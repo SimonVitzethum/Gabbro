@@ -1,0 +1,9 @@
+-- erwartet: K190
+-- **A float element in an integer-range array (found by the 5c adversarial review).** The
+-- initialiser list is held like a const table; `0.5` is no integer constant, so it cannot
+-- initialise a `u32 in 0 .. 255` cell. (The silent return for floats stays for float tables.)
+module gift::float_element_in_ganzzahlfeld {
+
+static mut A : [u32 in 0 .. 255; 4] = [0.5, 1, 2, 3];
+
+}

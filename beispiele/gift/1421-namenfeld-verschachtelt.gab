@@ -1,0 +1,16 @@
+-- erwartet: N465
+-- **A nested string array stays refused (Task 5b).** Only the DIRECT element of
+-- a one-dimensional static array is a cell; `[[string max 4; 2]; 2]` names no
+-- discipline for the inner strings.
+module gift::namenfeld_verschachtelt {
+
+static mut MATR : [[string max 4; 2]; 2] = 0;
+
+impl fn nimm() -> u32
+    effects { pure }
+    costs <= 4 ops
+{
+    return 0;
+}
+
+}

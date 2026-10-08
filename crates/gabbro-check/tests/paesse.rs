@@ -247,7 +247,7 @@ fn leave_ohne_marke_faellt() {
 #[test]
 fn next_zielt_auf_die_umgebende_marke() {
     faellt_mit(
-        "impl fn f() effects { pure } { traverse t over slots of c by unvisited { next t; } }",
+        "impl fn f() effects { pure } { traverse t over slots of c by unvisited { next u; } }",
         "S001",
     );
 }
@@ -336,7 +336,7 @@ fn jeder_gebaute_pass_kann_fallen() {
         ("Namen", "const A : u32 = 1;\nconst A : u32 = 2;"),
         (
             "M4/Schleifen",
-            "impl fn f() effects { pure } { traverse t over slots of c by unvisited { leave t; } }",
+            "impl fn f() effects { pure } { traverse t over slots of c by unvisited { leave u; } }",
         ),
         (
             "M1 + V1–V3",

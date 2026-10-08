@@ -1,0 +1,24 @@
+-- erwartet: N455
+-- **Copy-out of a string longer than the cell's max (SPRACHE-EFFIZIENZ #13).** A `string max 16`
+-- does not fit a cell of max 8 (`N455`, the copy rule).
+module gift::zelle_zu_lang_schreiben {
+
+const N : u32 = 4;
+
+table Namen count N {
+    slot {
+        name : string max 8,
+    }
+}
+
+lock K protects { Namen } rank 0 held <= 100 ops;
+
+impl fn setze(t : ptr<normal, rw> Namen, i : index into Namen, n : string max 16)
+    requires Held(K)
+    effects  { writes t.slots, locks K }
+    costs    <= 64 ops
+{
+    t.slots[i].name = n;
+}
+
+}

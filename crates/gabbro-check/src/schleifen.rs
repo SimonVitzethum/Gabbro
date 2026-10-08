@@ -139,9 +139,36 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
         }
         StmtArt::Schleife(sch) => match sch.as_ref() {
             // `traverse` traegt keine Marke -- die Grammatik gibt ihr keine Stelle dafuer.
+            //
+            // **Its BINDER is its label** (SPRACHE-EFFIZIENZ #19, find-first exit): `leave i;`
+            // inside `traverse i over slots of T` leaves that walk, `next i;` ends the pass.
+            // The model already has both (`Stmt.leave`/`next`, `traverseLauf`: `next` ends the
+            // pass, `leave` the loop, the invariant checked at the exit). Only the
+            // `by unvisited` walk takes it: `by consuming` removes what it visits and a
+            // half-done removal has no statement (`N580`).
             Schleife::Traverse(t) => {
                 abstieg_pruefen(t, absagen);
-                block(&t.rumpf, marken, lg, absagen)
+                if !matches!(t.abstieg, Abstieg::Unbesucht) {
+                    if let Some(span) = springt_auf(&t.rumpf, &t.variable.text) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N580",
+                                span,
+                                format!(
+                                    "`leave`/`next {}` leaves a `traverse` that is not `by unvisited`",
+                                    t.variable.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "`by consuming` removes every slot it visits; stopping half way \
+                                 leaves a removal the walk's statement does not describe",
+                            ),
+                        );
+                    }
+                }
+                marken.push(t.variable.text.clone());
+                block(&t.rumpf, marken, lg, absagen);
+                marken.pop();
             }
             Schleife::Retry(r) => {
                 ausgang_pruefen(&r.bei_ueberschreitung, lg, absagen);
@@ -214,6 +241,22 @@ fn divergierende(baum: &Programm) -> Vec<String> {
     aus
 }
 
+
+/// The first `leave`/`next` naming `name` anywhere under this block.
+fn springt_auf(b: &Block, name: &str) -> Option<gabbro_syntax::span::Span> {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Leave(m) | StmtArt::Next(m) if m.text == name => return Some(m.span),
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            if let Some(sp) = springt_auf(k, name) {
+                return Some(sp);
+            }
+        }
+    }
+    None
+}
 
 fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absagen) {
     if marken.iter().any(|m| m == &ziel.text) {

@@ -1,0 +1,57 @@
+-- 189 -- arithmetic in a wider declared context (SPRACHE-EFFIZIENZ #18).
+--
+-- `u32 + u32` standing as the whole value in a declared non-wrapping
+-- integer context of greater width and same signedness computes in the
+-- context's width: the operands convert implicitly (the rewrite the
+-- user wrote by hand), `M104` stays silent, `M101` holds the fit. Four
+-- contexts plus one nested form, all green. The B3 paper cut
+-- (`gift/583-summe-verlaesst-die-breite.gab`) is closed by the same rule.
+module beispiel189 {
+
+impl fn summe(a : u32, b : u32) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    return a + b;
+}
+
+impl fn bindung(a : u32, b : u32) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    let w : u64 = a + b;
+    return w;
+}
+
+impl fn zuweisung(a : u32, b : u32) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    let mut w : u64 = 0;
+    w = a + b;
+    return w;
+}
+
+impl fn verschachtelt(a : u32, b : u32, c : u32) -> u64
+    effects { pure }
+    costs <= 16 ops
+{
+    let n : u64 = a * b + c;
+    return n;
+}
+
+impl fn gibt(x : u64)
+    effects { pure }
+    costs <= 4 ops
+{
+}
+
+impl fn rufstelle(a : u32, b : u32) -> u64
+    effects { pure }
+    costs <= 16 ops
+{
+    gibt(a + b);
+    return a + b;
+}
+
+}

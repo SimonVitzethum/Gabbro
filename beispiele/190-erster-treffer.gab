@@ -1,0 +1,37 @@
+-- 190 -- find-first: `leave i;` leaves a `traverse` at the first hit.
+--
+-- A walk over a table used to visit every slot (`leave i` was `S001`: the binder was no label),
+-- so "claim the first free slot" ran N passes where C stops at one, or threaded a flag through
+-- the whole table (SPRACHE-EFFIZIENZ #19). The BINDER of a `traverse` is now its label:
+-- `leave i;` leaves the walk, `next i;` ends the pass. The model already carries both
+-- (`Stmt.leave` / `Stmt.next`, `traverseLauf`: the loop invariant is checked at the exit), and
+-- the exporter writes them for the INNERMOST binder. Only the `by unvisited` walk takes it:
+-- `by consuming` removes what it visits, and a half-done removal has no statement (`N580`).
+module beispiel190 {
+
+const NSLOTS : u32 = 8;
+
+table Plaetze count NSLOTS {
+    slot {
+        frei : bool,
+    }
+}
+
+lock K protects { Plaetze } rank 0 held <= 100 ops;
+
+impl fn erster_frei_belegen(t : ptr<normal, rw> Plaetze)
+    requires Held(K)
+    effects  { writes t.slots, locks K }
+    costs    <= NSLOTS * 8 ops
+{
+    traverse i over slots of t by unvisited
+        touches writes t.slots
+    {
+        if t.slots[i].frei {
+            t.slots[i].frei = false;
+            leave i;
+        }
+    }
+}
+
+}

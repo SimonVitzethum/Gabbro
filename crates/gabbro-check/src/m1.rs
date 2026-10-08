@@ -1561,9 +1561,12 @@ impl<'a> Pruefer<'a> {
         self.frische_gebrauch(s, lage);
         match &s.art {
             StmtArt::Let(l) => {
-                let wert = self.ausdruck(&l.wert, lage);
-                self.rufe_im_ausdruck(&l.wert, lage);
                 let ziel = l.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(&self.modul, t));
+                // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `let x : T = e;`
+                // rechnet ein schlichtes `+ - *` als ganzen Wert in `T`s
+                // Breite; ohne Annotation (`None`) aendert sich nichts.
+                let wert = self.ausdruck_mit_kontext(&l.wert, lage, ziel.as_ref());
+                self.rufe_im_ausdruck(&l.wert, lage);
                 if let Some(z) = &ziel {
                     self.passt(&wert, z, l.wert.span, "binding");
                 }
@@ -2059,7 +2062,15 @@ impl<'a> Pruefer<'a> {
                         ),
                     );
                 }
-                let quelle = self.ausdruck(&z.wert, lage);
+                // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `p = e;`
+                // rechnet ein schlichtes `+ - *` als ganzen Wert in der
+                // Breite des Zielorts; zusammengesetzte Zuweisung (`+=` …)
+                // laeuft weiter ueber `rechnung_zuweisung` wie bisher.
+                let quelle = if z.op == ZuwOp::Setzt {
+                    self.ausdruck_mit_kontext(&z.wert, lage, Some(&ziel))
+                } else {
+                    self.ausdruck(&z.wert, lage)
+                };
                 self.rufe_im_ausdruck(&z.wert, lage);
                 let ergebnis_typ = match z.op {
                     ZuwOp::Setzt => quelle,
@@ -2499,7 +2510,9 @@ impl<'a> Pruefer<'a> {
                 self.geschriebenes_toeten(rumpf, lage);
             }
             StmtArt::Return(Some(e)) => {
-                let t = self.ausdruck(e, lage);
+                // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `return e;`
+                // rechnet in der Breite des deklarierten Ergebnisses.
+                let t = self.ausdruck_mit_kontext(e, lage, ergebnis);
                 self.rufe_im_ausdruck(e, lage);
                 // **Ein `return` eines GRUNDES ist die Fehlerrueckgabe** (Stufe 7,
                 // 2026-08-21) -- und sie geht gegen das `or R` der Signatur, nicht gegen
@@ -2603,6 +2616,10 @@ impl<'a> Pruefer<'a> {
             // facts like one. Unresolved it stays what E1 made it: typed
             // arguments, no callee, `N057` from the name pass.
             StmtArt::LibraryCall(r) => {
+                // **Kein breiter Kontext hier (SPRACHE-EFFIZIENZ #18):** wie bei
+                // indirekten Rufen kennt der Erzeuger keine Parametertypen
+                // (`bibliothek_ruf` faechert ohne auf), also bleibt hier alles
+                // schmal wie bisher -- keine Divergenz je.
                 let mut argtypen = Vec::new();
                 for a in &r.args {
                     argtypen.push((self.ausdruck(a, lage), a.span));
@@ -2781,6 +2798,26 @@ impl<'a> Pruefer<'a> {
         let t = self.ausdruck_roh(e, lage);
         self.buche(&t);
         t
+    }
+
+    /// An expression typed against a declared integer context (SPRACHE-EFFIZIENZ
+    /// #18, breiter Kontext): `+ - *` standing as the WHOLE value compute in
+    /// the context's width (see `binaer`); every other form is typed exactly
+    /// as by `ausdruck`, so comparisons, shifts, division, calls and
+    /// everything else keep today's behaviour bit for bit. `None` is plain
+    /// `ausdruck` through the same door, so the context-free paths cannot
+    /// drift from it.
+    fn ausdruck_mit_kontext(&mut self, e: &Expr, lage: &Lage, ktx: Option<&Typ>) -> Typ {
+        match &e.art {
+            ExprArt::Binaer(op @ (BinOp::Plus | BinOp::Minus | BinOp::Mal), a, b)
+                if ktx.is_some() =>
+            {
+                let t = self.binaer(*op, a, b, e.span, lage, ktx);
+                self.buche(&t);
+                t
+            }
+            _ => self.ausdruck(e, lage),
+        }
     }
 
     fn ausdruck_roh(&mut self, e: &Expr, lage: &Lage) -> Typ {
@@ -3508,7 +3545,7 @@ impl<'a> Pruefer<'a> {
                 let (_, hi) = typen::grenzen(b.breite, false);
                 Typ::Ganzzahl(IntBereich::genau(b.breite, false, hi - b.max, hi - b.min))
             }
-            ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage),
+            ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage, None),
             // **Lane 111:** a const-table literal is not typed here.
             // `konstanten.rs` holds it element-wise (`K190`-`K194`), and a
             // second typing here would be the second register over the same
@@ -3636,10 +3673,56 @@ impl<'a> Pruefer<'a> {
         }
     }
 
-    fn binaer(&mut self, op: BinOp, a: &Expr, b: &Expr, span: Span, lage: &Lage) -> Typ {
+    /// **Breiter Kontext (SPRACHE-EFFIZIENZ #18): wann `+ - *` in der Breite
+    /// des Kontexts rechnen.** Gibt den deklarierten Bereich von `T` zurueck,
+    /// wenn alle drei Bedingungen stehen: `T` selbst laeuft nicht um und hat
+    /// einen Ganzzahlbereich; kein Operand laeuft um; jeder nicht-literale
+    /// Operand ist hoechstens so breit wie `T` und aus derselben
+    /// Vorzeichenklasse (Literale nehmen jede Breite an -- ihr Wert ist
+    /// exakt, und `M101` haelt danach den Sitz in `T`). Sonst `None`, und der
+    /// Aufrufer faehrt den schmalen Pfad wie bisher.
+    ///
+    /// `hoechstens` statt strikt groesser, mit Begruendung: ein Operand, der
+    /// BEREITS `T`-Breite traegt (etwa das Ergebnis einer inneren
+    /// Erweiterung wie in `a * b + c`), faellt unter dem strikten Vergleich
+    /// heraus, und der schmale Pfad antwortet bei gemischten Breiten mit
+    /// `Unbekannt` -- einer Stille, waehrend die Rechnung in `T` exakt und
+    /// bekannt waere ( dieselbe Klasse wie «B8»). Wo alle Breiten gleich
+    /// sind, rechnet die Erweiterung bitidentisch zum schmalen Pfad, also
+    /// aendert `<=` dort nichts -- namentlich bleibt `u32 + u32` in `u32`
+    /// bei `M104` (`gift/1409`).
+    fn breiter_kontext(
+        ta: &Typ,
+        tb: &Typ,
+        ba: &IntBereich,
+        bb: &IntBereich,
+        ktx: Option<&Typ>,
+    ) -> Option<IntBereich> {
+        let t = ktx?;
+        if t.laeuft_um() || ta.laeuft_um() || tb.laeuft_um() {
+            return None;
+        }
+        let tz = t.bereich()?;
+        for o in [ba, bb] {
+            if !o.literal && (o.breite > tz.breite || o.vorzeichen != tz.vorzeichen) {
+                return None;
+            }
+        }
+        Some(tz)
+    }
+
+    fn binaer(
+        &mut self,
+        op: BinOp,
+        a: &Expr,
+        b: &Expr,
+        span: Span,
+        lage: &Lage,
+        ktx: Option<&Typ>,
+    ) -> Typ {
         self.vorrangfalle(op, a, b);
-        let ta = self.ausdruck(a, lage);
-        let tb = self.ausdruck(b, lage);
+        let ta = self.ausdruck_mit_kontext(a, lage, ktx);
+        let tb = self.ausdruck_mit_kontext(b, lage, ktx);
         if op == BinOp::Und || op == BinOp::Oder {
             return Typ::Wahrheit;
         }
@@ -3843,6 +3926,49 @@ impl<'a> Pruefer<'a> {
             return self.wrapping_or_saturating(op, &ba, &bb, span);
         }
 
+        // **Breiter Kontext (SPRACHE-EFFIZIENZ #18): `+ - *` als ganzer Wert
+        // in einem deklarierten breiteren Ziel.** Beide Operandenbereiche
+        // werden auf `T`s Breite und Vorzeichen gehoben (gleiche Schranken --
+        // nur die Maschine darunter wird breiter, genau die ausgeschriebene
+        // Umwandlung, die der Nutzer heute von Hand schreibt) und mit
+        // denselben drei Funktionen gerechnet: `gemeinsame_form` antwortet
+        // dann `T`s Form, und `laeuft_ueber` misst gegen `T`s Breite. `M104`
+        // faellt nur noch, wo das Ergebnis auch `T` verlaesst (derselbe Satz,
+        // derselbe Wortlaut wie auf dem schmalen Pfad); ob es in `T`s
+        // DEKLARIERTEN Bereich passt, haelt danach `passt`/`M101` an der
+        // Zuweisung, wie bisher. V2/`abrunden`/wrapping-Pfade oben behalten
+        // Vorrang -- was dort schon entschieden ist, wird hier nicht neu
+        // entschieden.
+        if matches!(op, BinOp::Plus | BinOp::Minus | BinOp::Mal) {
+            if let Some(tz) = Self::breiter_kontext(&ta, &tb, &ba, &bb, ktx) {
+                let wa = IntBereich {
+                    breite: tz.breite,
+                    vorzeichen: tz.vorzeichen,
+                    min: ba.min,
+                    max: ba.max,
+                    literal: false,
+                };
+                let wb = IntBereich {
+                    breite: tz.breite,
+                    vorzeichen: tz.vorzeichen,
+                    min: bb.min,
+                    max: bb.max,
+                    literal: false,
+                };
+                let r = match op {
+                    BinOp::Plus => typen::addiere(&wa, &wb),
+                    BinOp::Minus => typen::subtrahiere(&wa, &wb),
+                    _ => typen::multipliziere(&wa, &wb),
+                };
+                if r.laeuft_ueber {
+                    self.ueberlauf_ausdruck(span, &ba, &bb, op_zeichen(op));
+                }
+                return match r.bereich {
+                    Some(x) => Typ::Ganzzahl(x),
+                    None => Typ::Unbekannt,
+                };
+            }
+        }
         let r = match op {
             BinOp::Plus => typen::addiere(&ba, &bb),
             BinOp::Minus => typen::subtrahiere(&ba, &bb),
@@ -4010,6 +4136,10 @@ impl<'a> Pruefer<'a> {
         // `Unbekannt`:** `Unbekannt` is precisely what made the old hole invisible, and the
         // run only counted it (`M1 saw 4 expressions, 3 of them without a type`).
         if let Some(o) = r.place() {
+            // **Kein breiter Kontext hier (SPRACHE-EFFIZIENZ #18):** der Erzeuger
+            // faechert indirekte Rufe ohne Parametertypen auf (`ruf` kennt nur
+            // den Ort), also rechnet hier alles schmal wie bisher -- keine
+            // Divergenz je zwischen geprüft und gesenkt.
             let mut argtypen = Vec::new();
             for a in &r.argumente {
                 argtypen.push((self.ausdruck(a, lage), a.span));
@@ -4107,8 +4237,16 @@ impl<'a> Pruefer<'a> {
         // **Aufgeloest wird im Modul des Aufrufs**, nicht ueber den blanken Namen.
         let signatur = r.path().and_then(|p| self.u.funktion(&self.modul, p)).cloned();
         let mut argtypen = Vec::new();
-        for a in &r.argumente {
-            argtypen.push((self.ausdruck(a, lage), a.span));
+        for (i, a) in r.argumente.iter().enumerate() {
+            // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** der Parametertyp
+            // des Rangs traegt ein schlichtes `+ - *` als ganzen Wert; ohne
+            // Signatur oder Rang (`uebergang` hat keine Parameter) aendert
+            // sich nichts. `M143` weiter unten bleibt wo es ist.
+            let ktx = signatur
+                .as_ref()
+                .and_then(|s| s.parameter.get(i))
+                .map(|(_, t)| t);
+            argtypen.push((self.ausdruck_mit_kontext(a, lage, ktx), a.span));
         }
         // **Lane 167: `Variant(payload)` -- a `tagged` case construction, not a call.**
         //
@@ -6247,7 +6385,12 @@ impl<'a> Pruefer<'a> {
         // §2a -- no path overlap, syntax only; own writes kill, §2b). A bare write
         // rebinds its own name instead: the old value is gone, taint and expiry
         // with it. Reached through `geschriebenes_toeten` for sub-blocks too.
-        frische_toeten_schreiben(&ziel.basis.text, ziel.suffixe.is_empty(), lage);
+        // **Task 5d:** the rebind stays on the written NAME (today's behaviour
+        // for the name itself, bit for bit); only the carrier kill reads the
+        // table key, so a write through any handle expires every taint of
+        // that table.
+        let schluessel = self.traeger_schluessel(&ziel.basis.text, lage);
+        frische_toeten_schreiben(&ziel.basis.text, &schluessel, ziel.suffixe.is_empty(), lage);
     }
 
     /// Ein Aufruf toetet die Fakten ueber alles **Nichtlokale**. Lokale Groessen kann er
@@ -6334,7 +6477,14 @@ impl<'a> Pruefer<'a> {
                 Some(geschrieben) => {
                     for w in &geschrieben {
                         let traeger = w.split(['.', '[']).next().unwrap_or(w);
-                        frische_toeten_traeger(lage, traeger);
+                        // **Task 5d:** the hull names world names; key them the
+                        // same way creation does (a table spelled qualified
+                        // kills the short key too). Callee-parameter writes
+                        // never reach here (coarse path above).
+                        frische_toeten_traeger(
+                            lage,
+                            &self.traeger_schluessel(traeger, lage),
+                        );
                     }
                 }
                 None => frische_alle_toeten(lage),
@@ -6465,6 +6615,40 @@ impl<'a> Pruefer<'a> {
         self.u.suche_global(&self.modul, schluessel).is_none()
     }
 
+    /// **V4 -- the carrier KEY of a place basis** (task 5d: the aliased-handle
+    /// gap of attack `r1_zwei_griffe_gleiche_tabelle`). Taints are compared by
+    /// string equality at every site, so creation and expiry must resolve two
+    /// handles of one table to one key: a function parameter (or local) whose
+    /// declared type is a pointer to a table `T` keys by the table's short
+    /// name; a basis naming a table keys by its short name; everything else
+    /// (statics, device handles, plain locals, pure values) keeps its own
+    /// name. ONE function for all sites, so creation and expiry can never
+    /// drift: `traeger_von_ort` (taint birth), the write kill
+    /// (`frische_toeten_schreiben`), the call-hull kill, the return-hull
+    /// mapping (`rueckgabe_traeger`) and the index `schutz` bases
+    /// (`frische_sammle`) all read it. A local shadowing a table name keeps
+    /// its own name (the guard below): only true globals resolve to tables.
+    fn traeger_schluessel(&self, basis: &str, lage: &Lage) -> String {
+        if let Some(t) = lage.lokal.get(basis) {
+            let mut inner = t;
+            loop {
+                match inner {
+                    Typ::Benannt { unter, .. } => inner = unter,
+                    Typ::Zeiger(z) => inner = z,
+                    Typ::Tabelle(k) => return crate::umgebung::kurzname(k).to_string(),
+                    _ => break,
+                }
+            }
+            return basis.to_string();
+        }
+        if let Some(k) = self.u.tabellen.keys().find(|k| {
+            *k == basis || k.rsplit("::").next() == Some(basis)
+        }) {
+            return crate::umgebung::kurzname(k).to_string();
+        }
+        basis.to_string()
+    }
+
     /// **V4 -- the carrier this place reads, if any** (spec §1-2).
     ///
     /// A device register read never taints (§2e -- asked of `m3`'s table, never a
@@ -6489,7 +6673,9 @@ impl<'a> Pruefer<'a> {
             {
                 return None;
             }
-            return Some(o.basis.text.clone());
+            // **Task 5d:** the key, not the handle -- two handles of one table
+            // share the table's name from here on.
+            return Some(self.traeger_schluessel(&o.basis.text, lage));
         }
         // A suffixed read through a `ptr` reaches the world; through a plain local
         // value (record, array) it reads the local itself. NOTE: `durchgreifen`
@@ -6500,7 +6686,8 @@ impl<'a> Pruefer<'a> {
                 return None;
             }
         }
-        Some(o.basis.text.clone())
+        // **Task 5d:** the key, not the handle (same function as above).
+        Some(self.traeger_schluessel(&o.basis.text, lage))
     }
 
     /// Carriers read DIRECTLY by this expression. Call arguments are NOT descended
@@ -6603,7 +6790,10 @@ impl<'a> Pruefer<'a> {
                     aus.extend(tiefe);
                 }
             } else {
-                aus.insert(basis.to_string());
+                // **Task 5d:** world names keyed like everywhere else (a table
+                // spelled qualified taints the short key too). Parameters map
+                // through the argument above, which keys at its own place.
+                aus.insert(self.traeger_schluessel(basis, lage));
             }
         }
         aus
@@ -6704,7 +6894,9 @@ impl<'a> Pruefer<'a> {
             _ => vec![],
         };
         for o in ziele {
-            let schutz = vec![o.basis.text.clone()];
+            // **Task 5d:** the schutz bases are carrier keys, compared against
+            // recorded source sets (which are keyed since creation).
+            let schutz = vec![self.traeger_schluessel(&o.basis.text, lage)];
             for sx in &o.suffixe {
                 if let OrtSuffix::Index(x) = sx {
                     self.frische_verweigere_mit_schutz(x, lage, &schutz);
@@ -6773,7 +6965,8 @@ impl<'a> Pruefer<'a> {
                     }
                 }
                 let mut tiefer = schutz.to_vec();
-                tiefer.push(o.basis.text.clone());
+                // **Task 5d:** deeper levels key like the top (same comparison).
+                tiefer.push(self.traeger_schluessel(&o.basis.text, lage));
                 for sx in &o.suffixe {
                     if let OrtSuffix::Index(x) = sx {
                         self.frische_sammle(x, lage, &tiefer, aus);
@@ -9013,17 +9206,19 @@ fn ist_zeiger(t: &Typ) -> bool {
 /// **V4 -- a write naming this carrier expires every local tainted with it**
 /// (spec §1, carrier granularity §2a -- no path overlap, syntax only; own writes
 /// kill, §2b). The written name itself is rebound when bare (fresh again) and
-/// stale when only a part of it was written.
-fn frische_toeten_schreiben(traeger: &str, nackt: bool, lage: &mut Lage) {
-    if let Some(s) = lage.frisch.remove(traeger) {
+/// stale when only a part of it was written. **Task 5d:** `name` is the
+/// written name (rebind, unchanged behaviour); `schluessel` is the carrier
+/// key the kill compares (the table name for any handle of it).
+fn frische_toeten_schreiben(name: &str, schluessel: &str, nackt: bool, lage: &mut Lage) {
+    if let Some(s) = lage.frisch.remove(name) {
         if !nackt {
-            lage.veraltet.insert(traeger.to_string(), s);
+            lage.veraltet.insert(name.to_string(), s);
         }
     }
     if nackt {
-        lage.veraltet.remove(traeger);
+        lage.veraltet.remove(name);
     }
-    frische_toeten_traeger(lage, traeger);
+    frische_toeten_traeger(lage, schluessel);
 }
 
 /// **V4 -- expire every tainted local of this carrier, keep the rest.** Each

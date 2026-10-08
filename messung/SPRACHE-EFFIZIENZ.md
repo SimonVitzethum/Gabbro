@@ -164,3 +164,70 @@ The existing `tyFits` (`CSpeicher.lean`) is the same statement for the C cell; t
 `tyFits'` is `bits lo hi <= 8 * cellbytes`, proved from `zellBytes_fits`. A bridging file
 `DarstellungTy.lean` over `Ty`/`encW` is the next step; it was not written because it imports
 `CSpeicher` and no Lean build was possible in this round.
+
+---
+
+# Tracking (dated; status per finding)
+
+## 2026-10-08 -- #19 find-first exit from `traverse`: DONE
+
+`leave i;` / `next i;` over a `traverse` binder (`by unvisited`): `schleifen.rs` pushes the binder
+as a label; `by consuming` falls as `N580` (gift `1413`, sentence `schleifen.traverse_ausgang`).
+The Lean model already had `Stmt.leave`/`Stmt.next` and `traverseLauf` (invariant checked at the
+exit); the exporter (`lean_g.rs`) now writes them for the INNERMOST binder at the end of a block
+(`LG004` otherwise). Example `190-erster-treffer` is CERTIFIED: `./lean-bau` 734 jobs, 0 errors,
+module `G190_erster_treffer` built. `cargo test -p gabbro-syntax -p gabbro-check`: 67 collections,
+0 failures (three tests that pinned `S001` for the binder were rewritten). The C emitter registers
+no label for a `traverse` and refuses the exit by name (`C001`); nothing new there.
+
+## Status of every finding (rows 1-20 of this report)
+
+| # | Finding | Status |
+|---|---|---|
+| 1-9, 12 | minimal-width / packed layout of ranged ints, bools, index cells, tags, records | Lean model DONE (`Speichermodell/Darstellung.lean`, merged); `DarstellungTy.lean` over `Ty`/`encW` DONE (agent 03, reviewed and built here: `tyBits`, `encN_lt`, `decN_encN`, `narrow_fits`, `narrow_le_wide`, packed `getCell_setCell`/`getCell_setCell_ne`, `packBytes_cells`; standard axioms); record field ordering DONE (`RecordLage.lean`, agent 03, reviewed and built: `lage_ge_summe`, `absteigend_ohne_luecke`, `absteigend_minimal` over permutations, `offset_ausgerichtet`, the 24/16/10 witnesses of finding 8; standard axioms); native lowering OPEN (compiler work) |
+| 10, 11 | string length word | C change not taken (C deprecated); native size theorem is part of the string design |
+| 13 | strings in tables / arrays / records | **DONE for table slot fields (2026-10-08)**: Lean `ZeichenfolgeZelle.lean` (copy-out/copy-in round trip, other cells untouched, loaded string fits, native cell never above the C layout; standard axioms), checker rule `N581` (a slot field `string max N` is read whole into a local and written whole; any other mention falls), example 191 (UNCERTIFIED `LG002`, no exporter string form), gifts 1414-1416, gift 1163 re-aimed at a record field (still `N465`). Static one-dimensional string arrays `[string max N; K]` are cells too (agent 05, example 192, gifts 1418-1421; `= 0` is the only initialiser). Record fields, nested arrays, consts, pointer targets stay `N465`: OPEN |
+| 14 | `static mut X : bool = false` | DONE (legacy C emit, example 187) |
+| 15 | static array initialiser list | DONE (parser + `konstanten.rs`, example 186, gifts 1405/1406) |
+| 16 | whole-array copy | DONE (`N579`, example 188, gifts 1407/1408) |
+| 17 | M147 selector taint | DONE (example 185, gift 1404) |
+| 18 | `u32 + u32` in the context width | DONE (2026-10-08, agent 05, reviewed and integrated): `+ - *` as the whole value of a `let x : T`, `return`, plain `=` or direct call argument computes in `T`'s width when `T` is non-wrapping, no operand is wider than `T` or of another signedness class (literals fit any width); `u32 + u32` into `u32` stays `M104` (gift 1409), no context stays `M104` (1410), a range that does not fit `T` is `M101` (1411), mixed signedness unchanged (1412); example 189 (UNCERTIFIED `LG003`: the assignment target has no G form), gift 583 flipped to silent like the lane-191 flips, sentence `m1.breiter_kontext`, nine `rechenwerk` tests, legacy C emitter mirrors it. Lean: the model's `Zahl lo hi` arithmetic is exact, so no model change |
+| 19 | find-first exit | DONE (above) |
+| 20 | runtime bound check on `u8` reads | NOT A COST (cc removes it; measured noise) |
+
+## The two earlier gap reports and `gabbro zeremonie` (rows, 2026-10-08)
+
+| Row | Finding | Status |
+|---|---|---|
+| G1 | no type parameters / generics | BLOCKED: language decision (`Ty` is deliberately non-recursive, OFFEN O15); needs Simon |
+| G2 | record as a value has no `Ty` (`LG002`) | BLOCKED: priced and refused 2026-09-15 (0 of 113 corpus programs gain); needs a `Ty.prod` decision |
+| G3 | `traverse` early exit | DONE (#19) |
+| G4 | windowed `traverse from s count n` | Lean groundwork DONE (`Fenster.lean`, agent 03, reviewed and built: `indizes_append` chunking lemma, `lauf_append`, `lauf_leave`, `besucht_praefix`). Parser (`P001`), bounds rule, effects and the exporter/G window arm OPEN |
+| G5 | `option` over ordinary types | Lean groundwork DONE (`OptBereich.lean`, agent 03, reviewed and built: `optDec_optEnc`, `optEnc_inj`, `none_ausserhalb`, `optBits_le_bits_succ`, `optBits_gleich_wenn_luft` -- the sentinel is free when the range does not fill its power of two). The grammar `option <range type>` (`P001`) is a language decision, OPEN: needs Simon |
+| G6 | `count` as a predicate | Lean groundwork DONE (`Zaehlen.lean`, agent 03, reviewed and built: `zaehle_schreibe` single-slot update law, plus/minus-one forms, `refcount_erhalten`). The invariant-language form (`D021`) OPEN |
+| G7 | strings in aggregates | BLOCKED, awaiting Simon (#13) |
+| G8 | byte pointers have no G form (O37) | OPEN |
+| G9 | `Endblock` binders (`let x = f()`, return under `locks`) | OPEN: named model decisions (O14/O15/O27) |
+| G10 | `bool` static | DONE (#14) |
+| G11 | payload hand-off after `awaits` (O25c) | OPEN: proof work, no weakening |
+| G12 | dense 256-way dispatch | Lean soundness of the jump table DONE (`Sprungtafel.lean`, agent 03, reviewed and built: `suche_gleich_kette` -- the table replaces the comparison chain exactly when every arm value lies in the window --, `suche_im_fenster`, `suche_ausserhalb`, `fenster_deckt`; standard axioms); the lowering itself belongs to the native compiler |
+| R/C/P/U rows | RAM / compute / proof-time / ugly rows of the Lean report | covered above where they overlap (strings, bool static, traverse exit); rest OPEN |
+| E1, E2 | ceremony | `gabbro zeremonie --table`: A1-A4 (annotation equal to what the signature or declaration says; an effect entry a callee already declares) and R1-R4 (duplicates) MAY FALL; T1-T10 (effects, costs, requires/ensures, maintains, invariants, loop bounds, touches, reserved, register class) MAY NOT. Making derivable clauses optional is a language decision (PLAN-EINFACHHEIT); no clause was made optional this round. OPEN, needs Simon |
+| U1 | `type Q(T) = ...` parses and means a ghost parameter | DONE (2026-10-08): `N582` (gift 1417, sentence `namen.typ_parameterliste`); `linear` witnesses keep their list |
+
+Decisions needed from Simon: strings in aggregates; generics; records as values; making derivable
+ceremony optional; `option` over ordinary types.
+
+## 2026-10-08 -- adversarial review of four new rules (agent 05, task 5c)
+
+`crates/gabbro-check/tests/attack_5c.rs`: 63 attacks (M147 selector refinement 15, static
+initialiser lists 15, whole-array copy 16, string cells 17), each asserting the current behaviour
+with a `// FINDING:` line. Result: 58 sound, 5 ACCEPTS-UNSOUND, 0 REFUSES-SOUND. Dispositions:
+
+| Finding | Disposition |
+|---|---|
+| R2 float element in an integer-range `static` list (`[0.5, 1, 2, 3]` into `u32 in 0 .. 255`) | FIXED: `K190` (`konstanten.rs`, gift 1422) |
+| R4 string cell as the source of a `let … else` (2 attacks) | FIXED: `N581` (`zeichenfolge.rs`, gift 1423; sentence extended) |
+| R2 `~` element (`[~1, 1, 2, 3]`) accepted by the checker | OPEN, contained: the folder cannot fold `~`, the C emitter refuses it by name (`C001`); a checker refusal needs the folder to learn complement per width |
+| R1 aliased handles: `let v = t.slots[i].x; u.slots[i].x = 1; if v == 0 …` with two `rw` handles to one table is silent | FIXED (2026-10-08, agent 05 task 5d, reviewed and integrated): carriers are keyed by TABLE (`traeger_schluessel`, six sites), so a write through any handle of a table expires every taint of it; gifts 1424-1425 (`M147`), example 193 (CERTIFIED), `tests/frische.rs`; still syntactic (two handles of one table type are assumed to alias; conservative). PRE-EXISTING gap, not introduced by the selector refinement |
+| R3 whole-array copy: none | a widening copy (u16 into u32 cells) would be sound but is not promised; refused as `N287`, spec-conform |

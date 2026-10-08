@@ -1,0 +1,25 @@
+-- erwartet: N581
+-- **A string cell used in place (SPRACHE-EFFIZIENZ #13).** `lenof(t.slots[i].name)` would put
+-- a length fact on memory another write can change between the check and the use. The cell is
+-- read whole into a local first (`beispiele/191`).
+module gift::zelle_an_ort_und_stelle {
+
+const N : u32 = 4;
+
+table Namen count N {
+    slot {
+        name : string max 8,
+    }
+}
+
+lock K protects { Namen } rank 0 held <= 100 ops;
+
+impl fn laenge(t : ptr<normal, rw> Namen, i : index into Namen) -> u32
+    requires Held(K)
+    effects  { reads t.slots, locks K }
+    costs    <= 64 ops
+{
+    return lenof(t.slots[i].name);
+}
+
+}

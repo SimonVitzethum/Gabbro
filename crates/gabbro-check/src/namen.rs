@@ -3292,6 +3292,28 @@ fn doppelt(
 }
 
 fn typdecl(t: &TypDecl, absagen: &mut Absagen) {
+    // **`N582`: a parameter list is a linear witness's, not a generic's** (SPRACHE-EFFIZIENZ U1).
+    // `type Queue(T) = { w : T, }` parsed with 0 errors, emitted byte-identically to the
+    // unparameterised type, and died at the emitter on the first use of `T`: the `(...)` list
+    // exists for `linear ghost type Held(Lock)`. Gabbro has no type parameters, so the word
+    // `(T)` on any other type is a promise nothing keeps.
+    if t.parameter.is_some() && !t.linear {
+        absagen.schiebe(
+            Absage::fehler(
+                "N582",
+                t.name.span,
+                format!(
+                    "`type {}(...)` carries a parameter list, but only a `linear ghost` witness has one: \
+                     Gabbro has no type parameters",
+                    t.name.text
+                ),
+            )
+            .mit_notiz(
+                "write one concrete type per element type; a generic container needs a language \
+                 decision that has not been taken (`messung/SPRACHE-EFFIZIENZ.md`, G1)",
+            ),
+        );
+    }
     if let Some(TypExpr::Varianten(varianten, _)) = &t.rumpf {
         let mut gesehen = HashMap::new();
         for v in varianten {

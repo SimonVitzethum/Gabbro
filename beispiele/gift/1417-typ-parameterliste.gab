@@ -1,0 +1,9 @@
+-- erwartet: N582
+-- **A parameter list on an ordinary type (SPRACHE-EFFIZIENZ U1).** `(T)` parsed, emitted
+-- byte-identically to the plain record and died at the first use of `T`. Only a `linear ghost`
+-- witness (`linear ghost type Held(Lock)`) carries a list.
+module gift::typ_parameterliste {
+
+type Queue(T) = { kopf : u32, ende : u32, };
+
+}

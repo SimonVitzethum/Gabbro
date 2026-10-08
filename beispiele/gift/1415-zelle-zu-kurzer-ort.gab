@@ -1,0 +1,27 @@
+-- erwartet: N455
+-- **Copy-in into a smaller local, and copy-out of a longer string (SPRACHE-EFFIZIENZ #13).**
+-- A cell of max 8 does not fit a local of max 4 (the loaded string may hold 8 characters), and
+-- a string of max 16 does not fit the cell: both fall under the copy rule `N455`, exactly as
+-- they do between two locals.
+module gift::zelle_zu_kurz {
+
+const N : u32 = 4;
+
+table Namen count N {
+    slot {
+        name : string max 8,
+    }
+}
+
+lock K protects { Namen } rank 0 held <= 100 ops;
+
+impl fn klein(t : ptr<normal, rw> Namen, i : index into Namen) -> u32
+    requires Held(K)
+    effects  { reads t.slots, locks K }
+    costs    <= 64 ops
+{
+    let n : string max 4 = t.slots[i].name;
+    return lenof(n);
+}
+
+}

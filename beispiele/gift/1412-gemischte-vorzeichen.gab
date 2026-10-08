@@ -1,0 +1,14 @@
+-- erwartet: M104
+-- **Mixed signedness, unchanged refusal.** Unsigned `u32` operands into a
+-- signed `i64` target stay on the narrow path exactly as before (the
+-- breiter-Kontext rule only joins equal signedness classes).
+module gift::gemischte_vorzeichen {
+
+pub fn f(a : u32, b : u32) -> i64
+    effects { pure }
+    costs <= 4 ops
+{
+    return a + b;
+}
+
+}

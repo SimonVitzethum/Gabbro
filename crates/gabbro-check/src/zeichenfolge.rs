@@ -36,6 +36,9 @@
 //!   pass binds, a resolved call with a string result, or a `+` of two:
 //!   the pass's knowledge is complete, and "not known as a string" means
 //!   "not a string".
+//!   (`N581` cells excepted: a table slot field, and since Task 5b the
+//!   direct element of a static one-dimensional string array -- both are
+//!   read whole into a local and written whole, never used in place.)
 //! - **Values (`N455`).** A string value flows only into a known string
 //!   slot that fits it: an annotated `let`, an assignment to a string name,
 //!   a `return` at a string result, a string parameter (also inside
@@ -185,6 +188,18 @@ struct Lage<'a> {
     fns: &'a HashMap<String, RumpfSignatur>,
     modul: &'a str,
     ergebnis: Option<Schlitz>,
+    /// **String cells (`N581`, SPRACHE-EFFIZIENZ #13):** `(table, field) -> max` for every table
+    /// slot field declared `string max N`. Names are unqualified, per unit.
+    zellen: &'a HashMap<(String, String), u128>,
+    /// **String cells in static arrays (Task 5b):** static name -> max for every
+    /// `static [mut] NAME : [string max N; K]` (one dimension, direct element only).
+    /// Same whole-in/whole-out discipline as the slot cells; names unqualified, per unit.
+    statzellen: &'a HashMap<String, u128>,
+    /// Every table name of the unit.
+    tabellen: &'a HashSet<String>,
+    /// The function's parameters that name a table (directly or behind a pointer):
+    /// `parameter -> table`.
+    tparam: HashMap<String, String>,
 }
 
 /// The flow state: scoped bindings plus the length facts.
@@ -283,19 +298,67 @@ pub fn pass(baum: &Programm, absagen: &mut gabbro_syntax::diag::Absagen) {
             );
         }
     });
+    let mut zellen: HashMap<(String, String), u128> = HashMap::new();
+    let mut tabellen: HashSet<String> = HashSet::new();
+    let mut statzellen: HashMap<String, u128> = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
+        if let ItemArt::Tabelle(t) = &item.art {
+            tabellen.insert(t.name.text.clone());
+            if let Some(slot) = &t.slot {
+                for f in &slot.felder {
+                    if let SlotTyp::Typ(TypExpr::Zeichenkette { max, .. }) = &f.typ {
+                        zellen.insert((t.name.text.clone(), f.name.text.clone()), *max);
+                    }
+                }
+            }
+        }
+        // **Static array cells (Task 5b):** a `static` whose DIRECT type is a one-dimensional
+        // array over `string max N` is a row of cells. Nested arrays (`[[string …; _]; _]`),
+        // consts, record fields, pointer targets and parameter arrays never land here: only
+        // the direct element of a static's own type is collected, mirroring `deklarationen`.
+        if let ItemArt::Statisch(s) = &item.art {
+            if let TypExpr::Feld(a) = &s.typ {
+                if let TypExpr::Zeichenkette { max, .. } = &a.element {
+                    statzellen.insert(s.name.text.clone(), *max);
+                }
+            }
+        }
+    });
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         deklarationen(item, absagen);
         let lage_ohne = Lage {
             fns: &fns,
             modul,
             ergebnis: None,
+            zellen: &zellen,
+            tabellen: &tabellen,
+            statzellen: &statzellen,
+            tparam: HashMap::new(),
         };
         match &item.art {
             ItemArt::Funktion(f) => {
+                let mut tparam: HashMap<String, String> = HashMap::new();
+                for p in &f.parameter {
+                    let ziel = match &p.typ {
+                        TypExpr::Zeiger(z) => &z.ziel,
+                        andere => andere,
+                    };
+                    if let TypExpr::Pfad(pf) = ziel {
+                        if let Some(l) = pf.teile.last() {
+                            if tabellen.contains(&l.text) {
+                                tparam.insert(p.name.text.clone(), l.text.clone());
+                            }
+                        }
+                    }
+                }
                 let lage = Lage {
                     fns: &fns,
                     modul,
                     ergebnis: f.ergebnis.as_ref().map(schlitz_von),
+                    zellen: &zellen,
+                    tabellen: &tabellen,
+                    statzellen: &statzellen,
+                    tparam,
                 };
                 let mut z = Zustand::neu();
                 for p in &f.parameter {
@@ -403,6 +466,29 @@ fn deklarationen(item: &Item, absagen: &mut gabbro_syntax::diag::Absagen) {
         }
         if let Some(TypExpr::Zeichenkette { span, .. }) = &f.ergebnis {
             erlaubt.push(*span);
+        }
+    }
+    // **A table slot field may be a string cell** (`N581`): it is read whole into a local and
+    // written whole from a string value, so its length facts are facts about the local.
+    if let ItemArt::Tabelle(t) = &item.art {
+        if let Some(slot) = &t.slot {
+            for f in &slot.felder {
+                if let SlotTyp::Typ(TypExpr::Zeichenkette { span, .. }) = &f.typ {
+                    erlaubt.push(*span);
+                }
+            }
+        }
+    }
+    // **A static one-dimensional string array is a row of cells** (Task 5b): the DIRECT
+    // element span of `[string max N; K]` is allowed, under exactly the slot-cell discipline
+    // (whole-in / whole-out, `N581`, copy rule `N455`). Nested arrays, `const`s, record
+    // fields, pointer targets and parameter arrays never land here -- their spans stay
+    // `N465`, mirroring the collection in `pass()`.
+    if let ItemArt::Statisch(s) = &item.art {
+        if let TypExpr::Feld(a) = &s.typ {
+            if let TypExpr::Zeichenkette { span, .. } = &a.element {
+                erlaubt.push(*span);
+            }
         }
     }
     let mut stellen: Vec<Span> = Vec::new();
@@ -555,9 +641,55 @@ fn finde_fn(fns: &HashMap<String, RumpfSignatur>, modul: &str, p: &Pfad) -> Aufl
 /// **A literal holds its exact byte length as its bound** (lane 261): a
 /// literal of length `L` fits exactly the slots a `string max L` fits, so
 /// every fit check below answers for it with no further rule.
+/// The max of the string cell this place names -- `T.slots[i].f` or `p.slots[i].f` with `f` a
+/// `string max N` slot field of the table, or `NAMEN[i]` with `NAMEN` a static one-dimensional
+/// string array (Task 5b) -- or `None`.
+fn zelle(o: &Ort, lage: &Lage) -> Option<u128> {
+    // **Static array cells (Task 5b):** `NAMEN[i]` -- one index suffix, basis a static string
+    // array. Whole-in / whole-out exactly like the slot cells; the slot path below is untouched.
+    if let [OrtSuffix::Index(_)] = o.suffixe.as_slice() {
+        if let Some(max) = lage.statzellen.get(&o.basis.text) {
+            return Some(*max);
+        }
+    }
+    if o.suffixe.len() != 3 {
+        return None;
+    }
+    zelle_anfang(o, lage)
+}
+
+/// The same, for a place that STARTS with a cell (`T.slots[i].f[k]` or `NAMEN[i][k]`: the cell
+/// is used in place -- never allowed).
+fn zelle_anfang(o: &Ort, lage: &Lage) -> Option<u128> {
+    // **Static array cells (Task 5b):** any place at `NAMEN[i]` -- the whole cell (exactly what
+    // `zelle` answers, so every expression occurrence draws `N581`; only the two whole-use
+    // sites bypass it, and they never walk the cell as an expression) or deeper (`NAMEN[i][k]`,
+    // an index into the cell).
+    if let [OrtSuffix::Index(_), ..] = o.suffixe.as_slice() {
+        if let Some(max) = lage.statzellen.get(&o.basis.text) {
+            return Some(*max);
+        }
+    }
+    let [OrtSuffix::Feld(slots), OrtSuffix::Index(_), OrtSuffix::Feld(f), ..] = o.suffixe.as_slice()
+    else {
+        return None;
+    };
+    if slots.text != "slots" {
+        return None;
+    }
+    let tabelle = if lage.tabellen.contains(&o.basis.text) {
+        o.basis.text.clone()
+    } else {
+        lage.tparam.get(&o.basis.text)?.clone()
+    };
+    lage.zellen.get(&(tabelle, f.text.clone())).copied()
+}
+
 fn synth(e: &Expr, z: &Zustand, lage: &Lage) -> Option<u128> {
     match &e.art {
         ExprArt::Klammer(x) => synth(x, z, lage),
+        // A cell is a string value of its declared max (its length never exceeds it).
+        ExprArt::Ort(o) if zelle(o, lage).is_some() => zelle(o, lage),
         ExprArt::Kette(bytes) => Some(bytes.len() as u128),
         ExprArt::Ort(o) | ExprArt::Alt(o) if o.suffixe.is_empty() => z.kette(&o.basis.text),
         ExprArt::Ergebnis => match lage.ergebnis {
@@ -720,7 +852,18 @@ fn toete_schreibziele(s: &Stmt, z: &mut Zustand) {
 fn anweisung(s: &Stmt, z: &mut Zustand, lage: &Lage, absagen: &mut gabbro_syntax::diag::Absagen) {
     match &s.art {
         StmtArt::Let(l) => {
-            ausdruck(&l.wert, z, lage, absagen);
+            // **Copy-in:** `let x : string max M = T.slots[i].f;` reads the cell WHOLE into a
+            // local (the only read of a cell). The place's index expressions are walked, the
+            // place itself draws no `N581`.
+            let ganz_zelle = match &ohne_klammern(&l.wert).art {
+                ExprArt::Ort(o) if zelle(o, lage).is_some() => Some(o),
+                _ => None,
+            };
+            if let Some(o) = ganz_zelle {
+                ort_ausdruecke(o, z, lage, absagen);
+            } else {
+                ausdruck(&l.wert, z, lage, absagen);
+            }
             let eintrag = match &l.typ {
                 Some(t) => {
                     typ_annotation(t, true, absagen);
@@ -765,6 +908,11 @@ fn anweisung(s: &Stmt, z: &mut Zustand, lage: &Lage, absagen: &mut gabbro_syntax
                 }
                 LetQuelle::Ort(o) => {
                     ort_ausdruecke(o, z, lage, absagen);
+                    // A cell is read WHOLE by `let x : string max M = cell;` only; a
+                    // `let … else` over it would bind it past the copy rule (attack 5c, R4).
+                    if zelle_anfang(o, lage).is_some() {
+                        zellen_ablehnung(o.span, absagen);
+                    }
                     if o.suffixe.is_empty() && z.kette(&o.basis.text).is_some() {
                         sort_ablehnung(
                             o.span,
@@ -784,6 +932,16 @@ fn anweisung(s: &Stmt, z: &mut Zustand, lage: &Lage, absagen: &mut gabbro_syntax
         StmtArt::Zuweisung(zw) => {
             ort_ausdruecke(&zw.ziel, z, lage, absagen);
             ausdruck(&zw.wert, z, lage, absagen);
+            // **Copy-out:** `T.slots[i].f = <string value>;` writes the cell WHOLE. Any other
+            // operator on a cell is no string operation here (`N581`).
+            if let Some(max) = zelle(&zw.ziel, lage) {
+                match zw.op {
+                    ZuwOp::Setzt => ziel_regel(&zw.wert, max, z, lage, absagen),
+                    _ => zellen_ablehnung(zw.ziel.span, absagen),
+                }
+                toete_schreibziele(s, z);
+                return;
+            }
             match (zw.ziel.suffixe.is_empty(), z.kette(&zw.ziel.basis.text)) {
                 (true, Some(max)) => match zw.op {
                     ZuwOp::Setzt => ziel_regel(&zw.wert, max, z, lage, absagen),
@@ -1110,7 +1268,12 @@ fn expr_regel(x: &Expr, z: &Zustand, lage: &Lage, absagen: &mut gabbro_syntax::d
     match &x.art {
         // The place rule runs at the node; `unterausdruecke` then yields
         // the index expressions for the walk.
-        ExprArt::Ort(o) | ExprArt::Alt(o) => ort_regel(o, z, lage, absagen),
+        ExprArt::Ort(o) | ExprArt::Alt(o) => {
+            ort_regel(o, z, lage, absagen);
+            if zelle_anfang(o, lage).is_some() {
+                zellen_ablehnung(o.span, absagen);
+            }
+        }
         ExprArt::Binaer(op, a, b) => match (synth(a, z, lage), synth(b, z, lage)) {
             (Some(_), Some(_)) if *op == BinOp::Plus || op.ist_vergleich() => {}
             (Some(_), Some(_)) => sort_ablehnung(
@@ -1140,6 +1303,11 @@ fn expr_regel(x: &Expr, z: &Zustand, lage: &Lage, absagen: &mut gabbro_syntax::d
             }
         }
         ExprArt::Eingebaut(g) => match &**g {
+            // `lenof(T.slots[i].f)`: the length of a cell in place (`N581`); a local's `lenof`
+            // is the one the facts speak about.
+            Eingebaut::Lenof(TypOderOrt::Ort(o)) if zelle_anfang(o, lage).is_some() => {
+                zellen_ablehnung(o.span, absagen)
+            }
             Eingebaut::Lenof(_) => {}
             Eingebaut::Sizeof(TypOderOrt::Ort(o)) => {
                 if o.suffixe.is_empty() && z.kette(&o.basis.text).is_some() {
@@ -1362,6 +1530,26 @@ fn index_regel(
             .mit_notiz(geschuetzt_notiz),
         ),
     }
+}
+
+/// `N581`: a string cell used in place. A cell is read WHOLE into a local
+/// (`let s : string max M = T.slots[i].f;`) and written WHOLE from a string value
+/// (`T.slots[i].f = s;`); any other mention -- an operand, a condition, an argument, a
+/// `return`, an index, a `lenof` -- would put a length fact on memory another write can change.
+fn zellen_ablehnung(span: Span, absagen: &mut gabbro_syntax::diag::Absagen) {
+    absagen.schiebe(
+        Absage::fehler(
+            "N581",
+            span,
+            "a string cell is used in place: it is read whole into a local or written whole, nothing else"
+                .to_string(),
+        )
+        .mit_notiz(
+            "copy it into a local first -- `let s : string max N = T.slots[i].f;` -- and use \
+             the local: its length facts (`lenof`, an index below the length) hold for the \
+             local alone; the cell can be rewritten by any later write or call",
+        ),
+    );
 }
 
 fn sort_ablehnung(span: Span, satz: &str, absagen: &mut gabbro_syntax::diag::Absagen) {

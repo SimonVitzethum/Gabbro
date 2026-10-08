@@ -1,0 +1,16 @@
+-- erwartet: N581
+-- **A static array cell used in place (Task 5b).** `lenof(NAMEN[i])` would put
+-- a length fact on memory another write can change between the check and the
+-- use. The cell is read whole into a local first (`beispiele/192`).
+module gift::namenfeld_an_ort_und_stelle {
+
+static mut NAMEN : [string max 8; 4] = 0;
+
+impl fn laenge(i : u32 in 0 ..< 4) -> u32
+    effects { reads NAMEN }
+    costs <= 16 ops
+{
+    return lenof(NAMEN[i]);
+}
+
+}

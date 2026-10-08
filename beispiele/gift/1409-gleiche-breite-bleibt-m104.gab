@@ -1,0 +1,14 @@
+-- erwartet: M104
+-- **Same width, same refusal.** `u32 + u32` into a `u32` target
+-- computes in 32 bits before and after the breiter-Kontext rule (the
+-- context is not wider), so `M104` stays exactly where it was.
+module gift::gleiche_breite {
+
+pub fn f(a : u32, b : u32) -> u32
+    effects { pure }
+    costs <= 4 ops
+{
+    return a + b;
+}
+
+}

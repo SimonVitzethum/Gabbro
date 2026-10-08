@@ -2515,8 +2515,8 @@ pub const M1: &[Satz] = &[
                   expired by any write naming the carrier -- own writes, loops (all), \
                   calls (writes-hull), never device registers -- and refused at decision \
                   positions only (branch/match condition, call argument, return, `narrow` \
-                  subject, index), while storing or moving the name stays allowed. The carriers of an INDEX expression do not taint the value read through it (a write to the selector outdates no cell content), unless the index mentions an expired local.",
-        vorbehalt: "**The literal `messung/netz/udp-echo.gab` still passes, BY DESIGN**: \
+                  subject, index), while storing or moving the name stays allowed. The carriers of an INDEX expression do not taint the value read through it (a write to the selector outdates no cell content), unless the index mentions an expired local. A carrier is keyed by TABLE, not by handle: two parameters (or locals) of pointer-to-table type over one table share one carrier, so a write through any handle expires every taint of that table; statics, registers and plain values keep their own names.",
+        vorbehalt: "Table-keyed, still syntactic: two handles are assumed to alias when their declared table types match, even where they never do at run time (conservative); handles of different tables stay disjoint. **The literal `messung/netz/udp-echo.gab` still passes, BY DESIGN**: \
                     its bug is an omission no local holds, so no expiry can fire -- the \
                     rule catches the udp-echo shape (a named stale use), not the missing \
                     recompute. Growth is `let`-shaped only: a carrier read moved through \
@@ -2633,6 +2633,69 @@ pub const M1: &[Satz] = &[
                       side is beispiele/188; the length mismatch stays N287 \
                       (beispiele/gift/1408, 951).",
         fundstelle: "crates/gabbro-check/src/m1.rs (feld_kopie_urteil, assignment arm)",
+    },
+    Satz {
+        name: "schleifen.traverse_ausgang",
+        kennungen: &["N580"],
+        aussage: "The binder of a `traverse` is the label of its body (SPRACHE-EFFIZIENZ #19): \
+                  `leave i;` leaves the walk at the first hit and `next i;` ends the pass \
+                  (`S001` no longer fires for it). Only a `by unvisited` walk takes the exit; \
+                  a `leave`/`next` naming the binder of a `by consuming` walk falls as \
+                  `N580`, because the walk removes every slot it visits and stopping half \
+                  way leaves a removal its statement does not describe.",
+        vorbehalt: "The Lean model already carries the exit (`Stmt.leave`/`Stmt.next`, \
+                    `traverseLauf`: the loop invariant is checked at the exit and `next` \
+                    ends the pass); the exporter writes it only for the INNERMOST binder, \
+                    one exit at the end of a block (`LG004` otherwise). The emitted C \
+                    registers no label for a `traverse` and refuses the exit by name \
+                    (`C001`); the C backend is deprecated and gets nothing new. Facts about \
+                    the slots NOT visited are not derived: after an early exit the checker \
+                    claims nothing about the rest of the table.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1413 (the consuming walk falls with N580 alone); the \
+                      clean side is beispiele/190-erster-treffer.gab (checks, exports, and \
+                      its generated module builds in Lean).",
+        fundstelle: "crates/gabbro-check/src/schleifen.rs (Traverse arm, springt_auf); \
+                     crates/gabbro-check/src/lean_g.rs (Leave/Next arm)",
+    },
+    Satz {
+        name: "m1.breiter_kontext",
+        kennungen: &["M104", "M101"],
+        aussage: "An integer `+ - *` (and nested uses of these) standing as the \
+                  WHOLE value in a declared non-wrapping integer context `T` of \
+                  greater-or-equal machine width and same signedness class \
+                  computes in `T`s width: every operand converts implicitly \
+                  (exactly the rewrite the user wrote by hand), so `M104` stays \
+                  silent where the result fits `T`, and `M101` holds the fit \
+                  against `T`s declared range as before. Contexts are `let x : \
+                  T = e`, `return e` at declared result `T`, assignment `p = e` \
+                  at place type `T`, and call arguments at parameter type `T`. \
+                  Operands already at `T` width keep the computation identical \
+                  to the narrow path, so `u32 + u32` into `u32` still falls at \
+                  `M104` (`gift/1409`).",
+        vorbehalt: "Only whole values widen: sub-expressions of comparisons, \
+                    shift counts, division and remainder, mixed signedness, \
+                    wrapping operands or targets, and compound assignment keep \
+                    today's behaviour bit for bit (`gift/1410`, `gift/1412`). \
+                    Narrowing refinements (`V2`, `abrunden`) keep priority over \
+                    the widened computation. The legacy C backend computes in \
+                    the operands' width, so a widened program needs operand \
+                    casts there (emitter) or stays refused. No new diagnostic \
+                    code was minted for this rule.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/189 (four contexts plus nested `a * b + c`, \
+                      clean); beispiele/gift/1409 (same width, `M104` stays), \
+                      /1410 (no context, `M104` stays), /1411 (`M101` alone, \
+                      no `M104`), /1412 (mixed signs, `M104` stays); \
+                      `583-summe-verlaesst-die-breite.gab` goes silent (B3 \
+                      paper cut closed, whitelisted as in lane 191); exact \
+                      code sets in `rechenwerk.rs` (`breiter_kontext_*`, nine \
+                      tests). Old-vs-new sweep over the corpus: zero diffs \
+                      outside the intended flips.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`ausdruck_mit_kontext`, \
+                     `breiter_kontext`, `binaer` context parameter; let, \
+                     return, assignment and call-argument sites); \
+                     crates/gabbro-check/tests/rechenwerk.rs",
     },
     Satz {
         name: "m1.whole_array_store",
@@ -2991,12 +3054,68 @@ pub const M1: &[Satz] = &[
                      `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean",
     },
     Satz {
+        name: "namen.typ_parameterliste",
+        kennungen: &["N582"],
+        aussage: "A parameter list on a type (`type Queue(T) = ...`) stands only on a `linear` \
+                  witness (`linear ghost type Held(Lock)`). On any other type it falls as \
+                  `N582`: Gabbro has no type parameters, and the list used to parse, emit \
+                  byte-identically to the unparameterised type and die at the emitter on the \
+                  first use of `T` (`messung/schreibprobe/S20`).",
+        vorbehalt: "It says nothing about generics as a language feature -- that is a decision \
+                    (`Ty` is deliberately non-recursive, OFFEN O15) and stays open. It reads \
+                    the declaration only: a `linear` type with a list is left to the \
+                    linearity passes.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1417 (a record with `(T)` falls with N582 alone); the \
+                      clean side is every `linear ghost type X(Y)` of the corpus.",
+        fundstelle: "crates/gabbro-check/src/namen.rs (typdecl)",
+    },
+    Satz {
+        name: "zeichenfolge.zelle",
+        kennungen: &["N581"],
+        aussage: "A bounded string CELL is read WHOLE into a local and written WHOLE from a \
+                  string value (SPRACHE-EFFIZIENZ #13): a table slot field `string max N`, \
+                  and the direct element of a static one-dimensional string array \
+                  `[string max N; K]`. Read: `let s : string max M = T.slots[i].f;` / \
+                  `= NAMEN[i];` (the cell max must fit `M`, copy rule `N455`); written: \
+                  `T.slots[i].f = s;` / `NAMEN[i] = s;` (the value must fit the cell max, \
+                  `N453`/`N455`). Every other mention of the cell -- an operand, a \
+                  condition, an argument, a `return`, `lenof(cell)`, an index into it, a \
+                  compound assignment, a self-copy, a `let … else` source -- falls as `N581`, because a length \
+                  fact about memory another write can change between the check and the use \
+                  would be unsound; the facts (`lenof`, an index below the length) hold for \
+                  the LOCAL.",
+        vorbehalt: "Only table slot fields and the direct element of a static \
+                    one-dimensional string array are cells; a string in a record field, a \
+                    nested array, a `const`, a pointer target or a parameter array stays \
+                    `N465`. A slot cell is a place `X.slots[i].f` whose basis is a table or \
+                    a parameter of table type; names are unqualified per unit. The only \
+                    static string initialiser is `= 0` (every cell empty). Concurrent \
+                    writers are the weak-memory model's business (a whole-cell copy is not \
+                    atomic), so a shared cell needs the lock discipline of any carrier. The \
+                    exporter has no string form (`LG002`), so such a program stays \
+                    UNCERTIFIED; `ZeichenfolgeZelle.lean` (generic over any cell count) \
+                    proves the copy discipline, it does not put strings into the goal \
+                    theorem.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1414 (`lenof` of a slot cell, N581 alone), 1415 \
+                      (copy-in into a smaller local, N455), 1416 (copy-out of a longer \
+                      string, N455); for the array form 1418 (N581), 1419 (N455), 1420 \
+                      (N455), 1421 (a nested array stays N465); the clean sides are \
+                      beispiele/191-name-im-slot.gab and beispiele/192-namenfeld.gab. Lean: \
+                      grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean \
+                      (laden_speichern, laden_speichern_ne, laden_len, zelleBytes_le_C).",
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (zelle, zelle_anfang, \
+                     zellen_ablehnung); \
+                     grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean",
+    },
+    Satz {
         name: "zeichenfolge.orte",
         kennungen: &["N465"],
         aussage: "A bounded string lives where its length is followed: as the \
                   whole type of a function parameter, a function result or a \
                   `let` annotation. Anywhere else a `string max N` is refused \
-                  (`N465`) -- a struct or table field, a `const`/`static`/atomic \
+                  (`N465`) -- a struct (record) field, a `const`/`static`/atomic \
                   type, an arena element, a type alias, an array element, a \
                   variant payload, a pointer target, a function-pointer \
                   parameter, a `syscall` head, a nested `let` type, an `alloc` \

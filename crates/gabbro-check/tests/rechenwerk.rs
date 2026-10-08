@@ -9898,3 +9898,143 @@ fn der_else_eines_narrow_endet_in_einer_nie_funktion_im_modul() {
     ));
     assert!(schlecht.iter().any(|c| c == "M105"), "a returning call does not: {schlecht:?}");
 }
+
+// --- SPRACHE-EFFIZIENZ #18: breiter Kontext -------------------------------------------
+//
+// `u32 + u32` standing as the WHOLE value in a declared non-wrapping integer
+// context of greater width and same signedness computes in the context's
+// width (`m1.rs`: `ausdruck_mit_kontext`, `breiter_kontext`): `M104` stays
+// silent, `M101` holds the fit. One test per rule edge; exact code sets,
+// so a returning `M104` (or any newcomer) fails loudly here.
+
+/// Fehler-Codes (nur Stufe Fehler), sortiert -- exakte Mengen statt `contains`.
+fn breite_codes(quelle: &str) -> Vec<String> {
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+    gabbro_check::pruefe(&baum, &mut a);
+    let mut v: Vec<String> = a
+        .absagen
+        .iter()
+        .filter(|x| x.stufe == gabbro_syntax::diag::Stufe::Fehler)
+        .map(|x| x.code.to_string())
+        .collect();
+    v.sort();
+    v
+}
+
+/// `let w : u64 = a + b;` -- finding 18 itself: silent.
+#[test]
+fn breiter_kontext_let_schweigt() {
+    let q = "module t {
+impl fn f(a : u32, b : u32) -> u64 effects { pure } costs <= 8 ops {
+    let w : u64 = a + b;
+    return w;
+}
+}";
+    assert_eq!(breite_codes(q), Vec::<String>::new(), "finding 18 stays silent:\n{q}");
+}
+
+/// `return a + b;` into a declared `u64` result: silent.
+#[test]
+fn breiter_kontext_return_schweigt() {
+    let q = "module t {
+impl fn f(a : u32, b : u32) -> u64 effects { pure } costs <= 8 ops {
+    return a + b;
+}
+}";
+    assert_eq!(breite_codes(q), Vec::<String>::new(), "return widens:\n{q}");
+}
+
+/// `w = a + b;` into a `u64` place: silent.
+#[test]
+fn breiter_kontext_zuweisung_schweigt() {
+    let q = "module t {
+impl fn f(a : u32, b : u32) -> u64 effects { pure } costs <= 8 ops {
+    let mut w : u64 = 0;
+    w = a + b;
+    return w;
+}
+}";
+    assert_eq!(breite_codes(q), Vec::<String>::new(), "assignment widens:\n{q}");
+}
+
+/// Call argument `gibt(a + b)` at a `u64` parameter: silent.
+#[test]
+fn breiter_kontext_rufargument_schweigt() {
+    let q = "module t {
+impl fn gibt(x : u64) effects { pure } costs <= 4 ops {
+}
+impl fn f(a : u32, b : u32) -> u64 effects { pure } costs <= 16 ops {
+    gibt(a + b);
+    return a + b;
+}
+}";
+    assert_eq!(breite_codes(q), Vec::<String>::new(), "call argument widens:\n{q}");
+}
+
+/// Nested `a * b + c` in `u64`: silent, with a KNOWN range (no `Unbekannt`).
+#[test]
+fn breiter_kontext_verschachtelt_schweigt() {
+    let q = "module t {
+impl fn f(a : u32, b : u32, c : u32) -> u64 effects { pure } costs <= 16 ops {
+    let n : u64 = a * b + c;
+    return n;
+}
+}";
+    assert_eq!(breite_codes(q), Vec::<String>::new(), "nesting widens too:\n{q}");
+}
+
+/// Same width is no widening: `u32 + u32` into `u32` still falls, with
+/// `M104` at the operation and `M101` at the return (the range fits
+/// neither width).
+#[test]
+fn breiter_kontext_gleiche_breite_faellt_m104() {
+    let q = "module t {
+impl fn f(a : u32, b : u32) -> u32 effects { pure } costs <= 4 ops {
+    return a + b;
+}
+}";
+    assert_eq!(
+        breite_codes(q),
+        vec!["M101".to_string(), "M104".to_string()],
+        "same width keeps M104 (and M101 at the return):\n{q}"
+    );
+}
+
+/// No declared context, no widening: `u32 + u32` under an `if` still falls,
+/// exactly `M104`.
+#[test]
+fn breiter_kontext_ohne_kontext_faellt_m104() {
+    let q = "module t {
+impl fn f(a : u32, b : u32) -> u32 effects { pure } costs <= 8 ops {
+    if a + b == 0 {
+        return 0;
+    }
+    return 1;
+}
+}";
+    assert_eq!(breite_codes(q), vec!["M104".to_string()], "condition keeps M104:\n{q}");
+}
+
+/// The range must still fit the DECLARED range: `M101`, and no `M104`.
+#[test]
+fn breiter_kontext_bereich_faellt_nur_m101() {
+    let q = "module t {
+impl fn f(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u64 effects { pure } costs <= 8 ops {
+    let w : u64 in 0 .. 100 = a + b;
+    return w;
+}
+}";
+    assert_eq!(breite_codes(q), vec!["M101".to_string()], "fit is still held:\n{q}");
+}
+
+/// Mixed signedness joins nothing: unsigned operands into `i64` still fall,
+/// exactly `M104`.
+#[test]
+fn breiter_kontext_gemischt_faellt_m104() {
+    let q = "module t {
+impl fn f(a : u32, b : u32) -> i64 effects { pure } costs <= 4 ops {
+    return a + b;
+}
+}";
+    assert_eq!(breite_codes(q), vec!["M104".to_string()], "mixed signs keep M104:\n{q}");
+}
