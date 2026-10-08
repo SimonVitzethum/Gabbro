@@ -202,9 +202,9 @@ no label for a `traverse` and refuses the exit by name (`C001`); nothing new the
 | G1 | no type parameters / generics | BLOCKED: language decision (`Ty` is deliberately non-recursive, OFFEN O15); needs Simon |
 | G2 | record as a value has no `Ty` (`LG002`) | BLOCKED: priced and refused 2026-09-15 (0 of 113 corpus programs gain); needs a `Ty.prod` decision |
 | G3 | `traverse` early exit | DONE (#19) |
-| G4 | windowed `traverse from s count n` | OPEN: `P001`; parser, bounds, effects and Lean window arms |
+| G4 | windowed `traverse from s count n` | Lean groundwork DONE (`Fenster.lean`, agent 03, reviewed and built: `indizes_append` chunking lemma, `lauf_append`, `lauf_leave`, `besucht_praefix`). Parser (`P001`), bounds rule, effects and the exporter/G window arm OPEN |
 | G5 | `option` over ordinary types | OPEN: language design (index-only today) |
-| G6 | `count` as a predicate | OPEN: invariant language (`D021`) |
+| G6 | `count` as a predicate | Lean groundwork IN PROGRESS (`Zaehlen.lean`, agent 03: the single-slot update law of a count). The invariant-language form (`D021`) OPEN |
 | G7 | strings in aggregates | BLOCKED, awaiting Simon (#13) |
 | G8 | byte pointers have no G form (O37) | OPEN |
 | G9 | `Endblock` binders (`let x = f()`, return under `locks`) | OPEN: named model decisions (O14/O15/O27) |
