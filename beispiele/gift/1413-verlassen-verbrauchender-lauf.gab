@@ -1,0 +1,43 @@
+-- erwartet: N580
+-- **`leave` over a `by consuming` walk (SPRACHE-EFFIZIENZ #19).** The binder of a
+-- `traverse` is its label for `leave`/`next`, but only a `by unvisited` walk takes the exit:
+-- a consuming walk removes every slot it visits, and stopping half way leaves a removal the
+-- walk's statement does not describe.
+module gift::verlassen_verbrauchend {
+
+const NSLOTS : u32 = 64;
+
+lock KAPPEN protects { Kappenraum } rank 0 held <= 400 ops;
+
+table Kappenraum count NSLOTS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        benutzt     : bool,
+        elter       : option index into Kappenraum,
+        erstes_kind : option index into Kappenraum,
+        naechstes   : option index into Kappenraum,
+    }
+}
+
+impl fn blatt_loeschen(s : index into Kappenraum)
+    requires Held(KAPPEN)
+    effects  { reads Kappenraum.slots, writes Kappenraum.slots, locks KAPPEN }
+    costs    <= 200 ops
+{
+    Kappenraum.slots[s].benutzt = false;
+}
+
+impl fn einsammeln(s : index into Kappenraum)
+    requires Held(KAPPEN)
+    effects  { reads Kappenraum.slots, consumes Kappenraum.slots, locks KAPPEN }
+    costs    <= 16371840 ops
+{
+    traverse opfer over descendants of Kappenraum.slots[s] by consuming
+        touches reads Kappenraum.slots, consumes Kappenraum.slots
+    {
+        blatt_loeschen(opfer);
+        leave opfer;
+    }
+}
+
+}

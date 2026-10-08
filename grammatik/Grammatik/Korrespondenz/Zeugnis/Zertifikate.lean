@@ -9,7 +9,7 @@
 -/
 import Grammatik.Korrespondenz.Korpus.GenOblig104
 import Grammatik.Korrespondenz.Korpus.GenOblig108
-import Grammatik.Zertifikat.Reihe01.G187_bool_statisch
+import Grammatik.Zertifikat.G190_erster_treffer
 import Grammatik.Zertifikat.Reihe00.G15_own_traegt_beide_rechte
 import Grammatik.Zertifikat.Reihe00.G16_by_ops_am_feld
 import Grammatik.Zertifikat.Reihe00.G34_markierter_wert
@@ -33,6 +33,7 @@ import Grammatik.Zertifikat.Reihe01.G166_eintritt_irq_maskiert
 import Grammatik.Zertifikat.Reihe01.G174_tor_im_modell
 import Grammatik.Zertifikat.Reihe01.G181_gate_at_top_level
 import Grammatik.Zertifikat.Reihe01.G182_fallible_gate
+import Grammatik.Zertifikat.Reihe01.G187_bool_statisch
 import Grammatik.Zertifikat.Reihe02.G219_unaeres_minus
 import Grammatik.Zertifikat.Reihe04.G414_tabellenspeicher_heisst_so
 import Grammatik.Zertifikat.Reihe07.G700_lesen_ohne_klausel

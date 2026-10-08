@@ -7,7 +7,8 @@
 //! taken inside released on the way out (`Austritt::schleifen`). What this
 //! file pins: the checker-clean exit lowers, lands after the loop, and
 //! releases on the path; a `leave`/`next` naming the traverse binder, and
-//! the windowed walk, stay refused (S001/P001).
+//! the windowed walk, stay refused (S001/P001); since SPRACHE-EFFIZIENZ #19 the traverse BINDER
+//! is a label for `by unvisited` walks.
 
 use gabbro_syntax::diag::Stufe;
 
@@ -132,22 +133,33 @@ fn leave_escapes_the_descendant_walk() {
     assert!(rumpf < sprung && sprung < marke, "exit leaves from the body:\n{c}");
 }
 
-/// A `traverse` carries no label, so `leave`/`next` naming its binder is
-/// S001 -- the negative pin beside the positive ones above.
+/// The BINDER of a `traverse` is its label (SPRACHE-EFFIZIENZ #19): `leave i;` / `next i;`
+/// inside a `by unvisited` walk are clean at the checker. (The emitter has no label for a
+/// `traverse` and refuses by name -- the C backend is deprecated and gets nothing new.)
 #[test]
-fn exit_naming_the_traverse_binder_falls() {
-    let q = format!(
-        "{KOPF}impl fn f(w : ptr<normal, rw> W) effects {{ writes w.slots }}\n\
-        {{ forever arbeit per_pass bounded 1024 ops on_exceeded stop \
-        effects {{ writes w.slots }} progress tickt\n\
-        {{ traverse i over slots of w by unvisited touches writes w.slots \
-        {{ leave i; }} }}\nreturn; }}\n}}"
-    );
-    assert_eq!(fehlercodes(&q), vec!["S001".to_string()]);
+fn exit_naming_the_traverse_binder_is_clean_when_unvisited() {
     let q = format!(
         "{KOPF}impl fn f(w : ptr<normal, rw> W) effects {{ writes w.slots }} costs <= 4096 ops\n\
         {{ traverse i over slots of w by unvisited touches writes w.slots \
-        {{ next i; }} }}\n}}"
+        {{ if w.slots[i].a {{ leave i; }} }} }}\n}}"
+    );
+    assert!(fehlercodes(&q).is_empty(), "refused: {:?}", fehlercodes(&q));
+    let q = format!(
+        "{KOPF}impl fn f(w : ptr<normal, rw> W) effects {{ writes w.slots }} costs <= 4096 ops\n\
+        {{ traverse i over slots of w by unvisited touches writes w.slots \
+        {{ if w.slots[i].a {{ next i; }} }} }}\n}}"
+    );
+    assert!(fehlercodes(&q).is_empty(), "refused: {:?}", fehlercodes(&q));
+}
+
+/// The exit stays refused for a name that is NOT an enclosing label (`S001`), and for a
+/// `by consuming` walk (`N580`).
+#[test]
+fn exit_naming_a_stranger_or_a_consuming_walk_falls() {
+    let q = format!(
+        "{KOPF}impl fn f(w : ptr<normal, rw> W) effects {{ writes w.slots }} costs <= 4096 ops\n\
+        {{ traverse i over slots of w by unvisited touches writes w.slots \
+        {{ leave j; }} }}\n}}"
     );
     assert_eq!(fehlercodes(&q), vec!["S001".to_string()]);
 }

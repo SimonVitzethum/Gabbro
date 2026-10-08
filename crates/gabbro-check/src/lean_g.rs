@@ -4417,7 +4417,22 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         StmtArt::Start(_) => tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock),
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
-        StmtArt::Leave(_) | StmtArt::Next(_) => Err(refuse("LG004", format!("`leave`/`next` in {fname} has no G form in this fragment"))),
+        // **`leave i;` / `next i;` over a `traverse` binder is `Stmt.leave`/`Stmt.next`**
+        // (SPRACHE-EFFIZIENZ #19). The model's loops are unlabelled -- `leave` exits the
+        // INNERMOST loop (`Ausgang.ausSchleife`) -- so the exit travels only when it names
+        // the innermost loop binder; an outer label, a mid-sequence exit (dead code behind
+        // it) and the top level (no loop, `l = false`) keep a named refusal.
+        StmtArt::Leave(m) | StmtArt::Next(m) => {
+            let wort = if matches!(&first.art, StmtArt::Leave(_)) { "leave" } else { "next" };
+            if !rest.is_empty() {
+                return Err(refuse("LG004", format!("`{wort}` in the middle of {fname} has no G form")));
+            }
+            let innerste = ctx.names.iter().find(|(_, _, k)| matches!(k, NameKind::Loop)).map(|(n, _, _)| n.clone());
+            if endblock || innerste.as_deref() != Some(m.text.as_str()) {
+                return Err(refuse("LG004", format!("`{wort} {}` in {fname} does not name the innermost `traverse` binder: no G form", m.text)));
+            }
+            Ok(format!("(.cons (.{wort} rfl) {cont})"))
+        }
     }
 }
 

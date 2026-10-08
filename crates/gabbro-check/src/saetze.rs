@@ -2635,6 +2635,30 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs (feld_kopie_urteil, assignment arm)",
     },
     Satz {
+        name: "schleifen.traverse_ausgang",
+        kennungen: &["N580"],
+        aussage: "The binder of a `traverse` is the label of its body (SPRACHE-EFFIZIENZ #19): \
+                  `leave i;` leaves the walk at the first hit and `next i;` ends the pass \
+                  (`S001` no longer fires for it). Only a `by unvisited` walk takes the exit; \
+                  a `leave`/`next` naming the binder of a `by consuming` walk falls as \
+                  `N580`, because the walk removes every slot it visits and stopping half \
+                  way leaves a removal its statement does not describe.",
+        vorbehalt: "The Lean model already carries the exit (`Stmt.leave`/`Stmt.next`, \
+                    `traverseLauf`: the loop invariant is checked at the exit and `next` \
+                    ends the pass); the exporter writes it only for the INNERMOST binder, \
+                    one exit at the end of a block (`LG004` otherwise). The emitted C \
+                    registers no label for a `traverse` and refuses the exit by name \
+                    (`C001`); the C backend is deprecated and gets nothing new. Facts about \
+                    the slots NOT visited are not derived: after an early exit the checker \
+                    claims nothing about the rest of the table.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1413 (the consuming walk falls with N580 alone); the \
+                      clean side is beispiele/190-erster-treffer.gab (checks, exports, and \
+                      its generated module builds in Lean).",
+        fundstelle: "crates/gabbro-check/src/schleifen.rs (Traverse arm, springt_auf); \
+                     crates/gabbro-check/src/lean_g.rs (Leave/Next arm)",
+    },
+    Satz {
         name: "m1.whole_array_store",
         kennungen: &["N287"],
         aussage: "A whole array is never a store target (`N287`): C has no assignment \
