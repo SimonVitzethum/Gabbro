@@ -184,9 +184,9 @@ no label for a `traverse` and refuses the exit by name (`C001`); nothing new the
 
 | # | Finding | Status |
 |---|---|---|
-| 1-9, 12 | minimal-width / packed layout of ranged ints, bools, index cells, tags, records | Lean model DONE (`Speichermodell/Darstellung.lean`, merged); `DarstellungTy.lean` over `Ty`/`encW` IN PROGRESS (agent 03); native lowering OPEN (compiler work) |
+| 1-9, 12 | minimal-width / packed layout of ranged ints, bools, index cells, tags, records | Lean model DONE (`Speichermodell/Darstellung.lean`, merged); `DarstellungTy.lean` over `Ty`/`encW` DONE (agent 03, reviewed and built here: `tyBits`, `encN_lt`, `decN_encN`, `narrow_fits`, `narrow_le_wide`, packed `getCell_setCell`/`getCell_setCell_ne`, `packBytes_cells`; standard axioms); record field ordering (`RecordLage.lean`, #8) IN PROGRESS (agent 03); native lowering OPEN (compiler work) |
 | 10, 11 | string length word | C change not taken (C deprecated); native size theorem is part of the string design |
-| 13 | strings in tables / arrays / records | **BLOCKED, awaiting Simon** (design in Round 2: copy-in/copy-out cells, `ZeichenfolgeZelle.lean`, checker rule `N581`) |
+| 13 | strings in tables / arrays / records | **DONE for table slot fields (2026-10-08)**: Lean `ZeichenfolgeZelle.lean` (copy-out/copy-in round trip, other cells untouched, loaded string fits, native cell never above the C layout; standard axioms), checker rule `N581` (a slot field `string max N` is read whole into a local and written whole; any other mention falls), example 191 (UNCERTIFIED `LG002`, no exporter string form), gifts 1414-1416, gift 1163 re-aimed at a record field (still `N465`). Record fields, array elements, statics stay `N465`: OPEN |
 | 14 | `static mut X : bool = false` | DONE (legacy C emit, example 187) |
 | 15 | static array initialiser list | DONE (parser + `konstanten.rs`, example 186, gifts 1405/1406) |
 | 16 | whole-array copy | DONE (`N579`, example 188, gifts 1407/1408) |
@@ -213,7 +213,7 @@ no label for a `traverse` and refuses the exit by name (`C001`); nothing new the
 | G12 | dense 256-way dispatch | OPEN: jump-table lowering belongs to the native compiler |
 | R/C/P/U rows | RAM / compute / proof-time / ugly rows of the Lean report | covered above where they overlap (strings, bool static, traverse exit); rest OPEN |
 | E1, E2 | ceremony | `gabbro zeremonie --table`: A1-A4 (annotation equal to what the signature or declaration says; an effect entry a callee already declares) and R1-R4 (duplicates) MAY FALL; T1-T10 (effects, costs, requires/ensures, maintains, invariants, loop bounds, touches, reserved, register class) MAY NOT. Making derivable clauses optional is a language decision (PLAN-EINFACHHEIT); no clause was made optional this round. OPEN, needs Simon |
-| U1 | `type Q(T) = ...` parses and means a ghost parameter | OPEN: refusing `(T)` on a non-ghost type is a small checker rule, not done |
+| U1 | `type Q(T) = ...` parses and means a ghost parameter | DONE (2026-10-08): `N582` (gift 1417, sentence `namen.typ_parameterliste`); `linear` witnesses keep their list |
 
 Decisions needed from Simon: strings in aggregates; generics; records as values; making derivable
 ceremony optional; `option` over ordinary types.
