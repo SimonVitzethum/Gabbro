@@ -82,11 +82,6 @@ pub mod abgeleitet;
 pub mod abi_tabelle;
 pub mod syscall;
 pub mod zielbindung;
-/// **Wave A, lane 273 -- the direct-x86 target vocabulary.** A safe,
-/// dependency-free Rust mirror of `grammatik/Grammatik/X86/Kern/Typen.lean`.
-/// Unwired foundation: no checker pass, emitter template or CLI reads it,
-/// and representation fidelity to Lean is unproved (see `x86::typen`).
-pub mod x86;
 /// **Lane O-1 -- the checked clone handoff (K-1).** The `stack` clause
 /// against its shape (`N446`/`N447`) and the `child` path against
 /// no-leave (`N448`), no-fall-through (`N449`) and the gate behind it
