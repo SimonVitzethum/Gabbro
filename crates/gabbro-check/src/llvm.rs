@@ -3220,6 +3220,9 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
         StmtArt::ResetArena(name) => {
             if k.s.arenen.contains_key(&name.text) {
                 k.zeile(&format!("store i64 0, ptr {}, align 8", gteil(&name.text, "belegt")));
+                // **TODO §1-B:** eine frische Generation hat keine freien
+                // Slots (der Commit bleibt stehen, die Liste nicht).
+                k.zeile(&format!("store i64 -1, ptr {}, align 8", gteil(&name.text, "frei")));
             } else {
                 weigere(k.s, "Y103", st.span, format!("reset of unknown arena {}", name.text));
             }
@@ -3228,6 +3231,8 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
             weigere(k.s, "Y103", st.span, "static range give-back".to_string());
         }
         StmtArt::Grow(g) => senke_grow(k, g, st.span),
+        // **TODO §1-B:** the slot release (intrusive free list).
+        StmtArt::Frei(f) => senke_frei(k, f, st.span),
         StmtArt::Child(b) => {
             // Kind-Pfad: läuft hinter dem Tor — hier läuft der Rumpf.
             senke_block(k, b);
@@ -4114,6 +4119,76 @@ fn senke_sperrt(k: &mut Koerper, s: &SperrtStmt, span: Span) {
     }
 }
 
+/// **Zelle hinter der Laufzeit-Basis (TODO §1-B).** Die dritte sanktionierte
+/// `inttoptr`-Stelle, geteilt von Hochwasser-Pfad, Freilisten-Pop und `free`.
+fn arena_zelle(k: &mut Koerper, tisch: &str, idx: &str) -> Option<String> {
+    let ai = k.s.arenen.get(tisch).cloned()?;
+    let b = k.tmp();
+    k.zeile(&format!("{b} = load i64, ptr {}, align 8", gteil(tisch, "basis")));
+    let bp = k.tmp();
+    k.zeile(&format!("{bp} = inttoptr i64 {b} to ptr"));
+    let zelle = k.tmp();
+    k.zeile(&format!(
+        "{zelle} = getelementptr {}, ptr {bp}, i64 {idx}",
+        ai.elem.text()
+    ));
+    Some(zelle)
+}
+
+/// **`free A[i];` senken (TODO §1-B, intrusive Freiliste).**
+///
+/// Der Slot trägt danach das Kettenglied (alter Kopf als `i64`), der Kopf
+/// zeigt auf ihn. Der Prüfer (`N586`) hält Einfach-Freigabe und Tod; hier
+/// steht kein Zweig -- ein lebender Slot ist immer verlinkbar. Elemente
+/// unter 8 Bytes tragen kein Glied (`Y103` -- der Prüfer kennt keine Größen,
+/// also steht die Schranke hier, benannt statt schweigend).
+fn senke_frei(k: &mut Koerper, f: &FreiStmt, span: Span) {
+    let tisch = f.ort.basis.text.clone();
+    let ai = match k.s.arenen.get(&tisch).cloned() {
+        Some(x) => x,
+        None => {
+            weigere(k.s, "Y103", span, format!("release from unknown arena {tisch}"));
+            return;
+        }
+    };
+    if ai.groesse < 8 {
+        weigere(
+            k.s,
+            "Y103",
+            span,
+            format!(
+                "release from arena {tisch} with {}-byte elements cannot carry the link",
+                ai.groesse
+            ),
+        );
+        return;
+    }
+    let ix = match f.ort.suffixe.as_slice() {
+        [OrtSuffix::Index(e)] => e,
+        _ => {
+            weigere(k.s, "Y103", span, format!("release of `{}` is no single slot", f.ort.text()));
+            return;
+        }
+    };
+    let v = match senke_expr(k, ix) {
+        Some(v) => v,
+        None => return,
+    };
+    let idx = match angleiche_mit_weigere(k, v, &LlTyp::Int(64), span) {
+        Some(w) => w.text,
+        None => return,
+    };
+    let zelle = match arena_zelle(k, &tisch, &idx) {
+        Some(z) => z,
+        None => return,
+    };
+    let frei_g = gteil(&tisch, "frei");
+    let kopf = k.tmp();
+    k.zeile(&format!("{kopf} = load i64, ptr {frei_g}, align 8"));
+    k.zeile(&format!("store i64 {kopf}, ptr {zelle}, align {}", nat_align(&ai.elem)));
+    k.zeile(&format!("store i64 {idx}, ptr {frei_g}, align 8"));
+}
+
 fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
     let ai = match k.s.arenen.get(&a.tisch.text).cloned() {
         Some(x) => x,
@@ -4131,6 +4206,48 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
         None => return,
     };
     let gname_tisch = a.tisch.text.clone();
+    let weiter = k.block("alloc_weiter");
+    let voll = k.block("alloc_voll");
+    // Freiliste zuerst (TODO §1-B): wiederverwendete Slots brauchen weder
+    // Commit noch Abtastung -- der Speicher steht bereit. Der Pfad mündet
+    // in `fertig`, nicht in `weiter`: `weiter` liest den Hochwasser-Zähler,
+    // den dieser Pfad nie lädt (SSA-Dominanz).
+    let fertig = k.block("alloc_fertig");
+    let frei_g = gteil(&gname_tisch, "frei");
+    let kopf = k.tmp();
+    k.zeile(&format!("{kopf} = load i64, ptr {frei_g}, align 8"));
+    let leer = k.tmp();
+    k.zeile(&format!("{leer} = icmp eq i64 {kopf}, -1"));
+    let hochwasser = k.block("alloc_hochwasser");
+    let freiliste = k.block("alloc_freiliste");
+    k.zeile(&format!("br i1 {leer}, label %{hochwasser}, label %{freiliste}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{freiliste}:");
+    k.beendet = false;
+    // Pop: Index ist der Kopf, Kopf ist das Glied im Slot; belegt rührt
+    // nicht (der Slot steht unter der Hochwassermarke).
+    let zelle_f = match arena_zelle(k, &gname_tisch, &kopf) {
+        Some(z) => z,
+        None => return,
+    };
+    let nach = k.tmp();
+    k.zeile(&format!("{nach} = load i64, ptr {zelle_f}, align {}", nat_align(&ai.elem)));
+    k.zeile(&format!("store i64 {nach}, ptr {frei_g}, align 8"));
+    k.zeile(&format!("store {} {}, ptr {zelle_f}, align {}", ai.elem.text(), w.text, nat_align(&ai.elem)));
+    // Index binden (schmal -- der Zähler passt immer). Derselbe Schwanz wie
+    // unten, wiederholt statt über einen Join: zwei Pfade, kein Phi.
+    let islot_f = k.alloca("i32");
+    let trunc_f = k.tmp();
+    k.zeile(&format!("{trunc_f} = trunc i64 {kopf} to i32"));
+    k.zeile(&format!("store i32 {trunc_f}, ptr {islot_f}, align 4"));
+    k.lege_an(
+        a.name.text.clone(),
+        Bindung { ptr: islot_f, ll: LlTyp::Int(32), zeichen: Zeichen::U, form: None , fluechtig: false },
+    );
+    k.zeile(&format!("br label %{fertig}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{hochwasser}:");
+    k.beendet = false;
     let belegt = gteil(&gname_tisch, "belegt");
     let idx = k.tmp();
     k.zeile(&format!("{idx} = load i64, ptr {belegt}, align 8"));
@@ -4138,8 +4255,6 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
     // einzigen Systemruf (die Schranke steht, RAM steht nicht dahinter).
     let ok = k.tmp();
     k.zeile(&format!("{ok} = icmp ult i64 {idx}, {}", ai.hi));
-    let weiter = k.block("alloc_weiter");
-    let voll = k.block("alloc_voll");
     k.zeile(&format!("br i1 {ok}, label %{weiter}, label %{voll}"));
     k.beendet = true;
     let _ = writeln!(k.text, "{voll}:");
@@ -4192,6 +4307,11 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
         a.name.text.clone(),
         Bindung { ptr: islot, ll: LlTyp::Int(32), zeichen: Zeichen::U, form: None , fluechtig: false },
     );
+    // Hochwasser-Pfad mündet in `fertig` (wie die Freiliste oben).
+    k.zeile(&format!("br label %{fertig}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{fertig}:");
+    k.beendet = false;
     let _ = a.veraenderlich;
     let _ = a.typ;
 }
@@ -5453,13 +5573,15 @@ fn emit_globale(s: &mut Senke) {
         };
         let _ = writeln!(s.rumpf, "@{} = global {} {init}, align {}", escape_name(n), ll.text(), nat_align(ll));
     }
-    // Arenen: drei Wörter (Basis, belegt, bereit) — KEIN Feld (kein RAM vorab;
-    // Reserve ist Adressraum via `mmap`, Commit via `mprotect`, siehe `arena_bereit`).
+    // Arenen: vier Wörter (Basis, belegt, bereit, Freilisten-Kopf) — KEIN Feld
+    // (kein RAM vorab; Reserve ist Adressraum via `mmap`, Commit via `mprotect`,
+    // siehe `arena_bereit`). Der Kopf trägt `-1` für leer (TODO §1-B).
     let arenen: Vec<(String, ArenaInfo)> = s.arenen.clone().into_iter().collect();
     for (n, _) in &arenen {
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "basis"));
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "belegt"));
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "bereit"));
+        let _ = writeln!(s.rumpf, "{} = global i64 -1, align 8", gteil(n, "frei"));
     }
 }
 
@@ -8247,6 +8369,12 @@ fn rufe_in_stmt(st: &Stmt, out: &mut Vec<Pfad>) {
             rufe_in_expr(&g.mehr, out);
             rufe_in_block(&g.sonst, out);
         }
+        // **TODO §1-B:** calls in the freed slot's index expressions.
+        StmtArt::Frei(f) => {
+            for e in crate::ausdruecke_im_ort(&f.ort) {
+                rufe_in_expr(e, out);
+            }
+        }
         StmtArt::Child(b) => rufe_in_block(b, out),
         StmtArt::Start(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {}
     }
@@ -8895,21 +9023,45 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     k.beendet = true;
     let _ = writeln!(k.text, "{schritt}:");
     k.beendet = false;
-    // Nächster Schritt (an der Decke: voll).
-    let stueck_elems = (COMMIT_SCHRITT / breite).max(1);
+    // Nächster Schritt (an der Decke: voll). Alles in BYTES (Elemente nur an
+    // der Naht: `bereit`/`bedarf` zählen Elemente, der Rest Bytes): Bedarf in
+    // Bytes, auf 1 MiB ausgerichtet (Vielfaches von 4K/16K/64K-Seiten), an der
+    // Decke gekappt. Leere Länge heißt voll, nicht Wachstum.
     let vollep = ai.max.saturating_mul(breite);
     let bb = k.tmp();
     k.zeile(&format!("{bb} = load i64, ptr {basis}, align 8"));
     let versatz = k.tmp();
     k.zeile(&format!("{versatz} = mul i64 {c}, {breite}"));
+    let fehlen = k.tmp();
+    k.zeile(&format!("{fehlen} = sub i64 {bedarf}, {c}"));
+    let brauchen = k.tmp();
+    k.zeile(&format!("{brauchen} = mul i64 {fehlen}, {breite}"));
+    let ende = k.tmp();
+    k.zeile(&format!("{ende} = add i64 {versatz}, {brauchen}"));
+    // Aufrunden auf 1 MiB (2^20): `ende + 0xFFFFF & ~0xFFFFF`.
+    let ende_auf = k.tmp();
+    k.zeile(&format!("{ende_auf} = add i64 {ende}, 1048575"));
+    let ende_rund = k.tmp();
+    k.zeile(&format!("{ende_rund} = and i64 {ende_auf}, -1048576"));
+    // Von unten abrunden (bereits committete Seiten doppelt zu mappen ist
+    // idempotent), an der Decke kappen.
+    let von = k.tmp();
+    k.zeile(&format!("{von} = and i64 {versatz}, -1048576"));
+    let decke = k.tmp();
+    k.zeile(&format!("{decke} = sub i64 {vollep}, {von}"));
+    let bis = k.tmp();
+    k.zeile(&format!("{bis} = sub i64 {ende_rund}, {von}"));
+    // Kleineres von Bedarf und Rest (ohne Zweig: min über icmp+select).
+    let mehr_bedarf = k.tmp();
+    k.zeile(&format!("{mehr_bedarf} = icmp ult i64 {bis}, {decke}"));
+    let lang = k.tmp();
+    k.zeile(&format!("{lang} = select i1 {mehr_bedarf}, i64 {bis}, i64 {decke}"));
     let adr = k.tmp();
-    k.zeile(&format!("{adr} = add i64 {bb}, {versatz}"));
-    // Decke prüfen (Commit über `max` hinaus ist voll, nicht Wachstum).
-    let rest = k.tmp();
-    k.zeile(&format!("{rest} = sub i64 {vollep}, {versatz}"));
-    let passt = k.tmp();
-    k.zeile(&format!("{passt} = icmp uge i64 {rest}, {stueck_elems}"));
-    k.zeile(&format!("br i1 {passt}, label %{weiter}_c, label %{voll}"));
+    k.zeile(&format!("{adr} = add i64 {bb}, {von}"));
+    // Leere Länge: nichts mehr zu holen (Decke erreicht oder Reserve leer).
+    let nichts = k.tmp();
+    k.zeile(&format!("{nichts} = icmp eq i64 {lang}, 0"));
+    k.zeile(&format!("br i1 {nichts}, label %{voll}, label %{weiter}_c"));
     k.beendet = true;
     let commit2 = format!("{weiter}_c");
     let _ = writeln!(k.text, "{commit2}:");
@@ -8932,13 +9084,13 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     let regs2 = if k.s.ziel.name == "x86_64" {
         vec![
             ("rdi".to_string(), adr.clone()),
-            ("rsi".to_string(), format!("{stueck_elems}")),
+            ("rsi".to_string(), lang.clone()),
             ("rdx".to_string(), "3".to_string()),
         ]
     } else {
         vec![
             ("x0".to_string(), adr.clone()),
-            ("x1".to_string(), format!("{stueck_elems}")),
+            ("x1".to_string(), lang.clone()),
             ("x2".to_string(), "3".to_string()),
         ]
     };
@@ -8949,8 +9101,16 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     k.beendet = true;
     let _ = writeln!(k.text, "{ok_arm}:");
     k.beendet = false;
+    // Bereit rückt auf ganze bedeckte Elemente vor (nie zurück, nie über die
+    // Decke hinaus -- die Schleife oben läuft, bis `bereit >= bedarf`).
+    let bedeckt = k.tmp();
+    k.zeile(&format!("{bedeckt} = add i64 {von}, {lang}"));
+    let stuecke = k.tmp();
+    k.zeile(&format!("{stuecke} = udiv i64 {bedeckt}, {breite}"));
+    let weiter_vorne = k.tmp();
+    k.zeile(&format!("{weiter_vorne} = icmp ult i64 {c}, {stuecke}"));
     let neu = k.tmp();
-    k.zeile(&format!("{neu} = add i64 {c}, {stueck_elems}"));
+    k.zeile(&format!("{neu} = select i1 {weiter_vorne}, i64 {stuecke}, i64 {c}"));
     k.zeile(&format!("store i64 {neu}, ptr {bereit}, align 8"));
     k.zeile(&format!("br label %{kopf}"));
     k.beendet = true;

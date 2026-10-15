@@ -673,7 +673,9 @@ pub(crate) fn bindungen_sammeln_flach(b: &Block, lokal: &mut HashSet<String>) {
             | StmtArt::ResetSlot(_)
             // **Lane 257:** `grow` binds no name either; the `sonst`
             // locals are collected through `unterbloecke` below.
-            | StmtArt::Grow(_) => {}
+            | StmtArt::Grow(_)
+            // **TODO §1-B:** `free` binds no name either.
+            | StmtArt::Frei(_) => {}
         }
     }
 }
@@ -847,6 +849,14 @@ fn rumpf_falten(
                 fakten.fremd.push((format!("arena {}", g.tisch.text), s.span));
                 knoten_ausdruck(&g.mehr, atomare, rein, fakten);
                 rumpf_falten(&g.sonst, atomare, lokal, rein, fakten);
+            }
+            // **TODO §1-B:** the release names its arena and evaluates the
+            // freed slot's index expressions.
+            StmtArt::Frei(f) => {
+                fakten.fremd.push((format!("arena {}", f.ort.basis.text), s.span));
+                for e in crate::ausdruecke_im_ort(&f.ort) {
+                    knoten_ausdruck(e, atomare, rein, fakten);
+                }
             }
             // **Lane 253:** a `start` IS calls -- one per named root. The
             // fold sees them the way it sees a library call's callee: the

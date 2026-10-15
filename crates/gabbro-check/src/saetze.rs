@@ -6636,6 +6636,15 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/arena.rs (`druckfrage`)",
     },
     Satz {
+        name: "arena.freigabe-hat-tod",
+        kennungen: &["N586"],
+        aussage: "`free A[i]` gives the slot back: the name dies statically, and any                   later read or second `free` naming it falls -- copies died with it,                   rebinding clears it, joins take the union, a `reset` clears it. Only                   a bare name bound by `alloc` to the current generation can die; a                   parameter index is borrowed (a callee never frees what it is                   handed), and a computed place names no death to carry.",
+        vorbehalt: "It does not cover aliases through untracked names (a copy the                   flow does not track reads freed memory silently -- OFFEN `Alias`,                   the same gap as every other name this pass does not track), nor                   `free` across function boundaries (the owner frees). The run-time                   half (intrusive free list, reuse without commit) is the LLVM                   backend's, not this rule's.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1439-gebrauch-nach-freigabe.gab (use after free),                       beispiele/gift/1440-doppelte-freigabe.gab (second free),                       beispiele/gift/1441-freigabe-geborgter-index.gab (borrowed),                       beispiele/gift/1442-freigabe-berechneter-platz.gab (computed) --                       all fall with N586 alone; the clean side is                       beispiele/1161-platz-freigeben.gab.",
+        fundstelle: "crates/gabbro-check/src/arena.rs (`frei`)",
+    },
+    Satz {
         name: "kbedingung.breaking-blocks-maintainers",
         kennungen: &["N532"],
         aussage: "Inside `breaking I { … }` no function whose `maintains` names `I` is \

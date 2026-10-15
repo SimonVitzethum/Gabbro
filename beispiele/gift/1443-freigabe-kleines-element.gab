@@ -1,0 +1,12 @@
+-- erwartet: Y103
+-- The link word is 8 bytes: a slot smaller than that cannot carry it. The
+-- checker is silent (it knows no sizes); the backend refuses by name.
+module gift::freigabe_kleines_element {
+arena Vorrat capacity 0 .. 4 of u8;
+
+fn nutze() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 128 ops {
+    let a = alloc Vorrat (7) else { return 1; };
+    free Vorrat[a];
+    return 0;
+}
+}

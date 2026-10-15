@@ -1031,6 +1031,12 @@ impl Lauf<'_> {
                 Toetet::Tabellen(BTreeSet::from([g.tisch.text.clone()])),
                 format!("the growth of {}", g.tisch.text),
             )),
+            // **TODO §1-B:** a release kills every fact about the arena --
+            // the slot's value is gone, and the link word stands in it.
+            StmtArt::Frei(f) => Some((
+                Toetet::Tabellen(BTreeSet::from([f.ort.basis.text.clone()])),
+                format!("the release of {}", f.ort.text()),
+            )),
             StmtArt::LibraryCall(l) => {
                 self.gruende.push(format!("library call @{}#{}", l.library.text, l.function.text));
                 Some((Toetet::Alles, "a library call".to_string()))

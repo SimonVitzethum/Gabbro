@@ -1402,6 +1402,12 @@ pub enum StmtArt {
     /// ceiling is refused (`N426`), with or without the branch. The
     /// amount `mehr` is a translation-time constant.
     Grow(GrowStmt),
+    /// `free A[i];` -- give slot `i` of arena `tisch` back (TODO §1-B).
+    ///
+    /// The slot becomes reusable; the freed name dies statically (any
+    /// later use falls with `N586`). No `else`: freeing a live slot
+    /// cannot fail.
+    Frei(FreiStmt),
     /// `child { … }` -- the clone-child path (lane O-1, K-1).
     ///
     /// The block that runs on the handed stack after a stack-carrying
@@ -1854,6 +1860,16 @@ pub struct GrowStmt {
     pub tisch: Ident,
     pub mehr: Expr,
     pub sonst: Block,
+}
+
+/// `free A[i];` -- give slot `i` of arena `A` back (TODO §1-B).
+///
+/// The slot becomes reusable (intrusive free list at run time); the freed
+/// name dies statically -- any later use falls (`N586` in the checker),
+/// copies included. No `else`: freeing a live slot cannot fail.
+#[derive(Debug, Clone)]
+pub struct FreiStmt {
+    pub ort: Ort,
 }
 
 /// `reset X at i count n;` -- see `StmtArt::ResetSlot`.

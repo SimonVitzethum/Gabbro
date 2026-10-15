@@ -340,6 +340,14 @@ wortschatz! {
     // word meaning; followed by a place continuation (`grow = 1;`) it
     // stays a name, like `reset` above.
     Grow          => "grow",          ctx;
+    // **Freigabe (TODO §1-B): `free A[i];` gibt einen Slot zurück.**
+    //
+    // Der Slot wird wiederverwendbar (intrusive Freiliste in der Laufzeit);
+    // der befreite Name stirbt statisch (Danach-Gebrauch fällt mit `N586`,
+    // Kopien eingeschlossen — Aliase über fremde Namen bleiben OFFEN wie bei
+    // `Alias`). Nur die Kopfstellung gibt dem Wort Bedeutung; anderswo bleibt
+    // es ein Name, wie `reset` und `grow` darüber.
+    Free          => "free",          ctx;
     // **Druckfrage (Speicherdruck-Abtastung auf dem Commit-Pfad).**
     //
     // `druckfrage P unter B` an einer Arena: vor jedem Commit fragt der

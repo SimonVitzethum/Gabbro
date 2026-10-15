@@ -1144,6 +1144,15 @@ fn anweisung(s: &Stmt, z: &mut Zustand, lage: &Lage, absagen: &mut gabbro_syntax
             block(&g.sonst, z, lage, absagen);
             toete_schreibziele(s, z);
         }
+        // **TODO §1-B:** the freed slot's index expressions read like any
+        // bound value; the release writes its arena.
+        StmtArt::Frei(f) => {
+            for e in crate::ausdruecke_im_ort(&f.ort) {
+                ausdruck(e, z, lage, absagen);
+                wert_ohne_kette(e, z, lage, absagen);
+            }
+            toete_schreibziele(s, z);
+        }
         // No block, no expression, no binding.
         StmtArt::Leave(_) | StmtArt::Next(_) | StmtArt::ResetArena(_) | StmtArt::Start(_) => {}
     }

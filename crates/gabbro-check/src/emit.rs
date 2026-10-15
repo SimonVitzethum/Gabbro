@@ -578,6 +578,9 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             // **Lane 257:** `grow` binds no name; the amount is a count,
             // never a record.
             | StmtArt::Grow(_)
+            // **TODO §1-B:** `free` binds no name; the freed slot is an
+            // index, never a record.
+            | StmtArt::Frei(_)
             // **M-ALLTAG C:** `reset A at i;` binds no name.
             | StmtArt::ResetSlot(_)
             | StmtArt::Sperrt(_)
@@ -10493,6 +10496,15 @@ pub(crate) fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<Str
                 e(&g.mehr, aus);
                 benutzte_namen(&g.sonst, aus);
             }
+            // **TODO §1-B:** the release names its arena and evaluates the
+            // freed slot's index expressions -- a lowering and its name set
+            // are one change, not two.
+            StmtArt::Frei(f) => {
+                aus.insert(f.ort.basis.text.clone());
+                for x in crate::ausdruecke_im_ort(&f.ort) {
+                    e(x, aus);
+                }
+            }
             // `leave l;` / `next l;` lower to `goto`, `break` or `continue`. A label is not
             // a name of this set.
             StmtArt::Leave(_) | StmtArt::Next(_) => {}
@@ -12633,6 +12645,19 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}}}\n"));
         }
+        // **TODO §1-B:** the C emitter is deprecated and learns no free
+        // list -- it refuses by name (`C001`); the LLVM backend lowers the
+        // release, and the checker (`N586`) holds the discipline.
+        StmtArt::Frei(f) => {
+            weigere(
+                absagen,
+                s.span,
+                &format!(
+                    "`free` of `{}` has no C lowering -- the slot release is the LLVM arm",
+                    f.ort.text(),
+                ),
+            );
+        }
     }
 }
 
@@ -13173,6 +13198,9 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
                 // `next` inside its `else` names an outer loop, reached
                 // through `unterbloecke` like at `child` above.
                 | StmtArt::Grow(_)
+                // **TODO §1-B:** `free` itself jumps nowhere and carries
+                // no block.
+                | StmtArt::Frei(_)
                 | StmtArt::ResetSlot(_)
                 | StmtArt::Let(_)
                 | StmtArt::Alloc(_)
@@ -15849,6 +15877,9 @@ fn needs_saturation(baum: &Programm) -> bool {
             // there is still a missing helper.)
             StmtArt::Grow(g) => expr(&g.mehr),
             StmtArt::ResetSlot(r) => expr(&r.index) || expr(&r.menge),
+            // **TODO §1-B:** the freed slot's index expressions count like
+            // the reset range above.
+            StmtArt::Frei(f) => crate::ausdruecke_im_ort(&f.ort).iter().any(|e| expr(e)),
             StmtArt::Leave(_) | StmtArt::Next(_) => false,
         }
     }

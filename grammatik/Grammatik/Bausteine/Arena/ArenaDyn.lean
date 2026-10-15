@@ -844,3 +844,85 @@ end Gabbro.Grammatik.ArenaDyn
     `max 64` arena returns `none` (by `rfl`); the unchecked `dynGrowFalsch`
      reaches `65`, past the ceiling (`planted_defekt_sichtbar`).
 -/
+
+namespace Gabbro.Grammatik.ArenaDyn
+
+/- ## Freiliste (TODO §1-B): befreite Slots sind wiederverwendbar.
+
+  Neben dem Committed-Präfix `c` trägt die Laufzeit eine Freiliste befreiter
+  Slots (intrusiv, LIFO) und die Hochwassermarke `belegt`. `alloc` nimmt von
+  der Liste (kein Commit, keine Abtastung -- der Speicher steht bereit) oder
+  von der Marke; `free` legt den Slot auf die Liste. Der Prüfer (`N586`)
+  hält Einfach-Freigabe und Tod; hier steht die Zustandsform mit den
+  Erhaltungssätzen. Kein `sorry`: was nicht schließt, steht nicht hier.
+-/
+
+/-- Freilisten-Zustand: Hochwasser `belegt` (monoton) und befreite Slots
+    (alle darunter -- nur belegte Slots werden je befreit). -/
+structure FreiZustand where
+  belegt : Nat
+  frei : List Nat
+  hfrei : ∀ i ∈ frei, i < belegt
+
+/-- `alloc`: von der Liste (Marke unverändert) oder vom Hochwasser (+1). -/
+def freiAlloc : FreiZustand → Nat × FreiZustand
+  | ⟨belegt, [], _⟩ =>
+    (belegt, ⟨belegt + 1, [], fun _ hm => absurd hm (by simp)⟩)
+  | ⟨belegt, i :: rest, hfrei⟩ =>
+    (i, ⟨belegt, rest, fun j hj => hfrei j (List.mem_cons_of_mem _ hj)⟩)
+
+/-- `free`: der Slot wandert auf die Liste -- genau einmal (Doppel-Freigabe
+    und Fremd-Slots sind `none`, wie `N586` am Prüfer). -/
+def freiFree (F : FreiZustand) (i : Nat) : Option FreiZustand :=
+  if h : i < F.belegt ∧ i ∉ F.frei then
+    some ⟨F.belegt, i :: F.frei, fun j hj => by
+      simp at hj
+      cases hj with
+      | inl heq => rw [heq]; exact h.1
+      | inr hmem => exact F.hfrei j hmem⟩
+  else none
+
+/-- Von der Liste heißt unter der Marke: jeder gereichte Slot ist brauchbar. -/
+theorem freiAlloc_unter_marke (F : FreiZustand) :
+    (freiAlloc F).1 < (freiAlloc F).2.belegt := by
+  cases F with
+  | mk belegt frei hfrei =>
+    cases frei with
+    | nil => simp [freiAlloc]
+    | cons i rest => simp [freiAlloc, hfrei]
+
+/-- Die Marke wächst nie zurück (auch nicht durch Wiederverwendung). -/
+theorem freiAlloc_marke_monoton (F : FreiZustand) :
+    F.belegt ≤ (freiAlloc F).2.belegt := by
+  cases F with
+  | mk belegt frei hfrei =>
+    cases frei with
+    | nil => simp [freiAlloc]
+    | cons _ _ => simp [freiAlloc]
+
+/-- Freigeben dann nehmen gibt denselben Slot zurück (LIFO-Rundlauf). -/
+theorem frei_rundlauf (F : FreiZustand) (i : Nat)
+    (h : i < F.belegt) (hn : i ∉ F.frei) (G : FreiZustand)
+    (hg : freiFree F i = some G) : (freiAlloc G).1 = i := by
+  unfold freiFree at hg
+  rw [dif_pos ⟨h, hn⟩] at hg
+  cases hg
+  simp [freiAlloc]
+
+/-- Doppel-Freigabe ist eine Abweisung, kein zweites Glied: der Slot steht
+    schon an der Spitze, also versagt die Bedingung (`i ∉`) beim zweiten Mal. -/
+theorem frei_doppelt_nein (F : FreiZustand) (i : Nat) (G : FreiZustand)
+    (hg : freiFree F i = some G) : freiFree G i = none := by
+  have hG : G.frei = i :: F.frei := by
+    unfold freiFree at hg
+    split at hg
+    · cases hg
+      rfl
+    · exact absurd hg (by simp)
+  have hmem : i ∈ G.frei := by
+    rw [hG]
+    exact List.mem_cons_self
+  unfold freiFree
+  rw [dif_neg (fun h => h.2 hmem)]
+
+end Gabbro.Grammatik.ArenaDyn

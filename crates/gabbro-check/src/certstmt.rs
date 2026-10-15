@@ -938,6 +938,8 @@ fn stmt_name(s: &Stmt) -> String {
         StmtArt::ResetSlot(_) => "reset arena slot".to_string(),
         // **Lane 257:** the commit request, named for refusals.
         StmtArt::Grow(_) => "grow".to_string(),
+        // **TODO §1-B:** the slot release, named for refusals.
+        StmtArt::Frei(_) => "free".to_string(),
         // **Lane O-1:** the clone-child path, named for refusals.
         StmtArt::Child(_) => "child".to_string(),
         // **Lane 253:** the hosted thread-start statement, named for refusals.

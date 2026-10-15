@@ -1396,6 +1396,8 @@ fn carrier_not_covered(d: &FnDecl, model: &Model) -> Result<(), Refusal> {
             | StmtArt::ResetArena(_)
             | StmtArt::ResetSlot(_)
             | StmtArt::Grow(_)
+            // **TODO §1-B:** `free` binds nothing either.
+            | StmtArt::Frei(_)
             | StmtArt::Child(_)
             | StmtArt::Start(_) => {}
         }
@@ -4395,6 +4397,13 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         StmtArt::Grow(g) => Err(refuse("LG005", format!("`grow` out of arena {} in {fname} has no G form: \
             the committed prefix below the ceiling is checker flow, and this exporter builds the static \
             `ArenaForm` of `hi` slots", g.tisch.text))),
+        // **TODO §1-B:** `free A[i];` has no G form yet -- the freed-slot
+        // state is checker flow, and this exporter builds the static
+        // `ArenaForm`. Refused by name, never skipped (O14's third form
+        // once the Lean free state lands).
+        StmtArt::Frei(f) => Err(refuse("LG005", format!("`free` of `{}` in {fname} has no G form: \
+            the freed-slot state is checker flow, and this exporter builds the static \
+            `ArenaForm` of `hi` slots", f.ort.text()))),
         StmtArt::Bricht(_) => Err(refuse("LG004", format!("`breaking` in {fname} has no G form in this fragment"))),
         // **Lane 250:** `child` has no G form in this fragment -- the handed
         // stack and the no-return-into-caller-frame are one `D.klon` pair

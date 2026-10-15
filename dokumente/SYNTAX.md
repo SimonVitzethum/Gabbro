@@ -40,9 +40,9 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **188** measured (`pruefe-syntax.sh` EBNF branch: 188 defined, 0 open, 0 unreachable from `program`; 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **189** measured (`pruefe-syntax.sh` EBNF branch: 189 defined, 0 open, 0 unreachable from `program`; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **244 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 244 EBNF terminals against 244 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `druckfrage` + `unter` (unbounded heap, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
+| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `druckfrage` + `unter` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -75,7 +75,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 ---
 
-## Vocabulary — closed, 247 words
+## Vocabulary — closed, 248 words
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -95,7 +95,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              endian little big reserved cost runs online offline
              library payload translator for
              profile rounding fp_contract memory_model interrupt_routing
-             arena capacity alloc reset grow druckfrage unter
+             arena capacity alloc reset grow druckfrage unter free
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
@@ -126,9 +126,9 @@ production and a name, and each is decided by the grammar and not by a list:
 2. **`old` and `result`** — words inside a contract clause, names everywhere else;
 3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
-**Seventeen of the 247 are still not names** (recounted 2026-09-26, Opus agent L:
-`instrumente/zaehle-wortschatz.py` reads 247 words, 17 reserved, 230 contextual;
-`instrumente/pruefe-wortschatz.py` reads 244 EBNF terminals against 244 table words --
+**Seventeen of the 248 are still not names** (recounted 2026-09-26, Opus agent L:
+`instrumente/zaehle-wortschatz.py` reads 248 words, 17 reserved, 231 contextual;
+`instrumente/pruefe-wortschatz.py` reads 245 EBNF terminals against 245 table words --
 the three over are `r` `w` `x`, single letters both sides drop by construction).
 Every one of the seventeen has **zero** declarator sites in 585 foreign files, and every
 one names below the position that forces it -- a use-site occurrence always parses as
@@ -163,11 +163,11 @@ ordinary local (`uint32_t <word> = 1; return <word>;` through
 row above: the twelve place-refusals, the five expression heads, the seven C names).
 
 Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `number`
-`errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1), `druckfrage` + `unter` (unbounded heap with sampling, §9.1),
+`errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1), `druckfrage` + `unter` (unbounded heap with sampling, §9.1), `free` (slot release, TODO §1-B, §9.1),
 `profile` `rounding` `fp_contract`
 `memory_model` `interrupt_routing`, `translator` `for`, `payload`, `depends` -- and
-`crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 247 as a parameter
-and as a local, requiring clean exactly for the 230. No word freed since stands
+`crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 248 as a parameter
+and as a local, requiring clean exactly for the 231. No word freed since stands
 unread: freeing one of the seventeen buys zero foreign sites and breaks either a read
 or the C, so the residue is irreducible by measurement, not by taste.
 
@@ -899,7 +899,7 @@ endstmt    = "return" [ expr ] ";" | "leave" ident ";" | "next" ident ";" ;
    register read and a `format` check ends here; the second version said (§7, line 1029) that
    the branch "must diverge or return" and never wrote it. `leave`/`next` only under a loop. A
    `return R::F;` is a `return expr;` whose expression is a ground. *)
-stmt       = letstmt | allocstmt | resetstmt | growstmt | childstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
+stmt       = letstmt | allocstmt | resetstmt | growstmt | freestmt | childstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
            | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt
            | libcall ";" ;                                       (* lane E1: statement position *)
@@ -953,6 +953,10 @@ resetstmt  = "reset" ident [ "at" expr "count" expr ] ";" ;      (* «E4», §9.
    index bound before is stale afterwards (`N211`). `reset = 1;` stays an assignment --
    the head word decides, like at every other keyword statement. *)
 growstmt   = "grow" ident "by" expr "else" block ";" ;      (* lane 257, §9.1 *)
+freestmt   = "free" place ";" ;                            (* TODO §1-B, §9.1 *)
+(* Give a slot back: the place is exactly one arena slot (`A[i]`), the name dies
+   statically (`N586`: no later read, no second `free`, copies included). No `else` --
+   freeing a live slot cannot fail, so the grammar has no branch form to owe. *)
 (* Commit-on-demand below the ceiling: `n` further slots of the named arena become
    readable and writable, or the `else` runs (OOM below the ceiling). The `else` always
    stands -- the grammar has no branchless form, so a missing `else` is `P001` at the
@@ -1497,6 +1501,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `arena A capacity lo .. hi of T druckfrage P unter B` | the UNBOUNDED form: no `max`, the ceiling is the counter room (`u32::MAX`); the generator reserves address space once (`mmap(PROT_NONE)`, no RAM) and commits per 1 MiB on demand (`mprotect`); before each commit it asks `P` for free bytes, below `B` the `else` runs (OOM path) — one probe per MiB, zero on the fast path; freestanding `P` measures itself | `ArenaDyn.lean`: ceiling `M`, committed prefix `c`, past-ceiling refusal, real OOM below `M` (the `else` is the program's); the 1 MiB steps overshoot the need invisibly (no introspection), hence refinement-true |
 | `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` refuses any other carrier; the END of the range is held against the length (`M103`); it is a store (`writes X`) | none: `lean-g` refuses the statement by name (`LG005`) — the exporter has no model of a released page |
 | `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (`N426` refuses the uncountable amount and the past-ceiling request, branch or no branch; `N213` the undeclared arena) | no constructor yet: the committed prefix is checker flow, and the emitter and the G exporter refuse the statement by name until the dynamic arm lands |
+| `free A[i];` | give exactly one slot back: the name dies statically (`N586` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the G exporter refuses by name (`LG005`) until the Block form lands |
 | `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` until the producer stands**: a declared `linear` mark (`D265`), exactly one foreign minter executed once (`D266`/`D268`), every access holding it (`D267`); the first mark is minted once and travels by handoff (`kbedingung.rs::eigner`, poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I … : p` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every `return` of such a function — and **such a function holds the locks of every carrier of `I`** (`U003` as a declaration rule: `invarianten_gehalten`), because it reads them all at `return` | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
@@ -1624,6 +1629,24 @@ indices are contiguous (`keine_fragmentierung`). The checker's generation
 counter and its static count are the shadow of those types over one body —
 counted per function, like `costs` (a reservation shared across functions is
 future work, not a silent promise).
+
+* `free A[i];` (TODO §1-B) gives exactly one slot back: the place is one arena
+  slot, the index a bare name bound by `alloc` to the current generation. The
+  name dies statically -- any later read or second `free` falls with `N586`
+  (copies died with it, rebinding clears it, joins take the union, `reset`
+  clears it); a parameter index is borrowed (the owner frees), a computed place
+  names no death to carry. No `else`: freeing a live slot cannot fail. At run
+  time the slot carries the link word (intrusive LIFO, zero overhead), so the
+  next `alloc` reuses it without commit and without sampling; elements under
+  8 bytes carry no link (`Y103`).
+
+*Lean:* `FreiZustand` (`ArenaDyn.lean`) beside the committed prefix -- high-water
+mark (monotone) plus freed slots (all below it); `freiAlloc` takes from the list
+or the mark, `freiFree` refuses doubles with `none`. Proved: reuse stays below
+the mark (`freiAlloc_unter_marke`), the mark never shrinks
+(`freiAlloc_marke_monoton`), free-then-take roundtrips (`frei_rundlauf`), no
+second free (`frei_doppelt_nein`). The G exporter refuses the statement by name
+(`LG005`) until the Block form lands (O14's third form).
 
 ---
 

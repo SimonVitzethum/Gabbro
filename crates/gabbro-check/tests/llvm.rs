@@ -113,6 +113,7 @@ fn verweigerung_ist_zielunabhaengig() {
         ("1428-sperre-ohne-llvm.gab", "Y102"),
         ("1433-geteilte-sperre-ohne-llvm.gab", "Y103"),
         ("1430-aligned-ohne-llvm.gab", "Y104"),
+        ("1443-freigabe-kleines-element.gab", "Y103"),
     ] {
         let quelle =
             std::fs::read_to_string(wurzel().join("gift").join(datei)).expect("{datei} lesbar");
@@ -421,6 +422,23 @@ pub fn main() -> u64
         assert!(ir.contains("@\"frei\"()"), "kein Zählruf auf {}:\n{ir}", ziel.name);
         assert!(ir.contains("1048576"), "keine Schwelle auf {}:\n{ir}", ziel.name);
         assert!(ir.contains("arena_genug"), "kein Weiter-Zweig auf {}:\n{ir}", ziel.name);
+        assert!(!ir.contains("= global ["), "BSS-Feld auf {}:\n{ir}", ziel.name);
+    }
+}
+
+/// **Die Freigabe senkt als intrusive Liste.** `free` schreibt das Glied und
+/// rückt den Kopf vor; der nächste `alloc` nimmt von der Liste (kein Commit,
+/// keine Abtastung auf dem Pfad) -- auf beiden Zielen, ohne BSS-Feld.
+#[test]
+fn freigabe_als_liste() {
+    let quelle = std::fs::read_to_string(wurzel().join("1161-platz-freigeben.gab"))
+        .expect("1161 lesbar");
+    for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+        let (ir, codes) = senke(&quelle, "1161-platz-freigeben.gab", ziel);
+        let f = fehler(&codes);
+        assert!(f.is_empty(), "Freigabe auf {} fällt mit {f:?}", ziel.name);
+        assert!(ir.contains("alloc_freiliste"), "kein Listenpfad auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("alloc_fertig"), "kein Fertig-Join auf {}:\n{ir}", ziel.name);
         assert!(!ir.contains("= global ["), "BSS-Feld auf {}:\n{ir}", ziel.name);
     }
 }

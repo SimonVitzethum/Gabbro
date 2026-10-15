@@ -79,6 +79,8 @@ fn stmt_name(art: &StmtArt) -> &'static str {
         StmtArt::ResetSlot(_) => "reset at",
         // **Lane 257:** the commit request, named for refusals.
         StmtArt::Grow(_) => "grow",
+        // **TODO §1-B:** the slot release, named for refusals.
+        StmtArt::Frei(_) => "free",
         // **Lane O-1:** the clone-child path, named for refusals.
         StmtArt::Child(_) => "child",
         // **Lane 253:** the hosted thread-start statement, named for refusals.

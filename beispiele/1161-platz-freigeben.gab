@@ -1,0 +1,18 @@
+-- 1161 -- **the slot release (`free`) with static death.**
+--
+-- `free Vorrat[a]` gives the slot back: the run time links it into the free
+-- list (intrusive, zero overhead), and the name `a` dies statically -- any
+-- later read or second `free` falls with `N586`, copies included. The next
+-- `alloc` reuses the freed slot without commit and without sampling (the
+-- memory stands ready). `reset` clears the list beside the counter.
+module beispiel::platz_freigeben {
+pub arena Vorrat capacity 0 .. 4 of u64;
+
+pub fn main() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 128 ops {
+    let a = alloc Vorrat (7) else { return 1; };
+    let b = alloc Vorrat (35) else { return 2; };
+    free Vorrat[a];
+    let c = alloc Vorrat (100) else { return 3; };
+    return Vorrat[c];
+}
+}

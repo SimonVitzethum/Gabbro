@@ -705,6 +705,9 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
         // **Lane 257:** same -- the commit moves storage, and the
         // failure continuation is entered through `unterbloecke` below.
         | StmtArt::Grow(_)
+        // **TODO §1-B:** same -- the release moves storage and binds
+        // nothing itself.
+        | StmtArt::Frei(_)
         // **Lane 253:** `start` binds nothing and carries no block.
         | StmtArt::Start(_)
         | StmtArt::ResetArena(_)
@@ -831,7 +834,10 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             // **No catch-all.** A statement kind that carries a block and is not listed here
             // would hide every loop inside it, and the register would be short by a duty
             // nobody could see was missing.
-            StmtArt::Let(_)
+            // **TODO §1-B:** `free` carries no block, so there is no loop
+            // to walk here.
+            StmtArt::Frei(_)
+            | StmtArt::Let(_)
             | StmtArt::Zuweisung(_)
             | StmtArt::Narrow(_)
             | StmtArt::ResetArena(_)

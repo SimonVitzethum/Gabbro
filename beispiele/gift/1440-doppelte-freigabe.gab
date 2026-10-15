@@ -1,0 +1,13 @@
+-- erwartet: N586
+-- A second `free` would link the same slot twice, and the free list would
+-- eat a live slot. Nothing else is wrong with this unit.
+module gift::doppelte_freigabe {
+arena Vorrat capacity 0 .. 4 of u64;
+
+fn nutze() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 128 ops {
+    let a = alloc Vorrat (7) else { return 1; };
+    free Vorrat[a];
+    free Vorrat[a];
+    return 0;
+}
+}

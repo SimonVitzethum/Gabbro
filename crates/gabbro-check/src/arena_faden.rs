@@ -208,6 +208,18 @@ impl<'a> Sammler<'a> {
                 }
                 self.block(&g.sonst, d, lokal, sperren, durch_kind);
             }
+            // **TODO §1-B:** the release mutates the free list -- shared
+            // state like the used counter, so the arena is booked as used
+            // under the current lock stack; the index expressions walk.
+            StmtArt::Frei(f) => {
+                for e in crate::ausdruecke_im_ort(&f.ort) {
+                    self.rufe_in_expr(e, &modul, d);
+                    self.orte_in_expr(e, d, lokal);
+                }
+                if let Some(q) = self.tisch(&f.ort.basis, d, lokal) {
+                    d.gebraucht.insert(q);
+                }
+            }
             StmtArt::Let(l) => {
                 self.rufe_in_expr(&l.wert, &modul, d);
                 self.orte_in_expr(&l.wert, d, lokal);

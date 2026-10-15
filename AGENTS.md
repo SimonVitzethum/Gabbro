@@ -404,9 +404,9 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N586** (new 2026-10-15: N584 pressure probe names nothing, N585 probe shape/threshold; before that N583, keeperless online invariant) |
-| Gift (poison-probe) numbers | **1439** (new 2026-10-15: gifts 1436-1438 pressure sampling, 1435 skipped/deleted; before that `beispiele/gift/1434`) |
-| Example numbers | **1161** (new 2026-10-15: example 1160 unbounded heap with sampling; before that `beispiele/1159`) |
+| Diagnostic codes | **N587** (new 2026-10-15: N586 slot release has static death; before that N584/N585 pressure sampling) |
+| Gift (poison-probe) numbers | **1444** (new 2026-10-15: gifts 1439-1442 release discipline, 1443 small-element link; before that `beispiele/gift/1438`) |
+| Example numbers | **1162** (new 2026-10-15: example 1161 slot release; before that `beispiele/1160`) |
 | Lane numbers | **1403** next free; allocate unique IDs from the actual live coordinator registry. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
@@ -487,6 +487,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | C-free lane, OFFEN O40 half closed (2026-10-05) | **not reserved** | gift **1398** (`zwei-private-gleichen-namens`); **no code**: `N042` widened to two function bodies of one name in two modules with a private side (`namen.rs::zwei_ruempfe_ein_name`); no example (clean twins `beispiele/29`, `messung/fragmente/F05.gab`). Also C3 slice 1 the same day (no number: templates `metall.speicher`, `arena.metall`) |
 | C-free lane, the handed stack is a number (2026-10-05) | **not reserved** | **N578** (`klon.stapel_zahl`: the parameter a gate's `stack` clause binds is a written integer type -- a region pointer handed as the stack kept its extent in the `child` region and in the parent, and both indexed one byte with 0 errors), gift **1399**; no example (clean side: 155, 156, 160, `linux.gab`'s `gabbro_os_klon_tor`, all `u64`). Corpus scan over every tracked `.gab`: no other file gains `N578` |
 | Unbounded heap with sampling (2026-10-15, TODO §1-B) | **not reserved** | **N584** (`druckfrage` names no gate and no function), **N585** (probe of the wrong shape, threshold no translation-time constant); gifts **1436** (unknown probe), **1437** (probe with parameter), **1438** (run-time threshold); example **1160** (`halde-mit-abtastung`, unbounded arena with sampling, checker-clean, LLVM-runnable both targets, C001 stands per 2026-10-15 rule). **1435 skipped** (deleted shape: unbounded-without-sampling is unwritable -- without the clause no-`max` is the static form, ceiling `hi`) |
+| Slot release with static death (2026-10-15, TODO §1-B) | **not reserved** | **N586** (use-after-free, double free, borrowed and computed shapes -- one rule, faces shared); gifts **1439**-**1442** (the four faces), **1443** (small-element link, checker-clean, LLVM `Y103`); example **1161** (`platz-freigeben`, checker-clean, LLVM-runnable both targets `rc=100`, C001 stands per 2026-10-15 rule). Lean `FreiZustand` + four proved preservation theorems (no new axioms); G exporter refuses by name (`LG005`, O14's third form) |
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
   they are never handed to another topic. Next free is always above the highest number in use,

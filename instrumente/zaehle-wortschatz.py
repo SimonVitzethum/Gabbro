@@ -146,7 +146,12 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # `max` names a static ceiling, `grow` a commit request -- and the reason stands
 # at the entry in `kw.rs`. Both words are `ctx`, so the second and third marks
 # do not move.
-MARKE_WOERTER = 247
+# **247 -> 248 on 2026-10-15 (slot release, TODO §1-B).** `free` names the
+# release statement (`dokumente/SYNTAX.md` §9.1): no existing form gives a
+# slot back -- `reset` consumes a whole generation -- and the reason stands
+# at the entry in `kw.rs`. The word is `ctx`, so the second and third marks
+# do not move.
+MARKE_WOERTER = 248
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

@@ -1234,6 +1234,14 @@ fn zugriff_stmt(s: &Stmt, z: &mut Kindzugriff) {
             zugriff_expr(&g.mehr, z);
             zugriff_block(&g.sonst, z);
         }
+        // **TODO §1-B: `free` is walked** -- the arena name and the freed
+        // slot's index expressions.
+        StmtArt::Frei(f) => {
+            z.namen.insert(f.ort.basis.text.clone());
+            for e in crate::ausdruecke_im_ort(&f.ort) {
+                zugriff_expr(e, z);
+            }
+        }
         StmtArt::Child(x) => zugriff_block(x, z),
         StmtArt::Start(st) => {
             for p in &st.roots {

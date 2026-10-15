@@ -168,6 +168,15 @@ struct Stand {
     /// compound-updated): a use falls (`N211`), because the generation the
     /// name carries is unknown.
     unsicher: HashSet<String>,
+    /// **TODO §1-B: local names whose slot was given back (`free`).**
+    /// A use of a dead name falls (`N586`), and so does a second `free` --
+    /// copies carry the death (like `gebunden` above), rebinding clears it,
+    /// joins take the union (dead on either path is dead after), and a
+    /// `reset` clears it (fresh generation; old names are stale anyway).
+    /// Death LEAKS out of blocks like generations (no restore in `block`):
+    /// a `free` inside a branch may have run, so the name stays dead after.
+    /// Aliases through untracked names stay open (OFFEN `Alias`).
+    tot: HashSet<String>,
     /// Every local name in scope -- arena names shadowed by these are not
     /// arena uses at all, and this pass stays silent about them (M1 reads
     /// the local meaning).
@@ -203,6 +212,13 @@ impl Stand {
     /// when the declaration never resolved to usable bounds (then `N210`
     /// already fell, and no count question is asked anywhere).
     fn reset(&mut self, arena: &str, frisch: &mut u64, boden: Option<u64>) {
+        *frisch = frisch.saturating_add(1);
+        self.generation.insert(arena.to_string(), *frisch);
+        self.zaehlung.insert(arena.to_string(), 0);
+        // **TODO §1-B:** a fresh generation clears death -- old names are
+        // stale through the generation bump, and their slots will be
+        // re-allocated to new names.
+        self.tot.clear();
         *frisch = frisch.saturating_add(1);
         self.generation.insert(arena.to_string(), *frisch);
         self.zaehlung.insert(arena.to_string(), 0);
@@ -289,6 +305,10 @@ impl Stand {
                 (None, None) => {}
             }
         }
+        // **TODO §1-B:** death joins with the union -- dead on either path
+        // is dead after (a `free` on one path may have run, so a later use
+        // would be use-after-free on exactly that path).
+        self.tot.extend(andere.tot.iter().cloned());
     }
 }
 
@@ -1118,6 +1138,8 @@ impl<'a> Laeufer<'a> {
             StmtArt::ResetArena(tisch) => self.reset(tisch),
             StmtArt::Grow(g) => self.grow(g, s.span),
             StmtArt::ResetSlot(r) => self.reset_platz(r),
+            // **TODO §1-B:** the slot release.
+            StmtArt::Frei(f) => self.frei(f, s.span),
             StmtArt::Let(l) => {
                 self.orte_in_expr(&l.wert);
                 // A copy of a tracked index keeps its tracking (fix lane F2):
@@ -1125,16 +1147,25 @@ impl<'a> Laeufer<'a> {
                 let mut kopie_gebunden: Option<(String, u64)> = None;
                 let mut kopie_eingang: Option<String> = None;
                 let mut kopie_unsicher = false;
+                // **TODO §1-B:** death follows copies (`let j = i;` names
+                // the same slot) and dies on rebinding (a fresh value is
+                // not the freed slot).
+                let mut kopie_tot = false;
                 if let ExprArt::Ort(o) = &entklammert(&l.wert).art {
                     if o.suffixe.is_empty() {
                         let n = &o.basis.text;
                         kopie_gebunden = self.stand.gebunden.get(n).cloned();
                         kopie_eingang = self.stand.eingang.get(n).cloned();
                         kopie_unsicher = self.stand.unsicher.contains(n);
+                        kopie_tot = self.stand.tot.contains(n);
                     }
                 }
                 self.binde_lokal(&l.name.text);
                 let name = l.name.text.clone();
+                self.stand.tot.remove(&name);
+                if kopie_tot {
+                    self.stand.tot.insert(name.clone());
+                }
                 if let Some(e) = kopie_gebunden {
                     self.stand.gebunden.insert(name, e);
                 } else if let Some(a) = kopie_eingang {
@@ -1198,6 +1229,24 @@ impl<'a> Laeufer<'a> {
                         }
                     }
                     self.stand.lokal.insert(ziel);
+                }
+                // **TODO §1-B:** death follows copies through assignment
+                // (`i = j;` with dead `j` kills `i`) and dies on any other
+                // rebinding (the new value is not the freed slot). A
+                // compound update (`+=` and kin) rebinds as well.
+                let ziel_tot = z.ziel.basis.text.clone();
+                if z.op == ZuwOp::Setzt {
+                    if let ExprArt::Ort(o) = &entklammert(&z.wert).art {
+                        if o.suffixe.is_empty() && self.stand.tot.contains(&o.basis.text) {
+                            self.stand.tot.insert(ziel_tot);
+                        } else {
+                            self.stand.tot.remove(&ziel_tot);
+                        }
+                    } else {
+                        self.stand.tot.remove(&ziel_tot);
+                    }
+                } else {
+                    self.stand.tot.remove(&ziel_tot);
                 }
             }
             StmtArt::Wenn(w) => {
@@ -1469,6 +1518,9 @@ impl<'a> Laeufer<'a> {
         self.stand.zaehlung.insert(q.clone(), self.stand.zaehlung(&q).saturating_add(1));
         self.stand.gebunden.insert(a.name.text.clone(), (q, g));
         self.stand.unsicher.remove(&a.name.text);
+        // **TODO §1-B:** a fresh index is live, even if the name died
+        // before (the slot may be a reused one -- the new binding owns it).
+        self.stand.tot.remove(&a.name.text);
         self.stand.lokal.insert(a.name.text.clone());
         if let Some(sonst) = &a.sonst {
             // The failure continuation runs instead of the main path; its
@@ -1613,6 +1665,126 @@ impl<'a> Laeufer<'a> {
             let nach_sonst = std::mem::replace(&mut self.stand, nach_haupt);
             self.stand.vereinige(&nach_sonst, &mut self.frisch, self.boden);
         }
+    }
+
+    /// **TODO §1-B: `free A[i];` -- give a slot back (`N586`).**
+    ///
+    /// The place must be exactly one slot of a declared arena (`A[i]`, one
+    /// index, nothing else -- a whole arena is freed by `reset`, a field is
+    /// no slot); the index must be a bare name this body bound with `alloc`
+    /// to the current generation. One rule, faces shared like `N065`:
+    ///
+    /// - a second `free` of the same name, or any use after it (copies
+    ///   died with the name);
+    /// - a `free` of a parameter index (borrowed: a callee never frees
+    ///   what it is handed -- the owner frees);
+    /// - a `free` of a stale, reassigned or untracked name, or of a
+    ///   computed place (only a bound name can die: a literal freed here
+    ///   would stay readable there, and no name would carry the death).
+    ///
+    /// An unknown arena is `N213`, like at `alloc` and `reset`. Nested
+    /// uses inside a computed index still read (they are walked before
+    /// the refusal). The slot becomes reusable at run time (intrusive
+    /// free list); the name dies here.
+    fn frei(&mut self, f: &FreiStmt, span: Span) {
+        let basis = &f.ort.basis;
+        if self.stand.lokal.contains(&basis.text) {
+            return;
+        }
+        let Some(q) = self.u.nennt_arena(&self.modul, &basis.text) else {
+            self.melde(
+                "N213",
+                basis.span,
+                format!(
+                    "`{}` names no declared arena: `free` gives a slot of \
+                     an `arena` declaration back",
+                    basis.text
+                ),
+                "without the declaration there is no slot to release and \
+                 no generation to hold the death against",
+            );
+            return;
+        };
+        let [OrtSuffix::Index(ix)] = f.ort.suffixe.as_slice() else {
+            self.melde(
+                "N586",
+                span,
+                format!(
+                    "`free` of `{}` is no single slot: a whole arena is freed \
+                     by `reset`, and a field is no slot",
+                    f.ort.text()
+                ),
+                "only `A[i]` names the slot that becomes reusable -- \
+                 everything else has no death to carry",
+            );
+            return;
+        };
+        let name = match &entklammert(ix).art {
+            ExprArt::Ort(io) if io.suffixe.is_empty() => {
+                self.orte_in_expr(ix);
+                io.basis.text.clone()
+            }
+            _ => {
+                // Nested uses inside the computed place still read.
+                self.orte_in_expr(ix);
+                self.melde(
+                    "N586",
+                    ix.span,
+                    "`free` of a computed place names no bound index: only \
+                     a name bound by `alloc` can die, so a literal or an \
+                     arithmetic freed here would stay readable there"
+                        .to_string(),
+                    "bind the slot with `alloc` and free the bound name",
+                );
+                return;
+            }
+        };
+        if self.stand.tot.contains(&name) {
+            self.melde(
+                "N586",
+                ix.span,
+                format!(
+                    "`{name}` was already given back: a second `free` would \
+                     link the same slot twice, and the free list would eat \
+                     a live slot"
+                ),
+                "allocate again for a live index -- a freed name stays dead \
+                 until its next `alloc`",
+            );
+            return;
+        }
+        if self.stand.eingang.contains_key(&name) {
+            self.melde(
+                "N586",
+                ix.span,
+                format!(
+                    "`{name}` is borrowed (a parameter index or its copy): a \
+                     callee never frees what it is handed -- the owner frees"
+                ),
+                "free what this body allocated; hand nothing back that was \
+                 handed in",
+            );
+            return;
+        }
+        match self.stand.gebunden.get(&name) {
+            Some((arena, g)) if arena == &q && *g == self.stand.generation(&q) => {}
+            _ => {
+                self.melde(
+                    "N586",
+                    ix.span,
+                    format!(
+                        "`{name}` is no live index of `{}` here: reassigned, \
+                         stale since a `reset`, or never bound by `alloc` -- \
+                         only a live bound name can die",
+                        f.ort.basis.text
+                    ),
+                    "bind the slot with `alloc` in this generation and free \
+                     the bound name",
+                );
+                return;
+            }
+        }
+        self.stand.tot.insert(name);
     }
 
     fn reset(&mut self, tisch: &Ident) {
@@ -1774,6 +1946,9 @@ impl<'a> Laeufer<'a> {
         }
         nach.gebunden = vor.gebunden.clone();
         nach.unsicher = vor.unsicher.clone();
+        // **TODO §1-B:** death inside the body persists after the loop --
+        // a slot freed on some pass stays freed.
+        nach.tot = vor.tot.union(&nach_eins.tot).cloned().collect();
         nach.lokal = vor.lokal.clone();
         nach.eingang = vor.eingang.clone();
         self.stand = nach;
@@ -1864,6 +2039,25 @@ impl<'a> Laeufer<'a> {
             _ => return,
         };
         if let Some(name) = &name {
+            // **TODO §1-B (`N586`): no use of a freed index.** The slot
+            // was given back with `free`, so it may hold another value now
+            // -- or the link word. Copies died with the name (death follows
+            // copies); aliases through untracked names stay open (OFFEN
+            // `Alias`), like every other name this pass does not track.
+            if self.stand.tot.contains(name) {
+                self.melde(
+                    "N586",
+                    span,
+                    format!(
+                        "`{name}` was given back with `free`: the slot of \
+                         `{angezeigt}` may hold another value now, so no read \
+                         and no second `free` may name it"
+                    ),
+                    "allocate again for a live index -- a freed name stays \
+                     dead until its next `alloc`",
+                );
+                return;
+            }
             if self.stand.unsicher.contains(name) {
                 // **`N211` -- no use of an index whose generation is unknown.**
                 self.melde(

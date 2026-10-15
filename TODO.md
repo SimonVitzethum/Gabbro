@@ -8,15 +8,18 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 ## 1. Heap — unbegrenzt, aber mit Grenzen
 
-- **A (Freiliste als Muster) — gebaut.** `beispiele/27-freiliste.gab`,
+- **A (Freiliste als Muster) — gebaut und festgeschrieben.** `beispiele/27-freiliste.gab`,
   `58-freiliste-zwei-formen.gab`: belegen/ablegen über `naechst`-Kette, keine
   Sprachänderung. Typisierte Fächer haben keine Fragmentierung (ein Elementtyp
-  je Halde) — frei heißt ein Belegt-Bit je Slot.
-- **B (unbegrenzt mit Abtastung) — Kern gebaut 2026-10-15, `free` offen.**
-  Gebaut: `druckfrage P unter B` an der Arena (SYNTAX.md §9.1) schaltet die
+  je Halde) — frei heißt ein Belegt-Bit je Slot. Festgeschrieben in
+  `dokumente/SPRACHE.md` (§`table`, mit Messung: 0 Fehler, LLVM beidseitig
+  `opt`-gültig); was das Muster NICHT gibt (kein Use-after-free-Schutz),
+  steht dabei — das ist B, kein zweites Register.
+- **B (unbegrenzt mit Abtastung + echte Freigabe) — gebaut 2026-10-15, Reste offen.**
+  Unbegrenzt: `druckfrage P unter B` an der Arena (SYNTAX.md §9.1) schaltet die
   UNBEGRENZTE Form ein (ohne sie ist ohne `max` die Decke `hi` — statisch).
   Der Erzeuger reserviert einmal Adressraum (`mmap(PROT_NONE)`, kein RAM),
-  committet je 1 MiB bei Bedarf (`mprotect`) und fragt VOR jedem Commit die
+  committet je 1 MiB bei Bedarf (`mprotect`, sauber in Bytes gerechnet) und fragt VOR jedem Commit die
   nullstellige Frage `P` nach freien Bytes; unter der Nutzer-Schwelle `B`
   (z.B. `unter 1048576` — 1 MiB) läuft der `else`-Zweig (OOM-Pfad). EIN Ruf
   je MiB, null im Schnellpfad (`bereit >= bedarf` fragt gar nicht) — Abtasten
@@ -24,11 +27,25 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
   Erzeuger). Prüfer: `N584` (Frage nennt nichts), `N585` (falsche Form,
   keine fällige Schwelle); Erzeuger: drittes sanktioniertes `inttoptr`
   (Laufzeit-Basis); Beispiel `1160`, Proben `gift/1436`–`1438`, LLVM-Test
-  `abtastung_vor_commit`. Offen: `free` mit linearer Fähigkeit
-  (Use-after-free — Nähe O37: nichts gibt eine Region frei), Lean-Form
-  für Freigabe/Generationen.
-- **C (Rückgabe an den Kern) — offen, nach B.** Leere Chunks per `madvise`
-  zurückgeben; Nutzer-Tor wie bei B, kein Erzeuger-Wissen über das System.
+  `abtastung_vor_commit`.
+  Freigabe: `free A[i];` (SYNTAX.md §9.1, `freestmt`) gibt genau einen Slot
+  zurück — intrusive LIFO-Freiliste (null Overhead, Elemente unter 8 Bytes
+  tragen kein Glied: `Y103`), der Name stirbt statisch (`N586`: kein
+  Danach-Gebrauch, keine Doppel-Freigabe, Kopien sterben mit, Joins vereinen,
+  `reset` löscht; geborgte und berechnete Formen fallen). Beispiel `1161`
+  (`rc=100`, Slot wiederverwendet), Proben `gift/1439`–`1443`, LLVM-Test
+  `freigabe_als_liste`. Lean: `FreiZustand` mit vier bewiesenen
+  Erhaltungssätzen (`ArenaDyn.lean`, keine neuen Axiome).
+  Offen: `free` über Funktionsgrenzen (der Eigner gibt frei — Helfer, die
+  für den Rufer freigeben, sind zeremoniell inline), Aliase über
+  ungetrackte Namen (OFFEN `Alias`, wie jede ungetrackte Kopie), Block-Form
+  und Exporteur-Anbindung (`LG005` steht, O14s dritte Form).
+- **C (Rückgabe an den Kern) — offen, Entwurf steht.** Leere 1-MiB-Chunks per
+  `madvise` zurückgeben: Zähler lebender Slots je Chunk (Seitentabelle,
+  Adressraum-reserviert wie die Freiliste), Rückgabe-Tor aus der
+  Nutzer-Bindung (kein Systemruf im Erzeuger — wie `gabbro_os_leeren`),
+  Commit-Bits je Chunk statt einer `bereit`-Marke (Decommit bricht das
+  Ein-Marken-Modell). Nach B, Tage.
 
 ## 2. Lean-Modell
 

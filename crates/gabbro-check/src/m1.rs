@@ -1872,6 +1872,16 @@ impl<'a> Pruefer<'a> {
                 self.rufe_im_ausdruck(&g.mehr, lage);
                 self.unterblock(&g.sonst, lage, ergebnis);
             }
+            // **TODO §1-B: `free A[i];`.** The freed slot's index
+            // expressions are ordinary expressions (their constness and
+            // calls are seen like any bound value); the arena is `arena.rs`'s
+            // business (`N586` there), so this arm stays silent about it.
+            StmtArt::Frei(f) => {
+                for e in crate::ausdruecke_im_ort(&f.ort) {
+                    let _ = self.ausdruck(e, lage);
+                    self.rufe_im_ausdruck(e, lage);
+                }
+            }
             // **Lane 253:** `start { f, g };`. No expression, no binding --
             // the roots resolve fail-closed in `nebeneinander.rs` (`W003`,
             // like the `concurrent` members), and nothing here has to move

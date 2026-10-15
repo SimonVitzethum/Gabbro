@@ -431,6 +431,15 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 t.schreibt.push((g.tisch.text.clone(), s.span));
                 liest_expr(&g.mehr, t);
             }
+            // **TODO §1-B:** releasing a slot rewrites the link word -- the
+            // arena is written, and the freed slot's index is read. Needs
+            // `writes A` in the effects, like any other store to a carrier.
+            StmtArt::Frei(f) => {
+                t.schreibt.push((f.ort.basis.text.clone(), s.span));
+                for e in crate::ausdruecke_im_ort(&f.ort) {
+                    liest_expr(e, t);
+                }
+            }
             StmtArt::Return(Some(x)) => liest_expr(x, t),
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {

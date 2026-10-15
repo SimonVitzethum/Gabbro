@@ -305,6 +305,8 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             StmtArt::ResetSlot(_) => "range reset",
             // **Lane 257:** the commit request.
             StmtArt::Grow(_) => "grow",
+            // **TODO §1-B:** the slot release.
+            StmtArt::Frei(_) => "free",
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 Schleife::Traverse(_) => "traverse",
                 Schleife::Retry(_) => "retry",

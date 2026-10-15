@@ -1,0 +1,16 @@
+-- erwartet: N586
+-- A callee never frees what it is handed: the index is borrowed, and the
+-- owner frees. Nothing else is wrong with this unit.
+module gift::freigabe_geborgten_index {
+arena Vorrat capacity 0 .. 4 of u64;
+
+fn freigeben(i : index into Vorrat) effects { reads Vorrat, writes Vorrat } costs <= 32 ops {
+    free Vorrat[i];
+}
+
+fn nutze() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 128 ops {
+    let a = alloc Vorrat (7) else { return 1; };
+    freigeben(a);
+    return Vorrat[a];
+}
+}

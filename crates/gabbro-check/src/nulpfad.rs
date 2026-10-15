@@ -513,6 +513,14 @@ impl<'a> Walker<'a> {
                     self.check_calls_in_expr(&g.mehr);
                     self.walk(&g.sonst, true);
                 }
+                // **TODO §1-B:** the freed slot's index expressions walk
+                // like any bound value.
+                StmtArt::Frei(f) => {
+                    for e in crate::ausdruecke_im_ort(&f.ort) {
+                        self.check_calls_in_expr(e);
+                        self.kill_for_expr(e);
+                    }
+                }
                 StmtArt::Child(b) => self.walk(b, true),
                 // `leave`, `next`, `reset`, `start`: no blocks, no expressions.
                 // A `@lib` call is refused by name elsewhere (`N057`); its contract

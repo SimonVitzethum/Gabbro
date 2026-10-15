@@ -3845,6 +3845,19 @@ impl<'a> Parser<'a> {
                     sonst,
                 })
             }
+            // **TODO §1-B: `free A[i];` -- give a slot back.**
+            //
+            // The head word decides, like at `reset` above: `free = 1;`
+            // and `free.x = y;` continue with a place continuation and
+            // stay assignments to a name of that spelling (the `kopf`
+            // guard above). No `else`: freeing a live slot cannot fail,
+            // so the grammar has no branch form to owe.
+            Art::Wort(Kw::Free) => {
+                self.pos += 1;
+                let ort = self.place()?;
+                self.erwarte_z(Z::Semi)?;
+                StmtArt::Frei(FreiStmt { ort })
+            }
             // **Lane O-1: `child { … }` -- the clone-child path (K-1).**
             //
             // The head word decides, like at `reset` above: `child = 1;`

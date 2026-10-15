@@ -398,6 +398,31 @@ counts as a debt item. And **incremental** checking presupposes that the checker
 that **only the mutator** knows: **whoever wants invariants in the hot path has already chosen cut
 (c).**
 
+#### The free list — reuse without fragmentation, as a pattern (TODO §1-A)
+
+Typed compartments do not fragment (one element type per heap), so reuse needs no
+size classes, no coalescing, no split: a head plus a chain. `beispiele/27-freiliste.gab`
+and `58-freiliste-zwei-formen.gab` carry the whole pattern — a table, a `frei` head,
+a `naechst` chain, `belegen` (pop) and `freigeben` (push):
+
+```gabbro
+table Halde count 1024 {
+    slot {
+        kopf    : u64,
+        naechst : option index into Halde,
+    }
+}
+static mut frei : option index into Halde = None;
+```
+
+What the pattern gives: reuse of whole slots, no language change, checker-clean
+(0 errors; one `E247` hint where the head is read without a held lock) and
+`opt`-valid LLVM on both targets (measured 2026-10-15). What it does NOT give:
+no use-after-free protection — a freed index stays a usable value, and nothing
+refuses its next read. That half is TODO §1-B (`free` with a consumed discipline),
+not this pattern: a pattern that promised it would be a second register beside
+the checker.
+
 ---
 
 ### 3. `traverse` — there are no loops

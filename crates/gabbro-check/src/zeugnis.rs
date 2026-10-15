@@ -1144,6 +1144,11 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 zaehle(e, "grow");
                 block(&g.sonst, e, geister);
             }
+            // **TODO §1-B:** the slot release is a derivation step the
+            // certificate counts.
+            StmtArt::Frei(_) => {
+                zaehle(e, "free");
+            }
             // **`breaking` is a booked construct since 2026-08-31.** It used to be pushed
             // straight onto `unzugeordnet` because the emitter refused it -- and the two
             // halves moved together: the lowering and its entry in `EINORDNUNG`.

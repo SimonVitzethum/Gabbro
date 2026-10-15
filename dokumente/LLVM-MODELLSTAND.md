@@ -93,8 +93,24 @@ das `else` ist des Programms); `reset` lässt Commit stehen. Der Erzeuger folgt
 demselben: drei Wörter (`basis`, `belegt`, `bereit`), Reserve einmalig per
 `mmap(PROT_NONE)` (Adressraum ohne RAM), Commit in 1-MiB-Schritten per
 `mprotect` bei Bedarf, jeder Fehlschlag in den `voll`-Zweig. Gemessen: 1 GiB
-Decke → 24 Byte BSS, `rc=42` korrekt. Die 1-MiB-Schritte überragen den Bedarf —
-unbeobachtbar (keine Introspektion), also verfeinerungstreu.
+Decke → 24 Byte BSS, `rc=42` korrekt (seit TODO §1-B vier Wörter mit `frei`:
+32 Byte, weiter decken-unabhängig). Die 1-MiB-Schritte überragen den Bedarf —
+unbeobachtbar (keine Introspektion), also verfeinerungstreu. Seit TODO §1-B
+rechnet der Schritt sauber in Bytes (Bedarf auf 1 MiB aufgerundet, an der
+Decke gekappt): Decken unter 1 MiB committen ihren Rest in einem Schritt
+(gemessen: `capacity 0 .. 4` läuft, `rc=100` mit Freilisten-Wiederverwendung).
+
+## Slot-Freigabe (`free A[i];`, TODO §1-B)
+
+Vier Wörter je Arena (`basis`, `belegt`, `bereit`, `frei` = -1 für leer):
+`free` schreibt den alten Kopf als `i64`-Glied in den Slot und rückt den Kopf
+vor (intrusiv, null Overhead — Elemente unter 8 Bytes tragen kein Glied,
+`Y103`); der nächste `alloc` nimmt von der Liste (kein Commit, keine Abtastung)
+oder vom Hochwasser; `reset` leert die Liste neben dem Zähler. Gemessen:
+Beispiel `1161` läuft beidseitig (`rc=100`, Slot wiederverwendet), BSS weiter
+konstant (32 Byte für 4 Wörter, decken-unabhängig; `frei` = -1 steht in DATA).
+Lean: `FreiZustand` mit vier bewiesenen Erhaltungssätzen (`ArenaDyn.lean`);
+der G-Exporteur verweigert noch (`LG005`, O14s dritte Form).
 
 ## Unbegrenzte Halde mit Abtastung (`druckfrage P unter B`)
 

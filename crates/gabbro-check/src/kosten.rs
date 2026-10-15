@@ -1150,6 +1150,16 @@ impl<'a> Rechner<'a> {
             StmtArt::Grow(g) => Kosten::Zahl(1).plus(self.ausdruck(&g.mehr, lokal)).plus(
                 self.block(&g.sonst, lokal),
             ),
+            // **TODO §1-B:** the release is one primitive plus the freed
+            // slot's index expressions -- the link store itself is the
+            // runtime's declared cost, not a second term here.
+            StmtArt::Frei(f) => {
+                let mut k = Kosten::Zahl(1);
+                for e in crate::ausdruecke_im_ort(&f.ort) {
+                    k = k.plus(self.ausdruck(e, lokal));
+                }
+                k
+            }
 
             StmtArt::Schleife(sch) => self.schleife(sch, lokal),
         }
