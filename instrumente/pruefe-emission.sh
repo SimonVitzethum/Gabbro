@@ -3449,7 +3449,7 @@ n_clang_ok=0; n_umg_nur_cc=0; umg_nur_cc=""
 # `set -e` reads an `a && b` whose `a` fails as a failed command, so this is an `if`.
 HAT_CLANG=0
 if command -v clang > /dev/null; then HAT_CLANG=1; fi
-n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_n=0; n_emit_p=0; n_emit_l=0; n_emit_i=0
+n_emit_b=0; n_emit_g=0; n_emit_m=0; n_emit_p=0; n_emit_l=0; n_emit_i=0
 n_emit_x=0; rest_x=""
 # **Der `find` bildet die Reichweite der Tafel NACH, und zwar ueber Namen statt ueber Pfade.**
 # `-name` sieht nur den letzten Bestandteil; ein Muster auf den ganzen Pfad haette denselben
@@ -3501,7 +3501,6 @@ while IFS= read -r q; do
     beispiele/gift/*) n_emit_g=$((n_emit_g + 1)) ;;
     beispiele/*)      n_emit_b=$((n_emit_b + 1)) ;;
     messung/*)        n_emit_m=$((n_emit_m + 1)) ;;
-    messungen/*)      n_emit_n=$((n_emit_n + 1)) ;;
     programmlogik/*)  n_emit_p=$((n_emit_p + 1)) ;;
     # **`laufzeit/` -- die SECHSTE gebuchte Wurzel, seit dem 2026-09-15.** Sie kam mit
     # Bahn 201 (`laufzeit/sperre.gab`, die Ticketsperre in Gabbro) und stand bis heute im
@@ -3586,8 +3585,8 @@ n_nenner=$((n_emit - n_umg))
 echo "  $n_ok von $n_nenner emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen,"
 echo "  $n_umg umgekehrte Proben (\`-- erwartet: cc\`) -- zusammen $n_emit, die emittieren"
 echo "  ($n_emit_b beispiele/, $n_emit_g beispiele/gift/, $n_emit_m messung/*/,"
-echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_l laufzeit/,"
-echo "   $n_emit_i bibliothek/, $n_emit_x sonst -- ACHT Marken)"
+echo "   $n_emit_p programmlogik/, $n_emit_l laufzeit/,"
+echo "   $n_emit_i bibliothek/, $n_emit_x sonst -- SIEBEN Marken)"
 
 # **Mark: reverse probes that bite under `cc` ALONE.** They are DEBT, not an achievement --
 # pulled onto the measured stand, and the number may only fall.
@@ -4170,12 +4169,11 @@ MARKE_EMIT=157
 # own C (`melde.c`, `atomar.c`) was deleted, so each emits as the unit it is built as -- with
 # `bibliothek/linux-kmod/linux-kmod.gab` beside it -- and that unit is built, LOADED and read in
 # QEMU by `instrumente/pruefe-kernelmodul.sh` (GREEN, 12 harness gifts).
-MARKE_EMIT_M=159
+MARKE_EMIT_M=161      # seit 2026-10-15 inkl. narrow.gab, tabelle.gab (aus `messungen/`)
 # **161 -> 162 on 2026-09-30 (server lane, M-ALLTAG C).** One new probe program: `messung/proben/seiten-zurueck/ring.gab`
 # (a 1 MiB static buffer and the one statement that gives it back), the subject of `instrumente/pruefe-seiten-zurueck.sh`.
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
-MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C
 MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt ab
 # **Und eine vierte, am 2026-09-15: `laufzeit/`.** Gebucht bei 1 -- `laufzeit/sperre.gab`,
 # die Ticketsperre, die Bahn 201 in Gabbro geschrieben hat. `laufzeit/start.c` ist C und
@@ -4367,7 +4365,6 @@ decke() {
 }
 ratsche "$n_emit_b" "$MARKE_EMIT"   "beispiele/"
 ratsche "$n_emit_m" "$MARKE_EMIT_M" "messung/*/"
-ratsche "$n_emit_n" "$MARKE_EMIT_N" "messungen/"
 ratsche "$n_emit_p" "$MARKE_EMIT_P" "programmlogik/"
 ratsche "$n_emit_l" "$MARKE_EMIT_L" "laufzeit/"
 ratsche "$n_emit_i" "$MARKE_EMIT_BIB" "bibliothek/"
