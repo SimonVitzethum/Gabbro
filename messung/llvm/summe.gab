@@ -1,0 +1,66 @@
+-- Kopie plus XOR-Prüfsumme (LLVM-Benchmark 1, ohne C): füllen, mit +1 kopieren,
+-- Prüfsumme falten, `OK` über das eigene `write`-Tor melden, Prüfsumme durch 251
+-- als Rückgabe (der Eintritt reicht sie an `exit_group` durch). Alle Operanden
+-- bereichsexakt (`+%` und `^` verlassen die Breite nie). Keine libc, kein C:
+-- nur Tore mit Gabbro-Registersyntax. Das Skript vergleicht x86-64 gegen AArch64
+-- (gleicher Rückgabewert = gleiche Semantik auf beiden Zielen).
+module summe {
+assume linux_schreibe
+    "Der Kern schreibt hoechstens len Bytes von buf und antwortet die Anzahl."
+    falsifier sonde_schreibe;
+syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = puffer, rdx = laenge }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    requires laenge <= lenof(puffer)
+    effects { writes ausgabe }
+    costs <= 8 ops
+    assume linux_schreibe falsifier sonde_schreibe;
+syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
+    abi linux arch aarch64 number 64
+    regs in { x0 = fd, x1 = puffer, x2 = laenge }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    requires laenge <= lenof(puffer)
+    effects { writes ausgabe }
+    costs <= 8 ops
+    assume linux_schreibe falsifier sonde_schreibe;
+pub static mut A : [u32; 65536] = 0;
+pub static mut B : [u32; 65536] = 0;
+pub static mut W : [u32; 128] = 0;
+pub static mut TEXT : [u8; 3] = 0;
+pub fn main() -> u64
+    effects { reads A, writes A, reads B, writes B, reads W, reads TEXT, writes TEXT, writes ausgabe, diverges }
+    costs <= 100000000 ops
+{
+    traverse i over elems of A by unvisited
+        touches writes A
+    {
+        A[i] = i;
+    }
+    traverse w over elems of W by unvisited
+        touches reads A, writes B
+    {
+        traverse j over elems of A by unvisited
+            touches reads A, writes B
+        {
+            B[j] = A[j] +% 1;
+        }
+    }
+    let mut s : u64 = 0;
+    traverse k over elems of B by unvisited
+        touches reads B
+    {
+        s = s ^ u64(B[k]);
+    }
+    TEXT[0] = 79;
+    TEXT[1] = 75;
+    TEXT[2] = 10;
+    schreibe(1, TEXT, 3);
+    let c = s % 251;
+    return c;
+}
+}

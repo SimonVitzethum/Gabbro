@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/X86/GvStartPflicht.lean
+  File:      Grammatik/GabbroV/GvStartPflicht.lean
   Subject:   GabbroV bridge: `StartPflicht` without the `Initially` assumption (lane 1387).
 
   GabbroV duty files assume `Initially s0` (well-typed initial world, every
@@ -29,7 +29,7 @@ import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 
-namespace Gabbro.Grammatik.X86
+namespace Gabbro.Grammatik.GabbroV
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
@@ -307,7 +307,7 @@ theorem gv_startPflicht_zeuge :
     gvInitWert_int_ok 0 100 64 (by decide) (by decide),
     gv_fragment_kein_static uExp104⟩
 
-end Gabbro.Grammatik.X86
+end Gabbro.Grammatik.GabbroV
 /- CUTS: PROVED here -- `Sp0Ok` with its decider (`sp0OkB` over the per-field
     test `sp0FeldOkB`, sound by `sp0OkB_klingt`/`sp0FeldOkB_klingt`); the computed
     zero memory (`sp0FeldWert` from the very `Bool` tests, `sp0FeldOkB_of`,
@@ -324,19 +324,19 @@ end Gabbro.Grammatik.X86
     in context (the `bruecke/` project, out of this file's scope -- its S4
     already closes the shape half for 104/108). Full `./lean-bau`: exit 0,
     0 errors, 723 jobs, module built. -/
-#print axioms Gabbro.Grammatik.X86.Sp0Ok
-#print axioms Gabbro.Grammatik.X86.sp0_luecke
-#print axioms Gabbro.Grammatik.X86.sp0FeldOkB_klingt
-#print axioms Gabbro.Grammatik.X86.sp0OkB_klingt
-#print axioms Gabbro.Grammatik.X86.sp0FeldWert
-#print axioms Gabbro.Grammatik.X86.sp0FeldOkB_of
-#print axioms Gabbro.Grammatik.X86.sp0Of
-#print axioms Gabbro.Grammatik.X86.sp0_lueckeB
-#print axioms Gabbro.Grammatik.X86.gv_fragment_kein_static
-#print axioms Gabbro.Grammatik.X86.gvInitWert_bool
-#print axioms Gabbro.Grammatik.X86.gvInitWert_int_bool_none
-#print axioms Gabbro.Grammatik.X86.gvInitWert_int_ok
-#print axioms Gabbro.Grammatik.X86.gvInitWert_int_none
-#print axioms Gabbro.Grammatik.X86.gv_lowerAllg_requires
-#print axioms Gabbro.Grammatik.X86.gv_startPflicht
-#print axioms Gabbro.Grammatik.X86.gv_startPflicht_zeuge
+#print axioms Gabbro.Grammatik.GabbroV.Sp0Ok
+#print axioms Gabbro.Grammatik.GabbroV.sp0_luecke
+#print axioms Gabbro.Grammatik.GabbroV.sp0FeldOkB_klingt
+#print axioms Gabbro.Grammatik.GabbroV.sp0OkB_klingt
+#print axioms Gabbro.Grammatik.GabbroV.sp0FeldWert
+#print axioms Gabbro.Grammatik.GabbroV.sp0FeldOkB_of
+#print axioms Gabbro.Grammatik.GabbroV.sp0Of
+#print axioms Gabbro.Grammatik.GabbroV.sp0_lueckeB
+#print axioms Gabbro.Grammatik.GabbroV.gv_fragment_kein_static
+#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_bool
+#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_int_bool_none
+#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_int_ok
+#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_int_none
+#print axioms Gabbro.Grammatik.GabbroV.gv_lowerAllg_requires
+#print axioms Gabbro.Grammatik.GabbroV.gv_startPflicht
+#print axioms Gabbro.Grammatik.GabbroV.gv_startPflicht_zeuge

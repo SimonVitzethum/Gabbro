@@ -120,7 +120,15 @@ import korpus  # noqa: E402
 #   commit's own `PASSREGISTER.md` books 53 while its tree already holds the
 #   code. *A mark that stands too low looks like a held ratchet and is a
 #   forgotten one* -- the file says so itself, 2026-08-31.
-MARKE = 55
+#   2026-10-14: 55 -> 61. The six `Y101`-`Y106` of the LLVM backend (`llvm.rs`,
+#   with gift probes 1427-1432) join WITHOUT sentences -- the `C001` class:
+#   refusals of an UNTRUSTED emitter, not sentences of a pass. Like `C001` they
+#   name the unlowered form instead of emitting something plausible.
+#   2026-10-14 (2): 61 -> 60. `Y105` (error channel) is fully lowered (LLVM-1:
+#   fallible signatures, `let … else`, reason values/matches, errno decoding);
+#   its probe `gift/1431` compiled and was deleted (a healed probe is retired,
+#   never widened).
+MARKE = 60
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

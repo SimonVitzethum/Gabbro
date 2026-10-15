@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/X86/GvAtomRely.lean
+  File:      Grammatik/GabbroV/GvAtomRely.lean
   Subject:   GabbroV bridge: the shared-atomic rely (lane 1385).
 
   Family V5 `the shared-atomic rely` (TODO 0f): premise (b) of the goal is
@@ -35,7 +35,7 @@ import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
 import Grammatik.Korrespondenz.Allgemein.Pflicht104
 
-namespace Gabbro.Grammatik.X86.GvAtomRely
+namespace Gabbro.Grammatik.GabbroV.GvAtomRely
 
 open Gabbro.Grammatik Zielsatz
 
@@ -168,12 +168,12 @@ theorem gv_rely_braucht_atomfreiheit_zeuge :
      five attempts, ~150 min).
 -/
 
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gvDutyA_gibt_nutzerA
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gv_plain_gibt_relyDuty_parserfragment
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gv_104_ohne_atomar
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gv_104_einzahlen_schreibt
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gv_plain_gibt_relyDuty_parserfragment_zeuge
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gv_rely_braucht_atomfreiheit
-#print axioms Gabbro.Grammatik.X86.GvAtomRely.gv_rely_braucht_atomfreiheit_zeuge
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gvDutyA_gibt_nutzerA
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_plain_gibt_relyDuty_parserfragment
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_104_ohne_atomar
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_104_einzahlen_schreibt
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_plain_gibt_relyDuty_parserfragment_zeuge
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_rely_braucht_atomfreiheit
+#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_rely_braucht_atomfreiheit_zeuge
 
-end Gabbro.Grammatik.X86.GvAtomRely
+end Gabbro.Grammatik.GabbroV.GvAtomRely

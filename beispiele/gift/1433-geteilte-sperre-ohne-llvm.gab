@@ -1,0 +1,22 @@
+-- erwartet: Y103
+-- 1433 -- **a shared acquisition has no LLVM lowering (LLVM-0).**
+--
+-- The checker accepts the shared take (and distinguishes it from exclusive by
+-- `E007` — that distinction is checked, not decorative); the LLVM backend
+-- lowers the exclusive ticket only. Silently serializing readers would
+-- contradict the checked distinction, so the *statement* is refused with
+-- `Y103`. A shared ticket needs its own (unproved) primitive first.
+module gift1433 {
+static mut x : u32 = 0;
+lock TOR protects { x } rank 0 held <= 2 ops shared held <= 4 ops;
+impl fn f() -> u32
+    effects { reads x, locks shared TOR }
+    costs <= 16 ops
+{
+    let mut y : u32 = 0;
+    locks shared TOR {
+        y = x;
+    }
+    return y;
+}
+}

@@ -12,7 +12,7 @@
 -/
 import Grammatik.Kern.Semantik.Semantik
 
-namespace Gabbro.Grammatik.X86
+namespace Gabbro.Grammatik.GabbroV
 
 open Gabbro.Grammatik
 
@@ -392,4 +392,4 @@ theorem deklaration_schliesst_eltern_nicht :
 #print axioms gegenbeispiel1_offen
 #print axioms beispielKonsistent_rufSicher
 
-end Gabbro.Grammatik.X86
+end Gabbro.Grammatik.GabbroV

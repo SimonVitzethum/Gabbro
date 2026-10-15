@@ -182,6 +182,14 @@ fn main() -> std::process::ExitCode {
         // The emitter, since 2026-08-17 -- what it covers and what it refuses stands at
         // `command_emit` below, where the code is.
         "emit" => command_emit(befehl, rest),
+        // **The LLVM backend (2026-10-14): Gabbro → LLVM-IR text for AArch64/x86-64.**
+        // Untrusted like the C backend: the checker runs first, refusal codes are `Y101`
+        // -`Y106`. The IR goes to stdout; `instrumente/baue-llvm.sh` compiles and runs
+        // it for both targets.
+        "llvm" => command_llvm(befehl, rest),
+        // **Das Lean-Zertifikat zum LLVM-IR (2026-10-14): Eingabe zur
+        // Verfeinerung, kein Beweis.** Aus demselben Senken-Lauf wie das IR.
+        "llvm-cert" => command_llvm_cert(befehl, rest),
         "fragments" | "fragmente" => fragmente::befehl(rest),
         "assumptions" | "annahmen" => befehl_annahmen(rest),
         "k-condition" | "k-bedingung" => {
@@ -806,6 +814,8 @@ const COMMAND_NAMES: &[&str] = &[
     "build", "bau",
     "new",
     "emit",
+    "llvm",
+    "llvm-cert",
     "fragments", "fragmente",
     "assumptions", "annahmen",
     "k-condition", "k-bedingung",
@@ -1004,6 +1014,19 @@ fn hilfe() {
                                     as a unit is translated as one.
                                     WITHOUT `--testbuild` this is the SHIPPING build: an
                                     item marked `when TESTBUILD` produces no line of C
+  gabbro llvm [--target=x86_64|aarch64] [--unit] [--testbuild] <file.gab>…
+                                    the unit as LLVM-IR text for AArch64 or x86-64
+                                    (default `x86_64`): checked first, refused by name
+                                    (`Y101`–`Y106`), IR to stdout. The backend is
+                                    UNTRUSTED like the C one -- `opt -O3` plus
+                                    `llc -O3` translate and optimise; validation
+                                    comes later.
+  gabbro llvm-cert [--target=x86_64|aarch64] [--unit] <file.gab>…
+                                    the Lean certificate for the LLVM IR: target,
+                                    layouts, functions, gates, entry, assumes and
+                                    the COMPLETE IR as Lean text -- input to
+                                    refinement, not a proof. Checked first,
+                                    refused by name, like `llvm`.
   gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…
                                      the Lean duties of each unit against `Proofs/<Unit>.lean`:
                                      GREEN, OWED (what a person still proves), RED, SETUP;
@@ -1554,6 +1577,271 @@ fn emittiere_als_einheit(
     }
 }
 
+/// **`gabbro llvm f.gab…` -- the unit as LLVM-IR text (2026-10-14).**
+///
+/// The counterpart of `gabbro emit` for the LLVM backend (`gabbro_check::llvm`):
+/// checked first, refused by name (`Y101`–`Y106`), IR to stdout, refusals to stderr —
+/// so a harness piping stdout into a `.ll` file never finds a diagnostic inside it.
+/// `--target=` picks `x86_64` (default) or `aarch64`; `--unit` translates the named
+/// files as ONE unit, like `emit --unit`.
+fn command_llvm(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
+    let pruefbau = argumente.iter().any(|a| a == "--testbuild");
+    let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
+    let ziel_wunsch = argumente
+        .iter()
+        .find_map(|a| {
+            a.strip_prefix("--target=")
+                .or_else(|| a.strip_prefix("--ziel="))
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "x86_64".to_string());
+    let ziel = match gabbro_check::llvm::ziel_fuer(&ziel_wunsch) {
+        Some(z) => z,
+        None => {
+            eprintln!("gabbro {getippt}: unknown target `{ziel_wunsch}` -- `x86_64` or `aarch64`");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    let argumente: Vec<String> = {
+        let mut out = Vec::new();
+        for a in argumente {
+            match a.as_str() {
+                "--testbuild" | "--unit" | "--einheit" => {}
+                _ if a.starts_with("--target=") || a.starts_with("--ziel=") => {}
+                _ => out.push(a.clone()),
+            }
+        }
+        out
+    };
+    let (dateien, mit) = match split_with(getippt, &argumente) {
+        Ok(x) => x,
+        Err(c) => return c,
+    };
+    let bau = if pruefbau {
+        gabbro_check::gatter::Bau::Pruefbau
+    } else {
+        gabbro_check::gatter::Bau::Auslieferung
+    };
+    let vorspann = match read_preamble(getippt, &mit) {
+        Ok(v) => v,
+        Err(c) => return c,
+    };
+    if einheit {
+        return llvm_als_einheit(getippt, &dateien, &vorspann, bau, ziel);
+    }
+    let mut schlecht = false;
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    for datei in &dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei) else {
+            eprintln!("gabbro: {datei} not readable");
+            schlecht = true;
+            continue;
+        };
+        let ganz = if vorspann.is_empty() {
+            quelle.clone()
+        } else {
+            format!("{vorspann}\n{quelle}")
+        };
+        let versatz = ganz.len() - quelle.len();
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &ganz);
+        // **The checker runs first, and that is the point** — like `emit`, no IR out of
+        // a tree the passes refused.
+        gabbro_check::pruefe(&baum, &mut absagen);
+        register.nimm_auf(datei, &baum, versatz, &mut absagen);
+        let ir = gabbro_check::llvm::emittiere_llvm(&baum, &mut absagen, bau, ziel);
+        if absagen.fehler_zahl() > 0 {
+            let stueck = [Stueck {
+                datei: datei.to_string(),
+                quelle: quelle.clone(),
+                von: versatz,
+                bis: ganz.len(),
+            }];
+            for a in zeige_je_stueck(&absagen, &stueck, Strom::Fehler, &mut |_, _| {}) {
+                eprintln!(
+                    "gabbro: [{}] fell outside the file -- its line number is the `--with` \
+                     PREAMBLE's: {}",
+                    a.code, a.text
+                );
+            }
+            eprintln!("gabbro {getippt}: {datei} has errors -- no LLVM IR written");
+            schlecht = true;
+            continue;
+        }
+        print!("{ir}");
+    }
+    if schlecht {
+        std::process::ExitCode::from(1)
+    } else {
+        std::process::ExitCode::SUCCESS
+    }
+}
+
+/// **`gabbro llvm --unit a.gab b.gab` -- the named files as ONE translation unit.**
+fn llvm_als_einheit(
+    getippt: &str,
+    dateien: &[String],
+    vorspann: &str,
+    bau: gabbro_check::gatter::Bau,
+    ziel: &'static gabbro_check::llvm::Ziel,
+) -> std::process::ExitCode {
+    let quellen = match lies_quellen(dateien) {
+        Ok(q) => q,
+        Err(e) => {
+            eprintln!("gabbro {getippt}: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    match uebersetze_einheit_llvm(vorspann, &quellen, bau, Strom::Fehler, ziel) {
+        Einheitsbau::Fertig { c, .. } => {
+            print!("{c}");
+            std::process::ExitCode::SUCCESS
+        }
+        Einheitsbau::Abgesagt(n) => {
+            eprintln!(
+                "gabbro {getippt}: the unit of {} file(s) has {n} error(s) -- no LLVM IR written",
+                dateien.len()
+            );
+            std::process::ExitCode::from(1)
+        }
+    }
+}
+
+/// **`gabbro llvm-cert f.gab…` -- das Lean-Zertifikat zum LLVM-IR (2026-10-14).**
+///
+/// Dasselbe geprüfte Programm wie bei `llvm`, aber statt IR kommt der Beleg als
+/// Lean-Datei: Ziel, Typ-Layouts, Funktionen, Tore, Eintritt, angenommene
+/// Tatsachen und das VOLLSTÄNDIGE IR als Lean-Text — alles, was die Verfeinerung
+/// zur Binary braucht, ohne IR-Text zu parsen. Nur Kern-Syntax, kein Import.
+/// Wie `llvm`: geprüft zuerst, verweigert mit Namen, Zertifikat nach stdout,
+/// Absagen nach stderr. Nur bei 0 Fehlern kommt ein Zertifikat.
+fn command_llvm_cert(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
+    let pruefbau = argumente.iter().any(|a| a == "--testbuild");
+    let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
+    let ziel_wunsch = argumente
+        .iter()
+        .find_map(|a| {
+            a.strip_prefix("--target=")
+                .or_else(|| a.strip_prefix("--ziel="))
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "x86_64".to_string());
+    let ziel = match gabbro_check::llvm::ziel_fuer(&ziel_wunsch) {
+        Some(z) => z,
+        None => {
+            eprintln!("gabbro {getippt}: unknown target `{ziel_wunsch}` -- `x86_64` or `aarch64`");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    let argumente: Vec<String> = {
+        let mut out = Vec::new();
+        for a in argumente {
+            match a.as_str() {
+                "--testbuild" | "--unit" | "--einheit" => {}
+                _ if a.starts_with("--target=") || a.starts_with("--ziel=") => {}
+                _ => out.push(a.clone()),
+            }
+        }
+        out
+    };
+    let (dateien, mit) = match split_with(getippt, &argumente) {
+        Ok(x) => x,
+        Err(c) => return c,
+    };
+    let bau = if pruefbau {
+        gabbro_check::gatter::Bau::Pruefbau
+    } else {
+        gabbro_check::gatter::Bau::Auslieferung
+    };
+    let vorspann = match read_preamble(getippt, &mit) {
+        Ok(v) => v,
+        Err(c) => return c,
+    };
+    // Der Einheitsname des Belegs: die Dateien, in Manifest-Ordnung.
+    let name = if dateien.is_empty() {
+        "<unit>".to_string()
+    } else {
+        dateien.join(" ")
+    };
+    if einheit {
+        return llvm_cert_als_einheit(getippt, &dateien, &vorspann, bau, &name, ziel);
+    }
+    let mut schlecht = false;
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    for datei in &dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei) else {
+            eprintln!("gabbro: {datei} not readable");
+            schlecht = true;
+            continue;
+        };
+        let ganz = if vorspann.is_empty() {
+            quelle.clone()
+        } else {
+            format!("{vorspann}\n{quelle}")
+        };
+        let versatz = ganz.len() - quelle.len();
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &ganz);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        register.nimm_auf(datei, &baum, versatz, &mut absagen);
+        let (_, beleg) =
+            gabbro_check::llvm::emittiere_llvm_mit_beleg(&baum, &mut absagen, bau, ziel);
+        if absagen.fehler_zahl() > 0 {
+            let stueck = [Stueck {
+                datei: datei.to_string(),
+                quelle: quelle.clone(),
+                von: versatz,
+                bis: ganz.len(),
+            }];
+            for a in zeige_je_stueck(&absagen, &stueck, Strom::Fehler, &mut |_, _| {}) {
+                eprintln!(
+                    "gabbro: [{}] fell outside the file -- its line number is the `--with` \
+                     PREAMBLE's: {}",
+                    a.code, a.text
+                );
+            }
+            eprintln!("gabbro {getippt}: {datei} has errors -- no certificate written");
+            schlecht = true;
+            continue;
+        }
+        print!("{}", beleg.als_lean(datei));
+    }
+    if schlecht {
+        std::process::ExitCode::from(1)
+    } else {
+        std::process::ExitCode::SUCCESS
+    }
+}
+
+/// **`gabbro llvm-cert --unit a.gab b.gab` -- ein Beleg für die ganze Einheit.**
+fn llvm_cert_als_einheit(
+    getippt: &str,
+    dateien: &[String],
+    vorspann: &str,
+    bau: gabbro_check::gatter::Bau,
+    name: &str,
+    ziel: &'static gabbro_check::llvm::Ziel,
+) -> std::process::ExitCode {
+    let quellen = match lies_quellen(dateien) {
+        Ok(q) => q,
+        Err(e) => {
+            eprintln!("gabbro {getippt}: {e}");
+            return std::process::ExitCode::from(2);
+        }
+    };
+    match uebersetze_einheit_llvm_beleg(vorspann, &quellen, bau, Strom::Fehler, name, ziel) {
+        BelegBau::Fertig { lean, .. } => {
+            print!("{lean}");
+            std::process::ExitCode::SUCCESS
+        }
+        BelegBau::Abgesagt(n) => {
+            eprintln!(
+                "gabbro {getippt}: the unit of {} file(s) has {n} error(s) -- no certificate written",
+                dateien.len()
+            );
+            std::process::ExitCode::from(1)
+        }
+    }
+}
+
 /// **`gabbro abi --unit a.gab b.gab` -- ONE interface for a unit of several files.**
 ///
 /// It goes through `uebersetze_einheit` and not past it, so the interface comes out of the
@@ -1597,6 +1885,88 @@ pub(crate) enum Einheitsbau {
     /// The number of errors. **They are already rendered** -- into the files they came from,
     /// through `zeige_je_stueck`.
     Abgesagt(usize),
+}
+
+/// **Check and translate a file list as ONE unit into LLVM-IR (2026-10-14).**
+///
+/// The LLVM twin of `uebersetze_einheit`: same joined parse, same passes, same register —
+/// only the last step differs (IR instead of C, no `.gabi` written here). The `c` field
+/// of `Einheitsbau::Fertig` carries the IR text.
+pub(crate) fn uebersetze_einheit_llvm(
+    vorspann: &str,
+    quellen: &[(String, String)],
+    bau: gabbro_check::gatter::Bau,
+    nach: Strom,
+    ziel: &'static gabbro_check::llvm::Ziel,
+) -> Einheitsbau {
+    let Einheitstext { ganz, vorspann_ende, stuecke } = klebe_einheit(vorspann, quellen);
+    let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    register.nimm_auf("<unit>", &baum, vorspann_ende, &mut absagen);
+    let c = gabbro_check::llvm::emittiere_llvm(&baum, &mut absagen, bau, ziel);
+    if absagen.fehler_zahl() == 0 {
+        let gabi = gabbro_check::abi::schreibe_ab(&baum, &ganz, vorspann_ende);
+        return Einheitsbau::Fertig { c, gabi };
+    }
+    let n = absagen.fehler_zahl();
+    let rest = zeige_je_stueck(&absagen, &stuecke, nach, &mut |_, _| {});
+    for a in &rest {
+        let zeile = format!(
+            "gabbro: [{}] outside every file of the unit -- it belongs to the `--with` \
+             preamble, and its line number is the PREAMBLE's: {}",
+            a.code, a.text
+        );
+        match nach {
+            Strom::Aus => println!("{zeile}"),
+            Strom::Fehler => eprintln!("{zeile}"),
+        }
+    }
+    Einheitsbau::Abgesagt(n)
+}
+
+/// **What translating one unit into IR plus certificate came to.**
+pub(crate) enum BelegBau {
+    /// **IR und Beleg aus EINEM geprüften Parse** — zwei Ausgaben, ein Lauf (siehe
+    /// `emittiere_llvm_mit_beleg`: was der Validator liest, kommt aus einer Wahrheit).
+    Fertig { ir: String, lean: String },
+    /// Fehlerzahl (bereits je Datei gerendert).
+    Abgesagt(usize),
+}
+
+/// **Check and translate a file list as ONE unit into IR plus Lean certificate.**
+pub(crate) fn uebersetze_einheit_llvm_beleg(
+    vorspann: &str,
+    quellen: &[(String, String)],
+    bau: gabbro_check::gatter::Bau,
+    nach: Strom,
+    name: &str,
+    ziel: &'static gabbro_check::llvm::Ziel,
+) -> BelegBau {
+    let Einheitstext { ganz, vorspann_ende, stuecke } = klebe_einheit(vorspann, quellen);
+    let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let mut register = gabbro_check::bindung::Bindungsregister::neu();
+    register.nimm_auf("<unit>", &baum, vorspann_ende, &mut absagen);
+    let (ir, beleg) = gabbro_check::llvm::emittiere_llvm_mit_beleg(&baum, &mut absagen, bau, ziel);
+    if absagen.fehler_zahl() == 0 {
+        let lean = beleg.als_lean(name);
+        return BelegBau::Fertig { ir, lean };
+    }
+    let n = absagen.fehler_zahl();
+    let rest = zeige_je_stueck(&absagen, &stuecke, nach, &mut |_, _| {});
+    for a in &rest {
+        let zeile = format!(
+            "gabbro: [{}] outside every file of the unit -- it belongs to the `--with` \
+             preamble, and its line number is the PREAMBLE's: {}",
+            a.code, a.text
+        );
+        match nach {
+            Strom::Aus => println!("{zeile}"),
+            Strom::Fehler => eprintln!("{zeile}"),
+        }
+    }
+    BelegBau::Abgesagt(n)
 }
 
 /// **Check and translate a file list as ONE unit -- the one place that does it.**

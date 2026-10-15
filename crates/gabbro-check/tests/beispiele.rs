@@ -70,6 +70,20 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
     {
         let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
     }
+    // **LLVM-Backend (2026-10-14): `Y101`–`Y106` join `C001` here.** They are emitter
+    // refusals: the checker stays silent over these probes BY DESIGN (the program is
+    // fine; the BACKEND refuses), so the LLVM emitter must run for them exactly as
+    // the C emitter runs for `C001` -- a probe the emitter never sees is a probe
+    // that never bites. Target is fixed (`x86_64`): refusals are target-independent
+    // by construction (no target word in any `Y` sentence).
+    if quelle.starts_with("-- erwartet: Y") {
+        let _ = gabbro_check::llvm::emittiere_llvm(
+            &baum,
+            &mut absagen,
+            gabbro_check::gatter::Bau::Auslieferung,
+            &gabbro_check::llvm::ZIEL_X86_64,
+        );
+    }
     let codes = absagen
         .absagen
         .iter()

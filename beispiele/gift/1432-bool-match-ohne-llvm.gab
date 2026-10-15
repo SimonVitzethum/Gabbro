@@ -1,0 +1,21 @@
+-- erwartet: Y106
+-- 1432 -- **a non-integer, non-variant `match` has no LLVM lowering (LLVM-0).**
+--
+-- The checker accepts the boolean case match (exhaustive over `wahr`/`falsch`,
+-- checker-clean); the LLVM backend lowers integer `match` (switch) and variant
+-- `match` (tag dispatch) — a boolean scrutinee is neither, so the *statement*
+-- is refused with `Y106`. (Variant constructors and variant matches lower since
+-- LLVM-1; their layering probe stood here before and was retired with `Y106`'s
+-- narrowing — a healed probe is reclassified, never widened.)
+module gift1432 {
+impl fn deute(b : bool) -> u32
+    effects { pure }
+    costs <= 16 ops
+{
+    match b {
+        wahr => { return 1; }
+        falsch => { return 0; }
+    }
+    return 0;
+}
+}

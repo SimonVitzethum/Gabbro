@@ -322,6 +322,8 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["link", "verbinde"],
     &["build", "bau"],
     &["emit"],
+    &["llvm"],
+    &["llvm-cert"],
     &["fragments", "fragmente"],
     &["assumptions", "annahmen"],
     &["k-condition", "k-bedingung"],

@@ -710,7 +710,7 @@ theorem hBeide_invGutGrundA (passes : Nat) :
 /-- **The full rely duty on the witness**: body triple (both branches
     covered) plus the vacuous invariant duties. -/
 theorem hBeide_relyDuty_voll (passes : Nat) :
-    Gabbro.Grammatik.X86.GvAtomRely.GvRelyDuty hPBeide SchwachZeuge.nS (axWahr nD)
+    Gabbro.Grammatik.GabbroV.GvAtomRely.GvRelyDuty hPBeide SchwachZeuge.nS (axWahr nD)
       (GeteiltA hPBeide [NFn.kern, NFn.zaehlB]) passes NFn.zaehlB :=
   ⟨hBeide_relyDuty passes, hBeide_invGutSA passes, hBeide_invGutGrundA passes⟩
 

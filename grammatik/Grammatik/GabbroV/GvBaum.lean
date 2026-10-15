@@ -23,7 +23,7 @@ import Grammatik.GabbroV.GvVerkettung
 namespace Gabbro.Grammatik.GabbroV
 
 open Gabbro.Grammatik
-open Gabbro.Grammatik.X86
+open Gabbro.Grammatik.GabbroV
 
 variable {D : Deklaration}
 

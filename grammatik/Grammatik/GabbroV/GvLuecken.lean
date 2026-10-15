@@ -19,11 +19,11 @@ import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 import Grammatik.Korrespondenz.Kette.Kette104Satz
 
-namespace Gabbro.Grammatik.X86.GvLuecken
+namespace Gabbro.Grammatik.GabbroV.GvLuecken
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser
-  Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Kette104 Gabbro.Grammatik.X86
+  Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Kette104 Gabbro.Grammatik.GabbroV
 
 /-- **L_a: the computed memory is 104's declared memory.** `gv_startPflicht`
     concludes over `sp0Of`, but 104's unit carries the independently defined
@@ -191,12 +191,12 @@ theorem gvLuecke_elabU_refuses_statics :
   `GvSplits`, `GvParserFragment`.
 -/
 
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_sp4_ist_sp0
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_start104_of
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_start104
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_luecke_zeuge
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_lokal_leer
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_fragment_ohne_atomar
-#print axioms Gabbro.Grammatik.X86.GvLuecken.gvLuecke_elabU_refuses_statics
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_sp4_ist_sp0
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_start104_of
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_start104
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_luecke_zeuge
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_lokal_leer
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_fragment_ohne_atomar
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_elabU_refuses_statics
 
-end Gabbro.Grammatik.X86.GvLuecken
+end Gabbro.Grammatik.GabbroV.GvLuecken

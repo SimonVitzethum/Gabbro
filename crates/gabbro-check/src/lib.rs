@@ -47,6 +47,10 @@ pub mod m3;
 pub mod paarung;
 pub mod gruppe;
 pub mod emit;
+/// **LLVM-Backend (2026-10-14): Gabbro → LLVM-IR-Text für AArch64 und x86-64.**
+/// Unvertraut wie `emit`: der Prüfer läuft davor, verweigert wird mit `Y101`–`Y106`.
+/// Kein `unsafe`, keine Abhängigkeit — die Datei schreibt Text, `clang` übersetzt ihn.
+pub mod llvm;
 pub mod geteilt;
 /// **Lane 156 -- lock invariants (`lock L protects { ... } invariant <pred>`).**
 /// The decidable thirds of `SperrInvOk` (footprint `N275`, purity `N276`,

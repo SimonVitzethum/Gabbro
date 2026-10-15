@@ -1,0 +1,18 @@
+-- erwartet: Y102
+-- 1428 -- **a masked lock has no LLVM lowering (LLVM-0).**
+--
+-- The checker accepts the IRQ-masking lock with carrier, rank and budget; the
+-- LLVM backend lowers plain ticket locks, but masking needs the interrupt
+-- model (which `IF` bit, on which core, nested how) — so the *item itself* is
+-- refused with `Y102`. (A plain lock stood here; it lowers since the runtime
+-- work, and the healed probe moved to the next unlowered lock form.)
+module gift1428 {
+static mut x : u32 = 0;
+lock TOR protects { x } rank 0 held <= 2 ops masks irqs;
+impl fn f() -> u32
+    effects { pure }
+    costs <= 4 ops
+{
+    return 1;
+}
+}

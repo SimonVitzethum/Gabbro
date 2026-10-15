@@ -1,0 +1,20 @@
+-- erwartet: Y101
+-- 1427 -- **a bodiless opaque type has no LLVM lowering (LLVM-0).**
+--
+-- The checker accepts the hidden representation behind the parameter (opacity
+-- is a visibility rule, `D1`/`D2` — not an absence); the LLVM backend lowers
+-- what it can see: a bodyless `linear` token travels as one byte (like the C
+-- backend's `typedef struct { uint8_t nichts; }`), a ghost is erased — but a
+-- bodiless `opaque` hides a representation that EXISTS elsewhere, and inventing
+-- a width for it would corrupt the foreign boundary silently. So the *type*
+-- is refused with `Y101`. (A table value stood here, then a string type; both
+-- lower since LLVM-1, and each healed probe moved on — same code, same rule.)
+module gift1427 {
+opaque type Griff;
+impl fn f(g : Griff) -> u32
+    effects { pure }
+    costs <= 8 ops
+{
+    return 0;
+}
+}

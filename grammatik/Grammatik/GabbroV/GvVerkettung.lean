@@ -14,7 +14,7 @@ import Grammatik.GabbroV.GvTreeParent
 
 namespace Gabbro.Grammatik.GabbroV
 
-open Gabbro.Grammatik.X86
+open Gabbro.Grammatik.GabbroV
 
 /-- The chain over one `option index` field, with fuel: `k` reaches `ziel`
     in at most `fuel` steps. Nat-index mirror of `Semantik.kette`
