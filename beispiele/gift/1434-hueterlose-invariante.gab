@@ -1,0 +1,27 @@
+-- erwartet: N583
+-- 1434 -- **an online invariant nobody maintains has no keeper (O11).**
+--
+-- The table carries an `online` invariant (`runs online`: it must hold at run
+-- time, not at audit time), no function names it in `maintains`, and the table
+-- has no generated `ops` to keep it instead. The checker books the invariant
+-- to nothing, so it refuses it with `N583`. (An `offline` invariant needs no
+-- keeper; a table with `ops` is kept by the generated operations, whose
+-- preservation is proved.)
+module gift1434 {
+
+table Zaehler count 4 {
+    slot {
+        wert : u32 in 0 .. 100,
+    }
+    invariant klein cost O(n) runs online :
+        forall s in slots of Self : Self.slots[s].wert <= 100;
+}
+
+impl fn lies(t : ptr<normal, r> Zaehler, i : u32 in 0 ..< 4) -> u32
+    effects { reads t.slots }
+    costs <= 8 ops
+{
+    return t.slots[i].wert;
+}
+
+}

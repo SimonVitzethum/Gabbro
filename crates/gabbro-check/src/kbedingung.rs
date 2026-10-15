@@ -597,6 +597,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     }
     breaking_nennt_eine_invariante(baum, absagen);
     breaking_rests_here(baum, absagen);
+    invariant_hat_hueter(baum, absagen);
     breaking_blocks_maintainers(baum, absagen);
     for t in erhebe(baum) {
         if !t.hat_ops {
@@ -1754,5 +1755,77 @@ fn rufe_in_block(b: &Block, schleife: bool, aus: &mut Vec<RufFund>) {
         for k in crate::unterbloecke(s) {
             rufe_in_block(k, innen, aus);
         }
+    }
+}
+
+
+/// **`N583` -- online `table`/`group` invariant with no maintainer.**
+///
+/// OFFEN O11: an invariant nobody maintains is booked by nothing. An `offline`
+/// invariant is audit-time (its `O(n)` cost runs offline) and needs no keeper;
+/// an `online` one must hold at run time, so someone must re-establish it --
+/// that someone is a function naming it in `maintains`. Tables with `ops` are
+/// exempt: the generated operations are the maintainers, and their preservation
+/// is proved (`Table_Ops_Erhaltung`: `einfuegen_erhaelt`, `blatt_loeschen_erhaelt`),
+/// not merely booked. Groups have no generated operations and are never exempt.
+///
+/// Conservative on purpose: the rule refuses only where the answer is certain
+/// (an online invariant, a table without `ops`, no `maintains` naming it).
+/// What it does NOT establish is that the maintainer really re-establishes --
+/// that is the recorded duty (`invRueck`), like `ensures`.
+fn invariant_hat_hueter(baum: &Programm, absagen: &mut Absagen) {
+    // Online-Invarianten mit Stelle: (Name, Span, Hüter-Ausnahme?).
+    let mut invs: Vec<(String, Span, bool)> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Tabelle(t) => {
+            let ops_hueter = !t.ops.is_empty();
+            for i in &t.invarianten {
+                if matches!(i.laeuft, gabbro_syntax::ast::Laeuft::Online) {
+                    invs.push((i.name.text.clone(), i.span, ops_hueter));
+                }
+            }
+        }
+        ItemArt::Gruppe(g) => {
+            for i in &g.invarianten {
+                if matches!(i.laeuft, gabbro_syntax::ast::Laeuft::Online) {
+                    invs.push((i.name.text.clone(), i.span, false));
+                }
+            }
+        }
+        _ => {}
+    });
+    if invs.is_empty() {
+        return;
+    }
+    let mut hut: std::collections::BTreeSet<String> = Default::default();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            for m in &f.maintains {
+                hut.insert(m.text.clone());
+            }
+        }
+    });
+    for (name, span, ops_hueter) in invs {
+        if ops_hueter || hut.contains(&name) {
+            continue;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "N583",
+                span,
+                format!(
+                    "online invariant `{name}` is maintained by nothing: no function names it \
+                     in `maintains`, and its table has no generated `ops` to keep it"
+                ),
+            )
+            .mit_notiz(
+                "an `offline` invariant is audit-time and needs no keeper; an `online` one \
+                 must hold at run time, so someone must re-establish it -- OFFEN O11",
+            )
+            .mit_notiz(
+                "tables with `ops` are exempt: the generated operations keep every field \
+                 (`Table_Ops_Erhaltung`), so the keeper is proved, not merely booked",
+            ),
+        );
     }
 }

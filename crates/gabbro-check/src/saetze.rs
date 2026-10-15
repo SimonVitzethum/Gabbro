@@ -6609,6 +6609,15 @@ pub const SPERREN: &[Satz] = &[
                      messung/OPUS-G-O1.md; SPRACHE.md §8.3.1",
     },
     Satz {
+        name: "kbedingung.invariant-hat-hueter",
+        kennungen: &["N583"],
+        aussage: "An `online` `table`/`group` invariant is named in some function's                   `maintains`, or its table carries generated `ops`. An `offline`                   invariant is audit-time and needs no keeper; an `online` one must                   hold at run time, so someone must re-establish it. Tables with                   `ops` are exempt: the generated operations keep every field, and                   their preservation is proved (`Table_Ops_Erhaltung`), not merely                   booked. What has neither falls as `N583` (OFFEN O11).",
+        vorbehalt: "It does not establish that the keeper really re-establishes --                     that is the recorded duty (`invRueck`), like `ensures`. Groups                     have no generated operations and are never exempt.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1434-hueterlose-invariante.gab (online invariant,                       no maintainer, no ops -- falls with N583 alone); the clean side                       is every maintained invariant of the corpus plus the `ops`                       tables (47-ops-wortmenge).",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs (`invariant_hat_hueter`)",
+    },
+    Satz {
         name: "kbedingung.breaking-blocks-maintainers",
         kennungen: &["N532"],
         aussage: "Inside `breaking I { … }` no function whose `maintains` names `I` is \

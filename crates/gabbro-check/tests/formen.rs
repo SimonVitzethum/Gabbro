@@ -49,6 +49,13 @@ linear ghost type Griff;
 extern fn griff_weg(g : Griff) effects { consumes g } costs <= 0 ops;
 extern fn hol() -> u32 or Grund effects { pure } costs <= 1 ops;
 extern fn nie() -> never effects { diverges } costs <= 0 ops;
+impl fn arena_schreibe(a : ptr<normal, rw> Arena, i : index into Arena, v : bool)
+    maintains nie_leer
+    effects { writes a.slots }
+    costs <= 8 ops
+{
+    a.slots[i].belegt = v;
+}
 "#;
 
 /// The codes the frame itself produces, which say nothing about the constructs. **They stand

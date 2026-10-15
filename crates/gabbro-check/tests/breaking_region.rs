@@ -37,6 +37,13 @@ impl fn setze(p : ptr<normal, rw> Paare, k : index into Paare)
         p.slots[k].a = 1;
         p.slots[k].b = 1;
     }
+}
+impl fn lege_frei(f : ptr<normal, rw> Frei, k : index into Frei, v : u32)
+    maintains frei_ok
+    effects   { writes f.slots }
+    costs     <= 8 ops
+{
+    f.slots[k].x = v;
 }";
 
 fn codes(rumpf: &str) -> Vec<String> {
