@@ -165,3 +165,27 @@ not run the middle end (measured slower than `-O0`). `summe.gab`: **10 ms at
 rc=25, x86_64 native), identical output on x86_64 and aarch64. These are
 Gabbro-vs-Gabbro numbers, not against GCC `-O3` — the `ARM-PLAN.md` 80 %/110 %
 targets are still unmeasured.
+
+## 7. Isabelle-Beweise (`beweise/*.thy`): was sie beweisen, wo es im Backend steht
+
+15 Theorien, 188K, 3512 Zeilen. Jede beweist eine Eigenschaft, die der C-Erzeuger
+braucht — und jede steht im LLVM-Erzeuger an derselben Stelle, weil die
+Absenkungsregeln dieselben sind. Wächterverdrahtung: `pruefe-beweise.sh`
+(Sitzung), `zaehle-theorien.py` (KENNZAHLEN), `pruefe-waechter.py`. 18 Zitate
+in `emit.rs`. Darum bleiben sie: Löschen bräche Wächter, ohne ein Byte zu sparen.
+
+| Theorie (Hauptsatz) | Was bewiesen ist | LLVM-Backend |
+|---|---|---|
+| `Table_Ops_Erhaltung` (`einfuegen_erhaelt`, `blatt_loeschen_erhaelt`) | ops erhalten Erreichbarkeit/Blätter | `senke_ops_ruf`: insert hängt ein + setzt belegt, remove setzt alles zurück |
+| `Table_Absenkung` (`absenkung_deckt_genau`) | Layout deckt genau die Indizes | benannte Layouts, GEP-Indizes |
+| `Table_Indexschranke`, `Table_Zaehlung`, `Table_Induktion` | Indexdisziplin, Zählung, Induktion | prüfer-seitig; Senkung erhält Breiten |
+| `Format_Roundtrip` | Schreiben stört getrennte Felder nicht | gepackte Structs, `volatile` |
+| `Verbund_Konstruktor` (`deckt_setzt_jedes_genau_einmal`) | Konstruktor setzt jedes Feld genau einmal | `insertvalue`-Kette |
+| `Device_Konstruktor` (getrennte Register, Bänke überlappen nicht) | Versätze disjunkt | Versätze aus der Deklaration, `volatile` |
+| `Accumulates_Monoid` | Faltung reihenfolgeunabhängig | eine Zelle: max/min/add gelten trivial |
+| `Consuming` | Verbrauchsordnung | Nachordnungs-Abstieg |
+| `Gruppe_Erhaltung` (`rangordnung_azyklisch`) | Rangordnung | prüfer-seitig (Ränge radiert) |
+| `Intervall_Aussen` (Summe in gerechneter Schranke) | M104-Bereiche | Breiten gehalten, `angleiche` |
+| `Option_Sonderwert` (`kodiere_injektiv`) | Tag-Kodierung injektiv | `%gabopt` Tag + Bytes |
+| `Restrict_Alleinzugriff` | `restrict` gerechtfertigt | `noalias` an `own` |
+| `Absenkung_Parametrisch` | Absenkung parametrisch | generische Layouts |
