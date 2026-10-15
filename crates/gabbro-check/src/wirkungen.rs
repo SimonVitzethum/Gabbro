@@ -2293,3 +2293,4 @@ fn footprint_against_guards(
         }
     }
 }
+

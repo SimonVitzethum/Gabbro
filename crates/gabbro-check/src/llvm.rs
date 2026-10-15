@@ -279,6 +279,15 @@ enum FnPlan {
 /// Ruf auflösen: eigenes Modul zuerst, voller Pfad dann, kurz zuletzt.
 fn loese_fn(s: &Senke, modul: &str, p: &Pfad) -> Option<(String, FnSig)> {
     let kurz = kurzname(p);
+    let k = loese_schluessel(s, modul, p)?;
+    let sig = s.fns.get(&k).cloned()?;
+    let emit = s.emitnamen.get(&k).cloned().unwrap_or_else(|| kurz.clone());
+    Some((emit, sig))
+}
+
+/// Schlüssel hinter einem Rufpfad (für Rufgraph und Schleifenentscheidung).
+fn loese_schluessel(s: &Senke, modul: &str, p: &Pfad) -> Option<String> {
+    let kurz = kurzname(p);
     let voll = p.text();
     let mut kandidaten = Vec::new();
     if p.teile.len() == 1 && !modul.is_empty() {
@@ -287,9 +296,8 @@ fn loese_fn(s: &Senke, modul: &str, p: &Pfad) -> Option<(String, FnSig)> {
     kandidaten.push(voll.clone());
     kandidaten.push(kurz.clone());
     for k in kandidaten {
-        if let Some(sig) = s.fns.get(&k).cloned() {
-            let emit = s.emitnamen.get(&k).cloned().unwrap_or_else(|| kurz.clone());
-            return Some((emit, sig));
+        if s.fns.contains_key(&k) {
+            return Some(k);
         }
     }
     None
@@ -524,6 +532,8 @@ struct Senke<'a> {
     faden_nr: u32,
     /// Rufer-Name je Vollname (Kollision → `m_f`, sonst kurz).
     emitnamen: BTreeMap<String, String>,
+    /// Schleifenplan je Zyklus-Mitglied (Vollname → Info).
+    rek: BTreeMap<String, RekInfo>,
     /// Slot-Felder je Tabelle (für Layout und Zugriffe).
     tab_slots: BTreeMap<String, Vec<(String, TypExpr)>>,
     /// Baumkanten je Tabelle (Vater, Kind, Geschwister — `tree { … }`).
@@ -1286,6 +1296,8 @@ struct Koerper<'s, 'a> {
     geist_rueck: bool,
     /// Tausch-Rumpf: `return` liefert neu (Speicher, Typ, Fortsetzung).
     tausch_rueck: Option<(String, LlTyp, String)>,
+    /// Schleife der laufenden Funktion (Schwanzrufe springen statt zu rufen).
+    rek: Option<RekKontext>,
     /// Tiefe der `locks`-Stapelung (Freigabe an jedem Ausgang).
     sperrtiefe: u32,
 }
@@ -2980,14 +2992,12 @@ fn senke_block(k: &mut Koerper, b: &Block) {
     k.schliesse();
 }
 
-/// Sperren am Ausgang freigeben (jeder Ausgang — `return`, Ende, `leave` trägt sie).
+/// Sperren am Ausgang freigeben (jeder Ausgang — Ticket: `bereit += 1`).
 fn sperren_freigeben(k: &mut Koerper) {
-    let gehalten: Vec<String> = k.sperren.clone();
-    for _ in gehalten {
-        // Ticket-Freigabe: `bereit += 1` (seq_cst) — der Nächste ist dran.
-        // Der Name steht im Stapel; die Adresse löst der Rufort auf.
-        let _ = k.tmp();
+    for name in k.sperren.clone() {
+        ticket_freigabe(k, &name);
     }
+    k.sperren.clear();
 }
 
 fn senke_stmt(k: &mut Koerper, st: &Stmt) {
@@ -3019,10 +3029,7 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
                 }
             };
             // Durch `traverse` hindurch (keine Marke dort) — Sperren freigeben.
-            for name in k.sperren.clone() {
-                ticket_freigabe(k, &name);
-            }
-            k.sperren.clear();
+            sperren_freigeben(k);
             k.zeile(&format!("br label %{}", ctx.danach));
             k.beendet = true;
         }
@@ -3034,10 +3041,7 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
                     return;
                 }
             };
-            for name in k.sperren.clone() {
-                ticket_freigabe(k, &name);
-            }
-            k.sperren.clear();
+            sperren_freigeben(k);
             k.zeile(&format!("br label %{}", ctx.weiter));
             k.beendet = true;
         }
@@ -3046,13 +3050,13 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
         StmtArt::Exchange(e) => senke_exchange(k, e, st.span),
         StmtArt::Return(e) => {
             // Freigabe an jedem Ausgang (Ticket: `bereit += 1` je gehaltener Sperre).
-            let gehalten = k.sperren.clone();
-            for name in &gehalten {
-                ticket_freigabe(k, name);
-            }
-            k.sperren.clear();
+            sperren_freigeben(k);
             match e {
                 Some(x) => {
+                    // Schwanzruf: springen statt rufen (kein Rahmen, kein Überlauf).
+                    if schwanz_ruf(k, x, st.span).is_some() {
+                        return;
+                    }
                     // Geist-Antwort: der Wert ist beweisführend — Rückkehr leer.
                     if k.geist_rueck {
                         k.zeile("ret void");
@@ -5104,7 +5108,11 @@ fn emit_funktionen(s: &mut Senke) {
                 }
             }
             FnPlan::Impl { rumpf, params, namen, formen, modul } => {
-                emit_impl(s, &voll, &rumpf, &params, &namen, &formen, &modul);
+                if let Some(info) = s.rek.get(&voll).cloned() {
+                    emit_rek(s, &voll, &info);
+                } else {
+                    emit_impl(s, &voll, &rumpf, &params, &namen, &formen, &modul);
+                }
             }
             FnPlan::Fertig { .. } => {}
         }
@@ -5152,6 +5160,7 @@ fn emit_impl(s: &mut Senke, voll: &str, rumpf: &Block, params: &[(LlTyp, Zeichen
             modul: modul.to_string(),
             geist_rueck: sig.geist_rueck,
             tausch_rueck: None,
+            rek: None,
             sperrtiefe: 0,
         };
         // Parameter in Allocas (echte Namen binden — der Körper liest sie).
@@ -5352,6 +5361,7 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         start_wurzeln: BTreeSet::new(),
         faden_nr: 0,
         emitnamen: BTreeMap::new(),
+        rek: BTreeMap::new(),
         tab_slots: BTreeMap::new(),
         tab_baeume: BTreeMap::new(),
         formate: BTreeSet::new(),
@@ -5378,6 +5388,7 @@ pub fn emittiere_llvm_mit_beleg(
     s.umg = crate::umgebung::Umgebung::sammle(baum);
     sammle(&mut s, baum, bau);
     vergebe_emitnamen(&mut s);
+    baue_rek_plan(&mut s);
     emit_globale(&mut s);
     emit_funktionen(&mut s);
     emit_start(&mut s);
@@ -7852,4 +7863,733 @@ fn tbaa_feld_tag(s: &mut Senke, struktur: &str, feld: &str, ll: &LlTyp, offset: 
     s.meta_knoten.insert(nr, def);
     s.tbaa_tags.insert(schluessel, nr);
     Some(nr)
+}
+
+// ===================================================================================
+// Endrekursion als Schleife (kein Stapelwachstum — nie ein Überlauf)
+// ===================================================================================
+
+/// Rufpfade in einem Ausdruck (Rufe überall — auch in Schranken und Indizes).
+fn rufe_in_expr(e: &Expr, out: &mut Vec<Pfad>) {
+    match &e.art {
+        ExprArt::Ruf(r) => {
+            if let Some(p) = r.path() {
+                out.push(p.clone());
+            }
+            for a in &r.argumente {
+                rufe_in_expr(a, out);
+            }
+        }
+        ExprArt::Klammer(x) => rufe_in_expr(x, out),
+        ExprArt::Unaer(_, x) => rufe_in_expr(x, out),
+        ExprArt::Binaer(_, a, b) => {
+            rufe_in_expr(a, out);
+            rufe_in_expr(b, out);
+        }
+        ExprArt::Ort(o) => {
+            for sfx in &o.suffixe {
+                if let OrtSuffix::Index(x) = sfx {
+                    rufe_in_expr(x, out);
+                }
+            }
+        }
+        ExprArt::Eingebaut(b) => match &**b {
+            Eingebaut::Aligned(a, c) => {
+                rufe_in_expr(a, out);
+                rufe_in_expr(c, out);
+            }
+            _ => {}
+        },
+        ExprArt::Zaehle { domaene, rumpf, .. } => {
+            rufe_in_domaene(domaene, out);
+            rufe_in_pred(rumpf, out);
+        }
+        _ => {}
+    }
+}
+
+fn rufe_in_domaene(d: &Domaene, out: &mut Vec<Pfad>) {
+    match d {
+        Domaene::SlotsVon(o)
+        | Domaene::NachfahrenVon(o)
+        | Domaene::VorfahrenVon(o)
+        | Domaene::Schlange(o)
+        | Domaene::ElementeVon(o)
+        | Domaene::AbbildungenVon(o) => {
+            for sfx in &o.suffixe {
+                if let OrtSuffix::Index(x) = sfx {
+                    rufe_in_expr(x, out);
+                }
+            }
+        }
+        Domaene::KetteIn { ort, .. } => {
+            for sfx in &ort.suffixe {
+                if let OrtSuffix::Index(x) = sfx {
+                    rufe_in_expr(x, out);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn rufe_in_pred(p: &Pred, out: &mut Vec<Pfad>) {
+    match &p.art {
+        PredArt::Vergleich(e) => rufe_in_expr(e, out),
+        PredArt::Quantor(q) => {
+            rufe_in_domaene(&q.domaene, out);
+            rufe_in_pred(&q.rumpf, out);
+        }
+        PredArt::Klammer(x) => rufe_in_pred(x, out),
+        PredArt::Nicht(x) => rufe_in_pred(x, out),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            rufe_in_pred(a, out);
+            rufe_in_pred(b, out);
+        }
+        _ => {}
+    }
+}
+
+/// Alle Rufe eines Blocks (jede Stelle — auch Tausch-Rümpfe: dort echte Rufe).
+fn rufe_in_block(b: &Block, out: &mut Vec<Pfad>) {
+    for st in &b.anweisungen {
+        rufe_in_stmt(st, out);
+    }
+}
+
+fn rufe_in_stmt(st: &Stmt, out: &mut Vec<Pfad>) {
+    match &st.art {
+        StmtArt::Let(l) => rufe_in_expr(&l.wert, out),
+        StmtArt::LetSonst(l) => match &l.quelle {
+            LetQuelle::Ruf(r) => {
+                if let Some(p) = r.path() {
+                    out.push(p.clone());
+                }
+                for a in &r.argumente {
+                    rufe_in_expr(a, out);
+                }
+            }
+            LetQuelle::Ort(o) => {
+                for sfx in &o.suffixe {
+                    if let OrtSuffix::Index(x) = sfx {
+                        rufe_in_expr(x, out);
+                    }
+                }
+            }
+        },
+        StmtArt::Zuweisung(z) => {
+            for sfx in &z.ziel.suffixe {
+                if let OrtSuffix::Index(x) = sfx {
+                    rufe_in_expr(x, out);
+                }
+            }
+            rufe_in_expr(&z.wert, out);
+        }
+        StmtArt::Wenn(w) => {
+            for (c, b) in &w.zweige {
+                rufe_in_expr(c, out);
+                rufe_in_block(b, out);
+            }
+            if let Some(s) = &w.sonst {
+                rufe_in_block(s, out);
+            }
+        }
+        StmtArt::Match(m) => {
+            rufe_in_expr(&m.gegenstand, out);
+            for z in &m.zweige {
+                rufe_in_block(&z.rumpf, out);
+            }
+        }
+        StmtArt::Schleife(s) => match &**s {
+            Schleife::Traverse(t) => {
+                if let Some(g) = &t.gegenstand {
+                    rufe_in_expr(g, out);
+                }
+                if let Some(m) = &t.mass {
+                    rufe_in_expr(m, out);
+                }
+                if let Some(i) = &t.invariante {
+                    rufe_in_pred(i, out);
+                }
+                rufe_in_domaene(&t.domaene, out);
+                rufe_in_block(&t.rumpf, out);
+            }
+            Schleife::Retry(r) => {
+                if let Some(b) = &r.bis {
+                    rufe_in_pred(b, out);
+                }
+                rufe_in_expr(&r.schranke, out);
+                if let Some(i) = &r.invariante {
+                    rufe_in_pred(i, out);
+                }
+                rufe_in_block(&r.rumpf, out);
+            }
+            Schleife::Forever(f) => {
+                rufe_in_expr(&f.je_durchgang, out);
+                if let Some(i) = &f.invariante {
+                    rufe_in_pred(i, out);
+                }
+                rufe_in_block(&f.rumpf, out);
+            }
+        },
+        StmtArt::Bricht(b) => rufe_in_block(&b.rumpf, out),
+        StmtArt::Narrow(n) => {
+            for sfx in &n.ort.suffixe {
+                if let OrtSuffix::Index(x) = sfx {
+                    rufe_in_expr(x, out);
+                }
+            }
+            if let NarrowZiel::Bereich(b) = &n.ziel {
+                rufe_in_expr(&b.von, out);
+                rufe_in_expr(&b.bis, out);
+            }
+            rufe_in_block(&n.sonst, out);
+        }
+        StmtArt::Sperrt(s) => rufe_in_block(&s.rumpf, out),
+        StmtArt::Observiert(o) => rufe_in_block(&o.rumpf, out),
+        StmtArt::Publish(p) => rufe_in_expr(&p.wert, out),
+        StmtArt::AwaitLoad(_) => {}
+        StmtArt::Exchange(e) => {
+            for sfx in &e.ort.suffixe {
+                if let OrtSuffix::Index(x) = sfx {
+                    rufe_in_expr(x, out);
+                }
+            }
+            match &e.form {
+                XForm::Update { rumpf, schranke, .. } => {
+                    if let Some(s) = schranke {
+                        rufe_in_expr(s, out);
+                    }
+                    rufe_in_block(rumpf, out);
+                }
+                XForm::Vergleich { wert, bedingung, .. } => {
+                    rufe_in_expr(wert, out);
+                    rufe_in_pred(bedingung, out);
+                }
+            }
+        }
+        StmtArt::Return(e) => {
+            if let Some(x) = e {
+                rufe_in_expr(x, out);
+            }
+        }
+        StmtArt::Ruf(r) => {
+            if let Some(p) = r.path() {
+                out.push(p.clone());
+            }
+            for a in &r.argumente {
+                rufe_in_expr(a, out);
+            }
+        }
+        StmtArt::LibraryCall(l) => {
+            for a in &l.args {
+                rufe_in_expr(a, out);
+            }
+        }
+        StmtArt::Alloc(a) => {
+            rufe_in_expr(&a.wert, out);
+            if let Some(s) = &a.sonst {
+                rufe_in_block(s, out);
+            }
+        }
+        StmtArt::ResetArena(_) | StmtArt::ResetSlot(_) => {}
+        StmtArt::Grow(g) => {
+            rufe_in_expr(&g.mehr, out);
+            rufe_in_block(&g.sonst, out);
+        }
+        StmtArt::Child(b) => rufe_in_block(b, out),
+        StmtArt::Start(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {}
+    }
+}
+
+/// Schwanzrufe: `return f(…)` direkt (Klammern durchsichtig), überall im Rumpf —
+/// AUSSER in Tausch-Rümpfen (dort liefert `return` neu, kein Ausgang).
+fn schwanz_in_block(b: &Block, unter_tausch: bool, out: &mut Vec<Pfad>) {
+    for st in &b.anweisungen {
+        schwanz_in_stmt(st, unter_tausch, out);
+    }
+}
+
+fn schwanz_in_stmt(st: &Stmt, unter_tausch: bool, out: &mut Vec<Pfad>) {
+    match &st.art {
+        StmtArt::Return(e) => {
+            if !unter_tausch {
+                if let Some(x) = e {
+                    let mut y = x;
+                    while let ExprArt::Klammer(i) = &y.art {
+                        y = i;
+                    }
+                    if let ExprArt::Ruf(r) = &y.art {
+                        if let Some(p) = r.path() {
+                            out.push(p.clone());
+                        }
+                    }
+                }
+            }
+        }
+        StmtArt::Wenn(w) => {
+            for (_, b) in &w.zweige {
+                schwanz_in_block(b, unter_tausch, out);
+            }
+            if let Some(s) = &w.sonst {
+                schwanz_in_block(s, unter_tausch, out);
+            }
+        }
+        StmtArt::Match(m) => {
+            for z in &m.zweige {
+                schwanz_in_block(&z.rumpf, unter_tausch, out);
+            }
+        }
+        StmtArt::Schleife(s) => match &**s {
+            Schleife::Traverse(t) => schwanz_in_block(&t.rumpf, unter_tausch, out),
+            Schleife::Retry(r) => schwanz_in_block(&r.rumpf, unter_tausch, out),
+            Schleife::Forever(f) => schwanz_in_block(&f.rumpf, unter_tausch, out),
+        },
+        StmtArt::Bricht(b) => schwanz_in_block(&b.rumpf, unter_tausch, out),
+        StmtArt::Narrow(n) => schwanz_in_block(&n.sonst, unter_tausch, out),
+        StmtArt::Sperrt(s) => schwanz_in_block(&s.rumpf, unter_tausch, out),
+        StmtArt::Observiert(o) => schwanz_in_block(&o.rumpf, unter_tausch, out),
+        StmtArt::LetSonst(l) => schwanz_in_block(&l.sonst, unter_tausch, out),
+        StmtArt::Alloc(a) => {
+            if let Some(s) = &a.sonst {
+                schwanz_in_block(s, unter_tausch, out);
+            }
+        }
+        StmtArt::Grow(g) => schwanz_in_block(&g.sonst, unter_tausch, out),
+        StmtArt::Child(b) => schwanz_in_block(b, unter_tausch, out),
+        StmtArt::Exchange(e) => {
+            if let XForm::Update { .. } = &e.form {
+                // Tausch-Rumpf fängt `return` ab — kein Schwanz darunter.
+            }
+        }
+        _ => {}
+    }
+}
+
+// ===================================================================================
+// Schleifenplan (Tarjan über Rufgraphen — nur endständige, einheitliche Zyklen)
+// ===================================================================================
+
+/// Ein umwandelbarer Zyklus: Mitglieder (deterministisch sortiert) mit Nummern.
+#[derive(Clone)]
+struct RekInfo {
+    mitglieder: Vec<String>,
+    ids: BTreeMap<String, u32>,
+}
+
+/// Rufgraph über `impl`-Pläne (aufgelöste Schlüssel, Tore/Extern als Blätter).
+fn baue_rek_plan(s: &mut Senke) {
+    // Kanten: Plan → gerufene Pläne (nur `impl`, nur direkte Rufe).
+    let mut kanten: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let plaene: Vec<(String, FnPlan)> = s.plaene.clone().into_iter().collect();
+    for (voll, plan) in &plaene {
+        let (rumpf, modul) = match plan {
+            FnPlan::Impl { rumpf, modul, .. } => (rumpf, modul.clone()),
+            FnPlan::Fertig { .. } => continue,
+        };
+        let mut pfade = Vec::new();
+        rufe_in_block(rumpf, &mut pfade);
+        let mut ziele = BTreeSet::new();
+        for p in pfade {
+            if let Some(k) = loese_schluessel(s, &modul, &p) {
+                if matches!(s.plaene.get(&k), Some(FnPlan::Impl { .. })) {
+                    ziele.insert(k);
+                }
+            }
+        }
+        kanten.insert(voll.clone(), ziele);
+    }
+    // Tarjan (iterativ — kein Stapelwachstum im Erzeuger selbst).
+    let sccs = tarjan(&kanten);
+    for scc in sccs {
+        if scc.is_empty() {
+            continue;
+        }
+        let zyklisch = scc.len() > 1 || kanten.get(&scc[0]).is_some_and(|z| z.contains(&scc[0]));
+        if !zyklisch {
+            continue;
+        }
+        if let Some(info) = rek_pruefe(s, &scc) {
+            for m in &info.mitglieder {
+                s.rek.insert(m.clone(), info.clone());
+            }
+        }
+    }
+}
+
+/// Iterative Tarjan-SCC (deterministisch — sortierte Nachfolger).
+fn tarjan(kanten: &BTreeMap<String, BTreeSet<String>>) -> Vec<Vec<String>> {
+    let mut index: BTreeMap<String, u32> = BTreeMap::new();
+    let mut tief: BTreeMap<String, u32> = BTreeMap::new();
+    let mut auf_stapel: BTreeSet<String> = BTreeSet::new();
+    let mut stapel: Vec<String> = Vec::new();
+    let mut naechste_nr = 0u32;
+    let mut sccs = Vec::new();
+    // Knoten in Ordnung (deterministisch).
+    let knoten: Vec<String> = kanten.keys().cloned().collect();
+    for start in knoten {
+        if index.contains_key(&start) {
+            continue;
+        }
+        // Expliziter Arbeitsstapel: (Knoten, Nachfolger-rest).
+        let mut arbeit: Vec<(String, Vec<String>)> = vec![(start.clone(), Vec::new())];
+        // Initialisieren beim ersten Sehen (Nachfolger sortiert laden).
+        while !arbeit.is_empty() {
+            let v = arbeit.last().expect("Arbeitsstapel").0.clone();
+            if !index.contains_key(&v) {
+                index.insert(v.clone(), naechste_nr);
+                tief.insert(v.clone(), naechste_nr);
+                naechste_nr += 1;
+                stapel.push(v.clone());
+                auf_stapel.insert(v.clone());
+                let mut nach: Vec<String> = kanten.get(&v).cloned().unwrap_or_default().into_iter().collect();
+                nach.sort();
+                arbeit.last_mut().expect("Arbeitsstapel").1 = nach;
+            }
+            let mut voran = false;
+            while let Some(w) = arbeit.last_mut().expect("Arbeitsstapel").1.pop() {
+                if !index.contains_key(&w) {
+                    arbeit.push((w, Vec::new()));
+                    voran = true;
+                    break;
+                } else if auf_stapel.contains(&w) {
+                    let tv = tief[&v].min(tief[&w]);
+                    tief.insert(v.clone(), tv);
+                }
+            }
+            if voran {
+                continue;
+            }
+            // Fertig: Wurzel einer SCC?
+            arbeit_pop(&mut arbeit);
+            if tief[&v] == index[&v] {
+                let mut scc = Vec::new();
+                while let Some(w) = stapel.pop() {
+                    auf_stapel.remove(&w);
+                    scc.push(w.clone());
+                    if w == v {
+                        break;
+                    }
+                }
+                scc.sort();
+                sccs.push(scc);
+            }
+            // Tiefstand zum Vorgänger reichen.
+            if let Some((u, _)) = arbeit.last() {
+                let tu = tief[u].min(tief[&v]);
+                tief.insert(u.clone(), tu);
+            }
+        }
+    }
+    sccs
+}
+
+fn arbeit_pop(arbeit: &mut Vec<(String, Vec<String>)>) {
+    arbeit.pop();
+}
+
+/// Prüft einen Zyklus auf Umwandelbarkeit (endständig, einheitlich, kanal-frei).
+fn rek_pruefe(s: &Senke, scc: &[String]) -> Option<RekInfo> {
+    // Einheitliche Antwort (exakt ein LlTyp — sonst echte Rufe).
+    let mut ret: Option<LlTyp> = None;
+    for m in scc {
+        let sig = s.fns.get(m)?;
+        if sig.or_nutz.is_some() {
+            return None;
+        }
+        let (rt, _) = sig.ret.clone()?;
+        if rt == LlTyp::Void {
+            return None;
+        }
+        match &ret {
+            None => ret = Some(rt),
+            Some(r) if *r == rt => {}
+            _ => return None,
+        }
+    }
+    // Jeder Intra-Zyklus-Ruf endständig (sonst echte Rufe).
+    let menge: BTreeSet<String> = scc.iter().cloned().collect();
+    for m in scc {
+        let plan = s.plaene.get(m)?;
+        let (rumpf, modul) = match plan {
+            FnPlan::Impl { rumpf, modul, .. } => (rumpf, modul),
+            FnPlan::Fertig { .. } => return None,
+        };
+        let mut alle = Vec::new();
+        rufe_in_block(rumpf, &mut alle);
+        let mut schwanz = Vec::new();
+        schwanz_in_block(rumpf, false, &mut schwanz);
+        let mut schwanz_aufgeloest = BTreeSet::new();
+        for p in schwanz {
+            if let Some(k) = loese_schluessel(s, modul, &p) {
+                schwanz_aufgeloest.insert(k);
+            }
+        }
+        for p in alle {
+            if let Some(k) = loese_schluessel(s, modul, &p) {
+                if menge.contains(&k) && !schwanz_aufgeloest.contains(&k) {
+                    return None;
+                }
+            }
+        }
+    }
+    let mut mitglieder = scc.to_vec();
+    mitglieder.sort();
+    let ids = mitglieder.iter().enumerate().map(|(i, m)| (m.clone(), i as u32)).collect();
+    Some(RekInfo { mitglieder, ids })
+}
+
+/// Laufzeit-Kontext einer Schleifenfunktion (Zustand, Schleife, Antwort).
+struct RekKontext {
+    info: RekInfo,
+    /// Zustand je Mitglied (Vollname → Ablagen in Parameterordnung).
+    zustand: BTreeMap<String, Vec<String>>,
+    schleife: String,
+    ret: (LlTyp, Zeichen),
+}
+
+// ===================================================================================
+// Schleifen-Emission (Zustand je Mitglied, Versand, Schwanzsprung)
+// ===================================================================================
+
+
+// ===================================================================================
+// Schleifen-Emission (Zustand je Mitglied, Versand, Schwanzsprung)
+// ===================================================================================
+
+/// Schwanzruf als Sprung senken (Zustand laden, Versand setzen, Schleife).
+/// `None`: kein Schwanzruf hierher — der Ruf läuft normal.
+fn schwanz_ruf(k: &mut Koerper, x: &Expr, span: Span) -> Option<()> {
+    // Kontext klonen (keine Leihe über Senken hinweg).
+    let (mitglieder, zustand, schleife) = match &k.rek {
+        Some(r) => (r.info.mitglieder.clone(), r.zustand.clone(), r.schleife.clone()),
+        None => return None,
+    };
+    let mut y = x;
+    while let ExprArt::Klammer(i) = &y.art {
+        y = i;
+    }
+    let r = match &y.art {
+        ExprArt::Ruf(r) => r.clone(),
+        _ => return None,
+    };
+    if !r.marken.is_empty() {
+        return None;
+    }
+    let pfad = r.path()?.clone();
+    let ziel = loese_schluessel(k.s, &k.modul.clone(), &pfad)?;
+    if !mitglieder.contains(&ziel) {
+        return None;
+    }
+    let tsig = k.s.fns.get(&ziel).cloned()?;
+    // Argumente wie am Ruf (Geister belegen Stellen, fallen weg).
+    let mut ai = 0usize;
+    let mut werte: Vec<(String, String)> = Vec::new();
+    for (gi, ghost) in tsig.geist_param.iter().enumerate() {
+        let ae = r.argumente.get(ai)?.clone();
+        ai += 1;
+        if *ghost {
+            continue;
+        }
+        let (pt, _) = tsig.params.get(werte.len()).cloned()?;
+        let w = verfall_arg(k, &ae, &pt, span)?;
+        let ww = angleiche(k, w, &pt, Zeichen::Egal)?;
+        werte.push((pt.text(), ww.text));
+        let _ = gi;
+    }
+    if ai != r.argumente.len() {
+        return None;
+    }
+    let slots = zustand.get(&ziel)?.clone();
+    if slots.len() != werte.len() {
+        return None;
+    }
+    // Freigabe wie an jedem Ausgang — dann Zustand laden, Versand setzen.
+    sperren_freigeben(k);
+    for ((t, text), slot) in werte.iter().zip(slots.iter()) {
+        k.zeile(&format!("store {t} {text}, ptr {slot}, align 8"));
+    }
+    let id = mitglieder.iter().position(|m| m == &ziel)? as u32;
+    if mitglieder.len() > 1 {
+        let dslot = zustand.get("!versand")?.first()?.clone();
+        k.zeile(&format!("store i32 {id}, ptr {dslot}, align 4"));
+    }
+    k.zeile(&format!("br label %{schleife}"));
+    k.beendet = true;
+    Some(())
+}
+
+/// Schleifenfunktion senken (jedes Mitglied ruft über den Versand).
+fn emit_rek(s: &mut Senke, voll: &str, info: &RekInfo) {
+    let emit = s.emitnamen.get(voll).cloned().unwrap_or_else(|| voll.to_string());
+    let sig = match s.fns.get(voll).cloned() {
+        Some(x) => x,
+        None => return,
+    };
+    let (ret_ll, _) = match sig.ret.clone() {
+        Some(x) => x,
+        None => return,
+    };
+    let ret_text = ret_ll.text();
+    // Signatur des Eintritts (eigene Parameter, eigene Attribute).
+    let ps: Vec<String> = sig
+        .params
+        .iter()
+        .zip(sig.eigen_param.iter().chain(std::iter::repeat(&false)))
+        .enumerate()
+        .map(|(i, ((t, _), e))| param_zeile(t, *e, i, ""))
+        .collect();
+    let _ = writeln!(s.rumpf, "define {ret_text} {}({}) {{", gname(&emit), ps.join(", "));
+    let _ = writeln!(s.rumpf, "eintritt:");
+    let mut k = Koerper {
+        s,
+        text: String::new(),
+        allocas: String::new(),
+        zaehler: 0,
+        bloecke: 0,
+        bereiche: vec![HashMap::new()],
+        funktionsname: emit.clone(),
+        gegenwart: "eintritt".to_string(),
+        rueck: Some((ret_ll.clone(), Zeichen::Egal)),
+        beendet: false,
+        schleifen: Vec::new(),
+        sperren: Vec::new(),
+        alt_wert: None,
+        ergebnis_wert: None,
+        or_nutz: None,
+        modul: String::new(),
+        geist_rueck: false,
+        tausch_rueck: None,
+        rek: None,
+        sperrtiefe: 0,
+    };
+    // Zustand je Mitglied (Ablagen in Parameterordnung) plus Versand.
+    let mut zustand: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for m in &info.mitglieder {
+        let msig = match k.s.fns.get(m).cloned() {
+            Some(x) => x,
+            None => return,
+        };
+        let mut slots = Vec::new();
+        for (pt, _) in &msig.params {
+            slots.push(k.alloca(&pt.text()));
+        }
+        zustand.insert(m.clone(), slots);
+    }
+    let dslot = if info.mitglieder.len() > 1 {
+        let d = k.alloca("i32");
+        zustand.insert("!versand".to_string(), vec![d.clone()]);
+        Some(d)
+    } else {
+        None
+    };
+    // Eintritt: eigene Parameter ablegen, Versand setzen, Schleife.
+    let eigene = match zustand.get(voll) {
+        Some(x) => x.clone(),
+        None => return,
+    };
+    for (i, slot) in eigene.iter().enumerate() {
+        let (pt, _) = match sig.params.get(i) {
+            Some(x) => x.clone(),
+            None => return,
+        };
+        k.zeile(&format!("store {} %p{i}, ptr {slot}, align {}", pt.text(), nat_align(&pt)));
+    }
+    if let Some(d) = &dslot {
+        let id = info.ids.get(voll).copied().unwrap_or(0);
+        k.zeile(&format!("store i32 {id}, ptr {d}, align 4"));
+    }
+    // Modul und Vertrag für den Rumpf.
+    k.modul = modul_von_voll(voll);
+    for pred in &sig.vertrag_requires.clone() {
+        nehme_an(&mut k, pred, "requires");
+    }
+    let schleife = k.block("rek_schleife");
+    k.zeile(&format!("br label %{schleife}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{schleife}:");
+    k.beendet = false;
+    k.rek = Some(RekKontext { info: info.clone(), zustand: zustand.clone(), schleife: schleife.clone(), ret: (ret_ll.clone(), Zeichen::Egal) });
+    // Arme je Mitglied (Versand oder direkt).
+    if info.mitglieder.len() == 1 {
+        let m = &info.mitglieder[0];
+        if emit_rek_arm(&mut k, m, &zustand).is_none() {
+            return;
+        }
+    } else {
+        let d = dslot.clone().expect("Versand geprüft");
+        let dv = k.tmp();
+        k.zeile(&format!("{dv} = load i32, ptr {d}, align 4"));
+        let mut faelle = Vec::new();
+        let mut arme = Vec::new();
+        for m in &info.mitglieder {
+            let arm = k.block("rek_arm");
+            let id = info.ids.get(m).copied().unwrap_or(0);
+            faelle.push(format!("i32 {id}, label %{arm}"));
+            arme.push((m.clone(), arm));
+        }
+        let falle = k.block("rek_falle");
+        // Fälle je Zeile (LLVM 23 lehnt kommagetrennte Einzeiler ab).
+        k.zeile(&format!("switch i32 {dv}, label %{falle} ["));
+        for fall in &faelle {
+            k.zeile(&format!("    {fall}"));
+        }
+        k.zeile("]");
+        k.beendet = true;
+        let _ = writeln!(k.text, "{falle}:");
+        k.beendet = false;
+        k.zeile("unreachable");
+        k.beendet = true;
+        for (m, arm) in arme {
+            let _ = writeln!(k.text, "{arm}:");
+            k.beendet = false;
+            if emit_rek_arm(&mut k, &m, &zustand).is_none() {
+                return;
+            }
+            // Arm ohne Ausgang: Schleife (darf nicht passieren — Rümpfe kehren).
+            if !k.beendet {
+                k.zeile("unreachable");
+                k.beendet = true;
+            }
+        }
+    }
+    let (text, allocas) = (k.text, k.allocas);
+    s.rumpf.push_str(&allocas);
+    s.rumpf.push_str(&text);
+    let _ = writeln!(s.rumpf, "}}");
+    s.beleg_funktionen.push((
+        emit,
+        sig.params.iter().map(|(t, _)| t.text()).collect(),
+        ret_text,
+        "impl".to_string(),
+    ));
+}
+
+/// Ein Arm der Schleife (Parameter binden, Rumpf mit Schwanzsprung).
+fn emit_rek_arm(k: &mut Koerper, m: &str, zustand: &BTreeMap<String, Vec<String>>) -> Option<()> {
+    let plan = k.s.plaene.get(m).cloned()?;
+    let (rumpf, params, namen, formen) = match plan {
+        FnPlan::Impl { rumpf, params, namen, formen, .. } => (rumpf, params, namen, formen),
+        FnPlan::Fertig { .. } => return None,
+    };
+    let slots = zustand.get(m)?.clone();
+    k.oeffne();
+    for (((pt, pz), pname), (slot, pform)) in params.iter().zip(namen.iter()).zip(slots.iter().zip(formen.iter())) {
+        k.lege_an(pname.clone(), Bindung { ptr: slot.clone(), ll: pt.clone(), zeichen: *pz, form: Some(pform.clone()), fluechtig: ist_fluechtig(k.s, &Some(pform.clone())) });
+    }
+    senke_block(k, &rumpf);
+    k.schliesse();
+    if !k.beendet {
+        k.zeile("unreachable");
+        k.beendet = true;
+    }
+    Some(())
+}
+
+/// Modul aus einem Vollnamen (`m::f` → `m`, sonst leer).
+fn modul_von_voll(voll: &str) -> String {
+    match voll.rfind("::") {
+        Some(i) => voll[..i].to_string(),
+        None => String::new(),
+    }
 }

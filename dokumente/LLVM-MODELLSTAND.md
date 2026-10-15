@@ -84,6 +84,17 @@ the C emitter's semantics, byte for byte.
 - `erlaubt` (state machine), `nutzlast` (non-empty), `braucht`, invariants:
   checker-side — correctly absent.
 
+## Rekursion ohne Stapel (Endrekursion als Schleife)
+
+Rekursive Rufe liefen als echte Maschinenrufe — Tiefe 512 passt, Tiefe 200.000
+nicht. Jetzt senkt der Erzeuger **endständige Rekursion** (solo und wechselseitig
+über den Rufgraphen, Tarjan, iterativ) als Schleife: ein Aufruf `return f(…)` wird
+Zustand + Sprung statt Rahmen. Gemessen: `ab(200000)` läuft mit **512 KB Stapel**
+in 0,000 s (`rc=0`, korrekt). Bedingungen: alle Zyklus-Rufe endständig, einheitliche
+Antwort, kein Fehlerkanal — sonst echte Rufe (Status quo, dokumentiert statt
+verweigert). Nicht-endständige Rekursion nutzt weiter den Maschinenstapel
+(begrenzt durch `decreases`, endlich aber endlich).
+
 ## 5. Open (model-measurable, with reason)
 
 | Item | Reason | Sites |
