@@ -149,7 +149,7 @@ and writing them into one sentence would have hidden the weaker under the strong
 >
 > A theorem apiece would have to be a theorem about C's integer widths, and that is not what
 > the proof layer models. **Measured before it was written:** codes 263 → 265, sentence-less
-> 48 → 50, and neither code is named in `saetze.rs` or under `beweise/` — the delta is exactly
+> 48 → 50, and neither code is named in `saetze.rs` or under `grammatik/Beweise/` — the delta is exactly
 > these two.
 
 ```

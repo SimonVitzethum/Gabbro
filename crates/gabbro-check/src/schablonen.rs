@@ -824,7 +824,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "H2b -- no global carrier of the same type is reachable", durch: Some("the LANGUAGE: no `cast` (G9), no address operator -- a pointer to a global table cannot be formed; `darf_restrict` checks the effect list on top of that"), braeuchte: None },
             Voraussetzung { was: "TWO `own` pointers of the same type point at different things -- that would be the case worth 2.85", durch: None, braeuchte: Some("a PROGRAM with two owning pointers to the same carrier. *The DECISION fell on 2026-08-20 -- `own` is the release operation (SPRACHE.md §5); two `own` pointers of the same type could therefore both carry `restrict`.* It is NOT built, and the reason is measured: the whole corpus has ONE function with two pointers to the same carrier (`beispiele/07::wechseln`), and it carries no `own`. **Rule A** -- no construct without a program that needed it") },
         ],
-        fundstelle: "beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2.85 against \
+        fundstelle: "grammatik/Beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2.85 against \
                      1.00); PLAN.md «OPT»",
     },
     Schablone {
@@ -834,7 +834,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **Eingetragen 2026-08-17, als der Erzeuger F8 absenkte.** Die Darstellung war bis
         // dahin offen, und der Erzeuger weigerte sich (`C001`) statt zu vergroebern -- eine
         // Absenkung zu blankem `uint32_t` haette das `None` still geloescht.
-        // **Nachgezogen 2026-08-17 nach der Formalisierung** (`beweise/Option_Sonderwert.thy`).
+        // **Nachgezogen 2026-08-17 nach der Formalisierung** (`grammatik/Beweise/Option_Sonderwert.thy`).
         // Die Praemisse `N < 2^w` stand in keiner der drei Fassungen des Satzes -- weder hier
         // noch in `SPRACHE.md` noch im Erzeuger. Sie kam aus dem Beweis und steht jetzt als
         // Pruefung im Erzeuger.
@@ -860,13 +860,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         stand: Stand::Getragen,
         voraussetzungen: &[],
         fundstelle: "FRAGMENTE.md F1 (four CDT fields), F8 (`aufloesen`); MESSUNGEN.md B3, \
-                     `while i != NIL`; beweise/Option_Sonderwert.thy",
+                     `while i != NIL`; grammatik/Beweise/Option_Sonderwert.thy",
     },
     Schablone {
         name: "consuming.ordnung",
         haengt_an: &["table.induktion"],
         konstrukt: "traverse … by consuming (REMOVAL)",
-        // **Berichtigt und maschinell geprueft am 2026-08-16** (`beweise/Consuming.thy`).
+        // **Berichtigt und maschinell geprueft am 2026-08-16** (`grammatik/Beweise/Consuming.thy`).
         // Die alte Fassung trug zwei Saetze, die beide zu gross waren:
         //
         //   K-1  `unter der erzeugten Mutation` -- Singular, ohne zu nennen WELCHE. Bewiesen
@@ -893,7 +893,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         haengt_an: &["consuming.ordnung"],
         konstrukt: "traverse … by consuming (RE-HANGING)",
         // **Abgespalten am 2026-08-16, und die naive Fassung ist WIDERLEGT.**
-        // `umhaengen_kann_zyklus_erzeugen` in `beweise/Consuming.thy` konstruiert einen
+        // `umhaengen_kann_zyklus_erzeugen` in `grammatik/Beweise/Consuming.thy` konstruiert einen
         // wohlfundierten Zustand, aus dem EIN Umhaengen eine Schlinge macht.
         //
         // **Und es ist kein Randfall.** Der Bestand tut beides in EINEM Zug: `delete_leaf`
@@ -918,7 +918,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "consuming.leermenge",
         haengt_an: &[],
         konstrukt: "traverse … by consuming",
-        // **Maschinell geprueft am 2026-08-16** -- `leermenge` in `beweise/Consuming.thy`,
+        // **Maschinell geprueft am 2026-08-16** -- `leermenge` in `grammatik/Beweise/Consuming.thy`,
         // eine Aequivalenz in einer Zeile. Vorhergesagt waren 0--1 ausgespuelte Bedingungen;
         // es wurde eine, und es ist dieselbe wie N-2 bei `table.induktion`:
         //
@@ -1015,7 +1015,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // ("die Sprachdefinition von C und keine Annahme dieses Beweises").
         //
         // **AND THAT STEP HAS SINCE BEEN CUT DOWN TO ONE LINE, WITH A CORRECTION ATTACHED**
-        // (2026-08-28, `beweise/Absenkung_Parametrisch.thy`). That theory states the lowering
+        // (2026-08-28, `grammatik/Beweise/Absenkung_Parametrisch.thy`). That theory states the lowering
         // of `relabel` PARAMETRICALLY over the target semantics -- six named properties
         // `E1`..`E6`, none of them naming C or a machine -- and proves three things:
         //
@@ -1046,7 +1046,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "table.induktion",
         haengt_an: &["table.indexschranke", "consuming.ordnung"],
-        // **Maschinell geprueft am 2026-08-16** -- Isabelle2025-2, `beweise/`.
+        // **Maschinell geprueft am 2026-08-16** -- Isabelle2025-2, `grammatik/Beweise/`.
         // Zuordnung Satz -> Zeile (die vorregistrierte Ungueltigkeitsprobe):
         //   N-1  Endlichkeit           -> `im_bereich`, `kante_bleibt_im_bereich`,
         //                                 `traeger_endlich`
@@ -1149,7 +1149,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   with the atomic RMW chain (`am_ruhepunkt_gleich_dem_atomaren_rmw`); per \
                   operator the instance stands there -- **and the unit of `min` is the \
                   MAXIMUM of the type, not zero** (`min_ist_monoid_mit_top`).",
-        // **Maschinell geprueft am 2026-08-17** (`beweise/Accumulates_Monoid.thy`, K11.3.2)
+        // **Maschinell geprueft am 2026-08-17** (`grammatik/Beweise/Accumulates_Monoid.thy`, K11.3.2)
         // -- und zwar VOR dem Konstrukt, wie das zweite Tor es verlangt.
         //
         // *Ausgespuelt: `min` mit `0` als Startwert zieht jedes Ergebnis auf null.* Eine
@@ -1170,7 +1170,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "one cell per core, laid out with the right unit", durch: Some("mutation probe `min-akkumulator-ohne-umkehr`, unit `beispiel23`"), braeuchte: None },
             Voraussetzung { was: "the QUIESCENT POINT -- no core writes any more while the fold runs", durch: None, braeuchte: Some("the EXECUTION CONTEXTS (K11.2.2) -- without them Gabbro does not say who runs concurrently, and no rule can establish the quiescent point") },
         ],
-        fundstelle: "SPRACHE.md §11.4; beweise/Accumulates_Monoid.thy",
+        fundstelle: "SPRACHE.md §11.4; grammatik/Beweise/Accumulates_Monoid.thy",
     },
     Schablone {
         name: "walk.mappings",
@@ -1204,7 +1204,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // der erklaerten Bytereihenfolge plus eine Gueltigkeitsfunktion aus den
         // `where`-Klauseln. Bitlagen bleiben abgelehnt («B24»).
         //
-        // **Maschinell geprueft am 2026-08-17** (`beweise/Format_Roundtrip.thy`, K11.3.2).
+        // **Maschinell geprueft am 2026-08-17** (`grammatik/Beweise/Format_Roundtrip.thy`, K11.3.2).
         // *Ausgespuelt hat der Beweis eine dritte Haelfte, die der Eintrag nicht nannte:* die
         // Rundreise je Feld ist wertlos, solange nicht dasteht, dass ein Schreiben in das eine
         // das andere nicht zerstoert (`schreiben_stoert_getrennte_felder_nicht`) -- **und
@@ -1214,7 +1214,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the written value fits into the declared width", durch: Some("M101 (m1.rs)"), braeuchte: None },
             Voraussetzung { was: "the fields lie SEPARATE (`trennt f g`)", durch: Some("the layout itself, `bitlage::lies` -- one word per field without a bit layout, one per bit group, and the offset grows monotonically. Two fields can only collide WITHIN a group, and there `N008` holds"), braeuchte: None },
         ],
-        fundstelle: "SPRACHE.md §10.1; beweise/Format_Roundtrip.thy",
+        fundstelle: "SPRACHE.md §10.1; grammatik/Beweise/Format_Roundtrip.thy",
     },
     Schablone {
         name: "entry.abdruck",
@@ -1249,7 +1249,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   (`trennung_haengt_nicht_an_der_basis` -- which is why the handle may be the \
                   constructor); bank entries do not overlap \
                   (`bankeintraege_ueberlappen_nicht`).",
-        // **Maschinell geprueft am 2026-08-17** (`beweise/Device_Konstruktor.thy`, K11.3.2).
+        // **Maschinell geprueft am 2026-08-17** (`grammatik/Beweise/Device_Konstruktor.thy`, K11.3.2).
         // Der Beweis darf kurz sein, und der Eintrag sagt warum: *„stimmt 0x18 fuer GCMD?"*
         // ist keine Frage an ein Beweissystem, sondern an ein Datenblatt -- sie steht als
         // Annahme mit Sonde im Manifest.
@@ -1263,13 +1263,13 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "`stride` is not zero -- otherwise every bank cell is empty", durch: Some("N010, since 2026-08-19 -- `stride 0` falls at the pass instead of in a comment"), braeuchte: None },
             Voraussetzung { was: "the declared layouts are the device's", durch: Some("axiom layer: `assume` with a falsifier, `gabbro annahmen`"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, The origin, 2026-08-14; beweise/Device_Konstruktor.thy",
+        fundstelle: "MESSUNGEN.md, The origin, 2026-08-14; grammatik/Beweise/Device_Konstruktor.thy",
     },
     Schablone {
         name: "table.indexschranke",
         haengt_an: &[],
         konstrukt: "table … count N / index into T",
-        // **Berichtigt und maschinell geprueft am 2026-08-16** (`beweise/Table_Indexschranke.thy`).
+        // **Berichtigt und maschinell geprueft am 2026-08-16** (`grammatik/Beweise/Table_Indexschranke.thy`).
         // Die alte Fassung lautete: *„Der erzeugte Indextyp `0 ..< N` deckt genau die
         // belegten Slots, und die Absenkung legt N Slots an."* Davon war der erste Halbsatz
         // **falsch** und der zweite gehoert nicht hierher:
@@ -1320,7 +1320,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // C-Feld ab, und `pruefe-emission.sh` misst es an der Ausfuehrung. *Damit ist dieser
         // Satz keine Zusage ueber einen kuenftigen Erzeuger mehr -- der Uebersetzer stuetzt
         // sich JETZT darauf.*
-        // **Maschinell geprueft 2026-08-17** (`beweise/Table_Absenkung.thy`, K11.3.2) -- der
+        // **Maschinell geprueft 2026-08-17** (`grammatik/Beweise/Table_Absenkung.thy`, K11.3.2) -- der
         // erste der vier LEBEND getragenen Saetze, und der, auf dem die anderen aufsitzen:
         // `option.sonderwert` braucht die Laenge fuer den Sonderwert, `table.induktion` die
         // Schranke fuer die Terminierung.
@@ -1333,7 +1333,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "`count N` is written there -- otherwise the array would have no size", durch: Some("C001, emit.rs:938"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), finding M-3; \
-                     beweise/Table_Absenkung.thy",
+                     grammatik/Beweise/Table_Absenkung.thy",
     },
     // ---- Kandidaten aus der Nachpruefung vom 2026-08-14. Noch kein Konstrukt, aber die
     // ---- Pflicht steht schon fest -- und genau das ist der Punkt dieser Liste.
@@ -1372,7 +1372,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "verbund.konstruktor",
         haengt_an: &[],
         konstrukt: "P(a: …, b: …) -- the labelled call (lowering)",
-        // **Maschinell geprueft 2026-08-17** (`beweise/Verbund_Konstruktor.thy`), und zwar
+        // **Maschinell geprueft 2026-08-17** (`grammatik/Beweise/Verbund_Konstruktor.thy`), und zwar
         // VOR dem Konstrukt: das Verbundliteral («B7») zu bauen haette diesen Eintrag von
         // `Entworfen` auf `Getragen` gehoben und damit `L` auf 5 -- das Tor aus K100.
         //
@@ -1399,7 +1399,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         voraussetzungen: &[
             Voraussetzung { was: "`deckt`: the assignment has exactly the field list as its key sequence", durch: Some("M106/M107"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy; \
+        fundstelle: "MESSUNGEN.md, B13-Nachpruefung; grammatik/Beweise/Verbund_Konstruktor.thy; \
                      m1.rs::marken_pruefen; emit.rs::verbund",
     },
     Schablone {
@@ -1428,7 +1428,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   TYPE; otherwise the obligation list looks complete while the second net is \
                   missing -- and an emission could drop the range check BECAUSE the proof \
                   says it cannot go negative.",
-        // **Maschinell geprueft am 2026-08-19** (`beweise/Gruppe_Erhaltung.thy`), und zwar
+        // **Maschinell geprueft am 2026-08-19** (`grammatik/Beweise/Gruppe_Erhaltung.thy`), und zwar
         // an dem Tag, an dem `Table_Ops_Erhaltung.thy` `verbindung_nicht_gedeckt` bewies:
         // eine Operation erhaelt jede Invariante IHRES Traegers und bricht die verbindende.
         // *Damit war `gruppe.ops` nicht mehr eine Bequemlichkeit, sondern notwendig -- und
@@ -1485,7 +1485,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   stands where it stands -- were it to take `EPS` under `SCHEDS`, it would \
                   invert the order. *A group with a declared footprint would have made that \
                   comment superfluous; that is the measured need, not a design wish.*",
-        // **Maschinell geprueft am 2026-08-19** (`beweise/Gruppe_Erhaltung.thy`). Die drei
+        // **Maschinell geprueft am 2026-08-19** (`grammatik/Beweise/Gruppe_Erhaltung.thy`). Die drei
         // benannten Teile der Pflicht sind drei Saetze geworden:
         //
         //   (a) die Reihenfolge      -> `rangordnung_azyklisch` und, als Gegenrichtung,
@@ -1526,9 +1526,9 @@ pub const SCHABLONEN: &[Schablone] = &[
 ];
 
 // ===========================================================================================
-// A THEORY WITH NO ENTRY, AND WHY -- `beweise/Table_Zaehlung.thy` (2026-08-28)
+// A THEORY WITH NO ENTRY, AND WHY -- `grammatik/Beweise/Table_Zaehlung.thy` (2026-08-28)
 //
-// **It is recorded here rather than only in `beweise/`, because a proof this register does
+// **It is recorded here rather than only in `grammatik/Beweise/`, because a proof this register does
 // not name grows the trust surface unseen** -- which is what `instrumente/zaehle-theorien.py`
 // counts. This note is not a template: it takes no seat, binds no premise, and nothing rests
 // on it.

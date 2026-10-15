@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Table_Indexschranke.lean
-  Part of:   Gabbro -- Lean port of `beweise/Table_Indexschranke.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Table_Indexschranke.thy`
              (template `table.indexschranke`, S12; lane 168).
 
   What this file is: the index bound as a promise about WRITE SITES, not

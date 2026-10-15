@@ -398,7 +398,7 @@ fn jede_schablone_nennt_ihre_pflicht() {
     }
     // **Die Zahl ist angenagelt, und das ist der Zweck.** Sie war bis zum 2026-08-16
     // `SCHABLONEN.len()` -- keine einzige bewiesen. Jetzt ist eine bewiesen
-    // (`table.induktion`, Isabelle2025-2, `beweise/`), und dieser Test hat die Buchfuehrung
+    // (`table.induktion`, Isabelle2025-2, `grammatik/Beweise/`), und dieser Test hat die Buchfuehrung
     // dazu erzwungen: er faellt, bis die Zahl HIER und in `BEWEIS.md` nachgezogen ist.
     //
     // *Wer die naechste beweist, faellt wieder hier -- so soll es sein. Eine Zahl, die sich

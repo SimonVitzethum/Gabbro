@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/GruppeErhaltung.lean
-  Port of:   beweise/Gruppe_Erhaltung.thy (templates `gruppe.ops` S19 and
+  Port of:   grammatik/Beweise/Gruppe_Erhaltung.thy (templates `gruppe.ops` S19 and
               `gruppe.sperrabdruck` S20)
 
   Part (a): rank order is acyclic -- otherwise the DEADLOCK-FREEDOM of the

@@ -14,7 +14,7 @@ Isabelle-Lauf (`~/Isabelle2025-2`) und jede Abnahme. `git push` geht über
 `~/.ssh/id_ed25519_github`. Wo weiter unten noch Server-Rezepte stehen, sind sie datierte
 Historie — die Regel ist lokal.
 
-*Wer `./instrumente/abnahme.py --voll` fährt, braucht beide Bäume (`crates/` und `beweise/`);
+*Wer `./instrumente/abnahme.py --voll` fährt, braucht beide Bäume (`crates/` und `grammatik/Beweise/`);
 ohne Isabelle misst `pruefe-beweise.sh`* **`OHNE NACHWEIS`, kein Befund**.
 
 ## Rechenlast läuft lokal — mit Blick auf den Speicher
@@ -122,7 +122,7 @@ dreimal Zahlen erzeugt, die beim Zusammenführen einzeln nachgerechnet werden mu
 `--ff-only`-Vorlauf ist kein Commit und kostet nichts; ihn zu vergessen kostet den Merge.*
 
 **In EIN Agentenverzeichnis gehören BEIDE Bäume, und zwar in dieser Reihenfolge:**
-der `crates`-Baum zuerst, dann `beweise/` daneben.
+der `crates`-Baum zuerst, dann `grammatik/Beweise/` daneben.
 
 *Ein Agent hat nur ein Verzeichnis* — und wer nur den ersten Baum hineinstellt, bekommt
 `pruefe-beweise.sh` **`OHNE NACHWEIS`** über fünfzehn tadellose Theorien. **Am 2026-08-31 hat das eine volle Abnahme rot gemeldet, mit `[1]` und ohne einen
@@ -221,11 +221,11 @@ Commit-Historie wird NICHT umgeschrieben -- sie ist ein Protokoll, kein Dokument
   **nie hineincommitten.** Korrekturvorschläge stehen im Protokoll, nicht im fremden Baum.
 * **`aarch64` bleibt versiegelt** („blockiert — Abstammung"), kein dritter Anlauf.
 * **Der Isabelle-Teil ist nach Lean übertragen, und die `.thy`-Menge ist damit eingefroren.**
-  *Gemessen am 2026-09-15:* `beweise/*.thy` zählt **15** Theorien, `grammatik/Grammatik/Isabelle/`
+  *Gemessen am 2026-09-15:* `grammatik/Beweise/*.thy` zählt **15** Theorien, `grammatik/Grammatik/Isabelle/`
   zählt **15** Lean-Dateien, und `grammatik/Grammatik.lean` importiert alle fünfzehn — der
   Lean-Bau prüft sie also bei jedem Lauf mit (Bahnen 168 und 169, `messung/muse/MUSE-REPORT-168.md`
   und `-169.md`, mit Treue-Tabelle je Satz). **Ein neuer Beweis gehört nach Lean, nicht nach
-  `beweise/`.** Der Ordner bleibt stehen als Protokoll und als Gegenprobe; `pruefe-beweise.sh`
+  `grammatik/Beweise/`.** Der Ordner bleibt stehen als Protokoll und als Gegenprobe; `pruefe-beweise.sh`
   fährt ihn weiter — lokal, mit `~/Isabelle2025-2`.
 * Isabelle2025-2 liegt lokal unter `~/Isabelle2025-2`; **kein AFP**.
   *Ohne `sudo` installiert* — Isabelle bringt sein eigenes JDK mit, `java` gibt es auf dem

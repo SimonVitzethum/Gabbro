@@ -224,7 +224,7 @@ pub struct Umgebung {
     pub funktionen: HashMap<String, Signatur>,
     /// **Die Namen, deren Signatur ein KONSTRUKTOR ist, kein Aufruf** («B7»).
     /// Wert ist die Felderliste in Deklarationsreihenfolge -- `fs` aus
-    /// `beweise/Verbund_Konstruktor.thy`.
+    /// `grammatik/Beweise/Verbund_Konstruktor.thy`.
     pub verbundtypen: HashMap<String, Vec<String>>,
     /// Je Modulpfad die Pfade seiner `use`-Zeilen.
     verwendet: HashMap<String, Vec<String>>,
@@ -1947,7 +1947,7 @@ impl Umgebung {
             // return h.slots[frei].kopf;      -- null Fehler, und `frei` kann N sein
             // ```
             //
-            // > *Der Sonderwert ist `N` selbst* (`beweise/Option_Sonderwert.thy`,
+            // > *Der Sonderwert ist `N` selbst* (`grammatik/Beweise/Option_Sonderwert.thy`,
             // > `sonderwert_ausserhalb`). Ein Optionswert nimmt ihn an -- also reicht sein
             // > Bereich bis `N`, und genau daran faellt `M103`, wenn jemand ihn als Index
             // > benutzt, statt ihn vorher zu `match`en.
@@ -1993,7 +1993,7 @@ impl Umgebung {
     ///
     /// `optional` is the `option index into T` case and is **a different type, not this one
     /// with a flag**: its special value is `N` itself, so its range reaches one further
-    /// (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). A binder is never
+    /// (`grammatik/Beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). A binder is never
     /// optional -- a traversal visits slots, not the absence of one.
     ///
     /// Without a `count` on the table the range stays open, and that is then a statement of

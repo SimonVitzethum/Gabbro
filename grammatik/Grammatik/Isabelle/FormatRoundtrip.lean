@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/FormatRoundtrip.lean
-  Port of:   beweise/Format_Roundtrip.thy (template `format.roundtrip`, S11)
+  Port of:   grammatik/Beweise/Format_Roundtrip.thy (template `format.roundtrip`, S11)
 
   The fixed case: a field at an offset with the width from the declaration.
   (1) The roundtrip `lesen(schreiben(x)) == x` for every representable `x` --

@@ -97,7 +97,7 @@ ssh ki-pc-fisch-101 'cd gabbro-lean && export PATH=$HOME/.elan/bin:$PATH && lake
 
 | Satz | Aussage |
 |---|---|
-| `add_korrekt`, `sub_korrekt`, `neg_korrekt`, **`mul_korrekt`** | das gerechnete Intervall **überdeckt** die wahre Menge. Das Produkt über die vier Ecken ist genau der Satz, den `beweise/Intervall_Aussen.thy`:149 als *„größer und noch nicht da"* offen ließ |
+| `add_korrekt`, `sub_korrekt`, `neg_korrekt`, **`mul_korrekt`** | das gerechnete Intervall **überdeckt** die wahre Menge. Das Produkt über die vier Ecken ist genau der Satz, den `grammatik/Beweise/Intervall_Aussen.thy`:149 als *„größer und noch nicht da"* offen ließ |
 | `schnitt_genau`, `schnitt_ist_infimum`, `huelle_deckt_*` | Schnitt und Hülle sind Infimum und obere Schranke — **semantisch**, nicht nur an den Ecken |
 | `add_monoton`, `sub_monoton`, `schnitt_monoton` | Monotonie: eine schärfere Eingabe gibt nie ein schlechteres Ergebnis |
 | `echt_enger_faellt`, **`keine_unendliche_verengung`** | **Terminierung der Verengung**: das Maß `hi − lo + 1` fällt echt, also gibt es keine unendliche Kette |
@@ -236,7 +236,7 @@ sichtbar und nicht in einer globalen Liste versteckt.
 |---|---|
 | die **Schärfe** der Intervallmultiplikation (nicht nur die Überdeckung) | braucht die Fallunterscheidung nach Vorzeichen als eigene Theorie; die **Überdeckung** ist der tragende Teil und steht |
 | das **Ergebnisintervall der Division** | Rundungsrichtung. `messung/P6.md`:85 sagt es für Isabelle: *„Isabelles `div` auf `int` rundet gegen minus unendlich, C schneidet gegen null ab"* — dieselbe Absage, derselbe Grund |
-| IEEE-754 | `beweise/Intervall_Aussen.thy` bucht es schon als Annahme; ohne AFP/mathlib gibt es keinen Träger |
+| IEEE-754 | `grammatik/Beweise/Intervall_Aussen.thy` bucht es schon als Annahme; ohne AFP/mathlib gibt es keinen Träger |
 | `Finset`/`Fintype` in `Wirkung` | **wurde nicht gebraucht** — und das ist ein Ergebnis: der Hauptsatz hängt nicht an der Zahl der Funktionen, sondern an der Form der Induktion |
 
 ---

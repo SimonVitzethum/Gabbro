@@ -1897,7 +1897,7 @@ lauf "beispiel26" "$W/beispiele/26-gleitkomma.gab" "$TREIBER26" "0.2 0.5 0.5 0.8
 
 # -- 10. `accumulates`: eine Zelle je Kern, und der Test misst die SCHABLONE ---------------
 #
-# **Der Beweis lag VOR dem Konstrukt** (`beweise/Accumulates_Monoid.thy`, 2026-08-17), und er
+# **Der Beweis lag VOR dem Konstrukt** (`grammatik/Beweise/Accumulates_Monoid.thy`, 2026-08-17), und er
 # hat die Falle ausgespuelt, die hier drinsteckt: `min` hat als Neutrales das MAXIMUM des
 # Typs, nicht die Null. Ein Erzeuger, der mit `0` anfaengt, zieht jedes `min` auf null.
 #
@@ -1963,7 +1963,7 @@ lauf "beispiel24" "$W/beispiele/24-ip-kopf.gab" "$TREIBER24" "4 5 10 0 2 0 6" \
 # -- 12. «C1»: die Freiliste -- der SONDERWERT, und der Beweis lag seit zwei Tagen da ------
 #
 # `option index into T` senkt zu einem Sonderwert ab, und der Sonderwert ist `count` selbst
-# (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`/`kodiere_injektiv`). Bis zum
+# (`grammatik/Beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`/`kodiere_injektiv`). Bis zum
 # 2026-08-19 weigerte sich der Erzeuger dafuer -- **der Satz stand da und kein Erzeuger
 # benutzte ihn**, und die Freiliste war die Datei, die daran haengenblieb.
 #

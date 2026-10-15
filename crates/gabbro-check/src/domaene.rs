@@ -253,7 +253,7 @@ impl<'a> Sicht<'a> {
 ///
 /// * **`D014`** -- the field stands in the slot. A name that stands nowhere is no edge.
 /// * **`D015`** -- it is `option index into <table>`. A chain must be able to END, and the
-///   sentinel for that is `count` itself (`beweise/Option_Sonderwert.thy`); an `index into T`
+///   sentinel for that is `count` itself (`grammatik/Beweise/Option_Sonderwert.thy`); an `index into T`
 ///   without `option` has no end, a `bool` is not an edge at all.
 /// * **`D016`** -- it points into the table it is walked in. An edge into another table is a
 ///   foreign key, and `chain(a, b) in` says nothing about that.
@@ -2542,7 +2542,7 @@ fn kante_pruefen(
             )
             .mit_notiz(
                 "the chain must be able to END, and the sentinel for that is `count` itself \
-                 (beweise/Option_Sonderwert.thy) -- an `index into T` without `option` has no \
+                 (grammatik/Beweise/Option_Sonderwert.thy) -- an `index into T` without `option` has no \
                  end, and a field that is no index at all is no edge",
             ),
         );

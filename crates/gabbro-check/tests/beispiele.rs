@@ -956,7 +956,7 @@ fn die_gnadenfrist_wird_verlangt_und_nur_sie() {
 
 /// **Der SPERRABDRUCK ist eine benannte Annahme der Axiomschicht** (2026-08-21).
 ///
-/// `beweise/Gruppe_Erhaltung.thy`, Locale `zug`, nimmt `abdruck_innen` an und schliesst
+/// `grammatik/Beweise/Gruppe_Erhaltung.thy`, Locale `zug`, nimmt `abdruck_innen` an und schliesst
 /// daraus, dass niemand hinsieht. Dass ein gehaltener Abdruck einen fremden Kern wirklich
 /// fernhaelt, ist eine Aussage ueber das SPEICHERMODELL -- *vorher war die Praemisse
 /// unsichtbar; jetzt steht sie in der Zahl.*

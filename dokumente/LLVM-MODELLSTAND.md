@@ -166,7 +166,7 @@ rc=25, x86_64 native), identical output on x86_64 and aarch64. These are
 Gabbro-vs-Gabbro numbers, not against GCC `-O3` — the `ARM-PLAN.md` 80 %/110 %
 targets are still unmeasured.
 
-## 7. Isabelle-Beweise (`beweise/*.thy`): was sie beweisen, wo es im Backend steht
+## 7. Isabelle-Beweise (`grammatik/Beweise/*.thy`): was sie beweisen, wo es im Backend steht
 
 15 Theorien, 188K, 3512 Zeilen. Jede beweist eine Eigenschaft, die der C-Erzeuger
 braucht — und jede steht im LLVM-Erzeuger an derselben Stelle, weil die

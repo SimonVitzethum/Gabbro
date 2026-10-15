@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Table_Zaehlung.lean
-  Part of:   Gabbro -- Lean port of `beweise/Table_Zaehlung.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Table_Zaehlung.thy`
              («B13» -- the aggregation `count(s in slots of A : P s)`;
              lane 168).
 

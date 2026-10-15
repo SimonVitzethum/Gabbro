@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/RestrictAlleinzugriff.lean
-  Port of:   beweise/Restrict_Alleinzugriff.thy (template
+  Port of:   grammatik/Beweise/Restrict_Alleinzugriff.thy (template
               `restrict.alleinzugriff` -- when the generator may write
               `restrict`)
 

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Absenkung_Parametrisch.lean
-  Part of:   Gabbro -- Lean port of `beweise/Absenkung_Parametrisch.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Absenkung_Parametrisch.thy`
              (the lowering theorem, parametric over the target semantics;
              lane 168).
 

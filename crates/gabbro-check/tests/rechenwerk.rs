@@ -891,7 +891,7 @@ impl fn f(w : ptr<normal, rw> W, i : index into W) -> bool
 
 /// **Die Praemisse, die aus dem Beweis kam (2026-08-17).**
 ///
-/// `beweise/Option_Sonderwert.thy` zeigt die Kodierung `None -> N`, `Some i -> i` als
+/// `grammatik/Beweise/Option_Sonderwert.thy` zeigt die Kodierung `None -> N`, `Some i -> i` als
 /// injektiv — **unter `N < 2^w`**. Bei `N = 2^w` faellt der Sonderwert mit dem ersten Slot
 /// zusammen (`sonderwert_kollidiert_bei_vollem_wort`), und `None` ist von `Some 0` nicht mehr
 /// zu unterscheiden.
@@ -2194,7 +2194,7 @@ impl fn ausgeben(tor : u16, wert : u8)
 
 /// **`restrict` nur bei genau EINEM Zeiger je Trägertyp** («OPT1», 2026-08-19).
 ///
-/// Das ist Hypothese **H2a** aus `beweise/Restrict_Alleinzugriff.thy`. Fällt sie, fällt der
+/// Das ist Hypothese **H2a** aus `grammatik/Beweise/Restrict_Alleinzugriff.thy`. Fällt sie, fällt der
 /// Satz — `ohne_trennung_kein_restrict` sagt es in der Gegenrichtung —, und was der Erzeuger
 /// dann hinschreibt, ist **undefiniertes Verhalten**: Code, der bei `-O0` stimmt und bei
 /// `-O2` nicht.
@@ -2304,7 +2304,7 @@ pub impl fn tu() effects { writes z } costs <= 1 ops { z = 1; }
 
 /// **«C1»: `option index into T` senkt zum SONDERWERT ab — und der Sonderwert ist `count`.**
 ///
-/// Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy`
+/// Der Beweis lag seit dem 2026-08-17 in `grammatik/Beweise/Option_Sonderwert.thy`
 /// (`sonderwert_ausserhalb`, `kodiere_injektiv`, `kodiere_wort_injektiv`) und **kein Erzeuger
 /// benutzte ihn**: `None`, `Some(i)`, ein `static … = None` und ein `match` ueber einem Ort
 /// waren zehn Weigerungen. *Ein Satz ohne Leser ist die Haelfte, die «NL» beklagt.*

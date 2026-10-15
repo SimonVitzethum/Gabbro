@@ -110,7 +110,7 @@ struct Namen {
     /// nicht, gegen welchen Sonderwert es schreibt.**
     statiken: HashMap<String, TypExpr>,
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
-    /// `beweise/Option_Sonderwert.thy`, M-1.
+    /// `grammatik/Beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
     /// **«E4»: each arena maps to its `hi` expression and element type.** The bound
     /// stays an expression (a literal or a `const` name, like `count`),
@@ -150,7 +150,7 @@ struct Namen {
     typen: HashMap<String, TypExpr>,
     /// **Die Verbundtypen: Name -> Felderliste in Deklarationsreihenfolge** («B7»).
     /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
-    /// zusammengesetzten Literal. *`fs` aus `beweise/Verbund_Konstruktor.thy`.*
+    /// zusammengesetzten Literal. *`fs` aus `grammatik/Beweise/Verbund_Konstruktor.thy`.*
     verbunde: BTreeSet<String>,
     /// **Die `tagged type`-Namen mit ihren Varianten** («C2»). Sie werden `struct { marke;
     /// union { … } }` -- und die Marke ist ein `enum`, damit `-Wswitch` ein **zweiter
@@ -2602,7 +2602,7 @@ pub fn emittiere_mit(
             // right; the extent was not.**
             //
             // > **No new template.** The lowering is `S19 verbund.konstruktor`, PROVED on
-            // > 2026-08-17 (`beweise/Verbund_Konstruktor.thy`) and already carried by
+            // > 2026-08-17 (`grammatik/Beweise/Verbund_Konstruktor.thy`) and already carried by
             // > `emit::ruf` for the expression position. This branch reaches the same
             // > designators at file scope -- `L` does not move, and that is the whole point of
             // > K100's second gate.
@@ -2806,7 +2806,7 @@ pub fn emittiere_mit(
         // unbeschraenkte Schleife: der Widerspruch *„der Uebersetzer erzeugt, was die Sprache
         // verbietet"* faellt damit weg.
         //
-        // **Die Schablone war VOR dem Konstrukt bewiesen** (`beweise/Accumulates_Monoid.thy`,
+        // **Die Schablone war VOR dem Konstrukt bewiesen** (`grammatik/Beweise/Accumulates_Monoid.thy`,
         // 2026-08-17) -- so verlangt es das zweite Tor. Und sie hat die Falle ausgespuelt,
         // die hier drinsteckt: **`min` hat als Neutrales das MAXIMUM des Typs, nicht die
         // Null.** Ein Erzeuger, der mit `0` anfaengt, zieht jedes `min` auf null.
@@ -2885,7 +2885,7 @@ pub fn emittiere_mit(
             aus.push_str(&format!(
                 "\n/* accumulates {nm} merge {op} per cpu {n} -- one cell per core.\n\
                  \x20* The merge set is a commutative monoid, so the fold is order-independent\n\
-                 \x20* (beweise/Accumulates_Monoid.thy). AT A QUIESCENT POINT this equals an\n\
+                 \x20* (grammatik/Beweise/Accumulates_Monoid.thy). AT A QUIESCENT POINT this equals an\n\
                  \x20* atomic RMW chain -- read while others write, it does not, and that is\n\
                  \x20* the price of the lowering, not an inaccuracy. */\n \
                  static _Atomic {c} {nm}_zellen[{n}];\n\
@@ -4298,7 +4298,7 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     //
     // > **Diese Praemisse stand nirgends** -- nicht im Registereintrag, nicht in `SPRACHE.md`,
     // > nicht hier. Sie kam am 2026-08-17 aus der Formalisierung
-    // > (`beweise/Option_Sonderwert.thy`, `sonderwert_kollidiert_bei_vollem_wort` und
+    // > (`grammatik/Beweise/Option_Sonderwert.thy`, `sonderwert_kollidiert_bei_vollem_wort` und
     // > `kodiere_wort_injektiv`). *In der Praxis war sie erfuellt -- `count 80256` gegen
     // > `2^32` -- aber erfuellt und geprueft sind zwei Zustaende.*
     const WORTGRENZE: i128 = 1 << 32;
@@ -4311,7 +4311,7 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             t.span,
             &format!(
                 "`count {n}` fills the index word: the `option` sentinel would be `2^32`, \
-                 which collides with slot 0 -- see beweise/Option_Sonderwert.thy, M-1"
+                 which collides with slot 0 -- see grammatik/Beweise/Option_Sonderwert.thy, M-1"
             ),
         ),
         None => weigere(
@@ -4398,7 +4398,7 @@ _Static_assert(1 <= ({max}), \"ceiling namable\");\n"
 
 /// **Cut (c): the generated mutations -- and the PROOF writes them, not I.**
 ///
-/// `beweise/Table_Ops_Erhaltung.thy` has three parts, and the third decides what comes out
+/// `grammatik/Beweise/Table_Ops_Erhaltung.thy` has three parts, and the third decides what comes out
 /// here:
 ///
 /// | Theorem | word | what it says |
@@ -4485,7 +4485,7 @@ fn grenzzahl(e: &Expr) -> Option<i128> {
 
 /// **The reset value of ONE slot field -- derived, and `None` where it cannot be.**
 ///
-/// `T_remove` clears a slot: the theorem it carries (`beweise/Table_Ops_Erhaltung.thy`,
+/// `T_remove` clears a slot: the theorem it carries (`grammatik/Beweise/Table_Ops_Erhaltung.thy`,
 /// `blatt_loeschen_erhaelt`) says the slot carries NO value any more, so EVERY field is
 /// reset. Until 2026-08-31 that read *`T_NONE` for an optional index, `0` for everything
 /// else*, and the `0` was a `_` arm. Measured over 499 corpus files: 29 hits.
@@ -4519,7 +4519,7 @@ fn ruecksetzwert(t: &SlotTyp, tn: &str, u: &Namen, tiefe: u32) -> Option<String>
         SlotTyp::Typ(x) => x,
     };
     match x {
-        // The sentinel is `count` itself -- `beweise/Option_Sonderwert.thy`.
+        // The sentinel is `count` itself -- `grammatik/Beweise/Option_Sonderwert.thy`.
         TypExpr::Index { optional: true, .. } => Some(format!("{tn}_NONE")),
         // And the non-optional one has no sentinel at all. **That is the refusal**, not an
         // oversight: the type says every value of it names a slot.
@@ -4612,7 +4612,7 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         match w.text.as_str() {
             "insert" => {
                 aus.push_str(&format!(
-                    "\n/* `ops insert` -- beweise/Table_Ops_Erhaltung.thy, `einfuegen_erhaelt`.\n\
+                    "\n/* `ops insert` -- grammatik/Beweise/Table_Ops_Erhaltung.thy, `einfuegen_erhaelt`.\n\
                      \x20  The premises are the theorem's: the slot is FRESH (`sigma n = None`)\n\
                      \x20  and the parent is REACHABLE (`erreicht sigma p`). What this function\n\
                      \x20  buys is Teil I: the proof falls ONCE per operation, not per call site.\n\
@@ -4640,7 +4640,7 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             }
             "remove" => {
                 aus.push_str(&format!(
-                    "\n/* `ops remove` -- beweise/Table_Ops_Erhaltung.thy, `blatt_loeschen_erhaelt`.\n\
+                    "\n/* `ops remove` -- grammatik/Beweise/Table_Ops_Erhaltung.thy, `blatt_loeschen_erhaelt`.\n\
                      \x20  Premise the theorem charges: `blatt sigma s` -- nobody names `s` as\n\
                      \x20  parent. `sigma(s := None)` is a slot that carries NO value any more, so\n\
                      \x20  EVERY field is reset. beispiele/47 shows why that is not zeal: its\n\
@@ -4697,7 +4697,7 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             // invented duty would have looked stricter and meant less.*
             "relabel" => match elter {
                 Some(e) => aus.push_str(&format!(
-                    "\n/* `ops relabel` -- beweise/Table_Ops_Erhaltung.thy, `umhaengen_erhaelt` (U-3).\n\
+                    "\n/* `ops relabel` -- grammatik/Beweise/Table_Ops_Erhaltung.thy, `umhaengen_erhaelt` (U-3).\n\
                      \x20  The premises are the theorem's: the NEW parent is REACHABLE\n\
                      \x20  (`erreicht sigma p`) and the re-hung slot does NOT lie on that\n\
                      \x20  parent's chain, that parent itself included -- U-3's second. That\n\
@@ -7586,7 +7586,7 @@ fn asmtext(t: &str) -> String {
     aus
 }
 
-/// **`restrict` — und die Hypothesen stehen in `beweise/Restrict_Alleinzugriff.thy`.**
+/// **`restrict` — und die Hypothesen stehen in `grammatik/Beweise/Restrict_Alleinzugriff.thy`.**
 ///
 /// Gemessen 2026-08-19, `cc -O2`: **2,85** dort, wo der C-Übersetzer die Herkunft der Zeiger
 /// nicht sieht, **1,00** dort, wo er sie sieht. Das ist der grösste Hebel des Erzeugers — und
@@ -14056,7 +14056,7 @@ fn traverse(
             //
             // Until today this line read `uint32_t`, copied from the `slots of` arm four
             // hundred lines up. There the width is DECIDED: a table index fills an index
-            // word and the `option` sentinel sits at `2^32` (`beweise/Option_Sonderwert.thy`,
+            // word and the `option` sentinel sits at `2^32` (`grammatik/Beweise/Option_Sonderwert.thy`,
             // and the refusal at `count {n} fills the index word` says so out loud). **An
             // array carries no such decision** -- its length stands in the declaration as a
             // `const … : u64`, and `sizeof(f)/sizeof(f[0])` is a `size_t`.
@@ -15999,7 +15999,7 @@ fn ausdruck_obergrenze(e: &Expr, u: &Namen) -> Option<i128> {
 /// width its `count` needs -- `uint8_t` for `count 8` -- and then the assignment would be a
 /// WIDENING and silent by itself. That changes the representation of every index in every
 /// signature, and the `option` sentinel premise (`N` must fit the index word,
-/// `beweise/Option_Sonderwert.thy`) with it. *A decision about the ABI is not a side effect
+/// `grammatik/Beweise/Option_Sonderwert.thy`) with it. *A decision about the ABI is not a side effect
 /// of a warning*; `messung/GRAMMATIKTAFEL.md` §8 left it open and it stays open.
 fn verenge(text: String, e: &Expr, ziel: Option<&str>, u: &Namen) -> String {
     let Some(ziel) = ziel else { return text };
@@ -16254,7 +16254,7 @@ fn option_quelle(e: &Expr, u: &Namen) -> Option<String> {
 
 /// **`None` und `Some(i)` als WERT -- und der Sonderwert kommt von der Zieltabelle.**
 ///
-/// Die Absenkung steht in `beweise/Option_Sonderwert.thy`: `None` ist `count` selbst, der
+/// Die Absenkung steht in `grammatik/Beweise/Option_Sonderwert.thy`: `None` ist `count` selbst, der
 /// erste Index, den es nicht gibt (`sonderwert_ausserhalb`), und die Kodierung ist auf dem
 /// gueltigen Bereich injektiv (`kodiere_injektiv`). **Die Praemisse des dritten Satzes
 /// prueft `tabelle`**, wo das `#define` entsteht -- ein volles Wort hat keinen Platz fuer
@@ -17163,7 +17163,7 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
             absagen,
             o.span,
             "`None` where the emitter cannot see WHICH table's sentinel is meant -- the \
-             sentinel is `count` itself (beweise/Option_Sonderwert.thy), so it needs the table",
+             sentinel is `count` itself (grammatik/Beweise/Option_Sonderwert.thy), so it needs the table",
         );
         return String::new();
     }

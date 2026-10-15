@@ -703,7 +703,7 @@ Ankerlaufs mitgezählt, obwohl der Mutationslauf selbst nicht läuft) sieht der 
 | `pruefe-emission.sh` | zehn Stufen, 25 Durchstiche, **101 von 101** Übersetzungseinheiten in Stufe 9, dazu Stufe 10 (Bibliothekskette) | **nichts** |
 | `mutiere-pruefer.py` | **372** Mutationen, je ein `cargo build` und ein `cargo test` | **372 Anker textlich**, null Mutationen gefahren |
 | `pruefe-luecken.py` | **15** Verdrehungen (13 mit eigenem Bau, 2 bewiesene Nullmutationen) und ein Nullauf | **nichts** |
-| `pruefe-beweise.sh` | **15** Isabelle-Theorien (`beweise/ROOT`) | **nichts** |
+| `pruefe-beweise.sh` | **15** Isabelle-Theorien (`grammatik/Beweise/ROOT`) | **nichts** |
 
 **503 Messposten stehen hinter der Auslassung** — 101 Übersetzungseinheiten, 372 Mutationen,
 15 Verdrehungen, 15 Theorien. *Die Summe hat keinen eigenen Nenner:* es gibt keine gezählte
@@ -750,7 +750,7 @@ Die Kopfzeile hat eine zweite bekommen, und die zweite hat den anderen Nenner:
    47 davon stehen in Waechtern, die dieser Lauf nicht gefahren hat -- und was
    mit ihnen ungemessen bleibt:
      pruefe-emission.sh    45 Stellen   101 von 101 Uebersetzungseinheiten in Stufe 9, …
-     pruefe-beweise.sh      2 Stellen   15 Isabelle-Theorien (`beweise/ROOT`)
+     pruefe-beweise.sh      2 Stellen   15 Isabelle-Theorien (`grammatik/Beweise/ROOT`)
      pruefe-luecken.py      0 Stellen   15 Verdrehungen, 13 davon mit eigenem Bau
 ```
 

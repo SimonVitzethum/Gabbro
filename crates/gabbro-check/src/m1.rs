@@ -4369,7 +4369,7 @@ impl<'a> Pruefer<'a> {
         //
         // Gemessen 2026-08-19: `frei = Some(8)` auf einer `table … count 8` ging mit **null
         // Fehlern** durch. Der Wert `8` ist aber genau der Sonderwert, zu dem `None`
-        // absenkt (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`) -- *damit waere
+        // absenkt (`grammatik/Beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`) -- *damit waere
         // `None` von einem gueltigen Index nicht mehr zu unterscheiden, und
         // `kodiere_injektiv` haette keine Praemisse mehr.*
         //
@@ -5676,7 +5676,7 @@ impl<'a> Pruefer<'a> {
         t.summe_typ.clone()
     }
 
-    /// **`M106` IST `deckt` aus `beweise/Verbund_Konstruktor.thy`, und `M107` ist die Frage,
+    /// **`M106` IST `deckt` aus `grammatik/Beweise/Verbund_Konstruktor.thy`, und `M107` ist die Frage,
     /// ob die Zuordnungsliste ueberhaupt eine ist.**
     ///
     /// Die Schablone `verbund.konstruktor` sagt: *„setzt jedes Feld genau einmal und laesst
@@ -7108,7 +7108,7 @@ impl<'a> Pruefer<'a> {
     /// einen **gueltigen** Index, `0 ..< N`.
     ///
     /// > *Wer `Some(N)` schreiben darf, hat `None` geloescht* -- `kodiere_injektiv` in
-    /// > `beweise/Option_Sonderwert.thy` haengt genau an dieser Trennung.
+    /// > `grammatik/Beweise/Option_Sonderwert.thy` haengt genau an dieser Trennung.
     ///
     /// Ueberall sonst faellt der Aufruf auf `passt` zurueck.
     fn passt_wert(&mut self, wert: &Expr, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {

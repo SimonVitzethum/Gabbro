@@ -70,7 +70,7 @@ import korpus  # noqa: E402
 #
 # **48 -> 50 on 2026-09-02, and the two new ones are `N050` and `N051`.** MEASURED before it
 # was written: the code total went 263 -> 265, the sentence-less count 48 -> 50, and neither
-# code is named in `saetze.rs` or anywhere under `beweise/`. *The delta is exactly these two
+# code is named in `saetze.rs` or anywhere under `grammatik/Beweise/`. *The delta is exactly these two
 # and nothing else moved.*
 #
 # The reason is the one above, one layer down. `Device_Konstruktor.thy` proves
@@ -98,7 +98,7 @@ import korpus  # noqa: E402
 # ran (`P002`, at the reader); repairing it needed a shape check beside the typing rule,
 # and these two codes are that check: `M144` is the conversion's arity (exactly one
 # value), `M145` is that the one value must itself be an integer. Neither is a theorem
-# in `beweise/` -- an arity check and a type-tag check are not the kind of claim a range
+# in `grammatik/Beweise/` -- an arity check and a type-tag check are not the kind of claim a range
 # proof makes a premise of, the way `N047`-`N049` establish `Device_Konstruktor.thy`'s.
 # They stand without a sentence because nobody has yet written what `m1.umwandlung` (the
 # rule this repair adds) promises as a whole, of which the arity and the tag are two

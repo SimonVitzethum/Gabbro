@@ -4764,7 +4764,7 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
 /// **It does not require the probe name to resolve at all.** That question was decided on
 /// 2026-08-19 and the decision stands two doors down, in [`spiegel_und_sonde`]'s own note:
 /// *"`expects` names an EXTERNAL probe, like `assume … falsifier`: it does not stand in
-/// Gabbro because it RUNS."* `sonden/README.md` carries the same point under a heading of
+/// Gabbro because it RUNS."* `instrumente/sonden/README.md` carries the same point under a heading of
 /// its own -- why a probe does not stand in Gabbro -- and the enforcement for a name whose
 /// probe does not exist lives where the probe lives: [`crate::manifest::gedeckt`] strikes the
 /// name out of the manifest as `ungedeckt` and prints how many were struck, and
@@ -4802,7 +4802,7 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
 /// **That a `-> bool` probe ever returns `false` is not decidable at the declaration** -- an
 /// `extern fn` body is outside Gabbro by construction, which is the whole point of the
 /// 2026-08-19 decision. What stands in its place is not silence but two runnable things:
-/// `sonden/README.md`'s sensitivity requirement (*a probe that finds nothing has two possible
+/// `instrumente/sonden/README.md`'s sensitivity requirement (*a probe that finds nothing has two possible
 /// reasons: nothing was there, or it cannot see*) and `pruefe-sonden.sh`, which demands the
 /// `0/1/77` contract and carries its own probe in all three directions.
 ///

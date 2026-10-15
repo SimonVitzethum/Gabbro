@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Table_Absenkung.lean
-  Part of:   Gabbro -- Lean port of `beweise/Table_Absenkung.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Table_Absenkung.thy`
              (template `table.absenkung`, S15; lane 168).
 
   What this file is: the COUNT, and only it. `table T count N` produces an

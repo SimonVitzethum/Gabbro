@@ -829,7 +829,7 @@ fn matchpruefen(
 ///
 /// * **`D006`** -- das Feld steht im `slot`. Ein Name, der nirgends steht, ist keine Kante.
 /// * **`D007`** -- es ist `option index into Self`. Die Kante muss ENDEN koennen, und der
-///   Sonderwert dafuer ist `count` selbst (`beweise/Option_Sonderwert.thy`). Ein `index into
+///   Sonderwert dafuer ist `count` selbst (`grammatik/Beweise/Option_Sonderwert.thy`). Ein `index into
 ///   T` ohne `option` hat kein Ende, ein `u32` hat nicht einmal eine Schranke.
 /// * **`D008`** -- sie zeigt auf die EIGENE Tabelle. `parent` in eine fremde Tabelle waere
 ///   keine Baumkante, sondern eine Fremdschluesselbeziehung, und darueber sagt `descendants
@@ -842,7 +842,7 @@ fn matchpruefen(
 /// **`occupied f` -- the field at which a slot is OCCUPIED, and two rules hold it.**
 ///
 /// The generator for `ops` (cut (c)) needs `sigma s = Some sl` from
-/// `beweise/Table_Ops_Erhaltung.thy` as a PROGRAM: `einfuegen_erhaelt` assumes the slot is
+/// `grammatik/Beweise/Table_Ops_Erhaltung.thy` as a PROGRAM: `einfuegen_erhaelt` assumes the slot is
 /// FRESH, `blatt_loeschen_erhaelt` that it is free afterwards. **Without a named field
 /// neither has a subject.**
 ///
@@ -884,7 +884,7 @@ fn belegtfeld(baum: &Programm, absagen: &mut Absagen) {
                         )
                         .mit_notiz(
                             "occupancy is two-valued: `Some sl` or `None` in \
-                             beweise/Table_Ops_Erhaltung.thy. A field with more values would \
+                             grammatik/Beweise/Table_Ops_Erhaltung.thy. A field with more values would \
                              make the generated `remove` say something the proof does not",
                         ),
                     );
@@ -1647,7 +1647,7 @@ fn baumkanten(baum: &Programm, absagen: &mut Absagen) {
                         )
                         .mit_notiz(
                             "the edge must be able to END, and the sentinel for that is `count` \
-                             itself (beweise/Option_Sonderwert.thy) -- an `index into T` without \
+                             itself (grammatik/Beweise/Option_Sonderwert.thy) -- an `index into T` without \
                              `option` has no end",
                         ),
                     );

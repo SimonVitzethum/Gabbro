@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Intervall_Aussen.lean
-  Part of:   Gabbro -- Lean port of `beweise/Intervall_Aussen.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Intervall_Aussen.thy`
              (outward rounding in M1's float propagation; lane 168).
 
   What this file is: the promise that the COMPUTED bound holds. The

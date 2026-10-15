@@ -89,7 +89,7 @@ Both halves come out of the same scan, and both are named here rather than left 
   after the function (`manifest.rs::stilllegungsannahmen`), which is why row 25 below has a
   name no `.gab` contains.
 * **"Stands as a program"** means `sonden/<probe>.c` exists. Nothing about whether it runs,
-  and nothing about whether it runs green — `sonden/README.md` fixes the contract, and return
+  and nothing about whether it runs green — `instrumente/sonden/README.md` fixes the contract, and return
   code **77** (*not runnable here*) is a full member of it.
 
 ```bash
@@ -131,7 +131,7 @@ was written**.
 
 ### Where `1/8` comes from — it is not a round number
 
-`sonden/README.md` and `messung/RACE.md` §5.4 already carry the classification this floor
+`instrumente/sonden/README.md` and `messung/RACE.md` §5.4 already carry the classification this floor
 rests on: for each named probe, **what it would need in order to exist**. Four classes, and
 they are read from there rather than invented here:
 
@@ -142,7 +142,7 @@ they are read from there rather than invented here:
 | **`P3`** | **a mechanism the generator does not emit** — a grace period, a reader that fetches, a source that ends | 4 |
 | **`P4`** | **nothing — it runs in userland on the bench this folder already has** | **19** |
 
-*The classification is an ESTIMATE per name and not a measurement; `sonden/README.md` says so
+*The classification is an ESTIMATE per name and not a measurement; `instrumente/sonden/README.md` says so
 about its own table, and that caveat travels with these rows.* What is not an estimate is the
 consequence:
 
@@ -166,7 +166,7 @@ consequence:
 ### What reaching the floor cost — and it was paid on 2026-09-04
 
 **Four probes.** Each is a userland C program under `sonden/`, each needs a sensitivity arm
-(`sonden/README.md`: *„Wer keine Empfindlichkeitsprobe hat, hat keine Sonde"*), and each had
+(`instrumente/sonden/README.md`: *„Wer keine Empfindlichkeitsprobe hat, hat keine Sonde"*), and each had
 to be entered in `manifest::SONDEN_MIT_PROGRAMM` or the checker keeps striking its name:
 
 | probe | assumption | what it does | control, and what it took to make it fall |
@@ -179,7 +179,7 @@ to be entered in `manifest::SONDEN_MIT_PROGRAMM` or the checker keeps striking i
 **Measured: 6 of 39 = 0.1538 ≥ 0.125.** The floor is met and not exceeded — *by design,
 because a floor with slack in it is a floor nobody has to think about again.*
 
-> **Not one of the four is an analogy** (`sonden/README.md` forbids those). Each forces the
+> **Not one of the four is an analogy** (`instrumente/sonden/README.md` forbids those). Each forces the
 > condition the assumption denies: a real rounding mode in a real register, a real x87
 > stack, a real counter that a real `prctl` takes away. **The one thing no userland probe
 > can force is a hardware counter that genuinely stops** — so `sonde_tsc` and `sonde_rdtscp`
@@ -225,7 +225,7 @@ for f in sonden/*.c; do n=$(basename "$f" .c)
 ```
 
 `sonde_release_sichtbarkeit.c` exists, runs, and carries a positive control that fell 3 079
-times in 1,5 million rounds. **No line in any `.gab` names it.** `sonden/README.md` said so on
+times in 1,5 million rounds. **No line in any `.gab` names it.** `instrumente/sonden/README.md` said so on
 the day it was built — *„Bis die Zeile in `beispiele/` steht, ist sie eine Sonde ohne
 Verpflichtung"* — and `N024` (*a probe belongs to exactly ONE obligation*) has nothing to hold
 it to.

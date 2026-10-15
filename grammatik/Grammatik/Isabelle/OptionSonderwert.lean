@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/OptionSonderwert.lean
-  Port of:   beweise/Option_Sonderwert.thy (template `option.sonderwert`, S1)
+  Port of:   grammatik/Beweise/Option_Sonderwert.thy (template `option.sonderwert`, S1)
 
   The entry reads: the special value `N` lies OUTSIDE the index domain
   `0 ..< N`, and no generated computation reaches it -- so lowering

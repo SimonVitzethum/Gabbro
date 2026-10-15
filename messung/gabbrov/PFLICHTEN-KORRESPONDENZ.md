@@ -280,7 +280,7 @@ for a change a reader can misread, and this one no reader can see.
 A `table`/`group` invariant is booked as `W` when **no `maintains` of the unit names it** — else
 it is already an `E` at that function, and the same debt twice is worse than once — and when
 **the table carries no `ops`** — else the generated mutations preserve it under the
-machine-checked template `table.ops.erhaltung` (`beweise/Table_Ops_Erhaltung.thy`), and a
+machine-checked template `table.ops.erhaltung` (`grammatik/Beweise/Table_Ops_Erhaltung.thy`), and a
 discharged duty is not open. *Neither condition hides a hole; both say where the duty went.*
 
 ### The census, re-measured — and every one of its five numbers had moved

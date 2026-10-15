@@ -128,9 +128,9 @@ def sub (a b : Iv) : Iv := ⟨a.lo - b.hi, a.hi - b.lo⟩
 @[simp] theorem sub_hi (a b : Iv) : (sub a b).hi = a.hi - b.lo := rfl
 
 /-- Das Produkt ueber die VIER ECKEN. Das ist die uebliche Intervallarithmetik und
-    zugleich die Form, die `beweise/Intervall_Aussen.thy` fuer die Summe schon fuehrt --
+    zugleich die Form, die `grammatik/Beweise/Intervall_Aussen.thy` fuer die Summe schon fuehrt --
     dort steht ausdruecklich, dass der Satz fuer das Produkt "groesser ist und noch nicht
-    dasteht" (`beweise/Intervall_Aussen.thy`:149). **Hier steht er.** -/
+    dasteht" (`grammatik/Beweise/Intervall_Aussen.thy`:149). **Hier steht er.** -/
 def mul (a b : Iv) : Iv :=
   let e1 := a.lo * b.lo
   let e2 := a.lo * b.hi

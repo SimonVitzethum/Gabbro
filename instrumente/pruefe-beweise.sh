@@ -40,12 +40,12 @@ ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"
 # *an abort out of memory is not a finding.*
 [ -x "$ISABELLE" ] || { echo "ABBRUCH: $ISABELLE nicht ausfuehrbar -- es wurde NICHTS geprueft."; exit 2; }
 
-# **And the population itself, measured 2026-08-31 over a tree with no `beweise/`.**
+# **And the population itself, measured 2026-08-31 over a tree with no `grammatik/Beweise/`.**
 # The glob then does not expand, `basename '*.thy'` yields the literal `*`, and this guardian
 # reported `Theorien ohne ROOT-Eintrag -- *` -- **a finding conjured out of nothing.** Zero
 # theories is a refusal, not a clean session (W1, W17).
-if [ ! -f "$W/beweise/ROOT" ] || ! ls "$W"/beweise/*.thy > /dev/null 2>&1; then
-    echo 'ABBRUCH: kein ROOT oder keine einzige `.thy` unter beweise/ -- NICHTS geprueft.'
+if [ ! -f "$W/grammatik/Beweise/ROOT" ] || ! ls "$W"/grammatik/Beweise/*.thy > /dev/null 2>&1; then
+    echo 'ABBRUCH: kein ROOT oder keine einzige `.thy` unter grammatik/Beweise/ -- NICHTS geprueft.'
     echo '  Ueber einer leeren Auswahl meldet `isabelle build` Erfolg, und das ist der Fall,'
     echo '  gegen den dieser Waechter gebaut ist.'
     exit 2
@@ -55,9 +55,9 @@ fi
 # geprueft -- und die Theorienzahl unten haette sie trotzdem nicht gezaehlt. *Eine Datei, die
 # im Ordner liegt und in keinem ROOT steht, ist ein Beweis, den niemand fuehrt.*
 FEHLT=""
-for T in "$W"/beweise/*.thy; do
+for T in "$W"/grammatik/Beweise/*.thy; do
     N="$(basename "$T" .thy)"
-    grep -qE "^    $N\\b" "$W/beweise/ROOT" || FEHLT="$FEHLT $N"
+    grep -qE "^    $N\\b" "$W/grammatik/Beweise/ROOT" || FEHLT="$FEHLT $N"
 done
 if [ -n "$FEHLT" ]; then
     # **Ruecklaufwert 1, und der Unterschied zu allem anderen hier ist die Frage, WER sich
@@ -68,7 +68,7 @@ if [ -n "$FEHLT" ]; then
     # Baum sich aendern, oder die Umgebung?*
     stufe "BEWEISE: THEORIEN OHNE ROOT-EINTRAG --$FEHLT"
     echo "  Sie liegen im Ordner und gehoeren keiner Sitzung an -- ungedeckt, und kein Lauf"
-    echo "  wuerde sie je anfassen. Eintrag in beweise/ROOT nachtragen."
+    echo "  wuerde sie je anfassen. Eintrag in grammatik/Beweise/ROOT nachtragen."
     exit 1
 fi
 
@@ -93,7 +93,7 @@ sprechprobe() {
 sprechprobe || exit 2   # a fallen probe means the watchdog measures nothing -- ABORT, not a finding
 
 stufe "Beweise: Sitzung Gabbro, Wachhund bei ${GRENZE_GB} GB / ${ZEIT}s"
-( cd "$W/beweise" && "$ISABELLE" build -o threads=1 -d . Gabbro ) > /tmp/gabbro-beweise.log 2>&1 &
+( cd "$W/grammatik/Beweise" && "$ISABELLE" build -o threads=1 -d . Gabbro ) > /tmp/gabbro-beweise.log 2>&1 &
 BAU=$!
 
 ANGEHALTEN=0
@@ -155,8 +155,8 @@ fi
 BUCH="$(ls -t "$($ISABELLE getenv -b ISABELLE_HEAPS)"/*/log/Gabbro.db 2>/dev/null | head -1)"
 if grep -qE "Finished Gabbro" /tmp/gabbro-beweise.log; then
     NACHWEIS="$(grep -E 'Finished Gabbro' /tmp/gabbro-beweise.log)"
-elif [ -n "$BUCH" ] && [ -z "$(find "$W/beweise" -name '*.thy' -newer "$BUCH" -print -quit)" ] \
-                    && [ ! "$W/beweise/ROOT" -nt "$BUCH" ]; then
+elif [ -n "$BUCH" ] && [ -z "$(find "$W/grammatik/Beweise" -name '*.thy' -newer "$BUCH" -print -quit)" ] \
+                    && [ ! "$W/grammatik/Beweise/ROOT" -nt "$BUCH" ]; then
     NACHWEIS="unveraendert seit $(date -r "$BUCH" '+%d.%m. %H:%M') -- keine Quelle ist juenger"
 else
     stufe "BEWEISE: OHNE NACHWEIS"
@@ -167,7 +167,7 @@ else
     # (gefunden 2026-08-20). `CLAUDE.md` fuehrt ZWEI Uebertragungen mit verschiedenen
     # Schaltern, und das ist kein Schoenheitsfehler:
     #
-    #     rsync -a       beweise/   -- Zeitstempel ERHALTEN
+    #     rsync -a       grammatik/Beweise/   -- Zeitstempel ERHALTEN
     #     rsync -rlpgoD  ./         -- Zeitstempel NEU (`cargo` braucht das)
     #
     # Wer den ganzen Baum mit `-rlpgoD` uebertraegt, gibt jeder `.thy` die aktuelle Zeit.
@@ -178,8 +178,8 @@ else
     echo "  Haeufigste Ursache ist NICHT eine Aenderung an den Beweisen, sondern der Sync:"
     echo "  \`rsync -rlpgoD\` (fuer \`cargo\`) gibt jeder uebertragenen \`.thy\` die AKTUELLE"
     echo "  Zeit. Isabelle rechnet nach INHALT und baut nichts; dieser Nachweis rechnet nach"
-    echo "  ZEIT und findet keinen. **CLAUDE.md uebertraegt \`beweise/\` deshalb mit \`-a\`.**"
-    echo "  Heilung: \`rsync -a beweise/ …\` -- oder einmal \`isabelle build -f -d . Gabbro\`,"
+    echo "  ZEIT und findet keinen. **CLAUDE.md uebertraegt \`grammatik/Beweise/\` deshalb mit \`-a\`.**"
+    echo "  Heilung: \`rsync -a grammatik/Beweise/ …\` -- oder einmal \`isabelle build -f -d . Gabbro\`,"
     echo "  und das baut Pure und HOL mit."
     # **2, and `CLAUDE.md` wrote the reason down before this line existed:** on 2026-08-31
     # this branch turned a full acceptance red *"mit `[1]` und ohne einen Befund darin"*,
@@ -189,8 +189,8 @@ fi
 
 # **From here on nothing more is measured** -- Isabelle has answered.
 abschnitt_fertig
-N=$(grep -c "^    [A-Z]" "$W/beweise/ROOT")
-D=$(ls "$W"/beweise/*.thy | wc -l)
+N=$(grep -c "^    [A-Z]" "$W/grammatik/Beweise/ROOT")
+D=$(ls "$W"/grammatik/Beweise/*.thy | wc -l)
 stufe "BEWEISE: ALL PASS -- $N Theorien ($D Dateien)"
 echo "  Nachweis: $NACHWEIS"
 echo "  Und was das NICHT heisst: jede Theorie fuehrt ihren eigenen M-2-Abschnitt --"

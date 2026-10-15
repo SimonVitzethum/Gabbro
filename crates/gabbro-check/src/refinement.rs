@@ -7,7 +7,7 @@
 //!
 //! ## The form, and why it is Isabelle text and not a neutral format
 //!
-//! This folder has **one** prover: thirteen theories in `beweise/`, Isabelle2025-2, no AFP.
+//! This folder has **one** prover: thirteen theories in `grammatik/Beweise/`, Isabelle2025-2, no AFP.
 //! Both sides of the choice, because the choice is not obvious:
 //!
 //! | | |

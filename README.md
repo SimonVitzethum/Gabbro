@@ -116,7 +116,7 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2431 and 110 clause sites | `gabbro ceremony` |
 
 Mutation tests damage one rule at a time: 422 mutations, one anchor each
-(`./instrumente/mutiere-pruefer.py`). The 15 theories in [`beweise/`](beweise/)
+(`./instrumente/mutiere-pruefer.py`). The 15 theories in [`grammatik/Beweise/`](grammatik/Beweise/)
 hold 3512 lines of Isar; new proofs go to Lean only.
 
 ## 5. Proved and not proved

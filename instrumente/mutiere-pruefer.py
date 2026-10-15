@@ -2863,7 +2863,7 @@ MUTATIONEN = [
     ),
     # -- emit.rs / m1.rs: «C1» -- der Sonderwert, ausgeschrieben ---------------------------
     #
-    # Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy` und **kein
+    # Der Beweis lag seit dem 2026-08-17 in `grammatik/Beweise/Option_Sonderwert.thy` und **kein
     # Erzeuger benutzte ihn**. Seit «C1» steht er im C -- und damit muss beschaedigbar sein,
     # was ihn traegt: der Wert selbst, die Nutzlastpruefung und der Typ des `Some`-Binders.
     Mutation(
@@ -4019,7 +4019,7 @@ MUTATIONEN = [
     ),
     # --- opsruf (2026-08-28) ---
     #
-    # **`D012` -- the premises of `beweise/Table_Ops_Erhaltung.thy` at the call site.** The
+    # **`D012` -- the premises of `grammatik/Beweise/Table_Ops_Erhaltung.thy` at the call site.** The
     # generator shipped that morning with them in a C COMMENT; if this rule goes silent, that
     # is exactly the state it returns to -- and a comment claiming a pass checks something is
     # the class `H007`/`H008` stand against.

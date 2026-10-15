@@ -572,7 +572,7 @@ vollständig aktuell ist.
 | entscheidet Aktualität nach | **Zeit** | **Inhalt** |
 | braucht deshalb | `-rlpgoD` (neue Zeiten) | `-a` (erhaltene Zeiten), damit der NACHWEIS trägt |
 
-**`CLAUDE.md` führt beide Übertragungen längst getrennt** — `rsync -a beweise/` und
+**`CLAUDE.md` führt beide Übertragungen längst getrennt** — `rsync -a grammatik/Beweise/` und
 `rsync -rlpgoD ./`. *Das sieht nach zwei Gewohnheiten aus und ist eine Bedingung.* Wer sie zu
 einem Befehl zusammenzieht, bekommt einen roten Wächter ohne Fehler.
 

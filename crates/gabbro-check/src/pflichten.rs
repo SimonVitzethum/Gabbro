@@ -1131,7 +1131,7 @@ fn lauf(
             //     that function, and booking it here would be the same debt twice;
             //   * **the table carries no `ops`** -- else the generated mutations preserve
             //     it under the machine-checked template `table.ops.erhaltung`
-            //     (`beweise/Table_Ops_Erhaltung.thy`), and a discharged duty is not open.
+            //     (`grammatik/Beweise/Table_Ops_Erhaltung.thy`), and a discharged duty is not open.
             //
             // *Neither condition is a filter over a hole; both name where the duty went.*
             ItemArt::Tabelle(t) => {

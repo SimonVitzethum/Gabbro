@@ -4687,7 +4687,7 @@ proved**, its `Stand` stays `Entworfen`, and the ratchet mark stays, torn as it 
 **What was run nevertheless** is the part whose pre-registered yield does not hang on the
 machine check: *not to write "proved" into the register but to learn
 what the register has concealed so far.* The formalisation stands as
-[`beweise/Table_Induktion.thy`](../beweise/Table_Induktion.thy), marked in its header as
+[`grammatik/Beweise/Table_Induktion.thy`](../beweise/Table_Induktion.thy), marked in its header as
 **unchecked**.
 
 ## The predicted outcome occurred — **all four**
@@ -6553,7 +6553,7 @@ dann schon falsch ist.
 > *Der Preis von «B7» ist damit nicht Grammatik plus Pass, sondern eine
 > Mehrdeutigkeitsentscheidung — und die gehört vor die erste Zeile, nicht in sie.*
 
-**Die Schablone dafür ist bezahlt** (`beweise/Verbund_Konstruktor.thy`, 2026-08-17). *Was
+**Die Schablone dafür ist bezahlt** (`grammatik/Beweise/Verbund_Konstruktor.thy`, 2026-08-17). *Was
 fehlt, ist nicht der Beweis und nicht der Code — es ist die Entscheidung, wie die Grammatik
 eindeutig bleibt.*
 
@@ -6604,7 +6604,7 @@ ohne dass ein Typ dagegen spricht** — der Feldname ist die einzige Unterscheid
 Und damit fällt `M106` mit der am selben Tag bewiesenen Schablone zusammen:
 
 ```
-deckt fs zs  ⟷  map fst zs = fs          (beweise/Verbund_Konstruktor.thy)
+deckt fs zs  ⟷  map fst zs = fs          (grammatik/Beweise/Verbund_Konstruktor.thy)
 ```
 
 Der Beweis wählt die **Reihenfolgefassung** ausdrücklich gegen `set (map fst zs) = set fs` —
@@ -8008,7 +8008,7 @@ einer Wirkung. *Ein Satz über „jede erzeugte Mutation" hat damit kein Subjekt
 `aushaengen` daneben — **zwei der vier Operationen, die §10.2 nennt, existieren als
 handgeschriebene `impl fn`.** Sie sind das Modell.
 
-## `beweise/Table_Ops_Erhaltung.thy` — elfte Theorie, 311 Zeilen, maschinell geprüft
+## `grammatik/Beweise/Table_Ops_Erhaltung.thy` — elfte Theorie, 311 Zeilen, maschinell geprüft
 
 | Teil | Satz | Inhalt |
 |---|---|---|
@@ -9963,7 +9963,7 @@ geratene Zuordnung wäre schlimmer als eine benannte Weigerung.*
 
 ### Der Satz zuerst
 
-`beweise/Restrict_Alleinzugriff.thy` (13 Theorien bauen auf `ki-pc-fisch-101` in 8 s).
+`grammatik/Beweise/Restrict_Alleinzugriff.thy` (13 Theorien bauen auf `ki-pc-fisch-101` in 8 s).
 Modelliert wird das Wenigste, was reicht: ein Zugriff nennt eine **Wurzel** und einen **Ort**.
 
 ```
@@ -10214,7 +10214,7 @@ sie derselbe Tag sind -- nicht, weil eine Reihenfolge behauptet wuerde.*
 | `static … : option index into T = None` | 27, 31 | „non-constant initialiser" |
 
 Die Absenkung ist der **Sonderwert** `count` selbst, und sie stand seit dem 2026-08-17
-maschinell geprüft in `beweise/Option_Sonderwert.thy`. *Der Satz lag da, und kein Erzeuger
+maschinell geprüft in `grammatik/Beweise/Option_Sonderwert.thy`. *Der Satz lag da, und kein Erzeuger
 benutzte ihn* — genau die Hälfte, die «NL» beklagt. Die Arbeit war die Verdrahtung.
 
 ## Und die Verdrahtung legte ZWEI stille Löcher frei, beide im Prüfer

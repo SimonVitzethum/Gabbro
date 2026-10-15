@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Consuming.lean
-  Port of:   beweise/Consuming.thy (templates `consuming.ordnung` S1 and
+  Port of:   grammatik/Beweise/Consuming.thy (templates `consuming.ordnung` S1 and
               `consuming.leermenge` S2)
 
   S1: the domain yields its witnesses in the generated well-founded order, and

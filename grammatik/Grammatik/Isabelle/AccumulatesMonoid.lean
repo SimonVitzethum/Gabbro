@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/AccumulatesMonoid.lean
-  Port of:   beweise/Accumulates_Monoid.thy (template `accumulates.monoid`, S9)
+  Port of:   grammatik/Beweise/Accumulates_Monoid.thy (template `accumulates.monoid`, S9)
 
   The Isabelle theory models the closed vocabulary `max | min | add | or | and`
   as ONE structure -- a commutative monoid (`merge_monoid` locale) -- folds it

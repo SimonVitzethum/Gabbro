@@ -188,7 +188,7 @@ MARKE_OHNE_GRUND = 212
 # holds the LIST against the reader; this mark holds the SIZE against the tree.
 MARKE_RESERVIERT = 17
 
-# **The single lowering theorem, booked with its address.** `beweise/Absenkung_Parametrisch.thy`
+# **The single lowering theorem, booked with its address.** `grammatik/Beweise/Absenkung_Parametrisch.thy`
 # holds `ops relabel` against the emitted C -- and its result is that the sentence *"the
 # emitted thing computes the model function"* is FALSE at the free slot. It is the only
 # theorem in the tree that makes the statement at all.
@@ -200,7 +200,7 @@ MARKE_RESERVIERT = 17
 # beside a booked exact number is the honest pair; a loose number alone would be a coverage
 # claim.* The upper bound is printed, with its refutation.
 ABSENKUNGSSAETZE = 1
-ABSENKUNG_ADRESSE = "beweise/Absenkung_Parametrisch.thy -- `ops relabel`, und der Satz FAELLT"
+ABSENKUNG_ADRESSE = "grammatik/Beweise/Absenkung_Parametrisch.thy -- `ops relabel`, und der Satz FAELLT"
 # **An address is a claim about a place, and nothing went there** (2026-09-02). The two
 # lines above are a Python constant printed as a standing fact about a theorem in another
 # language: that the file exists, that it is about `ops relabel`, and that the sentence
@@ -211,7 +211,7 @@ ABSENKUNG_ADRESSE = "beweise/Absenkung_Parametrisch.thy -- `ops relabel`, und de
 # here: whether the theorem still goes through is what `isabelle build` says, and the way
 # there is `./instrumente/pruefe-beweise.sh`. **The run says which of the three it verified**
 # rather than letting the printed sentence imply all three.
-ABSENKUNG_DATEI = "beweise/Absenkung_Parametrisch.thy"
+ABSENKUNG_DATEI = "grammatik/Beweise/Absenkung_Parametrisch.thy"
 ABSENKUNG_NAMEN = ("relabel_am_freien_platz_ist_wirkungslos",
                    "absenkung_geht_am_freien_platz_auseinander")
 
@@ -427,7 +427,7 @@ def main():
     print("   NICHT geprueft: ob der Satz heute noch faellt. Das sagt `isabelle build`,")
     print("   und der Weg dorthin ist `./instrumente/pruefe-beweise.sh`.")
     if genannt is None:
-        print("   (`beweise/` fehlt -- die obere Schranke wurde NICHT erhoben)")
+        print("   (`grammatik/Beweise/` fehlt -- die obere Schranke wurde NICHT erhoben)")
     else:
         print("   Die obere Schranke, und sie ist unbrauchbar: %d der %d Woerter stehen im"
               % (len(genannt), n))

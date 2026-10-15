@@ -56,8 +56,8 @@ Commit: see `git log` (one commit, "Fix lane F5").*
 
 ### 3. Own assumptions and probes for open and read (G04 F4, MEDIUM)
 
-- 149 names `linux_open_contract` (probe `sonden/sonde_open.c`), 150 `linux_read_contract`
-  (probe `sonden/sonde_read.c`). Both probes call the gate's own raw number (`syscall(2, …)`,
+- 149 names `linux_open_contract` (probe `instrumente/sonden/sonde_open.c`), 150 `linux_read_contract`
+  (probe `instrumente/sonden/sonde_read.c`). Both probes call the gate's own raw number (`syscall(2, …)`,
   `syscall(0, …)`), walk the mapped errnos (open: descriptor in 0..2^32-1 and readable,
   `ENOENT`, `EEXIST`, `EACCES` unprivileged; read: at most `len` into a 64-byte window with the
   guard bytes intact, drain then 0, `EBADF`, `EINVAL` via a short eventfd read), and carry a

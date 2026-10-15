@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/VerbundKonstruktor.lean
-  Port of:   beweise/Verbund_Konstruktor.thy (template `verbund.konstruktor`, S18)
+  Port of:   grammatik/Beweise/Verbund_Konstruktor.thy (template `verbund.konstruktor`, S18)
 
   The generated constructor sets every field exactly once and leaves none
   uninitialized. The two halves are ONE as soon as the declaration is

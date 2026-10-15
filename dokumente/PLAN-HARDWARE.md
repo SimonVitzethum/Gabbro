@@ -2973,7 +2973,7 @@ package() { install -Dm755 "Gabbro-$pkgver/target/release/gabbro" "$pkgdir/usr/b
   ist die Hälfte, die den Nutzer betrifft. *Ein Paket, das nur den SPDX-Ausdruck mitliefert,
   liefert die halbe Lizenz.*
 * **Isabelle und Lean gehören NICHT hinein**, in keiner der drei Listen. Sie prüfen den
-  **Baum**, nicht das **Erzeugnis** — `beweise/` und `programmlogik/` fahren hier und nicht
+  **Baum**, nicht das **Erzeugnis** — `grammatik/Beweise/` und `programmlogik/` fahren hier und nicht
   beim Nutzer. *Ein `makedepends` auf einen Beweiser wäre die Aussage, ein Paket sei ohne ihn
   nicht baubar, und sie wäre falsch.*
 * **`check()` braucht kein `gcc` über `base-devel` hinaus.** `cargo` braucht ohnehin einen

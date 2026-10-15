@@ -15,7 +15,7 @@
 #
 # Der Befund dort endete mit einem Satz, der kein Werkzeug hatte: *„es gibt im ganzen Ordner
 # keinen Ort, an dem eine Sonde stuende, kein Verzeichnis, keinen Laeufer, keine Buchung ueber
-# ihren Lauf."* **Dies ist der Ort.** `sonden/README.md` sagt, was dort stehen darf und was
+# ihren Lauf."* **Dies ist der Ort.** `instrumente/sonden/README.md` sagt, was dort stehen darf und was
 # nicht.
 #
 # DER VERTRAG EINER SONDE -- und die dritte Stufe, die die GRAMMATIK nicht hat
@@ -124,14 +124,14 @@ if [ -x "$BIN" ]; then
   [ -n "$GESTRICHEN" ] || GESTRICHEN=0
 fi
 DA=0
-for f in "$W"/sonden/sonde_*.c; do [ -e "$f" ] && DA=$((DA+1)); done
+for f in "$W"/instrumente/sonden/sonde_*.c; do [ -e "$f" ] && DA=$((DA+1)); done
 
 # **`0 von 0 Sonden gelaufen` was a GREEN run until 2026-08-31** (measured over a tree with
 # no `sonden/`). Not one assumption was put to the test, nothing was refuted, and this
 # guardian exited 0 -- *a positive verdict about nothing*, and over exactly the population
 # whose whole purpose is to be able to refute something (W1, W17).
 if [ "$DA" -eq 0 ]; then
-  echo "ABBRUCH: keine einzige Sonde unter sonden/ -- es wurde NICHTS gemessen."
+  echo "ABBRUCH: keine einzige Sonde unter instrumente/sonden/ -- es wurde NICHTS gemessen."
   echo '  Eine Sonde, die es nicht gibt, widerlegt nichts -- und `0 von 0 gelaufen` ist'
   echo '  keine Deckung, sondern eine leere Grundgesamtheit.'
   exit 2
@@ -142,7 +142,7 @@ GELAUFEN=0
 WIDERLEGT=0
 UNGEBAUT=0
 NICHT_LAUFFAEHIG=0
-for f in "$W"/sonden/sonde_*.c; do
+for f in "$W"/instrumente/sonden/sonde_*.c; do
   [ -e "$f" ] || continue
   name="$(basename "$f" .c)"
   if ! cc "${CFLAGS[@]}" -o "$TMP/$name" "$f" 2>"$TMP/$name.err"; then

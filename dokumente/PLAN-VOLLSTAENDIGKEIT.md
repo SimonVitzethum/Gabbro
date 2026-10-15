@@ -235,7 +235,7 @@ gegangen.**
 **Eine Messung über Eingaben, kein Satz über alle.** Zehn Fragmente, ausgeführt, verglichen —
 das schließt aus, dass die Absenkung *offensichtlich* falsch ist, und mehr nicht.
 
-`beweise/Absenkung_Parametrisch.thy` zeigt, wie das andere Ende aussieht: der Satz steht
+`grammatik/Beweise/Absenkung_Parametrisch.thy` zeigt, wie das andere Ende aussieht: der Satz steht
 parametrisch über sechs Eigenschaften der Zielsemantik — **und er ist an einem Zweig falsch**
 (`relabel` berechnet `umhaengen` nur am belegten Platz). *Genau das findet keine Ausführung,
 die den freien Platz nie trifft.*

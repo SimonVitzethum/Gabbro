@@ -2,7 +2,7 @@
 //! the proof's premises become duties.**
 //!
 //! Since 2026-08-28 `table … ops insert, remove;` has a generator (`emit.rs::ops`), cut to
-//! `beweise/Table_Ops_Erhaltung.thy`. And it shipped with two holes that this module closes:
+//! `grammatik/Beweise/Table_Ops_Erhaltung.thy`. And it shipped with two holes that this module closes:
 //!
 //! 1. **Nothing could call the generated functions.** They carried
 //!    `__attribute__((unused))`, because inside their own translation unit nobody calls them
@@ -321,7 +321,7 @@ pub fn koepfe(t: &Tabelle) -> Vec<Kopf> {
             // Until then the generator refused the word by naming `umhaengen_faellt`, and
             // the refusal was not wrong -- it was incomplete. It said that re-hanging
             // breaks `wohlgeformt`, and not WHAT it breaks on.
-            // `beweise/Table_Ops_Erhaltung.thy` now says: `umhaengen_erhaelt` (U-3), under
+            // `grammatik/Beweise/Table_Ops_Erhaltung.thy` now says: `umhaengen_erhaelt` (U-3), under
             // *"the new parent is reachable"* and *"the re-hung slot does not lie on its
             // chain"*. `G-1`/`G-2` show the old counterexample fails at the second premise
             // and at no other.
@@ -578,7 +578,7 @@ fn pruefe_ruf(
                         ),
                     )
                     .mit_notiz(
-                        "the premises of beweise/Table_Ops_Erhaltung.thy speak about a SLOT: \
+                        "the premises of grammatik/Beweise/Table_Ops_Erhaltung.thy speak about a SLOT: \
                          write the index as a place, so that the clause above the call and the \
                          clause here name the same one",
                     ),
@@ -605,7 +605,7 @@ fn pruefe_ruf(
                 ),
             )
             .mit_notiz(
-                "the premise comes from beweise/Table_Ops_Erhaltung.thy -- the generator \
+                "the premise comes from grammatik/Beweise/Table_Ops_Erhaltung.thy -- the generator \
                  discharges the preservation proof ONCE per operation, and this is the half \
                  the caller owes in exchange",
             )

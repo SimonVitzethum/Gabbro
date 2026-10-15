@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/DeviceKonstruktor.lean
-  Port of:   beweise/Device_Konstruktor.thy (template `device.konstruktor`, S13)
+  Port of:   grammatik/Beweise/Device_Konstruktor.thy (template `device.konstruktor`, S13)
 
   From the address comes a typed handle, and the generated accesses hit the
   `device` block's DECLARED positions. That the declared positions are the

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Table_Induktion.lean
-  Part of:   Gabbro -- Lean port of `beweise/Table_Induktion.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Table_Induktion.thy`
              (template `table.induktion`, S4; lane 168).
 
   What this file is: the induction schema the generator owes, in the

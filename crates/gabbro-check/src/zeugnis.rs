@@ -460,7 +460,7 @@ pub const EINORDNUNG: &[Posten] = &[
         konstrukt: "traverse (chain … in)",
         traegt: Traegt::Schablone("table.induktion"),
         grund: "the chain has an END only because its edge is `option index into T` -- the \
-                sentinel is `count` itself (beweise/Option_Sonderwert.thy, `D015`). The \
+                sentinel is `count` itself (grammatik/Beweise/Option_Sonderwert.thy, `D015`). The \
                 declaration hands out NO length: `domaenenschranke` is silent here and \
                 `K003` asks for the bound",
     },

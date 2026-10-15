@@ -185,7 +185,7 @@ def sprechprobe_katalog():
 # > the wrong one, and it read like a verdict on the tree.
 #
 # Measured 2026-08-31 from the guardians' own sources and their last logged full run, with no
-# build: `beweise/ROOT` (15 theories), `mutiere-pruefer.MUTATIONEN` (372), `pruefe-luecken
+# build: `grammatik/Beweise/ROOT` (15 theories), `mutiere-pruefer.MUTATIONEN` (372), `pruefe-luecken
 # .LUECKEN` (15 twists, 13 of them with a build of their own), and stage 9 of the last green
 # `pruefe-emission.sh` run (101 out of 101, behind ten stages and 25 through-cuts).
 #
@@ -204,7 +204,7 @@ GEGENSTAND = {
     "mutiere-pruefer.py":
         f"{mutationskatalog()} Mutationen, je ein `cargo build` und ein `cargo test`",
     "pruefe-beweise.sh":
-        "15 Isabelle-Theorien (`beweise/ROOT`)",
+        "15 Isabelle-Theorien (`grammatik/Beweise/ROOT`)",
     "pruefe-emission.sh":
         "101 von 101 Uebersetzungseinheiten in Stufe 9, hinter zehn Stufen und 25 Durchstichen",
     "pruefe-luecken.py":

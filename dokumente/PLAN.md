@@ -1302,7 +1302,7 @@ Commits, in denen `schablonen.rs` existiert** (Merge-Zweige eingeschlossen, nich
 |---|---|
 | einzige `Entworfen → Getragen`-Bewegung seit dem 2026-08-17 | `table.ops.erhaltung` am 2026-08-28 — der Beweis (`einfuegen_erhaelt`) lag **neun Tage** vorher |
 | `restrict.alleinzugriff` | trat als `Getragen` ein, mit seinem Beweis **im selben Commit** |
-| die zehn `Bewiesen`-Einträge | jeder hat seine Theorie, und jede steht in `beweise/ROOT` — **keine Lücke** |
+| die zehn `Bewiesen`-Einträge | jeder hat seine Theorie, und jede steht in `grammatik/Beweise/ROOT` — **keine Lücke** |
 | neun Einträge | standen nie anders als `Entworfen` |
 
 > **Und der Präzedenzfall hält bei genauem Hinsehen.** `verbund.konstruktor` trägt Beweis und
@@ -1319,7 +1319,7 @@ danach. *Das Tor ist die Antwort auf diese drei, keine Regel, die sie gebrochen 
 Doc-Kommentar über `lebend_ungedeckt()` protokolliert den Tag wörtlich.
 
 **Zwei Altlasten aus der Gründung, und sie sind keine Wanderung:** `table.indexschranke` und
-`device.konstruktor` wurden am 2026-08-14 direkt als `Getragen` angelegt — `beweise/` gab es da
+`device.konstruktor` wurden am 2026-08-14 direkt als `Getragen` angelegt — `grammatik/Beweise/` gab es da
 noch nicht, die erste Theorie stammt vom 2026-08-16 abends. Sie sind der Ausgangsbestand.
 
 > **Eine benannte Absage ist ein Ergebnis, und ein NICHT gefundener Verstoss auch.** Diese
@@ -1524,7 +1524,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 > Annahmenzahl, alle drei ohne Befehl.
 >
 > **Und zwei Theorien sind seit dem 2026-08-28 dazugekommen, ohne dass `L` sich bewegt hat**
-> — `beweise/Absenkung_Parametrisch.thy` und `beweise/Table_Zaehlung.thy`. Die zweite hat
+> — `grammatik/Beweise/Absenkung_Parametrisch.thy` und `grammatik/Beweise/Table_Zaehlung.thy`. Die zweite hat
 > ihren Registereintrag **ausdrücklich zurückgezogen**: Zahn 3 verlangt, dass eine bewiesene
 > Schablone jede Prämisse an einen Pass bindet, und von den dreien von
 > `buchfuehrung_erhaelt` ist eine bindbar (`M103` über `table.indexschranke`); die anderen
@@ -1532,7 +1532,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 > auf 8 gehoben — und eine Ratsche, deren Marke steigt, wenn man sie bindet, ist keine.*
 > **Ein Beweis, den das Register nicht nennt, vergrößert die Vertrauensfläche ungesehen**;
 > deshalb steht der Verzicht als Notiz IM Register (`schablonen.rs`, nach `SCHABLONEN`) und
-> nicht nur in `beweise/`.
+> nicht nur in `grammatik/Beweise/`.
 
 | | Ziel | heute | |
 |---|---|---|---|
@@ -1942,7 +1942,7 @@ ihre Schablone von `Entworfen` auf `Getragen`** — und ohne Beweis davor steigt
 Fläche. *Genau so ist `verbund.konstruktor` gelaufen, und deshalb bewegte sich die Zahl nicht.*
 
 Die lebend getragenen zuerst, weil sie **heute schon** getragen werden. **`table.absenkung`
-ist am 2026-08-17 gefallen** (`beweise/Table_Absenkung.thy`) — und zwar zuerst, weil die
+ist am 2026-08-17 gefallen** (`grammatik/Beweise/Table_Absenkung.thy`) — und zwar zuerst, weil die
 anderen darauf aufsitzen: *`option.sonderwert` braucht die Länge für den Sonderwert,
 `table.induktion` die Schranke für die Terminierung.*
 
@@ -2208,7 +2208,7 @@ Fall **schweigt der Pass**."* Und `gabbro kosten` druckt ehrlich `zugesagt --`.
 **Was dabei bereits passt:** `Kosten::Zahl(i128)` — `40 · 2⁶⁴ ≈ 7,4·10²⁰` liegt weit unter
 `i128::MAX`. Die im Einwand vermutete Prüferzeile ist schon geschrieben.
 
-**Und was ebenfalls schon passt:** `beweise/Table_Absenkung.thy` ist über **natürlichen
+**Und was ebenfalls schon passt:** `grammatik/Beweise/Table_Absenkung.thy` ist über **natürlichen
 Zahlen** formuliert, nicht über Konstanten — `feldindizes m = indextyp N ⟷ m = N` gilt
 unverändert, wenn beide Werte statt Literale sind. *Der Satz war allgemeiner gefasst, als das
 Konstrukt ihn brauchte.*
@@ -3509,7 +3509,7 @@ Umbuchung. *Das ist Zahn 2 der Klauselratsche, und sie klemmt bereits in beide R
 ## NL.1 — `ops` bekommt eine Wortmenge *(die größte Spalte: K = 28 von 73)*
 
 `table.ops.erhaltung` ist bewiesen, was die Mathematik angeht
-(`beweise/Table_Ops_Erhaltung.thy`), und **`entworfen`, was die Auslieferung angeht: es gibt
+(`grammatik/Beweise/Table_Ops_Erhaltung.thy`), und **`entworfen`, was die Auslieferung angeht: es gibt
 keinen Erzeuger.** Der Grund steht seit dem 2026-08-19 gemessen da:
 
 ```
@@ -3984,7 +3984,7 @@ als Rest liest:
 
 ## C1 — `option`, und der Beweis liegt schon da
 
-**Die grösste einzelne Ursache**, und die Entscheidung ist keine offene Frage: `beweise/`
+**Die grösste einzelne Ursache**, und die Entscheidung ist keine offene Frage: `grammatik/Beweise/`
 trägt seit jeher **`Option_Sonderwert.thy`**. Die Absenkung ist ein **Sonderwert** im
 Indexraum — `count` selbst, also der erste Index, den es nicht gibt —, und der Satz, dass
 das injektiv ist, steht in Isabelle.
@@ -4483,7 +4483,7 @@ stellen.
 | **Die Bewegung aus `Table_Absenkung.thy`:36 ist NICHT die häufigste** | über alle ~~vierzehn~~ **fünfzehn** Theorien ausgezählt (die fünfzehnte, `Table_Zaehlung`, trägt zu keiner Gestalt bei — nachgezählt 2026-08-30): **4** Delegationen an C, **21** an den Erzeuger, 7 an die Maschine, 9 an den Prüfer, 5 an eine Nachbarschablone. **Die Gabel aus §7 entscheidet vier davon; die Brücke steht auf jedem Weg und ist der fünffach größere Posten** |
 | **`K100.4`s Aufzählung ist an einer Stelle blind** | `gabbro zeugnis` nennt `table.ops.erhaltung` nicht, obwohl drei erzeugte Operationen darauf ruhen — zwei Dateien mit einem Zeilenunterschied ergeben 26 gegen 73 C-Zeilen und **byteidentische Zeugnisse**. `UNZUGEORDNET` greift auf Item-Ebene und sieht das Wachstum innerhalb eines eingeordneten Items nicht |
 | **`A8` nachgerechnet: nicht 18 offen, sondern 12 eingelöst / 2 offen / 4 WIDERLEGT** | Zeile für Zeile am Erzeuger gehalten. **Drei der vier Widerlegungen sind Widerlegungen durch den ERZEUGER, nicht durch C** — dieselbe Richtung wie die Zeile darüber |
-| **Der Absenkungssatz steht — und er ist FALSCH** | `beweise/Absenkung_Parametrisch.thy` formuliert ihn parametrisch über der Zielsemantik (sechs benannte Eigenschaften, keine nennt C oder eine Maschine) und beweist: `relabel` berechnet `umhaengen` **nur am belegten Platz**. Am freien gehen die beiden auseinander. *Der Satz „das Erzeugte berechnet die Modellfunktion" ist nicht bloß unbewiesen — er ist falsch, und jetzt steht daneben, woran* |
+| **Der Absenkungssatz steht — und er ist FALSCH** | `grammatik/Beweise/Absenkung_Parametrisch.thy` formuliert ihn parametrisch über der Zielsemantik (sechs benannte Eigenschaften, keine nennt C oder eine Maschine) und beweist: `relabel` berechnet `umhaengen` **nur am belegten Platz**. Am freien gehen die beiden auseinander. *Der Satz „das Erzeugte berechnet die Modellfunktion" ist nicht bloß unbewiesen — er ist falsch, und jetzt steht daneben, woran* |
 
 > **Und §7s Name für den zweiten Weg wird dabei berichtigt.** *„C streichen"* streicht C nicht;
 > es **ersetzt C durch eine Maschinensemantik je Architektur**, ohne fremde Vorlage. *„Man erbt

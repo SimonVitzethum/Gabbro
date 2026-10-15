@@ -28,7 +28,7 @@ can therefore be checked against criteria that did not know them.
 
 A `falsifier` names an **external** program. `crates/gabbro-check/src/namen.rs`:3242 has held
 it since 2026-08-19: *"`expects` names an EXTERNAL probe, like `assume … falsifier`: it does
-not stand in Gabbro because it RUNS"*, and `sonden/README.md` gives it a three-valued
+not stand in Gabbro because it RUNS"*, and `instrumente/sonden/README.md` gives it a three-valued
 contract:
 
 | return | means |
@@ -40,7 +40,7 @@ contract:
 **Two consequences do most of the work below.**
 
 * **Falsifiability is the RED direction.** An argument that no run could ever *confirm* the
-  assumption says nothing about whether one could *refute* it. `sonden/README.md` found this
+  assumption says nothing about whether one could *refute* it. `instrumente/sonden/README.md` found this
   in a live row and named it: *„Der Satz ist wahr, und er ist ein Argument über die GRÜNE
   Richtung. Falsifizierbarkeit ist die rote."*
 * **"Not runnable here" already has a home, and it is not this category.** Return code **77**
@@ -111,7 +111,7 @@ useful sentence about a different question. Falsifiability asks whether one obse
 **The test.** Name one observation that, made once, would kill the assumption for good. If you
 can name it, `R1` fires, however true the written reason is.
 
-*Found by `sonden/README.md` and `messung/RACE.md` §5.2 in `release_stellt_sichtbarkeit_her`
+*Found by `instrumente/sonden/README.md` and `messung/RACE.md` §5.2 in `release_stellt_sichtbarkeit_her`
 — and the probe for it was built the same day.*
 
 ### `R2` — a reason about the bench is not a reason about the sentence
@@ -127,7 +127,7 @@ words: the reason is „kein Grund über die Sache … sondern über die Testmas
 
 ### `R3` — the subject is not the environment
 
-A probe measures the **environment** (`sonden/README.md`: *„Eine Sonde misst die Umgebung"*,
+A probe measures the **environment** (`instrumente/sonden/README.md`: *„Eine Sonde misst die Umgebung"*,
 and: *„Keine Sonde, die den Prüfer ausführt"*). A sentence about the toolchain, about the
 checker, or about the program's own text has no external probe **by construction**.
 
@@ -326,7 +326,7 @@ The sentences behind the verdicts:
   `gcmd_kein_rmw`, says a probe would have to open the window the mechanism defends. Opening
   it is the **experiment**, not the violation — the assumption asserts that an unwritten bit
   is cleared, and one write with one read-back settles it. **For 5 the probe already exists as
-  a program** (`sonden/sonde_release_sichtbarkeit.c`, with a positive control that fell 3 079
+  a program** (`instrumente/sonden/sonde_release_sichtbarkeit.c`, with a positive control that fell 3 079
   times), which is the sharpest single fact in this table: *the tree contains the refuting
   instrument for an assumption it books as unrefutable.*
 * **8 `fach_zahl_passt_in_den_index`** — *„eine Sonde muesste den Uebersetzer selbst befragen,

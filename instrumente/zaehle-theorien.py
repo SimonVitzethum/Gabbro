@@ -48,7 +48,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import abschnitt  # noqa: E402
 
 W = pathlib.Path(__file__).resolve().parent.parent
-BEWEISE = W / "beweise"
+BEWEISE = W / "grammatik" / "Beweise"
 
 # **Ratsche, keine Zielzahl.** Jeder Aufruf ist eine Suche, die einmal lief und deren
 # Ergebnis jetzt im Baum steht. Sie darf fallen, nicht steigen.

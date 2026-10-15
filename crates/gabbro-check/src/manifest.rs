@@ -137,7 +137,7 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
 
 /// **Der SPERRABDRUCK -- die Praemisse, die `Gruppe_Erhaltung.thy` unterstellt hat.**
 ///
-/// `beweise/Gruppe_Erhaltung.thy`, Locale `zug`, nimmt `voll i` als *„der Abdruck ist
+/// `grammatik/Beweise/Gruppe_Erhaltung.thy`, Locale `zug`, nimmt `voll i` als *„der Abdruck ist
 /// gehalten"* und schliesst daraus, dass niemand hinsieht. **Dass ein gehaltener Abdruck
 /// einen fremden Kern wirklich fernhaelt, ist eine Aussage ueber das SPEICHERMODELL** und
 /// faellt nicht in diesen Satz -- `gabbro schablonen` fuehrte sie bis zum 2026-08-21 als
@@ -651,7 +651,7 @@ fn klasse(k: &AnnahmeKlasse) -> Klasse {
     }
 }
 
-/// **The probes that stand as a PROGRAM** -- kept against `sonden/sonde_*.c`, and
+/// **The probes that stand as a PROGRAM** -- kept against `instrumente/sonden/sonde_*.c`, and
 /// `instrumente/pruefe-sonden.sh` runs exactly these.
 ///
 /// *This list is the only route by which a probe name reaches the manifest.*

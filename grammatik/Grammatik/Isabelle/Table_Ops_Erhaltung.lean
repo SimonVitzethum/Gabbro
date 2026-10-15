@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Isabelle/Table_Ops_Erhaltung.lean
-  Part of:   Gabbro -- Lean port of `beweise/Table_Ops_Erhaltung.thy`
+  Part of:   Gabbro -- Lean port of `grammatik/Beweise/Table_Ops_Erhaltung.thy`
              (template `table.ops.erhaltung`, S5; lane 168).
 
   What this file is: the amortisation law (Part I -- once per operation,

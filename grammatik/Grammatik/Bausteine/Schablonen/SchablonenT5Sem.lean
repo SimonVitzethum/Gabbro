@@ -15,7 +15,7 @@
   `NAME_zeuge` instantiates the premises on a REAL program (`refD` /
   `refP`) by `decide` / computation, with the conclusion about that
   program's run. Modelled on the `Bewiesen` Isabelle theories in
-  `beweise/*.thy`.
+  `grammatik/Beweise/*.thy`.
 
   Covered (corpus order): `table.indexschranke`, `table.absenkung`,
   `gruppe.sperrabdruck`, `option.sonderwert`, and the model-facing
@@ -48,7 +48,7 @@ exactly that type. That is the whole carrying half
 (`schreibstellen_im_typ`, `kette_bleibt_im_typ`): there is no other
 way to name a slot -- `assignSlot`, `slot`, `durch`, `traverse`,
 `forallSlots` all take their index in this type. Modelled on
-`beweise/Table_Indexschranke.thy` (M-2). The occupancy half
+`grammatik/Beweise/Table_Indexschranke.thy` (M-2). The occupancy half
 (`belegt_liegt_im_indextyp`) has no counterpart: `World.slots` is
 total, slots are never unoccupied. -/
 
@@ -84,7 +84,7 @@ The emitter lays table `t` out as `(trec t).count` cells
 = N` agreement the certificate carries for a `C001`-checked layout).
 With the index bound (`indexschranke_eval`, §1) every index of a
 generated access names a cell: `kein_zugriff_laeuft_aus_dem_feld`.
-Modelled on `beweise/Table_Absenkung.thy`, including both failure
+Modelled on `grammatik/Beweise/Table_Absenkung.thy`, including both failure
 directions (`zu_kurz_laesst_einen_index_ohne_speicher`,
 `zu_lang_laesst_speicher_ohne_index`). -/
 
@@ -329,7 +329,7 @@ theorem sperrabdruck_zeuge :
 `Option.none` of the value world. So a `Some`-constructed value is
 always distinguishable from `None` (the `kodiere_injektiv`
 `None`/`Some` cases), and its payload is an in-range index by §1.
-Modelled on `beweise/Option_Sonderwert.thy`, first half. The word
+Modelled on `grammatik/Beweise/Option_Sonderwert.thy`, first half. The word
 half (`N < 2^w`, collapse at `N = 2^w`) has NO counterpart: the model
 has no machine-word lowering (`roh` maps `none` to `-1` with no
 modulus) -- see the skip note. -/
@@ -388,7 +388,7 @@ untouched. That is ALL any device statement (`regSchreib`,
 `transition`, `regLies`) does to the world -- their clauses call
 `lese` and then the oracle, which cannot touch the world by its type
 (`regSchreib` returns `Unit`). The layout arithmetic of
-`beweise/Device_Konstruktor.thy` (separate declared layouts meet
+`grammatik/Beweise/Device_Konstruktor.thy` (separate declared layouts meet
 separate cells for every base; bank stride) has NO counterpart and is
 skipped, precisely: `World.slots` is keyed by table, index and field
 with no base, offset or width; registers live behind

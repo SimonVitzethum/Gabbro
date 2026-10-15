@@ -959,7 +959,7 @@ theorem single_root_zeuge :
 /-! ## CUTS:
   - All 21 templates of `crates/gabbro-check/src/schablonen.rs` have a
     Lean soundness core in this file (previously: 0 of 21 in Lean; 10 of
-    21 in Isabelle `beweise/*.thy`). Each core is proved over a small
+    21 in Isabelle `grammatik/Beweise/*.thy`). Each core is proved over a small
     abstract model of the template, every premise is consumed by its
     proof, and every template has a `NAME_zeuge` instantiating ALL
     premises JOINTLY on concrete values only (no run link: the

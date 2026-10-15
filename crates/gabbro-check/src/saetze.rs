@@ -442,7 +442,7 @@ pub const NAMEN: &[Satz] = &[
     //
     // **The rule that was NOT built is the load-bearing half of this sentence.** `falsifier`
     // deliberately does not have to resolve: a probe is a C program in `sonden/`, decided
-    // 2026-08-19 and repeated in `sonden/README.md`. What IS decidable is the case where the
+    // 2026-08-19 and repeated in `instrumente/sonden/README.md`. What IS decidable is the case where the
     // name resolves anyway -- and then to something that has no way to say "refuted".
     Satz {
         name: "namen.sondenausgang",
@@ -481,7 +481,7 @@ pub const NAMEN: &[Satz] = &[
                       an assumption about `writes tlb` whose probe declares `pure` -- is \
                       decidable and was NOT built: of 14 `axiom … falsifier` clauses, 0 \
                       have a declared probe, so its population is EMPTY.*",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; sonden/README.md",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §8.3, §12; instrumente/sonden/README.md",
     },
     // --- lane E1, 2026-09-12: the unresolved library call ---------------------------
     //
@@ -1157,7 +1157,7 @@ pub const D1D2: &[Satz] = &[
         kennungen: &["D010", "D011"],
         aussage: "A `table` that declares `ops` names the field that carries occupancy, and \
                   that field is a `bool` of its own slot -- so the generated `insert`/`remove` \
-                  write the thing `beweise/Table_Ops_Erhaltung.thy` proves about.",
+                  write the thing `grammatik/Beweise/Table_Ops_Erhaltung.thy` proves about.",
         vorbehalt: "It checks that a field is NAMED and two-valued, not that the program keeps \
                     it truthful. A hand-written body may still set it, unless `D001`/`D002` \
                     forbid that -- and they do exactly where `ops` stands.",
@@ -1169,7 +1169,7 @@ pub const D1D2: &[Satz] = &[
         name: "d.opsruf",
         kennungen: &["D012"],
         aussage: "Wherever a generated operation is called, the premises \
-                  `beweise/Table_Ops_Erhaltung.thy` charges to the caller STAND above the \
+                  `grammatik/Beweise/Table_Ops_Erhaltung.thy` charges to the caller STAND above the \
                   call, about the very slot the call names -- the slot is FRESH for \
                   `insert`, the parent is REACHABLE where the table has a `parent` edge, \
                   `s` is a LEAF for `remove` on such a table, and for `relabel` the new \

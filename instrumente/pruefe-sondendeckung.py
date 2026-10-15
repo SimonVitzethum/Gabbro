@@ -46,7 +46,7 @@ WHAT IT DOES NOT DO
 -------------------
 **It does not decide whether a probe would really refute its assumption.**
 `instrumente/pruefe-sonden.sh` says the same of itself: what is measured is THAT one runs, not
-WHAT ABOUT. And the class of a row is an estimate a reader may dispute -- `sonden/README.md`
+WHAT ABOUT. And the class of a row is an estimate a reader may dispute -- `instrumente/sonden/README.md`
 says so about the table these classes are read from. Excluded is only what a script can
 exclude: that the quota falls unseen, and that a row stands under a class nobody wrote down.
 
@@ -110,7 +110,7 @@ SONDEN = W / "sonden"
 #
 # **(17, 50) -> (18, 51) on 2026-09-12 (lane S5, syscall).** One earned diff: the
 # first per-call OS assumption (`linux_write_contract` in `beispiele/74`) arrives
-# WITH its program (`sonden/sonde_write.c`, row 51, class `P4` userland -- a pipe
+# WITH its program (`instrumente/sonden/sonde_write.c`, row 51, class `P4` userland -- a pipe
 # stands in for the descriptor, the admitted errno is answered, `--kaputt` is
 # the control that must fall). Same rule as every earned diff before it: the
 # assumption and its probe land together, so the quota rises because the object
@@ -128,13 +128,13 @@ SONDEN = W / "sonden"
 # diffs: the open and read gates of `beispiele/149`/`150` borrowed
 # `linux_write_contract` and its write-only probe; each now names its own
 # assumption (`linux_open_contract`, `linux_read_contract`, rows 53/54, class
-# `P4`) and arrives WITH its program (`sonden/sonde_open.c`,
-# `sonden/sonde_read.c` -- the gate's own raw call number, the mapped errnos,
+# `P4`) and arrives WITH its program (`instrumente/sonden/sonde_open.c`,
+# `instrumente/sonden/sonde_read.c` -- the gate's own raw call number, the mapped errnos,
 # `--kaputt` as the control that must fall). Same rule: the quota rises because
 # the object grew.
 # **(21, 54) -> (22, 55) on 2026-09-26 (Opus agent L, OFFEN O31).** One earned
 # diff: every `target … abi metal` binding rests on `metal_kernel_contract` (row 55,
-# class `P4`), and it arrives WITH its program (`sonden/sonde_metall_systemruf.c`:
+# class `P4`), and it arrives WITH its program (`instrumente/sonden/sonde_metall_systemruf.c`:
 # the runtime's own vector-0x80 entry text, `laufzeit/metall/eintritt_asm.h`,
 # assembled into a userland program and entered through a hand-built interrupt
 # frame; `--kaputt` must fall). Same rule: the quota rises because the object grew.
