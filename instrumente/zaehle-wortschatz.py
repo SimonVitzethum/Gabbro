@@ -140,7 +140,13 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # the ABI of ONE gate, `profile` holds modes and assumption references and
 # binds no names -- and the reason stands at the entry in `kw.rs`. The second
 # mark does NOT move; the word is `ctx`, so the third mark does not move either.
-MARKE_WOERTER = 245
+# **245 -> 247 on 2026-10-15 (unbounded heap with sampling).** `druckfrage` +
+# `unter` name the sampling clause of an unbounded arena (`dokumente/SYNTAX.md`
+# §9.1): no existing form carries a user-set threshold with a nullary probe --
+# `max` names a static ceiling, `grow` a commit request -- and the reason stands
+# at the entry in `kw.rs`. Both words are `ctx`, so the second and third marks
+# do not move.
+MARKE_WOERTER = 247
 
 # **THE SECOND MARK -- words without a reason at the entry.** Also a ratchet, downwards.
 #

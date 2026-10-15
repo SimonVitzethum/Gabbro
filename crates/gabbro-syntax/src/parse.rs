@@ -4678,6 +4678,17 @@ impl<'a> Parser<'a> {
         };
         self.erwarte_kw(Kw::Of)?;
         let element = self.typeexpr()?;
+        // **Druckfrage (optional): `druckfrage P unter B` vor dem `;`.** Beide
+        // Wörter sind kontextuell (anderswo Namen); die Klausel steht hinter
+        // dem Elementtyp, damit der statische Präfix Byte für Byte wie bisher liest.
+        let druck = if self.friss_kw(Kw::Druckfrage) {
+            let frage = self.pfad()?;
+            self.erwarte_kw(Kw::Unter)?;
+            let unter = self.expr()?;
+            Some(Druckfrage { frage, unter, span: anfang.bis_zu(self.vorheriger_span()) })
+        } else {
+            None
+        };
         let ende = self.erwarte_z(Z::Semi)?;
         Ok(ArenaDecl {
             name,
@@ -4686,6 +4697,7 @@ impl<'a> Parser<'a> {
             hi,
             max,
             element,
+            druck,
             span: anfang.bis_zu(ende),
         })
     }

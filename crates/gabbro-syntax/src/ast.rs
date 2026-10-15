@@ -1876,6 +1876,14 @@ pub struct ArenaDecl {
     pub oeffentlich: bool,
     pub lo: Expr,
     pub hi: Expr,
+    /// **`druckfrage P unter B` -- die Speicherdruck-Abtastung.** `None` ohne
+    /// Klausel (statisch: Decke `max`, ohne `max` die Decke `hi`). MIT Klausel
+    /// steht die UNBEGRENZTE Form: die Decke ist der Zählerraum, der Erzeuger
+    /// fragt vor jedem Commit die nullstellige Frage `P` nach freien Bytes;
+    /// unter `B` (fällige Bytes, Nutzer-Konstante, z.B. 1 MiB) läuft der
+    /// `else`-Zweig (OOM-Pfad). `P` ist ein Tor oder eine Funktion —
+    /// freistehend misst das Programm selbst, kein Systemruf im Erzeuger.
+    pub druck: Option<Druckfrage>,
     /// The ceiling `max M` (lane 257, wave D): `None` is the static form,
     /// where the ceiling coincides with `hi` by construction. `Some(m)`
     /// reserves address for `M` slots while storage starts committed up
@@ -1883,6 +1891,16 @@ pub struct ArenaDecl {
     /// constants with `lo <= hi <= M` (`N210`).
     pub max: Option<Expr>,
     pub element: TypExpr,
+    pub span: Span,
+}
+
+/// **Eine Druckfrage: `frage` nennt die nullstellige Zählfrage, `unter` die
+/// Schwelle in Bytes (fällige Konstante). Geprüft in `arena.rs` (`N584`/`N585`),
+/// gesenkt auf dem Commit-Pfad (`llvm.rs`, `arena_bereit`) — nie im Alloc-Pfad.
+#[derive(Debug, Clone)]
+pub struct Druckfrage {
+    pub frage: Pfad,
+    pub unter: Expr,
     pub span: Span,
 }
 

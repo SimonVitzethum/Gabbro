@@ -1,12 +1,36 @@
 # Offen — was dem Projekt noch fehlt
 
-*Stand 2026-10-15, am Code gemessen. Enthält NUR Offenes aus vier Gebieten:
-LLVM-Backend, Lean-Modell, Prüfer, Übersetzungsvalidierung. IDs (`Oxx`) sind
+*Stand 2026-10-15, am Code gemessen. Enthält NUR Offenes aus fünf Gebieten:
+LLVM-Backend, Lean-Modell, Prüfer, Übersetzungsvalidierung, Heap. IDs (`Oxx`) sind
 stabil — Kommentare im Baum, die `OFFEN Oxx` nennen, meinen diese Abschnitte
 (`TODO.md` selbst ist gelöscht, Historie in Git). Geschlossenes und
 Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
-## 1. Lean-Modell
+## 1. Heap — unbegrenzt, aber mit Grenzen
+
+- **A (Freiliste als Muster) — gebaut.** `beispiele/27-freiliste.gab`,
+  `58-freiliste-zwei-formen.gab`: belegen/ablegen über `naechst`-Kette, keine
+  Sprachänderung. Typisierte Fächer haben keine Fragmentierung (ein Elementtyp
+  je Halde) — frei heißt ein Belegt-Bit je Slot.
+- **B (unbegrenzt mit Abtastung) — Kern gebaut 2026-10-15, `free` offen.**
+  Gebaut: `druckfrage P unter B` an der Arena (SYNTAX.md §9.1) schaltet die
+  UNBEGRENZTE Form ein (ohne sie ist ohne `max` die Decke `hi` — statisch).
+  Der Erzeuger reserviert einmal Adressraum (`mmap(PROT_NONE)`, kein RAM),
+  committet je 1 MiB bei Bedarf (`mprotect`) und fragt VOR jedem Commit die
+  nullstellige Frage `P` nach freien Bytes; unter der Nutzer-Schwelle `B`
+  (z.B. `unter 1048576` — 1 MiB) läuft der `else`-Zweig (OOM-Pfad). EIN Ruf
+  je MiB, null im Schnellpfad (`bereit >= bedarf` fragt gar nicht) — Abtasten
+  kostet keine Performance. Freistehend misst `P` selbst (kein Systemruf im
+  Erzeuger). Prüfer: `N584` (Frage nennt nichts), `N585` (falsche Form,
+  keine fällige Schwelle); Erzeuger: drittes sanktioniertes `inttoptr`
+  (Laufzeit-Basis); Beispiel `1160`, Proben `gift/1436`–`1438`, LLVM-Test
+  `abtastung_vor_commit`. Offen: `free` mit linearer Fähigkeit
+  (Use-after-free — Nähe O37: nichts gibt eine Region frei), Lean-Form
+  für Freigabe/Generationen.
+- **C (Rückgabe an den Kern) — offen, nach B.** Leere Chunks per `madvise`
+  zurückgeben; Nutzer-Tor wie bei B, kein Erzeuger-Wissen über das System.
+
+## 2. Lean-Modell
 
 - **O1-Rest (Pflichten jenseits der Maschine).** L50/L52 trägt das Bein `folge`,
   L24 die Invarianten-Beine, L34 steht als Existenz mit Zeuge. Offen: der Name
@@ -41,13 +65,13 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 - **O28-Rest (Verbund).** Spec-Diff ohne unabhängige Review-Runde; keine
   semantische Äquivalenz/Verfeinerung bei Verträgen (Normalform-Bäume);
   kein Zertifikat für verlinkte Programme; C-Linkschritt ist Sache der
-  Validierung (§4).
+  Validierung (§5).
 - **O37 (Regionen in G).** Keine Byte-Zeiger im Modell (`Ty.ptr` ist
   Träger-Fähigkeit); nichts gibt eine Region frei (kein Eigentums-Schluss
   am Tor-Parameter); Gabbro-Rümpfe reichen keine Ausdehnung weiter
   (nur fremde `ensures … <= lenof(result)` trägt).
 
-## 2. Prüfer
+## 3. Prüfer
 
 - **O11 (hüterlose Invariante).** Eine `table`/`group`-Invariante, die keine
   Funktion `maintains`, wird von NICHTS gebucht (`N275`–`N277` prüfen nur
@@ -58,7 +82,7 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 - **O26-Rest (fremde Sperrprimitive).** Eigene Primitive geprüft (`N481`–`N483`);
   fremde bleiben angenommen (schwaches Gedächtnis nimmt acquire/release an).
 
-## 3. LLVM-Backend
+## 4. LLVM-Backend
 
 Volltabelle in `dokumente/LLVM-MODELLSTAND.md` §5. Kurzform:
 
@@ -71,7 +95,7 @@ Volltabelle in `dokumente/LLVM-MODELLSTAND.md` §5. Kurzform:
 - **O40-Rest (Emitter-Namen).** Prüfer-Hälfte gebaut (`N042`); modulqualifizierte
   Namen fehlen beiden Emittern (LLVM mangelt `m_` nur bei Kollision).
 
-## 4. Übersetzungsvalidierung — kommt VIEL später
+## 5. Übersetzungsvalidierung — kommt VIEL später
 
 Voraussetzungskette, in dieser Reihenfolge; nichts davon ist O27-Arbeit:
 

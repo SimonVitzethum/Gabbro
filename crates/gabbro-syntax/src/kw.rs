@@ -340,6 +340,17 @@ wortschatz! {
     // word meaning; followed by a place continuation (`grow = 1;`) it
     // stays a name, like `reset` above.
     Grow          => "grow",          ctx;
+    // **Druckfrage (Speicherdruck-Abtastung auf dem Commit-Pfad).**
+    //
+    // `druckfrage P unter B` an einer Arena: vor jedem Commit fragt der
+    // Erzeuger die nullstellige Frage `P` (Tor oder Funktion, Antwort ganzzahlig,
+    // kein Fehlerkanal) nach freien Bytes; unter `B` läuft der `else`-Zweig
+    // (OOM-Pfad). Die Klausel schaltet die UNBEGRENZTE Form ein (ohne sie ist
+    // ohne `max` die Decke `hi`); die Schwelle `B` legt der Nutzer fest
+    // (z.B. `unter 1048576` — 1 MiB). Nur die Klauselposition gibt den Wörtern
+    // Bedeutung; anderswo bleiben sie Namen, wie `max` und `grow` darüber.
+    Druckfrage    => "druckfrage",    ctx;
+    Unter         => "unter",         ctx;
     // **«E3» (2026-09-12): the translator declaration (`SYNTAX.md` §7.2).**
     //
     // Heads the total, effect-free map from a call region's AST to the

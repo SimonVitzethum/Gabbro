@@ -109,6 +109,14 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 
 ## 3. Simon's standing instructions
 
+- **Orientation: checker + Lean model only** (Simon, 2026-10-15). The C emitter
+  (`emit.rs`) is outdated and is NO guide for language, checker or compiler work:
+  no new construct is shaped for it, no refusal is widened or narrowed for it,
+  no example is rewritten for it. What counts is the checker verdict and the Lean
+  model (`ArenaDyn.lean` and friends, `gabbro_ziel` still proved). The C backend
+  stays building where it builds; where it refuses by name (`C001` and kin),
+  that refusal stands untouched. This entry wins wherever older notes still
+  orient work on C emission.
 - **Direction change: AArch64 instead of x86-64** (Simon, 2026-10-07). All work on the x86-64
   hardware model has stopped (its files stay; add nothing there). The next target is AArch64
   (Armv9-A) built on the Sail Arm model, with the missing multicore memory model added in Lean.
@@ -396,9 +404,9 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N583** (highest issued: N582, Sonnet U, 2026-10-08: N579 array copy range, N580 traverse exit on a consuming walk, N581 string cell use, N582 parameter list on a non-linear type; before that N578, C-free lane, 2026-10-05; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
-| Gift (poison-probe) numbers | **1427** (highest file: `beispiele/gift/1425`, Sonnet U, 2026-10-08, 1426 skipped; Sonnet C took 1400-1403; before that `beispiele/gift/1399`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
-| Example numbers | **194** (highest file: `beispiele/193`, Sonnet U, 2026-10-08; 185-188 Sonnet E round 2, 189 u32+u32 context, 190 traverse exit, 191/192 string cells, 193 aliased handles; before that `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
+| Diagnostic codes | **N586** (new 2026-10-15: N584 pressure probe names nothing, N585 probe shape/threshold; before that N583, keeperless online invariant) |
+| Gift (poison-probe) numbers | **1439** (new 2026-10-15: gifts 1436-1438 pressure sampling, 1435 skipped/deleted; before that `beispiele/gift/1434`) |
+| Example numbers | **1161** (new 2026-10-15: example 1160 unbounded heap with sampling; before that `beispiele/1159`) |
 | Lane numbers | **1403** next free; allocate unique IDs from the actual live coordinator registry. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
@@ -478,6 +486,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | C-free lane, the kernel thread start in Gabbro (C2 slice 3, 2026-10-01, OFFEN O39) | **not reserved** | **N575**-**N577** (`eintritt.code`: the type `entry fn(…) -> R` -- where it stands, no Gabbro caller of a function taking one, one whole hand-over outside every loop), gifts **1394**-**1397**, example **184** (`code-vom-treiber`). `bibliothek/linux-kmod/linux-kmod.gab`'s thread start and join sleep are Gabbro (`kthread_create_on_node`, `wake_up_process`, `msleep`); `linux-kmod.c` keeps the core number only. PROVED template `faden.modul` (`SchablonenModul.lean` §3; register 33 -> 34 entries, 22 -> 23 machine-checked). Emitter repair: a function-pointer PARAMETER is written with its name inside the declarator (it was `T (*)(…) name`, a C error). OFFEN O40 (private functions of one name in two modules share a C name)
 | C-free lane, OFFEN O40 half closed (2026-10-05) | **not reserved** | gift **1398** (`zwei-private-gleichen-namens`); **no code**: `N042` widened to two function bodies of one name in two modules with a private side (`namen.rs::zwei_ruempfe_ein_name`); no example (clean twins `beispiele/29`, `messung/fragmente/F05.gab`). Also C3 slice 1 the same day (no number: templates `metall.speicher`, `arena.metall`) |
 | C-free lane, the handed stack is a number (2026-10-05) | **not reserved** | **N578** (`klon.stapel_zahl`: the parameter a gate's `stack` clause binds is a written integer type -- a region pointer handed as the stack kept its extent in the `child` region and in the parent, and both indexed one byte with 0 errors), gift **1399**; no example (clean side: 155, 156, 160, `linux.gab`'s `gabbro_os_klon_tor`, all `u64`). Corpus scan over every tracked `.gab`: no other file gains `N578` |
+| Unbounded heap with sampling (2026-10-15, TODO §1-B) | **not reserved** | **N584** (`druckfrage` names no gate and no function), **N585** (probe of the wrong shape, threshold no translation-time constant); gifts **1436** (unknown probe), **1437** (probe with parameter), **1438** (run-time threshold); example **1160** (`halde-mit-abtastung`, unbounded arena with sampling, checker-clean, LLVM-runnable both targets, C001 stands per 2026-10-15 rule). **1435 skipped** (deleted shape: unbounded-without-sampling is unwritable -- without the clause no-`max` is the static form, ceiling `hi`) |
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
   they are never handed to another topic. Next free is always above the highest number in use,

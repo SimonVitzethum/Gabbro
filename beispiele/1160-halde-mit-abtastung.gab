@@ -1,0 +1,20 @@
+-- 1160 -- **the unbounded heap with sampling (user threshold 1 MiB).**
+--
+-- No `max`: the ceiling is the counter room, the reservation is address space
+-- without RAM, and before every 1 MiB commit the generator asks `frei` for
+-- free bytes. Below `unter 1048576` the `else` runs (the OOM path); on a
+-- freestanding target `frei` is the program's own measurement, no OS call in
+-- the generator. The fast path (`bereit >= bedarf`) asks nothing.
+module beispiel::halde_mit_abtastung {
+pub arena Vorrat capacity 0 .. 2 of u64 druckfrage frei unter 1048576;
+
+impl fn frei() -> u64 effects { pure } costs <= 4 ops {
+    return 99999999;
+}
+
+pub fn main() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 64 ops {
+    let a = alloc Vorrat (7) else { return 1; };
+    let b = alloc Vorrat (35) else { return 2; };
+    return Vorrat[a] +% Vorrat[b];
+}
+}

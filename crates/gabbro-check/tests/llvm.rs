@@ -393,3 +393,34 @@ pub fn main() -> u64
     assert!(lean.contains("\"arbeiter\""), "Wurzel fehlt");
     assert!(!lean.contains("define "), "IR im Beleg!");
 }
+
+/// **Die Abtastung steht vor dem Commit, nie im Schnellpfad.** Unbegrenzte Arena
+/// (`druckfrage frei unter 1048576`, Nutzer-Schwelle 1 MiB): das IR ruft die
+/// Zählfrage, vergleicht gegen die Schwelle und läuft darunter in `voll` — auf
+/// beiden Zielen, ohne ein Byte BSS (`= global [` steht nirgends).
+#[test]
+fn abtastung_vor_commit() {
+    let quelle = r#"module abtastbeleg {
+pub arena Vorrat capacity 0 .. 2 of u64 druckfrage frei unter 1048576;
+impl fn frei() -> u64 effects { pure } costs <= 4 ops {
+    return 99999999;
+}
+pub fn main() -> u64
+    effects { reads Vorrat, writes Vorrat }
+    costs <= 64 ops
+{
+    let a = alloc Vorrat (7) else { return 1; };
+    return Vorrat[a];
+}
+}
+"#;
+    for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+        let (ir, codes) = senke(quelle, "abtastbeleg", ziel);
+        let f = fehler(&codes);
+        assert!(f.is_empty(), "Abtastung auf {} fällt mit {f:?}", ziel.name);
+        assert!(ir.contains("@\"frei\"()"), "kein Zählruf auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("1048576"), "keine Schwelle auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("arena_genug"), "kein Weiter-Zweig auf {}:\n{ir}", ziel.name);
+        assert!(!ir.contains("= global ["), "BSS-Feld auf {}:\n{ir}", ziel.name);
+    }
+}

@@ -889,6 +889,16 @@ fn erklaerungen(baum: &Programm, u: &crate::umgebung::Umgebung, absagen: &mut Ab
                 }
                 _ => {}
             }
+            // **Druckfrage (`N584`/`N585`).** Nur wo die Deklaration sonst
+            // brauchbar ist (kein zweites Urteil auf eine tote Zeile): die
+            // Klausel schaltet die UNBEGRENZTE Form ein — ohne sie ist ohne
+            // `max` die Decke `hi` (statisch, kein Abtasten nötig). Die Frage
+            // nennt ein nullstelliges Tor oder eine nullstellige Funktion mit
+            // ganzzahliger Antwort ohne Fehlerkanal, die Schwelle ist eine
+            // fällige Nutzer-Konstante (z.B. `unter 1048576` — 1 MiB).
+            if let Some(d) = &a.druck {
+                druckfrage(baum, u, modul, &a.name.text, d, absagen);
+            }
         }
     });
 }
@@ -2115,5 +2125,123 @@ mod wachstumstests {
         // The first two owe nothing to the ceiling.
         assert!(!kappe_erreicht(0, 2));
         assert!(!kappe_erreicht(1, 2));
+    }
+}
+
+/// **Die Zählfrage hinter `druckfrage P unter B` (`N584`/`N585`).**
+///
+/// `N584`: `P` nennt kein Tor und keine Funktion (oder mehrdeutig) — die
+/// Abtastung riefe ins Leere. `N585`: `P` hat Parameter, antwortet nicht
+/// ganzzahlig, trägt einen Fehlerkanal, oder `B` ist keine fällige Konstante.
+/// Die Schwelle legt der Nutzer fest (z.B. `unter 1048576` — 1 MiB).
+fn druckfrage(
+    baum: &Programm,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    arena: &str,
+    d: &Druckfrage,
+    absagen: &mut Absagen,
+) {
+    // Kandidaten: Tore und Funktionen (volle und kurze Namen) — EIGENE Werte,
+    // keineleihen aus dem Baum (die Closure leiht `item` nur im Durchlauf).
+    // Form je Kandidat: (Name, Parameterzahl, Fehlerkanal?, ganzzahlige Antwort?).
+    let voll = d.frage.text();
+    let kurz = d.frage.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+    let mut tore: Vec<(String, usize, bool, bool)> = Vec::new();
+    let mut fns: Vec<(String, usize, bool, bool)> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, m| {
+        let prä = if m.is_empty() { String::new() } else { format!("{m}::") };
+        match &item.art {
+            ItemArt::Syscall(g) => tore.push((
+                format!("{prä}{}", g.name.text),
+                g.parameter.len(),
+                g.fehler.is_some(),
+                matches!(&g.ergebnis, Some(TypExpr::Int(_))),
+            )),
+            ItemArt::Funktion(f) => fns.push((
+                format!("{prä}{}", f.name.text),
+                f.parameter.len(),
+                f.fehler.is_some(),
+                matches!(&f.ergebnis, Some(TypExpr::Int(_))),
+            )),
+            _ => {}
+        }
+    });
+    // Exakte Treffer zuerst (voll), dann kurze (eindeutig); mehrdeutig = kein Treffer.
+    fn triff(kandidaten: &[(String, usize, bool, bool)], voll: &str, kurz: &str) -> Option<(usize, bool, bool)> {
+        if let Some((_, p, f, i)) = kandidaten.iter().find(|(n, _, _, _)| n == voll) {
+            return Some((*p, *f, *i));
+        }
+        let ende = format!("::{kurz}");
+        let mut it = kandidaten.iter().filter(|(n, _, _, _)| n == kurz || n.ends_with(&ende));
+        let (_, p, f, i) = it.next()?;
+        if it.next().is_some() {
+            return None;
+        }
+        Some((*p, *f, *i))
+    }
+    let tor = triff(&tore, &voll, &kurz);
+    let fun = triff(&fns, &voll, &kurz);
+    if tor.is_none() && fun.is_none() {
+        melde_erklaerung(
+            absagen,
+            "N584",
+            d.frage.span,
+            format!(
+                "`{arena}` fragt `{voll}` nach freiem Speicher, und das nennt \
+                 kein Tor und keine Funktion (oder mehrdeutig): die Abtastung \
+                 riefe ins Leere",
+                arena = arena,
+                voll = voll
+            ),
+            "die Druckfrage nennt eine nullstellige Zählfrage beim Namen -- \
+             ohne sie läuft der Commit blind in den Speichermangel",
+        );
+        return;
+    }
+    // Form: nullstellig, ganzzahlig, ohne Fehlerkanal.
+    // Form: nullstellig, ganzzahlig, ohne Fehlerkanal (Tor wie Funktion gleich).
+    let formfehler: Option<String> = match tor.or(fun) {
+        None => None,
+        Some((p, hat_fehler, ganz)) => {
+            if p > 0 {
+                Some("mit Parametern zählt nichts ohne Argumente".to_string())
+            } else if hat_fehler {
+                Some("mit Fehlerkanal antwortet keine Zahl".to_string())
+            } else if !ganz {
+                Some("ohne ganzzahlige Antwort zählt keine Bytes".to_string())
+            } else {
+                None
+            }
+        }
+    };
+    if let Some(grund) = formfehler {
+        melde_erklaerung(
+            absagen,
+            "N585",
+            d.frage.span,
+            format!("`{voll}` ist keine Zählfrage: {grund}", voll = voll),
+            "gezählt wird nullstellig, ganzzahlig, ohne Fehlerkanal -- alles \
+             andere riefe die Abtastung mit der falschen Hand auf",
+        );
+        return;
+    }
+    // Schwelle: fällige Konstante, nicht negativ.
+    match u.konst_wert(modul, &d.unter) {
+        Some(b) if b >= 0 => {}
+        _ => {
+            melde_erklaerung(
+                absagen,
+                "N585",
+                d.unter.span,
+                format!(
+                    "`{arena}` läuft unter keiner fälligen Schwelle: `unter` \
+                     ist eine Übersetzungszeit-Konstante in Bytes",
+                    arena = arena
+                ),
+                "eine Schwelle, die erst zur Laufzeit feststeht, hält keinen \
+                 Commit auf -- der Vergleich braucht die Zahl vor dem Bau",
+            );
+        }
     }
 }

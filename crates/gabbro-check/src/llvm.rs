@@ -339,6 +339,65 @@ struct ArenaInfo {
     lo: u64,
     hi: u64,
     max: u64,
+    druck: Option<DruckAbtastung>,
+}
+
+/// **Die Abtastung hinter `druckfrage P unter B` (Commit-Pfad, nie Alloc-Pfad).**
+///
+/// UNaufgelöst gespeichert (Pfad plus Arena-Modul) und erst am Gebrauch
+/// aufgelöst — zur Sammelzeit stünde die Zählfrage oft noch hinter der Arena.
+/// Die Auflösung liest sich wie ein Ruf aus dem Arena-Modul (kurzer Name dort,
+/// voller Pfad überall). Die Schwelle (`unter B`, Bytes, fällige Konstante)
+/// legt der Nutzer fest — z.B. `unter 1048576` (1 MiB).
+#[derive(Clone)]
+struct DruckAbtastung {
+    pfad: Pfad,
+    modul: String,
+    schwelle: u64,
+}
+/// **Die Abtastung rufen (ein Ruf je Commit-Stück).** Tor zuerst (wie
+/// `senke_ruf`), dann Funktion — derselbe Pfad wie jeder Nutzer-Ruf (Dual-Arch,
+/// Antwortdekodierung). Das Modul steht für die Auflösung kurz auf dem der
+/// Arena und geht danach zurück.
+fn rufe_druck(k: &mut Koerper, d: &DruckAbtastung, span: Span) -> Option<Wert> {
+    let heim = k.modul.clone();
+    k.modul = d.modul.clone();
+    let w = if loese_tor(k.s, &d.modul, &d.pfad).is_some() {
+        let ruf = Ruf {
+            ziel: CallTarget::Path(d.pfad.clone()),
+            argumente: Vec::new(),
+            marken: Vec::new(),
+            span,
+        };
+        senke_tor_ruf(k, &d.pfad, &ruf, span)
+    } else {
+        match loese_fn(k.s, &d.modul, &d.pfad) {
+            Some((ename, sig)) => {
+                if !sig.params.is_empty() {
+                    weigere(k.s, "Y103", span, format!("pressure probe {} takes arguments", d.pfad.text()));
+                    k.modul = heim;
+                    return None;
+                }
+                match sig.ret.clone() {
+                    Some((rt, _)) if rt != LlTyp::Void => {
+                        let t = k.tmp();
+                        k.zeile(&format!("{t} = call {} {}()", rt.text(), gname(&ename)));
+                        Some(Wert { typ: rt.clone(), zeichen: Zeichen::U, text: t, form: None })
+                    }
+                    _ => {
+                        weigere(k.s, "Y103", span, format!("pressure probe {} answers nothing", d.pfad.text()));
+                        None
+                    }
+                }
+            }
+            None => {
+                weigere(k.s, "Y103", span, format!("pressure probe {} resolves nowhere", d.pfad.text()));
+                None
+            }
+        }
+    };
+    k.modul = heim;
+    w
 }
 
 /// Ein Tor im Beleg: Name, Nummer, Schablone, Bindungen, Austritt, Clobbers.
@@ -4449,7 +4508,19 @@ fn sammle_arena(s: &mut Senke, a: &ArenaDecl, span: Span) {
                 return;
             }
         },
+        // Ohne Decke MIT `druckfrage`: die unbegrenzte Form — der Zählerraum
+        // ist die Decke, die Reserve bleibt Adressraum ohne RAM (`mmap(PROT_NONE)`).
+        // Ohne Decke ohne Klausel: statisch, die Decke ist `hi` (wie der Prüfer).
+        None if a.druck.is_some() => u32::MAX as u64,
         None => hi,
+    };
+    // Druckfrage auflösen (Tor oder nullstellige Funktion, Modul der Arena).
+    let druck = match &a.druck {
+        Some(d) => match loese_druck(s, d, span) {
+            Some(x) => Some(x),
+            None => return,
+        },
+        None => None,
     };
     let alt = s.eng_modus;
     s.eng_modus = true;
@@ -4468,8 +4539,22 @@ fn sammle_arena(s: &mut Senke, a: &ArenaDecl, span: Span) {
     };
     s.arenen.insert(
         a.name.text.clone(),
-        ArenaInfo { elem, form: a.element.clone(), groesse, lo, hi, max },
+        ArenaInfo { elem, form: a.element.clone(), groesse, lo, hi, max, druck },
     );
+}
+
+/// **Druckfrage zur Sammelzeit festhalten.** Nur Schwelle (fällig, sonst `Y103`)
+/// und Herkunft (Pfad plus Arena-Modul) — aufgelöst wird am Gebrauch, wenn alle
+/// Items gesammelt sind. Der Prüfer (`N584`/`N585`) hat die Form gehalten.
+fn loese_druck(s: &mut Senke, d: &Druckfrage, span: Span) -> Option<DruckAbtastung> {
+    let schwelle = match konst_u64(s, &d.unter) {
+        Some(v) => v,
+        None => {
+            weigere(s, "Y103", span, "pressure probe with non-constant threshold".to_string());
+            return None;
+        }
+    };
+    Some(DruckAbtastung { pfad: d.frage.clone(), modul: s.modul.clone(), schwelle })
 }
 
 fn sammle_atomic(s: &mut Senke, a: &AtomicDecl, span: Span) {
@@ -8829,6 +8914,21 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     let commit2 = format!("{weiter}_c");
     let _ = writeln!(k.text, "{commit2}:");
     k.beendet = false;
+    // Abtastung (nur mit `druckfrage`): erst fragen, dann committen. Unter der
+    // Nutzer-Schwelle läuft der `voll`-Zweig (OOM-Pfad) — bei Freestanding misst
+    // die Nutzer-Funktion selbst, kein Systemruf im Erzeuger. EIN Ruf je Stück
+    // (1 MiB), null im Schnellpfad (`bereit >= bedarf` fragt gar nicht).
+    if let Some(d) = ai.druck.clone() {
+        let frei = rufe_druck(k, &d, span)?;
+        let f64 = angleiche(k, frei, &LlTyp::Int(64), Zeichen::U)?;
+        let wenig = k.tmp();
+        k.zeile(&format!("{wenig} = icmp ult i64 {}, {}", f64.text, d.schwelle));
+        let genug = k.block("arena_genug");
+        k.zeile(&format!("br i1 {wenig}, label %{voll}, label %{genug}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{genug}:");
+        k.beendet = false;
+    }
     let regs2 = if k.s.ziel.name == "x86_64" {
         vec![
             ("rdi".to_string(), adr.clone()),

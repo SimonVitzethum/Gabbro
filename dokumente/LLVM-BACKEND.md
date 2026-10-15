@@ -168,9 +168,11 @@ with declared signature), `retry` (counted bound, `bis` comparison, named
 overrun handler), `breaking` (body runs), float ranges + runtime bounds in
 `narrow`, `publish nothing` (release store), `await`/`exchange` (both forms),
 option matches, float `finite`, sugar widths, `const fn` folding, device
-registers/bitfields/transitions (`volatile`, two sanctioned `inttoptr` sites),
+registers/bitfields/transitions (`volatile`, three sanctioned `inttoptr` sites: device bases, region answers, arena runtime base),
 tree walks (ancestors strict, descendants post-order stackless), `leave`/`next`
-by name, atomic arrays.
+by name, atomic arrays, the unbounded heap with sampling (`druckfrage P unter B`:
+address-space reserve, per-MiB commit, one probe per commit, user threshold —
+three sanctioned `inttoptr` sites now).
 
 Still refused, per item:
 
