@@ -71,16 +71,19 @@ Volltabelle in `dokumente/LLVM-MODELLSTAND.md` §5. Kurzform:
 - **O40-Rest (Emitter-Namen).** Prüfer-Hälfte gebaut (`N042`); modulqualifizierte
   Namen fehlen beiden Emittern (LLVM mangelt `m_` nur bei Kollision).
 
-## 4. Übersetzungsvalidierung
+## 4. Übersetzungsvalidierung — kommt VIEL später
 
-- **Hardware-Modell (ARM-PLAN).** Kritischer Pfad; Sail-Arm plus Mehrkern-Modell
-  in Lean. Ohne es ist jedes Byte ein unvalidiertes Byte.
-- **Brücke je Zugriff.** Ziel → W/GX-Simulation pro Zugriff (gemeinsam mit dem
-  nativen Pfad, kein LLVM-Aufschlag).
-- **Tor- + Eintritts-Lemmata je Ziel.** Rohe Tor-Anweisung und `_start`
-  (Stapel, Eintrittszustand, Austritt/`never`).
-- **O28-Linkschluss.** Verlinktes C gegen verlinktes G-Programm.
-- **O26-fremd.** Angenommene Ordnungen fremder Primitive in der Kette tragen.
+Voraussetzungskette, in dieser Reihenfolge; nichts davon ist O27-Arbeit:
+
+- **Vollständiges Lean-Modell einer CPU.** Ohne es keine Verfeinerung —
+  das ist der lange Pol (ARM-PLAN: Sail-Arm plus Mehrkern-Modell), nicht O27.
+- **Und mehr:** Brücke je Zugriff (Ziel → W/GX-Simulation pro Zugriff),
+  Tor- + Eintritts-Lemmata je Ziel (rohe Anweisung, `_start` mit Stapel,
+  Zustand, Austritt/`never`), O28-Linkschluss, O26-fremde Ordnungen.
+- **Automatisch für alle Programme.** Kein Schritt je Programm von Hand —
+  deshalb ist die Kette teurer als O27, nicht billiger: O27 erweitert die
+  Urteil-Menge Programm für Programm, die Validierung muss danach für ALLE
+  ohne Zutun laufen.
 
 ## Anhang — geschlossen oder entfernt (ID → Grund)
 
