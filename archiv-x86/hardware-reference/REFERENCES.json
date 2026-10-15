@@ -1,0 +1,13 @@
+[
+  {
+    "name": "intel-instruction-reference",
+    "title": "Intel SDM combined volumes1-4",
+    "edition": "325462-093US, September2026",
+    "url": "https://cdrdv2.intel.com/v1/dl/getContent/671200",
+    "official_index": "https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html",
+    "sha256": "a4a62e6a7ba11a76c7753a195b825087306812aac39b930973f9168ee599f321",
+    "bytes": 26664929,
+    "verified": "2026-10-02T18:40:25.102662+00:00",
+    "scope": "All volumes are included, including system programming/interrupts/TSO, not only instruction reference. Intel-profile architectural evidence; do not claim vendor differences or physical silicon are proved. AMD URLs returned404; no AMD reference snapshot is available."
+  }
+]

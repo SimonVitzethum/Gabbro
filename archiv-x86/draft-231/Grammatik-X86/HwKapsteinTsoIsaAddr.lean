@@ -1,0 +1,416 @@
+/-
+  File:      Grammatik/X86/HwKapsteinTsoIsaAddr.lean
+  Subject:   TSO projection of the isa, addr and muldiv union tags.
+
+  Lane 1327: every classified union step of `HwKapsteinTso` (lane 1295)
+  projects to the TSO store-buffer model; isa/addr/muldiv were left as
+  FINDINGs there. This file classifies exactly those three tags over
+  the reused projection `kapTso` (never redefined): isa register steps
+  are silent, isa loads observe with forwarding, isa stores are single
+  `issueByte` events; muldiv steps are silent (register-only); addr
+  stores are folds of byte issues (`concIssue` over `entriesOf`) and
+  addr loads are silent forwarding observations. Widths 1/2/4/8 bytes;
+  a split across a group boundary stays the accepted tearing refusal.
+  Every accepted definition is reused unchanged, never redefined.
+-/
+import Grammatik.X86.HwKapsteinTso
+
+namespace Gabbro.Grammatik.X86
+
+/-- Re-embedded ISA successors leave the TSO projection unchanged:
+    only core data moves, never memory or buffers. -/
+theorem kapTso_setKernVonZustand (m : HwMaschine) (c : Nat)
+    (s' : Zustand) :
+    kapTso (setKernVonZustand m c s') = kapTso m := by
+  rfl
+
+/-! ## 1. ISA tag: register steps are silent, loads observe,
+    stores issue one byte. -/
+
+/-- Every ISA adapter step classifies on the TSO projection with its
+    footprint named: register steps are silent (only core data moves),
+    loads observe with forwarding (`loadByte`, both the observed and
+    the demanded value named), stores are single `issueByte` events. -/
+theorem kap_isa_tso_klass (m m' : HwMaschine) (c : Nat)
+    (e : IsaEreignis)
+    (h : adapterIsa.schritt m c e = some m') :
+    (∃ d s', e = .reg d ∧ stepI d (projZustand m c) = some s'
+      ∧ m' = setKernVonZustand m c s' ∧ kapTso m' = kapTso m)
+    ∨ (∃ a v w, e = .lade a v ∧ kapTso m' = kapTso m
+      ∧ loadByte (kapTso m) c a = some w ∧ (w == v) = true)
+    ∨ (∃ a v s', e = .gibAus a v
+      ∧ issueByte (kapTso m) c a v = some s' ∧ kapTso m' = s') := by
+  cases e with
+  | reg d =>
+    cases hstep : stepI d (projZustand m c) with
+    | some s' =>
+      cases hg : isaNurRegister d.instr with
+      | true =>
+        have he := adapterIsa_reg m c d s' hstep hg
+        rw [he] at h
+        cases h
+        exact Or.inl ⟨d, s', rfl, hstep, rfl,
+          kapTso_setKernVonZustand m c s'⟩
+      | false =>
+        have he := adapterIsa_reg_verweigert_speicher m c d s' hstep hg
+        rw [he] at h
+        cases h
+    | none =>
+      have he := adapterIsa_reg_verweigert_schritt m c d hstep
+      rw [he] at h
+      cases h
+  | lade a v =>
+    cases hload : loadByte (tsoAnsicht m) c a with
+    | some w =>
+      cases heq : (w == v) with
+      | true =>
+        have he := adapterIsa_lade m c a v w hload heq
+        rw [he] at h
+        cases h
+        exact Or.inr (Or.inl ⟨a, v, w, rfl, rfl, hload, heq⟩)
+      | false =>
+        have he := adapterIsa_lade_verweigert_wert m c a v w hload heq
+        rw [he] at h
+        cases h
+    | none =>
+      have he := adapterIsa_lade_verweigert m c a v hload
+      rw [he] at h
+      cases h
+  | gibAus a v =>
+    cases hissue : issueByte (tsoAnsicht m) c a v with
+    | some s' =>
+      have he := adapterIsa_gibAus m c a v s' hissue
+      rw [he] at h
+      cases h
+      exact Or.inr (Or.inr ⟨a, v, s', rfl, hissue,
+        kapTso_setTso m s'⟩)
+    | none =>
+      have he := adapterIsa_gibAus_verweigert m c a v hissue
+      rw [he] at h
+      cases h
+  | verweigert =>
+    have he := adapterIsa_verweigert m c
+    rw [he] at h
+    cases h
+
+/-- Every ISA adapter step reaches through the projection: silent
+    steps reuse `.start`, stores use one TSO issue step. -/
+theorem kap_isa_tso (m m' : HwMaschine) (c : Nat)
+    (e : IsaEreignis)
+    (h : adapterIsa.schritt m c e = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  rcases kap_isa_tso_klass m m' c e h with
+    ⟨d, s', _, _, _, heq⟩ | ⟨a, v, w, _, heq, _, _⟩
+      | ⟨a, v, s', _, hissue, heq⟩
+  · rw [heq]; exact .start
+  · rw [heq]; exact .start
+  · rw [heq]
+    exact kapTso_schritt_erreichbar _ _
+      (.issue _ s' c a v hissue)
+
+/-! ## 2. Muldiv tag: every step is silent (register-only). -/
+
+/-- Every muldiv adapter step leaves the TSO projection unchanged: a
+    success re-embeds core data only (the accepted width step never
+    touches memory, `wdSchritt_speicher`); traps and refusals admit no
+    successor at all. The footprint is the accepted width step itself. -/
+theorem kap_muldiv_tso_still (m m' : HwMaschine) (c : Nat)
+    (d : WdDecodiert)
+    (h : adapterMulDivWidth.schritt m c d = some m') :
+    kapTso m' = kapTso m ∧ ∃ s' : Zustand,
+      wdSchritt d (projZustand m c) = .ok s'
+      ∧ m' = setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩ := by
+  unfold adapterMulDivWidth at h
+  simp only at h
+  cases hsch : wdSchritt d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    exact ⟨kapTso_setKernVonFp m c _, s', rfl, rfl⟩
+  | hardwareHalt =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+  | misslungen =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Every muldiv adapter step reaches through the projection (silently). -/
+theorem kap_muldiv_tso (m m' : HwMaschine) (c : Nat)
+    (d : WdDecodiert)
+    (h : adapterMulDivWidth.schritt m c d = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  have heq := (kap_muldiv_tso_still m m' c d h).1
+  rw [heq]
+  exact .start
+
+/-! ## 3. Addr tag: stores are `concIssue` folds, loads observe. -/
+
+/-- A width-selected store fold reaches: the admitted gate first,
+    then the ordered `issueListe` induction
+    (`kapTso_issueListe_erreichbar` over `entriesOf`). -/
+theorem kapTso_concIssue_erreichbar (s : TSOZustand) (c : Nat)
+    (b : Breite) (a : Adresse) (v : Wort) (s' : TSOZustand)
+    (h : concIssue s c b a v = some s') :
+    TSOErreichbar s s' := by
+  unfold concIssue at h
+  cases hg : concAdmitted s.mem a b true with
+  | false => simp [hg] at h
+  | true =>
+    simp [hg] at h
+    exact kapTso_issueListe_erreichbar s c (entriesOf b a v) s' h
+
+/-- An addressed store IS a `concIssue` fold into the acting core's
+    buffer, with the exact footprint from `adrEff` (`hwAddrOf` over the
+    acting core's pre-state registers) and the stored value from the
+    pre-state source register. Canonical memory is untouched
+    (`hwAddrStore_kein_speicher`, cited). -/
+theorem kap_addr_store_issue (m m' : HwMaschine) (c : Nat)
+    (b : Breite) (f : AdrForm) (ripNext : Adresse) (src : Register)
+    (len : Nat)
+    (h : hwAddrStore m c b f ripNext src len = some m') :
+    ∃ s' : TSOZustand,
+      concIssue (kapTso m) c b (hwAddrOf m c ripNext f)
+        ((m.kerne c).register src) = some s'
+      ∧ kapTso m' = s' := by
+  unfold hwAddrStore at h
+  cases hlen : laengeOk len with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hi : concIssue (tsoAnsicht m) c b (hwAddrOf m c ripNext f)
+        ((m.kerne c).register src) with
+    | none => simp [hi] at h
+    | some s' =>
+      simp [hi] at h
+      cases h
+      exact ⟨s', hi, by cases s' with | mk mem puffer => rfl⟩
+
+/-- An addressed store reaches through the projection (fold of byte
+    issues, never a direct memory write). -/
+theorem kap_addr_store_tso (m m' : HwMaschine) (c : Nat)
+    (b : Breite) (f : AdrForm) (ripNext : Adresse) (src : Register)
+    (len : Nat)
+    (h : hwAddrStore m c b f ripNext src len = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  obtain ⟨s', hconc, heq⟩ :=
+    kap_addr_store_issue m m' c b f ripNext src len h
+  rw [heq]
+  exact kapTso_concIssue_erreichbar (kapTso m) c b
+    (hwAddrOf m c ripNext f) ((m.kerne c).register src) s' hconc
+
+/-- An addressed load leaves the projection unchanged and observes
+    the forwarding-aware value: only the destination register (through
+    the accepted `mergeRegNarrow`) and RIP move. The footprint is the
+    selected address (`hwAddrOf`) at the access width. -/
+theorem kap_addr_load_still (m m' : HwMaschine) (c : Nat)
+    (b : Breite) (f : AdrForm) (ripNext : Adresse) (dst : Register)
+    (len : Nat)
+    (h : hwAddrLoad m c b f ripNext dst len = some m') :
+    kapTso m' = kapTso m ∧ ∃ w : Wort,
+      concLoad (kapTso m) c b (hwAddrOf m c ripNext f) = some w
+      ∧ (m'.kerne c).register dst
+        = mergeRegNarrow b ((m.kerne c).register dst) w := by
+  unfold hwAddrLoad at h
+  cases hlen : laengeOk len with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hl : concLoad (tsoAnsicht m) c b (hwAddrOf m c ripNext f) with
+    | none => simp [hl] at h
+    | some w =>
+      simp [hl] at h
+      cases h
+      exact ⟨rfl, w, hl, by simp [regSet_gleich]⟩
+
+/-- Every addressed adapter step reaches through the projection:
+    stores via the `concIssue` fold, loads silently. -/
+theorem kap_addr_tso (m m' : HwMaschine) (c : Nat)
+    (e : HwAddrEreignis)
+    (h : adapterAddr.schritt m c e = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases e with
+  | store b f ripNext src len =>
+    exact kap_addr_store_tso m m' c b f ripNext src len h
+  | load b f ripNext dst len =>
+    have heq := (kap_addr_load_still m m' c b f ripNext dst len h).1
+    rw [heq]
+    exact .start
+  | verweigert =>
+    have he := adapterAddr_verweigert m c
+    rw [he] at h
+    cases h
+
+/-- Width cases 1/2/4/8 bytes: each width-selected store issues exactly
+    its byte count into the acting core's buffer (`entriesOf_laenge`). -/
+theorem kap_addr_breiten (a : Adresse) (v : Wort) :
+    (entriesOf .b8 a v).length = 1 ∧ (entriesOf .b16 a v).length = 2
+    ∧ (entriesOf .b32 a v).length = 4
+    ∧ (entriesOf .b64 a v).length = 8 := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [entriesOf_laenge]; decide
+  · rw [entriesOf_laenge]; decide
+  · rw [entriesOf_laenge]; decide
+  · rw [entriesOf_laenge]; decide
+
+/-- A split across a group boundary stays the accepted tearing refusal:
+    the exhibited partial buffer and the foreign-footprint overlap are
+    no word group (`hwAddrWitTeil_keine_gruppe`,
+    `hwAddrWitOverlap_keine_gruppe`, lifted unchanged). -/
+theorem kap_addr_tearing :
+    ¬ WortGruppe hwAddrWitTeil 0 hwAddrWitA hwAddrWitV
+    ∧ ¬ WortGruppe hwAddrWitOverlap 0 hwAddrWitA hwAddrWitV := by
+  exact ⟨hwAddrWitTeil_keine_gruppe, hwAddrWitOverlap_keine_gruppe⟩
+
+/-! ## 4. Union lifts: the three tags reach through the projection. -/
+
+/-- A classified ISA union step reaches through the projection. -/
+theorem kap_union_isa_tso (m m' : HwMaschine) (c : Nat)
+    (e : IsaEreignis)
+    (h : HwVollSchritt m m' (KapEreignis.isa c e)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | isa _ _ heq => exact kap_isa_tso m m' c e heq
+
+/-- A classified addressed union step reaches through the projection. -/
+theorem kap_union_addr_tso (m m' : HwMaschine) (c : Nat)
+    (e : HwAddrEreignis)
+    (h : HwVollSchritt m m' (KapEreignis.addr c e)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | addr _ _ heq => exact kap_addr_tso m m' c e heq
+
+/-- A classified muldiv union step reaches through the projection. -/
+theorem kap_union_muldiv_tso (m m' : HwMaschine) (c : Nat)
+    (d : WdDecodiert)
+    (h : HwVollSchritt m m' (KapEreignis.muldiv c d)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | muldiv _ _ heq => exact kap_muldiv_tso m m' c d heq
+
+/-- Joint summary: all three tags reach through the TSO projection.
+    Each premise is used by its own leg. -/
+theorem kap_drei_tso :
+    (∀ (m m' : HwMaschine) (c : Nat) (e : IsaEreignis),
+      HwVollSchritt m m' (.isa c e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (c : Nat) (e : HwAddrEreignis),
+      HwVollSchritt m m' (.addr c e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (c : Nat) (d : WdDecodiert),
+      HwVollSchritt m m' (.muldiv c d) →
+        TSOErreichbar (kapTso m) (kapTso m')) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro m m' c e h
+    exact kap_union_isa_tso m m' c e h
+  · intro m m' c e h
+    exact kap_union_addr_tso m m' c e h
+  · intro m m' c d h
+    exact kap_union_muldiv_tso m m' c d h
+
+/-- Joint witness: one exhibited union step per tag reaches through the
+    projection (buffered isa byte, width-4 SIB addr store, register-only
+    muldiv divide), beside the two-core non-degeneracy on the same TSO
+    model: a buffered store forwards to its owner only, the foreign core
+    reads the stale value, and the drain observably changes shared memory
+    (0 becomes 42 / `0x04`), observed from both cores. -/
+theorem kap_isa_addr_muldiv_zeuge :
+    (∃ m', HwVollSchritt stapelWitM0 m'
+      (KapEreignis.isa 0
+        (.gibAus stapelWitSlotAddr (BitVec.ofNat 8 7)))
+      ∧ TSOErreichbar (kapTso stapelWitM0) (kapTso m'))
+    ∧ (∃ m1, HwVollSchritt hwAddrWitM0 m1
+      (KapEreignis.addr 0
+        (.store .b32 hwAddrWitForm hwAddrWitNext .rax 7))
+      ∧ TSOErreichbar (kapTso hwAddrWitM0) (kapTso m1))
+    ∧ (∃ m', HwVollSchritt wdHwWitStart m'
+      (KapEreignis.muldiv 0 ⟨WdBefehl.divWd .w32 .rcx, 2⟩)
+      ∧ TSOErreichbar (kapTso wdHwWitStart) (kapTso m'))
+    ∧ isaFamLoadEigen = some (some (BitVec.ofNat 8 42))
+    ∧ isaFamLoadFremd = some (some (BitVec.ofNat 8 0))
+    ∧ isaFamNachFlush = some (some (BitVec.ofNat 8 42))
+    ∧ hwAddrWitLoadEigen = some (some hwAddrWitV)
+    ∧ hwAddrWitLoadFremd = some (some (BitVec.ofNat 64 0))
+    ∧ hwAddrWitNachFlush = some (some (BitVec.ofNat 8 4)) := by
+  obtain ⟨mI, hwI⟩ := kap_step_isa
+  have hrI : TSOErreichbar (kapTso stapelWitM0) (kapTso mI) :=
+    kap_union_isa_tso _ _ _ _ hwI
+  obtain ⟨mA, hwA⟩ := kap_step_addr
+  have hrA : TSOErreichbar (kapTso hwAddrWitM0) (kapTso mA) :=
+    kap_union_addr_tso _ _ _ _ hwA
+  obtain ⟨mD, hwD⟩ := kap_step_muldiv
+  have hrD : TSOErreichbar (kapTso wdHwWitStart) (kapTso mD) :=
+    kap_union_muldiv_tso _ _ _ _ hwD
+  exact ⟨⟨mI, hwI, hrI⟩, ⟨mA, hwA, hrA⟩, ⟨mD, hwD, hrD⟩,
+    isaFam_weiterleitung, isaFam_fremd_alt,
+    isaFam_spuelung_aendert_speicher, hwAddrWit_weiterleitung,
+    hwAddrWit_fremd_alt, hwAddrWit_spuelung⟩
+
+/- CUTS:
+    Proved here, over the reused accepted vocabulary only (every
+    definition lifted, never redefined):
+    - ISA tag (`kap_isa_tso_klass`, `kap_isa_tso`): register steps are
+      silent (only core data moves, `kapTso_setKernVonZustand`), loads
+      observe with forwarding (`loadByte`, observed and demanded values
+      named), stores are single `issueByte` events with the footprint
+      (core, address, value) named.
+    - Muldiv tag (`kap_muldiv_tso_still`, `kap_muldiv_tso`): every step
+      is silent (a success re-embeds core data only; the divide trap and
+      refusals admit no successor). The footprint is the accepted width
+      step itself; memory-freedom is the cited `wdSchritt_speicher`.
+    - Addr tag (`kap_addr_store_issue`, `kap_addr_store_tso`,
+      `kap_addr_load_still`, `kap_addr_tso`): stores are `concIssue`
+      folds of byte issues (`entriesOf`) into the acting core's buffer
+      with the exact footprint from `adrEff` (`hwAddrOf` over the
+      pre-state registers), reaching via `kapTso_concIssue_erreichbar`
+      (the `issueListe` induction); loads are silent forwarding
+      observations (`concLoad` value named, destination merged through
+      the accepted `mergeRegNarrow`). Width cases 1/2/4/8
+      (`kap_addr_breiten`); splits across a group boundary stay the
+      accepted tearing refusal (`kap_addr_tearing`: partial buffers and
+      foreign-footprint overlaps are no `WortGruppe`).
+    - Union lifts `kap_union_isa_tso`, `kap_union_addr_tso`,
+      `kap_union_muldiv_tso` and the joint summary `kap_drei_tso`.
+    - Joint witness `kap_isa_addr_muldiv_zeuge`: one exhibited union
+      step per tag reaches through the projection, beside the two-core
+      non-degeneracy (owner-only forwarding, foreign stale read, drain
+      observably changes shared memory).
+    - `wort`/`stapel` needed nothing here: both are already classified
+      by lane 1295 (`kap_union_wort_tso`, `kap_union_stapel_tso`).
+    NOT proved here, and not claimed:
+    - the remaining 13 union tags (lockRmw, lockFetch, uc, port, fp,
+      fehler, tor, vec, nested, int, system, bild, instanzen) are NOT
+      classified here; they keep lane 1295's FINDING status. No silent
+      TSO bypass was found among the three tags taken here: every one
+      of their memory writes travels the accepted issue path, and
+      register-only forms provably leave the projection unchanged.
+    - no W/GX bridge (target-only reachability); no whole-word
+      atomicity beyond the accepted byte-drain equations and the cited
+      tearing refusals; no source, checker, contract, entry, ABI,
+      loader, budget or liveness claim; no hardware correspondence
+      beyond self-consistency (silicon and timing assumptions live in
+      the family files, not re-checked here; vendor-neutral: no
+      Intel-only or AMD-only behaviour is pinned).
+-/
+
+#print axioms kapTso_setKernVonZustand
+#print axioms kap_isa_tso_klass
+#print axioms kap_isa_tso
+#print axioms kap_muldiv_tso_still
+#print axioms kap_muldiv_tso
+#print axioms kapTso_concIssue_erreichbar
+#print axioms kap_addr_store_issue
+#print axioms kap_addr_store_tso
+#print axioms kap_addr_load_still
+#print axioms kap_addr_tso
+#print axioms kap_addr_breiten
+#print axioms kap_addr_tearing
+#print axioms kap_union_isa_tso
+#print axioms kap_union_addr_tso
+#print axioms kap_union_muldiv_tso
+#print axioms kap_drei_tso
+#print axioms kap_isa_addr_muldiv_zeuge
+
+end Gabbro.Grammatik.X86
