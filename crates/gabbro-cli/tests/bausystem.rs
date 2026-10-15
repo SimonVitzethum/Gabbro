@@ -577,7 +577,7 @@ impl fn entladen() -> u32 effects { pure } costs <= 8 ops { return 0; }
 ///
 /// SIMON'S RULE is *"API calls are always user-made"*, and until this rule the module RUNTIME
 /// was the exception: `laufzeit/kmodul/` called twelve kernel functions no program had
-/// declared (`dokumente/OFFEN.md` O35). They are declarations now
+/// declared (`dokumente/TODO.md` O35). They are declarations now
 /// (`laufzeit/kmodul/bindung.h`) and the program defines them.
 ///
 /// **Why a test and not only the QEMU harness.** The harness measures a `.ko`; a unit whose

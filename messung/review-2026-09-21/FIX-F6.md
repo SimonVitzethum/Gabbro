@@ -83,7 +83,7 @@ says the Rust pass implements the rules. SATZKARTE §43 added (there was no entr
 
 ### 5. Recorded, not done: NUL and the upper limit on `max`
 
-`OFFEN.md` O24 and the TODO wave-E row: the representation (length word vs NUL-terminated
+`TODO.md` O24 and the TODO wave-E row: the representation (length word vs NUL-terminated
 `max + 1` bytes, NUL inside data), the missing upper bound on `max` (parsed `u128`),
 literals, strings in aggregates/constants -- all the lowering lane's.
 

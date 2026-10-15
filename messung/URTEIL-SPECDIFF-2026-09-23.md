@@ -269,7 +269,7 @@ where the nine components are pinned. Worth knowing when reading "19/19".
   the `beispiele/59` claim is true (§3.4).
 * NOT CLAIMED, F9: the run-time-spawned thread, with `LG004`, `C185` and O21.
 * Every OFFEN citation in the new header text resolves: **O17, O18 (marked closed by F10), O19
-  (narrowed by F11), O21** all exist in `dokumente/OFFEN.md`.
+  (narrowed by F11), O21** all exist in `dokumente/TODO.md`.
 
 ---
 

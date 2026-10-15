@@ -306,7 +306,7 @@ gap simply moves one level up.
 > > and `gabbro pflichten --lean` over `messung/fragmente/F01.gab` reports
 > > `total 17 goals 17 refused 0`. The correspondence table
 > > (`programmlogik/gabbrov/KORRESPONDENZ.md`) carries the row as green and
-> > names the residual shape condition; `OFFEN.md` `O6` carries the cost
+> > names the residual shape condition; `TODO.md` `O6` carries the cost
 > > question the unrolling still poses. What §7.2 ordered as channel work
 > > is done from the Lean side; what stays is the solver-side tractability,
 > > which no channel work decides.

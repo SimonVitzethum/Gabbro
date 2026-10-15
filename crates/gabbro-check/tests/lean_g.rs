@@ -245,7 +245,7 @@ fn refuses_tagged_and_linear_types() {
 
 /// **No item kind leaves through a catch-all.** Every refusal names the item
 /// (where the kind has a name) and says what the specification would carry it
-/// as -- the defect `N320` and `OFFEN.md` O14 were written for.
+/// as -- the defect `N320` and `TODO.md` O14 were written for.
 #[test]
 fn every_item_kind_refuses_with_a_reason() {
     for (zeile, wort, grund) in [

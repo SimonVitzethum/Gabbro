@@ -1887,7 +1887,7 @@ const ARENA_FELD: &str = "wert";
 const ARENA_ZAEHL: &str = "_used";
 
 /// **`arena A capacity lo .. hi of T` as the pair `ArenaZucker.lean` names**
-/// (`dokumente/OFFEN.md` O14): a table `A` of `count = hi` with one field
+/// (`dokumente/TODO.md` O14): a table `A` of `count = hi` with one field
 /// `wert : T`, and a global `A_used : int 0 hi` starting at zero -- literally
 /// what the emitter writes (`A_arena_speicher.buf[hi]` beside a `used`
 /// counter).
@@ -4632,7 +4632,7 @@ fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[
             "`alloc {aname}` in {fname} carries no `else`, and this exporter will not invent one: \
              `Block.arenaAlloc` always carries a full-arena branch, the emitted C carries none, \
              and what makes the branch dead is the checker's static count `N212`, which does not \
-             travel into the term -- see OFFEN.md O14")));
+             travel into the term -- see TODO.md O14")));
     };
     if !ctx.cf.writes.contains(&ti) || !ctx.cf.gwrites.contains(&gi) {
         return Err(refuse("LG004", format!(

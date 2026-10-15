@@ -601,7 +601,7 @@ lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
 
 # -- 1b. The example: bounded strings -------------------------------------------------
 #
-#    Expected (lane 261, OFFEN.md O24):
+#    Expected (lane 261, TODO.md O24):
 #      2        -- `baue` delivers `"hi"`: two bytes
 #      104 105  -- `h`, `i`
 #      2        -- `kopiere` into `string max 16` keeps the length
@@ -1392,7 +1392,7 @@ fi
 # Die benannten Streichungen, eine je Zeile -- jede mit ihrem Grund im Kopf von F01.gab.
 # 2026-09-26 (lane 266, OFFEN O4): the unguarded `cdt_wohlgeformt` body and `unlink`'s
 # `maintains` left for the guarded form and the new home (the reason stands in the
-# file's head and in OFFEN.md O4; the solver evidence in messung/gabbrov/L05d-L05i).
+# file's head and in TODO.md O4; the solver evidence in messung/gabbrov/L05d-L05i).
 cat > "$ARB/f1-gestrichen" <<'F1_WEG'
     costs     <= 16452480 ops
         delete_leaf(c, o, a, rf, victim);
@@ -2598,7 +2598,7 @@ lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
 # commit, and the stub is what makes that answer executable: under the
 # default heuristic the hosted commit practically never refuses (the OOM
 # killer fires at first touch instead -- the honest note in the prelude and
-# in `OFFEN.md` O20), and a past-`max` request is the fail-stop, never the
+# in `TODO.md` O20), and a past-`max` request is the fail-stop, never the
 # branch (`N426` holds admitted grows below it).
 #
 # The runtime sources are copied beside the drivers: the treiber compiles as

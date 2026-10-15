@@ -267,7 +267,7 @@ KNOWN_UNCOVERED = {
     # `bsem_bindCall`, `scorr_assignSlotParam` and `scorr_axiomCall`. Measured on the day
     # they were separated: 19 occurrences in 15 programs left state (i) for state (iii),
     # and 2 more moved from `stmt:bind-call-foreign` into `stmt:bind-aggregate`.
-    # The absence is ONE absence at four destinations, and it is named in `OFFEN.md` O16.
+    # The absence is ONE absence at four destinations, and it is named in `TODO.md` O16.
     "stmt:return-aggregate": ("2026-09-15", "`GRow.ret` carries an `Option (CTy x CX)` and "
                               "`CTy` is `int | ptr` (CSpeicher.lean 1): a struct returned by "
                               "value has no row, and no ABI in the model to have one by"),

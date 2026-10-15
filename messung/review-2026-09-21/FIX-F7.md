@@ -144,7 +144,7 @@ Code commit: `17af4282` (all code, examples, gifts, docs); this report is the co
   follow from the callee promises. It stays open.
 - Lane 204 measured that such a refusal would fall on `119`, a false positive. With the F7
   analysis the corpus rows are the same (119 UNPROVED), so that measurement stands.
-- Recorded in `OFFEN.md` O12 and `TODO.md`.
+- Recorded in `TODO.md` O12 and `TODO.md`.
 
 ## Measured results
 

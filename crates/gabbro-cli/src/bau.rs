@@ -1228,7 +1228,7 @@ struct BindungsZeile {
 ///
 /// SIMON'S RULE: *"API calls are always user-made"* -- and until this rule existed the module
 /// RUNTIME was the exception. `laufzeit/kmodul/` called twelve kernel functions no program had
-/// declared (`dokumente/OFFEN.md` O35, measured by the stage `symbole_pruefe` of
+/// declared (`dokumente/TODO.md` O35, measured by the stage `symbole_pruefe` of
 /// `instrumente/pruefe-kernelmodul.sh`). They are declarations now
 /// (the generated driver's prototypes since the C-free lane's C2) and the PROGRAM defines them --
 /// `bibliothek/linux-kmod/linux-kmod.gab` plus its `.c` is the binding a program may take off

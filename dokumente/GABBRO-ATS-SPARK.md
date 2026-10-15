@@ -90,8 +90,8 @@ of lemmas can be shared.
   (assumption A4) moving into the language. Pools are covered by the goal
   theorem since fix lane F10 (2026-09-22, OFFEN O18 closed). **Not covered
   by the goal theorem:** per-core writes admitted by the checker
-  (`OFFEN.md` O17, narrowed to the O25 payload rule), same-core interrupt
-  preemption (`OFFEN.md` O19), and DMA, which is
+  (`TODO.md` O17, narrowed to the O25 payload rule), same-core interrupt
+  preemption (`TODO.md` O19), and DMA, which is
   a checked address space in the language but has no leg in `Zielsatz/`.
 - **SPARK does Ravenscar**: a restricted deterministic tasking profile
   (fixed tasks, protected objects with ceiling locking, no dynamic
@@ -153,6 +153,6 @@ read.
   multicore plus DMA, time as a first-class bound, refusals instead of
   timeouts, and a per-program certificate a second tool checks (the
   target; three programs today) — with
-  the price stated up front (README §5, `OFFEN.md`, and §8 above):
+  the price stated up front (README §5, `TODO.md`, and §8 above):
   the chain is built program by program, and what is not yet carried is
   refused by name rather than promised.

@@ -282,7 +282,7 @@ field privacy; `opaque` is the stronger instrument and the pass did not reach it
 
 *Verified before it was repaired:* each of the five sites of `messung/proben/probe-opak-am-feld.gab`
 was run in its OWN file, and the three that were silent were silent alone too — so it was the
-rule's reach and not one refusal masking another. Booked at `dokumente/OFFEN.md` `O7` and
+rule's reach and not one refusal masking another. Booked at `dokumente/TODO.md` `O7` and
 `messung/FUENFTE-MARKE.md` §3; probes `beispiele/gift/669` and `670`.
 
 ## The second tooth, and how it measures

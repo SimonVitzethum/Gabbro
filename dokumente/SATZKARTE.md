@@ -3192,7 +3192,7 @@ parser: in Lean 4.33 `String.toList` goes through the array representation, and 
 FIRST character of one 1419-byte string literal costs **33,7 GB / 217 s**. Splitting the
 literal into 45 short ones joined by `++` does not help (`String.append` goes through the
 array too); the SAME text as a `List Char` built from 45 short `"…".toList` pieces costs
-**3,3 GB**. The pins are lists of lines for that reason, and `dokumente/OFFEN.md` O13 has
+**3,3 GB**. The pins are lists of lines for that reason, and `dokumente/TODO.md` O13 has
 the rest of the measurement -- the same `String.toList` stood in the Gabbro-side pins.
 
 **A second pathology was reported here and is WITHDRAWN** (O13 lane, 2026-09-15): "a MUTUAL
@@ -3418,7 +3418,7 @@ interleaving of them is SC remains the named premise `DRFSC`.
 
 *Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/Bausteine/Arena/ArenaZucker.lean` (new), imported by
 `Grammatik.lean`. Rust: `crates/gabbro-check/src/lean_g.rs` (the arena refusal by name).
-Report: `messung/muse/OPUS-BERICHT-ALLOC.md`. Ledger: `dokumente/OFFEN.md` O14.*
+Report: `messung/muse/OPUS-BERICHT-ALLOC.md`. Ledger: `dokumente/TODO.md` O14.*
 
 **The finding** (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md` §2.2/§5.3): `let i = alloc A (v)
 [else …];` and `reset A;` are accepted with zero diagnostics, emit C, that C compiles -- and
@@ -3535,7 +3535,7 @@ untouched, and the chain count is unchanged at **2 of 113** (`zaehle-kette.py --
 
 > *The 60 was measured with a guardian that classified a C statement by its TEXT and booked an
 > aggregate value under a scalar lemma; it reads 55 since the repair of 2026-09-15
-> (`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10, `OFFEN.md` `O16`). **The chain count is
+> (`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10, `TODO.md` `O16`). **The chain count is
 > unchanged** -- the two closed chains carry no aggregate.*
 
 | clause | text | proved by |
@@ -3979,7 +3979,7 @@ across calls and parameters). **Runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena
   through a premise its witness discharged without the run) were removed, not renamed.
 - Nothing links `DynArena` to the Rust accounting or to the C by proof: the checker's per-path
   upper bound and `dynGrowListe`'s sum agree by reading. The run model the checker assumes
-  (call-graph roots entered once per load) is not stated in `Spec.lean` (`OFFEN.md` O20).
+  (call-graph roots entered once per load) is not stated in `Spec.lean` (`TODO.md` O20).
 - The PLAN §9 work (`DynForm`, the four Block-form theorems, the simulation) and the two
   `Spec.lean` (d) assumption texts do not exist (review G08 F5; `TODO.md` wave D note).
 - `ArenaReset.lean`'s "no handle outlives a reset" holds in the sugar only; in the surface
@@ -4012,7 +4012,7 @@ argument. No run-level theorem says that a run whose gate calls all meet their p
 is the same run under the two oracles; no exporter builds `AxPre` from a gate's `requires`;
 a result-less gate has no raw word outside its type, so the bridge does not reach it; and the
 fixture's preconditions (a terminator slot, the handed-out descriptor) are analogs of
-`path_nul_terminated` and `len <= lenof(buf)`, not those clauses (`OFFEN.md` O23).
+`path_nul_terminated` and `len <= lenof(buf)`, not those clauses (`TODO.md` O23).
 
 **Axioms:** `propext`, `Quot.sound` (section 9); `#print axioms gabbro_ziel` unchanged.
 
@@ -4036,7 +4036,7 @@ theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Rust:**
 **What is NOT claimed.** No theorem says the Rust pass implements these rules: the link is
 the gifts and the test pins, not a proof. The model has no representation (no NUL, no length
 word), no literal surface, no strings in aggregates, and no upper limit on `max`
-(`OFFEN.md` O24). No string program reaches C or Lean export (`C001`).
+(`TODO.md` O24). No string program reaches C or Lean export (`C001`).
 
 **Axioms:** at most `propext` (`vergl_refl` also `Classical.choice`, `Quot.sound`); the file
 no longer imports `ReferenzB`. `#print axioms gabbro_ziel` unchanged.

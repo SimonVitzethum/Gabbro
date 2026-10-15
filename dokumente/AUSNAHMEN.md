@@ -38,7 +38,7 @@ state it was already in — and GabbroV writes it back that way.
 **Four rows, one cause.** They are not four separate gaps; they are one missing means seen
 four times.
 
-> **2026-09-26 (Opus agent G, `dokumente/OFFEN.md` O1, `messung/OPUS-G-O1.md`): the rows stay,
+> **2026-09-26 (Opus agent G, `dokumente/TODO.md` O1, `messung/OPUS-G-O1.md`): the rows stay,
 > and their scope is now named.** They are exceptions of GabbroV's fragment over `Body.lean`'s
 > big-step `exec`, and that is unchanged. The GOAL theorem does not stand on `exec`: its runs
 > are machine G's, small-step with a per-thread call log, and there all four are statable --

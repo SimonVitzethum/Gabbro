@@ -2,7 +2,7 @@
 """**What may §15's ratchet be keyed on? -- measured, not argued.**
 
 `SPRACHE.md` §15 says *"The ratchet runs over names; exchange is visible."* The second
-half does not follow from the first. `OFFEN.md` `O3` measured the counter-example: swap
+half does not follow from the first. `TODO.md` `O3` measured the counter-example: swap
 two `ensures` conjuncts and the manifest's **name, class, anchor and state** are all
 unchanged, and only the text column moves. A ratchet over names would carry `closed`
 from the old obligation to the new one without a word.
@@ -409,7 +409,7 @@ def lauf():
     if stoss or leer:
         print(f"RATSCHENSCHLUESSEL GEFALLEN: {stoss} duplicate triple(s), {leer} without a text.")
         print("  Then (name, class, text) is no longer a key, and the recommendation in")
-        print("  `OFFEN.md` `O3` needs its last resort: the anchor.")
+        print("  `TODO.md` `O3` needs its last resort: the anchor.")
         return 1
     if p or a:
         print(f"RATSCHENSCHLUESSEL GEFALLEN: {p} price case(s) and {a} anchor case against")

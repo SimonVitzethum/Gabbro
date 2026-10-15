@@ -297,7 +297,7 @@ def scanC : List Char → Nat → Option (List CTok)
     `List Char`, built from 45 short `"…".toList` pieces, lexes and gets
     counted in **3,3 GB / 20 s** -- a factor of 13 in memory. The whole
     measurement is in `messung/muse/OPUS-BERICHT-CPARSER.md`; it is the
-    same wall `dokumente/OFFEN.md` O13 ran into. -/
+    same wall `dokumente/TODO.md` O13 ran into. -/
 def lexC (cs : List Char) : Option (List CTok) :=
   scanC cs (cs.length + 1)
 

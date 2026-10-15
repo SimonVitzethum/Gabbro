@@ -431,7 +431,7 @@ fn erhaltene(baum: &Programm) -> std::collections::BTreeSet<String> {
 /// `maintains baum_wohlgeformt` and `refines g` name a statement instead of making one, and
 /// the statement is the body of the `spec fn` they name. **A manifest line that prints the
 /// name has printed a pointer, not an obligation** -- which is the same complaint
-/// `OFFEN.md` `O3` makes about the ordinal, one clause over.
+/// `TODO.md` `O3` makes about the ordinal, one clause over.
 ///
 /// *This is a LOOKUP and not a computation.* It resolves nothing the source does not already
 /// say in one place, it crosses no unit boundary, and where the name resolves to nothing the
@@ -930,7 +930,7 @@ fn lauf(
                         art: if rumpf_da { Art::Nachbedingung } else { Art::Fremdpflicht },
                         funktion: f.name.text.clone(),
                         gegenstand: format!("ensures #{}", n + 1),
-                        // **The ordinal's cure, and it was a DROPPED FIELD** (`OFFEN.md`
+                        // **The ordinal's cure, and it was a DROPPED FIELD** (`TODO.md`
                         // `O3`, 2026-09-03). Swap two `ensures` conjuncts and the register
                         // was byte-identical apart from the file name; the same binary in
                         // the same run already prints the terms apart under `--lean`. Here
@@ -1226,7 +1226,7 @@ fn lauf(
 /// obligation revoke.functional  "ensures !exists k in descendants of s: k.used"  offen
 /// ```
 ///
-/// Fassung 1 carried the name alone, and `OFFEN.md` `O3` measured what that is worth: swap
+/// Fassung 1 carried the name alone, and `TODO.md` `O3` measured what that is worth: swap
 /// the first and third `ensures` conjunct of `beispiele/01-tabelle.gab` and the two registers
 /// are byte-identical apart from the file name in the header. **`ensures #1` named one thing
 /// before the swap and another after, and nothing reported the change.**

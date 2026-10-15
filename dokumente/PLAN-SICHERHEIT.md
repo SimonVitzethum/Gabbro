@@ -223,7 +223,7 @@ call cycle without `decreases` — the theorem must refuse it, not assume it.
 > **S2 status 2026-09-10: PROVED** (`programmlogik/Gabbro/KompositionBeweis.lean`: `umgebung_ok_of_runs`, `umgebung_ok_of_runs_azyklisch`, `umgebung_ok_of_vertrag`, `vertrag_zyklus_of_pflichten`, `schleifen_ok_of_runsloop`; standard axioms, programmlogik green). The condition above is met: `UmgebungOK` and `SchleifenOK` are theorems over `Runs`/`RunsLoop`, stated once over a program with a body table; cycles carry `decreases` for the well-founded induction.
 
 **S3 — Make the two silent classes FAULTS.** *Build, in `Body.lean` — coordinated, the
-Isabelle proofs rest on the big-step shape (`OFFEN.md` O1).* Finding 1: add an outcome
+Isabelle proofs rest on the big-step shape (`TODO.md` O1).* Finding 1: add an outcome
 that the semantics reaches when an index leaves `0 ..< count c` or a store leaves a
 declared width — the plumbing table of `BEWEIS.md`:32 as an enumeration
 `Fehlerklasse := index | ueberlauf | nenner | gestalt | …`, and `Outcome.fehler k`.

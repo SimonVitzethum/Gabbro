@@ -599,7 +599,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         // routine: a hardware dispatch target (`entry … dispatch f`) any
         // number of times (every interrupt, every system call); a body a
         // `concurrent` set names, once per naming (a pool names it twice,
-        // `OFFEN.md` O18); a root of the call graph once per load.
+        // `TODO.md` O18); a root of the call graph once per load.
         let mut einsprung: HashSet<String> = HashSet::new();
         let mut genannt: HashMap<String, u64> = HashMap::new();
         crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {

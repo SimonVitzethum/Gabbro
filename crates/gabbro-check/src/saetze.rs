@@ -5470,7 +5470,7 @@ pub const PHASEN: &[Satz] = &[
                       `arena_reset_start_leser_n521`, \
                       `arena_reset_kind_bewacht_n521`).",
         fundstelle: "crates/gabbro-check/src/arena_faden.rs (`N521`, the \
-                     thread pairs, the calls-only closure); dokumente/OFFEN.md O20",
+                     thread pairs, the calls-only closure); dokumente/TODO.md O20",
     },
     Satz {
         name: "arena.zaehler_ohne_sperre",
@@ -5515,7 +5515,7 @@ pub const PHASEN: &[Satz] = &[
                       the disjoint arenas, the declared line).",
         fundstelle: "crates/gabbro-check/src/arena_faden.rs (`N522`, the \
                      guard proof); laufzeit/arena_dyn.h (the plain words); \
-                     dokumente/OFFEN.md O20",
+                     dokumente/TODO.md O20",
     },
     Satz {
         name: "bootsatz.schichten",

@@ -324,7 +324,7 @@ one free slot falsifies it, and `release_slot` leaves exactly one behind. Sharpe
 `maintains cdt_wohlgeformt` **four lines away in one signature**. A blind second encoding
 confirmed both and measured the obvious repair: a `used` guard makes the invariant
 satisfiable and **leaves `L05` refuted**, because `unlink` requires `used` and does not clear
-it. Booked as `dokumente/OFFEN.md` O4.
+it. Booked as `dokumente/TODO.md` O4.
 
 > **No Gabbro pass sees any of it, and the Durchstich does not either.** A Durchstich measures
 > what the C computes, not what the promise claims. *The two sentences stand side by side so

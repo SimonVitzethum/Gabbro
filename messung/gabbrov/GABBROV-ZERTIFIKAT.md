@@ -48,7 +48,7 @@ nothing about any program.
 **The shape of the 29 is not one gap.** 24 quantify over a table domain
 (the commonest form among the 66 — `allD` over `slots of T`); 5 need
 bounded reachability, whose unrolling is finite but not tractable at the
-corpus bounds (`OFFEN.md` `O6`: answers at 21, silence at 20); 3 need
+corpus bounds (`TODO.md` `O6`: answers at 21, silence at 20); 3 need
 folds that are not yet fragment constructs. A certificate story for the
 second and third classes is different work from the first.
 

@@ -11,7 +11,7 @@ guardian that holds both lists against each other:*
 *Two directions, two hardnesses (§7): Lean-can-Gabbro-cannot is **red** —
 a failure, the fragment is taken back or the Gabbro side is built first.
 Gabbro-can-Lean-cannot is **yellow** — the obligation ends undecided and
-stands in `OFFEN.md` by name. Red must be empty and stay empty; what keeps
+stands in `TODO.md` by name. Red must be empty and stay empty; what keeps
 it empty is the order, not luck: demands get a table row only when the
 Gabbro side lands first (§7.3).*
 
@@ -54,7 +54,7 @@ above), so no yellow row stands. The residual shape condition is not a
 row: outside the fitting shape — ends that do not resolve to slots of
 one counted table (`lean.rs:1108`, `slot_index`) — the channel still
 refuses with `LeanReason::Quantified` (`lean.rs:339`). No population row
-ends there; should one appear, it becomes yellow with an `OFFEN.md`
+ends there; should one appear, it becomes yellow with an `TODO.md`
 entry, and the guardian demands the entry.*
 
 ## Demands — not rows, and that is the mechanism
@@ -69,7 +69,7 @@ Gabbro side lands first; that order is what keeps red empty:*
 |---|---|---|
 | `LEAN countD` | `GABBRO count` | `DEMAND` — `count` is a reserved word (`kw.rs:265`) with no `pred`/`expr` production; §7.3 builds the Gabbro side first, no new source word |
 | `LEAN firstD` | `GABBRO traverse` | `DEMAND` — «B10»: `traverse` yields no value and knows no `break`; a different loop form, booked not built |
-| `LEAN reachesIn` | `GABBRO Erreicht` | `GREEN` — carried for the population (row above); the unrolling-vs-closure cost question stands in `OFFEN.md` (`O6`) |
+| `LEAN reachesIn` | `GABBRO Erreicht` | `GREEN` — carried for the population (row above); the unrolling-vs-closure cost question stands in `TODO.md` (`O6`) |
 
 *The guardian checks this section too: every `DEMAND` name on the
 Lean side resolves in `V1.lean`, every one on the Gabbro side in the

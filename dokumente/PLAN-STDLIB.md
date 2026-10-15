@@ -84,7 +84,7 @@ Three routes, and this is decided by measurement before anything is built:
 * **(c) a type parameter in the language** — the largest change, and it touches the model:
   `Ty` is deliberately non-recursive, and a parametrised table is a new shape in every pass and
   in `Akzeptiert`. **The product-former lane refused exactly this kind of change on measurement
-  (`OFFEN.md` O15), and the same rule applies here: it must pay for itself in programs.**
+  (`TODO.md` O15), and the same rule applies here: it must pay for itself in programs.**
 
 ---
 

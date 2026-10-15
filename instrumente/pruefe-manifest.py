@@ -94,7 +94,7 @@ FASSUNGEN = (1, 2)
 FASSUNGSZEILE = re.compile(r"^-- manifest-version (\d+)$")
 KOPFZEILE = re.compile(r"^== (\d+) obligations: ")
 # **Format 1 -- the entry line carries a name and nothing else.** Five spaces, then
-# `<function> :: <subject>`. The ordinal in the subject is exactly the defect `OFFEN.md` `O3`
+# `<function> :: <subject>`. The ordinal in the subject is exactly the defect `TODO.md` `O3`
 # names: swap two `ensures` conjuncts and the two manifests are byte-identical.
 ZEILE_V1 = re.compile(r"^ {5}(\S.*?) :: (\S.*)$")
 # **Format 2 -- the record `SPRACHE.md` §15 sketched**, tab-separated after the keyword:

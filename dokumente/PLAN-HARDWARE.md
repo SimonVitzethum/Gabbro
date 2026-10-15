@@ -2253,7 +2253,7 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
       | | was es ist | wo es gebucht ist |
       |---|---|---|
       | ~~**C1**~~ | ~~die Eigentumsübergabe (`reclaim`, `reclaim_unproven`, der Typestate)~~ | **geschlossen 2026-09-03** bei `7455b0f`, `beispiele/66-transport-rueckgabe.gab` — und **nachgemessen** in `FUENFTE-MARKE.md` §6, wo die Fähigkeit steht und das Belegstück ausgetauscht wird |
-      | ~~**C2**~~ | ~~die zwei Achsen eines DMA-Puffers bleiben getrennt~~ | **geschlossen 2026-09-03** — `N030` liest das Feld und das Schreiben hinein (`FUENFTE-MARKE.md` §3, `OFFEN.md` `O7`) |
+      | ~~**C2**~~ | ~~die zwei Achsen eines DMA-Puffers bleiben getrennt~~ | **geschlossen 2026-09-03** — `N030` liest das Feld und das Schreiben hinein (`FUENFTE-MARKE.md` §3, `TODO.md` `O7`) |
 
       > **Und `C1` hat den Nachlauf nur zur Hälfte überstanden — die Fähigkeit ja, die Probe
       > nicht.** `beispiele/66` trägt die Übergabe als linearen GEISTERmarker neben dem
@@ -2320,7 +2320,7 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
 
       * ein `tagged type`-Wert hat **keinen Erzeuger** — fünfzehn Deklarationen in neun
         Korpusdateien, alle nur zerlegt, keine gebaut, weil es keine Schreibung gibt.
-        «B9» ein drittes Mal; gebucht als `OFFEN.md` `O8`;
+        «B9» ein drittes Mal; gebucht als `TODO.md` `O8`;
       * `leave`/`next` an einer `retry`-Marke **prüft und senkt nicht ab**
         (der einzige `schleifen.push` der Datei steht im `forever`-Schreiber; Zeile 7821 am 2026-09-03 -- die ZAHL ist das Haltbare, nicht die Zeile);
       * `let x = f() else (e)` mit einem VERBUND senkt zu `x->feld` über einen Wert ab, den
@@ -2333,7 +2333,7 @@ kleiner, indem mehr in Gabbro geschrieben wird.*
         gibt **keine** Gabbro-Schreibung, die stattdessen einen Cast erzeugt (drei gemessen).
         *Der Korpus enthielt schlicht nie ein Programm, das über einen bewiesenen Bereich
         verengt* — ein 64-Bit-Merkmalswort durch ein 32-Bit-Register ist das erste. Gebucht
-        als `OFFEN.md` `O9`, die Marke steht mit benanntem Ausstieg auf 67/32.
+        als `TODO.md` `O9`, die Marke steht mit benanntem Ausstieg auf 67/32.
 
       *Die letzten drei liegen in `emit.rs`, das eine andere Bahn führt: **gemeldet, nicht
       repariert**.*
@@ -2722,7 +2722,7 @@ Ziel.*
       > Tabelle und verbietet damit einen freien Platz, während `release_slot` genau einen
       > zurücklässt — und `unlink`s `ensures … parent == None` widerspricht seinem eigenen
       > `maintains cdt_wohlgeformt` vier Zeilen weiter. Kein Pass sieht das; ein Löser fand es
-      > in 20 ms (`OFFEN.md` O4). *Ein Durchstich misst, was das C rechnet, nicht was die
+      > in 20 ms (`TODO.md` O4). *Ein Durchstich misst, was das C rechnet, nicht was die
       > Zusage behauptet* — und die zwei Sätze stehen nebeneinander, damit niemand den ersten
       > für den zweiten hält.
 

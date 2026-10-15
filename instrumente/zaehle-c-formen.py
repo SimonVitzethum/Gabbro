@@ -211,7 +211,7 @@ W = pathlib.Path(__file__).resolve().parent.parent
 #
 # **The exit is named, and it is the same shape as `D1`'s:** the mark falls back to 66/31 the
 # day the emitter writes the cast that M1 has already justified. Until then this number is on
-# loan from an open defect (`dokumente/OFFEN.md` `O9`). *Whoever finds it red again should fix
+# loan from an open defect (`dokumente/TODO.md` `O9`). *Whoever finds it red again should fix
 # the emitter, not the number.* It stands here and not in the probe because `emit.rs` belongs
 # to another lane -- the measurement is this lane's, the repair is not.
 #

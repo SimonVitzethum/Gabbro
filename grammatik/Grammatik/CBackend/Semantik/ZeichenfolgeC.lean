@@ -3,7 +3,7 @@
   Subject:   Bounded strings in C: the emitted layout and its correspondence.
 
   Lane 261 lowers `string max N` to `gabbro_string_N` -- one length word
-  plus N bytes, no NUL terminator (`OFFEN.md` O24, `emit.rs`
+  plus N bytes, no NUL terminator (`TODO.md` O24, `emit.rs`
   `ketten_abschnitt`). This file is the layout's value model beside
   `ZeichenfolgeGebunden.lean`'s `BString`: a `CString max` carries the full
   N-byte buffer with the length word beside it, and every emitted operation

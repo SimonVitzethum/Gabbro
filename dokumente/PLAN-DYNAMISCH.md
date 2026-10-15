@@ -292,7 +292,7 @@ _Static_assert(64 <= UINT32_MAX, "ceiling namable");
   immediate (§8). `grow` lowering: `if (gabbro_arena_grow(&desc, n)) { } else { <else> }`
   in the same brace shape as the checked `alloc`. `reset` lowering: unchanged
   (`used = 0`), plus a comment-level pointer to this plan for why `committed` does not
-  move. Bare `alloc` without `else` (the `OFFEN.md` O14 shape (1)): unchanged policy —
+  move. Bare `alloc` without `else` (the `TODO.md` O14 shape (1)): unchanged policy —
   closing it needs a decision about the emitted C, and that decision is still open;
   dynamic arenas inherit it, they do not fix it.
 - Ghost material: the Lean-only fields of §9 (`committed` proofs, generation indices)
@@ -375,7 +375,7 @@ proves). It extends `ArenaZucker.lean`, it does not modify it:
 
 ## 10. Builder lanes 240–244: exact inputs
 
-Common to all five: read this plan, `dokumente/SYNTAX.md` §9.1, `dokumente/OFFEN.md`
+Common to all five: read this plan, `dokumente/SYNTAX.md` §9.1, `dokumente/TODO.md`
 O14, `crates/gabbro-check/src/arena.rs` (module head + `N210`–`N214`), `grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`
 (header + §4), `crates/gabbro-check/src/emit.rs` `fn arena` + the `Alloc`/`ResetArena`
 lowering arms, and `crates/gabbro-check/src/kosten.rs` (the `Alloc`/`ResetArena` arms).

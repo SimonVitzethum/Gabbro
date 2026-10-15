@@ -795,7 +795,7 @@ def gabbrov(zusatz=None, tafelprobe=None, still=False):
 # This mode holds both lists against each other, in the same shape as
 # `pruefe-grammatiktafel.py`: every name has to occur where its side says
 # it lives, RED has to be empty (section 9 stop-list: a red row is a
-# failure, not a state), and every YELLOW row has to name its `OFFEN.md`
+# failure, not a state), and every YELLOW row has to name its `TODO.md`
 # entry. A row that names nothing is not a correspondence.
 #
 # Row form, both in the row section and in the demands section:
@@ -852,7 +852,7 @@ def korrespondenz(tafelprobe=None, still=False):
         text = text.replace(tafelprobe[0], tafelprobe[1], 1)
     quellen = _korrespondenz_texte()
     offen = (Path(__file__).resolve().parent.parent / "dokumente"
-             / "OFFEN.md").read_text(encoding="utf-8")
+             / "TODO.md").read_text(encoding="utf-8")
     zeilen = [(m.groups(), z) for z in text.splitlines()
               for m in [KORRESPONDENZ_ZEILE.match(z)] if m]
     if not zeilen:
@@ -869,7 +869,7 @@ def korrespondenz(tafelprobe=None, still=False):
         if urteil == "RED":
             rot.append(lean.strip())
     for (lean, gabbrov, urteil), ganze in zeilen:
-        # **A YELLOW row without a named OFFEN.md entry fails.** The entry
+        # **A YELLOW row without a named TODO.md entry fails.** The entry
         # has to stand in the ROW, not somewhere in the file -- otherwise a
         # new yellow row inherits an old row's entry and the list grows
         # quietly, which is what the named list exists to prevent.
@@ -882,7 +882,7 @@ def korrespondenz(tafelprobe=None, still=False):
               "their sources ==")
         print(f"  rows                                     {len(zeilen):>3}")
         print(f"  RED (must be empty)                      {len(rot):>3}")
-        print(f"  YELLOW without an OFFEN.md entry         {len(gelb_ohne_offen):>3}")
+        print(f"  YELLOW without an TODO.md entry         {len(gelb_ohne_offen):>3}")
         print(f"  names resolving nowhere                  {len(unaufgeloest):>3}")
         for seite, name in unaufgeloest:
             print(f"    {seite:<6} `{name}` resolves nowhere")
@@ -893,7 +893,7 @@ if __name__ == "__main__":
     if "--korrespondenz" in sys.argv:
         # **The speech test, in three directions** (R14): an invented name on
         # either side must fall, an added RED row must fall as red (not as
-        # unresolvable), and a YELLOW row without its OFFEN.md entry must
+        # unresolvable), and a YELLOW row without its TODO.md entry must
         # fall as yellow-without-entry.
         rot0, gelb0, fehl0 = korrespondenz(still=True)
         if rot0 or gelb0 or fehl0:
@@ -920,7 +920,7 @@ if __name__ == "__main__":
             sys.exit(2)
         print("== Sprechprobe: ok (ein erfundener GABBRO-Name faellt) ==")
         # THREE -- an added RED row falls as red, and a YELLOW row without
-        # an OFFEN.md entry falls as entry-less. Both probes reuse the
+        # an TODO.md entry falls as entry-less. Both probes reuse the
         # first GREEN row so the names stay resolvable and only the verdict
         # (respectively the entry) moves.
         r3, _, _ = korrespondenz(
@@ -931,14 +931,14 @@ if __name__ == "__main__":
                   "dann meldet dieser Modus kein Rot.", file=sys.stderr)
             sys.exit(2)
         print("== Sprechprobe: ok (eine rote Zeile faellt als ROT) ==")
-        # FOUR -- a YELLOW row without an OFFEN.md entry falls as
+        # FOUR -- a YELLOW row without an TODO.md entry falls as
         # entry-less. The table carries no yellow row today, so the probe
         # lends one its verdict; the names stay resolvable.
         _, g4, _ = korrespondenz(
             tafelprobe=("`GREEN` | `lean.rs:1305`", "`YELLOW` | `lean.rs:1305`"),
             still=True)
         if not g4:
-            print("SPRECHPROBE GESCHEITERT: eine gelbe Zeile ohne OFFEN.md-"
+            print("SPRECHPROBE GESCHEITERT: eine gelbe Zeile ohne TODO.md-"
                   "Eintrag bleibt STUMM.", file=sys.stderr)
             sys.exit(2)
         print("== Sprechprobe: ok (eine gelbe Zeile ohne Eintrag faellt) ==\n")

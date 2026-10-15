@@ -6859,7 +6859,7 @@ fn atom_refusal(a: &gabbro_syntax::ast::AtomicDecl, u: &Namen) -> &'static str {
     }
 }
 
-/// **Lane 261: the C name of a string max (OFFEN.md O24).**
+/// **Lane 261: the C name of a string max (TODO.md O24).**
 ///
 /// One C type per distinct max. Zero clamps to one spare byte: an empty
 /// literal (`""`) has length 0 but still needs an object to widen FROM
@@ -7033,7 +7033,7 @@ fn kette_seite(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
     }
 }
 
-/// **Lane 261: the string section of the prelude (OFFEN.md O24).**
+/// **Lane 261: the string section of the prelude (TODO.md O24).**
 ///
 /// The layout decision, written once per unit: one `typedef struct {
 /// uint32_t len; uint8_t data[N]; }` per distinct max the emitted C names,
@@ -7103,7 +7103,7 @@ fn ketten_abschnitt(aus: &str, rumpf: &str) -> String {
     }
     typen.extend(verketten.iter());
     let mut s = String::from(
-        "\n/* Bounded strings (lane 261, OFFEN.md O24): one length word plus `max` bytes per\n \
+        "\n/* Bounded strings (lane 261, TODO.md O24): one length word plus `max` bytes per\n \
          \x20  distinct max, no NUL terminator -- the length word governs every read. */\n\
          #include <string.h>\n",
     );
@@ -7222,7 +7222,7 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
         // sentinel is outside the index domain, and no arithmetic reaches it.
         TypExpr::Index { .. } => Some("uint32_t".into()),
         // **Lane 261: a bounded string lowers to its length word plus its
-        // max in bytes, with no NUL terminator** (`OFFEN.md` O24). One C
+        // max in bytes, with no NUL terminator** (`TODO.md` O24). One C
         // type per distinct max: `gabbro_string_N` is `struct { uint32_t
         // len; uint8_t data[N]; }`. Copies fit by construction (`N455`
         // refuses a copy into a shorter max), so every emitted copy is a

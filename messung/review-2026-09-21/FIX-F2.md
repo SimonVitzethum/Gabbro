@@ -70,7 +70,7 @@ Gifts **1136** (the review's `alloc; leere(); alloc; A[a]`), **1137** (parameter
 `arena.erklaerung` updated. Claims corrected to exactly this in `ArenaReset.lean` (header +
 CUTS), `beispiele/154` header (comment only), PLAN-DYNAMISCH §6, SYNTAX §9.1, module head.
 
-**Remaining gap (stated everywhere above, `OFFEN.md` O20):** a `reset` in a routine running
+**Remaining gap (stated everywhere above, `TODO.md` O20):** a `reset` in a routine running
 CONCURRENTLY with the index holder (another `concurrent` root, a `child` path, an interrupt
 handler) is not applied — generations are tracked along one thread of control.
 

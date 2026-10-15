@@ -475,7 +475,7 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   and `storeGlob` have no printer path. That is Rust work; until it is done those arms are
   exercised only by the probes.
 - **The arena stops at the EXPORTER, no longer at the specification** (2026-09-15,
-  `OFFEN.md` O14, `SATZKARTE.md` §33). `alloc`/`reset` had no `Stmt` constructor at all; since
+  `TODO.md` O14, `SATZKARTE.md` §33). `alloc`/`reset` had no `Stmt` constructor at all; since
   `Grammatik/Bausteine/Arena/ArenaZucker.lean` they are sugar over `Block.narrow` + `Stmt.assignSlot` +
   `Stmt.assignGlob` over a table of `count = hi` slots and a `used` global -- the pair the
   emitter itself writes. ~~**What is missing is `lean_g.rs`**, which refuses an arena declaration
@@ -574,7 +574,7 @@ C parser buys no chain today.
 **The cost, and what it says about O13.** Kernel-reducing the parse first cost 44,6 GB, and
 the parser was not the reason: in Lean 4.33 `String.toList` goes through the array
 representation, and forcing the FIRST character of a 1419-byte string LITERAL costs 33,7 GB.
-The same text as a `List Char` of 45 short pieces costs 3,3 GB. `dokumente/OFFEN.md` O13
+The same text as a `List Char` of 45 short pieces costs 3,3 GB. `dokumente/TODO.md` O13
 carries the rest of the measurement, because the Gabbro-side pins lex a `String` the same way.
 
 **O13 is CLOSED since 2026-09-15**, and the Gabbro side's 72 GB turned out to be only partly
@@ -824,7 +824,7 @@ touched sieve (e) only, while sieve (a) binds.
 ### 6.11 Sieve (d) was 60 because the guardian could not see a C TYPE -- it is 55 (2026-09-15)
 
 *Opus lane `aggregat`. Files: `instrumente/pruefe-cformen.py`, `instrumente/zaehle-kette.py`.
-Ledger: `dokumente/OFFEN.md` `O16`. Report: `messung/muse/OPUS-BERICHT-AGGREGAT.md`. No Lean
+Ledger: `dokumente/TODO.md` `O16`. Report: `messung/muse/OPUS-BERICHT-AGGREGAT.md`. No Lean
 and no Rust was touched; `#print axioms gabbro_ziel` and `gabbro_ziel` are untouched by
 construction.*
 

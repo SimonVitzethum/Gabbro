@@ -208,7 +208,7 @@ a generous variant that also skips the array and function-pointer record fields 
 would not close). The booked BEFORE number stands for whoever takes it up later:
 `gabbro obligations` reads **1** obligation on `beispiele/21-verbundwert` (1 precondition,
 open) and **126** over the corpus; nothing was built, so AFTER is the same. Named absence,
-`OFFEN.md` `O15`; the report is `messung/muse/OPUS-BERICHT-PRODUKT.md`. *An extension that
+`TODO.md` `O15`; the report is `messung/muse/OPUS-BERICHT-PRODUKT.md`. *An extension that
 stays in the fragment and pays for nothing has still left the fragment poorer, because the
 re-proof of every leg of `Ziel` is its price.*
 

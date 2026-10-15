@@ -18,7 +18,7 @@ into master, nothing pushed.*
 | Witnesses (`VerbundZeuge.lean`) | **SOUND, non-degenerate** (`vz_huelle_schreibt`), with one caveat (F5) |
 | Replaced NOT CLAIMED line | **true, and now complete** after F1/F2 were added (`cf5829c2`) |
 | Rust `gabbro link`, `N501`–`N505` | **SOUND in what it refuses, OVERCLAIMED in what its green means** — F1: a known false accept for pairs with threads on ONE side. Fixed in text (`cf5829c2`), open in code (OFFEN O28) |
-| Record slip | the branch renumbered Opus D's SATZKARTE reference 53 → 54 in `TODO.md`/`OFFEN.md`; restored (`cf5829c2`) |
+| Record slip | the branch renumbered Opus D's SATZKARTE reference 53 → 54 in `TODO.md`/`TODO.md`; restored (`cf5829c2`) |
 
 **Safe to merge: yes, with `cf5829c2`.** The Lean statement has no gap I could find. The Rust
 tool only ADDS refusals over master (no pass file is touched), so it weakens nothing; the gap in
@@ -136,7 +136,7 @@ placeholders are leaves and owe nothing. Recorded so nobody reads it as a Rust o
 
 ### F4 — LOW: record slip
 
-`TODO.md` and `OFFEN.md` pointed Opus D's invariants at SATZKARTE §54 (Opus E's section);
+`TODO.md` and `TODO.md` pointed Opus D's invariants at SATZKARTE §54 (Opus E's section);
 restored to §53.
 
 ### F5 — INFO: the positive witness is a re-split of an existing fixture

@@ -271,7 +271,7 @@ obligation<TAB>name<TAB>class<TAB>anchor<TAB>state<TAB>obligation text
 
 The kind headings stay above the records, so the three readers that grep them keep working.
 
-**The counter-check `OFFEN.md` `O3` asks for.** Swap the first and third `ensures` conjunct
+**The counter-check `TODO.md` `O3` asks for.** Swap the first and third `ensures` conjunct
 of `beispiele/01-tabelle.gab`, normalise the file name away, and diff:
 
 ```

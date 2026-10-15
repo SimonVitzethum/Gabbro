@@ -25,7 +25,7 @@ Commit: see `git log` (one commit, "Fix lane F5").*
   `oeffnen :: gate_open requires #3  V  path_nul_terminated(path, pathlen)`. **The checker
   does not decide it** (no rule reads a byte's value; not cheap): it is user logic, counted.
   The frame's LENGTH is decided (item 2). It does not enter the goal's hardware assumptions
-  (149 does not export: `LG001`), so `Spec.lean`'s list is unchanged; recorded as `OFFEN.md` O23.
+  (149 does not export: `LG001`), so `Spec.lean`'s list is unchanged; recorded as `TODO.md` O23.
 - **Does the emission check execute the gates?** No. `pruefe-emission.sh` stage 9 only
   compiles (`cc -c`) every emitting file; no stage links or runs 149/150. The runs above are
   this lane's own harness (scratch, read-only opens and a pipe), not part of any guardian.
@@ -138,7 +138,7 @@ both runs gave the numbers above.
 
 ## What stays open
 
-- `OFFEN.md` O23: the NUL path is a named, counted caller obligation, not a checked fact; the
+- `TODO.md` O23: the NUL path is a named, counted caller obligation, not a checked fact; the
   goal's premise (c) still quantifies over every argument (the split and bridge are proved
   beside it, run-level coincidence is not); `N464` does not hold `extern fn` byte buffers
   (`beispiele/64`'s `write`); `lenof` of a pointer is decided only where an array decays.
