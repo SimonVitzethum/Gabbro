@@ -84,6 +84,18 @@ the C emitter's semantics, byte for byte.
 - `erlaubt` (state machine), `nutzlast` (non-empty), `braucht`, invariants:
   checker-side — correctly absent.
 
+## Arenen: Reserve ist Adressraum, Belegung ist RAM (`ArenaDyn.lean`)
+
+Das Modell (`ArenaDyn.lean`) unterscheidet Decke `M` (reserviert, nie implizit
+berührt), Committed-Präfix `c` (`hi <= c <= M`, monoton) und Gebrauchtes; `grow`
+über `M` ist Abweisung, darunter darf die Laufzeit scheitern (OOM ist real —
+das `else` ist des Programms); `reset` lässt Commit stehen. Der Erzeuger folgt
+demselben: drei Wörter (`basis`, `belegt`, `bereit`), Reserve einmalig per
+`mmap(PROT_NONE)` (Adressraum ohne RAM), Commit in 1-MiB-Schritten per
+`mprotect` bei Bedarf, jeder Fehlschlag in den `voll`-Zweig. Gemessen: 1 GiB
+Decke → 24 Byte BSS, `rc=42` korrekt. Die 1-MiB-Schritte überragen den Bedarf —
+unbeobachtbar (keine Introspektion), also verfeinerungstreu.
+
 ## Rekursion ohne Stapel (Endrekursion als Schleife)
 
 Rekursive Rufe liefen als echte Maschinenrufe — Tiefe 512 passt, Tiefe 200.000

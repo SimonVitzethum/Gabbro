@@ -2107,7 +2107,8 @@ fn basis_adresse(
         return Some((format!("{}", gname(&name)), g.typ, g.zeichen, Some(g.form), None, fl));
     }
     if let Some(ai) = k.s.arenen.get(name).cloned() {
-        let gtext = gteil(name, "speicher");
+        // Nur mit Index zu gebrauchen (unten) — nackt weist der Prüfer ab.
+        let gtext = gteil(name, "basis");
         return Some((gtext, LlTyp::Feld(Box::new(ai.elem.clone()), ai.max), Zeichen::Egal, Some(ai.form), None, false));
     }
     if let Some((ll, ord)) = k.s.atomare.get(name).cloned() {
@@ -2146,6 +2147,17 @@ fn feld_nummer(s: &Senke, rekord: &str, feld: &str) -> Option<(usize, TypExpr)> 
 fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
     let (mut ptr, mut ll, mut z, mut form, mut atomar, fluechtig) = basis_adresse(k, &ort.basis.text, ort.span)?;
     let fluechtig = fluechtig || ist_fluechtig(k.s, &form);
+    // Arena-Basis (Elemente liegen hinter der Laufzeit-Basis, nicht im Global).
+    // Nackt ist sie kein Ort — der Prüfer weist das ab; Schweigen wäre ein Loch.
+    if k.s.arenen.contains_key(&ort.basis.text) && ort.suffixe.is_empty() {
+        weigere(k.s, "Y103", ort.span, format!("bare arena {} is not a place", ort.basis.text));
+        return None;
+    }
+    let arena_tisch: Option<String> = if k.s.arenen.contains_key(&ort.basis.text) {
+        Some(ort.basis.text.clone())
+    } else {
+        None
+    };
     // Geräteregister hinter dem Feld (Name, Tiefstbit, Breite merken).
     let mut dev_reg: Option<(String, String)> = None;
     let mut bit: Option<(u32, u32)> = None;
@@ -2332,6 +2344,27 @@ fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
                 // Elementtyp + GEP-Operanden je Träger.
                 match ll.clone() {
                     LlTyp::Feld(e, _) => {
+                        // Arena-Element (Basis aus der Laufzeit — DRITTE sanktionierte
+                        // `inttoptr`-Stelle: die Basis kommt aus eigenem `mmap`).
+                        if let Some(tisch) = arena_tisch.clone() {
+                            let ai = k.s.arenen.get(&tisch).cloned()?;
+                            let b = k.tmp();
+                            k.zeile(&format!("{b} = load i64, ptr {}, align 8", gteil(&tisch, "basis")));
+                            let bp = k.tmp();
+                            k.zeile(&format!("{bp} = inttoptr i64 {b} to ptr"));
+                            let t = k.tmp();
+                            k.zeile(&format!(
+                                "{t} = getelementptr {}, ptr {bp}, {} {}",
+                                ai.elem.text(),
+                                ii.typ.text(),
+                                ii.text
+                            ));
+                            ptr = t.clone();
+                            geladen = Some(t.clone());
+                            form = Some(ai.form.clone());
+                            ll = ai.elem.clone();
+                            continue;
+                        }
                         let t = k.tmp();
                         k.zeile(&format!(
                             "{t} = getelementptr {}, ptr {cur}, i32 0, {} {}",
@@ -4039,11 +4072,11 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
         None => return,
     };
     let gname_tisch = a.tisch.text.clone();
-    let g = gname(&gname_tisch);
     let belegt = gteil(&gname_tisch, "belegt");
     let idx = k.tmp();
     k.zeile(&format!("{idx} = load i64, ptr {belegt}, align 8"));
-    // Volle Arena: `else` oder Falle.
+    // Volle Arena (Zähler an der Schranke): `else` oder Falle — ohne einen
+    // einzigen Systemruf (die Schranke steht, RAM steht nicht dahinter).
     let ok = k.tmp();
     k.zeile(&format!("{ok} = icmp ult i64 {idx}, {}", ai.hi));
     let weiter = k.block("alloc_weiter");
@@ -4067,11 +4100,25 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
     }
     let _ = writeln!(k.text, "{weiter}:");
     k.beendet = false;
-    let speicher = gteil(&gname_tisch, "speicher");
+    // Bedarf bereitstellen (Reserve einmalig, Commit bei Bedarf — `arena_bereit`
+    // läuft bei Erfolg nach `weiter`, bei Speichermangel nach `voll`).
+    let bedarf = k.tmp();
+    k.zeile(&format!("{bedarf} = add i64 {idx}, 1"));
+    let nach_commit = k.block("alloc_commit");
+    // HINWEIS: `arena_bereit` braucht sein eigenes `voll`-Ziel — es teilt sich
+    // den Block mit der Schrankenprüfung oben (beide meinen „kein Platz").
+    if arena_bereit(k, &gname_tisch, &bedarf, &voll, span).is_none() {
+        return;
+    }
+    let _ = nach_commit;
+    let b = k.tmp();
+    k.zeile(&format!("{b} = load i64, ptr {}, align 8", gteil(&gname_tisch, "basis")));
+    let bp = k.tmp();
+    k.zeile(&format!("{bp} = inttoptr i64 {b} to ptr"));
     let zelle = k.tmp();
     k.zeile(&format!(
-        "{zelle} = getelementptr {}, ptr {speicher}, i64 {idx}",
-        LlTyp::Feld(Box::new(ai.elem.clone()), ai.max).text()
+        "{zelle} = getelementptr {}, ptr {bp}, i64 {idx}",
+        ai.elem.text()
     ));
     k.zeile(&format!("store {} {}, ptr {zelle}, align {}", ai.elem.text(), w.text, nat_align(&ai.elem)));
     let neu = k.tmp();
@@ -4091,7 +4138,8 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
 }
 
 fn senke_grow(k: &mut Koerper, g: &GrowStmt, span: Span) {
-    // `grow` bucht weitere Plätze unter der Decke (Zähler plus Prüfung).
+    // `grow` committet wirklich (Reserve/Commit wie `alloc`): Erfolg läuft
+    // weiter, Mangel läuft in `sonst` (Pflicht-Zweig, steht immer).
     if !k.s.arenen.contains_key(&g.tisch.text) {
         weigere(k.s, "Y103", span, format!("commit on unknown arena {}", g.tisch.text));
         return;
@@ -4103,8 +4151,29 @@ fn senke_grow(k: &mut Koerper, g: &GrowStmt, span: Span) {
             return;
         }
     };
-    let _ = mehr;
+    let belegt = gteil(&g.tisch.text, "belegt");
+    let idx = k.tmp();
+    k.zeile(&format!("{idx} = load i64, ptr {belegt}, align 8"));
+    let bedarf = k.tmp();
+    k.zeile(&format!("{bedarf} = add i64 {idx}, {mehr}"));
+    let weiter = k.block("grow_weiter");
+    let voll = k.block("grow_voll");
+    // HINWEIS: `arena_bereit` verzweigt selbst nach `weiter`/`voll` — hier nur
+    // aufrufen, dann den `voll`-Zweig mit `sonst` füllen.
+    if arena_bereit(k, &g.tisch.text, &bedarf, &voll, span).is_none() {
+        return;
+    }
+    k.zeile(&format!("br label %{weiter}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{voll}:");
+    k.beendet = false;
     senke_block(k, &g.sonst);
+    if !k.beendet {
+        k.zeile(&format!("br label %{weiter}"));
+    }
+    k.beendet = true;
+    let _ = writeln!(k.text, "{weiter}:");
+    k.beendet = false;
 }
 
 fn senke_start(k: &mut Koerper, s: &StartStmt, span: Span) {
@@ -5299,17 +5368,13 @@ fn emit_globale(s: &mut Senke) {
         };
         let _ = writeln!(s.rumpf, "@{} = global {} {init}, align {}", escape_name(n), ll.text(), nat_align(ll));
     }
-    // Arenen: Speicher plus Belegt-Zähler.
+    // Arenen: drei Wörter (Basis, belegt, bereit) — KEIN Feld (kein RAM vorab;
+    // Reserve ist Adressraum via `mmap`, Commit via `mprotect`, siehe `arena_bereit`).
     let arenen: Vec<(String, ArenaInfo)> = s.arenen.clone().into_iter().collect();
-    for (n, ai) in &arenen {
-        let speicher = LlTyp::Feld(Box::new(ai.elem.clone()), ai.max);
-        let _ = writeln!(
-            s.rumpf,
-            "{} = global {} zeroinitializer, align 8",
-            gteil(n, "speicher"),
-            speicher.text()
-        );
+    for (n, _) in &arenen {
+        let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "basis"));
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "belegt"));
+        let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "bereit"));
     }
 }
 
@@ -8592,4 +8657,204 @@ fn modul_von_voll(voll: &str) -> String {
         Some(i) => voll[..i].to_string(),
         None => String::new(),
     }
+}
+
+// ===================================================================================
+// Arenen: Reserve (Adressraum) gegen Belegung (RAM) — nichts liegt vorab
+// ===================================================================================
+
+/// Rohe Tor-Nummern der Laufzeit je Ziel (nur der Kern darunter).
+fn laufzeit_tor(s: &Senke, name: &str) -> Option<(i64, &'static str, &'static str)> {
+    match (s.ziel.name, name) {
+        ("x86_64", "mmap") => Some((9, "syscall", "rax")),
+        ("x86_64", "mprotect") => Some((10, "syscall", "rax")),
+        ("aarch64", "mmap") => Some((222, "svc #0", "x0")),
+        ("aarch64", "mprotect") => Some((226, "svc #0", "x0")),
+        _ => None,
+    }
+}
+
+/// Roher Tor-Ruf der Laufzeit (kein Gabbro-Tor — der Erzeuger bucht die Nummern).
+/// Eingaben: (Register, Operand) in ABI-Ordnung; Antwort: i64.
+fn laufzeit_ruf(k: &mut Koerper, name: &str, eingaben: &[(String, String)], span: Span) -> Option<String> {
+    let (nummer, template, ret_reg) = match laufzeit_tor(k.s, name) {
+        Some(x) => x,
+        None => {
+            weigere(k.s, "Y103", span, format!("runtime gate {name} on this target"));
+            return None;
+        }
+    };
+    let mut bind = vec![format!("={{{ret_reg}}}")];
+    let num_reg = if k.s.ziel.name == "x86_64" { "rax" } else { "x8" };
+    bind.push(format!("{{{num_reg}}}"));
+    for (reg, _) in eingaben {
+        bind.push(format!("{{{reg}}}"));
+    }
+    bind.push("~{memory}".to_string());
+    // Clobbers je Ziel (was der Kern zerstören darf).
+    if k.s.ziel.name == "x86_64" {
+        bind.push("~{rcx}".to_string());
+        bind.push("~{r11}".to_string());
+    }
+    let mut ops = vec![format!("i64 {nummer}")];
+    for (_, text) in eingaben {
+        ops.push(format!("i64 {text}"));
+    }
+    let t = k.tmp();
+    k.zeile(&format!(
+        "{t} = call i64 asm sideeffect \"{template}\", \"{}\"({})",
+        bind.join(","),
+        ops.join(", ")
+    ));
+    Some(t)
+}
+
+/// Rohe Antwort fehlgeschlagen? (Kernel antwortet `-errno` in `-4095..-1`.)
+fn ruf_fehlschlag(k: &mut Koerper, roh: &str) -> String {
+    let t = k.tmp();
+    k.zeile(&format!("{t} = icmp uge i64 {roh}, -4095"));
+    t
+}
+
+/// Elementbreite einer Arena (mindestens 1).
+fn arena_breite(ai: &ArenaInfo) -> u64 {
+    groesse_von_ll_direkt(&ai.elem).max(1)
+}
+
+fn groesse_von_ll_direkt(ll: &LlTyp) -> u64 {
+    match ll {
+        LlTyp::Int(w) => (*w as u64).div_ceil(8).max(1),
+        LlTyp::F32 => 4,
+        LlTyp::F64 => 8,
+        LlTyp::Ptr => 8,
+        LlTyp::Void => 1,
+        LlTyp::Feld(e, n) => groesse_von_ll_direkt(e).saturating_mul(*n).max(1),
+        LlTyp::Anon(fs) => fs.iter().map(groesse_von_ll_direkt).sum::<u64>().max(1),
+        LlTyp::Benannt(_) => 8,
+    }
+}
+
+/// Commit-Schritt (1 MiB — Vielfaches von 4K/16K/64K-Seiten auf beiden Zielen).
+const COMMIT_SCHRITT: u64 = 1048576;
+
+/// Stellt bereit: `bereit >= bedarf` Elemente (sonst `voll`). Reserve einmalig
+/// (`PROT_NONE` — Adressraum ohne RAM), Commit per `mprotect` bei Bedarf.
+fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Span) -> Option<()> {
+    let ai = k.s.arenen.get(tisch).cloned()?;
+    let breite = arena_breite(&ai);
+    let basis = gteil(tisch, "basis");
+    let bereit = gteil(tisch, "bereit");
+    // Reserve da? (Basis 0 = keine.)
+    let b = k.tmp();
+    k.zeile(&format!("{b} = load i64, ptr {basis}, align 8"));
+    let hat = k.tmp();
+    k.zeile(&format!("{hat} = icmp ne i64 {b}, 0"));
+    let hat_arm = k.block("arena_hat");
+    let neu_arm = k.block("arena_neu");
+    let weiter = k.block("arena_weiter");
+    k.zeile(&format!("br i1 {hat}, label %{hat_arm}, label %{neu_arm}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{neu_arm}:");
+    k.beendet = false;
+    // Reserve: `max` Elemente Adressraum, ohne Zugriffsrecht (kein RAM).
+    let gesamt = ai.max.saturating_mul(breite);
+    let regs = if k.s.ziel.name == "x86_64" {
+        vec![
+            ("rdi".to_string(), "0".to_string()),
+            ("rsi".to_string(), format!("{gesamt}")),
+            ("rdx".to_string(), "0".to_string()),
+            ("r10".to_string(), "34".to_string()),
+            ("r8".to_string(), "-1".to_string()),
+            ("r9".to_string(), "0".to_string()),
+        ]
+    } else {
+        vec![
+            ("x0".to_string(), "0".to_string()),
+            ("x1".to_string(), format!("{gesamt}")),
+            ("x2".to_string(), "0".to_string()),
+            ("x3".to_string(), "34".to_string()),
+            ("x4".to_string(), "-1".to_string()),
+            ("x5".to_string(), "0".to_string()),
+        ]
+    };
+    let roh = laufzeit_ruf(k, "mmap", &regs, span)?;
+    let schlecht = ruf_fehlschlag(k, &roh);
+    // Erfolg speichert die Basis SOFORT (kein SSA-Wert über den Join — Dominanz).
+    let ok_arm = k.block("arena_reserviert");
+    k.zeile(&format!("br i1 {schlecht}, label %{voll}, label %{ok_arm}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{ok_arm}:");
+    k.beendet = false;
+    k.zeile(&format!("store i64 {roh}, ptr {basis}, align 8"));
+    k.zeile(&format!("br label %{hat_arm}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{hat_arm}:");
+    k.beendet = false;
+    let commit_arm = k.block("arena_commit");
+    k.zeile(&format!("br label %{commit_arm}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{commit_arm}:");
+    k.beendet = false;
+    // Commit-Schleife bis `bereit >= bedarf` (in Schritten, unter der Decke).
+    let kopf = k.block("arena_kopf");
+    let schritt = k.block("arena_schritt");
+    k.zeile(&format!("br label %{kopf}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{kopf}:");
+    k.beendet = false;
+    let c = k.tmp();
+    k.zeile(&format!("{c} = load i64, ptr {bereit}, align 8"));
+    let reicht = k.tmp();
+    k.zeile(&format!("{reicht} = icmp uge i64 {c}, {bedarf}"));
+    k.zeile(&format!("br i1 {reicht}, label %{weiter}, label %{schritt}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{schritt}:");
+    k.beendet = false;
+    // Nächster Schritt (an der Decke: voll).
+    let stueck_elems = (COMMIT_SCHRITT / breite).max(1);
+    let vollep = ai.max.saturating_mul(breite);
+    let bb = k.tmp();
+    k.zeile(&format!("{bb} = load i64, ptr {basis}, align 8"));
+    let versatz = k.tmp();
+    k.zeile(&format!("{versatz} = mul i64 {c}, {breite}"));
+    let adr = k.tmp();
+    k.zeile(&format!("{adr} = add i64 {bb}, {versatz}"));
+    // Decke prüfen (Commit über `max` hinaus ist voll, nicht Wachstum).
+    let rest = k.tmp();
+    k.zeile(&format!("{rest} = sub i64 {vollep}, {versatz}"));
+    let passt = k.tmp();
+    k.zeile(&format!("{passt} = icmp uge i64 {rest}, {stueck_elems}"));
+    k.zeile(&format!("br i1 {passt}, label %{weiter}_c, label %{voll}"));
+    k.beendet = true;
+    let commit2 = format!("{weiter}_c");
+    let _ = writeln!(k.text, "{commit2}:");
+    k.beendet = false;
+    let regs2 = if k.s.ziel.name == "x86_64" {
+        vec![
+            ("rdi".to_string(), adr.clone()),
+            ("rsi".to_string(), format!("{stueck_elems}")),
+            ("rdx".to_string(), "3".to_string()),
+        ]
+    } else {
+        vec![
+            ("x0".to_string(), adr.clone()),
+            ("x1".to_string(), format!("{stueck_elems}")),
+            ("x2".to_string(), "3".to_string()),
+        ]
+    };
+    let roh2 = laufzeit_ruf(k, "mprotect", &regs2, span)?;
+    let schlecht2 = ruf_fehlschlag(k, &roh2);
+    let ok_arm = k.block("arena_ok");
+    k.zeile(&format!("br i1 {schlecht2}, label %{voll}, label %{ok_arm}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{ok_arm}:");
+    k.beendet = false;
+    let neu = k.tmp();
+    k.zeile(&format!("{neu} = add i64 {c}, {stueck_elems}"));
+    k.zeile(&format!("store i64 {neu}, ptr {bereit}, align 8"));
+    k.zeile(&format!("br label %{kopf}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{weiter}:");
+    k.beendet = false;
+    Some(())
 }
