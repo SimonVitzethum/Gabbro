@@ -3845,7 +3845,9 @@ fi
 # 156 -> 157 on 2026-10-01 (C-free lane, C2 slice 3): example 184 (`code-vom-treiber`, an `entry fn` parameter handed
 # on once to a foreign start, the handle decoded in Gabbro) emits -- the first emitted function-pointer PARAMETER, whose
 # declarator the same commit repaired. Its poison twins `gift/1394`-`1397` are refused by the CHECKER.
-MARKE_EMIT=157
+# 157 -> 158 on 2026-10-16 (real threads, step 1): example 1162 (`echte-faeden`, `start` with two lock-guarded roots
+# and a joining `main`) emits -- the C keeps its sequential lowering (deprecated, untouched).
+MARKE_EMIT=158
 # **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
 # `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
 # committed tree: 150 emitting files in `beispiele/`.

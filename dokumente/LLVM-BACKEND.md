@@ -185,7 +185,7 @@ Still refused, per item:
 - Stack gates + `child` (`Y102`): need the `clone` trampoline.
 - Entries (`Y102`, 12 sites): hardware dispatch (`unterbricht`).
 - Table `ops` (`Y104`): generated mutators (the exporter has no G form either).
-- `start`: lowers but runs SEQUENTIALLY (direct calls) — no real concurrency
+- `start`: real threads since 2026-10-16 (raw `clone` + futex join, example `1162`)
   yet. The sharpest edge; everything else is refused by name or genuinely
   lowered.
 

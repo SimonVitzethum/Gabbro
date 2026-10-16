@@ -103,8 +103,14 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 Volltabelle in `dokumente/LLVM-MODELLSTAND.md` §5. Kurzform:
 
-- **O22 (`start` läuft sequentiell).** Senkt als direkte Rufe — keine echten
-  Fäden. Schärfste Kante: läuft, aber nicht nebenläufig.
+- **O22 (`start` läuft sequentiell) — Schritt 1 gebaut 2026-10-16.** Echte
+  Fäden (rohes `clone`, kein libc): eigener Stapel je Wurzel, Futex-Join über
+  globale Fertig-Wörter, Beispiel `1162` (`rc=64` deterministisch beidseitig).
+  Gefunden dabei: Fehler-`unreachable` faltet der Optimierer zu `llvm.assume`
+  (laute Fallen `ud2`/`brk` seitdem); Kind setzt mitten in der Vater-Funktion
+  fort (1 MiB Prefix-Reserve); keine rahmen-relativen Adressen ins Kind
+  (`gabbro_faden_N_*`-Globale). Nächste Schritte: Stapel-Tiefe/Maß,
+  Join-Semantik bei Fehlern, geteilte Sperren unter echten Fäden messen.
 - **`entries` (12 Stellen).** Hardware-Dispatch ohne Modell — benannt verweigert.
 - **Stapel-Tore + `child` (12).** `clone`-Trampolin fehlt.
 - **`publish` mit Nutzlast (11).** OFFEN O25 — vom Zielsatz nicht gedeckt.

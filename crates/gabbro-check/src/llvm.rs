@@ -56,7 +56,7 @@
 //!   Stapel-Tore, Fehlerkanal-Tore, Kernel-Paarungen, Entries, `asm` (`Y102`).
 //! * Anweisungen: alles außer geteilten Sperren, Publish/Await/Exchange und exotischen
 //!   Domänen (`Y103`). Darunter: `locks` (exklusiv, Freigabe an jedem Ausgang), `start`
-//!   (direkter Ruf der Wurzeln — KEINE echte Nebenläufigkeit, siehe `senke_start`),
+//!   (Fäden: `clone` + Futex-Join je `start`-Wurzel — echte Nebenläufigkeit),
 //!   `alloc`/`grow`/`reset`, `traverse` (Zählschleife über Elemente/Slots),
 //!   `retry`/`forever` (Zählschleife mit Schranke), `narrow` (Prüfung + `assume`),
 //!   `breaking` (Rumpf läuft), `observes` (Zaun plus Rumpf), `child` (Rumpf läuft).
@@ -70,9 +70,12 @@
 //! Schlösser (Ticket-Wörter), Arenen (Reservierung plus Zähler) und der Eintritt
 //! (`_start`) entstehen als generiertes IR — kein Laufzeitobjekt, keine Verlinkung.
 //! Darunter liegt nur der Kern (rohe Tor-Nummern je Ziel, im Erzeuger gebucht).
-//! Fäden (`start`) laufen NOCH als direkte Rufe — keine echte Nebenläufigkeit:
-//! wer nebenläufige Programme baut, bekommt sequentielle. Das steht hier, damit es
-//! niemand für einen Fehler hält — die echte `clone`-Absenkung ist offene Arbeit.
+//! Fäden (`start`) laufen als echte Fäden: jede Wurzel kriegt einen eigenen
+//! Stapel (8 MiB, 1 MiB Prefix-Reserve) und ein Fertig-Wort (global,
+//! `gabbro_faden_N_*`), läuft im Kind (`CLONE_THREAD`), meldet fertig
+//! (Wort + Futex-`wake`) und endet mit `exit`; der Starter schließt jeden
+//! Join (Wort + Futex-`wait`-Schleife). Fehlerpfade sind laut (`ud2`/`brk`):
+//! `unreachable` allein faltet der Optimierer zu `llvm.assume` (gemessen).
 //!
 //! ## Die Stille-Invariante (Soundness)
 //!
@@ -589,6 +592,12 @@ struct Senke<'a> {
     nebenlaeufig: Vec<String>,
     start_wurzeln: BTreeSet<String>,
     faden_nr: u32,
+    /// Fertig-Wörter je gestarteter Wurzel (`gabbro_faden_N_*`, in
+    /// Senk-Reihenfolge): Rahmen-relative Adressen dürfen nie in ein Kind --
+    /// `ptrtoint(alloca)` senkt zu `lea [rsp+…]`, und im Kind zeigt `rsp`
+    /// anderswohin (gemessen: Weckruf an `oben-8` statt ans Wort). Globale
+    /// sind absolut und stimmen in beiden.
+    faden_worte: Vec<String>,
     /// Rufer-Name je Vollname (Kollision → `m_f`, sonst kurz).
     emitnamen: BTreeMap<String, String>,
     /// Schleifenplan je Zyklus-Mitglied (Vollname → Info).
@@ -4355,8 +4364,49 @@ fn senke_grow(k: &mut Koerper, g: &GrowStmt, span: Span) {
     k.beendet = false;
 }
 
+/// **Laute Falle (Nebenläufigkeit, Schritt 1).** Ein Fehlerpfad darf nie
+/// `unreachable` allein tragen: der Optimierer liest das als „unmöglich",
+/// faltet die Prüfung zu `llvm.assume` und streicht den Pfad (gemessen:
+/// Klon-Fehler liefen still weiter, `rc=0` statt Falle). Die Falle ist eine
+/// Seitenwirkung, die kein Pass entfernen oder durchschauen kann; das
+/// `unreachable` dahinter ist dann wahrhaftig unerreichbar.
+fn falle(k: &mut Koerper) {
+    if k.s.ziel.name == "x86_64" {
+        k.zeile("call void asm sideeffect \"ud2\", \"~{memory}\"()");
+    } else {
+        k.zeile("call void asm sideeffect \"brk #1\", \"~{memory}\"()");
+    }
+    k.zeile("unreachable");
+    k.beendet = true;
+}
+
+/// Kind-Stapel in Bytes (8 MiB gemappt, davon 1 MiB Reserve am Kopf: das
+/// Kind setzt mitten in der Vater-Funktion fort -- mit nacktem `rsp` träfe
+/// jeder rahmenrelative Spill bis dahin ins Unkartierte. Die Reserve deckt
+/// alle Prefix-Spill (eine Handvoll lebender Werte) tausendfach ab; dem
+/// Wurzel-Ruf bleiben 7 MiB. Nur berührte Seiten kosten RAM.
+const FADEN_STAPEL: u64 = 8 * 1024 * 1024;
+/// Reserve am Stapelkopf für die Kind-Prefix-Spill (1 MiB, 16-aligniert).
+const FADEN_RESERVE: u64 = 1024 * 1024;
+
+/// Klon-Flaggen: echte Fäden (Threadgruppe teilen: `CLONE_THREAD` -- wartebar
+/// sind sie dann nicht, der Join läuft über ein Futex-Wort, kein `wait4`).
+const KLON_FLAGGEN: i64 = 0x100 | 0x200 | 0x400 | 0x800 | 0x10000 | 0x40000;
+
+/// Futex-Operationen (privat: kein prozessübergreifendes Teilen nötig).
+const FUTEX_WARTE_PRIVAT: i64 = 128;
+const FUTEX_WECKE_PRIVAT: i64 = 129;
+
 fn senke_start(k: &mut Koerper, s: &StartStmt, span: Span) {
-    // `start`: Wurzeln direkt rufen (KEINE echte Nebenläufigkeit — siehe Kopf).
+    // `start`: echte Fäden (rohes `clone`, kein libc). Jede Wurzel kriegt
+    // einen eigenen Stapel (`mmap`, 8 MiB) und ein Fertig-Wort, läuft im Kind
+    // (`CLONE_THREAD`), meldet fertig (Wort + Futex-`wake`) und endet mit
+    // `exit`; der Starter schließt jeden Join (Wort + Futex-`wait` in einer
+    // Schleife: geweckt, unterbrochen und `EAGAIN` heißen nochmal, jeder
+    // andere Fehlschlag ist die laute Falle), bevor es weitergeht --
+    // sequentiell wäre ein Ablauf unter vielen, und der Prüfer
+    // (Nebenläufigkeit, Sperrdisziplin) gilt für alle. `start` trägt kein
+    // `else`, und Raten statt Fallen würde jeden Pass davor aufheben.
     for wurzel in &s.roots {
         let n = kurzname(wurzel);
         if !k.s.fns.contains_key(&n) {
@@ -4364,7 +4414,216 @@ fn senke_start(k: &mut Koerper, s: &StartStmt, span: Span) {
             return;
         }
         k.s.start_wurzeln.insert(n.clone());
+        // Fertig-Wort (absolute Globale aus `sammle_faden_worte` --
+        // nie Rahmen-relativ: im Kind zeigt `rsp` anderswohin).
+        let nr = k.s.faden_nr;
+        k.s.faden_nr += 1;
+        let worte = match k.s.faden_worte.get(nr as usize).cloned() {
+            Some(x) => x,
+            None => {
+                weigere(k.s, "Y103", span, "thread word without number".to_string());
+                return;
+            }
+        };
+        let fertig_g = format!("@{worte}_fertig");
+        k.zeile(&format!("store i32 0, ptr {fertig_g}, align 4"));
+        // Die Adresse ist absolut (`rip`-relativ), also kind-sicher.
+        let fertig = k.tmp();
+        k.zeile(&format!("{fertig} = ptrtoint ptr {fertig_g} to i64"));
+        // Stapel (`mmap`, lesbar+schreibbar, privat+anonym).
+        let stapel_regs = if k.s.ziel.name == "x86_64" {
+            vec![
+                ("rdi".to_string(), "0".to_string()),
+                ("rsi".to_string(), format!("{FADEN_STAPEL}")),
+                ("rdx".to_string(), "3".to_string()),
+                ("r10".to_string(), "34".to_string()),
+                ("r8".to_string(), "-1".to_string()),
+                ("r9".to_string(), "0".to_string()),
+            ]
+        } else {
+            vec![
+                ("x0".to_string(), "0".to_string()),
+                ("x1".to_string(), format!("{FADEN_STAPEL}")),
+                ("x2".to_string(), "3".to_string()),
+                ("x3".to_string(), "34".to_string()),
+                ("x4".to_string(), "-1".to_string()),
+                ("x5".to_string(), "0".to_string()),
+            ]
+        };
+        let stapel = match laufzeit_ruf(k, "mmap", &stapel_regs, span) {
+            Some(x) => x,
+            None => return,
+        };
+        let stapel_schlecht = ruf_fehlschlag(k, &stapel);
+        let stapel_ok = k.block("faden_stapel");
+        let stapel_falle = k.block("faden_kein_stapel");
+        k.zeile(&format!("br i1 {stapel_schlecht}, label %{stapel_falle}, label %{stapel_ok}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{stapel_falle}:");
+        k.beendet = false;
+        falle(k);
+        let _ = writeln!(k.text, "{stapel_ok}:");
+        k.beendet = false;
+        // Stapelspitze (der Stapel wächst nach unten), minus Reserve: das
+        // Kind startet mit nacktem `rsp`, also zeigt es in die Reserve
+        // (alle Prefix-Spill darüber sind kartiert).
+        let oben = k.tmp();
+        k.zeile(&format!("{oben} = add i64 {stapel}, {}", FADEN_STAPEL - FADEN_RESERVE));
+        // Klon (Threadgruppe teilen; TID wird nicht gebraucht -- der Join
+        // läuft übers Wort).
+        let klon_regs = if k.s.ziel.name == "x86_64" {
+            vec![
+                ("rdi".to_string(), format!("{KLON_FLAGGEN}")),
+                ("rsi".to_string(), oben.clone()),
+                ("rdx".to_string(), "0".to_string()),
+                ("r10".to_string(), "0".to_string()),
+                ("r8".to_string(), "0".to_string()),
+            ]
+        } else {
+            vec![
+                ("x0".to_string(), format!("{KLON_FLAGGEN}")),
+                ("x1".to_string(), oben.clone()),
+                ("x2".to_string(), "0".to_string()),
+                ("x3".to_string(), "0".to_string()),
+                ("x4".to_string(), "0".to_string()),
+            ]
+        };
+        let kind = match laufzeit_ruf(k, "clone", &klon_regs, span) {
+            Some(x) => x,
+            None => return,
+        };
+        // Die Klon-Antwort bleibt Register-Wert (pro Prozess selbstkonsistent:
+        // jeder spillt und lädt seinen eigenen Stapel); nur ADRESSEN aus dem
+        // Vater-Rahmen sind im Kind falsch und stehen deshalb global.
+        let klon_schlecht = ruf_fehlschlag(k, &kind);
+        let klon_ok = k.block("faden_geklont");
+        let klon_falle = k.block("faden_kein_kind");
+        k.zeile(&format!("br i1 {klon_schlecht}, label %{klon_falle}, label %{klon_ok}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{klon_falle}:");
+        k.beendet = false;
+        falle(k);
+        let _ = writeln!(k.text, "{klon_ok}:");
+        k.beendet = false;
+        // Kind (Antwort 0): Wurzel laufen, fertig melden (Wort + Wake),
+        // `exit`, nie zurück.
+        let ist_kind = k.tmp();
+        k.zeile(&format!("{ist_kind} = icmp eq i64 {kind}, 0"));
+        let kind_arm = k.block("faden_kind");
+        let weiter = k.block("faden_gestartet");
+        k.zeile(&format!("br i1 {ist_kind}, label %{kind_arm}, label %{weiter}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{kind_arm}:");
+        k.beendet = false;
         k.zeile(&format!("call void {}()", gname(&n)));
+        k.zeile(&format!("store i32 1, ptr {fertig_g}, align 4"));
+        let weck_regs = if k.s.ziel.name == "x86_64" {
+            vec![
+                ("rdi".to_string(), fertig.clone()),
+                ("rsi".to_string(), format!("{FUTEX_WECKE_PRIVAT}")),
+                ("rdx".to_string(), "1".to_string()),
+                ("r10".to_string(), "0".to_string()),
+                ("r8".to_string(), "0".to_string()),
+                ("r9".to_string(), "0".to_string()),
+            ]
+        } else {
+            vec![
+                ("x0".to_string(), fertig.clone()),
+                ("x1".to_string(), format!("{FUTEX_WECKE_PRIVAT}")),
+                ("x2".to_string(), "1".to_string()),
+                ("x3".to_string(), "0".to_string()),
+                ("x4".to_string(), "0".to_string()),
+                ("x5".to_string(), "0".to_string()),
+            ]
+        };
+        let geweckt = match laufzeit_ruf(k, "futex", &weck_regs, span) {
+            Some(x) => x,
+            None => return,
+        };
+        // Das Wecken selbst darf nicht fehlschlagen (sonst schliefe der
+        // Starter bei verlorenem Weckruf ewig).
+        let weck_schlecht = ruf_fehlschlag(k, &geweckt);
+        let weck_ok = k.block("faden_geweckt");
+        let weck_falle = k.block("faden_kein_weckruf");
+        k.zeile(&format!("br i1 {weck_schlecht}, label %{weck_falle}, label %{weck_ok}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{weck_falle}:");
+        k.beendet = false;
+        falle(k);
+        let _ = writeln!(k.text, "{weck_ok}:");
+        k.beendet = false;
+        let exit_regs = if k.s.ziel.name == "x86_64" {
+            vec![("rdi".to_string(), "0".to_string())]
+        } else {
+            vec![("x0".to_string(), "0".to_string())]
+        };
+        if laufzeit_ruf(k, "exit", &exit_regs, span).is_none() {
+            return;
+        }
+        falle(k);
+        let _ = writeln!(k.text, "{weiter}:");
+        k.beendet = false;
+        // Join: Wort lesen; fertig heißt weiter, sonst schlafen (mit
+        // erwartetem Wert 0 -- wer zuerst fertig war, gibt `EAGAIN`, und
+        // die Schleife sieht es dann).
+        let join_kopf = k.block("faden_join");
+        k.zeile(&format!("br label %{join_kopf}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{join_kopf}:");
+        k.beendet = false;
+        let stand = k.tmp();
+        k.zeile(&format!("{stand} = load i32, ptr {fertig_g}, align 4"));
+        let durch = k.tmp();
+        k.zeile(&format!("{durch} = icmp eq i32 {stand}, 1"));
+        let join_ok = k.block("faden_beigetreten");
+        let join_warte = k.block("faden_schlaeft");
+        k.zeile(&format!("br i1 {durch}, label %{join_ok}, label %{join_warte}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{join_warte}:");
+        k.beendet = false;
+        let warte_regs = if k.s.ziel.name == "x86_64" {
+            vec![
+                ("rdi".to_string(), fertig.clone()),
+                ("rsi".to_string(), format!("{FUTEX_WARTE_PRIVAT}")),
+                ("rdx".to_string(), "0".to_string()),
+                ("r10".to_string(), "0".to_string()),
+                ("r8".to_string(), "0".to_string()),
+                ("r9".to_string(), "0".to_string()),
+            ]
+        } else {
+            vec![
+                ("x0".to_string(), fertig.clone()),
+                ("x1".to_string(), format!("{FUTEX_WARTE_PRIVAT}")),
+                ("x2".to_string(), "0".to_string()),
+                ("x3".to_string(), "0".to_string()),
+                ("x4".to_string(), "0".to_string()),
+                ("x5".to_string(), "0".to_string()),
+            ]
+        };
+        let geschlafen = match laufzeit_ruf(k, "futex", &warte_regs, span) {
+            Some(x) => x,
+            None => return,
+        };
+        // Geweckt (0), unterbrochen (-4) und überholt (-11) heißen nochmal;
+        // jeder andere Fehlschlag ist die laute Falle.
+        let nicht0 = k.tmp();
+        k.zeile(&format!("{nicht0} = icmp ne i64 {geschlafen}, 0"));
+        let nicht_unterbrochen = k.tmp();
+        k.zeile(&format!("{nicht_unterbrochen} = icmp ne i64 {geschlafen}, -4"));
+        let nicht_ueberholt = k.tmp();
+        k.zeile(&format!("{nicht_ueberholt} = icmp ne i64 {geschlafen}, -11"));
+        let schlimm12 = k.tmp();
+        k.zeile(&format!("{schlimm12} = and i1 {nicht0}, {nicht_unterbrochen}"));
+        let schlimm = k.tmp();
+        k.zeile(&format!("{schlimm} = and i1 {schlimm12}, {nicht_ueberholt}"));
+        let join_falle = k.block("faden_kein_join");
+        k.zeile(&format!("br i1 {schlimm}, label %{join_falle}, label %{join_kopf}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{join_falle}:");
+        k.beendet = false;
+        falle(k);
+        let _ = writeln!(k.text, "{join_ok}:");
+        k.beendet = false;
     }
 }
 
@@ -5519,8 +5778,7 @@ fn emit_start(s: &mut Senke) {
 }
 
 /// Globale, Tabellen, Schlösser, Atomics, Arenen.
-fn emit_globale(s: &mut Senke) {
-    // Skalare und Felder.
+fn emit_globale(s: &mut Senke) {    // Skalare und Felder.
     let globale: Vec<(String, Global)> = s.globale.clone().into_iter().collect();
     for (n, g) in &globale {
         let init = g.init_text.clone().unwrap_or_else(|| "zeroinitializer".to_string());
@@ -5583,6 +5841,39 @@ fn emit_globale(s: &mut Senke) {
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "bereit"));
         let _ = writeln!(s.rumpf, "{} = global i64 -1, align 8", gteil(n, "frei"));
     }
+    // Faden-Wörter je gestarteter Wurzel (Fertig-Wort): absolut adressiert,
+    // nie rahmen-relativ (siehe `faden_worte`).
+    for n in &s.faden_worte.clone() {
+        let _ = writeln!(s.rumpf, "@{n}_fertig = global i32 0, align 4");
+    }
+}
+
+/// Faden-Wörter sammeln (in Senk-Reihenfolge): jede `start`-Wurzel kriegt
+/// ihre Nummer, bevor `emit_globale` die Wörter schreibt und `senke_start`
+/// sie per Zähler (`faden_nr`) verbraucht. Beide Läufe sehen dieselbe
+/// `plaene`-Ordnung (BTreeMap) und dieselbe Block-Ordnung
+/// (`crate::unterbloecke`), also dieselbe Nummernfolge.
+fn sammle_faden_worte(s: &mut Senke) {
+    fn block(b: &Block, aus: &mut Vec<String>, nr: &mut u32) {
+        for st in &b.anweisungen {
+            if let StmtArt::Start(st) = &st.art {
+                for _ in &st.roots {
+                    aus.push(format!("gabbro_faden_{nr}"));
+                    *nr += 1;
+                }
+            }
+            for k in crate::unterbloecke(st) {
+                block(k, aus, nr);
+            }
+        }
+    }
+    let plaene: Vec<(String, FnPlan)> = s.plaene.clone().into_iter().collect();
+    let mut nr = 0u32;
+    for (_, plan) in &plaene {
+        if let FnPlan::Impl { rumpf, .. } = plan {
+            block(rumpf, &mut s.faden_worte, &mut nr);
+        }
+    }
 }
 
 fn escape_name(n: &str) -> String {
@@ -5632,6 +5923,7 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         nebenlaeufig: Vec::new(),
         start_wurzeln: BTreeSet::new(),
         faden_nr: 0,
+        faden_worte: Vec::new(),
         emitnamen: BTreeMap::new(),
         rek: BTreeMap::new(),
         tab_slots: BTreeMap::new(),
@@ -5661,6 +5953,7 @@ pub fn emittiere_llvm_mit_beleg(
     sammle(&mut s, baum, bau);
     vergebe_emitnamen(&mut s);
     baue_rek_plan(&mut s);
+    sammle_faden_worte(&mut s);
     emit_globale(&mut s);
     emit_funktionen(&mut s);
     emit_start(&mut s);
@@ -8881,8 +9174,14 @@ fn laufzeit_tor(s: &Senke, name: &str) -> Option<(i64, &'static str, &'static st
     match (s.ziel.name, name) {
         ("x86_64", "mmap") => Some((9, "syscall", "rax")),
         ("x86_64", "mprotect") => Some((10, "syscall", "rax")),
+        ("x86_64", "clone") => Some((56, "syscall", "rax")),
+        ("x86_64", "futex") => Some((202, "syscall", "rax")),
+        ("x86_64", "exit") => Some((60, "syscall", "rax")),
         ("aarch64", "mmap") => Some((222, "svc #0", "x0")),
         ("aarch64", "mprotect") => Some((226, "svc #0", "x0")),
+        ("aarch64", "clone") => Some((220, "svc #0", "x0")),
+        ("aarch64", "futex") => Some((98, "svc #0", "x0")),
+        ("aarch64", "exit") => Some((93, "svc #0", "x0")),
         _ => None,
     }
 }

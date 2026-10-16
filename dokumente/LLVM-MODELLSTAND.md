@@ -145,7 +145,7 @@ verweigert). Nicht-endständige Rekursion nutzt weiter den Maschinenstapel
 | Shared locks | own primitive unproved | 3 (+1 correct probe) |
 | Stack gates + `child` | `clone` trampoline | 4 (`kind-*`) |
 | Entries (`unterbricht`) | hardware dispatch | 12 |
-| `start` | direct calls — NO real concurrency yet | lowers, runs sequentially |
+| `start` | real threads since 2026-10-16 (step 1): raw `clone` (`CLONE_THREAD`), own 8 MiB stack per root, futex join over global ready-words — measured 10x `rc=64` on x86_64, 5x under qemu-aarch64, deterministic under the ticket lock | the goal's concurrency legs are unchanged (the checker already ruled for every schedule); the per-access target→W/GX bridge stays validation work (§5) |
 | Library calls (`@lib#f`) | needs the library/payload model | 2 (`106`, `107`) |
 | `reset X at i count n` | the page give-back is a template + binding; the zero-fill alone is trivial, the whole statement is not | 2 (`175`) |
 | `static ptr = array-name` decay | refused by the C emitter too (`C001`) — an open remainder, not a lowering gap | 1 (`38`) |

@@ -1,0 +1,81 @@
+-- 1162 -- **real threads (`start`) with a deterministic join.**
+--
+-- `start { heber_a, heber_b };` runs both roots as real threads (raw `clone`,
+-- no libc) on stacks the unit owns (8 MiB each) and joins them before the
+-- starter proceeds: each root raises the shared counter `zaehler` once per
+-- `takt` slot under the lock `L`, so the joined total is deterministic
+-- (2 * N, on every schedule -- measured 10x `rc=64` on x86_64, 5x under
+-- qemu-aarch64). The checker bills the sum of the roots' costs; the race
+-- half is `N462` (both roots pool-safe: the one carrier anyone writes is
+-- guarded). Failure paths are loud (`ud2`/`brk`): a bare `unreachable`
+-- would be folded to `llvm.assume` by the optimizer.
+module beispiel::echte_faeden {
+
+pub const N : u32 = 32;
+
+pub table zaehler count 1 {
+    slot {
+        stand : u32 wrapping,
+    }
+}
+
+pub table takt count N {
+    slot {
+        an : bool,
+    }
+}
+
+pub lock L protects { zaehler } rank 0 held <= 64 ops;
+
+impl fn hebe()
+    requires Held(L)
+    effects  { reads zaehler.slots, writes zaehler.slots, locks L }
+    costs    <= 16 ops
+{
+    zaehler.slots[0].stand = zaehler.slots[0].stand + 1;
+}
+
+impl fn heber_a()
+    effects  { reads zaehler.slots, writes zaehler.slots, reads takt, reads takt.slots, locks L }
+    costs    <= 1024 ops
+{
+    traverse i over slots of takt by unvisited
+        touches reads takt, reads takt.slots, reads zaehler.slots, writes zaehler.slots, locks L
+    {
+        if takt.slots[i].an == false {
+            locks L {
+                hebe();
+            }
+        }
+    }
+}
+
+impl fn heber_b()
+    effects  { reads zaehler.slots, writes zaehler.slots, reads takt, reads takt.slots, locks L }
+    costs    <= 1024 ops
+{
+    traverse i over slots of takt by unvisited
+        touches reads takt, reads takt.slots, reads zaehler.slots, writes zaehler.slots, locks L
+    {
+        if takt.slots[i].an == false {
+            locks L {
+                hebe();
+            }
+        }
+    }
+}
+
+pub fn main() -> u32
+    effects { reads zaehler.slots, writes zaehler.slots, reads takt, reads takt.slots, locks L }
+    costs <= 8192 ops
+{
+    start { heber_a, heber_b };
+    -- Post-join read: no thread is alive, so no race is possible, but the
+    -- rule is conservative (`E247` hint) -- the checker does not track that
+    -- the join ended every writer. The read stays under the lock.
+    locks L {
+        return zaehler.slots[0].stand;
+    }
+}
+
+}

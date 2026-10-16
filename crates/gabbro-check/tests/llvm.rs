@@ -442,3 +442,21 @@ fn freigabe_als_liste() {
         assert!(!ir.contains("= global ["), "BSS-Feld auf {}:\n{ir}", ziel.name);
     }
 }
+
+/// **Fäden sind echt (keine direkten Rufe).** `start` senkt je Wurzel `clone`
+/// plus Futex-Join mit globalem Fertig-Wort (`gabbro_faden_N_*`, nie
+/// rahmen-relativ) -- auf beiden Zielen, ohne `llvm.assume`-gefaltete
+/// Fehlerprüfung (laute Fallen: `ud2`/`brk`).
+#[test]
+fn faden_sind_echt() {
+    let quelle = std::fs::read_to_string(wurzel().join("1162-echte-faeden.gab"))
+        .expect("1162 lesbar");
+    for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+        let (ir, codes) = senke(&quelle, "1162-echte-faeden.gab", ziel);
+        let f = fehler(&codes);
+        assert!(f.is_empty(), "Start auf {} fällt mit {f:?}", ziel.name);
+        assert!(ir.contains("gabbro_faden_0_fertig"), "kein Fertig-Wort auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("faden_kind"), "kein Kind-Arm auf {}:\n{ir}", ziel.name);
+        assert!(!ir.contains("llvm.assume"), "gefaltete Prüfung auf {}:\n{ir}", ziel.name);
+    }
+}
