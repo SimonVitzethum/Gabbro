@@ -2,7 +2,7 @@
 -- The probe takes an argument, so a nullary commit-time call cannot ask it.
 -- Nothing else is wrong with this unit.
 module beispiel::halde_frage_mit_parameter {
-arena Vorrat capacity 0 .. 2 of u64 druckfrage zaehlt unter 1048576;
+arena Vorrat capacity 0 .. 2 of u64 pb zaehlt blw 1048576;
 
 impl fn zaehlt(x : u64) -> u64 effects { pure } costs <= 4 ops {
     return x;

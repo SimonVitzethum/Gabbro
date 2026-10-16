@@ -909,15 +909,15 @@ fn erklaerungen(baum: &Programm, u: &crate::umgebung::Umgebung, absagen: &mut Ab
                 }
                 _ => {}
             }
-            // **Druckfrage (`N584`/`N585`).** Nur wo die Deklaration sonst
-            // brauchbar ist (kein zweites Urteil auf eine tote Zeile): die
-            // Klausel schaltet die UNBEGRENZTE Form ein — ohne sie ist ohne
-            // `max` die Decke `hi` (statisch, kein Abtasten nötig). Die Frage
-            // nennt ein nullstelliges Tor oder eine nullstellige Funktion mit
-            // ganzzahliger Antwort ohne Fehlerkanal, die Schwelle ist eine
-            // fällige Nutzer-Konstante (z.B. `unter 1048576` — 1 MiB).
-            if let Some(d) = &a.druck {
-                druckfrage(baum, u, modul, &a.name.text, d, absagen);
+            // **Pressure probe (`N584`/`N585`).** Only where the declaration is
+            // otherwise usable (no second verdict on a dead line): the clause
+            // switches the UNBOUNDED form on -- without it, no-`max` means
+            // ceiling `hi` (static, no sampling needed). The probe names a
+            // nullary gate or a nullary function with integer answer and no
+            // error channel, the threshold is a due user constant
+            // (e.g. `blw 1048576` -- 1 MiB).
+            if let Some(d) = &a.probe {
+                probe(baum, u, modul, &a.name.text, d, absagen);
             }
         }
     });
@@ -2322,25 +2322,25 @@ mod wachstumstests {
     }
 }
 
-/// **Die Zählfrage hinter `druckfrage P unter B` (`N584`/`N585`).**
+/// **The probe behind `pb P blw B` (`N584`/`N585`).**
 ///
-/// `N584`: `P` nennt kein Tor und keine Funktion (oder mehrdeutig) — die
-/// Abtastung riefe ins Leere. `N585`: `P` hat Parameter, antwortet nicht
-/// ganzzahlig, trägt einen Fehlerkanal, oder `B` ist keine fällige Konstante.
-/// Die Schwelle legt der Nutzer fest (z.B. `unter 1048576` — 1 MiB).
-fn druckfrage(
+/// `N584`: `P` names no gate and no function (or ambiguously) -- the
+/// sampling would call into the void. `N585`: `P` has parameters, answers
+/// non-integer, carries an error channel, or `B` is no due constant.
+/// The user sets the threshold (e.g. `blw 1048576` -- 1 MiB).
+fn probe(
     baum: &Programm,
     u: &crate::umgebung::Umgebung,
     modul: &str,
     arena: &str,
-    d: &Druckfrage,
+    d: &Probe,
     absagen: &mut Absagen,
 ) {
     // Kandidaten: Tore und Funktionen (volle und kurze Namen) — EIGENE Werte,
     // keineleihen aus dem Baum (die Closure leiht `item` nur im Durchlauf).
     // Form je Kandidat: (Name, Parameterzahl, Fehlerkanal?, ganzzahlige Antwort?).
-    let voll = d.frage.text();
-    let kurz = d.frage.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+    let voll = d.pfad.text();
+    let kurz = d.pfad.teile.last().map(|i| i.text.clone()).unwrap_or_default();
     let mut tore: Vec<(String, usize, bool, bool)> = Vec::new();
     let mut fns: Vec<(String, usize, bool, bool)> = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, m| {
@@ -2380,7 +2380,7 @@ fn druckfrage(
         melde_erklaerung(
             absagen,
             "N584",
-            d.frage.span,
+            d.pfad.span,
             format!(
                 "`{arena}` fragt `{voll}` nach freiem Speicher, und das nennt \
                  kein Tor und keine Funktion (oder mehrdeutig): die Abtastung \
@@ -2388,7 +2388,7 @@ fn druckfrage(
                 arena = arena,
                 voll = voll
             ),
-            "die Druckfrage nennt eine nullstellige Zählfrage beim Namen -- \
+            "die `pb`-Klausel nennt eine nullstellige Zählfrage beim Namen -- \
              ohne sie läuft der Commit blind in den Speichermangel",
         );
         return;
@@ -2413,7 +2413,7 @@ fn druckfrage(
         melde_erklaerung(
             absagen,
             "N585",
-            d.frage.span,
+            d.pfad.span,
             format!("`{voll}` ist keine Zählfrage: {grund}", voll = voll),
             "gezählt wird nullstellig, ganzzahlig, ohne Fehlerkanal -- alles \
              andere riefe die Abtastung mit der falschen Hand auf",
@@ -2421,15 +2421,15 @@ fn druckfrage(
         return;
     }
     // Schwelle: fällige Konstante, nicht negativ.
-    match u.konst_wert(modul, &d.unter) {
+    match u.konst_wert(modul, &d.schwelle) {
         Some(b) if b >= 0 => {}
         _ => {
             melde_erklaerung(
                 absagen,
                 "N585",
-                d.unter.span,
+                d.schwelle.span,
                 format!(
-                    "`{arena}` läuft unter keiner fälligen Schwelle: `unter` \
+                    "`{arena}` läuft unter keiner fälligen Schwelle: `blw` \
                      ist eine Übersetzungszeit-Konstante in Bytes",
                     arena = arena
                 ),

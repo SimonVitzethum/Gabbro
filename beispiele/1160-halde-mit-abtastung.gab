@@ -2,11 +2,11 @@
 --
 -- No `max`: the ceiling is the counter room, the reservation is address space
 -- without RAM, and before every 1 MiB commit the generator asks `frei` for
--- free bytes. Below `unter 1048576` the `else` runs (the OOM path); on a
+-- free bytes. Below `blw 1048576` the `else` runs (the OOM path); on a
 -- freestanding target `frei` is the program's own measurement, no OS call in
 -- the generator. The fast path (`bereit >= bedarf`) asks nothing.
 module beispiel::halde_mit_abtastung {
-pub arena Vorrat capacity 0 .. 2 of u64 druckfrage frei unter 1048576;
+pub arena Vorrat capacity 0 .. 2 of u64 pb frei blw 1048576;
 
 impl fn frei() -> u64 effects { pure } costs <= 4 ops {
     return 99999999;

@@ -42,7 +42,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 |---|---|---|
 | defined EBNF rules | 132 | **189** measured (`pruefe-syntax.sh` EBNF branch: 189 defined, 0 open, 0 unreachable from `program`; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `druckfrage` + `unter` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
+| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -95,7 +95,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              endian little big reserved cost runs online offline
              library payload translator for
              profile rounding fp_contract memory_model interrupt_routing
-             arena capacity alloc reset grow druckfrage unter free
+             arena capacity alloc reset grow pb blw free
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
@@ -163,7 +163,7 @@ ordinary local (`uint32_t <word> = 1; return <word>;` through
 row above: the twelve place-refusals, the five expression heads, the seven C names).
 
 Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `number`
-`errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1), `druckfrage` + `unter` (unbounded heap with sampling, §9.1), `free` (slot release, TODO §1-B, §9.1),
+`errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap with sampling, §9.1), `free` (slot release, TODO §1-B, §9.1),
 `profile` `rounding` `fp_contract`
 `memory_model` `interrupt_routing`, `translator` `for`, `payload`, `depends` -- and
 `crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 248 as a parameter
@@ -1461,16 +1461,16 @@ slotfeld   = ident ":" slottype [ "by" "ops" ] ;
 (* `by ops`: this field is written ONLY by the generated operations -- `refcount -= 1` by hand
    is not writable. CHANGED «SG-8»: as shape, the field's carrier is in the `writes` of the
    generated operations and of no other function. *)
-arena      = [ "pub" ] "arena" ident "capacity" constexpr ".." constexpr [ "max" constexpr ] "of" typeexpr [ "druckfrage" path "unter" constexpr ] ";" ;
+arena      = [ "pub" ] "arena" ident "capacity" constexpr ".." constexpr [ "max" constexpr ] "of" typeexpr [ "pb" path "blw" constexpr ] ";" ;
 (* «E4» (§9.1): a monotone region beside the table -- no body, no slots, no guards. Only
    `..` joins the bounds: both count elements, so `..<` would be a second spelling of
    `hi - 1`. Lane 257: the optional `max` ceiling reserves address for `M` slots while
    storage starts committed up to `hi` (`0 <= lo <= hi <= M`, all three constants --
    `N210`); without it the ceiling is `hi` by construction, and the declaration reads
-   byte for byte as before. The `druckfrage P unter B` clause switches the UNBOUNDED form:
+   byte for byte as before. The `pb P blw B` clause switches the UNBOUNDED form:
    no `max`, the ceiling is the counter room, and before every commit the generator asks
    the nullary question `P` (gate or function, integer answer, no error channel) for free
-   bytes -- below the user threshold `B` (e.g. `unter 1048576`, 1 MiB) the `else` runs.
+   bytes -- below the user threshold `B` (e.g. `blw 1048576`, 1 MiB) the `else` runs.
    `N584` refuses a probe naming nothing, `N585` a probe of the wrong shape and a
    threshold no translation-time constant. *)
 slottype   = typeexpr | intty "wrapping" ;
@@ -1498,7 +1498,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
 | `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used`. **In the SYNTAX since 2026-09-15**: `ArenaForm D` (`ArenaZucker.lean`) — a table of `count = hi` slots beside a global `used` counter, which is what the emitter writes |
 | `arena A capacity lo .. hi max M of T` | the dynamic form (lane 257): address reserved for `M` slots, storage committed up to `hi` (`0 <= lo <= hi <= M`, all three constants — `N210`) | the static `ArenaForm` of `hi` slots beside `used` is exactly the committed-prefix behavior, so the static lowering is sound where no `grow` stands; the dynamic form is future work, not a second model |
-| `arena A capacity lo .. hi of T druckfrage P unter B` | the UNBOUNDED form: no `max`, the ceiling is the counter room (`u32::MAX`); the generator reserves address space once (`mmap(PROT_NONE)`, no RAM) and commits per 1 MiB on demand (`mprotect`); before each commit it asks `P` for free bytes, below `B` the `else` runs (OOM path) — one probe per MiB, zero on the fast path; freestanding `P` measures itself | `ArenaDyn.lean`: ceiling `M`, committed prefix `c`, past-ceiling refusal, real OOM below `M` (the `else` is the program's); the 1 MiB steps overshoot the need invisibly (no introspection), hence refinement-true |
+| `arena A capacity lo .. hi of T pb P blw B` | the UNBOUNDED form: no `max`, the ceiling is the counter room (`u32::MAX`); the generator reserves address space once (`mmap(PROT_NONE)`, no RAM) and commits per 1 MiB on demand (`mprotect`); before each commit it asks `P` for free bytes, below `B` the `else` runs (OOM path) — one probe per MiB, zero on the fast path; freestanding `P` measures itself | `ArenaDyn.lean`: ceiling `M`, committed prefix `c`, past-ceiling refusal, real OOM below `M` (the `else` is the program's); the 1 MiB steps overshoot the need invisibly (no introspection), hence refinement-true |
 | `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` refuses any other carrier; the END of the range is held against the length (`M103`); it is a store (`writes X`) | none: `lean-g` refuses the statement by name (`LG005`) — the exporter has no model of a released page |
 | `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (`N426` refuses the uncountable amount and the past-ceiling request, branch or no branch; `N213` the undeclared arena) | no constructor yet: the committed prefix is checker flow, and the emitter and the G exporter refuse the statement by name until the dynamic arm lands |
 | `free A[i];` | give exactly one slot back: the name dies statically (`N586` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the G exporter refuses by name (`LG005`) until the Block form lands |

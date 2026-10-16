@@ -16,12 +16,12 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
   `opt`-gültig); was das Muster NICHT gibt (kein Use-after-free-Schutz),
   steht dabei — das ist B, kein zweites Register.
 - **B (unbegrenzt mit Abtastung + echte Freigabe) — gebaut 2026-10-15, Reste offen.**
-  Unbegrenzt: `druckfrage P unter B` an der Arena (SYNTAX.md §9.1) schaltet die
+  Unbegrenzt: `pb P blw B` an der Arena (SYNTAX.md §9.1) schaltet die
   UNBEGRENZTE Form ein (ohne sie ist ohne `max` die Decke `hi` — statisch).
   Der Erzeuger reserviert einmal Adressraum (`mmap(PROT_NONE)`, kein RAM),
   committet je 1 MiB bei Bedarf (`mprotect`, sauber in Bytes gerechnet) und fragt VOR jedem Commit die
   nullstellige Frage `P` nach freien Bytes; unter der Nutzer-Schwelle `B`
-  (z.B. `unter 1048576` — 1 MiB) läuft der `else`-Zweig (OOM-Pfad). EIN Ruf
+  (z.B. `blw 1048576` — 1 MiB) läuft der `else`-Zweig (OOM-Pfad). EIN Ruf
   je MiB, null im Schnellpfad (`bereit >= bedarf` fragt gar nicht) — Abtasten
   kostet keine Performance. Freistehend misst `P` selbst (kein Systemruf im
   Erzeuger). Prüfer: `N584` (Frage nennt nichts), `N585` (falsche Form,

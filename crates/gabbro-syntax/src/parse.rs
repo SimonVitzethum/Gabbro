@@ -4691,14 +4691,14 @@ impl<'a> Parser<'a> {
         };
         self.erwarte_kw(Kw::Of)?;
         let element = self.typeexpr()?;
-        // **Druckfrage (optional): `druckfrage P unter B` vor dem `;`.** Beide
-        // Wörter sind kontextuell (anderswo Namen); die Klausel steht hinter
-        // dem Elementtyp, damit der statische Präfix Byte für Byte wie bisher liest.
-        let druck = if self.friss_kw(Kw::Druckfrage) {
-            let frage = self.pfad()?;
-            self.erwarte_kw(Kw::Unter)?;
-            let unter = self.expr()?;
-            Some(Druckfrage { frage, unter, span: anfang.bis_zu(self.vorheriger_span()) })
+        // **Pressure probe (optional): `pb P blw B` before the `;`.** Both
+        // words are contextual (names elsewhere); the clause stands behind
+        // the element type, so the static prefix reads byte for byte as before.
+        let probe = if self.friss_kw(Kw::Pb) {
+            let pfad = self.pfad()?;
+            self.erwarte_kw(Kw::Blw)?;
+            let schwelle = self.expr()?;
+            Some(Probe { pfad, schwelle, span: anfang.bis_zu(self.vorheriger_span()) })
         } else {
             None
         };
@@ -4710,7 +4710,7 @@ impl<'a> Parser<'a> {
             hi,
             max,
             element,
-            druck,
+            probe,
             span: anfang.bis_zu(ende),
         })
     }

@@ -1892,14 +1892,14 @@ pub struct ArenaDecl {
     pub oeffentlich: bool,
     pub lo: Expr,
     pub hi: Expr,
-    /// **`druckfrage P unter B` -- die Speicherdruck-Abtastung.** `None` ohne
-    /// Klausel (statisch: Decke `max`, ohne `max` die Decke `hi`). MIT Klausel
-    /// steht die UNBEGRENZTE Form: die Decke ist der Zählerraum, der Erzeuger
-    /// fragt vor jedem Commit die nullstellige Frage `P` nach freien Bytes;
-    /// unter `B` (fällige Bytes, Nutzer-Konstante, z.B. 1 MiB) läuft der
-    /// `else`-Zweig (OOM-Pfad). `P` ist ein Tor oder eine Funktion —
-    /// freistehend misst das Programm selbst, kein Systemruf im Erzeuger.
-    pub druck: Option<Druckfrage>,
+    /// **`pb P blw B` -- pressure sampling.** `None` without clause
+    /// (static: ceiling `max`, without `max` the ceiling `hi`). WITH clause
+    /// stands the UNBOUNDED form: the ceiling is the counter room, the generator
+    /// asks the nullary probe `P` for free bytes before each commit;
+    /// below `B` (due bytes, user constant, e.g. 1 MiB) the `else`
+    /// branch runs (OOM path). `P` is a gate or a function --
+    /// freestanding the program measures itself, no OS call in the generator.
+    pub probe: Option<Probe>,
     /// The ceiling `max M` (lane 257, wave D): `None` is the static form,
     /// where the ceiling coincides with `hi` by construction. `Some(m)`
     /// reserves address for `M` slots while storage starts committed up
@@ -1910,13 +1910,13 @@ pub struct ArenaDecl {
     pub span: Span,
 }
 
-/// **Eine Druckfrage: `frage` nennt die nullstellige Zählfrage, `unter` die
-/// Schwelle in Bytes (fällige Konstante). Geprüft in `arena.rs` (`N584`/`N585`),
-/// gesenkt auf dem Commit-Pfad (`llvm.rs`, `arena_bereit`) — nie im Alloc-Pfad.
+/// **A pressure probe: `pfad` names the nullary probe, `schwelle` the
+/// threshold in bytes (due constant). Checked in `arena.rs` (`N584`/`N585`),
+/// lowered on the commit path (`llvm.rs`) -- never on the alloc path.
 #[derive(Debug, Clone)]
-pub struct Druckfrage {
-    pub frage: Pfad,
-    pub unter: Expr,
+pub struct Probe {
+    pub pfad: Pfad,
+    pub schwelle: Expr,
     pub span: Span,
 }
 

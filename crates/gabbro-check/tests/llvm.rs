@@ -396,13 +396,13 @@ pub fn main() -> u64
 }
 
 /// **Die Abtastung steht vor dem Commit, nie im Schnellpfad.** Unbegrenzte Arena
-/// (`druckfrage frei unter 1048576`, Nutzer-Schwelle 1 MiB): das IR ruft die
+/// (`pb frei blw 1048576`, Nutzer-Schwelle 1 MiB): das IR ruft die
 /// Zählfrage, vergleicht gegen die Schwelle und läuft darunter in `voll` — auf
 /// beiden Zielen, ohne ein Byte BSS (`= global [` steht nirgends).
 #[test]
 fn abtastung_vor_commit() {
     let quelle = r#"module abtastbeleg {
-pub arena Vorrat capacity 0 .. 2 of u64 druckfrage frei unter 1048576;
+pub arena Vorrat capacity 0 .. 2 of u64 pb frei blw 1048576;
 impl fn frei() -> u64 effects { pure } costs <= 4 ops {
     return 99999999;
 }

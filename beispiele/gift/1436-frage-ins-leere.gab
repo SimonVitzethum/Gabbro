@@ -2,7 +2,7 @@
 -- The sampling names nothing: `gibt_es_nicht` is no gate and no function, so
 -- the commit-time probe would call into the void. Nothing else is wrong.
 module beispiel::halde_frage_ins_leere {
-arena Vorrat capacity 0 .. 2 of u64 druckfrage gibt_es_nicht unter 1048576;
+arena Vorrat capacity 0 .. 2 of u64 pb gibt_es_nicht blw 1048576;
 
 fn nutze() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 64 ops {
     let a = alloc Vorrat (7) else { return 1; };

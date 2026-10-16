@@ -348,17 +348,17 @@ wortschatz! {
     // `Alias`). Nur die Kopfstellung gibt dem Wort Bedeutung; anderswo bleibt
     // es ein Name, wie `reset` und `grow` darüber.
     Free          => "free",          ctx;
-    // **Druckfrage (Speicherdruck-Abtastung auf dem Commit-Pfad).**
+    // **Pressure sampling on the commit path (`pb P blw B`).**
     //
-    // `druckfrage P unter B` an einer Arena: vor jedem Commit fragt der
-    // Erzeuger die nullstellige Frage `P` (Tor oder Funktion, Antwort ganzzahlig,
-    // kein Fehlerkanal) nach freien Bytes; unter `B` läuft der `else`-Zweig
-    // (OOM-Pfad). Die Klausel schaltet die UNBEGRENZTE Form ein (ohne sie ist
-    // ohne `max` die Decke `hi`); die Schwelle `B` legt der Nutzer fest
-    // (z.B. `unter 1048576` — 1 MiB). Nur die Klauselposition gibt den Wörtern
-    // Bedeutung; anderswo bleiben sie Namen, wie `max` und `grow` darüber.
-    Druckfrage    => "druckfrage",    ctx;
-    Unter         => "unter",         ctx;
+    // `pb P blw B` on an arena: before each commit the generator asks the
+    // nullary probe `P` (gate or function, integer answer, no error channel)
+    // for free bytes; below `B` the `else` branch runs (OOM path). The clause
+    // switches the UNBOUNDED form on (without it, no-`max` means ceiling `hi`);
+    // the threshold `B` is set by the user (e.g. `blw 1048576` -- 1 MiB). Only
+    // the clause position gives the words meaning; elsewhere they stay names,
+    // like `max` and `grow` above.
+    Pb              => "pb",            ctx;
+    Blw             => "blw",           ctx;
     // **«E3» (2026-09-12): the translator declaration (`SYNTAX.md` §7.2).**
     //
     // Heads the total, effect-free map from a call region's AST to the

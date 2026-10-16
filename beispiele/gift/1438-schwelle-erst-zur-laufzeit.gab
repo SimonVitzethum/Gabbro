@@ -3,7 +3,7 @@
 -- comparison could hold the commit: the threshold is a translation-time
 -- number or it is no threshold. Nothing else is wrong with this unit.
 module beispiel::halde_schwelle_erst_zur_laufzeit {
-arena Vorrat capacity 0 .. 2 of u64 druckfrage frei unter grenze;
+arena Vorrat capacity 0 .. 2 of u64 pb frei blw grenze;
 
 impl fn frei() -> u64 effects { pure } costs <= 4 ops {
     return 99999999;

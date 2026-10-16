@@ -112,13 +112,13 @@ konstant (32 Byte für 4 Wörter, decken-unabhängig; `frei` = -1 steht in DATA)
 Lean: `FreiZustand` mit vier bewiesenen Erhaltungssätzen (`ArenaDyn.lean`);
 der G-Exporteur verweigert noch (`LG005`, O14s dritte Form).
 
-## Unbegrenzte Halde mit Abtastung (`druckfrage P unter B`)
+## Unbegrenzte Halde mit Abtastung (`pb P blw B`)
 
 Die Klausel schaltet die unbegrenzte Form ein (SYNTAX.md §9.1, TODO §1): keine
 `max`-Decke, die Decke ist der Zählerraum (`u32::MAX`); die Reserve bleibt
 Adressraum ohne RAM, der Commit läuft je 1 MiB bei Bedarf. VOR jedem Commit
 fragt der Erzeuger die nullstellige Frage `P` (Tor oder Funktion) nach freien
-Bytes — unter der Nutzer-Schwelle `B` (z.B. `unter 1048576`, 1 MiB) läuft der
+Bytes — unter der Nutzer-Schwelle `B` (z.B. `blw 1048576`, 1 MiB) läuft der
 `voll`/`else`-Zweig. Ein Ruf je MiB, null im Schnellpfad; freistehend misst `P`
 selbst. Prüfer `N584`/`N585` (Sätze in `saetze.rs`), drittes sanktioniertes
 `inttoptr` (Laufzeit-Basis). Gemessen: Beispiel `1160` läuft beidseitig
