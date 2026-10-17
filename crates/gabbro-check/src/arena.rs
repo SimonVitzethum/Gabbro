@@ -2382,14 +2382,14 @@ fn probe(
             "N584",
             d.pfad.span,
             format!(
-                "`{arena}` fragt `{voll}` nach freiem Speicher, und das nennt \
-                 kein Tor und keine Funktion (oder mehrdeutig): die Abtastung \
-                 riefe ins Leere",
+                "the `pb` clause of `{arena}` asks `{voll}` for free memory, and that names no \
+                 gate and no function (or is ambiguous): the sampling would \
+                 call into the void",
                 arena = arena,
                 voll = voll
             ),
-            "die `pb`-Klausel nennt eine nullstellige Zählfrage beim Namen -- \
-             ohne sie läuft der Commit blind in den Speichermangel",
+            "the `pb` clause names a nullary counting question by name -- \
+             without it the commit runs blind into memory shortage",
         );
         return;
     }
@@ -2399,11 +2399,11 @@ fn probe(
         None => None,
         Some((p, hat_fehler, ganz)) => {
             if p > 0 {
-                Some("mit Parametern zählt nichts ohne Argumente".to_string())
+                Some("with parameters it counts nothing without arguments".to_string())
             } else if hat_fehler {
-                Some("mit Fehlerkanal antwortet keine Zahl".to_string())
+                Some("with an error channel it answers no number".to_string())
             } else if !ganz {
-                Some("ohne ganzzahlige Antwort zählt keine Bytes".to_string())
+                Some("without an integer answer it counts no bytes".to_string())
             } else {
                 None
             }
@@ -2414,9 +2414,9 @@ fn probe(
             absagen,
             "N585",
             d.pfad.span,
-            format!("`{voll}` ist keine Zählfrage: {grund}", voll = voll),
-            "gezählt wird nullstellig, ganzzahlig, ohne Fehlerkanal -- alles \
-             andere riefe die Abtastung mit der falschen Hand auf",
+            format!("`{voll}` is no counting question: {grund}", voll = voll),
+            "counting is nullary, integer-valued, without an error channel -- \
+             anything else would call the sampling with the wrong hand",
         );
         return;
     }
@@ -2429,12 +2429,12 @@ fn probe(
                 "N585",
                 d.schwelle.span,
                 format!(
-                    "`{arena}` läuft unter keiner fälligen Schwelle: `blw` \
-                     ist eine Übersetzungszeit-Konstante in Bytes",
+                    "`{arena}` runs under no due threshold: `blw` \
+                     is a translation-time constant in bytes",
                     arena = arena
                 ),
-                "eine Schwelle, die erst zur Laufzeit feststeht, hält keinen \
-                 Commit auf -- der Vergleich braucht die Zahl vor dem Bau",
+                "a threshold fixed only at run time holds no commit back -- \
+                 the comparison needs the number before the build",
             );
         }
     }

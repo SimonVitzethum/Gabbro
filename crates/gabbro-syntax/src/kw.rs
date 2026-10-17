@@ -340,13 +340,13 @@ wortschatz! {
     // word meaning; followed by a place continuation (`grow = 1;`) it
     // stays a name, like `reset` above.
     Grow          => "grow",          ctx;
-    // **Freigabe (TODO §1-B): `free A[i];` gibt einen Slot zurück.**
+    // **Release (TODO §1-B): `free A[i];` gives a slot back.**
     //
-    // Der Slot wird wiederverwendbar (intrusive Freiliste in der Laufzeit);
-    // der befreite Name stirbt statisch (Danach-Gebrauch fällt mit `N586`,
-    // Kopien eingeschlossen — Aliase über fremde Namen bleiben OFFEN wie bei
-    // `Alias`). Nur die Kopfstellung gibt dem Wort Bedeutung; anderswo bleibt
-    // es ein Name, wie `reset` und `grow` darüber.
+    // The slot becomes reusable (an intrusive free list in the runtime); the freed
+    // name dies statically (a use afterwards fails with `N586`, copies included --
+    // aliases through foreign names stay OPEN, as with `Alias`). Only the head
+    // position gives the word meaning; elsewhere it stays a name, like `reset` and
+    // `grow` above.
     Free          => "free",          ctx;
     // **Pressure sampling on the commit path (`pb P blw B`).**
     //
@@ -358,6 +358,10 @@ wortschatz! {
     // the clause position gives the words meaning; elsewhere they stay names,
     // like `max` and `grow` above.
     Pb              => "pb",            ctx;
+    // **`blw` -- the threshold half of the sampling clause (2026-10-17).** It carries its
+    // own reason because the mechanical rule counts comment lines directly above EACH entry:
+    // `pb` names the probe, `blw` introduces the translation-time byte threshold, and no
+    // existing word can introduce a number that is read against the probe's answer.
     Blw             => "blw",           ctx;
     // **«E3» (2026-09-12): the translator declaration (`SYNTAX.md` §7.2).**
     //

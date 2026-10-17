@@ -32,7 +32,7 @@
 //!    name arm, so `option`, `ptr` and `mmio` are still not the NAME of a type or a space.
 //!    They remain ordinary variable names.
 //!
-//! What is left reserved is **seventeen words of 221**, on two measured grounds: ten head a
+//! What is left reserved is **seventeen words of 248**, on two measured grounds: ten head a
 //! primary expression or a predicate unconditionally (`Some`, `None`, `true`, `false`,
 //! `Self`, `sizeof`, `lenof`, `aligned`, `forall`, `exists`), and seven break the emitted C
 //! as an ordinary local (`const`, `static`, `extern`, `if`, `else`, `return`, `bool`). Every
@@ -455,7 +455,7 @@ impl<'a> Parser<'a> {
                 )
                 .mit_notiz(grund)
                 .mit_notiz(
-                    "seventeen words of the 221 are not names, and only these: \
+                    "seventeen words of the vocabulary are not names, and only these: \
                      `sizeof` `lenof` `aligned` `forall` `exists` `true` `false` \
                      `Self` `Some` `None` `const` `static` `extern` `if` `else` \
                      `return` `bool` -- every other word of the table is an ordinary name",
