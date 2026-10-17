@@ -41,7 +41,7 @@ Deklaration.ggeteilt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static decla
 Deklaration.Lock	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
 Deklaration.decLock	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.rang	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
-Deklaration.maskiert	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	IRQ-masking locks refused (Y102).
+Deklaration.maskiert	LOWERED	crates/gabbro-check/src/llvm/masken.rs::maskieren	`masks irqs`: save the core's interrupt state and mask before the ticket draw, restore after the release on every path out (pushfq/cli/popfq on x86_64, mrs daif/msr daifset,#3/msr daif on aarch64); another mask word is Y102. Assembly text verified, not executed (privileged in user mode).
 Deklaration.Marke	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.decMarke	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.stufen	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
@@ -55,12 +55,12 @@ Deklaration.eigner_nie_erzeugt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	St
 Deklaration.Inv	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.traeger	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.invs	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
-Deklaration.Ax	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Some raw gates and foreign declarations supported; entry/boot/entrust/asm and stack gates remain incomplete.
-Deklaration.aparams	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Some raw gates and foreign declarations supported; entry/boot/entrust/asm and stack gates remain incomplete.
-Deklaration.aerg	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Some raw gates and foreign declarations supported; entry/boot/entrust/asm and stack gates remain incomplete.
+Deklaration.Ax	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
+Deklaration.aparams	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
+Deklaration.aerg	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
 Deklaration.aschreibt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.agschreibt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
-Deklaration.agruende	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Some raw gates and foreign declarations supported; entry/boot/entrust/asm and stack gates remain incomplete.
+Deklaration.agruende	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
 Deklaration.Reg	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	No exported G Reg path; surface MMIO is not a model-register bridge.
 Deklaration.rtyp	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	No exported G Reg path; surface MMIO is not a model-register bridge.
 Deklaration.rklasse	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	No exported G Reg path; surface MMIO is not a model-register bridge.
@@ -176,8 +176,8 @@ Block.bind	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/bind
 Block.bindCall	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Block.bindCallInd	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Block.bindCallElse	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
-Block.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct and errno gates supported; stack/paired/unbound gates refused.
-Block.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct and errno gates supported; stack/paired/unbound gates refused.
+Block.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
+Block.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
 Block.regLies	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
 Block.regLiesElse	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
 Block.awaits	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
@@ -194,8 +194,8 @@ Endblock.leave	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/
 Endblock.next	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.cons	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.bind	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
-Endblock.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct and errno gates supported; stack/paired/unbound gates refused.
-Endblock.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct and errno gates supported; stack/paired/unbound gates refused.
+Endblock.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
+Endblock.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
 Arms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Arms.cons	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 GrundArms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
@@ -204,7 +204,7 @@ Programm.invariante	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_b
 Programm.requires	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 Programm.ensures	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 Programm.rumpf	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Functions, channels and bodies supported within the runtime carrier and statement restrictions.
-Programm.unterbricht	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Hardware-dispatched entries are not lowered.
+Programm.unterbricht	PARTIAL	crates/gabbro-check/src/llvm/eintritte.rs::emittiere	x86_64 entries lowered (stub with full register and SSE save, error-code twin stub, vector table); not claimed: stack switch, EOI, IDT format; boot, entrust and aarch64 entries refused (Y102).
 ArenaForm.tab	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Arena runtime storage exists; the full source-to-G arena statement/export bridge is still incomplete.
 ArenaForm.feld	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Arena runtime storage exists; the full source-to-G arena statement/export bridge is still incomplete.
 ArenaForm.zaehl	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Arena runtime storage exists; the full source-to-G arena statement/export bridge is still incomplete.

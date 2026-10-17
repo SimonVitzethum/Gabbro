@@ -1,0 +1,127 @@
+-- `child` hinter einem rohen Klon-Tor mit übergebenem Stapel (LLVM-Erzeuger, ohne C).
+--
+-- Der Vater legt sich per `mmap` einen Stapel an, klont über das Tor `kind_start`
+-- (`stack rsi` / `stack x1`: das Register, das der Kern als `sp` des Kindes setzt) und
+-- wartet auf den Austritt des Kindes. Das Kind läuft in `child { … }` AUF DEM
+-- ÜBERGEBENEN STAPEL, ruft eine Funktion (Rahmen auf dem neuen Stapel), prüft, dass es
+-- den Stapelwert bekam (Seitenausrichtung, `% 4096 == 0`), und beendet den ganzen
+-- Prozess mit 42. Der Vater kehrt nur mit 3 zurück, wenn kein Kind lief.
+--
+-- Die Nummern (clone 56 / 220, mmap 9 / 222, exit_group 231 / 94, sched_yield 24 /
+-- 124) stehen als Daten des Programms in seinen Toren; der Erzeuger kennt keine.
+module kind {
+assume linux_kern
+    "Der Kern startet den Faden mit sp aus dem Stapelregister, antwortet im Kind null und achtet die Nummern seiner Architektur."
+    falsifier sonde_kind;
+
+syscall abbilden(adr : u64, laenge : u64, schutz : u64, art : u64, fd : u64, versatz : u64) -> u64
+    abi linux arch x86_64 number 9
+    regs in { rdi = adr, rsi = laenge, rdx = schutz, r10 = art, r8 = fd, r9 = versatz }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_kern falsifier sonde_kind;
+syscall abbilden(adr : u64, laenge : u64, schutz : u64, art : u64, fd : u64, versatz : u64) -> u64
+    abi linux arch aarch64 number 222
+    regs in { x0 = adr, x1 = laenge, x2 = schutz, x3 = art, x4 = fd, x5 = versatz }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_kern falsifier sonde_kind;
+
+syscall kind_start(art : u64, stapel : u64) -> u64
+    abi linux arch x86_64 number 56
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 64 ops
+    assume linux_kern falsifier sonde_kind;
+syscall kind_start(art : u64, stapel : u64) -> u64
+    abi linux arch aarch64 number 220
+    regs in { x0 = art, x1 = stapel }
+    regs out { x0 }
+    stack x1
+    clobbers { }
+    errors { }
+    effects { pure }
+    costs <= 64 ops
+    assume linux_kern falsifier sonde_kind;
+
+syscall ausgang(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_kern falsifier sonde_kind;
+syscall ausgang(code : u64) -> never
+    abi linux arch aarch64 number 94
+    regs in { x0 = code }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_kern falsifier sonde_kind;
+
+syscall nachgeben() -> u64
+    abi linux arch x86_64 number 24
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_kern falsifier sonde_kind;
+syscall nachgeben() -> u64
+    abi linux arch aarch64 number 124
+    regs in { }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_kern falsifier sonde_kind;
+
+pub static mut WARTE : [u32; 200000] = 0;
+
+impl fn rechne(stapel : u64) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    if stapel % 4096 == 0 {
+        return 42;
+    }
+    return 41;
+}
+
+pub fn main() -> u64
+    effects { reads WARTE, diverges }
+    costs <= 100000000 ops
+{
+    let basis = abbilden(0, 65536, 3, 34, 18446744073709551615, 0);
+    let stapel = basis +% 65536;
+    let v = kind_start(331520, stapel);
+    if v == 0 {
+        child {
+            let r = rechne(stapel);
+            ausgang(r);
+        }
+    }
+    traverse i over elems of WARTE by unvisited
+        touches reads WARTE
+    {
+        nachgeben();
+    }
+    return 3;
+}
+}

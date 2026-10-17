@@ -19,6 +19,8 @@ ENV = {**os.environ, "LC_ALL": "C"}
 # program -> expected exit code (the same on both targets)
 PROGRAMME = {
     "messung/llvm/summe.gab": 25,
+    "messung/llvm/sperre.gab": 3,
+    "messung/llvm/kind.gab": 42,
     "beispiele/1160-halde-mit-abtastung.gab": 42,
     "beispiele/1161-platz-freigeben.gab": 100,
     "beispiele/1162-echte-faeden.gab": 64,

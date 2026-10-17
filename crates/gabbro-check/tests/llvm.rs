@@ -523,3 +523,266 @@ fn beleg_elaboriert_mit_lean() {
         assert!(aus.status.success(), "lean rejects certificate {name}:\n{ausgabe}");
     }
 }
+
+// ===================================================================================
+// Nebenläufigkeit und Unterbrechungen: maskierende Sperren, Stapeltore mit `child`, `entry`
+// ===================================================================================
+
+fn senke_ohne_fehler(quelle: &str, name: &str, ziel: &'static gabbro_check::llvm::Ziel) -> String {
+    let (ir, codes) = senke(quelle, name, ziel);
+    let f = fehler(&codes);
+    assert!(f.is_empty(), "{name} auf {} fällt mit {f:?}", ziel.name);
+    ir
+}
+
+/// Eine Sperre mit Rückkehr mitten im Block und Fall-through: jeder Pfad gibt frei.
+const SPERRE_PFADE: &str = r#"module sperrpfade {
+pub static mut Z : u32 = 0;
+pub lock L protects { Z } rank 0 held <= 8 ops MASKE;
+pub fn g(c : bool) -> u32
+    effects { reads Z, writes Z, locks L }
+    costs <= 16 ops
+{
+    locks L {
+        if c {
+            return Z;
+        }
+        Z = Z +% 1;
+    }
+    return 0;
+}
+pub fn main() -> u64
+    effects { reads Z, writes Z, locks L }
+    costs <= 64 ops
+{
+    let a = g(true);
+    return 7;
+}
+}
+"#;
+
+/// **Die Freigabe steht an JEDEM Ausgang** (vor 2026-10-17 leerte das `return` im `if` den
+/// Sperrenstapel, und der Pfad ohne `return` behielt die Sperre für immer), und der Wert
+/// eines `return Z` wird gelesen, BEVOR die Sperre fällt.
+#[test]
+fn sperre_gibt_an_jedem_ausgang_frei_und_liest_zuerst() {
+    let q = SPERRE_PFADE.replace("MASKE", "");
+    for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+        let ir = senke_ohne_fehler(&q, "sperrpfade", ziel);
+        let g = ir.split("define i32 @\"g\"").nth(1).expect("g steht da").split("\n}\n").next().unwrap().to_string();
+        assert_eq!(g.matches("atomicrmw add ptr @\"L.bereit\"").count(), 2, "zwei Ausgänge, zwei Freigaben:\n{g}");
+        // `return Z`: erst die Lesung von Z, dann die Freigabe, dann `ret`.
+        let lies = g.find("load i32, ptr @\"Z\"").expect("Z gelesen");
+        let frei = g.find("atomicrmw add ptr @\"L.bereit\"").expect("freigegeben");
+        assert!(lies < frei, "der Wert wird unter der Sperre gelesen:\n{g}");
+    }
+}
+
+/// **`masks irqs`, die genauen Befehlsfolgen.** x86_64: Zustandswort sichern (`pushfq`/`popq`),
+/// dann `cli`; zurück mit `pushq`/`popfq` -- nie ein `sti`. aarch64: `mrs daif`, `msr daifset,
+/// #3`; zurück `msr daif`. Das Nehmen steht VOR der Ticket-Ziehung, das Zurücknehmen NACH
+/// der Freigabe, an jedem der zwei Ausgänge.
+#[test]
+fn maskierende_sperre_sichert_maskiert_und_stellt_her() {
+    let q = SPERRE_PFADE.replace("MASKE", "masks irqs");
+    let ix = senke_ohne_fehler(&q, "maske", &ZIEL_X86_64);
+    assert!(
+        ix.contains(
+            r#"call i64 asm sideeffect "leaq -128(%rsp), %rsp\0A\09pushfq\0A\09popq $0\0A\09cli\0A\09leaq 128(%rsp), %rsp", "=r,~{memory},~{cc}"()"#
+        ),
+        "x86_64: Sichern und Maskieren fehlt:\n{ix}"
+    );
+    assert_eq!(
+        ix.matches(
+            r#"call void asm sideeffect "leaq -128(%rsp), %rsp\0A\09pushq $0\0A\09popfq\0A\09leaq 128(%rsp), %rsp", "r,~{memory},~{cc}"(i64"#
+        )
+        .count(),
+        2,
+        "x86_64: je Ausgang eine Wiederherstellung:\n{ix}"
+    );
+    assert!(!ix.contains("sti"), "nie ein bedingungsloses sti");
+    let nehmen = ix.find("cli").expect("cli");
+    let ticket = ix.find("atomicrmw add ptr @\"L.naechst\"").expect("Ticket");
+    assert!(nehmen < ticket, "maskieren vor der Ticket-Ziehung");
+    let frei = ix.find("atomicrmw add ptr @\"L.bereit\"").expect("Freigabe");
+    let zurueck = ix.find("popfq").expect("popfq");
+    assert!(frei < zurueck, "zurücknehmen nach der Freigabe");
+
+    let ia = senke_ohne_fehler(&q, "maske", &ZIEL_AARCH64);
+    assert!(
+        ia.contains(
+            r#"call i64 asm sideeffect "mrs $0, daif\0A\09msr daifset, #3", "=r,~{memory}"()"#
+        ),
+        "aarch64: Sichern und Maskieren fehlt:\n{ia}"
+    );
+    assert_eq!(
+        ia.matches(r#"call void asm sideeffect "msr daif, $0", "r,~{memory}"(i64"#).count(),
+        2,
+        "aarch64: je Ausgang eine Wiederherstellung:\n{ia}"
+    );
+}
+
+/// Eine bloß DEKLARIERTE maskierende Sperre schreibt keinen Befehl (das Programm läuft im
+/// Benutzermodus weiter, wo `cli` ein #GP wäre); ein anderes Maskenwort als `irqs` fällt
+/// beim Namen.
+#[test]
+fn deklarierte_maskierende_sperre_schreibt_keinen_befehl_und_nmi_faellt() {
+    let q = r#"module nurdecl {
+pub static mut Z : u32 = 0;
+pub lock L protects { Z } rank 0 held <= 8 ops masks irqs;
+pub fn main() -> u64 effects { pure } costs <= 4 ops { return 5; }
+}
+"#;
+    for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+        let ir = senke_ohne_fehler(q, "nurdecl", ziel);
+        assert!(!ir.contains("daif") && !ir.contains("cli"), "kein Maskenbefehl ohne `locks`:\n{ir}");
+    }
+    let nmi = q.replace("masks irqs", "masks nmi");
+    for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+        let (_, codes) = senke(&nmi, "nmi", ziel);
+        assert_eq!(fehler(&codes), vec!["Y102"], "masks nmi fällt auf {}", ziel.name);
+    }
+}
+
+/// **`child` hinter einem Stapeltor (x86_64 und aarch64).** Die Region ist eine eigene
+/// Funktion `gabbro_kind_0(übergebener Stapel)`; der Befehl des Tors springt im KIND (Antwort
+/// null) in sie, mit dem Stapelregister als erstem Argument, ausgerichtet, ohne Rahmenzeiger;
+/// dahinter ein Trap. Der Vater läuft hinter der Marke `1:` weiter.
+#[test]
+fn child_springt_im_kind_auf_den_uebergebenen_stapel() {
+    let q = std::fs::read_to_string(wurzel().join("..").join("messung/llvm/kind.gab")).expect("kind.gab lesbar");
+    let ix = senke_ohne_fehler(&q, "kind", &ZIEL_X86_64);
+    assert!(
+        ix.contains(
+            r#""syscall\0A\09testq %rax, %rax\0A\09jnz 1f\0A\09movq %rsi, %rdi\0A\09xorl %ebp, %ebp\0A\09andq $$-16, %rsp\0A\09callq gabbro_kind_0\0A\09ud2\0A1:""#
+        ),
+        "x86_64: Stapeltor-Befehlsfolge:\n{ix}"
+    );
+    assert!(ix.contains("define void @\"gabbro_kind_0\"(i64 noundef %p0)"), "Region ausgelagert:\n{ix}");
+    assert!(ix.contains("@llvm.used = appending global [1 x ptr] [ptr @\"gabbro_kind_0\"]"), "nur der Assembler ruft sie");
+    let ia = senke_ohne_fehler(&q, "kind", &ZIEL_AARCH64);
+    assert!(
+        ia.contains(
+            r#""svc #0\0A\09cbnz x0, 1f\0A\09mov x0, x1\0A\09mov x29, xzr\0A\09mov x9, sp\0A\09and x9, x9, #-16\0A\09mov sp, x9\0A\09bl gabbro_kind_0\0A\09brk #0\0A1:""#
+        ),
+        "aarch64: Stapeltor-Befehlsfolge:\n{ia}"
+    );
+    // Der Kindrumpf rechnet mit dem Parameter, nicht mit einer Zelle des Vaters.
+    let region = ix.split("define void @\"gabbro_kind_0\"").nth(1).unwrap().split("\n}\n").next().unwrap().to_string();
+    assert!(region.contains("call i64 @\"rechne\""), "die Region ruft die Funktion mit dem Stapelwert:\n{region}");
+}
+
+/// Die Beispiele 155/156/160/1114 tragen nur eine x86_64-Bindung: auf x86_64 senken sie, und
+/// auf aarch64 steht kein Tor da, der Ruf fällt beim Namen (nicht still).
+#[test]
+fn stapeltor_beispiele_senken_auf_x86_und_fallen_auf_aarch64_benannt() {
+    for datei in ["155-kind-uebergabe.gab", "156-kind-verzweigt.gab", "160-kind-liest-stapel.gab", "1114-kind-handed-read.gab"] {
+        let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
+        let ir = senke_ohne_fehler(&quelle, datei, &ZIEL_X86_64);
+        assert!(ir.contains("callq gabbro_kind_0"), "{datei}: der Stapelruf springt in die Region");
+        let (_, codes) = senke(&quelle, datei, &ZIEL_AARCH64);
+        assert!(fehler(&codes).contains(&"Y102"), "{datei}: aarch64 ohne Tor fällt benannt");
+    }
+}
+
+const EINTRITT_QUELLE: &str = r#"module eintritte {
+entry syscall vector 0x80 arch x86_64 {
+    regs in  { nr : rax, a0 : rdi }
+    regs out { ret : rax }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rcx, r11 }
+    stack kernstapel per cpu nested never
+    dispatch verteiler;
+}
+entry gp vector 13 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rax, rbx, rcx, rdx, rsi, rdi, rbp, r8, r9, r10, r11, r12, r13, r14, r15 }
+    clobbers  { }
+    stack gp_stapel per cpu ist 1 nested never
+    dispatch gp_verteiler;
+}
+impl fn verteiler(nr : u64, a0 : u64) -> u64
+    effects { pure }
+{
+    return a0;
+}
+impl fn gp_verteiler()
+    effects { pure }
+{
+    return;
+}
+}
+"#;
+
+/// **`entry` auf x86_64:** je Eintritt ein Stub (Register und x87/SSE-Zustand sichern,
+/// `cld`, die C-Hälfte rufen, wiederherstellen, `iretq`), der Zwillings-Stub für Vektor 13
+/// (Fehlercode vor `iretq` abwerfen), die C-Hälfte lädt `regs in` und schreibt `regs out`
+/// in den Rahmen, die Vektortabelle nennt Stub und IST, jede Funktion trägt `noredzone`.
+#[test]
+fn entry_schreibt_stub_zwilling_und_vektortabelle() {
+    let ir = senke_ohne_fehler(EINTRITT_QUELLE, "eintritte", &ZIEL_X86_64);
+    for s in [
+        "module asm \"gabbro_eintritt_syscall:\"",
+        "module asm \"gabbro_eintritt_gemeinsam:\"",
+        "module asm \"gabbro_eintritt_gemeinsam_fc:\"",
+        "module asm \"\tfxsave (%rsp)\"",
+        "module asm \"\tcld\"",
+        "module asm \"\tiretq\"",
+        "module asm \"\tjmp gabbro_eintritt_gemeinsam_fc\"",
+    ] {
+        assert!(ir.contains(s), "fehlt: {s}\n{ir}");
+    }
+    // Nur der Zwilling wirft den Fehlercode ab.
+    assert_eq!(ir.matches("module asm \"\taddq $8, %rsp\"").count(), 1, "genau ein Zwilling");
+    // Die C-Hälfte: rdi und rax aus dem Rahmen (Versatz 72 und 112), die Antwort nach rax.
+    let c = ir.split("define void @\"gabbro_eintritt_syscall_c\"").nth(1).unwrap().split("\n}\n").next().unwrap().to_string();
+    assert!(c.contains("i64 112") && c.contains("i64 72"), "Rahmenplätze rax/rdi:\n{c}");
+    assert!(c.contains("call i64 @\"verteiler\"(i64 noundef %v0, i64 noundef %v1)"), "{c}");
+    assert!(c.contains("store i64 %a, ptr %pa"), "Antwort in den Rahmen:\n{c}");
+    // Die Vektortabelle: 256 Einträge, 0x80 und 13 belegt, IST 1 an Vektor 13.
+    assert!(ir.contains("@\"gabbro_eintritt_vektoren\" = constant [256 x ptr]"));
+    assert!(ir.contains("@\"gabbro_eintritt_ist\" = constant [256 x i8]"));
+    assert!(ir.matches("ptr @\"gabbro_eintritt_gp\"").count() >= 1 && ir.matches("ptr @\"gabbro_eintritt_syscall\"").count() >= 1);
+    assert!(ir.contains("noredzone"), "keine rote Zone unter einem Unterbrechungsrahmen");
+    assert!(!ir.lines().any(|l| l.starts_with("define ") && !l.contains("noredzone")), "jede Funktion");
+}
+
+/// `entry … via irq` (der Unterbrechungsweg eines fremden Kerns) ist ein gewöhnlicher
+/// Funktionskopf, kein Stub; ein Programm ohne Eintritt trägt weder Stub noch `noredzone`.
+#[test]
+fn entry_via_irq_ist_ein_funktionskopf() {
+    let q = r#"module irqweg {
+entry takt via irq arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack takt_stapel per cpu nested never
+    dispatch verteiler;
+}
+impl fn verteiler() effects { pure } { return; }
+}
+"#;
+    let ir = senke_ohne_fehler(q, "irqweg", &ZIEL_X86_64);
+    assert!(ir.contains("define void @\"gabbro_eintritt_takt\"() noredzone {"), "{ir}");
+    assert!(!ir.contains("module asm"), "kein Stub für den fremden Unterbrechungsweg");
+    let ohne = senke_ohne_fehler("module m { pub fn main() -> u64 effects { pure } costs <= 2 ops { return 1; } }", "m", &ZIEL_X86_64);
+    assert!(!ohne.contains("noredzone") && !ohne.contains("module asm"));
+}
+
+/// Was nicht gesenkt wird, fällt BEIM NAMEN: ein `entry` auf aarch64 (keine Ausnahmetabelle,
+/// kein `eret` modelliert), ein zweiter Eintritt auf demselben Vektor, `boot` und `entrust`.
+#[test]
+fn entry_boot_entrust_fallen_benannt() {
+    let (_, codes) = senke(EINTRITT_QUELLE, "eintritte", &ZIEL_AARCH64);
+    assert_eq!(fehler(&codes), vec!["Y102", "Y102"], "beide Eintritte auf aarch64");
+    let doppelt = EINTRITT_QUELLE.replace("vector 13", "vector 0x80");
+    let (_, codes) = senke(&doppelt, "doppelt", &ZIEL_X86_64);
+    assert!(fehler(&codes).contains(&"Y102"), "zweiter Eintritt auf demselben Vektor");
+    for datei in ["07-eintritt-und-boot.gab", "25-entrust.gab"] {
+        let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
+        let (_, codes) = senke(&quelle, datei, &ZIEL_X86_64);
+        assert!(fehler(&codes).contains(&"Y102"), "{datei} fällt beim Namen");
+    }
+}
