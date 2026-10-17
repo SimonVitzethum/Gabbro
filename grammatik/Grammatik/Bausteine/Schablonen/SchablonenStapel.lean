@@ -6,7 +6,7 @@
   source call/return rules. It does NOT prove the Rust emitter or final bytes.
   Allocation failure is explicit; no finite store promises unlimited memory.
 -/
-import Grammatik.Logik.Ruf.RufMaschineG
+import Grammatik.Logik.Ruf.Maschine.RufMaschineG
 import Grammatik.Bausteine.Schablonen.SchablonenFaden
 
 namespace Gabbro.Grammatik.Stapel

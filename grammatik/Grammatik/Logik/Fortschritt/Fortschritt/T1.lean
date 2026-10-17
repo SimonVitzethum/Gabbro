@@ -50,7 +50,7 @@
   `logik` checks.
 -/
 import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Logik.Ruf.RufAdaequatRufG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
 
 namespace Gabbro.Grammatik
 

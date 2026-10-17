@@ -96,7 +96,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.Korrespondenz
 import Grammatik.CBackend.Formen.CFormenDet
-import Grammatik.Logik.Ruf.RufOhneHardware
+import Grammatik.Logik.Ruf.Ohne.RufOhneHardware
 
 namespace Gabbro.Grammatik
 

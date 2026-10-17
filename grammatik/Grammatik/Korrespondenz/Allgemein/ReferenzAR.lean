@@ -14,7 +14,7 @@
   files are not edited). The F-machine run takes the lock and fires the
   `axiomCall` leaf, whose oracle writes slot `0 := 100`.
 -/
-import Grammatik.Logik.Ruf.RufMaschineF
+import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 
 namespace Gabbro.Grammatik
 

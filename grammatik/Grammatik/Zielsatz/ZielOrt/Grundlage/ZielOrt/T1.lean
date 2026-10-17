@@ -47,9 +47,9 @@
 
   The theorem `ziel_ort` itself is in `ZielOrtBeweis.lean`.
 -/
-import Grammatik.Logik.Ruf.RufUmkehrRufG
-import Grammatik.Logik.Ruf.RufHaeltG
-import Grammatik.Logik.Ruf.HoareRuf
+import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
+import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
+import Grammatik.Logik.Ruf.Hoare.HoareRuf
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre
 

@@ -5,7 +5,7 @@
              the ordinary parameters with the payload type appended.
              No new statement constructor: the call IS an `axiomCall`.
 -/
-import Grammatik.Logik.Ruf.RufMaschineF
+import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 
 namespace Gabbro.Grammatik
 

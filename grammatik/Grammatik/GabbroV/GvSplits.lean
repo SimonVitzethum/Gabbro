@@ -19,7 +19,7 @@
   are jointly satisfiable without vacuity. Heterogeneous chains stay open
   (see CUTS).
 -/
-import Grammatik.Logik.Ruf.HoareRuf
+import Grammatik.Logik.Ruf.Hoare.HoareRuf
 
 namespace Gabbro.Grammatik.GvSplits
 

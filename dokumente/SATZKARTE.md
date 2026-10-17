@@ -3531,8 +3531,8 @@ bytes; and red on a single changed byte, green again after restoring.
 
 ## 35. Part 4's condition, halved: a certified program cannot end a call in a HARDWARE outcome
 
-*Added 2026-09-15 (Opus lane `staerker`). Files: `Grammatik/Logik/Ruf/RufOhneHardware.lean` (new),
-`Grammatik/Logik/Ruf/RufOhneHardwareZeuge.lean` (new), `Grammatik/Korrespondenz/Allgemein/KorrOkAdaequat.lean` (new),
+*Added 2026-09-15 (Opus lane `staerker`). Files: `Grammatik/Logik/Ruf/Ohne/RufOhneHardware.lean` (new),
+`Grammatik/Logik/Ruf/Ohne/RufOhneHardwareZeuge.lean` (new), `Grammatik/Korrespondenz/Allgemein/KorrOkAdaequat.lean` (new),
 `Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` §5, `Grammatik/Korrespondenz/Kette/Schlusssatz.lean`,
 `Grammatik/Korrespondenz/Kette/Kette104Satz.lean`; index sites in `Grammatik/CBackend/Parser/Bruecke.lean`,
 `Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/CBackend/Semantik/CText108.lean`. Plan:

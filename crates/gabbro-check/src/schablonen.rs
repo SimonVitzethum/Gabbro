@@ -263,7 +263,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the errno table the stub compares maps each listed errno to one case of `R`, first entry wins", durch: Some("`emit.rs::syscall_stumpf`'s error-map rules (an errno outside 1..4095, a name no case of `R` carries, a map without an `or R` channel -- each refused by name), which is `dekodiere`'s `FehlerTabelle`"), braeuchte: None },
             Voraussetzung { was: "the kernel answers a listed errno or an in-range value (else the stub's `__builtin_unreachable()`)", durch: Some("the gate's declared contract -- `assume … falsifier …` or a `kernel` pairing (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §3; grammatik/Grammatik/Kern/Semantik/Syscall.lean \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §3; grammatik/Grammatik/Kern/Semantik/Syscall/Syscall.lean \
                      (`dekodiere`); crates/gabbro-check/src/emit.rs (`syscall_stumpf`)",
     },
     // **Entered 2026-09-30 by the C-free lane (the region gate, Simon's decision 1), PROVED in
@@ -297,7 +297,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every index through the bound answer satisfies `i + 1 <= n` for the extent `n` of the gate's `ensures n <= lenof(result)`", durch: Some("`N571` (`m1.rs::zeigerindex_pruefen`) over the clause `let … else` books for a name bound once and never assigned, and `N463` at every call the region is passed to"), braeuchte: None },
             Voraussetzung { was: "the kernel answers a listed errno or a fresh region of at least `n` bytes, disjoint from every live one (else the stub's `__builtin_unreachable()`)", durch: Some("the gate's declared contract -- `ensures … <= lenof(result)` plus `assume … falsifier …` (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §4; grammatik/Grammatik/Kern/Semantik/Syscall.lean \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §4; grammatik/Grammatik/Kern/Semantik/Syscall/Syscall.lean \
                      (`dekodiere`); crates/gabbro-check/src/emit.rs (`Antwort::Region`); \
                      crates/gabbro-check/src/m1.rs (`ergebnis_ausdehnung`); beispiele/183",
     },

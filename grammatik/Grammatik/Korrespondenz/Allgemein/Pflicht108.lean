@@ -39,7 +39,7 @@ import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
-import Grammatik.Logik.Ruf.RufAdaequatG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 
 namespace Gabbro.Grammatik

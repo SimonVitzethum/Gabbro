@@ -18,7 +18,7 @@ MODELS = {
     "Kern/Syntax/Syntax.lean": ["Signatur", "Regklasse", "Deklaration", "Res", "Vertrag", "RufPasst", "Var", "Expr", "NutzlastExpr", "Args", "ErgExpr", "GleitOp", "Stmt", "Block", "Endblock", "Arms", "GrundArms", "Programm"],
     "Bausteine/Arena/ArenaZucker.lean": ["ArenaForm"],
     "Bausteine/Arena/ArenaDyn.lean": ["DynArena", "DynForm", "FreiZustand"],
-    "Logik/Ruf/RufMaschineG.lean": ["GRest"],
+    "Logik/Ruf/Maschine/RufMaschineG.lean": ["GRest"],
 }
 
 
@@ -52,7 +52,11 @@ def members():
     result = {}
     for relative, names in MODELS.items():
         path = ROOT / "grammatik/Grammatik" / relative
-        text = uncomment(path.read_text())
+        text = path.read_text()
+        teile = path.with_suffix("")   # a file split by lean-teilen.py: its parts hold the declarations
+        if teile.is_dir():
+            text += "\n" + "\n".join(f.read_text() for f in sorted(teile.glob("T*.lean"), key=lambda f: int(f.stem[1:])))
+        text = uncomment(text)
         if relative == "Kern/Syntax/Syntax.lean":
             declared = set(re.findall(r"^(?:inductive|structure) ([\w']+)", text, re.M))
             if declared != set(names):

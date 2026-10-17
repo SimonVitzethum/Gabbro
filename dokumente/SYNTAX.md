@@ -966,7 +966,7 @@ freestmt   = "free" place ";" ;                            (* TODO §1-B, §9.1 
    and the request reaching past the ceiling, branch or no branch). `grow = 1;` stays
    an assignment -- the head word decides, like at `reset` above. *)
 childstmt  = "child" block ;                                    (* lane O-1, §12.1 *)
-startstmt  = "start" "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §11 *)
+startstmt  = ident "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §11; `ident` spelled `start`, read by text, not a vocabulary word *)
 (* The hosted thread start: the listed roots are the declared-concurrent bodies the program starts
    (`concurrentdecl`, §11). `start` is no keyword (`kw.rs` has no such word): only the identifier
    `start` directly followed by `{` is this statement, so `start = 1;`, `start(x);` and `start f;`

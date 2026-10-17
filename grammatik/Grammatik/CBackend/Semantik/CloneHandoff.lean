@@ -38,9 +38,9 @@
   decorative premise is worse than none) and puts the child in a model of
   its own instead; §7 is how the goal reaches it. See the CUTS at the end.
 -/
-import Grammatik.Kern.Semantik.Syscall
-import Grammatik.Kern.Semantik.SyscallAllg
-import Grammatik.Logik.Ruf.RufMaschineG
+import Grammatik.Kern.Semantik.Syscall.Syscall
+import Grammatik.Kern.Semantik.Syscall.SyscallAllg
+import Grammatik.Logik.Ruf.Maschine.RufMaschineG
 import Grammatik.Korrespondenz.Korpus.Korpus124
 
 namespace Gabbro.Grammatik

@@ -27,7 +27,7 @@
 -/
 import Grammatik.Zielsatz.Faeden.FaedenVor
 import Grammatik.Zielsatz.Faeden.PoolZeuge
-import Grammatik.Logik.Ruf.RufAdaequatG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 import Grammatik.CBackend.Semantik.CloneHandoff
 
 namespace Gabbro.Grammatik.Zielsatz

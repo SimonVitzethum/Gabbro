@@ -27,8 +27,8 @@
   closure `MerkAbg` then gives the thread invariant `MerkInvG` on every
   reachable machine (`merkInvG_erreichbar`).
 -/
-import Grammatik.Logik.Ruf.RufHaeltG
-import Grammatik.Logik.Ruf.RufAdaequatG
+import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 
 namespace Gabbro.Grammatik
 

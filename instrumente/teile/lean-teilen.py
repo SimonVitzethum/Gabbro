@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Split one big Lean file into parts of about --ziel lines (default 450) at top-level boundaries.
 
-    python3 instrumente/teile/lean-teilen.py grammatik/Grammatik/Logik/Ruf/RufAdaequatRufG.lean [--ziel 450]
+    python3 instrumente/teile/lean-teilen.py grammatik/Grammatik/Logik/Ruf/Adaequat/RufAdaequatRufG.lean [--ziel 450]
 
 `X.lean` becomes an umbrella that only imports `X/T1.lean` ... `X/Tn.lean`, so every module that imported `X` keeps
 working. Boundaries: between top-level declarations; a `section ... end` block and a `mutual ... end` block are never
