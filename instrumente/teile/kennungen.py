@@ -255,10 +255,11 @@ ABSICHTLICH = {
              "bound per `target` block (checked under every target, not only the active one)"),
     "N005": ({"namen.rs", "zielbindung.rs"},
              "the twin of N004: `rests on an unfalsifiable assumption`, same two sites"),
-    "Y102": ({"llvm.rs", "eintritte.rs", "stapeltor.rs"},
+    "Y102": ({"llvm.rs", "eintritte.rs", "stapeltor.rs", "assembler.rs", "portraum.rs"},
              "a CLASS code of the LLVM backend (`Y102` = item or gate shape, see `weigere` in "
-             "`llvm.rs`); `llvm/eintritte.rs` (entries) and `llvm/stapeltor.rs` (stack gates, "
-             "`child`) are submodules of `llvm.rs` and refuse through the same `weigere`"),
+             "`llvm.rs`); `llvm/eintritte.rs` (entries), `llvm/stapeltor.rs` (stack gates, "
+             "`child`), `llvm/assembler.rs` (`asm` bodies) and `llvm/portraum.rs` (port space) "
+             "are submodules of `llvm.rs` and refuse through the same `weigere`"),
     "Y103": ({"llvm.rs", "memory.rs", "stapeltor.rs"},
              "a CLASS code of the LLVM backend (`Y103` = statement, see `weigere` in "
              "`llvm.rs`); `llvm/memory.rs` and `llvm/stapeltor.rs` are submodules of `llvm.rs` "

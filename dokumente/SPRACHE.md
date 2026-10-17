@@ -1089,7 +1089,7 @@ in `switch_to`/`resume` with a linear saved `Context`; a `regs out` register car
 result only through a declared encoding with non-overlapping ranges; FP state as an opaque save
 area saved eagerly in `switch_to` (the lazy variant is a known leak). **What does not fall,
 honestly:** entry has no downstream prover — the emission comes from one site, probes sit in the
-acceptance series; the LLVM backend refuses hardware dispatch by name.
+acceptance series; the LLVM backend lowers `entry` (x86_64 IDT stubs, aarch64 vector table) and refuses `boot`/`entrust` by name.
 
 ### 12.4 Not built, named
 

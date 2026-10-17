@@ -1,0 +1,43 @@
+-- Two exception-vector entries for aarch64 (EL1): slot 4 (`sync`, current EL with SPx,
+-- the `svc` of the harness) and slot 0 (`sync`, current EL with SP0). The generated stub saves
+-- x0-x30, ELR/SPSR_EL1, FPSR/FPCR and q0-q31, calls the dispatch with `nr` from x0, writes the
+-- answer back into x0's frame slot and ends with `eret`.
+--
+-- What this file claims: the LOWERING of the two declarations (table slots, frame, `eret`).
+-- What it does not: VBAR_EL1 is written by the harness (`instrumente/teile/eintritt-a64-qemu.sh`,
+-- hand-written assembly, test apparatus only), not by the generated code.
+module eintritt_a64 {
+
+entry ruf_vier vector 4 via sync arch aarch64 {
+    regs in  { nr : x0 }
+    regs out { ret : x0 }
+    preserves { x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29 }
+    clobbers  { x9, x10 }
+    stack kernstapel per cpu nested never
+    dispatch eintritt_a64::verteiler_vier;
+}
+
+entry ruf_null vector 0 arch aarch64 {
+    regs in  { nr : x0 }
+    regs out { ret : x0 }
+    preserves { x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29 }
+    clobbers  { x9, x10 }
+    stack kernstapel per cpu nested never
+    dispatch eintritt_a64::verteiler_null;
+}
+
+impl fn verteiler_vier(nr : u64) -> u64
+    effects { pure }
+    costs   <= 2 ops
+{
+    return nr +% 1;
+}
+
+impl fn verteiler_null(nr : u64) -> u64
+    effects { pure }
+    costs   <= 2 ops
+{
+    return nr +% 100;
+}
+
+}
