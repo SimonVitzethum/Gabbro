@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Lower.Stmt
+import Grammatik.Code.Lower.Stmt
 
 /-
-  File:      Grammatik/Llvm/Refine/Mono.lean
+  File:      Grammatik/Code/Refine/Mono.lean
   Subject:   TRACK L, PHASE L1 -- THE LOWERING ONLY USES REGISTERS AND LABELS UPWARD, AND ITS
              BLOCKS HAVE NO PHIS: `lowerE_mono`, `lowerS_shape`/`lowerB_shape`/`lowerEnd_shape`.
 
@@ -9,7 +9,9 @@ import Grammatik.Llvm.Lower.Stmt
   block has phis (a jump into it leaves the registers alone), and the counters did not fall.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr)
 
@@ -800,4 +802,4 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) :
 
 end
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

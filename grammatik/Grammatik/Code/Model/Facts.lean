@@ -1,10 +1,10 @@
-import Grammatik.Llvm.Model.Step
+import Grammatik.Code.Model.Step
 
 /-
-  File:      Grammatik/Llvm/Model/Facts.lean
+  File:      Grammatik/Code/Model/Facts.lean
   Subject:   TRACK L, PHASE L0 -- FACTS ABOUT THE SEMANTICS the lowering proofs build on.
 
-    * `Code.at`, `seqI`, `reach_seq` -- a stretch of straight-line code found in a block runs in
+    * `Stretch`, `seqI`, `reach_seq` -- a stretch of straight-line code found in a block runs in
       one `Reach`, and what it does to memory and registers is `seqI`, a plain function;
     * `reach_jmp`, `reach_br_true/false`, `reach_ret` -- the terminators as `Reach` lemmas;
     * `step_sc_det` -- under sequential consistency (`Sees.sc`) and without opaque instructions
@@ -13,7 +13,9 @@ import Grammatik.Llvm.Model.Step
       oracle gives a `Reach`, which is what lets the witness be computed by `decide`.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
+
+variable [Conf]
 
 /-! ## 1. Straight-line code -/
 
@@ -26,12 +28,12 @@ def seqI : List Instr → Mem → Regs → Option (Mem × Regs)
       | none => none
 
 /-- `code` is the stretch of the body of block `l` of function `fn` that starts at index `pc`. -/
-def Code.at (M : Modl) (fn : Nat) (l : Lbl) (pc : Nat) (code : List Instr) : Prop :=
+def Stretch (M : Modl) (fn : Nat) (l : Lbl) (pc : Nat) (code : List Instr) : Prop :=
   ∃ blk, M.blk fn l = some blk ∧ ∀ i (h : i < code.length), blk.body[pc + i]? = some code[i]
 
-/-- The three instruction forms `step` handles outside `stepI`. -/
+/-- The two instruction forms `step` handles outside `stepI`. -/
 def Instr.special : Instr → Bool
-  | .call .. | .aload .. | .asm .. => true
+  | .call .. | .aload .. => true
   | _ => false
 
 theorem stepI_plain {i : Instr} {m : Mem} {rs : Regs} {r : Mem × Regs}
@@ -61,7 +63,7 @@ theorem step_plain {M : Modl} {S : Sees} {f : Frame} {blk : Block} {i : Instr} {
     Step M S (.run m f ks) (.run m' { f with regs := rs', pc := f.pc + 1 } ks) := by
   have hp := stepI_plain hs
   have hnext : Cfg.nextI M (.run m f ks) = some i := by simp [Cfg.nextI, hb, hi]
-  refine ⟨⟨fun _ _ _ _ _ => none, fun _ _ m => (m, none)⟩,
+  refine ⟨⟨fun _ _ _ _ _ => none⟩,
     legal_of_not_oracular S M _ _ ?_, ?_⟩
   · intro j hj
     rw [hnext] at hj
@@ -72,7 +74,7 @@ theorem step_plain {M : Modl} {S : Sees} {f : Frame} {blk : Block} {i : Instr} {
 /-- **Straight-line code is one `Reach`.** -/
 theorem reach_seq (M : Modl) (S : Sees) :
     ∀ (code : List Instr) (m : Mem) (f : Frame) (ks : List Frame) (m' : Mem) (rs' : Regs),
-      Code.at M f.fn f.lbl f.pc code → seqI code m f.regs = some (m', rs') →
+      Stretch M f.fn f.lbl f.pc code → seqI code m f.regs = some (m', rs') →
       Reach M S (.run m f ks) (.run m' { f with regs := rs', pc := f.pc + code.length } ks) := by
   intro code
   induction code with
@@ -113,7 +115,7 @@ theorem step_term {M : Modl} {S : Sees} {f : Frame} {t : Term} {blk : Block} {m 
     Step M S (.run m f ks) c := by
   obtain ⟨hb, hl, ht⟩ := h
   have hnone : blk.body[f.pc]? = none := by simp [hl]
-  refine ⟨⟨fun _ _ _ _ _ => none, fun _ _ m => (m, none)⟩,
+  refine ⟨⟨fun _ _ _ _ _ => none⟩,
     legal_of_not_oracular S M _ _ ?_, ?_⟩
   · intro j hj
     simp [Cfg.nextI, hb, hnone] at hj
@@ -151,10 +153,9 @@ theorem reach_ret_top {M : Modl} {S : Sees} {f : Frame} {o : Opd} {blk : Block} 
 
 /-- Under `Sees.sc` an oracle's atomic load answer is the memory's: so a legal oracle can be
     replaced by the one that reads memory. -/
-def Oracle.mem : Oracle := ⟨fun m b o t _ => m.load b o t, fun _ _ m => (m, none)⟩
+def Oracle.mem : Oracle := ⟨fun m b o t _ => m.load b o t⟩
 
 theorem step_sc_oracle (M : Modl) (O : Oracle) (c c' : Cfg) (hl : O.legal Sees.sc M c)
-    (hn : ∀ d t eff args txt, Cfg.nextI M c ≠ some (.asm d t eff args txt))
     (h : step M O c = some c') : step M Oracle.mem c = some c' := by
   cases c with
   | fin m v => simp [step] at h
@@ -169,7 +170,7 @@ theorem step_sc_oracle (M : Modl) (O : Oracle) (c c' : Cfg) (hl : O.legal Sees.s
           | some ins =>
               simp only [hi] at h ⊢
               cases ins with
-              | aload d t p ord al =>
+              | aload d t p ord =>
                   simp only at h ⊢
                   cases hp : p.ev f.regs with
                   | none => simp [hp] at h
@@ -194,19 +195,16 @@ theorem step_sc_oracle (M : Modl) (O : Oracle) (c c' : Cfg) (hl : O.legal Sees.s
                                 simp only [Oracle.mem, hal, this]
                                 exact h
                           · simp at h
-              | asm d t eff args txt =>
-                  exact absurd (by simp [Cfg.nextI, hb, hi]) (hn d t eff args txt)
               | _ => simpa [step] using h
 
 /-- **Determinism.** Under sequential consistency, with no opaque instruction next, the step
     relation is a partial function. -/
 theorem step_sc_det {M : Modl} {c c' c'' : Cfg}
-    (hn : ∀ d t eff args txt, Cfg.nextI M c ≠ some (.asm d t eff args txt))
     (h1 : Step M Sees.sc c c') (h2 : Step M Sees.sc c c'') : c' = c'' := by
   obtain ⟨O, hl, hs⟩ := h1
   obtain ⟨O', hl', hs'⟩ := h2
-  have a := step_sc_oracle M O c c' hl hn hs
-  have b := step_sc_oracle M O' c c'' hl' hn hs'
+  have a := step_sc_oracle M O c c' hl hs
+  have b := step_sc_oracle M O' c c'' hl' hs'
   rw [a] at b
   exact Option.some.inj b
 
@@ -220,40 +218,7 @@ def exec (M : Modl) : Nat → Cfg → Cfg
       | some c' => exec M n c'
       | none => c
 
-def Instr.isAsm : Instr → Bool
-  | .asm .. => true
-  | _ => false
-
-/-- No function of the module holds an opaque instruction. -/
-def Modl.NoAsm (M : Modl) : Prop :=
-  ∀ fn ∈ M.funs, ∀ b ∈ fn.blks, ∀ i ∈ b.body, i.isAsm = false
-
-instance (M : Modl) : Decidable M.NoAsm := by unfold Modl.NoAsm; exact inferInstance
-
-theorem nextI_not_asm {M : Modl} (h : M.NoAsm) (c : Cfg) :
-    ∀ d t eff args txt, Cfg.nextI M c ≠ some (.asm d t eff args txt) := by
-  intro d t eff args txt hc
-  cases c with
-  | fin m v => simp [Cfg.nextI] at hc
-  | run m f ks =>
-      simp only [Cfg.nextI] at hc
-      cases hb : M.blk f.fn f.lbl with
-      | none => simp [hb] at hc
-      | some blk =>
-          simp only [hb, Option.bind_some] at hc
-          have hmem : Instr.asm d t eff args txt ∈ blk.body := List.mem_of_getElem? hc
-          have hblk : ∃ fn ∈ M.funs, blk ∈ fn.blks := by
-            simp only [Modl.blk, Option.bind_eq_bind] at hb
-            cases hf : M.funs[f.fn]? with
-            | none => simp [hf] at hb
-            | some fn =>
-                simp only [hf, Option.bind_some] at hb
-                exact ⟨fn, List.mem_of_getElem? hf, List.mem_of_find?_eq_some hb⟩
-          obtain ⟨fn, hfn, hbm⟩ := hblk
-          have := h fn hfn blk hbm _ hmem
-          simp [Instr.isAsm] at this
-
-theorem exec_reach {M : Modl} (h : M.NoAsm) : ∀ (n : Nat) (c : Cfg), Reach M Sees.sc c (exec M n c) := by
+theorem exec_reach {M : Modl} : ∀ (n : Nat) (c : Cfg), Reach M Sees.sc c (exec M n c) := by
   intro n
   induction n with
   | zero => intro c; exact .refl c
@@ -272,11 +237,10 @@ theorem exec_reach {M : Modl} (h : M.NoAsm) : ∀ (n : Nat) (c : Cfg), Reach M S
               | none => simp only [hn]
               | some i =>
                   cases i with
-                  | aload d t p ord al =>
+                  | aload d t p ord =>
                       simp only [hn]
                       intro b o v _ hv
                       exact hv
-                  | asm d t eff args txt => exact absurd hn (nextI_not_asm h _ d t eff args txt)
                   | _ => simp only [hn]
 
-end Gabbro.Llvm
+end Gabbro.Code

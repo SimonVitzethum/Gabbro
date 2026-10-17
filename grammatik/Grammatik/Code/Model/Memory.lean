@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Model.Cells
+import Grammatik.Code.Model.Cells
 
 /-
-  File:      Grammatik/Llvm/Model/Memory.lean
+  File:      Grammatik/Code/Model/Memory.lean
   Subject:   TRACK L, PHASE L0 -- THE MEMORY of the IR: BLOCK-STRUCTURED, BYTE-ADDRESSED.
              (Cells, byte encodings and their round trips: `Cells.lean`.)
 
@@ -15,11 +15,12 @@ import Grammatik.Llvm.Model.Cells
     * a load of what was just stored returns it (`load_store_int`, `load_store_ptr`,
       `load_store_flt`, `load_store_dbl`);
     * `alloc` gives a fresh block and leaves every old one as it was (`alloc_load`).
-  Reading a cell never written (an `alloca` is uninitialised) or reading outside a block is
+  An access is aligned or stuck (`Mem.inside`).
+  Reading a cell never written (an `alloc` is uninitialised) or reading outside a block is
   `none`: the semantics gets STUCK, which is the model's word for undefined behaviour.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
 
 open Gabbro.Grammatik.Gleitkomma
 
@@ -27,15 +28,18 @@ open Gabbro.Grammatik.Gleitkomma
 def Mem.setBlk (m : Mem) (b : Nat) (blk : Blk) : Mem :=
   { blks := fun b' => if b' = b then some blk else m.blks b', next := m.next }
 
-/-- Allocate a block of `n` bytes: zero filled (a global) or never written (an `alloca`).
+/-- Allocate a block of `n` bytes: zero filled (a global) or never written (an `alloc`).
     Returns the new memory and the block id. -/
 def Mem.alloc (m : Mem) (n : Nat) (zero : Bool) : Mem × Nat :=
   let blk : Blk := ⟨n, fun k => if k < n ∧ zero = true then some (.byte 0) else none⟩
   ({ (m.setBlk m.next blk) with next := m.next + 1 }, m.next)
 
-/-- The guard of a scalar access of type `t` at offset `o` in a block of size `n`. -/
+variable [Conf]
+
+/-- The guard of a scalar access of type `t` at offset `o` in a block of size `n`: inside the
+    block, and ALIGNED -- an unaligned access is stuck (no ISA is asked to do one). -/
 def Mem.inside (n : Nat) (o : Int) (t : Ty) : Prop :=
-  0 ≤ o ∧ t.scalar = true ∧ o.toNat + t.store ≤ n
+  0 ≤ o ∧ t.scalar = true ∧ o.toNat + t.store ≤ n ∧ o % (t.align : Int) = 0
 
 instance (n : Nat) (o : Int) (t : Ty) : Decidable (Mem.inside n o t) := by
   unfold Mem.inside; exact inferInstance
@@ -193,4 +197,4 @@ theorem load_store_other {m m' : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
     · rw [if_neg hi, if_neg hi]
   · simp only [Mem.load, store_blks_other h b' eb]
 
-end Gabbro.Llvm
+end Gabbro.Code

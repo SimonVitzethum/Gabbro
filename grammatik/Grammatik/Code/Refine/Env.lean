@@ -1,9 +1,9 @@
-import Grammatik.Llvm.Refine.Frag
+import Grammatik.Code.Refine.Frag
 
 /-
-  File:      Grammatik/Llvm/Refine/Env.lean
+  File:      Grammatik/Code/Refine/Env.lean
   Subject:   TRACK L, PHASE L1 -- THE LOCALS: `EnvRep`, the relation between G's variable
-             environment and the `alloca` cells the lowering gives them, and its frame lemmas.
+             environment and the `alloc` cells the lowering gives them, and its frame lemmas.
 
   Variable number `i` of the context lives in the block its alloca register `cenv[i]` points to
   (`rs r = ptr b 0`); the block holds the encoding of the variable's value. A local block is
@@ -12,7 +12,9 @@ import Grammatik.Llvm.Refine.Frag
   are no local (`envRep_load`), keeps the relation.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Env Wert Ctx Var)
 
@@ -162,7 +164,7 @@ theorem alloc_store_ok (m : Mem) (t : Ty) (x : Val) (hs : t.scalar = true) (hx :
   have hle := Ty.store_le_size t hs
   unfold Mem.store
   rw [hb]
-  have hin : Mem.inside t.size 0 t := ⟨Int.le_refl _, hs, by simpa using hle⟩
+  have hin : Mem.inside t.size 0 t := ⟨Int.le_refl _, hs, by simpa using hle, Int.zero_emod _⟩
   simp [hin, hx]
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

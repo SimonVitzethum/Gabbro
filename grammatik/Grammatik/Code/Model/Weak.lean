@@ -1,14 +1,13 @@
-import Grammatik.Llvm.Model.Facts
+import Grammatik.Code.Model.Facts
 import Grammatik.Speichermodell.Maschine.Sicht
 
 /-
-  File:      Grammatik/Llvm/Model/Weak.lean
+  File:      Grammatik/Code/Model/Weak.lean
   Subject:   TRACK L, PHASE L0 -- THE LINK from the IR's atomics to the weak-memory interface
              that machine W / GX already use. No new memory model.
 
-  * `Order.toOrdnung` -- the IR's six orders onto the model's two (`Speichermodell.Ordnung`):
-    `unordered` and `monotonic` are `entspannt` (relaxed); `acquire`, `release`, `acq_rel` and
-    `seq_cst` are `freigabe`. That is the over-approximation the model states for `seq`
+  * `Order.toOrdnung` -- the five orders of `Code` onto the model's two (`Speichermodell.Ordnung`):
+    `rlx` is `entspannt` (relaxed); `acq`, `rel`, `acrel` and `seqc` are `freigabe`. That is the over-approximation the model states for `seq`
     (Sicht.lean, `Ordnung`): `seq_cst` is read as release/acquire, which is weaker, so safe.
   * `Sees.weak` -- the instance of the interface `Sees` for the weak memory: an atomic load may
     return the value of ANY message of its location at or above the reader's view (`Lesbar`,
@@ -22,20 +21,21 @@ import Grammatik.Speichermodell.Maschine.Sicht
   `Sees.weak` and the per-access view updates simulates a `RufSchrittW` step. L0 fixes the shape.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
 
 open Gabbro.Grammatik.Speichermodell
 
+variable [Conf]
+
 /-- The memory orders of the IR onto the weak-memory model's orders. -/
 def Order.toOrdnung : Order → Ordnung
-  | .unord => .entspannt
-  | .mono => .entspannt
+  | .rlx => .entspannt
   | .acq => .freigabe
   | .rel => .freigabe
   | .acrel => .freigabe
   | .seqc => .freigabe
 
-theorem toOrdnung_entspannt (o : Order) : o.toOrdnung = .entspannt ↔ (o = .unord ∨ o = .mono) := by
+theorem toOrdnung_entspannt (o : Order) : o.toOrdnung = .entspannt ↔ o = .rlx := by
   cases o <;> simp [Order.toOrdnung]
 
 theorem toOrdnung_freigabe (o : Order) :
@@ -78,7 +78,7 @@ theorem step_mono {M : Modl} {S S' : Sees}
       | some i =>
           simp only [hn] at hl ⊢
           cases i with
-          | aload d t p ord al =>
+          | aload d t p ord =>
               intro b o x hp hx
               exact h _ _ _ _ _ _ (hl b o x hp hx)
           | _ => exact hl
@@ -90,4 +90,4 @@ theorem reach_mono {M : Modl} {S S' : Sees}
   | refl => exact .refl _
   | step x y z hs _ ih => exact .step x y z (step_mono h hs) ih
 
-end Gabbro.Llvm
+end Gabbro.Code

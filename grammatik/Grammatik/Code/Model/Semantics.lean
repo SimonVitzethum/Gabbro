@@ -1,39 +1,24 @@
-import Grammatik.Llvm.Model.Syntax
-import Grammatik.Llvm.Model.Memory
+import Grammatik.Code.Model.Syntax
+import Grammatik.Code.Model.Memory
 
 /-
-  File:      Grammatik/Llvm/Model/Semantics.lean
-  Subject:   TRACK L, PHASE L0 -- THE SMALL-STEP SEMANTICS of the IR subset.
+  File:      Grammatik/Code/Model/Semantics.lean
+  Subject:   TRACK L -- THE SMALL-STEP SEMANTICS of `Code`: values, registers, frames, the pure
+             operations and `stepI`, one straight-line instruction.
 
   A configuration is `run m f ks` -- the memory, the running frame (function, block label, index
   of the next instruction in the block body, register file, where its caller wants the result)
   and the frames of the callers -- or `fin m v`, a finished run with its result.
 
-  `step M O c` is ONE step, a FUNCTION of the configuration and of an ORACLE `O`. The oracle
-  answers the only two questions the semantics itself does not decide:
-    * what an ATOMIC LOAD returns (`Oracle.ld`) -- the weak-memory interface, see below;
-    * what an OPAQUE instruction (inline assembly) gives back and does to memory (`Oracle.asm`).
-  Everything else -- arithmetic, plain loads and stores, calls, branches -- is deterministic, so
-  the oracle enters `step` in exactly two instruction forms (`step_indep`).
-
-  The RELATION `Step M S c c'` says: some LEGAL oracle makes `step` produce `c'`. Legal means:
-    * an atomic load returns only a value the memory-model interface `S` allows
-      (`Sees`: memory, block, offset, type, order, value) -- for sequential consistency `S` is
-      "the value in memory" (`Sees.sc`), for the weak memory the messages the view may read:
-      the same shape as machine GX, whose reads of the shared atomics are answered by a
-      PRESENTED memory that agrees with G's everywhere else (`Zielsatz`, `GXMaschine.lean`);
-    * an opaque instruction changes memory only as its declared effect `Eff` allows (`Eff.ok`).
-  So no memory model is invented here: the IR is parameterised by the interface the proofs
-  about threads already use, and `Weak.lean` links the orders to `Speichermodell.Ordnung`.
-
-  WHAT GETS STUCK (`step` is `none`) -- the model's word for undefined behaviour and poison,
-  read strictly: division by zero, signed overflow of `sdiv`/`srem`, a shift by the width or
-  more, a load or store outside its block or on a never written cell or misaligned, a violated
-  `!range`/`!tbaa` annotation, a false `llvm.assume`, `unreachable`, a type mismatch,
-  `noalias` arguments that share a block.
+  WHAT GETS STUCK (`none`) -- the model's word for "the instruction has a precondition that does
+  not hold", and the reason `Code` is ISA-neutral: x86 traps on division by zero, AArch64 answers
+  0, RISC-V answers -1, so no result is DEFINED there; a lowering must prove the divisor nonzero.
+  The same for `INT_MIN / -1`, a shift by the width or more (the ISAs mask differently), an
+  unaligned access, an access outside its block or to a never written cell, a type mismatch and a
+  false `fact`. Arithmetic that is not listed here WRAPS AROUND at its explicit width.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
 
 open Gabbro.Grammatik.Gleitkomma
 
@@ -74,16 +59,6 @@ def Opd.ev (rs : Regs) : Opd → Option Val
   | .null => some (.ptr nullBlk 0)
 
 /-! ## 2. Pure operations -/
-
-/-- The meaning of an annotation, as a proposition over the typed value it sits on. -/
-def Meta.ok : Meta → Ty → Val → Bool
-  | .range lo hi, _, .int w v =>
-      decide (lo % ((2 : Int) ^ w) = hi % ((2 : Int) ^ w))
-        || decide (((v.toNat : Int) - lo) % ((2 : Int) ^ w) < (hi - lo) % ((2 : Int) ^ w))
-  | .range .., _, _ => false
-  | .tbaa t, t', _ => decide (t = t')
-
-def Meta.holds (μ : Meta) (t : Ty) (v : Val) : Prop := μ.ok t v = true
 
 /-- Integer arithmetic of width `w`. `none` is stuck. -/
 def BinOp.ap : BinOp → (w : Nat) → BitVec w → BitVec w → Option (BitVec w)
@@ -199,21 +174,20 @@ def RmwOp.ap (op : RmwOp) : Val → Val → Option Val
 
 /-! ## 3. Straight-line instructions: `stepI` -/
 
-/-- The alignment check of an access: `al = 0` means "natural, not stated". -/
-def alignOk (al : Nat) (o : Int) : Prop := al = 0 ∨ o % (al : Int) = 0
-
-instance (al : Nat) (o : Int) : Decidable (alignOk al o) := by
-  unfold alignOk; exact inferInstance
-
 /-- Is an `inbounds` address within its block (one past the end allowed)? -/
 def inBlock (m : Mem) (b : Nat) (o : Int) : Bool :=
   match m.blks b with
   | some blk => decide (0 ≤ o ∧ o ≤ (blk.size : Int))
   | none => false
 
+variable [Conf]
+
+/-- An atomic access: on a word-sized cell (aligned by `Mem.inside`). -/
+def atomicOk (t : Ty) : Bool := decide (t.store = Conf.wb)
+
 /-- One non-control, non-call, non-oracle instruction on memory and registers. `none` is stuck
-    -- and also the answer for the three instruction forms handled by `step` itself
-    (`call`, `aload`, `asm`). -/
+    -- and also the answer for the two instruction forms handled by `step` itself
+    (`call`, `aload`). -/
 def stepI : Instr → Mem → Regs → Option (Mem × Regs)
   | .bin d op w a b, m, rs =>
       match a.ev rs, b.ev rs with
@@ -240,24 +214,19 @@ def stepI : Instr → Mem → Regs → Option (Mem × Regs)
       match a.ev rs with
       | some x => if x.ty = s then (Val.cast k t x).map fun v => (m, rs.set d v) else none
       | none => none
-  | .alloc d t _, m, rs =>
+  | .alloc d t, m, rs =>
       let r := m.alloc t.size false
       some (r.1, rs.set d (.ptr r.2 0))
-  | .load d t p al _ ms, m, rs =>
+  | .load d t p, m, rs =>
       match p.ev rs with
       | some (.ptr b o) =>
-          if alignOk al o then
-            match m.load b o t with
-            | some v => if ms.all (fun μ => μ.ok t v) then some (m, rs.set d v) else none
-            | none => none
-          else none
+          match m.load b o t with
+          | some v => some (m, rs.set d v)
+          | none => none
       | _ => none
-  | .store t v p al _ ms, m, rs =>
+  | .store t v p, m, rs =>
       match v.ev rs, p.ev rs with
-      | some x, some (.ptr b o) =>
-          if alignOk al o ∧ ms.all (fun μ => μ.ok t x) = true then
-            (m.store b o t x).map fun m' => (m', rs)
-          else none
+      | some x, some (.ptr b o) => (m.store b o t x).map fun m' => (m', rs)
       | _, _ => none
   | .gep d t p ix inb, m, rs =>
       match p.ev rs, ix.mapM (fun i => (i.ev rs).bind Val.idx) with
@@ -267,15 +236,15 @@ def stepI : Instr → Mem → Regs → Option (Mem × Regs)
               if !inb || inBlock m b (o + off) then some (m, rs.set d (.ptr b (o + off))) else none
           | none => none
       | _, _ => none
-  | .astor t v p _ _, m, rs =>
+  | .astor t v p _, m, rs =>
       match v.ev rs, p.ev rs with
       | some x, some (.ptr b o) =>
-          if o % (t.store : Int) = 0 then (m.store b o t x).map fun m' => (m', rs) else none
+          if atomicOk t then (m.store b o t x).map fun m' => (m', rs) else none
       | _, _ => none
   | .armw d op t p v _, m, rs =>
       match p.ev rs, v.ev rs with
       | some (.ptr b o), some x =>
-          if o % (t.store : Int) = 0 then
+          if atomicOk t then
             match m.load b o t with
             | some old =>
                 match op.ap old x with
@@ -287,7 +256,7 @@ def stepI : Instr → Mem → Regs → Option (Mem × Regs)
   | .cas d ok t p e n _ _, m, rs =>
       match p.ev rs, e.ev rs, n.ev rs with
       | some (.ptr b o), some ex, some nw =>
-          if o % (t.store : Int) = 0 then
+          if atomicOk t then
             match m.load b o t with
             | some old =>
                 if old = ex then (m.store b o t nw).map fun m' => (m', (rs.set d old).set ok (Val.bool true))
@@ -302,6 +271,5 @@ def stepI : Instr → Mem → Regs → Option (Mem × Regs)
       | _ => none
   | .aload .., _, _ => none
   | .call .., _, _ => none
-  | .asm .., _, _ => none
 
-end Gabbro.Llvm
+end Gabbro.Code

@@ -1,8 +1,8 @@
-import Grammatik.Llvm.Lower.Stmt
-import Grammatik.Llvm.Refine.Expr
+import Grammatik.Code.Lower.Stmt
+import Grammatik.Code.Refine.Expr
 
 /-
-  File:      Grammatik/Llvm/Refine/Block.lean
+  File:      Grammatik/Code/Refine/Block.lean
   Subject:   TRACK L, PHASE L1 -- THE BUILDING BLOCKS OF THE STATEMENT REFINEMENT: running one
              lowered basic block, storing, and the trace that has no image.
 
@@ -13,7 +13,9 @@ import Grammatik.Llvm.Refine.Expr
       semantics change nothing it speaks about.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res)
 
@@ -78,8 +80,8 @@ theorem store_of_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v0 x : Val}
 
 theorem stepI_store {m m' : Mem} {rs : Regs} {t : Ty} {v p : Opd} {x : Val} {b : Nat} {o : Int}
     (hv : v.ev rs = some x) (hp : p.ev rs = some (.ptr b o)) (hs : m.store b o t x = some m') :
-    stepI (.store t v p 0 false [.tbaa t]) m rs = some (m', rs) := by
-  simp [stepI, hv, hp, hs, alignOk, Meta.ok]
+    stepI (.store t v p) m rs = some (m', rs) := by
+  simp [stepI, hv, hp, hs]
 
 theorem bool_zext : Val.ofInt 1 (0 : Int) = Val.ofInt 1 0 := rfl
 
@@ -136,10 +138,10 @@ theorem storeTo_run (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = 
   simp only [hs1, Option.bind_some]
   simp only [seqI, storeI, stepI_store hev1 hp1 hm']
 
-/-- **A new local**: the code `alloca`, `store` leaves a fresh block with the value in it. -/
+/-- **A new local**: the code `alloc`, `store` leaves a fresh block with the value in it. -/
 theorem bind_run (lay : Layout D) {τ : GTy} (v : Wert D τ) (hs : supp τ = true) (om : Opd)
     (a : Reg) (m : Mem) (rs : Regs) (hom : om.ev rs = some (encM lay τ v)) (hlt : OpdLt om a) :
-    ∃ m1 rs1, seqI [.alloc a (memTy τ) 0, storeI τ om (.reg a)] m rs = some (m1, rs1) ∧
+    ∃ m1 rs1, seqI [.alloc a (memTy τ), storeI τ om (.reg a)] m rs = some (m1, rs1) ∧
       m1.next = m.next + 1 ∧ (∀ x, x ≠ a → rs1 x = rs x) ∧ rs1 a = some (.ptr m.next 0) ∧
       m1.load m.next 0 (memTy τ) = some (encM lay τ v) ∧
       (m.Wf → m1.Wf) ∧
@@ -151,7 +153,7 @@ theorem bind_run (lay : Layout D) {τ : GTy} (v : Wert D τ) (hs : supp τ = tru
   have hom1 : om.ev (rs.set a (.ptr m.next 0)) = some (encM lay τ v) := by
     rw [ev_agree (r := a) (fun x hx => regs_set_ne rs a x _ (Nat.ne_of_lt hx)) hlt]; exact hom
   refine ⟨m1, (rs.set a (.ptr m.next 0)), ?_, ?_, ?_, regs_set_same _ _ _, ?_, ?_, ?_, ?_, ?_⟩
-  · have hs1 : stepI (.alloc a (memTy τ) 0) m rs
+  · have hs1 : stepI (.alloc a (memTy τ)) m rs
         = some ((m.alloc (memTy τ).size false).1, rs.set a (.ptr m.next 0)) := rfl
     simp only [seqI, storeI]
     rw [hs1]
@@ -201,7 +203,7 @@ theorem bindCode_run (lay : Layout D) {τ : GTy} {σ : World D} {Γ : Ctx} {cenv
   have hs2' : seqI cm m rs = some (m, rs2) := hs2
   obtain ⟨m1, rs3, hs3, hnext, hag3, hra, hld1, hwf1, hrep1, hwl1, hmem⟩ :=
     bind_run lay v hs om r3 m rs2 hev2 hlt2
-  have hseq : seqI (cm ++ [.alloc r3 (memTy τ) 0, storeI τ om (.reg r3)]) m rs = some (m1, rs3) := by
+  have hseq : seqI (cm ++ [.alloc r3 (memTy τ), storeI τ om (.reg r3)]) m rs = some (m1, rs3) := by
     rw [seqI_append, hs2', Option.bind_some]
     exact hs3
   have hr1' : r1 ≤ r3 := hr2
@@ -220,4 +222,4 @@ theorem bindCode_run (lay : Layout D) {τ : GTy} {σ : World D} {Γ : Ctx} {cenv
   have l3 : x < r3 := Nat.lt_of_lt_of_le hx hr1'
   rw [hag3 x (Nat.ne_of_lt l3), hag2 x hx]
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

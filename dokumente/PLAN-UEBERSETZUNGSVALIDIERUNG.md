@@ -621,12 +621,16 @@ against the Lean function byte for byte (differential validator in the Lean guar
 a fast copy of a specification, not a second source of truth.
 
 **Track L: lowerings in Lean (phases, each ends with a theorem and a guardian stage).**
-1. **L0 IR model.** `Grammatik/Llvm/`: LLVM IR subset (types, `alloca`/`load`/`store`, `getelementptr`, integer
-   and float ops, `icmp`, `br`/`switch`/`phi` or `alloca`-based locals, `call`, `ret`, atomics with orderings,
-   `unreachable`, inline asm as an opaque instruction with a declared effect), small-step semantics with a
-   byte memory and the weak-memory interface of the existing GX machine for atomics. ~6 000–9 000 lines.
-2. **L1 core lowering.** Scalars, ranges (`!range`, `llvm.assume` as proof-carrying facts), tables and records,
-   control flow, calls, returns, statics; refinement against `execBlock`. ~10 000–15 000 lines.
+1. **L0 `Code` model.** `Grammatik/Code/Model/` (direction of 2026-10-18: not LLVM, ISA-neutral, no CPU model
+   on the way). Built and proved: types and values, byte-addressed block memory with aligned access only and
+   the word width and byte order as the parameter `Conf` (64-bit little and 32-bit big endian both run in
+   the witness), the small-step semantics with an oracle at the atomic load only (linked to the weak-memory
+   interface and `Speichermodell.Ordnung`), SC determinism, a kernel-computed witness, and `Need`, the
+   list of obligations a CPU model must provide for `Code -> bytes` (the same for x86-64, AArch64, RISC-V).
+2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`): expressions (`lowerE_ok`), statements, blocks,
+   end blocks (`lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: slot, pointer, global and variable assignment, `if`,
+   `let`, `check`, `return`) and the function prologue (`prologue_ok`, `lowerFn`). Open: calls, loops, `match`,
+   `narrow`, division and shifts (the lowering emits none until G's ranges prove the precondition).
 3. **L2 memory forms.** Arenas, `grow`, `free`/free list (`ArenaFrei.lean` is its model), sampling, the page
    return; stack and recursion lowering. ~6 000–9 000.
 4. **L3 concurrency.** Ticket lock, reader/writer lock, masked acquisition (the lock refinement of the open

@@ -1,23 +1,25 @@
-import Grammatik.Llvm.Lower.Rep
+import Grammatik.Code.Lower.Rep
 
 /-
-  File:      Grammatik/Llvm/Lower/Expr.lean
+  File:      Grammatik/Code/Lower/Expr.lean
   Subject:   TRACK L, PHASE L1 -- THE LOWERING OF EXPRESSIONS, as a Lean function.
 
   `lowerE lay cenv e r` turns an expression of machine G into straight-line IR: the list of
   instructions, the operand that holds the value, and the next free register. Registers are
   numbered in program order (`r`, `r + 1`, ...); every variable of the context lives in an
-  `alloca` cell whose register is `cenv[x.idx]`.
+  `alloc` cell whose register is `cenv[x.idx]`.
 
   THE FRAGMENT: constants, variables, globals, table slots (also through a pointer),
   widening, `+ - * neg`, `< <= ==`, `&& || !`. Every other form lowers to `none` (the Rust
-  producer refuses it with `Y104`/`Y103`); `none` is also the answer for a type outside `supp`
+  the lowering refuses it); `none` is also the answer for a type outside `supp`
   or a range beyond 128 bits. Integer ranges live in `Ar.wid` bits; an operation is carried out at
   the width of its RESULT range, its operands moved there by `cvt` (`sext`/`zext` by the sign of
   the operand's own range, `trunc` when narrower), which is exact modulo `2^w`.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Expr Ctx Var)
 
@@ -59,14 +61,11 @@ def cvtG (σ τ : GTy) (o : Opd) (r : Nat) : Option LR :=
 def loadG (τ : GTy) (p : Opd) (r : Nat) : Option LR :=
   match τ with
   | .int lo hi =>
-      if Ar.Fits lo hi 128 then
-        some ([.load r (.int (Ar.wid lo hi)) p 0 false
-                [.range lo (hi + 1), .tbaa (.int (Ar.wid lo hi))]], .reg r, r + 1)
-      else none
+      if Ar.Fits lo hi 128 then some ([.load r (.int (Ar.wid lo hi)) p], .reg r, r + 1) else none
   | .bool =>
-      some ([.load r (.int 8) p 0 false [.tbaa (.int 8)],
-             .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)], .reg (r + 1), r + 2)
-  | .ptr _ _ => some ([.load r .ptr p 0 false [.tbaa .ptr]], .reg r, r + 1)
+      some ([.load r (.int 8) p, .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)],
+            .reg (r + 1), r + 2)
+  | .ptr _ _ => some ([.load r .ptr p], .reg r, r + 1)
   | _ => none
 
 /-- Does an integer type fit the widths the lowering knows? -/
@@ -114,10 +113,10 @@ def ety {Γ : Ctx} {Λ : List (Gabbro.Grammatik.Res D)} {τ : GTy} (_ : Expr D �
 /-- The address of field `f` of the slot an index operand names, from a base pointer. -/
 def slotAddr (lay : Layout D) (t : D.Tab) (f : D.Feld t) (base : Opd) (iτ : GTy) (oi : Opd)
     (r : Nat) : Option LR :=
-  if D.count t ≤ 2 ^ 62 ∧ Ar.Fits 0 (D.count t - 1) 128 then
-    match cvtG iτ (.int 0 (2 ^ 64 - 1)) oi r with
-    | some (c, o64, r1) =>
-        some (c ++ [.gep r1 (lay.tty t) base [.int 64 0, o64, .int 64 (lay.fidx t f)] true],
+  if D.count t ≤ 2 ^ (Conf.wbits - 2) ∧ Ar.Fits 0 (D.count t - 1) 128 then
+    match cvtG iτ (.int 0 (2 ^ Conf.wbits - 1)) oi r with
+    | some (c, ow, r1) =>
+        some (c ++ [.gep r1 (lay.tty t) base [.int Conf.wbits 0, ow, .int Conf.wbits (lay.fidx t f)] true],
               .reg r1, r1 + 1)
     | none => none
   else none
@@ -241,4 +240,4 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
       | none => none
   | _, _, _, _, _ => none
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Refine.Env
+import Grammatik.Code.Refine.Env
 
 /-
-  File:      Grammatik/Llvm/Refine/Expr.lean
+  File:      Grammatik/Code/Refine/Expr.lean
   Subject:   TRACK L, PHASE L1 -- THE REFINEMENT THEOREM FOR EXPRESSIONS.
 
   `lowerE_ok`: if the lowering of an expression `e` succeeds, then, in any memory that represents
@@ -14,7 +14,9 @@ import Grammatik.Llvm.Refine.Env
   fits 128 bits).
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Expr Env Wert Ctx Var World Res eval Zahl)
 
@@ -477,4 +479,4 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .reaches .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Model.Types
+import Grammatik.Code.Model.Types
 
 /-
-  File:      Grammatik/Llvm/Model/Layout.lean
+  File:      Grammatik/Code/Model/Layout.lean
   Subject:   TRACK L, PHASE L0/L1 -- FACTS ABOUT THE DATA LAYOUT (`Ty.size`, `Ty.fieldOff`,
              `Ty.gepOff`): the bounds and the non-overlap the lowering proofs need.
 
@@ -12,26 +12,31 @@ import Grammatik.Llvm.Model.Types
     * `gepOff_slot` -- the offset `gep [n x R], 0, k, i` computes: `k * size R + offset of field i`.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
 
 namespace Ty
 
+variable [Conf]
+
 theorem intAlign_pos (w : Nat) : 0 < intAlign w := by
+  have := Conf.wb_pos
   unfold intAlign
   dsimp only
+  apply Nat.lt_min.mpr
+  refine ⟨?_, by omega⟩
   repeat (first | omega | split)
 
 theorem align_pos : ∀ t : Ty, 0 < t.align := by
   intro t
   induction t with
   | int w => exact intAlign_pos w
-  | flt => decide
-  | dbl => decide
-  | ptr => decide
-  | void => decide
+  | flt => simp [align]
+  | dbl => simp [align]
+  | ptr => exact Conf.wb_pos
+  | void => simp [align]
   | arr n t ih => exact ih
   | fld t r iht ihr => unfold align; omega
-  | unit => decide
+  | unit => simp [align]
 
 theorem roundUp_ge (o a : Nat) (h : 0 < a) : o ≤ roundUp o a := by
   unfold roundUp
@@ -137,4 +142,4 @@ theorem gepOff_slot (n : Nat) (R : Ty) (k : Int) (i off : Nat) (t' : Ty)
 
 end Ty
 
-end Gabbro.Llvm
+end Gabbro.Code

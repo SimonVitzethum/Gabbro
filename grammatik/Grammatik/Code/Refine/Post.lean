@@ -1,8 +1,8 @@
-import Grammatik.Llvm.Refine.Mono
-import Grammatik.Llvm.Refine.Block
+import Grammatik.Code.Refine.Mono
+import Grammatik.Code.Refine.Block
 
 /-
-  File:      Grammatik/Llvm/Refine/Post.lean
+  File:      Grammatik/Code/Refine/Post.lean
   Subject:   TRACK L, PHASE L1 -- WHAT A RUN LEAVES BEHIND, and the `return` fragment.
 
     * `Post` -- the relation after a normal exit: the world is in memory, the environment is in
@@ -13,7 +13,9 @@ import Grammatik.Llvm.Refine.Block
     * `post_store` -- a store into a block that is no local keeps `Post`.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag ErgVal ErgExpr eval evalErg)
 
@@ -85,4 +87,4 @@ theorem lowerErg_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) {Γ :
       exact ⟨⟨fn, lb, ce.length, rs1, dst⟩, hr, rfl, rfl, _, hb, Nat.le_refl _,
         Or.inr ⟨oe, rfl, hev⟩⟩
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

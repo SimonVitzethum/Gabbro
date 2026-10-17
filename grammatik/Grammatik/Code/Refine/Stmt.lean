@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Refine.Post
+import Grammatik.Code.Refine.Post
 
 /-
-  File:      Grammatik/Llvm/Refine/Stmt.lean
+  File:      Grammatik/Code/Refine/Stmt.lean
   Subject:   TRACK L, PHASE L1 -- THE REFINEMENT THEOREM FOR STATEMENTS, BLOCKS AND END BLOCKS.
 
   `lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: if the lowering of `s` (a statement, a block, an end
@@ -19,7 +19,9 @@ import Grammatik.Llvm.Refine.Post
   an implication from the source run, and a source run that stops there says nothing.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang EndAusgang RufAusgang
   ErgVal ErgExpr execStmt execBlock execEnd eval evalErg Zahl)
@@ -55,4 +57,4 @@ theorem kok_of_shape {M : Modl} {fn : Nat} {lb : Lbl} {st st' : St} {blks : List
   rw [hl] at h1
   exact ⟨b, h1, hp b (by rw [hb]; simp)⟩
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

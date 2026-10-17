@@ -1,8 +1,8 @@
-import Grammatik.Llvm.Model.Types
+import Grammatik.Code.Model.Types
 import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 
 /-
-  File:      Grammatik/Llvm/Model/Cells.lean
+  File:      Grammatik/Code/Model/Cells.lean
   Subject:   TRACK L, PHASE L0 -- THE MEMORY of the IR: BLOCK-STRUCTURED, BYTE-ADDRESSED.
 
   A pointer is a block and a byte offset (`Val.ptr b o`). Memory is a map from block ids to
@@ -15,11 +15,11 @@ import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
     * a load of what was just stored returns it (`load_store_int`, `load_store_ptr`,
       `load_store_flt`);
     * `alloc` gives a fresh block and leaves every old one as it was (`alloc_load`).
-  Reading a cell never written (an `alloca` is uninitialised) or reading outside a block is
+  Reading a cell never written (an `alloc` is uninitialised) or reading outside a block is
   `none`: the semantics gets STUCK, which is the model's word for undefined behaviour.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
 
 open Gabbro.Grammatik.Gleitkomma
 
@@ -123,30 +123,32 @@ theorem bytesNat_natBytes (k v : Nat) : bytesNat (natBytes k v) = some (v % 256 
       have := Nat.mod_mul (x := v) (a := 256) (b := 256 ^ k)
       rw [Nat.mul_comm (256 ^ k) 256, this, Nat.mod_mod]
 
-/-- The cells a value is stored as. -/
-def Val.enc : Val → List Cell
+variable [Conf]
+
+/-- The cells a value is stored as, least significant byte first. -/
+def Val.encLE : Val → List Cell
   | .int w v => natBytes ((w + 7) / 8) v.toNat
   | .flt g => natBytes 4 (zuBits f32 g)
   | .dbl g => natBytes 8 (zuBits f64 g)
-  | .ptr b o => (List.range 8).map (Cell.frag b o)
+  | .ptr b o => (List.range Conf.wb).map (Cell.frag b o)
 
 /-- The value a list of cells is when read as type `t`. -/
-def Ty.dec : Ty → List Cell → Option Val
+def Ty.decLE : Ty → List Cell → Option Val
   | .int w, cs =>
       if cs.length = (w + 7) / 8 then (bytesNat cs).map fun n => Val.int w (BitVec.ofNat w n) else none
   | .flt, cs => if cs.length = 4 then (bytesNat cs).map fun n => Val.flt (ausBits f32 n) else none
   | .dbl, cs => if cs.length = 8 then (bytesNat cs).map fun n => Val.dbl (ausBits f64 n) else none
   | .ptr, cs =>
       match cs with
-      | .frag b o 0 :: _ => if cs = (List.range 8).map (Cell.frag b o) then some (.ptr b o) else none
+      | .frag b o 0 :: _ => if cs = (List.range Conf.wb).map (Cell.frag b o) then some (.ptr b o) else none
       | _ => none
   | _, _ => none
 
-theorem Val.enc_length (v : Val) : v.enc.length = v.ty.store := by
-  cases v <;> simp [Val.enc, Val.ty, Ty.store, natBytes_length]
+theorem Val.encLE_length (v : Val) : v.encLE.length = v.ty.store := by
+  cases v <;> simp [Val.encLE, Val.ty, Ty.store, natBytes_length]
 
-theorem dec_enc_int (w : Nat) (v : BitVec w) : Ty.dec (.int w) (Val.enc (.int w v)) = some (.int w v) := by
-  simp only [Ty.dec, Val.enc, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
+theorem decLE_encLE_int (w : Nat) (v : BitVec w) : Ty.decLE (.int w) (Val.encLE (.int w v)) = some (.int w v) := by
+  simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
   congr 2
   have h1 : v.toNat < 2 ^ w := v.isLt
   have h2 : 2 ^ w ≤ 256 ^ ((w + 7) / 8) := by
@@ -157,8 +159,9 @@ theorem dec_enc_int (w : Nat) (v : BitVec w) : Ty.dec (.int w) (Val.enc (.int w 
   rw [Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h1 h2)]
   rw [BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
-theorem dec_enc_ptr (b : Nat) (o : Int) : Ty.dec .ptr (Val.enc (.ptr b o)) = some (.ptr b o) := by
-  simp [Ty.dec, Val.enc, List.range, List.range.loop]
+theorem decLE_encLE_ptr (b : Nat) (o : Int) : Ty.decLE .ptr (Val.encLE (.ptr b o)) = some (.ptr b o) := by
+  obtain ⟨n, hn⟩ : ∃ n, Conf.wb = n + 1 := ⟨Conf.wb - 1, by have := Conf.wb_pos; omega⟩
+  simp [Ty.decLE, Val.encLE, hn, List.range_succ_eq_map]
 
 /-- A well-formed float triple stays below `2^(1 + ebits + fracBits)`. -/
 theorem zuBits_lt (F : Format) (hF : F.dicht) (g : GBits F) (hw : wf F g) :
@@ -177,19 +180,53 @@ theorem zuBits_lt (F : Format) (hF : F.dicht) (g : GBits F) (hw : wf F g) :
   rw [Nat.pow_succ, Nat.pow_add]
   split <;> omega
 
-theorem dec_enc_flt (g : F32) (hw : wf f32 g) :
-    Ty.dec .flt (Val.enc (.flt g)) = some (.flt g) := by
+theorem decLE_encLE_flt (g : F32) (hw : wf f32 g) :
+    Ty.decLE .flt (Val.encLE (.flt g)) = some (.flt g) := by
   have hlt := zuBits_lt f32 f32_dicht g hw
   have : (f32.ebits + f32.fracBits + 1) = 32 := by decide
   rw [this] at hlt
-  simp only [Ty.dec, Val.enc, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
+  simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
   rw [Nat.mod_eq_of_lt (by simpa using hlt), ausBits_zuBits f32 f32_dicht g hw]
 
-theorem dec_enc_dbl (g : F64) (hw : wf f64 g) :
-    Ty.dec .dbl (Val.enc (.dbl g)) = some (.dbl g) := by
+theorem decLE_encLE_dbl (g : F64) (hw : wf f64 g) :
+    Ty.decLE .dbl (Val.encLE (.dbl g)) = some (.dbl g) := by
   have hlt := zuBits_lt f64 f64_dicht g hw
   have : (f64.ebits + f64.fracBits + 1) = 64 := by decide
   rw [this] at hlt
-  simp only [Ty.dec, Val.enc, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
+  simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
   rw [Nat.mod_eq_of_lt (by simpa using hlt), ausBits_zuBits f64 f64_dicht g hw]
-end Gabbro.Llvm
+/-! ## Byte order -/
+
+/-- Cells in memory order: the target's byte order is a parameter. -/
+def order (cs : List Cell) : List Cell := if Conf.big then cs.reverse else cs
+
+theorem order_order (cs : List Cell) : order (order cs) = cs := by
+  by_cases h : Conf.big = true <;> simp [order, h]
+
+theorem order_length (cs : List Cell) : (order cs).length = cs.length := by
+  by_cases h : Conf.big = true <;> simp [order, h]
+
+/-- The cells a value is stored as, in memory order. -/
+def Val.enc (v : Val) : List Cell := order v.encLE
+
+/-- The value a list of cells in memory order is when read as type `t`. -/
+def Ty.dec (t : Ty) (cs : List Cell) : Option Val := t.decLE (order cs)
+
+theorem Val.enc_length (v : Val) : v.enc.length = v.ty.store := by
+  unfold Val.enc; rw [order_length]; exact Val.encLE_length v
+
+theorem dec_enc_int (w : Nat) (v : BitVec w) : Ty.dec (.int w) (Val.enc (.int w v)) = some (.int w v) := by
+  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_int w v
+
+theorem dec_enc_ptr (b : Nat) (o : Int) : Ty.dec .ptr (Val.enc (.ptr b o)) = some (.ptr b o) := by
+  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_ptr b o
+
+theorem dec_enc_flt (g : F32) (hw : wf f32 g) :
+    Ty.dec .flt (Val.enc (.flt g)) = some (.flt g) := by
+  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_flt g hw
+
+theorem dec_enc_dbl (g : F64) (hw : wf f64 g) :
+    Ty.dec .dbl (Val.enc (.dbl g)) = some (.dbl g) := by
+  unfold Ty.dec Val.enc; rw [order_order]; exact decLE_encLE_dbl g hw
+
+end Gabbro.Code

@@ -1,22 +1,22 @@
-import Grammatik.Llvm.Lower.Stmt
+import Grammatik.Code.Lower.Stmt
 
 /-
-  File:      Grammatik/Llvm/Lower/Func.lean
+  File:      Grammatik/Code/Lower/Func.lean
   Subject:   TRACK L, PHASE L1 -- THE LOWERING OF A FUNCTION, as a Lean function.
 
   `lowerFn lay P f` turns the body of function `f` of the program `P` (machine G: an `Endblock`
   over the context `D.params f`) into an IR function: parameter `i` arrives in register `i`
-  (as its register image `regTy`); the entry block (label 0) gives every parameter an `alloca`
+  (as its register image `regTy`); the entry block (label 0) gives every parameter an `alloc`
   cell and stores the argument into it (`prologue`; the cells are made LAST parameter first, so
   the context's first variable ends up the head of `cenv`), then jumps to the lowered body
   (labels from 1; `lowerEnd`). The answer type is `regTy` of `D.erg f`, or `void`.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
 
 open Gabbro.Grammatik (Deklaration Programm Vertrag vertragVon Ctx Res)
 
-variable {D : Deklaration}
+variable [Conf] {D : Deklaration}
 
 /-- The cells of the parameters: parameter `i` (of the list) is in register `i + base`. The last
     parameter is made first. Returns the code, the cell registers (first parameter first) and the
@@ -38,7 +38,7 @@ def retTy : Option GTy → Ty
 
 /-- The IR parameters of a function with these parameter types. -/
 def irParams (ps : List GTy) : List Param :=
-  ps.zipIdx.map fun (τ, i) => ⟨regTy τ, i, false⟩
+  ps.zipIdx.map fun (τ, i) => ⟨regTy τ, i⟩
 
 /-- **The lowering of function `f`.** -/
 def lowerFn (lay : Layout D) (P : Programm D) (f : D.Fn) (name : String) : Option Func :=
@@ -50,4 +50,4 @@ def lowerFn (lay : Layout D) (P : Programm D) (f : D.Fn) (name : String) : Optio
       | none => none
   | none => none
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

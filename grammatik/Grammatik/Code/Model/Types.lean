@@ -1,11 +1,15 @@
 import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 
 /-
-  File:      Grammatik/Llvm/Model/Types.lean
-  Subject:   TRACK L, PHASE L0 -- THE TYPES AND VALUES OF THE LLVM IR SUBSET that
-             `crates/gabbro-check/src/llvm.rs` writes (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`
-             section 9a). Names are short English words (at most five letters per word); the
-             printer (`Print.lean`) maps each one to the LLVM mnemonic it stands for.
+  File:      Grammatik/Code/Model/Types.lean
+  Subject:   TRACK L -- `Code`: THE TARGET-INDEPENDENT LOW-LEVEL LANGUAGE, types and values.
+             `Code` is the language machine G is lowered to before any CPU model enters
+             (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a). It is NOT LLVM: no metadata, no
+             attributes, no inline assembly. It keeps what every CPU has -- word-sized locals,
+             byte memory, wraparound arithmetic at an explicit width, compare-and-branch,
+             call/return, atomics with orderings -- and nothing the ISAs disagree on
+             (`Conf`: word width and byte order are PARAMETERS). Names are short English words
+             (at most five letters per word).
 
   WHAT IS HERE
     `Ty`      -- iN, float, double, ptr, arrays, structs, void. A struct is a CHAIN of field
@@ -13,24 +17,39 @@ import Grammatik.Bausteine.Gleitkomma.Gleitkomma
                  equality needs no mutual recursion, and the layout is a plain left-to-right
                  walk. `{ i16, i32 }` is `fld (int 16) (fld (int 32) unit)`.
     layout    -- `Ty.align`, `Ty.size` (the ALLOC size), `Ty.store` (the bytes a load or store
-                 touches), `Ty.fieldOff`, `Ty.gepOff`: the data layout of the `target datalayout`
-                 string both targets share (x86_64 and aarch64 are LP64 little endian, i64 and
-                 i128 aligned to their size, double 8, pointer 8).
+                 touches), `Ty.fieldOff`, `Ty.gepOff`: natural alignment (an integer is aligned
+                 to its size up to twice the word, a pointer to the word, `double` to 8).
     `Val`     -- an integer of width `w` is a `BitVec w`; floats are bit-exact values of the
                  kernel IEEE model (`Gleitkomma`, binary32 and binary64); a pointer is a
                  BLOCK and a byte offset (block-structured memory, `Memory.lean`), so two
                  distinct allocations never alias by construction.
 
   NAMED CUTS (also in `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a)
-    * no first-class aggregate values (`insertvalue`, struct-typed `load`): aggregates live in
-      memory and are reached by `gep`; the `%gabopt`/sum layouts are L2;
-    * no integer to pointer conversion (the three sanctioned `inttoptr` sites are L4);
-    * every block is aligned to 16, so an `align N` check (N at most 16) is a check on the offset.
+    * no first-class aggregate values: aggregates live in memory and are reached by `gep`;
+    * no integer to pointer conversion (device bases and region answers are L4);
+    * every block is aligned to twice the word, so an alignment check is a check on the offset.
 -/
 
-namespace Gabbro.Llvm
+namespace Gabbro.Code
 
 open Gabbro.Grammatik.Gleitkomma
+
+/-- **The target parameters.** Word width (32 or 64 bits) and byte order. Everything in `Code`
+    that depends on them takes `[Conf]`; nothing is fixed to one ISA. -/
+class Conf where
+  wbits : Nat
+  big : Bool
+  wide : wbits = 32 ∨ wbits = 64
+
+namespace Conf
+
+/-- The word in bytes. -/
+def wb [Conf] : Nat := wbits / 8
+
+theorem wb_pos [c : Conf] : 0 < wb := by
+  unfold wb; rcases c.wide with h | h <;> rw [h] <;> decide
+
+end Conf
 
 /-- The types of the subset. -/
 inductive Ty where
@@ -48,17 +67,20 @@ inductive Ty where
 
 namespace Ty
 
-/-- Natural alignment in bytes of an integer of width `w`. -/
+variable [Conf]
+
+/-- Natural alignment in bytes of an integer of width `w`: its size, up to twice the word. -/
 def intAlign (w : Nat) : Nat :=
   let b := (w + 7) / 8
-  if b ≤ 1 then 1 else if b ≤ 2 then 2 else if b ≤ 4 then 4 else if b ≤ 8 then 8 else 16
+  min (if b ≤ 1 then 1 else if b ≤ 2 then 2 else if b ≤ 4 then 4 else if b ≤ 8 then 8 else 16)
+    (2 * Conf.wb)
 
 /-- ABI alignment. -/
 def align : Ty → Nat
   | int w => intAlign w
   | flt => 4
   | dbl => 8
-  | ptr => 8
+  | ptr => Conf.wb
   | void => 1
   | arr _ t => align t
   | fld t r => max (align t) (align r)
@@ -73,7 +95,7 @@ def size : Ty → Nat
   | int w => roundUp ((w + 7) / 8) (intAlign w)
   | flt => 4
   | dbl => 8
-  | ptr => 8
+  | ptr => Conf.wb
   | void => 0
   | arr n t => n * size t
   | unit => 0
@@ -89,7 +111,7 @@ def store : Ty → Nat
   | int w => (w + 7) / 8
   | flt => 4
   | dbl => 8
-  | ptr => 8
+  | ptr => Conf.wb
   | t => size t
 
 /-- Is it a scalar -- a type a `load` or a `store` carries. -/
@@ -157,4 +179,4 @@ def ofInt (w : Nat) (n : Int) : Val := .int w (BitVec.ofInt w n)
 
 end Val
 
-end Gabbro.Llvm
+end Gabbro.Code

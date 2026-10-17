@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Lower.Expr
+import Grammatik.Code.Lower.Expr
 
 /-
-  File:      Grammatik/Llvm/Lower/Stmt.lean
+  File:      Grammatik/Code/Lower/Stmt.lean
   Subject:   TRACK L, PHASE L1 -- THE LOWERING OF STATEMENTS, BLOCKS AND END BLOCKS, as Lean
              functions to IR basic blocks.
 
@@ -12,13 +12,15 @@ import Grammatik.Llvm.Lower.Expr
   for an end block, which never falls through: every path ends in `ret`.
 
   THE FRAGMENT: assignments to table slots (also through a pointer), globals and local
-  variables; `if`/`else`; `return`; `let` (an `alloca` cell plus its first store); `check` (a
+  variables; `if`/`else`; `return`; `let` (an `alloc` cell plus its first store); `check` (a
   failed condition runs the `else` end block). Every other form lowers to `none`
-  (`Y103`/`Y104` in the Rust producer). A variable is a stack cell whose register is
+  (a form with no `Code` lowering is refused by name). A variable is a stack cell whose register is
   `cenv[i]`; a `bool` is a byte in memory (`cvtM`).
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr)
 
@@ -38,7 +40,7 @@ def cvtM (τ : GTy) (o : Opd) (r : Nat) : Option LR :=
   | _ => none
 
 /-- `store` of a value (already in its memory image) to a pointer operand. -/
-def storeI (τ : GTy) (v p : Opd) : Instr := .store (memTy τ) v p 0 false [.tbaa (memTy τ)]
+def storeI (τ : GTy) (v p : Opd) : Instr := .store (memTy τ) v p
 
 /-- The code that evaluates, converts and stores `e` at the address operand `p`. -/
 def storeTo (τ : GTy) (oe : Opd) (r1 : Nat) (p : Opd) : Option (List Instr × Nat) :=
@@ -52,7 +54,7 @@ def bindCode (τ : GTy) (oe : Opd) (r1 : Nat) : Option (List Instr × Nat × Nat
   match cvtM τ oe r1 with
   | some (cm, om, r2) =>
       if supp τ then
-        some (cm ++ [.alloc r2 (memTy τ) 0, storeI τ om (.reg r2)], r2, r2 + 1)
+        some (cm ++ [.alloc r2 (memTy τ), storeI τ om (.reg r2)], r2, r2 + 1)
       else none
   | none => none
 
@@ -200,4 +202,4 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) :
 
 end
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

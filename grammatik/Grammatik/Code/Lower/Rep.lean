@@ -1,10 +1,10 @@
 import Grammatik.Kern.Semantik.Semantik
-import Grammatik.Llvm.Model.Facts
-import Grammatik.Llvm.Model.Layout
-import Grammatik.Llvm.Lower.Arith
+import Grammatik.Code.Model.Facts
+import Grammatik.Code.Model.Layout
+import Grammatik.Code.Lower.Arith
 
 /-
-  File:      Grammatik/Llvm/Lower/Rep.lean
+  File:      Grammatik/Code/Lower/Rep.lean
   Subject:   TRACK L, PHASE L1 -- THE REPRESENTATION RELATION between machine G's world and the
              IR's memory, and the layout assumptions it rests on.
 
@@ -13,7 +13,7 @@ import Grammatik.Llvm.Lower.Arith
   table `t` is the global block `gblk t` laid out as `[count x R]` for a record `R`, field `f`
   of slot `k` sits at the offset `gep [count x R], 0, k, fidx f` computes, and the bytes there
   decode to the encoding of `σ.slots t k f`; a global `g` is the cell of block `ggblk g`.
-  Locals live in `alloca` blocks, one per variable of the context (`EnvRep`).
+  Locals live in `alloc` blocks, one per variable of the context (`EnvRep`).
 
   THE CORRESPONDENCE ASSUMPTIONS, as hypotheses and not axioms (the structure `LayoutOk`):
     * the global of a table has type `[count x R]`, and every SUPPORTED field of `R` (an integer
@@ -23,11 +23,13 @@ import Grammatik.Llvm.Lower.Arith
   The widths are `Ar.wid`; the trace (`World.spur`) has no image in the IR and is ignored.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
 
 open Gabbro.Grammatik (Deklaration World Env Wert Zahl Ctx Var)
 
 abbrev GTy := Gabbro.Grammatik.Ty
+
+variable [Conf]
 
 /-- The types the L1 lowering carries: ranges that fit 128 bits, `bool`, table pointers. -/
 def supp : GTy → Bool
@@ -69,8 +71,8 @@ structure LayoutOk {D : Deklaration} (lay : Layout D) : Prop where
   tinj : ∀ t u, lay.gblk t = lay.gblk u → t = u
   gdis : ∀ t g, lay.gblk t ≠ lay.ggblk g
   ginj : ∀ g h, lay.ggblk g = lay.ggblk h → g = h
-  /-- field positions and slot counts stay far below the signed 64-bit range -/
-  fsm : ∀ t f, lay.fidx t f < 2 ^ 62
+  /-- field positions stay far below the signed word range -/
+  fsm : ∀ t f, lay.fidx t f < 2 ^ (Conf.wbits - 2)
 
 variable {D : Deklaration}
 
@@ -273,4 +275,4 @@ theorem rep_store_glob {lay : Layout D} (hL : LayoutOk lay) {σ : World D} {m m'
         load_store_other h (Or.inl (fun e => hg (hL.ginj _ _ e)))]
       exact hR.2 g' hs'
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

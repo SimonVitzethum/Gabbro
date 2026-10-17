@@ -1,8 +1,8 @@
-import Grammatik.Llvm.Refine.StmtOk
-import Grammatik.Llvm.Lower.Func
+import Grammatik.Code.Refine.StmtOk
+import Grammatik.Code.Lower.Func
 
 /-
-  File:      Grammatik/Llvm/Refine/Func.lean
+  File:      Grammatik/Code/Refine/Func.lean
   Subject:   TRACK L, PHASE L1 -- THE REFINEMENT OF A WHOLE FUNCTION (without calls).
 
     * `prologue_ok` -- the entry block builds the environment: the cells of the parameters hold
@@ -17,7 +17,9 @@ import Grammatik.Llvm.Lower.Func
   in the call-free fragment (it is, if `lowerFn` succeeds).
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Programm Vertrag vertragVon Ctx Res Env Wert World Orakel RufAusgang
   EndAusgang ErgVal execEnd)
@@ -97,4 +99,4 @@ theorem blk_of_nodup {M : Modl} {fn : Nat} {func : Func} (hfn : M.funs[fn]? = so
   simp only [Modl.blk, hfn, Option.bind_some]
   exact key func.blks hnd hb
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

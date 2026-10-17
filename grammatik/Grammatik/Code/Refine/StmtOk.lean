@@ -1,11 +1,13 @@
-import Grammatik.Llvm.Refine.Stmt
+import Grammatik.Code.Refine.Stmt
 
 /-
-  File:      Grammatik/Llvm/Refine/StmtOk.lean
+  File:      Grammatik/Code/Refine/StmtOk.lean
   Subject:   TRACK L, PHASE L1 -- THE MUTUAL REFINEMENT THEOREM (see `Stmt.lean` for what it says).
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang EndAusgang RufAusgang
   ErgVal ErgExpr execStmt execBlock execEnd eval evalErg Zahl)
@@ -810,4 +812,4 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (O : 
 
 end
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower

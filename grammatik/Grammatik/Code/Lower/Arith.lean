@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/Llvm/Lower/Arith.lean
+  File:      Grammatik/Code/Lower/Arith.lean
   Subject:   TRACK L, PHASE L1 -- THE ARITHMETIC OF INTEGER WIDTHS: why a `u32 in 0 .. 200` may
              live in an `i8`, why `a + b` computed modulo `2^w` is the exact sum, and how a value
              moves between widths. Pure `Int`/`BitVec` facts; nothing here knows the IR.
@@ -20,7 +20,7 @@
   `sle_ofInt`, `eq_ofInt`; and division `udiv_ofInt`, `urem_ofInt`.
 -/
 
-namespace Gabbro.Llvm.Ar
+namespace Gabbro.Code.Ar
 
 /-- Every integer of `lo .. hi` is representable in `w` bits. -/
 def Fits (lo hi : Int) (w : Nat) : Prop :=
@@ -92,7 +92,7 @@ theorem sub_ofInt {w : Nat} (a b : Int) :
 
 /-! ## Changing width -/
 
-private theorem two_pow_le {a b : Nat} (h : a ≤ b) : (2 : Int) ^ a ≤ 2 ^ b := by
+theorem two_pow_le {a b : Nat} (h : a ≤ b) : (2 : Int) ^ a ≤ 2 ^ b := by
   exact_mod_cast Nat.pow_le_pow_right (by decide) h
 
 theorem pow_cast (w : Nat) : ((2 ^ w : Nat) : Int) = (2 : Int) ^ w := by
@@ -186,45 +186,4 @@ theorem urem_ofInt {w : Nat} {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ w) (hb0 
   · subst h; simp [Nat.mod_eq_of_lt ha]
   · rw [Nat.mod_eq_of_lt (Nat.lt_trans (Nat.mod_lt _ h) hb)]
 
-/-! ## The `!range` annotation holds of every in-range encoding -/
-
-theorem range_ok {lo hi n : Int} {w : Nat} (hf : Fits lo hi w) (hw : 0 < w)
-    (h1 : lo ≤ n) (h2 : n ≤ hi) :
-    (decide (lo % (2 : Int) ^ w = (hi + 1) % (2 : Int) ^ w)
-      || decide ((((BitVec.ofInt w n).toNat : Int) - lo) % (2 : Int) ^ w
-          < (hi + 1 - lo) % (2 : Int) ^ w)) = true := by
-  have hM : (2 : Int) ^ w = 2 * 2 ^ (w - 1) := by
-    obtain ⟨v, rfl⟩ : ∃ v, w = v + 1 := ⟨w - 1, by omega⟩
-    simp [Int.pow_succ]; omega
-  have hp : (0 : Int) < 2 ^ (w - 1) := by
-    have := Nat.two_pow_pos (w - 1)
-    exact_mod_cast this
-  have hspan : hi - lo < 2 ^ w := by
-    unfold Fits at hf
-    by_cases hl : 0 ≤ lo
-    · rw [if_pos hl] at hf; omega
-    · rw [if_neg hl] at hf; omega
-  have hspan' : hi + 1 - lo ≤ 2 ^ w := by omega
-  have hMpos : (0 : Int) < 2 ^ w := by omega
-  have hnat : (((BitVec.ofInt w n).toNat : Nat) : Int) = n % (2 : Int) ^ w := by
-    rw [BitVec.toNat_ofInt, pow_cast]
-    exact Int.toNat_of_nonneg (Int.emod_nonneg _ (by omega))
-  rw [hnat]
-  have e1 : (n % (2 : Int) ^ w - lo) % (2 : Int) ^ w = (n - lo) % (2 : Int) ^ w := by
-    have := Int.emod_add_mul_ediv n ((2 : Int) ^ w)
-    have h3 : n - lo = (n % (2 : Int) ^ w - lo) + (2 : Int) ^ w * (n / (2 : Int) ^ w) := by omega
-    rw [h3, Int.add_mul_emod_self_left]
-  have hge : 0 ≤ n - lo := by omega
-  have hlt : n - lo < 2 ^ w := by omega
-  rw [e1, Int.emod_eq_of_lt hge hlt]
-  by_cases hc : hi + 1 - lo < 2 ^ w
-  · rw [Int.emod_eq_of_lt (by omega) hc]
-    simp only [Bool.or_eq_true, decide_eq_true_eq]
-    right; omega
-  · have : hi + 1 = lo + 2 ^ w := by omega
-    rw [this]
-    simp only [Bool.or_eq_true, decide_eq_true_eq]
-    left
-    rw [Int.add_emod_right]
-
-end Gabbro.Llvm.Ar
+end Gabbro.Code.Ar

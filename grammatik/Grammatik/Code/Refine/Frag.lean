@@ -1,7 +1,7 @@
-import Grammatik.Llvm.Lower.Expr
+import Grammatik.Code.Lower.Expr
 
 /-
-  File:      Grammatik/Llvm/Refine/Frag.lean
+  File:      Grammatik/Code/Refine/Frag.lean
   Subject:   TRACK L, PHASE L1 -- THE BUILDING BLOCKS OF THE EXPRESSION REFINEMENT: what each
              small piece of lowered code does when `seqI` runs it.
 
@@ -11,7 +11,9 @@ import Grammatik.Llvm.Lower.Expr
   and its operand evaluates to `v`.
 -/
 
-namespace Gabbro.Llvm.Lower
+namespace Gabbro.Code.Lower
+
+variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Wert)
 
@@ -129,20 +131,10 @@ theorem cvtG_frag {la ha lb hb : Int} {o : Opd} {r : Nat} {m : Mem} {rs : Regs} 
 
 /-! ## Loads -/
 
-theorem meta_range_ok {lo hi n : Int} {w : Nat} (hf : Ar.Fits lo hi w) (hw : 0 < w)
-    (h1 : lo ≤ n) (h2 : n ≤ hi) (t : Ty) :
-    Meta.ok (.range lo (hi + 1)) t (Val.ofInt w n) = true := by
-  simp only [Meta.ok, Val.ofInt]
-  exact Ar.range_ok hf hw h1 h2
-
-theorem meta_tbaa_ok (t t' : Ty) (v : Val) (h : t = t') : Meta.ok (.tbaa t) t' v = true := by
-  simp [Meta.ok, h]
-
 theorem stepI_load {m : Mem} {rs : Regs} {d : Reg} {t : Ty} {p : Opd} {b : Nat} {o : Int} {v : Val}
-    {ms : List Meta} (hp : p.ev rs = some (.ptr b o)) (hl : m.load b o t = some v)
-    (hm : ms.all (fun μ => μ.ok t v) = true) :
-    stepI (.load d t p 0 false ms) m rs = some (m, rs.set d v) := by
-  simp [stepI, hp, hl, hm, alignOk]
+    (hp : p.ev rs = some (.ptr b o)) (hl : m.load b o t = some v) :
+    stepI (.load d t p) m rs = some (m, rs.set d v) := by
+  simp [stepI, hp, hl]
 
 theorem stepI_trunc {m : Mem} {rs : Regs} {d : Reg} {s t : Nat} {a : Opd} {z : Int}
     (ha : a.ev rs = some (Val.ofInt s z)) (h : t ≤ s) :
@@ -161,28 +153,18 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
   cases τ with
   | int lo hi =>
       have hf : Ar.Fits lo hi 128 := by simpa [supp] using hs
-      have hw := Ar.wid_fits hf
-      have hp8 := Ar.wid_pos lo hi
-      refine ⟨([.load r (.int (Ar.wid lo hi)) p 0 false
-          [.range lo (hi + 1), .tbaa (.int (Ar.wid lo hi))]], .reg r, r + 1),
-        by simp [loadG, hf], ?_⟩
+      refine ⟨([.load r (.int (Ar.wid lo hi)) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
       rw [show encR lay (Grammatik.Ty.int lo hi) v = Val.ofInt (Ar.wid lo hi) v.n from rfl]
       apply frag_one
       have hl' : m.load b o (.int (Ar.wid lo hi)) = some (Val.ofInt (Ar.wid lo hi) v.n) := by
         simpa [memTy, regTy, encM, encR] using hl
-      have hr := meta_range_ok hw (by omega) v.lo_le v.le_hi (Ty.int (Ar.wid lo hi))
-      have ht := meta_tbaa_ok (Ty.int (Ar.wid lo hi)) (Ty.int (Ar.wid lo hi))
-        (Val.ofInt (Ar.wid lo hi) v.n) rfl
-      exact stepI_load hp hl' (by simp [hr, ht])
+      exact stepI_load hp hl'
   | bool =>
-      refine ⟨([.load r (.int 8) p 0 false [.tbaa (.int 8)],
-             .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)], .reg (r + 1), r + 2),
-        by simp [loadG], ?_⟩
+      refine ⟨([.load r (.int 8) p, .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)],
+        .reg (r + 1), r + 2), by simp [loadG], ?_⟩
       have hl' : m.load b o (.int 8) = some (Val.ofInt 8 (if (wbool v) then 1 else 0)) := by
         simpa [memTy, regTy, encM, encR] using hl
-      have ht := meta_tbaa_ok (Ty.int 8) (Ty.int 8)
-        (Val.ofInt 8 (if (wbool v) then 1 else 0)) rfl
-      have h1 := stepI_load (d := r) (ms := [.tbaa (.int 8)]) hp hl' (by simp [ht])
+      have h1 := stepI_load (d := r) hp hl'
       have h2 : stepI (.cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)) m
           (rs.set r (Val.ofInt 8 (if (wbool v) then 1 else 0)))
           = some (m, (rs.set r (Val.ofInt 8 (if (wbool v) then 1 else 0))).set (r + 1)
@@ -199,11 +181,11 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
       · simp [Opd.ev, regs_set_same, encR, bool_ofInt]
         rfl
   | ptr n rw =>
-      refine ⟨([.load r .ptr p 0 false [.tbaa .ptr]], .reg r, r + 1), by simp [loadG], ?_⟩
+      refine ⟨([.load r .ptr p], .reg r, r + 1), by simp [loadG], ?_⟩
       apply frag_one
       have hl' : m.load b o .ptr = some (encR lay (.ptr n rw) v) := by
         simpa [memTy, regTy, encM] using hl
-      exact stepI_load hp hl' (by simp [meta_tbaa_ok Ty.ptr Ty.ptr])
+      exact stepI_load hp hl'
   | _ => simp [supp] at hs
 
 /-! ## Addresses -/
@@ -217,12 +199,16 @@ theorem inBlock_of_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
   | some blk =>
       simp only [hb] at h ⊢
       by_cases hi : Mem.inside blk.size o t
-      · obtain ⟨h0, _, h2⟩ := hi
+      · obtain ⟨h0, _, h2, _⟩ := hi
         simp only [decide_eq_true_eq]
         omega
       · simp [hi] at h
 
-theorem wid64 : Ar.wid 0 (2 ^ 64 - 1) = 64 := by decide
+theorem wid_word : Ar.wid 0 (2 ^ Conf.wbits - 1) = Conf.wbits := by
+  rcases Conf.wide with h | h <;> rw [h] <;> decide
+
+theorem small_lt {n : Int} (h : n < 2 ^ (Conf.wbits - 2)) : n < 2 ^ (Conf.wbits - 1) :=
+  Int.lt_of_lt_of_le h (Ar.two_pow_le (by have := Conf.wide; omega))
 
 theorem toInt_ofInt_small {w : Nat} {n : Int} (hw : 0 < w) (h1 : 0 ≤ n) (h2 : n < 2 ^ (w - 1)) :
     (BitVec.ofInt w n).toInt = n :=
@@ -242,36 +228,38 @@ theorem slotAddr_frag (lay : Layout D) (hL : LayoutOk lay) (t : D.Tab) (f : D.Fe
   split at h
   · rename_i hc
     obtain ⟨hc1, hc2⟩ := hc
-    rcases hcv : cvt (twid (.int 0 (D.count t - 1))) (twid (.int 0 (2 ^ 64 - 1)))
+    rcases hcv : cvt (twid (.int 0 (D.count t - 1))) (twid (.int 0 (2 ^ Conf.wbits - 1)))
         (tsgn (.int 0 (D.count t - 1))) oi r with ⟨cc, oo, rr⟩
     simp only [cvtG, hcv] at h
     obtain rfl := Option.some.inj h
     have hfit := Ar.wid_fits hc2
     have hw8 := Ar.wid_pos 0 (D.count t - 1)
-    have hcvf := cvt_frag (twid (.int 0 (D.count t - 1))) (twid (.int 0 (2 ^ 64 - 1)))
+    have hcvf := cvt_frag (twid (.int 0 (D.count t - 1))) (twid (.int 0 (2 ^ Conf.wbits - 1)))
       (tsgn (.int 0 (D.count t - 1))) oi r m rs k hoi
       (fitS_of_fits hfit (by omega) hk0 (by omega)) hil
     rw [hcv] at hcvf
     obtain ⟨rs1, hs1, hr1, hag1, hlt1, hev1⟩ := hcvf
-    have e64 : twid (.int 0 (2 ^ 64 - 1)) = 64 := wid64
+    have e64 : twid (.int 0 (2 ^ Conf.wbits - 1)) = Conf.wbits := wid_word
     rw [e64] at hev1
     obtain ⟨gty, hg⟩ := Layout.gep_eq hL t k f hs
     have hfs := hL.fsm t f
-    have hkk : k < 2 ^ 62 := by omega
-    have i0 : ((Opd.int 64 0).ev rs1).bind Val.idx = some 0 := by
+    have hkk : k < 2 ^ (Conf.wbits - 2) := Int.lt_of_lt_of_le hk1 hc1
+    have i0 : ((Opd.int Conf.wbits 0).ev rs1).bind Val.idx = some 0 := by
       simp only [Opd.ev, Val.ofInt, Option.bind_some, Val.idx]
-      rw [toInt_ofInt_small (by omega) (by omega) (by omega)]
+      rw [toInt_ofInt_small (by have := Conf.wide; omega) (Int.le_refl _)
+        (small_lt (by exact_mod_cast Nat.two_pow_pos (Conf.wbits - 2)))]
     have i1 : (oo.ev rs1).bind Val.idx = some k := by
       rw [hev1]
       simp only [Val.ofInt, Option.bind_some, Val.idx]
-      rw [toInt_ofInt_small (by omega) hk0 (by omega)]
-    have i2 : ((Opd.int 64 (lay.fidx t f)).ev rs1).bind Val.idx = some (lay.fidx t f : Int) := by
+      rw [toInt_ofInt_small (by have := Conf.wide; omega) hk0 (small_lt hkk)]
+    have i2 : ((Opd.int Conf.wbits (lay.fidx t f)).ev rs1).bind Val.idx = some (lay.fidx t f : Int) := by
       simp only [Opd.ev, Val.ofInt, Option.bind_some, Val.idx]
-      rw [toInt_ofInt_small (by omega) (by omega) (by omega)]
-    have hidx : ([Opd.int 64 0, oo, Opd.int 64 (lay.fidx t f)].mapM
+      rw [toInt_ofInt_small (by have := Conf.wide; omega) (Int.natCast_nonneg _)
+        (small_lt (by exact_mod_cast hfs))]
+    have hidx : ([Opd.int Conf.wbits 0, oo, Opd.int Conf.wbits (lay.fidx t f)].mapM
         (fun i => (i.ev rs1).bind Val.idx)) = some [0, k, (lay.fidx t f : Int)] := by
       simp [List.mapM_cons, List.mapM_nil, i0, i1, i2]
-    have hstep : stepI (.gep rr (lay.tty t) base [.int 64 0, oo, .int 64 (lay.fidx t f)] true) m rs1
+    have hstep : stepI (.gep rr (lay.tty t) base [.int Conf.wbits 0, oo, .int Conf.wbits (lay.fidx t f)] true) m rs1
         = some (m, rs1.set rr (.ptr (lay.gblk t) (lay.off t k f))) := by
       have hb1 : base.ev rs1 = some (.ptr (lay.gblk t) 0) := by
         rw [ev_agree hag1 hbl]; exact hbase
@@ -279,10 +267,10 @@ theorem slotAddr_frag (lay : Layout D) (hL : LayoutOk lay) (t : D.Tab) (f : D.Fe
       have hin := inBlock_of_load hv
       simp only [stepI, hb1, hidx, hg]
       simp [Int.zero_add, hin]
-    have h2 := frag_one m rs1 rr (.gep rr (lay.tty t) base [.int 64 0, oo, .int 64 (lay.fidx t f)] true)
+    have h2 := frag_one m rs1 rr (.gep rr (lay.tty t) base [.int Conf.wbits 0, oo, .int Conf.wbits (lay.fidx t f)] true)
       (.ptr (lay.gblk t) (lay.off t k f)) hstep
     have := frag_trans (c1 := (cc, oo, rr)) (c2 := ([.gep rr (lay.tty t) base
-      [.int 64 0, oo, .int 64 (lay.fidx t f)] true], .reg rr, rr + 1)) hs1 hr1 hag1 h2
+      [.int Conf.wbits 0, oo, .int Conf.wbits (lay.fidx t f)] true], .reg rr, rr + 1)) hs1 hr1 hag1 h2
     exact this
   · simp at h
 
@@ -475,4 +463,4 @@ theorem binRest_fits {op : BinOp} {τ σa σb : GTy} {oa ob : Opd} {r : Nat} {c 
     · simp at h
   · simp at h
 
-end Gabbro.Llvm.Lower
+end Gabbro.Code.Lower
