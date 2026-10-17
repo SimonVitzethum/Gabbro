@@ -7,7 +7,7 @@
   Skeleton: the surface AST `SExpr` and a stub `parseExpr`. Levels,
   printer and round trip land in the next steps.
 -/
-import Grammatik.Parser.Lexer
+import Grammatik.Parser.Lex.Lexer
 
 namespace Gabbro.Grammatik.Parser
 

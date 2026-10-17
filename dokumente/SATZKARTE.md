@@ -3291,10 +3291,10 @@ are reported separately.*
 
 ## 31. O13 closed -- the chain source pinned as characters, the pipeline unfolded at a variable
 
-*Added 2026-09-15 (Opus lane `o13`). Files: `Grammatik/Parser/Lexer.lean` (`lexL`,
+*Added 2026-09-15 (Opus lane `o13`). Files: `Grammatik/Parser/Lex/Lexer.lean` (`lexL`,
 `lex_ofList`), `Grammatik/Korrespondenz/Kette/Schlusssatz.lean` (`uebersetzeAllg_von_zeichen`),
-`Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
-`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
+`Grammatik/Parser/Elab/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
+`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Elab/Uebersetze.lean` (`u104lexL`/`u104lex`),
 `Grammatik/Korrespondenz/Kette/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), retired `zaehle-kette`.
 Report: `messung/muse/OPUS-BERICHT-O13.md` (retired report, in the history).*
 

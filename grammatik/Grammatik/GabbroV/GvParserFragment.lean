@@ -9,7 +9,7 @@
   elaboration case, with its correctness theorem and refusal theorems.
   It never edits `Parser/`; other agents' work arrives only by merge.
 -/
-import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.Elab.Uebersetze
 
 namespace Gabbro.Grammatik.GabbroV.GvParserFragment
 

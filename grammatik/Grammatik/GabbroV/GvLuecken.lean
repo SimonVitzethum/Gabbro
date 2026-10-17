@@ -10,8 +10,8 @@
   by path, so that direction would be a dependency cycle).
 -/
 import Grammatik.GabbroV.GvStartPflicht
-import Grammatik.Parser.Uebersetze
-import Grammatik.Parser.UebersetzeAllg
+import Grammatik.Parser.Elab.Uebersetze
+import Grammatik.Parser.Elab.UebersetzeAllg
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Logik.Vertraege.AxiomVertrag
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem

@@ -17,9 +17,9 @@
   definitions of `Zielsatz/`, `Semantik` and `Parser/` unchanged; no new
   interpreter, no import from `programmlogik/`.
 -/
-import Grammatik.Parser.Uebersetze
-import Grammatik.Parser.UebersetzeAllg
-import Grammatik.Parser.UebersetzeAllg2
+import Grammatik.Parser.Elab.Uebersetze
+import Grammatik.Parser.Elab.UebersetzeAllg
+import Grammatik.Parser.Elab.UebersetzeAllg2
 import Grammatik.Kern.Syntax.Typen
 import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Kern.Semantik.Semantik

@@ -40,7 +40,7 @@
   * section 6, the theorem -- with A1 (+A2, A3) and A4 as HYPOTHESES
     (2026-09-14) --, its witnesses (rule 13) and its CUTS.
 -/
-import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.Elab.Uebersetze
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt104b
 import Grammatik.Korrespondenz.Allgemein.Korrespondenz104
 import Grammatik.CBackend.Formen.CFormenDet

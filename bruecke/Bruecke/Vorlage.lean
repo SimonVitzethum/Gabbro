@@ -1,5 +1,5 @@
 import Bruecke.Quelle
-import Grammatik.Parser.Lexer
+import Grammatik.Parser.Lex.Lexer
 
 /-!
 # P6: the template a person starts from, WRITTEN BY LEAN from the source text

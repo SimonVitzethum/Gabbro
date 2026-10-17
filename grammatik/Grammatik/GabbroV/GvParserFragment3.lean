@@ -17,7 +17,7 @@
   Both cases build cumulatively on `elabU02`.
 -/
 import Grammatik.GabbroV.GvParserFragment
-import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.Elab.Uebersetze
 
 namespace Gabbro.Grammatik.GabbroV.GvParserFragment3
 

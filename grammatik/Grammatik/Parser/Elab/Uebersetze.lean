@@ -33,7 +33,7 @@
   (`u104fragment`, `u104fuss`).
 -/
 import Grammatik.Korrespondenz.Korpus.Export104
-import Grammatik.Parser.ElementTief
+import Grammatik.Parser.Item.ElementTief
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 

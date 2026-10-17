@@ -41,7 +41,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
 import Grammatik.Korrespondenz.Allgemein.KorrOkOhneLocks
-import Grammatik.Parser.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeAllg2
 import Grammatik.Zielsatz.Kern.Beweis
 
 namespace Gabbro.Grammatik

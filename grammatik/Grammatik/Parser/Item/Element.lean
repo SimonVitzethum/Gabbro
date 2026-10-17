@@ -7,7 +7,7 @@
   (`parseItem`, `parseItems`, `parseTopItems`). Probes live in
   `Parser/AnweisungProben.lean`.
 -/
-import Grammatik.Parser.Anweisung
+import Grammatik.Parser.Stmt.Anweisung
 
 namespace Gabbro.Grammatik.Parser
 

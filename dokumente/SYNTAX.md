@@ -160,7 +160,7 @@ Ten head an expression or a predicate unconditionally; seven break the emitted C
 ordinary local (`uint32_t <word> = 1; return <word>;` through
 `cc -std=c11 -Wall -Wextra -Werror` -- `const` `static` `extern` `if` `else` `return`
 `bool`, measured 2026-09-05). The Lean side pins the same seventeen in
-`grammatik/Grammatik/Parser/WortStellung.lean` (`reserviertTafel`, with a theorem per
+`grammatik/Grammatik/Parser/Lex/WortStellung.lean` (`reserviertTafel`, with a theorem per
 row above: the twelve place-refusals, the five expression heads, the seven C names).
 
 Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `number`

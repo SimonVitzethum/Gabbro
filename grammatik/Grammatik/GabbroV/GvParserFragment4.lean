@@ -14,7 +14,7 @@
   else still refused is proved refused. `Parser/` untouched.
 -/
 import Grammatik.GabbroV.GvParserFragment3
-import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.Elab.Uebersetze
 
 namespace Gabbro.Grammatik.GabbroV.GvParserFragment4
 

@@ -15,7 +15,7 @@
   construct, in how many files it appears and in how many it is the
   ONLY blocker, with the ranked flip list. `Parser/` untouched.
 -/
-import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.Elab.Uebersetze
 
 namespace Gabbro.Grammatik.GabbroV.GvZensus
 

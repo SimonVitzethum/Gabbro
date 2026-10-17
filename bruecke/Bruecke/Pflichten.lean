@@ -1,4 +1,4 @@
-import Grammatik.Parser.Uebersetze
+import Grammatik.Parser.Elab.Uebersetze
 import Gabbro.Body
 
 /-!
