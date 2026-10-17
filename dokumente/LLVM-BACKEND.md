@@ -247,7 +247,7 @@ here simplifies a case, the register wins.
 | Model/surface boundary | Remaining work | Refusal |
 |---|---|---|
 | `Deklaration.maskiert` | IRQ masking and interrupt nesting | `Y102` |
-| `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (surface devices lower through `volatile`) | `Y10x` |
+| `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register is refused `Y102`, `gift/1470`, because x86 port space has no lowering yet and aarch64 has none) | `Y10x` |
 | `Stmt.publish` with payload | OFFEN O25, not covered by the goal theorem | `Y103` |
 | `Stmt.locks` shared | an own primitive, unproved | `Y103` |
 | `Deklaration.Ax`, `Block.bindAxiom*` | stack-carrying/paired/unbound gates, `child` (the internal `start` trampoline does not implement that source form) | `Y102` |
@@ -264,7 +264,7 @@ here simplifies a case, the register wins.
 
 Same checked unit, same lowering run as the IR: one run, two outputs, deterministic
 (`BTreeMap` throughout; same source, same bytes, twice). Core Lean syntax only, no import,
-**no LLVM** in it:
+**no LLVM** in it. The output elaborates with plain `lean` (a test runs it on three certificates):
 
 * `llvmEinheit`, `llvmZiel`, `llvmLayout`: what, for which target;
 * `llvmFunktionen` (name, params, ret, linkage class), `llvmTypen` (named layouts);
