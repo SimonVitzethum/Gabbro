@@ -1,51 +1,33 @@
 # Offen — was dem Projekt noch fehlt
 
-*Stand 2026-10-15, am Code gemessen. Enthält NUR Offenes aus fünf Gebieten:
+*Updated 2026-10-17 for memory, stack and model-based LLVM coverage. Enthält NUR Offenes aus fünf Gebieten:
 LLVM-Backend, Lean-Modell, Prüfer, Übersetzungsvalidierung, Heap. IDs (`Oxx`) sind
 stabil — Kommentare im Baum, die `OFFEN Oxx` nennen, meinen diese Abschnitte
 (`TODO.md` selbst ist gelöscht, Historie in Git). Geschlossenes und
 Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
-## 1. Heap — unbegrenzt, aber mit Grenzen
+## 1. Heap and stack (updated 2026-10-17)
 
-- **A (Freiliste als Muster) — gebaut und festgeschrieben.** `beispiele/27-freiliste.gab`,
-  `58-freiliste-zwei-formen.gab`: belegen/ablegen über `naechst`-Kette, keine
-  Sprachänderung. Typisierte Fächer haben keine Fragmentierung (ein Elementtyp
-  je Halde) — frei heißt ein Belegt-Bit je Slot. Festgeschrieben in
-  `dokumente/SPRACHE.md` (§`table`, mit Messung: 0 Fehler, LLVM beidseitig
-  `opt`-gültig); was das Muster NICHT gibt (kein Use-after-free-Schutz),
-  steht dabei — das ist B, kein zweites Register.
-- **B (unbegrenzt mit Abtastung + echte Freigabe) — gebaut 2026-10-15, Reste offen.**
-  Unbegrenzt: `pb P blw B` an der Arena (SYNTAX.md §9.1) schaltet die
-  UNBEGRENZTE Form ein (ohne sie ist ohne `max` die Decke `hi` — statisch).
-  Der Erzeuger reserviert einmal Adressraum (`mmap(PROT_NONE)`, kein RAM),
-  committet je 1 MiB bei Bedarf (`mprotect`, sauber in Bytes gerechnet) und fragt VOR jedem Commit die
-  nullstellige Frage `P` nach freien Bytes; unter der Nutzer-Schwelle `B`
-  (z.B. `blw 1048576` — 1 MiB) läuft der `else`-Zweig (OOM-Pfad). EIN Ruf
-  je MiB, null im Schnellpfad (`bereit >= bedarf` fragt gar nicht) — Abtasten
-  kostet keine Performance. Freistehend misst `P` selbst (kein Systemruf im
-  Erzeuger). Prüfer: `N584` (Frage nennt nichts), `N585` (falsche Form,
-  keine fällige Schwelle); Erzeuger: drittes sanktioniertes `inttoptr`
-  (Laufzeit-Basis); Beispiel `1160`, Proben `gift/1436`–`1438`, LLVM-Test
-  `abtastung_vor_commit`.
-  Freigabe: `free A[i];` (SYNTAX.md §9.1, `freestmt`) gibt genau einen Slot
-  zurück — intrusive LIFO-Freiliste (null Overhead, Elemente unter 8 Bytes
-  tragen kein Glied: `Y103`), der Name stirbt statisch (`N586`: kein
-  Danach-Gebrauch, keine Doppel-Freigabe, Kopien sterben mit, Joins vereinen,
-  `reset` löscht; geborgte und berechnete Formen fallen). Beispiel `1161`
-  (`rc=100`, Slot wiederverwendet), Proben `gift/1439`–`1443`, LLVM-Test
-  `freigabe_als_liste`. Lean: `FreiZustand` mit vier bewiesenen
-  Erhaltungssätzen (`ArenaDyn.lean`, keine neuen Axiome).
-  Offen: `free` über Funktionsgrenzen (der Eigner gibt frei — Helfer, die
-  für den Rufer freigeben, sind zeremoniell inline), Aliase über
-  ungetrackte Namen (OFFEN `Alias`, wie jede ungetrackte Kopie), Block-Form
-  und Exporteur-Anbindung (`LG005` steht, O14s dritte Form).
-- **C (Rückgabe an den Kern) — offen, Entwurf steht.** Leere 1-MiB-Chunks per
-  `madvise` zurückgeben: Zähler lebender Slots je Chunk (Seitentabelle,
-  Adressraum-reserviert wie die Freiliste), Rückgabe-Tor aus der
-  Nutzer-Bindung (kein Systemruf im Erzeuger — wie `gabbro_os_leeren`),
-  Commit-Bits je Chunk statt einer `bereit`-Marke (Decommit bricht das
-  Ein-Marken-Modell). Nach B, Tage.
+- **Built:** pressure-sampled unbounded arenas, slot release, external free-list
+  links supporting small elements, per-chunk live counts and physical return of
+  empty anonymous payload pages. Whole-arena reset clears counts and returns
+  used payload pages. Virtual reservations/access rights and the committed
+  prefix stay intact; best-effort page discard requires no decommit bitmap.
+- **Built:** all direct/compatible indirect recursive cycles use a loop
+  dispatcher and explicit growable continuation storage. Pure tail cycles keep
+  their jump-only path. Continuation chunks are released on unwind; allocation
+  failure is an explicit trap. This avoids recursion-dependent native stack
+  growth, not the need for RAM to store non-tail continuations.
+- **Built:** checked static range zeroing and optional whole-page return through
+  declared program bindings; guarded per-invocation thread stacks, group spawn
+  before join, kernel-exit completion and stack unmapping after join.
+- **Still open:** `free` across function boundaries, aliases outside the tracked
+  ownership discipline, complete `ArenaForm`/`DynForm` export and the G form of
+  the newer memory statements. No checker refusal or source obligation was
+  relaxed. CPU/final-byte refinement remains section 5 work.
+- **Evidence:** `dokumente/LLVM-SPEICHER-STAPEL.md`. Coverage is the actual Lean
+  constructor/field register, checked by
+  `python3 instrumente/pruefe-llvm-modelldeckung.py`; examples never define it.
 
 ## 2. Lean-Modell
 
@@ -76,9 +58,10 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 - **O23 (Tor-Vorbedingungen nicht im Ziel).** NUL-Pfad und Rahmenlänge sind
   benannt, nicht modelliert.
 - **O24 (Strings geprüft, nicht dargestellt).** NUL, `max`-Decke, Aggregate.
-- **O27 (Programme ohne Lean-Urteil).** Neu gemessen 2026-10-15: **138 von 166**
-  `beispiele/*.gab` exportieren kein G-Programm (`gabbro lean-g` verweigert,
-  meist `LG004`). Größter gezählter Brocken.
+- **O27 (source forms without complete G export).** The source-to-G exporter
+  remains partial, notably float, byte-pointer/string and dynamic-arena forms.
+  A working LLVM lowering is not a Lean judgment. Track the constructor/field
+  boundaries in `dokumente/llvm-modelldeckung.tsv`, not counts of examples.
 - **O28-Rest (Verbund).** Spec-Diff ohne unabhängige Review-Runde; keine
   semantische Äquivalenz/Verfeinerung bei Verträgen (Normalform-Bäume);
   kein Zertifikat für verlinkte Programme; C-Linkschritt ist Sache der
@@ -103,14 +86,12 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 Volltabelle in `dokumente/LLVM-MODELLSTAND.md` §5. Kurzform:
 
-- **O22 (`start` läuft sequentiell) — Schritt 1 gebaut 2026-10-16.** Echte
-  Fäden (rohes `clone`, kein libc): eigener Stapel je Wurzel, Futex-Join über
-  globale Fertig-Wörter, Beispiel `1162` (`rc=64` deterministisch beidseitig).
-  Gefunden dabei: Fehler-`unreachable` faltet der Optimierer zu `llvm.assume`
-  (laute Fallen `ud2`/`brk` seitdem); Kind setzt mitten in der Vater-Funktion
-  fort (1 MiB Prefix-Reserve); keine rahmen-relativen Adressen ins Kind
-  (`gabbro_faden_N_*`-Globale). Nächste Schritte: Stapel-Tiefe/Maß,
-  Join-Semantik bei Fehlern, geteilte Sperren unter echten Fäden messen.
+- **O22 — group execution and stack lifecycle built 2026-10-17.** Every
+  invocation owns a guarded mapping and completion word. All roots start before
+  any join; kernel `clear_child_tid` ends the join after actual exit, then the
+  mapping is released. Trampoline assembly is confined to the stack switch.
+  Runtime syscall numbers still belong to the Linux profile; OS-neutral
+  bindings/profiles and the target-to-GX proof remain open.
 - **`entries` (12 Stellen).** Hardware-Dispatch ohne Modell — benannt verweigert.
 - **Stapel-Tore + `child` (12).** `clone`-Trampolin fehlt.
 - **`publish` mit Nutzlast (11).** OFFEN O25 — vom Zielsatz nicht gedeckt.

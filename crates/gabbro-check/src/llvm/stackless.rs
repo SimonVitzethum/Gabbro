@@ -858,6 +858,20 @@ done:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn allocation_layout_includes_padding_and_packed_strides() {
+        let definitions = vec![
+            ("Record".into(), "{ i8, i64 }".into()),
+            ("Packed".into(), "<{ i8, i64 }>".into()),
+            ("Option".into(), "{ i32, [8 x i8] }".into()),
+        ];
+        assert_eq!(layout("%Record", &definitions), Some((16, 8)));
+        assert_eq!(layout("[3 x %Record]", &definitions), Some((48, 8)));
+        assert_eq!(layout("[3 x %Packed]", &definitions), Some((27, 1)));
+        assert_eq!(layout("[3 x %Option]", &definitions), Some((36, 4)));
+        assert_eq!(layout("[18446744073709551615 x i64]", &definitions), None);
+    }
     fn execute(name: &str, body: &str, expected: i32) {
         for target in [&super::super::ZIEL_X86_64, &super::super::ZIEL_AARCH64] {
             let transformed = lower(body, target, &[]).unwrap();

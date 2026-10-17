@@ -24,7 +24,7 @@ Entry points: `gabbro llvm [--target=x86_64|aarch64] [--unit]` (IR to stdout),
 `gabbro llvm-cert` (the Lean certificate for Gabbro→Binary refinement — same
 run, NO LLVM inside, see §7), `instrumente/baue-llvm.sh` (end to end, both
 targets, no-libc proof, agreement check). Tests:
-`crates/gabbro-check/tests/llvm.rs` (14 tests, no external tool),
+`crates/gabbro-check/tests/llvm.rs` (IR tests without the LLVM toolchain),
 `beispiele.rs` runs the LLVM emitter over the `Y` gift probes.
 
 ## 2. No C anywhere — how
@@ -81,28 +81,25 @@ proof duties — not the bytes' memory safety on this fragment, which the three
 built passes carry. A green run is the absence of built-pass findings, not a
 proof; the compiler stays untrusted and the proof is refinement (see §5).
 
-## 4. Measured snapshot 2026-10-14
+## 4. Coverage and execution evidence (updated 2026-10-17)
 
-Commands: `./target/debug/gabbro llvm`, `instrumente/baue-llvm.sh`,
-`cargo test -p gabbro-check --test llvm`, `opt -O3` as IR *validator*
-(compile-only — the validator adds nothing to any binary).
+Coverage is measured against Lean constructors/declaration fields, NEVER against
+examples: `python3 instrumente/pruefe-llvm-modelldeckung.py` checks the explicit
+register `dokumente/llvm-modelldeckung.tsv`. The model boundary and partial cases
+are described in `LLVM-MODELLSTAND.md`. Counts of compilable examples are not a
+completion metric.
 
-| | |
-|---|---|
-| Corpus lowered clean | 134 of 166 `beispiele/*.gab` (rest: named `Y` refusals, all booked open in `LLVM-MODELLSTAND.md`) |
-| Clean IR valid for both targets | 134 of 134 (`opt -O3`, x86_64 + aarch64; arch-specific files correctly refused on the other target) |
+Execution evidence is separate. The rule tests build and run both targets at
+`-O0` and `-O3`: 200,000 non-tail calls on a 128 KiB native stack; indirect mutual
+calls with aggregate returns and phi continuations; one-byte slot reuse; payload
+page discard with preserved free links; checked static range zeroing; repeated
+thread groups with a barrier requiring all roots to start before join. AArch64
+execution uses qemu and is not a native performance measurement.
 
-| End to end, no libc | `messung/llvm/summe.gab`: checker green, static binaries, `OK`, rc=25 on **both** targets, agreement checked |
-| Optimizer effect (`opt -O3` vs `-O0`, x86_64 native) | 20.3 ms → 3.3 ms (**6.2×**), identical output |
-| `llc`-only `-O3` (no middle-end) | 43 ms — **slower than `-O0`**; `opt` belongs in the pipeline (measured, kept) |
-| Binary size (static, summe) | 1848 bytes, no INTERP/NEEDED |
-| IR size | 112 lines IR from ~60 lines Gabbro |
-| Tests | 14 LLVM tests + full workspace suite green (incl. 5 `Y` probes) |
-| New codes | `Y101`–`Y104` + `Y106` (emitter class, no sentences — `C001` precedent; `pruefe-saetze.py` mark 55 → 61 → 60: `Y105` retired, fully lowered; `Y106` narrowed to non-dispatched matches) |
-
-Targets measured on unmatched settings are NOT reported: qemu timings are
-emulation, and the Snapdragon device is pending — ARM performance is open
-until hardware measures it (ARM-PLAN.md).
+Historical optimization witness: `summe.gab` produced the same result at `-O0`
+and `-O3`, with an earlier measured 20.3 ms -> 3.3 ms on x86-64. This is not a
+comparison against GCC and not language-model coverage. The ARM 80 %/110 %
+performance goals remain unmeasured.
 
 ## 5. What validating this would cost (evaluation, not a claim)
 
@@ -172,8 +169,9 @@ registers/bitfields/transitions (`volatile`, three sanctioned `inttoptr` sites: 
 tree walks (ancestors strict, descendants post-order stackless), `leave`/`next`
 by name, atomic arrays, the unbounded heap with sampling (`pb P blw B`:
 address-space reserve, per-MiB commit, one probe per commit, user threshold),
-the slot release (`free A[i];`: intrusive free list, static death —
-three sanctioned `inttoptr` sites now).
+the slot release (`free A[i];`: LIFO reuse with separate metadata and static
+death), and physical payload-page return. Runtime address conversions are
+confined to declared devices/regions and compiler-owned mappings.
 
 Still refused, per item:
 
@@ -182,12 +180,14 @@ Still refused, per item:
   devices lower through `volatile`. A device state model is open work.
 - Publish with payload (`Y103`): OFFEN O25, uncovered by the goal theorem.
 - Shared locks (`Y103`): own primitive unproved — nothing serialized silently.
-- Stack gates + `child` (`Y102`): need the `clone` trampoline.
-- Entries (`Y102`, 12 sites): hardware dispatch (`unterbricht`).
-- Table `ops` (`Y104`): generated mutators (the exporter has no G form either).
-- `start`: real threads since 2026-10-16 (raw `clone` + futex join, example `1162`)
-  yet. The sharpest edge; everything else is refused by name or genuinely
-  lowered.
+- Stack gates + `child` (`Y102`): need the declared-gate/child integration;
+  the internal `start` trampoline alone does not implement that source form.
+- Entries (`Y102`): hardware dispatch (`Programm.unterbricht`).
+- `start` now starts the whole group, joins after actual child exit and
+  releases guarded per-invocation stacks. It no longer serializes the roots.
+- General recursion, arena page return and static range reset are implemented;
+  their remaining model/export and proof boundaries are in
+  `LLVM-SPEICHER-STAPEL.md` and the checked model register.
 
 ## 7. The Lean certificate (`gabbro llvm-cert`)
 
@@ -203,9 +203,9 @@ Gabbro→Binary, never via intermediate text:
 - `llvmTore`: name, number, register bindings, out register, clobbers, template;
 - `llvmEintritt`: `main` + width (or `never`);
 - `llvmAnnahmen`: the `narrow` successes behind each `llvm.assume`;
-- llvmArenen`: name, element layout, reservation, bound, ceiling (words at
-  `<Name>.basis/.belegt/.bereit`); `llvmSchloesser`: ticket words at `<Name>`;
-  `llvmFaeden`: roots (stacks/words at `gabbro_faden_N_*`).
+- `llvmArenen`: name, element layout, reservation, bound, ceiling (runtime
+  words: `<Name>.basis/.belegt/.bereit/.frei/.meta`); `llvmSchloesser`: ticket
+  words at `<Name>`; `llvmFaeden`: roots owning guarded per-invocation regions.
 
 The validator checks the final bytes against source plus this certificate.
 Status: input to refinement, not a proof. A proved validator refuses bad

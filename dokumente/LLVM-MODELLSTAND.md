@@ -1,16 +1,21 @@
 # LLVM backend: standing against the Lean model
 
-*Measured 2026-10-15, backend `crates/gabbro-check/src/llvm.rs`. The unit is not the
-example corpus but the Lean language model (`grammatik/Grammatik/Kern/Syntax/`):
-every `Ty`, `Expr`, `Stmt`/`Block`/`Endblock` constructor and every `Deklaration`
-field is booked as LOWERED, REFUSED (with code), ERASED (proof-only, correctly
-absent from bytes) or OPEN. Corpus numbers are witnesses, not the measure.*
+*Updated 2026-10-17. The denominator is the Lean language model, never
+examples. Run `python3 instrumente/pruefe-llvm-modelldeckung.py`.*
 
-Method: `cargo test -p gabbro-check --test llvm` (14 tests), full workspace suite,
-`opt -O3` over every checker-green corpus file on both targets (validity gate),
-`instrumente/baue-llvm.sh` end to end (static, no INTERP/NEEDED, x86_64/aarch64
-agreement). A constructor counts LOWERED only if its IR passes `opt` and, where
-executed, runs.
+The checked register is `dokumente/llvm-modelldeckung.tsv`. It enumerates every
+constructor/declaration field in the selected core syntax, signature, program,
+arena and G-continuation families directly from their Lean definitions. Missing,
+removed or duplicate entries and missing implementation anchors fail the check.
+`LOWERED`, `PARTIAL`, `REFUSED`, `ERASED`, `MODEL_ONLY` and `OPEN` are explicit
+implementation classifications, not compiler correctness theorems. In particular,
+partial source-to-G export stays partial even when a surface form emits LLVM.
+The register is authoritative where the older prose tables below simplify a case.
+
+Execution tests are witnesses for lowering rules: the existing LLVM tests plus
+`llvm::stackless` and `llvm::memory` execute deep recursion, indirect/mutual calls,
+aggregate continuations, small-slot reuse, page reclamation, range reset and
+thread groups on both targets at `-O0`/`-O3`. They do not define coverage.
 
 ## 1. Types (`Typen.lean`, `Ty`)
 
@@ -86,6 +91,10 @@ the C emitter's semantics, byte for byte.
 
 ## Arenen: Reserve ist Adressraum, Belegung ist RAM (`ArenaDyn.lean`)
 
+The following measurements are the historical reservation/commit snapshot. The
+current implementation adds the metadata base and separate free links/counts
+described in the next section (five fixed words, 40 bytes).
+
 Das Modell (`ArenaDyn.lean`) unterscheidet Decke `M` (reserviert, nie implizit
 berührt), Committed-Präfix `c` (`hi <= c <= M`, monoton) und Gebrauchtes; `grow`
 über `M` ist Abweisung, darunter darf die Laufzeit scheitern (OOM ist real —
@@ -100,17 +109,26 @@ rechnet der Schritt sauber in Bytes (Bedarf auf 1 MiB aufgerundet, an der
 Decke gekappt): Decken unter 1 MiB committen ihren Rest in einem Schritt
 (gemessen: `capacity 0 .. 4` läuft, `rc=100` mit Freilisten-Wiederverwendung).
 
-## Slot-Freigabe (`free A[i];`, TODO §1-B)
+## Slot release and physical page reclamation
 
-Vier Wörter je Arena (`basis`, `belegt`, `bereit`, `frei` = -1 für leer):
-`free` schreibt den alten Kopf als `i64`-Glied in den Slot und rückt den Kopf
-vor (intrusiv, null Overhead — Elemente unter 8 Bytes tragen kein Glied,
-`Y103`); der nächste `alloc` nimmt von der Liste (kein Commit, keine Abtastung)
-oder vom Hochwasser; `reset` leert die Liste neben dem Zähler. Gemessen:
-Beispiel `1161` läuft beidseitig (`rc=100`, Slot wiederverwendet), BSS weiter
-konstant (32 Byte für 4 Wörter, decken-unabhängig; `frei` = -1 steht in DATA).
-Lean: `FreiZustand` mit vier bewiesenen Erhaltungssätzen (`ArenaDyn.lean`);
-der G-Exporteur verweigert noch (`LG005`, O14s dritte Form).
+Free links are now a separate, lazily touched anonymous metadata region, with
+one live-slot counter per approximately 1 MiB payload chunk. This preserves the
+`FreiZustand` LIFO semantics for every supported element width, including `u8`.
+Freeing the last live slot discards only whole interior pages of that chunk;
+neighbouring chunks and all free links survive. `reset` clears counts/list/high
+water and returns used payload pages. Metadata is virtual address space, not
+up-front physical RAM; touched links cost 8 bytes per freed slot, counters cost
+8 bytes per chunk, and the arena has five fixed words including the metadata base.
+
+`madvise(DONTNEED)` retains mappings/access rights and the committed prefix.
+There is no revoked-page bitmap: physical residency and virtual commit are distinct.
+With pressure sampling, reuse of an empty chunk samples before consuming its free
+head; a failed sample takes the existing allocation-failure path. Returning pages
+is best effort. Small ranges can retain partial boundary pages.
+
+Lean storage rule: `discard_live` in `ArenaSeiten.lean` preserves live payload and
+`discard_preserves_reuse` preserves the exact next logical allocation. The G
+exporter's `free`/dynamic-form remainder remains open; this is no binary proof.
 
 ## Unbegrenzte Halde mit Abtastung (`pb P blw B`)
 
@@ -124,34 +142,40 @@ selbst. Prüfer `N584`/`N585` (Sätze in `saetze.rs`), drittes sanktioniertes
 `inttoptr` (Laufzeit-Basis). Gemessen: Beispiel `1160` läuft beidseitig
 (`rc=42`), OOM-Zweig bei 100 Bytes frei korrekt genommen, 0 Byte BSS.
 
-## Rekursion ohne Stapel (Endrekursion als Schleife)
+## Recursion without native stack growth
 
-Rekursive Rufe liefen als echte Maschinenrufe — Tiefe 512 passt, Tiefe 200.000
-nicht. Jetzt senkt der Erzeuger **endständige Rekursion** (solo und wechselseitig
-über den Rufgraphen, Tarjan, iterativ) als Schleife: ein Aufruf `return f(…)` wird
-Zustand + Sprung statt Rahmen. Gemessen: `ab(200000)` läuft mit **512 KB Stapel**
-in 0,000 s (`rc=0`, korrekt). Bedingungen: alle Zyklus-Rufe endständig, einheitliche
-Antwort, kein Fehlerkanal — sonst echte Rufe (Status quo, dokumentiert statt
-verweigert). Nicht-endständige Rekursion nutzt weiter den Maschinenstapel
-(begrenzt durch `decreases`, endlich aber endlich).
+Every cyclic direct/compatible indirect call component becomes a loop dispatcher
+with explicit continuation frames, irrespective of tail position, return type or
+error channel. SSA values and address-taken locals remain in stable frames across
+suspension. Existing pure tail cycles retain their jump-only fast path. Checked
+anonymous chunks grow as needed and are released while unwinding; allocation
+failure traps explicitly, rather than falling through `unreachable`. Finite RAM
+is still finite: avoiding native stack overflow does not mean constant memory
+for non-tail recursion.
 
-## 5. Open (model-measurable, with reason)
+`SchablonenStapel` states the storage/resource obligations over the actual G
+frames and reuses the existing join contract. It does not certify Rust lowering.
+See `LLVM-SPEICHER-STAPEL.md` for the implementation and test boundary.
 
-| Item | Reason | Sites |
-|---|---|---|
-| IRQ-masking locks | interrupt model (which bit, nesting) | `01`, gifts |
-| Model `Reg`/`regLies` | the exporter builds no `Reg`; surface devices covered via `volatile`/`transition` |
-| Publish with payload | OFFEN O25, uncovered by the goal | 11 |
-| Shared locks | own primitive unproved | 3 (+1 correct probe) |
-| Stack gates + `child` | `clone` trampoline | 4 (`kind-*`) |
-| Entries (`unterbricht`) | hardware dispatch | 12 |
-| `start` | real threads since 2026-10-16 (step 1): raw `clone` (`CLONE_THREAD`), own 8 MiB stack per root, futex join over global ready-words — measured 10x `rc=64` on x86_64, 5x under qemu-aarch64, deterministic under the ticket lock | the goal's concurrency legs are unchanged (the checker already ruled for every schedule); the per-access target→W/GX bridge stays validation work (§5) |
-| Library calls (`@lib#f`) | needs the library/payload model | 2 (`106`, `107`) |
-| `reset X at i count n` | the page give-back is a template + binding; the zero-fill alone is trivial, the whole statement is not | 2 (`175`) |
-| `static ptr = array-name` decay | refused by the C emitter too (`C001`) — an open remainder, not a lowering gap | 1 (`38`) |
+## 5. Open against model constructs
 
-`start` is the sharpest edge: it lowers and runs, but sequentially. Every other
-row is refused by name or genuinely lowered.
+| Model/surface boundary | Remaining work |
+|---|---|
+| `Deklaration.maskiert` | IRQ masking and interrupt nesting |
+| `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | Model-register/export bridge; surface volatile MMIO is separate |
+| `Stmt.publish` | Nonempty payload hand-off |
+| `Stmt.locks` | Shared acquisition |
+| `Deklaration.Ax`, `Block.bindAxiom*` | Stack-carrying/paired/unbound gates and `child` semantics |
+| `Programm.unterbricht` | Hardware-dispatched entries; boot/entrust/asm lowering |
+| Library call surface | Library resolution and payload model |
+| Static pointer decay | Global array-address initializer |
+| `ArenaForm` / `DynForm` | Full G exporter/statement bridge remains partial |
+
+`start` now starts all roots before joining, with per-invocation guarded mappings,
+atomic completion reads, and stack reclamation after kernel-reported thread exit.
+It is a Linux runtime implementation, not a per-access target-to-GX proof.
+Static range reset now zeroes the checked interval; declared page-return bindings
+can reclaim its whole interior pages. The G-export remainder is unchanged.
 
 ## 6. Invariant optimization (measured, not claimed)
 

@@ -53,6 +53,10 @@ def members():
     for relative, names in MODELS.items():
         path = ROOT / "grammatik/Grammatik" / relative
         text = uncomment(path.read_text())
+        if relative == "Kern/Syntax/Syntax.lean":
+            declared = set(re.findall(r"^(?:inductive|structure) ([\w']+)", text, re.M))
+            if declared != set(names):
+                raise ValueError(f"core model family register differs: new={sorted(declared - set(names))}, removed={sorted(set(names) - declared)}")
         for name in names:
             match = re.search(rf"^(inductive|structure) {name}\b[^\n]*", text, re.M)
             if not match:

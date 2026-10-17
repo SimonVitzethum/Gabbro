@@ -1378,7 +1378,9 @@ fn nat_align(ll: &LlTyp) -> u32 {
         LlTyp::Void => 1,
         LlTyp::Feld(e, _) => nat_align(e),
         LlTyp::Anon(fs) => fs.iter().map(nat_align).max().unwrap_or(1),
-        LlTyp::Benannt(_) => 8,
+        // Named layouts include packed formats and 4-aligned options/records.
+        // The access type alone cannot promise eight-byte address alignment.
+        LlTyp::Benannt(_) => 1,
     }
 }
 
