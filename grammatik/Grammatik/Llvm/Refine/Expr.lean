@@ -100,7 +100,7 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
       exact ⟨frag_const m rs r _ (Val.bool false) (congrArg some ofInt_false) (fun x hx => nomatch hx),
         fitsT_nonint (fun lo hi e => nomatch e)⟩
   | _, _, τ, .var x, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      obtain ⟨a, b, ha, hs, hr, hl⟩ := envRep_get x cenv ρ hE
+      obtain ⟨a, b, ha, hs, hr, _, hl⟩ := envRep_get x cenv ρ hE
       simp only [lowerE, ha, hs, if_true] at h
       obtain ⟨c', hc', F⟩ := loadG_frag lay τ (ρ.get x) hs (.reg a) b 0 m rs r
         (by simpa [Opd.ev] using hr) hl

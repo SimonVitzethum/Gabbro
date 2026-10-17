@@ -411,3 +411,4 @@ import Grammatik.Kern.Semantik.SyscallAllg
 import Grammatik.Kern.Semantik.SyscallArmPflicht
 import Grammatik.Llvm.Model.Witness
 import Grammatik.Llvm.Refine.Expr
+import Grammatik.Llvm.Refine.Func
