@@ -19,6 +19,14 @@ Danach folgen Prüfer, Compiler und `SYNTAX.md`/`SPRACHE.md` — nie umgekehrt. 
 das Modell nicht kennt, dann irrt der Prüfer. Eine reine Absenkung einer vorhandenen Form (LLVM) ändert
 die Sprache nicht und fällt nicht darunter.
 
+## Kein Legacy in Compiler, Prüfer und Parser (Simon, 2026-10-17, feste Regel)
+
+**Compiler, Prüfer und Parser tragen kein Legacy: nur der neueste Stand.** Wird etwas ersetzt, wird das Alte
+gelöscht (die Historie steht in Git), nicht daneben gehalten: keine Kompatibilitäts-Schichten, keine
+deprecated-Pfade, keine alten Namen oder Flag-Aliase, keine Absagecodes für Dinge, die es nicht mehr gibt,
+keine Reste des C-Emitters (C-Namensregeln, C-Schablonen, `emit.rs`-Verweise). Eine Änderung ist erst fertig,
+wenn sie ihren Vorgänger entfernt hat.
+
 ## Es gibt genau vier Wächter
 
 | Wächter | Gegenstand | Was er prüft |

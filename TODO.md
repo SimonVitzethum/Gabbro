@@ -75,6 +75,13 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 ## 3. Prüfer
 
+- **Legacy-Bereinigung (feste Regel 2026-10-17: kein Legacy in Compiler, Prüfer, Parser).** Gemessen in `crates/`:
+  C11 in 79 Zeilen (23 Dateien), `emit.rs`/`gabbro emit` in 172 Zeilen (38 Dateien, meist Kommentare),
+  C-Namensregeln (`cnamen.rs`, `erzeugernamen.rs`, `N041`-Familie), C-Schablonen in `schablonen.rs`,
+  `corrlean.rs`/`certstmt.rs`, `E247`-Hinweis auf C-Gründe, `retired`-Codes (16 Zeilen). Alles entfernen, nicht
+  umbenennen. Offene Entscheidung: gilt `grammatik/Grammatik/CBackend` (22 233 Zeilen, archivierte C-Kette) als Legacy
+  des Modells?
+
 - **Wächter-Reste (vier Wächter seit 2026-10-17).** `bruecke/` wird nicht gemessen (sein `lake build`
   scheitert am fehlenden `mathlib`-Eintrag); der baumweite `gabbro prove`-Lauf und der E1-Vergleich
   (Pflichten-Manifest) hängen in keinem Wächter; der Mutationslauf über den Prüfer ist ersatzlos

@@ -109,6 +109,9 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 
 ## 3. Simon's standing instructions
 
+- **No legacy in the compiler, the checker and the parser** (Simon, 2026-10-17, fixed rule): only the newest
+  state; what is replaced is deleted (history stays in git), never kept beside the new: no compatibility
+  layers, deprecated paths, old names or flag aliases, retired-but-kept codes, or C-emitter remnants.
 - **Language and syntax follow the Lean model, in that order** (Simon, 2026-10-17): the Lean model is the
   single source; any change to the language or its syntax is made in the Lean model FIRST, then in the checker,
   the compiler and `SYNTAX.md`/`SPRACHE.md`. A form the checker accepts and the model lacks is a checker bug.
