@@ -606,6 +606,62 @@ Not claimed: no validated binary exists; `korrOk` is C-only; the per-access brid
 
 ---
 
+## 9a. Binding order of 2026-10-17: every lowering in Lean, a complete Lean parser, benchmarks last
+
+**Simon's orders.** (1) Every lowering must exist in Lean — this is a duty, not an option. (2) A complete
+Lean parser. (3) The benchmark against GCC comes only when the compiler lowers much more and strong
+optimisations are in. Language and syntax follow the Lean model first (CLAUDE.md); a lowering of an existing
+form changes no language, but it is not accepted until its Lean part exists.
+
+**What 'in Lean' means here.** The Rust lowering (`llvm.rs`, `llvm/*.rs`) stays an untrusted producer. A
+lowering is *in Lean* when (a) the target fragment of LLVM IR has a Lean syntax and a Lean semantics, (b) the
+lowering of the form is a Lean function from the model's source form to that IR, with a printer to `.ll`
+text, and (c) there is a theorem that the IR's behaviour refines the source form's behaviour in machine G
+(or, for hardware-only forms, a named assumption with its exact text). The Rust output is then checked
+against the Lean function byte for byte (differential validator in the Lean guardian), and the Rust code is
+a fast copy of a specification, not a second source of truth.
+
+**Track L: lowerings in Lean (phases, each ends with a theorem and a guardian stage).**
+1. **L0 IR model.** `Grammatik/Llvm/`: LLVM IR subset (types, `alloca`/`load`/`store`, `getelementptr`, integer
+   and float ops, `icmp`, `br`/`switch`/`phi` or `alloca`-based locals, `call`, `ret`, atomics with orderings,
+   `unreachable`, inline asm as an opaque instruction with a declared effect), small-step semantics with a
+   byte memory and the weak-memory interface of the existing GX machine for atomics. ~6 000–9 000 lines.
+2. **L1 core lowering.** Scalars, ranges (`!range`, `llvm.assume` as proof-carrying facts), tables and records,
+   control flow, calls, returns, statics; refinement against `execBlock`. ~10 000–15 000 lines.
+3. **L2 memory forms.** Arenas, `grow`, `free`/free list (`ArenaFrei.lean` is its model), sampling, the page
+   return; stack and recursion lowering. ~6 000–9 000.
+4. **L3 concurrency.** Ticket lock, reader/writer lock, masked acquisition (the lock refinement of the open
+   item 'lock primitive not proved'), `publish`/`await` as release/acquire, threads and `child` with handed
+   stacks; refinement into GX. ~8 000–12 000.
+5. **L4 hardware forms.** `entry` (x86_64 IDT stubs, aarch64 vectors), `asm` bodies, port space, `device`
+   registers, system-call gates: each with its named hardware assumption, no invented semantics.
+   ~4 000–6 000. `boot` and `entrust` stay refused until the language gives them a semantics in the model.
+6. **L5 certificate and validator.** `llvm-cert` consumed in Lean; the validator runs in the Lean guardian.
+   ~2 000–3 000.
+Total Track L: ~36 000–54 000 Lean lines. Order: L0, L1, then L2–L4 in parallel, L5 last.
+
+**Track P: a complete Lean parser** (`Grammatik/Parser/`, today 22 700 lines for the fragment tables, locks,
+`impl fn` with pointer/index/range parameters, comparison contracts, straight-line bodies, direct calls).
+Missing: loops and `traverse`/`retry`/`forever`, `match`/`let else`/option and sum forms, atomics, arenas and
+`free`, `entry`/`boot`/`syscall` gates/`asm`, floats, `format`/bit fields, `walk`/`group`/invariants,
+generics-free but module/`use` structure, `extern`/`library`, hardware profile items, `const`/`spec fn`.
+Plan: close the grammar rule by rule against `SYNTAX.md` (189 rules), each rule with a printer, a round-trip
+proof and an elaboration into `UProg`/`Deklaration`; a coverage matrix (rule × parser × printer × elaboration)
+is the measure, not a count of examples. Elaboration replaces the Rust exporter `lean_g.rs` (5 958 lines,
+then deleted). ~20 000–35 000 lines. Order by corpus weight: control flow, matches, atomics, arenas, then the
+hardware items.
+
+**Shared prerequisite.** The model changes first (CLAUDE.md): new G forms come from `PLAN-DYNAMISCH.md` 8a
+(free list, invariants over live slots) and from the missing hardware-form semantics.
+
+**Benchmark against GCC `-O3`: after Track L reaches L3 and the optimisation phase below.** Not before; today a
+measurement would compare a compiler that refuses a fifth of the corpus.
+
+**Optimisation (before the benchmark).** The `opt -O3` of LLVM is outside the validated chain. Strong
+optimisation inside the validated chain means either validating LLVM's output (Alive2-style, per function)
+or doing the passes in Lean; decide after L1. Meanwhile the checker-derived facts (`!range`, `noalias`,
+`llvm.assume`, `!tbaa`) are the optimisations Gabbro has that C does not.
+
 ## 10. Cited section numbers
 
 | Old reference in code | Now | Where it is cited |
