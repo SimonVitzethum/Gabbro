@@ -643,6 +643,29 @@ preconditions, the fence/atomic mapping); it is a statement of obligations, not 
 Lean validator for the Rust backend's bytes; the report of Track L states which properties of `Code` that step will need. The
 LLVM backend stays as the running reference compiler. Estimate for the half: 25 000-40 000 Lean lines.
 
+**Track L: lowerings in Lean (phases, each ends with a theorem and a guardian stage).**
+1. **L0 `Code` model.** `Grammatik/Code/Model/` (direction of 2026-10-18: not LLVM, ISA-neutral, no CPU model
+   on the way). Built and proved: types and values, byte-addressed block memory with aligned access only and
+   the word width and byte order as the parameter `Conf` (64-bit little and 32-bit big endian both run in
+   the witness), the small-step semantics with an oracle at the atomic load only (linked to the weak-memory
+   interface and `Speichermodell.Ordnung`), SC determinism, a kernel-computed witness, and `Need`, the
+   list of obligations a CPU model must provide for `Code -> bytes` (the same for x86-64, AArch64, RISC-V).
+2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`): expressions (`lowerE_ok`), statements, blocks,
+   end blocks (`lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: slot, pointer, global and variable assignment, `if`,
+   `let`, `check`, `return`) and the function prologue (`prologue_ok`, `lowerFn`). Open: calls, loops, `match`,
+   `narrow`, division and shifts (the lowering emits none until G's ranges prove the precondition).
+3. **L2 memory forms.** Arenas, `grow`, `free`/free list (`ArenaFrei.lean` is its model), sampling, the page
+   return; stack and recursion lowering. ~6 000–9 000.
+4. **L3 concurrency.** Ticket lock, reader/writer lock, masked acquisition (the lock refinement of the open
+   item 'lock primitive not proved'), `publish`/`await` as release/acquire, threads and `child` with handed
+   stacks; refinement into GX. ~8 000–12 000.
+5. **L4 hardware forms.** `entry` (x86_64 IDT stubs, aarch64 vectors), `asm` bodies, port space, `device`
+   registers, system-call gates: each with its named hardware assumption, no invented semantics.
+   ~4 000–6 000. `boot` and `entrust` stay refused until the language gives them a semantics in the model.
+6. **L5 certificate and validator.** `llvm-cert` consumed in Lean; the validator runs in the Lean guardian.
+   ~2 000–3 000.
+Total Track L: ~36 000–54 000 Lean lines. Order: L0, L1, then L2–L4 in parallel, L5 last.
+
 **Track P: a complete Lean parser** (`Grammatik/Parser/`, today 22 700 lines for the fragment tables, locks,
 `impl fn` with pointer/index/range parameters, comparison contracts, straight-line bodies, direct calls).
 Missing: loops and `traverse`/`retry`/`forever`, `match`/`let else`/option and sum forms, atomics, arenas and

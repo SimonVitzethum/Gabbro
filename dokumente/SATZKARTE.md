@@ -5111,3 +5111,29 @@ probes hold over the changed readers (`lockT` 7 fields, `globT` 7, `arenaT` 6, `
 Measured, not proved: 170 of 170 corpus files parse as a whole, 9 elaborate (`Parser/Cover/Census.lean`,
 `instrumente/parser-deckung.py`). NOT proved: any round trip for statements or items; elaboration beyond tables,
 locks and `impl fn` over integers. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
+
+## 78. `Code`: the target-independent low-level language and the lowering refinement (Track L, 2026-10-18, `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a)
+
+`grammatik/Grammatik/Code/` (Model, Lower, Refine). `Code` is a language of our own, **not LLVM** and
+ISA-neutral by construction: unbounded locals, no flags, a branch tests a word, explicit-width
+wraparound arithmetic, preconditions (stuck steps) wherever x86, AArch64 and RISC-V differ (division by
+zero, `INT_MIN / -1`, shifts by the width, unaligned access), five atomic orderings on word-sized cells
+with abstract read-modify-write, abstract call frames, and the word width and byte order as the
+PARAMETER `Conf` (run at 64 bit little endian and 32 bit big endian in the witness).
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| block memory, aligned byte access, round trips (`load_store_int/ptr/flt/dbl`), frame lemma `load_store_other`, `alloc` fresh | `Model/Cells`, `Model/Memory` | `[Conf]` |
+| small-step semantics `step`, oracle only at the atomic load (`step_indep`), SC determinism `step_sc_det`, `exec_reach` | `Model/Semantics`, `Step`, `Facts` | `[Conf]` |
+| the link to the weak memory: `Order.toOrdnung`, `Sees.weak`, `sees_sc_weak`, `step_mono` | `Model/Weak` | `[Conf]` |
+| witness: loop, call, `gep`, atomic `armw`, computed by the kernel at both configurations, and `weak_two_successors` | `Model/Witness` | none |
+| what `Code` guarantees (`code_pre_div`, `_sdiv`, `_shift`, `_align_*`) and `Need`, the list of obligations a CPU model must provide | `Model/Need` | `Need` is a statement, not an instance |
+| widths: `Fits`, `wid`, exact modular arithmetic, width changes, comparisons | `Lower/Arith` | |
+| representation relation `Rep`, `EnvRep`, store lemmas; layout assumptions `LayoutOk` | `Lower/Rep`, `Refine/Env` | `LayoutOk` (hypothesis, not axiom) |
+| `lowerE` and `lowerE_ok`: a lowered expression computes what `eval` computes | `Lower/Expr`, `Refine/Frag`, `Refine/Expr` | `LayoutOk`, success of the lowering |
+| `lowerS`/`lowerB`/`lowerEnd` and `lowerS_ok`/`lowerB_ok`/`lowerEnd_ok`: assignments, `if`, `let`, `check`, `return` | `Lower/Stmt`, `Refine/StmtOk` | `LayoutOk`, `InM`, `KOk` |
+| `prologue_ok`; `lowerFn` | `Refine/Func`, `Lower/Func` | |
+
+NOT proved: calls and recursion, loops, `match`, memory forms (arenas, `grow`), concurrency into GX,
+the label-uniqueness of a lowered function (`blk_of_nodup` takes it as a hypothesis), `Code -> bytes`.
+`Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
