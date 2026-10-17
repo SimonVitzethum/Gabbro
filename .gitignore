@@ -61,3 +61,4 @@ programmlogik/_pruefung/
 # das kein Baumname ist.
 .tmp/
 .town/
+qemu_*.core
