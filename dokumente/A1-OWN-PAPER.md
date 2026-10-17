@@ -105,6 +105,68 @@ and it does not mint a new owner. While both are live, they are one root.
      one pointer type; two tables are disjoint by construction, sound only because no
      cross-type view is exported. (3) A frame naming a table directly (a static root beside a
      parameter) is outside `RahmenUeberParams`. The S-3 boundary decision stays with slice 3.
+   **Slice 2b — objects below a table (Simon's decision of 2026-10-17). Status 2026-10-17:
+   done for objects that are one slot, with the bridge to `R014` under four named
+   hypotheses, and one checker finding.** `grammatik/Grammatik/Logik/Vertraege/Objekte.lean`,
+   `ObjektRahmen.lean`, `ObjektWurzel.lean`, `ObjektZeuge.lean` (SATZKARTE §75). Machine G and
+   `Zielsatz/Spec.lean` are unchanged; `gabbro_ziel` stays on `propext`, `Classical.choice`,
+   `Quot.sound`.
+   - *The choice.* An object is a SLOT: `Obj` = (carrier, identity), covering every field of
+     slot `nr` of table `tab`. G's world is already indexed this way, every slot store of G
+     writes one field of one slot, and a record pointer into a table names one record; a field
+     would be finer than a pointer names, a table is slice 2. A pointer to one object is the
+     PAIR of parameters G already has -- the capability `ptr n rw` and an index into its table
+     (`ObjPar`, positions counted from the bottom of the context) -- so the identity is a VALUE
+     the caller chooses, which the type alone could not say.
+   - *Proved (generic).* `ObjGetrenntL`/`ObjGetrennt` (the argument-to-object map is injective
+     on every pair with a writable or `own` side); `objGetrennt_schreiben_trennt` (a store
+     through one leaves the other's object); **`objGetrennt_ein_obj_iff`** (with one object per
+     carrier, `ObjGetrennt` IS `ParamGetrennt`) and `getrennt_objGetrennt` (carrier separation
+     implies object separation). The object discipline of a body (`oS`/`oB`/`oE`, over the
+     whole grammar: every slot store at a writable object parameter's own index, no overwrite of
+     such an index, every call hands each writable object parameter of the callee a writable
+     one of the caller at the same table, no table-writing axiom; indirect calls and
+     `schreibBytes` refused) gives **`rufAt_obj`** (the model's call keeps the frame over
+     objects at every depth and world, premise `TreuO` only) and **`obj_ruf_rahmen`**: under
+     `ObjGetrennt`, every run leaves every field of every read-only parameter's object --
+     also when it lies in the table the call writes. Borrow rule: **`umsicht_behaelt`** (a body
+     `return k;` answers the object it was handed) and `objGetrennt_nicht_bei_einem`.
+   - *The bridge to `R014`.* `Herkunft` (parameter / fresh / re-view / union / unknown) with the
+     roots of §5 (unknown = every root); **`r014_objGetrennt`**: disjoint roots at a call give
+     `ObjGetrennt` under four NAMED hypotheses -- `ParamVerschieden` (S-2, at an entry the
+     `R015` boundary assumption; never discharged), `FrischNeu` (fresh answers are new
+     objects; a theorem for the model's allocator, `frischNeu_aus_arena` over
+     `ArenaDyn.freiAlloc`), `RechteOk` (a writable parameter gets a writable root, `R002`/
+     `R003`), `HerkunftTreu` (every argument names what its provenance denotes; for a re-view
+     in the model `umsicht_behaelt`, for a foreign re-view or fresh answer the binding's
+     contract). `r014_ruf_rahmen` composes it with `obj_ruf_rahmen`.
+   - *Witnesses.* `ObjektZeuge.lean`: `aendern(kp : ptr rw T, k, wp : ptr r T, w)` -- ONE table.
+     At `k = w = 0` not `ObjGetrennt`, and one real run moves `w`'s object from 0 to 5
+     (`ohne_objGetrennt_nur_versprechen`); at `k = 0, w = 1` `ObjGetrennt`, every run leaves
+     `T.slots[1]`, the run really writes `T.slots[0]`, and `ParamGetrennt` fails
+     (`zeuge_obj_feiner`: strictly finer than slice 2). `aendern(k, sicht(k))` is never
+     separated and `R014` refuses its provenance; `aendern(k, f)` with `f` the allocator's
+     first fresh slot is `R014`-clean, all four hypotheses hold, and the frame follows
+     (`zeuge_r014_ruf_rahmen`).
+   - *Finding (checker, measured on the debug binary of 2026-10-17 12:19).* `getrennte_wurzeln`
+     gives an untraced name NO root and skips every pair with it (`let (Some(wa), Some(wb)) …
+     else { continue }`), and a re-view whose pointer argument has no root gets a FRESH root.
+     §5 says unknown counts as every root. A re-view through a function pointer,
+     `let w = v.s(k); aendern(k, w);` with `s : fn(r : ptr<normal, r> Kopf) -> ptr<normal, r> Worte`,
+     passes with **0 errors**. `rust_lesart_luecke` proves the Rust reading unsound in the
+     model: under all four hypotheses an untraced name and a parameter are "separated" while
+     naming one object. Not repaired here (no Rust edit in this slice).
+   - *OPEN / obstructed.* (1) Objects are single slots: a record laid over a byte buffer (a
+     `format`, n slots) is not one object, so the cross-type re-view of `udp-echo`
+     (`kopfworte_von : ptr IpKopf -> ptr Kopfworte`, a format and a record over the same bytes)
+     still has no model statement -- it needs range objects over a byte table and `schreibBytes`
+     in the discipline. (2) The checker's walk over `let`s is not formalised over G syntax; its
+     correctness is the premise `HerkunftTreu`. (3) The discipline is a `Prop`, not yet a Bool
+     the exporter could compute. (4) **Stretch D not done:** `LG005` (record pointers) and
+     `LG001` (foreign re-views) stay. Lifting them needs the exporter to lower each record-pointer
+     parameter to the pair (`ptr n rw`, `index (count t)`) and every `p.f` to `durch p t f (var k)`,
+     a decided discipline check per exported body, and -- for `LG001` -- a contract form for a
+     foreign re-view's `HerkunftTreu`; none of it is clean without (1)-(3).
 3. **Slice 3 — S-3 boundary** and the rows in `saetze.rs` (`pruefe-saetze.py`), `SYNTAX.md`
    §9, and the rewrite of `R004`/`R007` as the "same place" special cases of S-1.
 4. **Slice 4 — compiler:** `noalias` only where S-1 holds (`LLVM-MODELLSTAND.md`: `own` →

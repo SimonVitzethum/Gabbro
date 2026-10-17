@@ -5039,3 +5039,41 @@ refused by the exporter (`LG005`, `LG001`; `beispiele/1163` is `UNCERTIFIED LG00
 borrow rule is the model's reading only at one pointer type; **a frame that names a table directly**
 (a static root beside a parameter) is outside `RahmenUeberParams`. `Zielsatz/Spec.lean` unchanged;
 `gabbro_ziel` untouched.
+
+## 75. Objects below a table: `ObjGetrennt` (`own`/separation slice 2b, 2026-10-17, `dokumente/A1-OWN-PAPER.md`)
+
+**The question.** Slice 2 (§74) separates carriers: two pointer parameters of one table type are one
+carrier in machine G whatever their roots, so `R014`'s distinct roots had no model statement. Simon's
+decision of 2026-10-17: the model gets finer objects below a table. **The choice:** an object is a SLOT
+(`Obj` = carrier + identity, every field of slot `nr` of `tab`). G's world is already indexed this way,
+so nothing in G changes; a pointer to one object is the pair of parameters G already has (capability
+`ptr n rw` + index into its table, `ObjPar`, positions from the bottom of the context), so the identity
+is a value the caller chooses.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `Obj`, `storeObj_andere` | Objekte §1 | an object is a slot; a store into one object leaves every field of every other |
+| `ObjGetrenntL`, `objGetrennt_paarweise`, **`objGetrennt_schreiben_trennt`**, `objGetrennt_nicht_bei_einem` | Objekte §2 | the argument-to-object map is injective on pairs with a writable side; a store through one leaves the other's object; two positions on one object are not separated |
+| **`objGetrennt_ein_obj_iff`**, `getrennt_objGetrennt` | Objekte §3 | with one object per carrier `ObjGetrennt` IS `ParamGetrennt` (§74); carrier separation implies object separation |
+| `Var.unten`, `Env.unten`, `ObjPar`, `ObjParTreu`, `objVon`, `ObjGetrennt`, `WVon`, `SlotRahmen` | ObjektRahmen §1-2 | bottom positions; the object a pair names in an environment; the declared frame over the writable object parameters |
+| `SchreibOk`, `VarFrei`, `ObjRufOk`, `KeinTabAx`, `oS`/`oB`/`oE`/`oA`/`oG`, `ProgObjOk` | ObjektRahmen §3 | the object discipline over the whole grammar (indirect calls and `schreibBytes` refused) |
+| `stmt_obj`, `block_obj`, `end_obj`, `arms_obj`, `grund_obj` | ObjektRahmen §7 | the induction: a run changes no slot outside the writable parameters' objects, and index variables keep their values |
+| **`rufAt_obj`** | ObjektRahmen §8 | the model's call keeps the frame over objects at every depth and world (premise `TreuO` only) |
+| **`obj_ruf_rahmen`** | ObjektRahmen §8 | under `ObjGetrennt` every run leaves every field of every read-only parameter's object -- also inside the written table |
+| **`umsicht_behaelt`** | ObjektRahmen §9 | a body `return k;` answers the object it was handed (the borrow rule as a theorem) |
+| `Herkunft`, `Herkunft.wurzeln`, `R014Rein`, `Bedeutet`, `bedeutet_wurzel` | ObjektWurzel §1-2 | the provenance as the checker computes it, the paper's roots (unknown = every root), what a provenance denotes |
+| `ParamVerschieden`, `FrischNeu`, `RechteOk`, `HerkunftTreu` | ObjektWurzel §3 | the four NAMED hypotheses: S-2 / `R015`, allocation discipline, rights, faithful provenance |
+| `wurzel_getrennt_obj`, **`r014_objGetrennt`**, **`r014_ruf_rahmen`** | ObjektWurzel §4 | disjoint roots give `ObjGetrennt` under the four hypotheses; composed with `obj_ruf_rahmen` |
+| `allocStrom_neu`, `allocStrom_inj`, **`frischNeu_aus_arena`** | ObjektWurzel §5 | `FrischNeu` as a theorem for the model's allocator (`ArenaDyn.freiAlloc`, duplicate-free free list) |
+| `Herkunft.wurzelnR`, **`rust_lesart_luecke`** | ObjektWurzel §6 | FINDING: the Rust reading (untraced name = no root, pair skipped) is unsound in the model |
+| `zeuge_obj_nicht_getrennt`, `zeuge_lauf_gleich`, **`ohne_objGetrennt_nur_versprechen`** | ObjektZeuge | COUNTER-MODEL: `aendern(kp : ptr rw T, k, wp : ptr r T, w)` at `k = w = 0`; one real run moves `w`'s object 0 -> 5 |
+| `zeuge_prog`, `zeuge_objGetrennt`, **`zeuge_obj_ruf_rahmen`**, `zeuge_lauf_getrennt`, `zeuge_nicht_paramGetrennt`, **`zeuge_obj_feiner`** | ObjektZeuge | WITNESS: the same function at `k = 0, w = 1`, ONE table: `ObjGetrennt`, every run leaves `T.slots[1]`, the run writes `T.slots[0]`, `ParamGetrennt` fails |
+| `zeuge_umsicht`, `zeuge_sicht_lauf`, `zeuge_leihe_nicht_getrennt`, `zeuge_r014_leihe` | ObjektZeuge | borrow rule on `sicht(p, k) -> index T { return k; }`; `aendern(k, sicht(k))` never separated, refused by `R014Rein` |
+| `zeuge_r014_frisch`, `zeuge_S2`, `zeuge_frischNeu`, **`zeuge_r014_ruf_rahmen`**, `zeuge_r014_lauf` | ObjektZeuge | the bridge end to end: `aendern(k, f)` with `f` the allocator's first fresh slot |
+
+NOT proved, and why: **objects are single slots** -- a record over a byte buffer (a `format`, n slots)
+is not one object, so `udp-echo`'s cross-type re-view `kopfworte_von` still has no model statement
+(needs range objects and `schreibBytes` in the discipline); **the checker's walk over `let`s** is not
+formalised over G syntax, its correctness is the premise `HerkunftTreu`; **the discipline is a `Prop`**,
+no Bool the exporter could compute; **`LG005`/`LG001` stay** (the stretch was not clean, see
+A1-OWN-PAPER.md §6, slice 2b). `Zielsatz/Spec.lean` unchanged; `gabbro_ziel` untouched.
