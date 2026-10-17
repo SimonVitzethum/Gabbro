@@ -244,8 +244,29 @@ def erhebe(zusatz=None):
     return karte
 
 
+# **Deliberate multi-file identifiers, booked with a reason (2026-10-17).** The key is the
+# identifier, the value the EXACT set of files that may issue it plus the reason. A third
+# file issuing the same identifier is still a finding (the set no longer matches), and a
+# booked identifier that stops being multi-file is not hidden either.
+ABSICHTLICH = {
+    "N004": ({"namen.rs", "zielbindung.rs"},
+             "one rule, `names no declared assumption`: `namen.rs` checks the `entrust` and "
+             "`syscall` items, `zielbindung.rs` re-checks the same sentence for a `syscall` "
+             "bound per `target` block (checked under every target, not only the active one)"),
+    "N005": ({"namen.rs", "zielbindung.rs"},
+             "the twin of N004: `rests on an unfalsifiable assumption`, same two sites"),
+    "Y103": ({"llvm.rs", "memory.rs"},
+             "a CLASS code of the LLVM backend (`Y103` = statement, see `weigere` in "
+             "`llvm.rs`); `llvm/memory.rs` is a submodule of `llvm.rs` and refuses through "
+             "the same `weigere`"),
+}
+
+
 def befunde(karte):
-    return sorted((k, sorted(v)) for k, v in karte.items() if len(v) > 1)
+    return sorted(
+        (k, sorted(v)) for k, v in karte.items()
+        if len(v) > 1 and not (k in ABSICHTLICH and set(v) == ABSICHTLICH[k][0])
+    )
 
 
 def sprechprobe():

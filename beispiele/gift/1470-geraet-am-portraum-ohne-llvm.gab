@@ -1,0 +1,24 @@
+-- erwartet: Y102
+-- 1470 -- **a `device ... at port` has no LLVM lowering (Y102).**
+--
+-- The checker accepts the device (port-space handles are legal, `beispiele/65`);
+-- the LLVM backend used to lower its registers as `load volatile` at base+offset,
+-- i.e. plain memory at the PORT NUMBER -- the generated code read RAM (the defect
+-- `gift/416` pinned for the C emitter). The backend has no `in`/`out` lowering and
+-- aarch64 has no port space, so it refuses the device by name instead.
+module gift1470 {
+assume portraum_ist_x86 arch x86_64
+    "The port space is reached by `in`/`out`, and those instructions exist on x86 only."
+    falsifier sonde_portraum;
+
+device Com1(basis : u16) at port {
+    reg LSR : u8 @0x05 class r fields { THRE @5, }
+}
+
+impl fn bereit(c : ptr<port, rw> Com1) -> bool
+    effects { reads c.LSR }
+    costs <= 2 ops
+{
+    return c.LSR.THRE == 1;
+}
+}

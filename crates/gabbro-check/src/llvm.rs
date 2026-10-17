@@ -446,9 +446,9 @@ impl LLVMBeleg {
             let _ = writeln!(aus, "-- name := \"{n}\"");
         }
         if self.funktionen.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
-            let _ = writeln!(aus, "  := [");
+            let _ = writeln!(aus, "  [");
             for (i, (n, ps, r, k)) in self.funktionen.iter().enumerate() {
                 let ps_text = ps.iter().map(|p| format!("\"{p}\"")).collect::<Vec<_>>().join(", ");
                 let komma = if i + 1 < self.funktionen.len() { "," } else { "" };
@@ -458,9 +458,9 @@ impl LLVMBeleg {
         }
         let _ = writeln!(aus, "def llvmTypen : List (String × String) :=");
         if self.typen.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
-            let _ = writeln!(aus, "  := [");
+            let _ = writeln!(aus, "  [");
             for (i, (n, l)) in self.typen.iter().enumerate() {
                 let komma = if i + 1 < self.typen.len() { "," } else { "" };
                 let _ = writeln!(aus, "    (\"{n}\", \"{l}\"){komma}");
@@ -469,16 +469,21 @@ impl LLVMBeleg {
         }
         let _ = writeln!(aus, "def llvmTore : List (String × Nat × String × List String × String × List String) :=");
         if self.tore.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
-            let _ = writeln!(aus, "  := [");
+            let _ = writeln!(aus, "  [");
             for (i, t) in self.tore.iter().enumerate() {
                 let bs = t.bindungen.iter().map(|b| format!("\"{b}\"")).collect::<Vec<_>>().join(", ");
                 let cs = t.clobbers.iter().map(|c| format!("\"{c}\"")).collect::<Vec<_>>().join(", ");
                 let komma = if i + 1 < self.tore.len() { "," } else { "" };
                 let _ = writeln!(
                     aus,
-                    "    (\"{}\", nummer := {}, schablone := \"{}\", [{bs}], \"{}\", [{cs}]){komma}",
+                    "    -- name := \"{}\", nummer := {}, schablone := \"{}\"",
+                    t.name, t.nummer, t.schablone
+                );
+                let _ = writeln!(
+                    aus,
+                    "    (\"{}\", {}, \"{}\", [{bs}], \"{}\", [{cs}]){komma}",
                     t.name, t.nummer, t.schablone, t.austritt
                 );
             }
@@ -491,19 +496,19 @@ impl LLVMBeleg {
                     Some(b) => format!("some {b}"),
                     None => "none".to_string(),
                 };
-                let _ = writeln!(aus, "  := some (\"{n}\", {w_text})");
+                let _ = writeln!(aus, "  some (\"{n}\", {w_text})");
                 let _ = writeln!(aus, "def llvmEintrittArt : String := \"start\"");
                 let _ = writeln!(aus, "-- art := \"start\"");
             }
             None => {
-                let _ = writeln!(aus, "  := none");
+                let _ = writeln!(aus, "  none");
             }
         }
         let _ = writeln!(aus, "def llvmAnnahmen : List String :=");
         if self.annahmen.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
-            let _ = writeln!(aus, "  := [");
+            let _ = writeln!(aus, "  [");
             for (i, a) in self.annahmen.iter().enumerate() {
                 let komma = if i + 1 < self.annahmen.len() { "," } else { "" };
                 let sicher = a.replace('"', "'");
@@ -513,9 +518,9 @@ impl LLVMBeleg {
         }
         let _ = writeln!(aus, "def llvmArenen : List (String × String × Nat × Nat × Nat) :=");
         if self.arenen.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
-            let _ = writeln!(aus, "  := [");
+            let _ = writeln!(aus, "  [");
             for (i, (n, e, lo, hi, m)) in self.arenen.iter().enumerate() {
                 let komma = if i + 1 < self.arenen.len() { "," } else { "" };
                 let _ = writeln!(aus, "    (\"{n}\", \"{e}\", {lo}, {hi}, {m}){komma}");
@@ -524,17 +529,17 @@ impl LLVMBeleg {
         }
         let _ = writeln!(aus, "def llvmSchloesser : List String :=");
         if self.schloesser.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
             let sch = self.schloesser.iter().map(|s| format!("\"{s}\"")).collect::<Vec<_>>().join(", ");
-            let _ = writeln!(aus, "  := [{sch}]");
+            let _ = writeln!(aus, "  [{sch}]");
         }
         let _ = writeln!(aus, "def llvmFaeden : List String :=");
         if self.faeden.is_empty() {
-            let _ = writeln!(aus, "  := []");
+            let _ = writeln!(aus, "  []");
         } else {
             let f = self.faeden.iter().map(|s| format!("\"{s}\"")).collect::<Vec<_>>().join(", ");
-            let _ = writeln!(aus, "  := [{f}]");
+            let _ = writeln!(aus, "  [{f}]");
         }
         aus
     }
@@ -7207,6 +7212,20 @@ struct DevReg {
 }
 
 fn sammle_device(s: &mut Senke, d: &Device, span: Span) {
+    // **A `device ... at port` is NOT memory (Y102, the item class).** Its register offsets are port
+    // numbers reached by `in`/`out`; lowering them as `load volatile` at base+offset
+    // would read RAM at the port number -- the old C-emitter defect (`gift/416`).
+    // This backend has no `in`/`out` lowering (and aarch64 has no port space at all),
+    // so the device is refused by name instead of lowered to a plausible wrong access.
+    if matches!(d.raum, Raum::Port) {
+        weigere(
+            s,
+            "Y102",
+            span,
+            format!("device {} at port: port-space access (in/out) has no lowering", d.name.text),
+        );
+        return;
+    }
     let mut regs = Vec::new();
     for r in &d.register {
         let versatz = match konst_u64(s, &r.versatz) {

@@ -1166,7 +1166,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             // *Der Satz bliebe wahr und seine Praemisse wuerde falsch* -- genau die Bewegung,
             // gegen die Zahn 3 steht.
             Voraussetzung { was: "the operator comes from max/min/add/or/and", durch: Some("the closed vocabulary: `MergeOp` admits nothing else"), braeuchte: None },
-            Voraussetzung { was: "and all number types are INTEGRAL -- otherwise `add` is not associative", durch: Some("there is no floating-point type (dokumente/GLEITKOMMA.md); with one, `merge` would have to restrict mechanically"), braeuchte: None },
+            Voraussetzung { was: "and all number types are INTEGRAL -- otherwise `add` is not associative", durch: Some("the checker refuses `accumulates` over a floating-point type (`F004`): floats exist, but a fold over them is order-dependent, so no cell reaches the template"), braeuchte: None },
             Voraussetzung { was: "one cell per core, laid out with the right unit", durch: Some("mutation probe `min-akkumulator-ohne-umkehr`, unit `beispiel23`"), braeuchte: None },
             Voraussetzung { was: "the QUIESCENT POINT -- no core writes any more while the fold runs", durch: None, braeuchte: Some("the EXECUTION CONTEXTS (K11.2.2) -- without them Gabbro does not say who runs concurrently, and no rule can establish the quiescent point") },
         ],

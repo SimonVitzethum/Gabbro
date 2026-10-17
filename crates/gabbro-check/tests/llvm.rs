@@ -472,3 +472,54 @@ fn faden_sind_echt() {
         assert!(!ir.contains("llvm.assume"), "gefaltete Prüfung auf {}:\n{ir}", ziel.name);
     }
 }
+
+/// **The Lean certificate ELABORATES (not only substring checks).** Runs `lean` on
+/// the certificates of 63 (entry), the gate probe (gates with number) and the
+/// runtime probe; skipped with a clear message when no `lean` is found.
+#[test]
+fn beleg_elaboriert_mit_lean() {
+    let heim = std::env::var("HOME").unwrap_or_default();
+    let kandidaten = ["lean".to_string(), format!("{heim}/.elan/bin/lean")];
+    let lean = kandidaten.iter().find(|k| {
+        std::process::Command::new(k.as_str())
+            .arg("--version")
+            .env_remove("ELAN_TOOLCHAIN")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    });
+    let Some(lean) = lean else {
+        eprintln!("SKIP beleg_elaboriert_mit_lean: no `lean` on PATH or in ~/.elan/bin");
+        return;
+    };
+    let quelle63 = std::fs::read_to_string(wurzel().join("63-druckt.gab")).expect("63 lesbar");
+    let faelle: [(&str, &str, &gabbro_check::llvm::Ziel); 3] = [
+        ("beleg63", &quelle63, &ZIEL_X86_64),
+        ("belegtor", TOR_QUELLE, &ZIEL_AARCH64),
+        ("belegtorx", TOR_QUELLE, &ZIEL_X86_64),
+    ];
+    for (name, text, ziel) in faelle {
+        let (baum, mut absagen) = gabbro_syntax::lies(name, text);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        let (_, beleg) = gabbro_check::llvm::emittiere_llvm_mit_beleg(
+            &baum,
+            &mut absagen,
+            Bau::Auslieferung,
+            ziel,
+        );
+        assert!(absagen.fehler_zahl() == 0);
+        let verz = std::env::temp_dir().join(format!("gabbro-beleg-{}-{name}", std::process::id()));
+        std::fs::create_dir_all(&verz).unwrap();
+        let datei = verz.join(format!("{name}.lean"));
+        std::fs::write(&datei, beleg.als_lean(name)).unwrap();
+        let aus = std::process::Command::new(lean)
+            .arg(&datei)
+            .env_remove("ELAN_TOOLCHAIN")
+            .output()
+            .expect("lean startet");
+        let ausgabe = String::from_utf8_lossy(&aus.stdout).to_string()
+            + &String::from_utf8_lossy(&aus.stderr);
+        let _ = std::fs::remove_dir_all(&verz);
+        assert!(aus.status.success(), "lean rejects certificate {name}:\n{ausgabe}");
+    }
+}

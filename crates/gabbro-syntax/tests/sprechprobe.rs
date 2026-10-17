@@ -118,7 +118,7 @@ fn wortschatzwort_ist_ein_bezeichner() {
     // keyword only where the grammar expects one; at a parameter it is a name.
     faellt_nicht("impl fn f(slot : u32) effects { pure } { }");
     faellt_nicht("impl fn f(node : u32, index : u32, next : u32) effects { pure } { }");
-    // Seventeen of the 221 are still not names -- `tests/wortschatz.rs` holds the whole
+    // Seventeen of the 248 are still not names -- `tests/wortschatz.rs` holds the whole
     // column against the reader; one of each half stands here so this file can say why.
     faellt_mit("impl fn f(Some : u32) effects { pure } { }", "P002");
     faellt_mit("impl fn f(return : u32) effects { pure } { }", "P002");

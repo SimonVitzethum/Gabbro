@@ -230,6 +230,17 @@ MARKE_ZU_ZWEIT = 36
 # and falls at `C001`. *A guardian that counts hints as refusals reads its own leniency as
 # coverage.*
 FEHLER = re.compile(r'Absage::fehler\([^,]+,[^,]+,\s*(?:format!\()?\s*"((?:[^"\\]|\\.)*)"', re.S)
+# **The same error text, issued THROUGH A HELPER (2026-10-17).** `arena.rs` raises `N584`,
+# `N585` and `N586` via `self.melde("N586", span, text, note)` and
+# `melde_erklaerung(absagen, "N584", span, text, note)`; both wrap `Absage::fehler`, so the
+# text IS a checker error -- but `FEHLER` cannot see it, and the three words those refusals
+# head (`pb`, `blw`, `free`) read as `niemand nennt es` / UNGEDECKT although the checker
+# refuses the shapes by name (gifts 1436-1442). Only the two helper names stand here, and
+# only with a code literal as the first argument: *a helper that merely forwards a hint is
+# not matched, because a hint does not reject.*
+FEHLER_HELFER = re.compile(
+    r'\b(?:melde|melde_erklaerung)\(\s*(?:absagen,\s*)?"[A-Z][0-9]{3}",[^,]+,\s*'
+    r'(?:format!\()?\s*"((?:[^"\\]|\\.)*)"', re.S)
 WORT = re.compile(r"[A-Za-z_@][A-Za-z0-9_]*")
 
 
@@ -421,7 +432,9 @@ def pruefertexte():
     texte = []
     for q in sorted(CHECK.glob("*.rs")):
         if q.name != "emit.rs":
-            texte += FEHLER.findall(q.read_text())
+            text = q.read_text()
+            texte += FEHLER.findall(text)
+            texte += FEHLER_HELFER.findall(text)
     return texte
 
 
@@ -774,6 +787,12 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
                    s_teil.startswith("TEIL")))
     proben.append(("ein Wort, das in keinem Absagetext steht, heisst `niemand nennt es`",
                    herkunft("zzniemand", gemessen, erwaehnt) == "niemand nennt es"))
+    # (h) **The helper-issued text is read, and a hint is not.** Both calls are synthetic.
+    helfer = FEHLER_HELFER.findall('self.melde(\n "Z999", sp, format!("`zzhelfer` fell"), "n");')
+    proben.append(("ein Fehlertext ueber `melde(…)` wird als Pruefertext gelesen",
+                   helfer == ["`zzhelfer` fell"]))
+    proben.append(("und ein Hinweis (`Absage::hinweis`) wird es nicht",
+                   not FEHLER_HELFER.findall('Absage::hinweis("Z999", sp, "`zzhinweis` only")')))
     return proben
 
 

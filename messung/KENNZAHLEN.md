@@ -33,13 +33,13 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## Absagen ohne erkennbaren Grund
 
-- [ ] ~~105~~ ~~108~~ **202 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen**
+- [ ] ~~105~~ ~~108~~ ~~202~~ **201 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen**
 
       *8 → 9 verdächtig am 2026-09-15 (Opus-Bahn: die Spezifikationshälfte der Grammatikzählung): `N320` — `section` an einer FUNKTION — begründet sich über das ARTEFAKT (`byte-identical C`), und der Wächter hat recht, das zu sagen. **Hier ist das der Satz und kein Ausrutscher:** der ganze Inhalt der Regel ist, dass die Klausel in KEIN Register gelangt — nicht ins C, nicht in eine Pflicht, nicht in den G-Programmterm —, und eine Begründung aus der Zusage wäre hier die unehrliche. Die Zahl wandert ohne Streichung, weil das Muster `Zahl + "sind tragend, " + Zahl` keine verträgt.* (`./instrumente/pruefe-gruende.py`,      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
 
 ## Absagen, deren Text den tragenden Grund nennt / Absagen, die sich ueber die DARSTELLUNG begruenden
 
-      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ 220 sind tragend, 14 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. ~~129~~ ~~130~~ ~~131~~ ~~132~~ ~~139~~ ~~220~~ 221 sind tragend, 14 verdächtig — und **~~87~~ ~~107~~ 117 Absagetexte sagen ihren Grund in
 
 ## Item-Arten, die ein Pass anfasst
 
@@ -91,7 +91,7 @@ Marke 6 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
 
 ## deutsche Kommentarzeilen im Pruefer -- die Ratsche der Uebersetzung
 
-~~7881~~ ~~7883~~ ~~7891~~ **8691 von 27237 Kommentarzeilen** im Pruefer sind deutsch
+~~7881~~ ~~7883~~ ~~7891~~ ~~8691~~ **8685 von 48689 Kommentarzeilen** im Pruefer sind deutsch
 
 ## Giftproben auf einer mehrdeutigen Kennung
 
