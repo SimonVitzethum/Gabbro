@@ -631,6 +631,14 @@ needs no CPU model:
    `ite`, calls (L1); memory forms: arenas, `free`, stack and recursion (L2); concurrency: locks, `publish`/`await`, threads,
    refined into GX (L3); hardware forms with named assumptions (L4).
 The first LLVM-flavoured draft (`Grammatik/Llvm/`, ~6 000 lines) is the template and is deleted once `Code` supersedes it.
+**ISA neutrality (Simon, 2026-10-17): `Code` must serve x86-64, AArch64 and RISC-V models without extra work per ISA.** Hence: no
+condition flags or register classes (unbounded locals, fused compare-and-branch); word width and endianness are parameters; nothing
+relies on behaviour where the ISAs differ (division by zero, shift amounts at or above the width, `INT_MIN / -1`, unaligned access:
+each is an explicit precondition of the op, proven from G's ranges, never a defined result); atomics are the five orderings on
+aligned word cells with RMW as one abstract op; calls use an abstract frame. One plain structure lists exactly what any CPU model
+must provide for the later `Code`-to-bytes refinement (byte memory with the GX atomics, wraparound arithmetic at word width, the op
+preconditions, the fence/atomic mapping); it is a statement of obligations, not an ISA model.
+
 **Out of scope until the CPU model exists:** `Code` to bytes (instruction selection, encoding, relocation, image mapping) and the
 Lean validator for the Rust backend's bytes; the report of Track L states which properties of `Code` that step will need. The
 LLVM backend stays as the running reference compiler. Estimate for the half: 25 000-40 000 Lean lines.
