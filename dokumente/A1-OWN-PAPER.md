@@ -182,7 +182,7 @@ checker rule, **not a Lean judgment**; the model side is `Logik/Vertraege/Objekt
    roots) is not formalised over G syntax; its correctness is the premise `HerkunftTreu`. The
    discipline is a `Prop`, no Bool the exporter could compute.
 4. **`R004`/`R007` are not yet special cases of `R014`.**
-5. **No mutation run** has been done over the new rule (`mutiere-pruefer.py`): none of
+5. **No mutation run** has been done over the new rule (the mutation guardian `mutiere-pruefer` was retired on 2026-10-17; mutation testing of the checker is not guarded today): none of
    `getrennte_wurzeln` or the `noalias` conditions has been mutated and measured.
 6. **The S-3 decision** (named assumption vs. explicit `own` at the boundary) is recorded, not
    taken.

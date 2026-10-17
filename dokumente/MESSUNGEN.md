@@ -12,9 +12,9 @@ measured**, and a figure without a command is marked as a dated record.
    the records, not about the file.
 2. **A record is not a claim about today.** The tables of §6 are frozen results of one day. They
    have no command on purpose: giving a record a command turns it into a claim and would create
-   two registers over one subject (W7). `instrumente/pruefe-zahlen.py` carries each of them in its
-   `UNBEWACHBAR` register *with a written reason*, and a reason that no longer points at a line
-   falls — so these tables are read by a guardian and must not be reworded.
+   two registers over one subject (W7). Until 2026-10-17 the retired `pruefe-zahlen`
+   carried each of them in its `UNBEWACHBAR` register; no guardian reads these tables any more
+   (see git history).
 3. **Every ratio names its denominator**, and the denominator of a population count is stated with
    the command that counts it (W11). A tool that cannot count says *not measured*, never zero.
 4. **Gates are set in advance and not moved after the run** (R2); the verdicts below are
@@ -47,29 +47,32 @@ the language.* Each row is a measurement that tested it. "Result" is the lasting
 
 ## 2. Live counters — and how to measure them again
 
-Every row is a command. The values are the last ones I know; *refresh them with the command, not
-by editing the cell*. The guarded ledger of figures (`pruefe-zahlen.py` holds each against its
-command) is [`messung/KENNZAHLEN.md`](../messung/KENNZAHLEN.md); this table is the map.
+On 2026-10-17 the project kept exactly four guardians (`instrumente/pruefe-lean.py`,
+`pruefe-llvm.py`, `pruefe-pruefer.py`, `pruefe-gabbrov.py`, run together by `instrumente/abnahme.py`)
+and retired the roughly eighty counters, ratchets and registers that used to feed this table,
+including the `KENNZAHLEN` ledger. A row below with a command is live; a row marked *retired* is a
+historical result of the named counter (2026-10-17, see git history; `git show 414feafc:instrumente/<name>`)
+and is **not guarded today**.
 
 | Quantity | Command | Last value (date) |
 |---|---|---|
 | Poison probes / clean examples | `ls beispiele/gift/*.gab \| wc -l`; `ls beispiele/*.gab \| wc -l` | 898 / 170 (2026-10-17, measured while writing this) |
-| Fragments clean / lowering / pierced | `./instrumente/zaehle-fragmente.py [--je-datei]` | 9 / 9 / 9 of 10; F3 is the exception (`FRAGMENTE.md` §3) |
-| Mutation anchors that bite | `./instrumente/mutiere-pruefer.py --anker` (text counting, no build) | **388 of 422** (2026-10-17: 34 anchors measure nothing because the checker moved under them; the full run of 2026-09-03 caught 388 of 388 valid mutations, 375 of 376 under `cargo test` alone) |
-| Mutation run over the whole checker | `./instrumente/mutiere-pruefer.py` (needs `crates/` clean; 13 min 20 s measured on 377 mutations, **not** re-measured for the later catalogue) | see CLAUDE.md for the booked catalogue size |
+| Fragments clean / lowering / pierced | retired `zaehle-fragmente` | 9 / 9 / 9 of 10; F3 is the exception (`FRAGMENTE.md` §3) (historical) |
+| Mutation anchors that bite | retired `mutiere-pruefer` | **388 of 422** (2026-10-17: 34 anchors measure nothing because the checker moved under them; the full run of 2026-09-03 caught 388 of 388 valid mutations, 375 of 376 under `cargo test` alone) (historical) |
+| Mutation run over the whole checker | retired `mutiere-pruefer` | 13 min 20 s measured on 377 mutations (historical; not re-measured for the later catalogue) |
 | Checking passes, pass sentences | `gabbro paesse` | 12 passes; **216 sentences: 208 measured, 2 argued, 6 conjectured, 0 proved** (2026-10-17) |
-| Codes with / without a sentence | `./instrumente/pruefe-saetze.py` (ratchet: no new code without its sentence) | booked in `KENNZAHLEN.md` (198 sentences over 419 codes, 55 codes still without — 2026-08-31); not re-run today (the tool wants its own debug binary) |
-| Template register | `gabbro schablonen` | **41 templates, 11 unproved, 30 machine-checked; 3 carried-unproved; 6 premises without a pass** (2026-10-17). `KENNZAHLEN.md` still books 23 entries / 11 unproved — that cell is stale against the command |
-| Isabelle theories / Lean transfer | `ls grammatik/Beweise/*.thy \| wc -l`; `ls grammatik/Grammatik/Isabelle/ \| wc -l`; `./instrumente/zaehle-theorien.py` | 15 theories, 15 Lean files (2026-10-17); 3 512 lines, 101 sentences, 31 frozen proof searches (booked 2026-09-27) |
-| Instruments | `ls instrumente/` | 95 entries: 54 `pruefe-*`, 22 `zaehle-*` (2026-10-17) |
-| Number guardian | `./instrumente/pruefe-zahlen.py` | 80 figures with a command, 153 bold table figures without one (booked 2026-10-05; rewriting this file changes the second) |
-| Hanging plumbing `H`, K/L columns | `./instrumente/zaehle-pflichten.py --haengend` / `--spalten` | H = 1, K = 173, L = 66 (booked, 2026-09-04) |
-| `narrow` without effect | `./instrumente/zaehle-bereichspflichten.py` | `N_folgenlos` = 0 (§3.2) |
-| Grammar | `./instrumente/pruefe-syntax.sh` | 189 rules, 0 open, 0 unreachable from `program` (`SYNTAX.md`) |
-| Traversal bodies / duplicates | `./instrumente/zaehle-traversierungen.py` | 22 bodies, 0 duplicated (booked) |
-| German comment lines in the checker | `./instrumente/pruefe-englisch.py` | 7 892 of 27 237 (booked 2026-09; a ratchet that falls) |
-| Network stack against published vectors | `./instrumente/zaehle-netz.py` | 3 of 3 probes green |
-| Format versions | `./instrumente/zaehle-formate.py` | 0 formats with a second version; 8 distinct `@version` declarations (16 text sites) |
+| Codes with / without a sentence | `gabbro paesse` (the retired `pruefe-saetze` ratchet is not guarded today) | 198 sentences over 419 codes, 55 codes still without — 2026-08-31 (historical) |
+| Template register | `gabbro schablonen` | **41 templates, 11 unproved, 30 machine-checked; 3 carried-unproved; 6 premises without a pass** (2026-10-17) |
+| Isabelle theories / Lean transfer | `ls grammatik/Beweise/*.thy \| wc -l`; `ls grammatik/Grammatik/Isabelle/ \| wc -l` | 15 theories, 15 Lean files (2026-10-17); 3 512 lines, 101 sentences, 31 frozen proof searches (booked 2026-09-27 by the retired `zaehle-theorien`) |
+| Instruments | `ls instrumente/` | four guardians plus `abnahme.py` and `instrumente/teile/` (2026-10-17); before: 54 `pruefe-*`, 22 `zaehle-*` |
+| Number guardian | retired `pruefe-zahlen` | 80 figures with a command, 153 bold table figures without one (booked 2026-10-05; historical) |
+| Hanging plumbing `H`, K/L columns | retired `zaehle-pflichten` | H = 1, K = 173, L = 66 (booked, 2026-09-04; historical) |
+| `narrow` without effect | retired `zaehle-bereichspflichten` | `N_folgenlos` = 0 (§3.2; historical) |
+| Grammar | retired `pruefe-syntax` | 189 rules, 0 open, 0 unreachable from `program` (`SYNTAX.md`; historical) |
+| Traversal bodies / duplicates | retired `zaehle-traversierungen` | 22 bodies, 0 duplicated (booked; historical) |
+| German comment lines in the checker | retired `pruefe-englisch` | 7 892 of 27 237 (booked 2026-09; historical) |
+| Network stack against published vectors | retired `zaehle-netz` | 3 of 3 probes green (historical) |
+| Format versions | retired `zaehle-formate` | 0 formats with a second version; 8 distinct `@version` declarations (16 text sites) (historical) |
 
 ## 3. The measurements, one by one
 
@@ -101,8 +104,8 @@ construction"* was refuted at 19 named sites, by decision an *escalation* and no
   bound to no postcondition does not count; `effects` is checked against the actual accesses.
 
 **The reassignment (2026-08-17)**, with a `file:line` per obligation
-([`PFLICHTEN.txt`](PFLICHTEN.txt) holds the list; `./instrumente/zaehle-pflichten.py` finds the
-candidate lines and the hand pass decides): 239 obligations, 173 plumbing and 66 logic
+(the retired `PFLICHTEN` register held the list; the retired `zaehle-pflichten` found the
+candidate lines and the hand pass decided; `gabbro pflichten <file.gab>` counts per file): 239 obligations, 173 plumbing and 66 logic
 (recounted on 2026-08-30 — the first total of 238 = 171 + 67 had been wrong since the day it was
 booked, and a split whose sum is right is never recounted). H = 36 hung. The measure that
 mattered: **the ratio L : K is the wrong statistic.** Over the Rust original `delete_leaf` is
@@ -111,8 +114,8 @@ carries nine more plumbing obligations — it *writes them down*. A language tha
 plumbing explicitly gets a worse ratio and a better H, and only the second is the direction the
 thesis claims.
 
-**How H fell** (each step a re-measurement with its reason; the count is read, not carried:
-`zaehle-pflichten.py --haengend`): 36 → 35 (F7: a lowering) → 31 (the plumbing duties brought up to
+**How H fell** (each step a re-measurement with its reason; the count was read, not carried, by
+the retired `zaehle-pflichten`): 36 → 35 (F7: a lowering) → 31 (the plumbing duties brought up to
 date) → 29 (K100.1: two of the three hand-written `narrow … else` are *logic*, one is a ritual) →
 24 → 18 (K100.3: five of the seven notation gaps listed as hanging were already closed — *the list
 came from a frozen document, not from the subject*; a debt list that is too large looks like
@@ -150,7 +153,7 @@ time and grew in the process.
 The first count over Rust died at its classifier (3 of 5 hand-sampled cases wrong, all in one
 direction: the raw number is too high). The repeat over Gabbro source needs no classifier: remove
 every `narrow` statement, run the checker, count `M101`/`M104` sites —
-`./instrumente/zaehle-bereichspflichten.py`. The ten fragments plus other corpus files gave N = 2
+the retired `zaehle-bereichspflichten`. The ten fragments plus other corpus files gave N = 2
 in 791 lines (the Rust count had 150…317: Gabbro's types and V rules carry most obligations
 without a `narrow`; what remains is only what needs the emergency exit). Of the three
 hand-written `narrow … else` sites, one is a real check (a hostile device tree takes the branch),
@@ -168,7 +171,7 @@ equally.
 
 ### 3.3 B3 — which bodies cannot be written as a traversal? (M5)
 
-`./instrumente/zaehle-b3.py ../caprock-messbasis` (population: 105 files, 69 283 lines raw,
+The retired `zaehle-b3` counted (population: 105 files, 69 283 lines raw,
 60 756 without test modules; 2 536 function bodies, 2 186 outside tests; 462 with a loop; 571 `for`
 / 146 `while` / 117 `loop`). Four versions of the tool: 0.03 % (saw only bodies with a loop),
 4.36 % (read `for x in segs` as a non-domain — one body made 2 %), 0.74 % (missed three chain
@@ -215,7 +218,7 @@ verification, whose tool is small: 10 651 lines); the 32.1 % **invariant preserv
 fall with the layers** — amortisable over `table … ops`, and only where all mutations are
 generated (the K condition). Whoever expects 0.5 : 1 expects the 32 % to amortise completely and
 the 28 % to be trustworthy; both were unevidenced. The "Verus line count" side: a seL4-style
-comparison measures lines of model and proof (1 336 on this side, `KENNZAHLEN.md`), never the
+comparison measures lines of model and proof (1 336 on this side, as booked in the retired `KENNZAHLEN` register), never the
 effort per line.
 
 **The second metric was retracted (2026-08-19).** A formula that summed unlike things (value
@@ -271,10 +274,10 @@ the direct-binary goals (80 % minimum, 110 % target of GCC -O3 are goals, not fi
 
 | Guard | Measured | Note |
 |---|---|---|
-| `pruefe-lean-beweis.sh` on the build server (2026-09-01) | 482.4 s and 456.9 s, 121 units → 121 modules, 10 generated duties | 3.99 / 3.78 s per unit, against 2.72 s per unit under load 10–15 two days earlier (140 units): **load does not explain it**; the machine was never empty |
+| the retired `pruefe-lean-beweis` on the build server (2026-09-01) | 482.4 s and 456.9 s, 121 units → 121 modules, 10 generated duties | 3.99 / 3.78 s per unit, against 2.72 s per unit under load 10–15 two days earlier (140 units): **load does not explain it**; the machine was never empty |
 | deadline `FRIST_ABNAHME = 2 × FRIST = 600 s` | 78–80 % used | the deadline was *not* raised — it is the very latch that asks the question; at ~3.9 s/unit it is reached at about 155 units (121 today): a corpus reserve, and the corpus grows |
 | `isabelle build -D beweise -o threads=12` | 10.1 s wall, 46 s CPU, fifteen theories | the proof side is not the problem, the Lean chain is |
-| `pruefe-emission.sh` | 13.7 s (2026-08-20) | the 25 minutes once written as its cost had been a hang |
+| the retired `pruefe-emission` | 13.7 s (2026-08-20) | the 25 minutes once written as its cost had been a hang |
 
 Unmeasured: why the cost per unit rose by 43 %; an idle-to-idle comparison; whether `lean` itself is
 multithreaded under foreign load. The 2026-10-17 repository runs everything locally, so these
@@ -424,12 +427,11 @@ was unfavourable.
 
 ## 6. Booked records — frozen tables that the number guardian reads
 
-*Do not reword and do not recompute.* Each table is the result of one day; the guardian
-`instrumente/pruefe-zahlen.py` lists every row below in its `UNBEWACHBAR` register with a written
-reason (a record, a foreign tree, an ordinal or a judgement) and demands that the row still stands
-here. The *living* figure beside each is measured elsewhere (named in the caption).
+*Do not reword and do not recompute.* Each table is the result of one day; until 2026-10-17 the guardian
+`pruefe-zahlen` listed every row below in its `UNBEWACHBAR` register (a record, a foreign tree, an
+ordinal or a judgement); it is retired and no guardian reads these rows now. The *living* figure beside each is measured elsewhere (named in the caption).
 
-### 6.1 The reassignment of 2026-08-17 (the living split: `PFLICHTEN.txt`, `zaehle-pflichten.py --spalten`)
+### 6.1 The reassignment of 2026-08-17 (the living split was the retired `PFLICHTEN` register and `zaehle-pflichten`)
 
 | | | |
 |---|---:|---|
@@ -463,7 +465,7 @@ that day:
 |---|---|---|
 | 19 templates, 4 machine-checked | **20, 9** | `gabbro schablonen` |
 
-### 6.3 The mutation catalogue and the clause guard (the living figures: `mutiere-pruefer.py --anker`, `pruefe-klauseln.py`)
+### 6.3 The mutation catalogue and the clause guard (the living figures were the retired `mutiere-pruefer` and `pruefe-klauseln`)
 
 | | before | after |
 |---|---:|---:|
@@ -493,13 +495,13 @@ that day:
 | Number | stood | is | where | command |
 |---|---:|---:|---|---|
 | Prämissen ohne Pass | 7 | **9** | `PLAN.md`, «NL» | `gabbro schablonen` |
-| **ZUSAGE ohne Leser** | 13 | **0** | `PLAN.md`, «NL» | `./instrumente/pruefe-klauseln.py` |
+| **ZUSAGE ohne Leser** | 13 | **0** | `PLAN.md`, «NL» | retired `pruefe-klauseln` (not guarded today) |
 
 | | Reassignment | Lane B | merged |
 |---|---:|---:|---:|
 | Mutationsanker | 332 | 335 | **340** |
 
-| Theory split at its measuring day (the living: `zaehle-theorien.py`) | Lines | Share |
+| Theory split at its measuring day (the living figure was the retired `zaehle-theorien`) | Lines | Share |
 |---|---:|---:|
 | **Prosa** | **1 062** | **45,8 %** |
 

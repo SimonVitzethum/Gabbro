@@ -3,8 +3,8 @@
 *Consolidated 2026-10-17. It replaces the former `BEWEIS.md` (1 712 lines of August
 measurements), `dokumente/BEWEIS.md`, `dokumente/BEWEIS.md`, `dokumente/BEWEIS.md`,
 `dokumente/BEWEIS.md`, the verdict files `messung/URTEIL-*`, the review of 2026-09-21,
-`dokumente/BEWEIS.md` and `messung/TRAEGER-UND-HARDWARE.txt`. History is in git. Every
-number below names the command that re-measures it (Part E, last section); a claim that could
+`dokumente/BEWEIS.md` and the retired `TRAEGER-UND-HARDWARE` register. History is in git. Every
+number below names the command that re-measures it (Part E, last section), or is marked historical (the retired counters are not guarded today); a claim that could
 not be checked in this consolidation is listed at the end of that section.*
 
 **What may be said:** *the goal theorem is proved over the Lean model, with a witness and
@@ -256,8 +256,7 @@ A true statement over an empty world is worthless, so it is part of the architec
 
 Every new theorem with a ∀-over-syntax premise needs a `_zeuge` on a non-degenerate fixture.
 Required axioms: `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`,
-`Quot.sound` (printed by `grammatik/NachpruefungZiel.lean`; enforced at merge together with
-`instrumente/pruefe-kein-sorry.py`: no `sorry`, `admit`, `native_decide`, `unsafe`; the one
+`Quot.sound` (printed by `grammatik/NachpruefungZiel.lean`; enforced by `instrumente/pruefe-lean.py` (stages 2 and 3), which also checks: no `sorry`, `admit`, `native_decide`, `unsafe`; the one
 recorded `axiom`, `dma_inhalt`, is outside the goal's axiom set).
 
 ## B8. The Lean map
@@ -278,7 +277,7 @@ recorded `axiom`, `dma_inhalt`, is outside the goal's axiom set).
 The whole tree is about 250 000 lines in 409 files; `Grammatik.lean` imports all of it, and the
 Lean build also checks the fifteen theories of the former Isabelle tree (`Isabelle/`). The
 `.thy` set in `grammatik/Beweise/` is frozen as a protocol and cross-check
-(`instrumente/pruefe-beweise.sh`, needs `~/Isabelle2025-2`); **a new proof goes to Lean.**
+(the retired `pruefe-beweise` ran it with `~/Isabelle2025-2`; not guarded today); **a new proof goes to Lean.**
 
 ---
 
@@ -427,7 +426,7 @@ confused:
 | command | `gabbro obligations --lean` (`--isabelle`, `--g`) | `gabbro lean a.gab b.gab` |
 | says | Gabbro's own `ensures`/`requires` as duties | a Lean specification written **by hand** |
 | good for | measuring how much the language says about itself; the generated duty files (`gabbro prove`) | frame properties with quantifiers ("clearing touches no other compartment") that a `spec fn` cannot state |
-| guardian | `pruefe-lean-pflichten.sh`, `pruefe-lean-beweis.sh` | `pruefe-lean-programm.sh` |
+| guardian | `gabbro prove`, run by `instrumente/pruefe-gabbrov.py` | `instrumente/pruefe-gabbrov.py` (the retired `pruefe-lean-pflichten`, `-beweis` and `-programm` are not guarded today) |
 
 `gabbro obligations --g` is the channel the goal theorem uses: it writes the unit as a G program
 with the flagship's per-function duties (`KoerperGutS` + `InvGutS`) stated. Where the Lean parser
@@ -436,7 +435,7 @@ elaborates a unit (`lowerAllg`), the duty files of GabbroV *derive* (b) (`brueck
 programs 104 and 108 at the time of the bridge); every other unit still carries (b) as an
 assumption. See [`GABBROV.md`](GABBROV.md).
 
-**Obligation tally.** `dokumente/PFLICHTEN.txt`, held by `instrumente/zaehle-pflichten.py`:
+**Obligation tally.** The retired `PFLICHTEN` register and `zaehle-pflichten` (booked 2026-09, historical):
 239 obligations over the ten fragments = 173 K (plumbing) + 66 L (logic); three `progress`
 rows are assumptions with a falsifier, not obligations, so GabbroV's population is 63. K and L
 are by the criterion of A1 (the machine against the subject), not "obligation against
@@ -457,7 +456,7 @@ in Lean), `OPEN` (handed to the person) — a report without any percentage (cla
 unclaimed slots counted from the *program*, inert claims), and mutation of the body to find claims
 no mutation falsifies and mutations no claim catches. The sentence it rests on: *every verdict
 other than `open` cites a Lean-checked artefact.* Not built: there is no `changes only`,
-`never`/`always` form in `dokumente/SYNTAX.md` and no `mutiere-nutzerlogik.py` in `instrumente/`.
+`never`/`always` form in `dokumente/SYNTAX.md` and no mutation run over the user's logic (`mutiere-nutzerlogik` was never built).
 It must not infer `ensures`, and it removes Lean from the user's desk, not from the chain.
 
 **Independence of the verification path (a plan, partly built).** A verifier that only
@@ -509,7 +508,7 @@ complete Lean model of the CPU and the per-access bridge from the target's memor
 it. The C-level proofs (`CBackend/`, chain instances 104 and 108) are legacy evidence: the
 sequential stage is closed for those two programs, the concurrent stage (`LaufzeitC`: thread
 creation, the lock primitive, DRF-SC) is proved as theorems about named assumptions and the
-ticket lock. `instrumente/zaehle-kette.py` counts closed chains; `pruefe-cformen.py` classifies
+ticket lock. The retired `zaehle-kette` counted closed chains and the retired `pruefe-cformen` classified
 every emitted C form as lemma / assumption / uncovered (at the 2026-09-26 audit: 51 / 4 / 27).
 
 ## Item 2 — which C (legacy C lowering)
@@ -530,9 +529,9 @@ than `#if` out of `when`; `void*`; pointer arithmetic; union reinterpretation wi
 comma operator; assignment in an expression; `?:`; implicit conversion; variadics; `longjmp`;
 VLA; bit-fields.
 
-The list is counted by a lexer, not by `grep` (`instrumente/zaehle-c-formen.py`; the generated C
+The list is counted by a lexer, not by `grep` (by the retired `zaehle-c-formen`; the generated C
 explains itself in English, and `for` appears 73 times as a word and 49 times as a statement),
-and ratcheted. First measured 2026-08-31 over 102 emitting units (8 001 lines of C):
+and was ratcheted. First measured 2026-08-31 over 102 emitting units (8 001 lines of C):
 
 | Set | Forms |
 |---|---:|
@@ -540,7 +539,7 @@ and ratcheted. First measured 2026-08-31 over 102 emitting units (8 001 lines of
 | **C** used and not allowed (7 on the never list, 19 on neither, the rest under a generous reading) | **32** |
 | **Forms in the emitted C** | **67** |
 
-*Figures are the marks in `zaehle-c-formen.py` (`MARKE_TABELLE = 67`, `MARKE_UNERLAUBT = 32`).
+*Figures are the marks of the retired `zaehle-c-formen` (`MARKE_TABELLE = 67`, `MARKE_UNERLAUBT = 32`; historical, legacy C backend).
 The first measurement, 2026-08-31, read 64 = 34 + 30; set B, allowed and never used, had 6
 dead entries then. A rise of a mark needs its reason written in the instrument.*
 
@@ -553,13 +552,11 @@ proof export into C's UB rules and is named as such. A second instrument over th
 units (`-Wconversion -Wsign-conversion -Wcast-qual -Wvla -Wdouble-promotion -Wfloat-equal`)
 finds zero hits.
 
-### §1a. Where the instrument's headline is recorded
+### §1a. Where the instrument's headline was recorded
 
-`zaehle-c-formen.py` reads exactly two cells of this document, so that the figure it prints
-beside "Katalog … aus `BEWEIS.md` §1" is read and not merely quoted: the rows "**Forms in the
-emitted C**" and "**C**" of the table above. Do not rename them; the instrument aborts when it
-cannot find them. The table is a dated record and may lag the marks; the instrument prints the
-divergence.
+The retired `zaehle-c-formen` (2026-10-17, see git history) read two cells of this document, the rows
+"**Forms in the emitted C**" and "**C**" of the table above. No guardian reads them now; the table is a
+dated record of the legacy C backend.
 
 ### §2. The UB inventory — what kills each class
 
@@ -634,12 +631,10 @@ lower bound. A `format` is no longer the justification of the language, one of i
 | certificates and the register | `grep -c '^CERTIFIED' grammatik/Grammatik/Zertifikat/REGISTER.txt`; `cargo test --test zertifikate` |
 | templates | `gabbro schablonen` |
 | pass sentences | `gabbro paesse`, `gabbro paesse --per-statement` |
-| emitted-C forms | `python3 instrumente/zaehle-c-formen.py` |
-| closed chains | `python3 instrumente/zaehle-kette.py --lean` |
-| C-form classification | `python3 instrumente/pruefe-cformen.py` |
-| obligation population | `python3 instrumente/zaehle-pflichten.py --gabbrov` |
-| no `sorry`/`axiom` | `python3 instrumente/pruefe-kein-sorry.py` |
-| whole acceptance | `./instrumente/abnahme.py` (`--voll` needs both trees and Isabelle) |
+| emitted-C forms, closed chains, C-form classification | retired (`zaehle-c-formen`, `zaehle-kette`, `pruefe-cformen`; 2026-10-17, see git history); historical, not guarded today |
+| obligation population | `gabbro pflichten <file.gab>` per file (the retired `zaehle-pflichten` summed it) |
+| no `sorry`/`axiom` | `./instrumente/pruefe-lean.py` |
+| whole acceptance | `./instrumente/abnahme.py` (the four guardians) |
 
 **Not re-measured in this consolidation** (no `lake` or `cargo` run was allowed): the axiom set
 of `gabbro_ziel`, the build state of every Lean file named above, the REGISTER regeneration, the
@@ -664,4 +659,4 @@ marks beyond what the instrument's source records.
 | `dokumente/BEWEIS.md` §2.3, §3 | D4 (independence of the path) and `GABBROV.md` |
 | `dokumente/BEWEIS.md` | D4 (the proposal) |
 | `dokumente/BEWEIS.md` | B6 |
-| `messung/TRAEGER-UND-HARDWARE.txt` | the A7 / `hardware A, D;` decision in B4; its `H101` half belongs to the checker document |
+| the retired `TRAEGER-UND-HARDWARE` register | the A7 / `hardware A, D;` decision in B4; its `H101` half belongs to the checker document |

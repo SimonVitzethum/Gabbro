@@ -114,7 +114,7 @@ Each was a paid-for mistake in a real system; each now follows from the mechanis
 Identifiers, numbers with `_`, `--` comments, floating-point literals (§3.5), strings only in
 `claim`, `reason`, `assume`, `section`, `unfalsifiable`.
 
-**The vocabulary is a closed table** (`SYNTAX.md`, guarded by `pruefe-wortschatz.py`: EBNF
+**The vocabulary is a closed table** (`SYNTAX.md`, the terminal and reserved-word tables are held by `cargo test`, run by `instrumente/pruefe-pruefer.py`; the retired `pruefe-wortschatz` also compared EBNF
 terminals against table words, both readings). *A new word is a language change*: it needs an
 entry in the table, in `kw.rs`, and in the terminal count. Everything else is an identifier, and
 a word of the table is a keyword **only where the grammar expects one** — contextual words

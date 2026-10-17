@@ -41,19 +41,19 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **189** measured (`pruefe-syntax.sh` EBNF branch: 189 defined, 0 open, 0 unreachable from `program`; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **189** measured (by the retired `pruefe-syntax` EBNF branch, 2026-10-17; not guarded today: 189 defined, 0 open, 0 unreachable from `program`; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
+| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (by the retired `pruefe-wortschatz`, historical: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
-| **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
+| **Guardian** | the grammar and reserved-word table tests of `cargo test` (run by `instrumente/pruefe-pruefer.py`); the retired `pruefe-syntax` (2026-10-17, see git history) also held closure of the rules, reachability from `program` and terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it read the same grammar |
 
-> **Partly run on 2026-09-09.** The EBNF-closure branch of `pruefe-syntax.sh`
-> (161 rules, 0 open) and `pruefe-wortschatz.py` (221/221 both readings, speech
-> test green) ran from this workstation; the full `pruefe-syntax.sh` (it builds
-> with `cargo build --tests`), `pruefe-grammatiktafel.py` and the parser item of
+> **Partly run on 2026-09-09.** The EBNF-closure branch of retired `pruefe-syntax`
+> (161 rules, 0 open) and retired `pruefe-wortschatz` (221/221 both readings, speech
+> test green) ran from this workstation; the full retired `pruefe-syntax` (it builds
+> with `cargo build --tests`), retired `pruefe-grammatiktafel` and the parser item of
 > `dokumente/SYNTAX.md` §4 (retired) were still open. A number in this table that a guardian
-> contradicts is wrong here, not there.
+> contradicted is wrong here, not there (the guardians are retired; see git history).
 
 ---
 
@@ -128,8 +128,8 @@ production and a name, and each is decided by the grammar and not by a list:
 3. **a named `typeexpr` and a named `space`** — the keyword arms stand above the name arm.
 
 **Seventeen of the 248 are still not names** (recounted 2026-09-26, Opus agent L:
-`instrumente/zaehle-wortschatz.py` reads 248 words, 17 reserved, 231 contextual;
-`instrumente/pruefe-wortschatz.py` reads 245 EBNF terminals against 245 table words --
+retired `zaehle-wortschatz` reads 248 words, 17 reserved, 231 contextual;
+retired `pruefe-wortschatz` reads 245 EBNF terminals against 245 table words --
 the three over are `r` `w` `x`, single letters both sides drop by construction).
 Every one of the seventeen has **zero** declarator sites in 585 foreign files, and every
 one names below the position that forces it -- a use-site occurrence always parses as
@@ -2650,10 +2650,10 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 ## Open items — as of 2026-09-13
 
 - [x] **The guardians on this file** — measured: EBNF closure 176 defined rules, 0 open
-      (`pruefe-syntax.sh` EBNF branch); vocabulary 239 terminals against 239 table words
-      plus 4 Sonderformen, both readings (`pruefe-wortschatz.py`); guardian round in lane
-      129 (E5), re-run in lane 142. The `cargo build --tests` tail of `pruefe-syntax.sh`
-      and `pruefe-grammatiktafel.py` need a Rust toolchain and abort without one — a
+      (retired `pruefe-syntax` EBNF branch); vocabulary 239 terminals against 239 table words
+      plus 4 Sonderformen, both readings (retired `pruefe-wortschatz`); guardian round in lane
+      129 (E5), re-run in lane 142. The `cargo build --tests` tail of retired `pruefe-syntax`
+      and retired `pruefe-grammatiktafel` need a Rust toolchain and abort without one — a
       pre-existing environment limit, not a finding about the grammar.
 - [ ] **The parser from this grammar into `Syntax.lean`** — open as translation validation
       T3 (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`): the token-to-tree map with a
@@ -2681,7 +2681,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
   the incomplete story (no minter, no mint execution, or a minter no guarded
   access exercises). What stays open: borrowing the mark back across a
   call (`consumes` plus `allocs` is refused: move-only this lane).
-- [x] **`pruefe-syntax.sh` prose branch flagged `logik uebergang` (×3) — renamed.**
+- [x] **retired `pruefe-syntax` prose branch flagged `logik uebergang` (×3) — renamed.**
   The word was the Lean outcome constructor (`Logik.uebergang`), not the
   abolished keyword, but the guardian cannot see the difference and it is right
   not to try. The outcome is now `Logik.vorzustand` (the pre-state, PRUEFER.md

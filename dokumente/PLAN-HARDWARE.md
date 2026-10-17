@@ -313,7 +313,7 @@ The proof burden grows with the **vocabulary**, not with program size, because t
 for with vocabulary: every new recursion form needs a new construct instead of a termination
 proof. The trade is made everywhere and was not counted until 2026-09-01.
 
-Ratchet (`instrumente/zaehle-wortschatz.py`, run 2026-10-17): **248 words** (17 reserved, 231
+Ratchet (measured by the retired `zaehle-wortschatz`, run 2026-10-17; not guarded today): **248 words** (17 reserved, 231
 contextual); `MARKE_WOERTER = 248`, reserved mark 17, and **`MARKE_OHNE_GRUND = 212` while the tool
 counts 213 words without a reason block at the entry: the tool prints `RATSCHE GEBROCHEN`**
 (a word was added without its reason, or a reason block moved; the guardian is red at the base
@@ -385,7 +385,7 @@ open (68). Target mark: **705 → 0 with 188 kept.** Three corrections that taug
 **Proof side** (not measured by the mark above), 2026-09-01: obligations with a register 112 of
 159 files (47 files carry none — a unit with errors carries no register), body channel 145 of 381
 carried, 1 lowering theorem of 65 emitted forms (later: 51 C forms with a lemma, 4 named
-assumptions, 27 without semantics, `pruefe-cformen.py`). Those numbers fed the later decision to
+assumptions, 27 without semantics, by the retired `pruefe-cformen`). Those numbers fed the later decision to
 validate the final binary instead of proving emitter forms one by one.
 
 **One trust list, not three.** Assumption lines in source, refusals of the generator, emitted
@@ -449,8 +449,8 @@ Not re-run unless dated otherwise.
 - **English first names** for 12 subcommands and 12 flags, additive; `crates/gabbro-cli/tests/fahnen.rs`
   reads the *source*, not a list.
 - **`H = 0`** (fragments through emit → compile → run → compare to a hand value): decided to
-  *close*, not book; F09, F01, F05 closed 2026-09-03; F03 open. The guard `zaehle-fragmente.py`
-  prints the current count (`messung/fragmente/README.txt` is read by `pruefe-zahlen.py`).
+  *close*, not book; F09, F01, F05 closed 2026-09-03; F03 open. The retired `zaehle-fragmente`
+  printed the count (2026-10-17; not guarded today; `gabbro pruefe messung/fragmente/F0N.gab` re-measures one fragment).
 - **WASM:** `cargo build --target wasm32-wasip1 -p gabbro-cli --release` builds a 3.0 MiB module
   with no dependency; `build` is out of scope (no child process in WASI). **Never run** (no
   `wasmtime` on the machine). VS Code extension plan: stage 1 = diagnostics from `check`,
@@ -466,11 +466,10 @@ Not re-run unless dated otherwise.
 
 **Subject:** Ethernet → ARP → IPv4 → UDP echo, written against RFC 791/826/768/1071 and
 checked against **published vectors** (classic IPv4 header, RFC 1071 §3), with a deliberately
-different Python counter-calculation (`instrumente/zaehle-netz.py`). A comparison against one's
+different Python counter-calculation (the retired `zaehle-netz`, 2026-10-17). A comparison against one's
 own figure is no comparison; the decisive probe is the sum over a header that already holds its
-checksum, which must be 0. `messung/netz/README.txt` quotes the run (`3 von 3 Proben grün`) and
-**is machine-read by `pruefe-zahlen.py`** (a pattern on that quoted line): do not translate or
-delete the transcript block. The yield, as of 2026-08-20/21:
+checksum, which must be 0. the retired `messung/netz/README.txt` quoted the run (`3 von 3 Proben grün`) and
+was machine-read by the retired `pruefe-zahlen` (2026-10-17); no guardian reads the transcript now. The yield, as of 2026-08-20/21:
 
 1. unary `!` had no lowering and the clean corpus had zero occurrences (corpus is written *per
    construct*; `!` is what one writes in a program) — built, `beispiele/46`; unary minus
@@ -494,12 +493,12 @@ re-measured**. Not in scope of the stack: TCP, fragmentation, `ihl > 5`, timers.
 ## 14. How to re-measure
 
 ```
-python3 instrumente/zaehle-wortschatz.py            # §8
+# §8: the vocabulary ratchet was measured by the retired zaehle-wortschatz (2026-10-17); not guarded today
 gabbro pflichten <file> | grep '^W'                # §3.4 (invariants owed by nobody)
 gabbro assumptions <file>                          # §4
 gabbro llvm beispiele/65-port-space.gab | grep 'load volatile'   # §3.1 defect
 gabbro derived <file>; gabbro effects <fn>        # §9
-python3 instrumente/zaehle-netz.py                 # §13
+# §13: the network-stack vectors were run by the retired zaehle-netz (2026-10-17); not guarded today
 (cd arm && lake build)                             # §2.3, via the lane wrapper `./arm-bau`
 ```
 
@@ -508,7 +507,7 @@ python3 instrumente/zaehle-netz.py                 # §13
 | Old | Now | Cited from |
 |---|---|---|
 | §5 (page tables, Layer 2) | §3.4 | `domaene.rs:1529,1604`, `tests/korpus.rs:205`, `tests/rechenwerk.rs:7735`, `saetze.rs:1385`, `beispiele/gift/570` |
-| §11 (vocabulary ratchet) | §8 | `kw.rs:9`, `instrumente/zaehle-wortschatz.py:6,26` |
+| §11 (vocabulary ratchet) | §8 | `kw.rs:9`, the retired `zaehle-wortschatz` |
 | §21 (705/188 mark) | §9 | `messung/proben/460-…gab` |
 | §24, §25 (effects lattice; derived set retrievable) | §9 | `ableitung.rs:32`, `crates/gabbro-cli/src/main.rs:214`, `main.rs:3450` |
 | §42 (`phase`) | §11 | `SPRACHE.md:110` |
@@ -517,5 +516,5 @@ python3 instrumente/zaehle-netz.py                 # §13
 | §51 S2 (`spec fn` cannot state a frame condition) | §9 / `BEWEIS.md` | `beispiele/06-annahmen.gab:65` |
 
 Absorbed and now safe to delete: `dokumente/PLAN-HARDWARE.md` … `dokumente/PLAN-HARDWARE.md` (summarised in
-§2.3; their `CUTS` sections are the "honest limit" column). **Not safe to delete:**
-`messung/netz/README.txt` (machine-read) and `messung/netz/udp-echo.gab` (cited by tests).
+§2.3; their `CUTS` sections are the "honest limit" column). `messung/netz/README.txt` was retired on 2026-10-17;
+`messung/netz/udp-echo.gab` is still cited by tests.

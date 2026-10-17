@@ -12,24 +12,26 @@ in [`messung/fragmente/`](../messung/fragmente/).
 > edits it to make it pass moves the yardstick instead of discharging an obligation. Anything
 > that needs a program that runs belongs in `messung/fragmente/F01.gab` … `F10.gab`, which
 > carry exactly the lines that make the excerpts programs and say in their heads what was
-> added. *Adding is allowed, leaving out is not*, and `pruefe-emission.sh` rejects a completed
-> copy that lacks a frozen line.
+> added. *Adding is allowed, leaving out is not*, and the retired `pruefe-emission` (2026-10-17; not guarded today) rejected a completed
+> copy that lacked a frozen line.
 
 ## 0. Who reads this file mechanically
 
 Do not reflow, reorder or rewrite the code blocks, and do not add a ```gabbro block or move the
-heading «F0» without reading this table first.
+heading «F0» without reading this table first. Rows marked *retired* name guardians removed on
+2026-10-17 (see git history); they no longer read this file, but the block structure they relied on
+is still what `korpus.rs` and `gabbro fragmente` read.
 
 | Reader | What it needs from this file |
 |---|---|
 | `crates/gabbro-check/tests/korpus.rs` | cuts every ```gabbro block (`korpus::schneide`) and asserts that each refusal is a *named* code (the `BENANNT` list); the VT-d block (the one containing `device Vtd`) must stay completely clean (`f2_das_geraetefragment_bleibt_sauber`); `jeder_block_wird_gefunden` compares the cutter with the raw block count |
 | `gabbro fragmente dokumente/FRAGMENTE.md` | the gate-P2 reader; reports per block `unit` (whole module) or `excerpt` (starts mid-form) |
-| `instrumente/zaehle-pflichten.py` | aborts unless there are **exactly 10** ```gabbro blocks before the heading that starts with `# «F0»`; blocks after it are the second corpus and are counted separately |
-| `instrumente/zaehle-bereichspflichten.py` | removes every `narrow` statement from this file's text, re-runs the checker and counts `M101`/`M104`; the corpus for the `narrow` count |
-| `instrumente/pruefe-emission.sh` | cuts blocks by a header string (`module caprock::bringup`, `module caprock::sched`, `module caprock::dtb`, `device Vtd`, `device Virtq`, `module kernel::kstackmark`, `module caprock::mmu`, `module caprock::cap::space`, `module programs::virtio_blk`) and checks that completed copies lose no frozen line |
-| `instrumente/zaehle-formate.py` | counts the format-version declarations written in this file's blocks next to the corpus (the quoted figure lives in `messung/KENNZAHLEN.md`) |
-| `instrumente/pruefe-syntax.sh` | the block text must not contain the forbidden forms of `SYNTAX.md`, and the prose must not quote a retired German keyword |
-| `instrumente/pruefe-widerruf.py` | this file is exempt from the retraction scan (it quotes retracted sentences on purpose) |
+| retired `zaehle-pflichten` | (retired) aborted unless there are **exactly 10** ```gabbro blocks before the heading that starts with `# «F0»`; blocks after it are the second corpus and are counted separately |
+| retired `zaehle-bereichspflichten` | (retired) removed every `narrow` statement from this file's text, re-ran the checker and counted `M101`/`M104`; the corpus for the `narrow` count |
+| retired `pruefe-emission` | (retired) cut blocks by a header string (`module caprock::bringup`, `module caprock::sched`, `module caprock::dtb`, `device Vtd`, `device Virtq`, `module kernel::kstackmark`, `module caprock::mmu`, `module caprock::cap::space`, `module programs::virtio_blk`) and checked that completed copies lose no frozen line |
+| retired `zaehle-formate` | (retired) counted the format-version declarations written in this file's blocks next to the corpus |
+| retired `pruefe-syntax` | (retired) the block text had not to contain the forbidden forms of `SYNTAX.md`, and the prose not to quote a retired German keyword |
+| retired `pruefe-widerruf` | (retired) this file was exempt from the retraction scan (it quotes retracted sentences on purpose) |
 
 Line numbers into this file that old comments quote (`FRAGMENTE.md:269`, `:692`, `:902`, …)
 point at the layout of before the consolidation of 2026-10-17 and are stale; the content they
@@ -42,8 +44,8 @@ name is unchanged inside the blocks (the last section gives the shift per block)
 2. **EBNF.** Every line is held against its production.
 3. **Reachability.** Machine-recomputed which grammar rules are reachable from `program`; the
    first run found three load-bearing rules unreachable (`atomicdecl`, `lockdecl`, `lockstmt`,
-   «B2»). Today `pruefe-syntax.sh` checks closure *and* that no rule is unreachable (189 rules
-   booked in `SYNTAX.md`).
+   «B2»). The retired `pruefe-syntax` checked closure *and* that no rule is unreachable (189 rules
+   booked in `SYNTAX.md`, 2026-10-17; not guarded today).
 4. **What is not writable stays visible** as a comment `-- «Bnn»` in the line instead of being
    smoothed away. A fragment that passes only because the inconvenient line is missing is not
    a result.
@@ -57,25 +59,25 @@ between prose, example and EBNF); F7–F10 added B37–B41. The asymmetric yield
 The «Bnn» ids are cited all over the checker, the tests and the instruments; they never get
 renumbered. Status is read against `SYNTAX.md`, the corpus and the instruments named in the
 last column (checked 2026-10-17; "not re-probed" means the status is the one booked in
-`PFLICHTEN.txt` or `SYNTAX.md` and was not run again today).
+the retired `PFLICHTEN` register or `SYNTAX.md` and was not run again today).
 
 | # | Finding at the freeze | Status today | Evidence |
 |---|---|---|---|
 | B1 | `spec fn … = pred;` used by the file, rejected by its own EBNF | closed in practice | `spec fn` bodies with quantifiers stand in `beispiele/01`, `09`, `50` (0 errors); not re-probed |
-| B2 | `atomicdecl`, `lockdecl`, `lockstmt` unreachable from `program` | **closed** | `pruefe-syntax.sh`: every rule reachable |
-| B3 | `linear ghost type Held(Lock);` unwritable | **closed** | `pruefe-notation.py` (`LUECKEN`) |
+| B2 | `atomicdecl`, `lockdecl`, `lockstmt` unreachable from `program` | **closed** | retired `pruefe-syntax`: every rule reachable |
+| B3 | `linear ghost type Held(Lock);` unwritable | **closed** | retired `pruefe-notation` (`LUECKEN`) |
 | B4 | `costs` unit a free identifier (`cycles` vs `ops`) | **closed** | grammar: `costs <= expr "ops"` is the only form |
 | B5 | prose explains the retired word *keeping* | **closed** | the word no longer occurs in `SYNTAX.md` |
-| B6 | no name for the return value in `ensures` | **closed** | `result`; `pruefe-notation.py` |
+| B6 | no name for the return value in `ensures` | **closed** | `result`; retired `pruefe-notation` |
 | B7 | no record or array literal in `expr` | **closed 2026-08-17** | labelled call `P(a: 1, b: true)`; *no* braced literal (76 corpus sites have a `{` right after an expression) |
 | B8 | no call through a `place`; no producer of a function pointer | **closed** | `SYNTAX.md` «B8» productions; `fn(…)` types carry a contract (`N035`–`N037`) |
 | B9 | `fnptr` carries no contract | **retracted — a false entry** | `N035` (effects *and* costs obligatory, since 2026-08-21), `N036`, `N037` |
-| B10 | `traverse` yields no value and has no `break`; `by consuming` drains the whole queue | **open** (language/emitter) | checker accepts, `gabbro emit` refuses `[C001]` at the queue traverse (§8); `pruefe-notation.py` lists B10 as its one `ABSENKUNGSLUECKEN` entry |
+| B10 | `traverse` yields no value and has no `break`; `by consuming` drains the whole queue | **open** (language/emitter) | checker accepts, `gabbro emit` refuses `[C001]` at the queue traverse (§8); retired `pruefe-notation` lists B10 as its one `ABSENKUNGSLUECKEN` entry |
 | B11 | `forever` has no exit | **corrected 2026-08-20/28** | `leave <mark>` / `next` exist (`beispiele/04`, `39`, `150`); what is still missing is an exit that *carries a reason* |
 | B12 | no numeric-range domain; `slots of` ambiguity | **decided 2026-08-20** | `elems of` binds an INDEX, `slots of` a slot; `lenof` outside a `format` since 2026-08-25; a range domain stays absent |
 | B13 | no aggregation in `pred`; no cross-table domain | **closed** (grammar) | `count x in <domain> : pred` (`beispiele/71`); the cross-table half never carried (a foreign table name is a place). The bookkeeping *invariant* itself stays the human's L obligation |
-| B14 | `option` only as a slot type; `let … else` only on a call | **closed** | `option in typeexpr` and `let … else` on a place (`pruefe-notation.py` B14a, B14b) |
-| B15 | no type application (`Outcome(T,E)`, `Queue(T,N)`) | **open by decision** | no generic types; records stay monomorphic, no general `option T` (`SYNTAX.md` «SG-26»). Measured demand for generic traversal bodies: 0 duplicated bodies (`zaehle-traversierungen.py`, `messung/KENNZAHLEN.md`) |
+| B14 | `option` only as a slot type; `let … else` only on a call | **closed** | `option in typeexpr` and `let … else` on a place (retired `pruefe-notation` B14a, B14b) |
+| B15 | no type application (`Outcome(T,E)`, `Queue(T,N)`) | **open by decision** | no generic types; records stay monomorphic, no general `option T` (`SYNTAX.md` «SG-26»). Measured demand for generic traversal bodies: 0 duplicated bodies (retired `zaehle-traversierungen`, retired `KENNZAHLEN` register) |
 | B16 | `table` knows one `slot` word and no parameters | not re-probed | — |
 | B17 | `transition` writes exactly ONE place | **corrected 2026-08-28** | `transset = placeshift { "," placeshift }` exists and is used in `beispiele/02-geraet.gab` (the multi-place `transition irq_umlenken`); what really lacked was that `breaking <name> { … }` never resolved its name — now it does |
 | B18 | `device` knows no phases; one class per register | **built 2026-08-28** | `class rw in setup, r in live`, rule `R009` |
@@ -85,7 +87,7 @@ last column (checked 2026-10-17; "not re-probed" means the status is the one boo
 | B22 | strings single-line; multi-line `claim` | **closed 2026-08-17** | adjacent string literals join into one `claim` text |
 | B23 | one class per register cannot express a mixed register (VT-d `FSTS`) | **built 2026-08-20** | a field may carry its own `class`; a field without one inherits the register's |
 | B24 | bit positions beyond 64 / endian interplay | **decided 2026-08-18** | a position lies inside the field's own word; beyond it there is nothing to mean, so the notation is refused |
-| B25 | `intty in range` is an interval, not a value set | **closed** | `pruefe-notation.py` |
+| B25 | `intty in range` is an interval, not a value set | **closed** | retired `pruefe-notation` |
 | B26 | `requires` of a register has no named exit; no pre-state of a `transition` | **built 2026-08-28** | `requires … else <reason>` (`R010`/`R011`); the generator reads the pre-state through `mirrors` and measures it |
 | B27 | `prim fn` has no `abi` | **retracted — a false entry** | an `asm` body with `in`/`out`/`clobbers` has existed since 2026-08-20 |
 | B28 | no placeholder binder in `match` arms | not re-probed | — |
@@ -102,16 +104,17 @@ last column (checked 2026-10-17; "not re-probed" means the status is the one boo
 | B40 | the DTB parser checks 145 lines without error, with no tool | **a finding against the thesis, kept** | `format` buys brevity there, not safety; assumptions may name their machine (`assume <name> arch x86_64 "…"`) |
 | B41 | three domains missing (B3 count): `ancestors of`, union-find, chain over an edge function | **built in part** | `ancestors of` and `descendants of`, the edge named once at the table («B41b»); union-find and the edge-function chain were not built |
 
-**How to re-measure the statuses.** `./instrumente/pruefe-notation.py` runs the smallest program
-for each notation gap and asks the checker (8 notation gaps, plus the one emitter gap B10);
-`./instrumente/pruefe-syntax.sh` holds the examples against `SYNTAX.md`;
-`./instrumente/zaehle-pflichten.py --haengend` prints what still hangs per fragment.
+**How the statuses were measured.** The retired `pruefe-notation` ran the smallest program
+for each notation gap and asked the checker (8 notation gaps, plus the one emitter gap B10);
+the retired `pruefe-syntax` held the examples against `SYNTAX.md`; the retired `zaehle-pflichten`
+printed what still hung per fragment (all retired 2026-10-17, see git history; the statuses below are
+booked results, and `gabbro pruefe` on a snippet re-measures any single one).
 
 ## 3. How the ten fragments stand today
 
 Measured 2026-10-17 with the debug binary built that day, over the completed copies
 `messung/fragmente/F01.gab` … `F10.gab` (`gabbro pruefe`), and read from the `lauf "fragmentN"`
-lines of `instrumente/pruefe-emission.sh` (a *Durchstich* is: emit, compile, **run**, compare
+lines of the retired `pruefe-emission` (a *Durchstich* is: emit, compile, **run**, compare
 with a hand-written expected value, plus a poison edit of the C that must change the answer).
 
 | Fragment | Area | `gabbro pruefe` on the completed copy | Durchstich (expected output) |
@@ -128,9 +131,9 @@ with a hand-written expected value, plus a poison edit of the C that must change
 | F10 | DTB parser | 9 items, 0 errors, 0 hints | yes — `1 0 0 0 0 65` |
 
 Nine of ten check clean and nine of ten are pierced (`F3` is the exception in both columns).
-`./instrumente/zaehle-fragmente.py [--je-datei]` prints the three figures `N von 10 prüfen
-sauber`, `N von 10 senken ab` and the list of pierced fragments; `./instrumente/zaehle-pflichten.py
---haengend` reads the piercing ledger.
+The retired `zaehle-fragmente` printed the three figures `N von 10 prüfen
+sauber`, `N von 10 senken ab` and the list of pierced fragments, and the retired `zaehle-pflichten
+--haengend` read the piercing ledger (not guarded today; `gabbro pruefe` over each `F0N.gab` re-measures the first).
 
 **The frozen excerpts in this file are not the clean ones, and that is by design.**
 `gabbro fragmente dokumente/FRAGMENTE.md` reports today *6 of 13 translation units with no
@@ -1868,7 +1871,7 @@ own: the classic IPv4 header of RFC 791 (checksum `b861`) and the RFC 1071 §3 e
 `ddf2`), with the counter-calculation from a second implementation written differently. The
 rule is "no new construct without a program that needed it — and the template comes from
 outside", otherwise a stack measures how well Gabbro fits Gabbro. Instrument:
-`./instrumente/zaehle-netz.py` (`WERKZEUGKASTEN.md`).*
+the retired `zaehle-netz` (2026-10-17; not guarded today).*
 
 Four holes that 45 clean examples did not show (the corpus is written *per construct*; a `!`
 is not a construct, it is what one does when one writes a program):
@@ -1907,9 +1910,9 @@ checked, not handled), no timer; three vectors, not a network.
 # What `H` measures, and what an audit of it left standing
 
 **`H`** is the K100 gate "hanging plumbing obligations", read as `10 − |pierced fragments|`:
-today `H = 1` (F3). The obligation base is `PFLICHTEN.txt` (239 obligations = 173 K plumbing +
+`H = 1` (F3) when last counted (2026-10-17, by the retired `zaehle-pflichten`; not guarded today). The obligation base was the retired `PFLICHTEN` register (239 obligations = 173 K plumbing +
 66 L logic, assigned 2026-08-17 over F1–F10 plus one lowering row each; `L : K = 0.38 : 1`,
-derivable with `./instrumente/zaehle-pflichten.py --spalten`). Its history, in three lessons:
+derivable with that counter). Its history, in three lessons:
 
 * **The ratio is the wrong statistic, `H` is the measurand.** Over the Rust, `delete_leaf` was
   4 K / 7 L = 1.75 : 1; over the Gabbro fragment the same criterion gives 13 K / 8 L = 0.62 : 1.
@@ -1926,7 +1929,7 @@ derivable with `./instrumente/zaehle-pflichten.py --spalten`). Its history, in t
   the bound falls out of the domain and M1 does not see it). The measurand became
   `N_ritus = 0`; today it is a *judgement* (`N_ritus = 1`, the F6 site) and only the half that
   needs no judgement is measured: `N_folgenlos` — a `narrow` whose removal changes nothing —
-  counts **0** (`./instrumente/zaehle-bereichspflichten.py`).
+  counted **0** (by the retired `zaehle-bereichspflichten`).
 * **Zero plumbing among the refusals of F3, and an emitter refusal can be plumbing.** The
   classification of F3's 18 refusals by the pass that raises each: 0 plumbing, 9 *rule
   decisions* (the refusal is right and Gabbro would have to stop making it or gain a
@@ -1947,7 +1950,7 @@ same day** left these standing:
 
 | Gate | Verdict | What it means now |
 |---|---|---|
-| `H` | adds nothing beyond `pruefe-emission.sh`'s piercing ledger | `H = 10 − pierced`, over ten fragments chosen for difficulty — `H = 0` would still be trap 80 (a number a human runs parallel to the truth) until a corpus stands beside them that nobody looked at while building. `H` is a countdown, not a coverage measure; no code computes "100 % plumbing" |
+| `H` | adds nothing beyond the retired `pruefe-emission`'s piercing ledger | `H = 10 − pierced`, over ten fragments chosen for difficulty — `H = 0` would still be trap 80 (a number a human runs parallel to the truth) until a corpus stands beside them that nobody looked at while building. `H` is a countdown, not a coverage measure; no code computes "100 % plumbing" |
 | `L` (templates carried unproved) | the count holds, the gate did not exist | the bound `L <= 4` stood only in a comment; the test asserts today's value (`lebend_ungedeckt() == 2`). Two entries are contestable hand judgements (`gruppe.sperrabdruck`, `walk.mappings`) |
 | second corpus «K2» | does not hold as independent | see the K2 section; and the guard labelled "second corpus" points at the same codebase as the Caprock base (a different checkout of Caprock) |
 | `A_p` (falsifiable assumptions with a probe that stands as a program) | holds: `5 of 38`, floor `1/8` | the guard walked the *working tree* with `rglob`, so one untracked `.gab` outside four hard-coded directories broke it (exit 2); the class (walking the tree instead of `git ls-files`) was repaired for the named instance only. `instrumente/korpus.py` is the shared "is this file one `git` knows about?" check |
@@ -2005,11 +2008,11 @@ them.*
   one by one with a reason: 12 are already carried by another pass, 11 are assumptions rather
   than obligations, 23 remain open. The one that passes is a K (index/overflow) obligation, not
   a W (value) one — so the channel exists (`gabbro pflichten --isabelle`/`--lean`,
-  `./instrumente/zaehle-p6.py`) but the corpus had no W obligation that fits it.
-* **GabbroV population (2026-09-03).** Three `progress` rows are booked twice in `PFLICHTEN.txt`
+  the retired `zaehle-p6`) but the corpus had no W obligation that fits it.
+* **GabbroV population (2026-09-03).** Three `progress` rows are booked twice in the retired `PFLICHTEN` register
   (once as a logic obligation, once as an assumption: a `progress` name must resolve to a
   declared `assume`, `S003`/`S004`), and the emitted manifest does not double-book them.
-  Rebooking them moves GabbroV's population 66 → 63; the K/L split of `PFLICHTEN.txt` does not
+  Rebooking them moves GabbroV's population 66 → 63; the K/L split of the retired `PFLICHTEN` register does not
   move (173 / 66), because that column is machine-versus-subject, not obligation-versus-assumption.
   The vacuity check (`programmlogik/gabbrov/V2.lean`, proved sound) over the 55 sayable
   obligations: 31 carry a precondition, 0 are vacuous, 24 have none; two of the 26
@@ -2023,16 +2026,16 @@ them.*
 | of those, not sayable | 10 | 8 |
 | of those, sayable | 56 | 55 |
 
-| Derived today by `./instrumente/zaehle-pflichten.py --gabbrov` | |
+| Derived (2026-10-17) by the retired `zaehle-pflichten`; historical | |
 |---|---|
 | **GabbroV's obligation population** | **63** |
 | of these, discharged by the assumption layer | 3 |
 
-  The three rows with a figure are the ones `pruefe-zahlen.py` reads (they used to stand in
-  `messung/GABBROV-V2.txt`); the figures are derived by the command above.
-* **The obligation manifest versus its subject (E1).** `./instrumente/pruefe-manifest.py`
-  holds every `obligation` line of the emitted manifest against the correspondence table
-  `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.txt` (one row per obligation of GabbroV's population):
+  The three rows with a figure were the ones the retired `pruefe-zahlen` read (they stood in the
+  retired `messung/GABBROV-V2.txt`); the figures were derived by the counter above.
+* **The obligation manifest versus its subject (E1).** The retired `pruefe-manifest`
+  held every `obligation` line of the emitted manifest against the correspondence table
+  the retired `PFLICHTEN-KORRESPONDENZ.txt` (one row per obligation of GabbroV's population):
   states CARRIED (a manifest line states it), BLOCKED (the fragment emits no register),
   DROPPED (a clause stands in the source, unbooked), NO CLAUSE (nothing in the fragment states
   it). As of 2026-09-04: 20 carried, 13 blocked (F03 only), 5 dropped, 25 no clause — a
