@@ -4502,63 +4502,6 @@ pub const PHASEN: &[Satz] = &[
                      dokumente/SYNTAX.md §12.1",
     },
     Satz {
-        name: "syscall.stub",
-        kennungen: &["C180", "C181", "C182", "C183", "C184", "C186", "C187"],
-        aussage: "A checked `syscall` lowers to one C function: every parameter in its \
-                  declared in-register, the number in `rax`, the `syscall` instruction \
-                  as extended inline `__asm__` with the declared clobbers plus `memory`, \
-                  `rcx` and `r11`, and the raw `rax` answer decoded -- a negative \
-                  `-4095..-1` against the `errors` map into the `or R` channel, an \
-                  unlisted errno or an out-of-range non-negative value into the hardware \
-                  outcome. Five shape rules guard the five places a plausible wrong stub \
-                  would stand: no in-register the stub cannot keep (`C180` -- `rax` or a \
-                  clobbered register), the answer in `rax` and not scratch (`C181`), the \
-                  Linux x86_64 `syscall` ABI or the bare-metal `int $0x80` ABI (`abi \
-                  metal`, O31: nothing but memory destroyed) and no other (`C182`), an \
-                  integer answer with a \
-                  checkable range or a byte region `ptr<normal, …> u8` (`C183`), a region \
-                  only with its `or R` channel (`C186`: a gate that hands over memory can \
-                  refuse, and the refusal must reach the program's `else`), and a number -- \
-                  and every result bound -- that folds at translation time (`C184`). A \
-                  region's word is handed over as the address after the sign leg, and the \
-                  word zero is the hardware outcome (the proved template `tor.region`). A gate \
-                  that claims a stack also gets a C-only trampoline (template `tor.trampolin`), \
-                  which needs two callee-saved registers the gate neither binds nor destroys \
-                  (`C187` when there are none). For `abi linux arch aarch64` (2026-10-07) the \
-                  same stub is written in the AArch64 convention: the number in `x8`, the \
-                  arguments in `x0`-`x5`, `svc #0`, the answer in `x0` (also the first \
-                  argument register), nothing but memory destroyed.",
-        vorbehalt: "A template rule, and nothing else. The AArch64 stub, its inline \
-                    `child` trap and its trampoline (`cbnz`, `mov x9, sp`/`and sp, x9, #-16`, \
-                    `blr`) are MEASURED (compiled with `-Wall -Wextra -Werror`, run under \
-                    qemu-aarch64) and have NO Lean template yet: `tor.trampolin` and \
-                    `tor.kind` state the alignment as `rsp + 8` and prove the x86_64 text only. \
-                    It says nothing about whether the \
-                    kernel keeps the contract it decodes against -- that is the named \
-                    assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
-                    to the C compiler where no value can be delivered. The errno NAME is \
-                    never held against a kernel table: the number compared is the \
-                    binding's explicit number (`EBADF = 9 => BadFd`, O31) or else the \
-                    reason case's DECLARED value, and a declaration that numbers its \
-                    reasons differently than the kernel numbers its errnos decodes \
-                    against its own numbers (`S14` did, until Opus agent L). A ghost parameter, an `errors` map with no \
-                    channel, and an unresolvable reason stay the generic `C001`. The \
-                    out-of-range and past-`-4095` legs hand `__builtin_unreachable()` to \
-                    the compiler under the gate's OWN `assume` -- the stub prints it as \
-                    `hardware (<name>)` -- so a gate that borrows another gate's assumption \
-                    borrows its unreachable too (review G04 F4: the open and read gates of \
-                    `beispiele/149`/`150` now name `linux_open_contract` and \
-                    `linux_read_contract`, each with its own probe).",
-        stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
-                      `C180`/`C181`/`C182`/`C183`/`C184`, `1383` on `C186`, `1389` on `C187` -- each \
-                      checker-clean, each refused by exactly its code; beispiele/183 runs a \
-                      region answer (a page from the kernel, a store through it, `write`); beispiele/74 runs the value path \
-                      (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
-        fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
-                     dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Kern/Semantik/Erhaltung.lean",
-    },
-    Satz {
         name: "zeiger.index_in_der_ausdehnung",
         kennungen: &["N571"],
         aussage: "An index through a pointer lies inside what the pointer reaches. A pointer \
@@ -4802,7 +4745,7 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "klon.uebergabe",
-        kennungen: &["N446", "N447", "N448", "N449", "N450", "N572", "C185"],
+        kennungen: &["N446", "N447", "N448", "N449", "N450", "N572"],
         aussage: "A clone handoff holds its checked shape: the `stack` clause names \
                   the handed-stack register AS a stack -- bound in `regs in`, kept \
                   out of `clobbers` and out of `regs out` (`N446`) -- claimed once \

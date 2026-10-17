@@ -124,11 +124,12 @@ import korpus  # noqa: E402
 #   with gift probes 1427-1432) join WITHOUT sentences -- the `C001` class:
 #   refusals of an UNTRUSTED emitter, not sentences of a pass. Like `C001` they
 #   name the unlowered form instead of emitting something plausible.
+#   2026-10-17: 60 -> 59. The C emitter was removed; `syscall.stub` (C180-C187) went with it.
 #   2026-10-14 (2): 61 -> 60. `Y105` (error channel) is fully lowered (LLVM-1:
 #   fallible signatures, `let … else`, reason values/matches, errno decoding);
 #   its probe `gift/1431` compiled and was deleted (a healed probe is retired,
 #   never widened).
-MARKE = 60
+MARKE = 59
 
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 CODES_ZEILE = re.compile(r"^--\s+codes: (.+)$")

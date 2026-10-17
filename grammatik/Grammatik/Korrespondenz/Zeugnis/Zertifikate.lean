@@ -37,8 +37,6 @@ import Grammatik.Zertifikat.Reihe01.G182_fallible_gate
 import Grammatik.Zertifikat.Reihe01.G187_bool_statisch
 import Grammatik.Zertifikat.Reihe01.G190_erster_treffer
 import Grammatik.Zertifikat.Reihe01.G193_zwei_tabellen_kein_fehlablauf
-import Grammatik.Zertifikat.Reihe02.G219_unaeres_minus
-import Grammatik.Zertifikat.Reihe04.G414_tabellenspeicher_heisst_so
 import Grammatik.Zertifikat.Reihe07.G700_lesen_ohne_klausel
 import Grammatik.Zertifikat.Reihe07.G701_rein_ohne_klausel
 import Grammatik.Zertifikat.Reihe07.G719_lock_taken_nowhere
