@@ -785,11 +785,11 @@ def parsePredListe (f : Nat) (toks : List Token) :
     Except String (List SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match parseOr f toks with
+  | f + 1 => match parsePred f toks with
     | .error e => .error e
     | .ok (p, rest) => match rest with
       | .zeichen "," :: rest' =>
-        match parseOr f rest' with
+        match parsePred f rest' with
         | .ok _ =>
           match parsePredListe f rest' with
           | .error e2 => .error e2
@@ -1003,7 +1003,7 @@ def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
             | .ok (h, r2) => match fordereZeichen ";" r2 with
               | .error e => .error e
               | .ok r => .ok (.asmT sig ("asm { " ++ h), r)
-        else match parseOr f rest with
+        else match parsePred f rest with
           | .error e => .error e
           | .ok (p, r1) => match fordereZeichen ";" r1 with
             | .error e => .error e
@@ -1056,7 +1056,7 @@ def parseFeldRest (f : Nat) : List Token → Except String
                 .ok (((pos, some n, wo, res, byo)), r')
             | none => .error "offset_into expected"
         | _ => .error "offset_into expected"
-      else if strEq s "where" then match parseOr f rest with
+      else if strEq s "where" then match parsePred f rest with
         | .ok (p, r) => match parseFeldRest f r with
           | .error e => .error e
           | .ok ((pos, bezug, _, res, byo), r') =>
@@ -1230,7 +1230,7 @@ def parseRegRest (f : Nat) (rg : SReg) (toks : List Token) :
       else if strEq s "fields" then match parseRegFeldListe f rest with
         | .error e => .error e
         | .ok (fds, r) => parseRegRest f { rg with felder := fds } r
-      else if strEq s "requires" then match parseOr f rest with
+      else if strEq s "requires" then match parsePred f rest with
         | .error e => .error e
         | .ok (p, r1) => match r1 with
           | .wort t :: r2 =>
@@ -1394,7 +1394,7 @@ def parseTransRest (f : Nat) (tr : STrans) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .wort s :: rest =>
-      if strEq s "requires" then match parseOr f rest with
+      if strEq s "requires" then match parsePred f rest with
         | .error e => .error e
         | .ok (p, r) => parseTransRest f { tr with voraus := some p } r
       else if strEq s "effects" then match parseEffektBlock f rest with
@@ -1462,25 +1462,25 @@ def parseInvRest (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .wort s :: rest =>
-      if strEq s "by" then match nimmBisKopf rest with
+      if strEq s "by" then match nimmBisZeichen ":" rest 0 with
         | .error e => .error e
         | .ok (h, r1) => match fordereZeichen ":" r1 with
           | .error e => .error e
-          | .ok r2 => match parseOr f r2 with
+          | .ok r2 => match parsePred f r2 with
             | .error e => .error e
             | .ok (p, r3) => match fordereZeichen ";" r3 with
               | .error e => .error e
               | .ok r => .ok (((some h, p)), r)
       else match fordereZeichen ":" toks with
         | .error e => .error e
-        | .ok r1 => match parseOr f r1 with
+        | .ok r1 => match parsePred f r1 with
           | .error e => .error e
           | .ok (p, r2) => match fordereZeichen ";" r2 with
             | .error e => .error e
             | .ok r => .ok (((none, p)), r)
     | _ => match fordereZeichen ":" toks with
       | .error e => .error e
-      | .ok r1 => match parseOr f r1 with
+      | .ok r1 => match parsePred f r1 with
         | .error e => .error e
         | .ok (p, r2) => match fordereZeichen ";" r2 with
           | .error e => .error e
@@ -2270,13 +2270,13 @@ def parseAxiomErg (f : Nat) (toks : List Token) :
       | .error e => .error e
       | .ok (t, r1) => match r1 with
         | .wort s :: r2 =>
-          if strEq s "requires" then match parseOr f r2 with
+          if strEq s "requires" then match parsePred f r2 with
             | .error e => .error e
             | .ok (p, r) => .ok (((some t, some p)), r)
           else .ok (((some t, none)), r1)
         | _ => .ok (((some t, none)), r1)
     | .wort s :: rest =>
-      if strEq s "requires" then match parseOr f rest with
+      if strEq s "requires" then match parsePred f rest with
         | .error e => .error e
         | .ok (p, r) => .ok (((none, some p)), r)
       else .ok (((none, none)), toks)
@@ -2437,7 +2437,7 @@ def parseSperreTief (f : Nat) (toks : List Token) :
       | _ => pure (none, r8))
     let (inv, r10) ← (match r9 with
       | .wort "invariant" :: rest => do
-        let (p, r) ← parseOr f rest
+        let (p, r) ← parsePred f rest
         pure (some p, r)
       | _ => pure (none, r9))
     let r ← fordereZeichen ";" r10
@@ -2606,7 +2606,7 @@ def parseWegTief (f : Nat) (toks : List Token) :
                           | .error e => .error e
                           | .ok (dn, r12) => match nimmWort "when" r12 with
                             | .error e => .error e
-                            | .ok r13 => match parseOr f r13 with
+                            | .ok r13 => match parsePred f r13 with
                               | .error e => .error e
                               | .ok (dp, r14) =>
                                 match fordereZeichen "," r14 with
@@ -2615,7 +2615,7 @@ def parseWegTief (f : Nat) (toks : List Token) :
                                   | .error e => .error e
                                   | .ok r16 => match fordereZeichen ":" r16 with
                                     | .error e => .error e
-                                    | .ok r17 => match parseOr f r17 with
+                                    | .ok r17 => match parsePred f r17 with
                                       | .error e => .error e
                                       | .ok (lf, r18) => match r18 with
                                         | .zeichen "," :: r19 =>

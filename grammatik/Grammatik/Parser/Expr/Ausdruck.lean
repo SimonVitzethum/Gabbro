@@ -13,6 +13,24 @@ namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000
 
+/-- The forms of `ext` (below): predicates and the expression forms outside the printable core.
+    Layout of `ext k names subs`:
+    * `all`/`any`/`count`: `names = [x, domain kind] ++ domain names`, `subs = domain operands ++ [body]`
+      (`forall x in D : p`, `exists x in D : p`, `count x in D : p`);
+    * `mem`: `names = [domain kind] ++ domain names`, `subs = [e] ++ domain operands` (`e in D`);
+    * `reach`: `names = [field]`, `subs = [a, b]` (`a reaches b via field`);
+    * `imp`: `subs = [a, b]` (`a => b`);
+    * `text`: `names = [s]` (a string literal);
+    * `call`: `subs = callee :: args` (a call through a place, `v->f(x)`). -/
+inductive XKind
+  | all | any | count | mem | reach | imp | text | call
+  deriving DecidableEq, Repr
+
+def beqWorte : List String → List String → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => strEq x y && beqWorte xs ys
+  | _, _ => false
+
 /-- A surface expression: SYNTAX.md section 4 `expr` without types,
     spans or sugar resolution. Operators ride as their spelling
     (`bin "+%"`), so the precedence table stays one function.
@@ -40,6 +58,9 @@ inductive SExpr
   | alt : SExpr → SExpr
   | ergebnis : SExpr
   | why : String → String → SExpr
+  /-- Predicate forms, string literals and calls through places (layout at `XKind`). They have no
+      spelling in `druckToks`: the printer is total on the printable core only (`gut`). -/
+  | ext : XKind → List String → List SExpr → SExpr
   deriving Repr
 
 -- Structural equality on surface trees, as a `Bool`: core Lean
@@ -64,6 +85,7 @@ def beqSExpr : SExpr → SExpr → Bool
   | .alt x, .alt y => beqSExpr x y
   | .ergebnis, .ergebnis => true
   | .why g1 f1, .why g2 f2 => strEq g1 g2 && strEq f1 f2
+  | .ext k a x, .ext l b y => decide (k = l) && beqWorte a b && beqSExprList x y
   | _, _ => false
 def beqSExprList : List SExpr → List SExpr → Bool
   | [], [] => true
@@ -312,6 +334,10 @@ def parsePrimary (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .num v :: rest => .ok (.lit v, rest)
+    | .text t :: rest => .ok (.ext .text [t] [], rest)
+    | .wort "count" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseQuant f .count x rest
+      | none => .error "count without a name"
     | .float s :: rest => match rest with
       | .wort "rounded" :: rest' =>
         .ok (.float (s ++ " rounded"), rest')
@@ -418,6 +444,11 @@ def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :
         parseSuffixe f (.index e i) rest'
       | .ok (_, _) => .error "[ without ]"
       | .error e => .error e
+    | .zeichen "(" :: rest => match e with
+      | .variable _ => .ok (e, toks)
+      | _ => match parseArgs f rest with
+        | .ok (args, rest') => parseSuffixe f (.ext .call [] (e :: args)) rest'
+        | .error e => .error e
     | _ => .ok (e, toks)
 def parseArgs (f : Nat) (toks : List Token) :
     Except String (List SExpr × List Token) :=
@@ -444,6 +475,129 @@ def parseArg (f : Nat) (toks : List Token) :
         | none => toks
       | _ => toks
     parseOr f toks'
+/-- `q x in D : pred` behind the `in` (for `forall`, `exists` and `count`): the layout of `ext`. -/
+def parseQuant (f : Nat) (k : XKind) (x : String) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseDomain f toks with
+    | .error e => .error e
+    | .ok ((dk, ns, ops), r1) => match r1 with
+      | .zeichen ":" :: r2 => match parsePred f r2 with
+        | .ok (body, r) => .ok (.ext k (x :: dk :: ns) (ops ++ [body]), r)
+        | .error e => .error e
+      | _ => .error "wanted :"
+/-- A `domain` (SYNTAX.md section 5): its kind word, the names it carries and the places it takes. -/
+def parseDomain (f : Nat) (toks : List Token) :
+    Except String ((String × List String × List SExpr) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .wort "slots" :: .wort "of" :: r => domPlace f "slots" r
+    | .wort "descendants" :: .wort "of" :: r => domPlace f "descendants" r
+    | .wort "ancestors" :: .wort "of" :: r => domPlace f "ancestors" r
+    | .wort "elems" :: .wort "of" :: r => domPlace f "elems" r
+    | .wort "mappings" :: .wort "of" :: r => domPlace f "mappings" r
+    | .wort "queue" :: r => domPlace f "queue" r
+    | .wort "threads" :: r => .ok (("threads", [], []), r)
+    | .wort "fields" :: .wort "of" :: t :: r => match nameText t with
+      | some a =>
+        let (segs, r') := sammleSegmente r [a]
+        .ok (("fields", segs, []), r')
+      | none => .error "path expected"
+    | .wort "chain" :: .zeichen "(" :: a :: .zeichen "," :: b :: .zeichen ")" :: .wort "in" :: r =>
+      match nameText a, nameText b with
+      | some x, some y => match parseOrt f r with
+        | .ok (p, r') => .ok (("chain", [x, y], [p]), r')
+        | .error e => .error e
+      | _, _ => .error "chain names expected"
+    | _ => .error "domain expected"
+def domPlace (f : Nat) (k : String) (toks : List Token) :
+    Except String ((String × List String × List SExpr) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseOrt f toks with
+    | .ok (p, r) => .ok ((k, [], [p]), r)
+    | .error e => .error e
+/-- `pred` (SYNTAX.md section 5): `orpred`; the quantified forms, `e in D`, `a reaches b via f`
+    and `=>` ride as `ext` nodes. -/
+def parsePred (f : Nat) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parsePredAnd f toks with
+    | .ok (l, rest) => parsePredOrL f l rest
+    | .error e => .error e
+def parsePredOrL (f : Nat) (l : SExpr) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match opOder toks with
+    | some rest => match parsePredAnd f rest with
+      | .ok (r, rest') => parsePredOrL f (.bin "||" l r) rest'
+      | .error e => .error e
+    | none => .ok (l, toks)
+def parsePredAnd (f : Nat) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parsePredNot f toks with
+    | .ok (l, rest) => parsePredAndL f l rest
+    | .error e => .error e
+def parsePredAndL (f : Nat) (l : SExpr) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match opUnd toks with
+    | some rest => match parsePredNot f rest with
+      | .ok (r, rest') => parsePredAndL f (.bin "&&" l r) rest'
+      | .error e => .error e
+    | none => .ok (l, toks)
+def parsePredNot (f : Nat) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 =>
+    let (neg, t1) : Bool × List Token := match toks with
+      | .zeichen "!" :: rest => (true, rest)
+      | _ => (false, toks)
+    match parsePredAtom f t1 with
+    | .error e => .error e
+    | .ok (a, rest) =>
+      let a' := if neg then SExpr.un "!" a else a
+      match rest with
+      | .zeichen "=>" :: rest' => match parsePred f rest' with
+        | .ok (b, r) => .ok (.ext .imp [] [a', b], r)
+        | .error e => .error e
+      | _ => .ok (a', rest)
+def parsePredAtom (f : Nat) (toks : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .wort "forall" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseQuant f .all x rest
+      | none => .error "quantifier without a name"
+    | .wort "exists" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseQuant f .any x rest
+      | none => .error "quantifier without a name"
+    | _ => match parseCmp f toks with
+      | .ok (e, .wort "in" :: rest) => match parseDomain f rest with
+        | .ok ((dk, ns, ops), r) => .ok (.ext .mem (dk :: ns) (e :: ops), r)
+        | .error er => .error er
+      | .ok (e, .wort "reaches" :: rest) => match parseOrt f rest with
+        | .ok (b, .wort "via" :: t :: r) => match nameText t with
+          | some fld => .ok (.ext .reach [fld] [e, b], r)
+          | none => .error "via without a field"
+        | .ok (_, _) => .error "wanted via"
+        | .error er => .error er
+      | .ok (e, rest) => .ok (e, rest)
+      | .error er => match toks with
+        | .zeichen "(" :: rest => match parsePred f rest with
+          | .ok (p, .zeichen ")" :: r) => .ok (p, r)
+          | .ok (_, _) => .error "( without )"
+          | .error e2 => .error e2
+        | _ => .error er
 end
 
 /-- Trees that print bare under a prefix operator. `fnwert` is not
@@ -482,6 +636,8 @@ def druck : SExpr → String
   | .alt x => "old(" ++ druck x ++ ")"
   | .ergebnis => "result"
   | .why g f => g ++ "::" ++ f
+  | .ext .text ns _ => "\"" ++ ("".intercalate ns) ++ "\""
+  | .ext _ _ _ => "<ext>"
 def druckArgs : List SExpr → String
   | [] => ""
   | [x] => druck x

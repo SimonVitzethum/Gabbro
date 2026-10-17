@@ -403,6 +403,7 @@ import Grammatik.GabbroV.GvLauf
 import Grammatik.GabbroV.GvBaum
 import Grammatik.GabbroV.GvZensus
 import Grammatik.Parser.Cover.Census
+import Grammatik.Parser.Cover.Proben
 import Grammatik.GabbroV.GvAtomKoerper
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.BeweisAtomar

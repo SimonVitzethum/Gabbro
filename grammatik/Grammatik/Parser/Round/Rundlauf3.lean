@@ -440,6 +440,7 @@ theorem legsCmp : ∀ (e : SExpr), gutCmp e = true → Legs e := by
     | alt x => simp [cmpNeu] at hnew
     | ergebnis => simp [cmpNeu] at hnew
     | why g f => simp [cmpNeu] at hnew
+    | ext xk xn xs => simp [cmpNeu] at hnew
 
 -- Level-1 goal: every `gutCmp` tree parses back from its printed
 -- tokens with `brennstoff` fuel (the `Or` leg, `ende` follows by
@@ -753,6 +754,7 @@ theorem legsBit : ∀ (e : SExpr), gutBit e = true → Legs e := by
     | alt x => simp [bitNeu] at hnew
     | ergebnis => simp [bitNeu] at hnew
     | why g f => simp [bitNeu] at hnew
+    | ext xk xn xs => simp [bitNeu] at hnew
 
 -- Level-2 goal: every `gutBit` tree parses back from its printed
 -- tokens with `brennstoff` fuel.
@@ -1219,6 +1221,7 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
       | alt x => simp [addNeu] at hadd
       | ergebnis => simp [addNeu] at hadd
       | why g f => simp [addNeu] at hadd
+      | ext xk xn xs => simp [addNeu] at hadd
   · cases e with
     | lit m => simp [mulNeu] at hnew
     | float s => simp [mulNeu] at hnew
@@ -1246,6 +1249,7 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
     | alt x => simp [mulNeu] at hnew
     | ergebnis => simp [mulNeu] at hnew
     | why g f => simp [mulNeu] at hnew
+    | ext xk xn xs => simp [mulNeu] at hnew
 
 -- Level-3 goal: every `gutAM` tree parses back from its printed
 -- tokens with `brennstoff` fuel.
@@ -1336,6 +1340,7 @@ theorem gut_of_gutCmp : ∀ (e : SExpr), gutCmp e = true → gut e = true := by
     | alt x => simp [cmpNeu] at hnew
     | ergebnis => simp [cmpNeu] at hnew
     | why g f => simp [cmpNeu] at hnew
+    | ext xk xn xs => simp [cmpNeu] at hnew
 
 theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
   intro e hg
@@ -1364,6 +1369,7 @@ theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
     | alt x => simp [bitNeu] at hnew
     | ergebnis => simp [bitNeu] at hnew
     | why g f => simp [bitNeu] at hnew
+    | ext xk xn xs => simp [bitNeu] at hnew
 
 theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
   intro e hg
@@ -1393,6 +1399,7 @@ theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
       | alt x => simp [addNeu] at hadd
       | ergebnis => simp [addNeu] at hadd
       | why g f => simp [addNeu] at hadd
+      | ext xk xn xs => simp [addNeu] at hadd
   · cases e with
     | lit m => simp [mulNeu] at hnew
     | float s => simp [mulNeu] at hnew
@@ -1415,6 +1422,7 @@ theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
     | alt x => simp [mulNeu] at hnew
     | ergebnis => simp [mulNeu] at hnew
     | why g f => simp [mulNeu] at hnew
+    | ext xk xn xs => simp [mulNeu] at hnew
 
 -- LEVEL CALLS (calls with argument lists).
 --
@@ -1731,6 +1739,7 @@ theorem legsRuf : ∀ (e : SExpr), gutRuf e = true → Legs e := by
     | alt x => simp [rufNeu] at hnew
     | ergebnis => simp [rufNeu] at hnew
     | why g f => simp [rufNeu] at hnew
+    | ext xk xn xs => simp [rufNeu] at hnew
 
 -- Level-4 goal: every `gutRuf` tree parses back from its
 -- printed tokens with `brennstoff` fuel.
@@ -2126,6 +2135,7 @@ theorem gut_of_gutRuf : ∀ (e : SExpr), gutRuf e = true → gut e = true := by
     | alt x => simp [rufNeu] at hnew
     | ergebnis => simp [rufNeu] at hnew
     | why g f => simp [rufNeu] at hnew
+    | ext xk xn xs => simp [rufNeu] at hnew
 
 -- The three new builtin layers: `sizeof`/`lenof` over kernel
 -- places (minus bare type words), `aligned` over level-4
@@ -2192,6 +2202,7 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
         | alt x => simp [sizeofNeu] at hlen
         | ergebnis => simp [sizeofNeu] at hlen
         | why g f => simp [sizeofNeu] at hlen
+        | ext xk xn xs => simp [sizeofNeu] at hlen
     · cases e with
       | lit m => simp [lenofNeu] at hsz
       | float s => simp [lenofNeu] at hsz
@@ -2222,6 +2233,7 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
       | alt x => simp [lenofNeu] at hsz
       | ergebnis => simp [lenofNeu] at hsz
       | why g f => simp [lenofNeu] at hsz
+      | ext xk xn xs => simp [lenofNeu] at hsz
   · cases e with
     | lit m => simp [alignedNeu] at hnew
     | float s => simp [alignedNeu] at hnew
@@ -2255,6 +2267,7 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
     | alt x => simp [alignedNeu] at hnew
     | ergebnis => simp [alignedNeu] at hnew
     | why g f => simp [alignedNeu] at hnew
+    | ext xk xn xs => simp [alignedNeu] at hnew
 
 -- Bridge for the builtins predicate (via lane 161's shape
 -- equations `gut_sizeof_one`, `gut_lenof_one`,
@@ -2298,6 +2311,7 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
         | alt x => simp [sizeofNeu] at hlen
         | ergebnis => simp [sizeofNeu] at hlen
         | why g f => simp [sizeofNeu] at hlen
+        | ext xk xn xs => simp [sizeofNeu] at hlen
     · cases e with
       | lit m => simp [lenofNeu] at hsz
       | float s => simp [lenofNeu] at hsz
@@ -2330,6 +2344,7 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
       | alt x => simp [lenofNeu] at hsz
       | ergebnis => simp [lenofNeu] at hsz
       | why g f => simp [lenofNeu] at hsz
+      | ext xk xn xs => simp [lenofNeu] at hsz
   · cases e with
     | lit m => simp [alignedNeu] at hnew
     | float s => simp [alignedNeu] at hnew
@@ -2365,6 +2380,7 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
     | alt x => simp [alignedNeu] at hnew
     | ergebnis => simp [alignedNeu] at hnew
     | why g f => simp [alignedNeu] at hnew
+    | ext xk xn xs => simp [alignedNeu] at hnew
 
 -- Level-5 goal: every `gutEmb` tree parses back from its
 -- printed tokens with `brennstoff` fuel.

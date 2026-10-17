@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Coverage matrix of the Lean parser (Track P, `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a).
 
-One row per EBNF rule of `dokumente/SYNTAX.md` (189 defined rules), four columns, one measured column.
+One row per EBNF rule of `dokumente/SYNTAX.md` (190 defined rules), four columns, one measured column.
 
   reader    S  structured and shape-faithful      P  structured, some spellings refused or a part dropped
             R  balanced words kept as raw text    X  no reader (refused / fails on the corpus)
@@ -101,10 +101,10 @@ RULES = [
     ("params", "type", "S", ".", ".", "U", None, ""),
     ("fnptrparams", "type", "R", ".", ".", ".", None, ""),
     ("fnptrparam", "type", "R", ".", ".", ".", None, ""),
-    ("ptrty", "type", "P", ".", ".", "U", r"\bptr\s*<", "one right word; `r + w` and `own @ x` read as a name"),
+    ("ptrty", "type", "S", ".", ".", "U", "\\bptr\\s*<", "rights kept as one string (`rw+own`, `own@h`)"),
     ("space", "type", "S", ".", ".", "U", None, ""),
-    ("rights", "type", "P", ".", ".", "U", None, ""),
-    ("right", "type", "P", ".", ".", "U", None, ""),
+    ("rights", "type", "S", ".", ".", "U", None, "`parseRechte`"),
+    ("right", "type", "S", ".", ".", "U", None, "`parseRechte`"),
     # --- section 4: expressions
     ("expr", "expr", "S", "E", "P", "U", None, "`SExpr`; `druckToks`, `parse_druck_*` for `gutKern`..`gutEmb`"),
     ("orexpr", "expr", "S", "E", "P", "U", None, ""),
@@ -115,9 +115,9 @@ RULES = [
     ("mulexpr", "expr", "S", "E", "P", "U", None, ""),
     ("unary", "expr", "S", "E", "P", "U", None, ""),
     ("fnvalue", "expr", "S", "E", "P", ".", r"&\s*[A-Za-z_]", "`fnwert`"),
-    ("primary", "expr", "P", "E", "P", "U", None, "no string primary, no `count`"),
-    ("stringlit", "expr", "X", ".", ".", ".", r"=\s*\"|\(\s*\"", "no `SExpr` constructor"),
-    ("countexpr", "expr", "X", ".", ".", ".", r"\bcount\s+\w+\s+in\b", ""),
+    ("primary", "expr", "S", "E", "P", "U", None, "string literal and `count` read; both `ext`"),
+    ("stringlit", "expr", "S", ".", ".", ".", r'=\s*"|\(\s*"', "`ext .text`"),
+    ("countexpr", "expr", "S", ".", ".", ".", "\\bcount\\s+\\w+\\s+in\\b", "`ext .count`"),
     ("reasonval", "expr", "S", "E", "P", ".", r"\b[A-Z]\w*::[A-Z]\w*", "`SExpr.why`"),
     ("optionexpr", "expr", "S", "E", "P", ".", r"\b(Some|None)\b", "`ruf \"Some\"`"),
     ("paren", "expr", "S", "E", "P", "U", None, ""),
@@ -130,16 +130,16 @@ RULES = [
     ("placesuffix", "expr", "S", "E", "P", "U", None, ""),
     ("placelist", "expr", "S", "E", "P", "U", None, ""),
     # --- section 5: predicates
-    ("pred", "pred", "P", "E", "P", "U", None, "an `SExpr`; the quantified forms have no shape"),
+    ("pred", "pred", "S", "E", "P", "U", None, "`parsePred`; forms outside the core ride `ext`"),
     ("orpred", "pred", "S", "E", "P", "U", None, ""),
     ("andpred", "pred", "S", "E", "P", "U", None, ""),
-    ("notpred", "pred", "P", "E", "P", "U", r"=>", "`=>` has no shape"),
-    ("atompred", "pred", "P", "E", "P", "U", None, ""),
+    ("notpred", "pred", "S", "E", "P", "U", "=>", "`=>` is `ext .imp`"),
+    ("atompred", "pred", "S", "E", "P", "U", None, ""),
     ("heldpred", "pred", "S", "E", "P", "U", r"\bHeld\s*\(", "rides `ruf \"Held\"`"),
-    ("quant", "pred", "X", ".", ".", ".", r"\b(forall|exists)\s", "refused: `reserved head forall` (12 files)"),
-    ("domain", "pred", "X", ".", ".", ".", r"\b(slots\s+of|descendants\s+of|ancestors\s+of|queue\s|elems\s+of|mappings\s+of)\b", ""),
-    ("member", "pred", "X", ".", ".", ".", None, ""),
-    ("reach", "pred", "X", ".", ".", ".", r"\breaches\b", ""),
+    ("quant", "pred", "S", ".", ".", ".", "\\b(forall|exists)\\s", "`SExpr.ext .all/.any` (layout at `XKind`); no printer: `ext` has no spelling in `druckToks`"),
+    ("domain", "pred", "S", ".", ".", ".", "\\b(slots\\s+of|descendants\\s+of|ancestors\\s+of|queue\\s|elems\\s+of|mappings\\s+of)\\b", "the eight domains, as names and place operands of `ext`"),
+    ("member", "pred", "S", ".", ".", ".", None, "`ext .mem`"),
+    ("reach", "pred", "S", ".", ".", ".", "\\breaches\\b", "`ext .reach`"),
     ("predlist", "pred", "S", ".", ".", "U", None, ""),
     # --- section 6: function declarations
     ("fndecl", "fn", "S", ".", ".", "U", r"\bfn\s+[a-z_A-Z]", "`FnSig` + `SAnw`; elab: `impl fn` only"),
@@ -175,6 +175,7 @@ RULES = [
     ("growstmt", "stmt", "S", ".", ".", ".", "^\\s*grow\\s", "`SAnw.grow`"),
     ("freestmt", "stmt", "S", ".", ".", ".", "^\\s*free\\s", "`SAnw.free`"),
     ("childstmt", "stmt", "S", ".", ".", ".", "^\\s*child\\s*\\{", "`SAnw.child`"),
+    ("startstmt", "stmt", "S", ".", ".", ".", "^\\s*start\\s*\\{", "`SAnw.start`; written into SYNTAX.md 2026-10-17"),
     ("libcall", "stmt", "R", ".", ".", ".", r"@\s*\w+\s*#", "region skipped balanced"),
     ("libregion", "stmt", "R", ".", ".", ".", None, ""),
     ("translatordecl", "stmt", "S", ".", ".", ".", r"\btranslator\s", "`uebersetzerT`"),
@@ -292,7 +293,7 @@ def main(argv):
         rows.append((rule, grp, rd, pr, rt, el, n, note))
     names = [r[0] for r in RULES]
     distinct = len(set(names))
-    assert distinct == 189, distinct
+    assert distinct == 190, distinct
     if md:
         print("| rule | group | reader | printer | rtrip | elab | corpus files | note |")
         print("|---|---|---|---|---|---|---|---|")
@@ -308,7 +309,7 @@ def main(argv):
         for r in rows:
             c[r[idx]] = c.get(r[idx], 0) + 1
         cnt[key] = c
-    print(f"rules: {len(rows)} rows, {distinct} distinct rule names (SYNTAX.md defines 189; `int` is defined twice)")
+    print(f"rules: {len(rows)} rows, {distinct} distinct rule names (SYNTAX.md defines 190; `int` is defined twice)")
     for k, c in cnt.items():
         print(f"{k:8}", ", ".join(f"{a}={b}" for a, b in sorted(c.items())))
     full = sum(1 for r in rows if r[2] == "S" and r[3] == "E" and r[4] == "P" and r[5] == "U")

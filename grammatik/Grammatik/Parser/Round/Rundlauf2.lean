@@ -220,6 +220,7 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
   | alt x => simp [gutKern] at h
   | ergebnis => simp [gutKern] at h
   | why g f => simp [gutKern] at h
+  | ext xk xn xs => simp [gutKern] at h
 theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
     gutKernPlatz p = true → gutPlatz p = true := by
   intro p h
@@ -253,6 +254,7 @@ theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
   | alt x => simp [gutKernPlatz] at h
   | ergebnis => simp [gutKernPlatz] at h
   | why g f => simp [gutKernPlatz] at h
+  | ext xk xn xs => simp [gutKernPlatz] at h
 end
 
 -- The round-trip invariant at size bound `n`, restricted to
@@ -735,6 +737,7 @@ theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
   | alt x => simp [gutKern] at hgx
   | ergebnis => simp [gutKern] at hgx
   | why g f => simp [gutKern] at hgx
+  | ext xk xn xs => simp [gutKern] at hgx
 
 -- Atom towers, one per remaining leaf shape: the `parsePrimary`
 -- leg (concrete head) plus the `parseUnary` fall-through (head is
@@ -2064,6 +2067,7 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | alt x => simp [gutKernPlatz] at hg
     | ergebnis => simp [gutKernPlatz] at hg
     | why g f => simp [gutKernPlatz] at hg
+    | ext xk xn xs => simp [gutKernPlatz] at hg
 
 -- Suffix chains through `parseSuffixe` over kernel trees:
 -- lane 161's `suff_rund` with index payloads parsed through
@@ -2310,6 +2314,7 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2365,6 +2370,7 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2420,6 +2426,7 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2475,6 +2482,7 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 -- The `bin "*"` primary leg from a star-inner leg: word
 -- for word the `+` leg with the spelling swapped.
@@ -2628,6 +2636,7 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2683,6 +2692,7 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 -- The `parseUnary` step: no `ruhig` premise (loops never see
 -- the tail here), so atoms prove their fall-through legs
@@ -2886,6 +2896,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 -- The `parsePrimary` step: no `ruhig` premise (suffixes never
 -- see loop operators), prefix trees vacuous by `primFrei`.
@@ -2975,6 +2986,7 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
+  | ext xk xn xs => simp [gutKern] at hg
 
 -- The joint invariant by size induction: base cases are
 -- vacuous (every tree has size at least one, every pair at

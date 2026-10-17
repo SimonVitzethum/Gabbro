@@ -557,7 +557,7 @@ bodies of slot writes, direct calls, a trailing return. Everything else is an ex
 
 **Coverage of the Lean parser, measured 2026-10-17** (`Parser/Cover/Census.lean`, matrix in
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9b): the parser now lives in `Parser/{Lex,Expr,Stmt,Item,Round,Elab,Cover}`;
-153 of the 170 `beispiele/` files parse as a whole (116 before), 9 elaborate. New readers: current `syscall`
+all 170 `beispiele/` files parse as a whole (116 before), 9 elaborate. New readers: current `syscall`
 grammar (`via`, `costs`, numbered `errors`, `stack`), `syscall V;`, `target`, lock `invariant`, `arena max/pb/blw`,
 `static aligned` and initialiser lists, nested const arrays, `string max N`, `entry fn(..)`, typed `let`,
 `reset .. at .. count`, `grow`, `free`, `child`, `start { }`. Still missing: predicate forms, string literals and
