@@ -646,10 +646,6 @@ fn gname(n: &str) -> String {
     format!("@\"{}\"", n.replace('"', ""))
 }
 
-/// Flach wie beim C-Erzeuger: Module schachteln, Symbole nicht.
-fn defname(n: &str) -> String {
-    n.to_string()
-}
 
 /// Global-Teil (`M` + `bereit` → `@"M.bereit"` — Punkt IN den Anführungen).
 fn gteil(n: &str, teil: &str) -> String {
@@ -2745,7 +2741,7 @@ fn senke_ruf(k: &mut Koerper, r: &Ruf, span: Span) -> Option<Wert> {
         Some(_) => "void".to_string(),
         None => "void".to_string(),
     };
-    let ptexts: Vec<String> = sig.params.iter().map(|(t, _)| t.text()).collect();
+    let _ptexts: Vec<String> = sig.params.iter().map(|(t, _)| t.text()).collect();
     match &sig.ret {
         Some((rt, _)) if *rt != LlTyp::Void => {
             let t = k.tmp();
@@ -4859,14 +4855,6 @@ fn sammle_tabelle(s: &mut Senke, t: &Tabelle, span: Span) {
     let _ = &t.slot;
 }
 
-fn slot_typ_text(s: &mut Senke, felder: &[(String, TypExpr)]) -> Option<String> {
-    let mut teile = Vec::new();
-    for (_, ft) in felder {
-        let (ll, _) = senke_typ(s, ft)?;
-        teile.push(ll.text());
-    }
-    Some(format!("{{ {} }}", teile.join(", ")))
-}
 
 fn sammle_arena(s: &mut Senke, a: &ArenaDecl, span: Span) {
     let lo = match konst_u64(s, &a.lo) {
@@ -5735,25 +5723,7 @@ fn vergebe_emitnamen(s: &mut Senke) {
     }
 }
 
-/// Rufer-Name zum Pfad (voll gewinnt, kurz fällt zurück).
-fn emitname_fuer(s: &Senke, p: &Pfad) -> String {
-    let voll = p.text();
-    if let Some(e) = s.emitnamen.get(&voll) {
-        return e.clone();
-    }
-    kurzname(p)
-}
 
-/// Signatur zum Pfad (voll gewinnt, kurz fällt zurück).
-fn sig_fuer<'b>(s: &'b Senke, p: &Pfad) -> Option<(String, &'b FnSig)> {
-    let voll = p.text();
-    if let Some(sig) = s.fns.get(&voll) {
-        let e = s.emitnamen.get(&voll).cloned().unwrap_or_else(|| kurzname(p));
-        return Some((e, sig));
-    }
-    let kurz = kurzname(p);
-    s.fns.get(&kurz).map(|sig| (s.emitnamen.get(&voll).cloned().unwrap_or(kurz), sig))
-}
 
 /// Parametertext ohne Namen (`i32 noundef`, für `declare`).
 fn param_text(t: &LlTyp, eigen: bool) -> String {
@@ -8491,31 +8461,6 @@ fn tbaa_tag(s: &mut Senke, td: u32) -> u32 {
     nr
 }
 
-/// Struct-Pfad-Knoten für ein Feld: `!{!"feld", !struct, offset}`.
-/// Die Wurzel und der Struct-Knoten entstehen bei Bedarf.
-fn tbaa_pfad_knoten(s: &mut Senke, struktur: &str, feld: &str, offset: u64) -> Option<u32> {
-    if let Some(nr) = s.tbaa_pfad.get(&(struktur.to_string(), feld.to_string())) {
-        return Some(*nr);
-    }
-    let wurzel = tbaa_wurzel(s);
-    let struct_nr = match s.tbaa_struct.get(struktur) {
-        Some(nr) => *nr,
-        None => {
-            let def = format!("!{{!\"{struktur}\", !{wurzel}, i64 0}}");
-            let nr = s.meta_nr;
-            s.meta_nr += 1;
-            s.meta_knoten.insert(nr, def);
-            s.tbaa_struct.insert(struktur.to_string(), nr);
-            nr
-        }
-    };
-    let def = format!("!{{!\"{feld}\", !{struct_nr}, i64 {offset}}}");
-    let nr = s.meta_nr;
-    s.meta_nr += 1;
-    s.meta_knoten.insert(nr, def);
-    s.tbaa_pfad.insert((struktur.to_string(), feld.to_string()), nr);
-    Some(nr)
-}
 
 /// Die TBAA-Wurzel (einmal je Einheit).
 fn tbaa_wurzel(s: &mut Senke) -> u32 {

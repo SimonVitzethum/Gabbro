@@ -26,86 +26,10 @@ fn fehlercodes(quelle: &str) -> Vec<String> {
         .collect()
 }
 
-/// The C-level noreturn proof: the emitted unit compiles under
-/// `cc -std=c11 -Wall -Wextra -Werror -O0 -c`. A `_Noreturn` body that
-/// returned, or a `return` in one, would fail here -- not hope.
-///
-/// **Not `-fsyntax-only`** (review G04, 2026-09-21): gcc's "'noreturn'
-/// function does return" is a middle-end warning and does not run under
-/// `-fsyntax-only`, so a bare `__asm__` falling off a `_Noreturn` function
-/// passed this proof with gcc and failed `gcc -c -O0 -Werror` (measured).
-fn cc_nimmt_an(c: &str, name: &str) {
-    let ziel = std::env::temp_dir().join(format!("gabbro-never-{name}.c"));
-    let objekt = std::env::temp_dir().join(format!("gabbro-never-{name}.o"));
-    std::fs::write(&ziel, c).expect("emitted C is writable");
-    let cc = std::process::Command::new("cc")
-        .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-O0", "-c", "-o"])
-        .arg(&objekt)
-        .arg(&ziel)
-        .output();
-    let _ = std::fs::remove_file(&objekt);
-    match cc {
-        Ok(r) => assert!(
-            r.status.success(),
-            "{name} lowers but `cc` refuses the product:\n{}\n{}",
-            ziel.display(),
-            String::from_utf8_lossy(&r.stderr)
-        ),
-        // A missing `cc` is a missing measurement, never a green one.
-        Err(e) => panic!("`cc` does not start ({e}) -- NOTHING measured"),
-    }
-    let _ = std::fs::remove_file(&ziel);
-}
 
-const ASM_OHNE_OUT: &str = "module t {\n\
-    divergent fn halt() -> never\n\
-    \x20   effects { diverges }\n\
-    \x20   costs   <= 1 ops\n\
-    \x20   arch    x86_64\n\
-    \x20   = asm {\n\
-    \x20       \"hlt\"\n\
-    \x20       clobbers { memory }\n\
-    \x20   };\n\
-    }\n";
 
-const ASM_NUR_IN: &str = "module t {\n\
-    static mut GERAET : u32 = 0;\n\
-    divergent fn halt(w : u8) -> never\n\
-    \x20   effects { writes GERAET, diverges }\n\
-    \x20   costs   <= 1 ops\n\
-    \x20   arch    x86_64\n\
-    \x20   = asm {\n\
-    \x20       \"outb %[w], $0x80\"\n\
-    \x20       in { w : \"a\" }\n\
-    \x20       clobbers { memory }\n\
-    \x20   };\n\
-    }\n";
 
-const ASM_MIT_OUT: &str = "module t {\n\
-    static mut GERAET : u32 = 0;\n\
-    divergent fn halt(w : u8) -> never\n\
-    \x20   effects { writes GERAET, diverges }\n\
-    \x20   costs   <= 1 ops\n\
-    \x20   arch    x86_64\n\
-    \x20   = asm {\n\
-    \x20       \"outb %[w], $0x80\"\n\
-    \x20       in { w : \"a\" }\n\
-    \x20       out { w : \"=a\" }\n\
-    \x20       clobbers { memory }\n\
-    \x20   };\n\
-    }\n";
 
-const ASM_MIT_RESULT: &str = "module t {\n\
-    divergent fn halt() -> never\n\
-    \x20   effects { diverges }\n\
-    \x20   costs   <= 1 ops\n\
-    \x20   arch    x86_64\n\
-    \x20   = asm {\n\
-    \x20       \"hlt\"\n\
-    \x20       out { result : \"=a\" }\n\
-    \x20       clobbers { memory }\n\
-    \x20   };\n\
-    }\n";
 
 const FOREVER_RUMPF: &str = "module t {\n\
     table K count 4 { slot { v : u32, } }\n\
@@ -122,41 +46,8 @@ const FOREVER_RUMPF: &str = "module t {\n\
     \x20   }\n\
     }\n}\n";
 
-const TAILCALL_RUMPF: &str = "module t {\n\
-    extern fn stop() -> never effects { diverges } costs <= 1 ops;\n\
-    impl fn ruf() -> never\n\
-    \x20   effects { diverges }\n\
-    \x20   costs   <= 2 ops\n\
-    {\n\
-    \x20   stop();\n\
-    }\n}\n";
 
-const NIE_MIT_GRUND: &str = "module t {\n\
-    reason Leer {\n\
-    \x20   Leer = 1 \"leer\"\n\
-    \x20   exhaustive\n\
-    }\n\
-    divergent fn halt() -> never or Leer\n\
-    \x20   effects { diverges }\n\
-    \x20   costs   <= 1 ops\n\
-    \x20   arch    x86_64\n\
-    \x20   = asm {\n\
-    \x20       \"hlt\"\n\
-    \x20       clobbers { memory }\n\
-    \x20   };\n\
-    }\n";
 
-const U64_ASM_OHNE_OUT: &str = "module t {\n\
-    static mut GERAET : u32 = 0;\n\
-    impl fn lesen() -> u64\n\
-    \x20   effects { reads GERAET }\n\
-    \x20   costs   <= 1 ops\n\
-    \x20   arch    x86_64\n\
-    \x20   = asm {\n\
-    \x20       \"mov $1, %eax\"\n\
-    \x20       clobbers { memory }\n\
-    \x20   };\n\
-    }\n";
 
 /// The three still-refused `forever` ends (`gift/1062`-`1064`): total
 /// `costs` over a loop with no total (K003), a returning watchdog (S006),

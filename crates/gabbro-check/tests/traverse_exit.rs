@@ -27,17 +27,7 @@ const KOPF: &str = "module t {\ntable W count 16 { slot { a : bool, } }\n\
     extern fn stop() -> never effects { diverges };\n\
     assume tickt \"The timer interrupts.\" falsifier sonde_tickt;\n";
 
-const KOPF_SPERRE: &str = "module t {\ntable W count 16 { slot { a : bool, } }\n\
-    lock L protects { W } rank 0 held <= 400 ops;\n\
-    extern fn stop() -> never effects { diverges };\n\
-    assume tickt \"The timer interrupts.\" falsifier sonde_tickt;\n";
 
-const KOPF_BAUM: &str = "module t {\ntable T count 8 {\n\
-    tree { parent p, child k, sibling g }\n\
-    slot { a : bool, p : option index into T, k : option index into T, \
-    g : option index into T, } }\n\
-    extern fn stop() -> never effects { diverges };\n\
-    assume tickt \"The timer interrupts.\" falsifier sonde_tickt;\n";
 
 /// The BINDER of a `traverse` is its label (SPRACHE-EFFIZIENZ #19): `leave i;` / `next i;`
 /// inside a `by unvisited` walk are clean at the checker. (The emitter has no label for a

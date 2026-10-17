@@ -183,6 +183,7 @@ import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
 import Grammatik.Bausteine.Schablonen.SchablonenT5
 import Grammatik.Bausteine.Schablonen.SchablonenT5Sem
+import Grammatik.Bausteine.Schablonen.ZeugeTorModell
 import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc
 import Grammatik.Bausteine.Schablonen.SchablonenArena
 import Grammatik.Bausteine.Schablonen.SchablonenFaden
@@ -351,7 +352,6 @@ import Grammatik.Speichermodell.Sprungtafel
 import Grammatik.Speichermodell.Fenster
 import Grammatik.Speichermodell.Zaehlen
 import Grammatik.Speichermodell.OptBereich
-import Grammatik.Korrespondenz.Zeugnis.Zertifikate
 import Grammatik.Speichermodell.Atomar.Atomar
 import Grammatik.Speichermodell.Atomar.AtomarZeuge
 import Grammatik.Speichermodell.Maschine.RMW
@@ -383,7 +383,6 @@ import Grammatik.Logik.Fortschritt.FolgeBeweis
 import Grammatik.Logik.Fortschritt.FolgeZeuge
 import Grammatik.Zielsatz.Eigenschaften.FolgeZiel
 import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
-import Grammatik.Zielsatz.Atomar.AtomarZertifikatZeuge
 import Grammatik.Speichermodell.Maschine.ZaehlerW
 
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
