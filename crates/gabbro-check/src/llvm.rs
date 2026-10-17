@@ -94,6 +94,8 @@ mod stapeltor;
 mod eintritte;
 mod publizieren;
 mod leser_schreiber;
+mod portraum;
+mod assembler;
 #[cfg(test)]
 mod test_tools;
 
@@ -634,6 +636,10 @@ struct Senke<'a> {
     /// Qualified names of the functions whose WRITABLE pointer parameters carry `noalias`
     /// beyond `own` (`noalias_innen`).
     noalias_innen: BTreeSet<String>,
+    /// `asm`-Rümpfe (Vollname → fertige Funktion, `llvm/assembler.rs`).
+    asm_defs: BTreeMap<String, assembler::Def>,
+    /// `asm`-Rümpfe für die andere Maschine (Vollname → Kurzname, Maschine, Stelle).
+    fremde_asm: BTreeMap<String, (String, String, Span)>,
 }
 
 fn gname(n: &str) -> String {
@@ -1650,6 +1656,9 @@ struct Adresse {
     slot: Option<(String, String)>,
     /// Rekordfeld hinter dieser Adresse (Rekordname, Feld) — für Struct-Pfad-TBAA.
     rekord: Option<(String, String)>,
+    /// Portraum (`device … at port`): `addr` ist eine `i16`-PORTNUMMER, kein Zeiger; Zugriff
+    /// nur über `in`/`out` (`llvm/portraum.rs`). Jede andere Verwendung wird beim Namen verweigert.
+    port: bool,
 }
 
 fn atomar_ordnung(o: &Ordnung) -> &'static str {
@@ -1726,11 +1735,16 @@ fn senke_expr_mit(k: &mut Koerper, e: &Expr, _erwartet: Option<(&LlTyp, Zeichen)
                     return Some(Wert { typ, zeichen: Zeichen::Egal, text, form: None });
                 }
             }
-            let p = adresse_von_ort(k, o)?;
+            let p = adresse_von_ort_mit(k, o, true)?;
             if let Some((lo, breite)) = p.bit {
-                let w = k.tmp();
                 let al = nat_align(&p.ll);
-                k.zeile(&format!("{w} = load volatile {}, ptr {}, align {al}", p.ll.text(), p.addr));
+                let w = if p.port {
+                    portraum::lesen(k, &p.addr, &p.ll)
+                } else {
+                    let w = k.tmp();
+                    k.zeile(&format!("{w} = load volatile {}, ptr {}, align {al}", p.ll.text(), p.addr));
+                    w
+                };
                 let bw = p.ll.breite().unwrap_or(32);
                 // Verschieben, schneiden (nur bei echter Verengung), auf i32 heben.
                 let s1 = if lo == 0 {
@@ -1755,6 +1769,10 @@ fn senke_expr_mit(k: &mut Koerper, e: &Expr, _erwartet: Option<(&LlTyp, Zeichen)
                     klein
                 };
                 return Some(Wert { typ: LlTyp::Int(32), zeichen: Zeichen::U, text: t32, form: None });
+            }
+            if p.port {
+                let t = portraum::lesen(k, &p.addr, &p.ll);
+                return Some(Wert { typ: p.ll, zeichen: p.zeichen, text: t, form: p.form });
             }
             let t = k.tmp();
             let al = nat_align(&p.ll);
@@ -2190,6 +2208,13 @@ fn feld_nummer(s: &Senke, rekord: &str, feld: &str) -> Option<(usize, TypExpr)> 
 }
 
 fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
+    adresse_von_ort_mit(k, ort, false)
+}
+
+/// `port_ok`: der Aufrufer liest oder schreibt den Ort selbst (`portraum.rs`); jeder andere
+/// Gebrauch eines Portregisters (Adresse nehmen, `+=`, Atomar, Zeiger) wird verweigert.
+fn adresse_von_ort_mit(k: &mut Koerper, ort: &Ort, port_ok: bool) -> Option<Adresse> {
+    let mut port = false;
     let (mut ptr, mut ll, mut z, mut form, mut atomar, fluechtig) = basis_adresse(k, &ort.basis.text, ort.span)?;
     let fluechtig = fluechtig || ist_fluechtig(k.s, &form);
     // Arena-Basis (Elemente liegen hinter der Laufzeit-Basis, nicht im Global).
@@ -2254,6 +2279,28 @@ fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
                 // Geräteregister: Form nennt das Gerät (Zeiger oder Wert vom Konstruktor).
                 if let Some(dev) = geraet_hinter(k.s, &form) {
                     match k.s.geraete.get(&dev).and_then(|rs| rs.iter().find(|r| r.name == f.text).cloned()) {
+                        Some(reg) if reg.port => {
+                            if !port_ok {
+                                weigere(
+                                    k.s,
+                                    "Y102",
+                                    suffix_span(suffix),
+                                    format!("port register {}.{} used as an address: a port is reached by `in`/`out` only", dev, reg.name),
+                                );
+                                return None;
+                            }
+                            let cur = geladen.clone().unwrap_or_else(|| ptr.clone());
+                            let nr = portraum::portnummer(k, &ll, &cur, reg.versatz, suffix_span(suffix))?;
+                            ptr = nr.clone();
+                            geladen = Some(nr);
+                            ll = reg.ll.clone();
+                            z = reg.zeichen;
+                            form = None;
+                            atomar = None;
+                            port = true;
+                            dev_reg = Some((dev, reg.name.clone()));
+                            continue;
+                        }
                         Some(reg) => {
                             let cur = geladen.clone().unwrap_or_else(|| ptr.clone());
                             // Griff laden (Zeiger) oder wandeln (Basisadresse als Zahl —
@@ -2565,7 +2612,7 @@ fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
             }
         }
     }
-    Some(Adresse { addr: geladen.unwrap_or(ptr), ll, zeichen: z, form, atomar, fluechtig, bit, slot: slot_feld, rekord: rekord_feld })
+    Some(Adresse { addr: geladen.unwrap_or(ptr), ll, zeichen: z, form, atomar, fluechtig, bit, slot: slot_feld, rekord: rekord_feld, port })
 }
 
 fn suffix_span(s: &OrtSuffix) -> Span {
@@ -3379,10 +3426,16 @@ fn senke_let_sonst(k: &mut Koerper, l: &LetSonst, span: Span) {
 }
 
 fn senke_zuweisung(k: &mut Koerper, z: &Zuweisung, span: Span) {
-    let p = match adresse_von_ort(k, &z.ziel) {
+    let p = match adresse_von_ort_mit(k, &z.ziel, true) {
         Some(p) => p,
         None => return,
     };
+    if p.port && !matches!(z.op, ZuwOp::Setzt) {
+        // `in` und `out` sind zwei Befehle ohne etwas dazwischen, das ein Ort sein könnte
+        // (SPRACHE.md; `gift/654` im Prüfer): die Verbundzuweisung hat hier keine Form.
+        weigere(k.s, "Y103", span, "compound assignment at a port register: `in` and `out` are two instructions".to_string());
+        return;
+    }
     match z.op {
         ZuwOp::Setzt => {
             // Bitfeld-Speicher: lesen-modifizieren-schreiben (flüchtig beidseitig).
@@ -3392,11 +3445,16 @@ fn senke_zuweisung(k: &mut Koerper, z: &Zuweisung, span: Span) {
                     None => return,
                 };
                 let bw = p.ll.breite().unwrap_or(32);
-                let w = k.tmp();
                 let al = nat_align(&p.ll);
-                k.zeile(&format!("{w} = load volatile {}, ptr {}, align {al}", p.ll.text(), p.addr));
+                let w = if p.port {
+                    portraum::lesen(k, &p.addr, &p.ll)
+                } else {
+                    let w = k.tmp();
+                    k.zeile(&format!("{w} = load volatile {}, ptr {}, align {al}", p.ll.text(), p.addr));
+                    w
+                };
                 let maske: u128 = if breite >= 128 { u128::MAX } else { (1u128 << breite) - 1 };
-                let geloeschte_maske = !(maske << lo);
+                let geloeschte_maske = !(maske << lo) & ((1u128 << bw) - 1);
                 let vv = match angleiche(k, v, &LlTyp::Int(bw), Zeichen::U) {
                     Some(w) => w,
                     None => {
@@ -3412,13 +3470,25 @@ fn senke_zuweisung(k: &mut Koerper, z: &Zuweisung, span: Span) {
                 k.zeile(&format!("{behalten} = and i{bw} {w}, {geloeschte_maske}"));
                 let neu = k.tmp();
                 k.zeile(&format!("{neu} = or i{bw} {behalten}, {verschoben}"));
-                k.zeile(&format!("store volatile {} {neu}, ptr {}, align {al}", p.ll.text(), p.addr));
+                if p.port {
+                    portraum::schreiben(k, &p.addr, &p.ll, &neu);
+                } else {
+                    k.zeile(&format!("store volatile {} {neu}, ptr {}, align {al}", p.ll.text(), p.addr));
+                }
                 return;
             }
             let v = match senke_expr_mit(k, &z.wert, Some((&p.ll, p.zeichen))) {
                 Some(v) => v,
                 None => return,
             };
+            if p.port {
+                let w = match angleiche_mit_weigere(k, v, &p.ll, span) {
+                    Some(w) => w,
+                    None => return,
+                };
+                portraum::schreiben(k, &p.addr, &p.ll, &w.text);
+                return;
+            }
             // `bool`-Zelle als Byte: `zext` an der Grenze (trunc beim Laden).
             let (text, zugriff) = if p.ll == LlTyp::Int(8) && matches!(p.form.clone().map(|f| grundform(k.s, &f)), Some(TypExpr::Bool(_))) {
                 let w = angleiche(k, v, &LlTyp::Int(1), Zeichen::Egal).and_then(|w| {
@@ -4648,7 +4718,11 @@ fn sammle(s: &mut Senke, baum: &Programm, bau: crate::gatter::Bau) {
                     it.span,
                     format!(
                         "boot {}: a mode-ladder sequence of axiom steps (control registers, descriptor tables) \
-                         has no body to lower; the start state and the steps are the program's own gates",
+                         has no body to lower. The Lean model reads `boot` as a FOREIGN body (`Ax`, \
+                         `Syntax.lean` section 14) and its steps as axiom calls, register reads \
+                         (`bootinfo_retten(ebx)`) and a stack-pointer assignment with no instruction in \
+                         the source: lowering them would invent semantics the language and the model do \
+                         not state. The start state and the steps are the program's own gates",
                         b.name.text
                     ),
                 );
@@ -4661,7 +4735,9 @@ fn sammle(s: &mut Senke, baum: &Programm, bau: crate::gatter::Bau) {
                     it.span,
                     format!(
                         "entrust {}: the handover names a space and a register contract but no address to \
-                         transfer control to; the jump to unknown code has no sound lowering here",
+                         transfer control to, and no form of the source ever performs it (the Lean model reads \
+                         `entrust` as a FOREIGN body, `Ax`, `Syntax.lean` section 14); the jump to unknown code \
+                         has no sound lowering here",
                         t.name.text
                     ),
                 );
@@ -4972,10 +5048,8 @@ fn sammle_funktion(s: &mut Senke, f: &FnDecl, voll: &str, span: Span) {
             s.plaene.insert(schluessel_fuer(voll, &kurz, s), FnPlan::Fertig { modul: s.modul.clone() });
             return;
         }
-        FnRumpf::Asm(_) => {
-            weigere(s, "Y102", span, format!("assembly body of {kurz}"));
-            s.tote_items.insert(kurz);
-            s.tote_items.insert(voll.to_string());
+        FnRumpf::Asm(a) => {
+            assembler::sammle(s, f, a, voll, span);
             return;
         }
         FnRumpf::Keiner => {
@@ -5722,6 +5796,9 @@ fn emit_funktionen(s: &mut Senke) {
     for (voll, plan) in plaene {
         match plan {
             FnPlan::Fertig { .. } => {
+                if assembler::emittiere(s, &voll) {
+                    continue;
+                }
                 // Extern: Deklaration (fremde ABI — kein Körper, keine Annahmen).
                 if let Some(sig) = s.fns.get(&voll).cloned() {
                     if sig.extern_ {
@@ -6024,6 +6101,8 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         meta_nr: 0,
         eng_modus: true,
         noalias_innen: BTreeSet::new(),
+        asm_defs: BTreeMap::new(),
+        fremde_asm: BTreeMap::new(),
     }
 }
 
@@ -6039,6 +6118,7 @@ pub fn emittiere_llvm_mit_beleg(
     s.umg = crate::umgebung::Umgebung::sammle(baum);
     s.noalias_innen = noalias_innen(baum, &s.umg);
     sammle(&mut s, baum, bau);
+    assembler::fremde_pruefen(&mut s);
     vergebe_emitnamen(&mut s);
     baue_rek_plan(&mut s);
     emit_globale(&mut s);
@@ -7338,6 +7418,8 @@ struct DevReg {
     ll: LlTyp,
     zeichen: Zeichen,
     felder: Vec<(String, u32, u32)>,
+    /// `device … at port`: das Register liegt im Portraum (`in`/`out`), nicht im Speicher.
+    port: bool,
 }
 
 fn sammle_device(s: &mut Senke, d: &Device, span: Span) {
@@ -7346,12 +7428,21 @@ fn sammle_device(s: &mut Senke, d: &Device, span: Span) {
     // would read RAM at the port number -- the old C-emitter defect (`gift/416`).
     // This backend has no `in`/`out` lowering (and aarch64 has no port space at all),
     // so the device is refused by name instead of lowered to a plausible wrong access.
-    if matches!(d.raum, Raum::Port) {
+    let port = matches!(d.raum, Raum::Port);
+    if port && (!d.baenke.is_empty() || d.mirrors.is_some()) {
+        weigere(s, "Y102", span, format!("device {} at port with banks or mirrors: no port-space lowering", d.name.text));
+        return;
+    }
+    if port && s.ziel.name != "x86_64" {
         weigere(
             s,
             "Y102",
             span,
-            format!("device {} at port: port-space access (in/out) has no lowering", d.name.text),
+            format!(
+                "device {} at port: the {} target has no port space (`in`/`out` are x86 instructions); \
+                 a port device is declarable under `arch x86_64` only",
+                d.name.text, s.ziel.name
+            ),
         );
         return;
     }
@@ -7371,6 +7462,15 @@ fn sammle_device(s: &mut Senke, d: &Device, span: Span) {
                 return;
             }
         };
+        if port && w > 32 {
+            weigere(
+                s,
+                "Y102",
+                span,
+                format!("port register {} of {w} bits: `in`/`out` stop at 32 bits", r.name.text),
+            );
+            return;
+        }
         let mut felder = Vec::new();
         for (fname, pos, _) in &r.felder {
             match pos {
@@ -7390,7 +7490,7 @@ fn sammle_device(s: &mut Senke, d: &Device, span: Span) {
                 },
             }
         }
-        regs.push(DevReg { name: r.name.text.clone(), versatz, ll: LlTyp::Int(w), zeichen: z, felder });
+        regs.push(DevReg { name: r.name.text.clone(), versatz, ll: LlTyp::Int(w), zeichen: z, felder, port });
         let _ = &r.umlaufend;
         let _ = &r.phasen;
         let _ = &r.requires;
@@ -7480,23 +7580,33 @@ fn senke_transition(
     }
     let h = senke_expr(k, &r.argumente[0])?;
     // Griff: Zeiger oder Basisadresse als Zahl.
-    let roh = match &h.typ {
-        LlTyp::Ptr => h.text.clone(),
-        LlTyp::Int(_) => {
-            let w = angleiche(k, h, &LlTyp::Int(64), Zeichen::U)?;
-            let t = k.tmp();
-            k.zeile(&format!("{t} = inttoptr i64 {} to ptr", w.text));
-            t
-        }
-        _ => {
-            weigere(k.s, "Y104", span, "transition on odd handle".to_string());
-            return None;
-        }
-    };
     let regs = match k.s.geraete.get(dev).cloned() {
         Some(x) => x,
         None => {
             weigere(k.s, "Y104", span, format!("unknown device {dev}"));
+            return None;
+        }
+    };
+    let ist_port = regs.iter().any(|x| x.port);
+    let roh = match &h.typ {
+        LlTyp::Ptr if ist_port => {
+            let t = k.tmp();
+            k.zeile(&format!("{t} = ptrtoint ptr {} to i64", h.text));
+            t
+        }
+        LlTyp::Ptr => h.text.clone(),
+        LlTyp::Int(_) => {
+            let w = angleiche(k, h, &LlTyp::Int(64), Zeichen::U)?;
+            if ist_port {
+                w.text
+            } else {
+                let t = k.tmp();
+                k.zeile(&format!("{t} = inttoptr i64 {} to ptr", w.text));
+                t
+            }
+        }
+        _ => {
+            weigere(k.s, "Y104", span, "transition on odd handle".to_string());
             return None;
         }
     };
@@ -7509,14 +7619,24 @@ fn senke_transition(
             }
         };
         let breite = dr.ll.breite().unwrap_or(32);
-        let off = k.tmp();
-        k.zeile(&format!("{off} = getelementptr i8, ptr {roh}, i64 {}", dr.versatz));
-        let bc = k.tmp();
-        k.zeile(&format!("{bc} = getelementptr i8, ptr {off}, i64 0"));
+        // Die Adresse des Schritts: Speicher (`ptr`) oder Portnummer (`i16`).
+        let bc = if dr.port {
+            portraum::nummer_aus_zahl(k, &roh, dr.versatz)
+        } else {
+            let off = k.tmp();
+            k.zeile(&format!("{off} = getelementptr i8, ptr {roh}, i64 {}", dr.versatz));
+            let bc = k.tmp();
+            k.zeile(&format!("{bc} = getelementptr i8, ptr {off}, i64 0"));
+            bc
+        };
         if feld.is_empty() {
             // Ganzes Register schreiben (flüchtig).
             let n = falte_int(*nach, breite);
-            k.zeile(&format!("store volatile i{breite} {n}, ptr {bc}, align {}", nat_align(&dr.ll)));
+            if dr.port {
+                portraum::schreiben(k, &bc, &dr.ll, &n);
+            } else {
+                k.zeile(&format!("store volatile i{breite} {n}, ptr {bc}, align {}", nat_align(&dr.ll)));
+            }
             continue;
         }
         // Bitfeld: lesen, Feld ersetzen, schreiben (`von` hält der Prüfer).
@@ -7528,16 +7648,25 @@ fn senke_transition(
             }
         };
         let al = nat_align(&dr.ll);
-        let w = k.tmp();
-        k.zeile(&format!("{w} = load volatile i{breite}, ptr {bc}, align {al}"));
+        let w = if dr.port {
+            portraum::lesen(k, &bc, &dr.ll)
+        } else {
+            let w = k.tmp();
+            k.zeile(&format!("{w} = load volatile i{breite}, ptr {bc}, align {al}"));
+            w
+        };
         let maske: u128 = if br >= 128 { u128::MAX } else { (1u128 << br) - 1 };
-        let geloeschte: u128 = !(maske << lo);
+        let geloeschte: u128 = !(maske << lo) & ((1u128 << breite) - 1);
         let behalten = k.tmp();
         k.zeile(&format!("{behalten} = and i{breite} {w}, {geloeschte}"));
         let gesetzt = k.tmp();
         let n = falte_int((*nach & (maske as i128)) << lo, breite);
         k.zeile(&format!("{gesetzt} = or i{breite} {behalten}, {n}"));
-        k.zeile(&format!("store volatile i{breite} {gesetzt}, ptr {bc}, align {al}"));
+        if dr.port {
+            portraum::schreiben(k, &bc, &dr.ll, &gesetzt);
+        } else {
+            k.zeile(&format!("store volatile i{breite} {gesetzt}, ptr {bc}, align {al}"));
+        }
     }
     None
 }

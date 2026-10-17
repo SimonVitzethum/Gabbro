@@ -206,7 +206,7 @@ UNCERTIFIED	beispiele/gift/1427-opaque-ohne-llvm.gab	LG001	type Griff has no bod
 CERTIFIED	beispiele/gift/1428-sperre-ohne-llvm.gab	Grammatik.Zertifikat.G1428_sperre_ohne_llvm	chain=none
 UNCERTIFIED	beispiele/gift/1430-aligned-ohne-llvm.gab	LG003	expression in f has no G form
 UNCERTIFIED	beispiele/gift/1432-bool-match-ohne-llvm.gab	LG004	`match` in deute is not over a `tagged` value: the specification carries an `option` match as `Stmt.onOption` (with `Ty.opt`/`Expr.some`/`Expr.istSome`) and a reason match as `Stmt.onGrund`; this exporter builds neither
-UNCERTIFIED	beispiele/gift/1470-geraet-am-portraum-ohne-llvm.gab	LG001	device Com1 has no G form: a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`
+UNCERTIFIED	beispiele/gift/1470-geraet-am-portraum-ohne-aarch64.gab	LG001	device Com1 has no G form: a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`
 UNCERTIFIED	beispiele/gift/166-wachhund-nennt-nichts.gab	LG006	`retry` in f has no G form in this fragment
 UNCERTIFIED	beispiele/gift/194-cas-schleife-ohne-schranke.gab	LG004	`exchange` in hoch has no G form in this fragment
 UNCERTIFIED	beispiele/gift/195-descendants-ohne-tree.gab	LG002	field elter has no integer-range, bool or tagged form

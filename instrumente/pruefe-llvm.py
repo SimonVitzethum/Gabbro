@@ -7,6 +7,10 @@ Stages (a stage that cannot run is reported NICHT GEMESSEN and the run is not gr
   1. `cargo test --test llvm`: IR tests, refusals by name (Y101..Y106), model-coverage register
      (`teile/llvm-modelldeckung.py`), noalias rule, and the Lean certificate elaborating with
      plain `lean`.
+  3. Instruction text (`stufe_befehle`): hardware-only forms (`asm` bodies with `outb`/`invlpg`, the port
+     space's `in`/`out`) cannot run in user space, so `llc -filetype=obj` + `llvm-objdump -d` must show
+     the intended instructions. 4. The aarch64 exception entries RUN under `qemu-system-aarch64 -M virt`
+     (`teile/eintritt-a64-qemu.sh`: two `svc`, the generated stub, `eret`).
   2. End to end (`teile/baue-llvm.sh`): checker, IR, `opt -O3`, `llc`, `ld.lld`, static binary
      without INTERP/NEEDED, run on x86_64 natively and on aarch64 under qemu; both targets must
      return the SAME code, and it must be the expected one.
@@ -26,7 +30,16 @@ PROGRAMME = {
     "beispiele/1160-halde-mit-abtastung.gab": 42,
     "beispiele/1161-platz-freigeben.gab": 100,
     "beispiele/1162-echte-faeden.gab": 64,
+    "messung/llvm/assembler.gab": 42,
 }
+
+# hardware-only forms: (file, target, [(objdump pattern, what)]) -- the TEXT is checked, never the effect at a device
+BEFEHLE = [
+    ("beispiele/36-asm.gab", "x86_64", [(r"\boutb\s+%al, %dx", "outb"), (r"\bsyscall\b", "syscall")]),
+    ("beispiele/67-befehlsebene.gab", "x86_64", [(r"\binvlpg\b", "invlpg"), (r"\bsfence\b", "sfence"), (r"\bmfence\b", "mfence")]),
+    ("beispiele/65-port-space.gab", "x86_64", [(r"\binb\s+%dx, %al", "inb"), (r"\boutb\s+%al, %dx", "outb")]),
+    ("beispiele/60-annahme-mit-maschine.gab", "x86_64", [(r"\bmfence\b", "mfence")]),
+]
 
 
 def stufe_tests():
@@ -65,9 +78,51 @@ def stufe_ende_zu_ende():
     return ok
 
 
+def stufe_befehle():
+    fehlt = [t for t in ("opt", "llc", "llvm-objdump") if not shutil.which(t)]
+    if fehlt:
+        print(f"  3 befehle: NICHT GEMESSEN (fehlt: {', '.join(fehlt)})")
+        return None
+    tls = W / ".tmp" / "llvm-waechter"; tls.mkdir(parents=True, exist_ok=True)
+    gut = 0
+    for datei, ziel, muster in BEFEHLE:
+        name = pathlib.Path(datei).stem
+        ll, o = tls / f"{name}-{ziel}.befehle.ll", tls / f"{name}-{ziel}.befehle.o"
+        ok = False
+        p = subprocess.run([str(W / "target/debug/gabbro"), "llvm", f"--target={ziel}", datei], cwd=W, env=ENV, capture_output=True, text=True)
+        if p.returncode == 0:
+            ll.write_text(p.stdout)
+            a = subprocess.run(["opt", "-O3", str(ll), "-S", "-o", str(ll)], capture_output=True, text=True)
+            b = subprocess.run(["llc", "-O3", "-filetype=obj", str(ll), "-o", str(o)], capture_output=True, text=True)
+            if a.returncode == 0 and b.returncode == 0:
+                text = subprocess.run(["llvm-objdump", "-d", "--no-show-raw-insn", str(o)], capture_output=True, text=True).stdout
+                fehlend = [w for m, w in muster if not re.search(m, text)]
+                ok = not fehlend
+                if not ok: print(f"     {datei} [{ziel}]: im Objekt fehlt: {fehlend}")
+            else:
+                print(f"     {datei} [{ziel}]: opt/llc: {(a.stderr + b.stderr)[:300]}")
+        else:
+            print(f"     {datei} [{ziel}]: Erzeuger: {p.stderr[-300:]}")
+        gut += ok
+    ok = gut == len(BEFEHLE)
+    print(f"  3 befehle: {'ok' if ok else 'ROT'} ({gut} von {len(BEFEHLE)} Dateien: die Befehle stehen im Objekt; Wirkung am Gerät NICHT ausgeführt)")
+    return ok
+
+
+def stufe_eintritt_a64():
+    p = subprocess.run(["bash", str(W / "instrumente/teile/eintritt-a64-qemu.sh")], cwd=W, env=ENV, capture_output=True, text=True, timeout=600)
+    if p.returncode == 2:
+        print(f"  4 eintritt: NICHT GEMESSEN ({p.stderr.strip()[:120]})")
+        return None
+    ok = p.returncode == 0
+    print(f"  4 eintritt: {'ok' if ok else 'ROT'} (aarch64-Ausnahmen unter qemu-system-aarch64 -M virt, EL1)")
+    if not ok: print(p.stdout[-800:], p.stderr[-400:])
+    return ok
+
+
 def main():
     print("== Wächter 2: LLVM-Compiler ==")
-    erg = [stufe_tests(), stufe_ende_zu_ende()]
+    erg = [stufe_tests(), stufe_ende_zu_ende(), stufe_befehle(), stufe_eintritt_a64()]
     if False in erg: print("== LLVM: ROT =="); return 1
     if None in erg: print("== LLVM: TEILMESSUNG (nicht alles gemessen) =="); return 2
     print("== LLVM: GRUEN =="); return 0

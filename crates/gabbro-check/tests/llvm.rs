@@ -1002,3 +1002,218 @@ pub fn main() -> u64 effects { reads Z, locks shared L } costs <= 32 ops {
     let rest = l.find("popfq").unwrap();
     assert!(cli < ticket && ticket < leser && leser < rest, "Maske umschließt die Aufnahme:\n{l}");
 }
+
+// ---------------------------------------------------------------------------------------
+// `asm` bodies, the port space and the aarch64 exception entries (2026-10-17)
+// ---------------------------------------------------------------------------------------
+
+fn beispiel(datei: &str) -> String {
+    std::fs::read_to_string(wurzel().join(datei)).unwrap_or_else(|e| panic!("{datei}: {e}"))
+}
+
+/// **An `asm` body is a function whose body is ONE `call asm sideeffect`.** `beispiele/36`:
+/// `outb %[wert], %[tor]` with `wert : "a"` (a `u8`) and `tor : "d"` (a `u16`) becomes
+/// `outb $0, $1` over `{ax}`/`{dx}` (LLVM has no bare `a`/`d`), `$1` in `mov $1, %eax` becomes
+/// `$$1`, `result : "=a"` the output `={ax}`. On aarch64 the x86 bodies are refused BY NAME.
+#[test]
+fn asm_rumpf_ist_ein_inline_asm_nur_fuer_seine_maschine() {
+    let q = beispiel("36-asm.gab");
+    let ir = senke_ohne_fehler(&q, "36", &ZIEL_X86_64);
+    assert!(ir.contains("define void @\"ausgeben\"(i16 noundef %p0, i8 noundef %p1)"), "{ir}");
+    assert!(
+        ir.contains("call void asm sideeffect \"outb $0, $1\", \"{ax},{dx},~{memory}\"(i8 %p1, i16 %p0)"),
+        "Operanden nach der Zwangsfolge, nicht nach den Parametern:\n{ir}"
+    );
+    assert!(
+        ir.contains("%r = call i64 asm sideeffect \"mov $$1, %eax\\0Asyscall\", \"={ax},{di},{si},{dx},~{memory}\"(i64 %p0, i64 %p1, i64 %p2)"),
+        "{ir}"
+    );
+    let (_, codes) = senke(&q, "36", &ZIEL_AARCH64);
+    assert_eq!(fehler(&codes), vec!["Y102", "Y102"], "beide x86-Rümpfe fallen auf aarch64 benannt");
+}
+
+/// Two declarations of one function, one per `arch`, are the per-machine pair (like a gate's
+/// two `syscall` lines): each target takes the one that names it and the program lowers on both.
+#[test]
+fn asm_rumpf_paar_je_maschine_senkt_auf_beiden_zielen() {
+    let q = std::fs::read_to_string(wurzel().join("..").join("messung/llvm/assembler.gab")).expect("assembler.gab");
+    let x = senke_ohne_fehler(&q, "assembler", &ZIEL_X86_64);
+    let a = senke_ohne_fehler(&q, "assembler", &ZIEL_AARCH64);
+    assert!(x.contains("leaq"), "x86-Text:\n{x}");
+    assert!(a.contains("add $0, $1"), "aarch64-Text:\n{a}");
+    assert!(!x.contains("add $0, $1") && !a.contains("leaq"), "jedes Ziel schreibt nur den eigenen Text");
+}
+
+/// Constraints and operands with no 1:1 LLVM form fall by name instead of being counted wrongly.
+#[test]
+fn asm_rumpf_ohne_eins_zu_eins_form_faellt_benannt() {
+    let basis = |zwang: &str, text: &str| {
+        format!(
+            "module asmprobe {{
+pub static mut Z : u32 = 0;
+impl fn f(x : u64) -> u64
+    effects {{ writes Z }}
+    costs <= 1 ops
+    arch x86_64
+    = asm {{
+        \"{text}\"
+        in {{ x : \"{zwang}\" }}
+        out {{ result : \"=r\" }}
+        clobbers {{ memory }}
+    }};
+}}
+"
+        )
+    };
+    let ok = senke_ohne_fehler(&basis("r", "movq %[x], %[result]"), "p", &ZIEL_X86_64);
+    assert!(ok.contains("movq $1, $0") && ok.contains("\"=r,r,~{memory}\""), "{ok}");
+    for (zwang, text) in [("m", "movq %[x], %[result]"), ("0", "movq %[x], %[result]"), ("r", "movq %[y], %[result]")] {
+        let (_, codes) = senke(&basis(zwang, text), "p", &ZIEL_X86_64);
+        assert_eq!(fehler(&codes), vec!["Y102"], "{zwang} {text}");
+    }
+}
+
+/// **`device ... at port` is `in`/`out`** (`beispiele/65`): the width picks the instruction, the
+/// port number is `base + offset` in 16 bits (`i16`, `dx`), every access is `asm sideeffect` with
+/// `~{memory}` and none is a `load`/`store` at the number. On aarch64 the device falls for want
+/// of a port space.
+#[test]
+fn portraum_ist_in_und_out_und_sonst_nichts() {
+    let q = beispiel("65-port-space.gab");
+    let ir = senke_ohne_fehler(&q, "65", &ZIEL_X86_64);
+    assert!(ir.contains("asm sideeffect \"inb %dx, %al\", \"={al},{dx},~{memory}\"(i16 "), "{ir}");
+    assert!(ir.contains("asm sideeffect \"outb %al, %dx\", \"{al},{dx},~{memory}\"(i8 "), "{ir}");
+    assert!(!ir.contains("inttoptr") && !ir.contains("load volatile") && !ir.contains("store volatile"), "kein Speicherzugriff an der Portnummer:\n{ir}");
+    assert!(ir.contains("add i16 %"), "Portnummer = Basis + Versatz in 16 Bit:\n{ir}");
+    let (_, codes) = senke(&q, "65", &ZIEL_AARCH64);
+    assert!(fehler(&codes).contains(&"Y102"), "aarch64 hat keinen Portraum: {codes:?}");
+    // Breiten: 16 und 32 Bit wählen `inw`/`inl`, `outw`/`outl`.
+    let breit = r#"module portbreit {
+assume portraum_ist_x86 arch x86_64
+    "The port space is reached by `in`/`out`, and those instructions exist on x86 only."
+    falsifier sonde_portraum;
+device Zwei(basis : u16) at port {
+    reg W : u16 @0x00 class rw
+    reg L : u32 @0x04 class rw
+}
+impl fn lies_w(d : ptr<port, rw> Zwei) -> u16
+    effects { reads d.W }
+    costs <= 2 ops
+{
+    return d.W;
+}
+impl fn lies_l(d : ptr<port, rw> Zwei) -> u32
+    effects { reads d.L }
+    costs <= 2 ops
+{
+    return d.L;
+}
+impl fn schreibe(d : ptr<port, rw> Zwei, a : u16, b : u32)
+    effects { writes d.W, writes d.L }
+    costs <= 4 ops
+{
+    d.W = a;
+    d.L = b;
+}
+}
+"#;
+    let ir = senke_ohne_fehler(breit, "portbreit", &ZIEL_X86_64);
+    for s in ["inw %dx, %ax", "inl %dx, %eax", "outw %ax, %dx", "outl %eax, %dx"] {
+        assert!(ir.contains(s), "fehlt {s}:\n{ir}");
+    }
+}
+
+const A64_EINTRITT: &str = r#"module a64eintritt {
+entry ruf vector 4 via sync arch aarch64 {
+    regs in  { nr : x0 }
+    regs out { ret : x0 }
+    preserves { x19, x20 }
+    clobbers  { x9 }
+    stack kernstapel per cpu nested never
+    dispatch verteiler;
+}
+impl fn verteiler(nr : u64) -> u64 effects { pure } costs <= 2 ops { return nr +% 1; }
+}
+"#;
+
+/// **`entry … arch aarch64`:** a 16-slot table (`.balign 0x800`, one `b` per 0x80), the head per
+/// entry, a common body that saves x0-x30, ELR/SPSR_EL1, FPSR/FPCR and q0-q31 and ends with
+/// `eret`; the C half reads `x0` from frame offset 0 and writes the answer back there. Executed
+/// under `qemu-system-aarch64` by `instrumente/teile/eintritt-a64-qemu.sh` (a stage of
+/// `pruefe-llvm.py`); this test pins the TEXT.
+#[test]
+fn aarch64_eintritt_schreibt_tabelle_rahmen_und_eret() {
+    let ir = senke_ohne_fehler(A64_EINTRITT, "a64eintritt", &ZIEL_AARCH64);
+    for s in [
+        "module asm \"gabbro_eintritt_ruf:\"",
+        "module asm \"\tsub sp, sp, #800\"",
+        "module asm \"gabbro_eintritt_gemeinsam_a64:\"",
+        "module asm \"\tmrs x0, elr_el1\"",
+        "module asm \"\tmsr spsr_el1, x1\"",
+        "module asm \"\tstp q0, q1, [x0], #32\"",
+        "module asm \"\tldp q30, q31, [x0], #32\"",
+        "module asm \"\tblr x19\"",
+        "module asm \"\teret\"",
+        "module asm \".balign 0x800\"",
+        "module asm \"gabbro_eintritt_vektoren:\"",
+        "module asm \"\tb gabbro_eintritt_ruf\"",
+    ] {
+        assert!(ir.contains(s), "fehlt: {s}\n{ir}");
+    }
+    assert_eq!(ir.matches("module asm \"\tb .\"").count(), 15, "15 nicht deklarierte Plätze halten an");
+    assert_eq!(ir.matches("module asm \".balign 0x80\"").count(), 16, "16 Plätze zu je 0x80");
+    // x19 is saved BEFORE it becomes the holder of the C half's address.
+    let sichern = ir.find("stp x18, x19, [sp, #144]").expect("x18/x19 gesichert");
+    let halter = ir.find("mov x19, x1").expect("Halter");
+    assert!(sichern < halter, "x19 muss vor der Adresse gesichert sein");
+    let c = ir.split("define void @\"gabbro_eintritt_ruf_c\"").nth(1).unwrap().split("\n}\n").next().unwrap().to_string();
+    assert!(c.contains("i64 0") && c.contains("call i64 @\"verteiler\"(i64 noundef %v0)"), "{c}");
+    assert!(ir.contains("noredzone"));
+    // The x86 entries of a unit are not for this machine: refused by name.
+    let (_, codes) = senke(EINTRITT_QUELLE, "eintritte", &ZIEL_AARCH64);
+    assert_eq!(fehler(&codes), vec!["Y102", "Y102"]);
+    // And the aarch64 entry is not for x86_64.
+    let (_, codes) = senke(A64_EINTRITT, "a64eintritt", &ZIEL_X86_64);
+    assert_eq!(fehler(&codes), vec!["Y102"]);
+}
+
+/// What the aarch64 lowering cannot write falls BY NAME: no `vector` (the slot is not in the
+/// source), a `via` word that disagrees with the slot, a slot past 15, a register that is no
+/// `x0`-`x30`, `ist` (x86), two entries on one slot, a `via` that is no exception kind.
+#[test]
+fn aarch64_eintritt_verweigert_was_er_nicht_schreiben_kann() {
+    for (aus, mit) in [
+        ("vector 4 via sync", "via sync"),
+        ("vector 4 via sync", "vector 4 via irq"),
+        ("vector 4 via sync", "vector 16 via sync"),
+        ("vector 4 via sync", "vector 4 via idt"),
+        ("nr : x0", "nr : rax"),
+        ("regs out { ret : x0 }", "regs out { ret : x31 }"),
+        ("stack kernstapel per cpu nested never", "stack kernstapel per cpu ist 1 nested never"),
+        ("preserves { x19, x20 }", "preserves { x19, rsp }"),
+    ] {
+        let q = A64_EINTRITT.replace(aus, mit);
+        let (_, codes) = senke(&q, "a64", &ZIEL_AARCH64);
+        assert_eq!(fehler(&codes), vec!["Y102"], "{mit}");
+    }
+    let zwei = A64_EINTRITT.replace(
+        "impl fn verteiler",
+        "entry zweit vector 4 via sync arch aarch64 { regs in { nr : x0 } regs out { ret : x0 } preserves { x19 } clobbers { x9 } stack s per cpu nested never dispatch verteiler; }\nimpl fn verteiler",
+    );
+    let (_, codes) = senke(&zwei, "a64", &ZIEL_AARCH64);
+    assert!(fehler(&codes).contains(&"Y102"), "zwei Eintritte auf einem Platz: {codes:?}");
+}
+
+/// `boot` and `entrust` stay refused BY NAME, with their reason: the Lean model reads a foreign
+/// body as an axiom (`Syntax.lean` §14), the boot steps are `axiom` calls and register reads with
+/// no body, and an `entrust` has no source form that transfers control to it.
+#[test]
+fn boot_und_entrust_bleiben_benannt_verweigert() {
+    for datei in ["07-eintritt-und-boot.gab", "25-entrust.gab"] {
+        let q = beispiel(datei);
+        for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+            let (_, codes) = senke(&q, datei, ziel);
+            assert!(fehler(&codes).contains(&"Y102"), "{datei} auf {}", ziel.name);
+        }
+    }
+}

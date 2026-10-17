@@ -49,9 +49,44 @@
 //! die den Verteiler ruft. Verlangt: keine `regs in/out`, und `preserves` nennt nur
 //! Register, die der Funktionskopf nach der System-V-Konvention behält (`rbx rbp r12–r15`).
 //!
+//! ## `aarch64`, ein Tabellenplatz (`entry N vector V [via sync|irq|fiq|serror] arch aarch64`)
+//!
+//! Die Ausnahmetabelle `VBAR_EL1` hat 16 Plätze zu je 0x80 Bytes (vier Gruppen zu vier Arten:
+//! `sync`, `irq`, `fiq`, `serror` — Platz `V` ist Gruppe `V / 4`, Art `V % 4`), 0x800 ausgerichtet.
+//! **Der Vektor `V` der Quelle IST der Platz** (wie bei x86 der IDT-Index); ein `via`-Wort ist
+//! optional und muss die Art des Platzes nennen, sonst wird verweigert (es zu raten wäre eine
+//! Zusage ohne Klausel). Ohne `vector` kein Platz: verweigert.
+//!
+//! Der Kopf je Eintritt (Modul-Assembler) legt 0x320 Bytes Rahmen auf den Stapel, rettet `x0`,
+//! `x1`, lädt die Adresse der C-Hälfte nach `x1` und springt in den gemeinsamen Körper. Der
+//! sichert `x2`–`x30`, `ELR_EL1`, `SPSR_EL1`, `FPSR`, `FPCR` und **alle** 32 Vektorregister
+//! (`q0`–`q31`, 512 Bytes: der übersetzte Verteiler darf jedes Register und jedes `v` benutzen,
+//! und `preserves` nennt nur die verlangten — stärker, nie schwächer), ruft
+//! `gabbro_eintritt_N_c(rahmen)`, stellt alles wieder her und endet mit `eret`.
+//!
+//! Der Rahmen: `x0`–`x30` bei `8·n`, `ELR_EL1` bei 248, `SPSR_EL1` 256, `FPSR` 264, `FPCR` 272,
+//! `q0`–`q31` ab 288. Die C-Hälfte liest `regs in` und schreibt das `regs out` an denselben
+//! Plätzen wie bei x86 (`x{n}` ↔ `8·n`).
+//!
+//! **Die Tabelle** ist hier KÖRPER, nicht Daten: das Symbol `gabbro_eintritt_vektoren` (global,
+//! `.balign 0x800`) enthält an jedem deklarierten Platz `b gabbro_eintritt_N`, an jedem anderen
+//! `b .` (ein nicht deklarierter Platz hält den Kern an; er kehrt nie still zurück).
+//!
+//! **Zustand, den dieser Erzeuger NICHT zusagt (aarch64):**
+//! * Kein Schreiben von `VBAR_EL1`: wer die Tabelle in Kraft setzt (`msr vbar_el1`, `isb`), ist
+//!   der Start des Programms. Ebenso kein Quittieren am GIC (`EOI`): Logik des Verteilers.
+//! * Kein Stapelwechsel: der Stub läuft auf dem Stapel, den die Hardware gibt (`stack S per cpu`
+//!   bindet nichts); der Rahmen (0x320 Bytes) steht in keiner Zahl des Programms.
+//! * Der Stub ist für `EL1` geschrieben (`ELR_EL1`, `SPSR_EL1`); ein Eintritt in `EL2`/`EL3` wäre
+//!   ein anderes Registerpaar und ist nicht modelliert.
+//! * Die Ausnahme tritt mit maskierten `DAIF` ein (Hardware); der Stub demaskiert nie. Verschachtelung
+//!   ist Sache des Verteilers.
+//! * `regs in`/`out` nur `x0`–`x30`; `ist` ist x86 und wird verweigert.
+//! * **Ausgeführt wird der Stub nur unter `qemu-system-aarch64` (`-M virt`, EL1)**; im Benutzermodus
+//!   (`qemu-aarch64`) ist `eret`/`mrs elr_el1` ein Trap.
+//!
 //! ## Was verweigert bleibt (`Y102`, je Fall mit seinem Satz)
-//! * jede andere Architektur als das Ziel (und `aarch64`: Ausnahmetabelle `VBAR_EL1`,
-//!   Rahmen und `eret` sind nicht modelliert);
+//! * jede andere Architektur als das Ziel;
 //! * Register ohne Rahmenplatz (`rsp_user`, Segment- und Steuerregister), mehrere `regs out`,
 //!   ein Verteiler, dessen Kopf nicht ein `u64` je Eintrittsregister nimmt;
 //! * ein nicht konstanter Vektor, ein zweiter Eintritt auf demselben Vektor, ein `via`-Wort
@@ -61,6 +96,12 @@ use super::*;
 
 /// Rahmenplatz (Byte-Versatz ab Rahmenanfang) je Register, wie der Stub sie ablegt:
 /// r15 zuletzt, rax zuerst gepusht, dann der Hardware-Rahmen.
+/// `aarch64`: `x{n}` (0–30) liegt bei `8·n`.
+fn rahmenplatz_a64(reg: &str) -> Option<u32> {
+    let n: u32 = reg.strip_prefix('x')?.parse().ok()?;
+    if n <= 30 && reg == format!("x{n}") { Some(8 * n) } else { None }
+}
+
 fn rahmenplatz(reg: &str) -> Option<u32> {
     const ORDNUNG: [&str; 15] = [
         "r15", "r14", "r13", "r12", "r11", "r10", "r9", "r8", "rbp", "rdi", "rsi", "rdx", "rcx", "rbx", "rax",
@@ -87,6 +128,8 @@ pub(super) struct Plan {
     ist: u64,
     /// `via irq`: Funktionskopf statt Stub.
     ueber_irq: bool,
+    /// `aarch64`: Platz der Ausnahmetabelle, Rahmen nach `rahmenplatz_a64`.
+    a64: bool,
     regs_in: Vec<String>,
     regs_out: Vec<String>,
     dispatch: Pfad,
@@ -100,16 +143,11 @@ pub(super) fn sammle(s: &mut Senke, e: &EntryDecl, modul: &str, span: Span) {
         s.tote_items.insert(name.clone());
     };
     if e.arch.text != s.ziel.name {
-        let w = if s.ziel.name == "aarch64" {
-            format!(
-                "entry {name} for arch {}: the {} build has no entry lowering (exception vector \
-                 table, frame and `eret` are not modelled)",
-                e.arch.text, s.ziel.name
-            )
-        } else {
-            format!("entry {name} is declared for arch {}, this build is {}", e.arch.text, s.ziel.name)
-        };
+        let w = format!("entry {name} is declared for arch {}, this build is {}", e.arch.text, s.ziel.name);
         return tot(s, w);
+    }
+    if s.ziel.name == "aarch64" {
+        return sammle_a64(s, e, modul, span);
     }
     if s.ziel.name != "x86_64" {
         return tot(s, format!("entry {name}: no entry lowering for {}", s.ziel.name));
@@ -180,6 +218,85 @@ pub(super) fn sammle(s: &mut Senke, e: &EntryDecl, modul: &str, span: Span) {
         vektor,
         ist,
         ueber_irq,
+        a64: false,
+        regs_in,
+        regs_out,
+        dispatch: e.dispatch.clone(),
+    });
+}
+
+/// `aarch64`: Tabellenplatz, Rahmen, `eret` (siehe Kopf). Verweigert beim Namen, was nicht gesenkt wird.
+fn sammle_a64(s: &mut Senke, e: &EntryDecl, modul: &str, span: Span) {
+    let name = e.name.text.clone();
+    let tot = |s: &mut Senke, was: String| {
+        weigere(s, "Y102", span, was);
+        s.tote_items.insert(name.clone());
+    };
+    let slot = match &e.vektor {
+        None => {
+            return tot(
+                s,
+                format!(
+                    "entry {name} for aarch64 names no `vector`: the slot of the exception table (0..15, \
+                     group = slot / 4, kind sync/irq/fiq/serror = slot % 4) is not in the source, and a guess \
+                     would be a promise no clause carries"
+                ),
+            );
+        }
+        Some(x) => match konst_u64(s, x) {
+            Some(v) if v < 16 => v,
+            _ => return tot(s, format!("entry {name}: an aarch64 `vector` is a table slot, a constant 0..15")),
+        },
+    };
+    if let Some(v) = &e.via {
+        let art = match v.text.as_str() {
+            "sync" => 0,
+            "irq" => 1,
+            "fiq" => 2,
+            "serror" => 3,
+            w => return tot(s, format!("entry {name} via `{w}`: on aarch64 the path is sync, irq, fiq or serror")),
+        };
+        if slot % 4 != art {
+            return tot(
+                s,
+                format!(
+                    "entry {name} via `{}` on slot {slot}: slot {slot} is the `{}` of its group, the two words disagree",
+                    v.text,
+                    ["sync", "irq", "fiq", "serror"][(slot % 4) as usize]
+                ),
+            );
+        }
+    }
+    if e.ist.is_some() {
+        return tot(s, format!("entry {name} with `ist`: an x86 interrupt-stack-table index, no aarch64 meaning"));
+    }
+    let regs_in: Vec<String> = e.regs_in.iter().map(|(_, r)| r.text.clone()).collect();
+    let regs_out: Vec<String> = e.regs_out.iter().map(|(_, r)| r.text.clone()).collect();
+    if regs_out.len() > 1 {
+        return tot(s, format!("entry {name} with {} `regs out` registers: the dispatch answers one value", regs_out.len()));
+    }
+    for r in regs_in.iter().chain(regs_out.iter()) {
+        if rahmenplatz_a64(r).is_none() {
+            return tot(s, format!("entry {name}: register `{r}` has no slot in the saved frame (x0-x30 only)"));
+        }
+    }
+    for r in e.preserves.iter().chain(e.clobbers.iter()) {
+        if rahmenplatz_a64(&r.text).is_none() {
+            return tot(s, format!("entry {name}: `{}` is no general register x0-x30", r.text));
+        }
+    }
+    if let Some(anderer) = s.eintritte.iter().find(|p| p.vektor == Some(slot)) {
+        let w = format!("entry {name} on slot {slot}, which entry {} already takes", anderer.name);
+        return tot(s, w);
+    }
+    s.eintritte.push(Plan {
+        name,
+        modul: modul.to_string(),
+        span,
+        vektor: Some(slot),
+        ist: 0,
+        ueber_irq: false,
+        a64: true,
         regs_in,
         regs_out,
         dispatch: e.dispatch.clone(),
@@ -222,6 +339,88 @@ fn gemeinsam(aus: &mut String, fc: bool) {
     modul_asm(aus, "\tiretq");
 }
 
+/// Rahmengröße des aarch64-Stubs (16-ausgerichtet): 288 Bytes Allzweck/System, 512 Bytes `q0`–`q31`.
+const A64_RAHMEN: u32 = 0x320;
+
+/// `aarch64`, der Kopf je Eintritt: Rahmen anlegen, `x0`/`x1` retten, C-Hälfte nach `x1`, springen.
+fn kopf_a64(aus: &mut String, name: &str) {
+    modul_asm(aus, ".text");
+    modul_asm(aus, &format!(".globl gabbro_eintritt_{name}"));
+    modul_asm(aus, &format!("gabbro_eintritt_{name}:"));
+    modul_asm(aus, &format!("\tsub sp, sp, #{A64_RAHMEN}"));
+    modul_asm(aus, "\tstp x0, x1, [sp, #0]");
+    modul_asm(aus, &format!("\tadrp x1, gabbro_eintritt_{name}_c"));
+    modul_asm(aus, &format!("\tadd x1, x1, :lo12:gabbro_eintritt_{name}_c"));
+    modul_asm(aus, "\tb gabbro_eintritt_gemeinsam_a64");
+}
+
+/// `aarch64`, der gemeinsame Körper: alles sichern, C-Hälfte rufen (Adresse in `x1`), alles
+/// wiederherstellen, `eret`.
+fn gemeinsam_a64(aus: &mut String) {
+    let l = "gabbro_eintritt_gemeinsam_a64";
+    modul_asm(aus, ".text");
+    modul_asm(aus, &format!(".globl {l}"));
+    modul_asm(aus, &format!("{l}:"));
+    for i in (2..30).step_by(2) {
+        modul_asm(aus, &format!("\tstp x{i}, x{}, [sp, #{}]", i + 1, 8 * i));
+    }
+    // Erst NACH dem Sichern von x19: die Adresse der C-Hälfte (x1) wird zum Halter über den Ruf.
+    modul_asm(aus, "\tmov x19, x1");
+    for z in [
+        "\tstr x30, [sp, #240]",
+        "\tmrs x0, elr_el1",
+        "\tmrs x1, spsr_el1",
+        "\tstp x0, x1, [sp, #248]",
+        "\tmrs x0, fpsr",
+        "\tmrs x1, fpcr",
+        "\tstp x0, x1, [sp, #264]",
+        "\tadd x0, sp, #288",
+    ] {
+        modul_asm(aus, z);
+    }
+    for q in (0..32).step_by(2) {
+        modul_asm(aus, &format!("\tstp q{q}, q{}, [x0], #32", q + 1));
+    }
+    for z in ["\tmov x0, sp", "\tblr x19", "\tadd x0, sp, #288"] {
+        modul_asm(aus, z);
+    }
+    for q in (0..32).step_by(2) {
+        modul_asm(aus, &format!("\tldp q{q}, q{}, [x0], #32", q + 1));
+    }
+    for z in [
+        "\tldp x0, x1, [sp, #264]",
+        "\tmsr fpsr, x0",
+        "\tmsr fpcr, x1",
+        "\tldp x0, x1, [sp, #248]",
+        "\tmsr elr_el1, x0",
+        "\tmsr spsr_el1, x1",
+        "\tldr x30, [sp, #240]",
+    ] {
+        modul_asm(aus, z);
+    }
+    for i in (2..30).step_by(2).rev().chain(std::iter::once(0)) {
+        modul_asm(aus, &format!("\tldp x{i}, x{}, [sp, #{}]", i + 1, 8 * i));
+    }
+    modul_asm(aus, &format!("\tadd sp, sp, #{A64_RAHMEN}"));
+    modul_asm(aus, "\teret");
+}
+
+/// `aarch64`, die Ausnahmetabelle: 16 Plätze zu 0x80, 0x800 ausgerichtet, `VBAR_EL1`-tauglich.
+fn tabelle_a64(aus: &mut String, tab: &BTreeMap<u64, (String, u64)>) {
+    modul_asm(aus, ".section .text.gabbro_vektoren,\"ax\",@progbits");
+    modul_asm(aus, ".balign 0x800");
+    modul_asm(aus, ".globl gabbro_eintritt_vektoren");
+    modul_asm(aus, "gabbro_eintritt_vektoren:");
+    for v in 0..16u64 {
+        modul_asm(aus, ".balign 0x80");
+        match tab.get(&v) {
+            Some((n, _)) => modul_asm(aus, &format!("\tb gabbro_eintritt_{n}")),
+            None => modul_asm(aus, "\tb ."),
+        }
+    }
+    modul_asm(aus, ".text");
+}
+
 /// Alle aufgenommenen Eintritte schreiben (nach den Funktionen: die Signatur des Verteilers
 /// steht dann fest). Rückgabe: der Text für Kopf/Hilfsteil.
 pub(super) fn emittiere(s: &mut Senke) {
@@ -231,7 +430,7 @@ pub(super) fn emittiere(s: &mut Senke) {
     let plaene = std::mem::take(&mut s.eintritte);
     let mut text = String::new();
     let mut tab: BTreeMap<u64, (String, u64)> = BTreeMap::new();
-    let (mut braucht_plain, mut braucht_fc) = (false, false);
+    let (mut braucht_plain, mut braucht_fc, mut braucht_a64) = (false, false, false);
     let mut gesenkt = Vec::new();
     for p in &plaene {
         s.modul = p.modul.clone();
@@ -280,14 +479,14 @@ pub(super) fn emittiere(s: &mut Senke) {
         let _ = writeln!(text, "eintritt:");
         let mut args = Vec::new();
         for (i, reg) in p.regs_in.iter().enumerate() {
-            let off = rahmenplatz(reg).unwrap_or(0);
+            let off = if p.a64 { rahmenplatz_a64(reg) } else { rahmenplatz(reg) }.unwrap_or(0);
             let _ = writeln!(text, "  %p{i} = getelementptr inbounds i8, ptr %r, i64 {off}");
             let _ = writeln!(text, "  %v{i} = load i64, ptr %p{i}, align 8");
             args.push(format!("i64 noundef %v{i}"));
         }
         match sig.ret.clone() {
             Some((LlTyp::Int(w), z)) if p.regs_out.len() == 1 => {
-                let off = rahmenplatz(&p.regs_out[0]).unwrap_or(0);
+                let off = if p.a64 { rahmenplatz_a64(&p.regs_out[0]) } else { rahmenplatz(&p.regs_out[0]) }.unwrap_or(0);
                 let _ = writeln!(text, "  %a = call i{w} {}({})", gname(&emit), args.join(", "));
                 let wert = if w == 64 {
                     "%a".to_string()
@@ -306,6 +505,14 @@ pub(super) fn emittiere(s: &mut Senke) {
         let _ = writeln!(text, "  ret void");
         let _ = writeln!(text, "}}");
         s.kind.benutzt.push(format!("gabbro_eintritt_{}_c", p.name));
+        if p.a64 {
+            braucht_a64 = true;
+            kopf_a64(&mut text, &p.name);
+            let _ = writeln!(text, "declare void @\"gabbro_eintritt_{}\"()", p.name);
+            tab.insert(p.vektor.unwrap_or(0), (p.name.clone(), 0));
+            gesenkt.push(p.name.clone());
+            continue;
+        }
         let fc = p.vektor.is_some_and(hat_fehlercode);
         if fc {
             braucht_fc = true;
@@ -331,7 +538,10 @@ pub(super) fn emittiere(s: &mut Senke) {
     if braucht_fc {
         gemeinsam(&mut text, true);
     }
-    if !tab.is_empty() {
+    if braucht_a64 {
+        gemeinsam_a64(&mut text);
+        tabelle_a64(&mut text, &tab);
+    } else if !tab.is_empty() {
         let mut ptrs = Vec::new();
         let mut ists = Vec::new();
         for v in 0..256u64 {

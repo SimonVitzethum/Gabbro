@@ -76,12 +76,22 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
     // the C emitter runs for `C001` -- a probe the emitter never sees is a probe
     // that never bites. Target is fixed (`x86_64`): refusals are target-independent
     // by construction (no target word in any `Y` sentence).
+    //
+    // **A refusal that is about ONE target says so in the file** (2026-10-17): a line
+    // `-- ziel: aarch64` runs the generator for that target instead (`gift/1470`: the port
+    // space has no aarch64 lowering because the machine has no port space, while on `x86_64`
+    // the same device lowers to `in`/`out`).
     if quelle.starts_with("-- erwartet: Y") {
+        let ziel = if quelle.lines().any(|z| z.trim() == "-- ziel: aarch64") {
+            &gabbro_check::llvm::ZIEL_AARCH64
+        } else {
+            &gabbro_check::llvm::ZIEL_X86_64
+        };
         let _ = gabbro_check::llvm::emittiere_llvm(
             &baum,
             &mut absagen,
             gabbro_check::gatter::Bau::Auslieferung,
-            &gabbro_check::llvm::ZIEL_X86_64,
+            ziel,
         );
     }
     let codes = absagen

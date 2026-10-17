@@ -18,11 +18,11 @@ Signatur.gschreibt	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_be
 Signatur.konsumiert	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 Signatur.produziert	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 Signatur.boden	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
-Regklasse.r	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO is a different representation.
-Regklasse.w	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO is a different representation.
-Regklasse.rw	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO is a different representation.
-Regklasse.w1c	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO is a different representation.
-Regklasse.rc	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO is a different representation.
+Regklasse.r	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
+Regklasse.w	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
+Regklasse.rw	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
+Regklasse.w1c	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
+Regklasse.rc	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
 Deklaration.Tab	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
 Deklaration.decTab	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.count	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
@@ -55,12 +55,12 @@ Deklaration.eigner_nie_erzeugt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	St
 Deklaration.Inv	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.traeger	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.invs	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
-Deklaration.Ax	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
-Deklaration.aparams	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
-Deklaration.aerg	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
+Deklaration.Ax	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64 IDT stubs, aarch64 VBAR_EL1 table; llvm/eintritte.rs) and asm bodies (llvm/assembler.rs, only for the arch the body declares); boot/entrust and paired/unbound gates remain refused.
+Deklaration.aparams	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64 IDT stubs, aarch64 VBAR_EL1 table; llvm/eintritte.rs) and asm bodies (llvm/assembler.rs, only for the arch the body declares); boot/entrust and paired/unbound gates remain refused.
+Deklaration.aerg	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64 IDT stubs, aarch64 VBAR_EL1 table; llvm/eintritte.rs) and asm bodies (llvm/assembler.rs, only for the arch the body declares); boot/entrust and paired/unbound gates remain refused.
 Deklaration.aschreibt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.agschreibt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
-Deklaration.agruende	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64) in llvm/eintritte.rs; boot/entrust/asm bodies and paired/unbound gates remain refused.
+Deklaration.agruende	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Direct, errno and stack-carrying gates supported (stack gate + child: llvm/stapeltor.rs); entry (x86_64 IDT stubs, aarch64 VBAR_EL1 table; llvm/eintritte.rs) and asm bodies (llvm/assembler.rs, only for the arch the body declares); boot/entrust and paired/unbound gates remain refused.
 Deklaration.Reg	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	No exported G Reg path; surface MMIO is not a model-register bridge.
 Deklaration.rtyp	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	No exported G Reg path; surface MMIO is not a model-register bridge.
 Deklaration.rklasse	REFUSED	crates/gabbro-check/src/llvm.rs::sammle	No exported G Reg path; surface MMIO is not a model-register bridge.

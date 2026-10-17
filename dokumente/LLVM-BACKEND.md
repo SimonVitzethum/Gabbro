@@ -41,7 +41,7 @@ cannot lower is refused **by name** instead of guessed (the `C001` rule of the C
 | Code | Refuses | Poison probes |
 |---|---|---|
 | `Y101` | a type or a declaration without a lowering (bodiless or layout-less records, odd device registers, non-constant table counts, float words outside `f32`/`f64`…) | `beispiele/gift/1427` |
-| `Y102` | an item or a gate shape: a lock masking something other than `irqs`, kernel-paired and unbound gates, a stack gate with no `child` region behind the call or whose handed stack is no declared integer, assembly bodies, `boot`, `entrust`, an `entry` the stub cannot carry (other arch, register without a frame slot, several `regs out`, a dispatch head that is not one `u64` per register, a duplicate vector, a non-constant vector or `ist`, `via` other than `idt`/`irq`), a gate without a body for the target (`arch` mismatch) | `gift/1428` (`masks nmi`) |
+| `Y102` | an item or a gate shape: a lock masking something other than `irqs`, kernel-paired and unbound gates, a stack gate with no `child` region behind the call or whose handed stack is no declared integer, an `asm` body with no 1:1 LLVM form or only for the other machine, a port device on aarch64, `boot`, `entrust`, an `entry` the stub cannot carry (other arch, register without a frame slot, several `regs out`, a dispatch head that is not one `u64` per register, a duplicate vector, a non-constant vector or `ist`, `via` other than `idt`/`irq`; on aarch64 no `vector`, a vector above 15, a `via` that is not the slot's kind), a gate without a body for the target (`arch` mismatch) | `gift/1428` (`masks nmi`) |
 | `Y103` | a statement: non-constant bounds in arenas/`retry`/`exchange`, unlowerable tree walks and traversals, pressure probes of the wrong shape, a runtime gate the target lacks (`publish` with payload and shared lock acquisition are lowered, see Locks and Publication) | `gift/196` |
 | `Y104` | an expression: alignment probe, library call, bitwise operations on floats, unknown places/registers/functions, contract-only expressions in a body | `gift/1430` |
 | `Y106` | a match shape without lowering | `gift/1432` |
@@ -155,7 +155,7 @@ the handed stack and ends the process with 42) returns 42 on both targets at `-O
 there (they have no `main` and call the unit's `extern fn ausgang`, so they stop at link time, by design);
 on `aarch64` their gate has no body and the call is refused by name.
 
-**Entries** (`entry …`, `llvm/eintritte.rs`; `x86_64` only). A vectored or entered `entry` becomes a
+**Entries** (`entry …`, `llvm/eintritte.rs`; `x86_64` here, `aarch64` below). A vectored or entered `entry` becomes a
 stub written as module assembly, a common body per kind, and a generated C-ABI half
 `gabbro_eintritt_N_c(frame)`: the stub saves EVERY general register and the full x87/SSE state
 (`fxsave`), clears DF, aligns, calls the half, restores and `iretq`s; the half loads the `regs in`
@@ -172,9 +172,59 @@ the hardware gives; TSS and IDT are the builder's), the frame's space is in no p
 vector table is NOT an IDT (selector, privilege and gate type are the environment's), and no device
 acknowledgement (LAPIC EOI) is generated: that is the dispatch's logic. Verified: IR tests,
 `llc -filetype=obj`, `objdump -d` of stub and twin; **not executed** (the stubs are entered by
-hardware; no user-mode run reaches them). `boot` (a mode ladder of axiom steps) and `entrust` (no
-address to transfer to) stay refused by name, as does an `entry` on `aarch64` (no exception vector
-table or `eret` is modelled).
+hardware; no user-mode run reaches them).
+
+**Entries on `aarch64`** (`entry N vector V [via sync|irq|fiq|serror] arch aarch64`). The vector `V` of the
+source IS the slot of the exception table (16 slots of 0x80 bytes, group `V / 4`, kind `V % 4`; a
+`via` word is optional and must name the slot's kind, no `vector` means no slot: both refused by
+name). The symbol `gabbro_eintritt_vektoren` is the table itself, `.balign 0x800` (a `VBAR_EL1`
+value): a `b gabbro_eintritt_N` at each declared slot, `b .` at every other (an undeclared slot parks
+the core). The head makes a 0x320-byte frame, saves `x0`/`x1`, hands the C half's address in `x1` to
+the common body, which saves `x2`-`x30`, `ELR_EL1`, `SPSR_EL1`, `FPSR`, `FPCR` and ALL of `q0`-`q31`
+(the dispatch may use any register), calls `gabbro_eintritt_N_c(frame)` (frame slot of `xN` at
+`8*N`, same half as x86), restores everything and `eret`s. **Not claimed:** no `VBAR_EL1` write
+and no `isb` (the program's start does it), no GIC acknowledgement, no stack switch (`stack S per
+cpu` binds nothing), `EL1` only (`ELR_EL1`/`SPSR_EL1`), DAIF stays masked as the hardware left it,
+`regs in/out` only `x0`-`x30`, `ist` and `via idt` refused. **Verified by execution:**
+`instrumente/teile/eintritt-a64-qemu.sh` (stage 4 of `pruefe-llvm.py`) runs
+`messung/llvm/eintritt-a64.gab` under `qemu-system-aarch64 -M virt` at EL1: a hand-written test
+stand (apparatus, not product) sets stacks, `CPACR_EL1` and `VBAR_EL1`, takes an `svc` on slot 4
+(`SPx`) and slot 0 (`SP0`), and checks the answer in `x0`, callee-saved `x19`/`x20`, `x30`, `FPSR`
+and `SPSel` after the `eret`. Not executed: IRQ/FIQ/SError slots (no source of them in the stand;
+the slots share the head and body with the executed ones), EL0 entry groups, any GIC.
+
+**`asm` bodies** (`fn f(…) arch A = asm { … }`, `llvm/assembler.rs`). The body is a function whose
+body is ONE `call … asm sideeffect` with the declared frame: `in`/`out` operands become LLVM operands
+in the order the declaration lists them (`%[name]` -> `$k`, outputs counted first; `$` -> `$$`; `%eax`
+stays), x86 single-letter register constraints `a b c d S D` become `{ax} {bx} {cx} {dx} {si} {di}`
+(the operand's type picks `al`/`ax`/`eax`/`rax`), `r q i n` (x86) and `r w i n` (aarch64) pass,
+`clobbers` become `~{memory}`/`~{cc}`/`~{reg}`. **Only for the arch the body declares:** a body for the
+other machine is skipped when the unit also declares the same function for this target (a second
+declaration with the other `arch` is the pair, like a gate's two `syscall` lines) and refused by name
+otherwise. Refused by name: a constraint with no 1:1 LLVM form (memory, matching digits, `+`, `&`,
+several letters), an operand that is no lowered parameter, an `out` that is not `result`, a result
+type and `out { result }` that do not come together, `-> never` with an `out`, an error channel. A
+`-> never` body loops after the text (the text is unchecked; `hlt` returns). **Verified:** IR tests,
+`llc`, `llvm-objdump` (stage 3 of `pruefe-llvm.py`: `outb`, `syscall`, `invlpg`, `sfence`, `mfence`);
+`messung/llvm/assembler.gab` (a per-machine pair of pure arithmetic and a barrier) runs natively and
+under `qemu-aarch64` with the same exit code. **Not executed:** the privileged and I/O instructions
+of `36`/`60`/`67` (`outb`, `invlpg`: a `#GP` in user space); what the text does on the machine
+stays the assumption it is.
+
+**Port space** (`device … at port`, `llvm/portraum.rs`, `x86_64` only). A register is `in`/`out` of
+its width (`inb/inw/inl`, `outb/outw/outl`, 8/16/32 bits, port number in `dx`), the number is the
+`u16` handle plus the offset in 16 bits, every access `asm sideeffect` with `~{memory}`. A `+=` at a
+port register, any address use of one, a 64-bit register and banks/mirrors are refused by name
+(`Y102`/`Y103`); the device is refused on `aarch64` (no port space, `gift/1470`, target-selected by
+its `-- ziel: aarch64` line). **Verified:** IR tests and `objdump -d` (`inb %dx,%al`, `outb %al,%dx`);
+not executed (a `#GP` in user space).
+
+**`boot` and `entrust` stay refused by name** on both targets, and the reason is the model's: the
+Lean `Syntax.lean` section 14 reads `boot` and `entrust` as FOREIGN bodies (`Ax`) -- the boot steps
+are `axiom` calls (`write_cr0`, no instruction in the source), register reads (`bootinfo_retten(ebx)`)
+and a stack-pointer assignment, and no form of the source performs an `entrust` or names the
+address it transfers to. Lowering either would invent semantics the language and the model do not
+state; giving them one is a change of the language and goes into the Lean model first.
 
 **Locks.** Exclusive acquisition is a generated ticket lock (`<L>.naechst`, `<L>.bereit`).
 A lock that declares `shared held` (the checker refuses `locks shared` on any other one,
@@ -353,10 +403,10 @@ here simplifies a case, the register wins.
 | Model/surface boundary | Remaining work | Refusal |
 |---|---|---|
 | `Deklaration.maskiert` | lowered (`llvm/masken.rs`); open: the hardware run (privileged), nesting of masks beyond save/restore per lock | `Y102` for a word other than `irqs` |
-| `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register is refused `Y102`, `gift/1470`, because x86 port space has no lowering yet and aarch64 has none) | `Y10x` |
+| `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register lowers to `in`/`out` on x86_64 (`llvm/portraum.rs`) and is refused `Y102` on aarch64, `gift/1470`, which has no port space) | `Y10x` |
 | `Stmt.publish` with payload, `Stmt.locks` shared | lowered (release/acquire; reader/writer lock); the Lean side stays OFFEN O25 for unguarded payloads and the lock primitive is unproved in Lean | – |
 | `Deklaration.Ax`, `Block.bindAxiom*` | paired/unbound gates; stack gates and `child` lowered (`llvm/stapeltor.rs`), `aarch64` only where the program binds an `aarch64` gate | `Y102` |
-| `Programm.unterbricht` | x86_64 entries lowered (`llvm/eintritte.rs`); open: stack switch/IST, EOI, the IDT itself, `aarch64` entries, boot/entrust/asm lowering | `Y102` |
+| `Programm.unterbricht` | x86_64 entries and aarch64 vector-table entries lowered (`llvm/eintritte.rs`), asm bodies (`llvm/assembler.rs`); open: stack switch/IST, EOI, the IDT / VBAR write itself, boot/entrust (refused by name: foreign bodies in the model) | `Y102` |
 | library call surface | library resolution and payload model | `Y104` |
 | static pointer decay | global array-address initialiser | – |
 | `ArenaForm` / `DynForm`, `free` | full G exporter and statement bridge (`LG005`) | – |
