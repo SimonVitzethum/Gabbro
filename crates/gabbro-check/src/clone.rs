@@ -465,6 +465,47 @@ fn torpfade(
     }
 }
 
+/// **The pairing `N450` checks, as data: which region each stack-gate call hands to** (LLVM
+/// backend, `llvm/stapeltor.rs`). The same structured-dominance walk as `torpfade`, without
+/// the refusals: a call statement (by its span) opens for what follows it and for its
+/// sub-blocks, a region takes the open call, one call hands to one region, and a nested
+/// region pairs with the calls inside its own region (the outlined function walks its own
+/// body). Returned in program order: (the call statement's span, the region).
+pub(crate) fn kindpaare(b: &Block, tore: &HashSet<String>) -> Vec<(gabbro_syntax::span::Span, Block)> {
+    fn gang(
+        b: &Block,
+        tore: &HashSet<String>,
+        vorher: Option<gabbro_syntax::span::Span>,
+        genommen: &mut HashSet<gabbro_syntax::span::Span>,
+        aus: &mut Vec<(gabbro_syntax::span::Span, Block)>,
+    ) {
+        let mut offen = vorher;
+        for s in &b.anweisungen {
+            if let StmtArt::Child(region) = &s.art {
+                if let Some(ruf) = offen {
+                    if genommen.insert(ruf) {
+                        aus.push((ruf, region.clone()));
+                    }
+                }
+                offen = None;
+                continue;
+            }
+            if ruft_stapeltor(s, tore) {
+                offen = Some(s.span);
+            }
+            for k in crate::unterbloecke(s) {
+                gang(k, tore, offen, genommen, aus);
+            }
+            if enthaelt_kind(s) {
+                offen = None;
+            }
+        }
+    }
+    let mut aus = Vec::new();
+    gang(b, tore, None, &mut HashSet::new(), &mut aus);
+    aus
+}
+
 /// **`N456` -- the child holds nothing the parent holds** (fix lane F3, review G11 F2).
 ///
 /// The child runs BESIDE the parent from its first statement: it holds no lock the parent

@@ -52,7 +52,7 @@ pub(super) fn leser_nehmen(k: &mut Koerper, name: &str) -> String {
     ticket_nehmen_roh(k, name);
     let leser = gteil(name, "leser");
     k.zeile(&format!("atomicrmw add ptr {leser}, i32 1 acq_rel, align 4"));
-    ticket_freigabe(k, name);
+    ticket_freigabe_roh(k, name);
     format!("{name}{MARKE}")
 }
 

@@ -12,7 +12,8 @@ planned work, see [`PLAN-UEBERSETZUNGSVALIDIERUNG.md`](PLAN-UEBERSETZUNGSVALIDIE
 Gabbro --check--> LLVM IR text (.ll) --opt -O3--> llc -O3 --> ld.lld -static -e _start --> binary
 ```
 
-`crates/gabbro-check/src/llvm.rs` (plus `llvm/stackless.rs`, `llvm/memory.rs`) lowers a
+`crates/gabbro-check/src/llvm.rs` (plus `llvm/stackless.rs`, `llvm/memory.rs`, `llvm/masken.rs`,
+`llvm/stapeltor.rs`, `llvm/eintritte.rs`) lowers a
 checked tree directly to LLVM IR. No C source, no C compiler, no libc, no linked runtime:
 locks, threads, arenas and the entry `_start` are IR the compiler writes, over raw
 `syscall`/`svc` gates. `readelf` shows neither `INTERP` nor `NEEDED` (`baue-llvm.sh`,
@@ -40,7 +41,7 @@ cannot lower is refused **by name** instead of guessed (the `C001` rule of the C
 | Code | Refuses | Poison probes |
 |---|---|---|
 | `Y101` | a type or a declaration without a lowering (bodiless or layout-less records, odd device registers, non-constant table counts, float words outside `f32`/`f64`…) | `beispiele/gift/1427` |
-| `Y102` | an item or a gate shape: masked locks, stack-carrying, kernel-paired and unbound gates, assembly bodies, a gate without a body for the target (`arch` mismatch) | `gift/1428` |
+| `Y102` | an item or a gate shape: a lock masking something other than `irqs`, kernel-paired and unbound gates, a stack gate with no `child` region behind the call or whose handed stack is no declared integer, assembly bodies, `boot`, `entrust`, an `entry` the stub cannot carry (other arch, register without a frame slot, several `regs out`, a dispatch head that is not one `u64` per register, a duplicate vector, a non-constant vector or `ist`, `via` other than `idt`/`irq`), a gate without a body for the target (`arch` mismatch) | `gift/1428` (`masks nmi`) |
 | `Y103` | a statement: non-constant bounds in arenas/`retry`/`exchange`, unlowerable tree walks and traversals, pressure probes of the wrong shape, a runtime gate the target lacks (`publish` with payload and shared lock acquisition are lowered, see Locks and Publication) | `gift/196` |
 | `Y104` | an expression: alignment probe, library call, bitwise operations on floats, unknown places/registers/functions, contract-only expressions in a body | `gift/1430` |
 | `Y106` | a match shape without lowering | `gift/1432` |
@@ -104,6 +105,76 @@ retrying interruptions and raced waits. The word is initialised before `clone`;
 `CLONE_CHILD_CLEARTID` clears it only after actual child exit, and only then does the parent
 unmap the whole region. This reuses `SchablonenFaden.faden_warte_korrekt`'s gate-contract
 ordering; kernel behaviour stays user logic, not a new hardware assumption.
+
+**Locks.** (Reader/writer locks: see the paragraph below.) The lock is released at EVERY exit of its block: a `return` inside an `if` releases on
+its own path and the fall-through path releases at the block end (before 2026-10-17 a `return`
+inside the block emptied the lock stack and the other path kept the lock for ever; measured, a
+second call hung), `leave`/`next` release only the locks taken inside their loop, and the value
+of a `return e` under `locks` is evaluated BEFORE the release.
+
+**IRQ-masking locks** (`lock L … masks irqs`, `llvm/masken.rs`). Taking the lock first saves the
+executing core's interrupt state and masks, then draws the ticket; releasing frees the ticket,
+then restores the SAVED state (never an unconditional `sti`: a lock taken under already masked
+interrupts gives them back masked, like `raw_spin_lock_irqsave`). The saved word lives in a
+stack cell of the function, so every path out (`return`, `leave`, `next`, block end) reloads it
+and the stackless continuation lowering carries it across calls.
+
+| target | save + mask | restore |
+|---|---|---|
+| `x86_64` | `leaq -128(%rsp),%rsp; pushfq; popq r; cli; leaq 128(%rsp),%rsp` | `leaq -128(%rsp),%rsp; pushq r; popfq; leaq 128(%rsp),%rsp` |
+| `aarch64` | `mrs r, daif; msr daifset, #3` | `msr daif, r` |
+
+(The `leaq` pair steps over the red zone: `pushfq` writes below `rsp`.) **What is verified and what
+is not:** the IR text is tested (`tests/llvm.rs`, exact strings), `llc -filetype=obj` accepts it and
+`objdump -d` / `aarch64-linux-gnu-objdump -d` show `pushf; cli; popf` and `mrs daif; msr daifset,#0x3;
+msr daif`. **None of it is executed**: `cli`/`popfq` with IF and `msr daif` are privileged or trap
+in user mode, so a Linux user-space program that TAKES a masked lock faults; a program that only
+DECLARES one (examples 01, 53, ...) emits no instruction and runs as before. A lock that masks a
+word other than `irqs` is `Y102` (`gift/1428`).
+
+**Stack gates and `child`** (`llvm/stapeltor.rs`). A gate with `stack r` is the raw clone that
+starts a second thread on the stack the program hands over; the kernel sets the child's `sp` from
+register `r` and answers zero there. The child shares the parent's REGISTERS but not its frame, so
+the `child { … }` region is OUTLINED to `gabbro_kind_N(handed stack)` (the checker's `N451`/`N452`
+already restrict it to the handed slot and non-local places), and the gate's instruction itself
+jumps there in the child:
+
+```
+syscall ; test answer ; jnz 1f ; mov stackreg -> first argument ; clear frame pointer ;
+align sp to 16 ; call gabbro_kind_N ; trap ; 1:
+```
+(`aarch64`: `svc #0; cbnz x0, 1f; mov x0, stackreg; mov x29, xzr; mov x9, sp; and x9, x9, #-16;
+mov sp, x9; bl …; brk #0; 1:`). The parent continues at `1:` with the registers the gate declares;
+nothing returns into the parent's frame (the region ends in a never-returning call, `N448`/`N449`,
+and the trap sits behind it). The `child` statement in the parent (reachable only if the gate answered
+zero in the parent, which its contract excludes) calls the same function and ends in `unreachable`.
+The call number, registers and flags are the program's own gate data. Executed: `messung/llvm/kind.gab`
+(an `mmap`ed stack, clone with `CLONE_VM|FS|FILES|SIGHAND|THREAD|SYSVSEM`, the child runs a function on
+the handed stack and ends the process with 42) returns 42 on both targets at `-O0` and `-O3`
+(aarch64 under `qemu-aarch64`). The examples 155/156/160/1114 carry an `x86_64` binding only and lower
+there (they have no `main` and call the unit's `extern fn ausgang`, so they stop at link time, by design);
+on `aarch64` their gate has no body and the call is refused by name.
+
+**Entries** (`entry …`, `llvm/eintritte.rs`; `x86_64` only). A vectored or entered `entry` becomes a
+stub written as module assembly, a common body per kind, and a generated C-ABI half
+`gabbro_eintritt_N_c(frame)`: the stub saves EVERY general register and the full x87/SSE state
+(`fxsave`), clears DF, aligns, calls the half, restores and `iretq`s; the half loads the `regs in`
+registers from the frame in declaration order, calls the dispatch (one `u64` per register) and stores
+its answer into the frame slot of the `regs out` register, which the interrupted code finds after
+`iretq` (every other register comes back unchanged: stronger than `preserves`). Exceptions 8, 10-14,
+17, 21, 29, 30 push an error code: they get the TWIN stub that drops it before `iretq`.
+`@gabbro_eintritt_vektoren : [256 x ptr]` and `@gabbro_eintritt_ist : [256 x i8]` list stub and IST
+per declared vector. `entry … via irq` (a foreign kernel's interrupt path) is a plain
+`gabbro_eintritt_N()` function head calling the dispatch. A unit with an entry compiles every
+function `noredzone` (an interrupt frame on the same stack would destroy a leaf's red zone).
+**Not claimed:** the declared `stack S per cpu` / `ist` is not switched to (the stub runs on the stack
+the hardware gives; TSS and IDT are the builder's), the frame's space is in no program number, the
+vector table is NOT an IDT (selector, privilege and gate type are the environment's), and no device
+acknowledgement (LAPIC EOI) is generated: that is the dispatch's logic. Verified: IR tests,
+`llc -filetype=obj`, `objdump -d` of stub and twin; **not executed** (the stubs are entered by
+hardware; no user-mode run reaches them). `boot` (a mode ladder of axiom steps) and `entrust` (no
+address to transfer to) stay refused by name, as does an `entry` on `aarch64` (no exception vector
+table or `eret` is modelled).
 
 **Locks.** Exclusive acquisition is a generated ticket lock (`<L>.naechst`, `<L>.bereit`).
 A lock that declares `shared held` (the checker refuses `locks shared` on any other one,
@@ -281,11 +352,11 @@ here simplifies a case, the register wins.
 
 | Model/surface boundary | Remaining work | Refusal |
 |---|---|---|
-| `Deklaration.maskiert` | IRQ masking and interrupt nesting | `Y102` |
+| `Deklaration.maskiert` | lowered (`llvm/masken.rs`); open: the hardware run (privileged), nesting of masks beyond save/restore per lock | `Y102` for a word other than `irqs` |
 | `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register is refused `Y102`, `gift/1470`, because x86 port space has no lowering yet and aarch64 has none) | `Y10x` |
 | `Stmt.publish` with payload, `Stmt.locks` shared | lowered (release/acquire; reader/writer lock); the Lean side stays OFFEN O25 for unguarded payloads and the lock primitive is unproved in Lean | – |
-| `Deklaration.Ax`, `Block.bindAxiom*` | stack-carrying/paired/unbound gates, `child` (the internal `start` trampoline does not implement that source form) | `Y102` |
-| `Programm.unterbricht` | hardware-dispatched entries, boot/entrust/asm lowering | `Y102` |
+| `Deklaration.Ax`, `Block.bindAxiom*` | paired/unbound gates; stack gates and `child` lowered (`llvm/stapeltor.rs`), `aarch64` only where the program binds an `aarch64` gate | `Y102` |
+| `Programm.unterbricht` | x86_64 entries lowered (`llvm/eintritte.rs`); open: stack switch/IST, EOI, the IDT itself, `aarch64` entries, boot/entrust/asm lowering | `Y102` |
 | library call surface | library resolution and payload model | `Y104` |
 | static pointer decay | global array-address initialiser | – |
 | `ArenaForm` / `DynForm`, `free` | full G exporter and statement bridge (`LG005`) | – |

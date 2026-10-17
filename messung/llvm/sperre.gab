@@ -1,0 +1,50 @@
+-- Sperren an jedem Ausgang (LLVM-Erzeuger): Gegenprobe zu einem gemessenen Fehler.
+--
+-- `g` kehrt in einem `if` unter der Sperre zurück und läuft sonst bis zum Blockende. Bis
+-- zum 2026-10-17 leerte das `return` den Sperrenstapel des Erzeugers, und der Pfad OHNE
+-- `return` behielt die Sperre für immer: der zweite Ruf hing. Hier ruft `main` den
+-- Fall-through-Pfad dreimal und liest danach unter der Sperre (`return Z` liest VOR der
+-- Freigabe): erwartet 3, auf beiden Zielen.
+--
+-- `M` ist eine maskierende Sperre, nur DEKLARIERT und in einer nie gerufenen Funktion
+-- genommen: sie schreibt ihre Befehle (`cli` / `msr daifset`), und das Programm läuft im
+-- Benutzermodus trotzdem, weil keine davon ausgeführt wird.
+module sperre {
+pub static mut Z : u32 = 0;
+pub static mut W : u32 = 0;
+pub lock L protects { Z } rank 0 held <= 8 ops;
+pub lock M protects { W } rank 1 held <= 8 ops masks irqs;
+
+pub fn g(c : bool) -> u32
+    effects { reads Z, writes Z, locks L }
+    costs <= 16 ops
+{
+    locks L {
+        if c {
+            return Z;
+        }
+        Z = Z +% 1;
+    }
+    return 0;
+}
+
+pub fn nie_gerufen()
+    effects { reads W, writes W, locks M }
+    costs <= 16 ops
+{
+    locks M {
+        W = W +% 1;
+    }
+}
+
+pub fn main() -> u64
+    effects { reads Z, writes Z, locks L }
+    costs <= 128 ops
+{
+    let a = g(false);
+    let b = g(false);
+    let c = g(false);
+    let d = g(true);
+    return u64(d);
+}
+}

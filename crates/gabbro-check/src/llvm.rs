@@ -89,6 +89,9 @@ use std::fmt::Write as _;
 
 mod stackless;
 mod memory;
+mod masken;
+mod stapeltor;
+mod eintritte;
 mod publizieren;
 mod leser_schreiber;
 #[cfg(test)]
@@ -262,6 +265,8 @@ struct Tor {
     clobbers: Vec<String>,
     /// Austrittsregister (Antwort).
     ret_reg: &'static str,
+    /// `stack r`: das Tor startet einen Faden auf dem übergebenen Stapel (`llvm/stapeltor.rs`).
+    stapel: Option<stapeltor::StapelTor>,
     /// Fehlerkanal des Tors plus errno-Dekodierung (Nummer, Grundwert).
     or_nutz: Option<OrKanal>,
     errors: Vec<(i64, i32)>,
@@ -577,6 +582,13 @@ struct Senke<'a> {
     variant_typen: BTreeMap<String, (Vec<(String, Option<TypExpr>)>, u64)>,
     gruende: BTreeMap<String, Vec<(String, i128)>>,
     schloesser: BTreeMap<String, bool>,
+    /// Sperren mit `masks irqs` (`llvm/masken.rs`: Zustand sichern, maskieren, zurücknehmen).
+    maskiert: BTreeSet<String>,
+    /// Stapeltore und ausgelagerte Kindregionen (`llvm/stapeltor.rs`).
+    kind: stapeltor::SenkeZustand,
+    /// Aufgenommene `entry`-Deklarationen und ob welche geschrieben wurden (`llvm/eintritte.rs`).
+    eintritte: Vec<eintritte::Plan>,
+    mit_eintritt: bool,
     atomare: BTreeMap<String, (LlTyp, String)>,
     tabellen: BTreeMap<String, (u64, String)>,
     geister: BTreeSet<String>,
@@ -1313,6 +1325,10 @@ struct Koerper<'s, 'a> {
     beendet: bool,
     schleifen: Vec<SchleifenKontext>,
     sperren: Vec<String>,
+    /// Stapelzellen der gesicherten Unterbrechungsmaske je maskierender Sperre (`llvm/masken.rs`).
+    maske_zellen: BTreeMap<String, String>,
+    /// Paarung Rufstelle/`child`-Region dieser Funktion (`llvm/stapeltor.rs`).
+    kind: stapeltor::Zustand,
     alt_wert: Option<Wert>,
     ergebnis_wert: Option<Wert>,
     /// Fehlerkanal der laufenden Funktion (Rückgaben wickeln ein).
@@ -2944,10 +2960,17 @@ fn senke_tor_ruf(k: &mut Koerper, pfad: &Pfad, r: &Ruf, span: Span) -> Option<We
     }
     bind.push("~{memory}".to_string());
     let constraint = bind.join(",");
-    let template = tor.template;
+    // Stapeltor: im Kind springt die Befehlsfolge in die ausgelagerte Region (`llvm/stapeltor.rs`).
+    let template: String = match &tor.stapel {
+        Some(st) => stapeltor::vorbereiten(k, &tor, st, r, span)?,
+        None => tor.template.to_string(),
+    };
     if tor.nie {
+        // Ein Aufruf ohne Antwort (`void`) trägt keinen Ausgang: `={rax}` an `void` ist ein
+        // `llc`-Fehler ("could not allocate output register").
+        let ohne_ausgang = constraint.split_once(',').map(|(_, r)| r.to_string()).unwrap_or_default();
         k.zeile(&format!(
-            "call void asm sideeffect \"{template}\", \"{constraint}\"({})",
+            "call void asm sideeffect \"{template}\", \"{ohne_ausgang}\"({})",
             ops.join(", ")
         ));
         k.zeile("unreachable");
@@ -3060,24 +3083,116 @@ fn senke_block(k: &mut Koerper, b: &Block) {
 
 /// Sperren am Ausgang freigeben (jeder Ausgang — Ticket: `bereit += 1`).
 ///
-/// **The held list is the STATIC nesting and stays as it is**: a `return` inside an `if` inside
-/// `locks L { … }` releases on its own path only; the path that falls through the `if` still
-/// holds `L` and releases it at the end of the block. (It was cleared here once, and the
-/// fall-through path then kept the lock for ever.)
+/// **Der Stapel bleibt stehen.** Die Freigabe schreibt Text für EINEN Pfad (den, der hier
+/// endet); der andere Pfad hinter einem `if … { return }` hält die Sperre weiter und gibt
+/// sie am Blockende selbst frei. Früher leerte dieser Aufruf den Stapel, und der Pfad ohne
+/// `return` ließ die Sperre für immer genommen (gemessen 2026-10-17, ein zweiter Ruf
+/// hing). Innen vor außen: bei maskierenden Sperren ist die Reihenfolge Pflicht.
 fn sperren_freigeben(k: &mut Koerper) {
-    for name in k.sperren.clone().into_iter().rev() {
-        ticket_freigabe(k, &name);
+    sperren_freigeben_ab(k, 0);
+}
+
+/// Wie `sperren_freigeben`, aber nur die Sperren über `tiefe` (`leave`/`next`).
+fn sperren_freigeben_ab(k: &mut Koerper, tiefe: usize) {
+    let halten: Vec<String> = k.sperren.iter().skip(tiefe).cloned().collect();
+    for name in halten.iter().rev() {
+        ticket_freigabe(k, name);
     }
 }
 
-/// `leave`/`next`: release only the locks taken inside the loop (from `tiefe` up).
-fn sperren_freigeben_ab(k: &mut Koerper, tiefe: usize) {
-    for name in k.sperren.clone().into_iter().skip(tiefe).rev() {
-        ticket_freigabe(k, &name);
+/// `return` senken (die Sperren gibt der Aufrufer VOR dem Abschluss frei, `return_freigabe`).
+fn senke_return(k: &mut Koerper, e: &Option<Expr>, span: Span) {
+    match e {
+        Some(x) => {
+            // Schwanzruf: springen statt rufen (kein Rahmen, kein Überlauf).
+            if schwanz_ruf(k, x, span).is_some() {
+                return;
+            }
+            // Geist-Antwort: der Wert ist beweisführend — Rückkehr leer.
+            if k.geist_rueck {
+                k.zeile("ret void");
+                k.beendet = true;
+                return;
+            }
+            // Tausch-Rumpf: `return` ist das neue Wort (kein Ausgang).
+            if let Some((neu_slot, nll, weiter)) = k.tausch_rueck.clone() {
+                let v = match senke_expr(k, x) {
+                    Some(v) => v,
+                    None => return,
+                };
+                let w = match angleiche_mit_weigere(k, v, &nll, span) {
+                    Some(w) => w,
+                    None => return,
+                };
+                k.zeile(&format!("store {} {}, ptr {neu_slot}, align {}", nll.text(), w.text, nat_align(&nll)));
+                k.zeile(&format!("br label %{weiter}"));
+                k.beendet = true;
+                return;
+            }
+            if let Some((rt, _)) = k.rueck.clone() {
+                if rt == LlTyp::Void {
+                    weigere(k.s, "Y104", span, "return of a value from a void function".to_string());
+                    return;
+                }
+                // Kanalfunktion: Grund → Fehler, Wert → Ok.
+                if let Some(or) = k.or_nutz.clone() {
+                    senke_return_kanal(k, x, &or, &rt, span);
+                    k.beendet = true;
+                    return;
+                }
+                let v = match senke_expr_mit(k, x, Some((&rt, Zeichen::Egal))) {
+                    Some(v) => v,
+                    None => return,
+                };
+                let w = match angleiche_mit_weigere(k, v, &rt, span) {
+                    Some(w) => w,
+                    None => return,
+                };
+                // `ensures`-Annahmen über der Antwort (was sich senken lässt).
+                if let Some(annahmen) = k.s.fns.get(&k.funktionsname).map(|f| f.vertrag_ensures.clone()) {
+                    let alt = k.ergebnis_wert.clone();
+                    k.ergebnis_wert = Some(w.clone());
+                    for pred in &annahmen {
+                        nehme_an(k, pred, "ensures");
+                    }
+                    k.ergebnis_wert = alt;
+                }
+                k.zeile(&format!("ret {} {}", rt.text(), w.text));
+            } else {
+                weigere(k.s, "Y104", span, "return of a value".to_string());
+                return;
+            }
+        }
+        None => {
+            k.zeile("ret void");
+        }
     }
+    k.beendet = true;
+
+}
+
+/// Sperrfreigabe unmittelbar vor der letzten Zeile (dem Abschluss) des eben gesenkten
+/// `return`: `ret`, oder `br` beim Tausch-Rumpf und beim Schwanzruf.
+fn return_freigabe(k: &mut Koerper, von: usize) {
+    if !k.beendet || k.sperren.is_empty() || k.text.len() <= von {
+        return;
+    }
+    let ohne_ende = k.text.trim_end_matches('\n').len();
+    let Some(zeilenanfang) = k.text[..ohne_ende].rfind('\n').map(|i| i + 1) else {
+        return;
+    };
+    if zeilenanfang < von {
+        return;
+    }
+    let abschluss = k.text.split_off(zeilenanfang);
+    k.beendet = false;
+    sperren_freigeben(k);
+    k.beendet = true;
+    k.text.push_str(&abschluss);
 }
 
 fn senke_stmt(k: &mut Koerper, st: &Stmt) {
+    k.kind.stmt = Some(st.span);
     match &st.art {
         StmtArt::Let(l) => senke_let(k, l, st.span),
         StmtArt::LetSonst(l) => senke_let_sonst(k, l, st.span),
@@ -3126,74 +3241,13 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
         StmtArt::AwaitLoad(a) => senke_await(k, a, st.span),
         StmtArt::Exchange(e) => senke_exchange(k, e, st.span),
         StmtArt::Return(e) => {
-            // Freigabe an jedem Ausgang (Ticket: `bereit += 1` je gehaltener Sperre).
-            sperren_freigeben(k);
-            match e {
-                Some(x) => {
-                    // Schwanzruf: springen statt rufen (kein Rahmen, kein Überlauf).
-                    if schwanz_ruf(k, x, st.span).is_some() {
-                        return;
-                    }
-                    // Geist-Antwort: der Wert ist beweisführend — Rückkehr leer.
-                    if k.geist_rueck {
-                        k.zeile("ret void");
-                        k.beendet = true;
-                        return;
-                    }
-                    // Tausch-Rumpf: `return` ist das neue Wort (kein Ausgang).
-                    if let Some((neu_slot, nll, weiter)) = k.tausch_rueck.clone() {
-                        let v = match senke_expr(k, x) {
-                            Some(v) => v,
-                            None => return,
-                        };
-                        let w = match angleiche_mit_weigere(k, v, &nll, st.span) {
-                            Some(w) => w,
-                            None => return,
-                        };
-                        k.zeile(&format!("store {} {}, ptr {neu_slot}, align {}", nll.text(), w.text, nat_align(&nll)));
-                        k.zeile(&format!("br label %{weiter}"));
-                        k.beendet = true;
-                        return;
-                    }
-                    if let Some((rt, _)) = k.rueck.clone() {
-                        if rt == LlTyp::Void {
-                            weigere(k.s, "Y104", st.span, "return of a value from a void function".to_string());
-                            return;
-                        }
-                        // Kanalfunktion: Grund → Fehler, Wert → Ok.
-                        if let Some(or) = k.or_nutz.clone() {
-                            senke_return_kanal(k, x, &or, &rt, st.span);
-                            k.beendet = true;
-                            return;
-                        }
-                        let v = match senke_expr_mit(k, x, Some((&rt, Zeichen::Egal))) {
-                            Some(v) => v,
-                            None => return,
-                        };
-                        let w = match angleiche_mit_weigere(k, v, &rt, st.span) {
-                            Some(w) => w,
-                            None => return,
-                        };
-                        // `ensures`-Annahmen über der Antwort (was sich senken lässt).
-                        if let Some(annahmen) = k.s.fns.get(&k.funktionsname).map(|f| f.vertrag_ensures.clone()) {
-                            let alt = k.ergebnis_wert.clone();
-                            k.ergebnis_wert = Some(w.clone());
-                            for pred in &annahmen {
-                                nehme_an(k, pred, "ensures");
-                            }
-                            k.ergebnis_wert = alt;
-                        }
-                        k.zeile(&format!("ret {} {}", rt.text(), w.text));
-                    } else {
-                        weigere(k.s, "Y104", st.span, "return of a value".to_string());
-                        return;
-                    }
-                }
-                None => {
-                    k.zeile("ret void");
-                }
-            }
-            k.beendet = true;
+            // **Zuerst der Wert, dann die Freigabe.** Ein `return Z` unter `locks` liest `Z`
+            // noch unter der Sperre; die Freigabe steht darum unmittelbar VOR dem Abschluss
+            // dieses Pfades und nicht davor (bei maskierenden Sperren stünde sonst die Lesung
+            // mit freien Unterbrechungen).
+            let von = k.text.len();
+            senke_return(k, e, st.span);
+            return_freigabe(k, von);
         }
         StmtArt::Ruf(r) => {
             let _ = senke_ruf(k, r, st.span);
@@ -3213,10 +3267,7 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
         StmtArt::Grow(g) => senke_grow(k, g, st.span),
         // **TODO §1-B:** the slot release (intrusive free list).
         StmtArt::Frei(f) => senke_frei(k, f, st.span),
-        StmtArt::Child(b) => {
-            // Kind-Pfad: läuft hinter dem Tor — hier läuft der Rumpf.
-            senke_block(k, b);
-        }
+        StmtArt::Child(b) => stapeltor::kind_stmt(k, b),
         StmtArt::Start(s) => senke_start(k, s, st.span),
     }
 }
@@ -4081,10 +4132,26 @@ fn ticket_nehmen_roh(k: &mut Koerper, name: &str) {
 
 /// Ticket-Sperre geben: `bereit += 1` (der Nächste ist dran).
 fn ticket_freigabe(k: &mut Koerper, name: &str) {
-    if let Some(leser) = leser_schreiber::als_leser(name) {
-        leser_schreiber::leser_freigabe(k, leser);
-        return;
+    let basis = match leser_schreiber::als_leser(name) {
+        Some(leser) => {
+            leser_schreiber::leser_freigabe(k, leser);
+            leser
+        }
+        None => {
+            ticket_freigabe_roh(k, name);
+            name
+        }
+    };
+    // Maskierende Sperre: der Zustand von vorher kehrt zurück (nie ein bedingungsloses `sti`).
+    // Erst nach der Freigabe -- auch der Leserseite --, und nicht beim Weiterreichen des
+    // Tickets mitten in der Leseraufnahme (`ticket_freigabe_roh`).
+    if k.s.maskiert.contains(basis) {
+        masken::wiederherstellen(k, basis);
     }
+}
+
+/// Das Ticket allein weitergeben: `bereit += 1`.
+fn ticket_freigabe_roh(k: &mut Koerper, name: &str) {
     let bereit = gteil(name, "bereit");
     k.zeile(&format!("atomicrmw add ptr {bereit}, i32 1 seq_cst, align 4"));
 }
@@ -4096,14 +4163,19 @@ fn senke_sperrt(k: &mut Koerper, s: &SperrtStmt, span: Span) {
         weigere(k.s, "Y103", span, format!("unknown lock {name}"));
         return;
     }
+    // Maskierende Sperre: erst Zustand sichern und Unterbrechungen sperren (auch für die
+    // Leserseite), dann erst die Sperre selbst.
+    if k.s.maskiert.contains(&name) {
+        masken::maskieren(k, &name);
+    }
     // A shared acquisition is held under the marked name (`leser_schreiber.rs`).
     let gehalten = if s.geteilt { leser_schreiber::leser_nehmen(k, &name) } else { ticket_nehmen(k, &name); name.clone() };
     k.sperren.push(gehalten.clone());
-    let tiefe = k.sperren.len();
     senke_block(k, &s.rumpf);
-    // Freigabe, falls der Rumpf sie nicht schon nahm (Ausgang ohne `return`).
-    if k.sperren.len() >= tiefe {
-        k.sperren.pop();
+    // Freigabe am Blockende, wenn der Pfad bis hier läuft (ein Rumpf, der in jedem Zweig
+    // zurückkehrt, hat an jedem Ausgang freigegeben).
+    k.sperren.pop();
+    if !k.beendet {
         ticket_freigabe(k, &gehalten);
     }
 }
@@ -4512,12 +4584,18 @@ fn sammle(s: &mut Senke, baum: &Programm, bau: crate::gatter::Bau) {
             ItemArt::Tabelle(t) => sammle_tabelle(s, t, it.span),
             ItemArt::Arena(a) => sammle_arena(s, a, it.span),
             ItemArt::Lock(l) => {
-                if l.maskiert.is_some() {
-                    weigere(s, "Y102", it.span, format!("masked lock {}", l.name.text));
-                    s.tote_items.insert(l.name.text.clone());
-                } else {
-                    // `true`: a reader/writer lock (`shared held`), gets a `leser` word.
-                    s.schloesser.insert(l.name.text.clone(), l.geteilte_haltezeit.is_some());
+                match &l.maskiert {
+                    Some(w) if !masken::wort_ist_irqs(w) => {
+                        weigere(s, "Y102", it.span, format!("lock {} masks `{}`, no lowering", l.name.text, w.text));
+                        s.tote_items.insert(l.name.text.clone());
+                    }
+                    Some(_) => {
+                        s.maskiert.insert(l.name.text.clone());
+                        s.schloesser.insert(l.name.text.clone(), l.geteilte_haltezeit.is_some());
+                    }
+                    None => {
+                        s.schloesser.insert(l.name.text.clone(), l.geteilte_haltezeit.is_some());
+                    }
                 }
             }
             ItemArt::Atomic(a) => sammle_atomic(s, a, it.span),
@@ -4562,11 +4640,32 @@ fn sammle(s: &mut Senke, baum: &Programm, bau: crate::gatter::Bau) {
             ItemArt::Syscall(g) => sammle_tor(s, g, &voll, it.span),
             ItemArt::Konst(kd) => sammle_konst(s, kd, it.span),
             ItemArt::Statisch(sd) => sammle_statisch(s, sd, it.span),
-            ItemArt::Entry(_) | ItemArt::Boot(_) | ItemArt::Entrust(_) => {
-                weigere(s, "Y102", it.span, format!("{} without LLVM lowering", it.art.benennung()));
-                if let Some(n) = it.art.name() {
-                    s.tote_items.insert(n.text.clone());
-                }
+            ItemArt::Entry(e) => eintritte::sammle(s, e, modul, it.span),
+            ItemArt::Boot(b) => {
+                weigere(
+                    s,
+                    "Y102",
+                    it.span,
+                    format!(
+                        "boot {}: a mode-ladder sequence of axiom steps (control registers, descriptor tables) \
+                         has no body to lower; the start state and the steps are the program's own gates",
+                        b.name.text
+                    ),
+                );
+                s.tote_items.insert(b.name.text.clone());
+            }
+            ItemArt::Entrust(t) => {
+                weigere(
+                    s,
+                    "Y102",
+                    it.span,
+                    format!(
+                        "entrust {}: the handover names a space and a register contract but no address to \
+                         transfer control to; the jump to unknown code has no sound lowering here",
+                        t.name.text
+                    ),
+                );
+                s.tote_items.insert(t.name.text.clone());
             }
             _ => {}
         }
@@ -5173,12 +5272,35 @@ fn sammle_tor(s: &mut Senke, g: &SyscallDecl, voll: &str, span: Span) {
         s.tote_items.insert(kurz);
         return;
     }
-    if !g.stapel.is_empty() {
-        weigere(s, "Y102", span, format!("stack-carrying gate {kurz}"));
-        s.tote_items.insert(kurz.clone());
-        s.tote_items.insert(voll.to_string());
-        return;
-    }
+    // Stapelklausel: genau eine (`N447`), gebunden in `regs in` (`N446`) -- sonst benannt verweigert.
+    let stapel_tor = match g.stapel.as_slice() {
+        [] => None,
+        [reg] => {
+            let stelle = g
+                .regs_in
+                .iter()
+                .find(|(r, _)| r.text == reg.text)
+                .and_then(|(_, p)| g.parameter.iter().position(|q| q.name.text == p.text));
+            match stelle {
+                Some(stelle) => {
+                    s.kind.tore.insert(kurz.clone());
+                    Some(stapeltor::StapelTor { reg: reg.text.clone(), stelle })
+                }
+                None => {
+                    weigere(s, "Y102", span, format!("stack-carrying gate {kurz}: the stack register binds no parameter"));
+                    s.tote_items.insert(kurz.clone());
+                    s.tote_items.insert(voll.to_string());
+                    return;
+                }
+            }
+        }
+        _ => {
+            weigere(s, "Y102", span, format!("stack-carrying gate {kurz} with several stack registers"));
+            s.tote_items.insert(kurz.clone());
+            s.tote_items.insert(voll.to_string());
+            return;
+        }
+    };
     if matches!(g.paarung, SyscallPaarung::Kernel { .. }) {
         weigere(s, "Y102", span, format!("kernel-paired gate {kurz}"));
         s.tote_items.insert(kurz.clone());
@@ -5280,6 +5402,7 @@ fn sammle_tor(s: &mut Senke, g: &SyscallDecl, voll: &str, span: Span) {
         template,
         clobbers: clobbers.clone(),
         ret_reg,
+        stapel: stapel_tor.clone(),
         or_nutz: or_nutz_tor,
         errors,
     };
@@ -5290,7 +5413,7 @@ fn sammle_tor(s: &mut Senke, g: &SyscallDecl, voll: &str, span: Span) {
     s.beleg_tore.push(TorBeleg {
         name: kurz,
         nummer,
-        schablone: template.to_string(),
+        schablone: if stapel_tor.is_some() { format!("{template}+child") } else { template.to_string() },
         bindungen,
         austritt: ret_reg.to_string(),
         clobbers,
@@ -5630,6 +5753,11 @@ fn emit_funktionen(s: &mut Senke) {
             FnPlan::Fertig { .. } => {}
         }
     }
+    // Ausgelagerte `child`-Regionen (ihre Funktionen stehen nach denen, die sie riefen).
+    stapeltor::abarbeiten(s);
+    eintritte::emittiere(s);
+    let benutzt = stapeltor::benutzt_text(s);
+    s.helfer.push_str(&benutzt);
 }
 
 fn emit_impl(s: &mut Senke, voll: &str, rumpf: &Block, params: &[(LlTyp, Zeichen)], namen: &[String], formen: &[TypExpr], modul: &str) {
@@ -5654,6 +5782,7 @@ fn emit_impl(s: &mut Senke, voll: &str, rumpf: &Block, params: &[(LlTyp, Zeichen
     let _ = writeln!(s.rumpf, "define {ret_text} {}({}) {{", gname(&emit), ps.join(", "));
     let _ = writeln!(s.rumpf, "eintritt:");
     let (text, allocas) = {
+        let kind = stapeltor::Zustand::fuer(&s.kind, rumpf);
         let mut k = Koerper {
             s,
             text: String::new(),
@@ -5667,6 +5796,8 @@ fn emit_impl(s: &mut Senke, voll: &str, rumpf: &Block, params: &[(LlTyp, Zeichen
             beendet: false,
             schleifen: Vec::new(),
             sperren: Vec::new(),
+            maske_zellen: BTreeMap::new(),
+            kind,
             alt_wert: None,
             ergebnis_wert: None,
             or_nutz: sig.or_nutz.clone(),
@@ -5860,6 +5991,10 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         variant_typen: BTreeMap::new(),
         gruende: BTreeMap::new(),
         schloesser: BTreeMap::new(),
+        maskiert: BTreeSet::new(),
+        kind: Default::default(),
+        eintritte: Vec::new(),
+        mit_eintritt: false,
         atomare: BTreeMap::new(),
         tabellen: BTreeMap::new(),
         geister: BTreeSet::new(),
@@ -5929,6 +6064,9 @@ pub fn emittiere_llvm_mit_beleg(
     aus.push_str(&s.helfer);
     for (nr, def) in &s.meta_knoten {
         let _ = writeln!(aus, "!{nr} = {def}");
+    }
+    if s.mit_eintritt {
+        aus = eintritte::ohne_rote_zone(&aus);
     }
     let beleg = LLVMBeleg {
         ziel: ziel.triple,
@@ -8897,8 +9035,7 @@ fn schwanz_ruf(k: &mut Koerper, x: &Expr, span: Span) -> Option<()> {
     if slots.len() != werte.len() {
         return None;
     }
-    // Freigabe wie an jedem Ausgang — dann Zustand laden, Versand setzen.
-    sperren_freigeben(k);
+    // Die Freigabe (jeder Ausgang) setzt `return_freigabe` vor den Sprung.
     for ((t, text), slot) in werte.iter().zip(slots.iter()) {
         k.zeile(&format!("store {t} {text}, ptr {slot}, align 8"));
     }
@@ -8947,6 +9084,8 @@ fn emit_rek(s: &mut Senke, voll: &str, info: &RekInfo) {
         beendet: false,
         schleifen: Vec::new(),
         sperren: Vec::new(),
+        maske_zellen: BTreeMap::new(),
+        kind: Default::default(),
         alt_wert: None,
         ergebnis_wert: None,
         or_nutz: None,
