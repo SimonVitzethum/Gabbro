@@ -6,6 +6,35 @@ stabil — Kommentare im Baum, die `OFFEN Oxx` nennen, meinen diese Abschnitte
 (Historie in Git). Geschlossenes und
 Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
+## 0. Order of work (Simon, 2026-10-17)
+
+Strictly in this order; each step is Lean-first (model, then exporter/checker/compiler), no legacy, no German words in syntax.
+
+**Phase A: dynamic data structures and their invariants** (plan: `dokumente/PLAN-DYNAMISCH.md` section 8a; covers O4-O6, O11, O14, O20, O29).
+ 1. `free`/`grow` as G blocks over the arena sugar; free-list invariant (`ArenaFrei.lean` is built, phase 1 part one).
+ 2. Invariants over live slots: links in range, acyclic along a walk, tree shape (capability tree), freelist disjoint from live slots; preservation theorems with witnesses and counter-models.
+ 3. Concurrency of arenas (O20): `grow` as a locked commit.
+ 4. `Spec.lean` diff (dynamic structures and table/group invariants leave NOT CLAIMED; `invRuhe`/`invSicht` non-vacuous), `gabbro_ziel` re-proved, two independent verdicts.
+ 5. Exporter/elaboration, then checker (O11), then the three examples (list, tree, hash chain) with certificates and poison probes.
+ Open decisions: first structures (recommended list and tree), links as indices in one arena (recommended), `free` across function boundaries (follows the `own` boundary rule).
+
+**Phase B: weak memory, items 1-5** (state: GX/W model carries atomics with the rely; release/acquire enforced).
+ 1. Message passing with a plain payload under release/acquire without a lock (O25, `N291`): model first (happens-before over the payload), then the checker rule; 11 corpus examples wait for it.
+ 2. Weak memory beyond DRF-SC: name and prove what is claimed (standard patterns), shrink the NOT CLAIMED line.
+ 3. Hardware bridge: x86-TSO, ARMv8 and RISC-V (RVWMO) refine W/GX, access by access, through the ISA-neutral `Need` list of Track L (needs the CPU models, built by Simon).
+ 4. Orderings and primitives: `consume`, `seq_cst` total order, stand-alone fences, mixed-size access, atomics over floats; litmus tests as the yardstick (MP, SB, LB, IRIW: allowed or forbidden as the model says).
+ 5. Shared atomics across link boundaries and the merge discipline of per-core cells (O17); lock-free structures (SPSC/MPSC ring, Treiber stack, seqlock, RCU) with happens-before over the payload; device and DMA ordering.
+
+**Phase C: the rest** (in this order).
+ 1. Track P (complete Lean parser: coverage matrix, then elaboration replaces `lean_g.rs`) and Track L (refinement down to the binary: ISA-neutral `Code`, no CPU model; `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a/9b). Both run now, in parallel with phase A.
+ 2. `boot` and `entrust` semantics in the model; aarch64 `vector`/`via` meaning; port space and `asm` in the model (the LLVM lowerings exist without a model).
+ 3. Interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37).
+ 4. Termination, waiting bounds and fairness, stack depth, floats beyond the IEEE kernel.
+ 5. Benchmark against GCC `-O3`: only after the compiler lowers much more and strong optimisation is in (Simon).
+ 6. Housekeeping: C remnants (C templates in `schablonen.rs`, Lean folder `CBackend`, 13 compiler warnings), file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`), the old Isabelle `.thy` set.
+
+---
+
 ## 1. Heap and stack (updated 2026-10-17)
 
 - **Built:** pressure-sampled unbounded arenas, slot release, external free-list
