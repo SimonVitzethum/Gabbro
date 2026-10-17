@@ -1,0 +1,31 @@
+-- erwartet: R014
+-- **The other half of the alias question** (2026-10-17, `dokumente/A1-OWN-PAPER.md`, slice 1).
+--
+-- `sicht(r)` is a re-view: it takes a pointer and answers a pointer, and the answer BORROWS --
+-- it has the root of its argument. `k` and `w` are therefore two names for one object, and
+-- `aendern` writes through the one and reads through the other. `R007` does not bite (two
+-- different names), `R004` does not either (no `own`). *This is the shape of
+-- `messung/netz/udp-echo.gab::echo_beantworten`, which read a stale checksum with 0 errors.*
+module gift::alias_sicht_und_quelle {
+
+type Kopf = { x : u32, y : u32, };
+type Worte = { w0 : u32, w1 : u32, };
+
+extern fn sicht(r : ptr<normal, r> Kopf) -> ptr<normal, r> Worte effects { reads r } costs <= 4 ops;
+
+impl fn aendern(k : ptr<normal, rw> Kopf, w : ptr<normal, r> Worte)
+    effects { writes k, reads w }
+    costs   <= 8 ops
+{
+    k.x = w.w0;
+}
+
+impl fn ruft(k : ptr<normal, rw> Kopf)
+    effects { writes k, reads k }
+    costs   <= 32 ops
+{
+    let w = sicht(k);
+    aendern(k, w);
+}
+
+}

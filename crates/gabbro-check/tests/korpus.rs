@@ -343,6 +343,8 @@ const BENANNT: &[&str] = &[
     // **And unlike the space, rights are not symmetric** -- `rw` at an `r` slot is
     // narrowing and must stay silent, and `tests/gestalt.rs` already pinned that row.
     "R013",
+    // 2026-10-17, slice 1 of `dokumente/A1-OWN-PAPER.md`: two names, one root.
+    "R014",
     // **Die Versiegelung eines `asm`-Rumpfes** («OPT3»): `arch`, `effects`, `costs`, und ein
     // Operand, der ein Parameter sein muss. Geprueft wird die FORM, nicht der Befehlstext --
     // den liest Gabbro nicht, und das ist der Kern der Sache.

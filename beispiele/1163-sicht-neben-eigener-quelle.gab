@@ -1,0 +1,42 @@
+-- **Positive twin of `gift/1444`** (2026-10-17, `dokumente/A1-OWN-PAPER.md`, slice 1).
+--
+-- Two views of one header may be passed together when NEITHER parameter is writable, and a
+-- writable parameter may sit beside a pointer of another root. Both shapes pass `R014`.
+module beispiel1163 {
+
+type Kopf = { x : u32, y : u32, };
+type Worte = { w0 : u32, w1 : u32, };
+
+extern fn sicht(r : ptr<normal, r> Kopf) -> ptr<normal, r> Worte effects { reads r } costs <= 4 ops;
+
+impl fn lesen(k : ptr<normal, r> Kopf, w : ptr<normal, r> Worte) -> u32
+    effects { reads k, reads w }
+    costs   <= 8 ops
+{
+    return k.x;
+}
+
+impl fn aendern(k : ptr<normal, rw> Kopf, w : ptr<normal, r> Worte)
+    effects { writes k, reads w }
+    costs   <= 8 ops
+{
+    k.x = w.w0;
+}
+
+impl fn nur_lesend(k : ptr<normal, r> Kopf) -> u32
+    effects { reads k }
+    costs   <= 32 ops
+{
+    let w = sicht(k);
+    return lesen(k, w);
+}
+
+impl fn getrennt(k : ptr<normal, rw> Kopf, q : ptr<normal, r> Kopf)
+    effects { writes k, reads q }
+    costs   <= 32 ops
+{
+    let w = sicht(q);
+    aendern(k, w);
+}
+
+}

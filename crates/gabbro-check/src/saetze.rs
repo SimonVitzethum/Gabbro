@@ -3379,6 +3379,28 @@ pub const M3: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt; messung/RACE.md A1",
     },
     Satz {
+        name: "m3.zeiger_wurzel",
+        kennungen: &["R014"],
+        aussage: "Two pointer arguments of one call must not share a ROOT when one of the two \
+                  parameters is writable or `own`: the root of a pointer is the parameter it \
+                  came from, and the answer of a function that takes and answers a pointer (a \
+                  re-view) has the root of its argument.",
+        vorbehalt: "Slice 1 of `dokumente/A1-OWN-PAPER.md`; refuse-only. Only BARE names are \
+                    compared and the walk over `let`s is flat (no scoping; a name bound twice \
+                    carries the union of its roots), so a field, an index or a call two frames \
+                    up carries no root this pass can name. Two different plain parameters pass \
+                    (the callee's inherited precondition) -- which means a function CALLED FROM \
+                    OUTSIDE the unit (`messung/netz/udp-echo.gab::echo_beantworten`, the real \
+                    stale-checksum shape) is not caught here: that is the boundary, slice 3. \
+                    No Lean statement yet (slice 2).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Probe `beispiele/gift/1444-alias-sicht-und-quelle.gab` (exactly `R014`); \
+                      positive twin `beispiele/1163-sicht-neben-eigener-quelle.gab` (two views \
+                      read-only, a writable parameter beside another root: 0 errors). Corpus: \
+                      0 `R014` over every tracked `.gab`.",
+        fundstelle: "crates/gabbro-check/src/m3.rs::getrennte_wurzeln; dokumente/A1-OWN-PAPER.md",
+    },
+    Satz {
         name: "m3.registerklasse",
         kennungen: &["R005", "R006"],
         aussage: "A `device` register field is read only if its class permits reading and \

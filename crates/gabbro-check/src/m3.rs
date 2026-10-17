@@ -26,7 +26,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Was über einen Zeigerparameter bekannt ist.
 #[derive(Clone)]
@@ -465,6 +465,221 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// What `getrennte_wurzeln` needs to know of a callee: per parameter whether it is a pointer
+/// and whether separation matters for it (writable or `own`), and whether it answers a pointer.
+struct Rufform {
+    zeiger: Vec<(bool, bool)>,
+    antwort_zeiger: bool,
+}
+
+/// **`R014` -- two pointer arguments of one call with the SAME ROOT, one side writable.**
+///
+/// `R004` and `R007` refuse the same PLACE at two parameters. This is the other half
+/// (`dokumente/A1-OWN-PAPER.md`, slice 1): two DIFFERENT names for one object. A pointer's
+/// root is the parameter it came from; `let v = f(p)` where `f` takes a pointer and answers
+/// one (a re-view, `gabbro alias` stratum S4) BORROWS: `v` has the root of `p`. Two
+/// arguments with a common root at a call whose parameters are writable or `own` are refused;
+/// two read-only parameters are free.
+///
+/// **Under-approximations, stated:** only a bare name counts as an argument (a field or an
+/// index carries no root this pass can name); the walk over `let`s is flat -- no scoping, a
+/// name bound twice carries the union of its roots; a pointer parameter is its own root, so
+/// two different plain parameters pass (the callee's inherited precondition, S-2).
+fn getrennte_wurzeln(baum: &Programm, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let mut formen: BTreeMap<String, Rufform> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Funktion(f) = &item.art {
+            let zeiger = f
+                .parameter
+                .iter()
+                .map(|p| match &p.typ {
+                    TypExpr::Zeiger(z) => (
+                        true,
+                        z.rechte.iter().any(|r| {
+                            matches!(r, Recht::Eigen(_) | Recht::Schreiben | Recht::LesenSchreiben)
+                        }),
+                    ),
+                    _ => (false, false),
+                })
+                .collect();
+            formen.insert(
+                crate::umgebung::qualifiziere(modul, &f.name.text),
+                Rufform {
+                    zeiger,
+                    antwort_zeiger: matches!(f.ergebnis, Some(TypExpr::Zeiger(_))),
+                },
+            );
+        }
+    });
+    fn nackter_name(e: &Expr) -> Option<&str> {
+        match &e.art {
+            ExprArt::Ort(o) if o.suffixe.is_empty() => Some(o.basis.text.as_str()),
+            ExprArt::Klammer(i) => nackter_name(i),
+            _ => None,
+        }
+    }
+    fn aufloesen<'a>(
+        u: &crate::umgebung::Umgebung,
+        formen: &'a BTreeMap<String, Rufform>,
+        modul: &str,
+        r: &Ruf,
+    ) -> Option<&'a Rufform> {
+        let CallTarget::Path(p) = &r.ziel else {
+            return None;
+        };
+        u.kandidaten_aufloesbar(modul, &p.text())
+            .into_iter()
+            .find_map(|k| formen.get(&k))
+    }
+    fn alle_rufe<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
+        for s in &b.anweisungen {
+            for e in crate::eigene_ausdruecke(s) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        aus.push(r);
+                    }
+                }
+            }
+            match &s.art {
+                StmtArt::Ruf(r) => aus.push(r),
+                StmtArt::LetSonst(l) => {
+                    if let Some(r) = l.als_ruf() {
+                        aus.push(r);
+                    }
+                }
+                _ => {}
+            }
+            for k in crate::unterbloecke(s) {
+                alle_rufe(k, aus);
+            }
+        }
+    }
+    fn alle_lets<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>) {
+        for s in &b.anweisungen {
+            if let StmtArt::Let(l) = &s.art {
+                aus.push(l);
+            }
+            for k in crate::unterbloecke(s) {
+                alle_lets(k, aus);
+            }
+        }
+    }
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(rumpf) = &f.rumpf else {
+            return;
+        };
+        let mut wurzeln: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for p in &f.parameter {
+            if matches!(p.typ, TypExpr::Zeiger(_)) {
+                wurzeln.insert(p.name.text.clone(), BTreeSet::from([p.name.text.clone()]));
+            }
+        }
+        let mut lets = Vec::new();
+        alle_lets(rumpf, &mut lets);
+        // Flat and to a fixpoint: a chain of `let`s needs as many rounds as it is long.
+        for _ in 0..=lets.len() {
+            let mut bewegt = false;
+            for l in &lets {
+                let neu: BTreeSet<String> = if let Some(n) = nackter_name(&l.wert) {
+                    wurzeln.get(n).cloned().unwrap_or_default()
+                } else if let ExprArt::Ruf(r) = &l.wert.art {
+                    match aufloesen(&u, &formen, modul, r) {
+                        Some(form) if form.antwort_zeiger => {
+                            let mut von: BTreeSet<String> = BTreeSet::new();
+                            for (i, a) in r.argumente.iter().enumerate() {
+                                if form.zeiger.get(i).is_some_and(|z| z.0) {
+                                    if let Some(n) = nackter_name(a) {
+                                        von.extend(wurzeln.get(n).cloned().unwrap_or_default());
+                                    }
+                                }
+                            }
+                            if von.is_empty() {
+                                // An answer that comes from no pointer argument is a fresh object.
+                                BTreeSet::from([format!("#{}", l.name.text)])
+                            } else {
+                                von
+                            }
+                        }
+                        _ => continue,
+                    }
+                } else {
+                    continue;
+                };
+                let slot = wurzeln.entry(l.name.text.clone()).or_default();
+                let vorher = slot.len();
+                slot.extend(neu);
+                bewegt |= slot.len() != vorher;
+            }
+            if !bewegt {
+                break;
+            }
+        }
+        let mut rufe = Vec::new();
+        alle_rufe(rumpf, &mut rufe);
+        for r in rufe {
+            let Some(form) = aufloesen(&u, &formen, modul, r) else {
+                continue;
+            };
+            let namen: Vec<Option<&str>> = r.argumente.iter().map(nackter_name).collect();
+            'paare: for i in 0..namen.len() {
+                for j in (i + 1)..namen.len() {
+                    let (Some(a), Some(b)) = (namen[i], namen[j]) else {
+                        continue;
+                    };
+                    // The same place is `R004`/`R007`'s; this rule speaks about two NAMES.
+                    if a == b {
+                        continue;
+                    }
+                    let (Some(&(zi, si)), Some(&(zj, sj))) =
+                        (form.zeiger.get(i), form.zeiger.get(j))
+                    else {
+                        continue;
+                    };
+                    if !(zi && zj && (si || sj)) {
+                        continue;
+                    }
+                    let (Some(wa), Some(wb)) = (wurzeln.get(a), wurzeln.get(b)) else {
+                        continue;
+                    };
+                    if let Some(gemeinsam) = wa.intersection(wb).next() {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "R014",
+                                r.span,
+                                format!(
+                                    "`{}` passes `{a}` and `{b}` to two pointer parameters, \
+                                     one of them writable or `own`, and both point at the \
+                                     object of `{}`",
+                                    f.name.text,
+                                    gemeinsam.trim_start_matches('#')
+                                ),
+                            )
+                            .mit_notiz(
+                                "two names with one root are one object: a write through the \
+                                 one changes what the callee reads through the other",
+                            )
+                            .mit_notiz(
+                                "a pointer that comes out of a function taking a pointer (a \
+                                 re-view) borrows: it has the root of its argument",
+                            )
+                            .mit_notiz(
+                                "only bare names are compared, and the walk over `let`s is \
+                                 flat -- a field or an index carries no root this pass can \
+                                 name (`dokumente/A1-OWN-PAPER.md`)",
+                            ),
+                        );
+                        break 'paare;
+                    }
+                }
+            }
+        }
+    });
+}
+
 /// **Was eine Registerklasse ERLAUBT** -- und die Lesart steht hier, weil sie sonst nirgends
 /// stand.
 ///
@@ -881,6 +1096,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     geraeteversprechen(baum, absagen);
     fehlbare_lesungen(baum, absagen);
     eigen_doppelt(baum, absagen);
+    getrennte_wurzeln(baum, absagen);
 
     // **Die Platzierungsregel zuerst** -- sie betrifft Deklarationen, nicht Rümpfe.
     let mut mit_ops: Vec<String> = Vec::new();
