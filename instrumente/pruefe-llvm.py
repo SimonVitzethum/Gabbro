@@ -41,6 +41,8 @@ def stufe_tests():
 
 
 def stufe_ende_zu_ende():
+    # the binary the end-to-end stage drives must match the sources (a stale binary measured the old compiler)
+    subprocess.run(["cargo", "build", "-q", "-p", "gabbro-cli"], cwd=W, env=ENV, capture_output=True, timeout=3000)
     fehlt = [t for t in ("opt", "llc", "ld.lld", "readelf", "qemu-aarch64") if not shutil.which(t)]
     if fehlt:
         print(f"  2 binaer:  NICHT GEMESSEN (fehlt: {', '.join(fehlt)})")
