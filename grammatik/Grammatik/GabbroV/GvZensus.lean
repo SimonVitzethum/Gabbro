@@ -100,7 +100,7 @@ structure Befund where
 
 /-- True for table items. -/
 def istTabelle : SItemTief → Bool
-  | .tabelleT .. => true
+  | .tableT .. => true
   | _ => false
 
 /-- True for lock items. -/
@@ -110,7 +110,7 @@ def istSperre : SItemTief → Bool
 
 /-- A function item as head plus body. -/
 def alsFunktion : SItemTief → Option (FnSig × SAnw)
-  | .funktionT s b => some (s, b)
+  | .fnT s b => some (s, b)
   | _ => none
 
 /-- Statement tag (all 30 arms of `SAnw`; `Anweisung.lean`). -/
@@ -118,79 +118,79 @@ def artAnw : SAnw → String
   | .bind .. => "let"
   | .bindElse .. => "let-else"
   | .bindLib .. => "let-lib"
-  | .zuweis .. => "assign"
+  | .set .. => "assign"
   | .shift .. => "transition"
-  | .ruf .. => "call"
-  | .libruf .. => "lib-call"
-  | .wenn .. => "if"
-  | .sonstWenn .. => "else-if"
-  | .matchS .. => "match"
+  | .call .. => "call"
+  | .lcall .. => "lib-call"
+  | .cond .. => "if"
+  | .elsif .. => "else-if"
+  | .cases .. => "match"
   | .arm .. => "match-arm"
-  | .traverseS .. => "traverse"
-  | .retryS .. => "retry"
-  | .foreverS .. => "forever"
-  | .bricht .. => "bricht"
-  | .narrowS .. => "narrow"
-  | .sperrt .. => "locks"
-  | .beobachtet .. => "observe"
-  | .verlasse .. => "leave"
-  | .widen .. => "next"
-  | .publiziert .. => "publish"
-  | .erwartet .. => "await"
-  | .tauscht .. => "exchange"
-  | .schreitet .. => "advance"
-  | .rueck .. => "mid-return"
-  | .allocS .. => "alloc"
-  | .resetS .. => "reset"
+  | .each .. => "traverse"
+  | .retry .. => "retry"
+  | .loop .. => "forever"
+  | .waive .. => "waive"
+  | .trim .. => "narrow"
+  | .locks .. => "locks"
+  | .watch .. => "observe"
+  | .leave .. => "leave"
+  | .next .. => "next"
+  | .emit .. => "publish"
+  | .await .. => "await"
+  | .swap .. => "exchange"
+  | .step .. => "advance"
+  | .ret .. => "mid-return"
+  | .alloc .. => "alloc"
+  | .reset .. => "reset"
   | .grow .. => "grow"
   | .free .. => "free"
   | .child .. => "child"
   | .start .. => "start"
-  | .sonst .. => "else"
+  | .other .. => "else"
   | .block .. => "block"
 
 /-- Ender tag (all 3 arms of `SEnde`). -/
 def artEnde : SEnde → String
   | .ret _ => "return"
-  | .fort _ => "leave-end"
-  | .naechst _ => "next-end"
+  | .leave _ => "leave-end"
+  | .next _ => "next-end"
 
 /-- Constructor tag of a surface item (all 32 arms of `SItemTief`). -/
 def artItem : SItemTief → String
-  | .modulT .. => "modulT"
+  | .modT .. => "modT"
   | .useT .. => "useT"
-  | .typT .. => "typT"
-  | .konstT .. => "konstT"
+  | .typeT .. => "typeT"
+  | .constT .. => "constT"
   | .globT .. => "globT"
-  | .funktionT .. => "funktionT"
+  | .fnT .. => "fnT"
   | .protoT .. => "protoT"
   | .specT .. => "specT"
   | .asmT .. => "asmT"
   | .formatT .. => "formatT"
-  | .tabelleT .. => "tabelleT"
+  | .tableT .. => "tableT"
   | .arenaT .. => "arenaT"
-  | .grundT .. => "grundT"
-  | .zustandT .. => "zustandT"
-  | .geraetT .. => "geraetT"
-  | .annahmeT .. => "annahmeT"
-  | .axiomaT .. => "axiomaT"
-  | .pruefungT .. => "pruefungT"
-  | .atomarT .. => "atomarT"
+  | .whyT .. => "whyT"
+  | .stateT .. => "stateT"
+  | .devT .. => "devT"
+  | .assumT .. => "assumT"
+  | .axiomT .. => "axiomT"
+  | .checkT .. => "checkT"
+  | .atomT .. => "atomT"
   | .lockT .. => "lockT"
   | .rcuT .. => "rcuT"
-  | .gruppeT .. => "gruppeT"
-  | .nebenT .. => "nebenT"
-  | .akkumT .. => "akkumT"
-  | .wegT .. => "wegT"
-  | .eingangT .. => "eingangT"
-  | .anvertrautT .. => "anvertrautT"
-  | .startT .. => "startT"
-  | .sysrufT .. => "sysrufT"
+  | .groupT .. => "groupT"
+  | .concT .. => "concT"
+  | .accT .. => "accT"
+  | .walkT .. => "walkT"
+  | .entryT .. => "entryT"
+  | .trustT .. => "trustT"
+  | .bootT .. => "startT"
+  | .callT .. => "callT"
   | .varT .. => "varT"
   | .goalT .. => "goalT"
-  | .uebersetzerT .. => "uebersetzerT"
-  | .profilT .. => "profilT"
-  | .torT .. => "torT"
+  | .transT .. => "transT"
+  | .profT .. => "profT"
+  | .gateT .. => "gateT"
 
 /-- Parse each chunk; collect per-chunk outcomes (no short-circuit). -/
 def parseStuecke (toks : List Token) :
@@ -216,7 +216,7 @@ def sammleTabellen (consts : List (String × Int))
   | [] => []
   | it :: rest =>
     match it with
-    | .tabelleT n _ _ _ _ _ =>
+    | .tableT n _ _ _ _ _ =>
       (n, uTabelle consts aliase it) :: sammleTabellen consts aliase rest
     | _ => sammleTabellen consts aliase rest
 
@@ -262,7 +262,7 @@ theorem sammleIdx_laenge {α β : Type}
 /-- Ensures predicate expressions of clauses (mirrors `elabFn`). -/
 def sichertVon : List SKlausel → List SExpr
   | [] => []
-  | .sichert e :: rest => e :: sichertVon rest
+  | .gives e :: rest => e :: sichertVon rest
   | _ :: rest => sichertVon rest
 
 /-- Findings of one body: every statement tried, every ensures
@@ -278,10 +278,10 @@ def befundeRumpf (ctx : UCtx) (tabs : List UTab)
       | .error e => some ({ stufe := "rumpf", art := artAnw s, name := fname, meldung := e } : Befund)
       | .ok _ => none
     | _ => [some ({ stufe := "rumpf", art := "rumpf", name := fname, meldung := "Funktionsrumpf ohne G-Form" } : Befund)]
-  let sichert :=
+  let gives :=
     (sichertVon klauseln).map fun e =>
       match uSichert ctx e with
-      | .error m => some ({ stufe := "sichert", art := "ens-pred", name := fname, meldung := m } : Befund)
+      | .error m => some ({ stufe := "gives", art := "ens-pred", name := fname, meldung := m } : Befund)
       | .ok _ => none
   let ret :=
     match koerper with
@@ -290,7 +290,7 @@ def befundeRumpf (ctx : UCtx) (tabs : List UTab)
       | .error m => [({ stufe := "rueckgabe", art := "return", name := fname, meldung := m } : Befund)]
       | .ok _ => []
     | _ => []
-  saetze.filterMap id ++ sichert.filterMap id ++ ret
+  saetze.filterMap id ++ gives.filterMap id ++ ret
 
 /-- Findings of one function: head first, then the body descent (needs
     a good head for the context; a failed head hides its body, as in
@@ -331,7 +331,7 @@ def befundeElab (ms : List SItemTief) : List Befund :=
       | .ok v => some v
       | .error _ => none
   let wurzF := (ms.filter fun it => match it with
-    | .eingangT _ => true
+    | .entryT _ => true
     | _ => false).filterMap fun it =>
     match uWurzeln fnsOk [it] with
     | .error e => some ({ stufe := "eintritt", art := "entry", name := "", meldung := e } : Befund)
@@ -438,15 +438,15 @@ theorem zensus104_leer : befundeElab (uMembers items104) = [] := by
 /-- **Synthetic two-blocker fixture**: a table with an unknown field
     type plus a function with an `if` body (real table, real body). -/
 def wMultiItems : List SItemTief :=
-  [.modulT "beispiel::zeuge"
-    [.tabelleT "T" (.some (.lit 1)) .none .none false
-      [.tPlatz [{ fname := "v", ftyp := .atom "Unbekannt",
+  [.modT "beispiel::zeuge"
+    [.tableT "T" (.some (.lit 1)) .none .none false
+      [.tSlot [{ fname := "v", ftyp := .atom "Unbekannt",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
-    .funktionT
+    .fnT
       { art := "impl", name := "f", params := [],
-        ergebnis := .none, fehler := .none, klauseln := [] }
-      (.block [.wenn (.tru) (.block [] .none) [] .none]
+        res := .none, fehler := .none, klauseln := [] }
+      (.block [.cond (.tru) (.block [] .none) [] .none]
         (.some (.ret .none)))]]
 
 /-- **Exactness on the fixture**: exactly the table finding and the
@@ -489,7 +489,7 @@ def zensusDateien : List String :=
     "126-vergleichssortierung.gab", "127-treiberrueckruf.gab",
     "12-umlaufendes-register.gab", "130-derived-contract-pure.gab",
     "131-derived-contract-call.gab", "132-raum-am-zeiger.gab",
-    "133-nur-gruende-und-ein-format-am-pfeil.gab",
+    "133-nur-gruende-und-ein-format-am-arrow.gab",
     "134-holende-bitzuege.gab", "13-zeuge-mit-staerke.gab",
     "140-atomic-array-counter.gab", "141-atomic-array-pairing.gab",
     "146-sperrstreifen.gab", "147-ftp-alg-control.gab",
@@ -566,8 +566,8 @@ def zensusDateien : List String :=
      the word scan covers English surface spellings observed in the
      corpus; `SAnw`-internal expression shapes are not descended
      (statement tags + messages carry those rows); multi-module files
-     are opaque to the stage filters (items nested in `modulT` show
-     empty findings with modulT tags, e.g. 29/59/60/167).
+     are opaque to the stage filters (items nested in `modT` show
+     empty findings with modT tags, e.g. 29/59/60/167).
   3. Elaboration lesson: struct-instance `{...}` literals need a
      statically known expected type (`(...) : Befund` ascription) in
      lambdas and match arms; without it Lean reports "unexpected

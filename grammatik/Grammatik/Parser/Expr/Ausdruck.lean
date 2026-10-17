@@ -37,8 +37,8 @@ def beqWorte : List String → List String → Bool
     Against `ast.rs` `ExprArt`: `Zahl/Wahr/Falsch/Ort/Ruf/Grund`
     carry over (spans dropped); `Some(x)`/`None` stay calls
     (`ruf "Some" [x]`, `ruf "None" []`, as `parse.rs` builds them);
-    `FnWert` is `fnwert` with the path text; `Eingebaut` is
-    `eingebaut` with the head word and the argument expressions;
+    `FnWert` is `fnref` with the path text; `Eingebaut` is
+    `built` with the head word and the argument expressions;
     `Klammer` vanishes (the printer re-parenthesises); `Zaehle`,
     `ArrayLit` and `LibraryCall` are refused (see CUTS). -/
 inductive SExpr
@@ -47,16 +47,16 @@ inductive SExpr
   | tru : SExpr
   | fls : SExpr
   | variable : String → SExpr
-  | feld : SExpr → String → SExpr
+  | field : SExpr → String → SExpr
   | index : SExpr → SExpr → SExpr
-  | pfeil : SExpr → String → SExpr
+  | arrow : SExpr → String → SExpr
   | un : String → SExpr → SExpr
   | bin : String → SExpr → SExpr → SExpr
-  | ruf : String → List SExpr → SExpr
-  | fnwert : String → SExpr
-  | eingebaut : String → List SExpr → SExpr
-  | alt : SExpr → SExpr
-  | ergebnis : SExpr
+  | call : String → List SExpr → SExpr
+  | fnref : String → SExpr
+  | built : String → List SExpr → SExpr
+  | old : SExpr → SExpr
+  | res : SExpr
   | why : String → String → SExpr
   /-- Predicate forms, string literals and calls through places (layout at `XKind`). They have no
       spelling in `druckToks`: the printer is total on the printable core only (`gut`). -/
@@ -73,17 +73,17 @@ def beqSExpr : SExpr → SExpr → Bool
   | .tru, .tru => true
   | .fls, .fls => true
   | .variable a, .variable b => strEq a b
-  | .feld x f, .feld y g => beqSExpr x y && strEq f g
+  | .field x f, .field y g => beqSExpr x y && strEq f g
   | .index x i, .index y j => beqSExpr x y && beqSExpr i j
-  | .pfeil x f, .pfeil y g => beqSExpr x y && strEq f g
+  | .arrow x f, .arrow y g => beqSExpr x y && strEq f g
   | .un o x, .un p y => strEq o p && beqSExpr x y
   | .bin o x1 x2, .bin p y1 y2 =>
     strEq o p && beqSExpr x1 y1 && beqSExpr x2 y2
-  | .ruf f a, .ruf g b => strEq f g && beqSExprList a b
-  | .fnwert f, .fnwert g => strEq f g
-  | .eingebaut f a, .eingebaut g b => strEq f g && beqSExprList a b
-  | .alt x, .alt y => beqSExpr x y
-  | .ergebnis, .ergebnis => true
+  | .call f a, .call g b => strEq f g && beqSExprList a b
+  | .fnref f, .fnref g => strEq f g
+  | .built f a, .built g b => strEq f g && beqSExprList a b
+  | .old x, .old y => beqSExpr x y
+  | .res, .res => true
   | .why g1 f1, .why g2 f2 => strEq g1 g2 && strEq f1 f2
   | .ext k a x, .ext l b y => decide (k = l) && beqWorte a b && beqSExprList x y
   | _, _ => false
@@ -209,7 +209,7 @@ def sammleSegmente : List Token → List String → List String × List Token
     (`parse.rs` builds the same `Ort` with `Feld` suffixes). -/
 def grundKette : List String → SExpr
   | [] => .variable ""
-  | a :: rest => rest.foldl (fun e s => .feld e s) (.variable a)
+  | a :: rest => rest.foldl (fun e s => .field e s) (.variable a)
 
 -- The expression levels of SYNTAX.md section 4 (`expr` down to
 -- `primary`), each with fuel: every call passes strictly less fuel,
@@ -325,7 +325,7 @@ def parseUnary (f : Nat) (toks : List Token) :
     | .zeichen "&" :: t :: rest => match nameText t with
       | some s =>
         let (segs, rest') := sammleSegmente rest [s]
-        .ok (.fnwert ("::".intercalate segs), rest')
+        .ok (.fnref ("::".intercalate segs), rest')
       | none => .error "& expects a path"
     | _ => parsePrimary f toks
 def parsePrimary (f : Nat) (toks : List Token) :
@@ -346,15 +346,15 @@ def parsePrimary (f : Nat) (toks : List Token) :
     | .wort "false" :: rest => .ok (.fls, rest)
     | .wort "Some" :: .zeichen "(" :: rest =>
       match parseOr f rest with
-      | .ok (e, .zeichen ")" :: rest') => .ok (.ruf "Some" [e], rest')
+      | .ok (e, .zeichen ")" :: rest') => .ok (.call "Some" [e], rest')
       | .ok (_, _) => .error "Some without )"
       | .error e => .error e
-    | .wort "None" :: rest => .ok (.ruf "None" [], rest)
-    | .wort "Some" :: rest => .ok (.ruf "Some" [], rest)
-    | .wort "result" :: rest => .ok (.ergebnis, rest)
+    | .wort "None" :: rest => .ok (.call "None" [], rest)
+    | .wort "Some" :: rest => .ok (.call "Some" [], rest)
+    | .wort "result" :: rest => .ok (.res, rest)
     | .wort "old" :: .zeichen "(" :: rest =>
       match parseOrt f rest with
-      | .ok (e, .zeichen ")" :: rest') => .ok (.alt e, rest')
+      | .ok (e, .zeichen ")" :: rest') => .ok (.old e, rest')
       | .ok (_, _) => .error "old without )"
       | .error e => .error e
     | .wort "sizeof" :: .zeichen "(" :: rest =>
@@ -383,14 +383,14 @@ def parseEingebaut (f : Nat) (w : String) (n : Nat)
         match a with
         | .variable s =>
           if istTypWort s then .error (w ++ " over a type")
-          else .ok (.eingebaut w [a], rest')
-        | _ => .ok (.eingebaut w [a], rest')
+          else .ok (.built w [a], rest')
+        | _ => .ok (.built w [a], rest')
       | .ok (_, _) => .error (w ++ " without )")
       | .error e => .error e
     else match parseOr f toks with
       | .ok (a, .zeichen "," :: rest) => match parseOr f rest with
         | .ok (b, .zeichen ")" :: rest') =>
-          .ok (.eingebaut w [a, b], rest')
+          .ok (.built w [a, b], rest')
         | .ok (_, _) => .error (w ++ " without )")
         | .error e => .error e
       | .ok (_, _) => .error (w ++ " without ,")
@@ -417,11 +417,11 @@ def parseKopf (f : Nat) (toks : List Token) :
         | (segs, .zeichen "(" :: rest') =>
           match parseArgs f rest' with
           | .ok (args, rest'') =>
-            .ok (.ruf ("::".intercalate segs) args, rest'')
+            .ok (.call ("::".intercalate segs) args, rest'')
           | .error e => .error e
         | ([a, b], rest') =>
           if istIntWort a || istZuckerBreite a then
-            .ok (.feld (.variable a) b, rest')
+            .ok (.field (.variable a) b, rest')
           else if strEq a "Self" then .error "Self:: is not a form"
           else .ok (.why a b, rest')
         | ([a], rest') => parseSuffixe f (.variable a) rest'
@@ -434,10 +434,10 @@ def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .zeichen "." :: t :: rest => match nameText t with
-      | some s => parseSuffixe f (.feld e s) rest
+      | some s => parseSuffixe f (.field e s) rest
       | none => .error "field name expected"
     | .zeichen "->" :: t :: rest => match nameText t with
-      | some s => parseSuffixe f (.pfeil e s) rest
+      | some s => parseSuffixe f (.arrow e s) rest
       | none => .error "field name expected"
     | .zeichen "[" :: rest => match parseOr f rest with
       | .ok (i, .zeichen "]" :: rest') =>
@@ -600,13 +600,13 @@ def parsePredAtom (f : Nat) (toks : List Token) :
         | _ => .error er
 end
 
-/-- Trees that print bare under a prefix operator. `fnwert` is not
+/-- Trees that print bare under a prefix operator. `fnref` is not
     among them: `!&f` is refused on both sides, so it prints
     parenthesised and stays stable. -/
 def istAtom : SExpr → Bool
   | .bin .. => false
   | .un .. => false
-  | .fnwert _ => false
+  | .fnref _ => false
   | _ => true
 
 -- The printer: binary operators fully parenthesised, so the
@@ -621,20 +621,20 @@ def druck : SExpr → String
   | .tru => "true"
   | .fls => "false"
   | .variable s => s
-  | .feld x f => druck x ++ "." ++ f
+  | .field x f => druck x ++ "." ++ f
   | .index x i => druck x ++ "[" ++ druck i ++ "]"
-  | .pfeil x f => druck x ++ "->" ++ f
+  | .arrow x f => druck x ++ "->" ++ f
   | .un o x =>
     if istAtom x then o ++ druck x else o ++ "(" ++ druck x ++ ")"
   | .bin o l r => "(" ++ druck l ++ " " ++ o ++ " " ++ druck r ++ ")"
-  | .ruf f args =>
+  | .call f args =>
     match args with
     | [] => if strEq f "None" then "None" else f ++ "()"
     | _ :: _ => f ++ "(" ++ druckArgs args ++ ")"
-  | .fnwert p => "&" ++ p
-  | .eingebaut f args => f ++ "(" ++ druckArgs args ++ ")"
-  | .alt x => "old(" ++ druck x ++ ")"
-  | .ergebnis => "result"
+  | .fnref p => "&" ++ p
+  | .built f args => f ++ "(" ++ druckArgs args ++ ")"
+  | .old x => "old(" ++ druck x ++ ")"
+  | .res => "result"
   | .why g f => g ++ "::" ++ f
   | .ext .text ns _ => "\"" ++ ("".intercalate ns) ++ "\""
   | .ext _ _ _ => "<ext>"
@@ -741,7 +741,7 @@ end Gabbro.Grammatik.Parser
      (`@lib#f`) have no constructor and are refused.
   9. String literals are refused in expression position (`P011` in
      `parse.rs` has no string arm either) -- same refusal.
-  10. `&T` for a declared carrier reads as `fnwert "T"` here; Rust
+  10. `&T` for a declared carrier reads as `fnref "T"` here; Rust
       separates the `ptr` producer (`Expr.ptrOf`) by declaration
       context this reader does not have.
   11. `beqSExpr`/`beqTop` are not proved sound or complete: the

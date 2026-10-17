@@ -745,7 +745,7 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     lowDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tab b f ix =>
     lowTabRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
-  | .alt b f ix =>
+  | .old b f ix =>
     lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .add a b =>
     match lowSideEns u Γ Λ fn er a with

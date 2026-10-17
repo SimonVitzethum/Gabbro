@@ -11,23 +11,23 @@ namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
 /- A surface type: SYNTAX.md section 2 `typeexpr` without spans or
-    checks. `atom` is one name, `pfad` a `::` path, `ptr` a
+    checks. `atom` is one name, `path` a `::` path, `ptr` a
     `ptr<space, rights>` capability, `index` an `[option] index
     into T`, `bereich` a `base in lo .. hi` range (`exkl` for
-    `..<`), `reihe` an array, `wickelnd` a `wrapping` width and
-    `einbettet` an `embeds [hi:lo] [scale e]` field. A brace or
+    `..<`), `reihe` an array, `wrap` a `wrapping` width and
+    `embed` an `embeds [hi:lo] [scale e]` field. A brace or
     `fn(…)` group (`structty`, `variants`, `fnptr`) rides `roh`,
     balanced but uninterpreted (see CUTS). -/
 inductive STyp
   | atom : String → STyp
-  | pfad : List String → STyp
+  | path : List String → STyp
   | ptr : String → String → STyp → STyp
   | index : Bool → String → STyp
-  | bereich : STyp → SExpr → SExpr → Bool → STyp
-  | reihe : STyp → SExpr → STyp
-  | wickelnd : STyp → STyp
-  | einbettet : STyp → String → Option SExpr → STyp
-  | roh : String → STyp
+  | range : STyp → SExpr → SExpr → Bool → STyp
+  | array : STyp → SExpr → STyp
+  | wrap : STyp → STyp
+  | embed : STyp → String → Option SExpr → STyp
+  | raw : String → STyp
   /-- `string max N` (`stringty`): the bound as an expression. -/
   | str : SExpr → STyp
   /-- `entry fn(params) [-> T]` (`entryfn`): the parameter words raw, the result type read. -/
@@ -40,17 +40,17 @@ inductive STyp
 mutual
 def beqSTyp : STyp → STyp → Bool
   | .atom a, .atom b => strEq a b
-  | .pfad a, .pfad b => beqWorte a b
+  | .path a, .path b => beqWorte a b
   | .ptr r1 w1 t1, .ptr r2 w2 t2 =>
     strEq r1 r2 && strEq w1 w2 && beqSTyp t1 t2
   | .index o1 t1, .index o2 t2 => (o1 == o2) && strEq t1 t2
-  | .bereich b1 l1 h1 x1, .bereich b2 l2 h2 x2 =>
+  | .range b1 l1 h1 x1, .range b2 l2 h2 x2 =>
     beqSTyp b1 b2 && beqSExpr l1 l2 && beqSExpr h1 h2 && (x1 == x2)
-  | .reihe t1 n1, .reihe t2 n2 => beqSTyp t1 t2 && beqSExpr n1 n2
-  | .wickelnd t1, .wickelnd t2 => beqSTyp t1 t2
-  | .einbettet b1 s1 x1, .einbettet b2 s2 x2 =>
+  | .array t1 n1, .array t2 n2 => beqSTyp t1 t2 && beqSExpr n1 n2
+  | .wrap t1, .wrap t2 => beqSTyp t1 t2
+  | .embed b1 s1 x1, .embed b2 s2 x2 =>
     beqSTyp b1 b2 && strEq s1 s2 && beqOptExpr x1 x2
-  | .roh a, .roh b => strEq a b
+  | .raw a, .raw b => strEq a b
   | .str a, .str b => beqSExpr a b
   | .entry a x, .entry b y => strEq a b && beqSTypOpt x y
   | _, _ => false
@@ -217,13 +217,13 @@ def parseTyp (f : Nat) (toks : List Token) :
           | .ok (h, r') =>
             match nimmBisKopf r' with
             | .error e => .error e
-            | .ok (t, r'') => .ok (.roh ("fn ( " ++ h ++ t), r'')
+            | .ok (t, r'') => .ok (.raw ("fn ( " ++ h ++ t), r'')
       else match nimmPfad toks with
         | .error e => .error e
         | .ok (segs, r) => match segs with
           | [] => .error "type expected"
           | [a] => parseTypNach f (.atom a) r
-          | _ => parseTypNach f (.pfad segs) r
+          | _ => parseTypNach f (.path segs) r
     | .ident "string" :: .wort "max" :: rest => match parseOr f rest with
       | .error e => .error e
       | .ok (n, r) => .ok (.str n, r)
@@ -232,10 +232,10 @@ def parseTyp (f : Nat) (toks : List Token) :
       | .ok (segs, r) => match segs with
         | [] => .error "type expected"
         | [a] => parseTypNach f (.atom a) r
-        | _ => parseTypNach f (.pfad segs) r
+        | _ => parseTypNach f (.path segs) r
     | .zeichen "{" :: rest => match nimmBereichWorte rest 1 with
       | .error e => .error e
-      | .ok (h, r) => .ok (.roh ("{ " ++ h), r)
+      | .ok (h, r) => .ok (.raw ("{ " ++ h), r)
     | .zeichen "[" :: rest => match parseTyp f rest with
       | .error e => .error e
       | .ok (t, r1) => match fordereZeichen ";" r1 with
@@ -244,7 +244,7 @@ def parseTyp (f : Nat) (toks : List Token) :
           | .error e => .error e
           | .ok (n, r3) => match fordereZeichen "]" r3 with
             | .error e => .error e
-            | .ok r => .ok (.reihe t n, r)
+            | .ok r => .ok (.array t n, r)
     | _ => .error "type expected"
 /-- The `in range` / `wrapping` / `embeds` suffixes behind a base
     type (`intty`, `slottype`, `fieldty`). -/
@@ -262,11 +262,11 @@ def parseTypNach (f : Nat) (basis : STyp) (toks : List Token) :
               match parseOr f r2 with
               | .error e => .error e
               | .ok (hi, r) =>
-                parseTypNach f (.bereich basis lo hi (strEq o "..<")) r
+                parseTypNach f (.range basis lo hi (strEq o "..<")) r
             else .error "range expected"
           | _ => .error "range expected"
       else if strEq s "wrapping" then
-        parseTypNach f (.wickelnd basis) rest
+        parseTypNach f (.wrap basis) rest
       else if strEq s "embeds" then match fordereZeichen "[" rest with
         | .error e => .error e
         | .ok r1 => match sammleAusgewogen r1 0 1 0 with
@@ -276,9 +276,9 @@ def parseTypNach (f : Nat) (basis : STyp) (toks : List Token) :
               if strEq t "scale" then match parseOr f r3 with
                 | .error e => .error e
                 | .ok (e, r) =>
-                  parseTypNach f (.einbettet basis h (some e)) r
-              else parseTypNach f (.einbettet basis h none) r2
-            | _ => parseTypNach f (.einbettet basis h none) r2
+                  parseTypNach f (.embed basis h (some e)) r
+              else parseTypNach f (.embed basis h none) r2
+            | _ => parseTypNach f (.embed basis h none) r2
       else .ok (basis, toks)
     | _ => .ok (basis, toks)
 end

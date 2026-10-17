@@ -113,15 +113,15 @@ theorem gvLuecke_elabU_refuses_statics :
       intro hmem
       obtain ⟨m, a, t, v, al, s, g, hm⟩ := hmem
       cases x with
-      | konstT _ _ _ =>
+      | constT _ _ _ =>
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | typT _ _ _ _ _ =>
+      | typeT _ _ _ _ _ =>
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | tabelleT _ _ _ _ _ _ =>
+      | tableT _ _ _ _ _ _ =>
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
@@ -129,15 +129,15 @@ theorem gvLuecke_elabU_refuses_statics :
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | funktionT _ _ =>
+      | fnT _ _ =>
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | eingangT _ =>
+      | entryT _ =>
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | modulT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | modT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | useT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | globT _ _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | protoT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
@@ -145,26 +145,26 @@ theorem gvLuecke_elabU_refuses_statics :
       | asmT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | formatT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | arenaT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | grundT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | zustandT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | geraetT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | annahmeT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | axiomaT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | pruefungT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | atomarT _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | whyT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | stateT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | devT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | assumT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | axiomT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | checkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | atomT _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | rcuT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | gruppeT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | nebenT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | akkumT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | wegT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | anvertrautT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | startT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | sysrufT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | groupT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | concT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | accT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | walkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | trustT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | bootT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | callT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | varT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | goalT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | uebersetzerT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | profilT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | torT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | transT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | profT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | gateT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
   intro ms m a t v al s g hmem hex
   obtain ⟨u, hu⟩ := hex
   obtain ⟨e, he⟩ := aux (uMembers ms) ⟨m, a, t, v, al, s, g, hmem⟩

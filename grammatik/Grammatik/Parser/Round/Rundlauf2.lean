@@ -45,9 +45,9 @@ namespace Gabbro.Grammatik.Parser
 mutual
 def gutKernPlatz : SExpr → Bool
   | .variable s => !istKeinPlatz s
-  | .feld x _ => gutKernPlatz x
+  | .field x _ => gutKernPlatz x
   | .index x i => gutKernPlatz x && gutKern i
-  | .pfeil x _ => gutKernPlatz x
+  | .arrow x _ => gutKernPlatz x
   | _ => false
 def gutKern : SExpr → Bool
   | .lit _ => true
@@ -60,9 +60,9 @@ def gutKern : SExpr → Bool
   | .bin o l r =>
     (strEq o "+" || strEq o "*" || strEq o "||" || strEq o "&&") &&
       gutKern l && gutKern r
-  | .feld x f => gutKernPlatz x
+  | .field x f => gutKernPlatz x
   | .index x i => gutKernPlatz x && gutKern i
-  | .pfeil x f => gutKernPlatz x
+  | .arrow x f => gutKernPlatz x
   | _ => false
 end
 
@@ -103,7 +103,7 @@ theorem gutKern_bin : ∀ (o : String) (l r : SExpr),
   intro o l r
   rfl
 theorem gutKern_feld : ∀ (x : SExpr) (f : String),
-    gutKern (.feld x f) = gutKernPlatz x := by
+    gutKern (.field x f) = gutKernPlatz x := by
   intro x f
   rfl
 theorem gutKern_index : ∀ (x i : SExpr),
@@ -111,11 +111,11 @@ theorem gutKern_index : ∀ (x i : SExpr),
   intro x i
   rfl
 theorem gutKern_pfeil : ∀ (x : SExpr) (f : String),
-    gutKern (.pfeil x f) = gutKernPlatz x := by
+    gutKern (.arrow x f) = gutKernPlatz x := by
   intro x f
   rfl
 theorem gutKernPlatz_feld : ∀ (x : SExpr) (f : String),
-    gutKernPlatz (.feld x f) = gutKernPlatz x := by
+    gutKernPlatz (.field x f) = gutKernPlatz x := by
   intro x f
   rfl
 theorem gutKernPlatz_index : ∀ (x i : SExpr),
@@ -123,7 +123,7 @@ theorem gutKernPlatz_index : ∀ (x i : SExpr),
   intro x i
   rfl
 theorem gutKernPlatz_pfeil : ∀ (x : SExpr) (f : String),
-    gutKernPlatz (.pfeil x f) = gutKernPlatz x := by
+    gutKernPlatz (.arrow x f) = gutKernPlatz x := by
   intro x f
   rfl
 
@@ -169,7 +169,7 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
     simp only [gutKern] at h
     simp only [gut] at ⊢
     exact h
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at h
     simp only [gut] at ⊢
     exact gutPlatz_of_gutKernPlatz x h
@@ -179,7 +179,7 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
     obtain ⟨hpx, hi⟩ := h
     simp only [gut, Bool.and_eq_true] at ⊢
     exact ⟨gutPlatz_of_gutKernPlatz x hpx, gut_of_gutKern i hi⟩
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at h
     simp only [gut] at ⊢
     exact gutPlatz_of_gutKernPlatz x h
@@ -214,11 +214,11 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
     · simp only [gut, Bool.and_eq_true, and_assoc] at ⊢
       refine ⟨?_, gut_of_gutKern l hl, gut_of_gutKern r hr⟩
       decide
-  | ruf f xs => simp [gutKern] at h
-  | fnwert f => simp [gutKern] at h
-  | eingebaut f xs => simp [gutKern] at h
-  | alt x => simp [gutKern] at h
-  | ergebnis => simp [gutKern] at h
+  | call f xs => simp [gutKern] at h
+  | fnref f => simp [gutKern] at h
+  | built f xs => simp [gutKern] at h
+  | old x => simp [gutKern] at h
+  | res => simp [gutKern] at h
   | why g f => simp [gutKern] at h
   | ext xk xn xs => simp [gutKern] at h
 theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
@@ -233,7 +233,7 @@ theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
     simp only [gutKernPlatz] at h
     simp only [gutPlatz] at ⊢
     exact h
-  | feld x f =>
+  | field x f =>
     simp only [gutKernPlatz] at h
     simp only [gutPlatz] at ⊢
     exact gutPlatz_of_gutKernPlatz x h
@@ -242,17 +242,17 @@ theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
     obtain ⟨hpx, hi⟩ := h
     simp only [gutPlatz, Bool.and_eq_true] at ⊢
     exact ⟨gutPlatz_of_gutKernPlatz x hpx, gut_of_gutKern i hi⟩
-  | pfeil x f =>
+  | arrow x f =>
     simp only [gutKernPlatz] at h
     simp only [gutPlatz] at ⊢
     exact gutPlatz_of_gutKernPlatz x h
   | un o x => simp [gutKernPlatz] at h
   | bin o l r => simp [gutKernPlatz] at h
-  | ruf f xs => simp [gutKernPlatz] at h
-  | fnwert f => simp [gutKernPlatz] at h
-  | eingebaut f xs => simp [gutKernPlatz] at h
-  | alt x => simp [gutKernPlatz] at h
-  | ergebnis => simp [gutKernPlatz] at h
+  | call f xs => simp [gutKernPlatz] at h
+  | fnref f => simp [gutKernPlatz] at h
+  | built f xs => simp [gutKernPlatz] at h
+  | old x => simp [gutKernPlatz] at h
+  | res => simp [gutKernPlatz] at h
   | why g f => simp [gutKernPlatz] at h
   | ext xk xn xs => simp [gutKernPlatz] at h
 end
@@ -716,7 +716,7 @@ theorem tower_up_andbar : ∀ (l : SExpr) (S1 : List Token),
   exact ⟨hM, hA, hB, hC⟩
 
 -- A bare atom head is `primFrei` (only prefix trees and
--- `fnwert` are not).
+-- `fnref` are not).
 theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
     gutKern x = true → primFrei x = true := by
   intro x hat hgx
@@ -726,16 +726,16 @@ theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
   | tru => rfl
   | fls => rfl
   | «variable» s => rfl
-  | feld x f => rfl
+  | field x f => rfl
   | index x i => rfl
-  | pfeil x f => rfl
+  | arrow x f => rfl
   | un o y => simp [istAtom] at hat
   | bin o l r => simp [istAtom] at hat
-  | ruf f xs => simp [gutKern] at hgx
-  | fnwert f => simp [istAtom] at hat
-  | eingebaut f xs => simp [gutKern] at hgx
-  | alt x => simp [gutKern] at hgx
-  | ergebnis => simp [gutKern] at hgx
+  | call f xs => simp [gutKern] at hgx
+  | fnref f => simp [istAtom] at hat
+  | built f xs => simp [gutKern] at hgx
+  | old x => simp [gutKern] at hgx
+  | res => simp [gutKern] at hgx
   | why g f => simp [gutKern] at hgx
   | ext xk xn xs => simp [gutKern] at hgx
 
@@ -2010,7 +2010,7 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | «variable» a =>
       simp only [gutKernPlatz] at hg
       exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
-    | feld x f =>
+    | field x f =>
       simp only [gutKernPlatz] at hg
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
@@ -2044,7 +2044,7 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · simp only [suffGroesse_append, suffGroesse] at ⊢
         simp only [groesse, groesse_applySuff] at hs
         omega
-    | pfeil x f =>
+    | arrow x f =>
       simp only [gutKernPlatz] at hg
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
@@ -2061,11 +2061,11 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
         omega
     | un o x => simp [gutKernPlatz] at hg
     | bin o l r => simp [gutKernPlatz] at hg
-    | ruf f xs => simp [gutKernPlatz] at hg
-    | fnwert f => simp [gutKernPlatz] at hg
-    | eingebaut f xs => simp [gutKernPlatz] at hg
-    | alt x => simp [gutKernPlatz] at hg
-    | ergebnis => simp [gutKernPlatz] at hg
+    | call f xs => simp [gutKernPlatz] at hg
+    | fnref f => simp [gutKernPlatz] at hg
+    | built f xs => simp [gutKernPlatz] at hg
+    | old x => simp [gutKernPlatz] at hg
+    | res => simp [gutKernPlatz] at hg
     | why g f => simp [gutKernPlatz] at hg
     | ext xk xn xs => simp [gutKernPlatz] at hg
 
@@ -2099,14 +2099,14 @@ theorem kern_suff_rund : ∀ (n : Nat) (rkn : RKern n)
       simp only [suffToks, List.cons_append] at ⊢
       simp only [parseSuffixe] at ⊢
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.feld base f) ≤ n + 1 := by
+      have hs2 : suffGroesse suff + groesse (.field base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
-      have hF2 : 12 * (suffGroesse suff + groesse (.feld base f) + 1) +
+      have hF2 : 12 * (suffGroesse suff + groesse (.field base f) + 1) +
           suffGroesse suff ≤ F' := by
         simp only [suffGroesse, groesse] at hs hF ⊢
         omega
-      exact ih (SExpr.feld base f) rest F' hs2 hg hr hF2
+      exact ih (SExpr.field base f) rest F' hs2 hg hr hF2
     | arrow f =>
       intro base rest F hs hg hr hF
       simp only [suffGutKern] at hg
@@ -2115,14 +2115,14 @@ theorem kern_suff_rund : ∀ (n : Nat) (rkn : RKern n)
       simp only [suffToks, List.cons_append] at ⊢
       simp only [parseSuffixe] at ⊢
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.pfeil base f) ≤ n + 1 := by
+      have hs2 : suffGroesse suff + groesse (.arrow base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
-      have hF2 : 12 * (suffGroesse suff + groesse (.pfeil base f) + 1) +
+      have hF2 : 12 * (suffGroesse suff + groesse (.arrow base f) + 1) +
           suffGroesse suff ≤ F' := by
         simp only [suffGroesse, groesse] at hs hF ⊢
         omega
-      exact ih (SExpr.pfeil base f) rest F' hs2 hg hr hF2
+      exact ih (SExpr.arrow base f) rest F' hs2 hg hr hF2
     | idx i =>
       intro base rest F hs hg hr hF
       simp only [suffGutKern, Bool.and_eq_true] at hg
@@ -2291,11 +2291,11 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
     · exact (turm_bin_star n bStar l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
     · exact (turm_bin_or n bOr l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
     · exact (turm_bin_and n bAnd l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz n rkn (.feld x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+    exact (turm_platz n rkn (.field x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2303,16 +2303,16 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz n rkn (.index x i) rest hs hpp hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz n rkn (.pfeil x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2347,11 +2347,11 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     · exact (turm_bin_star n bStar l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
     · exact (turm_bin_or n bOr l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
     · exact (turm_bin_and n bAnd l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz n rkn (.feld x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+    exact (turm_platz n rkn (.field x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2359,16 +2359,16 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz n rkn (.index x i) rest hs hpp hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz n rkn (.pfeil x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2403,11 +2403,11 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     · exact (turm_bin_star n bStar l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.1 F (by omega)
     · exact (turm_bin_or n bOr l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.1 F (by omega)
     · exact (turm_bin_and n bAnd l r rest hs hl hr2 hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz n rkn (.feld x f) rest hs hpp hr hrs hrg).2.2.2.2.2.1 F (by omega)
+    exact (turm_platz n rkn (.field x f) rest hs hpp hr hrs hrg).2.2.2.2.2.1 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2415,16 +2415,16 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz n rkn (.index x i) rest hs hpp hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz n rkn (.pfeil x f) rest hs hpp hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2459,11 +2459,11 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     · exact (turm_bin_star n bStar l r rest hs hl hr2 hr hrs hrg).2.2.2.2.1 F (by omega)
     · exact (turm_bin_or n bOr l r rest hs hl hr2 hr hrs hrg).2.2.2.2.1 F (by omega)
     · exact (turm_bin_and n bAnd l r rest hs hl hr2 hr hrs hrg).2.2.2.2.1 F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz n rkn (.feld x f) rest hs hpp hr hrs hrg).2.2.2.2.1 F (by omega)
+    exact (turm_platz n rkn (.field x f) rest hs hpp hr hrs hrg).2.2.2.2.1 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2471,16 +2471,16 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz n rkn (.index x i) rest hs hpp hr hrs hrg).2.2.2.2.1 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz n rkn (.pfeil x f) rest hs hpp hr hrs hrg).2.2.2.2.1 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.1 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2613,11 +2613,11 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     · exact (turm_bin_star n bStar l r rest hs hl hr2 hr hrs hrg).2.2.2.1 F (by omega)
     · exact (turm_bin_or n bOr l r rest hs hl hr2 hr hrs hrg).2.2.2.1 F (by omega)
     · exact (turm_bin_and n bAnd l r rest hs hl hr2 hr hrs hrg).2.2.2.1 F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz n rkn (.feld x f) rest hs hpp hr hrs hrg).2.2.2.1 F (by omega)
+    exact (turm_platz n rkn (.field x f) rest hs hpp hr hrs hrg).2.2.2.1 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2625,16 +2625,16 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz n rkn (.index x i) rest hs hpp hr hrs hrg).2.2.2.1 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz n rkn (.pfeil x f) rest hs hpp hr hrs hrg).2.2.2.1 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.1 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2669,11 +2669,11 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     · exact (turm_bin_star n bStar l r rest hs hl hr2 hr hrs hrg).2.2.1 F (by omega)
     · exact (turm_bin_or n bOr l r rest hs hl hr2 hr hrs hrg).2.2.1 F (by omega)
     · exact (turm_bin_and n bAnd l r rest hs hl hr2 hr hrs hrg).2.2.1 F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz n rkn (.feld x f) rest hs hpp hr hrs hrg).2.2.1 F (by omega)
+    exact (turm_platz n rkn (.field x f) rest hs hpp hr hrs hrg).2.2.1 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2681,16 +2681,16 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz n rkn (.index x i) rest hs hpp hr hrs hrg).2.2.1 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz n rkn (.pfeil x f) rest hs hpp hr hrs hrg).2.2.1 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.1 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2873,11 +2873,11 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
       have hP' := kern_bin_prim_and l r rest hB F' (by omega)
       simp only [hd, List.append_assoc] at hP' ⊢
       exact un_paren_fall _ _ _ _ hP'
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact (turm_platz_PU n rkn' (.feld x f) rest hs hpp hrs hrg).2 F (by omega)
+    exact (turm_platz_PU n rkn' (.field x f) rest hs hpp hrs hrg).2 F (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2885,16 +2885,16 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact (turm_platz_PU n rkn' (.index x i) rest hs hpp hrs hrg).2 F (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact (turm_platz_PU n rkn' (.pfeil x f) rest hs hpp hrs hrg).2 F (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact (turm_platz_PU n rkn' (.arrow x f) rest hs hpp hrs hrg).2 F (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -2963,11 +2963,11 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
         intro G hG
         exact bAnd l r rest G hsum hl hr2 hG
       exact kern_bin_prim_and l r rest hB F (by omega)
-  | feld x f =>
+  | field x f =>
     rw [gutKern_feld] at hg
-    have hpp : gutKernPlatz (.feld x f) = true := by
+    have hpp : gutKernPlatz (.field x f) = true := by
       rw [gutKernPlatz_feld]; exact hg
-    exact kern_prim_platz n rkn (.feld x f) rest F hs hpp hrs (by omega)
+    exact kern_prim_platz n rkn (.field x f) rest F hs hpp hrs (by omega)
   | index x i =>
     rw [gutKern_index] at hg
     simp only [Bool.and_eq_true] at hg
@@ -2975,16 +2975,16 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
     have hpp : gutKernPlatz (.index x i) = true := by
       rw [gutKernPlatz_index]; simp only [Bool.and_eq_true]; exact ⟨hpx, hi⟩
     exact kern_prim_platz n rkn (.index x i) rest F hs hpp hrs (by omega)
-  | pfeil x f =>
+  | arrow x f =>
     rw [gutKern_pfeil] at hg
-    have hpp : gutKernPlatz (.pfeil x f) = true := by
+    have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
-    exact kern_prim_platz n rkn (.pfeil x f) rest F hs hpp hrs (by omega)
-  | ruf f xs => simp [gutKern] at hg
-  | fnwert f => simp [gutKern] at hg
-  | eingebaut f xs => simp [gutKern] at hg
-  | alt x => simp [gutKern] at hg
-  | ergebnis => simp [gutKern] at hg
+    exact kern_prim_platz n rkn (.arrow x f) rest F hs hpp hrs (by omega)
+  | call f xs => simp [gutKern] at hg
+  | fnref f => simp [gutKern] at hg
+  | built f xs => simp [gutKern] at hg
+  | old x => simp [gutKern] at hg
+  | res => simp [gutKern] at hg
   | why g f => simp [gutKern] at hg
   | ext xk xn xs => simp [gutKern] at hg
 
@@ -3136,14 +3136,14 @@ theorem zeuge_kern_and_rech : (match parseOr
     | _ => false) = true := by
   decide
 -- Step B3 witnesses: a field chain and an index place.
-theorem zeuge_kern_feld : parseOr (brennstoff (.feld (.variable "x") "f"))
-    (druckToks (.feld (.variable "x") "f") ++ [.ende]) =
-      .ok (.feld (.variable "x") "f", [.ende]) :=
+theorem zeuge_kern_feld : parseOr (brennstoff (.field (.variable "x") "f"))
+    (druckToks (.field (.variable "x") "f") ++ [.ende]) =
+      .ok (.field (.variable "x") "f", [.ende]) :=
   parse_druck_kern _ (by decide)
 theorem zeuge_kern_feld_rech : (match parseOr
-    (brennstoff (.feld (.variable "x") "f"))
-    (druckToks (.feld (.variable "x") "f") ++ [.ende]) with
-    | .ok (.feld (.variable "x") "f", [.ende]) => true
+    (brennstoff (.field (.variable "x") "f"))
+    (druckToks (.field (.variable "x") "f") ++ [.ende]) with
+    | .ok (.field (.variable "x") "f", [.ende]) => true
     | _ => false) = true := by
   decide
 theorem zeuge_kern_index :

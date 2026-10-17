@@ -7,7 +7,7 @@
   (`GvParserFragment3.lean`), the remaining elaboration blockers over
   all 157 corpus files are measured in REPORT-02.md. Of those, the two
   most common actionable ones are dropped here, cumulatively on
-  `elabU04`: grounds (`grundT`: proof facts with no elaborable
+  `elabU04`: grounds (`whyT`: proof facts with no elaborable
   content, 5 first-offense) and formats (`formatT`: byte layouts, 2
   first-offense). Uses of either fail loudly downstream (unknown
   names); unreferenced ones are inert, like dropped statics. Everything
@@ -23,10 +23,10 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.GabbroV.GvParserFragment
 open Gabbro.Grammatik.GabbroV.GvParserFragment3
 
-/-- **Is this a ground definition?** (`grundT`: named proof facts,
+/-- **Is this a ground definition?** (`whyT`: named proof facts,
     `ElementTief.lean`). -/
 def istGrund : SItemTief → Bool
-  | .grundT .. => true
+  | .whyT .. => true
   | _ => false
 
 /-- **Drop top-level grounds.** -/
@@ -79,15 +79,15 @@ theorem elabU05_verweigert_noch (items : List SItemTief)
 /-- **Synthetic witness items**: one table, one unreferenced ground,
     one clean function. -/
 def wGrundItems : List SItemTief :=
-  [.modulT "beispiel::zeuge"
-    [.tabelleT "T" (.some (.lit 1)) .none .none false
-      [.tPlatz [{ fname := "v", ftyp := .atom "u32",
+  [.modT "beispiel::zeuge"
+    [.tableT "T" (.some (.lit 1)) .none .none false
+      [.tSlot [{ fname := "v", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
-    .grundT "g" [("x", .lit 0, "t")] false,
-    .funktionT
+    .whyT "g" [("x", .lit 0, "t")] false,
+    .fnT
       { art := "impl", name := "f", params := [],
-        ergebnis := .none, fehler := .none, klauseln := [] }
+        res := .none, fehler := .none, klauseln := [] }
       (.block [] .none)]]
 
 /-- **Refused before**: `elabU04` stops at the ground. -/
@@ -164,18 +164,18 @@ theorem elabU06_verweigert_noch (items : List SItemTief)
 /-- **Synthetic witness items**: one table, one unreferenced format,
     one clean function. -/
 def wFormatItems : List SItemTief :=
-  [.modulT "beispiel::zeuge"
-    [.tabelleT "T" (.some (.lit 1)) .none .none false
-      [.tPlatz [{ fname := "v", ftyp := .atom "u32",
+  [.modT "beispiel::zeuge"
+    [.tableT "T" (.some (.lit 1)) .none .none false
+      [.tSlot [{ fname := "v", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
     .formatT "F" .none .none
       [{ fname := "v", ftyp := .atom "u32",
          pos := .none, bezug := .none, wo := .none,
          reserviert := false, byOps := false }],
-    .funktionT
+    .fnT
       { art := "impl", name := "f", params := [],
-        ergebnis := .none, fehler := .none, klauseln := [] }
+        res := .none, fehler := .none, klauseln := [] }
       (.block [] .none)]]
 
 /-- **Refused before**: `elabU05` stops at the format. -/
@@ -217,7 +217,7 @@ theorem w108_tip :
      Every shape mirrors the green-reviewed `GvParserFragment3`
      protoT package.
   2. NOT proved: anything beyond the elaborator; no corpus unit flips
-     on either case (measured: grundT-drop moves 11a/133/169/170/48
+     on either case (measured: whyT-drop moves 11a/133/169/170/48
      deeper, formatT-drop moves 03/24; all stay refused for other
      missing forms); `SAnw`-internal positions; nested modules
      re-unwrap (as before).

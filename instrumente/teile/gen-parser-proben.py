@@ -91,29 +91,29 @@ def itemsFail (toks : List Token) : Bool :=
   | .error _ => true
 
 def cx : SExpr := .variable "c"
-def sl : SExpr := .index (.feld cx "slots") (.variable "s")
+def sl : SExpr := .index (.field cx "slots") (.variable "s")
 
 """
 cases = [
     ('forall_slots', 'pred', 'forall s in slots of c : c.slots[s].x == 1',
-     '.ext .all ["s", "slots"] [cx, .bin "==" (.feld sl "x") (.lit 1)]'),
+     '.ext .all ["s", "slots"] [cx, .bin "==" (.field sl "x") (.lit 1)]'),
     ('exists_queue', 'pred', 'exists j in queue r : r.p[j] == 0',
-     '.ext .any ["j", "queue"] [.variable "r", .bin "==" (.index (.feld (.variable "r") "p") (.variable "j")) (.lit 0)]'),
+     '.ext .any ["j", "queue"] [.variable "r", .bin "==" (.index (.field (.variable "r") "p") (.variable "j")) (.lit 0)]'),
     ('implies_in_body', 'pred', 'forall s in slots of c : c.a == 1 => c.b == 2',
-     '.ext .all ["s", "slots"] [cx, .ext .imp [] [.bin "==" (.feld cx "a") (.lit 1), .bin "==" (.feld cx "b") (.lit 2)]]'),
+     '.ext .all ["s", "slots"] [cx, .ext .imp [] [.bin "==" (.field cx "a") (.lit 1), .bin "==" (.field cx "b") (.lit 2)]]'),
     ('reaches_via', 'pred', 'forall s in slots of c : c.slots[s] reaches ROOT via up',
      '.ext .all ["s", "slots"] [cx, .ext .reach ["up"] [sl, .variable "ROOT"]]'),
     ('member_of', 'pred', 'i in descendants of c', '.ext .mem ["descendants"] [.variable "i", cx]'),
     ('nested_quant', 'pred', 'forall j in queue r : forall k in queue r : j == k',
      '.ext .all ["j", "queue"] [.variable "r", .ext .all ["k", "queue"] [.variable "r", .bin "==" (.variable "j") (.variable "k")]]'),
     ('paren_pred', 'pred', '(forall s in slots of c : s == 0) && c.x == 1',
-     '.bin "&&" (.ext .all ["s", "slots"] [cx, .bin "==" (.variable "s") (.lit 0)]) (.bin "==" (.feld cx "x") (.lit 1))'),
+     '.bin "&&" (.ext .all ["s", "slots"] [cx, .bin "==" (.variable "s") (.lit 0)]) (.bin "==" (.field cx "x") (.lit 1))'),
     ('count_expr', 'expr', 'count k in slots of c : c.slots[k].u',
-     '.ext .count ["k", "slots"] [cx, .feld (.index (.feld cx "slots") (.variable "k")) "u"]'),
+     '.ext .count ["k", "slots"] [cx, .field (.index (.field cx "slots") (.variable "k")) "u"]'),
     ('text_literal', 'expr', '"hi"', '.ext .text ["hi"] []'),
     ('call_through_place', 'expr', 'v->cmp(a, b)',
-     '.ext .call [] [.pfeil (.variable "v") "cmp", .variable "a", .variable "b"]'),
-    ('plain_call_unchanged', 'expr', 'f(a)', '.ruf "f" [.variable "a"]'),
+     '.ext .call [] [.arrow (.variable "v") "cmp", .variable "a", .variable "b"]'),
+    ('plain_call_unchanged', 'expr', 'f(a)', '.call "f" [.variable "a"]'),
     ('forall_needs_colon', 'predx', 'forall s in slots of c c.x == 1', None),
     ('quant_needs_domain', 'predx', 'forall s in c : c.x == 1', None),
     ('reaches_needs_via', 'predx', 'a reaches b', None),
@@ -122,9 +122,9 @@ cases = [
      '.grow "A" (.lit 4) (.block [] (.some (.ret (.some (.lit 1)))))'),
     ('start_stmt', 'stmt', 'start { f, m::g };', '.start ["f", "m::g"]'),
     ('start_is_no_keyword', 'stmtx', 'start f;', None),
-    ('reset_range', 'stmt', 'reset A at 1 count 2;', '.resetS "A" (.some (.lit 1, .lit 2))'),
+    ('reset_range', 'stmt', 'reset A at 1 count 2;', '.reset "A" (.some (.lit 1, .lit 2))'),
     ('typed_let', 'stmt', 'let x : u64 = a;', '.bind false "x" (.some (.atom "u64")) (.variable "a")'),
-    ('call_stmt_through_place', 'stmt', 'v->go(1);', '.ruf "v->go" [.lit 1]'),
+    ('call_stmt_through_place', 'stmt', 'v->go(1);', '.call "v->go" [.lit 1]'),
     ('gate_via', 'item', 'syscall g(a : u64) -> u64 via V effects { pure } costs <= 8 ops;', None),
     ('gate_var', 'item', 'syscall V;', None),
     ('target_sel', 'item', 'target linux;', None),

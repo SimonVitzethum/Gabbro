@@ -31,8 +31,8 @@ theorem t01_lex :
       .ok tt01 := by
   decide
 theorem t01 : beqTopTief (parseTopTief tt01)
-    (.ok [.tabelleT "Zustand" (.some (.lit 4)) .none .none false
-      [.tPlatz [{ fname := "bereit", ftyp := .atom "u32",
+    (.ok [.tableT "Zustand" (.some (.lit 4)) .none .none false
+      [.tSlot [{ fname := "bereit", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]]]) = true := by
   decide
@@ -63,11 +63,11 @@ theorem t03_lex :
       .ok tt03 := by
   decide
 theorem t03 : beqTopTief (parseTopTief tt03)
-    (.ok [.geraetT "Geraet" [("basis", .atom "u64")] "mmio"
-      [.regTief { rname := "ST", rtyp := .atom "u32",
-                   adresse := .lit 0, klasse := "r", phasen := [],
+    (.ok [.devT "Geraet" [("basis", .atom "u64")] "mmio"
+      [.reg { name := "ST", rtyp := .atom "u32",
+                   addr := .lit 0, klasse := "r", stage := [],
                    felder := [], voraus := .none,
-                   vorausSonst := .none,
+                   elseF := .none,
                    abhaengt := [["Zustand"]] }]]) = true := by
   decide
 -- beispiele/112 (the `Geraet` device). Rust: `Device` with one
@@ -88,12 +88,12 @@ theorem t04_lex :
       .ok tt04 := by
   decide
 theorem t04 : beqTopTief (parseTopTief tt04)
-    (.ok [.funktionT
+    (.ok [.fnT
       { art := "impl", name := "lesen", params := [("d", .atom "Geraet")],
-        ergebnis := .some (.atom "u32"), fehler := .none,
-        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
-          .wirkung [.liest (.variable "d")], .kosten (.lit 8)] }
-      (.block [.bind false "stand" .none (.feld (.variable "d") "ST")]
+        res := .some (.atom "u32"), fehler := .none,
+        klauseln := [.needs (.call "Held" [.variable "Sperre"]),
+          .effs [.reads (.variable "d")], .cost (.lit 8)] }
+      (.block [.bind false "stand" .none (.field (.variable "d") "ST")]
         (.some (.ret (.some (.variable "stand")))))]) = true := by
   decide
 -- beispiele/112 (the `lesen` reader). Rust: `Funktion` with one
@@ -116,14 +116,14 @@ theorem t05_lex :
       .ok tt05 := by
   decide
 theorem t05 : beqTopTief (parseTopTief tt05)
-    (.ok [.funktionT
+    (.ok [.fnT
       { art := "impl", name := "schreiben",
         params := [("i", .index false "Zustand"), ("w", .atom "u32")],
-        ergebnis := .some (.atom "u32"), fehler := .none,
-        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
-          .wirkung [.schreibt (.variable "Zustand")], .kosten (.lit 8)] }
-      (.block [.zuweis
-        (.feld (.index (.feld (.variable "Zustand") "slots")
+        res := .some (.atom "u32"), fehler := .none,
+        klauseln := [.needs (.call "Held" [.variable "Sperre"]),
+          .effs [.writes (.variable "Zustand")], .cost (.lit 8)] }
+      (.block [.set
+        (.field (.index (.field (.variable "Zustand") "slots")
           (.variable "i")) "bereit")
         "=" (.variable "w")]
         (.some (.ret (.some (.lit 0)))))]) = true := by
@@ -149,7 +149,7 @@ theorem t07_lex :
     lex "opaque type Pa = u64;" = .ok tt07 := by
   decide
 theorem t07 : beqTopTief (parseTopTief tt07)
-    (.ok [.typT ["opaque"] "Pa" [] [] (.some (.atom "u64"))]) = true := by
+    (.ok [.typeT ["opaque"] "Pa" [] [] (.some (.atom "u64"))]) = true := by
   decide
 -- beispiele/01-tabelle.gab:18. Rust: `Typ` with the `opaque`
 -- flag -- same shape.
@@ -161,8 +161,8 @@ theorem t08_lex :
     lex "type Zaehler = u32 in 0 .. 65535;" = .ok tt08 := by
   decide
 theorem t08 : beqTopTief (parseTopTief tt08)
-    (.ok [.typT [] "Zaehler" [] []
-      (.some (.bereich (.atom "u32") (.lit 0) (.lit 65535) false))]) = true := by
+    (.ok [.typeT [] "Zaehler" [] []
+      (.some (.range (.atom "u32") (.lit 0) (.lit 65535) false))]) = true := by
   decide
 -- beispiele/01-tabelle.gab:16. Rust: `Typ` over a ranged
 -- integer -- same shape.
@@ -179,7 +179,7 @@ theorem t09_lex :
       .ok tt09 := by
   decide
 theorem t09 : beqTopTief (parseTopTief tt09)
-    (.ok [.typT ["tagged"] "ObjektArt" [] [] (.some (.roh
+    (.ok [.typeT ["tagged"] "ObjektArt" [] [] (.some (.raw
       "{ Speicher ( Pa ) , Endpunkt ( EpId ) , Faden ( FadenId ) , Antwort ( EpId ) } "))]) = true := by
   decide
 -- beispiele/01-tabelle.gab:22. Rust: `Typ` over variants -- the
@@ -194,7 +194,7 @@ theorem t10_lex :
       .ok tt10 := by
   decide
 theorem t10 : beqTopTief (parseTopTief tt10)
-    (.ok [.typT ["linear", "ghost"] "QueuePhase" [] ["setup", "live"]
+    (.ok [.typeT ["linear", "ghost"] "QueuePhase" [] ["setup", "live"]
       .none]) = true := by
   decide
 -- beispiele/02-geraet.gab:115. Rust: `Typ` with a mark order --
@@ -206,7 +206,7 @@ theorem t11_lex :
     lex "const NSLOTS : u32 = 4096;" = .ok tt11 := by
   decide
 theorem t11 : beqTopTief (parseTopTief tt11)
-    (.ok [.konstT "NSLOTS" (.atom "u32") (.one (.lit 4096))]) = true := by
+    (.ok [.constT "NSLOTS" (.atom "u32") (.one (.lit 4096))]) = true := by
   decide
 -- beispiele/01-tabelle.gab:10. Rust: `Konst` -- same shape.
 def tt12 : List Token :=
@@ -260,10 +260,10 @@ theorem t15_lex :
 theorem t15 : beqTopTief (parseTopTief tt15)
     (.ok [.protoT
       { art := "extern", name := "speicher_freigeben",
-        params := [("p", .atom "Pa")], ergebnis := .none,
+        params := [("p", .atom "Pa")], res := .none,
         fehler := .none,
-        klauseln := [.wirkung [.schreibt (.variable "halde")],
-          .kosten (.lit 64)] }]) = true := by
+        klauseln := [.effs [.writes (.variable "halde")],
+          .cost (.lit 64)] }]) = true := by
   decide
 -- beispiele/01-tabelle.gab (the `speicher_freigeben` foreign
 -- body). Rust: `Funktion` without a body -- same shape.
@@ -290,15 +290,15 @@ theorem t16 : beqTopTief (parseTopTief tt16)
       { art := "spec", name := "ist_blatt",
         params := [("c", .ptr "normal" "r" (.atom "Kappenraum")),
           ("s", .index false "Kappenraum")],
-        ergebnis := .some (.atom "bool"), fehler := .none,
-        klauseln := [.wirkung [.rein]] }
+        res := .some (.atom "bool"), fehler := .none,
+        klauseln := [.effs [.pure]] }
       (.bin "&&"
-        (.feld (.index (.feld (.variable "c") "slots")
+        (.field (.index (.field (.variable "c") "slots")
           (.variable "s")) "benutzt")
         (.bin "=="
-          (.feld (.index (.feld (.variable "c") "slots")
+          (.field (.index (.field (.variable "c") "slots")
             (.variable "s")) "erstes_kind")
-          (.ruf "None" [])))]) = true := by
+          (.call "None" [])))]) = true := by
   decide
 -- beispiele/01-tabelle.gab (the `ist_blatt` predicate helper).
 -- Rust: `Funktion` with `= pred` -- same shape (a `ptr` and an
@@ -324,9 +324,9 @@ theorem t17 : beqTopTief (parseTopTief tt17)
     (.ok [.asmT
       { art := "impl", name := "ausgeben",
         params := [("tor", .atom "u16"), ("wert", .atom "u8")],
-        ergebnis := .none, fehler := .none,
-        klauseln := [.wirkung [.schreibt (.variable "GERAET")],
-          .kosten (.lit 1), .rechenart "x86_64"] }
+        res := .none, fehler := .none,
+        klauseln := [.effs [.writes (.variable "GERAET")],
+          .cost (.lit 1), .arch "x86_64"] }
       "asm { \"outb %[wert], %[tor]\" in { wert : \"a\" , tor : \"d\" } clobbers { memory } } "]) = true := by
   decide
 -- beispiele/36-asm.gab:17-27. Rust: `Funktion` with `= asm` --
@@ -342,9 +342,9 @@ theorem t18_lex :
   decide
 theorem t18 : beqTopTief (parseTopTief tt18)
     (.ok [.protoT
-      { art := "impl", name := "f", params := [], ergebnis := .none,
+      { art := "impl", name := "f", params := [], res := .none,
         fehler := .none,
-        klauseln := [.frist
+        klauseln := [.limit
           "deadline <= 10 ops arch x86_64 falsifier s"] }]) = true := by
   decide
 -- The `deadline` clause shape is beispiele/36-asm.gab:36 (on a
@@ -364,12 +364,12 @@ theorem t19_lex :
       .ok tt19 := by
   decide
 theorem t19 : beqTopTief (parseTopTief tt19)
-    (.ok [.uebersetzerT "sum"
+    (.ok [.transT "sum"
       { art := "", name := "build",
         params := [("region", .atom "SumTab")],
-        ergebnis := .some (.atom "SumTab"), fehler := .none,
-        klauseln := [.wirkung [.rein], .kosten (.lit 8),
-          .faellt (.feld (.variable "region") "v")] }
+        res := .some (.atom "SumTab"), fehler := .none,
+        klauseln := [.effs [.pure], .cost (.lit 8),
+          .drops (.field (.variable "region") "v")] }
       (.block [] (.some (.ret (.some (.variable "region")))))]) = true := by
   decide
 -- beispiele/106-summe-uebersetzt.gab (the `build` translator).
@@ -404,7 +404,7 @@ theorem t21_lex :
 theorem t21 : beqTopTief (parseTopTief tt21)
     (.ok [.formatT "Elf64Kopf" .none (.some "little")
       [{ fname := "e_typ",
-          ftyp := .bereich (.atom "u16") (.lit 1) (.lit 4) false,
+          ftyp := .range (.atom "u16") (.lit 1) (.lit 4) false,
           pos := .none, bezug := .none, wo := .none,
           reserviert := false, byOps := false },
         { fname := "e_maschine", ftyp := .atom "u16",
@@ -413,7 +413,7 @@ theorem t21 : beqTopTief (parseTopTief tt21)
         { fname := "e_shoff", ftyp := .atom "u64",
           pos := .none, bezug := (.some "Self"),
           wo := (.some (.bin "<=" (.variable "e_shoff")
-            (.eingebaut "lenof" [.variable "Self"]))),
+            (.built "lenof" [.variable "Self"]))),
           reserviert := false, byOps := false },
         { fname := "e_flags", ftyp := .atom "u32",
           pos := .none, bezug := .none, wo := .none,
@@ -435,7 +435,7 @@ theorem t22_lex :
       .ok tt22 := by
   decide
 theorem t22 : beqTopTief (parseTopTief tt22)
-    (.ok [.grundT "KappenFehler"
+    (.ok [.whyT "KappenFehler"
       [("KeinSlot", .lit 1, "kein freier Slot mehr"),
         ("Ungueltig", .lit 2, "abgelaufenes Handle"),
         ("HatKinder", .lit 3, "erst die Nachfahren einsammeln")]
@@ -455,12 +455,12 @@ theorem t23_lex :
       .ok tt23 := by
   decide
 theorem t23 : beqTopTief (parseTopTief tt23)
-    (.ok [.zustandT "Ampel"
+    (.ok [.stateT "Ampel"
       [{ tname := "schalten",
          schritte := [(.variable "licht", .variable "rot",
            .variable "gruen")],
          voraus := .some (.bin "==" (.variable "bereit") .tru),
-         wirkung := [.schreibt (.variable "licht")] }]]) = true := by
+         wirkung := [.writes (.variable "licht")] }]]) = true := by
   decide
 -- Synthetic (no `state` item in the corpus, measured 2026-09-13;
 -- the transition arms follow beispiele/20-falle-vier.gab).
@@ -475,9 +475,9 @@ theorem t24_lex :
       .ok tt24 := by
   decide
 theorem t24 : beqTopTief (parseTopTief tt24)
-    (.ok [.annahmeT "mmu_folgt_ihrem_modell" .none
+    (.ok [.assumT "mmu_folgt_ihrem_modell" .none
       "Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt."
-      (.widerlegbar "sonde_pf_bei_p0")]) = true := by
+      (.probe "sonde_pf_bei_p0")]) = true := by
   decide
 -- beispiele/06-annahmen.gab:15-17. Rust: `Assume` with a
 -- falsifier -- same shape.
@@ -493,10 +493,10 @@ theorem t25_lex :
       .ok tt25 := by
   decide
 theorem t25 : beqTopTief (parseTopTief tt25)
-    (.ok [.axiomaT "write_cr3" [("p", .atom "Pa")] .none .none
-      [.schreibt (.variable "tlb"),
-        .schreibt (.variable "aktive_tabelle")]
-      (.widerlegbar "sonde_cr3")]) = true := by
+    (.ok [.axiomT "write_cr3" [("p", .atom "Pa")] .none .none
+      [.writes (.variable "tlb"),
+        .writes (.variable "aktive_tabelle")]
+      (.probe "sonde_cr3")]) = true := by
   decide
 -- beispiele/06-annahmen.gab:80. Rust: `Axiom` with two writes --
 -- same shape.
@@ -528,17 +528,17 @@ theorem t26_lex :
       .ok tt26 := by
   decide
 theorem t26 : beqTopTief (parseTopTief tt26)
-    (.ok [.pruefungT
+    (.ok [.checkT
       { cname := "stapel_wasserstand",
-        behauptung := "Kein Kern hat je mehr als 3/4 seines Stapels benutzt.",
+        claim := "Kein Kern hat je mehr als 3/4 seines Stapels benutzt.",
         misst := [.variable "tiefe_max", .variable "tiefe_lebend",
           .variable "kerne_gemessen"],
-        tore := ["abnahme", "freigabe"],
-        kannScheitern :=
+        gates := ["abnahme", "freigabe"],
+        canFail :=
           (.block
-            [.bindElse "g" .none (.ruf "groesse_gemessen" []) "e1"
+            [.bindElse "g" .none (.call "groesse_gemessen" []) "e1"
               (.block [] (.some (.ret (.some .fls)))),
-              .wenn (.bin ">=" (.bin "*" (.variable "tiefe_max") (.lit 4))
+              .cond (.bin ">=" (.bin "*" (.variable "tiefe_max") (.lit 4))
                 (.bin "*" (.variable "g") (.lit 3)))
                 (.block [] (.some (.ret (.some .fls)))) [] .none]
             (.some (.ret (.some .tru)))),
@@ -563,15 +563,15 @@ theorem t27_lex :
       .ok tt27 := by
   decide
 theorem t27 : beqTopTief (parseTopTief tt27)
-    (.ok [.tabelleT "Verzeichnis" (.some (.variable "N")) .none .none
+    (.ok [.tableT "Verzeichnis" (.some (.variable "N")) .none .none
       false
-      [.tPlatz [{ fname := "benutzt", ftyp := .atom "bool",
+      [.tSlot [{ fname := "benutzt", ftyp := .atom "bool",
                    pos := .none, bezug := .none, wo := .none,
                    reserviert := false, byOps := false },
                  { fname := "marke", ftyp := .atom "u32",
                    pos := .none, bezug := .none, wo := .none,
                    reserviert := false, byOps := false }],
-        .tOps ["insert", "remove"], .tBelegt "benutzt"]]) = true := by
+        .tOps ["insert", "remove"], .tBusy "benutzt"]]) = true := by
   decide
 -- beispiele/47-ops-wortmenge.gab:60-71 (comments dropped).
 -- Rust: `Tabelle` with generated `ops` and an `occupied` field
@@ -588,9 +588,9 @@ theorem t28_lex :
       .ok tt28 := by
   decide
 theorem t28 : beqTopTief (parseTopTief tt28)
-    (.ok [.tabelleT "T" (.some (.lit 4)) .none .none false
-      [.tKonst "WURZEL" (.atom "u32") (.one (.lit 0)),
-        .tPlatz [{ fname := "b", ftyp := .atom "bool",
+    (.ok [.tableT "T" (.some (.lit 4)) .none .none false
+      [.tConst "WURZEL" (.atom "u32") (.one (.lit 0)),
+        .tSlot [{ fname := "b", ftyp := .atom "bool",
                    pos := .none, bezug := .none, wo := .none,
                    reserviert := false, byOps := false }]]]) = true := by
   decide
@@ -609,10 +609,10 @@ theorem t29_lex :
       .ok tt29 := by
   decide
 theorem t29 : beqTopTief (parseTopTief tt29)
-    (.ok [.tabelleT "K" (.some (.lit 4)) .none .none false
-      [.tBaum [("parent", "elter"), ("child", "erstes_kind"),
+    (.ok [.tableT "K" (.some (.lit 4)) .none .none false
+      [.tTree [("parent", "elter"), ("child", "erstes_kind"),
         ("sibling", "naechstes")],
-        .tPlatz [{ fname := "b", ftyp := .atom "bool",
+        .tSlot [{ fname := "b", ftyp := .atom "bool",
                    pos := .none, bezug := .none, wo := .none,
                    reserviert := false, byOps := false }]]]) = true := by
   decide
@@ -633,10 +633,10 @@ theorem t30_lex :
       .ok tt30 := by
   decide
 theorem t30 : beqTopTief (parseTopTief tt30)
-    (.ok [.tabelleT "T" (.some (.lit 4)) .none .none false [.tPlatz [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInvariante { gname := "inv", kosten := .lit 1, online := true, dabei := .none, aussage := (.feld (.index (.feld (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
+    (.ok [.tableT "T" (.some (.lit 4)) .none .none false [.tSlot [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInv { name := "inv", kosten := .lit 1, online := true, proof := .none, pred := (.field (.index (.field (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
   decide
 -- The `invariant` member shape is beispiele/01-tabelle.gab (the
--- header row); the `aussage` is synthetic and quantifier-free --
+-- header row); the `pred` is synthetic and quantifier-free --
 -- quantified predicates ride no `SExpr` shape (see CUTS).
 def tt31 : List Token :=
   [.wort "atomic", .ident "fertig", .zeichen ":", .wort "bool",
@@ -647,7 +647,7 @@ theorem t31_lex :
       .ok tt31 := by
   decide
 theorem t31 : beqTopTief (parseTopTief tt31)
-    (.ok [.atomarT "fertig" (.atom "bool")
+    (.ok [.atomT "fertig" (.atom "bool")
       (.some [.variable "bericht"]) (.some "release") .none]) = true := by
   decide
 -- beispiele/11-grammatikbefunde.gab:13. Rust: `Atomic` with a
@@ -661,7 +661,7 @@ theorem t32_lex :
       .ok tt32 := by
   decide
 theorem t32 : beqTopTief (parseTopTief tt32)
-    (.ok [.atomarT "AVAIL_IDX" (.atom "u32") .none (.some "release")
+    (.ok [.atomT "AVAIL_IDX" (.atom "u32") .none (.some "release")
       (.some "karte_liest_nach_dem_index")]) = true := by
   decide
 -- beispiele/41-handschlag.gab:49. Rust: `Atomic` with an
@@ -695,10 +695,10 @@ theorem t34_lex :
       .ok tt34 := by
   decide
 theorem t34 : beqTopTief (parseTopTief tt34)
-    (.ok [.gruppeT "Zustellung" ["Endpunkte", "Faeden"] [{ gname := "wartende_haben_grund", kosten := (.variable "n"), online := false, dabei := .none, aussage := (.bin ">" (.feld (.index (.feld (.variable "Faeden") "slots") (.variable "wartende")) "gruende") (.lit 0)) }]]) = true := by
+    (.ok [.groupT "Zustellung" ["Endpunkte", "Faeden"] [{ name := "wartende_haben_grund", kosten := (.variable "n"), online := false, proof := .none, pred := (.bin ">" (.field (.index (.field (.variable "Faeden") "slots") (.variable "wartende")) "gruende") (.lit 0)) }]]) = true := by
   decide
 -- The `group` frame is beispiele/17-gruppe-ueber-zwei-sperren.gab:42-47;
--- the `aussage` is simplified (the corpus body quantifies -- see CUTS).
+-- the `pred` is simplified (the corpus body quantifies -- see CUTS).
 def tt35 : List Token :=
   [.wort "concurrent", .zeichen "{", .ident "read_a",
    .zeichen ",", .ident "read_c", .zeichen "}", .zeichen ";",
@@ -707,7 +707,7 @@ theorem t35_lex :
     lex "concurrent { read_a, read_c };" = .ok tt35 := by
   decide
 theorem t35 : beqTopTief (parseTopTief tt35)
-    (.ok [.nebenT [["read_a"], ["read_c"]]]) = true := by
+    (.ok [.concT [["read_a"], ["read_c"]]]) = true := by
   decide
 -- beispiele/108-disjoint-start-locks.gab (the declared pair).
 -- Rust: `Concurrent` -- same shape.
@@ -720,7 +720,7 @@ theorem t36_lex :
       .ok tt36 := by
   decide
 theorem t36 : beqTopTief (parseTopTief tt36)
-    (.ok [.akkumT "fehlerzahl" (.atom "u32") "add"
+    (.ok [.accT "fehlerzahl" (.atom "u32") "add"
       (.some (.variable "NKERNE"))]) = true := by
   decide
 -- beispiele/23-akkumulatoren.gab:45. Rust: `Accumulates` with a
@@ -741,7 +741,7 @@ theorem t37_lex :
       .ok tt37 := by
   decide
 theorem t37 : beqTopTief (parseTopTief tt37)
-    (.ok [.wegT { wname := "Seitentabelle", stufen := (.lit 4), knoten := (.reihe (.atom "Pte") (.lit 512)), runterName := "rahmen", runterWann := (.bin "&&" (.feld (.variable "it") "praesent") (.un "!" (.feld (.variable "it") "gross"))), blatt := (.bin "&&" (.feld (.variable "it") "praesent") (.un "!" (.feld (.variable "it") "gross"))), invarianten := [] }]) = true := by
+    (.ok [.walkT { name := "Seitentabelle", stufen := (.lit 4), node := (.array (.atom "Pte") (.lit 512)), dname := "rahmen", dwhen := (.bin "&&" (.field (.variable "it") "praesent") (.un "!" (.field (.variable "it") "gross"))), blatt := (.bin "&&" (.field (.variable "it") "praesent") (.un "!" (.field (.variable "it") "gross"))), invarianten := [] }]) = true := by
   decide
 -- beispiele/07-eintritt-und-boot.gab:26-29 (invariants dropped --
 -- they quantify, see CUTS). Rust: `Walk` with node, down and
@@ -762,7 +762,7 @@ theorem t38_lex :
       .ok tt38 := by
   decide
 theorem t38 : beqTopTief (parseTopTief tt38)
-    (.ok [.eingangT { ename := "entry_a", vektor := (.some (.lit 128)), via := .none, arch := "x86_64", regRein := [], regRaus := [], erhaelt := ["rbx"], zerstoert := ["rcx"], stapel := "ka", proCPU := true, ist := .none, verschachtelt := (.some "never"), dispatch := ["beispiel", "lockfree_entry_roots", "distribute_a"] }]) = true := by
+    (.ok [.entryT { name := "entry_a", vektor := (.some (.lit 128)), via := .none, arch := "x86_64", regIn := [], regOut := [], erhaelt := ["rbx"], kills := ["rcx"], stapel := "ka", perCpu := true, ist := .none, nest := (.some "never"), dispatch := ["beispiel", "lockfree_entry_roots", "distribute_a"] }]) = true := by
   decide
 -- beispiele/109-lockfree-entry-roots.gab (the `entry_a` root).
 -- Rust: `Entry` with empty register maps -- same shape.
@@ -780,8 +780,8 @@ theorem t39_lex :
       .ok tt39 := by
   decide
 theorem t39 : beqTopTief (parseTopTief tt39)
-    (.ok [.anvertrautT "jitpuffer" "Gastbild" "x86_64"
-      [.bindet "eintritt" "rdi", .bindet "kappe" "rsi"]
+    (.ok [.trustT "jitpuffer" "Gastbild" "x86_64"
+      [.binds "eintritt" "rdi", .binds "kappe" "rsi"]
       "gaststapel" "gast_bleibt_in_seinem_raum"]) = true := by
   decide
 -- beispiele/25-entrust.gab:32-36. Rust: `Entrust` -- same shape.
@@ -799,9 +799,9 @@ theorem t40_lex :
       .ok tt40 := by
   decide
 theorem t40 : beqTopTief (parseTopTief tt40)
-    (.ok [.startT "multiboot1" "x86_64"
-      [.setztSchritt "stapelzeiger" (.variable "boot_stapel_oben"),
-        .rufSchritt ["bootinfo_retten"] [.variable "ebx"]]
+    (.ok [.bootT "multiboot1" "x86_64"
+      [.set "stapelzeiger" (.variable "boot_stapel_oben"),
+        .call ["bootinfo_retten"] [.variable "ebx"]]
       ["beispiel", "eintritt", "rust_eintritt"]]) = true := by
   decide
 -- beispiele/07-eintritt-und-boot.gab:86-97 (two steps stand for
@@ -834,7 +834,7 @@ theorem t41_lex :
       .ok tt41 := by
   decide
 theorem t41 : beqTopTief (parseTopTief tt41)
-    (.ok [.sysrufT { sname := "write", sparams := [("fd", (.atom "u64")), ("buf", (.atom "u64")), ("len", (.atom "u64"))], sergebnis := (.some (.atom "u64")), sfehler := (.some "IoError"), way := .lit "linux" "x86_64" { id := (.lit 1), ins := [.bindet "rdi" "fd", .bindet "rsi" "buf", .bindet "rdx" "len"], outs := [.register "rax"], stack := [], dirty := ["rcx", "r11"], codes := [("EBADF", .none, "BadFd"), ("EINTR", .none, "Interrupted"), ("EAGAIN", .none, "WouldBlock")] } (.annahmeHerkunft "linux_write_contract" (.widerlegbar "sonde_write")), gate := { pre := [(.bin "<=" (.variable "len") (.lit 1024))], post := [(.bin "<=" .ergebnis (.variable "len"))], uses := [.rein], cost := .none } }]) = true := by
+    (.ok [.callT { name := "write", params := [("fd", (.atom "u64")), ("buf", (.atom "u64")), ("len", (.atom "u64"))], res := (.some (.atom "u64")), fail := (.some "IoError"), way := .lit "linux" "x86_64" { id := (.lit 1), ins := [.binds "rdi" "fd", .binds "rsi" "buf", .binds "rdx" "len"], outs := [.reg "rax"], stack := [], dirty := ["rcx", "r11"], codes := [("EBADF", .none, "BadFd"), ("EINTR", .none, "Interrupted"), ("EAGAIN", .none, "WouldBlock")] } (.assum "linux_write_contract" (.probe "sonde_write")), gate := { pre := [(.bin "<=" (.variable "len") (.lit 1024))], post := [(.bin "<=" .res (.variable "len"))], uses := [.pure], cost := .none } }]) = true := by
   decide
 -- beispiele/90-syscall-errno.gab:22-31. Rust: `Syscall` with an
 -- error channel, maps and contracts -- same shape.
@@ -864,7 +864,7 @@ theorem t42_lex :
       .ok tt42 := by
   decide
 theorem t42 : beqTopTief (parseTopTief tt42)
-    (.ok [.funktionT { art := "library", name := "sum", params := [(("t", (.ptr "normal" "r" (.atom "SumTab"))))], ergebnis := (.some ((.bereich (.atom "u32") (.lit 0) (.lit 400) false))), fehler := .none, klauseln := [(.nutzlast ["SumTab"]), (.sichert ((.bin "<=" .ergebnis (.lit 400)))), (.wirkung [(.liest ((.feld (.variable "t") "slots")))]), (.kosten (.lit 16))] } (.block [] (.some (.ret (.some ((.bin "+" ((.bin "+" ((.bin "+" ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 0))) "v")) ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 1))) "v")))) ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 2))) "v")))) ((.feld ((.index ((.feld ((.variable "t")) "slots")) (.lit 3))) "v"))))))))]) = true := by
+    (.ok [.fnT { art := "library", name := "sum", params := [(("t", (.ptr "normal" "r" (.atom "SumTab"))))], res := (.some ((.range (.atom "u32") (.lit 0) (.lit 400) false))), fehler := .none, klauseln := [(.load ["SumTab"]), (.gives ((.bin "<=" .res (.lit 400)))), (.effs [(.reads ((.field (.variable "t") "slots")))]), (.cost (.lit 16))] } (.block [] (.some (.ret (.some ((.bin "+" ((.bin "+" ((.bin "+" ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 0))) "v")) ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 1))) "v")))) ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 2))) "v")))) ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 3))) "v"))))))))]) = true := by
   decide
 -- beispiele/106-summe-uebersetzt.gab:16-23 (the `sum` library).
 -- Rust: `Funktion` with a payload type and a ranged result --
@@ -916,8 +916,8 @@ theorem t45_lex :
       .ok tt45 := by
   decide
 theorem t45 : beqTopTief (parseTopTief tt45)
-    (.ok [.geraetT "D" [] "mmio"
-      [.bankRoh "bank FRR at (CAP.FRO * 16) stride 16 count 256 { reg FR_LO : u64 @ 0 class rw reg FR_HI : u64 @ 8 class rw } "]]) = true := by
+    (.ok [.devT "D" [] "mmio"
+      [.bank "bank FRR at (CAP.FRO * 16) stride 16 count 256 { reg FR_LO : u64 @ 0 class rw reg FR_HI : u64 @ 8 class rw } "]]) = true := by
   decide
 -- beispiele/02-geraet.gab:22-25 (the `FRR` bank). Rust: `Device`
 -- with a `Bank` member -- the bank body rides raw (see CUTS).
@@ -942,7 +942,7 @@ theorem t46_lex :
       .ok tt46 := by
   decide
 theorem t46 : beqTopTief (parseTopTief tt46)
-    (.ok [.geraetT "Einheit" [("basis", (.atom "Pa"))] "mmio" [.spiegel (.variable "GCMD") (.variable "GSTS"), .regTief { rname := "GCMD", rtyp := (.atom "u32"), adresse := (.lit 24), klasse := "w", phasen := [], felder := [{ rfname := "SRTP", pos := "30", klasse := .none }, { rfname := "TE", pos := "31", klasse := .none }], voraus := .none, vorausSonst := .none, abhaengt := [] }, .uebergangTief { tname := "setze_rtp", schritte := [((.feld (.variable "GCMD") "SRTP"), (.lit 0), (.lit 1))], voraus := (.some ((.bin "==" ((.feld (.variable "GSTS") "TES")) (.lit 0)))), wirkung := [(.schreibt (.variable "GCMD"))] }]]) = true := by
+    (.ok [.devT "Einheit" [("basis", (.atom "Pa"))] "mmio" [.copy (.variable "GCMD") (.variable "GSTS"), .reg { name := "GCMD", rtyp := (.atom "u32"), addr := (.lit 24), klasse := "w", stage := [], felder := [{ name := "SRTP", pos := "30", klasse := .none }, { name := "TE", pos := "31", klasse := .none }], voraus := .none, elseF := .none, abhaengt := [] }, .trans { tname := "setze_rtp", schritte := [((.field (.variable "GCMD") "SRTP"), (.lit 0), (.lit 1))], voraus := (.some ((.bin "==" ((.field (.variable "GSTS") "TES")) (.lit 0)))), wirkung := [(.writes (.variable "GCMD"))] }]]) = true := by
   decide
 -- beispiele/20-falle-vier.gab (the `Einheit` device). Rust:
 -- `Device` with `mirrors`, a bit-field register and a guarded
@@ -958,11 +958,11 @@ theorem t47_lex :
       .ok tt47 := by
   decide
 theorem t47 : beqTopTief (parseTopTief tt47)
-    (.ok [.profilT false
-      [.modusEintrag "arch" "x86_64",
-        .modusEintrag "rounding" "nearest",
-        .modusEintrag "fp_contract" "off",
-        .annahmeEintrag "plattform_takt_stabil"]]) = true := by
+    (.ok [.profT false
+      [.mode "arch" "x86_64",
+        .mode "rounding" "nearest",
+        .mode "fp_contract" "off",
+        .assum "plattform_takt_stabil"]]) = true := by
   decide
 -- beispiele/100-hardwareprofil.gab:50-55. Rust: `Profil` with
 -- keyed modes and an assumption -- same shape.
@@ -976,9 +976,9 @@ theorem t48_lex :
       .ok tt48 := by
   decide
 theorem t48 : beqTopTief (parseTopTief tt48)
-    (.ok [.profilT true
-      [.modusEintrag "arch" "x86_64",
-        .annahmeEintrag "plattform_takt_stabil"]]) = true := by
+    (.ok [.profT true
+      [.mode "arch" "x86_64",
+        .assum "plattform_takt_stabil"]]) = true := by
   decide
 -- beispiele/100-hardwareprofil.gab:26-29. Rust: `ProfilBedarf`
 -- -- same shape.
@@ -991,7 +991,7 @@ theorem t49_lex :
       .ok tt49 := by
   decide
 theorem t49 : beqTopTief (parseTopTief tt49)
-    (.ok [.torT (.globT true "hoechstmarke" (.atom "Fuellstand")
+    (.ok [.gateT (.globT true "hoechstmarke" (.atom "Fuellstand")
       (.one (.lit 0)) .none .none false)]) = true := by
   decide
 -- beispiele/52-baugatter.gab:61-62. Rust: a gated `Statisch` --
@@ -1010,7 +1010,7 @@ theorem t50_lex :
       .ok tt50 := by
   decide
 theorem t50 : beqTopTief (parseTopTief tt50)
-    (.ok [.funktionT { art := "const", name := "quad", params := [(("i", (.bereich (.atom "u32") (.lit 0) (.lit 64) false)))], ergebnis := (.some (.atom "u32")), fehler := .none, klauseln := [(.wirkung [(.rein)]), (.kosten (.lit 4))] } (.block [] (.some (.ret (.some (.bin "*" (.variable "i") (.variable "i"))))))]) = true := by
+    (.ok [.fnT { art := "const", name := "quad", params := [(("i", (.range (.atom "u32") (.lit 0) (.lit 64) false)))], res := (.some (.atom "u32")), fehler := .none, klauseln := [(.effs [(.pure)]), (.cost (.lit 4))] } (.block [] (.some (.ret (.some (.bin "*" (.variable "i") (.variable "i"))))))]) = true := by
   decide
 -- beispiele/92-const-squares.gab:11. Rust: `Funktion` with the
 -- `const` modifier and a ranged parameter -- same shape.
@@ -1038,7 +1038,7 @@ theorem t51_lex :
       .ok tt51 := by
   decide
 theorem t51 : beqTopTief (parseTopTief tt51)
-    (.ok [.funktionT { art := "impl", name := "freigeben", params := [("p", .index false "Buch")], ergebnis := .none, fehler := .none, klauseln := [.verfeinert ["ist_frei"], .voraus (.ruf "Held" [.variable "BUCH"]), .voraus (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt"), .wirkung [.liest (.feld (.variable "Buch") "slots"), .schreibt (.feld (.variable "Buch") "slots"), .sperrt false (.variable "BUCH")], .kosten (.lit 8)] } (.block [.zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt") "=" .fls, .zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "wert") "=" (.lit 0)] .none)]) = true := by
+    (.ok [.fnT { art := "impl", name := "freigeben", params := [("p", .index false "Buch")], res := .none, fehler := .none, klauseln := [.refs ["ist_frei"], .needs (.call "Held" [.variable "BUCH"]), .needs (.field (.index (.field (.variable "Buch") "slots") (.variable "p")) "belegt"), .effs [.reads (.field (.variable "Buch") "slots"), .writes (.field (.variable "Buch") "slots"), .locks false (.variable "BUCH")], .cost (.lit 8)] } (.block [.set (.field (.index (.field (.variable "Buch") "slots") (.variable "p")) "belegt") "=" .fls, .set (.field (.index (.field (.variable "Buch") "slots") (.variable "p")) "wert") "=" (.lit 0)] .none)]) = true := by
   decide
 -- beispiele/50-verfeinerung.gab (the `freigeben` refinement).
 -- Rust: `Funktion` with `refines`, two `requires` and three
@@ -1055,7 +1055,7 @@ theorem t52_lex :
       .ok tt52 := by
   decide
 theorem t52 : beqTopTief (parseTopTief tt52)
-    (.ok [.protoT { art := "extern", name := "groesse_gemessen", params := [], ergebnis := (.some (.atom "Stapelgroesse")), fehler := (.some "MessFehler"), klauseln := [(.sichert ((.bin ">=" .ergebnis (.lit 1)))), (.wirkung [(.liest (.variable "stapel"))])] }]) = true := by
+    (.ok [.protoT { art := "extern", name := "groesse_gemessen", params := [], res := (.some (.atom "Stapelgroesse")), fehler := (.some "MessFehler"), klauseln := [(.gives ((.bin ">=" .res (.lit 1)))), (.effs [(.reads (.variable "stapel"))])] }]) = true := by
   decide
 -- beispiele/06-annahmen.gab:163-165. Rust: `Funktion` with the
 -- `or` error channel -- same shape.
@@ -1075,7 +1075,7 @@ theorem t53_lex :
       .ok tt53 := by
   decide
 theorem t53 : beqTopTief (parseTopTief tt53)
-    (.ok [.protoT { art := "prim", name := "wechseln", params := [(("von", (.ptr "normal" "rw" (.atom "Kontext")))), (("nach", (.ptr "normal" "r" (.atom "Kontext"))))], ergebnis := (.some (.atom "never")), fehler := .none, klauseln := [(.wirkung [(.schreibt (.variable "maschinenzustand")), (.schreibt (.variable "stapel")), .weichtAb])] }]) = true := by
+    (.ok [.protoT { art := "prim", name := "wechseln", params := [(("von", (.ptr "normal" "rw" (.atom "Kontext")))), (("nach", (.ptr "normal" "r" (.atom "Kontext"))))], res := (.some (.atom "never")), fehler := .none, klauseln := [(.effs [(.writes (.variable "maschinenzustand")), (.writes (.variable "stapel")), .loops])] }]) = true := by
   decide
 -- beispiele/07-eintritt-und-boot.gab:148-149. Rust: `Funktion`
 -- over `never` with a diverging effect -- same shape.
@@ -1093,7 +1093,7 @@ theorem t54_lex :
       .ok tt54 := by
   decide
 theorem t54 : beqTopTief (parseTopTief tt54)
-    (.ok [.protoT { art := "impl", name := "f", params := [], ergebnis := .none, fehler := .none, klauseln := [(.erhaelt ["invA", "invB"]), (.induktion "induction over descendants of s "), (.abschnitt ".text"), (.rechenart "x86_64"), (.schreitetVor "roh" "mmu"), (.ziehtZurueck "t from boot falsifier p")] }]) = true := by
+    (.ok [.protoT { art := "impl", name := "f", params := [], res := .none, fehler := .none, klauseln := [(.keeps ["invA", "invB"]), (.induc "induction over descendants of s "), (.part ".text"), (.arch "x86_64"), (.moves "roh" "mmu"), (.quits "t from boot falsifier p")] }]) = true := by
   decide
 -- Synthetic carrier for the remaining clause forms; each cites
 -- its corpus shape: `maintains` (beispiele/01-tabelle.gab:94),
@@ -1112,7 +1112,7 @@ theorem t55_lex :
       .ok tt55 := by
   decide
 theorem t55 : beqTopTief (parseTopTief tt55)
-    (.ok [.tabelleT "Halde" (.some (.lit 1048576)) (.some "hinterlegt") .none false [.tPlatz [{ fname := "b", ftyp := (.atom "bool"), pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]]]) = true := by
+    (.ok [.tableT "Halde" (.some (.lit 1048576)) (.some "hinterlegt") .none false [.tSlot [{ fname := "b", ftyp := (.atom "bool"), pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]]]) = true := by
   decide
 -- beispiele/28-reserve-und-hinterlegung.gab:19 (the header;
 -- memory kinds are values, not checked here). Rust: `Tabelle`
@@ -1132,8 +1132,8 @@ theorem tVar_lex :
 theorem tVar : beqTopTief (parseTopTief ttVar)
     (.ok [.protoT
       { art := "extern", name := "druck",
-        params := [("fmt", .atom "Text"), ("a", .atom "u64")], ergebnis := .none,
-        fehler := .none, klauseln := [.kosten (.lit 8)] }]) = true := by
+        params := [("fmt", .atom "Text"), ("a", .atom "u64")], res := .none,
+        fehler := .none, klauseln := [.cost (.lit 8)] }]) = true := by
   decide
 def ttEnd : List Token :=
   [.wort "module", .ident "beispiel112", .zeichen "{",
@@ -1178,34 +1178,34 @@ theorem tEnd_lex :
       .ok ttEnd := by
   decide
 theorem tEnd : beqTopTief (parseTopTief ttEnd)
-    (.ok [.modulT "beispiel112" [
-.tabelleT "Zustand" (.some (.lit 4)) .none .none false
-      [.tPlatz [{ fname := "bereit", ftyp := .atom "u32",
+    (.ok [.modT "beispiel112" [
+.tableT "Zustand" (.some (.lit 4)) .none .none false
+      [.tSlot [{ fname := "bereit", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
 .lockT "Sperre" [.variable "Zustand"] (.lit 0)
       .none .none .none .none,
-.geraetT "Geraet" [("basis", .atom "u64")] "mmio"
-      [.regTief { rname := "ST", rtyp := .atom "u32",
-                   adresse := .lit 0, klasse := "r", phasen := [],
+.devT "Geraet" [("basis", .atom "u64")] "mmio"
+      [.reg { name := "ST", rtyp := .atom "u32",
+                   addr := .lit 0, klasse := "r", stage := [],
                    felder := [], voraus := .none,
-                   vorausSonst := .none,
+                   elseF := .none,
                    abhaengt := [["Zustand"]] }],
-.funktionT
+.fnT
       { art := "impl", name := "lesen", params := [("d", .atom "Geraet")],
-        ergebnis := .some (.atom "u32"), fehler := .none,
-        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
-          .wirkung [.liest (.variable "d")], .kosten (.lit 8)] }
-      (.block [.bind false "stand" .none (.feld (.variable "d") "ST")]
+        res := .some (.atom "u32"), fehler := .none,
+        klauseln := [.needs (.call "Held" [.variable "Sperre"]),
+          .effs [.reads (.variable "d")], .cost (.lit 8)] }
+      (.block [.bind false "stand" .none (.field (.variable "d") "ST")]
         (.some (.ret (.some (.variable "stand"))))),
-.funktionT
+.fnT
       { art := "impl", name := "schreiben",
         params := [("i", .index false "Zustand"), ("w", .atom "u32")],
-        ergebnis := .some (.atom "u32"), fehler := .none,
-        klauseln := [.voraus (.ruf "Held" [.variable "Sperre"]),
-          .wirkung [.schreibt (.variable "Zustand")], .kosten (.lit 8)] }
-      (.block [.zuweis
-        (.feld (.index (.feld (.variable "Zustand") "slots")
+        res := .some (.atom "u32"), fehler := .none,
+        klauseln := [.needs (.call "Held" [.variable "Sperre"]),
+          .effs [.writes (.variable "Zustand")], .cost (.lit 8)] }
+      (.block [.set
+        (.field (.index (.field (.variable "Zustand") "slots")
           (.variable "i")) "bereit")
         "=" (.variable "w")]
         (.some (.ret (.some (.lit 0)))))]]) = true := by
@@ -1220,7 +1220,7 @@ theorem t56_lex :
     lex "const T : [u32; 2] = [1, 2];" = .ok tt56 := by
   decide
 theorem t56 : beqTopTief (parseTopTief tt56)
-    (.ok [.konstT "T" (.reihe (.atom "u32") (.lit 2))
+    (.ok [.constT "T" (.array (.atom "u32") (.lit 2))
       (.rows [.one (.lit 1), .one (.lit 2)])]) = true := by
   decide
 -- beispiele/92-const-squares.gab:13 (shortened from 64
@@ -1235,7 +1235,7 @@ theorem t57_lex :
     lex "pub module a::b { use c::d; }" = .ok tt57 := by
   decide
 theorem t57 : beqTopTief (parseTopTief tt57)
-    (.ok [.modulT "a::b" [.useT ["c", "d"]]]) = true := by
+    (.ok [.modT "a::b" [.useT ["c", "d"]]]) = true := by
   decide
 -- Synthetic (no `pub module` in the corpus, measured
 -- 2026-09-13): the `pub` prefix and nested members. Rust:
@@ -1253,11 +1253,11 @@ theorem t58_lex :
       .ok tt58 := by
   decide
 theorem t58 : beqTopTief (parseTopTief tt58)
-    (.ok [.geraetT "Ring" [("basis", (.atom "u64"))] "mmio" [.regTief { rname := "AVAIL_IDX", rtyp := (.wickelnd (.atom "u16")), adresse := (.lit 258), klasse := "rw", phasen := [], felder := [], voraus := .none, vorausSonst := .none, abhaengt := [] }, .regTief { rname := "RING_LEN", rtyp := (.atom "u16"), adresse := (.lit 260), klasse := "r", phasen := [], felder := [], voraus := .none, vorausSonst := .none, abhaengt := [] }]]) = true := by
+    (.ok [.devT "Ring" [("basis", (.atom "u64"))] "mmio" [.reg { name := "AVAIL_IDX", rtyp := (.wrap (.atom "u16")), addr := (.lit 258), klasse := "rw", stage := [], felder := [], voraus := .none, elseF := .none, abhaengt := [] }, .reg { name := "RING_LEN", rtyp := (.atom "u16"), addr := (.lit 260), klasse := "r", stage := [], felder := [], voraus := .none, elseF := .none, abhaengt := [] }]]) = true := by
   decide
 -- beispiele/12-umlaufendes-register.gab (the `Ring` device).
 -- Rust: `Device` with a `wrapping` register -- the width rides
--- the type (`wickelnd`), not the register.
+-- the type (`wrap`), not the register.
 
 end Gabbro.Grammatik.Parser
 

@@ -853,8 +853,8 @@ abbrev RumpTy (u : UProg) (f : Fin u.fns.length) :=
 def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
     Except String (EnsTy u c × RumpTy u c) :=
   match lowEnsList u (ErgCtx (ctxOf u c) ((verOf u c).erg))
-      (resOf u c) (fnAt u c) (fnAt u c).ergebnis
-      (fnAt u c).sichert with
+      (resOf u c) (fnAt u c) (fnAt u c).res
+      (fnAt u c).gives with
   | .error e => .error e
   | .ok e0 =>
     match lowBody u c (fnAt u c).saetze (fnAt u c).rueck with
@@ -1140,7 +1140,7 @@ theorem kette104 : lex src104real = .ok tt104 ∧
 /-- Bare `u32` as its full range (what the exporter computes
     with, per `Export108.lean` CUTS). -/
 def u32Voll : STyp :=
-  .bereich (.atom "u32") (.lit 0) (.lit 4294967295) false
+  .range (.atom "u32") (.lit 0) (.lit 4294967295) false
 
 /-- A type with bare `u32` normalised (lane 160 has no
     full-range rule by design; the normalisation lives here,
@@ -1155,29 +1155,29 @@ def normFeldU32 (f : SFeld) : SFeld :=
 
 /-- A table part with bare `u32` normalised. -/
 def normTabTeilU32 : STabTeil → STabTeil
-  | .tPlatz fds => .tPlatz (fds.map normFeldU32)
+  | .tSlot fds => .tSlot (fds.map normFeldU32)
   | t => t
 
 /-- A function head with bare `u32` normalised (parameters and
     result). -/
 def normSigU32 (s : FnSig) : FnSig :=
-  { s with params := s.params.map (fun p => (p.1, normTypU32 p.2)), ergebnis := s.ergebnis.map normTypU32 }
+  { s with params := s.params.map (fun p => (p.1, normTypU32 p.2)), res := s.res.map normTypU32 }
 
-/-- Drop `concurrent` items (`nebenT` has no G form). Top
+/-- Drop `concurrent` items (`concT` has no G form). Top
     level only, like `uMembers`: nested modules are refused by
     `uRestFehler` afterwards, loudly. Single recursion, so the
     kernel reduces it (nested-subterm recursion does not). -/
 def stripTopNeben : List SItemTief → List SItemTief
   | [] => []
-  | .nebenT _ :: rest => stripTopNeben rest
+  | .concT _ :: rest => stripTopNeben rest
   | it :: rest => it :: stripTopNeben rest
 
 /-- One item with bare `u32` normalised (no module recursion:
     `uMembers` unwraps the single module `elabU` supports). -/
 def normU32Item : SItemTief → SItemTief
-  | .tabelleT n c a b g parts =>
-    .tabelleT n c a b g (parts.map normTabTeilU32)
-  | .funktionT s k => .funktionT (normSigU32 s) k
+  | .tableT n c a b g parts =>
+    .tableT n c a b g (parts.map normTabTeilU32)
+  | .fnT s k => .fnT (normSigU32 s) k
   | it => it
 
 /-- Bare `u32` normalised over a top-level list. -/
@@ -1396,15 +1396,15 @@ theorem lex108 : lex src108 = .ok toks108 := by
 
 /-- The parsed 108 surface tree (raw, `concurrent` inside;
     `parse108` checks it against the reader). -/
-def items108 : List SItemTief := [.modulT
+def items108 : List SItemTief := [.modT
    "beispiel::disjoint_start_locks"
-   [.tabelleT
+   [.tableT
       "T"
       (some (.lit 4))
       none
       none
       false
-      [.tPlatz
+      [.tSlot
          [{ fname := "v",
             ftyp := .atom "u32",
             pos := none,
@@ -1412,43 +1412,43 @@ def items108 : List SItemTief := [.modulT
             wo := none,
             reserviert := false,
             byOps := false }]],
-    .funktionT
+    .fnT
       { art := "impl",
         name := "read_a",
         params := [],
-        ergebnis := some (.atom "u32"),
+        res := some (.atom "u32"),
         fehler := none,
-        klauseln := [.wirkung
-                       [.liest
-                          (.feld (.variable "T") "slots")],
-                     .kosten (.lit 4)] }
+        klauseln := [.effs
+                       [.reads
+                          (.field (.variable "T") "slots")],
+                     .cost (.lit 4)] }
       (.block
         []
         (some (.ret
-           (some (.feld
+           (some (.field
               (.index
-                (.feld (.variable "T") "slots")
+                (.field (.variable "T") "slots")
                 (.lit 0))
               "v"))))),
-    .funktionT
+    .fnT
       { art := "impl",
         name := "read_c",
         params := [],
-        ergebnis := some (.atom "u32"),
+        res := some (.atom "u32"),
         fehler := none,
-        klauseln := [.wirkung
-                       [.liest
-                          (.feld (.variable "T") "slots")],
-                     .kosten (.lit 4)] }
+        klauseln := [.effs
+                       [.reads
+                          (.field (.variable "T") "slots")],
+                     .cost (.lit 4)] }
       (.block
         []
         (some (.ret
-           (some (.feld
+           (some (.field
               (.index
-                (.feld (.variable "T") "slots")
+                (.field (.variable "T") "slots")
                 (.lit 1))
               "v"))))),
-    .nebenT [["read_a"], ["read_c"]]]]
+    .concT [["read_a"], ["read_c"]]]]
 
 theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
   decide
@@ -1456,7 +1456,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 1)) }] }
+def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 1)) }] }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide
@@ -1523,7 +1523,7 @@ end Gabbro.Grammatik.Parser.UebersetzeAllg2
      present. Without it `lowerAllg` fails on every result-bearing
      function whose contract reads a slot (measured on `lies`).
   4. 108 is done the same way as 104: `pre108` strips
-     `concurrent` (`nebenT`) and normalises bare `u32` to its
+     `concurrent` (`concT`) and normalises bare `u32` to its
      full range before `elabU`; `toks108`/`items108`/`uExp108`
      are probe-generated literals (`#eval` + `Repr`, then pinned
      by `lex108`/`parse108`/`elab108`), with the fragment,
