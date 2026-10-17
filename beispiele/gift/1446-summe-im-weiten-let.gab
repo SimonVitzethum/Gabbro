@@ -1,0 +1,16 @@
+-- erwartet: M104
+-- `let x : u64 = a + b;` over two `u32` operands.
+--
+-- The declared type of the binding does not widen the operands: the sum wraps at 32 bits
+-- before the `u64` sees it. Bind each operand into `u64` first (example 1164).
+module gift1446 {
+
+pub fn sum(a : u32, b : u32) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    let x : u64 = a + b;
+    return x;
+}
+
+}
