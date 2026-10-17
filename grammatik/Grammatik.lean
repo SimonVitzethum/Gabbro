@@ -327,6 +327,7 @@ import Grammatik.Korrespondenz.Korpus.Korpus125
 import Grammatik.Proben.SimPruef
 import Grammatik.Bausteine.Arena.ArenaDyn
 import Grammatik.Bausteine.Arena.ArenaSeiten
+import Grammatik.Bausteine.Arena.ArenaFrei
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset
 import Grammatik.Logik.Ruf.FremdRuf
