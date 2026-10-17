@@ -76,9 +76,35 @@ and it does not mint a new owner. While both are live, they are one root.
    passed with its source, a field of the same root. Positive probes: `delete_leaf`/`revoke`
    shape, two read-only views. Measure the corpus: **0 new diagnostics outside the probes**
    is the acceptance; any hit is read by hand.
-2. **Slice 2 — Lean.** A `Getrennt` predicate (roots pairwise distinct) on the call frame,
+2. **Slice 2 — Lean.** A `ParamGetrennt` predicate (roots pairwise distinct) on the call frame,
    the preservation theorem under `exec_rahmen`, and the witness (non-degenerate fixture).
    `gabbro_ziel` must stay on exactly `propext`, `Classical.choice`, `Quot.sound`.
+   **Status 2026-10-17: done at the model's granularity, with two obstructions named.**
+   `grammatik/Grammatik/Logik/Vertraege/Getrennt.lean` (+ `GetrenntZeuge.lean`, SATZKARTE §74).
+   - *What the model is.* `Ty.ptr n rw` names its carrier (table `tabNr n`) in the TYPE, and a
+     pointer value is `Unit`; `own` is exported as read-write. The argument-to-carrier map of a
+     call is therefore fixed by the callee's signature, and `ParamGetrennt` is a property of the
+     callee: the map is injective on pairs with a writable side (`ParamGetrennt`, decided by
+     `paramGetrenntB`, `paramGetrennt_iff`).
+   - *Proved (generic).* `getrennt_paarweise`, `getrennt_schreiben_trennt` (disjoint carriers;
+     a store through one leaves the other), `getrennt_lesesicht_bleibt` / `getrennt_ruf_rahmen`
+     (with the frame declared over the parameters, every run of the call -- `rufAt`, every depth
+     and world, through `rufAt_treu` -- leaves a read-only parameter's carrier unchanged),
+     `leihe_wurzel`, `leihe_nicht_getrennt` (the borrow rule at one pointer type).
+   - *Converse (witness).* `ohne_getrennt_nur_versprechen`: `aendern(k : ptr rw T, w : ptr r T)`,
+     frame over the parameters, one real `rufAt` run moves the object behind `w` from 0 to 5.
+     Positive witness `getrennt_ruf_rahmen_zeuge` on `getrennt(k : ptr rw T, q : ptr r U)`,
+     whose run really writes `T`. All on `propext`, `Classical.choice`, `Quot.sound` at most.
+   - *OPEN / obstructed.* (1) **Roots are finer than carriers**: two parameters of one table
+     type are one carrier in the model whatever their roots, so S-1/S-2 (distinct roots) has no
+     model statement; `R014`-clean is not `ParamGetrennt` there (the counter-model's two parameters
+     are two names). Expressing S-2 needs objects below a table that a pointer can name -- a
+     model change, not a lemma. (2) **Re-views across types do not reach the model**: record
+     pointers and foreign re-views are refused by the exporter (`LG005`, `LG001`;
+     `beispiele/1163` is `UNCERTIFIED LG001`), so the borrow rule is the model's reading only at
+     one pointer type; two tables are disjoint by construction, sound only because no
+     cross-type view is exported. (3) A frame naming a table directly (a static root beside a
+     parameter) is outside `RahmenUeberParams`. The S-3 boundary decision stays with slice 3.
 3. **Slice 3 — S-3 boundary** and the rows in `saetze.rs` (`pruefe-saetze.py`), `SYNTAX.md`
    §9, and the rewrite of `R004`/`R007` as the "same place" special cases of S-1.
 4. **Slice 4 — compiler:** `noalias` only where S-1 holds (`LLVM-MODELLSTAND.md`: `own` →
