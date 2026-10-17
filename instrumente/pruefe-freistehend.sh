@@ -190,6 +190,14 @@ while IFS= read -r q; do
     if ! G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
         rm -rf "$e"; continue          # `C001` -- a refusal is an honest answer (stage 9)
     fi
+    # 2026-10-17: the AArch64 twin of `linux.gab` is inline assembly for another architecture --
+    # the native x86 `cc` cannot assemble it. The same named exception as stage 9 of
+    # `pruefe-emission.sh` (`ausnahme_grund`), said here so the population is not silently smaller.
+    case "$d" in
+    bibliothek/linux/linux-aarch64.gab)
+        echo "  not built here (AArch64 inline assembly): $d -- named exception, as in stage 9"
+        rm -rf "$e"; continue ;;
+    esac
     if [ -n "$metallziel" ]; then
         if ! GABBRO_TARGET="$metallziel" G emit "$q" > "$e/einheit.c" 2>/dev/null || [ ! -s "$e/einheit.c" ]; then
             echo "  THE METAL TARGET DOES NOT EMIT: $d (target $metallziel)"

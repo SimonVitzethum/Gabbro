@@ -366,13 +366,13 @@ opus/…:opus/…` first.
 **After merges:**
 
 1. Refresh the lanes' warm Lean cache from the merge build.
-2. Bundle master, run `cargo test --no-fail-fast` and the emission check, and push only if
-   tests, emission and key grep are clean and origin is not ahead. If origin moved,
-   `git pull` (merge) first and run it again.
-   - Do NOT run it with `EMISSION=true`.
-   - Emission counters (`MARKE_EMIT`, `MARKE_EMIT_G`, `MARKE_EMIT_M` in
-     `instrumente/pruefe-emission.sh`) are re-measured by the merger, not by lanes. Each bump is
-     dated with its reason.
+2. Bundle master, run `cargo test --no-fail-fast`, and push only if the tests and the key grep
+   are clean and origin is not ahead. If origin moved, `git pull` (merge) first and run it again.
+   - **The C-emitter check is NOT a push gate any more** (Simon, 2026-10-17): the C backend is
+     deprecated (section 3, 2026-10-15). `instrumente/pruefe-emission.sh` stays as a standalone
+     legacy check; run it when `emit.rs` or the C runtime changes, not before every push.
+   - Its counters (`MARKE_EMIT`, `MARKE_EMIT_G`, `MARKE_EMIT_M`) are re-measured by whoever runs
+     it, with a dated reason per bump.
 
 ## 6. Opus agents (Claude subagents, max 2)
 
