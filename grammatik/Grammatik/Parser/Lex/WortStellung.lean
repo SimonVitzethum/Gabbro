@@ -14,7 +14,7 @@
   `kw.rs` `res` column order, with the theorems that tie each existing
   refusal to it.
 -/
-import Grammatik.Parser.Ausdruck
+import Grammatik.Parser.Expr.Ausdruck
 
 namespace Gabbro.Grammatik.Parser
 
@@ -77,10 +77,10 @@ theorem cNamen_in_reserviert :
 
 set_option maxRecDepth 100000
 
-/-- The closed vocabulary counts 243 words
-    (`instrumente/zaehle-wortschatz.py`; the lane brief says 242,
-    measured 243 -- the brief predates `depends`, lane 157). -/
-theorem wortschatz_dreihundertdreiundvierzig : wortschatz.length = 243 := by
+/-- The closed vocabulary counts 248 words: the 248 entries of `kw.rs` (`Kw::text`), diffed
+    word by word on 2026-10-17 (the table held 243 before: `grow`, `pb`, `blw`, `free` and
+    `target` were missing). -/
+theorem wortschatz_248 : wortschatz.length = 248 := by
   decide
 
 /-- Every reserved word stands in the closed vocabulary: the split
@@ -104,7 +104,7 @@ end Gabbro.Grammatik.Parser
     superset with the same meaning on the intersection -- keyword
     arms stand above the name path on both sides), but the positional
     refusal itself has no Lean counterpart yet.
-  * Field names need none: `erwarte_feldname` takes all 243 words,
+  * Field names need none: `erwarte_feldname` takes all 248 words,
     and Lean path segments do the same through `nameText` -- the two
     agree where both are permissive.
   * `istReserviert` decides by spelling only. Whether a reserved

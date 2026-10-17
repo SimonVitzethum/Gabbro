@@ -10,8 +10,8 @@
   by path, so that direction would be a dependency cycle).
 -/
 import Grammatik.GabbroV.GvStartPflicht
-import Grammatik.Parser.Uebersetze
-import Grammatik.Parser.UebersetzeAllg
+import Grammatik.Parser.Elab.Uebersetze
+import Grammatik.Parser.Elab.UebersetzeAllg
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Logik.Vertraege.AxiomVertrag
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
@@ -97,54 +97,54 @@ theorem gvLuecke_fragment_ohne_atomar (u : UProg) :
     `Uebersetze.lean` line 1298). Parser territory (agent 02); proved here from
     the accepted definitions, touching no `Parser/` file. -/
 theorem gvLuecke_elabU_refuses_statics :
-    ∀ (ms : List SItemTief) (m : Bool) (a : String) (t : STyp) (v : SExpr)
+    ∀ (ms : List SItemTief) (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr)
       (s : Option String) (g : Bool),
-      .statikT m a t v s g ∈ uMembers ms → ¬ ∃ u, elabU ms = .ok u := by
+      .statikT m a t v al s g ∈ uMembers ms → ¬ ∃ u, elabU ms = .ok u := by
   have aux : ∀ (l : List SItemTief),
-      (∃ m a t v s g, .statikT m a t v s g ∈ l) →
+      (∃ m a t v al s g, .statikT m a t v al s g ∈ l) →
       ∃ e, uRestFehler l = .error e := by
     intro l
     induction l with
     | nil =>
       intro hmem
-      obtain ⟨m, a, t, v, s, g, hm⟩ := hmem
+      obtain ⟨m, a, t, v, al, s, g, hm⟩ := hmem
       exact (List.not_mem_nil hm).elim
     | cons x xs ih =>
       intro hmem
-      obtain ⟨m, a, t, v, s, g, hm⟩ := hmem
+      obtain ⟨m, a, t, v, al, s, g, hm⟩ := hmem
       cases x with
       | konstT _ _ _ =>
-        have hmt : .statikT m a t v s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, s, g, hmt⟩
+        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | typT _ _ _ _ _ =>
-        have hmt : .statikT m a t v s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, s, g, hmt⟩
+        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | tabelleT _ _ _ _ _ _ =>
-        have hmt : .statikT m a t v s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, s, g, hmt⟩
+        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | sperreT _ _ _ _ _ _ =>
-        have hmt : .statikT m a t v s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, s, g, hmt⟩
+      | sperreT _ _ _ _ _ _ _ =>
+        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | funktionT _ _ =>
-        have hmt : .statikT m a t v s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, s, g, hmt⟩
+        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | eingangT _ =>
-        have hmt : .statikT m a t v s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, s, g, hmt⟩
+        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | modulT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | useT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | statikT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | statikT _ _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | protoT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | specT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | asmT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | formatT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | arenaT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | arenaT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | grundT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | zustandT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | geraetT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
@@ -160,12 +160,14 @@ theorem gvLuecke_elabU_refuses_statics :
       | anvertrautT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | startT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | sysrufT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | varT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | goalT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | uebersetzerT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | profilT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | torT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-  intro ms m a t v s g hmem hex
+  intro ms m a t v al s g hmem hex
   obtain ⟨u, hu⟩ := hex
-  obtain ⟨e, he⟩ := aux (uMembers ms) ⟨m, a, t, v, s, g, hmem⟩
+  obtain ⟨e, he⟩ := aux (uMembers ms) ⟨m, a, t, v, al, s, g, hmem⟩
   simp only [elabU, he] at hu
   exact nomatch hu
 

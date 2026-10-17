@@ -3291,10 +3291,10 @@ are reported separately.*
 
 ## 31. O13 closed -- the chain source pinned as characters, the pipeline unfolded at a variable
 
-*Added 2026-09-15 (Opus lane `o13`). Files: `Grammatik/Parser/Lexer.lean` (`lexL`,
+*Added 2026-09-15 (Opus lane `o13`). Files: `Grammatik/Parser/Lex/Lexer.lean` (`lexL`,
 `lex_ofList`), `Grammatik/Korrespondenz/Kette/Schlusssatz.lean` (`uebersetzeAllg_von_zeichen`),
-`Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
-`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
+`Grammatik/Parser/Elab/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
+`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Elab/Uebersetze.lean` (`u104lexL`/`u104lex`),
 `Grammatik/Korrespondenz/Kette/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), retired `zaehle-kette`.
 Report: `messung/muse/OPUS-BERICHT-O13.md` (retired report, in the history).*
 
@@ -5102,3 +5102,12 @@ No new Lean theorem: this section books what the checker and the LLVM emitter di
 NOT proved: the `let` walk of the checker over G syntax (the premise `HerkunftTreu`); `R004`/`R007` as
 special cases of `R014` (they stay separate rules); records over byte buffers (range objects, `LG005`/
 `LG001`). `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
+
+## 77. The Lean parser as a measured front end: coverage matrix, no new theorem (Track P, 2026-10-17)
+
+Statement-level facts, no theorem moved: `lex_keywords` and `wortschatz_248` now hold over the 248 words of `kw.rs`
+(five were missing); `u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben`
+probes hold over the changed readers (`sperreT` 7 fields, `statikT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`).
+Measured, not proved: 153 of 170 corpus files parse as a whole, 9 elaborate (`Parser/Cover/Census.lean`,
+`instrumente/parser-deckung.py`). NOT proved: any round trip for statements or items; elaboration beyond tables,
+locks and `impl fn` over integers. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.

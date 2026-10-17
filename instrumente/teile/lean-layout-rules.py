@@ -90,6 +90,15 @@ rules('grammatik/Grammatik/CParser', [
     (r'.*', '../CBackend/Parser'),
 ])
 
+rules('grammatik/Grammatik/Parser', [
+    (r'^(Lexer|LexerVertrauen|WortStellung)$', 'Lex'),
+    (r'^Ausdruck\w*$', 'Expr'),
+    (r'^Anweisung\w*$', 'Stmt'),
+    (r'^Element\w*$', 'Item'),
+    (r'^Rundlauf\w*$', 'Round'),
+    (r'^Uebersetze\w*$', 'Elab'),
+])
+
 rules('grammatik/Grammatik', [
     (r'^(Syntax|Typen|Konstanten|Fehler|Satz|Zucker|Marken|MarkenInstanzA|Profil|Koernung|Bits|Geist|Extraktion|Ziel)$', 'Kern/Syntax'),
     (r'^(Semantik|Maschine|MaschinenKette|Erhaltung|ErhaltungT4|Terminierung|Ueberlauf|Fristlauf|Durchgaenge|Budget|Adressraum|Syscall|SyscallPaarung|Geraet)$', 'Kern/Semantik'),

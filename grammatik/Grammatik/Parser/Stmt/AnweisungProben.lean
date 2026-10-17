@@ -14,7 +14,7 @@
   Corpus sites stand at each probe; probes with no corpus line say
   so (`{ }` bodies stand for the corpus block at the cited site).
 -/
-import Grammatik.Parser.Element
+import Grammatik.Parser.Item.Element
 
 namespace Gabbro.Grammatik.Parser
 
@@ -69,10 +69,10 @@ theorem s04_lex :
     lex "let x : u64 = SQUARES[a];" = .ok st04 := by
   decide
 theorem s04 : beqTopStmt (parseTopStmt st04)
-    (.ok (.lass false "x"
+    (.ok (.lass false "x" (.some (.atom "u64"))
       (.index (.variable "SQUARES") (.variable "a")))) = true := by
   decide
--- beispiele/92-const-squares.gab (the type ascription is skipped,
+-- beispiele/92-const-squares.gab (the type ascription is read,
 -- the value rides). Rust: `Let` -- same shape.
 def st05 : List Token :=
   [.wort "let", .wort "mut", .ident "n", .zeichen ":",
@@ -81,7 +81,7 @@ theorem s05_lex :
     lex "let mut n : u32 = 0;" = .ok st05 := by
   decide
 theorem s05 : beqTopStmt (parseTopStmt st05)
-    (.ok (.lass true "n" (.lit 0))) = true := by
+    (.ok (.lass true "n" (.some (.atom "u32")) (.lit 0))) = true := by
   decide
 -- beispiele/46-verneinung.gab:45. Rust: `Let` with `veraenderlich`
 -- -- same shape.
@@ -96,7 +96,7 @@ theorem s06_lex :
       .ok st06 := by
   decide
 theorem s06 : beqTopStmt (parseTopStmt st06)
-    (.ok (.lassElse "g" "groesse_gemessen()" "e1"
+    (.ok (.lassElse "g" .none (.ruf "groesse_gemessen" []) "e1"
       (.block [] (.some (.ret (.some .fls)))))) = true := by
   decide
 -- beispiele/06-annahmen.gab:136. Rust: `LetSonst` with a call
@@ -160,7 +160,7 @@ theorem s10_lex :
     lex "let s = @summe#sum() { 10 20 30 40 };" = .ok st10 := by
   decide
 theorem s10 : beqTopStmt (parseTopStmt st10)
-    (.ok (.lassLib false "s" "summe" "sum")) = true := by
+    (.ok (.lassLib false "s" .none "summe" "sum")) = true := by
   decide
 -- beispiele/107-summe-zwei-rufe.gab:36. Rust: `Let` over a
 -- `LibraryCall` -- same shape (the region is captured balanced,
@@ -459,7 +459,7 @@ theorem s32_lex :
     lex "let a = alloc Log (10);" = .ok st32 := by
   decide
 theorem s32 : beqTopStmt (parseTopStmt st32)
-    (.ok (.allocS false "a" "Log" (.lit 10) .none)) = true := by
+    (.ok (.allocS false "a" .none "Log" (.lit 10) .none)) = true := by
   decide
 -- beispiele/98-arena-erklaert.gab:11. Rust: `Alloc` with no
 -- `else` -- same shape.
@@ -474,7 +474,7 @@ theorem s33_lex :
       .ok st33 := by
   decide
 theorem s33 : beqTopStmt (parseTopStmt st33)
-    (.ok (.allocS false "c" "Log"
+    (.ok (.allocS false "c" .none "Log"
       (.bin "+" (.variable "a") (.variable "b"))
       (.some (.block [] (.some (.ret (.some (.lit 0)))))))) = true := by
   decide
@@ -487,7 +487,7 @@ theorem s34_lex :
     lex "reset Log;" = .ok st34 := by
   decide
 theorem s34 : beqTopStmt (parseTopStmt st34)
-    (.ok (.resetS "Log")) = true := by
+    (.ok (.resetS "Log" .none)) = true := by
   decide
 -- beispiele/98-arena-erklaert.gab:16. Rust: `ResetArena` --
 -- same shape.

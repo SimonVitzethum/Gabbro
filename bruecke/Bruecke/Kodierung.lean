@@ -1,4 +1,4 @@
-import Grammatik.Parser.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeAllg2
 import Grammatik.CBackend.Semantik.CSLInvarianteC
 import Grammatik.Kern.Syntax.Satz
 import Gabbro.Body
