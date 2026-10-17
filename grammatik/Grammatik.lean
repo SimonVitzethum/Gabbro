@@ -288,6 +288,8 @@ import Grammatik.Korrespondenz.Kette.Schlusssatz124Ticket
 import Grammatik.Logik.Ruf.RufOhneHardware
 import Grammatik.Logik.Ruf.RufOhneHardwareZeuge
 import Grammatik.Logik.Vertraege.RahmenTreu
+import Grammatik.Logik.Vertraege.Getrennt
+import Grammatik.Logik.Vertraege.GetrenntZeuge
 import Grammatik.Logik.Vertraege.HandlerKongruenz
 import Grammatik.Logik.Ruf.RufTiefe
 import Grammatik.Logik.Ruf.RufLogik

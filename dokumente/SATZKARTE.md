@@ -5008,3 +5008,34 @@ the declared starts run, each on its own thread; what moved is who writes the sc
 *Lesson of the proof:* `decide` on 64-bit literal arithmetic (`(0x1F80 + 0x037F * 2^32) % 2^32`)
 drove the elaborator past 4 GB and was killed (exit 137); `simp` with the literal simprocs
 proves the same in milliseconds.
+
+## 74. Separation at a call boundary: `ParamGetrennt` (`own`/separation slice 2, 2026-10-17, `dokumente/A1-OWN-PAPER.md`)
+
+**The question.** Slice 1 (`R014`, `m3.rs::getrennte_wurzeln`) refuses a call whose two pointer
+arguments share a root when one callee parameter is writable or `own`. What does the model need?
+In machine G a pointer type `Ty.ptr n rw` names its carrier STATICALLY (table `D.tabNr n`), and a
+pointer value is `Unit`. So the argument-to-carrier map of a call is fixed by the callee's
+signature, the same at every call site, and `own` reaches the model as read-write (`lean_g.rs`,
+`param_ty`). `ParamGetrennt` is therefore a property of the callee.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `traegerVon`, `zaehltFuerTrennung` | Getrennt §1 | the carrier a parameter type names; writable (incl. `own`) |
+| `ParamGetrenntL`, `ParamGetrennt`, `paramGetrenntB`, **`paramGetrennt_iff`** | Getrennt §2 | the parameter-to-carrier map is injective on pairs with a writable side; decided by a Bool |
+| **`getrennt_paarweise`**, **`getrennt_schreiben_trennt`** | Getrennt §3 | such parameters name disjoint carriers; a slot store through the one leaves every slot of the other |
+| `RahmenUeberParams`, `getrennt_nicht_geschrieben` | Getrennt §4 | the frame is declared over the writable parameters; then a read-only parameter's carrier is not written |
+| **`getrennt_lesesicht_bleibt`** | Getrennt §4 | for every frame-keeping call handler (`TreuR`): the read-only parameter's carrier is unchanged |
+| **`getrennt_ruf_rahmen`** | Getrennt §4 | the same at `rufAt`, every depth, every world (through `rufAt_treu`, no lock premise) |
+| `leihe_wurzel`, **`leihe_nicht_getrennt`** | Getrennt §5 | a re-view at one pointer type answers its argument's root; two names of one root (one writable) are not `ParamGetrennt` |
+| `zeuge_aendern_nicht_getrennt`, `zeuge_aendern_lauf`, **`ohne_getrennt_nur_versprechen`** | GetrenntZeuge | COUNTER-MODEL: `aendern(k : ptr rw T, w : ptr r T)`, frame over the parameters, one real `rufAt` run moves `w`'s object from 0 to 5 -- without `ParamGetrennt` the per-parameter frame is false |
+| `zeuge_getrennt`, **`getrennt_ruf_rahmen_zeuge`**, `zeuge_getrennt_lauf`, `getrennt_schreiben_trennt_zeuge`, `leihe_wurzel_zeuge` | GetrenntZeuge | WITNESS: `getrennt(k : ptr rw T, q : ptr r U)` is `ParamGetrennt` (decided); every run leaves `U`; the concrete run really writes `T` |
+
+NOT proved, and why (obstructions, not gaps to be closed by a premise): **roots are finer than
+carriers** -- two pointer parameters of one table type are one carrier in the model whatever their
+roots, so `R014`'s S-1/S-2 (distinct roots) has no model statement to discharge, and an S-1-clean
+callee over one table is not `ParamGetrennt` (the counter-model has two distinct parameter names);
+**re-views across types do not reach the model** -- pointers to records and foreign re-views are
+refused by the exporter (`LG005`, `LG001`; `beispiele/1163` is `UNCERTIFIED LG001`), so the
+borrow rule is the model's reading only at one pointer type; **a frame that names a table directly**
+(a static root beside a parameter) is outside `RahmenUeberParams`. `Zielsatz/Spec.lean` unchanged;
+`gabbro_ziel` untouched.
