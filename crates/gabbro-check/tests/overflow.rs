@@ -10,7 +10,6 @@
 //!   compute the wrapped, masked and clamped values.
 
 use gabbro_syntax::diag::Stufe;
-use std::process::Command;
 
 fn codes(source: &str) -> Vec<(&'static str, Stufe)> {
     let (baum, mut absagen) = gabbro_syntax::lies("<probe>", source);
@@ -133,65 +132,8 @@ fn saturation_on_two_ranges_falls_m154() {
 
 // -- the emitter writes the mask and the call --------------------------------------------
 
-const EMIT_SOURCE: &str = "module t {
-    impl fn w_mask(a : u13, b : u13) -> u13 effects { pure } costs <= 40 ops {
-        return a +% b;
-    }
-    impl fn w_voll(a : u32, b : u32) -> u32 effects { pure } costs <= 40 ops {
-        return a +% b;
-    }
-    impl fn s_u(a : u8 in 0 .. 5, b : u8 in 0 .. 5) -> u8 in 0 .. 5 effects { pure } costs <= 40 ops {
-        return a +| b;
-    }
-    impl fn s_i(a : i16 in -100 .. 100, b : i16 in -100 .. 100) -> i16 in -100 .. 100 effects { pure } costs <= 40 ops {
-        return a +| b;
-    }
-}";
 
 // -- the generated C computes the wrapped, masked and clamped values ---------------------
 
-const RUN_SOURCE: &str = "module t {
-    impl fn w_add(a : u32, b : u32) -> u32 effects { pure } costs <= 40 ops {
-        return a +% b;
-    }
-    impl fn w_sub(a : u32, b : u32) -> u32 effects { pure } costs <= 40 ops {
-        return a -% b;
-    }
-    impl fn w_mul(a : u32, b : u32) -> u32 effects { pure } costs <= 40 ops {
-        return a *% b;
-    }
-    impl fn w_shl(a : u32, s : u32 in 0 .. 31) -> u32 effects { pure } costs <= 40 ops {
-        return a <<% s;
-    }
-    impl fn w_mask(a : u13, b : u13) -> u13 effects { pure } costs <= 40 ops {
-        return a +% b;
-    }
-    impl fn s_add(a : u8 in 0 .. 5, b : u8 in 0 .. 5) -> u8 in 0 .. 5 effects { pure } costs <= 40 ops {
-        return a +| b;
-    }
-    impl fn s_add_i(a : i16 in -100 .. 100, b : i16 in -100 .. 100) -> i16 in -100 .. 100 effects { pure } costs <= 40 ops {
-        return a +| b;
-    }
-}";
 
-/// Case rows: (C expression, expected value). Each is a fact the checker proved
-/// (the range) and the C recomputes -- a single difference is a shipped program
-/// computing something other than what was proved.
-const CASES: &[(&str, &str)] = &[
-    ("w_add(4294967295u, 1u)", "0"),
-    ("w_sub(0u, 1u)", "4294967295"),
-    ("w_mul(65536u, 65536u)", "0"),
-    ("w_shl(1u, 31u)", "2147483648"),
-    ("w_shl(4294967295u, 1u)", "4294967294"),
-    ("w_mask(8191u, 1u)", "0"),
-    ("w_mask(4096u, 4096u)", "0"),
-    ("w_mask(100u, 23u)", "123"),
-    ("s_add(4u, 3u)", "5"),
-    ("s_add(0u, 0u)", "0"),
-    ("s_add(2u, 2u)", "4"),
-    ("s_add_i(100, 100)", "100"),
-    ("s_add_i(-100, -100)", "-100"),
-    ("s_add_i(50, 20)", "70"),
-    ("s_add_i(-50, -60)", "-100"),
-];
 

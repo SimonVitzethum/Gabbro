@@ -33,7 +33,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 
-use crate::freigabe::{Abschnitt, beurteile, menge_text};
+use crate::freigabe::{beurteile, menge_text};
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     for abschnitt in &beurteile(baum) {

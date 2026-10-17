@@ -85,7 +85,7 @@ gabbro zeremonie|ceremony [--per-site|--table] <file.gab>…
 gabbro blindstellen|blindspots <clean>… -- <poison>…   # FORM × POSITION, empty cells (§11)
 gabbro kontexte|contexts, alias, k-bedingung, costs|kosten, annahmen|assumptions,
 gabbro schablonen|templates [--gate], zeugnis|certificate, abi, link|verbinde
-gabbro lean | lean-g | gegenbeispiel|counterexample | prove|beweise | corr-lean | gabbrov pruefe
+gabbro lean | lean-g | gegenbeispiel|counterexample | prove|beweise | gabbrov pruefe
 ```
 
 * `pruefe` prints one line per finding (`error:`/`hint:`, the code in brackets, `file:line:col`,

@@ -209,7 +209,7 @@ Named in the header, never hidden; each extension of the goal is a reviewed diff
 
 ## B6. What a green build covers per program (the certificates)
 
-`grammatik/Grammatik/Zertifikat/REGISTER.txt` is THE ONE LIST of the programs under `beispiele/`
+`target/zertifikate/REGISTER.txt` (generated on demand by `cargo test --test zertifikate`, never committed; certificates are elaborated by the Lean guardian stage 5) is THE ONE LIST of the programs under `beispiele/`
 (top level and `gift/`) that the checker accepts. Measured now: **34 CERTIFIED, 211 UNCERTIFIED**
 (`grep -c` over the file). The cargo test `crates/gabbro-check/tests/zertifikate.rs` recomputes
 it from the tree and fails on any byte of difference; `GABBRO_ZERTIFIKATE=schreiben` rewrites it.
@@ -628,7 +628,7 @@ lower bound. A `format` is no longer the justification of the language, one of i
 | Figure | Command |
 |---|---|
 | goal theorem and its axioms | `cd grammatik && lake build && lake env lean NachpruefungZiel.lean` |
-| certificates and the register | `grep -c '^CERTIFIED' grammatik/Grammatik/Zertifikat/REGISTER.txt`; `cargo test --test zertifikate` |
+| certificates and the register | `cargo test --test zertifikate -- --nocapture` (prints the totals); `instrumente/pruefe-lean.py` stage 5 |
 | templates | `gabbro schablonen` |
 | pass sentences | `gabbro paesse`, `gabbro paesse --per-statement` |
 | emitted-C forms, closed chains, C-form classification | retired (`zaehle-c-formen`, `zaehle-kette`, `pruefe-cformen`; 2026-10-17, see git history); historical, not guarded today |

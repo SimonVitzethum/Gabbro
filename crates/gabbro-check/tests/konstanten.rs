@@ -20,7 +20,6 @@
 //! checks the values against the SOURCE.
 
 use gabbro_syntax::diag::Stufe;
-use std::process::Command;
 
 fn codes(source: &str) -> Vec<(&'static str, Stufe)> {
     let (baum, mut absagen) = gabbro_syntax::lies("<probe>", source);

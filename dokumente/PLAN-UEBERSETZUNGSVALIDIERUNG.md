@@ -60,7 +60,7 @@ image has its final output checked.
 | Piece | Task | Present status (2026-10-17) |
 |---|---|---|
 | **T3** | Lean source parser and elaborator compute `P`, layouts and duties | `grammatik/Grammatik/Parser/` (lexer, expressions, statements, `Uebersetze`) and the GabbroV front end (`GvParserFragment*`, `bruecke/Bruecke/Quelle.lean`). Sieve (a) was 5 of 148 programs on 2026-09-30 (tag `milestone-2026-09-30-parser-generic-chain5`); narrow fragment, **binding sieve** of the chain count |
-| **T1** | Generic soundness of the certificate: typing, safety, goal premises | model certificates per constructor (`Korrespondenz/Zeugnis/`), `Zertifikat/REGISTER.txt` (**34 CERTIFIED / 211 UNCERTIFIED** lines, 2026-10-17). An accepted program outside both lists or a stale row turns `cargo test` red (`tests/zertifikate.rs`) |
+| **T1** | Generic soundness of the certificate: typing, safety, goal premises | model certificates per constructor (`Korrespondenz/Zeugnis/`), `target/zertifikate/REGISTER.txt` (generated on demand) (**34 CERTIFIED / 211 UNCERTIFIED** lines, 2026-10-17). An accepted program outside both lists or a stale row turns `cargo test` red (`tests/zertifikate.rs`) |
 | **T4** | Target instruction semantics, byte decoder, byte-addressed memory, per-access memory model | **AArch64: in construction** (`arm/`, `PLAN-HARDWARE.md` §2.3, ~5 900 Lean lines; no decoder, no Sail bridge, no branches/FP, memory model not assembled). x86-64: archived |
 | **T2** | Sound validator from the final image to `P`/GX | none for a binary. Legacy: `korrOk` (decides a C certificate statement by statement, §6.2) |
 | **T5** | Generic runtime, entry, lock, call and hardware templates bound to the target semantics | `gabbro templates`: 41 entries, 30 proved against **C or abstract machine** semantics (`Bausteine/Schablonen/*`, `CTicket.lean`, `SyscallArm*.lean` mirrors the AArch64 Linux call ABI as data); machine-code correspondence open |
@@ -206,9 +206,8 @@ statement by statement, that the row is the emitted form of the statement. Sound
 depth (`korrOk_fnCorr`, induction through `cCorr_ruf`); each row is one existing T4 lemma.
 Widened 2026-09-15 from 6 to 27 of 42 `Expr` constructors and from 4 to 5 of 27 `Stmt`
 constructors, every arm with a positive probe and a **planted defect**. Seen failing
-(`korrOk_faellt`): wrong field offset, wrong stored value, a missing call row. The printer
-(`crates/gabbro-check/src/corrlean.rs`, `gabbro corr-lean`) prints `KCert` with the exporter's map
-but is narrower than the check (`+ - *` and `== < <= >` only).
+(`korrOk_faellt`): wrong field offset, wrong stored value, a missing call row. The printer for the C
+correlation (`gabbro corr-lean`) is removed with the C emitter (2026-10-17).
 
 ### 6.3 The chain count and where programs stop
 

@@ -823,7 +823,7 @@ impl Lauf<'_> {
     fn folgt_cmp(&self, op: BinOp, a: &Expr, b: &Expr) -> bool {
         let leer_gebunden: BTreeSet<String> = BTreeSet::new();
         let leer_subst: BTreeMap<String, Norm> = BTreeMap::new();
-        let leer_lokal: BTreeMap<String, i128> = BTreeMap::new();
+        let _leer_lokal: BTreeMap<String, i128> = BTreeMap::new();
         let l = self.kanon(&norm_expr(
             a,
             &leer_gebunden,
