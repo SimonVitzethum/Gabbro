@@ -62,3 +62,4 @@ programmlogik/_pruefung/
 .tmp/
 .town/
 qemu_*.core
+.serena/
