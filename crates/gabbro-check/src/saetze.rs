@@ -3385,14 +3385,18 @@ pub const M3: &[Satz] = &[
                   parameters is writable or `own`: the root of a pointer is the parameter it \
                   came from, and the answer of a function that takes and answers a pointer (a \
                   re-view) has the root of its argument.",
-        vorbehalt: "Slice 1 of `dokumente/A1-OWN-PAPER.md`; refuse-only. Only BARE names are \
-                    compared and the walk over `let`s is flat (no scoping; a name bound twice \
-                    carries the union of its roots), so a field, an index or a call two frames \
-                    up carries no root this pass can name. Two different plain parameters pass \
-                    (the callee's inherited precondition) -- which means a function CALLED FROM \
-                    OUTSIDE the unit (`messung/netz/udp-echo.gab::echo_beantworten`, the real \
-                    stale-checksum shape) is not caught here: that is the boundary, slice 3. \
-                    No Lean statement yet (slice 2).",
+        vorbehalt: "Slice 1 of `dokumente/A1-OWN-PAPER.md`; refuse-only. A pointer this pass cannot \
+                    trace (a field, an index, an indirect call, an argument that is no bare \
+                    name) is UNKNOWN and equals every root, so a pair with it falls when one \
+                    side is writable or `own` -- fixed 2026-10-17 after the slice-2b model \
+                    proved the earlier reading unsound (`ObjektWurzel.rust_lesart_luecke`: it \
+                    skipped such pairs). The walk over `let`s is flat (no scoping; a name bound \
+                    twice carries the union of its roots) and is not formalised in Lean (the \
+                    premise `HerkunftTreu`). Two different plain parameters pass (the callee's \
+                    inherited precondition) -- so a function CALLED FROM OUTSIDE the unit \
+                    (`messung/netz/udp-echo.gab::echo_beantworten`) is not caught here: that \
+                    is the boundary, `R015`. Lean: `Logik/Vertraege/Objekt*.lean`, with the \
+                    four named hypotheses.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Probe `beispiele/gift/1444-alias-sicht-und-quelle.gab` (exactly `R014`); \
                       positive twin `beispiele/1163-sicht-neben-eigener-quelle.gab` (two views \

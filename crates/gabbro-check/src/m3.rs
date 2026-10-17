@@ -465,6 +465,9 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// The root that equals every root: a pointer `getrennte_wurzeln` cannot trace.
+const UNBEKANNT: &str = "*";
+
 /// What `getrennte_wurzeln` needs to know of a callee: per parameter whether it is a pointer
 /// and whether separation matters for it (writable or `own`), and whether it answers a pointer.
 struct Rufform {
@@ -638,30 +641,43 @@ fn getrennte_wurzeln(baum: &Programm, absagen: &mut Absagen) {
         let mut lets = Vec::new();
         alle_lets(rumpf, &mut lets);
         // Flat and to a fixpoint: a chain of `let`s needs as many rounds as it is long.
+        //
+        // **`UNBEKANNT` is a root that equals every root** (the paper, section 5; found by the
+        // slice-2b model: `rust_lesart_luecke`). Until 2026-10-17 a name this walk could not
+        // trace had NO root and every pair with it was skipped, and a re-view whose argument had
+        // no root got a FRESH one -- so `let w = v.s(k); aendern(k, w);` (a re-view through a
+        // function pointer) passed with 0 errors while the model says both names are one object.
+        let unbekannt = || BTreeSet::from([UNBEKANNT.to_string()]);
         for _ in 0..=lets.len() {
             let mut bewegt = false;
             for l in &lets {
                 let neu: BTreeSet<String> = if let Some(n) = nackter_name(&l.wert) {
-                    wurzeln.get(n).cloned().unwrap_or_default()
+                    wurzeln.get(n).cloned().unwrap_or_else(unbekannt)
                 } else if let ExprArt::Ruf(r) = &l.wert.art {
                     match aufloesen(&u, &formen, modul, r) {
                         Some(form) if form.antwort_zeiger => {
+                            let hat_zeiger_arg = form.zeiger.iter().any(|z| z.0);
                             let mut von: BTreeSet<String> = BTreeSet::new();
                             for (i, a) in r.argumente.iter().enumerate() {
                                 if form.zeiger.get(i).is_some_and(|z| z.0) {
-                                    if let Some(n) = nackter_name(a) {
-                                        von.extend(wurzeln.get(n).cloned().unwrap_or_default());
+                                    match nackter_name(a).and_then(|n| wurzeln.get(n)) {
+                                        Some(w) => von.extend(w.iter().cloned()),
+                                        None => von.extend(unbekannt()),
                                     }
                                 }
                             }
-                            if von.is_empty() {
+                            if !hat_zeiger_arg {
                                 // An answer that comes from no pointer argument is a fresh object.
                                 BTreeSet::from([format!("#{}", l.name.text)])
                             } else {
                                 von
                             }
                         }
-                        _ => continue,
+                        // Not a pointer answer: the name carries no root of its own.
+                        Some(_) => continue,
+                        // An unresolved or indirect callee: the answer may be a pointer, and
+                        // whatever it points at is unknown.
+                        None => unbekannt(),
                     }
                 } else {
                     continue;
@@ -682,13 +698,16 @@ fn getrennte_wurzeln(baum: &Programm, absagen: &mut Absagen) {
                 continue;
             };
             let namen: Vec<Option<&str>> = r.argumente.iter().map(nackter_name).collect();
+            // The roots of one argument: a traced name has its set, anything else is UNKNOWN.
+            let wurzeln_von = |i: usize| -> BTreeSet<String> {
+                namen[i]
+                    .and_then(|n| wurzeln.get(n).cloned())
+                    .unwrap_or_else(|| BTreeSet::from([UNBEKANNT.to_string()]))
+            };
             'paare: for i in 0..namen.len() {
                 for j in (i + 1)..namen.len() {
-                    let (Some(a), Some(b)) = (namen[i], namen[j]) else {
-                        continue;
-                    };
                     // The same place is `R004`/`R007`'s; this rule speaks about two NAMES.
-                    if a == b {
+                    if namen[i].is_some() && namen[i] == namen[j] {
                         continue;
                     }
                     let (Some(&(zi, si)), Some(&(zj, sj))) =
@@ -699,20 +718,30 @@ fn getrennte_wurzeln(baum: &Programm, absagen: &mut Absagen) {
                     if !(zi && zj && (si || sj)) {
                         continue;
                     }
-                    let (Some(wa), Some(wb)) = (wurzeln.get(a), wurzeln.get(b)) else {
-                        continue;
+                    let (wa, wb) = (wurzeln_von(i), wurzeln_von(j));
+                    let gemeinsam = if wa.contains(UNBEKANNT) || wb.contains(UNBEKANNT) {
+                        Some(UNBEKANNT.to_string())
+                    } else {
+                        wa.intersection(&wb).next().cloned()
                     };
-                    if let Some(gemeinsam) = wa.intersection(wb).next() {
+                    if let Some(gemeinsam) = gemeinsam {
+                        let nenne = |k: usize| namen[k].map(|n| format!("`{n}`")).unwrap_or_else(|| "an argument that is no bare name".to_string());
+                        let was = if gemeinsam == UNBEKANNT {
+                            "and the root of at least one of them cannot be traced, so it may be the other"
+                                .to_string()
+                        } else {
+                            format!("and both point at the object of `{}`", gemeinsam.trim_start_matches('#'))
+                        };
                         absagen.schiebe(
                             Absage::fehler(
                                 "R014",
                                 r.span,
                                 format!(
-                                    "`{}` passes `{a}` and `{b}` to two pointer parameters, \
-                                     one of them writable or `own`, and both point at the \
-                                     object of `{}`",
+                                    "`{}` passes {} and {} to two pointer parameters, one of \
+                                     them writable or `own`, {was}",
                                     f.name.text,
-                                    gemeinsam.trim_start_matches('#')
+                                    nenne(i),
+                                    nenne(j),
                                 ),
                             )
                             .mit_notiz(
@@ -721,12 +750,14 @@ fn getrennte_wurzeln(baum: &Programm, absagen: &mut Absagen) {
                             )
                             .mit_notiz(
                                 "a pointer that comes out of a function taking a pointer (a \
-                                 re-view) borrows: it has the root of its argument",
+                                 re-view) borrows: it has the root of its argument; a pointer \
+                                 this pass cannot trace (a field, an index, an indirect call) \
+                                 is UNKNOWN and equals every root",
                             )
                             .mit_notiz(
-                                "only bare names are compared, and the walk over `let`s is \
-                                 flat -- a field or an index carries no root this pass can \
-                                 name (`dokumente/A1-OWN-PAPER.md`)",
+                                "to pass such a pointer, bind it from a parameter or an \
+                                 allocation, or declare the callee's pair read-only \
+                                 (`dokumente/A1-OWN-PAPER.md`)",
                             ),
                         );
                         break 'paare;

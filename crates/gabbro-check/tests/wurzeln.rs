@@ -91,3 +91,50 @@ fn zwei_lesende_zeiger_brauchen_keine_getrenntheit_und_nennen_keine_grenze() {
     let h = codes(zusatz, Stufe::Hinweis);
     assert!(h.iter().all(|c| c != "R015"), "{h:?}");
 }
+
+// ---------------------------------------------------------------------------------------------
+// The gap the slice-2b model found (`ObjektWurzel.rust_lesart_luecke`, 2026-10-17): a name the
+// walk cannot trace used to have NO root and every pair with it was skipped. It is UNKNOWN now,
+// and unknown equals every root.
+
+/// A record of function pointers: a re-view through one has no callee the walk can resolve.
+const FP_RAHMEN: &str = "type Tab = { s : fn(ptr<normal, r> Kopf) -> ptr<normal, r> Worte effects { pure } costs <= 4 ops, };\n";
+
+fn fp_ruf(arg_zeile: &str) -> String {
+    format!(
+        "{FP_RAHMEN}impl fn ziel(a : ptr<normal, rw> Kopf, b : ptr<normal, r> Worte)\n\
+         \x20   effects {{ writes a, reads b }} costs <= 8 ops {{ a.x = b.w; }}\n\
+         impl fn ruft(k : ptr<normal, rw> Kopf, v : ptr<normal, r> Tab)\n\
+         \x20   effects {{ writes k, reads k, reads v }} costs <= 32 ops {{ {arg_zeile} }}\n"
+    )
+}
+
+#[test]
+fn eine_sicht_ueber_einen_funktionszeiger_ist_unbekannt_und_faellt() {
+    let c = codes(&fp_ruf("let w = v->s(k); ziel(k, w);"), Stufe::Fehler);
+    assert!(c.iter().any(|c| c == "R014"), "{c:?}");
+}
+
+#[test]
+fn ein_zeiger_aus_einem_feld_ist_unbekannt_und_faellt() {
+    // `w` is bound from a field read: no root this walk can name.
+    let zusatz = "type Huelle = { w : ptr<normal, r> Worte, };\n\
+                  impl fn ziel(a : ptr<normal, rw> Kopf, b : ptr<normal, r> Worte)\n\
+                  \x20   effects { writes a, reads b } costs <= 8 ops { a.x = b.w; }\n\
+                  impl fn ruft(k : ptr<normal, rw> Kopf, h : ptr<normal, r> Huelle)\n\
+                  \x20   effects { writes k, reads k, reads h } costs <= 32 ops { let w = h.w; ziel(k, w); }\n";
+    let c = codes(zusatz, Stufe::Fehler);
+    assert!(c.iter().any(|c| c == "R014"), "{c:?}");
+}
+
+#[test]
+fn ein_unbekannter_zeiger_neben_zwei_lesenden_parametern_bleibt_frei() {
+    // The twin: unknown only matters where one of the two parameters is writable or `own`.
+    let zusatz = "type Huelle = { w : ptr<normal, r> Worte, };\n\
+                  impl fn lesen(a : ptr<normal, r> Kopf, b : ptr<normal, r> Worte)\n\
+                  \x20   effects { reads a, reads b } costs <= 8 ops { }\n\
+                  impl fn ruft(k : ptr<normal, r> Kopf, h : ptr<normal, r> Huelle)\n\
+                  \x20   effects { reads k, reads h } costs <= 32 ops { let w = h.w; lesen(k, w); }\n";
+    let c = codes(zusatz, Stufe::Fehler);
+    assert!(c.iter().all(|c| c != "R014"), "{c:?}");
+}
