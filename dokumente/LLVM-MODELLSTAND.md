@@ -193,7 +193,7 @@ struct-path tags), 2 `noalias`, 2 `dereferenceable`.**
 | **`forall s in slots of T : T.slots[s].f <= K`** | **`!range [0, K+1)` on every load of `T.slots[*].f`** | probe: `!{i32 0, i32 5}` from `<= 4` |
 | scalar type | flat TBAA node under `omnipotent char` | 1182 tags |
 | named record / table slot | **struct-path TBAA** `!{!struct, !member, i64 off}` | 182 tags |
-| `own` pointer parameter | `noalias` | 2 |
+| `own` pointer parameter; a writable pointer parameter of an internal function whose effects name only its own pointers | `noalias` | 10 |
 | `requires N <= lenof(p)` | `dereferenceable(N)` | 2 |
 | `requires aligned(p, N)` | `align N` | probe-verified |
 
@@ -226,7 +226,15 @@ rule is built and probe-verified.
   field, the access falls back to the flat scalar node rather than emitting a
   tag the verifier would reject. (Measured: LLVM 23 rejects a struct tag whose
   offset is not a listed member.)
-- `noalias` only where `own` is declared — never guessed.
+- `noalias` only where the checker holds the WHOLE call (2026-10-17, `A1-OWN-PAPER.md` slice 4):
+  an `own` parameter, and a WRITABLE pointer parameter of a function that is not `pub`, is called
+  from a body of its unit, has its address nowhere taken, is named by no entry/boot/concurrent
+  item, and whose declared `effects` name nothing but its own pointer parameters (`E008` keeps
+  that list a superset of its callees'). Calls into it are held by `R014`; it rests on the named
+  `R015` assumption of exported callers. A unit with a function value outside a function body
+  gets no extension. Never guessed. Measured over `beispiele/` + `messung/*/`: 10 `noalias`
+  (was 2). Not proved in Lean: the LLVM lowering is not a Lean judgment (O27); the model side is
+  `Logik/Vertraege/Objekt*.lean`.
 - Quantified clauses of other shapes (`reaches`, disjunction, equality chains)
   do not become optimizer facts: they would need loop-level reasoning.
 - No `llvm.loop` metadata. `opt -O3` already runs the loop vectorizer and

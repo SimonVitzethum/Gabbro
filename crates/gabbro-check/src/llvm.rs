@@ -612,6 +612,9 @@ struct Senke<'a> {
     /// Verengungs-Modus: `true` senkt Speicher nach bewiesener Reichweite
     /// (`verenge_form`); fremd (`extern`, Tore) senkt breit (fremde ABI).
     eng_modus: bool,
+    /// Qualified names of the functions whose WRITABLE pointer parameters carry `noalias`
+    /// beyond `own` (`noalias_innen`).
+    noalias_innen: BTreeSet<String>,
 }
 
 fn gname(n: &str) -> String {
@@ -4814,7 +4817,7 @@ fn sammle_funktion(s: &mut Senke, f: &FnDecl, voll: &str, span: Span) {
             geist_param: geist,
             geist_rueck: false,
             or_nutz: or_nutz_ext,
-            eigen_param: eigen_flags(f, &f.parameter, s),
+            eigen_param: eigen_flags(voll, &f.parameter, s),
             vertrag_requires: f.requires.clone(),
             vertrag_ensures: f.ensures.clone(),
         });
@@ -4900,7 +4903,7 @@ fn sammle_funktion(s: &mut Senke, f: &FnDecl, voll: &str, span: Span) {
         or_nutz: or_nutz_impl,
         geist_param: geist,
         geist_rueck,
-        eigen_param: eigen_flags(f, &f.parameter, s),
+        eigen_param: eigen_flags(voll, &f.parameter, s),
         vertrag_requires: f.requires.clone(),
         vertrag_ensures: f.ensures.clone(),
     });
@@ -4937,9 +4940,146 @@ fn sammle_funktion(s: &mut Senke, f: &FnDecl, voll: &str, span: Span) {
     s.plaene.insert(key, plan);
 }
 
-/// `own`-Flags je gesenkter (nicht Geist-) Stelle.
-fn eigen_flags(_f: &FnDecl, params: &[Parameter], s: &Senke) -> Vec<bool> {
-    params.iter().filter(|p| !ist_geist(s, &p.typ)).map(|p| ist_eigen(s, &p.typ)).collect()
+/// `noalias`-Flags je gesenkter (nicht Geist-) Stelle: `own`, und -- in einer Funktion aus
+/// `noalias_innen` -- jeder SCHREIBBARE Zeigerparameter.
+fn eigen_flags(voll: &str, params: &[Parameter], s: &Senke) -> Vec<bool> {
+    let innen = s.noalias_innen.contains(voll);
+    params
+        .iter()
+        .filter(|p| !ist_geist(s, &p.typ))
+        .map(|p| ist_eigen(s, &p.typ) || (innen && ist_schreibbarer_zeiger(s, &p.typ)))
+        .collect()
+}
+
+fn ist_schreibbarer_zeiger(s: &Senke, t: &TypExpr) -> bool {
+    match grundform(s, t) {
+        TypExpr::Zeiger(z) => z
+            .rechte
+            .iter()
+            .any(|r| matches!(r, Recht::Schreiben | Recht::LesenSchreiben | Recht::Eigen(_))),
+        _ => false,
+    }
+}
+
+/// **Which functions may put `noalias` on a WRITABLE pointer parameter** (`dokumente/A1-OWN-PAPER.md`,
+/// slice 4). `noalias` says: during the call nothing reaches the pointee except through this
+/// pointer. It is a fact about the WHOLE call, so it is emitted only where the checker has the
+/// whole call in view:
+///
+/// * the function is not `pub`, has a body, is called from a body of this unit, and its address
+///   is nowhere taken (`&f`) -- so every call goes through a call site `R014` holds against the
+///   pairwise-distinct-roots rule;
+/// * no entry, `boot` or `concurrent` item names it (those are entered by the runtime);
+/// * its DECLARED `effects` name nothing but its own pointer parameters -- no table, static,
+///   lock or arena by name -- and `E008` keeps that list a superset of the callees' effects, so
+///   the function cannot reach the pointee through a global either.
+///
+/// **It rests on one named assumption, and says so:** a `pub` caller with a pointer pair assumes
+/// its parameters distinct (`R015`). A caller outside the unit that breaks it breaks the frame
+/// statement as well. **A unit with a function value outside a function body gets NO extension**
+/// -- that is an address nobody walked.
+fn noalias_innen(baum: &Programm, u: &crate::umgebung::Umgebung) -> BTreeSet<String> {
+    fn adressen<'a>(b: &'a Block, aus: &mut Vec<&'a Pfad>) {
+        for s in &b.anweisungen {
+            let mut ausdruecke: Vec<&Expr> = crate::eigene_ausdruecke(s);
+            for p in crate::eigene_praedikate(s) {
+                ausdruecke.extend(crate::ausdruecke_im_praedikat(p));
+            }
+            if let StmtArt::Ruf(r) = &s.art {
+                ausdruecke.extend(r.argumente.iter());
+            }
+            if let StmtArt::LetSonst(l) = &s.art {
+                if let Some(r) = l.als_ruf() {
+                    ausdruecke.extend(r.argumente.iter());
+                }
+            }
+            for e in ausdruecke {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::FnWert(p) = &x.art {
+                        aus.push(p);
+                    }
+                }
+            }
+            for k in crate::unterbloecke(s) {
+                adressen(k, aus);
+            }
+        }
+    }
+    let mut kandidaten: BTreeSet<String> = BTreeSet::new();
+    let mut weg: BTreeSet<String> = BTreeSet::new();
+    let mut benannt: BTreeSet<String> = BTreeSet::new();
+    let mut ausserhalb = false;
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+        ItemArt::Funktion(f) => {
+            let FnRumpf::Block(rumpf) = &f.rumpf else {
+                return;
+            };
+            let mut ps: Vec<&Pfad> = Vec::new();
+            adressen(rumpf, &mut ps);
+            for p in ps {
+                weg.extend(u.kandidaten_aufloesbar(modul, &p.text()));
+            }
+            if f.oeffentlich {
+                return;
+            }
+            let zeiger: BTreeSet<&str> = f
+                .parameter
+                .iter()
+                .filter(|p| matches!(p.typ, TypExpr::Zeiger(_)))
+                .map(|p| p.name.text.as_str())
+                .collect();
+            let Some(w) = &f.effects else {
+                return;
+            };
+            let nur_eigene = w.liste.iter().all(|x| match &x.art {
+                WirkungArt::Liest(o) | WirkungArt::Schreibt(o) | WirkungArt::Verbraucht(o) => {
+                    zeiger.contains(o.basis.text.as_str())
+                }
+                WirkungArt::Rein | WirkungArt::Divergiert => true,
+                _ => false,
+            });
+            if nur_eigene {
+                kandidaten.insert(crate::umgebung::qualifiziere(modul, &f.name.text));
+            }
+        }
+        ItemArt::Entry(e) => {
+            benannt.insert(e.dispatch.teile.last().map(|i| i.text.clone()).unwrap_or_default());
+        }
+        ItemArt::Boot(b) => {
+            benannt.insert(b.dispatch.teile.last().map(|i| i.text.clone()).unwrap_or_default());
+        }
+        ItemArt::Concurrent(c) => {
+            for k in &c.koerper {
+                benannt.insert(k.teile.last().map(|i| i.text.clone()).unwrap_or_default());
+            }
+        }
+        ItemArt::Modul(_) => {}
+        other => {
+            if format!("{other:?}").contains("FnWert") {
+                ausserhalb = true;
+            }
+        }
+    });
+    if ausserhalb {
+        return BTreeSet::new();
+    }
+    let g = crate::aufrufgraph::erhebe_mit(baum, u);
+    let mut gerufen: BTreeSet<String> = BTreeSet::new();
+    for (k, kn) in &g.knoten {
+        for (ziel, _) in &kn.rufe {
+            if ziel != k {
+                gerufen.insert(ziel.clone());
+            }
+        }
+    }
+    kandidaten
+        .into_iter()
+        .filter(|k| gerufen.contains(k) && !weg.contains(k))
+        .filter(|k| {
+            let kurz = k.rsplit("::").next().unwrap_or(k);
+            !benannt.contains(kurz)
+        })
+        .collect()
 }
 fn trage_fn_ein(s: &mut Senke, voll: &str, kurz: &str, sig: FnSig) {
     let params = sig.params.clone();
@@ -5704,6 +5844,7 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         meta_knoten: BTreeMap::new(),
         meta_nr: 0,
         eng_modus: true,
+        noalias_innen: BTreeSet::new(),
     }
 }
 
@@ -5717,6 +5858,7 @@ pub fn emittiere_llvm_mit_beleg(
 ) -> (String, LLVMBeleg) {
     let mut s = neue_senke(absagen, ziel);
     s.umg = crate::umgebung::Umgebung::sammle(baum);
+    s.noalias_innen = noalias_innen(baum, &s.umg);
     sammle(&mut s, baum, bau);
     vergebe_emitnamen(&mut s);
     baue_rek_plan(&mut s);
