@@ -92,6 +92,8 @@ mod memory;
 mod masken;
 mod stapeltor;
 mod eintritte;
+mod publizieren;
+mod leser_schreiber;
 #[cfg(test)]
 mod test_tools;
 
@@ -1301,8 +1303,8 @@ struct SchleifenKontext {
     weiter: String,
     danach: String,
     marke: Option<String>,
-    /// Zahl der gehaltenen `locks` beim Eintritt: `leave`/`next` geben nur die darüber frei.
-    sperren: usize,
+    /// Locks held when the loop was entered: `leave`/`next` release only those taken inside.
+    sperr_tiefe: usize,
 }
 
 /// Passende Marke von innen suchen (`leave i` trifft den Binder).
@@ -2374,6 +2376,11 @@ fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
                     struct_typ.text()
                 ));
                 ptr = t.clone();
+                // The ADDRESS of the access is the field pointer. It stood as `base` (the
+                // record's own address) until 2026-10-17 -- every field behind the first one
+                // read and wrote the first field's word (found by messung/llvm/leserschreiber.gab:
+                // `paar.b` aliased `paar.a`, both targets, deterministic).
+                geladen = Some(t.clone());
                 ll = fll;
                 z = fz;
                 form = Some(ftyp);
@@ -3213,8 +3220,8 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
                     return;
                 }
             };
-            // Durch `traverse` hindurch (keine Marke dort) — Sperren der Schleife freigeben.
-            sperren_freigeben_ab(k, ctx.sperren);
+            // Durch `traverse` hindurch (keine Marke dort) — Sperren freigeben.
+            sperren_freigeben_ab(k, ctx.sperr_tiefe);
             k.zeile(&format!("br label %{}", ctx.danach));
             k.beendet = true;
         }
@@ -3226,7 +3233,7 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
                     return;
                 }
             };
-            sperren_freigeben_ab(k, ctx.sperren);
+            sperren_freigeben_ab(k, ctx.sperr_tiefe);
             k.zeile(&format!("br label %{}", ctx.weiter));
             k.beendet = true;
         }
@@ -3964,7 +3971,7 @@ fn senke_traverse(k: &mut Koerper, t: &Traverse, span: Span) {
         weiter: weiter.clone(),
         danach: danach.clone(),
         marke: Some(t.variable.text.clone()),
-        sperren: k.sperren.len(),
+        sperr_tiefe: k.sperren.len(),
     });
     for st in &t.rumpf.anweisungen {
         if k.beendet {
@@ -4045,7 +4052,7 @@ fn senke_retry(k: &mut Koerper, r: &Retry, span: Span) {
     if let Some(inv) = &r.invariante {
         nehme_an(k, inv, "invariant");
     }
-    k.schleifen.push(SchleifenKontext { weiter: weiter.clone(), danach: danach.clone(), marke: r.marke.clone().map(|m| m.text), sperren: k.sperren.len() });
+    k.schleifen.push(SchleifenKontext { weiter: weiter.clone(), danach: danach.clone(), marke: r.marke.clone().map(|m| m.text), sperr_tiefe: k.sperren.len() });
     senke_block(k, &r.rumpf);
     k.schleifen.pop();
     if !k.beendet {
@@ -4076,7 +4083,7 @@ fn senke_forever(k: &mut Koerper, f: &Forever, span: Span) {
     if let Some(inv) = &f.invariante {
         nehme_an(k, inv, "invariant");
     }
-    k.schleifen.push(SchleifenKontext { weiter: kopf.clone(), danach: danach.clone(), marke: f.marke.clone().map(|m| m.text), sperren: k.sperren.len() });
+    k.schleifen.push(SchleifenKontext { weiter: kopf.clone(), danach: danach.clone(), marke: f.marke.clone().map(|m| m.text), sperr_tiefe: k.sperren.len() });
     senke_block(k, &f.rumpf);
     k.schleifen.pop();
     if !k.beendet {
@@ -4096,10 +4103,13 @@ fn senke_forever(k: &mut Koerper, f: &Forever, span: Span) {
 
 /// Ticket-Sperre nehmen: `nummer = tausch(nächst); warte bis bereit == nummer`.
 fn ticket_nehmen(k: &mut Koerper, name: &str) {
-    // Maskierende Sperre: erst Zustand sichern und Unterbrechungen sperren, dann das Ticket.
-    if k.s.maskiert.contains(name) {
-        masken::maskieren(k, name);
-    }
+    ticket_nehmen_roh(k, name);
+    // A lock with a `shared held` side also waits for its readers to leave.
+    leser_schreiber::schreiber_wartet_auf_leser(k, name);
+}
+
+/// The ticket gate alone (a reader passes through it, `leser_schreiber.rs`).
+fn ticket_nehmen_roh(k: &mut Koerper, name: &str) {
     let naechst = gteil(name, "naechst");
     let bereit = gteil(name, "bereit");
     let ticket = k.tmp();
@@ -4122,33 +4132,51 @@ fn ticket_nehmen(k: &mut Koerper, name: &str) {
 
 /// Ticket-Sperre geben: `bereit += 1` (der Nächste ist dran).
 fn ticket_freigabe(k: &mut Koerper, name: &str) {
-    let bereit = gteil(name, "bereit");
-    k.zeile(&format!("atomicrmw add ptr {bereit}, i32 1 seq_cst, align 4"));
+    let basis = match leser_schreiber::als_leser(name) {
+        Some(leser) => {
+            leser_schreiber::leser_freigabe(k, leser);
+            leser
+        }
+        None => {
+            ticket_freigabe_roh(k, name);
+            name
+        }
+    };
     // Maskierende Sperre: der Zustand von vorher kehrt zurück (nie ein bedingungsloses `sti`).
-    if k.s.maskiert.contains(name) {
-        masken::wiederherstellen(k, name);
+    // Erst nach der Freigabe -- auch der Leserseite --, und nicht beim Weiterreichen des
+    // Tickets mitten in der Leseraufnahme (`ticket_freigabe_roh`).
+    if k.s.maskiert.contains(basis) {
+        masken::wiederherstellen(k, basis);
     }
 }
 
+/// Das Ticket allein weitergeben: `bereit += 1`.
+fn ticket_freigabe_roh(k: &mut Koerper, name: &str) {
+    let bereit = gteil(name, "bereit");
+    k.zeile(&format!("atomicrmw add ptr {bereit}, i32 1 seq_cst, align 4"));
+}
+
 fn senke_sperrt(k: &mut Koerper, s: &SperrtStmt, span: Span) {
-    if s.geteilt {
-        weigere(k.s, "Y103", span, "shared lock acquisition".to_string());
-        return;
-    }
     // Sperrname aus dem Ort (Basis — `locks L` / `locks m.L`).
     let name = s.sperre.basis.text.clone();
     if !k.s.schloesser.contains_key(&name) {
         weigere(k.s, "Y103", span, format!("unknown lock {name}"));
         return;
     }
-    ticket_nehmen(k, &name);
-    k.sperren.push(name.clone());
+    // Maskierende Sperre: erst Zustand sichern und Unterbrechungen sperren (auch für die
+    // Leserseite), dann erst die Sperre selbst.
+    if k.s.maskiert.contains(&name) {
+        masken::maskieren(k, &name);
+    }
+    // A shared acquisition is held under the marked name (`leser_schreiber.rs`).
+    let gehalten = if s.geteilt { leser_schreiber::leser_nehmen(k, &name) } else { ticket_nehmen(k, &name); name.clone() };
+    k.sperren.push(gehalten.clone());
     senke_block(k, &s.rumpf);
     // Freigabe am Blockende, wenn der Pfad bis hier läuft (ein Rumpf, der in jedem Zweig
     // zurückkehrt, hat an jedem Ausgang freigegeben).
     k.sperren.pop();
     if !k.beendet {
-        ticket_freigabe(k, &name);
+        ticket_freigabe(k, &gehalten);
     }
 }
 
@@ -4563,10 +4591,10 @@ fn sammle(s: &mut Senke, baum: &Programm, bau: crate::gatter::Bau) {
                     }
                     Some(_) => {
                         s.maskiert.insert(l.name.text.clone());
-                        s.schloesser.insert(l.name.text.clone(), false);
+                        s.schloesser.insert(l.name.text.clone(), l.geteilte_haltezeit.is_some());
                     }
                     None => {
-                        s.schloesser.insert(l.name.text.clone(), false);
+                        s.schloesser.insert(l.name.text.clone(), l.geteilte_haltezeit.is_some());
                     }
                 }
             }
@@ -4854,6 +4882,12 @@ fn sammle_atomic(s: &mut Senke, a: &AtomicDecl, span: Span) {
     // Atomares `i1` kennt LLVM nicht — Byte an der Grenze (wie `bool`-Atomics).
     if ll == LlTyp::Int(1) {
         ll = LlTyp::Int(8);
+    }
+    // The same for the elements of an atomic array (`atomic F : [bool; N]`).
+    if let LlTyp::Feld(e, n) = &ll {
+        if **e == LlTyp::Int(1) {
+            ll = LlTyp::Feld(Box::new(LlTyp::Int(8)), *n);
+        }
     }
     let ord = a.ordnung.as_ref().map(atomar_ordnung).unwrap_or("seq_cst");
     s.atomare.insert(a.name.text.clone(), (ll, ord.to_string()));
@@ -5899,6 +5933,9 @@ fn emit_globale(s: &mut Senke) {    // Skalare und Felder.
     for n in &schloesser {
         let _ = writeln!(s.rumpf, "{} = global i32 0, align 4", gteil(n, "naechst"));
         let _ = writeln!(s.rumpf, "{} = global i32 0, align 4", gteil(n, "bereit"));
+        if s.schloesser[n] {
+            let _ = writeln!(s.rumpf, "{} = global i32 0, align 4", gteil(n, "leser"));
+        }
     }
     // Atomics: ein Wort je Name.
     let atomare: Vec<(String, (LlTyp, String))> = s.atomare.clone().into_iter().collect();
@@ -6808,10 +6845,7 @@ fn atom_adresse(k: &mut Koerper, ort: &Ort) -> Option<(String, LlTyp)> {
 /// `X = v publishes nothing;` — Freigabe-Speicher (der exportierte Fall).
 /// Mit Nutzlast: Benennung (die Übergabe deckt der Zielsatz nicht — OFFEN O25).
 fn senke_publish(k: &mut Koerper, p: &PublishStmt, span: Span) {
-    if !matches!(p.nutzlast, Nutzlast::Nichts(_)) {
-        weigere(k.s, "Y103", span, "publish with payload".to_string());
-        return;
-    }
+    // The payload is ordered by the release store below (see `publizieren.rs`).
     let (addr, ll) = match atom_adresse(k, &p.ziel) {
         Some(x) => x,
         None => {
@@ -6828,21 +6862,26 @@ fn senke_publish(k: &mut Koerper, p: &PublishStmt, span: Span) {
         None => return,
     };
     // `bool`-Zelle als Byte an der Grenze.
-    let (text, zugriff) = if ll == LlTyp::Int(8) {
+    let (text, zugriff) = if ll == LlTyp::Int(8) && w.typ == LlTyp::Int(1) {
         let t = k.tmp();
         k.zeile(&format!("{t} = zext i1 {} to i8", w.text));
         (t, LlTyp::Int(8))
     } else {
         (w.text, ll.clone())
     };
+    let ord = publizieren::schreib_ordnung(&publizieren::deklarierte_ordnung(k, &p.ziel));
     k.zeile(&format!(
-        "store atomic {} {text}, ptr {addr} release, align {}",
+        "store atomic {} {text}, ptr {addr} {ord}, align {}",
         zugriff.text(),
         nat_align(&ll)
     ));
 }
 
-/// `let x = A awaits { … };` — Übernahme-Ladung plus Schleife bis erwartet.
+/// `let x = A awaits { … };` — ONE acquire load (the C emitter writes one
+/// `atomic_load_explicit` too). The payload places are not values to wait for: the branch
+/// fact "this load confirms the flag" belongs to the checker (V009-V011), and what the
+/// backend owes is the acquire order (`publizieren.rs`). An earlier spin loop compared the
+/// loaded flag against the payload places -- a different program; removed.
 fn senke_await(k: &mut Koerper, a: &AwaitLoad, span: Span) {
     let (addr, ll) = match atom_adresse(k, &a.quelle) {
         Some(x) => x,
@@ -6851,63 +6890,13 @@ fn senke_await(k: &mut Koerper, a: &AwaitLoad, span: Span) {
             return;
         }
     };
-    // Warten: laden bis der Wert einem erwarteten Ort gleicht — ohne Erwartung
-    // einmal laden (die reine Leseseite trägt keine Schleife).
-    if a.erwartet.is_empty() {
-        let t = k.tmp();
-        k.zeile(&format!("{t} = load atomic {}, ptr {addr} acquire, align {}", ll.text(), nat_align(&ll)));
-        let v = atom_zu_bool(k, &ll, &t);
-        let slot = k.alloca(&v.typ.text());
-        k.zeile(&format!("store {} {}, ptr {slot}, align {}", v.typ.text(), v.text, nat_align(&v.typ)));
-        k.lege_an(a.name.text.clone(), Bindung { ptr: slot, ll: v.typ.clone(), zeichen: Zeichen::Egal, form: None, fluechtig: false });
-        return;
-    }
-    // Mit Erwartung: Schleife, bis Ladung == einer der Orte.
-    let kopf = k.block("await_kopf");
-    let weiter = k.block("await_weiter");
-    k.zeile(&format!("br label %{kopf}"));
-    k.beendet = true;
-    let _ = writeln!(k.text, "{kopf}:");
-    k.beendet = false;
+    let ord = publizieren::lese_ordnung(&publizieren::deklarierte_ordnung(k, &a.quelle));
     let t = k.tmp();
-    k.zeile(&format!("{t} = load atomic {}, ptr {addr} acquire, align {}", ll.text(), nat_align(&ll)));
-    // Vergleich gegen jeden erwarteten Ort (Wert laden, `icmp eq`).
-    let mut trifft: Option<String> = None;
-    for ort in &a.erwartet {
-        let p = match adresse_von_ort(k, ort) {
-            Some(p) => p,
-            None => return,
-        };
-        let e = k.tmp();
-        k.zeile(&format!("{e} = load {}, ptr {}, align {}", p.ll.text(), p.addr, nat_align(&p.ll)));
-        let w = match angleiche(k, Wert { typ: p.ll.clone(), zeichen: p.zeichen, text: e, form: p.form }, &ll, Zeichen::Egal) {
-            Some(w) => w,
-            None => {
-                weigere(k.s, "Y103", span, "await expectation outside the atomic type".to_string());
-                return;
-            }
-        };
-        let c = k.tmp();
-        k.zeile(&format!("{c} = icmp eq {} {t}, {}", ll.text(), w.text));
-        trifft = Some(match trifft {
-            Some(b) => {
-                let o = k.tmp();
-                k.zeile(&format!("{o} = or i1 {b}, {c}"));
-                o
-            }
-            None => c,
-        });
-    }
-    let trifft = trifft.expect("Erwartung nicht leer geprüft");
-    k.zeile(&format!("br i1 {trifft}, label %{weiter}, label %{kopf}"));
-    k.beendet = true;
-    let _ = writeln!(k.text, "{weiter}:");
-    k.beendet = false;
+    k.zeile(&format!("{t} = load atomic {}, ptr {addr} {ord}, align {}", ll.text(), nat_align(&ll)));
     let v = atom_zu_bool(k, &ll, &t);
     let slot = k.alloca(&v.typ.text());
     k.zeile(&format!("store {} {}, ptr {slot}, align {}", v.typ.text(), v.text, nat_align(&v.typ)));
     k.lege_an(a.name.text.clone(), Bindung { ptr: slot, ll: v.typ.clone(), zeichen: Zeichen::Egal, form: None, fluechtig: false });
-    let _ = span;
 }
 
 /// Atomwort weiterreichen (die Grenze zieht der Gebrauch am Bindungstyp).
@@ -7740,7 +7729,7 @@ fn senke_traverse_ahnen(k: &mut Koerper, t: &Traverse, o: &Ort, span: Span) {
     }
     k.oeffne();
     k.lege_an(t.variable.text.clone(), Bindung { ptr: vslot.clone(), ll: LlTyp::Int(32), zeichen: Zeichen::U, form: None, fluechtig: false });
-    k.schleifen.push(SchleifenKontext { weiter: kopf.clone(), danach: danach.clone(), marke: Some(t.variable.text.clone()), sperren: k.sperren.len() });
+    k.schleifen.push(SchleifenKontext { weiter: kopf.clone(), danach: danach.clone(), marke: Some(t.variable.text.clone()), sperr_tiefe: k.sperren.len() });
     for st in &t.rumpf.anweisungen {
         if k.beendet {
             break;
@@ -7855,7 +7844,7 @@ fn senke_traverse_nachfahren(k: &mut Koerper, t: &Traverse, o: &Ort, span: Span)
     k.oeffne();
     k.lege_an(t.variable.text.clone(), Bindung { ptr: kslot.clone(), ll: LlTyp::Int(32), zeichen: Zeichen::U, form: None, fluechtig: false });
     let fort = k.block("nach_fort");
-    k.schleifen.push(SchleifenKontext { weiter: fort.clone(), danach: danach.clone(), marke: Some(t.variable.text.clone()), sperren: k.sperren.len() });
+    k.schleifen.push(SchleifenKontext { weiter: fort.clone(), danach: danach.clone(), marke: Some(t.variable.text.clone()), sperr_tiefe: k.sperren.len() });
     for st in &t.rumpf.anweisungen {
         if k.beendet {
             break;

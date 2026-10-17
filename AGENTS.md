@@ -109,6 +109,10 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 
 ## 3. Simon's standing instructions
 
+- **Language and syntax follow the Lean model, in that order** (Simon, 2026-10-17): the Lean model is the
+  single source; any change to the language or its syntax is made in the Lean model FIRST, then in the checker,
+  the compiler and `SYNTAX.md`/`SPRACHE.md`. A form the checker accepts and the model lacks is a checker bug.
+  Pure lowering of an existing form does not change the language.
 - **Orientation: checker + Lean model only** (Simon, 2026-10-15). The C emitter
   (`emit.rs`) is outdated and is NO guide for language, checker or compiler work:
   no new construct is shaped for it, no refusal is widened or narrowed for it,

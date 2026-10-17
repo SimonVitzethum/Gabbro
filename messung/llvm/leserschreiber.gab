@@ -1,0 +1,121 @@
+-- leserschreiber -- a reader/writer lock with two readers and one writer (LLVM backend).
+--
+-- `RW` is a lock with a `shared held` side. The writer raises the pair (`a`, `b`) by one each
+-- round under the EXCLUSIVE lock, with the pair visibly torn between the two stores; both
+-- readers take the lock SHARED and check `a == b`. If a reader ever overlaps a writer it sees
+-- the torn pair and counts a failure; if two writers overlapped, an update would be lost and
+-- the end state would differ from N. Exit code 42 = no failure and `a == b == N`, else 13.
+-- Deterministic on every schedule, on both targets.
+module messung::leserschreiber {
+
+pub const N : u32 = 200000;
+
+pub table runde count N {
+    slot {
+        an : bool,
+    }
+}
+
+pub table paar count 1 {
+    slot {
+        a : u32,
+        b : u32,
+    }
+}
+
+pub table fehler count 2 {
+    slot {
+        zahl : u32 in 0 .. 100000,
+    }
+}
+
+pub lock RW protects { paar, fehler } rank 0
+    held <= 64 ops
+    shared held <= 64 ops;
+
+impl fn paar_heben()
+    requires Held(RW)
+    effects  { reads paar.slots, writes paar.slots }
+    costs    <= 16 ops
+{
+    paar.slots[0].a = paar.slots[0].a +% 1;
+    paar.slots[0].b = paar.slots[0].b +% 1;
+}
+
+impl fn schreiber()
+    effects  { reads paar.slots, writes paar.slots, reads runde, reads runde.slots, locks RW }
+    costs    <= 20000000 ops
+{
+    traverse i over slots of runde by unvisited
+        touches reads runde, reads runde.slots, reads paar.slots, writes paar.slots, locks RW
+    {
+        if runde.slots[i].an == false {
+            locks RW {
+                paar_heben();
+            }
+        }
+    }
+}
+
+impl fn leser_null()
+    effects  { reads paar.slots, reads fehler.slots, writes fehler.slots, reads runde, reads runde.slots, locks RW, locks shared RW }
+    costs    <= 40000000 ops
+{
+    traverse i over slots of runde by unvisited
+        touches reads runde, reads runde.slots, reads paar.slots, reads fehler.slots, writes fehler.slots, locks RW, locks shared RW
+    {
+        if runde.slots[i].an == false {
+            let mut gleich : bool = true;
+            locks shared RW {
+                gleich = paar.slots[0].a == paar.slots[0].b;
+            }
+            if gleich == false {
+                locks RW {
+                    fehler.slots[0].zahl = 1;
+                }
+            }
+        }
+    }
+}
+
+impl fn leser_eins()
+    effects  { reads paar.slots, reads fehler.slots, writes fehler.slots, reads runde, reads runde.slots, locks RW, locks shared RW }
+    costs    <= 40000000 ops
+{
+    traverse i over slots of runde by unvisited
+        touches reads runde, reads runde.slots, reads paar.slots, reads fehler.slots, writes fehler.slots, locks RW, locks shared RW
+    {
+        if runde.slots[i].an == false {
+            let mut gleich : bool = true;
+            locks shared RW {
+                gleich = paar.slots[0].a == paar.slots[0].b;
+            }
+            if gleich == false {
+                locks RW {
+                    fehler.slots[1].zahl = 1;
+                }
+            }
+        }
+    }
+}
+
+pub fn main() -> u32
+    effects  { reads paar.slots, writes paar.slots, reads fehler.slots, writes fehler.slots, reads runde, reads runde.slots, locks RW, locks shared RW }
+    costs    <= 200000000 ops
+{
+    start { schreiber, leser_null, leser_eins };
+    locks RW {
+        if paar.slots[0].a == N {
+            if paar.slots[0].b == N {
+                if fehler.slots[0].zahl == 0 {
+                    if fehler.slots[1].zahl == 0 {
+                        return 42;
+                    }
+                }
+            }
+        }
+    }
+    return 13;
+}
+
+}

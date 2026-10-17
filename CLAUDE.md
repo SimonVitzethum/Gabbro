@@ -9,6 +9,16 @@ Nummernkreise und die teuren Fallen. Die Arbeitsliste ist `TODO.md`. Das Handbuc
 den 80 Wächtern, die es nicht mehr gibt. Sie stehen in Git (`git log -p CLAUDE.md`); was davon als
 Regel gilt, steht unten.*
 
+## Sprache und Syntax folgen dem Lean-Modell (Simon, 2026-10-17)
+
+**Das Lean-Modell (`grammatik/`) ist die einzige Quelle für Sprache und Syntax.** Wenn irgendetwas an der
+Sprache oder ihrer Syntax geändert wird (ein Konstrukt, eine Klausel, eine Typregel, eine Regel, die eine
+Form annimmt oder ablehnt), steht es ZUERST im Lean-Modell (Maschine G, `Akzeptiert`, `gabbro_ziel` bleibt
+auf `propext`/`Classical.choice`/`Quot.sound`, ein geprüfter `Spec.lean`-Diff, wenn die Aussage wandert).
+Danach folgen Prüfer, Compiler und `SYNTAX.md`/`SPRACHE.md` — nie umgekehrt. Nimmt der Prüfer etwas an, das
+das Modell nicht kennt, dann irrt der Prüfer. Eine reine Absenkung einer vorhandenen Form (LLVM) ändert
+die Sprache nicht und fällt nicht darunter.
+
 ## Es gibt genau vier Wächter
 
 | Wächter | Gegenstand | Was er prüft |
