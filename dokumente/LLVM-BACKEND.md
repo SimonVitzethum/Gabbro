@@ -1,7 +1,7 @@
 # The LLVM backend: checked Gabbro to a static binary, no C anywhere
 
-*Rewritten 2026-10-17. This is the current backend. The C11 emitter is deprecated
-(2026-10-15) and described in [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md).
+*Rewritten 2026-10-17. This is the ONLY backend: the C11 emitter was removed on 2026-10-17
+(repository tag `archiv/c-emitter-2026-10-17`, see [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md)).
 The compiler is UNTRUSTED: the checker runs first, and nothing here is a verified
 translation. Final-byte refinement (source -> model -> machine bytes, in Lean) is
 planned work, see [`PLAN-UEBERSETZUNGSVALIDIERUNG.md`](PLAN-UEBERSETZUNGSVALIDIERUNG.md).*
@@ -27,8 +27,9 @@ stage 4). Targets: `x86_64` and `aarch64`, both LP64 little endian, as data
 | `instrumente/teile/baue-llvm.sh [f.gab…]` (run by `instrumente/pruefe-llvm.py`) | end to end for both targets: check, IR, `opt`+`llc`, `ld.lld`, no-libc check, run (aarch64 under `qemu-aarch64`), compare |
 | `crates/gabbro-check/tests/llvm.rs` | IR tests without the LLVM toolchain; `tests/noalias.rs` the `noalias` rule; `tests/beispiele.rs` runs the emitter over the `Y` gift probes |
 
-`gabbro build` (the manifest build, [`BAUSYSTEM.md`](BAUSYSTEM.md)) does not drive this
-backend; it drives the legacy C path. The LLVM backend is reached through the commands above.
+`gabbro build` (the manifest build, [`BAUSYSTEM.md`](BAUSYSTEM.md)) drives this backend for
+`program` and `object` units (checker, IR, `opt -O3`, `llc -O3`, `ld.lld`); kernel-module,
+bare-metal and hosted-libc products, and a unit that uses another unit, are refused by name.
 
 The tool set is closed: `gabbro`, `opt`, `llc`, `ld.lld`, `readelf`, and `qemu-aarch64` for
 execution only. `clang`, `cc` and `gcc` never run.
@@ -36,7 +37,7 @@ execution only. `clang`, `cc` and `gcc` never run.
 ## 2. Position on safety: the checker decides, the backend refuses by name
 
 The backend proves nothing. It lowers only what the built passes decided, and every form it
-cannot lower is refused **by name** instead of guessed (the `C001` rule of the C emitter):
+cannot lower is refused **by name** instead of guessed (the rule the removed C emitter called `C001`):
 
 | Code | Refuses | Poison probes |
 |---|---|---|

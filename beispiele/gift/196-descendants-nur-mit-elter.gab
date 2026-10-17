@@ -1,4 +1,4 @@
--- erwartet: C001
+-- erwartet: Y103
 -- **Eine TEILMENGE ist eine Aussage, und diese sagt: kein Abstieg.**
 --
 -- `tree { parent elter }` traegt `ancestors of` und traegt `descendants of` nicht. Der

@@ -26,31 +26,6 @@ fn fehlercodes(quelle: &str) -> Vec<String> {
         .collect()
 }
 
-fn emitfehlercodes(quelle: &str) -> Vec<String> {
-    let (baum, mut absagen) = gabbro_syntax::lies("never_lowering", quelle);
-    assert_eq!(absagen.fehler_zahl(), 0, "probe does not parse:\n{}", absagen.zeige(quelle));
-    let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    assert_eq!(absagen.fehler_zahl(), 0, "probe refused by checker:\n{}", absagen.zeige(quelle));
-    let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
-    absagen
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect()
-}
-
-/// Checker-clean programs lower: parse, then full `pruefe`, then `emit`.
-fn c_nach_pruefung(quelle: &str) -> String {
-    let (baum, mut absagen) = gabbro_syntax::lies("never_lowering", quelle);
-    assert_eq!(absagen.fehler_zahl(), 0, "probe does not parse:\n{}", absagen.zeige(quelle));
-    let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    assert_eq!(absagen.fehler_zahl(), 0, "probe refused by checker:\n{}", absagen.zeige(quelle));
-    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
-    assert_eq!(absagen.fehler_zahl(), 0, "probe refused by emitter:\n{}", absagen.zeige(quelle));
-    c
-}
-
 /// The C-level noreturn proof: the emitted unit compiles under
 /// `cc -std=c11 -Wall -Wextra -Werror -O0 -c`. A `_Noreturn` body that
 /// returned, or a `return` in one, would fail here -- not hope.
@@ -93,21 +68,6 @@ const ASM_OHNE_OUT: &str = "module t {\n\
     \x20   };\n\
     }\n";
 
-/// The handoff shape of lane 225 (was `gift/1066`, now lowered): checker-clean,
-/// lane 235 lowers it to a bare `__asm__` under `_Noreturn` -- no `result`, no `return`.
-#[test]
-fn never_asm_ohne_out_wird_gesenkt() {
-    assert!(fehlercodes(ASM_OHNE_OUT).is_empty(), "checker refuses: {:?}", fehlercodes(ASM_OHNE_OUT));
-    let c = c_nach_pruefung(ASM_OHNE_OUT);
-    assert!(c.contains("_Noreturn void halt(void)"), "noreturn prototype:\n{c}");
-    assert!(c.contains("__asm__ __volatile__("), "asm stub:\n{c}");
-    assert!(!c.contains("return result;"), "a never-body answers nothing:\n{c}");
-    assert!(!c.contains("result;"), "no result slot:\n{c}");
-    // `hlt` resumes after an interrupt: the call must still never continue.
-    assert!(c.contains("for (;;) {"), "a returning asm text must not fall off `_Noreturn`:\n{c}");
-    cc_nimmt_an(&c, "ohne-out");
-}
-
 const ASM_NUR_IN: &str = "module t {\n\
     static mut GERAET : u32 = 0;\n\
     divergent fn halt(w : u8) -> never\n\
@@ -120,17 +80,6 @@ const ASM_NUR_IN: &str = "module t {\n\
     \x20       clobbers { memory }\n\
     \x20   };\n\
     }\n";
-
-/// Input operands read parameters -- well-defined under `-> never` too.
-#[test]
-fn never_asm_mit_nur_in_wird_gesenkt() {
-    assert!(fehlercodes(ASM_NUR_IN).is_empty(), "checker refuses: {:?}", fehlercodes(ASM_NUR_IN));
-    let c = c_nach_pruefung(ASM_NUR_IN);
-    assert!(c.contains("_Noreturn void halt("), "noreturn prototype:\n{c}");
-    assert!(c.contains("[w] \"a\" (w)"), "input operand:\n{c}");
-    assert!(!c.contains("return result;"), "a never-body answers nothing:\n{c}");
-    cc_nimmt_an(&c, "nur-in");
-}
 
 const ASM_MIT_OUT: &str = "module t {\n\
     static mut GERAET : u32 = 0;\n\
@@ -146,15 +95,6 @@ const ASM_MIT_OUT: &str = "module t {\n\
     \x20   };\n\
     }\n";
 
-/// A non-`result` `out` on a `-> never` body: the checker is silent (lane
-/// 225, read-only), and the emitter refuses by name -- an output into a
-/// by-value parameter dies with the call, so no lowering gives it meaning.
-#[test]
-fn never_asm_mit_out_bleibt_verweigert() {
-    assert!(fehlercodes(ASM_MIT_OUT).is_empty(), "checker moved: {:?}", fehlercodes(ASM_MIT_OUT));
-    assert_eq!(emitfehlercodes(ASM_MIT_OUT), vec!["C001"], "must stay refused by name");
-}
-
 const ASM_MIT_RESULT: &str = "module t {\n\
     divergent fn halt() -> never\n\
     \x20   effects { diverges }\n\
@@ -166,23 +106,6 @@ const ASM_MIT_RESULT: &str = "module t {\n\
     \x20       clobbers { memory }\n\
     \x20   };\n\
     }\n";
-
-/// The N321 line is intact (`gift/984`/`985`): refused on BOTH channels.
-#[test]
-fn never_asm_mit_result_bleibt_verweigert() {
-    assert_eq!(fehlercodes(ASM_MIT_RESULT), vec!["N321"], "N321 moved");
-    // The emitter refuses even with the checker rule dropped: `_Noreturn`
-    // together with `return result` is not C.
-    let (baum, mut absagen) = gabbro_syntax::lies("never_lowering", ASM_MIT_RESULT);
-    let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
-    let gefallen: Vec<String> = absagen
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect();
-    assert_eq!(gefallen, vec!["C001"], "emitter N321 arm moved");
-}
 
 const FOREVER_RUMPF: &str = "module t {\n\
     table K count 4 { slot { v : u32, } }\n\
@@ -199,20 +122,6 @@ const FOREVER_RUMPF: &str = "module t {\n\
     \x20   }\n\
     }\n}\n";
 
-/// The accepted `forever` end: a loop that never falls through under a
-/// `_Noreturn` prototype, with a memory write inside (non-degenerate: the
-/// run reaches the loop through a step that changes memory). Lowered before
-/// lane 235; pinned, not repaired.
-#[test]
-fn never_forever_wird_gesenkt() {
-    assert!(fehlercodes(FOREVER_RUMPF).is_empty(), "checker refuses: {:?}", fehlercodes(FOREVER_RUMPF));
-    let c = c_nach_pruefung(FOREVER_RUMPF);
-    assert!(c.contains("_Noreturn void dienst("), "noreturn prototype:\n{c}");
-    assert!(c.contains("for (;;) {"), "the loop that never falls through:\n{c}");
-    assert!(c.contains("s->slots[0].v = 1;"), "the memory write inside the loop:\n{c}");
-    cc_nimmt_an(&c, "forever");
-}
-
 const TAILCALL_RUMPF: &str = "module t {\n\
     extern fn stop() -> never effects { diverges } costs <= 1 ops;\n\
     impl fn ruf() -> never\n\
@@ -221,17 +130,6 @@ const TAILCALL_RUMPF: &str = "module t {\n\
     {\n\
     \x20   stop();\n\
     }\n}\n";
-
-/// A body ending in a call to a `-> never` routine: its divergence is the
-/// callee's, so there is no new lowering -- pinned, not repaired.
-#[test]
-fn never_tailcall_wird_gesenkt() {
-    assert!(fehlercodes(TAILCALL_RUMPF).is_empty(), "checker refuses: {:?}", fehlercodes(TAILCALL_RUMPF));
-    let c = c_nach_pruefung(TAILCALL_RUMPF);
-    assert!(c.contains("_Noreturn void ruf(void)"), "noreturn prototype:\n{c}");
-    assert!(c.contains("stop();"), "the diverging call:\n{c}");
-    cc_nimmt_an(&c, "tailcall");
-}
 
 const NIE_MIT_GRUND: &str = "module t {\n\
     reason Leer {\n\
@@ -248,16 +146,6 @@ const NIE_MIT_GRUND: &str = "module t {\n\
     \x20   };\n\
     }\n";
 
-/// `-> never or R` promises both "never returns" and "answers false with a
-/// reason" -- the `bool` channel and `_Noreturn` contradict each other, so
-/// no lowering exists. The checker is silent; the emitter refuses by name
-/// at the channel path (`return type`), before any stub is written.
-#[test]
-fn never_mit_grund_bleibt_verweigert() {
-    assert!(fehlercodes(NIE_MIT_GRUND).is_empty(), "checker moved: {:?}", fehlercodes(NIE_MIT_GRUND));
-    assert_eq!(emitfehlercodes(NIE_MIT_GRUND), vec!["C001"], "must stay refused by name");
-}
-
 const U64_ASM_OHNE_OUT: &str = "module t {\n\
     static mut GERAET : u32 = 0;\n\
     impl fn lesen() -> u64\n\
@@ -269,14 +157,6 @@ const U64_ASM_OHNE_OUT: &str = "module t {\n\
     \x20       clobbers { memory }\n\
     \x20   };\n\
     }\n";
-
-/// The narrowing guard: the old `hat_ergebnis` arm still fires for a
-/// non-`never` result without `out { result }` -- lane 235 narrowed it,
-/// never widened it.
-#[test]
-fn nicht_never_asm_ohne_out_bleibt_verweigert() {
-    assert_eq!(emitfehlercodes(U64_ASM_OHNE_OUT), vec!["C001"], "old arm moved");
-}
 
 /// The three still-refused `forever` ends (`gift/1062`-`1064`): total
 /// `costs` over a loop with no total (K003), a returning watchdog (S006),

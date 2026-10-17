@@ -4,7 +4,6 @@
 -- angesehen" -- genau die Verwechslung, gegen die die Deckungszeile steht. Also faellt sie
 -- schon am Manifest.
 
-compiler cc -std=c11 -Wall -Wextra -Werror
 out      target/bau-gift
 
 unit leer object

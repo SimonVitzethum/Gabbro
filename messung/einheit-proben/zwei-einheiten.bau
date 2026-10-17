@@ -16,7 +16,6 @@
 -- `use`-Zeilen in `prog-haupt.gab`, der Bau liest sie dort und rechnet daraus, welche
 -- Schnittstelle vor welche Einheit gehoert.
 
-compiler cc -std=c11 -O0 -Wall -Wextra -Werror
 out      target/bau-zwei
 
 unit rechenwerk object

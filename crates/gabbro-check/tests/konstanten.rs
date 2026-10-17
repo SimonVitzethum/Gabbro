@@ -62,17 +62,6 @@ fn falls_clean(source: &str) {
     assert!(f.is_empty(), "clean, but falls with {f:?}\n{source}");
 }
 
-fn emit_clean(source: &str) -> String {
-    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", source);
-    let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    assert!(
-        absagen.fehler_zahl() == 0,
-        "emits only what checks:\n{}",
-        absagen.zeige(source)
-    );
-    gabbro_check::emit::emittiere(&baum, &mut absagen)
-}
-
 // -- the fragment: literals, consts, arithmetic/bit operators, pure calls ---
 
 const QUAD: &str = "const fn quad(i : u32 in 0 .. 64) -> u32 effects { pure } costs <= 4 ops { return i * i; }";
@@ -238,84 +227,6 @@ fn nested_clean_table_checks() {
 }
 
 // -- the emitter writes the folded values -------------------------------------
-
-#[test]
-fn table_lowers_to_static_array() {
-    let c = emit_clean(&format!(
-        "module t {{\n\
-         {QUAD}\n\
-         const Q : [u32; 4] = [quad(0), quad(1), quad(2), quad(3)];\n\
-         impl fn f() -> u32 effects {{ pure }} costs <= 4 ops {{ return Q[3]; }}\n\
-         }}"
-    ));
-    assert!(
-        c.contains("static const uint32_t Q[4] __attribute__((unused)) = {0u, 1u, 4u, 9u};"),
-        "the folded values stand in the C:\n{c}"
-    );
-}
-
-#[test]
-fn table_computes_at_runtime() {
-    // The whole 64-entry square table, evaluated element-wise through 64
-    // `quad` calls, read back at run time: entry 63 is 3969, entry 7 is 49.
-    let c = emit_clean(&format!(
-        "module t {{\n\
-         {QUAD}\n\
-         const Q : [u32; 64] = [{}];\n\
-         impl fn wert(a : u32 in 0 .. 63, b : u32 in 0 .. 63) -> u64 effects {{ pure }} costs <= 16 ops {{\n\
-         let x : u64 = Q[a];\n\
-         let y : u64 = Q[b];\n\
-         return x + y;\n}}\n}}",
-        (0..64)
-            .map(|i| format!("quad({i})"))
-            .collect::<Vec<_>>()
-            .join(", ")
-    ));
-    assert!(
-        c.contains("static const uint32_t Q[64]"),
-        "the 64-entry table stands in the C:\n{c}"
-    );
-    let mut prog = c;
-    prog.push_str(
-        "\n#include <stdio.h>\n\nint main(void) {\n\
-        \x20   unsigned long long got = (unsigned long long)(wert(63u, 7u));\n\
-        \x20   unsigned long long want = 4018ull;\n\
-        \x20   if (got != want) { printf(\"MISMATCH got=%llu want=%llu\\n\", got, want); return 1; }\n\
-        \x20   printf(\"squares-ok\\n\");\n\
-        \x20   return 0;\n}\n",
-    );
-    let d = std::env::var("TMPDIR").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir()).join("gabbro-konstanten");
-    std::fs::create_dir_all(&d).expect("scratch dir is writable");
-    let c_path = d.join("run.c");
-    let bin_path = d.join("run");
-    std::fs::write(&c_path, &prog).expect("the generated C is writable");
-    let bau = Command::new("cc")
-        .args(["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror"])
-        .arg("-o")
-        .arg(&bin_path)
-        .arg(&c_path)
-        .output();
-    let bau = match bau {
-        Ok(r) => r,
-        Err(e) => panic!("`cc` does not start ({e}) -- NOTHING measured"),
-    };
-    assert!(
-        bau.status.success(),
-        "the generated C does not compile under `-Wall -Wextra -Werror`:\n{}\n{}",
-        String::from_utf8_lossy(&bau.stderr),
-        c_path.display()
-    );
-    let lauf = Command::new(&bin_path)
-        .output()
-        .unwrap_or_else(|e| panic!("the compiled program does not run ({e}) -- NOTHING measured"));
-    assert!(lauf.status.success(), "the compiled program aborts");
-    assert!(
-        String::from_utf8_lossy(&lauf.stdout).contains("squares-ok"),
-        "the shipped C reads something other than the folded table"
-    );
-    let _ = std::fs::remove_file(&c_path);
-    let _ = std::fs::remove_file(&bin_path);
-}
 
 // -- the certificate: printed values meet the Lean witness -----------------
 

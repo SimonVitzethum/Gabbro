@@ -66,6 +66,9 @@ fn name_ist_brauchbar(name: &str) -> Result<(), String> {
 }
 
 /// The source. **Every comment in it answers a question the eight attempts asked.**
+///
+/// Since 2026-10-17 (the C backend is removed) the skeleton is a libc-free program: it calls
+/// no C function, it makes the Linux `write` system call itself, through a `syscall` gate.
 fn quelle(name: &str) -> String {
     format!(
         "\
@@ -73,50 +76,57 @@ fn quelle(name: &str) -> String {
 --
 --     gabbro check {name}.gab     -- 0 errors
 --     gabbro costs {name}.gab     -- what the body COSTS, beside what the line PROMISES
---     gabbro build {name}.bau     -- writes the C, calls `cc`, links
+--     gabbro build {name}.bau     -- LLVM: checker, IR, `opt`, `llc`, `ld.lld`
 --     ./target/{name}/{name}      -- prints `Hi`
 --
--- **Four things here are irreducible, and that was measured and not chosen.** Each was taken
--- out on its own, checked, built and run. They carry `(1)` to `(4)` below. Everything else is
--- a comment, a body, or a line that stands because it teaches -- and says so.
---
+-- There is no C library and no C compiler in this build. **The program asks the kernel
+-- itself:** the `syscall` item below is the raw Linux `write` (x86-64, number 1), with the
+-- registers named, and it is the whole of the program's operating-system interface.
 -- `dokumente/TUTORIAL.md` is the reason each clause is there. This file is the shape.
+module {name} {{
 
--- **(1) `effects {{ … }}` is obligatory on EVERY function -- the `extern` ones included.**
---
--- Leaving it out is `E001`, and it is not fail-open: a function without the clause is not a
--- function that does nothing. **The braces are part of the clause.** `effects pure` is a
--- syntax error -- `effects` takes a brace LIST -- and the list is never empty: the word for
--- \"no effects\" is `pure`, so a pure function writes `effects {{ pure }}`.
---
--- **(2) `extern fn` binds a C name, and the signature must be C's own.**
---
--- `putchar` is `int putchar(int)`, so the parameter is `i32` and not `u32`. `N046` compares
--- against C's declaration and refuses with the line that would fit. The effect names a SINK,
--- not a place of this unit -- `output` is a free name, and it is what `writes` is for.
-extern fn putchar(c : i32) -> i32 effects {{ writes output }} costs <= 8 ops;
+-- **(1) `assume` names what the kernel is trusted to do, and `falsifier` names the probe that
+-- would catch it lying.** The system call is user logic, not a language rule.
+assume linux_schreibe
+    \"The kernel writes at most len bytes from buf and answers the count.\"
+    falsifier sonde_schreibe;
 
--- **(3) `pub` on the entry is not decoration.**
---
--- Without it the entry lowers to a `static` function and the linker never sees it. `check`
--- says nothing -- it is a build rule, and the build refuses by name.
---
--- **(4) A `unit … program` names exactly ONE entry, and it is called `main`.**
---
--- Gabbro does not mangle, so this name IS the C name.
+-- **(2) The gate.** Registers in, registers out, what the instruction destroys (`rcx`,
+-- `r11`), and the contract: never more bytes than the buffer holds. `effects` is obligatory on
+-- EVERY function and gate; `writes ausgabe` names the sink.
+syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
+    abi linux arch x86_64 number 1
+    regs in {{ rdi = fd, rsi = puffer, rdx = laenge }}
+    regs out {{ rax }}
+    clobbers {{ rcx, r11 }}
+    errors {{ }}
+    requires laenge <= lenof(puffer)
+    effects {{ writes ausgabe }}
+    costs <= 8 ops
+    assume linux_schreibe falsifier sonde_schreibe;
+
+-- **(3) The buffer is a `static`: the LLVM lowering hands a gate a global, not a local.** `check`
+-- says one `E247` hint about it (no lock guards a carrier the program writes) -- a hint, not a
+-- refusal; a one-thread program needs no lock.
+pub static mut TEXT : [u8; 3] = 0;
+
+-- **(4) `pub fn main` is the entry.** The generator writes `_start` around it and hands the
+-- answer to `exit_group`; a `unit … program` names exactly one such function.
 --
 -- **`costs <= 40 ops` is NOT irreducible** -- delete it and the file still checks. It stands
 -- here for the one habit worth having from the first day: **`gabbro costs {name}.gab` prints
 -- the number the body actually costs, beside the number this line promises.** Read it; never
 -- guess it. A promise that is too small is `K001`, and it is arithmetic, not opinion.
-pub fn main() -> i32
-    effects {{ writes output }}
+pub fn main() -> u64
+    effects {{ reads TEXT, writes TEXT, writes ausgabe }}
     costs   <= 40 ops
 {{
-    putchar(72);   -- H
-    putchar(105);  -- i
-    putchar(10);   -- newline
+    TEXT[0] = 72;   -- H
+    TEXT[1] = 105;  -- i
+    TEXT[2] = 10;   -- newline
+    schreibe(1, TEXT, 3);
     return 0;
+}}
 }}
 "
     )
@@ -127,19 +137,18 @@ pub fn main() -> i32
 fn manifest(name: &str) -> String {
     format!(
         "\
--- The manifest for `{name}`. **All four kinds of line are obligatory** -- each is refused by
+-- The manifest for `{name}`. **Both kinds of line are obligatory** -- each is refused by
 -- name when it is missing, and the refusal is the whole documentation:
 --
---     `compiler` -- \"no `compiler` line\"
---     `out`      -- \"no `out` line\"
---     `unit`     -- \"no `unit` line\"; `unit <name> <program|object>`, three words
---     a path     -- \"unit `{name}` names no file\"; INDENTED, one path per line
+--     `out`  -- \"no `out` line\"
+--     `unit` -- \"no `unit` line\"; `unit <name> <program|object>`, three words
+--     a path -- \"unit `{name}` names no file\"; INDENTED, one path per line
 --
--- **The indent is the whole syntax.** An indented line is a source of the unit above it.
+-- **The indent is the whole syntax.** An indented line is a source of the unit above.
 --
--- The unit graph is read out of `module` and `use` IN THE SOURCES and never from a line
--- here -- a manifest that repeated it would be a second register that can drift.
-compiler cc -std=c11 -O0 -ffp-contract=off -Wall -Wextra -Werror
+-- There is no `compiler` line: the build runs the LLVM tools (`opt`, `llc`, `ld.lld`) and
+-- compiles no C. The unit graph is read out of `module` and `use` IN THE SOURCES and never
+-- from a line here -- a manifest that repeated it would be a second register that can drift.
 out      target/{name}
 
 unit {name} program
@@ -149,7 +158,7 @@ unit {name} program
 }
 
 /// **Writes both files or neither.** A half-written skeleton is worse than none: the reader
-/// would build a manifest against a source that is not there and read `cc`'s refusal instead
+/// would build a manifest against a source that is not there and read a tool's refusal instead
 /// of Gabbro's.
 pub fn befehl(rest: &[String]) -> std::process::ExitCode {
     let benannt: Vec<&String> = rest.iter().filter(|a| !a.starts_with('-')).collect();

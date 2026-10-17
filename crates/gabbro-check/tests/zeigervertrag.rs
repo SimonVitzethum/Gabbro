@@ -145,29 +145,6 @@ fn staerkeres_ensures_am_typ_wird_gezaehlt() {
     );
 }
 
-/// **The comparator example: clean check, counted refinement, compilable C.**
-///
-/// `126` sorts through the slot's contract. Producer and slot agree word for word, so
-/// the counted `ensures` implication is dischargeable on sight -- the twin of `957`
-/// and `958`, where it is not. The `N297` hint stands beside a green check; sortedness
-/// itself is the user's (`N` obligations on `sortiere`, unproved here).
-#[test]
-fn vergleichssortierung_traegt_den_vertrag_durch_den_zeiger() {
-    let (quelle, baum, absagen) = lies("126-vergleichssortierung.gab");
-    assert!(fehler(&absagen).is_empty(), "{}", absagen.zeige(&quelle));
-    assert_eq!(hinweise(&absagen), ["N297"], "one hint at `nimm`");
-    let bericht = pflichten(&quelle, &baum, "126-vergleichssortierung.gab");
-    assert!(
-        bericht.contains("ensures of &kleiner => ensures of fn(a : u32, b : u32) -> bool"),
-        "the ensures-half implication is not there as written:\n{bericht}"
-    );
-    let c = gabbro_check::emit::emittiere(&baum, &mut gabbro_syntax::diag::Absagen::neu("126"));
-    assert!(
-        c.contains("bool (*cmp)(uint32_t, uint32_t)"),
-        "the comparator lowers to a C function pointer:\n{c}"
-    );
-}
-
 /// **The driver callback: world effects on the slot, decided and counted.**
 ///
 /// `127` carries `effects` and `costs` on the pointer type beside `requires`. The

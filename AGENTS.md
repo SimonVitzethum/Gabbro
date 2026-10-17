@@ -113,14 +113,13 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   single source; any change to the language or its syntax is made in the Lean model FIRST, then in the checker,
   the compiler and `SYNTAX.md`/`SPRACHE.md`. A form the checker accepts and the model lacks is a checker bug.
   Pure lowering of an existing form does not change the language.
-- **Orientation: checker + Lean model only** (Simon, 2026-10-15). The C emitter
-  (`emit.rs`) is outdated and is NO guide for language, checker or compiler work:
-  no new construct is shaped for it, no refusal is widened or narrowed for it,
-  no example is rewritten for it. What counts is the checker verdict and the Lean
-  model (`ArenaDyn.lean` and friends, `gabbro_ziel` still proved). The C backend
-  stays building where it builds; where it refuses by name (`C001` and kin),
-  that refusal stands untouched. This entry wins wherever older notes still
-  orient work on C emission.
+- **The C emitter is REMOVED** (Simon, 2026-10-17, final). LLVM (`llvm.rs`, `llvm/`) is the
+  only backend; `gabbro build` drives it (checker, IR, `opt`, `llc`, `ld.lld`) and refuses
+  module/kmod/metal products by name. The last tree with the C emitter carries the tag
+  `archiv/c-emitter-2026-10-17`; the Lean proofs under `grammatik/Grammatik/CBackend` stay as
+  archived evidence. Orientation stays: checker + Lean model; no construct is shaped for a
+  backend, and a form LLVM cannot lower is refused by name (`Y1xx`). This entry wins wherever
+  older notes still orient work on C emission (`emit.rs`, `C001`, `pruefe-emission.sh`).
 - **Direction change: AArch64 instead of x86-64** (Simon, 2026-10-07). All work on the x86-64
   hardware model has stopped (its files stay; add nothing there). The next target is AArch64
   (Armv9-A) built on the Sail Arm model, with the missing multicore memory model added in Lean.
@@ -373,8 +372,8 @@ opus/…:opus/…` first.
 2. Bundle master, run `cargo test --no-fail-fast`, and push only if the tests and the key grep
    are clean and origin is not ahead. If origin moved, `git pull` (merge) first and run it again.
    - **The push gate is the four guardians** (`./instrumente/abnahme.py`, Simon 2026-10-17: exactly
-     four). The C-emitter check (`pruefe-emission.sh`) is retired together with its counters
-     (`MARKE_EMIT*`): the C backend is deprecated (section 3, 2026-10-15) and no longer guarded.
+     four). The C-emitter check (`pruefe-emission.sh`) and its counters (`MARKE_EMIT*`) are gone:
+     the C backend was removed on 2026-10-17.
 
 ## 6. Opus agents (Claude subagents, max 2)
 

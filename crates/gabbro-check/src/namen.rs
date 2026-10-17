@@ -1390,7 +1390,7 @@ fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
         Some(TypExpr::Never(_)) => "void",
         // **A pointer RESULT stays undecidable, and that is the asymmetry, not an omission.**
         // See `sperrwort` and `ZEIGER` in `./instrumente/miss-c-signaturen.py`.
-        Some(t) => crate::emit::ctyp_primitiv(t)?,
+        Some(t) => ctyp_primitiv(t)?,
     };
     let mut teile: Vec<String> = Vec::with_capacity(f.parameter.len() + 2);
     for p in &f.parameter {
@@ -1401,12 +1401,12 @@ fn absenkung_der_signatur(f: &FnDecl) -> Option<String> {
         // the one reason a pointer can be compared here at all while a `table` cannot.*
         if let TypExpr::Zeiger(z) = &p.typ {
             teile.push(
-                if crate::emit::zeiger_schreibend(z) { "void *" } else { "const void *" }
+                if zeiger_schreibend(z) { "void *" } else { "const void *" }
                     .to_string(),
             );
             continue;
         }
-        teile.push(crate::emit::ctyp_primitiv(&p.typ)?.to_string());
+        teile.push(ctyp_primitiv(&p.typ)?.to_string());
     }
     // **`or R` CHANGES THE C SIGNATURE, and this function did not look** (2026-09-03).
     //
@@ -7371,4 +7371,62 @@ mod sperrprimitiv_tests {
         assert!(!faellt(&codes, "N481"), "N481 must stay silent, fired: {codes:?}");
         assert!(!faellt(&codes, "N482"), "N482 must stay silent, fired: {codes:?}");
     }
+}
+
+// ---------------------------------------------------------------------------------------
+// The C spelling of the primitive types, kept for the `N046` signature comparison of a bound
+// `extern fn` against the C table (`cnamen.rs`). The C emitter that used to own these rows
+// was removed on 2026-10-17 (tag `archiv/c-emitter-2026-10-17`); the comparison stays.
+// ---------------------------------------------------------------------------------------
+
+/// The primitive type words in their C spelling, by Gabbro spelling.
+fn primitivwort(n: &str) -> Option<&'static str> {
+    Some(match n {
+        "bool" => "bool",
+        "u8" => "uint8_t",
+        "u16" => "uint16_t",
+        "u32" => "uint32_t",
+        "u64" => "uint64_t",
+        "i8" => "int8_t",
+        "i16" => "int16_t",
+        "i32" => "int32_t",
+        "i64" => "int64_t",
+        "f32" => "float",
+        "f64" => "double",
+        _ => return None,
+    })
+}
+
+/// The C word of a type that needs no unit context to be spelled; `None` is "not decidable
+/// here", which the caller turns into a refusal.
+fn ctyp_primitiv(t: &TypExpr) -> Option<&'static str> {
+    use gabbro_syntax::kw::Kw;
+    match t {
+        TypExpr::Int(i) => primitivwort(match i.wort {
+            Kw::U8 => "u8",
+            Kw::U16 => "u16",
+            Kw::U32 => "u32",
+            Kw::U64 => "u64",
+            Kw::I8 => "i8",
+            Kw::I16 => "i16",
+            Kw::I32 => "i32",
+            Kw::I64 => "i64",
+            _ => return None,
+        }),
+        TypExpr::Float(f) => match f.wort {
+            Kw::F32 => Some("float"),
+            Kw::F64 => Some("double"),
+            _ => None,
+        },
+        TypExpr::Bool(_) => Some("bool"),
+        TypExpr::Pfad(p) => primitivwort(&p.teile.last()?.text),
+        _ => None,
+    }
+}
+
+/// Does this pointer let the callee write? (the `const` decision of `void *` / `const void *`)
+fn zeiger_schreibend(z: &gabbro_syntax::ast::PtrTy) -> bool {
+    z.rechte.iter().any(|r| {
+        matches!(r, Recht::Schreiben | Recht::LesenSchreiben | Recht::Eigen(_))
+    })
 }

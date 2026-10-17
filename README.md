@@ -31,23 +31,20 @@ container, text and time helpers a program needs on every page are planned as
 native Gabbro modules ([PLAN-STDLIB](dokumente/PLAN-STDLIB.md)), not as C behind
 a border.
 
-Two backends exist. The **LLVM backend** is the current target: checked Gabbro
-lowers directly to LLVM IR (x86-64 and AArch64), with no C, no libc and no linked
-runtime — locks, threads and arenas are generated IR over raw kernel gates
-([LLVM-BACKEND](dokumente/LLVM-BACKEND.md), status in
-[LLVM-MODELLSTAND](dokumente/LLVM-BACKEND.md)). The older **C11 emitter**
-(`emit.rs`) is deprecated and stays only as a legacy check. Neither backend is
-verified: the final-binary refinement needs a complete Lean model of the CPU,
-which is built on the Sail Arm specification
+There is one backend: **LLVM**. Checked Gabbro lowers directly to LLVM IR (x86-64 and
+AArch64), with no C, no libc and no linked runtime — locks, threads and arenas are generated
+IR over raw kernel gates ([LLVM-BACKEND](dokumente/LLVM-BACKEND.md)). The C11 emitter was
+removed on 2026-10-17 (repository tag `archiv/c-emitter-2026-10-17`; its Lean proofs stay as
+archived evidence). The backend is not verified: the final-binary refinement needs a complete
+Lean model of the CPU, which is built on the Sail Arm specification
 ([sail-arm](https://github.com/rems-project/sail-arm)) plus a multicore memory
 model in Lean, and is not finished ([plan](ARM-PLAN.md)).
 
 ## 1. Quick start
 
 Install **Rust 1.86 or newer**. The Rust crates have no third-party dependencies.
-Checking source needs nothing else. `gabbro build` with the legacy C11 backend uses
-a C compiler available as `cc`; the LLVM backend needs the LLVM tools `opt`, `llc`
-and `ld.lld` instead (`instrumente/teile/baue-llvm.sh`).
+Checking source needs nothing else. `gabbro build` needs the LLVM tools `opt`, `llc` and
+`ld.lld` on `PATH` — there is no C compiler (`cc`) in the chain.
 Ensure `~/.cargo/bin` is on your `PATH`.
 
 ```bash
@@ -91,7 +88,7 @@ oleans via `lake exe cache get`). The goal theorem itself does not import it, an
 | `…_zeuge` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
 | `…probeA/D…`, `w1_abgelehnt` | programs the checker **refuses** — a checker that accepts everything would make the theorem worthless |
 
-The translation evidence (legacy C chain, LLVM certificate) is described in [PLAN-UEBERSETZUNGSVALIDIERUNG](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) and [LLVM-BACKEND](dokumente/LLVM-BACKEND.md) §7 — the recipe above prints only the goal-theorem sentences.
+The translation evidence (archived C chain, LLVM certificate) is described in [PLAN-UEBERSETZUNGSVALIDIERUNG](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) and [LLVM-BACKEND](dokumente/LLVM-BACKEND.md) §7 — the recipe above prints only the goal-theorem sentences.
 
 **What those lines do NOT say:** an axiom list proves a *proof* valid, not the
 *statement*. The three axioms prove no model fidelity and remove no premise:
@@ -126,7 +123,7 @@ Measured snapshot 2026-10-17 — every figure carries its command; since the fou
 | **Grammar** | **189 EBNF rules**, closed and reachable | vocabulary covers every terminal, 245 / 245 |
 | **Proof templates** | **41, of which 30 are machine-checked** | `gabbro templates` |
 | **Corpus** | 170 clean examples, 898 poison files | `cargo test --no-fail-fast` |
-| **Backend** | LLVM backend (current target, no C), x86_64 and aarch64; the C11 emitter is deprecated and no longer guarded | `./instrumente/pruefe-llvm.py` |
+| **Backend** | LLVM backend (the only one, no C), x86_64 and aarch64 | `./instrumente/pruefe-llvm.py` |
 | **Guardians** | exactly 4: Lean model, LLVM compiler, checker, GabbroV; each prints its work quantity, `2` means not measured | `./instrumente/abnahme.py` |
 | **Blind spots** | **72 blind · 176 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2564 and 110 clause sites | `gabbro ceremony` |

@@ -8,7 +8,6 @@
 -- **Ohne diese Probe misst nichts, dass der Bindeschritt ueberhaupt laeuft.** Ein `program`,
 -- das in Wahrheit nur ein `object` schreibt, saehe von aussen genauso aus.
 
-compiler cc -std=c11 -O0 -Wall -Wextra -Werror
 out      target/bau-ohne-main
 
 unit ohnemain program

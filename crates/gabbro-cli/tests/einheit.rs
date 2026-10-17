@@ -209,62 +209,6 @@ fn der_sperrring_ueber_bibliotheken_wird_erst_als_einheit_sichtbar() {
 // it cannot be checked alone. *The capability existed inside `gabbro build` and had no name
 // on the command line* -- which is the shape a missing feature and a hidden one share.
 
-/// **The counter-sample, and the price named as a number.**
-///
-/// The same two files, one flag apart: nine refusals without it, none with it.
-#[test]
-fn emit_als_einheit_uebersetzt_was_einzeln_faellt() {
-    let (_, fehler, code) = lauf(&["emit", LAGER, BETRIEB]);
-    assert_eq!(code, 1, "file by file the second one falls:\n{fehler}");
-    // **Seven until 2026-09-02, nine since**, and the two are `D021`: the base name of a
-    // place in a `requires` got a reader that day, and `Faecher` stands in the other file.
-    // `M109` had said the same sentence about the same name in the `ensures` one line down
-    // since it existed -- *the count moved because the two clauses now answer alike.*
-    assert_eq!(
-        fehler.matches("error: [").count(),
-        9,
-        "and it falls nine times, at names the other file declares:\n{fehler}"
-    );
-
-    let (aus, fehler, code) = lauf(&["emit", "--unit", LAGER, BETRIEB]);
-    assert_eq!(code, 0, "as one unit it translates:\n{fehler}");
-    assert!(aus.contains("int32_t"), "and the C is C:\n{aus}");
-    assert!(
-        aus.contains("void raeumen(") && aus.contains("void kennzeichnen("),
-        "with the bodies of the SECOND file in it:\n{aus}"
-    );
-}
-
-/// **The refusals of `emit --unit` go to STDERR, and that is not a slip.**
-///
-/// This command writes the C to stdout. A diagnostic on the same stream would land inside the
-/// translation unit of whoever piped the output into a `.c` file -- so the two streams carry
-/// two different things, and the test says which.
-#[test]
-fn die_absagen_von_emit_stehen_nicht_im_c() {
-    let (aus, fehler, code) = lauf(&["emit", "--unit", BETRIEB]);
-    assert_eq!(code, 1, "alone the file does not translate:\n{aus}\n{fehler}");
-    assert!(fehler.contains("error: ["), "the refusals are on stderr:\n{fehler}");
-    assert!(
-        !aus.contains("error: ["),
-        "and NOT on stdout, where the C goes:\n{aus}"
-    );
-    // **And the site is in the file, not in the concatenation.**
-    assert!(
-        fehler.contains("programmlogik/beispiel/betrieb.gab:"),
-        "the site is the site in the file:\n{fehler}"
-    );
-    assert!(!fehler.contains("<unit>:"), "never the joined text:\n{fehler}");
-}
-
-/// The German second name reaches the same code, at `emit` as at `pruefe`.
-#[test]
-fn der_zweitname_der_fahne_gilt_auch_bei_emit() {
-    let englisch = lauf(&["emit", "--unit", LAGER, BETRIEB]);
-    let deutsch = lauf(&["emit", "--einheit", LAGER, BETRIEB]);
-    assert_eq!(englisch, deutsch, "`--unit` and `--einheit` are one flag here too");
-}
-
 /// **`abi --unit` writes ONE interface for a unit of two files** -- and it carries what the
 /// second file exports, which no per-file run can produce at all.
 #[test]

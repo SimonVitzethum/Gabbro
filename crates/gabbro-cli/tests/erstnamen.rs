@@ -45,7 +45,6 @@ const PAARE: &[(&str, &str)] = &[
     ("certificate", "zeugnis"),
     ("ceremony", "zeremonie"),
     ("templates", "schablonen"),
-    ("runtime", "laufzeit"),
     ("passes", "paesse"),
     ("counterexample", "gegenbeispiel"),
     ("link", "verbinde"),
@@ -115,7 +114,6 @@ fn die_absage_nennt_den_getippten_namen() {
     for (getippt, erwartet) in [
         ("check", "gabbro check:"),
         ("pruefe", "gabbro pruefe:"),
-        ("emit", "gabbro emit:"),
     ] {
         let (_, fehler, code) = lauf(&[getippt, "--with", DATEI, DATEI]);
         assert_eq!(code, 2, "a `.gab` is no `.gabi`:\n{fehler}");

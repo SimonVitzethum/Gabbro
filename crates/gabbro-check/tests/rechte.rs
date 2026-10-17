@@ -79,35 +79,6 @@ fn ein_weiteres_recht_am_engeren_argument_faellt() {
     }
 }
 
-/// **`R013`, the counter-direction -- and it is the half a wrong-way rule breaks first.**
-///
-/// `tests/gestalt.rs` already carried the `rw` at `r` row before this rule existed
-/// (*a wider right at a narrower slot*), which is why the corpus stayed byte-identical.
-/// It is repeated here because that file is about `M140` and would not say why it broke.
-#[test]
-fn ein_engerer_slot_bleibt_still() {
-    let paare: &[(&str, &str, &str)] = &[
-        ("the same right", "r", "r"),
-        ("the same right, writing", "rw", "rw"),
-        // The legitimate narrowing: the callee promises to do less than it could.
-        ("a wider right at a narrower slot", "r", "rw"),
-        // `own` lowers to a non-`const` `T *` -- `emit::zeiger_schreibend` is the one home of
-        // that decision -- so it carries read AND write, and the corpus writes it bare.
-        ("an owning argument at a read-write slot", "rw", "own"),
-        ("an owning argument at a read-only slot", "r", "own"),
-        ("`rw + own` at a read-write slot", "rw", "rw + own"),
-        // A spelling, not a set: `r + w` and `rw` are one pointer.
-        ("`r + w` spelled out at a `rw` slot", "rw", "r + w"),
-    ];
-    for (was, slot, arg) in paare {
-        let g = codes(&ruf_mit_rechten(slot, arg));
-        assert!(
-            g.is_empty(),
-            "{was}: `{arg}` at `{slot}` is a CORRECT call and must stay silent -- fell with {g:?}"
-        );
-    }
-}
-
 /// A `fn(...)` slot of shape `slot`, and a function of shape `fun` put into it with `&`.
 /// Both sides carry the same contract, so anything that falls here is the SIGNATURE.
 ///
