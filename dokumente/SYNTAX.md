@@ -236,7 +236,7 @@ item       = [ buildgate ]
              | atomicdecl | lockdecl | rcudecl | gruppedecl | concurrentdecl | accdecl | walkdecl | entrydecl | entrustdecl
              | bootdecl | syscalldecl | targetdecl | translatordecl | profiledecl | requiresprofile ) ;
 buildgate  = "when" "TESTBUILD" ;                              (* «TB» *)
-(* The build gate: `gabbro emit --testbuild` opens it, its absence is the shipping build, and a
+(* The build gate: `gabbro build --testbuild` opens it, its absence is the shipping build, and a
    gated item then produces NO line of C. `G001` holds the one direction that breaks (ungated
    code calling a gated function), `G002` refuses any other condition, `G003` refuses the name
    as a declaration. `TESTBUILD` is a G6 identifier in fixed position. *)

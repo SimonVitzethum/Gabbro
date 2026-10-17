@@ -30,7 +30,7 @@ the verdict (W17) and runs with a pinned locale.
 
 **A fifth guardian is not built.** What is to be checked next becomes a test in `cargo test`, a Lean
 theorem, or a stage in one of the four. The old counters (mark ratchets, document-figure guards,
-the mutation run, the C-emitter stages) are retired; their figures in other documents are dated
+the mutation run, the C-emitter stages) are retired (the C emitter itself was removed on 2026-10-17, tag `archiv/c-emitter-2026-10-17`); their figures in other documents are dated
 results, not guarded values.
 
 **Heavy runs — one at a time, with `free -g` beside them:** `cargo build`, `cargo test --no-fail-fast`,

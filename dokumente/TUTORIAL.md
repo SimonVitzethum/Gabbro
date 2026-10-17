@@ -36,20 +36,18 @@ Hi
 clause in what it writes carries a comment saying why it is there, and the four that are
 irreducible are marked. *Open that file beside this one.*
 
-> **Which backend is this?** `gabbro build` on a `.bau` manifest still lowers through the
-> **C11 emitter and a C compiler** (the `compiler cc …` line of the manifest). That path is
-> **deprecated** and stays only where it builds; the **current backend is LLVM**:
-> `gabbro llvm [--target=x86_64|aarch64]` writes IR for the checked unit and
-> `instrumente/teile/baue-llvm.sh` links a static binary with no C, no libc and no linked runtime
-> ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)). The checker is the same for both: what this file
-> teaches (ranges, `effects`, `costs`, `narrow`) is decided before either backend runs.
+> **Which backend is this?** LLVM, the only one. `gabbro build` on a `.bau` manifest runs the
+> checker, writes LLVM IR, and links a static binary with `opt`, `llc` and `ld.lld`: no C, no libc
+> and no linked runtime (`gabbro llvm [--target=x86_64|aarch64]` writes the IR alone;
+> [`LLVM-BACKEND.md`](LLVM-BACKEND.md)). The C11 emitter this tutorial once built through was
+> removed on 2026-10-17 (tag `archiv/c-emitter-2026-10-17`).
 >
-> **And `putchar` in the example is the one libc call of this tutorial.** Gabbro has no
-> standard library and no libc of its own: an OS call is the program's own `syscall` item
-> (an explicit number, registers in and out, an `abi`), and anything larger -- HTTP, TLS --
-> is written in Gabbro, neither built in nor forbidden ([`SPRACHE.md`](SPRACHE.md) §16).
-> `extern fn putchar` is the C backend's edge and is here because it is the shortest
-> program that prints.
+> **And the skeleton `gabbro new` writes calls no C function.** Gabbro has no standard library
+> and no libc of its own: an OS call is the program's own `syscall` item (an explicit number,
+> registers in and out, an `abi`), and anything larger -- HTTP, TLS -- is written in Gabbro,
+> neither built in nor forbidden ([`SPRACHE.md`](SPRACHE.md) §16). The `extern fn putchar`
+> examples below are checked, not linked: an `extern fn` names a symbol some other object has to
+> provide.
 
 ---
 
@@ -443,7 +441,7 @@ uint32_t clamp_sum(uint32_t a, uint32_t b) {
 ```
 
 **Two `if`s, and they are the only runtime cost of the whole range system.** The ranged
-version from section 6(a) emits this instead (shown as the C11 emitter writes it; the LLVM
+version from section 6(a) emits this instead (shown as the removed C11 emitter wrote it; the LLVM
 backend lowers the same checked body to the same two compares and adds, as IR):
 
 ```c
@@ -518,7 +516,7 @@ retired `zaehle-wortschatz` ratchet guarded (2026-10-17; not guarded today). The
 
 ### And there is a second table, which is C's
 
-Gabbro does not mangle: the name you write **is** the name in the C the legacy emitter writes,
+Gabbro does not mangle: the name you write **is** the name in the symbol table,
 and the checker keeps that door shut for every program, whichever backend builds it. So C's own
 vocabulary is closed to you as well — at the boundary, and only there:
 

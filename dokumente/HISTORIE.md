@@ -450,3 +450,5 @@ scope down**. Which is why every claim in the `README` and in `SPRACHE.md` now c
 and where none stands, that is a finding. The 2026-10 entries add two shapes of the same move:
 *a claim about an artifact that nobody ran through its consumer* (the certificate that does not
 elaborate), and *a decision that reversed without reaching the documents that stated it* (x86-64).
+
+*2026-10-17: the C emitter (`emit.rs`, the generated C drivers, the C runtime, `gabbro emit`) was removed; LLVM is the only backend and `gabbro build` drives it. Tag `archiv/c-emitter-2026-10-17` keeps the old tree; the Lean proofs under `grammatik/Grammatik/CBackend` stay as archived evidence.*

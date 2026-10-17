@@ -11,7 +11,7 @@ kernels, drivers and ordinary programs.
 | what is proved, and the goal theorem | [`BEWEIS.md`](BEWEIS.md) |
 | the checker: every pass, rule and diagnostic code | [`PRUEFER.md`](PRUEFER.md) |
 | why the design is the way it is | [`DESIGN.md`](DESIGN.md) |
-| code generation | [`LLVM-BACKEND.md`](LLVM-BACKEND.md) (current), [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md) (legacy C) |
+| code generation | [`LLVM-BACKEND.md`](LLVM-BACKEND.md) (current), [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md) (the C backend, removed 2026-10-17) |
 | floats, heap, hardware | [`GLEITKOMMA.md`](GLEITKOMMA.md), [`PLAN-DYNAMISCH.md`](PLAN-DYNAMISCH.md), [`PLAN-HARDWARE.md`](PLAN-HARDWARE.md) |
 
 **Standing words.** *Checked* means a pass of the Rust checker refuses the opposite, by a
@@ -1119,7 +1119,7 @@ falls out of M2 rather than a special rule. The speech test is a second obligati
 *failed* run consumes; the lower bound is M1 (a measured quantity `in 1 ..` cannot report zero);
 "the measured path writes the quantity itself" is an M3 write right. `check` bodies compile only
 under `when TESTBUILD`: a gated item produces **no line of output** in the shipping build
-(`gabbro emit --testbuild` opens the gate); `G001` (ungated code calls a gated function), `G002`
+(`gabbro llvm --testbuild` or `gabbro build --testbuild` opens the gate); `G001` (ungated code calls a gated function), `G002`
 (any other `when` condition), `G003` (`TESTBUILD` declared as a name). `offline` invariants are
 *not* gated — a different clause with a different reader.
 
@@ -1129,14 +1129,14 @@ under `when TESTBUILD`: a gated item produces **no line of output** in the shipp
 
 **Syntax-directed, not optimising.** Every construct has exactly one lowering; the untrusted
 compiler checks first, and what the checker refused never reaches the emitter. An unlowered form
-is refused **by name**, not guessed (`Y101`–`Y106` for LLVM, `C001` for the legacy C emitter).
+is refused **by name**, not guessed (`Y101`–`Y106` for LLVM; the removed C emitter's `C001` is gone).
 
 * **LLVM backend — current.** `gabbro llvm [--target=x86_64|aarch64]` lowers checked Gabbro
   directly to LLVM IR; `opt`, `llc`, `ld.lld` produce a static binary with **no C, no libc, no
   linked runtime** — locks, threads and arenas are generated IR over raw kernel gates.
   [`LLVM-BACKEND.md`](LLVM-BACKEND.md).
-* **C11 emitter — deprecated.** Still builds where it builds; what it refuses by name
-  (`C001` and kin) stays refused. [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md).
+* **C11 emitter — removed 2026-10-17** (tag `archiv/c-emitter-2026-10-17`).
+  [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md).
 * **Native machine code with translation validation** is the long-term path and needs a Lean
   model of the CPU first ([`PLAN-UEBERSETZUNGSVALIDIERUNG.md`](PLAN-UEBERSETZUNGSVALIDIERUNG.md)).
 
