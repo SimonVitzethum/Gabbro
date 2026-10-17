@@ -24,7 +24,10 @@ device Weckfenster(basis : Pa) at mmio {
 }
 
 -- ATTEMPT 1: compute the base, build the device handle, write through it.
-impl fn kick(notify_basis : u64, notify_versatz : u16, notify_faktor : u32, warteschlange : u16)
+-- 2026-10-17: the base carries a range (a 48-bit address). The checker has refused the sum
+-- `u64 + u16 * u32` of an UNBOUNDED base since the M1 widening of 2026-10-07/08 (`M104`); the
+-- arithmetic, the device and the driver result are unchanged.
+impl fn kick(notify_basis : u64 in 0 .. 281474976710655, notify_versatz : u16, notify_faktor : u32, warteschlange : u16)
     effects { writes Weckfenster.WECK }
     costs   <= 32 ops
 {
