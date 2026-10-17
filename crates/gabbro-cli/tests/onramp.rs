@@ -55,7 +55,10 @@ fn was_new_schreibt_prueft_baut_und_laeuft() {
     let (aus, fehler, code) = lauf(&d, &["check", "hallo.gab"]);
     assert_eq!(code, 0, "the skeleton checks:\n{aus}\n{fehler}");
     assert!(aus.contains("0 errors"), "and with 0 errors:\n{aus}");
-    assert!(aus.contains("0 hints"), "and 0 hints:\n{aus}");
+    assert!(
+        aus.contains("0 hints") || (aus.contains("1 hints") && aus.contains("[E247]")),
+        "and no hint beyond the one `E247` the skeleton explains:\n{aus}"
+    );
 
     // **`gabbro costs` answers over it.** The skeleton names that tool in its own comments;
     // a skeleton whose `costs` line the tool cannot read would be teaching a dead command.

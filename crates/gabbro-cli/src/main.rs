@@ -179,9 +179,6 @@ fn main() -> std::process::ExitCode {
         // language was set to English on 2026-09-01, and a NEW subcommand that shipped a
         // German spelling would be a pair nobody asked for.
         "new" => new::befehl(rest),
-        // The emitter, since 2026-08-17 -- what it covers and what it refuses stands at
-        // `command_emit` below, where the code is.
-        "emit" => command_emit(befehl, rest),
         // **The LLVM backend (2026-10-14): Gabbro → LLVM-IR text for AArch64/x86-64.**
         // Untrusted like the C backend: the checker runs first, refusal codes are `Y101`
         // -`Y106`. The IR goes to stdout; `instrumente/baue-llvm.sh` compiles and runs
@@ -693,57 +690,6 @@ fn main() -> std::process::ExitCode {
         // `--tor` faellt, solange eine haengt. Es ist ausdruecklich KEIN Vorgabeverhalten:
         // ein Werkzeug, das jeden Tag rot ist, wird nicht gelesen -- die tägliche Wache ist
         // die Ratsche in `pruefe-schablonen.py`, und **dieses Tor ist das ZIEL.**
-        // **The generated runtime texts, for a harness that builds its own driver** (C-free
-        // lane, 2026-09-30): `gabbro runtime arena` prints the arena runtime the hosted driver
-        // writes (template `arena.dyn`) -- the same bytes, so a harness cannot drift from it.
-        "runtime" | "laufzeit" => match rest.first().map(|s| s.as_str()) {
-            Some("arena") => {
-                print!("{}", bau::arena_laufzeit());
-                std::process::ExitCode::SUCCESS
-            }
-            Some("faden") | Some("threads") => {
-                print!("{}", bau::faden_laufzeit());
-                std::process::ExitCode::SUCCESS
-            }
-            // The bare-metal image's generated pieces (C-free lane, C3 slice 1).
-            Some("metal-arena") => {
-                print!("{}", bau::metall_arena_laufzeit());
-                std::process::ExitCode::SUCCESS
-            }
-            Some("metal-memory") => {
-                print!("{}", bau::metall_speicher());
-                std::process::ExitCode::SUCCESS
-            }
-            Some("metal-idt") => {
-                print!("{}", bau::metall_idt());
-                std::process::ExitCode::SUCCESS
-            }
-            Some("metal-threads") => {
-                print!("{}", bau::metall_faden());
-                std::process::ExitCode::SUCCESS
-            }
-            Some("metal-include") => match rest.get(1) {
-                Some(ziel) => match bau::metall_koepfe_schreiben(ziel) {
-                    Ok(()) => std::process::ExitCode::SUCCESS,
-                    Err(err) => {
-                        eprintln!("gabbro runtime metal-include: {err}");
-                        std::process::ExitCode::from(1)
-                    }
-                },
-                None => {
-                    eprintln!("gabbro runtime metal-include: name the directory to write");
-                    std::process::ExitCode::from(1)
-                }
-            },
-            _ => {
-                // 1 and not 2: the command is known, its argument is not.
-                eprintln!(
-                    "gabbro runtime: one of `arena`, `threads`, `metal-arena`, `metal-memory`, \
-                     `metal-idt`, `metal-threads`, `metal-include <dir>`"
-                );
-                std::process::ExitCode::from(1)
-            }
-        },
         "templates" | "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             if rest.iter().any(|x| x == "--gate" || x == "--tor") {
@@ -813,7 +759,6 @@ const COMMAND_NAMES: &[&str] = &[
     "abi",
     "build", "bau",
     "new",
-    "emit",
     "llvm",
     "llvm-cert",
     "fragments", "fragmente",
@@ -835,7 +780,6 @@ const COMMAND_NAMES: &[&str] = &[
     "ceremony", "zeremonie",
     "gabbrov",
     "templates", "schablonen",
-    "runtime", "laufzeit",
     "passes", "paesse",
     "check", "pruefe",
     "link", "verbinde",
@@ -913,8 +857,8 @@ fn hilfe() {
 
   gabbro new <name>                 write `<name>.gab` and `<name>.bau` into this directory.
                                     They CHECK, BUILD and RUN as written -- the skeleton is
-                                    the irreducible file measured out of `beispiele/63`, and
-                                    every clause in it carries the reason it stands there.
+                                    the irreducible file (a libc-free program with its own
+                                    `write` gate), and every clause in it carries the reason it stands there.
                                     Start here; `dokumente/TUTORIAL.md` is the long form
   gabbro check|pruefe [--with L.gabi]… [--unit] [--passes] [--fix] <file.gab>…
                                      read, parse and run the built passes. The \"not checked
@@ -965,10 +909,6 @@ fn hilfe() {
                                     the generator templates: the third counting column.
                                     `--gate` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
-  gabbro runtime|laufzeit arena|threads
-                                    the arena runtime (template `arena.dyn`) or the thread
-                                    runtime with the binding's head (`faden.laufzeit`) the
-                                    hosted driver writes, for a harness with its own driver
   gabbro k-condition|k-bedingung <file.gab>…
                                     per carrier: are ALL write sites generated? (measurement 2)
   gabbro costs|kosten <file.gab>…   the cost report per routine
@@ -983,8 +923,11 @@ fn hilfe() {
                                       `--elide` removes every clause equal to what
                                       would be derived. Same diagnostics, same
                                       register, same C -- or no view at all
-  gabbro build|bau [--testbuild] [--dry-run] [<manifest>]
-                                    the build out of a manifest: it computes the unit graph
+  gabbro build|bau [--testbuild] [--dry-run] [--target=x86_64|aarch64] [<manifest>]
+                                    the build out of a manifest, through LLVM (checker ->
+                                    IR -> `opt -O3` -> `llc` -> `ld.lld`; no C compiler, no
+                                    libc). `module`/`kmod`/`metal` products are refused by
+                                    name. It computes the unit graph
                                     from `module` and `use` -- never from a manifest line --
                                     and is incremental by CONTENT, not by timestamp. It
                                     prints what it built AND what it did not look at, and
@@ -1006,16 +949,6 @@ fn hilfe() {
   gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus
                                     a missing alias analysis could be about. Two upper
                                     bounds and two lower ones, printed together; no refusal
-  gabbro emit [--with L.gabi]… [--unit] [--testbuild] [--proved|--mit-beweis] <file.gab>…
-                                    `--proved`: no C for a unit that still owes a Lean proof
-                                    lower to C -- and REFUSE by name (`C001`) for every
-                                    form this emitter does not know. A `.gabi` lowers to a
-                                    C HEADER: typedefs and prototypes, no objects.
-                                    `--unit` lowers the named files as ONE translation
-                                    unit, the counterpart of `pruefe --unit`: what checks
-                                    as a unit is translated as one.
-                                    WITHOUT `--testbuild` this is the SHIPPING build: an
-                                    item marked `when TESTBUILD` produces no line of C
   gabbro llvm [--target=x86_64|aarch64] [--unit] [--testbuild] <file.gab>…
                                     the unit as LLVM-IR text for AArch64 or x86-64
                                     (default `x86_64`): checked first, refused by name
@@ -1179,57 +1112,6 @@ fn read_preamble(befehl: &str, mit: &[String]) -> Result<String, std::process::E
         }
     }
     Ok(vorspann)
-}
-
-/// **The emitter, since 2026-08-17.** It covers one fragment, not ten, and refuses by name
-/// (`C001`) for every form it does not know -- a generator that guesses undoes every pass in
-/// front of it.
-///
-/// **`--with` since 2026-08-21.** Without it the ABI was a half one: `pruefe --with` accepted
-/// the library, `emit` did not -- a program of two files could be checked and not translated.
-/// *Measured: a `.gabi` through the generator is exactly a C HEADER* -- `typedef`, `#define`
-/// and prototypes, **not a single object**. So the preamble in the output is what it would be
-/// in C anyway, and two units link without a duplicate symbol.
-/// **The gate `--mit-beweis` holds**: every file's unit has to be GREEN. Returns the exit
-/// code to leave with where it is not -- and prints the measurement, so that the refusal
-/// names what is owed.
-fn beweise_verlangen(getippt: &str, dateien: &[String], modell: Option<&str>) -> Option<std::process::ExitCode> {
-    let mut schlecht = 0u8;
-    for datei in dateien {
-        let Ok(quelle) = std::fs::read_to_string(datei) else {
-            eprintln!("gabbro {getippt}: {datei} not readable");
-            return Some(std::process::ExitCode::from(1));
-        };
-        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
-        gabbro_check::pruefe(&baum, &mut absagen);
-        if absagen.fehler_zahl() > 0 {
-            eprint!("{}", absagen.zeige(&quelle));
-            return Some(std::process::ExitCode::from(1));
-        }
-        let Some(m) = gabbro_check::beweis::modell_finden(datei, modell) else {
-            eprintln!("gabbro {getippt} --proved: no model folder (`programmlogik/Gabbro/Body.lean`) above {datei} -- name one with `--model <dir>`");
-            return Some(std::process::ExitCode::from(3));
-        };
-        match gabbro_check::beweis::pruefe(&baum, datei, &m) {
-            Ok(b) => {
-                eprintln!("{}", b.zeile());
-                match b.stand {
-                    gabbro_check::beweis::Stand::Gruen => {}
-                    gabbro_check::beweis::Stand::Aufbau => schlecht = schlecht.max(3),
-                    _ => schlecht = schlecht.max(1),
-                }
-            }
-            Err(e) => {
-                eprintln!("gabbro {getippt} --proved: {e}");
-                return Some(std::process::ExitCode::from(3));
-            }
-        }
-    }
-    if schlecht != 0 {
-        eprintln!("gabbro {getippt} --proved: a unit still owes a proof -- no C is written");
-        return Some(std::process::ExitCode::from(schlecht));
-    }
-    None
 }
 
 /// `gabbro counterexample|gegenbeispiel [--seed N] [--samples N] [--exhaustive N]
@@ -1417,166 +1299,6 @@ fn befehl_beweise(rest: &[String]) -> std::process::ExitCode {
         return std::process::ExitCode::from(schlecht);
     }
     std::process::ExitCode::SUCCESS
-}
-
-fn command_emit(getippt: &str, argumente: &[String]) -> std::process::ExitCode {
-    // **`--testbuild` opens the build gate, and its ABSENCE is the shipping build.**
-    //
-    // *The default is the closed gate on purpose.* Whoever forgets the flag loses check code
-    // out of a check build -- a missing symbol, and loud. The other default would put the
-    // check harness into the shipped artefact, and nothing would say so.
-    let pruefbau = argumente.iter().any(|a| a == "--testbuild");
-    // **`--unit` translates the named files as ONE translation unit** (German second name
-    // `--einheit`), the same word and the same meaning as at `pruefe`.
-    //
-    // > **Until 2026-09-01 the two halves did not match, and that was the hole under `OB5`:
-    // > a unit that CHECKS as a unit was not TRANSLATED as one.** `pruefe --unit` joined the
-    // > files and resolved the names across them; `emit` ran once per file, so the second
-    // > file's `use lager::Faecher` found nothing and the C came out per file or not at all.
-    // > `gabbro build` did the joined emit inside itself and had no name on the command
-    // > line -- *the capability existed and was unreachable*, which is the shape a missing
-    // > feature and a hidden one share.
-    let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
-    // **`--mit-beweis` (`--proved`) closes the gate on a unit that still owes a proof.**
-    // The Lean duties of every file are measured first (`beweis::pruefe`), and a unit
-    // that is not GREEN gets no C -- the emitter's refusal rests on the checker's
-    // measurement, the same one `gabbro beweise` prints.
-    let mit_beweis = argumente.iter().any(|a| a == "--proved" || a == "--mit-beweis");
-    let modell = argumente
-        .iter()
-        .position(|a| a == "--model" || a == "--modell")
-        .and_then(|i| argumente.get(i + 1).cloned());
-    let argumente: Vec<String> = {
-        let mut out = Vec::new();
-        let mut skip = false;
-        for a in argumente {
-            if skip {
-                skip = false;
-                continue;
-            }
-            match a.as_str() {
-                "--testbuild" | "--unit" | "--einheit" | "--proved" | "--mit-beweis" => {}
-                "--model" | "--modell" => skip = true,
-                _ => out.push(a.clone()),
-            }
-        }
-        out
-    };
-    if mit_beweis {
-        let (dateien, _) = match split_with(getippt, &argumente) {
-            Ok(x) => x,
-            Err(c) => return c,
-        };
-        if let Some(code) = beweise_verlangen(getippt, &dateien, modell.as_deref()) {
-            return code;
-        }
-    }
-    let (dateien, mit) = match split_with(getippt, &argumente) {
-        Ok(x) => x,
-        Err(c) => return c,
-    };
-    let bau = if pruefbau {
-        gabbro_check::gatter::Bau::Pruefbau
-    } else {
-        gabbro_check::gatter::Bau::Auslieferung
-    };
-    let vorspann = match read_preamble(getippt, &mit) {
-        Ok(v) => v,
-        Err(c) => return c,
-    };
-    // One unit or one file per unit -- the fork stands here and nowhere else.
-    if einheit {
-        return emittiere_als_einheit(getippt, &dateien, &vorspann, bau);
-    }
-    let mut schlecht = false;
-    // **A build is more than one file** (the ABI work, 2026-08-25). The C name is the
-    // Gabbro name, and two units of ONE run that both carry a `pub fn lesen` emit the same
-    // symbol twice. *Within one tree `bindung::pass` catches that; across the trees it takes
-    // a register, and it stands here because the file list stands here.*
-    //
-    // **The refusal still comes out of `gabbro-check`** -- a code belongs to exactly one
-    // file, or every poison probe on it is ambiguous.
-    let mut register = gabbro_check::bindung::Bindungsregister::neu();
-    for datei in &dateien {
-        let Ok(quelle) = std::fs::read_to_string(datei) else {
-            eprintln!("gabbro: {datei} not readable");
-            schlecht = true;
-            continue;
-        };
-        let ganz = if vorspann.is_empty() {
-            quelle.clone()
-        } else {
-            format!("{vorspann}\n{quelle}")
-        };
-        let versatz = ganz.len() - quelle.len();
-        let (baum, mut absagen) = gabbro_syntax::lies(datei, &ganz);
-        // **The checker runs first, and that is the point.** Emitting from a tree the
-        // passes have not accepted would produce C for a program Gabbro rejects.
-        gabbro_check::pruefe(&baum, &mut absagen);
-        register.nimm_auf(datei, &baum, versatz, &mut absagen);
-        let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);
-        if absagen.fehler_zahl() > 0 {
-            // The same offset map as at `pruefe` and at `build` -- see the note there. A site
-            // rendered against the joined text carries a line number in no file at all.
-            let stueck = [Stueck {
-                datei: datei.to_string(),
-                quelle: quelle.clone(),
-                von: versatz,
-                bis: ganz.len(),
-            }];
-            for a in zeige_je_stueck(&absagen, &stueck, Strom::Fehler, &mut |_, _| {}) {
-                eprintln!(
-                    "gabbro: [{}] fell outside the file -- its line number is the `--with` \
-                     PREAMBLE's: {}",
-                    a.code, a.text
-                );
-            }
-            eprintln!("gabbro {getippt}: {datei} has errors -- no C written");
-            schlecht = true;
-            continue;
-        }
-        print!("{c}");
-    }
-    if schlecht {
-        std::process::ExitCode::from(1)
-    } else {
-        std::process::ExitCode::SUCCESS
-    }
-}
-
-/// **`gabbro emit --unit a.gab b.gab` -- the named files as ONE translation unit.**
-///
-/// The counterpart of `pruefe --unit`, and it exists because the pair was broken: what
-/// checked as a unit could not be translated as one. See `command_emit` for the measurement.
-fn emittiere_als_einheit(
-    getippt: &str,
-    dateien: &[String],
-    vorspann: &str,
-    bau: gabbro_check::gatter::Bau,
-) -> std::process::ExitCode {
-    let quellen = match lies_quellen(dateien) {
-        Ok(q) => q,
-        Err(e) => {
-            eprintln!("gabbro {getippt}: {e}");
-            return std::process::ExitCode::from(2);
-        }
-    };
-    // **The refusals go to STDERR here and to STDOUT at `pruefe` and `build`**, and that is
-    // not a slip: this command writes the C to stdout, so a diagnostic on the same stream
-    // would land inside the translation unit of whoever piped it into a file.
-    match uebersetze_einheit(vorspann, &quellen, bau, Strom::Fehler) {
-        Einheitsbau::Fertig { c, .. } => {
-            print!("{c}");
-            std::process::ExitCode::SUCCESS
-        }
-        Einheitsbau::Abgesagt(n) => {
-            eprintln!(
-                "gabbro {getippt}: the unit of {} file(s) has {n} error(s) -- no C written",
-                dateien.len()
-            );
-            std::process::ExitCode::from(1)
-        }
-    }
 }
 
 /// **`gabbro llvm f.gab…` -- the unit as LLVM-IR text (2026-10-14).**
@@ -1860,7 +1582,7 @@ fn schreibe_einheits_abi(dateien: &[String]) -> std::process::ExitCode {
     // **The SHIPPING build**, as everywhere a `.gabi` is written: an interface names no
     // build, and a gated item binds only in one the interface cannot name.
     let bau = gabbro_check::gatter::Bau::Auslieferung;
-    match uebersetze_einheit("", &quellen, bau, Strom::Fehler) {
+    match uebersetze_einheit_llvm("", &quellen, bau, Strom::Fehler, &gabbro_check::llvm::ZIEL_X86_64) {
         Einheitsbau::Fertig { gabi, .. } => {
             print!("{gabi}");
             std::process::ExitCode::SUCCESS
@@ -1969,54 +1691,6 @@ pub(crate) fn uebersetze_einheit_llvm_beleg(
         }
     }
     BelegBau::Abgesagt(n)
-}
-
-/// **Check and translate a file list as ONE unit -- the one place that does it.**
-///
-/// `emit --unit` and `gabbro build` both need exactly this, and before 2026-09-01 the build
-/// carried its own copy: parse the joined text, run the passes, emit, and render the refusals
-/// back into the files. *Two renderings of one glued parse would be a second register over
-/// the same thing* -- the build's own comment said so about the renderer and then kept a
-/// second copy of everything around it.
-///
-/// **The binding register runs here too, over the joined text.** The build did not have one
-/// at all: a unit whose two files both declare `module a` was a collision no build could see,
-/// though `pruefe --unit` had refused it since 2026-08-21.
-pub(crate) fn uebersetze_einheit(
-    vorspann: &str,
-    quellen: &[(String, String)],
-    bau: gabbro_check::gatter::Bau,
-    nach: Strom,
-) -> Einheitsbau {
-    let Einheitstext { ganz, vorspann_ende, stuecke } = klebe_einheit(vorspann, quellen);
-    let (baum, mut absagen) = gabbro_syntax::lies("<unit>", &ganz);
-    gabbro_check::pruefe(&baum, &mut absagen);
-    // **One unit, one name in the register**, and the preamble is not part of it: what a
-    // `.gabi` declares is a promise about someone else's object file, not a second definition.
-    let mut register = gabbro_check::bindung::Bindungsregister::neu();
-    register.nimm_auf("<unit>", &baum, vorspann_ende, &mut absagen);
-    let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);
-    if absagen.fehler_zahl() == 0 {
-        let gabi = gabbro_check::abi::schreibe_ab(&baum, &ganz, vorspann_ende);
-        return Einheitsbau::Fertig { c, gabi };
-    }
-    let n = absagen.fehler_zahl();
-    let rest = zeige_je_stueck(&absagen, &stuecke, nach, &mut |_, _| {});
-    // Refusals whose site lies in the `--with` preamble or outside every piece. **They are
-    // named, not dropped** -- a partition that swallows what it cannot place looks exactly
-    // like a clean run.
-    for a in &rest {
-        let zeile = format!(
-            "gabbro: [{}] outside every file of the unit -- it belongs to the `--with` \
-             preamble, and its line number is the PREAMBLE's: {}",
-            a.code, a.text
-        );
-        match nach {
-            Strom::Aus => println!("{zeile}"),
-            Strom::Fehler => eprintln!("{zeile}"),
-        }
-    }
-    Einheitsbau::Abgesagt(n)
 }
 
 /// One file of a joined unit, and where its text sits in the joined source.

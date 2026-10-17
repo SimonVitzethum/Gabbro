@@ -45,31 +45,6 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
         .to_string();
     let (baum, mut absagen) = gabbro_syntax::lies(&name, &quelle);
     let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    // **The emitter runs for every file that expects IT to refuse** (2026-08-20).
-    //
-    // Bis heute lief hier nur `pruefe`, und damit hatte `C001` **keine einzige Giftprobe** --
-    // die Kennung des Erzeugers war die einzige, die der Giftkorpus nicht erreichte. Sie
-    // aufzunehmen kostet eine Zeile und deckt eine Flaeche, die sonst allein an
-    // `pruefe-emission.sh` haengt: *dort faellt auf, was NICHT emittiert; hier faellt auf,
-    // was mit dem falschen GRUND nicht emittiert.*
-    //
-    // > Der Erzeuger laeuft nur fuer die Dateien, die ihn erwarten. Ueber einem Baum, den die
-    // > Paesse abgelehnt haben, waere seine Absage ohnehin keine Aussage -- und die anderen
-    // > Giftdateien sind genau das.
-    //
-    // **Lane S6 (2026-09-12): the syscall stub rules `C180`-`C184` join `C001`
-    // here.** They are emitter rules with poison probes (`beispiele/gift/850`
-    // -`854`), so the emitter must run for them exactly as for `C001` -- a
-    // probe the emitter never sees is a probe that never bites.
-    // **Lane O-1: `C185` (the refused `child` block, `beispiele/gift/1112`)
-    // joins them for the same reason.**
-    if quelle.starts_with("-- erwartet: C001")
-        || ["C180", "C181", "C182", "C183", "C184", "C185", "C186", "C187"]
-            .iter()
-            .any(|c| quelle.starts_with(&format!("-- erwartet: {c}")))
-    {
-        let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
-    }
     // **LLVM-Backend (2026-10-14): `Y101`–`Y106` join `C001` here.** They are emitter
     // refusals: the checker stays silent over these probes BY DESIGN (the program is
     // fine; the BACKEND refuses), so the LLVM emitter must run for them exactly as
@@ -177,46 +152,6 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // a stronger probe than the code form: the checker has to STAY silent, and `cc` has
         // to refuse. A one-sided version would pass over a checker that started refusing for
         // some unrelated reason.
-        if erwartet == "cc" {
-            let (codes, bericht, name) = absagen_von(&pfad);
-            let fehler: Vec<&str> = codes
-                .iter()
-                .filter(|(_, s)| *s == Stufe::Fehler)
-                .map(|(c, _)| *c)
-                .collect();
-            assert!(
-                fehler.is_empty(),
-                "{name} traegt `-- erwartet: cc`, also darf der Pruefer NICHTS sagen: \
-                 {fehler:?}\n{bericht}"
-            );
-            // **The other half, and it is the one that carries the claim.** Without it the
-            // probe passes over an emitter that has been repaired -- and a poison that can no
-            // longer bite reads exactly like one that never could.
-            let (baum, mut a2) = gabbro_syntax::lies(&pfad.display().to_string(), &quelle);
-            let c = gabbro_check::emit::emittiere(&baum, &mut a2);
-            let ziel = std::env::temp_dir().join(format!(
-                "gabbro-gift-{}.c",
-                pfad.file_stem().unwrap().to_string_lossy()
-            ));
-            std::fs::write(&ziel, &c).expect("das erzeugte C liegt schreibbar");
-            let cc = std::process::Command::new("cc")
-                .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only"])
-                .arg(&ziel)
-                .output();
-            match cc {
-                Ok(r) => assert!(
-                    !r.status.success(),
-                    "{name} traegt `-- erwartet: cc`, also muss `cc` es ABWEISEN -- es hat \
-                     angenommen. Der Erzeugerfehler ist geheilt, und die Probe gehoert \
-                     nachgezogen:\n{}",
-                    ziel.display()
-                ),
-                // **A missing `cc` is a missing measurement, never a green one** (W1).
-                Err(e) => panic!("`cc` laesst sich nicht starten ({e}) -- NICHTS gemessen"),
-            }
-            let _ = std::fs::remove_file(&ziel);
-            continue;
-        }
         // **A FIFTH state, and it is the MIRROR of `cc`** (2026-08-31).
         //
         // `-- erwartet: cc` carries a defect the checker does not see and `cc` does. There is
@@ -258,31 +193,6 @@ fn jedes_gift_faellt_mit_seinem_code() {
                 "{name} traegt `-- erwartet: {code} allein`, also muss der Pruefer mit \
                  {code} fallen -- gefallen ist {gefallen:?}:\n{bericht}"
             );
-            let (baum, mut a2) = gabbro_syntax::lies(&pfad.display().to_string(), &quelle);
-            let c = gabbro_check::emit::emittiere(&baum, &mut a2);
-            let ziel = std::env::temp_dir().join(format!(
-                "gabbro-allein-{}.c",
-                pfad.file_stem().unwrap().to_string_lossy()
-            ));
-            std::fs::write(&ziel, &c).expect("das erzeugte C liegt schreibbar");
-            let cc = std::process::Command::new("cc")
-                .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only"])
-                .arg(&ziel)
-                .output();
-            match cc {
-                Ok(r) => assert!(
-                    r.status.success(),
-                    "{name} traegt `-- erwartet: {code} allein`, also muss `cc` das \
-                     Erzeugnis ANNEHMEN -- ohne {code} faellt hier nichts, und genau das ist \
-                     die Behauptung. `cc` hat abgewiesen, also gibt es jetzt einen zweiten \
-                     Waechter und die Datei gehoert auf `-- erwartet: cc` nachgezogen:\n{}\n{}",
-                    ziel.display(),
-                    String::from_utf8_lossy(&r.stderr)
-                ),
-                // **A missing `cc` is a missing measurement, never a green one** (W1).
-                Err(e) => panic!("`cc` laesst sich nicht starten ({e}) -- NICHTS gemessen"),
-            }
-            let _ = std::fs::remove_file(&ziel);
             continue;
         }
         let (stufe, erwartet) = match erwartet.strip_prefix("Hinweis ") {
@@ -315,60 +225,6 @@ fn der_korpus_hat_beide_richtungen() {
     );
 }
 
-/// **K100.4: das Zeugnis muss alles verbuchen, was der Erzeuger absenkt.**
-///
-/// Das ist die Kreuzprobe, um derentwillen die Einordnung in `zeugnis.rs` **unabhaengig** von
-/// der `match`-Kaskade des Erzeugers gefuehrt wird. Zwei Lesungen derselben Datei, und sie
-/// muessen sich decken:
-///
-/// * **Der Erzeuger senkt ab** → das Zeugnis muss die Form kennen.
-/// * **Der Erzeuger weigert sich** (`C001`) → dann gibt es kein C, und die Weigerung steht
-///   schon da; `UNZUGEORDNET` ist dort erwartbar und kein Befund.
-///
-/// > *Eine Vertrauensflaeche, die nur der Erzeuger kennt, ist keine gebuchte.*
-///
-/// **Beim ersten Lauf fand diese Probe sofort etwas:** `lock` senkt zu vier Prototypen ab
-/// (`beispiele/10`, `/13` uebersetzen damit sauber), und die Einordnung kannte die Form nicht.
-/// Daraus wurde die Klasse `Fremd` — *der Erzeuger schreibt den Prototyp, den Rumpf schreibt
-/// jemand anderes*, und das ist weder direkt noch erzeugt.
-#[test]
-fn was_der_erzeuger_absenkt_steht_im_zeugnis() {
-    let mut ohne_buchung = Vec::new();
-    let mut emittiert = 0;
-    for p in dateien(None) {
-        let quelle = std::fs::read_to_string(&p).unwrap();
-        let (baum, mut absagen) = gabbro_syntax::lies(&p.display().to_string(), &quelle);
-        gabbro_check::pruefe(&baum, &mut absagen);
-        let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
-        if absagen.fehler_zahl() > 0 {
-            // Der Erzeuger weigert sich -- die Weigerung steht da, das Zeugnis schuldet nichts.
-            continue;
-        }
-        emittiert += 1;
-        let e = gabbro_check::zeugnis::erhebe(&baum);
-        if !e.unzugeordnet.is_empty() {
-            let mut u = e.unzugeordnet.clone();
-            u.sort();
-            u.dedup();
-            ohne_buchung.push(format!("{}: {}", p.display(), u.join(", ")));
-        }
-    }
-    assert!(
-        emittiert >= 6,
-        "die Probe misst nur, wenn ueberhaupt etwas emittiert -- {emittiert} Dateien"
-    );
-    assert!(
-        ohne_buchung.is_empty(),
-        "der Erzeuger senkt Formen ab, die das Zeugnis nicht einordnet:\n  {}",
-        ohne_buchung.join("\n  ")
-    );
-}
-
-/// **Und die Gegenrichtung: das Zeugnis muss melden koennen.**
-///
-/// Eine Kreuzprobe, die nicht rot werden kann, misst nichts (R14). Hier steht darum eine Form,
-/// die der Erzeuger **nicht** kennt und die Einordnung ebenfalls nicht — sie MUSS als
-/// `UNZUGEORDNET` herausfallen.
 #[test]
 fn das_zeugnis_meldet_was_es_nicht_einordnen_kann() {
     // **`group` stand hier bis zum 2026-08-19** und wurde mit «C3c» eingeordnet -- sie

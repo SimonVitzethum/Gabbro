@@ -60,48 +60,6 @@ fn fehler(source: &str) -> Vec<String> {
         .collect()
 }
 
-/// The emitted C of a unit that checks clean. **The clean check is asserted, not
-/// assumed** -- a positive probe over a file the checker refuses measures the
-/// checker, and would read as a passed lowering test.
-fn erzeugt(source: &str) -> String {
-    let (tree, mut refusals) = gabbro_syntax::lies("holform", source);
-    let _ = gabbro_check::pruefe(&tree, &mut refusals);
-    let gefallen: Vec<String> = refusals
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect();
-    assert!(
-        gefallen.is_empty(),
-        "the positive probe does not check clean -- fell with {gefallen:?}"
-    );
-    let c = gabbro_check::emit::emittiere(&tree, &mut refusals);
-    let nachher: Vec<String> = refusals
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect();
-    assert!(nachher.is_empty(), "the emitter refused: {nachher:?}");
-    c
-}
-
-/// The emitted C, plus whatever the EMITTER refused -- for the rows where the
-/// checker is silent and the emitter is not.
-fn erzeugt_mit_absagen(source: &str) -> (String, Vec<String>) {
-    let (tree, mut refusals) = gabbro_syntax::lies("holform", source);
-    let _ = gabbro_check::pruefe(&tree, &mut refusals);
-    let c = gabbro_check::emit::emittiere(&tree, &mut refusals);
-    let codes: Vec<String> = refusals
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect();
-    (c, codes)
-}
-
 /// A unit around one `exchange update` body over the named atomic.
 ///
 /// `atome` are the atomic declarations, `rumpf` the update body, `ordnung_typ`
@@ -134,146 +92,14 @@ fn roh(rumpf: &str) -> String {
 // The three reachable arms, positive.
 // ---------------------------------------------------------------------------
 
-#[test]
-fn oder_wird_eine_anweisung() {
-    let c = erzeugt(&roh("return t | 4;"));
-    assert!(
-        c.contains("atomic_fetch_or_explicit(&ROH, (uint32_t)(4), memory_order_relaxed)"),
-        "`t | 4` is C11's `atomic_fetch_or`, not a loop:\n{c}"
-    );
-    assert!(
-        !c.contains("compare_exchange"),
-        "and no CAS is left beside it:\n{c}"
-    );
-}
-
-#[test]
-fn und_wird_eine_anweisung() {
-    let c = erzeugt(&roh("return t & 4294967291;"));
-    assert!(
-        c.contains("atomic_fetch_and_explicit(&ROH, (uint32_t)(4294967291), memory_order_relaxed)"),
-        "`t & m` is `atomic_fetch_and`:\n{c}"
-    );
-    assert!(!c.contains("compare_exchange"), "{c}");
-}
-
-#[test]
-fn xor_wird_eine_anweisung() {
-    let c = erzeugt(&roh("return t ^ 8;"));
-    assert!(
-        c.contains("atomic_fetch_xor_explicit(&ROH, (uint32_t)(8), memory_order_relaxed)"),
-        "`t ^ m` is `atomic_fetch_xor`:\n{c}"
-    );
-    assert!(!c.contains("compare_exchange"), "{c}");
-}
-
-/// **All three are commutative, so the binder may stand on either side** -- and
-/// the operand that comes out is the OTHER side, never the binder.
-#[test]
-fn der_binder_darf_links_stehen() {
-    let c = erzeugt(&roh("return 4 | t;"));
-    assert!(
-        c.contains("atomic_fetch_or_explicit(&ROH, (uint32_t)(4), memory_order_relaxed)"),
-        "`4 | t` is the same instruction as `t | 4`:\n{c}"
-    );
-}
-
-/// A `const` name is a translation-time value and rides out as the NAME -- the
-/// `#define` stands beside it, so changing the constant changes the operand.
-#[test]
-fn eine_konstante_faehrt_als_name_hinaus() {
-    let c = erzeugt(&roh("return t ^ MASKE;"));
-    assert!(
-        c.contains("atomic_fetch_xor_explicit(&ROH, (uint32_t)(MASKE), memory_order_relaxed)"),
-        "the constant's NAME, not its value:\n{c}"
-    );
-}
-
 // ---------------------------------------------------------------------------
 // The ordering: the JOIN of the declaration's two halves, read off the emitter's
 // own map and not assumed.
 // ---------------------------------------------------------------------------
 
-#[test]
-fn entspannt_bleibt_entspannt() {
-    let c = erzeugt(&roh("return t | 1;"));
-    assert!(c.contains("(&ROH, (uint32_t)(1), memory_order_relaxed)"), "{c}");
-}
-
-#[test]
-fn freigabe_wird_acq_rel() {
-    let c = erzeugt(&einheit(
-        "atomic FREI : u32 release;\n",
-        "FREI",
-        "u32",
-        "return t | 1;",
-    ));
-    assert!(
-        c.contains("(&FREI, (uint32_t)(1), memory_order_acq_rel)"),
-        "a `release` declaration is (store release, load acquire); ONE RMW carries \
-         their join:\n{c}"
-    );
-}
-
-#[test]
-fn erwerb_wird_acq_rel() {
-    let c = erzeugt(&einheit(
-        "atomic HOLE : u32 acquire;\n",
-        "HOLE",
-        "u32",
-        "return t & 4294967294;",
-    ));
-    assert!(
-        c.contains("(&HOLE, (uint32_t)(4294967294), memory_order_acq_rel)"),
-        "`acquire` and `release` name the same pair -- so the same join:\n{c}"
-    );
-}
-
-#[test]
-fn seq_bleibt_seq_cst() {
-    let c = erzeugt(&einheit(
-        "atomic ALLES : u32 seq;\n",
-        "ALLES",
-        "u32",
-        "return t | 1;",
-    ));
-    assert!(
-        c.contains("(&ALLES, (uint32_t)(1), memory_order_seq_cst)"),
-        "{c}"
-    );
-}
-
-/// **A declaration with no ordering word is `relaxed`, and the fetch arm must
-/// not read that absence as anything else.** The `Atomic` arm of `sammle_namen`
-/// was repaired once for exactly this class -- a catch-all that chose a memory
-/// model.
-#[test]
-fn keine_ordnung_ist_entspannt() {
-    let c = erzeugt(&einheit("atomic BLOSS : u32;\n", "BLOSS", "u32", "return t | 1;"));
-    assert!(
-        c.contains("(&BLOSS, (uint32_t)(1), memory_order_relaxed)"),
-        "{c}"
-    );
-}
-
 // ---------------------------------------------------------------------------
 // The widths, and the signed word.
 // ---------------------------------------------------------------------------
-
-#[test]
-fn alle_breiten_und_beide_vorzeichen() {
-    for (dekl, name, typ, ctyp, operand) in [
-        ("atomic W8 : u8 relaxed;\n", "W8", "u8", "uint8_t", "128"),
-        ("atomic W16 : u16 relaxed;\n", "W16", "u16", "uint16_t", "256"),
-        ("atomic W64 : u64 relaxed;\n", "W64", "u64", "uint64_t", "1"),
-        ("atomic S32 : i32 relaxed;\n", "S32", "i32", "int32_t", "1"),
-    ] {
-        let c = erzeugt(&einheit(dekl, name, typ, &format!("return t | {operand};")));
-        let erwartet =
-            format!("{ctyp} alt = atomic_fetch_or_explicit(&{name}, ({ctyp})({operand}), memory_order_relaxed)");
-        assert!(c.contains(&erwartet), "missing `{erwartet}` in:\n{c}");
-    }
-}
 
 // ---------------------------------------------------------------------------
 // The poison probes: a body that LOOKS like a fetch form and is not.
@@ -314,67 +140,9 @@ fn plus_zwei_faellt_genauso() {
     assert_eq!(fehler(&roh("return t + 2;")), vec!["M104", "M101"]);
 }
 
-/// **The wrapping form is the one that MATCHES C11's fetch-add, and over the
-/// whole word it lowers to it.** `atomic_fetch_add` wraps silently by
-/// definition; `t +% 1` over `u32` wraps modulo 2^32 -- the same operation, so
-/// one instruction and no loop. The binder's range is read off the atomic's
-/// declaration (lane 221); the operand rides as the constant it is.
-#[test]
-fn die_umlaufform_wird_eine_anweisung() {
-    let c = erzeugt(&roh("return t +% 1;"));
-    assert!(
-        c.contains("atomic_fetch_add_explicit(&ROH, (uint32_t)(1), memory_order_relaxed)"),
-        "`t +% 1` over `u32` is C11's `atomic_fetch_add`, not a loop:\n{c}"
-    );
-    assert!(
-        !c.contains("compare_exchange"),
-        "and no CAS is left beside it:\n{c}"
-    );
-}
-
-#[test]
-fn die_umlaufende_differenz_wird_eine_anweisung() {
-    let c = erzeugt(&roh("return t -% 1;"));
-    assert!(
-        c.contains("atomic_fetch_sub_explicit(&ROH, (uint32_t)(1), memory_order_relaxed)"),
-        "`t -% 1` over `u32` is C11's `atomic_fetch_sub`:\n{c}"
-    );
-    assert!(!c.contains("compare_exchange"), "{c}");
-}
-
 // ---------------------------------------------------------------------------
 // The fetch-add gate: full-width lowers, narrower stays refused.
 // ---------------------------------------------------------------------------
-
-/// **The poison row the report names: a narrower exact range stays refused.**
-/// `u32 in 0 .. 65535` wraps modulo 2^16; `atomic_fetch_add` would wrap at
-/// 2^32 -- a DIFFERENT operation, silently. So `C001` stands, narrowed, not
-/// lifted: the same code, firing where the modulus does not match.
-#[test]
-fn die_enge_umlaufform_bleibt_eine_absage() {
-    let src = einheit(
-        "atomic ENG : u32 in 0 .. 65535 relaxed;\n",
-        "ENG",
-        "u32 in 0 .. 65535",
-        "return t +% 1;",
-    );
-    let (c, codes) = erzeugt_mit_absagen(&src);
-    assert_eq!(codes, vec!["C001"], "the emitter refuses, the checker does not");
-    assert!(!c.contains("atomic_fetch"), "and no fetch was emitted:\n{c}");
-}
-
-/// The same gate on the subtraction row.
-#[test]
-fn die_enge_umlaufdifferenz_bleibt_eine_absage() {
-    let src = einheit(
-        "atomic ENG : u32 in 0 .. 65535 relaxed;\n",
-        "ENG",
-        "u32 in 0 .. 65535",
-        "return t -% 1;",
-    );
-    let (_, codes) = erzeugt_mit_absagen(&src);
-    assert_eq!(codes, vec!["C001"]);
-}
 
 /// **A non-power-of-two range never reaches the emitter.** `0 .. 1000` holds
 /// 1001 values -- no `2^N` -- so the CHECKER owns this row (`M153`); the
@@ -390,41 +158,6 @@ fn die_unexakte_umlaufform_faellt_am_pruefer() {
     assert_eq!(fehler(&src), vec!["M153"], "the range rules own this");
 }
 
-/// **An explicitly written full-width range IS the word.** Exactness is a
-/// property of the interval, not of whether the source wrote a bound:
-/// `u32 in 0 .. 4294967295` promises `0 .. 2^32 - 1`, modulus 2^32.
-#[test]
-fn die_ausgeschriebene_wortweite_wird_eine_anweisung() {
-    let src = einheit(
-        "atomic VOLL : u32 in 0 .. 4294967295 relaxed;\n",
-        "VOLL",
-        "u32 in 0 .. 4294967295",
-        "return t +% 1;",
-    );
-    let c = erzeugt(&src);
-    assert!(
-        c.contains("atomic_fetch_add_explicit(&VOLL, (uint32_t)(1), memory_order_relaxed)"),
-        "{c}"
-    );
-    assert!(!c.contains("compare_exchange"), "{c}");
-}
-
-/// **All widths fetch.** `u8`/`u16`/`u64` carry their own modulus; the gate
-/// checks `n == bits` on each.
-#[test]
-fn umlauf_alle_breiten() {
-    for (dekl, name, typ, ctyp) in [
-        ("atomic W8 : u8 relaxed;\n", "W8", "u8", "uint8_t"),
-        ("atomic W16 : u16 relaxed;\n", "W16", "u16", "uint16_t"),
-        ("atomic W64 : u64 relaxed;\n", "W64", "u64", "uint64_t"),
-    ] {
-        let c = erzeugt(&einheit(dekl, name, typ, "return t +% 1;"));
-        let erwartet =
-            format!("{ctyp} alt = atomic_fetch_add_explicit(&{name}, ({ctyp})(1), memory_order_relaxed)");
-        assert!(c.contains(&erwartet), "missing `{erwartet}` in:\n{c}");
-    }
-}
-
 /// **A signed word never wraps, so it never fetches.** The checker owns this
 /// row (`M153`, unsigned-only); the gate repeats it as defense in depth for
 /// an unchecked tree.
@@ -437,40 +170,6 @@ fn umlauf_vorzeichen_faellt_am_pruefer() {
         "return t +% 1;",
     );
     assert_eq!(fehler(&src), vec!["M153"], "the range rules own this");
-}
-
-/// **Addition commutes, so the binder may stand on the right.** `1 +% t` is
-/// `X + 1` modulo 2^32 -- the same instruction as `t +% 1`.
-#[test]
-fn umlauf_binder_rechts_add() {
-    let c = erzeugt(&roh("return 1 +% t;"));
-    assert!(
-        c.contains("atomic_fetch_add_explicit(&ROH, (uint32_t)(1), memory_order_relaxed)"),
-        "{c}"
-    );
-}
-
-/// **Subtraction does not, so on the right it stays refused.** `1 -% t` is
-/// `1 - X`; `atomic_fetch_sub` computes `X - 1`. A table that commuted would
-/// give this body a different operation and nothing would say so (row 7) --
-/// so the gate declines, and the loop path ends at the same `C001` as before.
-#[test]
-fn umlauf_binder_rechts_sub_bleibt_absage() {
-    let (c, codes) = erzeugt_mit_absagen(&roh("return 1 -% t;"));
-    assert_eq!(codes, vec!["C001"]);
-    assert!(!c.contains("atomic_fetch"), "`1 -% t` is not `atomic_fetch_sub`:\n{c}");
-}
-
-/// **A runtime operand stays out.** In the loop the body is re-run per pass;
-/// as a fetch operand it is evaluated once (the row-9 reason). `p` is a
-/// full-width `u32` -- exact, but not constant -- so the gate declines and the
-/// loop path ends at the same `C001` as before: the binder resolves nowhere
-/// outside the gate.
-#[test]
-fn umlauf_laufzeitoperand_bleibt_absage() {
-    let (c, codes) = erzeugt_mit_absagen(&roh("return t +% p;"));
-    assert_eq!(codes, vec!["C001"]);
-    assert!(!c.contains("atomic_fetch"), "{c}");
 }
 
 /// **A `const` name does NOT adopt (checker).** Only a literal takes the
@@ -489,207 +188,11 @@ fn umlauf_konstante_faellt_am_pruefer() {
     );
 }
 
-/// **The ordering rides along.** A `release` declaration is (store release,
-/// load acquire); ONE RMW carries their join `acq_rel` -- the same join the
-/// bitwise rows pin.
-#[test]
-fn umlauf_freigabe_wird_acq_rel() {
-    let c = erzeugt(&einheit(
-        "atomic FREI : u32 release;\n",
-        "FREI",
-        "u32",
-        "return t +% 1;",
-    ));
-    assert!(
-        c.contains("(&FREI, (uint32_t)(1), memory_order_acq_rel)"),
-        "{c}"
-    );
-}
-
-/// **The indexed atomic fetches on its element (the 140 shape).**
-/// `REGEL[r]` over `atomic REGEL : [u32; 256]` binds `t` at the ELEMENT type
-/// `u32` -- full width, so one `atomic_fetch_add` on `&REGEL[i]`, no loop.
-#[test]
-fn umlauf_indiziert_wird_eine_anweisung() {
-    let src = "module test::holform {\n\
-         atomic REG : [u32; 256] relaxed;\n\
-         extern fn aufgegeben() -> never effects { diverges };\n\
-         impl fn zug(r : u32 in 0 .. 255) -> u32 effects { reads REG, writes REG } costs <= 300 ops {\n\
-         let alt : u32 = REG[r] exchange update(t) bounded 64 ops on_exceeded aufgegeben \
-         { return t +% 1; } publishes nothing;\n\
-         return alt; }\n\
-         }\n";
-    let c = erzeugt(src);
-    assert!(
-        c.contains("atomic_fetch_add_explicit(&REG["),
-        "the fetch stands on the indexed element:\n{c}"
-    );
-    assert!(!c.contains("compare_exchange"), "{c}");
-}
-
-/// **The binder on BOTH sides is not a fetch form**: the operand would be `t`,
-/// a name that exists only inside the loop this arm would have removed.
-#[test]
-fn der_binder_auf_beiden_seiten_bleibt_eine_schleife() {
-    let c = erzeugt(&roh("return t | t;"));
-    assert!(!c.contains("atomic_fetch"), "`t | t` is no fetch form:\n{c}");
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
-/// **The row that matters most: a non-commutative operator with the binder on
-/// the WRONG side.** `atomic_fetch_sub(&X, t)` computes `X - t`; the body says
-/// `m - t`. A table that commuted would give this body a different operation and
-/// nothing would say so. (It is also unreachable as a fetch form for the reason
-/// above -- this row measures the SHAPE test, independently of that.)
-#[test]
-fn die_differenz_andersherum_bleibt_eine_schleife() {
-    let c = erzeugt(&roh("return 4294967295 - t;"));
-    assert!(
-        !c.contains("atomic_fetch"),
-        "`m - t` is not `atomic_fetch_sub`:\n{c}"
-    );
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
-/// A shift is no C11 fetch form at all, and it checks clean -- so only the table
-/// keeps it out.
-#[test]
-fn eine_verschiebung_bleibt_eine_schleife() {
-    let c = erzeugt(&roh("return t >> 1;"));
-    assert!(!c.contains("atomic_fetch"), "{c}");
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
-/// **A runtime operand stays a loop.** In the loop the body is re-run per pass;
-/// as a fetch operand it is evaluated once. For a translation-time constant those
-/// are the same value by construction. For a parameter they are the same only if
-/// the emitter reasons about what may change between passes -- and it would then
-/// be doing that silently.
-#[test]
-fn ein_laufzeitoperand_bleibt_eine_schleife() {
-    let c = erzeugt(&roh("return t | p;"));
-    assert!(!c.contains("atomic_fetch"), "{c}");
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
-/// **A body with a side condition stays a loop** -- the whole corpus shape
-/// (`beispiele/05`, `41`, `42`). It is not one operation, and no single
-/// instruction computes it.
-#[test]
-fn eine_nebenbedingung_bleibt_eine_schleife() {
-    let src = einheit(
-        "atomic GESTUFT : u32 in 0 .. 1000 relaxed;\n",
-        "GESTUFT",
-        "u32 in 0 .. 1000",
-        "if t < 1000 { return t + 1; } return t;",
-    );
-    let c = erzeugt(&src);
-    assert!(!c.contains("atomic_fetch"), "{c}");
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
-/// The identity body (`messung/proben/absenkung/probe-absenkung-exchange.gab`)
-/// is not a binary shape and keeps its loop -- byte for byte what it had.
-#[test]
-fn der_blosse_binder_bleibt_eine_schleife() {
-    let c = erzeugt(&roh("return t;"));
-    assert!(!c.contains("atomic_fetch"), "{c}");
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
-/// **A non-integer atomic has no fetch instruction in C11**, so the word list is
-/// part of the table and not a formality.
-#[test]
-fn ein_bool_atomic_bleibt_eine_schleife() {
-    let c = erzeugt(&einheit(
-        "atomic JANEIN : bool relaxed;\n",
-        "JANEIN",
-        "bool",
-        "return t;",
-    ));
-    assert!(!c.contains("atomic_fetch"), "{c}");
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-}
-
 // ---------------------------------------------------------------------------
 // The clauses are still demanded -- no refusal was lifted to build this arm.
 // ---------------------------------------------------------------------------
-
-/// **`bounded … ops on_exceeded …` stays mandatory even where the lowering is
-/// one instruction.** The clauses lose their consequence, not their obligation:
-/// lifting them would be a language change riding in on a lowering change.
-#[test]
-fn die_schranke_bleibt_pflicht_auch_fuer_die_holform() {
-    let src = "module test::holform {\n\
-         atomic ROH : u32 relaxed;\n\
-         impl fn zug() -> u32 effects { reads ROH, writes ROH } costs <= 300 ops {\n\
-         let alt : u32 = ROH exchange update(t) { return t | 4; } publishes nothing;\n\
-         return alt; }\n\
-         }\n";
-    let (c, codes) = erzeugt_mit_absagen(src);
-    assert_eq!(codes, vec!["C001"], "the missing clauses are still `C001`");
-    assert!(!c.contains("atomic_fetch"), "{c}");
-}
-
-/// And so is the `never` exit: a bound whose exit returns is a number without a
-/// consequence, fetch form or not.
-#[test]
-fn der_ausgang_muss_weiter_never_sein() {
-    let src = "module test::holform {\n\
-         atomic ROH : u32 relaxed;\n\
-         impl fn heim() effects { pure } costs <= 2 ops { }\n\
-         impl fn zug() -> u32 effects { reads ROH, writes ROH } costs <= 300 ops {\n\
-         let alt : u32 = ROH exchange update(t) bounded 64 ops on_exceeded heim \
-         { return t | 4; } publishes nothing;\n\
-         return alt; }\n\
-         }\n";
-    let (c, codes) = erzeugt_mit_absagen(src);
-    assert_eq!(codes, vec!["C001"]);
-    assert!(!c.contains("atomic_fetch"), "{c}");
-}
 
 // ---------------------------------------------------------------------------
 // The silencer both lowerings needed.
 // ---------------------------------------------------------------------------
 
-/// **An `exchange` result nothing reads back is `-Werror` in C, out of BOTH
-/// lowerings** -- `unused-variable` from the single instruction,
-/// `unused-but-set-variable` from the loop. Measured 2026-09-15 on
-/// `probe/p3.gab`: both families fell. `Austritt::stille_exchanges` carries the
-/// weighing, and the silencer stands after the declaration.
-#[test]
-fn eine_ungelesene_holung_wird_ruhiggestellt() {
-    let src = "module test::holform {\n\
-         atomic ROH : u32 relaxed;\n\
-         extern fn aufgegeben() -> never effects { diverges };\n\
-         impl fn zug() effects { reads ROH, writes ROH } costs <= 300 ops {\n\
-         let alt : u32 = ROH exchange update(t) bounded 64 ops on_exceeded aufgegeben \
-         { return t | 4; } publishes nothing; }\n\
-         }\n";
-    let c = erzeugt(src);
-    assert!(c.contains("atomic_fetch_or_explicit"), "{c}");
-    assert!(c.contains("(void)alt;"), "the silencer is missing:\n{c}");
-}
-
-#[test]
-fn eine_ungelesene_schleife_wird_auch_ruhiggestellt() {
-    let src = "module test::holform {\n\
-         atomic ROH : u32 relaxed;\n\
-         extern fn aufgegeben() -> never effects { diverges };\n\
-         impl fn zug() effects { reads ROH, writes ROH } costs <= 300 ops {\n\
-         let alt : u32 = ROH exchange update(t) bounded 64 ops on_exceeded aufgegeben \
-         { return t; } publishes nothing; }\n\
-         }\n";
-    let c = erzeugt(src);
-    assert!(c.contains("compare_exchange_weak_explicit"), "{c}");
-    assert!(c.contains("(void)alt;"), "the silencer is missing:\n{c}");
-}
-
-/// And a result that IS read gets none -- a silencer on a live name would hide
-/// the next real finding.
-#[test]
-fn eine_gelesene_holung_bekommt_keine_ruhigstellung() {
-    let c = erzeugt(&roh("return t | 4;"));
-    assert!(c.contains("atomic_fetch_or_explicit"), "{c}");
-    assert!(!c.contains("(void)alt;"), "{c}");
-}

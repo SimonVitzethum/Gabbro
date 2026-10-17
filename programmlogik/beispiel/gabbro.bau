@@ -13,7 +13,6 @@
 --
 -- Die Rechnung dazu: `dokumente/BAUSYSTEM.md`.
 
-compiler cc -std=c11 -Wall -Wextra -Werror
 out      target/bau-beispiel
 
 -- EINE Einheit aus zwei Dateien. Genau das ist der Linkschritt: die Frage, welche Dateien

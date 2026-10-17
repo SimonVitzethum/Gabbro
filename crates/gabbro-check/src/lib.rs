@@ -46,7 +46,6 @@ pub mod m2;
 pub mod m3;
 pub mod paarung;
 pub mod gruppe;
-pub mod emit;
 /// **LLVM-Backend (2026-10-14): Gabbro → LLVM-IR-Text für AArch64 und x86-64.**
 /// Unvertraut wie `emit`: der Prüfer läuft davor, verweigert wird mit `Y101`–`Y106`.
 /// Kein `unsafe`, keine Abhängigkeit — die Datei schreibt Text, `clang` übersetzt ihn.
@@ -221,11 +220,8 @@ pub mod zeugnis;
 // Unwired pending their hooks (central assembly): `certemit` prints
 // CertExpr validity certificates, `corrcert` collects per-run
 // correspondence rows, `kostenledger` renders the ops/deadline ledger.
-pub mod certemit;
 pub mod certstmt;
-pub mod corrcert;
 pub mod corrlean;
-pub mod kostenledger;
 pub mod zeremonie;
 /// Bounded-string length discipline (lane 256): specified, not wired.
 pub mod zeichenfolge;

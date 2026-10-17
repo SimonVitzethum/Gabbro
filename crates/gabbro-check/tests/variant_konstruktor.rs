@@ -44,29 +44,6 @@ fn errors(source: &str) -> Vec<String> {
         .collect()
 }
 
-fn emitted(source: &str) -> (String, Vec<String>) {
-    let (tree, mut refusals) = gabbro_syntax::lies("variant_konstruktor", source);
-    let _ = gabbro_check::pruefe(&tree, &mut refusals);
-    let fall: Vec<String> = refusals
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect();
-    assert!(
-        fall.is_empty(),
-        "the positive probe does not check clean -- fell with {fall:?}"
-    );
-    let c = gabbro_check::emit::emittiere(&tree, &mut refusals);
-    let nachher: Vec<String> = refusals
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code.to_string())
-        .collect();
-    (c, nachher)
-}
-
 const HEAD: &str =
     "module test::variante {\ntagged type Nachricht = { Leer, Kurz(u32), Lang(u64) };\n";
 
@@ -97,61 +74,6 @@ fn n284_labelled_variant_call_falls() {
     assert!(
         gefallen.contains(&"N284".to_string()),
         "labels exist only at a record constructor -- fell with {gefallen:?}"
-    );
-}
-
-#[test]
-fn bare_nullary_case_checks_clean_and_lowers() {
-    let src = unit(
-        "impl fn baue() -> Nachricht effects { pure } costs <= 4 ops \
-         { return Leer; }\n",
-    );
-    let (c, nachher) = emitted(&src);
-    assert!(
-        nachher.is_empty(),
-        "the bare case emits without refusal -- fell with {nachher:?}"
-    );
-    assert!(
-        c.contains("(Nachricht){ .marke = Nachricht_Leer }"),
-        "the bare case lowers to the mark alone:\n{c}"
-    );
-}
-
-#[test]
-fn nullary_call_form_checks_clean_and_lowers() {
-    let src = unit(
-        "impl fn baue() -> Nachricht effects { pure } costs <= 4 ops \
-         { return Leer(); }\n",
-    );
-    let (c, nachher) = emitted(&src);
-    assert!(
-        nachher.is_empty(),
-        "the nullary call emits without refusal -- fell with {nachher:?}"
-    );
-    assert!(
-        c.contains("(Nachricht){ .marke = Nachricht_Leer }"),
-        "the nullary call lowers to the same literal as the bare name:\n{c}"
-    );
-}
-
-#[test]
-fn function_of_the_same_name_wins() {
-    // `Kurz` is both a function and a case here. The checker reads the call as
-    // the call it always read -- and the emitter must agree, or the C answers a
-    // different callee than the checker typed.
-    let src = "module test::variante {\n\
-         tagged type Nachricht = { Leer, Kurz(u32) };\n\
-         impl fn Kurz(x : u32) -> u32 effects { pure } costs <= 1 ops { return x; }\n\
-         impl fn baue(x : u32) -> u32 effects { pure } costs <= 8 ops { return Kurz(x); }\n\
-         }\n";
-    let (c, nachher) = emitted(src);
-    assert!(
-        nachher.is_empty(),
-        "the function reading emits without refusal -- fell with {nachher:?}"
-    );
-    assert!(
-        c.contains("return Kurz(x);") && !c.contains(".last.Kurz"),
-        "the call stays the call, not the literal:\n{c}"
     );
 }
 

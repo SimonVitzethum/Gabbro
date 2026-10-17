@@ -27,17 +27,6 @@ fn errors(source: &str) -> Vec<&'static str> {
         .collect()
 }
 
-fn emit_clean(source: &str) -> String {
-    let (baum, mut absagen) = gabbro_syntax::lies("<probe>", source);
-    let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    assert!(
-        absagen.fehler_zahl() == 0,
-        "emits only what checks:\n{}",
-        absagen.zeige(source)
-    );
-    gabbro_check::emit::emittiere(&baum, &mut absagen)
-}
-
 /// The summing library of `beispiele/106`: the region fills the four rows
 /// of `SumTab`, the call passes one argument short, the function answers
 /// the unrolled sum.
@@ -75,45 +64,6 @@ fn rufer(rumpf: &str) -> String {
     )
 }
 
-#[test]
-fn translation_end_to_end_accepts_and_lowers() {
-    let quelle = rufer("let s = @summe#sum() { 10 20 30 40 };\n    return s;");
-    assert!(
-        errors(&quelle).is_empty(),
-        "the translated call passes:\n{}",
-        quelle
-    );
-    let c = emit_clean(&quelle);
-    assert!(
-        c.contains("static const SumTab"),
-        "the payload stands in the C as a static const table:\n{c}"
-    );
-    assert!(
-        c.contains("&sum__nutzlast_"),
-        "the call passes the payload table:\n{c}"
-    );
-    assert!(
-        c.contains("sum(&sum__nutzlast_"),
-        "the payload is the call's argument:\n{c}"
-    );
-}
-
-#[test]
-fn translation_two_calls_get_two_payload_tables() {
-    let quelle = rufer("@summe#sum() { 1 2 3 4 };\n    let s = @summe#sum() { 2 4 6 8 };\n    return s;");
-    assert!(
-        errors(&quelle).is_empty(),
-        "both calls translate:\n{}",
-        quelle
-    );
-    let c = emit_clean(&quelle);
-    assert_eq!(
-        c.matches("static const SumTab").count(),
-        2,
-        "one payload table per call site, named by call span:\n{c}"
-    );
-}
-
 fn baue_und_laufe(c: &str, haupt: &str) -> String {
     let d = std::env::var("TMPDIR")
         .map(std::path::PathBuf::from)
@@ -149,23 +99,6 @@ fn baue_und_laufe(c: &str, haupt: &str) -> String {
     let _ = std::fs::remove_file(&c_path);
     let _ = std::fs::remove_file(&bin_path);
     ausgabe
-}
-
-#[test]
-fn translation_emitted_sum_runs() {
-    let quelle = rufer("let s = @summe#sum() { 10 20 30 40 };\n    return s;");
-    let c = emit_clean(&quelle);
-    let ausgabe = baue_und_laufe(
-        &c,
-        "\n#include <stdio.h>\n\nint main(void) {\n\
-        \x20   printf(\"%u\\n\", hole());\n\
-        \x20   return 0;\n}\n",
-    );
-    assert_eq!(
-        ausgabe.trim(),
-        "100",
-        "the translated region sums at run time: 10 + 20 + 30 + 40"
-    );
 }
 
 // -- the certificate: printed payload meets the Lean witness -----------------

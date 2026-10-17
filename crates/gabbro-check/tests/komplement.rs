@@ -37,35 +37,6 @@ fn wurzel() -> PathBuf {
         .to_path_buf()
 }
 
-/// The emitted C of `beispiele/61-invertierung.gab` -- and the checker has to stay silent
-/// first, or this file measures a program that was never accepted.
-fn erzeugtes_c() -> String {
-    emittiere("61-invertierung.gab")
-}
-
-/// The emitted C of one clean example under `beispiele/`.
-fn emittiere(datei: &str) -> String {
-    let pfad = wurzel().join("beispiele").join(datei);
-    let quelle = std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{datei}: {e}"));
-    let (baum, mut absagen) = gabbro_syntax::lies(&pfad.display().to_string(), &quelle);
-    let _ = gabbro_check::pruefe(&baum, &mut absagen);
-    let fehler: Vec<&str> = absagen
-        .absagen
-        .iter()
-        .filter(|a| a.stufe == Stufe::Fehler)
-        .map(|a| a.code)
-        .collect();
-    assert!(
-        fehler.is_empty(),
-        "the complement probe is REFUSED ({fehler:?}) -- then the run below it measures \
-         nothing:\n{}",
-        absagen.zeige(&quelle)
-    );
-    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
-    assert!(!c.is_empty(), "the complement probe emits NOTHING -- nothing measured");
-    c
-}
-
 const TREIBER: &str = r#"
 #include <stdio.h>
 
@@ -94,144 +65,6 @@ int main(void) {
 }
 "#;
 
-/// **The poison probe, and it RUNS.**
-///
-/// Compiles the emitted C with exactly the command stage 9 of `pruefe-emission.sh` uses,
-/// executes it and demands every one of the eight numbers. *Against an emitter without the
-/// outer cast the `verbreiterung` row falls with `4294905615`* -- and `cc` compiles that
-/// version without a single warning.
-#[test]
-fn das_ausgelieferte_c_komplementiert_in_der_erklaerten_breite() {
-    let mut c = erzeugtes_c();
-    c.push_str(TREIBER);
-
-    let d = std::env::temp_dir().join("gabbro-komplement");
-    std::fs::create_dir_all(&d).expect("the work directory is writable");
-    let quelle = d.join("lauf.c");
-    let ziel = d.join("lauf");
-    std::fs::write(&quelle, &c).expect("the emitted C is writable");
-
-    let bau = Command::new("cc")
-        .args(["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror"])
-        .arg("-o")
-        .arg(&ziel)
-        .arg(&quelle)
-        .output();
-    let bau = match bau {
-        Ok(r) => r,
-        // **A missing `cc` is a missing measurement, never a green one** (W1).
-        Err(e) => panic!("`cc` cannot be started ({e}) -- NOTHING measured"),
-    };
-    assert!(
-        bau.status.success(),
-        "the emitted C does not compile under `-Wall -Wextra -Werror`:\n{}\n{}",
-        String::from_utf8_lossy(&bau.stderr),
-        quelle.display()
-    );
-
-    let lauf = Command::new(&ziel)
-        .output()
-        .unwrap_or_else(|e| panic!("the compiled program does not run ({e}) -- NOTHING measured"));
-    assert!(lauf.status.success(), "the compiled program aborts");
-    let aus = String::from_utf8_lossy(&lauf.stdout);
-    assert!(
-        aus.contains("geprueft=8 abweichungen=0"),
-        "the shipped C computes something other than what was checked:\n{aus}"
-    );
-    let _ = std::fs::remove_file(&quelle);
-    let _ = std::fs::remove_file(&ziel);
-}
-
-/// **The counter-probe: the text, pinned in BOTH directions.**
-///
-/// The run above dies on an emitter that casts too LITTLE. It does not die on one that casts
-/// too much -- `(uint64_t)~(uint64_t)(x)` over a `u16` computes the same number as long as
-/// the return type cuts it back, and would be wrong all the same. So every row here says
-/// which width must stand at which site.
-#[test]
-fn der_cast_traegt_die_breite_des_operanden_und_keine_andere() {
-    let c = erzeugtes_c();
-    for (zeile, gemeint) in [
-        ("(uint8_t)~(uint8_t)(m)", "the `u8` case casts to `uint8_t`"),
-        ("(uint16_t)~(uint16_t)(c)", "the `u16` case casts to `uint16_t`"),
-        ("(uint32_t)~(uint32_t)(m)", "the `u32` case casts to `uint32_t`"),
-        ("a & (uint16_t)~(uint16_t)(b)", "`a & ~b` brackets the complement, not the and"),
-        ("(uint16_t)~(uint16_t)(b) == 3855", "the comparison cuts back BEFORE comparing"),
-        ("uint32_t w = (uint16_t)~(uint16_t)(b);", "the widening cuts back BEFORE assigning"),
-    ] {
-        assert!(
-            c.contains(zeile),
-            "the emitted C does not carry `{zeile}` -- {gemeint}:\n{c}"
-        );
-    }
-    // **And no bare `~` anywhere.** Without this line an emitter would stay green that
-    // writes the six forms above and puts a seventh beside them without a cast.
-    for zeile in c.lines() {
-        if let Some(i) = zeile.find('~') {
-            assert!(
-                zeile[..i].ends_with(')'),
-                "a `~` with no cast before it -- the integer promotion then decides the \
-                 width:\n{zeile}"
-            );
-        }
-    }
-}
-
-/// **`u32::max` in an EXPRESSION -- the second half of the same item.**
-///
-/// The `const` path folded it correctly from day one (`#define G 4294967295u`); the
-/// expression path lowered it as a PLACE and wrote `w ^ u32->max`, which `cc` rejects as an
-/// undeclared `u32`. **And M1 gave the form no type at all**, so the width rule that catches
-/// the same mask spelled `4294967295` never ran.
-///
-/// The probe compiles the example and RUNS it, because a text probe alone would pass over an
-/// emitter that folds `u32::max` to some other number.
-#[test]
-fn ein_benannter_grenzwert_ist_eine_zahl_und_kein_ort() {
-    let mut c = emittiere("62-grenzwort-im-ausdruck.gab");
-    assert!(
-        !c.contains("u32->max") && !c.contains("->min"),
-        "a limit word lowered as a PLACE:\n{c}"
-    );
-    // `i32::min` carries no `u` -- `-2147483648u` would be another number, not just ugly.
-    assert!(c.contains("(-2147483648)"), "`i32::min` needs no `u` suffix:\n{c}");
-    assert!(c.contains("4294967295u"), "`u32::max` folds to its value:\n{c}");
-    c.push_str(GRENZTREIBER);
-
-    let d = std::env::temp_dir().join("gabbro-grenzwort");
-    std::fs::create_dir_all(&d).expect("the work directory is writable");
-    let quelle = d.join("lauf.c");
-    let ziel = d.join("lauf");
-    std::fs::write(&quelle, &c).expect("the emitted C is writable");
-    let bau = Command::new("cc")
-        .args(["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror"])
-        .arg("-o")
-        .arg(&ziel)
-        .arg(&quelle)
-        .output();
-    let bau = match bau {
-        Ok(r) => r,
-        Err(e) => panic!("`cc` cannot be started ({e}) -- NOTHING measured"),
-    };
-    assert!(
-        bau.status.success(),
-        "the emitted C does not compile under `-Wall -Wextra -Werror`:\n{}\n{}",
-        String::from_utf8_lossy(&bau.stderr),
-        quelle.display()
-    );
-    let lauf = Command::new(&ziel)
-        .output()
-        .unwrap_or_else(|e| panic!("the compiled program does not run ({e}) -- NOTHING measured"));
-    assert!(lauf.status.success(), "the compiled program aborts");
-    let aus = String::from_utf8_lossy(&lauf.stdout);
-    assert!(
-        aus.contains("geprueft=6 abweichungen=0"),
-        "the shipped C computes something other than what was checked:\n{aus}"
-    );
-    let _ = std::fs::remove_file(&quelle);
-    let _ = std::fs::remove_file(&ziel);
-}
-
 const GRENZTREIBER: &str = r#"
 #include <stdio.h>
 
@@ -254,62 +87,6 @@ int main(void) {
 }
 "#;
 
-/// **The third half of the same item: a read-modify-write on a W1C word.**
-///
-/// `beispiele/45` declares `FSTS` as `class rw` with two `w1c` fields, and until 2026-09-01
-/// its acknowledgement of `PFO` lowered to a read-modify-write. On the hardware that word
-/// describes, **writing a one CLEARS**: the read picks up every error bit standing, the
-/// write-back sets those ones again, and each of them clears. *Acknowledging one bit
-/// acknowledged all of them, and every pass was green.*
-///
-/// The probe RUNS the emitted C over a plain buffer, because that is enough to separate the
-/// two lowerings: with the whole-word write the buffer afterwards holds exactly bit 0 (a one
-/// aimed at `PFO` alone); with the read-modify-write it holds `0b11` -- a one aimed at `PPF`
-/// as well, which on the real device is the silently swallowed error.
-#[test]
-fn eine_w1c_quittierung_schreibt_das_ganze_wort_ohne_zu_lesen() {
-    let mut c = emittiere("45-gemischte-registerklasse.gab");
-    assert!(
-        !c.contains("uint32_t _v = "),
-        "the acknowledgement still READS the word before writing it:\n{c}"
-    );
-    c.push_str(W1CTREIBER);
-
-    let d = std::env::temp_dir().join("gabbro-w1c");
-    std::fs::create_dir_all(&d).expect("the work directory is writable");
-    let quelle = d.join("lauf.c");
-    let ziel = d.join("lauf");
-    std::fs::write(&quelle, &c).expect("the emitted C is writable");
-    let bau = Command::new("cc")
-        .args(["-std=c11", "-O2", "-Wall", "-Wextra", "-Werror"])
-        .arg("-o")
-        .arg(&ziel)
-        .arg(&quelle)
-        .output();
-    let bau = match bau {
-        Ok(r) => r,
-        Err(e) => panic!("`cc` cannot be started ({e}) -- NOTHING measured"),
-    };
-    assert!(
-        bau.status.success(),
-        "the emitted C does not compile under `-Wall -Wextra -Werror`:\n{}\n{}",
-        String::from_utf8_lossy(&bau.stderr),
-        quelle.display()
-    );
-    let lauf = Command::new(&ziel)
-        .output()
-        .unwrap_or_else(|e| panic!("the compiled program does not run ({e}) -- NOTHING measured"));
-    assert!(lauf.status.success(), "the compiled program aborts");
-    let aus = String::from_utf8_lossy(&lauf.stdout);
-    assert!(
-        aus.contains("quittiert=1"),
-        "the acknowledgement aims a one at more than `PFO` -- on a W1C word every one of \
-         them clears:\n{aus}"
-    );
-    let _ = std::fs::remove_file(&quelle);
-    let _ = std::fs::remove_file(&ziel);
-}
-
 // ---------------------------------------------------------------------------------------
 // **No null spelling in the emitted C of `beispiele/38` -- lane 145.**
 //
@@ -328,25 +105,6 @@ fn eine_w1c_quittierung_schreibt_das_ganze_wort_ohne_zu_lesen() {
 // there, and no null spelling is. It falls in both directions -- a returning
 // `(uintptr_t)0`, or a lost store.
 // ---------------------------------------------------------------------------------------
-
-/// **The store survived, the null did not.**
-///
-/// The emitted C of the repaired `beispiele/38` still writes
-/// `tz->slots[i].a = 5;` through a pointer -- and holds no `(uintptr_t)0`
-/// anywhere, the spelling the null hid behind.
-#[test]
-fn no_null_spelling_in_example_38_emission() {
-    let c = emittiere("38-unveraenderlicher-zeiger.gab");
-    assert!(
-        c.contains("tz->slots[i].a = 5;"),
-        "the store through the pointer is gone -- then this probe measures nothing:\n{c}"
-    );
-    assert!(
-        !c.contains("(uintptr_t)0"),
-        "a null spelling stands in the emitted C, and the store below it dereferences \
-         it:\n{c}"
-    );
-}
 
 const W1CTREIBER: &str = r#"
 #include <stdio.h>

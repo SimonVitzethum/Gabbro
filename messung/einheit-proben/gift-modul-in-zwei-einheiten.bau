@@ -6,7 +6,6 @@
 -- Das muss abgesagt werden, und zwar BEIM NAMEN. Ueber den ganzen Baum ist ein Modulname
 -- nicht eindeutig (`module gift` gehoert 122 Dateien) -- innerhalb EINES Baus muss er es sein.
 
-compiler cc -std=c11 -Wall -Wextra -Werror
 out      target/bau-gift
 
 unit eins object

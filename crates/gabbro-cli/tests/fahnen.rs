@@ -171,11 +171,6 @@ const FAHNEN: &[Fahne] = &[
     },
     // --- English from the start, no pair ------------------------------------------------
     Fahne {
-        erstname: "--c-liste",
-        zweitname: "",
-        lebendig: &[],
-    },
-    Fahne {
         erstname: "--with",
         zweitname: "",
         lebendig: &[],
@@ -189,7 +184,7 @@ const FAHNEN: &[Fahne] = &[
     Fahne {
         erstname: "--target",
         zweitname: "",
-        lebendig: &["emit", "--target", "metal", "beispiele/163-systemruf-variablen.gab"],
+        lebendig: &["llvm", "--target", "metal", "beispiele/163-systemruf-variablen.gab"],
     },
     Fahne {
         erstname: "--isabelle",
@@ -226,13 +221,6 @@ const FAHNEN: &[Fahne] = &[
         zweitname: "--vorlage",
         // the template needs no Lean; without the flag the run wants one
         lebendig: &["prove", "--template", DATEI],
-    },
-    Fahne {
-        erstname: "--proved",
-        zweitname: "--mit-beweis",
-        // with the flag the gate measures first (and refuses where no Lean is at hand);
-        // without it the C is written
-        lebendig: &["emit", "--proved", DATEI],
     },
     Fahne {
         erstname: "--model",
@@ -333,7 +321,6 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["check", "pruefe"],
     &["link", "verbinde"],
     &["build", "bau"],
-    &["emit"],
     &["llvm"],
     &["llvm-cert"],
     &["fragments", "fragmente"],
@@ -355,7 +342,6 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["corr-lean"],
     &["ceremony", "zeremonie"],
     &["templates", "schablonen"],
-    &["runtime", "laufzeit"],
     &["passes", "paesse"],
     &["gabbrov"],
     &["--help", "help", "--hilfe", "-h", "hilfe"],
