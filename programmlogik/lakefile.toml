@@ -1,6 +1,8 @@
 name = "programmlogik"
 version = "0.1.0"
 defaultTargets = ["Gabbro"]
+# Weak args keep build traces. Elab.async elaborates theorem bodies in parallel (2026-10-17).
+weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true"]
 
 # Mathlib ALLOWED since 2026-09-10 (decision: the range arithmetic of the S4
 # checker-parity fixes needs order lemmas no finite hand-proof should duplicate).
