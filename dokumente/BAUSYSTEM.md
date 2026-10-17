@@ -1,93 +1,63 @@
-# Das Bausystem — die Rechnung vor dem Bau
+# The build system: `gabbro build`
 
-*Gerechnet am 2026-08-31, lokal (`free -g`: 31 GB gesamt, 12 GB verfügbar, 20 Kerne).
-**Diese Rechnung steht vor der ersten Zeile Code**, und die Messungen darin sind gegen den
-Baum gefahren und nicht geschätzt.*
+*Rewritten 2026-10-17 from the reckoning of 2026-08-31 (written before the first line of `bau.rs`) and what the
+build grew into. Code: `crates/gabbro-cli/src/bau.rs` (manifest, graph, fingerprints, entry rules) and
+`treiber.rs` (the generated drivers and runtimes). Tests: `crates/gabbro-cli/tests/{bausystem,zweieinheiten,eintritt,
+verbund,onramp}.rs`.*
 
-Der Nutzer hat die Bauart gesetzt: **Cargo-artig mit Manifest, nicht Meson-artig als
-Generator.** Die Gründe stehen in der Sprache und nicht im Geschmack:
+**Which backend this drives.** `gabbro build` is the build of the **legacy C11 path**: it emits C per unit
+(`C-SPEICHERMODELL.md`), compiles it with the manifest's `compiler` line, links, and writes the generated drivers.
+The LLVM backend ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)) is not reachable through a manifest today: it is driven by
+`gabbro llvm [--unit]` and `instrumente/baue-llvm.sh`. A manifest word that selects the backend does not exist.
 
-* **`when TESTBUILD`** ist ein Sprachkonstrukt (`beispiele/52-baugatter.gab`), keine
-  Übersetzerfahne.
-* **`arch x86_64`** steht an `entry`, an `boot` und an `entrust` — gemessen: 11 Dateien tragen
-  ein `entry`, und `arch x86_64` steht in **jeder** dieser Formen in der Quelle. *Die
-  Zielarchitektur ist eine Aussage der Quelle.*
-* **`gabbro emit a.gab b.gab` erzeugt schon EINE Übersetzungseinheit** — der Linkschritt ist in
-  Wahrheit die Frage *welche Dateien bilden eine Einheit*.
+## 1. The decision: Cargo-like with a manifest, not a generator
 
----
+The reasons are in the language, not in taste:
 
-## 1. Die Frage, die alles entscheidet: **was steht schon in der Quelle?**
+* `when TESTBUILD` is a language construct (`beispiele/52-baugatter.gab`), not a compiler flag.
+* `arch x86_64` stands on `entry`, `boot` and `entrust`: the target architecture is a statement of the source.
+* `gabbro emit a.gab b.gab --unit` already produces ONE translation unit; the link step is really the question
+  *which files form a unit*.
 
-`W7` sagt: *ein zweites Register über derselben Sache.* Ein Manifest, das die Abhängigkeiten
-noch einmal aufschreibt, ist genau der Fehler — die `use`-Kanten stehen schon in den Dateien.
+**What stands in the source and what does not.** A second register over the same thing is `W7`, and a manifest that
+rewrites the dependencies is exactly that: the `use` edges are already in the files.
 
-**Also die Gegenfrage:** was steht **nicht** in der Quelle, und ist deshalb unvermeidlich?
-
-| Größe | steht in der Quelle? | wo |
+| Quantity | In the source? | Where |
 |---|---|---|
-| der Modulname einer Datei | **ja** | `module X { … }` |
-| die Abhängigkeitskanten | **ja** | `use a::b::C;` |
-| die Zielarchitektur | **ja** | `arch x86_64` an `entry`/`boot`/`entrust` |
-| die bedingte Übersetzung | **ja** | `when TESTBUILD` |
-| die Wirkungen, Kosten, Sperren | **ja** | `effects`/`costs`/`locks` |
-| **welche Dateien es gibt** | **nein** | — eine Datei kennt ihre Geschwister nicht |
-| **welche Dateien EINE Einheit bilden** | **nein** | — |
-| **welcher fremde Übersetzer, mit welchen Fahnen** | **nein** | — keine Sprachfrage |
-| **was das Erzeugnis ist** (Programm/Bibliothek) | **nein** | — |
+| a file's module name | yes | `module X { ... }` |
+| dependency edges | yes | `use a::b::C;` |
+| target architecture | yes | `arch ...` |
+| conditional translation | yes | `when TESTBUILD` |
+| effects, costs, locks | yes | `effects`/`costs`/`locks` |
+| **which files exist** | **no** | a file does not know its siblings |
+| **which files form ONE unit** | **no** | |
+| **which foreign compiler, with which flags** | **no** | not a language question |
+| **what the product is** (object, program, module) | **no** | |
 
-**Vier Zeilen ohne Vertreter in der Quelle. Das ist das Manifest, und mehr nicht.**
+Four lines without a representative in the source: that is the manifest, and nothing more.
 
-## 2. Die Messung, die die naheliegende Abkürzung widerlegt
-
-Die naheliegende Bauart wäre: *das Manifest nennt nur ein Verzeichnis, und der Modulname folgt
-dem Dateinamen* — dann bräuchte es die Dateiliste auch nicht. **Gemessen über alle 491
-`.gab`-Dateien:**
-
-| Größe | Zahl |
-|---|---|
-| Dateien gesamt | **491** |
-| ohne jedes `module` | **2** |
-| mit `module` | **489** |
-| davon: Dateiname **=** Modulname | **16** |
-| davon: Dateiname **≠** Modulname | **473** |
-| Dateien mit **mehr als einem** `module` | **9** |
-| Modulnamen, die **mehr als eine** Datei führt | **14** |
-
-Die Spitze der letzten Zeile: **`module gift` steht in 122 Dateien.** Dann `p` (5), `eins` (3),
-`zwei` (3), und `speicher`, `geraet`, `mischt`, `nutzer`, `a`, `b` je zweimal.
-
-> **Zwei Schlüsse, beide gemessen und nicht gewählt:**
->
-> 1. **Eine Konvention „Modulname = Dateiname" ist widerlegt** — 473 Gegenbeispiele gegen 16
->    Treffer. Das Manifest muss die **Dateien** nennen.
-> 2. **Eine GLOBALE Modul→Datei-Karte ist unmöglich.** `module gift` gehört 122 Dateien; eine
->    Karte über den ganzen Baum hätte 122 Kandidaten für einen Namen. **Ein Modulname ist nur
->    INNERHALB einer Einheit eindeutig** — und `N039` sagt genau das ab, wenn er es nicht ist.
-
-**Daraus folgt die ganze Bauart:**
+**Measured on 2026-08-31 (491 `.gab` files; the tree has 1,339 now, the argument does not move):** only 16 files
+carry the module name their file name suggests, 473 do not; 14 module names belong to more than one file, `module gift`
+to 122 of them. So "module name = file name" is refuted (the manifest must name the FILES), and a GLOBAL module-to-file
+map is impossible: a module name is unique only INSIDE a unit (`N039` says it when it is not). Hence:
 
 ```
-Das Manifest nennt DATEIEN je Einheit.
-Der Bau LIEST die Dateien und rechnet daraus:
-    Datei -> Modul     (aus `module`)
-    Modul -> Einheit   (aus der Zuordnung oben)
-    Einheit -> Einheit (aus `use`, über die Modulkarte)
+the manifest names FILES per unit; the build READS them and computes
+    file -> module (from `module`), module -> unit (from the manifest), unit -> unit (from `use`)
 ```
 
-*Die Kanten werden gerechnet, nie geschrieben.* Wer sie ins Manifest schriebe, hätte ein
-zweites Register über den `use`-Zeilen — und das erste Mal, dass eine `use`-Zeile hinzukommt
-und die Manifestzeile nicht, baut der Bau aus einer Mischung. **Dieselbe Klasse wie `rsync -a`
-gegen `cargo`.**
+*Edges are computed, never written.* A manifest that wrote them would be a second register over the `use` lines, and
+the first time a `use` is added and the manifest line is not, the build would build out of a mixture.
 
-## 3. Was das Manifest trägt — vier Zeilenarten
+## 2. The manifest
+
+Line-oriented, `--` comments, **the indent is the whole syntax**: an indented line is one file of the unit above it.
+Every refusal names its line number; the build never guesses what a manifest meant. The manifest has no optional line
+that a program needs beyond `compiler`, `out`, `unit` and the indented files (`gabbro new <name>` writes a working pair,
+`<name>.gab` plus `<name>.bau`, that check, build and run as written; `dokumente/TUTORIAL.md` is the long form).
 
 ```
--- gabbro.bau -- das Baumanifest.
---
--- Was hier NICHT steht: Abhaengigkeiten, Architektur, Baugatter, Modulnamen.
--- Alles vier steht in den Quellen und wird von dort gelesen.
-
+-- gabbro.bau
 compiler cc -std=c11 -Wall -Wextra -Werror
 out      target/bau
 
@@ -96,328 +66,143 @@ unit lager program
     programmlogik/beispiel/betrieb.gab
 ```
 
-| Zeile | warum sie unvermeidlich ist |
+| Word | Meaning |
 |---|---|
-| `compiler …` | der fremde Übersetzer und seine Fahnen — keine Sprachfrage |
-| `out …` | wohin die Erzeugnisse gehen — keine Sprachfrage |
-| `unit <name> <art>` | **welche Dateien eine Einheit bilden** — der eigentliche Linkschritt |
-| eingerückte Pfade | die Dateien der Einheit — 473 Gegenbeispiele gegen jede Konvention |
-| `metal <dir>` | the bare-metal runtime (`laufzeit/metall`). With it the build links `<unit>.metall.elf` itself (Opus agent J). Since 2026-10-05 (C-free lane, C3 slice 1) the build also WRITES the image's arena runtime (in `<unit>.metall.c`, templates `arena.modul`/`arena.metall`), its four memory functions (`<unit>.metall.speicher.c`, `metall.speicher`) and its `<math.h>`/`<string.h>` (`<unit>.metall-include/`); `gabbro runtime metal-arena`, `metal-memory`, `metal-include <dir>` print the same text for a harness |
-| `nolibc` | a process WITHOUT a C library (C-free lane, 2026-09-30): the build writes the entry `_start` (template `start.nolibc`) and links `-nostdlib -static`; the `compiler` line must say `-ffreestanding` (and `-fno-stack-protector`, whose runtime is libc's). The entry knows no system call: it calls the unit's `gabbro_os_anfang()` first when the unit defines it (no C constructor runs without libc), then `main`; a `main` that is not `-> never` must answer its status, which the entry hands to the unit's `gabbro_os_ende(code)` -- a `-> never` function of the program's binding. A unit that offers neither end is refused before any C (`bau.rs::eintrittsregel`). **A `program` whose unit declares roots** (`concurrent`) is entered by its GENERATED driver (since 2026-10-01): the build compiles `<unit>.treiber.c` (it includes the emitted unit) and links it as the process, so a concurrent program runs without a C library too -- and a `main` of the unit's own beside the roots is refused (the roots would never run) |
-| `kmod <kernel build dir> <load symbol> <unload symbol>` | the kernel's own build tree (`/lib/modules/<release>/build`) and the two symbols its module loader calls (for Linux `init_module cleanup_module`). **All three are named, none is guessed**: a path baked in here would be a fact about one machine, an entry name a fact about one kernel (server lane, 2026-09-28; since the C-free lane's C2, 2026-09-30, the module RUNTIME is no directory any more -- the build writes it) |
-| `provision <bytes>` | the static storage of each dynamic arena of a `module` unit, a positive multiple of 4096 (C-free lane, C2). Required when a module unit declares an arena; the span of an arena is `min(max * elem, provision)`, a `grow` past it answers `false` (refuse-on-full below the ceiling) |
-| `note <section> <text>` | a read-only string the module carries in a named section, e.g. `note .modinfo license=Dual MIT/GPL` (C-free lane, C2). Printable ASCII without `"` and `\`; the section name is letters, digits and `. _ - $` |
+| `compiler <cc> <flags>` | the foreign compiler and its flags (the whole line enters the fingerprint: another flag is another artefact) |
+| `out <dir>` | where the products go |
+| `unit <name> <object\|program>` | the unit's art: `object` compiles, `program` links (not a language question, hence in the manifest) |
+| `unit <name> module <init> <exit>` | the third art: a loadable Linux kernel module whose two loader entry points are the named functions (below) |
+| indented path | a file of the unit; a `.c` path is a foreign body for an `extern fn` the program declared; a `.h` (module units only) replaces one of the module's generated headers |
+| `nolibc` | the `program` units are Linux x86-64 processes WITHOUT a C library: linked `-nostdlib -static`, entered by a generated `_start` (template `start.nolibc`); the `compiler` line must carry `-ffreestanding` and `-fno-stack-protector`; the entry knows no system call: it calls the unit's `gabbro_os_anfang()` first when defined, then `main`, and hands a returned status to the unit's `gabbro_os_ende(code)`; a unit offering neither end is refused before any C (`eintrittsregel`) |
+| `metal <dir>` | the bare-metal runtime directory (`laufzeit/metall`): the build links `<unit>.metall.elf` itself, and WRITES the image's arena runtime (`<unit>.metall.c`), memory functions (`<unit>.metall.speicher.c`) and `<math.h>`/`<string.h>` headers |
+| `kmod <kernel build dir> <load symbol> <unload symbol>` | the kernel's own build tree and the two symbols its loader calls (for Linux `init_module cleanup_module`); all three named, none guessed |
+| `provision <bytes>` | static storage of each dynamic arena of a `module` unit, a positive multiple of 4096; a `grow` past it answers `false` |
+| `note <section> <text>` | a read-only string a module carries in a named section (e.g. `note .modinfo license=Dual MIT/GPL`) |
 
-**The third art: `unit <name> module <init> <exit>`** (server lane, 2026-09-28, TODO §0e K4).
-The unit becomes a loadable Linux kernel module: `gabbro build` writes the `Kbuild`, the module
-DRIVER (`treiber.rs::erzeuge_kmod`: the loader's two entry points, the arena pools, the lock
-primitives, one thread per root; templates `modul.lebenslauf` and `arena.modul`, proved in
-`grammatik/Grammatik/Bausteine/Schablonen/SchablonenModul.lean`) and the C type headers the kernel's `-nostdinc`
-build lacks (generated from the compiler's predefined types; `<stdatomic.h>` over its C11
-builtins), copies the emitted C beside them, and calls `make -C <kernel build dir> M=<dir>
-modules`. The artefact is `<unit>.ko`. **No handwritten C of Gabbro's is in it** (C-free lane,
-C2): the kernel calls are the program's binding (`bibliothek/linux-kmod`).
+**Why `kmod`'s calls stand in the manifest.** A Linux module is entered by a call, not by a vector, so `entry ... vector`
+is the wrong word, and what the product IS has no representative in the source. The same `.gab` becomes an object, a
+program or a module depending on this line alone. The load verdict is the init function's answer (0 loads); the build
+refuses an init that answers nothing, takes an argument, is not declared, or shares its name with the exit, and a module
+unit that declares the hosted entry `pub fn main`.
 
-* **Why the two calls stand in the MANIFEST and not in the source.** A Linux module is entered
-  by a call, not by a vector, so `entry … vector V` — the interrupt form — is the wrong word for
-  it, and *what the product IS has no representative in the source* (§1 above). The same `.gab`
-  becomes an object, a program or a module depending on this line alone.
-* **The init function's answer is the load verdict**: 0 loads, anything else refuses the load
-  and nothing of the unit stays resident. So the build refuses an init that answers nothing —
-  a `void` one would make every load succeed — one that takes an argument, one the unit does
-  not declare, and the same name for both calls. A `module` unit declaring the hosted entry
-  (`pub fn main`) is refused too: the loader never calls it.
-* **A unit's own C bodies**: a `.c` path in a module unit's file list is a foreign body — the
-  body of an `extern fn` the program declared. That is how a kernel call enters the artefact:
-  *what the program calls, the program declares*, and nothing about Linux enters this tree
-  (`TODO.md` §-1). Outside a module unit a `.c` file is refused, because a hosted program with
-  a foreign body is a gap of its own and naming it would be a promise the build does not keep.
-* **The arenas are NOT in the manifest** (only their storage size, `provision`). The emitted
-  unit carries `#define GABBRO_ARENEN` — the emitter knows which descriptors it wrote — and the
-  driver binds exactly that list, one static pool each.
-  A manifest that repeated it would be the second register over one fact (`W7`), and the one
-  nobody reads is the one that drifts.
-* Measured where it can only be measured: `instrumente/pruefe-kernelmodul.sh` builds the probe
-  through `gabbro build` and loads it **in QEMU**, never into the host's kernel.
+**Not a Gabbro file, on purpose.** A manifest describes no unit (no `module`, effects or costs); writing it as Gabbro
+would invent item kinds the language does not have, the direction `W24` stands against. (`gabbro abi` writes `.gabi` as
+Gabbro because an interface DOES describe a unit.)
 
-**Kein Format zum zweiten Mal:** das ist bewusst *kein* Gabbro-Quelltext. `gabbro abi`
-schreibt `.gabi` als gültigen Gabbro-Text, weil eine Schnittstelle **eine Einheit beschreibt**
-und dieselben Pässe durchlaufen soll. Ein Baumanifest beschreibt keine Einheit — es hat kein
-`module`, keine Wirkungen und keine Kosten. *Es als Gabbro zu schreiben hieße, Itemarten zu
-erfinden, die die Sprache nicht hat*, und die Sprache um des Bausystems willen zu erweitern
-ist die Richtung, gegen die W24 steht.
+## 3. What the build generates (no handwritten C of Gabbro's)
 
-## 4. Inkrementell nach INHALT, nicht nach Zeitstempel
+Everything a finished binary needs beyond the emitted unit is written by the build from proved templates, over the
+program's OWN binding (`bibliothek/linux/linux.gab` for hosted programs, `bibliothek/linux-kmod/` for modules): an OS
+call is a `syscall` item the program declares, and nothing in the build knows an operating system.
 
-`CLAUDE.md` trägt **zwei** Fallen dieser Klasse, und beide in verschiedene Richtungen:
+| Product | Written by the build | Template (Lean `Bausteine/Schablonen/`) |
+|---|---|---|
+| hosted driver `<unit>.treiber.c` for units with roots (`concurrent`): one wrapper per root, one thread per root, join all, the never-spawned idle root, lock primitives, dynamic-arena reservation | `treiber.rs::erzeuge`, versioned `GENERATOR_KENNUNG` (a template change with unchanged sources rebuilds once) | `sperre.ticket`, `faden.laufzeit`, `arena.dyn`, `tor.trampolin` |
+| process entry for `nolibc` | `prozess_start` | `start.nolibc` |
+| kernel-module driver (Kbuild, loader entry points, arena pools, lock primitives, one kernel thread per root, `<stdatomic.h>` over the compiler's C11 builtins) | `treiber.rs::erzeuge_kmod`, then `make -C <kernel build dir> M=<dir> modules` -> `<unit>.ko` | `modul.lebenslauf`, `arena.modul`, `faden.modul` |
+| bare-metal image (arena runtime, memory functions, thread runtime, IDT, headers) | `metall_bild_binden` | `metall.speicher`, `arena.metall`, `faden.metall`, `idt.metall` |
 
-* `rsync -a` gegen `cargo`: der Zeitstempel **log**, und `cargo` baute aus einer Mischung.
-* Der Riegel nach `abnahme.py --voll`: der Zeitstempel **sagte die Wahrheit** über etwas, das
-  keine Rolle spielte, und meldete einen grünen Baum rot.
+`gabbro runtime arena|threads|metal-arena|metal-memory|metal-threads|metal-idt|metal-include <dir>` prints the same
+text for a harness. A `.c` path in any unit's list is the body of an `extern fn` the program declared: a module unit compiles it into the
+module, a non-module unit compiles it beside its own object (`<unit>.fremd<N>.o`) and a `program` links it; a `.h` is the
+module include mechanism and is refused elsewhere. The arenas are NOT in the manifest (only their storage `provision`): the emitted unit
+carries `#define GABBRO_ARENEN`, and the driver binds exactly that list (`W7`).
 
-> *Ein Werkzeug, das die Zeit misst statt den Inhalt, irrt in beide Richtungen.*
+Measured where it can only be measured: `instrumente/pruefe-kernelmodul.sh` builds the module probes through
+`gabbro build` and loads them **in QEMU, never into the host's kernel**; `instrumente/pruefe-os-bindung.sh` checks what
+the runtimes still take from the OS; `instrumente/pruefe-metall.sh`/`pruefe-freistehend.sh` the bare-metal stages.
 
-**Also der Inhalt.** Je Einheit ein Abdruck über:
+## 4. Incremental by CONTENT, not by timestamp
 
-1. den Inhalt **jeder** Quelldatei der Einheit (in Manifestreihenfolge),
-2. die Übersetzerzeile **mitsamt Fahnen** (eine andere Fahne ist ein anderes Erzeugnis),
-3. den Baumodus (`--testbuild` oder nicht — `when TESTBUILD` hängt daran).
+`CLAUDE.md` carries two traps of this class in opposite directions (`rsync -a` against `cargo`, where the timestamp
+lied; the lock after `abnahme.py --voll`, where it told the truth about something that did not matter). A tool that
+measures the time instead of the content errs both ways.
 
-Stimmt der Abdruck mit dem der letzten Aufzeichnung überein **und liegt das Erzeugnis vor**,
-wird nichts getan. *Das Vorliegen wird geprüft und nicht geglaubt* — sonst hätte ein
-gelöschtes Erzeugnis mit gültiger Aufzeichnung genau die Lücke, gegen die der ganze Abschnitt
-steht.
+Per unit the fingerprint covers: the content of every source file (manifest order), the compiler line with its flags, the
+build mode (`--testbuild` or not), **and the fingerprints of everything the unit rests on** (a change in a dependency's
+PRIVATE body does not move its `.gabi` and does move its object: without the chain a program would be reported current
+over a library it no longer contains), plus the driver generator's version and, for a bare-metal image, the runtime
+sources' bytes. If it matches the last record AND the product is present, nothing is done (*presence is checked, not
+believed*). FNV-1a, 64 bit, by hand: not cryptographic, and not meant to be (it guards an accidentally unchanged product,
+not a collision-seeker).
 
-**Der Abdruck ist FNV-1a, 64 Bit, von Hand** — dieselbe Bauart wie `abdruck` in `main.rs`, nur
-breiter. *Und er ist ausdrücklich nicht kryptographisch:* er schützt gegen ein **versehentlich**
-unverändertes Erzeugnis, nicht gegen einen Angreifer, der eine Kollision sucht. Wer ihn für das
-Zweite hielte, hätte eine Zusage, die niemand gegeben hat. 32 Bit wie in `abdruck` wären hier
-zu schmal — der Abdruck steht dort in einer Ausgabe, die ein Mensch vergleicht, hier in einer
-Entscheidung, die eine Maschine trifft.
+## 5. Commands and the coverage line
 
-## 5. Die Deckungszeile — was gebaut wurde UND was nicht angesehen wurde
+```
+gabbro build [--testbuild] [--dry-run|--trocken|--c-liste] [<manifest>]    (German second name: bau)
+gabbro build <a.gab> <b.gab> ...       the link check only, nothing compiled (like `gabbro link`)
+gabbro new <name>                      a checking, building, running skeleton
+gabbro link [--with L.gabi]... <a.gab> <b.gab> ...   do the units make ONE program?
+```
 
-`abnahme.py` und `gabbro pruefe` drucken beide, was sie **nicht** geprüft haben. Ein Bau, der
-das nicht sagen kann, passt nicht in diesen Baum: *„nichts gefunden" und „nichts angesehen"
-sehen sonst gleich aus.*
-
-Der Bau druckt darum drei Zahlen und eine Liste:
+The build prints what it built AND what it did not look at, because "nothing found" and "nothing looked at" read alike:
 
 ```
 built 1 unit(s), 0 up to date, 0 refused
-NOT looked at: 489 `.gab` file(s) in this tree stand in no unit of this manifest
+NOT looked at: N `.gab` file(s) in this tree stand in no unit of this manifest
   the manifest is the reach -- a file no `unit` line names is not a file this build passed
 ```
 
-**Die dritte Zeile ist die wichtige.** Sie ist `Falle 80` in Werkzeugform: eine Zahl über einen
-Korpus, den man beim Bauen angesehen hat, ist keine Messung — und ein Bau, der 2 Dateien baut
-und 489 nicht ansieht, darf nicht wie ein Bau über den Baum aussehen.
+The manifest renders refusals through the same offset map as `pruefe --unit` (`main.rs::zeige_je_stueck`): file names and
+line numbers are the file's own, never the joined text's.
 
-## 6. Was diese Rechnung NICHT entscheidet
-
-* ~~**Wie eine Einheit gegen eine andere linkt.**~~ **Entschieden und gebaut am 2026-09-01:
-  als `.gabi`-Vorspann.** Der Grund steht nicht im Geschmack, sondern in der Prüfung: ein
-  C-Kopf trüge Typen und keine Verträge, und `effects`, `costs`, `requires` gingen genau da
-  verloren, wo sie geprüft werden müssten. Siehe den Abschnitt *„Die Kante, gebaut und
-  gelaufen"* am Ende.
-* **Ob `arch` über eine Einheit hinweg widerspruchsfrei sein muss.** Zwei Dateien einer Einheit
-  mit verschiedenen `arch` sind ungemessen.
-* **Was bei einem Zyklus zwischen Einheiten geschieht.** Der Graph kann einen tragen; ob er
-  abgesagt wird, steht offen.
-* **Nichts davon sagt, dass die Einheiten dieses Baums richtig geschnitten sind.** Das Manifest
-  sagt, was zusammengehört; **ob es zusammengehört, sagt kein Werkzeug.**
-
----
-
-# Was davon LÄUFT (2026-08-31)
-
-`gabbro build` (deutscher Zweitname `bau`), `crates/gabbro-cli/src/bau.rs`, 9 Proben grün.
-
-> **Die Zahlen dieses Abschnitts sind die vom 2026-08-31 und werden nicht nachgezogen.** Der
-> Korpus ist seither von 491 auf 525 `.gab`-Dateien gewachsen, also stimmt jede Zahl darunter
-> als *Messung jenes Tages* und keine als Aussage über heute. *Eine Zahl, die man nachzieht,
-> ohne sie neu zu messen, ist eine Behauptung mit einem Datum davor.* Was heute läuft, steht
-> unter **„Die Kante, gebaut und gelaufen"** am Ende — mit eigenen Zahlen und eigenem Datum.
-
-## Der Lauf über dem Beispiel
-
-`programmlogik/beispiel/gabbro.bau` — **das Manifest nennt zwei Dateien und keine einzige
-Abhängigkeit.** Die vier `use lager::…`-Zeilen stehen in `betrieb.gab`, und der Bau liest sie
-dort.
-
-```
-$ gabbro build --dry-run programmlogik/beispiel/gabbro.bau
-manifest programmlogik/beispiel/gabbro.bau
-  compiler cc -std=c11 -Wall -Wextra -Werror
-  out      target/bau-beispiel
-  unit lager (2 file(s))
-  0 computed edge(s) between units
-built 0 unit(s), 0 up to date, 0 refused -- 2 file(s) named by this manifest
-NOT looked at: 489 `.gab` file(s) in this tree stand in no unit of this manifest (491 in the tree)
-  the manifest is the reach -- a file no `unit` line names is not a file this build passed
-
-$ gabbro build programmlogik/beispiel/gabbro.bau
-built    lager
-$ gabbro build programmlogik/beispiel/gabbro.bau
-current  lager  -- content unchanged, artefact present
-```
-
-Das erzeugte C ist **eine** Übersetzungseinheit aus zwei Dateien und geht durch
-`cc -std=c11 -Wall -Wextra -Werror`. *Einzeln geprüft fällt `betrieb.gab` mit fünf Absagen.*
-
-## Die vier Eigenschaften, jede mit einer Probe
-
-| Eigenschaft | Probe |
-|---|---|
-| **`touch` baut NICHT neu** — dieselben Bytes, neue `mtime` | `inkrementell_nach_inhalt_und_nicht_nach_zeitstempel` |
-| **ein gelöschtes Erzeugnis baut neu** — das Vorliegen wird geprüft, nicht geglaubt | dieselbe |
-| **eine andere Übersetzerfahne baut neu** — `-O0` → `-O2`, kein Quellbyte bewegt | `eine_andere_uebersetzerfahne_baut_neu` |
-| **der Graph wird gerechnet** — kein `use` im Manifest, und die Kanten stehen trotzdem | `der_graph_wird_gerechnet_und_nicht_gelesen` |
-
-## Drei Giftmanifeste, alle abgesagt
-
-| Probe | Absage | Rückgabe |
-|---|---|---|
-| derselbe Modulname in **zwei** Einheiten | *„module `a` is declared in unit `eins` AND in unit `zwei` — a `use` edge onto it would have two targets"* | 1 |
-| eine Einheit **ohne Datei** | *„unit `leer` names no file — an empty unit builds nothing and says it built"* | 2 |
-| eine Einheit, die **nicht durchgeht** | `REFUSED halb: 7 error(s) -- no C written` | 1 |
-
-**Und die Absagen der dritten nennen `betrieb.gab:36:56`, nicht `<unit>:36:56`** — der Bau
-rendert durch **dieselbe Versatzkarte** wie `pruefe --unit`, aus derselben Funktion
-(`main.rs::zeige_je_stueck`). *Zwei Renderungen desselben geklebten Parses wären ein zweites
-Register über derselben Sache.*
-
-## Zwei Mutationen — und eine hat überlebt
-
-| Nr. | Was beschädigt wird | gefangen von |
-|---|---|---|
-| **452** `bau-glaubt-das-erzeugnis` | das Vorliegen wird geglaubt statt geprüft | **1 Probe** |
-| **453** `bau-vergisst-die-uebersetzerzeile` | die Übersetzerzeile fällt aus dem Abdruck | **anfangs 0 — ÜBERLEBT** |
-
-> **`453` hat überlebt, und der Grund ist derselbe wie bei `451`: meine Proben sahen auf die
-> falsche Hälfte.** Alle acht bewegten **Quellbytes** — und *Inhalt allein ist nicht die ganze
-> Eingabe eines Baus.* Ein Wechsel von `-O0` auf `-O2` hätte „aktuell" gemeldet, und das
-> Erzeugnis stünde unter einer Fahne, die niemand mehr genannt hat.
->
-> `eine_andere_uebersetzerfahne_baut_neu` ist daraufhin geschrieben worden. **Zum zweiten Mal
-> an diesem Tag hat eine überlebende Mutation eine blinde Probe benannt** — und beide Male war
-> die Blindheit dieselbe: die Probe sah dorthin, wo ich den Fehler erwartet hatte.
-
----
-
-# Die Kante, gebaut und gelaufen (2026-09-01, `OB5`)
-
-**Der Posten war eine ÄNDERUNG und keine Zahl, und hier ist sie:**
-
-```
-$ gabbro build messung/einheit-proben/zwei-einheiten.bau
-built    rechenwerk
-built    haupt
-$ target/bau-zwei/haupt ; echo $?
-137
-```
-
-**137 = 100 + 37.** Die `100` ist eine `5000`, die ein **privater** Helfer der *anderen*
-Einheit gedeckelt hat; die `37` ging unberührt durch. *Eine Zahl, für die beide Hälften der
-Grenze stimmen müssen.*
+## 6. The edge between units: built and run (2026-09-01, `OB5`)
 
 ```
 rechenwerk (object)   prog-vorrat.gab + prog-werk.gab  ->  rechenwerk.o + rechenwerk.gabi
-     ^                                                     als EINE Einheit geprueft,
-     | use werk::ablegen, use werk::holen, use vorrat::Regal    uebersetzt UND beschrieben
-haupt (program)       prog-haupt.gab                   ->  haupt.o, dann der BINDER
+     ^                                                     (checked, translated AND described as ONE unit)
+     | use werk::ablegen, use werk::holen, use vorrat::Regal
+haupt (program)       prog-haupt.gab                   ->  haupt.o, then the linker
 ```
 
-## Was der Bau dafür können musste — drei Dinge, und das dritte hat einen Preis
+(`messung/einheit-proben/zwei-einheiten.bau`; the program exits 137: 100 from a `5000` capped by a PRIVATE helper of the
+other unit, plus 37 passing through, a number for which both halves of the border must hold.)
 
-1. **`emit --unit` und `abi --unit`.** *Eine Einheit, die als Einheit PRÜFT, wurde nicht als
-   Einheit ÜBERSETZT* — `pruefe --unit` klebte die Dateien, `emit` lief je Datei. Gemessen an
-   denselben zwei Dateien: **sieben Absagen ohne die Fahne, null mit ihr.** Die Fähigkeit gab
-   es, *in `bau.rs` eingebaut und ohne Namen auf der Kommandozeile* — die Gestalt, die ein
-   fehlendes und ein verstecktes Merkmal teilen.
-2. **Die Kante wird getragen, nicht nur gerechnet.** Vor jeder Einheit steht die `.gabi` von
-   allem, worauf sie steht — **transitiv** und in Bauereihenfolge. *Nur direkte Kanten reichen
-   nicht:* die Schnittstelle von `b` nennt einen Typ, den `a` erklärt, und eine Schnittstelle,
-   die etwas nennt und nicht erklärt, ist genau das, was `N038` innen absagt.
-3. **Die Abdrücke der Unterbauten gehen in den eigenen Abdruck.** Das war der Preis, und es
-   ist die Falle, gegen die Abschnitt 4 steht: *eine Änderung im **privaten** Rumpf bewegt die
-   `.gabi` nicht und das Objekt schon.* Gemessen: `return 100` → `return 99`, `.gabi`
-   byteidentisch, `haupt` **gebaut** (nicht „current"), Ergebnis 136. Ohne die Kette wäre das
-   Programm aktuell gemeldet worden — über einer Bibliothek, die es nicht mehr enthält.
+* **`emit --unit` and `abi --unit`.** A unit that CHECKS as a unit is TRANSLATED as one (seven refusals without the flag,
+  zero with it, on the same two files).
+* **The edge is carried, not only computed.** Before each unit stands the `.gabi` of everything it rests on, transitively
+  and in build order (a signature that names a type it does not declare is what `N038` refuses inside).
+* **The fingerprints of the sub-builds go into the own fingerprint** (section 4).
+* **Effect derivation sees across the border** (`abi --vergleich`: a body with no own place touches `reads/writes
+  Regal.slots` only through the callees' contracts, which come from the `.gabi`), and the opposite direction falls: an effect
+  done beyond the border and not declared this side is `E008`; without the bridge the same file falls at `K003`.
+* **An `assume` does not cross the border.** `abi.rs` says it in its head: a library shipping its `assume` lines forces
+  its machine on every importer, and an override at import is not a replacement but a proof duty (`ABI4`). The importing
+  program therefore passes with 0 assumptions over a library proved under one, and `gabbro pruefe` does not name it:
+  the import form is unbuilt, not impossible.
 
-## Acht Proben, fünf davon Gegenrichtung
+Tests (the two kinds each way): `inkrementell_nach_inhalt_und_nicht_nach_zeitstempel`,
+`eine_andere_uebersetzerfahne_baut_neu`, `der_graph_wird_gerechnet_und_nicht_gelesen` (`bausystem.rs`);
+`das_zweieinheitenprogramm_uebersetzt_und_laeuft`, `ohne_die_kante_faellt_das_programm`,
+`ein_programm_ohne_main_faellt_an_der_eintrittsregel`, `was_pub_nicht_traegt_bindet_nicht` (`nm -g` outside shows exactly the
+exported names), `eine_aenderung_im_privaten_rumpf_baut_das_programm_neu`, `der_treiber_druckt_und_wird_verglichen`,
+`die_effektableitung_sieht_ueber_die_grenze`, `eine_annahme_traegt_nicht_ueber_die_grenze` (`zweieinheiten.rs`).
+Poison manifests under `messung/einheit-proben/gift-*.bau`: one module name in two units, a unit without a file, a unit
+that does not check (`REFUSED ...: N error(s) -- no C written`), a program without an edge, a program without `main`.
 
-| Probe | was sie hält |
-|---|---|
-| `das_zweieinheitenprogramm_uebersetzt_und_laeuft` | 1 gerechnete Kante, gebunden, `137` |
-| `ohne_die_kante_faellt_das_programm` | dasselbe Programm ohne die Einheit darunter: `K003` |
-| `ein_programm_ohne_main_faellt_an_der_eintrittsregel` | der Bindeschritt läuft und sagt wirklich ab |
-| `was_pub_nicht_traegt_bindet_nicht` | `nm -g`: außen genau `ablegen holen` |
-| `eine_aenderung_im_privaten_rumpf_baut_das_programm_neu` | die Abdruckkette |
-| `der_treiber_druckt_und_wird_verglichen` | `100 37 100`, mit Sprechprobe |
-| `die_effektableitung_sieht_ueber_die_grenze` | `identical`, und `E008` in der Gegenrichtung |
-| `eine_annahme_traegt_nicht_ueber_die_grenze` | 1 Annahme diesseits, **0** jenseits |
+## 7. The entry rule (a manifest rule, so no `Satz`)
 
-## Die zwei Messungen, die vorher nicht zu stellen waren
+A `unit ... program` names exactly one entry, an ordinary `pub fn main` (`main` is an identifier, not a keyword;
+`entry` declares an interrupt stub entered by hardware, a different construct). Before the rule the lower rows were
+refusals from foreign tools one or three tools downstream (`ld`: undefined `main`; `cc -Werror=main`: a private or
+mistyped `main`); `N039` covers only two EXPORTED `main`. The rule fires in `bau.rs::eintrittsregel`, before any C. It
+carries no identifier: a `Satz` says what is true of a program the checker passed, and a manifest is read by no pass
+(`paesse.rs` holds the passes at twelve, `pruefe-saetze.py` counts identifiers owing a statement as a ratchet). The same
+reading governs every manifest refusal here (module in two units, cycle, empty unit, linker refusal, `kmod`, `provision`,
+`note`, `nolibc` hooks, module rules, bindings): no `-- erwartet: CODE` probe can name them; the probes are `.bau` files.
+**Name collisions with C** (`putchar`, `exit`, ...) are `N041` (`C-SPEICHERMODELL.md` section 8): a Gabbro program does not
+print by calling `putchar`; it declares its own `syscall` item (`bibliothek/linux/linux.gab` `gabbro_os_schreibe`).
 
-### Die Effektableitung SIEHT über die Grenze
+## 8. What is NOT decided or not built
 
-```
-$ gabbro abi --vergleich --with target/bau-zwei/rechenwerk.gabi …/prog-haupt.gab
-  identical      haupt::main
-  units read  1        functions with `effects` and a body  1
-  identical  1  100.0 %
-```
-
-`main` fasst selbst **keinen** Ort an — die zwei Wirkungen `reads Regal.slots` und
-`writes Regal.slots` können nur aus den Verträgen der zwei Gerufenen stammen, und die kamen
-aus der `.gabi`. **Und die Gegenrichtung ist der Befund, den `OB6` nicht finden konnte:** eine
-Wirkung, die jenseits der Grenze getan und diesseits nicht erklärt wird, fällt an `E008` —
-*weil geprüft wird, nicht weil geschwiegen wird.* Ohne die Brücke fällt dieselbe Datei an
-`K003`, und über die Auslassung sagt niemand ein Wort.
-
-> **Dabei fiel ein Fehler heraus, den es vor der Brücke nicht geben konnte.**
-> `pruefe --with` (der Pfad je Datei) rendert gegen den **geklebten** Text und druckte den
-> Dateinamen neben einer Zeilennummer der Verkettung: `…-die-grenze.gab:42:13` über einer
-> Datei von 28 Zeilen. *Genau der Fehler, gegen den `Stueck` und `zeige_je_stueck` gebaut
-> wurden* — einen Pfad neben dem, in dem sie standen. Er wurde erst sichtbar, als eine Absage
-> zum ersten Mal aus einer `.gabi`-Brücke kam. Jetzt: `:17:13`.
-
-### Eine `assume` trägt NICHT über die Grenze
-
-```
-$ gabbro annahmen …/prog-vorrat.gab   ->  -- 1 Annahmen   fach_zahl_passt_in_den_index
-$ gabbro annahmen …/prog-haupt.gab    ->  -- 0 Annahmen
-$ grep -c assume target/bau-zwei/rechenwerk.gabi  ->  0
-```
-
-**Das ist eine Entscheidung und kein Loch** — `abi.rs` sagt sie in seinem eigenen Kopf: eine
-Bibliothek, die ihre `assume`-Zeilen mitschickt, zwingt jedem Importeur ihre Maschine auf, und
-ein `override` beim Import ist keine Ersetzung, sondern eine **Beweispflicht** («ABI4»).
-
-> **Was daran der Befund ist: an der Grenze sagt nichts, dass sie getroffen wurde.** Die
-> Bibliothek ist unter einer Annahme bewiesen, das Programm unter keiner, `gabbro pruefe`
-> geht mit `0 errors, 0 hints` durch und nennt das Wort nicht. *`OB8` sagt „Plattformannahmen
-> pro Programm NULL — heute sechs von sechs"; jetzt gibt es einen Ort, an dem eine Annahme
-> einmal stehen könnte, und sie trägt nicht dorthin.* Die Importform aus `§32` ist damit
-> **nicht unmöglich, sondern ungebaut** — die Brücke steht, nur geht diese Fracht nicht
-> darüber.
-
-## Und ein Gabbro-Programm kann nicht drucken
-
-Das Ergebnis verlässt `haupt` als Rückgabewert von `main`, und das ist keine Bequemlichkeit:
-
-```
-error: [N041] `putchar` is a name C has already taken
-  = `putchar` is a built-in function of the C implementation
-```
-
-`printf`, `puts` und `putchar` stehen alle drei in der Tafel von `cnamen.rs`. **Der Wächter
-hat recht, und er hat keine Ausnahme für eine ABSICHTLICHE fremde Bindung** — genau die, für
-die `extern fn` da ist. Was gedruckt wird, druckt ein C-Treiber daneben, gebunden gegen das
-`rechenwerk.o` dieses Baus, in der Gestalt von `pruefe-emission.sh` Stufe 10:
-**`100 37 100`**, mit Sprechprobe. *Der Treiber ist das Messgerät und nicht Teil des
-Programms.*
-
-*Abgelehnt und nicht gebaut:* `extern fn write` — der Name ist frei — mit einem
-`ptr<normal, r> Puffer` statt `const void *`. Das bindet und rechnet, und es ist eine
-**unverträgliche Deklaration einer externen Funktion**, also undefiniert. Ein
-Vorzeigebeispiel, das der C-Norm widerspricht, ist keines.
-
-## Was NICHT läuft
-
-* **~~Kein `main` in der Sprache~~ **ERLEDIGT 2026-09-01**: kein Wort dazu, aber eine Regel — ein `unit … program` ohne genau einen `pub fn main` fällt jetzt IM PRÜFER statt am Binder. Vormals: kein `main` in der Sprache, und kein Wort darüber.** `main` ist ein gewöhnlicher `pub fn`,
-  dessen Name zufällig der ist, den der Binder sucht. Nichts prüft, dass ein
-  `unit … program` genau einen hat — das tut der Binder, drei Werkzeuge später.
-* **Ein Zyklus ZWISCHEN Einheiten ist weiter ungemessen.** Der Sortierer sagt ihn beim Namen
-  ab, und es gibt kein Manifest, das einen trägt.
-* **`arch` über eine Einheitengrenze ist ungemessen.** Zwei Einheiten mit verschiedenem `arch`
-  mischt heute niemand, und die `.gabi` trägt kein `arch`.
-* **Sperrränge über die Grenze:** sie *reisen* seit dem 2026-08-21, und `H012` fällt über eine
-  Einheitengrenze — aber **nicht über eine BAU-Grenze**: `zwei-einheiten.bau` hat keinen Ring,
-  also ist der Fall im Bau ungemessen.
-* **Parallelität gibt es nicht.** Die Einheiten laufen der Reihe nach.
-* **`--testbuild` geht in den Abdruck, aber keine Probe fährt es.**
-* **Kein Fremdobjekt im Manifest.** Ein `program`, dessen `extern fn` von einer C-Datei
-  bedient wird, ist nicht baubar — der Treiber oben wird von der Probe gebunden, nicht vom
-  Bau.
+* **A cycle BETWEEN units**: the sorter names it, no manifest carries one; whether it is refused stays open.
+* **`arch` across a unit border**: two units with different `arch` are unmeasured, the `.gabi` carries no `arch`.
+* **Lock ranks across a BUILD border**: ranks travel since 2026-08-21 and `H012` falls across a unit border, but
+  `zwei-einheiten.bau` has no ring, so the case is unmeasured in the build.
+* **Parallelism**: units build one after another.
+* **`--testbuild`** enters the fingerprint but no probe drives it through a full build.
+* **A manifest word choosing the backend** (LLVM): none; the LLVM backend has no manifest path.
+* **Whether the units of this tree are cut correctly**: the manifest says what belongs together; no tool says whether it
+  does.
+* **Refinement of linked code**: linking proves nothing about the linked bytes; the model half is `GabbroZielVerbund`
+  (OFFEN O28 remainder), the byte half is translation validation (`PLAN-UEBERSETZUNGSVALIDIERUNG.md`).

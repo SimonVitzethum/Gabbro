@@ -1,7 +1,7 @@
 -- erwartet: R005
 -- **Gift 216 -- ein `class w`-Register wird gelesen.**
 --
--- Bis zum 2026-08-20 ging das mit **0 Fehlern** durch. `PFLICHTEN.md` buchte die Pflicht
+-- Bis zum 2026-08-20 ging das mit **0 Fehlern** durch. `PFLICHTEN.txt` buchte die Pflicht
 -- *„a `class w` register is never read"* als erledigt **durch `R002`/`R003`** -- und die
 -- beiden pruefen ZEIGERRECHTE, nicht Registerklassen.
 --

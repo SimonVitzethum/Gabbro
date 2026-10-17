@@ -35,7 +35,7 @@ Two backends exist. The **LLVM backend** is the current target: checked Gabbro
 lowers directly to LLVM IR (x86-64 and AArch64), with no C, no libc and no linked
 runtime — locks, threads and arenas are generated IR over raw kernel gates
 ([LLVM-BACKEND](dokumente/LLVM-BACKEND.md), status in
-[LLVM-MODELLSTAND](dokumente/LLVM-MODELLSTAND.md)). The older **C11 emitter**
+[LLVM-MODELLSTAND](dokumente/LLVM-BACKEND.md)). The older **C11 emitter**
 (`emit.rs`) is deprecated and stays only as a legacy check. Neither backend is
 verified: the final-binary refinement needs a complete Lean model of the CPU,
 which is built on the Sail Arm specification
@@ -127,9 +127,9 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 | **Proof templates** | **41, of which 30 are machine-checked** | `gabbro templates` |
 | **Corpus** | 170 clean examples, 898 poison files | `cargo test --no-fail-fast` |
 | **Backend** | LLVM backend (current target, no C) plus the deprecated C11 emitter (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`; every emitted unit compiled, part executed against a handwritten twin) | `./instrumente/baue-llvm.sh`, `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 54, each with deadline, two-way speech test, red on abort, pinned locale; **75 of 89 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
+| **Guardians** | 54, each with deadline, two-way speech test, red on abort, pinned locale; **64 of 78 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
 | **Blind spots** | **72 blind · 176 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
-| **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2431 and 110 clause sites | `gabbro ceremony` |
+| **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2564 and 110 clause sites | `gabbro ceremony` |
 
 Mutation tests damage one rule at a time: 422 mutations, one anchor each
 (`./instrumente/mutiere-pruefer.py`). The 15 theories in [`grammatik/Beweise/`](grammatik/Beweise/)

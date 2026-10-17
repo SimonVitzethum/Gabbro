@@ -559,7 +559,7 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // `gruppe.sperrabdruck` was booked `Entworfen` with a comment copied from the neighbouring
     // `gruppe.ops` entry; the code it actually names (`emit.rs`'s `Sperrt` handler, checked by
     // `geteilt.rs::H006`) has been generated all along, and `zeugnis.rs` has said so since
-    // long before this fix. See `messung/K100-VERDICT-2026-09-04.md` §2 and `schablonen.rs`
+    // long before this fix. See `dokumente/FRAGMENTE.md` §2 and `schablonen.rs`
     // at the entry.
     assert_eq!(
         lebend_ungedeckt(),
@@ -623,7 +623,7 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
 ///
 /// Until 2026-09-04 the only check on `L` was the equality above: a pin on today's value,
 /// which passes ANY number through unexamined the moment somebody edits the literal. An
-/// audit (`messung/AUDIT-K100-2026-09-04.md`, `messung/K100-VERDICT-2026-09-04.md`) found
+/// audit (`dokumente/FRAGMENTE.md`, `dokumente/FRAGMENTE.md`) found
 /// that no `<= 4` existed anywhere the tree could evaluate. This test is the bound itself.
 #[test]
 fn das_zweite_tor_haelt_l_unter_seiner_schranke() {
@@ -1718,7 +1718,7 @@ fn ein_member_traegt_dieselbe_domaenenfrage() {
 /// `M109` asked this of an `ensures` and of nothing else, `N053` of a device promise, `N032`
 /// of a `format … where`. Measured before the rule was written, 19 positions x 20 name kinds
 /// with the phantom name BESIDE a legitimate conjunct: **266 of 380 cells silent**
-/// (`messung/PREDICATE-NAMES.md`).
+/// (`dokumente/PRUEFER.md`).
 ///
 /// The severity is the reason the rule is an error and not a hint:
 ///
@@ -1901,7 +1901,7 @@ fn ein_praedikat_darf_nennen_was_ein_rumpf_nicht_kann() {
 ///
 /// The measurement first, because the rule is a decision about where a line runs: eleven
 /// written forms across six predicate positions, **64 of 66 accepted**
-/// (`messung/PREDICATE-NAMES.md` §5).
+/// (`dokumente/PRUEFER.md` §5).
 ///
 /// **What stays undecided, deliberately:** whether the name IS a feature of the machine.
 /// `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID probe (A14); that probe
@@ -2362,7 +2362,7 @@ fn ein_quantor_der_seinen_binder_nie_nennt() {
 /// **`M146` -- a fractional bound on an integer type, at every position a range can stand**
 /// (2026-09-08).
 ///
-/// `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.2 wrote the finding at ONE position
+/// `dokumente/PRUEFER.md` §1.2 wrote the finding at ONE position
 /// (a `type` alias) and said nothing about the rest. The sweep of the same day wrote one
 /// probe per position and got **`0 errors, 0 hints` in nineteen of nineteen** -- so there
 /// is one arm per position here, and not one arm for the head of the census. *A test that

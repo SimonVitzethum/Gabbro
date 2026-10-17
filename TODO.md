@@ -25,7 +25,7 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
   ownership discipline, complete `ArenaForm`/`DynForm` export and the G form of
   the newer memory statements. No checker refusal or source obligation was
   relaxed. CPU/final-byte refinement remains section 5 work.
-- **Evidence:** `dokumente/LLVM-SPEICHER-STAPEL.md`. Coverage is the actual Lean
+- **Evidence:** `dokumente/LLVM-BACKEND.md`. Coverage is the actual Lean
   constructor/field register, checked by
   `python3 instrumente/pruefe-llvm-modelldeckung.py`; examples never define it.
 
@@ -85,12 +85,16 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
   `FrischNeu` nur für den Modell-Allokator) und der `let`-Lauf des Prüfers in Lean;
   `R004`/`R007` als Sonderfälle von `R014`; Mutationslauf für `R014`/`R015`;
   `noalias` ist kein Lean-Urteil (O27).
+- **M104 wide-result hole (found 2026-10-17 by the doc check).** `pub fn f(a : u32, b : u32) -> u64 { return a + b; }`
+  checks with 0 errors, and `gabbro llvm` lowers it to a 32-bit `add` plus `zext`, so the sum wraps
+  before it widens. The note text in `m1.rs` still says a wider return type does not widen the
+  operands. Needs a decision: refuse (as before) or widen the operands. Not fixed.
 - **O26-Rest (fremde Sperrprimitive).** Eigene Primitive geprüft (`N481`–`N483`);
   fremde bleiben angenommen (schwaches Gedächtnis nimmt acquire/release an).
 
 ## 4. LLVM-Backend
 
-Volltabelle in `dokumente/LLVM-MODELLSTAND.md` §5. Kurzform:
+Volltabelle in `dokumente/LLVM-BACKEND.md` §5. Kurzform:
 
 - **O22 — group execution and stack lifecycle built 2026-10-17.** Every
   invocation owns a guarded mapping and completion word. All roots start before

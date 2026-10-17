@@ -36,7 +36,7 @@
 //!   Eine falsche Vorbedingung an einer fremden Deklaration kann ein richtiges Programm
 //!   abweisen -- sie kann kein falsches durchlassen. *Die Richtung ist der Unterschied:
 //!   `ensures` laesst den Pruefer mehr glauben, `requires` weniger.* Der Befund steht in
-//!   `messung/FREMDVERENGUNG.md`, damit die Entscheidung nachlesbar ist statt bloss gefallen.
+//!   `messung/FREMDVERENGUNG.txt`, damit die Entscheidung nachlesbar ist statt bloss gefallen.
 
 use crate::typen::{IntBereich, Typ};
 use gabbro_syntax::ast::*;

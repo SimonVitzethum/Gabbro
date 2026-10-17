@@ -13,7 +13,7 @@
 --
 -- **Bis zum 2026-08-31 stand dieser Name nicht in der Aufzaehlung.** `erzeugernamen.rs`
 -- kannte `gabbro_boot_{b}_s{i}` und `gabbro_boot_{b}_{setzt}` und den blossen Namen nicht --
--- gemessen (`messung/STILLE-KOLLISIONEN.md` §3, `m4-boot`): `0 errors, 0 hints`, `cc
+-- gemessen (`dokumente/PRUEFER.md` §3, `m4-boot`): `0 errors, 0 hints`, `cc
 -- -Werror` uebersetzt. **Der Pruefer, der Erzeuger, der Uebersetzer und der Binder haben
 -- allesamt geschwiegen**, ueber der Einsprungadresse.
 --

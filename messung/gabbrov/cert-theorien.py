@@ -29,7 +29,7 @@ V1 = W / "programmlogik" / "gabbrov" / "V1.lean"
 
 NOT_SAYABLE = set(re.findall(r"def (L\d\d) : Prop := notSayable",
                              V1.read_text(encoding="utf-8")))
-REBOOKED = {"L66"}  # assumption layer, messung/GABBROV-V2.md section 1
+REBOOKED = {"L66"}  # assumption layer, messung/GABBROV-V2.txt section 1
 
 
 def bloecke(text):

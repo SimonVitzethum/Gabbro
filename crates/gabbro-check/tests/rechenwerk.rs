@@ -3813,7 +3813,7 @@ fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
     //
     // Measured over the corpus that day: **101 -> 107 obligation lines**, four of them at
     // `messung/fragmente/F01.gab`:426, where `revoke` calls `delete_leaf` this way. Two of
-    // those four close `PFLICHTEN.md` F1 rows `236` and `337`, and `337` is the one that file
+    // those four close `PFLICHTEN.txt` F1 rows `236` and `337`, and `337` is the one that file
     // calls *"the load-bearing statement of `revoke`"*.
     assert_eq!(
         v("module t { extern fn nimm(x : u32 in 0 .. 9) -> u32 or Fehler requires x < 9, x > 0 \
@@ -4383,7 +4383,7 @@ transition an { GCMD.TE: 0 -> 1 } requires GSTS.RTPS == 1 effects { writes GCMD 
 
 /// **The balance adds up, and it adds up over THE SAME register `gabbro pflichten` counts.**
 ///
-/// *An output that forgets one kind looks complete* (`messung/ABI.md`, the `lock` line that
+/// *An output that forgets one kind looks complete* (`dokumente/SPRACHE.md`, the `lock` line that
 /// was missing for a day). Against exactly that: `goals + refused == total`, and `total` is
 /// the length of the register -- not a second number from a second walk.
 #[test]
@@ -4841,7 +4841,7 @@ impl fn reicht_durch(p : index into B) -> bool
 /// **A loop is an anonymous routine, and its `invariant` is DATA.**
 ///
 /// The measure was carried by the language from the start; the statement had no word until
-/// 2026-08-28 (`messung/SCHLEIFENINVARIANTE.md`). A loop WITHOUT one is still refused --
+/// 2026-08-28 (`dokumente/PRUEFER.md`). A loop WITHOUT one is still refused --
 /// that is the point of the word, not a gap in it.
 #[test]
 fn lean_schleife_traegt_ihre_invariante() {
@@ -5319,7 +5319,7 @@ fn fehlbare_lesung_gibt_den_gebundenen_grund_durch_den_fehlerkanal() {
 //
 // Seventeen refusals of the program channel stood under one word, and **not one of them was
 // a call over a contract**: six generated operations, six constructors, four `transition`s,
-// and one `return Some(i);` the model could carry all along. `messung/RUF-TOR.md` measures
+// and one `return Some(i);` the model could carry all along. `dokumente/SPRACHE.md` measures
 // it and decides the split; the probes below are what keeps the four apart.
 //
 // *A refusal filed under the wrong reason names a missing gate where a missing value form
@@ -5429,7 +5429,7 @@ fn lean_optionswert_ist_kein_ruf() {
 /// SURVIVE. The reason is exact: the probe above reads `return Some(i);`, which is the
 /// `Return` arm, while the mutation damages the `Let` arm. *Two arms, one rule, one probe --
 /// and a rule that can fall at one arm while every test stays green.* The mutation carries
-/// its name in `messung/RUMPFKANAL-LUECKEN.md`, where the German side of this run is booked.
+/// its name in `dokumente/PRUEFER.md`, where the German side of this run is booked.
 #[test]
 fn lean_optionswert_im_let_ist_kein_ruf() {
     let t = lean_programm(
@@ -5504,7 +5504,7 @@ impl fn ruf(p : index into B, w : Zahl)
 // `breaking I { … }` stood in one arm with `leave` and `next` under the sentence *"a
 // non-local exit out of a named loop"*. It is neither non-local nor an exit: what it changes
 // is which DUTY holds inside the block, not which statements run. **All four obligations
-// behind `non-local-exit` were `breaking`** -- `messung/AUSSETZUNG.md` measures
+// behind `non-local-exit` were `breaking`** -- `dokumente/PRUEFER.md` measures
 // it, and the four go through Lean since the split.
 // ===========================================================================================
 
@@ -5632,7 +5632,7 @@ impl fn dienst(b : ptr<normal, rw> B, i : index into B)
 // `result` stood in `primary` and in eight corpus sites; what was missing was never the
 // spelling but the BINDING -- a postcondition is evaluated over a `State`, and a result is
 // not part of one. The goal binds it, and no arm of the model changed for it: `finalValue`
-// has carried it since day one (`messung/VIER-LUECKEN.md`).
+// has carried it since day one (`dokumente/PRUEFER.md`).
 // ===========================================================================================
 
 const LEAN_ERGEBNIS: &str = "module t {
@@ -6100,7 +6100,7 @@ impl fn via_ort(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
 /// probe that only sampled `e = 1`, or only `e = l`, would have stayed green through all
 /// three days. *That is why the exponent is walked and not sampled.*
 ///
-/// See `messung/K001-DOMAENENSCHRANKE.md` for the whole chain, and for why `F09` keeps its
+/// See `dokumente/PRUEFER.md` for the whole chain, and for why `F09` keeps its
 /// wrong promise on purpose.
 #[test]
 fn die_schranke_von_mappings_of_ist_knotenlaenge_hoch_ebenen() {
@@ -6784,7 +6784,7 @@ impl fn setze(k : ptr<normal, rw> Klein, i : index into Ring)
 
 /// **`D014`-`D016`: the chain names its edge AT THE WALK, and nobody read it.**
 ///
-/// `messung/DOMAENENNAMEN.md`, 2026-08-31: five falsifications of the edge in
+/// `dokumente/PRUEFER.md`, 2026-08-31: five falsifications of the edge in
 /// `beispiele/55-kindkette.gab`, in `ensures`, in an `invariant` and in the body of a `spec
 /// fn` -- **0 errors and 0 `C001` every time**, while `tree { child gibtsnicht }` at the very
 /// same table falls at `D006`.
@@ -6913,7 +6913,7 @@ impl fn f(t : ptr<normal, rw> T, p : index into T)
     }
 
     // And the carrier that is NOT a table. **Until 2026-08-31 this was held here as an open
-    // gap -- the S2 cell of `messung/DOMAENENNAMEN.md` -- and `D018` closed it the same
+    // gap -- the S2 cell of `dokumente/PRUEFER.md` -- and `D018` closed it the same
     // day.** The division of labour is the point of the assertion: the three CHAIN rules
     // stay silent, because without a table there is no slot to hold the two field names
     // against; the refusal comes from the rule about the PLACE, and it names the place.
@@ -6935,7 +6935,7 @@ impl fn f(r : ptr<normal, rw> R)
 
 /// **`D017`/`D018`: the PLACE of a quantifier domain -- its name and its kind.**
 ///
-/// `messung/DOMAENENSTELLUNGEN.md`, 2026-08-31. The corpus carries 72 quantifier sites;
+/// `dokumente/PRUEFER.md`, 2026-08-31. The corpus carries 72 quantifier sites;
 /// **19 stand in an `ensures` and 53 do not.** Each of the 53 was falsified ONE BY ONE
 /// against the unchanged checker -- the base name replaced by `zzznix`, the file's own base
 /// load subtracted -- and **51 stayed silent**; the two that spoke said `D012`, about a
@@ -7623,7 +7623,7 @@ impl fn f(w : ptr<normal, r> Winzig, c : ptr<normal, r> Riesen) -> u32
 /// **`D019`: the FIELD names in the suffix of a domain's place.**
 ///
 /// The third question at the same place -- `D017` reads its base name, `D018` its kind,
-/// `D019` the field names of its suffix. `messung/DOMAENENSTELLUNGEN.md` §7 carried the
+/// `D019` the field names of its suffix. `dokumente/PRUEFER.md` §7 carried the
 /// cell as unchecked with a reason read off the source; the measurement of 2026-08-31
 /// (`messung/proben/probe-elems-feldname.gab`) found it too kind to the checker:
 ///
@@ -8597,7 +8597,7 @@ fn die_leere_tabelle_hat_eine_schranke_und_kein_erzeugnis() {
 ///
 /// It pins TODAY's behaviour, so it goes red the day someone refuses the scale, and asks to
 /// be rewritten into a code assertion then. Found by `instrumente/fuzze-erzeuger.py`, net 7;
-/// recorded in `messung/AUDIT-2026-09-02.md` 7.7 item 4 and `messung/ERZEUGERSWEEP.md` 9.
+/// recorded in `dokumente/FRAGMENTE.md` 7.7 item 4 and `dokumente/C-SPEICHERMODELL.md` 9.
 #[test]
 fn ein_massstab_von_null_liest_nichts_und_niemand_sagt_es() {
     let c_von = |scale: &str| {
@@ -8622,7 +8622,7 @@ fn ein_massstab_von_null_liest_nichts_und_niemand_sagt_es() {
         "BOOKING EXPIRED -- something now refuses `scale 0` ({codes}). That is the repair \
          this test was waiting for: rewrite it to assert the code, take the line out of \
          `GEBUCHT` in `instrumente/fuzze-erzeuger.py`, and correct \
-         `messung/ERZEUGERSWEEP.md`."
+         `dokumente/C-SPEICHERMODELL.md`."
     );
     assert!(
         c.contains("* 0u"),

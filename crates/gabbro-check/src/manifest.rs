@@ -373,9 +373,9 @@ fn reglokalklasse() -> Klasse {
 /// **«E6»: the hardware profile and library requirements in the manifest.**
 ///
 /// The manifest lists every REQUIREMENT with its library and the calls
-/// relying on it (`PLAN-ERWEITUNG.md` §0c, point 5): one line per keyed
+/// relying on it (`dokumente/PRUEFER.md` §0c, point 5): one line per keyed
 /// profile entry (the mode the program runs under -- including the
-/// `-ffp-contract=off` flag the float prelude binds, `PLAN-BITS.md` §5)
+/// `-ffp-contract=off` flag the float prelude binds, `dokumente/SPRACHE.md` §5)
 /// and one line per library requirement. A requirement's name carries its
 /// library (`lib#name`), so it never collides with the assumption it
 /// references: [`vereinige`] keys on the name, and two lines under one
@@ -536,13 +536,13 @@ fn profil_grund(schluessel: &ProfilSchluessel, wert: &str) -> String {
 }
 
 /// What a keyed profile entry says -- and for `fp_contract` that includes
-/// the build flag the float prelude binds (`PLAN-BITS.md` §5): if the
+/// the build flag the float prelude binds (`dokumente/SPRACHE.md` §5): if the
 /// profile says `fp_contract off`, the manifest carries the flag.
 fn profil_aussage(schluessel: &ProfilSchluessel, wert: &str) -> String {
     match schluessel {
         ProfilSchluessel::FpKontraktion => format!(
             "fp_contract {wert} -- build with -ffp-contract=off \
-             (binding for every compiler, PLAN-BITS.md §5)"
+             (binding for every compiler, dokumente/SPRACHE.md §5)"
         ),
         _ => format!("{} {wert}", schluessel.text()),
     }

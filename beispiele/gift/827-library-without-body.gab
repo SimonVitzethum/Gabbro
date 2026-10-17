@@ -1,7 +1,7 @@
 -- erwartet: P044
 -- Lane E2: a `library fn` without a Gabbro body -- a bodyless declaration
 -- would be a foreign promise, exactly what the library mechanism stands
--- against (PLAN-ERWEITUNG.md §0c).
+-- against (dokumente/PRUEFER.md §0c).
 module m {
 table T count 1 {
     slot {

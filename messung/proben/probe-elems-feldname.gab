@@ -1,6 +1,6 @@
 -- **Der Feldname im Suffix von `elems of` -- liest ihn jemand?**
 --
--- `messung/DOMAENENSTELLUNGEN.md` §7 fuehrt die Zelle als ungeprueft:
+-- `dokumente/PRUEFER.md` §7 fuehrt die Zelle als ungeprueft:
 --
 -- > *„`M109` steigt nur in `[index]`-Suffixe ab, nicht in `.feld`; `D017` liest den
 -- > GRUNDnamen. `D018` faengt den Fall halb: loest der Feldname nicht auf, ist der Typ des

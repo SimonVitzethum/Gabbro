@@ -894,7 +894,7 @@ pub(crate) fn griffe_von(
 
 /// **`class` an einem Register war eine Zusage, die kein Pass eingeloest hat** (2026-08-20).
 ///
-/// `PFLICHTEN.md` buchte *„a `class r` register is never written, a `class w` never read"* als
+/// `PFLICHTEN.txt` buchte *„a `class r` register is never written, a `class w` never read"* als
 /// erledigt **durch `R002`/`R003`** -- und die beiden pruefen ZEIGERRECHTE, nicht
 /// Registerklassen. Die Notiz an `R003` sagte den Satz sogar (*„`class w` on a register means
 /// the same"*), und der Code tat ihn nicht:
@@ -1321,7 +1321,7 @@ fn liest_expr(e: &Expr, span: Span, zeiger: &BTreeMap<String, Zeiger>, absagen: 
 // =======================================================================================
 // «B18» -- the register class PER PHASE. 2026-08-28.
 //
-// `dokumente/PFLICHTEN.md` carried two corpus sites, and the second one is load-bearing:
+// `dokumente/PFLICHTEN.txt` carried two corpus sites, and the second one is load-bearing:
 //
 //     impl fn heimlich(q : ptr<dma, rw> Virtq) effects { writes q } costs <= 4 ops
 //         { q.USED_IDX = 7; }        ->  0 errors, measured 2026-08-26

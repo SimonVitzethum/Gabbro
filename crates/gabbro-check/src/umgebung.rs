@@ -606,7 +606,7 @@ impl Umgebung {
     /// A declaration name is no value, so it is not in `globale` and `typ_von_ort` answers
     /// `Unbekannt` for it -- and `forall s in slots of Kappenraum` names the table itself.
     /// **Seventeen of the 53 corpus quantifier places are of that shape**
-    /// (`messung/DOMAENENSTELLUNGEN.md`).
+    /// (`dokumente/PRUEFER.md`).
     ///
     /// *It resolves through `kandidaten` and not through a direct lookup on a qualified
     /// key*: that is the shape of the `M103` hole in `m1.rs` of 2026-08-17, and
@@ -2225,7 +2225,7 @@ impl Umgebung {
     ///
     /// Bis 2026-08-20 gab V1 hier eine Schranke, und die erzeugte C-Zeile indizierte ein
     /// Feld mit acht Plaetzen mit einem Wert, den die Hardware zwischen den beiden Zeilen
-    /// frei aendern darf. **`PFLICHTEN.md` fuehrte «B33» als *"die V-Regeln verengen eine
+    /// frei aendern darf. **`PFLICHTEN.txt` fuehrte «B33» als *"die V-Regeln verengen eine
     /// Registerstelle nicht"* -- der Ordner beschrieb, was gelten SOLLTE, und der Pruefer
     /// tat das Gegenteil.** *Eine Zusage, die kein Pass einloest, ist die stille Richtung.*
     ///

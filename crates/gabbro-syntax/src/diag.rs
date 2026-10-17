@@ -23,7 +23,7 @@ pub struct Absage {
     pub span: Span,
     /// Extra lines under the site -- rule, example, counter-proposal.
     pub notizen: Vec<String>,
-    /// A machine-applicable repair, lane 187 (lever 4 of `dokumente/PLAN-EINFACHHEIT.md`).
+    /// A machine-applicable repair, lane 187 (lever 4 of `dokumente/PRUEFER.md`).
     ///
     /// `Some` only where the correct edit is UNIQUE and mechanically determined -- the
     /// missing entry the hull names, the bound below the computed one, the expected token.

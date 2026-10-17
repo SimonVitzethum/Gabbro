@@ -271,7 +271,7 @@ check kstack {
         --
         --     return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
         --
-        -- `PFLICHTEN.md` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
+        -- `PFLICHTEN.txt` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
         -- Begruendung *„`f < g / N` gibt `f < g` nur ueber die Division; die V-Regeln rechnen
         -- nicht."* **Nachgerechnet: die Begruendung beschreibt den falschen Zweig.** Der
         -- Vergleich steht in einem `if`, das ZURUECKKEHRT -- auf dem Weg hierher gilt

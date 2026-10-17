@@ -90,7 +90,7 @@ run_lean() {
 # **And it runs over TWO bodies, not one** (2026-08-28): the bare store, and the same store
 # inside a `breaking`. The second is a claim of its own -- *a suspension changes which DUTY
 # holds, not which statements run*, so a `breaking` body must reduce exactly like its body
-# (`messung/AUSSETZUNG.md`). **Four generated obligations rest on that reading**,
+# (`dokumente/PRUEFER.md`). **Four generated obligations rest on that reading**,
 # and a reading that is only ever seen to say yes is an ornament (R11). The poison direction
 # is what makes it falsifiable: it must fall, and it must fall on the CLAIM.
 speech_test() {

@@ -289,7 +289,7 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
             eigen(&mut v, n.clone(), a.name.span, "{Atomic}", "the atomic object".into());
             // **`{A}_ORDER` is CONDITIONAL, and the condition was measured as a false
             // positive before it was written here** (2026-08-31,
-            // `messung/STILLE-KOLLISIONEN.md` §5). The emitter writes the `#define` only
+            // `dokumente/PRUEFER.md` §5). The emitter writes the `#define` only
             // where the ordering is not `relaxed`-without-payload (`emit.rs`,
             // `ItemArt::Atomic`, the `Some(o)` arm); for `atomic Z : u32 relaxed` it writes
             // nothing at all. Listed unconditionally, this rule refused
@@ -330,7 +330,7 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
         // `void gabbro_boot_{n}(void);` (`emit.rs`:8611) is an external prototype the emitter
         // never defines -- the same class as `{L}_nimm`, and the sharpest member of it: that
         // symbol is the address the machine jumps to. Measured
-        // (`messung/STILLE-KOLLISIONEN.md` §3, `m4-boot`): `boot multiboot1` next to
+        // (`dokumente/PRUEFER.md` §3, `m4-boot`): `boot multiboot1` next to
         // `extern fn gabbro_boot_multiboot1()` passed with `0 errors, 0 hints` and `cc
         // -Werror` compiled the unit. **The whole chain was silent.**
         ItemArt::Boot(b) => {
@@ -387,7 +387,7 @@ pub fn erzeugte_namen(baum: &Programm) -> Vec<Gebildet> {
         // **`check c` -- `bool pruefe_{c}(void);` AND its body** (`emit.rs`:2775, :2793).
         //
         // The only generated name of that shape: external linkage AND defined here. Measured
-        // and RUN (`messung/STILLE-KOLLISIONEN.md` §4c): `check kontostand` next to
+        // and RUN (`dokumente/PRUEFER.md` §4c): `check kontostand` next to
         // `extern fn pruefe_kontostand() -> bool`, the writer's own body shipped in an
         // archive -- the linker never pulls the member, and the writer's call is answered by
         // the probe. Checker silent, `cc -Werror` silent, linker silent.

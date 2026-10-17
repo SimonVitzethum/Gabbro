@@ -6,7 +6,7 @@
 --
 -- Der Zweck ist die Messung und nicht das Programm. Je Zelle wird der GRUNDNAME des Orts
 -- durch `zzznix` ersetzt und je Zelle der TYP des Orts vertauscht; gemessen wird, was der
--- Pruefer dazu sagt. Die Tafel steht in `messung/DOMAENENSTELLUNGEN.md`.
+-- Pruefer dazu sagt. Die Tafel steht in `dokumente/PRUEFER.md`.
 --
 -- **Drei Zellen fehlen, und sie fehlen aus einem Sprachgrund**: `queue`, `elems of` und
 -- `fields of` in einer `table`-`invariant` braeuchten einen Verbund bzw. ein Format, an das

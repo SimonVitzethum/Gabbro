@@ -28,7 +28,7 @@ All of it belongs on `ki-pc-fisch-101` (`cargo run`, `CLAUDE.md`).
 |---|---|
 | **109** | foreign bodies in the corpus (`beispiele/*.gab` + `messung/*/*.gab`) |
 | **12** | of those **state their duty** — `ensures` or `maintains` on a declaration without a body |
-| **1** | of those **really narrows** something at the caller |
+| **4** | of those **really narrows** something at the caller |
 
 The one site:
 

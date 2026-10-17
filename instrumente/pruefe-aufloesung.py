@@ -83,7 +83,7 @@ UMGEBUNG = W / "crates" / "gabbro-check" / "src" / "umgebung.rs"
 # the `Umgebung`: **2 sites, both in `m1.rs`** -- and those two are the ones that are a
 # CHECKER. The mark fell from 27 to 2 not because anything was repaired but because 25 of
 # those 27 were never on this map. *A ratchet may fall; this one fell by 25 in one step, and
-# the step is a correction, not work* (`PLAN-AUTONOM.md` §1.8).
+# the step is a correction, not work* (`dokumente/DESIGN.md` §1.8).
 #
 # The old value stood at 27 from 2026-08-25 with the note *„25 of them in the emitter"*. That
 # sentence was the finding, written down and read as background for five days.

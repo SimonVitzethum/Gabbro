@@ -1,5 +1,5 @@
 //! **The span map from payload positions back into the region**
-//! (`PLAN-ERWEITUNG.md` §6, lane E7).
+//! (`dokumente/PRUEFER.md` §6, lane E7).
 //!
 //! A library call `@lib#f ( args ) { region }` carries its region as raw
 //! tokens with spans (lane E1: `RawToken { text, span }`). When the region is

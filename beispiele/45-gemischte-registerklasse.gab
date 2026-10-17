@@ -3,7 +3,7 @@
 -- Zwei Befunde vom 2026-08-20, und der erste ist der groessere:
 --
 -- 1. **`class` an einem Register war eine Zusage, die kein Pass eingeloest hat.**
---    `PFLICHTEN.md` buchte *„a `class r` register is never written, a `class w` never read"*
+--    `PFLICHTEN.txt` buchte *„a `class r` register is never written, a `class w` never read"*
 --    als erledigt **durch `R002`/`R003`** -- und die beiden pruefen ZEIGERRECHTE. Die Notiz
 --    an `R003` sagte den Satz sogar (*„`class w` on a register means the same"*), und der
 --    Code tat ihn nicht. Gemessen: `return d.NUR_W.A;` gab null Fehler.

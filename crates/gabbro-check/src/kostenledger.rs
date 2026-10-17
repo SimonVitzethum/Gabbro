@@ -26,7 +26,7 @@
 //!     aus
 //! ```
 //!
-//! `ablegen` (specified in `messung/KOSTEN-LEDGER.md`, implemented at wiring time)
+//! `ablegen` (specified in `dokumente/PLAN-DYNAMISCH.md`, implemented at wiring time)
 //! walks the tree with `crate::fuer_jedes_item_im_modul`, reads the already-computed
 //! numbers (`Umgebung::konst_wert` for each bound, `kosten::durchgangskosten` for each
 //! `retry` body, the statement counters below for each body), renders the [`Ledger`]
@@ -85,7 +85,7 @@ pub struct DeadlineEntry {
 }
 
 /// How many statements of each primitive lower into this function -- the `absenkung`
-/// census the lowering apex (`messung/ABSENKUNG-MESSUNG.md`) needs per unit.
+/// census the lowering apex (`dokumente/PRUEFER.md`) needs per unit.
 ///
 /// The fields are the Gabbro primitives of `SPRACHE.md` §7 plus the lowering forms
 /// `emit.rs` distinguishes. A new primitive is a new field, never a wider bucket:

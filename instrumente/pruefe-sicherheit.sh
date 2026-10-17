@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The safety-theorem guardian (S5 of dokumente/PLAN-SICHERHEIT.md).
+# The safety-theorem guardian (S5 of dokumente/PRUEFER.md).
 #
 # It watches the three files of the safety theorem over the sequential core:
 #
@@ -227,4 +227,4 @@ stufe "SAFETY: GREEN -- 0 sorry, 8 speech tests proved, 4 axiom reports clean, $
 echo "  And what that does NOT mean: that the sentence covers the language. It"
 echo "  covers the sequential core under named premises; the alias, the memory"
 echo "  model, termination, the axiom layer, foreign bodies and the emitter"
-echo "  stand outside it, each with its own sentence in PLAN-SICHERHEIT.md."
+echo "  stand outside it, each with its own sentence in dokumente/PRUEFER.md."

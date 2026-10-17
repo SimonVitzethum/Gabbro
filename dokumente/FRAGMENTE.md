@@ -1,92 +1,161 @@
 # Gabbro — the written-out fragments
 
-**Six fragments from six Caprock areas, held against today's grammar.**
-As of 2026-08-14. **No compiler reads this.** None of it is compiled, run or measured — it is
-text that was checked against [`SYNTAX.md`](SYNTAX.md), production by
-production.
+**Real code, written out in Gabbro, and what the language lacked to carry it.** Ten fragments
+from ten Caprock areas, two corpora from outside (a floating-point renderer, a Linux kernel
+tree) and a network stack. The point of this file is the *list of gaps* those programs found,
+and which of them are closed today: §2. The ten Caprock fragments themselves are kept as they
+were cut (2026-08-14 for F1–F6, 2026-08-16 for F7–F10); the completed, compilable copies live
+in [`messung/fragmente/`](../messung/fragmente/).
 
-> **That sentence has been false since the compiler existed, and it is the one line of this file
-> that speaks about TODAY rather than about 2026-08-14.** `crates/gabbro-check/tests/korpus.rs`
-> cuts every ```gabbro block below and asserts that each refusal is a named code; `gabbro
-> fragmente dokumente/FRAGMENTE.md` reports `Uebersetzungseinheiten: 10 von 10 ohne Fehler
-> (100 %)` — that **is** gate P2; `zaehle-bereichspflichten.py` measures over this file. *The
-> fragments are read, and the balance below was drawn before anything read them.* Everything
-> after this note is a record of 2026-08-14 and stays untouched, including the findings that
-> have since been closed.*
+> **Freeze sentence.** The ten ```gabbro blocks F1–F10 below are a report from 2026-08-14
+> (F7–F10: 2026-08-16), and they stay untouched. A frozen excerpt is the yardstick; whoever
+> edits it to make it pass moves the yardstick instead of discharging an obligation. Anything
+> that needs a program that runs belongs in `messung/fragmente/F01.gab` … `F10.gab`, which
+> carry exactly the lines that make the excerpts programs and say in their heads what was
+> added. *Adding is allowed, leaving out is not*, and `pruefe-emission.sh` rejects a completed
+> copy that lacks a frozen line.
 
-Until today `SYNTAX.md` carried, under the open points: *"Not a single written-out fragment
-lies in the folder."* The fragments lay in the scratchpad of two earlier sessions and were written
-against **older** versions of the grammar. This file brings them in, catches them up and
-delivers a verdict per fragment.
+## 0. Who reads this file mechanically
 
-## What has changed since — and what that moved in the fragments
+Do not reflow, reorder or rewrite the code blocks, and do not add a ```gabbro block or move the
+heading «F0» without reading this table first.
 
-| Change | Effect on the fragments |
+| Reader | What it needs from this file |
 |---|---|
-| *"keeping"* is gone, `mirrors <reg> from <reg>;` once per device | **closes** the most expensive gap of the VT-d fragment (trap 4) |
-| `publishes` is mandatory, `publishes nothing` exists | **closes** two of the three findings of the test-scaffold fragment |
-| `relaxed` exists | **closes** the third |
-| `old`, `offset_into`, `never` are real productions | `old(...)` in `delete_leaf` now carries |
-| `loop … variant` is gone; `traverse`/`retry`/`forever` | `retry` carries the virtio poll unchanged; `forever` does **not** carry the service loop (no exit) |
-| `costs` counts operations, not cycles | every `costs` line converted — and `SYNTAX.md` itself not (**«B4»**) |
-| `bitpos` as a range `@[33:24]`, `bank … at expr` | **closes** the three largest VT-d gaps (multi-bit fields, runtime-computed register location) |
+| `crates/gabbro-check/tests/korpus.rs` | cuts every ```gabbro block (`korpus::schneide`) and asserts that each refusal is a *named* code (the `BENANNT` list); the VT-d block (the one containing `device Vtd`) must stay completely clean (`f2_das_geraetefragment_bleibt_sauber`); `jeder_block_wird_gefunden` compares the cutter with the raw block count |
+| `gabbro fragmente dokumente/FRAGMENTE.md` | the gate-P2 reader; reports per block `unit` (whole module) or `excerpt` (starts mid-form) |
+| `instrumente/zaehle-pflichten.py` | aborts unless there are **exactly 10** ```gabbro blocks before the heading that starts with `# «F0»`; blocks after it are the second corpus and are counted separately |
+| `instrumente/zaehle-bereichspflichten.py` | removes every `narrow` statement from this file's text, re-runs the checker and counts `M101`/`M104`; the corpus for the `narrow` count |
+| `instrumente/pruefe-emission.sh` | cuts blocks by a header string (`module caprock::bringup`, `module caprock::sched`, `module caprock::dtb`, `device Vtd`, `device Virtq`, `module kernel::kstackmark`, `module caprock::mmu`, `module caprock::cap::space`, `module programs::virtio_blk`) and checks that completed copies lose no frozen line |
+| `instrumente/zaehle-formate.py` | counts the format-version declarations written in this file's blocks next to the corpus (the quoted figure lives in `messung/KENNZAHLEN.md`) |
+| `instrumente/pruefe-syntax.sh` | the block text must not contain the forbidden forms of `SYNTAX.md`, and the prose must not quote a retired German keyword |
+| `instrumente/pruefe-widerruf.py` | this file is exempt from the retraction scan (it quotes retracted sentences on purpose) |
 
-**The yield is asymmetric, and that is the news:** the device side has closed considerably over
-the last two versions, the **expression** side has not. Of the 31 findings below, 7 sit in
-`SYNTAX.md` itself (contradictions between prose, example and EBNF), and the heaviest of them
-(**«B2»**) makes **every atomic, every lock and every critical section in all six fragments
-unwritable** — not because the constructs are missing, but because they are **not reachable** in
-the EBNF.
+Line numbers into this file that old comments quote (`FRAGMENTE.md:269`, `:692`, `:902`, …)
+point at the layout of before the consolidation of 2026-10-17 and are stale; the content they
+name is unchanged inside the blocks (the last section gives the shift per block).
 
-## How it was checked
+## 1. How the corpus was built
 
-1. **Vocabulary:** every word that is not an identifier must stand in the closed table
-   (`SYNTAX.md` §Wortschatz). Units after `costs`/`bounded` are free identifiers —
-   which is why no guardian can see whether `ops` or `cycles` stands there (**«B4»**).
-2. **EBNF:** every line against its production, with the line number in `SYNTAX.md`.
-3. **Reachability:** machine-recomputed, which of the 103 rules are reachable from `program`.
-   Result: **three load-bearing rules are not** (`atomicdecl`, `lockdecl`, `lockstmt`),
-   plus the two lexical ones (`comment`, `newline`), which are allowed to be. `pruefe-syntax.sh`
-   checks **closure** (no used non-terminal without a definition) — the opposite direction,
-   **reachability**, it does not check, and that is exactly where the find sat.
-4. **What is not writable stands as a comment `-- «Bnn»` in the line** instead of being smoothed
-   away. A fragment that only passes because the inconvenient line is missing is not a
-   result.
+1. **Vocabulary.** Every word that is not an identifier must stand in the closed table of
+   `SYNTAX.md`.
+2. **EBNF.** Every line is held against its production.
+3. **Reachability.** Machine-recomputed which grammar rules are reachable from `program`; the
+   first run found three load-bearing rules unreachable (`atomicdecl`, `lockdecl`, `lockstmt`,
+   «B2»). Today `pruefe-syntax.sh` checks closure *and* that no rule is unreachable (189 rules
+   booked in `SYNTAX.md`).
+4. **What is not writable stays visible** as a comment `-- «Bnn»` in the line instead of being
+   smoothed away. A fragment that passes only because the inconvenient line is missing is not
+   a result.
 
-## Balance
+The first six fragments carried 31 findings (7 of them in `SYNTAX.md` itself: contradictions
+between prose, example and EBNF); F7–F10 added B37–B41. The asymmetric yield was the news: the
+*device* side had closed over two grammar versions, the *expression* side had not.
 
-| | |
-|---|---|
-| Fragments | **6** from 6 areas (cap space · VT-d · IPC · driver · userspace · test scaffold) |
-| **fits unchanged** | **0** |
-| **fits with findings** | **4** (F1 cap space, F2 VT-d, F4 driver, F6 test scaffold) |
-| **does not fit** | **2** (F3 IPC fastpath, F5 service loop) — both fail on a *load-bearing* statement, not on trimmings |
-| Findings | **31**, of them **7** in `SYNTAX.md` itself |
-| Findings that reopen a Caprock trap paid for by name | **5**: B11 (D0, nameless exit) · B18 (reused virtqueue) · B19 (arch-neutral barrier) · B21 (the counter that only grows) · B26 (refuse instead of interpret) |
+## 2. The findings register — closed or open today
 
-**The two "does not fit" are the yield of this round.** F3 fails because a `transition` writes
-**exactly one** place — the reply obligation (`caller` and `reply_owner` together) was the
-reason the fragment was written in `state` form at all. F5 fails because
-`forever` has **no exit**: the D0 lesson ("a nameless exit from the server loop cost
-ten days") is not expressible in today's grammar, because there is no exit
-at all.
+The «Bnn» ids are cited all over the checker, the tests and the instruments; they never get
+renumbered. Status is read against `SYNTAX.md`, the corpus and the instruments named in the
+last column (checked 2026-10-17; "not re-probed" means the status is the one booked in
+`PFLICHTEN.txt` or `SYNTAX.md` and was not run again today).
+
+| # | Finding at the freeze | Status today | Evidence |
+|---|---|---|---|
+| B1 | `spec fn … = pred;` used by the file, rejected by its own EBNF | closed in practice | `spec fn` bodies with quantifiers stand in `beispiele/01`, `09`, `50` (0 errors); not re-probed |
+| B2 | `atomicdecl`, `lockdecl`, `lockstmt` unreachable from `program` | **closed** | `pruefe-syntax.sh`: every rule reachable |
+| B3 | `linear ghost type Held(Lock);` unwritable | **closed** | `pruefe-notation.py` (`LUECKEN`) |
+| B4 | `costs` unit a free identifier (`cycles` vs `ops`) | **closed** | grammar: `costs <= expr "ops"` is the only form |
+| B5 | prose explains the retired word *keeping* | **closed** | the word no longer occurs in `SYNTAX.md` |
+| B6 | no name for the return value in `ensures` | **closed** | `result`; `pruefe-notation.py` |
+| B7 | no record or array literal in `expr` | **closed 2026-08-17** | labelled call `P(a: 1, b: true)`; *no* braced literal (76 corpus sites have a `{` right after an expression) |
+| B8 | no call through a `place`; no producer of a function pointer | **closed** | `SYNTAX.md` «B8» productions; `fn(…)` types carry a contract (`N035`–`N037`) |
+| B9 | `fnptr` carries no contract | **retracted — a false entry** | `N035` (effects *and* costs obligatory, since 2026-08-21), `N036`, `N037` |
+| B10 | `traverse` yields no value and has no `break`; `by consuming` drains the whole queue | **open** (language/emitter) | checker accepts, `gabbro emit` refuses `[C001]` at the queue traverse (§8); `pruefe-notation.py` lists B10 as its one `ABSENKUNGSLUECKEN` entry |
+| B11 | `forever` has no exit | **corrected 2026-08-20/28** | `leave <mark>` / `next` exist (`beispiele/04`, `39`, `150`); what is still missing is an exit that *carries a reason* |
+| B12 | no numeric-range domain; `slots of` ambiguity | **decided 2026-08-20** | `elems of` binds an INDEX, `slots of` a slot; `lenof` outside a `format` since 2026-08-25; a range domain stays absent |
+| B13 | no aggregation in `pred`; no cross-table domain | **closed** (grammar) | `count x in <domain> : pred` (`beispiele/71`); the cross-table half never carried (a foreign table name is a place). The bookkeeping *invariant* itself stays the human's L obligation |
+| B14 | `option` only as a slot type; `let … else` only on a call | **closed** | `option in typeexpr` and `let … else` on a place (`pruefe-notation.py` B14a, B14b) |
+| B15 | no type application (`Outcome(T,E)`, `Queue(T,N)`) | **open by decision** | no generic types; records stay monomorphic, no general `option T` (`SYNTAX.md` «SG-26»). Measured demand for generic traversal bodies: 0 duplicated bodies (`zaehle-traversierungen.py`, `messung/KENNZAHLEN.md`) |
+| B16 | `table` knows one `slot` word and no parameters | not re-probed | — |
+| B17 | `transition` writes exactly ONE place | **corrected 2026-08-28** | `transset = placeshift { "," placeshift }` exists and is used in `beispiele/02-geraet.gab` (the multi-place `transition irq_umlenken`); what really lacked was that `breaking <name> { … }` never resolved its name — now it does |
+| B18 | `device` knows no phases; one class per register | **built 2026-08-28** | `class rw in setup, r in live`, rule `R009` |
+| B19 | `publishes` sits on the atomic, not on the device register | **moved to the axiom layer** | K100.2 |
+| B20 | `wrapping` only on slots, not on registers | **closed** (as «B32») | `reg … wrapping` (`beispiele/12`, `37`) |
+| B21 | no atomic read-modify-write (high-water mark) | **closed** | `accumulates hoch : u64 merge max;` |
+| B22 | strings single-line; multi-line `claim` | **closed 2026-08-17** | adjacent string literals join into one `claim` text |
+| B23 | one class per register cannot express a mixed register (VT-d `FSTS`) | **built 2026-08-20** | a field may carry its own `class`; a field without one inherits the register's |
+| B24 | bit positions beyond 64 / endian interplay | **decided 2026-08-18** | a position lies inside the field's own word; beyond it there is nothing to mean, so the notation is refused |
+| B25 | `intty in range` is an interval, not a value set | **closed** | `pruefe-notation.py` |
+| B26 | `requires` of a register has no named exit; no pre-state of a `transition` | **built 2026-08-28** | `requires … else <reason>` (`R010`/`R011`); the generator reads the pre-state through `mirrors` and measures it |
+| B27 | `prim fn` has no `abi` | **retracted — a false entry** | an `asm` body with `in`/`out`/`clobbers` has existed since 2026-08-20 |
+| B28 | no placeholder binder in `match` arms | not re-probed | — |
+| B29 | relational precondition (`refcount -= 1`) | **decided** | `narrow … else` is the answer; the measurand `N_ritus` was built on it (§8) |
+| B30 | `touches` takes an unbraced list, `effects` a braced one | **open (a wart)** | grammar unchanged: `"touches" efflist` |
+| B31 | `old(place)` not usable in an expression | **corrected 2026-08-28** | `old(…)` in expressions (`beispiele/05`, `35`, `104`) |
+| B32 | virtio ring counter wraps by design | **built** | `wrapping` at the register declaration |
+| B33 | V-rules do not narrow a register location | **decided 2026-08-17** | deliberately: a register access is `volatile`, and `volatile` *is* the statement that the place can change between reads |
+| B34 | `revoke` bound | **premise fell** | no construct needed |
+| B35 | `Some`/`None` | **built** | — |
+| B37 | linearity enforces *exactly once*, not *in this order* | **closed 2026-08-17** | `order { … }` with `advances a -> b` (`beispiele/22-bootstrecke.gab`) |
+| B38 | `Stale(T)` that enforces revalidation is too strict | **candidate refuted; condition kept** | a value across a lock boundary re-checks *or* names a carrier; `masks IRQ` counts only under `nested masked`. Booked in the axiom layer, K100.2 |
+| B39 | the MMU writes `A`/`D` itself: a writer no `effects` line names | **moved to the axiom layer** | `assume … falsifier …`; the candidate word `hardware A, D;` on `walk` was never built (it would burden the convergence bet) |
+| B40 | the DTB parser checks 145 lines without error, with no tool | **a finding against the thesis, kept** | `format` buys brevity there, not safety; assumptions may name their machine (`assume <name> arch x86_64 "…"`) |
+| B41 | three domains missing (B3 count): `ancestors of`, union-find, chain over an edge function | **built in part** | `ancestors of` and `descendants of`, the edge named once at the table («B41b»); union-find and the edge-function chain were not built |
+
+**How to re-measure the statuses.** `./instrumente/pruefe-notation.py` runs the smallest program
+for each notation gap and asks the checker (8 notation gaps, plus the one emitter gap B10);
+`./instrumente/pruefe-syntax.sh` holds the examples against `SYNTAX.md`;
+`./instrumente/zaehle-pflichten.py --haengend` prints what still hangs per fragment.
+
+## 3. How the ten fragments stand today
+
+Measured 2026-10-17 with the debug binary built that day, over the completed copies
+`messung/fragmente/F01.gab` … `F10.gab` (`gabbro pruefe`), and read from the `lauf "fragmentN"`
+lines of `instrumente/pruefe-emission.sh` (a *Durchstich* is: emit, compile, **run**, compare
+with a hand-written expected value, plus a poison edit of the C that must change the answer).
+
+| Fragment | Area | `gabbro pruefe` on the completed copy | Durchstich (expected output) |
+|---|---|---|---|
+| F1 | cap space | 41 items, 0 errors, 1 hint | yes — `1 1 0 0 0 1 0 0 1 1 0 65536 4096 0 1` |
+| F2 | VT-d `device` | 10 items, 0 errors, 0 hints | yes — `4096 153 7 3 256 1 6 2 1 1 0 9` |
+| F3 | IPC fastpath | 27 items, **24 errors**, 2 hints | **no** — frozen on purpose (§8) |
+| F4 | virtio ring | 15 items, 0 errors, 0 hints | yes — `42 1 7 99` |
+| F5 | `virtio-blk` service | 32 items, 0 errors, 0 hints | yes — `qp12qBpSp 1 0 3 2 2 1 1 4711 31 512 77 0` |
+| F6 | stack high-water mark | 36 items, 0 errors, 0 hints | yes — `0 0 4096 4096 1 0 1 1 0 1 0 0 0 0 1 0 1 0` |
+| F7 | boot path (`order`) | 11 items, 0 errors, 0 hints | yes — `123456` |
+| F8 | scheduler, `Stale(T)` | 10 items, 0 errors, 1 hint | yes — `1 1 1 0 0 1 1 1` |
+| F9 | MMU page tables | 9 items, 0 errors, 0 hints | yes — `1 2236416 0 1 0 0` |
+| F10 | DTB parser | 9 items, 0 errors, 0 hints | yes — `1 0 0 0 0 65` |
+
+Nine of ten check clean and nine of ten are pierced (`F3` is the exception in both columns).
+`./instrumente/zaehle-fragmente.py [--je-datei]` prints the three figures `N von 10 prüfen
+sauber`, `N von 10 senken ab` and the list of pierced fragments; `./instrumente/zaehle-pflichten.py
+--haengend` reads the piercing ledger.
+
+**The frozen excerpts in this file are not the clean ones, and that is by design.**
+`gabbro fragmente dokumente/FRAGMENTE.md` reports today *6 of 13 translation units with no
+errors (46 %)* over this file (the F-blocks, the floating-point block and the K2 blocks) and
+two `excerpt` blocks that start mid-form. The old header sentence "10 of 10 without error —
+that is gate P2" is no longer true of this file; gate P2 was reached on 2026-08-15 over the
+completed copies and the corpus of units, and the frozen text is only held to *named* refusals
+(`korpus.rs`).
+
+## 4. What was and was not written out
+
+The 2026-08-14 scratchpad held six areas. The scheduler (F8), the MMU (F9), the loader (F7)
+and the DTB parser (F10) were written on 2026-08-16 to decide four open classes; each of
+the four demanded **no new construct** and left a finding instead («B37»–«B40»). Still not
+written as fragments: a GPT/FAT parser (its `format` blocks need a *run-time* array length
+where `array` requires a constant), and the checkpoint (Z4).
 
 ---
 
 # F1 — Cap space: `delete_leaf`, `unlink`, `revoke`
 
-**Origin (Rust original):** `crates/caprock-cap/src/space.rs:1062` (`delete_leaf`), `:1044`
-(`unlink`), `:991` (`release_slot`), `:619` (`revoke`); `crates/caprock-cap/src/object.rs`
-(`ObjectKind`).
-**Draft in the scratchpad:** `delete_leaf.gabbro` (138 ll.), `syntax-entwurf.md:1063-1243`.
-
-**Caught up:** `module x;` → `module x { … }` (`moduledecl` demands braces, SYNTAX.md:113) ·
-`use a::{b,c}` → three `usedecl` (:114 knows no brace list) · `held(CAPS)` → `Held(CAPS)`
-(§2 carries `linear ghost type Held(Lock)`) · `costs <= 200 cycles` → `<= 200 ops` · `type Gen = u32
-wrapping;` drops out, `wrapping` belongs on the slot (:388) · second table `objects { … }` **inside**
-the `table` → its own `table CapObjects` with `index into CapObjects` · slot fields with a trailing
-comma (:386) · `tagged ObjectKind : u8 { … }` → `tagged type … = { … }` (:147) · `invariant` with
-`cost` and `runs` (:389, previously left out).
+**Origin (Rust):** `crates/caprock-cap/src/space.rs` — `delete_leaf`, `unlink`, `release_slot`,
+`revoke`; `object.rs` (`ObjectKind`). **Caught up to the grammar of the day:** `module x { … }`
+with braces, one `use` per name, `Held(CAPS)`, `costs … ops`, wrapping on the slot, the object
+table as its own `table CapObjects`, `tagged type`.
 
 ```gabbro
 module caprock::cap::space {
@@ -349,49 +418,36 @@ extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { wri
 }
 ```
 
-**Verdict: fits with findings** — «B1», «B2», «B10», «B13», «B14», «B15», «B16», «B28», «B29», «B31».
+**Verdict at the freeze: fits with findings** — B1, B2, B10, B13, B14, B15, B16, B28, B29, B31.
 
-The body carries: `unlink` stands line for line, `delete_leaf` loses the catch-all branch over
-ten `ObjectKind` variants (in Caprock **five** variants have been added since it was laid down —
-each would silently have fallen into `_ => {}`), and `revoke` shrinks from 26 body lines to 4,
-because `by consuming` carries termination and leafness. **What does not carry is the bookkeeping itself:**
-`refcount_matches` is unformulable after «B13», and `refcount -= 1` hangs on exactly that.
+The body carries. `unlink` stands line for line; `delete_leaf` loses the catch-all branch over
+ten `ObjectKind` variants (Caprock has added *five* since the Rust was written — each would
+silently have fallen into `_ => {}`); `revoke` shrinks from 26 body lines to 4, because
+`by consuming` carries termination and leafness. What did not carry is the bookkeeping itself:
+`refcount_matches` was unformulable (B13), and `refcount -= 1` hung on exactly that (B29).
 
-**What the proof part needs — and that is NOT a finding.** For this fragment a second part lies in
-the scratchpad (`delete_leaf.beweis`, 7,2 KB): what a human would **additionally** have to
-write down for the obligations to go through. It needs `ghost let`, `assert … by { … }`, `lemma …
-requires … ensures … { induction over the slot table }` — and **none** of it exists. That is
-not a hole but the line drawn: `SYNTAX.md`:567 lists *"hand-written lemmata"*
-explicitly under what does not exist, and :253-259 states the price for it — there is no
-emergency exit. **The proof part is thereby the measurement of that price on a real case:** the
-preservation of `kind_zeigt_zurueck` by `unlink` splits into four cases, and Gabbro has no
-form in which to conduct them. Either the property falls out of the construction, or it falls
-out of the language.
+**The proof part is not a finding, it is the line drawn.** A hand-written second half
+(`ghost let`, `assert … by { … }`, `lemma … { induction over the slot table }`) would be needed
+for the preservation of `kind_zeigt_zurueck` by `unlink`, which splits into four cases;
+`SYNTAX.md` lists hand-written lemmata among what does not exist, and states the price — no
+emergency exit. Either the property falls out of the construction or it falls out of the
+language.
+
+**Today:** the completed copy `F01.gab` checks (0 errors) and is pierced. One real defect
+stays booked as `TODO.md` **O4**: `cdt_wohlgeformt` quantifies over `slots of c` — the whole
+table, not the used slots — so one free slot falsifies it, and `unlink`'s
+`ensures c.slots[s].parent == None` contradicts its own `maintains` four lines away. A solver
+found it; no Gabbro pass sees it, and the Durchstich does not either (it measures what the C
+computes, not what the promise claims).
 
 ---
 
 # F2 — VT-d: the remapping unit as a `device`
 
-**Origin:** `crates/caprock-hal/src/x86_64/vtd.rs:26-32` (register locations), `:42-52`
-(`GCMD_STATE_MASK` — trap 4 literally), `:442` (`frr_off`), `:451` (`read_frr`), `:236-247`
-(the state bits on the command write).
-**Draft in the scratchpad:** `vtd.gabbro` (155 ll.).
-
-**Caught up — and here the new grammar helped most:** the draft carried
-**seven** gaps, **four** of them are closed. Multi-bit fields (`ND`, `SAGAW`, `MGAW`, `FRO`,
-`NFR`, `MAMV`, `IRO`, `TTM`, `RTA`, the CCMD fields) now carry `@[hi:lo]` (`bitpos`,
-SYNTAX.md:146). The fault-recording registers and the IOTLB registers lie at a **runtime-computed**
-base and are writable as `bank … at CAP.FRO * 16 …` (:429). And the most expensive gap — *"there is
-no form for: the state of this register is read out of that one"* — is `mirrors GCMD from
-GSTS;` (:428). Multi-line strings in `assume` have been made single-line (`char` excludes
-`newline`, :95).
-
-**«B5»** In passing it shows: the explanatory paragraph on trap 4 (`SYNTAX.md`:453-458) still
-speaks of *"keeping"* — a word the grammar no longer knows. The file explicitly
-carries the writing rule that an abolished name stands in italics inside quotation marks and
-**is no longer syntax** (:49-50); here it stands in backticks, i.e. as today's syntax. The
-guardian cannot see it: it checks the vocabulary table against the **EBNF**, not against the
-prose.
+**Origin:** `crates/caprock-hal/src/x86_64/vtd.rs` (register locations, `GCMD_STATE_MASK` —
+trap 4 literally —, `frr_off`, `read_frr`, the state bits on the command write). Here the new
+grammar helped most: four of the draft's seven gaps closed (multi-bit fields `@[hi:lo]`,
+`bank … at CAP.FRO * 16 …` for run-time register locations, `mirrors GCMD from GSTS;`).
 
 ```gabbro
 device Vtd(base : Pa) at mmio {
@@ -518,7 +574,7 @@ format Slpte @version 1 endian little {
 
 -- «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
 -- ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
--- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.md`:* zwei Woerter,
+-- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.txt`:* zwei Woerter,
 -- und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
 format ContextEntryLo @version 1 endian little {
     P        : u64 @0,
@@ -544,25 +600,23 @@ assume fsts_pfo_verwirft
     falsifier probe_fault_overflow;
 ```
 
-**Verdict: fits with findings** — «B23», «B24», «B25», «B26».
+**Verdict at the freeze: fits with findings** — B23, B24, B25, B26. The best result of the six:
+`mirrors GCMD from GSTS;` is **one line** where the Rust has a constant plus eleven comment
+lines plus three hand-done sites. What remained was the register-class finding (B23: `FSTS` is
+`w1c` in bits 7:0 and read-only in 15:8, and one class per register made the fault-record index
+unreadable) — all built since.
 
-**That is the best result of the six.** Of the draft's seven gaps four are shut, and the
-most expensive of them was the x86 version of trap 4: `mirrors GCMD from GSTS;` is **one line**
-against a constant plus eleven lines of comment plus two sites done by hand
-(`vtd.rs:52`, `:236`, `:247`). What remains is the register-class finding («B23») — and it is
-not cosmetic: it makes unreadable the very field with which the driver finds the fault record.
+**Today:** the only frozen block that is clean under the checker, pinned by
+`f2_das_geraetefragment_bleibt_sauber`; the completed copy is pierced (`4096 153 7 3 256 1 6 2
+1 1 0 9`; five `reserved` fields were the only addition).
 
 ---
 
 # F3 — IPC: the fastpath `Endpoint::call`
 
-**Origin:** `crates/caprock-ipc/src/lib.rs:611` (`call`), `:335` (`caller`); D11 sits in the
-overflow branch of the sender queue.
-**Draft in the scratchpad:** `syntax-entwurf.md:1348-1456`.
-
-**Caught up:** `state X over Y` → `state X` (:414 knows no `over`) · `Some(x) -> { }` →
-`Some(x) => { }` (:320) · `costs … cycles` → `ops` · `over e.receivers` → `over queue e.receivers`
-(:242) · `Queue(ThreadId, QUEUE_CAP)` → monomorphic struct `TidQueue`.
+**Origin:** `crates/caprock-ipc/src/lib.rs` (`call`, `caller`; trap D11 sits in the overflow
+branch of the sender queue). **Caught up:** `state X`, `Some(x) => { }`, `costs … ops`,
+`over queue e.receivers`, a monomorphic `TidQueue`.
 
 ```gabbro
 module caprock::ipc {
@@ -718,50 +772,35 @@ extern fn frame_of(d : ptr<normal, r> SchedOps, t : u32) -> u32
 }
 ```
 
-**Verdict: does NOT fit** — «B17» is lethal, plus «B6», «B8», «B9», «B10», «B12», «B15».
+**Verdict at the freeze: does NOT fit** — B17 lethal (a `transition` wrote exactly one place),
+plus B6, B8, B9, B10, B12, B15. The fragment existed to show that Caprock's comment *"`caller`
+and `reply_owner` are always set and cleared together"* becomes a derivation instead of a
+promise. B17 has since been corrected (§2); B10 (`traverse` cannot return the *first* hit
+without emptying the queue — a different program) is still open.
 
-The reasoning is not a matter of taste: the fragment was written to show that Caprock's
-comment *"`caller` and `reply_owner` are always set and cleared together"* becomes in
-Gabbro a **derivation instead of a promise**. With a `transition` that writes one place,
-it stays a promise — and between the two assignments stands a state in which
-`antwortpflicht_paarig` is violated and which no construct describes. On top of that comes «B10»: the
-fastpath **changes its behaviour** if one rewrites it onto `traverse` without an exit.
-**Two load-bearing statements, both gone.** What carries is D11 — and that is remarkable enough
-to name: `let … else` forces the failure branch, a silent 33rd sender is not
-writable.
+**Three promises of the draft were deliberately not taken over**, and the reason is not
+grammar: `ensures e.caller is Some(cl) => cl == current_id(ops, core)` is **false** (a second
+caller lands in the `None` branch while `caller` stays the first); `msg_copied` is declared,
+counted into its own metric and gates **no** `ensures` — the only functional property of a
+fastpath, *the message arrived*, gates nothing; `locks SCHEDS` without an index hides that the
+cross-core branch takes a foreign core's lock. **The lesson belongs to the bookkeeping:** a
+metric formed out of unchecked promises rewards the false promise, because it is short.
 
-**Three promises of the draft I did NOT take over, and the reason is not a grammar question.**
-`syntax-pruefung-teil2.md` (G1–G3) held them against `crates/caprock-ipc/src/lib.rs:620-656`:
-
-* `ensures e.caller is Some(cl) => cl == current_id(ops, core)` is **false**, not merely
-  unproven. If a second thread B calls while the rendezvous with A is open, B lands in the
-  `None` branch (`:652`), `caller` stays `Some(A)` — the promise claims `A == B`. That is exactly
-  the state for which `senders` exists at all.
-* `msg_copied` is declared, **counted** into its own metric and hangs on **no**
-  `ensures`. The only functional property of a fastpath — *the message has arrived* — gates
-  nothing, while `transfer(f, …)` stands beside it without any postcondition. Literally the
-  paid-for trap *"a negative test can secure a property nobody uses"*, one
-  level up.
-* The `effects` names `locks SCHEDS[core]`, but the cross-core branch additionally takes the lock
-  of a **foreign** core (`unblock`). Above it therefore says `locks SCHEDS` without an index — that
-  is evaded, not solved.
-
-**The lesson from it does not belong to the grammar but to the bookkeeping over it:** a
-metric formed out of **unchecked promises** rewards the false promise, because it is
-short.
+**Today — the one fragment that is still not pierced**, and the reason is *decided*, not
+neglected (§8): 24 errors (the 18 of 2026-09-04 plus 6 `N574`, the refusal of 2026-09-30 that a
+foreign body takes no function pointer, hit by the scheduler vtable `SchedOps` handed to
+`extern fn block_current`/`switch_to`/…), classified **0 plumbing / 9 rule decisions / 9 the
+program is wrong**. A rewritten, runnable fast path exists
+(`messung/proben/probe-ipc-fastpath-durchgestochen.gab`, run name `ipcfastpath`) and was *not*
+accepted as F3's Durchstich, because it replaced the load-bearing statement.
 
 ---
 
 # F4 — The driver: virtio transport, ring, buffer ownership
 
-**Origin:** `crates/caprock-virtio/src/lib.rs:88-90` (register locations), `:334` (`publish`),
-`:363` (`poll_used`), `:494-499` (`QUEUE_SIZE` as a foreign number), `:533` (the status word
-assembled by hand), `crates/caprock-virtio/src/owned.rs` (buffer ownership).
-**Draft in the scratchpad:** `grammatik-v3.md:112-274`.
-
-**Caught up:** `where Self <= QMAX else QueueTooBig` → `requires Self <= QMAX` (`regdecl`,
-:433) · `fields { … }` with a trailing comma (:432) · `retry` in the order of the production
-(:343-348) · `touches { … }` → `touches` without braces (:340, **«B30»**).
+**Origin:** `crates/caprock-virtio/src/lib.rs` (register locations, `publish`, `poll_used`,
+`QUEUE_SIZE` as a foreign number, the status word assembled by hand), `owned.rs` (buffer
+ownership).
 
 ```gabbro
 device VirtioPci(base : Pa) at mmio {
@@ -921,24 +960,19 @@ impl fn poll_used(q : ptr<dma, r> Virtq, von : u16) -> u32
 }
 ```
 
-**Verdict: fits with findings** — «B3», «B7», «B18», «B19», «B20», «B26», «B30».
-
-The transport carries completely and takes trap 4 in its virtio version with it: the status word
-is no longer assembled by hand. `retry` carries the poll word for word. **The ring does not
-carry:** phases, a register class per phase and `publishes` on the device register are missing all
-three, and together they carry two paid-for traps (reused virtqueue, barrier out of the address space).
-The substitute via a linear ghost value carries the first — and needs «B3» to do it.
+**Verdict at the freeze: fits with findings** — B3, B7, B18, B19, B20, B26, B30. The transport
+carries completely and takes trap 4 in its virtio form with it (the status word is no longer
+assembled by hand); `retry` carries the poll word for word. The ring did not: phases, a register
+class per phase and `publishes` on a device register were missing — together the carriers of two
+paid-for traps (the reused virtqueue, the barrier out of the address space). B18/B26/B32 are
+built; B19 went to the axiom layer. **Today:** pierced (`42 1 7 99`).
 
 ---
 
 # F5 — Userspace: the service loop of `virtio-blk`
 
-**Origin:** `programs/hardware/virtio-blk/src/main.rs:255` (`run`), `:317` (the loop),
-`:418` (`OP_STOP`), `:92` (the op codes); `programs/libcaprock/src/lib.rs` (the syscall entry).
-**Draft in the scratchpad:** `grammatik-v3.md:317-408`.
-
-**Caught up:** `fn run … -> never` → `divergent fn` (`nevertype` is, per :138, the return type
-of `prim`/`divergent`) · match arms as blocks (:320) · the `costs` unit.
+**Origin:** `programs/hardware/virtio-blk/src/main.rs` (`run`, the loop, `OP_STOP`, the op
+codes), `programs/libcaprock` (the syscall entry).
 
 ```gabbro
 module programs::virtio_blk {
@@ -1043,30 +1077,27 @@ extern fn watchdog_schlug_an() -> never effects { diverges };
 }
 ```
 
-**Verdict: does NOT fit** — «B11» is lethal, plus «B7», «B14», «B27».
+**Verdict at the freeze: does NOT fit** — B11 lethal (a service must be able to leave its loop
+*by name*; `forever` had no exit), plus B7, B14, B27. What carried, carried well: `match` is
+exhaustive, so the `_ => reply(ST_BADOP)` branch exists once instead of in every server; the
+four `map_window` refusals are forced through `let … else`. B11 was corrected on 2026-08-20
+(`leave <mark>` exists and lowers to `goto marke_ende;`), B27 was a false entry, B14 is closed.
 
-What carries, carries well: `match` is exhaustive, so the `_ => reply(ST_BADOP)` branch no longer
-exists in every server but **once**, in `decode_op`; the four `map_window` refusals are
-forced through `let … else` instead of wished for. What does not carry is the **form** of the program:
-a service is a loop that waits on an endpoint and must be able to leave it **by name**.
-`forever` exists, an exit does not — and `retry until pred` is the wrong construct
-(it repeats **until** `pred` holds; here it is to end **on** `pred`, and the body is
-no retry attempt).
+**Completing it found three names that belong to C** (`exit`, `signal`, `recv`), and none is
+visible at `cc` because the generated unit includes no POSIX header — the linker then finds the
+real symbol behind whatever the unit declared: a *silent wrong binding*. They were renamed in
+the completed copy (`N046`'s own advice). The same run found that `N046` ignored the error
+channel (`-> T or R` rewrites the C signature) — repaired. **Today:** pierced, with a
+fingerprint of the whole dispatch as expected value (`qp12qBpSp …`).
 
 ---
 
 # F6 — Test scaffold: the stack high-water mark
 
-**Origin:** `kernel/src/kstackmark.rs:145` (`unberuehrt`), `:192` (`messen`), `:199-203`
-(`fetch_max`/`fetch_min`), `:372` (`marke`), `:432` (`MIND_MESSUNGEN`), `:445` (`urteil`),
-`:281-283` (the calibration).
-**Draft in the scratchpad:** `grammatik-v3.md:456-588`.
-
-**Caught up — and here the new grammar closed two of the draft's three findings:**
-`publishes nothing` now exists (:469), `relaxed` too (:470). The draft had carried both as a
-gap: a pure counter was *"either contract-free or ungrammatical"*, and the
-ordering set had left out the most frequent element with `Relaxed` (779 of 2257 measured
-accesses) and taken in the never-used one with `SeqCst`.
+**Origin:** `kernel/src/kstackmark.rs` (`unberuehrt`, `messen`, `fetch_max`/`fetch_min`,
+`marke`, `urteil`, the calibration). `publishes nothing` and `relaxed` closed two of the
+draft's three findings before it was even run (the ordering set had left out the most frequent
+ordering, 779 of 2 257 measured accesses).
 
 ```gabbro
 module kernel::kstackmark {
@@ -1204,7 +1235,7 @@ check kstack {
         --
         --     return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
         --
-        -- `PFLICHTEN.md` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
+        -- `PFLICHTEN.txt` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
         -- Begruendung *„`f < g / N` gibt `f < g` nur ueber die Division; die V-Regeln rechnen
         -- nicht."* **Nachgerechnet: die Begruendung beschreibt den falschen Zweig.** Der
         -- Vergleich steht in einem `if`, das ZURUECKKEHRT -- auf dem Weg hierher gilt
@@ -1224,118 +1255,26 @@ check kstack {
 }
 ```
 
-**Verdict: fits with findings** — «B2», «B6», «B7», «B14», «B21», «B22», «B30».
-
-**`check` itself would hit exactly:** the `measures` list **is** the report line (in the real code
-there are three versions of the same list — a struct `Marke` with ten fields, the function that
-fills it, and the formatting line); `floor` hits exactly the three speech tests that
-`urteil()` conducts by hand; and `gates kstack` at the calibration is the linear chain that in the
-real code stands as a voluntary first conjunct. **What does not carry is the measured quantity:**
-without an atomic read-modify-write («B21») there is no high-water mark, and without `option` as a
-type («B14») exactly the interpretation returns that `floor` is built against.
-
----
-
-# The findings
-
-**31 findings. 7 sit in `SYNTAX.md` itself** (B1–B6 and B31: contradictions between EBNF, prose
-and its own examples), **24 are gaps in the means of expression**. Column "Line" is the line **in
-this file** at which the finding is anchored; column "SYNTAX.md" names the affected
-production.
-
-> **Two things about this table's own description are no longer true, and they are named here
-> rather than repaired.**
->
-> **The count.** The file carries **38** distinct `«Bnn»`; seven of them have no row — B32, B33,
-> B34 (in the frozen F4 comments) and B37–B40 (the F7–F10 verdicts of 2026-08-16). *31 was right
-> on 2026-08-14 and has been a count of the table rather than of the findings ever since.*
->
-> **The `Line` column.** Twenty-two of the thirty-one line numbers no longer point at their
-> anchor — the file has grown above them. **They are deliberately not re-derived.**
-> [`HISTORIE.md`](HISTORIE.md) books exactly this as a fallen version (*"a location note in
-> running text — stale at the first insertion above it. Statements about **order** hold, line
-> numbers do not"*), and `korpus.rs` was re-anchored to content for the same reason on
-> 2026-08-15. *Re-deriving the column would restart the rot clock; anchoring on `«Bnn»` or
-> dropping it is the folder-consistent fix, and that is a decision, not a translation.*
-
-| # | Line | SYNTAX.md | Finding | hits |
-|---|---|---|---|---|
-| **B1** | 171 | :266-274 against :287 | `spec fn … = pred;` the file uses this form itself, `fndecl` allows only `block \| ";"`. Through a `block` a quantifier is not reachable, because `pred` does not hang under `expr` | F1, F3, every `spec fn` |
-| **B2** | 124 | :111-112, :313-314 | `atomicdecl`, `lockdecl`, `lockstmt` are defined and **not reachable** from `program`. Machine-recomputed: 103 rules, 3 unreachable | F1, F3, F4, F6 — every lock, every atomic |
-| **B3** | 744 | :135-136 against :162-167 | `linear ghost type Held(Lock);` writes a type list where `params` demands `ident ":" typeexpr`. Four of its own examples, `Held` in every `requires` | all six |
-| **B4** | 22 | :295, :366 against :580 | `costs <= 200 cycles` in the example against the decision "`costs` counts operations". The unit is a free identifier — no guardian can see it | all six |
-| **B5** | 334 | :453-458 against :428 | The paragraph on trap 4 explains *"keeping"*, a word that no longer exists; the production is called `mirrors` | F2 |
-| **B6** | 574 | :266-274 | No name for the return value in `ensures`. `old(place)` exists, a `result` does not | F3, F4, F6 |
-| **B7** | 785 | :200 | No struct and no array literal in `expr`. A function therefore cannot produce a `structty`; tuple return and `reply(EP, [ … ])` fall with it | F4, F5, F6 |
-| **B8** | 560 | :202 | No call through a `place`: `ops.current_id(core)` is not a `call`, although `fnptr` exists as a type | F3 |
-| **B9** | 557 | :148 | `fnptr` carries no contract — the substitute for `&mut dyn SchedOps` loses exactly what it was there for | F3 |
-| **B10** | 283 | :337-341 | `traverse` yields no value, there is no `break`. The search for the FIRST hit becomes the emptying of the whole set; an operation counter cannot be raised | F1 (`peak_revoke_ops`), F3 (fastpath) |
-| **B11** | 862 | :350-354, :603 | `forever` has no exit; `leave`/`break`/`continue` do not exist. The D0 lesson ("a nameless exit from the server loop") is not expressible | **F5 lethal** |
-| **B12** | 549 | :238-244 | No numeric-range domain (`forall i in 0 ..< MSG_WORDS`); and whether `slots of` binds an index or a slot is not laid down — both readings occur in the file | F1, F3, F6 |
-| **B13** | 165 | :230-247 | No aggregation (`count`) and no cross-table domain in `pred`. `refcount_matches` — the bookkeeping of the capability system — is not formulable | F1 |
-| **B14** | 162 | :137, :387, :316 | `option` exists only as a `slottype`, not as a `typeexpr`; and `let … else` demands a `call` on the right, so it does not unpack a `place` | F1, F5, F6 |
-| **B15** | 111 | :137, :147, :150 | No type application: `Outcome(T,E)`, `Queue(T,N)` unwritable; `variants` takes exactly one `typeexpr` per variant, multi-field payloads need helper structs | F1, F3 |
-| **B16** | 130 | :385-386, :239 | `table` knows exactly one `slot` word and no parameters; and an `invariant` in the `table` body has no name for its own table | F1, F3, F6 |
-| **B17** | 536 | :414, :434 | A `transition` writes **exactly one** `place`; `state` does not name the type it stands over. "`caller` and `reply_owner` never half set" is thereby a comment again | **F3 lethal** |
-| **B18** | 705 | :426-435 | `device` knows no phases and `regdecl` one class per register — "`used` belongs to the device" cannot be typed. Concerns a paid-for trap (reused virtqueue) | F4 |
-| **B19** | 716 | :468, :598 | `publishes` sits on the atomic (which after B2 is unreachable), not on the device register. The five barriers of the virtio path have no carrier | F4 |
-| **B20** | 713 | :139, :388 | `wrapping` belongs on `slottype`, not on `intty`. A wrapping REGISTER (avail index, per the specification at 65536) is not writable | F4 |
-| **B21** | 949 | :468, :600 | No atomic read-modify-write: `accumulates max/min/+` is missing. 213 sites in the tree, of them 19 `fetch_max`/`fetch_min` | F6 |
-| **B22** | 1004 | :95 | Strings are single-line (`char` excludes `newline`). All three `claim` texts and two `assume` texts are multi-line | F2, F6 |
-| **B23** | 366 | :430 | One class per register cannot express a mixed register. VT-d `FSTS` is w1c in 7:0 and r in 15:8 — `class w1c` makes `FRI` unreadable | F2 |
-| **B24** | 383 | :146, :393 | `bitpos` says nothing about bit positions beyond 64 and nothing about the interplay with `endian`. The VT-d fault record consists of two words | F2 |
-| **B25** | 429 | :139 | `intty in range` is an interval, not a set of values — binding a field to the values of a `reason` works only if the codes happen to be contiguous | F2 |
-| **B26** | 395 | :430-435 | The `requires` of `regdecl` has no named exit (`else QueueTooBig`), and there is no placeholder for the prior state of a `transition` (`any -> 0`) | F2, F4 |
-| **B27** | 831 | :266-274 | `prim fn` has no `abi` block: `arch` exists, the register assignment does not. The place at which 168 `asm!` sites were meant to converge has no content | F5 |
-| **B28** | 251 | :320 | No placeholder binder in `match` arms. Ten variants with no payload use need ten dead names | F1 |
-| **B29** | 245 | :588, :607-609 | Relational precondition: `refcount -= 1` falls only via an invariant that after B13 is not writable at all. The contested case of the dividing line, on a real case | F1 |
-| **B30** | 973 | :340 | `touches` takes an `efflist` without braces, `effects` everywhere else with them. Both drafts wrote `touches { … }` | F4, F6 |
-| **B31** | 228 | :235-236, :200 against :292 | `old(place)` hangs under `atompred`, not under `primary` — it can stand as a predicate on its own, but cannot occur in any expression. **No difference statement ("after against before") is writable**, and the file states one in its own `delete_leaf` example | F1, and every `ensures` with `old` |
-
-## What is NOT written out at all in the scratchpad files
-
-So that nobody concludes from it that it has been checked:
-
-* **The scheduler.** No fragment, in none of the five files. There is prose on `SCHEDS`,
-  lock ranks and the reason set (Z24) — but not a line of Gabbro. `forever … per_pass … progress
-  timer_tick_arrives` in `SYNTAX.md`:363-368 is an example of the grammar, not a fragment.
-* **The MMU/page tables.** Explicitly deferred (`syntax-entwurf.md`, VII.3), on the
-  grounds that a PTE is pointer and bitfield at once — that is the open point
-  `SYNTAX.md`:591-593 and not answered with a fragment.
-* **The loader / `SYS_LOAD` / the verification.** There is a single line
-  (`prim fn seal_code(…)`, `syntax-entwurf.md`:1716) and the statement that W^X thereby becomes
-  an axiom — no fragment.
-* **GPT/FAT parser.** Two `format` blocks in the draft (`syntax-entwurf.md`:128-144) that map the
-  header but not the reading; `bounded_by` in them is not a word of the grammar, and
-  `[GptEntry; GptHeader.entry_count]` demands a **runtime** length where `array` (:142) requires a
-  `constexpr`. Not carried as a fragment, because no body for it exists.
-* **The checkpoint (Z4).** Occurs in none of the files.
-
+**Verdict at the freeze: fits with findings** — B2, B6, B7, B14, B21, B22, B30. `check` would
+hit exactly: its `measures` list *is* the report line (three hand-kept copies in the Rust),
+`floor` hits the three speech tests `urteil()` conducts by hand, `gates kstack` is the linear
+chain the original keeps as a voluntary first conjunct. What did not carry was the measured
+quantity: no atomic read-modify-write (B21), and no `option` as a type (B14). Both closed.
+**Today:** pierced. Its `narrow` at the traversal counter is the one *ritual* site of the corpus
+(§8): its `else` branch can never be taken, because the bound falls out of the domain — a
+place where M1 does not see what the human sees.
 
 ---
 
-## F7 — Loader/bringup: the boot path with `BootPhase` as a value
+# F7 — Loader/bringup: the boot path with `BootPhase` as a value
 
-**Written 2026-08-16** against `kernel/src/main.rs:143-310` (`../caprock-messbasis`,
-`a1bf707`). **The fragment decides the plumbing class *phase*** — advance protocol and gate
-(`k = 5`) stand in `MESSUNGEN.md`, commit `27805bd`.
-
-The original carries its ordering **in comments**. Seven sites, each with the sentence
-that explains it:
-
-| # | Site | what it says | Condition |
-|---:|---|---|---|
-| 1 | `main.rs:144`/`:151` | *"Before the MMU atomics/spinlocks are not well defined"* | single-core + order |
-| 2 | `main.rs:213` | *"cap tables BEFORE the first cap"* | order |
-| 3 | `main.rs:222` | *"IPC tables BEFORE the first endpoint"* | order |
-| 4 | `main.rs:251` | *"first report the authority document, then start the root task"* | order |
-| 5 | `main.rs:256` | *"the verifier MUST stand before the root task"* | order |
-| 6 | `main.rs:303` | AP entry: *"only after that are atomics/console valid"* | single-core |
-| 7 | `caprock-slab/src/lib.rs:173` | *"call only at boot, before other cores"* | single-core |
-
-> **And no. 4 is a paid-for mistake of exactly this class:** *"Precisely this line was missing on
-> ARM — here the manifest path ran along unchecked."* The order stood as a comment in
-> one architecture and **was missing in the other**. No tool could say so.
+**Origin:** `kernel/src/main.rs` (Caprock `a1bf707`). The original keeps its ordering *in
+comments*; seven sites carry the sentence that explains each: before the MMU, atomics and
+spinlocks are not well defined (single-core); cap tables before the first cap; IPC tables
+before the first endpoint; report the authority document before starting the root task; the
+verifier must stand before the root task; AP entry; a slab call only at boot. Site 4 is a
+paid-for mistake: *"precisely this line was missing on ARM"* — the order stood as a comment in
+one architecture and was absent in the other, and no tool could say so.
 
 ```gabbro
 module caprock::bringup {
@@ -1394,77 +1333,32 @@ impl fn hochlauf(p : BootPhase)
 }
 ```
 
-**Verdict: the token CARRIES — at seven sites, against a gate of five.**
-
-And the yield is not the number but **what it does NOT carry**: the token makes
-*"before the MMU"* distinguishable from *"after the MMU"*, because a consumption lies there. **The
-four ordering constraints within one phase it does not carry** — `cap_tabellen` before
-`ipc_tabellen` stands here only because I wrote it down. The compiler sees a
-chain of consumptions and says nothing about their **order**.
-
-> **«B37»:** linearity enforces *exactly once*, not *in this order*. For the
-> order one would need a token of its own per step — then the vocabulary grows with
-> every boot step — or an **order on tokens**, and that does not exist.
-
+**Verdict: the token carries — at seven sites, against a gate of five.** The yield is what it
+does *not* carry: a linear token makes *before the MMU* distinguishable from *after*, but says
+nothing about the order of four constraints inside one phase (**B37**: linearity enforces
+*exactly once*, not *in this order*). B37 was closed by an order on tokens
+(`order { … }` / `advances`). Pierced (`123456`).
 
 ---
 
-## F8 — Scheduler: `Stale(T)` **carried refutably**
+# F8 — Scheduler: `Stale(T)` carried refutably
 
-**Written 2026-08-16** against `kernel/src/system.rs` and `crates/caprock-sched/src/lib.rs`
-(`a1bf707`). **The lock situation is quoted, not surveyed anew** — `MEM` is the leaf, `CAPS` is
-the outermost, `SCHEDS[*]` lies between ([`AN-CAPROCK.md`](AN-CAPROCK.md), N1).
+**Origin:** `kernel/src/system.rs`, `crates/caprock-sched/src/lib.rs`. The candidate: a
+construct that replaces double acquisition (select under lock A, release, continue under B,
+**re-check the finding**). Measured: **five values** cross a lock boundary in the scheduler and
+are used afterwards under another lock.
 
-### The candidate and the counter-probe
+| # | Value | Carried by |
+|---|---|---|
+| 1, 2 | `tid` to `kill` | `resolve(tid)` revalidates — exactly the pattern |
+| 3, 4 | `tid`/`caller` from `current_id` | **counterexample:** IRQs are masked in the trap, so the current thread is stable across the short locks — no revalidation, and a *different* promise carries it |
+| 5 | `bekommen` from `priority_of` | self-test path; the value is reported, not used |
 
-`Stale(T)` was to carry the pattern that **replaces double acquisition**: select under lock A,
-release, continue under B, **re-check the finding**. Measured: **five values cross a lock
-boundary in the scheduler and are used afterwards under a different lock.**
-
-| # | Site | Value | does anything carry it? |
-|---:|---|---|---|
-| 1 | `system.rs:1119` → `caprock-sched:842` | `tid` to `kill` | **`resolve(tid)` — revalidates.** Exactly the pattern |
-| 2 | `system.rs:8325` | `tid` to `kill` | the same |
-| 3 | `system.rs:1109` | `tid` from `current_id` | **COUNTEREXAMPLE** — see below |
-| 4 | `system.rs:9104` | `caller` from `current_id` | the same counterexample |
-| 5 | `system.rs:4943` | `bekommen` from `priority_of` | self-test path; the value is **reported**, not used |
-
-### **The counterexample, and it is justified word for word**
-
-`system.rs:1107-1109`:
-
-> *"remember the tid of the terminating thread before the switch; **IRQs are masked in the trap →
-> the current thread is stable across the short locks**."*
-
-**The value crosses a lock boundary and still needs no revalidation** — not because
-somebody was careless, but because a **different** promise carries it: the masking. A
-`Stale(T)` that enforces revalidation would **make this path unwritable**.
-
-> **«B38»: `Stale(T)` in its enforcing version is too strict.** Two of five measured
-> transitions rest not on revalidation but on **interrupt masking** — and that
-> is in Gabbro today `masks IRQ`, i.e. **already an effect**. The honest form would be
-> not *"every continuation re-checks"* but *"every continuation re-checks **or** names
-> what carries it instead"* — and that is no new token but a condition on an
-> existing one.
->
-> ### And the side condition belongs to it, otherwise the carrier is an escape hatch
->
-> **Whoever invokes masking must BE in the masked state.**
->
-> Without that coupling *"masking carries me"* would be exactly the assurance from **R15**
-> that is satisfied as soon as the checker stays silent — a `masks IRQ` in the effect list says
-> that the function masks, not that it **runs masked**.
->
-> **And it is mechanically checkable, not merely formulable:** `entrydecl` carries
-> `nested ( "never" | "masked" | "bounded" constexpr )` — the entry context says whether a
-> path is reached masked. The condition thereby reads in full:
->
-> > *A value that crosses a lock boundary loses its facts. The continuation re-checks
-> > anew **or** names a carrier — and a carrier `masks IRQ` counts only if the
-> > entry context carries `nested masked`.*
->
-> **That is the same cut as with `H005`:** there the *strength* of the witness decides, here
-> the *state* at entry. Both times the bare naming is not enough.
+Two of five — the hottest path, `exit_current` and the IPC handover — would be made unwritable
+by an enforcing `Stale(T)`. **B38:** the honest form is *re-check or name what carries it
+instead*, and the carrier `masks IRQ` counts only if the entry context says `nested masked`
+(`entrydecl` already carries `nested ( "never" | "masked" | "bounded" constexpr )`), otherwise
+the carrier is an escape hatch (the same assurance-satisfied-because-nothing-happened as R15).
 
 ```gabbro
 module caprock::sched {
@@ -1522,30 +1416,17 @@ impl fn beenden(l : ptr<normal, rw> Laufliste, k : index into Laufliste) -> bool
 }
 ```
 
-### Verdict: **`Stale(T)` in the proposed form is refuted**
-
-**Three of five transitions carry the pattern; two refute its enforcing version.** And the
-two are not exceptions but the **hottest path** — `exit_current` and the
-IPC handover path.
-
-> **What remains is not a construct but a condition:** a value across a lock boundary
-> loses its facts — *the language already does that, the V rules die* — and the
-> continuation must **either re-check or name what carries it instead**. The second
-> exit is `masks IRQ`, and that one exists.
-
-**New constructs: 0.**
-
+**Verdict: `Stale(T)` in the proposed form is refuted. New constructs: 0.** What remains is a
+condition on existing constructs, not a word. Pierced (`1 1 1 0 0 1 1 1`).
 
 ---
 
-## F9 — MMU/page tables: the entry that is pointer **and** bitfield
+# F9 — MMU/page tables: the entry that is pointer **and** bitfield
 
-**Written 2026-08-16** against `crates/caprock-hal/src/x86_64/mmu.rs` (1 719 lines,
-`a1bf707`).
-
-### The measured core
-
-The descent is **four-level** and reads two things out of **the same 64-bit number**:
+**Origin:** `crates/caprock-hal/src/x86_64/mmu.rs` (1 719 lines). The descent is four-level and
+reads two things out of the *same* 64-bit number: `e4 & MASK` is an address, `e4 & P`, `& RW`,
+`& US`, `& NX` are rights bits — nine named ones, two of them (`A`, `D`) *set by the hardware,
+never by us*.
 
 ```
 mmu.rs:578   let e4 = PML4.0[((va >> 39) & 0x1ff) as usize];
@@ -1554,10 +1435,7 @@ mmu.rs:589   let e2 = table_mut(e3 & MASK)[((va >> 21) & 0x1ff) as usize];
 mmu.rs:596   let e1 = table_mut(e2 & MASK)[((va >> 12) & 0x1ff) as usize];
 ```
 
-`e4 & MASK` is an **address**; `e4 & P`, `& RW`, `& US`, `& NX` are **rights bits** —
-nine named ones, of them two (`A`, `D`) *"set by the HARDWARE, never by us"*.
-
-**That was the finding that demanded the eighth domain** (`mappings of`), and it is answered with
+That was the finding that demanded the eighth domain, `mappings of`, answered with
 `walk`/`embeds`.
 
 ```gabbro
@@ -1611,34 +1489,17 @@ impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
 }
 ```
 
-### Verdict: **fits — and the finding is what did NOT show up**
+**Verdict: fits — and the finding is what did NOT show up. New constructs: 0.**
 
-**New constructs: 0.** `embeds`, `walk` and `mappings of` already stood; the fragment
-evidences them for the first time on the stretch they were designed for.
+**B39 — the two bits the hardware writes.** `A` and `D` are set by the MMU itself: in the
+effect computation a writer no `effects` line names, so the frame statement *only what stands
+there changes* is false at this site — not through a gap in the checker but because the
+hardware is a participant. The honest form is an assumption with a falsifier, and one of the
+few cases that really belong in the axiom layer. It also collides with the write-rights
+promise as soon as group `ops` reach the page machinery (the K condition demands that *all*
+write sites be generated, and the MMU is not a generated operation), so the exception would
+have to stand at the declaration. The candidate was:
 
-> **«B39» — the finding lies in the two bits the hardware writes.** `A` and `D`
-> are set by the MMU **itself**, without software doing it. In Gabbro's effect computation that
-> is a **writer no `effects` line names** — the frame statement *"only what
-> stands there changes"* is **false** at this site, and not because of a gap
-> in the checker but because the hardware is a participant.
->
-> **The honest form is an assumption with a falsifier**, not an effect: *"the MMU
-> sets `A`/`D`, nothing else"* — exactly the build that `assume … falsifier …` carries. With that
-> the case belongs in the **axiom layer**, and it is one of the few that belong
-> there, because they really are hardware.
->
-> ### And the axiom alone does not suffice — it needs its exception rule
->
-> **`A`/`D` are the GDT lesson on the page machinery.** Hardware writes into a structure that
-> is otherwise thought of as `by ops`-like: a page table is exactly the carrier whose
-> write sites one would like generated. **As soon as group `ops` reach the page machinery,
-> the axiom collides with the write-rights promise** — the K condition demands that *all*
-> write sites be generated, and the MMU is not a generated operation.
->
-> **The exception must therefore stand at the declaration, not in running text:** which fields
-> of a `walk` declaration are **hardware-writable** belongs in the declaration — the way
-> `reserved` on a `format` field says that nobody writes it.
->
 > ```gabbro
 > walk Seitenabstieg levels EBENEN {
 >     node : [Pte; EINTRAEGE],
@@ -1647,26 +1508,26 @@ evidences them for the first time on the stretch they were designed for.
 >     -- die Kandidatenzeile: `hardware A, D;`
 > }
 > ```
->
-> **Without it the placement rule from `R001` is untenable at this site** — it says
-> today *"an `ops` carrier lies in no `dma` space"*, and the reason is exactly this:
-> a device writes past every grammar. **The MMU does the same, only in the `normal` space**,
-> and `R001` does not see it.
->
-> *Candidate, not a decision — and expressly one that burdens the convergence bet: it
-> would be a new word.*
 
+*A candidate, not a decision; it would be a new word and burden the convergence bet.*
+
+**Completing it cost the excerpt a promise.** `mappings of` has meant the *leaf set* since
+2026-08-20, which makes the excerpt's `costs <= 4096 ops` recomputably **false** (the body
+costs 137 438 953 472); the two statements — about the set and about one entry — were
+separated in the completed copy (`rechte_pruefen`, `costs <= 5 ops`), and the `device …
+at normal` block became a `format` for the same word. `traverse … over mappings of` still has
+no lowering: it needs a generated descent *and* a named resolver from frame to node, and there
+is no place in Gabbro to write the resolver (the hand-written driver holds it). Pierced
+(`1 2236416 0 1 0 0`; the poison inverts `leaf` and moves the number to `1118208`, so the value
+provably comes out of the descent).
 
 ---
 
-## F10 — Parser/checkpoint: the buffer nobody believes
+# F10 — Parser/checkpoint: the buffer nobody believes
 
-**Written 2026-08-16** against `crates/caprock-dtb/src/lib.rs` (145 lines, `a1bf707`) —
-the only parser of the kernel that reads **foreign bytes**.
-
-### The measured core
-
-`Dtb::parse` reads a magic word, then two offsets:
+**Origin:** `crates/caprock-dtb/src/lib.rs` (145 lines) — the only parser of the kernel that
+reads foreign bytes. `Dtb::parse` reads a magic word and two offsets, and *every* access goes
+through `be32(data, n)?`, a function that yields `Option`:
 
 ```rust
 if be32(data, 0)? != MAGIC { return None; }
@@ -1674,12 +1535,9 @@ let off_struct  = be32(data, 8)?  as usize;
 let off_strings = be32(data, 12)? as usize;
 ```
 
-**Every access goes through `be32(data, n)?`** — a function that yields `Option`, i.e. checks the
-length and gives `None` on overflow. **That is the range obligation, written out as
-control flow**, and it stands at *every* access individually.
-
-`format` takes exactly that off one's hands: **the reader checks the buffer length once at entry,
-everything further is proven accesses.**
+That is the range obligation, written out as control flow, at every access individually.
+`format` takes exactly that off one's hands: the reader checks the buffer length once at
+entry, and everything after is a proved access.
 
 ```gabbro
 module caprock::dtb {
@@ -1735,49 +1593,38 @@ assume token_verbraucht
 }
 ```
 
-### Verdict: **fits — and the finding is the place where the original already writes Gabbro**
-
-**New constructs: 0.**
-
-`be32(data, n)?` is already *"check, else refuse"* — the original has the rule, it only has
-it **at every access individually** instead of once at entry. **That is the folder's cheapest
-fragment finding**: `format` with `offset_into Self` and `where` replaces a
-control-flow discipline that the author already sustains with a declaration that the
-compiler sustains.
-
-> **«B40» — and it goes against the folder.** The original checks **error-free over 145
-> lines**, without a language and without a tool. *A parser that fulfils its range obligations
-> individually anyway gains **brevity** from `format`, not **safety**.* The
-> gain is real and it is **not the gain the folder promises** — and that
-> needs saying, because `format` elsewhere (base rate: 5 formats, 0 errors) once already
-> stood there without evidence.
+**Verdict: fits — new constructs 0 — and the finding is the place where the original already
+writes Gabbro:** the rule exists, it just stands at every access instead of once at entry.
+**B40 goes against the folder:** the original checks error-free over 145 lines with neither a
+language nor a tool; a parser that fulfils its range obligations individually anyway gains
+*brevity* from `format`, not *safety* — a real gain, and not the one the thesis promises
+(base rate behind `format`: 5 formats in the whole tree, 0 occurred errors of that class, one
+documented near miss; see `MESSUNGEN.md`). Pierced (`1 0 0 0 0 65`).
 
 ---
 
-# «F0» — der Gleitkommakorpus, und er hat sofort eine Planentscheidung gekippt
+# «F0» — the floating-point corpus, and it overturned a plan decision at once
 
-> **Gemessen 2026-08-18** an *Fraktaler 3* (Version 3.1), einem gleitkommaschweren Renderer:
-> 52 Quelldateien, **479 `float`, 355 `double`, 37 `long double`**, 128 NaN/Inf-Stellen — und
-> **kein `-ffast-math`** im Makefile eines leistungskritischen Programms.
->
-> *Die Messbasis dieses Ordners (Caprock) hat null rechnende Gleitkommastellen. Ein Korpus für
-> «F» muss also von außerhalb kommen, sonst entwirft man für eine vorgestellte Verwendung.*
+*Measured 2026-08-18 on a floating-point-heavy renderer (Fraktaler 3.1): 52 source files,
+479 `float`, 355 `double`, 37 `long double`, 128 NaN/Inf sites, and no fast-math flag in the
+makefile of a performance-critical program. Caprock has no computing floating point at all;
+a corpus for floats had to come from outside, or the design would be for an imagined use.*
 
-## FF1 — Der Fluchttest. Vier der sieben Entscheidungen in einer Zeile.
+**FF1 — the escape test.** Four of the seven float decisions in two lines of real code: the
+programmer writes the NaN check *by hand beside the comparison* (because `Zz2 < ER2` alone does
+not cover it), plus a clamp (that is `narrow`), a width mix (`float` from `double`, explicit),
+two libm calls (the axiom layer) and an *inexact literal*.
 
 ```c
 float t = float(arg(Z1)) / (2.0f * 3.141592653f);
 if (Zz2 < ER2 || isnan(de.x) || isinf(de.x) || isnan(de.y) || isinf(de.y))
 ```
 
-**Befund.** Der Programmierer schreibt die NaN-Prüfung **von Hand neben den Vergleich** — weil
-`Zz2 < ER2` allein den Fall nicht abdeckt. *Das ist genau die Lage, die F1.3 beschreibt, und
-hier steht sie als echter Code.* Dazu in derselben Umgebung: eine Klemmung
-(`min(max(x, 0.), 1.)` — das ist `narrow`), eine Breitenmischung (`float` aus `double`,
-ausdrücklich umgewandelt), zwei `log`-Aufrufe (libm, also die Axiomschicht) und ein
-**inexaktes Literal** (`3.141592653`).
-
-## FF2 — Die Genauigkeitsleiter. Sie beantwortet die `long double`-Frage.
+**FF2 — the precision ladder answers the `long double` question.** Where extra precision is
+really needed, `long double` is *one rung of seven*; above it sit `floatexp`, `doubleexp`,
+`softfloat`, `float128`, all software types of the program. Whoever needs more than `f64` wants
+a *named* precision, not a platform-dependent 80-bit type, so refusing `long double` reads off
+what real programs do anyway.
 
 ```c
 = { "none", "float", "double", "long double", "floatexp", "doubleexp", "softfloat"
@@ -1787,73 +1634,74 @@ ausdrücklich umgewandelt), zwei `log`-Aufrufe (libm, also die Axiomschicht) und
 };
 ```
 
-**Befund, und er ist stärker als die Empfehlung, die er trägt.** In der Domäne, die
-Extragenauigkeit *wirklich* braucht, ist `long double` **eine Sprosse von sieben** — darüber
-liegen `floatexp`, `doubleexp`, `softfloat`, `float128`, alles Softwaretypen des Programms.
-
-> **Wer mehr als f64 braucht, will keinen plattformabhängigen 80-Bit-Typ, sondern eine
-> BENANNTE Genauigkeit.** Die Weigerung bei `long double` ist damit nicht Härte, sondern die
-> Ablesung dessen, was echte Programme ohnehin tun.
-
-## FF3 — Die Reduktion.
+**FF3 — the reduction.** A sum over an array is `accumulates` — and over floating point it is
+order-dependent, while `accumulates.monoid` is proved under the premise that it is not. The
+corpus supplies the demand evidence for `F004`: the refusal is not precautionary, it hits a
+form that occurs.
 
 ```c
 progress_t a = 0;
 for (count_t i = 0; i < count; ++i) { a += progress[1 + count + i]; }
 ```
 
-**Befund.** Eine Summe über ein Feld — in Gabbro die Form, für die `accumulates` da ist. Über
-Gleitkomma ist sie **reihenfolgeabhängig**, und `accumulates.monoid` ist unter der Prämisse
-bewiesen, dass sie es nicht ist. *Der Korpus liefert damit den Bedarfsbeleg für `F004`: die
-Weigerung ist nicht vorsorglich, sie trifft eine Form, die wirklich vorkommt.*
-
-## FF4 — Die Literalmessung, und sie hat F1.5 gekippt
-
-Alle 340 Gleitkommaliterale des Renderers gegen die Frage *„exakt darstellbar?"* gehalten
-(`m/10^d` ist dyadisch genau dann, wenn `5^d` die Mantisse teilt):
+**FF4 — the literal measurement, which overturned rule F1.5.** All 340 float literals against
+*is it exactly representable?*:
 
 ```
-340  Literale gesamt
-287  exakt darstellbar   (84 %)   -- 0.0, 1.0, 2.0, 3.0, 0.5 …
- 53  NICHT exakt         (16 %)   -- 0.6931471805599453, 6.283185307179586, 0.04045, 4.1
+340  literals in total
+287  exactly representable   (84 %)   -- 0.0, 1.0, 2.0, 3.0, 0.5 …
+ 53  NOT exact               (16 %)   -- 0.6931471805599453, 6.283185307179586, 0.04045, 4.1
 ```
 
-**Die geplante Regel hätte 53 Literale abgelehnt, darunter ln 2 und 2π.** Das ist keine
-Härtung, das ist eine unbrauchbare Sprache: eine transzendente Konstante ist in *keiner*
-binären Breite exakt, und ihre Dezimalform ist schon eine Näherung.
-
-**Aber die Messung sagt auch, wo die Grenze wirklich liegt.** Die exakten 84 % sind
-Strukturkonstanten; die inexakten 16 % sind **Näherungen an reelle Zahlen**. Die richtige
-Regel verbietet also nicht das Inexakte, sondern das **stillschweigend** Inexakte:
+The planned rule *exact or refuse* would have refused 53 literals including ln 2 and 2π — an
+unusable language, since a transcendental constant is exact in no binary width. The rule that
+the measurement supports forbids the *silently* inexact, not the inexact: **declared or
+refused**, spelled with one word that has a sibling in the folder (`u32 wrapping` says
+*overflow is declared, hence no finding*; `rounded` says the same about rounding):
 
 ```gabbro
 const TAU : f64 = 6.283185307179586 rounded;
 ```
 
-*Ein Wort, und es hat schon ein Geschwister im Ordner:* `u32 wrapping` sagt **der Überlauf ist
-erklärt und darum kein Befund** — `rounded` sagt dasselbe über die Rundung. **Dieselbe Form,
-dieselbe Begründung, und darum kein neues Muster.**
-
-## Was F0 beigetragen hat
-
-| | |
-|---|---|
-| **F1.3** bestätigt | die Handprüfung neben dem Vergleich steht als echter Code da |
-| **F1.5 gekippt** | „exakt oder Absage" wäre unbrauchbar — die Regel heißt jetzt „erklärt oder Absage" |
-| **`long double`** | die Weigerung ist eine Ablesung, keine Härte: echte Programme bauen eine Leiter |
-| **F004** belegt | die Gleitkommareduktion kommt wirklich vor |
-| **kein fast-math** | ein leistungskritischer Renderer verzichtet freiwillig darauf |
+`rounded` is in the grammar today (`fexpr = float [ "rounded" ]`, compulsory at an inexact
+literal). What F0 contributed: F1.3 (the hand check beside the comparison) confirmed as real
+code; F1.5 overturned; `long double` refusal as a reading, not a hardness; `F004` evidenced;
+no fast-math in a performance-critical renderer.
 
 ---
 
-# «K2» — zwei Fragmente aus fremder Autorenlinie, geschnitten und gemessen
+# «K2» — a second corpus from a foreign author line: the Linux kernel tree
 
-> **2026-08-18.** Die Zählung («K2» in `MESSUNGEN.md`) zählte Formen. *Der Unterschied
-> zwischen „`format` gibt es" und „das Fragment geht durch" ist derselbe, den dieser Ordner
-> schon einmal bezahlt hat* — also hier zwei geschnittene Fragmente, und was der Prüfer dazu
-> sagt.
+*2026-08-18. The aarch64 lesson was: a corpus the same author writes for the same language
+measures fit, not transferability. Counts over `kernel/` and `mm/` (234 of roughly 64 000
+files); no foreign code was copied into this repository.*
 
-## K2-F1 — `setpriority`, und die zwei Sprungmarken
+```text
+spin_lock  808     mutex + rcu_read_lock  571     atomic_*()  637     per_cpu  411
+barriers / *_ONCE  589     allocations 938     BUG_ON / WARN_ON  2034     goto  2669
+unbounded loops  74
+```
+
+The two largest numbers are the two claims of the folder, at foreign code for the first time:
+`BUG_ON`/`WARN_ON` (2034) are run-time assertions — the class Gabbro *replaces* by M1 facts —
+and `goto` (2669) is the commonest control-flow form of the tree, which Gabbro lacks on
+purpose. `goto` splits into four Gabbro forms and three exist: error labels (`out`, `err`,
+`error`, `fail`: 1 147) become `let … else`; unlock labels (`out_unlock`, `unlock`: 220)
+vanish because a `locks { … }` block takes and gives on every path ("the target does not exist
+because the problem does not"); `retry` (90) becomes `retry … bounded N ops … on_exceeded`;
+`next` (54) is `next`. **The construct-level find was RCU** (578 lock/unlock sites, 73
+dereferences, 99 grace-period calls): the read side takes *nothing*, the write side swaps a
+pointer and waits for a grace period, so Gabbro's lock model (mutual exclusion) had no word for
+it. A corpus that only confirms measures fit; this one showed a class the language did not
+know. RCU is now in the grammar (`rcu D protects { … } reclaims p;`, `observes`; the grace
+period is an `assume`).
+
+*Counting forms is not translating them.* Five fragments were cut and run through the
+checker — reproductions, not translations: the tables are invented where `struct bsd_acct_struct`
+was not cut along.
+
+**K2-F1 `setpriority`** — two jump labels, the first exists only to release. In Gabbro the
+labels do not appear: `locks`/`rcu` ends with the block, the error path is `match`. 0 errors.
 
 ```c
 		if (!uid_eq(uid, cred->uid)) {
@@ -1868,15 +1716,11 @@ out:
 	return error;
 ```
 
-**Befund.** Zwei Sprungmarken, und die erste existiert **nur zum Freigeben**. In Gabbro gibt
-es sie nicht: `locks { … }` nimmt und gibt auf jedem Pfad, und der Fehlerweg ist
-`let … else`. *Die Marke verschwindet nicht, weil man sie umschreibt, sondern weil das
-Problem nicht auftritt.*
-
-**Verdikt: blockiert — `rcu_read_unlock`.** Und zwar nicht am `goto`, sondern an dem, was die
-Marke freigibt.
-
-## K2-F2 — `acct_get`, und `goto again` ist ein `retry`
+**K2-F2 `acct_get`** — `goto again` *is* a `retry`, with a bound and a named overflow that the
+original lacks (its loop is unbounded and spins forever if the counter never frees);
+`rcu_read_unlock` stands three times, once per exit — exactly what a block makes unnecessary;
+and **M1 found, on the first run, an overflow the original does not check**:
+`atomic_long_inc_not_zero` guards against zero, not against the upper bound.
 
 ```c
 again:
@@ -1892,28 +1736,12 @@ again:
 	rcu_read_unlock();
 ```
 
-**Befund, und er hat drei Teile.**
-
-**(1) `goto again` IST ein `retry`** — und in Gabbro trägt es eine Schranke und einen
-benannten Überlauf. Das Original hat beides nicht: die Schleife ist **unbeschränkt**, und
-wenn der Zähler nie freikommt, dreht sie für immer. *Der `on_exceeded`-Zweig ist kein Zusatz,
-er ist die Stelle, an der aus einer Hoffnung eine Aussage wird.*
-
-**(2) `rcu_read_unlock` steht DREIMAL** — einmal je Ausgang. Genau die Bauart, die
-`locks { … }` unnötig macht; nur ist RCU keine Sperre, und Gabbro hat kein Wort dafür.
-
-**(3) Und M1 fand beim ersten Lauf einen Überlauf, den das Original nicht prüft.**
-`atomic_long_inc_not_zero` schützt gegen **null**, nicht gegen die obere Schranke:
-
 ```
 die Zuweisung requires `u32 in 0 .. 65535`, the value has `u32 in 2 .. 65536`   -- M101
 ```
 
-*Das ist die Zählerüberlaufklasse, und sie fiel aus einem fremden Fragment beim ersten
-Rendern heraus.* Die Antwort steht in derselben Sprache — eine zweite Schranke im `if`, und
-der Prüfer schweigt.
-
-## Nachgebildet, RCU durch eine Sperre ersetzt: der Rest TRÄGT
+The answer is in the same language — a second bound in the `if`, and the checker is silent. The
+reconstruction with RCU replaced by a lock checks clean:
 
 ```gabbro
 module k2::acct {
@@ -1958,23 +1786,15 @@ extern fn konto_verschwunden() -> never effects { diverges };
 }
 ```
 
-**0 Fehler, 0 Hinweise.** Das ist das eigentliche Ergebnis der ersten zwei Fragmente:
-**ein einziges fehlendes Konstrukt blockiert beide, und der ganze Rest trägt** — Sperre,
-Rang, Haltezeit, beschränkte Wiederholung, benannter Überlauf, Fortschrittsannahme mit
-Falsifikator, Indexschranke.
+**0 errors, 0 hints** — one missing construct blocked both fragments and the rest carried: lock,
+rank, hold time, bounded retry, named overflow, progress assumption with falsifier, index
+bound. After RCU, one remnant: the original's `atomic_long_inc_not_zero` is its own mutual
+exclusion, while in Gabbro `atomic` is an *item and not a slot field*, so a counter inside the
+object cannot be declared atomic and `H010` demands a lock the original does not need — a
+finding about the language, still open.
 
-> **Und es ist eine NACHBILDUNG, keine Übersetzung.** Die Tabelle ist erfunden, weil
-> `struct bsd_acct_struct` nicht mitgeschnitten ist. Gemessen ist damit die FORM des
-> Fragments und nicht sein Rumpf — derselbe Unterschied wie oben, eine Ebene tiefer.
-
----
-
-# «K2» abgeschlossen — fünf Fragmente, und vier tragen ohne Rest
-
-> **2026-08-18, nach RCU.** K2-F1 und K2-F2 waren an einem Konstrukt blockiert; es gibt es
-> jetzt. Drei weitere sind dazugekommen, jedes für eine andere Klasse.
-
-## K2-F1 — `setpriority`: **beide Sprungmarken entfallen**
+**K2-F1 after RCU** — both labels disappear (the scope ends with the block, the error path is
+`match`):
 
 ```gabbro
 observes TASKLIST {
@@ -1985,36 +1805,23 @@ observes TASKLIST {
 }
 ```
 
-Im Original `out_unlock:` (gibt RCU frei) und `out:` (kehrt zurück). **Der Bereich endet mit
-dem Block, der Fehlerweg ist `match`.** *Die Marken verschwinden nicht, weil man sie
-umschreibt, sondern weil das Problem nicht auftritt.* — **0 Fehler.**
-
-## K2-F2 — `acct_get`: trägt, und ist strenger als das Vorbild
-
-Bereits gemessen: `goto again` ist ein `retry` mit Schranke und benanntem Überlauf, den das
-Original nicht hat; und **M1 fand einen Zählerüberlauf**, gegen den nur `!= 0` schützte.
-
-**Nach RCU bleibt ein Befund**, und er ist ein Befund über die Sprache: das Original benutzt
-`atomic_long_inc_not_zero` — *ein atomares RMW ist seine eigene Wechselseitigkeit.* In Gabbro
-ist `atomic` ein **Item und kein Slotfeld**, ein Zähler *im* Objekt also nicht atomar
-deklarierbar. `H010` verlangt dort eine Sperre, die das Vorbild nicht braucht.
-
-## K2-F3 — `sum_mthp_stat`: **dreizehn Zeilen werden eine Deklaration**
+**K2-F3 `sum_mthp_stat`** — thirteen lines become one declaration; the order independence the
+loop silently relies on is *proved* (`accumulates.monoid`):
 
 ```gabbro
 accumulates mthp_summe : u64 merge add per cpu 64;
 ```
 
-Die Schleife über alle Kerne verschwindet, und die Reihenfolgeunabhängigkeit, auf die sie sich
-stillschweigend verlässt, ist **bewiesen** (`accumulates.monoid`). — **0 Fehler.**
-
-## K2-F4 — `pid_namespace`: der Fortschrittszeuge stand als KOMMENTAR da
+**K2-F4 `pid_namespace`** — the progress witness stood as a comment:
 
 ```c
 	/* Once all of the other tasks are gone from the pid_namespace
 	 * free_pid() will awaken this task. */
 	for (;;) { … schedule(); }
 ```
+
+The comment *is* the assumption; Gabbro turns it into a declaration with a falsifier and adds
+the per-pass bound and the named overflow the original lacks:
 
 ```gabbro
 forever warten
@@ -2029,35 +1836,253 @@ assume free_pid_weckt_uns
     falsifier sonde_kein_aufwecken;
 ```
 
-**Der Kommentar IST die Annahme.** Gabbro macht aus ihm eine Deklaration mit Falsifikator, und
-dazu kommen die Schranke je Durchgang und der benannte Überlauf, die das Original nicht hat.
-— **0 Fehler.**
-
-## K2-F5 — `BUG_ON(addr >= end)`: die Zusicherung wird nicht geprüft, sie wird VERLANGT
-
-Dreimal dieselbe Zeile in einer Datei. In Gabbro steht die Aussage im Typ, und die Beziehung
-wird **einmal** geprüft, mit benanntem Ausgang.
-
-**Und die Gegenprobe ist die eigentliche Messung:** nimmt man den Vergleich heraus, fällt die
-Subtraktion.
+**K2-F5 `BUG_ON(addr >= end)`** — the same line three times in one file. In Gabbro the statement
+stands in the type and the relation is checked **once**, with a named exit; and the counter-probe
+is the measurement itself: remove the comparison and the subtraction falls:
 
 ```
 `u32 in 0 .. 65535 - u32 in 0 .. 65535` leaves the width of the result type   -- M104
 die Rueckgabe requires `u32`, the value has `u32 in -65535 .. 65535`          -- M101
 ```
 
-> *Die Zusicherung wird nicht geglaubt, sie wird erzwungen* — und zwar zur Übersetzungszeit.
-> Das ist die Zielgröße `BUG_ON`/`WARN_ON` **2034**, an einem Fall.
+The assertion is not believed, it is enforced at translation time — the `BUG_ON`/`WARN_ON`
+target of 2034, on one case.
 
-## Stand von «K2»
+**Stand of K2:** five fragments, five classes (jump labels · retry · per-core sum · unbounded
+loop · assertion); four carry with no remainder (F1, F3, F4, F5); F2 keeps one remainder (no
+atomic inside a slot). Three finds no own corpus would have delivered: RCU as a class, the
+counter overflow, the progress witness as a comment. And what this is not: five fragments are
+no statement about 64 000 files, they are reconstructions, and the form is measured, not the
+body. *Audit note (2026-09-04): «K2» is a second corpus from a foreign author line, but the
+checker was extended for it 57 minutes after the fragments were cut, and the K2 blocks are
+`cargo test` fixtures — it measures the rules it helped write. Of the four blocks of this
+section only one whole module parses clean today, two blocks start mid-form.*
 
-| | |
+---
+
+# The network stack — a corpus whose template comes from outside
+
+*Ethernet → ARP → IPv4 → UDP echo, written against RFC 791, 826, 768 and 1071
+(`messung/netz/udp-echo.gab`), and checked against **published** vectors, not packets of its
+own: the classic IPv4 header of RFC 791 (checksum `b861`) and the RFC 1071 §3 example (sum
+`ddf2`), with the counter-calculation from a second implementation written differently. The
+rule is "no new construct without a program that needed it — and the template comes from
+outside", otherwise a stack measures how well Gabbro fits Gabbro. Instrument:
+`./instrumente/zaehle-netz.py` (`WERKZEUGKASTEN.md`).*
+
+Four holes that 45 clean examples did not show (the corpus is written *per construct*; a `!`
+is not a construct, it is what one does when one writes a program):
+
+1. **`!` had no lowering** — `if !kopf_gueltig(k, w) { return 0; }`, the most ordinary line of
+   a receive path, passed the checker and was refused by the emitter. Built
+   (`beispiele/46-verneinung.gab`); unary minus deliberately *not* (`gift/219`: in C, `-x` on
+   an unsigned operand stays unsigned while M1 says `i32 in -4294967295 .. 0`, and no program
+   needed it).
+2. **The error channel `-> T or R` lowered wrongly in two ways at once** — `f(0)` reported
+   failure for a valid value, `f(7)` left the result untouched (the generator wrote
+   `return <value>;` into a `bool` function and added `const`, whereupon GCC dropped the store);
+   0 checker errors, emitter exit 0, `cc` without `-Werror` compiles. Every `or R` in the
+   corpus had stood on an `extern fn` — on bodies the generator never sees. The first Gabbro
+   body with an error channel was this stack.
+3. **A `reason` value had no producer** — now produced, and the emitted C says so.
+4. **"Read the same bytes as big-endian 16-bit words" is not writable**: a `format` explains
+   byte order for its fields, and a field type `[u16; 10]` is refused twice (the type and the
+   access). The words are assembled in C, outside the language — precisely the step network
+   code would need the language to manage.
+
+And a hole found *by reading the stack's own code*: `echo_beantworten` takes `ptr<…, rw> IpKopf`
+and `ptr<…, r> Kopfworte` over the **same twenty bytes**; the answer read through the second is
+stale after `k.ttl = 64`, `effects` claims both accesses are declared, and the checker says
+0 errors (only the same site on two `own` parameters falls, `R004`). The rights half is right;
+**the event half is missing** (nothing invalidates the view at the write). The settled shape
+(`SYNTAX.md` §3): one view writing, all others reading, and the switch is an event — the shape
+of `state`/`transition` applied to views. A byte view that takes only the rights half inherits
+the hole and gives it a construct to hide behind.
+
+What this stack is not: no TCP, no fragmentation, no variable header length (`ihl > 5` is
+checked, not handled), no timer; three vectors, not a network.
+
+---
+
+# What `H` measures, and what an audit of it left standing
+
+**`H`** is the K100 gate "hanging plumbing obligations", read as `10 − |pierced fragments|`:
+today `H = 1` (F3). The obligation base is `PFLICHTEN.txt` (239 obligations = 173 K plumbing +
+66 L logic, assigned 2026-08-17 over F1–F10 plus one lowering row each; `L : K = 0.38 : 1`,
+derivable with `./instrumente/zaehle-pflichten.py --spalten`). Its history, in three lessons:
+
+* **The ratio is the wrong statistic, `H` is the measurand.** Over the Rust, `delete_leaf` was
+  4 K / 7 L = 1.75 : 1; over the Gabbro fragment the same criterion gives 13 K / 8 L = 0.62 : 1.
+  Gabbro did not *create* nine more plumbing obligations, it wrote them down (`Held(CAPS)`,
+  `<= 200 ops`, the effects line, the `own` threading, call preconditions). A language that
+  carries more plumbing explicitly gets a *worse* ratio and a *better* `H` — and only the second
+  is the direction the thesis claims. Of the 173 K obligations 137 were carried by construction
+  when `H` first read 36 (gate missed against a bar of 0); the trajectory to today's 1 was
+  bought by construction and by corrections of wrong entries (B9, B21, B27 were false rows),
+  each with a re-measurement.
+* **A `narrow` is not one thing.** Of the three hand-written `narrow … else` sites in the
+  corpus, one is a real check (F10, a hostile DTB takes the branch), one is the deliberate
+  second net (F1, the bookkeeping invariant is what keeps the branch dead), one is a *ritual* (F6,
+  the bound falls out of the domain and M1 does not see it). The measurand became
+  `N_ritus = 0`; today it is a *judgement* (`N_ritus = 1`, the F6 site) and only the half that
+  needs no judgement is measured: `N_folgenlos` — a `narrow` whose removal changes nothing —
+  counts **0** (`./instrumente/zaehle-bereichspflichten.py`).
+* **Zero plumbing among the refusals of F3, and an emitter refusal can be plumbing.** The
+  classification of F3's 18 refusals by the pass that raises each: 0 plumbing, 9 *rule
+  decisions* (the refusal is right and Gabbro would have to stop making it or gain a
+  production: `N035` ×5, `M124` ×3, `M140` at `enqueue` for want of an address-of, `C001` at the
+  queue traverse), 9 *the program is wrong* (six `M140`, `M143`, `M101`, `H011`: suppressing
+  the refusal would only move the failure to `cc`, and a cast would make it compile by breaking
+  the run). Five of the `N035` sit on a declaration the fragment never calls through. The same
+  work refuted a criterion — "`gabbro pruefe` reports 0 errors ⇒ only the generator is
+  missing ⇒ plumbing": the probe
+  `messung/proben/probe-queue-traverse-checks-clean-and-has-no-lowering.gab` checks clean and
+  `gabbro emit` still refuses it (`[C001]`, B10). *A criterion wrong in both directions is not a
+  threshold that needs moving.* And `C001` is not automatically non-plumbing: `D21` (`retry`
+  never pushed the loop label `forever` pushes) and `D22` (a record bound by `let … else`)
+  were `C001` over an arm nobody had written, and only running `emit` tells the two apart.
+
+**The adversarial audit of 2026-09-04 (four K100 gates) and the independent re-judgement of the
+same day** left these standing:
+
+| Gate | Verdict | What it means now |
+|---|---|---|
+| `H` | adds nothing beyond `pruefe-emission.sh`'s piercing ledger | `H = 10 − pierced`, over ten fragments chosen for difficulty — `H = 0` would still be trap 80 (a number a human runs parallel to the truth) until a corpus stands beside them that nobody looked at while building. `H` is a countdown, not a coverage measure; no code computes "100 % plumbing" |
+| `L` (templates carried unproved) | the count holds, the gate did not exist | the bound `L <= 4` stood only in a comment; the test asserts today's value (`lebend_ungedeckt() == 2`). Two entries are contestable hand judgements (`gruppe.sperrabdruck`, `walk.mappings`) |
+| second corpus «K2» | does not hold as independent | see the K2 section; and the guard labelled "second corpus" points at the same codebase as the Caprock base (a different checkout of Caprock) |
+| `A_p` (falsifiable assumptions with a probe that stands as a program) | holds: `5 of 38`, floor `1/8` | the guard walked the *working tree* with `rglob`, so one untracked `.gab` outside four hard-coded directories broke it (exit 2); the class (walking the tree instead of `git ls-files`) was repaired for the named instance only. `instrumente/korpus.py` is the shared "is this file one `git` knows about?" check |
+
+The headline *100 % plumbing coverage* does not follow from the four. What would make it follow:
+a coded ratio over a mechanically derived source, an `H` that classifies by running `emit` and
+reading *why* it refuses, an executable `L <= N`, and a second corpus assembled by a party that
+did not write the fragments.
+
+---
+
+# The completion work, in findings (what `messung/fragmente/` taught)
+
+Each completed copy states in its head what was added and what was not (declarations the excerpt
+calls and does not name; nothing rewritten, nothing left out). Seven of the ten carried at least
+one *corpus-side* bolt: 41 sites naming 20 undeclared names (`MAX_POLL`, `EP_BADGE`,
+`SYSNO_RESULT`, `Fehler`, `NTFN`, `IpcResult`, …), nine `let … else` calling bodies the unit
+does not know, six unnamed bit positions, one table without `tree`, one callee without `or
+<reason>`. Where an error stood after completion it belonged to Gabbro, and that was the yield:
+
+* **`A::B` parses and was never resolved** (`IpcResult::Ok` fell as `M119`).
+* **A `reason` value had no producer** — superseded: `return R::F;` is settled as one of three
+  permitted positions since stage 7; a reason value as a *call argument* was closed by the
+  "fourth door" (2026-08-25).
+* **A frozen corpus goes stale under a new refusal**: the five `fn(…)` lines of F3 would have to
+  carry a contract that did not exist on 2026-08-14 (`N035`).
+* **Refusals right for the wrong reason**: a `static` of a record type was refused for every
+  initialiser although the text named only the case "initialised with an ordinary number"; it
+  lowers now as a braced initialiser with designators (a compound literal is not a constant
+  expression, C11 6.7.9p4).
+* **A `check … can_fail` body was not entered by the name, effect and cost passes**: the same
+  unknown call is `0 errors` inside a `check` and `E009` + `K003` inside an `impl fn` — and
+  the quieter answer stands in the block whose purpose is measuring. Not built; booked.
+* **The generator found its own errors behind refusals** — a defect behind a refusal is
+  invisible for exactly as long as the refusal stands. F1's completion exposed two emitter holes
+  (a `let … else` over a callee with an error channel and no result had no lowering; and the
+  success `return` of an `or R` function was never written, so the C ran off the end of a
+  non-void function — compiled under `-Wall -Wextra -Werror` at `-O0` and `-O2`, because
+  `-Wreturn-type` does not reach a `static` function nothing has called yet). Only a *run*
+  reads hole 2: the sharpest argument for counting Durchstiche instead of compilations.
+* **Three kinds of "who was wrong"**: for F9, F1 and F5 the larger half of every repair was
+  finding out which side was wrong, and each time it was the fragment, not the refusal;
+  every one carried at least one checker or emitter defect behind the fragment's own error
+  (`walk … levels` over a `const` name, the result-less `or R` call, `N046` reading a signature
+  without its error channel). The vocabulary ratchet did not move once.
+
+# Obligation-side measurements
+
+*Hand-measured on this corpus; all numbers below stand next to the instrument that re-derives
+them.*
+
+* **How many obligations can a prover read (P6, 2026-08-21).** `gabbro pflichten` counted 47
+  obligations over the example corpus (6 preservation, 10 postcondition, 11 foreign, 20
+  precondition). Written as an Isabelle theory, **one** goes through; the other 46 are refused
+  one by one with a reason: 12 are already carried by another pass, 11 are assumptions rather
+  than obligations, 23 remain open. The one that passes is a K (index/overflow) obligation, not
+  a W (value) one — so the channel exists (`gabbro pflichten --isabelle`/`--lean`,
+  `./instrumente/zaehle-p6.py`) but the corpus had no W obligation that fits it.
+* **GabbroV population (2026-09-03).** Three `progress` rows are booked twice in `PFLICHTEN.txt`
+  (once as a logic obligation, once as an assumption: a `progress` name must resolve to a
+  declared `assume`, `S003`/`S004`), and the emitted manifest does not double-book them.
+  Rebooking them moves GabbroV's population 66 → 63; the K/L split of `PFLICHTEN.txt` does not
+  move (173 / 66), because that column is machine-versus-subject, not obligation-versus-assumption.
+  The vacuity check (`programmlogik/gabbrov/V2.lean`, proved sound) over the 55 sayable
+  obligations: 31 carry a precondition, 0 are vacuous, 24 have none; two of the 26
+  quantifier-free ones (L44, L53) are tautologies. Of the 55, 26 are quantifier-free in shape
+  (the ceiling for a certificate route through a solver), 29 need quantifiers, folds or
+  reachability (`python3 messung/gabbrov/cert-theorien.py`).
+
+| | before | after |
+|---|---:|---:|
+| GabbroV's obligation population | 66 | **63** |
+| of those, not sayable | 10 | 8 |
+| of those, sayable | 56 | 55 |
+
+| Derived today by `./instrumente/zaehle-pflichten.py --gabbrov` | |
 |---|---|
-| **fünf Fragmente**, fünf Klassen | Sprungmarken · Wiederholung · per-Kern-Summe · unbeschränkte Schleife · Zusicherung |
-| **vier tragen ohne Rest** | F1, F3, F4, F5 |
-| **einer bleibt** | F2 — und der Rest ist ein Befund über die Sprache: kein Atomar im Slot |
-| **drei Funde**, die kein eigener Korpus geliefert hätte | RCU als Klasse · der Zählerüberlauf · der Fortschrittszeuge als Kommentar |
+| **GabbroV's obligation population** | **63** |
+| of these, discharged by the assumption layer | 3 |
 
-**Und was das NICHT heißt:** fünf Fragmente sind keine Aussage über 64 000 Dateien. Es sind
-Nachbildungen, keine Übersetzungen — die Strukturen sind erfunden, wo sie nicht mitgeschnitten
-waren. *Gemessen ist die Form, nicht der Rumpf.*
+  The three rows with a figure are the ones `pruefe-zahlen.py` reads (they used to stand in
+  `messung/GABBROV-V2.txt`); the figures are derived by the command above.
+* **The obligation manifest versus its subject (E1).** `./instrumente/pruefe-manifest.py`
+  holds every `obligation` line of the emitted manifest against the correspondence table
+  `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.txt` (one row per obligation of GabbroV's population):
+  states CARRIED (a manifest line states it), BLOCKED (the fragment emits no register),
+  DROPPED (a clause stands in the source, unbooked), NO CLAUSE (nothing in the fragment states
+  it). As of 2026-09-04: 20 carried, 13 blocked (F03 only), 5 dropped, 25 no clause — a
+  re-derivation after F01/F05/F09 became emitting; the first split `43 blocked / 15 dropped / 5
+  carried` of 2026-09-03 was superseded because nothing derived it. *That table is a machine
+  input: it stays a file of its own.*
+
+# Audit sweeps (2026-09-01/02) — what stays true after the C emitter was deprecated
+
+Two sweeps handed an output of the project to something that did not write it. Their findings
+about the **checker's boundaries** hold whatever the back end:
+
+* **Boundary arithmetic.** 15 declaration forms × 60 values, later 63 forms and 5 778 cases,
+  each run in *both* build profiles (release has no overflow checks, and release is what
+  `cargo install` produces: a disagreement catches a panic and a silent wrap at once). After the
+  repairs: 0 disagreements. Found: `N049`'s extent arithmetic panicked in debug and wrapped in
+  release (a lossy `as i128` on a `u128`, in code one day old); `N050` (the bank index multiply
+  is 32-bit, so `F[65535].X` named a register 64 GiB below the declared one); `N051` (a layout
+  number wider than the pointer arithmetic); `M139` (an integer literal wider than `i128` had no
+  type, so every range rule went quiet: *"unknown" is not a refusal, it is an acquittal that
+  reads like caution*); the emitter's own `as` cast wrote `vector -1` for `u128::MAX`.
+  Lessons: a rule that is right because two errors cancel does not hold; a repair can carry
+  the defect it was written beside; a message is code; and the sweep's own instrument was wrong
+  before the tree was, three times, each caught by its speech test.
+* **The emitted C under foreign tools** (gcc 16, clang 22, `clang --analyze`, UBSan/ASan over the
+  24 units the emission guard drives end to end): zero findings except one real one — a null
+  pointer constant dereferenced (`static tz : ptr<…> Platz = 0;`), repaired in the emitter
+  because address 0 is a vector slot on bare metal. ASan runs only where its shadow map fits
+  the kernel; elsewhere the stage prints "not run" and the number falls instead of staying.
+* **Found and not repaired** (not re-probed since): `M103` does not run in predicate positions
+  (`spec fn` body, `ensures`, table `invariant`); `aligned(p, 0)` and `aligned(p, 3)` are
+  accepted; `table count 0`, `[u64; 0]` and `embeds … scale 0` are accepted by the checker; a
+  65 536-character identifier is written into C. **Not swept:** 57 of 100 boundary-carrying
+  rules, combinations of boundary slots, the emitter as part of the property; no `cppcheck`, no
+  big-endian toolchain.
+
+# Where the blocks moved
+
+When this file was consolidated on 2026-10-17 the code blocks kept their bytes; their start
+lines changed. If an old comment quotes a line of this file, add the shift of its block:
+
+| Block | first code line before | first code line now | shift |
+|---|---:|---:|---:|
+| F1 | 91 | 161 | +70 |
+| F2 | 396 | 453 | +57 |
+| F3 | 567 | 622 | +55 |
+| F4 | 766 | 806 | +40 |
+| F5 | 943 | 978 | +35 |
+| F6 | 1071 | 1103 | +32 |
+| F7 | 1340 | 1280 | -60 |
+| F8 | 1469 | 1364 | -105 |
+| F9 (first block) | 1563 | 1442 | -121 |
+| F10 | 1684 | 1543 | -141 |

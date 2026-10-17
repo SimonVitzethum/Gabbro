@@ -108,7 +108,7 @@ pub enum ItemArt {
     /// **`profile { … }` -- the ONE hardware profile of the program** («E6»).
     ///
     /// The one set of hardware assumptions the whole program runs under
-    /// (`PLAN-ERWEITUNG.md` §0c): keyed mode entries plus references to
+    /// (`dokumente/PRUEFER.md` §0c): keyed mode entries plus references to
     /// declared `assume` items. At most one block per unit (`N219`).
     Profil(ProfilBlock),
     /// **`requires profile { … }` -- what a library asks of the profile** («E6»).
@@ -118,7 +118,7 @@ pub enum ItemArt {
     /// does not carry (`N217`).
     ProfilBedarf(ProfilBlock),
     /// **`arena` -- a monotone region with a lower and an upper bound**
-    /// («E4», SYNTAX.md §9.1, `PLAN-ERWEITUNG.md` §3).
+    /// («E4», SYNTAX.md §9.1, `dokumente/PRUEFER.md` §3).
     ///
     /// The declaration holds the reservation `lo` and the hard bound `hi`
     /// (`capacity lo .. hi`) plus the element type. Allocation is monotone
@@ -399,7 +399,7 @@ pub enum Raum {
 }
 
 /// **A named space is equal to itself by NAME, not by the span of the token that spelled
-/// it** -- found by «K3» (`messung/K3-BEFUND.md` §4.2) and reproduced independently before
+/// it** -- found by «K3» (`dokumente/PRUEFER.md` §4.2) and reproduced independently before
 /// this fix: `Ident` derives `PartialEq` over `{ text, span }`, so a `#[derive(PartialEq)]`
 /// here compared two occurrences of `Benannt(Ident)` at their SITES, and two declaration
 /// sites never share a span. `ptr<user, r> u8` passed to a parameter declared the identical
@@ -910,7 +910,7 @@ impl Ruf {
 /// One struct for both positions (statement and binding) so that no pass can
 /// read one and miss the other. The reader captures the region as a
 /// brace-balanced token tree WITHOUT interpreting it; translating the region
-/// into a payload (`PLAN-ERWEITUNG.md` §0b) is not implemented yet, so the
+/// into a payload (`dokumente/PRUEFER.md` §0b) is not implemented yet, so the
 /// checker refuses every such call with `N057`.
 #[derive(Debug, Clone)]
 pub struct LibraryCall {
@@ -1056,7 +1056,7 @@ pub struct FnDecl {
     /// **`payload <path>` -- the payload type of a `library fn` (lane E2).**
     ///
     /// Names the table (a tree table is a table) the translator fills at
-    /// translation time (`PLAN-ERWEITUNG.md` §0b); `None` on every other
+    /// translation time (`dokumente/PRUEFER.md` §0b); `None` on every other
     /// function. The parser demands the clause on a `library fn`
     /// (`P043`); the checker holds the name against the declared tables
     /// (`N060`). A path and not a bare name, so the table may stand in
@@ -1737,7 +1737,7 @@ pub struct Traverse {
     pub mass: Option<Expr>,
     pub touches: Option<Wirkungen>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
-    /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
+    /// language already; this is the statement (`dokumente/PRUEFER.md`).
     pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
@@ -1762,7 +1762,7 @@ pub struct Retry {
     pub bei_ueberschreitung: Ident,
     pub effects: Option<Wirkungen>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
-    /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
+    /// language already; this is the statement (`dokumente/PRUEFER.md`).
     pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
@@ -1777,7 +1777,7 @@ pub struct Forever {
     pub fortschritt: Option<Ident>,
     pub verlaesst: Vec<Ident>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
-    /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
+    /// language already; this is the statement (`dokumente/PRUEFER.md`).
     pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
@@ -2539,7 +2539,7 @@ pub enum SyscallPaarung {
 /// **The fixed key set of the hardware profile (lane E6, «E6»).**
 ///
 /// Mirrors `ProfilSchluessel` in `grammatik/Grammatik/Kern/Syntax/Profil.lean`
-/// (`PLAN-ERWEITUNG.md` §0c, point 3): an assumption fixing a mode or a
+/// (`dokumente/PRUEFER.md` §0c, point 3): an assumption fixing a mode or a
 /// resource names its key and value. `arch` reuses the existing word; the
 /// other four are words of their own so a typo falls at the reader, not in
 /// a string comparison nobody reads.
@@ -2567,7 +2567,7 @@ impl ProfilSchluessel {
 
 /// One entry of a `profile` or `requires profile` block: a keyed mode
 /// assumption (`arch x86_64;`) or a reference to a declared `assume` item
-/// (`assume <name>;`), never a copy of its text (`PLAN-ERWEITUNG.md` §0c,
+/// (`assume <name>;`), never a copy of its text (`dokumente/PRUEFER.md` §0c,
 /// point 2).
 #[derive(Debug, Clone)]
 pub enum ProfilEintrag {

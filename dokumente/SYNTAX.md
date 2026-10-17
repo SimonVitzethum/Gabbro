@@ -1,7 +1,8 @@
 # Gabbro — the syntax
 
 **The source for the surface, and since 2026-09-09 the source for the proof.**
-[`SPRACHE.md`](SPRACHE.md) says which mechanisms there are and why; [`BEWEIS.md`](BEWEIS.md),
+[`SPRACHE.md`](SPRACHE.md) says which mechanisms there are and why (and does not repeat this
+file); [`PRUEFER.md`](PRUEFER.md) is the checker that enforces them; [`BEWEIS.md`](BEWEIS.md),
 what they are there for; here stands how one writes them down — **and what every spelling
 has to carry so that it may be written at all.** What does not stand here is not writable.
 
@@ -32,7 +33,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 > becomes unwritable through a `SUGAR` mark. Unmarked productions are unchanged. Every
 > production names the Lean constructor that carries it (`Lean:`), or says that it is
 > declaration-level (`Deklaration`) or sugar. «SG-n» numbers continue the numbering of
-> `PLAN-GRAMMATIK.md`.
+> `dokumente/SYNTAX.md` (retired; in the history).
 
 ---
 
@@ -42,7 +43,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 |---|---|---|
 | defined EBNF rules | 132 | **189** measured (`pruefe-syntax.sh` EBNF branch: 189 defined, 0 open, 0 unreachable from `program`; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
-| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
+| vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
 | **Guardian** | `pruefe-syntax.sh` — closure of the rules, reachability from `program`, terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it reads the same grammar |
@@ -51,7 +52,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 > (161 rules, 0 open) and `pruefe-wortschatz.py` (221/221 both readings, speech
 > test green) ran from this workstation; the full `pruefe-syntax.sh` (it builds
 > with `cargo build --tests`), `pruefe-grammatiktafel.py` and the parser item of
-> `PLAN-GRAMMATIK.md` §4 are still open. A number in this table that a guardian
+> `dokumente/SYNTAX.md` §4 (retired) were still open. A number in this table that a guardian
 > contradicts is wrong here, not there.
 
 ---
@@ -65,7 +66,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 | **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, no catch-all branch, no default value | each of the four classes has a paid-for trap. The single exception is the widening of a range («SG-1»), and it is written as an attribute, not as a conversion |
 | **E4** | **Contracts stand BEFORE the body, in a fixed order** | a tool that has to sort cannot say "`effects` is missing here" |
 | **E5** | **Every declaration is complete at exactly one place** | no preprocessor, no forward declaration |
-| **E6** | **Every attribute is part of the production** — NEW «SG-0» | a rule that a pass checks after the fact can be forgotten by the pass; a rule that is the shape of the derivation cannot. `GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.4 found an obligation that vanished on a rename; under E6 it has no place to vanish from |
+| **E6** | **Every attribute is part of the production** — NEW «SG-0» | a rule that a pass checks after the fact can be forgotten by the pass; a rule that is the shape of the derivation cannot. the retired `dokumente/PRUEFER.md` §1.4 (in the history) found an obligation that vanished on a rename; under E6 it has no place to vanish from |
 
 > **`obligation` is NOT a source word.** It stands in the **obligation manifest**, i.e. in the
 > **artefact**. The vocabulary here is that of the **source**.
@@ -117,7 +118,7 @@ one word mean two things, the trap class `HISTORIE.md` books under `reserved`.
 
 ### And a word of the table is a keyword only where the grammar EXPECTS one
 
-**Set 2026-09-05, `messung/WORTSTELLUNG.md`, unchanged.** At every position where the grammar
+**Set 2026-09-05, the retired `messung/WORTSTELLUNG.md` (in the history), unchanged.** At every position where the grammar
 writes `ident`, every word of this table is a name. Three positions admit both a keyword
 production and a name, and each is decided by the grammar and not by a list:
 
@@ -196,7 +197,7 @@ path       = pathseg { "::" pathseg } ;                        (* G5 *)
 pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
            | uint | int | opname ;
 (* `u64::max` -- both segments are vocabulary words. `opname` as a segment is the call form
-   of a generated table operation (`T::insert`, `messung/OPS-RUFFORM.md`). *)
+   of a generated table operation (`T::insert`, the retired `messung/OPS-RUFFORM.md` (in the history)). *)
 identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
@@ -209,8 +210,8 @@ the vocabulary — identifiers in a fixed position, counted and named by the gua
 **The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors`, `kernel` and `target` are
 words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
 side carries them through `syscalldecl`, and a `syscall` item has been checked
-since lane S5 (`N063`-`N068`, `A005`/`A006`; emission refused as `C001` until the
-lane-S6 stub lands). `entry syscall …` keeps parsing: the
+since lane S5 (`N063`-`N068`, `A005`/`A006`) and lowered by both backends (the C11 emitter and
+`gabbro llvm`, which lowers direct gates inline; measured on `beispiele/74`). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
@@ -220,7 +221,7 @@ comments and in every identifier a *user* chooses.
 Strings only in `claim`, `reason`, `assume`, `retires … unfalsifiable`, `section` and `asm`.
 
 *Lean:* the lexis has no constructor. A Lean term is a **tree**, and a tree has no tokens; the
-map from the token stream to the tree is the parser, and `PLAN-GRAMMATIK.md` §4 says when it
+map from the token stream to the tree is the parser, and the retired `dokumente/SYNTAX.md` §4 (in the history) said when it
 exists. Nothing in the theorem depends on it.
 
 ---
@@ -265,8 +266,8 @@ entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 (* Checked since lane S5 («SS-1», §12.1): the user side of a
    system call. The checker holds the declaration against its own shape
-   (`N063`-`N068`, `A005`/`A006`) and refuses the emission as `C001` until
-   the lane-S6 stub lands;
+   (`N063`-`N068`, `A005`/`A006`); both backends lower it (the C11 emitter
+   through the stub, `gabbro llvm` inline for direct gates);
    the grammar below is the surface the checker, the emitter ruling and the corpus
    example (§12.1) are written against. *)
 syscalldecl = "syscall" ident
@@ -388,7 +389,7 @@ nonzero    = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
 (* CHANGED «SG-1»: in the core EVERY integer type carries its range. `u32` without `in` is
    SUGAR for `u32 in 0 .. u32::max`, `i32` for `i32 in i32::min .. i32::max`; a `wrapping`
    field (§9) is the one place where the width and not the range is the type.
-   `uN`/`iN` (PLAN-BITS §1): SUGAR for the next standard storage width plus the exact
+   `uN`/`iN` (SPRACHE.md §3.4): SUGAR for the next standard storage width plus the exact
    range — `u13` is `u16 in 0 .. 8191`, `i37` is `i64 in -2^36 .. 2^36 - 1`;
    `u0`, `u65`, `i0` and wider are refused (`P008`). The eight standard words keep
    their full-width meaning exactly. The emitted C uses the storage width, never
@@ -513,8 +514,8 @@ version answers the question at the type instead of at an alias analysis:
 | **what a pointer points at** | a `ptr<space, right> T` is a value of type *"the carrier `T`, number `n`, with right `rw`"*. Its only producer is the name of a **declared** carrier (`&T`, §4); there is no address of an expression and no arithmetic on a pointer | `Ty.ptr n rw`; `Expr.ptrOf t n (ht : D.tabNr n = some t) rw` |
 | **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the owner mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.durch p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
 | **a write through a pointer** | needs the type `ptr<…, rw>` **and** the write right of the enclosing contract on `T` (`R002`/`R003` as shape) | `Stmt.assignDurch (p : Expr … (.ptr n true)) … (hw : V.schreibt t = true)`; theorem `zeiger_schreibt_mit_recht` |
-| **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias |
-| **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own> T` is SUGAR for *"`T` is `owner m` and the callee `consumes m` … `allocs m`"* — the mark is borrowed for the call and comes back. Two `own` parameters of one carrier are then not derivable: the mark is one («SG-9») | `D.eigner`, `eigner_nie_erzeugt` |
+| **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value. **At a CALL it is not harmless any more (2026-10-17):** two pointer arguments of one root, one of the two parameters writable or `own`, are refused (`R014`; an untraceable pointer is unknown and equals every root), and an exported function that assumes two pointer parameters distinct says so (`R015`, a hint) — `SPRACHE.md` §5, `A1-OWN-PAPER.md` | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias; at the call boundary `ParamGetrennt` / `ObjGetrennt` and `r014_objGetrennt` (SATZKARTE §74, §75) |
+| **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own> T` is SUGAR for *"`T` is `owner m` and the callee `consumes m` … `allocs m`"* — the mark is borrowed for the call and comes back. Two `own` parameters of one carrier are then not derivable (`R004`): the mark is one («SG-9»). An `own` parameter also lets the LLVM backend emit `noalias` | `D.eigner`, `eigner_nie_erzeugt` |
 | **`space`** | the barrier follows from the space; the space of a carrier is a declaration fact and the emitter's concern | none — a declaration attribute; `retires … from space` (§6) names it |
 | **`x`** | code space; a pointer with `x` is a `fnptr` (§2) or an `entrust` target (§1) | `Ty.fnptr` |
 
@@ -537,7 +538,7 @@ barrier follows from it. That reading holds for kernel carriers, whose bytes
 no other party rewrites. It does not hold for bytes that live on the far side
 of a user/kernel boundary, where a check of a range and the copy from that
 range are two reads and the far side may rewrite the bytes between them. The
-finding is measured in `messung/TOCTOU-ADRESSRAUM.md` with verdict GAP: no
+finding is measured in the retired `messung/TOCTOU-ADRESSRAUM.md` (in the history) with verdict GAP: no
 user-memory region in the grammar or the world, no copy primitive binding
 validation to copying, no shape refusing two reads of the same user bytes
 with a check between them.
@@ -594,7 +595,7 @@ cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
 bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" | "<<%" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" | "+%" | "-%" | "+|" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" | "*%" ) unary } ;
-(* PLAN-BITS section 4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
+(* SPRACHE.md section 3.4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
    each rides at the precedence of its base operator. *)
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
 (* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
@@ -974,8 +975,8 @@ childstmt  = "child" block ;                                    (* lane O-1, §1
    `locks`/`observes`/`breaking` or under `requires Held` (`N456`), and every carrier
    its path touches that anyone writes is guarded, atomic or per-core (`N457`).
    `child = 1;` stays an assignment, like at
-   `reset` above. The emitter refuses the block by name (`C185`) until the inline
-   trap lands; the model side (`CloneHandoff.lean`, fix lane F9) models the child as a
+   `reset` above. The inline trap has landed (lane 260, the proved template `tor.kind`); the C11 emitter
+   refuses by name (`C185`) only a `child` outside the lowered gate+guard+region triple; the model side (`CloneHandoff.lean`, fix lane F9) models the child as a
    spawned thread, standalone beside the goal theorem (SATZKARTE §39). No new word: `child` is the
    `tree` word (§9, `kante`). *)
 ```
@@ -1003,8 +1004,10 @@ own and are JOINED before the starter proceeds; no detached form exists. The rul
   costs plus two per root (create and join) -- the sum, since nothing promises each root
   a core.
 
-The emitter refuses the statement (`C001`) and the exporter too (`LG004`): these are
-checker rules, with no model and no lowering yet.
+The C11 emitter lowers the statement through the generated hosted driver's thread runtime
+(`gabbro runtime threads`; measured: `beispiele/159` emits with no `C001`). The exporter's
+`LG004` refusal for it is **not re-measured** here; where it still stands, the statement has a
+checker rule and no G model.
 
 **`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
 compilation. **Error propagation** is `let … else (e) { … }`: no hidden control flow, and the
@@ -1047,7 +1050,7 @@ enclosing `locks` blocks and the statements before the position:
 | `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | **SUGAR since 2026-09-15**: `Block.arenaAlloc` (`grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`) = `Block.narrow` on the `used` counter + `Stmt.assignSlot` + `Stmt.assignGlob`; theorems `arenaAlloc_unter_schranke`/`_an_schranke`, bridge `arenaAlloc_gdw_modell` to `Arena.alloc`. *The generation stays checker state (`N211`); the exporter does not build the form yet — `TODO.md` O14* |
 | `reset A;` | `A` is a declared arena; `writes A` | — | **SUGAR since 2026-09-15**: `Stmt.arenaReset` = `Stmt.assignGlob zaehl 0`; theorem `arenaReset_stand`. The model function `Arena.reset` keeps the generation half: every older index is stale by typing |
 | `narrow x to finite` / a float range | | — | `Block.gleitNarrow` |
-| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `messung/URTEIL-OPUS-2026-09-15b.md` F1) | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
+| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `dokumente/BEWEIS.md` F1) | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
 | `f(…);` | see §6 | `logik (vorbedingung f)` … from the callee | `Stmt.call`, `Stmt.callInd` |
 | `axiom(…);` | | `hardware (annahme a)` | `Stmt.axiomCall` |
 | `R = e;` (register) | `R` has a writable class (§10) | — (the device is outside the world) | `Stmt.regSchreib`; theorem `register_schreibbar` |
@@ -1098,7 +1101,7 @@ lane's work.
 ### Library calls — `@library#function ( args ) { region }` (lane E1)
 
 A library call is a **run-time call** of `function` in `library`
-(`PLAN-ERWEITUNG.md` §0b, §1, §6). It stands in statement position and in
+(`PRUEFER.md` §0b, §1, §6). It stands in statement position and in
 binding position:
 
 ```ebnf
@@ -1110,7 +1113,7 @@ libregion  = ? brace-balanced token tree, captured without interpreting ? ;
 is the ordinary argument list. The region is a brace-balanced token tree the
 reader captures WITHOUT interpreting: the opening `{`, nested `{ … }` pairs,
 the closing `}`. What the region MEANS — compiled at translation time into a
-payload the call carries (`PLAN-ERWEITUNG.md` §0b) — runs since lane E5 as a
+payload the call carries (`PRUEFER.md` §0b) — runs since lane E5 as a
 first cut (§7.3): an exact-length row of integer literals through the
 identity translator. A call that resolves `lib` to a used module and
 `function` to a declared `library fn` in it (§7.1) is checked like an
@@ -1177,7 +1180,7 @@ plus the four things only a library declaration can fail:
   the call shape (what the translator fills), not the contract.
 * **body** — a Gabbro block, nothing else (`P044`: no `;`, no `= pred ;`,
   no `= asm`). The transitive call hull holds no `extern`, `raw`, `prim`
-  or `asm` (`N059`, `PLAN-ERWEITUNG.md` §0c) — structure, never prose
+  or `asm` (`N059`, `PRUEFER.md` §0c) — structure, never prose
   comparison.
 * **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
   root, `use` lines) and `f` to a `library fn` in it; arguments, effects
@@ -1202,9 +1205,9 @@ reached two-step run that moves memory
 **Specified, the words lexed, the declaration checked («E3»).** A library
 declares, for each of its run-time functions, the *translator*: a total,
 effect-free Gabbro function from the call region's AST (a tree table type,
-`PLAN-ERWEITUNG.md` §2) to the function's payload type. Running it needs
+`PRUEFER.md` §2) to the function's payload type. Running it needs
 the compile-time evaluator — **only the declaration and the typing are
-built now** (`PLAN-ERWEITUNG.md` §6, lane E3). The region still is not
+built now** (`PRUEFER.md` §6, lane E3). The region still is not
 translated: a resolved call is still refused with `N069`, which now names
 the translator that WOULD run.
 
@@ -1259,7 +1262,7 @@ RUNS.
 **The checks** — the body is an ordinary function body: types, contracts,
 effects and costs are checked by the ordinary checker, and the transitive
 call hull holds no `extern`, `raw`, `prim` or `asm` (`N059`,
-`PLAN-ERWEITUNG.md` §0c). Five new refusals hold the five things only the
+`PRUEFER.md` §0c). Five new refusals hold the five things only the
 linkage can fail:
 
 * **one translator** — every `library fn` with a payload type has exactly
@@ -1382,7 +1385,7 @@ forever    = "forever" [ ident ]
              [ "leaves"    identlist ]
              [ "invariant" pred ]
              block ;
-(* `progress` names WHO ends the loop -- an assumption with a falsifier. `UNFALSIFIZIERBAR.md`
+(* `progress` names WHO ends the loop -- an assumption with a falsifier. `PRUEFER.md`
    row 4 measured a wait loop with no `progress` as "writable, and no latch can ever close
    it" (`beispiele/66`:66). In the core a `forever` ends by `leave` or by the environment, and
    the environment's contribution IS the named assumption: outcome `hardware (fortschritt a)`.
@@ -1548,7 +1551,7 @@ private one, `N038`).
 
 ### 9.1 Arenas — a heap that is never unbounded («E4»)
 
-**Specified, the words lexed, the declaration checked.** `PLAN-ERWEITUNG.md` §3 fixes the
+**Specified, the words lexed, the declaration checked.** `PRUEFER.md` §3 fixes the
 owner's rule — *a heap is allowed but never unbounded: every region has an upper and a
 lower bound* — and the arena is the monotone form: release only as a whole (`reset`),
 no fragmentation, allocation fails only beyond the upper bound. The pool form (fixed
@@ -2004,12 +2007,12 @@ footnote: *memory-safe under A1…An*.
 ### 12.1 `syscall` — the user side of a system call (checked since lane S5)
 
 **Specified since «SS-1», checked since lane S5.** What
-follows is the surface of `PLAN-SYSCALL.md` §1, written as grammar, named checks
+follows is the surface of `SPRACHE.md` §16, written as grammar, named checks
 and one example, so that the checker lane (S5), the emitter lane (S6) and the
 corpus lane (S7) have a text to build against. Every `syscall`
 item is held against its own shape -- register map, errno decoding, machine and
-counterpart -- and the emission is refused as `C001` until the lane-S6 stub
-lands. The example block is an excerpt (`…`), not a
+counterpart -- and both backends lower it (the C11 stub and the LLVM
+inline gate). The example block is an excerpt (`…`), not a
 translation unit.
 
 **The checks** — each names the passes of §1 it mirrors (`G4`, `G7` at
@@ -2018,12 +2021,13 @@ they point at stands in §1 beside `entrydecl`.
 
 * **arch** — the `arch` after `abi` is held against a declared `arch`, as for
   `assume` (`A005`). A syscall for a machine no `arch` declares is refused.
-  **x86_64 only** — `aarch64` stays sealed (`A006`).
+  **`x86_64` and `aarch64` are open** (`aarch64` since 2026-10-07; `A006` refuses every
+  other machine).
 * **register map** — `regs in` / `regs out` / `clobbers` carry the same checks
   as `entry` (`G4`, `G7` at `entrydecl`): the in-registers are pairwise
   distinct (`N063`), no out register is clobbered (`N064`), every parameter is
-  bound exactly once (`N065`), and every named register is one of the sixteen
-  x86_64 general registers (`N066`); `clobbers` may be empty.
+  bound exactly once (`N065`), and every named register is a general register of
+  the declared `arch` (`N066`; the sixteen x86_64 ones, or the aarch64 set); `clobbers` may be empty.
 * **error map** — `errors` is a total map from the errnos the contract admits
   to the declared reasons (`or R`): every admitted errno has exactly one arm,
   every target is a case of the declared channel (`N067`). The decoding is
@@ -2083,17 +2087,17 @@ they point at stands in §1 beside `entrydecl`.
   the declaration; the stack switch is the stub's business and the runtime's
   assumption (d2 -- proposed on branch `opus/clone-handoff`, not a premise of
   `gabbro_ziel` on master). The spill-read rule (`N451`/`N452`, lane 249) keeps
-  the path off unhanded caller slots. The emitter refuses the block by name (`C185`) until the
-  inline trap lands. `beispiele/155` is the clean shape, `156` its branched
-  twin, `gift/1107`-`1113`, `1115`-`1117` and `1139`-`1147` the refusals (`1114` the silent spill pin, refused only by `C185`).
+  the path off unhanded caller slots. The C11 emitter lowers the checked shape as an inline trap and
+  refuses a `child` outside the gate+guard+region triple by name (`C185`). `beispiele/155` is the clean shape, `156` its branched
+  twin, `gift/1107`-`1113`, `1115`-`1117` and `1139`-`1147` the refusals (`1114` moved to `beispiele/1114-kind-handed-read.gab`: its only expected line was `C185`, and the legal handed read is now a positive).
   **The checker's reading assumes the lowering enters the child by jump at the
   region** (the statements between the gate call and the region are parent code;
-  SATZKARTE §39) -- a lowering that lifts `C185` keeps that or re-checks the gap.
+  SATZKARTE §39) -- a lowering that changes `C185` keeps that or re-checks the gap.
 
 **Two places where the written example fixes the production's letter** (measured
 at the build, lane S5): the §1 production line says `regbind` (`ident ":"
-ident`, entry order) for both maps, but every written example — `PLAN-SYSCALL.md`
-§1, the block below, the probes — writes `regs in { rdi = fd }` (register
+ident`, entry order) for both maps, but every written example — `SPRACHE.md`
+§16, the block below, the probes — writes `regs in { rdi = fd }` (register
 first, `=`) and `regs out { rax }` (bare registers). What parses is what the
 examples write, with `:` accepted beside `=` at `regs in`; a `regs out` pair
 has no reading (the out value has no Gabbro-side name) and falls at the parser.
@@ -2122,7 +2126,7 @@ semantics treats like any carrier and the emitter omits.
 
 ### 12.2 `profile` — the one hardware profile, and what libraries require (lane E6)
 
-**Specified and checked («E6», the checker half of `PLAN-ERWEITUNG.md`
+**Specified and checked («E6», the checker half of `PRUEFER.md`
 §0c).** The main program declares the profile: the one set of hardware
 assumptions the whole program runs under. A library does not assert
 assumptions; it requires profile entries, by reference to the declared
@@ -2182,7 +2186,7 @@ things only a profile can fail:
   declaration with the same name and content.
 * **platform** — `fp_contract` other than `off` contradicts the float
   prelude, which binds `-ffp-contract=off` for every compiler
-  (`PLAN-BITS.md` §5); an `arch` the unit never declares contradicts the
+  (`SPRACHE.md` §3.4); an `arch` the unit never declares contradicts the
   declared machines (`N218`). Without declared machines nothing is
   refused — a unit with no machine named constrains no machine.
 
@@ -2654,12 +2658,12 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 - [ ] **The parser from this grammar into `Syntax.lean`** — open as translation validation
       T3 (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`): the token-to-tree map with a
       certificate, so Rust leaves the trusted base. Production-to-constructor table
-      161 mapped-or-named in `messung/SYNTAX-PARSER-ENTWURF.md`. This is what turns 16.4
+      161 mapped-or-named in the retired `messung/SYNTAX-PARSER-ENTWURF.md` (in the history). This is what turns 16.4
       (8) into a corpus measurement.
 - [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09; race freedom now
       proved over machine G as `rennfrei_g` (lane 130).
 - [x] **A byte-addressed place** — `leseBytes`/`schreibBytes`, evening of 2026-09-09.
-- [x] **The implementation in checker and emitter** — `PLAN-UMSETZUNG.md`
+- [x] **The implementation in checker and emitter** — `PLAN-UEBERSETZUNGSVALIDIERUNG.md`
   (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
   (`K011`/`K012`, `N056` for the probe, `frist_` manifest entry) and `count`
   checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
@@ -2680,7 +2684,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 - [x] **`pruefe-syntax.sh` prose branch flagged `logik uebergang` (×3) — renamed.**
   The word was the Lean outcome constructor (`Logik.uebergang`), not the
   abolished keyword, but the guardian cannot see the difference and it is right
-  not to try. The outcome is now `Logik.vorzustand` (the pre-state, PFLICHTEN.md
+  not to try. The outcome is now `Logik.vorzustand` (the pre-state, PRUEFER.md
   «B26» — a word that was never a keyword): `Semantik.lean` ctor plus its two
   uses, three prose cells here. `Stmt.uebergang` and `uebergang_erklaert` stand
   — the guardian does not read dotted names, and the statement is not the
@@ -2905,7 +2909,7 @@ Lean: `Grammatik/Korrespondenz/Zeugnis/Zeugnis.lean`. The printer stays trust ba
 ### 21.8 Ledger pointer
 
 The per-cut status of this chapter (proved, shape, open across cuts C1, C2, C3, C6,
-with deciding witness and recompute command) is booked in `messung/SYNTAX-EMITTER-ANHANG.md`.
+with deciding witness and recompute command) is booked in the retired `messung/SYNTAX-EMITTER-ANHANG.md` (in the history).
 
 ### 21.9 Shared carriers carry assertions in invariant form only
 

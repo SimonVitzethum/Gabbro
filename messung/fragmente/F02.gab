@@ -148,7 +148,7 @@ format Slpte @version 1 endian little {
 
 -- «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
 -- ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
--- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.md`:* zwei Woerter,
+-- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.txt`:* zwei Woerter,
 -- und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
 format ContextEntryLo @version 1 endian little {
     P        : u64 @0,

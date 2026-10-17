@@ -1,9 +1,9 @@
-//! Lane E5 -- the translation stage, first cut (PLAN-ERWEITUNG.md section 6).
+//! Lane E5 -- the translation stage, first cut (dokumente/PRUEFER.md section 6).
 //!
 //! A checked library call `@lib#f ( args ) { region }` is a run-time call
 //! whose region the reader captures as raw tokens (lane E1). The library's
 //! declared translator turns the region into a payload at translation time
-//! (PLAN-ERWEITUNG.md section 0b); the translator is not trusted -- a wrong
+//! (dokumente/PRUEFER.md section 0b); the translator is not trusted -- a wrong
 //! translator produces a payload this stage refuses -- and the emitter
 //! passes an accepted payload as a `static const` table argument.
 //!
@@ -15,7 +15,7 @@
 //! a hex literal, a brace -- is outside this cut, and the call keeps the
 //! translation refusal (`N069`): the region is captured, not interpreted,
 //! exactly as before. A token table the translator walks in Gabbro code
-//! (PLAN-ERWEITUNG.md section 2) needs translation-time value
+//! (dokumente/PRUEFER.md section 2) needs translation-time value
 //! construction -- building a fresh table value without a run-time effect
 //! -- which the checker has no syntax for (`M140` is nominal, a carrier
 //! read under `pure` is `E010`); until that syntax exists the walk lives
@@ -302,7 +302,7 @@ pub fn versuch(
         )
         .mit_notiz(
             "tree payloads and multi-field tables are the declared direction \
-             (PLAN-ERWEITUNG.md section 2), not this cut: the region fills one \
+             (dokumente/PRUEFER.md section 2), not this cut: the region fills one \
              field, and anything else has no row to fill",
         );
         return einmal("N233", &z.name, absage);
@@ -323,7 +323,7 @@ pub fn versuch(
         )
         .mit_notiz(
             "the payload reaches the function as a `static const` table argument \
-             (PLAN-ERWEITUNG.md section 0b); without a parameter to carry it the \
+             (dokumente/PRUEFER.md section 0b); without a parameter to carry it the \
              translation has nowhere to go, and dropping it would be fail-open",
         );
         return einmal("N233", &z.name, absage);
@@ -421,7 +421,7 @@ pub fn versuch(
                 ),
             )
             .mit_notiz(
-                "the payload is checked against the payload type (PLAN-ERWEITUNG.md \
+                "the payload is checked against the payload type (dokumente/PRUEFER.md \
                  section 0b): a well-typed value of that table type, every entry in \
                  its field range -- the span above is the offending region token, \
                  carried back through the region span map (lane E7)",

@@ -2,7 +2,7 @@
 -- **Der Feldname im Suffix einer Domaene, den es nicht gibt.**
 --
 -- Dieselbe Bauart wie `chain`s Kante (`D014`--`D016`) und wie der Grundname (`D017`): ein
--- Name in einer Annotation, den niemand las. `messung/DOMAENENSTELLUNGEN.md` §7 fuehrte die
+-- Name in einer Annotation, den niemand las. `dokumente/PRUEFER.md` §7 fuehrte die
 -- Zelle als ungeprueft und nannte den Grund aus dem Quelltext -- *„`M109` steigt nur in
 -- `[index]`-Suffixe ab, nicht in `.feld`"*.
 --

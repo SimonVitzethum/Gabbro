@@ -9,7 +9,7 @@ $ ./instrumente/zaehle-zeremonie.py
   ableitbar       88        A1  4 · A4 84
   redundant        0
   tragend       1281
-111 von 1559 Stellen dürfen sinken
+331 von 2564 Stellen dürfen sinken
 
 > **111 von 1559 on 2026-09-13 (lane 140, measured on the lane tree).**
 > The delta against lane E5/129's 1548 is exactly this lane's 11 sites

@@ -78,7 +78,7 @@ ZUSAGE = "-- erwartet: "
 #
 # **258 -> 262 and 320 -> 324 on 2026-08-31**, and it is a growing SUBJECT and not a raised
 # bar: four probes came in for the silent `N042` collisions (`417`-`420`,
-# `messung/STILLE-KOLLISIONEN.md`), and each of the four falls with its code and nothing
+# `dokumente/PRUEFER.md`), and each of the four falls with its code and nothing
 # else. *A floor that lags behind the corpus is slack, not safety* -- it would take four
 # probes losing their subject without a word.
 #

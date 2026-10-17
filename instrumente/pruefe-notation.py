@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**Die Notationsluecken gegen die HEUTIGE Grammatik, nicht gegen den eingefrorenen Text.**
 
-`PFLICHTEN.md` fuehrte am 2026-08-17 sieben Notationsluecken als haengende
+`PFLICHTEN.txt` fuehrte am 2026-08-17 sieben Notationsluecken als haengende
 Klempnereipflichten. Sie stammten aus `FRAGMENTE.md`, und diese Datei traegt ihren eigenen
 Einfriersatz: *„ein Bericht vom 2026-08-14, und er bleibt unangetastet."*
 

@@ -1,6 +1,6 @@
 -- **Traegt der Grundname eines `traverse` einen Leser -- und was kostet einer?**
 --
--- `messung/DOMAENENSTELLUNGEN.md` §7 fuehrt die Stelle als *„ungeprueft von `D017`"* mit dem
+-- `dokumente/PRUEFER.md` §7 fuehrt die Stelle als *„ungeprueft von `D017`"* mit dem
 -- Grund **Geltungsbereich, nicht Reichweite**: *„Eine Domaene im Rumpf kann ueber eine
 -- `let`-Bindung laufen, und dieser Pass traegt keinen Blockgeltungsbereich -- er wuerde den
 -- Namen abweisen, den die Zeile darueber einfuehrt."*
@@ -30,7 +30,7 @@
 -- Programm: `tafel` ist ein `let`-Aliasname des Parameters `w`, und `slots of tafel` ist
 -- dieselbe Schranke wie `slots of w`. **`kosten.rs` traegt denselben fehlenden
 -- Blockgeltungsbereich wie `domaene.rs`** -- und weist deshalb heute schon ab, was in
--- Ordnung ist. *Der Vorbehalt in `DOMAENENSTELLUNGEN.md` §7 nennt die Luecke an `D017`;
+-- Ordnung ist. *Der Vorbehalt in `dokumente/PRUEFER.md` §7 nennt die Luecke an `D017`;
 -- gemessen ist sie an `K003`, und dort kostet sie bereits eine Falschabsage.*
 --
 -- 2. MIT `D017` PROBEHALBER AM `traverse`

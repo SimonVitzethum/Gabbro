@@ -7,7 +7,7 @@
 --
 -- > **Der `W24`-Vorlauf ist der Grund, dass diese Datei nicht rot geraten ist:** vor der
 -- > Regel sagte der Pruefer zu genau diesem Text `3 items, 0 errors, 0 hints`, der Erzeuger
--- > schrieb 20 Zeilen C, und erst das dritte Werkzeug fiel. `messung/C-NAMEN.md` §1.
+-- > schrieb 20 Zeilen C, und erst das dritte Werkzeug fiel. `dokumente/C-SPEICHERMODELL.md` §1.
 --
 -- **Diese Probe stand bis zum 2026-09-01 an einem `extern fn`, und das war die falsche
 -- Stelle** -- dort ist die Frage seither die Signatur (`N046`, Proben 512 und 513). Die

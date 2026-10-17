@@ -1,5 +1,5 @@
 //! **`arena` -- the monotone region with two bounds** («E4»,
-//! `PLAN-ERWEITUNG.md` §3, checker half).
+//! `dokumente/PRUEFER.md` §3, checker half).
 //!
 //! The Lean model (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`, lane E4 model half)
 //! proves the mathematics: allocation within the reservation never fails

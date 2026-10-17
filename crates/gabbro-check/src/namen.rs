@@ -961,9 +961,9 @@ fn ruf_bewerten(r: &Ruf, span: Span, rein: &HashSet<String>, fakten: &mut PrimFa
 /// The generator writes the Gabbro name into C UNCHANGED -- there is no `fn c_name` in
 /// `emit.rs`. So a declaration named `exit` becomes `_Noreturn void exit(void);`, and `cc`
 /// answers *conflicting types for built-in function 'exit'; expected 'void(int)'*. **Measured
-/// against the UNCHANGED checker before this rule existed** (`W24`, `messung/C-NAMEN.md` §1):
+/// against the UNCHANGED checker before this rule existed** (`W24`, `dokumente/C-SPEICHERMODELL.md` §1):
 /// `gabbro pruefe` said `3 items, 0 errors, 0 hints`, `gabbro emit` wrote 20 lines of C, and
-/// the third tool refused them. *That is exactly the state `PLAN-VOLLSTAENDIGKEIT.md` §2
+/// the third tool refused them. *That is exactly the state `dokumente/PRUEFER.md` §2
 /// forbids -- the checker accepts and there is no C.*
 ///
 /// **Why the CHECKER and not the generator.** A generator that quietly renames `exit` to
@@ -1094,7 +1094,7 @@ fn name_gehoert_schon_c(baum: &Programm, absagen: &mut Absagen) {
             .mit_notiz(klasse.fundort(&name.text))
             .mit_notiz(
                 "measured 2026-08-31 with `cc -std=c11 -O0 -Wall -Wextra -Werror`; \
-                 the table and its command stand in `messung/C-NAMEN.md`",
+                 the table and its command stand in `dokumente/C-SPEICHERMODELL.md`",
             )
             .mit_notiz(hinweis),
         );
@@ -1699,7 +1699,7 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
 /// **`N054` -- `Has(…)` names ONE machine feature, and a feature is a bare NAME.**
 ///
 /// The other direction of the device tier, and it was measured before it was decided
-/// (`messung/PREDICATE-NAMES.md` §5): **eleven written forms x six predicate positions, 64
+/// (`dokumente/PRUEFER.md` §5): **eleven written forms x six predicate positions, 64
 /// of 66 accepted.** `Has()` with no argument, `Has(7)`, `Has(GRENZE + 1)`,
 /// `Has(Platten.slots)` and `Has(RDTSCP, XSAVE)` all gave `0 errors, 0 hints`. The two that
 /// fell did so at `N053` and about the SECOND argument, not about the form.
@@ -4301,7 +4301,7 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
 /// name there that exists nowhere and the match matches nothing, so **both rules fall
 /// silent** -- and the file looks no different from one that had nothing to report.
 ///
-/// *Measured 2026-08-31, `messung/TORREICHWEITE.md`:* `messung/tor-proben/t11` is
+/// *Measured 2026-08-31, `dokumente/PRUEFER.md`:* `messung/tor-proben/t11` is
 /// `beispiele/gift/155-messung-schreibt-sich-selbst.gab` byte for byte with `measures kk`
 /// instead of `measures k`. The original reports `N027` **and `N021`**, the copy only
 /// `N027`. *One letter, and the rule is gone.* `measures` is „the report line" by
@@ -5081,7 +5081,7 @@ fn pruefe_uebersetzer_signatur(
 /// * the declaration side is held here too: the payload must name a
 ///   declared table (`N060`), and the library function's transitive hull
 ///   must hold no `extern`/`raw`/`prim`/`asm` (`N059`,
-///   `PLAN-ERWEITUNG.md` §0c);
+///   `dokumente/PRUEFER.md` §0c);
 /// * a DIRECT call to a library function is refused with `N061`: without
 ///   a region there is no payload, so the call would silently bypass the
 ///   mechanism the declaration stands for.
@@ -5111,7 +5111,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         ),
                     )
                     .mit_notiz(
-                        "the payload is a table or tree type (PLAN-ERWEITUNG.md §0b/§2): \
+                        "the payload is a table or tree type (dokumente/PRUEFER.md §0b/§2): \
                          a tree table is a table, anything else is not a payload",
                     ),
                 );
@@ -5132,7 +5132,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "PLAN-ERWEITUNG.md §0c: a function reachable through `@lib#f` \
+                    "dokumente/PRUEFER.md §0c: a function reachable through `@lib#f` \
                      is safe Gabbro -- `extern`, `raw`, `prim` and `asm` are \
                      refused anywhere in its call hull, including itself",
                 ),
@@ -5235,7 +5235,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     format!("`translator {}` reaches the foreign body `{fremd}`", t.qual),
                 )
                 .mit_notiz(
-                    "PLAN-ERWEITUNG.md §0c: what the translation stage would \
+                    "dokumente/PRUEFER.md §0c: what the translation stage would \
                      run is safe Gabbro -- `extern`, `raw`, `prim` and `asm` \
                      are refused anywhere in a translator's call hull, \
                      including itself",
@@ -5343,7 +5343,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         t.qual
                     ),
                     "the region is compiled at translation time into a payload \
-                     (PLAN-ERWEITUNG.md §0b); the translator is declared and \
+                     (dokumente/PRUEFER.md §0b); the translator is declared and \
                      typed (SYNTAX.md §7.2), but running it needs the \
                      compile-time evaluator (lane E5) -- until then every \
                      resolved call is refused here: never silently accepted, \
@@ -5352,7 +5352,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 None => (
                     "library call checked -- no translator declared yet".to_string(),
                     "the region is compiled at translation time into a payload \
-                     (PLAN-ERWEITUNG.md §0b); until a translator is declared \
+                     (dokumente/PRUEFER.md §0b); until a translator is declared \
                      (SYNTAX.md §7.2, `N200` beside the function) every \
                      resolved call is refused here: never silently accepted, \
                      never crashed on",
@@ -5378,7 +5378,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 absage = absage.mit_notiz(format!(
                     "the refusal names the region's first token `{erster}`: \
                      the span above is its site, carried back through the \
-                     region span map (PLAN-ERWEITUNG.md §6, lane E7)",
+                     region span map (dokumente/PRUEFER.md §6, lane E7)",
                 ));
             }
             absagen.schiebe(absage.mit_notiz(hinweis));
@@ -5460,7 +5460,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 )
                 .mit_notiz(
                     "the region compiles at translation time into the payload \
-                     the call carries (PLAN-ERWEITUNG.md §0b); a direct call \
+                     the call carries (dokumente/PRUEFER.md §0b); a direct call \
                      has no region, so it would run the body with no payload",
                 ),
             );
@@ -5475,7 +5475,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
 ///
 /// The main program declares ONE hardware profile (`profile { … }`); a
 /// library REQUIRES profile entries by reference (`requires profile { … }`),
-/// never by a copy of their text (`PLAN-ERWEITUNG.md` §0c). Consistency is a
+/// never by a copy of their text (`dokumente/PRUEFER.md` §0c). Consistency is a
 /// subset check against the one set -- decidable and cheap -- plus the two
 /// halves of `Profil.gut` (`grammatik/Grammatik/Kern/Syntax/Profil.lean`): key agreement
 /// (`einigung`, `N215`) and same-name content agreement
@@ -5523,7 +5523,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
             .find_map(|k| annahmen.get(&k))
     }
     // `N219`: the second `profile` block -- one hardware profile per
-    // program (`PLAN-ERWEITUNG.md` §0c, point 2). The first block stands;
+    // program (`dokumente/PRUEFER.md` §0c, point 2). The first block stands;
     // every further one falls here, never silently merged.
     for (_, b) in profile.iter().skip(1) {
         absagen.schiebe(
@@ -5534,7 +5534,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
             )
             .mit_notiz(
                 "consistency is a subset check against ONE set \
-                 (PLAN-ERWEITUNG.md §0c): two profiles are two sets, and \
+                 (dokumente/PRUEFER.md §0c): two profiles are two sets, and \
                  merging them silently would hide exactly the conflict \
                  `N215` exists to refuse; the single set is the promise \
                  linking relies on",
@@ -5571,7 +5571,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         .mit_notiz(format!(
                             "in {} -- contradictory modes make every proof over \
                              the combined program vacuous, and every caller \
-                             relies on one mode (PLAN-ERWEITUNG.md §0c)",
+                             relies on one mode (dokumente/PRUEFER.md §0c)",
                             if modul.is_empty() {
                                 "this unit".to_string()
                             } else {
@@ -5604,7 +5604,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     )
                     .mit_notiz(
                         "a profile entry references the declared assumption, \
-                         never a copy of its text (PLAN-ERWEITUNG.md §0c) -- \
+                         never a copy of its text (dokumente/PRUEFER.md §0c) -- \
                          and there is no declaration here to reference; \
                          a reference with no declaration promises nothing",
                     ),
@@ -5640,7 +5640,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         "the profile holds the NAME, so two statements under \
                          it are two assumptions wearing one name -- linking \
                          relies on the name meaning one statement \
-                         (PLAN-ERWEITUNG.md §0c)",
+                         (dokumente/PRUEFER.md §0c)",
                     ),
                 );
             }
@@ -5686,7 +5686,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                                  not in the profile -- the main program must add \
                                  them to its profile, where they meet everything \
                                  else; every call into the library relies on them \
-                                 (PLAN-ERWEITUNG.md §0c)",
+                                 (dokumente/PRUEFER.md §0c)",
                             ),
                         );
                     }
@@ -5729,7 +5729,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                                  not in the profile -- the main program must add \
                                  them to its profile, where they meet everything \
                                  else; every call into the library relies on them \
-                                 (PLAN-ERWEITUNG.md §0c)",
+                                 (dokumente/PRUEFER.md §0c)",
                             ),
                         );
                     }
@@ -5739,7 +5739,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
     }
     // `N218`: the profile against the platform. `fp_contract` other than
     // `off` contradicts the float prelude, which binds
-    // `-ffp-contract=off` for every compiler (`PLAN-BITS.md` §5); an
+    // `-ffp-contract=off` for every compiler (`dokumente/SPRACHE.md` §5); an
     // `arch` the unit never declares contradicts the declared machines.
     // Without `arch` declarations nothing is refused (R16): a unit with no
     // machine named constrains no machine.
@@ -5764,7 +5764,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         .mit_notiz(
                             "the prelude carries no pragma and the manifest \
                              carries the flag for every compiler \
-                             (PLAN-BITS.md §5) -- a profile promising \
+                             (dokumente/SPRACHE.md §5) -- a profile promising \
                              contraction re-opens what the prelude closed, \
                              and every bound the checker computed relies on \
                              the flag staying off",
@@ -6141,7 +6141,7 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
         }
         absagen.schiebe(a);
     });
-    // **A `syscall` names its machine the same way (lane 86, PLAN-SYSCALL.md §1).**
+    // **A `syscall` names its machine the same way (lane 86, dokumente/SPRACHE.md §1).**
     //
     // The rule is the same rule, asked of the declaration instead of the
     // assumption: a syscall for a machine no `arch` declares can never be in
@@ -6981,7 +6981,7 @@ fn beobachter(baum: &Programm, absagen: &mut Absagen) {
 /// }
 /// ```
 ///
-/// > Die Klausel ist keine Verzierung: `PFLICHTEN.md` F10 begruendet mit ihr, warum **nach
+/// > Die Klausel ist keine Verzierung: `PFLICHTEN.txt` F10 begruendet mit ihr, warum **nach
 /// > einem `format`-Zugriff keine Laengenpruefung mehr noetig ist** -- *„der Leser liefert
 /// > NIE eine Struktur, die sie verletzt."* Eine Zusage, auf die andere Regeln bauen, und ihr
 /// > Inhalt war ungelesen.
@@ -7032,7 +7032,7 @@ fn formatklauseln(baum: &Programm, absagen: &mut Absagen) {
                         ),
                     )
                     .mit_notiz(
-                        "the clause is what PFLICHTEN.md F10 rests on -- after a `format` \
+                        "the clause is what PFLICHTEN.txt F10 rests on -- after a `format` \
                          access no length check is needed because the reader NEVER delivers \
                          a structure that violates it. A promise other rules build on",
                     ),

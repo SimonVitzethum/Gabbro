@@ -184,7 +184,7 @@ def main():
         return 1
     print(f"== {len(soll)} von {len(soll)} Proben gruen ==")
     print("  Und was das NICHT heisst: der Stack ist an DREI Vektoren gemessen, nicht an")
-    print("  einem Netz. Was er kann, steht in `messung/netz/README.md`; was Gabbro dabei")
+    print("  einem Netz. Was er kann, steht in `messung/netz/README.txt`; was Gabbro dabei")
     print("  NICHT konnte, steht daneben -- und das ist der eigentliche Ertrag.")
     print()
     zeilen = len(QUELLE.read_text(encoding="utf-8").splitlines())

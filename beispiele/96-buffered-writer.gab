@@ -16,7 +16,7 @@
 -- because the loop writes one byte per call.
 --
 -- The syscall is 74's, with one honest difference: `buf` is a pointer
--- (`ptr<normal, r> u8`, the PLAN-SYSCALL.md §1 shape), not a `u64`. The stub
+-- (`ptr<normal, r> u8`, the dokumente/SPRACHE.md §1 shape), not a `u64`. The stub
 -- widens it into `rsi` itself, and the call site passes the staging array
 -- the way 64 passes its buffer to `extern fn write`.
 --

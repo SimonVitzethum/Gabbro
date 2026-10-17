@@ -1,7 +1,7 @@
 -- erwartet: M146
 -- **A bound the person wrote, and the checker kept none of it.**
 --
--- `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.2 booked
+-- `dokumente/PRUEFER.md` §1.2 booked
 -- `type T = u32 in 0.5 .. 1.5;` as a form that MEANS NOTHING: `2 items, 0 errors,
 -- 0 hints`, and `Shape.intIn lo hi` in the model is the carrier for exactly this
 -- declaration (`PLAN.md` §3.1).

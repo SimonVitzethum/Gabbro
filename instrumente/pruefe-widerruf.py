@@ -2,7 +2,7 @@
 """**Widerrufene Saetze -- die Klasse, die dreimal von Hand gefunden wurde.**
 
 `pruefe-todo.py` haelt `TODO.md` gegen sechs Klassen, darunter *stehengebliebene Zahl*. Er
-sieht **genau eine Datei.** Am 2026-08-19 standen in `dokumente/PLAN.md` sechs Saetze, die
+sieht **genau eine Datei.** Am 2026-08-19 standen in `dokumente/PRUEFER.md` sechs Saetze, die
 das Gegenteil des Gebauten sagten -- vier Abschnitte ueber dem Bauplan, der sie widerlegt.
 
     Zeile 1742  "Gleitkomma -- nicht im Kern"
@@ -134,7 +134,7 @@ WIDERRUFE = [
                 r"|[Ww]hat blocks is the IP header"
                 r"|[Nn]etwork stack[^\n|]{0,40}block(?:ed|s) (?:on|at)"
                 r"|block(?:ed|s) on \*\*one\*\* decision",
-         datum="2026-08-18", grund="`PFLICHTEN.md`:141/:155 -- entschieden; "
+         datum="2026-08-18", grund="`PFLICHTEN.txt`:141/:155 -- entschieden; "
                                    "`beispiele/24-ip-kopf.gab` und `emit.rs`:1416 -- gebaut",
          ersatz="entschieden UND gebaut; seit 2026-08-19 auch im Pruefer (`N007`/`N008`)",
          probe=("«B24» ist offen und blockiert an **einer** Entscheidung.",
@@ -154,7 +154,7 @@ WIDERRUFE = [
          probe=("Damit steht die Kennzahl bei >= 1,9.",
                 "That puts the metric at >= 1.9.")),
     # **WK1, 2026-08-23.** The sentence stood on 2026-08-19 and was right then. The BUILD of
-    # P6 refuted it two days later: `messung/P6.md` measures that 16 of the 23 genuinely open
+    # P6 refuted it two days later: `dokumente/FRAGMENTE.md` measures that 16 of the 23 genuinely open
     # obligations hang on exactly the body effect it declares dispensable.
     # *It is expensive because it makes the blocker look CHEAPER than it is* -- the class this
     # guardian stands against: a sentence that prevents work instead of merely delaying it.
@@ -163,7 +163,7 @@ WIDERRUFE = [
                 r"|[Kk]eine Sprachsemantik n[oö]tig"
                 r"|not an Isabelle semantics of Gabbro"
                 r"|[Nn]o language semantics (?:is )?(?:needed|necessary|required)",
-         datum="2026-08-21", grund="`messung/P6.md`: 16 der 23 offenen Pflichten sitzen "
+         datum="2026-08-21", grund="`dokumente/FRAGMENTE.md`: 16 der 23 offenen Pflichten sitzen "
                                    "an der Rumpfwirkung, 7 am Weltmodell",
          ersatz="die ISABELLE-SEMANTIK EINES GABBRO-RUMPFS ist der Blocker der Kennzahl, "
                 "nicht die Bruecke -- `TODO.md`, Abschnitt DIE KENNZAHL",
@@ -179,7 +179,7 @@ WIDERRUFE = [
     # **WB2, entered 2026-08-25.** The sentence stood in the HEAD of stage 7 -- the place a
     # builder looks to see what is next -- and it did not say *"open"*, it said *"the
     # language does not have it"*. All four halves were built on 2026-08-21
-    # (`messung/FNPTR.md`); the sentence stood four days longer than it was true.
+    # (`dokumente/SPRACHE.md`); the sentence stood four days longer than it was true.
     #
     # *This guardian could not catch it, and its own head says why:* it is a memory, not a
     # judgement -- it finds what somebody wrote down as revoked. **That is exactly why the
@@ -192,7 +192,7 @@ WIDERRUFE = [
                 r"|no corpus sites and no producer"
                 r"|[Tt]he language (?:has|knows) no `&f`"
                 r"|`fnptr`[^\n]{0,40}\bNOT built\b",
-         datum="2026-08-21", grund="`messung/FNPTR.md`: Erzeuger `ExprArt::FnWert` "
+         datum="2026-08-21", grund="`dokumente/SPRACHE.md`: Erzeuger `ExprArt::FnWert` "
                                    "(`M127`/`M128`), Ruf ueber einen Ort (`M129`), die "
                                    "Absenkung und der Vertrag am Typ (`N035`-`N037`); "
                                    "`beispiele/49-dispatch-tabelle.gab` mit 0 Fehlern",
@@ -205,7 +205,7 @@ WIDERRUFE = [
     #
     # `WB2` remembers the claim about the CONSTRUCT: *"the language has no `&f`"*, *"no corpus
     # sites and no producer"*. The sentence that was still standing one day later in
-    # `PFLICHTEN.md`:175 is a DIFFERENT claim about the same item -- the one about the
+    # `PFLICHTEN.txt`:175 is a DIFFERENT claim about the same item -- the one about the
     # CONTRACT: *"`fnptr` carries no `requires`, no `ensures`, no `effects`"*. It stood there
     # as an open gap and therefore carried one point of `H`.
     #
@@ -231,7 +231,7 @@ WIDERRUFE = [
          datum="2026-08-21", grund="`N035` macht `effects` UND `costs` am `fn(...)`-Typ zur "
                                    "Pflicht, `N036` traegt die Wirkungswoerter durch den "
                                    "indirekten Ruf, `N037` weist `requires`/`ensures` mit "
-                                   "GEMESSENER Begruendung ab; `messung/FNPTR.md`",
+                                   "GEMESSENER Begruendung ab; `dokumente/SPRACHE.md`",
          ersatz="der Vertrag steht am Zeigertyp und ist PFLICHT -- `effects` und `costs`; "
                 "abgewiesen sind nur `requires`/`ensures`, und das begruendet `N037`",
          probe=("Er traegt kein `requires`, kein `ensures`, kein `effects`.",
@@ -289,7 +289,7 @@ DATEIEN = (sorted(W.glob("dokumente/*.md"))
            #
            # *Measured while entering `WB2`: THREE live hits, all three about `fnptr`.*
            # `ERZEUGER.md`:15 and :266 booked as not built an item that was built **on the
-           # same day** (`FNPTR.md`); `FNPTR.md`:14 quotes the sentence in a before/after
+           # same day** (`dokumente/SPRACHE.md`); `dokumente/SPRACHE.md`:14 quotes the sentence in a before/after
            # table and is therefore wrapped in the exempting marker pair now.
            #
            # > **A guardian that does not read the file the sentence stands in is no
@@ -301,11 +301,11 @@ DATEIEN = (sorted(W.glob("dokumente/*.md"))
 # **FROZEN, and therefore exempt -- entered 2026-08-25 while building `WB3`.**
 #
 # `dokumente/FRAGMENTE.md` is a report from 2026-08-14 and carries its freeze sentence;
-# `messung/fragmente/README.md` says why, right beside it: *"an excerpt cannot be executed"*,
+# `messung/fragmente/README.txt` says why, right beside it: *"an excerpt cannot be executed"*,
 # and overwriting it would move the yardstick instead of discharging an obligation.
 #
 # **The reason for the exemption is not convenience, it is consistency:** `WB3` finds its
-# three-part enumeration in TWO places -- in `PFLICHTEN.md` (live, and struck there now) and in
+# three-part enumeration in TWO places -- in `PFLICHTEN.txt` (live, and struck there now) and in
 # `FRAGMENTE.md`:628, the source it was copied from. **The second cannot be struck without
 # breaking the freeze sentence.** A guardian that only turns green by breaking another rule is
 # no longer measuring.
@@ -366,7 +366,7 @@ def main():
     # `dokumente/` this tool died of a `FileNotFoundError` inside its own speech test:
     # return code 1, a traceback, and in a chain that reads like a live occurrence.
     # *A crash is not a refusal -- a NAMED refusal is.*
-    probe = W / "dokumente" / "PLAN.md"
+    probe = W / "dokumente" / "PRUEFER.md"
     if not DATEIEN or not probe.is_file():
         print("ABBRUCH: %d Dateien im Zugriff, Sprechprobendatei %s -- es wurde NICHTS "
               "gemessen." % (len(DATEIEN), "da" if probe.is_file() else "FEHLT"))
@@ -415,7 +415,7 @@ def main():
     # that only knows German cannot pass. **The point is the counter-direction:** a
     # bilingual pattern that lost its German half would come through a test that only ever
     # spoke English -- the same hole, mirrored.
-    probe = W / "dokumente" / "PLAN.md"
+    probe = W / "dokumente" / "PRUEFER.md"
     # speech_test: begin
     roh = probe.read_text()
     grundzahl = {e["kennung"]: len(suche(roh, e["muster"])) for e in WIDERRUFE}

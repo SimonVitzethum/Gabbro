@@ -121,7 +121,7 @@ const BENANNT: &[&str] = &[
     // > The build came from the other side: at a LIBRARY BOUNDARY a lock name from elsewhere
     // > is the normal case, and until this rule it was invisible. The rank rules in the
     // > checker looked the rank up, found nothing and stayed silent -- a ring across two
-    // > libraries passed with zero errors (`messung/ABI.md`).
+    // > libraries passed with zero errors (`dokumente/SPRACHE.md`).
     "H016",
     // 2026-09-10, driver handoff rule (`sperren.fenster`, lane-55): a function
     // writing a `ptr<dma,…>`-rooted place AND ringing the `ptr<mmio,…>` doorbell
@@ -179,15 +179,15 @@ const BENANNT: &[&str] = &[
     // `D008` seine Tabelle.
     "D006", "D007", "D008",
     // 2026-08-31: the same three questions at the CHAIN edge, which `chain(a, b) in`
-    // names at the walk instead of at the declaration. `messung/DOMAENENNAMEN.md`.
+    // names at the walk instead of at the declaration. `dokumente/PRUEFER.md`.
     "D014", "D015", "D016",
     // **2026-08-31: a probe yields a VERDICT, and on every path.** `N044` a `return` with
     // no value in a `can_fail` block, `N045` a path that reaches the closing brace. Six of
     // the twelve files in `messung/tor-proben/` emitted C that `cc` refused, and no stage
-    // before `cc` said a word. `messung/TORREICHWEITE.md`.
+    // before `cc` said a word. `dokumente/PRUEFER.md`.
     "N044", "N045",
     // 2026-08-31, one measurement later: the PLACE of a quantifier domain. `D017` its base
-    // name -- `messung/DOMAENENSTELLUNGEN.md` falsified each of the 53 corpus sites outside
+    // name -- `dokumente/PRUEFER.md` falsified each of the 53 corpus sites outside
     // `ensures` one by one and 51 stayed silent -- and `D018` its KIND: `slots of` needs a
     // table, `queue` a record, `elems of` an array field, `mappings of` a `walk`.
     "D017", "D018",
@@ -407,7 +407,7 @@ const BENANNT: &[&str] = &[
     // **`N040` -- and over the FROZEN excerpt it is the EXPECTED answer.**
     //
     // An excerpt names types it does not declare; that is its nature, and it has stood
-    // counted out since 2026-08-20 in `messung/fragmente/README.md`: *"41 sites name 20
+    // counted out since 2026-08-20 in `messung/fragmente/README.txt`: *"41 sites name 20
     // names nobody declares."* Until 2026-08-25 nothing but that tally SAID so -- the
     // checker walked over them with 0 errors and the emitter wrote C forward declarations.
     //
@@ -427,7 +427,7 @@ const BENANNT: &[&str] = &[
     // POINT** -- an `extern fn` exists to bind it. What is wrong is the SIGNATURE: the
     // generator writes `_Noreturn void exit(void);` and `cc` answers *conflicting types for
     // built-in function 'exit'; expected 'void(int)'*. The parameter is missing, not the
-    // right to the name. Measured 2026-08-31 (`messung/C-NAMEN.md`), re-diagnosed 2026-09-01.
+    // right to the name. Measured 2026-08-31 (`dokumente/C-SPEICHERMODELL.md`), re-diagnosed 2026-09-01.
     //
     // > **The line was ADDED to the excerpt on 2026-08-15**, with the note above it saying
     // > `exit` and `signal` had been called and never declared -- and it thereby became part
@@ -520,7 +520,7 @@ const BENANNT: &[&str] = &[
     //
     // `M109` asked this of an `ensures` and of nothing else, `N053` of a device promise,
     // `N032` of a `format ... where`. Measured position by position against the unchanged
-    // checker (`messung/PREDICATE-NAMES.md`): a name nothing declares was accepted in **266
+    // checker (`dokumente/PRUEFER.md`): a name nothing declares was accepted in **266
     // of 380** position x name-kind cells, and the sixteen positions without a reader
     // include every `requires`, every `invariant` and the body of every `spec fn`.
     //
@@ -575,7 +575,7 @@ const BENANNT: &[&str] = &[
 fn der_korpus_bringt_nur_benannte_absagen() {
     for datei in ["dokumente/FRAGMENTE.md", "dokumente/SYNTAX.md", "dokumente/SPRACHE.md", "README.md",
                   // Der Memo BEHAUPTET „heute schreibbar" -- dann wird sein Block auch gemessen.
-                  "dokumente/MEMO-GLEITKOMMA.md"] {
+                  "dokumente/GLEITKOMMA.md"] {
         let md = lies(datei);
         for b in korpus::messe(datei, &md) {
             for (code, zeile) in b.fehler.iter().chain(b.hinweise.iter()) {
@@ -923,7 +923,7 @@ fn c2_witness_pairs_have_written_expectations() {
     let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..");
-    let pfad = wurzel.join("messung/proben/zeugnis-c2/EXPECTED.md");
+    let pfad = wurzel.join("messung/proben/zeugnis-c2/EXPECTED.txt");
     let md = std::fs::read_to_string(&pfad).expect("EXPECTED.md readable");
     for (name, form) in [
         ("c2-01-zuweisung", "zuweisung"),

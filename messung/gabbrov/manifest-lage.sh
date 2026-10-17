@@ -3,7 +3,7 @@
 #
 # `dokumente/GABBROV.md` §2 rests the whole design on one sentence: *"GabbroV does not read
 # the Gabbro program. It reads the manifest."* This script asks what the manifest actually
-# holds for `messung/fragmente/F01..F10`, which is the corpus `PFLICHTEN.md` counts.
+# holds for `messung/fragmente/F01..F10`, which is the corpus `PFLICHTEN.txt` counts.
 #
 # It exists because `messung/GABBROV-AUFTRAG.md` §4 asks for the obligation TEXT in the
 # manifest line, and a richer format over an absent register is a better-labelled emptiness.
@@ -75,6 +75,6 @@ echo -n "  GabbroV's obligation population               "
     || echo "?"
 echo
 echo "  A fragment with a standing checker error emits NO register, so its obligations are"
-echo "  unreachable by the tool \`GABBROV.md\` §2 describes. \`messung/fragmente/README.md\`"
+echo "  unreachable by the tool \`GABBROV.md\` §2 describes. \`messung/fragmente/README.txt\`"
 echo "  books the standing errors as the corpus's YIELD -- that is deliberate. What is not"
 echo "  written anywhere is what it costs the manifest."

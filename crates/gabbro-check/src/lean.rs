@@ -351,7 +351,7 @@ impl LeanReason {
             // A `threads over T` -- or any mark that hangs `threads` on a table -- makes
             // `forall t in threads : P` the SAME index set, the SAME proposition and the
             // same C as `forall t in slots of T : P`. A synonym is exactly the "form that
-            // means nothing" of `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1, so a
+            // means nothing" of `dokumente/PRUEFER.md` §1, so a
             // refusal must not send a reader to it. `PLAN.md` §15 has the differential and
             // the alternative that would NOT be one.
             LeanReason::QuantifiedThreads => {
@@ -6778,7 +6778,7 @@ mod deckung_tests {
 }
 
 // ===========================================================================================
-// S4 -- THE SEAM WITNESSES (`dokumente/PLAN-SICHERHEIT.md` §4).
+// S4 -- THE SEAM WITNESSES (`dokumente/PRUEFER.md` §4).
 //
 // `gabbro lean` writes `Duty*.lean` per unit against `Gabbro.Body`; this function writes a
 // SECOND module per unit against `Gabbro.Sicherheit.Anweisung`: for every routine whose

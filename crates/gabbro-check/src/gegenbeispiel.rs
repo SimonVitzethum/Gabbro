@@ -1,4 +1,4 @@
-//! **Counterexamples for handed-over obligations (PLAN-ZIELSATZ.md §9).**
+//! **Counterexamples for handed-over obligations (dokumente/BEWEIS.md §9).**
 //!
 //! When a user's `ensures` does not hold, the project says "unproved"; a
 //! solver would say "for these inputs it breaks". This module is the

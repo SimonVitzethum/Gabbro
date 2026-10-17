@@ -1,1712 +1,667 @@
 # Gabbro — the proof architecture
 
-> **Target decision, 2026-10-01:** the selected translation-validation route is
-> [source → model → direct x86-64 machine bytes](PLAN-UEBERSETZUNGSVALIDIERUNG.md), with
-> per-access x86-TSO refinement to the existing W / GX concurrency model. C-specific plans,
-> assumptions and measurements below describe the previous route and current C backend;
-> they are not the active binary-validation assignment. The new backend/validator is planned.
+*Consolidated 2026-10-17. It replaces the former `BEWEIS.md` (1 712 lines of August
+measurements), `dokumente/BEWEIS.md`, `dokumente/BEWEIS.md`, `dokumente/BEWEIS.md`,
+`dokumente/BEWEIS.md`, the verdict files `messung/URTEIL-*`, the review of 2026-09-21,
+`dokumente/BEWEIS.md` and `messung/TRAEGER-UND-HARDWARE.txt`. History is in git. Every
+number below names the command that re-measures it (Part E, last section); a claim that could
+not be checked in this consolidation is listed at the end of that section.*
 
+**What may be said:** *the goal theorem is proved over the Lean model, with a witness and
+non-degeneracy, for the programs the exporter carries.* **What may NOT be said:** *Gabbro is
+verified.* The checker inside the statement is the Lean Bool, not the Rust checker; the bridge
+from the model to emitted code is only partly built (Part E).
 
-**What is proved, what it speaks about, who discharges it, and where it is lowered to.**
-Drawn together on 2026-08-14 from six separate files — text unchanged.
+**The one authoritative statement** is the header of
+[`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`](../grammatik/Grammatik/Zielsatz/Kern/Spec.lean)
+(2 530 lines, of which about 1 470 are the header: THE ONE LIST of named assumptions, the NOT
+CLAIMED list, the review package with file and line for every definition). This document is a
+map of it. Where the two ever differ, `Spec.lean` wins and this file is wrong.
 
----
-
-
----
-
-# The criterion — logic only
-
-## The criterion: **prove logic, nothing else**
-
-**2026-08-13.** Up to here the goal was a **number** (0,5 : 1). It is a proxy, and proxies are a
-paid-for trap in this project. The actual criterion is a **kind**, not a quantity:
-
-> **Whoever proves a Gabbro program proves the LOGIC of their program — and nothing else.**
-> Everything else falls out by construction.
-
-**Even 2 : 1 would be good if the counted lines are logic.** And 0,5 : 1 would be a failure if
-hand-written range checks sit inside it. **The number thereby turns from the goal into the
-diagnosis.**
+**Section ids.** Parts A–E carry their own ids (A1, B3, …). The sections of "Item 2 — which C"
+keep the numbers §1–§5 of the former document, because code comments cite `BEWEIS.md §1`,
+`§2` row 7 and `§3` for the legacy C lowering. Appendix: old → new ids.
 
 ---
 
-### The dividing line, and it has to be sharp
+# Part A — The criterion
 
-> **An obligation is PLUMBING if its statement mentions only the MACHINE.
-> It is LOGIC if it mentions the SUBJECT.**
+## A1. Prove logic, nothing else
 
-| **Plumbing — must fall by construction** | **Logic — you write it, in every language** |
+> Whoever proves a Gabbro program proves the **logic** of their program — and nothing else.
+> Everything else falls out by construction or is named.
+
+The dividing line (decided 2026-08-13): *an obligation is **plumbing** if its statement mentions
+only the machine; it is **logic** if it mentions the subject.* Termination by running over a finite
+set is plumbing; termination because "the scheduler makes progress" is logic.
+
+| Plumbing — must fall by construction | Logic — written by the person |
 |---|---|
-| an index lies in range | "the tree stays a tree" |
-| no over-/underflow | "the refcount is the number of references" |
-| no alias, no borrow violation | "the message arrived at the right thread" |
-| frame condition: what is **not** touched | "after `revoke`, `s` has no descendants" |
-| the lock is held, the order is right | "an exhausted thread does not run" |
-| no data race | "the colouring separates the tenants" |
-| the loop ends because the set is finite | the loop ends because **the algorithm** makes progress |
-| the refinement source ↔ C | — |
-| the well-formedness of a data structure after a **generated** mutation | the **formulation** of the invariant |
+| an index lies in range; no overflow | "the tree stays a tree"; "the refcount is the number of references" |
+| frame condition (what is not touched) | "after `revoke`, `s` has no descendants" |
+| lock held, lock order, no data race | "the message arrived at the right thread" |
+| the loop ends because the set is finite | the loop ends because the algorithm makes progress |
+| source ↔ lowering | the formulation of the invariant |
 
-**The borderline case is termination**, and the rule decides it: "ends because it runs over a
-finite set" names only the machine — **plumbing**. "Ends because the scheduler makes progress"
-names the subject — **logic**, and it belongs written down.
+The number "proof lines : code lines" is a diagnosis, not the goal; a ratio counted without this
+split is not a measured value. The one worked split (`delete_leaf` of the Caprock corpus,
+2026-08-15) came out at 7 logic against 4 plumbing obligations, because a `match` over ten
+variants is ten proof steps and one obligation.
 
----
+## A2. Three outcomes, not two
 
-### The first DISPUTED case, and it is not termination *(2026-08-21)*
+Plumbing that **cannot** fall by construction (the Caprock zombie-stack reclaim: no core still
+executes on a region when it enters the reclaim ring) is not left to the programmer and not
+dissolved. It is **named and counted**: an `assume` with a falsifier in the axiom layer
+(`gabbro annahmen`). Naming is not discharging; the layer is finite, named and ratcheted, and
+that is what separates a gap paid in *reach* ("memory-safe under A1…An") from one paid in
+*validity* (an unnamed assumption). Every gap the design leaves is meant to be moved from the
+second currency to the first.
 
-Termination is the borderline case the rule **decides**. Here is one it does not, and it is a
-real site in foreign code, not a construction: **`caprock`, the reclaim of a dying thread's
-kernel stack.** *(`../caprock-messbasis`, branch `arch/x86_64`, read-only —
-`crates/caprock-sched/src/lib.rs`:183-197 and :1973-1983.)*
+## A3. What the criterion does not decide
 
-```rust
-// `record_zombie` legt die Stack-Region des Sterbenden in den Zombie-Ring; von dort gibt SIE JEDER
-// Kern per `reap_core` an den Allokator zurueck [...]. Beim Selbst-Ende (`exit_current`) ist das
-// aber genau die Region, auf der der Kernel in diesem Moment noch rechnet: der Trap-Handler laeuft
-// auf SP_EL1, und das ist bei einem EL1-Thread SEIN Stack. Zwischen `record_zombie` und dem
-// `mov sp, x0` des Vektor-Epilogs darf ein fremder Kern die Region also holen [...]
-```
-
-**The obligation is:** *when the region enters the zombie ring, no core is still executing on
-it.*
-
-**Apply the rule literally, and it says PLUMBING.** The sentence mentions cores, a stack, a
-memory region, a moment — the machine, and nothing else. No subject-matter concept appears; you
-could not tell from it whether this kernel schedules threads or routes packets. It is the same
-family the table already books as plumbing: *no alias*, *frame condition: what is not touched*.
-
-**And it cannot fall by construction.** The last reader stops being one at `mov sp, x0` in the
-vector epilogue — an instruction below every type system, in a window that opens *before* it and
-closes *after*. There is no ownership discipline that reaches it, because the holder of the
-reference is the hardware stack pointer.
-
-**What caprock actually does is the sharpest part of the case.** It does not discharge the
-obligation. It **counts the opportunity** — `ZOMBIE_UNTER_FUESSEN`, incremented when the current
-frame lies inside the region just released for pickup — and it records that a canary at the
-bottom of the region found *"0 Diebstaehle"* over **4295 windows in 108 runs** before being
-removed.
-
-> That is an assurance drawn from the **absence of a refutation** — **R15** and **W10**, in real
-> kernel code, written by people who knew exactly what they were doing and had nothing better
-> available.
-
-#### The decision
-
-**The dividing line holds. What breaks is a second claim that was riding on it unstated:** that
-*plumbing* and *must fall by construction* are the same set. They are not.
-
-| | discharged by | |
-|---|---|---|
-| **logic** | the programmer writes the proof | as before |
-| **plumbing** | falls by construction | as before |
-| **plumbing that CANNOT fall** | **nobody — it is named, and counted** | *the third outcome* |
-
-The third row is not a loophole; it is what the **axiom layer** has been all along, and it is why
-that layer is countable and ratchetable rather than a footnote. *This case belongs in it, beside
-`release_stellt_sichtbarkeit_her` and `sperrabdruck_haelt_fremde_kerne_fern`.*
-
-#### Does the abort condition fire?
-
-The abort condition reads: *"a **named** plumbing obligation remains **that the programmer has to
-discharge by hand**."* Here the programmer discharges nothing by hand — **nobody discharges it at
-all.** It is assumed, named, and counted. **So it does not fire.**
-
-**But only because the axiom layer exists.** Without a place to name such an obligation, this
-site would be exactly the thesis-ending shape: a plumbing obligation, left to the programmer, in
-the one language construct that was supposed to make plumbing disappear. *The escape is not that
-the case is mild — it is that the layer it lands in is finite, named and ratcheted.*
-
-Gabbro's answer to this specific site is **`H015`** (built 2026-08-21): a `rcu … reclaims` now
-**demands** a named grace-period assumption, the way `S003` demands one at `progress`. It is worth
-being precise about what that buys, because it is less than it sounds: *the assumption is named,
-not established.*
-
-> **And the residue is measured, not estimated.** Of the 27 assumptions in the corpus that name a
-> falsifier, **none exists as a runnable probe** — see [`messung/AXIOMSCHICHT.md`](../messung/AXIOMSCHICHT.md).
-> Naming is not discharging, and the axiom layer is where that debt is visible instead of
-> dissolved.
-
-*Where a static check **can** reach, caprock reaches:* `crates/caprock-sync/src/lib.rs`:198-206
-turns the IRQ-masking assumption into a `const _: () = assert!(…)` that fails the build on a
-bare-metal target without masking. **That is the line.** Findings of the kind above lie on the
-far side of it, and the criterion's job is to say so out loud rather than to count them as
-plumbing that will one day fall.
+It is a decision, not a law of nature, and borderline cases are argued in the open. It orders
+measurements, it does not replace them. A construct may be missing; a plumbing obligation that
+stays hanging on the programmer refutes the sentence at exactly that point and names the
+missing construct.
 
 ---
 
-### What that does to the existing measurements
-
-**The numbers stay, their reading changes** — and both measurements are consequently **not yet
-broken down**. That is the next paper step, not a claim:
-
-| Measurement | Number | **open: which share is logic?** |
-|---|---|---|
-| `delete_leaf` (checker) | ~~3,6–6 : 1~~ **unevidenced, replaced by 1,75 : 1** (2026-08-15, breakdown below) | chain finiteness and index bounds are **plumbing** and would have to fall; `child_points_back` and `refcount_matches` are **formulations of invariants**, i.e. logic |
-| `Endpoint::call` (designer) | 1,8–2,3 : 1 | `msg_copied` is **logic** and was bound to nothing (G2); the missing `locks` effect (G3) is **plumbing** that should never have arisen at all |
-
-- [ ] **Break both measurements down into logic/plumbing.** Only then do they say anything about
-      the criterion. **A number without that split is from now on not a measured value.**
-
----
-
-### The abort condition gets sharper, not softer
-
-Until now: *"above 3 : 1"* — a number, measurable only once there is a compiler.
-
-**Now:** *"a **named** plumbing obligation remains that the programmer has to discharge by
-hand."*
-
-That is **checkable on paper, per construct**, and thereby incomparably cheaper. Every such site
-is either a missing construct or the end of the thesis.
-
-**Two of them already stand there today, both from the paper tests:**
-
-1. **`self.queues[p]` after `31 - leading_zeros()`** (`caprock-sched/src/lib.rs:1996`) needs the
-   data-structure invariant in order to discharge the index obligation. **Pure plumbing** — and
-   today not covered by construction. Either M1 carries it, or the criterion is violated at this
-   site.
-2. **The refinement**, if the lowering is not flat enough. It never mentions the subject and is
-   therefore plumbing by definition — every refinement lemma is a breach.
-
----
-
-### Why the criterion is better than the number
-
-* **It is decidable per construct**, without a compiler and without a corpus.
-* **It cannot be flattered by short false promises** — the finding from
-  [`MESSUNGEN.md`](MESSUNGEN.md) loses its force, because what counts is no longer the
-  **quantity** but the **kind**. A false `ensures` is logic that is false; it does not make the
-  number better.
-* **It says what Gabbro is**, in one sentence you can refute: *everything except the logic falls
-  out by construction.* Whoever finds a plumbing obligation that stays hanging has refuted the
-  sentence at that point — and at the same time said which construct is missing.
-* **It makes the number honest:** 2 : 1 of pure logic is a success. 0,5 : 1 with hand-written
-  range checks is not.
-
----
-
-### What it does not mean
-
-* **The dividing line is a decision, not a law of nature.** "Mentions only the machine" is sharp
-  enough for the cases above and will have to be argued over at some borderline case. **The
-  disputed case then belongs here, not in a footnote.**
-* **It does not replace the measurement, it orders it.** Without the breakdown every number stays
-  what it was before: a proxy.
-
-
----
-
-# The gaps between proof obligation and Gold
-
-## What Gabbro lacks for GOLD — apart from the logic proof and the expressive power
-
-**2026-08-14.** Two items are explicitly **not** meant: the **logic proof** (the programmer
-writes that, in every language) and the **expressive power** (that all programs, above all
-Caprock, fit inside — that is the running backlog, see `PLAN.md` A3/A5/A6/A7).
-
-**What is left when you take both away?** The answer is uncomfortable and short:
-
-> **Gabbro produces proof obligations. There is nothing that discharges them, and nothing they
-> speak ABOUT.**
-
-A proof obligation needs three things: a **language**, a **model** in which it has a meaning, and
-a **prover**. Gabbro has the language — half of it. Model and prover it does not have at all.
-
----
-
-### L1 — A MACHINE MODEL. **Designed on 2026-08-14** ([`BEWEIS.md`](BEWEIS.md)): 106 axioms, ~130 names — and the 20 arch-neutral families already stand in `caprock-hal/*/cpu.rs`
-
-#### The original version of the gap
-
-`axiom write_cr3(p: Pa) effects { writes tlb, writes active_table }` names an **effect on a state
-that does not exist.** There is no `tlb`, no `active_table`, no machine state — only a word in an
-effect list.
-
-**With that it is not sayable today what a privileged instruction DOES**, only that it touches
-something. But a Gold proof over a kernel is at its core a proof **over machine states**: "after
-`write_cr3(p)` every access translates according to the table at `p`".
-
-| | |
-|---|---|
-| **What is missing** | a state space (registers, TLB, page tables, device state) and per axiom a **transition function** over it |
-| **Why it is not "logic"** | the programmer proves over *his* program; the machine model is **beneath** him and the same for all programs |
-| **Order of magnitude** | seL4 has its own model in Isabelle for this. **That is not a side item, that is a subproject** |
-
----
-
-### L2 — A MEMORY MODEL. **Decided: RC11 without SC** — and the choice is less load-bearing than assumed here, because Caprock claims only RMW atomicity and per-address coherence ([`BEWEIS.md`](BEWEIS.md))
-
-#### The original version of the gap
-
-`atomic X : bool publishes { Y } release;` is today a **notation without a meaning.** What
-`release` formally means — which prior writes become visible for which `acquire` — stands
-nowhere.
-
-**Without a memory model nothing can be proved about a concurrent kernel.** And Caprock is
-concurrent: **2 231 `Ordering::` sites**, 872 of them in a single file.
-
-> **This is the item seL4 SIDESTEPPED**, not solved — the seL4 proof is sequential at its core.
-> Whoever wants to prove a concurrent kernel gold enters territory the models themselves have not
-> entered.
-
----
-
-### L3 — **DECIDED 2026-08-14** ([`BEWEIS.md`](BEWEIS.md)): three kinds of obligation, templates into Isabelle, program obligations via a **certificate checker**. **And the ceiling: Gold in the seL4 sense is not reachable on this path**
-
-#### The original version of the gap
-
-The type checker discharges **plumbing**. The **logic** obligations — `ensures`, `maintains`,
-`invariant` — Gabbro produces and **nobody discharges them**.
-
-Formerly the answer was "an existing prover" (Verus/GNATprove/Frama-C). **With the decision
-"output is C + iasm, Gabbro checks for itself" that route is closed** — and no replacement is
-named.
-
-- [ ] **To be decided, and it is a decision about direction:** an SMT connection of one's own
-      (Z3/CVC5 behind `pred`), or emitting the obligations into an existing system (Why3,
-      Isabelle), or after all a second emission. **Every answer costs something different**, and
-      today none of them stands there.
-
----
-
-### L4 — **DECIDED 2026-08-14**: there are **three** lowerings, not one; a coverage certificate per run; and the unnamed crack is **which C** ([`BEWEIS.md`](BEWEIS.md))
-
-#### The original version of the gap
-
-"Syntax-directed and non-optimising" is the condition under which the refinement becomes cheap.
-**Nothing checks it.** The proof lies on the source, what is shipped is the C — that both do the
-same thing is **unproved**, and exactly this gap seL4 closes with binary verification (a project
-of its own, filed under "Later").
-
----
-
-### L5 — One's own TCB cannot be named
-
-The assumption set in the artefact ("proved under A1…An") covers the **hardware**. It does **not**
-cover:
-
-| | unverified |
-|---|---|
-| the Gabbro type checker | yes |
-| the lowering to C | yes |
-| the **ghost-theory templates** (that is where the structural induction lives) | yes |
-| the axiom layer | yes, and it is the largest surface |
-
-**For Gold you have to be able to say what you trusted.** Today you can say it for the hardware
-and for nothing else.
-
----
-
-### L6 — The BEGINNING is missing
-
-A proof begins in a state. **Which state holds before the first Gabbro code runs?** The boot phase
-is there as a token (`BootPhase`, linear, `boot_end` unmaps `.boot`) — but what **holds** when it
-is consumed stands nowhere. seL4 has an initialisation proof of its own for this.
-
----
-
-### What explicitly is NOT on this list
-
-* **Liveness and progress** — no mechanism addresses them, and that is a stated limit, not a
-  backlog.
-* **The logic proof** — it is the point of the exercise, not a defect.
-* **The expressive power** — it is the running backlog (19 hanging plumbing obligations, no
-  fragment in the folder — *both figures are from 2026-08-14 and the folder has overtaken them:
-  the fragments stand written out in [`FRAGMENTE.md`](FRAGMENTE.md), and the 19 were never
-  evidenced, see W7*), but it was excepted.
-
----
-
-### The honest balance
-
-**Four of the six items (L1, L2, L3, L6) are each a subproject**, not an open item. L2 is on top
-of that one the models did not solve but **sidestepped**.
-
-> **With that the question "what is missing for Gold" cannot be answered today with a list of
-> constructs.** The language can **set up** the obligations; it has neither the model in which
-> they have a meaning nor the tool that discharges them.
->
-> **That is not a refutation** — Gabbro's promise was never to carry out the proof. It is the
-> observation that between "produces good proof obligations" and "Gold" lies **not the last mile
-> but the road**.
-
-- [ ] **The cheapest step against this is L3, and it is a decision, not work:** where do the logic
-      obligations go? As long as that is open, every further grammar rule is a line for a
-      recipient that does not exist.
-
-
----
-
-### What the gaps COST — the bill, drawn together (2026-08-14)
-
-**The question is not whether there are gaps, but in which currency they are paid.** There are
-exactly two, and the difference is the whole design:
-
-| Currency | means | Example |
-|---|---|---|
-| **Reach** | the sentence holds **relative to named assumptions**. You know what you have proved, and what it hangs on | "memory-safe **under A1…An**" |
-| **Validity** | you do **not** know what you have proved, because the assumption is unnamed | an `unsafe` block with a comment |
-
-> **Gabbro's design consists at its core in transferring every gap from the second currency into
-> the first.** Which is why the assumption set stands **in the artefact** and not in a footnote.
-
-#### The four gaps, itemised
-
-| Gap | costs | Number |
-|---|---|---|
-| **Axiom layer** | reach | **~130 names** for two architectures (A1–A25 counted, plus MSRs, CPUID leaves, device assumptions). **Ratchet: may only fall** — and `port` has just relieved it by **70 sites** |
-| **Memory model** | reach | **2 assumptions** (`c11_release_acquire_x86`/`_aarch64`), each with a litmus falsifier (MP/SB/LB) |
-| **Trust base of the tools** | reach | **4 items**: checker, lowering, **one** `iasm` emission site, N ghost-theory templates. All named, none estimated |
-| **Seam CPU ↔ device** | reach, **but without a model to follow** | the device side is `assume` + probe, the **connection** has no mechanised model. For the MMU there is prior work, for DMA there is none |
-| **Liveness (D8)** | reach | every progress statement is a `progress` **assume** with a falsifier (the watchdog). **96 infinite loops** measured; how many need a progress statement is uncounted |
-| **Functional correctness outside the structural induction** | **unknown** | **that is the only gap without a number** — and it is exactly the open measurement |
-
-#### The sentence a finished Caprock proof carries at the end
+# Part B — The goal theorem
+
+## B1. The statement
+
+> A Gabbro user who wants to verify a program proves only their own logic plus named hardware
+> assumptions. Memory safety, data-race freedom, contracts where claimed — in concurrent runs
+> too — and time are carried by the language. *(Simon, 2026-09-13)*
+
+`theorem gabbro_ziel : GabbroZiel` — statement `Zielsatz/Kern/Spec.lean`, proof
+`Zielsatz/Atomar/BeweisAtomar.lean:343`; `Zielsatz/Kern/Beweis.lean` proves the version over plain
+machine G directly. Everything is about ONE value `E : Einheit D`, the program the user wrote
+(code with contracts, lock invariants, the axioms' declared `ensures`, declared starts with
+arguments, declared initial memory, run-time roots).
 
 ```
-plumbing-safe by exec_sicher under S1 S2 U1 U2
-memory-safe under A1..An
-alias-free NOT CARRIED
-race-free under c11_*
-terminating forever-no-traverse-retry-necessary
-functionally open on O1..Ok
+∀ checker C, declaration D, unit E : Einheit D, complete enumerations of functions/locks/carriers,
+  (a) C.akzeptiert E … = true             -- ONE Bool; PrueferX, sound against AkzeptiertSpecX
+  (b) NutzerPflichtA E                    -- the USER's logic: every body at EVERY `forever`
+                                          --   budget and against every value a shared-atomic
+                                          --   read may return; plus the start duties
+  (c) HardwareAnnahmen O E.Q              -- named hardware and foreign-code assumptions
+  (d) Laufzeit E sp init                  -- the loader and the runtime's thread creation
+  →  every reachable machine K of the THREAD machine over GX satisfies ZielFX
 ```
 
-> **State carries 2026-09-11** (additive; the bill table above and its cells are untouched and left for the central integrator run). S2 proved 2026-09-10: U1/U2 discharged (`programmlogik/Gabbro/KompositionBeweis.lean`: `umgebung_ok_of_runs`, `schleifen_ok_of_runsloop`), so the first line above reads with named premises as theorems. Cut G3 narrowed 2026-09-10: shared-side preservation from checked lock discipline (`InterferenzAllgemein.lean`: `schuldnerHaelt_gilt`, `fremdDisziplin_gilt`, `fremdErhalt_disjunkt_aus_Disziplin`, `invErhalt_aus_Kontext`). S3 threaded 2026-09-10: fault outcome through parallel execution (`Grammatik/Kern/Syntax/Fehler.lean`: `evalF`, `AusF.folge`, `schrittFolge`, `schleifeF`). General N-thread stability proved with its invariant corollary (`allgemeinStabil`, `allgemeinStabil_invariant`). Device windows chained (`Geraet.lean`: `dma_uebergabe`, `kette_ohne_wettlauf`, `kette_uebergabe`). Validated copy safe inside the model and wired to `World` (`Adressraum.lean`: `gepruefteKopie_ohneToctou`, `modellSequenz_ohneToctou`; exec-side range check stays missing as booked). Lowering measured: maximum 17 at `traverse over descendants of` with bound 18 (`messung/ABSENKUNG-MESSUNG.md` 2026-09-10; `ABSENKUNG-ZAEHLUNG.md`; `Ziel.lean` bound widened 8 to 18). Sondes at 17 of 50, all passing (`dokumente/SONDENDECKUNG.md`; 2026-09-11 remainder). H back to 1 by use-granularity precision (2026-09-10; `dokumente/PFLICHTEN.md` register). Numeric registers themselves (`Ziel.lean` constant, `SONDENDECKUNG.md` counts, `PFLICHTEN.md` H) are deliberately left for the central carries.
+**Quantifier discipline** (the lesson of probes A and D): everything a prover could pick to
+empty an obligation is universally quantified — the budget `passes`, the oracle (restricted only
+by (c)), start memory, start assignment, the run. A premise that fits none of (a)–(d) is a
+finding, not a premise.
 
-> **The cost of all the gaps together is: `n` is large, but counted and falling — and `k` is
-> uncounted.** That is the whole bill. **Knowing `k` is the cheapest step that still moves the
-> folder**, and it is the same one as the falsifier of the L3 decision: **classify the 17 measured
-> logic obligations** into *by construction · by generated induction scheme · by hand*.
+## B2. What the conclusion says (legs of `Ziel`)
 
-**What the third column costs can be said in advance:** a body that has to be proved by hand costs,
-by our own measurement, **5 : 1** on its share. At 5 % of the kernel that is +0,25 on the metric,
-at 10 % +0,5. **A single unexpected case there is therefore more expensive than all 130 axioms
-together** — they cost reach, it costs work.
-
-
----
-
-# L1 and L2 — machine model and memory model
-
-## L1 and L2 — machine model and memory model, designed and measured
-
-**2026-08-14.** The two heaviest items from [`BEWEIS.md`](BEWEIS.md). Load-bearing numbers
-re-checked.
-
----
-
-### L1 — The axiom count: **106**, and the finest find was already there
-
-> **W7 SWEEP 2026-08-15: UNEVIDENCED — TO BE REPLACED.** The number **106** (and the **65**,
-> **30**, **~130 names** derived from it) has **no source list in the folder** — neither per axiom
-> nor as a re-runnable search path. It is therefore the same class as the 74 proof obligations and
-> the 19 hanging ones: *a handed-down aggregate without attribution.*
->
-> **Not deleted, because the marking is the finding.** What it needs in order to be replaced: a
-> list per axiom with `file:line` in the register manual or in the tree — and **only the x86 half
-> is collectable** (the aarch64 figure 58 additionally rests on the sealed tree, see *The aarch64
-> gap*). **Until then "memory-safe under A1…An" is again a form without content**, and the
-> sentence two paragraphs below, that it has "for the first time a content", stands under this
-> reservation.
-
-| | |
-|---|---|
-| axioms, counted per register and width | **106** — x86_64 40, aarch64 58, MMIO access 8 |
-| conservative (parameterised) | **65** |
-| of these **pure reads** | **30 (28 %)** — they change no state and are the cheap part |
-| plus control-flow primitives, device assumptions | ~8 + ~25 |
-| **The assumption set A1…An of a two-architecture kernel** | **around 130 names** |
-
-**With that, "memory-safe under A1…An" has for the first time a content.** 130 is large enough to
-justify a ratchet, and small enough to maintain one.
-
-#### Two corrections to my advance measurement, both against me
-
-* **168 `asm!` were never 168 sites** — they are calls **plus** `global_asm!` **plus** doc
-  mentions. *(Recounted: 150 + 15; the deviation from the agent's figure is a different search
-  pattern, not a different finding.)*
-* **Of 129 volatile accesses only 61 are device MMIO.** The other 68 are tokens and `packed`
-  structs in normal RAM. **I had equated volatile with device.**
-
-#### The find: the axiom layer already stands in the tree, only without a name
-
-> **The arch-neutral intersection is ~20 families** — derived from two independent directions
-> (lowering classes and the intersection of both architectures).
-> **Re-checked, and it is exactly 20:** `caprock-hal/src/x86_64/cpu.rs` has 27 public functions,
-> `aarch64/cpu.rs` has 20, **the intersection is 20** — identically named:
-> `local_irq_save/restore/enable/disable`, `dsb_sy`, `isb`, `csdb`, `csv2`, `csv3`,
-> `speculation_barrier`, `array_index_nospec`, `sb_supported`, `core_id`, `mpidr_affinity`,
-> `current_el`, `halt`, `wfi`, `irqs_freigegeben`, `hypervisor_present`, `sync_code_range`.
-
-**Caprock built the axiom abstraction without calling it that.** That is the cheapest conceivable
-beginning for L1: the interface exists, what is missing are the transition functions behind it.
-
----
-
-### L2 — RC11 without the SC axis. And the choice is less load-bearing than thought
-
-**No model invented.** Chosen: **RC11 without SC**, with ownership transfer (RSL/FSL/iRC11) as the
-surface — **the programmer never sees RC11**, he writes `publishes`.
-
-**The justification is measured, not chosen:**
-
-| | |
-|---|---|
-| `Ordering::SeqCst` in the whole tree | **0** — recounted |
-| `compare_exchange` | 11 |
-| non-trivial lock-free algorithms | 3 |
-| seqlock, RCU, `AtomicPtr` CAS | **none** |
-| share of the ordering annotations in **self-test code** | **70 %** |
-
-*Promising* falls, because its distinguishing feature (out-of-thin-air) has no counterpart in
-Caprock; "Rust's model" is not a third candidate but C11 with a different syntax.
-
-> **The sharper version, and it relativises L2 itself:** what Caprock **claims** is **RMW
-> atomicity plus per-address coherence** — and that is identical in **all three** models. Every
-> Dekker-shaped site in the tree collapses onto it. **The choice of model is thereby considerably
-> less load-bearing than the gap assumed.**
-
----
-
-### What is NOT covered
-
-**The seam CPU ↔ device is research**, and the reason is differentiated rather than blanket:
-
-| Side | State |
-|---|---|
-| CPU | **mechanical** — over-approximation plus full fence |
-| device | **named assumption with falsifier** — that Gabbro can do |
-| **the connection** | **no mechanised model to follow.** For the MMU there is prior work (Syeda & Klein), for DMA devices there is none |
-
-**W^X remains unformulable**, and the cause is the same one as known: **a PTE is pointer and
-bitfield at once.** New is the consequence — **the TLB design hangs on it.** With that the PTE
-construct is no longer an open item but a **blocker with a reason**.
-
----
-
-### The weakest part — named by the designer himself, and it is the house pattern
-
-> **"The machine state is the set of the linear ghost values."**
-
-True for state a core **holds**. Silently extended to **the** machine state — **exactly the move
-`HISTORIE.md` keeps as a pattern**, this time found by an agent on itself. `vspace_wx_ok` is
-**one** measured counter-instance, and **how many others there are is not counted**.
-
-- [ ] **This number decides whether L1 is a design or a sketch.** It is cheap to collect and
-      stands as the next step.
-
-Secondary, but instructive: **the first axiom count of my own came to 75 instead of 106 — 29 % too
-small, and all the omissions in the same direction.** A count whose errors have a sign is not a
-count.
-
----
-
-### Grammar
-
-**One new word** (`result`), four productions, **no new mechanism** — and `result` was
-independently needed already: without it **no** function with a return value can assure anything
-about it in `ensures`. **The seven domains hold** — paid for with W^X.
-
-
----
-
-# L3 and L4 — prover and correspondence
-
-## L3 and L4 — the prover and the correspondence. **And the ceiling is named**
-
-**2026-08-14.** The commissioned question was: do the seven quantifier domains at nesting depth 2
-fall into a **decidable** theory? That would have been the strongest finding in the whole folder.
-
-> **Run. Answer: no.** And the reason is not the domain list.
-
----
-
-### Why it is not decidable — four reasons, each sufficient on its own
-
-1. **The seven are in truth three classes**, and the count was skewed: one disappears at compile
-   time (`fields of`), four are finitely indexed, **two are transitive closure** — plus
-   `reaches … via`, which is **the same thing** as `chain(…) in`, only written as a predicate.
-   **The reachability class is three of eight constructs, not one of seven.**
-2. **The array property fragment is directly on point and breaks exactly here:** quantified indices
-   may **only** be read directly, `a[b[i]]` is forbidden. **Caprock's CDT is a pointer mesh,
-   encoded as indices** — hence `a[b[i]]` throughout.
-3. **The three load-bearing invariants of `space.rs` lie in THREE different theories:**
-   `cdt_wellformed` (transitive closure), `child_points_back` (nested reads), `refcount_matches`
-   (cardinality). **No known combination contains all three plus bitvectors.**
-4. **The bound "nesting at most two" does not hold.** It holds over the **source text**, not over
-   the **formula**: `maintains` puts a `spec fn` with its own `forall` inside an `ensures` with
-   `forall`, and `spec fn` may call `spec fn` — only recursion is forbidden. **Checkable on paper,
-   today checked nowhere.**
-
-**And above that stands an item the folder has already measured:** the reordering lemma from
-[`MESSUNGEN.md`](MESSUNGEN.md) is **structural induction**, and **no SMT solver does induction**.
-With that the direction was decided before the question was asked.
-
-**A constructive counter-finding, and it is the most valuable part:** the proof surface is not the
-domain list but the **encoding**. If you model `parent`/`first_child` as **unary functions over an
-abstract sort** instead of as array indices, the invariant family moves into the reachability
-theory. **At run time it stays an array — the logic never sees an index.** *(Unchecked: the
-conclusion comes from the designer, and `refcount_matches` certainly does not fall into it.)*
-
----
-
-### L3 — The obligations are not ONE kind, but THREE
-
-**The folder treated them as one.** As soon as you separate them, the main reason for a prover
-front end disappears.
-
-| Level | Obligation | where to |
+| Leg | In words | Needs |
 |---|---|---|
-| **1** | **Templates** (ghost theory, reordering lemma) — finitely many, hanging on the **construct**, not on the program. **Counted since 2026-08-14, as of 2026-08-17: 20, of which 15 unproved** (`gabbro schablonen`) — four are machine-checked (Isabelle2025-2, `grammatik/Beweise/`). **And the numbers are the actual report: four formalisations, the register grew from 17 to 19, the unproved ones fell by ONE — and the emitter added the twentieth (`option.sonderwert`) when it had to choose a representation for `option index into T`.** *The amortisation argument now holds over four cases — and the price for it was splitting two entries, because they were half provable and half over a nothing* — the one item is a **list with a length** | **Isabelle, once, outside the build process.** The **only** item that **shrinks** the trust base — today the template is called "the most trust-critical component, checked by the unverified core" |
-| **2** | **Program obligations** | a VC generator of one's own → Z3/cvc5 — **but what stands in the trust base is a certificate checker in safe Rust, not the solver** |
-| **3** | the ladder **proved · checked · owed** | **zero new words** — it consists of `invariant … runs online\|offline`, `check` and the assumption set |
+| `speicherSicher` | every access carries its carrier's guards and the locks are held; bounds and types are intrinsic to `Programm D` | nothing (every well-typed program of G) |
+| `rennfrei` | cross-thread access pairs with a write are lock-ordered, for every carrier except `atomic` ones (`schwach` covers those) | (a), (c) |
+| `vertrag`, `invRueck`, `invGrund`, `startEnde`, `keinStartGrund`, `keinLogikHalt` | `requires` at every logged entry, `ensures` and owed invariants at every logged return, the start frame completes, no thread stops at a loop-invariant or transition check | (b), (c) |
+| `sperrInv`, `sperrWechsel`, `sperrSicht` | every free lock has its invariant in memory; every acquire starts from it, every release restores it; no other thread touches a protected carrier while a lock is held | (a), (b) |
+| `invRuhe`, `invSicht` | a table/group invariant holds wherever no unfinished thread is inside a writer, and at every point of a thread holding one of its guards outside every writer | (b) |
+| `keineVerklemmung`, `keinZyklus`, `fortschritt` | no deadlock, no wait cycle (locks and join waits); every stop is one of the named stops (B5) | (a) |
+| `keinKernHalt` | with the program's own interrupt handlers (`via idt`), no same-core handler deadlock under the named core plan | (a) `masken` |
+| `schwach` | the weak-memory machine W adds no behaviour on an accepted program, for every order assignment | (a), (c) |
+| `zeit` | a frame's own G-steps ≤ the syntax-computed `kostenTief` (finite call trees only) | nothing |
+| `folge` | order of calls in every thread's call log (an entry or return directly behind a named function's return) | nothing |
+| `spawnSicht`, `schlafendUnberuehrt`, `joinFrei`, … | threads created at run time (`start`, `child`) enter holding nothing, a spawn leaves the G state alone, joins end only when all roots are finished | (a), (d) |
 
-**Fail-closed, looked up:** cvc5's Alethe covers only parts, LFSC prints **`trust steps`** — a
-certificate with a `trust step` does **not** count as proved. On failure the build **always**
-aborts, with **distinguishable** outcomes (`widerlegt` ≠ `unklar` — Caprock's trap, literally),
-time bounds in **resources rather than wall clock** (D13), solver version in the fingerprint.
+*What `Ziel` adds over `NutzerPflicht`* is the point of the theorem: (b) is sequential per
+function; the theorem returns it on the **interleaved** machine together with race freedom,
+the global lock-invariant fact, progress and the weak-memory leg — none of which is in (b).
+`speicherSicher`, `zeit` and `folge` hold with no premise at all; for them a user proof is never
+needed.
 
-**Hard rule: the ladder applies exclusively to logic.** An unsolved plumbing obligation has
-**exactly one rung and no way out.**
+## B3. Variants, and why nothing was weakened
 
-#### The ceiling, and it belongs in line 1 of the folder
+Every extension is a **reviewed diff of `Spec.lean`**: premises and conclusion move only with
+the old statement derived as a corollary.
 
-> **Program-specific induction is thereby excluded** — a user cannot write a template. The ceiling
-> is **safety hull plus declared invariants from a finite template library.**
-
-#### CORRECTION (2026-08-14, a few hours later): "impossible" was wrong. It is FORBIDDEN
-
-The version above wrote "excluded forever" and "Gold is not reachable on this path". **Looked up
-again: induction fails on three lines, and all three stand in the list "What deliberately does not
-exist"** (`SYNTAX.md`:585):
-
-> *user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas*
-
-**Those are design decisions, not theorems.** Whoever takes them back can express induction — and
-lands at Verus or F\*, which the line explicitly wanted to avoid. **The difference between
-"impossible" and "forbidden by us" is exactly the move `HISTORIE.md` keeps as the house pattern**
-— a sentence that would be true had its scope not been widened.
-
-#### And there is a third way that nobody looked at
-
-The version above equates: *templates hang on the **construct*** ⟹ *finitely many* ⟹ *nothing
-program-specific*. **The middle step is not right.**
-
-> **An induction scheme does not have to be fixed — it can be GENERATED FROM THE USER'S
-> DECLARATION.**
-
-A `table` with `parent`/`first_child`/`next_sibling` **declares a forest**. The structural
-induction principle over it follows from the declaration — **just as in cut (c) the mutations
-follow from it.** The user writes **no** lemma and **no** recursive `spec fn` and still gets
-induction **over his own structure**.
-
-**That is not an invention:** Isabelle and Coq have always derived the induction principle from the
-datatype declaration. The only new thing would be applying it to a **declared** table instead of to
-a datatype.
-
-**And it would hit the measured case:** the reordering lemma from [`MESSUNGEN.md`](MESSUNGEN.md)
-is structural induction **over exactly the declared tree**.
-
-#### Where the difficulty then really sits — and it is real
-
-**A `table` is not an inductive datatype but a mutable array.** "Is a forest" is an **invariant**,
-not a type — so the induction principle holds only **as long as the invariant holds**, and that is
-precisely what one wants to prove. The standard resolution is an induction over a **well-founded
-measure** (say the number of descendants) with the invariant as a **premise**.
-
-**Doable, known — and that is exactly where the work sits.**
-
-**ENTERED 2026-08-14:** `by induction over <domain>` stands in the grammar — **one** new word
-(`over` is reused), two productions, no lemma. With that the ceiling reads: **safety hull +
-declared invariants + inductive properties over DECLARED structures.**
-
-- [ ] **To be checked, and it is cheap:** does an induction scheme generated from the `table`
-      declaration suffice for the 17 measured logic obligations? **This question replaces the
-      claim "impossible" with a measurement** — and it is the same one that is due anyway as the
-      falsifier of the L3 decision.
-
-#### What stays outside even after that
-
-* **Induction over an arbitrary user-defined recursive function** — that does not exist, and it
-  stays that way.
-* **Induction over program runs** (liveness) — a stated limit, independently of this.
-* **And the reservation against the third way itself:** that the generated scheme really discharges
-  the obligations is **unchecked**. Until then it is a design, not a solution.
-
-**On the rejection of the second emission:** it holds, **but the reason in the folder is too
-broad.** It hits a second **code** emission (you pay L4 twice) and does **not** carry against an
-**obligations** front end like Why3. Why3 falls for a different reason: its use is the manual
-fallback — *"a folder with a fallback has no gate."*
-
----
-
-### L4 — "The lowering" does not exist, there are three
-
-| | Part | is "syntax-directed, non-optimising" … |
+| Statement | What it covers | Relation |
 |---|---|---|
-| **(a)** | flat core | **true** |
-| **(b)** | library emissions (`format`, `table`, `device`) | **moot** — a declaration becomes an algorithm, there is no source structure |
-| **(c)** | assembler | **not applicable** |
+| `GabbroZiel` (`gabbro_ziel`) | thread machine over GX; atomic rely; conclusion `ZielFX` | the current statement |
+| `GabbroZielSC` (`gabbro_ziel_sc_aus`) | the statement before the atomic rely (`Ziel` over G, sequentially consistent) | a corollary: every checker of before is a `PrueferX`, and with no shared atomic GX is G |
+| `GabbroZielVor` (`gabbro_ziel_vor`) | the statement before run-time threads (units with no `gestartet`) | a corollary |
+| `gabbro_ziel_g`, `gabbro_ziel_schwach`, `gabbro_ziel_folge` | `Ziel` on plain G runs; every leg on every machine W reaches; the order leg for every order specification a program passes | corollaries |
+| `GabbroZielVerbund` (`gabbro_ziel_verbund`) | a program LINKED from two separately compiled units over one link declaration, the SAME hardware assumptions, link check `SchnittstelleSpec` (`gabbro link`, `N501`–`N505`) | a second statement; conclusion `ZielF` on the linked unit |
 
-**The condition is formulated, of all things, for the part that generates the fewest lines.**
+The atomic rely (2026-09-26): a flag, counter or per-core cell written by one thread and read by
+another without a lock is admitted (`GeteiltV`, no contract may mention it — `N484`), the
+user's proof must then hold *whatever the read returns* (`LogikPflichtA`), and `schwach` becomes
+`SchwachX`. One caveat of the review is part of the record: "verbatim" for `GabbroZielSC` is the
+text; machine W gained the field `rmw`, so the leg speaks about fewer W steps than W without it
+would have admitted (assumption (2) of B4 carries the difference).
 
-* **"Non-optimising" becomes checkable as a bijection between evaluation sites** — and **that only
-  works because E2 and E3 are already decided** (assignment is not an expression, nothing is
-  implicit). Without them it would be semantic and thereby undecidable. **That is the strongest
-  justification for E2/E3, and it stood nowhere in the folder.**
-* **(a):** coverage certificate per compilation run, recomputed by a **separate** program with its
-  own rule table — the `checkfat.py` lesson. **What is accepted is the mutation list, not the
-  existence of the checker.**
-* **(b):** an **interpreter in the compiler** instead of the handwriting, differential test against
-  the descriptor. **Price, named nowhere today: the library layer gets built twice.**
+## B4. The named assumptions (the ONE list is the `Spec.lean` header)
 
-#### The unnamed crack: **which C?**
+Premise (c) and the runtime part of (d) are the only places where hardware or foreign code
+enters. In the statement they are:
 
-"Output is C" — **without a named subset and named compiler options the correspondence is not
-unproved but UNFORMULABLE.** Four places where Gabbro's own design meets undefined behaviour:
-`restrict`, signed overflow, `tagged` → union, volatile. **The set belongs in the artefact, next to
-A1…An.**
+* `GutO` — axiom answers stay inside the declared write frame, keep held locks and trace;
+* `RegLokal` — register and `awaits`-visibility answers depend only on the declared device
+  carriers. It is stronger than hardware: a register with no `depends` answers the same in every
+  world, so an autonomously changing status register breaks it (found in round 3, kept named);
+* `AxVertragO` — axiom answers meet their declared `ensures` (this is the content of
+  `E.Q`; `Q := false` is an honest vacuity, visible in the declaration);
+* `Laufzeit` — each declared start is placed on a thread, the root runs elsewhere; a run-time
+  root's arguments and entry world are the unit's; spawn sites are the checked ones
+  (`N456`, `N461`); every spawn succeeds.
 
-#### Binary verification: **enabled, and cheaper than thought**
+**Assumptions of the reading** (what G being the meaning of the emitted code needs; since the
+weak-memory leg the clause "the hardware is DRF-SC" is withdrawn):
+(1) machine W over-approximates the C11 (RC11) model at G's step granularity;
+(2) the compiler and hardware implement C11 atomics as specified, and an `exchange` lowers to
+one read-modify-write; (3) every lock primitive `<L>_nimm` is an acquire and `<L>_gib` a release
+(own primitives are checked: `N323`, `N481`–`N483`; foreign ones are assumed); (4) carriers are
+the locations; (5) what G reads without recording (foreign answers, register reads, `awaits`
+visibility) sees G's memory.
 
-It needs a named C subset and preserved function boundaries — **the same certificate checker
-delivers both. One property, two purchases.** And **monomorphisation does not block it** — with
-that the contradiction candidate from [`PLAN.md`](PLAN.md) is relieved.
+**Not a premise but a report: the permitted stops** of `fortschritt`: hardware answers outside
+the declared type (answerable types only), a register answer against its declared promise,
+`nieZurueck` (an axiom declared `-> never` returns nothing), `flagge` (an `awaits` whose flag is
+not visible — a wait, never a failure), `budget` (a spent `forever` budget: a model artefact).
+Any other empty answer type is refused by the checker (`AkzeptiertSpec.antworten`, Rust
+`N310`–`N314`). Progress is "every stop is named", not "every wait ends".
 
-> **But:** seL4 excludes assembler **and volatile accesses**. **With that the whole
-> `device`/`mmio` branch would lie outside as well — exactly the part with the most killed
-> traps.**
+The axiom layer on the language side stays `gabbro annahmen`; one open line there: the MMU's
+write of the accessed/dirty bits is an assumption (`A7`) no pass reads, and the construct that
+would carry it (`hardware A, D;` at a `walk`) was priced and **not built**, because the
+collision it guards needs a `group … ops` and a `walk … by ops` the grammar does not have.
+
+## B5. NOT CLAIMED
+
+Named in the header, never hidden; each extension of the goal is a reviewed diff.
+
+* termination and waiting bounds under fairness (`zeit` bounds finite call trees only; a waiting
+  bound exists separately, B6); starvation freedom; stack depth (G's stacks are unbounded);
+* the C and the hardware (translation validation's job, Part E); linking at the C level;
+* contracts, `requires`, `ensures` or invariants *over* a shared atomic (refused, `N484`);
+  per-core cell merging beyond the reader's rely (OFFEN O17); the
+  publish/await hand-off of an unguarded plain payload (refused by the checker);
+* invariants inside a running writer or a held section (claimed everywhere else); a table
+  invariant false at the start memory (the hypothesis of the leg); an invariant reading carriers
+  outside its declared set;
+* interrupt handlers: that the hardware schedules as `KernPlan` says; re-entry; handler on
+  handler; the emitted C realises no masking at all — translation validation has nothing to
+  relate `KernPlan` to (OFFEN O19-Rest);
+* orders of effects that are not calls of Gabbro functions, across a compound statement, an
+  indirect call or a lock block, "sometime before"; the names in `breaking I` (OFFEN O1-Rest);
+* threads created at run time with per-spawn arguments, the end of a join wait, a failing spawn
+  (OFFEN O21); a busy routine declared ONCE on several threads;
+* linked units with differing hardware assumptions, callbacks through an import, sharing an
+  atomic across a link, dynamic loading (OFFEN O28-Rest);
+* floats beyond the kernel IEEE model (bit-exact is not accurate: error bounds need a separate
+  discipline);
+* **dynamic unbounded data structures** and **probabilistic statements** — out of scope by
+  decision. NOT this case: an `arena … max M`, whose ceiling bounds it; its form is sugar over
+  `Block`, but the exporter refuses `grow` (`LG005`), so no dynamic-arena program is certified;
+* the exporter (`lean_g.rs`) is unverified: that `gE` is the source program is not claimed, and
+  every form it drops is in the certificate's "NO FORM in G" ledger (declared `costs`, `reads`,
+  deadlines, hold budgets, `traverse` annotations, `by ops`, `mut`, `pub`/`opaque`, `const fn`,
+  the hardware around `entry`/`boot`).
+
+## B6. What a green build covers per program (the certificates)
+
+`grammatik/Grammatik/Zertifikat/REGISTER.txt` is THE ONE LIST of the programs under `beispiele/`
+(top level and `gift/`) that the checker accepts. Measured now: **34 CERTIFIED, 211 UNCERTIFIED**
+(`grep -c` over the file). The cargo test `crates/gabbro-check/tests/zertifikate.rs` recomputes
+it from the tree and fails on any byte of difference; `GABBRO_ZERTIFIKATE=schreiben` rewrites it.
+
+* **CERTIFIED**: the byte-exact output of `gabbro obligations --g` is in the build; it decides
+  premise (a) *in Lean* for the exported unit (`gCheck … := by decide`) and states the goal
+  theorem on it, leaving (b) `NutzerPflichtA gE` as the open hypothesis — the user's part. The
+  Rust checker's verdict is not in the chain of reasoning: an exported program the Lean Bool
+  refused turns `lake build` red. The register column `chain` says `chain-instance=<name>` where a
+  Lean instance of the generic closing theorem for the emitted C exists, `chain=none` elsewhere.
+* **UNCERTIFIED**: the exporter refuses the program (first refusal `LG001`–`LG007`). A green build
+  says **nothing** about it; the goal theorem reaches it only through a hand-written term
+  (`Korpus07`, `Korpus125`).
+* A program outside `beispiele/` is covered exactly when its own `gabbro obligations --g` output
+  elaborates; nothing checks that this was done.
+* The Rust diagnostic codes are premises of nothing here: those mirroring `AkzeptiertSpec` are
+  re-decided in Lean for every certified program; the rest guard properties the statement does
+  not claim. Of the 216 sentences in the pass register (`gabbro paesse`, 12 passes) none is in
+  state PROVED.
+* The table and group invariant legs are vacuous for every certified program (the exporter
+  writes `Inv := Empty` and refuses `maintains`); the lock legs carry the content there.
+
+The funnel that motivated the register (2026-09-26, 129 top-level corpus programs: accepted by
+the checker 129, exported 17, decided in Lean 2, chain closed 2) is the reason it exists: before
+it, a green build said nothing for the other 112 and nothing turned red when a program was not
+covered.
+
+## B7. Anti-vacuity
+
+A true statement over an empty world is worthless, so it is part of the architecture:
+`Zielsatz/Kern/Proben*.lean` and `SpecProben.lean` prove, as theorems, that
+
+* every premise holds JOINTLY on non-degenerate concurrent programs (`gabbro_ziel_zeuge`: two
+  active threads, a shared carrier under a lock with a non-trivial invariant, a memory-changing
+  run), written as `.gab` and exported — never hand-built;
+* probe A (`ensures false` everywhere), probe D (`forever … leave` with `ensures false`),
+  a table-invariant breaker, an unsatisfiable lock family and an out-of-range float all
+  **violate** (b), and an unguarded shared write violates (a);
+* positives: contracts over shared state at a lock boundary and readers in `locks` blocks satisfy
+  all premises; `Erfuellbar` asks every declared start to run on some thread, so an empty start
+  list no longer satisfies the witnesses;
+* the run class is never empty (the idle root meets (d): `laufzeit_ruhe`); what stays in the
+  user's hand is named: `E.starts = []`, and an unsatisfiable `E.Q`.
+
+Every new theorem with a ∀-over-syntax premise needs a `_zeuge` on a non-degenerate fixture.
+Required axioms: `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`,
+`Quot.sound` (printed by `grammatik/NachpruefungZiel.lean`; enforced at merge together with
+`instrumente/pruefe-kein-sorry.py`: no `sorry`, `admit`, `native_decide`, `unsafe`; the one
+recorded `axiom`, `dma_inhalt`, is outside the goal's axiom set).
+
+## B8. The Lean map
+
+| Area | Where under `grammatik/Grammatik/` |
+|---|---|
+| statement, proof, probes | `Zielsatz/Kern/` (`Spec`, `Beweis`, `Akzeptiert`, `Proben*`), `Zielsatz/Atomar/` (the atomic rely, the statement as proved), `Zielsatz/Faeden/` (threads, pools, linking, idle root), `Zielsatz/Eigenschaften/` (invariants, masks, order, weak memory, divergence), `Zielsatz/ZielOrt/` (the per-place machinery) |
+| machine G and semantics | `Logik/Ruf/RufMaschineG.lean` (small-step, thread-indexed), `Kern/Semantik/`, `Kern/Syntax/` |
+| concurrency, races, locks | `Nebenlaeufigkeit/` (`Rennfreiheit/`, `Sperren/`, `Allgemein/` incl. `FadenMaschine`) |
+| weak memory | `Speichermodell/` (`Maschine/MaschineW`, `GXMaschine`, `DRF`, `RMW`, `Sicht`; `Atomar/`) |
+| progress, time | `Logik/Fortschritt/` (`KostenG`, `Lebendigkeit`, `Folge`, `Fortschritt`) |
+| noninterference | `Nichtinterferenz/` (11 files, ≈4 150 lines) |
+| floats, arenas, templates | `Bausteine/Gleitkomma`, `Bausteine/Arena`, `Bausteine/Schablonen` |
+| legacy C backend proofs | `CBackend/` (forms, parser, `Semantik/`: `CSemantik`, `CSpeicher`, `CTicket`, `CNebenlaeufig`, `CloneHandoff`), `Korrespondenz/` (the closing theorem, chain instances for 104 and 108) |
+| source → model | `Parser/` (the Lean parser, T3), `GabbroV/` (the GabbroV side, see `GABBROV.md`) |
+| generated per program | `Zertifikat/` |
+
+The whole tree is about 250 000 lines in 409 files; `Grammatik.lean` imports all of it, and the
+Lean build also checks the fifteen theories of the former Isabelle tree (`Isabelle/`). The
+`.thy` set in `grammatik/Beweise/` is frozen as a protocol and cross-check
+(`instrumente/pruefe-beweise.sh`, needs `~/Isabelle2025-2`); **a new proof goes to Lean.**
 
 ---
 
-### The one rule that applies to **every** emission decision (W6)
+# Part C — Review history
 
-> **Omitting a runtime check is justified by M1 alone, never by an invariant.**
+## C1. The protocol
 
-The two nets look the same from outside and hang on different things: **M1 hangs on the type and
-is recomputed per program; an invariant hangs on the template that preserves it** — that is, on
-the unproved surface this folder already keeps as trust-critical. An emission that strikes a range
-check *because the proof says it cannot go negative* confuses the two — and releases a claim about
-the **model** into the **machine**.
+The goal is judged by **two independent verdicts** — one Muse lane, one Opus agent — each
+adversarial: nothing is accepted on the strength of a comment or a report. The four questions:
+(1) does `Ziel` say the four legs and nothing weaker? (2) is every premise in exactly one of
+(a)–(d)? (3) can a user-controlled choice empty an obligation? (4) does machine G run what
+the language means? *The axiom list shows that the proof is valid; it says nothing about whether
+the statement is the right one.* Two further reading questions decide strength: what `Ziel`
+gives that `NutzerPflicht` does not already claim, and whether each `HardwareAnnahme` is really
+hardware. After step 1 of the end sequence (AGENTS §1) the checker and emitter work follows.
 
-**Mechanically, at every emission decision that cites a proof:** the cited fact must be derivable
-from M1 alone, otherwise the check stays in the C. *A prior commitment for a surface that does not
-yet exist* — see `WERKZEUGKASTEN.md`, W6.
+## C2. Verdicts, one table
 
-### The inline assembler: **"one emission site instead of 161" is FALSE today**
-
-L4 does not apply there — assembler is **not lowered but inserted**. What is checkable is only the
-**interface**, and **today that is not even sayable**: `prim fn` has **no `abi` block**; `arch`
-exists, the register allocation does not.
-
-**The surface therefore does not shrink — it moves into a declaration without content.**
-
-The minimal version is designed (`abi` block, **four new words**); three of the four conditions
-fall out of **D2** and **M1**, so not on the programmer. The cheaper two-word version has been
-examined and **rejected** — `reserved` would then mean two things, Caprock's most expensive trap
-class. **For the block, countability applies, not correctness:** an axiom of its own class
-**"emission"** (not "hardware"), plus buildable falsifiers — **three of four already run in
-Caprock.** **The block gets no proof, but it gets `check`.**
-
-- [ ] **Not in the grammar yet.** The four words are not in the vocabulary, the two productions not
-      in the EBNF, `./instrumente/pruefe-syntax.sh` has not been run against it. **Until then the `abi` part is
-      a sketch, not a rule** — and its justification is **weaker than that of every other
-      construct**: a language finding, not a paid-for trap.
-
----
-
-### The weakest part — named by the designer, and it lands
-
-1. **The L3 decision rests on n = 1** (`revoke` → reordering lemma) — **in a folder that has
-   measured exactly this error twice.** The falsifier stands right beside it and costs one day:
-   classify the **17 measured logic obligations** into *SMT-decidable / needs a template / needs
-   **program-specific** induction*. **A single case in the third column refutes the decision.**
-2. **The coverage certificate checks STRUCTURE, and there is no argument that structure implies
-   meaning.** In between lies a hand-written, hand-trusted table *Gabbro operation → C operation →
-   condition*, estimated **40–60 entries** — **A8 scaled up by an order of magnitude, and the only
-   item without an instrument.**
-3. **Three claims from the literature quoted from memory**; the sentence "under a function
-   encoding Caprock's invariant family falls into a decidable fragment" is **a conclusion,
-   unchecked**.
-
-
----
-
-# Item 2 — which C
-
-## Item 2 — WHICH C, and how the lowering turns from a promise into a statement
-
-**2026-08-14.** The only item on which Gabbro is **structurally** behind seL4
-([`BEWEIS.md`](BEWEIS.md)). seL4 solves it by **formalising** a C subset (parser,
-Simpl/AutoCorres) — a subproject.
-
-**Gabbro solves it differently, and the difference is the whole answer:**
-
-> **seL4 formalises C. Gabbro emits so little C that its semantics is a FINITE TABLE.** What is
-> never emitted needs no semantics.
-
----
-
-### 1. The target language is not "C" but a closed list of forms
-
-The emitter knows **one C form per construct** (definition §14.1). With that the target language
-is **enumerable**, and it is small:
-
-```
-Declarations    static, extern, typedef-free struct/union definition, enum-free constants
-Types           uint{8,16,32,64}_t, int{8,16,32,64}_t, _Bool, T*, T[N], struct, union
-Statements      assignment, if/else, switch (exhaustive, no default), for (counting loop),
-                return, goto ONLY as a generated loop exit, call
-Expressions     literal, identifier, field access, index, unary !/-, binary
-                + - * / % & | ^ << >> == != < <= > >=, call, EXPLICIT cast
-Other           volatile access, _Atomic with named ordering, _Noreturn, restrict,
-                inline assembler at exactly one emission site
-```
-
-**What is NEVER emitted** — and is therefore free of any need for semantics: preprocessor other
-than `#if` out of `when`; `void*`; pointer arithmetic; `union` reinterpretation without a tag;
-comma operator; assignment inside an expression; `?:`; nested assignment; implicit conversion;
-variadic functions; `longjmp`; VLA; bitfields (Gabbro does them itself with mask and shift);
-`const` discarding.
-
-- [x] **The list is to be counted and ratcheted**, like the axiom layer. If it grows in order to
-      solve an emission problem, that is the same movement as a growing axiom layer.
-      **Counted on 2026-08-31 by `instrumente/zaehle-c-formen.py`, ratcheted at 64/30, and
-      driven by `abnahme.py` from the day it was written. The result is below, and it is not
-      the result this section assumed.**
-
-#### 1a. The list, MEASURED — 2026-08-31
-
-**Denominator:** 102 of 485 versioned `.gab` files emit; **8001 lines of C**, of which 1732
-are comment (22 %). Not `grep` but a lexer: line splicing, comment removal, string and
-character literals as one token. *The generated C explains itself in English, and `for`,
-`if`, `while`, `case` are English WORDS too — `grep` finds `for` 73 times, a statement it is
-**49** times.* The counter is TOTAL over the token stream: every keyword and every punctuator
-must map to a catalogue entry, and what does not is printed under `UNBEKANNT`. That is why
-`float`, `&&`, `sizeof`, `while`, `inline` and `__attribute__` were noticed at all — *a
-checklist can only find what somebody already suspected.*
-
-| | | |
-|---|---:|---|
-| **A** erlaubt und benutzt | **34** | the actual table — what needs a C semantics |
-| **B** erlaubt und NIE benutzt | **6** | dead entries; the list can lose them |
-| **C** benutzt und NICHT erlaubt | **30** | the findings |
-| | | **7** on the never list — a CONTRADICTION |
-| | | **19** on neither list, and no generous reading covers them |
-| | | **4** on neither list, but a generous reading does |
-| **Forms in the emitted C** | **64** | = A + C, and this is the ratchet |
-
-**B — the six dead entries, and the first is the important one:** `#if` out of `when` · `#else`
-· `#elif` · `extern` · `_Bool` · unary `-`.
-
-> **This section's own example is dead.** The allow list says *„preprocessor other than `#if`
-> **out of `when`**"*. Of the five `#if` in the entire corpus, **not one** comes out of a
-> `when`; all five are `#if defined(__GNUC__)` around `__builtin_unreachable()`, written by
-> the emitter. *The permitted form is never emitted, and the emitted form was never
-> permitted.* Until the counter split the entry in two it booked the one as the other and
-> looked green (W25).
-
-**C1 — used and on the NEVER list.** Seven, and two of them are large:
-
-| form | sites | note |
-|---|---:|---|
-| **pointer arithmetic** | **491** | `d->basis + 8`, `v->bytes + 4`. `basis` is `volatile uint8_t *`, `bytes` is `uint8_t *` — checked against the declarations. **This contradicts §2 row 2 directly**, which says *„the emission generates **no** pointer arithmetic \| residual risk: none"* |
-| **index on a pointer** | **156** | `p[1]` where `p` is `const uint8_t *p`. `p[i]` **is** `*(p+i)` by C's own definition; the allow list says „index" and does not say whether it means this too |
-| `#include` | 408 | preprocessor other than `#if` |
-| `typedef` | 240 | the list says *„**typedef-free** struct/union definition"* |
-| `#define` | 210 | preprocessor other than `#if` — but *„enum-free constants"* plainly means it |
-| `enum` | 28 | the list says *„**enum-free** constants"* |
-| **`?:`** | **8** | ruled on below |
-
-**C2 — used and on NEITHER list, and no generous reading covers them.** Nineteen: `void` (930,
-the type row does not name it) · `__attribute__` (766) · `inline` (440) · `const` (419) ·
-`*` dereference (141) · `&` address-of (111) · `~` (98) · `break` (51) · `++`/`--` (42) ·
-`sizeof` (27) · `&&`/`||` (23) · `double` (18) · `while` (11) · `__typeof__` (9) · `float` (8) ·
-`__builtin_unreachable` (5) · `#if defined(__GNUC__)` (5) · `continue` (3) · `_Static_assert` (1).
-
-> **Two of these are not omissions but decisions nobody took.** `float`/`double` — the type
-> row knows no floating point at all, and 26 sites of it are emitted. `&&`/`||` — the binary
-> row names `&` and `|`, not `&&` and `||`, and those two are exactly the operators that,
-> like `?:`, evaluate CONDITIONALLY. *Refusing `?:` while emitting `&&` refuses a class at
-> one of its three doors.*
-
-**C3 — used, unnamed, but a generous reading covers them.** Four: `->` (704, „field access") ·
-`bool` (350, `<stdbool.h>` rather than `_Bool`) · `true`/`false` (211) · `+=`/`|=`/`-=` (24,
-„assignment"). *They are listed so that the count of 30 carries its own two readings; under
-the generous one the findings are 26.*
-
-**What the SECOND instrument says, and it is good news:** `cc -std=c11 -Wconversion
--Wsign-conversion -Wcast-qual -Wvla -Wdouble-promotion -Wfloat-equal` finds **zero** hits over
-the **101** units it compiles. **Implicit conversion, `const` discarding and VLA hold — and
-they hold measured.** Row 7 of §2 below demands of implicit conversion *„none, but to be
-checked mechanically"*; that is the mechanical check. *(The 102nd unit,
-`beispiele/gift/414-tabellenspeicher-heisst-so.gab`, does not compile, and the tool says so
-rather than booking it as zero warnings — W1.)*
-
-**What stays UNMEASURED, by name:** `union` reinterpretation without a tag (a question about
-the Gabbro program, not about its C) · whether every `goto` really is a generated loop exit
-(the count is of `goto`, not of what for) · whether `asm` really sits at exactly one emission
-site *in `emit.rs`* · the comma operator outside a grouping paren. Set B is an UPPER bound: a
-103rd program can revive a dead entry.
-
-#### 1b. Two rulings, each with a calculation
-
-**`?:` — the GENERATOR is wrong. Measured, not preferred.**
-
-All eight sites are one and the same line, `z = (z > v) ? z : v;`, out of one emission site
-(`emit.rs`, `MergeOp::Max`/`Min`). Three forms of the same fold, `cc (GCC) 16.2.1`, x86-64:
-
-| | `?:` | `if/else` naive | `if` tight |
-|---|---:|---:|---:|
-| `-O0` | 34 | 36 | **34** |
-| `-O2` | 11 | 11 | 11 — **byte-identical bar the `.file` line** |
-| `-Os` | 11 | 11 | 11 — **byte-identical bar the `.file` line** |
-
-*`if (v > z) { z = v; }` costs nothing at any level.* And what would `?:` cost on the list? It
-is, besides `&&`/`||`, the only operator that evaluates conditionally — and the only one that
-forms its result type by the **usual arithmetic conversions** over its two arms. Putting it on
-the list drags an implicit-conversion rule into a table that the compiler has just certified
-free of one. **A rule that costs a semantics and buys zero instructions is the wrong side of
-the trade.**
-
-- [ ] `emit.rs` writes `if (v > z) { z = v; }` for `MergeOp::Max`/`Min`. Then C1 loses `?:`
-      and both marks fall by one. *Not done here: `emit.rs` was held by another lane.*
-- [ ] **And it does not close the class.** `&&`/`||` remain, 23 sites, with the same
-      conditional evaluation. Either the binary row admits them by name, or they go the same
-      way. **Deciding `?:` alone would look like a solved class and be one door of three.**
-
-**`__builtin_unreachable` — BOTH: the generator is wrong four times, and the list was wrong
-once.**
-
-Deleting the whole `#if` block and compiling with `cc -std=c11 -Wall -Wextra -Werror`:
-
-| site | `-O0` | `-O2` | |
+| Round / date | Muse verdict | Opus verdict | Found → repaired |
 |---|---|---|---|
-| `08-bereiche` | ok | ok | **deletable** |
-| `34-markierter-wert` ×3 | ok | ok | **deletable** |
-| `40-werte-und-griffe` | **`-Werror=return-type`** | ok | **load-bearing — and only at `-O0`** |
+| 1 — 2026-09-13 | reached for the model, not the implementation | **not reached** | probe A: a false loop invariant makes the conclusion vacuous and (b) ignores it; probes B/C: no contract over shared state at a lock boundary, `locks` readers outside; a cosmetic `e0`; the model's typing stricter than the checker's (held-set equality). → `KeineLogik`, lock-invariant family `SperrInv`, table invariants in the conclusion |
+| 2 — 2026-09-14 | reached for the model | **not reached** | probe D: `passes` is free data, a spent `forever` budget is a stop the prover chooses; time is a step bound only. A, B, C now behave. → `passes` universally quantified, deadlock freedom |
+| 3 — 2026-09-15 | goal with named gaps | **not the goal yet** | P1 an unsatisfiable lock invariant empties (b) and (d); P2 `ws`/`Q`/`S` free parameters; P3 payload races dropped; `RegLokal` makes a register a constant. → `Einheit`, `StartPflicht`, `Laufzeit`, `Akzeptiert` as one Bool |
+| 4 — 2026-09-15b | goal with named gaps | goal with named gaps; one unnamed | F1 an out-of-range float stops as "hardware" for every oracle; F2 deadlock leg only global; F3 stop classes. → `Logik.bereich`, `KeinWarteZyklus`, `HaltArt` |
+| 5 — 2026-09-15c | no unnamed gap | unnamed gap | G1: `einpassen` held every sum, float and function-pointer answer to be impossible, so an axiom result of such a type stopped as "hardware" at every call. → decoding of sums, floats, pointers (`EinpassenVoll`) |
+| 6 — 2026-09-15d | goal with named gaps, no unnamed gap | the same | one wording defect (W1), repaired: answers at empty types are refused (`antwortenB`, `N310`–`N314`); `nieZurueck` is for `-> never` only |
+| Spec-diff reviews — 2026-09-23 | — | F9 clone handoff, F10 pools, F11 `keinKernHalt`: SOUND; F11 overclaimed in its header | one overclaim corrected |
+| Spec-diff reviews — 2026-09-26 | — | A (run-time threads), B (weak memory), D (invariants beyond returns), E (linking), G (order leg), H (handlers), O25c (atomic rely): all SOUND; text repairs (B: two assumptions narrowed, D: "at every entry" narrower than worded, `invSicht` nominal, E: a known false accept of `gabbro link` for one-sided threads → OFFEN O28, H: the atomics sibling keeps F11's unconditional form, O25c: the "verbatim" caveat) | header text only; no definition moved after review |
+| Reach audit — 2026-09-26 | — | what a green build covers: 177 accepted programs were silently uncovered | the register of B6; certificates in `lake build` |
+| Static review of 13 lane groups — 2026-09-21 | — | findings in checker rules, Lean witnesses and claims larger than proofs (degenerate witnesses, a wrong literal found by a theorem written to catch it) | fix lanes F1–F11; the goal-relevant ones are F9/F10/F11 above |
 
-**And the rule behind it is mechanical: exactly the four deletable sites carry a `return 0;`
-directly after the `#endif`, the load-bearing one does not.** So at four sites two adjacent
-lines contradict each other — `__builtin_unreachable()` says *„being here is undefined"*, the
-`return 0;` under it says *„if we are here, return 0"*. **Only one of the two can be meant**,
-and the first turns the second into dead code the optimiser may remove. *Four sites export a
-Gabbro promise into C's UB rules and get nothing for it.*
-
-- [ ] `emit.rs` emits the block only where no `return` follows — measured: 1 of 5.
-- [x] **The remaining one goes ON the list, and its price is said.** It is not a convenience:
-      at that site the C compiler is TOLD that the fall-through is unreachable, and that rests
-      on `D005` plus the invariant that a tag only ever holds a declared variant. **That is a
-      proof export into C's rules — the same class as row 11 (`restrict`) below**, and it
-      belongs in the UB inventory as such, not in the syntax list alone.
-- [ ] **Its `#if defined(__GNUC__)` is a second deviation at the same construct**, and a
-      sharper one than it looks: under a non-GNU compiler the emitted program is a DIFFERENT
-      program. §3 pins the compiler options into the artefact with a fingerprint; a `#if` on
-      the compiler's IDENTITY belongs in the same place, or the artefact is not one artefact.
-
-#### 1c. What the count decides — and it is not what this section assumed
-
-**The table did not stay small because the list was obeyed; it stayed small because Gabbro is
-small.** 64 forms over 8001 lines is a real result and it does hold the load-bearing sentence:
-this is an enumerable target language, and AutoCorres is not needed for it. **But 30 of the 64
-were never decided**, and two of them — pointer arithmetic at 491 sites, `void` as a type at
-930 — are not oversights at the margin. *A list that 30 forms walk past is not a ratchet, and
-until today nothing counted it.*
-
-- [ ] **The 19 unnamed forms of C2 are to be RULED ON, one by one, the way `?:` was**: onto the
-      list with the price of their semantics, or out of the generator with the price of the
-      change. **Ruling by taste is what produced a list with 30 holes in it.**
-- [ ] **§2 row 2 is to be rewritten.** It says pointer arithmetic has residual risk „none"
-      because the emission generates none. The emission generates 491 sites of it.
+The current standing is therefore: *the goal with named gaps — no unnamed gap found (round 6),
+extended by seven reviewed diffs.* No external human review of the B2 package has happened yet;
+it is the first point where an outside reader gets a lever on a few hundred lines instead of
+the whole tree.
 
 ---
 
-### 2. The UB inventory — every class, and what kills it
-
-**The proofs live in Gabbro. The danger is that the EMISSION devalues them through C's own
-rules.** Which is why the list is not "which UB can Gabbro code have" (none) but **"which UB can
-the generated C have"**:
-
-| # | UB class in C | dies through | residual risk |
-|---|---|---|---|
-| 1 | **signed overflow** | M1 proves the bound — **but C does not know that.** Emission uses unsigned types where possible; otherwise `-fwrapv` as a belt | none, if both stand |
-| 2 | **out-of-bounds access** | M1/M4 in the source type; the emission generates **no** pointer arithmetic | none |
-| 3 | **division/remainder by zero** | M1: the denominator range excludes 0 | none |
-| 4 | **shift by ≥ width** | M1 bounds the shift amount | none |
-| 5 | **strict aliasing** | **no cast between pointer types is ever emitted**; `-fno-strict-aliasing` as a belt | none |
-| 6 | **evaluation order / sequence points** | **E2**: assignment is not an expression, one effect per statement. **The whole class disappears** | none |
-| 7 | **implicit conversion / integer promotion** | **E3** in the source text; the emission places **explicit casts everywhere** | none, but **to be checked mechanically** |
-| 8 | **uninitialised read** | E3: nothing is implicit, every declaration has a value | none |
-| 9 | **null pointer** | Gabbro has no `null`; `option` is `tagged` -- and since 2026-09-13 an immutable `ptr` starting at `0` is refused (`N260`): without `mut` the binding can never name another address, so every use is a null dereference | **a `static mut` pointer starting at `0` (the NULL-initialised global idiom), and the `extern` boundary** |
-| 10 | **`union` reinterpretation** | `tagged` writes and reads **via the tag**; C11 explicitly permits reading another member | padding bytes stay unspecified — **never read** |
-| 11 | **`restrict` wrong** | generated from `effects`. **If `effects` is wrong, that is C UB** — a **proof export into C's rules** | **a real trust transfer, named** |
-| 12 | **`volatile` semantics** | weakly specified; MMIO practice. **seL4 excludes exactly this** | **axiom, named** (A12/A17) |
-
-> **Two rows carry real residual risk, and both are named rather than covered:** `restrict` (11)
-> exports a Gabbro promise into C's UB rules, and `volatile` (12) is an axiom anyway. **Everything
-> else dies on a rule that is already there for another reason** — E2 and E3 pay a second time
-> here.
-
-#### Row 9 was right about the language and wrong about the product (2026-09-02)
-
-*"Gabbro has no `null`"* is true of the source language and was not true of the emission.
-`beispiele/38-unveraenderlicher-zeiger.gab` writes
-
-```
-static tz : ptr<normal, rw> Platz = 0;      -- 4 items, 0 errors, 0 hints
-```
-
-and until this date that lowered to `static Platz * const tz … = 0;`. **The `0` is a null
-pointer constant** (C11 6.3.2.3p3), the body below it writes `tz->slots[i].a = 5;`, and that
-is undefined behaviour under 6.5.3.2p4. The file is not at the `extern` boundary, which is
-the only residual risk the row named.
-
-**Found by `clang --analyze` over the emitted C** — `core.NullDereference`, the single such
-finding in 121 emitted units, in the audit method of 2026-09-01: hand an output the project
-already produces to a tool that did not write it.
-
-*The intent was never wrong.* On bare metal address 0 is a vector slot, and naming it is what
-this language is for. The spelling was wrong, and **the emitter already held the right one**:
-the MMIO path has written `(volatile uint8_t *)(uintptr_t)GERAETEBASIS` since it existed, and
-converting an *integer* to a pointer is implementation-defined (6.3.2.3p5) rather than
-undefined. Two spellings for one thing were `W7`; there is now one. Held by
-`crates/gabbro-check/tests/komplement.rs::ein_zeiger_aus_einer_zahl_traegt_den_uintptr_cast`,
-which falls in both directions.
-
-#### Row 9, second cut: the cast was spelling, not cure (2026-09-13, lane 145)
-
-The 2026-09-02 cure did not hold. `(Platz *)(uintptr_t)0` is still an integer
-constant expression with the value 0, hence still a null pointer constant
-(6.3.2.3p3) -- 6.3.2.3p5 (integer-to-pointer conversion) does not apply where
-p3 already fired. Measured, not argued: the unchanged emission of
-`beispiele/38` run under `-fsanitize=undefined` aborts with `member access
-within null pointer` at the store; `clang --analyze` stays silent on the same
-file, so the 2026-09-02 silence was the tool's, not the program's.
-
-The verdict is the checker's, because the emitter has no move: there is no
-non-null spelling of address 0 in C, so no lowering can keep the value and
-drop the undefined behaviour. `N260`
-(`crates/gabbro-check/src/namen.rs::immutable_null_pointer`) refuses an
-immutable pointer -- `static` without `mut`, `let` without `mut`, `const` --
-whose initializer folds to `0` (`Umgebung::konst_wert`, so a `const` name for
-zero is the same refusal). The sentence is `namen.immutable_null_pointer`;
-the poison probe is
-`beispiele/gift/931-null-pointer-through-an-immutable-static.gab`, refused
-with `N260` ALONE.
-
-`beispiele/38` is repaired, not deleted: the store is a `static mut` array
-and the function binds it with `let`. The repaired emission holds no
-`(uintptr_t)0` (pinned by
-`crates/gabbro-check/tests/komplement.rs::no_null_spelling_in_example_38_emission`),
-runs clean under UBSan and ASan, and agrees between `-O0` and `-O2`. Corpus
-sweep 2026-09-13: 239 emitting units (`beispiele/`, `beispiele/gift/`,
-`messung/`, `messungen/`), zero hold `(uintptr_t)0` after the repair, one
-before it.
-
-Two remainders, both booked. A `static mut` pointer starting at `0` still
-lowers to a null spelling -- the NULL-initialised global idiom of real kernel
-code (`messung/k3-fragmente/K01`, `K07`), where assignment may precede any
-use; refusing it is flow, not a declaration, and this rule does not read
-flow. And an immutable `static` pointer has no valid spelling left: a number
-is null (`N260`) or refused (`M140`), an array name checks (decay) but does
-not lower (`C001`). The checker accepts the decay; the emitter does not lower
-it yet.
-
----
-
-### 3. The compiler options are part of the artefact, not of the environment
-
-```
--std=c11 -ffreestanding -fno-builtin
--fwrapv -fno-strict-aliasing -fno-delete-null-pointer-checks
--fno-common -fno-stack-protector
-```
-
-**They belong in the artefact, next to A1…An** — and with a **fingerprint**. The lesson stands in
-the register: *"`cargo build` runs through" is no evidence as long as nobody binds the
-CONFIGURATION* (`CAPROCK_FLAGS_FP`). A lowering whose validity hangs on options nobody records is a
-promise about somebody else's machine.
-
-- [ ] **Fail-closed:** if somebody compiles the generated C **without** the named options, it must
-      **break**, not quietly mean something different. Mechanism: a generated `_Static_assert`
-      preamble that checks `__OPTIMIZE__`-independent features, plus the fingerprint in the image.
-
----
-
-### 4. How the lowering turns from a promise into a STATEMENT
-
-**"Syntax-directed and non-optimising" is prose today.** It becomes checkable as a **bijection
-between evaluation sites** — and **that only works because E2 and E3 are already decided**:
-without them the question would be semantic and thereby undecidable.
-
-The emitter produces a **coverage certificate** per compilation run:
-
-```
-site  gabbro:space.gb:412:9   ->  c:space.c:1187:5   form ASSIGN_INDEX
-site  gabbro:space.gb:413:5   ->  c:space.c:1188:5   form CALL
-form  ASSIGN_INDEX  =  "<lhs>[<idx>] = <rhs>;"        from rule R17
-```
-
-An **independent** program with its **own** form table recomputes:
-
-1. **Completeness** — every Gabbro evaluation site appears **exactly once**.
-2. **Order** — the C sites stand in the same order.
-3. **Closure** — every C form stands in the list from §1.
-4. **No additional effect** — the C contains no evaluation site without a Gabbro preimage.
-
-**The `checkfat.py` lesson applies literally:** the recomputer is **a second program with its own
-pattern**, not the same code called twice. **And what is accepted is the mutation list, not the
-existence of the checker** — a deliberately displaced evaluation site must be noticed.
-
----
-
-### 5. What that achieves — and what explicitly not
-
-**Achieved:**
-
-* **The target language is named and closed**, which makes the correspondence formulable at all —
-  before, it was not.
-* **Ten of twelve UB classes die on existing rules**, not on new ones.
-* **The lowering is recomputed per run**, by a second program.
-* **Binary verification stays possible** and even becomes easier: a named subset and preserved
-  function boundaries are exactly what it demands.
-
-**Not achieved, and the difference from seL4 remains:**
-
-* **This is NOT a formal C semantics.** It is a **reduction of the surface plus a structural
-  recomputation.** What the twelve forms *mean* stands in a table a human wrote — **40–60 entries,
-  hand-trusted** (named as such already in [`BEWEIS.md`](BEWEIS.md)).
-* **Structure does not imply meaning.** The certificate shows that the sites **correspond to each
-  other** — not that the C form **does** the same thing. The gap in between is exactly that table,
-  and it is the **only item in the whole folder without an instrument**.
-* **`restrict` and `volatile` remain trust**, named in the manifest.
-
-### The instrument that does exist after all — witness pairs
-
-**"The only item without an instrument" was wrong.** The tool lies in our own box: **every table
-entry gets an executable witness pair** — a Gabbro fragment, the expected C, the expected behaviour
-—, run through the **real** C compiler and compared. With that the table is **checkable instead of
-hand-trusted**, and an entry without a witness pair is incomplete.
-
-### `restrict` becomes a priced option, not a default export
-
-`restrict` exports a Gabbro promise into C's UB rules (row 11 of the inventory). **Which is why it
-is NOT emitted by default** — only where the differential benchmark demands it. The cost truth
-measures against handwriting anyway; **the UB transfer is therefore paid exactly where it buys
-something measurable**, and nowhere else.
-
-### The common-mode failure of the coverage certificate, named
-
-Two programs with **their own** form tables are N-versions — **but both tables come from the same
-specification text.** An error *in the text* stands in both. **The common-mode failure remains and
-is thereby a named item**, not a closed one; the witness pairs above are the only thing that helps
-against it, because they measure against the **compiler** instead of against a second reading.
-
-- [ ] **The next step is the form table itself** — 40–60 entries, each *Gabbro operation → C form →
-      condition*. It is small enough to write, and large enough to **count and to ratchet**. **Only
-      once it stands has item 2 moved from "unformulable" to "named"** — and this design claims
-      nothing more.
-
-
----
-
-# What seL4 needs besides the logic
-
-## What an seL4 verification needs BESIDES the logic proof — and what Gabbro has for it
-
-**2026-08-14.** Gabbro's promise reads "everything except the logic proof falls out by
-construction". **Then one has to know what "everything except" really is at seL4** — otherwise one
-is comparing a design with an impression.
-
-> **Reservation, and it holds for the whole file:** the seL4 figures are **from memory**. The
-> folder has needed the same class once before (the 20:1 split) and it was confirmed — **that is
-> no evidence for these here.** Where a number stands, it stands as an order of magnitude.
-
----
-
-### The six items besides the logic
-
-| # | Item | what it is at seL4 | what Gabbro has for it |
-|---|---|---|---|
-| **1** | **Machine model** | a model of its own in Isabelle: registers, memory, MMU; what is not modelled is **axiomatised** | the **axiom layer**, ~130 names for two architectures, **ratchetable** and in the artefact. `port` has just relieved it by 70 sites |
-| **2** | **C semantics** | a **C parser** together with a formalisation of a C subset (Simpl/AutoCorres) — a subproject in itself | **nothing equivalent.** Gabbro replaces it with "one emission, syntax-directed, non-optimising" — **and this correspondence is claimed**, not formalised. *But the shortfall is smaller than "no" — see the row on item 4* |
-| **3** | **The assumption list** | explicitly maintained: assembler unproved, boot code initially left out, hardware as modelled, DMA restricted, **verified configuration single-core** | **the obligation manifest** — the same thing, but machine-readable, with classes and a ratchet over names. **Sharper in the DESIGN**: seL4's list exists as an artefact, Gabbro's as a specification (§15) — it is not emitted today |
-| **4** | **Binary verification** | **translation validation PER BUILD** (graph-refine/SydTV, `tools/asmrefine` = 10 651 lines) — **not** a verified compiler, but a certificate per run. **Assembler and volatile are excluded** | **TV-lite is built, TV-full is reachable, a verified emitter is not needed.** The coverage certificate per run **is** already the light form; and **the syntax-directed lowering is precisely the property that makes per-build validation possible**, where for optimising compilers it is heroic. **Only the whole `device` branch would lie outside** |
-| **5** | **Properties above correctness** | integrity, confidentiality, authority confinement — **theorems of their own with specifications of their own**; measured **+23,5 %** on top of correctness (`proof/infoflow` + `proof/access-control`, see [`MESSUNGEN.md`](MESSUNGEN.md)) | **not the theorem, but a checkable approximation** — see below |
-| **6** | **The upkeep** | **the item nobody counts along** — see below |
-
----
-
-### The 239 458 lines prove a SINGLE-CORE kernel — and that cuts both ways
-
-**The verified seL4 configuration is single-core.** With that everything that makes the scheduler
-area hard — address-ordered locking, queue surgery under fine-grained locks, every real
-concurrency — lies **outside what the 40 / 32 / 28 split ever surveyed.**
-
-> **seL4 did not prove the concurrency, it removed it by configuration** — route 5 of the counting
-> rule ([`PLAN.md`](PLAN.md)) at the largest possible scale.
-
-**What that means for Gabbro cuts both ways:**
-
-* **No model to follow.** Whoever looks for an seL4 reference at the scheduler finds none. The lock
-  order, the `Held` witnesses, the pairing — for those there is **no proved precedent** to measure
-  against.
-* **But also no unfavourable comparison.** Gabbro is not *behind* seL4 there, but **beyond the
-  surveyed front**, where nobody has proofs.
-
-**This line stands here before somebody reads the 40 % as transferable to an SMP kernel.** They are
-not; they are measured on a kernel that, by configuration, does not have the hardest class.
-
-> **And Gabbro's goal has explicitly been multicore WITH DMA since 2026-08-14.** With that the
-> simplification seL4 chose is **excluded** — and three things follow from it:
->
-> 1. **The pairing (pass 7) is load-bearing, not a "later".** Without it there is no race freedom,
->    and without race freedom none of the other promises is stable on a multicore machine: a fact
->    that holds on one core does not hold when a second one writes.
-> 2. **The `dma` space must carry statements, not merely classify.** A device that writes is a
->    second actor without a lock and without `Held` witnesses. **Concretely and immediately:** a
->    carrier whose fields only the generated `ops` may write must lie in **no `dma`-reachable
->    region** — a **placement rule** as with the GDT, otherwise the write-right promise is a
->    promise with an open door.
-> 3. **For this part there is no proved precedent.** No unfavourable comparison, but also no model
->    to follow: what is built here is built without a reference.
-
----
-
-### Item 5 has a floor — the theorem is unreachable, an approximation is not
-
-**Non-interference is a hyperproperty over *pairs* of runs.** Ordinary Hoare logic and refinement
-**cannot structurally express** it; it can therefore **never come out of M1–M4**, however far one
-builds them. That is the categorical statement, and it stands.
-
-**But it is not a total loss.** Out of existing rules there falls a **syntactic flow discipline**
-as an **over-approximation**: `effects` names what is read and written, and M3 separates the
-address spaces — **what is not in the effect set is not read by the generated code.** That is
-checkable, it is half built today (the body reconciliation checks writes and `locks`, not reads),
-and it is the difference between
-
-> *"unreachable"* and *"the **theorem** is unreachable, a **checkable approximation** exists."*
-
-**What the approximation does not cover belongs written down beside it:** timing behaviour,
-scheduling, indirect flows via control flow and occupancy state. An over-approximation that does
-not carry this list is once again a promise instead of a condition.
-
-> **2026-09-14: the floor stands, and the theorem exists beside it.** Noninterference is now
-> proved as a relational METATHEOREM over machine G, not derived from M1–M4:
-> `nichtinterferenz` (`grammatik/Grammatik/Nichtinterferenz/Fluss.lean`) -- a program that
-> passes the decidable flow check `flussB` shows every observer domain the same observation on
-> two runs with the same schedule from starts equal on what it may see; the scheduler form
-> `nichtinterferenz_planer` covers every scheduler whose choice depends only on that
-> observation. Timing, enabledness, declassification and everything below machine G stay
-> outside. `dokumente/NICHTINTERFERENZ.md` carries the statement, the list, and the
-> customer-facing sentence in the form in which it is true.
-
----
-
-### Item 6: the upkeep, and here lies Gabbro's strongest argument
-
-**The real cost of a Gold verification is not the first proof but the fact that it has to be
-maintained.** Every kernel change breaks proofs; the proof base (order of magnitude 200 000 lines)
-is a **permanent** item, not a one-off. Which is why verified code is in practice code one **no
-longer likes to touch**.
-
-> **Gabbro's answer to this is structural and has so far been stated nowhere:**
-> **if plumbing falls out by construction, a code change cannot break it.** A new index, a new
-> subtraction, a new lock acquisition produce **no** new proof work — they compile or they do not.
-> **The upkeep effort scales with the LOGIC share, not with the code size.**
-
-**That is the one axis on which Gabbro does not reproduce seL4 but beats it** — and it stands and
-falls with the same uncounted number: **how large is the logic share really?**
-
-#### The silent precondition — and it is measurable
-
-**"Plumbing cannot break" holds only as long as the change stays INSIDE the constructs.** A change
-that needs a **new construct** breaks no proofs — **it breaks the language.** And then **language
-upkeep** replaces proof upkeep, only under a different name.
-
-**Our own history shows the price is real:** eleven plumbing classes became twelve; `keeping`
-became `mirrors`; `transition` became `transset`; `forever` got `leaves` — all within days.
-
-> **The bet is that the vocabulary converges, and it is MEASURABLE:** *new constructs per
-> written-out fragment must fall.* **The four missing domain fragments — scheduler, MMU, loader,
-> parser — are precisely the instrument for that**, and that is why they are not merely a coverage
-> gap but the probe on the folder's strongest product argument.
-
----
-
-### Where Gabbro is worse, without embellishment
-
-1. **No C semantics.** seL4 has a formalisation; Gabbro has a **promise about its own lowering**.
-   That is item 2, and it is the largest shortfall.
-2. **No proof about the checker.** seL4's proofs run in Isabelle, whose kernel is small and
-   checked. Gabbro's checker is **unverified Rust**, and everything hangs on it.
-3. **No security statements.** Integrity and information flow are **theorems of their own** at
-   seL4; Gabbro does not deliver them and does not claim to.
-4. **Maturity.** seL4's chain has been run, repeatedly, on real hardware.
-   **Gabbro has had compiler and checker code since 2026-08-14** (lexer, parser over the complete
-   EBNF; on that date five of nine passes, **today ten passes and none open**, `gabbro paesse`)
-   — **and it came into being in breach of our own ordering rule.** "No
-   checker line before the result of measurement 2" held and holds; measurement 2 has not been run.
-   The breach happened **on announcement, not silently**, and stands as a breach in
-   [`HISTORIE.md`](HISTORIE.md) and in [`MESSUNGEN.md`](MESSUNGEN.md).
-   *This line carries the rule status along, because the fact alone would smooth it over — and that
-   is the error class from commit `5904cae`.*
-
----
-
-### What the comparison says for the hard promises
-
-[`SPRACHE.md`](SPRACHE.md) makes induction automatic instead of heuristic — that addresses **the
-proof part**, i.e. exactly the item seL4 pays for with 200 000 lines.
-
-**But the comparison shows that this is the smaller half:** of the six items besides the logic, the
-step promise touches **one** (the proof effort over declared structures). **Items 2 and 5 remain
-untouched, item 4 stands under "Later", item 3 is well solved, item 1 is half there.**
-
-- [ ] **The honest consequence for the plan:** the next piece of work is **not** a further
-      sharpening of the proof automation, but **item 2** — what does "which C" mean, and how does
-      the lowering turn from a promise into a checkable statement? That stands in
-      [`BEWEIS.md`](BEWEIS.md) as L4 and is the only item on which Gabbro is **structurally**
-      behind seL4 rather than merely behind in maturity.
-
-
----
-
-# The performance of the generated C — what is measured (nothing) and what follows
-
-**2026-08-14.** The folder has on this subject a **table of claims** (definition §14.2) and **no
-measurement**. What follows from that stands here, separated by direction — and the item the table
-does **not** name.
-
-## Where it should be faster than today's Rust kernel
-
-| | Reason | Number |
-|---|---|---|
-| **Range checks** | Rust checks **every** indexing, unless LLVM can optimise it away. **Caprock bypasses that nowhere** — recounted: **0** `get_unchecked`, **0** `unreachable_unchecked`, **0** `assert_unchecked`. Gabbro **proves** and emits **none** | **1 398** variable indexings in the tree |
-| **`accumulates`** | one cell per core plus a merge at read time instead of a CAS loop | measured on `sync:572–592` **strictly better than the original**, which additionally has an accepted race site there |
-| **`transition`/`mirrors`** | **one** store with a constant mask instead of read-modify-write | per device transition |
-| **Ghosts, contracts, `check`** | disappear before code generation; `check` compiles only under `when TESTBUILD` — **built 2026-08-28 («TB»), and until then the second half of this line was a plan**: the emitter did not read `Item::when`, so a gated `check` reached the C like any other item. Measured now at `beispiele/52`: **39 lines of shipping C against 77** | **0 bytes** |
-
-## Where it should be the same
-
-Range types → bare C type · `tagged`+`match` → union with tag, `switch` · `traverse` → `for`
-without bound checks · `format` readers → accesses **after one** length check · `lock`/`locks` →
-the existing primitive.
-
-## Where it will be SLOWER — and the table does not name it
-
-### 1. The loop bounds cost a counter that was not there before
-
-`retry`/`forever` demand `bounded N ops`. **A wait loop that spins without a counter today gets
-one** — increment and comparison per iteration. On a contended lock that is measurable. Measured:
-**96 `spin_loop` hints** in the tree, **2** raw `loop {` in `caprock-sync` alone.
-
-- [ ] **A remedy, designable and not yet designed:** the bound does not have to be checked **per
-      iteration**. If it is a **watchdog** bound (and it is, since `progress` carries the
-      termination), a check **every 2^k iterations** suffices — cost falls to ~1/2^k, the promise
-      remains "breaks after at most N + 2^k". **That belongs decided before the first benchmark
-      runs**, otherwise it measures a construct nobody would build that way.
-
-### 2. `restrict` is now OFF by default
-
-The UB transfer is paid only where the differential benchmark demands it. **The price for that is
-more conservative C code at exactly those places** where handwriting would have set `restrict` —
-and those are the copying paths, i.e. the hot ones.
-
-### 3. The structural item: **lowering flat and being fast stand in tension**
-
-**"Syntax-directed, non-optimising" is the condition under which the refinement becomes cheap**
-(M-Gold-2) — and it means: **the emitter does not restructure.** Where a human would have fused a
-loop, hoisted a computation or reduced a strength, Gabbro emits the naive form and **relies on the
-C compiler**.
-
-> **The folder has so far priced this tension only on the correctness side.** On the performance
-> side it is unpriced: **the lowering is a bet that LLVM/GCC handle the form Gabbro produces
-> well.** Whether that is true nobody knows — it hangs on the form table, which is not yet written.
-
-## What decides it — and it is not this file
-
-**The differential benchmark per module** (P3/P5 gate): generated C against hand-written, triggering
-at "generated slower than handwriting plus measurement noise". **Until then every number here is an
-expectation.**
-
-**The honest summary in one sentence:** *In the counting and access paths the generated C should be
-faster than today's Rust kernel, because 1 398 range checks fall away
-(**W7 sweep 2026-08-15: UNEVIDENCED — to be replaced.** A recount over `[…]` accesses in the tree
-gives **2 143**, not 1 398; which search path led to 1 398 stands nowhere. The numbers probably
-measure different things — *probably* is the point); in the waiting paths slower at first, until
-the bound check is amortised; and over the whole thing hangs an unpriced bet on the C compiler.*
-
-
----
-
-## The alias item — named as an obligation, and the mechanism is missing
-
-**Entered 2026-08-14.**
-
-`SYNTAX.md`:10 imposes on every grammar rule that it discharge a plumbing obligation by
-construction, and lists **"alias"** among them. `SPRACHE.md` §0 likewise carries it under what
-Gabbro itself bears. **The mechanism for it is nowhere to be found:**
-
-* **M3 gives address spaces, not separation.** `ptr<normal, rw>` and `ptr<normal, rw>` can point
-  at the same object; the space says only *which* barrier applies.
-* **`effects` declares, it does not condition.** `writes c.slots, writes o.slots` over two
-  parameters that are the same thing is a true statement about a false assumption.
-* **And this file's own inventory says so** (row 11): *"`restrict` wrong — generated from
-  `effects`. **If `effects` is wrong, that is C UB** — a proof export into C's rules",* kept as a
-  **real trust transfer**. `restrict` is therefore **off** by default now. That defuses the C side;
-  **it does not answer the Gabbro side.**
-
-**With that the frame statement rests on a promise instead of a condition** — exactly what this
-file's criterion forbids: *an obligation that stays hanging on the programmer is a refutation at
-that point, not a blemish.*
-
-### The proposal stands in the folder, only not in the grammar
-
-The derivation table in `SPRACHE.md` §3b carries *"`region`, ownership → **M2** → a linear block is
-its region"*. The intention is there; but `own` is today a **right on the pointer type**, and
-pointer types are copyable. **A pointer carrying `own` would have to be a linear value** — then
-separation falls out of M2, and Gabbro keeps four mechanisms.
-
-**The paper test for this stands as A1 in [`PLAN.md`](PLAN.md), with a two-sided gate.** If it
-comes out red, separation needs a **fifth mechanism** — and the opponent for that is not Verus but
-**Rust's borrow checker**, which supplies it. That would be the most expensive conceivable answer
-to the question whether this language justifies itself.
-
----
-
-## The breakdown into logic/plumbing — run 2026-08-15
-
-> *"Break both measurements down into logic/plumbing — `delete_leaf` (3,6–6 : 1) and
-> `Endpoint::call` (1,8–2,3 : 1). **Without that split a number is not a measured value.**"*
-> (`TODO.md`:524)
-
-Measured against `../caprock-messbasis` @ `a1bf707`, `crates/caprock-cap/src/space.rs:1062-1095`.
-
-### `delete_leaf` — 34 lines, of which 12 code and 15 comment
-
-**The criterion (`BEWEIS.md`, above):** *if the obligation names only the machine it is plumbing;
-if it names the subject it is logic.*
-
-| Line | Obligation | Class | why |
-|---|---|---|---|
-| `slots[slot].object` | index in bounds | **K** | names only the memory |
-| `unlink(slot)` | chains stay well-formed | **L** | names the CDT, i.e. the subject |
-| `release_slot(slot)` | slot is free afterwards | **K** | state of a place |
-| `refcount -= 1` | no underflow | **K** | «B29», pure representation |
-| `refcount -= 1` | counter == number of references | **L** | **the connection invariant, «B13»** |
-| `if refcount == 0` | release exactly at zero | **L** | names the lifetime of the subject |
-| `match kind` — `Memory` | region belongs to the RAM allocator | **L** | the 5 comment lines 8–12 are the evidence |
-| `match kind` — `Dma` | release only after proof | **L** | comments 14–17 and 22–25: **ordering across system boundaries** |
-| `match kind` — `Reply` | caller is unblocked | **L** | names the IPC protocol |
-| `gen.wrapping_add(1)` | wraparound is intended | **K** | representation — *and in Gabbro sayable since «B32»* |
-| `objects[obj] = EMPTY` | no reference survives | **L** | names the subject |
-
-**Split: 4 K, 7 L.** Ratio **L : K ≈ 1,75 : 1** — the plumbing is the **minority**.
-
-> **And that stands against the number the folder carries.** `delete_leaf` was booked at **3,6–6 :
-> 1** — as evidence that plumbing predominates. Broken down it tips: **the majority of this
-> function's obligations name the subject.**
-
-**Why the old number came out differently, as far as it can be reconstructed:** it apparently
-counted **proof steps** (every index, every range, every alias individually), not **obligations**.
-A `match` over ten variants yields ten plumbing steps and **one** logical obligation. *Both are
-legitimate ways of counting, but they answer different questions* — and the folder's question
-("what is left for the human?") is answered by the **obligation** count, not by the step count.
-
-**The comment share is the second finding:** 15 of 34 lines are comment, and **every single one of
-them carries a logical obligation** (which kind of object holds RAM, why `Dma` is the exception,
-why the release comes only after proof). *What a human has to write down so that the next reader
-does not break the function is a good estimator for the logic share* — and it points in the same
-direction.
-
-### `Endpoint::call` — **not broken down, and why**
-
-The function lies in `kernel/src/system.rs` and is interwoven with `SCHEDS`/`FP_OWNER` via the IPC
-fastpath; a breakdown by the same criterion needs the lock situation **per line**. That is doable,
-but it is **the work of the scheduler fragment** (wave 4) and not the work of this measurement.
-**Blocked, with a reason and a source reference** — not silently omitted.
-
-
----
-
-# The value thesis has shifted — measured, with source references
-
-**The folder's founding assumption was the parser.** The traps that triggered the design were
-format traps: wrong offsets, swapped byte order, a header of 10 instead of 12 bytes. `format` was
-the first construct and the most plausible one.
-
-**Two independent measurements now say the opposite.**
-
-## `format` stands there twice without evidence
-
-| Measurement | Result | Source |
-|---|---|---|
-| **Base rate** | **5 formats, 5 touching commits in 53 days, 0 occurred errors of the class.** The one near miss stands there as **avoided** — a warning, not an obituary | `MESSUNGEN.md`, *Basisrate*; `done.md:1745-1750` |
-| **«B40», DTB fragment** | The only parser of the core that reads foreign bytes checks **145 lines without error, without a language and without a tool**. `be32(data, n)?` is already *"check, otherwise refuse"* | `FRAGMENTE.md` F10; `crates/caprock-dtb/src/lib.rs` |
-
-> **`format` wins brevity there, not safety.** The gain is real — a declaration instead of a
-> control-flow discipline at every access — **but it is not the gain the folder promises.**
-
-## The kernel side carries its evidence — all of it
-
-| Construct | Evidence | Kind of evidence |
-|---|---|---|
-| `table … count N` | `M103`, fragment `revoke` | a **measured** error would otherwise be possible |
-| `lock … rank … held` | `K002`/`K004`, `H001`–`H005` | 419 lock acquisitions; `held` carries the latency statement |
-| `locks shared` | **33 `read()` against 44 `write()`** | the hottest path was **not writable** |
-| Pairing | 2 276 atomic accesses, 824 stores | `V001`/`V002` — the orphaned half reads valid garbage |
-| `walk`/`embeds` | four-level descent, 9 named bits | `FRAGMENTE.md` F9 |
-| `BootPhase` | **7 sites against a gate of 5**, among them a **paid-for** error | `main.rs:251` — *"exactly this line was missing on ARM"* |
-| M1/overflow | «B29» in the delete path, **survived five rebuilds** | `space.rs:1067` |
-| `traverse … over <domain>` | **0 of 571 `for` loops** run over something that is not a domain; what stays non-traversable is **584 of 60 756 lines** | `MESSUNGEN.md`, *B3*; the three gaps as «B41» |
-
-**Eight constructs, eight pieces of evidence — and three of them are paid-for errors**, not
-plausible scenarios.
-
-> **The eighth piece of evidence carries its counter-evidence in the same sentence.** B3 shows the
-> loop stock as load-bearing *and* names three domains that are missing («B41»). **Both are the
-> same measurement** — whoever quotes the 0,96 % quotes the three gaps along with it.
-
-## The sentence that follows from it
-
-> **The language justifies itself at the kernel, not at the parser.**
-
-That is **the opposite of the founding assumption**, and it is the folder's most useful shift: it
-says where building continues (carriers, locks, ordering, descents) and where **not** (formats, as
-long as the base rate does not rise).
-
-**What it does NOT say:** that `format` should go. It carries ELF, the manifest and the DTB
-brevity, and the near miss shows that the class is real — *its detection today hangs on
-attention*. It means: **`format` is no longer the justification of the language but one of its
-conveniences**, and whoever wants to justify it needs an argument other than the error frequency in
-this tree.
-
-*Both measurements stand there with a search path (W7) — recountable, and thereby refutable.*
-
----
-
-# The actual result of the whole measurement chain: **the expensive obligations are many, but small**
-
-Two measurements that were run separately together yield a sentence that neither of them carries
-alone:
-
-| | Result | Reading |
-|---|---|---|
-| **K/A/W** (`N_L = 73`) | **W = 38 against 36,5** — the value statements are the **majority** | the ceiling of the step promises covers a **minority** |
-| **B3** (`p = 0,96 %`) | surcharge **+0,05** — below the resolution of the metric | the code form costs **almost nothing** |
-
-**Both together mean: the distance to the floor hangs almost entirely on the W column itself.** Not
-on loop forms, not on domains, not on the loop stock — on the question of how many obligations are
-**value statements**.
-
-**And the size distribution says how that can be.** In the population in which the lines are
-measured (81, `F = 1 389`):
-
-```
-W:      40 obligations,  474 lines   ->  11,9 lines per obligation
-K + A:  41 obligations,  915 lines   ->  22,3 lines per obligation
-```
-
-> **A W obligation is on average half the size of a K or A obligation** — 52 % of the obligations,
-> but only 34 % of the lines. **The majority is a majority by head count, not by extent.**
-
-**What that means for the thesis, in both directions:**
-
-* **In favour:** the ceiling covers a minority of the obligations and **costs almost nothing** —
-  the plumbing is not the problem. Whoever wants to attack the design attacks the W column, not the
-  loop forms.
-* **Against:** *"many, but small"* is **not a consolation but a warning**. Small proof bodies are
-  cheap to write and expensive to **maintain**: 38 places where a human has to claim something
-  about a **value** are 38 places that have to be re-checked on every change. **The effort scales
-  with the count, the metric with the lines.**
-
-*That is the tension the measurement chain produced, and it stands here instead of in a summary:
-**the metric turns out well because the expensive obligations are short — not because there are
-few of them.***
-
-## That is why the dashboard needs a **second** number
-
-**The metric measures writing cost. The W count measures proof cost. They can diverge** — and this
-folder has just measured that they do:
-
-> **A language can reach 0,5 : 1 and leave 38 small hand proofs open in the process.**
-> The line ratio would then look like a victory, and the upkeep would be unchanged.
-
-**The second number is therefore `W` obligations per thousand lines** — the **upkeep predictor**,
-carried beside the line ratio, not beneath it:
-
-| Metric | measures | State |
-|---|---|---|
-| **proof lines : code lines** | **writing cost** — once | ~~**≥ 1,90**~~ **unbekannt, > 0,5** *(zurückgezogen 2026-08-19: `w` war an VERUS-Zeilen gemessen, Gabbro beweist in Isabelle/HOL)* |
-| **W obligations per 1 000 lines** | **proof cost** — on **every** change | **≥ 0,63** (38 of 60 756) |
-
-**The second is explicitly a lower bound, and its direction is known.** The denominator is the whole
-measurement base; the numerator comes from the areas for which **somebody wrote a Verus proof**.
-Areas without a proof contribute **zero** obligations — not because they have none. *The sharp
-number needs the code lines of the proved areas; those lie in a tree that is not available here,
-and that is a small, named measurement, not a reservation.*
-
-> **Why the second number is needed at all, in one sentence:** *otherwise the folder optimises for
-> the denominator that shines instead of the one that costs.*
-
----
-
-# The trust base is the EMITTER, and the certificate is the only thing that does not depend on it
-
-*2026-08-31, drawn from the wildcard sweep (`messung/WILDCARD-ZWEIGE.md`).*
-
-Everything above measures what a **person** still owes. It says nothing about the party that
-writes the C, and that party is a few thousand lines of Rust without a proof:
-
-> **Gabbro's trust base is not the `assume` list. It is the emitter.** Closing points 1 to 4
-> in the type system changes nothing as long as the lowering is allowed to guess.
-
-## What a guess looks like, measured
-
-`emit.rs::breite_von` used to be four lines:
-
-```rust
-U8|I8 => 1,  U16|I16 => 2,  U32|I32 => 4,
-_ => 8,
-```
-
-Under all four hardware points lies this one arm. A ninth integer word, and the emitter
-silently writes `volatile uint64_t *` onto a device register: checker `0 errors`,
-`cc -Werror` clean, and the device gets an access of the wrong width. **No Gabbro program can
-defend itself against that** — the defect sits below every pass, in the translation.
-
-It fired **146 times** over 499 corpus files, and the previous count had booked it as
-*silent*. It is now a table with eight entries, a `C001` for anything else, and four tests
-that hold the table against `kw::ALLE` and `ist_intty`.
-
-## And a SECOND one, 2026-09-03 — the wrong address instead of the wrong width
-
-*This is not the emitter's first documented silent failure. It is its second, and the two
-together say more than either alone.*
-
-`emit::Namen::geraete` keyed its device table by the **bare** declared name, with no module
-qualifier. Two `device Foo`, one per `module`, with different register offsets:
-
-| stage | verdict |
+# Part D — Extension rules, noninterference, user logic
+
+## D1. Rules for extending the goal
+
+* **The criterion is counted per OBLIGATION, not per feature.** An extension stays in the
+  carried fragment only if the checker discharges its premises; `gabbro obligations` before and
+  after is the measure, on the extension's examples and on the corpus. *The first extension this
+  rule refused:* a product/record former in `Ty` (so that `impl fn … -> Completion` can travel)
+  generated zero obligations on the corpus — sieve (b) stayed 15 of 113 with every refusal
+  skipped — and its price was the re-proof of every leg. Named absence OFFEN O15, closed as
+  priced and rejected.
+* **One assumption list**: lock primitives, thread creation, the idle root, the scheduler class
+  for noninterference, the IEEE unit, device answers, the compiler. `Spec.lean`'s header is the
+  one place that lists them.
+* **Liveness**: `wartezeit_schranke` (`Logik/Fortschritt/Lebendigkeit.lean`) bounds a lock wait
+  under `LaufzeitAnnahme` (FIFO plus a fairness window `F`) and `HardwareImAbschnitt`; the hold
+  time is a premise. Flat locks give `(c−1)(held+1)+1` own steps of the waiter; nested locks
+  blow up multiplicatively over rank levels (a depth-4 chain 1.6·10⁹ own steps at `c = F = 64`),
+  shrunk by dominance and by non-preemptible sections. It is not in `Ziel`, and a green theorem
+  over a number nobody can put in a data sheet is not counted as a result.
+* **Higher-order contracts**: refinement is contravariant in `requires`, covariant in `ensures`
+  (the wrong direction needs a poison probe); a pointer type carries `effects` and `costs`;
+  closures over the call graph join over all admissible candidates (`KandOk`).
+
+## D2. Gaps named by external review (2026-09-14) and their routes
+
+| Gap | Route / status |
 |---|---|
-| `gabbro pruefe` | `0 errors, 0 hints` |
-| `gabbro emit` | exit `0` |
-| `cc -Wall -Wextra -Werror` | clean |
-| the running program | **both devices' accessors carry the SECOND device's offset** |
+| Fixed-width arithmetic (`x & (x-1)`, CRC, alignment) | oracle plus certificate: `bv_decide` carries exactly one named axiom per proof (`verifyBVExpr … = true`); decision: list each by name in the one assumption list. Not built into the user path |
+| Counterexamples for handed-over obligations | `gabbro counterexample`: search outside the trusted base, every hit confirmed by running it through the exported semantics; "none found" is never a proof |
+| Linearizability of lock-free structures | the language names linearization points; one INTERNAL point per operation per path (excludes Michael–Scott and helping, and must say so). Not started |
+| Real time (WCET) | a named interface with proven inputs: flow facts (loop bounds, paths, call graph, deadlines) as a certificate; the processor timing model is a named assumption. Not built |
+| Unbounded nonlinear arithmetic | stays user logic; no certificate standard exists |
+| Annotation burden | infer, then check: `effects` and `costs` are computed (`gabbro abgeleitet`); every inferred annotation is checked like a written one |
+| Timing channels | constant-time discipline as an extension of the flow rule (Part C-style); not built |
+| Linking, inline assembly, source trust (homoglyph/bidi), float accuracy, checker robustness, adoption | linking is a theorem since 2026-09-26 (B3); assembly is an assumption (`AxCorr`); the lexer refuses bidi controls; termination of every pass is not a registered sentence; the people problem is a tutorial path |
 
-The access against the first device reads and writes **the wrong port**. On real hardware
-that presents as a hardware fault, a timing problem, or a broken device — *it is not
-debuggable from the program*, because the program is correct and the translation is not.
+## D3. Noninterference — isolation as a theorem over machine G
 
-**The two failures are the same class and different mechanisms, and that distinction is
-what an outside auditor should take from here.** `breite_von` was a **guess**: a fallback
-arm that answered a question it could not answer, and the cure was to make the table total
-and refuse everything outside it. The device table did not guess at all — it was a **lookup
-that could not represent the question asked of it**. A key with no namespace cannot
-distinguish two things that differ only by namespace, and so it answers confidently and
-wrongly. *A rule with no value does not refuse; it says nothing* — the same sentence `D17`
-carries, one construct over.
+Lean `Nichtinterferenz/` (11 files, ≈4 150 lines, standard axioms). **Proved:** for every
+program passing the decidable flow condition `flussB`, every observer domain `B`, and every two
+runs of G under the same schedule from start memories that agree on what `B` may see, `B` sees
+the same at every step (`nichtinterferenz`). A scheduler is admitted if its choice depends only
+on what `B` sees (`nichtinterferenz_planer`); the fixed-timetable partition scheduler is the
+instance (`nichtinterferenz_zeitplan`). The metatheorem is proved once over all rules of
+machine G (74 as counted in `SchrittTreu.lean`); the program supplies its premises by a check.
+It is a hyperproperty over pairs of runs and cannot come out of per-run contracts.
 
-So the emitter's failure mode is not "arithmetic that is wrong". It is **a table whose key
-is narrower than the distinction it is keyed on**, and that is a shape one can go looking
-for without reading every line. The count exists: `instrumente/zaehle-karten.py` holds the
-READ side at 46 direct lookups, 41 of them unqualified, as a ratchet with its reason at the
-mark — *every unqualified look is a place where a check inside a `module` block can go
-silent*, which is the shape of the `M103` hole of 2026-08-17.
+**Model.** A policy `darf` (reflexive, transitive); labels on every carrier (tables, globals,
+device carriers, lock-invariant carriers), every axiom and every entry root; a thread has its
+root's domain. The observation of `B` is the memory of every carrier that may flow to `B` plus
+the ghost-free state of every thread that may. Unwinding conditions: local respect, step
+consistency, output consistency. Possibilistic and schedule-parametric.
 
-**How it was found is part of the finding.** `zaehle-karten.py` had been red for days and
-the acceptance run had listed it every time. Nobody had opened it. Its own text named the
-consequence in advance and was right twice: a second hole of the same shape sat in
-`domaene.rs`, where a `walk`'s `format` name was pre-qualified against its own module and a
-poison probe one module away passed with `0 errors`. *A guardian that states its consequence
-and is left red is a finding already made and not yet read.*
+**The flow rule `flussB`** (thread-granular): for every labelled root of domain `d` and every
+function its call graph reaches, every carrier read has a label that may flow to `d`, every
+write frame a label `d` may flow to, every foreign call is labelled below `d`, and no thread
+starts at an unlabelled root of a multi-domain program. Explicit and implicit flows both need a
+thread that reads `A` and writes `B`-observable data, so both fall. A statement-level rule
+(program-counter labels) would admit a dispatcher serving two domains; its proof is not built —
+until then one thread, one domain.
 
-The cure here is a refusal at the collection site, and its text says what it prevents:
+**Not covered:** timing and every physical channel; schedulers that look at more than `B`'s
+observation (round-robin over runnable threads, load balancing, a timetable that skips a blocked
+slot); enabledness (a scheduled thread that cannot step; locks shared across incomparable
+domains, proposed checker code `I005`); declassification (only its statement exists:
+`FreigabeNI`, delimited release; plain NI implies it, and with nothing released it is plain NI);
+device output; everything below machine G.
 
-    error: [C001] …: no lowering: two `device` declarations named `Foo` in this unit -- the
-    C name `Foo` has room for one, and the emitter's device table is keyed by this bare name
-    with no module qualifier. Picking one silently would make every register and port access
-    against the OTHER a silent misread instead of the compile error two same-named devices
-    need
+**The sentence that is TRUE** (every sentence about isolation carries the scheduler class, the
+timing exclusion and the level, or it is not written): *if a program is accepted by the checker
+with domain labels, and runs on a runtime whose scheduler hands out slices by a fixed timetable
+(or any rule that looks only at `B`'s state), a blocked slot left idle, then nothing in tenant
+A's data changes what tenant B's threads compute or what B's memory holds, step for step — for
+machine G, under: every foreign function and driver writes only what it declares, device
+registers answer only from declared device state, every foreign function `B` may call acts only
+on data `B` may see.* False and not to be written: "A learns nothing about B on a load-balanced
+machine"; "as good as VMs including side channels"; "proved down to the binary"; "any Gabbro
+program is isolated" (only labelled, checked ones); "tenants cannot interfere through shared
+data" (a structure written by two tenants is *refused*, not made safe).
 
-`beispiele/gift/672-two-devices-share-a-name.gab`, and `671-mapping-field-one-module-away.gab`
-for the other.
+**Status of the language surface: not built.** The surface (`domain`, `flows`, labels on tables,
+devices, roots) and the checker rules `I001`–`I004` are a proposal; no checker code issues them
+(`grep` over `crates/` is empty). The theorem is Lean-side only. Corpus measurement, by `decide`
+in `Nichtinterferenz/Korpus.lean`: of six multi-root programs, 108 is admitted, 104, 118 and 124
+are refused for every label (a carrier written by two roots is interference in the theorem's
+sense even where no data flows); one labelling with an auditor domain above both tenants admits
+124 (`n124_zeuge`).
 
-> **What this does to the sentence at the head of this section.** *"Gabbro's trust base is
-> the emitter"* was an argument on 2026-08-31 with one instance behind it. It now has two,
-> both silent, both below every pass, and neither reachable by any Gabbro program's own
-> defences. **A sovereignty claim that names the emitter as its trust point owes the reader
-> its failure record, not only its architecture** — that is why this stands here and not
-> only in the history.
+**Premises, counted:** `flussB` is checker-decidable from labels; the enumerations are
+exporter facts; the hardware entries (`GutO`, `RegLokal`, `OrakelTreu`) and the scheduler class
+are named assumptions; **user logic: none** — a program need not be verified to be isolated,
+only labelled and checked. For the C: the runtime list is one structure, `LaufzeitC`
+(`CBackend/Semantik/CNebenlaeufig.lean`); the ticket lock *is* proved to be the abstract lock
+(`CTicket.lean`: exclusion, FIFO), but the old entry "reveals only held or free" is **false** of it
+(a waiter can measure its queue position), and "release only one's own" is a checker guarantee,
+not a runtime one. Carrying a *pair* of runs to C needs two facts not proved. Comparison with
+seL4's confidentiality proof: seL4 proves one kernel for a static schedule; here the metatheorem
+holds for every program of the language over G, and does not reach the code.
 
-## Why the CERTIFICATE is the structurally different answer
+## D4. User logic, obligations, and the channels to Lean
 
-Every other safeguard in this folder is a pass, and a pass is code by the same author as the
-emitter. The translation certificate is not:
+The user's own logic reaches Lean by two channels with different objects — they are regularly
+confused:
 
-> **A certificate that vouches for two different programs vouches for neither** — and that
-> property can be checked without believing the emitter.
+| | Channel A | Channel B |
+|---|---|---|
+| command | `gabbro obligations --lean` (`--isabelle`, `--g`) | `gabbro lean a.gab b.gab` |
+| says | Gabbro's own `ensures`/`requires` as duties | a Lean specification written **by hand** |
+| good for | measuring how much the language says about itself; the generated duty files (`gabbro prove`) | frame properties with quantifiers ("clearing touches no other compartment") that a `spec fn` cannot state |
+| guardian | `pruefe-lean-pflichten.sh`, `pruefe-lean-beweis.sh` | `pruefe-lean-programm.sh` |
 
-Until 2026-08-31 it did not hold. Two programs differing in one line
-(`messung/proben/probe-zeugnis-injektiv-{a,b}.gab`, `threads` against `queue r`) had
-**byte-identical** certificates apart from the file name in the header: five of the nine
-traversal domains ran together on one word.
+`gabbro obligations --g` is the channel the goal theorem uses: it writes the unit as a G program
+with the flagship's per-function duties (`KoerperGutS` + `InvGutS`) stated. Where the Lean parser
+elaborates a unit (`lowerAllg`), the duty files of GabbroV *derive* (b) (`bruecke_nutzer`,
+`bruecke_nutzerA`), given decided name and rank conditions — a parser fragment only (corpus
+programs 104 and 108 at the time of the bridge); every other unit still carries (b) as an
+assumption. See [`GABBROV.md`](GABBROV.md).
 
-The cure was not nine labels but **nine reasons** — each domain rests on a different bound,
-and three rest on none at all (`chain(…) in`, `fields of`, `threads`). *The single mark hid
-exactly the places where termination does not follow from the declaration.*
+**Obligation tally.** `dokumente/PFLICHTEN.txt`, held by `instrumente/zaehle-pflichten.py`:
+239 obligations over the ten fragments = 173 K (plumbing) + 66 L (logic); three `progress`
+rows are assumptions with a falsifier, not obligations, so GabbroV's population is 63. K and L
+are by the criterion of A1 (the machine against the subject), not "obligation against
+assumption"; a discharged obligation still counts.
 
-`crates/gabbro-check/tests/zeugnis_injektiv.rs` measures both directions: the pair must
-differ, two equal programs must agree, all nine domains must be pairwise distinct — and every
-comparison renders under the **same** file name, so the header cannot do the work.
+**The own-logic remainder (`hFree`).** A contract clause over a lock-shared carrier that is *not*
+in invariant form still owes the per-run preservation proof over every foreign step. The checker
+rule `D027` refuses such clauses in contract position of a shared-side function (the clause
+restates instead of naming the invariant). What stays owed, as user logic outside contract
+position: loop invariants over shared carriers, `spec fn` bodies, and clauses of functions
+without a shared side, where they leave invariant form. A checker that refused every such shape
+would refuse programs, not discharge them.
 
-## What this does NOT claim
+**The proposal "the user's logic, stated in Gabbro, checked by Lean" (not built).** Four verdicts
+instead of two — `CARRIED` (a pass already establishes it), `DECIDED` (evaluated over a bounded
+domain, certificate checked in Lean), `ORACLE` (a solver as untrusted oracle, certificate checked
+in Lean), `OPEN` (handed to the person) — a report without any percentage (claims by verdict,
+unclaimed slots counted from the *program*, inert claims), and mutation of the body to find claims
+no mutation falsifies and mutations no claim catches. The sentence it rests on: *every verdict
+other than `open` cites a Lean-checked artefact.* Not built: there is no `changes only`,
+`never`/`always` form in `dokumente/SYNTAX.md` and no `mutiere-nutzerlogik.py` in `instrumente/`.
+It must not infer `ensures`, and it removes Lean from the user's desk, not from the chain.
 
-* **An injective certificate is not a proof.** It cannot become false while the program
-  changes, which is a different and weaker property than being right.
-* **It is injective in the traversal domains, not in general.** Nothing here says that no two
-  other programs share a certificate; the measurement covers the case that was found and the
-  thirty-five neighbouring pairs.
-* **The emitter still has arms that answer `None`** rather than a value — those hand the
-  decision to a caller that refuses. The sweep struck the arms that answered with a
-  *plausible value*; the honest-unknown ones stay, and the reasoning stands in
-  `messung/WILDCARD-ZWEIGE.md`.
+**Independence of the verification path (a plan, partly built).** A verifier that only
+verifies what the checker already accepted verifies the wrong thing: the export must not depend
+on the checker's verdict. Required: break the refusal list into language gaps and checker
+knowledge; turn the 93 `foreign-body` refusals into 93 named assumptions (a contract is a
+**hypothesis**, never an axiom); write the trusted base down (parser, export, the `Body`
+semantics, the Lean kernel — not the passes); witness pairs for the export's fidelity; the
+guardians inside the acceptance run. Built: `gabbro gabbrov pruefe` and the `Bruecke` of
+`GABBROV.md`.
 
 ---
 
-## The `hFree` remainder: non-invariant assertions over shared carriers (2026-09-11)
+# Part E — Trust base and the lowering
 
-The invariant-form discharge (`InterferenzAllgemein.lean` §20, Ziel-level
-`ziel_seqLogic_aus_spec_invariantForm`) removes the per-run interference
-proof for exactly one class: contract assertions that coincide with a
-declared carrier invariant. What remains is stated exactly, so no wave
-re-measures it: a contract clause over a lock-shared carrier that is NOT
-in invariant form still owes `hFree`, the per-run preservation proof over
-every foreign step, as user own-logic.
+## E1. What is trusted, by layer
 
-Why own-logic and not plumbing: the dividing-line table above books "the
-lock is held, the order is right" and "no data race" as plumbing — the
-discipline that orders guarded access falls by construction (checked lock
-discipline, `Wettlauf.lean`). But WHICH value-level statement a contract
-clause makes about the shared bytes is the author's choice about the
-subject — "the refcount is the number of references", not "the guard is
-held". No construction can choose it for them; a checker that refused
-every non-invariant shape would refuse programs, not discharge them. The
-bound is exact: the owed proof covers precisely the foreign steps of the
-joint run (`InterferenceFree` over `schrittFaden`), nothing about the
-sequential triples, nothing about the frame — and it vanishes the moment
-the clause takes invariant form.
+| Layer | State |
+|---|---|
+| Lean kernel | external; every goal-theorem result uses the three standard axioms |
+| The statement | reviewed (Part C); `Spec.lean` header is the list of what is assumed |
+| The Rust checker | unverified. For a certified program its verdict is not in the chain (B6); for the rest, **the emitter and checker are trusted** |
+| The exporter `lean_g.rs` | unverified; every dropped form is named per certificate; `gabbro corr-lean` and `gabbro certificate` print what a translation rests on |
+| The emitter / lowering | trusted until the validation chain is closed; about 19 600 lines of Rust in `emit.rs` alone, and failures there are silent below every pass (see below) |
+| Generator templates | `gabbro schablonen`: 41 entries, 30 machine-checked, 11 unproved, 3 of those CARRIED (the compiler rests on them), 6 premises without a pass (tooth 3); base mark 18 plus one seat per proved template; an entry leaves only proved or with its construct |
+| Hardware | the named assumptions of B4 |
 
-`D027` (checker, `domaene.rs::aus_pred`, `SYNTAX.md` §21.9) has since
-closed the contract half of this remainder: a `requires`/`ensures` clause
-of a shared-side function that reads a table carrier and restates instead
-of naming is refused, so no such clause reaches the prover as own-logic.
-What stands above is unchanged OUTSIDE contract position — loop invariants
-over shared carriers, `spec fn` bodies, and clauses of functions without a
-shared side still owe `hFree` as user own-logic where they leave invariant
-form. The two registers agree: `SYNTAX.md` §21.9 states the refusal, this
-section states what the refusal does not cover.
+**The emitter's failure record** is part of the trust claim: `breite_von` once answered "8 bytes"
+for any integer word it did not know, so a ninth word would write a wrong-width access onto a
+device register — checker clean, `cc -Werror` clean. It is a total table now (`C001` otherwise).
+A second case: a device table keyed by the bare name silently gave two same-named devices in
+two modules the second one's offsets (now refused). Both are "a table whose key is narrower than
+the distinction it is keyed on". The structurally different answer is the **certificate**: a
+certificate that vouches for two different programs vouches for neither, and injectivity is
+tested (`zeugnis_injektiv.rs`: nine traversal domains pairwise distinct). An injective
+certificate is not a proof.
+
+**The one emission rule (W6):** omitting a runtime check is justified by M1 (the range types)
+alone, never by an invariant — the net that hangs on the type is recomputed per program; an
+invariant hangs on a template.
+
+## E2. The route to the machine
+
+*Backend truth (2026-10-17).* The LLVM backend is current (`gabbro llvm`, `gabbro llvm-cert`,
+see `LLVM-BACKEND.md`); the C11 emitter is deprecated (2026-10-15) and stays building where it
+builds. The target-level proof — source → model → machine code of AArch64 or x86-64 — needs a
+complete Lean model of the CPU and the per-access bridge from the target's memory model to W/GX
+(`PLAN-UEBERSETZUNGSVALIDIERUNG.md`, `TODO.md` §5); it is not started and nothing here claims
+it. The C-level proofs (`CBackend/`, chain instances 104 and 108) are legacy evidence: the
+sequential stage is closed for those two programs, the concurrent stage (`LaufzeitC`: thread
+creation, the lock primitive, DRF-SC) is proved as theorems about named assumptions and the
+ticket lock. `instrumente/zaehle-kette.py` counts closed chains; `pruefe-cformen.py` classifies
+every emitted C form as lemma / assumption / uncovered (at the 2026-09-26 audit: 51 / 4 / 27).
+
+## Item 2 — which C (legacy C lowering)
+
+seL4 formalises C; Gabbro emits so little C that its semantics is a *finite table*. The sections
+below keep the former numbering (§1–§5); code comments cite them as `BEWEIS.md §N`.
+
+### §1. The target language is a closed list of forms
+
+The emitter writes one C form per construct. Allowed: declarations (`static`, `extern`,
+struct/union definitions, constants), types (`uint{8,16,32,64}_t`, `int…_t`, `_Bool`, `T*`,
+`T[N]`, struct, union), statements (assignment, `if/else`, exhaustive `switch`, a counting
+`for` loop, `return`, `goto` only as a generated loop exit, call), expressions (literal,
+identifier, field, index, unary `!`/`-`, binary arithmetic/bit/compare operators, call, explicit
+cast), plus `volatile`, `_Atomic` with a named order, `_Noreturn`, `restrict` (priced, off by
+default), inline assembler at the named emission sites. **Never emitted:** preprocessor other
+than `#if` out of `when`; `void*`; pointer arithmetic; union reinterpretation without a tag; the
+comma operator; assignment in an expression; `?:`; implicit conversion; variadics; `longjmp`;
+VLA; bit-fields.
+
+The list is counted by a lexer, not by `grep` (`instrumente/zaehle-c-formen.py`; the generated C
+explains itself in English, and `for` appears 73 times as a word and 49 times as a statement),
+and ratcheted. First measured 2026-08-31 over 102 emitting units (8 001 lines of C):
+
+| Set | Forms |
+|---|---:|
+| **A** allowed and used (derived: total minus C) | 35 |
+| **C** used and not allowed (7 on the never list, 19 on neither, the rest under a generous reading) | **32** |
+| **Forms in the emitted C** | **67** |
+
+*Figures are the marks in `zaehle-c-formen.py` (`MARKE_TABELLE = 67`, `MARKE_UNERLAUBT = 32`).
+The first measurement, 2026-08-31, read 64 = 34 + 30; set B, allowed and never used, had 6
+dead entries then. A rise of a mark needs its reason written in the instrument.*
+
+The result is not the one the section assumed: the table stayed small because Gabbro is small,
+not because the list was obeyed, and thirty forms were never decided — pointer arithmetic at
+491 sites, `void` as a type at 930. Two rulings stand: `?:` is wrong in the generator
+(`if (v > z) { z = v; }` costs 0 instructions at `-O2`), and `__builtin_unreachable` was
+wrong at four of five sites (a `return 0;` directly under it contradicts it); the fifth is a
+proof export into C's UB rules and is named as such. A second instrument over the 101 compiling
+units (`-Wconversion -Wsign-conversion -Wcast-qual -Wvla -Wdouble-promotion -Wfloat-equal`)
+finds zero hits.
+
+### §1a. Where the instrument's headline is recorded
+
+`zaehle-c-formen.py` reads exactly two cells of this document, so that the figure it prints
+beside "Katalog … aus `BEWEIS.md` §1" is read and not merely quoted: the rows "**Forms in the
+emitted C**" and "**C**" of the table above. Do not rename them; the instrument aborts when it
+cannot find them. The table is a dated record and may lag the marks; the instrument prints the
+divergence.
+
+### §2. The UB inventory — what kills each class
+
+The proofs live in Gabbro; the danger is that the *emission* devalues them through C's own rules.
+
+| # | UB class in C | Dies through | Residual risk |
+|---|---|---|---|
+| 1 | signed overflow | M1 proves the bound but C does not know it: unsigned types, otherwise `-fwrapv` | none if both stand |
+| 2 | out-of-bounds access | M1/M4 in the source type; pointer arithmetic — see §1 | the 491 sites of §1 are an open ruling |
+| 3 | division by zero | the denominator range excludes 0 | none |
+| 4 | shift by ≥ width | M1 bounds the amount | none |
+| 5 | strict aliasing | no cast between pointer types is emitted; `-fno-strict-aliasing` | none |
+| 6 | evaluation order | assignment is not an expression; one effect per statement | none |
+| 7 | implicit conversion | explicit casts everywhere; checked mechanically (`-Wconversion`) | none, zero hits measured |
+| 8 | uninitialised read | nothing implicit; every declaration has a value | none |
+| 9 | null pointer | no `null` in the language; an immutable pointer starting at `0` is refused (`N260`) | a `static mut` pointer starting at `0` (the NULL-initialised global idiom), and the `extern` boundary |
+| 10 | union reinterpretation | `tagged` reads and writes via the tag | padding bytes are never read |
+| 11 | wrong `restrict` | generated from `effects` — a real proof export into C | named; off by default, priced where a benchmark demands it |
+| 12 | `volatile` semantics | weakly specified | an axiom, named |
+
+Row 9 was right about the language and wrong about the product: a cast to `uintptr_t` is *still*
+a null pointer constant when the value is `0`, so the first cure (2026-09-02) was spelling, not
+cure; the verdict is the checker's (`N260`, gift 931), because no non-null C spelling of
+address 0 exists.
+
+### §3. The compiler options are part of the artefact
+
+`-std=c11 -ffreestanding -fno-builtin -fwrapv -fno-strict-aliasing
+-fno-delete-null-pointer-checks -fno-common -fno-stack-protector`, bound to a fingerprint next to
+the assumption list. A lowering whose validity hangs on options nobody records is a promise about
+somebody else's machine. Open: fail closed — a generated preamble that breaks when the options
+differ.
+
+### §4. The lowering as a statement: the coverage certificate
+
+"Syntax-directed and non-optimising" becomes checkable as a bijection between evaluation sites,
+which works only because assignment is not an expression and nothing is implicit. The emitter
+writes a coverage certificate per run (site → C site, form, rule); an independent recomputer
+with its own form table checks completeness, order, closure and no-extra-effect. **Cut C1** is
+that recomputer's contract (`corrcert.rs`; the Lean side `CorrSite`, `vollB_sound`,
+`korrespondenz_sound`). What is accepted is the mutation list, not the checker's existence. The
+common-mode failure is named: both tables come from one specification text; the executable
+witness pairs (a Gabbro fragment, expected C, expected behaviour, run through the real compiler)
+are the only thing that measures against the compiler instead of a second reading.
+
+### §5. What that achieves, and what not
+
+Achieved: the target language is named and closed (so the correspondence is formulable at all),
+ten of twelve UB classes die on existing rules, the lowering is recomputed per run, binary
+validation stays possible. **Not achieved:** a formal C semantics. Structure does not imply
+meaning; the table *Gabbro operation → C operation → condition* is hand-trusted, and
+`restrict`/`volatile` remain trust.
+
+## E3. The value thesis, shifted (measured, with search paths in the former document)
+
+The founding assumption was the parser; the evidence says the language justifies itself at the
+**kernel**, not at the parser. `format` earned brevity, not safety: 5 formats in 53 days with 0
+errors of the class, and the only core parser that reads foreign bytes (**B40**, the DTB
+fragment, 145 lines) already checks every access (`be32(data, n)?` is "check, otherwise
+refuse"). Eight constructs carried evidence from the kernel side (`table … count`,
+`lock … rank … held`, `locks shared` — 33 reads against 44 writes —, pairing, `walk`/`embeds`,
+`BootPhase` — 7 sites against a gate of 5 —, M1 overflow, `traverse` — 0 of 571 loops over
+something that is not a domain). The second number a dashboard needs: not only writing cost
+(the ratio) but proof cost per change — W (value-statement) obligations per thousand lines, a
+lower bound. A `format` is no longer the justification of the language, one of its conveniences.
+
+## E4. Re-measuring
+
+| Figure | Command |
+|---|---|
+| goal theorem and its axioms | `cd grammatik && lake build && lake env lean NachpruefungZiel.lean` |
+| certificates and the register | `grep -c '^CERTIFIED' grammatik/Grammatik/Zertifikat/REGISTER.txt`; `cargo test --test zertifikate` |
+| templates | `gabbro schablonen` |
+| pass sentences | `gabbro paesse`, `gabbro paesse --per-statement` |
+| emitted-C forms | `python3 instrumente/zaehle-c-formen.py` |
+| closed chains | `python3 instrumente/zaehle-kette.py --lean` |
+| C-form classification | `python3 instrumente/pruefe-cformen.py` |
+| obligation population | `python3 instrumente/zaehle-pflichten.py --gabbrov` |
+| no `sorry`/`axiom` | `python3 instrumente/pruefe-kein-sorry.py` |
+| whole acceptance | `./instrumente/abnahme.py` (`--voll` needs both trees and Isabelle) |
+
+**Not re-measured in this consolidation** (no `lake` or `cargo` run was allowed): the axiom set
+of `gabbro_ziel`, the build state of every Lean file named above, the REGISTER regeneration, the
+counts of the former August measurements (axiom counts, Caprock figures), and the emitted-C
+marks beyond what the instrument's source records.
+
+---
+
+## Appendix — old → new ids
+
+| Cited as | Now |
+|---|---|
+| `BEWEIS.md §1`, `§1a`, `§2` (row 7 = implicit conversion, row 9 = null pointer), `§3`, "Item 2" | unchanged, under "Item 2 — which C" |
+| `BEWEIS.md` "cut C1", the recomputer | Item 2 §4 |
+| `BEWEIS.md` "B40" | E3 |
+| `BEWEIS.md` "own-logic debt", the `hFree` remainder | D4 |
+| `BEWEIS.md` line numbers (`:107`, `:1078`) | dead; they pointed into the former text |
+| `dokumente/BEWEIS.md` §2 (the statement), §4 (anti-vacuity), §5 (review package, the four questions), §6 (not claimed) | B1, B7, C1 and the `Spec.lean` header, B5 |
+| `dokumente/BEWEIS.md` §8 (extension rules, liveness) | D1 |
+| `dokumente/BEWEIS.md` §9, §10 (further gaps; linking; `counterexample`) | D2 and B3 |
+| `dokumente/BEWEIS.md` §3, §7.4, §8, §9, §10 (the runtime list `LaufzeitC`) | D3 |
+| `dokumente/BEWEIS.md` §2.3, §3 | D4 (independence of the path) and `GABBROV.md` |
+| `dokumente/BEWEIS.md` | D4 (the proposal) |
+| `dokumente/BEWEIS.md` | B6 |
+| `messung/TRAEGER-UND-HARDWARE.txt` | the A7 / `hardware A, D;` decision in B4; its `H101` half belongs to the checker document |

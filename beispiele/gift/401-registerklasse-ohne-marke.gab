@@ -1,5 +1,5 @@
 -- erwartet: R006
--- **«B18», die TRAGENDE Fundstelle.** `PFLICHTEN.md` buchte `L101` fuer die Zeile
+-- **«B18», die TRAGENDE Fundstelle.** `PFLICHTEN.txt` buchte `L101` fuer die Zeile
 -- *„nach `queue_arm` kann kein Pfad `USED_IDX` schreiben"* -- und `L101` traegt sie nicht.
 -- Am 2026-08-26 gemessen, mit genau diesem Rumpf: **8 Items, 0 Fehler, 0 Hinweise.**
 --

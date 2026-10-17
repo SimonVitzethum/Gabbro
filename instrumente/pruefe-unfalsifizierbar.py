@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**The `unfalsifiable` category -- counted against the corpus, and latched twice.**
 
-`dokumente/UNFALSIFIZIERBAR.md` states the bar: which KINDS of reason make an assumption
+`dokumente/UNFALSIFIZIERBAR.txt` states the bar: which KINDS of reason make an assumption
 genuinely unfalsifiable (`U1`, `U2`), which kinds do not (`R1`..`R4`), and a register in which
 every `unfalsifiable` clause of the tree stands with its verdict.
 
@@ -13,7 +13,7 @@ WHY THE CATEGORY NEEDS A GUARDIAN AT ALL
 of the twenty-five surplus assumptions can become unfalsifiable one at a time, each with a
 plausible sentence beside it, and the gate closes by being emptied rather than passed.
 
-`dokumente/AUSNAHMEN.md` gives the shape of the answer, and this file copies it deliberately
+`dokumente/PRUEFER.md` gives the shape of the answer, and this file copies it deliberately
 rather than inventing a second one (`W7`): **a register that is COUNTED cannot grow in
 silence, because growing it is a diff.**
 
@@ -58,7 +58,7 @@ import abschnitt  # noqa: E402
 import korpus  # noqa: E402
 
 W = Path(__file__).resolve().parent.parent
-DOC = W / "dokumente" / "UNFALSIFIZIERBAR.md"
+DOC = W / "dokumente" / "UNFALSIFIZIERBAR.txt"
 GENERATOR = W / "crates" / "gabbro-check" / "src" / "manifest.rs"
 
 # **The booked size of the population.** Eight `unfalsifiable` clauses stand in the non-poison
@@ -120,7 +120,7 @@ def corpus_files():
     # its `parts` and an absolute filter would exclude the whole corpus. *A guardian that
     # measures nothing prints the same `ALL PASS` as one that measures everything.*
     # **The directory blacklist below fixed ONE incident, not the class** (2026-09-04,
-    # `messung/K100-VERDICT-2026-09-04.md` §2): `arbeitsprotokoll` was added the same day as
+    # `dokumente/FRAGMENTE.md` §2): `arbeitsprotokoll` was added the same day as
     # the sibling guard's fix, but any OTHER untracked `.gab` -- anywhere the blacklist does
     # not name -- still moves this guardian's population, demonstrated by dropping one at
     # the repository root with an `unfalsifiable` clause and watching the run abort.
@@ -294,7 +294,7 @@ def main():
     # **TOOTH 0 -- the subject has to be there.** Over a missing document every check below
     # holds, and `ALL PASS` would be a verdict about nothing (`W17`).
     if not DOC.is_file() or not GENERATOR.is_file():
-        fehlt = "dokumente/UNFALSIFIZIERBAR.md" if not DOC.is_file() \
+        fehlt = "dokumente/UNFALSIFIZIERBAR.txt" if not DOC.is_file() \
             else "crates/gabbro-check/src/manifest.rs"
         print("ABBRUCH: `%s` is missing -- NOTHING was measured." % fehlt, file=sys.stderr)
         print("ABBRUCH: `%s` is missing -- NOTHING was measured." % fehlt)
@@ -318,9 +318,9 @@ def main():
         doc_text, population, rs_sites)
 
     if not n_zeilen:
-        print("ABBRUCH: `dokumente/UNFALSIFIZIERBAR.md` carries NO row in the expected shape.",
+        print("ABBRUCH: `dokumente/UNFALSIFIZIERBAR.txt` carries NO row in the expected shape.",
               file=sys.stderr)
-        print("ABBRUCH: `dokumente/UNFALSIFIZIERBAR.md` carries NO row in the expected shape.")
+        print("ABBRUCH: `dokumente/UNFALSIFIZIERBAR.txt` carries NO row in the expected shape.")
         print("  Either the register is empty -- then this run is a judgement about nothing")
         print("  -- or the table changed shape and this guardian no longer reads it.")
         print("  **Both are a finding, not a green run.**")

@@ -2,7 +2,7 @@
 -- 983 -- **an own lock primitive without the lock contract.**
 --
 -- `lock TOR` beside a bodied `pub impl fn TOR_nimm()` is the `m1-hijack` shape
--- (`messung/STILLE-KOLLISIONEN.md` §4a): the lock's acquire call lands in the
+-- (`dokumente/PRUEFER.md` §4a): the lock's acquire call lands in the
 -- writer's body, `spur` goes from 0 to 7, `nutz` is written, **and no lock was
 -- ever taken.** `N042` refuses the name -- one C symbol, two declarations.
 -- `N323` (`namen.rs::sperrprimitiv_vertrag`) reads the body against

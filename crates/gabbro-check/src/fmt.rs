@@ -1,4 +1,4 @@
-//! **Lever 3 of `dokumente/PLAN-EINFACHHEIT.md`: explicitness as a VIEW.**
+//! **Lever 3 of `dokumente/PRUEFER.md`: explicitness as a VIEW.**
 //!
 //! `gabbro fmt --explicit` writes every derived clause out (for review, for the
 //! certifier, for the unfamiliar reader); `gabbro fmt --elide` removes every

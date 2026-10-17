@@ -10,7 +10,7 @@
 -- zwischen den beiden Zeilen frei setzt.
 --
 -- **Der Ordner beschrieb die richtige Regel und der Pruefer tat das Gegenteil:**
--- `PFLICHTEN.md` fuehrte «B33» als *„die V-Regeln verengen eine Registerstelle nicht"*.
+-- `PFLICHTEN.txt` fuehrte «B33» als *„die V-Regeln verengen eine Registerstelle nicht"*.
 -- *Eine Zusage, die kein Pass einloest, ist die stille Richtung.*
 --
 -- Die ehrliche Form steht in `beispiele/44-register-einmal-lesen.gab`: einmal in eine

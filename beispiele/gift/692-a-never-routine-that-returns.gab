@@ -1,7 +1,7 @@
 -- erwartet: S009
 -- **A routine declared not to answer, and a body that answers.**
 --
--- `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.3 booked this as `2 items, 0 errors,
+-- `dokumente/PRUEFER.md` §1.3 booked this as `2 items, 0 errors,
 -- 1 hints` -- and the hint is `E003` about the missing `diverges`, not about the `return`.
 --
 -- **Why it is worse than a wrong answer.** `PLAN.md` §3.1 writes the result clause of every

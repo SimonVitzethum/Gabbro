@@ -28,7 +28,7 @@ floor text), not just the number.*
 
 ## Why `A = 19` is retired
 
-`dokumente/PLAN.md` fixes the target and its arithmetic in one sentence: *„`gabbro annahmen`
+`dokumente/PRUEFER.md` fixes the target and its arithmetic in one sentence: *„`gabbro annahmen`
 stand beim Schreiben dieses Absatzes bei ~~**14**~~; nach K100 muss dort **19** stehen"* —
 **19 = 14 + the five rebookings of `K100.2`**. `DONE.md` records the day it was hit.
 

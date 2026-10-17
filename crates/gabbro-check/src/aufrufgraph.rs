@@ -360,7 +360,7 @@ pub fn erhebe_mit_roh(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             ruft: BTreeSet::new(),
             verlangt: Vec::new(),
             hat_effects: true,
-            // Lane E2: a syscall is no foreign body -- PLAN-ERWEITUNG.md
+            // Lane E2: a syscall is no foreign body -- dokumente/PRUEFER.md
             // §0c names it as a construct a library may reach hardware
             // through. Its assumptions are named, not smuggled.
             fremd: false,
@@ -396,7 +396,7 @@ pub fn erhebe_mit_roh(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     // here, `u64(a)` inside a `pure` function made that function's OWN effect hull
     // undecidable -- the diagnostic three comments up, *"the call effects of `f` are
     // undecidable: `u64` is unknown to the graph"* -- a hole in the GRAPH, not in the
-    // program (`messung/K3-BEFUND.md` §4.1 asked for the conversion; this is what wiring
+    // program (`dokumente/PRUEFER.md` §4.1 asked for the conversion; this is what wiring
     // it in without this node broke).
     //
     // A conversion reads its one argument and writes nothing -- `pure` is not a guess,

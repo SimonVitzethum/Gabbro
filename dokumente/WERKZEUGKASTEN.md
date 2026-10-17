@@ -1,1258 +1,745 @@
-# Toolbox — working rules this folder earned
+# Toolbox — the instruments, and the working rules they were built from
 
-**Admission condition:** a rule gets in here only if it comes from a **mistake in this folder**
-and the mistake is named. No good intentions, no borrowed wisdom. Whoever reads a rule should
-be able to see the damage it was paid for.
+**What this is.** The inventory of the measuring instruments in `instrumente/` (95 entries: 54
+`pruefe-*` guardians, 22 `zaehle-*` counters, `mutiere-pruefer.py`, `abnahme.py`, helpers and
+data files), the probe corpora that stand beside them, and the working rules (**W1–W29**) the
+folder earned. **Admission condition for a rule:** it comes from a *mistake in this folder* and
+the mistake is named. No good intentions, no borrowed wisdom — whoever reads a rule can see the
+damage it was paid for. The rule ids are cited from source comments and other documents and are
+never renumbered.
 
-> The **trap** numbering (`Falle 80` …) lives in
-> [`fallen-klassifikation.tsv`](../messung/fallen-klassifikation.tsv) — 100 paid-for Caprock traps, source
-> `CLAUDE.md`, as of 2026-08-13. That file is a **measured inventory with a named source**;
-> nothing is added to it after the fact. The `W` numbers here are our own and stand beside it,
-> not inside it.
->
-> `Falle 80` reads there, literally: *a number a human runs parallel to the truth* (class `S`,
-> `ableitung`). **W1 and W2 below are both children of that trap** — once in the instrument,
-> once in the declaration.
-
----
-
-## W1 — A coverage number counts evidence, not attempts
-
-*Next to trap 80: a number a human runs parallel to the truth.*
-
-**The damage.** On 2026-08-14 the checker grew by five rules, and I wrote five mutations to go
-with them. The summary line printed `37 of 37` — from `len(MUTATIONEN)`, i.e. from the number
-of **written** mutations. At the same time an older mutation (`sperre-egal`) had lost its
-anchor because I had rebuilt the line it targeted. It did not run at all. **A dead mutation
-counted as coverage.**
-
-**Why that is worse than an unchecked rule.** A hole you know about is an item. A coverage
-number that counts holes as coverage **devalues every other number in the folder** — because it
-is the number you check the others with. It is the wished-for form *inside the instrument*.
-
-**The rule.** Every coverage, completeness or progress number is formed from **verified
-evidence**, never from the number of attempts, entries or lines. Where a piece of evidence can
-drop out (dead anchor, skipped probe, unbuilt surface), the dropout must **lower** the number,
-not leave it untouched.
-
-**The handle.** `mutiere-pruefer.py` now counts `caught` out of `valid`; a lost anchor appears
-as `ANKER FEHLT` and **falls out of the denominator, not into the numerator**.
+> The trap numbering (`Falle 80` …) lives in `messung/fallen-klassifikation.tsv` — 100 paid-for
+> Caprock traps, a measured inventory with a named source; nothing is added to it after the fact.
+> **W1 and W2 are both children of trap 80** (*a number a human runs parallel to the truth*) —
+> once in the instrument, once in the declaration.
 
 ---
 
-## W2 — The zero promise: the checker is the instrument for the numbers it checks
-
-**The occasion.** For a new example I needed three `costs` lines. Instead of estimating them I
-pushed them down to `1 ops`, let the checker name the true numbers (`4`, `2`, `2`) and entered
-those. **The numbers fell out of the body, not out of the wish.**
-
-**The relapse inside that.** The procedure was right, the handle was manual work — and manual
-work on a number is exactly where a number starts running parallel to the truth. A procedure
-that needs discipline is a procedure with an expiry date.
-
-**The rule.** Where a pass **checks** a declared number, it must also be able to **name** it. A
-promise is copied down, not guessed.
-
-**The handle.** `gabbro kosten datei.gab` prints, per function, the computed body figure next to
-the promised one, and per `locks` block the computed hold time next to `held` resp.
-`shared held`.
-
-```
--- Site                                    computed   promised  slack
-rechte_aufloesen                           4          4         0
-  rechte_aufloesen / shared held KAPPEN    4          4         0
-```
-
-**The `slack` column is a difference, not a verdict** — and the two cases differ: for `costs`
-slack is often right (a signature should not break on every body change), for `held` it is
-almost always wrong, **because the latency statement computes with the promise, not with the
-computation**.
-
-**Where it will be needed again:** `held`, `shared held` (already today), `per_pass bounded` —
-there with the known caveat that an input-dependent bound is not a number but a term.
-
----
-
-## W3 — No construct without measured need
-
-**Paid for twice.** `abi { … }` was stopped before it was written. `locks ordered` died at the
-paper test of 2026-08-14 with **zero test cases** — and the answer was stronger than the
-question: in the whole tree there was not a single repeated acquisition of the same lock class.
-
-**The rule.** A construct needs **counted** sites in real code before the first line of grammar
-is written. Not plausible ones, not remembered ones — counted ones.
-
-**The probe for whether the rule works:** the test must be allowed to kill its own candidate. A
-paper test that only confirms is a demonstration. *That same test found, instead of the
-confirmed construct, two gaps that were on no list — the yield was larger than the loss.*
-
----
-
-## W4 — A loud overstatement is cheaper than a silent exception
-
-**The case.** `locks shared` stands, but the witness at the **call boundary** needs the call
-graph, which does not exist yet. Without a rule the boundary would be not merely unchecked but
-**permeable**: the callee writes with exclusive rights, the caller holds only shared — `H001`
-through the back door.
-
-**The rule.** Where a load-bearing rule has a hole that can only be closed properly later, the
-**coarse, too-strict** version goes in front — not nothing. It has to be **named** as an interim
-rule, together with what it forbids too much, and together with the check that will replace it.
-
-**Why.** Somebody goes looking after a loud overstatement — it is in the way. Nobody goes
-looking after a silent exception, because it looks like a green.
-
-**The handle.** `H005`: a shared block calls no function with `requires Held(…)`. Full stop.
-Including one for a different lock, which is too much and says so in the refusal.
-
----
-
-## W5 — An interim rule carries three parts, otherwise it becomes permanent
-
-*W4 says **that** the coarse version goes first. W5 says **how** it must be written so that it
-really gets replaced later and not merely grown accustomed to.*
-
-**The occasion.** `H005` is deliberately too strict. A too-strict rule without an expiry note is
-taken for the right one after three months — nobody remembers what it forbids too much, so
-nobody dares touch it. **The overstatement that W4 justifies is exactly what later makes it
-untouchable.**
-
-**The rule.** A conservative interim rule names, in its own refusal:
-
-1. **the rule** — what it forbids;
-2. **the price** — what it forbids too much, concretely, not as "possibly too strict";
-3. **the replacement** — which check will replace it and what that check must be able to do.
-
-**Why in the refusal and not in a ticket.** A ticket is read by whoever tidies up. The refusal
-is read by whoever is running into it right now — and that is the person paying the price, and
-therefore the one who can report it.
-
-**The handle.** `H005` carries all three parts as notes. At pass 8 it will not have been the
-last time.
-
----
-
-## W6 — Omitting a runtime check is justified by M1 alone, never by an invariant
-
-**The damage, already booked one level up.** `5904cae`: smoothing a claim about the tree instead
-of surveying the tree. The same grip one level down would be: striking a range check from the
-generated C **because the proof says it cannot go negative**.
-
-**The two nets, and why they are not the same.**
-
-| | what it hangs on | who recomputes it |
-|---|---|---|
-| **M1** | on the **type** (`u32 in 0 ..= NSLOTS`) | the type system, **per program**, every time |
-| **invariant** | on the **template** that preserves it | the trust surface — once, for all |
-
-The Verus template `cap_space.rs` carries `refcount : nat` and proves `oldrc >= 1` (line 792)
-**from the invariant**. That is correct — and it is **exactly one net**. Gabbro's
-`u32 in 0 ..= NSLOTS` gives a second one that holds **without** the invariant; it was the one
-that fell as `M104` next to `D001` in the speech test.
-
-**The rule, mechanically, at every emission decision that cites a proof:**
-
-> **The cited fact must be derivable from M1 alone. Otherwise the check stays in the C.**
-
-**Why that is cheaper than the special version.** The narrow form — *no field generated by a
-template carries a type without a width* — covers fields. It does not cover intermediate values,
-and it covers future constructs even less; there the same hole opens again. W6 instead sits **at
-the decision** rather than at the subject: **one line in the emission pass instead of one per
-construct.**
-
-*Noted in advance for a surface that does not yet exist.* The emission pass is not built —
-`mutiere-pruefer.py` reports it with **0 mutations**. This rule is therefore a **prior
-commitment** today, not a checked promise, and it stands here so that it need not be reinvented
-when the building starts. **What has 0 mutations is not covered, it is undamageable.**
-
----
-
-## W7 — A number without a source list does not belong in a document
-
-**Paid for three times, found in one day.**
-
-| Number | Aggregate | Attribution |
-|---|---|---|
-| 74 proof obligations (17 logic / 57 plumbing) | in the folder | **lost** |
-| 19 hanging obligations in eleven classes | in the folder | **6 of 11** |
-| `delete_leaf` 3,6–6 : 1 | in the folder | **lost** |
-
-**The damage is not vagueness but irrefutability.** A number whose attribution is missing cannot
-be checked by anyone — not even by its author. It gets quoted, it carries decisions, and it is
-immune to every correction, because there is nothing to hold it against.
-
-**Two of the three had already tipped once someone recounted:** `delete_leaf` from 3,6–6 : 1 to
-**1,75 : 1** (different counting: obligations instead of proof steps), and the eleven classes
-from "19 hanging" to **N_neu = 5 hanging classes** — not convertible, because the old set was
-never evidenced.
-
-**The rule.** A reported number carries the list it came from: per item `file:line` or a
-re-runnable command line. If the list does not fit in the document, it goes in a file beside it
-— **but it exists.**
-
-**The flip side, and it is the actual promise:** a number **with** a list is allowed to be
-wrong. It is then checkably wrong, and that is the whole difference. *Trap 80 says a number must
-not run parallel to the truth; W7 says how to prevent it.*
-
-**The handle, where it can be mechanical:** `pruefe-luecken.py` and `zaehle-bereichspflichten.py`
-print their sites; `gabbro kosten` and `gabbro k-bedingung` likewise. Where a number arises by
-hand, the list belongs in the same change.
-
-### **The addition, measured on 2026-08-16: the SWEEP reads table cells as claims**
-
-**The W7 sweep of 2026-08-15 missed a number, and the reason is not carelessness but the
-procedure.** It went through the folder's **sentences**. The 89 closures sat in a **table
-cell** — and survived.
-
-> **The sweep reads table cells as claims, not only sentences.**
->
-> *Otherwise every future table is a hiding place — and this folder has just measured that it
-> works.*
-
-**That is a gap in the procedure, not an escaped number.** A number escapes once; a procedure
-that never looks at an entire presentation form lets every future one escape.
-
----
-
-## **The number pair for W7 — the folder's second quantitative piece of evidence**
-
-R14 has its own (**factor 130 between discarded rule versions, factor 1 afterwards**). Since
-2026-08-16 W7 has one too, and it is cleaner, because both numbers come from **the same
-measurement on the same tree**:
-
-| Number | Search path | Reproduction |
-|---|---|---|
-| **67** `dyn` sites | stated in the measurement | **exact** |
-| **89** closures | **stated nowhere** | **64 — deviation −28 %** |
-
-> **Same measurement, two numbers, one with a search path, one without.** The one with a list
-> reproduces to the digit; the one without was off by more than a quarter — **and nobody would
-> have noticed, because it looked plausible.**
-
-**That is the whole rule in one number pair:** a number with a list may be wrong, because it is
-checkably wrong. One without a list is not wrong — *it is uncheckable*, and that is the more
-expensive state.
-
----
-
-## W8 — A compositional check is probed over **two levels**, not one
-
-**The occasion.** `E008` includes the effects of callees. The obvious probe would be: *caller
-declares `writes`, callee declares `writes`, it arrives.* **That measures nothing** — it is
-already green if the pass only sees the first level.
-
-**The rule.** A probe for a transitive property puts an **intermediate function** in between
-that does **not have the property itself**:
-
-```gabbro
-extern fn ganz_tief() effects { masks IRQ } …   -- only HERE does `masks` appear
-impl fn mitte()       effects { pure }     …    { ganz_tief(); }
-impl fn oben()        effects { pure }     …    { mitte(); }
-```
-
-The assurance is: *`masks IRQ` arrives at `oben`.* **If the pass falls back to the first level,
-the effect disappears** — and the probe tips. It thereby demonstrably hangs on the subject
-(R14b), and specifically on **transitivity**, not on a single hit.
-
-**Where it will be needed again:** the **pairing pass** needs the same probe shape — a
-`publishes`/`awaits` pairing **across an intermediate function**. Every analysis that says
-"includes …" needs it.
-
----
-
-## W9 — If an analysis coarsens, the **direction** is checked, not the convenience
-
-*R8 says: overstate only in the safe direction — that applied to **refusals**. W9 is the same
-for **analyses**.*
-
-**The case.** `E008` computes over **sets**, not over **paths**. That is the right coarseness —
-**but only because here it is coarse in the safe direction**: the pass sees more effects than
-there are, never fewer.
-
-**And the same coarseness is inadmissible in one place.** `diverges` does **not** travel upward:
-whoever calls a diverging function does not diverge — only whoever calls it on **every** path.
-That is a statement about **paths**. Computed over sets it would be coarse in the **unsafe**
-direction: it would force `diverges` onto functions that return.
-
-**The rule.** Before an analysis coarsens, ask per property: *does the coarse version err in the
-safe or in the unsafe direction?* **The answer goes in the pass comment, not in someone's
-head.** A coarsening without a direction check is a convenience with a random result.
-
----
-
-## W10 — The third state: not refused does not mean confirmed
-
-**The near miss.** `E008` does not refuse on the basis of a **lower bound** — correct (R16): a
-refusal from a lower bound would be a claim. But the first version thereby let the function pass
-**silently**, and a `pure` promise behind a cycle was green.
-
-**That is the escape-hatch assurance from R15 through the back door** — *"satisfied, because
-nothing happened"*, only one level down: not in the assurance but in the **pass**.
-
-**The rule.** Where an analysis may **not refuse** out of incompleteness, it may also **not
-confirm**. The honest third state is called **undecidable**, has a diagnostic code of its own,
-and is **visible**.
-
-**The handle.** `E009` names the reason (`cycle over …`, `… is unknown to the graph`) and says
-explicitly that the `pure` promise is **not checked** at this site. *A side benefit showed up
-immediately:* two of the first three `E009` were **gaps in the graph**, not in the program —
-`transition`s were missing from it. The third state turned first against our own tool.
-
----
-
-## W11 — Every gate ratio names its N, and a jump in N is itself a test case
-
-**The near miss.** I sharpened the separation *excerpt / translation unit* and searched for `…`
-in the **raw text**. That threw out five of the six fragments — there `…` appears in
-**comments**. Gate P2 would have reported:
-
-```
-Uebersetzungseinheiten: 1 von 1 ohne Fehler (100 %)
-```
-
-**And that is also 100 %.** A filter that shrinks the population **masquerades as success** —
-the ratio rises while coverage falls.
-
-**The rule.** Every gate ratio names its **N**, and a **jump in N against the previous run is
-itself a test case**. The right report would not have been *"1 of 1 green"* but:
-
-> **"N fell from 6 to 1."**
-
-*The second report is the one that shows the error.* A ratio without a denominator is not a
-number — that is trap 80 — and a denominator that moves without cause is a finding.
-
-**The kinship.** W1 says: a coverage number counts evidence, not attempts. **W11 says the flip
-side:** when the denominator shrinks, that must be louder than the rising numerator. *Both
-errors look the same in the report — only the denominator tells them apart.*
-
-**The handle.** `gabbro fragmente` has always printed N; what was missing was attention to its
-**change**. Where a tool defines a population, its size belongs in the same sentence as the
-ratio — and its previous value beside it, as soon as there is one.
-
-### **Confirmation came one day after the rule — in pure form**
-
-**B3, 2026-08-16.** The R14(a) probe put a broken brace into a copy of the subject. The tool
-reported `Abbrueche: 1` — **and the reported number silently fell from 26 to 24**, because two
-bodies dropped out of the inventory.
-
-> **Without the abort counter the measurement would have delivered a number two too low and
-> looked healthy doing it** — with a gate that passes *downward*, i.e. in the flattering
-> direction.
-
-*The same construction as the P2 case: the numerator is right, the denominator has moved, and
-the report looks identical in both cases.* **A rule that catches its second case one day after
-being written down is no longer a precaution.**
-
----
-
-## **The number pair for R14 — the most quantitative argument this folder owns**
-
-R14 (*a measuring tool proves it can measure*) stood on justifications until now. **B3 gives it
-numbers, and they are uncomfortably clear:**
-
-| | |
-|---|---:|
-| spread between the **discarded** rule versions (0,03 % … 4,36 %) | **factor 130** |
-| distance between **tool and truth** after the three R14 probes | **factor 1** |
-
-**Four versions, three of them wrong:**
-
-```
-version 1   0,03 %   saw only bodies WITH a loop -- loopless surgery invisible
-version 2   4,36 %   read `for x in segs` as a non-domain -- ONE body made up 2 %
-version 3   0,74 %   missed index, edge and donation chains
-version 4   0,95 %   the reported one
-```
-
-> **The two discarded versions bracket the right answer and span a factor of 130 doing it. Both
-> could have been presented with the same list of sites.** The only difference between them and
-> the final version is **R14** — the full count of all 347 `for` heads and the three mutation
-> probes.
-
-**The rule that follows fits on one line:** *a number from this class of tool without R14 is not
-imprecise, it is worthless.* **Three of four versions were wrong, and none of them looked
-wrong.**
-
----
-
-## W12 — A filled map is no evidence of a **complete** map
-
-**The damage.** The domain bound for `mappings of` was there — `levels × node length`, from the
-`walk` declaration, entered into `walkschranken` and demonstrated by a probe (`t::W → 2048`).
-**It still did not bite.** Type resolution knew formats, devices and tables — and no walks.
-`ptr<normal, r> Seitenabstieg` was simply `Unbekannt`.
-
-**`Unbekannt` did not drop out. It ran along as an empty entry.** I spent half an hour searching
-at the wrong end, because the map was filled.
-
-**The class.** That is structurally the same error as the vocabulary guardian claiming closure
-over a set it had never seen: **a resolution with a catch-all branch claims a completeness it
-does not have.**
-
-**The rule.** At every resolution site, match **exhaustively over the declaration kinds**,
-**without a `_` branch**. A new kind is thereby a **compile error** at every chain that does not
-handle it.
-
-> **The same D2 medicine the language prescribes to its users, applied to the checker itself** —
-> Gabbro demands exhaustive `match` over `tagged`, and Rust hands it over for free here.
-
-**The handle.** `Traegerart::ALLE` (`umgebung.rs`) with five variants and two `match`es without
-a catch-all. *The order of the array is the resolution order* — it therefore lives in one place
-instead of in the nesting of an `if-else` chain.
-
-**The flip side, and it is the price:** `Typ::Unbekannt` remains admissible as a *result* — a
-name no declaration carries is unknown, and that is right. What is no longer possible is **being
-unknown because nobody looked.**
-
----
-
-## W13 — Berührung ist keine Prüfung
-
-**Ein Pass, der ein Konstrukt anfasst, prüft es nicht.** `schleifen.rs` liest
-`ItemArt::Check` — aber nur, um in `can_fail` hineinzulaufen. `kbedingung.rs` liest `ops` — als
-`!t.ops.is_empty()`, also als **boolesche** Frage, nie als Menge. **Beide Konstrukte gelten
-damit als „gelesen", und keine ihrer Zusagen fällt je.**
-
-**Die Feldstufe hatte die Unterscheidung schon.** `pruefe-klauseln.py` trennt seit jeher
-**ZUSAGE** (eine Aussage, die kein Pass hält) von **ABSENKUNG** (der Erzeuger ist ihr richtiger
-Leser) — genau, weil ein Feld, das nur in einer Absenkung auftaucht, nicht geprüft ist.
-
-> **Maß 1 des Konstruktwächters hat diese Unterscheidung auf der Item-Ebene wieder verloren**
-> und meldete 21 von 23 als gelesen — `ops` und `check` darunter, also die zwei Fundstellen,
-> für die er gebaut wurde.
-
-**Die Regel.** Wer Deckung misst, fragt nicht *„greift jemand zu"*, sondern **„ist daran je
-etwas gefallen"**. Für ein Konstrukt heißt das: *gibt es eine Giftprobe, die es zum Fallen
-bringt?* — 7 von 19 hatten keine.
-
-**Und die neue Frage wird NEU abgeleitet, nicht die alte gedehnt.** Maß 1 zu erweitern hätte
-geheißen, „gelesen" umzudefinieren, bis es passt; Maß 2 fragt etwas anderes und misst darum
-etwas anderes.
-
----
-
-## W14 — Die eigene Deckung wird systematisch um eine Größenordnung zu hoch geschätzt
-
-**Drei Wächter, drei Messungen, dieselbe Form:**
-
-| Werkzeug | erwartet | gemessen |
-|---|---:|---:|
-| `pruefe-klauseln.py` — Felder ohne Leser | **4** | **48** |
-| `pruefe-englisch.py` — deutsche Meldungstexte | **41** *(erste Schätzung)* | **151** |
-| `pruefe-konstrukte.py` — Konstrukte ohne Probe | **2** | **7** |
-
-**Das ist inzwischen selbst ein Datum**, und es sagt etwas Unbequemes: *die Intuition über die
-**eigene** Deckung liegt um etwa eine Größenordnung zu optimistisch.* **Nicht über fremden
-Code — über den eigenen.**
-
-**Die Regel.** Wer eine Erwartung aufschreibt, bevor er misst (und das verlangt R11 ohnehin),
-rechnet mit dem **Faktor**, nicht mit der Zahl: *eine Schätzung von vier heißt „vermutlich
-einige Dutzend".*
-
-> **Und der Grund, warum es keine Nachlässigkeit ist:** man zählt, woran man sich erinnert, und
-> man erinnert sich an das, was man gebaut hat. **Was nie gebaut wurde, hinterlässt keine
-> Erinnerung** — und genau das ist die Klasse, die diese drei Werkzeuge messen.
-
-**Der Preis der Regel, damit sie nicht zur Ausrede wird:** sie rechtfertigt keine Schätzung
-nach oben statt einer Messung. *Sie sagt nur, welche Größenordnung eine Überraschung ist und
-welche keine.*
-
----
-
-## W15 — Ein Sammelzweig ist eine stille Zusage, kein Vorbehalt
-
-**Der Befund.** Der Prüfer hatte **78 `_ => {}`-Zweige** über `StmtArt`. Jeder Pass stieg
-selbst in die Anweisungen ab, jeder schloss mit einem Sammelzweig — und **jeder vergaß einen
-anderen Arm**. Gemessen:
-
-| Anweisungsart | war unsichtbar für |
-|---|---|
-| `observes` | `m3`, `phasen`, `paarung`, `gruppe`, `kbedingung`, **`aufrufgraph`** |
-| `exchange` | `m1`, `m2`, `m3`, `namen`, `geteilt` |
-| `narrow … else` | `m1`, `wirkungen` |
-
-**Die Zeile, die es zeigte:** ein Ruf **in** einem `observes`-Block kam im Aufrufgraphen nicht
-an. Damit verschwanden zwei `E008` — `masks IRQ` und `writes G` standen im Gerufenen und in
-keiner Wirkungsliste. *Derselbe Ruf eine Zeile höher fiel.*
-
-**Warum `_ => {}` schlimmer ist als eine fehlende Regel.** Es liest sich wie ein Vorbehalt
-(*„damit befasse ich mich nicht"*) und wirkt wie eine Zusage (*„hier steht nichts, was mich
-angeht"*). **Niemand prüft sie nach, wenn eine Anweisungsart dazukommt** — und die neue Art
-erbt schweigend so viele Löcher, wie es Sammelzweige gibt.
-
-> **Der Unterschied zwischen einem Sammelzweig und einer Weigerung ist der Unterschied
-> zwischen einer Lücke und einem Eintrag.** `emit.rs` schliesst mit `_ => weigere(…, "statement
-> kind")` und nennt jede Form, die es nicht kann, beim Namen (`C001`). *Derselbe Zweig, die
-> andere Richtung* — und darum steht der Erzeuger in `pruefe-abstieg.py` als gedeckt da.
-
-**Die Regel.** Was über einen Baum absteigt, matcht **erschöpfend, ohne `_`** — an **einer**
-Stelle (`lib.rs::unterbloecke`, `lib.rs::endet_immer`), und alle anderen nehmen sie. Dann ist
-eine neue Anweisungsart ein **Übersetzungsfehler an jeder Kette, die sie nicht behandelt.**
-
-**Und der Nebenbefund, der die Regel bezahlt:** `endet_immer` stand **dreimal** im Prüfer,
-jedes Mal unvollständig und jedes Mal anders. Alle drei hielten `locks L { return x; }` für
-*fällt durch*. Eine Zusammenlegung schloss drei Löcher mit einer Funktion.
-
-*Gemessen von `pruefe-abstieg.py` — und zuerst zu grob: die Dateiebene zählte `m2` als gedeckt,
-weil `sammle_forever` nannte, was `gehe` fehlte. **Auf Funktionsebene wurden aus 7 Lücken 15**
-(W14, zum vierten Mal).*
-
----
-
-## W16 — Ein Messwerkzeug ohne Abstiegsschritt misst seine eigene Leseweite
-
-**Drei Werkzeuge in einer Woche haben plausibel ausgesehen und etwas anderes gemessen als
-ihren Gegenstand.** Die Signatur ist in allen drei Fällen dieselbe, und sie ist so einfach,
-dass sie eine Prüfliste hergibt:
-
-| Werkzeug | stieg **nicht** ab in | und meldete deshalb |
-|---|---|---|
-| die Rufhülle | die Gerufenen | ein Ruf in einem `match`-Zweig war unsichtbar — *und der Korpus hat genau diese Gestalt* |
-| `enthaelt_schritt` | geschachtelte Rümpfe | ein `locks { }` um denselben Schritt machte `O006` stumm |
-| `pruefe-gruende.py` | über die abgeschnittene Zeile hinaus | **`N011` als verdächtig** — die eine Regel, deren Notiz den tragenden Grund wörtlich nennt |
-
-**Die Regel ist eine Frage, und sie wird vor dem ersten Lauf gestellt:**
-
-> *Ist der Gegenstand rekursiv oder mehrzeilig — und steigt das Werkzeug ab?*
-
-Zusammen mit **W8** (die Zweiebenenprobe) ist das eine mechanische Vorabprüfung für jedes neue
-Messwerkzeug: ein Gegenstand mit zwei Ebenen bekommt eine Probe mit zwei Ebenen, und wo keine
-zweite Ebene geprüft wird, ist die erste die ganze Messung.
-
-### Und der teuerste Fall ist nicht der Verlust, sondern die Umkehrung
-
-Die ersten beiden Werkzeuge **verloren** eine Antwort; das dritte **kehrte sie um**. Der
-Unterschied ist der Grund, warum der dritte der schärfste war:
-
-> **Bei einer verlorenen Antwort fehlt etwas. Bei einer umgekehrten steht das Gegenteil da —
-> und sieht vollständig aus.**
-
-Die Umkehrung entsteht genau dort, wo das Abgeschnittene das **entlastende** Material enthält.
-`pruefe-gruende.py` las Rusts `\`-Zeilenfortsetzung nicht und sah damit von jeder Absage nur
-die Meldung, nie die Notizen — und die Notiz ist die Stelle, an der eine Regel ihren tragenden
-Grund nennt. *Ein Werkzeug, das nur die Anklage liest und nie die Entlastung, findet
-zuverlässig Schuldige.*
-
-**Es ist R16 in Textform**: eine untere Schranke, die nicht sagt, dass sie eine ist, liest sich
-als Ergebnis.
-
-### Und die Sippe reicht über Werkzeuge hinaus: ein Bau aus einer MISCHUNG
-
-Am 2026-08-20 meldete `cargo test` auf `ki-pc-fisch-101` einen Test rot, der lokal grün war —
-bei **byteidentischen Quellen** (md5 über den ganzen Baum, beidseitig verglichen). `M107` fiel
-hier und dort nicht.
-
-Die Ursache war nicht der Code: **`rsync -a` erhält Zeitstempel, und `cargo` entscheidet
-Aktualität nach Zeitstempel.** Eine übertragene Datei behält ihre alte `mtime`; ist die älter
-als das Bauartefakt auf dem Server, gilt sie als aktuell — und der Bau ist eine Mischung aus
-neuer Quelle und altem Objekt. Ein `touch` heilte es.
-
-> **Dieselbe Signatur eine Ebene tiefer:** das Werkzeug las nicht die Hälfte seines
-> Gegenstands, es las die Hälfte seines *Zustands*. Und wie dort sah das Ergebnis vollständig
-> aus — eine Zahl, kein Zweifel.
-
-*Die Regel ist dieselbe Frage:* **misst dieser Lauf, was ich glaube, dass er misst — oder
-misst er, was einmal da war?** Der Riegel steht in `CLAUDE.md`: `-rlpgoD` statt `-a`, damit
-jede übertragene Datei die aktuelle Zeit bekommt.
-
-### Und derselbe Riegel hat ein SPIEGELBILD — gefunden am 2026-08-20
-
-**`-rlpgoD` heilt `cargo` und bricht `pruefe-beweise.sh`.** Der Beweiswächter verlangt einen
-*Nachweis*, dass wirklich gebaut wurde (W17: `isabelle build` schweigt bei leerer Auswahl),
-und der zweite Weg zu diesem Nachweis lautet: *„kein Bauwerksbuch, das jünger ist als jede
-Quelle."* **Das ist eine Zeitstempelfrage.**
-
-Wer den ganzen Baum mit `-rlpgoD` überträgt, gibt jeder `.thy` die aktuelle Zeit. Isabelle
-rechnet nach **Inhalt**, wählt korrekt nichts aus und schweigt; der Wächter rechnet nach
-**Zeit**, findet keinen Nachweis und meldet `OHNE NACHWEIS` — über einer Sitzung, die
-vollständig aktuell ist.
-
-| | `cargo` | `isabelle build` |
-|---|---|---|
-| entscheidet Aktualität nach | **Zeit** | **Inhalt** |
-| braucht deshalb | `-rlpgoD` (neue Zeiten) | `-a` (erhaltene Zeiten), damit der NACHWEIS trägt |
-
-**`CLAUDE.md` führt beide Übertragungen längst getrennt** — `rsync -a grammatik/Beweise/` und
-`rsync -rlpgoD ./`. *Das sieht nach zwei Gewohnheiten aus und ist eine Bedingung.* Wer sie zu
-einem Befehl zusammenzieht, bekommt einen roten Wächter ohne Fehler.
-
-> **Zwei Begriffe von „aktuell" in einer Kette, und keiner von beiden ist falsch.** Die
-> vorherige Instanz log grün (der Bau aus einer Mischung), diese lässt einen richtigen Lauf
-> durchfallen. *Die Richtung wechselt, die Frage bleibt.*
-
-Der Wächter sagt seit dem 2026-08-20 in seiner Absage, welche der zwei Ursachen die häufigere
-ist und wie man sie unterscheidet — **eine Absage, die ihren wahrscheinlichsten Grund nicht
-nennt, kostet jedes Mal dieselbe halbe Stunde.**
-
----
-
-## W23 — Eine Messung, deren Grundgesamtheit die eigenen Proben enthält, misst sich selbst
-
-**Der Fall, 2026-08-28.** `messung/ordnung/tore.py` sollte den Bedarf für `V009` belegen: wie
-oft steht im Baum eine schlichte Lesung aus einem `atomic`, die einen Zweig gattert? Der erste
-Lauf meldete **26 Bindungen, 0 schlichte** über `beispiele/` **und** `beispiele/gift/` in einer
-Summe. Der zweite trennte die Töpfe — und die **einzige** schlichte Atomlesung im ganzen Baum
-war die Giftprobe, die für `V009` geschrieben worden war.
-
-> **Die Probe war Teil der Grundgesamtheit, die ihren eigenen Bedarf belegen sollte.**
-
-**Das ist W18 in der Messrichtung.** Dort enthält ein *Register* seine eigene Ausgabe und hat
-einen Fixpunkt statt einer Messung; hier enthält eine *Grundgesamtheit* die Proben, die zu der
-Regel gehören, deren Bedarf sie belegen soll. Die Bewegung ist dieselbe, der Schaden ist
-schlimmer: ein Fixpunkt fällt auf, weil die Zahl sich nicht bewegt — eine Selbstmessung liefert
-eine **plausible, nicht triviale Zahl**, und niemand sieht ihr an, woher sie kommt.
-
-**Die Regel ist eine Frage, und sie wird vor dem ersten Lauf gestellt:**
-
-> *Enthält die Menge, über die ich zähle, Dateien, die für den Gegenstand dieser Zählung
-> geschrieben wurden?*
-
-`beispiele/gift/` gehört in **keine** Bedarfsmessung. Es gehört in Trefferzählungen (*„fällt die
-Regel?"*) und dort ausschließlich. Wo beide Töpfe in einem Lauf gebraucht werden, werden sie
-**getrennt ausgewiesen**, nicht summiert.
-
-*Und die Behandlung des Falls gehört dazu:* der Commit hat die falsche erste Zahl mit der
-richtigen daneben stehen lassen, statt sie zu ersetzen. **Eine korrigierte Messung ohne die
-ersetzte Zahl ist eine Behauptung über eine Korrektur.**
-
----
-
-## W24 — Bevor ein neues Wort erwogen wird: **parst die naheliegende Form heute schon?**
-
-**Vier Fälle, und beim dritten war die Bauart nicht mehr zu übersehen. Der vierte ist der
-teuerste: dort hat eine falsche Zeile die Frage seit dem 2026-08-17 beantwortet — elf Tage,
-zwei Fundstellen, und `MESSUNGEN.md`:6198 stand die ganze Zeit richtig daneben.**
-
-| Fall | erwogen wurde | gemessen wurde |
-|---|---|---|
-| `transition` | eine fehlende Form | *„eine Lücke im GRAPHEN, nicht im Programm"* |
-| «B35» | dasselbe | dasselbe |
-| **`ops`-Rufform**, 2026-08-28 | eine eigene Anweisungsart (`insert v.slots[n] under p;`) mit dem neuen Wort `under` | **`Verzeichnis::insert(v, i)` parst seit jeher.** `parse.rs::erwarte_feldname` nimmt hinter `::` jedes Wortschatzwort an; die EBNF sagte es nur nicht |
-| **«B17»**, 2026-08-28 abends | eine Mehrfachform für `transition` — *„`transition` schreibt genau EINEN `place` … nicht schreibbar"* (`PFLICHTEN.md`, zweimal) | **`transset = placeshift { "," placeshift }` steht in `SYNTAX.md`:1256 und wird in `beispiele/02-geraet.gab`:42 BENUTZT.** Von sieben Proben fiel genau eine am Parser, an EINEM Token (`over`). Was wirklich fehlte, stand woanders: `breaking I { … }` gab es seit jeher und **löste seinen Namen nie auf** — `breaking gibt_es_gar_nicht { … }` ging mit 0 Fehlern durch |
-
-Was der Prüfer **wirklich** meldete, mit einer Probedatei durch den **unveränderten** Prüfer:
-
-```
-Hinweis: [E009] `Verzeichnis::insert` is unknown to the graph
-Fehler:  [K003] `belegen` promises costs, but `insert` is not declared here
-```
-
-**Kein einziges `P00x`.** Gefehlt hat nicht die Rufform, sondern **der Gerufene**.
-
-> **Die Regel ist eine Frage, und sie wird vor der Abwägung gestellt:**
-> *Schreib die naheliegende Form hin und lass sie durch den unveränderten Prüfer laufen —
-> parst sie? Und wenn nein: fällt sie am Parser, oder an etwas dahinter?*
-
-**Der Preis, den sie spart, ist nicht klein.** Die verworfene Anweisungsart hätte an
-**dreißig** Fundstellen (`grep -c 'StmtArt::Ruf'`) die Wirkungs-, Kosten-, Sperr- und
-Phasenfrage einzeln neu beantworten müssen — für eine Lücke, die im Aufrufgraphen lag und
-dort mit einem Erzeuger für Signaturen zu schließen war.
-
-*Und sie ist die Schwester von W22:* dort misst man die **falsche Ablehnung** an der
-Asymmetrie des Korpus, hier misst man die **vermeintliche Unschreibbarkeit** an einem
-einzigen Lauf. Beide Male ist die billige Messung die, die niemand macht, weil das Urteil
-schon feststeht.
-
----
-
-## W17 — Erfolg ohne Arbeit: ein positives Urteil über nichts
-
-**Am 2026-08-20 hat dieselbe Form dreimal zugeschlagen, in drei ganz verschiedenen
-Werkzeugen:**
-
-| | tat | und meldete |
-|---|---|---|
-| `isabelle build -D .` | wählte **nichts** aus | *„Finished"* — grün |
-| `zaehle-b3.py` | druckte `! ABBRUCH` | Rücklaufwert **0** |
-| `pruefe-todo.py` | ein Muster traf **nichts** mehr | *„Kennzahlentafel deckt sich mit dem Gegenstand"* |
-
-**Das ist nicht ein falsches Urteil, sondern ein *positives Urteil über nichts*** — und das
-ist die gefährlichere Hälfte, weil es wie ein Ergebnis aussieht. Ein falsches Urteil hat einen
-Gegenstand und irrt sich über ihn; dieses hier hat keinen und sagt trotzdem *ja*.
-
-> **Die Regel:** neben dem Urteil steht die **Arbeitsmenge**. Wie viele Dateien, wie viele
-> Stellen, wie viele Treffer. *Ohne sie ist ein grüner Lauf von einem leeren nicht zu
-> unterscheiden.*
-
-**Die Verwandtschaft ist ausdrücklich W11** — *jede Quote nennt ihr N* — nur eine Ebene höher:
-W11 spricht über das Verhältnis in einem Bericht, W17 über das Urteil eines Werkzeugs. **Und
-über beide steht dieselbe Ursache: ein Nenner, den niemand ansieht.**
-
-**Der Griff.** `pruefe-waechter.py` führt die Arbeitsmenge seit dem 2026-08-20 als **vierte
-Forderung** neben Frist, Sprechprobe und rotem Abbruch. Der Lauf mit `--lauf` liest die
-wirkliche Ausgabe und meldet jeden Wächter, der ein Urteil ohne Zahl abgibt. *Wo eine Frist
-steht, fehlt die Zahl daneben oft noch.*
-
-### Und eine Ebene darüber: die AUSNAHMELISTE, deren Grund niemand nachrechnet
-
-**Derselbe Tag, vierter Fall — und der teuerste.** `pruefe-waechter.py` führte fünf
-Instrumente als *„zu schwer für einen Lauf hier"*, jedes mit einem Grund daneben. **Vier der
-fünf Gründe waren falsch:**
-
-| | stand da | gemessen |
-|---|---|---:|
-| `pruefe-emission.sh` | *„46 Einheiten … ~25 min"* | **13,7 s** |
-| `pruefe-luecken.py` | *„baut dreizehnmal neu"* | 10,7 s (27,8 s CPU) |
-| `pruefe-beweise.sh` | *„zwölf Isabelle-Theorien"* | 8,1 s — es sind dreizehn |
-| `pruefe-notation.py` | *„vierzehn `cargo run`"* | **0,56 s, und kein einziges `cargo run`** |
-
-Die 25 Minuten stammen vom **Vormittag desselben Tages**, als derselbe Wächter an `baum41`
-HING — einundzwanzig Läufe nebeneinander. Die Frist hat den Hänger beseitigt; die Zahl, die
-ihn beschrieb, blieb stehen — **als Begründung dafür, ihn nicht mehr zu messen.**
-
-> **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl, die
-> niemand nachrechnet — nur teurer.** Eine falsche Zahl *verfälscht* eine Messung. Eine
-> falsche Ausnahme **ordnet sie gar nicht erst an**, und danach gibt es nichts mehr, das
-> auffallen könnte.
-
-**Die Regel:** eine Ausnahme von der Messung trägt ihren Grund **als Messung**, mit Datum und
-Ort — und wo der Grund eine Zeit ist, steht die Zeit daneben, die der Lauf selbst gemessen
-hat. *Sonst überlebt die Ausnahme genau das Ereignis, das sie gerechtfertigt hat.*
-
-**Der Griff.** `--lauf` druckt seit dem 2026-08-20 die Wanduhrzeit **je Wächter** und die
-Summe darunter (heute: 19 von 25 in 4,4 s). Die vier verbliebenen Ausnahmen stehen mit dem
-Grund da, der wirklich trägt, und keiner davon ist die Zeit: der **Ort** (Speicherspitze über
-der lokalen Grenze; Rechenlast gehört auf den Server) oder die **Wirkung** (es schreibt in
-Quellen, zwei Läufe zerstören einander).
-
----
-
-## W18 — Ein Register, das seine eigene Ausgabe enthält, hat einen Fixpunkt statt einer Messung
-
-**Der Fall, in Reinform, und er ist mein eigener.** `pruefe-zahlen.py` hält Kennzahlen gegen
-den Befehl, der sie ableitet. Am Tag seiner Entstehung habe ich die zwei Zahlen, die es **über
-sich selbst** druckt — bewachte und unbewachte Kennzahlen — in sein eigenes Register
-eingetragen.
-
-Der Eintrag ruft das Werkzeug, das Werkzeug prüft den Eintrag, der Eintrag ruft das Werkzeug.
-Nach zwei Minuten abgebrochen.
-
-**Und der Rücklauf ist nicht das Schlimme daran.** Ein Fixpunkt, der **terminiert**, wäre
-gefährlicher:
-
-> Die Zahl stimmt dann **immer** — und zwar unabhängig davon, ob irgendetwas gemessen wurde.
-
-*Das ist die Ausweg-Zusicherung aus **R15** in ihrer reinsten Form — „erfüllt, weil nichts
-geschah" — eine Ebene über dem Werkzeug.* W10 hat dieselbe Bewegung eine Ebene tiefer gefunden
-(im Pass); hier steht sie im **Register**, also in der Instanz, die über alle anderen Zahlen
-urteilt.
-
-**Die Regel ist mechanisch prüfbar und billig, und darum steht sie als Code und nicht als
-Satz:**
-
-> **Kein Registereintrag darf einen Befehl nennen, der das registerführende Werkzeug selbst
-> ist.**
-
-`pruefe-zahlen.py` prüft das vor jedem Lauf und trägt dafür seine eigene Sprechprobe. **Die
-zwei eigenen Zahlen tragen ihr Datum**, wie jede Zahl aus einem Lauf — ein Register braucht
-einen Gegenstand außerhalb seiner selbst.
-
-### Und der Riegel war EINEN SCHRITT tief — nachgezogen am Nachmittag desselben Tages
-
-Der Riegel suchte den **Namen** des Werkzeugs im Befehl eines Eintrags. Das fängt den Ring der
-Länge eins und **keinen längeren** — und einer der Länge zwei lag unmittelbar bereit:
-
-> `pruefe-zahlen.py` → `./instrumente/pruefe-waechter.py --lauf` → *jeder leichte Wächter* → `pruefe-zahlen.py`
-
-**Ein einziger Registereintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel
-hätte ihn durchgelassen: im Befehl steht `pruefe-waechter.py` und nicht `pruefe-zahlen.py`.
-
-*Der Fehler ist derselbe wie im Werkzeug, das die Regel gefunden hat:* **eine Prüfung, die aus
-dem naheliegenden Grund gebaut wurde** — hier: „der Zyklus steht im Text" — **deckt nicht, was
-der eigentliche Grund verlangt** — „der Zyklus steht im Prozessbaum".
-
-**Die Fassung, die in jeder Tiefe greift, hängt nicht am Text, sondern an den Kindprozessen:**
-eine Marke in der Umgebung, die an jeden Registerbefehl vererbt wird. *Wer sie beim Start
-vorfindet, ist von sich selbst gerufen worden.* Sie wird an einem echten Kindprozess gemessen
-und nicht behauptet.
-
-> **Die Regel in ihrer allgemeinen Form:** ein Riegel gegen einen Kreis muss an der Kante
-> hängen, die den Kreis WIRKLICH schließt. *Ein Namensvergleich schließt einen Kreis über
-> Namen; ein Prozess schließt einen Kreis über Prozesse.*
-
-**Und der Nebenbefund ist der beste Beleg für die Messschicht selbst:** der Fehler fiel
-**innerhalb einer Minute** auf, weil seit demselben Morgen überall eine Frist steht. *Die
-Reparatur der Messschicht hat an ihrem ersten Tag einen Fehler gefangen, den sie erst
-ermöglicht hat.*
-
----
-
-## W19 — Ein Urteil, das sich als Messung liest, bekommt die Autorität der Messung
-
-**`N_ritus` ist der Fall.** K100.1 buchte als Tor: *„`zaehle-bereichspflichten.py`
-unterscheidet die drei Fälle."* **Das Werkzeug tat es nicht** — die Unterscheidung stand in
-`PFLICHTEN.md`, also im Urteil. Die Zahl las sich, als käme sie aus einem Lauf.
-
-Die Auflösung hat zwei Teile, und der zweite ist der wichtigere:
-
-1. **Die Hälfte bauen, die ohne Urteil geht.** `N_folgenlos` — ein `narrow`, dessen Entfernung
-   nichts ändert, ist Zierde. Zweiebenenprobe (W8), heute **0**.
-2. **Sie ANDERS benennen.** Denn `N_ritus` ist über die *Erreichbarkeit* des `else`-Zweigs
-   definiert, und eine unerreichbare Stelle trägt sehr wohl eine Pflicht — M1 sieht die
-   Schranke nicht. **Zwei verschiedene Fragen, und bis dahin hießen beide gleich.**
-
-> **Beide unter einem Namen zu führen hätte die Bewertung mit der Autorität der Messung
-> ausgestattet.** *Ein Name ist kein Etikett, er ist eine Zuständigkeitserklärung.*
-
-**Und dieselbe Trennung wird eine Stufe weiter noch einmal gebraucht.** Das
-Nutzbarkeitsinstrument aus Stufe 2 (`gabbro zeremonie`) misst **ableitbar** gegen **tragend**
-— und das ist derselbe Schnitt: was aus einer Deklaration abzulesen ist, gegen das, was
-nirgends sonst steht. *Wer ihn dort nicht zieht, misst die Menge aller Klauseln und drängt
-gegen die Zusage der Sprache.*
-
----
-
-## W20 — Eine Kennzahl, die zum Ziel werden kann, trägt ihre Kalibrierung **im Werkzeug**
-
-**W19 sagt, woran man den Fehler erkennt; W20 sagt, was man dagegen baut.**
-
-Ein Nutzbarkeitsmaß wird sofort zum Optimierungsziel. Fällt es unkalibriert, fällt als erstes
-das Billigste — und das Billigste ist hier `effects`, `costs`, die Paarungsklauseln. *Genau
-der Gegenstand der Sprache.* Eine Kalibrierung in einer Fußnote schützt davor nicht: sie wird
-nicht mitgelesen, wenn die Zahl zitiert wird.
-
-**Die Bauform: zwei Achsen, und sie stehen nebeneinander in derselben Ausgabe.**
-
-```text
-ACHSE 1, gemessen    steht diese Tatsache ein ZWEITES Mal in dieser Einheit?
-                     -> ableitbar / redundant / tragend
-ACHSE 2, erklärt     darf die Zahl sinken? -- je Regel ein Ja/Nein MIT GRUND
-```
-
-`gabbro zeremonie --tafel` druckt beide. Ein Waechter liest die Tafel aus dem Werkzeug statt
-sie nachzuschreiben (W7) und **verlangt je Regel einen Grund**: ein Nein ohne Satz wäre ein
-Machtwort, ein Ja ohne Satz eine Einladung.
-
-> **Erst die Trennung erlaubt den Fall, auf den es ankommt: `ableitbar` UND „darf nicht
-> sinken".** `A4` ist so ein Fall — eine Wirkungszeile, die ein Gerufener ohnehin erklärt.
-> Sie *ist* ableitbar; sie einfach zu streichen machte `E008` rückgängig. Mit einer Achse
-> hätte man sich zwischen „nicht messen" und „zum Rückstand erklären" entscheiden müssen, und
-> beides wäre falsch gewesen.
-
-**Und die Sprechprobe wandert von den Mustern auf die Regeln.** Der Korpus meldete beim ersten
-Lauf **null** redundante Stellen — ein sauberer Korpus und ein blindes Werkzeug sehen von
-außen gleich aus (W17). Deshalb: *eine Regel der Tafel, die nirgends einen Treffer hat, ist
-selbst ein Befund*, und was der Korpus nicht auslöst, löst eine absichtlich schlecht
-geschriebene Probe aus.
----
-
-## W21 — Ein Wächter, dessen Gegenstand woanders liegt, misst den Rechner
-
-**Der Fall.** Am 2026-08-20 war `./instrumente/pruefe-waechter.py --lauf` auf dem Arbeitsrechner **grün**
-und auf `ki-pc-fisch-101` **rot** — bei byteidentischen Quellen. Der rote Posten war
-`zaehle-narrow.py` mit Rücklaufwert 2, danebengestellt als *„!! OHNE ARBEITSMENGE"*.
-
-**Nicht der Code fehlte, sondern der Gegenstand.** `zaehle-narrow.py` misst den zweiten Korpus
-(`~/Dokumente/SEL4Lake/SEL4Lake`), `zaehle-b3.py` die Caprock-Messbasis — **und beide liegen
-nur auf dem Arbeitsrechner.** Auf dem Rechner, auf den `CLAUDE.md` die ganze Rechenlast legt,
-gibt es sie nicht.
-
-> **Beide Richtungen sind falsch, und das ist der Grund, warum es eine eigene Klasse ist:**
-> ein fehlender Gegenstand kann als **rot ohne Fehler** erscheinen (der Ruf schlägt fehl) oder
-> als **grün ohne Messung** (das Werkzeug zählt null und meldet „keine Befunde"). *Die zweite
-> Richtung ist W17; die erste ist ihr Spiegelbild und genauso wertlos.*
-
-**Und die Sippe reicht bis in den Arbeitsbaum.** `../caprock-messbasis` ist ein **relativer**
-Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum statt neben die Hauptauscheckung
-— dort ist er ebenfalls weg, auf demselben Rechner. `zaehle-b3.py` lief darüber bis in eine
-`ZeroDivisionError` und meldete Rücklaufwert 1, also *einen Befund*.
-
-**Die Regel:** ein Wächter, dessen Gegenstand außerhalb des Baums liegt, **deklariert den Pfad
-und was dort steht**. Fehlt er, ist das Ergebnis weder rot noch grün, sondern **nicht
-gemessen** — mit seiner Zahl neben dem Urteil.
-
-    FREMDER_KORPUS = {
-        "zaehle-b3.py":     ("../caprock-messbasis", "die Caprock-Messbasis"),
-        "zaehle-narrow.py": ("~/Dokumente/SEL4Lake/SEL4Lake", "der zweite Korpus"),
-    }
-
-*Das ist kein Freibrief.* Der Unterschied zu einem stillen Überspringen ist genau die Zahl:
-**„18 von 19 gelaufenen nennen ihre Arbeitsmenge, 1 weiterer nicht gemessen, weil sein fremder
-Korpus fehlt"** — ein Loch, das sich zählen lässt, ist ein Posten; eines, das grün aussieht,
-ist keiner.
-
-**Und der Nebenbefund gehört zur Messschicht:** dass die Zählung über den zweiten Korpus
-(*„wie viele der 637 `atomic_*()`-Stellen sind Zähler ohne obere Schranke?"*) seit Tagen
-offensteht, hat **keinen** fachlichen Grund. Sie ist **ortsgebunden**, und der erste Schritt
-ist eine Übertragung und kein Werkzeug. *Das stand nirgends, weil niemand den Ort aufgeschrieben
-hatte.*
-
-### Der zweite Beleg, 2026-08-31 — und diesmal ließ sich der Gegenstand MITBRINGEN
-
-`mutiere-pruefer.py --anker` war hier grün und auf `ki-pc-fisch-101` rot, bei byteidentischen
-Quellen. Der übertragene Baum ist **kein git-Repository**; `git status` endet dort mit **128
-und leerer Ausgabe**, `baumstand()` meldet zu Recht `unbekannt` — und die Sprechprobe
-verlangte vom **umgebenden** Baum `sauber` oder `schmutzig`. Sie fiel, mit dem schärfsten
-Satz, den ein Lauf über sich selbst machen kann: **`SPRECHPROBE GESCHEITERT`.** Der Satz war
-falsch; das Werkzeug war in Ordnung, der Gegenstand fehlte.
-
-**Ein fremder Baum ließ sich nicht mitbringen — ein git-Repository schon.** `git init`, eine
-Datei, ein Commit, und alle drei Zustände sind in der eigenen Wegwerf-Ablage erreichbar, auf
-jedem Rechner. Der umgebende Baum steht seitdem als **Angabe** daneben und trägt nichts zum
-Urteil bei.
-
-> **Die Regel bekommt damit eine Vorstufe:** *bevor der Gegenstand deklariert wird, wird
-> gefragt, ob er sich mitbringen lässt.* Ein Register ist die Antwort für das, was
-> ortsgebunden ist; für alles andere ist es ein Umweg, der die Ortsbindung festschreibt.
-
-Was der Umgebung bleibt, ist `git` selbst — und fehlt das, fallen alle drei Zustände auf
-`unbekannt` zusammen. **Eine Probe mit einem einzigen erreichbaren Ausgang misst nichts**;
-das ist keine gefallene Probe, sondern eine fehlende Vorbedingung, und sie endet mit `2`.
-
-**Die Sippe war zu dritt, und das teuerste Glied war nicht das gemeldete.**
-`pruefe-luecken.py` stellte dieselbe Frage in einer eigenen Kopie und las **nur `stdout`** —
-leer heißt sauber. Also lief er weiter und **schrieb in Quellen**, ohne jeden Nachweis, dass
-der Baum sauber ist. Er steht in `SCHWER` mit dem Grund *„baut dreizehnmal neu — gehört auf
-den Server"*: **der Riegel gegen die Mischung lief genau auf dem Rechner leer, für den er
-geschrieben wurde.** `erzeuge-mutationen.py` las die 128 als *„crates/ ist nicht sauber"* —
-die Absage war sicher, der **Grund** falsch, und ein falscher Grund schickt den Leser einen
-sauberen Baum reparieren.
-
-*Geheilt mit einem Register statt drei Kopien (W7); gegen die vierte Kopie steht eine
-statische Prüfung: **wer `git` selbst aufruft, sieht auf den Rücklaufwert.** Eine leere
-Ausgabe aus einem Befehl, der GESCHEITERT ist, ist keine Antwort.*
-
-## W22 — Eine **falsche Ablehnung** meldet niemand, und darum misst man sie an der Asymmetrie des Korpus
-
-Die Fehlerklassen dieses Ordners gingen fast alle in eine Richtung: eine Regel schwieg, eine
-Notiz behauptete, eine Klausel hatte keinen Leser. **Die Gegenrichtung — der Prüfer lehnt ein
-KORREKTES Programm ab — ist bis zum 2026-08-24 in 492 Commits genau nullmal aufgetreten**, und
-seither dreimal in zwei Tagen:
-
-```text
-2026-08-24  U005   der Rang loeste im leeren Modulpfad nicht auf -> `rank 0`, nirgends in der Quelle
-2026-08-25  M2     auf BEIDEN Wegen verbraucht, gemeldet als „auf keinem"
-2026-08-25  M108   ein `pure`-Ruf toetete die Verengung; 3 von 4 Faellen falsch
-```
-
-**Zu streng zu sein ist harmlos für die Zusage und teuer für die Benutzbarkeit** — und es ist
-die Fehlerart, die niemand meldet, *weil der Programmierer sein Programm umschreibt statt den
-Prüfer zu verdächtigen.* Genau das ist an der Halde passiert: die `narrow`-Fassung wurde durch
-ein `if` ersetzt, und der Fehler wäre in die Sprachbeschreibung eingegangen.
-
-**Die Ursache ist strukturell und messbar** (2026-08-25):
-
-```text
-Giftproben (muessen FALLEN)      275 Dateien, 6937 Zeilen
-Beispiele  (muessen DURCHGEHEN)   50 Dateien, 4564 Zeilen
-                                  --------------------------
-                                  5,5 zu 1
-```
+## 1. Running the instruments
 
 ```bash
-# W7: die Zahlen kommen von hier, nicht aus dem Gedaechtnis.
-ls beispiele/gift/*.gab | wc -l ; cat beispiele/gift/*.gab | wc -l
-ls beispiele/*.gab      | wc -l ; cat beispiele/*.gab      | wc -l
-# und die Historie:
-git log --format=%h | while read h; do git log -1 --format=%B $h \
-  | grep -qiE 'falsche Ablehnung|KORREKTES Programm|falsche Absage' && echo $h; done
+./instrumente/abnahme.py            # every guardian, one verdict each (the acceptance run)
+./instrumente/abnahme.py --voll     # additionally the heavy ones: the mutation run over the whole checker, the Lean/Isabelle proof guardians
+./instrumente/pruefe-waechter.py [--lauf]   # are the guardians themselves fit instruments?
 ```
 
-*Der Ordner misst „fällt es" fünfeinhalbmal so oft wie „geht es durch".* Eine Giftprobe kann
-eine falsche Ablehnung **prinzipiell nicht** finden — sie prüft, dass etwas fällt.
+**Exit codes, the same in every instrument** (`messung/RUECKLAUFWERTE.md`): `0` measured, no
+finding · `1` measured, and something stands open · `2` **nothing was measured** (a missing
+precondition, a failed speech test, an empty population, a timeout, a crash). The line between
+1 and 2 answers one question — *who has to change, the tree or the set-up?* `abnahme.py` prints
+five verdicts: green · **ROT** (everything measured, something open) · **TEILMESSUNG** (it left
+before its last measurement and says where: something was measured, not everything, and the
+finding count beside it is a lower bound) · **ABBRUCH** (nothing measured) · **NICHT FAHRBAR**
+(its subject is not here, e.g. a foreign corpus). It reads the cast from the directory
+(`pruefe-*`, `mutiere-*`, `zaehle-*`), not from a list in the script, so a new guardian is in the
+acceptance run on the day it appears; what stays outside is named with its reason in
+`pruefe-waechter.py` (`OHNE_URTEIL`, `SCHWER`, `FREMDER_KORPUS`).
 
-**Was daraus folgt, in dieser Reihenfolge:**
+**After the mutation run the next acceptance run is red, and that is not a finding.** The
+mutation run rewrites checker sources and restores them byte for byte — with a new mtime, so
+every source is younger than the built binary and `pruefe-saetze.py` aborts with *binary is
+OLDER than N source files*. The cure is a build (`cargo build`), never a `touch` on the binary:
+forging the timestamp hides exactly the mixture the guard stands against.
 
-1. **Ziel 3 bekommt eine zweite Achse.** `gabbro zeremonie` misst, *wie viel man schreiben
-   muss*; das sagt nichts darüber, *wie oft Richtiges abgelehnt wird*. **Eine falsche
-   Ablehnung ist Zeremonie in ihrer teuersten Form:** sie kostet nicht eine Zeile, sondern
-   einen Umbau — und hinterlässt eine Sprachbeschreibung, die eine Umgehung als Idiom führt.
-2. **Der Positivkorpus ist die einzige Sonde dieser Klasse.** Jede Reparatur, die eine falsche
-   Ablehnung behebt, bringt ihre Probe als *korrektes* Programm mit — nicht als Gift. Die drei
-   oben tun das.
-3. **Wer eine Regel umschreibt, statt sie zu befragen, hat den Befund verworfen.** Der Reflex,
-   ein abgelehntes Programm anders zu formulieren, ist genau der Moment, in dem diese Klasse
-   verschwindet. *Vor dem Umschreiben steht die Frage, warum die Regel greift.*
+**Every instrument carries five requirements**, held statically by `pruefe-waechter.py` (the
+fifth only by `--lauf`): a **deadline** on everything it executes (a hang looks like "still
+running", not like a finding) · a **speech test** in both directions (what should fall falls,
+what should not does not: *a guardian that cannot go red measures nothing*) · **red on abort**
+(`set -e` with `timeout` is the trap: the deadline ended the guardian silently with exit 0) ·
+the **work quantity** beside the verdict (W17) · a **pinned locale** (`LC_ALL=C`: under
+`de_DE.UTF-8` the linker says *Mehrfachdefinition von*, a tool searching for the English
+words reported a failure that did not exist).
 
-> **Und die Zahl 0-von-492 ist selbst ein Befund über das Messwerkzeug, nicht über den
-> Prüfer.** Drei Fälle an zwei Tagen sind nicht plötzlich entstanden; sie sind sichtbar
-> geworden, als jemand anfing, *richtige* Programme zu schreiben und laufen zu lassen.
+**Heavy runs — one at a time, with `free -g` beside them.** `cargo build` and `cargo test
+--no-fail-fast`, the whole mutation run, `pruefe-emission.sh`, `pruefe-luecken.py`, Isabelle
+and Lean builds; never two in one tree (`cargo test` rebuilds the model with `lake` and
+replaces the `.olean` files the running `lean` processes read — measured as 52 phantom Lean
+errors). An agent gets its own working directory and its own scratch directory.
 
 ---
 
-## W25 — **Eine Zahl belegt ihren Nenner, nicht ihre Beschriftung**
+## 2. The working rules
 
-**Gefunden am 2026-08-31, und der Befund ist, wie lange er überlebt hat: vier Nachrichten,
-weil die Zahl stimmte.**
+### W1 — A coverage number counts evidence, not attempts
+*Damage (2026-08-14):* five new rules, five new mutations, summary `37 of 37` — formed from
+`len(MUTATIONEN)`, while an older mutation had lost its anchor and did not run at all. **A dead
+mutation counted as coverage**, devaluing every other number, because it is the number the
+others are checked with.
+*Rule:* every coverage, completeness or progress number is formed from verified evidence, never
+from attempts, entries or lines; a dropout must **lower** the number. *Handle:*
+`mutiere-pruefer.py` counts `caught` out of `valid`; a lost anchor appears as `ANKER FEHLT` and
+falls out of the denominator, not into the numerator.
 
-`pruefe-grammatiktafel.py` meldete `UNGEDECKT = 4` und schrieb drei der vier Wörter den Satz
-*„der Erzeuger sagt ab, der Pruefer nicht"* daneben. **Die Zahl war richtig** — `chain`,
-`queue`, `threads` und `state` sind wirklich ungedeckt. **Der Satz war falsch:** drei davon
-sagt der Erzeuger gar nicht ab. Nachgemessen, je kleinstes Programm: `0 Fehler, 0 C001`.
+### W2 — The zero promise: the checker is the instrument for the numbers it checks
+*Damage:* `costs` lines for a new example were first guessed; then pushed down to `1 ops` so the
+checker named the true numbers (`4`, `2`, `2`). Right procedure, manual handle — and manual
+work on a number is where numbers start running parallel to the truth.
+*Rule:* where a pass **checks** a declared number it must also be able to **name** it; a promise
+is copied down, not guessed. *Handle:* `gabbro costs file.gab` prints, per function, the
+computed body figure beside the promised one, and per `locks` block the hold time beside `held`.
+The `slack` column is a difference, not a verdict (for `held` it is almost always wrong, because
+the latency statement computes with the promise).
 
-Die Ursache steht in einer Zeile:
+### W3 — No construct without measured need
+*Paid twice:* `abi { … }` was stopped before it was written; `locks ordered` died at the paper
+test with **zero** test cases — in the whole tree there was no repeated acquisition of one lock
+class. *Rule:* a construct needs **counted** sites in real code before the first grammar line —
+not plausible, not remembered ones. The test must be allowed to kill its own candidate (that
+paper test found two gaps on no list instead).
 
-```python
-if t in absage:
-    woher.append("der Erzeuger sagt ab, der Pruefer nicht")
-```
+### W4 — A loud overstatement is cheaper than a silent exception
+*Case:* `locks shared` stood, but the witness at the call boundary needed a call graph that did
+not exist; without a rule the boundary was permeable (the callee writes exclusively, the caller
+holds shared). *Rule:* where a load-bearing rule has a hole that can only be closed later, the
+coarse, too-strict version goes in front — not nothing — and is **named** as interim. Somebody
+goes looking after a loud overstatement; nobody goes looking after a silent exception, because
+it looks like a green. *Handle:* `H005` — a shared block calls no function with `requires
+Held(…)`, full stop.
 
-`absage` ist die Menge der Wörter, **die in einem Absagetext vorkommen** — nicht die Menge der
-Formen, deren Absage jemand gemessen hat. `queue` steht in fremden Absagetexten, also bekam es
-die Zuschreibung. **Der Wächter hat eine Erwähnung für eine Messung genommen.**
+### W5 — An interim rule carries three parts, otherwise it becomes permanent
+A too-strict rule without an expiry note is taken for the right one after three months. The
+refusal itself names (1) the rule — what it forbids, (2) the price — what it forbids too much,
+concretely, (3) the replacement — which check will replace it and what that check must do. In
+the refusal and not in a ticket: the refusal is read by the person paying the price, who is the
+one who can report it. *Handle:* `H005`.
 
-> **Ein falscher Satz neben einer richtigen Zahl ist die haltbarste Form eines Irrtums, weil
-> jede Prüfung, die auf die Zahl zeigt, ihn bestätigt.**
+### W6 — Omitting a runtime check is justified by M1 alone, never by an invariant
+*Damage (booked one level up, `5904cae`):* smoothing a claim about the tree instead of surveying
+it; one level down it would be striking a range check from the generated C because *the proof
+says it cannot go negative*. M1 hangs on the **type** (`u32 in 0 ..= NSLOTS`) and is recomputed
+per program; an invariant hangs on a **template** and lives in the trust surface once. A
+`refcount : nat` proved `oldrc >= 1` from the invariant is exactly one net; the typed range is
+a second one that holds without it. *Rule, at every emission decision that cites a proof:* **the
+cited fact must be derivable from M1 alone, otherwise the check stays in the C.** One line in
+the emission pass instead of one per construct.
 
-*Das ist der Unterschied zu W16: dort misst der Wächter etwas anderes als seinen Gegenstand,
-und die ZAHL ist falsch. Hier stimmt die Zahl, und die Beschriftung trägt eine zweite
-Behauptung, die niemand gemessen hat.* Die Folge war keine falsche Buchung, sondern eine
-falsche **Klasse**: drei Korpuslücken sahen vier Tage lang wie eine Sprachentscheidung aus,
-und der Ordner hätte darüber entschieden.
+### W7 — A number without a source list does not belong in a document
+*Paid three times in one day:* 74 proof obligations (list lost), 19 hanging obligations in
+eleven classes (attribution lost for 6 of 11), `delete_leaf` 3.6–6 : 1 (lost; recounted 1.75 :
+1). The damage is not vagueness but **irrefutability**: a number with no attribution cannot be
+checked by anyone, is quoted, carries decisions and is immune to correction.
+*Rule:* a reported number carries the list it came from — per item `file:line` or a re-runnable
+command; if it does not fit in the document it goes in a file beside it. *A number with a list
+is allowed to be wrong: it is checkably wrong.*
+*Addition (2026-08-16):* the sweep reads **table cells** as claims, not only sentences — the
+89 closures sat in a table cell and survived the first sweep.
+*The number pair, measured on one tree:* **67** `dyn` sites (search path stated) reproduced
+**exactly**; **89** closures (path stated nowhere) reproduced as **64**, off by 28 % — and
+nobody would have noticed, because it looked plausible. *Handles:* `pruefe-luecken.py`,
+`zaehle-bereichspflichten.py`, `gabbro costs`, `gabbro k-condition` print their sites;
+`pruefe-zahlen.py` is the register (§3).
 
-**Die Vorkehrung:** eine Beschriftung, die einen Grund nennt, braucht dieselbe Messung wie
-die Zahl daneben. Wo sie abgeleitet ist, sagt sie es (*„enthält das Wort"*), und wo sie
-gemessen ist, gibt es einen Lauf, der sie belegt. **Eine abgeleitete Beschriftung, die wie
-eine gemessene klingt, ist teurer als gar keine.**
+### W8 — A compositional check is probed over two levels, not one
+`E008` includes the effects of callees. The obvious probe (caller declares `writes`, callee
+declares `writes`) is already green if the pass sees only the first level. A probe for a
+transitive property puts an **intermediate function that does not itself have the property**
+between them (`masks IRQ` only at the bottom, `pure` in the middle and at the top): if the pass
+falls back to one level the effect vanishes and the probe tips. Every analysis that says
+"includes …" needs it (the pairing pass: a `publishes`/`awaits` pairing across an intermediate
+function).
 
-## W26 — **Eine abgeschnittene Grundgesamtheit sieht aus wie ein Urteil über alles**
+### W9 — If an analysis coarsens, the direction is checked, not the convenience
+`E008` computes over **sets**, not paths — right, because here the coarseness errs in the safe
+direction (more effects than there are, never fewer). The same coarseness is inadmissible for
+`diverges`, which does *not* travel upward (it holds only if a callee diverges on **every**
+path): over sets it would force `diverges` onto functions that return — the unsafe direction.
+Before an analysis coarsens, ask per property which way the coarse version errs, and write the
+answer in the pass comment.
 
-**Gemessen am 2026-08-31, an einem Fall mit Datum und einem Preis von zwei Wochen.**
+### W10 — The third state: not refused does not mean confirmed
+`E008` rightly does not refuse from a lower bound (R16), but the first version then let the
+function pass **silently**: a `pure` promise behind a cycle was green — the escape-hatch
+assurance of R15 one level down. Where an analysis may not refuse out of incompleteness it may
+also not confirm; the honest third state is **undecidable**, with a code of its own, visible.
+*Handle:* `E009` names the reason and says the promise is *not checked* here. Two of its first
+three firings were gaps in the graph, not in the program.
 
-`pruefe-emission.sh` starb an `F06`s `N043` in der **vierten von zehn Stufen**, mit
-`exit 1`. Die Stufen 9 und 10 liefen nie, und **keine Zeile sagte das.** Hinter dem Schnitt
-standen zwei Befunde, die zwei Wochen niemand gesehen hat: sechs Dateien, deren erzeugtes C
-nicht übersetzt, und eine Marke, die sieben zu niedrig stand.
+### W11 — Every gate ratio names its N, and a jump in N is itself a test case
+*Near miss:* sharpening *excerpt / unit* with a search for `…` in raw text threw out five of six
+fragments (the `…` sat in comments) and gate P2 would have read `1 of 1 without error (100 %)`
+— also 100 %. A filter that shrinks the population masquerades as success. The right report is
+*"N fell from 6 to 1"*. The flip side of W1: when the denominator shrinks, that must be louder
+than the rising numerator. *Confirmed one day later (B3, 2026-08-16):* a broken brace in a copy
+of the subject made the reported number fall silently from 26 to 24 (two bodies dropped out of
+the inventory); only the abort counter showed it.
+*The number pair for R14:* the spread between the **discarded** rule versions of the B3 tool
+was **factor 130** (0.03 % — saw only bodies with a loop; 4.36 % — read `for x in segs` as a
+non-domain; 0.74 % — missed three chain kinds; 0.95 % reported); the distance between tool and
+truth after the three R14 probes was **factor 1**. A number from this class of tool without R14
+is not imprecise, it is worthless — three of four versions were wrong and none looked wrong.
 
-> **W17 ist die leere Grundgesamtheit — ein grünes Urteil über nichts.** W26 ist die
-> ABGESCHNITTENE, und sie ist schlimmer: sie sieht aus wie ein Urteil über **alles**.
+### W12 — A filled map is no evidence of a complete map
+The domain bound for `mappings of` was there and demonstrated — and did not bite, because type
+resolution knew formats, devices and tables and **no walks**: `ptr<normal, r> Seitenabstieg`
+was `Unbekannt`, which ran along as an empty entry; half an hour was lost searching at the wrong
+end. *A resolution with a catch-all branch claims a completeness it does not have.* *Rule:* at
+every resolution site match **exhaustively over the declaration kinds, without a `_` branch**,
+so a new kind is a compile error at every chain that does not handle it. *Handle:*
+`Traegerart::ALLE` (`umgebung.rs`). `Typ::Unbekannt` stays admissible as a *result*; what is no
+longer possible is being unknown because nobody looked.
 
-**Der Rücklaufwert kann es nicht sagen, und das ist der Kern.** Die drei Klassen des Ordners
-sind `0` gemessen · `1` Befund · `2` nichts gemessen. Ein `1` **mitten** im Lauf heißt
-beides zugleich: *ein Befund hier, ein Abbruch für alles dahinter.* Die drei Klassen kennen
-„nichts gemessen"; sie kennen **„die Hälfte gemessen" nicht.**
+### W13 — Touching is not checking
+A pass that touches a construct does not check it: `schleifen.rs` read `ItemArt::Check` only to
+walk into `can_fail`; `kbedingung.rs` read `ops` as `!ops.is_empty()`, a boolean, never a set.
+Both counted as "read", and no promise of either ever fell. The field level had the distinction
+(`pruefe-klauseln.py`: ZUSAGE versus ABSENKUNG); the construct level lost it and reported 21 of
+23 read. *Rule:* a coverage question is not *"does a pass access it"* but **"has something ever
+fallen on it"** — is there a poison probe that makes it fall (7 of 19 had none)? Derive the new
+question anew instead of stretching the old measure.
 
-### Warum der leere Baum sie nicht findet
+### W14 — Your own coverage is systematically overestimated by an order of magnitude
+Expected → measured: field clauses without a reader **4 → 48**; German message texts **41 →
+151**; constructs without a probe **2 → 7**. Intuition about one's *own* coverage runs about a
+factor ten optimistic, because one counts what one remembers and one remembers what one built —
+what was never built leaves no memory, which is the class these tools measure. *Rule:* write the
+expectation down before measuring (R11) and compute with the factor: an estimate of four means
+"probably a few dozen". It does not license estimating high instead of measuring.
 
-Die Methode, die die früheren Löcher fand, war *jeder Wächter einmal über einem leeren Baum*.
-Sie fängt den Fall, dass die Vorbedingung **von Anfang an** fehlt. Sie fängt nicht, dass sie
-**mitten im Lauf** wegbricht. *Der leere Baum misst den Anfang; das hier misst die Mitte.*
+### W15 — A catch-all branch is a silent promise, not a reservation
+The checker had **78 `_ => {}` branches** over `StmtArt`; every pass descended by itself, every
+one ended in a catch-all and each forgot a different arm (`observes` invisible to six passes,
+`exchange` to five, `narrow … else` to two). A call *inside* an `observes` block did not reach
+the call graph, so two `E008` vanished. A catch-all reads like a reservation and acts like a
+promise, and nobody re-checks it when a statement kind is added. The difference between a
+catch-all and a refusal is the difference between a gap and an entry (`emit.rs` closes with
+`_ => weigere(…)` naming every form it cannot do: `C001`). *Rule:* whatever descends a tree
+matches exhaustively, without `_`, in **one** place (`lib.rs::unterbloecke`,
+`lib.rs::endet_immer`) that all others use — `endet_immer` had stood three times, each
+incomplete and different. `pruefe-abstieg.py` measures it (at file level it said 7 gaps, at
+function level 15 — W14, fourth time).
 
-### Die Fläche, und das Sieb darunter
+### W16 — A measuring tool without a descent step measures its own reading width
+*Three tools in one week looked plausible and measured something other than their subject:* the
+call envelope (did not descend into callees: a call in a `match` arm was invisible),
+`enthaelt_schritt` (nested bodies: a `locks { }` around a step silenced `O006`),
+`pruefe-gruende.py` (did not read past the cut-off line, and flagged `N011` — the one rule whose
+note names the carrying reason). *Pre-run question:* **is the subject recursive or multi-line —
+and does the tool descend?** With W8 this is a mechanical pre-check for every new tool. The
+worst case is not loss but **inversion**: when the cut-off material is the *exculpatory* one the
+tool finds the guilty reliably — a lost answer lacks something, an inverted one shows the
+opposite and looks complete. *The family reaches past tools:* `rsync -a` keeps mtimes and
+`cargo` decides freshness by mtime, so a transferred file with an old mtime is "current" and the
+build is a mixture of new source and old object (a test red on the server, green locally, with
+**byte-identical** sources). *The mirror image (2026-08-20):* the cure `-rlpgoD` (fresh mtimes)
+breaks `pruefe-beweise.sh`, which wants *evidence* that Isabelle really built and the second way
+to that evidence is a timestamp (*no build log younger than every source*): `isabelle build`
+decides freshness by **content**, `cargo` by **time**; two transfers, not two habits. The guard
+says in its refusal which of the two causes is the likelier.
 
-Gemessen über 50 Instrumente (`messung/RUECKLAUFWERTE.md`):
+### W17 — Success without work: a positive verdict about nothing
+*Three different tools the same day:* `isabelle build -D .` selected **nothing** and said
+*Finished*; `zaehle-b3.py` printed `! ABBRUCH` and exited 0; a `pruefe-todo.py` pattern hit
+nothing and said *table agrees with the subject*. A false verdict has a subject and errs about
+it; this one has none and says yes. *Rule:* **beside the verdict stands the work quantity** —
+files, sites, hits — otherwise a green run is indistinguishable from an empty one (kin of W11,
+one level up). `pruefe-waechter.py` demands it as its fourth requirement; `--lauf` prints the
+wall time per guardian and the sum (19 of 25 in 4.4 s on 2026-08-20).
+*One level higher: the exception list whose reason nobody recomputes.* `pruefe-waechter.py`
+excluded five instruments as "too heavy for one run", each with a reason; **four reasons were
+wrong** (`pruefe-emission.sh` "~25 min" — measured 13.7 s; `pruefe-notation.py` "fourteen
+`cargo run`" — 0.56 s and no `cargo run`; …). The 25 minutes came from the morning the guard hung
+on `baum41` — the deadline removed the hang and the number stayed as the reason never to measure
+it again. *Rule:* an exception from measurement carries its reason **as a measurement**, with
+date and place; where the reason is a time, the time the run itself measured stands beside it.
 
-```
-251  Ausgangsstellen hinter dem jeweils ersten          (die FLAECHE)
-248  beenden den Lauf wirklich  -- 3 sind `return 1` in einem HELFER
-104  enden mit 1 -- ERREICHBAR, OHNE DASS ETWAS KAPUTT IST
- 92  tragen Ausgabe auf BEIDEN Seiten                   (die GEFAHR)
-```
+### W18 — A register that contains its own output has a fixed point instead of a measurement
+`pruefe-zahlen.py` holds figures against the command that derives them. On its first day the two
+figures it prints *about itself* (guarded and unguarded figures) went into its own register: the
+entry calls the tool, the tool checks the entry — cancelled after two minutes. A fixed point
+that *terminates* would be worse: the number is then right always, independent of whether
+anything was measured (R15 above the tool). *Rule:* no register entry may name a command that is
+the register-keeping tool itself — checked by code. **The first guard was one step deep** (it
+looked for the tool's name in the command): `pruefe-zahlen.py → pruefe-waechter.py --lauf →
+every light guardian → pruefe-zahlen.py` closes a ring of length two. The version that works at
+any depth hangs on **child processes** (an environment mark inherited by every register command;
+whoever finds it at start was called by itself), measured on a real child. *A guard against a
+cycle must hang on the edge that really closes it: a name comparison closes a cycle over names;
+a process closes one over processes.*
 
-**Die zwei Zahlen beantworten zwei Fragen, und die zweite ist die, die zählt.** Zu einem
-Ausgang mit `2` kommt nur, wer etwas kaputt hat; zu einem mit `1` kommt man, **ohne dass
-irgendetwas kaputt ist** — ein Befund ist eine Aussage über den Baum, und der Baum darf einen
-Fehler haben. **Eine Fläche, die niemand verkleinern kann, hört auf, gelesen zu werden**;
-darum das Sieb.
+### W19 — A judgement that reads as a measurement acquires the authority of a measurement
+`N_ritus` was booked as a gate *"`zaehle-bereichspflichten.py` distinguishes the three cases"* —
+the tool did not; the distinction stood in `PFLICHTEN.txt`, in judgement, and the number read as
+coming from a run. Two parts of the resolution, the second more important: build the half that
+needs no judgement (`N_folgenlos`: a `narrow` whose removal changes nothing is decoration;
+two-level probe, W8; **0**), and **name it differently** — `N_ritus` is defined by the
+reachability of the `else` branch, and an unreachable site still carries a duty because M1 does
+not see the bound. *A name is not a label, it is a declaration of responsibility.* The same cut
+recurs in `gabbro ceremony`: *derivable* versus *load-bearing*.
 
-### Die Vorkehrung, und sie ist keine Heilung
+### W20 — A figure that can become a target carries its calibration in the tool
+A usability measure instantly becomes an optimisation target; uncalibrated, the cheapest thing
+falls first — `effects`, `costs`, the pairing clauses, the very subject of the language. A
+calibration in a footnote is not read when the number is quoted. Form: **two axes in the same
+output.** Axis 1, measured: does this fact stand a second time in the unit (derivable /
+redundant / load-bearing). Axis 2, declared: may the figure fall — per rule a yes/no **with a
+reason** (a no without a sentence is an edict, a yes without one an invitation). `gabbro ceremony
+--tafel` prints both; a guardian reads the table from the tool (W7). The separation allows the
+case that matters: *derivable and must not fall* (`A4`, an effect line a callee explains anyway —
+striking it would undo `E008`). The speech test moves from patterns to rules: a rule of the table
+with no hit anywhere is itself a finding, and what the corpus does not trigger a deliberately
+badly written probe does (the first run reported **zero** redundant sites — a clean corpus and a
+blind tool look alike).
 
-**Wer vor seinem Ende aussteigt, sagt WO.** `instrumente/abschnitt.py` und
-`instrumente/abschnitt.sh` tragen die Form, `abnahme.py` liest sie und druckt eine eigene
-Marke:
+### W21 — A guardian whose subject lies elsewhere measures the machine
+`pruefe-waechter.py --lauf` was green on the workstation and red on the build server, with
+byte-identical sources: `zaehle-narrow.py` measures the second corpus and `zaehle-b3.py` the
+Caprock base, and **both exist only on the workstation**. A missing subject appears either as
+**red without a finding** (the call fails) or as **green without a measurement** (the tool counts
+zero and says "no findings") — the second is W17, the first its mirror image, equally worthless.
+*Family reach into the working tree:* `../caprock-messbasis` is a *relative* path and in a git
+worktree it points beside the worktree, not beside the main checkout. *Rule:* a guardian whose
+subject lies outside the tree **declares the path and what stands there** (`FREMDER_KORPUS`); if
+it is missing the result is neither red nor green but **not measured**, with its number beside
+the verdict ("18 of 19 that ran name their work quantity, 1 more not measured: foreign corpus
+missing" — a hole that can be counted is an item). *Pre-step:* ask whether the subject can be
+**brought along** — `mutiere-pruefer.py --anker` was red on the server because the transferred
+tree is no git repository and its speech test demanded `clean`/`dirty` of the surrounding tree
+(`SPRECHPROBE GESCHEITERT`, a false sentence). The cure was a throwaway repository of its own
+(`git init`, one file, one commit: all three states reachable anywhere). A probe with a single
+reachable outcome measures nothing; that is a missing precondition and ends with `2`.
+*The family was three:* `pruefe-luecken.py` asked the same question in its own copy and read
+only `stdout` (empty means clean) — so it ran on and **wrote into sources** with no evidence that
+the tree was clean; `erzeuge-mutationen.py` read exit 128 as "crates/ is not clean" — right
+refusal, wrong reason, which sends the reader to repair a clean tree. *Whoever calls `git`
+looks at its return code: an empty output from a failed command is not an answer.*
 
-| | |
-|---|---|
-| `ABBRUCH` | nichts gemessen — zählt nicht zur Arbeitsmenge |
-| **`TEILMESSUNG`** | etwas, aber nicht alles — zählt mit, macht rot, **und die Zahl der Befunde daneben ist eine untere Schranke** |
-| `ROT` | alles gemessen, etwas gefunden |
+### W22 — A false refusal is reported by nobody, so it is measured by the corpus asymmetry
+The error classes of this folder nearly all ran one way (a rule stayed silent, a note claimed,
+a clause had no reader). The other direction — the checker **refuses a correct program** — had
+occurred exactly zero times in 492 commits and then three times in two days (`U005` rank not
+resolving in an empty module path; `M2` consumed on both paths reported as on none; `M108` a
+`pure` call killing a narrowing). Too strict is harmless to the promise and expensive for usability
+— and nobody reports it, *because the programmer rewrites the program instead of suspecting the
+checker*. The structural cause is measurable: on 2026-08-25 **275 poison files (6 937 lines)**
+against **50 examples (4 564 lines)** — 5.5 : 1; today (2026-10-17) `ls beispiele/gift/*.gab | wc
+-l` gives **898** against **170** in `beispiele/` (5.3 : 1 in files). A poison probe can in
+principle not find a false refusal; it checks that something falls. *Consequences, in order:*
+goal 3 gets a second axis (how often is correct code refused — ceremony in its most expensive
+form: not a line but a rebuild, leaving a language description that carries the workaround as an
+idiom); the **positive corpus is the only probe of this class** (every repair of a false
+refusal brings its probe as a *correct* program, not as a poison); whoever rewrites a refused
+program instead of questioning the rule has discarded the finding.
 
-> **Eine gedeckte Stelle schneidet den Lauf genauso — sie sagt es nur.** Gemessen ist, ob der
-> Schnitt ANGESAGT wird, nie, ob er richtig ist (W10). Eine Sprechprobe am Dateianfang SOLL
-> alles dahinter beenden; das ist ihr Zweck.
+### W23 — A measurement whose population contains its own probes measures itself
+*Case (2026-08-28):* to evidence the need for `V009` (how often does a plain read from an
+`atomic` gate a branch?) the first run reported **26 bindings, 0 plain** over `beispiele/` **and**
+`beispiele/gift/` summed; the second split the pots, and the **only** plain atomic read in the
+tree was the poison probe written for `V009`. W18 in the measurement direction: a fixed point
+is noticed because the number never moves; a self-measurement delivers a plausible, non-trivial
+number nobody can trace. *Pre-run question:* **does the set I count over contain files written for
+the subject of this count?** `beispiele/gift/` belongs in hit counts (*does the rule fall?*) and
+nowhere else; where both pots are needed they are reported separately. And a corrected
+measurement keeps the replaced number beside the right one — *a corrected measurement without the
+replaced number is a claim about a correction.*
 
-### Und das WO kommt aus der eigenen Ausgabe
+### W24 — Before a new word is considered: does the obvious form already parse?
+*Four cases, the fourth the most expensive (a wrong row answered the question for eleven days):*
+`transition` (*"a gap in the graph, not in the program"*), «B35» (same), the **`ops` call form**
+(2026-08-28; a proposed statement `insert v.slots[n] under p;` with a new word `under` — but
+`Verzeichnis::insert(v, i)` has always parsed: `parse.rs::erwarte_feldname` accepts any
+vocabulary word after `::`; the EBNF did not say so), and **«B17»** (a multi-place form for
+`transition` — but `transset = placeshift { "," placeshift }` stands in `SYNTAX.md` and is *used*
+in `beispiele/02-geraet.gab`; of seven probes exactly one fell at the parser, at one token; what
+really lacked was that `breaking I { … }` never resolved its name). Through the unchanged
+checker the real answers were `E009` (callee unknown to the graph) and `K003` — not a single
+`P00x`: the missing thing was the **callee**, not the call form. *Rule, asked before the
+weighing:* **write the obvious form and run it through the unchanged checker — does it parse?
+and if not, does it fall at the parser or at something behind it?** The rejected statement kind
+would have forced the effect, cost, lock and phase question to be re-answered at thirty
+`StmtArt::Ruf` sites. Sister of W22 (measure the *false refusal* by the corpus asymmetry; here
+the *supposed unwritability* by one run).
 
-Eine Marke je Stufe wäre ein zweites Register über derselben Sache (`W7`) — und sie veraltet
-lautlos, genau wie die Liste, die Stufe 9 einmal war. Der Python-Teil merkt sich die letzte
-gedruckte `== … ==`-Zeile; **jeder Wächter dieses Ordners druckt seine Abschnitte ohnehin.**
-Die Schale kann das nicht sicher (ein `tee` ist beim Lauf der `EXIT`-Falle vielleicht noch
-nicht geleert), *und ein Mechanismus, der manchmal die falsche Stufe meldet, ist schlimmer
-als keiner* — dort steht die Marke deshalb ausdrücklich.
+### W25 — A number evidences its denominator, not its label
+`pruefe-grammatiktafel.py` reported `UNGEDECKT = 4` and wrote *"the generator refuses, the
+checker does not"* beside three of the four words. The number was right (`chain`, `queue`,
+`threads`, `state` are uncovered); the sentence was wrong — the generator does not refuse three of
+them (`0 errors, 0 C001`, measured per smallest program). `absage` was the set of words that
+**occur in a refusal text**, not the set of forms whose refusal anyone measured: the guardian took
+a mention for a measurement. *A wrong sentence beside a right number is the most durable form of
+an error, because every check that points at the number confirms it.* Unlike W16 (the *number* is
+wrong) here the number stands and the label carries a second, unmeasured claim — the
+consequence was a wrong **class**: three corpus gaps looked like a language decision for four
+days. *Precaution:* a label that gives a reason needs the same measurement as the number beside
+it; where it is derived it says so (*"contains the word"*).
 
-**Die eine Zeile, die Urteilskraft braucht, ist `fertig()`:** ein Wächter, der an seinem
-LETZTEN Ausgang mit `1` endet, hat alles gemessen; einer, der am vorletzten mit `1` endet,
-nicht. **Von außen sieht beides gleich aus.** Der erste Versuch setzte sie vor die letzte
-Rückgabe und ließ `pruefe-grammatiktafel.py` seinen vollständigen Befund als abgeschnitten
-melden — sie gehört vor die **Urteilskette**.
+### W26 — A truncated population looks like a verdict over everything
+`pruefe-emission.sh` died at `F06`'s `N043` in **stage 4 of 10** with exit 1; stages 9 and 10 never
+ran and no line said so — behind the cut stood two findings nobody saw for two weeks (six files
+whose generated C does not compile; a counter seven too low). W17 is the *empty* population (a
+green verdict about nothing); W26 is the *truncated* one, and worse: it looks like a verdict over
+**everything**. The exit code cannot say it — the three classes (`0`, `1`, `2`) know "nothing
+measured", not **"half measured"**; a `1` in mid-run means *a finding here* and *an abort for
+everything behind* at once. The method that found the earlier holes (each guardian once over an
+empty tree) catches a precondition missing from the *start*, not one that breaks *mid-run* (the
+empty tree measures the start; this measures the middle). Measured over 50 instruments
+(`messung/RUECKLAUFWERTE.md`): **251** exit sites behind the first (the surface), **248** really
+end the run, **104** end with `1` *reachably without anything being broken*, **92** carry output
+on both sides — the danger; a surface nobody can shrink stops being read, hence the sieve.
+*Precaution, not a cure:* **whoever leaves before the end says WHERE** (`instrumente/abschnitt.py`
+and `abschnitt.sh`; `abnahme.py` reads them and prints `TEILMESSUNG`, with the finding count a
+lower bound). The WHERE comes from the tool's own output (it remembers the last printed `== … ==`
+line; a mark per stage would be a second register over one thing, W7). The one line that needs
+judgement is `fertig()`: a guardian that ends with `1` at its **last** exit has measured
+everything, one that ends with `1` at the second-to-last has not, and from outside both look
+alike — it belongs *before the verdict chain*. A covered site cuts the run just as much; it only
+says so (what is measured is whether the cut is announced, never whether it is right: W10).
 
----
+### W27 — A missing handle, read as a missing capability
+*Booked 2026-09-01 after three instances in one lane:* `--with` did not reach `--compare`, so
+*"does it see the derivation across the boundary?"* was **not askable**, and the absence of an
+answer read like a negative; `emit --unit` did not exist — the capability lay in `bau.rs` with no
+name on the command line (7 refusals without the flag, 0 with it, byte-identical C); `assume`
+at a unit boundary was **not impossible but unbuilt**, and nothing at the boundary says the
+decision was taken. Not W16 (there the instrument measures something else; the countermeasure is
+to check the instrument): here it **cannot accept the question**. *Ask whether the answer is
+"no" or "not asked".* The most expensive form stood in `N041`: the rule held every named item
+except `module` and `use`, `extern fn` included — the construct whose purpose is the deliberate
+binding to a C name — so a Gabbro program could not print and **eight attempts at "add two
+numbers"** had an explanation that was not the language. Redeemed 2026-09-01 as a **change**,
+not an exception: `beispiele/63-druckt.gab` prints `Hallo` (checked, emitted, compiled under
+`-Wall -Wextra -Werror`, run), and `N046` asks the right question — *does the signature match
+the one C already knows?* The handle for that was missing too: `./instrumente/miss-c-signaturen.py`
+(not in the tree today; the measurement stood at 138 of 558 names bindable, 420 not).
 
-## W27 — Fehlender Griff, gelesen als fehlende Fähigkeit
+### W28 — A figure that triggers a lane carries its HANDLE and its DENOMINATOR
+*Booked 2026-09-01 after the sixth instance of W16 — this time hitting a prioritisation.* The
+vocabulary-ratchet lane was justified by *"226 → 234 words in one day"*; the handle behind it
+(`grep -oE '"[a-z_][a-z0-9_]*"' kw.rs | sort -u | wc -l → 234`) takes every lowercase string of
+the file — fifteen too many from comments, the three capitalised too few. Counted properly it was
+never 234 and never 226: 219 · 220 · 222 over eight days. For **result** figures the tree has
+long kept the denominator (W7, the counter-probe in the guardian); for **justification** figures
+not — and the damage is larger there: a wrong result figure turns red next run, a wrong
+justification figure *steers a lane and disappears*. The conclusion held here (221 words and a
+lowering sentence are a disproportion whatever the slope) — **luck, not merit.** *Second line,
+after the eighth instance:* two of the six W16 cases share a special reason: **`gift/` in the
+denominator** (the domain computation: 17 words fall → measured 3; §42: 14/31/6/102 → 3/12/3/52 in
+the ratchet corpus, eleven of fourteen `order` being poison probes). A corpus whose purpose is
+refusal inside a count of *use*. The rule: **a figure that triggers a lane carries its handle and
+its denominator; every frequency measurement runs without `gift/` unless somebody writes the
+opposite.** Seen live the same hour: `zaehle-formate.py` reported *"523 files, 46 format
+declarations"*; recounted **39**, 13 of them in `gift/` — a third. Of 21 tools counting over
+`.gab`, four did not name `gift/` (two of them select a subset that excludes it anyway).
 
-*Gebucht 2026-09-01, nach **drei** Instanzen in einer einzigen Bahn.*
+### W29 — Before a rule over a WORD: count its uses, and their DIRECTION
+*Booked 2026-09-01 after the third instance.* A rule over a keyword hits **all** its uses, and the
+distribution behind it is rarely uniform:
 
-> **Die Frage war unstellbar, und das sah aus wie ein Nein.**
-
-| | |
-|---|---|
-| `--with` erreichte `--vergleich` nicht | *„sieht die Ableitung über die Grenze?"* war **nicht fragbar** — und die Abwesenheit einer Antwort las sich wie eine negative |
-| `emit --unit` gab es nicht | **Die Fähigkeit steckte in `bau.rs` und hatte keinen Namen auf der Kommandozeile** — dieselben zwei Dateien: 7 Absagen ohne die Fahne, 0 mit ihr, byteidentisches C |
-| `assume` an der Einheitengrenze | **nicht unmöglich, sondern ungebaut** — und nichts an der Grenze sagt, dass die Entscheidung getroffen wurde |
-
-### Warum das eine eigene Zeile ist und nicht W16
-
-Bei `W16` **misst ein Messgerät etwas anderes als seinen Gegenstand** — die Gegenmaßnahme ist,
-das Gerät zu prüfen. Hier **kann es die Frage gar nicht annehmen**, und die Gegenmaßnahme ist
-eine andere:
-
-> **Fragen, ob die Antwort „nein" heißt oder „nicht gefragt".**
-
-*Ein Werkzeug ohne Griff für eine Frage beantwortet sie nicht mit Schweigen — es beantwortet
-sie gar nicht, und Schweigen ist die Form, in der das ankommt.*
-
-**Und die teuerste Form davon stand in `N041`:** die Regel hielt jedes benannte Item außer
-`module` und `use`, also auch `extern fn` — *das Konstrukt, dessen Zweck die absichtliche
-Bindung an einen C-Namen ist.* Damit konnte ein Gabbro-Programm nicht drucken, und **acht
-Anläufe für „addiere zwei Zahlen" haben eine Erklärung, die nicht die Sprache ist.**
-
-> **Eingelöst am 2026-09-01, und die Einlösung war eine ÄNDERUNG und keine Ausnahme.**
-> `beispiele/63-druckt.gab` gibt `Hallo` aus — geprüft, erzeugt, unter `-Wall -Wextra -Werror`
-> übersetzt und gelaufen. An der Stelle der falschen Frage steht `N046` und stellt die
-> richtige: **stimmt die Signatur mit der, die C schon kennt?**
->
-> *Und die Frage war wirklich nicht stellbar, nicht bloß unbeantwortet* — genau die Form, die
-> `W27` beschreibt. Der Prüfer hatte keine Tafel der C-Signaturen, also konnte er nur über
-> den Namen urteilen, und ein Urteil über den Namen ist bei diesem Konstrukt immer ein Nein.
-> **Der Griff dazu fehlte ebenfalls**: `./instrumente/miss-c-signaturen.py` liest die
-> Signaturen heute aus `cc` selbst (`-aux-info`, `expected '…'`) und hält die eingebaute
-> Tafel dagegen. *Erst mit dem Griff war überhaupt sichtbar, dass 138 der 558 Namen bindbar
-> sind und 420 nicht — vorher sah beides gleich aus.*
-
----
-
-## W28 — Eine Zahl, die eine Bahn auslöst, trägt ihren GRIFF und ihren NENNER
-
-*Gebucht 2026-09-01, nach der sechsten Instanz von `W16` — und die traf diesmal keine
-Messung, sondern eine **Priorisierung**.*
-
-Der Auftrag an die Wortschatzratsche trug als Dringlichkeitsbeleg: *„226 → 234 Wörter an
-einem Tag."* Der Griff dahinter:
-
-```
-grep -oE '"[a-z_][a-z0-9_]*"' kw.rs | sort -u | wc -l   ->   234
-```
-
-Er nimmt **jede kleingeschriebene Zeichenkette der Datei**: fünfzehn aus Kommentaren zu viel,
-die drei großgeschriebenen zu wenig. **Nachgezählt war die Zahl nie 234 und nie 226** —
-219 · 220 · 222 über acht Tage.
-
-> **Bei `grep -oE '"[a-z_]…"' kw.rs` hätte jeder Leser gesehen, dass Kommentare mitzählen.**
-
-**Für ERGEBNISzahlen führt der Baum das längst** — `W7`, der Nenner neben jeder Zahl, die
-Gegenprobe im Wächter. **Für BEGRÜNDUNGSzahlen nicht**, und genau dort ist der Schaden
-größer: eine falsche Ergebniszahl wird beim nächsten Lauf rot, eine falsche
-Begründungszahl **lenkt eine Bahn und verschwindet danach.**
-
-*Das Ergebnis stimmte hier trotzdem — 221 Wörter und ein Absenkungssatz sind unabhängig von
-der Steigung ein Missverhältnis. **Aber das ist Glück, kein Verdienst.*** Der Satz, der es
-benennt, stand zwei Antworten vorher im selben Gespräch: *der Unterschied zwischen einem
-Argument, das an einer Messung hängt, und einem, das an der Struktur hängt.*
-
-
-### Die zweite Zeile, angefügt nach der achten Instanz
-
-**Zwei der sechs `W16`-Fälle haben denselben speziellen Grund: `gift/` im Nenner.**
-
-```
-die Domaenenrechnung   17 Woerter fallen   ->   gemessen 3
-§42, eine Antwort spaeter   14 / 31 / 6 / 102   ->   im Ratschenkorpus 3 / 12 / 3 / 52
-                            elf von vierzehn `order` sind GIFTPROBEN
-```
-
-> **Ein Korpus, dessen Zweck Ablehnung ist, in einer Zählung von BENUTZUNG.**
-
-Das ist kein Aufmerksamkeitsfehler, sondern ein **fehlender Standardbereich**. Bei den
-Ergebniszahlen steht der Nenner längst daneben — *„159 Dateien ohne `gift/`"* mit
-Begründung. **Bei den Anlasszahlen nicht**, und das ist dieselbe Asymmetrie wie beim Griff:
-`W7` deckt Ergebnisse, nicht Anlässe.
-
-**Damit hat die Regel zwei Zeilen, und sie fangen die achte Instanz zusammen mit der
-sechsten:**
-
-> **Eine Zahl, die eine Bahn auslöst, trägt ihren GRIFF und ihren NENNER.** Jede
-> Häufigkeitsmessung läuft ohne `gift/`, **es sei denn, jemand schreibt das Gegenteil hin.**
-
-### Und der Standardbereich fehlt auch in einem laufenden Werkzeug
-
-*Gemessen 2026-09-01, während diese Zeile geschrieben wurde:*
-
-```
-zaehle-formate.py:166   beispiele/**/*.gab + messung/**/*.gab
-                        521 Dateien, davon 358 aus `gift/`
-gemeldet: „523 Dateien im Korpus, 46 format-Deklarationen"
-nachgezaehlt: 39 Deklarationen, davon 13 in `gift/` -- ein DRITTEL
-```
-
-**`W7` deckt sie formal — der Nenner steht in der Zeile.** Sie ist trotzdem falsch, *weil
-niemand nach dem Nenner gefragt hat.* Von 21 Werkzeugen, die über `.gab` zählen, nennen
-**vier** `gift/` nicht; zwei davon wählen eine Teilmenge, die es ohnehin ausschließt, und
-**zwei nicht.**
-
----
-
-## W29 — Vor einer Regel über einem WORT steht die Auszählung seiner Verwendungen — und ihrer RICHTUNG
-
-*Gebucht 2026-09-01, nach der dritten Instanz.*
-
-> **Eine Regel über einem Schlüsselwort trifft ALLE seine Verwendungen, und die Verteilung
-> dahinter ist selten einheitlich.**
-
-| Wort | die Regel wollte | die Verteilung war |
+| Word | the rule wanted | the distribution was |
 |---|---|---|
-| `runs online` | *„ohne erzeugte Prüfung → `C001`"* | **drei KLASSEN:** `table … ops` (3) trägt es über eine maschinengeprüfte Schablone · `table` ohne `ops` (5) als `E`-Pflicht · **`walk` (3) durch nichts** |
-| `narrow … else` | einen Terminator nachtragen | **drei KONSTRUKTE derselben Bauart:** `narrow … else`, `let … else`, der `exchange`-`update`-Rumpf — der Kommentar nennt sie zusammen |
-| `_ =>` | Wildcards streichen | **drei KATEGORIEN:** tote Verteidigung (4) · tragender Standardzweig (6) · echter Befund (1) |
+| `runs online` | *"without a generated check → `C001`"* | **three classes**: `table … ops` (3) carries it through a machine-checked template · `table` without `ops` (5) as an `E` duty · **`walk` (3) through nothing** |
+| `narrow … else` | add a terminator | **three constructs of one build**: `narrow … else`, `let … else`, the `exchange`-`update` body |
+| `_ =>` | strike the wildcards | **three categories**: dead defence (4) · load-bearing default (6) · real finding (1) |
 
-**Dreimal dieselbe Bewegung — eine Regel über der OBERFLÄCHE statt über der SACHE.**
+Three times the same move — a rule over the **surface** instead of the **thing**: a rule over the
+word `online` would have hit two working registers to reach the one that does not. The count is
+cheaper than the rule, with three outcomes (uniform → the rule is right, now measured instead of
+assumed; several → it hits too broad, it belongs to the class, not the word; one class → the
+rule is a refusal over one case). *Addendum:* a count over **the own corpus** is self-confirming
+(a construct not sensibly writable today is not there, so rule A refuses, so it never arises —
+a circle, not a finding); where an external witness exists (`../caprock-messbasis`, 139 files,
+75 294 lines) it is stronger than the corpus. *Second half: not only how many, but whether they go
+wrong in the same direction.* For `_ =>` the three categories were ordered **by danger** (silent
+memory error · wrong type · wrong value) and the repair order hung on that, not on frequency; the
+case first caught is in the Caprock base: of five sites that change a mapping (`mmu.rs`), three
+**add**, one **changes rights**, one **switches the address space** — a rule *"every PTE write
+invalidates"* would be wrong for three of five (a not-present → present transition needs no
+invalidation on x86). *The rule belongs to the KIND of change, not to the write* — and whether the
+add case needs an invalidation is an architecture question, so an `assume … arch` with a
+falsifier, not a decision in the lowering. **Two uses that MASK each other are worse than ten
+that do the same.**
 
-> *Eine Regel über dem Wort `online` hätte zwei funktionierende Register getroffen, um an das
-> eine zu kommen, das nicht funktioniert.*
+### The R-rules that these entries cite
+The measurement protocols of the folder cite rules `R1`–`R18`; the wording was never collected in
+one place, and what follows is *reconstructed from use* in the entries above and the
+measurements (`MESSUNGEN.md`), not quoted: **R1** the protocol is committed before the first
+counted site · **R2** a gate is not moved after the run (a population may be corrected only for a
+reason independent of the result — and the correction that moves *against* the flattering
+reading is never a reinterpretation) · **R7** the template entry stands before the grammar ·
+**R8** overstate only in the safe direction · **R11** a measurement that delivers the hoped-for
+result at the first try is suspect (for a comparison "hoped for" means *winning by a mile*) —
+write an expectation down before measuring · **R14** a measuring tool first proves that it can
+measure: (a) a deliberate abort must be counted, (b) the number must hang on the subject (mutate
+a copy, the number moves), (c) the search paths find their known sites / full count of the
+enumerated heads · **R15** an assurance that is satisfied because nothing happened is no
+assurance · **R16** a number from a search path that aborted is a lower bound and is called one ·
+**R17** says what one starts with, not what one ends with · **R18** a class with one instance is
+not designed before its decisive fragment.
 
-**Die Auszählung ist billiger als die Regel**, und sie hat drei mögliche Ausgänge, von denen
-zwei die Regel verhindern:
+---
+
+## 3. The instrument inventory (checked against `ls instrumente/`, 2026-10-17)
+
+Each row: the command, and what it measures. The *docstring of the tool* is the contract and
+wins over this table; `abnahme.py` runs everything marked **A**.
+
+### 3.1 Acceptance and meta-guardians
+| Tool | Measures |
+|---|---|
+| `abnahme.py` **A** | the whole cast, one verdict per guardian (§1); `--voll` adds the heavy ones; `--probe` is its speech test |
+| `pruefe-waechter.py` | the five requirements of §1 for every instrument; `--lauf` executes the light ones and reads the exit class they promise |
+| `abschnitt.py`, `abschnitt.sh` | the shared form of *whoever leaves mid-run says where* (W26) |
+| `binaer.sh` | the single rule for *which* `gabbro` binary an instrument measures (never a stale or a different-profile one: an instrument that takes `target/release/gabbro` because it exists measures whatever was built last) |
+| `korpus.py` | "is this file one `git` knows about?" — the check a dozen tree walks lacked |
+| `zaehle-probenzweige.py` | how many instruments have a branch only the speech test ever reached |
+
+### 3.2 Numbers and documents
+| Tool | Measures |
+|---|---|
+| `pruefe-zahlen.py` **A** | every figure in the guarded documents against the command that derives it; `UNBEWACHBAR` is the register of figures with a written reason why no command can exist (a record, a foreign tree, an ordinal, a judgement) and a reason that no longer points at anything falls (W18, W7) |
+| `pruefe-todo.py` **A** | `TODO.md` against itself and against the folder; reads `messung/KENNZAHLEN.md` together with it |
+| `pruefe-widerruf.py` **A** | retracted sentences: no document may still say what a measurement refuted (exempt blocks: `<!-- widerruf:aus --> … <!-- widerruf:an -->`) |
+| `pruefe-englisch.py` **A** | the surface language is English: German diagnostic texts, source comments, ratchets per layer |
+| `pruefe-kennungen.py`, `pruefe-vergabe.py` | no code twice; one code, one rule (not only one code, one file) |
+| `pruefe-saetze.py` **A** | the second tooth of the pass register: no new refusal code without its sentence (`crates/gabbro-check/src/saetze.rs`) |
+| `pruefe-syntax.sh` **A** | the examples in the documents against `SYNTAX.md` (forbidden forms, retired German keywords in code blocks *and* prose), the EBNF closed and every rule reachable, the vocabulary table covers the terminals |
+| `pruefe-wortschatz.py`, `zaehle-wortschatz.py` | the vocabulary table against the grammar; the vocabulary ratchet (two marks) |
+| `pruefe-grammatiktafel.py` | form × responsibility from the grammar; `UNGEDECKT` must be empty (W25: labels are measured too) |
+| `pruefe-zitate.py` | a note that claims a check its rule does not perform |
+| `pruefe-gruende.py` | does a rule stand on the technical or on the load-bearing reason (W16: reads past the continuation line) |
+| `pruefe-notation.py` | the notation gaps of §2 of `FRAGMENTE.md` against *today's* grammar (smallest program per gap), plus the emitter gaps |
+| `pruefe-manifest.py` | the obligation manifest against its correspondence table |
+
+### 3.3 Checker coverage (what a rule, a clause, a pass really reads)
+| Tool | Measures |
+|---|---|
+| `mutiere-pruefer.py` | **mutation run on the checker itself**: damage one rule, see whether any probe falls (survived = the rule is unguarded; caught; invalid = does not build and does not count). `--anker` counts anchors without a build (measured today: **388 of 422** anchors bite, 34 measure nothing, because the checker moved under them — a dead anchor is W1's case); `--schnell` runs only the speech test. Needs `crates/` clean; writes into sources and restores them byte for byte |
+| `pruefe-luecken.py` | the named gaps of the generator run, one by one (re-builds thirteen times: heavy) |
+| `pruefe-klauseln.py` | clauses declared, carried, never read (ZUSAGE versus ABSENKUNG; homonym table); `ZUSAGE 0` as of 2026-09-12 |
+| `pruefe-konstrukte.py`, `pruefe-abstieg.py` | a construct without a poison probe (W13); does every pass descend into every statement kind with a sub-block (W15, W16) |
+| `pruefe-reichweite.py`, `pruefe-aufloesung.py`, `zaehle-karten.py` | a body no pass *reads*; a qualified map queried with a bare name; two looks at one map of which only one was module-aware |
+| `pruefe-schablonen.py` | tooth 3: every proved template binds its premises to a pass (a ratchet, not a target) |
+| `pruefe-sondendeckung.py`, `pruefe-unfalsifizierbar.py`, `pruefe-sonden.sh` | `A_p` (falsifiable hardware assumptions whose probe stands as a program, floor 1/8); the `unfalsifiable` category latched twice; the probe runner (§4.3) |
+| `pruefe-umwandlungen.py` | the checker does in Rust what `M104` forbids in its object language: casts with `as` |
+| `zaehle-gifttreffer.py`, `zaehle-absagen.py`, `zaehle-verdrahtung.py`, `zaehle-fremdverengung.py`, `zaehle-traversierungen.py` | every poison probe against its own promise (does the expected code fall *alone*); the forms of generator refusal; two parts correct and unconnected; how often a foreign body's promise decides; duplicated traversal bodies (the number before the generic-bodies decision) |
+| `vergleiche-binaerprogramme.py` | two `gabbro` binaries over the whole corpus byte for byte — the counter-direction for a change that is meant to be additive |
+
+### 3.4 Fragments, obligations and corpus counters
+| Tool | Measures |
+|---|---|
+| `zaehle-fragmente.py [--je-datei]` | the completed fragment corpus: clean / lowers / pierced (§4.2) |
+| `zaehle-pflichten.py [--haengend\|--spalten\|--gabbrov\|--zeilen]` | candidate lines of the obligation search path; the K/L columns derived from the rows; what hangs per fragment; GabbroV's population |
+| `zaehle-bereichspflichten.py` | the `narrow` count over Gabbro source without a classifier: remove every `narrow`, run the checker, count `M101`/`M104` sites; `N_folgenlos` |
+| `zaehle-b3.py`, `zaehle-narrow.py` | foreign-corpus counters (B3 traversability; `narrow` over Rust). `zaehle-narrow.py` is **not a measuring instrument** (its classifier failed the protocol's hand sample) |
+| `zaehle-formate.py`, `zaehle-netz.py`, `zaehle-zeremonie.py`, `zaehle-theorien.py`, `zaehle-fallen.sh` | format versions (0 formats with a second version); the network stack against published vectors; ceremony of the corpus (goal 3's first figure); proof prose versus proof steps; the trap inventory |
+| `zaehle-c.py`, `zaehle-c-formen.py`, `zaehle-kette.py`, `zaehle-p6.py` | handwritten C per target; the C forms really emitted; the validation-chain count; how many obligations a prover can read |
+
+### 3.5 Back ends and run-time evidence
+| Tool | Measures |
+|---|---|
+| `pruefe-emission.sh` | the differential test — the *yes* statements: emit, compile under `-Wall -Wextra -Werror` at `-O0`/`-O2`, **run**, compare with a hand-written expectation, plus a poison edit per run. 22+ stages, among them UBSan/ASan, the five `lauf "fragmentN"` runs, freestanding link (stage 12), bare-metal QEMU (11), the concurrent twin (22b), atomic accesses (22c). **Legacy check since 2026-10-17: not a push gate**; run it when `emit.rs` or the C runtime changes |
+| `pruefe-cformen.py`, `pruefe-ctext.py`, `pruefe-genlean.py` | no emitted C form without its semantics (three states: lemma / assumption / uncovered); the pinned C text is what the emitter writes; a committed generated Lean file is what the generator writes |
+| `pruefe-freistehend.sh`, `pruefe-metall.sh`, `pruefe-kernelmodul.sh`, `pruefe-os-bindung.sh`, `pruefe-seiten-zurueck.sh`, `pruefe-nebenlaeufig-zwilling.sh`, `pruefe-atomar-zugriffe.py`, `pruefe-osfrei.py`, `pruefe-uebersetzerfamilie.py`, `miss-arena-decke.sh`, `vergifte-leeren.py` | every emitting unit linked without an OS; threads on bare metal (QEMU); a unit as a Linux kernel module (QEMU); what the runtime takes from the OS as a number that has to reach zero; reset gives pages back; a concurrent driver against a handwritten twin; every atomic access through a C11 atomic operation; no OS memory call outside the runtime; two translators of one family are one translator; the ceiling costs nothing; the poison twin of a runtime helper |
+| `baue-llvm.sh` | pure Gabbro through the LLVM pipeline (checker → LLVM IR text → `llc` → `ld.lld`), no `clang`, no `cc`, no libc; the current back end |
+| `pruefe-llvm-modelldeckung.py`, `erzeuge-abi-tabelle.py` | the LLVM coverage register against the Lean constructors; the ABI table generated from the Lean records (one source) |
+| `sonde-fma.c` | the FMA probe: no fused multiply-add hides in the generated arithmetic |
+
+### 3.6 Lean and Isabelle
+| Tool | Measures |
+|---|---|
+| `pruefe-beweise.sh` **A (--voll)** | the Isabelle guardian, with a watchdog (a proof step that searches without a bound is a loop without `bounded`; paid twice); needs `~/Isabelle2025-2` or it reports `OHNE NACHWEIS` — no finding |
+| `pruefe-lean-beweis.sh`, `pruefe-lean-pflichten.sh`, `pruefe-lean-programm.sh`, `pruefe-p6-beweis.sh`, `pruefe-vorlagen.sh`, `pruefe-beweis-tor.sh`, `pruefe-sperre-beweis.sh`, `pruefe-sicherheit.sh` | rule A for the body channel / the duty channel / the program export / the generated refinement obligation; every owed unit's template compiles to goals; the gates of `gabbro prove` each with its poison probe; the lock invariant in the duty channel; the safety theorem's three files |
+| `pruefe-akzeptiert-diff.py`, `pruefe-deckung.py`, `pruefe-gestalt.py`, `pruefe-kein-sorry.py`, `pruefe-lean-layout.py` | the Rust checker computes the whole Lean checker Bool of the goal theorem (differential test); the coverage theorem talks about *this* language; sentences against definitions per file; no `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`/unrecorded `axiom` (allowlist `kein-sorry-allowlist.txt`); at most 20 entries per Lean folder (`lean-layout.py --check`, `--apply`; rules in `lean-layout-rules.py`, map in `lean-layout-map.json`) |
+| `zaehle-theorien.py` | Isabelle theories: lines, sentences, frozen proof searches |
+| `arm-bau`, `arm-probe` | queued build / check of the separate Lake project `arm/` |
+
+### 3.7 What the instruments do **not** do
+Counters (`zaehle-*`) measure, they do not guard; a counter that is red over an empty tree is
+what `abnahme.py` reports as ABBRUCH, never as a finding. A static reading (`pruefe-waechter.py`
+without `--lauf`) says a `timeout` stands in the text, not that it stands in the right place.
+A covered site cuts a run just as much as an uncovered one; what is measured is whether the cut
+is announced.
+
+---
+
+## 4. Probe corpora
+
+### 4.1 `messung/proben/` — the smallest programs that decide a question
+*The W24 pre-run as a directory.* Before a refusal of the generator is decided, the smallest
+program that contains the form is written and run through the **unchanged** checker and
+generator. *A comment that says "the checker already catches that" is not a measurement.* They
+live here and not in `messung/fragmente/`: there stand the ten frozen excerpts, a corpus with its
+own count. A probe is not a fragment — an argument in program form — and not an example
+(`beispiele/` shows what the language can do, a probe what it *does* at one place; several are
+programs the generator refuses on purpose). Some of the answers, measured when the probe was
+written (several have since been repaired; the file stays so the measurement can be re-run):
+
+| Probe | Question → answer |
+|---|---|
+| `probe-elems.gab` | type of the loop variable of `elems of` → the generator lowered it as `uint32_t`, a narrowing that failed `-Werror=type-limits` (cause in the generator) |
+| `probe-vergleich.gab` | does the checker say anything on a comparison its own range makes constant → **no**: 0 errors at 100 % type coverage |
+| `probe-unbekannter-ruf.gab`, `probe-vier-zellen.gab` | does the checker accept a call nobody declared → without a cost promise yes (only `E009`, a hint); with one `K003` falls. `state`, `queue`, `chain in`, `threads`: 0 errors, four `C001` — same root: `K003` hangs on a promise that a `divergent fn` does not make |
+| `probe-f32-literal.gab` | width of a float literal in the generated C → **`double`**: `x * 0.1` computes in double on `x : f32` (39 974 of 200 000 values differ) |
+| `probe-erzeugernamen-frei.gab` | does `N042` refuse six words that *look like* a generator suffix → **no**, `cc` accepts: a word list would have refused all six |
+| `probe-probenurteil-typ.gab`, `probe-rueckgabetyp.gab` | does anyone see the *type* of what a probe returns → no (`return 7;` in a `can_fail`: 0 errors, `cc -Werror` accepts); it is a gap in `M1` (`passt` compares ranges, and `Typ::Wahrheit` has none) |
+| `probe-probenurteil-schleife.gab` | `N045` on a probe whose only exit stands in a `forever` → it fires, **wrongly** (`for (;;)` has no end; `endet_immer` read every loop as falling through) |
+| `probe-traverse-grundname.gab`, `probe-elems-feldname.gab` | `traverse` over a `let`-bound name: 0 of 41, and `D017` switched on over 476 files gives 0 new refusals; the field name in the suffix of `elems of` is read by nobody → became `D019` (`gift/431`) |
+| `probe-transport-*.gab`, `probe-ecam-faehigkeitenlauf.gab`, `probe-region-schnitt-und-nullen.gab`, `probe-netz-rahmen-und-ergebnis.gab` | transport (`poll_used`, kick address computed at run time, feature negotiation, queue setup, reset), PCI capability walk, region carve, a whole ARP frame: **unwritten**, not unwritable — checked, lowered, `cc` accepts; the overflow gets a *name* in Gabbro instead of a `None`; `want as u32` falls at `M101` where Rust truncates silently |
+| `probe-opak-am-feld.gab` | does `N030` fire when the wrong `opaque` value comes from a *field* → **no** (one error at four wrong places); became `O7` |
+| `probe-tagged-wird-gebaut.gab` | can a `tagged type` value be *built* → until 2026-09-14 no, in none of four spellings (nine `tagged type`s in the corpus, all only taken apart; «B9» a third time); since lane 167 yes (`Case(payload)`, `Case()`, bare `Case`; `beispiele/120`, `121`, `N280`–`N284`) |
+| `probe-marke-an-retry-und-traverse.gab`, `probe-fehlerkanal-verbundwert.gab` | `next` at a `retry` mark: `0 errors` at the checker, `C001` at the generator (found by the *corpus hiding it*: all `leave`/`next` of `beispiele/41` name `forever` marks) → `D21`; `let x = f() else (e)` with a record: `0 errors`, `cc` says *invalid type argument of '->'* (found by *reading the body*, not by a pattern) → `D22` |
+| `probe-besitz-zwei-typen.gab` | does the ownership hand-over carry Caprock's *exclusion* or only its shape → both writable, `beispiele/66` chose the weaker form; two `linear type`s with the write path only on the driver side give it back (`gift/671`–`673`, `O10`) |
+
+`messung/fnptr-proben/p1.gab … p8.gab`, `h1.gab`, `h2.gab` are the hand probes behind the
+function-pointer decision («B8»): the four halves one by one (generator, call over a place,
+lowering, contract), `p8` the unbooked find (`fn(…)` lay on `Typ::Unbekannt` and was compatible
+with everything: `let x : u32`, `: bool` and `: ptr<…> Treiber` from the **same** `t->bereit`,
+zero type errors), `h1`/`h2` the same shape written correctly. They are not poison probes (no
+`-- erwartet:` line, no guardian runs them, the mutation run does not know them); `zeugnis_stmt2`
+reads `p5.gab`. *Evidence for a report, not part of the coverage.*
+
+### 4.2 `messung/fragmente/` — the completed fragment corpus
+`F01.gab` … `F10.gab` are the ten fragments of `FRAGMENTE.md` made into programs: byte-identical
+to the frozen excerpts, plus exactly the declarations the excerpt calls and does not name (head of
+each file lists what was added and what was not; nothing rewritten, nothing left out, no refusal
+defined away; where an error stands after completion it belongs to Gabbro). The state is read by
+`./instrumente/zaehle-fragmente.py`; the quoted run below is **evidence in the tool's own
+language** — it moves when the tool's output moves, and the number guardian reads two of its lines
+(`N von 10 prüfen sauber`, `N von 10 senken ab`):
 
 ```
-einheitlich   ->  die Regel ist richtig, und das ist jetzt GEMESSEN statt vermutet
-mehrere       ->  die Regel trifft zu breit -- sie gehoert an die Klasse, nicht an das Wort
-eine Klasse   ->  die Regel ist eine Absage ueber einen Fall; Regel A entscheidet
+$ ./instrumente/zaehle-fragmente.py
+9 von 10 prüfen sauber        (über den Ausschnitten: 5)
+9 von 10 senken ab            (über den Ausschnitten: 3)
+9 von 10 sind DURCHGESTOCHEN  — F01, F02, F04, F05, F06, F07, F08, F09, F10
 ```
 
-**Und der Nachtrag aus derselben Stunde:** wenn die Auszählung über den *eigenen Korpus*
-läuft, ist sie selbstbestätigend — *ein Konstrukt, das heute nicht sinnvoll schreibbar ist,
-steht nicht da, also sagt Regel A ab, also entsteht es nie.* **Das ist ein Zirkel, kein
-Befund.** Wo ein externer Zeuge existiert — `../caprock-messbasis`, 139 Dateien, 75 294
-Zeilen — **ist er stärker als der Korpus, und die Frage gehört an ihn gestellt.**
+(The three figures were re-read against the per-file `gabbro pruefe` runs of 2026-10-17; the tool
+itself was not run, since it needs the debug binary in its own tree.) The history of the figure
+is in `FRAGMENTE.md` §3 and in `HISTORIE.md`.
 
+### 4.3 `instrumente/sonden/` — where a `falsifier` can become a program
+*Created 2026-08-21; before it there was no such place, and that was the finding:* of 27
+assumptions naming a probe (26 distinct names) **zero** existed as a program — a `falsifier` whose
+probe exists nowhere asserts the *absence of a refutation* (R15, W10). A probe does not belong in
+the tree of checked programs (`namen.rs`: *"`expects` names an EXTERNAL probe, like `assume …
+falsifier`: it does not stand in Gabbro because it RUNS"*) — it belongs beside it. Runner:
+`./instrumente/pruefe-sonden.sh [--runden N]`. **The contract**, return value `0` = not refuted
+in this run **and that is all it means** · `1` = **refuted**, or the probe proved itself blind ·
+`77` = cannot run here (no device, no right, one core): the third state the grammar lacks
+syntactically (*falsified / not falsifiable with a reason / not run*) exists as an exit class.
+Each probe prints `sonde <name> :: <assumption>` on its first line (a human reads the mapping;
+the runner does not check that the probe hits the assumption in its name) and its **work quantity**,
+and carries its own **sensitivity probe**:
 
-### Die zweite Hälfte: nicht nur wie viele, sondern ob sie in dieselbe Richtung falsch gehen
+> A probe that finds nothing has two possible reasons: there was nothing, or it cannot see. Whoever
+> does not separate them has no measurement but a reassurance.
 
-*Angefügt 2026-09-01, weil eine Auszählung, die nur zählt, die Reparatur falsch ordnet.*
+`sonde_release_sichtbarkeit` separates them with a **positive control**, a third arm in which the
+writer sets the flag deliberately *before* the payload; that arm **must** fall. Measured
+2026-08-21 (20 cores): 204 693 observations, **3 079** violations of the control arm over 1.5 M
+rounds, 0 for the release arm (expected: x86 is near sequential consistency for this shape).
+*Falsifiability has a direction:* the booking *"not falsifiable: running cannot refute the memory
+model"* argues the **green** direction; falsifiability is the red one — a single observation of a
+visible flag over a stale payload kills the assumption for good, with the witness printed. **What
+must not stand here:** a probe whose green run reads as confirmation; an **analogy** (masking
+POSIX signals instead of interrupts measures POSIX); a probe that runs the checker (that is what
+the poison probes and the mutation run measure — a probe measures the *environment*). Of the 26
+names the first booking estimated: ring 0: 9 · a device: 9 · a mechanism the generator does not
+generate: 4 · userland: 4 (`sonde_mxcsr_rne`, `sonde_keine_ueberbreite`, `sonde_tsc`,
+`sonde_rdtscp`, all four built 2026-09-04). *The class "runs in userland" is empty;* the estimate
+per name is a judgement, not a measurement. The directory today holds the `.c` probes listed by
+`ls instrumente/sonden/`.
 
-Bei `_ =>` waren die drei Kategorien **nach Gefährlichkeit** getrennt — stiller
-Speicherfehler · falscher Typ · falscher Wert — **und die Reihenfolge der Reparatur hing
-genau daran, nicht an der Häufigkeit.** *Eine Auszählung, die nur zählt, hätte `3488` nicht
-vor `3690` gesetzt.*
+### 4.4 Emission evidence and witness pairs
+| Directory | What it pins |
+|---|---|
+| `messung/proben/emission-141/` | direct byte operations with the run bound: `PUFFER[3]` stays plain for a constant index; a dynamic read carries `(i < 16u ? PUFFER[i] : (__builtin_trap(), 0))`; a dynamic write binds the index once and traps past the bound. Over all 647 `.gab` files under `beispiele/` and `messung/proben/` old versus new `gabbro emit`: zero exit-code diffs and exactly one C diff (`beispiele/32-zeichenkette.gab`) — the byte-identity method for an additive emitter change |
+| `messung/proben/emission-143/` | seven C forms that were open in `grammatik/Grammatik/Erhaltung.lean`'s table, one minimal unit each, all **admit** (neither lowered nor refused): `static inline` helpers, `const D *restrict` readers, volatile-cast dereference, error-channel call `gib_opt(&v, &e)`, width-bound complement `(u16)~(u16)(x)`, bounded retry counter, `sizeof(q->slots)/sizeof(q->slots[0])`; each emission compiled under `-std=c11 -O0/-O2 -Wall -Wextra -Werror` (14 of 14); the rulings are `messung/CFORM-REGEL-*.md` |
+| `messung/proben/emission-155-c1/` | witness pairs for `typedef`, `#define`, `enum` (6 units, 12 of 12 compile); `zeigerArithmetik` (491 sites) stays open — a refusal that fired on `u32` arithmetic because `wert_ctyp` resolves through scope-blind maps was withdrawn the same day (*a refusal that fires on integers is not strict, it is loaded*); `cInclude` (408 sites) stays open — the four-line preamble is load-bearing line by line |
+| `messung/proben/zeugnis-c2/` | five witness pairs, one named C form each (`zuweisung`, `wenn`, `ruf`, `rueckgabe`, `literal`; probes `c2-01-zuweisung.gab` … `c2-05-literal.gab`); `pruefe` reports 0 errors and `emit` writes the named fragment (`= 41`, `else`, `gib()`, `return`, `8`). **`EXPECTED.md` in that directory is read by the test `c2_witness_pairs_run_clean_and_emit_their_form` and stays a file of its own**; the Lean side recomputes the form half (`zeugenPaarGueltig`), the test the execution half; a green pair links the probe to the tabled form, it does not prove what the C fragment means |
 
-> **Zwei Verwendungen, die einander MASKIEREN, sind schlimmer als zehn, die dasselbe tun.**
-
-**Und die Instanz, an der es zuerst gegriffen hat**, steht in `../caprock-messbasis`:
+### 4.5 `messung/netz/` — the network stack against published vectors
+`./instrumente/zaehle-netz.py [--zeige-c]` runs the stack (`udp-echo.gab`) over the classic IPv4
+header (RFC 791, checksum `b861`), the same header *with* its checksum (the sum must be 0 — the
+property the whole receive path rests on, and the only one of the three a wrong folding does not
+survive) and the RFC 1071 §3 example (`ddf2`), each against a second implementation written
+differently (every step folds in Python; only the end folds, twice, in Gabbro). Rule A: no new
+construct without a program that needed it; **rule B: and the template comes from outside**,
+otherwise a stack measures how well Gabbro fits Gabbro. The quoted run is evidence; the number
+guardian reads its last line (`N von 3 Proben grün`):
 
 ```
-mmu.rs, fuenf Stellen, die eine Abbildung aendern   flush im Rumpf
-  map_device_window_global · map_device_page               0   <- ADDIEREN
-  map_device_block_global                                  0   <- ADDIEREN
-  protect_page                                             1   <- AENDERT Rechte
-  set_user_vspace                                          9   <- WECHSELT Adressraum
+$ ./instrumente/zaehle-netz.py
+ok   ohne   Gabbro b861  Gegenrechnung b861   IPv4-Kopf, Feld genullt (RFC 791)
+ok   mit    Gabbro 0000  Gegenrechnung 0000   derselbe Kopf MIT der Summe — muss 0 sein
+ok   summe  Gabbro ddf2  Gegenrechnung ddf2   RFC 1071, Abschnitt 3: die Summe
+3 von 3 Proben grün
 ```
 
-**Drei addieren, eine ändert, eine wechselt.** Eine Regel *„jeder PTE-Schreibvorgang
-invalidiert"* wäre **für drei von fünf falsch** — sie fügte eine Invalidierung hinzu, die ein
-Übergang von *nicht vorhanden* nach *vorhanden* auf x86 nicht braucht.
+What the stack found is in `FRAGMENTE.md` (*The network stack*).
 
-> **Die Regel gehört an die ART der Änderung, nicht an das Schreiben.** Und ob der
-> Additionsfall eine Invalidierung braucht, ist **eine Architekturfrage, keine Sprachfrage**
-> — also ein `assume … arch` mit Falsifikator, nicht eine Entscheidung in der Absenkung.
+---
 
-*Ohne die Richtungsfrage hätte die Zählung `5 von 5` gemeldet und die Regel gerechtfertigt,
-die für drei davon falsch ist.*
+## 5. The language switch to English — the order is the whole rule
+
+*Decided 2026-09-01 (the repository points at a public tree); costed on 2026-08-31 before the
+decision.* What was already English at the time: the checker's diagnostics (33 → 0 German
+message lines), `gabbro help` and every subcommand help, `README.md`; what is English today: the
+documents, the commit messages, the diagnostics. The costing, kept because it explains the
+rule:
+
+* **98 `.md` files, 40 879 non-empty lines, 49 % German** (`messung/` 9 488 of 14 297,
+  `dokumente/` 7 210 of 20 768, root 3 207 of 5 045); *German* meaning a line with at least one
+  word of a closed function-word list — a lower bound for the effort and an upper bound for the
+  line count (W25: the denominator is stated).
+* **Sub-command names** were the other cost. Of 17, 4 were English (`emit`, `abi`, `lean`,
+  `alias`), 13 German. The additive way — one more pattern per name in the flat `match` of
+  `main.rs` — breaks none of the 608 call sites (225 in code, 383 in documents); it is what was
+  done: today the table `COMMAND_NAMES` lists English first, German second (`check`/`pruefe`,
+  `fragments`/`fragmente`, `obligations`/`pflichten`, `costs`/`kosten`, `ceremony`/`zeremonie`,
+  `certificate`/`zeugnis`, `blindspots`/`blindstellen`, …), with `erstnamen.rs::PAARE` and
+  `fahnen.rs::UNTERBEFEHLE` as drift guards. Two hooks that belong to the decision: the name
+  handed to `split_with`/`read_preamble` for a message must be the name the user *typed* (a
+  message naming another command than the one typed is W16), and `alias` (alias analysis of
+  pointers) collides with the word "alias" for a command's second name.
+* **The number that is the real one: 7.** *21 of 54 instruments* read a `.md` **and** carry a
+  German literal in a detection position. Three classes, confirmed on the text: **(a)** whoever
+  parses a German *label* out of a document goes **silently blind** when the heading is
+  translated (`pruefe-todo.py`, `pruefe-zahlen.py`, `pruefe-grammatiktafel.py`,
+  `pruefe-widerruf.py` — four) — *proven here once already*: a mere rewording (not even a
+  translation) of the rule-count wording in `TODO.md` made a `pruefe-todo.py` pattern hit nothing
+  for weeks; **(b)** whoever reads the German *output* of other guardians goes red *en masse*
+  (visibly: `pruefe-waechter.py`, `abnahme.py`, `abschnitt.py`) — their abort-word list is already
+  half bilingual; **(c)** the proof that (a) is no thought experiment, as described above.
+* **The rule.** Patterns become bilingual *before* the document moves: first the pattern in both
+  languages, then the document, then — much later — the German alternative is removed. Whoever
+  reverses it gets a green guardian that measures nothing. Example already in the tree: `(\d+)
+  (?:EBNF-Regeln|Regeln, 0 offen|rules, 0 open)`.
+* **Watcher stage 0 (2026-09-12) did exactly that**, with these standing results: `pruefe-todo.py`'s
+  speech test no longer grades invented lists against the live `DONE.md` (it aborted over its own
+  subject); `pruefe-klauseln.py` books the homonym `version` (an AST clause `Format.version` versus
+  the ledger field `Ledger.version` in `kostenledger.rs`: *different struct, same field name* — the
+  `kosten` trap one field over); `pruefe-englisch.py` prints every sink hit and feeder hit
+  **before** the ratchet verdicts, so a broken ratchet cannot hide its own evidence; 36 of the 37
+  German-only labels of `pruefe-zahlen.py` carry an English alternative (exactly one capturing
+  group each, checked mechanically over all 91 entries). Already bilingual and verified:
+  `pruefe-widerruf.py`, `pruefe-todo.py`, `pruefe-wortschatz.py`, `pruefe-sondendeckung.py`
+  (structural identifiers), `pruefe-grammatiktafel.py`, `pruefe-klauseln.py`/`-deckung.py`/
+  `-gestalt.py`. The cell moves it proposed were all applied or superseded by now; nothing in this
+  section depends on them.
+* **Quoted runs stay in the tool's language.** A translated transcript is no longer a transcript,
+  and the number guardian reads some of them (§4.2, §4.5): they change when the *tool's* output
+  changes, not when the document does.
+
+---
+
+## 6. When something red looks like a finding
+
+* **Look first for the numbers the guardian no longer prints.** A guardian that *aborts* reads
+  like one that passed; one whose abort drops six figures the number guardian reads produces six
+  findings in the wrong register (2026-09-08: a new probe named a `falsifier` for which no
+  program exists, the counter `aussen` rose 13 → 14, `pruefe-sondendeckung.py` aborted at its own
+  speech test). Measure the base in a throw-away worktree at the state before the merge.
+* **A guardian that cuts at the first hit answers *is there at least one*, not *which fire*.**
+  Eleven wildcard branches were replaced by `panic!`; six "fired", five "were silent" — wrong: the
+  first hit ends the process and hides every later one (`emit.rs:3488` was reported silent and
+  fires 148×); with `eprintln!` seven fire. This applies to `--fail-fast`, `set -e` in measurement
+  scripts, `panic!` instrumentation and every checker run that stops at the first error. `cargo
+  test` needs `--no-fail-fast`; `abnahme.py` says *what stands behind an ABBRUCH was not measured,
+  neither yes nor no*.
+* **Never wait with `pgrep -f`.** The whole invocation stands in the command line of the waiting
+  shell, so the pattern finds itself — the loop reports "still running" forever and leaves an
+  orphan. Ask `ps -C python3`, or write the output to a file and read its last line.
+* **Two tools in one tree measure a mixture** (`cargo test` and the Lean corpus run together:
+  phantom Lean errors; a `rsync` into a directory where a mutation run works: two green suites
+  turned red). One heavy run at a time, one directory per agent.

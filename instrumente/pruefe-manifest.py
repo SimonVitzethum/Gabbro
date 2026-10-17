@@ -16,7 +16,7 @@ document the compiler has never heard of:
                print loop while the header line already counts it.
 
     OUTER   what the manifest CARRIES against the population it is about
-            -> lives here, because the population is `dokumente/PFLICHTEN.md` and
+            -> lives here, because the population is `dokumente/PFLICHTEN.txt` and
                `gabbro` neither reads it nor should.
 
 **This guard is RED today and that is the finding, not a fault.** The split is the thing
@@ -38,8 +38,8 @@ hardcoded string. **Three fragments were repaired that same day and not one of t
 numbers moved**, because none of them was derived from anything -- 43 counted F01, F05 and F09
 against defects that no longer existed. *A blocker that no longer exists is not a blocker.*
 
-The mapping itself is a judgement over `PFLICHTEN.md` and cannot be computed, so it stands
-row by row in **`messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md`** and this reader holds it
+The mapping itself is a judgement over `PFLICHTEN.txt` and cannot be computed, so it stands
+row by row in **`messung/gabbrov/PFLICHTEN-KORRESPONDENZ.txt`** and this reader holds it
 against a live run:
 
     a CARRIED row must name a line that is really in the register  -> else E1 red
@@ -48,7 +48,7 @@ against a live run:
     the table's row count must equal the population                -> else ABBRUCH, 2
 
 **And the subtraction it replaces was a category error.** `bev - <manifest lines>` compares
-GabbroV's population -- the `L` rows of `PFLICHTEN.md` alone -- against every line the
+GabbroV's population -- the `L` rows of `PFLICHTEN.txt` alone -- against every line the
 register emits, `K` and `L` together. Measured 2026-09-03: **16 of 27 lines carry a `K` row or
 no row at all**, so the old arithmetic counted sixteen lines as if each had closed a logic
 obligation. *It reported 36 missing where the mapping says 50.*
@@ -81,7 +81,7 @@ GABBRO = W / "target" / "debug" / "gabbro"
 FRIST = 120  # seconds per unit; a hang is not a finding.
 
 # **The mapping, and it lives in a document because it is a JUDGEMENT.**
-KORRESPONDENZ = W / "messung" / "gabbrov" / "PFLICHTEN-KORRESPONDENZ.md"
+KORRESPONDENZ = W / "messung" / "gabbrov" / "PFLICHTEN-KORRESPONDENZ.txt"
 # The four states, exhaustive and closed. **A fifth word in the table is an ABBRUCH, not a
 # row this reader skips** -- a state it does not know is a row it cannot check, and a row it
 # cannot check must not be counted into a split that reads like a measurement.
@@ -187,7 +187,7 @@ def _zellen(z):
 
 
 def korrespondenz(text=None):
-    """**The mapping table of `PFLICHTEN-KORRESPONDENZ.md` §3, one entry per obligation.**
+    """**The mapping table of `PFLICHTEN-KORRESPONDENZ.txt` §3, one entry per obligation.**
 
     Returns `[(nr, fragment, anker, pflicht, zustand, grund)]` -- or raises, never guesses.
 
@@ -290,7 +290,7 @@ def lauf(zeigen=False, offen=False):
         print("  zwischen zwei Mengen, die einander nicht enthalten.")
         return 2
     # **The denominator, checked against the table BEFORE anything is counted.** A table that
-    # has fallen behind `PFLICHTEN.md` would answer a smaller question and look complete doing
+    # has fallen behind `PFLICHTEN.txt` would answer a smaller question and look complete doing
     # it -- the `W16` shape at the bookkeeping layer.
     if len(tafel) != bev:
         print(f"ABBRUCH: `{KORRESPONDENZ.name}` fuehrt {len(tafel)} Zeilen, die Bevoelkerung "
@@ -351,7 +351,7 @@ def lauf(zeigen=False, offen=False):
     getragen_pflichten = je["CARRIED"]
     fehlend = bev - getragen_pflichten
     # The reverse direction: lines that no row of the table claims. They are not a defect --
-    # `PFLICHTEN.md` books `K` rows too and GabbroV's population is the `L` half -- but the
+    # `PFLICHTEN.txt` books `K` rows too and GabbroV's population is the `L` half -- but the
     # number has to STAND somewhere, because it is exactly what the old subtraction spent.
     benannt = set()
     for _n, _f, _a, _p, zustand, grund in tafel:
@@ -373,8 +373,8 @@ def lauf(zeigen=False, offen=False):
     print(f"  DROPPED    a clause stands in the source, unbooked    {je['DROPPED']:>3}")
     print(f"  NO CLAUSE  nothing in the fragment states it          {je['NO CLAUSE']:>3}")
     print()
-    print("  **The split is a JUDGEMENT over `PFLICHTEN.md` and not a measurement**, so it")
-    print("  stands row by row in `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.md` and this run")
+    print("  **The split is a JUDGEMENT over `PFLICHTEN.txt` and not a measurement**, so it")
+    print("  stands row by row in `messung/gabbrov/PFLICHTEN-KORRESPONDENZ.txt` and this run")
     print("  holds every row against the register: a CARRIED row names a line that has to be")
     print("  there, a BLOCKED row names a fragment that has to be without one.")
     print()

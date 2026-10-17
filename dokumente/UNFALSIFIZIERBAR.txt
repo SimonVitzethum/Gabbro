@@ -9,7 +9,7 @@ hier die Grammatik, nicht die Sorgfalt."*
 **What the reason has to SAY has never been written down.** Until it is, `unfalsifiable` is
 the cheapest exit from every assumption whose probe is expensive, dangerous or merely absent.
 
-> `dokumente/PLAN.md` §`K100.2` predicts the category and its first member in the same
+> `dokumente/PRUEFER.md` §`K100.2` predicts the category and its first member in the same
 > sentence: *„**Zwei davon werden vermutlich unfalsifizierbar sein** — eine Sonde für „die MMU
 > schreibt nur `A` und `D`" müsste die MMU anhalten."*
 >
@@ -269,7 +269,7 @@ refuses a single file that stands today.**
 
 ## Three things that are **not** reasons
 
-The bar `dokumente/AUSNAHMEN.md` sets for `E2` transfers whole: **structural, not difficult.**
+The bar `dokumente/PRUEFER.md` sets for `E2` transfers whole: **structural, not difficult.**
 
 | not a reason | why |
 |---|---|
@@ -278,7 +278,7 @@ The bar `dokumente/AUSNAHMEN.md` sets for `E2` transfers whole: **structural, no
 | **privilege** | ring 0, a second core and a real device are `77`, one and all. `messung/RACE.md` §5.4 already sorts 26 named probes by which of the three they need; not one of those rows is an argument about falsifiability. |
 
 *If a better bench, a written probe or more time could move the row, it does not belong here —
-the same test `AUSNAHMEN.md` states, and for the same reason.*
+the same test `dokumente/PRUEFER.md` states, and for the same reason.*
 
 ---
 

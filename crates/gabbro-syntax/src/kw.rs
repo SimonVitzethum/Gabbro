@@ -245,7 +245,7 @@ wortschatz! {
     Library       => "library",       ctx;
     // **«E2» (2026-09-12): the payload clause of a `library fn`.**
     //
-    // Names the table (a tree table is a table, `PLAN-ERWEITUNG.md` §2)
+    // Names the table (a tree table is a table, `dokumente/PRUEFER.md` §2)
     // the translator will fill at translation time (§0b); the checker
     // holds the name against the declared tables (`N060`). A bare
     // `payload` elsewhere -- a parameter, a local, a field -- keeps
@@ -255,7 +255,7 @@ wortschatz! {
     // **«E6» (2026-09-12): the hardware profile block (`profile { … }`).**
     //
     // Names the one set of hardware assumptions the whole program runs
-    // under (`PLAN-ERWEITUNG.md` §0c): keyed mode entries plus references
+    // under (`dokumente/PRUEFER.md` §0c): keyed mode entries plus references
     // to declared `assume` items. Without the word the block would parse
     // as a bare name followed by a brace -- no rule to hold the entries
     // against (`N215`/`N216`/`N218`/`N219` would have no declaration).
@@ -266,7 +266,7 @@ wortschatz! {
     //
     // Fixes the FP rounding mode by key and value (`rounding nearest`).
     // An identifier for the same job would accept any spelling and move
-    // the fixed key set (`PLAN-ERWEITUNG.md` §0c, point 3) into a string
+    // the fixed key set (`dokumente/PRUEFER.md` §0c, point 3) into a string
     // comparison nobody reads; a typo would then fall late or never.
     // CONTEXTUAL: elsewhere it stays a name.
     Rounding      => "rounding",      ctx;
@@ -274,7 +274,7 @@ wortschatz! {
     //
     // Fixes FP contraction by key and value (`fp_contract off`). The only
     // admissible value is `off`: the float prelude binds
-    // `-ffp-contract=off` (`PLAN-BITS.md` §5), so any other value
+    // `-ffp-contract=off` (`dokumente/SPRACHE.md` §5), so any other value
     // contradicts it and is refused (`N218`). A bare identifier could not
     // carry that binding.
     // CONTEXTUAL: elsewhere it stays a name.
@@ -290,11 +290,11 @@ wortschatz! {
     //
     // Fixes interrupt routing by key and value. The fifth key of the
     // fixed set beside `arch`, `rounding`, `fp_contract` and
-    // `memory_model` (`PLAN-ERWEITUNG.md` §0c, point 3, mirrors
+    // `memory_model` (`dokumente/PRUEFER.md` §0c, point 3, mirrors
     // `ProfilSchluessel` in `grammatik/Grammatik/Kern/Syntax/Profil.lean`).
     // CONTEXTUAL: elsewhere it stays a name.
     InterruptRouting => "interrupt_routing", ctx;
-    // **«E4» (2026-09-12): the monotone arena, `PLAN-ERWEITUNG.md` §3.**
+    // **«E4» (2026-09-12): the monotone arena, `dokumente/PRUEFER.md` §3.**
     //
     // A heap is allowed but never unbounded: every region carries a lower
     // bound (the reservation) and an upper bound (the capacity). The arena

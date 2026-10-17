@@ -28,7 +28,7 @@
 -- `Domaene::Schlange(_)` in an UNCONDITIONAL match arm, and the refusal text is the reason:
 -- lowering it without an early exit computes something else. There is no arm being withheld.
 --
--- > **This is the other half of `messung/AUDIT-K100-2026-09-04.md`.** That audit refuted the
+-- > **This is the other half of `dokumente/FRAGMENTE.md`.** That audit refuted the
 -- > `> 0 errors` branch -- it reads a COUNT and never a REASON. This refutes the `== 0`
 -- > branch, and by the same measure: *zero errors does not entail that only the generator is
 -- > missing.* A criterion wrong in both directions is not a threshold that needs moving.

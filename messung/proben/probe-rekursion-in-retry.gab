@@ -21,7 +21,7 @@
 -- The first version of this file did carry one -- `progress jemand_zaehlt_hoch`, with an
 -- `assume` behind it and `falsifier sonde_jemand_zaehlt_hoch` behind that. **There is no
 -- program of that name**, and a `falsifier` naming a probe that does not exist is an
--- unfalsifiable assumption wearing a falsifiable one's clothes (`dokumente/UNFALSIFIZIERBAR.md`).
+-- unfalsifiable assumption wearing a falsifiable one's clothes (`dokumente/UNFALSIFIZIERBAR.txt`).
 -- `instrumente/pruefe-sondendeckung.py` said so at once and in the right way: the name pushed
 -- its `aussen` count from 13 to 14, its own speech test then failed, and the run ABORTED
 -- before printing the six numbers `pruefe-zahlen.py` reads -- so `pruefe-zahlen.py` went from

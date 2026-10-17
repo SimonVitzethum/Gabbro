@@ -1,6 +1,6 @@
 //! **Every accepted corpus program is CERTIFIED in Lean or NAMED -- nothing falls between.**
 //!
-//! Opus agent C, 2026-09-26 (`messung/OPUS-C-TRAGWEITE.md`). Simon's sentence: *"When Lean is
+//! Opus agent C, 2026-09-26 (`dokumente/BEWEIS.md`). Simon's sentence: *"When Lean is
 //! green, Gabbro carries everything except the things named in the Spec."* Before this test a
 //! program the checker accepted and the exporter refused (`LG001`-`LG007`) was judged by
 //! nothing in Lean, and nothing turned red: the refusal was a printed line.

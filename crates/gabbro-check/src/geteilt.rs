@@ -1284,7 +1284,7 @@ fn h020_block(
 
 /// **`H017` -- an `observes` domain that no `rcu` declaration explains.** The RCU instance
 /// of the shape `H016` closed for locks, and it was named as open on the same day
-/// (`messung/ABI.md` §6.1: *"Dieselbe Stille steht noch bei der RCU-Domaene"*).
+/// (`dokumente/SPRACHE.md` §6.1: *"Dieselbe Stille steht noch bei der RCU-Domaene"*).
 ///
 /// **Measured 2026-08-21 on `messung/abi-proben/unbekannte-domaene.gab`**, unchanged since
 /// it was written for the ABI report:
@@ -1313,7 +1313,7 @@ fn h020_block(
 /// Naming `NIEDADOM` at six places is one mistake.
 ///
 /// *On the library boundary the rule costs nothing today and cannot: `abi.rs` carries no
-/// `rcu` item into a `.gabi` at all (`messung/ABI.md` §5 lists `rcu` among the 14 unmeasured
+/// `rcu` item into a `.gabi` at all (`dokumente/SPRACHE.md` §5 lists `rcu` among the 14 unmeasured
 /// item kinds). There is no way to import a domain, so there is no import to exempt.* **When
 /// `rcu` does cross the boundary, this rule is where the exemption has to be written, and
 /// `H016` shows the shape.**

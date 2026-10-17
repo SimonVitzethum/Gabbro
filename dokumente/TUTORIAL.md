@@ -36,6 +36,21 @@ Hi
 clause in what it writes carries a comment saying why it is there, and the four that are
 irreducible are marked. *Open that file beside this one.*
 
+> **Which backend is this?** `gabbro build` on a `.bau` manifest still lowers through the
+> **C11 emitter and a C compiler** (the `compiler cc …` line of the manifest). That path is
+> **deprecated** and stays only where it builds; the **current backend is LLVM**:
+> `gabbro llvm [--target=x86_64|aarch64]` writes IR for the checked unit and
+> `instrumente/baue-llvm.sh` links a static binary with no C, no libc and no linked runtime
+> ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)). The checker is the same for both: what this file
+> teaches (ranges, `effects`, `costs`, `narrow`) is decided before either backend runs.
+>
+> **And `putchar` in the example is the one libc call of this tutorial.** Gabbro has no
+> standard library and no libc of its own: an OS call is the program's own `syscall` item
+> (an explicit number, registers in and out, an `abi`), and anything larger -- HTTP, TLS --
+> is written in Gabbro, neither built in nor forbidden ([`SPRACHE.md`](SPRACHE.md) §16).
+> `extern fn putchar` is the C backend's edge and is here because it is the shortest
+> program that prints.
+
 ---
 
 ## 2 — The line at the bottom of every run
@@ -80,7 +95,8 @@ line**, and the count will stay at zero on its own.
 ### And the two file kinds
 
 A `.gab` file is source. A `.bau` file is a **manifest** — which sources form a unit, whether
-that unit is a `program` or an `object`, which C compiler builds it, where the artefacts go.
+that unit is a `program` or an `object`, which C compiler builds it (the legacy C path; see
+section 1), where the artefacts go ([`BAUSYSTEM.md`](BAUSYSTEM.md)).
 `gabbro check` takes `.gab` paths; `gabbro build` takes the `.bau`.
 
 ---
@@ -93,7 +109,7 @@ Every function is the same six parts, in this order:
       pub  fn  clamp(x : u32 in 0 .. 100) -> u32 in 0 .. 100
                  |     |                       |
       export   name  parameters, WITH RANGES   return type, with its range
-          effects { pure }        <- what it touches.  OBLIGATORY
+          effects { pure }        <- what it touches.  never fail-open (section 4)
           costs   <= 4 ops        <- what it costs.    optional, and never guessed
       {
           ...                     <- the body
@@ -129,7 +145,8 @@ Four things about that block are worth more than the rest of this section:
 * **`pub` is not decoration.** An entry without it lowers to a `static` function and the
   linker never sees it. The build refuses by name; the checker does not, because it is a
   build rule and not a language rule.
-* **`effects` is obligatory.** Section 4.
+* **`effects` is never fail-open.** Written, it is the bound the body must stay inside;
+  omitted, it is derived from the body or refused. Section 4.
 * **`costs` is optional — and you never write that number out of your head.** `gabbro costs
   <file.gab>` computes what the body costs and prints it beside what the line promises.
   Section 5, and it is the one to read even if you skip the rest.
@@ -153,21 +170,26 @@ pub fn twice(x : u32 in 0 .. 100) -> u32 in 0 .. 200
 }
 ```
 
-A function with no `effects` clause is **not** a function that does nothing. It is a refusal:
+**A function with no `effects` clause does not claim to do nothing.** Where the body settles
+the answer, the clause is *derived* and checked exactly like a written one — whoever touches
+nothing derives `effects { pure }`, and `gabbro abgeleitet <file.gab>` prints the derived
+clause per function. **A written clause is the enforced bound**: a body that does more than
+it says is refused (`E008`; `E010` for reads), and the call graph's hull has to stay inside it.
+Where nothing settles the answer — a declaration with no body, such as an `extern fn` — the
+omission is refused:
 
 ```
-error: [E001] `twice` has no `effects` clause
-  = SPRACHE.md §7: `effects` is obligatory and not fail-open
-  = the omission was at once the strongest promise and the cheapest one to write
+error: [E001] `g` has no `effects` clause
 ```
 
-*That is the whole design in one line.* A clause that could be left out would mean the
-strongest possible promise — **I touch nothing** — is also the cheapest thing to write, and a
-promise nobody paid for is a promise nobody keeps.
+*That is the whole design in one line*: the strongest promise — **I touch nothing** — is never
+the cheapest thing to write. Write the clause anyway on every function you export: it is the
+part of the signature a caller reads, and a body that later grows an effect then fails at
+your line and not at theirs.
 
 ### The two shapes that cost an attempt each
 
-The measured session, having read `E001`, wrote these two before it wrote the third:
+The measured session, once it knew the clause matters, wrote these two before it wrote the third:
 
 | typed | refused with | why |
 |---|---|---|
@@ -187,8 +209,8 @@ parameter, or a plain name for a sink that is not memory of this unit at all:
 ```gabbro
 module tutorial::sink {
 
--- `output` is not declared anywhere. It names what lies behind the C function -- the effect
--- system is about WHAT IS TOUCHED, and the terminal is touched.
+-- `output` is not declared anywhere. It names what lies behind the foreign function -- the
+-- effect system is about WHAT IS TOUCHED, and the terminal is touched.
 extern fn putchar(c : i32) -> i32 effects { writes output } costs <= 8 ops;
 
 pub fn shout() -> i32 in 0 .. 1
@@ -204,8 +226,9 @@ pub fn shout() -> i32 in 0 .. 1
 
 Two rules that will find you within the hour:
 
-* **`extern fn` needs the clause too.** It is the declaration of something Gabbro cannot see;
-  without a clause, every caller's effects become undecidable, and `E009` says so.
+* **`extern fn` needs the clause.** It is the declaration of something Gabbro cannot see and
+  has no body to derive it from: without a clause it is `E001`, and a caller of one whose
+  effects stay undecidable gets `E009`.
 * **The caller's clause must cover the callee's.** The hull is computed out of the call
   graph, and you can read it: `gabbro effects <file.gab>` prints the effects it derived per
   function, and `gabbro abi --vergleich <file.gab>` puts the COMPUTED hull beside the WRITTEN
@@ -266,18 +289,21 @@ An integer in Gabbro carries its **range**, and every operation must stay inside
 its result type. That is Ada's trick, and it is why this is a compile error:
 
 ```
-pub fn sum(a : u32, b : u32) -> u64 { return a + b; }
+pub fn sum(a : u32, b : u32) -> u32 { return a + b; }
 
 error: [M104] `u32 + u32` leaves the width of the result type
   = SYNTAX.md §4: if the result range does not fit, it is a compile error and not a wrap-around
+error: [M101] the return value requires `u32`, the value has `u32 in 0 .. 8589934590`
 ```
 
 **Read the second line twice.** In C this silently wraps. Here it does not compile.
 
 And read the first line carefully, because the measured session did not: **the width that is
 left is the width of the OPERANDS.** `a` and `b` are full-range `u32`, so their sum runs to
-`8589934590`, which no `u32` holds. *Widening the return type changes nothing* — that attempt
-was made, and it got the identical refusal back.
+`8589934590`, which no `u32` holds. *The refusal does not move to the result:* the cure is on
+the operands, as the three ways out below say — bind them into a wider type first, or give them a
+range. (`M104` and `M101` are the two faces of one fact: the first says the operation leaves its
+width, the second that the value does not fit where it goes.)
 
 ### The types, and their limits
 
@@ -417,7 +443,8 @@ uint32_t clamp_sum(uint32_t a, uint32_t b) {
 ```
 
 **Two `if`s, and they are the only runtime cost of the whole range system.** The ranged
-version from section 6(a) emits this instead:
+version from section 6(a) emits this instead (shown as the C11 emitter writes it; the LLVM
+backend lowers the same checked body to the same two compares and adds, as IR):
 
 ```c
 uint32_t sum(uint32_t a, uint32_t b) {
@@ -470,24 +497,29 @@ pub fn sum(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000
 
 ## 9 — Words you cannot use as names
 
-Gabbro's vocabulary is a **closed table of 245 words**, and the first thing a newcomer types
-is in it:
+Gabbro's vocabulary is a **closed table of 248 words**, but a word is a keyword only *where the
+grammar expects one*: `add`, `min`, `index`, `node`, `next`, `entry`, `walk` and most of the rest are
+ordinary names for a function, a field or a variable. **Only seventeen are not names at all**,
+on two grounds: ten *begin* an expression or a predicate (`sizeof` `lenof` `aligned` `forall`
+`exists` `true` `false` `Self` `Some` `None`), and seven are C's own (`const` `static` `extern`
+`if` `else` `return` `bool`, which would break the generated C as a local):
 
 ```
-error: [P002] `add` is a word of the vocabulary, not an identifier
-  = SYNTAX.md: the vocabulary is a closed table -- everything else is an identifier
+error: [P002] `const` is a word of the vocabulary, not an identifier
+  = C has this name too, and the lowering writes a name unchanged
+  = seventeen words of the 221 are not names, and only these: ...
 ```
 
-`add` is the accumulator kind in `accumulates … add`. So are `min`, `max`, `or`, `and`,
-`merge`, `index`, `into`, `node`, `leaf`, `entry`, `scale`, `chain`, `atomic`, `shared` and
-`walk` — all of them ordinary-looking words that a program wants for a function or a field.
+*(The refusal's own text still says "221"; the table has 248 words today — the count the
+`instrumente/zaehle-wortschatz.py` ratchet guards. The seventeen are unchanged.)*
 
 **There is no way to escape a keyword.** Pick another name; the table is in
 [`dokumente/SYNTAX.md`](SYNTAX.md), and the refusal names the word it read.
 
 ### And there is a second table, which is C's
 
-Gabbro does not mangle: the name you write **is** the name in the generated C. So C's own
+Gabbro does not mangle: the name you write **is** the name in the C the legacy emitter writes,
+and the checker keeps that door shut for every program, whichever backend builds it. So C's own
 vocabulary is closed to you as well — at the boundary, and only there:
 
 ```
@@ -499,9 +531,9 @@ error: [N041] `double` is a name C has already taken
 ```
 
 *This paragraph was written because `double` was the first name this tutorial reached for in
-section 4.* The measured table of 558 names — C keywords, the standard library, and what
+section 4.* The measured table of names — C keywords, the standard library, and what
 `cc -std=c11 -Wall -Wextra -Werror` reserves — is in
-[`messung/C-NAMEN.md`](../messung/C-NAMEN.md).
+[`dokumente/C-SPEICHERMODELL.md`](../dokumente/C-SPEICHERMODELL.md).
 
 ---
 
@@ -513,11 +545,22 @@ section 4.* The measured table of 558 names — C keywords, the standard library
 | the grammar, as a grammar | [`dokumente/SYNTAX.md`](SYNTAX.md) |
 | what the checker checks, and what it does not | `gabbro passes --je-satz` |
 | what a build looked at and what it skipped | [`dokumente/BAUSYSTEM.md`](BAUSYSTEM.md) |
-| 142 worked programs | `beispiele/` — and `beispiele/gift/` is 827 programs that must FAIL |
+| the one rule about pointers (below) | [`dokumente/SPRACHE.md`](SPRACHE.md) §5 and [`A1-OWN-PAPER.md`](A1-OWN-PAPER.md) |
+| code generation: LLVM (current), C11 (deprecated) | [`dokumente/LLVM-BACKEND.md`](LLVM-BACKEND.md), [`dokumente/C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md) |
+| 170 worked programs | `beispiele/` — and `beispiele/gift/` is 898 programs that must FAIL |
 | what a translation rests on | `gabbro certificate <file.gab>` |
 | what a human still owes | `gabbro obligations <file.gab>` |
 
-**And the last two rows are the point of the language.** Gabbro is a systems language whose
+**One rule about pointers, because it will find you in your first program with a buffer.**
+Two pointer arguments of one call must not point into the same place when one of the two
+parameters is writable (`R014`): the root of a pointer is the parameter it came from, a pointer
+the checker cannot trace is *unknown and equals every root*, and two read-only views are free.
+A function that assumes two of its pointer parameters distinct and is exported says so as a
+named assumption (`R015`, a hint). `own` is a *loan* of ownership for the length of a call, not
+a note on the signature ([`SPRACHE.md`](SPRACHE.md) §5, design record
+[`A1-OWN-PAPER.md`](A1-OWN-PAPER.md)).
+
+**And the last two rows of the table above are the point of the language.** Gabbro is a systems language whose
 compiler is required to say what it does not know. If you read only one more thing, read the
 output of `gabbro passes` — it is a list of promises with their state, and it is shorter than
 this file.

@@ -282,7 +282,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
     // call hangs here because the environment already stands here -- a second
     // `Umgebung::sammle` would be a second reader of one thing.
     //
-    // *And it walks EVERY position, not just `ensures`*: `messung/DOMAENENSTELLUNGEN.md`
+    // *And it walks EVERY position, not just `ensures`*: `dokumente/PRUEFER.md`
     // falsified each of the 53 corpus sites outside `ensures` one by one and got 51 silent
     // runs, so the position is where the gap was, not the domain.
     crate::domaene::domaenen(baum, &umgebung, absagen);
@@ -3578,7 +3578,7 @@ impl<'a> Pruefer<'a> {
     /// `(a & b) << c` here and `a & (b << c)` there -- **the same characters, two programs.**
     ///
     /// Measured on 2026-08-31, compiled and run over all 25 pairs
-    /// (`messung/proben/VORRANG-BITSTUFEN.md`): nine of them compute a different value, and
+    /// (`dokumente/SPRACHE.md`): nine of them compute a different value, and
     /// two of the four comparison forms as well. The emitter now writes the parenthesis
     /// (`emit.rs::geklammert`), so **the shipped program computes what the checker proved.**
     ///
@@ -4109,7 +4109,7 @@ impl<'a> Pruefer<'a> {
         // repair lets `u64(a)` reach here as an ordinary `Ruf` over the one-segment path
         // `u64`, and this is where it is typed rather than looked up as a function.
         //
-        // Found by «K3» (`messung/K3-BEFUND.md` §4.1): `test_func`'s two most ordinary lines
+        // Found by «K3» (`dokumente/PRUEFER.md` §4.1): `test_func`'s two most ordinary lines
         // -- `(u64) ktime_us_delta(...)`, `(u64) test_repeat_count` -- have no Gabbro form,
         // and `grep` over the whole corpus at the time found zero sites that would have
         // exercised the gap.
@@ -4823,7 +4823,7 @@ impl<'a> Pruefer<'a> {
     ///
     /// The surface spells them per width until generics exist; the width here is
     /// the operand's OWN `breite`, so no width is named twice and none can
-    /// disagree with the declaration. Ranges follow `PLAN-BITS.md` §3: the
+    /// disagree with the declaration. Ranges follow `dokumente/SPRACHE.md` §3: the
     /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M157`, with the
     /// `narrow` remedy the task asks for); every operand must be an unsigned
     /// standard width (`M158`/`M159`/`M160`); rotation needs the EXACT full
@@ -7034,7 +7034,7 @@ impl<'a> Pruefer<'a> {
     /// reads as reassurance.
     ///
     /// **The wording is deliberately NOT changed.** Ten transcripts quote the line verbatim
-    /// -- `messung/FNPTR.md`, `ERZEUGER.md`, `OPS-RELABEL.md`, `C-NAMEN.md`,
+    /// -- `dokumente/SPRACHE.md`, `ERZEUGER.md`, `OPS-RELABEL.md`, `dokumente/C-SPEICHERMODELL.md`,
     /// `UEBERSETZUNGSREICHWEITE.md`, `TUTORIAL.md`, two probe headers under
     /// `messung/proben/` and two poison probes -- and each of them is a MEASUREMENT of a
     /// past run. *Renaming the field would falsify a record instead of correcting a
@@ -7896,13 +7896,13 @@ impl<'a> Pruefer<'a> {
             absage = absage.mit_notiz(
                 "wrapping is unsigned-only: signed overflow is undefined in C, \
                  and the conversion back from unsigned is implementation-defined \
-                 (PLAN-BITS.md section 5b)",
+                 (dokumente/SPRACHE.md section 5b)",
             );
         } else {
             absage = absage.mit_notiz(
                 "on a range like `0 .. 5` wrapping is ambiguous (mod 6 costs a \
                  division per operation), so it is not derivable there \
-                 (PLAN-BITS.md section 4)",
+                 (dokumente/SPRACHE.md section 4)",
             );
         }
         absage = absage.mit_notiz(
@@ -8405,7 +8405,7 @@ impl<'a> Pruefer<'a> {
     /// Flaeche, von der nur eine Haelfte gebucht ist, sieht kleiner aus als sie ist.*
     /// **Wirksam heisst hier: eine Tatsache ist ENTSTANDEN.** Ob sie irgendwo gebraucht wird,
     /// entscheidet dieser Pass nicht -- die Zahl ist in dieser Richtung eine OBERE Schranke,
-    /// und sie steht als solche in `messung/FREMDVERENGUNG.md`.
+    /// und sie steht als solche in `messung/FREMDVERENGUNG.txt`.
     fn beziehung_aus_ensures(&mut self, binder: &str, r: &Ruf, lage: &mut Lage) {
         let Some(sig) = r.path().and_then(|p| self.u.funktion(&self.modul, p)).cloned() else { return };
         for p in &sig.ensures {
@@ -8488,7 +8488,7 @@ impl<'a> Pruefer<'a> {
     ///
     /// ## `elems of` -- the fourth traversal domain, closed 2026-09-08
     ///
-    /// `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.4 booked the binder without a type
+    /// `dokumente/PRUEFER.md` §2.4 booked the binder without a type
     /// at four domains; 2026-09-07 closed three of them through `binder_tabelle`, and
     /// **`elems of` stayed open because `binder_tabelle` returns `None` for it** -- it
     /// resolves a TABLE, and an array field is not one.
@@ -9944,7 +9944,7 @@ fn wege_aus_der_breite(a: &IntBereich, b: &IntBereich) -> String {
 ///
 /// The third row is the finding: the person wrote a bound, the checker kept none, and the
 /// proof channel is handed `Shape.intIn 0 4294967295` -- a shape whose meaning nobody
-/// stated (`PLAN.md` §3.1, `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.2).
+/// stated (`PLAN.md` §3.1, `dokumente/PRUEFER.md` §1.2).
 ///
 /// ## Where it looks, and it is NINETEEN positions and not one
 ///

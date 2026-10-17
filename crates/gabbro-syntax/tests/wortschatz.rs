@@ -166,7 +166,7 @@ fn probe_lokal(w: &str) -> String {
     )
 }
 
-/// The same question at a parameter -- `messung/K3-BEFUND.md` §3 found seven of its eight
+/// The same question at a parameter -- `dokumente/PRUEFER.md` §3 found seven of its eight
 /// there, not at a `let`.
 fn probe_parameter(w: &str) -> String {
     format!(

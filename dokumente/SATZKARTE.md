@@ -19,7 +19,16 @@ proposals for each (d) item, §9 the `#print axioms` record, §10 the
 distance to the goal.
 
 > §§7-10 are superseded by §11 (goal restated and proved over machine G, 2026-09-13); kept unchanged for history.
-> **The current goal theorem is `ziel_ort_ganz`, §13.**
+> **Status note, 2026-10-17.** The current goal theorem is **`gabbro_ziel`** (§58; proof file
+> `Zielsatz/Atomar/BeweisAtomar.lean`, statement `Zielsatz/Kern/Spec.lean`), on exactly `propext`,
+> `Classical.choice`, `Quot.sound`. `ziel_ort_ganz` (§13) is its ancestor, kept for the history of the
+> premise tables. Lean paths in this file are relative to `grammatik/Grammatik/`; `file:line`
+> references are as of the date of their section and are **not** re-measured (a moved line is a
+> stale pointer, not a stale theorem; grep the name). Retired reports named below (`messung/OPUS-*`,
+> `messung/muse/OPUS-BERICHT-*`, `messung/muse-audit/*` probe files) are gone from the tree; the verdict files (`messung/URTEIL-*`, `messung/review-*`, `dokumente/BEWEIS.md`) are summarised in the verdict table of `BEWEIS.md` and likewise leave the tree. The own/separation line of work is
+> §74-§76 (`dokumente/A1-OWN-PAPER.md`).
+> `OFFEN Oxx` ids are cited as they stood when their section was written; the live list is
+> `TODO.md`, and an id that is no longer there is closed or moved, not forgotten.
 
 ## 7. Re-measured premise table (2026-09-12)
 
@@ -694,7 +703,7 @@ bounds normal answers only (not reason answers); the frame is a write SET
 ## 13. THE goal theorem: `ziel_ort_ganz` (2026-09-13)
 
 Separation items 1 and 3 of the independent Opus verdict
-(`messung/URTEIL-OPUS-2026-09-13.md` §6). Files: `ZielOrtRahmenBeweis.lean`
+(`dokumente/BEWEIS.md` §6). Files: `ZielOrtRahmenBeweis.lean`
 (the replay made generic in a declared axiom ensures `Q`),
 `ZielOrtRahmen.lean` (`zielInvR_erreichbar`), `ZielOrtGanz.lean` (obligation,
 conclusion, theorem), `ZielOrtGanzZeuge.lean` (witnesses, probe A). **This is
@@ -888,7 +897,7 @@ No `sorryAx`, no new `axiom`.
 ## 14. THE goal theorem: `ziel_ort_sperre` -- lock invariants (2026-09-13)
 
 Separation item 2 of the independent Opus verdict
-(`messung/URTEIL-OPUS-2026-09-13.md` §6, probes B and C of §3). Files:
+(`dokumente/BEWEIS.md` §6, probes B and C of §3). Files:
 `SperreSem.lean` (the family, the class of environment moves, the
 sequential semantics with acquire moves and release checks, its frame
 semantics and step lemmas), `SperreFuss.lean` (stable carriers, the
@@ -1750,8 +1759,8 @@ Axioms of every new theorem: `propext`, `Classical.choice`, `Quot.sound`
 ## 18. The `forever` budget, start reasons, the closing theorem's assumptions (2026-09-14, second round)
 
 The model items of the two independent verdicts of 2026-09-14
-(`messung/URTEIL-OPUS-2026-09-14.md` §5 probe D and §6 items 1, 7;
-`messung/URTEIL-MUSE-2026-09-14.md` §5). Files: `Durchgaenge.lean` (new),
+(`dokumente/BEWEIS.md` §5 probe D and §6 items 1, 7;
+`dokumente/BEWEIS.md` §5). Files: `Durchgaenge.lean` (new),
 `ProbeD.lean` (new), `ZielOrtGrund.lean` (new), `ZielOrtStart.lean`,
 `ZielOrtMehrfaden.lean`, `Schlusssatz104.lean`, `MehrfadenZeuge.lean`,
 `MehrfadenLauf.lean`. **G, `rufAt`, `execStmt`/`execStmtH` are unchanged.**
@@ -2030,7 +2039,7 @@ Every theorem named in §18 -- `Endblock.execH_passes`,
 
 ## 19. Invariants at reason returns; progress up to named stops (2026-09-14, two legs of `Ziel`)
 
-`Zielsatz/Spec.lean` states the goal `GabbroZiel` as one statement; two of
+`Zielsatz/Kern/Spec.lean` states the goal `GabbroZiel` as one statement; two of
 its legs had no theorem in the model: `invGrund : InvAmGrundG P M` and
 `fortschritt : FortschrittG P O passes M`. Both are proved here, against the
 definitions of `Spec.lean` as they stand (no change to `Spec.lean`, none
@@ -2044,7 +2053,7 @@ release another thread saw `i` false with every premise met. Now closed as
 obligation + conclusion, like §15.4:
 
 ```lean
--- Zielsatz/Spec.lean (unchanged):
+-- Zielsatz/Kern/Spec.lean (unchanged):
 def InvGutGrund (P) (passes) (Q) (S) (f) : Prop :=        -- per function, SEQUENTIAL
   ∀ O', RahmenO O' → RegLokal O' → AxVertragO Q O' → ∀ U, HavocOk S U →
     ∀ R, RespektiertRahmen P R → OhneVorbedingung R →
@@ -2109,7 +2118,7 @@ calls it through `let x = setze() else { r => … }` inside `breaking`.
 ### 19.2 `FortschrittG` -- progress up to named stops (`Fortschritt.lean`)
 
 ```lean
--- Zielsatz/Spec.lean (unchanged):
+-- Zielsatz/Kern/Spec.lean (unchanged):
 def FortschrittG (P) (O) (passes) (M) : Prop :=
   ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M t ∨ ∃ M', RufSchrittG P O passes M t M'
 
@@ -2212,7 +2221,7 @@ new theorem -- `popS_grund`, `invGrundLog_schritt`,
 ## 20. `gabbro_ziel : GabbroZiel` -- proved; the event `e0` removed (2026-09-14)
 
 ```lean
--- Zielsatz/Beweis.lean
+-- Zielsatz/Kern/Beweis.lean
 theorem gabbro_ziel : GabbroZiel      -- propext, Classical.choice, Quot.sound
 ```
 
@@ -2354,7 +2363,7 @@ hardware stop in a section, contenders `[0, 1]`, `KeinLogikHaltG` from `mP_zerti
 holds the lock at steps 6-11 and takes it at step 15 -- the theorem says before 37
 (`wartezeit_zeuge`).
 
-Measured on the corpus (`messung/WARTESCHRANKEN-2026-09-15.md`, by hand from the
+Measured on the corpus (`messung/WARTESCHRANKEN-2026-09-15.md` (retired report, in the history), by hand from the
 declarations: `lean-g` carries no `held`): 28 programs declare `held`, 19 have an acquisition
 point. Flat locks give `W/F = (c-1)(held+1)+1` own steps of the waiting thread (124/125 with
 `concurrent` pairs: 102 and 66; 59 on 64 cores: 2,584). Two programs nest (05, 17): at
@@ -2384,7 +2393,7 @@ the depth-4 chain to 6,427.
 
 ## 22. `GabbroZiel` repaired: one program, an owned start, payloads in the race leg (2026-09-15)
 
-The third independent Opus verdict (`URTEIL-OPUS-2026-09-15.md`) found that the STATEMENT was
+The third independent Opus verdict (`dokumente/BEWEIS.md`) found that the STATEMENT was
 not the goal yet, and the Muse verdict (gap 7) found the same class. This section is a reviewed
 diff of `Spec.lean`, re-proved. Machine G's rules are unchanged.
 
@@ -2538,7 +2547,7 @@ and `register_ohne_traeger_konstant`: `propext`. No `sorry`, no new `axiom`, no
 
 ## 23. `GabbroZiel`, fourth round: floats are the user's logic, no wait cycle, the stops by kind (2026-09-15)
 
-The fourth independent Opus verdict (`URTEIL-OPUS-2026-09-15b.md`) found `GabbroZiel` to be
+The fourth independent Opus verdict (`dokumente/BEWEIS.md`) found `GabbroZiel` to be
 the goal with named gaps, one of them NOT named: F1. This section is a reviewed diff of
 `Spec.lean` (and, for F1, of the sequential semantics), re-proved. Machine G's rules are
 unchanged.
@@ -2647,7 +2656,7 @@ Full `lake build` from the changed `Syntax.lean` up, 226 jobs, green, 19 min 44 
 - The `flagge` wait's end, and the never-published flag, are not covered (liveness).
 - A stop inside a critical section leaves the lock's waiters waiting forever (named).
 - `SYNTAX.md` (the outcome table and the float row) and `GLEITKOMMA.md` name `logik bereich`
-  now; `PLAN-GRAMMATIK.md` and `PLAN-UMSETZUNG.md` still say `hardware ieee` (the C runtime
+  now; `dokumente/SYNTAX.md` and `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` still say `hardware ieee` (the C runtime
   check `gabbro_hardware(IEEE)` is unchanged and is now a check the user proved passes).
 - Everything named in §22.6.
 
@@ -2733,7 +2742,7 @@ obligation, where the named stop is a statement.
 every other empty answer type is now REFUSED by the checker, and `nieZurueck` is an axiom
 `-> never` alone.
 
-### 24.4 The G1 probes, refuted (Zielsatz/ProbenG1.lean)
+### 24.4 The G1 probes, refuted (Zielsatz/Kern/ProbenG1.lean)
 
 `g1D`: no table, global or lock; `haupt`; axiom `holen() -> ok (0 .. 10) | err` writing
 nothing; register `temp : f64 in 0 .. 1` without device carriers.
@@ -2823,7 +2832,7 @@ CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 mi
 
 ## 25. W1: the checker refuses an empty answer type other than `never` (2026-09-15)
 
-Both round-6 reviews (URTEIL-OPUS-2026-09-15d.md §3, URTEIL-MUSE-2026-09-15d.md) confirmed "the
+Both round-6 reviews (dokumente/BEWEIS.md §3, dokumente/BEWEIS.md) confirmed "the
 goal with named gaps -- no unnamed gap found" and reproduced one escape. This section is a
 reviewed diff: `AkzeptiertSpec` gains the field `antworten`, `KopfHalt .nieZurueck` is
 narrowed; `GabbroZiel` and every other premise are unchanged.
@@ -2840,7 +2849,7 @@ certified (the reviewers' `n_ziel`).
 * `Block.ants` & co. (AntwortOrte.lean) collect a body's answer sites -- `bindAxiom` and
   `axiomCall` (`inl a`), `regLies` and `regLiesElse` (`inr r`); `StelleOk`: the site is an
   axiom whose declared result is `never`, or its declared answer type is not `AntwortLeer`.
-* `antwortenB` (Zielsatz/Akzeptiert.lean) is the Bool, part of `Akzeptiert`;
+* `antwortenB` (Zielsatz/Kern/Akzeptiert.lean) is the Bool, part of `Akzeptiert`;
   `antwortenB_iff` proves it decides the field exactly. Emptiness is decided by `antwortB`
   (EinpassenVoll.lean, `antwortB_iff`, through `antwortLeer_iff`): range bounds, reason count,
   sum cases, `fnptr n` over the enumerated function list, and a float range by three
@@ -2855,7 +2864,7 @@ certified (the reviewers' `n_ziel`).
   `fortschrittG_sperre`, `fortschrittG_mehrfaden`, `abschnittAktiv_aus`,
   `wartezeit_schranke` take the component; `ziel_aus` passes `hA.antworten`, transferred to
   `P.mitRuhe` by `akzeptiertSpec_mitRuhe` (`rumpf_mitRuhe_ants`, `antwortLeer_mitRuhe`,
-  `stelleOk_mitRuhe`, Zielsatz/Ruhe.lean).
+  `stelleOk_mitRuhe`, Zielsatz/Faeden/Ruhe.lean).
 
 **Corrected sentences (Spec.lean).** The ONE list's `nieZurueck` entry is now "a call of an
 axiom whose declared result is `never` -- the call does not return ... The continuation is
@@ -2864,7 +2873,7 @@ refused. The (c) entry reads "for an `E.Q` satisfiable at a DECODABLE value (for
 well-formed one, `WertOk`)". NOT CLAIMED names linking of separately compiled units
 (PLAN-ZIELSATZ §10).
 
-**Refuted (Zielsatz/ProbenW1.lean).** `w1_spec_nicht`: no lock family, function list or start
+**Refuted (Zielsatz/Kern/ProbenW1.lean).** `w1_spec_nicht`: no lock family, function list or start
 list makes the round-6 probe meet `AkzeptiertSpec`; `w1_abgelehnt`: `akzeptiert_pruefer`
 refuses every program with its code; `w1_bool`/`w1_sonst_alles`: computed, the Bool is
 `false` and every other component is `true`, so the refusal is `antwortenB`'s alone. The same
@@ -3059,7 +3068,7 @@ A1/A3/A4 stay outside; the adequacy chain and stage (b) are untouched (PLAN §6.
 
 *Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (the check and its soundness),
 `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzWeitZeuge.lean` (new: the fixture, the probes, the witness).
-Report: `messung/muse/OPUS-BERICHT-KORROK.md`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.2, §6.5.*
+Report: `messung/muse/OPUS-BERICHT-KORROK.md` (retired report, in the history). Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.2, §6.5.*
 
 ### 28.1 The finding
 
@@ -3120,8 +3129,8 @@ kernel), and the note there says how to build it without a mutual block.
 
 ## 29. A2 discharged: a Lean parser for the emitted C subset (2026-09-15)
 
-*Files: `grammatik/Grammatik/CBackend/Parser/CLexer.lean` (the C lexer), `CParser/CParse.lean`
-(`parseC`), `CParser/CProben.lean` (the refusals), `CParser/Bruecke.lean` (`A2`, `kFuns`,
+*Files: `grammatik/Grammatik/CBackend/Parser/CLexer.lean` (the C lexer), `CBackend/Parser/CParse.lean`
+(`parseC`), `CBackend/Parser/CProben.lean` (the refusals), `CBackend/Parser/Bruecke.lean` (`A2`, `kFuns`,
 `schlusssatz_text`), `CText104.lean` + `CText104Zeuge.lean`, `CText108.lean`, and the two
 theorems added at the end of `Kette104Satz.lean`. Guardian:
 `instrumente/pruefe-ctext.py`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG.md §6.6.*
@@ -3192,7 +3201,7 @@ parser: in Lean 4.33 `String.toList` goes through the array representation, and 
 FIRST character of one 1419-byte string literal costs **33,7 GB / 217 s**. Splitting the
 literal into 45 short ones joined by `++` does not help (`String.append` goes through the
 array too); the SAME text as a `List Char` built from 45 short `"…".toList` pieces costs
-**3,3 GB**. The pins are lists of lines for that reason, and `dokumente/TODO.md` O13 has
+**3,3 GB**. The pins are lists of lines for that reason, and `TODO.md` O13 has
 the rest of the measurement -- the same `String.toList` stood in the Gabbro-side pins.
 
 **A second pathology was reported here and is WITHDRAWN** (O13 lane, 2026-09-15): "a MUTUAL
@@ -3201,7 +3210,7 @@ exponential in the fuel" was measured again and **does not hold** -- two-way and
 mutual fuel recursions stay at the bare `lean` baseline from fuel 10 to fuel 320, and the
 Gabbro parser is that very shape at fuel 2032. The 112 GB the probe reached had another
 cause, which was not identified. The expression parser's lack of recursion is a SCOPE
-decision and stands on that alone (`CParser/CParse.lean` §4).
+decision and stands on that alone (`CBackend/Parser/CParse.lean` §4).
 
 **And O13 itself is closed** (§31): the 72 GB was not the lexer pin either. It was ONE
 theorem -- `uebersetzt4`/`uebersetzt8` unfolding `uebersetzeAllg` at a CONCRETE source, so
@@ -3214,7 +3223,7 @@ peak of 6,86 GB**, and `Kette104`/`Kette108` cost **0,92 GB** and **0,87 GB**.
 
 *Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (the staged check and its soundness),
 `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzBlockZeuge.lean` (new: two fixtures and the probes).
-Report: `messung/muse/OPUS-BERICHT-BLOCK.md`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.5, §6.7.*
+Report: `messung/muse/OPUS-BERICHT-BLOCK.md` (retired report, in the history). Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.5, §6.7.*
 
 ### 30.1 The finding
 
@@ -3285,7 +3294,7 @@ are reported separately.*
 `Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
 `Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
 `Grammatik/Korrespondenz/Kette/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), `instrumente/zaehle-kette.py`.
-Report: `messung/muse/OPUS-BERICHT-O13.md`.*
+Report: `messung/muse/OPUS-BERICHT-O13.md` (retired report, in the history).*
 
 | Theorem | What it says |
 |---|---|
@@ -3365,7 +3374,7 @@ statement about the real machine rather than the SC semantics -- `DRFSC`.
    the earlier ticket. `sperrAbstrakt_nur_eigen` is a theorem about the SPECIFICATION and does
    not transfer to the implementation. The safety statement is untouched (the refinement runs
    implementation-to-specification: fewer runs), but the NI-facing half of the
-   `NICHTINTERFERENZ.md` §10 entry may not be read as a statement about the ticket lock: a
+   `dokumente/BEWEIS.md` §10 entry may not be read as a statement about the ticket lock: a
    waiting thread can measure its position in the queue, which is the arrival order of the
    other threads.
 2. **The release performs no check** (`gib_ohne_wache`). `L_gib` increments `now` for whoever
@@ -3418,9 +3427,9 @@ interleaving of them is SC remains the named premise `DRFSC`.
 
 *Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/Bausteine/Arena/ArenaZucker.lean` (new), imported by
 `Grammatik.lean`. Rust: `crates/gabbro-check/src/lean_g.rs` (the arena refusal by name).
-Report: `messung/muse/OPUS-BERICHT-ALLOC.md`. Ledger: `dokumente/TODO.md` O14.*
+Report: `messung/muse/OPUS-BERICHT-ALLOC.md` (retired report, in the history). Ledger: `TODO.md` O14.*
 
-**The finding** (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md` §2.2/§5.3): `let i = alloc A (v)
+**The finding** (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md` (retired report, in the history) §2.2/§5.3): `let i = alloc A (v)
 [else …];` and `reset A;` are accepted with zero diagnostics, emit C, that C compiles -- and
 `Syntax.lean` had no `Stmt` constructor for either, so no program using them could ever close a
 correspondence chain.
@@ -3467,7 +3476,7 @@ so no arena program closes a chain yet. The form exists; the export does not.
 *Added 2026-09-15 (Opus lane `pflicht`). Files: `Grammatik/Korrespondenz/Korpus/GenOblig104.lean` (REGENERATED),
 `Grammatik/Korrespondenz/Allgemein/Pflicht104.lean` (migrated), `Grammatik/Korrespondenz/Korpus/GenOblig108.lean` (new, generated),
 `Grammatik/Korrespondenz/Allgemein/Pflicht108.lean` (new), imported by `Grammatik.lean`. Guardian:
-`instrumente/pruefe-genlean.py`. Report: `messung/muse/OPUS-BERICHT-PFLICHT.md`.*
+`instrumente/pruefe-genlean.py`. Report: `messung/muse/OPUS-BERICHT-PFLICHT.md` (retired report, in the history).*
 
 **What was missing.** Lane 198 made `gabbro lean-g` produce a full `Zielsatz.Einheit gE` and
 `gabbro obligations --g` state `def nutzerPflicht := Zielsatz.NutzerPflicht gE` beside the
@@ -3478,7 +3487,7 @@ the PRE-`Einheit` obligation form, and `Pflicht104.lean` proved duties over name
 
 **Both obligation files are now the exporter's own output, and the duty is proved for both.**
 
-| Conjunct of `NutzerPflicht E` (`Zielsatz/Spec.lean`) | 104 | 108 |
+| Conjunct of `NutzerPflicht E` (`Zielsatz/Kern/Spec.lean`) | 104 | 108 |
 |---|---|---|
 | `logik.1` `KoerperGutS` at EVERY budget | `oblig_koerper` (`koerperGutS_ohne` + `koerperGutS_alle`; `einzahlen` by frame reasoning, `lies` by `KoerperGutV`) | `p108_koerper` (both bodies a single `return <slot>`) |
 | `logik.1` `InvGutS` | `oblig_inv` (`invGutS_leer`, `gD.invs = []`) | `p108_inv` (same) |
@@ -3525,7 +3534,7 @@ bytes; and red on a single changed byte, green again after restoring.
 `Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` §5, `Grammatik/Korrespondenz/Kette/Schlusssatz.lean`,
 `Grammatik/Korrespondenz/Kette/Kette104Satz.lean`; index sites in `Grammatik/CBackend/Parser/Bruecke.lean`,
 `Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/CBackend/Semantik/CText108.lean`. Plan:
-`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.8. Report: `messung/muse/OPUS-BERICHT-STAERKER.md`.*
+`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.8. Report: `messung/muse/OPUS-BERICHT-STAERKER.md` (retired report, in the history).*
 
 **The statement that changed.** `schlusssatz` (the generic closing theorem, §27) kept every
 hypothesis it had -- `Kette src`, `hH`, `hXR`, `hA1`, `hA4` -- and gained three conclusions
@@ -3591,7 +3600,7 @@ green, no `sorry`, no `native_decide`, no new `axiom`.
 `Grammatik/Korrespondenz/Kette/Schlusssatz.lean`, `Grammatik/CBackend/Parser/Bruecke.lean`; index sites in
 `Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/CBackend/Semantik/CText108.lean`, `Grammatik/Korrespondenz/Kette/Kette104Satz.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.9. Report:
-`messung/muse/OPUS-BERICHT-KONGRUENZ.md`.*
+`messung/muse/OPUS-BERICHT-KONGRUENZ.md` (retired report, in the history).*
 
 **THE LEMMA** (`Stmt/Block/Endblock/Arms/GrundArms.kongruent`, `HandlerKongruenz.lean`).
 For an error-mark set `Er : Fehlermarke D → Prop` (a `Fehlermarke` is a `Logik` or a
@@ -3654,7 +3663,7 @@ on `Stmt.locks` (`korrOk_ohneLocks`, `KorrOkOhneLocks.lean`, the twin of
 **The statement that changed.** `schlusssatz` kept every hypothesis and gained ONE
 conclusion, 4e, between 4d and part 5, with two halves: (i) the depth residue is stable
 upwards, unconditionally; (ii) under `RufRahmenTreu`, the writer's-logic residue IS the
-depth residue. `schlusssatz_text` (`CParser/Bruecke.lean`) restates it. Parts 5 and 6 moved
+depth residue. `schlusssatz_text` (`CBackend/Parser/Bruecke.lean`) restates it. Parts 5 and 6 moved
 right by one `.2` at three sites. `schlusssatz_104`, `schlusssatz_124` and `gabbro_ziel`
 untouched.
 
@@ -3683,7 +3692,7 @@ unchanged, whole library **262 jobs** green, no `sorry`, no `native_decide`, no 
 `corrW`'s third clause), `Grammatik/CBackend/Formen/CFormen.lean` (`DecidableEq CX`),
 `Grammatik/Korrespondenz/Kette/Schlusssatz.lean`, `Grammatik/Korrespondenz/Allgemein/KorrOkAdaequat.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §5 and §6.10. Report:
-`messung/muse/OPUS-BERICHT-GERAET.md`.*
+`messung/muse/OPUS-BERICHT-GERAET.md` (retired report, in the history).*
 
 **THE SENTENCE.** *If the profile holds and the register answers inside its declared type,
 every run of the emitted C corresponds.* Nothing about the device is claimed.
@@ -3755,7 +3764,7 @@ no new `axiom`.
 lines), `Grammatik/Logik/Ruf/RufLogik.lean`, `Grammatik/Logik/Ruf/RufLogikZeuge.lean`,
 `Grammatik/Korrespondenz/Kette/Schlusssatz.lean`, `Grammatik/CBackend/Parser/Bruecke.lean`, `Grammatik.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10. Report:
-`messung/muse/OPUS-BERICHT-RAHMEN.md`.*
+`messung/muse/OPUS-BERICHT-RAHMEN.md` (retired report, in the history).*
 
 **THE QUESTION** §36 left open: `rufAt_gut` (`Satz.lean`) proves the frame of a call only at
 worlds meeting `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt`, and
@@ -3829,7 +3838,7 @@ green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 > puts every thread at the root or a declared start, `klon` separates entries from starts),
 > so `CloneHandoff` -- which reads only the START machine's heads -- holds vacuously and
 > (d2) is derivable from (d); the model contains no child thread at all
-> (`messung/review-2026-09-21/G11.md`).
+> (`dokumente/BEWEIS.md`).
 
 > **Fix lane F3 (2026-09-21, review G11 F2-F5): the child is its own thread in the checker.**
 > `N456` refuses a `child` inside `locks`/`observes`/`breaking` or under `requires Held`, and
@@ -3876,7 +3885,7 @@ green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 `emit.rs` (`C185`), `saetze.rs` (`klon.uebergabe`); probes `beispiele/gift/1107`-`1112`,
 examples `155`/`156`. Lean: `Grammatik/CBackend/Semantik/CloneHandoff.lean` (new),
 `Deklaration.klon`, `Laufzeit.klon`, `CloneAssume` in `Spec.lean`. Report:
-`messung/muse/OPUS-BERICHT-CLONE.md`.*
+`messung/muse/OPUS-BERICHT-CLONE.md` (retired report, in the history).*
 
 **THE QUESTION** K-1 left open: a `syscall` gate can declare the raw clone call
 (number, registers, error map -- all user-made), but "the child starts on the handed
@@ -4122,10 +4131,10 @@ to PoolSicher and prove the legs"). The text of `GabbroZiel` and of `Ziel` is un
 | (d) `Laufzeit.einmal` | two threads never run one declared start | ... unless the program declares it at least twice |
 | proof's `StartZulaessig.einmal` | `Ruhig` | `Ruhig ∨ Mehrfach ws` |
 
-**Files:** `Zielsatz/Spec.lean` (the diff, header "WHAT CHANGED ON 2026-09-22"),
-`Zielsatz/Akzeptiert.lean` (component, proof changes), `Zielsatz/Ruhe.lean` (mitRuhe transfer,
-runtime start), `Zielsatz/Beweis.lean` (`startZulaessig_aus`), `Zielsatz/PoolSym.lean`
-(never-weakened statements), `Zielsatz/PoolZeuge.lean` (witnesses).
+**Files:** `Zielsatz/Kern/Spec.lean` (the diff, header "WHAT CHANGED ON 2026-09-22"),
+`Zielsatz/Kern/Akzeptiert.lean` (component, proof changes), `Zielsatz/Faeden/Ruhe.lean` (mitRuhe transfer,
+runtime start), `Zielsatz/Kern/Beweis.lean` (`startZulaessig_aus`), `Zielsatz/Faeden/PoolSym.lean`
+(never-weakened statements), `Zielsatz/Faeden/PoolZeuge.lean` (witnesses).
 
 | Theorem | What it says |
 |---|---|
@@ -4159,7 +4168,7 @@ steps; `Ziel` at every other reachable machine is `gabbro_ziel`'s, not the witne
 ## 48. Same-core interrupt preemption: the leg `keinKernHalt` of `Ziel` (fix lane F11, 2026-09-22)
 
 *Files: `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (`KernPlan`, `KernHaltG`, the leg),
-`Zielsatz/Masken.lean` (the proofs and the discipline Bool), `Zielsatz/MaskenZeuge.lean`
+`Zielsatz/Eigenschaften/Masken.lean` (the proofs and the discipline Bool), `Zielsatz/Eigenschaften/MaskenZeuge.lean`
 (the witnesses on `Korpus59.lean`). Reviews G02 F1 and G12 F1, OFFEN O19.*
 
 **The gap.** An `entry … via idt` dispatch root travels into the model as an ordinary start,
@@ -4192,10 +4201,10 @@ masking at all (no `cli`/`sti`).
 ## 49. Threads created at run time: the thread machine in the goal theorem (Opus agent A, 2026-09-26)
 
 *Files: `grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/FadenMaschine.lean` (the machine, its invariant, both bridges),
-`Zielsatz/Spec.lean` (`Einheit.gestartet`, `Einheit.ws`, `ZielF`, the new `GabbroZiel`),
-`Zielsatz/Faeden.lean` (the join legs), `Zielsatz/Beweis.lean` (`zielF_aus`, `gabbro_ziel`,
-`gabbro_ziel_g`), `Zielsatz/FaedenVor.lean` (nothing weakened), `Zielsatz/FaedenZeuge.lean`
-(witnesses). OFFEN O21, O22; report `messung/OPUS-A-LAUFZEITFAEDEN.md`.*
+`Zielsatz/Kern/Spec.lean` (`Einheit.gestartet`, `Einheit.ws`, `ZielF`, the new `GabbroZiel`),
+`Zielsatz/Faeden/Faeden.lean` (the join legs), `Zielsatz/Kern/Beweis.lean` (`zielF_aus`, `gabbro_ziel`,
+`gabbro_ziel_g`), `Zielsatz/Faeden/FaedenVor.lean` (nothing weakened), `Zielsatz/Faeden/FaedenZeuge.lean`
+(witnesses). OFFEN O21, O22; report `messung/OPUS-A-LAUFZEITFAEDEN.md` (retired report, in the history).*
 
 **The gap.** `start { f, g };` (the starter joins its roots) and the `child` region of a stack
 gate create threads at run time; `GabbroZiel` fixed the thread population at the start. A child
@@ -4236,10 +4245,10 @@ wait, the handed stack, and the C side of the spawn (lane 260's lowering).
 ## 50. The memory model beyond DRF-SC: machine W and the leg `schwach` of `Ziel` (Opus agent B, 2026-09-26)
 
 *Files: `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean` (the view discipline, litmus facts),
-`Speichermodell/MaschineW.lean` (machine W over G, `w_aus_g`), `Speichermodell/DRF.lean` (the DRF
-theorem), `Speichermodell/Zeuge.lean` (witnesses, OFFEN O17), `Zielsatz/Spec.lean` (`SchwachSC`,
-the leg), `Zielsatz/Beweis.lean` (the leg proved), `Zielsatz/Schwach.lean` (the goal over W).
-Report: `messung/OPUS-B-SPEICHERMODELL.md`. OFFEN O17 (narrowed), O25 (new).*
+`Speichermodell/Maschine/MaschineW.lean` (machine W over G, `w_aus_g`), `Speichermodell/Maschine/DRF.lean` (the DRF
+theorem), `Speichermodell/Maschine/Zeuge.lean` (witnesses, OFFEN O17), `Zielsatz/Kern/Spec.lean` (`SchwachSC`,
+the leg), `Zielsatz/Kern/Beweis.lean` (the leg proved), `Zielsatz/Eigenschaften/Schwach.lean` (the goal over W).
+Report: `messung/OPUS-B-SPEICHERMODELL.md` (retired report, in the history). OFFEN O17 (narrowed), O25 (new).*
 
 **The gap.** G is sequentially consistent, and `Spec.lean` read "the hardware is DRF-SC" as an
 assumption of the reading; atomics were "ordered by A10". The emitted C is a C11 program with
@@ -4293,8 +4302,8 @@ as release/acquire, no promises).
 
 *Files: `grammatik/Grammatik/Zertifikat/*.lean` (generated certificates), `Zertifikat/REGISTER.txt`
 (the one list), `Grammatik/Korrespondenz/Zeugnis/Zertifikate.lean` (umbrella), `crates/gabbro-check/tests/zertifikate.rs`
-(the guard), `Zielsatz/Spec.lean` header "WHAT A GREEN BUILD COVERS". Report
-`messung/OPUS-C-TRAGWEITE.md`.*
+(the guard), `Zielsatz/Kern/Spec.lean` header "WHAT A GREEN BUILD COVERS". Report
+`dokumente/BEWEIS.md`.*
 
 **The gap.** `lake build` green said nothing about a real program: only 104 and 108 had their
 exported unit judged by the Lean Bool in the build; 20 further exported programs were judged by
@@ -4317,10 +4326,10 @@ is comptime (93 certified).
 
 ## 52. Racing atomics over machine W: the memory half of O25, the language-carried legs, `N481`-`N483` (Opus lane O25, 2026-09-26)
 
-*Standalone: `Zielsatz/Spec.lean`'s definitions, `Akzeptiert` and `gabbro_ziel` are unchanged
+*Standalone: `Zielsatz/Kern/Spec.lean`'s definitions, `Akzeptiert` and `gabbro_ziel` are unchanged
 (two comment-only header corrections, assumption (3) and the O25 pointer in NOT CLAIMED). Files
 `grammatik/Grammatik/Speichermodell/{Atomar,AtomarZeuge,Zaehler}.lean`; report
-`messung/OPUS-O25-ATOMICS.md`.*
+`messung/OPUS-O25-ATOMICS.md` (retired report, in the history).*
 
 **The question.** §50's DRF theorem holds by exclusion: `fuss` refuses every unguarded read of a
 carrier another thread writes, atomics included. What does machine W do when that refusal is
@@ -4367,11 +4376,11 @@ racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to
 
 ## 53. Invariants beyond the returns: four legs of `Ziel`, one of `ZielF`, and `N496` (Opus agent D, 2026-09-26)
 
-*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean` (proofs), `Zielsatz/InvariantenZeuge.lean`
-(witnesses), `Zielsatz/Spec.lean` (definitions, the invariant block of the header),
-`Zielsatz/Beweis.lean` (`ziel_aus`, `zielF_aus`); Rust `crates/gabbro-check/src/m1.rs`
+*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean` (proofs), `Zielsatz/Eigenschaften/InvariantenZeuge.lean`
+(witnesses), `Zielsatz/Kern/Spec.lean` (definitions, the invariant block of the header),
+`Zielsatz/Kern/Beweis.lean` (`ziel_aus`, `zielF_aus`); Rust `crates/gabbro-check/src/m1.rs`
 (`invarianten_buchen`), `tests/invarianten_buchung.rs`, `beispiele/gift/1231`-`1234`. Report
-`messung/OPUS-D-INVARIANTEN.md`.*
+`messung/OPUS-D-INVARIANTEN.md` (retired report, in the history).*
 
 **The gap.** NOT CLAIMED read "invariants at entry or while locks are held (claimed at returns
 only)"; OFFEN O11 said a table/group invariant no function `maintains` was booked by nothing.
@@ -4410,16 +4419,16 @@ one reading carriers outside its `traeger`; any invariant while an unfinished th
 one of its writers. Every certified program has no table invariant (`Inv := Empty` in the
 exporter), so `invRuhe`/`invSicht` are vacuous there; the lock legs are not.
 
-**Review** (`messung/URTEIL-SPECDIFF-OPUS-D-2026-09-26.md`): sound, no premise moved. A callee's
+**Review** (`dokumente/BEWEIS.md`): sound, no premise moved. A callee's
 writes are its caller's, so a thread that ever writes a carrier keeps the invariant open for its
 whole life (`invRuhe` bites after the writers finish); and a guarded table invariant has, by
 argument, no reachable writer in the model, so `invSicht` adds nothing to `invRuhe` there.
 
 ## 54. Linking separately compiled units under the same hardware assumptions (Opus agent E, 2026-09-26)
 
-*A SECOND statement in `Zielsatz/Spec.lean`, purely additive: `GabbroZiel` and every definition
+*A SECOND statement in `Zielsatz/Kern/Spec.lean`, purely additive: `GabbroZiel` and every definition
 before it are unchanged. Files `grammatik/Grammatik/Zielsatz/{Verbund,VerbundZeuge}.lean`; Rust
-`crates/gabbro-check/src/verbund.rs`, `gabbro link`; report `messung/OPUS-E-LINKEN.md`.*
+`crates/gabbro-check/src/verbund.rs`, `gabbro link`; report `messung/OPUS-E-LINKEN.md` (retired report, in the history).*
 
 | theorem / definition | file | statement |
 |---|---|---|
@@ -4441,7 +4450,7 @@ threads on both sides), `N504` (costs), `N505` (hardware assumptions). Probes
 `messung/proben/verbund/` 1241-1245 (each unit clean alone, the link refuses with exactly its
 code), positive pair `tabelle-bib.gab` + `tabelle-app.gab`; `crates/gabbro-cli/tests/verbund.rs`.
 
-**Note (Opus agent F, 2026-09-26, review E F1, `messung/OPUS-F-VERBUND-RENNEN.md`).** No Lean
+**Note (Opus agent F, 2026-09-26, review E F1, `messung/OPUS-F-VERBUND-RENNEN.md` (retired report, in the history)).** No Lean
 change. The Rust side now decides the three whole-program components of `SchnittstelleSpec`
 instead of refusing around them: `verbund.rs::verbinde_alle` composes the units into the linked
 program (`verbundtext`: each body from its owner, each unit's starts -- the surface of
@@ -4458,10 +4467,10 @@ than the exporter's; dynamic loading; foreign C; the C link step (OFFEN O28).
 
 ## 55. The atomic rely: every leg of `Ziel` with shared atomics over machine W, standalone (Opus lane O25b, 2026-09-26)
 
-*Standalone: `Zielsatz/Spec.lean`, `Akzeptiert` and `gabbro_ziel` are unchanged. Files
+*Standalone: `Zielsatz/Kern/Spec.lean`, `Akzeptiert` and `gabbro_ziel` are unchanged. Files
 `grammatik/Grammatik/Speichermodell/{AtomarSem,SperreSemA,AtomarRec,AtomarReplay,AtomarAkteur,AtomarLauf,AtomarW,AtomarInv,AtomarRuhe,AtomarFortschritt,AtomarZiel,RMW}.lean`,
 `grammatik/Grammatik/Zielsatz/{AtomarPflicht,AtomarRuheNutzer,AtomarInvarianten,AtomarMasken,AtomarAkzeptiert,AtomarAkzeptiertZeuge,AtomarZiel}.lean`;
-report `messung/OPUS-O25B-ATOMICS.md`.*
+report `messung/OPUS-O25B-ATOMICS.md` (retired report, in the history).*
 
 **The question (OFFEN O25, the contract half).** §52 proved what machine W does on a program
 whose footprints admit racing atomics, and the legs the language carries there. The contract
@@ -4520,7 +4529,7 @@ and a per-thread CALL LOG. All four are statable there. `L24` (read observationa
 (an existence statement) are the invariant legs of §53 and their witness; `L50` and `L52` are one
 shape, "an event DIRECTLY behind a return in the call log", and `Ziel` gains the leg `folge` for
 it. Premise-free; no premise of `GabbroZiel` moved. Files `grammatik/Grammatik/{Folge,FolgeBeweis,
-FolgeZeuge,Zielsatz/FolgeZiel}.lean`; Rust `kbedingung.rs` (`N531`, `N532`); report `messung/OPUS-G-O1.md`.*
+FolgeZeuge,Zielsatz/FolgeZiel}.lean`; Rust `kbedingung.rs` (`N531`, `N532`); report `messung/OPUS-G-O1.md` (retired report, in the history).*
 
 | theorem / definition | file | statement |
 |---|---|---|
@@ -4558,12 +4567,12 @@ block's end) -- G unfolds the block without the name; which `Φ` a source progra
 
 ## 57. Handlers in the unit: the leg `keinKernHalt` carried by (a) (Opus agent H, 2026-09-26)
 
-*Files: `grammatik/Grammatik/Kern/Syntax/Syntax.lean` (`Programm.unterbricht`), `Zielsatz/Spec.lean`
+*Files: `grammatik/Grammatik/Kern/Syntax/Syntax.lean` (`Programm.unterbricht`), `Zielsatz/Kern/Spec.lean`
 (`NurMaskiert`, `MaskenDisziplin`, `AkzeptiertSpec.masken`, `HandlerVon`, `KernHaltE`, the leg,
-`Verbindbar.unterbricht`, `SchnittstelleSpec.masken`), `Zielsatz/Akzeptiert.lean` (`maskenB`),
-`Zielsatz/Masken.lean` (the discharge), `MitRuheStatisch.lean` (`mE_und`),
-`Zielsatz/MaskenZeuge.lean` (witnesses), `lean_g.rs` (the export). OFFEN O19; report
-`messung/OPUS-H-KERNE.md`.*
+`Verbindbar.unterbricht`, `SchnittstelleSpec.masken`), `Zielsatz/Kern/Akzeptiert.lean` (`maskenB`),
+`Zielsatz/Eigenschaften/Masken.lean` (the discharge), `MitRuheStatisch.lean` (`mE_und`),
+`Zielsatz/Eigenschaften/MaskenZeuge.lean` (witnesses), `lean_g.rs` (the export). OFFEN O19; report
+`messung/OPUS-H-KERNE.md` (retired report, in the history).*
 
 **The gap.** §48's leg was unconditional (`kernHaltG_gilt`): which threads are handlers, their
 graphs and `H102` were hypotheses of the leg, so the conjunct added no content
@@ -4599,10 +4608,10 @@ handler-on-handler preemption; a thrown entry without `via idt`.
 sound against `AkzeptiertSpecX`), the user's logic with the rely (`NutzerPflichtA`), and concludes
 `ZielFX` on every reachable thread machine over GX; the statement of before is `GabbroZielSC`,
 derived. Files `grammatik/Grammatik/Speichermodell/{GXMaschine,ZaehlerW}.lean`,
-`Zielsatz/{BeweisAtomar,AtomarGoalZeuge,AtomarZertifikatZeuge}.lean`, the atomic-rely block of
-`Zielsatz/Spec.lean`; `MaschineW.lean` (`SchrittW.rmw`); Rust `lean_g.rs` (`read_atomic`,
+`Zielsatz/Atomar/{BeweisAtomar,AtomarGoalZeuge,AtomarZertifikatZeuge}.lean` (`Zielsatz/BeweisAtomar.lean` is a pinned one-line re-export shim), the atomic-rely block of
+`Zielsatz/Kern/Spec.lean`; `MaschineW.lean` (`SchrittW.rmw`); Rust `lean_g.rs` (`read_atomic`,
 `Stmt.publish`), `obligations_g.rs` (certificates over the new statement); report
-`messung/OPUS-O25C-ATOMICS.md`.*
+`messung/OPUS-O25C-ATOMICS.md` (retired report, in the history).*
 
 | theorem / definition | file | statement |
 |---|---|---|
@@ -4660,8 +4669,8 @@ that statement for premise (b) of the goal theorem, in `bruecke/Bruecke/Quelle.l
 **What is NOT claimed:** the fragment premises -- no lock invariants, no axiom ensures, no declared
 starts, no atomics, `requires` lowered to `true`, the `ensures` forms `== < <=` with `and/or/not`,
 zero initial memory, no arithmetic in the bridge (refused by name: `sideExpr` is `none`). Each is a
-construct the Lean front end REFUSES by name; the plan to lift each is `STAND-P.md` /
-`messung/PARSER-LANE-REPORT.md`.
+construct the Lean front end REFUSES by name; the plan to lift each is `STAND-P.md` (retired report, in the history) /
+`messung/PARSER-LANE-REPORT.md` (retired report, in the history).
 
 ## 61. A foreign call at the top level of a body: `Endblock.bindAxiom` (C-free lane, 2026-09-30)
 
@@ -4758,7 +4767,7 @@ harness), and the binding's storage and report calls are Gabbro (`bibliothek/lin
 | `arena_commit_monoton`, `arena_ueber_der_decke` | SchablonenArena | the prefix only grows; one slot past the ceiling needs a byte past an exact span |
 | `arena_zeuge` | SchablonenArena | WITNESS on the os-probe's arena (8-byte slots, ceiling 65536, grown by 1024) |
 
-`Zielsatz/Spec.lean`: comment only, header block "arena runtime"; (d) `Laufzeit.reserve` and
+`Zielsatz/Kern/Spec.lean`: comment only, header block "arena runtime"; (d) `Laufzeit.reserve` and
 `.commit` reworded (the storage is the program's binding under the proved template; no definition,
 premise or conclusion moves). Measured: `pruefe-os-bindung.sh` GREEN and all 8 harness gifts
 caught; `miss-arena-decke.sh` GREEN (10 MiB and 32 GiB ceilings, same binary); `pruefe-osfrei.py`
@@ -4854,8 +4863,8 @@ driver; every kernel call below the unit is the program's binding.
 | **`laden_erfolg`**, `laden_init_erst_nach_bindung`, `laden_ruft_kein_exit`, `laden_start_nach_init`, **`laden_verweigert_wartet`**, `entladen_wartet_vor_exit` | SchablonenModul §2 | bind, lock, init, start; the init only after every arena; never the exit on load; roots only after a good init; a refused load waits for every root it started; the unload waits before the exit |
 | `lebenslauf_zeuge_*` | SchablonenModul §2 | WITNESSES: the three probes, gift 4's stop, a refused reservation |
 
-`Zielsatz/Spec.lean`: comment only -- (M11) now names the compiler's C11 atomics instead of the
-LKMM table (review: `messung/SERVER-0E-SPEC-DIFF.md` Part IV), and (d) `Laufzeit.reserve` names
+`Zielsatz/Kern/Spec.lean`: comment only -- (M11) now names the compiler's C11 atomics instead of the
+LKMM table (review: `messung/SERVER-0E-SPEC-DIFF.md` (retired report, in the history) Part IV), and (d) `Laufzeit.reserve` names
 the static pool. Measured: `instrumente/pruefe-kernelmodul.sh` GREEN on all three probes (halde:
 refuse-on-full at the provision; takt: `landed=0` over 38 ticks; atomar: 512/256/0/3), 12 of 12
 gifts caught; `instrumente/zaehle-c.py` kmod runtime share 1344 -> 0 lines (what stays is the
@@ -4886,7 +4895,7 @@ values). The binding's core number went too -- it fed only a holder record a pro
 
 NOT proved: the wrapper's instructions after its store run in module text (the unload window the
 completion had too), and that the binding keeps `kern_faden_vertrag` (user logic, premise (c)).
-`Zielsatz/Spec.lean` unchanged: the goal's runtime premise (d) already says the declared starts
+`Zielsatz/Kern/Spec.lean` unchanged: the goal's runtime premise (d) already says the declared starts
 run; what moved is who writes the start (the binding, in Gabbro) and the driver's join.
 
 ## 70. The bare-metal image's generated pieces: `metall.speicher` and `arena.metall` (C-free lane, 2026-10-05, C3 slice 1)
@@ -4914,7 +4923,7 @@ four memory functions (`<unit>.metall.speicher.c`) and the two header names besi
 | `arena_metall_zeuge` | SchablonenMetall §2 | WITNESS: three descriptors, two pools granted, a refused third, a stranger |
 
 NOT proved: that the compiler calls the memory functions only with ranges it owns, and that the
-loader zeroes `.bss` (the bare-metal block's `lader`). `Zielsatz/Spec.lean` unchanged (the arena
+loader zeroes `.bss` (the bare-metal block's `lader`). `Zielsatz/Kern/Spec.lean` unchanged (the arena
 on metal is still the static storage premise (d) names; its parenthesis naming `arena.c` in the
 Opus agent L block is a dated remark). Measured: `instrumente/pruefe-metall.sh` 18 images booted
 on `qemu -smp 4`, every expectation held, 8 gifts bite (158-else with a pool of exactly the floor
@@ -4948,7 +4957,7 @@ every macro are unchanged.
 
 NOT proved: the C11 orderings (the C and the hardware), counter wrap at 2^32, starvation of a
 grace wait (OFFEN O32), and the runtime's own side of the yield (`metall_abgeben` and the
-scheduler stay `kern.c`, wall C of `messung/C3-WAENDE.md`). `Zielsatz/Spec.lean` unchanged: the
+scheduler stay `kern.c`, wall C of `messung/C3-WAENDE.md` (retired report, in the history)). `Zielsatz/Kern/Spec.lean` unchanged: the
 goal's lock premise is `LaufzeitC.sperre`, which `ticketLP_sperrAbstrakt` discharges, and the
 generated lock refines it step for step.
 
@@ -4975,7 +4984,7 @@ and wake vectors are one register (`METALL_TAKT_VEKTOR`, `METALL_WECK_VEKTOR` in
 
 NOT proved: the SDM's gate format on real silicon (the hardware assumption every metal image
 names), that every core executes `lidt` before its first interrupt (the runtime's bring-up order,
-`kern.c`), and the stubs (`start.S`, `eintritt_asm.h`, wall D). `Zielsatz/Spec.lean` unchanged.
+`kern.c`), and the stubs (`start.S`, `eintritt_asm.h`, wall D). `Zielsatz/Kern/Spec.lean` unchanged.
 
 ## 73. The bare-metal thread runtime: `faden.metall` (C-free lane, 2026-10-05, C3 slice 4)
 
@@ -5003,7 +5012,7 @@ cores through the interface in `metall.h` (`metall_kern_setze`, `metall_kern_api
 
 NOT proved: the switch (`metall_schalte`, `start.S`: the register file and stack as the hardware
 keeps them -- wall D), the C11 orderings of the join word, and preemption's timing (the LAPIC
-timer in `kern.c`, wall A). `Zielsatz/Spec.lean` unchanged: the goal's runtime premise (d) says
+timer in `kern.c`, wall A). `Zielsatz/Kern/Spec.lean` unchanged: the goal's runtime premise (d) says
 the declared starts run, each on its own thread; what moved is who writes the scheduler.
 *Lesson of the proof:* `decide` on 64-bit literal arithmetic (`(0x1F80 + 0x037F * 2^32) % 2^32`)
 drove the elaborator past 4 GB and was killed (exit 137); `simp` with the literal simprocs
@@ -5037,7 +5046,7 @@ callee over one table is not `ParamGetrennt` (the counter-model has two distinct
 **re-views across types do not reach the model** -- pointers to records and foreign re-views are
 refused by the exporter (`LG005`, `LG001`; `beispiele/1163` is `UNCERTIFIED LG001`), so the
 borrow rule is the model's reading only at one pointer type; **a frame that names a table directly**
-(a static root beside a parameter) is outside `RahmenUeberParams`. `Zielsatz/Spec.lean` unchanged;
+(a static root beside a parameter) is outside `RahmenUeberParams`. `Zielsatz/Kern/Spec.lean` unchanged;
 `gabbro_ziel` untouched.
 
 ## 75. Objects below a table: `ObjGetrennt` (`own`/separation slice 2b, 2026-10-17, `dokumente/A1-OWN-PAPER.md`)
@@ -5065,7 +5074,7 @@ is a value the caller chooses.
 | `ParamVerschieden`, `FrischNeu`, `RechteOk`, `HerkunftTreu` | ObjektWurzel §3 | the four NAMED hypotheses: S-2 / `R015`, allocation discipline, rights, faithful provenance |
 | `wurzel_getrennt_obj`, **`r014_objGetrennt`**, **`r014_ruf_rahmen`** | ObjektWurzel §4 | disjoint roots give `ObjGetrennt` under the four hypotheses; composed with `obj_ruf_rahmen` |
 | `allocStrom_neu`, `allocStrom_inj`, **`frischNeu_aus_arena`** | ObjektWurzel §5 | `FrischNeu` as a theorem for the model's allocator (`ArenaDyn.freiAlloc`, duplicate-free free list) |
-| `Herkunft.wurzelnR`, **`rust_lesart_luecke`** | ObjektWurzel §6 | FINDING: the Rust reading (untraced name = no root, pair skipped) is unsound in the model |
+| `Herkunft.wurzelnR`, **`rust_lesart_luecke`** | ObjektWurzel §6 | FINDING, **repaired in the checker 2026-10-17 (commit `a6a2e2d6`)**: the first Rust reading (untraced name = no root, pair skipped) was unsound in the model; now an untraceable pointer is UNKNOWN and equals every root (§76) |
 | `zeuge_obj_nicht_getrennt`, `zeuge_lauf_gleich`, **`ohne_objGetrennt_nur_versprechen`** | ObjektZeuge | COUNTER-MODEL: `aendern(kp : ptr rw T, k, wp : ptr r T, w)` at `k = w = 0`; one real run moves `w`'s object 0 -> 5 |
 | `zeuge_prog`, `zeuge_objGetrennt`, **`zeuge_obj_ruf_rahmen`**, `zeuge_lauf_getrennt`, `zeuge_nicht_paramGetrennt`, **`zeuge_obj_feiner`** | ObjektZeuge | WITNESS: the same function at `k = 0, w = 1`, ONE table: `ObjGetrennt`, every run leaves `T.slots[1]`, the run writes `T.slots[0]`, `ParamGetrennt` fails |
 | `zeuge_umsicht`, `zeuge_sicht_lauf`, `zeuge_leihe_nicht_getrennt`, `zeuge_r014_leihe` | ObjektZeuge | borrow rule on `sicht(p, k) -> index T { return k; }`; `aendern(k, sicht(k))` never separated, refused by `R014Rein` |
@@ -5076,4 +5085,18 @@ is not one object, so `udp-echo`'s cross-type re-view `kopfworte_von` still has 
 (needs range objects and `schreibBytes` in the discipline); **the checker's walk over `let`s** is not
 formalised over G syntax, its correctness is the premise `HerkunftTreu`; **the discipline is a `Prop`**,
 no Bool the exporter could compute; **`LG005`/`LG001` stay** (the stretch was not clean, see
-A1-OWN-PAPER.md §6, slice 2b). `Zielsatz/Spec.lean` unchanged; `gabbro_ziel` untouched.
+A1-OWN-PAPER.md §6, slice 2b). `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
+
+## 76. Own, slices 3 and 4: the `R014` repair, the `R015` boundary hint, `noalias` (2026-10-17, `dokumente/A1-OWN-PAPER.md`)
+
+No new Lean theorem: this section books what the checker and the LLVM emitter did with §74/§75.
+
+| What | Where | Status |
+|---|---|---|
+| **The repair of the slice-2b finding.** `getrennte_wurzeln` no longer skips a pair with an untraced name: a field read, an index, an indirect call, an unresolved callee, an argument that is no bare name and a re-view of an untraced pointer are `UNBEKANNT`, a root equal to every root; a fresh root is only for an answer that comes from no pointer argument. Pairs of two read-only parameters stay free | `crates/gabbro-check/src/m3.rs`, sentence `m3.zeiger_wurzel` (`saetze.rs`), `tests/wurzeln.rs` (10 rows, three of them new: function-pointer re-view, field pointer, read-only twin), probe `beispiele/gift/1444-alias-sicht-und-quelle.gab` | measured: 0 new `R014` over every tracked `.gab` except the probe |
+| **`R015`**, the boundary: a function that assumes two pointer parameters distinct (one writable or `own`) and is `pub` or called by no body of its unit says so | `m3.rs`, sentence `m3.zeiger_wurzel_grenze` | a HINT, not a refusal; it is the Rust face of the hypothesis `ParamVerschieden` of `r014_objGetrennt` (§75) |
+| **`noalias`** on a writable pointer parameter of an *internal* function the checker holds the whole call of (not `pub`, has a body, called from a body of the unit, address never taken, named by no entry/boot/concurrent item, `effects` naming nothing but its own pointer parameters) | `crates/gabbro-check/src/llvm.rs`, `tests/noalias.rs` (one positive row, four refusing twins), `dokumente/LLVM-BACKEND.md` | measured: 10 `noalias` over `beispiele/` + `messung/*/` (was 2), IR verified with `opt`; **not a Lean judgment**: the model side is §74/§75, the rule itself is a Rust checker rule |
+
+NOT proved: the `let` walk of the checker over G syntax (the premise `HerkunftTreu`); `R004`/`R007` as
+special cases of `R014` (they stay separate rules); records over byte buffers (range objects, `LG005`/
+`LG001`). `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.

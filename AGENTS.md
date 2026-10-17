@@ -184,7 +184,7 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 - **Proposed friend optimiser ownership:** `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean`
   and `OptimizationWitnesses.lean` are reserved for the friend handoff. Muse lanes
   do not edit these paths; reuse the one accepted IR and wait for its frozen interface.
-  The complete planned optimiser specification belongs in `grammatik/OPTIMIZER.md`.
+  The complete planned optimiser specification belongs in `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`.
 - **Continuous Muse utilisation (Simon, 2026-10-01):** keep up to 15 useful models active permanently. Dispatch independently of serial integration/build/publication. Count actual live model PIDs separately from queues, completed lanes and Python/build wrappers. Preserve all safety gates and record genuine dependency/provider/resource bottlenecks. The coordinator manages only its own lanes.
 - **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
   Muse lanes: as many as useful.
@@ -196,7 +196,7 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 - **Work in real folders, not `/tmp`.** `/tmp` is RAM on this machine. Scratch files go to
   `.claude/muse-arbeit/kratz/`.
 - **Every Lean build and every `cargo` run happens locally.** No exceptions for "just a small one".
-- **Simplicity is a goal, but no guarantee is given up for it** (PLAN-EINFACHHEIT.md). The measure
+- **Simplicity is a goal, but no guarantee is given up for it** (dokumente/PRUEFER.md). The measure
   is: ceremony count down AND pass register constant. Never derive `ensures`, and never turn a
   refusal into a warning.
 - **Safety is never traded for features** (Simon, 2026-09-17). No lane weakens a guarantee —
@@ -505,7 +505,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (review target), `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean` |
 | Model | `RufMaschineG.lean` (machine G), `Semantik.lean` (`execEnd`, `rufAt`), `SperreBeweis.lean`, `Lebendigkeit.lean`, `Gleitkomma*.lean`, `EinpassenVoll.lean`, `AntwortOrte.lean`, `Nichtinterferenz/` |
 | Translation validation | Active target: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 (source → final x86 bytes, W / GX reuse). Existing C proof record: `Schlusssatz104.lean` (first chain), `Schlusssatz.lean` + `KorrespondenzAllg.lean` (stage (a) generic, `korrOk`), `Kette104*.lean`, `Kette108.lean`, `CNebenlaeufig.lean` + `Schlusssatz124.lean` + `Korpus124.lean` (stage (b)), `CFormen*.lean`, `CSpeicher.lean`, `CSemantik.lean`, `Parser/` (T3) |
-| Plans | `dokumente/PLAN-ZIELSATZ.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 historical C record), `PLAN-EINFACHHEIT.md`, `NICHTINTERFERENZ.md`, `GLEITKOMMA.md` |
+| Plans | `dokumente/BEWEIS.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 historical C record), `dokumente/PRUEFER.md`, `dokumente/BEWEIS.md`, `GLEITKOMMA.md` |
 | Theorem map | `dokumente/SATZKARTE.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
 | Known absences | `dokumente/TODO.md` (O1–O14) |
 | Guardian-booked figures | `messung/KENNZAHLEN.md` (moved out of the old TODO.md; `pruefe-zahlen.py` reads it) |

@@ -243,7 +243,7 @@ impl<'a> Sicht<'a> {
 /// `SYNTAX.md`:1060 moved the tree edge to the `table` with the argument that two sites could
 /// name different fields *"without anybody comparing the two"* -- and it names `chain(a, b)
 /// in` as the model that could already do it. **On `chain` itself the argument never fell
-/// back.** Measured on 2026-08-31 (`messung/DOMAENENNAMEN.md` §2c): five falsifications of
+/// back.** Measured on 2026-08-31 (`dokumente/PRUEFER.md` §2c): five falsifications of
 /// the edge in `beispiele/55-kindkette.gab`, in `ensures`, in an `invariant` and in a `spec
 /// fn` body -- **0 errors and 0 `C001` every time**, while `tree { child gibtsnicht }` at the
 /// very same table falls at `D006`.
@@ -260,7 +260,7 @@ impl<'a> Sicht<'a> {
 ///
 /// ## The place itself -- `D017` and `D018`, built 2026-08-31 on the second measurement
 ///
-/// `messung/DOMAENENSTELLUNGEN.md` verified each of the 53 corpus quantifier sites OUTSIDE
+/// `dokumente/PRUEFER.md` verified each of the 53 corpus quantifier sites OUTSIDE
 /// `ensures` one by one: the base name of the place replaced by `zzznix`, the base load of
 /// the same file subtracted. **51 stayed silent and 2 answered with `D012`** -- the premise
 /// rule at a call of a generated operation, which lives in `opsruf.rs` and says nothing
@@ -301,7 +301,7 @@ impl<'a> Sicht<'a> {
 /// spine and stands in the corpus (`messung/proben/probe-vier-zellen.gab`:59,
 /// `chain(naechst, naechst)`); `chain(parent, parent)` is the ancestor chain. *Refusing them
 /// needs a statement about what the author MEANT, and no measurement of this bench carries
-/// one.* The gap is named in `messung/DOMAENENNAMEN.md` and left open there.
+/// one.* The gap is named in `dokumente/PRUEFER.md` and left open there.
 pub fn domaenen(baum: &Programm, u: &Umgebung, absagen: &mut Absagen) {
     // **The names a shared-side contract clause may invoke (`D027` below).**
     //
@@ -353,7 +353,7 @@ enum Stellung {
     Durchlauf,
     /// **Four positions this walk did not reach until 2026-09-02**, and each was measured
     /// silent in all twenty name kinds before it was hooked up
-    /// (`messung/PREDICATE-NAMES.md`): the `floor` of a `check`, the `down` and `leaf` of a
+    /// (`dokumente/PRUEFER.md`): the `floor` of a `check`, the `down` and `leaf` of a
     /// `walk`, the `when` of a compare-exchange, and the `requires` of an `axiom` -- which
     /// takes `Vorbedingung`, because it is one.
     Untergrenze,
@@ -391,7 +391,7 @@ fn domaenen_im_item(
     match &item.art {
         // A function: its parameters are the local view, and its CONTRACTS as well as
         // its BODY are read. **All positions**, not just `ensures` -- the position finding
-        // of `messung/DOMAENENNAMEN.md` stands right beside this rule.
+        // of `dokumente/PRUEFER.md` stands right beside this rule.
         ItemArt::Funktion(f) => {
             let mut lokal: HashMap<String, Typ> = HashMap::new();
             for p in &f.parameter {
@@ -1196,7 +1196,7 @@ fn zaehlbar_pruefen(d: &Domaene, st: Stellung, span: Span, absagen: &mut Absagen
 /// `M109` in `m1.rs` asks this of an `ensures` and of nothing else; `N053` in `namen.rs`
 /// asks it of a device promise; `N032` asks it of a `format … where`. **Sixteen of the
 /// nineteen predicate positions the grammar has asked it of nobody**, and that was measured
-/// position by position before this rule was written (`messung/PREDICATE-NAMES.md`):
+/// position by position before this rule was written (`dokumente/PRUEFER.md`):
 ///
 /// ```text
 /// requires gibt_es_nicht(s) == 0   ->  0 errors, 3 hints [E009]   Lean: DROPPED
@@ -1811,7 +1811,7 @@ fn binderverwendung_pruefen(
     // `fields of` nor `threads` can say anything about a declared carrier at all, so the
     // vacuous body is all that is left of them. *A refusal that makes a word of the grammar
     // unwritable is a grammar change wearing a rule's clothes*, and the grammar change is
-    // already booked: `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 for `threads`,
+    // already booked: `dokumente/PRUEFER.md` §2.3 for `threads`,
     // and `fields of` has zero corpus sites and its own emitter refusal. **Until then the
     // hint stands at every one of those sites and says what they are worth.**
     if !nennt(&q.rumpf, v) {
@@ -1931,7 +1931,7 @@ fn binderverwendung_pruefen(
                 // **`threads` gets its own wording, and that is not decoration.** It is
                 // the one domain that names no place at all, so its refusal cannot point at
                 // a declaration that is wrong -- it has to say that there is none. *And it
-                // is the sentence `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 books
+                // is the sentence `dokumente/PRUEFER.md` §2.3 books
                 // as a missing grammar line (`PLAN.md` §9.1, "a language change, not a
                 // model change"): until `threads` names a carrier, no statement over it can
                 // be about one.*
@@ -2021,7 +2021,7 @@ fn binderverwendung_pruefen(
     // > goes on saying what that shape is worth.
     //
     // **What it does NOT do, and this is the whole honest half.** It does not give
-    // `threads` a domain. `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §2.3 and
+    // `threads` a domain. `dokumente/PRUEFER.md` §2.3 and
     // `PLAN.md` §9.1 book that as a language change, and §15 measures why the obvious
     // surface (`threads over T`, a mark at the table) would be a SYNONYM of `slots of T`
     // -- byte-identical C, the same proposition, and therefore the very decoration this
@@ -2140,7 +2140,7 @@ fn domaene_pruefen(
 
 /// **`D019` -- the FIELD names in the suffix of the place resolve.**
 ///
-/// `messung/DOMAENENSTELLUNGEN.md` §7 carried the cell as unchecked, and the reason it gave
+/// `dokumente/PRUEFER.md` §7 carried the cell as unchecked, and the reason it gave
 /// was read off the source -- `M109` lives in `m1.rs`: *"`M109` descends only into
 /// `[index]` suffixes, not into
 /// `.field`; `D017` reads the BASE name. `D018` catches the case by half: if the field name
@@ -2249,7 +2249,7 @@ fn ortsfelder_pruefen(d: &Domaene, s: &Sicht, geb: &[String], absagen: &mut Absa
 /// The place a domain names -- or `None` for the two domains that name no place.
 ///
 /// `fields of <path>` carries a PATH and not a place, and `threads` names nothing at all
-/// (`Q3`, a language decision). *Both are named in `messung/DOMAENENSTELLUNGEN.md` as
+/// (`Q3`, a language decision). *Both are named in `dokumente/PRUEFER.md` as
 /// unchecked, with the reason, instead of being guessed at here.*
 fn ort_der_domaene(d: &Domaene) -> Option<&Ort> {
     match d {
@@ -2287,7 +2287,7 @@ fn grundname_pruefen(
     // in a body may run over a `let` binding, and this pass carries no block scope -- it
     // would refuse the name the line above introduced. At a `traverse` with a `costs` line
     // `K003` from `kosten.rs` speaks instead: about the missing BOUND, not the name. *`W16`
-    // shape and it is named in `messung/DOMAENENSTELLUNGEN.md`, not closed here.*
+    // shape and it is named in `dokumente/PRUEFER.md`, not closed here.*
     if st == Stellung::Durchlauf {
         return;
     }
@@ -2394,7 +2394,7 @@ fn ortstyp_pruefen(d: &Domaene, s: &Sicht, geb: &[String], absagen: &mut Absagen
             &[Ortsart::Tabelle, Ortsart::Index],
             "a slot of a table",
         ),
-        // **Not built, and named instead** (`messung/DOMAENENSTELLUNGEN.md`): `fields of`
+        // **Not built, and named instead** (`dokumente/PRUEFER.md`): `fields of`
         // carries a path and has zero corpus sites -- Regel A, there is no subject that
         // measures the need. `threads` names nothing (`Q3`).
         Domaene::FelderVon(_) | Domaene::Threads => return,

@@ -159,7 +159,7 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # is the corpus.**
 #
 # The one unit is `beispiele/gift/641`, which arrived on 2026-09-02 as the probe for `D1`
-# (`messung/ERZEUGERSWEEP.md`). And the form is a SHADOW of that defect, not a second one:
+# (`dokumente/C-SPEICHERMODELL.md`). And the form is a SHADOW of that defect, not a second one:
 # `T_absteigen` calls `Pte_rest`, which no accessor declares, C assumes `int` for an
 # undeclared callee, and `int -> uint64_t` is the sign conversion `-Wsign-conversion`
 # reports. **Spliced a `Pte_rest` reader into the emitted C and recompiled: ZERO warnings
@@ -231,7 +231,7 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # before the repair. *Whoever finds it red again should fix the emitter, not the number* --
 # unchanged, because the sentence does not expire when the number does.
 # **66 -> 67 and 31 -> 32 on 2026-09-12, and the new form is the syscall
-# stub's half of PLAN-SYSCALL.md item 1 (lane S6).** The emitter writes the
+# stub's half of dokumente/SPRACHE.md item 1 (lane S6).** The emitter writes the
 # stub itself -- arguments bound to the declared registers, the number in
 # `rax`, one `syscall` instruction -- and the sixteen x86_64 general registers
 # have no complete constraint-letter set (`r10` has none), so the binding is
@@ -617,7 +617,7 @@ KATALOG = {
     "memory_order_*": ("Sonstiges", E, "lex", "Other: _Atomic with NAMED ordering", None),
     "_Noreturn": ("Sonstiges", E, "lex", "Other: _Noreturn", None),
     "restrict": ("Sonstiges", E, "lex", "Other: restrict", None),
-    "asm": ("Sonstiges", E, "lex", "Other: inline assembler at two emission sites (`asm` bodies and the syscall stub, PLAN-SYSCALL.md item 1)", None),
+    "asm": ("Sonstiges", E, "lex", "Other: inline assembler at two emission sites (`asm` bodies and the syscall stub, dokumente/SPRACHE.md item 1)", None),
     "const": ("Sonstiges", U, "lex", "auf keiner Liste -- nur `const` DISCARDING steht dort", None),
     "inline": ("Sonstiges", U, "lex",
                "auf keiner Liste -- die `Other`-Zeile nennt `_Noreturn` und `restrict`", None),
@@ -654,7 +654,7 @@ KATALOG = {
     "_Static_assert": ("Sonstiges", U, "lex", "auf keiner Liste (aber `BEWEIS.md` §3 will es)", None),
     "_Alignas": ("Sonstiges", U, "lex", "auf keiner Liste", None),
     "_Thread_local": ("Sonstiges", U, "lex", "auf keiner Liste", None),
-    "register": ("Sonstiges", U, "lex", "auf keiner Liste -- seit lane S6 die expliziten Registervariablen der Syscall-Registerbindung (PLAN-SYSCALL.md item 1)", None),
+    "register": ("Sonstiges", U, "lex", "auf keiner Liste -- seit lane S6 die expliziten Registervariablen der Syscall-Registerbindung (dokumente/SPRACHE.md item 1)", None),
     "auto": ("Sonstiges", U, "lex", "auf keiner Liste", None),
 }
 
@@ -1448,7 +1448,7 @@ def main():
     print("     Lauf misst es weiterhin nicht.")
     print("   * `asm` at two emission sites since lane S6: gezaehlt werden die Vorkommen im C,")
     print("     nicht die Stellen in `emit.rs` -- ein `asm`-Rumpf und der `syscall`-Rumpf des")
-    print("     syscall-Stubs (PLAN-SYSCALL.md item 1, eine Schablone) teilen sich diese Zeile.")
+    print("     syscall-Stubs (dokumente/SPRACHE.md item 1, eine Schablone) teilen sich diese Zeile.")
     print("   * Menge B ist eine OBERE Schranke: ein 128. Programm kann einen toten Eintrag")
     print("     wiederbeleben.")
 

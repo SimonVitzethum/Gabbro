@@ -1,4 +1,4 @@
-//! Lane E5 -- the translation stage, first cut (PLAN-ERWEITUNG.md section 6).
+//! Lane E5 -- the translation stage, first cut (dokumente/PRUEFER.md section 6).
 //!
 //! Three sides, each pinned:
 //!

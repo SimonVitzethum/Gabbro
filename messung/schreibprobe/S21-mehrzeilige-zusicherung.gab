@@ -17,7 +17,7 @@
 -- 200 characters, and `pruefe-englisch.py`/`-zeilen` read them as one.
 --
 -- WHY IT IS NOT COSMETIC. An assumption's text is the ONE place a reader
--- learns what is being trusted; `UNFALSIFIZIERBAR.md` is a whole document
+-- learns what is being trusted; `UNFALSIFIZIERBAR.txt` is a whole document
 -- about those sentences. A carrier that forces them onto one line makes the
 -- long ones unreadable in a diff and invites the short ones.
 --

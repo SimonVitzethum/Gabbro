@@ -171,7 +171,7 @@ ERWARTET = {
     # carried the sentence *see `ab` -- `WalkDecl`*, and that held as long as the two clauses
     # were predicates nobody walked: measured that day, position by position, `walk … down`
     # and `walk … leaf` accepted a name nothing declares in **all twenty** name kinds
-    # (`messung/PREDICATE-NAMES.md`). `D021` reads them now, and `D017`-`D020` with it --
+    # (`dokumente/PRUEFER.md`). `D021` reads them now, and `D017`-`D020` with it --
     # the walk's own binder `it` is the only name they introduce.
     #
     # *This guard said so on its own, before anyone thought of updating the table -- which

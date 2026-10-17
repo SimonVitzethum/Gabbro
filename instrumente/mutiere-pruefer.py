@@ -340,7 +340,7 @@ MUTATIONEN = [
     #
     # *The loss was silent and not small:* 101 -> 107 obligation lines over the corpus, four
     # of them at `messung/fragmente/F01.gab`:426 where `revoke` calls `delete_leaf`. Two of
-    # those close `PFLICHTEN.md` F1 rows `236` and `337` -- the second is what that file calls
+    # those close `PFLICHTEN.txt` F1 rows `236` and `337` -- the second is what that file calls
     # **the load-bearing statement of `revoke`**.
     #
     # Without an anchor the arm could be dropped again in silence, and the register would
@@ -921,7 +921,7 @@ MUTATIONEN = [
     # `chain(a, b) in` is the one domain that names its edge AT THE WALK, and until this day
     # nobody read the two names. **Three rules, three mutations** -- and each of them is the
     # state the checker was in yesterday, so a survivor here would say the rule went back to
-    # where it came from. `messung/DOMAENENNAMEN.md`.
+    # where it came from. `dokumente/PRUEFER.md`.
     Mutation(
         "kettenkante-nimmt-irgendein-feld",
         "domaene.rs",
@@ -951,7 +951,7 @@ MUTATIONEN = [
     #
     # Six of the twelve files in `messung/tor-proben/` emitted C that `cc` refused, and
     # three static stages passed it. **Each of these two mutations is the state the checker
-    # was in that morning.** `messung/TORREICHWEITE.md`.
+    # was in that morning.** `dokumente/PRUEFER.md`.
     Mutation(
         "probenurteil-return-darf-leer-sein",
         "namen.rs",
@@ -972,7 +972,7 @@ MUTATIONEN = [
     #
     # `M109` reads `f.ensures` and nothing else. Each of the 53 corpus quantifier sites
     # OUTSIDE `ensures` was falsified one by one against the unchanged checker, and 51
-    # stayed silent (`messung/DOMAENENSTELLUNGEN.md`). **Each of these three mutations is
+    # stayed silent (`dokumente/PRUEFER.md`). **Each of these three mutations is
     # the state the checker was in the day before**, so a survivor says the rule went back.
     Mutation(
         "domaenenort-nur-in-nachbedingungen",
@@ -999,7 +999,7 @@ MUTATIONEN = [
         "record and `queue` over a table pass again",
     ),
     # **`D021`, three mutations** (2026-09-02). The rule holds the base name of a place in
-    # a PREDICATE, in the sixteen positions that had no reader; `messung/PREDICATE-NAMES.md`
+    # a PREDICATE, in the sixteen positions that had no reader; `dokumente/PRUEFER.md`
     # measured 266 of 380 position x name-kind cells accepting a name nothing declares. Each
     # mutation below is the state the checker was in the day before.
     Mutation(
@@ -2356,7 +2356,7 @@ MUTATIONEN = [
         "namen.rs",
         "                if felder.contains(n.as_str())",
         "                if true || felder.contains(n.as_str())",
-        "N032 -- die `where`-Klausel eines `format` darf wieder einen Namen nennen, den es nicht gibt; PFLICHTEN.md F10 baut auf ihr auf",
+        "N032 -- die `where`-Klausel eines `format` darf wieder einen Namen nennen, den es nicht gibt; PFLICHTEN.txt F10 baut auf ihr auf",
     ),
     # **The report line of a `check`** (2026-08-31). If this one survives, `measures` may
     # name into the void again -- and with it `N021` and `N022` go silent, because both find
@@ -4105,7 +4105,7 @@ MUTATIONEN = [
     # --- lean.rs, the collecting bucket (2026-08-28, `B1`) ---
     #
     # **Seventeen refusals stood under one word, and not one was a call over a contract**
-    # (`messung/RUF-TOR.md`). The three mutations below hit the three surfaces that can fall
+    # (`dokumente/SPRACHE.md`). The three mutations below hit the three surfaces that can fall
     # back silently -- and two of them leave the balance line untouched, which is why the
     # probes read the emitted TEXT and not only the count.
     Mutation(
@@ -4143,7 +4143,7 @@ MUTATIONEN = [
     ),
     # --- lean.rs, the suspension (2026-08-28, `B2`) ---
     #
-    # **A suspension is not an exit** (`messung/AUSSETZUNG.md`). Four obligations
+    # **A suspension is not an exit** (`dokumente/PRUEFER.md`). Four obligations
     # went through Lean the moment `breaking` stopped being filed as one. The two mutations
     # below hold both halves: the reading itself, and the NAME that makes it sound.
     Mutation(
@@ -4171,7 +4171,7 @@ MUTATIONEN = [
     #
     # **`result` is a name, and the goal that uses it must demand that a value AROSE.**
     # A body that runs off the end has none; a goal without the `finalValue` conjunct would
-    # prove the promise of a routine that never makes one (`messung/VIER-LUECKEN.md`).
+    # prove the promise of a routine that never makes one (`dokumente/PRUEFER.md`).
     Mutation(
         "lean-ergebnis-ohne-wert",
         "lean.rs",

@@ -133,7 +133,7 @@ impl fn einsammeln(c : ptr<normal, rw> Kappenraum,
 {
     -- **Was ueber den Durchlaeufen gilt.** Das MASS traegt `by consuming` schon; dies ist
     -- die AUSSAGE, und bis zum 2026-08-28 hatte die Sprache kein Wort dafuer
-    -- (`messung/SCHLEIFENINVARIANTE.md`). `invariant` ist kein neues Wort: es steht an einer
+    -- (`dokumente/PRUEFER.md`). `invariant` ist kein neues Wort: es steht an einer
     -- `table` fuer dasselbe -- ein Praedikat, das durchgehend gilt.
     traverse opfer over descendants of c.slots[s] by consuming
         touches consumes c.slots, writes o.slots

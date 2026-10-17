@@ -11,7 +11,7 @@
 -- begruendet den Umzug der Baumkante an die `table` mit genau diesem Argument, das auf
 -- `chain` nie zurueckgefallen ist.
 --
--- Gemessen in `messung/DOMAENENNAMEN.md`.
+-- Gemessen in `dokumente/PRUEFER.md`.
 
 module gift {
 

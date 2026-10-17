@@ -5,7 +5,7 @@
 //! name C owns is a name a lowering cannot use, and the checker is the place that says so --
 //! not `cc`, three tools later, in a language the writer never asked about.
 //!
-//! **The table is a measurement of 2026-08-31**, and `messung/C-NAMEN.md` carries the command
+//! **The table is a measurement of 2026-08-31**, and `dokumente/C-SPEICHERMODELL.md` carries the command
 //! for every line of it. Three classes, and they are not the same kind of thing:
 //!
 //! | class | count | how it was measured |

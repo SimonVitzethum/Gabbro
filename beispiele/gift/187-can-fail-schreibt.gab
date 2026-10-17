@@ -104,7 +104,7 @@ extern fn groesse_gemessen() -> u64 in 1 .. 1000000 or MessFehler
 -- K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
 --
 -- **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
--- Klempnereipflichten in `PFLICHTEN.md` -- Stellen, an denen der Mensch etwas von Hand zu
+-- Klempnereipflichten in `PFLICHTEN.txt` -- Stellen, an denen der Mensch etwas von Hand zu
 -- zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
 -- den richtigen Ort.
 --

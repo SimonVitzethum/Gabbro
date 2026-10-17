@@ -2,7 +2,7 @@
 """**Die Abnahme -- EIN Befehl, der JEDEN Waechter faehrt und je Waechter ein Urteil nennt.**
 
 Am 2026-08-30 gab es 26 `pruefe-*`-Waechter und **keinen Lauf, der alle faehrt**.
-`dokumente/PLAN-AUTONOM.md` §1.7 nannte elf; jede Sitzung stellte sich den Rest aus dem
+`dokumente/DESIGN.md` §1.7 nannte elf; jede Sitzung stellte sich den Rest aus dem
 Gedaechtnis zusammen. Sieben standen in KEINER Liste und in keinem Sammellauf --
 `pruefe-abstieg.py`, `pruefe-aufloesung.py`, `pruefe-reichweite.py`, `pruefe-widerruf.py`,
 `pruefe-lean-beweis.sh`, `pruefe-lean-programm.sh`, `pruefe-p6-beweis.sh`. Zwei rote Ratschen
@@ -380,7 +380,7 @@ def unsichere_stellen(wurzel, ergebnisse):
     instead of behind an adverb.*
 
     **What is NOT built, what it would take, and the granularity that decides it**
-    (measured 2026-09-01, `messung/UNTERE-GRENZE.md`). A line trace per run
+    (measured 2026-09-01, `dokumente/PRUEFER.md`). A line trace per run
     (`zaehle-probenzweige.py` already keeps one) could tighten the lower end, and the size of
     the prize is **two places of 94 -- 2,1 %**. Regel A: the need is measured, not assumed,
     and this one is not there.

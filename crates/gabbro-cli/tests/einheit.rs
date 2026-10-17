@@ -1,6 +1,6 @@
 //! **`gabbro pruefe --unit` -- the named files as ONE translation unit.**
 //!
-//! The measurement behind it stands in `messung/EINHEITENSICHT.md`. The short form: the
+//! The measurement behind it stands in `dokumente/PRUEFER.md`. The short form: the
 //! resolver (`umgebung.rs::kandidaten`) walked the module chain and followed `use` lines all
 //! along; what it never got was the OTHER FILE. `gabbro lean` joins the sources and therefore
 //! resolves; `gabbro pruefe` loops and therefore does not.

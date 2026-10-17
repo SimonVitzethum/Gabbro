@@ -10,7 +10,7 @@
 -- ein `index into Kappraum` OHNE `option` -- es hat kein Ende, und eine Kette ohne Ende
 -- laeuft, solange die Tabelle Plaetze hat.
 --
--- Gemessen in `messung/DOMAENENNAMEN.md`.
+-- Gemessen in `dokumente/PRUEFER.md`.
 
 module gift {
 

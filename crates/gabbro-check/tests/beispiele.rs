@@ -248,7 +248,7 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // the types agree, at most one side defines, and C11 calls that a legal repetition.
         // `lock TOR` beside `extern fn TOR_nimm()`; `boot b` beside
         // `extern fn gabbro_boot_b()`; `check c` beside `extern fn pruefe_c()`. Measured and
-        // RUN in `messung/STILLE-KOLLISIONEN.md`: taking the lock executes the writer's body,
+        // RUN in `dokumente/PRUEFER.md`: taking the lock executes the writer's body,
         // and the writer's own archive member is never linked.
         //
         // For those, `-- erwartet: N042` alone would be one-sided. It says the checker
@@ -684,7 +684,7 @@ fn h020_silence_and_single_fire_738() {
 /// **«B26»: a `requires` at a register is COUNTED, since 2026-08-24.**
 ///
 /// Until then no pass read `RegDecl::requires` -- the clause parsed and vanished.
-/// `PFLICHTEN.md` carried that as a hanging plumbing duty, and the note named the cure
+/// `PFLICHTEN.txt` carried that as a hanging plumbing duty, and the note named the cure
 /// itself: *"the same shape as `ensures` on an `extern fn`."* That one became a counted
 /// foreign duty; this one becomes a counted **device promise**.
 ///
@@ -858,7 +858,7 @@ fn ein_eigener_rumpf_zaehlt_nicht_als_fremdverengung() {
 /// die Flaeche kleiner aus, als sie ist.*
 ///
 /// **Wirksam heisst hier: eine Tatsache ist ENTSTANDEN**, nicht: sie wird gebraucht. Die Zahl
-/// ist in dieser Richtung eine OBERE Schranke, und das steht in `messung/FREMDVERENGUNG.md`.
+/// ist in dieser Richtung eine OBERE Schranke, und das steht in `messung/FREMDVERENGUNG.txt`.
 #[test]
 fn auch_die_relationale_nachbedingung_wird_gebucht() {
     let q = "module t { \

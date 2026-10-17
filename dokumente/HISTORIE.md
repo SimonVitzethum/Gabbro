@@ -1,56 +1,144 @@
-# Gabbro — the corrections
+# Gabbro — the history and the corrections
 
-This file records **what was already wrong about this design**. It stands apart because the
-`README` would otherwise grow as sediment from layers of corrections — at 658 lines it already
-had, and the location note "this correction is in line 3" had rotted before anyone read it.
+This file records **what happened to this design and what was already wrong about it.** It
+stands apart because the `README` would otherwise grow as sediment from layers of corrections —
+at 658 lines it already had, and the location note "this correction is in line 3" had rotted
+before anyone read it.
 
 **The documentary value is the point.** A design folder that deletes its refuted versions ends
-up looking as if it had been right from the start.
-
+up looking as if it had been right from the start. The git history is the protocol: a deleted
+file is not lost, and the commits named below say where to find it. *(Tidied 2026-10-17: a
+dated timeline first, then the corrections that teach, then what the deleted reports recorded.
+The corrections themselves are not rewritten; their dates and wording stay.)*
 
 ---
 
-## The big step — four obligations the shared semantics cannot state *(2026-09-03)*
+## 1. Timeline
 
-**`L24`, `L34`, `L50` and `L52` are the first four rows of `AUSNAHMEN.md`**, and the entry
-stands here because burying them under *"ten rows are not sayable"* was the mistake.
+One line per event, newest last. A hash is the commit that carries it; a file name is where the
+decision is written. Dates are commit or decision dates, not measurement dates.
+
+| Date | Event | Evidence |
+|---|---|---|
+| 2026-08-13 | A narrow language for formats and tables, target C, is drafted as *Basalt* and renamed **Gabbro** the same day; the first overreach (`provable`) and its correction follow | `f3a7ec0c`, `155cbdf0` |
+| 2026-08-13 | The kernel branch gets a number: the seven constructs cover at most 9 % of Caprock; the plan for the other 91 % is written | `b5763f25`, `d106f2d4` |
+| 2026-08-14 | A compiler (lexer, parser over the whole EBNF, five of nine passes) is written although the ordering rule said no checker line before measurement 2: **a breach, booked** | §2 below |
+| 2026-08-14 | `locks ordered` is struck by its own paper test (zero test cases in the whole kernel tree) | §2 below |
+| 2026-08-15 | Two copies of the B29 pattern turn out to be one inheritance (`R099` rename) | §2 below |
+| 2026-08-20 | Five faults fall out of the first driver, none a wrong idea: each was a sentence the folder had written and no reader held | §2 below |
+| 2026-08-31 | First full acceptance over 49 guardians: three times the guardian was the finding. Twelve emitter wildcards counted: eight fire, and `breite_von` 146 times | `bb11bdd3`, `7be80aed` |
+| 2026-09-01 | `gabbro` prints `Hallo` without a hand-written C driver; tag `0.0.1`; twelve subcommand/flag pairs get English first names; the audit of the whole tree; the hardware plan is written and retracted in part within three days | `aecd27fe`, `2f2ded1b`, `27681e08` |
+| 2026-09-02 | GabbroV measured: 56 of 66 logic obligations are sayable as a `Prop`, and `lean` took them without looking in | `86054b06` |
+| 2026-09-03 | Four obligations the shared semantics cannot state; the `G1` falsifier without a threshold is withdrawn | §2 below |
+| 2026-09-04 | The four `K100` gates audited adversarially; `H = 0` shown buyable | `ff3dc75c` |
+| 2026-09-10 | A goal assessment says the goal is not reached | its report, last present at `4bb5e944` |
+| 2026-09-14 | `theorem gabbro_ziel : GabbroZiel` proved (tag `milestone-2026-09-15-gabbro-ziel`) | tag |
+| 2026-09-15 | Rounds 5 and 6 of the independent review (`G1` repaired, `W1` closed in Lean and Rust); both reviewers find "the goal with named gaps — no unnamed gap found"; stage (a) of the C chain closes generically; the Isabelle theories are ported to Lean (lanes 168/169) | tag `milestone-2026-09-15-zielsatz-bestaetigt`, `92b75c60`, `944001ff` |
+| 2026-09-15 to 27 | The session runs on a server; everything computes there and on a second machine | `CLAUDE.md` |
+| 2026-09-26 | Opus lanes O25, O25b, O25c: the goal statement carries the **atomic rely** (`PrueferX`, `NutzerPflichtA`, `ZielFX`/`ZielX` over GX); agents A–L extend runtime threads, weak memory, invariants, linking, handlers, bare metal | `AGENTS.md` §2 |
+| 2026-09-27 | Everything runs locally again | `CLAUDE.md` |
+| 2026-09-28 | Milestone: a Gabbro Linux kernel module with a real bounded heap, no OS call hard-wired in any runtime; dynamic data structures come into scope | tag `milestone-2026-09-28-kernelmodul-heap` |
+| 2026-09-29 | GabbroV bridge milestone | tag `milestone-2026-09-29-gabbrov-bruecke` |
+| 2026-09-30 | Generic parser chain: sieve (a) re-measured at 5 of 148; the C-free lane removes handwritten C from the runtimes | tag `milestone-2026-09-30-parser-generic-chain5` |
+| 2026-10-01 | Simon selects a **direct x86-64 backend with final-byte validation** (C11 validation becomes legacy evidence); up to 15 Muse agents run in parallel | header of the old validation plan |
+| 2026-10-05 | Lean layout rule: at most 20 entries per folder; mechanical move guardian | `AGENTS.md` §3 |
+| 2026-10-07 | **Direction change: AArch64 (Armv9-A) on the Sail Arm model instead of x86-64**; the C emitter is archived (tag `archiv/c-emitter-2026-10-07`) and deprecated; performance target 80 % min / 110 % of GCC `-O3` | `ARM-PLAN.md`, `4e098dcb`, `2b3c54d6` |
+| 2026-10-08 | Mathlib is allowed everywhere, pinned to Lean v4.33.1 | `c852c3f6` |
+| 2026-10-10 | The x86-64 model (357 Lean files, about 265 000 lines, 48 documents, an unwired Rust foundation) is moved to the branch `archive` | `7c693cb7` |
+| 2026-10-14/15 | **LLVM backend**: Gabbro lowers directly to LLVM IR for x86-64 and AArch64, no C, no libc, static binaries; untrusted, refuses by name (`Y101`–`Y106`) | `a6a6c622` |
+| 2026-10-15 | Simon: the C emitter is outdated and no guide for language, checker or compiler work; repository cleanup removes 998 Muse reports, 83 lane tasks, about 240 measurement files and the state documents (§3); `TODO.md` replaces `OFFEN.md`; the unbounded heap with pressure sampling is built | `014b4d93`, `f6eb0ac2`, `b62a25a2` |
+| 2026-10-16 | The sampling clause is written in English: `pb P blw B` | `60e71603` |
+| 2026-10-17 | Real threads for `start`; recursion lowered to loops with growable continuation storage; the LLVM backend measured against the Lean constructor register | `dbda971d`, `9a2b9986`, `158047cc` |
+| 2026-10-17 | **`own`, aliasing and `noalias`**: `R014` refuses two pointer arguments with one root, an untraceable pointer is *unknown* and equals every root (a soundness gap closed), `R015` names the boundary assumption; Lean model of objects below a table (`ParamGetrennt`, `ObjGetrennt`) with a bridge to `R014`; `noalias` on writable pointer parameters of internal functions | `704719db`, `74d7c90d`, `bf760447`, `be9320a4`, `a6a2e2d6`, `4bb5e944` |
+| 2026-10-17 | The emission check stops being a push gate (the C backend is deprecated) | `acb9b5dd` |
+| 2026-10-17 | **Documentation consolidation**: 163 Markdown files become 30 (README, `AGENTS.md`, `CLAUDE.md`, `TODO.md`, `ARM-PLAN.md`, 21 documents, three machine-read ledgers) | this commit series |
+
+---
+
+## 2. The corrections that teach (newest first)
+
+### Found during the 2026-10-17 consolidation: documents and a printer nobody ran
+
+Three findings, all of one class: *a statement about an artifact that nobody ran through its
+consumer.*
+
+- **The x86-64 direction lived six days as the selected target** (decision 2026-10-01, reversed
+  2026-10-07) and the archive move came three days after that (2026-10-10). The validation plan
+  and the optimiser specification kept naming x86-64 as the target, and the optimiser
+  specification still linked to `Grammatik/X86/*.lean`, files no longer on master, until this
+  consolidation. *A decision that reverses must reach every document that
+  states the old one.* The optimiser specification and the hardware plan were rewritten as
+  target-neutral with the archive named (`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §8,
+  `PLAN-HARDWARE.md` §2.3).
+- **`gabbro llvm-cert` prints Lean that does not elaborate.** `LLVM-BACKEND.md` said the file
+  "elaborates with plain `lean`". Run through `lean`, every definition fails (`unexpected token
+  ':='`: the printer writes a second `:=` after comment lines, `llvm.rs:444–452`); the tests
+  check substrings, and nothing in `grammatik/` reads the definitions. *Open.*
+- **The LLVM backend lowers a `device … at port` register as a volatile memory access** (`gabbro
+  llvm beispiele/65-port-space.gab` prints `load volatile` at `base + offset`). That is the
+  2026-09-02 defect of the C emitter ("the generated code reads RAM"), reborn in a new producer
+  and against the rule "refuse by name, never guess". *Open; written down at `PLAN-HARDWARE.md`
+  §3.1.*
+
+### The hardware plan, retracted in parts within three days *(2026-09-01 to 2026-09-04)*
+
+The 3 078-line hardware plan was written on 2026-09-01 and corrected in place until 2026-09-04.
+Each retraction below was found by running something, not by rereading. The plan's lasting
+content is in `PLAN-HARDWARE.md`; what fell:
+
+| Claim | What happened |
+|---|---|
+| "twelve wildcards, seven fire" | **eight** fire; the pass was run by four commands and the hits fell into one pot; the line named as the root (`breite_von`) was booked "silent" and fired 146 times. *A counter that aborts at its first hit counts "at least one", not "which"* |
+| "the vocabulary is 234 words" | **222**: a `grep` over the file counted 15 words from comments and lost three; the denominator is the `wortschatz!` macro call |
+| "string output is unreachable" | retracted within the hour; strings went on the day. The *question* was then mis-framed too (a length is not a terminator) |
+| "462 bookkeeping entries" | not reconstructible; **359** comparable entries over `beispiele/` (80 more are bodiless `extern`/`prim`, trust surface that cannot reach zero) |
+| "59 of 359 carry nothing" | **withdrawn, not corrected**: the hull inherits the callee's padding, so the measurement hides the very error it should find |
+| "effects form a finite lattice, so the fixpoint converges" | false: crossing a call edge creates new places, `k.wert → k.kind.wert → …`; the derivation widens at depth four. The conclusion survived, the argument did not |
+| `phase` as one generalised word | calculated and rejected: one word falls, not four; two of four sites already had it |
+| "exactly one item remains" (ownership transfer) | the remainder after an enumeration with no written denominator; there were two |
+| "75 % → 87 % → 90 %" | not comparable; the denominator was written down only at the third pass |
+
+*The general rule this paid for:* before a rule over a word belongs a count of its uses, and
+whether they go wrong in the same direction.
+
+### The big step — four obligations the shared semantics cannot state *(2026-09-03)*
+
+**`L24`, `L34`, `L50` and `L52` are the first four rows of the list of obligations the semantics
+could not state**, and the entry stands here because burying them under *"ten rows are not
+sayable"* was the mistake.
 
 They are one missing means seen four times. `L24` says two places are never half set — *no
 third state exists between the pre and the post*. `L34` says the opposite about the same
 object — *one does exist, and the invariant fails in it*. `L50` and `L52` order two effects of
 one step: the flush before the reply, the reply before the service ends.
-`programmlogik/Gabbro/Body.lean`'s `exec` is **big-step**. It hands out a start state and an
-end state, and nothing in between.
+The semantics' `exec` is **big-step**. It hands out a start state and an end state, and
+nothing in between.
 
 **Why this is not a gap in the specification fragment**, which is the reading that would send
 the repair to the one place it cannot be made: a fragment is a language of predicates over the
-objects the semantics provides. A new construct in §7 would have nothing to range over. It
-would denote nothing — or, worse and far more likely, denote something weaker while wearing the
-obligation's name: `flush ∧ reply` type-checks and reads right. *The corpus already splits the
-sayable half off; `L23` is L24's pre/post half and stands as a `Prop`. The residue is exactly
-what no predicate over a state pair can hold.*
+objects the semantics provides. A new construct would have nothing to range over. It would
+denote nothing — or, worse and far more likely, denote something weaker while wearing the
+obligation's name: `flush ∧ reply` type-checks and reads right.
 
-**And the sharp end.** `GABBROV.md` §3 names one site as the place GabbroV would earn its
-keep beyond convenience — §8.3.1's finding that `D013` checks that the invariant `I` *exists*
-and expressly not that the block restores it, so *"a `breaking` on the wrong-but-existing
-invariant still passes."* The statement that site needs **is `L34`**.
+**And the sharp end.** One site is where GabbroV would earn its keep beyond convenience: `D013`
+checks that the invariant `I` *exists* and expressly not that the block restores it, so *"a
+`breaking` on the wrong-but-existing invariant still passes."* The statement that site needs
+**is `L34`**.
 
 > So the four are not four leftovers at the edge of a good count. **They are the centre of the
-> case for building the tool**, and they are the part of it today's semantics cannot express.
+> case for building the tool**, and they are the part of it the semantics could not express.
 > *An exception list whose members are the most valuable rows is a finding, not an appendix.*
 
-The repair is not a wider fragment but a small-step or trace semantics, and that sits on
-`AUFTRAG-GABBROV.md` §9's stop-list **because the Isabelle proofs rest on `exec` as it is**.
-Booked, not attempted.
+The repair is not a wider fragment but a small-step or trace semantics. *Later:* the goal
+statement carries the order leg `folge` for `L50`/`L52` and the invariant legs for `L24`; `L34`
+stands as an existence with a witness (`TODO.md` O1-Rest).
 
----
+### A falsifier without a threshold, cleared by a judgement *(2026-09-03)*
 
-## A falsifier without a threshold, cleared by a judgement *(2026-09-03)*
-
-**`G1` of `GABBROV.md` §11 never had a number, and on 2026-09-02 it was reported as not
+**`G1` of the GabbroV plan never had a number, and on 2026-09-02 it was reported as not
 firing.** The condition reads *"a **noteworthy** part of the 66 L obligations is not sayable in
 the fragment"*. 56 of 66 stood as a `Prop`, and three documents wrote down ~~*"`G1` does not
-fire"*~~ — `GABBROV.md` in three places, `messung/GABBROV-V1.md` in its own answer-up-front,
+fire"*~~ — the plan in three places, its own measurement report in its answer-up-front,
 and `TODO.md` in a parenthesis.
 
 **No count can clear a gate that has no number, and none can trip it either.** What was
@@ -65,20 +153,17 @@ pulled to fit a result. *A gate set after the run is not a gate, it is a caption
 
 So the withdrawal stands without a replacement number, and the criteria that take over —
 `E1` (every obligation gets a verdict; a line count against a line count) and `E2` (decided
-against undecided, against a **named** exception list in `dokumente/AUSNAHMEN.md`) — get their
-force from something a threshold cannot supply: **they were written down before the runs they
-judge.**
+against undecided, against a **named** exception list) — get their force from something a
+threshold cannot supply: **they were written down before the runs they judge.**
 
 > **The class, and it is older than this entry.** `G5` sits in the same table and cannot fire
 > either — *"the assumption set has no model"* is a question about formulas, and the eight
-> assumptions of the ten fragments are German prose sentences (`messung/GABBROV-V1.md` §6).
+> assumptions of the ten fragments are German prose sentences.
 > **Two of five falsifiers cannot be evaluated, and both looked evaluable from the outside.**
 > *A falsifier list is a promise that something could go red; a row that cannot go red is an
 > ornament in the exact sense of `R11`.*
 
----
-
-## The most expensive faults sit in what nobody read *(2026-08-20)*
+### The most expensive faults sit in what nobody read *(2026-08-20)*
 
 > **The most expensive faults of this project do not sit in what was thought wrongly, but in
 > what nobody read** — and the last three guardians are answers to that sentence.
@@ -92,7 +177,7 @@ Every one was a sentence the folder had already written down and that no reader 
 | `SPRACHE.md`:355 — *„Generates: reader, **writer**"* | the emitter built only the reader |
 | the ghost erasure, specified in three places | the fourth, `return`, was never built |
 | *„**M2**: the waker consumes **exactly its** reason"* | no pass compared the names |
-| `PFLICHTEN.md` F10 — the `where` clause carries the length promise | no pass read the clause |
+| `PFLICHTEN.txt` F10 — the `where` clause carries the length promise | no pass read the clause |
 | «B37» — the order on a linear mark | the `boot` construct did not check its own order |
 | `beispiele/06`, a file that DEMONSTRATES probes | its `can_fail` body had no type pass |
 
@@ -138,20 +223,14 @@ the truncated line. That makes the class detectable in advance, and the question
 
 **And the same week produced its mirror image:** a measuring apparatus that produces the
 scatter rather than the subject. `pruefe-gruende.py` first reported thirteen suspects; eleven
-were the substring `word` matching rules that speak about the *vocabulary* — the language of
-the comment, not its subject. **13 → 2 by tightening a word list**, and the number that
-mattered was neither: **44 refusal texts state their reason in neither language at all.**
+were the substring `word` matching rules that speak about the *vocabulary*. **13 → 2 by
+tightening a word list**, and the number that mattered was neither: **44 refusal texts state
+their reason in neither language at all.** *A refusal without an articulated reason is not
+wrongly justified — it is unverifiable for reach.* The cure is incremental and cheap: every
+refusal that is touched once gets its reason in one of the two languages. Not a project — a
+maintenance principle.
 
-*A refusal without an articulated reason is not wrongly justified — it is unverifiable for
-reach.* Nobody, not even its author, can tell whether it grips too narrowly or too widely.
-That was the mechanism in all four known instances of the previous class; there a WRONG reason
-stood where here none stands. **The cure is incremental and cheap: every refusal that is
-touched once gets its reason in one of the two languages.** Not a project — a maintenance
-principle.
-
----
-
-## The two overreaches — same class, two weeks apart
+### The two overreaches — same class, two weeks apart
 
 Both stood in **line 3**, both were the strongest word at the place with the weakest coverage,
 and the second arose while **correcting the first**.
@@ -169,21 +248,17 @@ worded weaker without **becoming** weaker.
 > The sentence "a proof that proves the wished-for form is worse than none" also applies to
 > words in headings — and apparently to words in corrections of headings.
 
----
-
-## The broken ordering rule — 2026-08-14, announced, and booked here
+### The broken ordering rule — 2026-08-14, announced, and booked here
 
 **The rule stood twice and in capitals:** *"No checker line before the result of measurement
 2"* and *"THE NEXT STEP IS NOT A LINE OF RUST"*.
 
-> **Both citations were checked on 2026-08-17, and one of them no longer resolves.**
-> [`TODO.md`](../TODO.md) still carries the sentence (struck through, dated).
-> [`PLAN.md`](PLAN.md) carries only two weaker descendants of it. *A file that records broken
-> rules and cites a site that has since moved does the same thing it accuses others of — so
-> the citation now says which of the two holds.*
+> **Both citations were checked on 2026-08-17, and one of them no longer resolved.** A file
+> that records broken rules and cites a site that has since moved does the same thing it
+> accuses others of — so the citation said which of the two held.
 
-**Measurement 2 has still not been run** — it is blocked because five of the eleven plumbing
-classes exist only in the scratchpad.
+**Measurement 2 was not run** — it was blocked because five of the eleven plumbing classes
+existed only in the scratchpad.
 
 **On 2026-08-14 a compiler came into being anyway:** lexer, parser over the complete EBNF, five
 of nine checking passes, plus example and poison corpora. **That is real checker code, not a
@@ -194,23 +269,23 @@ were never barred; the compiler was.
 |---|---|
 | **What it was** | a **breach**, not a change. The rule stands unchanged |
 | **How** | on explicit announcement, not silently |
-| **Where it is recorded** | [`MESSUNGEN.md`](MESSUNGEN.md) P2, first paragraph; [`TODO.md`](../TODO.md); and from now on here |
+| **Where it is recorded** | `MESSUNGEN.md` P2, first paragraph; and from now on here |
 | **What it cost** | **P2 and P3 can no longer kill the thesis *before* the compiler is built.** The order was built so that each stage consumes the result of the previous one — that chain is severed at one point |
-| **What it earned** | the measurements in [`MESSUNGEN.md`](MESSUNGEN.md) from P2 on: 1 of 6 fragments, eleven grammar findings, the vocabulary collision, 16 unsoundness holes found, the cost figures |
+| **What it earned** | the measurements from P2 on: 1 of 6 fragments, eleven grammar findings, the vocabulary collision, 16 unsoundness holes found, the cost figures |
 
 **The lesson is not "the breach was wrong"** — it was a decision with a yield, and the yield is
 recorded as measured. **The lesson is where it was booked:** it stood as a paragraph *inside
 the measurement that profited from it*, and nowhere else. A broken rule belongs where you look
 for it when you distrust the folder — and that is this file.
 
-> **And the form in which it nearly disappeared:** [`BEWEIS.md`](BEWEIS.md) still said *"Gabbro
-> has no line of compiler"*. That sentence became false, and **pulling it up to the new state**
-> would have been the convenient move — smoothing the claim instead of surveying the tree. That
-> is literally the class from commit `5904cae` ("the previous commit message described three
+> **And the form in which it nearly disappeared:** `BEWEIS.md` still said *"Gabbro has no line
+> of compiler"*. That sentence became false, and **pulling it up to the new state** would have
+> been the convenient move — smoothing the claim instead of surveying the tree. That is
+> literally the class from commit `5904cae` ("the previous commit message described three
 > changes that were not carried out"). The passage now carries **the rule status, not just the
 > fact**.
 
-## The first construct killed by our own paper test — `locks ordered`, 2026-08-14
+### The first construct killed by our own paper test — `locks ordered`, 2026-08-14
 
 `locks ordered` had been on the candidate list since the multicore push: a grammar line
 requiring that every repeated acquisition of the same lock class stand lexically together. It
@@ -240,7 +315,7 @@ construct for a rare case and missed the common one.
 > round, and the result was one deletion plus two real finds. **The test is worth exactly as
 > much as its licence to kill its own candidates.**
 
-## Two sites from one inheritance — 2026-08-15, and `git log` would have said so
+### Two sites from one inheritance — 2026-08-15, and `git log` would have said so
 
 I had reported that the B29 pattern (`refcount -= 1`, null check afterwards) stood **twice**, in
 "two independently written kernels of the same tree", and concluded: *the form does not come
@@ -268,7 +343,7 @@ which rewrote the release semantics themselves. B29 is not a slip but an **attra
 > **The lesson, mechanically:** a statement about the origin of files is backed by
 > `git log --follow` or not made at all. Two paths are no evidence of two origins.
 
-## The rest, shorter
+### The rest, shorter
 
 | What | Version that fell | what holds instead |
 |---|---|---|
@@ -281,8 +356,8 @@ which rewrote the release semantics themselves. B29 is not a slip but an **attra
 | **The SPARK finding** | "SPARK found two errors Verus did not ⇒ a language of one's own buys something" | the gain came from a **default setting**, not from Ada's expressive power. `refcount` sits in the Verus model as `nat` and **cannot even ask** the question. What remains is the checkable version: *defaults beat capability* |
 | **"deliberately in line 3"** | a location note in running text | stale at the first insertion above it. Statements about **order** hold, line numbers do not |
 | **"neither SPARK nor Rust"** | "the caller holds the lock" counted as the **largest single item** and as an expressive gap in all existing tools | **measured 2026-08-13: Verus can do it**, as a `tracked` witness, `no_std`, without a byte in the artefact. The sentence was true for SPARK and Rust and was silently extended to "all" — and **Verus stood in the relatives table dismissed with "proves what someone modelled".** Whoever devalues the nearest relative instead of running it keeps their justification longer than it holds |
-| **Twenty constructs** | the first version of the plan file had one keyword per error class — `device`, `lock`, `atomic`, `barrier`, `bitfield`, `unit`, `set`, `right`, `placement`, … | **that is a catalogue, not a language**, and it grows with every finding. The obvious derivation from a list of traps is the wrong conclusion. There are **four mechanisms** (range types · linear, also ghost values · address spaces with rights · no unchecked index) and **two declaration rules**; the twenty fall out of them as a library. The prettiest derivation is `check`: a **linear obligation**, not a checking keyword |
-| **Ü2 has RETURNED** | "make Gold cheap" stood as refuted in this file | **and has been back in the `README` since 2026-08-13** — that belongs here, otherwise a silently withdrawn correction looks like one never made. The difference from the refuted version is twofold: there is now a **mechanism** (invariants on the structure · syntax-directed lowering · `spec`/`impl` in one language, plan file §3c) and a **lowered target** (5 : 1 for kernel code instead of 1 : 1). **A claim may return — but only with a mechanism and with a number** |
+| **Twenty constructs** | the first version of the plan file had one keyword per error class — `device`, `lock`, `atomic`, `barrier`, `bitfield`, `unit`, `set`, `right`, `placement`, … | **that is a catalogue, not a language**, and it grows with every finding. There are **four mechanisms** (range types · linear, also ghost values · address spaces with rights · no unchecked index) and **two declaration rules**; the twenty fall out of them as a library. The prettiest derivation is `check`: a **linear obligation**, not a checking keyword |
+| **Ü2 has RETURNED** | "make Gold cheap" stood as refuted in this file | **and has been back in the `README` since 2026-08-13** — that belongs here, otherwise a silently withdrawn correction looks like one never made. The difference from the refuted version is twofold: there is now a **mechanism** (invariants on the structure · syntax-directed lowering · `spec`/`impl` in one language) and a **lowered target** (5 : 1 for kernel code instead of 1 : 1). **A claim may return — but only with a mechanism and with a number** |
 | **"not a general-purpose language"** | stood as a promise in the `README` and the roadmap | **abandoned on 2026-08-13**, on request and explicitly. The replacement is the five abort conditions in the plan file — an abandoned promise without a replacement would be merely a forgotten sentence |
 | **The wrong denominator** | the metric measured specification lines against the **hand-written Rust reference** | the denominator is **Gabbro code** — the question is whether a kernel *written in Gabbro* is cheap to verify; Rust does not appear in it. The wrong version gave "for Caprock as a whole: no", the right one "conditionally yes". **A denominator is a question, not a formality** — with the wrong one you answer cleanly the question nobody asked |
 | **5 : 1 as the floor** | counted as a derived lower bound for kernel code | seL4's 20 : 1 is **not a single item**: about 0,5 : 1 abstract specification, about 19,5 : 1 proof. Only the first is untouchable. **The floor is ≈ 0,5 : 1**, and the 5 : 1 came from treating proof effort as indivisible |
@@ -299,7 +374,40 @@ which rewrote the release semantics themselves. B29 is not a slip but an **attra
 
 ---
 
-## The trajectory — the pattern above the individual errors
+## 3. What the deleted reports recorded
+
+The 2026-10-15 cleanup (`014b4d93`, parent `7c693cb7`) and this consolidation removed reports,
+verdicts and working notes. Their *lasting facts* went into the documents named in the last
+column; the rest is git history. "Last present" is the commit whose tree still holds the file
+(`7c693cb7` for the 2026-10-15 deletions; files still present on 2026-10-17 were last present
+at `4bb5e944`, the base of this consolidation; read one with `git show <commit>:<path>`).
+
+| Files | What they recorded | Last present | Facts now in |
+|---|---|---|---|
+| `messung/muse/MUSE-REPORT-NNN.md` (975 files, lanes 02 to 1398) | one report per Muse contributor lane: what was built, `CUTS`, build results, findings for the reviewer | `7c693cb7` | `git log`; `AGENTS.md` §5 for the process |
+| `messung/muse/OPUS-BERICHT-*.md` (25) | the 2026-09-15 Opus lane reports: `STUFE-A`/`-B` (closing theorem stages), `KORROK`, `BLOCK`, `STAERKER`, `KONGRUENZ`, `RAHMEN`, `GERAET`, `AGGREGAT`, `CPARSER`, `TICKET`, `EXPORT`, `LINEAR`, `PFLICHT`, `O13` … | `7c693cb7` | `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§6–7 |
+| `messung/muse-audit/` (58 Lean files) | audit probes of the Muse waves | `7c693cb7` | — |
+| `messung/URTEIL-{MUSE,OPUS}-2026-09-13…15d.md` (12) | six rounds of two independent verdicts "is the goal reached": rounds 1 and 2 (2026-09-13/14): Muse "reached for the Lean model, not yet for the implementation", Opus **"not reached"** (two defects of substance); round 3 Opus "not the goal yet" (`P1` unsatisfiable lock invariant, `P2` free parameters, `P3` payload races); round 4 "the goal with named gaps", but `F1` (out-of-range float stop) was not named yet, and `F2` (global deadlock leg) and `F3` (stop classes) were repaired; round 5 unnamed gap `G1` (an axiom answer or register read whose declared type `einpassen` cannot hold); round 6 **both: the goal with named gaps — no unnamed gap found** (`W1` closed) | `4bb5e944` | `BEWEIS.md`, `AGENTS.md` §2 |
+| `messung/URTEIL-SPECDIFF-*.md` (8) | independent adversarial reviews of each `Spec.lean` diff: fix lanes F9–F11 (2026-09-23), Opus agents A (runtime threads), B (weak memory `schwach`), D (invariants), E (linking `N501`–`N505`), G (`folge`), H (`KernHaltE`), O25c (atomic rely) | `4bb5e944` | `BEWEIS.md`, header of `Spec.lean` |
+| `messung/review-2026-09-21/G01…G13, FIX-F1…F11, dokumente/BEWEIS.md` (25) | the static review of 2026-09-21 over the Muse lanes while the second machine was unreachable (13 groups), and the eleven fix lanes that repaired it: integer `match` coverage (`N411`–`N414`), dynamic arenas, the `child` block as a thread, thread starts, fd carrier and gates, bounded strings, smaller Rust findings, Lean witnesses "no claim bigger than its proof", the clone hand-off, worker pools in the goal, same-core interrupt preemption | `4bb5e944` | `AGENTS.md` §7 ledger, `BEWEIS.md` |
+| `messung/OPUS-{A…L,O25,O25B,O25C}-*.md` (14) | the 2026-09-26 Opus agent reports: runtime threads, weak memory beyond DRF-SC, **how far a green `lake build` reaches** (the reach audit behind `REGISTER.txt`), invariants, linking, link races, `OFFEN O1` order leg, handlers and cores, bare metal, freestanding, target-bound gates, the atomic rely | `7c693cb7` (`dokumente/BEWEIS.md`: `4bb5e944`) | `BEWEIS.md`, header of `Spec.lean` |
+| `messung/GABBROV-*.md`, `GABBROV-V1/V2`, `SPRACHLUECKEN*`, `PARSER-LANE-REPORT`, `SERVER-0E-*` | GabbroV: the 56 of 66 measurement and its audit, the bridge report, the proof-lines-per-user-line ratio, the server and parser lane reports; the language-gap reports and the server lane's phase-1 measurements | `7c693cb7` | `GABBROV.md`, `FRAGMENTE.md`, `PLAN-DYNAMISCH.md` |
+| `messung/ARM-KOMPATIBILITAET-A…G.md`, `ARM-NATIV-ABI.md` | AArch64 readiness of the C emitter, the language model, the checker and the Lean ABI model; what the native compiler needs from Lean | `7c693cb7` | `ARM-PLAN.md`, `PLAN-HARDWARE.md` §2.3 |
+| `messung/arm/REPORT-06…12.md` | the AArch64 hardware-model agents: executions, the axiomatic model, litmus bench, atomics, barriers, sequential integer ISA, loads/stores | `4bb5e944` | `PLAN-HARDWARE.md` §2.3 |
+| `messung/CFORM-REGEL-*.md` (22), `CFORM-ABARBEITUNG.md` | one ruling per emitted C form (`&`, `->`, `sizeof`, `~`, `inline`, …): which are admitted as lemma or assumption | `7c693cb7` | `C-SPEICHERMODELL.md`, `pruefe-cformen.py` |
+| `messung/ABSENKUNG*.md`, `ABSAGEFORMEN`, `EMISSIONSZWEIGE`, `WILDCARD-ZWEIGE`, `ERZEUGER*`, `DREI-ERZEUGERFEHLER`, `STILLE-KOLLISIONEN`, `C-NAMEN`, `ERZEUGERSWEEP` | the C emitter under measurement: per-primitive statement budgets, 139 refusal sites in 130 forms, the twelve wildcards, six emitter defects repaired one by one, names C had already taken, a sweep that broke the promise 342 times in 5 889 cases | `7c693cb7` | `C-SPEICHERMODELL.md`, `PLAN-HARDWARE.md` §5 |
+| `messung/TEARING-*.md`, `TOCTOU-*.md`, `RACE.md`, `ADRESSRAEUME`, `ADRESSRAUM-REGELN`, `DEVICE-DMA-NOTIZ`, `CPU-DEVICE-NAHT` | tearing inventory and ruling, TOCTOU as a class (check, window, use), the race classes by form, the six address spaces and which the emitter reads, DMA memory-model note | `7c693cb7` | `C-SPEICHERMODELL.md`, `PLAN-HARDWARE.md` §3 |
+| `messung/AUDIT-*.md`, `K100-*.md`, `K3-*.md`, `GEGENPROBE-F03`, `KLASSEN-F03`, `BERICHT-H0`, `BERICHT-B10/SUCHE/O3-RATSCHE/ERZEUGERHALT/UEBERSETZERFAMILIE`, `W24-FRAGMENTE` | the 2026-09-01..05 audits, the four `K100` gates, the three readings of `K3` ("0 of 8"), the standing adversary of `F03`, the fragment break-throughs (`H = 0`) | `7c693cb7` (`AUDIT-2026-09-02`, `AUDIT-K100`, `BERICHT-H0`, `GEGENPROBE-F03`, `K3-BEFUND`, `KLASSEN-F03`: `4bb5e944`) | `FRAGMENTE.md`, `PRUEFER.md`, this file |
+| `messung/DOMAENEN*`, `PREDICATE-NAMES`, `EINHEITENSICHT`, `ERSTNAMEN`, `K001*`, `K003-TOR`, `SCHLEIFEN*`, `TORREICHWEITE`, `UNTERE-GRENZE`, `AUSSETZUNG`, `RUMPFKANAL-*`, `ZEREMONIE`, `VIER-LUECKEN` | the checker's rule studies: quantifier domains, names a predicate may write, the unit view, the English first names, the `K001` bound, the loop invariant, the lower bound `2 of 94`, `leave`/`breaking`, the body channel's 66 refusals | `4bb5e944` for those still in the tree on 2026-10-17 | `PRUEFER.md` |
+| `messung/{ABNAHME-*,VOLLER-LAUF-GELESEN,AUFRAEUMEN-2026-09-12,VORRICHTUNGEN,TODO-TREUE-2026-09-04,KETTE-2026-09-13,WARTESCHRANKEN-2026-09-15}.md` | the full acceptance runs read line by line (49 guardians, "100 % over a guardian that stood after 2.8 seconds"), the guardian fixtures, the TODO staleness rate, the chain count of 2026-09-13, the waiting-bound census | `7c693cb7` | `WERKZEUGKASTEN.md`, `MESSUNGEN.md` |
+| `dokumente/{DONE,PROJECT-STATUS,STAND-2026-09-03}.md` | the finished list, the provenance behind the README snapshot, the handover of 2026-09-03 | `7c693cb7` | this file, `README.md` |
+| `dokumente/AUFTRAG-*.md` (3), `dokumente/GLEITKOMMA.md` | the GabbroV, GabbroV-verification and translation-validation assignments; the float memo ("the price is a second fact logic, and the demand is zero") | `7c693cb7` | `GABBROV.md`, `GLEITKOMMA.md` |
+| `lanes/*.md` (83 task files) | finished lane assignments; the templates stay | `7c693cb7` | `git log` |
+| `dokumente/x86/` (48), `Grammatik/X86/` (357 Lean files), `DIRECT-COMPILER*.md`, `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` | the x86-64 hardware model, its optimiser rule library, the direct-compiler record and design | branch `archive` | `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §8, `PLAN-HARDWARE.md` §2.3 |
+
+---
+
+## 4. The trajectory — the pattern above the individual errors
 
 **This folder has survived every fallen gate by refounding**, and the hard gate has migrated
 behind the compiler in the process:
@@ -320,18 +428,24 @@ compiler exists. The three cheap gates before it were named through three rebuil
 run**, while about 2000 lines of design text appeared in a single day. **The correction loop ran
 faster than the measurement loop** — "measure before building", inverted at the meta level.
 
-**Countermeasure, since 2026-08-13:** P0.1 has been run ([`MESSUNGEN.md`](MESSUNGEN.md)) and
-immediately found an error in the counting rule that three rebuilds of proofreading had not.
-**No further design text before P0.2 and P0.3.**
+**Countermeasure, since 2026-08-13:** P0.1 has been run (`MESSUNGEN.md`) and immediately found
+an error in the counting rule that three rebuilds of proofreading had not. **No further design
+text before P0.2 and P0.3.**
 
----
+**The same pattern one level up, 2026-10:** the selected target of the validation
+plan changed twice in a week (C11 → direct x86-64 bytes, 2026-10-01 → AArch64 on Sail Arm,
+2026-10-07) and the working backend changed to LLVM IR within another week (2026-10-14); each
+switch left documents naming the target before it. The goal theorem did
+not move: it is about the model, and the model was never the backend.
 
-## The form that repeats
+## 5. The form that repeats
 
-Six of the nine entries are the same move: **a sentence that would be true if its scope were
-not silently widened.** `format` → everything; parameter boundary → everywhere; one measurement
-of the mechanism → its transfer; Silver → Gold.
+Six of the nine entries of the early list are the same move: **a sentence that would be true if
+its scope were not silently widened.** `format` → everything; parameter boundary → everywhere;
+one measurement of the mechanism → its transfer; Silver → Gold.
 
 That is not carelessness but what a design text does by itself as long as nobody **writes the
-scope down**. Which is why every claim in the `README` and in [`SPRACHE.md`](SPRACHE.md) now
-carries one — and where none stands, that is a finding.
+scope down**. Which is why every claim in the `README` and in `SPRACHE.md` now carries one —
+and where none stands, that is a finding. The 2026-10 entries add two shapes of the same move:
+*a claim about an artifact that nobody ran through its consumer* (the certificate that does not
+elaborate), and *a decision that reversed without reaching the documents that stated it* (x86-64).

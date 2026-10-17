@@ -9,13 +9,13 @@ Vollstaendigkeitsplans lautet je Form:
 
 Faellt die Antwort ueberall auf „ja", dann ist `C001` fuer ein angenommenes Programm
 **unerreichbar** -- und das ist die Aussage, die eine Korpuszahl nicht treffen kann
-(`dokumente/PLAN-VOLLSTAENDIGKEIT.md` §2, Falle 80).
+(`dokumente/PRUEFER.md` §2, Falle 80).
 
 DIE ZAEHLUNG, UND WARUM SIE NICHT `grep C001` IST
 --------------------------------------------------
 `grep -c 'C001' emit.rs` zaehlt die Kommentare mit -- 22 statt 135. `grep -c 'weigere('`
 zaehlt die Definition mit -- 136 statt 135. **Beide Zahlen standen schon in einem Plan**
-(`PLAN-VOLLSTAENDIGKEIT.md`: erst 22, dann 136/127).
+(`dokumente/PRUEFER.md`: erst 22, dann 136/127).
 
 Dieses Werkzeug klammert von `weigere(` aus und liest das DRITTE Argument; steht dort ein
 Bezeichner statt eines Textes, folgt es dem `let <name> = match … { … }` davor und nimmt

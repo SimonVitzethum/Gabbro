@@ -59,9 +59,9 @@ pruefe_prosa() {
 # `FileNotFoundError` -- gedruckt als **"SYNTAX: FEHLER (Grammatik nicht geschlossen)"**,
 # also als Befund ueber eine Grammatik, die der Waechter nie gelesen hat. *Eine fehlende
 # Datei ist keine offene Regel.*
-DOKUMENTE="dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md
+DOKUMENTE="dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PRUEFER.md README.md TODO.md
            dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md
-           dokumente/MEMO-GLEITKOMMA.md"
+           dokumente/GLEITKOMMA.md"
 FEHLEND=""
 for D in $DOKUMENTE; do [ -f "$D" ] || FEHLEND="$FEHLEND $D"; done
 if [ -n "$FEHLEND" ]; then
@@ -72,8 +72,8 @@ if [ -n "$FEHLEND" ]; then
 fi
 
 stufe "Beispiele gegen dokumente/SYNTAX.md"
-if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md && \
-   pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md; then
+if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PRUEFER.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/GLEITKOMMA.md && \
+   pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PRUEFER.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/GLEITKOMMA.md; then
   echo "  keine verbotene Form in Beispielen, keine zweite Schluesselwortsprache in Prosa"
 else
   echo "== SYNTAX: FEHLER =="; exit 1

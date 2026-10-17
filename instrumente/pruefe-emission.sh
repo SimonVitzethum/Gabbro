@@ -200,7 +200,7 @@ fi
 sprechprobe_asan
 echo
 
-# **FMA probe: no silent contraction (PLAN-BITS.md 5, item 3).**
+# **FMA probe: no silent contraction (dokumente/SPRACHE.md 5, item 3).**
 #
 # Claim: no fused multiply-add hides in the two-statement shape the emitter
 # writes (`p = a*b; r = p + c;`). The probe (`instrumente/sonde-fma.c`) IS the
@@ -222,7 +222,7 @@ echo
 # Holding there would mean this machine does not contract even when fast --
 # and the probe would witness nothing.
 LETZTE_STUFE="the FMA probe"
-echo "== FMA probe: no fused multiply-add in the emitted shape (PLAN-BITS.md 5.3) =="
+echo "== FMA probe: no fused multiply-add in the emitted shape (dokumente/SPRACHE.md 5.3) =="
 if ! cc -std=c11 -ffp-contract=off -O2 -mfma -Wall -Wextra -Werror \
         -o "$ARB/sonde-fma" "$W/instrumente/sonde-fma.c" 2> "$ARB/fma-ccfehler"; then
     echo "  FMA probe:  FAILED to compile (manifest flags)"; head -10 "$ARB/fma-ccfehler"; exit 1
@@ -2482,7 +2482,7 @@ lauf "beispiel96" "$W/beispiele/96-buffered-writer.gab" "$TREIBER96" "$(printf '
 # -- 23. The translated library call, running (lane E5/129) -------------------------------
 #
 # `beispiele/106` is the first cut of the translation stage
-# (`PLAN-ERWEITUNG.md` §6, lane E5): the region `{ 10 20 30 40 }` becomes
+# (`dokumente/PRUEFER.md` §6, lane E5): the region `{ 10 20 30 40 }` becomes
 # the four rows of `SumTab` through the identity translator, and the call
 # passes the payload as a `static const` table argument
 # (`&sum__nutzlast_*`). The driver runs the call and reads the sum:
@@ -3940,7 +3940,7 @@ MARKE_EMIT=165
 #
 # **30 -> 31 on 2026-08-31, and it is a GROWING SUBJECT again.**
 # `messung/proben/probe-neun-domaenen.gab` carries all NINE quantifier domains in one unit,
-# each in an `ensures` -- the carrier on which `messung/DOMAENENNAMEN.md` sets its 32
+# each in an `ensures` -- the carrier on which `dokumente/PRUEFER.md` sets its 32
 # falsifications, and the one place where `fields of` stands in a program at all (it had
 # ZERO sites in the whole corpus). It emits and compiles.
 #
@@ -3964,7 +3964,7 @@ MARKE_EMIT=165
 # **38 -> 39 on 2026-08-31**, and the subject grew by one file:
 # `messung/proben/probe-stellungen.gab` -- the nine quantifier domains in `requires`, in an
 # `invariant` and in the body of a `spec fn`, the carrier of the position measurement in
-# `messung/DOMAENENSTELLUNGEN.md`. It is annotations only, so it lowers to C and compiles.
+# `dokumente/PRUEFER.md`. It is annotations only, so it lowers to C and compiles.
 # *A floor that lags behind the corpus is slack, not safety.*
 #
 # **39 -> 40 on 2026-08-31**, same reason and one file further:

@@ -2,7 +2,7 @@
 //! nobody has written yet.**
 //!
 //! `erstnamen.rs` next door holds the fourteen sub-command pairs that EXIST. It cannot hold the
-//! thirteenth, and `messung/ERSTNAMEN.md` §5 said so about itself on the day it was written:
+//! thirteenth, and `dokumente/PRUEFER.md` §5 said so about itself on the day it was written:
 //!
 //! > *"Kein Waechter prueft, dass ein NEUER Unterbefehl einen englischen Erstnamen bekommt --
 //! > `erstnamen.rs` haelt die zwoelf, die es gibt, und nicht den dreizehnten, den jemand
@@ -26,7 +26,7 @@
 //! file name. So two spellings that are BOTH unread produce identical output, and a typo in
 //! an English first name would pass the equivalence test with full marks. *A test that
 //! measures equality has to measure first that anything is there* -- the same sentence
-//! `ERSTNAMEN.md` §3 wrote about the sub-commands, one level down.
+//! `dokumente/PRUEFER.md` §3 wrote about the sub-commands, one level down.
 //!
 //! ## What it does NOT do (W10)
 //!
@@ -60,7 +60,7 @@ const DATEI: &str = "beispiele/16-by-ops-am-feld.gab";
 /// **Every flag spelling `crates/gabbro-cli/src/` accepts.**
 ///
 /// The English first names came in on 2026-09-01, additively and on the path the
-/// sub-commands took in `ERSTNAMEN.md`: **twelve German-only flags got an English first
+/// sub-commands took in `dokumente/PRUEFER.md`: **twelve German-only flags got an English first
 /// name, and no German spelling was taken away.**
 const FAHNEN: &[Fahne] = &[
     // --- the twelve that were German-only until 2026-09-01 -----------------------------
@@ -311,7 +311,7 @@ const FAHNEN: &[Fahne] = &[
 /// question here is completeness against the source rather than behaviour.
 ///
 /// > **Two pairs were missing from the hand-written list next door, and reading the source
-/// > is what found them:** `effects|wirkungen` stands in no table in `ERSTNAMEN.md`, and
+/// > is what found them:** `effects|wirkungen` stands in no table in `dokumente/PRUEFER.md`, and
 /// > `build|bau` was filed there under *"English from the start"* although `bau` is a German
 /// > second name like any other. *A register maintained by hand drifts from the thing it
 /// > registers; that is the whole reason this file reads `main.rs`.*
@@ -532,7 +532,7 @@ fn lauf(argumente: &[&str]) -> (String, String, i32) {
 
 /// **A flag in the source and not in the register turns this red -- in any language.**
 ///
-/// This is the layer that actually closes the hole `ERSTNAMEN.md` §5 named. It does not ask
+/// This is the layer that actually closes the hole `dokumente/PRUEFER.md` §5 named. It does not ask
 /// whether the new flag is German; it asks whether anybody decided. *A new flag costs one
 /// line in `FAHNEN`, and that line is where the English first name gets written down.*
 #[test]
@@ -774,7 +774,7 @@ fn die_zwei_paare_die_erstnamen_rs_nicht_faehrt_tun_dasselbe() {
 
 /// **The rule stands in the help, not only in this file.**
 ///
-/// A user does not read the test suite. `ERSTNAMEN.md` §5 booked *"the help is the only
+/// A user does not read the test suite. `dokumente/PRUEFER.md` §5 booked *"the help is the only
 /// place the rule stands"* as a weakness of the sub-command half; for the flags the help
 /// carries it too, and now a guardian carries it as well.
 #[test]

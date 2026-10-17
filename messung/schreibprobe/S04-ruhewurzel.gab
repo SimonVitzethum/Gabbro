@@ -34,7 +34,7 @@ extern fn nie_erreicht() -> never effects { diverges };
 
 -- The falsifier the `assume` demands. It answers `false` forever, because the
 -- idle root is never left; so the probe can never refute the assumption, and
--- an assumption no probe can refute is what `UNFALSIFIZIERBAR.md` is about.
+-- an assumption no probe can refute is what `UNFALSIFIZIERBAR.txt` is about.
 extern fn sonde_ruhe_wird_beendet() -> bool effects { pure } costs <= 1 ops;
 
 -- The idle root itself. NOTE: no `costs` line -- `K003` refuses one over a

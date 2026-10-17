@@ -85,7 +85,7 @@ reason IpcResult {
 --
 -- **Die Zahlen sind ZITIERT, nicht gewaehlt.** Dieselbe Sperre steht im eingefrorenen
 -- Korpus selbst, in F8 (`FRAGMENTE.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
--- Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/AN-CAPROCK.md`:31 zitiert
+-- Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/DESIGN.md`:31 zitiert
 -- den Kernel: *CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM*.
 --
 -- Was NICHT zitiert ist: `protects { sched }`. F8 schuetzt `{ belegt, kern, prio }` -- Orte

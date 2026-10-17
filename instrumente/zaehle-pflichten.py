@@ -364,11 +364,11 @@ _BEFUND = re.compile(r":\s*\d+ items?, (\d+) errors?, \d+ hints?\s*$", re.M)
 # errors (the number this file would read), `gabbro emit` reports **19** -- the same 18 plus
 # `[C001]` at `F03.gab:185` (the `queue … by consuming` traversal, `emit.rs`:8639), which
 # `pruefe` does not raise at any error level. Full classification of the 18, per the pass
-# that raises each, in `messung/KLASSEN-F03-2026-09-04.md`; the `pruefe`/`emit` gap itself,
-# checked independently, in `messung/GEGENPROBE-F03.md`.
+# that raises each, in `dokumente/FRAGMENTE.md`; the `pruefe`/`emit` gap itself,
+# checked independently, in `dokumente/FRAGMENTE.md`.
 #
 # **This is not fixed here.** The lowering classifier above is contested ground -- refuted and
-# rewritten once already this week (`messung/AUDIT-K100-2026-09-04.md`) -- and a second
+# rewritten once already this week (`dokumente/FRAGMENTE.md`) -- and a second
 # rewrite of what it reads, on the same day, on the strength of one more finding, is exactly
 # the move that document warns against. *Naming a blind spot and patching it in the same
 # breath is how a measure ends up calibrated on its own last correction.* Whoever repairs
@@ -409,7 +409,7 @@ def _pruefe_fehler(quelle):
 def absenkungsklasse(sonde=None, locker=True):
     """**The open lowering obligations -- the SPLIT IS WITHDRAWN, see below.**
 
-    **REFUTED 2026-09-04 by an adversarial audit** (`messung/AUDIT-K100-2026-09-04.md`), and
+    **REFUTED 2026-09-04 by an adversarial audit** (`dokumente/FRAGMENTE.md`), and
     `locker` therefore defaults to the OLD, undivided rule again. `H` reads 1.
 
     The split asked *does `gabbro pruefe` accept the file* and answered it with **the total
@@ -421,7 +421,7 @@ def absenkungsklasse(sonde=None, locker=True):
       the tree published `H = 4`: F01 3 errors, F03 27, F05 4, F09 1 -- and those four WERE
       the open lowering obligations. Today's criterion over that tree yields `klempnerei =
       {}` and `H = 0`, on the very day three of the four were discharged as plumbing. The
-      refuting table already stood in `messung/BERICHT-H0.md`:22-33, two commits BEFORE the
+      refuting table already stood in `dokumente/FRAGMENTE.md`:22-33, two commits BEFORE the
       paragraph claiming F1, F5 and F9 had checked clean.
     * **A new refusal lowers `H`.** At `da18f16` (2026-08-31) `gabbro pruefe F06.gab` gave
       4 errors from a rule added that same day; under this criterion F06 books as notation
@@ -469,7 +469,7 @@ def absenkungsklasse(sonde=None, locker=True):
 
 # **The K/L split, DERIVED instead of carried forward** (2026-08-30).
 #
-# `PFLICHTEN.md` closes with two summary tables, and on 2026-08-30 both were wrong about the
+# `PFLICHTEN.txt` closes with two summary tables, and on 2026-08-30 both were wrong about the
 # same thing. The column table listed eleven fragments; its own `K` column adds up to 173 and
 # its `L` column to 65, and the total row beneath it read **171 / 67**. *Both readings sum to
 # 238, and that is exactly why it stood: a split whose total matches is not recomputed.*
@@ -513,7 +513,7 @@ def spalten(probe=None, still=False):
     still is one.*
     """
     import re
-    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.md"
+    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.txt"
     text = quelle.read_text(encoding="utf-8")
     if probe is not None:
         text = text.replace(probe[0], probe[1], 1)
@@ -584,7 +584,7 @@ GAP_SPALTE = re.compile(r"^(?:\*\*|\*|_)*gap:")
 def haengend(probe=None, still=False, locker=False):
     """**Die haengenden Klempnereipflichten, aus dem Handgang ABGELESEN statt fortgeschrieben.**
 
-    Der Handgang steht in `PFLICHTEN.md` als Tabelle: je Zeile eine Pflicht, Spalte 3 die
+    Der Handgang steht in `PFLICHTEN.txt` als Tabelle: je Zeile eine Pflicht, Spalte 3 die
     Klasse (`K`/`L`), Spalte 4 wodurch sie erledigt ist. **Eine haengende Pflicht ist eine,
     deren vierte Spalte mit `gap:` anfaengt** -- das ist keine Auslegung, das ist die Form,
     in der die Tabelle geschrieben wurde.
@@ -599,7 +599,7 @@ def haengend(probe=None, still=False, locker=False):
     > SIEHT belegt aus.
     """
     import re
-    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.md"
+    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.txt"
     text = quelle.read_text(encoding="utf-8")
     if probe is not None:
         text = text.replace(probe[0], probe[1], 1)
@@ -625,7 +625,7 @@ def haengend(probe=None, still=False, locker=False):
     n = sum(len(v) for v in offen.values())
     # **Die Spalte je Fragment -- ABGELEITET statt gepflegt** (2026-08-20).
     #
-    # `PFLICHTEN.md` fuehrte eine Tabelle „hanging / of which K" je Fragment. Ihre Spalte
+    # `PFLICHTEN.txt` fuehrte eine Tabelle „hanging / of which K" je Fragment. Ihre Spalte
     # summierte sich zu 33, die Summenzeile sagte 18, und die Fussnoten der Abschnitte sagten
     # ein Drittes. **Drei Register ueber derselben Sache** (W7) -- und keins davon abgeleitet.
     #
@@ -687,11 +687,11 @@ def haengend(probe=None, still=False, locker=False):
 # over one thing and the one WITH the search path was the wrong one. The remedy is not to
 # distrust search paths but to make sure exactly one place defines the population.
 #
-# **`L` does NOT move, and that is measured elsewhere.** `PFLICHTEN.md`'s third column asks
+# **`L` does NOT move, and that is measured elsewhere.** `PFLICHTEN.txt`'s third column asks
 # *who* the statement is about -- machine or subject -- and these three are about the device,
 # the client and the token. They stay `L`. What moves is a different population: the rows
 # GabbroV is supposed to CHECK, which is the `L` rows minus the rows that are not obligations
-# at all. `messung/GABBROV-V2.md` §1.6 carries that argument; this function carries the count.
+# at all. `messung/GABBROV-V2.txt` §1.6 carries that argument; this function carries the count.
 #
 # THE SEARCH PATH, and it has TWO SIDES that have to meet
 # -------------------------------------------------------
@@ -699,7 +699,7 @@ def haengend(probe=None, still=False, locker=False):
 #                the executable fragments the checker reads, not the frozen prose of
 #                `FRAGMENTE.md`, whose line anchors are from revision `708beed` and no longer
 #                point where they say.
-#   table side   `dokumente/PFLICHTEN.md` -- every `L` row whose fourth column names one of
+#   table side   `dokumente/PFLICHTEN.txt` -- every `L` row whose fourth column names one of
 #                those names.
 #
 # **If the two sides disagree the mode REFUSES.** A `progress` clause with no rebooked row
@@ -743,7 +743,7 @@ def gabbrov(zusatz=None, tafelprobe=None, still=False):
 
     Returns `(l, ausgebucht, bevoelkerung, namen, fehlend, ueberzaehlig)`.
     """
-    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.md"
+    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.txt"
     text = quelle.read_text(encoding="utf-8")
     if tafelprobe is not None:
         text = text.replace(tafelprobe[0], tafelprobe[1], 1)
@@ -770,7 +770,7 @@ def gabbrov(zusatz=None, tafelprobe=None, still=False):
     ausgebucht = sum(len(wo) for wo in getroffen.values())
     if not still:
         print("== GabbroV's obligation population -- the two sides, and they have to meet ==")
-        print(f"  `L` rows in `PFLICHTEN.md`                    {l:>3}")
+        print(f"  `L` rows in `PFLICHTEN.txt`                    {l:>3}")
         print(f"  of these discharged by the assumption layer   {ausgebucht:>3}")
         print(f"  ------------------------------------------------")
         print(f"  GabbroV obligation population                 {l - ausgebucht:>3}")
@@ -791,7 +791,7 @@ def gabbrov(zusatz=None, tafelprobe=None, still=False):
 # (2026-09-09, `AUFTRAG-GABBROV.md` section 7).
 #
 # One row per construct of the Lean fragment with its named counterpart in
-# Gabbro's `pred`/`expr`, kept in `programmlogik/gabbrov/KORRESPONDENZ.md`.
+# Gabbro's `pred`/`expr`, kept in `programmlogik/gabbrov/KORRESPONDENZ.txt`.
 # This mode holds both lists against each other, in the same shape as
 # `pruefe-grammatiktafel.py`: every name has to occur where its side says
 # it lives, RED has to be empty (section 9 stop-list: a red row is a
@@ -807,7 +807,7 @@ def gabbrov(zusatz=None, tafelprobe=None, still=False):
 # lands first -- that order is what keeps red empty).
 KORRESPONDENZ_TAFEL = (
     Path(__file__).resolve().parent.parent / "programmlogik" / "gabbrov"
-    / "KORRESPONDENZ.md"
+    / "KORRESPONDENZ.txt"
 )
 KORRESPONDENZ_ZEILE = re.compile(
     r"^\|\s*`LEAN\s+([^`|]+)`\s*\|\s*`GABBRO\s+([^`|]+)`\s*\|\s*`(GREEN|YELLOW|RED|DEMAND)`"
@@ -1127,7 +1127,7 @@ impl fn zwei() -> u32 effects { pure } costs <= 2 ops { return nirgends_erklaert
 }
 """
         # **WITHDRAWN 2026-09-04.** These two probes tested the SPLIT, and the split was
-        # refuted by an adversarial audit (`messung/AUDIT-K100-2026-09-04.md`): the criterion
+        # refuted by an adversarial audit (`dokumente/FRAGMENTE.md`): the criterion
         # read the total error count and never the REASON for the refusal. They are kept
         # here, unrun, because they are the right SHAPE for a sound criterion -- forward and
         # backward, each able to come out wrong -- and because deleting them would hide what

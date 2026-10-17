@@ -53,7 +53,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// grammar that is deliberately **not a word of the vocabulary**, exactly like `O` in a
 /// `costexpr` and `Held` in a `heldpred`. It stands as an identifier in a fixed position.
 ///
-/// *Why not a keyword.* `messung/SCHLEIFENINVARIANTE.md` §3: a second word for an existing
+/// *Why not a keyword.* `dokumente/PRUEFER.md` §3: a second word for an existing
 /// concept is dearer than a second site for an existing word. "Compile this only in build
 /// X" is the concept `when` was put into the grammar for -- `SYNTAX.md` §1 says so in those
 /// words. What was missing was not a word but a READER.

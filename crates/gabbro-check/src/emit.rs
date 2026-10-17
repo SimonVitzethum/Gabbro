@@ -5010,7 +5010,7 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     //     cc              error: `D` has no member named `X`
     //
     // *A filter that turns a KNOWN fact into a MISSING one* -- word for word the class
-    // `messung/ERZEUGERSWEEP.md` §9 named for `table count 0`, one construct over. **A rule
+    // `dokumente/C-SPEICHERMODELL.md` §9 named for `table count 0`, one construct over. **A rule
     // with no value does not refuse; it says nothing**, and what it says nothing about here
     // is a struct member that was never declared.
     //
@@ -6168,7 +6168,7 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         versatz += breite;
     }
     // **Die `where`-Klauseln sind der Grund, warum danach kein Zugriff mehr eine
-    // Laengenpruefung braucht** (`PFLICHTEN.md` F10). Sie stehen als EINE Funktion da, damit
+    // Laengenpruefung braucht** (`PFLICHTEN.txt` F10). Sie stehen als EINE Funktion da, damit
     // der Rufer sie einmal stellt statt an jedem Feld.
     aus.push_str(&format!(
         "static inline __attribute__((unused)) bool {n}_gueltig(const {n} *v) {{\n    if (v->len < {versatz}u) return false;\n"
@@ -7409,7 +7409,7 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
     // **Measured separately from `S009` on purpose.** It fires whether or not the body
     // returns (measured at a body whose only statement is a `forever` with no `leave`), so
     // it is a second finding and not a symptom of the first --
-    // `messung/GRAMMATIK-VOLLSTAENDIG-2026-09-08.md` §1.3 booked the two together and said
+    // `dokumente/PRUEFER.md` §1.3 booked the two together and said
     // it had not separated them.
     if f.ergebnis.is_none() || matches!(&f.ergebnis, Some(TypExpr::Never(_))) {
         return "";
@@ -8917,7 +8917,7 @@ fn syscall_code(
     );
 }
 
-/// **The syscall stub (lane S6, PLAN-SYSCALL.md lane S6): one C function per
+/// **The syscall stub (lane S6, dokumente/SPRACHE.md lane S6): one C function per
 /// declared `syscall`.**
 ///
 /// The template binds every parameter to its declared in-register, loads
@@ -9579,7 +9579,7 @@ fn syscall_stumpf(
     }
     // **The answer shape: integer with a checkable bound, or nothing.**
     // `C183` -- the decoding holds the raw answer against the declared result
-    // range (`einpassen` as C, PLAN-UMSETZUNG.md 2.1); a non-integer answer
+    // range (`einpassen` as C, dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md 2.1); a non-integer answer
     // has no range to check. A named type is refused with it too: its carrier
     // lowers, but its range lives in a declaration the stub does not resolve
     // -- one line of honesty instead of a check against the wrong bound.
@@ -18704,7 +18704,7 @@ fn zuw_op(op: &ZuwOp) -> &'static str {
 ///
 /// Measured over all 25 pairs on 2026-08-31, compiled and run: **nine compute a different
 /// value**, and `-Wparentheses` -- the only net -- catches three of the nine while warning
-/// on three that are correct. The table is in `messung/proben/VORRANG-BITSTUFEN.md`.
+/// on three that are correct. The table is in `dokumente/SPRACHE.md`.
 fn ist_bitop(op: &BinOp) -> bool {
     matches!(
         op,

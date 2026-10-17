@@ -19,7 +19,7 @@
 //! *"`insert` is not declared here"*. **The call form was never missing. The CALLEE was.**
 //!
 //! > `messung/OPS-RUFFORM.md` weighs both sides of three forms. The decision is the same
-//! > move as `SCHLEIFENINVARIANTE.md`: *a second word for a concept the language already
+//! > move as `dokumente/PRUEFER.md`: *a second word for a concept the language already
 //! > carries is dearer than a second site for a word it already has.*
 //!
 //! ## What this module is, structurally: ONE producer, five readers

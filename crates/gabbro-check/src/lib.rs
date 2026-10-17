@@ -76,10 +76,10 @@ pub mod abi;
 /// agent E, `N501`-`N505`; the Lean side is `GabbroZielVerbund`).
 pub mod verbund;
 /// **Lane 191 -- the derived contract as a view** (lever 1 of
-/// `PLAN-EINFACHHEIT.md`). Owns no refusal, only the register of what the
+/// `dokumente/PRUEFER.md`). Owns no refusal, only the register of what the
 /// checker derives per function: `gabbro abgeleitet` reads it.
 pub mod abgeleitet;
-/// **The `syscall` declaration (PLAN-SYSCALL.md, lane S5).** The register map,
+/// **The `syscall` declaration (dokumente/SPRACHE.md, lane S5).** The register map,
 /// the errno decoding and the machine/counterpart questions -- the call
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and
 /// `H007`, so this module holds only the declaration itself.
@@ -92,7 +92,7 @@ pub mod zielbindung;
 /// (`N450`). Declaration-level beside `syscall.rs`, whose file this module
 /// never touches: the register file is read here, not shared.
 pub mod clone;
-/// **The monotone `arena` («E4», `PLAN-ERWEITUNG.md` §3, checker half).**
+/// **The monotone `arena` («E4», `dokumente/PRUEFER.md` §3, checker half).**
 /// The declaration against its own shape (`N210`) and the per-function flow
 /// -- generations, the static count since the last reset, the owed `else`
 /// (`N211`-`N213`). The place shape and index belonging live where every
@@ -156,7 +156,7 @@ pub use m1::fremdverengungen;
 // register is untouched by construction.
 pub mod fix;
 // **Lane 197 -- explicitness as a view** (lever 3 of
-// `PLAN-EINFACHHEIT.md`). `gabbro fmt --explicit` writes every settled
+// `dokumente/PRUEFER.md`). `gabbro fmt --explicit` writes every settled
 // derived clause out, `gabbro fmt --elide` removes every clause equal to what
 // would be derived. Both read the checker's own derivation and own no refusal,
 // so the pass register is untouched by construction.
@@ -202,10 +202,10 @@ pub mod konst_lean;
 pub mod beweis;
 pub mod refinement;
 pub mod schablonen;
-/// **The region span map (PLAN-ERWEITUNG.md §6, lane E7).** No pass of its
+/// **The region span map (dokumente/PRUEFER.md §6, lane E7).** No pass of its
 /// own: `namen.rs` reads it and reports region diagnostics through it.
 pub mod regionkarte;
-/// **The translation stage, first cut (PLAN-ERWEITUNG.md §6, lane E5).**
+/// **The translation stage, first cut (dokumente/PRUEFER.md §6, lane E5).**
 /// No pass of its own either: the verdicts fire through the name pass,
 /// where the call side already stands, and the emitter reads the accepted
 /// call sites. The translator runs here, at translation time; the Lean
@@ -1113,7 +1113,7 @@ pub fn ist_praedikatswort(r: &Ruf) -> bool {
 /// of it walks a BODY. **A predicate does not need a body**: eighteen of the nineteen places
 /// the grammar puts one are contract or declaration positions, and until 2026-09-02 no
 /// walker reached them together. Measured that day, position by position, against the
-/// unchanged checker (`messung/PREDICATE-NAMES.md`): a name that nothing declares was
+/// unchanged checker (`dokumente/PRUEFER.md`): a name that nothing declares was
 /// accepted in **266 of 380** position x name-kind cells.
 ///
 /// The order is the order of `ItemArt`, and the arms that carry nothing are written out

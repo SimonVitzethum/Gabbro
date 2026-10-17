@@ -48,7 +48,7 @@ pub struct Pflicht {
     /// two registers, and that is the class this folder writes against.*
     pub material: Material,
     /// **Where the obligation ARISES** -- the anchor of `AUFTRAG-GABBROV.md` §4, and the same
-    /// notion `PFLICHTEN.md` puts in its `Line` column.
+    /// notion `PFLICHTEN.txt` puts in its `Line` column.
     ///
     /// For seven of the eight kinds this is the clause itself. **For `V` it is the CALL
     /// SITE**, and that is not a slip: a body with two calls to the same callee produces two
@@ -84,7 +84,7 @@ pub struct Pflicht {
 /// **What each kind of obligation offers a prover -- exhaustively, no catch-all.**
 ///
 /// A new obligation kind is a compile error at every site that turns one into a goal, not a
-/// silent omission. *An output that forgets one kind looks complete* (`messung/ABI.md`, the
+/// silent omission. *An output that forgets one kind looks complete* (`dokumente/SPRACHE.md`, the
 /// `lock` line that was missing from the ABI for a day).
 #[derive(Clone)]
 pub enum Material {
@@ -214,7 +214,7 @@ pub enum Art {
     /// `traverse … invariant P { … }` says: *P holds across the passes.* Until today the
     /// clause did not exist, and the body channel refused 23 routines with `loop` for the
     /// reason that the measure was carried and the STATEMENT was not
-    /// (`messung/SCHLEIFENINVARIANTE.md`).
+    /// (`dokumente/PRUEFER.md`).
     ///
     /// *It stands beside `E` and not inside it:* a table invariant is declared once at the
     /// table and quantified over its slots; a loop invariant is declared at ONE loop and
@@ -280,7 +280,7 @@ pub enum Art {
     /// commit that wrote the census -- **and `spezpraedikate` a hundred lines below named
     /// exactly those three (plus F03's) the same day, as the `maintains` lines whose wording
     /// sat at a `table`/`group` invariant.** Two registers over one set, written together,
-    /// disagreeing. The measurement stands in `PFLICHTEN-KORRESPONDENZ.md` §7, taken twice --
+    /// disagreeing. The measurement stands in `PFLICHTEN-KORRESPONDENZ.txt` §7, taken twice --
     /// once from the source and once from the artefact -- and both say 14.
     ///
     /// *It stands beside `E` and not inside it:* an `E` is owed by a FUNCTION that names the
@@ -742,7 +742,7 @@ fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
 /// The consequence is not a smaller number, it is a SILENT one: every `requires` of a callee
 /// reached through `let … else` produced no `V` line at all. Measured at
 /// `messung/fragmente/F01.gab`:426 -- `revoke` calls `delete_leaf` that way, and
-/// `delete_leaf` carries four `requires`; `PFLICHTEN.md` books two of them as LOGIC
+/// `delete_leaf` carries four `requires`; `PFLICHTEN.txt` books two of them as LOGIC
 /// obligations (`236` *the cap has no children*, `337` *every `victim` is a leaf when
 /// `delete_leaf` sees it* -- *"the load-bearing statement of `revoke`"*). **Both were absent
 /// from the manifest and nothing said so.**
@@ -955,7 +955,7 @@ fn lauf(
             }
             // **`requires` at a `reg` -- the device promise** (2026-08-24, «B26»).
             //
-            // Until today nobody read this clause: `PFLICHTEN.md` carried it as a hanging
+            // Until today nobody read this clause: `PFLICHTEN.txt` carried it as a hanging
             // plumbing duty with the note *"no pass reads `RegDecl::requires` at all. The
             // clause parses and is then dropped -- the same shape as `ensures` on an
             // `extern fn`."* **The comparison was the pointer to the cure:** that one became
@@ -1018,7 +1018,7 @@ fn lauf(
                     // Until today a `transition` reached the register only through its
                     // `requires`, so the four `transition`s of `messung/fragmente/F04.gab`
                     // -- which carry none -- stood in no line at all
-                    // (`PFLICHTEN-KORRESPONDENZ.md` rows 36-39, `DROPPED`).
+                    // (`PFLICHTEN-KORRESPONDENZ.txt` rows 36-39, `DROPPED`).
                     //
                     // **The pre-state is ASSUMED, and that is measured, not argued.**
                     // `transition ack { DEVICE_STATUS: 0 -> ACK }` lowers to
@@ -1069,7 +1069,7 @@ fn lauf(
             // mapping domain of the structure, not about what some function leaves behind.
             ItemArt::Walk(w) => {
                 // **`down` and `leaf` -- the two predicates the descent RESTS on**
-                // (2026-09-04, `PFLICHTEN-KORRESPONDENZ.md` rows 59 and 60).
+                // (2026-09-04, `PFLICHTEN-KORRESPONDENZ.txt` rows 59 and 60).
                 //
                 // `down : roh when !it.PS` and `leaf : it.PS` are not checked anywhere.
                 // The emitter compiles them into CLASSIFIERS --

@@ -31,7 +31,7 @@
 -- refuses a zero divisor, and `C001` refuses `[T; 0]` at a `static`, at a slot field, at a
 -- `walk` node and at `walk levels`. **Eight positions measured, and only two escaped** -- this
 -- one, and `embeds … scale 0` (`beispiele/gift/648`), which is a different argument.
--- `messung/ERZEUGERSWEEP.md` §9 carries the table.
+-- `dokumente/C-SPEICHERMODELL.md` §9 carries the table.
 --
 -- *The declaration alone is refused by the emitter now as well (`C001`) -- so this file keeps
 -- the CHECKER's half honest, and `648` keeps the other zero's.*

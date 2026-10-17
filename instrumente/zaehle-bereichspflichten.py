@@ -112,7 +112,7 @@ def main():
     # **`N_ritus` -- das Tor von K100.1, zum ersten Mal GEMESSEN** (2026-08-20).
     #
     # K100.1 buchte: *„`zaehle-bereichspflichten.py` unterscheidet die drei Faelle"*. Es tat
-    # es nicht -- die Unterscheidung stand in `PFLICHTEN.md`, also im Urteil, und nicht im
+    # es nicht -- die Unterscheidung stand in `PFLICHTEN.txt`, also im Urteil, und nicht im
     # Werkzeug. **Sechster Fall an einem Tag, in dem eine Buchung auf etwas zeigte, das
     # anderswo lag.**
     #

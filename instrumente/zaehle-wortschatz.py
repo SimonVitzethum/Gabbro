@@ -89,7 +89,7 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 #
 # **224 -> 229 on 2026-09-12, and by the ratchet's own first case («SS-1»).**
 # `syscall` + `abi` + `number` + `errors` + `kernel` name the user side of a
-# system call (`dokumente/SYNTAX.md` §12.1, `PLAN-SYSCALL.md` §1): no existing
+# system call (`dokumente/SYNTAX.md` §12.1, `dokumente/SPRACHE.md` §1): no existing
 # form carries it -- an `axiom`/`extern fn` throws away the ABI binding, the
 # generated errno decoding, the ghost OS state and the kernel pairing -- and
 # the reason stands at the entry in `kw.rs`. The third mark does NOT move:
@@ -99,14 +99,14 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 # reason block above EACH entry, so the second mark below does not move.
 #
 # **231 -> 235 on 2026-09-12 («E4»).** `arena` + `capacity` + `alloc` + `reset`
-# name the monotone region (`dokumente/SYNTAX.md` §9.1, `PLAN-ERWEITUNG.md`
+# name the monotone region (`dokumente/SYNTAX.md` §9.1, `dokumente/PRUEFER.md`
 # §3): no existing form carries a bounded heap -- a `table` has no lower
 # bound and no whole-region release, and an `owner` mark has no minter -- and
 # the reason stands at EACH entry in `kw.rs`. The second mark does NOT move.
 #
 # **235 -> 240 on 2026-09-12 («E6»).** `profile` + `rounding` + `fp_contract`
 # + `memory_model` + `interrupt_routing` name the hardware profile
-# (`dokumente/SYNTAX.md` §12.2, `PLAN-ERWEITUNG.md` §0c): no existing form
+# (`dokumente/SYNTAX.md` §12.2, `dokumente/PRUEFER.md` §0c): no existing form
 # carries the fixed key set -- an identifier for a key would accept any
 # spelling and move the set into a string comparison nobody reads -- and
 # the reason stands above EACH entry in `kw.rs`. The second mark does NOT
@@ -114,7 +114,7 @@ SYNTAX = W / "dokumente" / "SYNTAX.md"
 #
 # **240 -> 242 on 2026-09-12 («E3»).** `translator` + `for` name the
 # translator declaration (`dokumente/SYNTAX.md` §7.2,
-# `PLAN-ERWEITUNG.md` §6, lane E3): no existing form carries the
+# `dokumente/PRUEFER.md` §6, lane E3): no existing form carries the
 # region-to-payload map or its link to the served function -- a bare name
 # would collide with the served function -- and the reason stands at each
 # entry in `kw.rs`. The second mark does NOT move; both words are `ctx`,
@@ -518,7 +518,7 @@ def main():
         print("  RATSCHE GEBROCHEN: %d reservierte Woerter, gebucht sind %d."
               % (res, MARKE_RESERVIERT))
         print("  Ein reserviertes Wort ist ein Name, den ein Benutzer nicht vergeben darf --")
-        print("  und `messung/K3-BEFUND.md` §3 hat gemessen, was das kostet: `P002` in sechs")
+        print("  und `dokumente/PRUEFER.md` §3 hat gemessen, was das kostet: `P002` in sechs")
         print("  von acht fremden Auszuegen, jedes Mal auf einem Bezeichner, den der Kern")
         print("  selbst geschrieben hat, und jeder davon verdeckte alles dahinter.")
         print("  **Wer diese Marke hebt, nennt die STELLUNG, an der das Wort greift, und")

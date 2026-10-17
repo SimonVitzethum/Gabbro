@@ -16,7 +16,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 
 | | | Command |
 |---|---:|---|
-| Sentences in the register | **~~135~~ ~~144~~ 157** | `gabbro paesse` |
+| Sentences in the register | **216** | `gabbro paesse` |
 | of those `measured` | **~~127~~ 149** | a poison-probe case or a caught mutation |
 | of those **`ARGUED`** | **2** | a correctness argument is written down — [`K001`](K001.md), [`H006`](H006.md). *The first found an undercount by a factor of 3; the third attempt ([`V2`](V2.md)) found, instead of a measurement, the [non-determinism](DETERMINISMUS.md) and stayed `CONJECTURED`* |
 | of those `CONJECTURED` | **6** | nothing measures them |
@@ -98,7 +98,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > forgotten one.*
 >
 > **And on the same day once more by one, for the same reason:** `N043`
-> (`namen.berichtszeile`) — a `measures` name without a carrier, `messung/TORREICHWEITE.md`.
+> (`namen.berichtszeile`) — a `measures` name without a carrier, `dokumente/PRUEFER.md`.
 > 74 → 75 sentences, 242 → 243 codes, 197 → 198 claimed, 67 → 68 `measured`; the 45
 > without a sentence stay standing. *The second tooth, for the second time in one day.*
 >
@@ -106,7 +106,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > (`d.praedikatsname`, the base name of a place in a predicate) and `N054`
 > (`n.merkmalsform`, a feature demand names one bare name) came in **with their sentences in
 > the same commit** — 92 → 94 sentences, 272 → 274 codes, 221 → 223 claimed, and **51
-> without a sentence, unmoved.** `messung/PREDICATE-NAMES.md`.
+> without a sentence, unmoved.** `dokumente/PRUEFER.md`.
 >
 > *The four figures beside them were stale again* — `measured` stood at 68 where the run
 > says 87, `Codes` at 243 where it says 274, `claimed` at 198 where it says 223. They are
@@ -122,7 +122,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # the regis
 > sentence -- the base already carried it while booking 53. *The same shape as
 > 2026-09-02, and the reason the tooth exists: a code without its sentence in
 > the same commit is the gap.*
-| **Codes without a sentence — the ratchet** | **55** | `./instrumente/pruefe-saetze.py` |
+| **Codes without a sentence — the ratchet** | **60** | `./instrumente/pruefe-saetze.py` |
 
 **The estimate in the plan was ~22 sentences; it became 43.** The reason is not
 diligence but a measurement: several passes hold **two claims of different strength**,

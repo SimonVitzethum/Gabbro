@@ -191,7 +191,7 @@ CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
 #
 # **3 -> 0 on 2026-08-31, and NOT by writing three programs against the list.**
 # `messung/proben/probe-neun-domaenen.gab` is the carrier of the falsification series in
-# `messung/DOMAENENNAMEN.md`: all nine quantifier domains in one unit, so that each of the 32
+# `dokumente/PRUEFER.md`: all nine quantifier domains in one unit, so that each of the 32
 # falsifications changes exactly one thing and the control is the same file. It happens to be
 # the SECOND file for `chain`, `queue` and `threads` -- *a by-product of a measurement with
 # its own subject, which is exactly the shape §5c asks for and not the one it warns against.*

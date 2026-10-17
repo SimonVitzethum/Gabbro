@@ -112,7 +112,7 @@ PFLICHTEN_SUMME = (
 # the wording and carries the pattern along, and any label that loses BOTH spellings
 # reports UNBEWACHT -- loud, not silent (the speech test above measures exactly that, per
 # entry, over the real text). No document was touched for this; see
-# `messung/WAECHTER-STUFE0.md` for the record and the booked cell moves.
+# `dokumente/WERKZEUGKASTEN.md` for the record and the booked cell moves.
 EINTRAEGE = [
     # **The cut in the middle of the run** (2026-08-31). The two figures out of
     # `messung/RUECKLAUFWERTE.md`, its own section on the cut -- the item the empty tree
@@ -142,14 +142,14 @@ EINTRAEGE = [
         "Ausgangsstellen hinter dem jeweils ersten -- die Schnittflaeche",
     ),
     (
-        "messung/fragmente/README.md",
+        "messung/fragmente/README.txt",
         r"(\d+) (?:von 10 prüfen sauber|of 10 check clean)",
         ["./instrumente/zaehle-fragmente.py"],
         r"^  (\d+) von 10 pruefen sauber",
         "vervollstaendigte Fragmente, die sauber pruefen",
     ),
     (
-        "messung/fragmente/README.md",
+        "messung/fragmente/README.txt",
         r"(\d+) (?:von 10 senken ab|of 10 lower)",
         ["./instrumente/zaehle-fragmente.py"],
         r"^  (\d+) von 10 senken ab",
@@ -163,7 +163,7 @@ EINTRAEGE = [
         "Zahn 3 -- Praemissen bewiesener Schablonen ohne Pass",
     ),
     (
-        "messung/netz/README.md",
+        "messung/netz/README.txt",
         # **The figure sits inside a QUOTED TRANSCRIPT of `zaehle-netz.py`.** Its German is
         # the tool's output, not the document's prose, so the translation of that file left
         # it standing -- *a quoted run is evidence, and a translated transcript is not one.*
@@ -234,14 +234,14 @@ EINTRAEGE = [
     # `target/` excluded for the same reason, pre-emptively: it holds no `.gab` today, and a
     # search path that only happens to be right is one nobody notices going wrong.
     (
-        "messung/TRAEGER-UND-HARDWARE.md",
+        "messung/TRAEGER-UND-HARDWARE.txt",
         r"\| `walk`-Deklarationen im ganzen Korpus \| \*\*(\d+)\*\*",
         ["sh", "-c", r"grep -rh '^walk \|^ *walk ' --include=*.gab --exclude-dir=.claude --exclude-dir=target . | wc -l"],
         r"^\s*(\d+)\s*$",
         "walk-Deklarationen im Korpus",
     ),
     (
-        "messung/TRAEGER-UND-HARDWARE.md",
+        "messung/TRAEGER-UND-HARDWARE.txt",
         r"\| `group`-Deklarationen \| \*\*(\d+)\*\*",
         ["sh", "-c", r"grep -rh '^group \|^ *group ' --include=*.gab --exclude-dir=.claude --exclude-dir=target . | wc -l"],
         r"^\s*(\d+)\s*$",
@@ -302,106 +302,39 @@ EINTRAEGE = [
         "Zeremoniestellen des echten Codes, in der Kennzahlentafel",
     ),
     (
-        "messung/ZEREMONIE.md",
+        "messung/ZEREMONIE.txt",
         r"\| \*\*(?:echter Code|real code)\*\* .*?\| (\d+) (?:von|of) 109",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  echter Code: (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen im ECHTEN Code, die sinken duerfen",
     ),
     (
-        "messung/ZEREMONIE.md",
+        "messung/ZEREMONIE.txt",
         r"(\d+) (?:von|of) \d+ (?:Stellen dürfen sinken|places may sink)",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen, die sinken duerfen -- Ziel 3",
     ),
     (
-        "messung/ZEREMONIE.md",
+        "messung/ZEREMONIE.txt",
         r"\d+ (?:von|of) (\d+) (?:Stellen dürfen sinken|places may sink)",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  \d+ von (\d+) Stellen duerfen sinken",
         "Zeremoniestellen insgesamt -- das N zur Quote (W11)",
     ),
     (
-        "messung/ZEREMONIE.md",
+        "messung/ZEREMONIE.txt",
         r"\*\*(\d+) (?:Regeln, 14 vom Korpus|rules, 14 from the corpus)",
         ["./instrumente/zaehle-zeremonie.py"],
         r"^  (\d+) Regeln in der Tafel",
         "Regeln der Kalibriertafel -- jede mit Grund",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"of which \*\*`H = (\d+)` are K\*\*",
         ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H -- haengende Klempnereipflichten",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\| `H` \| 0 \| \*\*(\d+)\*\*",
-        ["./instrumente/zaehle-pflichten.py", "--haengend"],
-        r"^\s+H\s+(\d+)\s*$",
-        "H in der K100-Statustafel",
-    ),
-    # **`A` is a CENSUS since 2026-09-04 and no longer a gate**, so the target cell reads
-    # `~~19~~ **retired**` -- and the pattern had to move with it. *A pattern that pins a
-    # retired target keeps watching a number nobody stands behind*, and this entry would have
-    # gone silent instead of red the moment the cell changed.
-    (
-        "dokumente/PLAN.md",
-        r"\| `A` \| ~~19~~ \*\*retired\*\* \| \*\*(\d+)\*\*",
-        ["sh", "-c", "cargo run -q --bin gabbro -- annahmen beispiele/*.gab"],
-        r"^-- (\d+) Annahmen",
-        "A -- Annahmen mit Sonde oder Grund",
-    ),
-    # **`A_p`, the share that replaced the gate.** The figure stands twice -- in the status
-    # table and in the document that derives it -- and both are read from the same run, so a
-    # repaired probe cannot move one and leave the other.
-    (
-        "dokumente/PLAN.md",
-        r"`A_p` = \*\*(\d+)\*\* of \d+ \(falsifiable assumptions whose probe",
-        ["./instrumente/pruefe-sondendeckung.py"],
-        r"^\s+(\d+) of \d+ falsifiable assumptions carry a probe",
-        "A_p -- Annahmen mit einer Sonde als PROGRAMM",
-    ),
-    (
-        "dokumente/SONDENDECKUNG.md",
-        r"probe stands as a program\*\* \| \*\*(\d+) of \d+\*\*",
-        ["./instrumente/pruefe-sondendeckung.py"],
-        r"^\s+(\d+) of \d+ falsifiable assumptions carry a probe",
-        "A_p -- der Zaehler",
-    ),
-    # **The DENOMINATOR gets its own entry, and that is not pedantry** -- a share vouches for
-    # its denominator, not for its caption (W25). Without this line `1 of 12` would pass.
-    (
-        "dokumente/SONDENDECKUNG.md",
-        r"probe stands as a program\*\* \| \*\*\d+ of (\d+)\*\*",
-        ["./instrumente/pruefe-sondendeckung.py"],
-        r"^\s+\d+ of (\d+) falsifiable assumptions carry a probe",
-        "A_p -- der Nenner, die falsifizierbaren Annahmen",
-    ),
-    # **The class the FLOOR was derived from.** If this count moves, `1/8` is standing over a
-    # different derivation than the one written beneath it.
-    (
-        "dokumente/SONDENDECKUNG.md",
-        r"already has\*\* \| \*\*(\d+)\*\* \|",
-        ["./instrumente/pruefe-sondendeckung.py"],
-        r"^\s+(\d+) of \d+ rows are class",
-        "P4 -- die Sonden, die nur einen Uebersetzer brauchen",
-    ),
-    (
-        "dokumente/SONDENDECKUNG.md",
-        r"\*\*(\d+) orphan program is booked",
-        ["./instrumente/pruefe-sondendeckung.py"],
-        r"^\s+\d+ program\(s\) under `sonden/`, (\d+) of them named by no",
-        "Programme, die kein `falsifier` nennt",
-    ),
-    (
-        "dokumente/SONDENDECKUNG.md",
-        r"\*\*The other (\d+)\*\* stand in `messung/fragmente/`",
-        ["./instrumente/pruefe-sondendeckung.py"],
-        r"^\s+(\d+) probe name\(s\) outside this register",
-        "Sondennamen ausserhalb des Registers",
     ),
     # **The `unfalsifiable` category, and both of its ratchets.** `A = 19` against 44 can be
     # reached by writing `unfalsifiable` twenty-five times, and then the gate was emptied
@@ -409,32 +342,18 @@ EINTRAEGE = [
     # the command that recomputes them. *The second is the sharp one: it counts the rows a
     # CRITERION admits, not the rows somebody wrote the word on.*
     (
-        "dokumente/UNFALSIFIZIERBAR.md",
+        "dokumente/UNFALSIFIZIERBAR.txt",
         r"\*\*(\d+) rows of \d+ clauses in the tree",
         ["./instrumente/pruefe-unfalsifizierbar.py"],
         r"^\s+\d+ clauses, (\d+) rows, \d+ ADMITTED",
         "unfalsifiable -- rows in the register",
     ),
     (
-        "dokumente/UNFALSIFIZIERBAR.md",
+        "dokumente/UNFALSIFIZIERBAR.txt",
         r"rows of \d+ clauses in the tree, (\d+) of them ADMITTED",
         ["./instrumente/pruefe-unfalsifizierbar.py"],
         r"^\s+\d+ clauses, \d+ rows, (\d+) ADMITTED",
         "unfalsifiable -- ADMITTED under a criterion",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\| `L` \| ≤ 4 \| \*\*(\d+)\*\*",
-        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
-        r"CARRIED unproved \(the compiler rests on them\): (\d+)",
-        "L -- getragen und unbewiesen",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"(?:daneben aber|but beside it) \*\*(\d+) (?:Prämissen ohne Pass|premises without a pass)\*\*",
-        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
-        r"PREMISES WITHOUT A PASS \(tooth 3\): (\d+)",
-        "Praemissen ohne Pass (Zahn 3)",
     ),
     (
         "dokumente/MESSUNGEN.md",
@@ -491,14 +410,14 @@ EINTRAEGE = [
         "fremde Ruempfe, die ihre Pflicht AUSSPRECHEN",
     ),
     (
-        "messung/FREMDVERENGUNG.md",
+        "messung/FREMDVERENGUNG.txt",
         r"\| \*\*(\d+)\*\* \| (?:davon \*\*verengt wirklich|of those \*\*really narrows)\*\*",
         ["./instrumente/zaehle-fremdverengung.py"],
         r"== (\d+) wirksame Fremdverengungen",
         "wirksame Fremdverengungen im Korpus -- die Zahl mit Wirkung im Erzeugnis",
     ),
     (
-        "messung/FREMDVERENGUNG.md",
+        "messung/FREMDVERENGUNG.txt",
         r"\| \*\*(\d+)\*\* \| (?:davon \*\*sprechen ihre Pflicht aus"
         r"|of those \*\*state their duty)\*\*",
         ["./instrumente/zaehle-fremdverengung.py"],
@@ -534,32 +453,25 @@ EINTRAEGE = [
     # zwoelf standen beim Eintragen falsch da.
     # ------------------------------------------------------------------------------
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"### Offen — \*\*`H = (\d+)`\*\*",
         ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H in der Postenliste (die UEBERSCHRIFT, nicht die Summenzeile)",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"\*\*(\d+) anchored at a line, \d+ lowerings\*\*",
         ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+verankert\s+(\d+)\s*$",
         "haengende Pflichten, an einer Zeile verankert",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"\*\*\d+ anchored at a line, (\d+) lowerings\*\*",
         ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+Absenkung\s+(\d+)\s",
         "haengende Pflichten, die an der Absenkung haengen",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\| \*\*(?:Prämissen ohne Pass|Premises without a pass)\*\* \| \*\*(\d+)\*\*",
-        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
-        r"PREMISES WITHOUT A PASS \(tooth 3\): (\d+)",
-        "Praemissen ohne Pass, in der «NL»-Tafel",
     ),
     (
         "messung/KENNZAHLEN.md",
@@ -713,57 +625,7 @@ EINTRAEGE = [
         "`metis`/`blast`/`smt` -- Suchen, die einmal liefen",
     ),
 
-    # **Die «NL»-Tafel, Zeile fuer Zeile** -- sie nennt selbst die Befehle, und drei von fuenf
-    # Zahlen standen am 2026-08-20 falsch da. *Eine davon war das Tor von «NL»: `ZUSAGE = 0`
-    # war ERREICHT, und die Tafel fuehrte 13.* Ein Tor, dessen Erreichen niemand mitschreibt,
-    # ist von einem unerreichten nicht zu unterscheiden.
-    (
-        "dokumente/PLAN.md",
-        r"\| \*\*Erhaltungspflichten\*\* \| \*\*(\d+)\*\*",
-        ["sh", "-c", PFLICHTEN_SUMME],
-        r"erhaltung (\d+)",
-        "Erhaltungspflichten ueber dem Korpus",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\| \*\*(?:ZUSAGE ohne Leser|ZUSAGE without a reader)\*\* \| \*\*(\d+)\*\*",
-        ["./instrumente/pruefe-klauseln.py"],
-        r"^\s+ZUSAGE\s+(\d+)\s",
-        "ZUSAGE-Klauseln ohne Leser -- das Tor von «NL»",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\| \*\*Fremdpflichten\*\* \| \*\*(\d+)\*\*",
-        ["sh", "-c", PFLICHTEN_SUMME],
-        r"fremd (\d+)",
-        "Fremdpflichten ueber dem Korpus",
-    ),
-    # **Neu am 2026-08-20** -- der Preis der SCHWACHEN Fassung von `M115`. Der Pruefer weist
-    # ab, wo der Bereich des Arguments die Vorbedingung ausschliesst, und schweigt sonst; die
-    # Zahl der Rufstellen, an denen er schweigt, stand nirgends. *Ein Preis, der nirgends
-    # steht, sieht aus wie null.*
-    (
-        "dokumente/PLAN.md",
-        r"\| \*\*Vorbedingungen am Rufort\*\* \| \*\*(\d+)\*\*",
-        ["sh", "-c", PFLICHTEN_SUMME],
-        r"vorbed (\d+)",
-        "Vorbedingungen an Rufstellen ueber dem Korpus",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\| \*\*Absenkungspflichten\*\* \| \*\*(\d+)\*\*",
-        ["./instrumente/zaehle-pflichten.py", "--haengend"],
-        r"^\s+Absenkung\s+(\d+)\s",
-        "Absenkungspflichten in der «NL»-Tafel",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"H = (\d+)\s+(?:ueber den zehn Fragmenten kein Handbeweis mehr|over the ten fragments no more hand proofs)",
-        ["./instrumente/zaehle-pflichten.py", "--haengend"],
-        r"^\s+H\s+(\d+)\s*$",
-        "H im «NL»-Kasten",
-    ),
-    # **The two summary tables of `PFLICHTEN.md`** -- new on 2026-08-30, and the occasion is
+    # **The two summary tables of `PFLICHTEN.txt`** -- new on 2026-08-30, and the occasion is
     # written in the file itself: the column table added up to 173 K / 65 L, the row beneath
     # it read 171 / 67, and BOTH make 238. *A split whose total matches is not recomputed* --
     # it stood for sixteen days. The recount found the cause one level down: F4 has 31 rows,
@@ -772,81 +634,46 @@ EINTRAEGE = [
     # **Six entries for six numbers, not one for the table.** Two tables over the same thing
     # are W7 -- while both stand, every cell gets its own command.
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"\| \*\*Obligations in total\*\* \|[^|]*?\*\*(\d+)\*\* \|",
         ["./instrumente/zaehle-pflichten.py", "--spalten"],
         r"^  insgesamt\s+(\d+) =",
         "Pflichten insgesamt -- die Tafel `The totals`",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"\| \*\*Plumbing \(K\)\*\* \|[^|]*?\*\*(\d+)\*\* \|",
         ["./instrumente/zaehle-pflichten.py", "--spalten"],
         r"^  insgesamt\s+\d+ =\s+(\d+) K",
         "Klempnereipflichten (K) -- die Tafel `The totals`",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"\| \*\*Logic \(L\)\*\* \|[^|]*?\*\*(\d+)\*\* \|",
         ["./instrumente/zaehle-pflichten.py", "--spalten"],
         r"^  insgesamt\s+\d+ =\s+\d+ K \+\s+(\d+) L",
         "Logikpflichten (L) -- die Tafel `The totals`",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"(?m)^\| \|[^|]*?\*\*(\d+)\*\* \|[^|]*\|[^|]*\|$",
         ["./instrumente/zaehle-pflichten.py", "--spalten"],
         r"^  insgesamt\s+(\d+) =",
         "Pflichten insgesamt -- die Spaltentafel je Fragment",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"(?m)^\| \|[^|]*\|[^|]*?\*\*(\d+)\*\* \|[^|]*\|$",
         ["./instrumente/zaehle-pflichten.py", "--spalten"],
         r"^  insgesamt\s+\d+ =\s+(\d+) K",
         "Klempnereipflichten (K) -- die Spaltentafel je Fragment",
     ),
     (
-        "dokumente/PFLICHTEN.md",
+        "dokumente/PFLICHTEN.txt",
         r"(?m)^\| \|[^|]*\|[^|]*\|[^|]*?\*\*(\d+)\*\* \|$",
         ["./instrumente/zaehle-pflichten.py", "--spalten"],
         r"^  insgesamt\s+\d+ =\s+\d+ K \+\s+(\d+) L",
         "Logikpflichten (L) -- die Spaltentafel je Fragment",
-    ),
-    # **The register line from K100's trap section** -- new on 2026-08-30. It stood as
-    # `20 Eintraege, 16 unbewiesen, 4 davon lebend` while the command said 21 / 11 / 2.
-    # *Two of the three had moved in the GOOD direction* -- the trust surface fell while the
-    # register grew -- **and that is exactly the movement K100's second gate exists to make
-    # visible.** A hand-kept number shows it in neither direction.
-    (
-        "dokumente/PLAN.md",
-        r"\*\*(\d+) Einträge, \d+ unbewiesen, \d+ davon lebend\*\*",
-        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
-        r"^-- (\d+) templates, \d+ of them unproved",
-        "Schablonen im Register",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\*\*\d+ Einträge, (\d+) unbewiesen, \d+ davon lebend\*\*",
-        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
-        r"^-- \d+ templates, (\d+) of them unproved",
-        "unbewiesene Schablonen",
-    ),
-    (
-        "dokumente/PLAN.md",
-        r"\*\*\d+ Einträge, \d+ unbewiesen, (\d+) davon lebend\*\*",
-        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
-        r"CARRIED unproved \(the compiler rests on them\): (\d+)",
-        "lebend unbewiesene Schablonen (die Registerzeile, nicht die Statustafel)",
-    ),
-    # **The assumption count in the prose, beside the one in the status table.** Two places
-    # over one number are W7 -- while both stand, each gets its own command.
-    (
-        "dokumente/PLAN.md",
-        r"\*\*(?:Heute steht dort|Today it stands at) (\d+)\*\*",
-        ["sh", "-c", "cargo run -q --bin gabbro -- annahmen beispiele/*.gab"],
-        r"^-- (\d+) Annahmen",
-        "Annahmen -- die Zahl im Fliesstext von K100",
     ),
     # **The trigger for goal 9, and it stood 19 sentences short** (2026-08-30). `TODO.md` reads
     # a sentence naming 52 sentences over 12 of 12 passes, none proved -- and calls that
@@ -882,19 +709,19 @@ EINTRAEGE = [
     # three chances to drift.*
     #
     # `zaehle-pflichten.py --gabbrov` derives it from BOTH sides -- the `progress` clauses of
-    # `messung/fragmente/F*.gab` and the `L` rows of `PFLICHTEN.md` that name them -- and
+    # `messung/fragmente/F*.gab` and the `L` rows of `PFLICHTEN.txt` that name them -- and
     # refuses when the two disagree. **Four cells, four entries**, by the same rule the six
-    # `PFLICHTEN.md` summary cells follow: while more than one table says a thing, each cell
+    # `PFLICHTEN.txt` summary cells follow: while more than one table says a thing, each cell
     # is recomputed on its own.
     (
-        "messung/GABBROV-V2.md",
+        "messung/GABBROV-V2.txt",
         r"\| GabbroV's obligation population \| 66 \| \*\*(\d+)\*\* \|",
         ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
         r"^  GabbroV obligation population\s+(\d+)",
         "GabbroV-Bevoelkerung -- die Tafel `The answer, up front`",
     ),
     (
-        "messung/GABBROV-V2.md",
+        "messung/GABBROV-V2.txt",
         r"\| \*\*GabbroV's obligation population\*\* \| \*\*(\d+)\*\* \|",
         ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
         r"^  GabbroV obligation population\s+(\d+)",
@@ -908,7 +735,7 @@ EINTRAEGE = [
         "GabbroV-Bevoelkerung -- §11 der Falsifikatorentafel",
     ),
     (
-        "messung/GABBROV-V2.md",
+        "messung/GABBROV-V2.txt",
         r"\| of these, discharged by the assumption layer \| (\d+) \|",
         ["./instrumente/zaehle-pflichten.py", "--gabbrov"],
         r"^  of these discharged by the assumption layer\s+(\d+)",
@@ -922,7 +749,7 @@ EINTRAEGE = [
 # through them one by one showed that **most of them are not unmeasured -- they are
 # unguardable, and for three different reasons that must not be added up:**
 #
-# **The four classes and what each one means stand in `messung/REICHWEITE-GRUENDE.md`.**
+# **The four classes and what each one means stand in `dokumente/PRUEFER.md`.**
 # They are named in the entries below and NOT spelled out here, and the reason is measurable:
 # two of the four class names carry a German particle, and a class name repeated in a comment
 # block lifts the language ratchet by one line per mention. *A name is a comment nobody can
@@ -944,7 +771,7 @@ EINTRAEGE = [
 UNBEWACHBAR = [
     # ---- MESSUNGEN.md: the frozen protocol of the reassignment (2026-08-17) -------------
     ("dokumente/MESSUNGEN.md", r"\| \*\*Plumbing \(K\)\*\* \| \*\*173\*\*", "PROTOKOLL",
-     "die Aufteilung vom 2026-08-17; die LEBENDE steht in `PFLICHTEN.md` und ist bewacht"),
+     "die Aufteilung vom 2026-08-17; die LEBENDE steht in `PFLICHTEN.txt` und ist bewacht"),
     ("dokumente/MESSUNGEN.md", r"\| \*\*hanging\*\* \| \*\*50\*\*", "PROTOKOLL",
      "`H = 36` an dem Tag, an dem das Tor verfehlt wurde -- der Torbefund selbst"),
     ("dokumente/MESSUNGEN.md", r"\| disputed \| \*\*1\*\* \| 0,4 %", "PROTOKOLL",
@@ -1013,24 +840,9 @@ UNBEWACHBAR = [
     ("messung/KENNZAHLEN.md", r"\| \*\*\d+\*\* \| der Prüfer als Mathematik, in Lean 4", "KEINE KENNZAHL",
      "Ziel Nummer neun"),
 
-    # ---- PLAN.md ------------------------------------------------------------------------
-    ("dokumente/PLAN.md", r"\| \*\*together, hard\*\* \| \*\*3 081\*\*", "KEIN INSTRUMENT",
-     "Caprock-Zeilen, gemessen 2026-08-13 im fremden Baum"),
-    ("dokumente/PLAN.md", r"\| \*\*\d+\*\* \| \*\*The preservation\*\* of the group invariant",
-     "KEINE KENNZAHL", "Posten Nummer drei einer nummerierten Aufzaehlung"),
-    # **Its neighbour in the very same table, and it stood open for a day longer.** Rows 3,
-    # 4 and 5 of that list were booked and row 2 was not -- *a register that catches four of
-    # five rows of one table has found the class and missed a line.*
-    ("dokumente/PLAN.md", r"\| \*\*\d+\*\* \| \*\*The emission\*\* — C and annotation",
-     "KEINE KENNZAHL", "Posten Nummer zwei derselben nummerierten Aufzaehlung"),
-    ("dokumente/PLAN.md", r"117 ms \| 117 ms \|", "KEIN INSTRUMENT",
-     "Laufzeitverhaeltnis aus einem Messlauf, den dieser Ordner nicht wiederholt"),
-    ("dokumente/PLAN.md", r"156 ms \| 210 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),
-    ("dokumente/PLAN.md", r"23,0 ms \| 23,1 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),
-    ("dokumente/PLAN.md", r"66,0 ms \| 23,2 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),
 
-    # ---- PFLICHTEN.md -------------------------------------------------------------------
-    ("dokumente/PFLICHTEN.md", r"\| \*\*disputed\*\* \| \*\*1\*\*", "URTEIL",
+    # ---- PFLICHTEN.txt -------------------------------------------------------------------
+    ("dokumente/PFLICHTEN.txt", r"\| \*\*disputed\*\* \| \*\*1\*\*", "URTEIL",
      "`unlink`:194-196 -- in der Zeile ARGUMENTIERT, und ein Argument zaehlt kein Werkzeug"),
 ]
 
@@ -1057,8 +869,8 @@ def unbewachbar_tot():
 # dieser Ordner seine Kennzahlen schreibt. Was davon keinen Befehl hat, ist unbewacht -- und
 # das ist keine Schande, sondern die Zahl, die dieses Werkzeug ueber sich selbst schuldet.
 BEWACHTE_DATEIEN = [
-    "dokumente/PFLICHTEN.md",
-    "dokumente/PLAN.md",
+    "dokumente/PFLICHTEN.txt",
+    "dokumente/PRUEFER.md",
     "dokumente/MESSUNGEN.md",
     "dokumente/SYNTAX.md",
     "messung/KENNZAHLEN.md",

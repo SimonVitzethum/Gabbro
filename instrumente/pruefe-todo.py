@@ -52,7 +52,7 @@ PRUEFERPLAN = {
 # **Und PLAN.md fuehrt DIESELBEN Etiketten mit anderem Inhalt** (gefunden 2026-08-19).
 #
 # Der Waechter hielt bis heute nur TODO.md-Ueberschriften gegen `PRUEFERPLAN` -- und sah
-# deshalb nicht, dass die groesste Zweitvergabe im Ordner in `dokumente/PLAN.md` steht: eine
+# deshalb nicht, dass die groesste Zweitvergabe im Ordner in `dokumente/PRUEFER.md` steht: eine
 # vollstaendige zweite P-Reihe, P0 bis P8, die von P1 an etwas anderes bedeutet.
 #
 #   SPRACHE.md  P6  Paarungspass + `entry`-Emission
@@ -65,19 +65,8 @@ PRUEFERPLAN = {
 #
 # *Welche gilt, ist ein Urteil und steht nicht hier.* Gebucht ist der Stand; eine NEUE
 # Abweichung faellt.
-PLAN_ABWEICHUNG_GEBUCHT = {
-    # P0 heisst in beiden "Papier zuerst" und ist die EINZIGE Stufe, die sich noch deckt --
-    # der Wortlaut steht trotzdem hier, denn gebucht wird der Stand, nicht die Absicht.
-    "P0": "Paper. Three questions, each can kill the thesis",
-    "P1": "`check` as a Rust macro library, without a language",
-    "P2": "The core as a CHECKER, without code generation",
-    "P3": "Lowering to C, syntax-directed",
-    "P4": "M3 and `device`",
-    "P5": "Axiom layer and entry",
-    "P6": "`spec fn` / `impl fn` and the generated refinement obligation",
-    "P7": "Race freedom",
-    "P8": "Migration by the strangler pattern",
-}
+# The second P-series of the old PLAN.md is gone (consolidated into PRUEFER.md, 2026-10-17): no booked deviation remains.
+PLAN_ABWEICHUNG_GEBUCHT = {}
 
 
 def plan_etiketten():
@@ -86,7 +75,7 @@ def plan_etiketten():
     Neu abgewichen  -> FEHLER: eine dritte Bedeutung fuer dasselbe Etikett.
     Angeglichen     -> FEHLER: der Eintrag ist gestiegen und gehoert geloescht (Sperrklinke).
     """
-    text = (WURZEL / "dokumente" / "PLAN.md").read_text()
+    text = (WURZEL / "dokumente" / "PRUEFER.md").read_text()
     heute = {}
     for z in text.splitlines():
         m = re.match(r"^## (P\d) — (.+)$", z)
@@ -785,7 +774,7 @@ def main():
     # crash is not a refusal -- a NAMED refusal is*, and a missing subject says the SETUP
     # has to change, not the tree. `pruefe_readme` even answered `[]` for a missing README
     # -- a GREEN verdict over a file that is not there (W17).
-    gegenstand = [WURZEL / "TODO.md", WURZEL / "README.md", WURZEL / "dokumente" / "PLAN.md"]
+    gegenstand = [WURZEL / "TODO.md", WURZEL / "README.md", WURZEL / "dokumente" / "PRUEFER.md"]
     fehlend = [str(d.relative_to(WURZEL)) for d in gegenstand if not d.is_file()]
     n_bsp_da = len(list((WURZEL / "beispiele").glob("*.gab")))
     if fehlend or not n_bsp_da:
@@ -806,7 +795,7 @@ def main():
         return 0
 
     p_befunde = plan_etiketten()
-    print("\n== Die zweite P-Reihe (dokumente/PLAN.md) ==")
+    print("\n== Die zweite P-Reihe (dokumente/PRUEFER.md) ==")
     if p_befunde:
         for b in p_befunde:
             print(f"  {b}")

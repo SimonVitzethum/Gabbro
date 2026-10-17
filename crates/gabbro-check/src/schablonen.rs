@@ -1096,7 +1096,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         //
         // **The form is not what is missing here** (measured 2026-08-28, W24). `transset`
         // has carried several places since the first day (`SYNTAX.md`:1256), the parser has
-        // the comma loop, and `beispiele/02-geraet.gab`:42 uses it. `PFLICHTEN.md` read the
+        // the comma loop, and `beispiele/02-geraet.gab`:42 uses it. `PFLICHTEN.txt` read the
         // opposite twice («B17», *"`transition` writes exactly ONE `place`"*) and was wrong
         // on that for eleven days.
         //
@@ -1166,7 +1166,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             // *Der Satz bliebe wahr und seine Praemisse wuerde falsch* -- genau die Bewegung,
             // gegen die Zahn 3 steht.
             Voraussetzung { was: "the operator comes from max/min/add/or/and", durch: Some("the closed vocabulary: `MergeOp` admits nothing else"), braeuchte: None },
-            Voraussetzung { was: "and all number types are INTEGRAL -- otherwise `add` is not associative", durch: Some("there is no floating-point type (MEMO-GLEITKOMMA.md); with one, `merge` would have to restrict mechanically"), braeuchte: None },
+            Voraussetzung { was: "and all number types are INTEGRAL -- otherwise `add` is not associative", durch: Some("there is no floating-point type (dokumente/GLEITKOMMA.md); with one, `merge` would have to restrict mechanically"), braeuchte: None },
             Voraussetzung { was: "one cell per core, laid out with the right unit", durch: Some("mutation probe `min-akkumulator-ohne-umkehr`, unit `beispiel23`"), braeuchte: None },
             Voraussetzung { was: "the QUIESCENT POINT -- no core writes any more while the fold runs", durch: None, braeuchte: Some("the EXECUTION CONTEXTS (K11.2.2) -- without them Gabbro does not say who runs concurrently, and no rule can establish the quiescent point") },
         ],
@@ -1503,8 +1503,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         // zwischen den beiden Nahmen NICHT, und dann laesst sich das Locale nicht erfuellen
         // -- nicht weil der Beweis schwerer waere, sondern weil die Voraussetzung falsch ist.
         //
-        // **CORRECTED 2026-09-04** (K100 audit, `messung/K100-VERDICT-2026-09-04.md` §2,
-        // `messung/AUDIT-K100-2026-09-04.md` §2.2). The previous line's reason for staying
+        // **CORRECTED 2026-09-04** (K100 audit, `dokumente/FRAGMENTE.md` §2,
+        // `dokumente/FRAGMENTE.md` §2.2). The previous line's reason for staying
         // at the "designed" state was copied from the neighbouring `gruppe.ops` entry, whose
         // reason genuinely applies there (no `group`-with-`ops` construct exists) but not
         // here: this entry's construct is the `locks` STATEMENT inside an ordinary function,
@@ -1691,7 +1691,7 @@ pub fn lebend_ungedeckt() -> usize {
 /// 2026-08-17, and nothing evaluated it: the only check was
 /// `assert_eq!(lebend_ungedeckt(), 2)`, an equality pinned to that day's value, not a bound
 /// -- a hand edit to the literal `2` would have passed any number through unexamined. An
-/// audit (`messung/AUDIT-K100-2026-09-04.md` §2.3) found that `L` reached 4 for a single
+/// audit (`dokumente/FRAGMENTE.md` §2.3) found that `L` reached 4 for a single
 /// 5.5-hour window on 2026-08-17, the window in which the bound was written, and has been 1
 /// or 2 in the 42 commits that touch this register since -- the ceiling was written AT the
 /// number it was meant to guard, and a decorative bound that a `grep` for `<= 4` never finds

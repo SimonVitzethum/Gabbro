@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**`A_p` -- the probe quota that replaces `K100`'s gate `A = 19`, with a floor it FAILS.**
 
-`dokumente/SONDENDECKUNG.md` states the measure: `A_p` = falsifiable assumptions whose named
+`dokumente/SONDENDECKUNG.txt` states the measure: `A_p` = falsifiable assumptions whose named
 probe stands as a program in `sonden/`, over falsifiable assumptions. It carries the register
 of all 38 rows, the four classes that say what a probe would need in order to exist, and the
 derivation of the floor.
@@ -63,9 +63,9 @@ import abschnitt  # noqa: E402
 import korpus  # noqa: E402
 
 W = Path(__file__).resolve().parent.parent
-DOC = W / "dokumente" / "SONDENDECKUNG.md"
+DOC = W / "dokumente" / "SONDENDECKUNG.txt"
 GENERATOR = W / "crates" / "gabbro-check" / "src" / "manifest.rs"
-SONDEN = W / "sonden"
+SONDEN = W / "instrumente" / "sonden"
 
 # **The booked quota, as a fraction -- numerator and denominator of the day it was booked.**
 # The check is `covered * 38 >= falsifiable * 1`, so it is a comparison of shares and not of
@@ -140,7 +140,7 @@ SONDEN = W / "sonden"
 # frame; `--kaputt` must fall). Same rule: the quota rises because the object grew.
 MARK_QUOTE = (22, 55)
 
-# **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.md` derives it: five
+# **The FLOOR -- and it is not a round number.** `dokumente/SONDENDECKUNG.txt` derives it: five
 # of the 38 rows are class `P4` (the probe needs nothing but a userland C program), and the
 # work that is actually possible reaches 5 of 38 = 0.1316. **All five have a program since
 # 2026-09-04, so the class is empty of open work and that ceiling is now also the state.**
@@ -280,7 +280,7 @@ def korpus_dateien(unterordner):
     if not wurzel.is_dir():
         return []
     # **The directory blacklist below fixed ONE incident, not the class** (2026-09-04,
-    # `messung/K100-VERDICT-2026-09-04.md` §2): `arbeitsprotokoll/` was added after two
+    # `dokumente/FRAGMENTE.md` §2): `arbeitsprotokoll/` was added after two
     # UNTRACKED scratch files there moved this guardian's population. Any OTHER untracked
     # `.gab`, anywhere the blacklist does not name, still would -- demonstrated by dropping
     # one at the repository root and watching this guardian abort with `ABGESCHNITTEN`
@@ -688,7 +688,7 @@ def sprechprobe(doc_text, annahmen, progs, liste, waisen_aussen, rs_sites, ausse
 def main():
     # **TOOTH 0 -- the subject has to be there.** Over a missing document every check below
     # holds, and `ALL PASS` would be a verdict about nothing (`W17`).
-    for pfad, wie in ((DOC, "dokumente/SONDENDECKUNG.md"),
+    for pfad, wie in ((DOC, "dokumente/SONDENDECKUNG.txt"),
                       (GENERATOR, "crates/gabbro-check/src/manifest.rs")):
         if not pfad.is_file():
             for strom in (sys.stderr, sys.stdout):
@@ -733,7 +733,7 @@ def main():
 
     if not n_zeilen:
         for strom in (sys.stderr, sys.stdout):
-            print("ABBRUCH: `dokumente/SONDENDECKUNG.md` carries NO row in the expected "
+            print("ABBRUCH: `dokumente/SONDENDECKUNG.txt` carries NO row in the expected "
                   "shape.", file=strom)
         print("  Either the register is empty -- then this run is a judgement about nothing")
         print("  -- or the table changed shape and this guardian no longer reads it.")
@@ -853,7 +853,7 @@ def main():
     if boden_verfehlt:
         print("  THE FLOOR IS NOT MET: A_p = %d of %d = %.4f, the floor is %d/%d = %.4f."
               % (n_ged, n_ann, n_ged / n_ann, bn, bd, bn / bd))
-        print("  **This is the debt, not a regression.** `dokumente/SONDENDECKUNG.md` names")
+        print("  **This is the debt, not a regression.** `dokumente/SONDENDECKUNG.txt` names")
         print("  the price: %d probe(s) of class `%s`, each a userland C program with a"
               % (n_frei_offen, FREI))
         print("  sensitivity arm, each entered in `manifest::SONDEN_MIT_PROGRAMM`.")
