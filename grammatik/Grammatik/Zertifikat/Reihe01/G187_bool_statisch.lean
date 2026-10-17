@@ -132,19 +132,19 @@ theorem gGDarf_gehalten_ANHALTEN : gdarf gD GGlob.ANHALTEN gL_gehalten := by unf
 theorem gGDarf_halte_ANHALTEN : gdarf gD GGlob.ANHALTEN gL_halte := by unfold gdarf; decide
 
 def gBody_halte : Endblock gD (vertragVon gD g_halte) false gCtx_halte gL_halte :=
-  (.cons (.assignGlob GGlob.ANHALTEN .wahr (by decide) gGDarf_halte_ANHALTEN) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignGlob GGlob.ANHALTEN .tru (by decide) gGDarf_halte_ANHALTEN) (.ret .empty (List.Perm.refl _)))
 
 def gBody_gehalten : Endblock gD (vertragVon gD g_gehalten) false gCtx_gehalten gL_gehalten :=
-  (.ret (.wert (Expr.glob (D := gD) GGlob.ANHALTEN gGDarf_gehalten_ANHALTEN)) (List.Perm.refl _))
+  (.ret (.val (Expr.glob (D := gD) GGlob.ANHALTEN gGDarf_gehalten_ANHALTEN)) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .halte => .wahr
-    | .gehalten => .wahr
+    | .halte => .tru
+    | .gehalten => .tru
   ensures
-    | .halte => .wahr
-    | .gehalten => .wahr
+    | .halte => .tru
+    | .gehalten => .tru
   rumpf
     | .halte => gBody_halte
     | .gehalten => gBody_gehalten

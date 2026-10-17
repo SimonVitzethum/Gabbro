@@ -51,15 +51,15 @@ mutual
 theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), (ruS s).ants = s.ants
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignDurch .. => rfl
+  | _, _, _, _, .assignThru .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
-  | _, _, _, _, .schreibBytes .. => rfl
+  | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
-  | _, _, _, _, .uebergang .. => rfl
+  | _, _, _, _, .shift .. => rfl
   | _, _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruB_ants t) (ruB_ants e)
   | _, _, _, _, .onOption _ p a => kongr₂ (· ++ ·) (ruB_ants p) (ruB_ants a)
   | _, _, _, _, .onTag _ arms => ruArms_ants arms
-  | _, _, _, _, .onGrund _ arms => ruGArms_ants arms
+  | _, _, _, _, .onWhy _ arms => ruGArms_ants arms
   | _, _, _, _, .call .. => ants_nachΛ _ _
   | _, _, _, _, .callInd .. => ants_nachΛ _ _
   | _, _, _, _, .locks _ _ body => ruB_ants body
@@ -68,13 +68,13 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_ants body) (ruB_ants ueber)
   | _, _, _, _, .forever _ _ body => ruB_ants body
   | _, _, _, _, .axiomCall .. => rfl
-  | _, _, _, _, .regSchreib .. => rfl
+  | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
   | _, _, _, _, .advances .. => ants_nachΛ _ _
   | _, _, _, _, .retires .. => ants_nachΛ _ _
   | _, _, _, _, .ret .. => rfl
-  | _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -91,23 +91,23 @@ theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .bindAxiom a _ _ _ _ _ _ rest => congrArg (Sum.inl a :: ·) (ruB_ants rest)
   | _, _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest =>
       congrArg (Sum.inl a :: ·) (kongr₂ (· ++ ·) (ruEnd_ants err) (ruB_ants rest))
-  | _, _, _, _, .regLies r _ rest => congrArg (Sum.inr r :: ·) (ruB_ants rest)
-  | _, _, _, _, .regLiesElse r _ _ sonst rest =>
+  | _, _, _, _, .regRead r _ rest => congrArg (Sum.inr r :: ·) (ruB_ants rest)
+  | _, _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Sum.inr r :: ·) (kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest))
   | _, _, _, _, .awaits _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
-  | _, _, _, _, .pruefung _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
-  | _, _, _, _, .gleit _ _ _ _ _ rest => ruB_ants rest
-  | _, _, _, _, .gleitLit _ _ _ rest => ruB_ants rest
-  | _, _, _, _, .gleitVon _ _ _ rest => ruB_ants rest
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest =>
+  | _, _, _, _, .check _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
+  | _, _, _, _, .float _ _ _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .floatLit _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .floatOf _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest =>
       kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
 
 theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ), (ruEnd e).ants = e.ants
   | _, _, _, .ret .. => rfl
-  | _, _, _, .retGrund .. => rfl
+  | _, _, _, .retWhy .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_ants s) (ruEnd_ants rest)
@@ -142,7 +142,7 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .bool, _ => Iff.rfl
   | .opt _, _ => Iff.rfl
   | .sum _, _ => Iff.rfl
-  | .grund _, _ => Iff.rfl
+  | .why _, _ => Iff.rfl
   | .never, _ => Iff.rfl
   | .fl _ _, _ => Iff.rfl
   | .fnptr _, _ => Iff.rfl
@@ -170,7 +170,7 @@ theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .bool => by simp
   | .opt _ => by simp
   | .sum _ => by simp
-  | .grund _ => by simp
+  | .why _ => by simp
   | .never => by simp
   | .fl _ _ => by simp
   | .fnptr _ => by simp

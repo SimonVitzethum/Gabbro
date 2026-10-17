@@ -141,19 +141,19 @@ theorem gDarf_getrennt_A : darf gD GTab.A gL_getrennt := by unfold darf; decide
 theorem gDarf_getrennt_B : darf gD GTab.B gL_getrennt := by unfold darf; decide
 
 def gBody_getrennt : Endblock gD (vertragVon gD g_getrennt) false gCtx_getrennt gL_getrennt :=
-  (.bind ((Expr.durch (D := gD) (.var .hier) GTab.A rfl GAFeld.x ((.var (.dort (.dort .hier)))) gDarf_getrennt_A) : Expr gD gCtx_getrennt gL_getrennt (.int 0 4294967295)) (.cons (.assignDurch (.var (.dort (.dort .hier))) GTab.B rfl GBFeld.x ((.var (.dort (.dort (.dort (.dort .hier)))))) ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 1 1))) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 4294967295)) (by decide) gDarf_getrennt_B) (.cons (.ite (.eq (.var .hier) (((.lit 0)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 0))) (.cons (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 1 1))) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 4294967295))) (List.Perm.refl _)) .nil) .nil) (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 0)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 0))) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 4294967295))) (List.Perm.refl _)))))
+  (.bind ((Expr.thru (D := gD) (.var .here) GTab.A rfl GAFeld.x ((.var (.there (.there .here)))) gDarf_getrennt_A) : Expr gD gCtx_getrennt gL_getrennt (.int 0 4294967295)) (.cons (.assignThru (.var (.there (.there .here))) GTab.B rfl GBFeld.x ((.var (.there (.there (.there (.there .here)))))) ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 1 1))) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 4294967295)) (by decide) gDarf_getrennt_B) (.cons (.ite (.eq (.var .here) (((.lit 0)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 0))) (.cons (.ret (.val ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 1 1))) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 4294967295))) (List.Perm.refl _)) .nil) .nil) (.ret (.val ((.widen (by decide) (by decide) (((.lit 0)) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 0))) : Expr gD ((.int 0 4294967295) :: gCtx_getrennt) gL_getrennt (.int 0 4294967295))) (List.Perm.refl _)))))
 
 def gBody_erneut : Endblock gD (vertragVon gD g_erneut) false gCtx_erneut gL_erneut :=
-  (.bind ((Expr.durch (D := gD) (.var .hier) GTab.A rfl GAFeld.x ((.var (.dort .hier))) gDarf_erneut_A) : Expr gD gCtx_erneut gL_erneut (.int 0 4294967295)) (.cons (.assignDurch (.var (.dort .hier)) GTab.A rfl GAFeld.x ((.var (.dort (.dort .hier)))) (.var .hier) (by decide) gDarf_erneut_A) (.bind ((Expr.durch (D := gD) (.var (.dort .hier)) GTab.A rfl GAFeld.x ((.var (.dort (.dort .hier)))) gDarf_erneut_A) : Expr gD ((.int 0 4294967295) :: gCtx_erneut) gL_erneut (.int 0 4294967295)) (.cons (.ite (.eq (.var .hier) (((.lit 0)) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_erneut)) gL_erneut (.int 0 0))) (.cons (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_erneut)) gL_erneut (.int 1 1))) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_erneut)) gL_erneut (.int 0 4294967295))) (List.Perm.refl _)) .nil) .nil) (.ret (.wert (.var .hier)) (List.Perm.refl _))))))
+  (.bind ((Expr.thru (D := gD) (.var .here) GTab.A rfl GAFeld.x ((.var (.there .here))) gDarf_erneut_A) : Expr gD gCtx_erneut gL_erneut (.int 0 4294967295)) (.cons (.assignThru (.var (.there .here)) GTab.A rfl GAFeld.x ((.var (.there (.there .here)))) (.var .here) (by decide) gDarf_erneut_A) (.bind ((Expr.thru (D := gD) (.var (.there .here)) GTab.A rfl GAFeld.x ((.var (.there (.there .here)))) gDarf_erneut_A) : Expr gD ((.int 0 4294967295) :: gCtx_erneut) gL_erneut (.int 0 4294967295)) (.cons (.ite (.eq (.var .here) (((.lit 0)) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_erneut)) gL_erneut (.int 0 0))) (.cons (.ret (.val ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_erneut)) gL_erneut (.int 1 1))) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_erneut)) gL_erneut (.int 0 4294967295))) (List.Perm.refl _)) .nil) .nil) (.ret (.val (.var .here)) (List.Perm.refl _))))))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .getrennt => .wahr
-    | .erneut => .wahr
+    | .getrennt => .tru
+    | .erneut => .tru
   ensures
-    | .getrennt => .wahr
-    | .erneut => .wahr
+    | .getrennt => .tru
+    | .erneut => .tru
   rumpf
     | .getrennt => gBody_getrennt
     | .erneut => gBody_erneut

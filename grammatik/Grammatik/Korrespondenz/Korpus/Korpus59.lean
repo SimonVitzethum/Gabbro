@@ -174,14 +174,14 @@ theorem kDarfAuftr : darf kD KTab.auftraege kLR := by
 
 /-- The index literal `0` as an index into `Takte` / `Auftraege`. -/
 def kJ0T {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (Ty.index 64) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def kJ0U {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (Ty.index 16) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The constant both leaves write. -/
 def kEins {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 18446744073709551615) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 /-- The call-site typing of every call. -/
 theorem kHaeltZaehle : (kD.signatur kZaehle).haelt = [KLock.takt] := rfl
@@ -227,13 +227,13 @@ theorem kHpBearbeite : RufPasst kD (vertragVon kD kRufVert) (kD.signatur kBearbe
 
 /-- `zaehle(i)`: `Takte.slots[i].stand = 1;`. -/
 def kRumpfZaehle : Endblock kD (vertragVon kD kZaehle) false [Ty.index 64] kLT :=
-  .cons (.assignSlot KTab.takte () (.var .hier) kEins rfl kDarfTakte)
-    (.ret .keine (by rfl))
+  .cons (.assignSlot KTab.takte () (.var .here) kEins rfl kDarfTakte)
+    (.ret .empty (by rfl))
 
 /-- `bearbeite(i)`: `Auftraege.slots[i].stand = 1;`. -/
 def kRumpfBearbeite : Endblock kD (vertragVon kD kBearbeite) false [Ty.index 16] kLR :=
-  .cons (.assignSlot KTab.auftraege () (.var .hier) kEins rfl kDarfAuftr)
-    (.ret .keine (by rfl))
+  .cons (.assignSlot KTab.auftraege () (.var .here) kEins rfl kDarfAuftr)
+    (.ret .empty (by rfl))
 
 /-- The call `zaehle(0)` inside `takt_verteiler`'s lock. -/
 def kRufZ : Stmt kD (vertragVon kD kTaktVert) false [] kLT kLT :=
@@ -245,7 +245,7 @@ def kLocksT : Stmt kD (vertragVon kD kTaktVert) false [] [] [] :=
 
 /-- `takt_verteiler`, as in the source. -/
 def kRumpfTaktVert : Endblock kD (vertragVon kD kTaktVert) false [] [] :=
-  .cons kLocksT (.ret .keine List.Perm.nil)
+  .cons kLocksT (.ret .empty List.Perm.nil)
 
 /-- The call `bearbeite(0)` inside `ruf_verteiler`'s lock. -/
 def kRufB : Stmt kD (vertragVon kD kRufVert) false [] kLR kLR :=
@@ -257,15 +257,15 @@ def kLocksR : Stmt kD (vertragVon kD kRufVert) false [] [] [] :=
 
 /-- `ruf_verteiler`, as in the source. -/
 def kRumpfRufVert : Endblock kD (vertragVon kD kRufVert) false [] [] :=
-  .cons kLocksR (.ret .keine List.Perm.nil)
+  .cons kLocksR (.ret .empty List.Perm.nil)
 
 /-- **The program of `beispiele/59`**: the source's bodies; trivial contracts
     (the source declares no `requires`/`ensures` on these four functions); the interrupt
     handler `takt_verteiler` (its entry is `via idt`, Opus agent H 2026-09-26). -/
 def kP : Programm kD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .zaehle => kRumpfZaehle
     | .taktVert => kRumpfTaktVert
@@ -316,7 +316,7 @@ theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTak
 
 /-! ## 3. The user obligations -/
 
-/-- Every `requires` is `.wahr`, at every function, world and environment. -/
+/-- Every `requires` is `.tru`, at every function, world and environment. -/
 theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
     ReqAmEintritt kP f W ρ := rfl
 
@@ -360,17 +360,17 @@ theorem kTakt_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes 
     {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
     (ρ : Env kD (kD.params kTaktVert)) :
     ∃ σ2 : World kD, execEndH S O U passes R kRumpfTaktVert σ ρ =
-        execEndH S O U passes R (.cons kLocksT (.ret .keine List.Perm.nil)) σ2 ρ :=
+        execEndH S O U passes R (.cons kLocksT (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
 theorem kRuf_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes : Nat}
     {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
     (ρ : Env kD (kD.params kRufVert)) :
     ∃ σ2 : World kD, execEndH S O U passes R kRumpfRufVert σ ρ =
-        execEndH S O U passes R (.cons kLocksR (.ret .keine List.Perm.nil)) σ2 ρ :=
+        execEndH S O U passes R (.cons kLocksR (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
-/-- `takt_verteiler`: `ensures` is `.wahr`; the caller duty of the call from
+/-- `takt_verteiler`: `ensures` is `.tru`; the caller duty of the call from
     the trivial `requires`; no `logik` outcome because the release check is
     the trivially-true invariant. -/
 theorem kP_koerper_taktVert : KoerperGutS kP 0 (axWahr kD) kSI kTaktVert := by

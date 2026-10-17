@@ -111,7 +111,7 @@ theorem ecorr_durch {n : Nat} {rw : Bool} {p : Expr D Γ Λ (.ptr n rw)} {cp : C
     (ht : D.tabNr n = some t) (hp : PtrTo X K cp t) (f : D.Feld t) (hgt : D.geist t = false)
     {ci : CX} {i : Expr D Γ Λ (.index (D.count t))} (hL : darf D t Λ) (hi : ExprCorr X K ci i) :
     ExprCorr X K (.ld (.slotA cp ci (X.EL.trec t).count (X.EL.trec t).ssize
-      ((X.EL.trec t).off (X.EL.fnr t f))) (X.EL.slotTy t f)) (Expr.durch p t ht f i hL) :=
+      ((X.EL.trec t).off (X.EL.fnr t f))) (X.EL.slotTy t f)) (Expr.thru p t ht f i hL) :=
   ecorr_slotVia X K hp f hgt hi (fun _ _ => rfl)
 
 /-- The store scheme through a pointer: the emitted store reaches a state
@@ -159,7 +159,7 @@ theorem scorr_assignDurch (m : Nat) {V : Vertrag D} {l : Bool} {n : Nat}
     {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)} {ci ce : CX}
     (hw : V.schreibt t = true) (hL : darf D t Λ) (hi : ExprCorr X K ci i)
     (he : ExprCorr X K ce e) :
-    StmtCorr X m K (Stmt.assignDurch (l := l) p t ht f i e hw hL)
+    StmtCorr X m K (Stmt.assignThru (l := l) p t ht f i e hw hL)
       (.store (.slotA cp ci (X.EL.trec t).count (X.EL.trec t).ssize
         ((X.EL.trec t).off (X.EL.fnr t f))) (X.EL.slotTy t f) ce) := by
   intro σ st ρG ρC hc hr _
@@ -173,7 +173,7 @@ theorem scorr_assignDurch (m : Nat) {V : Vertrag D} {l : Bool} {n : Nat}
     true (6.5.13p4); Gabbro's `und` evaluates both, and both are pure, so
     the values agree (the C side makes fewer observations). -/
 theorem ecorr_und {ca cb : CX} {a b : Expr D Γ Λ .bool} (ha : ExprCorr X K ca a)
-    (hb : ExprCorr X K cb b) : ExprCorr X K (.land ca cb) (.und a b) := by
+    (hb : ExprCorr X K cb b) : ExprCorr X K (.land ca cb) (.and a b) := by
   intro σ st ρG ρC hc hr
   obtain ⟨st1, h1, hc1⟩ := ha.runB X K hc hr
   cases hav : wahr? (eval σ a σ ρG) with
@@ -194,7 +194,7 @@ theorem ecorr_und {ca cb : CX} {a b : Expr D Γ Λ .bool} (ha : ExprCorr X K ca 
 
 /-- M3. `a || b`. -/
 theorem ecorr_oder {ca cb : CX} {a b : Expr D Γ Λ .bool} (ha : ExprCorr X K ca a)
-    (hb : ExprCorr X K cb b) : ExprCorr X K (.lor ca cb) (.oder a b) := by
+    (hb : ExprCorr X K cb b) : ExprCorr X K (.lor ca cb) (.or a b) := by
   intro σ st ρG ρC hc hr
   obtain ⟨st1, h1, hc1⟩ := ha.runB X K hc hr
   cases hav : wahr? (eval σ a σ ρG) with
@@ -432,7 +432,7 @@ theorem scorr_call (m : Nat) {V : Vertrag D} {l : Bool} (f : D.Fn) (args : Args 
   have hex : execStmt X.O X.passes X.R (Stmt.call (l := l) f args hp hr) σ ρG =
       match X.R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG) with
       | .ok σ' _ => .ok σ' ρG
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e := rfl
   rw [hex] at hnf ⊢
@@ -441,7 +441,7 @@ theorem scorr_call (m : Nat) {V : Vertrag D} {l : Bool} (f : D.Fn) (args : Args 
       obtain ⟨st2, rv, hcr, hro⟩ := hF _ st1 _ vs ρ0 hc1 hb hr0 (by rw [hR]; rfl)
       rw [hR] at hro
       exact ⟨_, Exec.call hev hcr rfl, st2, ρC, rfl, hro.1, hrel⟩
-  | grund σ' r => exact (Nat.not_lt_zero r.val (by have := r.isLt; omega)).elim
+  | why σ' r => exact (Nat.not_lt_zero r.val (by have := r.isLt; omega)).elim
   | logik e => rw [hR] at hnf; exact Bool.noConfusion hnf
   | hardware e => rw [hR] at hnf; exact Bool.noConfusion hnf
 
@@ -463,7 +463,7 @@ theorem bsem_bindCall (m : Nat) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} 
   have hex : execBlock X.O X.passes X.R (Block.bindCall f args he hp hr rest) σ ρG =
       match X.R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG) with
       | .ok σ' v => (execBlock X.O X.passes X.R rest σ' (.cons (ergWert he v) ρG)).schrumpf
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e := rfl
   rw [hex] at hnf ⊢
@@ -481,7 +481,7 @@ theorem bsem_bindCall (m : Nat) {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} 
       rw [istFehler_schrumpf] at hnf
       obtain ⟨o, h2, hO⟩ := hrest σ' st2 _ (lokUpd ρC x c) hc2 hr1 hnf
       exact ⟨o, Exec.seqN (Exec.call hev hcr hput) h2, stOut_schrumpf X m _ o hO⟩
-  | grund σ' r => exact (Nat.not_lt_zero r.val (by have := r.isLt; omega)).elim
+  | why σ' r => exact (Nat.not_lt_zero r.val (by have := r.isLt; omega)).elim
   | logik e => rw [hR] at hnf; exact Bool.noConfusion hnf
   | hardware e => rw [hR] at hnf; exact Bool.noConfusion hnf
 
@@ -551,7 +551,7 @@ theorem cCorr_ruf (EL : EmitLay D) (orc : DevOrc) (XR : CCallR) (P : Programm D)
           · exact ⟨_, cv, ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inl ho, rfl⟩, hc3, hrc⟩
           · exact ⟨_, none, ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inr ⟨rfl, ρ1, ho⟩, rfl⟩, hc3,
               retCorr_none hV v⟩
-  | grund σ' r =>
+  | why σ' r =>
       obtain ⟨o, -, hO⟩ := hbody _ _ ρG ρ0 hc1 hr (by rw [hE]; rfl)
       rw [hE] at hO
       exact hO.elim
@@ -623,7 +623,7 @@ theorem scorr_locks (m : Nat) {V : Vertrag D} {l : Bool} (L : D.Lock)
       subst ho
       exact ⟨_, Exec.seqN h1 (Exec.seqX h2 rfl), st2, cv, rfl,
         (hc2 : corrW X.EL (σ'.gibt L) st2), hrc⟩
-  | grund σ' r => rw [hB] at hO; exact hO.elim
+  | why σ' r => rw [hB] at hO; exact hO.elim
   | leave hl σ' ρ' =>
       rw [hB] at hO
       obtain ⟨st2, ρC2, ho, hc2, hr2⟩ := hO

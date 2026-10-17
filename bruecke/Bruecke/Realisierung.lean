@@ -382,9 +382,9 @@ theorem realisiert (S : Stimmig u)
             have heBr : ∀ x ∈ eB, ∃ e, x = .ret (some e) := by
               intro x hx
               cases hr : (fnAt u c).rueck with
-              | keine => rw [hr] at heB; simp [endBody] at heB; subst heB; cases hx
+              | empty => rw [hr] at heB; simp [endBody] at heB; subst heB; cases hx
               | bool _ => rw [hr] at heB; simp [endBody] at heB
-              | wert v =>
+              | val v =>
                 rw [hr] at heB
                 simp only [endBody] at heB
                 cases hs : sideExpr u (fnAt u c) v with

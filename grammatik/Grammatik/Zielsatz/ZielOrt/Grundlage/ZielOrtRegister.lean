@@ -46,7 +46,7 @@ def Stmt.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .ite _ t e => t.rOk K && e.rOk K
   | .onOption _ p a => p.rOk K && a.rOk K
   | .onTag _ arms => arms.rOk K
-  | .onGrund _ arms => arms.rOk K
+  | .onWhy _ arms => arms.rOk K
   | .locks _ _ body => body.rOk K
   | .breaking _ body => body.rOk K
   | .traverse _ _ body => body.rOk K
@@ -65,21 +65,21 @@ def Block.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bindCallElse _ _ _ _ _ err rest => err.rOk K && rest.rOk K
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.rOk K && rest.rOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.rOk K
-  | .regLies _ _ rest => rest.rOk K
-  | .regLiesElse _ _ _ sonst rest => sonst.rOk K && rest.rOk K
+  | .regRead _ _ rest => rest.rOk K
+  | .regReadElse _ _ _ sonst rest => sonst.rOk K && rest.rOk K
   | .awaits _ _ _ _ rest => rest.rOk K
   | .exchange _ _ _ _ rest => rest.rOk K
   | .narrow _ _ _ sonst rest => sonst.rOk K && rest.rOk K
-  | .pruefung _ sonst rest => sonst.rOk K && rest.rOk K
-  | .gleit _ _ _ _ _ rest => rest.rOk K
-  | .gleitLit _ _ _ rest => rest.rOk K
-  | .gleitVon _ _ _ rest => rest.rOk K
-  | .gleitNarrow _ _ _ sonst rest => sonst.rOk K && rest.rOk K
+  | .check _ sonst rest => sonst.rOk K && rest.rOk K
+  | .float _ _ _ _ _ rest => rest.rOk K
+  | .floatLit _ _ _ rest => rest.rOk K
+  | .floatOf _ _ _ rest => rest.rOk K
+  | .floatNarrow _ _ _ sonst rest => sonst.rOk K && rest.rOk K
 
 def Endblock.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (K : Nat → Bool) : Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.rOk K && rest.rOk K
@@ -214,33 +214,33 @@ theorem rHpLeser : RufPasst rD (vertragVon rD rHaupt) (rD.signatur rLeser) [] wh
 
 /-- `R; R; return x == y` inside `if true`. -/
 def rLesBlock : Block rD (vertragVon rD rLeser) false [] [] [] :=
-  .regLies () rfl (.regLies () rfl
-    (.cons (.ret (.wert (.eq (.var (.dort .hier)) (.var .hier))) List.Perm.nil) .nil))
+  .regRead () rfl (.regRead () rfl
+    (.cons (.ret (.val (.eq (.var (.there .here)) (.var .here))) List.Perm.nil) .nil))
 
 def rRumpfLeser : Endblock rD (vertragVon rD rLeser) false [] [] :=
-  .cons (.ite .wahr rLesBlock .nil) (.ret (.wert .wahr) List.Perm.nil)
+  .cons (.ite .tru rLesBlock .nil) (.ret (.val .tru) List.Perm.nil)
 
 def rRumpfHaupt : Endblock rD (vertragVon rD rHaupt) false [] [] :=
-  .cons (.call rLeser .nil rHpLeser rfl) (.ret .keine List.Perm.nil)
+  .cons (.call rLeser .nil rHpLeser rfl) (.ret .empty List.Perm.nil)
 
 def rIdx {Γ : Ctx} {Λ : List (Res rD)} : Expr rD Γ Λ (.index (rD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def rEins {Γ : Ctx} {Λ : List (Res rD)} : Expr rD Γ Λ (.int 0 1) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 /-- `schreiber` (holds the lock): `t[0] := 1; return`. -/
 def rRumpfSchreiber : Endblock rD (vertragVon rD rSchreiber) false [] rL :=
-  .cons (.assignSlot () () rIdx rEins rfl rDarf) (.ret .keine (by rfl))
+  .cons (.assignSlot () () rIdx rEins rfl rDarf) (.ret .empty (by rfl))
 
 /-- The program: `ensures result` for `leser`, `true` elsewhere. -/
 def rP : Programm rD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .haupt => .wahr
-    | .leser => .var .hier
-    | .schreiber => .wahr
+    | .haupt => .tru
+    | .leser => .var .here
+    | .schreiber => .tru
   rumpf
     | .haupt => rRumpfHaupt
     | .leser => rRumpfLeser
@@ -310,7 +310,7 @@ theorem rLeser_lauf (O' : Orakel rD) (passes : Nat)
   show (∃ σ', execEnd O' passes R rRumpfLeser σ ρ = .zurueck σ' true) ∨
     ∃ e, execEnd O' passes R rRumpfLeser σ ρ = .hardware e
   simp only [rRumpfLeser, rLesBlock, execEnd, execStmt, execBlock, if_true, rZusage]
-  cases hv : einpassen O'.zeiger (rD.rtyp ()) (O'.regLies () (σ.lese [] (Expr.wahr : Expr rD [] [] .bool).orte)) with
+  cases hv : einpassen O'.zeiger (rD.rtyp ()) (O'.regLies () (σ.lese [] (Expr.tru : Expr rD [] [] .bool).orte)) with
   | none =>
       right
       exact ⟨_, rfl⟩
@@ -421,19 +421,19 @@ theorem rLauf : ∃ M : RufMaschineG rD,
   have h0 := rM0_faden0
   have hoff0 : offen ((RufStartG rP rSp rInit).faeden 0).spur = [] := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := rP) (O := rO) (passes := 0) h0 rLeser .nil rHpLeser rfl
-    (.ret .keine List.Perm.nil) .nil rfl (rHg0 hoff0).heldIn
+    (.ret .empty List.Perm.nil) .nil rfl (rHg0 hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen, rOffen_weltVon]; exact hoff0
   have e1 := hZ1.1
   try dsimp only at e1
   obtain ⟨M2, s2, hZ2⟩ := w_endeEntf (P := rP) (O := rO) (passes := 0) e1
-    (.ite .wahr rLesBlock .nil) (.ret (.wert .wahr) List.Perm.nil) .nil rfl rfl
+    (.ite .tru rLesBlock .nil) (.ret (.val .tru) List.Perm.nil) .nil rfl rfl
   have hoff2 : offen (M2.faeden 0).spur = [] := by
     rw [hZ2.spur, rOffen_weltVon]; exact hoff1
   have e2 := hZ2.1
   try dsimp only at e2
-  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := rP) (O := rO) (passes := 0) e2 .wahr rLesBlock .nil
-    .nil (.ende (.ret (.wert .wahr) List.Perm.nil)) .nil rfl rfl (rHg0 (rHoff_e e2 hoff2)).heldIn
+  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := rP) (O := rO) (passes := 0) e2 .tru rLesBlock .nil
+    .nil (.ende (.ret (.val .tru) List.Perm.nil)) .nil rfl rfl (rHg0 (rHoff_e e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, rOffen_weltVon]; exact hoff2
   have e3 := hZ3.1
@@ -457,7 +457,7 @@ theorem rLauf : ∃ M : RufMaschineG rD,
     rw [rufSchrittG_fremd s4 1 (by decide), rufSchrittG_fremd s3 1 (by decide),
       rufSchrittG_fremd s2 1 (by decide), rufSchrittG_fremd s1 1 (by decide), rM0_faden1]
   obtain ⟨M5, s5, hZ5⟩ := w_blatt (P := rP) (O := rO) (passes := 0) h41
-    (.assignSlot () () rIdx rEins rfl rDarf) (.ret .keine (by rfl)) .nil rfl rfl (rHgL rfl).heldIn _ _
+    (.assignSlot () () rIdx rEins rfl rDarf) (.ret .empty (by rfl)) .nil rfl rfl (rHgL rfl).heldIn _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have h50 : M5.faeden 0 = M4.faeden 0 := rufSchrittG_fremd s5 0 (by decide)

@@ -836,7 +836,7 @@ theorem anyBelow_true_of (f : Nat → Option Value) (n k : Nat) (hk : k < n)
 /-- The chain as a relation -- `hier`/`hoeher`, the same two rules `Table_Ops_Erhaltung.thy`
     calls `ueber`. -/
 inductive Reaches (σ : World) (c via : String) : Int → Int → Prop
-  | hier (k : Int) : Reaches σ c via k k
+  | here (k : Int) : Reaches σ c via k k
   | hoeher (k m n : Int) (h : σ (.slot c k via) = .present m) (r : Reaches σ c via m n) :
       Reaches σ c via k n
 
@@ -849,12 +849,12 @@ theorem reaches_of_chase (σ : World) (c via : String) (to : Int) :
     intro k h
     rw [chase_zero] at h
     simp only [Option.some.injEq, Value.bool.injEq, decide_eq_true_eq] at h
-    subst h; exact .hier k
+    subst h; exact .here k
   | succ n ih =>
     intro k h
     rw [chase_succ] at h
     split at h
-    · rename_i hk; subst hk; exact .hier k
+    · rename_i hk; subst hk; exact .here k
     · split at h
       · rename_i m hm; exact .hoeher k m to hm (ih m h)
       · simp at h
@@ -864,7 +864,7 @@ theorem reaches_of_chase (σ : World) (c via : String) (to : Int) :
 theorem chase_of_reaches (σ : World) (c via : String) (k to : Int)
     (r : Reaches σ c via k to) : ∃ n, chase σ c via to k n = some (.bool true) := by
   induction r with
-  | hier k => exact ⟨0, by rw [chase_zero]; simp⟩
+  | here k => exact ⟨0, by rw [chase_zero]; simp⟩
   | hoeher k m n h _ ih =>
     obtain ⟨f, hf⟩ := ih
     refine ⟨f + 1, ?_⟩

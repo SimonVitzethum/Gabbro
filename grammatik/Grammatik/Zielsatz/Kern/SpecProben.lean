@@ -81,7 +81,7 @@ def probeA_falsch_inv : Prop :=
     float literal outside its declared range. The kernel IEEE model decides it, for every
     oracle. -/
 def f1Crash {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false Γ Λ Λ :=
-  .ite .wahr (.gleitLit (2, 1) (0, 1) (1, 1) .nil) .nil
+  .ite .tru (.floatLit (2, 1) (0, 1) (1, 1) .nil) .nil
 
 /-- **Probe F1**: probe A's contracts (`ensures false` everywhere) with the crash in front of
     every body. Until 2026-09-15 the crash ended the body in `hardware ieee` -- a "hardware"
@@ -89,8 +89,8 @@ def f1Crash {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false �
     `haupt` declared and running, and `gabbro_ziel` certified it. -/
 def f1P : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
   rumpf f := .cons f1Crash (paP.rumpf f)
 
 /-- **Probe F1 fails (b)** (verdict F1, 2026-09-15): an out-of-range float is `logik bereich`,

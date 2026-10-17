@@ -278,7 +278,7 @@ theorem fieldAtPos_name : ∀ (fs : List (String × (Int × Int))) (n : String) 
         exact fieldAtPos_name rest n w h
 
 theorem fieldHit_name (u : UProg) (t : Fin u.tabellen.length) (fld : String) (fh : FieldHit u t)
-    (h : fieldHit u t fld = .ok fh) : ((tabAt u t).felder[fh.idx.val]?).map (·.1) = some fld := by
+    (h : fieldHit u t fld = .ok fh) : ((tabAt u t).felder[fh.idx.wert]?).map (·.1) = some fld := by
   unfold fieldHit at h
   split at h
   · cases h
@@ -444,7 +444,7 @@ theorem fieldHit_of (t : Fin u.tabellen.length) (fld : String) (w : Int × Int)
     rw [h] at h'
     cases h'
     have hnb : ∀ f : Fin (fieldCount u t), boolFeldAt u t f = false := by
-      intro f; unfold boolFeldAt; rw [hB]; cases (tabAt u t).felder[f.val]? <;> simp
+      intro f; unfold boolFeldAt; rw [hB]; cases (tabAt u t).felder[f.wert]? <;> simp
     rw [dif_pos (hnb _)]
     exact ⟨_, rfl, rfl⟩
 

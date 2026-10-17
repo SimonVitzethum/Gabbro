@@ -105,8 +105,8 @@ def opOf : String → Option BinOp
   | "==" => some .eq | "<" => some .lt | "<=" => some .le | _ => none
 
 def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
-  | .wahr => some (.lit (.bool true), a)
-  | .falsch => some (.lit (.bool false), a)
+  | .tru => some (.lit (.bool true), a)
+  | .fls => some (.lit (.bool false), a)
   | .cmp op l r =>
       match opOf op, ensSide u f a l with
       | some o, some (le, a1) =>
@@ -114,21 +114,21 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
           | some (re, a2) => some (.bin o le re, a2)
           | none => none
       | _, _ => none
-  | .und x y =>
+  | .and x y =>
       match ensExpr u f a x with
       | some (xe, a1) =>
           match ensExpr u f a1 y with
           | some (ye, a2) => some (.bin .and xe ye, a2)
           | none => none
       | none => none
-  | .oder x y =>
+  | .or x y =>
       match ensExpr u f a x with
       | some (xe, a1) =>
           match ensExpr u f a1 y with
           | some (ye, a2) => some (.bin .or xe ye, a2)
           | none => none
       | none => none
-  | .nicht x =>
+  | .not x =>
       match ensExpr u f a x with
       | some (xe, a1) => some (.un .not xe, a1)
       | none => none
@@ -175,7 +175,7 @@ def shapeOfU (u : UProg) : Typing := fun p =>
 def argExpr (u : UProg) (f : UFn) : UArg → Option Expr
   | .var p => some (.name p)
   | .freshPtr tab _ => (ptrParam u f tab).map (fun p => .name p)
-  | .wert s => sideExpr u f s
+  | .val s => sideExpr u f s
 
 def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
   | [] => some []
@@ -209,8 +209,8 @@ def zuBody (u : UProg) (f : UFn) : Option (List Stmt) :=
   | none => none
   | some ss =>
       match f.rueck with
-      | .keine => some ss
-      | .wert v => (sideExpr u f v).map (fun e => ss ++ [Stmt.ret (some e)])
+      | .empty => some ss
+      | .val v => (sideExpr u f v).map (fun e => ss ++ [Stmt.ret (some e)])
       | .bool _ => none
 
 /-! ## 4. The postcondition -/

@@ -82,7 +82,7 @@ def ValCorr (EL : EmitLay D) : (τ : Ty) → Wert D τ → CVal → Prop
   | .int lo hi, v, c => c = .int (encW (.int lo hi) v)
   | .bool, v, c => c = .int (encW .bool v)
   | .opt n, v, c => c = .int (encW (.opt n) v)
-  | .grund n, v, c => c = .int (encW (.grund n) v)
+  | .why n, v, c => c = .int (encW (.why n) v)
   | .ptr n _, _, c => ∃ t, D.tabNr n = some t ∧ c = .ptr ⟨.tab (EL.tnr t), 0⟩
   | .sum _, _, _ => False
   | .never, _, _ => False
@@ -97,21 +97,21 @@ theorem ValCorr.ne_undef {EL : EmitLay D} {τ : Ty} {v : Wert D τ}
 
 /-- The position of a variable in its context. -/
 def Var.idx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
-  | _, _, .hier => 0
-  | _, _, .dort x => Var.idx x + 1
+  | _, _, .here => 0
+  | _, _, .there x => Var.idx x + 1
 
 theorem Var.idx_lt : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), x.idx < Γ.length
-  | _, _, .hier => by simp [Var.idx]
-  | _, _, .dort x => by
+  | _, _, .here => by simp [Var.idx]
+  | _, _, .there x => by
       have := Var.idx_lt x
       simp only [Var.idx, List.length_cons]; omega
 
 theorem Var.idx_inj : ∀ {Γ : Ctx} {τ τ' : Ty} (x : Var Γ τ) (y : Var Γ τ'),
     x.idx = y.idx → τ = τ' ∧ HEq x y
-  | _, _, _, .hier, .hier, _ => ⟨rfl, HEq.rfl⟩
-  | _, _, _, .hier, .dort _, h => by simp [Var.idx] at h
-  | _, _, _, .dort _, .hier, h => by simp [Var.idx] at h
-  | _, _, _, .dort x, .dort y, h => by
+  | _, _, _, .here, .here, _ => ⟨rfl, HEq.rfl⟩
+  | _, _, _, .here, .there _, h => by simp [Var.idx] at h
+  | _, _, _, .there _, .here, h => by simp [Var.idx] at h
+  | _, _, _, .there x, .there y, h => by
       obtain ⟨e, he⟩ := Var.idx_inj x y (by simp only [Var.idx] at h; omega)
       subst e
       cases he
@@ -119,15 +119,15 @@ theorem Var.idx_inj : ∀ {Γ : Ctx} {τ τ' : Ty} (x : Var Γ τ) (y : Var Γ �
 
 theorem Env.get_set_same : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ) (v : Wert D τ),
     (ρ.set x v).get x = v
-  | _, _, .cons _ _, .hier, _ => rfl
-  | _, _, .cons _ ρ, .dort x, v => Env.get_set_same ρ x v
+  | _, _, .cons _ _, .here, _ => rfl
+  | _, _, .cons _ ρ, .there x, v => Env.get_set_same ρ x v
 
 theorem Env.get_set_other : ∀ {Γ : Ctx} {τ τ' : Ty} (ρ : Env D Γ) (x : Var Γ τ) (v : Wert D τ)
     (y : Var Γ τ'), y.idx ≠ x.idx → (ρ.set x v).get y = ρ.get y
-  | _, _, _, .cons _ _, .hier, _, .hier, h => absurd rfl h
-  | _, _, _, .cons _ _, .hier, _, .dort _, _ => rfl
-  | _, _, _, .cons _ _, .dort _, _, .hier, _ => rfl
-  | _, _, _, .cons _ ρ, .dort x, v, .dort y, h =>
+  | _, _, _, .cons _ _, .here, _, .here, h => absurd rfl h
+  | _, _, _, .cons _ _, .here, _, .there _, _ => rfl
+  | _, _, _, .cons _ _, .there _, _, .here, _ => rfl
+  | _, _, _, .cons _ ρ, .there x, v, .there y, h =>
       Env.get_set_other ρ x v y (fun e => h (by simp only [Var.idx]; omega))
 
 /-- The certificate's layout of the C locals at a program point: where
@@ -240,11 +240,11 @@ theorem envRel_push {EL : EmitLay D} {Γ : Ctx} {K : CEnvLay D Γ} (hK : K.okB =
   refine ⟨?_, ?_, ?_⟩
   · intro τ' y
     cases y with
-    | hier =>
+    | here =>
         show ValCorr EL τ v (lokUpd ρC x c x)
         simp only [lokUpd, if_pos]
         exact hv
-    | dort y =>
+    | there y =>
         show ValCorr EL τ' (ρG.get y) (lokUpd ρC x c (K.loc y))
         have hne : K.loc y ≠ x := fun e => hx (e ▸ loc_mem hl y)
         simp only [lokUpd]
@@ -309,11 +309,11 @@ def StOut (X : TVCtx D) (m : Nat) {Γ : Ctx} (K : CEnvLay D Γ) {V : Vertrag D} 
     Ausgang V l Γ → COut → Prop
   | .ok σ' ρG', o => ∃ st' ρC', o = .norm st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
   | .zurueck σ' v, o => ∃ st' cv, o = .ret st' cv ∧ corrW X.EL σ' st' ∧ RetCorr X.EL V.erg v cv
-  | .grund _ _, _ => False
+  | .why _ _, _ => False
   | .leave _ σ' ρG', o =>
       ∃ st' ρC', o = .jump (.ende m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
   | .next _ σ' ρG', o =>
-      ∃ st' ρC', o = .jump (.weiter m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
+      ∃ st' ρC', o = .jump (.widen m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
   | .logik _, _ => False
   | .hardware _, _ => False
 
@@ -382,11 +382,11 @@ theorem ecorr_lit (n : Int) : ExprCorr X K (.lit n) (Expr.lit (D := D) (Γ := Γ
   exact ⟨.int n, st, rfl, rfl⟩
 
 /-- E2. `true` is `1`, `false` is `0` (`<stdbool.h>`). -/
-theorem ecorr_wahr : ExprCorr X K (.lit 1) (Expr.wahr (D := D) (Γ := Γ) (Λ := Λ)) := by
+theorem ecorr_wahr : ExprCorr X K (.lit 1) (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)) := by
   intro σ st ρG ρC _ _
   exact ⟨.int 1, st, rfl, rfl⟩
 
-theorem ecorr_falsch : ExprCorr X K (.lit 0) (Expr.falsch (D := D) (Γ := Γ) (Λ := Λ)) := by
+theorem ecorr_falsch : ExprCorr X K (.lit 0) (Expr.fls (D := D) (Γ := Γ) (Λ := Λ)) := by
   intro σ st ρG ρC _ _
   exact ⟨.int 0, st, rfl, rfl⟩
 
@@ -404,7 +404,7 @@ theorem ecorr_var {τ : Ty} (x : Var Γ τ) :
 /-- E4. A widening has no C text. -/
 theorem ecorr_weiter {lo hi lo' hi' : Int} {c : CX} {e : Expr D Γ Λ (.int lo hi)}
     (h1 : lo' ≤ lo) (h2 : hi ≤ hi') (h : ExprCorr X K c e) :
-    ExprCorr X K c (Expr.weiter h1 h2 e) := by
+    ExprCorr X K c (Expr.widen h1 h2 e) := by
   intro σ st ρG ρC hc he
   obtain ⟨st', hv, -⟩ := h.runI X K hc he
   exact ⟨_, st', hv, rfl⟩
@@ -683,12 +683,12 @@ theorem ecorr_gt (t : CIT) {l1 h1 l2 h2 : Int} {ca cb : CX}
 
 /-- E18. `!(a)`. -/
 theorem ecorr_nicht {c : CX} {a : Expr D Γ Λ .bool} (h : ExprCorr X K c a) :
-    ExprCorr X K (.lnot c) (.nicht a) := by
+    ExprCorr X K (.lnot c) (.not a) := by
   intro σ st ρG ρC hc he
   obtain ⟨st1, h1, -⟩ := h.runB X K hc he
   refine ⟨.int (b2i (!wahr? (eval σ a σ ρG))), st1, ?_, ?_⟩
   · simp only [ev, h1, truth_b2i]
-  · show CVal.int (b2i (!wahr? (eval σ a σ ρG))) = .int (encW .bool (eval σ (Expr.nicht a) σ ρG))
+  · show CVal.int (b2i (!wahr? (eval σ a σ ρG))) = .int (encW .bool (eval σ (Expr.not a) σ ρG))
     rfl
 
 /-- The complement of a `w`-bit number is its xor with all ones. -/
@@ -820,7 +820,7 @@ theorem valCorr_encW {EL : EmitLay D} (τ : Ty) (c : CTy) (v : Wert D τ) (hf : 
   | int lo hi => rfl
   | bool => rfl
   | opt n => rfl
-  | grund n => rfl
+  | why n => rfl
   | sum cs => exact absurd hf (by cases c <;> simp [tyFits])
   | never => exact absurd hf (by cases c <;> simp [tyFits])
   | fl lo hi => exact absurd hf (by cases c <;> simp [tyFits])
@@ -833,7 +833,7 @@ theorem valCorr_int_of_fits {EL : EmitLay D} (τ : Ty) (c : CTy) (w : Wert D τ)
   | int lo hi => exact h
   | bool => exact h
   | opt n => exact h
-  | grund n => exact h
+  | why n => exact h
   | sum cs => exact absurd hf (by cases c <;> simp [tyFits])
   | never => exact absurd hf (by cases c <;> simp [tyFits])
   | fl lo hi => exact absurd hf (by cases c <;> simp [tyFits])
@@ -959,8 +959,8 @@ theorem convV_of_valCorr {EL : EmitLay D} {τ : Ty} {v : Wert D τ} {c : CVal} {
       have hc : c = .int (encW (.opt n) v) := h
       subst hc
       exact convV_of_valFits _ _ (encW_fits _ _ v hd)
-  | grund n =>
-      have hc : c = .int (encW (.grund n) v) := h
+  | why n =>
+      have hc : c = .int (encW (.why n) v) := h
       subst hc
       exact convV_of_valFits _ _ (encW_fits _ _ v hd)
   | sum cs => exact h.elim
@@ -1099,8 +1099,8 @@ theorem scorr_assignGlobAtomar (g : D.Glob) (hgg : D.ggeist g = false)
     expression at a fitting return type for `return e;`. -/
 def ErgCorr {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) :
     {e : Option Ty} → ErgExpr D Γ Λ e → Option (CTy × CX) → Prop
-  | _, .keine, cr => cr = none
-  | some τ, .wert e, cr => ∃ τc ce, cr = some (τc, ce) ∧ ExprCorr X K ce e ∧ declOk τ τc = true
+  | _, .empty, cr => cr = none
+  | some τ, .val e, cr => ∃ τc ce, cr = some (τc, ce) ∧ ExprCorr X K ce e ∧ declOk τ τc = true
 
 /-- Running the C side of an answer. -/
 theorem ergCorr_run {r : ErgExpr D Γ Λ V.erg} {cr : Option (CTy × CX)} (h : ErgCorr X K r cr)
@@ -1112,11 +1112,11 @@ theorem ergCorr_run {r : ErgExpr D Γ Λ V.erg} {cr : Option (CTy × CX)} (h : E
   generalize V.erg = eg at r
   intro h
   cases r with
-  | keine =>
+  | empty =>
       have hcr : cr = none := h
       subst hcr
       exact ⟨st, none, Exec.retN, hc, rfl⟩
-  | wert e =>
+  | val e =>
       obtain ⟨τc, ce, hcr, he, hd⟩ := h
       subst hcr
       obtain ⟨v, st1, h1, hv, hc1⟩ := he.run X K hc hr
@@ -1168,7 +1168,7 @@ theorem envRel_pop {EL : EmitLay D} {Γ : Ctx} {K : CEnvLay D Γ} {τ : Ty} {x :
     EnvRel EL K ρG.tail ρC := by
   cases ρG with
   | cons v ρ =>
-      refine ⟨fun τ' y => h.1 τ' (.dort y), h.2.1, h.2.2⟩
+      refine ⟨fun τ' y => h.1 τ' (.there y), h.2.1, h.2.2⟩
 
 theorem istFehler_schrumpf {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
     (a : Ausgang V l (τ :: Γ)) : a.schrumpf.istFehler = a.istFehler := by
@@ -1182,7 +1182,7 @@ theorem stOut_schrumpf (X : TVCtx D) (m : Nat) {Γ : Ctx} {K : CEnvLay D Γ} {τ
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       exact ⟨st', ρC', ho, hc, envRel_pop hr⟩
   | zurueck σ v => exact h
-  | grund σ r => exact h.elim
+  | why σ r => exact h.elim
   | leave hl σ ρ =>
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       exact ⟨st', ρC', ho, hc, envRel_pop hr⟩
@@ -1257,7 +1257,7 @@ theorem cCorr_block (X : TVCtx D) (m : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
           obtain ⟨st1, cv, ho1, hc1, hrc⟩ := hO
           subst ho1
           exact ⟨_, Exec.seqX h1 rfl, st1, cv, rfl, hc1, hrc⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, -, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact hO.elim
@@ -1304,11 +1304,11 @@ def EndOut (X : TVCtx D) (m : Nat) (top : Bool) {Γ : Ctx} (K : CEnvLay D Γ) {V
   | .zurueck σ' v, o => ∃ st', corrW X.EL σ' st' ∧
       ((∃ cv, o = .ret st' cv ∧ RetCorr X.EL V.erg v cv) ∨
         (top = true ∧ V.erg = none ∧ ∃ ρC', o = .norm st' ρC'))
-  | .grund _ _, _ => False
+  | .why _ _, _ => False
   | .leave _ σ' ρG', o =>
       ∃ st' ρC', o = .jump (.ende m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
   | .next _ σ' ρG', o =>
-      ∃ st' ρC', o = .jump (.weiter m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
+      ∃ st' ρC', o = .jump (.widen m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRel X.EL K ρG' ρC'
   | .logik _, _ => False
   | .hardware _, _ => False
 
@@ -1337,7 +1337,7 @@ inductive EndCorr (X : TVCtx D) (m : Nat) (top : Bool) {V : Vertrag D} {l : Bool
   | leave {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} (hl : l = true) :
       EndCorr X m top K (Endblock.leave (Λ := Λ) hl) (.goto (.ende m))
   | next {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} (hl : l = true) :
-      EndCorr X m top K (Endblock.next (Λ := Λ) hl) (.goto (.weiter m))
+      EndCorr X m top K (Endblock.next (Λ := Λ) hl) (.goto (.widen m))
   | cons {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {s : Stmt D V l Γ Λ Λ'}
       {rest : Endblock D V l Γ Λ'} {cs cr : CS} (hs : StmtCorr X m K s cs)
       (hr : EndCorr X m top K rest cr) : EndCorr X m top K (.cons s rest) (.seq cs cr)
@@ -1362,7 +1362,7 @@ theorem endOut_schrumpf (X : TVCtx D) (m : Nat) (top : Bool) {Γ : Ctx} {K : CEn
     (h : EndOut X m top (K.push τ x) a o) : EndOut X m top K a.schrumpf o := by
   cases a with
   | zurueck σ v => exact h
-  | grund σ r => exact h.elim
+  | why σ r => exact h.elim
   | leave hl σ ρ =>
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       exact ⟨st', ρC', ho, hc, envRel_pop hr⟩
@@ -1397,7 +1397,7 @@ theorem cCorr_end (X : TVCtx D) (m : Nat) (top : Bool) {V : Vertrag D} {l : Bool
           match execStmt X.O X.passes X.R s σ ρG with
           | .ok σ' ρ' => execEnd X.O X.passes X.R rest σ' ρ'
           | .zurueck σ' v => .zurueck σ' v
-          | .grund σ' r => .grund σ' r
+          | .why σ' r => .why σ' r
           | .leave h σ' ρ' => .leave h σ' ρ'
           | .next h σ' ρ' => .next h σ' ρ'
           | .logik e => .logik e
@@ -1418,7 +1418,7 @@ theorem cCorr_end (X : TVCtx D) (m : Nat) (top : Bool) {V : Vertrag D} {l : Bool
           obtain ⟨st1, cv, ho1, hc1, hrc⟩ := hO
           subst ho1
           exact ⟨_, Exec.seqX h1 rfl, st1, hc1, Or.inl ⟨cv, rfl, hrc⟩⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, -, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact hO.elim
@@ -1597,7 +1597,7 @@ theorem exec_keeps {L : CLayout} {orc : DevOrc} {fr : Nat} {CR XR : CCallR} (x :
           exact ihb hw.2 _ rfl
       | jump lb s r =>
           cases lb with
-          | weiter m' =>
+          | widen m' =>
               simp only [COut.weiter] at hwe
               split at hwe
               · simp only [Option.some.injEq, Prod.mk.injEq] at hwe
@@ -1632,7 +1632,7 @@ theorem exec_keeps {L : CLayout} {orc : DevOrc} {fr : Nat} {CR XR : CCallR} (x :
                 simp only [COut.lok, Option.some.injEq] at ho
                 subst ho
                 exact ihb hw.2 _ rfl
-          | weiter m' =>
+          | widen m' =>
               simp only [COut.raus] at hx
               split at hx
               · exact absurd hx (by simp)
@@ -1865,7 +1865,7 @@ theorem trav_run (hK : K.okB = true) {x : Nat} (hf : K.freshB x = true) (tb : D.
           obtain ⟨st1, cv, ho1, hc2, hrc⟩ := hO
           subst ho1
           exact ⟨_, Exec.forExit hcond htrue h1 rfl, st1, cv, rfl, hc2, hrc⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, -, hO⟩ := hb _ st _ ρC hc1 hr1 (by rw [hbo]; rfl)
           rw [hbo] at hO
           exact hO.elim

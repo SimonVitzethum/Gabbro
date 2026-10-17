@@ -148,8 +148,8 @@ inductive LaufSpur (schritt : World D → Env D (τ :: Γ) → Ausgang V true (�
       LaufSpur schritt inv (k :: ks) σ ρ [k] (.zurueck σ' v)
   | abGrund {k : Wert D τ} {ks : List (Wert D τ)} {σ : World D} {ρ : Env D Γ}
       {σ' : World D} {r : Fin V.gruende}
-      (h : (inv σ ρ).2 = true) (hs : schritt (inv σ ρ).1 (.cons k ρ) = .grund σ' r) :
-      LaufSpur schritt inv (k :: ks) σ ρ [k] (.grund σ' r)
+      (h : (inv σ ρ).2 = true) (hs : schritt (inv σ ρ).1 (.cons k ρ) = .why σ' r) :
+      LaufSpur schritt inv (k :: ks) σ ρ [k] (.why σ' r)
   | abLogik {k : Wert D τ} {ks : List (Wert D τ)} {σ : World D} {ρ : Env D Γ}
       {e : Logik D}
       (h : (inv σ ρ).2 = true) (hs : schritt (inv σ ρ).1 (.cons k ρ) = .logik e) :
@@ -192,7 +192,7 @@ theorem trav_lauf_hat_spur (schritt : World D → Env D (τ :: Γ) → Ausgang V
             by simp [traverseLauf, heq, hs, hinv]⟩
       | zurueck σ' v =>
         exact ⟨[k], _, LaufSpur.abZurueck heq hs, by simp [traverseLauf, heq, hs]⟩
-      | grund σ' r =>
+      | why σ' r =>
         exact ⟨[k], _, LaufSpur.abGrund heq hs, by simp [traverseLauf, heq, hs]⟩
       | logik e =>
         exact ⟨[k], _, LaufSpur.abLogik heq hs, by simp [traverseLauf, heq, hs]⟩

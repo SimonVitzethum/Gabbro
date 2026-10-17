@@ -162,7 +162,7 @@ def freiH (S : SperrInv D) (L : D.Lock) {l : Bool} {Γ : Ctx} : Ausgang V l Γ �
   | .leave h σ ρ => if S.inv L σ.speicher = true then .leave h (σ.gibt L) ρ else .logik .schleife
   | .next h σ ρ => if S.inv L σ.speicher = true then .next h (σ.gibt L) ρ else .logik .schleife
   | .zurueck σ v => .zurueck (σ.gibt L) v
-  | .grund σ r => .grund (σ.gibt L) r
+  | .why σ r => .why (σ.gibt L) r
   | .logik e => .logik e
   | .hardware e => .hardware e
 
@@ -188,19 +188,19 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignSlot t f i e _ _, σ, ρ =>
       let σ := σ.lese Λ (i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
-  | .assignDurch p t _ f i e _ _, σ, ρ =>
+  | .assignThru p t _ f i e _ _, σ, ρ =>
       let σ := σ.lese Λ (p.orte ++ i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
   | .assignGlob g e _ _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .ok (σ.schreibGlob g Λ (eval σ e σ ρ)) ρ
-  | .schreibBytes t f hf n i _ _ e _ _, σ, ρ =>
+  | .putBytes t f hf n i _ _ e _ _, σ, ρ =>
       let σ := σ.lese Λ (i.orte ++ e.orte)
       .ok (σ.schreibBytes t f hf Λ (eval σ i σ ρ).n (zahlZuBytes n (eval σ e σ ρ).n)) ρ
   | .assignVar x e, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .ok σ (ρ.set x (eval σ e σ ρ))
-  | .uebergang t f hτ i von nach hn _ _ _, σ, ρ =>
+  | .shift t f hτ i von nach hn _ _ _, σ, ρ =>
       let σ := σ.lese Λ (.inl t :: i.orte)
       let k := (eval σ i σ ρ).n
       if (hτ ▸ σ.slots t k f : Zahl _ _).n = von
@@ -217,14 +217,14 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onTag v arms, σ, ρ =>
       let σ := σ.lese Λ v.orte
       execArmsH arms (eval σ v σ ρ) σ ρ
-  | .onGrund r arms, σ, ρ =>
+  | .onWhy r arms, σ, ρ =>
       let σ := σ.lese Λ r.orte
       execGrundH arms (eval σ r σ ρ) σ ρ
   | .call f args _ hr, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' _ => .ok σ' ρ
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .callInd p args _ hr, σ, ρ =>
@@ -232,7 +232,7 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let ⟨f, hf⟩ := eval σ p σ ρ
       match R f σ (umsig hf (evalArgs σ args σ ρ)) with
       | .ok σ' _ => .ok σ' ρ
-      | .grund _ r => keinGrundSig hf hr r
+      | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .locks L _ body, σ, ρ => freiH S L (execBlockH body ((U L σ).nimmt L) ρ)
@@ -253,7 +253,7 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some _) => .ok σ' ρ
       | (_, Option.none) => .hardware (.annahme a)
-  | .regSchreib r _ e, σ, ρ =>
+  | .regWrite r _ e, σ, ρ =>
       let σ := σ.lese Λ e.orte
       let _ := O.regSchreib r (roh (eval σ e σ ρ))
       .ok σ ρ
@@ -269,7 +269,7 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ret e _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
-  | .retGrund r _, σ, _ => .grund σ r
+  | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
 
@@ -287,7 +287,7 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' v => (execBlockH rest σ' (.cons (ergWert he v) ρ)).schrumpf
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindCallInd p args he _ hr rest, σ, ρ =>
@@ -295,14 +295,14 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let ⟨f, hf⟩ := eval σ p σ ρ
       match R f σ (umsig hf (evalArgs σ args σ ρ)) with
       | .ok σ' v => (execBlockH rest σ' (.cons (ergWert (ergSig hf he) v) ρ)).schrumpf
-      | .grund _ r => keinGrundSig hf hr r
+      | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindCallElse f args he _ _ err rest, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' v => (execBlockH rest σ' (.cons (ergWert he v) ρ)).schrumpf
-      | .grund σ' r => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | .why σ' r => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
@@ -316,13 +316,13 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | (σ', Option.some (Sum.inl v)) => (execBlockH rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (σ', Option.some (Sum.inr r)) => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang
       | (_, Option.none) => .hardware (.annahme a)
-  | .regLies r _ rest, σ, ρ =>
+  | .regRead r _ rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlockH rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
-  | .regLiesElse r _ zusage sonst rest, σ, ρ =>
+  | .regReadElse r _ zusage sonst rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
@@ -343,24 +343,24 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlockH rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEndH sonst σ ρ).zuAusgang
-  | .pruefung c sonst rest, σ, ρ =>
+  | .check c sonst rest, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execBlockH rest σ ρ else (execEndH sonst σ ρ).zuAusgang
-  | .gleit op a b lo hi rest, σ, ρ =>
+  | .float op a b lo hi rest, σ, ρ =>
       let σ := σ.lese Λ (a.orte ++ b.orte)
       match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitLit q lo hi rest, σ, ρ =>
+  | .floatLit q lo hi rest, σ, ρ =>
       match gleitPasst lo hi (bruch q) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitVon e lo hi rest, σ, ρ =>
+  | .floatOf e lo hi rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitNarrow e lo hi sonst rest, σ, ρ =>
+  | .floatNarrow e lo hi sonst rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (eval σ e σ ρ).x with
       | Option.some v => (execBlockH rest σ (.cons v ρ)).schrumpf
@@ -371,14 +371,14 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ret e _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
-  | .retGrund r _, σ, _ => .grund σ r
+  | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
   | .cons s rest, σ, ρ =>
       match execStmtH s σ ρ with
       | .ok σ' ρ' => execEndH rest σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .leave h σ' ρ' => .leave h σ' ρ'
       | .next h σ' ρ' => .next h σ' ρ'
       | .logik e => .logik e
@@ -435,7 +435,7 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execStmtH, execStmt, Block.execH_leer p, Block.execH_leer a] <;> rfl
   | .onTag v arms, σ, ρ => by
       simp only [execStmtH, execStmt, Arms.execH_leer arms] <;> rfl
-  | .onGrund r arms, σ, ρ => by
+  | .onWhy r arms, σ, ρ => by
       simp only [execStmtH, execStmt]
       exact GrundArms.execH_leer arms _ _ _
   | .locks L hr body, σ, ρ => by
@@ -461,21 +461,21 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         (fun σ ρ => execBlock O passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execH_leer body σ ρ]
   | .assignSlot .., _, _ => rfl
-  | .assignDurch .., _, _ => rfl
+  | .assignThru .., _, _ => rfl
   | .assignGlob .., _, _ => rfl
-  | .schreibBytes .., _, _ => rfl
+  | .putBytes .., _, _ => rfl
   | .assignVar .., _, _ => rfl
-  | .uebergang .., _, _ => rfl
+  | .shift .., _, _ => rfl
   | .call .., _, _ => rfl
   | .callInd .., _, _ => rfl
   | .axiomCall .., _, _ => rfl
-  | .regSchreib .., _, _ => rfl
+  | .regWrite .., _, _ => rfl
   | .transition .., _, _ => rfl
   | .publish .., _, _ => rfl
   | .advances .., _, _ => rfl
   | .retires .., _, _ => rfl
   | .ret .., _, _ => rfl
-  | .retGrund .., _, _ => rfl
+  | .retWhy .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
 
@@ -497,9 +497,9 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
-  | .regLies r hk rest, σ, ρ => by
+  | .regRead r hk rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
-  | .regLiesElse r hk zusage sonst rest, σ, ρ => by
+  | .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
   | .awaits g payload hp hL rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
@@ -507,22 +507,22 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .narrow e lo' hi' sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
-  | .pruefung c sonst rest, σ, ρ => by
+  | .check c sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
-  | .gleit op a b lo hi rest, σ, ρ => by
+  | .float op a b lo hi rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
-  | .gleitLit q lo hi rest, σ, ρ => by
+  | .floatLit q lo hi rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
-  | .gleitVon e lo hi rest, σ, ρ => by
+  | .floatOf e lo hi rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
-  | .gleitNarrow e lo hi sonst rest, σ, ρ => by
+  | .floatNarrow e lo hi sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
 
 theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → ∀ (σ : World D) (ρ : Env D Γ),
       execEndH (SperrInv.leer D) O U passes R b σ ρ = execEnd O passes R b σ ρ
   | .ret .., _, _ => rfl
-  | .retGrund .., _, _ => rfl
+  | .retWhy .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
   | .cons s rest, σ, ρ => by
@@ -572,7 +572,7 @@ def Stmt.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ
   | .ite _ t e => t.ohneLocks && e.ohneLocks
   | .onOption _ p a => p.ohneLocks && a.ohneLocks
   | .onTag _ arms => arms.ohneLocks
-  | .onGrund _ arms => arms.ohneLocks
+  | .onWhy _ arms => arms.ohneLocks
   | .locks .. => false
   | .breaking _ body => body.ohneLocks
   | .traverse _ _ body => body.ohneLocks
@@ -589,16 +589,16 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
   | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
-  | .regLies _ _ rest => rest.ohneLocks
-  | .regLiesElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .regRead _ _ rest => rest.ohneLocks
+  | .regReadElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .awaits _ _ _ _ rest => rest.ohneLocks
   | .exchange _ _ _ _ rest => rest.ohneLocks
   | .narrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
-  | .pruefung _ sonst rest => sonst.ohneLocks && rest.ohneLocks
-  | .gleit _ _ _ _ _ rest => rest.ohneLocks
-  | .gleitLit _ _ _ rest => rest.ohneLocks
-  | .gleitVon _ _ _ rest => rest.ohneLocks
-  | .gleitNarrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .check _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .float _ _ _ _ _ rest => rest.ohneLocks
+  | .floatLit _ _ _ rest => rest.ohneLocks
+  | .floatOf _ _ _ rest => rest.ohneLocks
+  | .floatNarrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
 
 def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .cons s rest => s.ohneLocks && rest.ohneLocks
@@ -637,7 +637,7 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Stmt.ohneLocks] at h
       simp only [execStmtH, execStmt]
       exact Arms.execH_ohne arms h _ _ _
-  | .onGrund r arms, h, σ, ρ => by
+  | .onWhy r arms, h, σ, ρ => by
       simp only [Stmt.ohneLocks] at h
       simp only [execStmtH, execStmt]
       exact GrundArms.execH_ohne arms h _ _ _
@@ -667,21 +667,21 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         (fun σ ρ => execBlock O passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
   | .assignSlot .., _, _, _ => rfl
-  | .assignDurch .., _, _, _ => rfl
+  | .assignThru .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
-  | .schreibBytes .., _, _, _ => rfl
+  | .putBytes .., _, _, _ => rfl
   | .assignVar .., _, _, _ => rfl
-  | .uebergang .., _, _, _ => rfl
+  | .shift .., _, _, _ => rfl
   | .call .., _, _, _ => rfl
   | .callInd .., _, _, _ => rfl
   | .axiomCall .., _, _, _ => rfl
-  | .regSchreib .., _, _, _ => rfl
+  | .regWrite .., _, _, _ => rfl
   | .transition .., _, _, _ => rfl
   | .publish .., _, _, _ => rfl
   | .advances .., _, _, _ => rfl
   | .retires .., _, _, _ => rfl
   | .ret .., _, _, _ => rfl
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -710,10 +710,10 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
-  | .regLies r hk rest, h, σ, ρ => by
+  | .regRead r hk rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
-  | .regLiesElse r hk zusage sonst rest, h, σ, ρ => by
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
@@ -727,20 +727,20 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
-  | .pruefung c sonst rest, h, σ, ρ => by
+  | .check c sonst rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
-  | .gleit op a b lo hi rest, h, σ, ρ => by
+  | .float op a b lo hi rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
-  | .gleitLit q lo hi rest, h, σ, ρ => by
+  | .floatLit q lo hi rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
-  | .gleitVon e lo hi rest, h, σ, ρ => by
+  | .floatOf e lo hi rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
-  | .gleitNarrow e lo hi sonst rest, h, σ, ρ => by
+  | .floatNarrow e lo hi sonst rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
@@ -749,7 +749,7 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → b.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
       execEndH S O U passes R b σ ρ = execEnd O passes R b σ ρ
   | .ret .., _, _, _ => rfl
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, h, σ, ρ => by
@@ -816,7 +816,7 @@ theorem execStmtH_blatt (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes :
     failure, or anything else. -/
 inductive ZErgG (V : Vertrag D) where
   | zurueck (σ : World D) (v : ErgVal D V.erg)
-  | grund (σ : World D) (r : Fin V.gruende)
+  | why (σ : World D) (r : Fin V.gruende)
   | logik (e : Logik D)
   | sonst
 
@@ -827,7 +827,7 @@ variable {V : Vertrag D}
 /-- Frame results that agree up to the trace. -/
 def gleich : ZErgG V → ZErgG V → Prop
   | .zurueck σ v, .zurueck σ' v' => SG σ σ' ∧ v = v'
-  | .grund σ r, .grund σ' r' => SG σ σ' ∧ r = r'
+  | .why σ r, .why σ' r' => SG σ σ' ∧ r = r'
   | .logik e, .logik e' => e = e'
   | .sonst, .sonst => True
   | _, _ => False
@@ -875,7 +875,7 @@ theorem folgt_zurueck {a : ZErgG V} {σ : World D} {v : ErgVal D V.erg}
   · exact h
 
 theorem folgt_grund {a : ZErgG V} {σ : World D} {r : Fin V.gruende}
-    (h : a.folgt (.grund σ r)) : a.gleich (.grund σ r) := by
+    (h : a.folgt (.why σ r)) : a.gleich (.why σ r) := by
   rcases h with h | h
   · cases h
   · exact h
@@ -891,7 +891,7 @@ end ZErgG
 /-- The frame result of an end outcome, reasons kept. -/
 def zErgG {V : Vertrag D} {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → ZErgG V
   | .zurueck σ v => .zurueck σ v
-  | .grund σ r => .grund σ r
+  | .why σ r => .why σ r
   | .logik e => .logik e
   | _ => .sonst
 
@@ -914,10 +914,10 @@ theorem zErgG_gleich_zurueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusga
   | _ => simp [zErgG, ZErgG.gleich] at h
 
 theorem zErgG_gleich_grund {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
-    {σ : World D} {r : Fin V.gruende} (h : (zErgG o).gleich (.grund σ r)) :
-    ∃ σ', o = .grund σ' r ∧ SG σ' σ := by
+    {σ : World D} {r : Fin V.gruende} (h : (zErgG o).gleich (.why σ r)) :
+    ∃ σ', o = .why σ' r ∧ SG σ' σ := by
   cases o with
-  | grund σ' r' =>
+  | why σ' r' =>
       obtain ⟨hs, hr⟩ := h
       subst hr
       exact ⟨σ', rfl, hs⟩
@@ -941,7 +941,7 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       match o with
       | .ok σ ρ => zErgG (execEndH S O U passes R e σ ρ)
       | .zurueck σ v => .zurueck σ v
-      | .grund σ r => .grund σ r
+      | .why σ r => .why σ r
       | .logik e => .logik e
       | _ => .sonst
   | _, _, _, .dann b k, o => weiterH k (laufA (fun σ ρ => execBlockH S O U passes R b σ ρ) o)
@@ -961,7 +961,7 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
           weiterH k (if (leseB inv σ ρ.tail).2 = true then .ok (leseB inv σ ρ.tail).1 ρ.tail
             else .logik .schleife)
       | .zurueck σ v => weiterH k (.zurueck σ v)
-      | .grund σ r => weiterH k (.grund σ r)
+      | .why σ r => weiterH k (.why σ r)
       | .logik e => weiterH k (.logik e)
       | .hardware e => weiterH k (.hardware e)
   | _, _, _, .wieder n bis body ueber k, o =>
@@ -975,7 +975,7 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
           (leseB bis) (fun σ ρ => execBlockH S O U passes R ueber σ ρ) n σ ρ)
       | .leave _ σ ρ => weiterH k (.ok σ ρ)
       | .zurueck σ v => weiterH k (.zurueck σ v)
-      | .grund σ r => weiterH k (.grund σ r)
+      | .why σ r => weiterH k (.why σ r)
       | .logik e => weiterH k (.logik e)
       | .hardware e => weiterH k (.hardware e)
   | _, _, _, .ewig a n inv body k, o =>
@@ -988,7 +988,7 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
           (leseB inv) n σ ρ)
       | .leave _ σ ρ => weiterH k (.ok σ ρ)
       | .zurueck σ v => weiterH k (.zurueck σ v)
-      | .grund σ r => weiterH k (.grund σ r)
+      | .why σ r => weiterH k (.why σ r)
       | .logik e => weiterH k (.logik e)
       | .hardware e => weiterH k (.hardware e)
   | _, _, _, .wartet _ k, o =>
@@ -1069,7 +1069,7 @@ theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
     of `weiterH_zurueck`, 2026-09-14). -/
 theorem weiterH_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (r : Fin V.gruende),
-    (weiterH S O U passes R k (.grund σ r)).gleich (.grund σ r)
+    (weiterH S O U passes R k (.why σ r)).gleich (.why σ r)
   | _, _, _, .ende _, _, _ => ZErgG.gleich_refl _
   | _, _, _, .dann _ k, σ, r => weiterH_grund k σ r
   | _, _, _, .schrumpf k, σ, r => weiterH_grund k σ r
@@ -1090,7 +1090,7 @@ theorem weiterH_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : End
     (weiterH S O U passes R k eo.zuAusgang).folgt (zErgG eo) := by
   cases eo with
   | zurueck σ v => exact ZErgG.folgt_of_gleich (weiterH_zurueck S O U passes R k σ v)
-  | grund σ r => exact ZErgG.folgt_of_gleich (weiterH_grund S O U passes R k σ r)
+  | why σ r => exact ZErgG.folgt_of_gleich (weiterH_grund S O U passes R k σ r)
   | logik e => exact ZErgG.folgt_of_eq (weiterH_logik S O U passes R k e)
   | _ => exact ZErgG.folgt_sonst _
 
@@ -1100,7 +1100,7 @@ theorem Endblock.execBlockH_alsBlock :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ),
       execBlockH S O U passes R e.alsBlock.2 σ ρ = (execEndH S O U passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
-  | _, _, .retGrund _ _, _, _ => rfl
+  | _, _, .retWhy _ _, _, _ => rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by
@@ -1165,7 +1165,7 @@ theorem execGrundH_wahl {Λ Λ' : List (Res D)} :
       exact execGrundH_wahl rest _ σ ρ
 
 theorem execGrundH_wahlW {Λ Λ' : List (Res D)} {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n)
-    (r : Wert D (.grund n)) (σ : World D) (ρ : Env D Γ) :
+    (r : Wert D (.why n)) (σ : World D) (ρ : Env D Γ) :
     execGrundH S O U passes R arms r σ ρ = execBlockH S O U passes R (grundWahlG arms r) σ ρ :=
   execGrundH_wahl S O U passes R arms r σ ρ
 
@@ -1258,10 +1258,10 @@ theorem semH_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int
   rw [execArmsH_wahl, hw]
   rfl
 
-theorem semH_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.grund n))
+theorem semH_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.why n))
     (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
     (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.dann (.cons (.onGrund r arms) rest) k) σ ρ =
+    semH S O U passes R (.dann (.cons (.onWhy r arms) rest) k) σ ρ =
       semH S O U passes R (.dann (grundWahlG arms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρ))
         (.dann rest k)) (σ.lese Λ r.orte) ρ := by
   rw [semH_dann_cons]
@@ -1353,7 +1353,7 @@ theorem semH_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true) :
-    semH S O U passes R (.dann (.pruefung c sonst rest) k) σ ρ =
+    semH S O U passes R (.dann (.check c sonst rest) k) σ ρ =
       semH S O U passes R (.dann rest k) (σ.lese Λ c.orte) ρ := by
   rw [semH_dann]
   simp only [execBlockH, hw, if_true]
@@ -1363,7 +1363,7 @@ theorem semH_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
-    (semH S O U passes R (.dann (.pruefung c sonst rest) k) σ ρ).folgt
+    (semH S O U passes R (.dann (.check c sonst rest) k) σ ρ).folgt
       (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hw, Bool.false_eq_true, if_false]
@@ -1388,7 +1388,7 @@ theorem semH_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (o
     (hv : gleitPasst lo hi (gleitRechne op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
-    semH S O U passes R (.dann (.gleit op a b lo hi rest) k) σ ρ =
+    semH S O U passes R (.dann (.float op a b lo hi rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv]
@@ -1397,7 +1397,7 @@ theorem semH_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (o
 theorem semH_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
-    semH S O U passes R (.dann (.gleitLit q lo hi rest) k) σ ρ =
+    semH S O U passes R (.dann (.floatLit q lo hi rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv]
@@ -1408,7 +1408,7 @@ theorem semH_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ �
     (σ : World D) (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
       (σ.lese Λ e.orte) ρ).n) = some v) :
-    semH S O U passes R (.dann (.gleitVon e lo hi rest) k) σ ρ =
+    semH S O U passes R (.dann (.floatOf e lo hi rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv]
@@ -1419,7 +1419,7 @@ theorem semH_gleitNarrowOk {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = some v) :
-    semH S O U passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ =
+    semH S O U passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv]
@@ -1430,7 +1430,7 @@ theorem semH_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
-    (semH S O U passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ).folgt
+    (semH S O U passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ).folgt
       (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hn]
@@ -1723,19 +1723,19 @@ theorem semH_dannRet {Λ Λ'' : List (Res D)} (e : ErgExpr D Γ Λ V.erg)
 
 theorem semH_rueckGrund {Λ : List (Res D)} (r : Fin V.gruende) (hperm : Λ.Perm V.ende)
     (σ : World D) (ρ : Env D Γ) :
-    (semH S O U passes R (.ende (.retGrund (l := l) r hperm)) σ ρ).gleich (.grund σ r) :=
+    (semH S O U passes R (.ende (.retWhy (l := l) r hperm)) σ ρ).gleich (.why σ r) :=
   ZErgG.gleich_refl _
 
 theorem semH_rueckConsGrund {Λ : List (Res D)} (r : Fin V.gruende) (hperm : Λ.Perm V.ende)
     (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    (semH S O U passes R (.ende (.cons (.retGrund r hperm) rest)) σ ρ).gleich (.grund σ r) := by
+    (semH S O U passes R (.ende (.cons (.retWhy r hperm) rest)) σ ρ).gleich (.why σ r) := by
   rw [semH_ende_cons]
   exact ZErgG.gleich_refl _
 
 theorem semH_dannRetGrund {Λ Λ'' : List (Res D)} (r : Fin V.gruende)
     (hperm : Λ.Perm V.ende) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
     (σ : World D) (ρ : Env D Γ) :
-    (semH S O U passes R (.dann (.cons (.retGrund r hperm) rest) k) σ ρ).gleich (.grund σ r) := by
+    (semH S O U passes R (.dann (.cons (.retWhy r hperm) rest) k) σ ρ).gleich (.why σ r) := by
   rw [semH_dann_cons]
   exact weiterH_grund S O U passes R (.dann rest k) _ _
 
@@ -1745,7 +1745,7 @@ theorem semH_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hz : D.rzusage r v = true) :
-    semH S O U passes R (.dann (.regLies r hk rest) k) σ ρ =
+    semH S O U passes R (.dann (.regRead r hk rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hz, if_true]
@@ -1756,7 +1756,7 @@ theorem semH_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklass
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
-    semH S O U passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ =
+    semH S O U passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hw, if_true]
@@ -1768,7 +1768,7 @@ theorem semH_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
-    (semH S O U passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
+    (semH S O U passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
       (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hw, Bool.false_eq_true, if_false]

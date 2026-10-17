@@ -57,7 +57,7 @@ variable {X : TVCtx D} {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ)
     and its ruling row stands decided. -/
 theorem bridge_logUndOder_und {ca cb : CX} {a b : Expr D Γ Λ .bool}
     (ha : ExprCorr X K ca a) (hb : ExprCorr X K cb b) :
-    ExprCorr X K (.land ca cb) (.und a b) ∧
+    ExprCorr X K (.land ca cb) (.and a b) ∧
       EntscheidZiel.luecke OffeneForm.logUndOder logUndOderEntscheid ∈ tafel ∧
         entschieden (EntscheidZiel.luecke OffeneForm.logUndOder logUndOderEntscheid) :=
   ⟨ecorr_und X K ha hb, logUndOder_steht⟩
@@ -66,7 +66,7 @@ theorem bridge_logUndOder_und {ca cb : CX} {a b : Expr D Γ Λ .bool}
     and its ruling row stands decided. -/
 theorem bridge_logUndOder_oder {ca cb : CX} {a b : Expr D Γ Λ .bool}
     (ha : ExprCorr X K ca a) (hb : ExprCorr X K cb b) :
-    ExprCorr X K (.lor ca cb) (.oder a b) ∧
+    ExprCorr X K (.lor ca cb) (.or a b) ∧
       EntscheidZiel.luecke OffeneForm.logUndOder logUndOderEntscheid ∈ tafel ∧
         entschieden (EntscheidZiel.luecke OffeneForm.logUndOder logUndOderEntscheid) :=
   ⟨ecorr_oder X K ha hb, logUndOder_steht⟩
@@ -79,14 +79,14 @@ theorem boolLit_steht :
 
 /-- Bridge (`boolLit`, `true`): the literal `1` corresponds, and the row stands. -/
 theorem bridge_boolLit_wahr :
-    ExprCorr X K (.lit 1) (Expr.wahr (D := D) (Γ := Γ) (Λ := Λ)) ∧
+    ExprCorr X K (.lit 1) (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)) ∧
       EntscheidZiel.luecke OffeneForm.boolLit (.aufListe "generous reading: boolean literals") ∈ tafel ∧
         entschieden (EntscheidZiel.luecke OffeneForm.boolLit (.aufListe "generous reading: boolean literals")) :=
   ⟨ecorr_wahr X K, boolLit_steht⟩
 
 /-- Bridge (`boolLit`, `false`): the literal `0` corresponds, and the row stands. -/
 theorem bridge_boolLit_falsch :
-    ExprCorr X K (.lit 0) (Expr.falsch (D := D) (Γ := Γ) (Λ := Λ)) ∧
+    ExprCorr X K (.lit 0) (Expr.fls (D := D) (Γ := Γ) (Λ := Λ)) ∧
       EntscheidZiel.luecke OffeneForm.boolLit (.aufListe "generous reading: boolean literals") ∈ tafel ∧
         entschieden (EntscheidZiel.luecke OffeneForm.boolLit (.aufListe "generous reading: boolean literals")) :=
   ⟨ecorr_falsch X K, boolLit_steht⟩

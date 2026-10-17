@@ -126,10 +126,10 @@ def eRuhe : eD.Fn := EFn.ruhe
 theorem eDarf (Λ : List (Res eD)) : darf eD () Λ := fun _ h => nomatch h
 
 def eIdx {Γ : Ctx} {Λ : List (Res eD)} : Expr eD Γ Λ (.index (eD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def eFuenf {Γ : Ctx} {Λ : List (Res eD)} : Expr eD Γ Λ (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 5)
+  .widen (by decide) (by decide) (.lit 5)
 
 /-- `konto[0] == 5`. -/
 def eFuenfGleich {Γ : Ctx} {Λ : List (Res eD)} : Expr eD Γ Λ .bool :=
@@ -160,27 +160,27 @@ theorem eHpPruefe : RufPasst eD (vertragVon eD eHaupt) (eD.signatur ePruefe) [] 
 
 /-- `setze`: `konto[0] = 5; return`. -/
 def eRumpfSetze : Endblock eD (vertragVon eD eSetze) false [] [] :=
-  .cons (.assignSlot () () eIdx eFuenf rfl (eDarf _)) (.ret .keine List.Perm.nil)
+  .cons (.assignSlot () () eIdx eFuenf rfl (eDarf _)) (.ret .empty List.Perm.nil)
 
 /-- `pruefe`: `return` (its `requires` is the point). -/
-def eRumpfPruefe : Endblock eD (vertragVon eD ePruefe) false [] [] := .ret .keine List.Perm.nil
+def eRumpfPruefe : Endblock eD (vertragVon eD ePruefe) false [] [] := .ret .empty List.Perm.nil
 
 /-- `haupt`: `setze(); pruefe(); return`. -/
 def eRumpfHaupt : Endblock eD (vertragVon eD eHaupt) false [] [] :=
   .cons (.call eSetze .nil eHpSetze rfl) (.cons (.call ePruefe .nil eHpPruefe rfl)
-    (.ret .keine List.Perm.nil))
+    (.ret .empty List.Perm.nil))
 
-def eRumpfRuhe : Endblock eD (vertragVon eD eRuhe) false [] [] := .ret .keine List.Perm.nil
+def eRumpfRuhe : Endblock eD (vertragVon eD eRuhe) false [] [] := .ret .empty List.Perm.nil
 
 /-- The program: `setze` ensures `konto[0] == 5`, `pruefe` REQUIRES it. -/
 def eP : Programm eD where
   invariante := fun i => nomatch i
   requires
     | .pruefe => eFuenfGleich
-    | _ => .wahr
+    | _ => .tru
   ensures
     | .setze => eFuenfGleich
-    | _ => .wahr
+    | _ => .tru
   rumpf
     | .setze => eRumpfSetze
     | .pruefe => eRumpfPruefe
@@ -370,7 +370,7 @@ theorem ziel_ort_einfaden_zeuge : ∃ M : RufMaschineG eD,
       [RufEreignisF.eintritt eHaupt .nil (eSp.welt [])]⟩ := rfl
   have hoff0 : offen ((RufStartG eP eSp eInit).faeden 0).spur = [] := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := eP) (O := eO) (passes := 0) h00 eSetze .nil eHpSetze rfl
-    (.cons (.call ePruefe .nil eHpPruefe rfl) (.ret .keine List.Perm.nil)) .nil rfl (ehg0 hoff0).heldIn
+    (.cons (.call ePruefe .nil eHpPruefe rfl) (.ret .empty List.Perm.nil)) .nil rfl (ehg0 hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen]; exact hoff0
   obtain ⟨M2, s2, hZ2⟩ := w_blatt (P := eP) (O := eO) (passes := 0) hZ1.1
@@ -385,7 +385,7 @@ theorem ziel_ort_einfaden_zeuge : ∃ M : RufMaschineG eD,
     rw [hG3.1]
     exact ((Erw.lese _ _ _).offen).trans hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := eP) (O := eO) (passes := 0) hG3.1 ePruefe .nil eHpPruefe
-    rfl (.ret .keine List.Perm.nil) .nil rfl (ehg0 (eoff_g hG3 hoff3)).heldIn
+    rfl (.ret .empty List.Perm.nil) .nil rfl (ehg0 (eoff_g hG3 hoff3)).heldIn
   have hr4 : RufErreichbarG eP eO 0 (RufStartG eP eSp eInit) M4 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4
   obtain ⟨rho, w0, hm⟩ : ∃ (rho : Env eD (eD.params ePruefe)) (w0 : World eD),

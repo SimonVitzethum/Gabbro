@@ -58,16 +58,16 @@ abbrev sA : Stmt nD (vertragVon nD NFn.hauptA) false [] [] [] :=
 abbrev mStale : RufMaschineG nD := mitSpeicher (r1M1 sp0) sp0
 
 theorem stale_schritt :
-    RufSchrittG nP nO 0 mStale 0 (blattM mStale 0 sA (.ret .keine List.Perm.nil)) :=
+    RufSchrittG nP nO 0 mStale 0 (blattM mStale 0 sA (.ret .empty List.Perm.nil)) :=
   blattM_schritt mStale 0 _ _ rfl rfl rfl rfl
 
 /-- The accesses the stale step records: the write of `tabA`, the read of `konfig`. -/
-theorem stale_zugriffe : zugriffe mStale (blattM mStale 0 sA (.ret .keine List.Perm.nil)) 0 =
+theorem stale_zugriffe : zugriffe mStale (blattM mStale 0 sA (.ret .empty List.Perm.nil)) 0 =
     [(.inl NTab.tabA, true), (.inr NGlob.konfig, false)] := rfl
 
 /-- The stale step reads `konfig`. -/
 theorem stale_liest :
-    LiestG mStale (blattM mStale 0 sA (.ret .keine List.Perm.nil)) 0 (.inr NGlob.konfig) := by
+    LiestG mStale (blattM mStale 0 sA (.ret .empty List.Perm.nil)) 0 (.inr NGlob.konfig) := by
   show (_, false) ∈ zugriffe _ _ _
   rw [stale_zugriffe]
   exact List.mem_cons_of_mem _ List.mem_cons_self
@@ -98,14 +98,14 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
   obtain ⟨T, hT⟩ := hF1
   -- step 2: `hauptA` on the presented initial memory
   have hs2 : RufSchrittG nP nO 0 (mitSpeicher W1.g sp0) 0
-      (blattM mStale 0 sA (.ret .keine List.Perm.nil)) := by
+      (blattM mStale 0 sA (.ret .empty List.Perm.nil)) := by
     rw [hg1]; exact stale_schritt
-  have hl : ∀ c, LiestG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .keine List.Perm.nil)) 0 c →
+  have hl : ∀ c, LiestG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .empty List.Perm.nil)) 0 c →
       Lesbar W1.hist (W1.sicht 0) c m0 ∧ TraegerGleich sp0 m0.wert c := by
     intro c _
     refine ⟨⟨hm0 c, ?_⟩, traegerGleich_refl _ c⟩
     rw [hsicht]; exact Nat.zero_le _
-  have hu : ∀ c, ¬ LiestG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .keine List.Perm.nil)) 0 c →
+  have hu : ∀ c, ¬ LiestG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .empty List.Perm.nil)) 0 c →
       TraegerGleich sp0 W1.g.speicher c := by
     intro c hc
     rw [hg1] at hc ⊢
@@ -125,7 +125,7 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
   obtain ⟨W2, h2, hS2, _⟩ := schrittW_bau (ord := ord) hs2 (fun _ => m0) hl hu T
     (fun c => ⟨(hT c).2.1, (hT c).2.2.1, (hT c).2.2.2.1, (hT c).2.2.2.2⟩) hm0
     (fun g hk => absurd hk (hkein g))
-  have hwA : SchreibG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .keine List.Perm.nil)) 0
+  have hwA : SchreibG (mitSpeicher W1.g sp0) (blattM mStale 0 sA (.ret .empty List.Perm.nil)) 0
       (.inl NTab.tabA) := by
     rw [hg1]
     refine Or.inl ?_
@@ -135,7 +135,7 @@ theorem w_nicht_sc (ord : nD.Glob → Ordnung) :
   have hA := hS2 _ hwA
   refine ⟨W1, W2, hW1, ⟨sp0, _, _, _, h2⟩, hg1, ?_, ?_, ?_⟩
   · rw [hg1]; rfl
-  · have e : W2.g.speicher.slots NTab.tabA = (blattM mStale 0 sA (.ret .keine List.Perm.nil)).speicher.slots NTab.tabA := hA
+  · have e : W2.g.speicher.slots NTab.tabA = (blattM mStale 0 sA (.ret .empty List.Perm.nil)).speicher.slots NTab.tabA := hA
     rw [e]; rfl
   · rfl
 
@@ -167,7 +167,7 @@ def kopfBlatt {D : Deklaration} {V : Vertrag D} :
 
 /-- Thread 0 (`hauptA`) at `r1M1`: `tabA[0] = konfig; return` at the start of its body. -/
 theorem kopf0 : ((r1M1 sp0).faeden 0).kopf.rest =
-    ⟨false, [], [], .nil, .ende (.cons sA (.ret .keine List.Perm.nil))⟩ := rfl
+    ⟨false, [], [], .nil, .ende (.cons sA (.ret .empty List.Perm.nil))⟩ := rfl
 
 /-- **Determinism of G at the point `w_nicht_sc` uses**: EVERY G step of thread 0 from
     `r1M1` (after `kern` wrote `konfig := 3`) writes `tabA[0] = 3`. Inversion over all rules

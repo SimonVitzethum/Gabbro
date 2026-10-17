@@ -123,7 +123,7 @@ theorem absenkung_monoton (n : Nat) (h : n ≤ absenkung.proPrimitiv) :
 
 /-- Jeder Ausgang ist Kontrollfluss, Logik oder Hardware -- kein dritter. -/
 theorem ziel_zwei_fehler (o : Ausgang V l Γ) :
-    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
     (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
     (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e) :=
   zwei_fehler o
@@ -276,7 +276,7 @@ def fristAlsAnnahme (a : D.Annahme) : Hardware D := .fortschritt a
     Satz. Nichts davon nennt einen Pass, eine Diagnose oder eine
     Erzeugerzeile. -/
 theorem ziel (o : Ausgang V l Γ) :
-    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
     (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
     (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e) :=
   zwei_fehler o
@@ -379,7 +379,7 @@ theorem ziel_nutzer_last (o : Ausgang V l Γ)
     ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
       fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
     ∧ (hLowering.proPrimitiv ≤ 18)
-    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
       (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
       (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e)) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -649,7 +649,7 @@ theorem ziel_nutzer_last_aus_disziplin (o : Ausgang V l Γ)
     ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
       fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
     ∧ (hLowering.proPrimitiv ≤ 18)
-    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
       (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
       (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
     ∧ (∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
@@ -812,7 +812,7 @@ theorem ziel_nutzer_last_aus_maschine (o : Ausgang V l Γ)
     ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
       fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
     ∧ (hLowering.proPrimitiv ≤ 18)
-    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
       (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
       (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
     ∧ ((maschinenWelten M).length = M.run.length + 1)
@@ -1039,7 +1039,7 @@ theorem ziel_nutzer_last_aus_pc (o : Ausgang V l Γ)
     ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
       fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
     ∧ (hLowering.proPrimitiv ≤ 18)
-    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
       (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
       (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
     ∧ (Marken.Einfaedig (laufProj code M.lauf))
@@ -1363,7 +1363,7 @@ theorem ziel_nutzer_last_aus_pc_stabil (o : Ausgang V l Γ)
     ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
       fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
     ∧ (hLowering.proPrimitiv ≤ 18)
-    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
       (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
       (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
     ∧ (Marken.Einfaedig (laufProj code M.lauf))
@@ -2417,7 +2417,7 @@ theorem ziel_nutzer_last_aus_pc_Q (o : Ausgang V l Γ)
     ∧ (∃ n, d ≤ c.tick n ∧ c.tick n ≤ p.lauf ∧
       fristErgebnis (fristlauf p fr (some d)) = some (.fortschritt fr.annahme))
     ∧ (hLowering.proPrimitiv ≤ 18)
-    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    ∧ ((∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
       (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
       (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e))
     ∧ (Marken.Einfaedig (laufProj code M.lauf))

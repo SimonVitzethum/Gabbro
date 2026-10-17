@@ -101,7 +101,7 @@ abbrev zPoolLocks :=
 /-- `haupt`'s `return` as G runs it. -/
 abbrev zPoolRet :=
   ruEnd (V := vertragVon zD zHaupt) (l := false) (Γ := []) (Λ := [])
-    (Endblock.ret .keine List.Perm.nil)
+    (Endblock.ret .empty List.Perm.nil)
 
 /-- **THE POOL WITNESS.** On the runtime's start of `zPool` (threads 0 and 1 both run
     `haupt`), thread 0 steps, thread 1 steps, thread 0 takes the lock; at the reached machine

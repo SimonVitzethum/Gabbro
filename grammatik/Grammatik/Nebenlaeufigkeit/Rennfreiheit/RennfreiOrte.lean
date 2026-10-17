@@ -487,7 +487,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       refine ⟨_ :: leseEv σ Λ (i.orte ++ e.orte), rfl, ?_⟩
       exact evOk_append (X := [_]) (evOk_schreibT hw) (evOk_lese σ Λ hC)
-  | .assignDurch p t _ f i e hw hL, _, hC, σ, ρ, _, σ', h => by
+  | .assignThru p t _ f i e hw hL, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       refine ⟨_ :: leseEv σ Λ (p.orte ++ i.orte ++ e.orte), rfl, ?_⟩
       exact evOk_append (X := [_]) (evOk_schreibT hw) (evOk_lese σ Λ hC)
@@ -495,7 +495,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       refine ⟨_ :: leseEv σ Λ e.orte, rfl, ?_⟩
       exact evOk_append (X := [_]) (evOk_schreibG hw) (evOk_lese σ Λ hC)
-  | .schreibBytes t f hf n i _ _ e hw hL, _, hC, σ, ρ, _, σ', h => by
+  | .putBytes t f hf n i _ _ e hw hL, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       obtain ⟨X, hX, hok⟩ := schreibBytes_ev (C := C) (W := schreibV V) t f hf Λ hw
         (zahlZuBytes n (eval (σ.lese Λ (i.orte ++ e.orte)) e (σ.lese Λ (i.orte ++ e.orte)) ρ).n)
@@ -507,7 +507,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .assignVar x e, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
-  | .uebergang t f hτ i von nach hn he hw hL, _, hC, σ, ρ, _, σ', h => by
+  | .shift t f hτ i von nach hn he hw hL, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
@@ -532,7 +532,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
         rw [e1, hX, List.append_assoc]
         rfl
       · simp [Ausgang.welt] at h
-  | .regSchreib r _ e, _, hC, σ, ρ, _, σ', h => by
+  | .regWrite r _ e, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
   | .transition .., _, _, σ, ρ, _, σ', h => by
@@ -551,7 +551,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .ret e _, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
-  | .retGrund .., _, _, σ, ρ, _, σ', h => by
+  | .retWhy .., _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨[], rfl, evOk_nil⟩
   | .leave _, _, _, σ, ρ, _, σ', h => by
@@ -563,7 +563,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .ite .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .onOption .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .onTag .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onGrund .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .onWhy .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .call .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .callInd .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .locks .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf

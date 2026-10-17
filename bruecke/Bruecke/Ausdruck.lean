@@ -398,7 +398,7 @@ theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       | error e => simp [hx, hy] at h
       | ok ly =>
         simp only [hx, hy] at h
-        unfold LowSide.und at h
+        unfold LowSide.and at h
         split at h
         · rename_i h0
           split at h
@@ -437,7 +437,7 @@ theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       | error e => simp [hx, hy] at h
       | ok ly =>
         simp only [hx, hy] at h
-        unfold LowSide.oder at h
+        unfold LowSide.or at h
         split at h
         · rename_i h0
           split at h
@@ -593,10 +593,10 @@ theorem ensSide_vor {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
 
 theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr},
     ensExpr u fn a e = some (x, a') → Vor a a'
-  | .wahr, a, a', x, h => by
+  | .tru, a, a', x, h => by
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨_, rfl⟩ := h; exact Vor.refl _
-  | .falsch, a, a', x, h => by
+  | .fls, a, a', x, h => by
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨_, rfl⟩ := h; exact Vor.refl _
   | .cmp op l r, a, a', x, h => by
@@ -610,7 +610,7 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
           exact (ensSide_vor hl).trans (ensSide_vor hr)
         · cases h
       · cases h
-  | .und x y, a, a', z, h => by
+  | .and x y, a, a', z, h => by
       simp only [ensExpr] at h
       split at h
       · rename_i xe a1 hx
@@ -621,7 +621,7 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
           exact (ensExpr_vor x hx).trans (ensExpr_vor y hy)
         · cases h
       · cases h
-  | .oder x y, a, a', z, h => by
+  | .or x y, a, a', z, h => by
       simp only [ensExpr] at h
       split at h
       · rename_i xe a1 hx
@@ -632,7 +632,7 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
           exact (ensExpr_vor x hx).trans (ensExpr_vor y hy)
         · cases h
       · cases h
-  | .nicht x, a, a', z, h => by
+  | .not x, a, a', z, h => by
       simp only [ensExpr] at h
       split at h
       · rename_i xe a1 hx
@@ -740,11 +740,11 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       ensExpr u fn a e = some (x, a') → lowEns u Γ Λ fn er e = .ok g →
       Vor a' A →
       Gabbro.Body.eval ⟨w, β⟩ x = some (.bool (wahr? (eval σ₀ g σ ρ)))
-  | .wahr, a, a', x, g, hb, h, _ => by
+  | .tru, a, a', x, g, hb, h, _ => by
       simp only [lowEns] at h; cases h
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, _⟩ := hb; rfl
-  | .falsch, a, a', x, g, hb, h, _ => by
+  | .fls, a, a', x, g, hb, h, _ => by
       simp only [lowEns] at h; cases h
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, _⟩ := hb; rfl
@@ -778,7 +778,7 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
                 simp [Grammatik.eval, wahr?]
         · cases hb
       · cases hb
-  | .und x y, a, a', z, g, hb, h, hpre => by
+  | .and x y, a, a', z, g, hb, h, hpre => by
       simp only [ensExpr] at hb
       split at hb
       · rename_i xe a1 hx
@@ -801,7 +801,7 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
               rfl
         · cases hb
       · cases hb
-  | .oder x y, a, a', z, g, hb, h, hpre => by
+  | .or x y, a, a', z, g, hb, h, hpre => by
       simp only [ensExpr] at hb
       split at hb
       · rename_i xe a1 hx
@@ -824,7 +824,7 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
               rfl
         · cases hb
       · cases hb
-  | .nicht x, a, a', z, g, hb, h, hpre => by
+  | .not x, a, a', z, g, hb, h, hpre => by
       simp only [ensExpr] at hb
       split at hb
       · rename_i xe a1 hx
@@ -921,10 +921,10 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr} {g : Expr (declOf u) Γ Λ .bool},
       ensExpr u fn a e = some (x, a') → lowEns u Γ Λ fn er e = .ok g → Zuwachs s₀ er a a'
-  | .wahr, a, a', x, g, hb, h => by
+  | .tru, a, a', x, g, hb, h => by
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
-  | .falsch, a, a', x, g, hb, h => by
+  | .fls, a, a', x, g, hb, h => by
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
   | .cmp op l r, a, a', x, g, hb, h => by
@@ -947,7 +947,7 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
                 (ensSide_zuwachs hs2 hr hA hT σ₀ σ ρ s₀ hW₀ hL₀)
         · cases hb
       · cases hb
-  | .und x y, a, a', z, g, hb, h => by
+  | .and x y, a, a', z, g, hb, h => by
       simp only [ensExpr] at hb
       split at hb
       · rename_i xe a1 hx
@@ -967,7 +967,7 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
                 (ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ y hy hgy)
         · cases hb
       · cases hb
-  | .oder x y, a, a', z, g, hb, h => by
+  | .or x y, a, a', z, g, hb, h => by
       simp only [ensExpr] at hb
       split at hb
       · rename_i xe a1 hx
@@ -987,7 +987,7 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
                 (ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ y hy hgy)
         · cases hb
       · cases hb
-  | .nicht x, a, a', z, g, hb, h => by
+  | .not x, a, a', z, g, hb, h => by
       simp only [ensExpr] at hb
       split at hb
       · rename_i xe a1 hx

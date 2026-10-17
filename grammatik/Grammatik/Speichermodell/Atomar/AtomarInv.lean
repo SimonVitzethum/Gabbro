@@ -199,7 +199,7 @@ theorem popSA_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS :
     (hinv : ∀ i ∈ D.invs, schuldet G.f i = true → (P.invariante i).orte ⊆ stabilS P S lok G.f Λ)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
       (U : Umwelt D) (A : AUmwelt D) (σ : World D),
-      (semHA S O' U A passes R r σ ρ).gleich (.grund σ rg)) :
+      (semHA S O' U A passes R r σ ρ).gleich (.why σ rg)) :
     InvAmRueck P G.f W := by
   obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, _⟩, hg, _,
     heq⟩ := hG
@@ -244,7 +244,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     (hs : RufSchrittG P O passes M u M') :
     ∀ ev ∈ (M'.faeden u).log, ev ∈ (M.faeden u).log ∨
       ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
-        ev = RufEreignisF.grund g rho r s0 s1 → InvAmRueck P g s1 := by
+        ev = RufEreignisF.why g rho r s0 s1 → InvAmRueck P g s1 := by
   cases hs with
   | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg
       rho hrho s0 hs0 rg hrg hn =>
@@ -252,7 +252,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     simp only [rufUpdateG_self] at hev
     rcases List.mem_cons.mp hev with rfl | hev
     · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.grund.injEq] at h
+      simp only [RufEreignisF.why.injEq] at h
       obtain ⟨rfl, -, -, -, rfl⟩ := h
       subst hfg
       exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
@@ -265,7 +265,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     simp only [rufUpdateG_self] at hev
     rcases List.mem_cons.mp hev with rfl | hev
     · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.grund.injEq] at h
+      simp only [RufEreignisF.why.injEq] at h
       obtain ⟨rfl, -, -, -, rfl⟩ := h
       subst hfg
       exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
@@ -278,7 +278,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     simp only [rufUpdateG_self] at hev
     rcases List.mem_cons.mp hev with rfl | hev
     · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.grund.injEq] at h
+      simp only [RufEreignisF.why.injEq] at h
       obtain ⟨rfl, -, -, -, rfl⟩ := h
       subst hfg
       exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r

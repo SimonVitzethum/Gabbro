@@ -125,19 +125,19 @@ abbrev gL_nimm : List (Res gD) := []
 
 
 def gBody_baue : Endblock gD (vertragVon gD g_baue) false gCtx_baue gL_baue :=
-  (.cons (.ite (.var .hier) (.cons (.ret (.wert ((.fall [none, some (0, 100), some (0, 18446744073709551615)] ⟨1, by decide⟩ (.zahl (.var (.dort .hier)))) : Expr gD gCtx_baue gL_baue (.sum [none, some (0, 100), some (0, 18446744073709551615)]))) (List.Perm.refl _)) .nil) .nil) (.ret (.wert ((.fall [none, some (0, 100), some (0, 18446744073709551615)] ⟨0, by decide⟩ .keine) : Expr gD gCtx_baue gL_baue (.sum [none, some (0, 100), some (0, 18446744073709551615)]))) (List.Perm.refl _)))
+  (.cons (.ite (.var .here) (.cons (.ret (.val ((.case [none, some (0, 100), some (0, 18446744073709551615)] ⟨1, by decide⟩ (.num (.var (.there .here)))) : Expr gD gCtx_baue gL_baue (.sum [none, some (0, 100), some (0, 18446744073709551615)]))) (List.Perm.refl _)) .nil) .nil) (.ret (.val ((.case [none, some (0, 100), some (0, 18446744073709551615)] ⟨0, by decide⟩ .empty) : Expr gD gCtx_baue gL_baue (.sum [none, some (0, 100), some (0, 18446744073709551615)]))) (List.Perm.refl _)))
 
 def gBody_nimm : Endblock gD (vertragVon gD g_nimm) false gCtx_nimm gL_nimm :=
-  (.cons (.onTag (.var .hier) (.cons (.cons (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_nimm gL_nimm (.int 0 0))) : Expr gD gCtx_nimm gL_nimm (.int 0 100))) (List.Perm.refl _)) .nil) (.cons (.cons (.ret (.wert (.var .hier)) (List.Perm.refl _)) .nil) (.cons (.cons (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 0)) : Expr gD ((.int 0 18446744073709551615) :: gCtx_nimm) gL_nimm (.int 0 0))) : Expr gD ((.int 0 18446744073709551615) :: gCtx_nimm) gL_nimm (.int 0 100))) (List.Perm.refl _)) .nil) .nil)))) (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_nimm gL_nimm (.int 0 0))) : Expr gD gCtx_nimm gL_nimm (.int 0 100))) (List.Perm.refl _)))
+  (.cons (.onTag (.var .here) (.cons (.cons (.ret (.val ((.widen (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_nimm gL_nimm (.int 0 0))) : Expr gD gCtx_nimm gL_nimm (.int 0 100))) (List.Perm.refl _)) .nil) (.cons (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) (.cons (.cons (.ret (.val ((.widen (by decide) (by decide) (((.lit 0)) : Expr gD ((.int 0 18446744073709551615) :: gCtx_nimm) gL_nimm (.int 0 0))) : Expr gD ((.int 0 18446744073709551615) :: gCtx_nimm) gL_nimm (.int 0 100))) (List.Perm.refl _)) .nil) .nil)))) (.ret (.val ((.widen (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_nimm gL_nimm (.int 0 0))) : Expr gD gCtx_nimm gL_nimm (.int 0 100))) (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .baue => .wahr
-    | .nimm => .wahr
+    | .baue => .tru
+    | .nimm => .tru
   ensures
-    | .baue => .wahr
-    | .nimm => .wahr
+    | .baue => .tru
+    | .nimm => .tru
   rumpf
     | .baue => gBody_baue
     | .nimm => gBody_nimm

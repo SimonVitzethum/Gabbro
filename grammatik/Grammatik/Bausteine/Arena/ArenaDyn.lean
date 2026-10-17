@@ -345,7 +345,7 @@ def dynGrowB (A : DynForm D) (n : Int)
     (rest : Block D V l (Ty.int 0 (D.count A.tab) :: Γ) Λ Λ') :
     Block D V l Γ Λ Λ' :=
   .narrow (dynSumme A n hLK) 0 (D.count A.tab) voll
-    (.cons (.assignGlob A.komm (Expr.umTyp A.hk.symm (Expr.var .hier)) hwK hLK) rest)
+    (.cons (.assignGlob A.komm (Expr.umTyp A.hk.symm (Expr.var .here)) hwK hLK) rest)
 
 /-- The guard of a dynamic allocation: `used < committed`. This is the
     R-commit test, and it is the ONE thing a dynamic `alloc` does that the
@@ -367,7 +367,7 @@ def dynAlloc (A : DynForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
     (voll : Endblock D V l Γ Λ)
     (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') :
     Block D V l Γ Λ Λ' :=
-  .pruefung (dynUnterKomm A hLG hLK) voll
+  .check (dynUnterKomm A hLG hLK) voll
     (Block.arenaAlloc A.toArenaForm v hwT hLT hwG hLG voll rest)
 
 end Block
@@ -666,7 +666,7 @@ theorem zeuge_stand_an_der_verpflichtung : Halde.komSt gespannt ≤ Halde.stand 
 
 /-- The value an `alloc` stores in the witness. -/
 def sieben : Expr DD [] [] (DD.typ Halde.tab Halde.feld) :=
-  Expr.weiter (by decide) (by decide) (Expr.lit 7)
+  Expr.widen (by decide) (by decide) (Expr.lit 7)
 
 /-- **`grow Halde by 2`, run:** the committed word moves from 2 to the
     ceiling 4, the used counter does not move, and no slot does. A real

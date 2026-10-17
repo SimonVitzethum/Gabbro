@@ -249,12 +249,12 @@ theorem gvInitWert_int_none {F : Type} {sig : F → Nat} (lo hi n : Int)
 /-! ## The bridge: `StartPflicht` from lowering plus zero memory -/
 
 /-- **The parser's lowering writes no `requires`** (`gv_lowerAllg_requires`):
-    `progOfFn` sets `requires := fun _ => .wahr` for every accepted program --
+    `progOfFn` sets `requires := fun _ => .tru` for every accepted program --
     mirror of the accepted `bruecke` S4 lemma over the same definition (no
     interpreter duplicated). -/
 theorem gv_lowerAllg_requires (u : UProg) (P : Programm (declOf u))
     (fs : List (declOf u).Fn) (h : lowerAllg u = .ok (P, fs)) :
-    ∀ f, P.requires f = .wahr := by
+    ∀ f, P.requires f = .tru := by
   unfold lowerAllg at h
   split at h
   · cases h

@@ -71,7 +71,7 @@ def Stmt.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ite _ t e => t.hardwareFrei && e.hardwareFrei
   | .onOption _ p a => p.hardwareFrei && a.hardwareFrei
   | .onTag _ arms => arms.hardwareFrei
-  | .onGrund _ arms => arms.hardwareFrei
+  | .onWhy _ arms => arms.hardwareFrei
   | .locks _ _ body => body.hardwareFrei
   | .breaking _ body => body.hardwareFrei
   | .traverse _ _ body => body.hardwareFrei
@@ -92,21 +92,21 @@ def Block.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.hardwareFrei && rest.hardwareFrei
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
-  | .regLies .. => false
-  | .regLiesElse .. => false
+  | .regRead .. => false
+  | .regReadElse .. => false
   | .awaits .. => false
   | .exchange _ _ _ _ rest => rest.hardwareFrei
   | .narrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
-  | .pruefung _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
-  | .gleit _ _ _ _ _ rest => rest.hardwareFrei
-  | .gleitLit _ _ _ rest => rest.hardwareFrei
-  | .gleitVon _ _ _ rest => rest.hardwareFrei
-  | .gleitNarrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
+  | .check _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
+  | .float _ _ _ _ _ rest => rest.hardwareFrei
+  | .floatLit _ _ _ rest => rest.hardwareFrei
+  | .floatOf _ _ _ rest => rest.hardwareFrei
+  | .floatNarrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
 
 def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.hardwareFrei && rest.hardwareFrei
@@ -237,7 +237,7 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
       simp only [Stmt.hardwareFrei] at h
       simp only [execStmt] at he
       exact Arms.hardwareFrei_ok hR arms h _ _ _ _ he
-  | .onGrund r arms, h, σ, ρ, e', he => by
+  | .onWhy r arms, h, σ, ρ, e', he => by
       simp only [Stmt.hardwareFrei] at h
       simp only [execStmt] at he
       exact GrundArms.hardwareFrei_ok hR arms h _ _ _ _ he
@@ -283,21 +283,21 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
         exact hR _ _ _ _ heq
   | .forever .., h, _, _, _, _ => by simp [Stmt.hardwareFrei] at h
   | .axiomCall .., h, _, _, _, _ => by simp [Stmt.hardwareFrei] at h
-  | .uebergang .., _, _, _, _, he => by
+  | .shift .., _, _, _, _, he => by
       simp only [execStmt] at he
       split at he <;> cases he
   | .assignSlot .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignDurch .., _, _, _, _, he => by simp [execStmt] at he
+  | .assignThru .., _, _, _, _, he => by simp [execStmt] at he
   | .assignGlob .., _, _, _, _, he => by simp [execStmt] at he
-  | .schreibBytes .., _, _, _, _, he => by simp [execStmt] at he
+  | .putBytes .., _, _, _, _, he => by simp [execStmt] at he
   | .assignVar .., _, _, _, _, he => by simp [execStmt] at he
-  | .regSchreib .., _, _, _, _, he => by simp [execStmt] at he
+  | .regWrite .., _, _, _, _, he => by simp [execStmt] at he
   | .transition .., _, _, _, _, he => by simp [execStmt] at he
   | .publish .., _, _, _, _, he => by simp [execStmt] at he
   | .advances .., _, _, _, _, he => by simp [execStmt] at he
   | .retires .., _, _, _, _, he => by simp [execStmt] at he
   | .ret .., _, _, _, _, he => by simp [execStmt] at he
-  | .retGrund .., _, _, _, _, he => by simp [execStmt] at he
+  | .retWhy .., _, _, _, _, he => by simp [execStmt] at he
   | .leave .., _, _, _, _, he => by simp [execStmt] at he
   | .next .., _, _, _, _, he => by simp [execStmt] at he
 
@@ -352,8 +352,8 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
         exact hR _ _ _ _ heq
   | .bindAxiom .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
   | .bindAxiomElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
-  | .regLies .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
-  | .regLiesElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
+  | .regRead .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
+  | .regReadElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
   | .awaits .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
   | .exchange g neu hw hL rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei] at h
@@ -365,31 +365,31 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
       split at he
       · exact Block.hardwareFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_hardware he)
       · exact Endblock.hardwareFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_hardware he)
-  | .pruefung c sonst rest, h, σ, ρ, e, he => by
+  | .check c sonst rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
       · exact Block.hardwareFrei_ok hR rest h.2 _ _ _ he
       · exact Endblock.hardwareFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_hardware he)
-  | .gleit op a b lo hi rest, h, σ, ρ, e, he => by
+  | .float op a b lo hi rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei] at h
       simp only [execBlock] at he
       split at he
       · exact Block.hardwareFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_hardware he)
       · cases he
-  | .gleitLit q lo hi rest, h, σ, ρ, e, he => by
+  | .floatLit q lo hi rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei] at h
       simp only [execBlock] at he
       split at he
       · exact Block.hardwareFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_hardware he)
       · cases he
-  | .gleitVon x lo hi rest, h, σ, ρ, e, he => by
+  | .floatOf x lo hi rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei] at h
       simp only [execBlock] at he
       split at he
       · exact Block.hardwareFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_hardware he)
       · cases he
-  | .gleitNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
+  | .floatNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
@@ -400,7 +400,7 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
     (b : Endblock D V l Γ Λ) → b.hardwareFrei = true →
       ∀ (σ : World D) (ρ : Env D Γ) (e : Hardware D), execEnd O passes R b σ ρ ≠ .hardware e
   | .ret .., _, _, _, _, he => by simp [execEnd] at he
-  | .retGrund .., _, _, _, _, he => by simp [execEnd] at he
+  | .retWhy .., _, _, _, _, he => by simp [execEnd] at he
   | .leave .., _, _, _, _, he => by simp [execEnd] at he
   | .next .., _, _, _, _, he => by simp [execEnd] at he
   | .cons s rest, h, σ, ρ, e, he => by

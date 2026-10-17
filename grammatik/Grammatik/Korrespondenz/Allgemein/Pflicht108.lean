@@ -58,13 +58,13 @@ theorem p108_fn_zwei (f : G108_disjoint_start_locks_oblig.gD.Fn) :
 
 /-- Both `requires` are `true` (neither reader constrains its caller). -/
 theorem p108_req (w : G108_disjoint_start_locks_oblig.gD.Fn) :
-    G108_disjoint_start_locks_oblig.gP.requires w = .wahr := by
+    G108_disjoint_start_locks_oblig.gP.requires w = .tru := by
   cases w <;> rfl
 
 /-- Both `ensures` are `true` (neither reader promises a value relation;
     108 exists for the CONCURRENCY legs, not for the contract leg). -/
 theorem p108_ens (f : G108_disjoint_start_locks_oblig.gD.Fn) :
-    G108_disjoint_start_locks_oblig.gP.ensures f = .wahr := by
+    G108_disjoint_start_locks_oblig.gP.ensures f = .tru := by
   cases f <;> rfl
 
 /-- **Both bodies meet their obligation**: a single `return <slot>` -- the

@@ -49,26 +49,26 @@ theorem ruS_fNach (Φ : Folge D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .advances .. => fNach_nachΛ _ _ _ _
   | .retires .. => fNach_nachΛ _ _ _ _
   | .assignSlot .. => rfl
-  | .assignDurch .. => rfl
+  | .assignThru .. => rfl
   | .assignGlob .. => rfl
-  | .schreibBytes .. => rfl
+  | .putBytes .. => rfl
   | .assignVar .. => rfl
-  | .uebergang .. => rfl
+  | .shift .. => rfl
   | .ite .. => rfl
   | .onOption .. => rfl
   | .onTag .. => rfl
-  | .onGrund .. => rfl
+  | .onWhy .. => rfl
   | .locks .. => rfl
   | .breaking .. => rfl
   | .traverse .. => rfl
   | .retry .. => rfl
   | .forever .. => rfl
   | .axiomCall .. => rfl
-  | .regSchreib .. => rfl
+  | .regWrite .. => rfl
   | .transition .. => rfl
   | .publish .. => rfl
   | .ret .. => rfl
-  | .retGrund .. => rfl
+  | .retWhy .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
 
@@ -77,17 +77,17 @@ mutual
 theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (e w : Bool) (s : Stmt D V l Γ Λ Λ'), fS Φ.mitRuhe e w (ruS s) = fS Φ e w s
   | _, _, _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, _, _, .assignDurch .. => rfl
+  | _, _, _, _, _, _, .assignThru .. => rfl
   | _, _, _, _, _, _, .assignGlob .. => rfl
-  | _, _, _, _, _, _, .schreibBytes .. => rfl
+  | _, _, _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, _, _, .assignVar .. => rfl
-  | _, _, _, _, _, _, .uebergang .. => rfl
+  | _, _, _, _, _, _, .shift .. => rfl
   | _, _, _, _, e, _, .ite _ t f =>
       kongr₂ (· && ·) (ruB_fB Φ e false t) (ruB_fB Φ e false f)
   | _, _, _, _, e, _, .onOption _ p a =>
       kongr₂ (· && ·) (ruB_fB Φ e false p) (ruB_fB Φ e false a)
   | _, _, _, _, e, _, .onTag _ arms => ruArms_fArms Φ e arms
-  | _, _, _, _, e, _, .onGrund _ arms => ruGArms_fGArms Φ e arms
+  | _, _, _, _, e, _, .onWhy _ arms => ruGArms_fGArms Φ e arms
   | _, _, _, _, _, _, .call .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, _, _, .callInd .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, e, _, .locks _ _ body => ruB_fB Φ e false body
@@ -97,13 +97,13 @@ theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
       kongr₂ (· && ·) (ruB_fB Φ e false body) (ruB_fB Φ e false ueber)
   | _, _, _, _, e, _, .forever _ _ body => ruB_fB Φ e false body
   | _, _, _, _, _, _, .axiomCall .. => rfl
-  | _, _, _, _, _, _, .regSchreib .. => rfl
+  | _, _, _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, _, _, .transition .. => rfl
   | _, _, _, _, _, _, .publish .. => rfl
   | _, _, _, _, _, _, .advances .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, _, _, .retires .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, _, _, .ret .. => rfl
-  | _, _, _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, _, _, .leave _ => rfl
   | _, _, _, _, _, _, .next _ => rfl
 
@@ -129,25 +129,25 @@ theorem ruB_fB (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
   | _, _, _, _, e, w, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       show (fE Φ.mitRuhe e false (ruEnd err) && fB Φ.mitRuhe e w (ruB rest)) = _
       rw [ruEnd_fE Φ e _ err, ruB_fB Φ e _ rest]; rfl
-  | _, _, _, _, e, w, .regLies _ _ rest => ruB_fB Φ e w rest
-  | _, _, _, _, e, w, .regLiesElse _ _ _ sonst rest =>
+  | _, _, _, _, e, w, .regRead _ _ rest => ruB_fB Φ e w rest
+  | _, _, _, _, e, w, .regReadElse _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
   | _, _, _, _, e, w, .awaits _ _ _ _ rest => ruB_fB Φ e w rest
   | _, _, _, _, e, w, .exchange _ _ _ _ rest => ruB_fB Φ e w rest
   | _, _, _, _, e, w, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
-  | _, _, _, _, e, w, .pruefung _ sonst rest =>
+  | _, _, _, _, e, w, .check _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
-  | _, _, _, _, e, w, .gleit _ _ _ _ _ rest => ruB_fB Φ e w rest
-  | _, _, _, _, e, w, .gleitLit _ _ _ rest => ruB_fB Φ e w rest
-  | _, _, _, _, e, w, .gleitVon _ _ _ rest => ruB_fB Φ e w rest
-  | _, _, _, _, e, w, .gleitNarrow _ _ _ sonst rest =>
+  | _, _, _, _, e, w, .float _ _ _ _ _ rest => ruB_fB Φ e w rest
+  | _, _, _, _, e, w, .floatLit _ _ _ rest => ruB_fB Φ e w rest
+  | _, _, _, _, e, w, .floatOf _ _ _ rest => ruB_fB Φ e w rest
+  | _, _, _, _, e, w, .floatNarrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
 
 theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e w : Bool) (b : Endblock D V l Γ Λ), fE Φ.mitRuhe e w (ruEnd b) = fE Φ e w b
   | _, _, _, _, _, .ret .. => rfl
-  | _, _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, _, .leave _ => rfl
   | _, _, _, _, _, .next _ => rfl
   | _, _, _, e, w, .cons s rest => by

@@ -33,7 +33,7 @@
   (i)'s (`stmtCorr_G0`).
 
   THE ENCODING OF A REASON (a FINDING about the model's encoding): the
-  model encodes reason `r : Fin n` as its index (`encW (.grund n) r = r`,
+  model encodes reason `r : Fin n` as its index (`encW (.why n) r = r`,
   CSpeicher.lean), the emitter as the DECLARED ordinal of the enum
   constant (`Buchfehler_Unbelegt = 1`, `beispiele/48`). This file keeps
   the channel generic in the constant (`Kanal.code`); where a reason
@@ -328,7 +328,7 @@ theorem OutAgree.weiter {S : List Nat} {o1 o2 : COut} (h : OutAgree S o1 o2) (m 
       obtain ⟨rfl, rfl, ha⟩ := h
       cases l1 with
       | ende m' => simp [COut.weiter] at hw
-      | weiter m' =>
+      | widen m' =>
           simp only [COut.weiter] at hw ⊢
           split at hw
           · rename_i hm
@@ -375,7 +375,7 @@ theorem OutAgree.raus {S : List Nat} {o1 o2 : COut} (h : OutAgree S o1 o2) (m : 
             rw [if_neg hm]
             refine ⟨_, rfl, ?_⟩
             exact ⟨rfl, rfl, ha⟩
-      | weiter m' =>
+      | widen m' =>
           simp only [COut.raus] at hx ⊢
           split at hx
           · exact absurd hx (by simp)
@@ -920,11 +920,11 @@ def StOutG (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CEnvLay D Γ) {V :
     {l : Bool} : Ausgang V l Γ → COut → Prop
   | .ok σ' ρG', o => ∃ st' ρC', o = .norm st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
   | .zurueck σ' v, o => ZurG X G σ' v o
-  | .grund σ' r, o => GruG X G σ' r o
+  | .why σ' r, o => GruG X G σ' r o
   | .leave _ σ' ρG', o =>
       ∃ st' ρC', o = .jump (.ende m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
   | .next _ σ' ρG', o =>
-      ∃ st' ρC', o = .jump (.weiter m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
+      ∃ st' ρC', o = .jump (.widen m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
   | .logik _, _ => False
   | .hardware _, _ => False
 
@@ -950,11 +950,11 @@ def EndOutG (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {Γ : Ctx} (K : CEnv
     {V : Vertrag D} {l : Bool} : EndAusgang V l Γ → COut → Prop
   | .zurueck σ' v, o => ZurG X G σ' v o ∨
       (top = true ∧ G.kan = none ∧ V.erg = none ∧ ∃ st' ρC', o = .norm st' ρC' ∧ corrW X.EL σ' st')
-  | .grund σ' r, o => GruG X G σ' r o
+  | .why σ' r, o => GruG X G σ' r o
   | .leave _ σ' ρG', o =>
       ∃ st' ρC', o = .jump (.ende m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
   | .next _ σ' ρG', o =>
-      ∃ st' ρC', o = .jump (.weiter m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
+      ∃ st' ρC', o = .jump (.widen m) st' ρC' ∧ corrW X.EL σ' st' ∧ EnvRelG X G K ρG' ρC' st'
   | .logik _, _ => False
   | .hardware _, _ => False
 
@@ -977,7 +977,7 @@ theorem stOutG0 (X : TVCtx D) (m : Nat) {Γ : Ctx} (K : CEnvLay D Γ) {V : Vertr
   | ok σ ρ =>
       simp only [StOutG, StOut, envRelG0]
   | zurueck σ v => exact Iff.rfl
-  | grund σ r => exact Iff.rfl
+  | why σ r => exact Iff.rfl
   | leave h σ ρ => simp only [StOutG, StOut, envRelG0]
   | next h σ ρ => simp only [StOutG, StOut, envRelG0]
   | logik e => exact Iff.rfl
@@ -1018,7 +1018,7 @@ theorem endOutG0 (X : TVCtx D) (m : Nat) (top : Bool) {Γ : Ctx} (K : CEnvLay D 
       · rintro ⟨st', hc, ⟨cv, ho, hr⟩ | ⟨ht, hV, ρ', ho⟩⟩
         · exact Or.inl ⟨st', cv, ho, hc, hr⟩
         · exact Or.inr ⟨ht, hV, st', ρ', ho, hc⟩
-  | grund σ r => exact Iff.rfl
+  | why σ r => exact Iff.rfl
   | leave h σ ρ => simp only [EndOutG, EndOut, envRelG0]
   | next h σ ρ => simp only [EndOutG, EndOut, envRelG0]
   | logik e => exact Iff.rfl
@@ -1269,7 +1269,7 @@ theorem liftG {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} {cs : CS} (h : 
               rw [ha] at this
               exact absurd this (by simp [Ausgang.istRueck])
       | _ => exact hA.elim
-  | grund σ' r => rw [ha] at hO; exact hO.elim
+  | why σ' r => rw [ha] at hO; exact hO.elim
   | leave hl σ' ρG' =>
       rw [ha] at hO
       obtain ⟨st', ρ', ho, hc', hr'⟩ := hO
@@ -1506,7 +1506,7 @@ theorem liftG_zs {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} {cs : CS} (h
               rw [ha] at this
               exact absurd this (by simp [Ausgang.istRueck])
       | _ => exact hA.elim
-  | grund σ' r => rw [ha] at hO; exact hO.elim
+  | why σ' r => rw [ha] at hO; exact hO.elim
   | leave hl σ' ρG' =>
       rw [ha] at hO
       obtain ⟨st', ρ', ho, hc', hr'⟩ := hO
@@ -1664,8 +1664,8 @@ variable (X : TVCtx D) (m : Nat) (G : GCtx) {V : Vertrag D} {l : Bool}
     expression that fits `*_wert`'s type. -/
 def ErgCorrK {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) (τw : CTy) :
     {e : Option Ty} → ErgExpr D Γ Λ e → Option CX → Prop
-  | _, .keine, cr => cr = none
-  | some τ, .wert e, cr => ∃ ce, cr = some ce ∧ ExprCorr X K ce e ∧ declOk τ τw = true
+  | _, .empty, cr => cr = none
+  | some τ, .val e, cr => ∃ ce, cr = some ce ∧ ExprCorr X K ce e ∧ declOk τ τw = true
 
 /-- A channel `return`, run. -/
 theorem retK_run {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) (κ : Kanal)
@@ -1680,11 +1680,11 @@ theorem retK_run {Γ : Ctx} {Λ : List (Res D)} (K : CEnvLay D Γ) (κ : Kanal)
   generalize V.erg = eg at r
   intro h
   cases r with
-  | keine =>
+  | empty =>
       have hcr : cr = none := h
       subst hcr
       exact ⟨st, Exec.retS rfl rfl, hc, trivial⟩
-  | wert e =>
+  | val e =>
       obtain ⟨ce, hcr, he, hd⟩ := h
       subst hcr
       obtain ⟨v, st1, h1, hv, hc1⟩ := he.run X K hc hr.1
@@ -1704,7 +1704,7 @@ variable {Γ : Ctx} (K : CEnvLay D Γ)
 theorem kcorr_retGrund {Λ : List (Res D)} (κ : Kanal) (hkan : G.kan = some κ)
     (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) (hfit : valFits κ.τg (.int (κ.code r)) = true)
     {f x : Nat} (hstk : κ.gp.blk = .stk f x) :
-    StmtCorrG X m G K (Stmt.retGrund (l := l) (Γ := Γ) r hΛ) (retGrundCS κ r) := by
+    StmtCorrG X m G K (Stmt.retWhy (l := l) (Γ := Γ) r hΛ) (retGrundCS κ r) := by
   intro σ st ρG ρC hc hr _
   have hk : KanalIn X.EL.lay κ st ρC := by have := hr.2.1; rw [hkan] at this; exact this
   obtain ⟨st', hx, hc', hm⟩ := retGrund_run κ r hk hfit hstk hc
@@ -1814,7 +1814,7 @@ theorem stOutG_schrumpf (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} {K : CEnvL
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       exact ⟨st', ρC', ho, hc, envRelG_pop hr⟩
   | zurueck σ v => exact h
-  | grund σ r => exact h
+  | why σ r => exact h
   | leave hl σ ρ =>
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       exact ⟨st', ρC', ho, hc, envRelG_pop hr⟩
@@ -1886,7 +1886,7 @@ theorem cCorrG_block (X : TVCtx D) (m : Nat) (G : GCtx) {V : Vertrag D} {l : Boo
           obtain ⟨o1, h1, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact ⟨o1, Exec.seqX h1 (zurG_abrupt hO), hO⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, h1, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact ⟨o1, Exec.seqX h1 (gruG_abrupt hO), hO⟩
@@ -1939,7 +1939,7 @@ theorem endOutG_schrumpf (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {Γ : C
     (o : COut) (h : EndOutG X m top G (K.push τ x) a o) : EndOutG X m top G K a.schrumpf o := by
   cases a with
   | zurueck σ v => exact h
-  | grund σ r => exact h
+  | why σ r => exact h
   | leave hl σ ρ =>
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       exact ⟨st', ρC', ho, hc, envRelG_pop hr⟩
@@ -1966,14 +1966,14 @@ inductive EndCorrG (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {V : Vertrag 
       (h : ErgCorrK X K κ.τw r cr) {f x : Nat} (hstk : κ.wp.blk = .stk f x) :
       EndCorrG X m top G K (.ret r hΛ) (retKCS κ G.gs cr)
   /-- K1 as a terminal block: `*_grund = F; return false;`. -/
-  | retGrund {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} (κ : Kanal) (hkan : G.kan = some κ)
+  | retWhy {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} (κ : Kanal) (hkan : G.kan = some κ)
       (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) (hfit : valFits κ.τg (.int (κ.code r)) = true)
       {f x : Nat} (hstk : κ.gp.blk = .stk f x) :
-      EndCorrG X m top G K (.retGrund r hΛ) (retGrundCS κ r)
+      EndCorrG X m top G K (.retWhy r hΛ) (retGrundCS κ r)
   | leave {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} (hl : l = true) :
       EndCorrG X m top G K (Endblock.leave (Λ := Λ) hl) (.goto (.ende m))
   | next {Γ : Ctx} {Λ : List (Res D)} {K : CEnvLay D Γ} (hl : l = true) :
-      EndCorrG X m top G K (Endblock.next (Λ := Λ) hl) (.goto (.weiter m))
+      EndCorrG X m top G K (Endblock.next (Λ := Λ) hl) (.goto (.widen m))
   | cons {Γ : Ctx} {Λ Λ' : List (Res D)} {K : CEnvLay D Γ} {s : Stmt D V l Γ Λ Λ'}
       {rest : Endblock D V l Γ Λ'} {cs cr : CS} (hs : StmtCorrG X m G K s cs)
       (hr : EndCorrG X m top G K rest cr) : EndCorrG X m top G K (.cons s rest) (.seq cs cr)
@@ -2024,7 +2024,7 @@ theorem cCorrG_end (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {V : Vertrag 
       refine ⟨_, hx, Or.inl ?_⟩
       simp only [ZurG, hkan]
       exact ⟨st', rfl, hc', hw⟩
-  | @retGrund Γ Λ K κ hkan r hΛ hfit f x hstk =>
+  | @retWhy Γ Λ K κ hkan r hΛ hfit f x hstk =>
       intro σ st ρG ρC hc hr _
       have hk : KanalIn X.EL.lay κ st ρC := by have := hr.2.1; rw [hkan] at this; exact this
       obtain ⟨st', hx, hc', hm⟩ := retGrund_run κ r hk hfit hstk hc
@@ -2044,7 +2044,7 @@ theorem cCorrG_end (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {V : Vertrag 
           match execStmt X.O X.passes X.R s σ ρG with
           | .ok σ' ρ' => execEnd X.O X.passes X.R rest σ' ρ'
           | .zurueck σ' v => .zurueck σ' v
-          | .grund σ' r => .grund σ' r
+          | .why σ' r => .why σ' r
           | .leave h σ' ρ' => .leave h σ' ρ'
           | .next h σ' ρ' => .next h σ' ρ'
           | .logik e => .logik e
@@ -2063,7 +2063,7 @@ theorem cCorrG_end (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {V : Vertrag 
           obtain ⟨o1, h1, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact ⟨o1, Exec.seqX h1 (zurG_abrupt hO), Or.inl hO⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, h1, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact ⟨o1, Exec.seqX h1 (gruG_abrupt hO), hO⟩
@@ -2112,7 +2112,7 @@ theorem cCorrG_end (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {V : Vertrag 
           match execStmt X.O X.passes X.R s σ ρG with
           | .ok σ' ρ' => execEnd X.O X.passes X.R rest σ' ρ'
           | .zurueck σ' v => .zurueck σ' v
-          | .grund σ' r => .grund σ' r
+          | .why σ' r => .why σ' r
           | .leave h σ' ρ' => .leave h σ' ρ'
           | .next h σ' ρ' => .next h σ' ρ'
           | .logik e => .logik e
@@ -2125,7 +2125,7 @@ theorem cCorrG_end (X : TVCtx D) (m : Nat) (top : Bool) (G : GCtx) {V : Vertrag 
           obtain ⟨o1, h1, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact ⟨o1, h1, Or.inl hO⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, h1, hO⟩ := hs σ st ρG ρC hc hr (by rw [hs']; rfl)
           rw [hs'] at hO
           exact ⟨o1, h1, hO⟩
@@ -2194,7 +2194,7 @@ theorem gcorr_locks {Λ : List (Res D)} (L : D.Lock) (hr : ∀ M, Res.held M ∈
         exact ⟨st2, cv, ho, (hc2 : corrW X.EL (σ'.gibt L) st2), hrc⟩
       · obtain ⟨st2, ho, hc2, hw⟩ := hO
         exact ⟨st2, ho, (hc2 : corrW X.EL (σ'.gibt L) st2), hw⟩
-  | grund σ' r =>
+  | why σ' r =>
       rw [hB] at hO
       refine ⟨o, Exec.seqN h1 (Exec.seqX h2 (gruG_abrupt hO)), ?_⟩
       have hO : GruG X G σ' r o := hO
@@ -2249,7 +2249,7 @@ theorem wertInP_ergWert {EL : EmitLay D} {wp : CPtr} {τ : Ty} :
 def RufOutK (EL : EmitLay D) (wp gp : CPtr) (code : Nat → Int) {f : D.Fn} :
     RufAusgang f → CSt → Option CVal → Prop
   | .ok σ' v, st', rv => corrW EL σ' st' ∧ rv = some (.int 1) ∧ WertInP EL wp (D.erg f) v st'
-  | .grund σ' r, st', rv => corrW EL σ' st' ∧ rv = some (.int 0) ∧
+  | .why σ' r, st', rv => corrW EL σ' st' ∧ rv = some (.int 0) ∧
       st'.mem gp.blk gp.off.toNat = .int (code r)
   | _, _, _ => False
 
@@ -2354,7 +2354,7 @@ theorem cCorr_rufK (EL : EmitLay D) (orc : DevOrc) (XR : CCallR) (P : Programm D
             refine ⟨_, some (.int 1), ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inl ho, rfl⟩, hc3, rfl, ?_⟩
             exact wertIn_wertInP (st := st1) (st' := leaveFrame st1 (n + 1)) v rfl hwi
       · exact absurd hkan (by simp)
-  | grund σ' r =>
+  | why σ' r =>
       obtain ⟨o, hx, hO⟩ := hbody wp gp hsw hsg _ _ ρG ρ0 hc1 hrel (by rw [hE]; rfl)
       rw [hE] at hO
       obtain ⟨st1, ho, hc2, hm⟩ := hO
@@ -2425,7 +2425,7 @@ theorem cCorr_rufG (EL : EmitLay D) (orc : DevOrc) (XR : CCallR) (P : Programm D
           · exact ⟨_, cv, ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inl ho, rfl⟩, hc3, hrc⟩
           · exact ⟨_, none, ⟨F, ρ0, o, hPr, hb, hx, st1, Or.inr ⟨rfl, ρ1, ho⟩, rfl⟩, hc3,
               retCorr_none hV v⟩
-  | grund σ' r =>
+  | why σ' r =>
       obtain ⟨o, -, hO⟩ := hbody _ _ ρG ρ0 hc1 hrel (by rw [hE]; rfl)
       rw [hE] at hO
       exact hO.elim
@@ -2450,7 +2450,7 @@ theorem gcorr_seqTot (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CEnvLay 
   cases execStmt X.O X.passes X.R s σ ρG with
   | ok σ' ρ' => intro _ h; exact absurd h (by simp [Ausgang.istOk])
   | zurueck σ' v => intro hO _; exact zurG_abrupt hO
-  | grund σ' r => intro hO _; exact gruG_abrupt hO
+  | why σ' r => intro hO _; exact gruG_abrupt hO
   | leave hl σ' ρ' => intro hO _; obtain ⟨st', ρ'', ho, -⟩ := hO; subst ho; rfl
   | next hl σ' ρ' => intro hO _; obtain ⟨st', ρ'', ho, -⟩ := hO; subst ho; rfl
   | logik e => intro hO _; exact hO.elim
@@ -2547,7 +2547,7 @@ theorem endOutG_zu (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} {K : CEnvLay D 
       rcases h with hZ | ⟨hf, -⟩
       · exact ⟨hZ, zurG_abrupt hZ⟩
       · exact absurd hf (by decide)
-  | grund σ r => exact ⟨h, gruG_abrupt h⟩
+  | why σ r => exact ⟨h, gruG_abrupt h⟩
   | leave hl σ ρ =>
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       subst ho
@@ -2568,7 +2568,7 @@ theorem endOutG_zu (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} {K : CEnvLay D 
 theorem bsemG_bindCallElse (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CEnvLay D Γ)
     {V : Vertrag D} {l : Bool} {Λ Λ' : List (Res D)} {τ : Ty} (f : D.Fn)
     (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ) (hp : RufPasst D V (D.signatur f) Λ)
-    (hr0 : 0 < D.gruende f) (err : Endblock D V l (.grund (D.gruende f) :: Γ) (nach D f Λ))
+    (hr0 : 0 < D.gruende f) (err : Endblock D V l (.why (D.gruende f) :: Γ) (nach D f Λ))
     (rest : Block D V l (τ :: Γ) (nach D f Λ) Λ') {fc : Nat} {ps : List (Nat × CTy)}
     {Kf : CEnvLay D (D.params f)} {wxf gxf : Nat} {τw τg : CTy} {code : Nat → Int} {fcf : Nat}
     (hF : FnCorrK X.EL X.R X.CR f fc ps Kf wxf gxf τw τg code fcf) (hfr : X.fr ≠ fcf)
@@ -2581,7 +2581,7 @@ theorem bsemG_bindCallElse (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CE
     (htk : ∀ κ, G.kan = some κ → tmp ≠ κ.wx ∧ tmp ≠ κ.gx)
     (hkeep : CallKeeps X G fc nx ex)
     (hinj : ∀ g e τ', gsFind G.gs g = some (e, τ') → (e = nx → g = gN) ∧ (e = ex → g = gE))
-    (herr : EndSemG X m false G (K.push (.grund (D.gruende f)) gE) err cerr)
+    (herr : EndSemG X m false G (K.push (.why (D.gruende f)) gE) err cerr)
     (hrest : BlockSemG X m G (K.push τ gN) rest crest) :
     BlockSemG X m G K (Block.bindCallElse f args he hp hr0 err rest)
       (callElseCS fc cargs nx ex tmp cerr crest) := by
@@ -2589,7 +2589,7 @@ theorem bsemG_bindCallElse (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CE
   have hex : execBlock X.O X.passes X.R (Block.bindCallElse f args he hp hr0 err rest) σ ρG =
       match X.R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρG) with
       | .ok σ' v => (execBlock X.O X.passes X.R rest σ' (.cons (ergWert he v) ρG)).schrumpf
-      | .grund σ' r => (execEnd X.O X.passes X.R err σ' (.cons r ρG)).schrumpf.zuAusgang
+      | .why σ' r => (execEnd X.O X.passes X.R err σ' (.cons r ρG)).schrumpf.zuAusgang
       | .logik e => .logik e
       | .hardware e => .hardware e := rfl
   rw [hex] at hnf ⊢
@@ -2680,7 +2680,7 @@ theorem bsemG_bindCallElse (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CE
           (lokUpd ρC tmp (.int 1)) (.norm st2 (lokUpd ρC tmp (.int 1))) :=
         Exec.iteF (ev_lnot (ev_var (v := 1) (by simp [lokUpd])) rfl) rfl Exec.skip
       exact ⟨o, Exec.seqN hx1 (Exec.seqN hite hx2), stOutG_schrumpf X m G _ o hO⟩
-  | grund σ' r =>
+  | why σ' r =>
       obtain ⟨st2, rv, hcr, hro⟩ := hF _ st1 _ vs ρ0 _ _ hc1 hb hr0' hw0 hg0
         (accOk_zelle hBN hkN hcN hlN .wr (Or.inr rfl)) (accOk_zelle hBE hkE hcE hlE .wr (Or.inr rfl))
         hdN hdE hstkN hstkE (by rw [hR]; rfl)
@@ -2700,18 +2700,18 @@ theorem bsemG_bindCallElse (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} (K : CE
           show st2.mem (CPtr.blk ⟨.stk X.fr ex, 0⟩) (CPtr.off ⟨.stk X.fr ex, 0⟩).toNat ≠ _
           rw [hm]; simp)]
         exact hm
-      have hrel2 : EnvRelG X G (K.push (.grund (D.gruende f)) gE) (.cons r ρG)
+      have hrel2 : EnvRelG X G (K.push (.why (D.gruende f)) gE) (.cons r ρG)
           (lokUpd ρC tmp (.int 0)) st2 := by
         refine ⟨?_, hkan2 _ _ hρ hkk, fun q hq => by rw [hkl q hq]; exact hrel1.2.2 q hq⟩
-        refine envRel_push_same hK hfE (hpos _ _ hρ hkm hkl) (show Wert D (.grund _) from r) ?_
+        refine envRel_push_same hK hfE (hpos _ _ hρ hkm hkl) (show Wert D (.why _) from r) ?_
         rw [ghostify_at, hgE]
-        show ValCorr X.EL (.grund _) r (zellWert X.EL.lay X.fr st2 ex τg)
+        show ValCorr X.EL (.why _) r (zellWert X.EL.lay X.fr st2 ex τg)
         rw [hz]
         show CVal.int (code r) = CVal.int ((r : Nat) : Int)
         rw [hcode r]
       have hnf' : (execEnd X.O X.passes X.R err σ' (.cons r ρG)).istFehler = false := by
         rw [hR] at hnf
-        have e1 : ∀ (a : EndAusgang V l (.grund (D.gruende f) :: Γ)),
+        have e1 : ∀ (a : EndAusgang V l (.why (D.gruende f) :: Γ)),
             a.schrumpf.zuAusgang.istFehler = a.istFehler := fun a => by cases a <;> rfl
         rw [e1] at hnf
         exact hnf
@@ -2748,7 +2748,7 @@ theorem endOutG_zu0 (X : TVCtx D) (m : Nat) (G : GCtx) {Γ : Ctx} {K : CEnvLay D
       rcases h with hZ | ⟨hf, -⟩
       · exact ⟨hZ, zurG_abrupt hZ⟩
       · exact absurd hf (by decide)
-  | grund σ r => exact ⟨h, gruG_abrupt h⟩
+  | why σ r => exact ⟨h, gruG_abrupt h⟩
   | leave hl σ ρ =>
       obtain ⟨st', ρC', ho, hc, hr⟩ := h
       subst ho
@@ -2796,7 +2796,7 @@ theorem stOutG_nichtBrk {a : Ausgang V l Γ} {o : COut}
         subst ho; exact ⟨fun _ _ h => COut.noConfusion h, fun _ _ h => COut.noConfusion h⟩
       · obtain ⟨st', ho, -⟩ := h
         subst ho; exact ⟨fun _ _ h => COut.noConfusion h, fun _ _ h => COut.noConfusion h⟩
-  | grund σ r =>
+  | why σ r =>
       have h : GruG X G σ r o := h
       unfold GruG at h
       split at h
@@ -2814,7 +2814,7 @@ theorem stOutG_nichtBrk {a : Ausgang V l Γ} {o : COut}
 
 /-- A reason constant `R::F` is its index (the ordinal convention). -/
 theorem ecorr_grundLit {Λ : List (Res D)} (n : Nat) (r : Fin n) :
-    ExprCorr X K (.lit ((r : Nat) : Int)) (Expr.grund (Γ := Γ) (Λ := Λ) n r) := by
+    ExprCorr X K (.lit ((r : Nat) : Int)) (Expr.why (Γ := Γ) (Λ := Λ) n r) := by
   intro σ st ρG ρC _ _
   exact ⟨.int ((r : Nat) : Int), st, rfl, rfl⟩
 
@@ -2824,30 +2824,30 @@ theorem ecorr_grundLit {Λ : List (Res D)} (n : Nat) (r : Fin n) :
     and a Gabbro arm that always fails (an index no reason has: the
     ordinal convention leaves the indices below the smallest ordinal
     unused). -/
-theorem gcorr_onGrund {Λ Λ' : List (Res D)} {n : Nat} {r : Expr D Γ Λ (.grund n)}
+theorem gcorr_onGrund {Λ Λ' : List (Res D)} {n : Nat} {r : Expr D Γ Λ (.why n)}
     {arms : GrundArms D V l Γ Λ Λ' n} {cr : CX} {carms : List (Int × CS)}
     (hr : ExprCorr X K cr r)
     (harms : ∀ i : Fin n, (∃ c, carms.lookup ((i : Nat) : Int) = some (.seq c .brk) ∧
       BlockSemG X m G K (arms.get i) c) ∨
       (∀ σ ρ, (execBlock X.O X.passes X.R (arms.get i) σ ρ).istFehler = true)) :
-    StmtCorrG X m G K (Stmt.onGrund r arms) (.sw (cr.zs G.gs) carms) := by
+    StmtCorrG X m G K (Stmt.onWhy r arms) (.sw (cr.zs G.gs) carms) := by
   intro σ st ρG ρC hc hrel hnf
   have hc' : corrW X.EL (σ.lese Λ r.orte) st := (corrW_lese _ _ _ _ _).mpr hc
   obtain ⟨v, st1, h1, hv, hc1⟩ := hr.run X K hc' hrel.1
-  have hv' : v = .int (encW (.grund n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) := hv
+  have hv' : v = .int (encW (.why n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) := hv
   subst hv'
   have hs1 := ev_same X.EL.lay X.orc X.fr cr st _ _ st1 h1
   have h1' : ev X.EL.lay X.orc X.fr (cr.zs G.gs) st ρC =
-      some (.int (encW (.grund n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)), st1) := by
+      some (.int (encW (.why n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)), st1) := by
     rw [ev_zs G.gs cr st st ρC (SameML.refl _)]; exact h1
-  have hex : execStmt X.O X.passes X.R (Stmt.onGrund r arms) σ ρG =
+  have hex : execStmt X.O X.passes X.R (Stmt.onWhy r arms) σ ρG =
       execBlock X.O X.passes X.R (arms.get (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG))
         (σ.lese Λ r.orte) ρG := by
     show execGrund _ _ _ _ _ _ _ = _
     exact execGrund_get _ _ _ _ _ _ _
   rw [hex] at hnf ⊢
   obtain ⟨c, hl, hb⟩ : ∃ c, carms.lookup
-      (encW (.grund n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) = some (.seq c .brk) ∧
+      (encW (.why n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) = some (.seq c .brk) ∧
       BlockSemG X m G K (arms.get (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) c := by
     rcases harms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG) with h | hfe
     · exact h
@@ -2864,28 +2864,28 @@ theorem gcorr_onGrund {Λ Λ' : List (Res D)} {n : Nat} {r : Expr D Γ Λ (.grun
     whose every arm returns a reason of the caller's channel whose
     constant is the matched reason's index. -/
 theorem kcorr_weiterleiten {Λ Λ' : List (Res D)} (κ : Kanal) (hkan : G.kan = some κ) {n : Nat}
-    {r : Expr D Γ Λ (.grund n)} {arms : GrundArms D V l Γ Λ Λ' n} {cr : CX}
+    {r : Expr D Γ Λ (.why n)} {arms : GrundArms D V l Γ Λ Λ' n} {cr : CX}
     (hr : ExprCorr X K cr r) (φ : Fin n → Fin V.gruende)
     (hφ : ∀ (i : Fin n) (σ : World D) (ρ : Env D Γ),
-      execBlock X.O X.passes X.R (arms.get i) σ ρ = .grund σ (φ i))
+      execBlock X.O X.passes X.R (arms.get i) σ ρ = .why σ (φ i))
     (hcode : ∀ i : Fin n, κ.code (φ i) = ((i : Nat) : Int))
     (hfit : ∀ i : Fin n, valFits κ.τg (.int ((i : Nat) : Int)) = true)
     {f x : Nat} (hstk : κ.gp.blk = .stk f x) :
-    StmtCorrG X m G K (Stmt.onGrund r arms)
+    StmtCorrG X m G K (Stmt.onWhy r arms)
       (.seq (.store (.var κ.gx) κ.τg (cr.zs G.gs)) (.ret (some (cBoolTy, .lit 0)))) := by
   intro σ st ρG ρC hc hrel hnf
   have hk : KanalIn X.EL.lay κ st ρC := by have := hrel.2.1; rw [hkan] at this; exact this
   obtain ⟨-, k2, -, k4⟩ := hk
   have hc' : corrW X.EL (σ.lese Λ r.orte) st := (corrW_lese _ _ _ _ _).mpr hc
   obtain ⟨v, st1, h1, hv, hc1⟩ := hr.run X K hc' hrel.1
-  have hv' : v = .int (encW (.grund n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) := hv
+  have hv' : v = .int (encW (.why n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) := hv
   subst hv'
   have hs1 := ev_same X.EL.lay X.orc X.fr cr st _ _ st1 h1
   have h1' : ev X.EL.lay X.orc X.fr (cr.zs G.gs) st ρC =
-      some (.int (encW (.grund n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)), st1) := by
+      some (.int (encW (.why n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)), st1) := by
     rw [ev_zs G.gs cr st st ρC (SameML.refl _)]; exact h1
-  have hex : execStmt X.O X.passes X.R (Stmt.onGrund r arms) σ ρG =
-      .grund (σ.lese Λ r.orte) (φ (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) := by
+  have hex : execStmt X.O X.passes X.R (Stmt.onWhy r arms) σ ρG =
+      .why (σ.lese Λ r.orte) (φ (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG)) := by
     show execGrund _ _ _ _ _ _ _ = _
     exact (execGrund_get _ _ _ _ _ _ _).trans (hφ _ _ _)
   rw [hex]
@@ -2893,7 +2893,7 @@ theorem kcorr_weiterleiten {Λ Λ' : List (Res D)} (κ : Kanal) (hkan : G.kan = 
     (accOk_live (L := X.EL.lay) (st := st) (st' := st1) (p := κ.gp) (τ := κ.τg) (md := .wr)
       (by rw [hs1.2])).trans k4
   have hs := bStore_progress X.EL.lay st1 κ.gp κ.τg
-    (.int (encW (.grund n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG))) k4' (hfit _)
+    (.int (encW (.why n) (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρG))) k4' (hfit _)
   refine ⟨_, Exec.seqN (Exec.store (by simp only [ev, k2]) h1' (convV_of_valFits _ _ (hfit _)) hs)
     (Exec.retS rfl rfl), ?_⟩
   show GruG X G _ _ _
@@ -3060,19 +3060,19 @@ theorem narrow_bind_var {Λ : List (Res D)} {lo hi lo' hi' : Int} (x : Var Γ (.
   intro σ st ρG ρC v _ hrel hv
   refine ⟨⟨fun τ y => ?_, hrel.1.2.1, hrel.1.2.2⟩, hrel.2⟩
   cases y with
-  | hier =>
+  | here =>
       have h := hrel.1.1 _ x
       show ghostify X.EL.lay X.fr G.gs ρC st (K.loc x) = .int v.n
       rw [h, hv]
       rfl
-  | dort y => exact hrel.1.1 _ y
+  | there y => exact hrel.1.1 _ y
 
 /-- R4. The `where`/`requires` check: `if (!(c)) { sonst } rest` against
     `pruefung`. -/
 theorem gsem_pruefung {Λ Λ' : List (Res D)} {c : Expr D Γ Λ .bool} {sonst : Endblock D V l Γ Λ}
     {rest : Block D V l Γ Λ Λ'} {cc : CX} {csonst crest : CS} (hc : ExprCorr X K cc c)
     (hs : EndSemG X m false G K sonst csonst) (hr : BlockSemG X m G K rest crest) :
-    BlockSemG X m G K (Block.pruefung c sonst rest)
+    BlockSemG X m G K (Block.check c sonst rest)
       (.seq (.ite (.lnot (cc.zs G.gs)) csonst .skip) crest) := by
   intro σ st ρG ρC hcw hrel hnf
   have hc' : corrW X.EL (σ.lese Λ c.orte) st := (corrW_lese _ _ _ _ _).mpr hcw
@@ -3082,7 +3082,7 @@ theorem gsem_pruefung {Λ Λ' : List (Res D)} {c : Expr D Γ Λ .bool} {sonst : 
       some (.int (b2i (wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρG))), st1) := by
     rw [ev_zs G.gs cc st st ρC (SameML.refl _)]; exact h1
   have hrel1 := envRelG_same hs1 hrel
-  have hex : execBlock X.O X.passes X.R (Block.pruefung c sonst rest) σ ρG =
+  have hex : execBlock X.O X.passes X.R (Block.check c sonst rest) σ ρG =
       if wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρG) then
         execBlock X.O X.passes X.R rest (σ.lese Λ c.orte) ρG
       else (execEnd X.O X.passes X.R sonst (σ.lese Λ c.orte) ρG).zuAusgang := rfl
@@ -3265,7 +3265,7 @@ theorem zst_weiter {o : COut} {m : Nat} {s : CSt} {r : CLok} (h : o.weiter m = s
   | cont s1 r1 => simp only [COut.weiter, Option.some.injEq, Prod.mk.injEq] at h; exact h.1
   | jump lb s1 r1 =>
       cases lb with
-      | weiter m' =>
+      | widen m' =>
           simp only [COut.weiter] at h
           split at h
           · simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.1
@@ -3283,7 +3283,7 @@ theorem zst_raus {o o' : COut} {m : Nat} (h : o.raus m = some o') : o'.zst = o.z
       | ende m' =>
           simp only [COut.raus] at h
           split at h <;> (simp only [Option.some.injEq] at h; subst h; rfl)
-      | weiter m' =>
+      | widen m' =>
           simp only [COut.raus] at h
           split at h
           · exact absurd h (by simp)

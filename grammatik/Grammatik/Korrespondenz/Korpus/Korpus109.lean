@@ -156,14 +156,14 @@ theorem kDarfUB : darf kD KTab.u kLB := by
 
 /-- The index literal `0` (call argument and slot index). -/
 def kJ0 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (Ty.index 4) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The constants the leaves write. -/
 def kEins {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 def kZwei {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
-  .weiter (by decide) (by decide) (.lit 2)
+  .widen (by decide) (by decide) (.lit 2)
 
 /-- The call-site typing of every call. -/
 theorem kHaeltWriteA : (kD.signatur kWriteA).haelt = [KLock.l] := rfl
@@ -209,13 +209,13 @@ theorem kHpWriteB : RufPasst kD (vertragVon kD kDistB) (kD.signatur kWriteB) kLB
 
 /-- `write_a(i)`: `T.slots[i].v = 1;`. -/
 def kRumpfWriteA : Endblock kD (vertragVon kD kWriteA) false [Ty.index 4] kLA :=
-  .cons (.assignSlot KTab.t () (.var .hier) kEins rfl kDarfTA)
-    (.ret .keine (by rfl))
+  .cons (.assignSlot KTab.t () (.var .here) kEins rfl kDarfTA)
+    (.ret .empty (by rfl))
 
 /-- `write_b(i)`: `U.slots[i].v = 2;`. -/
 def kRumpfWriteB : Endblock kD (vertragVon kD kWriteB) false [Ty.index 4] kLB :=
-  .cons (.assignSlot KTab.u () (.var .hier) kZwei rfl kDarfUB)
-    (.ret .keine (by rfl))
+  .cons (.assignSlot KTab.u () (.var .here) kZwei rfl kDarfUB)
+    (.ret .empty (by rfl))
 
 /-- The call `write_a(0)` inside `distribute_a`'s lock. -/
 def kRufA : Stmt kD (vertragVon kD kDistA) false [] kLA kLA :=
@@ -227,7 +227,7 @@ def kLocksA : Stmt kD (vertragVon kD kDistA) false [] [] [] :=
 
 /-- `distribute_a`, as in the source. -/
 def kRumpfDistA : Endblock kD (vertragVon kD kDistA) false [] [] :=
-  .cons kLocksA (.ret .keine List.Perm.nil)
+  .cons kLocksA (.ret .empty List.Perm.nil)
 
 /-- The call `write_b(0)` inside `distribute_b`'s lock. -/
 def kRufB : Stmt kD (vertragVon kD kDistB) false [] kLB kLB :=
@@ -239,14 +239,14 @@ def kLocksB : Stmt kD (vertragVon kD kDistB) false [] [] [] :=
 
 /-- `distribute_b`, as in the source. -/
 def kRumpfDistB : Endblock kD (vertragVon kD kDistB) false [] [] :=
-  .cons kLocksB (.ret .keine List.Perm.nil)
+  .cons kLocksB (.ret .empty List.Perm.nil)
 
 /-- **The program of `beispiele/109`**: the source's bodies; trivial contracts
     (the source declares no `requires`/`ensures` on these four functions). -/
 def kP : Programm kD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .writeA => kRumpfWriteA
     | .distA => kRumpfDistA
@@ -292,7 +292,7 @@ theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kD
 
 /-! ## 3. The user obligations -/
 
-/-- Every `requires` is `.wahr`, at every function, world and environment. -/
+/-- Every `requires` is `.tru`, at every function, world and environment. -/
 theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
     ReqAmEintritt kP f W ρ := rfl
 
@@ -336,17 +336,17 @@ theorem kDistA_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes
     {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
     (ρ : Env kD (kD.params kDistA)) :
     ∃ σ2 : World kD, execEndH S O U passes R kRumpfDistA σ ρ =
-        execEndH S O U passes R (.cons kLocksA (.ret .keine List.Perm.nil)) σ2 ρ :=
+        execEndH S O U passes R (.cons kLocksA (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
 theorem kDistB_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes : Nat}
     {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
     (ρ : Env kD (kD.params kDistB)) :
     ∃ σ2 : World kD, execEndH S O U passes R kRumpfDistB σ ρ =
-        execEndH S O U passes R (.cons kLocksB (.ret .keine List.Perm.nil)) σ2 ρ :=
+        execEndH S O U passes R (.cons kLocksB (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
-/-- `distribute_a`: `ensures` is `.wahr`; the caller duty of the call from the
+/-- `distribute_a`: `ensures` is `.tru`; the caller duty of the call from the
     trivial `requires`; no `logik` outcome because the release check is the
     trivially-true invariant. -/
 theorem kP_koerper_distA : KoerperGutS kP 0 (axWahr kD) kSI kDistA := by

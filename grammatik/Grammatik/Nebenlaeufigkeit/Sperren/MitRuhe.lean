@@ -53,7 +53,7 @@ namespace Gabbro.Grammatik
   | .bool => .bool
   | .opt n => .opt n
   | .sum cs => .sum cs
-  | .grund n => .grund n
+  | .why n => .why n
   | .never => .never
   | .fl lo hi => .fl lo hi
   | .fnptr n => .fnptr (n + 1)
@@ -95,7 +95,7 @@ def sigNrM (D : Deklaration) : Nat → Signatur D.Tab D.Glob D.Lock D.Marke
   | .bool, v => v
   | .opt _, v => v
   | .sum _, v => v
-  | .grund _, v => v
+  | .why _, v => v
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr _, v => ⟨some v.1, congrArg (· + 1) v.2⟩
@@ -108,7 +108,7 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (sigM D) (tyR τ) → Val D.Fn D.sig 
   | .bool, v => v
   | .opt _, v => v
   | .sum _, v => v
-  | .grund _, v => v
+  | .why _, v => v
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr n, v => match v with
@@ -121,7 +121,7 @@ theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.sig τ), valZ τ (valR τ v) =
   | .bool, _ => rfl
   | .opt _, _ => rfl
   | .sum _, _ => rfl
-  | .grund _, _ => rfl
+  | .why _, _ => rfl
   | .never, _ => rfl
   | .fl _ _, _ => rfl
   | .fnptr _, ⟨_, _⟩ => rfl
@@ -132,7 +132,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (sigM D) (tyR τ)), val
   | .bool, _ => rfl
   | .opt _, _ => rfl
   | .sum _, _ => rfl
-  | .grund _, _ => rfl
+  | .why _, _ => rfl
   | .never, _ => rfl
   | .fl _ _, _ => rfl
   | .fnptr n, ⟨some f, h⟩ => rfl
@@ -409,8 +409,8 @@ theorem rufPasstR {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke}
 
 /-- A variable of `Γ` as a variable of the shifted `Γ`. -/
 def varR : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Var (Γ.map tyR) (tyR τ)
-  | _, _, .hier => .hier
-  | _, _, .dort x => .dort (varR x)
+  | _, _, .here => .here
+  | _, _, .there x => .there (varR x)
 
 /-- Transport an expression along an equation of its holdings. -/
 def Expr.umΛ {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (h : Λ = Λ') (e : Expr D Γ Λ τ) :
@@ -439,17 +439,17 @@ mutual
 def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ →
     Expr D.mitRuhe (Γ.map tyR) (Λ.map resR) (tyR τ)
   | _, _, _, .lit n => .lit n
-  | _, _, _, .wahr => .wahr
-  | _, _, _, .falsch => .falsch
+  | _, _, _, .tru => .tru
+  | _, _, _, .fls => .fls
   | _, _, _, .var x => .var (varR x)
   | _, _, _, .glob g hL => Expr.glob (D := D.mitRuhe) g (gdarfR hL)
   | _, _, _, .slot t f i hL => Expr.slot (D := D.mitRuhe) t f (ruE i) (darfR hL)
-  | _, _, _, .durch p t ht f i hL => Expr.durch (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
+  | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ht rw
   | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) (congrArg (· + 1) h)
-  | _, _, _, .altGlob g hL => Expr.altGlob (D := D.mitRuhe) g (gdarfR hL)
-  | _, _, _, .altSlot t f i hL => Expr.altSlot (D := D.mitRuhe) t f (ruE i) (darfR hL)
-  | _, _, _, .weiter h1 h2 e => .weiter h1 h2 (ruE e)
+  | _, _, _, .oldG g hL => Expr.oldG (D := D.mitRuhe) g (gdarfR hL)
+  | _, _, _, .oldS t f i hL => Expr.oldS (D := D.mitRuhe) t f (ruE i) (darfR hL)
+  | _, _, _, .widen h1 h2 e => .widen h1 h2 (ruE e)
   | _, _, _, .add a b => .add (ruE a) (ruE b)
   | _, _, _, .sub a b => .sub (ruE a) (ruE b)
   | _, _, _, .neg a => .neg (ruE a)
@@ -458,8 +458,8 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .rem h0 h1 a b => .rem h0 h1 (ruE a) (ruE b)
   | _, _, _, .sdiv hb a b => .sdiv hb (ruE a) (ruE b)
   | _, _, _, .srem hb a b => .srem hb (ruE a) (ruE b)
-  | _, _, _, .leseBytes t f hf n i hlo hhi hL =>
-      .leseBytes (D := D.mitRuhe) t f (congrArg tyR hf) n (ruE i) hlo
+  | _, _, _, .getBytes t f hf n i hlo hhi hL =>
+      .getBytes (D := D.mitRuhe) t f (congrArg tyR hf) n (ruE i) hlo
         hhi (darfR hL)
   | _, _, _, .band h0 h0' a b => .band h0 h0' (ruE a) (ruE b)
   | _, _, _, .bor w h0 h0' hw1 hw2 a b => .bor w h0 h0' hw1 hw2 (ruE a) (ruE b)
@@ -471,14 +471,14 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .eq a b => .eq (ruE a) (ruE b)
   | _, _, _, .fllt a b => .fllt (ruE a) (ruE b)
   | _, _, _, .flle a b => .flle (ruE a) (ruE b)
-  | _, _, _, .und a b => .und (ruE a) (ruE b)
-  | _, _, _, .oder a b => .oder (ruE a) (ruE b)
-  | _, _, _, .nicht a => .nicht (ruE a)
+  | _, _, _, .and a b => .and (ruE a) (ruE b)
+  | _, _, _, .or a b => .or (ruE a) (ruE b)
+  | _, _, _, .not a => .not (ruE a)
   | _, _, _, .none n => .none n
   | _, _, _, .some e => .some (ruE e)
   | _, _, _, .istSome e => .istSome (ruE e)
-  | _, _, _, .fall cs i nutz => .fall cs i (ruN nutz)
-  | _, _, _, .grund n r => .grund n r
+  | _, _, _, .case cs i nutz => .case cs i (ruN nutz)
+  | _, _, _, .why n r => .why n r
   | _, _, _, .forallSlots t body hL => Expr.forallSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
   | _, _, _, .existsSlots t body hL => Expr.existsSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
   | _, _, _, .reaches t f hf a b hL =>
@@ -488,8 +488,8 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
 /-- A payload expression, translated. -/
 def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →
     NutzlastExpr D.mitRuhe (Γ.map tyR) (Λ.map resR) c
-  | _, _, _, .keine => .keine
-  | _, _, _, .zahl e => .zahl (ruE e)
+  | _, _, _, .empty => .empty
+  | _, _, _, .num e => .num (ruE e)
 
 end
 
@@ -502,8 +502,8 @@ def ruA : {Γ : Ctx} → {Λ : List (Res D)} → {τs : List Ty} → Args D Γ �
 /-- A result expression, translated. -/
 def ruErg : {Γ : Ctx} → {Λ : List (Res D)} → {e : Option Ty} → ErgExpr D Γ Λ e →
     ErgExpr D.mitRuhe (Γ.map tyR) (Λ.map resR) (e.map tyR)
-  | _, _, _, .keine => .keine
-  | _, _, _, .wert e => .wert (ruE e)
+  | _, _, _, .empty => .empty
+  | _, _, _, .val e => .val (ruE e)
 
 mutual
 
@@ -513,20 +513,20 @@ mutual
 def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     Stmt D V l Γ Λ Λ' → Stmt D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR) (Λ'.map resR)
   | _, _, _, _, .assignSlot t f i e hw hL => .assignSlot t f (ruE i) (ruE e) hw (darfR hL)
-  | _, _, _, _, .assignDurch p t ht f i e hw hL =>
-      .assignDurch (ruE p) t ht f (ruE i) (ruE e) hw (darfR hL)
+  | _, _, _, _, .assignThru p t ht f i e hw hL =>
+      .assignThru (ruE p) t ht f (ruE i) (ruE e) hw (darfR hL)
   | _, _, _, _, .assignGlob g e hw hL => .assignGlob g (ruE e) hw (gdarfR hL)
-  | _, _, _, _, .schreibBytes t f hf n i hlo hhi e hw hL =>
-      .schreibBytes (V := vertragR V) t f (congrArg tyR hf) n (ruE i) hlo hhi
+  | _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL =>
+      .putBytes (V := vertragR V) t f (congrArg tyR hf) n (ruE i) hlo hhi
         (ruE e) hw (darfR hL)
   | _, _, _, _, .assignVar x e => .assignVar (varR x) (ruE e)
-  | _, _, _, _, .uebergang t f hτ i von nach hn he hw hL =>
-      .uebergang (V := vertragR V) t f (congrArg tyR hτ) (ruE i) von nach hn
+  | _, _, _, _, .shift t f hτ i von nach hn he hw hL =>
+      .shift (V := vertragR V) t f (congrArg tyR hτ) (ruE i) von nach hn
         he hw (darfR hL)
   | _, _, _, _, .ite c t e => .ite (ruE c) (ruB t) (ruB e)
   | _, _, _, _, .onOption o p a => .onOption (ruE o) (ruB p) (ruB a)
   | _, _, _, _, .onTag v arms => .onTag (ruE v) (ruArms arms)
-  | _, _, _, _, .onGrund r arms => .onGrund (ruE r) (ruGArms arms)
+  | _, _, _, _, .onWhy r arms => .onWhy (ruE r) (ruGArms arms)
   | _, _, Λ, _, .call f args hp hr =>
       Stmt.nachΛ (nach_map f Λ).symm
         (.call (V := vertragR V) (some f) (ruA args) (rufPasstR hp) hr)
@@ -542,7 +542,7 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .axiomCall a args h hw hg hd hgd =>
       .axiomCall (V := vertragR V) a (ruA args) (by show Option.map tyR (D.aerg a) = _; rw [h]; rfl)
         hw hg (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg'))
-  | _, _, _, _, .regSchreib r hk e => .regSchreib r hk (ruE e)
+  | _, _, _, _, .regWrite r hk e => .regWrite r hk (ruE e)
   | _, _, _, _, .transition r hk m hm hl maske bits => .transition r hk m hm hl maske bits
   | _, _, _, _, .publish g e payload hp hw hL => .publish g (ruE e) payload hp hw (gdarfR hL)
   | _, _, Λ, _, .advances m a h hs =>
@@ -551,7 +551,7 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, Λ, _, .retires m s h a =>
       Stmt.nachΛ (by rw [erase_map_rm]; rfl) (.retires (V := vertragR V) m s (mem_map_rm.mpr h) a)
   | _, _, _, _, .ret e hΛ => .ret (ruErg e) ((hΛ.map resR).trans (by rw [ende_map]))
-  | _, _, _, _, .retGrund r hΛ => .retGrund r ((hΛ.map resR).trans (by rw [ende_map]))
+  | _, _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, _, .leave h => .leave h
   | _, _, _, _, .next h => .next h
 
@@ -581,24 +581,24 @@ def ruB {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
       .bindAxiomElse (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hr hw hg
         (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd err) (ruB rest)
-  | _, _, _, _, .regLies r hk rest => .regLies r hk (ruB rest)
-  | _, _, _, _, .regLiesElse r hk zusage sonst rest =>
-      .regLiesElse r hk (ruE zusage) (ruEnd sonst) (ruB rest)
+  | _, _, _, _, .regRead r hk rest => .regRead r hk (ruB rest)
+  | _, _, _, _, .regReadElse r hk zusage sonst rest =>
+      .regReadElse r hk (ruE zusage) (ruEnd sonst) (ruB rest)
   | _, _, _, _, .awaits g payload hp hL rest => .awaits g payload hp (gdarfR hL) (ruB rest)
   | _, _, _, _, .exchange g neu hw hL rest => .exchange g (ruE neu) hw (gdarfR hL) (ruB rest)
   | _, _, _, _, .narrow e lo' hi' sonst rest => .narrow (ruE e) lo' hi' (ruEnd sonst) (ruB rest)
-  | _, _, _, _, .pruefung c sonst rest => .pruefung (ruE c) (ruEnd sonst) (ruB rest)
-  | _, _, _, _, .gleit op a b lo hi rest => .gleit op (ruE a) (ruE b) lo hi (ruB rest)
-  | _, _, _, _, .gleitLit q lo hi rest => .gleitLit q lo hi (ruB rest)
-  | _, _, _, _, .gleitVon e lo hi rest => .gleitVon (ruE e) lo hi (ruB rest)
-  | _, _, _, _, .gleitNarrow e lo hi sonst rest =>
-      .gleitNarrow (ruE e) lo hi (ruEnd sonst) (ruB rest)
+  | _, _, _, _, .check c sonst rest => .check (ruE c) (ruEnd sonst) (ruB rest)
+  | _, _, _, _, .float op a b lo hi rest => .float op (ruE a) (ruE b) lo hi (ruB rest)
+  | _, _, _, _, .floatLit q lo hi rest => .floatLit q lo hi (ruB rest)
+  | _, _, _, _, .floatOf e lo hi rest => .floatOf (ruE e) lo hi (ruB rest)
+  | _, _, _, _, .floatNarrow e lo hi sonst rest =>
+      .floatNarrow (ruE e) lo hi (ruEnd sonst) (ruB rest)
 
 /-- An end block, translated. -/
 def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
     Endblock D V l Γ Λ → Endblock D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR)
   | _, _, _, .ret e hΛ => .ret (ruErg e) ((hΛ.map resR).trans (by rw [ende_map]))
-  | _, _, _, .retGrund r hΛ => .retGrund r ((hΛ.map resR).trans (by rw [ende_map]))
+  | _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, .leave h => .leave h
   | _, _, _, .next h => .next h
   | _, _, _, .cons s rest => .cons (ruS s) (ruEnd rest)
@@ -637,14 +637,14 @@ end
 def Programm.mitRuhe (P : Programm D) : Programm D.mitRuhe where
   invariante i := Expr.umΛ (invSicht_map (D := D) i) (ruE (P.invariante i))
   requires
-    | none => .wahr
+    | none => .tru
     | some f => Expr.umΛ (anfang_map (D.signatur f)) (ruE (P.requires f))
   ensures
-    | none => .wahr
+    | none => .tru
     | some f => Expr.umΓ (ergCtx_map (D.params f) (D.erg f))
         (Expr.umΛ (ende_map (vertragVon D f)) (ruE (P.ensures f)))
   rumpf
-    | none => .ret .keine List.Perm.nil
+    | none => .ret .empty List.Perm.nil
     | some f => Endblock.umΛ (anfang_map (D.signatur f)) (ruEnd (P.rumpf f))
   -- the idle root is no handler; a user function keeps its dispatch fact (Opus agent H)
   unterbricht

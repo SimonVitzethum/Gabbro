@@ -137,7 +137,7 @@ theorem respektiert_rufZuD {P : Programm D}
         have he := h.1 (some g) (worldR σ) (envR ρ) ((req_mitRuhe_iff P g σ ρ).mpr hreq) σ1 v1 hy
         rw [← worldR_worldZ σ1, ← ergR_ergZ (D.erg g) v1] at he
         exact (ens_mitRuhe_iff P g σ (worldZ σ1) ρ (ergZ (D.erg g) v1)).mp he
-    | grund => rw [hy] at hx; cases hx
+    | why => rw [hy] at hx; cases hx
     | logik => rw [hy] at hx; cases hx
     | hardware => rw [hy] at hx; cases hx
   · unfold rufZuD at hx
@@ -150,7 +150,7 @@ theorem respektiert_rufZuD {P : Programm D}
         show (worldZ σ1).haelt = σ.haelt
         rw [haelt_worldZ, ← haelt_worldR σ]
         exact h2
-    | grund => rw [hy] at hx; cases hx
+    | why => rw [hy] at hx; cases hx
     | logik => rw [hy] at hx; cases hx
     | hardware => rw [hy] at hx; cases hx
 
@@ -162,7 +162,7 @@ theorem ohneVorbedingung_rufZuD
   unfold rufZuD at hx
   cases hy : R' (some g) (worldR σ) (envR ρ) with
   | ok => rw [hy] at hx; cases hx
-  | grund => rw [hy] at hx; cases hx
+  | why => rw [hy] at hx; cases hx
   | logik => rw [hy] at hx; cases hx
   | hardware => rw [hy] at hx; cases hx
 
@@ -173,7 +173,7 @@ theorem ohneLogik_rufZuD
   unfold rufZuD at hx
   cases hy : R' (some g) (worldR σ) (envR ρ) with
   | ok => rw [hy] at hx; cases hx
-  | grund => rw [hy] at hx; cases hx
+  | why => rw [hy] at hx; cases hx
   | logik e' => exact h (some g) _ _ e' hy
   | hardware => rw [hy] at hx; cases hx
 
@@ -187,7 +187,7 @@ theorem rufRel_rufZuD
       left
       simp only [rufZ, rufR, worldR_worldZ]
       exact congrArg _ (ergR_ergZ (D.erg g) v1).symm
-  | grund σ1 r =>
+  | why σ1 r =>
       left
       simp only [rufZ, rufR, worldR_worldZ]
   | logik e' =>
@@ -262,7 +262,7 @@ theorem koerperGutS_mitRuhe (h : KoerperGutS P passes Q S f) :
             simp only [endR] at e
             cases e
             exact (ens_mitRuhe_iff P f σ0 σa ρ0 va).mpr (hk.1 σa va hy)
-        | grund => rw [hy] at e; cases e
+        | why => rw [hy] at e; cases e
         | leave => rw [hy] at e; cases e
         | next => rw [hy] at e; cases e
         | logik => rw [hy] at e; cases e
@@ -279,7 +279,7 @@ theorem koerperGutS_mitRuhe (h : KoerperGutS P passes Q S f) :
             | vorbedingung g0 => exact hk.2 g0 hy
             | _ => simp only [logikR] at e; cases e
         | zurueck => rw [hy] at e; cases e
-        | grund => rw [hy] at e; cases e
+        | why => rw [hy] at e; cases e
         | leave => rw [hy] at e; cases e
         | next => rw [hy] at e; cases e
         | hardware => rw [hy] at e; cases e
@@ -304,7 +304,7 @@ theorem koerperGutS_mitRuhe (h : KoerperGutS P passes Q S f) :
           (rufZuD R') (P.rumpf f) σ0 ρ0 with
       | logik e0 => exact hk e0 hy
       | zurueck => rw [hy] at e; cases e
-      | grund => rw [hy] at e; cases e
+      | why => rw [hy] at e; cases e
       | leave => rw [hy] at e; cases e
       | next => rw [hy] at e; cases e
       | hardware => rw [hy] at e; cases e
@@ -330,7 +330,7 @@ theorem invGutS_mitRuhe (h : InvGutS P passes Q S f) :
         simp only [endR] at e
         cases e
         exact (invAmRueck_mitRuhe P f σa).mpr (hk σa va hy)
-    | grund => rw [hy] at e; cases e
+    | why => rw [hy] at e; cases e
     | leave => rw [hy] at e; cases e
     | next => rw [hy] at e; cases e
     | logik => rw [hy] at e; cases e
@@ -352,7 +352,7 @@ theorem invGutGrund_mitRuhe (h : InvGutGrund P passes Q S f) :
   · have e := hx.symm.trans e
     cases hy : execEndH (V := vertragVon D f) S (Orakel.zurueck O') (umweltZ U') passes
         (rufZuD R') (P.rumpf f) σ0 ρ0 with
-    | grund σa ra =>
+    | why σa ra =>
         rw [hy] at e
         simp only [endR] at e
         cases e

@@ -66,19 +66,19 @@ abbrev kΓ (lo0 hi0 : Int × Int) : Ctx := [kAnteil, .fl lo0 hi0]
 
 /-- `else { return halb; }` -/
 def kSonst (lo0 hi0 : Int × Int) : Endblock D (kV D) false (kΓ lo0 hi0) [] :=
-  .ret (.wert (.var .hier)) (List.Perm.refl _)
+  .ret (.val (.var .here)) (List.Perm.refl _)
 
 /-- `return x;` (the narrowed `x`). -/
 def kRest (lo0 hi0 : Int × Int) : Block D (kV D) false (kAnteil :: kΓ lo0 hi0) [] [] :=
-  .cons (.ret (.wert (.var .hier)) (List.Perm.refl _)) .nil
+  .cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil
 
 /-- `narrow x to 0 .. 1 else { return halb; } return x;` -/
 def kNarrow (lo0 hi0 : Int × Int) : Block D (kV D) false (kΓ lo0 hi0) [] [] :=
-  .gleitNarrow (.var (.dort .hier)) (0, 1) (1, 1) (kSonst lo0 hi0) (kRest lo0 hi0)
+  .floatNarrow (.var (.there .here)) (0, 1) (1, 1) (kSonst lo0 hi0) (kRest lo0 hi0)
 
 /-- The body: `let halb = 0.5 rounded; …`. -/
 def kBlock (lo0 hi0 : Int × Int) : Block D (kV D) false [.fl lo0 hi0] [] [] :=
-  .gleitLit (1, 2) (0, 1) (1, 1) (kNarrow lo0 hi0)
+  .floatLit (1, 2) (0, 1) (1, 1) (kNarrow lo0 hi0)
 
 /-- `0.5` in `0 .. 1`: the value `halb` is bound to. -/
 def kHalb : Gleit (0, 1) (1, 1) := ⟨bruch (1, 2), by decide, by decide, by decide⟩
@@ -112,14 +112,14 @@ theorem klemmen_corr (X : TVCtx D) (lo0 hi0 : Int × Int) :
     BlockSemG X 0 G0 (kK lo0 hi0) (kBlock lo0 hi0) kC := by
   intro σ st ρG ρC hc hrel _
   have hrel0 := (envRelG0 X (kK lo0 hi0) ρG ρC st).mp hrel
-  have hx : ρC 0 = .int (fEin f64 (ρG.get .hier).x) ∧ wf f64 (ρG.get .hier).x :=
-    hrel0.1 _ .hier
+  have hx : ρC 0 = .int (fEin f64 (ρG.get .here).x) ∧ wf f64 (ρG.get .here).x :=
+    hrel0.1 _ .here
   -- the condition, by the general lemma (the C `x` is `ecorr_var`)
   obtain ⟨st1, h1, hs1⟩ :=
-    narrowCondF_ge_le X G0 (kK lo0 hi0) (ecorr_var X (kK lo0 hi0) (Λ := []) .hier) (0, 1) (1, 1)
+    narrowCondF_ge_le X G0 (kK lo0 hi0) (ecorr_var X (kK lo0 hi0) (Λ := []) .here) (0, 1) (1, 1)
       σ st ρG ρC hc hrel
   have h1' : ev X.EL.lay X.orc X.fr kCond st ρC =
-      some (.int (b2i (gleitPasst (0, 1) (1, 1) (ρG.get .hier).x).isSome), st1) := h1
+      some (.int (b2i (gleitPasst (0, 1) (1, 1) (ρG.get .here).x).isSome), st1) := h1
   have hc1 : corrW X.EL σ st1 := corrW_same hc hs1
   -- the Gabbro side: `halb` binds `0.5`
   have hH : gleitPasst (0, 1) (1, 1) (bruch (1, 2)) = some kHalb := gleitPasst_selbst kHalb
@@ -132,7 +132,7 @@ theorem klemmen_corr (X : TVCtx D) (lo0 hi0 : Int × Int) :
   split
   next v hgp0 =>
       -- the check passes: `return x;` with the narrowed value
-      have hgp : gleitPasst (0, 1) (1, 1) (ρG.get .hier).x = some v := hgp0
+      have hgp : gleitPasst (0, 1) (1, 1) (ρG.get .here).x = some v := hgp0
       rw [hgp] at h1'
       have hout : ((execBlock X.O X.passes X.R (kRest (D := D) lo0 hi0) (σ.lese [] [])
           (.cons v (.cons kHalb ρG))).schrumpf).schrumpf =
@@ -140,17 +140,17 @@ theorem klemmen_corr (X : TVCtx D) (lo0 hi0 : Int × Int) :
       rw [hout]
       have hvx := gleitPasst_x hgp
       have hev : ev X.EL.lay X.orc X.fr (.var 0) st1 ρC =
-          some (.int (fEin f64 (ρG.get .hier).x), st1) := by simp only [ev, hx.1]
+          some (.int (fEin f64 (ρG.get .here).x), st1) := by simp only [ev, hx.1]
       refine ⟨_, Exec.seqN (Exec.iteF (ev_lnot h1' (truth_b2i _)) rfl Exec.skip)
         (Exec.retS hev (convV_fEin _ hx.2)), ?_⟩
       refine ⟨st1, _, rfl, hc1, _, rfl, ?_, ?_⟩
-      · show CVal.int (fEin f64 (ρG.get .hier).x) = .int (fEin f64 v.x)
+      · show CVal.int (fEin f64 (ρG.get .here).x) = .int (fEin f64 v.x)
         rw [hvx]
       · show wf f64 v.x
         rw [hvx]; exact hx.2
   next hgp0 =>
       -- the check fails: `return 0.5;`
-      have hgp : gleitPasst (0, 1) (1, 1) (ρG.get .hier).x = none := hgp0
+      have hgp : gleitPasst (0, 1) (1, 1) (ρG.get .here).x = none := hgp0
       rw [hgp] at h1'
       have hout : ((execEnd X.O X.passes X.R (kSonst (D := D) lo0 hi0) (σ.lese [] [])
           (.cons kHalb ρG)).zuAusgang).schrumpf =

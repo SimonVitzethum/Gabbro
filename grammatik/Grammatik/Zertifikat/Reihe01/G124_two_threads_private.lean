@@ -211,44 +211,44 @@ theorem gHp_hauptB_in_L_setze : RufPasst gD (vertragVon gD g_hauptB) (gD.signatu
   hb := fun c h => by have hV : (vertragVon gD g_hauptB).boden = some 0 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
 
 def gEns_setze : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) (vertragVon gD g_setze).ende .bool :=
-  (.und (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto)) (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (.var .hier)))
+  (.and (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto)) (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (.var .here)))
 
 def gEns_pruefeA : Expr gD (ErgCtx (gD.params g_pruefeA) (gD.erg g_pruefeA)) (vertragVon gD g_pruefeA).ende .bool :=
-  (.eq (.var .hier) (((.lit 7)) : Expr gD (ErgCtx (gD.params g_pruefeA) (gD.erg g_pruefeA)) gL_pruefeA (.int 7 7)))
+  (.eq (.var .here) (((.lit 7)) : Expr gD (ErgCtx (gD.params g_pruefeA) (gD.erg g_pruefeA)) gL_pruefeA (.int 7 7)))
 
 def gEns_hauptA : Expr gD (ErgCtx (gD.params g_hauptA) (gD.erg g_hauptA)) (vertragVon gD g_hauptA).ende .bool :=
-  (.eq (Expr.slot (D := gD) GTab.privA GprivAFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_hauptA) (gD.erg g_hauptA)) gL_hauptA (.index (gD.count GTab.privA))))) gDarf_hauptA_privA) (((.lit 7)) : Expr gD (ErgCtx (gD.params g_hauptA) (gD.erg g_hauptA)) gL_hauptA (.int 7 7)))
+  (.eq (Expr.slot (D := gD) GTab.privA GprivAFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_hauptA) (gD.erg g_hauptA)) gL_hauptA (.index (gD.count GTab.privA))))) gDarf_hauptA_privA) (((.lit 7)) : Expr gD (ErgCtx (gD.params g_hauptA) (gD.erg g_hauptA)) gL_hauptA (.int 7 7)))
 
 def gReq_setze : Expr gD (gD.params g_setze) (Signatur.anfang gD (gD.signatur g_setze)) .bool :=
-  (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto))
+  (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto))
 
 def gReq_pruefeA : Expr gD (gD.params g_pruefeA) (Signatur.anfang gD (gD.signatur g_pruefeA)) .bool :=
-  (.eq (Expr.slot (D := gD) GTab.privA GprivAFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (gD.params g_pruefeA) gL_pruefeA (.index (gD.count GTab.privA))))) gDarf_pruefeA_privA) (((.lit 7)) : Expr gD (gD.params g_pruefeA) gL_pruefeA (.int 7 7)))
+  (.eq (Expr.slot (D := gD) GTab.privA GprivAFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (gD.params g_pruefeA) gL_pruefeA (.index (gD.count GTab.privA))))) gDarf_pruefeA_privA) (((.lit 7)) : Expr gD (gD.params g_pruefeA) gL_pruefeA (.int 7 7)))
 
 def gBody_setze : Endblock gD (vertragVon gD g_setze) false gCtx_setze gL_setze :=
-  (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .hier) (by decide) gDarf_setze_konto) (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .hier) (by decide) gDarf_setze_konto) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .here) (by decide) gDarf_setze_konto) (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .here) (by decide) gDarf_setze_konto) (.ret .empty (List.Perm.refl _))))
 
 def gBody_pruefeA : Endblock gD (vertragVon gD g_pruefeA) false gCtx_pruefeA gL_pruefeA :=
-  (.ret (.wert (Expr.slot (D := gD) GTab.privA GprivAFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_pruefeA gL_pruefeA (.index (gD.count GTab.privA))))) gDarf_pruefeA_privA)) (List.Perm.refl _))
+  (.ret (.val (Expr.slot (D := gD) GTab.privA GprivAFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_pruefeA gL_pruefeA (.index (gD.count GTab.privA))))) gDarf_pruefeA_privA)) (List.Perm.refl _))
 
 def gBody_hauptA : Endblock gD (vertragVon gD g_hauptA) false gCtx_hauptA gL_hauptA :=
-  (.cons (.assignSlot GTab.privA GprivAFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_hauptA gL_hauptA (.index (gD.count GTab.privA))))) ((.weiter (by decide) (by decide) (((.lit 7)) : Expr gD gCtx_hauptA gL_hauptA (.int 7 7))) : Expr gD gCtx_hauptA gL_hauptA (.int 0 100)) (by decide) gDarf_hauptA_privA) (.cons (.assignSlot GTab.privA GprivAFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD gCtx_hauptA gL_hauptA (.index (gD.count GTab.privA))))) ((.weiter (by decide) (by decide) (((.lit 7)) : Expr gD gCtx_hauptA gL_hauptA (.int 7 7))) : Expr gD gCtx_hauptA gL_hauptA (.int 0 100)) (by decide) gDarf_hauptA_privA) (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_setze (.cons ((.weiter (by decide) (by decide) (((.lit 30)) : Expr gD gCtx_hauptA gL_hauptA_in_L (.int 30 30))) : Expr gD gCtx_hauptA gL_hauptA_in_L (.int 0 100)) .nil) gHp_hauptA_in_L_setze rfl) .nil)) (.cons (.call g_pruefeA .nil gHp_hauptA_pruefeA rfl) (.ret .keine (List.Perm.refl _))))))
+  (.cons (.assignSlot GTab.privA GprivAFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_hauptA gL_hauptA (.index (gD.count GTab.privA))))) ((.widen (by decide) (by decide) (((.lit 7)) : Expr gD gCtx_hauptA gL_hauptA (.int 7 7))) : Expr gD gCtx_hauptA gL_hauptA (.int 0 100)) (by decide) gDarf_hauptA_privA) (.cons (.assignSlot GTab.privA GprivAFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD gCtx_hauptA gL_hauptA (.index (gD.count GTab.privA))))) ((.widen (by decide) (by decide) (((.lit 7)) : Expr gD gCtx_hauptA gL_hauptA (.int 7 7))) : Expr gD gCtx_hauptA gL_hauptA (.int 0 100)) (by decide) gDarf_hauptA_privA) (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_setze (.cons ((.widen (by decide) (by decide) (((.lit 30)) : Expr gD gCtx_hauptA gL_hauptA_in_L (.int 30 30))) : Expr gD gCtx_hauptA gL_hauptA_in_L (.int 0 100)) .nil) gHp_hauptA_in_L_setze rfl) .nil)) (.cons (.call g_pruefeA .nil gHp_hauptA_pruefeA rfl) (.ret .empty (List.Perm.refl _))))))
 
 def gBody_hauptB : Endblock gD (vertragVon gD g_hauptB) false gCtx_hauptB gL_hauptB :=
-  (.cons (.assignSlot GTab.privB GprivBFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_hauptB gL_hauptB (.index (gD.count GTab.privB))))) ((.weiter (by decide) (by decide) (((.lit 5)) : Expr gD gCtx_hauptB gL_hauptB (.int 5 5))) : Expr gD gCtx_hauptB gL_hauptB (.int 0 100)) (by decide) gDarf_hauptB_privB) (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_setze (.cons ((.weiter (by decide) (by decide) (((.lit 70)) : Expr gD gCtx_hauptB gL_hauptB_in_L (.int 70 70))) : Expr gD gCtx_hauptB gL_hauptB_in_L (.int 0 100)) .nil) gHp_hauptB_in_L_setze rfl) .nil)) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignSlot GTab.privB GprivBFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_hauptB gL_hauptB (.index (gD.count GTab.privB))))) ((.widen (by decide) (by decide) (((.lit 5)) : Expr gD gCtx_hauptB gL_hauptB (.int 5 5))) : Expr gD gCtx_hauptB gL_hauptB (.int 0 100)) (by decide) gDarf_hauptB_privB) (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_setze (.cons ((.widen (by decide) (by decide) (((.lit 70)) : Expr gD gCtx_hauptB gL_hauptB_in_L (.int 70 70))) : Expr gD gCtx_hauptB gL_hauptB_in_L (.int 0 100)) .nil) gHp_hauptB_in_L_setze rfl) .nil)) (.ret .empty (List.Perm.refl _))))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
     | .setze => gReq_setze
     | .pruefeA => gReq_pruefeA
-    | .hauptA => .wahr
-    | .hauptB => .wahr
+    | .hauptA => .tru
+    | .hauptB => .tru
   ensures
     | .setze => gEns_setze
     | .pruefeA => gEns_pruefeA
     | .hauptA => gEns_hauptA
-    | .hauptB => .wahr
+    | .hauptB => .tru
   rumpf
     | .setze => gBody_setze
     | .pruefeA => gBody_pruefeA

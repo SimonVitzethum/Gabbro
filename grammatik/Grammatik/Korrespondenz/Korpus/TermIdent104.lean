@@ -89,14 +89,14 @@ example : printInt (D := refD) (Γ := []) (Λ := [])
 /-- Differential witness 9: Rust `Wide(0, 7, lit 3)` prints
     `(.wide 0 7 (.lit 3))` (`wide_narrows_within_bounds`). -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
-    (Expr.weiter (lo' := 0) (hi' := 7) (lo := 3) (hi := 3)
+    (Expr.widen (lo' := 0) (hi' := 7) (lo := 3) (hi := 3)
       (by decide) (by decide) (Expr.lit 3))
     = some (CertExpr.wide (D := refD) 0 7 (.lit 3)) := rfl
 
 /-- Differential witness 10: Rust `Var(0)` against context `[(3, 3)]`
     prints `(.var 0)` (`var_reads_the_context`). -/
 example : printInt (D := refD) (Γ := [.int 3 3]) (Λ := [])
-    (Expr.var Var.hier)
+    (Expr.var Var.here)
     = some (CertExpr.var (D := refD) 0) := rfl
 
 /-- Differential witness 11: Rust `Slot(t, f, Wide(0, count - 1, lit))`

@@ -158,29 +158,29 @@ def vR0 : Fin (vertragVon vD vErr).gruende := ⟨0, by decide⟩
 
 /-- `ferr`: the reason return. -/
 def vRumpfErr : Endblock vD (vertragVon vD vErr) false [] [] :=
-  .retGrund vR0 List.Perm.nil
+  .retWhy vR0 List.Perm.nil
 
 /-- The `else` block of `mid`: `return`. -/
-def vErrBlock : Endblock vD (vertragVon vD vMid) false (.grund (vD.gruende vErr) :: [])
+def vErrBlock : Endblock vD (vertragVon vD vMid) false (.why (vD.gruende vErr) :: [])
     (nach vD vErr []) :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 /-- `let x = ferr() else r => { return }` -/
 def vLetElse : Block vD (vertragVon vD vMid) false [] [] [] :=
   .bindCallElse vErr .nil rfl vHpErr (by decide) vErrBlock .nil
 
 /-- `if true { let x = ferr() else … }` -/
-def vIte : Stmt vD (vertragVon vD vMid) false [] [] [] := .ite .wahr vLetElse .nil
+def vIte : Stmt vD (vertragVon vD vMid) false [] [] [] := .ite .tru vLetElse .nil
 
 /-- `mid`: `if true { let x = ferr() else r => { return } }; return`. -/
 def vRumpfMid : Endblock vD (vertragVon vD vMid) false [] [] :=
-  .cons vIte (.ret .keine List.Perm.nil)
+  .cons vIte (.ret .empty List.Perm.nil)
 
 /-- The loop body: `leave`. -/
 def vLeave : Block vD (vertragVon vD vHaupt) true [] [] [] := .cons (.leave rfl) .nil
 
 /-- `retry 1 until false { leave } on_exceeded { }` -/
-def vRetry : Stmt vD (vertragVon vD vHaupt) false [] [] [] := .retry 1 .falsch vLeave .nil
+def vRetry : Stmt vD (vertragVon vD vHaupt) false [] [] [] := .retry 1 .fls vLeave .nil
 
 /-- The axiom call `ax()`, under the lock. -/
 def vAx : Stmt vD (vertragVon vD vHaupt) false [] vL vL :=
@@ -193,7 +193,7 @@ def vLocks : Stmt vD (vertragVon vD vHaupt) false [] [] [] :=
 
 /-- `haupt` after its call. -/
 def vRestHaupt : Endblock vD (vertragVon vD vHaupt) false [] (nach vD vMid []) :=
-  .cons vRetry (.cons vLocks (.ret .keine List.Perm.nil))
+  .cons vRetry (.cons vLocks (.ret .empty List.Perm.nil))
 
 /-- The pointer `&mid`. -/
 def vZeigerMid {Γ : Ctx} {Λ : List (Res vD)} : Expr vD Γ Λ (.fnptr 1) := .fnref vMid 1 rfl
@@ -209,8 +209,8 @@ def vRumpfHaupt : Endblock vD (vertragVon vD vHaupt) false [] [] :=
 /-- The witness program: all contracts `true`. -/
 def vP : Programm vD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .haupt => vRumpfHaupt
     | .mid => vRumpfMid
@@ -520,7 +520,7 @@ theorem vO_erw (σ : World vD) (ρ : Env vD (vD.aparams ())) :
 theorem vLauf : ∃ M : RufMaschineG vD,
     RufErreichbarG vP vO 0 (RufStartG vP vSp vInit) M ∧
     M.speicher.slots () 0 () = true ∧
-    (∃ rho r s0 s1, RufEreignisF.grund vErr rho r s0 s1 ∈ (M.faeden 0).log) ∧
+    (∃ rho r s0 s1, RufEreignisF.why vErr rho r s0 s1 ∈ (M.faeden 0).log) ∧
     (∃ rho v s0 s1, RufEreignisF.rueck vMid rho v s0 s1 ∈ (M.faeden 0).log) ∧
     (M.faeden 0).kopf.f = vHaupt ∧ (() : vD.Lock) ∈ offen (M.faeden 0).spur ∧
     M.faeden 1 = (RufStartG vP vSp vInit).faeden 1 := by
@@ -535,19 +535,19 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e1
   -- `mid`: unfold the `if`, take its true branch, call `ferr` in `let … else`
   obtain ⟨M2, s2, hZ2⟩ := w_endeEntf (P := vP) (O := vO) (passes := 0) e1 vIte
-    (.ret .keine List.Perm.nil) .nil rfl rfl
+    (.ret .empty List.Perm.nil) .nil rfl rfl
   have hoff2 : offen (M2.faeden 0).spur = [] := by
     rw [hZ2.spur, vOffen_weltVon]; exact hoff1
   have e2 := hZ2.1
   try dsimp only at e2
-  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := vP) (O := vO) (passes := 0) e2 .wahr vLetElse .nil
-    .nil (.ende (.ret .keine List.Perm.nil)) .nil rfl rfl (vHg0 (vHoff_e e2 hoff2)).heldIn
+  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := vP) (O := vO) (passes := 0) e2 .tru vLetElse .nil
+    .nil (.ende (.ret .empty List.Perm.nil)) .nil rfl rfl (vHg0 (vHoff_e e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff2
   have e3 := hZ3.1
   try dsimp only at e3
   obtain ⟨M4, s4, hZ4⟩ := w_bindCallElse (P := vP) (O := vO) (passes := 0) e3 vErr .nil rfl
-    vHpErr (by decide) vErrBlock .nil (.dann .nil (.ende (.ret .keine List.Perm.nil))) .nil rfl
+    vHpErr (by decide) vErrBlock .nil (.dann .nil (.ende (.ret .empty List.Perm.nil))) .nil rfl
     (vHg0 (vHoff_e e3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 0).spur = [] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff3
@@ -555,7 +555,7 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e4
   -- `ferr` returns its reason; `mid` runs its `else` block
   obtain ⟨M5, s5, hG5⟩ := w_rueckGrundP (P := vP) (O := vO) (passes := 0) e4 _ _ rfl
-    (PopGrund.sonst vErrBlock .nil (.dann .nil (.ende (.ret .keine List.Perm.nil))) .nil rfl)
+    (PopGrund.sonst vErrBlock .nil (.dann .nil (.ende (.ret .empty List.Perm.nil))) .nil rfl)
     vR0 List.Perm.nil .nil rfl (vHg0 (vHoff_e e4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 0).spur = [] := by
     rw [hG5.1]; exact hoff4
@@ -563,7 +563,7 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e5
   -- `mid` returns to `haupt`
   obtain ⟨M6, s6, hG6⟩ := w_dannRetP (P := vP) (O := vO) (passes := 0) e5 _ _ rfl
-    (PopArt.wie rfl) .keine List.Perm.nil .nil _ _ rfl (vHg0 (vHoff_e e5 hoff5)).heldIn
+    (PopArt.wie rfl) .empty List.Perm.nil .nil _ _ rfl (vHg0 (vHoff_e e5 hoff5)).heldIn
   have hoff6 : offen (M6.faeden 0).spur = [] := by
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
@@ -571,40 +571,40 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e6
   -- `haupt`: the loop, left by `leave`
   obtain ⟨M7, s7, hZ7⟩ := w_endeEntf (P := vP) (O := vO) (passes := 0) e6 vRetry
-    (.cons vLocks (.ret .keine List.Perm.nil)) .nil rfl rfl
+    (.cons vLocks (.ret .empty List.Perm.nil)) .nil rfl rfl
   have hoff7 : offen (M7.faeden 0).spur = [] := by
     rw [hZ7.spur, vOffen_weltVon]; exact hoff6
   have e7 := hZ7.1
   try dsimp only at e7
-  obtain ⟨M8, s8, hZ8⟩ := w_dannRetry (P := vP) (O := vO) (passes := 0) e7 1 .falsch vLeave
-    .nil .nil (.ende (.cons vLocks (.ret .keine List.Perm.nil))) .nil rfl
+  obtain ⟨M8, s8, hZ8⟩ := w_dannRetry (P := vP) (O := vO) (passes := 0) e7 1 .fls vLeave
+    .nil .nil (.ende (.cons vLocks (.ret .empty List.Perm.nil))) .nil rfl
   have hoff8 : offen (M8.faeden 0).spur = [] := by
     rw [hZ8.spur, vOffen_weltVon]; exact hoff7
   have e8 := hZ8.1
   try dsimp only at e8
-  obtain ⟨M9, s9, hZ9⟩ := w_wiederSchritt (P := vP) (O := vO) (passes := 0) e8 0 .falsch vLeave
-    .nil (.dann .nil (.ende (.cons vLocks (.ret .keine List.Perm.nil)))) .nil rfl rfl
+  obtain ⟨M9, s9, hZ9⟩ := w_wiederSchritt (P := vP) (O := vO) (passes := 0) e8 0 .fls vLeave
+    .nil (.dann .nil (.ende (.cons vLocks (.ret .empty List.Perm.nil)))) .nil rfl rfl
     (vHg0 (vHoff_e e8 hoff8)).heldIn
   have hoff9 : offen (M9.faeden 0).spur = [] := by
     rw [hZ9.spur, (Erw.lese _ _ _).offen, vOffen_weltVon]; exact hoff8
   have e9 := hZ9.1
   try dsimp only at e9
-  obtain ⟨M10, s10, hZ10⟩ := w_abbWieder (P := vP) (O := vO) (passes := 0) e9 true 0 .falsch
-    vLeave .nil (.dann .nil (.ende (.cons vLocks (.ret .keine List.Perm.nil)))) .nil .nil rfl
+  obtain ⟨M10, s10, hZ10⟩ := w_abbWieder (P := vP) (O := vO) (passes := 0) e9 true 0 .fls
+    vLeave .nil (.dann .nil (.ende (.cons vLocks (.ret .empty List.Perm.nil)))) .nil .nil rfl
     (vHg0 (vHoff_e e9 hoff9)).heldIn
   have hoff10 : offen (M10.faeden 0).spur = [] := by
     rw [hZ10.spur, vOffen_weltVon]; exact hoff9
   have e10 := hZ10.1
   try dsimp only at e10
   obtain ⟨M11, s11, hZ11⟩ := w_dannLeer (P := vP) (O := vO) (passes := 0) e10
-    (.ende (.cons vLocks (.ret .keine List.Perm.nil))) .nil rfl
+    (.ende (.cons vLocks (.ret .empty List.Perm.nil))) .nil rfl
   have hoff11 : offen (M11.faeden 0).spur = [] := by
     rw [hZ11.spur, vOffen_weltVon]; exact hoff10
   have e11 := hZ11.1
   try dsimp only at e11
   -- `haupt`: take the lock, call the axiom
   obtain ⟨M12, s12, hZ12⟩ := w_endeEntf (P := vP) (O := vO) (passes := 0) e11 vLocks
-    (.ret .keine List.Perm.nil) .nil rfl rfl
+    (.ret .empty List.Perm.nil) .nil rfl rfl
   have hoff12 : offen (M12.faeden 0).spur = [] := by
     rw [hZ12.spur, vOffen_weltVon]; exact hoff11
   have e12 := hZ12.1
@@ -616,7 +616,7 @@ theorem vLauf : ∃ M : RufMaschineG vD,
       rufSchrittG_fremd s6 u hu, rufSchrittG_fremd s5 u hu, rufSchrittG_fremd s4 u hu,
       rufSchrittG_fremd s3 u hu, rufSchrittG_fremd s2 u hu, rufSchrittG_fremd s1 u hu, vM0_faden]
   obtain ⟨M13, s13, hZ13⟩ := w_locks (P := vP) (O := vO) (passes := 0) e12 ()
-    (fun _ h => by cases h) (.cons vAx .nil) .nil (.ende (.ret .keine List.Perm.nil)) .nil rfl
+    (fun _ h => by cases h) (.cons vAx .nil) .nil (.ende (.ret .empty List.Perm.nil)) .nil rfl
     (vHg0 (vHoff_e e12 hoff12))
     (fun u hu h => by rw [hfremd12 u hu] at h; exact List.not_mem_nil h)
   have hoff13 : offen (M13.faeden 0).spur = [()] := by
@@ -677,7 +677,7 @@ theorem ziel_ort_voll_zeuge :
     StartExklusiv (D := vD) vInit ∧
     ∃ M : RufMaschineG vD, RufErreichbarG vP vO 0 (RufStartG vP vSp vInit) M ∧
       vSp.slots () 0 () = false ∧ M.speicher.slots () 0 () = true ∧
-      (∃ rho r s0 s1, RufEreignisF.grund vErr rho r s0 s1 ∈ (M.faeden 0).log) ∧
+      (∃ rho r s0 s1, RufEreignisF.why vErr rho r s0 s1 ∈ (M.faeden 0).log) ∧
       (∃ rho v s0 s1, RufEreignisF.rueck vMid rho v s0 s1 ∈ (M.faeden 0).log) ∧
       (M.faeden 0).kopf.f = vHaupt ∧ (() : vD.Lock) ∈ offen (M.faeden 0).spur ∧
       M.faeden 1 = (RufStartG vP vSp vInit).faeden 1 ∧

@@ -78,18 +78,18 @@ theorem darf8 : darf D8 t8 [] := by unfold darf; decide
 
 /-- `read_a`'s body: `return T.slots[0].v;`. -/
 def bodyA8 : Endblock D8 (vertragVon D8 a8) false (D8.params a8) [] :=
-  .ret (.wert (Expr.weiter (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
-    (Expr.slot t8 f8 (.weiter (by decide) (by decide) (.lit 0)) darf8))) (List.Perm.refl _)
+  .ret (.val (Expr.widen (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
+    (Expr.slot t8 f8 (.widen (by decide) (by decide) (.lit 0)) darf8))) (List.Perm.refl _)
 
 /-- `read_c`'s body: `return T.slots[1].v;`. -/
 def bodyC8 : Endblock D8 (vertragVon D8 c8) false (D8.params c8) [] :=
-  .ret (.wert (Expr.weiter (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
-    (Expr.slot t8 f8 (.weiter (by decide) (by decide) (.lit 1)) darf8))) (List.Perm.refl _)
+  .ret (.val (Expr.widen (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
+    (Expr.slot t8 f8 (.widen (by decide) (by decide) (.lit 1)) darf8))) (List.Perm.refl _)
 
 theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := rfl
 theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := rfl
-theorem ens8 (f : D8.Fn) : P8.ensures f = .wahr := by rcases fn_zwei f with e | e <;> subst e <;> rfl
-theorem req8 (f : D8.Fn) : P8.requires f = .wahr := rfl
+theorem ens8 (f : D8.Fn) : P8.ensures f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
+theorem req8 (f : D8.Fn) : P8.requires f = .tru := rfl
 
 /-! ## 3. Layout, certificate, unit, checker -/
 

@@ -31,8 +31,8 @@ def Block.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .cons s _ => s.istBlatt
   | .bindAxiom .. => true
   | .bindAxiomElse .. => true
-  | .regLies .. => true
-  | .regLiesElse .. => true
+  | .regRead .. => true
+  | .regReadElse .. => true
   | .awaits .. => true
   | _ => false
 
@@ -75,8 +75,8 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
           all_goals exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
-      | regLies => rfl
-      | regLiesElse => rfl
+      | regRead => rfl
+      | regReadElse => rfl
       | awaits => rfl
       | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
   | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])

@@ -117,14 +117,14 @@ abbrev gL_f : List (Res gD) := []
 
 
 def gBody_f : Endblock gD (vertragVon gD g_f) false gCtx_f gL_f :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_f gL_f (.int 1 1))) : Expr gD gCtx_f gL_f (.int 0 4294967295))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_f gL_f (.int 1 1))) : Expr gD gCtx_f gL_f (.int 0 4294967295))) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .f => .wahr
+    | .f => .tru
   ensures
-    | .f => .wahr
+    | .f => .tru
   rumpf
     | .f => gBody_f
 

@@ -56,7 +56,7 @@ def Stmt.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ 
   | .ite _ t e => t.ohneEwig && e.ohneEwig
   | .onOption _ p a => p.ohneEwig && a.ohneEwig
   | .onTag _ arms => arms.ohneEwig
-  | .onGrund _ arms => arms.ohneEwig
+  | .onWhy _ arms => arms.ohneEwig
   | .locks _ _ body => body.ohneEwig
   | .breaking _ body => body.ohneEwig
   | .traverse _ _ body => body.ohneEwig
@@ -73,16 +73,16 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bindCallElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
-  | .regLies _ _ rest => rest.ohneEwig
-  | .regLiesElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
+  | .regRead _ _ rest => rest.ohneEwig
+  | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .awaits _ _ _ _ rest => rest.ohneEwig
   | .exchange _ _ _ _ rest => rest.ohneEwig
   | .narrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
-  | .pruefung _ sonst rest => sonst.ohneEwig && rest.ohneEwig
-  | .gleit _ _ _ _ _ rest => rest.ohneEwig
-  | .gleitLit _ _ _ rest => rest.ohneEwig
-  | .gleitVon _ _ _ rest => rest.ohneEwig
-  | .gleitNarrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
+  | .check _ sonst rest => sonst.ohneEwig && rest.ohneEwig
+  | .float _ _ _ _ _ rest => rest.ohneEwig
+  | .floatLit _ _ _ rest => rest.ohneEwig
+  | .floatOf _ _ _ rest => rest.ohneEwig
+  | .floatNarrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
 
 def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .cons s rest => s.ohneEwig && rest.ohneEwig
@@ -123,7 +123,7 @@ theorem Stmt.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Stmt.ohneEwig] at h
       simp only [execStmtH]
       exact Arms.execH_passes arms h _ _ _
-  | .onGrund r arms, h, σ, ρ => by
+  | .onWhy r arms, h, σ, ρ => by
       simp only [Stmt.ohneEwig] at h
       simp only [execStmtH]
       exact GrundArms.execH_passes arms h _ _ _
@@ -150,21 +150,21 @@ theorem Stmt.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
             funext fun σ => funext fun ρ => Block.execH_passes ueber h.2 σ ρ]
   | .forever .., h, _, _ => by simp [Stmt.ohneEwig] at h
   | .assignSlot .., _, _, _ => rfl
-  | .assignDurch .., _, _, _ => rfl
+  | .assignThru .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
-  | .schreibBytes .., _, _, _ => rfl
+  | .putBytes .., _, _, _ => rfl
   | .assignVar .., _, _, _ => rfl
-  | .uebergang .., _, _, _ => rfl
+  | .shift .., _, _, _ => rfl
   | .call .., _, _, _ => rfl
   | .callInd .., _, _, _ => rfl
   | .axiomCall .., _, _, _ => rfl
-  | .regSchreib .., _, _, _ => rfl
+  | .regWrite .., _, _, _ => rfl
   | .transition .., _, _, _ => rfl
   | .publish .., _, _, _ => rfl
   | .advances .., _, _, _ => rfl
   | .retires .., _, _, _ => rfl
   | .ret .., _, _, _ => rfl
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -193,10 +193,10 @@ theorem Block.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes err h.1]
-  | .regLies r hk rest, h, σ, ρ => by
+  | .regRead r hk rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
-  | .regLiesElse r hk zusage sonst rest, h, σ, ρ => by
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
   | .awaits g payload hp hL rest, h, σ, ρ => by
@@ -208,19 +208,19 @@ theorem Block.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .narrow e lo' hi' sonst rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
-  | .pruefung c sonst rest, h, σ, ρ => by
+  | .check c sonst rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
-  | .gleit op a b lo hi rest, h, σ, ρ => by
+  | .float op a b lo hi rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
-  | .gleitLit q lo hi rest, h, σ, ρ => by
+  | .floatLit q lo hi rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
-  | .gleitVon e lo hi rest, h, σ, ρ => by
+  | .floatOf e lo hi rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
-  | .gleitNarrow e lo hi sonst rest, h, σ, ρ => by
+  | .floatNarrow e lo hi sonst rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
 
@@ -228,7 +228,7 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → b.ohneEwig = true → ∀ (σ : World D) (ρ : Env D Γ),
       execEndH S O U n R b σ ρ = execEndH S O U m R b σ ρ
   | .ret .., _, _, _ => rfl
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, h, σ, ρ => by

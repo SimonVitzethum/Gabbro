@@ -137,10 +137,10 @@ def gzIeee {Γ : Ctx} : Ausgang gzV false Γ → Bool
     -- the range `lo .. hi` of `c` is the parameter. -/
 def gzSumme (lo hi : Int × Int) (hG : gzD.gtyp () = .fl lo hi) :
     Block gzD gzV false [] [] [] :=
-  .gleitLit (1, 10) gzLo gzHi
-    (.gleitLit (2, 10) gzLo gzHi
-      (.gleit .add (.var (.dort .hier)) (.var .hier) lo hi
-        (.cons (.assignGlob () (hG ▸ .var .hier) rfl gzDarf) .nil)))
+  .floatLit (1, 10) gzLo gzHi
+    (.floatLit (2, 10) gzLo gzHi
+      (.float .add (.var (.there .here)) (.var .here) lo hi
+        (.cons (.assignGlob () (hG ▸ .var .here) rfl gzDarf) .nil)))
 
 /-- **`0.1 + 0.2` runs, passes its range `0 .. 1`, and stores exactly
     `0x3FD3333333333334`** -- the IEEE double 0.30000000000000004, pinned by
@@ -152,9 +152,9 @@ theorem lauf01_gespeichert :
 /-- The block of `lauf01_ueber03`: the sum declared in `0 .. 3/10`, bound and
     dropped (the global keeps `0 .. 1`; the step's range is the one checked). -/
 def gzSummeEng : Block gzD gzV false [] [] [] :=
-  .gleitLit (1, 10) gzLo gzHi
-    (.gleitLit (2, 10) gzLo gzHi
-      (.gleit .add (.var (.dort .hier)) (.var .hier) (0, 1) (3, 10) .nil))
+  .floatLit (1, 10) gzLo gzHi
+    (.floatLit (2, 10) gzLo gzHi
+      (.float .add (.var (.there .here)) (.var .here) (0, 1) (3, 10) .nil))
 
 /-- **The range check bites on the last ulp**: `0.1 + 0.2` declared in
     `0 .. 3/10` leaves its range (`0x3FD3333333333334 > 0x3FD3333333333333 =
@@ -175,7 +175,7 @@ theorem lauf01_vergleich :
 theorem lauf01_vergleichExpr :
     wahr? (eval gzWelt
       (Expr.fllt (Γ := [.fl gzLo gzHi, .fl gzLo gzHi]) (Λ := []) (D := gzD)
-        (.var (.dort .hier)) (.var .hier))
+        (.var (.there .here)) (.var .here))
       gzWelt
       (.cons ⟨bruch (3, 10), by decide, by decide, by decide⟩
         (.cons ⟨gleitRechne .add (bruch (1, 10)) (bruch (2, 10)), by decide, by decide,
@@ -196,9 +196,9 @@ theorem roh_trunc : gleitRoh (bruch (5, 2)) = 2 ∧ gleitRoh (bruch (-5, 2)) = -
     integer conversions are range-checked, the quotient is `+inf`, not finite,
     and the step takes `logik bereich`. -/
 def gzDurchNull : Block gzD gzV false [] [] [] :=
-  .gleitVon (.lit 1) gzLo gzHi
-    (.gleitVon (.lit 0) gzLo gzHi
-      (.gleit .div (.var (.dort .hier)) (.var .hier) gzLo gzHi .nil))
+  .floatOf (.lit 1) gzLo gzHi
+    (.floatOf (.lit 0) gzLo gzHi
+      (.float .div (.var (.there .here)) (.var .here) gzLo gzHi .nil))
 
 theorem laufDurchNull :
     gzIeee (execBlock gzO 0 gzR gzDurchNull gzWelt .nil) = true := by decide

@@ -145,19 +145,19 @@ theorem gDarf_nimm_A : darf gD GTab.A gL_nimm := by unfold darf; decide
 theorem gDarf_nimm_B : darf gD GTab.B gL_nimm := by unfold darf; decide
 
 def gBody_gib : Endblock gD (vertragVon gD g_gib) false gCtx_gib gL_gib :=
-  (.cons (.assignDurch (.var .hier) GTab.A rfl GAFeld.x (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_gib gL_gib (.index (gD.count GTab.A))))) ((.weiter (by decide) (by decide) (((.lit 30)) : Expr gD gCtx_gib gL_gib (.int 30 30))) : Expr gD gCtx_gib gL_gib (.int 0 100)) (by decide) gDarf_gib_A) (.cons (.assignDurch (.var (.dort .hier)) GTab.B rfl GBFeld.y (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_gib gL_gib (.index (gD.count GTab.B))))) ((.weiter (by decide) (by decide) (((.lit 70)) : Expr gD gCtx_gib gL_gib (.int 70 70))) : Expr gD gCtx_gib gL_gib (.int 0 100)) (by decide) gDarf_gib_B) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignThru (.var .here) GTab.A rfl GAFeld.x (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_gib gL_gib (.index (gD.count GTab.A))))) ((.widen (by decide) (by decide) (((.lit 30)) : Expr gD gCtx_gib gL_gib (.int 30 30))) : Expr gD gCtx_gib gL_gib (.int 0 100)) (by decide) gDarf_gib_A) (.cons (.assignThru (.var (.there .here)) GTab.B rfl GBFeld.y (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_gib gL_gib (.index (gD.count GTab.B))))) ((.widen (by decide) (by decide) (((.lit 70)) : Expr gD gCtx_gib gL_gib (.int 70 70))) : Expr gD gCtx_gib gL_gib (.int 0 100)) (by decide) gDarf_gib_B) (.ret .empty (List.Perm.refl _))))
 
 def gBody_nimm : Endblock gD (vertragVon gD g_nimm) false gCtx_nimm gL_nimm :=
-  (.cons (.assignDurch (.var .hier) GTab.A rfl GAFeld.x (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_nimm gL_nimm (.index (gD.count GTab.A))))) ((.weiter (by decide) (by decide) (((.lit 10)) : Expr gD gCtx_nimm gL_nimm (.int 10 10))) : Expr gD gCtx_nimm gL_nimm (.int 0 100)) (by decide) gDarf_nimm_A) (.cons (.assignDurch (.var (.dort .hier)) GTab.B rfl GBFeld.y (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_nimm gL_nimm (.index (gD.count GTab.B))))) ((.weiter (by decide) (by decide) (((.lit 90)) : Expr gD gCtx_nimm gL_nimm (.int 90 90))) : Expr gD gCtx_nimm gL_nimm (.int 0 100)) (by decide) gDarf_nimm_B) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignThru (.var .here) GTab.A rfl GAFeld.x (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_nimm gL_nimm (.index (gD.count GTab.A))))) ((.widen (by decide) (by decide) (((.lit 10)) : Expr gD gCtx_nimm gL_nimm (.int 10 10))) : Expr gD gCtx_nimm gL_nimm (.int 0 100)) (by decide) gDarf_nimm_A) (.cons (.assignThru (.var (.there .here)) GTab.B rfl GBFeld.y (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_nimm gL_nimm (.index (gD.count GTab.B))))) ((.widen (by decide) (by decide) (((.lit 90)) : Expr gD gCtx_nimm gL_nimm (.int 90 90))) : Expr gD gCtx_nimm gL_nimm (.int 0 100)) (by decide) gDarf_nimm_B) (.ret .empty (List.Perm.refl _))))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .gib => .wahr
-    | .nimm => .wahr
+    | .gib => .tru
+    | .nimm => .tru
   ensures
-    | .gib => .wahr
-    | .nimm => .wahr
+    | .gib => .tru
+    | .nimm => .tru
   rumpf
     | .gib => gBody_gib
     | .nimm => gBody_nimm

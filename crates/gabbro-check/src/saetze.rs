@@ -2690,7 +2690,7 @@ pub const M1: &[Satz] = &[
         name: "m1.sum_constructor",
         kennungen: &["N280", "N281", "N282", "N283", "N284"],
         aussage: "A `tagged` case constructs in a body as `Case(payload)`, `Case()` or \
-                  the bare `Case` -- the surface of the model's `Expr.fall cs i nutz`: \
+                  the bare `Case` -- the surface of the model's `Expr.case cs i nutz`: \
                   the case index is the declaration order, the payload is held against \
                   the case's type, and the construction answers the owning sum. A name \
                   that is neither a function nor a visible case falls (`N280`), as does \

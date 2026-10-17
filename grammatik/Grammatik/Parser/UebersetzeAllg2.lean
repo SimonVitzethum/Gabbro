@@ -158,7 +158,7 @@ def lowWertAt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .error e => .error e
   | .ok s =>
     if h1 : lo ≤ s.weit.1 then
-      if h2 : s.weit.2 ≤ hi then .ok (Expr.weiter h1 h2 s.term)
+      if h2 : s.weit.2 ≤ hi then .ok (Expr.widen h1 h2 s.term)
       else .error "value outside range"
     else .error "value outside range"
 
@@ -177,7 +177,7 @@ def assignDurchStmt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     show Expr (declOf u) Γ Λ (typAt u t fh.idx)
     rw [fh.hint]
     exact e
-  exact Stmt.assignDurch (D := declOf u) p t ht fh.idx i e2 hw hL
+  exact Stmt.assignThru (D := declOf u) p t ht fh.idx i e2 hw hL
 
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -210,7 +210,7 @@ def assignDurchStmtB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     show Expr (declOf u) Γ Λ (typAt u t bh.idx)
     rw [bh.hbool]
     exact e
-  exact Stmt.assignDurch (D := declOf u) p t ht bh.idx i e2 hw hL
+  exact Stmt.assignThru (D := declOf u) p t ht bh.idx i e2 hw hL
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -455,12 +455,12 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
             else .error "argument right without G form"
           else .error "argument type without G form"
         else .error "argument type without G form"
-      | .wert _ => .error "value for pointer without G form"
+      | .val _ => .error "value for pointer without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
         match a with
-        | .wert s =>
+        | .val s =>
           if h : num < u.tabellen.length then
             if hLo : lo = 0 then
               if hHi : hi = (declOf u).count ⟨num, h⟩ - 1 then
@@ -483,7 +483,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
       | _ => .error "argument type without G form"
     | .int, .int lo hi =>
       match a with
-      | .wert s =>
+      | .val s =>
         match lowWertAt u (ctxOf u caller) Λ
             (fnAt u caller) lo hi s with
         | .error e => .error e
@@ -761,7 +761,7 @@ theorem endPerm_ok (u : UProg) (caller : Fin u.fns.length) :
 def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
     Except String (Endblock (declOf u) (verOf u caller) false
       (ctxOf u caller) (resOf u caller))
-  | .keine =>
+  | .empty =>
     match hE : (fnAt u caller).ergTy with
     | none =>
       have hV : (verOf u caller).erg = none := by
@@ -770,10 +770,10 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
       have eK : ErgExpr (declOf u) (ctxOf u caller)
           (resOf u caller) (verOf u caller).erg := by
         rw [hV]
-        exact ErgExpr.keine
+        exact ErgExpr.empty
       .ok (Endblock.ret eK (endPerm_ok u caller))
     | some _ => .error "return without value with result"
-  | .wert s =>
+  | .val s =>
     match hE : (fnAt u caller).ergTy with
     | some (.int lo hi) =>
       match lowWertAt u (ctxOf u caller) (resOf u caller)
@@ -787,7 +787,7 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
             vErg_eq u caller, hE]
           show ErgExpr (declOf u) (ctxOf u caller)
             (resOf u caller) (Option.some (.int lo hi))
-          exact ErgExpr.wert v
+          exact ErgExpr.val v
         .ok (Endblock.ret eW (endPerm_ok u caller))
     | some _ => .error "number returned for a non-number result"
     | none => .error "return with value without result"
@@ -802,7 +802,7 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
-          exact ErgExpr.wert v
+          exact ErgExpr.val v
         .ok (Endblock.ret eW (endPerm_ok u caller))
     | some _ => .error "truth value returned for a non-bool result"
     | none => .error "return with value without result"
@@ -929,7 +929,7 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
     (B : ∀ f : Fin u.fns.length, RumpTy u f) :
     Programm (declOf u) where
   invariante := fun i => nomatch i
-  requires := fun _ => Expr.wahr
+  requires := fun _ => Expr.tru
   ensures := fun f => E f
   rumpf := fun f => B f
 
@@ -1301,7 +1301,7 @@ def toks108 : List Token := [.wort "module",
  .wort "table",
  .ident "T",
  .wort "count",
- .zahl 4,
+ .num 4,
  .zeichen "{",
  .wort "slot",
  .zeichen "{",
@@ -1327,7 +1327,7 @@ def toks108 : List Token := [.wort "module",
  .zeichen "}",
  .wort "costs",
  .zeichen "<=",
- .zahl 4,
+ .num 4,
  .wort "ops",
  .zeichen "{",
  .wort "return",
@@ -1335,7 +1335,7 @@ def toks108 : List Token := [.wort "module",
  .zeichen ".",
  .wort "slots",
  .zeichen "[",
- .zahl 0,
+ .num 0,
  .zeichen "]",
  .zeichen ".",
  .ident "v",
@@ -1357,7 +1357,7 @@ def toks108 : List Token := [.wort "module",
  .zeichen "}",
  .wort "costs",
  .zeichen "<=",
- .zahl 4,
+ .num 4,
  .wort "ops",
  .zeichen "{",
  .wort "return",
@@ -1365,7 +1365,7 @@ def toks108 : List Token := [.wort "module",
  .zeichen ".",
  .wort "slots",
  .zeichen "[",
- .zahl 1,
+ .num 1,
  .zeichen "]",
  .zeichen ".",
  .ident "v",
@@ -1456,7 +1456,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .wert (.tab "T" "v" (.lit 1)) }] }
+def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], ergebnis := some (0, 4294967295), held := [], schreibt := [], sichert := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 1)) }] }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide

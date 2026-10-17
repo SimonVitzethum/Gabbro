@@ -247,27 +247,27 @@ inductive BlattG {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List 
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       BlattG (l := l) (.assignSlot t f i e hw hL)
-  | assignDurch (n : Nat) (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab)
+  | assignThru (n : Nat) (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab)
       (ht : D.tabNr n = some t) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      BlattG (l := l) (.assignDurch p t ht f i e hw hL)
+      BlattG (l := l) (.assignThru p t ht f i e hw hL)
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
       (hL : gdarf D g Λ) :
       BlattG (l := l) (.assignGlob g e hw hL)
-  | schreibBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
+  | putBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
       (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t)
       (e : Expr D Γ Λ (.int 0 (256 ^ n - 1))) (hw : V.schreibt t = true)
       (hL : darf D t Λ) :
-      BlattG (l := l) (.schreibBytes t f hf n i hlo hhi e hw hL)
+      BlattG (l := l) (.putBytes t f hf n i hlo hhi e hw hL)
   | assignVar {τ : Ty} (x : Var Γ τ) (e : Expr D Γ Λ τ) :
       BlattG (l := l) (.assignVar (τ := τ) x e)
-  | uebergang (t : D.Tab) (f : D.Feld t) (hτ : D.typ t f = .int lo hi)
+  | shift (t : D.Tab) (f : D.Feld t) (hτ : D.typ t f = .int lo hi)
       (i : Expr D Γ Λ (.index (D.count t))) (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi)
       (he : D.erlaubt t f von nach = true) (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      BlattG (l := l) (.uebergang t f hτ i von nach hn he hw hL)
-  | regSchreib (r : D.Reg) (hk : (D.rklasse r).schreibbar = true)
+      BlattG (l := l) (.shift t f hτ i von nach hn he hw hL)
+  | regWrite (r : D.Reg) (hk : (D.rklasse r).schreibbar = true)
       (e : Expr D Γ Λ (D.rtyp r)) :
-      BlattG (l := l) (.regSchreib r hk e)
+      BlattG (l := l) (.regWrite r hk e)
   | transition (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (m : D.Reg)
       (hm : D.spiegel r = some m) (hl : (D.rklasse m).lesbar = true) (maske bits : Int) :
       BlattG (l := l) (Γ := Γ) (Λ := Λ) (.transition r hk m hm hl maske bits)
@@ -287,8 +287,8 @@ theorem BlattG.istBlatt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
     impossible cases without dependent elimination on the indices). -/
 def Stmt.blattArt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
-  | .assignSlot .. | .assignDurch .. | .assignGlob .. | .schreibBytes .. | .assignVar ..
-  | .uebergang .. | .regSchreib .. | .transition .. | .publish .. | .advances ..
+  | .assignSlot .. | .assignThru .. | .assignGlob .. | .putBytes .. | .assignVar ..
+  | .shift .. | .regWrite .. | .transition .. | .publish .. | .advances ..
   | .retires .. => true
   | _ => false
 
@@ -307,7 +307,7 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
-  | assignDurch n p t ht f i e hw hL =>
+  | assignThru n p t ht f i e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
@@ -315,7 +315,7 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibGlob _ _ _ _)
-  | schreibBytes t f hf n i hlo hhi e hw hL =>
+  | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibBytes _ _ _ _ _ _ _)
@@ -323,14 +323,14 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact Erw.lese _ _ _
-  | uebergang t f hτ i von nach hn he hw hL =>
+  | shift t f hτ i von nach hn he hw hL =>
       simp only [execStmt] at hex
       split at hex
       · simp only [Ausgang.ok.injEq] at hex
         obtain ⟨rfl, -⟩ := hex
         exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
       · cases hex
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact Erw.lese _ _ _
@@ -388,9 +388,9 @@ inductive StmtG {V : Vertrag D} (A : D.Lock → Prop) :
       {cs : List (Option (Int × Int))} (v : Expr D Γ Λ (.sum cs))
       (arms : Arms D V l Γ Λ Λ' cs) (ha : ArmsG A mr arms) :
       StmtG A mr (.onTag v arms)
-  | onGrund {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
-      (r : Expr D Γ Λ (.grund n)) (arms : GrundArms D V l Γ Λ Λ' n)
-      (ha : GrundArmsG A mr arms) : StmtG A mr (.onGrund r arms)
+  | onWhy {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+      (r : Expr D Γ Λ (.why n)) (arms : GrundArms D V l Γ Λ Λ' n)
+      (ha : GrundArmsG A mr arms) : StmtG A mr (.onWhy r arms)
   | breaking {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (i : D.Inv) (body : Block D V l Γ Λ Λ') (hb : BlockG A mr body) :
       StmtG A mr (.breaking i body)
@@ -413,16 +413,16 @@ inductive BlockG {V : Vertrag D} (A : D.Lock → Prop) :
   | bind {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
       (e : Expr D Γ Λ τ) (rest : Block D V l (τ :: Γ) Λ Λ')
       (hr : BlockG A mr rest) : BlockG A mr (.bind e rest)
-  | regLies {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+  | regRead {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
       (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (hr : BlockG A mr rest) :
-      BlockG A mr (.regLies r hk rest)
-  | regLiesElse {Γ : Ctx} {Λ Λ' : List (Res D)}
+      BlockG A mr (.regRead r hk rest)
+  | regReadElse {Γ : Ctx} {Λ Λ' : List (Res D)}
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
       (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V false Γ Λ)
       (rest : Block D V false (D.rtyp r :: Γ) Λ Λ')
       (hs : EndG A sonst) (hr : BlockG A true rest) :
-      BlockG A true (.regLiesElse r hk zusage sonst rest)
+      BlockG A true (.regReadElse r hk zusage sonst rest)
   | awaits {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
       (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
@@ -437,27 +437,27 @@ inductive BlockG {V : Vertrag D} (A : D.Lock → Prop) :
       (rest : Block D V false (.int lo' hi' :: Γ) Λ Λ')
       (hs : EndG A sonst) (hr : BlockG A true rest) :
       BlockG A true (.narrow e lo' hi' sonst rest)
-  | pruefung {Γ : Ctx} {Λ Λ' : List (Res D)}
+  | check {Γ : Ctx} {Λ Λ' : List (Res D)}
       (c : Expr D Γ Λ .bool) (sonst : Endblock D V false Γ Λ)
       (rest : Block D V false Γ Λ Λ')
       (hs : EndG A sonst) (hr : BlockG A true rest) :
-      BlockG A true (.pruefung c sonst rest)
-  | gleit {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 l2 h2 : Int × Int}
+      BlockG A true (.check c sonst rest)
+  | float {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 l2 h2 : Int × Int}
       (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
       (lo hi : Int × Int) (rest : Block D V l (.fl lo hi :: Γ) Λ Λ')
-      (hr : BlockG A mr rest) : BlockG A mr (.gleit op a b lo hi rest)
-  | gleitLit {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+      (hr : BlockG A mr rest) : BlockG A mr (.float op a b lo hi rest)
+  | floatLit {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (q lo hi : Int × Int) (rest : Block D V l (.fl lo hi :: Γ) Λ Λ')
-      (hr : BlockG A mr rest) : BlockG A mr (.gleitLit q lo hi rest)
-  | gleitVon {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int}
+      (hr : BlockG A mr rest) : BlockG A mr (.floatLit q lo hi rest)
+  | floatOf {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int}
       (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
       (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (hr : BlockG A mr rest) :
-      BlockG A mr (.gleitVon e lo hi rest)
-  | gleitNarrow {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
+      BlockG A mr (.floatOf e lo hi rest)
+  | floatNarrow {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
       (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock D V false Γ Λ)
       (rest : Block D V false (.fl lo hi :: Γ) Λ Λ')
       (hs : EndG A sonst) (hr : BlockG A true rest) :
-      BlockG A true (.gleitNarrow e lo hi sonst rest)
+      BlockG A true (.floatNarrow e lo hi sonst rest)
 
 /-- Covered end blocks: at loop level `false` (a function body), ending in
     `ret`, with covered statements (a `ret` allowed) and `let` bindings. -/
@@ -497,7 +497,7 @@ end
 def Stmt.gArt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') : Bool :=
   match s with
-  | .ite .. | .onOption .. | .onTag .. | .onGrund .. | .breaking .. | .locks ..
+  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .breaking .. | .locks ..
   | .ret .. => true
   | s => s.blattArt
 
@@ -536,11 +536,11 @@ theorem StmtG.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))
   | onTag _ _ ha => exact ha
 
 theorem StmtG.onGrund_inv {Λ Λ' : List (Res D)} {n : Nat}
-    {r : Expr D Γ Λ (.grund n)} {arms : GrundArms D V l Γ Λ Λ' n}
-    (h : StmtG A mr (.onGrund r arms)) : GrundArmsG A mr arms := by
+    {r : Expr D Γ Λ (.why n)} {arms : GrundArms D V l Γ Λ Λ' n}
+    (h : StmtG A mr (.onWhy r arms)) : GrundArmsG A mr arms := by
   cases h with
   | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | onGrund _ _ ha => exact ha
+  | onWhy _ _ ha => exact ha
 
 theorem StmtG.breaking_inv {Λ Λ' : List (Res D)} {i : D.Inv}
     {body : Block D V l Γ Λ Λ'} (h : StmtG A mr (.breaking i body)) : BlockG A mr body := by
@@ -575,9 +575,9 @@ theorem BlockG.bind_inv {Λ Λ' : List (Res D)} {τ : Ty} {e : Expr D Γ Λ τ}
 
 theorem BlockG.regLies_inv {Λ Λ' : List (Res D)} {r : D.Reg}
     {hk : (D.rklasse r).lesbar = true} {rest : Block D V l (D.rtyp r :: Γ) Λ Λ'}
-    (h : BlockG A mr (.regLies r hk rest)) : BlockG A mr rest := by
+    (h : BlockG A mr (.regRead r hk rest)) : BlockG A mr rest := by
   cases h with
-  | regLies _ _ _ hr => exact hr
+  | regRead _ _ _ hr => exact hr
 
 theorem BlockG.awaits_inv {Λ Λ' : List (Res D)} {g : D.Glob} {payload : List D.Glob}
     {hp : payload = D.nutzlast g} {hL : gdarf D g Λ}
@@ -596,30 +596,30 @@ theorem BlockG.exchange_inv {Λ Λ' : List (Res D)} {g : D.Glob}
 theorem BlockG.gleit_inv {Λ Λ' : List (Res D)} {l1 h1 l2 h2 : Int × Int} {op : GleitOp}
     {a : Expr D Γ Λ (.fl l1 h1)} {b : Expr D Γ Λ (.fl l2 h2)} {lo hi : Int × Int}
     {rest : Block D V l (.fl lo hi :: Γ) Λ Λ'}
-    (h : BlockG A mr (.gleit op a b lo hi rest)) : BlockG A mr rest := by
+    (h : BlockG A mr (.float op a b lo hi rest)) : BlockG A mr rest := by
   cases h with
-  | gleit _ _ _ _ _ _ hr => exact hr
+  | float _ _ _ _ _ _ hr => exact hr
 
 theorem BlockG.gleitLit_inv {Λ Λ' : List (Res D)} {q lo hi : Int × Int}
     {rest : Block D V l (.fl lo hi :: Γ) Λ Λ'}
-    (h : BlockG A mr (.gleitLit q lo hi rest)) : BlockG A mr rest := by
+    (h : BlockG A mr (.floatLit q lo hi rest)) : BlockG A mr rest := by
   cases h with
-  | gleitLit _ _ _ _ hr => exact hr
+  | floatLit _ _ _ _ hr => exact hr
 
 theorem BlockG.gleitVon_inv {Λ Λ' : List (Res D)} {l1 h1 : Int}
     {e : Expr D Γ Λ (.int l1 h1)} {lo hi : Int × Int}
     {rest : Block D V l (.fl lo hi :: Γ) Λ Λ'}
-    (h : BlockG A mr (.gleitVon e lo hi rest)) : BlockG A mr rest := by
+    (h : BlockG A mr (.floatOf e lo hi rest)) : BlockG A mr rest := by
   cases h with
-  | gleitVon _ _ _ _ hr => exact hr
+  | floatOf _ _ _ _ hr => exact hr
 
 theorem BlockG.regLiesElse_inv {Λ Λ' : List (Res D)} {r : D.Reg}
     {hk : (D.rklasse r).lesbar = true} {zusage : Expr D (D.rtyp r :: Γ) Λ .bool}
     {sonst : Endblock D V l Γ Λ} {rest : Block D V l (D.rtyp r :: Γ) Λ Λ'}
-    (h : BlockG A mr (.regLiesElse r hk zusage sonst rest)) :
+    (h : BlockG A mr (.regReadElse r hk zusage sonst rest)) :
     mr = true ∧ BlockG A true rest ∧ EndG A sonst ∧ l = false := by
   cases h with
-  | regLiesElse _ _ _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
+  | regReadElse _ _ _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
 
 theorem BlockG.narrow_inv {Λ Λ' : List (Res D)} {lo hi : Int}
     {e : Expr D Γ Λ (.int lo hi)} {lo' hi' : Int} {sonst : Endblock D V l Γ Λ}
@@ -631,18 +631,18 @@ theorem BlockG.narrow_inv {Λ Λ' : List (Res D)} {lo hi : Int}
 
 theorem BlockG.pruefung_inv {Λ Λ' : List (Res D)} {c : Expr D Γ Λ .bool}
     {sonst : Endblock D V l Γ Λ} {rest : Block D V l Γ Λ Λ'}
-    (h : BlockG A mr (.pruefung c sonst rest)) :
+    (h : BlockG A mr (.check c sonst rest)) :
     mr = true ∧ BlockG A true rest ∧ EndG A sonst ∧ l = false := by
   cases h with
-  | pruefung _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
+  | check _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
 
 theorem BlockG.gleitNarrow_inv {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
     {e : Expr D Γ Λ (.fl l1 h1)} {lo hi : Int × Int} {sonst : Endblock D V l Γ Λ}
     {rest : Block D V l (.fl lo hi :: Γ) Λ Λ'}
-    (h : BlockG A mr (.gleitNarrow e lo hi sonst rest)) :
+    (h : BlockG A mr (.floatNarrow e lo hi sonst rest)) :
     mr = true ∧ BlockG A true rest ∧ EndG A sonst ∧ l = false := by
   cases h with
-  | gleitNarrow _ _ _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
+  | floatNarrow _ _ _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
 
 theorem ArmsG.cons_inv {Λ Λ' : List (Res D)} {c : Option (Int × Int)}
     {cs : List (Option (Int × Int))} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
@@ -849,11 +849,11 @@ theorem w_tagNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
 
 theorem w_grund {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} {n : Nat}
-    (r : Expr D Γ Λ (.grund n))
+    (r : Expr D Γ Λ (.why n))
     (arms : GrundArms D (vertragVon D z.kopf.f) l Γ Λ Λ' n)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onGrund r arms) rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onWhy r arms) rest) k⟩)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log ρ
@@ -1000,7 +1000,7 @@ theorem w_pruefWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (c : Expr D Γ Λ .bool) (sonst : Endblock D (vertragVon D z.kopf.f) l Γ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.pruefung c sonst rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.check c sonst rest) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ c.orte) c ((M.weltVon f).lese Λ c.orte) ρ)
       = true)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
@@ -1016,7 +1016,7 @@ theorem w_pruefFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (c : Expr D Γ Λ .bool) (sonst : Endblock D (vertragVon D z.kopf.f) l Γ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.pruefung c sonst rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.check c sonst rest) k⟩)
     (hw : wahr? (eval ((M.weltVon f).lese Λ c.orte) c ((M.weltVon f).lese Λ c.orte) ρ)
       = false)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
@@ -1033,7 +1033,7 @@ theorem w_regLies {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (rest : Block D (vertragVon D z.kopf.f) l (D.rtyp r :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLies r hk rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regRead r hk rest) k⟩)
     (v : Wert D (D.rtyp r))
     (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hzs : D.rzusage r v = true)
@@ -1052,7 +1052,7 @@ theorem w_regLiesElseWahr {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (sonst : Endblock D (vertragVon D z.kopf.f) l Γ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l (D.rtyp r :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLiesElse r hk zusage sonst rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regReadElse r hk zusage sonst rest) k⟩)
     (v : Wert D (D.rtyp r))
     (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hw : wahr? (eval ((M.weltVon f).lese Λ zusage.orte) zusage
@@ -1072,7 +1072,7 @@ theorem w_regLiesElseFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (sonst : Endblock D (vertragVon D z.kopf.f) l Γ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l (D.rtyp r :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regLiesElse r hk zusage sonst rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.regReadElse r hk zusage sonst rest) k⟩)
     (v : Wert D (D.rtyp r))
     (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
     (hw : wahr? (eval ((M.weltVon f).lese Λ zusage.orte) zusage
@@ -1130,7 +1130,7 @@ theorem w_gleit {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (b : Expr D Γ Λ (.fl l₂ h₂)) (lo hi : Int × Int)
     (rest : Block D (vertragVon D z.kopf.f) l (.fl lo hi :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleit op a b lo hi rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.float op a b lo hi rest) k⟩)
     (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (gleitRechne op
       (eval ((M.weltVon f).lese Λ (a.orte ++ b.orte)) a
@@ -1150,7 +1150,7 @@ theorem w_gleitLit {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (q lo hi : Int × Int)
     (rest : Block D (vertragVon D z.kopf.f) l (.fl lo hi :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitLit q lo hi rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.floatLit q lo hi rest) k⟩)
     (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (.cons v ρ)
@@ -1164,7 +1164,7 @@ theorem w_gleitVon {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     {l₁ h₁ : Int} (e : Expr D Γ Λ (.int l₁ h₁)) (lo hi : Int × Int)
     (rest : Block D (vertragVon D z.kopf.f) l (.fl lo hi :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitVon e lo hi rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.floatOf e lo hi rest) k⟩)
     (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (gleitAusInt (eval ((M.weltVon f).lese Λ e.orte) e
       ((M.weltVon f).lese Λ e.orte) ρ).n) = some v)
@@ -1182,7 +1182,7 @@ theorem w_gleitNarrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (sonst : Endblock D (vertragVon D z.kopf.f) l Γ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l (.fl lo hi :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitNarrow e lo hi sonst rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.floatNarrow e lo hi sonst rest) k⟩)
     (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval ((M.weltVon f).lese Λ e.orte) e
       ((M.weltVon f).lese Λ e.orte) ρ).x = some v)
@@ -1200,7 +1200,7 @@ theorem w_gleitNarrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (sonst : Endblock D (vertragVon D z.kopf.f) l Γ Λ)
     (rest : Block D (vertragVon D z.kopf.f) l (.fl lo hi :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitNarrow e lo hi sonst rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.floatNarrow e lo hi sonst rest) k⟩)
     (hn : gleitPasst lo hi (eval ((M.weltVon f).lese Λ e.orte) e
       ((M.weltVon f).lese Λ e.orte) ρ).x = none)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
@@ -1388,7 +1388,7 @@ theorem execGrund_wahl (O : Orakel D) (passes : Nat)
 /-- `execGrund_wahl` with the selector typed as a `Wert`, as `execStmt` passes it. -/
 theorem execGrund_wahlW (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {Λ Λ' : List (Res D)}
-    {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Wert D (.grund n)) (σ : World D)
+    {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Wert D (.why n)) (σ : World D)
     (ρ : Env D Γ) :
     execGrund O passes R arms r σ ρ = execBlock O passes R (grundWahlG arms r) σ ρ :=
   execGrund_wahl O passes R arms r σ ρ
@@ -1485,18 +1485,18 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     SimOkS P O passes f fn stapel rho s0 log A s
   | _, _, _, _, _, .assignSlot t f' i e hw hL, _ =>
       blattOk P O passes f fn stapel rho s0 log A (.assignSlot t f' i e hw hL)
-  | _, _, _, _, _, .assignDurch p t ht f' i e hw hL, _ =>
-      blattOk P O passes f fn stapel rho s0 log A (.assignDurch _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
+      blattOk P O passes f fn stapel rho s0 log A (.assignThru _ p t ht f' i e hw hL)
   | _, _, _, _, _, .assignGlob g e hw hL, _ =>
       blattOk P O passes f fn stapel rho s0 log A (.assignGlob g e hw hL)
-  | _, _, _, _, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _ =>
-      blattOk P O passes f fn stapel rho s0 log A (.schreibBytes t f' hf n i hlo hhi e hw hL)
+  | _, _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>
+      blattOk P O passes f fn stapel rho s0 log A (.putBytes t f' hf n i hlo hhi e hw hL)
   | _, _, _, _, _, .assignVar x e, _ =>
       blattOk P O passes f fn stapel rho s0 log A (.assignVar x e)
-  | _, _, _, _, _, .uebergang t f' hτ i von nach hn he hw hL, _ =>
-      blattOk P O passes f fn stapel rho s0 log A (.uebergang t f' hτ i von nach hn he hw hL)
-  | _, _, _, _, _, .regSchreib r hk e, _ =>
-      blattOk P O passes f fn stapel rho s0 log A (.regSchreib r hk e)
+  | _, _, _, _, _, .shift t f' hτ i von nach hn he hw hL, _ =>
+      blattOk P O passes f fn stapel rho s0 log A (.shift t f' hτ i von nach hn he hw hL)
+  | _, _, _, _, _, .regWrite r hk e, _ =>
+      blattOk P O passes f fn stapel rho s0 log A (.regWrite r hk e)
   | _, _, _, _, _, .transition r hk m hm hl maske bits, _ =>
       blattOk P O passes f fn stapel rho s0 log A (.transition r hk m hm hl maske bits)
   | _, _, _, _, _, .publish g e payload hp hw hL, _ =>
@@ -1577,7 +1577,7 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M3, hs3, hZ3⟩ := schrumpfOk P O passes f fn stapel rho s0 log hZ2
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
-  | _, _, _, _, _, .onGrund r arms, hs => by
+  | _, _, _, _, _, .onWhy r arms, hs => by
       intro σ σ' ρ ρ' hex M _ rest k hZ hΛ hA
       have ha := hs.onGrund_inv
       have hW := hZ.welt
@@ -1626,7 +1626,7 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .ret .., _ => by
       intro σ σ' ρ ρ' hex
       simp [execStmt] at hex
-  | _, _, _, _, _, .retGrund .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retWhy .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .leave .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .next .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
 
@@ -1669,7 +1669,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
-  | _, _, _, _, _, .regLies r hk rest, hb => by
+  | _, _, _, _, _, .regRead r hk rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.regLies_inv
       have hW := hZ.welt
@@ -1688,7 +1688,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3, ho2⟩
         · cases hex
       · cases hex
-  | _, _, _, _, _, .regLiesElse r hk zusage sonst rest, hb => by
+  | _, _, _, _, _, .regReadElse r hk zusage sonst rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.regLiesElse_inv.2.1
       have hW := hZ.welt
@@ -1760,7 +1760,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
       · exact absurd hex (zuAusgang_ne_ok _ _ _)
-  | _, _, _, _, _, .pruefung c sonst rest, hb => by
+  | _, _, _, _, _, .check c sonst rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.pruefung_inv.2.1
       have hW := hZ.welt
@@ -1774,7 +1774,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
         exact ⟨M2, RufLaufG.schritt hs1 hr2, hZ2, by rw [ho2, (Erw.lese _ _ _).offen]⟩
       · exact absurd hex (zuAusgang_ne_ok _ _ _)
-  | _, _, _, _, _, .gleit op a b lo hi rest, hb => by
+  | _, _, _, _, _, .float op a b lo hi rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.gleit_inv
       have hW := hZ.welt
@@ -1791,7 +1791,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
       · cases hex
-  | _, _, _, _, _, .gleitLit q lo hi rest, hb => by
+  | _, _, _, _, _, .floatLit q lo hi rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.gleitLit_inv
       have hW := hZ.welt
@@ -1807,7 +1807,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M3, hs3, hZ3⟩ := schrumpfOk P O passes f fn stapel rho s0 log hZ2
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3, ho2⟩
       · cases hex
-  | _, _, _, _, _, .gleitVon e lo hi rest, hb => by
+  | _, _, _, _, _, .floatOf e lo hi rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.gleitVon_inv
       have hW := hZ.welt
@@ -1824,7 +1824,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
       · cases hex
-  | _, _, _, _, _, .gleitNarrow e lo hi sonst rest, hb => by
+  | _, _, _, _, _, .floatNarrow e lo hi sonst rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.gleitNarrow_inv.2.1
       have hW := hZ.welt
@@ -1884,18 +1884,18 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       execStmt O passes keinRuf s σ ρ ≠ .zurueck σ' v
   | _, _, _, _, .assignSlot t f' i e hw hL, _ =>
       BlattG.nicht_zurueck O passes keinRuf (.assignSlot t f' i e hw hL)
-  | _, _, _, _, .assignDurch p t ht f' i e hw hL, _ =>
-      BlattG.nicht_zurueck O passes keinRuf (.assignDurch _ p t ht f' i e hw hL)
+  | _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
+      BlattG.nicht_zurueck O passes keinRuf (.assignThru _ p t ht f' i e hw hL)
   | _, _, _, _, .assignGlob g e hw hL, _ =>
       BlattG.nicht_zurueck O passes keinRuf (.assignGlob g e hw hL)
-  | _, _, _, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _ =>
-      BlattG.nicht_zurueck O passes keinRuf (.schreibBytes t f' hf n i hlo hhi e hw hL)
+  | _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>
+      BlattG.nicht_zurueck O passes keinRuf (.putBytes t f' hf n i hlo hhi e hw hL)
   | _, _, _, _, .assignVar x e, _ =>
       BlattG.nicht_zurueck O passes keinRuf (.assignVar x e)
-  | _, _, _, _, .uebergang t f' hτ i von nach hn he hw hL, _ =>
-      BlattG.nicht_zurueck O passes keinRuf (.uebergang t f' hτ i von nach hn he hw hL)
-  | _, _, _, _, .regSchreib r hk e, _ =>
-      BlattG.nicht_zurueck O passes keinRuf (.regSchreib r hk e)
+  | _, _, _, _, .shift t f' hτ i von nach hn he hw hL, _ =>
+      BlattG.nicht_zurueck O passes keinRuf (.shift t f' hτ i von nach hn he hw hL)
+  | _, _, _, _, .regWrite r hk e, _ =>
+      BlattG.nicht_zurueck O passes keinRuf (.regWrite r hk e)
   | _, _, _, _, .transition r hk m hm hl maske bits, _ =>
       BlattG.nicht_zurueck O passes keinRuf (.transition r hk m hm hl maske bits)
   | _, _, _, _, .publish g e payload hp hw hL, _ =>
@@ -1929,7 +1929,7 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       cases c with
       | none => exact hk _ _ _ _ hex
       | some lh => exact hk _ _ _ _ (schrumpf_zurueck hex)
-  | _, _, _, _, .onGrund r arms, hs => by
+  | _, _, _, _, .onWhy r arms, hs => by
       intro σ σ' ρ v hex
       have ha := hs.onGrund_inv
       simp only [execStmt] at hex
@@ -1953,7 +1953,7 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .forever .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, .ret .., hs => absurd hs.ret_inv (by decide)
-  | _, _, _, _, .retGrund .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
 
@@ -1978,7 +1978,7 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb
-  | _, _, _, _, .regLies r hk rest, hb => by
+  | _, _, _, _, .regRead r hk rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.regLies_inv
       simp only [execBlock] at hex
@@ -1987,7 +1987,7 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         · exact blockKein rest hr _ _ _ _ (schrumpf_zurueck hex)
         · cases hex
       · cases hex
-  | _, _, _, _, .regLiesElse .., hb => absurd hb.regLiesElse_inv.1 (by decide)
+  | _, _, _, _, .regReadElse .., hb => absurd hb.regLiesElse_inv.1 (by decide)
   | _, _, _, _, .awaits g payload hp hL rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.awaits_inv
@@ -2001,29 +2001,29 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execBlock] at hex
       exact blockKein rest hr _ _ _ _ (schrumpf_zurueck hex)
   | _, _, _, _, .narrow .., hb => absurd hb.narrow_inv.1 (by decide)
-  | _, _, _, _, .pruefung .., hb => absurd hb.pruefung_inv.1 (by decide)
-  | _, _, _, _, .gleit op a b lo hi rest, hb => by
+  | _, _, _, _, .check .., hb => absurd hb.pruefung_inv.1 (by decide)
+  | _, _, _, _, .float op a b lo hi rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.gleit_inv
       simp only [execBlock] at hex
       split at hex
       · exact blockKein rest hr _ _ _ _ (schrumpf_zurueck hex)
       · cases hex
-  | _, _, _, _, .gleitLit q lo hi rest, hb => by
+  | _, _, _, _, .floatLit q lo hi rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.gleitLit_inv
       simp only [execBlock] at hex
       split at hex
       · exact blockKein rest hr _ _ _ _ (schrumpf_zurueck hex)
       · cases hex
-  | _, _, _, _, .gleitVon e lo hi rest, hb => by
+  | _, _, _, _, .floatOf e lo hi rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.gleitVon_inv
       simp only [execBlock] at hex
       split at hex
       · exact blockKein rest hr _ _ _ _ (schrumpf_zurueck hex)
       · cases hex
-  | _, _, _, _, .gleitNarrow .., hb => absurd hb.gleitNarrow_inv.1 (by decide)
+  | _, _, _, _, .floatNarrow .., hb => absurd hb.gleitNarrow_inv.1 (by decide)
 
 theorem armsKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -2092,7 +2092,7 @@ theorem endeConsOk {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | ite => exact hEntf rfl
   | onOption => exact hEntf rfl
   | onTag => exact hEntf rfl
-  | onGrund => exact hEntf rfl
+  | onWhy => exact hEntf rfl
   | breaking => exact hEntf rfl
   | locks => exact hEntf rfl
 
@@ -2196,7 +2196,7 @@ theorem endeConsRet {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | ite => exact hEntf rfl
   | onOption => exact hEntf rfl
   | onTag => exact hEntf rfl
-  | onGrund => exact hEntf rfl
+  | onWhy => exact hEntf rfl
   | breaking => exact hEntf rfl
   | locks => exact hEntf rfl
 
@@ -2211,20 +2211,20 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     SimRetS P O passes f fn caller rst rho s0 log A s
   | _, _, _, _, .assignSlot t f' i e hw hL, _ =>
       blattRet P O passes f fn caller rst rho s0 log A (.assignSlot t f' i e hw hL)
-  | _, _, _, _, .assignDurch p t ht f' i e hw hL, _ =>
-      blattRet P O passes f fn caller rst rho s0 log A (.assignDurch _ p t ht f' i e hw hL)
+  | _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
+      blattRet P O passes f fn caller rst rho s0 log A (.assignThru _ p t ht f' i e hw hL)
   | _, _, _, _, .assignGlob g e hw hL, _ =>
       blattRet P O passes f fn caller rst rho s0 log A (.assignGlob g e hw hL)
-  | _, _, _, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _ =>
+  | _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>
       blattRet P O passes f fn caller rst rho s0 log A
-        (.schreibBytes t f' hf n i hlo hhi e hw hL)
+        (.putBytes t f' hf n i hlo hhi e hw hL)
   | _, _, _, _, .assignVar x e, _ =>
       blattRet P O passes f fn caller rst rho s0 log A (.assignVar x e)
-  | _, _, _, _, .uebergang t f' hτ i von nach hn he hw hL, _ =>
+  | _, _, _, _, .shift t f' hτ i von nach hn he hw hL, _ =>
       blattRet P O passes f fn caller rst rho s0 log A
-        (.uebergang t f' hτ i von nach hn he hw hL)
-  | _, _, _, _, .regSchreib r hk e, _ =>
-      blattRet P O passes f fn caller rst rho s0 log A (.regSchreib r hk e)
+        (.shift t f' hτ i von nach hn he hw hL)
+  | _, _, _, _, .regWrite r hk e, _ =>
+      blattRet P O passes f fn caller rst rho s0 log A (.regWrite r hk e)
   | _, _, _, _, .transition r hk m hm hl maske bits, _ =>
       blattRet P O passes f fn caller rst rho s0 log A (.transition r hk m hm hl maske bits)
   | _, _, _, _, .publish g e payload hp hw hL, _ =>
@@ -2298,7 +2298,7 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
           (hsim _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-  | _, _, _, _, .onGrund r arms, hs => by
+  | _, _, _, _, .onWhy r arms, hs => by
       intro σ σ' ρ v hex M _ rest k hZ hΛ hA
       have ha := hs.onGrund_inv
       have hW := hZ.welt
@@ -2341,7 +2341,7 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         caller rst rfl e hperm rest k ρ rfl hΛ.heldIn hnw
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
-  | _, _, _, _, .retGrund .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
 
@@ -2378,7 +2378,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb
-  | _, _, _, _, .regLies r hk rest, hb => by
+  | _, _, _, _, .regRead r hk rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.regLies_inv
       have hW := hZ.welt
@@ -2395,7 +2395,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (hA.lauf (RufLaufG.einzeln hs1)))
         · cases hex
       · cases hex
-  | _, _, _, _, .regLiesElse r hk zusage sonst rest, hb => by
+  | _, _, _, _, .regReadElse r hk zusage sonst rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       obtain ⟨_, hr, hs, _⟩ := hb.regLiesElse_inv
       have hW := hZ.welt
@@ -2472,7 +2472,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
               (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-  | _, _, _, _, .pruefung c sonst rest, hb => by
+  | _, _, _, _, .check c sonst rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
       have hW := hZ.welt
@@ -2494,7 +2494,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
               (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-  | _, _, _, _, .gleit op a b lo hi rest, hb => by
+  | _, _, _, _, .float op a b lo hi rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.gleit_inv
       have hW := hZ.welt
@@ -2508,7 +2508,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (blockRet rest hr _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
       · cases hex
-  | _, _, _, _, .gleitLit q lo hi rest, hb => by
+  | _, _, _, _, .floatLit q lo hi rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.gleitLit_inv
       have hW := hZ.welt
@@ -2522,7 +2522,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (blockRet rest hr _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 hΛ
             (hA.lauf (RufLaufG.einzeln hs1)))
       · cases hex
-  | _, _, _, _, .gleitVon e lo hi rest, hb => by
+  | _, _, _, _, .floatOf e lo hi rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.gleitVon_inv
       have hW := hZ.welt
@@ -2536,7 +2536,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (blockRet rest hr _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
       · cases hex
-  | _, _, _, _, .gleitNarrow e lo hi sonst rest, hb => by
+  | _, _, _, _, .floatNarrow e lo hi sonst rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
       have hW := hZ.welt
@@ -2573,7 +2573,7 @@ theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         caller rst rfl e hperm ρ rfl hΛ.heldIn hnw
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
-  | _, _, _, .retGrund .., he => by cases he
+  | _, _, _, .retWhy .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he => by
@@ -2617,7 +2617,7 @@ theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         caller rst rfl e hperm .nil k ρ rfl hΛ.heldIn hnw
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
-  | _, _, _, .retGrund .., he => by cases he
+  | _, _, _, .retWhy .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he => by
@@ -2723,15 +2723,15 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
     ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ'),
     StmtG A mr s → StmtOhneRuf s
   | _, _, _, _, _, .assignSlot t f' i e hw hL, _ => blattG_ohneRuf (.assignSlot t f' i e hw hL)
-  | _, _, _, _, _, .assignDurch p t ht f' i e hw hL, _ =>
-      blattG_ohneRuf (.assignDurch _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
+      blattG_ohneRuf (.assignThru _ p t ht f' i e hw hL)
   | _, _, _, _, _, .assignGlob g e hw hL, _ => blattG_ohneRuf (.assignGlob g e hw hL)
-  | _, _, _, _, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _ =>
-      blattG_ohneRuf (.schreibBytes t f' hf n i hlo hhi e hw hL)
+  | _, _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>
+      blattG_ohneRuf (.putBytes t f' hf n i hlo hhi e hw hL)
   | _, _, _, _, _, .assignVar x e, _ => blattG_ohneRuf (.assignVar x e)
-  | _, _, _, _, _, .uebergang t f' hτ i von nach hn he hw hL, _ =>
-      blattG_ohneRuf (.uebergang t f' hτ i von nach hn he hw hL)
-  | _, _, _, _, _, .regSchreib r hk e, _ => blattG_ohneRuf (.regSchreib r hk e)
+  | _, _, _, _, _, .shift t f' hτ i von nach hn he hw hL, _ =>
+      blattG_ohneRuf (.shift t f' hτ i von nach hn he hw hL)
+  | _, _, _, _, _, .regWrite r hk e, _ => blattG_ohneRuf (.regWrite r hk e)
   | _, _, _, _, _, .transition r hk m hm hl maske bits, _ =>
       blattG_ohneRuf (.transition r hk m hm hl maske bits)
   | _, _, _, _, _, .publish g e payload hp hw hL, _ =>
@@ -2743,7 +2743,7 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .onOption _ p a, hs =>
       .onOption _ _ _ (blockG_ohneRuf p hs.onOption_inv.1) (blockG_ohneRuf a hs.onOption_inv.2)
   | _, _, _, _, _, .onTag _ arms, hs => .onTag _ _ (armsG_ohneRuf arms hs.onTag_inv)
-  | _, _, _, _, _, .onGrund _ arms, hs => .onGrund _ _ (grundG_ohneRuf arms hs.onGrund_inv)
+  | _, _, _, _, _, .onWhy _ arms, hs => .onWhy _ _ (grundG_ohneRuf arms hs.onGrund_inv)
   | _, _, _, _, _, .call .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .locks _ _ body, hs => .locks _ _ _ (blockG_ohneRuf body hs.locks_inv.2)
@@ -2753,7 +2753,7 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .forever .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .ret e hΛ, _ => .ret e hΛ
-  | _, _, _, _, _, .retGrund .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retWhy .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
 
@@ -2769,9 +2769,9 @@ theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
-  | _, _, _, _, _, .regLies _ _ rest, hb => .regLies _ _ _ (blockG_ohneRuf rest hb.regLies_inv)
-  | _, _, _, _, _, .regLiesElse _ _ _ sonst rest, hb =>
-      .regLiesElse _ _ _ _ _ (endG_ohneRuf sonst hb.regLiesElse_inv.2.2.1)
+  | _, _, _, _, _, .regRead _ _ rest, hb => .regRead _ _ _ (blockG_ohneRuf rest hb.regLies_inv)
+  | _, _, _, _, _, .regReadElse _ _ _ sonst rest, hb =>
+      .regReadElse _ _ _ _ _ (endG_ohneRuf sonst hb.regLiesElse_inv.2.2.1)
         (blockG_ohneRuf rest hb.regLiesElse_inv.2.1)
   | _, _, _, _, _, .awaits _ _ _ _ rest, hb =>
       .awaits _ _ _ _ _ (blockG_ohneRuf rest hb.awaits_inv)
@@ -2780,24 +2780,24 @@ theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .narrow _ _ _ sonst rest, hb =>
       .narrow _ _ _ _ _ (endG_ohneRuf sonst hb.narrow_inv.2.2.1)
         (blockG_ohneRuf rest hb.narrow_inv.2.1)
-  | _, _, _, _, _, .pruefung _ sonst rest, hb =>
-      .pruefung _ _ _ (endG_ohneRuf sonst hb.pruefung_inv.2.2.1)
+  | _, _, _, _, _, .check _ sonst rest, hb =>
+      .check _ _ _ (endG_ohneRuf sonst hb.pruefung_inv.2.2.1)
         (blockG_ohneRuf rest hb.pruefung_inv.2.1)
-  | _, _, _, _, _, .gleit _ _ _ _ _ rest, hb =>
-      .gleit _ _ _ _ _ _ (blockG_ohneRuf rest hb.gleit_inv)
-  | _, _, _, _, _, .gleitLit _ _ _ rest, hb =>
-      .gleitLit _ _ _ _ (blockG_ohneRuf rest hb.gleitLit_inv)
-  | _, _, _, _, _, .gleitVon _ _ _ rest, hb =>
-      .gleitVon _ _ _ _ (blockG_ohneRuf rest hb.gleitVon_inv)
-  | _, _, _, _, _, .gleitNarrow _ _ _ sonst rest, hb =>
-      .gleitNarrow _ _ _ _ _ (endG_ohneRuf sonst hb.gleitNarrow_inv.2.2.1)
+  | _, _, _, _, _, .float _ _ _ _ _ rest, hb =>
+      .float _ _ _ _ _ _ (blockG_ohneRuf rest hb.gleit_inv)
+  | _, _, _, _, _, .floatLit _ _ _ rest, hb =>
+      .floatLit _ _ _ _ (blockG_ohneRuf rest hb.gleitLit_inv)
+  | _, _, _, _, _, .floatOf _ _ _ rest, hb =>
+      .floatOf _ _ _ _ (blockG_ohneRuf rest hb.gleitVon_inv)
+  | _, _, _, _, _, .floatNarrow _ _ _ sonst rest, hb =>
+      .floatNarrow _ _ _ _ _ (endG_ohneRuf sonst hb.gleitNarrow_inv.2.2.1)
         (blockG_ohneRuf rest hb.gleitNarrow_inv.2.1)
 
 theorem endG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
     EndG A e → EndOhneRuf e
   | _, _, _, .ret e hΛ, _ => .ret e hΛ
-  | _, _, _, .retGrund .., he => by cases he
+  | _, _, _, .retWhy .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he =>
@@ -2940,10 +2940,10 @@ theorem adDarf : darf adD () adΛL := by
   exact List.mem_singleton.mpr rfl
 
 def adIdx : Expr adD [] adΛL (.index (adD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def adFuenf : Expr adD [] adΛL (adD.typ () ()) :=
-  .weiter (by decide) (by decide) (.lit 5)
+  .widen (by decide) (by decide) (.lit 5)
 
 /-- `konto[0] := 5`. -/
 def adWrite : Stmt adD (vertragVon adD adFn) false [] adΛL adΛL :=
@@ -2955,7 +2955,7 @@ def adThen : Block adD (vertragVon adD adFn) false [] adΛL adΛL :=
 
 /-- `if true { konto[0] := 5 } else { }`. -/
 def adIte : Stmt adD (vertragVon adD adFn) false [] adΛL adΛL :=
-  .ite .wahr adThen .nil
+  .ite .tru adThen .nil
 
 def adBody : Block adD (vertragVon adD adFn) false [] adΛL adΛL :=
   .cons adIte .nil
@@ -2965,19 +2965,19 @@ def adLocks : Stmt adD (vertragVon adD adFn) false [] [] [] :=
   .locks () (fun _ h => absurd h List.not_mem_nil) adBody
 
 def adSieben : Expr adD [] [] (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 7)
+  .widen (by decide) (by decide) (.lit 7)
 
 /-- The body: `locks m { if true { konto[0] := 5 } else { } }; return 7`. -/
 def adRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
-  .cons adLocks (.ret (.wert adSieben) List.Perm.nil)
+  .cons adLocks (.ret (.val adSieben) List.Perm.nil)
 
 def adCallerRumpf : Endblock adD (vertragVon adD adCallerFn) false [] [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 def adP : Programm adD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | true => adRumpf
     | false => adCallerRumpf
@@ -3096,7 +3096,7 @@ def Stmt.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .ite _ t e => t.ohneOrakel && e.ohneOrakel
   | .onOption _ p a => p.ohneOrakel && a.ohneOrakel
   | .onTag _ arms => arms.ohneOrakel
-  | .onGrund _ arms => arms.ohneOrakel
+  | .onWhy _ arms => arms.ohneOrakel
   | .locks _ _ body => body.ohneOrakel
   | .breaking _ body => body.ohneOrakel
   | .traverse _ _ body => body.ohneOrakel
@@ -3115,16 +3115,16 @@ def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
-  | .regLies .. => false
-  | .regLiesElse .. => false
+  | .regRead .. => false
+  | .regReadElse .. => false
   | .awaits .. => false
   | .exchange _ _ _ _ rest => rest.ohneOrakel
   | .narrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
-  | .pruefung _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
-  | .gleit _ _ _ _ _ rest => rest.ohneOrakel
-  | .gleitLit _ _ _ rest => rest.ohneOrakel
-  | .gleitVon _ _ _ rest => rest.ohneOrakel
-  | .gleitNarrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .check _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .float _ _ _ _ _ rest => rest.ohneOrakel
+  | .floatLit _ _ _ rest => rest.ohneOrakel
+  | .floatOf _ _ _ rest => rest.ohneOrakel
+  | .floatNarrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
 
 def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
@@ -3200,12 +3200,12 @@ theorem SG.schreibGlob {σ σ' : World D} (h : SG σ σ') (g : D.Glob) (Λ : Lis
   simp only [World.storeGlob]
   rw [h.2]
 
-theorem SG.schreibBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
+theorem SG.putBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
     (Λ : List (Res D)) : ∀ (bs : List Byte) (σ σ' : World D) (k : Int), SG σ σ' →
     SG (σ.schreibBytes t f hf Λ k bs) (σ'.schreibBytes t f hf Λ k bs)
   | [], _, _, _, h => h
   | _ :: bs, _, _, k, h =>
-      SG.schreibBytes t f hf Λ bs _ _ (k + 1) (h.schreibSlot t Λ k f _)
+      SG.putBytes t f hf Λ bs _ _ (k + 1) (h.schreibSlot t Λ k f _)
 
 theorem SG.eval {σ σ' : World D} (h : SG σ σ') {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (e : Expr D Γ Λ τ) (ρ : Env D Γ) : eval σ e σ ρ = eval σ' e σ' ρ :=
@@ -3215,8 +3215,8 @@ theorem SG.evalErg {σ σ' : World D} (h : SG σ σ') {Γ : Ctx} {Λ : List (Res
     {e : Option Ty} (x : ErgExpr D Γ Λ e) (ρ : Env D Γ) :
     evalErg σ x σ ρ = evalErg σ' x σ' ρ := by
   cases x with
-  | keine => rfl
-  | wert e => exact h.eval e ρ
+  | empty => rfl
+  | val e => exact h.eval e ρ
 
 /-- Outcomes that agree up to the trace: same kind, same memory, same
     environment or value; every other kind agrees on the kind only. -/
@@ -3240,7 +3240,7 @@ section AusSGLemmas
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 /-- Continuing after a statement preserves agreement. -/
-theorem AusSG.weiter {o o' : Ausgang V l Γ} (h : AusSG o o')
+theorem AusSG.widen {o o' : Ausgang V l Γ} (h : AusSG o o')
     (g g' : World D → Env D Γ → Ausgang V l Γ)
     (hg : ∀ σ σ' ρ, SG σ σ' → AusSG (g σ ρ) (g' σ' ρ)) :
     AusSG (match o with | .ok σ ρ => g σ ρ | o => o)
@@ -3280,13 +3280,13 @@ theorem EndSG.schrumpf {τ : Ty} {o o' : EndAusgang V l (τ :: Γ)} (h : EndSG o
   cases o <;> cases o' <;> simp_all [EndSG, EndAusgang.schrumpf]
 
 /-- `execEnd` of `s; rest` from agreeing statement outcomes. -/
-theorem EndSG.weiter {o o' : Ausgang V l Γ} (h : AusSG o o')
+theorem EndSG.widen {o o' : Ausgang V l Γ} (h : AusSG o o')
     (g g' : World D → Env D Γ → EndAusgang V l Γ)
     (hg : ∀ σ σ' ρ, SG σ σ' → EndSG (g σ ρ) (g' σ' ρ)) :
     EndSG (match o with
         | .ok σ' ρ' => g σ' ρ'
         | .zurueck σ' v => .zurueck σ' v
-        | .grund σ' r => .grund σ' r
+        | .why σ' r => .why σ' r
         | .leave h σ' ρ' => .leave h σ' ρ'
         | .next h σ' ρ' => .next h σ' ρ'
         | .logik e => .logik e
@@ -3294,7 +3294,7 @@ theorem EndSG.weiter {o o' : Ausgang V l Γ} (h : AusSG o o')
       (match o' with
         | .ok σ' ρ' => g' σ' ρ'
         | .zurueck σ' v => .zurueck σ' v
-        | .grund σ' r => .grund σ' r
+        | .why σ' r => .why σ' r
         | .leave h σ' ρ' => .leave h σ' ρ'
         | .next h σ' ρ' => .next h σ' ρ'
         | .logik e => .logik e
@@ -3357,7 +3357,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [h1.eval i, h1.eval e]
       exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
-  | _, _, _, Λ₀, _, .assignDurch p t ht f' i e hw hL, _, _ => by
+  | _, _, _, Λ₀, _, .assignThru p t ht f' i e hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt]
@@ -3369,19 +3369,19 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [h1.eval e]
       exact ⟨h1.schreibGlob _ _ _, rfl⟩
-  | _, _, _, Λ₀, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _, _ => by
+  | _, _, _, Λ₀, _, .putBytes t f' hf n i hlo hhi e hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (i.orte ++ e.orte)
       simp only [execStmt]
       rw [h1.eval i, h1.eval e]
-      exact ⟨SG.schreibBytes _ _ _ _ _ _ _ _ h1, rfl⟩
+      exact ⟨SG.putBytes _ _ _ _ _ _ _ _ h1, rfl⟩
   | _, _, _, Λ₀, _, .assignVar x e, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       rw [h1.eval e]
       exact ⟨h1, rfl⟩
-  | _, _, _, Λ₀, _, .uebergang t f' hτ i von nach hn he hw hL, _, _ => by
+  | _, _, _, Λ₀, _, .shift t f' hτ i von nach hn he hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (.inl t :: i.orte)
       simp only [execStmt]
@@ -3389,7 +3389,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
       · trivial
-  | _, _, _, _, _, .regSchreib r hk e, _, _ => by
+  | _, _, _, _, _, .regWrite r hk e, _, _ => by
       intro σ σ' ρ h
       simp only [execStmt]
       exact ⟨h.lese _ _, rfl⟩
@@ -3439,7 +3439,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [execArms_wahl, execArms_wahl, h1.eval w]
       exact AusSG.schrumpfArm _ (armsSG arms ha ho _ _ _ _ h1)
-  | _, _, _, Λ₀, _, .onGrund r arms, hs, ho => by
+  | _, _, _, Λ₀, _, .onWhy r arms, hs, ho => by
       intro σ σ' ρ h
       have ha := hs.onGrund_inv
       simp only [Stmt.ohneOrakel] at ho
@@ -3471,7 +3471,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, _, _, .retGrund .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retWhy .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .leave .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
   | _, _, _, _, _, .next .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
 
@@ -3506,8 +3506,8 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallElse .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb, _ => by cases hb
-  | _, _, _, _, _, .regLies .., _, ho => by simp [Block.ohneOrakel] at ho
-  | _, _, _, _, _, .regLiesElse .., _, ho => by simp [Block.ohneOrakel] at ho
+  | _, _, _, _, _, .regRead .., _, ho => by simp [Block.ohneOrakel] at ho
+  | _, _, _, _, _, .regReadElse .., _, ho => by simp [Block.ohneOrakel] at ho
   | _, _, _, _, _, .awaits .., _, ho => by simp [Block.ohneOrakel] at ho
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb, ho => by
       intro σ σ' ρ h
@@ -3529,7 +3529,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSG rest hr ho.2 _ _ _ h1)
       · exact EndSG.zuAusgang (endSG sonst hs ho.1 _ _ _ h1)
-  | _, _, _, Λ₀, _, .pruefung c sonst rest, hb, ho => by
+  | _, _, _, Λ₀, _, .check c sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
       simp only [Block.ohneOrakel, Bool.and_eq_true] at ho
@@ -3539,7 +3539,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact blockSG rest hr ho.2 _ _ _ h1
       · exact EndSG.zuAusgang (endSG sonst hs ho.1 _ _ _ h1)
-  | _, _, _, Λ₀, _, .gleit op a b lo hi rest, hb, ho => by
+  | _, _, _, Λ₀, _, .float op a b lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleit_inv
       simp only [Block.ohneOrakel] at ho
@@ -3549,7 +3549,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h1)
       · trivial
-  | _, _, _, _, _, .gleitLit q lo hi rest, hb, ho => by
+  | _, _, _, _, _, .floatLit q lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleitLit_inv
       simp only [Block.ohneOrakel] at ho
@@ -3557,7 +3557,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h)
       · trivial
-  | _, _, _, Λ₀, _, .gleitVon e lo hi rest, hb, ho => by
+  | _, _, _, Λ₀, _, .floatOf e lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleitVon_inv
       simp only [Block.ohneOrakel] at ho
@@ -3567,7 +3567,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h1)
       · trivial
-  | _, _, _, Λ₀, _, .gleitNarrow e lo hi sonst rest, hb, ho => by
+  | _, _, _, Λ₀, _, .floatNarrow e lo hi sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
       simp only [Block.ohneOrakel, Bool.and_eq_true] at ho
@@ -3587,7 +3587,7 @@ theorem endSG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execEnd]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, .retGrund .., he, _ => by cases he
+  | _, _, _, .retWhy .., he, _ => by cases he
   | _, _, _, .leave .., he, _ => by cases he
   | _, _, _, .next .., he, _ => by cases he
   | _, _, _, .cons s rest, he, ho => by
@@ -3952,12 +3952,12 @@ theorem sem_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int)
   rw [execArms_wahl, hw]
   exact semR_dann O passes b _ _ _
 
-theorem sem_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.grund n))
+theorem sem_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.why n))
     (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
     (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
     semR O passes (.dann (grundWahlG arms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρ))
         (.dann rest k)) (σ.lese Λ r.orte) ρ =
-      semR O passes (.dann (.cons (.onGrund r arms) rest) k) σ ρ := by
+      semR O passes (.dann (.cons (.onWhy r arms) rest) k) σ ρ := by
   rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
   simp only [execStmt]
   rw [execGrund_wahlW O passes keinRuf arms]
@@ -4013,7 +4013,7 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
       e.alsBlock.2.ohneOrakel = e.ohneOrakel
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -4059,7 +4059,7 @@ theorem sem_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true) :
     semR O passes (.dann rest k) (σ.lese Λ c.orte) ρ =
-      semR O passes (.dann (.pruefung c sonst rest) k) σ ρ := by
+      semR O passes (.dann (.check c sonst rest) k) σ ρ := by
   rw [semR_dann, semR_dann]
   simp only [execBlock, hw, if_true]
 
@@ -4068,7 +4068,7 @@ theorem sem_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
     semR O passes (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ =
-      semR O passes (.dann (.pruefung c sonst rest) k) σ ρ := by
+      semR O passes (.dann (.check c sonst rest) k) σ ρ := by
   rw [semR_alsBlock]
   rw [semR_dann]
   simp only [execBlock, hw, Bool.false_eq_true, if_false]
@@ -4097,7 +4097,7 @@ theorem sem_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
     semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ) =
-      semR O passes (.dann (.gleit op a b lo hi rest) k) σ ρ := by
+      semR O passes (.dann (.float op a b lo hi rest) k) σ ρ := by
   rw [semR_dann, semR_dann]
   simp only [execBlock, hv]
   rw [nachA_schrumpf]
@@ -4106,7 +4106,7 @@ theorem sem_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
     semR O passes (.dann rest (.schrumpf k)) σ (.cons v ρ) =
-      semR O passes (.dann (.gleitLit q lo hi rest) k) σ ρ := by
+      semR O passes (.dann (.floatLit q lo hi rest) k) σ ρ := by
   rw [semR_dann, semR_dann]
   simp only [execBlock, hv]
   rw [nachA_schrumpf]
@@ -4117,7 +4117,7 @@ theorem sem_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ Λ
     (hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
       (σ.lese Λ e.orte) ρ).n) = some v) :
     semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
-      semR O passes (.dann (.gleitVon e lo hi rest) k) σ ρ := by
+      semR O passes (.dann (.floatOf e lo hi rest) k) σ ρ := by
   rw [semR_dann, semR_dann]
   simp only [execBlock, hv]
   rw [nachA_schrumpf]
@@ -4128,7 +4128,7 @@ theorem sem_gleitNarrowOk {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = some v) :
     semR O passes (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
-      semR O passes (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+      semR O passes (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ := by
   rw [semR_dann, semR_dann]
   simp only [execBlock, hv]
   rw [nachA_schrumpf]
@@ -4139,7 +4139,7 @@ theorem sem_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
     semR O passes (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ =
-      semR O passes (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+      semR O passes (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ := by
   rw [semR_alsBlock]
   rw [semR_dann]
   simp only [execBlock, hn]
@@ -5076,11 +5076,11 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
 
 /-- `traverse konto invariant false { }` in the witness function. -/
 def adTrav : Stmt adD (vertragVon adD adFn) false [] [] [] :=
-  .traverse () .falsch .nil
+  .traverse () .fls .nil
 
 /-- The old counterexample body: `traverse konto invariant false { }; return 7`. -/
 def adTravRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
-  .cons adTrav (.ret (.wert adSieben) List.Perm.nil)
+  .cons adTrav (.ret (.val adSieben) List.Perm.nil)
 
 def adTravFaden : RufFadenG adD :=
   ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adTravRumpf⟩⟩,
@@ -5095,12 +5095,12 @@ def adTravK0 : RufRahmenG adD :=
 
 def adTravK1 : RufRahmenG adD :=
   ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil,
-    .dann (.cons adTrav .nil) (.ende (.ret (.wert adSieben) List.Perm.nil))⟩⟩
+    .dann (.cons adTrav .nil) (.ende (.ret (.val adSieben) List.Perm.nil))⟩⟩
 
 def adTravK2 : RufRahmenG adD :=
   ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil,
-    .trav () .falsch .nil (alleIndizes (adD.count ()))
-      (.dann .nil (.ende (.ret (.wert adSieben) List.Perm.nil)))⟩⟩
+    .trav () .fls .nil (alleIndizes (adD.count ()))
+      (.dann .nil (.ende (.ret (.val adSieben) List.Perm.nil)))⟩⟩
 
 /-- The run invariant of the witness thread: one of the three frames, the
     caller below, NOTHING logged. -/
@@ -5112,17 +5112,17 @@ def AdTravZ (M : RufMaschineG adD) : Prop :=
 theorem adTravZ_schritt {M M' : RufMaschineG adD} (hs : RufSchrittG adP adO 0 M 0 M')
     (h : AdTravZ M) : AdTravZ M' := by
   obtain ⟨sp, h | h | h⟩ := h
-  · rcases trav_ende_schritt hs _ h () .falsch .nil (.ret (.wert adSieben) List.Perm.nil)
+  · rcases trav_ende_schritt hs _ h () .fls .nil (.ret (.val adSieben) List.Perm.nil)
       Env.nil rfl with ⟨sp', e⟩ | ⟨sp', e⟩
     · exact ⟨sp', Or.inl e⟩
     · exact ⟨sp', Or.inr (Or.inl e)⟩
-  · rcases trav_dann_schritt hs _ h () .falsch .nil .nil
-      (.ende (.ret (.wert adSieben) List.Perm.nil)) Env.nil rfl with ⟨sp', e⟩ | ⟨sp', e⟩
+  · rcases trav_dann_schritt hs _ h () .fls .nil .nil
+      (.ende (.ret (.val adSieben) List.Perm.nil)) Env.nil rfl with ⟨sp', e⟩ | ⟨sp', e⟩
     · exact ⟨sp', Or.inr (Or.inl e)⟩
     · exact ⟨sp', Or.inr (Or.inr e)⟩
-  · obtain ⟨sp', e⟩ := trav_falsch_steht hs _ h () .falsch .nil
+  · obtain ⟨sp', e⟩ := trav_falsch_steht hs _ h () .fls .nil
       ⟨0, by decide, by decide⟩ [⟨1, by decide, by decide⟩]
-      (.dann .nil (.ende (.ret (.wert adSieben) List.Perm.nil))) Env.nil rfl rfl
+      (.dann .nil (.ende (.ret (.val adSieben) List.Perm.nil))) Env.nil rfl rfl
     exact ⟨sp', Or.inr (Or.inr e)⟩
 
 theorem adTravZ_lauf {M M' : RufMaschineG adD} (hl : RufLaufG adP adO 0 0 M M')

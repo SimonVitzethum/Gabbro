@@ -72,7 +72,7 @@ def fNach {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (w : Bool) : Stmt D V l 
   | .ite .. => false
   | .onOption .. => false
   | .onTag .. => false
-  | .onGrund .. => false
+  | .onWhy .. => false
   | .locks .. => false
   | .breaking .. => false
   | .traverse .. => false
@@ -87,24 +87,24 @@ def fS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Stmt D V l �
   | .call g _ _ _ => !Φ.ruf g || w
   | .callInd (n := n) .. => !Φ.ind n || w
   | .ret .. => !e || w
-  | .retGrund .. => !e || w
+  | .retWhy .. => !e || w
   | .ite _ t f => fB e false t && fB e false f
   | .onOption _ p a => fB e false p && fB e false a
   | .onTag _ arms => fArms e arms
-  | .onGrund _ arms => fGArms e arms
+  | .onWhy _ arms => fGArms e arms
   | .locks _ _ body => fB e false body
   | .breaking _ body => fB e false body
   | .traverse _ _ body => fB e false body
   | .retry _ _ body ueber => fB e false body && fB e false ueber
   | .forever _ _ body => fB e false body
   | .assignSlot .. => true
-  | .assignDurch .. => true
+  | .assignThru .. => true
   | .assignGlob .. => true
-  | .schreibBytes .. => true
+  | .putBytes .. => true
   | .assignVar .. => true
-  | .uebergang .. => true
+  | .shift .. => true
   | .axiomCall .. => true
-  | .regSchreib .. => true
+  | .regWrite .. => true
   | .transition .. => true
   | .publish .. => true
   | .advances .. => true
@@ -123,16 +123,16 @@ def fB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Block D V l 
       (!Φ.ruf g || w) && fE e false err && fB e (Φ.vor g) rest
   | .bindAxiom _ _ _ _ _ _ _ rest => fB e w rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => fE e false err && fB e w rest
-  | .regLies _ _ rest => fB e w rest
-  | .regLiesElse _ _ _ sonst rest => fE e false sonst && fB e w rest
+  | .regRead _ _ rest => fB e w rest
+  | .regReadElse _ _ _ sonst rest => fE e false sonst && fB e w rest
   | .awaits _ _ _ _ rest => fB e w rest
   | .exchange _ _ _ _ rest => fB e w rest
   | .narrow _ _ _ sonst rest => fE e false sonst && fB e w rest
-  | .pruefung _ sonst rest => fE e false sonst && fB e w rest
-  | .gleit _ _ _ _ _ rest => fB e w rest
-  | .gleitLit _ _ _ rest => fB e w rest
-  | .gleitVon _ _ _ rest => fB e w rest
-  | .gleitNarrow _ _ _ sonst rest => fE e false sonst && fB e w rest
+  | .check _ sonst rest => fE e false sonst && fB e w rest
+  | .float _ _ _ _ _ rest => fB e w rest
+  | .floatLit _ _ _ rest => fB e w rest
+  | .floatOf _ _ _ rest => fB e w rest
+  | .floatNarrow _ _ _ sonst rest => fE e false sonst && fB e w rest
 
 /-- The arms of a `match`: each is a sub-block, entered unarmed. -/
 def fArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
@@ -148,7 +148,7 @@ def fGArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
 /-- An end block entered with armed bit `w`. -/
 def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l Γ Λ → Bool
   | .ret .. => !e || w
-  | .retGrund .. => !e || w
+  | .retWhy .. => !e || w
   | .leave _ => true
   | .next _ => true
   | .cons s rest => fS e w s && fE e (fNach Φ w s) rest
@@ -199,7 +199,7 @@ def Armiert (Φ : Folge D) : List (RufEreignisF D) → Bool
 def Pflichtig (Φ : Folge D) : RufEreignisF D → Bool
   | .eintritt g .. => Φ.ruf g
   | .rueck g .. => Φ.ende g
-  | .grund g .. => Φ.ende g
+  | .why g .. => Φ.ende g
 
 /-- **The order in a call log** (newest first): every ordered event, except the thread's
     start entry (the oldest event), has as its DIRECT predecessor a return of a `vor`

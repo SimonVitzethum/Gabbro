@@ -100,29 +100,29 @@ theorem hp4 : RufPasst D4 (vertragVon D4 ein4) (D4.signatur lies4) L4 where
 /-- `einzahlen`'s body, as the parser lowers it: the write through `k`, the
     call of `lies` on a fresh read-only pointer and `i`, the return. -/
 def bodyEin4 : Endblock D4 (vertragVon D4 ein4) false (D4.params ein4) L4 :=
-  .cons (Stmt.assignDurch (.var .hier) t4 ht4 f4 (.var (.dort .hier))
-      (.weiter (by decide) (by decide) (.lit 100)) rfl darf4)
-    (.cons (Stmt.call lies4 (.cons (.ptrOf t4 0 ht4 false) (.cons (.var (.dort .hier)) .nil))
-      hp4 rfl) (.ret .keine (List.Perm.refl _)))
+  .cons (Stmt.assignThru (.var .here) t4 ht4 f4 (.var (.there .here))
+      (.widen (by decide) (by decide) (.lit 100)) rfl darf4)
+    (.cons (Stmt.call lies4 (.cons (.ptrOf t4 0 ht4 false) (.cons (.var (.there .here)) .nil))
+      hp4 rfl) (.ret .empty (List.Perm.refl _)))
 
 /-- `lies`' body: the return of the slot read through `k`. -/
 def bodyLies4 : Endblock D4 (vertragVon D4 lies4) false (D4.params lies4) L4 :=
-  .ret (.wert (Expr.weiter (lo' := 0) (hi' := 100) (by decide) (by decide)
-    (Expr.durch (.var .hier) t4 ht4 f4 (.var (.dort .hier)) darf4))) (List.Perm.refl _)
+  .ret (.val (Expr.widen (lo' := 0) (hi' := 100) (by decide) (by decide)
+    (Expr.thru (.var .here) t4 ht4 f4 (.var (.there .here)) darf4))) (List.Perm.refl _)
 
 def ensEin4 : Expr D4 (ErgCtx (D4.params ein4) (D4.erg ein4)) (vertragVon D4 ein4).ende .bool :=
-  .le (Expr.altSlot t4 f4 (.var (.dort .hier)) darf4)
-    (Expr.durch (.var .hier) t4 ht4 f4 (.var (.dort .hier)) darf4)
+  .le (Expr.oldS t4 f4 (.var (.there .here)) darf4)
+    (Expr.thru (.var .here) t4 ht4 f4 (.var (.there .here)) darf4)
 
 def ensLies4 : Expr D4 (ErgCtx (D4.params lies4) (D4.erg lies4)) (vertragVon D4 lies4).ende .bool :=
-  .eq (.var .hier) (Expr.durch (.var (.dort .hier)) t4 ht4 f4 (.var (.dort (.dort .hier))) darf4)
+  .eq (.var .here) (Expr.thru (.var (.there .here)) t4 ht4 f4 (.var (.there (.there .here))) darf4)
 
 /-- The lowered bodies and contracts ARE these terms (kernel-checked). -/
 theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := rfl
 theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := rfl
 theorem ens_ein4 : P4.ensures ein4 = ensEin4 := rfl
 theorem ens_lies4 : P4.ensures lies4 = ensLies4 := rfl
-theorem req4 (f : D4.Fn) : P4.requires f = .wahr := rfl
+theorem req4 (f : D4.Fn) : P4.requires f = .tru := rfl
 
 /-! ## 3. The emitter's layout and the correspondence certificate -/
 

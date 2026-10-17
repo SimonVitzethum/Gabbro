@@ -179,7 +179,7 @@ theorem assignDurch_neu (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t = true} {hL : darf D t Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (.assignDurch p t ht f i e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+      (.assignThru p t ht f i e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
     Ereignis.zugriff t true Λ
       (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt ∈ neu := by
@@ -190,7 +190,7 @@ theorem assignDurch_neu (O : Orakel D) (passes : Nat)
           | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
           | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
     have hcomp : (execStmt O passes keinRuf
-        ((.assignDurch p t ht f i e hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
+        ((.assignThru p t ht f i e hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
         some ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t Λ
           (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
             (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n f
@@ -240,12 +240,12 @@ theorem uebergang_neu (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t = true} {hL : darf D t Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
+      (.shift t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
       = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
     Ereignis.zugriff t true Λ (σ.lese Λ (.inl t :: i.orte)).haelt ∈ neu := by
   have hcomp : (execStmt O passes keinRuf
-      ((.uebergang t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
+      ((.shift t f hτ i von nach hn he hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
       (if (hτ ▸ (σ.lese Λ (.inl t :: i.orte)).slots t
           (eval (σ.lese Λ (.inl t :: i.orte)) i
             (σ.lese Λ (.inl t :: i.orte)) ρ).n f : Zahl _ _).n = von
@@ -311,7 +311,7 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
     (hn : 0 < n)
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (.schreibBytes t f hf n i hlo hhi e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
+      (.putBytes t f hf n i hlo hhi e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
       = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
     ∃ ev ∈ neu, ev.traeger = some (Sum.inl t) := by
@@ -369,7 +369,7 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
       -- `hstep` fires the same statement (after `subst`, `n = m+1`
       -- definitionally); unfold its fold the same way and conclude.
       have hrfl : (execStmt O passes keinRuf
-          ((.schreibBytes t f hf (m + 1) i hlo hhi e hw hL :
+          ((.putBytes t f hf (m + 1) i hlo hhi e hw hL :
             Stmt D V l Γ Λ Λ)) σ ρ).welt =
           Ausgang.welt (D := D) (V := V) (l := l) (Γ := Γ) (Ausgang.ok
             ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t f hf Λ
@@ -379,7 +379,7 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
                 (eval (σ.lese Λ (i.orte ++ e.orte)) e
                   (σ.lese Λ (i.orte ++ e.orte)) ρ).n)) ρ) := rfl
       have hstepFold : (execStmt O passes keinRuf
-            ((.schreibBytes t f hf (m + 1) i hlo hhi e hw hL :
+            ((.putBytes t f hf (m + 1) i hlo hhi e hw hL :
               Stmt D V l Γ Λ Λ)) σ ρ).welt =
             some ((((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
               (eval (σ.lese Λ (i.orte ++ e.orte)) i
@@ -684,11 +684,11 @@ theorem regSchreib_slots_fest (O : Orakel D) (passes : Nat)
     {r : D.Reg} {hk : (D.rklasse r).schreibbar = true} {e : Expr D Γ Λ (D.rtyp r)}
     (sg : World D) (rho : Env D Γ) (sg' : World D)
     (hstep : (execStmt O passes keinRuf
-      (Stmt.regSchreib (V := V) (l := l) r hk e) sg rho).welt = some sg')
+      (Stmt.regWrite (V := V) (l := l) r hk e) sg rho).welt = some sg')
     (t : D.Tab) (k : Int) (f : D.Feld t) :
     sg'.slots t k f = sg.slots t k f := by
   have hcomp : (execStmt O passes keinRuf
-      (Stmt.regSchreib (V := V) (l := l) r hk e) sg rho).welt =
+      (Stmt.regWrite (V := V) (l := l) r hk e) sg rho).welt =
       some (sg.lese Λ e.orte) := rfl
   rw [hcomp] at hstep
   have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
@@ -768,7 +768,7 @@ theorem retGrund_slots_fest (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {r : Fin V.gruende} {hΛ : Λ.Perm V.ende}
     (s : Stmt D V l Γ Λ Λ)
-    (hs : s = Stmt.retGrund (V := V) (l := l) r hΛ)
+    (hs : s = Stmt.retWhy (V := V) (l := l) r hΛ)
     (sg : World D) (rho : Env D Γ) (sg' : World D)
     (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
     (t : D.Tab) (k : Int) (f : D.Feld t) :
@@ -914,12 +914,12 @@ theorem assignDurch_andere_fest (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf
-      (Stmt.assignDurch (V := V) (l := l) p t₂ ht₂ f₂ i e hw hL :
+      (Stmt.assignThru (V := V) (l := l) p t₂ ht₂ f₂ i e hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
     σ'.slots t k f = σ.slots t k f := by
   have hEq : (execStmt O passes keinRuf
-      (Stmt.assignDurch (V := V) (l := l) p t₂ ht₂ f₂ i e hw hL :
+      (Stmt.assignThru (V := V) (l := l) p t₂ ht₂ f₂ i e hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt =
       some ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t₂ Λ
         (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
@@ -951,12 +951,12 @@ theorem uebergang_andere_fest (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf
-      (Stmt.uebergang (V := V) (l := l) t₂ f₂ hτ i von nach hn he hw hL :
+      (Stmt.shift (V := V) (l := l) t₂ f₂ hτ i von nach hn he hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
     σ'.slots t k f = σ.slots t k f := by
   have hcomp : (execStmt O passes keinRuf
-      (Stmt.uebergang (V := V) (l := l) t₂ f₂ hτ i von nach hn he hw hL :
+      (Stmt.shift (V := V) (l := l) t₂ f₂ hτ i von nach hn he hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt =
       (if (hτ ▸ (σ.lese Λ (.inl t₂ :: i.orte)).slots t₂
         (eval (σ.lese Λ (.inl t₂ :: i.orte)) i
@@ -996,12 +996,12 @@ theorem schreibBytes_andere_fest (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf
-      (Stmt.schreibBytes (V := V) (l := l) t₂ f₂ hf₂ n i hlo hhi e hw hL :
+      (Stmt.putBytes (V := V) (l := l) t₂ f₂ hf₂ n i hlo hhi e hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
     σ'.slots t k f = σ.slots t k f := by
   have hEq : (execStmt O passes keinRuf
-      (Stmt.schreibBytes (V := V) (l := l) t₂ f₂ hf₂ n i hlo hhi e hw hL :
+      (Stmt.putBytes (V := V) (l := l) t₂ f₂ hf₂ n i hlo hhi e hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt =
       some ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t₂ f₂ hf₂ Λ
         (eval (σ.lese Λ (i.orte ++ e.orte)) i
@@ -1032,7 +1032,7 @@ theorem schreibBytes_null_fest (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t = true} {hL : darf D t Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf
-      (Stmt.schreibBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
+      (Stmt.putBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (k : Int) (f : D.Feld t) :
     σ'.slots t k f = σ.slots t k f := by
@@ -1045,7 +1045,7 @@ theorem schreibBytes_null_fest (O : Orakel D) (passes : Nat)
     simp at hlen
     exact hlen
   have hEq : (execStmt O passes keinRuf
-      (Stmt.schreibBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
+      (Stmt.putBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt =
       some ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t f₂ hf₂ Λ
         (eval (σ.lese Λ (i.orte ++ e.orte)) i
@@ -1179,7 +1179,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
         exact Or.inl ⟨_, assignSlot_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
       · exact Or.inr (Or.inl fun k f =>
           assignSlot_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
-  | assignDurch p t2 ht2 f2 i e hw hL =>
+  | assignThru p t2 ht2 f2 i e hw hL =>
       by_cases ht : t2 = t
       · subst ht
         exact Or.inl ⟨_, assignDurch_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
@@ -1188,7 +1188,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | assignGlob g e hw hL =>
       exact Or.inr (Or.inl fun k f =>
         assignGlob_slots_fest O passes σ ρ σ' hstep t k f)
-  | schreibBytes t2 f2 hf2 n i hlo hhi e hw hL =>
+  | putBytes t2 f2 hf2 n i hlo hhi e hw hL =>
       by_cases ht : t2 = t
       · subst ht
         by_cases hn : 0 < n
@@ -1204,7 +1204,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | assignVar x e =>
       exact Or.inr (Or.inl fun k f =>
         assignVar_slots_fest O passes σ ρ σ' hstep t k f)
-  | uebergang t2 f2 hτ i von nach hn he hw hL =>
+  | shift t2 f2 hτ i von nach hn he hw hL =>
       by_cases ht : t2 = t
       · subst ht
         exact Or.inl ⟨_, uebergang_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
@@ -1213,7 +1213,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | ite c tb eb => simp [Stmt.istBlatt] at hleaf
   | onOption o p a => simp [Stmt.istBlatt] at hleaf
   | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onGrund r arms => simp [Stmt.istBlatt] at hleaf
+  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
   | call fn args hp hr =>
       exact Or.inr (Or.inl fun k f =>
         call_slots_fest O passes (Stmt.call fn args hp hr) rfl σ ρ σ' hstep t k f)
@@ -1234,7 +1234,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
           | false => rfl
         exact Or.inr (Or.inl fun k f =>
           axiomCall_nichtschreibt_fest (Λ' := Λ) O hO passes (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) rfl t htF σ ρ σ' hstep k f)
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       exact Or.inr (Or.inl fun k f =>
         regSchreib_slots_fest O passes σ ρ σ' hstep t k f)
   | transition r hk m hm hl maske bits =>
@@ -1252,9 +1252,9 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | ret e hΛ =>
       exact Or.inr (Or.inl fun k f =>
         ret_slots_fest O passes σ ρ σ' hstep t k f)
-  | retGrund r hΛ =>
+  | retWhy r hΛ =>
       exact Or.inr (Or.inl fun k f =>
-        retGrund_slots_fest O passes (Stmt.retGrund r hΛ) rfl σ ρ σ' hstep t k f)
+        retGrund_slots_fest O passes (Stmt.retWhy r hΛ) rfl σ ρ σ' hstep t k f)
   | leave h =>
       exact Or.inr (Or.inl fun k f =>
         leave_slots_fest O passes (Stmt.leave h) rfl σ ρ σ' hstep t k f)
@@ -1515,7 +1515,7 @@ theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
     (σ' : World Gabbro.Grammatik.BG.D1)
     (hσ' : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
       (Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := [.bool]) (Λ := []) (τ := .bool)
-        Var.hier (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool)) (M1.weltVon 1) ρ).welt
+        Var.here (.fls : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool)) (M1.weltVon 1) ρ).welt
       = some σ') :
     PCSchritt (P := Gabbro.Grammatik.BG.P1) (O := Gabbro.Grammatik.BG.O1) 0 wprog M1 pc1 1
       ⟨σ'.speicher, genUpdate M1.spuren 1 σ'.spur,
@@ -1523,8 +1523,8 @@ theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
         M1.welten ++ [σ'], M1.tiefe + 1⟩
       (pcAdvance pc1 1) := by
   refine PCSchritt.leaf (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := [.bool]) (Λ := []) (Λ' := [])
-    (s := Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) Var.hier
-      (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool))
+    (s := Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) Var.here
+      (.fls : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool))
     (ρ := ρ) (σ' := σ') (neu := []) (Λa := []) (cs := []) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
   · rfl
   · intro L
@@ -1532,15 +1532,15 @@ theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
   · exact hσ'
   · -- `assignVar` with empty `orte` records nothing: outcome spur is old.
     have hlese : ((M1.weltVon 1).lese ([] : List (Res Gabbro.Grammatik.BG.D1))
-        (Expr.falsch.orte (D := Gabbro.Grammatik.BG.D1) (Γ := [.bool]) (Λ := []))).spur =
+        (Expr.fls.orte (D := Gabbro.Grammatik.BG.D1) (Γ := [.bool]) (Λ := []))).spur =
         (M1.weltVon 1).spur := by
-      have : (Expr.falsch (D := Gabbro.Grammatik.BG.D1) (Γ := [.bool]) (Λ := ([] : List (Res Gabbro.Grammatik.BG.D1)))).orte = [] := rfl
+      have : (Expr.fls (D := Gabbro.Grammatik.BG.D1) (Γ := [.bool]) (Λ := ([] : List (Res Gabbro.Grammatik.BG.D1)))).orte = [] := rfl
       rw [this]
       rfl
     have hcomp : (execStmt (O := Gabbro.Grammatik.BG.O1) 0 keinRuf
         (Stmt.assignVar (V := Gabbro.Grammatik.BG.V1) (l := false) (Γ := [.bool]) (Λ := [])
-          (τ := .bool) Var.hier
-          (.falsch : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool)) (M1.weltVon 1) ρ).welt =
+          (τ := .bool) Var.here
+          (.fls : Expr Gabbro.Grammatik.BG.D1 [.bool] [] .bool)) (M1.weltVon 1) ρ).welt =
         some ((M1.weltVon 1).lese [] []) := rfl
     rw [hcomp] at hσ'
     have hσspur : σ'.spur = (M1.weltVon 1).spur :=
@@ -1883,9 +1883,9 @@ def progF : PCProg D2 := fun _ => [PCAtom.leaf [] []]
 /-- Any program: bodies never fire here (only the axiom step matters). -/
 def P2w : Programm D2 where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
-  rumpf := fun _ => .ret .keine (List.Perm.refl [])
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ => .ret .empty (List.Perm.refl [])
 
 /-- `hNurG` for the counterexample program: all atoms are carrier-free. -/
 theorem hNurF : ∀ h : Faden, h ≠ (0 : Faden) → ∀ a ∈ progF h,

@@ -192,7 +192,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
           simp only [einpassen]
           rw [dif_pos ⟨k.lo_le, k.le_hi⟩]
   | .sum cs, v, _ => ⟨fun _ => Option.none, summeRoh cs v, summePasst_voll cs v⟩
-  | .grund m, r, _ => ⟨fun _ => Option.none, ((r : Fin m).val : Int), by
+  | .why m, r, _ => ⟨fun _ => Option.none, ((r : Fin m).val : Int), by
       simp only [einpassen]
       rw [dif_pos ⟨Int.natCast_nonneg _, by have := (r : Fin m).2; omega⟩]
       exact congrArg some (Fin.ext (Int.toNat_natCast _))⟩
@@ -209,7 +209,7 @@ theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v 
   | _, .bool, _, _, _ => trivial
   | _, .opt _, _, _, _ => trivial
   | _, .sum _, _, _, _ => trivial
-  | _, .grund _, _, _, _ => trivial
+  | _, .why _, _, _, _ => trivial
   | _, .never, _, _, _ => trivial
   | _, .fnptr _, _, _, _ => trivial
   | _, .ptr _ _, _, _, _ => trivial
@@ -234,7 +234,7 @@ theorem antwortLeer_iff (τ : Ty) : AntwortLeer D (some τ) ↔ ∀ v : Wert D �
 theorem antwortLeer_never : AntwortLeer D (some .never) := fun _ _ => rfl
 
 /-- A reason channel without reasons has no value. -/
-theorem antwortLeer_grund0 : AntwortLeer D (some (.grund 0)) :=
+theorem antwortLeer_grund0 : AntwortLeer D (some (.why 0)) :=
   (antwortLeer_iff _).mpr fun v _ => (v : Fin 0).elim0
 
 /-- An empty range has no value. -/
@@ -491,7 +491,7 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .bool => true
   | .opt _ => true
   | .sum cs => cs.any nutzBar
-  | .grund n => decide (n ≠ 0)
+  | .why n => decide (n ≠ 0)
   | .never => false
   | .fl lo hi => gleitBarB lo hi
   | .fnptr m => fs.any fun f => decide (D.sig f = m)
@@ -519,7 +519,7 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
         exact ⟨(⟨i, x⟩ : Σ i : Fin cs.length, Nutzlast (cs.get i)), trivial⟩
       · rintro ⟨⟨i, x⟩, _⟩
         exact ⟨cs.get i, List.get_mem cs i, (nutzBar_iff _).mpr ⟨x⟩⟩
-  | .grund n => by
+  | .why n => by
       simp only [antwortTyB, decide_eq_true_eq]
       constructor
       · intro h

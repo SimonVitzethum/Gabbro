@@ -23,17 +23,17 @@ mutual
 theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ),
     (ruE e).orte = e.orte
   | _, _, _, .lit _ => rfl
-  | _, _, _, .wahr => rfl
-  | _, _, _, .falsch => rfl
+  | _, _, _, .tru => rfl
+  | _, _, _, .fls => rfl
   | _, _, _, .var _ => rfl
   | _, _, _, .glob _ _ => rfl
   | _, _, _, .slot t f i hL => congrArg (Sum.inl t :: ·) (ruE_orte i)
-  | _, _, _, .durch p t ht f i hL => kongr₂ (fun x y => x ++ Sum.inl t :: y) (ruE_orte p) (ruE_orte i)
+  | _, _, _, .thru p t ht f i hL => kongr₂ (fun x y => x ++ Sum.inl t :: y) (ruE_orte p) (ruE_orte i)
   | _, _, _, .ptrOf .. => rfl
   | _, _, _, .fnref .. => rfl
-  | _, _, _, .altGlob _ _ => rfl
-  | _, _, _, .altSlot t f i hL => congrArg (Sum.inl t :: ·) (ruE_orte i)
-  | _, _, _, .weiter _ _ e => ruE_orte e
+  | _, _, _, .oldG _ _ => rfl
+  | _, _, _, .oldS t f i hL => congrArg (Sum.inl t :: ·) (ruE_orte i)
+  | _, _, _, .widen _ _ e => ruE_orte e
   | _, _, _, .add a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .sub a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .neg a => ruE_orte a
@@ -42,7 +42,7 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .rem _ _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .sdiv _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .srem _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
-  | _, _, _, .leseBytes t _ _ _ i _ _ _ => congrArg (Sum.inl t :: ·) (ruE_orte i)
+  | _, _, _, .getBytes t _ _ _ i _ _ _ => congrArg (Sum.inl t :: ·) (ruE_orte i)
   | _, _, _, .band _ _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .bor _ _ _ _ _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .bxor _ _ _ _ _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
@@ -53,22 +53,22 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .eq a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .fllt a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .flle a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
-  | _, _, _, .und a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
-  | _, _, _, .oder a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
-  | _, _, _, .nicht a => ruE_orte a
+  | _, _, _, .and a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .or a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .not a => ruE_orte a
   | _, _, _, .none _ => rfl
   | _, _, _, .some a => ruE_orte a
   | _, _, _, .istSome a => ruE_orte a
-  | _, _, _, .fall _ _ nutz => ruN_orte nutz
-  | _, _, _, .grund _ _ => rfl
+  | _, _, _, .case _ _ nutz => ruN_orte nutz
+  | _, _, _, .why _ _ => rfl
   | _, _, _, .forallSlots t body _ => congrArg (Sum.inl t :: ·) (ruE_orte body)
   | _, _, _, .existsSlots t body _ => congrArg (Sum.inl t :: ·) (ruE_orte body)
   | _, _, _, .reaches t _ _ a b _ => kongr₂ (fun x y => Sum.inl t :: x ++ y) (ruE_orte a) (ruE_orte b)
 
 theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte
-  | _, _, _, .keine => rfl
-  | _, _, _, .zahl e => ruE_orte e
+  | _, _, _, .empty => rfl
+  | _, _, _, .num e => ruE_orte e
 
 end
 
@@ -79,8 +79,8 @@ theorem ruA_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args 
 
 theorem ruErg_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (a : ErgExpr D Γ Λ e),
     (ruErg a).orte = a.orte
-  | _, _, _, .keine => rfl
-  | _, _, _, .wert e => ruE_orte e
+  | _, _, _, .empty => rfl
+  | _, _, _, .val e => ruE_orte e
 
 theorem umΛ_orte {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (h : Λ = Λ') (e : Expr D Γ Λ τ) :
     (Expr.umΛ h e).orte = e.orte := by
@@ -146,18 +146,18 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ'),
     stmtOrteP P.mitRuhe (ruS s) = stmtOrteP P s
   | _, _, _, _, .assignSlot _ _ i e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
-  | _, _, _, _, .assignDurch p _ _ _ i e _ _ =>
+  | _, _, _, _, .assignThru p _ _ _ i e _ _ =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruE_orte i)) (ruE_orte e)
   | _, _, _, _, .assignGlob _ e _ _ => ruE_orte e
-  | _, _, _, _, .schreibBytes _ _ _ _ i _ _ e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
+  | _, _, _, _, .putBytes _ _ _ _ i _ _ e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
   | _, _, _, _, .assignVar _ e => ruE_orte e
-  | _, _, _, _, .uebergang t _ _ i _ _ _ _ _ _ => congrArg (Sum.inl t :: ·) (ruE_orte i)
+  | _, _, _, _, .shift t _ _ i _ _ _ _ _ _ => congrArg (Sum.inl t :: ·) (ruE_orte i)
   | _, _, _, _, .ite c t e =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruB_orteP P t)) (ruB_orteP P e)
   | _, _, _, _, .onOption o p a =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte o) (ruB_orteP P p)) (ruB_orteP P a)
   | _, _, _, _, .onTag v arms => kongr₂ (· ++ ·) (ruE_orte v) (ruArms_orteP P arms)
-  | _, _, _, _, .onGrund r arms => kongr₂ (· ++ ·) (ruE_orte r) (ruGArms_orteP P arms)
+  | _, _, _, _, .onWhy r arms => kongr₂ (· ++ ·) (ruE_orte r) (ruGArms_orteP P arms)
   | _, _, _, _, .call g args _ _ =>
       (orteP_nachΛ _ _ _).trans (kongr₂ (· ++ ·) (ruA_orte args)
         (kongr₂ (· ++ ·) (requires_mitRuhe_orte P g) (ensures_mitRuhe_orte P g)))
@@ -170,13 +170,13 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte bis) (ruB_orteP P body)) (ruB_orteP P ueber)
   | _, _, _, _, .forever _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
   | _, _, _, _, .axiomCall _ args _ _ _ _ _ => ruA_orte args
-  | _, _, _, _, .regSchreib _ _ e => ruE_orte e
+  | _, _, _, _, .regWrite _ _ e => ruE_orte e
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish _ e _ _ _ _ => ruE_orte e
   | _, _, _, _, .advances .. => orteP_nachΛ _ _ _
   | _, _, _, _, .retires .. => orteP_nachΛ _ _ _
   | _, _, _, _, .ret e _ => ruErg_orte e
-  | _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -202,8 +202,8 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (· ++ ·) (ruA_orte args) (ruB_orteP P rest)
   | _, _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P err)) (ruB_orteP P rest)
-  | _, _, _, _, .regLies _ _ rest => ruB_orteP P rest
-  | _, _, _, _, .regLiesElse _ _ zusage sonst rest =>
+  | _, _, _, _, .regRead _ _ rest => ruB_orteP P rest
+  | _, _, _, _, .regReadElse _ _ zusage sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte zusage) (ruEnd_orteP P sonst))
         (ruB_orteP P rest)
   | _, _, _, _, .awaits g _ _ _ rest => congrArg (Sum.inr g :: ·) (ruB_orteP P rest)
@@ -211,20 +211,20 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (fun x y => (Sum.inr g :: x) ++ y) (ruE_orte neu) (ruB_orteP P rest)
   | _, _, _, _, .narrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
-  | _, _, _, _, .pruefung c sonst rest =>
+  | _, _, _, _, .check c sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
-  | _, _, _, _, .gleit _ a b _ _ rest =>
+  | _, _, _, _, .float _ a b _ _ rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)) (ruB_orteP P rest)
-  | _, _, _, _, .gleitLit _ _ _ rest => ruB_orteP P rest
-  | _, _, _, _, .gleitVon e _ _ rest => kongr₂ (· ++ ·) (ruE_orte e) (ruB_orteP P rest)
-  | _, _, _, _, .gleitNarrow e _ _ sonst rest =>
+  | _, _, _, _, .floatLit _ _ _ rest => ruB_orteP P rest
+  | _, _, _, _, .floatOf e _ _ rest => kongr₂ (· ++ ·) (ruE_orte e) (ruB_orteP P rest)
+  | _, _, _, _, .floatNarrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
 
 theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
     endblockOrteP P.mitRuhe (ruEnd e) = endblockOrteP P e
   | _, _, _, .ret e _ => ruErg_orte e
-  | _, _, _, .retGrund .. => rfl
+  | _, _, _, .retWhy .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_orteP P s) (ruEnd_orteP P rest)
@@ -258,15 +258,15 @@ mutual
 theorem ruS_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), (ruS s).regs = s.regs
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignDurch .. => rfl
+  | _, _, _, _, .assignThru .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
-  | _, _, _, _, .schreibBytes .. => rfl
+  | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
-  | _, _, _, _, .uebergang .. => rfl
+  | _, _, _, _, .shift .. => rfl
   | _, _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruB_regs t) (ruB_regs e)
   | _, _, _, _, .onOption _ p a => kongr₂ (· ++ ·) (ruB_regs p) (ruB_regs a)
   | _, _, _, _, .onTag _ arms => ruArms_regs arms
-  | _, _, _, _, .onGrund _ arms => ruGArms_regs arms
+  | _, _, _, _, .onWhy _ arms => ruGArms_regs arms
   | _, _, _, _, .call .. => regs_nachΛ _ _
   | _, _, _, _, .callInd .. => regs_nachΛ _ _
   | _, _, _, _, .locks _ _ body => ruB_regs body
@@ -275,13 +275,13 @@ theorem ruS_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_regs body) (ruB_regs ueber)
   | _, _, _, _, .forever _ _ body => ruB_regs body
   | _, _, _, _, .axiomCall .. => rfl
-  | _, _, _, _, .regSchreib .. => rfl
+  | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
   | _, _, _, _, .advances .. => regs_nachΛ _ _
   | _, _, _, _, .retires .. => regs_nachΛ _ _
   | _, _, _, _, .ret .. => rfl
-  | _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -297,23 +297,23 @@ theorem ruB_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
         ((regs_vorΛ _ _).trans (ruB_regs rest))
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_regs rest
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kongr₂ (· ++ ·) (ruEnd_regs err) (ruB_regs rest)
-  | _, _, _, _, .regLies r _ rest => congrArg (r :: ·) (ruB_regs rest)
-  | _, _, _, _, .regLiesElse r _ _ sonst rest =>
+  | _, _, _, _, .regRead r _ rest => congrArg (r :: ·) (ruB_regs rest)
+  | _, _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (r :: ·) (kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest))
   | _, _, _, _, .awaits _ _ _ _ rest => ruB_regs rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_regs rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest)
-  | _, _, _, _, .pruefung _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest)
-  | _, _, _, _, .gleit _ _ _ _ _ rest => ruB_regs rest
-  | _, _, _, _, .gleitLit _ _ _ rest => ruB_regs rest
-  | _, _, _, _, .gleitVon _ _ _ rest => ruB_regs rest
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest =>
+  | _, _, _, _, .check _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest)
+  | _, _, _, _, .float _ _ _ _ _ rest => ruB_regs rest
+  | _, _, _, _, .floatLit _ _ _ rest => ruB_regs rest
+  | _, _, _, _, .floatOf _ _ _ rest => ruB_regs rest
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest =>
       kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest)
 
 theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ), (ruEnd e).regs = e.regs
   | _, _, _, .ret .. => rfl
-  | _, _, _, .retGrund .. => rfl
+  | _, _, _, .retWhy .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_regs s) (ruEnd_regs rest)
@@ -347,15 +347,15 @@ mutual
 theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ'), Stmt.gOk (D := D.mitRuhe) K Rg (ruS s) = s.gOk (kZ K) Rg
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignDurch .. => rfl
+  | _, _, _, _, .assignThru .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
-  | _, _, _, _, .schreibBytes .. => rfl
+  | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
-  | _, _, _, _, .uebergang .. => rfl
+  | _, _, _, _, .shift .. => rfl
   | _, _, _, _, .ite _ t e => kongr₂ (· && ·) (ruB_gOk K Rg t) (ruB_gOk K Rg e)
   | _, _, _, _, .onOption _ p a => kongr₂ (· && ·) (ruB_gOk K Rg p) (ruB_gOk K Rg a)
   | _, _, _, _, .onTag _ arms => ruArms_gOk K Rg arms
-  | _, _, _, _, .onGrund _ arms => ruGArms_gOk K Rg arms
+  | _, _, _, _, .onWhy _ arms => ruGArms_gOk K Rg arms
   | _, _, _, _, .call .. => gOk_nachΛ _ _ _ _
   | _, _, _, _, .callInd .. => gOk_nachΛ _ _ _ _
   | _, _, _, _, .locks _ _ body => ruB_gOk K Rg body
@@ -365,13 +365,13 @@ theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
       kongr₂ (· && ·) (ruB_gOk K Rg body) (ruB_gOk K Rg ueber)
   | _, _, _, _, .forever _ _ body => ruB_gOk K Rg body
   | _, _, _, _, .axiomCall .. => rfl
-  | _, _, _, _, .regSchreib .. => rfl
+  | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
   | _, _, _, _, .advances .. => gOk_nachΛ _ _ _ _
   | _, _, _, _, .retires .. => gOk_nachΛ _ _ _ _
   | _, _, _, _, .ret .. => rfl
-  | _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -389,25 +389,25 @@ theorem ruB_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_gOk K Rg rest
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruB_gOk K Rg rest)
-  | _, _, _, _, .regLies r _ rest => congrArg (Rg r && ·) (ruB_gOk K Rg rest)
-  | _, _, _, _, .regLiesElse r _ _ sonst rest =>
+  | _, _, _, _, .regRead r _ rest => congrArg (Rg r && ·) (ruB_gOk K Rg rest)
+  | _, _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Rg r && ·) (kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest))
   | _, _, _, _, .awaits _ _ _ _ rest => ruB_gOk K Rg rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_gOk K Rg rest
   | _, _, _, _, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest)
-  | _, _, _, _, .pruefung _ sonst rest =>
+  | _, _, _, _, .check _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest)
-  | _, _, _, _, .gleit _ _ _ _ _ rest => ruB_gOk K Rg rest
-  | _, _, _, _, .gleitLit _ _ _ rest => ruB_gOk K Rg rest
-  | _, _, _, _, .gleitVon _ _ _ rest => ruB_gOk K Rg rest
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest =>
+  | _, _, _, _, .float _ _ _ _ _ rest => ruB_gOk K Rg rest
+  | _, _, _, _, .floatLit _ _ _ rest => ruB_gOk K Rg rest
+  | _, _, _, _, .floatOf _ _ _ rest => ruB_gOk K Rg rest
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest)
 
 theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), Endblock.gOk (D := D.mitRuhe) K Rg (ruEnd e) = e.gOk (kZ K) Rg
   | _, _, _, .ret .. => rfl
-  | _, _, _, .retGrund .. => rfl
+  | _, _, _, .retWhy .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_gOk K Rg s) (ruEnd_gOk K Rg rest)
@@ -445,15 +445,15 @@ mutual
 theorem ruS_mS (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ'), mS A (ruS s) = mS (mZ A) s
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignDurch .. => rfl
+  | _, _, _, _, .assignThru .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
-  | _, _, _, _, .schreibBytes .. => rfl
+  | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
-  | _, _, _, _, .uebergang .. => rfl
+  | _, _, _, _, .shift .. => rfl
   | _, _, _, _, .ite _ t e => kongr₂ (· && ·) (ruB_mB A t) (ruB_mB A e)
   | _, _, _, _, .onOption _ p a => kongr₂ (· && ·) (ruB_mB A p) (ruB_mB A a)
   | _, _, _, _, .onTag _ arms => ruArms_mArms A arms
-  | _, _, _, _, .onGrund _ arms => ruGArms_mGArms A arms
+  | _, _, _, _, .onWhy _ arms => ruGArms_mGArms A arms
   | _, _, _, _, .call .. => mS_nachΛ _ _ _
   | _, _, _, _, .callInd .. => mS_nachΛ _ _ _
   | _, _, _, _, .locks L _ body => congrArg (A.sperre L && ·) (ruB_mB A body)
@@ -462,13 +462,13 @@ theorem ruS_mS (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· && ·) (ruB_mB A body) (ruB_mB A ueber)
   | _, _, _, _, .forever _ _ body => ruB_mB A body
   | _, _, _, _, .axiomCall .. => rfl
-  | _, _, _, _, .regSchreib .. => rfl
+  | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
   | _, _, _, _, .advances .. => mS_nachΛ _ _ _
   | _, _, _, _, .retires .. => mS_nachΛ _ _ _
   | _, _, _, _, .ret .. => rfl
-  | _, _, _, _, .retGrund .. => rfl
+  | _, _, _, _, .retWhy .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -487,23 +487,23 @@ theorem ruB_mB (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_mE A err) (ruB_mB A rest)
-  | _, _, _, _, .regLies _ _ rest => ruB_mB A rest
-  | _, _, _, _, .regLiesElse _ _ _ sonst rest =>
+  | _, _, _, _, .regRead _ _ rest => ruB_mB A rest
+  | _, _, _, _, .regReadElse _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
   | _, _, _, _, .awaits _ _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
-  | _, _, _, _, .pruefung _ sonst rest => kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
-  | _, _, _, _, .gleit _ _ _ _ _ rest => ruB_mB A rest
-  | _, _, _, _, .gleitLit _ _ _ rest => ruB_mB A rest
-  | _, _, _, _, .gleitVon _ _ _ rest => ruB_mB A rest
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest =>
+  | _, _, _, _, .check _ sonst rest => kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
+  | _, _, _, _, .float _ _ _ _ _ rest => ruB_mB A rest
+  | _, _, _, _, .floatLit _ _ _ rest => ruB_mB A rest
+  | _, _, _, _, .floatOf _ _ _ rest => ruB_mB A rest
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
 
 theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (e : Endblock D V l Γ Λ), mE A (ruEnd e) = mE (mZ A) e
   | _, _, _, .ret .. => rfl
-  | _, _, _, .retGrund .. => rfl
+  | _, _, _, .retWhy .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_mS A s) (ruEnd_mE A rest)
@@ -549,7 +549,7 @@ theorem mS_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, _, .onOption _ p a, h => by
       simp only [mS, Bool.and_eq_true] at h ⊢; exact ⟨mB_mono hle p h.1, mB_mono hle a h.2⟩
   | _, _, _, _, .onTag _ arms, h => mArms_mono hle arms h
-  | _, _, _, _, .onGrund _ arms, h => mGArms_mono hle arms h
+  | _, _, _, _, .onWhy _ arms, h => mGArms_mono hle arms h
   | _, _, _, _, .call g .., h => hle.1 g h
   | _, _, _, _, .callInd (n := n) .., h => hle.2.1 n h
   | _, _, _, _, .locks L _ body, h => by
@@ -560,19 +560,19 @@ theorem mS_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
       simp only [mS, Bool.and_eq_true] at h ⊢; exact ⟨mB_mono hle body h.1, mB_mono hle ueber h.2⟩
   | _, _, _, _, .forever _ _ body, h => mB_mono hle body h
   | _, _, _, _, .assignSlot .., _ => rfl
-  | _, _, _, _, .assignDurch .., _ => rfl
+  | _, _, _, _, .assignThru .., _ => rfl
   | _, _, _, _, .assignGlob .., _ => rfl
-  | _, _, _, _, .schreibBytes .., _ => rfl
+  | _, _, _, _, .putBytes .., _ => rfl
   | _, _, _, _, .assignVar .., _ => rfl
-  | _, _, _, _, .uebergang .., _ => rfl
+  | _, _, _, _, .shift .., _ => rfl
   | _, _, _, _, .axiomCall .., _ => rfl
-  | _, _, _, _, .regSchreib .., _ => rfl
+  | _, _, _, _, .regWrite .., _ => rfl
   | _, _, _, _, .transition .., _ => rfl
   | _, _, _, _, .publish .., _ => rfl
   | _, _, _, _, .advances .., _ => rfl
   | _, _, _, _, .retires .., _ => rfl
   | _, _, _, _, .ret .., _ => rfl
-  | _, _, _, _, .retGrund .., _ => rfl
+  | _, _, _, _, .retWhy .., _ => rfl
   | _, _, _, _, .leave _, _ => rfl
   | _, _, _, _, .next _, _ => rfl
 
@@ -593,25 +593,25 @@ theorem mB_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢
       exact ⟨mE_mono hle err h.1, mB_mono hle rest h.2⟩
-  | _, _, _, _, .regLies _ _ rest, h => mB_mono hle rest h
-  | _, _, _, _, .regLiesElse _ _ _ sonst rest, h => by
+  | _, _, _, _, .regRead _ _ rest, h => mB_mono hle rest h
+  | _, _, _, _, .regReadElse _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
   | _, _, _, _, .awaits _ _ _ _ rest, h => mB_mono hle rest h
   | _, _, _, _, .exchange _ _ _ _ rest, h => mB_mono hle rest h
   | _, _, _, _, .narrow _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
-  | _, _, _, _, .pruefung _ sonst rest, h => by
+  | _, _, _, _, .check _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
-  | _, _, _, _, .gleit _ _ _ _ _ rest, h => mB_mono hle rest h
-  | _, _, _, _, .gleitLit _ _ _ rest, h => mB_mono hle rest h
-  | _, _, _, _, .gleitVon _ _ _ rest, h => mB_mono hle rest h
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest, h => by
+  | _, _, _, _, .float _ _ _ _ _ rest, h => mB_mono hle rest h
+  | _, _, _, _, .floatLit _ _ _ rest, h => mB_mono hle rest h
+  | _, _, _, _, .floatOf _ _ _ rest, h => mB_mono hle rest h
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
 
 theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ), mE A e = true → mE A' e = true
   | _, _, _, .ret .., _ => rfl
-  | _, _, _, .retGrund .., _ => rfl
+  | _, _, _, .retWhy .., _ => rfl
   | _, _, _, .leave _, _ => rfl
   | _, _, _, .next _, _ => rfl
   | _, _, _, .cons s rest, h => by
@@ -662,7 +662,7 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [mS, Bool.and_eq_true] at h h' ⊢
       exact ⟨mB_und p h.1 h'.1, mB_und a h.2 h'.2⟩
   | _, _, _, _, .onTag _ arms, h, h' => mArms_und arms h h'
-  | _, _, _, _, .onGrund _ arms, h, h' => mGArms_und arms h h'
+  | _, _, _, _, .onWhy _ arms, h, h' => mGArms_und arms h h'
   | _, _, _, _, .call g .., h, h' => by
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢; exact ⟨h, h'⟩
   | _, _, _, _, .callInd (n := n) .., h, h' => by
@@ -677,19 +677,19 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       exact ⟨mB_und body h.1 h'.1, mB_und ueber h.2 h'.2⟩
   | _, _, _, _, .forever _ _ body, h, h' => mB_und body h h'
   | _, _, _, _, .assignSlot .., _, _ => rfl
-  | _, _, _, _, .assignDurch .., _, _ => rfl
+  | _, _, _, _, .assignThru .., _, _ => rfl
   | _, _, _, _, .assignGlob .., _, _ => rfl
-  | _, _, _, _, .schreibBytes .., _, _ => rfl
+  | _, _, _, _, .putBytes .., _, _ => rfl
   | _, _, _, _, .assignVar .., _, _ => rfl
-  | _, _, _, _, .uebergang .., _, _ => rfl
+  | _, _, _, _, .shift .., _, _ => rfl
   | _, _, _, _, .axiomCall .., _, _ => rfl
-  | _, _, _, _, .regSchreib .., _, _ => rfl
+  | _, _, _, _, .regWrite .., _, _ => rfl
   | _, _, _, _, .transition .., _, _ => rfl
   | _, _, _, _, .publish .., _, _ => rfl
   | _, _, _, _, .advances .., _, _ => rfl
   | _, _, _, _, .retires .., _, _ => rfl
   | _, _, _, _, .ret .., _, _ => rfl
-  | _, _, _, _, .retGrund .., _, _ => rfl
+  | _, _, _, _, .retWhy .., _, _ => rfl
   | _, _, _, _, .leave _, _, _ => rfl
   | _, _, _, _, .next _, _, _ => rfl
 
@@ -713,8 +713,8 @@ theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, h' => by
       simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und err h.1 h'.1, mB_und rest h.2 h'.2⟩
-  | _, _, _, _, .regLies _ _ rest, h, h' => mB_und rest h h'
-  | _, _, _, _, .regLiesElse _ _ _ sonst rest, h, h' => by
+  | _, _, _, _, .regRead _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .regReadElse _ _ _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
   | _, _, _, _, .awaits _ _ _ _ rest, h, h' => mB_und rest h h'
@@ -722,20 +722,20 @@ theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .narrow _ _ _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
-  | _, _, _, _, .pruefung _ sonst rest, h, h' => by
+  | _, _, _, _, .check _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
-  | _, _, _, _, .gleit _ _ _ _ _ rest, h, h' => mB_und rest h h'
-  | _, _, _, _, .gleitLit _ _ _ rest, h, h' => mB_und rest h h'
-  | _, _, _, _, .gleitVon _ _ _ rest, h, h' => mB_und rest h h'
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest, h, h' => by
+  | _, _, _, _, .float _ _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .floatLit _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .floatOf _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
 
 theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ), mE A e = true → mE B e = true → mE (mUnd A B) e = true
   | _, _, _, .ret .., _, _ => rfl
-  | _, _, _, .retGrund .., _, _ => rfl
+  | _, _, _, .retWhy .., _, _ => rfl
   | _, _, _, .leave _, _, _ => rfl
   | _, _, _, .next _, _, _ => rfl
   | _, _, _, .cons s rest, h, h' => by

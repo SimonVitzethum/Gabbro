@@ -376,7 +376,7 @@ theorem klon_frei_nur_lebende {P : Programm D} {O : Orakel D} {passes : Nat}
 def isEntryReturn (D : Deklaration) (e : D.Fn) : RufEreignisF D → Prop
   | .rueck f _ _ _ _ => f = e
   | .eintritt _ _ _ => False
-  | .grund _ _ _ _ _ => False
+  | .why _ _ _ _ _ => False
 
 /-- A child thread never returns from its entry: no `.rueck entry` in its
     log. Returns of SUBFUNCTIONS inside the child are fine -- only the
@@ -574,7 +574,7 @@ theorem kwSchritt1 : RufSchrittG gP rufOF 0 kwM0 0 kwM1 := by
        rhoCallerF,
        .ende (.cons (.call rufIncF rufArgsF rufHpF rfl)
          ((rufDF_params rufCallerF).symm ▸
-           (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+           (.ret (.val ((.widen (by decide) (by decide) (.var .here) :
              Expr rufDF (rufDF.params rufIncF) [] (.int 0 6)))) (by decide)) :
            Endblock rufDF (vertragVon rufDF rufCallerF) false
              (rufDF.params rufIncF) (nach rufDF rufIncF [])))⟩ := by

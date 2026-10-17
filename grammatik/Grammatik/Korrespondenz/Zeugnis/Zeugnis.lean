@@ -112,7 +112,7 @@ theorem intVonTyp_eq {τ : Ty} {lo hi : Int}
   | bool => simp [intVonTyp] at h
   | opt _ => simp [intVonTyp] at h
   | sum _ => simp [intVonTyp] at h
-  | grund _ => simp [intVonTyp] at h
+  | why _ => simp [intVonTyp] at h
   | never => simp [intVonTyp] at h
   | fl _ => simp [intVonTyp] at h
   | fnptr _ => simp [intVonTyp] at h
@@ -143,11 +143,11 @@ theorem ctxTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int)
       | int lo' hi' =>
         simp [ctxTyp] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨.hier, trivial⟩
+        exact ⟨.here, trivial⟩
       | bool => simp [ctxTyp] at h
       | opt _ => simp [ctxTyp] at h
       | sum _ => simp [ctxTyp] at h
-      | grund _ => simp [ctxTyp] at h
+      | why _ => simp [ctxTyp] at h
       | never => simp [ctxTyp] at h
       | fl _ => simp [ctxTyp] at h
       | fnptr _ => simp [ctxTyp] at h
@@ -155,7 +155,7 @@ theorem ctxTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int)
     | succ k =>
       simp [ctxTyp] at h
       obtain ⟨x, _⟩ := ih k h
-      exact ⟨.dort x, trivial⟩
+      exact ⟨.there x, trivial⟩
 
 /-- Guard predicates as `Decidable`: `darf`/`gdarf` quantify over the finite
     `braucht` list with decidable membership, so the table can recompute them
@@ -562,7 +562,7 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨ea, _⟩ := iha _ _ ha
-        exact ⟨Expr.weiter hc.1 hc.2 ea, trivial⟩
+        exact ⟨Expr.widen hc.1 hc.2 ea, trivial⟩
       · simp [hc] at h
   | var k =>
     simp only [GueltigAbleitung, certRange] at h
@@ -911,13 +911,13 @@ theorem block_sound {D : Deklaration} {V : Vertrag D} {l : Bool}
     intro h
     simp only [certBlockGueltig] at h
     obtain ⟨he, hΛ⟩ := h
-    exact ⟨Block.cons (Stmt.ret (by rw [he]; exact ErgExpr.keine) hΛ) Block.nil, trivial⟩
+    exact ⟨Block.cons (Stmt.ret (by rw [he]; exact ErgExpr.empty) hΛ) Block.nil, trivial⟩
   | retWert e lo hi =>
     intro h
     simp only [certBlockGueltig] at h
     obtain ⟨he, hrng, hΛ⟩ := h
     obtain ⟨ee, _⟩ := zeugnis_sound e lo hi hrng
-    exact ⟨Block.cons (Stmt.ret (by rw [he]; exact ErgExpr.wert ee) hΛ) Block.nil, trivial⟩
+    exact ⟨Block.cons (Stmt.ret (by rw [he]; exact ErgExpr.val ee) hΛ) Block.nil, trivial⟩
 
 /-! ### CUT-5 probes: bind, call, return -/
 
@@ -1043,8 +1043,8 @@ inductive CertCut3 (D : Deklaration) where
   | none (n : Int)
   | some (e : CertExpr D) (n : Int)
   | istSome (o : CertCut3 D) (n : Int)
-  | fall (cs : List (Option (Int × Int))) (i : Nat) (p : Option (CertExpr D))
-  | grund (n r : Nat)
+  | case (cs : List (Option (Int × Int))) (i : Nat) (p : Option (CertExpr D))
+  | why (n r : Nat)
   | forallSlots (t : D.Tab)
   | existsSlots (t : D.Tab)
   | reaches (t : D.Tab) (f : D.Feld t) (a b : CertExpr D)
@@ -1082,8 +1082,8 @@ def certCut3Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut3 D →
   | .none _ => True
   | .some e n => certRange D Γ Λ e = some (0, n - 1)
   | .istSome o n => certCut3Ok D Γ Λ o ∧ certCut3IsOpt o n = true
-  | .fall cs i p => i < cs.length ∧ certCut3PayloadOk D Γ Λ cs[i]? p = true
-  | .grund n r => r < n
+  | .case cs i p => i < cs.length ∧ certCut3PayloadOk D Γ Λ cs[i]? p = true
+  | .why n r => r < n
   | .forallSlots t => darf D t Λ
   | .existsSlots t => darf D t Λ
   | .reaches t f a b =>
@@ -1106,10 +1106,10 @@ instance decCut3Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut
   | .istSome o n =>
     haveI := decCut3Ok D Γ Λ o
     inferInstanceAs (Decidable (certCut3Ok D Γ Λ o ∧ certCut3IsOpt o n = true))
-  | .fall cs i p =>
+  | .case cs i p =>
     inferInstanceAs
       (Decidable (i < cs.length ∧ certCut3PayloadOk D Γ Λ cs[i]? p = true))
-  | .grund n r => inferInstanceAs (Decidable (r < n))
+  | .why n r => inferInstanceAs (Decidable (r < n))
   | .forallSlots t => inferInstanceAs (Decidable (darf D t Λ))
   | .existsSlots t => inferInstanceAs (Decidable (darf D t Λ))
   | .reaches t f a b =>
@@ -1136,7 +1136,7 @@ instance decCut3Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut
 inductive CertCut4 (D : Deklaration) where
   | ptrOf (t : D.Tab) (n : Nat) (rw : Bool)
   | fnref (f : D.Fn) (n : Nat)
-  | durch (t : D.Tab) (f : D.Feld t) (n : Nat) (i : CertExpr D)
+  | thru (t : D.Tab) (f : D.Feld t) (n : Nat) (i : CertExpr D)
 
 /-- CUT-4 remainder validity: `ptrOf` recomputes the table-number equation;
     `fnref` the signature equation; `durch` the table-number equation, the
@@ -1145,7 +1145,7 @@ inductive CertCut4 (D : Deklaration) where
 def certCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut4 D → Prop
   | .ptrOf t n _ => D.tabNr n = some t
   | .fnref f n => D.sig f = n
-  | .durch t _f n i =>
+  | .thru t _f n i =>
     D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧ darf D t Λ
 
 /-- CUT-4 remainder validity as `Decidable` (mirror of `decGueltigBlock`). -/
@@ -1154,7 +1154,7 @@ instance decCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut
   match c with
   | .ptrOf t n _ => inferInstanceAs (Decidable (D.tabNr n = some t))
   | .fnref f n => inferInstanceAs (Decidable (D.sig f = n))
-  | .durch t _f n i =>
+  | .thru t _f n i =>
     inferInstanceAs
       (Decidable (D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧
         darf D t Λ))
@@ -1250,7 +1250,7 @@ theorem flVonTyp_eq {τ : Ty} {lo hi : Int × Int}
   | bool => simp [flVonTyp] at h
   | opt _ => simp [flVonTyp] at h
   | sum _ => simp [flVonTyp] at h
-  | grund _ => simp [flVonTyp] at h
+  | why _ => simp [flVonTyp] at h
   | never => simp [flVonTyp] at h
   | fl lo' hi' =>
     simp [flVonTyp] at h
@@ -1275,18 +1275,18 @@ theorem ctxFlTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int × Int)
       | bool => simp [ctxFlTyp, flVonTyp] at h
       | opt _ => simp [ctxFlTyp, flVonTyp] at h
       | sum _ => simp [ctxFlTyp, flVonTyp] at h
-      | grund _ => simp [ctxFlTyp, flVonTyp] at h
+      | why _ => simp [ctxFlTyp, flVonTyp] at h
       | never => simp [ctxFlTyp, flVonTyp] at h
       | fl lo' hi' =>
         simp [ctxFlTyp, flVonTyp] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨.hier, trivial⟩
+        exact ⟨.here, trivial⟩
       | fnptr _ => simp [ctxFlTyp, flVonTyp] at h
       | ptr _ _ => simp [ctxFlTyp, flVonTyp] at h
     | succ k =>
       simp [ctxFlTyp] at h
       obtain ⟨x, _⟩ := ih k h
-      exact ⟨.dort x, trivial⟩
+      exact ⟨.there x, trivial⟩
 
 /-- Float-read soundness: a float table hit elaborates to a `.fl` expression
     (mirror of the `var`/`glob`/`slot` cases of `zeugnis_sound`). -/
@@ -1406,12 +1406,12 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
     | fllt _ _ => simp [certCut3IsOpt] at hi
     | flle _ _ => simp [certCut3IsOpt] at hi
     | istSome _ _ => simp [certCut3IsOpt] at hi
-    | fall _ _ _ => simp [certCut3IsOpt] at hi
-    | grund _ _ => simp [certCut3IsOpt] at hi
+    | case _ _ _ => simp [certCut3IsOpt] at hi
+    | why _ _ => simp [certCut3IsOpt] at hi
     | forallSlots _ => simp [certCut3IsOpt] at hi
     | existsSlots _ => simp [certCut3IsOpt] at hi
     | reaches _ _ _ _ => simp [certCut3IsOpt] at hi
-  | fall cs i p =>
+  | case cs i p =>
     simp only [certCut3Ok] at h
     obtain ⟨hi, hp⟩ := h
     cases hq : cs[i]? with
@@ -1429,7 +1429,7 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         cases p with
         | none =>
           simp only [certCut3PayloadOk] at hp
-          exact ⟨.sum cs, Expr.fall cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.keine),
+          exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.empty),
             trivial⟩
         | some _ =>
           simp [certCut3PayloadOk] at hp
@@ -1442,11 +1442,11 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp only [certCut3PayloadOk] at hp
           have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
           obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
-          exact ⟨.sum cs, Expr.fall cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.zahl ee),
+          exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.num ee),
             trivial⟩
-  | grund n r =>
+  | why n r =>
     simp only [certCut3Ok] at h
-    exact ⟨.grund n, Expr.grund n ⟨r, h⟩, trivial⟩
+    exact ⟨.why n, Expr.why n ⟨r, h⟩, trivial⟩
   | forallSlots t =>
     simp only [certCut3Ok] at h
     exact ⟨.bool, Expr.forallSlots t body h, trivial⟩
@@ -1493,35 +1493,35 @@ example : ¬ certCut3Ok TestD [] []
 /-- The `zahl` case: `fall` at index `0` with a payload that recomputes the
     cased range. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
-  cut3_sound (.fall [some (0, 0)] 0 (some (.lit 0))) () (by decide)
+  cut3_sound (.case [some (0, 0)] 0 (some (.lit 0))) () (by decide)
 
 /-- The caseless arm: `fall` at index `0` with no payload. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
-  cut3_sound (.fall [none] 0 none) () (by decide)
+  cut3_sound (.case [none] 0 none) () (by decide)
 
 /-- FORGED payload: the `zahl` arm carries `1`, cased at `(0, 0)`. -/
 example : ¬ certCut3Ok TestD [] []
-    (.fall [some (0, 0)] 0 (some (.lit 1))) := by decide
+    (.case [some (0, 0)] 0 (some (.lit 1))) := by decide
 
 /-- `grund 1 of 2` elaborates to `Expr.grund`. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
-  cut3_sound (.grund 2 1) () (by decide)
+  cut3_sound (.why 2 1) () (by decide)
 
 /-- The quantifier guard, then `return`: `forallSlots` over the guarded
     table elaborates behind the supplied body. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
-  cut3_sound (.forallSlots ()) Expr.wahr (by decide)
+  cut3_sound (.forallSlots ()) Expr.tru (by decide)
 
 /-- Same guard, existential half. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
-  cut3_sound (.existsSlots ()) Expr.wahr (by decide)
+  cut3_sound (.existsSlots ()) Expr.tru (by decide)
 
 /-- FORGED payload: `some 1` at bound `1` claims the index shape `0 .. 0`,
     but the payload recomputes `(1, 1)` -- provably not valid. -/
 example : ¬ certCut3Ok TestD [] [] (.some (.lit 1) 1) := by decide
 
 /-- FORGED ground: case `2` of `2` reasons is out of range (`r < n` fails). -/
-example : ¬ certCut3Ok TestD [] [] (.grund 2 2) := by decide
+example : ¬ certCut3Ok TestD [] [] (.why 2 2) := by decide
 
 /-- FORGED `reaches`: both endpoint indices recompute `(0, 10)`, but the
     field carries `.int 0 10`, not an option into self -- no certificate. -/
@@ -1541,7 +1541,7 @@ example : ¬ certCut3Ok TestD [] []
     index shape, guard); the pointer itself travels as proof. Every other
     arm needs nothing (`Unit`). -/
 def Cut4Ptr (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut4 D → Type
-  | .durch _ _ n _ => Σ rw : Bool, Expr D Γ Λ (.ptr n rw)
+  | .thru _ _ n _ => Σ rw : Bool, Expr D Γ Λ (.ptr n rw)
   | _ => Unit
 
 /-- CUT-4 remainder soundness: a valid remainder print elaborates to the
@@ -1558,12 +1558,12 @@ theorem cut4_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | fnref f n =>
     simp only [certCut4Ok] at h
     exact ⟨.fnptr n, Expr.fnref f n h, trivial⟩
-  | durch t f n i =>
+  | thru t f n i =>
     simp only [certCut4Ok] at h
     obtain ⟨ht, hrng, hL⟩ := h
     obtain ⟨rw, p⟩ := s
     obtain ⟨ei, _⟩ := zeugnis_sound i 0 (D.count t - 1) hrng
-    exact ⟨D.typ t f, Expr.durch p t ht f ei hL, trivial⟩
+    exact ⟨D.typ t f, Expr.thru p t ht f ei hL, trivial⟩
 
 /-! ### CUT-4 remainder soundness probes -/
 
@@ -1578,7 +1578,7 @@ example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
 /-- `durch` the named pointer: table number, generated index shape, and
     guard recompute; the pointer travels as proof. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
-  cut4_sound (.durch () () 0 (.wide 0 10 (.lit 3)))
+  cut4_sound (.thru () () 0 (.wide 0 10 (.lit 3)))
     ⟨true, Expr.ptrOf () 0 rfl true⟩ (by decide)
 
 /-- FORGED signature: the nullary function claimed at signature `1` -- the
@@ -1588,11 +1588,11 @@ example : ¬ certCut4Ok TestD [] [] (.fnref false 1) := by decide
 /-- FORGED index: a bare `3` is not of index type `0 .. 10` -- without the
     widening the `durch` has no validity. -/
 example : ¬ certCut4Ok TestD [] [Res.held ()]
-    (.durch () () 0 (.lit 3)) := by decide
+    (.thru () () 0 (.lit 3)) := by decide
 
 /-- FORGED guard: the widened index is right, but the hands are empty. -/
 example : ¬ certCut4Ok TestD [] []
-    (.durch () () 0 (.wide 0 10 (.lit 3))) := by decide
+    (.thru () () 0 (.wide 0 10 (.lit 3))) := by decide
 
 /-! ## CUT-5 remainder soundness: calls WITH arguments, carrying `RufPasst`
 

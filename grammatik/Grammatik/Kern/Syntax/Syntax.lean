@@ -325,8 +325,8 @@ theorem RufPasst.hx_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Ma
 abbrev Ctx := List Ty
 
 inductive Var : Ctx → Ty → Type where
-  | hier : Var (τ :: Γ) τ
-  | dort : Var Γ τ → Var (σ :: Γ) τ
+  | here : Var (τ :: Γ) τ
+  | there : Var Γ τ → Var (σ :: Γ) τ
 
 def ArmCtx (Γ : Ctx) : Option (Int × Int) → Ctx
   | none => Γ
@@ -341,8 +341,8 @@ mutual
 
 inductive Expr : Ctx → List (Res D) → Ty → Type where
   | lit (n : Int) : Expr Γ Λ (.int n n)
-  | wahr : Expr Γ Λ .bool
-  | falsch : Expr Γ Λ .bool
+  | tru : Expr Γ Λ .bool
+  | fls : Expr Γ Λ .bool
   | var (x : Var Γ τ) : Expr Γ Λ τ
   /-- Ein `static`/`atomic`: unter seinen Waechtern (`H007`). -/
   | glob (g : D.Glob) (hL : gdarf D g Λ) : Expr Γ Λ (D.gtyp g)
@@ -351,7 +351,7 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       Expr Γ Λ (D.typ t f)
   /-- `p->f`, `p[i].f` -- ein Zugriff DURCH einen Zeiger auf Traeger `n`: derselbe Zugriff wie
       `slot`, mit denselben Waechtern; der Zeiger ist die Faehigkeit, `t` zu nennen (M3). -/
-  | durch (p : Expr Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t) (f : D.Feld t)
+  | thru (p : Expr Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t) (f : D.Feld t)
       (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
   /-- Der Zeiger auf einen Traeger -- die einzige Adresse, die es gibt: die eines DEKLARIERTEN
       Dings. Es gibt keine Adresse eines Ausdrucks (`SYNTAX.md` §4, `fnvalue`). -/
@@ -359,10 +359,10 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   /-- `&f` -- der Funktionszeiger: eine Funktion GENAU dieser Signatur («B8»). -/
   | fnref (f : D.Fn) (n : Nat) (h : D.sig f = n) : Expr Γ Λ (.fnptr n)
   /-- `old(g)`, `old(T.slots[i].f)` -- nur in `ensures`: der Wert beim Eintritt. -/
-  | altGlob (g : D.Glob) (hL : gdarf D g Λ) : Expr Γ Λ (D.gtyp g)
-  | altSlot (t : D.Tab) (f : D.Feld t) (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
+  | oldG (g : D.Glob) (hL : gdarf D g Λ) : Expr Γ Λ (D.gtyp g)
+  | oldS (t : D.Tab) (f : D.Feld t) (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
       Expr Γ Λ (D.typ t f)
-  | weiter (h1 : lo' ≤ lo) (h2 : hi ≤ hi') (e : Expr Γ Λ (.int lo hi)) : Expr Γ Λ (.int lo' hi')
+  | widen (h1 : lo' ≤ lo) (h2 : hi ≤ hi') (e : Expr Γ Λ (.int lo hi)) : Expr Γ Λ (.int lo' hi')
   | add (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ (.int (l1 + l2) (h1 + h2))
   | sub (a : Expr Γ Λ (.int l1 h1)) (b : Expr Γ Λ (.int l2 h2)) : Expr Γ Λ (.int (l1 - h2) (h1 - l2))
   | neg (a : Expr Γ Λ (.int lo hi)) : Expr Γ Λ (.int (-hi) (-lo))
@@ -384,7 +384,7 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       `@bitpos`, `embeds` und die zweite Sicht auf dieselben Bytes sind Lesungen dieser
       Form. Der Bereich des Index plus `n` liegt in der Tabelle -- das ist die Schranke am
       Versatz, als Attribut. -/
-  | leseBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
+  | getBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
       (i : Expr Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) :
       Expr Γ Λ (.int 0 (256 ^ n - 1))
   /-- `&` `|` `^` `<<` `>>` `~` -- `M137`: nur ueber nichtnegativen Bereichen; `|`, `^`, `~`
@@ -406,15 +406,15 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       Trichotomie gilt, die NaN-Vierteilung («F») gibt es nicht. -/
   | fllt (a : Expr Γ Λ (.fl l1 h1)) (b : Expr Γ Λ (.fl l2 h2)) : Expr Γ Λ .bool
   | flle (a : Expr Γ Λ (.fl l1 h1)) (b : Expr Γ Λ (.fl l2 h2)) : Expr Γ Λ .bool
-  | und (a b : Expr Γ Λ .bool) : Expr Γ Λ .bool
-  | oder (a b : Expr Γ Λ .bool) : Expr Γ Λ .bool
-  | nicht (a : Expr Γ Λ .bool) : Expr Γ Λ .bool
+  | and (a b : Expr Γ Λ .bool) : Expr Γ Λ .bool
+  | or (a b : Expr Γ Λ .bool) : Expr Γ Λ .bool
+  | not (a : Expr Γ Λ .bool) : Expr Γ Λ .bool
   | none (n : Int) : Expr Γ Λ (.opt n)
   | some (e : Expr Γ Λ (.index n)) : Expr Γ Λ (.opt n)
   | istSome (e : Expr Γ Λ (.opt n)) : Expr Γ Λ .bool
-  | fall (cs : List (Option (Int × Int))) (i : Fin cs.length)
+  | case (cs : List (Option (Int × Int))) (i : Fin cs.length)
       (nutz : NutzlastExpr Γ Λ (cs.get i)) : Expr Γ Λ (.sum cs)
-  | grund (n : Nat) (r : Fin n) : Expr Γ Λ (.grund n)
+  | why (n : Nat) (r : Fin n) : Expr Γ Λ (.why n)
   /-- `forall k in slots of T : pred` / `elems of` / `queue` -- der Binder traegt den Index. -/
   | forallSlots (t : D.Tab) (body : Expr (.index (D.count t) :: Γ) Λ .bool) (hL : darf D t Λ) :
       Expr Γ Λ .bool
@@ -427,8 +427,8 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       (a b : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ .bool
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
-  | keine : NutzlastExpr Γ Λ none
-  | zahl (e : Expr Γ Λ (.int lo hi)) : NutzlastExpr Γ Λ (some (lo, hi))
+  | empty : NutzlastExpr Γ Λ none
+  | num (e : Expr Γ Λ (.int lo hi)) : NutzlastExpr Γ Λ (some (lo, hi))
 
 end
 
@@ -439,8 +439,8 @@ inductive Args : Ctx → List (Res D) → List Ty → Type where
 /-! ## 4. Anweisungen -- `stmt`, `block`, und der Block, der nicht abfaellt -/
 
 inductive ErgExpr (Γ : Ctx) (Λ : List (Res D)) : Option Ty → Type where
-  | keine : ErgExpr Γ Λ none
-  | wert (e : Expr D Γ Λ τ) : ErgExpr Γ Λ (some τ)
+  | empty : ErgExpr Γ Λ none
+  | val (e : Expr D Γ Λ τ) : ErgExpr Γ Λ (some τ)
 
 /-- Die Gleitkommarechnung («F»): jede Operation nennt den Bereich ihres Ergebnisses; die
     Maschine rechnet, und das Ergebnis wird gegen den Bereich gehalten (`rounded`). -/
@@ -456,14 +456,14 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
   /-- `p->f = e;` -- Schreiben DURCH einen `rw`-Zeiger (`R002`/`R003`: kein `w` ohne Recht). -/
-  | assignDurch (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
+  | assignThru (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
       (hL : gdarf D g Λ) : Stmt l Γ Λ Λ
   /-- `n` Bytes ab Index `i` schreiben («SG-16») -- ein Feld eines `format` ueber einem
       Bytetraeger setzen. -/
-  | schreibBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
+  | putBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
       (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t)
       (e : Expr D Γ Λ (.int 0 (256 ^ n - 1))) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       Stmt l Γ Λ Λ
@@ -471,7 +471,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   /-- `T.slots[i].s = B;` an einem `state`-Feld: der Uebergang `von -> nach` ist ERKLAERT
       (`state S { … }`), und dass das Feld gerade auf `von` steht, ist die Logik des
       Schreibers (`Logik.uebergang`). -/
-  | uebergang (t : D.Tab) (f : D.Feld t) (hτ : D.typ t f = .int lo hi)
+  | shift (t : D.Tab) (f : D.Feld t) (hτ : D.typ t f = .int lo hi)
       (i : Expr D Γ Λ (.index (D.count t))) (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi)
       (he : D.erlaubt t f von nach = true) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       Stmt l Γ Λ Λ
@@ -479,7 +479,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | onOption (o : Expr D Γ Λ (.opt n)) (p : Block l (.index n :: Γ) Λ Λ') (a : Block l Γ Λ Λ') :
       Stmt l Γ Λ Λ'
   | onTag (v : Expr D Γ Λ (.sum cs)) (arms : Arms l Γ Λ Λ' cs) : Stmt l Γ Λ Λ'
-  | onGrund (r : Expr D Γ Λ (.grund n)) (arms : GrundArms l Γ Λ Λ' n) : Stmt l Γ Λ Λ'
+  | onWhy (r : Expr D Γ Λ (.why n)) (arms : GrundArms l Γ Λ Λ' n) : Stmt l Γ Λ Λ'
   /-- `f(a, b);` -/
   | call (f : D.Fn) (args : Args D Γ Λ (D.params f)) (hp : RufPasst D V (D.signatur f) Λ)
       (hr : D.gruende f = 0) : Stmt l Γ Λ (nach D f Λ)
@@ -506,7 +506,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) : Stmt l Γ Λ Λ
   /-- `R = e;` an einem Register (`transition` ist dieselbe Anweisung mit dem Spiegel): die
       Klasse erlaubt das Schreiben, oder die Anweisung ist nicht ableitbar (`R005`/`R006`). -/
-  | regSchreib (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :
+  | regWrite (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :
       Stmt l Γ Λ Λ
   /-- `transition t { R.b : 0 -> 1 }` (Falle 4): EIN Lesen des Spiegels `m`, EIN Schreiben
       auf `R` -- die Bits `bits` unter der Maske `maske` ersetzt, alle anderen aus dem
@@ -526,7 +526,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | retires (m : D.Marke) (s : Nat) (h : Res.marke m s ∈ Λ) (a : D.Annahme) :
       Stmt l Γ Λ (Λ.erase (.marke m s))
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Stmt l Γ Λ Λ
-  | retGrund (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) : Stmt l Γ Λ Λ
+  | retWhy (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) : Stmt l Γ Λ Λ
   | leave (h : l = true) : Stmt l Γ Λ Λ
   | next (h : l = true) : Stmt l Γ Λ Λ
 
@@ -542,7 +542,7 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (rest : Block l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ') : Block l Γ Λ Λ'
   | bindCallElse (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
       (hp : RufPasst D V (D.signatur f) Λ) (hr : 0 < D.gruende f)
-      (err : Endblock l (.grund (D.gruende f) :: Γ) (nach D f Λ))
+      (err : Endblock l (.why (D.gruende f) :: Γ) (nach D f Λ))
       (rest : Block l (τ :: Γ) (nach D f Λ) Λ') : Block l Γ Λ Λ'
   | bindAxiom (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
       (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
@@ -559,15 +559,15 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
-      (err : Endblock l (.grund (D.agruende a) :: Γ) Λ)
+      (err : Endblock l (.why (D.agruende a) :: Γ) Λ)
       (rest : Block l (τ :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- `let x = R;` -- eine Registerlesung, lesbar nach Klasse; `requires … else` (B26) ist die
       Form `regLiesElse`. -/
-  | regLies (r : D.Reg) (hk : (D.rklasse r).lesbar = true) (rest : Block l (D.rtyp r :: Γ) Λ Λ') :
+  | regRead (r : D.Reg) (hk : (D.rklasse r).lesbar = true) (rest : Block l (D.rtyp r :: Γ) Λ Λ') :
       Block l Γ Λ Λ'
   /-- `let x = R else (e) { … }` -- die Lesung ist fehlbar; die Geraetezusage (`requires`) ist
       die Bedingung, der `else`-Zweig faellt nicht ab. -/
-  | regLiesElse (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
+  | regReadElse (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
       (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock l Γ Λ)
       (rest : Block l (D.rtyp r :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- `let x = A awaits { p, q };` -- dieselbe Nutzlast wie am `publishes`. -/
@@ -581,27 +581,27 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (rest : Block l (.int lo' hi' :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- `where`-Bedingung eines `format`-Felds, `requires` einer Lesung, jede benannte Absage
       (Regel 3): die Bedingung gilt, oder der `else`-Zweig -- der nicht abfaellt. -/
-  | pruefung (c : Expr D Γ Λ .bool) (sonst : Endblock l Γ Λ) (rest : Block l Γ Λ Λ') :
+  | check (c : Expr D Γ Λ .bool) (sonst : Endblock l Γ Λ) (rest : Block l Γ Λ Λ') :
       Block l Γ Λ Λ'
   /-- Gleitkomma («F»): `let y = a op b;` mit erklaertem Bereich `lo .. hi` -- die Maschine
       rechnet (IEEE), das Ergebnis wird gegen den Bereich gehalten, und ein Ergebnis
       ausserhalb (oder NaN, Unendlich) ist `Logik.bereich` (since 2026-09-15, verdict F1:
       the kernel IEEE model decides it from the program's values; was `Hardware.ieee`). -/
-  | gleit (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
+  | float (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) (lo hi : Int × Int)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- Ein Gleitkommaliteral `1.5 rounded` in seinem Bereich. -/
-  | gleitLit (q : Int × Int) (lo hi : Int × Int) (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  | floatLit (q : Int × Int) (lo hi : Int × Int) (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- Eine Zahl als Gleitkommazahl, in ihrem Bereich. -/
-  | gleitVon (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int) (rest : Block l (.fl lo hi :: Γ) Λ Λ') :
+  | floatOf (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int) (rest : Block l (.fl lo hi :: Γ) Λ Λ') :
       Block l Γ Λ Λ'
   /-- `narrow x to finite` -- eine Gleitkommazahl in einen engeren Bereich, sonst der
       `else`-Zweig. -/
-  | gleitNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock l Γ Λ)
+  | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock l Γ Λ)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
 
 inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
-  | retGrund (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
+  | retWhy (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
   | leave (h : l = true) : Endblock l Γ Λ
   | next (h : l = true) : Endblock l Γ Λ
   | cons (s : Stmt l Γ Λ Λ') (rest : Endblock l Γ Λ') : Endblock l Γ Λ
@@ -623,7 +623,7 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
-      (err : Endblock l (.grund (D.agruende a) :: Γ) Λ)
+      (err : Endblock l (.why (D.agruende a) :: Γ) Λ)
       (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where

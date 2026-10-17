@@ -125,16 +125,16 @@ abbrev ntL : List (Res ntD) := [Res.held (D := ntD) ()]
 /-- `x` as an argument in `0 .. 10`. -/
 def ntArg (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 10) {Γ : Ctx} {Λ : List (Res ntD)} :
     Args ntD Γ Λ (ntD.params ntHelfer) :=
-  .cons (.weiter (lo := k) (hi := k) h0 h1 (.lit k)) .nil
+  .cons (.widen (lo := k) (hi := k) h0 h1 (.lit k)) .nil
 
 /-- `helfer` ensures `result == x`. -/
 def ntEnsHelfer : Expr ntD (ErgCtx (ntD.params ntHelfer) (ntD.erg ntHelfer)) (vertragVon ntD ntHelfer).ende .bool :=
-  .eq (.var .hier) (.var (.dort .hier))
+  .eq (.var .here) (.var (.there .here))
 
 /-- `helfer(x)`: `return x`. -/
 def ntRumpfHelfer : Endblock ntD (vertragVon ntD ntHelfer) false [.int 0 10]
     (Signatur.anfang ntD (ntD.signatur ntHelfer)) :=
-  .ret (.wert (.var .hier)) (List.Perm.refl _)
+  .ret (.val (.var .here)) (List.Perm.refl _)
 
 /-- The call from `frei`: no lock held, exactly `helfer`'s (empty) held set. -/
 theorem ntHpFrei : RufPasst ntD (vertragVon ntD ntFrei) (ntD.signatur ntHelfer) [] where
@@ -155,7 +155,7 @@ theorem ntHpSetze : RufPasst ntD (vertragVon ntD ntSetze) (ntD.signatur ntHelfer
 
 /-- `frei()`: `helfer(3); return`. -/
 def ntRumpfFrei : Endblock ntD (vertragVon ntD ntFrei) false [] [] :=
-  .cons (.call ntHelfer (ntArg 3 (by decide) (by decide)) ntHpFrei rfl) (.ret .keine List.Perm.nil)
+  .cons (.call ntHelfer (ntArg 3 (by decide) (by decide)) ntHpFrei rfl) (.ret .empty List.Perm.nil)
 
 /-- The call of `setze` inside the lock. -/
 def ntRufL : Stmt ntD (vertragVon ntD ntSetze) false [] ntL ntL :=
@@ -165,7 +165,7 @@ def ntRufL : Stmt ntD (vertragVon ntD ntSetze) false [] ntL ntL :=
 def ntLocks : Stmt ntD (vertragVon ntD ntSetze) false [] [] [] :=
   .locks () (fun _ h => nomatch h) (.cons ntRufL .nil)
 
-def ntSetzeRet : Endblock ntD (vertragVon ntD ntSetze) false [] [] := .ret .keine List.Perm.nil
+def ntSetzeRet : Endblock ntD (vertragVon ntD ntSetze) false [] [] := .ret .empty List.Perm.nil
 
 /-- `setze()`: `locks L { helfer(5) }; return`. -/
 def ntRumpfSetze : Endblock ntD (vertragVon ntD ntSetze) false [] [] :=
@@ -175,13 +175,13 @@ def ntRumpfSetze : Endblock ntD (vertragVon ntD ntSetze) false [] [] :=
 def ntP : Programm ntD where
   invariante := fun i => nomatch i
   requires
-    | .helfer => .wahr
-    | .frei => .wahr
-    | .setze => .wahr
+    | .helfer => .tru
+    | .frei => .tru
+    | .setze => .tru
   ensures
     | .helfer => ntEnsHelfer
-    | .frei => .wahr
-    | .setze => .wahr
+    | .frei => .tru
+    | .setze => .tru
   rumpf
     | .helfer => ntRumpfHelfer
     | .frei => ntRumpfFrei
@@ -423,7 +423,7 @@ theorem helfer_zeuge : ∃ M : RufMaschineG ntD,
     rw [rufSchrittG_fremd s4 1 (by decide), rufSchrittG_fremd s3 1 (by decide),
       rufSchrittG_fremd s2 1 (by decide), rufSchrittG_fremd s1 1 (by decide)]
   obtain ⟨M5, s5, hZ5⟩ := w_rufEnde (P := ntP) (O := ntO) (passes := 0) (h41.trans ntM0_faden1)
-    ntHelfer (ntArg 3 (by decide) (by decide)) ntHpFrei rfl (.ret .keine List.Perm.nil) .nil rfl ntHeld0
+    ntHelfer (ntArg 3 (by decide) (by decide)) ntHpFrei rfl (.ret .empty List.Perm.nil) .nil rfl ntHeld0
   obtain ⟨M6, s6, hG6⟩ := w_rueckP (P := ntP) (O := ntO) (passes := 0) hZ5.1 _ _ rfl
     (PopArt.wie rfl) _ _ _ rfl ntHeld0
   have hr6 : RufErreichbarG ntP ntO 0 (RufStartG ntP ntSp ntInit) M6 :=

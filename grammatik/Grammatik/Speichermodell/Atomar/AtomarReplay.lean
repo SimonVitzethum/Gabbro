@@ -210,13 +210,13 @@ def FortSA (F : RufRahmenG D) (g : D.Fn) (X : ZErgG (vertragVon D F.f))
           (restb : Block D (vertragVon D F.f) l (τ :: Γ) Λ Λ')
           (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         (F.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∨
-          ∃ (n : Nat) (err : Endblock D (vertragVon D F.f) l (.grund n :: Γ) Λ),
+          ∃ (n : Nat) (err : Endblock D (vertragVon D F.f) l (.why n :: Γ) Λ),
             F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩) →
         ∀ he : D.erg g = some τ,
           X.folgt (semHA S O' U A passes R (.dann restb (.schrumpf k)) σa (.cons (ergWert he v) ρc)))
-  | .grund σa r =>
+  | .why σa r =>
       ∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
-        (err : Endblock D (vertragVon D F.f) l (.grund n :: Γ) Λ)
+        (err : Endblock D (vertragVon D F.f) l (.why n :: Γ) Λ)
         (restb : Block D (vertragVon D F.f) l (τ :: Γ) Λ Λ')
         (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ →
@@ -284,7 +284,7 @@ theorem fortSA_mono {passes : Nat} {S : SperrInv D} {F : RufRahmenG D} {g : D.Fn
     ∀ {a : RufAusgang g}, FortSA passes S F g Y R O' U A a → FortSA passes S F g X R O' U A a
   | .ok _ _, h => ⟨fun hw => ZErgG.folgt_trans hXY (h.1 hw),
       fun l Γ Λ Λ' τ restb k ρc hc he => ZErgG.folgt_trans hXY (h.2 l Γ Λ Λ' τ restb k ρc hc he)⟩
-  | .grund _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
+  | .why _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
       ZErgG.folgt_trans hXY (h l Γ Λ Λ' τ n err restb k ρc hc hn)
   | .logik _, _ => trivial
   | .hardware _, _ => trivial
@@ -510,8 +510,8 @@ theorem popSA_begr_grund (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W :
     (rg : Fin (vertragVon D G.f).gruende)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
       (U : Umwelt D) (A : AUmwelt D) (σ : World D),
-      (semHA S O' U A passes R r σ ρ).gleich (.grund σ rg)) :
-    BegruendetA P O passes S ⟨G.f, G.s0, G.rho, .grund G.s0 rg⟩ := by
+      (semHA S O' U A passes R r σ ρ).gleich (.why σ rg)) :
+    BegruendetA P O passes S ⟨G.f, G.s0, G.rho, .why G.s0 rg⟩ := by
   obtain ⟨H, HA, HU, HX, σ, _, hf, _, hk, _, _, _, hka, _, _, _, _, _, _, heq⟩ := hG
   refine .mk _ _ _ _ H hf (hk.2 hE) (fun R U A hR => ?_)
   have h1 := heq R O U A hR (hka.2 hE) (passtU_leer hE S U HU) (passtX_leer hE Tg A HX)
@@ -527,7 +527,7 @@ theorem popSA_kopf {F : RufRahmenG D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D}
     (hW : WarteSA P O passes Q S lok Tg F G) (s1 : World D) (mk : World D → RufAusgang G.1)
     (hmk : (∃ v, (∀ σa, mk σa = .ok σa v) ∧ EnsAmRueck P G.1 G.2.2 s1 G.2.1 v) ∨
-      (∃ r, ∀ σa, mk σa = .grund σa r))
+      (∃ r, ∀ σa, mk σa = .why σa r))
     (hb : ¬ Nonempty (Ereignis D) → BegruendetA P O passes S ⟨G.1, G.2.2, G.2.1, mk G.2.2⟩)
     (hRah : GleichOhne G.1 (stabilS P S lok F.f F.rest.2.2.1) G.2.2 s1)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ' : Env D Γ) (r' : GRest D (vertragVon D F.f) l Γ Λ)
@@ -804,7 +804,7 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
-  | assignDurch p t ht f i e hw hL =>
+  | assignThru p t ht f i e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
@@ -812,7 +812,7 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibGlob _ _ _ _)
-  | schreibBytes t f hf n i hlo hhi e hw hL =>
+  | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibBytes _ _ _ _ _ _ _)
@@ -820,14 +820,14 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact Nat.le_refl _
-  | uebergang t f hτ i von nach hn he hw hL =>
+  | shift t f hτ i von nach hn he hw hL =>
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.ok.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
       · cases h
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact Nat.le_refl _
@@ -852,7 +852,7 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       exact Nat.le_refl _
   | axiomCall => simp [Stmt.istAxiom] at ha
   | ret e hp => simp [execStmt] at h
-  | retGrund r hp => simp [execStmt] at h
+  | retWhy r hp => simp [execStmt] at h
   | leave hl => simp [execStmt] at h
   | next hl => simp [execStmt] at h
   | _ => simp [Stmt.istBlatt] at hb

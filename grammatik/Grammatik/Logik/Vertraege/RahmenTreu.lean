@@ -329,7 +329,7 @@ theorem stmt_treu :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibSlot _ t Λ _ f _ hw)
-  | .assignDurch p t _ f i e hw hL, σ, ρ, σ', h => by
+  | .assignThru p t _ f i e hw hL, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibSlot _ t Λ _ f _ hw)
@@ -337,14 +337,14 @@ theorem stmt_treu :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibGlob _ g Λ _ hw)
-  | .schreibBytes t f hf n i _ _ e hw hL, σ, ρ, σ', h => by
+  | .putBytes t f hf n i _ _ e hw hL, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibBytes _ t f hf Λ hw _ _)
   | .assignVar x e, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
-  | .uebergang t f hτ i von nach hn he hw hL, σ, ρ, σ', h => by
+  | .shift t f hτ i von nach hn he hw hL, σ, ρ, σ', h => by
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
@@ -366,7 +366,7 @@ theorem stmt_treu :
   | .onTag v arms, σ, ρ, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ v.orte
       exact (TreuAusgang.vor hl (arms_treu arms _ _ ρ)) σ' h
-  | .onGrund r arms, σ, ρ, σ', h => by
+  | .onWhy r arms, σ, ρ, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ r.orte
       exact (TreuAusgang.vor hl (grund_treu arms _ _ ρ)) σ' h
   | .call f args hp hr, σ, ρ, σ', h => by
@@ -419,7 +419,7 @@ theorem stmt_treu :
         rw [ha] at this
         exact hl.trans (Treu.weiter hw hg this)
       · simp [Ausgang.welt] at h
-  | .regSchreib r _ e, σ, ρ, σ', h => by
+  | .regWrite r _ e, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
   | .transition .., σ, ρ, σ', h => by
@@ -435,7 +435,7 @@ theorem stmt_treu :
   | .ret e _, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
-  | .retGrund .., σ, ρ, σ', h => by
+  | .retWhy .., σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .leave _, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
@@ -526,14 +526,14 @@ theorem block_treu :
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
       · simp [Ausgang.welt] at h
-  | .regLies r _ rest, σ, ρ, σ', h => by
+  | .regRead r _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
       · split at h
         · exact (block_treu rest σ _).schrumpf σ' h
         · simp [Ausgang.welt] at h
       · simp [Ausgang.welt] at h
-  | .regLiesElse r _ zusage sonst rest, σ, ρ, σ', h => by
+  | .regReadElse r _ zusage sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
@@ -561,30 +561,30 @@ theorem block_treu :
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
       · exact (TreuEnd.vor hl (end_treu sonst _ ρ)).zuAusgang σ' h
-  | .pruefung c sonst rest, σ, ρ, σ', h => by
+  | .check c sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ ρ)) σ' h
       · exact (TreuEnd.vor hl (end_treu sonst _ ρ)).zuAusgang σ' h
-  | .gleit op a b lo hi rest, σ, ρ, σ', h => by
+  | .float op a b lo hi rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (a.orte ++ b.orte)
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
       · simp [Ausgang.welt] at h
-  | .gleitLit q lo hi rest, σ, ρ, σ', h => by
+  | .floatLit q lo hi rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
       · exact (block_treu rest σ _).schrumpf σ' h
       · simp [Ausgang.welt] at h
-  | .gleitVon e lo hi rest, σ, ρ, σ', h => by
+  | .floatOf e lo hi rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
       · simp [Ausgang.welt] at h
-  | .gleitNarrow e lo hi sonst rest, σ, ρ, σ', h => by
+  | .floatNarrow e lo hi sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       split at h
@@ -597,7 +597,7 @@ theorem end_treu :
   | .ret e _, σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
-  | .retGrund .., σ, ρ, σ', h => by
+  | .retWhy .., σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .leave _, σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _

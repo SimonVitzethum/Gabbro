@@ -37,8 +37,8 @@ namespace Gabbro.Grammatik
 
 /-- The loop invariant of the probe: `true` or `false`. -/
 def fvInv {Γ : Ctx} {Λ : List (Res zD)} : Bool → Expr zD Γ Λ .bool
-  | true => .wahr
-  | false => .falsch
+  | true => .tru
+  | false => .fls
 
 /-- `forever () invariant w { leave }`. -/
 def fvSchleife {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} (w : Bool) :
@@ -46,24 +46,24 @@ def fvSchleife {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} (w : Bool) :
   .forever () (fvInv w) (.cons (.leave rfl) .nil)
 
 def fvRumpfEin (w : Bool) : Endblock zD (vertragVon zD zEin) false [] zL :=
-  .cons (fvSchleife w) (.ret .keine (by rfl))
+  .cons (fvSchleife w) (.ret .empty (by rfl))
 
 def fvRumpfLies (w : Bool) : Endblock zD (vertragVon zD zLies) false [] zL :=
-  .cons (fvSchleife w) (.ret (.wert zHundert) (by rfl))
+  .cons (fvSchleife w) (.ret (.val zHundert) (by rfl))
 
 def fvRumpfWrap (w : Bool) : Endblock zD (vertragVon zD zWrap) false [] zL :=
-  .cons (fvSchleife w) (.ret .keine (by rfl))
+  .cons (fvSchleife w) (.ret .empty (by rfl))
 
 def fvRumpfHaupt (w : Bool) : Endblock zD (vertragVon zD zHaupt) false [] [] :=
-  .cons (fvSchleife w) (.ret .keine List.Perm.nil)
+  .cons (fvSchleife w) (.ret .empty List.Perm.nil)
 
 /-- **Probe D**: every function `ensures false`, every body
     `forever () invariant w { leave }; return`. `fvP false` is the
     verdict's `fvP`, `fvP true` its `fwP`. -/
 def fvP (w : Bool) : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
   rumpf
     | .ein => fvRumpfEin w
     | .lies => fvRumpfLies w
@@ -188,9 +188,9 @@ theorem fvStart0 (w : Bool) : (RufStartG (fvP w) zSp zInit).faeden 0 = ⟨[], �
 theorem probeD_halt : ∃ M : RufMaschineG zD,
     RufErreichbarG (fvP false) zO 1 (RufStartG (fvP false) zSp zInit) M ∧ ¬ KeinLogikHaltG zO 1 M := by
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := fvP false) (O := zO) (passes := 1) (fvStart0 false)
-    (fvSchleife false) (.ret .keine List.Perm.nil) .nil rfl rfl
-  obtain ⟨M2, s2, hZ2⟩ := w_dannForever (P := fvP false) (O := zO) (passes := 1) hZ1.1 () .falsch
-    (.cons (.leave rfl) .nil) .nil (.ende (.ret .keine List.Perm.nil)) .nil rfl
+    (fvSchleife false) (.ret .empty List.Perm.nil) .nil rfl rfl
+  obtain ⟨M2, s2, hZ2⟩ := w_dannForever (P := fvP false) (O := zO) (passes := 1) hZ1.1 () .fls
+    (.cons (.leave rfl) .nil) .nil (.ende (.ret .empty List.Perm.nil)) .nil rfl
   refine ⟨M2, .schritt _ _ _ (.schritt _ _ _ .start s1) s2, fun h => ?_⟩
   have h0 := h 0
   unfold PrueftG at h0
@@ -206,22 +206,22 @@ theorem probeD_halt : ∃ M : RufMaschineG zD,
 theorem fwP_ende_verletzt : ∃ M : RufMaschineG zD,
     RufErreichbarG (fvP true) zO 1 (RufStartG (fvP true) zSp zInit) M ∧ ¬ StartEndeG (fvP true) M := by
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := fvP true) (O := zO) (passes := 1) (fvStart0 true)
-    (fvSchleife true) (.ret .keine List.Perm.nil) .nil rfl rfl
-  obtain ⟨M2, s2, hZ2⟩ := w_dannForever (P := fvP true) (O := zO) (passes := 1) hZ1.1 () .wahr
-    (.cons (.leave rfl) .nil) .nil (.ende (.ret .keine List.Perm.nil)) .nil rfl
-  obtain ⟨M3, s3, hZ3⟩ := w_ewigWeiter (P := fvP true) (O := zO) (passes := 1) hZ2.1 () 0 .wahr
-    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .keine List.Perm.nil))) .nil rfl rfl
+    (fvSchleife true) (.ret .empty List.Perm.nil) .nil rfl rfl
+  obtain ⟨M2, s2, hZ2⟩ := w_dannForever (P := fvP true) (O := zO) (passes := 1) hZ1.1 () .tru
+    (.cons (.leave rfl) .nil) .nil (.ende (.ret .empty List.Perm.nil)) .nil rfl
+  obtain ⟨M3, s3, hZ3⟩ := w_ewigWeiter (P := fvP true) (O := zO) (passes := 1) hZ2.1 () 0 .tru
+    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .empty List.Perm.nil))) .nil rfl rfl
     (fun _ h => nomatch h)
-  obtain ⟨M4, s4, hZ4⟩ := w_abbEwig (P := fvP true) (O := zO) (passes := 1) hZ3.1 true () 0 .wahr
-    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .keine List.Perm.nil))) .nil .nil rfl
+  obtain ⟨M4, s4, hZ4⟩ := w_abbEwig (P := fvP true) (O := zO) (passes := 1) hZ3.1 true () 0 .tru
+    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .empty List.Perm.nil))) .nil .nil rfl
     (fun _ h => nomatch h)
   obtain ⟨M5, s5, hZ5⟩ := w_dannLeer (P := fvP true) (O := zO) (passes := 1) hZ4.1
-    (.ende (.ret .keine List.Perm.nil)) .nil rfl
+    (.ende (.ret .empty List.Perm.nil)) .nil rfl
   refine ⟨M5, .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
     (.schritt _ _ _ .start s1) s2) s3) s4) s5, fun h => ?_⟩
   have h0 := h 0
   rw [hZ5.1] at h0
-  have := (h0 rfl false [] [] .nil (.ende (.ret .keine List.Perm.nil)) .keine rfl
+  have := (h0 rfl false [] [] .nil (.ende (.ret .empty List.Perm.nil)) .empty rfl
     ⟨List.Perm.nil, Or.inl rfl⟩).1
   simp [EnsAmRueck, fvP, eval, wahr?] at this
 
@@ -251,19 +251,19 @@ theorem execEnd_ewig_leave {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ct
 def ewSchleife {V : Vertrag zD} : Stmt zD V false [] zL zL :=
   .forever () lInv (.cons (.leave rfl) .nil)
 
-def ewRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL := .cons ewSchleife (.ret .keine (by rfl))
+def ewRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL := .cons ewSchleife (.ret .empty (by rfl))
 
 def ewRumpfLies : Endblock zD (vertragVon zD zLies) false [] zL :=
-  .cons ewSchleife (.ret (.wert zHundert) (by rfl))
+  .cons ewSchleife (.ret (.val zHundert) (by rfl))
 
-def ewRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .cons ewSchleife (.ret .keine (by rfl))
+def ewRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .cons ewSchleife (.ret .empty (by rfl))
 
 /-- **The `forever` program**: the three lock holders run the loop and
     return, `haupt` returns; every contract `true`. -/
 def ewP : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .ein => ewRumpfEin
     | .lies => ewRumpfLies
@@ -285,7 +285,7 @@ theorem ewP_lauf (O' : Orakel zD) (R : ∀ f : zD.Fn, World zD → Env zD (zD.pa
       | zero => exact Or.inl rfl
       | succ n =>
           have e : execEnd (V := vertragVon zD zEin) O' (n + 1) R (ewP.rumpf zEin) σ ρ =
-              execEnd O' (n + 1) R (.ret .keine (by rfl)) (σ.lese zL (lInv (Γ := [])).orte) ρ :=
+              execEnd O' (n + 1) R (.ret .empty (by rfl)) (σ.lese zL (lInv (Γ := [])).orte) ρ :=
             execEnd_ewig_leave O' n R () lInv _ σ ρ (fun _ _ _ => lInv_wahr _ _ _)
           exact Or.inr ⟨_, _, e.trans rfl⟩
   | lies =>
@@ -293,7 +293,7 @@ theorem ewP_lauf (O' : Orakel zD) (R : ∀ f : zD.Fn, World zD → Env zD (zD.pa
       | zero => exact Or.inl rfl
       | succ n =>
           have e : execEnd (V := vertragVon zD zLies) O' (n + 1) R (ewP.rumpf zLies) σ ρ =
-              execEnd O' (n + 1) R (.ret (.wert zHundert) (by rfl)) (σ.lese zL (lInv (Γ := [])).orte) ρ :=
+              execEnd O' (n + 1) R (.ret (.val zHundert) (by rfl)) (σ.lese zL (lInv (Γ := [])).orte) ρ :=
             execEnd_ewig_leave O' n R () lInv _ σ ρ (fun _ _ _ => lInv_wahr _ _ _)
           exact Or.inr ⟨_, _, e.trans rfl⟩
   | wrap =>
@@ -301,7 +301,7 @@ theorem ewP_lauf (O' : Orakel zD) (R : ∀ f : zD.Fn, World zD → Env zD (zD.pa
       | zero => exact Or.inl rfl
       | succ n =>
           have e : execEnd (V := vertragVon zD zWrap) O' (n + 1) R (ewP.rumpf zWrap) σ ρ =
-              execEnd O' (n + 1) R (.ret .keine (by rfl)) (σ.lese zL (lInv (Γ := [])).orte) ρ :=
+              execEnd O' (n + 1) R (.ret .empty (by rfl)) (σ.lese zL (lInv (Γ := [])).orte) ρ :=
             execEnd_ewig_leave O' n R () lInv _ σ ρ (fun _ _ _ => lInv_wahr _ _ _)
           exact Or.inr ⟨_, _, e.trans rfl⟩
 
@@ -348,7 +348,7 @@ theorem ziel_ort_ewig_zeuge :
     ∃ M2 : RufMaschineG zD, RufErreichbarG ewP zO 1 (RufStartG ewP zSp lInit) M2 ∧
       (∃ (spur : List (Ereignis zD)) (log : List (RufEreignisF zD)),
         M2.faeden 0 = ⟨[], ⟨zWrap, .nil, zSp.welt [], ⟨false, [], zL, .nil,
-          .ewig () 1 lInv (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .keine (by rfl))))⟩⟩,
+          .ewig () 1 lInv (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .empty (by rfl))))⟩⟩,
           spur, log⟩) ∧
       wahr? (eval ((M2.weltVon 0).lese zL (lInv (Γ := [])).orte) lInv
         ((M2.weltVon 0).lese zL (lInv (Γ := [])).orte) .nil) = true ∧
@@ -357,9 +357,9 @@ theorem ziel_ort_ewig_zeuge :
       ⟨false, [], zL, .nil, .ende ewRumpfWrap⟩⟩, startSpur zWrap,
       [RufEreignisF.eintritt zWrap .nil (zSp.welt [])]⟩ := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := ewP) (O := zO) (passes := 1) h00 ewSchleife
-    (.ret .keine (by rfl)) .nil rfl rfl
+    (.ret .empty (by rfl)) .nil rfl rfl
   obtain ⟨M2, s2, hZ2⟩ := w_dannForever (P := ewP) (O := zO) (passes := 1) hZ1.1 () lInv
-    (.cons (.leave rfl) .nil) .nil (.ende (.ret .keine (by rfl))) .nil rfl
+    (.cons (.leave rfl) .nil) .nil (.ende (.ret .empty (by rfl))) .nil rfl
   have hr2 : RufErreichbarG ewP zO 1 (RufStartG ewP zSp lInit) M2 :=
     .schritt _ _ _ (.schritt _ _ _ .start s1) s2
   have h0 := (ewP_zertifiziert 1 M2 hr2).1.1.2.2.1 0
@@ -370,7 +370,7 @@ theorem ziel_ort_ewig_zeuge :
     rw [hZ2.spur, offen_weltVon, hZ1.spur]
     rfl
   obtain ⟨M3, s3, _⟩ := w_ewigWeiter (P := ewP) (O := zO) (passes := 1) hZ2.1 () 0 lInv
-    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .keine (by rfl)))) .nil rfl
+    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .empty (by rfl)))) .nil rfl
     (by rw [hZ2.welt] at hw ⊢; exact hw) (hgL (by rw [← hZ2.spur]; exact hoff)).heldIn
   refine ⟨M2, hr2, ⟨_, _, hZ2.1⟩, ?_, M3, s3⟩
   rw [hZ2.welt]

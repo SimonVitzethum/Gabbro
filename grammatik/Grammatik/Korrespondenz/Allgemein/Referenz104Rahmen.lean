@@ -53,13 +53,13 @@ theorem r4_einzahlen_R : KoerperGutR r4P 0 r4Ein := by
       have hfr := (hR.2 r4Lies _ _ σ2 w hRv).1.1 () rfl
       simp only [r4Schreib, execStmt] at h1
       cases h1
-      show decide ((σ.slots () (ρ.get (.dort .hier)).n ()).n ≤
-        (σ2.slots () (ρ.get (.dort .hier)).n ()).n) = true
-      have e3 := (hfr (ρ.get (.dort .hier)).n ()).trans (storeSlot_hit (D := r4D) _ () _ () _)
-      have h100 : (σ2.slots () (ρ.get (.dort .hier)).n ()).n = 100 :=
+      show decide ((σ.slots () (ρ.get (.there .here)).n ()).n ≤
+        (σ2.slots () (ρ.get (.there .here)).n ()).n) = true
+      have e3 := (hfr (ρ.get (.there .here)).n ()).trans (storeSlot_hit (D := r4D) _ () _ () _)
+      have h100 : (σ2.slots () (ρ.get (.there .here)).n ()).n = 100 :=
         (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
       apply decide_eq_true
-      exact Int.le_trans (σ.slots () (ρ.get (.dort .hier)).n ()).le_hi (Int.le_of_eq h100.symm)
+      exact Int.le_trans (σ.slots () (ρ.get (.there .here)).n ()).le_hi (Int.le_of_eq h100.symm)
     · rename_i r _
       exact r.elim0
     · cases h2

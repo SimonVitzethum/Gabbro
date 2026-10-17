@@ -307,7 +307,7 @@ theorem blatt_slots_t_gleich
           rw [hslot]
           exact lese_slots_gleich _ _ _ _ _ _
         exact hgoal
-  | assignDurch p u ht fld i e hw hL =>
+  | assignThru p u ht fld i e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       by_cases htu : u = t
@@ -369,7 +369,7 @@ theorem blatt_slots_t_gleich
         rw [h1]
         exact lese_slots_gleich _ _ _ _ _ _
       exact hgoal
-  | schreibBytes u fld hf n i hlo hhi e hw hL =>
+  | putBytes u fld hf n i hlo hhi e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       -- Do NOT subst: the byte-list case split below needs `hstep`
       -- (world equation) and `hneu` (trace equation) both intact.
@@ -421,7 +421,7 @@ theorem blatt_slots_t_gleich
           (M.weltVon f).slots t k fld' :=
         lese_slots_gleich _ _ _ _ _ _
       exact hgoal
-  | uebergang u fld hτ i von nach hn he hw hL =>
+  | shift u fld hτ i von nach hn he hw hL =>
       -- `uebergang` either fails (`.logik`, contradicting `hstep`'s `some`)
       -- or writes through `schreibSlot`: same argument as `assignSlot`.
       simp only [execStmt] at hstep
@@ -489,7 +489,7 @@ theorem blatt_slots_t_gleich
   | ite c tb eb => simp [Stmt.istBlatt] at hleaf
   | onOption o pb ab => simp [Stmt.istBlatt] at hleaf
   | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onGrund r arms => simp [Stmt.istBlatt] at hleaf
+  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
   | call fn args hp hr => simp [Stmt.istBlatt] at hleaf
   | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
   | locks L' hr body => simp [Stmt.istBlatt] at hleaf
@@ -498,7 +498,7 @@ theorem blatt_slots_t_gleich
   | retry n bis body ueber => simp [Stmt.istBlatt] at hleaf
   | forever a inv body => simp [Stmt.istBlatt] at hleaf
   | axiomCall a args hh hw hg _ _ => exact False.elim (hax)
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'
@@ -537,7 +537,7 @@ theorem blatt_slots_t_gleich
       subst hstep
       intro k fld'
       exact lese_slots_gleich _ _ _ _ _ _
-  | retGrund r hΛe =>
+  | retWhy r hΛe =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'

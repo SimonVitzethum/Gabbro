@@ -25,9 +25,9 @@ set_option maxRecDepth 100000
     `ArrayLit` and `LibraryCall` are refused (see CUTS). -/
 inductive SExpr
   | lit : Nat → SExpr
-  | gleit : String → SExpr
-  | wahr : SExpr
-  | falsch : SExpr
+  | float : String → SExpr
+  | tru : SExpr
+  | fls : SExpr
   | variable : String → SExpr
   | feld : SExpr → String → SExpr
   | index : SExpr → SExpr → SExpr
@@ -39,7 +39,7 @@ inductive SExpr
   | eingebaut : String → List SExpr → SExpr
   | alt : SExpr → SExpr
   | ergebnis : SExpr
-  | grund : String → String → SExpr
+  | why : String → String → SExpr
   deriving Repr
 
 -- Structural equality on surface trees, as a `Bool`: core Lean
@@ -48,9 +48,9 @@ inductive SExpr
 mutual
 def beqSExpr : SExpr → SExpr → Bool
   | .lit m, .lit n => m == n
-  | .gleit a, .gleit b => strEq a b
-  | .wahr, .wahr => true
-  | .falsch, .falsch => true
+  | .float a, .float b => strEq a b
+  | .tru, .tru => true
+  | .fls, .fls => true
   | .variable a, .variable b => strEq a b
   | .feld x f, .feld y g => beqSExpr x y && strEq f g
   | .index x i, .index y j => beqSExpr x y && beqSExpr i j
@@ -63,7 +63,7 @@ def beqSExpr : SExpr → SExpr → Bool
   | .eingebaut f a, .eingebaut g b => strEq f g && beqSExprList a b
   | .alt x, .alt y => beqSExpr x y
   | .ergebnis, .ergebnis => true
-  | .grund g1 f1, .grund g2 f2 => strEq g1 g2 && strEq f1 f2
+  | .why g1 f1, .why g2 f2 => strEq g1 g2 && strEq f1 f2
   | _, _ => false
 def beqSExprList : List SExpr → List SExpr → Bool
   | [], [] => true
@@ -311,13 +311,13 @@ def parsePrimary (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .zahl v :: rest => .ok (.lit v, rest)
-    | .gleit s :: rest => match rest with
+    | .num v :: rest => .ok (.lit v, rest)
+    | .float s :: rest => match rest with
       | .wort "rounded" :: rest' =>
-        .ok (.gleit (s ++ " rounded"), rest')
-      | _ => .ok (.gleit s, rest)
-    | .wort "true" :: rest => .ok (.wahr, rest)
-    | .wort "false" :: rest => .ok (.falsch, rest)
+        .ok (.float (s ++ " rounded"), rest')
+      | _ => .ok (.float s, rest)
+    | .wort "true" :: rest => .ok (.tru, rest)
+    | .wort "false" :: rest => .ok (.fls, rest)
     | .wort "Some" :: .zeichen "(" :: rest =>
       match parseOr f rest with
       | .ok (e, .zeichen ")" :: rest') => .ok (.ruf "Some" [e], rest')
@@ -397,7 +397,7 @@ def parseKopf (f : Nat) (toks : List Token) :
           if istIntWort a || istZuckerBreite a then
             .ok (.feld (.variable a) b, rest')
           else if strEq a "Self" then .error "Self:: is not a form"
-          else .ok (.grund a b, rest')
+          else .ok (.why a b, rest')
         | ([a], rest') => parseSuffixe f (.variable a) rest'
         | (segs, rest') => .ok (grundKette segs, rest')
       | none => .error "expression expected"
@@ -463,9 +463,9 @@ def istAtom : SExpr → Bool
 mutual
 def druck : SExpr → String
   | .lit n => toString n
-  | .gleit s => s
-  | .wahr => "true"
-  | .falsch => "false"
+  | .float s => s
+  | .tru => "true"
+  | .fls => "false"
   | .variable s => s
   | .feld x f => druck x ++ "." ++ f
   | .index x i => druck x ++ "[" ++ druck i ++ "]"
@@ -481,7 +481,7 @@ def druck : SExpr → String
   | .eingebaut f args => f ++ "(" ++ druckArgs args ++ ")"
   | .alt x => "old(" ++ druck x ++ ")"
   | .ergebnis => "result"
-  | .grund g f => g ++ "::" ++ f
+  | .why g f => g ++ "::" ++ f
 def druckArgs : List SExpr → String
   | [] => ""
   | [x] => druck x
@@ -530,10 +530,10 @@ theorem pp_lit : beqTop (parsePrint (.lit 5)) (.ok (.lit 5)) = true := by
 theorem pp_var : beqTop (parsePrint (.variable "y"))
     (.ok (.variable "y")) = true := by
   decide
-theorem pp_wahr : beqTop (parsePrint (.wahr)) (.ok (.wahr)) = true := by
+theorem pp_wahr : beqTop (parsePrint (.tru)) (.ok (.tru)) = true := by
   decide
-theorem pp_falsch : beqTop (parsePrint (.falsch))
-    (.ok (.falsch)) = true := by
+theorem pp_falsch : beqTop (parsePrint (.fls))
+    (.ok (.fls)) = true := by
   decide
 theorem pp_not : beqTop (parsePrint (.un "!" (.variable "y")))
     (.ok (.un "!" (.variable "y"))) = true := by
@@ -543,8 +543,8 @@ theorem pp_not : beqTop (parsePrint (.un "!" (.variable "y")))
 theorem print_parse :
     beqTop (parsePrint (.lit 5)) (.ok (.lit 5)) = true ∧
     beqTop (parsePrint (.variable "y")) (.ok (.variable "y")) = true ∧
-    beqTop (parsePrint (.wahr)) (.ok (.wahr)) = true ∧
-    beqTop (parsePrint (.falsch)) (.ok (.falsch)) = true ∧
+    beqTop (parsePrint (.tru)) (.ok (.tru)) = true ∧
+    beqTop (parsePrint (.fls)) (.ok (.fls)) = true ∧
     beqTop (parsePrint (.un "!" (.variable "y")))
       (.ok (.un "!" (.variable "y"))) = true :=
   ⟨pp_lit, pp_var, pp_wahr, pp_falsch, pp_not⟩

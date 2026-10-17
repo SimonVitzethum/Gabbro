@@ -39,32 +39,32 @@ theorem Stmt.blatt_darf (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {
       rcases ho with ho | ho
       · exact i.orte_darf o ho
       · exact e.orte_darf o ho
-  | assignDurch p t ht f i e hw hL =>
+  | assignThru p t ht f i e hw hL =>
       simp only [stmtOrteP, List.mem_append] at ho
       rcases ho with (ho | ho) | ho
       · exact p.orte_darf o ho
       · exact i.orte_darf o ho
       · exact e.orte_darf o ho
   | assignGlob g e hw hL => exact e.orte_darf o ho
-  | schreibBytes t f hf n i hlo hhi e hw hL =>
+  | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [stmtOrteP, List.mem_append] at ho
       rcases ho with ho | ho
       · exact i.orte_darf o ho
       · exact e.orte_darf o ho
   | assignVar x e => exact e.orte_darf o ho
-  | uebergang t f hτ i von nach hn he hw hL =>
+  | shift t f hτ i von nach hn he hw hL =>
       simp only [stmtOrteP, List.mem_cons] at ho
       rcases ho with rfl | ho
       · exact hL
       · exact i.orte_darf o ho
   | axiomCall a args h hw hg hd hgd => exact args.orte_darf o ho
-  | regSchreib r hk e => exact e.orte_darf o ho
+  | regWrite r hk e => exact e.orte_darf o ho
   | transition => simp [stmtOrteP] at ho
   | publish g e payload hp hw hL => exact e.orte_darf o ho
   | advances => simp [stmtOrteP] at ho
   | retires => simp [stmtOrteP] at ho
   | ret e hp => exact e.orte_darf o ho
-  | retGrund => simp [stmtOrteP] at ho
+  | retWhy => simp [stmtOrteP] at ho
   | leave => simp [stmtOrteP] at ho
   | next => simp [stmtOrteP] at ho
   | _ => simp [Stmt.istBlatt] at hb
@@ -214,7 +214,7 @@ theorem axWeltF_vertrag {Q : AxEns D} (hlok : AxEnsLokal Q) (a : D.Ax)
 def Antwortet {g : D.Fn} {l : Bool} {Γ : Ctx} (x : EndAusgang (vertragVon D g) l Γ) :
     RufAusgang g → Prop
   | .ok _ v => ∃ σ, x = .zurueck σ v
-  | .grund _ r => ∃ σ, x = .grund σ r
+  | .why _ r => ∃ σ, x = .why σ r
   | _ => False
 
 theorem antwortet_eindeutig (hE : ¬ Nonempty (Ereignis D)) {g : D.Fn} {l : Bool} {Γ : Ctx}
@@ -228,19 +228,19 @@ theorem antwortet_eindeutig (hE : ¬ Nonempty (Ereignis D)) {g : D.Fn} {l : Bool
       obtain ⟨s2, h⟩ := h2
       cases h
       rw [welt_eq hE σ σ']
-    | grund σ' r' =>
+    | why σ' r' =>
       obtain ⟨s1, rfl⟩ := h1
       obtain ⟨s2, h⟩ := h2
       cases h
     | logik e => exact h2.elim
     | hardware e => exact h2.elim
-  | grund σ r =>
+  | why σ r =>
     cases a' with
     | ok σ' v' =>
       obtain ⟨s1, rfl⟩ := h1
       obtain ⟨s2, h⟩ := h2
       cases h
-    | grund σ' r' =>
+    | why σ' r' =>
       obtain ⟨s1, rfl⟩ := h1
       obtain ⟨s2, h⟩ := h2
       cases h
@@ -386,13 +386,13 @@ def FortS (F : RufRahmenG D) (g : D.Fn) (X : ZErgG (vertragVon D F.f))
           (restb : Block D (vertragVon D F.f) l (τ :: Γ) Λ Λ')
           (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         (F.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∨
-          ∃ (n : Nat) (err : Endblock D (vertragVon D F.f) l (.grund n :: Γ) Λ),
+          ∃ (n : Nat) (err : Endblock D (vertragVon D F.f) l (.why n :: Γ) Λ),
             F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩) →
         ∀ he : D.erg g = some τ,
           X.folgt (semH S O' U passes R (.dann restb (.schrumpf k)) σa (.cons (ergWert he v) ρc)))
-  | .grund σa r =>
+  | .why σa r =>
       ∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
-        (err : Endblock D (vertragVon D F.f) l (.grund n :: Γ) Λ)
+        (err : Endblock D (vertragVon D F.f) l (.why n :: Γ) Λ)
         (restb : Block D (vertragVon D F.f) l (τ :: Γ) Λ Λ')
         (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ →
@@ -459,7 +459,7 @@ theorem fortS_mono {passes : Nat} {S : SperrInv D} {F : RufRahmenG D} {g : D.Fn}
     ∀ {a : RufAusgang g}, FortS passes S F g Y R O' U a → FortS passes S F g X R O' U a
   | .ok _ _, h => ⟨fun hw => ZErgG.folgt_trans hXY (h.1 hw),
       fun l Γ Λ Λ' τ restb k ρc hc he => ZErgG.folgt_trans hXY (h.2 l Γ Λ Λ' τ restb k ρc hc he)⟩
-  | .grund _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
+  | .why _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
       ZErgG.folgt_trans hXY (h l Γ Λ Λ' τ n err restb k ρc hc hn)
   | .logik _, _ => trivial
   | .hardware _, _ => trivial
@@ -626,8 +626,8 @@ theorem popS_begr_grund (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : 
     {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ} (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
     (rg : Fin (vertragVon D G.f).gruende)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-      (U : Umwelt D) (σ : World D), (semH S O' U passes R r σ ρ).gleich (.grund σ rg)) :
-    Begruendet P O passes S ⟨G.f, G.s0, G.rho, .grund G.s0 rg⟩ := by
+      (U : Umwelt D) (σ : World D), (semH S O' U passes R r σ ρ).gleich (.why σ rg)) :
+    Begruendet P O passes S ⟨G.f, G.s0, G.rho, .why G.s0 rg⟩ := by
   obtain ⟨H, HA, HU, σ, _, hf, _, hk, _, _, _, hka, _, _, _, _, _, heq⟩ := hG
   refine .mk _ _ _ _ H hf (hk.2 hE) (fun R U hR => ?_)
   have h1 := heq R O U hR (hka.2 hE) (passtU_leer hE S U HU) ⟨rfl, rfl, rfl⟩
@@ -646,7 +646,7 @@ theorem popS_kopf {F : RufRahmenG D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D}
     (hW : WarteS P O passes Q S lok F G) (s1 : World D) (mk : World D → RufAusgang G.1)
     (hmk : (∃ v, (∀ σa, mk σa = .ok σa v) ∧ EnsAmRueck P G.1 G.2.2 s1 G.2.1 v) ∨
-      (∃ r, ∀ σa, mk σa = .grund σa r))
+      (∃ r, ∀ σa, mk σa = .why σa r))
     (hb : ¬ Nonempty (Ereignis D) → Begruendet P O passes S ⟨G.1, G.2.2, G.2.1, mk G.2.2⟩)
     (hRah : GleichOhne G.1 (stabilS P S lok F.f F.rest.2.2.1) G.2.2 s1)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ' : Env D Γ) (r' : GRest D (vertragVon D F.f) l Γ Λ)

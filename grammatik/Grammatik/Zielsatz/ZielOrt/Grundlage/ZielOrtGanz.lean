@@ -222,7 +222,7 @@ theorem blatt_logik (P : Programm D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
     (e : Logik D) (h : execStmt O passes R s W ρ = .logik e) :
     execStmt O' passes R' s σ ρ = .logik e := by
   cases s with
-  | uebergang t f hτ i von nach hn he hw hL =>
+  | shift t f hτ i von nach hn he hw hL =>
       simp only [stmtOrteP, List.cons_subset] at hS
       have hgl := hg.lese Λ Λ (.inl t :: i.orte) (.inl t :: i.orte)
       have hi : eval (σ.lese Λ (.inl t :: i.orte)) i (σ.lese Λ (.inl t :: i.orte)) ρ =
@@ -243,7 +243,7 @@ theorem blatt_logik (P : Programm D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | ite => simp [Stmt.istBlatt] at hb
   | onOption => simp [Stmt.istBlatt] at hb
   | onTag => simp [Stmt.istBlatt] at hb
-  | onGrund => simp [Stmt.istBlatt] at hb
+  | onWhy => simp [Stmt.istBlatt] at hb
   | call => simp [Stmt.istBlatt] at hb
   | callInd => simp [Stmt.istBlatt] at hb
   | locks => simp [Stmt.istBlatt] at hb
@@ -269,11 +269,11 @@ mutual
 
 def Stmt.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
-  | .uebergang .. => false
+  | .shift .. => false
   | .traverse .. => false
   | .forever .. => false
   | .onTag .. => false
-  | .onGrund .. => false
+  | .onWhy .. => false
   | .ite _ t e => t.logikFrei && e.logikFrei
   | .onOption _ p a => p.logikFrei && a.logikFrei
   | .locks _ _ body => body.logikFrei
@@ -291,21 +291,21 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .bindCallElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
-  | .regLies _ _ rest => rest.logikFrei
-  | .regLiesElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
+  | .regRead _ _ rest => rest.logikFrei
+  | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .awaits _ _ _ _ rest => rest.logikFrei
   | .exchange _ _ _ _ rest => rest.logikFrei
   | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
-  | .pruefung _ sonst rest => sonst.logikFrei && rest.logikFrei
-  | .gleit .. => false
-  | .gleitLit q lo hi rest => (gleitPasst lo hi (bruch q)).isSome && rest.logikFrei
-  | .gleitVon .. => false
-  | .gleitNarrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
+  | .check _ sonst rest => sonst.logikFrei && rest.logikFrei
+  | .float .. => false
+  | .floatLit q lo hi rest => (gleitPasst lo hi (bruch q)).isSome && rest.logikFrei
+  | .floatOf .. => false
+  | .floatNarrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
 
 def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.logikFrei && rest.logikFrei
@@ -420,23 +420,23 @@ theorem Stmt.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | .axiomCall a args h' hw hg hd hgd, _, σ, ρ, e', he => by
       simp only [execStmt, axiomAntwort] at he
       split at he <;> cases he
-  | .uebergang .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
+  | .shift .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
   | .traverse .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
   | .forever .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
   | .onTag .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
-  | .onGrund .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
+  | .onWhy .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
   | .assignSlot .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignDurch .., _, _, _, _, he => by simp [execStmt] at he
+  | .assignThru .., _, _, _, _, he => by simp [execStmt] at he
   | .assignGlob .., _, _, _, _, he => by simp [execStmt] at he
-  | .schreibBytes .., _, _, _, _, he => by simp [execStmt] at he
+  | .putBytes .., _, _, _, _, he => by simp [execStmt] at he
   | .assignVar .., _, _, _, _, he => by simp [execStmt] at he
-  | .regSchreib .., _, _, _, _, he => by simp [execStmt] at he
+  | .regWrite .., _, _, _, _, he => by simp [execStmt] at he
   | .transition .., _, _, _, _, he => by simp [execStmt] at he
   | .publish .., _, _, _, _, he => by simp [execStmt] at he
   | .advances .., _, _, _, _, he => by simp [execStmt] at he
   | .retires .., _, _, _, _, he => by simp [execStmt] at he
   | .ret .., _, _, _, _, he => by simp [execStmt] at he
-  | .retGrund .., _, _, _, _, he => by simp [execStmt] at he
+  | .retWhy .., _, _, _, _, he => by simp [execStmt] at he
   | .leave .., _, _, _, _, he => by simp [execStmt] at he
   | .next .., _, _, _, _, he => by simp [execStmt] at he
 
@@ -503,7 +503,7 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       · exact Endblock.logikFrei_ok hR err h.1 _ _ _
           (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he))
       · cases he
-  | .regLies r hk rest, h, σ, ρ, e, he => by
+  | .regRead r hk rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei] at h
       simp only [execBlock] at he
       split at he
@@ -511,7 +511,7 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
         · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
         · cases he
       · cases he
-  | .regLiesElse r hk zusage sonst rest, h, σ, ρ, e, he => by
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
@@ -535,14 +535,14 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       split at he
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
-  | .pruefung c sonst rest, h, σ, ρ, e, he => by
+  | .check c sonst rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ he
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
-  | .gleit .., h, _, _, _, _ => by simp [Block.logikFrei] at h
-  | .gleitLit q lo hi rest, h, σ, ρ, e, he => by
+  | .float .., h, _, _, _, _ => by simp [Block.logikFrei] at h
+  | .floatLit q lo hi rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
@@ -550,8 +550,8 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       · rename_i hn
         rw [hn] at h
         simp at h
-  | .gleitVon .., h, _, _, _, _ => by simp [Block.logikFrei] at h
-  | .gleitNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
+  | .floatOf .., h, _, _, _, _ => by simp [Block.logikFrei] at h
+  | .floatNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
       split at he
@@ -562,7 +562,7 @@ theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : Lis
     (b : Endblock D V l Γ Λ) → b.logikFrei = true →
       ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execEnd O passes R b σ ρ ≠ .logik e
   | .ret .., _, _, _, _, he => by simp [execEnd] at he
-  | .retGrund .., _, _, _, _, he => by simp [execEnd] at he
+  | .retWhy .., _, _, _, _, he => by simp [execEnd] at he
   | .leave .., _, _, _, _, he => by simp [execEnd] at he
   | .next .., _, _, _, _, he => by simp [execEnd] at he
   | .cons s rest, h, σ, ρ, e, he => by
@@ -762,7 +762,7 @@ def AnPruefungG (M : RufMaschineG D) (t : Faden) : Prop :=
       (hw : (vertragVon D (M.faeden t).kopf.f).schreibt tb = true) (hL : darf D tb Λ)
       (K : Endblock D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
     (M.faeden t).kopf.rest =
-      ⟨l, Γ, Λ, ρ, .ende (.cons (.uebergang tb fl hτ i von nach hn he hw hL) K)⟩) ∨
+      ⟨l, Γ, Λ, ρ, .ende (.cons (.shift tb fl hτ i von nach hn he hw hL) K)⟩) ∨
   (∃ (l : Bool) (Γ : Ctx) (Λ Λ'' : List (Res D)) (ρ : Env D Γ) (lo hi : Int) (tb : D.Tab)
       (fl : D.Feld tb) (hτ : D.typ tb fl = .int lo hi) (i : Expr D Γ Λ (.index (D.count tb)))
       (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi) (he : D.erlaubt tb fl von nach = true)
@@ -770,7 +770,7 @@ def AnPruefungG (M : RufMaschineG D) (t : Faden) : Prop :=
       (rst : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ'')
       (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ''),
     (M.faeden t).kopf.rest =
-      ⟨l, Γ, Λ, ρ, .dann (.cons (.uebergang tb fl hτ i von nach hn he hw hL) rst) k⟩)
+      ⟨l, Γ, Λ, ρ, .dann (.cons (.shift tb fl hτ i von nach hn he hw hL) rst) k⟩)
 
 /-- A `state` transition whose outcome is no `logik` outcome is an `ok`
     step that only adds accesses to the trace. -/
@@ -780,10 +780,10 @@ theorem uebergang_ok {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {
     (he : D.erlaubt tb fl von nach = true) (hw : V.schreibt tb = true) (hL : darf D tb Λ)
     (W : World D) (ρ : Env D Γ)
     (hno : ∀ e : Logik D, execStmt O passes keinRuf
-      (Stmt.uebergang (l := l) tb fl hτ i von nach hn he hw hL) W ρ ≠ .logik e) :
-    ∃ σ' ρ', execStmt O passes keinRuf (Stmt.uebergang (l := l) tb fl hτ i von nach hn he hw hL)
+      (Stmt.shift (l := l) tb fl hτ i von nach hn he hw hL) W ρ ≠ .logik e) :
+    ∃ σ' ρ', execStmt O passes keinRuf (Stmt.shift (l := l) tb fl hτ i von nach hn he hw hL)
       W ρ = .ok σ' ρ' ∧ Erw W σ' := by
-  cases hx : execStmt O passes keinRuf (Stmt.uebergang (l := l) tb fl hτ i von nach hn he hw hL)
+  cases hx : execStmt O passes keinRuf (Stmt.shift (l := l) tb fl hτ i von nach hn he hw hL)
       W ρ with
   | ok σ' ρ' =>
       refine ⟨σ', ρ', rfl, ?_⟩

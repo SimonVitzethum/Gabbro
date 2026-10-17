@@ -138,15 +138,15 @@ mutual
 def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
   | .assignSlot _ _ i e _ _ => i.orte ++ e.orte
-  | .assignDurch p _ _ _ i e _ _ => p.orte ++ i.orte ++ e.orte
+  | .assignThru p _ _ _ i e _ _ => p.orte ++ i.orte ++ e.orte
   | .assignGlob _ e _ _ => e.orte
-  | .schreibBytes _ _ _ _ i _ _ e _ _ => i.orte ++ e.orte
+  | .putBytes _ _ _ _ i _ _ e _ _ => i.orte ++ e.orte
   | .assignVar _ e => e.orte
-  | .uebergang t _ _ i _ _ _ _ _ _ => .inl t :: i.orte
+  | .shift t _ _ i _ _ _ _ _ _ => .inl t :: i.orte
   | .ite c t e => c.orte ++ blockOrteP P t ++ blockOrteP P e
   | .onOption o p a => o.orte ++ blockOrteP P p ++ blockOrteP P a
   | .onTag v arms => v.orte ++ armsOrteP P arms
-  | .onGrund r arms => r.orte ++ grundArmsOrteP P arms
+  | .onWhy r arms => r.orte ++ grundArmsOrteP P arms
   | .call g args _ _ => args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte)
   | .callInd p args _ _ => p.orte ++ args.orte
   | .locks _ _ body => blockOrteP P body
@@ -155,13 +155,13 @@ def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .retry _ bis body ueber => bis.orte ++ blockOrteP P body ++ blockOrteP P ueber
   | .forever _ inv body => inv.orte ++ blockOrteP P body
   | .axiomCall _ args _ _ _ _ _ => args.orte
-  | .regSchreib _ _ e => e.orte
+  | .regWrite _ _ e => e.orte
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ e _ _ _ _ => e.orte
   | .advances _ _ _ _ => []
   | .retires _ _ _ _ => []
   | .ret e _ => e.orte
-  | .retGrund _ _ => []
+  | .retWhy _ _ => []
   | .leave _ => []
   | .next _ => []
 
@@ -179,25 +179,25 @@ def blockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrteP P rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       args.orte ++ endblockOrteP P err ++ blockOrteP P rest
-  | .regLies _ _ rest => blockOrteP P rest
-  | .regLiesElse _ _ zusage sonst rest =>
+  | .regRead _ _ rest => blockOrteP P rest
+  | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
   | .awaits g _ _ _ rest => .inr g :: blockOrteP P rest
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ blockOrteP P rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
-  | .pruefung c sonst rest =>
+  | .check c sonst rest =>
       c.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
-  | .gleit _ a b _ _ rest => a.orte ++ b.orte ++ blockOrteP P rest
-  | .gleitLit _ _ _ rest => blockOrteP P rest
-  | .gleitVon e _ _ rest => e.orte ++ blockOrteP P rest
-  | .gleitNarrow e _ _ sonst rest =>
+  | .float _ a b _ _ rest => a.orte ++ b.orte ++ blockOrteP P rest
+  | .floatLit _ _ _ rest => blockOrteP P rest
+  | .floatOf e _ _ rest => e.orte ++ blockOrteP P rest
+  | .floatNarrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
 
 def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List (D.Tab ⊕ D.Glob)
   | .ret e _ => e.orte
-  | .retGrund _ _ => []
+  | .retWhy _ _ => []
   | .leave _ => []
   | .next _ => []
   | .cons s rest => stmtOrteP P s ++ endblockOrteP P rest
@@ -225,7 +225,7 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
       blockOrteP P e.alsBlock.2 = endblockOrteP P e
   | _, _, .ret _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
-  | _, _, .retGrund _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
+  | _, _, .retWhy _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
   | _, _, .leave _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
   | _, _, .next _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
   | _, _, .cons s rest => by
@@ -918,13 +918,13 @@ end Sperren
 def gegRumpfLies : Endblock refD (vertragVon refD refLies) false []
     (Signatur.anfang refD (refD.signatur refLies)) :=
   .bind (.slot () () refIdxBodyLies refDarfBodyLies)
-    (.ret (.wert (.var .hier)) (by rfl))
+    (.ret (.val (.var .here)) (by rfl))
 
 /-- `einzahlen`: call `lies`, write the cap, return. -/
 def gegRumpfEin :
     Endblock refD (vertragVon refD refEin) false [.int 0 10] [Res.held (D := refD) ()] :=
   .cons (.call (V := vertragVon refD refEin) refLies refArgsLies refHpLiesAt rfl)
-    (.cons refWriteStAt (.ret .keine (by rfl)))
+    (.cons refWriteStAt (.ret .empty (by rfl)))
 
 /-- The counterexample program: reference contracts, the two bodies above. -/
 def gegP : Programm refD where
@@ -1060,7 +1060,7 @@ theorem offen_gegZ0 : offen gegZ0.spur = [()] := rfl
 /-- The rest of `einzahlen` after its call. -/
 def gegRestEin : Endblock refD (vertragVon refD refEin) false [.int 0 10]
     (nach refD refLies [Res.held (D := refD) ()]) :=
-  .cons refWriteStAt (.ret .keine (by rfl))
+  .cons refWriteStAt (.ret .empty (by rfl))
 
 /-- Reachability composes. -/
 theorem rufErreichbarG_trans {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -1160,7 +1160,7 @@ theorem geg_lauf : ∃ M : RufMaschineG refD,
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_blatt (P := gegP) (O := refO) (passes := 0) hG6.1 refWriteStAt
-    (.ret .keine (by rfl)) refRho7 rfl rfl
+    (.ret .empty (by rfl)) refRho7 rfl rfl
     (heldGenau_ref (by first | exact hoff6 | (rw [hG6.1] at hoff6; exact hoff6))).heldIn _ _ rfl
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   -- thread 0 again: return the stale value
@@ -1275,7 +1275,7 @@ theorem refP_req (g : refD.Fn) (s : World refD) (rho : Env refD (refD.params g))
 def refRestEin : Endblock refD (vertragVon refD refEin) false [.int 0 10]
     [Res.held (D := refD) ()] :=
   .cons (.call (V := vertragVon refD refEin) refLies refArgsLies refHpLiesAt rfl)
-    (.ret .keine (by rfl))
+    (.ret .empty (by rfl))
 
 /-- **Witness that `VertragAmOrtG` is satisfiable with memory change, a call
     and a return**: thread 1 of the reference program (holding the lock from
@@ -1297,7 +1297,7 @@ theorem vertragAmOrtG_refP_zeuge : ∃ M : RufMaschineG refD,
     rw [hZ2.spur]
     exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufEnde (P := refP) (O := refO) (passes := 0) hZ2.1 refLies
-    refArgsLies refHpLiesAt rfl (.ret .keine (by rfl)) refRho7 rfl
+    refArgsLies refHpLiesAt rfl (.ret .empty (by rfl)) refRho7 rfl
     (heldGenau_ref (by first | exact hoff2 | (rw [hZ2.1] at hoff2; exact hoff2))).heldIn
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur]

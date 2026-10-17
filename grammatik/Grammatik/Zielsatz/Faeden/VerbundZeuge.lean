@@ -46,13 +46,13 @@ def vzE : zD.Fn → Bool
   | _ => false
 
 /-- The app's placeholder for `einzahlen`: a leaf. -/
-def vzStubEin : Endblock zD (vertragVon zD zEin) false [] zL := .ret .keine (by rfl)
+def vzStubEin : Endblock zD (vertragVon zD zEin) false [] zL := .ret .empty (by rfl)
 /-- The app's placeholder for `lies`: a leaf. -/
-def vzStubLies : Endblock zD (vertragVon zD zLies) false [] zL := .ret (.wert zHundert) (by rfl)
+def vzStubLies : Endblock zD (vertragVon zD zLies) false [] zL := .ret (.val zHundert) (by rfl)
 /-- The app's placeholder for `wrap`: a leaf. -/
-def vzStubWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .ret .keine (by rfl)
+def vzStubWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .ret .empty (by rfl)
 /-- The library's placeholder for `haupt`: a leaf. -/
-def vzStubHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .keine List.Perm.nil
+def vzStubHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .empty List.Perm.nil
 
 /-- The app's program: `haupt() = locks { wrap() }` (its own body), probe B's contracts
     (the IMPORTED `wrap` ensures `konto[0] == 100`), placeholders for the library. -/
@@ -186,15 +186,15 @@ def vmE : mD.Fn → Bool
     Its contract (`requires privA[0] == 7`) does not mention `privB`, so the app cannot see the
     read. -/
 def vmLeser : Endblock mD (vertragVon mD mPruefeA) false [] [] :=
-  .bind (.slot MTab.privB () mI0 (mDarfB _)) (.ret .keine List.Perm.nil)
+  .bind (.slot MTab.privB () mI0 (mDarfB _)) (.ret .empty List.Perm.nil)
 
 /-- The library's program: `pruefeA` reads `privB`; leaves for the app's functions. -/
 def vmBib : Programm mD := mitRumpf mP fun
-  | .setze => .ret .keine (by rfl)
-  | .hauptA => .ret .keine List.Perm.nil
-  | .hauptB => .ret .keine List.Perm.nil
+  | .setze => .ret .empty (by rfl)
+  | .hauptA => .ret .empty List.Perm.nil
+  | .hauptB => .ret .empty List.Perm.nil
   | .pruefeA => vmLeser
-  | .ruhe => .ret .keine List.Perm.nil
+  | .ruhe => .ret .empty List.Perm.nil
 
 /-- The library as a unit: no thread of its own. -/
 def vmE2 : Einheit mD := ⟨vmBib, mSI, axWahr mD, [], mSp, []⟩
@@ -240,7 +240,7 @@ def vzE2Schwach : Einheit zD := ⟨vzBibSchwach, zS, axWahr zD, [], zSp, []⟩
 theorem vz_vertrag_zu_schwach :
     Akzeptiert vzBibSchwach zS zFs [()] [.inl ()] [] = true ∧ ¬ Verbindbar vzE1 vzE2Schwach := by
   refine ⟨by decide, fun h => ?_⟩
-  have e : zEnsWrapB = (Expr.wahr : Expr zD (ErgCtx (zD.params zWrap) (zD.erg zWrap))
+  have e : zEnsWrapB = (Expr.tru : Expr zD (ErgCtx (zD.params zWrap) (zD.erg zWrap))
       (vertragVon zD zWrap).ende .bool) := congrFun h.ensures zWrap
   cases e
 

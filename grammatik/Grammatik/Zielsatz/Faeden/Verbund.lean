@@ -46,17 +46,17 @@ mutual
 theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), stmtOrteP (mitRumpf P r) s = stmtOrteP P s
   | _, _, _, _, .assignSlot _ _ _ _ _ _ => rfl
-  | _, _, _, _, .assignDurch _ _ _ _ _ _ _ _ => rfl
+  | _, _, _, _, .assignThru _ _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .assignGlob _ _ _ _ => rfl
-  | _, _, _, _, .schreibBytes _ _ _ _ _ _ _ _ _ _ => rfl
+  | _, _, _, _, .putBytes _ _ _ _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .assignVar _ _ => rfl
-  | _, _, _, _, .uebergang _ _ _ _ _ _ _ _ _ _ => rfl
+  | _, _, _, _, .shift _ _ _ _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .ite c t e => by
       simp only [stmtOrteP, blockOrteP_mitRumpf t, blockOrteP_mitRumpf e]
   | _, _, _, _, .onOption o p a => by
       simp only [stmtOrteP, blockOrteP_mitRumpf p, blockOrteP_mitRumpf a]
   | _, _, _, _, .onTag v arms => by simp only [stmtOrteP, armsOrteP_mitRumpf arms]
-  | _, _, _, _, .onGrund r' arms => by simp only [stmtOrteP, grundArmsOrteP_mitRumpf arms]
+  | _, _, _, _, .onWhy r' arms => by simp only [stmtOrteP, grundArmsOrteP_mitRumpf arms]
   | _, _, _, _, .call _ _ _ _ => rfl
   | _, _, _, _, .callInd _ _ _ _ => rfl
   | _, _, _, _, .locks _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
@@ -66,13 +66,13 @@ theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' :
       simp only [stmtOrteP, blockOrteP_mitRumpf body, blockOrteP_mitRumpf ueber]
   | _, _, _, _, .forever _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .axiomCall _ _ _ _ _ _ _ => rfl
-  | _, _, _, _, .regSchreib _ _ _ => rfl
+  | _, _, _, _, .regWrite _ _ _ => rfl
   | _, _, _, _, .transition _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .publish _ _ _ _ _ _ => rfl
   | _, _, _, _, .advances _ _ _ _ => rfl
   | _, _, _, _, .retires _ _ _ _ => rfl
   | _, _, _, _, .ret _ _ => rfl
-  | _, _, _, _, .retGrund _ _ => rfl
+  | _, _, _, _, .retWhy _ _ => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -90,25 +90,25 @@ theorem blockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' 
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf err, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .regLies _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .regLiesElse _ _ _ sonst rest => by
+  | _, _, _, _, .regRead _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .regReadElse _ _ _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
   | _, _, _, _, .awaits _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .exchange _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .narrow _ _ _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .pruefung _ sonst rest => by
+  | _, _, _, _, .check _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .gleit _ _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .gleitLit _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .gleitVon _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .gleitNarrow _ _ _ sonst rest => by
+  | _, _, _, _, .float _ _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .floatLit _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .floatOf _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
 
 theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ), endblockOrteP (mitRumpf P r) e = endblockOrteP P e
   | _, _, _, .ret _ _ => rfl
-  | _, _, _, .retGrund _ _ => rfl
+  | _, _, _, .retWhy _ _ => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => by

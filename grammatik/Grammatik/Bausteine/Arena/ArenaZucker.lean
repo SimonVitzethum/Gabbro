@@ -153,7 +153,7 @@ variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 /-- The counter expression `0`, at the counter's declared type. -/
 def arenaNull (A : ArenaForm D) : Expr D Γ Λ (D.gtyp A.zaehl) :=
   Expr.umTyp A.hz.symm
-    (Expr.weiter (lo := 0) (hi := 0) (lo' := 0) (hi' := D.count A.tab)
+    (Expr.widen (lo := 0) (hi := 0) (lo' := 0) (hi' := D.count A.tab)
       (Int.le_refl 0) (by have := A.hpos; omega) (Expr.lit 0))
 
 /-- **`reset A;`** -- a fresh generation is the counter back at zero. The generation
@@ -175,9 +175,9 @@ variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 def arenaBump (A : ArenaForm D) :
     Expr D (Ty.index (D.count A.tab) :: Γ) Λ (D.gtyp A.zaehl) :=
   Expr.umTyp A.hz.symm
-    (Expr.weiter (lo := 0 + 1) (hi := (D.count A.tab - 1) + 1)
+    (Expr.widen (lo := 0 + 1) (hi := (D.count A.tab - 1) + 1)
       (lo' := 0) (hi' := D.count A.tab) (by omega) (by omega)
-      (Expr.add (Expr.var .hier) (Expr.lit 1)))
+      (Expr.add (Expr.var .here) (Expr.lit 1)))
 
 /-- The body of an allocation: the store, then the bump. Named, because both theorems
     below speak about it. -/
@@ -187,7 +187,7 @@ def arenaRumpf (A : ArenaForm D)
     (hwG : V.gschreibt A.zaehl = true) (hLG : gdarf D A.zaehl Λ)
     (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') :
     Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ' :=
-  .cons (.assignSlot A.tab A.feld (Expr.var .hier) (Expr.weaken v) hwT hLT)
+  .cons (.assignSlot A.tab A.feld (Expr.var .here) (Expr.weaken v) hwT hLT)
     (.cons (.assignGlob A.zaehl (arenaBump A) hwG hLG) rest)
 
 /-- **`let i = alloc A (v) else B; …`** -- three existing forms in a row:
@@ -446,7 +446,7 @@ theorem zeuge_reset (O : Orakel ZD) (passes : Nat)
 
 /-- The value stored by an `alloc` of `7` into the EMPTY witness arena. -/
 def sieben : Expr ZD [] [] (ZD.typ Log.tab Log.feld) :=
-  Expr.weiter (by decide) (by decide) (Expr.lit 7)
+  Expr.widen (by decide) (by decide) (Expr.lit 7)
 
 /-- **The `else` branch is not taken on the empty arena, and the index is `0`.** -/
 theorem zeuge_alloc_leer (O : Orakel ZD) (passes : Nat)

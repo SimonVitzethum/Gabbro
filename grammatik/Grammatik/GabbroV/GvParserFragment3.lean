@@ -114,7 +114,7 @@ def wProtoProg : UProg :=
     fns := [{ name := "f", params := [], parten := [],
               ergebnis := .none, ergBool := false,
               held := [], schreibt := [], sichert := [],
-              saetze := [], rueck := .keine }],
+              saetze := [], rueck := .empty }],
     wurzeln := [] }
 
 /-- **Refused before**: `elabU02` stops at the prototype. -/
@@ -259,7 +259,7 @@ def wExklusivProg : UProg :=
               parten := [.int], ergebnis := .some (0, 100),
               ergBool := false, held := [], schreibt := [],
               sichert := [], saetze := [],
-              rueck := .wert (.param "i") }],
+              rueck := .val (.param "i") }],
     wurzeln := [] }
 
 /-- **Refused before**: `elabU02` has no exclusive-bound form. -/

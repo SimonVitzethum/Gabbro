@@ -91,7 +91,7 @@ theorem forever_run (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block D V
           obtain ⟨st1, cv, ho1, hc2, hrc⟩ := hO
           subst ho1
           exact ⟨_, Exec.forExit hcond rfl h1 rfl, st1, cv, rfl, hc2, hrc⟩
-      | grund σ' r =>
+      | why σ' r =>
           obtain ⟨o1, -, hO⟩ := hbody _ st ρG ρC hc1 hr (by rw [hB]; rfl)
           rw [hB] at hO
           exact hO.elim

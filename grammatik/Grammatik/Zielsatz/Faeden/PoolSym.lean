@@ -160,13 +160,13 @@ def poolRho : Env poolD (poolD.params true) :=
     body needs to mean anything; they only need to typecheck. -/
 def poolP : Programm poolD where
   invariante := fun i => Empty.elim i
-  requires := fun | true => Expr.wahr | false => Expr.wahr
-  ensures := fun | true => Expr.wahr | false => Expr.wahr
+  requires := fun | true => Expr.tru | false => Expr.tru
+  ensures := fun | true => Expr.tru | false => Expr.tru
   rumpf := fun
-    | true => Endblock.ret ErgExpr.keine (List.Perm.refl _)
+    | true => Endblock.ret ErgExpr.empty (List.Perm.refl _)
     | false =>
         Endblock.ret
-          (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.lit 7)))
+          (ErgExpr.val (Expr.widen (by decide) (by decide) (Expr.lit 7)))
           (List.Perm.refl _)
 
 /-! ## The decidable pool checks, and "never weakened" (fix lane F10)

@@ -72,7 +72,7 @@ theorem kein_halt_leer {z : RufFadenG mD} : ([] : List Unit) ≠ [] →
 /-- The idle threads: every thread from 2 on starts in `ruhe`, finished. -/
 theorem lStartRuhe (u : Faden) (hu : 2 ≤ u) :
     (RufStartG mP mSp mInit).faeden u = ⟨[], ⟨mRuhe, .nil, mSp.welt [],
-      ⟨false, [], [], .nil, .ende (.ret .keine List.Perm.nil)⟩⟩, startSpur mRuhe,
+      ⟨false, [], [], .nil, .ende (.ret .empty List.Perm.nil)⟩⟩, startSpur mRuhe,
       [RufEreignisF.eintritt mRuhe .nil (mSp.welt [])]⟩ := by
   have e : mInit u = ⟨mRuhe, .nil⟩ := by
     unfold mInit
@@ -271,7 +271,7 @@ theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
     _ _ _ rfl rfl (mHeld0 _) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   obtain ⟨M5, s5, hZ5⟩ := w_endeEntf (P := mP) (O := mO) (passes := 0) hZ4.1 mLocksB
-    (.ret .keine List.Perm.nil) .nil rfl rfl
+    (.ret .empty List.Perm.nil) .nil rfl rfl
   have h0_5 : M5.faeden 0 = M3.faeden 0 := by
     rw [rufSchrittG_fremd s5 0 (by decide), rufSchrittG_fremd s4 0 (by decide)]
   have hr5 : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M5 :=
@@ -308,9 +308,9 @@ theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
       (.ende mRestA) (M5.speicher.welt (M2.weltVon 0).spur) ⟨h0_5.trans hZ3.1, rfl⟩ o0_2 hfrei5
   -- thread 0 finishes: call `pruefeA`, return
   obtain ⟨Mc, sc, hZc⟩ := w_rufEnde (P := mP) (O := mO) (passes := 0) hza.1 mPruefeA .nil
-    mHpPruefe rfl (.ret .keine List.Perm.nil) .nil rfl (mHeld0 _)
+    mHpPruefe rfl (.ret .empty List.Perm.nil) .nil rfl (mHeld0 _)
   obtain ⟨Md, sd, hGd⟩ := w_rueckP (P := mP) (O := mO) (passes := 0) hZc.1 _ [] rfl
-    (PopArt.wie rfl) .keine List.Perm.nil .nil rfl (mHeld0 _)
+    (PopArt.wie rfl) .empty List.Perm.nil .nil rfl (mHeld0 _)
   have o0_8 : offen (N8.faeden 0).spur = [] := by rw [hza.spur]; exact hoffa
   have o0_c : offen (Mc.faeden 0).spur = [] := by
     rw [hZc.spur, (Erw.lese _ _ _).offen]; exact o0_8
@@ -345,7 +345,7 @@ theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
   have i15 := hUI _ 0 i14 _ sd (by decide)
   -- thread 1's critical section
   have hz1d : ZustandG Md 1 [] mHauptB .nil (mSp.welt []) _ .nil
-      (.dann (.cons mLocksB .nil) (.ende (.ret .keine List.Perm.nil)))
+      (.dann (.cons mLocksB .nil) (.ende (.ret .empty List.Perm.nil)))
       (Md.speicher.welt (M4.weltVon 1).spur) := ⟨f1_15.trans hZ5.1, rfl⟩
   have hfreid : RufFreiG Md 1 () := mFrei fun g hg => by
     by_cases hg0 : g = 0
@@ -354,7 +354,7 @@ theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
   obtain ⟨P1, P2, P3, P4, P5, P6, P7, P8, c1, c2, c3, c4, c5, c6, c7, c8,
       d1, d2, d3, d4, d5, d6, d7, σb, logb, hzb, hoffb⟩ :=
     lAbschnitt (M := Md) 1 mHauptB .nil (mSp.welt []) _ m70 mHpSetzeB (fun _ h => nomatch h)
-      (.ende (.ret .keine List.Perm.nil)) _ hz1d o1_4 hfreid
+      (.ende (.ret .empty List.Perm.nil)) _ hz1d o1_4 hfreid
   have hne01 : (0 : Faden) ≠ 1 := by decide
   have hU0 : ∀ X : RufMaschineG mD, X.faeden 0 = Md.faeden 0 → ∀ Y, RufSchrittG mP mO 0 X 1 Y →
       Y.faeden 0 = Md.faeden 0 := fun X hX Y hs => (rufSchrittG_fremd hs 0 hne01).trans hX

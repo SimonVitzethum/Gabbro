@@ -183,9 +183,9 @@ theorem wurzelFn_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Spe
     of a block. -/
 def GrundKopf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) : Prop :=
   ∃ (g : Fin V.gruende) (hperm : Λ.Perm V.ende),
-    r = .ende (.retGrund g hperm) ∨ (∃ rest, r = .ende (.cons (.retGrund g hperm) rest)) ∨
+    r = .ende (.retWhy g hperm) ∨ (∃ rest, r = .ende (.cons (.retWhy g hperm) rest)) ∨
     (∃ (Λ'' : List (Res D)) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ''),
-      r = .dann (.cons (.retGrund g hperm) rest) k)
+      r = .dann (.cons (.retWhy g hperm) rest) k)
 
 /-- **No start frame stands at a reason return.** -/
 def KeinStartGrundG (M : RufMaschineG D) : Prop :=

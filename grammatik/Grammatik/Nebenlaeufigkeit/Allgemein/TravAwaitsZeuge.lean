@@ -187,21 +187,21 @@ theorem taHeld_ne : Res.held (D := taD) TaLock.k ≠ Res.held TaLock.l :=
   fun e => taLock_ne (Res.held.inj e)
 
 def taEins {Γ : Ctx} {Λ : List (Res taD)} : Expr taD Γ Λ (.int 0 1) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 /-- The traverse body: `tab[i] := 1`. -/
 def taSchreibI : Stmt taD (vertragVon taD taFuelle) true [.index (taD.count ())] taLL taLL :=
-  .assignSlot () () (.var .hier) taEins rfl taDarfL
+  .assignSlot () () (.var .here) taEins rfl taDarfL
 
 def taTravBody : Block taD (vertragVon taD taFuelle) true [.index (taD.count ())] taLL taLL :=
   .cons taSchreibI .nil
 
 /-- `traverse tab invariant true { tab[i] := 1 }` -/
 def taTrav : Stmt taD (vertragVon taD taFuelle) false [] taLL taLL :=
-  .traverse () .wahr taTravBody
+  .traverse () .tru taTravBody
 
 def taRetF : Endblock taD (vertragVon taD taFuelle) false [] taLL :=
-  .ret .keine (List.Perm.refl _)
+  .ret .empty (List.Perm.refl _)
 
 def taRumpfFuelle : Endblock taD (vertragVon taD taFuelle) false [] taLL :=
   .cons taTrav taRetF
@@ -209,7 +209,7 @@ def taRumpfFuelle : Endblock taD (vertragVon taD taFuelle) false [] taLL :=
 /-- `fuelle` ensures every slot of `tab` is `1`. -/
 def taEnsFuelle : Expr taD (ErgCtx (taD.params taFuelle) (taD.erg taFuelle))
     (vertragVon taD taFuelle).ende .bool :=
-  .forallSlots () (.eq (.slot () () (.var .hier) taDarfL) (.lit 1)) taDarfL
+  .forallSlots () (.eq (.slot () () (.var .here) taDarfL) (.lit 1)) taDarfL
 
 /-- `haupt0` calls `fuelle`: same lock, the callee's writes are the caller's. -/
 theorem taHpFuelle : RufPasst taD (vertragVon taD taHaupt0) (taD.signatur taFuelle) taLL where
@@ -247,7 +247,7 @@ def taLocksK : Stmt taD (vertragVon taD taHaupt0) false [] taLL taLL :=
   .locks TaLock.k taRangK taPubBody
 
 def taRetH0 : Endblock taD (vertragVon taD taHaupt0) false [] taLL :=
-  .ret .keine (List.Perm.refl _)
+  .ret .empty (List.Perm.refl _)
 
 def taRestH0 : Endblock taD (vertragVon taD taHaupt0) false [] taLL :=
   .cons taLocksK taRetH0
@@ -279,7 +279,7 @@ def taWarteBody : Block taD (vertragVon taD taHaupt1) false [] taKL taKL := .con
 def taLocksH : Stmt taD (vertragVon taD taHaupt1) false [] [] [] :=
   .locks TaLock.k (fun _ h => nomatch h) taWarteBody
 
-def taRetH1 : Endblock taD (vertragVon taD taHaupt1) false [] [] := .ret .keine List.Perm.nil
+def taRetH1 : Endblock taD (vertragVon taD taHaupt1) false [] [] := .ret .empty List.Perm.nil
 
 def taRumpfHaupt1 : Endblock taD (vertragVon taD taHaupt1) false [] [] :=
   .cons taLocksH taRetH1
@@ -289,27 +289,27 @@ def taAwaitsBlock : Block taD (vertragVon taD taWarte) false [] taKL taKL :=
   .awaits () [] rfl taGdarfK .nil
 
 def taIteW : Stmt taD (vertragVon taD taWarte) false [] taKL taKL :=
-  .ite .wahr taAwaitsBlock .nil
+  .ite .tru taAwaitsBlock .nil
 
 def taRetW : Endblock taD (vertragVon taD taWarte) false [] taKL :=
-  .ret .keine (List.Perm.refl _)
+  .ret .empty (List.Perm.refl _)
 
 def taRumpfWarte : Endblock taD (vertragVon taD taWarte) false [] taKL :=
   .cons taIteW taRetW
 
 def taRumpfRuhe : Endblock taD (vertragVon taD taRuhe) false [] [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 /-- The program: a non-trivial `ensures` for `fuelle`, `true` elsewhere. -/
 def taP : Programm taD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .haupt0 => .wahr
+    | .haupt0 => .tru
     | .fuelle => taEnsFuelle
-    | .haupt1 => .wahr
-    | .warte => .wahr
-    | .ruhe => .wahr
+    | .haupt1 => .tru
+    | .warte => .tru
+    | .ruhe => .tru
   rumpf
     | .haupt0 => taRumpfHaupt0
     | .fuelle => taRumpfFuelle

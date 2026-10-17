@@ -104,7 +104,7 @@ def retryLaufC (schritt : World D → Env D Γ → Ausgang V true Γ)
       | .next _ σ' ρ' => retryLaufC schritt bis ueberlauf n σ' ρ'
       | .leave _ σ' ρ' => .ok σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .logik e => .logik e
       | .hardware e => .hardware e
 
@@ -123,7 +123,7 @@ theorem retryLaufC_eq (schritt : World D → Env D Γ → Ausgang V true Γ)
         | next h σ' ρ' => exact retryLaufC_eq schritt bis ueb n σ' ρ'
         | leave h σ' ρ' => rfl
         | zurueck σ' v => rfl
-        | grund σ' r => rfl
+        | why σ' r => rfl
         | logik e => rfl
         | hardware e => rfl
 
@@ -140,7 +140,7 @@ def retryLaufAlt (schritt : World D → Env D Γ → Ausgang V true Γ)
       | .next _ σ' ρ' => retryLaufAlt schritt bis ueberlauf n σ' ρ'
       | .leave _ σ' ρ' => .ok σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .logik e => .logik e
       | .hardware e => .hardware e
 
@@ -165,7 +165,7 @@ theorem retryLauf_eq_alt (schritt : World D → Env D Γ → Ausgang V true Γ)
         | next h σ' ρ' => exact retryLauf_eq_alt schritt bis ueb n σ' ρ'
         | leave h σ' ρ' => rfl
         | zurueck σ' v => rfl
-        | grund σ' r => rfl
+        | why σ' r => rfl
         | logik e => rfl
         | hardware e => rfl
 
@@ -205,7 +205,7 @@ theorem retryLauf_C_gleich (schritt : World D → Env D Γ → Ausgang V true Γ
             exact retryLauf_C_gleich schritt bis ueb n σ' ρ' h
         | leave hl σ' ρ' => rfl
         | zurueck σ' v => rfl
-        | grund σ' r => rfl
+        | why σ' r => rfl
         | logik e => rfl
         | hardware e => rfl
 
@@ -237,7 +237,7 @@ theorem retryLauf_C_erschoepft (schritt : World D → Env D Γ → Ausgang V tru
             exact retryLauf_C_erschoepft schritt bis ueb n σ' ρ' σ0 ρ0 h
         | leave hl σ' ρ' => rw [hs] at h; exact absurd h (by simp)
         | zurueck σ' v => rw [hs] at h; exact absurd h (by simp)
-        | grund σ' r => rw [hs] at h; exact absurd h (by simp)
+        | why σ' r => rw [hs] at h; exact absurd h (by simp)
         | logik e => rw [hs] at h; exact absurd h (by simp)
         | hardware e => rw [hs] at h; exact absurd h (by simp)
 
@@ -498,7 +498,7 @@ theorem retryC_run (hK : K.okB = true) {z : Nat} (hf : K.freshB z = true) (N : N
               obtain ⟨st2, cv, ho1, hc2, hrc⟩ := hO1
               subst ho1
               exact ⟨_, Exec.seqX (Exec.forExit h1 htr hx1 rfl) rfl, st2, cv, rfl, hc2, hrc⟩
-          | grund σ' r =>
+          | why σ' r =>
               obtain ⟨o1, -, hO1⟩ := hbody _ st1 ρG ρC hc1 hr (by rw [hB]; rfl)
               rw [hB] at hO1
               exact hO1.elim

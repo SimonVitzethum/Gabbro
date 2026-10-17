@@ -186,7 +186,7 @@ theorem leseBytes_single_event (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (n : Nat) (lo hi : Int)
     (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo)
     (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) (hi0 : i.orte = []) :
-    (Expr.leseBytes t f hf n i hlo hhi hL).orte = [.inl t] := by
+    (Expr.getBytes t f hf n i hlo hhi hL).orte = [.inl t] := by
   simp [Expr.orte, hi0]
 
 /-- **The negative read case.** For 2 <= n the single event of a
@@ -197,7 +197,7 @@ theorem leseBytes_not_atomic (t : D.Tab) (f : D.Feld t)
     (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo)
     (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) (hi0 : i.orte = [])
     (h : 2 ≤ n) :
-    (Expr.leseBytes t f hf n i hlo hhi hL).orte.length ≠ n := by
+    (Expr.getBytes t f hf n i hlo hhi hL).orte.length ≠ n := by
   have ho := leseBytes_single_event t f hf n lo hi i hlo hhi hL hi0
   rw [ho]
   simp only [List.length_cons, List.length_nil]

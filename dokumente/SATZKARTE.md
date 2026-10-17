@@ -3744,11 +3744,11 @@ T4 lemma at all.
 **The semantic merge break with §36, and the repair.** `korrOk_ohneLocks`
 (`KorrOkOhneLocks.lean`) reads a certified body's freedom from `locks` off the same check by the
 same row induction, and its block half ended in a catch-all that assumed every remaining row
-meets `Block.cons`. The device rows do not (`loadReg` meets `Block.regLies`, `loadRegElse` meets
-`Block.regLiesElse`), so the merged tree read `h.1` off a `false = true`. **The repair is three
+meets `Block.cons`. The device rows do not (`loadReg` meets `Block.regRead`, `loadRegElse` meets
+`Block.regReadElse`), so the merged tree read `h.1` off a `false = true`. **The repair is three
 explicit branches and NO guard**, because all three rows genuinely carry no `locks`:
-`Stmt.regSchreib` is a leaf that carries no block; `Block.ohneLocks (.regLies …)` is
-`rest.ohneLocks`, the binder's question handed on; and `Block.regLiesElse` owes
+`Stmt.regWrite` is a leaf that carries no block; `Block.ohneLocks (.regLies …)` is
+`rest.ohneLocks`, the binder's question handed on; and `Block.regReadElse` owes
 `sonst.ohneLocks && rest.ohneLocks`, whose `sonst` half is free because the check admits only
 `Endblock.ret` there (`sonstOk`). The four `ohneLocks` theorems therefore gained `GT` and are
 STRONGER than before, not narrower — they hold for EVERY device table. *If the `else` channel is

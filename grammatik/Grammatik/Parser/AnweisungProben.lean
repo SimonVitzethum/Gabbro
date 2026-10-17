@@ -31,14 +31,14 @@ theorem s01 : beqTopStmt (parseTopStmt st01)
     (.ok (.zuweis
       (.feld (.index (.feld (.variable "r") "slots")
         (.variable "i")) "belegt")
-      "=" .wahr)) = true := by
+      "=" .tru)) = true := by
   decide
 -- beispiele/15 (the body of `uebernehmen`). Rust: `Zuweisung`
 -- with a slot target -- same shape.
 def st02 : List Token :=
   [.ident "c", .zeichen ".", .wort "slots", .zeichen "[",
    .ident "s", .zeichen "]", .zeichen ".", .ident "marke",
-   .zeichen "+=", .zahl 1, .zeichen ";", .ende]
+   .zeichen "+=", .num 1, .zeichen ";", .ende]
 theorem s02_lex :
     lex "c.slots[s].marke += 1;" = .ok st02 := by
   decide
@@ -76,7 +76,7 @@ theorem s04 : beqTopStmt (parseTopStmt st04)
 -- the value rides). Rust: `Let` -- same shape.
 def st05 : List Token :=
   [.wort "let", .wort "mut", .ident "n", .zeichen ":",
-   .wort "u32", .zeichen "=", .zahl 0, .zeichen ";", .ende]
+   .wort "u32", .zeichen "=", .num 0, .zeichen ";", .ende]
 theorem s05_lex :
     lex "let mut n : u32 = 0;" = .ok st05 := by
   decide
@@ -97,7 +97,7 @@ theorem s06_lex :
   decide
 theorem s06 : beqTopStmt (parseTopStmt st06)
     (.ok (.lassElse "g" "groesse_gemessen()" "e1"
-      (.block [] (.some (.ret (.some .falsch)))))) = true := by
+      (.block [] (.some (.ret (.some .fls)))))) = true := by
   decide
 -- beispiele/06-annahmen.gab:136. Rust: `LetSonst` with a call
 -- source -- same shape (the `else` takes no trailing `;`, as in
@@ -120,7 +120,7 @@ def st08 : List Token :=
   [.wort "let", .ident "alt", .zeichen "=",
    .ident "ZAEHLER", .wort "exchange", .wort "update",
    .zeichen "(", .ident "v", .zeichen ")", .wort "bounded",
-   .zahl 4, .wort "ops", .wort "on_exceeded", .ident "streit",
+   .num 4, .wort "ops", .wort "on_exceeded", .ident "streit",
    .zeichen "{", .zeichen "}", .wort "publishes",
    .wort "nothing", .zeichen ";", .ende]
 theorem s08_lex :
@@ -138,7 +138,7 @@ def st09 : List Token :=
   [.wort "let", .ident "genommen", .zeichen "=",
    .ident "BESITZER", .wort "exchange", .ident "f",
    .wort "when", .wort "old", .zeichen "(",
-   .ident "BESITZER", .zeichen ")", .zeichen "==", .zahl 0,
+   .ident "BESITZER", .zeichen ")", .zeichen "==", .num 0,
    .wort "returns", .ident "erfolg", .wort "publishes",
    .wort "nothing", .zeichen ";", .ende]
 theorem s09_lex :
@@ -154,8 +154,8 @@ theorem s09 : beqTopStmt (parseTopStmt st09)
 def st10 : List Token :=
   [.wort "let", .ident "s", .zeichen "=", .zeichen "@",
    .ident "summe", .zeichen "#", .ident "sum", .zeichen "(",
-   .zeichen ")", .zeichen "{", .zahl 10, .zahl 20, .zahl 30,
-   .zahl 40, .zeichen "}", .zeichen ";", .ende]
+   .zeichen ")", .zeichen "{", .num 10, .num 20, .num 30,
+   .num 40, .zeichen "}", .zeichen ";", .ende]
 theorem s10_lex :
     lex "let s = @summe#sum() { 10 20 30 40 };" = .ok st10 := by
   decide
@@ -231,7 +231,7 @@ theorem s14 : beqTopStmt (parseTopStmt st14)
 -- domain and the mode ride raw).
 def st15 : List Token :=
   [.wort "retry", .ident "warten", .wort "until",
-   .ident "ok", .wort "bounded", .zahl 8, .wort "ops",
+   .ident "ok", .wort "bounded", .num 8, .wort "ops",
    .wort "on_exceeded", .ident "haengt", .zeichen "{",
    .zeichen "}", .ende]
 theorem s15_lex :
@@ -247,7 +247,7 @@ theorem s15 : beqTopStmt (parseTopStmt st15)
 -- needs the `pred` reader and rides raw).
 def st16 : List Token :=
   [.wort "forever", .ident "dienst", .wort "per_pass",
-   .wort "bounded", .zahl 4096, .wort "ops",
+   .wort "bounded", .num 4096, .wort "ops",
    .wort "on_exceeded", .wort "w", .wort "effects",
    .zeichen "{", .wort "pure", .zeichen "}", .wort "progress",
    .ident "tick", .zeichen "{", .zeichen "}", .ende]
@@ -276,9 +276,9 @@ theorem s17 : beqTopStmt (parseTopStmt st17)
 -- beispiele/53-zwei-orte.gab:64 (body emptied). Rust: `Bricht`
 -- -- same shape.
 def st18 : List Token :=
-  [.wort "narrow", .ident "roh", .wort "to", .zahl 0,
+  [.wort "narrow", .ident "roh", .wort "to", .num 0,
    .zeichen "..", .ident "GRENZE", .wort "else",
-   .zeichen "{", .wort "return", .zahl 0, .zeichen ";",
+   .zeichen "{", .wort "return", .num 0, .zeichen ";",
    .zeichen "}", .ende]
 theorem s18_lex :
     lex "narrow roh to 0 .. GRENZE else { return 0; }" =
@@ -354,7 +354,7 @@ theorem s24_lex :
     lex "next dienst;" = .ok st24 := by
   decide
 theorem s24 : beqTopStmt (parseTopStmt st24)
-    (.ok (.weiter "dienst")) = true := by
+    (.ok (.widen "dienst")) = true := by
   decide
 -- SYNTAX.md `nextstmt` (no corpus occurrence beside `leave`
 -- sites; measured 2026-09-13). Rust: `Next` -- same shape.
@@ -367,7 +367,7 @@ theorem s25_lex :
       .ok st25 := by
   decide
 theorem s25 : beqTopStmt (parseTopStmt st25)
-    (.ok (.publiziert (.variable "FARBE_FERTIG") .wahr
+    (.ok (.publiziert (.variable "FARBE_FERTIG") .tru
       "farbbericht ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:52. Rust: `Publish` with a
@@ -415,7 +415,7 @@ theorem s29_lex :
     lex "return Fehler::Buchfuehrung;" = .ok st29 := by
   decide
 theorem s29 : beqTopStmt (parseTopStmt st29)
-    (.ok (.rueck (.some (.grund "Fehler" "Buchfuehrung")))) = true := by
+    (.ok (.rueck (.some (.why "Fehler" "Buchfuehrung")))) = true := by
   decide
 -- beispiele/48-grund-mit-erzeuger.gab (the error-return shape).
 -- Rust: `Return` over a `Grund` -- same shape.
@@ -428,7 +428,7 @@ theorem s30_lex :
     lex "transition T.slots[i].s : Idle -> Busy;" = .ok st30 := by
   decide
 theorem s30 : beqTopStmt (parseTopStmt st30)
-    (.ok (.uebergang
+    (.ok (.shift
       (.feld (.index (.feld (.variable "T") "slots")
         (.variable "i")) "s")
       "Idle" "Busy")) = true := by
@@ -453,7 +453,7 @@ theorem s31 : beqTopStmt (parseTopStmt st31)
 -- production.
 def st32 : List Token :=
   [.wort "let", .ident "a", .zeichen "=", .wort "alloc",
-   .ident "Log", .zeichen "(", .zahl 10, .zeichen ")",
+   .ident "Log", .zeichen "(", .num 10, .zeichen ")",
    .zeichen ";", .ende]
 theorem s32_lex :
     lex "let a = alloc Log (10);" = .ok st32 := by
@@ -467,7 +467,7 @@ def st33 : List Token :=
   [.wort "let", .ident "c", .zeichen "=", .wort "alloc",
    .ident "Log", .zeichen "(", .ident "a", .zeichen "+",
    .ident "b", .zeichen ")", .wort "else", .zeichen "{",
-   .wort "return", .zahl 0, .zeichen ";", .zeichen "}",
+   .wort "return", .num 0, .zeichen ";", .zeichen "}",
    .zeichen ";", .ende]
 theorem s33_lex :
     lex "let c = alloc Log (a + b) else { return 0; };" =
@@ -494,7 +494,7 @@ theorem s34 : beqTopStmt (parseTopStmt st34)
 def st35 : List Token :=
   [.zeichen "@", .ident "spirv", .zeichen "#", .wort "kernel",
    .zeichen "(", .ident "n", .zeichen ")", .zeichen "{",
-   .wort "dispatch", .zahl 0, .zeichen "}", .zeichen ";",
+   .wort "dispatch", .num 0, .zeichen "}", .zeichen ";",
    .ende]
 theorem s35_lex :
     lex "@spirv#kernel(n) { dispatch 0 };" = .ok st35 := by
@@ -530,7 +530,7 @@ theorem e02 : beqTopItems (parseTopItems et02)
 -- `Use` -- same shape (the path rides raw).
 def et03 : List Token :=
   [.wort "type", .ident "Fuellstand", .zeichen "=",
-   .wort "u32", .wort "in", .zahl 0, .zeichen "..",
+   .wort "u32", .wort "in", .num 0, .zeichen "..",
    .ident "VOLL", .zeichen ";", .ende]
 theorem e03_lex :
     lex "type Fuellstand = u32 in 0 .. VOLL;" = .ok et03 := by
@@ -543,7 +543,7 @@ theorem e03 : beqTopItems (parseTopItems et03)
 -- validated).
 def et04 : List Token :=
   [.wort "const", .ident "NSLOTS", .zeichen ":",
-   .wort "u32", .zeichen "=", .zahl 16, .zeichen ";", .ende]
+   .wort "u32", .zeichen "=", .num 16, .zeichen ";", .ende]
 theorem e04_lex :
     lex "const NSLOTS : u32 = 16;" = .ok et04 := by
   decide
@@ -555,7 +555,7 @@ theorem e04 : beqTopItems (parseTopItems et04)
 def et05 : List Token :=
   [.wort "static", .wort "mut", .ident "hoechstmarke",
    .zeichen ":", .ident "Fuellstand", .zeichen "=",
-   .zahl 0, .zeichen ";", .ende]
+   .num 0, .zeichen ";", .ende]
 theorem e05_lex :
     lex "static mut hoechstmarke : Fuellstand = 0;" =
       .ok et05 := by
@@ -596,7 +596,7 @@ theorem e07 : beqTopItems (parseTopItems et07)
 -- is skipped, not validated).
 def et08 : List Token :=
   [.wort "format", .ident "Manifest", .zeichen "@",
-   .ident "version", .zahl 1, .wort "endian", .wort "little",
+   .ident "version", .num 1, .wort "endian", .wort "little",
    .zeichen "{", .zeichen "}", .ende]
 theorem e08_lex :
     lex "format Manifest @version 1 endian little { }" =
@@ -608,7 +608,7 @@ theorem e08 : beqTopItems (parseTopItems et08)
 -- beispiele/04-schleifen.gab (the `Manifest` head, body
 -- emptied). Rust: `Format` -- same shape.
 def et09 : List Token :=
-  [.wort "table", .ident "Region", .wort "count", .zahl 8,
+  [.wort "table", .ident "Region", .wort "count", .num 8,
    .zeichen "{", .wort "slot", .zeichen "{",
    .ident "belegt", .zeichen ":", .wort "bool", .zeichen ",",
    .zeichen "}", .zeichen "}", .ende]
@@ -622,8 +622,8 @@ theorem e09 : beqTopItems (parseTopItems et09)
 -- beispiele/15 (the `Region` table). Rust: `Tabelle` -- same
 -- shape (slots, invariants and ops are skipped balanced).
 def et10 : List Token :=
-  [.wort "arena", .ident "Log", .wort "capacity", .zahl 2,
-   .zeichen "..", .zahl 8, .wort "of", .wort "u32",
+  [.wort "arena", .ident "Log", .wort "capacity", .num 2,
+   .zeichen "..", .num 8, .wort "of", .wort "u32",
    .zeichen ";", .ende]
 theorem e10_lex :
     lex "arena Log capacity 2 .. 8 of u32;" = .ok et10 := by
@@ -724,7 +724,7 @@ theorem e17 : beqTopItems (parseTopItems et17)
 -- Rust: `AtomicDecl` -- same shape.
 def et18 : List Token :=
   [.wort "lock", .ident "P", .wort "protects", .zeichen "{",
-   .ident "Plaetze", .zeichen "}", .wort "rank", .zahl 1,
+   .ident "Plaetze", .zeichen "}", .wort "rank", .num 1,
    .zeichen ";", .ende]
 theorem e18_lex :
     lex "lock P protects { Plaetze } rank 1;" = .ok et18 := by
@@ -787,7 +787,7 @@ theorem e22 : beqTopItems (parseTopItems et22)
 -- same shape.
 def et23 : List Token :=
   [.wort "walk", .ident "Seitentabelle", .wort "levels",
-   .zahl 4, .zeichen "{", .zeichen "}", .ende]
+   .num 4, .zeichen "{", .zeichen "}", .ende]
 theorem e23_lex :
     lex "walk Seitentabelle levels 4 { }" = .ok et23 := by
   decide
@@ -797,7 +797,7 @@ theorem e23 : beqTopItems (parseTopItems et23)
 -- beispiele/07-eintritt-und-boot.gab:26 (body emptied). Rust:
 -- `WalkDecl` -- same shape.
 def et24 : List Token :=
-  [.wort "entry", .ident "nmi", .wort "vector", .zahl 2,
+  [.wort "entry", .ident "nmi", .wort "vector", .num 2,
    .wort "via", .ident "idt", .wort "arch", .ident "x86_64",
    .zeichen "{", .zeichen "}", .ende]
 theorem e24_lex :
@@ -838,7 +838,7 @@ def et27 : List Token :=
    .ident "fd", .zeichen ":", .wort "u64", .zeichen ")",
    .zeichen "->", .wort "u64", .wort "or", .ident "IoError",
    .wort "abi", .ident "linux", .wort "arch", .ident "x86_64",
-   .wort "number", .zahl 1, .wort "regs", .wort "in",
+   .wort "number", .num 1, .wort "regs", .wort "in",
    .zeichen "{", .ident "rdi", .zeichen "=", .ident "fd",
    .zeichen "}", .wort "regs", .wort "out", .zeichen "{",
    .ident "rax", .zeichen "}", .wort "clobbers",
@@ -864,7 +864,7 @@ def et28 : List Token :=
    .zeichen ":", .ident "KernelTab", .zeichen ")",
    .zeichen "->", .ident "KernelTab", .wort "effects",
    .zeichen "{", .wort "pure", .zeichen "}", .wort "costs",
-   .zeichen "<=", .zahl 8, .wort "ops", .wort "decreases",
+   .zeichen "<=", .num 8, .wort "ops", .wort "decreases",
    .ident "region", .zeichen ".", .ident "words",
    .zeichen "{", .wort "return", .ident "region",
    .zeichen ";", .zeichen "}", .ende]
@@ -906,7 +906,7 @@ theorem e30 : beqTopItems (parseTopItems et30)
 def et31 : List Token :=
   [.wort "when", .ident "TESTBUILD", .wort "static",
    .wort "mut", .ident "hoechstmarke", .zeichen ":",
-   .ident "Fuellstand", .zeichen "=", .zahl 0,
+   .ident "Fuellstand", .zeichen "=", .num 0,
    .zeichen ";", .ende]
 theorem e31_lex :
     lex "when TESTBUILD static mut hoechstmarke : Fuellstand = 0;" =
@@ -928,7 +928,7 @@ def ft01 : List Token :=
    .wort "effects", .zeichen "{", .wort "reads", .wort "r",
    .zeichen ".", .wort "slots", .zeichen ",", .wort "writes",
    .wort "r", .zeichen ".", .wort "slots", .zeichen "}",
-   .wort "costs", .zeichen "<=", .zahl 4, .wort "ops",
+   .wort "costs", .zeichen "<=", .num 4, .wort "ops",
    .zeichen "{", .wort "r", .zeichen ".", .wort "slots",
    .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
    .ident "belegt", .zeichen "=", .wort "true", .zeichen ";",
@@ -945,7 +945,7 @@ theorem f01 : beqTopItems (parseTopItems ft01)
         [(.zuweis
           (.feld (.index (.feld (.variable "r") "slots")
             (.variable "i")) "belegt")
-          "=" .wahr)]
+          "=" .tru)]
         (.some (.ret (.some
           (.feld (.index (.feld (.variable "r") "slots")
             (.variable "i")) "belegt"))))))]) = true := by

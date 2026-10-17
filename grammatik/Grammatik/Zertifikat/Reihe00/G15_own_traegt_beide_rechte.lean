@@ -117,14 +117,14 @@ abbrev gL_uebernehmen : List (Res gD) := []
 theorem gDarf_uebernehmen_Region : darf gD GTab.Region gL_uebernehmen := by unfold darf; decide
 
 def gBody_uebernehmen : Endblock gD (vertragVon gD g_uebernehmen) false gCtx_uebernehmen gL_uebernehmen :=
-  (.cons (.assignDurch (.var .hier) GTab.Region rfl GRegionFeld.belegt ((.var (.dort .hier))) .wahr (by decide) gDarf_uebernehmen_Region) (.ret (.wert (Expr.durch (D := gD) (.var .hier) GTab.Region rfl GRegionFeld.belegt ((.var (.dort .hier))) gDarf_uebernehmen_Region)) (List.Perm.refl _)))
+  (.cons (.assignThru (.var .here) GTab.Region rfl GRegionFeld.belegt ((.var (.there .here))) .tru (by decide) gDarf_uebernehmen_Region) (.ret (.val (Expr.thru (D := gD) (.var .here) GTab.Region rfl GRegionFeld.belegt ((.var (.there .here))) gDarf_uebernehmen_Region)) (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .uebernehmen => .wahr
+    | .uebernehmen => .tru
   ensures
-    | .uebernehmen => .wahr
+    | .uebernehmen => .tru
   rumpf
     | .uebernehmen => gBody_uebernehmen
 

@@ -139,7 +139,7 @@ theorem rufAt_nie_nachbedingung_iff_ens (P : Programm D) (O : Orakel D)
 
 /-! ## CUTS
   - Scope: the returned-body case only (`hbody` pins the `.zurueck` outcome).
-    Non-returning bodies (`.grund`, `.logik`, `.hardware`) are excluded by
+    Non-returning bodies (`.why`, `.logik`, `.hardware`) are excluded by
     the `hbody` equation, not by a premise left unused: `rufAt` forwards
     those outcomes unchanged (no postcondition gate), so no equivalence of
     this shape holds for them.

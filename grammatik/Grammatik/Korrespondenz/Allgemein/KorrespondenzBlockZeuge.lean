@@ -37,11 +37,11 @@ abbrev bU32c : CTy := .int false .w32
 /-- `a = 1;` -- ONE statement, and the `else` arm's is a different one, so
     "the two branches swapped" is a defect the probe can see. -/
 def bArmT : Block wD wV false wCtx [] [] :=
-  .cons (Stmt.assignVar .hier (.weiter (by decide) (by decide) (Expr.lit 1))) .nil
+  .cons (Stmt.assignVar .here (.widen (by decide) (by decide) (Expr.lit 1))) .nil
 
 /-- `a = 2;` -/
 def bArmE : Block wD wV false wCtx [] [] :=
-  .cons (Stmt.assignVar .hier (.weiter (by decide) (by decide) (Expr.lit 2))) .nil
+  .cons (Stmt.assignVar .here (.widen (by decide) (by decide) (Expr.lit 2))) .nil
 
 /-- `if (a < b) { a = 1; } else { a = 2; }` -/
 def bIte : Stmt wD wV false wCtx [] [] := .ite (Expr.lt x0 x1) bArmT bArmE
@@ -71,8 +71,8 @@ theorem probe_ite :
 theorem probe_ite_fremd :
     stOk wEL wFnum wZert wK bIte bRowT = false ∧
     stOk wEL wFnum wZert wK
-      (Stmt.assignVar (V := wV) (l := false) (Λ := []) .hier
-        (.weiter (by decide) (by decide) (Expr.lit 1)))
+      (Stmt.assignVar (V := wV) (l := false) (Λ := []) .here
+        (.widen (by decide) (by decide) (Expr.lit 1)))
       (.ite bCond [bRowT] [bRowE]) = false := by
   decide
 
@@ -99,7 +99,7 @@ theorem probe_blOk_void :
     a local that is already a parameter (not fresh), and the `let` bound to
     a local the following row does not read. -/
 def bLetBlock : Block wD wV false wCtx [] [] :=
-  .bind (τ := wU32) x0 (.cons (Stmt.assignVar (.dort .hier) (Expr.var .hier)) .nil)
+  .bind (τ := wU32) x0 (.cons (Stmt.assignVar (.there .here) (Expr.var .here)) .nil)
 
 theorem probe_blOk_let :
     blOk wEL wFnum wZert wK bLetBlock
@@ -217,7 +217,7 @@ def cFnum : cD.Fn → Nat := fun _ => 0
 def cZert : KCert cD :=
   [{ params := [(0, bU32c)], locals := [], rows := [], vm := [0], pp := [], ks := [] }]
 
-def cx0 : Expr cD wCtx [] wU32 := .var .hier
+def cx0 : Expr cD wCtx [] wU32 := .var .here
 
 theorem cHp : RufPasst cD cV (cD.signatur ()) [] where
   hw := fun _ _ => rfl
@@ -229,7 +229,7 @@ theorem cHp : RufPasst cD cV (cD.signatur ()) [] where
     row after it reads exactly that local. -/
 def cLetCall : Block cD cV false wCtx [] [] :=
   .bindCall () (.cons cx0 .nil) rfl cHp rfl
-    (.cons (Stmt.assignVar (.dort .hier) (Expr.var .hier)) .nil)
+    (.cons (Stmt.assignVar (.there .here) (Expr.var .here)) .nil)
 
 /-- The call-with-answer row, accepted and refused. PLANTED DEFECTS, in
     order: the answer bound to a local the FOLLOWING ROW does not read
@@ -284,18 +284,18 @@ abbrev bTravCtx : Ctx := Ty.index (wD.count ()) :: wCtx
 /-- `traverse T { a = 1; }` -- the body writes a PARAMETER (C local `0`),
     not the loop variable. -/
 def bTravBody : Block wD wV true bTravCtx [] [] :=
-  .cons (Stmt.assignVar (.dort .hier) (.weiter (by decide) (by decide) (Expr.lit 1))) .nil
+  .cons (Stmt.assignVar (.there .here) (.widen (by decide) (by decide) (Expr.lit 1))) .nil
 
-def bTrav : Stmt wD wV false wCtx [] [] := .traverse () Expr.wahr bTravBody
+def bTrav : Stmt wD wV false wCtx [] [] := .traverse () Expr.tru bTravBody
 
 /-- The same loop, with a body that writes the LOOP VARIABLE (`v = 0;`).
     The model allows the statement; `scorr_traverse` does not cover it
     (`hw`), so the check must REFUSE its row -- and the refusal is the
     hygiene check, not a mismatch of the rows. -/
 def bTravBodySchreibt : Block wD wV true bTravCtx [] [] :=
-  .cons (Stmt.assignVar .hier (.weiter (by decide) (by decide) (Expr.lit 0))) .nil
+  .cons (Stmt.assignVar .here (.widen (by decide) (by decide) (Expr.lit 0))) .nil
 
-def bTravSchreibt : Stmt wD wV false wCtx [] [] := .traverse () Expr.wahr bTravBodySchreibt
+def bTravSchreibt : Stmt wD wV false wCtx [] [] := .traverse () Expr.tru bTravBodySchreibt
 
 /-- The loop row, accepted and refused. PLANTED DEFECTS: the WRONG LOOP
     BOUND (too high, too low, and not a constant at all), the loop
@@ -330,20 +330,20 @@ theorem probe_forTrav_fremd :
 
 /-! ## 5. The recursion NESTS: an `if` inside a `traverse` -/
 
-def by0 : Expr wD bTravCtx [] wU32 := .var (.dort .hier)
-def by1 : Expr wD bTravCtx [] wU32 := .var (.dort (.dort .hier))
+def by0 : Expr wD bTravCtx [] wU32 := .var (.there .here)
+def by1 : Expr wD bTravCtx [] wU32 := .var (.there (.there .here))
 
 def bNestT : Block wD wV true bTravCtx [] [] :=
-  .cons (Stmt.assignVar (.dort .hier) (.weiter (by decide) (by decide) (Expr.lit 1))) .nil
+  .cons (Stmt.assignVar (.there .here) (.widen (by decide) (by decide) (Expr.lit 1))) .nil
 
 def bNestE : Block wD wV true bTravCtx [] [] :=
-  .cons (Stmt.assignVar (.dort .hier) (.weiter (by decide) (by decide) (Expr.lit 2))) .nil
+  .cons (Stmt.assignVar (.there .here) (.widen (by decide) (by decide) (Expr.lit 2))) .nil
 
 /-- `traverse T { if (a < b) { a = 1; } else { a = 2; } }` -/
 def bNestBody : Block wD wV true bTravCtx [] [] :=
   .cons (Stmt.ite (Expr.lt by0 by1) bNestT bNestE) .nil
 
-def bNest : Stmt wD wV false wCtx [] [] := .traverse () Expr.wahr bNestBody
+def bNest : Stmt wD wV false wCtx [] [] := .traverse () Expr.tru bNestBody
 
 /-- Two levels of row list, and the check still reads both -- with the
     branches swapped at the INNER level as the planted defect. -/

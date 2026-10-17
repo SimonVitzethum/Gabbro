@@ -236,7 +236,7 @@ def fragLocks : Stmt refD (vertragVon refD refEin) false [.int 0 10] [] [] :=
 def ausgangSpur {l : Bool} {Γ : Ctx} : Ausgang V l Γ → List (Ereignis D)
   | .ok σ _ => σ.spur
   | .zurueck σ _ => σ.spur
-  | .grund σ _ => σ.spur
+  | .why σ _ => σ.spur
   | .leave _ σ _ => σ.spur
   | .next _ σ _ => σ.spur
   | .logik _ => []

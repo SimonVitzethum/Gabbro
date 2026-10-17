@@ -137,12 +137,12 @@ theorem rennfrei_g_zeuge : ∃ (M M' : RufMaschineG zD) (f : Faden)
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ3.1 zLies .nil zHpLies
-    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
+    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .empty (by rfl))) .nil rfl
     (hgL (hoff_z hZ3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ4.1
-    (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
+    (.slot () () zIdx zDarf) (.ret (.val (.var .here)) (by rfl)) .nil rfl
     (hgL (hoff_z hZ4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff4
@@ -152,7 +152,7 @@ theorem rennfrei_g_zeuge : ∃ (M M' : RufMaschineG zD) (f : Faden)
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hG6.1 zEin .nil zHpEin rfl
-    (.ret .keine (by rfl)) .nil rfl
+    (.ret .empty (by rfl)) .nil rfl
     (hgL (hoff_g hG6 hoff6)).heldIn
   have hoff7 : offen (M7.faeden 1).spur = [()] := by
     rw [hZ7.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff6

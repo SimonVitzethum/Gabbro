@@ -80,7 +80,7 @@ def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (spur : List (Ereignis D)) (sp 
       match c.rest with
       | ⟨l, Γ, Λ, ρc, GRest.wartetSonst n err _ k⟩ =>
           if hn : (vertragVon D f).gruende = n then
-            some (⟨rst, ⟨c.f, c.rho, ⟨l, .grund n :: Γ, Λ, .cons (Fin.cast hn r) ρc,
+            some (⟨rst, ⟨c.f, c.rho, ⟨l, .why n :: Γ, Λ, .cons (Fin.cast hn r) ρc,
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩, spur⟩, sp)
           else none
       | _ => none
@@ -139,7 +139,7 @@ def kAusDann (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : 
     Ausgang (vertragVon D f) l Γ → KErg D
   | .ok σ' ρ' => kLokal st f rho ρ' (.dann rest k) σ'.spur σ'.speicher
   | .zurueck σ v => kPop st f σ v
-  | .grund σ r => kPopGrund st f σ.spur σ.speicher r
+  | .why σ r => kPopGrund st f σ.spur σ.speicher r
   | .leave h σ' ρ' => kLeave st f rho k h σ' ρ'
   | .next h σ' ρ' => kNext st f rho k h σ' ρ'
   | _ => none
@@ -149,7 +149,7 @@ def kAusEnde (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : 
     (rest : Endblock D (vertragVon D f) l Γ Λ') : Ausgang (vertragVon D f) l Γ → KErg D
   | .ok σ' ρ' => kLokal st f rho ρ' (.ende rest) σ'.spur σ'.speicher
   | .zurueck σ v => kPop st f σ v
-  | .grund σ r => kPopGrund st f σ.spur σ.speicher r
+  | .why σ r => kPopGrund st f σ.spur σ.speicher r
   | _ => none
 
 
@@ -198,7 +198,7 @@ def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.para
           kLokal st f rho (Γ := .int lo hi :: _) (armEnv nutz ρ) (.dann b (.schrumpf (.dann rest k)))
             σ₁.spur sp
       | ⟨none, b, nutz⟩ => kLokal st f rho (armEnv nutz ρ) (.dann b (.dann rest k)) σ₁.spur sp
-  | _, _, Λ, _, _, ρ, .onGrund r arms, rest, k =>
+  | _, _, Λ, _, _, ρ, .onWhy r arms, rest, k =>
       let σ₁ := (sp.welt spur).lese Λ r.orte
       kLokal st f rho ρ (.dann (grundWahlG arms (eval σ₁ r σ₁ ρ)) (.dann rest k)) σ₁.spur sp
   | _, _, _, _, _, ρ, .locks L _ body, rest, k =>
@@ -247,12 +247,12 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       match axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
       | (σ₂, some (Sum.inl v)) => kLokal st f rho (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur σ₂.speicher
       | (σ₂, some (Sum.inr r)) =>
-          kLokal st f rho (Env.cons (τ := .grund (D.agruende a)) r ρ) (.ende err) σ₂.spur σ₂.speicher
+          kLokal st f rho (Env.cons (τ := .why (D.agruende a)) r ρ) (.ende err) σ₂.spur σ₂.speicher
       | (_, none) => none
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)
-  | _, _, _, _, .retGrund r _ => kPopGrund st f spur sp r
+  | _, _, _, _, .retWhy r _ => kPopGrund st f spur sp r
   | _, _, _, _, _ => none
 
 /-- A `dann` residue. -/
@@ -285,16 +285,16 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       | (σ₂, some (Sum.inl v)) =>
           kLokal st f rho (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur σ₂.speicher
       | (σ₂, some (Sum.inr r)) =>
-          kLokal st f rho (Env.cons (τ := .grund (D.agruende a)) r ρ)
+          kLokal st f rho (Env.cons (τ := .why (D.agruende a)) r ρ)
             (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur σ₂.speicher
       | (_, none) => none
-  | _, _, _, _, ρ, .regLies r _ rest, k =>
+  | _, _, _, _, ρ, .regRead r _ rest, k =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
       | some v =>
           if D.rzusage r v = true then kLokal st f rho (.cons v ρ) (.dann rest (.schrumpf k)) spur sp
           else none
       | none => none
-  | _, _, Λ, _, ρ, .regLiesElse r _ zusage sonst rest, k =>
+  | _, _, Λ, _, ρ, .regReadElse r _ zusage sonst rest, k =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
       | some v =>
           let σ₁ := (sp.welt spur).lese Λ zusage.orte
@@ -316,25 +316,25 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       if h : lo' ≤ (eval σ₁ e σ₁ ρ).n ∧ (eval σ₁ e σ₁ ρ).n ≤ hi' then
         kLokal st f rho (.cons (show Wert D (.int lo' hi') from ⟨(eval σ₁ e σ₁ ρ).n, h.1, h.2⟩) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
       else kLokal st f rho ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur sp
-  | _, _, Λ, _, ρ, .pruefung c sonst rest, k =>
+  | _, _, Λ, _, ρ, .check c sonst rest, k =>
       let σ₁ := (sp.welt spur).lese Λ c.orte
       if wahr? (eval σ₁ c σ₁ ρ) = true then kLokal st f rho ρ (.dann rest k) σ₁.spur sp
       else kLokal st f rho ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur sp
-  | _, _, Λ, _, ρ, .gleit op a b lo hi rest, k =>
+  | _, _, Λ, _, ρ, .float op a b lo hi rest, k =>
       let σ₁ := (sp.welt spur).lese Λ (a.orte ++ b.orte)
       match gleitPasst lo hi (gleitRechne op (eval σ₁ a σ₁ ρ).x (eval σ₁ b σ₁ ρ).x) with
       | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
       | none => none
-  | _, _, _, _, ρ, .gleitLit q lo hi rest, k =>
+  | _, _, _, _, ρ, .floatLit q lo hi rest, k =>
       match gleitPasst lo hi (bruch q) with
       | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.dann rest (.schrumpf k)) spur sp
       | none => none
-  | _, _, Λ, _, ρ, .gleitVon e lo hi rest, k =>
+  | _, _, Λ, _, ρ, .floatOf e lo hi rest, k =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       match gleitPasst lo hi (gleitAusInt (eval σ₁ e σ₁ ρ).n) with
       | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
       | none => none
-  | _, _, Λ, _, ρ, .gleitNarrow e lo hi sonst rest, k =>
+  | _, _, Λ, _, ρ, .floatNarrow e lo hi sonst rest, k =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       match gleitPasst lo hi (eval σ₁ e σ₁ ρ).x with
       | some v => kLokal st f rho (.cons (show Wert D (.fl lo hi) from v) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp

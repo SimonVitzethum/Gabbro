@@ -297,8 +297,8 @@ variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 def freiKopfNeu (A : FreiForm D) :
     Expr D (Ty.index (D.count A.tab) :: Γ) Λ (D.gtyp A.kopf) :=
   Expr.umTyp A.hkopf.symm
-    (Expr.weiter (lo := 0) (hi := D.count A.tab - 1) (lo' := 0) (hi' := D.count A.tab)
-      (by omega) (by omega) (Expr.var .hier))
+    (Expr.widen (lo := 0) (hi := D.count A.tab - 1) (lo' := 0) (hi' := D.count A.tab)
+      (by omega) (by omega) (Expr.var .here))
 
 /-- The old head, at the link field's declared type. -/
 def freiKopfAlt (A : FreiForm D) (hLK : gdarf D A.kopf Λ) :
@@ -312,7 +312,7 @@ def freiRumpf (A : FreiForm D)
     (hwK : V.gschreibt A.kopf = true) (hLK : gdarf D A.kopf Λ)
     (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') :
     Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ' :=
-  .cons (.assignSlot A.tab A.nxt (Expr.var .hier) (freiKopfAlt A hLK) hwT hLT)
+  .cons (.assignSlot A.tab A.nxt (Expr.var .here) (freiKopfAlt A hLK) hwT hLT)
     (.cons (.assignGlob A.kopf (freiKopfNeu A) hwK hLK) rest)
 
 end Block

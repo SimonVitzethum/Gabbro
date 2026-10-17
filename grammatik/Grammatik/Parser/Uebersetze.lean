@@ -74,11 +74,11 @@ inductive USide
     boolean combination (the `tr_ensures` fragment). -/
 inductive UEns
   | cmp : String → USide → USide → UEns
-  | wahr : UEns
-  | falsch : UEns
-  | und : UEns → UEns → UEns
-  | oder : UEns → UEns → UEns
-  | nicht : UEns → UEns
+  | tru : UEns
+  | fls : UEns
+  | and : UEns → UEns → UEns
+  | or : UEns → UEns → UEns
+  | not : UEns → UEns
   /-- A `bool` slot read through a pointer parameter / at a table (`p.slots[i].f`, `T.slots[i].f`):
       the truth value itself, not a number. -/
   | slotB : String → String → UIdx → UEns
@@ -93,7 +93,7 @@ inductive UEns
 inductive UArg
   | var : String → UArg
   | freshPtr : String → Bool → UArg
-  | wert : USide → UArg
+  | val : USide → UArg
   deriving DecidableEq, Repr
 
 /-- One body statement: a slot write through a pointer (`assign`)
@@ -116,8 +116,8 @@ inductive UStmt
 /-- The trailing return: nothing, or a value (a literal, a
     numeric parameter or a slot read). -/
 inductive URet
-  | keine : URet
-  | wert : USide → URet
+  | empty : URet
+  | val : USide → URet
   /-- A `bool` result: a truth value. -/
   | bool : UEns → URet
   deriving DecidableEq, Repr
@@ -604,7 +604,7 @@ def uIndex (ctx : UCtx) (t : String) (num : Nat) : SExpr → Except String UIdx
     (pointer parameter or table name), the table, the field and
     the index (the `slot_access` of `lean_g.rs`). -/
 inductive UBasis
-  | durch : String → UBasis
+  | thru : String → UBasis
   | tabelle : String → UBasis
   deriving DecidableEq, Repr
 
@@ -627,7 +627,7 @@ def uZugriff (ctx : UCtx) : SExpr →
               | .ok _ =>
                 match uIndex ctx tb.name num idx with
                 | .error e => .error e
-                | .ok ix => .ok (.durch b, tb.name, f, ix)
+                | .ok ix => .ok (.thru b, tb.name, f, ix)
         | _ => .error "Platz ohne G-Form"
       | .error _ =>
         match ctx.tabellen.find? (fun x => strEq x.name b) with
@@ -726,7 +726,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
   | .alt o =>
     match uZugriff ctx o with
     | .error e => .error e
-    | .ok (.durch b, _, f, ix) => .ok (.alt b f ix)
+    | .ok (.thru b, _, f, ix) => .ok (.alt b f ix)
     | .ok (.tabelle b, _, f, ix) => .ok (.alt b f ix)
   | e =>
     match uGrenzwort ctx e with
@@ -734,7 +734,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .none =>
       match uZugriff ctx e with
       | .error _ => .error "Vergleichsseite ohne G-Form"
-      | .ok (.durch b, tb, f, ix) =>
+      | .ok (.thru b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.tab b f ix)
@@ -769,25 +769,25 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
       | .ok a =>
         match uSichert ctx r with
         | .error e => .error e
-        | .ok b => .ok (.und a b)
+        | .ok b => .ok (.and a b)
     else if strEq op "||" then
       match uSichert ctx l with
       | .error e => .error e
       | .ok a =>
         match uSichert ctx r with
         | .error e => .error e
-        | .ok b => .ok (.oder a b)
+        | .ok b => .ok (.or a b)
     else .error "Operator ohne G-Form"
   | .un "!" q =>
     match uSichert ctx q with
     | .error e => .error e
-    | .ok a => .ok (.nicht a)
-  | .wahr => .ok .wahr
-  | .falsch => .ok .falsch
+    | .ok a => .ok (.not a)
+  | .tru => .ok .tru
+  | .fls => .ok .fls
   | e =>
     match uZugriff ctx e with
     | .error _ => .error "Ensures-Klausel ohne G-Form"
-    | .ok (.durch b, tb, f, ix) =>
+    | .ok (.thru b, tb, f, ix) =>
       if uBoolFeld ctx tb f then .ok (.slotB b f ix) else .error "Ensures-Klausel ohne G-Form"
     | .ok (.tabelle b, tb, f, ix) =>
       if uBoolFeld ctx tb f then .ok (.tabB b f ix) else .error "Ensures-Klausel ohne G-Form"
@@ -802,8 +802,8 @@ def seiteAltErg : USide → Bool
 /-- `old(..)` or `result` inside a predicate. -/
 def ensAltErg : UEns → Bool
   | .cmp _ a b => seiteAltErg a || seiteAltErg b
-  | .und a b | .oder a b => ensAltErg a || ensAltErg b
-  | .nicht a => ensAltErg a
+  | .and a b | .or a b => ensAltErg a || ensAltErg b
+  | .not a => ensAltErg a
   | _ => false
 
 /-- A truth value in a BODY (a returned or stored `bool`): the predicate forms of an `ensures`,
@@ -834,7 +834,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .none =>
       match uZugriff ctx e with
       | .error _ => .error "Wert ohne G-Form"
-      | .ok (.durch b, tb, f, ix) =>
+      | .ok (.thru b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.tab b f ix)
@@ -1115,12 +1115,12 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
     | .some tb =>
       match uIndex ctx tb.name num a with
       | .error e => .error e
-      | .ok (.lit v) => .ok (.wert (.lit v))
-      | .ok (.param p) => .ok (.wert (.param p))
+      | .ok (.lit v) => .ok (.val (.lit v))
+      | .ok (.param p) => .ok (.val (.param p))
   | .int, a =>
     match uWertBody ctx a with
     | .error e => .error e
-    | .ok s => .ok (.wert s)
+    | .ok s => .ok (.val s)
   | _, _ => .error "Argument ohne G-Form"
 
 def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
@@ -1143,7 +1143,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
   | .zuweis ziel "=" wert =>
     match uZugriff ctx ziel with
     | .error e => .error e
-    | .ok (.durch b, tb, f, ix) =>
+    | .ok (.thru b, tb, f, ix) =>
       match uStelle ctx.pnamen b with
       | .error e => .error e
       | .ok j =>
@@ -1218,11 +1218,11 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
   | .none =>
     match ctx.ergebnis with
     | .some _ => .error "Funktion mit Ergebnis faellt durch"
-    | .none => if ctx.ergBool then .error "Funktion mit Ergebnis faellt durch" else .ok .keine
+    | .none => if ctx.ergBool then .error "Funktion mit Ergebnis faellt durch" else .ok .empty
   | .some (.ret .none) =>
     match ctx.ergebnis with
     | .some _ => .error "Rueckgabe ohne Wert mit Ergebnis"
-    | .none => if ctx.ergBool then .error "Rueckgabe ohne Wert mit Ergebnis" else .ok .keine
+    | .none => if ctx.ergBool then .error "Rueckgabe ohne Wert mit Ergebnis" else .ok .empty
   | .some (.ret (.some v)) =>
     if ctx.ergBool then
       match uBool ctx v with
@@ -1234,7 +1234,7 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
     | .some _ =>
       match uWertBody ctx v with
       | .error e => .error e
-      | .ok s => .ok (.wert s)
+      | .ok s => .ok (.val s)
   | .some _ => .error "Blockende ohne G-Form"
 
 /-- Pass two: contracts and body of one function. -/
@@ -1375,9 +1375,9 @@ abbrev UKoerpEin :=
     (positions are the known signature; anything else is an
     explicit error). -/
 def varNumEin : (j : Nat) → (τ : Ty) → Except String (Var UCtxEin τ)
-  | 0, .ptr 0 true => .ok .hier
-  | 1, .int 0 1 => .ok (.dort .hier)
-  | 2, .int 0 10 => .ok (.dort (.dort .hier))
+  | 0, .ptr 0 true => .ok .here
+  | 1, .int 0 1 => .ok (.there .here)
+  | 2, .int 0 10 => .ok (.there (.there .here))
   | _, _ => .error "Parameter ohne G-Form"
 
 /-- An index into `Konto` in `einzahlen`: the `i` parameter or
@@ -1385,10 +1385,10 @@ def varNumEin : (j : Nat) → (τ : Ty) → Except String (Var UCtxEin τ)
     with the range check as an explicit error). -/
 def lowerIdxEin : UIdx →
     Except String (Expr G104_referenz.gD UCtxEin ULEin (.index (G104_referenz.gD.count G104_referenz.GTab.Konto)))
-  | .param "i" => .ok (Expr.var (Var.dort Var.hier))
+  | .param "i" => .ok (Expr.var (Var.there Var.here))
   | .lit n =>
     if h1 : 0 ≤ n then
-      if h2 : n ≤ 1 then .ok (Expr.weiter h1 h2 (Expr.lit n))
+      if h2 : n ≤ 1 then .ok (Expr.widen h1 h2 (Expr.lit n))
       else .error "Index ausserhalb count"
     else .error "Index ausserhalb count"
   | _ => .error "Index ohne G-Form"
@@ -1437,7 +1437,7 @@ def lowerSeiteEin (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok { weit := (0, 100),
-                term := Expr.durch (Expr.var Var.hier)
+                term := Expr.thru (Expr.var Var.here)
                   G104_referenz.GTab.Konto rfl
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_einzahlen_Konto }
@@ -1465,7 +1465,7 @@ def lowerSeiteEin (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok { weit := (0, 100),
-                term := Expr.altSlot G104_referenz.GTab.Konto
+                term := Expr.oldS G104_referenz.GTab.Konto
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result im Rumpf ohne G-Form"
@@ -1484,7 +1484,7 @@ def lowerVglEin (tabs : List UTab) (pnamen : List String)
       | .ok s2 =>
         match op with
         | "==" => .ok (Expr.eq s1.term s2.term)
-        | "!=" => .ok (Expr.nicht (Expr.eq s1.term s2.term))
+        | "!=" => .ok (Expr.not (Expr.eq s1.term s2.term))
         | "<" => .ok (Expr.lt s1.term s2.term)
         | "<=" => .ok (Expr.le s1.term s2.term)
         | ">" => .ok (Expr.lt s2.term s1.term)
@@ -1495,33 +1495,33 @@ def lowerVglEin (tabs : List UTab) (pnamen : List String)
 def lowerSichertEin (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : UEns → Except String UEnsEin
   | .cmp op a b => lowerVglEin tabs pnamen ptypen op a b
-  | .wahr => .ok Expr.wahr
-  | .falsch => .ok Expr.falsch
-  | .und a b =>
+  | .tru => .ok Expr.tru
+  | .fls => .ok Expr.fls
+  | .and a b =>
     match lowerSichertEin tabs pnamen ptypen a with
     | .error e => .error e
     | .ok x =>
       match lowerSichertEin tabs pnamen ptypen b with
       | .error e => .error e
-      | .ok y => .ok (Expr.und x y)
-  | .oder a b =>
+      | .ok y => .ok (Expr.and x y)
+  | .or a b =>
     match lowerSichertEin tabs pnamen ptypen a with
     | .error e => .error e
     | .ok x =>
       match lowerSichertEin tabs pnamen ptypen b with
       | .error e => .error e
-      | .ok y => .ok (Expr.oder x y)
-  | .nicht a =>
+      | .ok y => .ok (Expr.or x y)
+  | .not a =>
     match lowerSichertEin tabs pnamen ptypen a with
     | .error e => .error e
-    | .ok x => .ok (Expr.nicht x)
+    | .ok x => .ok (Expr.not x)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
 
-/-- The `ensures` conjunction in `einzahlen` (empty is `.wahr`,
+/-- The `ensures` conjunction in `einzahlen` (empty is `.tru`,
     like the exporter's conjunction). -/
 def lowerSichertListeEin (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : List UEns → Except String UEnsEin
-  | [] => .ok Expr.wahr
+  | [] => .ok Expr.tru
   | e :: rest =>
     match lowerSichertEin tabs pnamen ptypen e with
     | .error err => .error err
@@ -1530,8 +1530,8 @@ def lowerSichertListeEin (tabs : List UTab) (pnamen : List String)
       | .error err => .error err
       | .ok y =>
         match y with
-        | Expr.wahr => .ok x
-        | _ => .ok (Expr.und x y)
+        | Expr.tru => .ok x
+        | _ => .ok (Expr.and x y)
 
 /-- A value at an expected range in `einzahlen` (the
     `tr_value`/`fit` of `lean_g.rs`: literals widen with their
@@ -1542,7 +1542,7 @@ def lowerWertEin (tabs : List UTab) (pnamen : List String)
     Except String (Expr G104_referenz.gD UCtxEin ULEin (.int lo hi))
   | .lit n =>
     if h1 : lo ≤ n then
-      if h2 : n ≤ hi then .ok (Expr.weiter h1 h2 (Expr.lit n))
+      if h2 : n ≤ hi then .ok (Expr.widen h1 h2 (Expr.lit n))
       else .error "Literal ausserhalb"
     else .error "Literal ausserhalb"
   | .param p =>
@@ -1557,7 +1557,7 @@ def lowerWertEin (tabs : List UTab) (pnamen : List String)
           | .error e => .error e
           | .ok v =>
             if h1 : lo ≤ a then
-              if h2 : b ≤ hi then .ok (Expr.weiter h1 h2 (Expr.var v))
+              if h2 : b ≤ hi then .ok (Expr.widen h1 h2 (Expr.var v))
               else .error "Parameter ausserhalb"
             else .error "Parameter ausserhalb"
       | _, _ => .error "Parameter ohne G-Form"
@@ -1566,7 +1566,7 @@ def lowerWertEin (tabs : List UTab) (pnamen : List String)
     | .error e => .error e
     | .ok t =>
       if h1 : lo ≤ t.weit.1 then
-        if h2 : t.weit.2 ≤ hi then .ok (Expr.weiter h1 h2 t.term)
+        if h2 : t.weit.2 ≤ hi then .ok (Expr.widen h1 h2 t.term)
         else .error "Wert ausserhalb"
       else .error "Wert ausserhalb"
 
@@ -1594,7 +1594,7 @@ def lowerAssignEin (tabs : List UTab) (pnamen : List String)
           | .error e => .error e
           | .ok i =>
             if strEq b "k" then
-              .ok (Stmt.assignDurch (Expr.var Var.hier)
+              .ok (Stmt.assignThru (Expr.var Var.here)
                 G104_referenz.GTab.Konto rfl
                 G104_referenz.GKontoFeld.stand i w (by decide)
                 G104_referenz.gDarf_einzahlen_Konto)
@@ -1610,7 +1610,7 @@ def lowerAssignEin (tabs : List UTab) (pnamen : List String)
 def lowerArgsLies (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : List UArg →
     Except String (Args G104_referenz.gD UCtxEin ULEin (G104_referenz.gD.params G104_referenz.g_lies))
-  | [.freshPtr "Konto" false, .wert (.param "i")] =>
+  | [.freshPtr "Konto" false, .val (.param "i")] =>
     match pnamen[1]?, ptypen[1]? with
     | .some q, .some (Ty.int 0 1) =>
       if !strEq q "i" then .error "Argument verdreht"
@@ -1621,7 +1621,7 @@ def lowerArgsLies (tabs : List UTab) (pnamen : List String)
           if tb.count != 2 then .error "Anzahl fremd"
           else
             .ok (Args.cons (Expr.ptrOf G104_referenz.GTab.Konto 0 rfl false)
-              (Args.cons (Expr.var (Var.dort Var.hier)) Args.nil))
+              (Args.cons (Expr.var (Var.there Var.here)) Args.nil))
     | _, _ => .error "Argument ohne G-Form"
   | _ => .error "Argument ohne G-Form"
 
@@ -1633,9 +1633,9 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
     Except String
       (Endblock G104_referenz.gD (vertragVon G104_referenz.gD G104_referenz.g_einzahlen) false UCtxEin
         (nach G104_referenz.gD G104_referenz.g_lies ULEin))
-  | [], .keine => .ok (.ret .keine (List.Perm.refl _))
+  | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ => .error "Rueckgabe mit Wahrheitswert ohne Ergebnis"
-  | [], .wert _ => .error "Rueckgabe mit Wert ohne Ergebnis"
+  | [], .val _ => .error "Rueckgabe mit Wert ohne Ergebnis"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs pnamen ptypen b f ix v with
     | .error e => .error e
@@ -1659,9 +1659,9 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
     `tr_body` of `lean_g.rs`). -/
 def lowerSaetzeEin (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : List UStmt → URet → Except String UKoerpEin
-  | [], .keine => .ok (.ret .keine (List.Perm.refl _))
+  | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ => .error "Rueckgabe mit Wahrheitswert ohne Ergebnis"
-  | [], .wert _ => .error "Rueckgabe mit Wert ohne Ergebnis"
+  | [], .val _ => .error "Rueckgabe mit Wert ohne Ergebnis"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs pnamen ptypen b f ix v with
     | .error e => .error e
@@ -1713,17 +1713,17 @@ abbrev UKoerpLies :=
 
 /-- A parameter variable of `lies` by position and type. -/
 def varNumLies : (j : Nat) → (τ : Ty) → Except String (Var UCtxLies τ)
-  | 0, .ptr 0 false => .ok Var.hier
-  | 1, .int 0 1 => .ok (Var.dort Var.hier)
+  | 0, .ptr 0 false => .ok Var.here
+  | 1, .int 0 1 => .ok (Var.there Var.here)
   | _, _ => .error "Parameter ohne G-Form"
 
 /-- A variable of the `lies` `ensures` context: the result or
     a parameter (positions are the known signature). -/
 def varEnsLies : (j : Nat) → (τ : Ty) →
     Except String (Var UCtxEnsLies τ)
-  | 0, .int 0 100 => .ok Var.hier
-  | 1, .ptr 0 false => .ok (Var.dort Var.hier)
-  | 2, .int 0 1 => .ok (Var.dort (Var.dort Var.hier))
+  | 0, .int 0 100 => .ok Var.here
+  | 1, .ptr 0 false => .ok (Var.there Var.here)
+  | 2, .int 0 1 => .ok (Var.there (Var.there Var.here))
   | _, _ => .error "Parameter ohne G-Form"
 
 /-- One side in the `lies` body, with its range. -/
@@ -1736,10 +1736,10 @@ def lowerIdxLies : UIdx →
     Except String
       (Expr G104_referenz.gD UCtxLies ULLies
         (.index (G104_referenz.gD.count G104_referenz.GTab.Konto)))
-  | .param "i" => .ok (Expr.var (Var.dort Var.hier))
+  | .param "i" => .ok (Expr.var (Var.there Var.here))
   | .lit n =>
     if h1 : 0 ≤ n then
-      if h2 : n ≤ 1 then .ok (Expr.weiter h1 h2 (Expr.lit n))
+      if h2 : n ≤ 1 then .ok (Expr.widen h1 h2 (Expr.lit n))
       else .error "Index ausserhalb count"
     else .error "Index ausserhalb count"
   | _ => .error "Index ohne G-Form"
@@ -1769,7 +1769,7 @@ def lowerSeiteLies (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok { weit := (0, 100),
-                term := Expr.durch (Expr.var Var.hier)
+                term := Expr.thru (Expr.var Var.here)
                   G104_referenz.GTab.Konto rfl
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_lies_Konto }
@@ -1821,7 +1821,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok { weit := (0, 100),
-                term := Expr.durch (Expr.var (Var.dort Var.hier))
+                term := Expr.thru (Expr.var (Var.there Var.here))
                   G104_referenz.GTab.Konto rfl
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_lies_Konto }
@@ -1849,12 +1849,12 @@ def lowerSeiteEnsLies (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok { weit := (0, 100),
-                term := Expr.altSlot G104_referenz.GTab.Konto
+                term := Expr.oldS G104_referenz.GTab.Konto
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_lies_Konto }
   | .erg =>
     match ergebnis with
-    | .some (0, 100) => .ok { weit := (0, 100), term := Expr.var Var.hier }
+    | .some (0, 100) => .ok { weit := (0, 100), term := Expr.var Var.here }
     | _ => .error "Ergebnisweite fremd"
   | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. =>
     .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
@@ -1863,10 +1863,10 @@ where
     Except String
       (Expr G104_referenz.gD UCtxEnsLies ULLies
         (.index (G104_referenz.gD.count G104_referenz.GTab.Konto)))
-    | .param "i" => .ok (Expr.var (Var.dort (Var.dort Var.hier)))
+    | .param "i" => .ok (Expr.var (Var.there (Var.there Var.here)))
     | .lit n =>
       if h1 : 0 ≤ n then
-        if h2 : n ≤ 1 then .ok (Expr.weiter h1 h2 (Expr.lit n))
+        if h2 : n ≤ 1 then .ok (Expr.widen h1 h2 (Expr.lit n))
         else .error "Index ausserhalb count"
       else .error "Index ausserhalb count"
     | _ => .error "Index ohne G-Form"
@@ -1884,7 +1884,7 @@ def lowerVglLies (tabs : List UTab) (pnamen : List String)
       | .ok s2 =>
         match op with
         | "==" => .ok (Expr.eq s1.term s2.term)
-        | "!=" => .ok (Expr.nicht (Expr.eq s1.term s2.term))
+        | "!=" => .ok (Expr.not (Expr.eq s1.term s2.term))
         | "<" => .ok (Expr.lt s1.term s2.term)
         | "<=" => .ok (Expr.le s1.term s2.term)
         | ">" => .ok (Expr.lt s2.term s1.term)
@@ -1895,32 +1895,32 @@ def lowerSichertLies (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) (ergebnis : Option (Int × Int)) :
     UEns → Except String UEnsLies
   | .cmp op a b => lowerVglLies tabs pnamen ptypen ergebnis op a b
-  | .wahr => .ok Expr.wahr
-  | .falsch => .ok Expr.falsch
-  | .und a b =>
+  | .tru => .ok Expr.tru
+  | .fls => .ok Expr.fls
+  | .and a b =>
     match lowerSichertLies tabs pnamen ptypen ergebnis a with
     | .error e => .error e
     | .ok x =>
       match lowerSichertLies tabs pnamen ptypen ergebnis b with
       | .error e => .error e
-      | .ok y => .ok (Expr.und x y)
-  | .oder a b =>
+      | .ok y => .ok (Expr.and x y)
+  | .or a b =>
     match lowerSichertLies tabs pnamen ptypen ergebnis a with
     | .error e => .error e
     | .ok x =>
       match lowerSichertLies tabs pnamen ptypen ergebnis b with
       | .error e => .error e
-      | .ok y => .ok (Expr.oder x y)
-  | .nicht a =>
+      | .ok y => .ok (Expr.or x y)
+  | .not a =>
     match lowerSichertLies tabs pnamen ptypen ergebnis a with
     | .error e => .error e
-    | .ok x => .ok (Expr.nicht x)
+    | .ok x => .ok (Expr.not x)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
 
 def lowerSichertListeLies (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) (ergebnis : Option (Int × Int)) :
     List UEns → Except String UEnsLies
-  | [] => .ok Expr.wahr
+  | [] => .ok Expr.tru
   | e :: rest =>
     match lowerSichertLies tabs pnamen ptypen ergebnis e with
     | .error err => .error err
@@ -1929,8 +1929,8 @@ def lowerSichertListeLies (tabs : List UTab) (pnamen : List String)
       | .error err => .error err
       | .ok y =>
         match y with
-        | Expr.wahr => .ok x
-        | _ => .ok (Expr.und x y)
+        | Expr.tru => .ok x
+        | _ => .ok (Expr.and x y)
 
 /-- A value at an expected range in the `lies` body. -/
 def lowerWertLies (tabs : List UTab) (pnamen : List String)
@@ -1938,7 +1938,7 @@ def lowerWertLies (tabs : List UTab) (pnamen : List String)
     Except String (Expr G104_referenz.gD UCtxLies ULLies (.int lo hi))
   | .lit n =>
     if h1 : lo ≤ n then
-      if h2 : n ≤ hi then .ok (Expr.weiter h1 h2 (Expr.lit n))
+      if h2 : n ≤ hi then .ok (Expr.widen h1 h2 (Expr.lit n))
       else .error "Literal ausserhalb"
     else .error "Literal ausserhalb"
   | .param p =>
@@ -1953,7 +1953,7 @@ def lowerWertLies (tabs : List UTab) (pnamen : List String)
           | .error e => .error e
           | .ok v =>
             if h1 : lo ≤ a then
-              if h2 : b ≤ hi then .ok (Expr.weiter h1 h2 (Expr.var v))
+              if h2 : b ≤ hi then .ok (Expr.widen h1 h2 (Expr.var v))
               else .error "Parameter ausserhalb"
             else .error "Parameter ausserhalb"
       | _, _ => .error "Parameter ohne G-Form"
@@ -1962,7 +1962,7 @@ def lowerWertLies (tabs : List UTab) (pnamen : List String)
     | .error e => .error e
     | .ok t =>
       if h1 : lo ≤ t.weit.1 then
-        if h2 : t.weit.2 ≤ hi then .ok (Expr.weiter h1 h2 t.term)
+        if h2 : t.weit.2 ≤ hi then .ok (Expr.widen h1 h2 t.term)
         else .error "Wert ausserhalb"
       else .error "Wert ausserhalb"
 
@@ -1973,7 +1973,7 @@ def lowerWertLies (tabs : List UTab) (pnamen : List String)
     value widens. -/
 def lowerSaetzeLies (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : List UStmt → URet → Except String UKoerpLies
-  | [], .wert (.slot b f ix) =>
+  | [], .val (.slot b f ix) =>
     if !(strEq b "k" && strEq f "stand") then
       .error "Rueckgabe ohne G-Form"
     else
@@ -1984,12 +1984,12 @@ def lowerSaetzeLies (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok (Endblock.ret
-            (ErgExpr.wert (Expr.durch (Expr.var Var.hier)
+            (ErgExpr.val (Expr.thru (Expr.var Var.here)
               G104_referenz.GTab.Konto rfl
               G104_referenz.GKontoFeld.stand i
               G104_referenz.gDarf_lies_Konto))
             (List.Perm.refl _))
-  | [], .wert (.tab b f ix) =>
+  | [], .val (.tab b f ix) =>
     if !(strEq b "Konto" && strEq f "stand") then
       .error "Rueckgabe ohne G-Form"
     else
@@ -2000,14 +2000,14 @@ def lowerSaetzeLies (tabs : List UTab) (pnamen : List String)
         | .error e => .error e
         | .ok i =>
           .ok (Endblock.ret
-            (ErgExpr.wert (Expr.slot G104_referenz.GTab.Konto
+            (ErgExpr.val (Expr.slot G104_referenz.GTab.Konto
               G104_referenz.GKontoFeld.stand i
               G104_referenz.gDarf_lies_Konto))
             (List.Perm.refl _))
-  | [], .wert s =>
+  | [], .val s =>
     match lowerWertLies tabs pnamen ptypen 0 100 s with
     | .error e => .error e
-    | .ok v => .ok (Endblock.ret (ErgExpr.wert v) (List.Perm.refl _))
+    | .ok v => .ok (Endblock.ret (ErgExpr.val v) (List.Perm.refl _))
   | _, _ => .error "Lies-Rumpf ohne G-Form"
 
 /-! ## Program assembly -/
@@ -2018,7 +2018,7 @@ def lowerSaetzeLies (tabs : List UTab) (pnamen : List String)
 def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
     (b2 : UKoerpLies) : Programm G104_referenz.gD where
   invariante := fun i => nomatch i
-  requires := fun _ => Expr.wahr
+  requires := fun _ => Expr.tru
   ensures
     | G104_referenz.GFn.einzahlen => e1
     | G104_referenz.GFn.lies => e2
@@ -2083,20 +2083,20 @@ def tt104 : List Token :=
   [.wort "module", .ident "beispiel", .zeichen "::", .ident "referenz",
    .zeichen "{",
    .wort "const", .ident "NKONTO", .zeichen ":", .wort "u32",
-   .zeichen "=", .zahl 2, .zeichen ";",
+   .zeichen "=", .num 2, .zeichen ";",
    .wort "type", .ident "Betrag", .zeichen "=",
-   .wort "u32", .wort "in", .zahl 0, .zeichen "..", .zahl 10,
+   .wort "u32", .wort "in", .num 0, .zeichen "..", .num 10,
    .zeichen ";",
    .wort "type", .ident "Stand", .zeichen "=",
-   .wort "u32", .wort "in", .zahl 0, .zeichen "..", .zahl 100,
+   .wort "u32", .wort "in", .num 0, .zeichen "..", .num 100,
    .zeichen ";",
    .wort "table", .ident "Konto", .wort "count", .ident "NKONTO",
    .zeichen "{", .wort "slot", .zeichen "{", .ident "stand",
    .zeichen ":", .ident "Stand", .zeichen ",", .zeichen "}",
    .zeichen "}",
    .wort "lock", .ident "M", .wort "protects", .zeichen "{",
-   .ident "stand", .zeichen "}", .wort "rank", .zahl 0,
-   .wort "held", .zeichen "<=", .zahl 50, .wort "ops", .zeichen ";",
+   .ident "stand", .zeichen "}", .wort "rank", .num 0,
+   .wort "held", .zeichen "<=", .num 50, .wort "ops", .zeichen ";",
    .wort "impl", .wort "fn", .ident "einzahlen", .zeichen "(",
    .ident "k", .zeichen ":", .wort "ptr", .zeichen "<",
    .wort "normal", .zeichen ",", .wort "rw", .zeichen ">",
@@ -2116,10 +2116,10 @@ def tt104 : List Token :=
    .zeichen ".", .wort "slots", .zeichen ",", .wort "writes",
    .ident "k", .zeichen ".", .wort "slots", .zeichen ",",
    .wort "locks", .ident "M", .zeichen "}",
-   .wort "costs", .zeichen "<=", .zahl 16, .wort "ops",
+   .wort "costs", .zeichen "<=", .num 16, .wort "ops",
    .zeichen "{", .ident "k", .zeichen ".", .wort "slots",
    .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
-   .ident "stand", .zeichen "=", .zahl 100, .zeichen ";",
+   .ident "stand", .zeichen "=", .num 100, .zeichen ";",
    .ident "lies", .zeichen "(", .ident "k", .zeichen ",",
    .ident "i", .zeichen ")", .zeichen ";", .zeichen "}",
    .wort "impl", .wort "fn", .ident "lies", .zeichen "(",
@@ -2136,7 +2136,7 @@ def tt104 : List Token :=
    .wort "effects", .zeichen "{", .wort "reads", .ident "k",
    .zeichen ".", .wort "slots", .zeichen ",", .wort "locks",
    .ident "M", .zeichen "}",
-   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops",
+   .wort "costs", .zeichen "<=", .num 8, .wort "ops",
    .zeichen "{", .wort "return", .ident "k", .zeichen ".",
    .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
    .zeichen ".", .ident "stand", .zeichen ";", .zeichen "}",
@@ -2250,8 +2250,8 @@ def uExp104 : UProg :=
           (.slot "k" "stand" (.param "i"))],
         saetze := [.assign "k" "stand" (.param "i") (.lit 100),
           .call "lies" [.freshPtr "Konto" false,
-            .wert (.param "i")]],
-        rueck := .keine },
+            .val (.param "i")]],
+        rueck := .empty },
       { name := "lies",
         params := [("k", .ptr 0 false), ("i", .index 2)],
         parten := [.ptr 0 false, .index 0],
@@ -2260,7 +2260,7 @@ def uExp104 : UProg :=
         sichert := [.cmp "==" .erg
           (.slot "k" "stand" (.param "i"))],
         saetze := [],
-        rueck := .wert (.slot "k" "stand" (.param "i")) }] }
+        rueck := .val (.slot "k" "stand" (.param "i")) }] }
 
 /-! ## Shape equality on U (Bool pins, like `beqTopTief`) -/
 
@@ -2285,7 +2285,7 @@ def beqTy : Ty → Ty → Bool
   | .bool, .bool => true
   | .opt n, .opt m => n == m
   | .sum cs, .sum ds => beqOptIntPairList cs ds
-  | .grund n, .grund m => n == m
+  | .why n, .why m => n == m
   | .never, .never => true
   | .fl a b, .fl c d => beqIntPair a c && beqIntPair b d
   | .fnptr n, .fnptr m => n == m
@@ -2316,11 +2316,11 @@ def beqUSide : USide → USide → Bool
 def beqUEns : UEns → UEns → Bool
   | .cmp o a b, .cmp p c d =>
     strEq o p && beqUSide a c && beqUSide b d
-  | .wahr, .wahr => true
-  | .falsch, .falsch => true
-  | .und a b, .und c d => beqUEns a c && beqUEns b d
-  | .oder a b, .oder c d => beqUEns a c && beqUEns b d
-  | .nicht a, .nicht b => beqUEns a b
+  | .tru, .tru => true
+  | .fls, .fls => true
+  | .and a b, .and c d => beqUEns a c && beqUEns b d
+  | .or a b, .or c d => beqUEns a c && beqUEns b d
+  | .not a, .not b => beqUEns a b
   | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
     strEq a b && strEq f g && beqUIdx x y
   | _, _ => false
@@ -2333,7 +2333,7 @@ def beqUEnsList : List UEns → List UEns → Bool
 def beqUArg : UArg → UArg → Bool
   | .var a, .var b => strEq a b
   | .freshPtr a w, .freshPtr b v => strEq a b && w == v
-  | .wert a, .wert b => beqUSide a b
+  | .val a, .val b => beqUSide a b
   | _, _ => false
 
 def beqUArgList : List UArg → List UArg → Bool
@@ -2359,8 +2359,8 @@ def beqUStmtList : List UStmt → List UStmt → Bool
   | _, _ => false
 
 def beqURet : URet → URet → Bool
-  | .keine, .keine => true
-  | .wert a, .wert b => beqUSide a b
+  | .empty, .empty => true
+  | .val a, .val b => beqUSide a b
   | .bool a, .bool b => beqUEns a b
   | _, _ => false
 

@@ -483,14 +483,14 @@ linear ghost type Duty(farbtest);   -- the parameter is the NAME of a `check` de
 | `boolty` | | `Ty.bool` |
 | `nevertype` | the type without a value: a body `-> never` can derive **no** `return` | `Ty.never`, `Wert D .never = Empty` («SG-18») |
 | `variants` (`tagged`) | a case index **and** its payload, no other shape | `Ty.sum cases`, value `Σ i, Nutzlast (cases.get i)` |
-| `reason` values (§9) | one of `n` declared grounds | `Ty.grund n`, value `Fin n` |
+| `reason` values (§9) | one of `n` declared grounds | `Ty.why n`, value `Fin n` |
 | `fnptr` | the value is a function **of exactly this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.sig f = sig}` («SG-8») |
 | `ptrty` (§3) | a capability naming a declared carrier and a right | `Ty.ptr tab rw` |
 | `linear type m [order]` | a resource in the context Λ, with a stage | `D.Marke`, `D.stufen`, `Res.marke m stufe` («SG-14») |
 | `structty`, `array`, `path` to a type | a compound is a **table with `count 1`** (a record) or `count N` (an array): the field is a slot field, the element index an index type | `D.Tab` with `count`, `Feld`, `typ` — SUGAR over §9 |
 | a record as a **VALUE** (`-> P`, `p : P`, `let x : P`, `P(a: …)` «B7») | **NO `Ty`, and that is named and priced, not an oversight.** The row above is the CARRIER lowering; it does not make a record a value. The list in this table is complete: there is no product former, so a result, a parameter or a `let` of record type has no form at all — `gabbro lean-g` refuses each by name (`LG002`) and says which carrier form does work (`ptr<normal, r> P`) | **none.** `TODO.md` `O15`: a `Ty.prod` was priced on 2026-09-15 and REFUSED — measured over all 113 corpus programs, it gains **zero**; what pays first is the `Endblock` binder (`O14` (2)) and the C side of aggregate values, which `Ty.sum` already owes |
 | `opaque` | no operation but equality and passing — a range `n .. n`-free `int` with no arithmetic derivable *(by absence of a constructor, not by a rule)* | `Ty.int` without `add`/… at the use site; the pass `M1` today, the derivation tomorrow |
-| `field … @ bitpos`, `embeds`, `offset_into`, `reserved`, `where` | layout is the EMITTER's; the value read is of the field's type and `where` is a check at the read (§9, `Block.pruefung`) | layout: none («SG-16», §16 (4)) |
+| `field … @ bitpos`, `embeds`, `offset_into`, `reserved`, `where` | layout is the EMITTER's; the value read is of the field's type and `where` is a check at the read (§9, `Block.check`) | layout: none («SG-16», §16 (4)) |
 
 ---
 
@@ -512,8 +512,8 @@ version answers the question at the type instead of at an alias analysis:
 | | rule | Lean |
 |---|---|---|
 | **what a pointer points at** | a `ptr<space, right> T` is a value of type *"the carrier `T`, number `n`, with right `rw`"*. Its only producer is the name of a **declared** carrier (`&T`, §4); there is no address of an expression and no arithmetic on a pointer | `Ty.ptr n rw`; `Expr.ptrOf t n (ht : D.tabNr n = some t) rw` |
-| **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the owner mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.durch p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
-| **a write through a pointer** | needs the type `ptr<…, rw>` **and** the write right of the enclosing contract on `T` (`R002`/`R003` as shape) | `Stmt.assignDurch (p : Expr … (.ptr n true)) … (hw : V.schreibt t = true)`; theorem `zeiger_schreibt_mit_recht` |
+| **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the owner mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.thru p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
+| **a write through a pointer** | needs the type `ptr<…, rw>` **and** the write right of the enclosing contract on `T` (`R002`/`R003` as shape) | `Stmt.assignThru (p : Expr … (.ptr n true)) … (hw : V.schreibt t = true)`; theorem `zeiger_schreibt_mit_recht` |
 | **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value. **At a CALL it is not harmless any more (2026-10-17):** two pointer arguments of one root, one of the two parameters writable or `own`, are refused (`R014`; an untraceable pointer is unknown and equals every root), and an exported function that assumes two pointer parameters distinct says so (`R015`, a hint) — `SPRACHE.md` §5, `A1-OWN-PAPER.md` | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias; at the call boundary `ParamGetrennt` / `ObjGetrennt` and `r014_objGetrennt` (SATZKARTE §74, §75) |
 | **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own> T` is SUGAR for *"`T` is `owner m` and the callee `consumes m` … `allocs m`"* — the mark is borrowed for the call and comes back. Two `own` parameters of one carrier are then not derivable (`R004`): the mark is one («SG-9»). An `own` parameter also lets the LLVM backend emit `noalias` | `D.eigner`, `eigner_nie_erzeugt` |
 | **`space`** | the barrier follows from the space; the space of a carrier is a declaration fact and the emitter's concern | none — a declaration attribute; `retires … from space` (§6) names it |
@@ -521,7 +521,7 @@ version answers the question at the type instead of at an alias analysis:
 
 > **Bytes — in the core since the evening of 2026-09-09 («SG-16»).** A byte carrier is a table
 > whose field is `u8 in 0 .. 255`; `n` bytes from index `i` are ONE number in `0 .. 256ⁿ−1`
-> (`Expr.leseBytes`, `Stmt.schreibBytes`), and the attribute at the read is the bound of the
+> (`Expr.getBytes`, `Stmt.putBytes`), and the attribute at the read is the bound of the
 > whole run: `hi(i) + n ≤ count`. A `format` over a byte carrier is a **view**: `offset_into`,
 > `@bitpos`, `embeds … scale` are reads of this form (`Zucker.lean` §4, `bitfeld`, `embeds`),
 > and **two views on the same bytes read the same world** — the second view of the second
@@ -662,24 +662,24 @@ placelist  = place { "," place } ;
 | `a +\| b` | one shared integer range `lo .. hi` (`M154` otherwise); a literal operand takes the other's range | `lo .. hi`, the sum clamped to it | `Zahl.addS` |
 | `< <= == != > >=` on integers | | `bool` | `Expr.lt le eq` (the rest by `nicht`, swapped operands) |
 | `< <=` on floats | both operands finite by type — the comparison is **total**, the NaN quadrant of «F» does not exist («SG-17») | `bool` | `Expr.fllt`, `Expr.flle` |
-| `&& \|\| !` | | `bool` | `Expr.und oder nicht` |
-| a narrower range at a wider place | `lo' ≤ lo ∧ hi ≤ hi'` — the ONE implicit widening («SG-1», E3) | `lo' .. hi'` | `Expr.weiter h1 h2` |
+| `&& \|\| !` | | `bool` | `Expr.and oder nicht` |
+| a narrower range at a wider place | `lo' ≤ lo ∧ hi ≤ hi'` — the ONE implicit widening («SG-1», E3) | `lo' .. hi'` | `Expr.widen h1 h2` |
 | `int` literal `n` | | `n .. n` | `Expr.lit n` |
-| `true`, `false` | | `bool` | `Expr.wahr`, `Expr.falsch` |
+| `true`, `false` | | `bool` | `Expr.tru`, `Expr.fls` |
 | `place` = a local | | its type | `Expr.var x` |
 | `place` = a `static`/`atomic` | **the guards of the global are in Λ** (`H007`, §11) | its type | `Expr.glob g (hL : gdarf D g Λ)` |
 | `place` = `T.slots[i].f`, `r[i].f` | **`i : index into T`** (CHANGED «SG-4»: no other type reaches an index — a wider number reaches it through `narrow`, §7) **and the guards of `T` are in Λ** («SG-6a») | the field's type | `Expr.slot t f i hL` |
-| `n` bytes at `i` of a byte carrier | `i : lo .. hi` with `0 ≤ lo` and `hi + n ≤ count`; guards of the carrier in Λ («SG-16») | `0 .. 256ⁿ − 1` | `Expr.leseBytes`; theorem `bytes_in_tabelle` |
-| `place` = `p->f`, `p[i].f` | the same, through a pointer (§3) | | `Expr.durch` |
+| `n` bytes at `i` of a byte carrier | `i : lo .. hi` with `0 ≤ lo` and `hi + n ≤ count`; guards of the carrier in Λ («SG-16») | `0 .. 256ⁿ − 1` | `Expr.getBytes`; theorem `bytes_in_tabelle` |
+| `place` = `p->f`, `p[i].f` | the same, through a pointer (§3) | | `Expr.thru` |
 | `Some(e)`, `None` | `e : index into T` | `option index into T` | `Expr.some`, `Expr.none` |
 | `x.is_some()` / match on `option` | | `bool` | `Expr.istSome` |
-| `Variant(e)` (a `tagged` case) | the payload has the case's type; the case index is in range by shape | the sum type | `Expr.fall cs i nutz` |
-| `Variant()` / bare `Variant` (a nullary `tagged` case, lane 167) | nothing to carry — the case index alone says which case it is | the sum type | `Expr.fall cs i` with the empty payload |
+| `Variant(e)` (a `tagged` case) | the payload has the case's type; the case index is in range by shape | the sum type | `Expr.case cs i nutz` |
+| `Variant()` / bare `Variant` (a nullary `tagged` case, lane 167) | nothing to carry — the case index alone says which case it is | the sum type | `Expr.case cs i` with the empty payload |
 | `Variant(e)` refused (lane 167) | an unknown or ambiguous case (`N280`); a missing payload (`N281`); a payload on a nullary case (`N282`); a bare name over a payload case (`N283`); labels at a case (`N284`) — the payload RANGE stays `M101`'s, its SHAPE `M140`'s | — | — |
-| `R::F` | | `reason R` | `Expr.grund n r` |
+| `R::F` | | `reason R` | `Expr.why n r` |
 | `&f` | `f` has exactly the signature of the `fnptr` at the place | `fn(…)` | `Expr.fnref f n (h : D.sig f = n)` |
 | `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
-| `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.altGlob hL`, `Expr.altSlot hL` |
+| `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.oldG hL`, `Expr.oldS hL` |
 | `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
 | `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
@@ -746,7 +746,7 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 | `threads` | the domain of the scheduler table | `forallSlots` over the declared `Threads` table |
 | `mappings of root` | the leaves of a `walk` (§9): a nested `traverse` per level, which is a nested `forallSlots` | `forallSlots` per level (SUGAR, «SG-16») |
 | `Held(L)`, `Held(L, shared)` | **`Res.held L ∈ Λ`** — not a value, a fact about the derivation; `shared` is a second witness kind of the same lock (a `locks shared` block adds it) | the index `Λ` of every `Expr`/`Stmt`; theorem `slot_hat_waechter` |
-| `p => q` | `!p \|\| q` | `Expr.oder (Expr.nicht p) q` |
+| `p => q` | `!p \|\| q` | `Expr.or (Expr.not p) q` |
 | `e in domain` | `exists k in domain : k == e` | SUGAR |
 
 > **The price is unquantified and probably the largest of the whole design:** there is no
@@ -1030,40 +1030,40 @@ enclosing `locks` blocks and the statements before the position:
 |---|---|---|---|
 | `x = e;` (local) | `e` has the type of `x` | — | `Stmt.assignVar` |
 | `T.slots[i].f = e;` | `i : index into T`; guards of `T` in Λ; **`writes T` in the contract** | — | `Stmt.assignSlot t f i e hw hL`; theorem `zuweisung_hat_recht` |
-| `p->f = e;` | the same, and `p : ptr<…, rw>` | — | `Stmt.assignDurch` |
+| `p->f = e;` | the same, and `p : ptr<…, rw>` | — | `Stmt.assignThru` |
 | `G = e;` (static) | guards of `G` in Λ; `writes G` | — | `Stmt.assignGlob` |
-| `transition T.slots[i].s : A -> B;` | `A -> B` declared at `state`; `B` in the field's range; `writes T`; guards | **`logik vorzustand`** if the field is not on `A` | `Stmt.uebergang`; theorem `uebergang_erklaert` |
+| `transition T.slots[i].s : A -> B;` | `A -> B` declared at `state`; `B` in the field's range; `writes T`; guards | **`logik vorzustand`** if the field is not on `A` | `Stmt.shift`; theorem `uebergang_erklaert` |
 | `x += e;` etc. | SUGAR for `x = x + e;` | — | `Expr.add` |
 | `let x = e;` | binds; `mut` is a surface flag | — | `Block.bind e rest` |
 | `let x = f(…);` | as a call; `f` has a return type and no `or` | — | `Block.bindCall` |
 | `let x = p(…);` | indirect, against the type of `p` | — | `Block.bindCallInd` |
 | `let x = f(…) else (e) endblock;` | `f` has `or R`; `e : reason R` in the `else`; the `else` does not fall off | — | `Block.bindCallElse f args he hp hr err rest` |
 | `let x = axiom(…);` | the axiom's `writes` ⊆ the contract's | **`hardware (annahme a)`** if the answer is outside the declared type (every type has a decoding since 2026-09-15, finding G1: a sum is `marke + cases * last` (`cases` the number of cases), a float its binary64 bits, a pointer an address the loaded image names; `einpassen_voll`); a declared type WITHOUT a value (`-> never`, an empty range) admits no answer: the call does not return, named `HaltArt.nieZurueck` | `Block.bindAxiom` |
-| `let x = R;` (register) | `R` has a readable class (§10); the value is held against the type AND against the register's declared promise (`requires` without `else`) | **`hardware (register r)`** if outside the type; **`hardware (geraet r)`** if the promise fails — the device assumption, named at the register | `Block.regLies r hk rest`, `D.rzusage`; theorem `register_lesbar` |
-| `let x = R else (e) endblock;` | `R` carries `requires … else` (§10): the promise is checked on the binding | — (the `else` runs) | `Block.regLiesElse` |
+| `let x = R;` (register) | `R` has a readable class (§10); the value is held against the type AND against the register's declared promise (`requires` without `else`) | **`hardware (register r)`** if outside the type; **`hardware (geraet r)`** if the promise fails — the device assumption, named at the register | `Block.regRead r hk rest`, `D.rzusage`; theorem `register_lesbar` |
+| `let x = R else (e) endblock;` | `R` carries `requires … else` (§10): the promise is checked on the binding | — (the `else` runs) | `Block.regReadElse` |
 | `let x = A awaits { p, q };` | `{ p, q }` is **exactly** the payload declared at `A` («SG-13») | **`hardware (sichtbarkeit A10)`** if the machine does not deliver the publication — the memory model, as an outcome | `Block.awaits g payload hp hL rest`, `Orakel.sichtbar`; theorem `awaits_paart` |
 | `let x = A exchange update(v) { … } …;` | read, compute, write as **one** statement; `bounded`/`on_exceeded` as at `retry` | — | `Block.exchange g neu hw hL rest` |
 | `A = e publishes { p, q };` | the declared payload; `writes A` | — | `Stmt.publish`; theorem `publish_paart` |
 | `if c blk else blk` | | — | `Stmt.ite` |
-| `match e { arms }` | one arm per case (see production) | — | `Stmt.onTag`, `Stmt.onOption`, `Stmt.onGrund`; `Arms`, `GrundArms` |
+| `match e { arms }` | one arm per case (see production) | — | `Stmt.onTag`, `Stmt.onOption`, `Stmt.onWhy`; `Arms`, `GrundArms` |
 | `narrow x to lo .. hi else endblock` | the `else` does not fall off; after it `x : lo .. hi` | — | `Block.narrow e lo hi sonst rest` |
 | `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | **SUGAR since 2026-09-15**: `Block.arenaAlloc` (`grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`) = `Block.narrow` on the `used` counter + `Stmt.assignSlot` + `Stmt.assignGlob`; theorems `arenaAlloc_unter_schranke`/`_an_schranke`, bridge `arenaAlloc_gdw_modell` to `Arena.alloc`. *The generation stays checker state (`N211`); the exporter does not build the form yet — `TODO.md` O14* |
 | `reset A;` | `A` is a declared arena; `writes A` | — | **SUGAR since 2026-09-15**: `Stmt.arenaReset` = `Stmt.assignGlob zaehl 0`; theorem `arenaReset_stand`. The model function `Arena.reset` keeps the generation half: every older index is stale by typing |
-| `narrow x to finite` / a float range | | — | `Block.gleitNarrow` |
-| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `dokumente/BEWEIS.md` F1) | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
+| `narrow x to finite` / a float range | | — | `Block.floatNarrow` |
+| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `dokumente/BEWEIS.md` F1) | `Block.float`, `gleitLit`, `gleitVon` («SG-17») |
 | `f(…);` | see §6 | `logik (vorbedingung f)` … from the callee | `Stmt.call`, `Stmt.callInd` |
 | `axiom(…);` | | `hardware (annahme a)` | `Stmt.axiomCall` |
-| `R = e;` (register) | `R` has a writable class (§10) | — (the device is outside the world) | `Stmt.regSchreib`; theorem `register_schreibbar` |
+| `R = e;` (register) | `R` has a writable class (§10) | — (the device is outside the world) | `Stmt.regWrite`; theorem `register_schreibbar` |
 | `transition t { R.b : 0 -> 1 }` | `R` writable, its declared mirror `m` readable; one read of `m`, one write of `R` with the bits under the mask replaced | — | `Stmt.transition r hk m hm hl maske bits`; theorem `transition_hat_spiegel` |
-| `T.slots[i].f = e` on `n` bytes | a byte-carrier write of `n` bytes at `i`, `hi(i) + n ≤ count`, `writes T`, guards | — | `Stmt.schreibBytes` |
+| `T.slots[i].f = e` on `n` bytes | a byte-carrier write of `n` bytes at `i`, `hi(i) + n ≤ count`, `writes T`, guards | — | `Stmt.putBytes` |
 | `locks L blk`, `observes D blk` | §11 | — | `Stmt.locks L hr body` |
 | `breaking I blk` | §6 | — | `Stmt.breaking` |
 | `advances a -> b;` | the mark is at `a` in Λ, `b = a+1 < stages` | — | `Stmt.advances m a h hs`; theorem `stufe_steigt` |
 | `retires` (at the head, §6) | the mark at stage `s` in Λ | — | `Stmt.retires m s h a` |
 | `return e;` | `e` has the return type; **Λ ≡ allocs** | `logik (nachbedingung f)`, `logik (invariante i)` at the call | `Stmt.ret`, `Endblock.ret`; theorem `rueckgabe_bilanziert` |
-| `return R::F;` | the function has `or R` | — | `Stmt.retGrund`, `Endblock.retGrund` |
+| `return R::F;` | the function has `or R` | — | `Stmt.retWhy`, `Endblock.retWhy` |
 | `leave l;`, `next l;` | inside a loop (`l = true`) | — | `Stmt.leave`, `Stmt.next` |
-| a `format` field's `where`, a `requires` at a read | the condition, or the named `else` (§9) | — | `Block.pruefung c sonst rest` |
+| a `format` field's `where`, a `requires` at a read | the condition, or the named `else` (§9) | — | `Block.check c sonst rest` |
 
 *Lean:* `Stmt`, `Block` (falls off: outcome `ok`), `Endblock` (does not: outcome `EndAusgang`
 has no `ok`), `Arms`, `GrundArms` — `Syntax.lean` §4. **Theorem `exec_rahmen`** (`Satz.lean`
@@ -1515,9 +1515,9 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `wrapping` | a field whose width, not range, is the type: `+` on it is `(a + b) % 2^w` — SUGAR over `rem` with the width as denominator | `Expr.rem` with a literal `2^w` |
 | `by ops` | the field is in the `writes` of the generated operations and of no other function | `D.sigNr … .schreibt` |
 | `walk W levels n { node : [Pte; 512], down : f when p, leaf : q }` | `n` tables of `count 512`, one per level; `mappings of` is a `traverse` per level, nested `n` deep, filtered by `p`/`q` — SUGAR («SG-16») | `D.Tab` per level; `Stmt.traverse` nested; `Expr.forallSlots` nested |
-| `format F endian e { field @bitpos where p, … }` | a **view** on a byte carrier: a field `@[hi:lo]` at offset `o` is `(bytes(o, n) >> lo) & mask`, `embeds … scale s` multiplies, `endian big` reverses the byte list, `offset_into` is the offset's bound at the read; **`where p` is a check at the field's read**: the condition, or the named `else` of the enclosing `let … else` | `Expr.leseBytes`, `Zucker.Expr.bitfeld/embeds`, `bytesZuZahlBig`; `Block.pruefung c sonst rest` («SG-16») |
-| `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`). **`pub` since 2026-09-28** — see below | `Ty.grund n` |
-| `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair | `D.erlaubt t f von nach`; `Stmt.uebergang` («SG-19») |
+| `format F endian e { field @bitpos where p, … }` | a **view** on a byte carrier: a field `@[hi:lo]` at offset `o` is `(bytes(o, n) >> lo) & mask`, `embeds … scale s` multiplies, `endian big` reverses the byte list, `offset_into` is the offset's bound at the read; **`where p` is a check at the field's read**: the condition, or the named `else` of the enclosing `let … else` | `Expr.getBytes`, `Zucker.Expr.bitfeld/embeds`, `bytesZuZahlBig`; `Block.check c sonst rest` («SG-16») |
+| `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`). **`pub` since 2026-09-28** — see below | `Ty.why n` |
+| `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair | `D.erlaubt t f von nach`; `Stmt.shift` («SG-19») |
 
 ```gabbro
 format Elf64 endian little {
@@ -1710,15 +1710,15 @@ the write replaces; every other bit comes from the mirror.
 | spelling | attribute | outcome | Lean |
 |---|---|---|---|
 | `reg R : τ @off class K` | a register of type `τ` and class `K` — **outside the world**: a device is not a carrier | | `D.Reg`, `D.rtyp`, `D.rklasse`, `Regklasse` |
-| `let x = R;` | `K` is readable (`r`, `rw`, `w1c`, `rc`); the machine answers **raw**, the answer is held against `τ` | **`hardware (register r)`** if outside `τ` | `Block.regLies r hk rest`; `Orakel.regLies` |
-| `let x = R else (e) endblock;` | additionally `R`'s `requires p` is checked **on the binding**; the `else` does not fall off | — | `Block.regLiesElse r hk zusage sonst rest` |
-| `R = e;` | `K` is writable (`w`, `rw`, `w1c`) | — (the world is unchanged: the device is not in it) | `Stmt.regSchreib r hk e`; `Orakel.regSchreib` |
+| `let x = R;` | `K` is readable (`r`, `rw`, `w1c`, `rc`); the machine answers **raw**, the answer is held against `τ` | **`hardware (register r)`** if outside `τ` | `Block.regRead r hk rest`; `Orakel.regLies` |
+| `let x = R else (e) endblock;` | additionally `R`'s `requires p` is checked **on the binding**; the `else` does not fall off | — | `Block.regReadElse r hk zusage sonst rest` |
+| `R = e;` | `K` is writable (`w`, `rw`, `w1c`) | — (the world is unchanged: the device is not in it) | `Stmt.regWrite r hk e`; `Orakel.regSchreib` |
 | `transition t { R.b : 0 -> 1 }` | `R` writable, `m = mirrors(R)` readable (a declaration fact, `D.spiegel`); ONE read of `m`, ONE write of `R`: `(m & ~mask) \| bits` | | `Stmt.transition` — core, not sugar («SG-15») |
 | `class rw in setup, r in live` | the class is a function of the **stage** of the order mark in Λ: `hk` is `(rklasse r (stage of m in Λ)).lesbar` | | `D.rklasse` per stage — the core carries one class per register and the staged form is its `D` built per stage |
 | `fields { b @31 class r }` | a field with its own class: a register per field — SUGAR | | `D.Reg` per field |
 | `bank B at e stride s count n { reg … }` | `n` registers with an index of `index into B` — a table of registers | | `D.Reg` per index; the index is `Ty.index n` |
 | `mirrors W from R` | the source of the carried bits — a declaration fact read by the `transition` sugar | | none |
-| `requires p` at `reg` without `else` | **the device's promise, held at every read** — a value that breaks it is `hardware (geraet r)`: the assumption about the device, named at its register (turn 3 of 2026-09-09: "devices go through hardware assumptions") | `hardware (geraet r)` | `D.rzusage r`, `Block.regLies` |
+| `requires p` at `reg` without `else` | **the device's promise, held at every read** — a value that breaks it is `hardware (geraet r)`: the assumption about the device, named at its register (turn 3 of 2026-09-09: "devices go through hardware assumptions") | `hardware (geraet r)` | `D.rzusage r`, `Block.regRead` |
 | `reg R : τ @off class K … depends { C1, C2 }` | the device-state carriers the answer of `R` may rest on — tables or globals of this unit, bare names (`N258` refuses `T.feld`: a slot is not a carrier in the model); a function reading `R` holds by signature a lock guarding each carrier some function writes, or the carrier is written by none (`N256`) | `hardware (reglokal R)`, one manifest line per register with its carriers | `D.rtraeger r` |
 
 **`depends` carries the device into the footprint (lane 140).** `ziel_ort_geraet` admits a
@@ -2606,7 +2606,7 @@ shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
 | **«SG-24» counting** | `count k in slots of T : p` as an expression (NEW, §4) | the predicate `p` | the traversal that counts it — SUGAR for a call to the table's **generated** count function, like `ops insert/remove` (§9): `Block.bindCall` with its `requires`; over **one** table only, a cross-table count is a `group` invariant, never a hand-maintained counter | `Block.bindCall` |
 | **«SG-25» first match** | NO new syntax: bind the result into a variable before the loop, `leave` out, read it after | which match is first (the logic) | termination and the bound — still from the domain; `assignVar` plus `leave`, never a hand-threaded cursor or bitmap | `Stmt.assignVar`, `Stmt.leave` |
 | **«SG-26» general option** | NO new syntax: over non-index `T` spell the two-case `tagged` sum; `match` over it is exhaustive by shape | the case split | the shape — over `index into T` it stays the carrier's index option (`Expr.some`/`none`); nothing is lost and no constructor is added for what a declaration already says | `Ty.sum`, `Arms` |
-| **«SG-27» variable tails** | NO new syntax: `backed k` plus `narrow i to 0 ..< k` before the access (§9) | that the entry length check holds once | everything after: the bound as an attribute at every access (`leseBytes`/`schreibBytes` with the run's bound) — a runtime length the declaration does not know would be a hand-threaded check at every access, i.e. manual plumbing | `Expr.leseBytes`, `Block.narrow` |
+| **«SG-27» variable tails** | NO new syntax: `backed k` plus `narrow i to 0 ..< k` before the access (§9) | that the entry length check holds once | everything after: the bound as an attribute at every access (`leseBytes`/`schreibBytes` with the run's bound) — a runtime length the declaration does not know would be a hand-threaded check at every access, i.e. manual plumbing | `Expr.getBytes`, `Block.narrow` |
 
 **What deliberately stays a hardware assumption** (no new constructor, no new
 proof duty): the lock primitive's exclusion (W3), the memory-model pairing A10
@@ -2686,7 +2686,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
   abolished keyword, but the guardian cannot see the difference and it is right
   not to try. The outcome is now `Logik.vorzustand` (the pre-state, PRUEFER.md
   «B26» — a word that was never a keyword): `Semantik.lean` ctor plus its two
-  uses, three prose cells here. `Stmt.uebergang` and `uebergang_erklaert` stand
+  uses, three prose cells here. `Stmt.shift` and `uebergang_erklaert` stand
   — the guardian does not read dotted names, and the statement is not the
   outcome.
 - [ ] The four marks of the second version stand: `narrow` count ≤ 24 sites; the 17 logic

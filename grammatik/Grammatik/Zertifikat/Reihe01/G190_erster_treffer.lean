@@ -120,14 +120,14 @@ abbrev gL_erster_frei_belegen : List (Res gD) := [Res.held (D := gD) GLock.K]
 theorem gDarf_erster_frei_belegen_Plaetze : darf gD GTab.Plaetze gL_erster_frei_belegen := by unfold darf; decide
 
 def gBody_erster_frei_belegen : Endblock gD (vertragVon gD g_erster_frei_belegen) false gCtx_erster_frei_belegen gL_erster_frei_belegen :=
-  (.cons (.traverse GTab.Plaetze .wahr (.cons (.ite (Expr.durch (D := gD) (.var (.dort .hier)) GTab.Plaetze rfl GPlaetzeFeld.frei ((.var .hier)) gDarf_erster_frei_belegen_Plaetze) (.cons (.assignDurch (.var (.dort .hier)) GTab.Plaetze rfl GPlaetzeFeld.frei ((.var .hier)) .falsch (by decide) gDarf_erster_frei_belegen_Plaetze) (.cons (.leave rfl) .nil)) .nil) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.traverse GTab.Plaetze .tru (.cons (.ite (Expr.thru (D := gD) (.var (.there .here)) GTab.Plaetze rfl GPlaetzeFeld.frei ((.var .here)) gDarf_erster_frei_belegen_Plaetze) (.cons (.assignThru (.var (.there .here)) GTab.Plaetze rfl GPlaetzeFeld.frei ((.var .here)) .fls (by decide) gDarf_erster_frei_belegen_Plaetze) (.cons (.leave rfl) .nil)) .nil) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .erster_frei_belegen => .wahr
+    | .erster_frei_belegen => .tru
   ensures
-    | .erster_frei_belegen => .wahr
+    | .erster_frei_belegen => .tru
   rumpf
     | .erster_frei_belegen => gBody_erster_frei_belegen
 

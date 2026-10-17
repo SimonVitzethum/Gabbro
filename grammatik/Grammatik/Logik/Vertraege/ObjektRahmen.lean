@@ -50,12 +50,12 @@ variable {D : Deklaration}
 /-- The position of a variable counted from the BOTTOM of its context: the parameters of a
     body keep their position under every binder the body pushes above them. -/
 def Var.unten : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
-  | _ :: Γ, _, .hier => Γ.length
-  | _ :: _, _, .dort x => x.unten
+  | _ :: Γ, _, .here => Γ.length
+  | _ :: _, _, .there x => x.unten
 
 theorem Var.unten_lt : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), x.unten < Γ.length
-  | _ :: _, _, .hier => by simp [Var.unten]
-  | _ :: _, _, .dort x => by have := Var.unten_lt x; simp only [Var.unten, List.length_cons]; omega
+  | _ :: _, _, .here => by simp [Var.unten]
+  | _ :: _, _, .there x => by have := Var.unten_lt x; simp only [Var.unten, List.length_cons]; omega
 
 /-- The integer a value carries, where its type is a number. -/
 def intVon : (τ : Ty) → Wert D τ → Option Int
@@ -93,17 +93,17 @@ theorem Env.unten_tail_some {τ : Ty} {Γ : Ctx} (ρ : Env D (τ :: Γ)) {j : Na
 
 theorem Env.unten_get : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ),
     ρ.unten x.unten = intVon τ (ρ.get x)
-  | _ :: Γ, _, .cons v ρ, .hier => by simp [Env.unten, Var.unten, Env.get]
-  | _ :: _, _, .cons _ ρ, .dort x => by
+  | _ :: Γ, _, .cons v ρ, .here => by simp [Env.unten, Var.unten, Env.get]
+  | _ :: _, _, .cons _ ρ, .there x => by
       simp only [Env.unten, Var.unten, Env.get]
       rw [if_neg (by have := Var.unten_lt x; omega)]
       exact Env.unten_get ρ x
 
 theorem Env.unten_set : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ) (v : Wert D τ) {j : Nat},
     j ≠ x.unten → (ρ.set x v).unten j = ρ.unten j
-  | _ :: _, _, .cons _ _, .hier, _, _, h => by
+  | _ :: _, _, .cons _ _, .here, _, _, h => by
       simp only [Env.set, Env.unten, Var.unten] at h ⊢; rw [if_neg h, if_neg h]
-  | _ :: Γ, _, .cons _ ρ, .dort x, v, j, h => by
+  | _ :: Γ, _, .cons _ ρ, .there x, v, j, h => by
       simp only [Env.set, Env.unten, Var.unten] at h ⊢
       by_cases hj : j = Γ.length
       · rw [if_pos hj, if_pos hj]
@@ -258,15 +258,15 @@ mutual
 /-- **The object discipline of a statement** (nested blocks included). -/
 def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Prop
   | .assignSlot t _ i _ _ _ => SchreibOk ps t i
-  | .assignDurch _ t _ _ i _ _ _ => SchreibOk ps t i
+  | .assignThru _ t _ _ i _ _ _ => SchreibOk ps t i
   | .assignGlob .. => True
-  | .schreibBytes .. => False
+  | .putBytes .. => False
   | .assignVar x _ => VarFrei ps x
-  | .uebergang t _ _ i _ _ _ _ _ _ => SchreibOk ps t i
+  | .shift t _ _ i _ _ _ _ _ _ => SchreibOk ps t i
   | .ite _ t e => oB t ∧ oB e
   | .onOption _ p a => oB p ∧ oB a
   | .onTag _ arms => oA arms
-  | .onGrund _ arms => oG arms
+  | .onWhy _ arms => oG arms
   | .call f args _ _ => ObjRufOk objs ps f args
   | .callInd .. => False
   | .locks _ _ body => oB body
@@ -275,13 +275,13 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .retry _ _ body ueber => oB body ∧ oB ueber
   | .forever _ _ body => oB body
   | .axiomCall a .. => KeinTabAx a
-  | .regSchreib .. => True
+  | .regWrite .. => True
   | .transition .. => True
   | .publish .. => True
   | .advances .. => True
   | .retires .. => True
   | .ret .. => True
-  | .retGrund .. => True
+  | .retWhy .. => True
   | .leave _ => True
   | .next _ => True
 
@@ -294,20 +294,20 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .bindCallElse f args _ _ _ err rest => ObjRufOk objs ps f args ∧ oE err ∧ oB rest
   | .bindAxiom a _ _ _ _ _ _ rest => KeinTabAx a ∧ oB rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oB rest
-  | .regLies _ _ rest => oB rest
-  | .regLiesElse _ _ _ sonst rest => oE sonst ∧ oB rest
+  | .regRead _ _ rest => oB rest
+  | .regReadElse _ _ _ sonst rest => oE sonst ∧ oB rest
   | .awaits _ _ _ _ rest => oB rest
   | .exchange _ _ _ _ rest => oB rest
   | .narrow _ _ _ sonst rest => oE sonst ∧ oB rest
-  | .pruefung _ sonst rest => oE sonst ∧ oB rest
-  | .gleit _ _ _ _ _ rest => oB rest
-  | .gleitLit _ _ _ rest => oB rest
-  | .gleitVon _ _ _ rest => oB rest
-  | .gleitNarrow _ _ _ sonst rest => oE sonst ∧ oB rest
+  | .check _ sonst rest => oE sonst ∧ oB rest
+  | .float _ _ _ _ _ rest => oB rest
+  | .floatLit _ _ _ rest => oB rest
+  | .floatOf _ _ _ rest => oB rest
+  | .floatNarrow _ _ _ sonst rest => oE sonst ∧ oB rest
 
 def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Prop
   | .ret .. => True
-  | .retGrund .. => True
+  | .retWhy .. => True
   | .leave _ => True
   | .next _ => True
   | .cons s rest => oS s ∧ oE rest
@@ -393,7 +393,7 @@ def ObjA (W : D.Tab → Int → Prop) (ps : List (ObjPar D)) (σ : World D) {V :
     {Γ : Ctx} : Ausgang V l Γ → Prop
   | .ok σ' ρ' => SlotRahmen W σ σ' ∧ ObjInv W ps ρ'
   | .zurueck σ' _ => SlotRahmen W σ σ'
-  | .grund σ' _ => SlotRahmen W σ σ'
+  | .why σ' _ => SlotRahmen W σ σ'
   | .leave _ σ' ρ' => SlotRahmen W σ σ' ∧ ObjInv W ps ρ'
   | .next _ σ' ρ' => SlotRahmen W σ σ' ∧ ObjInv W ps ρ'
   | .logik _ => True
@@ -402,7 +402,7 @@ def ObjA (W : D.Tab → Int → Prop) (ps : List (ObjPar D)) (σ : World D) {V :
 def ObjE (W : D.Tab → Int → Prop) (ps : List (ObjPar D)) (σ : World D) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} : EndAusgang V l Γ → Prop
   | .zurueck σ' _ => SlotRahmen W σ σ'
-  | .grund σ' _ => SlotRahmen W σ σ'
+  | .why σ' _ => SlotRahmen W σ σ'
   | .leave _ σ' ρ' => SlotRahmen W σ σ' ∧ ObjInv W ps ρ'
   | .next _ σ' ρ' => SlotRahmen W σ σ' ∧ ObjInv W ps ρ'
   | .logik _ => True
@@ -629,21 +629,21 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       obtain ⟨x, rfl, op, hop, hrw, htab, hidx⟩ := hok
       simp only [execStmt]
       exact ⟨slotRahmen_schreib σ _ rfl f _ Λ (schreibOk_in hinv hop hrw htab hidx _ _), hinv⟩
-  | .assignDurch p t _ f i e hw hL, hok, σ, ρ, _, hinv => by
+  | .assignThru p t _ f i e hw hL, hok, σ, ρ, _, hinv => by
       obtain ⟨x, rfl, op, hop, hrw, htab, hidx⟩ := hok
       simp only [execStmt]
       exact ⟨slotRahmen_schreib σ _ rfl f _ Λ (schreibOk_in hinv hop hrw htab hidx _ _), hinv⟩
   | .assignGlob g e hw hL, _, σ, ρ, _, hinv => by
       simp only [execStmt]
       exact ⟨slotRahmen_gleich rfl, hinv⟩
-  | .schreibBytes .., hok, _, _, _, _ => hok.elim
+  | .putBytes .., hok, _, _, _, _ => hok.elim
   | .assignVar x e, hok, σ, ρ, _, hinv => by
       simp only [execStmt]
       refine ⟨slotRahmen_gleich rfl, ?_⟩
       intro op hop hrw k hk
       rw [Env.unten_set ρ x _ (hok op hop hrw)] at hk
       exact hinv op hop hrw k hk
-  | .uebergang t f hτ i von nach hn he hw hL, hok, σ, ρ, _, hinv => by
+  | .shift t f hτ i von nach hn he hw hL, hok, σ, ρ, _, hinv => by
       obtain ⟨x, rfl, op, hop, hrw, htab, hidx⟩ := hok
       simp only [execStmt]
       split
@@ -664,7 +664,7 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onTag v arms, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
       exact ObjA.vor (slotRahmen_gleich rfl) (arms_obj arms hok _ _ ρ hlen hinv)
-  | .onGrund r arms, hok, σ, ρ, hlen, hinv => by
+  | .onWhy r arms, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
       exact ObjA.vor (slotRahmen_gleich rfl) (grund_obj arms hok _ _ ρ hlen hinv)
   | .call f args hp hr, hok, σ, ρ, _, hinv => by
@@ -702,7 +702,7 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         refine ⟨?_, hinv⟩
         exact axiom_rahmen hO hok (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha])
       · trivial
-  | .regSchreib r _ e, _, σ, ρ, _, hinv => by
+  | .regWrite r _ e, _, σ, ρ, _, hinv => by
       simp only [execStmt]
       exact ⟨slotRahmen_gleich rfl, hinv⟩
   | .transition .., _, σ, ρ, _, hinv => by
@@ -720,7 +720,7 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ret e _, _, σ, ρ, _, _ => by
       simp only [execStmt]
       exact slotRahmen_gleich rfl
-  | .retGrund .., _, σ, ρ, _, _ => by
+  | .retWhy .., _, σ, ρ, _, _ => by
       simp only [execStmt]
       exact SlotRahmen.refl _ _
   | .leave _, _, σ, ρ, _, hinv => by
@@ -789,14 +789,14 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
             (by rw [← axiomAntwortSonst_fst, ha]))
           (end_obj err hok.2.1 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf.zuAusgang
       · trivial
-  | .regLies r _ rest, hok, σ, ρ, hlen, hinv => by
+  | .regRead r _ rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · split
         · exact (block_obj rest hok σ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
         · trivial
       · trivial
-  | .regLiesElse r _ zusage sonst rest, hok, σ, ρ, hlen, hinv => by
+  | .regReadElse r _ zusage sonst rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · split
@@ -820,29 +820,29 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       · exact ObjA.vor (slotRahmen_gleich rfl)
           (block_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · exact ObjA.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv).zuAusgang
-  | .pruefung c sonst rest, hok, σ, ρ, hlen, hinv => by
+  | .check c sonst rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact ObjA.vor (slotRahmen_gleich rfl) (block_obj rest hok.2 _ ρ hlen hinv)
       · exact ObjA.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv).zuAusgang
-  | .gleit op a b lo hi rest, hok, σ, ρ, hlen, hinv => by
+  | .float op a b lo hi rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact ObjA.vor (slotRahmen_gleich rfl)
           (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
-  | .gleitLit q lo hi rest, hok, σ, ρ, hlen, hinv => by
+  | .floatLit q lo hi rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact (block_obj rest hok σ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
-  | .gleitVon e lo hi rest, hok, σ, ρ, hlen, hinv => by
+  | .floatOf e lo hi rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact ObjA.vor (slotRahmen_gleich rfl)
           (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
-  | .gleitNarrow e lo hi sonst rest, hok, σ, ρ, hlen, hinv => by
+  | .floatNarrow e lo hi sonst rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact ObjA.vor (slotRahmen_gleich rfl)
@@ -856,7 +856,7 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ret e _, _, σ, ρ, _, _ => by
       simp only [execEnd]
       exact slotRahmen_gleich rfl
-  | .retGrund .., _, σ, ρ, _, _ => by
+  | .retWhy .., _, σ, ρ, _, _ => by
       simp only [execEnd]
       exact SlotRahmen.refl _ _
   | .leave _, _, σ, ρ, _, hinv => by
@@ -998,15 +998,15 @@ def ergInt : (e : Option Ty) → ErgVal D e → Option Int
 
 /-- The bottom position of an answer that is a bare variable. -/
 def ErgExpr.varUnten? {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} : ErgExpr D Γ Λ e → Option Nat
-  | .wert x => x.varUnten?
-  | .keine => Option.none
+  | .val x => x.varUnten?
+  | .empty => Option.none
 
 theorem ergVarUnten_eval {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (x : ErgExpr D Γ Λ e) {b : Nat}
     (h : x.varUnten? = some b) (σ0 σ : World D) (ρ : Env D Γ) :
     ergInt e (evalErg σ0 x σ ρ) = ρ.unten b := by
   cases x with
-  | keine => simp [ErgExpr.varUnten?] at h
-  | wert ex => exact varUnten_eval ex h σ0 σ ρ
+  | empty => simp [ErgExpr.varUnten?] at h
+  | val ex => exact varUnten_eval ex h σ0 σ ρ
 
 /-- **A re-view keeps the object** (the borrow rule `R014` assumes, now a theorem of the
     model). For every program and every function `f` whose body is `return k;` with `k` a

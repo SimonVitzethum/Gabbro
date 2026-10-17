@@ -109,7 +109,7 @@ def o174 : Orakel D174 where
     call `exit_group(1)` as `Block.bindAxiom` with the empty rest. -/
 def endeBlock : Block D174 (vertragVon D174 G174_tor_im_modell_oblig.g_ende_wenn) false G174_tor_im_modell_oblig.gCtx_ende_wenn G174_tor_im_modell_oblig.gL_ende_wenn G174_tor_im_modell_oblig.gL_ende_wenn :=
   .bindAxiom G174_tor_im_modell_oblig.GAx.exit_group
-    (.cons ((.weiter (by decide) (by decide)
+    (.cons ((.widen (by decide) (by decide)
       (((.lit 1)) : Expr D174 G174_tor_im_modell_oblig.gCtx_ende_wenn G174_tor_im_modell_oblig.gL_ende_wenn (.int 1 1))) :
         Expr D174 G174_tor_im_modell_oblig.gCtx_ende_wenn G174_tor_im_modell_oblig.gL_ende_wenn (.int 0 18446744073709551615)) .nil)
     rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
@@ -261,7 +261,7 @@ variable {D : Deklaration}
     value half lies outside the declared range. -/
 def packe (n : Nat) {lo hi : Int} : SysAntwort { x : Int // lo ≤ x ∧ x ≤ hi } (Fin n) → Int
   | .ok v => v.1 * ((n : Int) + 1)
-  | .grund r => (r.1 : Int) + 1
+  | .why r => (r.1 : Int) + 1
   | .unerwartet _ => (hi + 1) * ((n : Int) + 1)
 
 /-- What G does with a decoded answer of a fallible gate: the value (as the machine's `Zahl`),
@@ -269,7 +269,7 @@ def packe (n : Nat) {lo hi : Int} : SysAntwort { x : Int // lo ≤ x ∧ x ≤ h
 def gAntwort {n : Nat} {lo hi : Int} : SysAntwort { x : Int // lo ≤ x ∧ x ≤ hi } (Fin n) →
     Option (ErgVal D (some (.int lo hi)) ⊕ Fin n)
   | .ok v => some (Sum.inl (⟨v.1, v.2.1, v.2.2⟩ : Zahl lo hi))
-  | .grund r => some (Sum.inr r)
+  | .why r => some (Sum.inr r)
   | .unerwartet _ => none
 
 theorem packe_ok (z : Int → Option D.Fn) (n : Nat) {lo hi : Int}
@@ -284,7 +284,7 @@ theorem packe_ok (z : Int → Option D.Fn) (n : Nat) {lo hi : Int}
   rfl
 
 theorem packe_grund (z : Int → Option D.Fn) (n : Nat) {lo hi : Int} (r : Fin n) :
-    sonstPasst z (some (.int lo hi)) n (packe (lo := lo) (hi := hi) n (.grund r)) =
+    sonstPasst z (some (.int lo hi)) n (packe (lo := lo) (hi := hi) n (.why r)) =
       some (Sum.inr r) := by
   obtain ⟨i, hi'⟩ := r
   have hm : ((i : Int) + 1) % ((n : Int) + 1) = (i : Int) + 1 :=
@@ -313,7 +313,7 @@ theorem tor_fehlbar (z : Int → Option D.Fn) (n : Nat) (tab : FehlerTabelle (Fi
       gAntwort (D := D) (dekodiere tab lo hi roh) := by
   cases dekodiere tab lo hi roh with
   | ok v => exact packe_ok z n v
-  | grund r => exact packe_grund z n r
+  | why r => exact packe_grund z n r
   | unerwartet u => exact packe_unerwartet z n u
 
 /-- The three legs of the stub, joined with `dekodiere`'s characterisation (Syscall.lean): an
@@ -394,7 +394,7 @@ def regionStumpf {Grund : Type} [DecidableEq Grund] (tab : FehlerTabelle Grund) 
   if roh < 0 then
     if roh < -4095 then .unerwartet roh
     else match fehlerSuche tab (-roh).toNat with
-      | some r => .grund r
+      | some r => .why r
       | none => .unerwartet roh
   else if roh = 0 then .unerwartet roh
   else .ok roh.toNat
@@ -406,7 +406,7 @@ def wortMax : Int := 2 ^ 63 - 1
 def alsAdresse {Grund : Type} : SysAntwort { x : Int // 1 ≤ x ∧ x ≤ wortMax } Grund →
     SysAntwort Nat Grund
   | .ok v => .ok v.1.toNat
-  | .grund r => .grund r
+  | .why r => .why r
   | .unerwartet u => .unerwartet u
 
 /-- **Soundness of `tor.region`.** For EVERY word the `int64_t` register can hold and every
@@ -508,7 +508,7 @@ def regionTab : FehlerTabelle (Fin 2) := [(12, 0), (22, 1)]
     region just below it. -/
 theorem tor_region_zeuge :
     regionStumpf regionTab 0x7f0000000000 = .ok 0x7f0000000000 ∧
-    regionStumpf regionTab (-12) = .grund 0 ∧
+    regionStumpf regionTab (-12) = .why 0 ∧
     regionStumpf regionTab 0 = .unerwartet 0 ∧
     regionStumpf regionTab (-13) = .unerwartet (-13) ∧
     regionStumpf regionTab 0x7f0000000000 =

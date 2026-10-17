@@ -540,11 +540,11 @@ def D2 : Deklaration where
 
 /-- Index `0` into the single-slot table, at empty holdings. -/
 def idx2 : Expr D2 [] [] (.index (D2.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- Constant `true`, at empty holdings. -/
 def wahr2 : Expr D2 [] [] .bool :=
-  .wahr
+  .tru
 
 /-- The writer leaf `konto[0] := true`, typed over the writer's own
     contract (so honesty below holds by `rfl`). -/
@@ -556,7 +556,7 @@ theorem writeLeaf2_blatt : writeLeaf2.istBlatt = true := rfl
 
 /-- The writer body: write, then return. -/
 def rumpfSchreibt2 : Endblock D2 (vertragVon D2 true) false [] [] :=
-  .cons writeLeaf2 (.ret .keine (by rfl))
+  .cons writeLeaf2 (.ret .empty (by rfl))
 
 /-- The slot read for the reader's return value. -/
 def liesSlot2 : Expr D2 [] [] .bool :=
@@ -564,13 +564,13 @@ def liesSlot2 : Expr D2 [] [] .bool :=
 
 /-- The reader body: return the slot (reads only). -/
 def rumpfLiest2 : Endblock D2 (vertragVon D2 false) false [] [] :=
-  .ret (.wert liesSlot2) (by rfl)
+  .ret (.val liesSlot2) (by rfl)
 
 /-- The program: trivial contracts, writer/reader bodies. -/
 def P2 : Programm D2 where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf := fun | true => rumpfSchreibt2 | false => rumpfLiest2
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/

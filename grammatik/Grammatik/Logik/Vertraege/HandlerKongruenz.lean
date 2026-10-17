@@ -218,7 +218,7 @@ theorem traverseLauf_kongruent {l : Bool} {Γ : Ctx} {τ : Ty}
           | next hl σ' ρ' => exact traverseLauf_kongruent s₁ s₂ inv hs ks σ' ρ'.tail
           | leave hl σ' ρ' => exact Or.inl rfl
           | zurueck σ' v => exact Or.inl rfl
-          | grund σ' r => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
@@ -246,7 +246,7 @@ theorem retryLauf_kongruent {l : Bool} {Γ : Ctx}
           | next hl σ' ρ' => exact retryLauf_kongruent s₁ s₂ bis u₁ u₂ hs hu n σ' ρ'
           | leave hl σ' ρ' => exact Or.inl rfl
           | zurueck σ' v => exact Or.inl rfl
-          | grund σ' r => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
@@ -270,7 +270,7 @@ theorem foreverLauf_kongruent {l : Bool} {Γ : Ctx} (a : D.Annahme)
           | next hl σ' ρ' => exact foreverLauf_kongruent a s₁ s₂ inv hs n σ' ρ'
           | leave hl σ' ρ' => exact Or.inl rfl
           | zurueck σ' v => exact Or.inl rfl
-          | grund σ' r => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
@@ -304,7 +304,7 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
   | .onTag v arms, σ, ρ => by
       simp only [execStmt]
       exact Arms.kongruent hR arms _ _ ρ
-  | .onGrund r arms, σ, ρ => by
+  | .onWhy r arms, σ, ρ => by
       simp only [execStmt]
       exact GrundArms.kongruent hR arms _ _ ρ
   | .locks L hr body, σ, ρ => by
@@ -346,19 +346,19 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         · rw [h]; exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .assignSlot .., _, _ => Or.inl rfl
-  | .assignDurch .., _, _ => Or.inl rfl
+  | .assignThru .., _, _ => Or.inl rfl
   | .assignGlob .., _, _ => Or.inl rfl
-  | .schreibBytes .., _, _ => Or.inl rfl
+  | .putBytes .., _, _ => Or.inl rfl
   | .assignVar .., _, _ => Or.inl rfl
-  | .uebergang .., _, _ => Or.inl rfl
+  | .shift .., _, _ => Or.inl rfl
   | .axiomCall .., _, _ => Or.inl rfl
-  | .regSchreib .., _, _ => Or.inl rfl
+  | .regWrite .., _, _ => Or.inl rfl
   | .transition .., _, _ => Or.inl rfl
   | .publish .., _, _ => Or.inl rfl
   | .advances .., _, _ => Or.inl rfl
   | .retires .., _, _ => Or.inl rfl
   | .ret .., _, _ => Or.inl rfl
-  | .retGrund .., _, _ => Or.inl rfl
+  | .retWhy .., _, _ => Or.inl rfl
   | .leave .., _, _ => Or.inl rfl
   | .next .., _, _ => Or.inl rfl
 
@@ -375,7 +375,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         cases hx : execStmt O passes R₂ s σ ρ with
         | ok σ' ρ' => exact Block.kongruent hR rest σ' ρ'
         | zurueck σ' v => exact Or.inl rfl
-        | grund σ' r => exact Or.inl rfl
+        | why σ' r => exact Or.inl rfl
         | leave hl σ' ρ' => exact Or.inl rfl
         | next hl σ' ρ' => exact Or.inl rfl
         | logik e => exact Or.inl rfl
@@ -393,7 +393,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         cases hx : R₂ g (σ.lese Λ args.orte)
             (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
         | ok σ' v => exact (Block.kongruent hR rest σ' _).schrumpf
-        | grund σ' r => exact Or.inl rfl
+        | why σ' r => exact Or.inl rfl
         | logik e => exact Or.inl rfl
         | hardware e => exact Or.inl rfl
       · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
@@ -412,7 +412,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
               (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
                 (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
           | ok σ' v => exact (Block.kongruent hR rest σ' _).schrumpf
-          | grund σ' r => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
@@ -425,7 +425,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         cases hx : R₂ g (σ.lese Λ args.orte)
             (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
         | ok σ' v => exact (Block.kongruent hR rest σ' _).schrumpf
-        | grund σ' r =>
+        | why σ' r =>
             exact ((Endblock.kongruent hR err σ' _).schrumpf).zuAusgang
         | logik e => exact Or.inl rfl
         | hardware e => exact Or.inl rfl
@@ -447,14 +447,14 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         · exact Or.inl rfl
         · exact (Block.kongruent hR rest _ _).schrumpf
         · exact ((Endblock.kongruent hR err _ _).schrumpf).zuAusgang
-  | .regLies r hr rest, σ, ρ => by
+  | .regRead r hr rest, σ, ρ => by
       simp only [execBlock]
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | none => exact Or.inl rfl
       | some v =>
           exact AusgangUnter.ite ((Block.kongruent hR rest σ (.cons v ρ)).schrumpf)
             (Or.inl rfl)
-  | .regLiesElse r hr zusage sonst rest, σ, ρ => by
+  | .regReadElse r hr zusage sonst rest, σ, ρ => by
       simp only [execBlock]
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | none => exact Or.inl rfl
@@ -475,29 +475,29 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
       simp only [execBlock]
       exact AusgangUnter.dite (fun _ => (Block.kongruent hR rest _ _).schrumpf)
         (fun _ => (Endblock.kongruent hR sonst _ ρ).zuAusgang)
-  | .pruefung c sonst rest, σ, ρ => by
+  | .check c sonst rest, σ, ρ => by
       simp only [execBlock]
       exact AusgangUnter.ite (Block.kongruent hR rest _ ρ)
         ((Endblock.kongruent hR sonst _ ρ).zuAusgang)
-  | .gleit op a b lo hi rest, σ, ρ => by
+  | .float op a b lo hi rest, σ, ρ => by
       simp only [execBlock]
       cases hx : gleitPasst lo hi (gleitRechne op
           (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
           (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) with
       | none => exact Or.inl rfl
       | some v => exact (Block.kongruent hR rest _ _).schrumpf
-  | .gleitLit q lo hi rest, σ, ρ => by
+  | .floatLit q lo hi rest, σ, ρ => by
       simp only [execBlock]
       cases hx : gleitPasst lo hi (bruch q) with
       | none => exact Or.inl rfl
       | some v => exact (Block.kongruent hR rest _ _).schrumpf
-  | .gleitVon e lo hi rest, σ, ρ => by
+  | .floatOf e lo hi rest, σ, ρ => by
       simp only [execBlock]
       cases hx : gleitPasst lo hi (gleitAusInt
           (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
       | none => exact Or.inl rfl
       | some v => exact (Block.kongruent hR rest _ _).schrumpf
-  | .gleitNarrow e lo hi sonst rest, σ, ρ => by
+  | .floatNarrow e lo hi sonst rest, σ, ρ => by
       simp only [execBlock]
       cases hx : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
       | none => exact (Endblock.kongruent hR sonst _ ρ).zuAusgang
@@ -510,7 +510,7 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
     (b : Endblock D V l Γ Λ) → ∀ (σ : World D) (ρ : Env D Γ),
       EndUnter Er (execEnd O passes R₁ b σ ρ) (execEnd O passes R₂ b σ ρ)
   | .ret .., _, _ => Or.inl rfl
-  | .retGrund .., _, _ => Or.inl rfl
+  | .retWhy .., _, _ => Or.inl rfl
   | .leave .., _, _ => Or.inl rfl
   | .next .., _, _ => Or.inl rfl
   | .cons s rest, σ, ρ => by
@@ -520,7 +520,7 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
         cases hx : execStmt O passes R₂ s σ ρ with
         | ok σ' ρ' => exact Endblock.kongruent hR rest σ' ρ'
         | zurueck σ' v => exact Or.inl rfl
-        | grund σ' r => exact Or.inl rfl
+        | why σ' r => exact Or.inl rfl
         | leave hl σ' ρ' => exact Or.inl rfl
         | next hl σ' ρ' => exact Or.inl rfl
         | logik e => exact Or.inl rfl
@@ -601,7 +601,7 @@ def rufSchritt (P : Programm D) (O : Orakel D) (passes : Nat)
         match D.invs.find? (fun i => schuldet f i && !wahr? (eval σ' (P.invariante i) σ' .nil)) with
         | Option.some i => .logik (.invariante i)
         | Option.none => .ok σ' v
-  | .grund σ' r => .grund σ' r
+  | .why σ' r => .why σ' r
   | .leave h _ _ => absurd h (by decide)
   | .next h _ _ => absurd h (by decide)
   | .logik e => .logik e
@@ -634,7 +634,7 @@ theorem rufSchritt_kongruent {Er : Fehlermarke D → Prop}
       cases hx : execEnd (V := vertragVon D f) O passes R₂ (P.rumpf f)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ with
       | zurueck σ' v => exact Or.inl rfl
-      | grund σ' r => exact Or.inl rfl
+      | why σ' r => exact Or.inl rfl
       | leave hl σ' ρ' => exact Or.inl rfl
       | next hl σ' ρ' => exact Or.inl rfl
       | logik e => exact Or.inl rfl

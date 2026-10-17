@@ -390,7 +390,7 @@ theorem keinRuf_gut : GutR (D := D) keinRuf := by
 /-- Leaf or compound. A thread step executes one leaf; compound statements
     (`ite`, calls, `locks`, loops, ...) open into further steps instead. -/
 def Stmt.istBlatt : Stmt D V l Γ Λ Λ' → Bool
-  | .ite .. | .onOption .. | .onTag .. | .onGrund .. | .call .. | .callInd ..
+  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd ..
   | .locks .. | .breaking .. | .traverse .. | .retry .. | .forever .. => false
   | _ => true
 
@@ -406,7 +406,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
-  | .assignDurch p t _ f i e hw hL, _, σ, ρ, hh, σ', h => by
+  | .assignThru p t _ f i e hw hL, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
@@ -415,14 +415,14 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh
       exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hh))
-  | .schreibBytes t f hf n i _ _ e hw hL, _, σ, ρ, hh, σ', h => by
+  | .putBytes t f hf n i _ _ e hw hL, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
       exact hl.trans (gut_schreibBytes _ t f hf Λ hw hL _ _ (hl.heldIn hh))
   | .assignVar x e, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
-  | .uebergang t f hτ i von nach hn he hw hL, _, σ, ρ, hh, σ', h => by
+  | .shift t f hτ i von nach hn he hw hL, _, σ, ρ, hh, σ', h => by
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
@@ -439,7 +439,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
         rw [ha] at this
         exact hl.trans (Gut.weiter hw hg this)
       · simp [Ausgang.welt] at h
-  | .regSchreib r _ e, _, σ, ρ, hh, σ', h => by
+  | .regWrite r _ e, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
   | .transition .., _, σ, ρ, hh, σ', h => by
@@ -455,7 +455,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
   | .ret e _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
-  | .retGrund .., _, σ, ρ, hh, σ', h => by
+  | .retWhy .., _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
@@ -464,7 +464,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
   | .ite .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .onOption .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .onTag .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onGrund .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .onWhy .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .call .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .callInd .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
   | .locks .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
@@ -756,7 +756,7 @@ theorem schreibt_wirkt_glob_ne (σ₁ : World D) (g : D.Glob)
 
 /-- **A fireable write yields a one-step generated run whose memory differs.**
     The write's value comes from the thread's own world (any differing value
-    fires: for a boolean global the literals `.wahr`/`.falsch` always supply
+    fires: for a boolean global the literals `.tru`/`.fls` always supply
     one); the step is the `blatt` rule with the computed event list. -/
 theorem gen_write_glob_moves (P : Programm D) (O : Orakel D) (passes : Nat)
     (M : GenMaschine D) (f : Faden)
@@ -4067,12 +4067,12 @@ variable {D : Deklaration}
     never a slot / global write and never an oracle answer. -/
 def Stmt.speicherfest : Stmt D V l Γ Λ Λ' → Bool
   | .assignVar _ _ => true
-  | .regSchreib _ _ _ => true
+  | .regWrite _ _ _ => true
   | .transition _ _ _ _ _ _ _ => true
   | .advances _ _ _ _ => true
   | .retires _ _ _ _ => true
   | .ret _ _ => true
-  | .retGrund _ _ => true
+  | .retWhy _ _ => true
   | .leave _ => true
   | .next _ => true
   | _ => false
@@ -4091,17 +4091,17 @@ theorem speicherfest_speicher
   cases s with
   | assignSlot t f i e hw hL =>
       simp [Stmt.speicherfest] at hFest
-  | assignDurch p t ht f i e hw hL =>
+  | assignThru p t ht f i e hw hL =>
       simp [Stmt.speicherfest] at hFest
   | assignGlob g e hw hL =>
       simp [Stmt.speicherfest] at hFest
-  | schreibBytes t f hf n i hlo hhi e hw hL =>
+  | putBytes t f hf n i hlo hhi e hw hL =>
       simp [Stmt.speicherfest] at hFest
   | assignVar x e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
-  | uebergang t f hτ i von nach hn he hw hL =>
+  | shift t f hτ i von nach hn he hw hL =>
       simp [Stmt.speicherfest] at hFest
   | ite c t e =>
       simp [Stmt.speicherfest] at hFest
@@ -4109,7 +4109,7 @@ theorem speicherfest_speicher
       simp [Stmt.speicherfest] at hFest
   | onTag v arms =>
       simp [Stmt.speicherfest] at hFest
-  | onGrund r arms =>
+  | onWhy r arms =>
       simp [Stmt.speicherfest] at hFest
   | call f args hp hr =>
       simp [Stmt.speicherfest] at hFest
@@ -4127,7 +4127,7 @@ theorem speicherfest_speicher
       simp [Stmt.speicherfest] at hFest
   | axiomCall a args h hw hg hd hgd =>
       simp [Stmt.speicherfest] at hFest
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
@@ -4149,7 +4149,7 @@ theorem speicherfest_speicher
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
-  | retGrund r hΛ =>
+  | retWhy r hΛ =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl

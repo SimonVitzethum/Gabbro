@@ -333,13 +333,13 @@ def FortV (F : RufRahmenG D) (g : D.Fn) (X : ZErg (vertragVon D F.f))
           (restb : Block D (vertragVon D F.f) l (τ :: Γ) Λ Λ')
           (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         (F.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∨
-          ∃ (n : Nat) (err : Endblock D (vertragVon D F.f) l (.grund n :: Γ) Λ),
+          ∃ (n : Nat) (err : Endblock D (vertragVon D F.f) l (.why n :: Γ) Λ),
             F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩) →
         ∀ he : D.erg g = some τ,
           X.folgt (semV O' passes R (.dann restb (.schrumpf k)) σa (.cons (ergWert he v) ρc)))
-  | .grund σa r =>
+  | .why σa r =>
       ∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
-        (err : Endblock D (vertragVon D F.f) l (.grund n :: Γ) Λ)
+        (err : Endblock D (vertragVon D F.f) l (.why n :: Γ) Λ)
         (restb : Block D (vertragVon D F.f) l (τ :: Γ) Λ Λ')
         (k : GRest D (vertragVon D F.f) l Γ Λ') (ρc : Env D Γ),
         F.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ →
@@ -381,7 +381,7 @@ end Inv
 
 theorem logOk_grund {P : Programm D} {log : List (RufEreignisF D)} (h : LogOk P log)
     {g : D.Fn} {rho : Env D (D.params g)} {r : Fin (D.gruende g)} {s0 s1 : World D} :
-    LogOk P (RufEreignisF.grund g rho r s0 s1 :: log) := by
+    LogOk P (RufEreignisF.why g rho r s0 s1 :: log) := by
   intro ev hev
   rcases List.mem_cons.mp hev with rfl | hev
   · refine ⟨fun g' rho' s0' h' => ?_, fun g' rho' v' s0' s1' h' => ?_⟩ <;> cases h'
@@ -393,7 +393,7 @@ theorem fortV_mono {passes : Nat} {F : RufRahmenG D} {g : D.Fn} {X Y : ZErg (ver
     (hXY : X.folgt Y) : ∀ {a : RufAusgang g}, FortV passes F g Y R O' a → FortV passes F g X R O' a
   | .ok _ _, h => ⟨fun hw => ZErg.folgt_trans hXY (h.1 hw),
       fun l Γ Λ Λ' τ restb k ρc hc he => ZErg.folgt_trans hXY (h.2 l Γ Λ Λ' τ restb k ρc hc he)⟩
-  | .grund _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
+  | .why _ _, h => fun l Γ Λ Λ' τ n err restb k ρc hc hn =>
       ZErg.folgt_trans hXY (h l Γ Λ Λ' τ n err restb k ρc hc hn)
   | .logik _, _ => trivial
   | .hardware _, _ => trivial
@@ -509,7 +509,7 @@ theorem popV_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D}
     (hW : WarteV P O passes F G) (s1 : World D) (mk : World D → RufAusgang G.1)
     (hmk : (∃ v, (∀ σa, mk σa = .ok σa v) ∧ EnsAmRueck P G.1 G.2.2 s1 G.2.1 v) ∨
-      (∃ r, ∀ σa, mk σa = .grund σa r))
+      (∃ r, ∀ σa, mk σa = .why σa r))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ' : Env D Γ) (r' : GRest D (vertragVon D F.f) l Γ Λ)
     (hok' : F.rest.2.2.2.2.okV P (fussOrte P F.f) → r'.okV P (fussOrte P F.f))
     (hwahl : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)

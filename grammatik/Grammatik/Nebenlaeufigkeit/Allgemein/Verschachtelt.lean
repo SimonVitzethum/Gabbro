@@ -107,7 +107,7 @@ theorem nestIdx_hi (M N : Nat) (hM : 0 < M) (hN : 0 < N) :
 def nestIdx {Γ : Ctx} {Λ : List (Res D)} (M N : Nat) (hM : 0 < M) (hN : 0 < N)
     (i : Expr D Γ Λ (.index (M : Int))) (j : Expr D Γ Λ (.index (N : Int))) :
     Expr D Γ Λ (.index ((M * N : Nat) : Int)) :=
-  Expr.weiter (nestIdx_lo M N hM) (nestIdx_hi M N hM hN) (Expr.add (Expr.mul i (Expr.lit N)) j)
+  Expr.widen (nestIdx_lo M N hM) (nestIdx_hi M N hM hN) (Expr.add (Expr.mul i (Expr.lit N)) j)
 
 /-- The model reads `nestIdx i j` as the flat index. -/
 theorem eval_nestIdx {Γ : Ctx} {Λ : List (Res D)} (M N : Nat) (hM : 0 < M) (hN : 0 < N)
@@ -235,13 +235,13 @@ abbrev nvV : Vertrag nvD := vertragVon nvD ()
 theorem nvDarf : darf nvD () [] := fun _ h => nomatch h
 
 /-- `1` as a row index of `[[u32; 4]; 3]`, `2` as a column index. -/
-def nvI : Expr nvD [] [] (.index ((3 : Nat) : Int)) := .weiter (by decide) (by decide) (.lit 1)
-def nvJ : Expr nvD [] [] (.index ((4 : Nat) : Int)) := .weiter (by decide) (by decide) (.lit 2)
+def nvI : Expr nvD [] [] (.index ((3 : Nat) : Int)) := .widen (by decide) (by decide) (.lit 1)
+def nvJ : Expr nvD [] [] (.index ((4 : Nat) : Int)) := .widen (by decide) (by decide) (.lit 2)
 
 /-- `M[1][2] = 7;` -/
 def nvBlock : Block nvD nvV false [] [] [] :=
   .cons (.assignSlot () () (nestIdx 3 4 (by decide) (by decide) nvI nvJ)
-    (.weiter (by decide) (by decide) (.lit 7)) rfl nvDarf) .nil
+    (.widen (by decide) (by decide) (.lit 7)) rfl nvDarf) .nil
 
 def nvO : Orakel nvD where
   wirkt := fun a => nomatch a

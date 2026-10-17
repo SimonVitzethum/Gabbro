@@ -47,11 +47,11 @@ theorem fertig_wert {M : RufMaschineG D} (hK : KeinStartGrundG M) {t : Faden} (h
   | ende eb =>
       cases eb with
       | ret e hp => exact ⟨e, rfl, hp, Or.inl rfl⟩
-      | retGrund g hp => exact absurd ⟨g, hp, Or.inl rfl⟩ (hKt _ _ _ _ _ hx)
+      | retWhy g hp => exact absurd ⟨g, hp, Or.inl rfl⟩ (hKt _ _ _ _ _ hx)
       | cons s rest =>
           cases s with
           | ret e hp => exact ⟨e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
-          | retGrund g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
+          | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
           | _ => simp [GRest.anRueck, Endblock.istRueck, Stmt.istRueck] at hret
       | _ => simp [GRest.anRueck, Endblock.istRueck] at hret
   | dann b k =>
@@ -59,7 +59,7 @@ theorem fertig_wert {M : RufMaschineG D} (hK : KeinStartGrundG M) {t : Faden} (h
       | cons s rest =>
           cases s with
           | ret e hp => exact ⟨e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
-          | retGrund g hp =>
+          | retWhy g hp =>
               exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
           | _ => simp [GRest.anRueck, Block.istRueck, Stmt.istRueck] at hret
       | _ => simp [GRest.anRueck, Block.istRueck] at hret
@@ -67,19 +67,19 @@ theorem fertig_wert {M : RufMaschineG D} (hK : KeinStartGrundG M) {t : Faden} (h
 
 /-! ## 2. The probe: a start function that ends in a reason -/
 
-def grRumpfHaupt : Endblock vD (vertragVon vD vHaupt) false [] [] := .ret .keine List.Perm.nil
+def grRumpfHaupt : Endblock vD (vertragVon vD vHaupt) false [] [] := .ret .empty List.Perm.nil
 
-def grRumpfMid : Endblock vD (vertragVon vD vMid) false [] [] := .ret .keine List.Perm.nil
+def grRumpfMid : Endblock vD (vertragVon vD vMid) false [] [] := .ret .empty List.Perm.nil
 
 /-- **The probe**: `ferr` (`ensures false`, one reason) is every thread's
     start function and its body is `return R`; `haupt` and `mid` return. -/
 def grP : Programm vD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .ferr => .falsch
-    | .haupt => .wahr
-    | .mid => .wahr
+    | .ferr => .fls
+    | .haupt => .tru
+    | .mid => .tru
   rumpf
     | .haupt => grRumpfHaupt
     | .mid => grRumpfMid
@@ -128,7 +128,7 @@ theorem grP_alt_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG vD),
 theorem grP_fertig (t : Faden) :
     FertigG (RufStartG grP vSp grInit) t ∧
       GrundKopf ((RufStartG grP vSp grInit).faeden t).kopf.rest.2.2.2.2 ∧
-      grP.ensures vErr = .falsch :=
+      grP.ensures vErr = .fls :=
   ⟨⟨rfl, rfl⟩, ⟨vR0, List.Perm.nil, Or.inl rfl⟩, rfl⟩
 
 /-- **The probe fails the new premise**: its start function declares a

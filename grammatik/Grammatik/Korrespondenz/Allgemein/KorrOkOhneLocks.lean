@@ -22,7 +22,7 @@
   * `GRow.storeReg` (`R = e;`) meets `Stmt.regSchreib`, a LEAF statement that
     carries no block at all (`Stmt.ohneLocks`'s catch-all);
   * `GRow.loadReg` (`T x = (*(volatile T *)(cp));`) meets `Block.regLies`,
-    a BINDER that continues: `Block.ohneLocks (.regLies …) = rest.ohneLocks`,
+    a BINDER that continues: `Block.ohneLocks (.regRead …) = rest.ohneLocks`,
     so the question is handed to the rows after it and answered there;
   * `GRow.loadRegElse` meets `Block.regLiesElse`, which owes TWO --
     `sonst.ohneLocks && rest.ohneLocks`. The `rest` half is the binder's
@@ -132,11 +132,11 @@ theorem stOkBl_ohneLocks (GT : GerTafel D) : ∀ (n : Nat),
               | _ => exact absurd h (by simp [blOk])
           -- `T x = (*(volatile T *)(cp));` -- A DEVICE READ CARRIES NO BLOCK.
           -- `Block.regLies` binds the machine's answer and CONTINUES, and
-          -- `Block.ohneLocks (.regLies …) = rest.ohneLocks`: the question is
+          -- `Block.ohneLocks (.regRead …) = rest.ohneLocks`: the question is
           -- handed to the rows after it, exactly as at a `let`.
           | loadReg y τc cp w =>
               cases b with
-              | regLies rg hkl rest =>
+              | regRead rg hkl rest =>
                   simp only [blOk, Bool.and_eq_true] at h
                   exact ih.2 _ rest rs' hrs h.2
               | _ => exact absurd h (by simp [blOk])
@@ -149,7 +149,7 @@ theorem stOkBl_ohneLocks (GT : GerTafel D) : ∀ (n : Nat),
           -- false and not merely unproved.
           | loadRegElse y τc cp w cc crr =>
               cases b with
-              | regLiesElse rg hkl zusage sonst rest =>
+              | regReadElse rg hkl zusage sonst rest =>
                   cases sonst with
                   | ret e0 hΛ =>
                       simp only [blOk, sonstOk, Bool.and_eq_true] at h

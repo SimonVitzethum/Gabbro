@@ -97,8 +97,8 @@ theorem evalErg_gleichAuf {S : List (D.Tab ⊕ D.Glob)} {Γ : Ctx} {Λ : List (R
     {e : Option Ty} (x : ErgExpr D Γ Λ e) (hsub : ∀ o ∈ x.orte, o ∈ S) {σ σ' : World D}
     (h : GleichAuf S σ σ') (ρ : Env D Γ) : evalErg σ x σ ρ = evalErg σ' x σ' ρ := by
   cases x with
-  | keine => rfl
-  | wert e => exact eval_gleichAuf e hsub h ρ
+  | empty => rfl
+  | val e => exact eval_gleichAuf e hsub h ρ
 
 /-- A slot store of the same value at the same place keeps agreement. -/
 theorem gleichAuf_storeSlot {S : List (D.Tab ⊕ D.Glob)} {σ σ' : World D}
@@ -173,7 +173,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
       rw [eval_gleichAuf i (fun o ho => hS o (List.mem_append_left _ ho)) hg1,
         eval_gleichAuf e (fun o ho => hS o (List.mem_append_right _ ho)) hg1]
       exact gleichAuf_schreibSlot hg1 _ _ _ _ _ _
-  | assignDurch p t ht f i e hw hL =>
+  | assignThru p t ht f i e hw hL =>
       simp only [stmtOrteP] at hS
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -191,7 +191,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
       refine ⟨_, rfl, ?_, spur_laenge_erw ((Erw.lese _ _ _).trans (Erw.schreibGlob _ _ _ _))⟩
       rw [eval_gleichAuf e hS hg1]
       exact gleichAuf_schreibGlob hg1 _ _ _ _
-  | schreibBytes t f hf n i hlo hhi e hw hL =>
+  | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [stmtOrteP] at hS
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -208,7 +208,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
       refine ⟨_, ?_, hg1, spur_laenge_erw (Erw.lese _ _ _)⟩
       simp only [execStmt]
       rw [eval_gleichAuf e hS hg1]
-  | uebergang t f hτ i von nach hn he hw hL =>
+  | shift t f hτ i von nach hn he hw hL =>
       simp only [stmtOrteP] at hS
       have hg1 := hg.lese Λ Λ (.inl t :: i.orte) (.inl t :: i.orte)
       have hi := eval_gleichAuf i (fun o ho => hS o (List.mem_cons_of_mem _ ho)) hg1 ρ
@@ -224,7 +224,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
         simp only [execStmt]
         rw [hi, ht, if_pos hvon]
       · cases h
-  | regSchreib r hk' e =>
+  | regWrite r hk' e =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨_, rfl, hg.lese Λ Λ e.orte e.orte, spur_laenge_erw (Erw.lese _ _ _)⟩
@@ -249,7 +249,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨_, rfl, hg, Nat.le_refl _⟩
   | ret e hp => simp only [execStmt] at h; cases h
-  | retGrund r hp => simp only [execStmt] at h; cases h
+  | retWhy r hp => simp only [execStmt] at h; cases h
   | leave h' => simp only [execStmt] at h; cases h
   | next h' => simp only [execStmt] at h; cases h
   | axiomCall => simp [Stmt.kOk] at hk
@@ -466,12 +466,12 @@ theorem semZ_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int
   rw [execArms_wahl, hw]
   exact semZ_dann O passes R b _ _ _
 
-theorem semZ_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.grund n))
+theorem semZ_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.why n))
     (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
     (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
     semZ O passes R (.dann (grundWahlG arms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρ))
         (.dann rest k)) (σ.lese Λ r.orte) ρ =
-      semZ O passes R (.dann (.cons (.onGrund r arms) rest) k) σ ρ := by
+      semZ O passes R (.dann (.cons (.onWhy r arms) rest) k) σ ρ := by
   rw [semZ_dann O passes R (.cons _ rest), nachZ_cons, semZ_dann]
   simp only [execStmt]
   rw [execGrund_wahlW O passes R arms]
@@ -556,7 +556,7 @@ theorem semZ_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true) :
     semZ O passes R (.dann rest k) (σ.lese Λ c.orte) ρ =
-      semZ O passes R (.dann (.pruefung c sonst rest) k) σ ρ := by
+      semZ O passes R (.dann (.check c sonst rest) k) σ ρ := by
   rw [semZ_dann, semZ_dann]
   simp only [execBlock, hw, if_true]
 
@@ -565,7 +565,7 @@ theorem semZ_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
     semZ O passes R (.ende sonst) (σ.lese Λ c.orte) ρ =
-      semZ O passes R (.dann (.pruefung c sonst rest) k) σ ρ := by
+      semZ O passes R (.dann (.check c sonst rest) k) σ ρ := by
   rw [semZ_dann]
   simp only [execBlock, hw, Bool.false_eq_true, if_false]
   rw [nachZ_zuAusgang]
@@ -593,7 +593,7 @@ theorem semZ_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (o
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
     semZ O passes R (.dann rest (.schrumpf k)) (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ) =
-      semZ O passes R (.dann (.gleit op a b lo hi rest) k) σ ρ := by
+      semZ O passes R (.dann (.float op a b lo hi rest) k) σ ρ := by
   rw [semZ_dann, semZ_dann]
   simp only [execBlock, hv]
   rw [nachZ_schrumpf]
@@ -602,7 +602,7 @@ theorem semZ_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
     semZ O passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) =
-      semZ O passes R (.dann (.gleitLit q lo hi rest) k) σ ρ := by
+      semZ O passes R (.dann (.floatLit q lo hi rest) k) σ ρ := by
   rw [semZ_dann, semZ_dann]
   simp only [execBlock, hv]
   rw [nachZ_schrumpf]
@@ -613,7 +613,7 @@ theorem semZ_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ �
     (hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
       (σ.lese Λ e.orte) ρ).n) = some v) :
     semZ O passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
-      semZ O passes R (.dann (.gleitVon e lo hi rest) k) σ ρ := by
+      semZ O passes R (.dann (.floatOf e lo hi rest) k) σ ρ := by
   rw [semZ_dann, semZ_dann]
   simp only [execBlock, hv]
   rw [nachZ_schrumpf]
@@ -624,7 +624,7 @@ theorem semZ_gleitNarrowOk {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = some v) :
     semZ O passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
-      semZ O passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+      semZ O passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ := by
   rw [semZ_dann, semZ_dann]
   simp only [execBlock, hv]
   rw [nachZ_schrumpf]
@@ -635,7 +635,7 @@ theorem semZ_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
     semZ O passes R (.ende sonst) (σ.lese Λ e.orte) ρ =
-      semZ O passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+      semZ O passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ := by
   rw [semZ_dann]
   simp only [execBlock, hn]
   rw [nachZ_zuAusgang]

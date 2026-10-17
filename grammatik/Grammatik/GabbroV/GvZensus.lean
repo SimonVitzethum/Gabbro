@@ -119,7 +119,7 @@ def artAnw : SAnw → String
   | .lassElse .. => "let-else"
   | .lassLib .. => "let-lib"
   | .zuweis .. => "assign"
-  | .uebergang .. => "transition"
+  | .shift .. => "transition"
   | .ruf .. => "call"
   | .libruf .. => "lib-call"
   | .wenn .. => "if"
@@ -134,7 +134,7 @@ def artAnw : SAnw → String
   | .sperrt .. => "locks"
   | .beobachtet .. => "observe"
   | .verlasse .. => "leave"
-  | .weiter .. => "next"
+  | .widen .. => "next"
   | .publiziert .. => "publish"
   | .erwartet .. => "await"
   | .tauscht .. => "exchange"
@@ -408,7 +408,7 @@ def merkmaleSrc (toks : List Token) : List String :=
       | _ => false) toks then "at-sign" :: mitText else mitText
   let mitGleit :=
     if scanBelegt (fun t => match t with
-      | .gleit _ => true
+      | .float _ => true
       | _ => false) toks then "float-lit" :: mitAt else mitAt
   if arrayAnfang toks then "array-lit" :: mitGleit else mitGleit
 
@@ -440,7 +440,7 @@ def wMultiItems : List SItemTief :=
     .funktionT
       { art := "impl", name := "f", params := [],
         ergebnis := .none, fehler := .none, klauseln := [] }
-      (.block [.wenn (.wahr) (.block [] .none) [] .none]
+      (.block [.wenn (.tru) (.block [] .none) [] .none]
         (.some (.ret .none)))]]
 
 /-- **Exactness on the fixture**: exactly the table finding and the

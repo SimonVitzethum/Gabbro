@@ -173,7 +173,7 @@ def restA : Nat → Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res DR),
   | 5 => ⟨false, [], [], .nil, .ende (ruEnd kRestA)⟩
   | _ => ⟨false, [], [], .nil,
       .ende (ruEnd (V := vertragVon kD kHauptA) (l := false) (Γ := []) (Λ := [])
-        (.ret .keine List.Perm.nil))⟩
+        (.ret .empty List.Perm.nil))⟩
 
 def frA (j : Nat) : RufRahmenG DR := ⟨some kHauptA, .nil, s0R, restA j⟩
 
@@ -182,15 +182,15 @@ def restB : Nat → Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res DR),
     Env DR Γ × GRest DR (vertragVon DR (some kHauptB)) l Γ Λ
   | 0 => ⟨false, DR.params (some kHauptB), Signatur.anfang DR (DR.signatur (some kHauptB)), .nil,
       .ende (kP.mitRuhe.rumpf (some kHauptB))⟩
-  | 1 => ⟨false, [], [], .nil, .ende (ruEnd (.cons kLocksB (.ret .keine List.Perm.nil)))⟩
+  | 1 => ⟨false, [], [], .nil, .ende (ruEnd (.cons kLocksB (.ret .empty List.Perm.nil)))⟩
   | 2 => ⟨false, [], [Res.held lL], .nil,
       .dann (ruB (.cons kRufB .nil)) (.frei lL (.dann .nil (.ende (ruEnd (V := vertragVon kD kHauptB)
-        (l := false) (Γ := []) (Λ := []) (.ret .keine List.Perm.nil)))))⟩
+        (l := false) (Γ := []) (Λ := []) (.ret .empty List.Perm.nil)))))⟩
   | 3 => ⟨false, [], [Res.held lL], .nil, .frei lL (.dann .nil (.ende (ruEnd
-      (V := vertragVon kD kHauptB) (l := false) (Γ := []) (Λ := []) (.ret .keine List.Perm.nil))))⟩
+      (V := vertragVon kD kHauptB) (l := false) (Γ := []) (Λ := []) (.ret .empty List.Perm.nil))))⟩
   | _ => ⟨false, [], [], .nil,
       .ende (ruEnd (V := vertragVon kD kHauptB) (l := false) (Γ := []) (Λ := [])
-        (.ret .keine List.Perm.nil))⟩
+        (.ret .empty List.Perm.nil))⟩
 
 def frB (j : Nat) : RufRahmenG DR := ⟨some kHauptB, .nil, s0R, restB j⟩
 
@@ -268,10 +268,10 @@ theorem gBlatt (fn : kD.Fn) (rho : Env DR (DR.params (some fn))) (tb : KTab)
 
 /-- The pieces of `setze`'s body. -/
 def kS0 : Stmt kD (vertragVon kD kSetze) false [.int 0 100] kL kL :=
-  .assignSlot KTab.konto () kI0 (.var .hier) rfl kDarfK
+  .assignSlot KTab.konto () kI0 (.var .here) rfl kDarfK
 def kS1 : Stmt kD (vertragVon kD kSetze) false [.int 0 100] kL kL :=
-  .assignSlot KTab.konto () kI1 (.var .hier) rfl kDarfK
-def kSRet : Endblock kD (vertragVon kD kSetze) false [.int 0 100] kL := .ret .keine (by rfl)
+  .assignSlot KTab.konto () kI1 (.var .here) rfl kDarfK
+def kSRet : Endblock kD (vertragVon kD kSetze) false [.int 0 100] kL := .ret .empty (by rfl)
 
 theorem kRumpfSetze_teile : kRumpfSetze = .cons kS0 (.cons kS1 kSRet) := rfl
 
@@ -287,7 +287,7 @@ theorem frA0_form (M : RufMaschineG DR) (t : Faden) (sp : List (Ereignis DR))
 theorem frB0_form (M : RufMaschineG DR) (t : Faden) (sp : List (Ereignis DR))
     (log : List (RufEreignisF DR)) (hz : M.faeden t = ⟨[], frB 0, sp, log⟩) :
     M.faeden t = ⟨[], ⟨some kHauptB, .nil, s0R, ⟨false, [], [], .nil,
-      .ende (ruEnd (.cons kB0 (.cons kLocksB (.ret .keine List.Perm.nil))))⟩⟩, sp, log⟩ := hz
+      .ende (ruEnd (.cons kB0 (.cons kLocksB (.ret .empty List.Perm.nil))))⟩⟩, sp, log⟩ := hz
 
 /-- **The acquire**: `locks L { … }` at the head of a root frame, unfolded and
     taken -- two G steps; the second takes `L`. -/
@@ -371,7 +371,7 @@ theorem gSetze (fn : kD.Fn) (rho : Env DR (DR.params (some fn)))
   have ho3 : offen (M3.faeden t).spur = [lL] := by
     rw [hZ3.1]; exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans ho2
   obtain ⟨M4, s4, hG4⟩ := w_rueckP (P := PR) (O := OR) (passes := passes) hZ3.1 _ [] rfl
-    (PopArt.wie rfl) .keine _ _ rfl (heldIn_L (by have h := ho3; rw [hZ3.1] at h; exact h))
+    (PopArt.wie rfl) .empty _ _ rfl (heldIn_L (by have h := ho3; rw [hZ3.1] at h; exact h))
   have ho4 : offen (M4.faeden t).spur = [lL] := by
     rw [hG4.1]; exact ((Erw.lese _ _ _).offen).trans ho3
   obtain ⟨M5, s5, hZ5⟩ := w_dannLeer (P := PR) (O := OR) (passes := passes) hG4.1 (.frei lL k) .nil rfl
@@ -438,7 +438,7 @@ theorem gPruefe (M : RufMaschineG DR) (t : Faden) (sp : List (Ereignis DR))
     show offen (M.faeden t).spur = []; rw [hz]; exact hoff
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := PR) (O := OR) (passes := passes) hz (some kPruefeA)
     (ruA .nil) (rufPasstR kHpPruefe) rfl (ruEnd (V := vertragVon kD kHauptA) (l := false) (Γ := [])
-      (Λ := []) (.ret .keine List.Perm.nil)) .nil rfl (heldIn_leer _)
+      (Λ := []) (.ret .empty List.Perm.nil)) .nil rfl (heldIn_leer _)
   have ho1 : offen (M1.faeden t).spur = [] := by
     rw [hZ1.1]; exact ((Erw.lese _ _ _).offen).trans hoff0
   obtain ⟨M2, s2, hG2⟩ := w_rueckP (P := PR) (O := OR) (passes := passes) hZ1.1 _ [] rfl
@@ -1202,7 +1202,7 @@ theorem schrittB (w : Faden → Option Nat) {K K' : KonfC} {M : RufMaschineG DR}
         (mk 1 _ _ (by omega) rfl ⟨sp, log, hz, hoff⟩)
   | 1, _, hc, hz, hoff =>
       obtain ⟨M1, s1, ⟨sp1, hz1, ho1⟩, hacc, hmem⟩ := gBlatt (passes := passes) kHauptB .nil
-        KTab.privB kI0 k5 rfl (kDarfB _) (.cons kLocksB (.ret .keine List.Perm.nil)) M t sp log
+        KTab.privB kI0 k5 rfl (kDarfB _) (.cons kLocksB (.ret .empty List.Perm.nil)) M t sp log
         (frB0_form M t sp log hz)
       exact k_store w hR KTab.privB 0 (by decide) 5 (by decide) ⟨5, by decide, by decide⟩ rfl
         (k := [cRestB1]) (ρ := ρ0) hc hs s1 hacc (by rw [hz1, hz]; exact ho1)
@@ -1213,7 +1213,7 @@ theorem schrittB (w : Faden → Option Nat) {K K' : KonfC} {M : RufMaschineG DR}
   | 3, _, hc, hz, hoff =>
       obtain ⟨_, hfrei⟩ := nimm_frei w hR (k := [cRestB2]) (ρ := ρ0) hc hs
       obtain ⟨M1, M2, s1, s2, hs1, ⟨sp2, hz2, ho2⟩, _, hm2⟩ := gNimm (passes := passes) kHauptB
-        .nil (.cons kRufB .nil) (.ret .keine List.Perm.nil) M t sp log hz hoff hfrei
+        .nil (.cons kRufB .nil) (.ret .empty List.Perm.nil) M t sp log hz hoff hfrei
       exact k_nimm w hR (k := [cRestB2]) (ρ := ρ0) hc hs s1 s2 (hs1.trans (by rw [hz]))
         (by rw [hz2]; exact ho2) hm2 (by rw [hz]; exact hoff)
         (mk 4 _ _ (by omega) rfl ⟨sp2, log, hz2, ho2⟩)
@@ -1224,7 +1224,7 @@ theorem schrittB (w : Faden → Option Nat) {K K' : KonfC} {M : RufMaschineG DR}
       obtain ⟨M1, M2, M3, M4, M5, s1, s2, s3, s4, s5, o1, o2, o3, o4, ⟨sp5, log5, hz5, ho5⟩,
         hacc, hmem⟩ := gSetze (passes := passes) kHauptB .nil kHpSetzeB k70
           (.dann .nil (.ende (ruEnd (V := vertragVon kD kHauptB) (l := false) (Γ := []) (Λ := [])
-            (.ret .keine List.Perm.nil)))) M t sp log hz hoff
+            (.ret .empty List.Perm.nil)))) M t sp log hz hoff
       have h0 : offen (M.faeden t).spur = [lL] := by rw [hz]; exact hoff
       exact k_setze w hR 70 (by decide) ⟨70, by decide, by decide⟩ rfl (k := [cGib]) (ρ := ρ0)
         hc hs s1 s2 s3 s4 s5 (o1.trans h0.symm) (o2.trans h0.symm) (o3.trans h0.symm)
@@ -1232,7 +1232,7 @@ theorem schrittB (w : Faden → Option Nat) {K K' : KonfC} {M : RufMaschineG DR}
         (mk 6 _ _ (by omega) rfl ⟨sp5, log5, hz5, ho5⟩)
   | 6, _, hc, hz, hoff =>
       obtain ⟨M1, M2, s1, s2, ho1, ⟨sp2, hz2, ho2⟩, _, hm2⟩ := gGib (passes := passes) kHauptB
-        .nil (.ret .keine List.Perm.nil) M t sp log hz hoff
+        .nil (.ret .empty List.Perm.nil) M t sp log hz hoff
       exact k_gib w hR (k := []) (ρ := ρ0) hc hs s1 s2 (by rw [hz]; exact hoff) ho1
         (by rw [hz2]; exact ho2) hm2 (mk 7 _ _ (by omega) rfl ⟨sp2, log, hz2, ho2⟩)
   | 7, _, hc, hz, hoff =>
@@ -1483,7 +1483,7 @@ theorem c124_ende {passes : Nat} {w : Faden → Option Nat} {K : KonfC} {M : Ruf
   have hSE := hZ.startEnde t
   rw [hz] at hSE
   have hE := (hSE rfl false [] [] .nil (.ende (ruEnd (V := vertragVon kD kHauptA) (l := false)
-    (Γ := []) (Λ := []) (.ret .keine List.Perm.nil))) .keine rfl ⟨List.Perm.nil, Or.inl rfl⟩).1
+    (Γ := []) (Λ := []) (.ret .empty List.Perm.nil))) .empty rfl ⟨List.Perm.nil, Or.inl rfl⟩).1
   have hd : decide ((M.speicher.slots KTab.privA 0 ()).n = 7) = true := hE
   have h7 : (M.speicher.slots KTab.privA 0 ()).n = 7 := of_decide_eq_true hd
   have h0 := (hR.1.1 KTab.privA rfl).2 0 () (by decide) (by decide)

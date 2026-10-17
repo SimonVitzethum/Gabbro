@@ -69,7 +69,7 @@ theorem execStmtH_call_fall {D : Deklaration} {S : SperrInv D} {O : Orakel D} {U
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
     with
   | ok σ' v => exact Or.inl ⟨σ', v, rfl, by simp only [execStmtH, hR]⟩
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => exact Or.inr (Or.inl ⟨e, rfl, by simp only [execStmtH, hR]⟩)
   | hardware e => exact Or.inr (Or.inr ⟨e, by simp only [execStmtH, hR]⟩)
 
@@ -117,12 +117,12 @@ def zEnsWrapB :
     `konto[0] == 100` (and `einzahlen` promises it). -/
 def zPB : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
     | .ein => zEnsHundert
     | .lies => zEnsLies
     | .wrap => zEnsWrapB
-    | .haupt => .wahr
+    | .haupt => .tru
   rumpf
     | .ein => zRumpfEin
     | .lies => zRumpfLies
@@ -308,12 +308,12 @@ theorem zPB_lauf : ∃ M : RufMaschineG zD,
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := zPB) (O := zO) (passes := 0) hZ3.1 zLies .nil zHpLies
-    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
+    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .empty (by rfl))) .nil rfl
     (hgL (hoff_z hZ3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := zPB) (O := zO) (passes := 0) hZ4.1
-    (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
+    (.slot () () zIdx zDarf) (.ret (.val (.var .here)) (by rfl)) .nil rfl
     (hgL (hoff_z hZ4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff4
@@ -323,7 +323,7 @@ theorem zPB_lauf : ∃ M : RufMaschineG zD,
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_rufEnde (P := zPB) (O := zO) (passes := 0) hG6.1 zEin .nil zHpEin rfl
-    (.ret .keine (by rfl)) .nil rfl
+    (.ret .empty (by rfl)) .nil rfl
     (hgL (hoff_g hG6 hoff6)).heldIn
   have hoff7 : offen (M7.faeden 1).spur = [()] := by
     rw [hZ7.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff6
@@ -361,7 +361,7 @@ def zLeseSchreib : Stmt zD (vertragVon zD zHaupt) false [] zL zL :=
 
 /-- **Probe C**: `haupt` = `locks { konto[0] = konto[0] }; return`. -/
 def zRumpfHauptC : Endblock zD (vertragVon zD zHaupt) false [] [] :=
-  .cons (.locks () (fun _ h => nomatch h) (.cons zLeseSchreib .nil)) (.ret .keine List.Perm.nil)
+  .cons (.locks () (fun _ h => nomatch h) (.cons zLeseSchreib .nil)) (.ret .empty List.Perm.nil)
 
 /-- The program of probe C: `zP` with the reading `haupt`. -/
 def zPC : Programm zD :=
@@ -510,10 +510,10 @@ theorem sDarf : darf sD () sL := by
   exact List.mem_singleton.mpr rfl
 
 def sIdx0 {Γ : Ctx} {Λ : List (Res sD)} : Expr sD Γ Λ (.index (sD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def sIdx1 {Γ : Ctx} {Λ : List (Res sD)} : Expr sD Γ Λ (.index (sD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 /-- `konto[0] == konto[1]`, at the holdings `sL`. -/
 def sGleich {Γ : Ctx} : Expr sD Γ sL .bool :=
@@ -525,12 +525,12 @@ def sReqSetze : Expr sD (sD.params sSetze) (Signatur.anfang sD (sD.signatur sSet
 
 /-- `setze` ensures `konto[0] == konto[1] && konto[0] == x`. -/
 def sEnsSetze : Expr sD (ErgCtx (sD.params sSetze) (sD.erg sSetze)) (vertragVon sD sSetze).ende .bool :=
-  .und sGleich (.eq (.slot () () sIdx0 sDarf) (.var .hier))
+  .and sGleich (.eq (.slot () () sIdx0 sDarf) (.var .here))
 
 /-- `setze(x)`: `konto[0] = x; konto[1] = x; return`. -/
 def sRumpfSetze : Endblock sD (vertragVon sD sSetze) false [.int 0 100] sL :=
-  .cons (.assignSlot () () sIdx0 (.var .hier) rfl sDarf)
-    (.cons (.assignSlot () () sIdx1 (.var .hier) rfl sDarf) (.ret .keine (by rfl)))
+  .cons (.assignSlot () () sIdx0 (.var .here) rfl sDarf)
+    (.cons (.assignSlot () () sIdx1 (.var .here) rfl sDarf) (.ret .empty (by rfl)))
 
 theorem sHp : RufPasst sD (vertragVon sD sHaupt) (sD.signatur sSetze) sL where
   hw := fun _ _ => rfl
@@ -547,21 +547,21 @@ theorem sHp : RufPasst sD (vertragVon sD sHaupt) (sD.signatur sSetze) sL where
 
 /-- The call `setze(x)` inside the lock. -/
 def sRuf : Stmt sD (vertragVon sD sHaupt) false [.int 0 100] sL sL :=
-  .call sSetze (.cons (.var .hier) .nil) sHp rfl
+  .call sSetze (.cons (.var .here) .nil) sHp rfl
 
 /-- `haupt(x)`: `locks { setze(x) }; return`. -/
 def sRumpfHaupt : Endblock sD (vertragVon sD sHaupt) false [.int 0 100] [] :=
-  .cons (.locks () (fun _ h => nomatch h) (.cons sRuf .nil)) (.ret .keine List.Perm.nil)
+  .cons (.locks () (fun _ h => nomatch h) (.cons sRuf .nil)) (.ret .empty List.Perm.nil)
 
 /-- The two-writer program. -/
 def sP : Programm sD where
   invariante := fun i => nomatch i
   requires
     | .setze => sReqSetze
-    | .haupt => .wahr
+    | .haupt => .tru
   ensures
     | .setze => sEnsSetze
-    | .haupt => .wahr
+    | .haupt => .tru
   rumpf
     | .setze => sRumpfSetze
     | .haupt => sRumpfHaupt
@@ -661,7 +661,7 @@ theorem sInv_of_ens {κ σ2 : World sD} {ρk : Env sD (sD.params sSetze)}
     {v : ErgVal sD (sD.erg sSetze)} (h : EnsAmRueck sP sSetze κ σ2 ρk v) :
     sS.inv () σ2.speicher = true := by
   have h' : (decide ((σ2.slots () 0 ()).n = (σ2.slots () 1 ()).n) &&
-      decide ((σ2.slots () 0 ()).n = (ρk.get .hier).n)) = true := h
+      decide ((σ2.slots () 0 ()).n = (ρk.get .here).n)) = true := h
   simp only [Bool.and_eq_true] at h'
   exact h'.1
 
@@ -677,7 +677,7 @@ theorem sP_koerper_haupt : KoerperGutS sP 0 (axWahr sD) sS sHaupt := by
     simp only [sRumpfHaupt, execEndH] at hrun
     erw [execStmtH_locks_eins] at hrun
     rcases execStmtH_call_fall (S := sS) (O := O') (U := U) (passes := 0) (R := torRuf sP R)
-      (l := false) (Γ := [.int 0 100]) sSetze (.cons (.var .hier) .nil) sHp rfl
+      (l := false) (Γ := [.int 0 100]) sSetze (.cons (.var .here) .nil) sHp rfl
       ((U () σ).nimmt ()) ρ with ⟨σ1, v1, _, h1⟩ | ⟨e1, he1, h1⟩ | ⟨e1, h1⟩ <;> erw [h1] at hrun
     · cases hi : sS.inv () σ1.speicher with
       | true =>
@@ -689,10 +689,10 @@ theorem sP_koerper_haupt : KoerperGutS sP 0 (axWahr sD) sS sHaupt := by
     · simp only [freiH] at hrun
       cases hrun
       have hreq : ReqAmEintritt sP sSetze (((U () σ).nimmt ()).lese sL [])
-          (Env.cons (ρ.get .hier) .nil) := (hU () σ).2.2
+          (Env.cons (ρ.get .here) .nil) := (hU () σ).2.2
       have htor : torRuf sP R sSetze (((U () σ).nimmt ()).lese sL [])
-          (Env.cons (ρ.get .hier) .nil) =
-          R sSetze (((U () σ).nimmt ()).lese sL []) (Env.cons (ρ.get .hier) .nil) := if_pos hreq
+          (Env.cons (ρ.get .here) .nil) =
+          R sSetze (((U () σ).nimmt ()).lese sL []) (Env.cons (ρ.get .here) .nil) := if_pos hreq
       exact hOV _ _ _ _ (htor.symm.trans he1) g rfl
     · simp only [freiH] at hrun
       cases hrun
@@ -700,10 +700,10 @@ theorem sP_koerper_haupt : KoerperGutS sP 0 (axWahr sD) sS sHaupt := by
     simp only [sRumpfHaupt, execEndH] at hrun
     erw [execStmtH_locks_eins] at hrun
     rcases execStmtH_call_fall (S := sS) (O := O') (U := U) (passes := 0) (R := R)
-      (l := false) (Γ := [.int 0 100]) sSetze (.cons (.var .hier) .nil) sHp rfl
+      (l := false) (Γ := [.int 0 100]) sSetze (.cons (.var .here) .nil) sHp rfl
       ((U () σ).nimmt ()) ρ with ⟨σ1, v1, hR1, h1⟩ | ⟨e1, he1, h1⟩ | ⟨e1, h1⟩ <;> erw [h1] at hrun
     · have hreq : ReqAmEintritt sP sSetze (((U () σ).nimmt ()).lese sL [])
-          (Env.cons (ρ.get .hier) .nil) := (hU () σ).2.2
+          (Env.cons (ρ.get .here) .nil) := (hU () σ).2.2
       have hinv := sInv_of_ens (hR.1 _ _ _ hreq σ1 v1 hR1)
       simp only [freiH, hinv, if_true] at hrun
       cases hrun
@@ -786,7 +786,7 @@ theorem soff_g {M : RufMaschineG sD} {f : Faden} {caller : RufRahmenG sD}
 def sLocks : Stmt sD (vertragVon sD sHaupt) false [.int 0 100] [] [] :=
   .locks () (fun _ h => nomatch h) (.cons sRuf .nil)
 
-def sHauptRet : Endblock sD (vertragVon sD sHaupt) false [.int 0 100] [] := .ret .keine List.Perm.nil
+def sHauptRet : Endblock sD (vertragVon sD sHaupt) false [.int 0 100] [] := .ret .empty List.Perm.nil
 
 /-- **One critical section of a thread `t` running `haupt(x)`**: eight
     steps from its start state -- take the lock, call `setze(x)`, both
@@ -796,13 +796,13 @@ theorem sAbschnitt {M : RufMaschineG sD} (hr : RufErreichbarG sP sO 0 (RufStartG
     (hfrei : RufFreiG M t ()) :
     ∃ M' : RufMaschineG sD, RufErreichbarG sP sO 0 (RufStartG sP sSp sInit) M' ∧
       (∀ u, u ≠ t → M'.faeden u = M.faeden u) ∧ offen (M'.faeden t).spur = [] ∧
-      (M'.speicher.slots () 0 ()).n = (x.get .hier).n ∧
-      (M'.speicher.slots () 1 ()).n = (x.get .hier).n ∧
-      (∃ s0 : World sD, RufEreignisF.eintritt sSetze (Env.cons (x.get .hier) .nil) s0 ∈
+      (M'.speicher.slots () 0 ()).n = (x.get .here).n ∧
+      (M'.speicher.slots () 1 ()).n = (x.get .here).n ∧
+      (∃ s0 : World sD, RufEreignisF.eintritt sSetze (Env.cons (x.get .here) .nil) s0 ∈
           (M'.faeden t).log ∧ s0.speicher = M.speicher) ∧
       (∃ (v : ErgVal sD (sD.erg sSetze)) (s0 s1 : World sD),
-          RufEreignisF.rueck sSetze (Env.cons (x.get .hier) .nil) v s0 s1 ∈ (M'.faeden t).log ∧
-          (s1.slots () 0 ()).n = (x.get .hier).n) := by
+          RufEreignisF.rueck sSetze (Env.cons (x.get .here) .nil) v s0 s1 ∈ (M'.faeden t).log ∧
+          (s1.slots () 0 ()).n = (x.get .here).n) := by
   have hoff0 : offen (M.faeden t).spur = [] := by rw [hz]; rfl
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := sP) (O := sO) (passes := 0) hz sLocks sHauptRet
     x rfl rfl
@@ -819,7 +819,7 @@ theorem sAbschnitt {M : RufMaschineG sD} (hr : RufErreichbarG sP sO 0 (RufStartG
     rw [sOffen_weltVon, hZ1.spur, sOffen_weltVon, hoff0]
     rfl
   obtain ⟨M3, s3, hZ3⟩ := w_rufDann (P := sP) (O := sO) (passes := 0) hZ2.1 sSetze
-    (.cons (.var .hier) .nil) sHp rfl .nil _ x rfl (shgL (soff_z hZ2 hoff2)).heldIn
+    (.cons (.var .here) .nil) sHp rfl .nil _ x rfl (shgL (soff_z hZ2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden t).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_blatt (P := sP) (O := sO) (passes := 0) hZ3.1

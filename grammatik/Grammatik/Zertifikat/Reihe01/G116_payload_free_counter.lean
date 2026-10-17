@@ -132,19 +132,19 @@ theorem gGDarf_lies_ZAEHLER : gdarf gD GGlob.ZAEHLER gL_lies := by unfold gdarf;
 theorem gGDarf_melde_ZAEHLER : gdarf gD GGlob.ZAEHLER gL_melde := by unfold gdarf; decide
 
 def gBody_melde : Endblock gD (vertragVon gD g_melde) false gCtx_melde gL_melde :=
-  (.cons (.publish GGlob.ZAEHLER (.var .hier) [] rfl (by decide) gGDarf_melde_ZAEHLER) (.ret .keine (List.Perm.refl _)))
+  (.cons (.publish GGlob.ZAEHLER (.var .here) [] rfl (by decide) gGDarf_melde_ZAEHLER) (.ret .empty (List.Perm.refl _)))
 
 def gBody_lies : Endblock gD (vertragVon gD g_lies) false gCtx_lies gL_lies :=
-  (.bind ((Expr.glob (D := gD) GGlob.ZAEHLER gGDarf_lies_ZAEHLER) : Expr gD gCtx_lies gL_lies (.int 0 4294967295)) (.ret (.wert (.var .hier)) (List.Perm.refl _)))
+  (.bind ((Expr.glob (D := gD) GGlob.ZAEHLER gGDarf_lies_ZAEHLER) : Expr gD gCtx_lies gL_lies (.int 0 4294967295)) (.ret (.val (.var .here)) (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .melde => .wahr
-    | .lies => .wahr
+    | .melde => .tru
+    | .lies => .tru
   ensures
-    | .melde => .wahr
-    | .lies => .wahr
+    | .melde => .tru
+    | .lies => .tru
   rumpf
     | .melde => gBody_melde
     | .lies => gBody_lies

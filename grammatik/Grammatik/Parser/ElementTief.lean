@@ -1263,7 +1263,7 @@ def parseBitpos : List Token → Except String (String × List Token)
   | t :: rest => match nameText t with
     | some _ => .ok (zeigeTok t, rest)
     | none => match t with
-      | .zahl _ => .ok (zeigeTok t, rest)
+      | .num _ => .ok (zeigeTok t, rest)
       | _ => .error "bitpos expected"
   | [] => .error "bitpos expected"
 /-- A `{` … `}` field list (slots and formats share the shape). -/

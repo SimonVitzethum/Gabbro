@@ -4204,7 +4204,7 @@ impl<'a> Pruefer<'a> {
                                     ),
                                 )
                                 .mit_notiz(
-                                    "the case index the model carries (`Expr.fall cs i nutz`) \
+                                    "the case index the model carries (`Expr.case cs i nutz`) \
                                      is read off ONE case list; with two lists there is no index",
                                 ),
                             );
@@ -5471,7 +5471,7 @@ impl<'a> Pruefer<'a> {
 
     /// **`Variant(payload)` / `Variant()` -- the `tagged` case construction (lane 167).**
     ///
-    /// Answers the owning sum type: the model's `Expr.fall cs i nutz` with `i` the
+    /// Answers the owning sum type: the model's `Expr.case cs i nutz` with `i` the
     /// declaration order and `nutz` the payload held against the case's type. The
     /// arity is the constructor's own (`N281`/`N282`); the payload RANGE is `M101`'s
     /// and its SHAPE `M140`'s, through the ordinary `passt` -- the same split the

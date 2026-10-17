@@ -33,12 +33,12 @@ def uZ : UProg :=
     fns := [
       { name := "f", params := [], parten := [], ergebnis := none, held := [], schreibt := [],
         sichert := [.cmp "==" (.tab "T" "v" (.lit 1)) (.lit 5)], saetze := [.call "g" []],
-        rueck := .keine },
+        rueck := .empty },
       { name := "g", params := [], parten := [], ergebnis := none, held := [], schreibt := [],
         sichert := [.cmp "==" (.tab "T" "v" (.lit 0)) (.lit 7)], saetze := [.call "h" []],
-        rueck := .keine },
+        rueck := .empty },
       { name := "h", params := [], parten := [], ergebnis := none, held := [], schreibt := [],
-        sichert := [.falsch], saetze := [.call "h" []], rueck := .keine }] }
+        sichert := [.fls], saetze := [.call "h" []], rueck := .empty }] }
 
 theorem low_some : (lowerAllg uZ).toOption.isSome = true := by decide
 
@@ -147,11 +147,11 @@ def vF : (declOf uZ).Feld tT := ⟨0, by decide⟩
 
 theorem typZ : ∀ (t : (declOf uZ).Tab) (f : (declOf uZ).Feld t), (declOf uZ).typ t f = .int 0 10 := by
   intro t f
-  have ht : t = tT := Fin.ext (by have := t.isLt; simp [uZ] at this; show t.val = 0; omega)
+  have ht : t = tT := Fin.ext (by have := t.isLt; simp [uZ] at this; show t.wert = 0; omega)
   subst ht
   have hf : f = vF := Fin.ext (by
-    have h1 : f.val < 1 := f.isLt
-    show f.val = 0
+    have h1 : f.wert < 1 := f.isLt
+    show f.wert = 0
     omega)
   subst hf
   rfl
@@ -249,8 +249,8 @@ theorem regLokal0 : RegLokal O0 := ⟨(fun r => nomatch r), (fun g => nomatch g)
 theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   intro hK
   obtain ⟨b0, hb0, hPb⟩ := gesenktZ.rumpf fI
-  change lowBody uZ fI [.call "g" []] .keine = .ok b0 at hb0
-  rw [lowBody_cons fI .keine (.call "g" []) [] (fun g => by simp)] at hb0
+  change lowBody uZ fI [.call "g" []] .empty = .ok b0 at hb0
+  rw [lowBody_cons fI .empty (.call "g" []) [] (fun g => by simp)] at hb0
   split at hb0
   · cases hb0
   · rename_i gst hgst
@@ -281,7 +281,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
         cases hR'
         have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
           simp only [execEnd, hex]
-        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEnd uZ fI .keine = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .keine = some [])
+        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEnd uZ fI .empty = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
           (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
         have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
           (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl

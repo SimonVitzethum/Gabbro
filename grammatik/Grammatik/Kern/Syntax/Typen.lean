@@ -41,7 +41,7 @@ inductive Ty where
   /-- `tagged type` -- die Faelle, je mit oder ohne Zahl-Nutzlast im Bereich. -/
   | sum (cases : List (Option (Int × Int)))
   /-- `reason` -- `n` Gruende. -/
-  | grund (n : Nat)
+  | why (n : Nat)
   /-- `never` -- der Typ ohne Wert: die Antwort einer `divergent`/`prim` Funktion. -/
   | never
   /-- `f32`/`f64 in lo .. hi` («F») -- die Schranken als Brueche `(z, n)`, weil `0.5` eine
@@ -121,7 +121,7 @@ def Val (F : Type) (sig : F → Nat) : Ty → Type
   | .bool => Bool
   | .opt n => Option (Zahl 0 (n - 1))
   | .sum cs => Σ i : Fin cs.length, Nutzlast (cs.get i)
-  | .grund n => Fin n
+  | .why n => Fin n
   | .never => Empty
   | .fl lo hi => Gleit lo hi
   | .fnptr n => { f : F // sig f = n }

@@ -48,7 +48,7 @@ def Ausgang.fehler : Ausgang V l Γ → Option (Logik D ⊕ Hardware D)
     Hardware.** Ein dritter Konstruktor wuerde diesen Satz brechen, nicht eine Definition
     weiter hinten. -/
 theorem zwei_fehler (o : Ausgang V l Γ) :
-    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .grund σ r) ∨
+    (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
     (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
     (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e) := by
   cases o <;> simp <;> assumption
@@ -92,12 +92,12 @@ theorem slot_hat_waechter {t : D.Tab} {f : D.Feld t} {i : Expr D Γ Λ (.index (
 /-- Ein Zugriff DURCH einen Zeiger steht unter denselben Waechtern («SG-8»). -/
 theorem zeiger_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr n rw)}
     {ht : D.tabNr n = some t} {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
-    (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .durch p t ht f i hL) : darf D t Λ := hL
+    (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .thru p t ht f i hL) : darf D t Λ := hL
 
 /-- Eine Bytelesung liegt in der Tabelle: `hi + n ≤ count` («SG-16»). -/
 theorem bytes_in_tabelle {t : D.Tab} {f : D.Feld t} {hf} {n : Nat} {i : Expr D Γ Λ (.int lo hi)}
     {hlo : 0 ≤ lo} {hhi : hi + n ≤ D.count t} {hL}
-    (_e : Expr D Γ Λ (.int 0 (256 ^ n - 1))) (_h : _e = .leseBytes t f hf n i hlo hhi hL) :
+    (_e : Expr D Γ Λ (.int 0 (256 ^ n - 1))) (_h : _e = .getBytes t f hf n i hlo hhi hL) :
     0 ≤ lo ∧ hi + n ≤ D.count t := ⟨hlo, hhi⟩
 
 /-- Eine Zuweisung an einen Slot hat das Schreibrecht ihres Vertrags. -/
@@ -107,7 +107,7 @@ theorem zuweisung_hat_recht {t : D.Tab} {f : D.Feld t} {i} {e} {hw : V.schreibt 
 /-- Eine Zuweisung DURCH einen Zeiger verlangt einen `rw`-Zeiger UND das Schreibrecht. -/
 theorem zeiger_schreibt_mit_recht {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr n true)}
     {ht} {i} {e} {hw : V.schreibt t = true} {hL}
-    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignDurch p t ht f i e hw hL) : V.schreibt t = true := hw
+    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignThru p t ht f i e hw hL) : V.schreibt t = true := hw
 
 /-- Ein `locks L` steht ueber jedem gehaltenen Rang (`H006`): kein zirkulaeres Warten. -/
 theorem sperre_steigt {L : D.Lock} {hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L} {body}
@@ -158,11 +158,11 @@ theorem zeigerruf_hat_alles {p : Expr D Γ Λ (.fnptr n)} {args} {hp : RufPasst 
 
 /-- Ein Registerschreiben steht an einem Register schreibbarer Klasse (`R005`/`R006`). -/
 theorem register_schreibbar {r : D.Reg} {hk : (D.rklasse r).schreibbar = true} {e}
-    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .regSchreib r hk e) : (D.rklasse r).schreibbar = true := hk
+    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .regWrite r hk e) : (D.rklasse r).schreibbar = true := hk
 
 /-- Eine Registerlesung steht an einem Register lesbarer Klasse. -/
 theorem register_lesbar {r : D.Reg} {hk : (D.rklasse r).lesbar = true} {rest}
-    (_b : Block D V l Γ Λ Λ') (_h : _b = .regLies r hk rest) : (D.rklasse r).lesbar = true := hk
+    (_b : Block D V l Γ Λ Λ') (_h : _b = .regRead r hk rest) : (D.rklasse r).lesbar = true := hk
 
 /-- Ein `transition` schreibt ein schreibbares Register aus seinem ERKLAERTEN Spiegel. -/
 theorem transition_hat_spiegel {r m : D.Reg} {hk} {hm : D.spiegel r = some m} {hl} {maske bits}
@@ -172,7 +172,7 @@ theorem transition_hat_spiegel {r m : D.Reg} {hk} {hm : D.spiegel r = some m} {h
 /-- Ein `state`-Uebergang ist ERKLAERT: `erlaubt t f von nach`. -/
 theorem uebergang_erklaert {t : D.Tab} {f : D.Feld t} {hτ : D.typ t f = .int lo hi} {i}
     {von nach : Int} {hn} {he : D.erlaubt t f von nach = true} {hw} {hL}
-    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .uebergang t f hτ i von nach hn he hw hL) :
+    (_s : Stmt D V l Γ Λ Λ) (_h : _s = .shift t f hτ i von nach hn he hw hL) :
     D.erlaubt t f von nach = true := he
 
 /-- Eine Veroeffentlichung nimmt GENAU die erklaerte Nutzlast mit (`V001`-`V004`). -/
@@ -501,43 +501,43 @@ theorem gut_nimmt_gibt {W G} (σ σ1 : World D) (L : D.Lock)
 -- Die Orte eines Ausdrucks tragen ihre Waechter -- weil jeder Konstruktor sie verlangt.
 mutual
 theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
-  | .lit _, _, h | .wahr, _, h | .falsch, _, h | .var _, _, h | .ptrOf _ _ _ _, _, h
-  | .fnref _ _ _, _, h | .none _, _, h | .grund _ _, _, h => by simp [Expr.orte] at h
+  | .lit _, _, h | .tru, _, h | .fls, _, h | .var _, _, h | .ptrOf _ _ _ _, _, h
+  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h => by simp [Expr.orte] at h
   | .glob g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
-  | .altGlob g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
+  | .oldG g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
   | .slot t _ i hL, o, h => by
       simp only [Expr.orte, List.mem_cons] at h
       rcases h with rfl | h
       · exact hL
       · exact i.orte_darf o h
-  | .altSlot t _ i hL, o, h => by
+  | .oldS t _ i hL, o, h => by
       simp only [Expr.orte, List.mem_cons] at h
       rcases h with rfl | h
       · exact hL
       · exact i.orte_darf o h
-  | .leseBytes t _ _ _ i _ _ hL, o, h => by
+  | .getBytes t _ _ _ i _ _ hL, o, h => by
       simp only [Expr.orte, List.mem_cons] at h
       rcases h with rfl | h
       · exact hL
       · exact i.orte_darf o h
-  | .durch p t _ _ i hL, o, h => by
+  | .thru p t _ _ i hL, o, h => by
       simp only [Expr.orte, List.mem_append, List.mem_cons] at h
       rcases h with h | rfl | h
       · exact p.orte_darf o h
       · exact hL
       · exact i.orte_darf o h
-  | .weiter _ _ e, o, h => e.orte_darf o h
-  | .neg a, o, h | .nicht a, o, h | .some a, o, h | .istSome a, o, h => a.orte_darf o h
+  | .widen _ _ e, o, h => e.orte_darf o h
+  | .neg a, o, h | .not a, o, h | .some a, o, h | .istSome a, o, h => a.orte_darf o h
   | .add a b, o, h | .sub a b, o, h | .mul a b, o, h | .div _ _ a b, o, h | .rem _ _ a b, o, h
   | .sdiv _ a b, o, h | .srem _ a b, o, h | .band _ _ a b, o, h | .bor _ _ _ _ _ a b, o, h
   | .bxor _ _ _ _ _ a b, o, h | .shl _ _ _ _ _ a b, o, h | .shr _ _ _ _ _ a b, o, h | .lt a b, o, h
-  | .le a b, o, h | .eq a b, o, h | .fllt a b, o, h | .flle a b, o, h | .und a b, o, h
-  | .oder a b, o, h => by
+  | .le a b, o, h | .eq a b, o, h | .fllt a b, o, h | .flle a b, o, h | .and a b, o, h
+  | .or a b, o, h => by
       simp only [Expr.orte, List.mem_append] at h
       rcases h with h | h
       · exact a.orte_darf o h
       · exact b.orte_darf o h
-  | .fall _ _ nutz, o, h => nutz.orte_darf o h
+  | .case _ _ nutz, o, h => nutz.orte_darf o h
   | .forallSlots t body hL, o, h | .existsSlots t body hL, o, h => by
       simp only [Expr.orte, List.mem_cons] at h
       rcases h with rfl | h
@@ -551,8 +551,8 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact b.orte_darf o h
 
 theorem NutzlastExpr.orte_darf : (e : NutzlastExpr D Γ Λ c) → ∀ o ∈ e.orte, OrtDarf Λ o
-  | .keine, _, h => by simp [NutzlastExpr.orte] at h
-  | .zahl e, o, h => e.orte_darf o h
+  | .empty, _, h => by simp [NutzlastExpr.orte] at h
+  | .num e, o, h => e.orte_darf o h
 end
 
 theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ o
@@ -564,8 +564,8 @@ theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ
       · exact rest.orte_darf o h
 
 theorem ErgExpr.orte_darf : (e : ErgExpr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
-  | .keine, _, h => by simp [ErgExpr.orte] at h
-  | .wert e, o, h => e.orte_darf o h
+  | .empty, _, h => by simp [ErgExpr.orte] at h
+  | .val e, o, h => e.orte_darf o h
 
 /-- Zwei Ausdruecke, zusammen. -/
 theorem orte_append {Λ : List (Res D)} {a b : List (D.Tab ⊕ D.Glob)} (ha : ∀ o ∈ a, OrtDarf Λ o)
@@ -615,15 +615,15 @@ theorem held_nachSig_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (
 
 mutual
 theorem Stmt.held_mono : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
-  | .assignSlot .., L, h | .assignDurch .., L, h | .assignGlob .., L, h | .schreibBytes .., L, h
-  | .assignVar .., L, h | .uebergang .., L, h | .locks .., L, h | .traverse .., L, h
-  | .retry .., L, h | .forever .., L, h | .axiomCall .., L, h | .regSchreib .., L, h
-  | .transition .., L, h | .publish .., L, h | .ret .., L, h | .retGrund .., L, h
+  | .assignSlot .., L, h | .assignThru .., L, h | .assignGlob .., L, h | .putBytes .., L, h
+  | .assignVar .., L, h | .shift .., L, h | .locks .., L, h | .traverse .., L, h
+  | .retry .., L, h | .forever .., L, h | .axiomCall .., L, h | .regWrite .., L, h
+  | .transition .., L, h | .publish .., L, h | .ret .., L, h | .retWhy .., L, h
   | .leave .., L, h | .next .., L, h => h
   | .ite _ t _, L, h => t.held_mono L h
   | .onOption _ p _, L, h => p.held_mono L h
   | .onTag _ arms, L, h => arms.held_mono L h
-  | .onGrund _ arms, L, h => arms.held_mono L h
+  | .onWhy _ arms, L, h => arms.held_mono L h
   | .call f _ _ _, L, h => held_nachSig _ _ L h
   | .callInd (n := n) _ _ _ _, L, h => held_nachSig _ _ L h
   | .breaking _ body, L, h => body.held_mono L h
@@ -637,10 +637,10 @@ theorem Stmt.held_mono : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ
 theorem Block.held_mono : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
   | .nil, L, h => h
   | .cons s rest, L, h => s.held_mono L (rest.held_mono L h)
-  | .bind _ rest, L, h | .bindAxiom _ _ _ _ _ _ _ rest, L, h | .regLies _ _ rest, L, h
-  | .regLiesElse _ _ _ _ rest, L, h | .awaits _ _ _ _ rest, L, h | .exchange _ _ _ _ rest, L, h
-  | .narrow _ _ _ _ rest, L, h | .pruefung _ _ rest, L, h | .gleit _ _ _ _ _ rest, L, h
-  | .gleitLit _ _ _ rest, L, h | .gleitVon _ _ _ rest, L, h | .gleitNarrow _ _ _ _ rest, L, h =>
+  | .bind _ rest, L, h | .bindAxiom _ _ _ _ _ _ _ rest, L, h | .regRead _ _ rest, L, h
+  | .regReadElse _ _ _ _ rest, L, h | .awaits _ _ _ _ rest, L, h | .exchange _ _ _ _ rest, L, h
+  | .narrow _ _ _ _ rest, L, h | .check _ _ rest, L, h | .float _ _ _ _ _ rest, L, h
+  | .floatLit _ _ _ rest, L, h | .floatOf _ _ _ rest, L, h | .floatNarrow _ _ _ _ rest, L, h =>
       rest.held_mono L h
   | .bindCall f _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
   | .bindCallInd _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
@@ -658,15 +658,15 @@ end
 
 mutual
 theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
-  | .assignSlot .., _ | .assignDurch .., _ | .assignGlob .., _ | .schreibBytes .., _
-  | .assignVar .., _ | .uebergang .., _ | .locks .., _ | .traverse .., _
-  | .retry .., _ | .forever .., _ | .axiomCall .., _ | .regSchreib .., _
-  | .transition .., _ | .publish .., _ | .ret .., _ | .retGrund .., _
+  | .assignSlot .., _ | .assignThru .., _ | .assignGlob .., _ | .putBytes .., _
+  | .assignVar .., _ | .shift .., _ | .locks .., _ | .traverse .., _
+  | .retry .., _ | .forever .., _ | .axiomCall .., _ | .regWrite .., _
+  | .transition .., _ | .publish .., _ | .ret .., _ | .retWhy .., _
   | .leave .., _ | .next .., _ => Iff.rfl
   | .ite _ t _, L => t.held_iff L
   | .onOption _ p _, L => p.held_iff L
   | .onTag _ arms, L => arms.held_iff L
-  | .onGrund _ arms, L => arms.held_iff L
+  | .onWhy _ arms, L => arms.held_iff L
   | .call f _ _ _, L => held_nachSig_iff _ _ L
   | .callInd (n := n) _ _ _ _, L => held_nachSig_iff _ _ L
   | .breaking _ body, L => body.held_iff L
@@ -685,10 +685,10 @@ theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ'
 theorem Block.held_iff : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
   | .nil, _ => Iff.rfl
   | .cons s rest, L => (rest.held_iff L).trans (s.held_iff L)
-  | .bind _ rest, L | .bindAxiom _ _ _ _ _ _ _ rest, L | .regLies _ _ rest, L
-  | .regLiesElse _ _ _ _ rest, L | .awaits _ _ _ _ rest, L | .exchange _ _ _ _ rest, L
-  | .narrow _ _ _ _ rest, L | .pruefung _ _ rest, L | .gleit _ _ _ _ _ rest, L
-  | .gleitLit _ _ _ rest, L | .gleitVon _ _ _ rest, L | .gleitNarrow _ _ _ _ rest, L =>
+  | .bind _ rest, L | .bindAxiom _ _ _ _ _ _ _ rest, L | .regRead _ _ rest, L
+  | .regReadElse _ _ _ _ rest, L | .awaits _ _ _ _ rest, L | .exchange _ _ _ _ rest, L
+  | .narrow _ _ _ _ rest, L | .check _ _ rest, L | .float _ _ _ _ _ rest, L
+  | .floatLit _ _ _ rest, L | .floatOf _ _ _ rest, L | .floatNarrow _ _ _ _ rest, L =>
       rest.held_iff L
   | .bindCall f _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
   | .bindCallInd _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
@@ -708,7 +708,7 @@ end
 def Ausgang.welt : Ausgang V l Γ → Option (World D)
   | .ok σ _ => some σ
   | .zurueck σ _ => some σ
-  | .grund σ _ => some σ
+  | .why σ _ => some σ
   | .leave _ σ _ => some σ
   | .next _ σ _ => some σ
   | .logik _ => none
@@ -716,7 +716,7 @@ def Ausgang.welt : Ausgang V l Γ → Option (World D)
 
 def EndAusgang.welt : EndAusgang V l Γ → Option (World D)
   | .zurueck σ _ => some σ
-  | .grund σ _ => some σ
+  | .why σ _ => some σ
   | .leave _ σ _ => some σ
   | .next _ σ _ => some σ
   | .logik _ => none
@@ -724,7 +724,7 @@ def EndAusgang.welt : EndAusgang V l Γ → Option (World D)
 
 def RufAusgang.welt {f : D.Fn} : RufAusgang f → Option (World D)
   | .ok σ _ => some σ
-  | .grund σ _ => some σ
+  | .why σ _ => some σ
   | .logik _ => none
   | .hardware _ => none
 
@@ -1113,7 +1113,7 @@ def Stmt.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .ite _ t e => t.ueberBoden c && e.ueberBoden c
   | .onOption _ p a => p.ueberBoden c && a.ueberBoden c
   | .onTag _ arms => arms.ueberBoden c
-  | .onGrund _ arms => arms.ueberBoden c
+  | .onWhy _ arms => arms.ueberBoden c
   | .locks L _ body => decide (c ≤ D.rang L) && body.ueberBoden c
   | .breaking _ body => body.ueberBoden c
   | .traverse _ _ body => body.ueberBoden c
@@ -1131,16 +1131,16 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .bindCallElse _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
-  | .regLies _ _ rest => rest.ueberBoden c
-  | .regLiesElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .regRead _ _ rest => rest.ueberBoden c
+  | .regReadElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .awaits _ _ _ _ rest => rest.ueberBoden c
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
-  | .pruefung _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
-  | .gleit _ _ _ _ _ rest => rest.ueberBoden c
-  | .gleitLit _ _ _ rest => rest.ueberBoden c
-  | .gleitVon _ _ _ rest => rest.ueberBoden c
-  | .gleitNarrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .check _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .float _ _ _ _ _ rest => rest.ueberBoden c
+  | .floatLit _ _ _ rest => rest.ueberBoden c
+  | .floatOf _ _ _ rest => rest.ueberBoden c
+  | .floatNarrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
 
 def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
     Endblock D V l Γ Λ → Bool
@@ -1238,7 +1238,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
-  | .assignDurch p t _ f i e hw hL, σ, ρ, hbo, hh, σ', h => by
+  | .assignThru p t _ f i e hw hL, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh.heldIn
@@ -1247,14 +1247,14 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
       exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldB hh).heldIn)
-  | .schreibBytes t f hf n i _ _ e hw hL, σ, ρ, hbo, hh, σ', h => by
+  | .putBytes t f hf n i _ _ e hw hL, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibBytes _ t f hf Λ hw hL _ _ (hl.heldB hh).heldIn)
   | .assignVar x e, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .uebergang t f hτ i von nach hn he hw hL, σ, ρ, hbo, hh, σ', h => by
+  | .shift t f hτ i von nach hn he hw hL, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
@@ -1276,7 +1276,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .onTag v arms, σ, ρ, hbo, hh, σ', h => by
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ v.orte_darf hh.heldIn
       exact (GutAusgang.vor hl (arms_gutB bo hbV arms _ _ ρ (by boden_tac) (hl.heldB hh))) σ' h
-  | .onGrund r arms, σ, ρ, hbo, hh, σ', h => by
+  | .onWhy r arms, σ, ρ, hbo, hh, σ', h => by
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ r.orte_darf hh.heldIn
       exact (GutAusgang.vor hl (grund_gutB bo hbV arms _ _ ρ (by boden_tac) (hl.heldB hh))) σ' h
   | .call f args hp hr, σ, ρ, hbo, hh, σ', h => by
@@ -1331,7 +1331,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         rw [ha] at this
         exact hl.trans (Gut.weiter hw hg this)
       · simp [Ausgang.welt] at h
-  | .regSchreib r _ e, σ, ρ, hbo, hh, σ', h => by
+  | .regWrite r _ e, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
   | .transition .., σ, ρ, hbo, hh, σ', h => by
@@ -1347,7 +1347,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ret e _, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .retGrund .., σ, ρ, hbo, hh, σ', h => by
+  | .retWhy .., σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
@@ -1440,14 +1440,14 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf.zuAusgang σ' h)
       · simp [Ausgang.welt] at h
-  | .regLies r _ rest, σ, ρ, hbo, hh, σ', h => by
+  | .regRead r _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       split at h
       · split at h
         · exact (block_gutB bo hbV rest σ _ (by boden_tac) hh).schrumpf σ' h
         · simp [Ausgang.welt] at h
       · simp [Ausgang.welt] at h
-  | .regLiesElse r _ zusage sonst rest, σ, ρ, hbo, hh, σ', h => by
+  | .regReadElse r _ zusage sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       split at h
       · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ zusage.orte_darf hh.heldIn
@@ -1476,31 +1476,31 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
       · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))).zuAusgang σ' h
-  | .pruefung c sonst rest, σ, ρ, hbo, hh, σ', h => by
+  | .check c sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ c.orte_darf hh.heldIn
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ ρ (by boden_tac) (hl.heldB hh))) σ' h
       · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))).zuAusgang σ' h
-  | .gleit op a b lo hi rest, σ, ρ, hbo, hh, σ', h => by
+  | .float op a b lo hi rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append a.orte_darf b.orte_darf) hh.heldIn
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
       · simp [Ausgang.welt] at h
-  | .gleitLit q lo hi rest, σ, ρ, hbo, hh, σ', h => by
+  | .floatLit q lo hi rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       split at h
       · exact (block_gutB bo hbV rest σ _ (by boden_tac) hh).schrumpf σ' h
       · simp [Ausgang.welt] at h
-  | .gleitVon e lo hi rest, σ, ρ, hbo, hh, σ', h => by
+  | .floatOf e lo hi rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
       · simp [Ausgang.welt] at h
-  | .gleitNarrow e lo hi sonst rest, σ, ρ, hbo, hh, σ', h => by
+  | .floatNarrow e lo hi sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
       split at h
@@ -1513,7 +1513,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ret e _, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .retGrund .., σ, ρ, hbo, hh, σ', h => by
+  | .retWhy .., σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
@@ -1763,7 +1763,7 @@ def leereWelt : World leer := ⟨fun t => Empty.elim t, fun g => Empty.elim g, [
 /-- `x : u8 in 0 .. 5`; `x + x` hat den Bereich `0 .. 10`, und `(x + x) / (x + 1)` ist
     schreibbar, weil der Nenner in `1 .. 6` liegt -- Bereich `0 .. 10`. -/
 def probe : Expr leer [.int 0 5] [] (.int 0 10) :=
-  .div (by decide) (by decide) (.add (.var .hier) (.var .hier)) (.add (.var .hier) (.lit 1))
+  .div (by decide) (by decide) (.add (.var .here) (.var .here)) (.add (.var .here) (.lit 1))
 
 example : (eval leereWelt probe leereWelt (.cons ⟨3, by decide, by decide⟩ .nil)).n = 1 := by rfl
 example : (eval leereWelt probe leereWelt (.cons ⟨0, by decide, by decide⟩ .nil)).n = 0 := by rfl
@@ -1771,7 +1771,7 @@ example : (eval leereWelt probe leereWelt (.cons ⟨0, by decide, by decide⟩ .
 /-- `x : i8 in -5 .. 5`, `y : i8 in -3 .. -1`: `x / y` ist schreibbar (der Nenner ist nie
     null), Bereich `-5 .. 5`; bei `x = -5, y = -2` ist es `2` (abschneidend, wie C). -/
 def sprobe : Expr leer [.int (-3) (-1), .int (-5) 5] [] (.int (-(betragMax (-5) 5)) (betragMax (-5) 5)) :=
-  .sdiv (.inr (by decide)) (.var (.dort .hier)) (.var .hier)
+  .sdiv (.inr (by decide)) (.var (.there .here)) (.var .here)
 
 example : (eval leereWelt sprobe leereWelt
     (.cons ⟨-2, by decide, by decide⟩ (.cons ⟨-5, by decide, by decide⟩ .nil))).n = 2 := by rfl
@@ -1782,7 +1782,7 @@ example : ¬ (1 ≤ (0 : Int)) := by decide
 example : ¬ (1 ≤ (0 : Int) ∨ (5 : Int) ≤ -1) := by decide
 
 /-- `forall k in slots of T : …` ueber der leeren Tabelle -- immer wahr. -/
-example : wahr? (eval (D := leer) (Γ := []) (Λ := []) leereWelt (.und .wahr (.nicht .falsch)) leereWelt .nil) = true := by
+example : wahr? (eval (D := leer) (Γ := []) (Λ := []) leereWelt (.and .tru (.not .fls)) leereWelt .nil) = true := by
   rfl
 
 def leerV : Vertrag leer := ⟨fun t => t.elim, fun g => g.elim, none, 0, [], [], none⟩
@@ -1791,7 +1791,7 @@ def leerO : Orakel leer :=
   ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => Option.none⟩
 
 def gleitProbe : Block leer leerV false [] [] [] :=
-  .gleitLit (3, 2) (0, 1) (10, 1) .nil
+  .floatLit (3, 2) (0, 1) (10, 1) .nil
 
 example : ∃ o, execBlock (D := leer) leerO 0 (fun f => f.elim) gleitProbe leereWelt .nil = o :=
   ⟨_, rfl⟩

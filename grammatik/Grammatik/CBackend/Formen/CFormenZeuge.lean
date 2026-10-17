@@ -119,8 +119,8 @@ theorem lies_fn : FnCorr refEL (rufAt refP refO 0 1) (CallAt refEL.lay tvOrc tvX
 
 /-- `(void)b;` evaluates Gabbro's `b`. -/
 theorem ein_void :
-    ExprCorr xEin kEin (.var 2) (Expr.var (D := refD) (Λ := [Res.held (D := refD) ()]) .hier) :=
-  ecorr_var xEin kEin .hier
+    ExprCorr xEin kEin (.var 2) (Expr.var (D := refD) (Λ := [Res.held (D := refD) ()]) .here) :=
+  ecorr_var xEin kEin .here
 
 /-- `k->slots[i].stand = 100;` against `konto[0] := 100`. -/
 theorem ein_write (m : Nat) : StmtCorr xEin m kEin refWriteStAt (.store cStand cU32 (.lit 100)) := by
@@ -205,8 +205,8 @@ theorem ein_envRel : EnvRel refEL kEin refRho7
   refine ⟨?_, ?_, ?_⟩
   · intro τ x
     cases x with
-    | hier => rfl
-    | dort y => exact nomatch y
+    | here => rfl
+    | there y => exact nomatch y
   · intro q hq
     rw [List.mem_singleton.mp hq]
     rfl
@@ -393,11 +393,11 @@ theorem viewBytes_ev (ρ : CLok) :
 theorem bytesicht_zeuge (ρG : Env bvD []) (ρC : CLok) :
     ev bvEL.lay tvOrc 1 (le32 (.padd cViewBytes (.lit 0))) bvSt ρC =
       some (.int 67305985, bvSt) ∧
-    (eval bvW (Expr.leseBytes (D := bvD) (Γ := []) (Λ := []) () () rfl 4 (Expr.lit ((0 : Nat) : Int))
+    (eval bvW (Expr.getBytes (D := bvD) (Γ := []) (Λ := []) () () rfl 4 (Expr.lit ((0 : Nat) : Int))
       (Int.natCast_nonneg 0) (by decide) bvDarf) bvW ρG).n = 67305985 := by
   have h := le32_corr_at xBv (Γ := []) (Λ := []) () () rfl rfl rfl rfl rfl 0 (by decide)
     bvDarf bvW bvSt bv_corr ρG ρC cViewBytes (viewBytes_ev ρC)
-  have hv : (eval bvW (Expr.leseBytes (D := bvD) (Γ := []) (Λ := []) () () rfl 4
+  have hv : (eval bvW (Expr.getBytes (D := bvD) (Γ := []) (Λ := []) () () rfl 4
       (Expr.lit ((0 : Nat) : Int)) (Int.natCast_nonneg 0) (by decide)
       bvDarf) bvW ρG).n = 67305985 := by
     rfl

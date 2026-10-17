@@ -1473,7 +1473,7 @@ fn kandidat_emit(
         let (erg_term, bindet) = erg_anzeige(cf);
         let erg_arm = if bindet { ".zurueck _ v" } else { ".zurueck _ _" };
         out.push_str(&format!(
-            "def gx_{g}_erg{nr} : String := match gx_{g}_e{nr} with | {erg_arm} => \"Ergebnis: \" ++ {erg_term} | .grund _ r => \"grund \" ++ toString r.val | .logik _ => \"logik\" | .hardware _ => \"hardware\" | .leave _ _ _ => \"leave\" | .next _ _ _ => \"next\"\n",
+            "def gx_{g}_erg{nr} : String := match gx_{g}_e{nr} with | {erg_arm} => \"Ergebnis: \" ++ {erg_term} | .why _ r => \"grund \" ++ toString r.val | .logik _ => \"logik\" | .hardware _ => \"hardware\" | .leave _ _ _ => \"leave\" | .next _ _ _ => \"next\"\n",
         ));
         out.push_str(&format!("#eval gx_{g}_erg{nr}\n"));
         // The end state: every cell read back (truncated past 256 cells;
@@ -1711,7 +1711,7 @@ fn abschnitt(
     out.push_str("-- kernel-checked `example ... := by decide`. A searcher false\n");
     out.push_str("-- positive fails the file LOUDLY; \"none found\" is NEVER a proof.\n");
     out.push_str("--\n");
-    out.push_str("-- Boundaries, measured: `requires` travels (`gReq` arms, `.wahr`\n");
+    out.push_str("-- Boundaries, measured: `requires` travels (`gReq` arms, `.tru`\n");
     out.push_str("-- where none stands) and is kernel-checked per hit; lock\n");
     out.push_str("-- invariants are the separate family `gS` (`invs := []`), so only\n");
     out.push_str("-- `ensures` violations are searched. Searcher and file share one\n");

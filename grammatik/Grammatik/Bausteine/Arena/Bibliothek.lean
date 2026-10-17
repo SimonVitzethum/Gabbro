@@ -242,11 +242,11 @@ theorem bibDarf : darf bibD () [Res.held (D := bibD) ()] := by
 /-- Index `0` into the two-slot table, in the writer context. -/
 def bibIdx : Expr bibD [.int 0 10] [Res.held (D := bibD) ()]
     (.index (bibD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The cap value `100` in range. -/
 def bibHundert : Expr bibD [.int 0 10] [Res.held (D := bibD) ()] (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 100)
+  .widen (by decide) (by decide) (.lit 100)
 
 /-- The writer holds the lock: start equals end. -/
 theorem bibW_start : Signatur.anfang bibD (bibD.signatur bibW) =
@@ -273,17 +273,17 @@ def bibWriteStAt : Stmt bibD (vertragVon bibD bibW) false [.int 0 10]
 def bibRumpfW :
     Endblock bibD (vertragVon bibD bibW) false [.int 0 10]
       [Res.held (D := bibD) ()] :=
-  .cons bibWriteStAt (.ret .keine (by rfl))
+  .cons bibWriteStAt (.ret .empty (by rfl))
 
 /-- The writer requires `true`. -/
 def bibReqW : Expr bibD (bibD.params bibW)
     (Signatur.anfang bibD (bibD.signatur bibW)) .bool :=
-  .wahr
+  .tru
 
 /-- The writer ensures the slot did not decrease (`old ≤ new`). -/
 def bibEnsW : Expr bibD (ErgCtx (bibD.params bibW) (bibD.erg bibW))
     (vertragVon bibD bibW).ende .bool :=
-  .le (.altSlot () () bibIdx bibDarfW)
+  .le (.oldS () () bibIdx bibDarfW)
     (.slot () () bibIdx bibDarfW)
 
 /-- The program: one writer with its contract and write-return body. -/
@@ -322,11 +322,11 @@ theorem bibDient : DientBibliothek bibD bibLib () := by
 
 /-- The ordinary call argument: the parameter itself. -/
 def bibArgs : Args bibD [.int 0 10] [Res.held (D := bibD) ()] [.int 0 10] :=
-  .cons (.var .hier) .nil
+  .cons (.var .here) .nil
 
 /-- The payload argument: the cap `100`. -/
 def bibLast : Expr bibD [.int 0 10] [Res.held (D := bibD) ()] (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 100)
+  .widen (by decide) (by decide) (.lit 100)
 
 /-! ## 5. The witness run: lock, then the writing leaf -/
 
@@ -422,7 +422,7 @@ def bibM2F : RufMaschineF bibD :=
       ⟨(bibM1F.faeden 0).kopf.f, (bibM1F.faeden 0).kopf.rho,
        (bibM1F.faeden 0).kopf.s0,
        ⟨false, [.int 0 10], [Res.held (D := bibD) ()], bibRho7,
-        .ret (.keine (D := bibD) (Γ := [.int 0 10])
+        .ret (.empty (D := bibD) (Γ := [.int 0 10])
           (Λ := [Res.held (D := bibD) ()])) (by rfl)⟩⟩,
       (((bibM1F.weltVon 0).lese [Res.held (D := bibD) ()]
         (bibIdx.orte ++ bibHundert.orte)).schreibSlot () [Res.held (D := bibD) ()]
@@ -437,7 +437,7 @@ theorem bibSchrittBF : RufSchrittF bibP bibO 0 bibM1F 0 bibM2F := by
   have hhead : (bibM1F.faeden 0).kopf.rest =
       ⟨false, [.int 0 10], [Res.held (D := bibD) ()], bibRho7,
         .cons bibWriteStAt
-          (.ret (.keine (D := bibD) (Γ := [.int 0 10])
+          (.ret (.empty (D := bibD) (Γ := [.int 0 10])
             (Λ := [Res.held (D := bibD) ()])) (by rfl))⟩ := rfl
   have hstep : (execStmt bibO 0 keinRuf bibWriteStAt
       (bibM1F.weltVon 0) bibRho7) =

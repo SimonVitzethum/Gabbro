@@ -145,22 +145,22 @@ theorem gHp_einzahlen_lies : RufPasst gD (vertragVon gD g_einzahlen) (gD.signatu
   hb := fun c h => by have hV : (vertragVon gD g_einzahlen).boden = some 1 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
 
 def gEns_einzahlen : Expr gD (ErgCtx (gD.params g_einzahlen) (gD.erg g_einzahlen)) (vertragVon gD g_einzahlen).ende .bool :=
-  (.le (Expr.altSlot (D := gD) GTab.Konto GKontoFeld.stand ((.var (.dort .hier))) gDarf_einzahlen_Konto) (Expr.durch (D := gD) (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) gDarf_einzahlen_Konto))
+  (.le (Expr.oldS (D := gD) GTab.Konto GKontoFeld.stand ((.var (.there .here))) gDarf_einzahlen_Konto) (Expr.thru (D := gD) (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) gDarf_einzahlen_Konto))
 
 def gEns_lies : Expr gD (ErgCtx (gD.params g_lies) (gD.erg g_lies)) (vertragVon gD g_lies).ende .bool :=
-  (.eq (.var .hier) (Expr.durch (D := gD) (.var (.dort .hier)) GTab.Konto rfl GKontoFeld.stand ((.var (.dort (.dort .hier)))) gDarf_lies_Konto))
+  (.eq (.var .here) (Expr.thru (D := gD) (.var (.there .here)) GTab.Konto rfl GKontoFeld.stand ((.var (.there (.there .here)))) gDarf_lies_Konto))
 
 def gBody_einzahlen : Endblock gD (vertragVon gD g_einzahlen) false gCtx_einzahlen gL_einzahlen :=
-  (.cons (.assignDurch (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) ((.weiter (by decide) (by decide) (((.lit 100)) : Expr gD gCtx_einzahlen gL_einzahlen (.int 100 100))) : Expr gD gCtx_einzahlen gL_einzahlen (.int 0 100)) (by decide) gDarf_einzahlen_Konto) (.cons (.call g_lies (.cons (.ptrOf GTab.Konto 0 rfl false) (.cons (.var (.dort .hier)) .nil)) gHp_einzahlen_lies rfl) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignThru (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) ((.widen (by decide) (by decide) (((.lit 100)) : Expr gD gCtx_einzahlen gL_einzahlen (.int 100 100))) : Expr gD gCtx_einzahlen gL_einzahlen (.int 0 100)) (by decide) gDarf_einzahlen_Konto) (.cons (.call g_lies (.cons (.ptrOf GTab.Konto 0 rfl false) (.cons (.var (.there .here)) .nil)) gHp_einzahlen_lies rfl) (.ret .empty (List.Perm.refl _))))
 
 def gBody_lies : Endblock gD (vertragVon gD g_lies) false gCtx_lies gL_lies :=
-  (.ret (.wert (Expr.durch (D := gD) (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) gDarf_lies_Konto)) (List.Perm.refl _))
+  (.ret (.val (Expr.thru (D := gD) (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) gDarf_lies_Konto)) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .einzahlen => .wahr
-    | .lies => .wahr
+    | .einzahlen => .tru
+    | .lies => .tru
   ensures
     | .einzahlen => gEns_einzahlen
     | .lies => gEns_lies

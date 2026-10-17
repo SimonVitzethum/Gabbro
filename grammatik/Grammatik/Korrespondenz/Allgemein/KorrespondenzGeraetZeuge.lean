@@ -166,16 +166,16 @@ abbrev gCtx : Ctx := [gU32]
 /-- `let s = ST; a = s;` -- the plain register read: its promise
     (`ST <= 8`) is the DEVICE's, and breaking it is `Hardware.geraet`. -/
 def gArmT : Block gD gV false gCtx [] [] :=
-  .regLies .st rfl (.cons (Stmt.assignVar (.dort .hier) (Expr.var .hier)) .nil)
+  .regRead .st rfl (.cons (Stmt.assignVar (.there .here) (Expr.var .here)) .nil)
 
 /-- `let t = ST else (t < 9) { return 0; } a = t;` -- the CHECKED read: the
     same promise, but read by the PROGRAM, so a broken promise is a branch
     and not a stop. -/
 def gArmE : Block gD gV false gCtx [] [] :=
-  .regLiesElse .st rfl (Expr.lt (Expr.var .hier) (Expr.lit 9))
-    (Endblock.ret (.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0)))
+  .regReadElse .st rfl (Expr.lt (Expr.var .here) (Expr.lit 9))
+    (Endblock.ret (.val (Expr.widen (by decide) (by decide) (Expr.lit 0)))
       (List.Perm.refl []))
-    (.cons (Stmt.assignVar (.dort .hier) (Expr.var .hier)) .nil)
+    (.cons (Stmt.assignVar (.there .here) (Expr.var .here)) .nil)
 
 /-- ```
     impl fn treiber(a : u32) -> u32 {
@@ -186,14 +186,14 @@ def gArmE : Block gD gV false gCtx [] [] :=
     }
     ``` -/
 def gBody : Endblock gD gV false gCtx [] :=
-  .cons (Stmt.regSchreib .ctrl rfl (Expr.var .hier))
-    (.cons (Stmt.ite (Expr.lt (Expr.var .hier) (Expr.lit 1)) gArmT gArmE)
-      (.ret (.wert (Expr.var .hier)) (List.Perm.refl [])))
+  .cons (Stmt.regWrite .ctrl rfl (Expr.var .here))
+    (.cons (Stmt.ite (Expr.lt (Expr.var .here) (Expr.lit 1)) gArmT gArmE)
+      (.ret (.val (Expr.var .here)) (List.Perm.refl [])))
 
 def gProg : Programm gD where
   invariante := fun i => nomatch i
-  requires := fun _ => Expr.wahr
-  ensures := fun _ => Expr.wahr
+  requires := fun _ => Expr.tru
+  ensures := fun _ => Expr.tru
   rumpf := fun _ => gBody
 
 /-! ## 3. The certificate: the emitted C, row by row

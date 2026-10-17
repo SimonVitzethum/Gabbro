@@ -14,8 +14,8 @@ namespace Gabbro.Grammatik.Parser
 inductive Token
   | ident : String → Token
   | wort : String → Token
-  | zahl : Nat → Token
-  | gleit : String → Token
+  | num : Nat → Token
+  | float : String → Token
   | text : String → Token
   | zeichen : String → Token
   | ende : Token
@@ -296,11 +296,11 @@ def nimmZeichen : List Char → Option (String × List Char)
     `L003`: `0b12` is never `0b1` followed by `2`). Pure: returns the
     token and the rest, so `scan` keeps the only recursion. -/
 def zahlWeiter : Nat → List Char → Except LexFehler (Token × List Char)
-  | v, [] => .ok (Token.zahl v, [])
+  | v, [] => .ok (Token.num v, [])
   | v, c :: cs =>
     if istAnfang c || istZiffer c then
       .error (.unbekannt "letter in number")
-    else .ok (Token.zahl v, c :: cs)
+    else .ok (Token.num v, c :: cs)
 
 /-- A number body of the given base: value, then the maximal-munch
     float branch (`1..5` stays a range, `1.5` a float, `1.` refuses
@@ -314,7 +314,7 @@ def zahlBasis (basis : Nat) (cs : List Char) :
       if istZiffer d then
         let (nach, rest') := nimmDez (d :: ds)
         let (exp, rest'') := nimmExponent rest'
-        .ok (Token.gleit (toString v ++ "." ++ String.ofList nach ++ exp),
+        .ok (Token.float (toString v ++ "." ++ String.ofList nach ++ exp),
           rest'')
       else zahlWeiter v rest
     | _ => zahlWeiter v rest
@@ -442,22 +442,22 @@ theorem lex_ident_beispiel :
 
 /-- Hex and binary literals with `_` separators take their value. -/
 theorem lex_zahl_hex :
-    lex "0xFFFF_FFFF" = .ok [Token.zahl 4294967295, Token.ende] := by
+    lex "0xFFFF_FFFF" = .ok [Token.num 4294967295, Token.ende] := by
   decide
 
 /-- Binary literal. -/
 theorem lex_zahl_bin :
-    lex "0b101" = .ok [Token.zahl 5, Token.ende] := by
+    lex "0b101" = .ok [Token.num 5, Token.ende] := by
   decide
 
 /-- A float literal with an exponent. -/
 theorem lex_gleit_beispiel :
-    lex "1.5e-3" = .ok [Token.gleit "1.5e-3", Token.ende] := by
+    lex "1.5e-3" = .ok [Token.float "1.5e-3", Token.ende] := by
   decide
 
 /-- Maximal munch: `1..5` is a range, never a float. -/
 theorem lex_bereich :
-    lex "1..5" = .ok [Token.zahl 1, Token.zeichen "..", Token.zahl 5,
+    lex "1..5" = .ok [Token.num 1, Token.zeichen "..", Token.num 5,
       Token.ende] := by
   decide
 
@@ -506,7 +506,7 @@ theorem sonde01_lex :
   decide
 def tok02 : List Token :=
   [.ident "m", .zeichen ".", .ident "va", .zeichen "<",
-   .zahl 18446603336221196288, .zeichen "||", .zeichen "!",
+   .num 18446603336221196288, .zeichen "||", .zeichen "!",
    .ident "m", .zeichen ".", .ident "nutzer", .ende]
 theorem sonde02_lex :
     lex "m.va < 0xFFFF_8000_0000_0000 || !m.nutzer" = .ok tok02 := by
@@ -567,8 +567,8 @@ theorem sonde11_lex :
     lex "Self.slots[s].elter == None" = .ok tok11 := by
   decide
 def tok12 : List Token :=
-  [.wort "x", .zeichen ">=", .gleit "0.0", .zeichen "&&",
-   .wort "x", .zeichen "<=", .gleit "1.0", .ende]
+  [.wort "x", .zeichen ">=", .float "0.0", .zeichen "&&",
+   .wort "x", .zeichen "<=", .float "1.0", .ende]
 theorem sonde12_lex :
     lex "x >= 0.0 && x <= 1.0" = .ok tok12 := by
   decide
@@ -576,7 +576,7 @@ def tok13 : List Token :=
   [.ident "d", .zeichen ".", .ident "TIEFE", .ende]
 theorem sonde13_lex : lex "d.TIEFE" = .ok tok13 := by decide
 def tok14 : List Token :=
-  [.ident "TIEFE", .zeichen "<=", .zahl 8, .ende]
+  [.ident "TIEFE", .zeichen "<=", .num 8, .ende]
 theorem sonde14_lex : lex "TIEFE <= 8" = .ok tok14 := by decide
 def tok15 : List Token :=
   [.ident "m", .zeichen ".", .ident "rahmen", .zeichen ">=",
@@ -602,13 +602,13 @@ theorem sonde17_lex :
   decide
 def tok18 : List Token :=
   [.ident "c", .zeichen ".", .ident "wert", .zeichen "+",
-   .zahl 1, .ende]
+   .num 1, .ende]
 theorem sonde18_lex : lex "c.wert + 1" = .ok tok18 := by decide
 def tok19 : List Token :=
-  [.ident "v", .zeichen "+", .zahl 1, .ende]
+  [.ident "v", .zeichen "+", .num 1, .ende]
 theorem sonde19_lex : lex "v + 1" = .ok tok19 := by decide
 def tok20 : List Token :=
-  [.ident "z", .zeichen "+", .zahl 1, .ende]
+  [.ident "z", .zeichen "+", .num 1, .ende]
 theorem sonde20_lex : lex "z + 1" = .ok tok20 := by decide
 def tok21 : List Token :=
   [.ident "a", .zeichen "+%", .ident "b", .zeichen "*%",

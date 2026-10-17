@@ -18,7 +18,7 @@
   * `w1_bool` / `w1_sonst_alles` -- computed: the Bool is `false`, and every OTHER component
     is `true` -- the refusal is the new component `antwortenB`'s alone;
   * the same for an empty register type (`w1r_spec_nicht`, `w1r_bool`: `u8 in 1 .. 0`) and an
-    axiom returning `reason` with no reasons (`w1g_bool`: `.grund 0`).
+    axiom returning `reason` with no reasons (`w1g_bool`: `.why 0`).
   THE CONTRAST: the same code behind an axiom `-> never` is still accepted (`w1v_bool`), and
   the head is the named stop `nieZurueck` (`w1v_kopf`): there the call really does not
   return (`_Noreturn`), and the continuation is unreachable in the C as in G.
@@ -47,15 +47,15 @@ theorem w1_leer : AntwortLeer w1D (w1D.aerg ()) := by
 
 /-- `if true { let p = hol(); }` -/
 def w1Stmt : Stmt w1D (vertragVon w1D ()) false [] [] [] :=
-  .ite .wahr (.bindAxiom (τ := .fnptr 5) () .nil rfl (fun e => nomatch e) (fun e => nomatch e)
+  .ite .tru (.bindAxiom (τ := .fnptr 5) () .nil rfl (fun e => nomatch e) (fun e => nomatch e)
     (fun e => nomatch e) (fun e => nomatch e) .nil) .nil
 
 /-- **The round-6 probe**: probe A's contract behind `let p = hol();`. -/
 def w1P : Programm w1D where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
-  rumpf _ := .cons w1Stmt (.ret .keine List.Perm.nil)
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
+  rumpf _ := .cons w1Stmt (.ret .empty List.Perm.nil)
 
 def w1S : SperrInv w1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
@@ -104,9 +104,9 @@ instance w1rD_fn_deq : DecidableEq w1rD.Fn := inferInstanceAs (DecidableEq Unit)
 /-- `if true { let t = temp; }` over the empty register. -/
 def w1rP : Programm w1rD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
-  rumpf _ := .cons (.ite .wahr (.regLies () rfl .nil) .nil) (.ret .keine List.Perm.nil)
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
+  rumpf _ := .cons (.ite .tru (.regRead () rfl .nil) .nil) (.ret .empty List.Perm.nil)
 
 def w1rS : SperrInv w1rD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
@@ -123,18 +123,18 @@ theorem w1r_bool : Akzeptiert w1rP w1rS [()] [] [] [()] = false := by decide
 
 /-! ## 3. `reason` with no reasons -/
 
-/-- `g1D` whose axiom returns `.grund 0`. -/
-def w1gD : Deklaration := { g1D with aerg := fun _ => some (.grund 0) }
+/-- `g1D` whose axiom returns `.why 0`. -/
+def w1gD : Deklaration := { g1D with aerg := fun _ => some (.why 0) }
 
 instance w1gD_fn_deq : DecidableEq w1gD.Fn := inferInstanceAs (DecidableEq Unit)
 
 def w1gP : Programm w1gD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
-  rumpf _ := .cons (.ite .wahr (.bindAxiom (τ := .grund 0) () .nil rfl (fun e => nomatch e)
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
+  rumpf _ := .cons (.ite .tru (.bindAxiom (τ := .why 0) () .nil rfl (fun e => nomatch e)
     (fun e => nomatch e) (fun e => nomatch e) (fun e => nomatch e) .nil) .nil)
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 def w1gS : SperrInv w1gD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
@@ -153,9 +153,9 @@ def w1vKopf : Block w1vD (vertragVon w1vD ()) false [] [] [] :=
 
 def w1vP : Programm w1vD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
-  rumpf _ := .cons (.ite .wahr w1vKopf .nil) (.ret .keine List.Perm.nil)
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
+  rumpf _ := .cons (.ite .tru w1vKopf .nil) (.ret .empty List.Perm.nil)
 
 def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 

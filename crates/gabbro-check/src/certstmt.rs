@@ -840,8 +840,8 @@ fn drucke_bedingung(
     info: &DeclInfo,
 ) -> Result<String, Refusal> {
     match &e.art {
-        ExprArt::Wahr => Ok(".wahr".to_string()),
-        ExprArt::Falsch => Ok(".falsch".to_string()),
+        ExprArt::Wahr => Ok(".tru".to_string()),
+        ExprArt::Falsch => Ok(".fls".to_string()),
         ExprArt::Klammer(x) => drucke_bedingung(funktion, x, ctx, info),
         ExprArt::Ort(o) if o.suffixe.is_empty() => match ctx.index_von(&o.basis.text) {
             Some((k, CtxEintrag::Wahr(_))) => Ok(format!("(.var {k})")),
@@ -882,14 +882,14 @@ fn drucke_bedingung(
             let (tb, _, _) = drucke_expr(funktion, rechts, ctx, info)?;
             let inner = format!("(.{name} {ta} {tb})");
             Ok(if negiert {
-                format!("(.nicht {inner})")
+                format!("(.not {inner})")
             } else {
                 inner
             })
         }
         ExprArt::Unaer(UnOp::Nicht, x) => {
             let t = drucke_bedingung(funktion, x, ctx, info)?;
-            Ok(format!("(.nicht {t})"))
+            Ok(format!("(.not {t})"))
         }
         _ => fehlschlag(
             funktion,
@@ -1221,7 +1221,7 @@ fn drucke_zuweisung(
             fr,
         )?;
         return Ok(StmtTerm::Neu2(format!(
-            "(.assignDurch {} {} {ti} true {iterm} {t})",
+            "(.assignThru {} {} {ti} true {iterm} {t})",
             tab.name, feld.text,
         )));
     }

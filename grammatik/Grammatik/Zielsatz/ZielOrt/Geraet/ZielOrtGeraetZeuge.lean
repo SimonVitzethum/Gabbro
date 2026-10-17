@@ -191,10 +191,10 @@ theorem geHpLeser : RufPasst geD (vertragVon geD geHaupt) (geD.signatur geLeser)
         fun h => absurd (List.mem_singleton.mp h) geLock_ne⟩)
 
 def geIdx {Γ : Ctx} {Λ : List (Res geD)} (t : GeTab) : Expr geD Γ Λ (.index (geD.count t)) :=
-  .weiter (by show (0 : Int) ≤ 0; decide) (by show (0 : Int) ≤ 1 - 1; decide) (.lit 0)
+  .widen (by show (0 : Int) ≤ 0; decide) (by show (0 : Int) ≤ 1 - 1; decide) (.lit 0)
 
 def geEins {Γ : Ctx} {Λ : List (Res geD)} : Expr geD Γ Λ (.int 0 1) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 /-- `notiz[0] := 1` inside `leser`, after the first read. -/
 def geNotiz : Stmt geD (vertragVon geD geLeser) false [.int 0 1] geLg geLg :=
@@ -202,31 +202,31 @@ def geNotiz : Stmt geD (vertragVon geD geLeser) false [.int 0 1] geLg geLg :=
 
 /-- `let x = R; notiz[0] := 1; let y = R; return x == y` -/
 def geLesBlock : Block geD (vertragVon geD geLeser) false [] geLg geLg :=
-  .regLies () rfl (.cons geNotiz (.regLies () rfl
-    (.cons (.ret (.wert (.eq (.var (.dort .hier)) (.var .hier))) (List.Perm.refl _)) .nil)))
+  .regRead () rfl (.cons geNotiz (.regRead () rfl
+    (.cons (.ret (.val (.eq (.var (.there .here)) (.var .here))) (List.Perm.refl _)) .nil)))
 
 def geRumpfLeser : Endblock geD (vertragVon geD geLeser) false [] geLg :=
-  .cons (.ite .wahr geLesBlock .nil) (.ret (.wert .wahr) (List.Perm.refl _))
+  .cons (.ite .tru geLesBlock .nil) (.ret (.val .tru) (List.Perm.refl _))
 
 def geRumpfHaupt : Endblock geD (vertragVon geD geHaupt) false [] geLg :=
-  .cons (.call geLeser .nil geHpLeser rfl) (.ret .keine (List.Perm.refl _))
+  .cons (.call geLeser .nil geHpLeser rfl) (.ret .empty (List.Perm.refl _))
 
 def geRumpfSchreiber : Endblock geD (vertragVon geD geSchreiber) false [] geLt :=
   .cons (.assignSlot GeTab.tafel () (geIdx GeTab.tafel) geEins rfl geDarfTafel)
-    (.ret .keine (List.Perm.refl _))
+    (.ret .empty (List.Perm.refl _))
 
 def geRumpfRuhe : Endblock geD (vertragVon geD geRuhe) false [] [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 /-- The program: `ensures result` for `leser`, `true` elsewhere. -/
 def geP : Programm geD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .haupt => .wahr
-    | .leser => .var .hier
-    | .schreiber => .wahr
-    | .ruhe => .wahr
+    | .haupt => .tru
+    | .leser => .var .here
+    | .schreiber => .tru
+    | .ruhe => .tru
   rumpf
     | .haupt => geRumpfHaupt
     | .leser => geRumpfLeser
@@ -358,7 +358,7 @@ theorem geLeser_lauf (O' : Orakel geD) (hRL : RegLokal O') (passes : Nat)
   show (∃ σ', execEnd O' passes R geRumpfLeser σ ρ = .zurueck σ' true) ∨
     ∃ e, execEnd O' passes R geRumpfLeser σ ρ = .hardware e
   simp only [geRumpfLeser, geLesBlock, geNotiz, execEnd, execStmt, execBlock]
-  generalize hσ1 : σ.lese geLg (Expr.wahr : Expr geD [] geLg .bool).orte = σ1
+  generalize hσ1 : σ.lese geLg (Expr.tru : Expr geD [] geLg .bool).orte = σ1
   simp only [eval, wahr?, if_true]
   cases hv : einpassen O'.zeiger (geD.rtyp ()) (O'.regLies () σ1) with
   | none =>
@@ -502,20 +502,20 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   have hoff0 : offen ((RufStartG geP geSp geInit).faeden 0).spur = [GeLock.lg] := rfl
   -- `haupt` calls `leser`
   obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := geP) (O := geO) (passes := 0) h0 geLeser .nil geHpLeser
-    rfl (.ret .keine (List.Perm.refl _)) .nil rfl (geHgLg hoff0).heldIn
+    rfl (.ret .empty (List.Perm.refl _)) .nil rfl (geHgLg hoff0).heldIn
   have hoff1 : offen (M1.faeden 0).spur = [GeLock.lg] := by
     rw [hZ1.spur, (Erw.lese _ _ _).offen, geOffen_weltVon]; exact hoff0
   have e1 := hZ1.1
   try dsimp only at e1
   -- `leser`: unfold the `if`, take its true branch
   obtain ⟨M2, s2, hZ2⟩ := w_endeEntf (P := geP) (O := geO) (passes := 0) e1
-    (.ite .wahr geLesBlock .nil) (.ret (.wert .wahr) (List.Perm.refl _)) .nil rfl rfl
+    (.ite .tru geLesBlock .nil) (.ret (.val .tru) (List.Perm.refl _)) .nil rfl rfl
   have hoff2 : offen (M2.faeden 0).spur = [GeLock.lg] := by
     rw [hZ2.spur, geOffen_weltVon]; exact hoff1
   have e2 := hZ2.1
   try dsimp only at e2
-  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := geP) (O := geO) (passes := 0) e2 .wahr geLesBlock .nil
-    .nil (.ende (.ret (.wert .wahr) (List.Perm.refl _))) .nil rfl rfl
+  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := geP) (O := geO) (passes := 0) e2 .tru geLesBlock .nil
+    .nil (.ende (.ret (.val .tru) (List.Perm.refl _))) .nil rfl rfl
     (geHgLg (geHoff_e e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [GeLock.lg] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, geOffen_weltVon]; exact hoff2
@@ -556,7 +556,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
       rufSchrittG_fremd s1 1 (by decide), geM0_faden1]
   obtain ⟨M6, s6, hZ6⟩ := w_blatt (P := geP) (O := geO) (passes := 0) h51
     (.assignSlot GeTab.tafel () (geIdx GeTab.tafel) geEins rfl geDarfTafel)
-    (.ret .keine (List.Perm.refl _)) .nil rfl rfl (geHgLt rfl).heldIn _ _
+    (.ret .empty (List.Perm.refl _)) .nil rfl rfl (geHgLt rfl).heldIn _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have h60 : M6.faeden 0 = M5.faeden 0 := rufSchrittG_fremd s6 0 (by decide)

@@ -315,8 +315,8 @@ reads), not in a handler's answers.
 
 ### 6.10 A device chain
 
-`korrOk` carries three of the five hardware forms (`Stmt.regSchreib`, `Block.regLies`,
-`Block.regLiesElse`): *if the profile holds and the register answers inside its declared type,
+`korrOk` carries three of the five hardware forms (`Stmt.regWrite`, `Block.regRead`,
+`Block.regReadElse`): *if the profile holds and the register answers inside its declared type,
 every run of the emitted C corresponds* — nothing about the device is claimed. The `requires …
 else` channel is the interesting one: a broken device promise becomes a **branch**, so
 `Hardware.geraet` cannot arise from it. `korrOk` gained a last parameter `GT : GerTafel D`

@@ -311,13 +311,13 @@ def akRuhe : akD.Fn := AkFn.ruhe
 theorem akDarf (Λ : List (Res akD)) : darf akD () Λ := fun _ h => nomatch h
 
 def akI0 {Γ : Ctx} {Λ : List (Res akD)} : Expr akD Γ Λ (.index 2) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def ak1 {Γ : Ctx} {Λ : List (Res akD)} : Expr akD Γ Λ (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 def ak2 {Γ : Ctx} {Λ : List (Res akD)} : Expr akD Γ Λ (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 2)
+  .widen (by decide) (by decide) (.lit 2)
 
 /-- `t[0] == 1`: `a`'s `ensures`, so `t` is in `a`'s footprint. -/
 def akT1 {Γ : Ctx} {Λ : List (Res akD)} : Expr akD Γ Λ .bool :=
@@ -326,41 +326,41 @@ def akT1 {Γ : Ctx} {Λ : List (Res akD)} : Expr akD Γ Λ .bool :=
 /-- `a`: `t[0] = 1; return`, `ensures t[0] == 1` -- no lock, the table is
     unguarded. -/
 def akRumpfA : Endblock akD (vertragVon akD akA) false [] [] :=
-  .cons (.assignSlot () () akI0 ak1 rfl (akDarf _)) (.ret .keine List.Perm.nil)
+  .cons (.assignSlot () () akI0 ak1 rfl (akDarf _)) (.ret .empty List.Perm.nil)
 
 /-- `b`: `t[0] = 2; return`. -/
 def akRumpfB : Endblock akD (vertragVon akD akB) false [] [] :=
-  .cons (.assignSlot () () akI0 ak2 rfl (akDarf _)) (.ret .keine List.Perm.nil)
+  .cons (.assignSlot () () akI0 ak2 rfl (akDarf _)) (.ret .empty List.Perm.nil)
 
 /-- `c` with floor `1`: `locks L { }; return` -- `L` has rank `0`. -/
 def akRumpfC : Endblock akD (vertragVon akD akC) false [] [] :=
-  .cons (.locks () (fun _ h => nomatch h) .nil) (.ret .keine List.Perm.nil)
+  .cons (.locks () (fun _ h => nomatch h) .nil) (.ret .empty List.Perm.nil)
 
 /-- The program without the floor violation (`c` just returns). -/
 def akP1 : Programm akD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
     | .a => akT1
-    | _ => .wahr
+    | _ => .tru
   rumpf
     | .a => akRumpfA
     | .b => akRumpfB
-    | .c => .ret .keine List.Perm.nil
-    | .ruhe => .ret .keine List.Perm.nil
+    | .c => .ret .empty List.Perm.nil
+    | .ruhe => .ret .empty List.Perm.nil
 
 /-- The same program with `c` taking a lock below its floor. -/
 def akP2 : Programm akD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
     | .a => akT1
-    | _ => .wahr
+    | _ => .tru
   rumpf
     | .a => akRumpfA
     | .b => akRumpfB
     | .c => akRumpfC
-    | .ruhe => .ret .keine List.Perm.nil
+    | .ruhe => .ret .empty List.Perm.nil
 
 def akFs : List akD.Fn := [akA, akB, akC, akRuhe]
 
@@ -415,13 +415,13 @@ theorem ak2_boden_falsch :
     and `t[0] = 1` / `t[0] = 2` read nothing. No footprint contains `t`. -/
 def akP3 : Programm akD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .a => akRumpfA
     | .b => akRumpfB
-    | .c => .ret .keine List.Perm.nil
-    | .ruhe => .ret .keine List.Perm.nil
+    | .c => .ret .empty List.Perm.nil
+    | .ruhe => .ret .empty List.Perm.nil
 
 /-- **The Bool as of master `cdfa8ac9`** (before the fix), recorded to show
     what it accepted: fragment, closure, footprint, floors, protected

@@ -146,35 +146,35 @@ theorem nDarf (t : nD.Tab) (Λ : List (Res nD)) : darf nD t Λ := fun _ h => nom
 theorem nGd (g : nD.Glob) (Λ : List (Res nD)) : gdarf nD g Λ := fun _ h => nomatch h
 
 def nI0 {Γ : Ctx} {Λ : List (Res nD)} {t : nD.Tab} : Expr nD Γ Λ (.index (nD.count t)) :=
-  .weiter (by decide) (show (0 : Int) ≤ 1 - 1 by decide) (.lit 0)
+  .widen (by decide) (show (0 : Int) ≤ 1 - 1 by decide) (.lit 0)
 
 def nW {Γ : Ctx} {Λ : List (Res nD)} (k : Int) (h0 : (0 : Int) ≤ k) (h9 : k ≤ 9) :
     Expr nD Γ Λ (.int 0 9) :=
-  .weiter h0 h9 (.lit k)
+  .widen h0 h9 (.lit k)
 
 /-! ## 2. The program -/
 
 def nRumpfA : Endblock nD (vertragVon nD NFn.hauptA) false [] [] :=
   .cons (.assignSlot NTab.tabA () nI0 (.glob NGlob.konfig (nGd _ _)) rfl (nDarf _ _))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 def nRumpfB : Endblock nD (vertragVon nD NFn.hauptB) false [] [] :=
   .cons (.assignSlot NTab.tabB () nI0 (.glob NGlob.konfig (nGd _ _)) rfl (nDarf _ _))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 def nKernS : Stmt nD (vertragVon nD NFn.kern) false [] [] [] :=
   .assignGlob NGlob.konfig (nW 3 (by decide) (by decide)) rfl (nGd _ _)
 
 def nRumpfKern : Endblock nD (vertragVon nD NFn.kern) false [] [] :=
-  .cons nKernS (.ret .keine List.Perm.nil)
+  .cons nKernS (.ret .empty List.Perm.nil)
 
 def nRumpfZA : Endblock nD (vertragVon nD NFn.zaehlA) false [] [] :=
   .cons (.assignGlob NGlob.zaehler (.slot NTab.tabA () nI0 (nDarf _ _)) rfl (nGd _ _))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 def nRumpfZB : Endblock nD (vertragVon nD NFn.zaehlB) false [] [] :=
   .cons (.assignSlot NTab.tabB () nI0 (.glob NGlob.zaehler (nGd _ _)) rfl (nDarf _ _))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 /-- The condition of the leak: `tabA[0] == 0`. -/
 def lkC : Expr nD [] [] .bool := .eq (.slot NTab.tabA () nI0 (nDarf _ _)) (.lit 0)
@@ -185,19 +185,19 @@ def lkW : Stmt nD (vertragVon nD NFn.leck) false [] [] [] :=
 
 def lkS : Stmt nD (vertragVon nD NFn.leck) false [] [] [] := .ite lkC (.cons lkW .nil) .nil
 
-def lkRet : Endblock nD (vertragVon nD NFn.leck) false [] [] := .ret .keine List.Perm.nil
+def lkRet : Endblock nD (vertragVon nD NFn.leck) false [] [] := .ret .empty List.Perm.nil
 
 def nRumpfLeck : Endblock nD (vertragVon nD NFn.leck) false [] [] := .cons lkS lkRet
 
 def nP : Programm nD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .hauptA => nRumpfA
     | .hauptB => nRumpfB
     | .kern => nRumpfKern
-    | .ruhe => .ret .keine List.Perm.nil
+    | .ruhe => .ret .empty List.Perm.nil
     | .zaehlA => nRumpfZA
     | .zaehlB => nRumpfZB
     | .leck => nRumpfLeck
@@ -367,13 +367,13 @@ def tafel1 : Nat → Faden
 
 def r1M0 (sp : Speicher nD) : RufMaschineG nD := RufStartG nP sp init1
 def r1M1 (sp : Speicher nD) : RufMaschineG nD :=
-  blattM (r1M0 sp) 2 nKernS (.ret .keine List.Perm.nil)
+  blattM (r1M0 sp) 2 nKernS (.ret .empty List.Perm.nil)
 def r1M2 (sp : Speicher nD) : RufMaschineG nD :=
   blattM (r1M1 sp) 0 (.assignSlot NTab.tabA () nI0 (.glob NGlob.konfig (nGd _ _)) rfl (nDarf _ _))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 def r1M3 (sp : Speicher nD) : RufMaschineG nD :=
   blattM (r1M2 sp) 1 (.assignSlot NTab.tabB () nI0 (.glob NGlob.konfig (nGd _ _)) rfl (nDarf _ _))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 def r1 (sp : Speicher nD) : Nat → RufMaschineG nD
   | 0 => r1M0 sp

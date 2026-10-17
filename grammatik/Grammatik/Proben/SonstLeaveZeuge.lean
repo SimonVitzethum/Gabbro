@@ -31,15 +31,15 @@ namespace Gabbro.Grammatik
 
 /-- The loop body: `if !false { leave }` (the refusal `pruefung`). -/
 def svBody : Block adD (vertragVon adD adFn) true [] [] [] :=
-  .pruefung .falsch (.leave rfl) .nil
+  .check .fls (.leave rfl) .nil
 
 /-- `retry 1 until false { svBody }` with an empty overflow block. -/
 def svRetry : Stmt adD (vertragVon adD adFn) false [] [] [] :=
-  .retry 1 .falsch svBody .nil
+  .retry 1 .fls svBody .nil
 
 /-- The statement after the loop. -/
 def svRet : Endblock adD (vertragVon adD adFn) false [] [] :=
-  .ret (.wert adSieben) List.Perm.nil
+  .ret (.val adSieben) List.Perm.nil
 
 /-- The body: the loop, then `return 7`. -/
 def svRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
@@ -47,8 +47,8 @@ def svRumpf : Endblock adD (vertragVon adD adFn) false [] [] :=
 
 def svP : Programm adD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | true => svRumpf
     | false => adCallerRumpf
@@ -107,7 +107,7 @@ theorem sonst_leave_zeuge :
       RufLaufG svP adO 0 0 svM M4 ∧
       (∃ sp lg, M4.faeden 0 = ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [],
         ⟨true, [], [], Env.nil, .dann (.cons (.leave rfl) .nil)
-          (.abbruch (.wiederRest 0 .falsch svBody .nil (.dann .nil (.ende svRet))))⟩⟩, sp, lg⟩) ∧
+          (.abbruch (.wiederRest 0 .fls svBody .nil (.dann .nil (.ende svRet))))⟩⟩, sp, lg⟩) ∧
       RufLaufG svP adO 0 0 M4 M' ∧
       M'.faeden 0 = ⟨[], adCaller, σ'.spur,
         [RufEreignisF.rueck adFn Env.nil v (adSp0.welt []) σ']⟩ ∧
@@ -120,27 +120,27 @@ theorem sonst_leave_zeuge :
     .nil rfl rfl
   have e1 := hZ1.1
   try dsimp only at e1
-  obtain ⟨M2, s2, hZ2⟩ := w_dannRetry (P := svP) (O := adO) (passes := 0) e1 1 .falsch svBody
+  obtain ⟨M2, s2, hZ2⟩ := w_dannRetry (P := svP) (O := adO) (passes := 0) e1 1 .fls svBody
     .nil .nil (.ende svRet) .nil rfl
   have e2 := hZ2.1
   try dsimp only at e2
   -- the bound is false: one pass of the body
-  obtain ⟨M3, s3, hZ3⟩ := w_wiederSchritt (P := svP) (O := adO) (passes := 0) e2 0 .falsch svBody
+  obtain ⟨M3, s3, hZ3⟩ := w_wiederSchritt (P := svP) (O := adO) (passes := 0) e2 0 .fls svBody
     .nil (.dann .nil (.ende svRet)) .nil rfl rfl (fun _ h => absurd h List.not_mem_nil)
   have e3 := hZ3.1
   try dsimp only at e3
   -- the refusal fails: its `else` block runs in block position over `abbruch`
-  obtain ⟨M4, s4, hZ4⟩ := w_pruefFalsch (P := svP) (O := adO) (passes := 0) e3 .falsch
-    (.leave rfl) .nil (.wiederRest 0 .falsch svBody .nil (.dann .nil (.ende svRet))) .nil rfl rfl
+  obtain ⟨M4, s4, hZ4⟩ := w_pruefFalsch (P := svP) (O := adO) (passes := 0) e3 .fls
+    (.leave rfl) .nil (.wiederRest 0 .fls svBody .nil (.dann .nil (.ende svRet))) .nil rfl rfl
     (fun _ h => absurd h List.not_mem_nil)
   have e4 := hZ4.1
   try dsimp only at e4
   -- the `leave` reaches the loop shim
   obtain ⟨M5, s5, hZ5⟩ := w_peelAbbruch (P := svP) (O := adO) (passes := 0) e4 true .nil
-    (.wiederRest 0 .falsch svBody .nil (.dann .nil (.ende svRet))) .nil rfl
+    (.wiederRest 0 .fls svBody .nil (.dann .nil (.ende svRet))) .nil rfl
   have e5 := hZ5.1
   try dsimp only at e5
-  obtain ⟨M6, s6, hZ6⟩ := w_abbWieder (P := svP) (O := adO) (passes := 0) e5 true 0 .falsch
+  obtain ⟨M6, s6, hZ6⟩ := w_abbWieder (P := svP) (O := adO) (passes := 0) e5 true 0 .fls
     svBody .nil (.dann .nil (.ende svRet)) .nil .nil rfl (fun _ h => absurd h List.not_mem_nil)
   have e6 := hZ6.1
   try dsimp only at e6
@@ -149,7 +149,7 @@ theorem sonst_leave_zeuge :
   try dsimp only at e7
   -- the statement after the loop: `return 7`
   obtain ⟨M8, s8, hG8⟩ := w_rueckP (P := svP) (O := adO) (passes := 0) e7 _ _ rfl
-    (PopArt.wie rfl) (.wert adSieben) List.Perm.nil _ rfl (fun _ h => absurd h List.not_mem_nil)
+    (PopArt.wie rfl) (.val adSieben) List.Perm.nil _ rfl (fun _ h => absurd h List.not_mem_nil)
   refine ⟨M4, M8, _, _,
     RufLaufG.schritt s1 (RufLaufG.schritt s2 (RufLaufG.schritt s3 (RufLaufG.einzeln s4))),
     ⟨_, _, e4⟩, RufLaufG.schritt s5 (RufLaufG.schritt s6 (RufLaufG.schritt s7

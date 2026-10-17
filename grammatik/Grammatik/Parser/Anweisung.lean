@@ -57,7 +57,7 @@ inductive SAnw
   | lassElse : String → String → String → SAnw → SAnw
   | lassLib : Bool → String → String → String → SAnw
   | zuweis : SExpr → String → SExpr → SAnw
-  | uebergang : SExpr → String → String → SAnw
+  | shift : SExpr → String → String → SAnw
   | ruf : String → List SExpr → SAnw
   | libruf : String → String → Nat → SAnw
   | wenn : SExpr → SAnw → List SAnw → Option SAnw → SAnw
@@ -72,7 +72,7 @@ inductive SAnw
   | sperrt : Bool → SExpr → SAnw → SAnw
   | beobachtet : String → SAnw → SAnw
   | verlasse : String → SAnw
-  | weiter : String → SAnw
+  | widen : String → SAnw
   | publiziert : SExpr → SExpr → String → SAnw
   | erwartet : String → SExpr → String → SAnw
   | tauscht : String → SExpr → String → SAnw
@@ -125,7 +125,7 @@ def beqSAnw : SAnw → SAnw → Bool
     m == n && strEq a b && strEq l m2 && strEq f g
   | .zuweis z o x, .zuweis w p y =>
     beqSExpr z w && strEq o p && beqSExpr x y
-  | .uebergang z a b, .uebergang w c d =>
+  | .shift z a b, .shift w c d =>
     beqSExpr z w && strEq a c && strEq b d
   | .ruf f a, .ruf g b => strEq f g && beqSExprList a b
   | .libruf l f n, .libruf m g k =>
@@ -147,7 +147,7 @@ def beqSAnw : SAnw → SAnw → Bool
     g == h && beqSExpr o p && beqSAnw b d
   | .beobachtet d b, .beobachtet e c => strEq d e && beqSAnw b c
   | .verlasse l, .verlasse m => strEq l m
-  | .weiter l, .weiter m => strEq l m
+  | .widen l, .widen m => strEq l m
   | .publiziert z w p, .publiziert y v q =>
     beqSExpr z y && beqSExpr w v && strEq p q
   | .erwartet n q e, .erwartet m p f =>
@@ -230,8 +230,8 @@ def istKopfForm (w : String) : List Token → Bool
 def zeigeTok : Token → String
   | .ident s => s
   | .wort s => s
-  | .zahl n => toString n
-  | .gleit s => s
+  | .num n => toString n
+  | .float s => s
   | .text s => "\"" ++ s ++ "\""
   | .zeichen s => s
   | .ende => "<ende>"
@@ -329,7 +329,7 @@ def schliesseBlock : List SAnw → SAnw
   | ss => match ss.getLast? with
     | some (.rueck x) => .block ss.dropLast (some (.ret x))
     | some (.verlasse l) => .block ss.dropLast (some (.fort l))
-    | some (.weiter l) => .block ss.dropLast (some (.naechst l))
+    | some (.widen l) => .block ss.dropLast (some (.naechst l))
     | _ => .block ss none
 
 -- The statement levels of SYNTAX.md section 7 (`stmt`, `block`,
@@ -739,7 +739,7 @@ def parseWeiter (f : Nat) (toks : List Token) :
   | f + 1 => match nimmName toks with
     | .error e => .error e
     | .ok (l, rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.weiter l, rest')
+      | .ok rest' => .ok (.widen l, rest')
       | .error e => .error e
 def parseRueck (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -776,7 +776,7 @@ def parseUebergang (f : Nat) (toks : List Token) :
           | .ok rest3 => match nimmName rest3 with
             | .error e => .error e
             | .ok (nach, rest4) => match fordereZeichen ";" rest4 with
-              | .ok rest5 => .ok (.uebergang z von nach, rest5)
+              | .ok rest5 => .ok (.shift z von nach, rest5)
               | .error e => .error e
 def parseSchreitet (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=

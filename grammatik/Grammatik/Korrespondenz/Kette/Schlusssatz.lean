@@ -456,7 +456,7 @@ theorem schlusssatz {src : String} (K : Kette src)
     intro passes n f σ ρG hf
     cases hr : rufAt K.E.P O passes n f σ ρG with
     | ok σ' v => rw [hr] at hf; exact absurd hf (by simp [RufAusgang.istFehler])
-    | grund σ' r => rw [hr] at hf; exact absurd hf (by simp [RufAusgang.istFehler])
+    | why σ' r => rw [hr] at hf; exact absurd hf (by simp [RufAusgang.istFehler])
     | logik e => exact ⟨e, rfl⟩
     | hardware e => exact absurd hr (hhw passes n f σ ρG e)
   have hreq : ∀ (passes n : Nat) (f : (declOf K.u).Fn) (σ : World (declOf K.u))

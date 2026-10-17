@@ -109,14 +109,14 @@ abbrev gL_kombiniert : List (Res gD) := []
 
 
 def gBody_kombiniert : Endblock gD (vertragVon gD g_kombiniert) false gCtx_kombiniert gL_kombiniert :=
-  (.ret (.wert (.bor 64 (by decide) (by decide) (by decide) (by decide) ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD gCtx_kombiniert gL_kombiniert (.int 0 18446744073709551615)) ((.weiter (by decide) (by decide) (.var (.dort .hier))) : Expr gD gCtx_kombiniert gL_kombiniert (.int 0 18446744073709551615)))) (List.Perm.refl _))
+  (.ret (.val (.bor 64 (by decide) (by decide) (by decide) (by decide) ((.widen (by decide) (by decide) (.var .here)) : Expr gD gCtx_kombiniert gL_kombiniert (.int 0 18446744073709551615)) ((.widen (by decide) (by decide) (.var (.there .here))) : Expr gD gCtx_kombiniert gL_kombiniert (.int 0 18446744073709551615)))) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .kombiniert => .wahr
+    | .kombiniert => .tru
   ensures
-    | .kombiniert => .wahr
+    | .kombiniert => .tru
   rumpf
     | .kombiniert => gBody_kombiniert
 

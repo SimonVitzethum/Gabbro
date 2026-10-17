@@ -48,7 +48,7 @@ theorem null_bereich {u : UProg} (h : nullB u = true) (t : Fin u.tabellen.length
     (f : Fin (fieldCount u t)) (w : Int × Int) (hw : fieldRangeO u t f = some w) :
     w.1 ≤ 0 ∧ 0 ≤ w.2 := by
   unfold fieldRangeO at hw
-  cases hf : (tabAt u t).felder[f.val]? with
+  cases hf : (tabAt u t).felder[f.wert]? with
   | none => rw [hf] at hw; simp at hw
   | some e =>
     rw [hf] at hw

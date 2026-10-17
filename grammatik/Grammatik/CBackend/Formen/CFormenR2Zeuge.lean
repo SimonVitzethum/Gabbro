@@ -32,9 +32,9 @@ theorem foreverBody_corr : BlockSem xF 7 kEin foreverBody cForeverBody := by
 
 /-- F1 INSTANTIATED: `for (;;) { k->slots[i].stand = 100; goto m_ende; }`. -/
 theorem forever_corr : StmtCorr xF 0 kEin
-    (Stmt.forever (V := vertragVon refD refEin) (l := false) () Expr.wahr foreverBody)
+    (Stmt.forever (V := vertragVon refD refEin) (l := false) () Expr.tru foreverBody)
     (CS.loop cForeverBody 7) :=
-  scorr_forever xF 0 7 kEin () Expr.wahr foreverBody cForeverBody foreverBody_corr
+  scorr_forever xF 0 7 kEin () Expr.tru foreverBody cForeverBody foreverBody_corr
 
 /-- WITNESS, `forever`: from the zero state the loop runs one round and
     leaves it, the slot at `100` on both sides. -/
@@ -76,10 +76,10 @@ theorem satI_zeuge (L : CLayout) (orc : DevOrc) (st : CSt) :
 /-! ## 3. `<<%` on a byte: `200 <<% 3` in `u8` -/
 
 def byte200 : Expr d74 Γ74 [] (.int 0 (2 ^ (7 + 1) - 1)) :=
-  Expr.weiter (by decide) (by decide) (Expr.lit 200)
+  Expr.widen (by decide) (by decide) (Expr.lit 200)
 
 def drei : Expr d74 Γ74 [] (.int 0 ((7 : Nat) : Int)) :=
-  Expr.weiter (by decide) (by decide) (Expr.lit 3)
+  Expr.widen (by decide) (by decide) (Expr.lit 3)
 
 /-- WITNESS, `<<%`: `(uint8_t)((uint32_t)(200) << (uint32_t)(3))` is `64`
     (`1600 mod 256`), `Zahl.shlW`'s value. -/

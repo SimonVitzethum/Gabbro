@@ -18,25 +18,25 @@
   | `held <= 50 ops` (lock hold budget)           | NO FORM (no hold budget in `Deklaration`)       |
   | `impl fn einzahlen(k : ptr<normal, rw> Konto, | params `[.ptr 0 true, .index 2, .int 0 10]`;    |
   |   i : index into Konto, b : Betrag)`          | the address space `normal`: NO FORM             |
-  | `requires Held(M)`                            | `haelt := [M]`, `requires := .wahr`             |
-  | `ensures old(k.slots[i].stand) <=             | `.le (.altSlot Konto stand i) (.durch k … i)`;  |
+  | `requires Held(M)`                            | `haelt := [M]`, `requires := .tru`             |
+  | `ensures old(k.slots[i].stand) <=             | `.le (.oldS Konto stand i) (.thru k … i)`;  |
   |   k.slots[i].stand`                           | `old(p->…)` has no pointer form (`altDurch`):   |
   |                                               | written `altSlot` of the table the type names   |
   | `effects { reads k.slots, writes k.slots,     | `schreibt := true`; `reads`: NO FORM (reads are |
   |   locks M }`                                  | the computed footprint); `locks M`: `haelt`     |
   | `costs <= 16 ops` / `<= 8 ops`                | `r4Decl` with `kostenPasst` (`KostenG.lean`)    |
-  | `k.slots[i].stand = 100;`                     | `.assignDurch (.var k) Konto rfl stand (.var i) |
+  | `k.slots[i].stand = 100;`                     | `.assignThru (.var k) Konto rfl stand (.var i) |
   |                                               |   100 rfl hL`                                   |
   | `lies(k, i);`                                 | `.call lies [ptrOf Konto false, var i] hp rfl`: |
   |                                               | a `rw` pointer passed as `r` has no coercion    |
   |                                               | form; `ptrOf` of the same table (a pointer's    |
   |                                               | value is `()`, the denotation is identical)     |
-  | end of `einzahlen` (falls off)                | `.ret .keine perm` (an `Endblock` must end)     |
+  | end of `einzahlen` (falls off)                | `.ret .empty perm` (an `Endblock` must end)     |
   | `impl fn lies(k : ptr<normal, r> Konto,       | params `[.ptr 0 false, .index 2]`,              |
   |   i : index into Konto) -> Stand`             | `erg := some (.int 0 100)`                      |
-  | `ensures result == k.slots[i].stand`          | `.eq (.var .hier) (.durch k … i)`               |
+  | `ensures result == k.slots[i].stand`          | `.eq (.var .here) (.thru k … i)`               |
   | `effects { reads k.slots, locks M }`          | `schreibt := false`, `haelt := [M]`             |
-  | `return k.slots[i].stand;`                    | `.ret (.wert (.durch (.var k) … (.var i))) perm`|
+  | `return k.slots[i].stand;`                    | `.ret (.val (.thru (.var k) … (.var i))) perm`|
 
   NOT in the file, added and flagged: the driver `treiber` (the file's
   header says the C driver runs `einzahlen` then `lies`; in Lean it is a
@@ -182,12 +182,12 @@ theorem r4Darf : darf r4D () r4M := by
 
 /-! ## 2. The bodies and contracts -/
 
-/-- `einzahlen`'s parameters: `k` (`.hier`), `i`, `b`. -/
+/-- `einzahlen`'s parameters: `k` (`.here`), `i`, `b`. -/
 abbrev r4GEin : Ctx := [.ptr 0 true, .index 2, .int 0 10]
 
 /-- `k.slots[i].stand = 100;` -/
 def r4Schreib : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M r4M :=
-  .assignDurch (.var .hier) () rfl () (.var (.dort .hier)) (.weiter (by decide) (by decide) (.lit 100))
+  .assignThru (.var .here) () rfl () (.var (.there .here)) (.widen (by decide) (by decide) (.lit 100))
     rfl r4Darf
 
 /-- `einzahlen` calls `lies`: same lock, `lies` writes nothing. -/
@@ -204,10 +204,10 @@ theorem r4HpLies : RufPasst r4D (vertragVon r4D r4Ein) (r4D.signatur r4Lies) r4M
 
 /-- `lies(k, i);` -- `k` (rw) passed as `r`: the pointer to the same table. -/
 def r4RufLies : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M (nach r4D r4Lies r4M) :=
-  .call r4Lies (.cons (.ptrOf () 0 rfl false) (.cons (.var (.dort .hier)) .nil)) r4HpLies rfl
+  .call r4Lies (.cons (.ptrOf () 0 rfl false) (.cons (.var (.there .here)) .nil)) r4HpLies rfl
 
 def r4RetEin : Endblock r4D (vertragVon r4D r4Ein) false r4GEin r4M :=
-  .ret .keine (List.Perm.refl _)
+  .ret .empty (List.Perm.refl _)
 
 def r4RestEin : Endblock r4D (vertragVon r4D r4Ein) false r4GEin r4M := .cons r4RufLies r4RetEin
 
@@ -217,20 +217,20 @@ def r4RumpfEin : Endblock r4D (vertragVon r4D r4Ein) false r4GEin r4M := .cons r
 /-- `ensures old(k.slots[i].stand) <= k.slots[i].stand` -/
 def r4EnsEin : Expr r4D (ErgCtx (r4D.params r4Ein) (r4D.erg r4Ein)) (vertragVon r4D r4Ein).ende
     .bool :=
-  .le (.altSlot () () (.var (.dort .hier)) r4Darf)
-    (.durch (.var .hier) () rfl () (.var (.dort .hier)) r4Darf)
+  .le (.oldS () () (.var (.there .here)) r4Darf)
+    (.thru (.var .here) () rfl () (.var (.there .here)) r4Darf)
 
-/-- `lies`'s parameters: `k` (`.hier`), `i`. -/
+/-- `lies`'s parameters: `k` (`.here`), `i`. -/
 abbrev r4GLies : Ctx := [.ptr 0 false, .index 2]
 
 /-- `return k.slots[i].stand;` -/
 def r4RumpfLies : Endblock r4D (vertragVon r4D r4Lies) false r4GLies r4M :=
-  .ret (.wert (.durch (.var .hier) () rfl () (.var (.dort .hier)) r4Darf)) (List.Perm.refl _)
+  .ret (.val (.thru (.var .here) () rfl () (.var (.there .here)) r4Darf)) (List.Perm.refl _)
 
 /-- `ensures result == k.slots[i].stand` -/
 def r4EnsLies : Expr r4D (ErgCtx (r4D.params r4Lies) (r4D.erg r4Lies)) (vertragVon r4D r4Lies).ende
     .bool :=
-  .eq (.var .hier) (.durch (.var (.dort .hier)) () rfl () (.var (.dort (.dort .hier))) r4Darf)
+  .eq (.var .here) (.thru (.var (.there .here)) () rfl () (.var (.there (.there .here))) r4Darf)
 
 /-- The driver (flagged addition): `einzahlen(&Konto, 0, 7); lies(&Konto, 0); return`. -/
 theorem r4HpEinT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Ein) r4M where
@@ -255,8 +255,8 @@ theorem r4HpLiesT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Lies
     cases L
     exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
-def r4Idx0 {Γ : Ctx} : Expr r4D Γ r4M (.index 2) := .weiter (by decide) (by decide) (.lit 0)
-def r4Sieben {Γ : Ctx} : Expr r4D Γ r4M (.int 0 10) := .weiter (by decide) (by decide) (.lit 7)
+def r4Idx0 {Γ : Ctx} : Expr r4D Γ r4M (.index 2) := .widen (by decide) (by decide) (.lit 0)
+def r4Sieben {Γ : Ctx} : Expr r4D Γ r4M (.int 0 10) := .widen (by decide) (by decide) (.lit 7)
 
 def r4RufEinT : Stmt r4D (vertragVon r4D r4Treiber) false [] r4M (nach r4D r4Ein r4M) :=
   .call r4Ein (.cons (.ptrOf () 0 rfl true) (.cons r4Idx0 (.cons r4Sieben .nil))) r4HpEinT rfl
@@ -264,23 +264,23 @@ def r4RufEinT : Stmt r4D (vertragVon r4D r4Treiber) false [] r4M (nach r4D r4Ein
 def r4RufLiesT : Stmt r4D (vertragVon r4D r4Treiber) false [] r4M (nach r4D r4Lies r4M) :=
   .call r4Lies (.cons (.ptrOf () 0 rfl false) (.cons r4Idx0 .nil)) r4HpLiesT rfl
 
-def r4RetT : Endblock r4D (vertragVon r4D r4Treiber) false [] r4M := .ret .keine (List.Perm.refl _)
+def r4RetT : Endblock r4D (vertragVon r4D r4Treiber) false [] r4M := .ret .empty (List.Perm.refl _)
 
 def r4RestT : Endblock r4D (vertragVon r4D r4Treiber) false [] r4M := .cons r4RufLiesT r4RetT
 
 def r4RumpfTreiber : Endblock r4D (vertragVon r4D r4Treiber) false [] r4M := .cons r4RufEinT r4RestT
 
-def r4RumpfRuhe : Endblock r4D (vertragVon r4D r4Ruhe) false [] [] := .ret .keine List.Perm.nil
+def r4RumpfRuhe : Endblock r4D (vertragVon r4D r4Ruhe) false [] [] := .ret .empty List.Perm.nil
 
 /-- The translated program. -/
 def r4P : Programm r4D where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
     | .einzahlen => r4EnsEin
     | .lies => r4EnsLies
-    | .treiber => .wahr
-    | .ruhe => .wahr
+    | .treiber => .tru
+    | .ruhe => .tru
   rumpf
     | .einzahlen => r4RumpfEin
     | .lies => r4RumpfLies
@@ -386,7 +386,7 @@ theorem r4_call_tor {V : Vertrag r4D} {l : Bool} {Γ : Ctx} {Λ : List (Res r4D)
   simp only [execStmt, ht]
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
   | ok σ' v => intro h; cases h
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
   | hardware e => intro h; cases h
 

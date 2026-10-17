@@ -1013,7 +1013,7 @@ theorem ev_same : ∀ (c : CX) (st : CSt) (ρ : CLok) (v : CVal) (st' : CSt),
     for `leave m`/`next m` only (9235) and for the `exchange update` body
     (10017, `_cnN_fertig`, a jump to the end of its own block). -/
 inductive CLbl where
-  | weiter (m : Nat)
+  | widen (m : Nat)
   | ende (m : Nat)
   deriving DecidableEq, Repr
 
@@ -1086,7 +1086,7 @@ def COut.abrupt : COut → Bool
 def COut.weiter (m : Nat) : COut → Option (CSt × CLok)
   | .norm st ρ => some (st, ρ)
   | .cont st ρ => some (st, ρ)
-  | .jump (.weiter m') st ρ => if m' = m then some (st, ρ) else none
+  | .jump (.widen m') st ρ => if m' = m then some (st, ρ) else none
   | _ => none
 
 /-- After a loop body: the loop is over with this outcome -- `break;` or a
@@ -1095,7 +1095,7 @@ def COut.weiter (m : Nat) : COut → Option (CSt × CLok)
 def COut.raus (m : Nat) : COut → Option COut
   | .brk st ρ => some (.norm st ρ)
   | .jump (.ende m') st ρ => if m' = m then some (.norm st ρ) else some (.jump (.ende m') st ρ)
-  | .jump (.weiter m') st ρ => if m' = m then none else some (.jump (.weiter m') st ρ)
+  | .jump (.widen m') st ρ => if m' = m then none else some (.jump (.widen m') st ρ)
   | .ret st v => some (.ret st v)
   | _ => none
 

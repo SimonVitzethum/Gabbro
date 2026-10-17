@@ -58,7 +58,7 @@ abbrev UserSyscall (D : Deklaration) (Params : Ctx) (Grund : Type) [DecidableEq 
 def antwortInt {Grund : Type} {lo hi : Int} :
     SysAntwort { x : Int // lo ≤ x ∧ x ≤ hi } Grund → SysAntwort Int Grund
   | .ok v => .ok v.val
-  | .grund r => .grund r
+  | .why r => .why r
   | .unerwartet u => .unerwartet u
 
 /-- The oracle premise for ONE axiom: exactly the per-axiom instance of
@@ -268,7 +268,7 @@ def swU : UserSyscall swD (swD.aparams ()) IoFehler where
   Pu := fun σ ρ => (σ.slots () (swFd ρ) ()).n ≠ 0
   Qu := fun _ _ ans ρ => match ans with
     | .ok v => v ≤ swLen ρ
-    | .grund _ => True
+    | .why _ => True
     | .unerwartet _ => False
   Eu := fun _ => true
   EuG := fun g => nomatch g
@@ -399,7 +399,7 @@ theorem swEns : ∀ σ σ' roh ρ, swK.Qk σ σ' roh ρ →
     subst hrfl
     have hfirst : ersterEintrag schreibFehler 9 IoFehler.badFd :=
       ⟨[], [(4, .interrupted), (11, .wouldBlock)], rfl, by decide⟩
-    have hdec : dekodiere schreibFehler 0 8192 (-(9 : Int)) = .grund IoFehler.badFd :=
+    have hdec : dekodiere schreibFehler 0 8192 (-(9 : Int)) = .why IoFehler.badFd :=
       dekodiere_tabelle schreibFehler 0 8192 9 IoFehler.badFd hfirst (by decide)
     show swU.Qu σ σ' (antwortInt (dekodiere schreibFehler 0 8192 (-9))) ρ
     rw [hdec]
@@ -450,7 +450,7 @@ def swUleer : UserSyscall swD (swD.aparams ()) IoFehler where
   Pu := fun σ ρ => (σ.slots () (swFd ρ) ()).n ≠ 0
   Qu := fun _ _ ans ρ => match ans with
     | .ok v => v ≤ swLen ρ
-    | .grund _ => True
+    | .why _ => True
     | .unerwartet _ => False
   Eu := fun _ => false
   EuG := fun g => nomatch g

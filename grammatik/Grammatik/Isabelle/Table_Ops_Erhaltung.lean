@@ -118,7 +118,7 @@ def Umhaengen (σ : Tabelle) (s p : Nat) : Tabelle :=
     reflexive-transitive hull of the parent edge. Reflexivity is half
     the statement: `umhaengen σ s s` is a loop. -/
 inductive Ueber (σ : Tabelle) : Nat → Nat → Prop where
-  | hier (s : Nat) : Ueber σ s s
+  | here (s : Nat) : Ueber σ s s
   | hoeher (x : Nat) (xl : Slot) (q s : Nat) :
       σ x = some xl → xl.elter = some q → Ueber σ q s → Ueber σ x s
 
@@ -222,7 +222,7 @@ theorem umhaengen_ausserhalb (σ : Tabelle) (s p x : Nat)
       intro hcon
       apply hnu
       rw [hcon]
-      exact Ueber.hier s
+      exact Ueber.here s
     have hs' : Umhaengen σ s p y = some yl := by
       have e : Umhaengen σ s p y = σ y := upd_diff σ s y _ hne
       rw [e]; exact hs
@@ -233,7 +233,7 @@ theorem umhaengen_ausserhalb (σ : Tabelle) (s p x : Nat)
       intro hcon
       apply hnu
       rw [hcon]
-      exact Ueber.hier s
+      exact Ueber.here s
     have hnq : ¬ Ueber σ q s := by
       intro hcon
       apply hnu
@@ -389,7 +389,7 @@ theorem gegenbeispiel_erfuellt_die_alten :
 
 /-- G-2: and the third one falls, and only it. -/
 theorem gegenbeispiel_verletzt_die_neue : Ueber zwei 1 0 :=
-  Ueber.hoeher 1 { elter := some 0 } 0 0 zwei_belegt1 rfl (Ueber.hier 0)
+  Ueber.hoeher 1 { elter := some 0 } 0 0 zwei_belegt1 rfl (Ueber.here 0)
 
 /-- An operation touching only the first carrier. -/
 def setze_eins (z : Nat × Nat) : Nat × Nat :=
@@ -472,7 +472,7 @@ theorem wσ_blatt5 : Blatt wσ 5 := by
     relinking can never cycle here. -/
 theorem ueber_wσ_inv (x s : Nat) (h : Ueber wσ x s) : x = s := by
   induction h with
-  | hier _ => rfl
+  | here _ => rfl
   | hoeher x xl q s hs he _ _ =>
     by_cases hx : x = 5
     · rw [hx] at hs

@@ -87,15 +87,15 @@ mutual
 def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .assignSlot _ _ i e _ _ => orteOk (D := D) (i.orte ++ e.orte)
-  | .assignDurch p _ _ _ i e _ _ => orteOk (D := D) (p.orte ++ i.orte ++ e.orte)
+  | .assignThru p _ _ _ i e _ _ => orteOk (D := D) (p.orte ++ i.orte ++ e.orte)
   | .assignGlob _ e _ _ => orteOk (D := D) e.orte
-  | .schreibBytes _ _ _ _ i _ _ e _ _ => orteOk (D := D) (i.orte ++ e.orte)
+  | .putBytes _ _ _ _ i _ _ e _ _ => orteOk (D := D) (i.orte ++ e.orte)
   | .assignVar _ e => orteOk (D := D) e.orte
-  | .uebergang _ _ _ i _ _ _ _ _ _ => orteOk (D := D) i.orte
+  | .shift _ _ _ i _ _ _ _ _ _ => orteOk (D := D) i.orte
   | .ite c t e => orteOk (D := D) c.orte && g001 t && g001 e
   | .onOption o p a => orteOk (D := D) o.orte && g001 p && g001 a
   | .onTag v arms => orteOk (D := D) v.orte && g001Arms arms
-  | .onGrund r arms => orteOk (D := D) r.orte && g001Grund arms
+  | .onWhy r arms => orteOk (D := D) r.orte && g001Grund arms
   | .call _ args _ _ => orteOk (D := D) args.orte
   | .callInd p args _ _ => orteOk (D := D) (p.orte ++ args.orte)
   | .locks _ _ body => g001 body
@@ -104,13 +104,13 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ bis body ueber => orteOk (D := D) bis.orte && g001 body && g001 ueber
   | .forever _ inv body => orteOk (D := D) inv.orte && g001 body
   | .axiomCall _ args _ _ _ _ _ => orteOk (D := D) args.orte
-  | .regSchreib _ _ e => orteOk (D := D) e.orte
+  | .regWrite _ _ e => orteOk (D := D) e.orte
   | .transition _ _ _ _ _ _ _ => true
   | .publish _ e _ _ _ _ => orteOk (D := D) e.orte
   | .advances _ _ _ _ => true
   | .retires _ _ _ _ => true
   | .ret e _ => orteOk (D := D) e.orte
-  | .retGrund _ _ => true
+  | .retWhy _ _ => true
   | .leave _ => true
   | .next _ => true
 
@@ -128,21 +128,21 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001 rest
-  | .regLies _ _ rest => g001 rest
-  | .regLiesElse _ _ zusage sonst rest =>
+  | .regRead _ _ rest => g001 rest
+  | .regReadElse _ _ zusage sonst rest =>
       orteOk (D := D) zusage.orte && g001End sonst && g001 rest
   | .awaits g _ _ _ rest => orteOk (D := D) [.inr g] && g001 rest
   | .exchange g neu _ _ rest =>
       orteOk (D := D) ([.inr g] ++ neu.orte) && g001 rest
   | .narrow e _ _ sonst rest =>
       orteOk (D := D) e.orte && g001End sonst && g001 rest
-  | .pruefung c sonst rest =>
+  | .check c sonst rest =>
       orteOk (D := D) c.orte && g001End sonst && g001 rest
-  | .gleit _ a b _ _ rest =>
+  | .float _ a b _ _ rest =>
       orteOk (D := D) (a.orte ++ b.orte) && g001 rest
-  | .gleitLit _ _ _ rest => g001 rest
-  | .gleitVon e _ _ rest => orteOk (D := D) e.orte && g001 rest
-  | .gleitNarrow e _ _ sonst rest =>
+  | .floatLit _ _ _ rest => g001 rest
+  | .floatOf e _ _ rest => orteOk (D := D) e.orte && g001 rest
+  | .floatNarrow e _ _ sonst rest =>
       orteOk (D := D) e.orte && g001End sonst && g001 rest
 
 /-- The G001 check over a non-falling block: the form the checker runs on
@@ -150,7 +150,7 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
 def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
     Endblock D V l Γ Λ → Bool
   | _, _, _, .ret e _ => orteOk (D := D) e.orte
-  | _, _, _, .retGrund _ _ => true
+  | _, _, _, .retWhy _ _ => true
   | _, _, _, .leave _ => true
   | _, _, _, .next _ => true
   | _, _, _, .cons s rest => g001Stmt s && g001End rest
@@ -224,7 +224,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001_korrekt t h2.2 o ho'
       · exact g001_korrekt e h1.2 o ho'
-  | .assignDurch p t ht f i e hw hL =>
+  | .assignThru p t ht f i e hw hL =>
       intro h ho
       have h0 : (orteOk (D := D) (p.orte ++ i.orte ++ e.orte)) = true := h
       have ho' : o ∈ p.orte ++ i.orte ++ e.orte := by
@@ -236,7 +236,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have ho' : o ∈ e.orte := by
         simpa [Extraktion.stmtOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
-  | .schreibBytes t f hf n i hlo hhi e hw hL =>
+  | .putBytes t f hf n i hlo hhi e hw hL =>
       intro h ho
       have h0 : (orteOk (D := D) (i.orte ++ e.orte)) = true := h
       have ho' : o ∈ i.orte ++ e.orte := by
@@ -248,7 +248,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have ho' : o ∈ e.orte := by
         simpa [Extraktion.stmtOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
-  | .uebergang t f hτ i von nach hn he hw hL =>
+  | .shift t f hτ i von nach hn he hw hL =>
       intro h ho
       have h0 : (orteOk (D := D) i.orte) = true := h
       have ho' : o ∈ i.orte := by
@@ -272,7 +272,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have ho' : o ∈ args.orte := by
         simpa [Extraktion.stmtOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
-  | .regSchreib r hk e =>
+  | .regWrite r hk e =>
       intro h ho
       have h0 : (orteOk (D := D) e.orte) = true := h
       have ho' : o ∈ e.orte := by
@@ -302,7 +302,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro h ho
       have ho' : o ∈ ([] : List (D.Tab ⊕ D.Glob)) := by simpa [Extraktion.stmtOrte] using ho
       exact (List.not_mem_nil ho').elim
-  | .retGrund r hΛ =>
+  | .retWhy r hΛ =>
       intro h ho
       have ho' : o ∈ ([] : List (D.Tab ⊕ D.Glob)) := by simpa [Extraktion.stmtOrte] using ho
       exact (List.not_mem_nil ho').elim
@@ -337,7 +337,7 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rcases ho' with ho' | ho'
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
       · exact g001Arms_korrekt arms h1.2 o ho'
-  | .onGrund r arms =>
+  | .onWhy r arms =>
       intro h ho
       have h0 : (orteOk (D := D) r.orte && g001Grund arms) = true := h
       have ho' : o ∈ r.orte ∨ o ∈ Extraktion.grundArmsOrte arms := by
@@ -491,13 +491,13 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001End_korrekt err h2.2 o ho'
       · exact g001_korrekt rest h1.2 o ho'
-  | .regLies r hk rest =>
+  | .regRead r hk rest =>
       intro h ho
       have h0 : (g001 rest) = true := h
       have ho' : o ∈ Extraktion.blockOrte rest := by
         simpa [Extraktion.blockOrte] using ho
       exact g001_korrekt rest h0 o ho'
-  | .regLiesElse r hk zusage sonst rest =>
+  | .regReadElse r hk zusage sonst rest =>
       intro h ho
       have h0 : (orteOk (D := D) zusage.orte && g001End sonst && g001 rest) = true := h
       have ho' : o ∈ zusage.orte ∨ o ∈ Extraktion.endblockOrte sonst ∨ o ∈ Extraktion.blockOrte rest := by
@@ -554,7 +554,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001End_korrekt sonst h2.2 o ho'
       · exact g001_korrekt rest h1.2 o ho'
-  | .pruefung c sonst rest =>
+  | .check c sonst rest =>
       intro h ho
       have h0 : (orteOk (D := D) c.orte && g001End sonst && g001 rest) = true := h
       have ho' : o ∈ c.orte ∨ o ∈ Extraktion.endblockOrte sonst ∨ o ∈ Extraktion.blockOrte rest := by
@@ -567,7 +567,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001End_korrekt sonst h2.2 o ho'
       · exact g001_korrekt rest h1.2 o ho'
-  | .gleit op a b lo hi rest =>
+  | .float op a b lo hi rest =>
       intro h ho
       have h0 : (orteOk (D := D) (a.orte ++ b.orte) && g001 rest) = true := h
       have ho2 : o ∈ a.orte ∨ o ∈ b.orte ∨ o ∈ Extraktion.blockOrte rest := by
@@ -584,13 +584,13 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           simpa [List.mem_append] using ho'
         exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho2)
       · exact g001_korrekt rest h1.2 o ho'
-  | .gleitLit q lo hi rest =>
+  | .floatLit q lo hi rest =>
       intro h ho
       have h0 : (g001 rest) = true := h
       have ho' : o ∈ Extraktion.blockOrte rest := by
         simpa [Extraktion.blockOrte] using ho
       exact g001_korrekt rest h0 o ho'
-  | .gleitVon e lo hi rest =>
+  | .floatOf e lo hi rest =>
       intro h ho
       have h0 : (orteOk (D := D) e.orte && g001 rest) = true := h
       have ho' : o ∈ e.orte ∨ o ∈ Extraktion.blockOrte rest := by
@@ -600,7 +600,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rcases ho' with ho' | ho'
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
       · exact g001_korrekt rest h1.2 o ho'
-  | .gleitNarrow e lo hi sonst rest =>
+  | .floatNarrow e lo hi sonst rest =>
       intro h ho
       have h0 : (orteOk (D := D) e.orte && g001End sonst && g001 rest) = true := h
       have ho' : o ∈ e.orte ∨ o ∈ Extraktion.endblockOrte sonst ∨ o ∈ Extraktion.blockOrte rest := by
@@ -687,7 +687,7 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have ho' : o ∈ e.orte := by
         simpa [Extraktion.endblockOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
-  | .retGrund _ _ =>
+  | .retWhy _ _ =>
       intro h ho
       have ho' : o ∈ ([] : List (D.Tab ⊕ D.Glob)) := by simpa [Extraktion.endblockOrte] using ho
       exact (List.not_mem_nil ho').elim
@@ -898,7 +898,7 @@ def GV : Vertrag GD :=
 
 /-- Index `0` into either table (both have `count 1`). -/
 def gi (t : GD.Tab) : Expr GD [] [] (.index (GD.count t)) :=
-  .weiter (by cases t <;> decide) (by cases t <;> decide) (.lit 0)
+  .widen (by cases t <;> decide) (by cases t <;> decide) (.lit 0)
 
 /-- Slot read of either table as a boolean expression. -/
 def gslot (t : GD.Tab) : Expr GD [] [] .bool :=
@@ -929,17 +929,17 @@ theorem g001_korrekt_zeuge
 /-- The witness body as a non-falling block: the statement, then return.
     Feeds the witness program `GP` below. -/
 def gendbody : Endblock GD GV false [] [] :=
-  .cons gstmt (.ret .keine (List.Perm.refl []))
+  .cons gstmt (.ret .empty (List.Perm.refl []))
 
 /-- `ensures` over the ghost slot: the ghost value the body never reads. -/
 def GPost : Expr GD (ErgCtx (GD.params ()) (GD.erg ())) (vertragVon GD ()).ende .bool :=
-  .slot false () (.weiter (by decide) (by decide) (.lit 0)) (fun w => nomatch w)
+  .slot false () (.widen (by decide) (by decide) (.lit 0)) (fun w => nomatch w)
 
 /-- The witness program: `requires` true, `ensures` over the ghost slot,
     body `gendbody` which writes the ordinary table and reads no ghost. -/
 def GP : Programm GD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures := fun _ => GPost
   rumpf := fun _ => gendbody
 

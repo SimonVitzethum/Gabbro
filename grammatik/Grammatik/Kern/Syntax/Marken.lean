@@ -48,7 +48,7 @@
   `Grammatik.lean`-Index, also kann sie noch nicht eingebunden werden; die Namen
   sind fuer das spaetere Verdrahten gewaehlt):
 
-  | hier                  | dort (`Syntax` / `Wettlauf`)                  |
+  | here                  | dort (`Syntax` / `Wettlauf`)                  |
   |-----------------------|-----------------------------------------------|
   | `Marke := Nat`        | `D.Marke`                                     |
   | `Faden := Nat`        | `Wettlauf.Faden`                              |
@@ -150,7 +150,7 @@ def MarkenSchritt.faden {κ : MarkDekl} {σ σ' : Stand} (h : MarkenSchritt κ �
 /-- Ein Verlauf: von `Anfang` an, Schritt an Schritt. -/
 inductive Verlauf (κ : MarkDekl) : Stand → Type where
   | anfang : Verlauf κ Anfang
-  | weiter {σ σ' : Stand} (v : Verlauf κ σ) (h : MarkenSchritt κ σ σ') :
+  | widen {σ σ' : Stand} (v : Verlauf κ σ) (h : MarkenSchritt κ σ σ') :
       Verlauf κ σ'
 
 /-! ## 4. Die Strukturinvarianten, als Definitionen -/
@@ -322,7 +322,7 @@ theorem verlauf_stufentreu (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
   | anfang =>
       intro m f s h
       simp [Anfang] at h
-  | weiter _ h ih =>
+  | widen _ h ih =>
       exact schritt_stufentreu κ ih h
 
 /-- Jeder erreichbare Stand ist einfaedrig. -/
@@ -333,7 +333,7 @@ theorem verlauf_einfaedig (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
       intro m f g hf hg
       obtain ⟨s₁, h1⟩ := hf
       simp [Anfang] at h1
-  | weiter _ h ih =>
+  | widen _ h ih =>
       exact schritt_einfaedig κ ih h
 
 #print axioms Gabbro.Grammatik.Marken.verlauf_stufentreu

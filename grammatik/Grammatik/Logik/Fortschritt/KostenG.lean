@@ -58,17 +58,17 @@ variable {D : Deklaration}
 mutual
 def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .lit _ => 0
-  | .wahr => 0
-  | .falsch => 0
+  | .tru => 0
+  | .fls => 0
   | .var _ => 0
   | .glob _ _ => 1
   | .slot _ _ i _ => 1 + kostenExpr i
-  | .durch p _ _ _ i _ => 1 + kostenExpr p + kostenExpr i
+  | .thru p _ _ _ i _ => 1 + kostenExpr p + kostenExpr i
   | .ptrOf _ _ _ _ => 0
   | .fnref _ _ _ => 0
-  | .altGlob _ _ => 1
-  | .altSlot _ _ i _ => 1 + kostenExpr i
-  | .weiter _ _ e => 1 + kostenExpr e
+  | .oldG _ _ => 1
+  | .oldS _ _ i _ => 1 + kostenExpr i
+  | .widen _ _ e => 1 + kostenExpr e
   | .add a b => 1 + kostenExpr a + kostenExpr b
   | .sub a b => 1 + kostenExpr a + kostenExpr b
   | .neg a => 1 + kostenExpr a
@@ -77,7 +77,7 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .rem _ _ a b => 1 + kostenExpr a + kostenExpr b
   | .sdiv _ a b => 1 + kostenExpr a + kostenExpr b
   | .srem _ a b => 1 + kostenExpr a + kostenExpr b
-  | .leseBytes _ _ _ _ i _ _ _ => 1 + kostenExpr i
+  | .getBytes _ _ _ _ i _ _ _ => 1 + kostenExpr i
   | .band _ _ a b => 1 + kostenExpr a + kostenExpr b
   | .bor _ _ _ _ _ a b => 1 + kostenExpr a + kostenExpr b
   | .bxor _ _ _ _ _ a b => 1 + kostenExpr a + kostenExpr b
@@ -88,22 +88,22 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .eq a b => 1 + kostenExpr a + kostenExpr b
   | .fllt a b => 1 + kostenExpr a + kostenExpr b
   | .flle a b => 1 + kostenExpr a + kostenExpr b
-  | .und a b => 1 + kostenExpr a + kostenExpr b
-  | .oder a b => 1 + kostenExpr a + kostenExpr b
-  | .nicht a => 1 + kostenExpr a
+  | .and a b => 1 + kostenExpr a + kostenExpr b
+  | .or a b => 1 + kostenExpr a + kostenExpr b
+  | .not a => 1 + kostenExpr a
   | .none _ => 0
   | .some e => 1 + kostenExpr e
   | .istSome e => 1 + kostenExpr e
-  | .fall _ _ nutz => 1 + kostenNutz nutz
-  | .grund _ _ => 0
+  | .case _ _ nutz => 1 + kostenNutz nutz
+  | .why _ _ => 0
   | .forallSlots _ _ _ => 1
   | .existsSlots _ _ _ => 1
   | .reaches _ _ _ a b _ => 1 + kostenExpr a + kostenExpr b
 
 def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :
     NutzlastExpr D Γ Λ c → Nat
-  | .keine => 0
-  | .zahl e => kostenExpr e
+  | .empty => 0
+  | .num e => kostenExpr e
 end
 
 /-- Cost of call arguments: the sum, as `kosten.rs::ruf` adds each one. -/
@@ -115,8 +115,8 @@ def kostenArgs {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} :
 /-- Cost of a return payload: nothing for `none`, the expression otherwise. -/
 def kostenErg {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} :
     ErgExpr D Γ Λ o → Nat
-  | .keine => 0
-  | .wert e => kostenExpr e
+  | .empty => 0
+  | .val e => kostenExpr e
 
 /-- The extra dispatch step of a compound at END position: G first moves
     it into block position (`endeEntf`), one step the block position does
@@ -146,15 +146,15 @@ mutual
 def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i e _ _ => 1 + kostenExpr i + kostenExpr e
-  | .assignDurch p _ _ _ i e _ _ => 1 + kostenExpr p + kostenExpr i + kostenExpr e
+  | .assignThru p _ _ _ i e _ _ => 1 + kostenExpr p + kostenExpr i + kostenExpr e
   | .assignGlob _ e _ _ => 1 + kostenExpr e
-  | .schreibBytes _ _ _ _ i _ _ e _ _ => 1 + kostenExpr i + kostenExpr e
+  | .putBytes _ _ _ _ i _ _ e _ _ => 1 + kostenExpr i + kostenExpr e
   | .assignVar _ e => 1 + kostenExpr e
-  | .uebergang _ _ _ i _ _ _ _ _ _ => 1 + kostenExpr i
+  | .shift _ _ _ i _ _ _ _ _ _ => 1 + kostenExpr i
   | .ite b t e => 1 + kostenExpr b + max (kostenBlock c pa t) (kostenBlock c pa e)
   | .onOption o p a => 2 + kostenExpr o + max (kostenBlock c pa p) (kostenBlock c pa a)
   | .onTag v arms => 2 + kostenExpr v + kostenArms c pa arms
-  | .onGrund r arms => 1 + kostenExpr r + kostenGrundArms c pa arms
+  | .onWhy r arms => 1 + kostenExpr r + kostenGrundArms c pa arms
   | .call g args _ _ => 1 + kostenArgs args + c g
   /- Indirect call: the callee is named by a pointer VALUE, so the Lean
       model has no number for it (the checker reads `costs` off the
@@ -170,13 +170,13 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
   | .forever _ inv body => 2 + pa * (kostenBlock c pa body + kostenExpr inv + 2)
   | .axiomCall _ args _ _ _ _ _ => 1 + kostenArgs args
-  | .regSchreib _ _ e => 1 + kostenExpr e
+  | .regWrite _ _ e => 1 + kostenExpr e
   | .transition _ _ _ _ _ _ _ => 1
   | .publish _ e _ _ _ _ => 1 + kostenExpr e
   | .advances _ _ _ _ => 1
   | .retires _ _ _ _ => 1
   | .ret e _ => 1 + kostenErg e
-  | .retGrund _ _ => 1
+  | .retWhy _ _ => 1
   | .leave _ => 1
   | .next _ => 1
 
@@ -193,19 +193,19 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
-  | .regLies _ _ rest => 2 + kostenBlock c pa rest
-  | .regLiesElse _ _ zusage sonst rest =>
+  | .regRead _ _ rest => 2 + kostenBlock c pa rest
+  | .regReadElse _ _ zusage sonst rest =>
       2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
   | .awaits _ _ _ _ rest => 2 + kostenBlock c pa rest
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenBlock c pa rest
   | .narrow e _ _ sonst rest =>
       2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
-  | .pruefung b sonst rest =>
+  | .check b sonst rest =>
       1 + kostenExpr b + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest)
-  | .gleit _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenBlock c pa rest
-  | .gleitLit _ _ _ rest => 2 + kostenBlock c pa rest
-  | .gleitVon e _ _ rest => 2 + kostenExpr e + kostenBlock c pa rest
-  | .gleitNarrow e _ _ sonst rest =>
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenBlock c pa rest
+  | .floatLit _ _ _ rest => 2 + kostenBlock c pa rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenBlock c pa rest
+  | .floatNarrow e _ _ sonst rest =>
       2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
 
 def kostenArms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -221,7 +221,7 @@ def kostenGrundArms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
 def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret e _ => 1 + kostenErg e
-  | .retGrund _ _ => 1
+  | .retWhy _ _ => 1
   | .leave _ => 1
   | .next _ => 1
   | .cons s rest => entfZ s + kostenStmt c pa s + kostenEnd c pa rest
@@ -238,7 +238,7 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
 def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret e _ => 2 + kostenErg e
-  | .retGrund _ _ => 2
+  | .retWhy _ _ => 2
   | .leave _ => 2
   | .next _ => 2
   | .cons s rest => kostenStmt c pa s + kostenSonst c pa rest
@@ -261,7 +261,7 @@ def rufeS (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .ite _ t e => rufeB Z t && rufeB Z e
   | .onOption _ p a => rufeB Z p && rufeB Z a
   | .onTag _ arms => rufeArms Z arms
-  | .onGrund _ arms => rufeGArms Z arms
+  | .onWhy _ arms => rufeGArms Z arms
   | .call g _ _ _ => Z g
   | .callInd _ _ _ _ => false
   | .locks _ _ body => rufeB Z body
@@ -270,19 +270,19 @@ def rufeS (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retry _ _ body ueber => rufeB Z body && rufeB Z ueber
   | .forever _ _ body => rufeB Z body
   | .assignSlot .. => true
-  | .assignDurch .. => true
+  | .assignThru .. => true
   | .assignGlob .. => true
-  | .schreibBytes .. => true
+  | .putBytes .. => true
   | .assignVar .. => true
-  | .uebergang .. => true
+  | .shift .. => true
   | .axiomCall .. => true
-  | .regSchreib .. => true
+  | .regWrite .. => true
   | .transition .. => true
   | .publish .. => true
   | .advances .. => true
   | .retires .. => true
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -296,16 +296,16 @@ def rufeB (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z err && rufeB Z rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeB Z rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeB Z rest
-  | .regLies _ _ rest => rufeB Z rest
-  | .regLiesElse _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
+  | .regRead _ _ rest => rufeB Z rest
+  | .regReadElse _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
   | .awaits _ _ _ _ rest => rufeB Z rest
   | .exchange _ _ _ _ rest => rufeB Z rest
   | .narrow _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
-  | .pruefung _ sonst rest => rufeE Z sonst && rufeB Z rest
-  | .gleit _ _ _ _ _ rest => rufeB Z rest
-  | .gleitLit _ _ _ rest => rufeB Z rest
-  | .gleitVon _ _ _ rest => rufeB Z rest
-  | .gleitNarrow _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
+  | .check _ sonst rest => rufeE Z sonst && rufeB Z rest
+  | .float _ _ _ _ _ rest => rufeB Z rest
+  | .floatLit _ _ _ rest => rufeB Z rest
+  | .floatOf _ _ _ rest => rufeB Z rest
+  | .floatNarrow _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
 
 def rufeArms (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -320,7 +320,7 @@ def rufeGArms (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 def rufeE (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => rufeS Z s && rufeE Z rest
@@ -412,7 +412,7 @@ theorem kostenBlock_alsBlock :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
       kostenBlock c pa e.alsBlock.2 = kostenSonst c pa e
   | _, _, .ret _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
-  | _, _, .retGrund _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
+  | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .leave _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .next _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .cons s rest => by
@@ -429,7 +429,7 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
       rufeB Z e.alsBlock.2 = rufeE Z e
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -1133,7 +1133,7 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ite _ t e => spiegelB t && spiegelB e
   | .onOption _ p a => spiegelB p && spiegelB a
   | .onTag _ arms => spiegelArms arms
-  | .onGrund _ arms => spiegelGArms arms
+  | .onWhy _ arms => spiegelGArms arms
   | .locks _ _ body => spiegelB body
   | .breaking _ body => spiegelB body
   | .traverse _ _ body => spiegelB body
@@ -1145,16 +1145,16 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .advances .. => false
   | .retires .. => false
   | .assignSlot .. => true
-  | .assignDurch .. => true
+  | .assignThru .. => true
   | .assignGlob .. => true
-  | .schreibBytes .. => true
+  | .putBytes .. => true
   | .assignVar .. => true
-  | .uebergang .. => true
+  | .shift .. => true
   | .call .. => true
-  | .regSchreib .. => true
+  | .regWrite .. => true
   | .publish .. => true
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -1168,16 +1168,16 @@ def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelB rest
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
-  | .regLies _ _ rest => spiegelB rest
-  | .regLiesElse _ _ _ sonst rest => spiegelE sonst && spiegelB rest
+  | .regRead _ _ rest => spiegelB rest
+  | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelB rest
   | .awaits _ _ _ _ rest => spiegelB rest
   | .exchange _ _ _ _ rest => spiegelB rest
   | .narrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
-  | .pruefung _ sonst rest => spiegelE sonst && spiegelB rest
-  | .gleit _ _ _ _ _ rest => spiegelB rest
-  | .gleitLit _ _ _ rest => spiegelB rest
-  | .gleitVon _ _ _ rest => spiegelB rest
-  | .gleitNarrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
+  | .check _ sonst rest => spiegelE sonst && spiegelB rest
+  | .float _ _ _ _ _ rest => spiegelB rest
+  | .floatLit _ _ _ rest => spiegelB rest
+  | .floatOf _ _ _ rest => spiegelB rest
+  | .floatNarrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
 
 def spiegelArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -1192,7 +1192,7 @@ def spiegelGArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => spiegelS s && spiegelE rest
@@ -1208,17 +1208,17 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   -- `Zuweisung`: `1 + ausdruck(wert)` -- the target place is not read (F1)
   | .assignSlot _ _ _ e _ _ => 1 + kostenExpr e
-  | .assignDurch _ _ _ _ _ e _ _ => 1 + kostenExpr e
+  | .assignThru _ _ _ _ _ e _ _ => 1 + kostenExpr e
   | .assignGlob _ e _ _ => 1 + kostenExpr e
-  | .schreibBytes _ _ _ _ _ _ _ e _ _ => 1 + kostenExpr e
+  | .putBytes _ _ _ _ _ _ _ e _ _ => 1 + kostenExpr e
   | .assignVar _ e => 1 + kostenExpr e
-  | .uebergang .. => 1
+  | .shift .. => 1
   -- `Wenn`: conditions plus the maximum over the arms, the branch free
   | .ite b t e => kostenExpr b + max (kostenKB c t) (kostenKB c e)
   -- `Match`: subject plus the maximum over the arms
   | .onOption o p a => kostenExpr o + max (kostenKB c p) (kostenKB c a)
   | .onTag v arms => kostenExpr v + kostenKArms c arms
-  | .onGrund r arms => kostenExpr r + kostenKGArms c arms
+  | .onWhy r arms => kostenExpr r + kostenKGArms c arms
   -- `ruf`: declared costs plus arguments
   | .call g args _ _ => kostenArgs args + c g
   | .callInd _ args _ _ => kostenArgs args
@@ -1230,14 +1230,14 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall _ args _ _ _ _ _ => kostenArgs args
-  | .regSchreib _ _ e => 1 + kostenExpr e
+  | .regWrite _ _ e => 1 + kostenExpr e
   | .transition .. => 0
   | .publish _ e _ _ _ _ => 1 + kostenExpr e
   | .advances .. => 0
   | .retires .. => 0
   -- `Return(Some e)`: the expression; `Return(None)`, `Leave`, `Next`: `0`
   | .ret e _ => kostenErg e
-  | .retGrund .. => 0
+  | .retWhy .. => 0
   | .leave _ => 0
   | .next _ => 0
 
@@ -1255,9 +1255,9 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKB c rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
   -- `Let x = R`: `1 +` one load
-  | .regLies _ _ rest => 2 + kostenKB c rest
+  | .regRead _ _ rest => 2 + kostenKB c rest
   -- `LetSonst` over a place: `1 + 1 + block(sonst)`; the predicate is not read (F4)
-  | .regLiesElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKB c rest
+  | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKB c rest
   -- `AwaitLoad`: `1`
   | .awaits _ _ _ _ rest => 1 + kostenKB c rest
   -- `Exchange` update: `1 + block(rumpf)`
@@ -1266,12 +1266,12 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .narrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKB c rest
   -- a named refusal: `if !c { sonst }` with an always-leaving arm -- the
   -- two-way rule of `block`: condition plus the maximum
-  | .pruefung b sonst rest => kostenExpr b + max (kostenKE c sonst) (kostenKB c rest)
+  | .check b sonst rest => kostenExpr b + max (kostenKE c sonst) (kostenKB c rest)
   -- float `let`s: `1 + ausdruck(wert)`
-  | .gleit _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenKB c rest
-  | .gleitLit _ _ _ rest => 1 + kostenKB c rest
-  | .gleitVon e _ _ rest => 2 + kostenExpr e + kostenKB c rest
-  | .gleitNarrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKB c rest
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenKB c rest
+  | .floatLit _ _ _ rest => 1 + kostenKB c rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenKB c rest
+  | .floatNarrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKB c rest
 
 def kostenKArms (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
@@ -1286,7 +1286,7 @@ def kostenKGArms (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret e _ => kostenErg e
-  | .retGrund .. => 0
+  | .retWhy .. => 0
   | .leave _ => 0
   | .next _ => 0
   | .cons s rest => kostenKS c s + kostenKE c rest
@@ -1302,15 +1302,15 @@ mutual
 def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i _ _ _ => kostenExpr i
-  | .assignDurch p _ _ _ i _ _ _ => kostenExpr p + kostenExpr i
+  | .assignThru p _ _ _ i _ _ _ => kostenExpr p + kostenExpr i
   | .assignGlob .. => 0
-  | .schreibBytes _ _ _ _ i _ _ _ _ _ => kostenExpr i
+  | .putBytes _ _ _ _ i _ _ _ _ _ => kostenExpr i
   | .assignVar .. => 0
-  | .uebergang _ _ _ i _ _ _ _ _ _ => kostenExpr i
+  | .shift _ _ _ i _ _ _ _ _ _ => kostenExpr i
   | .ite _ t e => 1 + max (zusatzB t) (zusatzB e)
   | .onOption _ p a => 2 + max (zusatzB p) (zusatzB a)
   | .onTag _ arms => 2 + zusatzArms arms
-  | .onGrund _ arms => 1 + zusatzGArms arms
+  | .onWhy _ arms => 1 + zusatzGArms arms
   | .call .. => 1
   | .callInd .. => 0
   | .locks _ _ body => 2 + zusatzB body
@@ -1319,13 +1319,13 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall .. => 0
-  | .regSchreib .. => 0
+  | .regWrite .. => 0
   | .transition .. => 0
   | .publish .. => 0
   | .advances .. => 0
   | .retires .. => 0
   | .ret .. => 1
-  | .retGrund .. => 1
+  | .retWhy .. => 1
   | .leave _ => 1
   | .next _ => 1
 
@@ -1339,16 +1339,16 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzB rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
-  | .regLies _ _ rest => zusatzB rest
-  | .regLiesElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzB rest
+  | .regRead _ _ rest => zusatzB rest
+  | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzB rest
   | .awaits _ _ _ _ rest => 1 + zusatzB rest
   | .exchange _ _ _ _ rest => 1 + zusatzB rest
   | .narrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
-  | .pruefung _ sonst rest => 1 + max (zusatzSonst sonst + 1) (zusatzB rest)
-  | .gleit _ _ _ _ _ rest => zusatzB rest
-  | .gleitLit _ _ _ rest => 1 + zusatzB rest
-  | .gleitVon _ _ _ rest => zusatzB rest
-  | .gleitNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
+  | .check _ sonst rest => 1 + max (zusatzSonst sonst + 1) (zusatzB rest)
+  | .float _ _ _ _ _ rest => zusatzB rest
+  | .floatLit _ _ _ rest => 1 + zusatzB rest
+  | .floatOf _ _ _ rest => zusatzB rest
+  | .floatNarrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
 
 def zusatzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
@@ -1363,7 +1363,7 @@ def zusatzGArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
   | .ret .. => 1
-  | .retGrund .. => 1
+  | .retWhy .. => 1
   | .leave _ => 1
   | .next _ => 1
   | .cons s rest => entfZ s + zusatzS s + zusatzE rest
@@ -1375,7 +1375,7 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
   | .ret .. => 2
-  | .retGrund .. => 2
+  | .retWhy .. => 2
   | .leave _ => 2
   | .next _ => 2
   | .cons s rest => zusatzS s + zusatzSonst rest
@@ -1404,7 +1404,7 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
   | .onTag v arms, h => by
       have h1 := spiegel_arms c pa arms h
       simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .onGrund r arms, h => by
+  | .onWhy r arms, h => by
       have h1 := spiegel_garms c pa arms h
       simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .locks _ _ body, h => by
@@ -1429,16 +1429,16 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
   | .advances .., h => by simp [spiegelS] at h
   | .retires .., h => by simp [spiegelS] at h
   | .assignSlot .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .assignDurch .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .assignThru .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .assignGlob .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .schreibBytes .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .putBytes .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .assignVar .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .uebergang .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .shift .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .call .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .regSchreib .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .regWrite .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .publish .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .ret .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .retGrund .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .retWhy .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .leave _, _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .next _, _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
 
@@ -1466,10 +1466,10 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       simp only [kostenBlock, kostenKB, zusatzB]; omega
   | .bindAxiom .., h => by simp [spiegelB] at h
   | .bindAxiomElse .., h => by simp [spiegelB] at h
-  | .regLies _ _ rest, h => by
+  | .regRead _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .regLiesElse _ _ _ sonst rest, h => by
+  | .regReadElse _ _ _ sonst rest, h => by
       simp only [spiegelB, Bool.and_eq_true] at h
       have h1 := spiegel_sonst c pa sonst h.1
       have h2 := spiegel_block c pa rest h.2
@@ -1485,21 +1485,21 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa sonst h.1
       have h2 := spiegel_block c pa rest h.2
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .pruefung _ sonst rest, h => by
+  | .check _ sonst rest, h => by
       simp only [spiegelB, Bool.and_eq_true] at h
       have h1 := spiegel_sonst c pa sonst h.1
       have h2 := spiegel_block c pa rest h.2
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .gleit _ _ _ _ _ rest, h => by
+  | .float _ _ _ _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .gleitLit _ _ _ rest, h => by
+  | .floatLit _ _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .gleitVon _ _ _ rest, h => by
+  | .floatOf _ _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .gleitNarrow _ _ _ sonst rest, h => by
+  | .floatNarrow _ _ _ sonst rest, h => by
       simp only [spiegelB, Bool.and_eq_true] at h
       have h1 := spiegel_sonst c pa sonst h.1
       have h2 := spiegel_block c pa rest h.2
@@ -1532,7 +1532,7 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
     (e : Endblock D V l Γ Λ) → spiegelE e = true →
       kostenEnd c pa e ≤ kostenKE c e + zusatzE e
   | .ret .., _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
-  | .retGrund .., _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .retWhy .., _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .leave _, _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .next _, _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .cons s rest, h => by
@@ -1551,7 +1551,7 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
     (e : Endblock D V l Γ Λ) → spiegelE e = true →
       kostenSonst c pa e ≤ kostenKE c e + zusatzSonst e
   | .ret .., _ => by simp only [kostenSonst, kostenKE, zusatzSonst]; omega
-  | .retGrund .., _ => by simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .retWhy .., _ => by simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .leave _, _ => by simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .next _, _ => by simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .cons s rest, h => by
@@ -1605,7 +1605,7 @@ theorem rufeS_of_StmtR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr 
       exact ⟨rufeB_of_BlockR Z hZ hp, rufeB_of_BlockR Z hZ ha⟩
   | .onTag _ _ ha => by
       simp only [rufeS]; exact rufeArms_of_ArmsR Z hZ ha
-  | .onGrund _ _ ha => by
+  | .onWhy _ _ ha => by
       simp only [rufeS]; exact rufeGArms_of_GrundArmsR Z hZ ha
   | .breaking _ _ hb => by
       simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
@@ -1625,7 +1625,7 @@ theorem rufeS_of_StmtR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr 
       simp only [rufeS]; exact rufeB_of_BlockR Z hZ hb
   | .leave _ => rfl
   | .next _ => rfl
-  | .retGrund _ _ => rfl
+  | .retWhy _ _ => rfl
 
 theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {b : Block D V l Γ Λ Λ'} :
@@ -1638,8 +1638,8 @@ theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr
   | .bindCall _ _ _ _ _ _ hC hr => by
       simp only [rufeB, Bool.and_eq_true]
       exact ⟨hZ _ hC, rufeB_of_BlockR Z hZ hr⟩
-  | .regLies _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
-  | .regLiesElse _ _ _ _ _ hs hr => by
+  | .regRead _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .regReadElse _ _ _ _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
       exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
   | .awaits _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
@@ -1647,13 +1647,13 @@ theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr
   | .narrow _ _ _ _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
       exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
-  | .pruefung _ _ _ hs hr => by
+  | .check _ _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
       exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
-  | .gleit _ _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
-  | .gleitLit _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
-  | .gleitVon _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
-  | .gleitNarrow _ _ _ _ _ hs hr => by
+  | .float _ _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .floatLit _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .floatOf _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .floatNarrow _ _ _ _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
       exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
   | .bindCallElse _ _ _ _ _ _ _ hC herr hr => by
@@ -1668,7 +1668,7 @@ theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : 
       simp only [rufeE, Bool.and_eq_true]
       exact ⟨rufeS_of_StmtR Z hZ hs, rufeE_of_EndR Z hZ hr⟩
   | .bind _ _ hr => by simp only [rufeE]; exact rufeE_of_EndR Z hZ hr
-  | .retGrund _ _ => rfl
+  | .retWhy _ _ => rfl
 
 theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
@@ -1759,7 +1759,7 @@ def fremdStmt (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .ite _ t e => max (fremdBlock fa pa t) (fremdBlock fa pa e)
   | .onOption _ p a => max (fremdBlock fa pa p) (fremdBlock fa pa a)
   | .onTag _ arms => fremdArms fa pa arms
-  | .onGrund _ arms => fremdGArms fa pa arms
+  | .onWhy _ arms => fremdGArms fa pa arms
   | .locks _ _ body => fremdBlock fa pa body
   | .breaking _ body => fremdBlock fa pa body
   | .traverse t _ body => (D.count t).toNat * fremdBlock fa pa body
@@ -1778,16 +1778,16 @@ def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdBlock fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
-  | .regLies _ _ rest => fremdBlock fa pa rest
-  | .regLiesElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+  | .regRead _ _ rest => fremdBlock fa pa rest
+  | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
   | .awaits _ _ _ _ rest => fremdBlock fa pa rest
   | .exchange _ _ _ _ rest => fremdBlock fa pa rest
   | .narrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
-  | .pruefung _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
-  | .gleit _ _ _ _ _ rest => fremdBlock fa pa rest
-  | .gleitLit _ _ _ rest => fremdBlock fa pa rest
-  | .gleitVon _ _ _ rest => fremdBlock fa pa rest
-  | .gleitNarrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+  | .check _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
+  | .float _ _ _ _ _ rest => fremdBlock fa pa rest
+  | .floatLit _ _ _ rest => fremdBlock fa pa rest
+  | .floatOf _ _ _ rest => fremdBlock fa pa rest
+  | .floatNarrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
 
 def fremdArms (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
@@ -1802,7 +1802,7 @@ def fremdGArms (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
 def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret .. => 0
-  | .retGrund .. => 0
+  | .retWhy .. => 0
   | .leave _ => 0
   | .next _ => 0
   | .cons s rest => fremdStmt fa pa s + fremdEnd fa pa rest

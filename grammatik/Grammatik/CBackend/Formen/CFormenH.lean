@@ -51,7 +51,7 @@ theorem scorr_leave (m : Nat) {V : Vertrag D} (h : true = true) :
 
 /-- H1. `next` is `goto m_weiter;`, a jump to the end of loop `m`'s body. -/
 theorem scorr_next (m : Nat) {V : Vertrag D} (h : true = true) :
-    StmtCorr X m K (Stmt.next (V := V) (Γ := Γ) (Λ := Λ) h) (.goto (.weiter m)) := by
+    StmtCorr X m K (Stmt.next (V := V) (Γ := Γ) (Λ := Λ) h) (.goto (.widen m)) := by
   intro σ st ρG ρC hc hr _
   exact ⟨_, Exec.goto, st, ρC, rfl, hc, hr⟩
 
@@ -420,7 +420,7 @@ theorem le32_corr_at (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
     (hc : corrW X.EL σ st) (ρG : Env D Γ) (ρC : CLok) (cp : CX)
     (hp : ev X.EL.lay X.orc X.fr cp st ρC = some (.ptr ⟨.tab (X.EL.tnr t), 0⟩, st)) :
     ev X.EL.lay X.orc X.fr (le32 (.padd cp (.lit Kc))) st ρC =
-      some (.int (eval σ (Expr.leseBytes (Γ := Γ) t f hf 4 (Expr.lit (Kc : Int))
+      some (.int (eval σ (Expr.getBytes (Γ := Γ) t f hf 4 (Expr.lit (Kc : Int))
         (Int.natCast_nonneg Kc) (by omega) hL) σ ρG).n, st) := by
   have hcnt := X.EL.trec_count t
   have hsz : (X.EL.trec t).size = (X.EL.trec t).count := by
@@ -499,7 +499,7 @@ theorem ecorr_le32 (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
     (Kc : Nat) (hhi : (Kc : Int) + 4 ≤ D.count t) (hL : darf D t Λ) {cp : CX}
     (hp : PtrTo X K cp t) :
     ExprCorr X K (le32 (.padd cp (.lit Kc)))
-      (Expr.leseBytes t f hf 4 (Expr.lit (Kc : Int)) (Int.natCast_nonneg Kc) (by omega) hL) := by
+      (Expr.getBytes t f hf 4 (Expr.lit (Kc : Int)) (Int.natCast_nonneg Kc) (by omega) hL) := by
   intro σ st ρG ρC hc hr
   exact ⟨_, st, le32_corr_at X t f hf hgt hss hoff hty Kc hhi hL σ st hc ρG ρC cp (hp st ρG ρC hr),
     rfl⟩
@@ -634,7 +634,7 @@ theorem regLies_step (r : D.Reg) (d : Nat) (B : BlkLay) (hL : X.EL.lay (.dev d) 
       EnvRel X.EL (K.push (D.rtyp r) x) (.cons v ρG) (lokUpd ρC x (.int (X.O.regLies r σ))) ∧
       (∀ {V : Vertrag D} {l : Bool} {Λ' : List (Res D)} (hkl : (D.rklasse r).lesbar = true)
         (rest : Block D V l (D.rtyp r :: Γ) Λ Λ'), D.rzusage r v = true →
-        execBlock X.O X.passes X.R (Block.regLies r hkl rest) σ ρG =
+        execBlock X.O X.passes X.R (Block.regRead r hkl rest) σ ρG =
           (execBlock X.O X.passes X.R rest σ (.cons v ρG)).schrumpf) := by
   have hin := accOk_inside hL (show accOk X.EL.lay st ⟨.dev d, (Kr : Int)⟩ (.int false w) .vol = true by
     unfold accOk
@@ -688,7 +688,7 @@ theorem regSchreib_step {V : Vertrag D} {l : Bool} (r : D.Reg)
     (hr : EnvRel X.EL K ρG ρC) :
     ∃ st1 st' : CSt, Exec X.EL.lay X.orc X.fr X.CR X.XR
         (.vstore (.padd (.devH d B.base) (.lit Kr)) (.int false w) ce) st ρC (.norm st' ρC) ∧
-      StOut X 0 K (execStmt X.O X.passes X.R (Stmt.regSchreib (V := V) (l := l) r hkl e) σ ρG)
+      StOut X 0 K (execStmt X.O X.passes X.R (Stmt.regWrite (V := V) (l := l) r hkl e) σ ρG)
         (.norm st' ρC) ∧
       st'.obs = .vwr ⟨.dev d, Kr⟩ (.int false w)
         (encW (D.rtyp r) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG)) :: st1.obs := by

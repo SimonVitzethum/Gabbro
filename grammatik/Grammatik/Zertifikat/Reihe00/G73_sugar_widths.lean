@@ -189,39 +189,39 @@ abbrev gL_voll : List (Res gD) := []
 
 
 def gBody_eins : Endblock gD (vertragVon gD g_eins) false gCtx_eins gL_eins :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD gCtx_eins gL_eins (.int 0 255))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (.var .here)) : Expr gD gCtx_eins gL_eins (.int 0 255))) (List.Perm.refl _))
 
 def gBody_dreizehn : Endblock gD (vertragVon gD g_dreizehn) false gCtx_dreizehn gL_dreizehn :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD gCtx_dreizehn gL_dreizehn (.int 0 65535))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (.var .here)) : Expr gD gCtx_dreizehn gL_dreizehn (.int 0 65535))) (List.Perm.refl _))
 
 def gBody_wandle : Endblock gD (vertragVon gD g_wandle) false gCtx_wandle gL_wandle :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD gCtx_wandle gL_wandle (.int 0 8191))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (.var .here)) : Expr gD gCtx_wandle gL_wandle (.int 0 8191))) (List.Perm.refl _))
 
 def gBody_grenze : Endblock gD (vertragVon gD g_grenze) false gCtx_grenze gL_grenze :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 8191)) : Expr gD gCtx_grenze gL_grenze (.int 8191 8191))) : Expr gD gCtx_grenze gL_grenze (.int 0 18446744073709551615))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (((.lit 8191)) : Expr gD gCtx_grenze gL_grenze (.int 8191 8191))) : Expr gD gCtx_grenze gL_grenze (.int 0 18446744073709551615))) (List.Perm.refl _))
 
 def gBody_minus : Endblock gD (vertragVon gD g_minus) false gCtx_minus gL_minus :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD gCtx_minus gL_minus (.int (-9223372036854775808) 9223372036854775807))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (.var .here)) : Expr gD gCtx_minus gL_minus (.int (-9223372036854775808) 9223372036854775807))) (List.Perm.refl _))
 
 def gBody_voll : Endblock gD (vertragVon gD g_voll) false gCtx_voll gL_voll :=
-  (.ret (.wert (.var .hier)) (List.Perm.refl _))
+  (.ret (.val (.var .here)) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .eins => .wahr
-    | .dreizehn => .wahr
-    | .wandle => .wahr
-    | .grenze => .wahr
-    | .minus => .wahr
-    | .voll => .wahr
+    | .eins => .tru
+    | .dreizehn => .tru
+    | .wandle => .tru
+    | .grenze => .tru
+    | .minus => .tru
+    | .voll => .tru
   ensures
-    | .eins => .wahr
-    | .dreizehn => .wahr
-    | .wandle => .wahr
-    | .grenze => .wahr
-    | .minus => .wahr
-    | .voll => .wahr
+    | .eins => .tru
+    | .dreizehn => .tru
+    | .wandle => .tru
+    | .grenze => .tru
+    | .minus => .tru
+    | .voll => .tru
   rumpf
     | .eins => gBody_eins
     | .dreizehn => gBody_dreizehn

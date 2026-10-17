@@ -34,7 +34,7 @@ def weiterHA : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l
       match o with
       | .ok σ ρ => zErgG (execEndHA S O U A passes R e σ ρ)
       | .zurueck σ v => .zurueck σ v
-      | .grund σ r => .grund σ r
+      | .why σ r => .why σ r
       | .logik e => .logik e
       | _ => .sonst
   | _, _, _, .dann b k, o => weiterHA k (laufA (fun σ ρ => execBlockHA S O U A passes R b σ ρ) o)
@@ -54,7 +54,7 @@ def weiterHA : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l
           weiterHA k (if (leseBA A inv σ ρ.tail).2 = true then .ok (leseBA A inv σ ρ.tail).1 ρ.tail
             else .logik .schleife)
       | .zurueck σ v => weiterHA k (.zurueck σ v)
-      | .grund σ r => weiterHA k (.grund σ r)
+      | .why σ r => weiterHA k (.why σ r)
       | .logik e => weiterHA k (.logik e)
       | .hardware e => weiterHA k (.hardware e)
   | _, _, _, .wieder n bis body ueber k, o =>
@@ -68,7 +68,7 @@ def weiterHA : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l
           (leseBA A bis) (fun σ ρ => execBlockHA S O U A passes R ueber σ ρ) n σ ρ)
       | .leave _ σ ρ => weiterHA k (.ok σ ρ)
       | .zurueck σ v => weiterHA k (.zurueck σ v)
-      | .grund σ r => weiterHA k (.grund σ r)
+      | .why σ r => weiterHA k (.why σ r)
       | .logik e => weiterHA k (.logik e)
       | .hardware e => weiterHA k (.hardware e)
   | _, _, _, .ewig a n inv body k, o =>
@@ -81,7 +81,7 @@ def weiterHA : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l
           (leseBA A inv) n σ ρ)
       | .leave _ σ ρ => weiterHA k (.ok σ ρ)
       | .zurueck σ v => weiterHA k (.zurueck σ v)
-      | .grund σ r => weiterHA k (.grund σ r)
+      | .why σ r => weiterHA k (.why σ r)
       | .logik e => weiterHA k (.logik e)
       | .hardware e => weiterHA k (.hardware e)
   | _, _, _, .wartet _ k, o =>
@@ -162,7 +162,7 @@ theorem weiterHA_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GR
     of `weiterHA_zurueck`, 2026-09-14). -/
 theorem weiterHA_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (r : Fin V.gruende),
-    (weiterHA S O U A passes R k (.grund σ r)).gleich (.grund σ r)
+    (weiterHA S O U A passes R k (.why σ r)).gleich (.why σ r)
   | _, _, _, .ende _, _, _ => ZErgG.gleich_refl _
   | _, _, _, .dann _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .schrumpf k, σ, r => weiterHA_grund k σ r
@@ -183,7 +183,7 @@ theorem weiterHA_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : En
     (weiterHA S O U A passes R k eo.zuAusgang).folgt (zErgG eo) := by
   cases eo with
   | zurueck σ v => exact ZErgG.folgt_of_gleich (weiterHA_zurueck S O U A passes R k σ v)
-  | grund σ r => exact ZErgG.folgt_of_gleich (weiterHA_grund S O U A passes R k σ r)
+  | why σ r => exact ZErgG.folgt_of_gleich (weiterHA_grund S O U A passes R k σ r)
   | logik e => exact ZErgG.folgt_of_eq (weiterHA_logik S O U A passes R k e)
   | _ => exact ZErgG.folgt_sonst _
 
@@ -193,7 +193,7 @@ theorem Endblock.execBlockHA_alsBlock :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ),
       execBlockHA S O U A passes R e.alsBlock.2 σ ρ = (execEndHA S O U A passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
-  | _, _, .retGrund _ _, _, _ => rfl
+  | _, _, .retWhy _ _, _, _ => rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by
@@ -258,7 +258,7 @@ theorem execGrundHA_wahl {Λ Λ' : List (Res D)} :
       exact execGrundHA_wahl rest _ σ ρ
 
 theorem execGrundHA_wahlW {Λ Λ' : List (Res D)} {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n)
-    (r : Wert D (.grund n)) (σ : World D) (ρ : Env D Γ) :
+    (r : Wert D (.why n)) (σ : World D) (ρ : Env D Γ) :
     execGrundHA S O U A passes R arms r σ ρ = execBlockHA S O U A passes R (grundWahlG arms r) σ ρ :=
   execGrundHA_wahl S O U A passes R arms r σ ρ
 
@@ -351,10 +351,10 @@ theorem semHA_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × In
   rw [execArmsHA_wahl, hw]
   rfl
 
-theorem semHA_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.grund n))
+theorem semHA_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.why n))
     (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
     (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
-    semHA S O U A passes R (.dann (.cons (.onGrund r arms) rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.cons (.onWhy r arms) rest) k) σ ρ =
       semHA S O U A passes R (.dann (grundWahlG arms (eval (leseA A σ Λ r.orte) r (leseA A σ Λ r.orte) ρ))
         (.dann rest k)) (leseA A σ Λ r.orte) ρ := by
   rw [semHA_dann_cons]
@@ -446,7 +446,7 @@ theorem semHA_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (leseA A σ Λ c.orte) c (leseA A σ Λ c.orte) ρ) = true) :
-    semHA S O U A passes R (.dann (.pruefung c sonst rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.check c sonst rest) k) σ ρ =
       semHA S O U A passes R (.dann rest k) (leseA A σ Λ c.orte) ρ := by
   rw [semHA_dann]
   simp only [execBlockHA, hw, if_true]
@@ -456,7 +456,7 @@ theorem semHA_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (sonst : Endblock D V l Γ Λ) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (leseA A σ Λ c.orte) c (leseA A σ Λ c.orte) ρ) = false) :
-    (semHA S O U A passes R (.dann (.pruefung c sonst rest) k) σ ρ).folgt
+    (semHA S O U A passes R (.dann (.check c sonst rest) k) σ ρ).folgt
       (semHA S O U A passes R (.dann sonst.alsBlock.2 (.abbruch k)) (leseA A σ Λ c.orte) ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hw, Bool.false_eq_true, if_false]
@@ -481,7 +481,7 @@ theorem semHA_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (
     (hv : gleitPasst lo hi (gleitRechne op
       (eval (leseA A σ Λ (a.orte ++ b.orte)) a (leseA A σ Λ (a.orte ++ b.orte)) ρ).x
       (eval (leseA A σ Λ (a.orte ++ b.orte)) b (leseA A σ Λ (a.orte ++ b.orte)) ρ).x) = some v) :
-    semHA S O U A passes R (.dann (.gleit op a b lo hi rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.float op a b lo hi rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ (a.orte ++ b.orte)) (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv]
@@ -490,7 +490,7 @@ theorem semHA_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (
 theorem semHA_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
-    semHA S O U A passes R (.dann (.gleitLit q lo hi rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.floatLit q lo hi rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv]
@@ -501,7 +501,7 @@ theorem semHA_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ 
     (σ : World D) (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (gleitAusInt (eval (leseA A σ Λ e.orte) e
       (leseA A σ Λ e.orte) ρ).n) = some v) :
-    semHA S O U A passes R (.dann (.gleitVon e lo hi rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.floatOf e lo hi rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ e.orte) (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv]
@@ -512,7 +512,7 @@ theorem semHA_gleitNarrowOk {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).x = some v) :
-    semHA S O U A passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ e.orte) (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv]
@@ -523,7 +523,7 @@ theorem semHA_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).x = none) :
-    (semHA S O U A passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ).folgt
+    (semHA S O U A passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ).folgt
       (semHA S O U A passes R (.dann sonst.alsBlock.2 (.abbruch k)) (leseA A σ Λ e.orte) ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hn]
@@ -816,19 +816,19 @@ theorem semHA_dannRet {Λ Λ'' : List (Res D)} (e : ErgExpr D Γ Λ V.erg)
 
 theorem semHA_rueckGrund {Λ : List (Res D)} (r : Fin V.gruende) (hperm : Λ.Perm V.ende)
     (σ : World D) (ρ : Env D Γ) :
-    (semHA S O U A passes R (.ende (.retGrund (l := l) r hperm)) σ ρ).gleich (.grund σ r) :=
+    (semHA S O U A passes R (.ende (.retWhy (l := l) r hperm)) σ ρ).gleich (.why σ r) :=
   ZErgG.gleich_refl _
 
 theorem semHA_rueckConsGrund {Λ : List (Res D)} (r : Fin V.gruende) (hperm : Λ.Perm V.ende)
     (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    (semHA S O U A passes R (.ende (.cons (.retGrund r hperm) rest)) σ ρ).gleich (.grund σ r) := by
+    (semHA S O U A passes R (.ende (.cons (.retWhy r hperm) rest)) σ ρ).gleich (.why σ r) := by
   rw [semHA_ende_cons]
   exact ZErgG.gleich_refl _
 
 theorem semHA_dannRetGrund {Λ Λ'' : List (Res D)} (r : Fin V.gruende)
     (hperm : Λ.Perm V.ende) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
     (σ : World D) (ρ : Env D Γ) :
-    (semHA S O U A passes R (.dann (.cons (.retGrund r hperm) rest) k) σ ρ).gleich (.grund σ r) := by
+    (semHA S O U A passes R (.dann (.cons (.retWhy r hperm) rest) k) σ ρ).gleich (.why σ r) := by
   rw [semHA_dann_cons]
   exact weiterHA_grund S O U A passes R (.dann rest k) _ _
 
@@ -838,7 +838,7 @@ theorem semHA_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).le
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hz : D.rzusage r v = true) :
-    semHA S O U A passes R (.dann (.regLies r hk rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.regRead r hk rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv, hz, if_true]
@@ -849,7 +849,7 @@ theorem semHA_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklas
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (.cons v ρ)) = true) :
-    semHA S O U A passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ zusage.orte) (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv, hw, if_true]
@@ -861,7 +861,7 @@ theorem semHA_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (.cons v ρ)) = false) :
-    (semHA S O U A passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
+    (semHA S O U A passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
       (semHA S O U A passes R (.dann sonst.alsBlock.2 (.abbruch k)) (leseA A σ Λ zusage.orte) ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv, hw, Bool.false_eq_true, if_false]

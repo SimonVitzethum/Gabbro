@@ -1784,7 +1784,7 @@ theorem hwit_falt_instanz_J0
       .inl t₀ ∈ Extraktion.stmtTraeger tabs globs s)
     (hbytes_all : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ'),
-      (match s with | .schreibBytes _ _ _ n _ _ _ _ _ _ => 0 < n | _ => True))
+      (match s with | .putBytes _ _ _ n _ _ _ _ _ _ => 0 < n | _ => True))
     (hwit_lock : ∀ (Mx : GenMaschine D) (pcx : PCStand),
       PCReach P O passes prog (GenStart sp) Mx pcx →
       TraegerSchreibt ((fun _ => fn0) f) (.inl t₀) = true →

@@ -474,17 +474,17 @@ def rufVD : ErgVal rufD (rufD.erg rufIncD) :=
 
 /-- `requires`: the parameter equals 2. -/
 def rufReqD : Expr rufD (rufD.params rufIncD) [] .bool :=
-  .eq (.var .hier)
-    ((.weiter (by decide) (by decide) (.lit 2) :
+  .eq (.var .here)
+    ((.widen (by decide) (by decide) (.lit 2) :
       Expr rufD (rufD.params rufIncD) [] (.int 0 5)))
 
 /-- `ensures`: the result equals the parameter plus one.
-    Context `[.int 0 5, .int 0 5]`: result at `.hier`, parameter at `.dort .hier`. -/
+    Context `[.int 0 5, .int 0 5]`: result at `.here`, parameter at `.there .here`. -/
 def rufEnsLitD : Expr rufD [.int 0 6, .int 0 5] [] .bool :=
-  .eq (.var .hier)
-    (.add (.weiter (by decide) (by decide) (.var (.dort .hier)) :
+  .eq (.var .here)
+    (.add (.widen (by decide) (by decide) (.var (.there .here)) :
           Expr rufD [.int 0 6, .int 0 5] [] (.int 0 5))
-        (.weiter (by decide) (by decide) (.lit 1) :
+        (.widen (by decide) (by decide) (.lit 1) :
           Expr rufD [.int 0 6, .int 0 5] [] (.int 0 1)))
 
 /-- The ensures context computes to result-before-parameters. -/
@@ -501,16 +501,16 @@ def rufPD : Programm rufD where
   requires := fun _ => rufReqD
   ensures := fun _ => rufEnsCtxD ▸ rufEnsLitD
   rumpf
-    | true => .ret (.wert
-        (.add (.var .hier)
-          (.weiter (by decide) (by decide) (.lit 1) :
+    | true => .ret (.val
+        (.add (.var .here)
+          (.widen (by decide) (by decide) (.lit 1) :
             Expr rufD (rufD.params rufIncD) (Signatur.anfang rufD (rufD.signatur rufIncD)) (.int 0 1))) :
         ErgExpr rufD (rufD.params rufIncD)
           (Signatur.anfang rufD (rufD.signatur rufIncD)) (rufD.erg rufIncD))
         (by decide)
-    | false => .ret (.wert
-        (.add (.var .hier)
-          (.weiter (by decide) (by decide) (.lit 1) :
+    | false => .ret (.val
+        (.add (.var .here)
+          (.widen (by decide) (by decide) (.lit 1) :
             Expr rufD (rufD.params rufIncD) (Signatur.anfang rufD (rufD.signatur rufIncD)) (.int 0 1))) :
         ErgExpr rufD (rufD.params rufIncD)
           (Signatur.anfang rufD (rufD.signatur rufIncD)) (rufD.erg rufIncD))
@@ -562,7 +562,7 @@ theorem rufHpD : RufPasst rufD (vertragVon rufD rufIncD)
 
 /-- The call arguments: the single variable. -/
 def rufArgsD : Args rufD [Ty.int 0 5] [] (rufD.params rufIncD) :=
-  (rufD_params rufIncD).symm ▸ Args.cons (.var .hier) Args.nil
+  (rufD_params rufIncD).symm ▸ Args.cons (.var .here) Args.nil
 
 /-- Held-exactly at the empty trace: no locks exist. -/
 theorem rufHeldLeerD (spur : List (Ereignis rufD)) :
@@ -575,7 +575,7 @@ theorem rufHeldLeerD (spur : List (Ereignis rufD)) :
 def rufCallerResD :
     Endblock rufD (vertragVon rufD rufIncD) false [Ty.int 0 5] [] :=
   .cons (.call rufIncD rufArgsD rufHpD rfl)
-    (.ret (.wert (.weiter (by decide) (by decide) (.var .hier))) (by decide))
+    (.ret (.val (.widen (by decide) (by decide) (.var .here))) (by decide))
 
 
 /-- The caller frame: running `rufIncD` with `rufRhoD`, entry world the empty
@@ -641,8 +641,8 @@ theorem rufSchritt1D :
 /-- The return expression of the callee body: param + 1. -/
 def rufRetED : ErgExpr rufD (rufD.params rufIncD)
     (Signatur.anfang rufD (rufD.signatur rufIncD)) (rufD.erg rufIncD) :=
-  .wert (.add (.var .hier)
-    ((.weiter (by decide) (by decide) (.lit 1) :
+  .val (.add (.var .here)
+    ((.widen (by decide) (by decide) (.lit 1) :
       Expr rufD (rufD.params rufIncD)
         (Signatur.anfang rufD (rufD.signatur rufIncD)) (.int 0 1))))
 

@@ -293,7 +293,7 @@ theorem kEntf_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
       rcases x with ⟨_ | ⟨lo, hi⟩, b, nutz⟩
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.lokal _ _ _ _ _ rfl hsp
-  | onGrund r arms =>
+  | onWhy r arms =>
       simp only [nS, Bool.and_eq_true] at hs
       simp only [kEntf]
       rw [(hW.lese Λ r.orte).eval r (alle_von hST hs.1) ρ]
@@ -399,7 +399,7 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [kEnde]
       rw [(hW.lese Λ e.orte).evalErg e (alle_von hST he) ρ]
       exact kPop_rel st f (hW.lese Λ e.orte) _
-  | retGrund r _ => exact kPopGrund_rel st f spur hsp r
+  | retWhy r _ => exact kPopGrund_rel st f spur hsp r
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 
@@ -475,7 +475,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       · exact KRel.none_l _
       · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
       · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
-  | regLies r hk' rest =>
+  | regRead r hk' rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
@@ -484,7 +484,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       cases x with
       | none => exact KRel.none_l _
       | some v => exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp) (fun _ => KRel.none_l _)
-  | regLiesElse r hk' zusage sonst rest =>
+  | regReadElse r hk' zusage sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
@@ -523,13 +523,13 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
         (fun _ _ => KRel.lokal _ _ _ _ _ rfl hsp)
       congr 1
       exact zahl_ext hn
-  | pruefung c sonst rest =>
+  | check c sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [(hW.lese Λ c.orte).eval c (alle_von hST hb.1.1) ρ]
       exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp)
         (fun _ => KRel.lokal _ _ _ _ _ rfl hsp)
-  | gleit op a b lo hi rest =>
+  | float op a b lo hi rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       have h1 := hW.lese Λ (a.orte ++ b.orte)
@@ -538,13 +538,13 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       cases x with
       | none => exact KRel.none_l _
       | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
-  | gleitLit q lo hi rest =>
+  | floatLit q lo hi rest =>
       simp only [kDann]
       generalize gleitPasst lo hi _ = x
       cases x with
       | none => exact KRel.none_l _
       | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
-  | gleitVon e lo hi rest =>
+  | floatOf e lo hi rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [(hW.lese Λ e.orte).eval e (alle_von hST hb.1) ρ]
@@ -552,7 +552,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       cases x with
       | none => exact KRel.none_l _
       | some v => exact KRel.lokal _ _ _ _ _ rfl hsp
-  | gleitNarrow e lo hi sonst rest =>
+  | floatNarrow e lo hi sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [(hW.lese Λ e.orte).eval e (alle_von hST hb.1.1) ρ]

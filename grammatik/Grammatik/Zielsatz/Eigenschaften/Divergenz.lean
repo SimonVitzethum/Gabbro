@@ -58,7 +58,7 @@ def NoExit {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- **The invariant holds everywhere**: the loop guard passes at every world
     the run can present. At the accepted shape this is the writer's own
-    invariant (here `.wahr`); THAT it holds is proved per program, never
+    invariant (here `.tru`); THAT it holds is proved per program, never
     assumed in general. -/
 def InvWahr {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (Hold : List (Res D)) : Prop :=
@@ -145,14 +145,14 @@ theorem forever_leer_divergiert {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ
     {Λ : List (Res D)} (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (a : D.Annahme) (σ : World D) (ρ : Env D Γ) :
-    execStmt O passes R ((.forever a .wahr .nil : Stmt D V l Γ Λ Λ)) σ ρ =
+    execStmt O passes R ((.forever a .tru .nil : Stmt D V l Γ Λ Λ)) σ ρ =
       .hardware (.fortschritt a) := by
   have hNo : NoExit (D := D) (V := V) (Γ := Γ) (Λ := Λ) O passes R
       (.nil : Block D V true Γ Λ Λ) :=
     fun σ ρ => Or.inl ⟨_, _, rfl⟩
-  have hInv : InvWahr (D := D) (Γ := Γ) (Λ := Λ) (.wahr : Expr D Γ Λ .bool) Λ :=
+  have hInv : InvWahr (D := D) (Γ := Γ) (Λ := Λ) (.tru : Expr D Γ Λ .bool) Λ :=
     fun _ _ => rfl
-  exact forever_noexit_divergiert O passes R a .wahr .nil σ ρ hNo hInv
+  exact forever_noexit_divergiert O passes R a .tru .nil σ ρ hNo hInv
 
 /-! ## 3. `asm`: a `-> never` foreign body never comes back -/
 
@@ -194,9 +194,9 @@ theorem asm_never_kein_ok {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx
 def SpinKopf {D : Deklaration} (M : RufMaschineG D) (t : Faden) : Prop :=
   ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (a : D.Annahme) (n : Nat)
     (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
-    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a n .wahr .nil k⟩ ∨
-    (M.faeden t).kopf.rest = ⟨true, Γ, Λ, ρ, .dann .nil (.ewigRest a n .wahr .nil k)⟩ ∨
-    (M.faeden t).kopf.rest = ⟨true, Γ, Λ, ρ, .ewigRest a n .wahr .nil k⟩
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a n .tru .nil k⟩ ∨
+    (M.faeden t).kopf.rest = ⟨true, Γ, Λ, ρ, .dann .nil (.ewigRest a n .tru .nil k)⟩ ∨
+    (M.faeden t).kopf.rest = ⟨true, Γ, Λ, ρ, .ewigRest a n .tru .nil k⟩
 
 theorem spin_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
     {M : RufMaschineG D} {t : Faden} (h : SpinKopf M t) : PrueftG O passes M t := by
@@ -231,15 +231,15 @@ theorem ewig_wahr_schreitet {D : Deklaration} {P : Programm D} {O : Orakel D} {p
     {M : RufMaschineG D} {t : Faden}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ} {a : D.Annahme} {n : Nat}
     {k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ}
-    (hhead : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a (n + 1) (.wahr : Expr D Γ Λ .bool)
+    (hhead : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ewig a (n + 1) (.tru : Expr D Γ Λ .bool)
       (.nil : Block D (vertragVon D (M.faeden t).kopf.f) true Γ Λ Λ) k⟩)
-    (hspur : ((M.weltVon t).lese Λ ((.wahr : Expr D Γ Λ .bool)).orte).spur =
+    (hspur : ((M.weltVon t).lese Λ ((.tru : Expr D Γ Λ .bool)).orte).spur =
       (M.faeden t).spur)
     (hHeld : HeldIn Λ (offen (M.faeden t).spur)) :
     ∃ M', RufSchrittG P O passes M t M' := by
-  refine ⟨_, RufSchrittG.ewigWeiter M t l Γ Λ a n (.wahr : Expr D Γ Λ .bool)
+  refine ⟨_, RufSchrittG.ewigWeiter M t l Γ Λ a n (.tru : Expr D Γ Λ .bool)
     (.nil : Block D (vertragVon D (M.faeden t).kopf.f) true Γ Λ Λ) k ρ hhead
-    ((M.weltVon t).lese Λ ((.wahr : Expr D Γ Λ .bool)).orte) rfl rfl [] ?_ hHeld⟩
+    ((M.weltVon t).lese Λ ((.tru : Expr D Γ Λ .bool)).orte) rfl rfl [] ?_ hHeld⟩
   simp [hspur]
 
 /-- **A `bindAxiom` head is no leaf head** (review G10 F3: a
@@ -400,11 +400,11 @@ theorem divDarfSchreib : darf divD () (vertragVon divD divSchreib).ende := by
 /-- Index `0` into the two-slot table, in the `schreib` context. -/
 def divIdx : Expr divD [.int 0 10] [Res.held (D := divD) ()]
     (.index (divD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The cap value `100` in range. -/
 def divHundert : Expr divD [.int 0 10] [Res.held (D := divD) ()] (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 100)
+  .widen (by decide) (by decide) (.lit 100)
 
 /-- The `schreib` write: `konto[0] := 100`. -/
 def divWriteSt : Stmt divD (vertragVon divD divSchreib) false [.int 0 10]
@@ -421,14 +421,14 @@ def divWriteStAt : Stmt divD (vertragVon divD divSchreib) false [.int 0 10]
     named `progress` assumption `()` as the exit evidence). -/
 def divSchleife : Stmt divD (vertragVon divD divSchreib) false [.int 0 10]
     [Res.held (D := divD) ()] [Res.held (D := divD) ()] :=
-  .forever () .wahr .nil
+  .forever () .tru .nil
 
 /-- `schreib` body: write the cap, then diverge. The `ret` is unreachable
     but well-typed -- exactly the accepted `-> never`-shaped body. -/
 def divRumpfW :
     Endblock divD (vertragVon divD divSchreib) false [.int 0 10]
       [Res.held (D := divD) ()] :=
-  .cons divWriteStAt (.cons divSchleife (.ret .keine (by rfl)))
+  .cons divWriteStAt (.cons divSchleife (.ret .empty (by rfl)))
 
 /-- `lies` holds the lock: start equals end. -/
 theorem divLies_start : Signatur.anfang divD (divD.signatur divLies) =
@@ -438,7 +438,7 @@ theorem divLies_start : Signatur.anfang divD (divD.signatur divLies) =
 def divIdxBodyR : Expr divD [] (Signatur.anfang divD (divD.signatur divLies))
     (.index (divD.count ())) :=
   divLies_start ▸
-    (.weiter (by decide) (by decide) (.lit 0) :
+    (.widen (by decide) (by decide) (.lit 0) :
       Expr divD [] [Res.held (D := divD) ()] (.index (divD.count ())))
 
 /-- `lies` locks the table in its body context. -/
@@ -451,14 +451,14 @@ theorem divDarfBodyR :
 def divRumpfR :
     Endblock divD (vertragVon divD divLies) false []
       (Signatur.anfang divD (divD.signatur divLies)) :=
-  .ret (.wert (.slot () () divIdxBodyR divDarfBodyR)) (by rfl)
+  .ret (.val (.slot () () divIdxBodyR divDarfBodyR)) (by rfl)
 
 /-- The program: `schreib` writes then diverges, `lies` reads; every
     contract `true` (nothing is claimed beyond the divergence shapes). -/
 def divP : Programm divD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | true => divSchreib_start ▸ divRumpfW
     | false => divLies_start ▸ divRumpfR
@@ -570,7 +570,7 @@ def divM2F : RufMaschineF divD :=
       ⟨(divM1F.faeden 1).kopf.f, (divM1F.faeden 1).kopf.rho,
        (divM1F.faeden 1).kopf.s0,
        ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
-        .cons divSchleife (.ret .keine (by rfl))⟩⟩,
+        .cons divSchleife (.ret .empty (by rfl))⟩⟩,
       (((divM1F.weltVon 1).lese [Res.held (D := divD) ()]
         (divIdx.orte ++ divHundert.orte)).schreibSlot () [Res.held (D := divD) ()]
         divK0 () divV100).spur,
@@ -584,7 +584,7 @@ theorem divSchrittBF : RufSchrittF divP divO 0 divM1F 1 divM2F := by
   have hhead : (divM1F.faeden 1).kopf.rest =
       ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
         .cons divWriteStAt
-          (.cons divSchleife (.ret .keine (by rfl)))⟩ := rfl
+          (.cons divSchleife (.ret .empty (by rfl)))⟩ := rfl
   have hstep : (execStmt divO 0 keinRuf divWriteStAt
       (divM1F.weltVon 1) divRho7) =
       Ausgang.ok (D := divD) (V := vertragVon divD divSchreib)
@@ -646,7 +646,7 @@ theorem divB_schreibt : divM2F.speicher.slots () 0 () ≠
 /-- After step B the head stands at the diverging `forever`. -/
 theorem divM2kopf : (divM2F.faeden 1).kopf.rest =
     ⟨false, [.int 0 10], [Res.held (D := divD) ()], divRho7,
-      .cons divSchleife (.ret .keine (by rfl))⟩ := rfl
+      .cons divSchleife (.ret .empty (by rfl))⟩ := rfl
 
 /-! ## 7. The joint witness: every premise together, nothing weakened -/
 
@@ -654,7 +654,7 @@ theorem divM2kopf : (divM2F.faeden 1).kopf.rest =
     runs, then the `forever` answers the named assumption. -/
 theorem divRest_divergiert (n : Nat) (σ : World divD) (ρ : Env divD [.int 0 10]) :
     execEnd divO n keinRuf
-      (.cons divSchleife (.ret .keine (by rfl)) :
+      (.cons divSchleife (.ret .empty (by rfl)) :
         Endblock divD (vertragVon divD divSchreib) false [.int 0 10]
           [Res.held (D := divD) ()]) σ ρ =
       .hardware (.fortschritt ()) := by
@@ -672,7 +672,7 @@ theorem divNoExit (O : Orakel divD) (passes : Nat)
 
 /-- Evidence bundle: `true` holds everywhere. -/
 theorem divInvWahr :
-    InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
+    InvWahr (.tru : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
       [Res.held (D := divD) ()] :=
   fun _ _ => rfl
 
@@ -695,10 +695,10 @@ theorem divergent_body_zeuge :
     ∃ (hNo : NoExit divO 3 keinRuf
           (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
             [Res.held (D := divD) ()] [Res.held (D := divD) ()]))
-      (hInv : InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
+      (hInv : InvWahr (.tru : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
           [Res.held (D := divD) ()]),
       execStmt divO 3 keinRuf
-          ((.forever () .wahr .nil : Stmt divD (vertragVon divD divSchreib) false
+          ((.forever () .tru .nil : Stmt divD (vertragVon divD divSchreib) false
             [.int 0 10] [Res.held (D := divD) ()] [Res.held (D := divD) ()])) σ ρ =
           .hardware (.fortschritt ()) ∧
       (∃ M : RufMaschineF divD,
@@ -708,11 +708,11 @@ theorem divergent_body_zeuge :
   obtain ⟨hNo, hInv⟩ : NoExit divO 3 keinRuf
       (.nil : Block divD (vertragVon divD divSchreib) true [.int 0 10]
         [Res.held (D := divD) ()] [Res.held (D := divD) ()]) ∧
-      InvWahr (.wahr : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
+      InvWahr (.tru : Expr divD [.int 0 10] [Res.held (D := divD) ()] .bool)
         [Res.held (D := divD) ()] :=
     ⟨divNoExit divO 3 keinRuf, divInvWahr⟩
   refine ⟨divSp0.welt [], divRho7, hNo, hInv, ?_, ?_, ?_, ?_⟩
-  · exact forever_noexit_divergiert (l := false) divO 3 keinRuf () .wahr .nil _ _
+  · exact forever_noexit_divergiert (l := false) divO 3 keinRuf () .tru .nil _ _
       hNo hInv
   · exact ⟨divM2F, divB_erreicht, divB_schreibt⟩
   · exact stelleOk_never_ax (D := divD) () divAx_never
@@ -734,18 +734,18 @@ review asked for (G10 F3). -/
     unreachable `ret`. -/
 def divRumpfSpin : Endblock divD (vertragVon divD divSchreib) false (divD.params divSchreib)
     (Signatur.anfang divD (divD.signatur divSchreib)) :=
-  .cons (.forever () .wahr .nil) (.ret .keine (by rfl))
+  .cons (.forever () .tru .nil) (.ret .empty (by rfl))
 
 /-- `lies` returns the constant `0` (no read, so no lock story). -/
 def divRumpfNull : Endblock divD (vertragVon divD divLies) false (divD.params divLies)
     (Signatur.anfang divD (divD.signatur divLies)) :=
-  .ret (.wert (.weiter (by decide) (by decide) (.lit 0))) (by rfl)
+  .ret (.val (.widen (by decide) (by decide) (.lit 0))) (by rfl)
 
 /-- The spin program (see the section header). -/
 def divPS : Programm divD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | true => divRumpfSpin
     | false => divRumpfNull
@@ -761,11 +761,11 @@ def divS0 : RufMaschineG divD := RufStartG divPS divSp0 divInitS
 /-- Thread 0 starts at the spin body. -/
 theorem divS0_kopf : (divS0.faeden 0).kopf.rest =
     ⟨false, divD.params divSchreib, Signatur.anfang divD (divD.signatur divSchreib), divRho7,
-      .ende (.cons (.forever () .wahr .nil) (.ret .keine (by rfl)))⟩ := rfl
+      .ende (.cons (.forever () .tru .nil) (.ret .empty (by rfl)))⟩ := rfl
 
 /-- The unreachable `ret` behind the spin. -/
 abbrev divSpinRet : Endblock divD (vertragVon divD divSchreib) false (divD.params divSchreib)
-    (Signatur.anfang divD (divD.signatur divSchreib)) := .ret .keine (by rfl)
+    (Signatur.anfang divD (divD.signatur divSchreib)) := .ret .empty (by rfl)
 
 /-- After `endeEntf`: the `forever` statement unfolded to a `dann` head. -/
 def divS1 : RufMaschineG divD :=
@@ -773,33 +773,33 @@ def divS1 : RufMaschineG divD :=
     ⟨(divS0.faeden 0).stapel,
      ⟨(divS0.faeden 0).kopf.f, (divS0.faeden 0).kopf.rho, (divS0.faeden 0).kopf.s0,
       ⟨false, divD.params divSchreib, Signatur.anfang divD (divD.signatur divSchreib), divRho7,
-       .dann (.cons (.forever () .wahr .nil) .nil) (.ende divSpinRet)⟩⟩,
+       .dann (.cons (.forever () .tru .nil) .nil) (.ende divSpinRet)⟩⟩,
      (divS0.faeden 0).spur, (divS0.faeden 0).log⟩,
    divS0.lauf, divS0.start⟩
 
 /-- The first G step: `endeEntf` unfolds the `forever` statement. -/
 theorem divS01 : RufSchrittG divPS divO 1 divS0 0 divS1 :=
-  RufSchrittG.endeEntf divS0 0 false _ _ _ (.forever () .wahr .nil) divSpinRet divRho7 rfl divS0_kopf
+  RufSchrittG.endeEntf divS0 0 false _ _ _ (.forever () .tru .nil) divSpinRet divRho7 rfl divS0_kopf
 
 /-- **Witness** (rule 13) for `ewig_wahr_schreitet` and `spin_prueft`: a
     REACHED G machine (two steps from `RufStartG`) whose thread 0 stands at
-    `.ewig () 1 .wahr .nil k`, where `KeinLogikHaltG` holds for every thread
+    `.ewig () 1 .tru .nil k`, where `KeinLogikHaltG` holds for every thread
     and thread 0 steps on. -/
 theorem ewig_spin_zeuge :
     ∃ M, RufErreichbarG divPS divO 1 divS0 M ∧
       (∃ k, (M.faeden 0).kopf.rest = ⟨false, divD.params divSchreib,
         Signatur.anfang divD (divD.signatur divSchreib), divRho7,
-        .ewig () 1 .wahr .nil k⟩) ∧
+        .ewig () 1 .tru .nil k⟩) ∧
       KeinLogikHaltG divO 1 M ∧ ∃ M', RufSchrittG divPS divO 1 M 0 M' := by
   have s2 := RufSchrittG.dannForever (P := divPS) (O := divO) (passes := 1) divS1 0 false _ _
-    (Signatur.anfang divD (divD.signatur divSchreib)) _ () .wahr .nil .nil (.ende divSpinRet) divRho7 rfl
+    (Signatur.anfang divD (divD.signatur divSchreib)) _ () .tru .nil .nil (.ende divSpinRet) divRho7 rfl
   refine ⟨_, .schritt _ _ _ (.schritt _ _ _ .start divS01) s2, ⟨_, rfl⟩, ?_, ?_⟩
   · intro t
     by_cases ht : t = 0
     · subst ht
       exact spin_prueft ⟨_, _, _, _, _, _, _, Or.inl rfl⟩
     · match t, ht with
-      | n + 1, _ => exact ret_prueft (e := .wert (.weiter (by decide) (by decide) (.lit 0))) (hΛ := by rfl) rfl
+      | n + 1, _ => exact ret_prueft (e := .val (.widen (by decide) (by decide) (.lit 0))) (hΛ := by rfl) rfl
   · refine ewig_wahr_schreitet (n := 0) rfl rfl ?_
     intro L _
     show L ∈ offen (startSpur (D := divD) divSchreib)
@@ -833,12 +833,12 @@ theorem ewig_spin_zeuge :
   NOT proved, named:
   * THAT a body's exits are absent / an invariant holds on a REAL program
     is writer's logic (`NoExit`/`InvWahr` are premises, proved here only for
-    the witness shapes `.nil`/`.wahr`).
+    the witness shapes `.nil`/`.tru`).
   * No checker acceptance (`antwortenB`, lane 225's sentences) is claimed in
     Lean: the shapes are the model's, the acceptance is the checker's.
   * The spin facts are PER HEAD: `spin_prueft` does not show that a thread
     stays in `SpinKopf` along its steps (no inversion of `RufSchrittG`), and
-    only the empty body with guard `.wahr` is covered -- a `forever` with a
+    only the empty body with guard `.tru` is covered -- a `forever` with a
     real body or a real invariant is the writer's logic (`NoExit`/`InvWahr`)
     and meets `KeinLogikHaltG` through the general route, not through this
     file. `KeinLogikHaltG` is shown for ONE reached machine

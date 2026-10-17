@@ -133,11 +133,11 @@ theorem ivDarf : darf ivD () ivL := by
 
 def ivIdx {Λ : List (Res ivD)} (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 1) :
     Expr ivD [] Λ (.index (ivD.count ())) :=
-  .weiter (lo := k) (hi := k) h0 h1 (.lit k)
+  .widen (lo := k) (hi := k) h0 h1 (.lit k)
 
 def ivWert {Λ : List (Res ivD)} (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 10) :
     Expr ivD [] Λ (ivD.typ () ()) :=
-  .weiter (lo := k) (hi := k) h0 h1 (.lit k)
+  .widen (lo := k) (hi := k) h0 h1 (.lit k)
 
 theorem ivInvSicht : invSicht ivD () = ivL := rfl
 
@@ -154,8 +154,8 @@ def ivSchreib (f : ivD.Fn) (hw : (vertragVon ivD f).schreibt () = true) (k v : I
     Stmt ivD (vertragVon ivD f) false [] ivL ivL :=
   .assignSlot () () (ivIdx k hk0 hk1) (ivWert v hv0 hv1) hw ivDarf
 
-def ivRetS : Endblock ivD (vertragVon ivD ivSetze) false [] ivL := .ret .keine (List.Perm.refl _)
-def ivRetH : Endblock ivD (vertragVon ivD ivHaupt) false [] ivL := .ret .keine (List.Perm.refl _)
+def ivRetS : Endblock ivD (vertragVon ivD ivSetze) false [] ivL := .ret .empty (List.Perm.refl _)
+def ivRetH : Endblock ivD (vertragVon ivD ivHaupt) false [] ivL := .ret .empty (List.Perm.refl _)
 
 def ivS0 : Stmt ivD (vertragVon ivD ivSetze) false [] ivL ivL :=
   ivSchreib ivSetze rfl 0 5 (by decide) (by decide) (by decide) (by decide)
@@ -194,12 +194,12 @@ def ivRumpfHaupt : Endblock ivD (vertragVon ivD ivHaupt) false [] ivL :=
   .cons ivRuf ivHauptRest
 
 def ivRumpfNichts : Endblock ivD (vertragVon ivD ivNichts) false [] [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 def ivP (setze : Endblock ivD (vertragVon ivD ivSetze) false [] ivL) : Programm ivD where
   invariante := fun _ => ivInv
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .haupt => ivRumpfHaupt
     | .setze => setze
@@ -447,7 +447,7 @@ theorem ivPschlecht_verletzt : ∃ M : RufMaschineG ivD,
       (by rw [← hZ1.welt] at *; exact hoff1)
   have e2 := hZ2.1
   obtain ⟨M3, s3, hG3⟩ := w_rueckP (P := ivPschlecht) (O := ivO) (passes := 0) e2 _ _ rfl
-    (PopArt.wie rfl) .keine (List.Perm.refl _) _ rfl
+    (PopArt.wie rfl) .empty (List.Perm.refl _) _ rfl
     (by show HeldIn ivL _; rw [← e2]; exact ivHeld hoff2)
   refine ⟨M3, .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3, fun h => ?_⟩
   have h3 := h 0 _ (by rw [hG3.1]; exact List.mem_cons_self) _ _ _ _ _ rfl ()
@@ -494,7 +494,7 @@ theorem ivGut_zeuge : ∃ M : RufMaschineG ivD,
       (by rw [← hZ2.welt] at *; exact hoff2)
   have e3 := hZ3.1
   obtain ⟨M4, s4, hG4⟩ := w_rueckP (P := ivPgut) (O := ivO) (passes := 0) e3 _ _ rfl
-    (PopArt.wie rfl) .keine (List.Perm.refl _) _ rfl
+    (PopArt.wie rfl) .empty (List.Perm.refl _) _ rfl
     (by show HeldIn ivL _; rw [← e3]; exact ivHeld hoff3)
   have hr4 : RufErreichbarG ivPgut ivO 0 (RufStartG ivPgut ivSp ivInit) M4 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4

@@ -121,14 +121,14 @@ abbrev gL_auffuellen_in_K : List (Res gD) := [Res.held (D := gD) GLock.K]
 theorem gDarf_auffuellen_in_K_A : darf gD GTab.A gL_auffuellen_in_K := by unfold darf; decide
 
 def gBody_auffuellen : Endblock gD (vertragVon gD g_auffuellen) false gCtx_auffuellen gL_auffuellen :=
-  (.cons (.locks GLock.K (fun M => by cases M <;> decide) (.cons (.assignDurch (.var .hier) GTab.A rfl GAFeld.x (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_auffuellen gL_auffuellen_in_K (.index (gD.count GTab.A))))) ((.weiter (by decide) (by decide) (((.lit 40)) : Expr gD gCtx_auffuellen gL_auffuellen_in_K (.int 40 40))) : Expr gD gCtx_auffuellen gL_auffuellen_in_K (.int 0 100)) (by decide) gDarf_auffuellen_in_K_A) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.K (fun M => by cases M <;> decide) (.cons (.assignThru (.var .here) GTab.A rfl GAFeld.x (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_auffuellen gL_auffuellen_in_K (.index (gD.count GTab.A))))) ((.widen (by decide) (by decide) (((.lit 40)) : Expr gD gCtx_auffuellen gL_auffuellen_in_K (.int 40 40))) : Expr gD gCtx_auffuellen gL_auffuellen_in_K (.int 0 100)) (by decide) gDarf_auffuellen_in_K_A) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .auffuellen => .wahr
+    | .auffuellen => .tru
   ensures
-    | .auffuellen => .wahr
+    | .auffuellen => .tru
   rumpf
     | .auffuellen => gBody_auffuellen
 

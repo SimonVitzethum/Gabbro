@@ -128,20 +128,20 @@ def fS : oD.Fn := OFn.sicht
 theorem darfT : darf oD OTab.T [] := by unfold darf; intro w hw; cases hw
 
 def wert5 {Γ : Ctx} : Expr oD Γ [] (oD.typ OTab.T OFeld.x) :=
-  Expr.weiter (lo := 5) (hi := 5) (lo' := 0) (hi' := 7) (by decide) (by decide) (.lit 5)
+  Expr.widen (lo := 5) (hi := 5) (lo' := 0) (hi' := 7) (by decide) (by decide) (.lit 5)
 
 /-- The index variable `k` of `aendern`, at the generated index type of `T`. -/
-def varK : Expr oD (oD.params fA) [] (.index (oD.count OTab.T)) := .var (.dort .hier)
+def varK : Expr oD (oD.params fA) [] (.index (oD.count OTab.T)) := .var (.there .here)
 
 /-- `kp->slots[k].x = 5; return;` -/
 def rumpfAendern :
     Endblock oD (vertragVon oD fA) false (oD.params fA) (Signatur.anfang oD (oD.signatur fA)) :=
-  .cons (.assignDurch (.var .hier) OTab.T rfl OFeld.x varK wert5 rfl darfT)
-    (.ret .keine (List.Perm.refl _))
+  .cons (.assignThru (.var .here) OTab.T rfl OFeld.x varK wert5 rfl darfT)
+    (.ret .empty (List.Perm.refl _))
 
 /-- The answer of `sicht`: its index parameter `k`. -/
 def antwortSicht : ErgExpr oD (oD.params fS) (Signatur.anfang oD (oD.signatur fS))
-    (vertragVon oD fS).erg := .wert (Expr.var (τ := .index 4) (.dort .hier))
+    (vertragVon oD fS).erg := .val (Expr.var (τ := .index 4) (.there .here))
 
 /-- `return k;` -/
 def rumpfSicht :
@@ -150,8 +150,8 @@ def rumpfSicht :
 
 def oP : Programm oD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .aendern => rumpfAendern
     | .sicht => rumpfSicht
@@ -175,7 +175,7 @@ theorem zeuge_prog : ProgObjOk objs oP := by
   intro f
   cases f with
   | aendern =>
-      refine ⟨⟨⟨.dort .hier, rfl, ⟨2, 3, OTab.T, true⟩, by simp [objs], rfl, rfl, rfl⟩, trivial⟩,
+      refine ⟨⟨⟨.there .here, rfl, ⟨2, 3, OTab.T, true⟩, by simp [objs], rfl, rfl, rfl⟩, trivial⟩,
         ?_, ?_⟩
       · intro op hop hrw
         simp only [objs, List.mem_cons, List.not_mem_nil, or_false] at hop

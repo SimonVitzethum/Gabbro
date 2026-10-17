@@ -146,19 +146,19 @@ theorem gHp_takt_verteiler_in_TAKT_zaehle : RufPasst gD (vertragVon gD g_takt_ve
   hb := fun c h => by have hV : (vertragVon gD g_takt_verteiler).boden = some 0 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
 
 def gBody_zaehle : Endblock gD (vertragVon gD g_zaehle) false gCtx_zaehle gL_zaehle :=
-  (.cons (.assignSlot GTab.Takte GTakteFeld.stand ((.var .hier)) ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_zaehle gL_zaehle (.int 1 1))) : Expr gD gCtx_zaehle gL_zaehle (.int 0 18446744073709551615)) (by decide) gDarf_zaehle_Takte) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignSlot GTab.Takte GTakteFeld.stand ((.var .here)) ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_zaehle gL_zaehle (.int 1 1))) : Expr gD gCtx_zaehle gL_zaehle (.int 0 18446744073709551615)) (by decide) gDarf_zaehle_Takte) (.ret .empty (List.Perm.refl _)))
 
 def gBody_takt_verteiler : Endblock gD (vertragVon gD g_takt_verteiler) false gCtx_takt_verteiler gL_takt_verteiler :=
-  (.cons (.locks GLock.TAKT (fun M => by cases M <;> decide) (.cons (.call g_zaehle (.cons ((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_takt_verteiler gL_takt_verteiler_in_TAKT (.index (gD.count GTab.Takte)))) .nil) gHp_takt_verteiler_in_TAKT_zaehle rfl) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.TAKT (fun M => by cases M <;> decide) (.cons (.call g_zaehle (.cons ((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_takt_verteiler gL_takt_verteiler_in_TAKT (.index (gD.count GTab.Takte)))) .nil) gHp_takt_verteiler_in_TAKT_zaehle rfl) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .zaehle => .wahr
-    | .takt_verteiler => .wahr
+    | .zaehle => .tru
+    | .takt_verteiler => .tru
   ensures
-    | .zaehle => .wahr
-    | .takt_verteiler => .wahr
+    | .zaehle => .tru
+    | .takt_verteiler => .tru
   rumpf
     | .zaehle => gBody_zaehle
     | .takt_verteiler => gBody_takt_verteiler

@@ -119,7 +119,7 @@ def hTest : Stmt nD (vertragVon nD NFn.zaehlB) false [] [] [] :=
 
 /-- The body of `zaehlB` in `hP`: read `konfig`, then test it again. -/
 def hRumpf : Endblock nD (vertragVon nD NFn.zaehlB) false [] [] :=
-  .cons hLies (.cons hTest (.ret .keine List.Perm.nil))
+  .cons hLies (.cons hTest (.ret .empty List.Perm.nil))
 
 /-- `zaehlB` ensures `tabB[0] == 1`. -/
 def hEns : Expr nD (ErgCtx (nD.params NFn.zaehlB) (nD.erg NFn.zaehlB)) (vertragVon nD NFn.zaehlB).ende
@@ -129,20 +129,20 @@ def hEns : Expr nD (ErgCtx (nD.params NFn.zaehlB) (nD.erg NFn.zaehlB)) (vertragV
 /-- **The program `hP`**: `nP` with `zaehlB := hRumpf` and its contract `tabB[0] == 1`. -/
 def hP : Programm nD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .hauptA => .wahr
-    | .hauptB => .wahr
-    | .kern => .wahr
-    | .ruhe => .wahr
-    | .zaehlA => .wahr
+    | .hauptA => .tru
+    | .hauptB => .tru
+    | .kern => .tru
+    | .ruhe => .tru
+    | .zaehlA => .tru
     | .zaehlB => hEns
-    | .leck => .wahr
+    | .leck => .tru
   rumpf
     | .hauptA => nRumpfA
     | .hauptB => nRumpfB
     | .kern => nRumpfKern
-    | .ruhe => .ret .keine List.Perm.nil
+    | .ruhe => .ret .empty List.Perm.nil
     | .zaehlA => nRumpfZA
     | .zaehlB => hRumpf
     | .leck => nRumpfLeck
@@ -291,15 +291,15 @@ def vEns : Expr nD (ErgCtx (nD.params NFn.kern) (nD.erg NFn.kern)) (vertragVon n
 /-- `nP` with `kern`'s contract `konfig == 3`. -/
 def vP : Programm nD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .hauptA => .wahr
-    | .hauptB => .wahr
+    | .hauptA => .tru
+    | .hauptB => .tru
     | .kern => vEns
-    | .ruhe => .wahr
-    | .zaehlA => .wahr
-    | .zaehlB => .wahr
-    | .leck => .wahr
+    | .ruhe => .tru
+    | .zaehlA => .tru
+    | .zaehlB => .tru
+    | .leck => .tru
   rumpf := nP.rumpf
 
 /-- **THE REFUSAL**: on configuration 1 with a contract over the shared `konfig`, `AkzeptiertX`

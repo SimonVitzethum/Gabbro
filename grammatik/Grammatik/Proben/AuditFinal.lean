@@ -21,10 +21,10 @@ variable {D : Deklaration}
 /-! ## 1. Goal premises: the `voll` witness contracts are `true`. -/
 
 /-- The `voll` witness reasons about no contract: the requires gate is `true`. -/
-theorem audit_vP_requires_true : vP.requires vHaupt = .wahr := rfl
+theorem audit_vP_requires_true : vP.requires vHaupt = .tru := rfl
 
 /-- The ensures gate is `true` as well: joint satisfiability without frame reasoning. -/
-theorem audit_vP_ensures_true : vP.ensures vHaupt = .wahr := rfl
+theorem audit_vP_ensures_true : vP.ensures vHaupt = .tru := rfl
 
 /-! ## 2. `RegLokal`: satisfiable by a memory-dependent oracle. -/
 
@@ -90,7 +90,7 @@ theorem audit_vlauf_schreibt :
   exact ⟨M, hr, hmem⟩
 
 /-- The `geraet` witness contract is non-trivial: `leser` ensures its result. -/
-theorem audit_geP_ensures_leser : geP.ensures geLeser = .var .hier := rfl
+theorem audit_geP_ensures_leser : geP.ensures geLeser = .var .here := rfl
 
 /-- The `geraet` run is genuinely two-threaded: thread 0's reader (two
     register reads with its own write between them) interleaved with

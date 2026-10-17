@@ -1992,32 +1992,32 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     eval σ₀ e σ ρ = eval σ₀' e σ' ρ := by
   match e with
   | .lit _ => rfl
-  | .wahr => rfl
-  | .falsch => rfl
+  | .tru => rfl
+  | .fls => rfl
   | .var _ => rfl
   | .ptrOf _ _ _ _ => rfl
   | .fnref _ _ _ => rfl
   | .none _ => rfl
-  | .grund _ _ => rfl
+  | .why _ _ => rfl
   | .glob g _ =>
       simp only [eval]
       exact hG g
-  | .altGlob g _ =>
+  | .oldG g _ =>
       simp only [eval]
       exact h0G g
   | .slot t f i _ =>
       have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval, hi]
       exact hS t _ _
-  | .altSlot t f i _ =>
+  | .oldS t f i _ =>
       have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval, hi]
       exact h0S t _ _
-  | .durch _ t _ f i _ =>
+  | .thru _ t _ f i _ =>
       have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval, hi]
       exact hS t _ _
-  | .weiter _ _ e =>
+  | .widen _ _ e =>
       have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [h]
@@ -2025,7 +2025,7 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       have h := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [h]
-  | .nicht a =>
+  | .not a =>
       have h := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [h]
@@ -2037,7 +2037,7 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [h]
-  | .fall _ _ nutz =>
+  | .case _ _ nutz =>
       have hn := evalNutz_liest_nur_speicher nutz σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [hn]
@@ -2126,17 +2126,17 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [ha, hb]
-  | .und a b =>
+  | .and a b =>
       have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [ha, hb]
-  | .oder a b =>
+  | .or a b =>
       have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [ha, hb]
-  | .leseBytes t f hf n i _ _ _ =>
+  | .getBytes t f hf n i _ _ _ =>
       have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       have hb : σ.bytesAb t f hf n (eval σ₀' i σ' ρ).n =
           σ'.bytesAb t f hf n (eval σ₀' i σ' ρ).n :=
@@ -2187,8 +2187,8 @@ theorem evalNutz_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {c : Option (
     (h0G : ∀ g : D.Glob, σ₀.globs g = σ₀'.globs g) :
     evalNutz σ₀ nutz σ ρ = evalNutz σ₀' nutz σ' ρ := by
   match nutz with
-  | .keine => rfl
-  | .zahl e =>
+  | .empty => rfl
+  | .num e =>
       have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [evalNutz]
       rw [h]

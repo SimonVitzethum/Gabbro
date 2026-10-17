@@ -159,15 +159,15 @@ theorem kDarfA (Λ : List (Res kD)) : darf kD KTab.privA Λ := fun _ h => nomatc
 theorem kDarfB (Λ : List (Res kD)) : darf kD KTab.privB Λ := fun _ h => nomatch h
 
 def kI0 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.index 2) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def kI1 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.index 2) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
-def k7 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 7)
-def k5 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 5)
-def k30 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 30)
-def k70 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 70)
+def k7 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 7)
+def k5 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 5)
+def k30 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 30)
+def k70 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 70)
 
 /-- `konto[0] == konto[1]` (the lock invariant), at the holdings `kL`. -/
 def kGleich {Γ : Ctx} : Expr kD Γ kL .bool :=
@@ -214,12 +214,12 @@ theorem kHpPruefe : RufPasst kD (vertragVon kD kHauptA) (kD.signatur kPruefeA) [
 
 /-- `setze(x)`: `konto.slots[0].stand = x; konto.slots[1].stand = x;`. -/
 def kRumpfSetze : Endblock kD (vertragVon kD kSetze) false [.int 0 100] kL :=
-  .cons (.assignSlot KTab.konto () kI0 (.var .hier) rfl kDarfK)
-    (.cons (.assignSlot KTab.konto () kI1 (.var .hier) rfl kDarfK) (.ret .keine (by rfl)))
+  .cons (.assignSlot KTab.konto () kI0 (.var .here) rfl kDarfK)
+    (.cons (.assignSlot KTab.konto () kI1 (.var .here) rfl kDarfK) (.ret .empty (by rfl)))
 
 /-- `pruefeA()`: `return privA.slots[0].stand;`. -/
 def kRumpfP : Endblock kD (vertragVon kD kPruefeA) false [] [] :=
-  .ret (.wert (.slot KTab.privA () kI0 (kDarfA _))) List.Perm.nil
+  .ret (.val (.slot KTab.privA () kI0 (kDarfA _))) List.Perm.nil
 
 /-- `privA.slots[0].stand = 7;` -/
 def kA0 : Stmt kD (vertragVon kD kHauptA) false [] [] [] :=
@@ -243,7 +243,7 @@ def kRufP : Stmt kD (vertragVon kD kHauptA) false [] [] [] :=
 
 /-- `pruefeA(); return` -- the tail of `hauptA`. -/
 def kRestA : Endblock kD (vertragVon kD kHauptA) false [] [] :=
-  .cons kRufP (.ret .keine List.Perm.nil)
+  .cons kRufP (.ret .empty List.Perm.nil)
 
 /-- `hauptA`, as in the source. -/
 def kRumpfA : Endblock kD (vertragVon kD kHauptA) false [] [] :=
@@ -263,7 +263,7 @@ def kLocksB : Stmt kD (vertragVon kD kHauptB) false [] [] [] :=
 
 /-- `hauptB`, as in the source. -/
 def kRumpfB : Endblock kD (vertragVon kD kHauptB) false [] [] :=
-  .cons kB0 (.cons kLocksB (.ret .keine List.Perm.nil))
+  .cons kB0 (.cons kLocksB (.ret .empty List.Perm.nil))
 
 /-- **The program of `beispiele/124`**: the source's bodies and the source's
     contracts (`setze`'s `ensures` matches the source since lane 204; see the
@@ -273,12 +273,12 @@ def kP : Programm kD where
   requires
     | .setze => kGleich
     | .pruefeA => kA7
-    | _ => .wahr
+    | _ => .tru
   ensures
-    | .setze => .und kGleich (.eq (.slot KTab.konto () kI0 kDarfK) (.var .hier))
+    | .setze => .and kGleich (.eq (.slot KTab.konto () kI0 kDarfK) (.var .here))
     | .hauptA => kA7
-    | .pruefeA => .eq (.var .hier) k7
-    | _ => .wahr
+    | .pruefeA => .eq (.var .here) k7
+    | _ => .tru
   rumpf
     | .setze => kRumpfSetze
     | .hauptA => kRumpfA
@@ -337,7 +337,7 @@ theorem kInv_of_ens {κ σ2 : World kD} {ρk : Env kD (kD.params kSetze)}
     {v : ErgVal kD (kD.erg kSetze)} (h : EnsAmRueck kP kSetze κ σ2 ρk v) :
     kSI.inv () σ2.speicher = true := by
   have h' : (decide ((σ2.slots KTab.konto 0 ()).n = (σ2.slots KTab.konto 1 ()).n) &&
-      decide ((σ2.slots KTab.konto 0 ()).n = (ρk.get .hier).n)) = true := h
+      decide ((σ2.slots KTab.konto 0 ()).n = (ρk.get .here).n)) = true := h
   simp only [Bool.and_eq_true] at h'
   exact h'.1
 
@@ -464,7 +464,7 @@ theorem kB_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes : N
     {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (σ : World kD)
     (ρ : Env kD (kD.params kHauptB)) :
     ∃ σ2 : World kD, execEndH S O U passes R kRumpfB σ ρ =
-        execEndH S O U passes R (.cons kLocksB (.ret .keine List.Perm.nil)) σ2 ρ :=
+        execEndH S O U passes R (.cons kLocksB (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
 /-- `hauptB`: the caller duty from the lock invariant at the acquire; the

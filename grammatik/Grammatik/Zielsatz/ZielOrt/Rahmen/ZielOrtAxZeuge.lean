@@ -193,7 +193,7 @@ theorem axLauf : ∃ M : RufMaschineG axD,
   have hoff2 : offen (M2.faeden 0).spur = [()] := by rw [hZ2.spur]; exact hoff1
   have e2 := hZ2.1
   try dsimp only at e2
-  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := axP) (O := axO) (passes := 0) e2 .wahr axIncBlock .nil
+  obtain ⟨M3, s3, hZ3⟩ := w_iteWahr (P := axP) (O := axO) (passes := 0) e2 .tru axIncBlock .nil
     .nil (.ende axRetNull) .nil rfl rfl (axHgL (axHoff e2 hoff2)).heldIn
   have hoff3 : offen (M3.faeden 0).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen]; exact hoff2
@@ -202,7 +202,7 @@ theorem axLauf : ∃ M : RufMaschineG axD,
   have hsp3 : M3.speicher = axSp := hZ3.2.trans (hZ2.2.trans hZ1.2)
   obtain ⟨M4, s4, hZ4⟩ := w_bindAxiom (P := axP) (O := axO) (passes := 0) e3 axInc .nil rfl
     (fun _ _ => rfl) (fun e => nomatch e) (fun _ _ => axDarf) (fun e => nomatch e)
-    (.cons (.ret (.wert (.var .hier)) (List.Perm.refl _)) .nil) (.dann .nil (.ende axRetNull)) .nil
+    (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) (.dann .nil (.ende axRetNull)) .nil
     rfl _ axEins (by
       show (_, einpassen axO.zeiger (.int 0 3) (axNeu ((M3.weltVon 0).lese axL [])).n) = _
       have hn : (axNeu ((M3.weltVon 0).lese axL [])).n = 1 := by

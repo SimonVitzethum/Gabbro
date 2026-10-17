@@ -149,11 +149,11 @@ theorem zDarf : darf zD () zL := by
 
 /-- Index `0`. -/
 def zIdx {Γ : Ctx} {Λ : List (Res zD)} : Expr zD Γ Λ (.index (zD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The cap `100`. -/
 def zHundert {Γ : Ctx} {Λ : List (Res zD)} : Expr zD Γ Λ (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 100)
+  .widen (by decide) (by decide) (.lit 100)
 
 theorem zEin_ende : (vertragVon zD zEin).ende = zL := rfl
 theorem zLies_ende : (vertragVon zD zLies).ende = zL := rfl
@@ -164,19 +164,19 @@ theorem zHaupt_start : Signatur.anfang zD (zD.signatur zHaupt) = [] := rfl
 
 /-- `einzahlen` ensures the slot did not decrease. -/
 def zEnsEin : Expr zD (ErgCtx (zD.params zEin) (zD.erg zEin)) (vertragVon zD zEin).ende .bool :=
-  .le (.altSlot () () zIdx zDarf) (.slot () () zIdx zDarf)
+  .le (.oldS () () zIdx zDarf) (.slot () () zIdx zDarf)
 
 /-- `lies` ensures `result = konto[0]`. -/
 def zEnsLies : Expr zD (ErgCtx (zD.params zLies) (zD.erg zLies)) (vertragVon zD zLies).ende .bool :=
-  .eq (.var .hier) (.slot () () zIdx zDarf)
+  .eq (.var .here) (.slot () () zIdx zDarf)
 
 /-- `einzahlen`: `konto[0] := 100; return`. -/
 def zRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL :=
-  .cons (.assignSlot () () zIdx zHundert rfl zDarf) (.ret .keine (by rfl))
+  .cons (.assignSlot () () zIdx zHundert rfl zDarf) (.ret .empty (by rfl))
 
 /-- `lies`: `let x = konto[0]; return x`. -/
 def zRumpfLies : Endblock zD (vertragVon zD zLies) false [] zL :=
-  .bind (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl))
+  .bind (.slot () () zIdx zDarf) (.ret (.val (.var .here)) (by rfl))
 
 /-- A call between lock holders: the callee holds exactly the lock. -/
 theorem zHp (caller callee : zD.Fn) (hw : ∀ t, (zD.signatur callee).schreibt t = true →
@@ -209,7 +209,7 @@ theorem zHpWrap : RufPasst zD (vertragVon zD zHaupt) (zD.signatur zWrap) zL :=
 
 /-- `wrap`: `lies(); einzahlen(); return`. -/
 def zRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL :=
-  .cons (.call zLies .nil zHpLies rfl) (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl)))
+  .cons (.call zLies .nil zHpLies rfl) (.cons (.call zEin .nil zHpEin rfl) (.ret .empty (by rfl)))
 
 /-- The `locks` body of `haupt`: `wrap()`. -/
 def zLocksBody : Block zD (vertragVon zD zHaupt) false [] zL zL :=
@@ -217,17 +217,17 @@ def zLocksBody : Block zD (vertragVon zD zHaupt) false [] zL zL :=
 
 /-- `haupt`: `locks { wrap() }; return`. -/
 def zRumpfHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] :=
-  .cons (.locks () (fun _ h => nomatch h) zLocksBody) (.ret .keine List.Perm.nil)
+  .cons (.locks () (fun _ h => nomatch h) zLocksBody) (.ret .empty List.Perm.nil)
 
 /-- The witness program. -/
 def zP : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
     | .ein => zEnsEin
     | .lies => zEnsLies
-    | .wrap => .wahr
-    | .haupt => .wahr
+    | .wrap => .tru
+    | .haupt => .tru
   rumpf
     | .ein => zRumpfEin
     | .lies => zRumpfLies
@@ -310,7 +310,7 @@ theorem call_tor_ok {V : Vertrag zD} {l : Bool} {Γ : Ctx} {Λ : List (Res zD)}
   simp only [execStmt, ht]
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
   | ok σ' v => intro h; cases h
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
   | hardware e => intro h; cases h
 
@@ -459,7 +459,7 @@ def zLocks : Stmt zD (vertragVon zD zHaupt) false [] [] [] :=
   .locks () (fun _ h => nomatch h) zLocksBody
 
 /-- The rest of `haupt` after its `locks`. -/
-def zHauptRet : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .keine List.Perm.nil
+def zHauptRet : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .empty List.Perm.nil
 
 /-- **The run.** Eighteen steps of the repaired G from the start machine of
     `zP` (every thread in `haupt`, `konto` all zero): thread 1 takes the lock,
@@ -507,12 +507,12 @@ theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
   have hoff3 : offen (M3.faeden 1).spur = [()] := by
     rw [hZ3.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff2
   obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ3.1 zLies .nil zHpLies
-    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
+    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .empty (by rfl))) .nil rfl
     (hgL (hoff_z hZ3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 1).spur = [()] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff3
   obtain ⟨M5, s5, hZ5⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ4.1
-    (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
+    (.slot () () zIdx zDarf) (.ret (.val (.var .here)) (by rfl)) .nil rfl
     (hgL (hoff_z hZ4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [()] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff4
@@ -523,7 +523,7 @@ theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
     rw [hG6.1]
     exact ((Erw.lese _ _ _).offen).trans hoff5
   obtain ⟨M7, s7, hZ7⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hG6.1 zEin .nil zHpEin rfl
-    (.ret .keine (by rfl)) .nil rfl
+    (.ret .empty (by rfl)) .nil rfl
     (hgL (hoff_g hG6 hoff6)).heldIn
   have hoff7 : offen (M7.faeden 1).spur = [()] := by
     rw [hZ7.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff6
@@ -592,12 +592,12 @@ theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
   have hoff15 : offen (M15.faeden 0).spur = [()] := by
     rw [hZ15.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff14
   obtain ⟨M16, s16, hZ16⟩ := w_rufEnde (P := zP) (O := zO) (passes := 0) hZ15.1 zLies .nil zHpLies
-    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .keine (by rfl))) .nil rfl
+    rfl (.cons (.call zEin .nil zHpEin rfl) (.ret .empty (by rfl))) .nil rfl
     (hgL (hoff_z hZ15 hoff15)).heldIn
   have hoff16 : offen (M16.faeden 0).spur = [()] := by
     rw [hZ16.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff15
   obtain ⟨M17, s17, hZ17⟩ := w_endeBind (P := zP) (O := zO) (passes := 0) hZ16.1
-    (.slot () () zIdx zDarf) (.ret (.wert (.var .hier)) (by rfl)) .nil rfl
+    (.slot () () zIdx zDarf) (.ret (.val (.var .here)) (by rfl)) .nil rfl
     (hgL (hoff_z hZ16 hoff16)).heldIn
   have hoff17 : offen (M17.faeden 0).spur = [()] := by
     rw [hZ17.spur, (Erw.lese _ _ _).offen, offen_weltVon]; exact hoff16

@@ -72,7 +72,7 @@ theorem schritt_schluesselX {M M' : RufMaschineG D} {u : Faden}
       ∀ c, ¬ Tg c → TraegerGleich s1.speicher M'.speicher c) ∨
     (∃ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       RufFadenSchluesselG (M.faeden u) = ⟨g, rho, s0⟩ :: RufFadenSchluesselG (M'.faeden u) ∧
-      RufEreignisF.grund g rho r s0 s1 ∈ (M'.faeden u).log ∧
+      RufEreignisF.why g rho r s0 s1 ∈ (M'.faeden u).log ∧
       ∀ c, ¬ Tg c → TraegerGleich s1.speicher M'.speicher c) := by
   obtain ⟨σ, M'', hs, hσ, hw1, hw2, hfa, _, _⟩ := h
   have hin : ∀ c, ¬ Tg c → TraegerGleich M''.speicher M'.speicher c := by
@@ -107,7 +107,7 @@ theorem schritt_schluesselX {M M' : RufMaschineG D} {u : Faden}
     rw [he] at h1
     generalize RufFadenSchluesselG (M''.faeden u) = ks at h1 ⊢
     cases h1 with
-    | grund _ _ _ _ _ _ _ h2 => exact (rufLogPasstG_eind h2 h0).symm
+    | why _ _ _ _ _ _ _ h2 => exact (rufLogPasstG_eind h2 h0).symm
 
 /-- An invariant reading tables only is read equally at two memories agreeing outside `Tg`. -/
 theorem invHaelt_aussen (hTA : ∀ c, Tg c → AtomarAusgenommen c) {i : D.Inv}

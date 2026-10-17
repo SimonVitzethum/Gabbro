@@ -65,7 +65,7 @@ variable {V : Vertrag D}
 /-- A statement that never ends normally: a return, a reason, `leave`, `next`. -/
 def Stmt.istAbschluss {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave .. => true
   | .next .. => true
   | _ => false
@@ -81,22 +81,22 @@ def Block.terminal {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bindCallElse _ _ _ _ _ _ rest => rest.terminal
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.terminal
   | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => rest.terminal
-  | .regLies _ _ rest => rest.terminal
-  | .regLiesElse _ _ _ _ rest => rest.terminal
+  | .regRead _ _ rest => rest.terminal
+  | .regReadElse _ _ _ _ rest => rest.terminal
   | .awaits _ _ _ _ rest => rest.terminal
   | .exchange _ _ _ _ rest => rest.terminal
   | .narrow _ _ _ _ rest => rest.terminal
-  | .pruefung _ _ rest => rest.terminal
-  | .gleit _ _ _ _ _ rest => rest.terminal
-  | .gleitLit _ _ _ rest => rest.terminal
-  | .gleitVon _ _ _ rest => rest.terminal
-  | .gleitNarrow _ _ _ _ rest => rest.terminal
+  | .check _ _ rest => rest.terminal
+  | .float _ _ _ _ _ rest => rest.terminal
+  | .floatLit _ _ _ rest => rest.terminal
+  | .floatOf _ _ _ rest => rest.terminal
+  | .floatNarrow _ _ _ _ rest => rest.terminal
 
 /-- An end block run as a block never ends normally. -/
 theorem Endblock.alsBlock_terminal {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.terminal = true
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons _ rest => by
@@ -164,7 +164,7 @@ def FormG (c : RufRahmenG D) (g : D.Fn) : Prop :=
       (k : GRest D (vertragVon D c.f) l Γ Λ') (ρc : Env D Γ),
     c.rest = ⟨l, Γ, Λ, ρc, .wartet restb k⟩ ∧ D.erg g = some τ ∧ D.gruende g = 0) ∨
   (∃ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
-      (err : Endblock D (vertragVon D c.f) l (.grund n :: Γ) Λ)
+      (err : Endblock D (vertragVon D c.f) l (.why n :: Γ) Λ)
       (restb : Block D (vertragVon D c.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D c.f) l Γ Λ') (ρc : Env D Γ),
     c.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ ∧ D.erg g = some τ ∧ D.gruende g = n)
@@ -473,7 +473,7 @@ theorem blatt_fall {O : Orakel D} (hO : GutO O) (passes : Nat) {V : Vertrag D} {
       exfalso
       cases s <;> simp [Stmt.istBlatt, Stmt.istAbschluss] at hb ha <;>
         simp only [execStmt] at hx <;> (try split at hx) <;> cases hx
-  | grund σ' r =>
+  | why σ' r =>
       exfalso
       cases s <;> simp [Stmt.istBlatt, Stmt.istAbschluss] at hb ha <;>
         simp only [execStmt] at hx <;> (try split at hx) <;> cases hx
@@ -519,7 +519,7 @@ def BereichG (M : RufMaschineG D) (t : Faden) : Prop :=
       (l1 h1 l2 h2 lo hi : Int × Int) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
       (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
       (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
-    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleit op a b lo hi rest) k⟩ →
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.float op a b lo hi rest) k⟩ →
     gleitPasst lo hi (gleitRechne op
       (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) a
         ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x
@@ -528,13 +528,13 @@ def BereichG (M : RufMaschineG D) (t : Faden) : Prop :=
   (∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (q lo hi : Int × Int)
       (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
       (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
-    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitLit q lo hi rest) k⟩ →
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.floatLit q lo hi rest) k⟩ →
     gleitPasst lo hi (bruch q) ≠ none) ∧
   (∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (l1 h1 : Int)
       (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
       (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.fl lo hi :: Γ) Λ Λ')
       (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
-    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.gleitVon e lo hi rest) k⟩ →
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.floatOf e lo hi rest) k⟩ →
     gleitPasst lo hi (gleitAusInt
       (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) ≠ none)
 
@@ -666,7 +666,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       | cons caller rst =>
           obtain ⟨ziel, hart⟩ := popArt_von hst hkt
           exact fort_schritt (w_rueckP rfl caller rst hst hart e hp ρ hx hΛ)
-  | retGrund r hp =>
+  | retWhy r hp =>
       cases hst : (M.faeden t).stapel with
       | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
       | cons caller rst =>
@@ -752,7 +752,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
             | cons caller rst =>
                 obtain ⟨ziel, hart⟩ := popArt_von hst hkt
                 exact fort_schritt (w_rueckConsP rfl caller rst hst hart e hp rest ρ hx hΛ)
-        | retGrund r hp =>
+        | retWhy r hp =>
             cases hst : (M.faeden t).stapel with
             | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
             | cons caller rst =>
@@ -849,7 +849,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
       · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomElseGrund M t l Γ Λ _ _ a args he hr hw hg hd hgd err rest
           k ρ hx _ rfl σ₂ r hax neu hneu hΛ⟩
-  | regLies r hk rest =>
+  | regRead r hk rest =>
       by_cases hex : ∃ v, einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) = some v ∧
           D.rzusage r v = true
       · obtain ⟨v, hv, hz⟩ := hex
@@ -862,7 +862,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
         cases hz : D.rzusage r v
         · rfl
         · exact absurd ⟨v, hv, hz⟩ hex
-  | regLiesElse r hk zusage sonst rest =>
+  | regReadElse r hk zusage sonst rest =>
       cases hv : einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) with
       | none =>
           by_cases hleer : AntwortLeer D (some (D.rtyp r))
@@ -885,11 +885,11 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n ≤ hi'
       · exact fort_schritt (w_narrowOk rfl lo' hi' e sonst rest k ρ hx rfl h hΛ)
       · exact fort_schritt (w_narrowElse rfl lo' hi' e sonst rest k ρ hx h hΛ)
-  | pruefung c sonst rest =>
+  | check c sonst rest =>
       cases hw : wahr? (eval ((M.weltVon t).lese Λ c.orte) c ((M.weltVon t).lese Λ c.orte) ρ) with
       | true => exact fort_schritt (w_pruefWahr rfl c sonst rest k ρ hx hw hΛ)
       | false => exact fort_schritt (w_pruefFalsch rfl c sonst rest k ρ hx hw hΛ)
-  | gleit op a b lo hi rest =>
+  | float op a b lo hi rest =>
       cases hv : gleitPasst lo hi (gleitRechne op
           (eval ((M.weltVon t).lese Λ (a.orte ++ b.orte)) a
             ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x
@@ -897,16 +897,16 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             ((M.weltVon t).lese Λ (a.orte ++ b.orte)) ρ).x) with
       | none => exact absurd hv (hB.1 l Γ Λ _ ρ op _ _ _ _ lo hi a b rest k hx)
       | some v => exact fort_schritt (w_gleit rfl op a b lo hi rest k ρ hx v hv hΛ)
-  | gleitLit q lo hi rest =>
+  | floatLit q lo hi rest =>
       cases hv : gleitPasst lo hi (bruch q) with
       | none => exact absurd hv (hB.2.1 l Γ Λ _ ρ q lo hi rest k hx)
       | some v => exact fort_schritt (w_gleitLit rfl q lo hi rest k ρ hx v hv)
-  | gleitVon e lo hi rest =>
+  | floatOf e lo hi rest =>
       cases hv : gleitPasst lo hi (gleitAusInt
           (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n) with
       | none => exact absurd hv (hB.2.2 l Γ Λ _ ρ _ _ e lo hi rest k hx)
       | some v => exact fort_schritt (w_gleitVon rfl e lo hi rest k ρ hx v hv hΛ)
-  | gleitNarrow e lo hi sonst rest =>
+  | floatNarrow e lo hi sonst rest =>
       cases hv : gleitPasst lo hi
           (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).x with
       | none => exact fort_schritt (w_gleitNarrowElse rfl e lo hi sonst rest k ρ hx hv hΛ)
@@ -933,7 +933,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             | ⟨none, b', nutz⟩ => exact fort_schritt (w_tagNone rfl v arms rest k ρ hx b' nutz hw hΛ)
             | ⟨some (lo, hi), b', nutz⟩ =>
                 exact fort_schritt (w_tagSome rfl v arms rest k ρ hx lo hi b' nutz hw hΛ)
-        | onGrund r arms => exact fort_schritt (w_grund rfl r arms rest k ρ hx hΛ)
+        | onWhy r arms => exact fort_schritt (w_grund rfl r arms rest k ρ hx hΛ)
         | call g args hp hr => exact fort_schritt (w_rufDann rfl g args hp hr rest k ρ hx hΛ)
         | callInd p args hp hr =>
             obtain ⟨neu, hneu, -⟩ := Erw.lese (M.weltVon t) Λ (p.orte ++ args.orte)
@@ -961,7 +961,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             | cons caller rst =>
                 obtain ⟨ziel, hart⟩ := popArt_von hst hkt
                 exact fort_schritt (w_dannRetP rfl caller rst hst hart e hp rest k ρ hx hΛ)
-        | retGrund r hp =>
+        | retWhy r hp =>
             cases hst : (M.faeden t).stapel with
             | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
             | cons caller rst =>

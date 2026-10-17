@@ -157,29 +157,29 @@ abbrev gL_zwei_wege_eine_maske : List (Res gD) := []
 
 
 def gBody_invertiere : Endblock gD (vertragVon gD g_invertiere) false gCtx_invertiere gL_invertiere :=
-  (.ret (.wert (.bxor 32 (by decide) (by decide) (by decide) (by decide) (.var .hier) (((.lit 4294967295)) : Expr gD gCtx_invertiere gL_invertiere (.int 4294967295 4294967295)))) (List.Perm.refl _))
+  (.ret (.val (.bxor 32 (by decide) (by decide) (by decide) (by decide) (.var .here) (((.lit 4294967295)) : Expr gD gCtx_invertiere gL_invertiere (.int 4294967295 4294967295)))) (List.Perm.refl _))
 
 def gBody_passt_in_16 : Endblock gD (vertragVon gD g_passt_in_16) false gCtx_passt_in_16 gL_passt_in_16 :=
-  (.ret (.wert (.le (.var .hier) (((.lit 65535)) : Expr gD gCtx_passt_in_16 gL_passt_in_16 (.int 65535 65535)))) (List.Perm.refl _))
+  (.ret (.val (.le (.var .here) (((.lit 65535)) : Expr gD gCtx_passt_in_16 gL_passt_in_16 (.int 65535 65535)))) (List.Perm.refl _))
 
 def gBody_ist_kleinster : Endblock gD (vertragVon gD g_ist_kleinster) false gCtx_ist_kleinster gL_ist_kleinster :=
-  (.ret (.wert (.eq (.var .hier) (((.lit (-2147483648))) : Expr gD gCtx_ist_kleinster gL_ist_kleinster (.int (-2147483648) (-2147483648))))) (List.Perm.refl _))
+  (.ret (.val (.eq (.var .here) (((.lit (-2147483648))) : Expr gD gCtx_ist_kleinster gL_ist_kleinster (.int (-2147483648) (-2147483648))))) (List.Perm.refl _))
 
 def gBody_zwei_wege_eine_maske : Endblock gD (vertragVon gD g_zwei_wege_eine_maske) false gCtx_zwei_wege_eine_maske gL_zwei_wege_eine_maske :=
-  (.ret (.wert (.eq (.bxor 8 (by decide) (by decide) (by decide) (by decide) (.var .hier) (((.lit 255)) : Expr gD gCtx_zwei_wege_eine_maske gL_zwei_wege_eine_maske (.int 255 255))) (.bxor 8 (by decide) (by decide) (by decide) (by decide) (.var .hier) (((.lit 255)) : Expr gD gCtx_zwei_wege_eine_maske gL_zwei_wege_eine_maske (.int 255 255))))) (List.Perm.refl _))
+  (.ret (.val (.eq (.bxor 8 (by decide) (by decide) (by decide) (by decide) (.var .here) (((.lit 255)) : Expr gD gCtx_zwei_wege_eine_maske gL_zwei_wege_eine_maske (.int 255 255))) (.bxor 8 (by decide) (by decide) (by decide) (by decide) (.var .here) (((.lit 255)) : Expr gD gCtx_zwei_wege_eine_maske gL_zwei_wege_eine_maske (.int 255 255))))) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .invertiere => .wahr
-    | .passt_in_16 => .wahr
-    | .ist_kleinster => .wahr
-    | .zwei_wege_eine_maske => .wahr
+    | .invertiere => .tru
+    | .passt_in_16 => .tru
+    | .ist_kleinster => .tru
+    | .zwei_wege_eine_maske => .tru
   ensures
-    | .invertiere => .wahr
-    | .passt_in_16 => .wahr
-    | .ist_kleinster => .wahr
-    | .zwei_wege_eine_maske => .wahr
+    | .invertiere => .tru
+    | .passt_in_16 => .tru
+    | .ist_kleinster => .tru
+    | .zwei_wege_eine_maske => .tru
   rumpf
     | .invertiere => gBody_invertiere
     | .passt_in_16 => gBody_passt_in_16

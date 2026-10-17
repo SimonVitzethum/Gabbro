@@ -157,19 +157,19 @@ abbrev gL_merke_in_Schutz : List (Res gD) := [Res.held (D := gD) GLock.Schutz]
 theorem gDarf_merke_in_Schutz_Protokoll : darf gD GTab.Protokoll gL_merke_in_Schutz := by unfold darf; decide
 
 def gBody_merke : Endblock gD (vertragVon gD g_merke) false gCtx_merke gL_merke :=
-  (.cons (.locks GLock.Schutz (fun M => by cases M <;> decide) (.bindAxiom GAx.getpid .nil rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.cons (.assignSlot GTab.Protokoll GProtokollFeld.pid ((.var (.dort .hier))) ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD ((.int 1 4194304) :: gCtx_merke) gL_merke_in_Schutz (.int 0 4194304)) (by decide) gDarf_merke_in_Schutz_Protokoll) .nil))) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.Schutz (fun M => by cases M <;> decide) (.bindAxiom GAx.getpid .nil rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.cons (.assignSlot GTab.Protokoll GProtokollFeld.pid ((.var (.there .here))) ((.widen (by decide) (by decide) (.var .here)) : Expr gD ((.int 1 4194304) :: gCtx_merke) gL_merke_in_Schutz (.int 0 4194304)) (by decide) gDarf_merke_in_Schutz_Protokoll) .nil))) (.ret .empty (List.Perm.refl _)))
 
 def gBody_ende_wenn : Endblock gD (vertragVon gD g_ende_wenn) false gCtx_ende_wenn gL_ende_wenn :=
-  (.cons (.ite (.var .hier) (.bindAxiom GAx.exit_group (.cons ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_ende_wenn gL_ende_wenn (.int 1 1))) : Expr gD gCtx_ende_wenn gL_ende_wenn (.int 0 18446744073709551615)) .nil) rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) .nil) .nil) (.ret .keine (List.Perm.refl _)))
+  (.cons (.ite (.var .here) (.bindAxiom GAx.exit_group (.cons ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_ende_wenn gL_ende_wenn (.int 1 1))) : Expr gD gCtx_ende_wenn gL_ende_wenn (.int 0 18446744073709551615)) .nil) rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) .nil) .nil) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .merke => .wahr
-    | .ende_wenn => .wahr
+    | .merke => .tru
+    | .ende_wenn => .tru
   ensures
-    | .merke => .wahr
-    | .ende_wenn => .wahr
+    | .merke => .tru
+    | .ende_wenn => .tru
   rumpf
     | .merke => gBody_merke
     | .ende_wenn => gBody_ende_wenn

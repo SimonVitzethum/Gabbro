@@ -22,7 +22,7 @@
     false, so there is no primary leg -- the leg below is at
     `parseUnary` (`&` arm, segments stop by `sammleSeg_stop`
     under `ruhigSuff`).
-  - `grundNeu`: `.grund g f` with exactly `gut`'s side
+  - `grundNeu`: `.why g f` with exactly `gut`'s side
     conditions (lane 161's `prim_grund`, reused).
 
   `gutPrim e = gutEmb e || primNeu e`; `parse_druck_prim` is the
@@ -43,7 +43,7 @@ def fnwertNeu : SExpr → Bool
   | .fnwert _ => true
   | _ => false
 def grundNeu : SExpr → Bool
-  | .grund g _ =>
+  | .why g _ =>
     !istKeinPlatz g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
   | _ => false
@@ -247,9 +247,9 @@ theorem fnwertLegs : ∀ (p : String), Legs (.fnwert p) := by
 theorem grundLegs : ∀ (g f : String),
     (!istKeinPlatz g) = true → (!istIntWort g) = true →
     (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
-    Legs (.grund g f) := by
+    Legs (.why g f) := by
   intro g f hkp hit hzuk hself
-  have hd : druckToks (.grund g f) = [.ident g] ++
+  have hd : druckToks (.why g f) = [.ident g] ++
       [.zeichen "::", .ident f] := by
     simp [druckToks]
   apply identTurm _ _ hd
@@ -261,9 +261,9 @@ theorem legsAlt : ∀ (e : SExpr), altNeu e = true → Legs e := by
   intro e hg
   cases e with
   | lit m => simp [altNeu] at hg
-  | gleit s => simp [altNeu] at hg
-  | wahr => simp [altNeu] at hg
-  | falsch => simp [altNeu] at hg
+  | float s => simp [altNeu] at hg
+  | tru => simp [altNeu] at hg
+  | fls => simp [altNeu] at hg
   | «variable» s => simp [altNeu] at hg
   | un o x => simp [altNeu] at hg
   | bin o l r => simp [altNeu] at hg
@@ -277,16 +277,16 @@ theorem legsAlt : ∀ (e : SExpr), altNeu e = true → Legs e := by
     simp only [altNeu] at hg
     exact altLegs x hg
   | ergebnis => simp [altNeu] at hg
-  | grund g f => simp [altNeu] at hg
+  | why g f => simp [altNeu] at hg
 
 -- Every `ergebnisNeu` tree has legs.
 theorem legsErgebnis : ∀ (e : SExpr), ergebnisNeu e = true → Legs e := by
   intro e hg
   cases e with
   | lit m => simp [ergebnisNeu] at hg
-  | gleit s => simp [ergebnisNeu] at hg
-  | wahr => simp [ergebnisNeu] at hg
-  | falsch => simp [ergebnisNeu] at hg
+  | float s => simp [ergebnisNeu] at hg
+  | tru => simp [ergebnisNeu] at hg
+  | fls => simp [ergebnisNeu] at hg
   | «variable» s => simp [ergebnisNeu] at hg
   | un o x => simp [ergebnisNeu] at hg
   | bin o l r => simp [ergebnisNeu] at hg
@@ -298,16 +298,16 @@ theorem legsErgebnis : ∀ (e : SExpr), ergebnisNeu e = true → Legs e := by
   | eingebaut f xs => simp [ergebnisNeu] at hg
   | alt x => simp [ergebnisNeu] at hg
   | ergebnis => exact ergebnisLegs
-  | grund g f => simp [ergebnisNeu] at hg
+  | why g f => simp [ergebnisNeu] at hg
 
 -- Every `fnwertNeu` tree has legs.
 theorem legsFnwert : ∀ (e : SExpr), fnwertNeu e = true → Legs e := by
   intro e hg
   cases e with
   | lit m => simp [fnwertNeu] at hg
-  | gleit s => simp [fnwertNeu] at hg
-  | wahr => simp [fnwertNeu] at hg
-  | falsch => simp [fnwertNeu] at hg
+  | float s => simp [fnwertNeu] at hg
+  | tru => simp [fnwertNeu] at hg
+  | fls => simp [fnwertNeu] at hg
   | «variable» s => simp [fnwertNeu] at hg
   | un o x => simp [fnwertNeu] at hg
   | bin o l r => simp [fnwertNeu] at hg
@@ -319,16 +319,16 @@ theorem legsFnwert : ∀ (e : SExpr), fnwertNeu e = true → Legs e := by
   | eingebaut f xs => simp [fnwertNeu] at hg
   | alt x => simp [fnwertNeu] at hg
   | ergebnis => simp [fnwertNeu] at hg
-  | grund g f => simp [fnwertNeu] at hg
+  | why g f => simp [fnwertNeu] at hg
 
 -- Every `grundNeu` tree has legs.
 theorem legsGrund : ∀ (e : SExpr), grundNeu e = true → Legs e := by
   intro e hg
   cases e with
   | lit m => simp [grundNeu] at hg
-  | gleit s => simp [grundNeu] at hg
-  | wahr => simp [grundNeu] at hg
-  | falsch => simp [grundNeu] at hg
+  | float s => simp [grundNeu] at hg
+  | tru => simp [grundNeu] at hg
+  | fls => simp [grundNeu] at hg
   | «variable» s => simp [grundNeu] at hg
   | un o x => simp [grundNeu] at hg
   | bin o l r => simp [grundNeu] at hg
@@ -340,7 +340,7 @@ theorem legsGrund : ∀ (e : SExpr), grundNeu e = true → Legs e := by
   | eingebaut f xs => simp [grundNeu] at hg
   | alt x => simp [grundNeu] at hg
   | ergebnis => simp [grundNeu] at hg
-  | grund g f =>
+  | why g f =>
     simp only [grundNeu, Bool.and_eq_true] at hg
     obtain ⟨hABC, hself⟩ := hg
     obtain ⟨hAB, hzuk⟩ := hABC
@@ -387,9 +387,9 @@ theorem gut_of_altNeu : ∀ (e : SExpr), altNeu e = true → gut e = true := by
   intro e hg
   cases e with
   | lit m => simp [altNeu] at hg
-  | gleit s => simp [altNeu] at hg
-  | wahr => simp [altNeu] at hg
-  | falsch => simp [altNeu] at hg
+  | float s => simp [altNeu] at hg
+  | tru => simp [altNeu] at hg
+  | fls => simp [altNeu] at hg
   | «variable» s => simp [altNeu] at hg
   | un o x => simp [altNeu] at hg
   | bin o l r => simp [altNeu] at hg
@@ -404,7 +404,7 @@ theorem gut_of_altNeu : ∀ (e : SExpr), altNeu e = true → gut e = true := by
     simp only [gut]
     exact gutPlatz_of_gutKernPlatz x hg
   | ergebnis => simp [altNeu] at hg
-  | grund g f => simp [altNeu] at hg
+  | why g f => simp [altNeu] at hg
 
 -- Bridge for the `ergebnis` layer.
 theorem gut_of_ergebnisNeu : ∀ (e : SExpr),
@@ -412,9 +412,9 @@ theorem gut_of_ergebnisNeu : ∀ (e : SExpr),
   intro e hg
   cases e with
   | lit m => simp [ergebnisNeu] at hg
-  | gleit s => simp [ergebnisNeu] at hg
-  | wahr => simp [ergebnisNeu] at hg
-  | falsch => simp [ergebnisNeu] at hg
+  | float s => simp [ergebnisNeu] at hg
+  | tru => simp [ergebnisNeu] at hg
+  | fls => simp [ergebnisNeu] at hg
   | «variable» s => simp [ergebnisNeu] at hg
   | un o x => simp [ergebnisNeu] at hg
   | bin o l r => simp [ergebnisNeu] at hg
@@ -426,7 +426,7 @@ theorem gut_of_ergebnisNeu : ∀ (e : SExpr),
   | eingebaut f xs => simp [ergebnisNeu] at hg
   | alt x => simp [ergebnisNeu] at hg
   | ergebnis => rfl
-  | grund g f => simp [ergebnisNeu] at hg
+  | why g f => simp [ergebnisNeu] at hg
 
 -- Bridge for the `fnwert` layer.
 theorem gut_of_fnwertNeu : ∀ (e : SExpr),
@@ -434,9 +434,9 @@ theorem gut_of_fnwertNeu : ∀ (e : SExpr),
   intro e hg
   cases e with
   | lit m => simp [fnwertNeu] at hg
-  | gleit s => simp [fnwertNeu] at hg
-  | wahr => simp [fnwertNeu] at hg
-  | falsch => simp [fnwertNeu] at hg
+  | float s => simp [fnwertNeu] at hg
+  | tru => simp [fnwertNeu] at hg
+  | fls => simp [fnwertNeu] at hg
   | «variable» s => simp [fnwertNeu] at hg
   | un o x => simp [fnwertNeu] at hg
   | bin o l r => simp [fnwertNeu] at hg
@@ -448,7 +448,7 @@ theorem gut_of_fnwertNeu : ∀ (e : SExpr),
   | eingebaut f xs => simp [fnwertNeu] at hg
   | alt x => simp [fnwertNeu] at hg
   | ergebnis => simp [fnwertNeu] at hg
-  | grund g f => simp [fnwertNeu] at hg
+  | why g f => simp [fnwertNeu] at hg
 
 -- Bridge for the `grund` layer (exactly `gut`'s side
 -- conditions; stepwise `obtain` -- the flattened four-pattern
@@ -458,9 +458,9 @@ theorem gut_of_grundNeu : ∀ (e : SExpr),
   intro e hg
   cases e with
   | lit m => simp [grundNeu] at hg
-  | gleit s => simp [grundNeu] at hg
-  | wahr => simp [grundNeu] at hg
-  | falsch => simp [grundNeu] at hg
+  | float s => simp [grundNeu] at hg
+  | tru => simp [grundNeu] at hg
+  | fls => simp [grundNeu] at hg
   | «variable» s => simp [grundNeu] at hg
   | un o x => simp [grundNeu] at hg
   | bin o l r => simp [grundNeu] at hg
@@ -472,7 +472,7 @@ theorem gut_of_grundNeu : ∀ (e : SExpr),
   | eingebaut f xs => simp [grundNeu] at hg
   | alt x => simp [grundNeu] at hg
   | ergebnis => simp [grundNeu] at hg
-  | grund g f =>
+  | why g f =>
     simp only [grundNeu, Bool.and_eq_true] at hg
     obtain ⟨hABC, hself⟩ := hg
     obtain ⟨hAB, hzuk⟩ := hABC
@@ -538,14 +538,14 @@ theorem zeuge_fnwert_rech : (match parseOr
     | _ => false) = true := by
   decide
 theorem zeuge_grund :
-    parseOr (brennstoff (.grund "T" "x"))
-    (druckToks (.grund "T" "x") ++ [.ende]) =
-      .ok (.grund "T" "x", [.ende]) :=
+    parseOr (brennstoff (.why "T" "x"))
+    (druckToks (.why "T" "x") ++ [.ende]) =
+      .ok (.why "T" "x", [.ende]) :=
   parse_druck_prim _ (by decide)
 theorem zeuge_grund_rech : (match parseOr
-    (brennstoff (.grund "T" "x"))
-    (druckToks (.grund "T" "x") ++ [.ende]) with
-    | .ok (.grund "T" "x", [.ende]) => true
+    (brennstoff (.why "T" "x"))
+    (druckToks (.why "T" "x") ++ [.ende]) with
+    | .ok (.why "T" "x", [.ende]) => true
     | _ => false) = true := by
   decide
 

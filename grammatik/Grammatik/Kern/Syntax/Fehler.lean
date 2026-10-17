@@ -170,25 +170,25 @@ inductive Fehlerklasse where
 /-- Der parallele Ausgang eines Ausdrucks: ein Wert seines Typs oder ein benannter
     Fehler. Daneben `Ausgang` aus `Semantik.lean`, der unveraendert bleibt. -/
 inductive ErgebnisF (D : Deklaration) (τ : Ty) where
-  | wert (v : Wert D τ)
+  | val (v : Wert D τ)
   | fehler (k : Fehlerklasse)
 
 /-- Die parallele Auswertung: `State -> Expr -> Wert plus Fehlerklasse` als Gestalt.
     Heute immer `wert`, per P1 durch `eval` hindurch -- der Fehlerarm wartet auf den
     Anschluss (Schnitt S2), nicht auf einen zweiten Auswerter. -/
 def evalF (σ₀ σ : World D) (ρ : Env D Γ) (e : Expr D Γ Λ τ) : ErgebnisF D τ :=
-  .wert (eval σ₀ e σ ρ)
+  .val (eval σ₀ e σ ρ)
 
 /-- Kein Fehler: das Ergebnis traegt einen Wert. Die Voraussetzung der
     Uebereinstimmung, als `Prop`-Definition, nicht als Satz. -/
 def evalF_ok : ErgebnisF D τ → Prop
-  | .wert _ => True
+  | .val _ => True
   | .fehler _ => False
 
 /-- Die Uebereinstimmungsform: faellt kein Fehler, stimmt `eval` zu -- bewiesen in
     `evalF_stimmt_halt` fuer den heutigen Auswerter, der nie fehlt. -/
 def evalF_stimmt (σ₀ σ : World D) (ρ : Env D Γ) (e : Expr D Γ Λ τ) (v : Wert D τ) : Prop :=
-  evalF σ₀ σ ρ e = .wert v → eval σ₀ e σ ρ = v
+  evalF σ₀ σ ρ e = .val v → eval σ₀ e σ ρ = v
 
 /-- Ein Index ausserhalb als DATUM: die Tabelle und das nackte `Int` -- ohne
     Bereichsbeweis, denn mit Beweis waere es kein Falsifizierer, sondern ein Term. -/
@@ -258,12 +258,12 @@ theorem evalF_stimmt_halt (σ₀ σ : World D) (ρ : Env D Γ) (e : Expr D Γ Λ
 /-- Die Fehlerfortpflanzung in einem Schritt: ein Wert laeuft weiter, ein Fehler
     bleibt stehen -- die Form, die jede zusammengesetzte Auswertung traegt. -/
 def ErgebnisF.bind {τ' : Ty} : ErgebnisF D τ → (Wert D τ → ErgebnisF D τ') → ErgebnisF D τ'
-  | .wert v, f => f v
+  | .val v, f => f v
   | .fehler k, _ => .fehler k
 
 /-- Dieselbe Form ohne Fortsetzung: ein Wert wird abgebildet, ein Fehler bleibt. -/
 def ErgebnisF.map {τ' : Ty} (f : Wert D τ → Wert D τ') : ErgebnisF D τ → ErgebnisF D τ'
-  | .wert v => .wert (f v)
+  | .val v => .val (f v)
   | .fehler k => .fehler k
 
 /-- Ein fehlerhafter Eingang fehlert die Bindung -- die Fortsetzung laeuft nicht. -/
@@ -275,7 +275,7 @@ theorem ErgebnisF.bind_fehler {τ' : Ty} (k : Fehlerklasse)
 /-- Ein Wert laeuft in die Fortsetzung. -/
 theorem ErgebnisF.bind_wert {τ' : Ty} (v : Wert D τ)
     (f : Wert D τ → ErgebnisF D τ') :
-    (.wert v : ErgebnisF D τ).bind f = f v :=
+    (.val v : ErgebnisF D τ).bind f = f v :=
   rfl
 
 /-- Ein fehlerhafter Eingang fehlert die Abbildung. -/
@@ -285,7 +285,7 @@ theorem ErgebnisF.map_fehler {τ' : Ty} (f : Wert D τ → Wert D τ') (k : Fehl
 
 /-- Ein Wert wird abgebildet. -/
 theorem ErgebnisF.map_wert {τ' : Ty} (f : Wert D τ → Wert D τ') (v : Wert D τ) :
-    (.wert v : ErgebnisF D τ).map f = .wert (f v) :=
+    (.val v : ErgebnisF D τ).map f = .val (f v) :=
   rfl
 
 /-! ## 3. Die `evalAll`-Gestalt: ein fehlerhaftes Argument fehlert die Liste -/
@@ -300,7 +300,7 @@ def evalArgsMit {τs : List Ty} (aus : ∀ {t}, Expr D Γ Λ t → ErgebnisF D t
   | .nil => .inl .nil
   | .cons e rest =>
       match aus e, evalArgsMit aus rest with
-      | .wert v, .inl vs => .inl (.cons v vs)
+      | .val v, .inl vs => .inl (.cons v vs)
       | .fehler k, _ => .inr k
       | _, .inr k => .inr k
 
@@ -317,7 +317,7 @@ theorem evalArgsMit_rest_fehler {τs : List Ty}
     (aus : ∀ {t}, Expr D Γ Λ t → ErgebnisF D t)
     (e : Expr D Γ Λ τ) (rest : Args D Γ Λ τs)
     (v : Wert D τ) (k : Fehlerklasse)
-    (hv : aus e = .wert v) (hr : evalArgsMit aus rest = .inr k) :
+    (hv : aus e = .val v) (hr : evalArgsMit aus rest = .inr k) :
     evalArgsMit aus (.cons e rest) = .inr k := by
   simp only [evalArgsMit, hv, hr]
 
@@ -325,7 +325,7 @@ theorem evalArgsMit_rest_fehler {τs : List Ty}
 theorem evalArgsMit_ok {τs : List Ty}
     (aus : ∀ {t}, Expr D Γ Λ t → ErgebnisF D t)
     (as : Args D Γ Λ τs)
-    (h : ∀ {t} (e : Expr D Γ Λ t), ∃ v, aus e = .wert v) :
+    (h : ∀ {t} (e : Expr D Γ Λ t), ∃ v, aus e = .val v) :
     ∃ ρ', evalArgsMit aus as = .inl ρ' := by
   induction as with
   | nil => exact ⟨.nil, rfl⟩
@@ -350,7 +350,7 @@ theorem evalArgsF_ok {τs : List Ty} (σ₀ σ : World D) (ρ : Env D Γ)
 /-- Der parallele Ausgang einer Anweisung: der Ausgang aus `Semantik.lean`, oder ein
     benannter Fehler -- daneben, nicht darin (Schnitt S1'). -/
 inductive AusF (V : Vertrag D) (l : Bool) (Γ : Ctx) where
-  | weiter (a : Ausgang V l Γ)
+  | widen (a : Ausgang V l Γ)
   | fehler (k : Fehlerklasse)
 
 variable {V : Vertrag D} {l : Bool}
@@ -359,8 +359,8 @@ variable {V : Vertrag D} {l : Bool}
     jeder andere Ausgang bleibt stehen. -/
 def AusF.folge : AusF V l Γ → (World D → Env D Γ → AusF V l Γ) → AusF V l Γ
   | .fehler k, _ => .fehler k
-  | .weiter (.ok σ ρ), nach => nach σ ρ
-  | .weiter o, _ => .weiter o
+  | .widen (.ok σ ρ), nach => nach σ ρ
+  | .widen o, _ => .widen o
 
 /-- Ein Fehler laeuft nicht weiter -- die Fortsetzung wird nicht aufgerufen. -/
 theorem AusF.folge_fehler (k : Fehlerklasse)
@@ -371,19 +371,19 @@ theorem AusF.folge_fehler (k : Fehlerklasse)
 /-- `ok` uebergibt Welt und Sichtbereich an die Fortsetzung. -/
 theorem AusF.folge_ok (σ : World D) (ρ : Env D Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.ok σ ρ) : AusF V l Γ).folge nach = nach σ ρ :=
+    (AusF.widen (.ok σ ρ) : AusF V l Γ).folge nach = nach σ ρ :=
   rfl
 
 /-- Die Logik des Schreibers bleibt stehen. -/
 theorem AusF.folge_logik (e : Logik D)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.logik e) : AusF V l Γ).folge nach = .weiter (.logik e) :=
+    (AusF.widen (.logik e) : AusF V l Γ).folge nach = .widen (.logik e) :=
   rfl
 
 /-- Eine widerlegte Maschinenannahme bleibt stehen. -/
 theorem AusF.folge_hardware (e : Hardware D)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.hardware e) : AusF V l Γ).folge nach = .weiter (.hardware e) :=
+    (AusF.widen (.hardware e) : AusF V l Γ).folge nach = .widen (.hardware e) :=
   rfl
 
 /-- Die Blockfolge ueber Welt-Schritten: ein fehlerhafter Schritt beendet die Folge;
@@ -466,13 +466,13 @@ theorem durchlaufF_rest {α : Type}
 /-- Der Nachzustand: was eine Welt traegt (`ok`, `zurueck`, `grund`, `leave`,
     `next`), sonst nichts -- ein Fehler hat keinen, wie `stuck` keinen haette. -/
 def endZustandF : AusF V l Γ → Option (World D)
-  | .weiter (.ok σ _) => some σ
-  | .weiter (.zurueck σ _) => some σ
-  | .weiter (.grund σ _) => some σ
-  | .weiter (.leave _ σ _) => some σ
-  | .weiter (.next _ σ _) => some σ
-  | .weiter (.logik _) => none
-  | .weiter (.hardware _) => none
+  | .widen (.ok σ _) => some σ
+  | .widen (.zurueck σ _) => some σ
+  | .widen (.why σ _) => some σ
+  | .widen (.leave _ σ _) => some σ
+  | .widen (.next _ σ _) => some σ
+  | .widen (.logik _) => none
+  | .widen (.hardware _) => none
   | .fehler _ => none
 
 /-- Ein benannter Fehler hat keinen Nachzustand. -/
@@ -482,17 +482,17 @@ theorem endZustandF_fehler (k : Fehlerklasse) :
 
 /-- Die widerlegte Schreiberlogik hat keinen Nachzustand. -/
 theorem endZustandF_logik (e : Logik D) :
-    endZustandF (AusF.weiter (.logik e) : AusF V l Γ) = none :=
+    endZustandF (AusF.widen (.logik e) : AusF V l Γ) = none :=
   rfl
 
 /-- Die widerlegte Maschinenannahme hat keinen Nachzustand. -/
 theorem endZustandF_hardware (e : Hardware D) :
-    endZustandF (AusF.weiter (.hardware e) : AusF V l Γ) = none :=
+    endZustandF (AusF.widen (.hardware e) : AusF V l Γ) = none :=
   rfl
 
 /-- `ok` traegt seine Welt weiter. -/
 theorem endZustandF_ok (σ : World D) (ρ : Env D Γ) :
-    endZustandF (AusF.weiter (.ok σ ρ) : AusF V l Γ) = some σ :=
+    endZustandF (AusF.widen (.ok σ ρ) : AusF V l Γ) = some σ :=
   rfl
 
 /-! ## 7. Die Sicherheitsform: gestoert heisst eigene Logik oder benannter Fehler -/
@@ -501,9 +501,9 @@ theorem endZustandF_ok (σ : World D) (ρ : Env D Γ) :
     `Semantik.lean` kennt -- die Logik des Schreibers, die Annahme ueber die Maschine. -/
 def IstBenannt : AusF V l Γ → Prop
   | .fehler _ => True
-  | .weiter (.logik _) => True
-  | .weiter (.hardware _) => True
-  | .weiter _ => False
+  | .widen (.logik _) => True
+  | .widen (.hardware _) => True
+  | .widen _ => False
 
 /-- Ein benannter Fehler ist benannt. -/
 theorem fehler_ist_benannt (k : Fehlerklasse) :
@@ -512,12 +512,12 @@ theorem fehler_ist_benannt (k : Fehlerklasse) :
 
 /-- Die widerlegte Schreiberlogik ist benannt. -/
 theorem logik_ist_benannt (e : Logik D) :
-    IstBenannt (AusF.weiter (.logik e) : AusF V l Γ) :=
+    IstBenannt (AusF.widen (.logik e) : AusF V l Γ) :=
   trivial
 
 /-- Die widerlegte Maschinenannahme ist benannt. -/
 theorem hardware_ist_benannt (e : Hardware D) :
-    IstBenannt (AusF.weiter (.hardware e) : AusF V l Γ) :=
+    IstBenannt (AusF.widen (.hardware e) : AusF V l Γ) :=
   trivial
 
 /-- Die Folge erhaelt das Benannte: war der erste Ausgang benannt, ist es auch die
@@ -527,11 +527,11 @@ theorem folge_benannt_bleibt (a : AusF V l Γ)
     IstBenannt (a.folge nach) := by
   cases a with
   | fehler k => trivial
-  | weiter o =>
+  | widen o =>
       cases o with
       | ok σ ρ => exact False.elim h
       | zurueck σ v => exact False.elim h
-      | grund σ r => exact False.elim h
+      | why σ r => exact False.elim h
       | leave h' σ ρ => exact False.elim h
       | next h' σ ρ => exact False.elim h
       | logik e => trivial
@@ -540,9 +540,9 @@ theorem folge_benannt_bleibt (a : AusF V l Γ)
 /-- Jeder Ausgang ist entweder weitergetragen oder benannt fehlert -- die Form, in
     der `stuck`-oder-Fehler die eigene Logik oder den benannten Fehler stuende. -/
 theorem ausF_klassifikation (a : AusF V l Γ) :
-    (∃ o, a = .weiter o) ∨ (∃ k, a = .fehler k) := by
+    (∃ o, a = .widen o) ∨ (∃ k, a = .fehler k) := by
   cases a with
-  | weiter o => exact .inl ⟨o, rfl⟩
+  | widen o => exact .inl ⟨o, rfl⟩
   | fehler k => exact .inr ⟨k, rfl⟩
 
 /-! ## 8. The embedding into execution: `AusF` carries `Ausgang` -/
@@ -550,12 +550,12 @@ theorem ausF_klassifikation (a : AusF V l Γ) :
 /-- The embedding: every `Ausgang` of `Semantik.lean` runs on as `weiter` --
     the hook, not a third exit: `Ausgang` gains no constructor. -/
 def AusF.vonAusgang : Ausgang V l Γ → AusF V l Γ
-  | o => .weiter o
+  | o => .widen o
 
 /-- Back: `weiter` projects, a named fault has no `Ausgang` -- as `finalState`
     maps `fehler` (and `stuck`) to `none` (S3 design A, §6). -/
 def AusF.zuAusgang : AusF V l Γ → Option (Ausgang V l Γ)
-  | .weiter o => some o
+  | .widen o => some o
   | .fehler _ => none
 
 /-- There and back: the embedding loses nothing. -/
@@ -573,43 +573,43 @@ theorem AusF.zuAusgang_fehler (k : Fehlerklasse) :
     carries every other exit unchanged -- as `execBlock`'s `| o => o` arm. -/
 theorem AusF.folge_weiter (o : Ausgang V l Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter o).folge nach =
+    (AusF.widen o).folge nach =
       match o with
       | .ok σ ρ => nach σ ρ
-      | .zurueck σ v => .weiter (.zurueck σ v)
-      | .grund σ r => .weiter (.grund σ r)
-      | .leave h σ ρ => .weiter (.leave h σ ρ)
-      | .next h σ ρ => .weiter (.next h σ ρ)
-      | .logik e => .weiter (.logik e)
-      | .hardware e => .weiter (.hardware e) := by
+      | .zurueck σ v => .widen (.zurueck σ v)
+      | .why σ r => .widen (.why σ r)
+      | .leave h σ ρ => .widen (.leave h σ ρ)
+      | .next h σ ρ => .widen (.next h σ ρ)
+      | .logik e => .widen (.logik e)
+      | .hardware e => .widen (.hardware e) := by
   cases o <;> rfl
 
 /-- A returned answer does not continue. -/
 theorem AusF.folge_zurueck (σ : World D) (v : ErgVal D V.erg)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.zurueck σ v) : AusF V l Γ).folge nach =
-      .weiter (.zurueck σ v) :=
+    (AusF.widen (.zurueck σ v) : AusF V l Γ).folge nach =
+      .widen (.zurueck σ v) :=
   rfl
 
 /-- A raised ground does not continue. -/
 theorem AusF.folge_grund (σ : World D) (r : Fin V.gruende)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.grund σ r) : AusF V l Γ).folge nach =
-      .weiter (.grund σ r) :=
+    (AusF.widen (.why σ r) : AusF V l Γ).folge nach =
+      .widen (.why σ r) :=
   rfl
 
 /-- A consumed `leave` does not continue. -/
 theorem AusF.folge_leave (h : l = true) (σ : World D) (ρ : Env D Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.leave h σ ρ) : AusF V l Γ).folge nach =
-      .weiter (.leave h σ ρ) :=
+    (AusF.widen (.leave h σ ρ) : AusF V l Γ).folge nach =
+      .widen (.leave h σ ρ) :=
   rfl
 
 /-- A consumed `next` does not continue. -/
 theorem AusF.folge_next (h : l = true) (σ : World D) (ρ : Env D Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
-    (AusF.weiter (.next h σ ρ) : AusF V l Γ).folge nach =
-      .weiter (.next h σ ρ) :=
+    (AusF.widen (.next h σ ρ) : AusF V l Γ).folge nach =
+      .widen (.next h σ ρ) :=
   rfl
 
 /-! ## 9. Stuck-or-fault implies own logic or named fault -/
@@ -627,11 +627,11 @@ theorem stecken_heisst_benannt (a : AusF V l Γ) (h : IstStecken a) :
     IstBenannt a := by
   cases a with
   | fehler k => trivial
-  | weiter o =>
+  | widen o =>
       cases o with
       | ok σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
       | zurueck σ v => exact absurd h (by simp [IstStecken, endZustandF])
-      | grund σ r => exact absurd h (by simp [IstStecken, endZustandF])
+      | why σ r => exact absurd h (by simp [IstStecken, endZustandF])
       | leave h' σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
       | next h' σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
       | logik e => trivial
@@ -642,11 +642,11 @@ theorem benannt_heisst_stecken (a : AusF V l Γ) (h : IstBenannt a) :
     IstStecken a := by
   cases a with
   | fehler k => rfl
-  | weiter o =>
+  | widen o =>
       cases o with
       | ok σ ρ => exact False.elim h
       | zurueck σ v => exact False.elim h
-      | grund σ r => exact False.elim h
+      | why σ r => exact False.elim h
       | leave h' σ ρ => exact False.elim h
       | next h' σ ρ => exact False.elim h
       | logik e => rfl
@@ -654,16 +654,16 @@ theorem benannt_heisst_stecken (a : AusF V l Γ) (h : IstBenannt a) :
 
 /-- Stuck-or-fault in the disjunctive form: own logic or named fault. -/
 theorem stecken_klassifikation (a : AusF V l Γ) (h : IstStecken a) :
-    (∃ e : Logik D, a = .weiter (.logik e)) ∨
-    (∃ e : Hardware D, a = .weiter (.hardware e)) ∨
+    (∃ e : Logik D, a = .widen (.logik e)) ∨
+    (∃ e : Hardware D, a = .widen (.hardware e)) ∨
     (∃ k, a = .fehler k) := by
   cases a with
   | fehler k => exact .inr (.inr ⟨k, rfl⟩)
-  | weiter o =>
+  | widen o =>
       cases o with
       | ok σ ρ => simp [IstStecken, endZustandF] at h
       | zurueck σ v => simp [IstStecken, endZustandF] at h
-      | grund σ r => simp [IstStecken, endZustandF] at h
+      | why σ r => simp [IstStecken, endZustandF] at h
       | leave h' σ ρ => simp [IstStecken, endZustandF] at h
       | next h' σ ρ => simp [IstStecken, endZustandF] at h
       | logik e => exact .inl ⟨e, rfl⟩
@@ -676,7 +676,7 @@ theorem stecken_klassifikation (a : AusF V l Γ) (h : IstStecken a) :
 theorem evalArgsMit_stimmt {τs : List Ty}
     (aus : ∀ {t}, Expr D Γ Λ t → ErgebnisF D t)
     (σ₀ σ : World D) (ρ : Env D Γ) (as : Args D Γ Λ τs) (ρ' : Env D τs)
-    (hstim : ∀ {t} (e : Expr D Γ Λ t), aus e = .wert (eval σ₀ e σ ρ))
+    (hstim : ∀ {t} (e : Expr D Γ Λ t), aus e = .val (eval σ₀ e σ ρ))
     (h : evalArgsMit aus as = .inl ρ') :
     evalArgs σ₀ as σ ρ = ρ' := by
   induction as with
@@ -744,22 +744,22 @@ theorem schleifeF_als_folge (f : World D → World D) (n : Nat) (σ : World D) :
 
 /-- A returned answer carries its world. -/
 theorem endZustandF_zurueck (σ : World D) (v : ErgVal D V.erg) :
-    endZustandF (AusF.weiter (.zurueck σ v) : AusF V l Γ) = some σ :=
+    endZustandF (AusF.widen (.zurueck σ v) : AusF V l Γ) = some σ :=
   rfl
 
 /-- A raised ground carries its world. -/
 theorem endZustandF_grund (σ : World D) (r : Fin V.gruende) :
-    endZustandF (AusF.weiter (.grund σ r) : AusF V l Γ) = some σ :=
+    endZustandF (AusF.widen (.why σ r) : AusF V l Γ) = some σ :=
   rfl
 
 /-- A consumed `leave` carries its world. -/
 theorem endZustandF_leave (h : l = true) (σ : World D) (ρ : Env D Γ) :
-    endZustandF (AusF.weiter (.leave h σ ρ) : AusF V l Γ) = some σ :=
+    endZustandF (AusF.widen (.leave h σ ρ) : AusF V l Γ) = some σ :=
   rfl
 
 /-- A consumed `next` carries its world. -/
 theorem endZustandF_next (h : l = true) (σ : World D) (ρ : Env D Γ) :
-    endZustandF (AusF.weiter (.next h σ ρ) : AusF V l Γ) = some σ :=
+    endZustandF (AusF.widen (.next h σ ρ) : AusF V l Γ) = some σ :=
   rfl
 
 /-! ## 11. Fault threading through the `execBlock`/`traverseLauf` shapes -/
@@ -768,12 +768,12 @@ theorem endZustandF_next (h : l = true) (σ : World D) (ρ : Env D Γ) :
     `ok`, `cons` continues through `AusF.folge` -- a faulted head faults the
     block, a non-`ok` exit stops it, exactly as `execBlock`'s `| o => o` arm. -/
 def blockF : List (World D → Env D Γ → AusF V l Γ) → World D → Env D Γ → AusF V l Γ
-  | [], σ, ρ => .weiter (.ok σ ρ)
+  | [], σ, ρ => .widen (.ok σ ρ)
   | s :: ss, σ, ρ => (s σ ρ).folge (fun σ' ρ' => blockF ss σ' ρ')
 
 /-- The empty block answers `ok` -- the `execBlock.nil` shape. -/
 theorem blockF_nil (σ : World D) (ρ : Env D Γ) :
-    blockF ([] : List (World D → Env D Γ → AusF V l Γ)) σ ρ = .weiter (.ok σ ρ) :=
+    blockF ([] : List (World D → Env D Γ → AusF V l Γ)) σ ρ = .widen (.ok σ ρ) :=
   rfl
 
 /-- A faulted head faults the block -- the rest does not run. -/
@@ -786,7 +786,7 @@ theorem blockF_cons_fehler (s : World D → Env D Γ → AusF V l Γ)
 /-- An `ok` head hands world and scope to the rest -- the `execBlock` step. -/
 theorem blockF_cons_ok (s : World D → Env D Γ → AusF V l Γ)
     (ss : List (World D → Env D Γ → AusF V l Γ)) (σ σ' : World D) (ρ ρ' : Env D Γ)
-    (h : s σ ρ = (AusF.weiter (.ok σ' ρ') : AusF V l Γ)) :
+    (h : s σ ρ = (AusF.widen (.ok σ' ρ') : AusF V l Γ)) :
     blockF (s :: ss) σ ρ = blockF ss σ' ρ' := by
   simp only [blockF, h, AusF.folge_ok]
 
@@ -794,8 +794,8 @@ theorem blockF_cons_ok (s : World D → Env D Γ → AusF V l Γ)
     stops the block, as `execBlock`'s `| o => o` arm. -/
 theorem blockF_cons_weiter (s : World D → Env D Γ → AusF V l Γ)
     (ss : List (World D → Env D Γ → AusF V l Γ)) (σ : World D) (ρ : Env D Γ)
-    (o : Ausgang V l Γ) (h : s σ ρ = (AusF.weiter o : AusF V l Γ)) :
-    blockF (s :: ss) σ ρ = (AusF.weiter o).folge (fun σ' ρ' => blockF ss σ' ρ') := by
+    (o : Ausgang V l Γ) (h : s σ ρ = (AusF.widen o : AusF V l Γ)) :
+    blockF (s :: ss) σ ρ = (AusF.widen o).folge (fun σ' ρ' => blockF ss σ' ρ') := by
   simp only [blockF, h]
 
 /-- A faulted head is named -- the sequencing-to-safety link for blocks. -/
@@ -814,21 +814,21 @@ def traverseAusF (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ ::
     (inv : World D → Env D Γ → World D × Bool) :
     List (Wert D τ) → World D → Env D Γ → AusF V l Γ
   | [], σ, ρ =>
-      if (inv σ ρ).2 = true then .weiter (.ok (inv σ ρ).1 ρ)
-      else .weiter (.logik .schleife)
+      if (inv σ ρ).2 = true then .widen (.ok (inv σ ρ).1 ρ)
+      else .widen (.logik .schleife)
   | k :: ks, σ, ρ =>
-      if (inv σ ρ).2 = false then .weiter (.logik .schleife)
+      if (inv σ ρ).2 = false then .widen (.logik .schleife)
       else match schrittF (inv σ ρ).1 (.cons k ρ) with
         | .fehler e => .fehler e
-        | .weiter (.ok σ' ρ') => traverseAusF schrittF inv ks σ' ρ'.tail
-        | .weiter (.next _ σ' ρ') => traverseAusF schrittF inv ks σ' ρ'.tail
-        | .weiter (.leave _ σ' ρ') =>
-            if (inv σ' ρ'.tail).2 = true then .weiter (.ok (inv σ' ρ'.tail).1 ρ'.tail)
-            else .weiter (.logik .schleife)
-        | .weiter (.zurueck σ' v) => .weiter (.zurueck σ' v)
-        | .weiter (.grund σ' r) => .weiter (.grund σ' r)
-        | .weiter (.logik e) => .weiter (.logik e)
-        | .weiter (.hardware e) => .weiter (.hardware e)
+        | .widen (.ok σ' ρ') => traverseAusF schrittF inv ks σ' ρ'.tail
+        | .widen (.next _ σ' ρ') => traverseAusF schrittF inv ks σ' ρ'.tail
+        | .widen (.leave _ σ' ρ') =>
+            if (inv σ' ρ'.tail).2 = true then .widen (.ok (inv σ' ρ'.tail).1 ρ'.tail)
+            else .widen (.logik .schleife)
+        | .widen (.zurueck σ' v) => .widen (.zurueck σ' v)
+        | .widen (.why σ' r) => .widen (.why σ' r)
+        | .widen (.logik e) => .widen (.logik e)
+        | .widen (.hardware e) => .widen (.hardware e)
 
 /-- A faulted element faults the run -- at a held invariant boundary. -/
 theorem traverseAusF_kopf_fehler
@@ -850,7 +850,7 @@ theorem traverseAusF_kopf_ok
     (ρ' : Env D (τ :: Γ))
     (hinv : (inv σ ρ).2 = true)
     (h : schrittF (inv σ ρ).1 (.cons k ρ) =
-      (AusF.weiter (.ok σ' ρ') : AusF V true (τ :: Γ))) :
+      (AusF.widen (.ok σ' ρ') : AusF V true (τ :: Γ))) :
     (traverseAusF schrittF inv (k :: ks) σ ρ : AusF V l Γ) =
       traverseAusF schrittF inv ks σ' ρ'.tail := by
   have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
@@ -864,7 +864,7 @@ theorem traverseAusF_kopf_next
     (ρ' : Env D (τ :: Γ))
     (hinv : (inv σ ρ).2 = true)
     (h : schrittF (inv σ ρ).1 (.cons k ρ) =
-      (AusF.weiter (.next rfl σ' ρ') : AusF V true (τ :: Γ))) :
+      (AusF.widen (.next rfl σ' ρ') : AusF V true (τ :: Γ))) :
     (traverseAusF schrittF inv (k :: ks) σ ρ : AusF V l Γ) =
       traverseAusF schrittF inv ks σ' ρ'.tail := by
   have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
@@ -878,7 +878,7 @@ theorem traverseAusF_ok_rest_fehler
     (ρ' : Env D (τ :: Γ)) (e : Fehlerklasse)
     (hinv : (inv σ ρ).2 = true)
     (h : schrittF (inv σ ρ).1 (.cons k ρ) =
-      (AusF.weiter (.ok σ' ρ') : AusF V true (τ :: Γ)))
+      (AusF.widen (.ok σ' ρ') : AusF V true (τ :: Γ)))
     (hr : traverseAusF schrittF inv ks σ' ρ'.tail = (AusF.fehler e : AusF V l Γ)) :
     traverseAusF schrittF inv (k :: ks) σ ρ = (AusF.fehler e : AusF V l Γ) := by
   rw [traverseAusF_kopf_ok schrittF inv k ks σ σ' ρ ρ' hinv h, hr]
@@ -891,7 +891,7 @@ theorem traverseAusF_stimmt
     (schrittF : World D → Env D (τ :: Γ) → AusF V true (τ :: Γ))
     (inv : World D → Env D Γ → World D × Bool)
     (xs : List (Wert D τ)) (σ : World D) (ρ : Env D Γ)
-    (h : ∀ σ ρ, ∃ o, schrittF σ ρ = AusF.weiter o ∧ schritt σ ρ = o) :
+    (h : ∀ σ ρ, ∃ o, schrittF σ ρ = AusF.widen o ∧ schritt σ ρ = o) :
     (traverseAusF schrittF inv xs σ ρ : AusF V l Γ) =
       AusF.vonAusgang (traverseLauf schritt inv xs σ ρ) := by
   induction xs generalizing σ ρ with
@@ -907,7 +907,7 @@ theorem traverseAusF_stimmt
         cases o with
         | ok σ' ρ' => exact ih _ _
         | zurueck σ' v => rfl
-        | grund σ' r => rfl
+        | why σ' r => rfl
         | leave h' σ' ρ' =>
             by_cases hi : (inv σ' ρ'.tail).2 = true
             · simp only [if_pos hi]
@@ -922,18 +922,18 @@ theorem traverseAusF_stimmt
 def foreverAusF (a : D.Annahme) (schrittF : World D → Env D Γ → AusF V true Γ)
     (inv : World D → Env D Γ → World D × Bool) :
     Nat → World D → Env D Γ → AusF V l Γ
-  | 0, _, _ => .weiter (.hardware (.fortschritt a))
+  | 0, _, _ => .widen (.hardware (.fortschritt a))
   | n + 1, σ, ρ =>
-      if (inv σ ρ).2 = false then .weiter (.logik .schleife)
+      if (inv σ ρ).2 = false then .widen (.logik .schleife)
       else match schrittF (inv σ ρ).1 ρ with
         | .fehler e => .fehler e
-        | .weiter (.ok σ' ρ') => foreverAusF a schrittF inv n σ' ρ'
-        | .weiter (.next _ σ' ρ') => foreverAusF a schrittF inv n σ' ρ'
-        | .weiter (.leave _ σ' ρ') => .weiter (.ok σ' ρ')
-        | .weiter (.zurueck σ' v) => .weiter (.zurueck σ' v)
-        | .weiter (.grund σ' r) => .weiter (.grund σ' r)
-        | .weiter (.logik e) => .weiter (.logik e)
-        | .weiter (.hardware e) => .weiter (.hardware e)
+        | .widen (.ok σ' ρ') => foreverAusF a schrittF inv n σ' ρ'
+        | .widen (.next _ σ' ρ') => foreverAusF a schrittF inv n σ' ρ'
+        | .widen (.leave _ σ' ρ') => .widen (.ok σ' ρ')
+        | .widen (.zurueck σ' v) => .widen (.zurueck σ' v)
+        | .widen (.why σ' r) => .widen (.why σ' r)
+        | .widen (.logik e) => .widen (.logik e)
+        | .widen (.hardware e) => .widen (.hardware e)
 
 /-- A faulted pass faults the fuel-bounded run -- in every pass. -/
 theorem foreverAusF_kopf_fehler (a : D.Annahme)
@@ -952,7 +952,7 @@ theorem foreverAusF_kopf_ok (a : D.Annahme)
     (inv : World D → Env D Γ → World D × Bool)
     (n : Nat) (σ σ' : World D) (ρ ρ' : Env D Γ)
     (hinv : (inv σ ρ).2 = true)
-    (h : schrittF (inv σ ρ).1 ρ = (AusF.weiter (.ok σ' ρ') : AusF V true Γ)) :
+    (h : schrittF (inv σ ρ).1 ρ = (AusF.widen (.ok σ' ρ') : AusF V true Γ)) :
     (foreverAusF a schrittF inv (n + 1) σ ρ : AusF V l Γ) =
       foreverAusF a schrittF inv n σ' ρ' := by
   have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]

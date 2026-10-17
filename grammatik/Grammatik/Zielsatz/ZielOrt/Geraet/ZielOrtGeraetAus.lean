@@ -144,29 +144,29 @@ theorem rHpLeserC :
 def rLeserC : (rDc c).Fn := RFn.leser
 
 def rLesBlockC : Block (rDc c) (vertragVon (rDc c) RFn.leser) false [] [] [] :=
-  .regLies () rfl (.regLies () rfl
-    (.cons (.ret (.wert (.eq (.var (.dort .hier)) (.var .hier))) List.Perm.nil) .nil))
+  .regRead () rfl (.regRead () rfl
+    (.cons (.ret (.val (.eq (.var (.there .here)) (.var .here))) List.Perm.nil) .nil))
 
 def rRumpfLeserC : Endblock (rDc c) (vertragVon (rDc c) RFn.leser) false [] [] :=
-  .cons (.ite .wahr (rLesBlockC c) .nil) (.ret (.wert .wahr) List.Perm.nil)
+  .cons (.ite .tru (rLesBlockC c) .nil) (.ret (.val .tru) List.Perm.nil)
 
 def rRumpfHauptC : Endblock (rDc c) (vertragVon (rDc c) RFn.haupt) false [] [] :=
-  .cons (.call (rLeserC c) .nil (rHpLeserC c) rfl) (.ret .keine List.Perm.nil)
+  .cons (.call (rLeserC c) .nil (rHpLeserC c) rfl) (.ret .empty List.Perm.nil)
 
 def rRumpfSchreiberC : Endblock (rDc c) (vertragVon (rDc c) RFn.schreiber) false [] (rLc c) :=
-  .cons (.assignSlot () () (.weiter (by show (0 : Int) ≤ 0; decide)
+  .cons (.assignSlot () () (.widen (by show (0 : Int) ≤ 0; decide)
       (by show (0 : Int) ≤ 1 - 1; decide) (.lit 0))
-    (.weiter (by show (0 : Int) ≤ 1; decide) (by show (1 : Int) ≤ 1; decide) (.lit 1)) rfl
-      (rDarfC c)) (.ret .keine (by rfl))
+    (.widen (by show (0 : Int) ≤ 1; decide) (by show (1 : Int) ≤ 1; decide) (.lit 1)) rfl
+      (rDarfC c)) (.ret .empty (by rfl))
 
 /-- The counterexample program over the attribution `c`. -/
 def rPc : Programm (rDc c) where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .haupt => .wahr
-    | .leser => .var .hier
-    | .schreiber => .wahr
+    | .haupt => .tru
+    | .leser => .var .here
+    | .schreiber => .tru
   rumpf
     | .haupt => rRumpfHauptC c
     | .leser => rRumpfLeserC c

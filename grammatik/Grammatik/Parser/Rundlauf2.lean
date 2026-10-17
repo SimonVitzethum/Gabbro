@@ -51,9 +51,9 @@ def gutKernPlatz : SExpr → Bool
   | _ => false
 def gutKern : SExpr → Bool
   | .lit _ => true
-  | .gleit _ => true
-  | .wahr => true
-  | .falsch => true
+  | .float _ => true
+  | .tru => true
+  | .fls => true
   | .variable s => !istKeinPlatz s
   | .un o x =>
     (strEq o "!" || strEq o "-" || strEq o "~") && gutKern x
@@ -162,9 +162,9 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
   intro e h
   cases e with
   | lit m => rfl
-  | gleit s => rfl
-  | wahr => rfl
-  | falsch => rfl
+  | float s => rfl
+  | tru => rfl
+  | fls => rfl
   | «variable» s =>
     simp only [gutKern] at h
     simp only [gut] at ⊢
@@ -219,15 +219,15 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
   | eingebaut f xs => simp [gutKern] at h
   | alt x => simp [gutKern] at h
   | ergebnis => simp [gutKern] at h
-  | grund g f => simp [gutKern] at h
+  | why g f => simp [gutKern] at h
 theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
     gutKernPlatz p = true → gutPlatz p = true := by
   intro p h
   cases p with
   | lit m => simp [gutKernPlatz] at h
-  | gleit s => simp [gutKernPlatz] at h
-  | wahr => simp [gutKernPlatz] at h
-  | falsch => simp [gutKernPlatz] at h
+  | float s => simp [gutKernPlatz] at h
+  | tru => simp [gutKernPlatz] at h
+  | fls => simp [gutKernPlatz] at h
   | «variable» s =>
     simp only [gutKernPlatz] at h
     simp only [gutPlatz] at ⊢
@@ -252,7 +252,7 @@ theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
   | eingebaut f xs => simp [gutKernPlatz] at h
   | alt x => simp [gutKernPlatz] at h
   | ergebnis => simp [gutKernPlatz] at h
-  | grund g f => simp [gutKernPlatz] at h
+  | why g f => simp [gutKernPlatz] at h
 end
 
 -- The round-trip invariant at size bound `n`, restricted to
@@ -720,9 +720,9 @@ theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
   intro x hat hgx
   cases x with
   | lit m => rfl
-  | gleit s => rfl
-  | wahr => rfl
-  | falsch => rfl
+  | float s => rfl
+  | tru => rfl
+  | fls => rfl
   | «variable» s => rfl
   | feld x f => rfl
   | index x i => rfl
@@ -734,121 +734,121 @@ theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
   | eingebaut f xs => simp [gutKern] at hgx
   | alt x => simp [gutKern] at hgx
   | ergebnis => simp [gutKern] at hgx
-  | grund g f => simp [gutKern] at hgx
+  | why g f => simp [gutKern] at hgx
 
 -- Atom towers, one per remaining leaf shape: the `parsePrimary`
 -- leg (concrete head) plus the `parseUnary` fall-through (head is
 -- no prefix operator), then `tower_up` for the six loop levels.
 theorem turm_gleit : ∀ (s : String) (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 1 ≤ G →
-      parsePrimary G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 2 ≤ G →
-      parseUnary G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 3 ≤ G →
-      parseMul G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 4 ≤ G →
-      parseAdd G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 5 ≤ G →
-      parseBit G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 6 ≤ G →
-      parseCmp G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 7 ≤ G →
-      parseAnd G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 8 ≤ G →
-      parseOr G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest)) := by
+    (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 1 ≤ G →
+      parsePrimary G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 2 ≤ G →
+      parseUnary G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 3 ≤ G →
+      parseMul G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 4 ≤ G →
+      parseAdd G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 5 ≤ G →
+      parseBit G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 6 ≤ G →
+      parseCmp G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 7 ≤ G →
+      parseAnd G (druckToks (.float s) ++ rest) = .ok (.float s, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 8 ≤ G →
+      parseOr G (druckToks (.float s) ++ rest) = .ok (.float s, rest)) := by
   intro s rest hr hrs hrg
   have hP : ∀ (G : Nat),
-      12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 1 ≤ G →
-      parsePrimary G (druckToks (.gleit s) ++ rest) =
-        .ok (.gleit s, rest) := by
+      12 * (groesse (.float s) + 1) + groesse (.float s) + 1 ≤ G →
+      parsePrimary G (druckToks (.float s) ++ rest) =
+        .ok (.float s, rest) := by
     intro G hG
     exact prim_gleit s rest G hrg (by omega)
   have hU : ∀ (G : Nat),
-      12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 2 ≤ G →
-      parseUnary G (druckToks (.gleit s) ++ rest) =
-        .ok (.gleit s, rest) := by
+      12 * (groesse (.float s) + 1) + groesse (.float s) + 2 ≤ G →
+      parseUnary G (druckToks (.float s) ++ rest) =
+        .ok (.float s, rest) := by
     intro G hG
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up (.gleit s) rest hr hU
+  have hup := tower_up (.float s) rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 theorem turm_wahr : ∀ (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 1 ≤ G →
-      parsePrimary G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 2 ≤ G →
-      parseUnary G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 3 ≤ G →
-      parseMul G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 4 ≤ G →
-      parseAdd G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 5 ≤ G →
-      parseBit G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 6 ≤ G →
-      parseCmp G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 7 ≤ G →
-      parseAnd G (druckToks .wahr ++ rest) = .ok (.wahr, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 8 ≤ G →
-      parseOr G (druckToks .wahr ++ rest) = .ok (.wahr, rest)) := by
+    (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 1 ≤ G →
+      parsePrimary G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 2 ≤ G →
+      parseUnary G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 3 ≤ G →
+      parseMul G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 4 ≤ G →
+      parseAdd G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 5 ≤ G →
+      parseBit G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 6 ≤ G →
+      parseCmp G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 7 ≤ G →
+      parseAnd G (druckToks .tru ++ rest) = .ok (.tru, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 8 ≤ G →
+      parseOr G (druckToks .tru ++ rest) = .ok (.tru, rest)) := by
   intro rest hr hrs hrg
   have hP : ∀ (G : Nat),
-      12 * (groesse .wahr + 1) + groesse .wahr + 1 ≤ G →
-      parsePrimary G (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+      12 * (groesse .tru + 1) + groesse .tru + 1 ≤ G →
+      parsePrimary G (druckToks .tru ++ rest) = .ok (.tru, rest) := by
     intro G hG
     exact prim_wahr rest G (by omega)
   have hU : ∀ (G : Nat),
-      12 * (groesse .wahr + 1) + groesse .wahr + 2 ≤ G →
-      parseUnary G (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+      12 * (groesse .tru + 1) + groesse .tru + 2 ≤ G →
+      parseUnary G (druckToks .tru ++ rest) = .ok (.tru, rest) := by
     intro G hG
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up .wahr rest hr hU
+  have hup := tower_up .tru rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 theorem turm_falsch : ∀ (rest : List Token),
     ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true →
-    (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 1 ≤ G →
-      parsePrimary G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 2 ≤ G →
-      parseUnary G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 3 ≤ G →
-      parseMul G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 4 ≤ G →
-      parseAdd G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 5 ≤ G →
-      parseBit G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 6 ≤ G →
-      parseCmp G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 7 ≤ G →
-      parseAnd G (druckToks .falsch ++ rest) = .ok (.falsch, rest))
-    ∧ (∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 8 ≤ G →
-      parseOr G (druckToks .falsch ++ rest) = .ok (.falsch, rest)) := by
+    (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 1 ≤ G →
+      parsePrimary G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 2 ≤ G →
+      parseUnary G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 3 ≤ G →
+      parseMul G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 4 ≤ G →
+      parseAdd G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 5 ≤ G →
+      parseBit G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 6 ≤ G →
+      parseCmp G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 7 ≤ G →
+      parseAnd G (druckToks .fls ++ rest) = .ok (.fls, rest))
+    ∧ (∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 8 ≤ G →
+      parseOr G (druckToks .fls ++ rest) = .ok (.fls, rest)) := by
   intro rest hr hrs hrg
   have hP : ∀ (G : Nat),
-      12 * (groesse .falsch + 1) + groesse .falsch + 1 ≤ G →
-      parsePrimary G (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+      12 * (groesse .fls + 1) + groesse .fls + 1 ≤ G →
+      parsePrimary G (druckToks .fls ++ rest) = .ok (.fls, rest) := by
     intro G hG
     exact prim_falsch rest G (by omega)
   have hU : ∀ (G : Nat),
-      12 * (groesse .falsch + 1) + groesse .falsch + 2 ≤ G →
-      parseUnary G (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+      12 * (groesse .fls + 1) + groesse .fls + 2 ≤ G →
+      parseUnary G (druckToks .fls ++ rest) = .ok (.fls, rest) := by
     intro G hG
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP G' (by omega)
-  have hup := tower_up .falsch rest hr hU
+  have hup := tower_up .fls rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
@@ -2001,9 +2001,9 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     intro p hs hg
     cases p with
     | lit m => simp [gutKernPlatz] at hg
-    | gleit s => simp [gutKernPlatz] at hg
-    | wahr => simp [gutKernPlatz] at hg
-    | falsch => simp [gutKernPlatz] at hg
+    | float s => simp [gutKernPlatz] at hg
+    | tru => simp [gutKernPlatz] at hg
+    | fls => simp [gutKernPlatz] at hg
     | «variable» a =>
       simp only [gutKernPlatz] at hg
       exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
@@ -2063,7 +2063,7 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | eingebaut f xs => simp [gutKernPlatz] at hg
     | alt x => simp [gutKernPlatz] at hg
     | ergebnis => simp [gutKernPlatz] at hg
-    | grund g f => simp [gutKernPlatz] at hg
+    | why g f => simp [gutKernPlatz] at hg
 
 -- Suffix chains through `parseSuffixe` over kernel trees:
 -- lane 161's `suff_rund` with index payloads parsed through
@@ -2265,9 +2265,9 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hr hrs hrg hF
   cases e with
   | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | float s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
+  | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2309,7 +2309,7 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2320,9 +2320,9 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hr hrs hrg hF
   cases e with
   | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | float s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
+  | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2364,7 +2364,7 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2375,9 +2375,9 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hr hrs hrg hF
   cases e with
   | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | float s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
+  | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2419,7 +2419,7 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2430,9 +2430,9 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hr hrs hrg hF
   cases e with
   | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.2.1 F (by omega)
-  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.1 F (by omega)
-  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.2.1 F (by omega)
-  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | float s => exact (turm_gleit s rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.1 F (by omega)
+  | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.1 F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2474,7 +2474,7 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 -- The `bin "*"` primary leg from a star-inner leg: word
 -- for word the `+` leg with the spelling swapped.
@@ -2583,9 +2583,9 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hr hrs hrg hF
   cases e with
   | lit m => exact (turm_lit m rest hr hrs hrg).2.2.2.1 F (by omega)
-  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.2.1 F (by omega)
-  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.2.1 F (by omega)
-  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.2.1 F (by omega)
+  | float s => exact (turm_gleit s rest hr hrs hrg).2.2.2.1 F (by omega)
+  | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.1 F (by omega)
+  | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.1 F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2627,7 +2627,7 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2638,9 +2638,9 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hr hrs hrg hF
   cases e with
   | lit m => exact (turm_lit m rest hr hrs hrg).2.2.1 F (by omega)
-  | gleit s => exact (turm_gleit s rest hr hrs hrg).2.2.1 F (by omega)
-  | wahr => exact (turm_wahr rest hr hrs hrg).2.2.1 F (by omega)
-  | falsch => exact (turm_falsch rest hr hrs hrg).2.2.1 F (by omega)
+  | float s => exact (turm_gleit s rest hr hrs hrg).2.2.1 F (by omega)
+  | tru => exact (turm_wahr rest hr hrs hrg).2.2.1 F (by omega)
+  | fls => exact (turm_falsch rest hr hrs hrg).2.2.1 F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2682,7 +2682,7 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 -- The `parseUnary` step: no `ruhig` premise (loops never see
 -- the tail here), so atoms prove their fall-through legs
@@ -2708,9 +2708,9 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP F' (by omega)
-  | gleit s =>
-    have hP : ∀ (G : Nat), 12 * (groesse (.gleit s) + 1) + groesse (.gleit s) + 1 ≤ G →
-        parsePrimary G (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest) := by
+  | float s =>
+    have hP : ∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 1 ≤ G →
+        parsePrimary G (druckToks (.float s) ++ rest) = .ok (.float s, rest) := by
       intro G hG
       exact prim_gleit s rest G hrg (by omega)
     have hG1 : 1 ≤ F := by omega
@@ -2718,9 +2718,9 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP F' (by omega)
-  | wahr =>
-    have hP : ∀ (G : Nat), 12 * (groesse .wahr + 1) + groesse .wahr + 1 ≤ G →
-        parsePrimary G (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+  | tru =>
+    have hP : ∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 1 ≤ G →
+        parsePrimary G (druckToks .tru ++ rest) = .ok (.tru, rest) := by
       intro G hG
       exact prim_wahr rest G (by omega)
     have hG1 : 1 ≤ F := by omega
@@ -2728,9 +2728,9 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
     simp only [parseUnary] at ⊢
     exact hP F' (by omega)
-  | falsch =>
-    have hP : ∀ (G : Nat), 12 * (groesse .falsch + 1) + groesse .falsch + 1 ≤ G →
-        parsePrimary G (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+  | fls =>
+    have hP : ∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 1 ≤ G →
+        parsePrimary G (druckToks .fls ++ rest) = .ok (.fls, rest) := by
       intro G hG
       exact prim_falsch rest G (by omega)
     have hG1 : 1 ≤ F := by omega
@@ -2885,7 +2885,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 -- The `parsePrimary` step: no `ruhig` premise (suffixes never
 -- see loop operators), prefix trees vacuous by `primFrei`.
@@ -2898,9 +2898,9 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
   intro n rkn bkn bStar bOr bAnd e rest F hs hg hpf hrs hrg hF
   cases e with
   | lit m => exact prim_lit m rest F (by omega)
-  | gleit s => exact prim_gleit s rest F hrg (by omega)
-  | wahr => exact prim_wahr rest F (by omega)
-  | falsch => exact prim_falsch rest F (by omega)
+  | float s => exact prim_gleit s rest F hrg (by omega)
+  | tru => exact prim_wahr rest F (by omega)
+  | fls => exact prim_falsch rest F (by omega)
   | «variable» a =>
     have hka : (!istKeinPlatz a) = true := by
       simp only [gutKern] at hg
@@ -2974,7 +2974,7 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
   | eingebaut f xs => simp [gutKern] at hg
   | alt x => simp [gutKern] at hg
   | ergebnis => simp [gutKern] at hg
-  | grund g f => simp [gutKern] at hg
+  | why g f => simp [gutKern] at hg
 
 -- The joint invariant by size induction: base cases are
 -- vacuous (every tree has size at least one, every pair at
@@ -3101,26 +3101,26 @@ theorem zeuge_kern_mul_rech : (match parseOr
     | _ => false) = true := by
   decide
 -- Step B4 witnesses: the loop level at work (a disjunction).
-theorem zeuge_kern_or : parseOr (brennstoff (.bin "||" (.wahr) (.falsch)))
-    (druckToks (.bin "||" (.wahr) (.falsch)) ++ [.ende]) =
-      .ok (.bin "||" (.wahr) (.falsch), [.ende]) :=
+theorem zeuge_kern_or : parseOr (brennstoff (.bin "||" (.tru) (.fls)))
+    (druckToks (.bin "||" (.tru) (.fls)) ++ [.ende]) =
+      .ok (.bin "||" (.tru) (.fls), [.ende]) :=
   parse_druck_kern _ (by decide)
 theorem zeuge_kern_or_rech : (match parseOr
-    (brennstoff (.bin "||" (.wahr) (.falsch)))
-    (druckToks (.bin "||" (.wahr) (.falsch)) ++ [.ende]) with
-    | .ok (.bin "||" (.wahr) (.falsch), [.ende]) => true
+    (brennstoff (.bin "||" (.tru) (.fls)))
+    (druckToks (.bin "||" (.tru) (.fls)) ++ [.ende]) with
+    | .ok (.bin "||" (.tru) (.fls), [.ende]) => true
     | _ => false) = true := by
   decide
 -- Step B5 witnesses: the second loop level at work (a
 -- conjunction).
-theorem zeuge_kern_and : parseOr (brennstoff (.bin "&&" (.wahr) (.wahr)))
-    (druckToks (.bin "&&" (.wahr) (.wahr)) ++ [.ende]) =
-      .ok (.bin "&&" (.wahr) (.wahr), [.ende]) :=
+theorem zeuge_kern_and : parseOr (brennstoff (.bin "&&" (.tru) (.tru)))
+    (druckToks (.bin "&&" (.tru) (.tru)) ++ [.ende]) =
+      .ok (.bin "&&" (.tru) (.tru), [.ende]) :=
   parse_druck_kern _ (by decide)
 theorem zeuge_kern_and_rech : (match parseOr
-    (brennstoff (.bin "&&" (.wahr) (.wahr)))
-    (druckToks (.bin "&&" (.wahr) (.wahr)) ++ [.ende]) with
-    | .ok (.bin "&&" (.wahr) (.wahr), [.ende]) => true
+    (brennstoff (.bin "&&" (.tru) (.tru)))
+    (druckToks (.bin "&&" (.tru) (.tru)) ++ [.ende]) with
+    | .ok (.bin "&&" (.tru) (.tru), [.ende]) => true
     | _ => false) = true := by
   decide
 -- Step B3 witnesses: a field chain and an index place.

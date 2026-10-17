@@ -21,7 +21,7 @@ variable {u : UProg}
 
 /-- What the lowering says about the program. -/
 structure Gesenkt (u : UProg) (P : Programm (declOf u)) : Prop where
-  req : ∀ f, P.requires f = .wahr
+  req : ∀ f, P.requires f = .tru
   ens : ∀ f, ∃ e0, lowEnsList u (ErgCtx (ctxOf u f) (verOf u f).erg) (resOf u f) (fnAt u f)
       (fnAt u f).ergebnis (fnAt u f).sichert = .ok e0 ∧ HEq (P.ensures f) e0
   rumpf : ∀ f, ∃ b0, lowBody u f (fnAt u f).saetze (fnAt u f).rueck = .ok b0 ∧ HEq (P.rumpf f) b0
@@ -207,8 +207,8 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
 
 /-- The Body tail `zuBody` appends for the trailing return. -/
 def endBody (u : UProg) (fn : UFn) : URet → Option (List Gabbro.Body.Stmt)
-  | .keine => some []
-  | .wert v => (sideExpr u fn v).map (fun e => [.ret (some e)])
+  | .empty => some []
+  | .val v => (sideExpr u fn v).map (fun e => [.ret (some e)])
   | .bool _ => none
 
 theorem zuBody_eq (fn : UFn) : zuBody u fn =
@@ -220,8 +220,8 @@ theorem zuBody_eq (fn : UFn) : zuBody u fn =
   | none => rfl
   | some ss =>
     cases fn.rueck with
-    | keine => simp [endBody]
-    | wert v => simp only [endBody, Option.map_map]; rfl
+    | empty => simp [endBody]
+    | val v => simp only [endBody, Option.map_map]; rfl
     | bool _ => simp [endBody]
 
 theorem ergValOf_heq {D : Deklaration} {e₁ e₂ : Option Ty} (h : e₁ = e₂) (x₁ : ErgVal D e₁)
@@ -256,7 +256,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
         Gabbro.Body.finalValue (Gabbro.Body.exec ρB eB s) = ergValOf (verOf u c).erg v := by
   cases r with
   | bool _ => simp [endBody] at hb
-  | keine =>
+  | empty =>
     simp only [endBody, Option.some.injEq] at hb
     subst hb
     revert h
@@ -272,7 +272,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
       rw [ergValOf_none _ he]
       rfl
     · intro h; cases h
-  | wert sd =>
+  | val sd =>
     simp only [endBody] at hb
     cases hs : sideExpr u (fnAt u c) sd with
     | none => rw [hs] at hb; cases hb

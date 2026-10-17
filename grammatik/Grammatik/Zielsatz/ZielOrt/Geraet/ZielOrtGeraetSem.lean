@@ -108,7 +108,7 @@ def Stmt.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .ite _ t e => t.gOk K Rg && e.gOk K Rg
   | .onOption _ p a => p.gOk K Rg && a.gOk K Rg
   | .onTag _ arms => arms.gOk K Rg
-  | .onGrund _ arms => arms.gOk K Rg
+  | .onWhy _ arms => arms.gOk K Rg
   | .locks _ _ body => body.gOk K Rg
   | .breaking _ body => body.gOk K Rg
   | .traverse _ _ body => body.gOk K Rg
@@ -129,21 +129,21 @@ def Block.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bindCallElse _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
-  | .regLies r _ rest => Rg r && rest.gOk K Rg
-  | .regLiesElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
+  | .regRead r _ rest => Rg r && rest.gOk K Rg
+  | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
   | .awaits _ _ _ _ rest => rest.gOk K Rg
   | .exchange _ _ _ _ rest => rest.gOk K Rg
   | .narrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
-  | .pruefung _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
-  | .gleit _ _ _ _ _ rest => rest.gOk K Rg
-  | .gleitLit _ _ _ rest => rest.gOk K Rg
-  | .gleitVon _ _ _ rest => rest.gOk K Rg
-  | .gleitNarrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
+  | .check _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
+  | .float _ _ _ _ _ rest => rest.gOk K Rg
+  | .floatLit _ _ _ rest => rest.gOk K Rg
+  | .floatOf _ _ _ rest => rest.gOk K Rg
+  | .floatNarrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
 
 def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : Nat → Bool)
     (Rg : D.Reg → Bool) : Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.gOk K Rg && rest.gOk K Rg
@@ -167,7 +167,7 @@ end
 theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg : D.Reg → Bool) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.gOk K Rg = e.gOk K Rg
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -188,7 +188,7 @@ def Stmt.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ite _ t e => t.regs ++ e.regs
   | .onOption _ p a => p.regs ++ a.regs
   | .onTag _ arms => arms.regs
-  | .onGrund _ arms => arms.regs
+  | .onWhy _ arms => arms.regs
   | .locks _ _ body => body.regs
   | .breaking _ body => body.regs
   | .traverse _ _ body => body.regs
@@ -207,21 +207,21 @@ def Block.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
-  | .regLies r _ rest => r :: rest.regs
-  | .regLiesElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
+  | .regRead r _ rest => r :: rest.regs
+  | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
   | .awaits _ _ _ _ rest => rest.regs
   | .exchange _ _ _ _ rest => rest.regs
   | .narrow _ _ _ sonst rest => sonst.regs ++ rest.regs
-  | .pruefung _ sonst rest => sonst.regs ++ rest.regs
-  | .gleit _ _ _ _ _ rest => rest.regs
-  | .gleitLit _ _ _ rest => rest.regs
-  | .gleitVon _ _ _ rest => rest.regs
-  | .gleitNarrow _ _ _ sonst rest => sonst.regs ++ rest.regs
+  | .check _ sonst rest => sonst.regs ++ rest.regs
+  | .float _ _ _ _ _ rest => rest.regs
+  | .floatLit _ _ _ rest => rest.regs
+  | .floatOf _ _ _ rest => rest.regs
+  | .floatNarrow _ _ _ sonst rest => sonst.regs ++ rest.regs
 
 def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List D.Reg
   | .ret .. => []
-  | .retGrund .. => []
+  | .retWhy .. => []
   | .leave .. => []
   | .next .. => []
   | .cons s rest => s.regs ++ rest.regs
@@ -265,7 +265,7 @@ theorem Stmt.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .onTag _ arms, h, hr => by
       simp only [Stmt.gOk, Stmt.regs] at h hr ⊢
       exact Arms.gOk_mono arms h hr
-  | .onGrund _ arms, h, hr => by
+  | .onWhy _ arms, h, hr => by
       simp only [Stmt.gOk, Stmt.regs] at h hr ⊢
       exact GrundArms.gOk_mono arms h hr
   | .locks _ _ body, h, hr => by
@@ -288,20 +288,20 @@ theorem Stmt.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
       simp only [Stmt.gOk] at h ⊢
       exact hKK _ h
   | .assignSlot .., _, _ => rfl
-  | .assignDurch .., _, _ => rfl
+  | .assignThru .., _, _ => rfl
   | .assignGlob .., _, _ => rfl
-  | .schreibBytes .., _, _ => rfl
+  | .putBytes .., _, _ => rfl
   | .assignVar .., _, _ => rfl
-  | .uebergang .., _, _ => rfl
+  | .shift .., _, _ => rfl
   | .call .., _, _ => rfl
   | .axiomCall .., _, _ => rfl
-  | .regSchreib .., _, _ => rfl
+  | .regWrite .., _, _ => rfl
   | .transition .., _, _ => rfl
   | .publish .., _, _ => rfl
   | .advances .., _, _ => rfl
   | .retires .., _, _ => rfl
   | .ret .., _, _ => rfl
-  | .retGrund .., _, _ => rfl
+  | .retWhy .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
 
@@ -333,10 +333,10 @@ theorem Block.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | .bindAxiom _ _ _ _ _ _ _ rest, h, hr => by
       simp only [Block.gOk, Block.regs] at h hr ⊢
       exact Block.gOk_mono rest h hr
-  | .regLies r _ rest, h, hr => by
+  | .regRead r _ rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_cons] at h hr ⊢
       exact ⟨hr r (Or.inl rfl), Block.gOk_mono rest h.2 (fun r' h' => hr r' (Or.inr h'))⟩
-  | .regLiesElse r _ _ sonst rest, h, hr => by
+  | .regReadElse r _ _ sonst rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_cons, List.mem_append]
         at h hr ⊢
       exact ⟨hr r (Or.inl rfl),
@@ -352,20 +352,20 @@ theorem Block.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
-  | .pruefung _ sonst rest, h, hr => by
+  | .check _ sonst rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
-  | .gleit _ _ _ _ _ rest, h, hr => by
+  | .float _ _ _ _ _ rest, h, hr => by
       simp only [Block.gOk, Block.regs] at h hr ⊢
       exact Block.gOk_mono rest h hr
-  | .gleitLit _ _ _ rest, h, hr => by
+  | .floatLit _ _ _ rest, h, hr => by
       simp only [Block.gOk, Block.regs] at h hr ⊢
       exact Block.gOk_mono rest h hr
-  | .gleitVon _ _ _ rest, h, hr => by
+  | .floatOf _ _ _ rest, h, hr => by
       simp only [Block.gOk, Block.regs] at h hr ⊢
       exact Block.gOk_mono rest h hr
-  | .gleitNarrow _ _ _ sonst rest, h, hr => by
+  | .floatNarrow _ _ _ sonst rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
@@ -374,7 +374,7 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
     (e : Endblock D V l Γ Λ) → e.gOk K Rg = true → (∀ r ∈ e.regs, Rg' r = true) →
       e.gOk K' Rg' = true
   | .ret .., _, _ => rfl
-  | .retGrund .., _, _ => rfl
+  | .retWhy .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
   | .cons s rest, h, hr => by
@@ -610,7 +610,7 @@ theorem semV_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hz : D.rzusage r v = true) :
-    semV O passes R (.dann (.regLies r hk rest) k) σ ρ =
+    semV O passes R (.dann (.regRead r hk rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hz, if_true]
@@ -621,7 +621,7 @@ theorem semV_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklass
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
-    semV O passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ =
+    semV O passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hw, if_true]
@@ -632,7 +632,7 @@ theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rkla
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
-    (semV O passes R (.dann (.regLiesElse r hk zusage sonst rest) k) σ ρ).folgt
+    (semV O passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
       (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hw, Bool.false_eq_true, if_false]
@@ -676,7 +676,7 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .onTag _ arms, h => by
       simp only [Stmt.vOk] at h
       exact Arms.gOk_of_vOk arms h
-  | .onGrund _ arms, h => by
+  | .onWhy _ arms, h => by
       simp only [Stmt.vOk] at h
       exact GrundArms.gOk_of_vOk arms h
   | .locks _ _ body, h => by
@@ -701,20 +701,20 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
       simp only [Stmt.vOk] at h
       exact ⟨h, rfl⟩
   | .assignSlot .., _ => ⟨rfl, rfl⟩
-  | .assignDurch .., _ => ⟨rfl, rfl⟩
+  | .assignThru .., _ => ⟨rfl, rfl⟩
   | .assignGlob .., _ => ⟨rfl, rfl⟩
-  | .schreibBytes .., _ => ⟨rfl, rfl⟩
+  | .putBytes .., _ => ⟨rfl, rfl⟩
   | .assignVar .., _ => ⟨rfl, rfl⟩
-  | .uebergang .., _ => ⟨rfl, rfl⟩
+  | .shift .., _ => ⟨rfl, rfl⟩
   | .call .., _ => ⟨rfl, rfl⟩
   | .axiomCall .., _ => ⟨rfl, rfl⟩
-  | .regSchreib .., _ => ⟨rfl, rfl⟩
+  | .regWrite .., _ => ⟨rfl, rfl⟩
   | .transition .., _ => ⟨rfl, rfl⟩
   | .publish .., _ => ⟨rfl, rfl⟩
   | .advances .., _ => ⟨rfl, rfl⟩
   | .retires .., _ => ⟨rfl, rfl⟩
   | .ret .., _ => ⟨rfl, rfl⟩
-  | .retGrund .., _ => ⟨rfl, rfl⟩
+  | .retWhy .., _ => ⟨rfl, rfl⟩
   | .leave .., _ => ⟨rfl, rfl⟩
   | .next .., _ => ⟨rfl, rfl⟩
 
@@ -752,8 +752,8 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
-  | .regLies .., h => by simp [Block.vOk] at h
-  | .regLiesElse .., h => by simp [Block.vOk] at h
+  | .regRead .., h => by simp [Block.vOk] at h
+  | .regReadElse .., h => by simp [Block.vOk] at h
   | .awaits .., h => by simp [Block.vOk] at h
   | .exchange _ _ _ _ rest, h => by
       simp only [Block.vOk] at h
@@ -764,22 +764,22 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
       simp only [Block.gOk, Block.regs, hs.1, hr.1, hs.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
-  | .pruefung _ sonst rest, h => by
+  | .check _ sonst rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h
       have hs : sonst.gOk K Rg = true ∧ sonst.regs = [] := Endblock.gOk_of_vOk sonst h.1
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
       simp only [Block.gOk, Block.regs, hs.1, hr.1, hs.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
-  | .gleit _ _ _ _ _ rest, h => by
+  | .float _ _ _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
-  | .gleitLit _ _ _ rest, h => by
+  | .floatLit _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
-  | .gleitVon _ _ _ rest, h => by
+  | .floatOf _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
-  | .gleitNarrow _ _ _ sonst rest, h => by
+  | .floatNarrow _ _ _ sonst rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h
       have hs : sonst.gOk K Rg = true ∧ sonst.regs = [] := Endblock.gOk_of_vOk sonst h.1
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
@@ -789,7 +789,7 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
 theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → e.vOk K = true → e.gOk K Rg = true ∧ e.regs = []
   | .ret .., _ => ⟨rfl, rfl⟩
-  | .retGrund .., _ => ⟨rfl, rfl⟩
+  | .retWhy .., _ => ⟨rfl, rfl⟩
   | .leave .., _ => ⟨rfl, rfl⟩
   | .next .., _ => ⟨rfl, rfl⟩
   | .cons s rest, h => by

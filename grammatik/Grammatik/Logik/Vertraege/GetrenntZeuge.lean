@@ -130,27 +130,27 @@ theorem darfT : darf gD GTab.T [] := by unfold darf; intro w hw; cases hw
 
 /-- The index `0` into `T` and the value `5`, as expressions of the declared types. -/
 def idx0 {Γ : Ctx} : Expr gD Γ [] (.index (gD.count GTab.T)) :=
-  Expr.weiter (lo := 0) (hi := 0) (lo' := 0) (hi' := gD.count GTab.T - 1)
+  Expr.widen (lo := 0) (hi := 0) (lo' := 0) (hi' := gD.count GTab.T - 1)
     (by decide) (by decide) (.lit 0)
 
 def wert5 {Γ : Ctx} : Expr gD Γ [] (gD.typ GTab.T GFeld.x) :=
-  Expr.weiter (lo := 5) (hi := 5) (lo' := 0) (hi' := 7) (by decide) (by decide) (.lit 5)
+  Expr.widen (lo := 5) (hi := 5) (lo' := 0) (hi' := 7) (by decide) (by decide) (.lit 5)
 
 /-- Both bodies: `k->slots[0].x = 5; return;` -- a write through the FIRST parameter. -/
 def rumpfAendern :
     Endblock gD (vertragVon gD gAendern) false (gD.params gAendern) (Signatur.anfang gD (gD.signatur gAendern)) :=
-  .cons (.assignDurch (.var .hier) GTab.T rfl GFeld.x idx0 wert5 rfl darfT)
-    (.ret .keine (List.Perm.refl _))
+  .cons (.assignThru (.var .here) GTab.T rfl GFeld.x idx0 wert5 rfl darfT)
+    (.ret .empty (List.Perm.refl _))
 
 def rumpfGetrennt :
     Endblock gD (vertragVon gD gGetrennt) false (gD.params gGetrennt) (Signatur.anfang gD (gD.signatur gGetrennt)) :=
-  .cons (.assignDurch (.var .hier) GTab.T rfl GFeld.x idx0 wert5 rfl darfT)
-    (.ret .keine (List.Perm.refl _))
+  .cons (.assignThru (.var .here) GTab.T rfl GFeld.x idx0 wert5 rfl darfT)
+    (.ret .empty (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .aendern => rumpfAendern
     | .getrennt => rumpfGetrennt

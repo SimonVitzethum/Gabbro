@@ -30,8 +30,8 @@ variable {D : Deklaration}
 
 theorem envR_get : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ),
     (envR ρ).get (varR x) = valR τ (ρ.get x)
-  | _, _, .cons _ _, .hier => rfl
-  | _, _, .cons _ ρ, .dort x => envR_get ρ x
+  | _, _, .cons _ _, .here => rfl
+  | _, _, .cons _ ρ, .there x => envR_get ρ x
 
 theorem envZ_envR : ∀ {Γ : Ctx} (ρ : Env D Γ), envZ (envR ρ) = ρ
   | [], .nil => rfl
@@ -132,23 +132,23 @@ mutual
 theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (ρ : Env D Γ), eval (worldR σ₀) (ruE e) (worldR σ) (envR ρ) = valR τ (eval σ₀ e σ ρ)
   | _, _, _, .lit _, _ => rfl
-  | _, _, _, .wahr, _ => rfl
-  | _, _, _, .falsch, _ => rfl
+  | _, _, _, .tru, _ => rfl
+  | _, _, _, .fls, _ => rfl
   | _, _, _, .var x, ρ => envR_get ρ x
   | _, _, _, .glob _ _, _ => rfl
   | _, _, _, .slot t f i _, ρ =>
       congrArg (fun z : Zahl 0 (D.count t - 1) => valR (D.typ t f) (σ.slots t z.n f))
         (eval_ru σ₀ σ i ρ)
-  | _, _, _, .durch _ t _ f i _, ρ =>
+  | _, _, _, .thru _ t _ f i _, ρ =>
       congrArg (fun z : Zahl 0 (D.count t - 1) => valR (D.typ t f) (σ.slots t z.n f))
         (eval_ru σ₀ σ i ρ)
   | _, _, _, .ptrOf .., _ => rfl
   | _, _, _, .fnref .., _ => rfl
-  | _, _, _, .altGlob _ _, _ => rfl
-  | _, _, _, .altSlot t f i _, ρ =>
+  | _, _, _, .oldG _ _, _ => rfl
+  | _, _, _, .oldS t f i _, ρ =>
       congrArg (fun z : Zahl 0 (D.count t - 1) => valR (D.typ t f) (σ₀.slots t z.n f))
         (eval_ru σ₀ σ i ρ)
-  | _, _, _, .weiter h1 h2 e, ρ => congrArg (Zahl.weiter h1 h2) (eval_ru σ₀ σ e ρ)
+  | _, _, _, .widen h1 h2 e, ρ => congrArg (Zahl.weiter h1 h2) (eval_ru σ₀ σ e ρ)
   | _, _, _, .add a b, ρ => kongr₂ Zahl.add (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
   | _, _, _, .sub a b, ρ => kongr₂ Zahl.sub (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
   | _, _, _, .neg a, ρ => congrArg Zahl.neg (eval_ru σ₀ σ a ρ)
@@ -157,7 +157,7 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .rem h0 h1 a b, ρ => kongr₂ (Zahl.rem h0 h1) (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
   | _, _, _, .sdiv hb a b, ρ => kongr₂ (Zahl.sdiv hb) (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
   | _, _, _, .srem hb a b, ρ => kongr₂ (Zahl.srem hb) (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
-  | _, _, _, .leseBytes t f hf n i _ _ _, ρ =>
+  | _, _, _, .getBytes t f hf n i _ _ _, ρ =>
       zahl_ext (congrArg bytesZuZahl ((bytesAb_worldR σ t f hf _ n _).trans
         (congrArg (σ.bytesAb t f hf n) (congrArg Zahl.n (eval_ru σ₀ σ i ρ)))))
   | _, _, _, .band h0 h0' a b, ρ =>
@@ -185,19 +185,19 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .flle (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, ρ =>
       kongr₂ (fun (x : Gleit l1 h1) (y : Gleit l2 h2) => gleitLe x.x y.x)
         (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
-  | _, _, _, .und a b, ρ =>
+  | _, _, _, .and a b, ρ =>
       kongr₂ (fun (x y : Bool) => (x && y)) (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
-  | _, _, _, .oder a b, ρ =>
+  | _, _, _, .or a b, ρ =>
       kongr₂ (fun (x y : Bool) => (x || y)) (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
-  | _, _, _, .nicht a, ρ => congrArg (fun (x : Bool) => !x) (eval_ru σ₀ σ a ρ)
+  | _, _, _, .not a, ρ => congrArg (fun (x : Bool) => !x) (eval_ru σ₀ σ a ρ)
   | _, _, _, .none _, _ => rfl
   | _, _, _, .some e, ρ => congrArg Option.some (eval_ru σ₀ σ e ρ)
   | _, _, _, .istSome (n := n) e, ρ =>
       congrArg (fun (x : Option (Zahl 0 (n - 1))) => x.isSome) (eval_ru σ₀ σ e ρ)
-  | _, _, _, .fall cs i nutz, ρ =>
+  | _, _, _, .case cs i nutz, ρ =>
       congrArg (fun z => (⟨i, z⟩ : Σ i : Fin cs.length, Nutzlast (cs.get i)))
         (evalNutz_ru σ₀ σ nutz ρ)
-  | _, _, _, .grund _ _, _ => rfl
+  | _, _, _, .why _ _, _ => rfl
   | _, _, _, .forallSlots t body _, ρ =>
       congrArg (fun p => (alleIndizes (D.count t)).all p)
         (funext fun k => eval_ru σ₀ σ body (Env.cons k ρ))
@@ -211,8 +211,8 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
 theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),
     evalNutz (worldR σ₀) (ruN n) (worldR σ) (envR ρ) = evalNutz σ₀ n σ ρ
-  | _, _, _, .keine, _ => rfl
-  | _, _, _, .zahl e, ρ => eval_ru σ₀ σ e ρ
+  | _, _, _, .empty, _ => rfl
+  | _, _, _, .num e, ρ => eval_ru σ₀ σ e ρ
 
 end
 
@@ -275,7 +275,7 @@ def ausR {V : Vertrag D} {l : Bool} {Γ : Ctx} :
     Ausgang V l Γ → Ausgang (vertragR V) l (Γ.map tyR)
   | .ok σ ρ => .ok (worldR σ) (envR ρ)
   | .zurueck σ v => .zurueck (worldR σ) (ergR V.erg v)
-  | .grund σ r => .grund (worldR σ) r
+  | .why σ r => .why (worldR σ) r
   | .leave h σ ρ => .leave h (worldR σ) (envR ρ)
   | .next h σ ρ => .next h (worldR σ) (envR ρ)
   | .logik e => .logik (logikR e)
@@ -285,7 +285,7 @@ def ausR {V : Vertrag D} {l : Bool} {Γ : Ctx} :
 def endR {V : Vertrag D} {l : Bool} {Γ : Ctx} :
     EndAusgang V l Γ → EndAusgang (vertragR V) l (Γ.map tyR)
   | .zurueck σ v => .zurueck (worldR σ) (ergR V.erg v)
-  | .grund σ r => .grund (worldR σ) r
+  | .why σ r => .why (worldR σ) r
   | .leave h σ ρ => .leave h (worldR σ) (envR ρ)
   | .next h σ ρ => .next h (worldR σ) (envR ρ)
   | .logik e => .logik (logikR e)
@@ -294,7 +294,7 @@ def endR {V : Vertrag D} {l : Bool} {Γ : Ctx} :
 /-- A call outcome, translated. -/
 def rufR {f : D.Fn} : RufAusgang f → RufAusgang (D := D.mitRuhe) (some f)
   | .ok σ v => .ok (worldR σ) (ergR (D.erg f) v)
-  | .grund σ r => .grund (worldR σ) r
+  | .why σ r => .why (worldR σ) r
   | .logik e => .logik (logikR e)
   | .hardware e => .hardware (hwR e)
 
@@ -440,9 +440,9 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
   | .sum cs, n => by
       show summePasst cs n = Option.map (valR (D := D) (.sum cs)) (summePasst cs n)
       cases summePasst cs n <;> rfl
-  | .grund m, n => by
-      show einpassen (D := D.mitRuhe) z' (.grund m) n =
-        Option.map (valR (.grund m)) (einpassen (D := D) z (.grund m) n)
+  | .why m, n => by
+      show einpassen (D := D.mitRuhe) z' (.why m) n =
+        Option.map (valR (.why m)) (einpassen (D := D) z (.why m) n)
       simp only [einpassen]
       split <;> rfl
   | .never, _ => rfl
@@ -588,14 +588,14 @@ end Hilfen
 
 theorem envR_set : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ) (v : Wert D τ),
     (envR ρ).set (varR x) (valR τ v) = envR (ρ.set x v)
-  | _, _, .cons _ _, .hier, _ => rfl
-  | _, _, .cons w ρ, .dort x, v => congrArg (Env.cons _) (envR_set ρ x v)
+  | _, _, .cons _ _, .here, _ => rfl
+  | _, _, .cons w ρ, .there x, v => congrArg (Env.cons _) (envR_set ρ x v)
 
 theorem evalErg_ru (σ₀ σ : World D) {Γ : Ctx} {Λ : List (Res D)} :
     ∀ {e : Option Ty} (a : ErgExpr D Γ Λ e) (ρ : Env D Γ),
       evalErg (worldR σ₀) (ruErg a) (worldR σ) (envR ρ) = ergR e (evalErg σ₀ a σ ρ)
-  | _, .keine, _ => rfl
-  | _, .wert e, ρ => eval_ru σ₀ σ e ρ
+  | _, .empty, _ => rfl
+  | _, .val e, ρ => eval_ru σ₀ σ e ρ
 
 theorem ergWert_ru {τ : Ty} : ∀ {e : Option Ty} (he : e = some τ)
     (he' : e.map tyR = some (tyR τ)) (v : ErgVal D e),
@@ -676,7 +676,7 @@ theorem traverseLauf_ru {τ : Ty}
             simp only [ausR, envR_tail, hi]
             by_cases hc' : (inv σ' ρ'.tail).2 = true <;> simp only [hc', if_true, if_false] <;> rfl
         | zurueck => rfl
-        | grund => rfl
+        | why => rfl
         | logik => rfl
         | hardware => rfl
 
@@ -707,7 +707,7 @@ theorem retryLauf_ru
         | next h σ' ρ' => exact retryLauf_ru schritt schritt' bis bis' ueber ueber' hs hb hu n σ' ρ'
         | leave h σ' ρ' => rfl
         | zurueck => rfl
-        | grund => rfl
+        | why => rfl
         | logik => rfl
         | hardware => rfl
 
@@ -733,7 +733,7 @@ theorem foreverLauf_ru (a : D.Annahme)
         | next h σ' ρ' => exact foreverLauf_ru a schritt schritt' inv inv' hs hi n σ' ρ'
         | leave h σ' ρ' => rfl
         | zurueck => rfl
-        | grund => rfl
+        | why => rfl
         | logik => rfl
         | hardware => rfl
 
@@ -775,7 +775,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       simp only [ruS, execStmt]
       rw [orte2, lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
       rfl
-  | _, _, Λ, _, .assignDurch p t ht f i e hw hL, σ, ρ => by
+  | _, _, Λ, _, .assignThru p t ht f i e hw hL, σ, ρ => by
       simp only [ruS, execStmt]
       rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
         kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
@@ -784,7 +784,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       simp only [ruS, execStmt]
       rw [ruE_orte, lese_worldR, eval_ru, schreibGlob_worldR]
       rfl
-  | _, _, Λ, _, .schreibBytes t f hf n i hlo hhi e hw hL, σ, ρ => by
+  | _, _, Λ, _, .putBytes t f hf n i hlo hhi e hw hL, σ, ρ => by
       simp only [ruS, execStmt]
       rw [orte2, lese_worldR, eval_ru, eval_ru, schreibBytes_worldR t f hf]
       rfl
@@ -792,7 +792,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       simp only [ruS, execStmt]
       rw [ruE_orte, lese_worldR, eval_ru, envR_set]
       rfl
-  | _, _, Λ, _, .uebergang (lo := lo) (hi := hi) t f hτ i von nach hn he hw hL, σ, ρ => by
+  | _, _, Λ, _, .shift (lo := lo) (hi := hi) t f hτ i von nach hn he hw hL, σ, ρ => by
       simp only [ruS, execStmt]
       erw [show (Sum.inl t :: (ruE i).orte : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) =
         Sum.inl t :: i.orte from congrArg (Sum.inl t :: ·) (ruE_orte i)]
@@ -827,7 +827,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       simp only [ruS, execStmt]
       rw [ruE_orte, lese_worldR, eval_ru]
       exact execArms_ru arms _ _ ρ
-  | _, _, Λ, _, .onGrund r arms, σ, ρ => by
+  | _, _, Λ, _, .onWhy r arms, σ, ρ => by
       simp only [ruS, execStmt]
       rw [ruE_orte, lese_worldR, eval_ru]
       exact execGrund_ru arms _ _ ρ
@@ -838,7 +838,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       erw [ruA_orte, lese_worldR, evalArgs_ru, hR]
       cases hx : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
       | ok σ' v => (try erw [hx]); rfl
-      | grund σ' r => exact (Fin.cast hr r).elim0
+      | why σ' r => exact (Fin.cast hr r).elim0
       | logik e => (try erw [hx]); rfl
       | hardware e => (try erw [hx]); rfl
   | _, _, Λ, _, .callInd (n := n) p args hp hr, σ, ρ => by
@@ -855,7 +855,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
           erw [umsig_ru hg, hR]
           cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
           | ok σ' v => (try erw [hx]); rfl
-          | grund σ' r => exact keinGrundSig hg hr r
+          | why σ' r => exact keinGrundSig hg hr r
           | logik e => (try erw [hx]); rfl
           | hardware e => (try erw [hx]); rfl
   | _, _, Λ, _, .locks L hr body, σ, ρ => by
@@ -900,7 +900,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
           cases w with
           | none => rfl
           | some _ => rfl
-  | _, _, Λ, _, .regSchreib r hk e, σ, ρ => by
+  | _, _, Λ, _, .regWrite r hk e, σ, ρ => by
       simp only [ruS, execStmt]
       rw [ruE_orte, lese_worldR]
       rfl
@@ -921,7 +921,7 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       simp only [ruS, execStmt]
       erw [ruErg_orte, lese_worldR, evalErg_ru]
       rfl
-  | _, _, _, _, .retGrund .., σ, ρ => rfl
+  | _, _, _, _, .retWhy .., σ, ρ => rfl
   | _, _, _, _, .leave _, σ, ρ => rfl
   | _, _, _, _, .next _, σ, ρ => rfl
 
@@ -949,7 +949,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
           erw [execBlock_vorΛ, ergWert_ru he]
           exact (congrArg Ausgang.schrumpf (execBlock_ru rest σ' (Env.cons (ergWert he v) ρ))).trans
             (ausR_schrumpf _)
-      | grund σ' r => exact (Fin.cast hr r).elim0
+      | why σ' r => exact (Fin.cast hr r).elim0
       | logik e => (try erw [hx]); rfl
       | hardware e => (try erw [hx]); rfl
   | _, _, Λ, _, .bindCallInd (n := n) p args he hp hr rest, σ, ρ => by
@@ -969,7 +969,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               erw [execBlock_vorΛ, ergWert_ru (ergSig hg he)]
               exact (congrArg Ausgang.schrumpf
                 (execBlock_ru rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))).trans (ausR_schrumpf _)
-          | grund σ' r => exact keinGrundSig hg hr r
+          | why σ' r => exact keinGrundSig hg hr r
           | logik e => (try erw [hx]); rfl
           | hardware e => (try erw [hx]); rfl
   | _, _, Λ, _, .bindCallElse g args he hp hr err rest, σ, ρ => by
@@ -982,7 +982,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
           erw [execBlock_vorΛ, ergWert_ru he]
           exact (congrArg Ausgang.schrumpf (execBlock_ru rest σ' (Env.cons (ergWert he v) ρ))).trans
             (ausR_schrumpf _)
-      | grund σ' r =>
+      | why σ' r =>
           try erw [hx]
           simp only [rufR]
           erw [execEnd_umΛ]
@@ -1016,9 +1016,9 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
             rfl
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
             exact (congrArg (fun a => EndAusgang.zuAusgang (EndAusgang.schrumpf a))
-              (execEnd_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ))).trans
+              (execEnd_ru err σ' (Env.cons (τ := .why (D.agruende a)) r ρ))).trans
               ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
-  | _, _, _, _, .regLies r hk rest, σ, ρ => by
+  | _, _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
       cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
@@ -1032,7 +1032,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               simp only [if_true]
               rw [← ausR_schrumpf, ← execBlock_ru rest σ (Env.cons v ρ)]
               rfl
-  | _, _, Λ, _, .regLiesElse r hk zusage sonst rest, σ, ρ => by
+  | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
       cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
@@ -1082,7 +1082,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
           (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))).trans
           (ausR_schrumpf _)
       · erw [dif_neg hc, dif_neg hc, ← endR_zuAusgang, execEnd_ru sonst _ ρ]
-  | _, _, Λ, _, .pruefung c sonst rest, σ, ρ => by
+  | _, _, Λ, _, .check c sonst rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [ruE_orte, lese_worldR, eval_ru]
       cases h : (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ : Bool) with
@@ -1092,7 +1092,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       | true =>
           simp only [wahr?, valR_bool, h, if_true]
           exact execBlock_ru rest _ ρ
-  | _, _, Λ, _, .gleit op a b lo hi rest, σ, ρ => by
+  | _, _, Λ, _, .float op a b lo hi rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [orte2, lese_worldR, eval_ru, eval_ru]
       try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
@@ -1103,14 +1103,14 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       | some v =>
           rw [← ausR_schrumpf, ← execBlock_ru rest _ (Env.cons v ρ)]
           rfl
-  | _, _, _, _, .gleitLit q lo hi rest, σ, ρ => by
+  | _, _, _, _, .floatLit q lo hi rest, σ, ρ => by
       simp only [ruB, execBlock]
       cases gleitPasst lo hi (bruch q) with
       | none => rfl
       | some v =>
           rw [← ausR_schrumpf, ← execBlock_ru rest _ (Env.cons v ρ)]
           rfl
-  | _, _, Λ, _, .gleitVon e lo hi rest, σ, ρ => by
+  | _, _, Λ, _, .floatOf e lo hi rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [ruE_orte, lese_worldR, eval_ru]
       try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
@@ -1119,7 +1119,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       | some v =>
           rw [← ausR_schrumpf, ← execBlock_ru rest _ (Env.cons v ρ)]
           rfl
-  | _, _, Λ, _, .gleitNarrow e lo hi sonst rest, σ, ρ => by
+  | _, _, Λ, _, .floatNarrow e lo hi sonst rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [ruE_orte, lese_worldR, eval_ru]
       try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
@@ -1136,7 +1136,7 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       simp only [ruEnd, execEnd]
       erw [ruErg_orte, lese_worldR, evalErg_ru]
       rfl
-  | _, _, _, .retGrund .., σ, ρ => rfl
+  | _, _, _, .retWhy .., σ, ρ => rfl
   | _, _, _, .leave _, σ, ρ => rfl
   | _, _, _, .next _, σ, ρ => rfl
   | _, _, _, .cons s rest, σ, ρ => by
@@ -1173,7 +1173,7 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
             rw [ergWert_ru he, ← endR_schrumpf, ← execEnd_ru rest σ' (Env.cons _ ρ)]
             rfl
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
-            rw [← endR_schrumpf, ← execEnd_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ)]
+            rw [← endR_schrumpf, ← execEnd_ru err σ' (Env.cons (τ := .why (D.agruende a)) r ρ)]
             rfl
 
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -1336,7 +1336,7 @@ theorem rufAt_mitRuhe (P : Programm D) (O : Orakel D) (passes : Nat) :
                     (σ'.lese (vertragVon D g).ende (P.ensures g).orte)) Env.nil)) with
               | none => (try erw [hx]); rfl
               | some i => (try erw [hx]); rfl
-        | grund σ' r => rfl
+        | why σ' r => rfl
         | leave h _ _ => exact absurd h (by decide)
         | next h _ _ => exact absurd h (by decide)
         | logik e => rfl

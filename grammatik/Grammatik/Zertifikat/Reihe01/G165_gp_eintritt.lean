@@ -110,14 +110,14 @@ abbrev gL_gp_verteiler : List (Res gD) := []
 
 
 def gBody_gp_verteiler : Endblock gD (vertragVon gD g_gp_verteiler) false gCtx_gp_verteiler gL_gp_verteiler :=
-  (.ret .keine (List.Perm.refl _))
+  (.ret .empty (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .gp_verteiler => .wahr
+    | .gp_verteiler => .tru
   ensures
-    | .gp_verteiler => .wahr
+    | .gp_verteiler => .tru
   rumpf
     | .gp_verteiler => gBody_gp_verteiler
 

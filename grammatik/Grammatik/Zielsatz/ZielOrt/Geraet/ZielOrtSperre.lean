@@ -589,7 +589,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
-    refine ⟨fadenS_ax hF hhead (Env.cons (τ := .grund (D.agruende a)) r ρ) (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur
+    refine ⟨fadenS_ax hF hhead (Env.cons (τ := .why (D.agruende a)) r ρ) (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur
       (fun _ => Iff.rfl) a args
       (fun hok => okS_alsBlock err (.schrumpf k) rest.held_iff
         (by have h1 := hok.1; simp only [Block.gOk, Bool.and_eq_true] at h1; exact h1.1)
@@ -667,7 +667,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
-    refine ⟨fadenS_ax hF hhead (Env.cons (τ := .grund (D.agruende a)) r ρ) (.ende err) σ₂.spur
+    refine ⟨fadenS_ax hF hhead (Env.cons (τ := .why (D.agruende a)) r ρ) (.ende err) σ₂.spur
       (fun _ => Iff.rfl) a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Endblock.gOk, Bool.and_eq_true] at h1; exact h1.1,
         by have h2 := hok.2; simp only [endblockOrteP] at h2; exact (teil_append (teil_append h2).1).2⟩)
@@ -734,7 +734,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
         | ok σa v =>
             exact ⟨fun _ => ZErgG.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -765,7 +765,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
         | ok σa v =>
             exact ⟨fun _ => ZErgG.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -804,7 +804,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
             · cases hc
               exact ZErgG.folgt_refl _
             · cases hc
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -845,7 +845,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
             · cases hc
             · cases hc
               exact ZErgG.folgt_refl _
-        | grund σa r =>
+        | why σa r =>
             intro _ _ _ _ _ _ _ _ _ _ hc hn
             cases hc
             rw [semH_alsBlock_schrumpf]
@@ -887,7 +887,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
         | ok σa v =>
             exact ⟨fun _ => ZErgG.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -924,7 +924,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
         | ok σa v =>
             exact ⟨fun _ => ZErgG.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -972,7 +972,7 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
             · cases hc
               exact ZErgG.folgt_refl _
             · cases hc
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -1128,11 +1128,11 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     obtain ⟨hWc, hSt'⟩ := hSt
     have hRS' := hRS
     rw [hpop] at hRS'
-    refine ⟨⟨popS_kopf hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
+    refine ⟨⟨popS_kopf hWc (M.weltVon u) (fun σa => .why σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
       (fun hE => popS_begr_grund hE hF.1 hhead rg
         (fun O' R U σ => semH_rueckGrund S O' U passes R rg hperm σ ρ))
       (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (Env.cons (τ := .why n) (Fin.cast hn rg) ρc)
       (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun L h => by rw [hcaller]; exact h)
       (fun hokc => okS_alsBlock err (.schrumpf k) restb.held_iff (rest_okS hcaller hokc).1
@@ -1149,11 +1149,11 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     obtain ⟨hWc, hSt'⟩ := hSt
     have hRS' := hRS
     rw [hpop] at hRS'
-    refine ⟨⟨popS_kopf hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
+    refine ⟨⟨popS_kopf hWc (M.weltVon u) (fun σa => .why σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
       (fun hE => popS_begr_grund hE hF.1 hhead rg
         (fun O' R U σ => semH_rueckConsGrund S O' U passes R rg hperm restk σ ρ))
       (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (Env.cons (τ := .why n) (Fin.cast hn rg) ρc)
       (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun L h => by rw [hcaller]; exact h)
       (fun hokc => okS_alsBlock err (.schrumpf k) restb.held_iff (rest_okS hcaller hokc).1
@@ -1170,11 +1170,11 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     obtain ⟨hWc, hSt'⟩ := hSt
     have hRS' := hRS
     rw [hpop] at hRS'
-    refine ⟨⟨popS_kopf hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
+    refine ⟨⟨popS_kopf hWc (M.weltVon u) (fun σa => .why σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
       (fun hE => popS_begr_grund hE hF.1 hhead rg
         (fun O' R U σ => semH_dannRetGrund S O' U passes R rg hperm restk kk σ ρ))
       (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+      (Env.cons (τ := .why n) (Fin.cast hn rg) ρc)
       (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun L h => by rw [hcaller]; exact h)
       (fun hokc => okS_alsBlock err (.schrumpf k) restb.held_iff (rest_okS hcaller hokc).1

@@ -147,25 +147,25 @@ theorem gHp_arbeiter_in_L_setze : RufPasst gD (vertragVon gD g_arbeiter) (gD.sig
   hb := fun c h => by have hV : (vertragVon gD g_arbeiter).boden = some 0 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
 
 def gEns_setze : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) (vertragVon gD g_setze).ende .bool :=
-  (.und (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto)) (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (.var .hier)))
+  (.and (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto)) (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (ErgCtx (gD.params g_setze) (gD.erg g_setze)) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (.var .here)))
 
 def gReq_setze : Expr gD (gD.params g_setze) (Signatur.anfang gD (gD.signatur g_setze)) .bool :=
-  (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto))
+  (.eq (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto) (Expr.slot (D := gD) GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD (gD.params g_setze) gL_setze (.index (gD.count GTab.konto))))) gDarf_setze_konto))
 
 def gBody_setze : Endblock gD (vertragVon gD g_setze) false gCtx_setze gL_setze :=
-  (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .hier) (by decide) gDarf_setze_konto) (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.weiter (by decide) (by decide) (.lit 1) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .hier) (by decide) gDarf_setze_konto) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .here) (by decide) gDarf_setze_konto) (.cons (.assignSlot GTab.konto GkontoFeld.stand (((.widen (by decide) (by decide) (.lit 1) : Expr gD gCtx_setze gL_setze (.index (gD.count GTab.konto))))) (.var .here) (by decide) gDarf_setze_konto) (.ret .empty (List.Perm.refl _))))
 
 def gBody_arbeiter : Endblock gD (vertragVon gD g_arbeiter) false gCtx_arbeiter gL_arbeiter :=
-  (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_setze (.cons ((.weiter (by decide) (by decide) (((.lit 30)) : Expr gD gCtx_arbeiter gL_arbeiter_in_L (.int 30 30))) : Expr gD gCtx_arbeiter gL_arbeiter_in_L (.int 0 100)) .nil) gHp_arbeiter_in_L_setze rfl) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_setze (.cons ((.widen (by decide) (by decide) (((.lit 30)) : Expr gD gCtx_arbeiter gL_arbeiter_in_L (.int 30 30))) : Expr gD gCtx_arbeiter gL_arbeiter_in_L (.int 0 100)) .nil) gHp_arbeiter_in_L_setze rfl) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
     | .setze => gReq_setze
-    | .arbeiter => .wahr
+    | .arbeiter => .tru
   ensures
     | .setze => gEns_setze
-    | .arbeiter => .wahr
+    | .arbeiter => .tru
   rumpf
     | .setze => gBody_setze
     | .arbeiter => gBody_arbeiter

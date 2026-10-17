@@ -154,15 +154,15 @@ theorem mDarfA (Λ : List (Res mD)) : darf mD MTab.privA Λ := fun _ h => nomatc
 theorem mDarfB (Λ : List (Res mD)) : darf mD MTab.privB Λ := fun _ h => nomatch h
 
 def mI0 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.index 2) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def mI1 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.index 2) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
-def m7 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 7)
-def m5 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 5)
-def m30 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 30)
-def m70 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .weiter (by decide) (by decide) (.lit 70)
+def m7 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 7)
+def m5 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 5)
+def m30 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 30)
+def m70 {Γ : Ctx} {Λ : List (Res mD)} : Expr mD Γ Λ (.int 0 100) := .widen (by decide) (by decide) (.lit 70)
 
 /-- `konto[0] == konto[1]`, at the holdings `mL`. -/
 def mGleich {Γ : Ctx} : Expr mD Γ mL .bool :=
@@ -213,8 +213,8 @@ theorem mHpPruefe : RufPasst mD (vertragVon mD mHauptA) (mD.signatur mPruefeA) [
 
 /-- `setze(x)`: `konto[0] = x; konto[1] = x; return`. -/
 def mRumpfSetze : Endblock mD (vertragVon mD mSetze) false [.int 0 100] mL :=
-  .cons (.assignSlot MTab.konto () mI0 (.var .hier) rfl mDarfK)
-    (.cons (.assignSlot MTab.konto () mI1 (.var .hier) rfl mDarfK) (.ret .keine (by rfl)))
+  .cons (.assignSlot MTab.konto () mI0 (.var .here) rfl mDarfK)
+    (.cons (.assignSlot MTab.konto () mI1 (.var .here) rfl mDarfK) (.ret .empty (by rfl)))
 
 /-- The call `setze(30)` inside `hauptA`'s lock. -/
 def mRufA : Stmt mD (vertragVon mD mHauptA) false [] mL mL :=
@@ -234,7 +234,7 @@ def mLocksB : Stmt mD (vertragVon mD mHauptB) false [] [] [] :=
 
 /-- `pruefeA(); return` -- the tail of `hauptA`. -/
 def mRestA : Endblock mD (vertragVon mD mHauptA) false [] [] :=
-  .cons (.call mPruefeA .nil mHpPruefe rfl) (.ret .keine List.Perm.nil)
+  .cons (.call mPruefeA .nil mHpPruefe rfl) (.ret .empty List.Perm.nil)
 
 /-- `hauptA`: `privA[0] = 7; privA[1] = 7; locks { setze(30) }; pruefeA(); return`. -/
 def mRumpfA : Endblock mD (vertragVon mD mHauptA) false [] [] :=
@@ -245,7 +245,7 @@ def mRumpfA : Endblock mD (vertragVon mD mHauptA) false [] [] :=
 /-- `hauptB`: `privB[0] = 5; locks { setze(70) }; return`. -/
 def mRumpfB : Endblock mD (vertragVon mD mHauptB) false [] [] :=
   .cons (.assignSlot MTab.privB () mI0 m5 rfl (mDarfB _))
-    (.cons mLocksB (.ret .keine List.Perm.nil))
+    (.cons mLocksB (.ret .empty List.Perm.nil))
 
 /-- The program. -/
 def mP : Programm mD where
@@ -253,17 +253,17 @@ def mP : Programm mD where
   requires
     | .setze => mGleich
     | .pruefeA => mA7
-    | _ => .wahr
+    | _ => .tru
   ensures
-    | .setze => .und mGleich (.eq (.slot MTab.konto () mI0 mDarfK) (.var .hier))
+    | .setze => .and mGleich (.eq (.slot MTab.konto () mI0 mDarfK) (.var .here))
     | .hauptA => mA7
-    | _ => .wahr
+    | _ => .tru
   rumpf
     | .setze => mRumpfSetze
     | .hauptA => mRumpfA
     | .hauptB => mRumpfB
-    | .pruefeA => .ret .keine List.Perm.nil
-    | .ruhe => .ret .keine List.Perm.nil
+    | .pruefeA => .ret .empty List.Perm.nil
+    | .ruhe => .ret .empty List.Perm.nil
 
 def mFs : List mD.Fn := [mSetze, mHauptA, mHauptB, mPruefeA, mRuhe]
 
@@ -380,7 +380,7 @@ theorem mInv_of_ens {κ σ2 : World mD} {ρk : Env mD (mD.params mSetze)}
     {v : ErgVal mD (mD.erg mSetze)} (h : EnsAmRueck mP mSetze κ σ2 ρk v) :
     mSI.inv () σ2.speicher = true := by
   have h' : (decide ((σ2.slots MTab.konto 0 ()).n = (σ2.slots MTab.konto 1 ()).n) &&
-      decide ((σ2.slots MTab.konto 0 ()).n = (ρk.get .hier).n)) = true := h
+      decide ((σ2.slots MTab.konto 0 ()).n = (ρk.get .here).n)) = true := h
   simp only [Bool.and_eq_true] at h'
   exact h'.1
 
@@ -519,7 +519,7 @@ theorem mB_schreib {S : SperrInv mD} {O : Orakel mD} {U : Umwelt mD} {passes : N
     {R : ∀ f : mD.Fn, World mD → Env mD (mD.params f) → RufAusgang f} (σ : World mD)
     (ρ : Env mD (mD.params mHauptB)) :
     ∃ σ2 : World mD, execEndH S O U passes R mRumpfB σ ρ =
-        execEndH S O U passes R (.cons mLocksB (.ret .keine List.Perm.nil)) σ2 ρ :=
+        execEndH S O U passes R (.cons mLocksB (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
 /-- `hauptB`: the caller duty from the lock invariant at the acquire; the

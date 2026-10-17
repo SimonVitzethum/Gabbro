@@ -413,9 +413,9 @@ theorem legsCmp : ∀ (e : SExpr), gutCmp e = true → Legs e := by
   · exact legsKern e hker
   · cases e with
     | lit m => simp [cmpNeu] at hnew
-    | gleit s => simp [cmpNeu] at hnew
-    | wahr => simp [cmpNeu] at hnew
-    | falsch => simp [cmpNeu] at hnew
+    | float s => simp [cmpNeu] at hnew
+    | tru => simp [cmpNeu] at hnew
+    | fls => simp [cmpNeu] at hnew
     | «variable» s => simp [cmpNeu] at hnew
     | un o x => simp [cmpNeu] at hnew
     | bin o l r =>
@@ -439,7 +439,7 @@ theorem legsCmp : ∀ (e : SExpr), gutCmp e = true → Legs e := by
     | eingebaut f xs => simp [cmpNeu] at hnew
     | alt x => simp [cmpNeu] at hnew
     | ergebnis => simp [cmpNeu] at hnew
-    | grund g f => simp [cmpNeu] at hnew
+    | why g f => simp [cmpNeu] at hnew
 
 -- Level-1 goal: every `gutCmp` tree parses back from its printed
 -- tokens with `brennstoff` fuel (the `Or` leg, `ende` follows by
@@ -726,9 +726,9 @@ theorem legsBit : ∀ (e : SExpr), gutBit e = true → Legs e := by
   · exact legsCmp e hold
   · cases e with
     | lit m => simp [bitNeu] at hnew
-    | gleit s => simp [bitNeu] at hnew
-    | wahr => simp [bitNeu] at hnew
-    | falsch => simp [bitNeu] at hnew
+    | float s => simp [bitNeu] at hnew
+    | tru => simp [bitNeu] at hnew
+    | fls => simp [bitNeu] at hnew
     | «variable» s => simp [bitNeu] at hnew
     | un o x => simp [bitNeu] at hnew
     | bin o l r =>
@@ -752,7 +752,7 @@ theorem legsBit : ∀ (e : SExpr), gutBit e = true → Legs e := by
     | eingebaut f xs => simp [bitNeu] at hnew
     | alt x => simp [bitNeu] at hnew
     | ergebnis => simp [bitNeu] at hnew
-    | grund g f => simp [bitNeu] at hnew
+    | why g f => simp [bitNeu] at hnew
 
 -- Level-2 goal: every `gutBit` tree parses back from its printed
 -- tokens with `brennstoff` fuel.
@@ -1193,9 +1193,9 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
     · exact legsBit e hold2
     · cases e with
       | lit m => simp [addNeu] at hadd
-      | gleit s => simp [addNeu] at hadd
-      | wahr => simp [addNeu] at hadd
-      | falsch => simp [addNeu] at hadd
+      | float s => simp [addNeu] at hadd
+      | tru => simp [addNeu] at hadd
+      | fls => simp [addNeu] at hadd
       | «variable» s => simp [addNeu] at hadd
       | un o x => simp [addNeu] at hadd
       | bin o l r =>
@@ -1218,12 +1218,12 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
       | eingebaut f xs => simp [addNeu] at hadd
       | alt x => simp [addNeu] at hadd
       | ergebnis => simp [addNeu] at hadd
-      | grund g f => simp [addNeu] at hadd
+      | why g f => simp [addNeu] at hadd
   · cases e with
     | lit m => simp [mulNeu] at hnew
-    | gleit s => simp [mulNeu] at hnew
-    | wahr => simp [mulNeu] at hnew
-    | falsch => simp [mulNeu] at hnew
+    | float s => simp [mulNeu] at hnew
+    | tru => simp [mulNeu] at hnew
+    | fls => simp [mulNeu] at hnew
     | «variable» s => simp [mulNeu] at hnew
     | un o x => simp [mulNeu] at hnew
     | bin o l r =>
@@ -1245,7 +1245,7 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
     | eingebaut f xs => simp [mulNeu] at hnew
     | alt x => simp [mulNeu] at hnew
     | ergebnis => simp [mulNeu] at hnew
-    | grund g f => simp [mulNeu] at hnew
+    | why g f => simp [mulNeu] at hnew
 
 -- Level-3 goal: every `gutAM` tree parses back from its printed
 -- tokens with `brennstoff` fuel.
@@ -1316,9 +1316,9 @@ theorem gut_of_gutCmp : ∀ (e : SExpr), gutCmp e = true → gut e = true := by
   · exact gut_of_gutKern e hker
   · cases e with
     | lit m => simp [cmpNeu] at hnew
-    | gleit s => simp [cmpNeu] at hnew
-    | wahr => simp [cmpNeu] at hnew
-    | falsch => simp [cmpNeu] at hnew
+    | float s => simp [cmpNeu] at hnew
+    | tru => simp [cmpNeu] at hnew
+    | fls => simp [cmpNeu] at hnew
     | «variable» s => simp [cmpNeu] at hnew
     | un o x => simp [cmpNeu] at hnew
     | bin o l r =>
@@ -1335,7 +1335,7 @@ theorem gut_of_gutCmp : ∀ (e : SExpr), gutCmp e = true → gut e = true := by
     | eingebaut f xs => simp [cmpNeu] at hnew
     | alt x => simp [cmpNeu] at hnew
     | ergebnis => simp [cmpNeu] at hnew
-    | grund g f => simp [cmpNeu] at hnew
+    | why g f => simp [cmpNeu] at hnew
 
 theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
   intro e hg
@@ -1344,9 +1344,9 @@ theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
   · exact gut_of_gutCmp e hold
   · cases e with
     | lit m => simp [bitNeu] at hnew
-    | gleit s => simp [bitNeu] at hnew
-    | wahr => simp [bitNeu] at hnew
-    | falsch => simp [bitNeu] at hnew
+    | float s => simp [bitNeu] at hnew
+    | tru => simp [bitNeu] at hnew
+    | fls => simp [bitNeu] at hnew
     | «variable» s => simp [bitNeu] at hnew
     | un o x => simp [bitNeu] at hnew
     | bin o l r =>
@@ -1363,7 +1363,7 @@ theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
     | eingebaut f xs => simp [bitNeu] at hnew
     | alt x => simp [bitNeu] at hnew
     | ergebnis => simp [bitNeu] at hnew
-    | grund g f => simp [bitNeu] at hnew
+    | why g f => simp [bitNeu] at hnew
 
 theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
   intro e hg
@@ -1373,9 +1373,9 @@ theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
     · exact gut_of_gutBit e hold2
     · cases e with
       | lit m => simp [addNeu] at hadd
-      | gleit s => simp [addNeu] at hadd
-      | wahr => simp [addNeu] at hadd
-      | falsch => simp [addNeu] at hadd
+      | float s => simp [addNeu] at hadd
+      | tru => simp [addNeu] at hadd
+      | fls => simp [addNeu] at hadd
       | «variable» s => simp [addNeu] at hadd
       | un o x => simp [addNeu] at hadd
       | bin o l r =>
@@ -1392,12 +1392,12 @@ theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
       | eingebaut f xs => simp [addNeu] at hadd
       | alt x => simp [addNeu] at hadd
       | ergebnis => simp [addNeu] at hadd
-      | grund g f => simp [addNeu] at hadd
+      | why g f => simp [addNeu] at hadd
   · cases e with
     | lit m => simp [mulNeu] at hnew
-    | gleit s => simp [mulNeu] at hnew
-    | wahr => simp [mulNeu] at hnew
-    | falsch => simp [mulNeu] at hnew
+    | float s => simp [mulNeu] at hnew
+    | tru => simp [mulNeu] at hnew
+    | fls => simp [mulNeu] at hnew
     | «variable» s => simp [mulNeu] at hnew
     | un o x => simp [mulNeu] at hnew
     | bin o l r =>
@@ -1414,7 +1414,7 @@ theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
     | eingebaut f xs => simp [mulNeu] at hnew
     | alt x => simp [mulNeu] at hnew
     | ergebnis => simp [mulNeu] at hnew
-    | grund g f => simp [mulNeu] at hnew
+    | why g f => simp [mulNeu] at hnew
 
 -- LEVEL CALLS (calls with argument lists).
 --
@@ -1713,9 +1713,9 @@ theorem legsRuf : ∀ (e : SExpr), gutRuf e = true → Legs e := by
   · exact legsAM e hold
   · cases e with
     | lit m => simp [rufNeu] at hnew
-    | gleit s => simp [rufNeu] at hnew
-    | wahr => simp [rufNeu] at hnew
-    | falsch => simp [rufNeu] at hnew
+    | float s => simp [rufNeu] at hnew
+    | tru => simp [rufNeu] at hnew
+    | fls => simp [rufNeu] at hnew
     | «variable» s => simp [rufNeu] at hnew
     | un o x => simp [rufNeu] at hnew
     | bin o l r => simp [rufNeu] at hnew
@@ -1730,7 +1730,7 @@ theorem legsRuf : ∀ (e : SExpr), gutRuf e = true → Legs e := by
     | eingebaut f xs => simp [rufNeu] at hnew
     | alt x => simp [rufNeu] at hnew
     | ergebnis => simp [rufNeu] at hnew
-    | grund g f => simp [rufNeu] at hnew
+    | why g f => simp [rufNeu] at hnew
 
 -- Level-4 goal: every `gutRuf` tree parses back from its
 -- printed tokens with `brennstoff` fuel.
@@ -2106,9 +2106,9 @@ theorem gut_of_gutRuf : ∀ (e : SExpr), gutRuf e = true → gut e = true := by
   · exact gut_of_gutAM e hold
   · cases e with
     | lit m => simp [rufNeu] at hnew
-    | gleit s => simp [rufNeu] at hnew
-    | wahr => simp [rufNeu] at hnew
-    | falsch => simp [rufNeu] at hnew
+    | float s => simp [rufNeu] at hnew
+    | tru => simp [rufNeu] at hnew
+    | fls => simp [rufNeu] at hnew
     | «variable» s => simp [rufNeu] at hnew
     | un o x => simp [rufNeu] at hnew
     | bin o l r => simp [rufNeu] at hnew
@@ -2125,7 +2125,7 @@ theorem gut_of_gutRuf : ∀ (e : SExpr), gutRuf e = true → gut e = true := by
     | eingebaut f xs => simp [rufNeu] at hnew
     | alt x => simp [rufNeu] at hnew
     | ergebnis => simp [rufNeu] at hnew
-    | grund g f => simp [rufNeu] at hnew
+    | why g f => simp [rufNeu] at hnew
 
 -- The three new builtin layers: `sizeof`/`lenof` over kernel
 -- places (minus bare type words), `aligned` over level-4
@@ -2164,9 +2164,9 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
       · exact legsRuf e hold2
       · cases e with
         | lit m => simp [sizeofNeu] at hlen
-        | gleit s => simp [sizeofNeu] at hlen
-        | wahr => simp [sizeofNeu] at hlen
-        | falsch => simp [sizeofNeu] at hlen
+        | float s => simp [sizeofNeu] at hlen
+        | tru => simp [sizeofNeu] at hlen
+        | fls => simp [sizeofNeu] at hlen
         | «variable» s => simp [sizeofNeu] at hlen
         | un o x => simp [sizeofNeu] at hlen
         | bin o l r => simp [sizeofNeu] at hlen
@@ -2191,12 +2191,12 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
             | cons z zs => simp [argsPlatz1] at hargs
         | alt x => simp [sizeofNeu] at hlen
         | ergebnis => simp [sizeofNeu] at hlen
-        | grund g f => simp [sizeofNeu] at hlen
+        | why g f => simp [sizeofNeu] at hlen
     · cases e with
       | lit m => simp [lenofNeu] at hsz
-      | gleit s => simp [lenofNeu] at hsz
-      | wahr => simp [lenofNeu] at hsz
-      | falsch => simp [lenofNeu] at hsz
+      | float s => simp [lenofNeu] at hsz
+      | tru => simp [lenofNeu] at hsz
+      | fls => simp [lenofNeu] at hsz
       | «variable» s => simp [lenofNeu] at hsz
       | un o x => simp [lenofNeu] at hsz
       | bin o l r => simp [lenofNeu] at hsz
@@ -2221,12 +2221,12 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
           | cons z zs => simp [argsPlatz1] at hargs
       | alt x => simp [lenofNeu] at hsz
       | ergebnis => simp [lenofNeu] at hsz
-      | grund g f => simp [lenofNeu] at hsz
+      | why g f => simp [lenofNeu] at hsz
   · cases e with
     | lit m => simp [alignedNeu] at hnew
-    | gleit s => simp [alignedNeu] at hnew
-    | wahr => simp [alignedNeu] at hnew
-    | falsch => simp [alignedNeu] at hnew
+    | float s => simp [alignedNeu] at hnew
+    | tru => simp [alignedNeu] at hnew
+    | fls => simp [alignedNeu] at hnew
     | «variable» s => simp [alignedNeu] at hnew
     | un o x => simp [alignedNeu] at hnew
     | bin o l r => simp [alignedNeu] at hnew
@@ -2254,7 +2254,7 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
           | cons w2 ws => simp [argsRuf2] at hargs
     | alt x => simp [alignedNeu] at hnew
     | ergebnis => simp [alignedNeu] at hnew
-    | grund g f => simp [alignedNeu] at hnew
+    | why g f => simp [alignedNeu] at hnew
 
 -- Bridge for the builtins predicate (via lane 161's shape
 -- equations `gut_sizeof_one`, `gut_lenof_one`,
@@ -2268,9 +2268,9 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
       · exact gut_of_gutRuf e hold2
       · cases e with
         | lit m => simp [sizeofNeu] at hlen
-        | gleit s => simp [sizeofNeu] at hlen
-        | wahr => simp [sizeofNeu] at hlen
-        | falsch => simp [sizeofNeu] at hlen
+        | float s => simp [sizeofNeu] at hlen
+        | tru => simp [sizeofNeu] at hlen
+        | fls => simp [sizeofNeu] at hlen
         | «variable» s => simp [sizeofNeu] at hlen
         | un o x => simp [sizeofNeu] at hlen
         | bin o l r => simp [sizeofNeu] at hlen
@@ -2297,12 +2297,12 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
             | cons z zs => simp [argsPlatz1] at hargs
         | alt x => simp [sizeofNeu] at hlen
         | ergebnis => simp [sizeofNeu] at hlen
-        | grund g f => simp [sizeofNeu] at hlen
+        | why g f => simp [sizeofNeu] at hlen
     · cases e with
       | lit m => simp [lenofNeu] at hsz
-      | gleit s => simp [lenofNeu] at hsz
-      | wahr => simp [lenofNeu] at hsz
-      | falsch => simp [lenofNeu] at hsz
+      | float s => simp [lenofNeu] at hsz
+      | tru => simp [lenofNeu] at hsz
+      | fls => simp [lenofNeu] at hsz
       | «variable» s => simp [lenofNeu] at hsz
       | un o x => simp [lenofNeu] at hsz
       | bin o l r => simp [lenofNeu] at hsz
@@ -2329,12 +2329,12 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
           | cons z zs => simp [argsPlatz1] at hargs
       | alt x => simp [lenofNeu] at hsz
       | ergebnis => simp [lenofNeu] at hsz
-      | grund g f => simp [lenofNeu] at hsz
+      | why g f => simp [lenofNeu] at hsz
   · cases e with
     | lit m => simp [alignedNeu] at hnew
-    | gleit s => simp [alignedNeu] at hnew
-    | wahr => simp [alignedNeu] at hnew
-    | falsch => simp [alignedNeu] at hnew
+    | float s => simp [alignedNeu] at hnew
+    | tru => simp [alignedNeu] at hnew
+    | fls => simp [alignedNeu] at hnew
     | «variable» s => simp [alignedNeu] at hnew
     | un o x => simp [alignedNeu] at hnew
     | bin o l r => simp [alignedNeu] at hnew
@@ -2364,7 +2364,7 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
           | cons w2 ws => simp [argsRuf2] at hargs
     | alt x => simp [alignedNeu] at hnew
     | ergebnis => simp [alignedNeu] at hnew
-    | grund g f => simp [alignedNeu] at hnew
+    | why g f => simp [alignedNeu] at hnew
 
 -- Level-5 goal: every `gutEmb` tree parses back from its
 -- printed tokens with `brennstoff` fuel.

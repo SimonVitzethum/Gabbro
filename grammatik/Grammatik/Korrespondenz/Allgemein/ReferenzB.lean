@@ -167,43 +167,43 @@ theorem refDarfLies : darf refD () (vertragVon refD refLies).ende := by
 /-- Index `0` into the two-slot table, in the `einzahlen` context. -/
 def refIdxEin : Expr refD [.int 0 10] [Res.held (D := refD) ()]
     (.index (refD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- Index `0` in the `lies` body context. -/
 def refIdxLies : Expr refD [] [Res.held (D := refD) ()]
     (.index (refD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The cap value `100` in range. -/
 def refHundert : Expr refD [.int 0 10] [Res.held (D := refD) ()] (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 100)
+  .widen (by decide) (by decide) (.lit 100)
 
 /-- `einzahlen` requires `true`. -/
 def refReqEin : Expr refD (refD.params refEin)
     (Signatur.anfang refD (refD.signatur refEin)) .bool :=
-  .wahr
+  .tru
 
 /-- `einzahlen` ensures the slot did not decrease (`old ≤ new`). -/
 def refEnsEin : Expr refD (ErgCtx (refD.params refEin) (refD.erg refEin))
     (vertragVon refD refEin).ende .bool :=
-  .le (.altSlot () () refIdxEin refDarfEin)
+  .le (.oldS () () refIdxEin refDarfEin)
     (.slot () () refIdxEin refDarfEin)
 
 /-- Index `0` in the `lies` ensures context (result before params). -/
 def refIdxEnsLies :
     Expr refD (ErgCtx (refD.params refLies) (refD.erg refLies))
       (vertragVon refD refLies).ende (.index (refD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- `lies` requires `true`. -/
 def refReqLies : Expr refD (refD.params refLies)
     (Signatur.anfang refD (refD.signatur refLies)) .bool :=
-  .wahr
+  .tru
 
 /-- `lies` ensures `result = konto[0]`. -/
 def refEnsLies : Expr refD (ErgCtx (refD.params refLies) (refD.erg refLies))
     (vertragVon refD refLies).ende .bool :=
-  .eq (.var .hier)
+  .eq (.var .here)
     (.slot () () refIdxEnsLies refDarfLies)
 
 /-! ## 3. Bodies and the program -/
@@ -284,7 +284,7 @@ def refRumpfEin :
   .cons refWriteStAt
     (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
       refHpLiesAt rfl)
-      (.ret .keine (by rfl)))
+      (.ret .empty (by rfl)))
 
 /-- `lies` holds the lock: start equals end. -/
 theorem refLies_start : Signatur.anfang refD (refD.signatur refLies) =
@@ -305,7 +305,7 @@ theorem refDarfBodyLies :
 def refRumpfLies :
     Endblock refD (vertragVon refD refLies) false []
       (Signatur.anfang refD (refD.signatur refLies)) :=
-  .ret (.wert (.slot () () refIdxBodyLies refDarfBodyLies)) (by rfl)
+  .ret (.val (.slot () () refIdxBodyLies refDarfBodyLies)) (by rfl)
 
 /-- The program: `true` requires, ensured non-decrease, write-call-return;
     `false` requires `true`, ensures result equality, slot return.
@@ -453,7 +453,7 @@ def refM2B : RufMaschineD refD :=
         .cons (.call (V := vertragVon refD (refM1B.faeden 1).kopf.f)
           refLies refArgsLies
           (refHpLiesAt) rfl)
-          (.ret .keine (by rfl))⟩⟩,
+          (.ret .empty (by rfl))⟩⟩,
       (((refM1B.weltVon 1).lese [Res.held (D := refD) ()]
         (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
         refK0 () refV100).spur,
@@ -470,7 +470,7 @@ theorem refM1rest :
         .cons (refEin_start ▸ refWriteSt)
           (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
             refHpLiesAt rfl)
-            (.ret .keine (by rfl)))⟩ := rfl
+            (.ret .empty (by rfl)))⟩ := rfl
 
 /-- Step B: thread 1 fires the write `konto[0] := 100`. Every `blatt`
     premise is a named `rfl` fact about the `assignSlot` equation. -/
@@ -480,7 +480,7 @@ theorem refSchrittB : RufSchrittD refP refO 0 refM1B 1 refM2B := by
         .cons refWriteStAt
           (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
             refHpLiesAt rfl)
-            (.ret .keine (by rfl)))⟩ := rfl
+            (.ret .empty (by rfl)))⟩ := rfl
   have hstep : (execStmt refO 0 keinRuf refWriteStAt
       (refM1B.weltVon 1) refRho7).welt =
       some (((refM1B.weltVon 1).lese [Res.held (D := refD) ()]
@@ -538,7 +538,7 @@ theorem refSchrittC : RufSchrittD refP refO 0 refM2B 1 refM3B := by
       ⟨false, [.int 0 10], [Res.held (D := refD) ()],
         .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
           refHpLiesAt rfl)
-          (.ret .keine (by rfl))⟩ := rfl
+          (.ret .empty (by rfl))⟩ := rfl
   have hs0 : refM2B.weltVon 1 =
       (refM2B.weltVon 1).lese [Res.held (D := refD) ()]
         (Args.orte refArgsLies) := rfl
@@ -802,7 +802,7 @@ def refM2F : RufMaschineF refD :=
        ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
         .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
           refHpLiesAt rfl)
-          (.ret .keine (by rfl))⟩⟩,
+          (.ret .empty (by rfl))⟩⟩,
       (((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
         (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
         refK0 () refV100).spur,
@@ -818,7 +818,7 @@ theorem refSchrittBF : RufSchrittF refP refO 0 refM1F 1 refM2F := by
         .cons refWriteStAt
           (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
             refHpLiesAt rfl)
-            (.ret .keine (by rfl)))⟩ := rfl
+            (.ret .empty (by rfl)))⟩ := rfl
   have hstep : (execStmt refO 0 keinRuf refWriteStAt
       (refM1F.weltVon 1) refRho7) =
       Ausgang.ok (D := refD) (V := vertragVon refD refEin)
@@ -873,7 +873,7 @@ theorem refSchrittCF : RufSchrittF refP refO 0 refM2F 1 refM3F := by
       ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
         .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
           refHpLiesAt rfl)
-          (.ret .keine (by rfl))⟩ := rfl
+          (.ret .empty (by rfl))⟩ := rfl
   have hs0 : refM2F.weltVon 1 =
       (refM2F.weltVon 1).lese [Res.held (D := refD) ()]
         (Args.orte refArgsLies) := rfl
@@ -898,7 +898,7 @@ def refCallerFF : RufRahmenF refD :=
    ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
     .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
       refHpLiesAt rfl)
-      (.ret .keine (by rfl))⟩⟩
+      (.ret .empty (by rfl))⟩⟩
 
 /-- The return value: the cap `100` at the `lies` result type. -/
 def refV100back : ErgVal refD (refD.erg refLies) :=
@@ -924,7 +924,7 @@ def MB : RufMaschineF refD :=
 /-- The `lies` return expression: the slot read as a result. -/
 def refRetLies : ErgExpr refD [] (Signatur.anfang refD (refD.signatur refLies))
     (refD.erg refLies) :=
-  .wert (.slot () () refIdxBodyLies refDarfBodyLies)
+  .val (.slot () () refIdxBodyLies refDarfBodyLies)
 
 /-- The return reads the table (one carrier). -/
 theorem refRetLies_orte : ErgExpr.orte refRetLies = [Sum.inl (())] := rfl

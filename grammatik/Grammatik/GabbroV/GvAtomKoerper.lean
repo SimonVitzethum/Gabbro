@@ -389,7 +389,7 @@ def hZweigEins : Block nD (vertragVon nD NFn.zaehlB) false [] [] [] :=
 open AtomarXZeuge in
 /-- The tail: return with no value. -/
 def hSchwanzLeer : Endblock nD (vertragVon nD NFn.zaehlB) false [] [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 open AtomarXZeuge in
 /-- The `hP` body with BOTH branches writing `1`: the test outcome no
@@ -457,7 +457,7 @@ theorem hBeide_pin2 (s₁ s₂ : Speicher nD) (w : World nD) :
   unfold pinA
   rw [if_neg (by decide), if_pos rfl]
 
-/-- Any other read (here: the empty one of `.keine`) is untouched. -/
+/-- Any other read (here: the empty one of `.empty`) is untouched. -/
 theorem hBeide_pin0 (s₁ s₂ : Speicher nD) (w : World nD) :
     pinA (GeteiltA hPBeide [NFn.kern, NFn.zaehlB]) [.inr NGlob.konfig]
       [.inr NGlob.konfig, .inl NTab.tabB] s₁ s₂ [] w = w := by
@@ -521,7 +521,7 @@ theorem hBeide_idx0 {Γ : Ctx} (w : World nD) (ρ : Env nD Γ) :
 /-- Any closed `0` index reads `0` (unfolded form, schematic proofs). -/
 theorem hBeide_idx0w {Γ : Ctx} (w : World nD) (ρ : Env nD Γ)
     (h1 : (0 : Int) ≤ 0) (h2 : (0 : Int) ≤ 0) :
-    (eval w (Expr.weiter h1 h2 (Expr.lit 0 : Expr nD Γ [] (.int 0 0))) w ρ).n
+    (eval w (Expr.widen h1 h2 (Expr.lit 0 : Expr nD Γ [] (.int 0 0))) w ρ).n
       = 0 := by
   rfl
 
@@ -611,7 +611,7 @@ theorem tabBNach_zurueck {V : Vertrag nD} {l : Bool} {Γ : Ctx}
     (o : EndAusgang V l Γ) (h : tabBNach o = 1) : ∃ σ' v, o = .zurueck σ' v := by
   cases o with
   | zurueck σ' v => exact ⟨σ', v, rfl⟩
-  | grund σ' r => simp only [tabBNach] at h; omega
+  | why σ' r => simp only [tabBNach] at h; omega
   | leave h σ' ρ' => simp only [tabBNach] at h; omega
   | next h σ' ρ' => simp only [tabBNach] at h; omega
   | logik e => simp only [tabBNach] at h; omega

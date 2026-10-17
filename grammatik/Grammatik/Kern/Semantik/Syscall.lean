@@ -95,7 +95,7 @@ theorem schreibAbi_gut : schreibAbi.gut := by decide
     the contract (PLAN-SYSCALL.md §1). -/
 inductive SysAntwort (A : Type) (Grund : Type) where
   | ok : A → SysAntwort A Grund
-  | grund : Grund → SysAntwort A Grund
+  | why : Grund → SysAntwort A Grund
   | unerwartet : Int → SysAntwort A Grund
   deriving DecidableEq, Repr
 
@@ -119,7 +119,7 @@ def dekodiere {Grund : Type} [DecidableEq Grund]
   if _ : roh < 0 then
     if _ : 1 ≤ -roh ∧ -roh ≤ 4095 then
       match fehlerSuche tab (-roh).toNat with
-      | some r => .grund r
+      | some r => .why r
       | none => .unerwartet roh
     else .unerwartet roh
   else if h : lo ≤ roh ∧ roh ≤ hi then .ok ⟨roh, h⟩
@@ -197,7 +197,7 @@ theorem dekodiere_ok {Grund : Type} [DecidableEq Grund]
     Forward reads the lookup hit off the equation; backward writes it. -/
 theorem dekodiere_grund {Grund : Type} [DecidableEq Grund]
     (tab : FehlerTabelle Grund) (lo hi roh : Int) (r : Grund) :
-    dekodiere tab lo hi roh = .grund r ↔
+    dekodiere tab lo hi roh = .why r ↔
       (∃ e : Nat, -4095 ≤ roh ∧ roh ≤ -1 ∧ (-roh).toNat = e ∧
         ersterEintrag tab e r) := by
   constructor
@@ -210,7 +210,7 @@ theorem dekodiere_grund {Grund : Type} [DecidableEq Grund]
         cases he : fehlerSuche tab (-roh).toNat with
         | some s =>
           rw [he] at hcon
-          simp only [SysAntwort.grund.injEq] at hcon
+          simp only [SysAntwort.why.injEq] at hcon
           obtain rfl := hcon
           refine ⟨(-roh).toNat, by omega, by omega, rfl, ?_⟩
           exact erster_of_fehlerSuche tab _ _ he
@@ -247,7 +247,7 @@ theorem dekodiere_unerwartet {Grund : Type} [DecidableEq Grund]
       obtain ⟨v, hv⟩ := hcon2
       rw [hcon] at hv
       cases hv
-    have hgr : ¬ ∃ r : Grund, dekodiere tab lo hi roh = .grund r := by
+    have hgr : ¬ ∃ r : Grund, dekodiere tab lo hi roh = .why r := by
       intro hcon2
       obtain ⟨r, hr⟩ := hcon2
       rw [hcon] at hr
@@ -325,7 +325,7 @@ theorem dekodiere_total {Grund : Type} [DecidableEq Grund]
     (∃ v : { x : Int // lo ≤ x ∧ x ≤ hi },
       dekodiere tab lo hi roh = .ok v ∧ (v : Int) = roh ∧
       0 ≤ roh ∧ lo ≤ roh ∧ roh ≤ hi) ∨
-    (∃ r : Grund, dekodiere tab lo hi roh = .grund r ∧
+    (∃ r : Grund, dekodiere tab lo hi roh = .why r ∧
       ∃ e : Nat, -4095 ≤ roh ∧ roh ≤ -1 ∧ (-roh).toNat = e ∧
         ersterEintrag tab e r) ∨
     (∃ u : Int, dekodiere tab lo hi roh = .unerwartet u ∧ u = roh ∧
@@ -386,7 +386,7 @@ theorem dekodiere_tabelle {Grund : Type} [DecidableEq Grund]
     (e : Nat) (r : Grund)
     (hfirst : ersterEintrag tab e r)
     (hbereich : 1 ≤ (e : Int) ∧ (e : Int) ≤ 4095) :
-    dekodiere tab lo hi (-(e : Int)) = .grund r :=
+    dekodiere tab lo hi (-(e : Int)) = .why r :=
   (dekodiere_grund tab lo hi _ r).mpr
     ⟨e, by omega, by omega, by omega, hfirst⟩
 
@@ -404,7 +404,7 @@ theorem dekodiere_ok_bereich {Grund : Type} [DecidableEq Grund]
     split (empty prefix, so freshness is vacuous) and `9 ∈ 1 .. 4095`,
     both by computation. -/
 theorem dekodiere_tabelle_zeuge :
-    dekodiere schreibFehler 0 8192 (-(9 : Int)) = .grund IoFehler.badFd :=
+    dekodiere schreibFehler 0 8192 (-(9 : Int)) = .why IoFehler.badFd :=
   dekodiere_tabelle schreibFehler 0 8192 9 IoFehler.badFd
     ⟨[], [(4, .interrupted), (11, .wouldBlock)], rfl, by decide⟩
     (by decide)
@@ -417,7 +417,7 @@ theorem dekodiere_total_ok_zeuge :
 
 /-- Totality witness, reason leg: -4 decodes to `interrupted`. -/
 theorem dekodiere_total_grund_zeuge :
-    dekodiere schreibFehler 0 10 (-4) = .grund IoFehler.interrupted := by
+    dekodiere schreibFehler 0 10 (-4) = .why IoFehler.interrupted := by
   decide
 
 /-- Totality witness, unexpected leg: -22 (unlisted errno) decodes to

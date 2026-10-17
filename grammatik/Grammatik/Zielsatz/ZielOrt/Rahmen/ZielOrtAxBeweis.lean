@@ -188,7 +188,7 @@ theorem popA_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D}
     (hW : WarteA P O passes Q F G) (s1 : World D) (mk : World D → RufAusgang G.1)
     (hmk : (∃ v, (∀ σa, mk σa = .ok σa v) ∧ EnsAmRueck P G.1 G.2.2 s1 G.2.1 v) ∨
-      (∃ r, ∀ σa, mk σa = .grund σa r))
+      (∃ r, ∀ σa, mk σa = .why σa r))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ' : Env D Γ) (r' : GRest D (vertragVon D F.f) l Γ Λ)
     (hok' : F.rest.2.2.2.2.okV P (fussOrte P F.f) → r'.okV P (fussOrte P F.f))
     (hwahl : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)

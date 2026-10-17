@@ -205,20 +205,20 @@ theorem axDarf : darf axD () axL := by
   exact List.mem_singleton.mpr rfl
 
 def axIdx {Γ : Ctx} {Λ : List (Res axD)} : Expr axD Γ Λ (.index (axD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 def axNullE {Γ : Ctx} {Λ : List (Res axD)} : Expr axD Γ Λ (.int 0 3) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- `let r = inc(); return r` -/
 def axIncBlock : Block axD (vertragVon axD axZaehle) false [] axL axL :=
   .bindAxiom axInc .nil rfl (fun _ _ => rfl) (fun e => nomatch e) (fun _ _ => axDarf)
-    (fun e => nomatch e) (.cons (.ret (.wert (.var .hier)) (List.Perm.refl _)) .nil)
+    (fun e => nomatch e) (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil)
 
-def axIte : Stmt axD (vertragVon axD axZaehle) false [] axL axL := .ite .wahr axIncBlock .nil
+def axIte : Stmt axD (vertragVon axD axZaehle) false [] axL axL := .ite .tru axIncBlock .nil
 
 def axRetNull : Endblock axD (vertragVon axD axZaehle) false [] axL :=
-  .ret (.wert axNullE) (List.Perm.refl _)
+  .ret (.val axNullE) (List.Perm.refl _)
 
 /-- `zaehle`: `if true { let r = inc(); return r }; return 0`. -/
 def axRumpfZaehle : Endblock axD (vertragVon axD axZaehle) false [] axL := .cons axIte axRetNull
@@ -238,28 +238,28 @@ theorem axHpZaehle : RufPasst axD (vertragVon axD axHaupt) (axD.signatur axZaehl
 def axRufZaehle : Stmt axD (vertragVon axD axHaupt) false [] axL (nach axD axZaehle axL) :=
   .call axZaehle .nil axHpZaehle rfl
 
-def axRetH : Endblock axD (vertragVon axD axHaupt) false [] axL := .ret .keine (List.Perm.refl _)
+def axRetH : Endblock axD (vertragVon axD axHaupt) false [] axL := .ret .empty (List.Perm.refl _)
 
 /-- `haupt`: `zaehle(); return`. -/
 def axRumpfHaupt : Endblock axD (vertragVon axD axHaupt) false [] axL := .cons axRufZaehle axRetH
 
-def axRumpfRuhe : Endblock axD (vertragVon axD axRuhe) false [] [] := .ret .keine List.Perm.nil
+def axRumpfRuhe : Endblock axD (vertragVon axD axRuhe) false [] [] := .ret .empty List.Perm.nil
 
 /-- An `ensures` for `zaehle`: over its result (bound first) and the slot. -/
 abbrev AxEnsZ := Expr axD (ErgCtx (axD.params axZaehle) (axD.erg axZaehle))
   (vertragVon axD axZaehle).ende .bool
 
 /-- `result == tab[0]`: `inc` returns the new value of the slot it writes. -/
-def axEnsInc : AxEnsZ := .eq (.var .hier) (.slot () () axIdx axDarf)
+def axEnsInc : AxEnsZ := .eq (.var .here) (.slot () () axIdx axDarf)
 
 /-- The program with `zaehle`'s `ensures` given by `E`. -/
 def axPE (E : AxEnsZ) : Programm axD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
-    | .haupt => .wahr
+    | .haupt => .tru
     | .zaehle => E
-    | .ruhe => .wahr
+    | .ruhe => .tru
   rumpf
     | .haupt => axRumpfHaupt
     | .zaehle => axRumpfZaehle

@@ -140,13 +140,13 @@ theorem kGdarfW : gdarf kD QGlob.z kLW := by
 
 /-- `0 : u32`, the constant `setze_null` writes. -/
 def kNull {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- `setze_null()`: `locks WACHE { z = 0; }` -- exactly the source body. -/
 def kRumpfSetzeNull : Endblock kD (vertragVon kD kSetzeNull) false [] [] :=
   .cons (.locks QLock.w (fun _ h => nomatch h)
     (.cons (.assignGlob QGlob.z kNull rfl kGdarfW) .nil))
-    (.ret .keine List.Perm.nil)
+    (.ret .empty List.Perm.nil)
 
 /-- `lese_schreibe`, value-faithful: `let r = 0; locks WACHE { let v = z;
     z = v; r = z; } return r;` -- the source's `return z` inside the lock
@@ -156,16 +156,16 @@ def kRumpfLese : Endblock kD (vertragVon kD kLese) false [] [] :=
   .bind kNull
     (.cons (.locks QLock.w (fun _ h => nomatch h)
       (.bind (.glob QGlob.z kGdarfW)
-        (.cons (.assignGlob QGlob.z (.var .hier) rfl kGdarfW)
-          (.cons (.assignVar (.dort .hier) (.glob QGlob.z kGdarfW)) .nil))))
-      (.ret (.wert (.var .hier)) List.Perm.nil))
+        (.cons (.assignGlob QGlob.z (.var .here) rfl kGdarfW)
+          (.cons (.assignVar (.there .here) (.glob QGlob.z kGdarfW)) .nil))))
+      (.ret (.val (.var .here)) List.Perm.nil))
 
 /-- **The program of `beispiele/125`** (value-faithful `lese_schreibe`);
     trivial contracts (the source declares no `requires`/`ensures`). -/
 def kP : Programm kD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .lese => kRumpfLese
     | .setzeNull => kRumpfSetzeNull
@@ -239,7 +239,7 @@ def offen125 : String :=
 
 /-! ## 4. The user obligations -/
 
-/-- Every `requires` is `.wahr`, at every function, world and environment. -/
+/-- Every `requires` is `.tru`, at every function, world and environment. -/
 theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
     ReqAmEintritt kP f W ρ := rfl
 

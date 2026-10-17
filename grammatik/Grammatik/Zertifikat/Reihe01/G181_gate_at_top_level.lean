@@ -157,19 +157,19 @@ abbrev gL_merke_in_Schutz : List (Res gD) := [Res.held (D := gD) GLock.Schutz]
 theorem gDarf_merke_in_Schutz_Protokoll : darf gD GTab.Protokoll gL_merke_in_Schutz := by unfold darf; decide
 
 def gBody_merke : Endblock gD (vertragVon gD g_merke) false gCtx_merke gL_merke :=
-  (.bindAxiom GAx.getpid .nil rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.cons (.locks GLock.Schutz (fun M => by cases M <;> decide) (.cons (.assignSlot GTab.Protokoll GProtokollFeld.pid ((.var (.dort .hier))) ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD ((.int 1 4194304) :: gCtx_merke) gL_merke_in_Schutz (.int 0 4194304)) (by decide) gDarf_merke_in_Schutz_Protokoll) .nil)) (.ret .keine (List.Perm.refl _))))
+  (.bindAxiom GAx.getpid .nil rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.cons (.locks GLock.Schutz (fun M => by cases M <;> decide) (.cons (.assignSlot GTab.Protokoll GProtokollFeld.pid ((.var (.there .here))) ((.widen (by decide) (by decide) (.var .here)) : Expr gD ((.int 1 4194304) :: gCtx_merke) gL_merke_in_Schutz (.int 0 4194304)) (by decide) gDarf_merke_in_Schutz_Protokoll) .nil)) (.ret .empty (List.Perm.refl _))))
 
 def gBody_ende : Endblock gD (vertragVon gD g_ende) false gCtx_ende gL_ende :=
-  (.bindAxiom GAx.exit_group (.cons ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_ende gL_ende (.int 1 1))) : Expr gD gCtx_ende gL_ende (.int 0 18446744073709551615)) .nil) rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.ret .keine (List.Perm.refl _)))
+  (.bindAxiom GAx.exit_group (.cons ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_ende gL_ende (.int 1 1))) : Expr gD gCtx_ende gL_ende (.int 0 18446744073709551615)) .nil) rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .merke => .wahr
-    | .ende => .wahr
+    | .merke => .tru
+    | .ende => .tru
   ensures
-    | .merke => .wahr
-    | .ende => .wahr
+    | .merke => .tru
+    | .ende => .tru
   rumpf
     | .merke => gBody_merke
     | .ende => gBody_ende

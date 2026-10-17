@@ -115,14 +115,14 @@ abbrev gL_liest_ohne_klausel : List (Res gD) := []
 theorem gGDarf_liest_ohne_klausel_g : gdarf gD GGlob.g gL_liest_ohne_klausel := by unfold gdarf; decide
 
 def gBody_liest_ohne_klausel : Endblock gD (vertragVon gD g_liest_ohne_klausel) false gCtx_liest_ohne_klausel gL_liest_ohne_klausel :=
-  (.ret (.wert (Expr.glob (D := gD) GGlob.g gGDarf_liest_ohne_klausel_g)) (List.Perm.refl _))
+  (.ret (.val (Expr.glob (D := gD) GGlob.g gGDarf_liest_ohne_klausel_g)) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .liest_ohne_klausel => .wahr
+    | .liest_ohne_klausel => .tru
   ensures
-    | .liest_ohne_klausel => .wahr
+    | .liest_ohne_klausel => .tru
   rumpf
     | .liest_ohne_klausel => gBody_liest_ohne_klausel
 

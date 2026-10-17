@@ -25,7 +25,7 @@ variable {S : D.Tab ⊕ D.Glob → Bool} {Ax : D.Ax → Bool}
 theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), nB S Ax e.alsBlock.2 = nE S Ax e
   | _, _, .ret _ _ => by simp [Endblock.alsBlock, nB, nS, nE]
-  | _, _, .retGrund _ _ => by simp [Endblock.alsBlock, nB, nS, nE]
+  | _, _, .retWhy _ _ => by simp [Endblock.alsBlock, nB, nS, nE]
   | _, _, .leave _ => by simp [Endblock.alsBlock, nB, nS, nE]
   | _, _, .next _ => by simp [Endblock.alsBlock, nB, nS, nE]
   | _, _, .cons s rest => by
@@ -247,7 +247,7 @@ theorem kAusDann_ok {l : Bool} {Γ : Ctx} {Λ' Λ'' : List (Res D)}
       try simp only [kAusDann]
       exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hr, hk⟩ | (simp only [GRest.nR]; exact ⟨hr, hk⟩)) _ _
   | zurueck σ v => exact kPop_ok hst f σ v
-  | grund σ r => exact kPopGrund_ok hst f _ _ r
+  | why σ r => exact kPopGrund_ok hst f _ _ r
   | leave h σ' ρ' => exact kLeave_ok P hst f rho k hk h σ' ρ'
   | next h σ' ρ' => exact kNext_ok P hst f rho k hk h σ' ρ'
   | logik _ => exact KErgOk.none
@@ -261,7 +261,7 @@ theorem kAusEnde_ok {l : Bool} {Γ : Ctx} {Λ' : List (Res D)}
       try simp only [kAusEnde]
       exact KErgOk.lokal hst _ _ _ (by first | exact hr | (simp only [GRest.nR]; exact hr)) _ _
   | zurueck σ v => exact kPop_ok hst f σ v
-  | grund σ r => exact kPopGrund_ok hst f _ _ r
+  | why σ r => exact kPopGrund_ok hst f _ _ r
   | _ => exact KErgOk.none
 
 theorem kRufEnde_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
@@ -319,7 +319,7 @@ theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D 
           (congrArg (fun x => nB S Ax x.2.1) heq).symm.trans (nB_armWahlG arms _ hs.2)
         try simp only [kEntf]
         exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hb, hr, hk⟩ | (simp only [GRest.nR]; exact ⟨hb, hr, hk⟩)) _ _
-  | onGrund r arms =>
+  | onWhy r arms =>
       simp only [nS, Bool.and_eq_true] at hs
       try simp only [kEntf]
       exact KErgOk.lokal hst _ _ _ (by first | exact ⟨nB_grundWahlG arms _ hs.2, hr, hk⟩ | (simp only [GRest.nR]; exact ⟨nB_grundWahlG arms _ hs.2, hr, hk⟩)) _ _
@@ -388,7 +388,7 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       · exact KErgOk.lokal hst _ _ _ (by first | exact he.1.2 | (simp only [GRest.nR]; exact he.1.2)) _ _
       · exact KErgOk.none
   | ret e _ => exact kPop_ok hst f _ _
-  | retGrund r _ => exact kPopGrund_ok hst f _ _ r
+  | retWhy r _ => exact kPopGrund_ok hst f _ _ r
   | leave _ => exact KErgOk.none
   | next _ => exact KErgOk.none
 
@@ -436,13 +436,13 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
           | exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩
           | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩)) _ _
       · exact KErgOk.none
-  | regLies r hk' rest =>
+  | regRead r hk' rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       split
       · exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _) (fun _ => KErgOk.none)
       · exact KErgOk.none
-  | regLiesElse r hk' zusage sonst rest =>
+  | regReadElse r hk' zusage sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       split
@@ -462,30 +462,30 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
       try simp only [kDann]
       exact KErgOk.dite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _)
         (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩)) _ _)
-  | pruefung c sonst rest =>
+  | check c sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _)
         (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩)) _ _)
-  | gleit op a b lo hi rest =>
+  | float op a b lo hi rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       split
       · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _
       · exact KErgOk.none
-  | gleitLit q lo hi rest =>
+  | floatLit q lo hi rest =>
       simp only [nB] at hb
       try simp only [kDann]
       split
       · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hb, hk⟩ | (simp only [GRest.nR]; exact ⟨hb, hk⟩)) _ _
       · exact KErgOk.none
-  | gleitVon e lo hi rest =>
+  | floatOf e lo hi rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       split
       · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _
       · exact KErgOk.none
-  | gleitNarrow e lo hi sonst rest =>
+  | floatNarrow e lo hi sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       split

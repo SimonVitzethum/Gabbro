@@ -83,7 +83,7 @@ theorem koerperGutSA_mitRuhe (h : KoerperGutSA P passes Q S T f) :
             simp only [endR] at e
             cases e
             exact (ens_mitRuhe_iff P f σ0 σa ρ0 va).mpr (hk.1 σa va hy)
-        | grund => rw [hy] at e; cases e
+        | why => rw [hy] at e; cases e
         | leave => rw [hy] at e; cases e
         | next => rw [hy] at e; cases e
         | logik => rw [hy] at e; cases e
@@ -100,7 +100,7 @@ theorem koerperGutSA_mitRuhe (h : KoerperGutSA P passes Q S T f) :
             | vorbedingung g0 => exact hk.2 g0 hy
             | _ => simp only [logikR] at e; cases e
         | zurueck => rw [hy] at e; cases e
-        | grund => rw [hy] at e; cases e
+        | why => rw [hy] at e; cases e
         | leave => rw [hy] at e; cases e
         | next => rw [hy] at e; cases e
         | hardware => rw [hy] at e; cases e
@@ -125,7 +125,7 @@ theorem koerperGutSA_mitRuhe (h : KoerperGutSA P passes Q S T f) :
           (rufZuD R') (P.rumpf f) σ0 ρ0 with
       | logik e0 => exact hk e0 hy
       | zurueck => rw [hy] at e; cases e
-      | grund => rw [hy] at e; cases e
+      | why => rw [hy] at e; cases e
       | leave => rw [hy] at e; cases e
       | next => rw [hy] at e; cases e
       | hardware => rw [hy] at e; cases e
@@ -151,7 +151,7 @@ theorem invGutSA_mitRuhe (h : InvGutSA P passes Q S T f) :
         simp only [endR] at e
         cases e
         exact (invAmRueck_mitRuhe P f σa).mpr (hk σa va hy)
-    | grund => rw [hy] at e; cases e
+    | why => rw [hy] at e; cases e
     | leave => rw [hy] at e; cases e
     | next => rw [hy] at e; cases e
     | logik => rw [hy] at e; cases e
@@ -173,7 +173,7 @@ theorem invGutGrundA_mitRuhe (h : InvGutGrundA P passes Q S T f) :
   · have e := hx.symm.trans e
     cases hy : execEndHA (V := vertragVon D f) S (Orakel.zurueck O') (umweltZ U') (umweltZA A') passes
         (rufZuD R') (P.rumpf f) σ0 ρ0 with
-    | grund σa ra =>
+    | why σa ra =>
         rw [hy] at e
         simp only [endR] at e
         cases e

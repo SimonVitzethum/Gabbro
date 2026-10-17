@@ -130,17 +130,17 @@ theorem stOkBl_stmtR (GT : GerTafel D) (hein : GT.ein = false) : ∀ (n : Nat),
                   exact BlockR.bind e rest (ih.2 _ rest rs' hrs h.2)
               | _ => exact absurd h (by simp [blOk])
           -- THE DEVICE READS are outside THIS bridge: `BlockR` HAS both
-          -- (`BlockR.regLies`, `.regLiesElse`), but `regLiesElse` is stated
+          -- (`BlockR.regRead`, `.regReadElse`), but `regLiesElse` is stated
           -- at `l = false` only, and this induction runs at every `l`. So
           -- the adequacy bridge is claimed for a certificate that names NO
           -- device (`GT.ein = false`), and the device case is OPEN by name.
           | loadReg y τc cp w =>
               cases b with
-              | regLies rg hkl rest => exact absurd h (by simp [blOk, hein])
+              | regRead rg hkl rest => exact absurd h (by simp [blOk, hein])
               | _ => exact absurd h (by simp [blOk])
           | loadRegElse y τc cp w cc crr =>
               cases b with
-              | regLiesElse rg hkl zusage sonst rest => exact absurd h (by simp [blOk, hein])
+              | regReadElse rg hkl zusage sonst rest => exact absurd h (by simp [blOk, hein])
               | _ => exact absurd h (by simp [blOk])
           | call fc cargs dst =>
               cases dst with

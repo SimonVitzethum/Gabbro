@@ -27,17 +27,17 @@ namespace Gabbro.Grammatik
 
 /-- De Bruijn index of a variable: the position `CertExpr.var` names. -/
 def varIdx : Var Γ τ → Nat
-  | .hier => 0
-  | .dort x => varIdx x + 1
+  | .here => 0
+  | .there x => varIdx x + 1
 
 /-- Rebuild a variable from its index: the computational inverse of
     `varIdx` at ANY type. Bounds are READ from the context, never trusted
     from a print (mirror of `ctxTyp_var`, but returning the witness). -/
 def varOfAll : (Γ : Ctx) → (k : Nat) → Option (Σ τ, Var Γ τ)
-  | τ :: _, 0 => some ⟨τ, .hier⟩
+  | τ :: _, 0 => some ⟨τ, .here⟩
   | _ :: Γ, k + 1 =>
     match varOfAll Γ k with
-    | some ⟨τ, x⟩ => some ⟨τ, .dort x⟩
+    | some ⟨τ, x⟩ => some ⟨τ, .there x⟩
     | none => none
   | [], _ => none
 
@@ -52,8 +52,8 @@ def varOf (Γ : Ctx) (k : Nat) : Option (Σ lo hi : Int, Var Γ (.int lo hi)) :=
 theorem varOfAll_varIdx {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
     varOfAll Γ (varIdx x) = some ⟨τ, x⟩ := by
   induction x with
-  | hier => rfl
-  | dort x ih => simp [varIdx, varOfAll, ih]
+  | here => rfl
+  | there x ih => simp [varIdx, varOfAll, ih]
 
 /-- Roundtrip at int type, behind the projection. -/
 theorem varOf_varIdx {Γ : Ctx} {lo hi : Int} (x : Var Γ (.int lo hi)) :
@@ -105,7 +105,7 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .var x => some (.var (varIdx x))
   | .glob g _ => some (.glob g)
   | .slot t f i _ => (printInt i).map (CertExpr.slot t f)
-  | .weiter _ _ e =>
+  | .widen _ _ e =>
     match τ with
     | .int lo' hi' => (printInt e).map (CertExpr.wide lo' hi')
     | _ => none
@@ -130,27 +130,27 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   -- reads through pointers or post-entry values, byte reads, and every
   -- non-`int` constructor. One arm each, so every arm owns an equation
   -- lemma the roundtrip proof rewrites with.
-  | .wahr => none
-  | .falsch => none
-  | .durch _ _ _ _ _ _ => none
+  | .tru => none
+  | .fls => none
+  | .thru _ _ _ _ _ _ => none
   | .ptrOf _ _ _ _ => none
   | .fnref _ _ _ => none
-  | .altGlob _ _ => none
-  | .altSlot _ _ _ _ => none
-  | .leseBytes _ _ _ _ _ _ _ _ => none
+  | .oldG _ _ => none
+  | .oldS _ _ _ _ => none
+  | .getBytes _ _ _ _ _ _ _ _ => none
   | .lt _ _ => none
   | .le _ _ => none
   | .eq _ _ => none
   | .fllt _ _ => none
   | .flle _ _ => none
-  | .und _ _ => none
-  | .oder _ _ => none
-  | .nicht _ => none
+  | .and _ _ => none
+  | .or _ _ => none
+  | .not _ => none
   | .none _ => none
   | .some _ => none
   | .istSome _ => none
-  | .fall _ _ _ => none
-  | .grund _ _ => none
+  | .case _ _ _ => none
+  | .why _ _ => none
   | .forallSlots _ _ _ => none
   | .existsSlots _ _ _ => none
   | .reaches _ _ _ _ _ _ => none
@@ -237,7 +237,7 @@ def elabInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
   | .wide lo' hi' a =>
     match elabInt a with
     | some ⟨.int l1 h1, ea⟩ =>
-      if h : lo' ≤ l1 ∧ h1 ≤ hi' then some ⟨_, .weiter h.1 h.2 ea⟩ else none
+      if h : lo' ≤ l1 ∧ h1 ≤ hi' then some ⟨_, .widen h.1 h.2 ea⟩ else none
     | _ => none
   | .var k =>
     match varOfAll Γ k with
@@ -277,7 +277,7 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
     | some ci =>
       have ihi' : elabInt ci = some ⟨_, i⟩ := by rw [hi] at ihi; exact ihi
       simp [printInt, hi, elabInt, ihi', hL]
-  | .weiter h1 h2 e => by
+  | .widen h1 h2 e => by
     have ihe := print_elab_all e
     cases he : printInt e with
     | none => simp [printInt, he]
@@ -435,27 +435,27 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
         simp [printInt, ha, hb, elabInt, iha', ihb', hw1, hw2, h0, h0']
-  | .wahr => by simp [printInt]
-  | .falsch => by simp [printInt]
-  | .durch _ _ _ _ _ _ => by simp [printInt]
+  | .tru => by simp [printInt]
+  | .fls => by simp [printInt]
+  | .thru _ _ _ _ _ _ => by simp [printInt]
   | .ptrOf _ _ _ _ => by simp [printInt]
   | .fnref _ _ _ => by simp [printInt]
-  | .altGlob _ _ => by simp [printInt]
-  | .altSlot _ _ _ _ => by simp [printInt]
-  | .leseBytes _ _ _ _ _ _ _ _ => by simp [printInt]
+  | .oldG _ _ => by simp [printInt]
+  | .oldS _ _ _ _ => by simp [printInt]
+  | .getBytes _ _ _ _ _ _ _ _ => by simp [printInt]
   | .lt _ _ => by simp [printInt]
   | .le _ _ => by simp [printInt]
   | .eq _ _ => by simp [printInt]
   | .fllt _ _ => by simp [printInt]
   | .flle _ _ => by simp [printInt]
-  | .und _ _ => by simp [printInt]
-  | .oder _ _ => by simp [printInt]
-  | .nicht _ => by simp [printInt]
+  | .and _ _ => by simp [printInt]
+  | .or _ _ => by simp [printInt]
+  | .not _ => by simp [printInt]
   | .none _ => by simp [printInt]
   | .some _ => by simp [printInt]
   | .istSome _ => by simp [printInt]
-  | .fall _ _ _ => by simp [printInt]
-  | .grund _ _ => by simp [printInt]
+  | .case _ _ _ => by simp [printInt]
+  | .why _ _ => by simp [printInt]
   | .forallSlots _ _ _ => by simp [printInt]
   | .existsSlots _ _ _ => by simp [printInt]
   | .reaches _ _ _ _ _ _ => by simp [printInt]
@@ -532,9 +532,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
             show certRange D Γ Λ (.add a b) = some (l1 + l2, h1 + h2)
             simp [certRange, ra, rb]
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | sub a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -556,9 +556,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
             show certRange D Γ Λ (.sub a b) = some (l1 - h2, h1 - l2)
             simp [certRange, ra, rb]
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | neg a iha =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -572,7 +572,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         have ra : certRange D Γ Λ a = some (l, hh) := iha ha1
         show certRange D Γ Λ (.neg a) = some (-hh, -l)
         simp [certRange, ra]
-      | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+      | bool | opt | sum | why | never | fl | fnptr | ptr =>
         simp [elabInt, ha1] at h
   | mul a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -596,9 +596,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               some (imin (imin (l1 * l2) (l1 * h2)) (imin (h1 * l2) (h1 * h2)),
                 imax (imax (l1 * l2) (l1 * h2)) (imax (h1 * l2) (h1 * h2)))
             simp [certRange, ra, rb]
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | div a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -624,9 +624,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | rem a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -652,9 +652,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | sdiv a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -681,9 +681,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | srem a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -710,9 +710,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | band a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -738,9 +738,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | bor w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -766,9 +766,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | bxor w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -794,9 +794,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | shl w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -822,9 +822,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | shr w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -850,9 +850,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp [certRange, ra, rb, hc]
             · simp only [dif_neg hc] at h
               simp at h
-          | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr =>
             simp [elabInt, ha1, hb1] at h
-        | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr =>
           simp [elabInt, ha1, hb1] at h
   | wide lo' hi' a iha =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -871,7 +871,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp [certRange, ra, hc]
         · simp only [dif_neg hc] at h
           simp at h
-      | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+      | bool | opt | sum | why | never | fl | fnptr | ptr =>
         simp [elabInt, ha1] at h
   | slot t f i ihi =>
     cases hi1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) i with
@@ -890,7 +890,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp [certRange, ri, hg, hL, intVonTyp]
         · simp only [dif_neg hc] at h
           simp at h
-      | bool | opt | sum | grund | never | fl | fnptr | ptr =>
+      | bool | opt | sum | why | never | fl | fnptr | ptr =>
         simp [elabInt, hi1] at h
 
 /-- Witness for `print_elab_all` (rule 13): joint instantiation on the

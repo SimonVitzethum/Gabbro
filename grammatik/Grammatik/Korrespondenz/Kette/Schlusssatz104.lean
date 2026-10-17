@@ -204,11 +204,11 @@ def kLiesG : CEnvLay G104_referenz.gD (G104_referenz.gD.params g_lies) := kOfG [
     `k` is C local 0 (Gabbro variable 0), `i` C local 1 (variable 1). -/
 theorem liesG_end (m : Nat) : EndCorr xLiesG m true kLiesG (G104_referenz.gP.rumpf g_lies) cLiesBody := by
   have hi : ExprCorr xLiesG kLiesG (.var 1)
-      (Expr.var (D := G104_referenz.gD) (Γ := gCtx_lies) (Λ := gL_lies) (.dort .hier)) :=
-    ecorr_var xLiesG kLiesG (.dort .hier)
+      (Expr.var (D := G104_referenz.gD) (Γ := gCtx_lies) (Λ := gL_lies) (.there .here)) :=
+    ecorr_var xLiesG kLiesG (.there .here)
   have hp : PtrTo xLiesG kLiesG (.var 0) GTab.Konto :=
-    ptrTo_var xLiesG kLiesG (Γ := gCtx_lies) (.hier) rfl
-  have he := ecorr_durch xLiesG kLiesG (Λ := gL_lies) (rw := false) (p := Expr.var .hier)
+    ptrTo_var xLiesG kLiesG (Γ := gCtx_lies) (.here) rfl
+  have he := ecorr_durch xLiesG kLiesG (Λ := gL_lies) (rw := false) (p := Expr.var .here)
     rfl hp GKontoFeld.stand rfl gDarf_lies_Konto hi
   exact EndCorr.ret (by rfl) ⟨cU32, _, rfl, he, rfl⟩
 
@@ -223,26 +223,26 @@ theorem liesG_fn : FnCorr gEL104 (rufAt G104_referenz.gP gO104 0 1) (CallAt gEL1
 /-- `(void)b;` evaluates Gabbro's `b` (variable 2, C local 2). -/
 theorem einG_void :
     ExprCorr xEinG kEinG (.var 2)
-      (Expr.var (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) (.dort (.dort .hier))) :=
-  ecorr_var xEinG kEinG (.dort (.dort .hier))
+      (Expr.var (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) (.there (.there .here))) :=
+  ecorr_var xEinG kEinG (.there (.there .here))
 
 /-- `k->slots[i].stand = 100;` against `k.slots[i].stand = 100` through the
     `rw` pointer `k`. -/
 theorem einG_write (m : Nat) :
     StmtCorr xEinG m kEinG
-      (Stmt.assignDurch (V := vertragVon G104_referenz.gD g_einzahlen) (l := false) (Γ := gCtx_einzahlen)
-        (Λ := gL_einzahlen) (.var .hier) GTab.Konto rfl GKontoFeld.stand (.var (.dort .hier))
-        (.weiter (by decide) (by decide) (.lit 100)) (by decide) gDarf_einzahlen_Konto)
+      (Stmt.assignThru (V := vertragVon G104_referenz.gD g_einzahlen) (l := false) (Γ := gCtx_einzahlen)
+        (Λ := gL_einzahlen) (.var .here) GTab.Konto rfl GKontoFeld.stand (.var (.there .here))
+        (.widen (by decide) (by decide) (.lit 100)) (by decide) gDarf_einzahlen_Konto)
       (.store cStand cU32 (.lit 100)) := by
   have hi : ExprCorr xEinG kEinG (.var 1)
-      (Expr.var (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) (.dort .hier)) :=
-    ecorr_var xEinG kEinG (.dort .hier)
+      (Expr.var (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) (.there .here)) :=
+    ecorr_var xEinG kEinG (.there .here)
   have he : ExprCorr xEinG kEinG (.lit 100)
-      (Expr.weiter (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) (lo' := 0) (hi' := 100)
+      (Expr.widen (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) (lo' := 0) (hi' := 100)
         (by decide) (by decide) (.lit 100)) :=
     ecorr_weiter xEinG kEinG _ _ (ecorr_lit xEinG kEinG 100)
   have hp : PtrTo xEinG kEinG (.var 0) GTab.Konto :=
-    ptrTo_var xEinG kEinG (Γ := gCtx_einzahlen) (.hier) rfl
+    ptrTo_var xEinG kEinG (Γ := gCtx_einzahlen) (.here) rfl
   exact scorr_assignDurch xEinG kEinG m rfl hp GKontoFeld.stand rfl _ _ hi he
 
 /-- The arguments of `lies(k, i);`: C passes `k` (local 0) and `i`
@@ -250,19 +250,19 @@ theorem einG_write (m : Nat) :
     A pointer's C value is the table's address either way. -/
 theorem einG_args : ArgsTo xEinG kEinG
     (Args.cons (Expr.ptrOf (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) GTab.Konto 0 rfl false)
-      (Args.cons (Expr.var (.dort .hier)) .nil))
+      (Args.cons (Expr.var (.there .here)) .nil))
     [.var 0, .var 1] cLies.params kLiesG := by
   intro σ st ρG ρC _ hr
-  have h0 := hr.1 _ (Var.hier (Γ := [.index 2, .int 0 10]) (τ := .ptr 0 true))
-  have h1 := hr.1 _ (Var.dort (σ := .ptr 0 true) (Var.hier (Γ := [.int 0 10]) (τ := .index 2)))
+  have h0 := hr.1 _ (Var.here (Γ := [.index 2, .int 0 10]) (τ := .ptr 0 true))
+  have h1 := hr.1 _ (Var.there (σ := .ptr 0 true) (Var.here (Γ := [.int 0 10]) (τ := .index 2)))
   obtain ⟨t0, ht0, e0⟩ := h0
   have et : t0 = GTab.Konto := by cases t0; rfl
   subst et
   have e0' : ρC 0 = .ptr ⟨.tab 0, 0⟩ := e0
-  have e1' : ρC 1 = .int (encW (.index 2) (ρG.get (.dort .hier))) := h1
+  have e1' : ρC 1 = .int (encW (.index 2) (ρG.get (.there .here))) := h1
   have hc1 : convV cU32 (ρC 1) = some (ρC 1) := by
     rw [e1']
-    exact convV_of_valCorr (EL := gEL104) (τ := .index 2) (v := ρG.get (.dort .hier)) rfl rfl
+    exact convV_of_valCorr (EL := gEL104) (τ := .index 2) (v := ρG.get (.there .here)) rfl rfl
   refine ⟨[ρC 0, ρC 1], st, lokUpd (lokUpd (fun _ => .undef) 1 (ρC 1)) 0 (ρC 0), ?_,
     SameML.refl st, ?_, ?_⟩
   · simp only [evArgs, ev, e0', e1']
@@ -281,26 +281,26 @@ theorem einG_args : ArgsTo xEinG kEinG
       fun q hq => absurd hq (by simp [kLiesG, kOfG])⟩
     intro τ x
     cases x with
-    | hier =>
+    | here =>
         refine ⟨GTab.Konto, rfl, ?_⟩
         show lokUpd (lokUpd (fun _ => .undef) 1 (ρC 1)) 0 (ρC 0) 0 = _
         simp only [lokUpd, if_pos]
         exact e0'
-    | dort y =>
+    | there y =>
         cases y with
-        | hier =>
+        | here =>
             show ValCorr gEL104 (.index 2) _ (lokUpd (lokUpd (fun _ => .undef) 1 (ρC 1)) 0 (ρC 0) 1)
             simp only [lokUpd]
             rw [e1']
             rfl
-        | dort z => exact nomatch z
+        | there z => exact nomatch z
 
 /-- `lies(k, i);` against `gP`'s call of `lies`. -/
 theorem einG_call (m : Nat) :
     StmtCorr xEinG m kEinG
       (Stmt.call (V := vertragVon G104_referenz.gD g_einzahlen) (l := false) (Γ := gCtx_einzahlen) g_lies
         (Args.cons (Expr.ptrOf (D := G104_referenz.gD) (Γ := gCtx_einzahlen) (Λ := gL_einzahlen) GTab.Konto 0 rfl false)
-          (Args.cons (Expr.var (.dort .hier)) .nil))
+          (Args.cons (Expr.var (.there .here)) .nil))
         gHp_einzahlen_lies rfl)
       (.call 1 [.var 0, .var 1] none) :=
   scorr_call xEinG kEinG m g_lies _ gHp_einzahlen_lies rfl liesG_fn einG_args
@@ -414,7 +414,7 @@ theorem einBody (n : Nat) (σ : World G104_referenz.gD)
     (ρ : Env G104_referenz.gD (G104_referenz.gD.params g_einzahlen)) :
     ∃ σ1, execEnd (V := vertragVon G104_referenz.gD g_einzahlen) gO104 0
       (rufAt G104_referenz.gP gO104 0 (n + 1)) (G104_referenz.gP.rumpf g_einzahlen) σ ρ =
-      .zurueck σ1 () ∧ (σ1.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 := by
+      .zurueck σ1 () ∧ (σ1.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n = 100 := by
   show ∃ σ1, execEnd _ _ _ G104_referenz.gBody_einzahlen σ ρ = _ ∧ _
   simp only [G104_referenz.gBody_einzahlen, execEnd, execStmt, liesAt]
   refine ⟨_, rfl, ?_⟩
@@ -436,7 +436,7 @@ theorem rufEin_ok (n : Nat) (σ : World G104_referenz.gD)
     hb _ rfl ?_ _ rfl rfl⟩
   show wahr? (decide (_ ≤ _)) = true
   apply decide_eq_true
-  show _ ≤ (σ1.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n
+  show _ ≤ (σ1.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n
   rw [h100]
   exact (Zahl.le_hi _)
 
@@ -505,9 +505,9 @@ variable {D : Deklaration} {V : Vertrag D} {l : Bool}
     argument count and the `RufPasst` carried). Every other statement: none. -/
 def printStmt104 {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → CertEnd104 D V → Option (CertEnd104 D V)
-  | .assignDurch (n := n) _ t _ f i e _ _, r =>
+  | .assignThru (n := n) _ t _ f i e _ _, r =>
     (printInt i).bind fun ci => (printInt e).bind fun ce =>
-      some (.cons2 (.assignDurch t f n true ci ce) Λ' r)
+      some (.cons2 (.assignThru t f n true ci ce) Λ' r)
   | .call f _ hp _, r => some (.consCall f (D.params f).length Λ hp r)
   | _, _ => none
 
@@ -516,9 +516,9 @@ def printStmt104 {Γ : Ctx} {Λ Λ' : List (Res D)} :
     printed). Every other value: none. -/
 def printRet104 {Γ : Ctx} {Λ : List (Res D)} : {e : Option Ty} → ErgExpr D Γ Λ e →
     Option (CertEnd104 D V)
-  | _, .keine => some (.lift2 (.liftE .ret))
-  | _, .wert (.durch (n := n) _ t _ f i _) => (printInt i).map (CertEnd104.retDurch t f n)
-  | _, .wert _ => none
+  | _, .empty => some (.lift2 (.liftE .ret))
+  | _, .val (.thru (n := n) _ t _ f i _) => (printInt i).map (CertEnd104.retDurch t f n)
+  | _, .val _ => none
 
 /-- THE LEAN-SIDE PRINT of a body, in the `CertEnd104` layer. -/
 def printEnd104 {Γ : Ctx} : {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (CertEnd104 D V)
@@ -563,7 +563,7 @@ theorem g_call_tor {V : Vertrag G104_referenz.gD} {l : Bool} {Γ : Ctx}
   simp only [execStmt, ht]
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
   | ok σ' v => intro h; cases h
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
   | hardware e => intro h; cases h
 
@@ -609,14 +609,14 @@ theorem gP_einzahlen_R : KoerperGutR G104_referenz.gP 0 g_einzahlen := by
       have hfr := (hR.2 g_lies _ _ σ2 w hRv).1.1 GTab.Konto rfl
       simp only [execStmt] at h1
       cases h1
-      show decide ((σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n ≤
-        (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n) = true
-      have e3 := (hfr (ρ.get (.dort .hier)).n GKontoFeld.stand).trans
+      show decide ((σ.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n ≤
+        (σ2.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n) = true
+      have e3 := (hfr (ρ.get (.there .here)).n GKontoFeld.stand).trans
         (storeSlot_hit (D := G104_referenz.gD) _ GTab.Konto _ GKontoFeld.stand _)
-      have h100 : (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 :=
+      have h100 : (σ2.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n = 100 :=
         (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
       apply decide_eq_true
-      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).le_hi
+      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).le_hi
         (Int.le_of_eq h100.symm)
     · rename_i r _
       exact r.elim0
@@ -739,39 +739,39 @@ theorem gbHp : RufPasst gDB (vertragVon gDB (some GFn.einzahlen)) (gDB.signatur 
 
 def gbEns_einzahlen : Expr gDB (ErgCtx (gDB.params (some GFn.einzahlen)) (gDB.erg (some GFn.einzahlen)))
     (vertragVon gDB (some GFn.einzahlen)).ende .bool :=
-  (.le (Expr.altSlot (D := gDB) GTab.Konto GKontoFeld.stand ((.var (.dort .hier))) gbDarf)
-    (Expr.durch (D := gDB) (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier))) gbDarf))
+  (.le (Expr.oldS (D := gDB) GTab.Konto GKontoFeld.stand ((.var (.there .here))) gbDarf)
+    (Expr.thru (D := gDB) (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) gbDarf))
 
 def gbEns_lies : Expr gDB (ErgCtx (gDB.params (some GFn.lies)) (gDB.erg (some GFn.lies)))
     (vertragVon gDB (some GFn.lies)).ende .bool :=
-  (.eq (.var .hier) (Expr.durch (D := gDB) (.var (.dort .hier)) GTab.Konto rfl GKontoFeld.stand
-    ((.var (.dort (.dort .hier)))) gbDarf))
+  (.eq (.var .here) (Expr.thru (D := gDB) (.var (.there .here)) GTab.Konto rfl GKontoFeld.stand
+    ((.var (.there (.there .here)))) gbDarf))
 
 def gbBody_einzahlen : Endblock gDB (vertragVon gDB (some GFn.einzahlen)) false
     (gDB.params (some GFn.einzahlen)) gbL :=
-  (.cons (.assignDurch (.var .hier) GTab.Konto rfl GKontoFeld.stand ((.var (.dort .hier)))
-    (.weiter (by decide) (by decide) (.lit 100)) (by decide) gbDarf)
-    (.cons (.call (some GFn.lies) (.cons (.ptrOf GTab.Konto 0 rfl false) (.cons (.var (.dort .hier)) .nil))
-      gbHp rfl) (.ret .keine (List.Perm.refl _))))
+  (.cons (.assignThru (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here)))
+    (.widen (by decide) (by decide) (.lit 100)) (by decide) gbDarf)
+    (.cons (.call (some GFn.lies) (.cons (.ptrOf GTab.Konto 0 rfl false) (.cons (.var (.there .here)) .nil))
+      gbHp rfl) (.ret .empty (List.Perm.refl _))))
 
 def gbBody_lies : Endblock gDB (vertragVon gDB (some GFn.lies)) false
     (gDB.params (some GFn.lies)) gbL :=
-  (.ret (.wert (Expr.durch (D := gDB) (.var .hier) GTab.Konto rfl GKontoFeld.stand
-    ((.var (.dort .hier))) gbDarf)) (List.Perm.refl _))
+  (.ret (.val (Expr.thru (D := gDB) (.var .here) GTab.Konto rfl GKontoFeld.stand
+    ((.var (.there .here))) gbDarf)) (List.Perm.refl _))
 
 def gbBody_ruhe : Endblock gDB (vertragVon gDB none) false (gDB.params none) [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 /-- **The program the machine runs**: `gP`'s contracts and bodies on
     `some f` (section 5.3 proves them the renamings of the parser's), the
     idle root on `none`. -/
 def gPB : Programm gDB where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures
     | some .einzahlen => gbEns_einzahlen
     | some .lies => gbEns_lies
-    | none => .wahr
+    | none => .tru
   rumpf
     | some .einzahlen => gbBody_einzahlen
     | some .lies => gbBody_lies
@@ -877,23 +877,23 @@ theorem nach_rm (f : GFn) (Λ : List (Res G104_referenz.gD)) :
 def renE : {Γ : Ctx} → {Λ : List (Res G104_referenz.gD)} → {τ : Ty} →
     Expr G104_referenz.gD Γ Λ τ → Option (Expr gDB Γ (Λ.map rm) τ)
   | _, _, _, .lit n => some (.lit n)
-  | _, _, _, .wahr => some .wahr
-  | _, _, _, .falsch => some .falsch
+  | _, _, _, .tru => some .tru
+  | _, _, _, .fls => some .fls
   | _, _, _, .var x => some (.var x)
   | _, _, _, .slot t f i hL => (renE i).map fun i' => Expr.slot (D := gDB) t f i' (darf_rm hL)
-  | _, _, _, .durch p t ht f i hL =>
-    (renE p).bind fun p' => (renE i).map fun i' => Expr.durch (D := gDB) p' t ht f i' (darf_rm hL)
+  | _, _, _, .thru p t ht f i hL =>
+    (renE p).bind fun p' => (renE i).map fun i' => Expr.thru (D := gDB) p' t ht f i' (darf_rm hL)
   | _, _, _, .ptrOf t n ht rw => some (Expr.ptrOf (D := gDB) t n ht rw)
-  | _, _, _, .altSlot t f i hL => (renE i).map fun i' => Expr.altSlot (D := gDB) t f i' (darf_rm hL)
-  | _, _, _, .weiter h1 h2 e => (renE e).map (.weiter h1 h2)
+  | _, _, _, .oldS t f i hL => (renE i).map fun i' => Expr.oldS (D := gDB) t f i' (darf_rm hL)
+  | _, _, _, .widen h1 h2 e => (renE e).map (.widen h1 h2)
   | _, _, _, .add a b => (renE a).bind fun a' => (renE b).map (.add a')
   | _, _, _, .sub a b => (renE a).bind fun a' => (renE b).map (.sub a')
   | _, _, _, .lt a b => (renE a).bind fun a' => (renE b).map (.lt a')
   | _, _, _, .le a b => (renE a).bind fun a' => (renE b).map (.le a')
   | _, _, _, .eq a b => (renE a).bind fun a' => (renE b).map (.eq a')
-  | _, _, _, .und a b => (renE a).bind fun a' => (renE b).map (.und a')
-  | _, _, _, .oder a b => (renE a).bind fun a' => (renE b).map (.oder a')
-  | _, _, _, .nicht a => (renE a).map .nicht
+  | _, _, _, .and a b => (renE a).bind fun a' => (renE b).map (.and a')
+  | _, _, _, .or a b => (renE a).bind fun a' => (renE b).map (.or a')
+  | _, _, _, .not a => (renE a).map .not
   | _, _, _, _ => none
 
 /-- Argument lists. -/
@@ -905,8 +905,8 @@ def renArgs : {Γ : Ctx} → {Λ : List (Res G104_referenz.gD)} → {τs : List 
 /-- Return values. -/
 def renErg {Γ : Ctx} {Λ : List (Res G104_referenz.gD)} : {e : Option Ty} →
     ErgExpr G104_referenz.gD Γ Λ e → Option (ErgExpr gDB Γ (Λ.map rm) e)
-  | _, .keine => some .keine
-  | _, .wert e => (renE e).map .wert
+  | _, .empty => some .empty
+  | _, .val e => (renE e).map .val
 
 section Ren
 variable {V : Vertrag G104_referenz.gD} {l : Bool}
@@ -918,9 +918,9 @@ def renS {Γ : Ctx} {Λ Λ' : List (Res G104_referenz.gD)} :
     Stmt G104_referenz.gD V l Γ Λ Λ' → Option (Stmt gDB (vm V) l Γ (Λ.map rm) (Λ'.map rm))
   | .assignSlot t f i e hw hL =>
     (renE i).bind fun i' => (renE e).map fun e' => Stmt.assignSlot (V := vm V) t f i' e' hw (darf_rm hL)
-  | .assignDurch p t ht f i e hw hL =>
+  | .assignThru p t ht f i e hw hL =>
     (renE p).bind fun p' => (renE i).bind fun i' => (renE e).map fun e' =>
-      Stmt.assignDurch (V := vm V) p' t ht f i' e' hw (darf_rm hL)
+      Stmt.assignThru (V := vm V) p' t ht f i' e' hw (darf_rm hL)
   | .call f args hp hr =>
     (renArgs args).map fun a =>
       (nach_rm f Λ) ▸ Stmt.call (V := vm V) (l := l) (some f) ((params_some f).symm ▸ a)
@@ -931,7 +931,7 @@ def renS {Γ : Ctx} {Λ Λ' : List (Res G104_referenz.gD)} :
 def renEnd {Γ : Ctx} : {Λ : List (Res G104_referenz.gD)} →
     Endblock G104_referenz.gD V l Γ Λ → Option (Endblock gDB (vm V) l Γ (Λ.map rm))
   | _, .ret e hΛ => (renErg e).map fun e' => .ret e' (perm_rm hΛ)
-  | _, .retGrund r hΛ => some (.retGrund r (perm_rm hΛ))
+  | _, .retWhy r hΛ => some (.retWhy r (perm_rm hΛ))
   | _, .leave h => some (.leave h)
   | _, .next h => some (.next h)
   | _, .cons s rest => (renS s).bind fun s' => (renEnd rest).map (.cons s')
@@ -987,7 +987,7 @@ theorem gb_call_tor {V : Vertrag gDB} {l : Bool} {Γ : Ctx}
   simp only [execStmt, ht]
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
   | ok σ' v => intro h; cases h
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
   | hardware e => intro h; cases h
 
@@ -1036,14 +1036,14 @@ theorem gPB_einzahlen_R : KoerperGutR gPB 0 (some GFn.einzahlen) := by
       have hfr := (hR.2 (some GFn.lies) _ _ σ2 w hRv).1.1 GTab.Konto rfl
       simp only [execStmt] at h1
       cases h1
-      show decide ((σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n ≤
-        (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n) = true
-      have e3 := (hfr (ρ.get (.dort .hier)).n GKontoFeld.stand).trans
+      show decide ((σ.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n ≤
+        (σ2.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n) = true
+      have e3 := (hfr (ρ.get (.there .here)).n GKontoFeld.stand).trans
         (storeSlot_hit (D := gDB) _ GTab.Konto _ GKontoFeld.stand _)
-      have h100 : (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 :=
+      have h100 : (σ2.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n = 100 :=
         (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
       apply decide_eq_true
-      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).le_hi
+      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).le_hi
         (Int.le_of_eq h100.symm)
     · rename_i r _
       exact r.elim0
@@ -1193,11 +1193,11 @@ def xEinB : TVCtx gDB :=
     `k` is C local 0 (Gabbro variable 0), `i` C local 1 (variable 1). -/
 theorem liesB_end (m : Nat) : EndCorr xLiesB m true kLiesB (gPB.rumpf (some GFn.lies)) cLiesBody := by
   have hi : ExprCorr xLiesB kLiesB (.var 1)
-      (Expr.var (D := gDB) (Γ := (gDB.params (some GFn.lies))) (Λ := gbL) (.dort .hier)) :=
-    ecorr_var xLiesB kLiesB (.dort .hier)
+      (Expr.var (D := gDB) (Γ := (gDB.params (some GFn.lies))) (Λ := gbL) (.there .here)) :=
+    ecorr_var xLiesB kLiesB (.there .here)
   have hp : PtrTo xLiesB kLiesB (.var 0) GTab.Konto :=
-    ptrTo_var xLiesB kLiesB (Γ := (gDB.params (some GFn.lies))) (.hier) rfl
-  have he := ecorr_durch xLiesB kLiesB (Λ := gbL) (rw := false) (p := Expr.var .hier)
+    ptrTo_var xLiesB kLiesB (Γ := (gDB.params (some GFn.lies))) (.here) rfl
+  have he := ecorr_durch xLiesB kLiesB (Λ := gbL) (rw := false) (p := Expr.var .here)
     rfl hp GKontoFeld.stand rfl gbDarf hi
   exact EndCorr.ret (by rfl) ⟨cU32, _, rfl, he, rfl⟩
 
@@ -1212,26 +1212,26 @@ theorem liesB_fn : FnCorr gEBL (rufAt gPB gOB 0 1) (CallAt gEBL.lay tvOrc tvXR r
 /-- `(void)b;` evaluates Gabbro's `b` (variable 2, C local 2). -/
 theorem einB_void :
     ExprCorr xEinB kEinB (.var 2)
-      (Expr.var (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) (.dort (.dort .hier))) :=
-  ecorr_var xEinB kEinB (.dort (.dort .hier))
+      (Expr.var (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) (.there (.there .here))) :=
+  ecorr_var xEinB kEinB (.there (.there .here))
 
 /-- `k->slots[i].stand = 100;` against `k.slots[i].stand = 100` through the
     `rw` pointer `k`. -/
 theorem einB_write (m : Nat) :
     StmtCorr xEinB m kEinB
-      (Stmt.assignDurch (V := vertragVon gDB (some GFn.einzahlen)) (l := false) (Γ := (gDB.params (some GFn.einzahlen)))
-        (Λ := gbL) (.var .hier) GTab.Konto rfl GKontoFeld.stand (.var (.dort .hier))
-        (.weiter (by decide) (by decide) (.lit 100)) (by decide) gbDarf)
+      (Stmt.assignThru (V := vertragVon gDB (some GFn.einzahlen)) (l := false) (Γ := (gDB.params (some GFn.einzahlen)))
+        (Λ := gbL) (.var .here) GTab.Konto rfl GKontoFeld.stand (.var (.there .here))
+        (.widen (by decide) (by decide) (.lit 100)) (by decide) gbDarf)
       (.store cStand cU32 (.lit 100)) := by
   have hi : ExprCorr xEinB kEinB (.var 1)
-      (Expr.var (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) (.dort .hier)) :=
-    ecorr_var xEinB kEinB (.dort .hier)
+      (Expr.var (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) (.there .here)) :=
+    ecorr_var xEinB kEinB (.there .here)
   have he : ExprCorr xEinB kEinB (.lit 100)
-      (Expr.weiter (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) (lo' := 0) (hi' := 100)
+      (Expr.widen (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) (lo' := 0) (hi' := 100)
         (by decide) (by decide) (.lit 100)) :=
     ecorr_weiter xEinB kEinB _ _ (ecorr_lit xEinB kEinB 100)
   have hp : PtrTo xEinB kEinB (.var 0) GTab.Konto :=
-    ptrTo_var xEinB kEinB (Γ := (gDB.params (some GFn.einzahlen))) (.hier) rfl
+    ptrTo_var xEinB kEinB (Γ := (gDB.params (some GFn.einzahlen))) (.here) rfl
   exact scorr_assignDurch xEinB kEinB m rfl hp GKontoFeld.stand rfl _ _ hi he
 
 /-- The arguments of `lies(k, i);`: C passes `k` (local 0) and `i`
@@ -1239,19 +1239,19 @@ theorem einB_write (m : Nat) :
     A pointer's C value is the table's address either way. -/
 theorem einB_args : ArgsTo xEinB kEinB
     (Args.cons (Expr.ptrOf (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) GTab.Konto 0 rfl false)
-      (Args.cons (Expr.var (.dort .hier)) .nil))
+      (Args.cons (Expr.var (.there .here)) .nil))
     [.var 0, .var 1] cLies.params kLiesB := by
   intro σ st ρG ρC _ hr
-  have h0 := hr.1 _ (Var.hier (Γ := [.index 2, .int 0 10]) (τ := .ptr 0 true))
-  have h1 := hr.1 _ (Var.dort (σ := .ptr 0 true) (Var.hier (Γ := [.int 0 10]) (τ := .index 2)))
+  have h0 := hr.1 _ (Var.here (Γ := [.index 2, .int 0 10]) (τ := .ptr 0 true))
+  have h1 := hr.1 _ (Var.there (σ := .ptr 0 true) (Var.here (Γ := [.int 0 10]) (τ := .index 2)))
   obtain ⟨t0, ht0, e0⟩ := h0
   have et : t0 = GTab.Konto := by cases t0; rfl
   subst et
   have e0' : ρC 0 = .ptr ⟨.tab 0, 0⟩ := e0
-  have e1' : ρC 1 = .int (encW (.index 2) (ρG.get (.dort .hier))) := h1
+  have e1' : ρC 1 = .int (encW (.index 2) (ρG.get (.there .here))) := h1
   have hc1 : convV cU32 (ρC 1) = some (ρC 1) := by
     rw [e1']
-    exact convV_of_valCorr (EL := gEBL) (τ := .index 2) (v := ρG.get (.dort .hier)) rfl rfl
+    exact convV_of_valCorr (EL := gEBL) (τ := .index 2) (v := ρG.get (.there .here)) rfl rfl
   refine ⟨[ρC 0, ρC 1], st, lokUpd (lokUpd (fun _ => .undef) 1 (ρC 1)) 0 (ρC 0), ?_,
     SameML.refl st, ?_, ?_⟩
   · simp only [evArgs, ev, e0', e1']
@@ -1270,26 +1270,26 @@ theorem einB_args : ArgsTo xEinB kEinB
       fun q hq => absurd hq (by simp [kLiesB])⟩
     intro τ x
     cases x with
-    | hier =>
+    | here =>
         refine ⟨GTab.Konto, rfl, ?_⟩
         show lokUpd (lokUpd (fun _ => .undef) 1 (ρC 1)) 0 (ρC 0) 0 = _
         simp only [lokUpd, if_pos]
         exact e0'
-    | dort y =>
+    | there y =>
         cases y with
-        | hier =>
+        | here =>
             show ValCorr gEBL (.index 2) _ (lokUpd (lokUpd (fun _ => .undef) 1 (ρC 1)) 0 (ρC 0) 1)
             simp only [lokUpd]
             rw [e1']
             rfl
-        | dort z => exact nomatch z
+        | there z => exact nomatch z
 
 /-- `lies(k, i);` against `gPB`'s call of `lies`. -/
 theorem einB_call (m : Nat) :
     StmtCorr xEinB m kEinB
       (Stmt.call (V := vertragVon gDB (some GFn.einzahlen)) (l := false) (Γ := (gDB.params (some GFn.einzahlen))) (some GFn.lies)
         (Args.cons (Expr.ptrOf (D := gDB) (Γ := (gDB.params (some GFn.einzahlen))) (Λ := gbL) GTab.Konto 0 rfl false)
-          (Args.cons (Expr.var (.dort .hier)) .nil))
+          (Args.cons (Expr.var (.there .here)) .nil))
         gbHp rfl)
       (.call 1 [.var 0, .var 1] none) :=
   scorr_call xEinB kEinB m (some GFn.lies) _ gbHp rfl liesB_fn einB_args
@@ -1348,7 +1348,7 @@ theorem einBodyB (n : Nat) (σ : World gDB)
     (ρ : Env gDB (gDB.params (some GFn.einzahlen))) :
     ∃ σ1, execEnd (V := vertragVon gDB (some GFn.einzahlen)) gOB 0
       (rufAt gPB gOB 0 (n + 1)) (gPB.rumpf (some GFn.einzahlen)) σ ρ =
-      .zurueck σ1 () ∧ (σ1.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 := by
+      .zurueck σ1 () ∧ (σ1.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n = 100 := by
   show ∃ σ1, execEnd _ _ _ gbBody_einzahlen σ ρ = _ ∧ _
   simp only [gbBody_einzahlen, execEnd, execStmt, liesAtB]
   refine ⟨_, rfl, ?_⟩
@@ -1370,7 +1370,7 @@ theorem rufEinB_ok (n : Nat) (σ : World gDB)
     hb _ rfl ?_ _ rfl rfl⟩
   show wahr? (decide (_ ≤ _)) = true
   apply decide_eq_true
-  show _ ≤ (σ1.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n
+  show _ ≤ (σ1.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n
   rw [h100]
   exact (Zahl.le_hi _)
 
@@ -1623,14 +1623,14 @@ theorem gRho7_env : EnvRel gEL104 (kOfG certG104.vmEin certG104.ppEin certG104.k
     fun q hq => absurd hq (by simp [certG104, kOfG])⟩
   intro τ x
   cases x with
-  | hier => exact ⟨GTab.Konto, rfl, rfl⟩
-  | dort y =>
+  | here => exact ⟨GTab.Konto, rfl, rfl⟩
+  | there y =>
       cases y with
-      | hier => rfl
-      | dort z =>
+      | here => rfl
+      | there z =>
           cases z with
-          | hier => rfl
-          | dort w => exact nomatch w
+          | here => rfl
+          | there w => exact nomatch w
 
 /-- **WITNESS, part 4**: `einzahlen(k, 0, 7)` from the zero state -- the
     premises of part 4 hold jointly; by the theorem the Gabbro call ends
@@ -1739,7 +1739,7 @@ theorem schlusssatz_104_maschine_zeuge :
   have hSE := (gPB_ziel (bootInit GFn.einzahlen gbRho7) (bootInit_laufzeit _ _) gbSp0 0 M3 hr3).2.1 0
   have h3 := hG3.1
   rw [h3] at hSE
-  have hroot := (hSE rfl _ _ _ _ _ .keine rfl ⟨_, Or.inl rfl⟩).1
+  have hroot := (hSE rfl _ _ _ _ _ .empty rfl ⟨_, Or.inl rfl⟩).1
   exact ⟨M3, hr3, rfl, hsp, rho, v, w0, w1, hm, hens, by rw [h3], _, hroot⟩
 
 /-- **The premises of `schlusssatz_104` are jointly satisfiable** (rule

@@ -99,17 +99,17 @@ def qfn : qD.Fn := ()
 /-- `requires k != 0`: `k` is the only parameter, so this is
     `nicht (eq k 0)`. -/
 def qRequires : Expr qD [.int 0 5] [] .bool :=
-  .nicht (.eq (.var .hier) (.lit 0))
+  .not (.eq (.var .here) (.lit 0))
 
 /-- `ensures result = k + 1`: the result (`hier`) against `k + 1`
     (`dort hier`, plus the literal `1`). -/
 def qEnsures : Expr qD [.int 1 6, .int 0 5] [] .bool :=
-  .eq (.var .hier) (.add (.var (.dort .hier)) (.lit 1))
+  .eq (.var .here) (.add (.var (.there .here)) (.lit 1))
 
 /-- The honest body: it returns `k + 1`, which fits `int in 1 .. 6`. -/
 def qRumpf : Endblock qD (vertragVon qD qfn) false (qD.params qfn)
     (Signatur.anfang qD (qD.signatur qfn)) :=
-  .ret (.wert (.add (.var .hier) (.lit 1))) (List.Perm.refl [])
+  .ret (.val (.add (.var .here) (.lit 1))) (List.Perm.refl [])
 
 /-- The program: vacuous invariants, the two contracts above, the honest body. -/
 def qP : Programm qD where
@@ -192,8 +192,8 @@ end Gabbro.Grammatik
      `hSeedAll` premise uninhabited under the stated scope, but the corollary
      is not applied to the goal theorem (that would need the full run-side
      wiring, which is the booked remainder of section 13, not this lane).
-   - No statement about `.wahr` contracts: a vacuous contract (`requires
-     .wahr`) has a true Q at every world; the degeneration needs a proper
+   - No statement about `.tru` contracts: a vacuous contract (`requires
+     .tru`) has a true Q at every world; the degeneration needs a proper
      parameter or result, as exhibited.
    - The body (`qRumpf` returns `k + 1`) is exhibited but its correctness is
      neither stated nor needed: the Q-falsity holds regardless of the body,

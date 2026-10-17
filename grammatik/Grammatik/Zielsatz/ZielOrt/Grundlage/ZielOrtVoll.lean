@@ -624,7 +624,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
-    refine ⟨fadenV_ax e0 hF hhead (Env.cons (τ := .grund (D.agruende a)) r ρ) (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur a args
+    refine ⟨fadenV_ax e0 hF hhead (Env.cons (τ := .why (D.agruende a)) r ρ) (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur a args
       (fun hok => okV_alsBlock err (.schrumpf k) rest.held_iff
         (by have h1 := hok.1; simp only [Block.vOk, Bool.and_eq_true] at h1; exact h1.1)
         (by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append (teil_append h2).1).2) hok.2.2)
@@ -673,7 +673,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
-    refine ⟨fadenV_ax e0 hF hhead (Env.cons (τ := .grund (D.agruende a)) r ρ) (.ende err) σ₂.spur a args
+    refine ⟨fadenV_ax e0 hF hhead (Env.cons (τ := .why (D.agruende a)) r ρ) (.ende err) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Endblock.vOk, Bool.and_eq_true] at h1; exact h1.1,
         by have h2 := hok.2; simp only [endblockOrteP] at h2; exact (teil_append (teil_append h2).1).2⟩)
       (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
@@ -706,7 +706,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
         | ok σa v =>
             exact ⟨fun _ => ZErg.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -731,7 +731,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
         | ok σa v =>
             exact ⟨fun _ => ZErg.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -764,7 +764,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
             · cases hc
               exact ZErg.folgt_refl _
             · cases hc
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -799,7 +799,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
             · cases hc
             · cases hc
               exact ZErg.folgt_refl _
-        | grund σa r =>
+        | why σa r =>
             intro _ _ _ _ _ _ _ _ _ _ hc hn
             cases hc
             rw [semV_alsBlock_schrumpf]
@@ -838,7 +838,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
         | ok σa v =>
             exact ⟨fun _ => ZErg.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -872,7 +872,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
         | ok σa v =>
             exact ⟨fun _ => ZErg.folgt_refl _,
               fun _ _ _ _ _ _ _ _ hc _ => by rcases hc with hc | ⟨_, _, hc⟩ <;> cases hc⟩
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -917,7 +917,7 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
             · cases hc
               exact ZErg.folgt_refl _
             · cases hc
-        | grund σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
+        | why σa r => exact fun _ _ _ _ _ _ _ _ _ _ hc => by cases hc
         | logik e => trivial
         | hardware e => trivial)
     exact ⟨hFad, logOk_eintritt hL hReq⟩
@@ -1035,8 +1035,8 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     have hSt := hF.2
     rw [hpop] at hSt
     obtain ⟨hWc, hSt'⟩ := hSt
-    refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+    refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .why σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
+      (Env.cons (τ := .why n) (Fin.cast hn rg) ρc)
       (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun hokc => okV_alsBlock err (.schrumpf k) restb.held_iff (rest_okV hcaller hokc).1
         (rest_okV hcaller hokc).2.1 (rest_okV hcaller hokc).2.2.2.2)
@@ -1050,8 +1050,8 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     have hSt := hF.2
     rw [hpop] at hSt
     obtain ⟨hWc, hSt'⟩ := hSt
-    refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+    refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .why σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
+      (Env.cons (τ := .why n) (Fin.cast hn rg) ρc)
       (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun hokc => okV_alsBlock err (.schrumpf k) restb.held_iff (rest_okV hcaller hokc).1
         (rest_okV hcaller hokc).2.1 (rest_okV hcaller hokc).2.2.2.2)
@@ -1065,8 +1065,8 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     have hSt := hF.2
     rw [hpop] at hSt
     obtain ⟨hWc, hSt'⟩ := hSt
-    refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .grund σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
-      (Env.cons (τ := .grund n) (Fin.cast hn rg) ρc)
+    refine ⟨⟨popV_kopf e0 hWc (M.weltVon u) (fun σa => .why σa rg) (Or.inr ⟨rg, fun _ => rfl⟩)
+      (Env.cons (τ := .why n) (Fin.cast hn rg) ρc)
       (.dann err.alsBlock.2 (.abbruch (.schrumpf k)))
       (fun hokc => okV_alsBlock err (.schrumpf k) restb.held_iff (rest_okV hcaller hokc).1
         (rest_okV hcaller hokc).2.1 (rest_okV hcaller hokc).2.2.2.2)
@@ -1205,22 +1205,22 @@ end Ziel
 /-- The reason a residue returns right now, if its head is a reason return. -/
 def GRest.grundJetzt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     GRest D V l Γ Λ → Option (Fin V.gruende)
-  | .ende (.retGrund r _) => some r
-  | .ende (.cons (.retGrund r _) _) => some r
-  | .dann (.cons (.retGrund r _) _) _ => some r
+  | .ende (.retWhy r _) => some r
+  | .ende (.cons (.retWhy r _) _) => some r
+  | .dann (.cons (.retWhy r _) _) _ => some r
   | _ => none
 
 /-- **Reason returns are logged faithfully.** -/
 theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : RufMaschineG D}
     {u : Faden} (hs : RufSchrittG P O passes M u M') (g : D.Fn) (rho : Env D (D.params g))
     (r : Fin (D.gruende g)) (s0 s1 : World D)
-    (hlog : (M'.faeden u).log = RufEreignisF.grund g rho r s0 s1 :: (M.faeden u).log) :
+    (hlog : (M'.faeden u).log = RufEreignisF.why g rho r s0 s1 :: (M.faeden u).log) :
     (M.faeden u).kopf.f = g ∧
     (∃ r' : Fin (vertragVon D (M.faeden u).kopf.f).gruende,
       (M.faeden u).kopf.rest.2.2.2.2.grundJetzt = some r' ∧ HEq r' r) ∧
     ∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)) (l : Bool) (Γ : Ctx)
       (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
-      (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ)
+      (err : Endblock D (vertragVon D caller.f) l (.why n :: Γ) Λ)
       (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D caller.f) l Γ Λ') (ρc : Env D Γ) (hn : D.gruende g = n),
       (M.faeden u).stapel = caller :: rst ∧
@@ -1228,12 +1228,12 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
       (M'.faeden u).stapel = rst ∧
       (M'.faeden u).kopf =
         ⟨caller.f, caller.rho, caller.s0,
-          ⟨l, .grund n :: Γ, Λ, Env.cons (τ := .grund n) (Fin.cast hn r) ρc,
+          ⟨l, .why n :: Γ, Λ, Env.cons (τ := .why n) (Fin.cast hn r) ρc,
             .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩ := by
   cases hs with
   | rueckGrund r0 hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g' hfg rho'
       hrho s0' hs0 rg hrg hn =>
-    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.grund.injEq] at hlog ⊢
+    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
     obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
     subst hg
     subst hfg
@@ -1244,7 +1244,7 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
     rfl
   | rueckConsGrund r0 hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
       hfg rho' hrho s0' hs0 rg hrg hn =>
-    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.grund.injEq] at hlog ⊢
+    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
     obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
     subst hg
     subst hfg
@@ -1255,7 +1255,7 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
     rfl
   | dannRetGrund r0 hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
       hfg rho' hrho s0' hs0 rg hrg hn =>
-    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.grund.injEq] at hlog ⊢
+    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
     obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
     subst hg
     subst hfg
@@ -1292,7 +1292,7 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onTag _ arms, h, σ, ρ => by
       simp only [Stmt.kOk] at h
       simp only [execStmt, Arms.orakel_kOk arms h]
-  | .onGrund _ arms, h, σ, ρ => by
+  | .onWhy _ arms, h, σ, ρ => by
       simp only [Stmt.kOk] at h
       simp only [execStmt]
       exact GrundArms.orakel_kOk arms h _ _ _
@@ -1308,19 +1308,19 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .axiomCall .., h, _, _ => by simp [Stmt.kOk] at h
   | .callInd .., h, _, _ => by simp [Stmt.kOk] at h
   | .assignSlot .., _, _, _ => rfl
-  | .assignDurch .., _, _, _ => rfl
+  | .assignThru .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
-  | .schreibBytes .., _, _, _ => rfl
+  | .putBytes .., _, _, _ => rfl
   | .assignVar .., _, _, _ => rfl
-  | .uebergang .., _, _, _ => rfl
+  | .shift .., _, _, _ => rfl
   | .call .., _, _, _ => rfl
-  | .regSchreib .., _, _, _ => rfl
+  | .regWrite .., _, _, _ => rfl
   | .transition .., _, _, _ => rfl
   | .publish .., _, _, _ => rfl
   | .advances .., _, _, _ => rfl
   | .retires .., _, _, _ => rfl
   | .ret .., _, _, _ => rfl
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -1341,8 +1341,8 @@ theorem Block.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse .., h, _, _ => by simp [Block.kOk] at h
   | .bindAxiom .., h, _, _ => by simp [Block.kOk] at h
   | .bindAxiomElse .., h, _, _ => by simp [Block.kOk] at h
-  | .regLies .., h, _, _ => by simp [Block.kOk] at h
-  | .regLiesElse .., h, _, _ => by simp [Block.kOk] at h
+  | .regRead .., h, _, _ => by simp [Block.kOk] at h
+  | .regReadElse .., h, _, _ => by simp [Block.kOk] at h
   | .awaits .., h, _, _ => by simp [Block.kOk] at h
   | .exchange _ _ _ _ rest, h, σ, ρ => by
       simp only [Block.kOk] at h
@@ -1350,19 +1350,19 @@ theorem Block.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .narrow _ _ _ sonst rest, h, σ, ρ => by
       simp only [Block.kOk, Bool.and_eq_true] at h
       simp only [execBlock, Endblock.orakel_kOk sonst h.1, Block.orakel_kOk rest h.2]
-  | .pruefung _ sonst rest, h, σ, ρ => by
+  | .check _ sonst rest, h, σ, ρ => by
       simp only [Block.kOk, Bool.and_eq_true] at h
       simp only [execBlock, Endblock.orakel_kOk sonst h.1, Block.orakel_kOk rest h.2]
-  | .gleit _ _ _ _ _ rest, h, σ, ρ => by
+  | .float _ _ _ _ _ rest, h, σ, ρ => by
       simp only [Block.kOk] at h
       simp only [execBlock, Block.orakel_kOk rest h]
-  | .gleitLit _ _ _ rest, h, σ, ρ => by
+  | .floatLit _ _ _ rest, h, σ, ρ => by
       simp only [Block.kOk] at h
       simp only [execBlock, Block.orakel_kOk rest h]
-  | .gleitVon _ _ _ rest, h, σ, ρ => by
+  | .floatOf _ _ _ rest, h, σ, ρ => by
       simp only [Block.kOk] at h
       simp only [execBlock, Block.orakel_kOk rest h]
-  | .gleitNarrow _ _ _ sonst rest, h, σ, ρ => by
+  | .floatNarrow _ _ _ sonst rest, h, σ, ρ => by
       simp only [Block.kOk, Bool.and_eq_true] at h
       simp only [execBlock, Endblock.orakel_kOk sonst h.1, Block.orakel_kOk rest h.2]
 
@@ -1370,7 +1370,7 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → e.kOk = true → ∀ (σ : World D) (ρ : Env D Γ),
       execEnd O passes R e σ ρ = execEnd O' passes R e σ ρ
   | .ret .., _, _, _ => rfl
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, h, σ, ρ => by

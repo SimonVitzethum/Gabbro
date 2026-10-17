@@ -31,7 +31,7 @@ theorem weiter_raus (m : Nat) (o : COut) (p : CSt × CLok) (o' : COut) (h1 : o.w
   | jump lb s r =>
       cases lb with
       | ende m' => simp [COut.weiter] at h1
-      | weiter m' =>
+      | widen m' =>
           simp only [COut.weiter] at h1
           simp only [COut.raus] at h2
           by_cases hm : m' = m

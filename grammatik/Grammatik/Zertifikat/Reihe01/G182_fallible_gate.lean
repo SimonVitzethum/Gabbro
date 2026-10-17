@@ -127,14 +127,14 @@ abbrev gL_schreibe : List (Res gD) := []
 
 
 def gBody_schreibe : Endblock gD (vertragVon gD g_schreibe) false gCtx_schreibe gL_schreibe :=
-  (.bindAxiomElse GAx.write (.cons (.var .hier) (.cons (.var (.dort .hier)) (.cons (.var (.dort (.dort .hier))) .nil))) rfl (by decide) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 2000)) : Expr gD ((.grund 2) :: gCtx_schreibe) gL_schreibe (.int 2000 2000))) : Expr gD ((.grund 2) :: gCtx_schreibe) gL_schreibe (.int 0 2000))) (List.Perm.refl _)) (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD ((.int 0 1024) :: gCtx_schreibe) gL_schreibe (.int 0 2000))) (List.Perm.refl _)))
+  (.bindAxiomElse GAx.write (.cons (.var .here) (.cons (.var (.there .here)) (.cons (.var (.there (.there .here))) .nil))) rfl (by decide) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (.ret (.val ((.widen (by decide) (by decide) (((.lit 2000)) : Expr gD ((.why 2) :: gCtx_schreibe) gL_schreibe (.int 2000 2000))) : Expr gD ((.why 2) :: gCtx_schreibe) gL_schreibe (.int 0 2000))) (List.Perm.refl _)) (.ret (.val ((.widen (by decide) (by decide) (.var .here)) : Expr gD ((.int 0 1024) :: gCtx_schreibe) gL_schreibe (.int 0 2000))) (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .schreibe => .wahr
+    | .schreibe => .tru
   ensures
-    | .schreibe => .wahr
+    | .schreibe => .tru
   rumpf
     | .schreibe => gBody_schreibe
 

@@ -117,7 +117,7 @@ theorem ruf_schritt (M : RufMaschineG rufDF) (t : Faden) (stapel : List (RufRahm
        rhoCallerF,
        .ende (.cons (.call rufIncF rufArgsF rufHpF rfl)
          ((rufDF_params rufCallerF).symm ▸
-           (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+           (.ret (.val ((.widen (by decide) (by decide) (.var .here) :
              Expr rufDF (rufDF.params rufIncF) [] (.int 0 6)))) (by decide)) :
            Endblock rufDF (vertragVon rufDF rufCallerF) false
              (rufDF.params rufIncF) (nach rufDF rufIncF [])))⟩ := by

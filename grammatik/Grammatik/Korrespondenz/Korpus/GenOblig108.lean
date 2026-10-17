@@ -136,19 +136,19 @@ theorem gDarf_read_a_T : darf gD GTab.T gL_read_a := by unfold darf; decide
 theorem gDarf_read_c_T : darf gD GTab.T gL_read_c := by unfold darf; decide
 
 def gBody_read_a : Endblock gD (vertragVon gD g_read_a) false gCtx_read_a gL_read_a :=
-  (.ret (.wert (Expr.slot (D := gD) GTab.T GTFeld.v (((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_read_a gL_read_a (.index (gD.count GTab.T))))) gDarf_read_a_T)) (List.Perm.refl _))
+  (.ret (.val (Expr.slot (D := gD) GTab.T GTFeld.v (((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_read_a gL_read_a (.index (gD.count GTab.T))))) gDarf_read_a_T)) (List.Perm.refl _))
 
 def gBody_read_c : Endblock gD (vertragVon gD g_read_c) false gCtx_read_c gL_read_c :=
-  (.ret (.wert (Expr.slot (D := gD) GTab.T GTFeld.v (((.weiter (by decide) (by decide) (.lit 1) : Expr gD gCtx_read_c gL_read_c (.index (gD.count GTab.T))))) gDarf_read_c_T)) (List.Perm.refl _))
+  (.ret (.val (Expr.slot (D := gD) GTab.T GTFeld.v (((.widen (by decide) (by decide) (.lit 1) : Expr gD gCtx_read_c gL_read_c (.index (gD.count GTab.T))))) gDarf_read_c_T)) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .read_a => .wahr
-    | .read_c => .wahr
+    | .read_a => .tru
+    | .read_c => .tru
   ensures
-    | .read_a => .wahr
-    | .read_c => .wahr
+    | .read_a => .tru
+    | .read_c => .tru
   rumpf
     | .read_a => gBody_read_a
     | .read_c => gBody_read_c

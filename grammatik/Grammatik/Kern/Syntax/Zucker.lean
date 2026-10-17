@@ -42,26 +42,26 @@ end Ty
 
 /-- Eine Variable unter einem eingeschobenen Binder. -/
 def Var.ins : (Γ1 : Ctx) → Var (Γ1 ++ Γ2) τ → Var (Γ1 ++ σ :: Γ2) τ
-  | [], x => .dort x
-  | _ :: _, .hier => .hier
-  | _ :: Γ1, .dort x => .dort (Var.ins Γ1 x)
+  | [], x => .there x
+  | _ :: _, .here => .here
+  | _ :: Γ1, .there x => .there (Var.ins Γ1 x)
 
 mutual
 /-- Ein Ausdruck unter einem eingeschobenen Binder: dieselben Orte, dasselbe `Λ`. -/
 def Expr.ins (Γ1 : Ctx) : Expr D (Γ1 ++ Γ2) Λ τ → Expr D (Γ1 ++ σ :: Γ2) Λ τ
   | .lit n => .lit n
-  | .wahr => .wahr
-  | .falsch => .falsch
+  | .tru => .tru
+  | .fls => .fls
   | .var x => .var (Var.ins Γ1 x)
   | .glob g hL => .glob g hL
   | .slot t f i hL => .slot t f (i.ins Γ1) hL
-  | .durch p t ht f i hL => .durch (p.ins Γ1) t ht f (i.ins Γ1) hL
+  | .thru p t ht f i hL => .thru (p.ins Γ1) t ht f (i.ins Γ1) hL
   | .ptrOf t n ht rw => .ptrOf t n ht rw
   | .fnref f n h => .fnref f n h
-  | .altGlob g hL => .altGlob g hL
-  | .altSlot t f i hL => .altSlot t f (i.ins Γ1) hL
-  | .leseBytes t f hf n i hlo hhi hL => .leseBytes t f hf n (i.ins Γ1) hlo hhi hL
-  | .weiter h1 h2 e => .weiter h1 h2 (e.ins Γ1)
+  | .oldG g hL => .oldG g hL
+  | .oldS t f i hL => .oldS t f (i.ins Γ1) hL
+  | .getBytes t f hf n i hlo hhi hL => .getBytes t f hf n (i.ins Γ1) hlo hhi hL
+  | .widen h1 h2 e => .widen h1 h2 (e.ins Γ1)
   | .add a b => .add (a.ins Γ1) (b.ins Γ1)
   | .sub a b => .sub (a.ins Γ1) (b.ins Γ1)
   | .neg a => .neg (a.ins Γ1)
@@ -80,21 +80,21 @@ def Expr.ins (Γ1 : Ctx) : Expr D (Γ1 ++ Γ2) Λ τ → Expr D (Γ1 ++ σ :: Γ
   | .eq a b => .eq (a.ins Γ1) (b.ins Γ1)
   | .fllt a b => .fllt (a.ins Γ1) (b.ins Γ1)
   | .flle a b => .flle (a.ins Γ1) (b.ins Γ1)
-  | .und a b => .und (a.ins Γ1) (b.ins Γ1)
-  | .oder a b => .oder (a.ins Γ1) (b.ins Γ1)
-  | .nicht a => .nicht (a.ins Γ1)
+  | .and a b => .and (a.ins Γ1) (b.ins Γ1)
+  | .or a b => .or (a.ins Γ1) (b.ins Γ1)
+  | .not a => .not (a.ins Γ1)
   | .none n => .none n
   | .some e => .some (e.ins Γ1)
   | .istSome e => .istSome (e.ins Γ1)
-  | .fall cs i nutz => .fall cs i (nutz.ins Γ1)
-  | .grund n r => .grund n r
+  | .case cs i nutz => .case cs i (nutz.ins Γ1)
+  | .why n r => .why n r
   | .forallSlots t body hL => .forallSlots t (body.ins (_ :: Γ1)) hL
   | .existsSlots t body hL => .existsSlots t (body.ins (_ :: Γ1)) hL
   | .reaches t f hf a b hL => .reaches t f hf (a.ins Γ1) (b.ins Γ1) hL
 
 def NutzlastExpr.ins (Γ1 : Ctx) : NutzlastExpr D (Γ1 ++ Γ2) Λ c → NutzlastExpr D (Γ1 ++ σ :: Γ2) Λ c
-  | .keine => .keine
-  | .zahl e => .zahl (e.ins Γ1)
+  | .empty => .empty
+  | .num e => .num (e.ins Γ1)
 end
 
 /-- Ein Ausdruck, einen Binder tiefer. -/
@@ -106,9 +106,9 @@ namespace Expr
 variable {Γ : Ctx} {Λ : List (Res D)}
 
 /-- `p => q` -/
-def impl (p q : Expr D Γ Λ .bool) : Expr D Γ Λ .bool := .oder (.nicht p) q
+def impl (p q : Expr D Γ Λ .bool) : Expr D Γ Λ .bool := .or (.not p) q
 /-- `a != b` -/
-def ne (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Expr D Γ Λ .bool := .nicht (.eq a b)
+def ne (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Expr D Γ Λ .bool := .not (.eq a b)
 /-- `a > b` -/
 def gt (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Expr D Γ Λ .bool := .lt b a
 /-- `a >= b` -/
@@ -124,17 +124,17 @@ def bnot (w : Nat) (h0 : 0 ≤ l1) (hw : h1 < 2 ^ w) (a : Expr D Γ Λ (.int l1 
   .bxor w h0 (by have := two_pow_pos_int w; omega) hw (by omega) a (.lit (2 ^ w - 1))
 /-- `e in slots of T` -/
 def member (t : D.Tab) (e : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr D Γ Λ .bool :=
-  .existsSlots t (.eq (.var .hier) e.weaken) hL
+  .existsSlots t (.eq (.var .here) e.weaken) hL
 /-- `forall k in descendants of s : p` -- jeder Slot, den `s` ueber die `child`-Kante erreicht. -/
 def descendants (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
     (s : Expr D Γ Λ (.index (D.count t))) (body : Expr D (.index (D.count t) :: Γ) Λ .bool)
     (hL : darf D t Λ) : Expr D Γ Λ .bool :=
-  .forallSlots t (impl (.reaches t f hf s.weaken (.var .hier) hL) body) hL
+  .forallSlots t (impl (.reaches t f hf s.weaken (.var .here) hL) body) hL
 /-- `forall k in ancestors of s : p` -- dieselbe Kette, andere Richtung: `k` erreicht `s`. -/
 def ancestors (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
     (s : Expr D Γ Λ (.index (D.count t))) (body : Expr D (.index (D.count t) :: Γ) Λ .bool)
     (hL : darf D t Λ) : Expr D Γ Λ .bool :=
-  .forallSlots t (impl (.reaches t f hf (.var .hier) s.weaken hL) body) hL
+  .forallSlots t (impl (.reaches t f hf (.var .here) s.weaken hL) body) hL
 /-- `chain(a, b) in T` -- `a` erreicht `b` ueber das Feld, das die Stelle nennt. -/
 def chain (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
     (a b : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr D Γ Λ .bool :=
@@ -153,11 +153,11 @@ variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     schreibbar (das ist `M104`, als Voraussetzung des Zuckers). -/
 def plusGleich (x : Var Γ (.int lo hi)) (e : Expr D Γ Λ (.int lo' hi'))
     (h1 : lo ≤ lo + lo') (h2 : hi + hi' ≤ hi) : Stmt D V l Γ Λ Λ :=
-  .assignVar x (.weiter h1 h2 (.add (.var x) e))
+  .assignVar x (.widen h1 h2 (.add (.var x) e))
 /-- `x -= e` -/
 def minusGleich (x : Var Γ (.int lo hi)) (e : Expr D Γ Λ (.int lo' hi'))
     (h1 : lo ≤ lo - hi') (h2 : hi - lo' ≤ hi) : Stmt D V l Γ Λ Λ :=
-  .assignVar x (.weiter h1 h2 (.sub (.var x) e))
+  .assignVar x (.widen h1 h2 (.sub (.var x) e))
 /-- `x &= e` ueber `0 ..` -/
 def undGleich (x : Var Γ (.int 0 hi)) (e : Expr D Γ Λ (.int lo' hi')) (h0' : 0 ≤ lo') :
     Stmt D V l Γ Λ Λ :=
@@ -171,7 +171,7 @@ def observes (R : D.Lock) (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang R
     (body : Block D V l Γ (.held R :: Λ) (.held R :: Λ)) : Stmt D V l Γ Λ Λ :=
   .locks R hr body
 /-- `maintains I` -- sagt nichts, was `effects` nicht schon sagt. -/
-def maintains (_ : D.Inv) : Stmt D V l Γ Λ Λ := .ite .wahr .nil .nil
+def maintains (_ : D.Inv) : Stmt D V l Γ Λ Λ := .ite .tru .nil .nil
 /-- `accumulates A merge max`: `if A < v { A = v; }` ueber einem Zahlglobal. -/
 def mergeMax (g : D.Glob) (hτ : D.gtyp g = .int lo hi) (v : Expr D Γ Λ (.int lo hi))
     (hw : V.gschreibt g = true) (hL : gdarf D g Λ) : Stmt D V l Γ Λ Λ :=
@@ -180,11 +180,11 @@ def mergeMax (g : D.Glob) (hτ : D.gtyp g = .int lo hi) (v : Expr D Γ Λ (.int 
 def mergeAdd (g : D.Glob) (hτ : D.gtyp g = .int lo hi) (v : Expr D Γ Λ (.int lo' hi'))
     (h1 : lo ≤ lo + lo') (h2 : hi + hi' ≤ hi) (hw : V.gschreibt g = true) (hL : gdarf D g Λ) :
     Stmt D V l Γ Λ Λ :=
-  .assignGlob g (hτ.symm ▸ Expr.weiter h1 h2 (.add (hτ ▸ Expr.glob g hL) v)) hw hL
+  .assignGlob g (hτ.symm ▸ Expr.widen h1 h2 (.add (hτ ▸ Expr.glob g hL) v)) hw hL
 /-- Ein Verbundwert `P(a: e)` -- ein Traeger mit `count 1`: Feld fuer Feld gesetzt. -/
 def verbund (t : D.Tab) (hc : 1 ≤ D.count t) (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f))
     (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt D V l Γ Λ Λ :=
-  .assignSlot t f (.weiter (Int.le_refl 0) (by omega) (.lit 0)) e hw hL
+  .assignSlot t f (.widen (Int.le_refl 0) (by omega) (.lit 0)) e hw hL
 end Stmt
 
 namespace Block
@@ -217,7 +217,7 @@ def bitfeld (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
     (.lit (2 ^ breite - 1))
     (.shr (lo' + 1) hw1 hw2 (l1 := 0) (l2 := (lo' : Int))
       (Int.le_refl 0) (Int.natCast_nonneg lo')
-      (.leseBytes t f hf n off hlo hhi hL) (.lit lo'))
+      (.getBytes t f hf n off hlo hhi hL) (.lit lo'))
 
 /-- `embeds [hi:lo] scale s` -- das Bitfeld, mal `s`. -/
 def embeds (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)

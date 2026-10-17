@@ -391,11 +391,11 @@ def w108prog : UProg :=
     fns := [{ name := "read_a", params := [], parten := [],
               ergebnis := .some (0, 4294967295), ergBool := false,
               held := [], schreibt := [], sichert := [], saetze := [],
-              rueck := .wert (.tab "T" "v" (.lit 0)) },
+              rueck := .val (.tab "T" "v" (.lit 0)) },
             { name := "read_c", params := [], parten := [],
               ergebnis := .some (0, 4294967295), ergBool := false,
               held := [], schreibt := [], sichert := [], saetze := [],
-              rueck := .wert (.tab "T" "v" (.lit 1)) }],
+              rueck := .val (.tab "T" "v" (.lit 1)) }],
     wurzeln := [] }
 
 /-- **108 was refused before**: `elabU` stops at the `concurrent`

@@ -138,7 +138,7 @@ theorem mVorlauf : ∃ (M : RufMaschineG mD) (σ0 σ1 : World mD) (log0 log1 : L
     ZustandG M 0 [] mHauptA .nil (mSp.welt []) log0 .nil
       (.dann (.cons mLocksA .nil) (.ende mRestA)) σ0 ∧ offen σ0.spur = [] ∧
     ZustandG M 1 [] mHauptB .nil (mSp.welt []) log1 .nil
-      (.dann (.cons mLocksB .nil) (.ende (.ret .keine List.Perm.nil))) σ1 ∧ offen σ1.spur = [] ∧
+      (.dann (.cons mLocksB .nil) (.ende (.ret .empty List.Perm.nil))) σ1 ∧ offen σ1.spur = [] ∧
     ∀ u, u ≠ 0 → u ≠ 1 → M.faeden u = (RufStartG mP mSp mInit).faeden u := by
   obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP) (O := mO) (passes := 0) mStart0
     _ _ _ rfl rfl (mHeld0 _) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
@@ -155,7 +155,7 @@ theorem mVorlauf : ∃ (M : RufMaschineG mD) (σ0 σ1 : World mD) (log0 log1 : L
     _ _ _ rfl rfl (mHeld0 _) _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   obtain ⟨M5, s5, hZ5⟩ := w_endeEntf (P := mP) (O := mO) (passes := 0) hZ4.1 mLocksB
-    (.ret .keine List.Perm.nil) .nil rfl rfl
+    (.ret .empty List.Perm.nil) .nil rfl rfl
   have hr5 : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M5 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3)
       s4) s5
@@ -231,19 +231,19 @@ theorem ziel_ort_mehrfaden_zeuge : ∃ Mb Mc Md : RufMaschineG mD,
   obtain ⟨Ma, hra, hfremdA, σa, loga, hza, hoffa, _, _⟩ := mAbschnitt hr 0 mHauptA .nil
     (mSp.welt []) log0 m30 mHpSetzeA (fun _ h => nomatch h) (.ende mRestA) σ0 hz0 hoff0 hfrei0
   have hz1' : ZustandG Ma 1 [] mHauptB .nil (mSp.welt []) log1 .nil
-      (.dann (.cons mLocksB .nil) (.ende (.ret .keine List.Perm.nil))) (Ma.speicher.welt σ1.spur) :=
+      (.dann (.cons mLocksB .nil) (.ende (.ret .empty List.Perm.nil))) (Ma.speicher.welt σ1.spur) :=
     ⟨(hfremdA 1 (by decide)).trans hz1.1, rfl⟩
   have hfrei1 : RufFreiG Ma 1 () := mFrei fun g hg => by
     by_cases hg0 : g = 0
     · subst hg0; rw [hza.spur]; exact hoffa
     · rw [hfremdA g hg0, hidle g hg0 hg]; exact mStart_offen g
   obtain ⟨Mb, hrb, hfremdB, σb, logb, hzb, _, _, hrueck⟩ := mAbschnitt hra 1 mHauptB .nil
-    (mSp.welt []) log1 m70 mHpSetzeB (fun _ h => nomatch h) (.ende (.ret .keine List.Perm.nil)) _
+    (mSp.welt []) log1 m70 mHpSetzeB (fun _ h => nomatch h) (.ende (.ret .empty List.Perm.nil)) _
     hz1' hoff1 hfrei1
   have hza' : Mb.faeden 0 = ⟨[], ⟨mHauptA, .nil, mSp.welt [], ⟨false, [], [], .nil, .ende mRestA⟩⟩,
       σa.spur, loga⟩ := (hfremdB 0 (by decide)).trans hza.1
   obtain ⟨Mc, sc, hZc⟩ := w_rufEnde (P := mP) (O := mO) (passes := 0) hza' mPruefeA .nil
-    mHpPruefe rfl (.ret .keine List.Perm.nil) .nil rfl (mHeld0 _)
+    mHpPruefe rfl (.ret .empty List.Perm.nil) .nil rfl (mHeld0 _)
   have hrc : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) Mc := .schritt _ _ _ hrb sc
   obtain ⟨rho, w0, hm⟩ : ∃ (rho : Env mD (mD.params mPruefeA)) (w0 : World mD),
       RufEreignisF.eintritt mPruefeA rho w0 ∈ (Mc.faeden 0).log := by
@@ -251,13 +251,13 @@ theorem ziel_ort_mehrfaden_zeuge : ∃ Mb Mc Md : RufMaschineG mD,
     exact ⟨_, _, List.mem_cons_self⟩
   have hreq := ((mP_zertifiziert 0 Mc hrc).1.1.1 0 _ hm).1 _ _ _ rfl
   obtain ⟨Md, sd, hGd⟩ := w_rueckP (P := mP) (O := mO) (passes := 0) hZc.1 _ [] rfl
-    (PopArt.wie rfl) .keine List.Perm.nil .nil rfl (mHeld0 _)
+    (PopArt.wie rfl) .empty List.Perm.nil .nil rfl (mHeld0 _)
   have hrd : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) Md := .schritt _ _ _ hrc sd
   have h1d : Md.faeden 1 = Mb.faeden 1 := by
     rw [rufSchrittG_fremd sd 1 (by decide), rufSchrittG_fremd sc 1 (by decide)]
   have hSE := (mP_zertifiziert 0 Md hrd).2.1 0
   rw [hGd.1] at hSE
-  obtain ⟨hE, hI⟩ := hSE rfl false [] [] .nil (.ende (.ret .keine List.Perm.nil)) .keine rfl
+  obtain ⟨hE, hI⟩ := hSE rfl false [] [] .nil (.ende (.ret .empty List.Perm.nil)) .empty rfl
     ⟨_, Or.inl rfl⟩
   have hI' := hI () (List.mem_singleton_self _) rfl
   refine ⟨Mb, Mc, Md, hrb, sc, hrc, hrd, by rw [hzb.1]; exact hrueck, ⟨rho, w0, hm, hreq, of_decide_eq_true hreq⟩,

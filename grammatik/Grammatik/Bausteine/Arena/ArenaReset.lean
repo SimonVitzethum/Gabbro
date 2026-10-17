@@ -71,7 +71,7 @@ def oz : Orakel ArenaZeuge.ZD where
 
 /-- The `else` continuation for the witness: return with nothing left to hold. -/
 def voll0 : Endblock ArenaZeuge.ZD ArenaZeuge.ZV false [] [] :=
-  .ret .keine (by rfl)
+  .ret .empty (by rfl)
 
 /-- **Joint witness on the four-slot fixture.** Every premise of
     `reset_alloc_laueft_rumpf` is instantiated JOINTLY: the arena `Log`

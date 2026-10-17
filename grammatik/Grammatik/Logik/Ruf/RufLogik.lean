@@ -124,7 +124,7 @@ theorem rufSchritt_nicht_logik (P : Programm D) (O : Orakel D) (passes : Nat)
     at hcon
   cases hy : execEnd (V := vertragVon D f) O passes R (P.rumpf f)
       (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ with
-  | grund σ₂ r => simp [hy] at hcon
+  | why σ₂ r => simp [hy] at hcon
   | leave hl σ₂ ρ₂ => exact absurd hl (by decide)
   | next hl σ₂ ρ₂ => exact absurd hl (by decide)
   | logik e' => exact hbody e' hy
@@ -186,7 +186,7 @@ theorem rufAt_vertraege (P : Programm D) (O : Orakel D) (passes : Nat) :
       rw [if_neg (by rw [req_lese, show wahr? (eval σ (P.requires f) σ ρ) = true from hreq]; simp)]
       cases hy : execEnd (V := vertragVon D f) O passes (rufAt P O passes m) (P.rumpf f)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ with
-      | grund σ₂ r => dsimp only; intro σ' v h; cases h
+      | why σ₂ r => dsimp only; intro σ' v h; cases h
       | leave hl σ₂ ρ₂ => exact absurd hl (by decide)
       | next hl σ₂ ρ₂ => exact absurd hl (by decide)
       | logik e => dsimp only; intro σ' v h; cases h
@@ -258,7 +258,7 @@ theorem rufFrei_ok (P : Programm D) (O : Orakel D) (passes n : Nat) (g : D.Fn)
   unfold rufFrei
   cases hx : rufAt P O passes n g σ ρ with
   | ok σ₂ w => exact id
-  | grund σ₂ r => intro h; cases h
+  | why σ₂ r => intro h; cases h
   | logik e => intro h; cases h
   | hardware e => intro h; cases h
 
@@ -278,7 +278,7 @@ theorem kong_rufAt_rufFrei (P : Programm D) (O : Orakel D) (passes n : Nat) :
   unfold rufFrei
   cases hx : rufAt P O passes n g σ ρ with
   | ok σ' v => exact Or.inl rfl
-  | grund σ' r => exact Or.inl rfl
+  | why σ' r => exact Or.inl rfl
   | logik e => exact Or.inr ⟨.logik e, rfl, ⟨e, rfl⟩⟩
   | hardware e => exact Or.inl rfl
 
@@ -309,7 +309,7 @@ theorem kong_rufAt_torRuf (P : Programm D) (O : Orakel D) (passes n : Nat)
     rw [if_pos hq]
     cases hx : rufAt P O passes n g σ ρ with
     | ok σ' v => exact Or.inl rfl
-    | grund σ' r => exact Or.inl rfl
+    | why σ' r => exact Or.inl rfl
     | hardware e => exact Or.inl rfl
     | logik e =>
         obtain ⟨hh, rfl⟩ := ih g σ ρ e hq hx

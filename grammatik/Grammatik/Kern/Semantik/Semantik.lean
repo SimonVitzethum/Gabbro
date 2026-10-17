@@ -141,12 +141,12 @@ inductive Env (D : Deklaration) : Ctx → Type where
   | cons (v : Wert D τ) (ρ : Env D Γ) : Env D (τ :: Γ)
 
 def Env.get : Env D Γ → Var Γ τ → Wert D τ
-  | .cons v _, .hier => v
-  | .cons _ ρ, .dort x => ρ.get x
+  | .cons v _, .here => v
+  | .cons _ ρ, .there x => ρ.get x
 
 def Env.set : Env D Γ → Var Γ τ → Wert D τ → Env D Γ
-  | .cons _ ρ, .hier, v => .cons v ρ
-  | .cons w ρ, .dort x, v => .cons w (ρ.set x v)
+  | .cons _ ρ, .here, v => .cons v ρ
+  | .cons w ρ, .there x, v => .cons w (ρ.set x v)
 
 def Env.tail : Env D (τ :: Γ) → Env D Γ
   | .cons _ ρ => ρ
@@ -158,25 +158,25 @@ mutual
 /-- Die Traeger und Globale, die ein Ausdruck liest (statisch; eine Ueberdeckung, denn
     `&&` liest den rechten Operanden nicht immer -- mehr Ereignisse, alle bewacht). -/
 def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
-  | .lit _ | .wahr | .falsch | .var _ | .ptrOf _ _ _ _ | .fnref _ _ _ | .none _ | .grund _ _ => []
+  | .lit _ | .tru | .fls | .var _ | .ptrOf _ _ _ _ | .fnref _ _ _ | .none _ | .why _ _ => []
   | .glob g _ => [.inr g]
   | .slot t _ i _ => .inl t :: i.orte
-  | .durch p t _ _ i _ => p.orte ++ .inl t :: i.orte
-  | .altGlob g _ => [.inr g]
-  | .altSlot t _ i _ => .inl t :: i.orte
-  | .leseBytes t _ _ _ i _ _ _ => .inl t :: i.orte
-  | .weiter _ _ e => e.orte
+  | .thru p t _ _ i _ => p.orte ++ .inl t :: i.orte
+  | .oldG g _ => [.inr g]
+  | .oldS t _ i _ => .inl t :: i.orte
+  | .getBytes t _ _ _ i _ _ _ => .inl t :: i.orte
+  | .widen _ _ e => e.orte
   | .add a b | .sub a b | .mul a b | .div _ _ a b | .rem _ _ a b | .sdiv _ a b | .srem _ a b
   | .band _ _ a b | .bor _ _ _ _ _ a b | .bxor _ _ _ _ _ a b | .shl _ _ _ _ _ a b | .shr _ _ _ _ _ a b
-  | .lt a b | .le a b | .eq a b | .fllt a b | .flle a b | .und a b | .oder a b => a.orte ++ b.orte
-  | .neg a | .nicht a | .some a | .istSome a => a.orte
-  | .fall _ _ nutz => nutz.orte
+  | .lt a b | .le a b | .eq a b | .fllt a b | .flle a b | .and a b | .or a b => a.orte ++ b.orte
+  | .neg a | .not a | .some a | .istSome a => a.orte
+  | .case _ _ nutz => nutz.orte
   | .forallSlots t body _ | .existsSlots t body _ => .inl t :: body.orte
   | .reaches t _ _ a b _ => .inl t :: a.orte ++ b.orte
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
-  | .keine => []
-  | .zahl e => e.orte
+  | .empty => []
+  | .num e => e.orte
 
 end
 
@@ -185,8 +185,8 @@ def Args.orte : Args D Γ Λ τs → List (D.Tab ⊕ D.Glob)
   | .cons e rest => e.orte ++ rest.orte
 
 def ErgExpr.orte : ErgExpr D Γ Λ e → List (D.Tab ⊕ D.Glob)
-  | .keine => []
-  | .wert e => e.orte
+  | .empty => []
+  | .val e => e.orte
 
 /-! ## 3. Die Bedeutung eines Ausdrucks -- total -/
 
@@ -213,17 +213,17 @@ mutual
 /-- `σ₀` ist die Welt beim EINTRITT (fuer `old(…)` in `ensures`); im Rumpf ist sie `σ`. -/
 def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D τ
   | .lit n, _, _ => ⟨n, Int.le_refl _, Int.le_refl _⟩
-  | .wahr, _, _ => true
-  | .falsch, _, _ => false
+  | .tru, _, _ => true
+  | .fls, _, _ => false
   | .var x, _, ρ => ρ.get x
   | .glob g _, σ, _ => σ.globs g
   | .slot t f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
-  | .durch _ t _ f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
+  | .thru _ t _ f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .ptrOf _ _ _ _, _, _ => ()
   | .fnref f _ h, _, _ => ⟨f, h⟩
-  | .altGlob g _, _, _ => σ₀.globs g
-  | .altSlot t f i _, σ, ρ => σ₀.slots t (eval σ₀ i σ ρ).n f
-  | .weiter h1 h2 e, σ, ρ => Zahl.weiter h1 h2 (eval σ₀ e σ ρ)
+  | .oldG g _, _, _ => σ₀.globs g
+  | .oldS t f i _, σ, ρ => σ₀.slots t (eval σ₀ i σ ρ).n f
+  | .widen h1 h2 e, σ, ρ => Zahl.weiter h1 h2 (eval σ₀ e σ ρ)
   | .add a b, σ, ρ => Zahl.add (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .sub a b, σ, ρ => Zahl.sub (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .neg a, σ, ρ => Zahl.neg (eval σ₀ a σ ρ)
@@ -232,7 +232,7 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .rem h0 h1 a b, σ, ρ => Zahl.rem h0 h1 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .sdiv hb a b, σ, ρ => Zahl.sdiv hb (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .srem hb a b, σ, ρ => Zahl.srem hb (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
-  | .leseBytes t f hf n i _ _ _, σ, ρ =>
+  | .getBytes t f hf n i _ _ _, σ, ρ =>
       let bs := σ.bytesAb t f hf n (eval σ₀ i σ ρ).n
       ⟨bytesZuZahl bs, (bytesZuZahl_bereich bs).1, by
         have := (bytesZuZahl_bereich bs).2; rw [World.bytesAb_length] at this; exact this⟩
@@ -246,14 +246,14 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .eq a b, σ, ρ => decide ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n)
   | .fllt a b, σ, ρ => gleitLt (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x
   | .flle a b, σ, ρ => gleitLe (eval σ₀ a σ ρ).x (eval σ₀ b σ ρ).x
-  | .und a b, σ, ρ => (wahr? (eval σ₀ a σ ρ) && wahr? (eval σ₀ b σ ρ) : Bool)
-  | .oder a b, σ, ρ => (wahr? (eval σ₀ a σ ρ) || wahr? (eval σ₀ b σ ρ) : Bool)
-  | .nicht a, σ, ρ => (!wahr? (eval σ₀ a σ ρ) : Bool)
+  | .and a b, σ, ρ => (wahr? (eval σ₀ a σ ρ) && wahr? (eval σ₀ b σ ρ) : Bool)
+  | .or a b, σ, ρ => (wahr? (eval σ₀ a σ ρ) || wahr? (eval σ₀ b σ ρ) : Bool)
+  | .not a, σ, ρ => (!wahr? (eval σ₀ a σ ρ) : Bool)
   | .none _, _, _ => Option.none
   | .some e, σ, ρ => Option.some (eval σ₀ e σ ρ)
   | .istSome e, σ, ρ => (eval σ₀ e σ ρ).isSome
-  | .fall cs i nutz, σ, ρ => ⟨i, evalNutz σ₀ nutz σ ρ⟩
-  | .grund _ r, _, _ => r
+  | .case cs i nutz, σ, ρ => ⟨i, evalNutz σ₀ nutz σ ρ⟩
+  | .why _ r, _, _ => r
   | .forallSlots t body _, σ, ρ =>
       (alleIndizes (D.count t)).all fun k => wahr? (eval σ₀ body σ (.cons k ρ))
   | .existsSlots t body _, σ, ρ =>
@@ -262,8 +262,8 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
       kette (fun k => hf ▸ σ.slots t k f) (D.count t).toNat (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
-  | .keine, _, _ => ()
-  | .zahl e, σ, ρ => eval σ₀ e σ ρ
+  | .empty, _, _ => ()
+  | .num e, σ, ρ => eval σ₀ e σ ρ
 
 end
 
@@ -318,7 +318,7 @@ def ErgVal (D : Deklaration) : Option Ty → Type
 inductive Ausgang (V : Vertrag D) : Bool → Ctx → Type where
   | ok (σ : World D) (ρ : Env D Γ) : Ausgang V l Γ
   | zurueck (σ : World D) (v : ErgVal D V.erg) : Ausgang V l Γ
-  | grund (σ : World D) (r : Fin V.gruende) : Ausgang V l Γ
+  | why (σ : World D) (r : Fin V.gruende) : Ausgang V l Γ
   | leave (h : l = true) (σ : World D) (ρ : Env D Γ) : Ausgang V l Γ
   | next (h : l = true) (σ : World D) (ρ : Env D Γ) : Ausgang V l Γ
   | logik (e : Logik D) : Ausgang V l Γ
@@ -329,7 +329,7 @@ variable {V : Vertrag D}
 /-- Ein Ausgang, der nicht `ok` ist -- was ein `Endblock` liefert. -/
 inductive EndAusgang (V : Vertrag D) : Bool → Ctx → Type where
   | zurueck (σ : World D) (v : ErgVal D V.erg) : EndAusgang V l Γ
-  | grund (σ : World D) (r : Fin V.gruende) : EndAusgang V l Γ
+  | why (σ : World D) (r : Fin V.gruende) : EndAusgang V l Γ
   | leave (h : l = true) (σ : World D) (ρ : Env D Γ) : EndAusgang V l Γ
   | next (h : l = true) (σ : World D) (ρ : Env D Γ) : EndAusgang V l Γ
   | logik (e : Logik D) : EndAusgang V l Γ
@@ -338,7 +338,7 @@ inductive EndAusgang (V : Vertrag D) : Bool → Ctx → Type where
 /-- Was ein Ruf liefert -- im Vertrag des GERUFENEN. -/
 inductive RufAusgang {D : Deklaration} (f : D.Fn) : Type where
   | ok (σ : World D) (v : ErgVal D (D.erg f))
-  | grund (σ : World D) (r : Fin (D.gruende f))
+  | why (σ : World D) (r : Fin (D.gruende f))
   | logik (e : Logik D)
   | hardware (e : Hardware D)
 
@@ -419,7 +419,7 @@ def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn
     oracle -- a stop the MODEL decided and filed as hardware). Every value of every type is
     the decoding of some raw word under some image (`einpassen_voll`, EinpassenVoll.lean; for
     floats: every well-formed one). What is left without an answer is exactly the EMPTY
-    types -- `never`, `.grund 0`, an empty range, a sum without a value -- and among them the
+    types -- `never`, `.why 0`, an empty range, a sum without a value -- and among them the
     checker admits only an axiom `-> never` (round-6 finding W1, `AkzeptiertSpec.antworten`),
     whose call does not return (`HaltArt.nieZurueck`, Zielsatz/Spec.lean).
     `z` is the loaded image (`Orakel.zeiger`), read only by `fnptr`. -/
@@ -429,7 +429,7 @@ def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D �
   | .opt m, n => if h : 0 ≤ n ∧ n ≤ m - 1 then some (some ⟨n, h.1, h.2⟩)
                  else if n < 0 then some Option.none else Option.none
   | .sum cs, n => summePasst cs n
-  | .grund m, n => if h : 0 ≤ n ∧ n < m then some ⟨n.toNat, by omega⟩ else Option.none
+  | .why m, n => if h : 0 ≤ n ∧ n < m then some ⟨n.toNat, by omega⟩ else Option.none
   | .never, _ => Option.none
   | .fl lo hi, n => gleitWortPasst lo hi n
   | .fnptr m, n => zeigerPasst z m n
@@ -440,7 +440,7 @@ def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option
   | Option.some τ, n => einpassen z τ n
 
 /-- **An empty answer class** (G1 repair, 2026-09-15): no raw word decodes under any image --
-    the declared answer type has no value (`never`, `.grund 0`, an empty range, a sum
+    the declared answer type has no value (`never`, `.why 0`, an empty range, a sum
     without a value, a pointer type no function has; `einpassen_voll`, EinpassenVoll.lean,
     shows that every value IS some answer). A call whose answer class is empty cannot
     return, and the machine cannot fail to answer it "outside its type": there is no inside.
@@ -484,7 +484,7 @@ def schuldet (f : D.Fn) (i : D.Inv) : Bool :=
 def Ausgang.schrumpf : Ausgang V l (τ :: Γ) → Ausgang V l Γ
   | .ok σ ρ => .ok σ ρ.tail
   | .zurueck σ v => .zurueck σ v
-  | .grund σ r => .grund σ r
+  | .why σ r => .why σ r
   | .leave h σ ρ => .leave h σ ρ.tail
   | .next h σ ρ => .next h σ ρ.tail
   | .logik e => .logik e
@@ -496,7 +496,7 @@ def Ausgang.schrumpfArm : (c : Option (Int × Int)) → Ausgang V l (ArmCtx Γ c
 
 def EndAusgang.schrumpf : EndAusgang V l (τ :: Γ) → EndAusgang V l Γ
   | .zurueck σ v => .zurueck σ v
-  | .grund σ r => .grund σ r
+  | .why σ r => .why σ r
   | .leave h σ ρ => .leave h σ ρ.tail
   | .next h σ ρ => .next h σ ρ.tail
   | .logik e => .logik e
@@ -504,7 +504,7 @@ def EndAusgang.schrumpf : EndAusgang V l (τ :: Γ) → EndAusgang V l Γ
 
 def EndAusgang.zuAusgang : EndAusgang V l Γ → Ausgang V l Γ
   | .zurueck σ v => .zurueck σ v
-  | .grund σ r => .grund σ r
+  | .why σ r => .why σ r
   | .leave h σ ρ => .leave h σ ρ
   | .next h σ ρ => .next h σ ρ
   | .logik e => .logik e
@@ -514,7 +514,7 @@ def EndAusgang.zuAusgang : EndAusgang V l Γ → Ausgang V l Γ
 def Ausgang.mapWelt (f : World D → World D) : Ausgang V l Γ → Ausgang V l Γ
   | .ok σ ρ => .ok (f σ) ρ
   | .zurueck σ v => .zurueck (f σ) v
-  | .grund σ r => .grund (f σ) r
+  | .why σ r => .why (f σ) r
   | .leave h σ ρ => .leave h (f σ) ρ
   | .next h σ ρ => .next h (f σ) ρ
   | .logik e => .logik e
@@ -525,7 +525,7 @@ def Ausgang.mapWelt (f : World D → World D) : Ausgang V l Γ → Ausgang V l �
 def Ausgang.ausSchleife : Ausgang V true Γ → Ausgang V l Γ
   | .ok σ ρ => .ok σ ρ
   | .zurueck σ v => .zurueck σ v
-  | .grund σ r => .grund σ r
+  | .why σ r => .why σ r
   | .leave _ σ ρ => .ok σ ρ
   | .next _ σ ρ => .ok σ ρ
   | .logik e => .logik e
@@ -544,7 +544,7 @@ def traverseLauf (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ 
       | .next _ σ' ρ' => traverseLauf schritt inv ks σ' ρ'.tail
       | .leave _ σ' ρ' => if (inv σ' ρ'.tail).2 = true then .ok (inv σ' ρ'.tail).1 ρ'.tail else .logik .schleife
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .logik e => .logik e
       | .hardware e => .hardware e
 
@@ -564,7 +564,7 @@ def retryLauf (schritt : World D → Env D Γ → Ausgang V true Γ) (bis : Worl
       | .next _ σ' ρ' => retryLauf schritt bis ueberlauf n σ' ρ'
       | .leave _ σ' ρ' => .ok σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .logik e => .logik e
       | .hardware e => .hardware e
 
@@ -581,7 +581,7 @@ def foreverLauf (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V tr
       | .next _ σ' ρ' => foreverLauf a schritt inv n σ' ρ'
       | .leave _ σ' ρ' => .ok σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .logik e => .logik e
       | .hardware e => .hardware e
 
@@ -601,8 +601,8 @@ def armEnv {c : Option (Int × Int)} (nutz : Nutzlast c) (ρ : Env D Γ) : Env D
   | Option.some (_, _), v => .cons v ρ
 
 def evalErg (σ₀ : World D) : ErgExpr D Γ Λ e → World D → Env D Γ → ErgVal D e
-  | .keine, _, _ => ()
-  | .wert e, σ, ρ => eval σ₀ e σ ρ
+  | .empty, _, _ => ()
+  | .val e, σ, ρ => eval σ₀ e σ ρ
 
 /-- Die Argumente eines indirekten Rufs, in die Parameter der GERUFENEN Funktion: dieselbe
     Signatur, per `sig f = n`. -/
@@ -638,7 +638,7 @@ def roh : {τ : Ty} → Wert D τ → Int
   | .opt _, Option.none => -1
   | .opt _, Option.some k => k.n
   | .sum _, ⟨i, _⟩ => i.val
-  | .grund _, r => r.val
+  | .why _, r => r.val
   | .never, v => v.elim
   | .fl _ _, v => gleitRoh v.x
   | .fnptr _, _ => 0
@@ -700,19 +700,19 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .assignSlot t f i e _ _, σ, ρ =>
       let σ := σ.lese Λ (i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
-  | .assignDurch p t _ f i e _ _, σ, ρ =>
+  | .assignThru p t _ f i e _ _, σ, ρ =>
       let σ := σ.lese Λ (p.orte ++ i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
   | .assignGlob g e _ _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .ok (σ.schreibGlob g Λ (eval σ e σ ρ)) ρ
-  | .schreibBytes t f hf n i _ _ e _ _, σ, ρ =>
+  | .putBytes t f hf n i _ _ e _ _, σ, ρ =>
       let σ := σ.lese Λ (i.orte ++ e.orte)
       .ok (σ.schreibBytes t f hf Λ (eval σ i σ ρ).n (zahlZuBytes n (eval σ e σ ρ).n)) ρ
   | .assignVar x e, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .ok σ (ρ.set x (eval σ e σ ρ))
-  | .uebergang t f hτ i von nach hn _ _ _, σ, ρ =>
+  | .shift t f hτ i von nach hn _ _ _, σ, ρ =>
       let σ := σ.lese Λ (.inl t :: i.orte)
       let k := (eval σ i σ ρ).n
       if (hτ ▸ σ.slots t k f : Zahl _ _).n = von
@@ -729,14 +729,14 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .onTag v arms, σ, ρ =>
       let σ := σ.lese Λ v.orte
       execArms arms (eval σ v σ ρ) σ ρ
-  | .onGrund r arms, σ, ρ =>
+  | .onWhy r arms, σ, ρ =>
       let σ := σ.lese Λ r.orte
       execGrund arms (eval σ r σ ρ) σ ρ
   | .call f args _ hr, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' _ => .ok σ' ρ
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .callInd p args _ hr, σ, ρ =>
@@ -744,7 +744,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       let ⟨f, hf⟩ := eval σ p σ ρ
       match R f σ (umsig hf (evalArgs σ args σ ρ)) with
       | .ok σ' _ => .ok σ' ρ
-      | .grund _ r => keinGrundSig hf hr r
+      | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .locks L _ body, σ, ρ => (execBlock body (σ.nimmt L) ρ).mapWelt (·.gibt L)
@@ -765,7 +765,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some _) => .ok σ' ρ
       | (_, Option.none) => .hardware (.annahme a)
-  | .regSchreib r _ e, σ, ρ =>
+  | .regWrite r _ e, σ, ρ =>
       let σ := σ.lese Λ e.orte
       let _ := O.regSchreib r (roh (eval σ e σ ρ))
       .ok σ ρ
@@ -781,7 +781,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .ret e _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
-  | .retGrund r _, σ, _ => .grund σ r
+  | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
 
@@ -798,7 +798,7 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' v => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindCallInd p args he _ hr rest, σ, ρ =>
@@ -806,14 +806,14 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       let ⟨f, hf⟩ := eval σ p σ ρ
       match R f σ (umsig hf (evalArgs σ args σ ρ)) with
       | .ok σ' v => (execBlock rest σ' (.cons (ergWert (ergSig hf he) v) ρ)).schrumpf
-      | .grund _ r => keinGrundSig hf hr r
+      | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindCallElse f args he _ _ err rest, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' v => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
-      | .grund σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | .why σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
@@ -827,13 +827,13 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       | (σ', Option.some (Sum.inl v)) => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
       | (_, Option.none) => .hardware (.annahme a)
-  | .regLies r _ rest, σ, ρ =>
+  | .regRead r _ rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlock rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
-  | .regLiesElse r _ zusage sonst rest, σ, ρ =>
+  | .regReadElse r _ zusage sonst rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
@@ -854,24 +854,24 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlock rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEnd sonst σ ρ).zuAusgang
-  | .pruefung c sonst rest, σ, ρ =>
+  | .check c sonst rest, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execBlock rest σ ρ else (execEnd sonst σ ρ).zuAusgang
-  | .gleit op a b lo hi rest, σ, ρ =>
+  | .float op a b lo hi rest, σ, ρ =>
       let σ := σ.lese Λ (a.orte ++ b.orte)
       match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitLit q lo hi rest, σ, ρ =>
+  | .floatLit q lo hi rest, σ, ρ =>
       match gleitPasst lo hi (bruch q) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitVon e lo hi rest, σ, ρ =>
+  | .floatOf e lo hi rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitNarrow e lo hi sonst rest, σ, ρ =>
+  | .floatNarrow e lo hi sonst rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       match gleitPasst lo hi (eval σ e σ ρ).x with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
@@ -881,14 +881,14 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
   | .ret e _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
-  | .retGrund r _, σ, _ => .grund σ r
+  | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
   | .cons s rest, σ, ρ =>
       match execStmt s σ ρ with
       | .ok σ' ρ' => execEnd rest σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .leave h σ' ρ' => .leave h σ' ρ'
       | .next h σ' ρ' => .next h σ' ρ'
       | .logik e => .logik e
@@ -942,7 +942,7 @@ def rufAt : Nat → ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang 
             match D.invs.find? (fun i => schuldet f i && !wahr? (eval σ' (P.invariante i) σ' .nil)) with
             | Option.some i => .logik (.invariante i)
             | Option.none => .ok σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .leave h _ _ => absurd h (by decide)
       | .next h _ _ => absurd h (by decide)
       | .logik e => .logik e

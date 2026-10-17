@@ -192,20 +192,20 @@ theorem end104_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     intro h
     simp only [certEnd104Gueltig] at h
     obtain ⟨he, hΛ⟩ := h
-    exact ⟨Endblock.ret (by rw [he]; exact ErgExpr.keine) hΛ, trivial⟩
+    exact ⟨Endblock.ret (by rw [he]; exact ErgExpr.empty) hΛ, trivial⟩
   | retWert e lo hi =>
     intro h
     simp only [certEnd104Gueltig] at h
     obtain ⟨he, hrng, hΛ⟩ := h
     obtain ⟨ee, _⟩ := zeugnis_sound e lo hi hrng
-    exact ⟨Endblock.ret (by rw [he]; exact ErgExpr.wert ee) hΛ, trivial⟩
+    exact ⟨Endblock.ret (by rw [he]; exact ErgExpr.val ee) hΛ, trivial⟩
   | retDurch t f n i p =>
     intro h
     simp only [certEnd104Gueltig] at h
     obtain ⟨htab, hii, herg, hL, hperm⟩ := h
     obtain ⟨ei, _⟩ := zeugnis_sound i 0 (D.count t - 1) hii
     exact ⟨Endblock.ret
-      (by rw [herg]; exact ErgExpr.wert (Expr.durch p t htab f ei hL))
+      (by rw [herg]; exact ErgExpr.val (Expr.thru p t htab f ei hL))
       hperm, trivial⟩
 
 /-- Body checker: `true` iff the body print recomputes. -/
@@ -309,7 +309,7 @@ def cert104_einzahlen :
     CertEnd104 G104_referenz.gD
       (vertragVon G104_referenz.gD G104_referenz.g_einzahlen) :=
   (.cons2
-    (.assignDurch G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand
+    (.assignThru G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand
       0 true (.var 1) (.wide 0 100 (.lit 100)))
     [Res.held (D := G104_referenz.gD) G104_referenz.GLock.M]
     (.consCall G104_referenz.GFn.lies 2
@@ -325,7 +325,7 @@ def args104_einzahlen :
   (.cons2 _ _
     (.consCall _ _ _ G104_referenz.gHp_einzahlen_lies
       (.cons (Expr.ptrOf G104_referenz.GTab.Konto 0 rfl false)
-        (.cons (Expr.var (.dort .hier)) .nil))
+        (.cons (Expr.var (.there .here)) .nil))
       (.lift2 _)))
 
 /-- The print is valid, by `decide`. -/
@@ -353,7 +353,7 @@ def args104_lies :
     End104Args G104_referenz.gD
       (vertragVon G104_referenz.gD G104_referenz.g_lies)
       G104_referenz.gCtx_lies G104_referenz.gL_lies cert104_lies :=
-  (.retDurch _ _ _ _ (Expr.var .hier))
+  (.retDurch _ _ _ _ (Expr.var .here))
 
 /-- The print is valid, by `decide`. -/
 example : certEnd104Ok G104_referenz.gD

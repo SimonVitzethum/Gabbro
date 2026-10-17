@@ -39,14 +39,14 @@ def Stmt.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ite _ t e => t.kOk && e.kOk
   | .onOption _ p a => p.kOk && a.kOk
   | .onTag _ arms => arms.kOk
-  | .onGrund _ arms => arms.kOk
+  | .onWhy _ arms => arms.kOk
   | .locks _ _ body => body.kOk
   | .breaking _ body => body.kOk
   | .traverse .. => false
   | .retry .. => false
   | .forever .. => false
   | .axiomCall .. => false
-  | .retGrund .. => false
+  | .retWhy .. => false
   | .leave .. => false
   | .next .. => false
   | .callInd .. => false
@@ -62,21 +62,21 @@ def Block.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse .. => false
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
-  | .regLies .. => false
-  | .regLiesElse .. => false
+  | .regRead .. => false
+  | .regReadElse .. => false
   | .awaits .. => false
   | .exchange _ _ _ _ rest => rest.kOk
   | .narrow _ _ _ sonst rest => sonst.kOk && rest.kOk
-  | .pruefung _ sonst rest => sonst.kOk && rest.kOk
-  | .gleit _ _ _ _ _ rest => rest.kOk
-  | .gleitLit _ _ _ rest => rest.kOk
-  | .gleitVon _ _ _ rest => rest.kOk
-  | .gleitNarrow _ _ _ sonst rest => sonst.kOk && rest.kOk
+  | .check _ sonst rest => sonst.kOk && rest.kOk
+  | .float _ _ _ _ _ rest => rest.kOk
+  | .floatLit _ _ _ rest => rest.kOk
+  | .floatOf _ _ _ rest => rest.kOk
+  | .floatNarrow _ _ _ sonst rest => sonst.kOk && rest.kOk
 
 def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => false
+  | .retWhy .. => false
   | .leave .. => false
   | .next .. => false
   | .cons s rest => s.kOk && rest.kOk
@@ -379,7 +379,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [h1.eval i, h1.eval e]
       exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
-  | _, _, _, Λ₀, _, .assignDurch p t ht f' i e hw hL, _, _ => by
+  | _, _, _, Λ₀, _, .assignThru p t ht f' i e hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt]
@@ -391,19 +391,19 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [h1.eval e]
       exact ⟨h1.schreibGlob _ _ _, rfl⟩
-  | _, _, _, Λ₀, _, .schreibBytes t f' hf n i hlo hhi e hw hL, _, _ => by
+  | _, _, _, Λ₀, _, .putBytes t f' hf n i hlo hhi e hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (i.orte ++ e.orte)
       simp only [execStmt]
       rw [h1.eval i, h1.eval e]
-      exact ⟨SG.schreibBytes _ _ _ _ _ _ _ _ h1, rfl⟩
+      exact ⟨SG.putBytes _ _ _ _ _ _ _ _ h1, rfl⟩
   | _, _, _, Λ₀, _, .assignVar x e, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       rw [h1.eval e]
       exact ⟨h1, rfl⟩
-  | _, _, _, Λ₀, _, .uebergang t f' hτ i von nach hn he hw hL, _, _ => by
+  | _, _, _, Λ₀, _, .shift t f' hτ i von nach hn he hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (.inl t :: i.orte)
       simp only [execStmt]
@@ -411,7 +411,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
       · trivial
-  | _, _, _, _, _, .regSchreib r hk e, _, _ => by
+  | _, _, _, _, _, .regWrite r hk e, _, _ => by
       intro σ σ' ρ h
       simp only [execStmt]
       exact ⟨h.lese _ _, rfl⟩
@@ -461,7 +461,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [execArms_wahl, execArms_wahl, h1.eval w]
       exact AusSG.schrumpfArm _ (armsSGK arms ha ho _ _ _ _ h1)
-  | _, _, _, Λ₀, _, .onGrund r arms, hs, ho => by
+  | _, _, _, Λ₀, _, .onWhy r arms, hs, ho => by
       intro σ σ' ρ h
       have ha := hs.onGrund_inv
       simp only [Stmt.kOk] at ho
@@ -483,16 +483,16 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         cases o' with
         | ok σ2 v2 => exact ⟨hRg.1, rfl⟩
         | _ => exact hRg.elim
-      | grund _ r => exact (Fin.cast hr r).elim0
+      | why _ r => exact (Fin.cast hr r).elim0
       | logik e =>
         cases o' with
         | ok => exact hRg.elim
-        | grund _ r => exact (Fin.cast hr r).elim0
+        | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
       | hardware e =>
         cases o' with
         | ok => exact hRg.elim
-        | grund _ r => exact (Fin.cast hr r).elim0
+        | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
   | _, _, _, _, _, .callInd .., _, ho => by simp [Stmt.kOk] at ho
   | _, _, _, _, _, .locks L hr body, hs, ho => by
@@ -516,7 +516,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, _, _, .retGrund .., _, ho => by simp [Stmt.kOk] at ho
+  | _, _, _, _, _, .retWhy .., _, ho => by simp [Stmt.kOk] at ho
   | _, _, _, _, _, .leave .., _, ho => by simp [Stmt.kOk] at ho
   | _, _, _, _, _, .next .., _, ho => by simp [Stmt.kOk] at ho
 
@@ -563,23 +563,23 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           obtain ⟨hs2, rfl⟩ := hRg
           exact AusSG.schrumpf (blockSGK rest hrest ho _ _ _ hs2)
         | _ => exact hRg.elim
-      | grund _ r => exact (Fin.cast hr r).elim0
+      | why _ r => exact (Fin.cast hr r).elim0
       | logik e =>
         cases o' with
         | ok => exact hRg.elim
-        | grund _ r => exact (Fin.cast hr r).elim0
+        | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
       | hardware e =>
         cases o' with
         | ok => exact hRg.elim
-        | grund _ r => exact (Fin.cast hr r).elim0
+        | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
   | _, _, _, _, _, .bindCallInd .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .bindCallElse .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .bindAxiom .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .bindAxiomElse .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .regLies .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .regLiesElse .., _, ho => by simp [Block.kOk] at ho
+  | _, _, _, _, _, .regRead .., _, ho => by simp [Block.kOk] at ho
+  | _, _, _, _, _, .regReadElse .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .awaits .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb, ho => by
       intro σ σ' ρ h
@@ -601,7 +601,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSGK rest hr ho.2 _ _ _ h1)
       · exact EndSG.zuAusgang (endSGK sonst hs ho.1 _ _ _ h1)
-  | _, _, _, Λ₀, _, .pruefung c sonst rest, hb, ho => by
+  | _, _, _, Λ₀, _, .check c sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
       simp only [Block.kOk, Bool.and_eq_true] at ho
@@ -611,7 +611,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact blockSGK rest hr ho.2 _ _ _ h1
       · exact EndSG.zuAusgang (endSGK sonst hs ho.1 _ _ _ h1)
-  | _, _, _, Λ₀, _, .gleit op a b lo hi rest, hb, ho => by
+  | _, _, _, Λ₀, _, .float op a b lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleit_inv
       simp only [Block.kOk] at ho
@@ -621,7 +621,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSGK rest hr ho _ _ _ h1)
       · trivial
-  | _, _, _, _, _, .gleitLit q lo hi rest, hb, ho => by
+  | _, _, _, _, _, .floatLit q lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleitLit_inv
       simp only [Block.kOk] at ho
@@ -629,7 +629,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSGK rest hr ho _ _ _ h)
       · trivial
-  | _, _, _, Λ₀, _, .gleitVon e lo hi rest, hb, ho => by
+  | _, _, _, Λ₀, _, .floatOf e lo hi rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.gleitVon_inv
       simp only [Block.kOk] at ho
@@ -639,7 +639,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSGK rest hr ho _ _ _ h1)
       · trivial
-  | _, _, _, Λ₀, _, .gleitNarrow e lo hi sonst rest, hb, ho => by
+  | _, _, _, Λ₀, _, .floatNarrow e lo hi sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv
       simp only [Block.kOk, Bool.and_eq_true] at ho
@@ -659,7 +659,7 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execEnd]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, .retGrund .., _, ho => by simp [Endblock.kOk] at ho
+  | _, _, _, .retWhy .., _, ho => by simp [Endblock.kOk] at ho
   | _, _, _, .leave .., _, ho => by simp [Endblock.kOk] at ho
   | _, _, _, .next .., _, ho => by simp [Endblock.kOk] at ho
   | _, _, _, .cons s rest, he, ho => by
@@ -870,12 +870,12 @@ theorem semK_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int
   rw [execArms_wahl, hw]
   exact semK_dann O passes R b _ _ _
 
-theorem semK_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.grund n))
+theorem semK_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.why n))
     (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
     (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
     semK O passes R (.dann (grundWahlG arms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρ))
         (.dann rest k)) (σ.lese Λ r.orte) ρ =
-      semK O passes R (.dann (.cons (.onGrund r arms) rest) k) σ ρ := by
+      semK O passes R (.dann (.cons (.onWhy r arms) rest) k) σ ρ := by
   rw [semK_dann O passes R (.cons _ rest), nachK_cons, semK_dann]
   simp only [execStmt]
   rw [execGrund_wahlW O passes R arms]
@@ -930,7 +930,7 @@ theorem semK_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.
 theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.kOk = e.kOk
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -945,9 +945,9 @@ theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} 
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ},
       EndR A C e → BlockR A C true e.alsBlock.2
   | _, _, _, _, .ret e hΛ => .cons _ _ (.ret e hΛ) .nil
-  | _, _, _, _, .retGrund r hΛ => by
+  | _, _, _, _, .retWhy r hΛ => by
       simp only [Endblock.alsBlock]
-      exact .cons _ _ (@StmtR.retGrund _ _ A C _ false [] _ r hΛ) .nil
+      exact .cons _ _ (@StmtR.retWhy _ _ A C _ false [] _ r hΛ) .nil
   | _, _, _, _, .cons s _ hs hr => .cons s _ hs (EndR.alsBlock hr)
   | _, _, _, _, .bind e _ hr => .bind e _ (EndR.alsBlock hr)
 
@@ -977,7 +977,7 @@ theorem semK_pruefWahr {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true) :
     semK O passes R (.dann rest k) (σ.lese Λ c.orte) ρ =
-      semK O passes R (.dann (.pruefung c sonst rest) k) σ ρ := by
+      semK O passes R (.dann (.check c sonst rest) k) σ ρ := by
   rw [semK_dann, semK_dann]
   simp only [execBlock, hw, if_true]
 
@@ -986,7 +986,7 @@ theorem semK_pruefFalsch {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ)
     (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = false) :
     semK O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ c.orte) ρ =
-      semK O passes R (.dann (.pruefung c sonst rest) k) σ ρ := by
+      semK O passes R (.dann (.check c sonst rest) k) σ ρ := by
   rw [semK_alsBlock]
   rw [semK_dann]
   simp only [execBlock, hw, Bool.false_eq_true, if_false]
@@ -1015,7 +1015,7 @@ theorem semK_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (o
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = some v) :
     semK O passes R (.dann rest (.schrumpf k)) (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ) =
-      semK O passes R (.dann (.gleit op a b lo hi rest) k) σ ρ := by
+      semK O passes R (.dann (.float op a b lo hi rest) k) σ ρ := by
   rw [semK_dann, semK_dann]
   simp only [execBlock, hv]
   rw [nachK_schrumpf]
@@ -1024,7 +1024,7 @@ theorem semK_gleitLit {Λ Λ' : List (Res D)} (q lo hi : Int × Int)
     (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D)
     (ρ : Env D Γ) (v : Wert D (.fl lo hi)) (hv : gleitPasst lo hi (bruch q) = some v) :
     semK O passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) =
-      semK O passes R (.dann (.gleitLit q lo hi rest) k) σ ρ := by
+      semK O passes R (.dann (.floatLit q lo hi rest) k) σ ρ := by
   rw [semK_dann, semK_dann]
   simp only [execBlock, hv]
   rw [nachK_schrumpf]
@@ -1035,7 +1035,7 @@ theorem semK_gleitVon {Λ Λ' : List (Res D)} {l₁ h₁ : Int} (e : Expr D Γ �
     (hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e
       (σ.lese Λ e.orte) ρ).n) = some v) :
     semK O passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
-      semK O passes R (.dann (.gleitVon e lo hi rest) k) σ ρ := by
+      semK O passes R (.dann (.floatOf e lo hi rest) k) σ ρ := by
   rw [semK_dann, semK_dann]
   simp only [execBlock, hv]
   rw [nachK_schrumpf]
@@ -1046,7 +1046,7 @@ theorem semK_gleitNarrowOk {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ) (v : Wert D (.fl lo hi))
     (hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = some v) :
     semK O passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) (.cons v ρ) =
-      semK O passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+      semK O passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ := by
   rw [semK_dann, semK_dann]
   simp only [execBlock, hv]
   rw [nachK_schrumpf]
@@ -1057,7 +1057,7 @@ theorem semK_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
     (ρ : Env D Γ)
     (hn : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = none) :
     semK O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ e.orte) ρ =
-      semK O passes R (.dann (.gleitNarrow e lo hi sonst rest) k) σ ρ := by
+      semK O passes R (.dann (.floatNarrow e lo hi sonst rest) k) σ ρ := by
   rw [semK_alsBlock]
   rw [semK_dann]
   simp only [execBlock, hn]
@@ -1153,7 +1153,7 @@ inductive Wiederauf (g : D.Fn) (caller : RufRahmenG D) (v : ErgVal D (D.erg g)) 
       Wiederauf g caller v ⟨caller.f, caller.rho, caller.s0,
         ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc, .dann restb (.schrumpf k)⟩⟩
   | bindSonst {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (n : Nat)
-      (err : Endblock D (vertragVon D caller.f) l (.grund n :: Γ) Λ)
+      (err : Endblock D (vertragVon D caller.f) l (.why n :: Γ) Λ)
       (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
       (k : GRest D (vertragVon D caller.f) l Γ Λ') (ρc : Env D Γ)
       (hc : caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩) (he : D.erg g = some τ) :
@@ -1984,7 +1984,7 @@ theorem invK_schritt {M M' : RufMaschineG D} (hs : RufSchrittG P O passes M f M'
           refine Anspruch.bind _ unten g σ1 v1 restb k ρ' rfl he ?_
           rw [← hsemw σ1 v1 hR1]
           exact hanT
-      | grund => exact Anspruch.sonst _ _
+      | why => exact Anspruch.sonst _ _
       | leave h' => exact absurd h' (by decide)
       | next h' => exact absurd h' (by decide)
       | logik => exact Anspruch.sonst _ _
@@ -2177,15 +2177,15 @@ theorem t4B_wartet_ueber :
   have hZ0 : ZustandG (t4M t4B t4BRumpf) 0 [t4Unten] t4B Env.nil (t4Sp.welt []) []
       (Env.nil : Env t4D []) (.ende t4BRumpf) ((t4M t4B t4BRumpf).weltVon 0) := ⟨rfl, rfl⟩
   obtain ⟨M1, hs1, hZ1⟩ := w_endeEntf (P := t4P) (O := t4O) (passes := 0) hZ0.1
-    (.ite .wahr t4BindBlock .nil) (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)
+    (.ite .tru t4BindBlock .nil) (.ret (.val (t4Lit 9 (by decide) (by decide))) List.Perm.nil)
     Env.nil rfl rfl
   obtain ⟨M2, hs2, hZ2⟩ := w_iteWahr (P := t4P) (O := t4O) (passes := 0) hZ1.1
-    .wahr t4BindBlock .nil .nil
-    (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil)) Env.nil rfl rfl
+    .tru t4BindBlock .nil .nil
+    (.ende (.ret (.val (t4Lit 9 (by decide) (by decide))) List.Perm.nil)) Env.nil rfl rfl
     (fun L => nomatch L)
   obtain ⟨M3, hs3, hZ3⟩ := w_bindCall (P := t4P) (O := t4O) (passes := 0) hZ2.1
-    t4G .nil rfl (t4Hp t4B) rfl (.cons (.assignSlot () () t4Idx1x (.var .hier) rfl t4Darf) .nil)
-    (.dann .nil (.ende (.ret (.wert (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
+    t4G .nil rfl (t4Hp t4B) rfl (.cons (.assignSlot () () t4Idx1x (.var .here) rfl t4Darf) .nil)
+    (.dann .nil (.ende (.ret (.val (t4Lit 9 (by decide) (by decide))) List.Perm.nil))) Env.nil
     rfl (fun L => nomatch L)
   have h0 : 0 < ((t4M t4B t4BRumpf).faeden 0).stapel.length := Nat.zero_lt_succ _
   have h1 : 0 < (M1.faeden 0).stapel.length := by rw [hZ1.1]; exact Nat.zero_lt_succ _

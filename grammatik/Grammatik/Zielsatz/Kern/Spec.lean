@@ -736,7 +736,7 @@
   * W1 -- the third round named every EMPTY declared answer type as the stop `nieZurueck`,
     with the reason "the continuation is unreachable in the C as in G". That is true only
     for an axiom `-> never` (the C prototype is `_Noreturn`). An axiom whose result is
-    `.grund 0`, an empty range, a sum without a value or a pointer type no function has is
+    `.why 0`, an empty range, a sum without a value or a pointer type no function has is
     declared by an ORDINARY prototype: the C call returns some word and the continuation
     runs, covered by nothing;
     a register read never "does not return". Both reviewers reproduced it: probe A behind
@@ -784,7 +784,7 @@
     them (`g1_holen_antwortet`, `g1_temp_antwortet`), and no program with that code meets (b)
     (`g1PA_widerlegt`, whenever the declared ensures holds at SOME answer; `g1PR_widerlegt`).
   * THE EMPTY TYPES, and `never` (NEW kind `HaltArt.nieZurueck`): a declared answer type
-    without a value (`never`, `.grund 0`, an empty range, a sum without a value, a pointer
+    without a value (`never`, `.why 0`, an empty range, a sum without a value, a pointer
     type no function has; `AntwortLeer`) admits no answer at all -- so its call does not
     return. That is not the machine answering "outside" a type that has no inside, so it is
     no longer a `hardware` stop: `KopfHalt .hardware` at an axiom or register head now
@@ -1107,7 +1107,7 @@
       foreign code (the C prototype is `_Noreturn`; a foreign body that returns breaks it, a
       hardware/foreign fact like every entry of (c)). The continuation is unreachable in the
       C as in G; everything before the call is covered by (b). Every OTHER empty answer type
-      (`.grund 0`, an empty range, a sum without a value, a pointer type no function of the
+      (`.why 0`, an empty range, a sum without a value, a pointer type no function of the
       program has), at an axiom or at a register, is REFUSED by the checker
       (`AkzeptiertSpec.antworten`, W1): its C call would return into a continuation nothing
       covers, so it is not named here but excluded, and no reachable thread stands at one.
@@ -1639,7 +1639,7 @@ def InvGutGrund (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (
       RespektiertRahmen P R → OhneVorbedingung R →
       ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
         ∀ (σ' : World D) (r : Fin (D.gruende f)),
-          execEndH (V := vertragVon D f) S O' U passes R (P.rumpf f) σ ρ = EndAusgang.grund σ' r →
+          execEndH (V := vertragVon D f) S O' U passes R (P.rumpf f) σ ρ = EndAusgang.why σ' r →
             InvAmRueck P f σ'
 
 /-- A lock invariant reads only its protected carriers (second half of `SperrInvOk`). -/
@@ -1742,7 +1742,7 @@ def RennfreiBis (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschi
 def InvAmGrundG (P : Programm D) (M : RufMaschineG D) : Prop :=
   ∀ (t : Faden) (ev : RufEreignisF D), ev ∈ (M.faeden t).log →
     ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
-      ev = RufEreignisF.grund g rho r s0 s1 → InvAmRueck P g s1
+      ev = RufEreignisF.why g rho r s0 s1 → InvAmRueck P g s1
 
 /-- **The kinds of named stop** (2026-09-15, verdicts F1 and F3, finding G1). Each is a place
     where G has no rule for a thread and the statement reports it instead of claiming more:
@@ -1766,7 +1766,7 @@ inductive HaltArt where
       obligation (b) still covers everything before the call. NEW 2026-09-15 (round-5
       finding G1): before, this stop was filed as `hardware`, as if the machine had answered
       outside a type that has no inside. NARROWED 2026-09-15 (round-6 finding W1): every
-      other empty answer type (`.grund 0`, an empty range, a sum without a value, a pointer
+      other empty answer type (`.why 0`, an empty range, a sum without a value, a pointer
       type no function has, at an axiom or a register) is refused by the checker
       (`AkzeptiertSpec.antworten`), because there the C call returns. -/
   | nieZurueck
@@ -1783,10 +1783,10 @@ def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       (axiomAntwort O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
       ¬ AntwortLeer D (D.aerg a)
-  | .hardware, .regLies r .. =>
+  | .hardware, .regRead r .. =>
       (∀ v, einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v → D.rzusage r v = false) ∧
       ¬ AntwortLeer D (some (D.rtyp r))
-  | .hardware, .regLiesElse r .. =>
+  | .hardware, .regReadElse r .. =>
       einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r σ) = none ∧
       ¬ AntwortLeer D (some (D.rtyp r))
   | .nieZurueck, .bindAxiom a .. => D.aerg a = some .never

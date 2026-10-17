@@ -94,11 +94,11 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
       ⟨false, [], taLL, .nil, .dann (.cons taTrav .nil) (.ende taRetF)⟩⟩, sp, lg⟩) ∧
     (∃ st rho s0 sp lg, (L.getD 3 taM0).faeden 0 = ⟨st, ⟨taFuelle, rho, s0,
       ⟨false, [], taLL, .nil,
-        .trav () .wahr taTravBody (alleIndizes (taD.count ())) (.dann .nil (.ende taRetF))⟩⟩,
+        .trav () .tru taTravBody (alleIndizes (taD.count ())) (.dann .nil (.ende taRetF))⟩⟩,
       sp, lg⟩) ∧
     (∃ st rho s0 sp lg, (L.getD 4 taM0).faeden 0 = ⟨st, ⟨taFuelle, rho, s0,
       ⟨true, [.index (taD.count ())], taLL, .cons taI0 .nil,
-        .dann taTravBody (.travRest () .wahr taTravBody [taI1] (.dann .nil (.ende taRetF)))⟩⟩,
+        .dann taTravBody (.travRest () .tru taTravBody [taI1] (.dann .nil (.ende taRetF)))⟩⟩,
       sp, lg⟩) ∧
     ((L.getD 4 taM0).speicher.slots () 0 ()).n = 0 ∧
     ((L.getD 5 taM0).speicher.slots () 0 ()).n = 1 ∧
@@ -128,13 +128,13 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   have e2 := hZ2.1
   try dsimp only at e2
   -- 3: `dannTrav`
-  obtain ⟨M3, s3, hZ3⟩ := w_dannTrav (P := taP) (O := taO) (passes := 0) e2 () .wahr taTravBody
+  obtain ⟨M3, s3, hZ3⟩ := w_dannTrav (P := taP) (O := taO) (passes := 0) e2 () .tru taTravBody
     .nil (.ende taRetF) .nil rfl
   have hoff3 : offen (M3.faeden 0).spur = [TaLock.l] := by rw [hZ3.spur]; exact hoff2
   have e3 := hZ3.1
   try dsimp only at e3
   -- 4: `travNext`, index 0
-  obtain ⟨M4, s4, hZ4⟩ := w_travNext (P := taP) (O := taO) (passes := 0) e3 () .wahr taTravBody
+  obtain ⟨M4, s4, hZ4⟩ := w_travNext (P := taP) (O := taO) (passes := 0) e3 () .tru taTravBody
     taI0 [taI1] (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e3 hoff3)).heldIn
   have hoff4 : offen (M4.faeden 0).spur = [TaLock.l] := by
     rw [hZ4.spur, (Erw.lese _ _ _).offen]; exact hoff3
@@ -142,7 +142,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e4
   -- 5: `tab[0] := 1`
   obtain ⟨M5, s5, hZ5⟩ := w_dannBlatt (P := taP) (O := taO) (passes := 0) e4 taSchreibI .nil
-    (.travRest () .wahr taTravBody [taI1] (.dann .nil (.ende taRetF))) (.cons taI0 .nil) rfl rfl
+    (.travRest () .tru taTravBody [taI1] (.dann .nil (.ende taRetF))) (.cons taI0 .nil) rfl rfl
     (taHgL (taHoff e4 hoff4)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff5 : offen (M5.faeden 0).spur = [TaLock.l] := by
@@ -152,18 +152,18 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e5
   -- 6: `dannLeer`
   obtain ⟨M6, s6, hZ6⟩ := w_dannLeer (P := taP) (O := taO) (passes := 0) e5
-    (.travRest () .wahr taTravBody [taI1] (.dann .nil (.ende taRetF))) (.cons taI0 .nil) rfl
+    (.travRest () .tru taTravBody [taI1] (.dann .nil (.ende taRetF))) (.cons taI0 .nil) rfl
   have hoff6 : offen (M6.faeden 0).spur = [TaLock.l] := by rw [hZ6.spur]; exact hoff5
   have e6 := hZ6.1
   try dsimp only at e6
   -- 7: `travFort`
-  obtain ⟨M7, s7, hZ7⟩ := w_travFort (P := taP) (O := taO) (passes := 0) e6 () .wahr taTravBody
+  obtain ⟨M7, s7, hZ7⟩ := w_travFort (P := taP) (O := taO) (passes := 0) e6 () .tru taTravBody
     [taI1] (.dann .nil (.ende taRetF)) taI0 .nil rfl
   have hoff7 : offen (M7.faeden 0).spur = [TaLock.l] := by rw [hZ7.spur]; exact hoff6
   have e7 := hZ7.1
   try dsimp only at e7
   -- 8: `travNext`, index 1
-  obtain ⟨M8, s8, hZ8⟩ := w_travNext (P := taP) (O := taO) (passes := 0) e7 () .wahr taTravBody
+  obtain ⟨M8, s8, hZ8⟩ := w_travNext (P := taP) (O := taO) (passes := 0) e7 () .tru taTravBody
     taI1 [] (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e7 hoff7)).heldIn
   have hoff8 : offen (M8.faeden 0).spur = [TaLock.l] := by
     rw [hZ8.spur, (Erw.lese _ _ _).offen]; exact hoff7
@@ -171,7 +171,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e8
   -- 9: `tab[1] := 1`
   obtain ⟨M9, s9, hZ9⟩ := w_dannBlatt (P := taP) (O := taO) (passes := 0) e8 taSchreibI .nil
-    (.travRest () .wahr taTravBody [] (.dann .nil (.ende taRetF))) (.cons taI1 .nil) rfl rfl
+    (.travRest () .tru taTravBody [] (.dann .nil (.ende taRetF))) (.cons taI1 .nil) rfl rfl
     (taHgL (taHoff e8 hoff8)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
     ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hoff9 : offen (M9.faeden 0).spur = [TaLock.l] := by
@@ -181,18 +181,18 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e9
   -- 10: `dannLeer`
   obtain ⟨M10, s10, hZ10⟩ := w_dannLeer (P := taP) (O := taO) (passes := 0) e9
-    (.travRest () .wahr taTravBody [] (.dann .nil (.ende taRetF))) (.cons taI1 .nil) rfl
+    (.travRest () .tru taTravBody [] (.dann .nil (.ende taRetF))) (.cons taI1 .nil) rfl
   have hoff10 : offen (M10.faeden 0).spur = [TaLock.l] := by rw [hZ10.spur]; exact hoff9
   have e10 := hZ10.1
   try dsimp only at e10
   -- 11: `travFort`
-  obtain ⟨M11, s11, hZ11⟩ := w_travFort (P := taP) (O := taO) (passes := 0) e10 () .wahr
+  obtain ⟨M11, s11, hZ11⟩ := w_travFort (P := taP) (O := taO) (passes := 0) e10 () .tru
     taTravBody [] (.dann .nil (.ende taRetF)) taI1 .nil rfl
   have hoff11 : offen (M11.faeden 0).spur = [TaLock.l] := by rw [hZ11.spur]; exact hoff10
   have e11 := hZ11.1
   try dsimp only at e11
   -- 12: `travDone`
-  obtain ⟨M12, s12, hZ12⟩ := w_travDone (P := taP) (O := taO) (passes := 0) e11 () .wahr
+  obtain ⟨M12, s12, hZ12⟩ := w_travDone (P := taP) (O := taO) (passes := 0) e11 () .tru
     taTravBody (.dann .nil (.ende taRetF)) .nil rfl rfl (taHgL (taHoff e11 hoff11)).heldIn
   have hoff12 : offen (M12.faeden 0).spur = [TaLock.l] := by
     rw [hZ12.spur, (Erw.lese _ _ _).offen]; exact hoff11
@@ -206,7 +206,7 @@ theorem taLauf0 : ∃ L : List (RufMaschineG taD),
   try dsimp only at e13
   -- 14: `fuelle` returns into `haupt0`
   obtain ⟨M14, s14, hG14⟩ := w_rueckP (P := taP) (O := taO) (passes := 0) e13 _ _ rfl
-    (PopArt.wie rfl) .keine (List.Perm.refl _) .nil rfl (taHgL (taHoff e13 hoff13)).heldIn
+    (PopArt.wie rfl) .empty (List.Perm.refl _) .nil rfl (taHgL (taHoff e13 hoff13)).heldIn
   have hoff14 : offen (M14.faeden 0).spur = [TaLock.l] := by
     rw [hG14.1]; exact ((Erw.lese _ _ _).offen).trans hoff13
   have e14 := hG14.1
@@ -401,7 +401,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
   have e4 := hZ4.1
   try dsimp only at e4
   -- 5: its `true` branch
-  obtain ⟨M5, s5, hZ5⟩ := w_iteWahr (P := taP) (O := taO) (passes := 0) e4 .wahr taAwaitsBlock
+  obtain ⟨M5, s5, hZ5⟩ := w_iteWahr (P := taP) (O := taO) (passes := 0) e4 .tru taAwaitsBlock
     .nil .nil (.ende taRetW) .nil rfl rfl (taHgK (taHoff e4 hoff4)).heldIn
   have hoff5 : offen (M5.faeden 1).spur = [TaLock.k] := by
     rw [hZ5.spur, (Erw.lese _ _ _).offen]; exact hoff4
@@ -436,7 +436,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
   try dsimp only at e9
   -- 10: `warte` returns into `haupt1`
   obtain ⟨M10, s10, hG10⟩ := w_rueckP (P := taP) (O := taO) (passes := 0) e9 _ _ rfl
-    (PopArt.wie rfl) .keine (List.Perm.refl _) .nil rfl (taHgK (taHoff e9 hoff9)).heldIn
+    (PopArt.wie rfl) .empty (List.Perm.refl _) .nil rfl (taHgK (taHoff e9 hoff9)).heldIn
   refine ⟨[M, M1, M2, M3, M4, M5, M6, M7, M8, M9, M10], rfl, ?_, ⟨_, _, _, _, _, e5⟩,
     ⟨_, _, _, _, _, _, ?_, e6⟩, ?_, ?_⟩
   · intro k hk
@@ -480,11 +480,11 @@ theorem taLauf : ∃ (ms : Nat → RufMaschineG taD) (fs : Nat → Faden),
       ⟨false, [], taLL, .nil, .dann (.cons taTrav .nil) (.ende taRetF)⟩⟩, sp, lg⟩) ∧
     (∃ st rho s0 sp lg, (ms 3).faeden 0 = ⟨st, ⟨taFuelle, rho, s0,
       ⟨false, [], taLL, .nil,
-        .trav () .wahr taTravBody (alleIndizes (taD.count ())) (.dann .nil (.ende taRetF))⟩⟩,
+        .trav () .tru taTravBody (alleIndizes (taD.count ())) (.dann .nil (.ende taRetF))⟩⟩,
       sp, lg⟩) ∧
     (∃ st rho s0 sp lg, (ms 4).faeden 0 = ⟨st, ⟨taFuelle, rho, s0,
       ⟨true, [.index (taD.count ())], taLL, .cons taI0 .nil,
-        .dann taTravBody (.travRest () .wahr taTravBody [taI1] (.dann .nil (.ende taRetF)))⟩⟩,
+        .dann taTravBody (.travRest () .tru taTravBody [taI1] (.dann .nil (.ende taRetF)))⟩⟩,
       sp, lg⟩) ∧
     ((ms 4).speicher.slots () 0 ()).n = 0 ∧ ((ms 5).speicher.slots () 0 ()).n = 1 ∧
     ((ms 8).speicher.slots () 1 ()).n = 0 ∧ ((ms 9).speicher.slots () 1 ()).n = 1 ∧
@@ -585,11 +585,11 @@ theorem trav_awaits_zeuge :
         ⟨false, [], taLL, .nil, .dann (.cons taTrav .nil) (.ende taRetF)⟩⟩, sp, lg⟩) ∧
       (∃ st rho s0 sp lg, (ms 3).faeden 0 = ⟨st, ⟨taFuelle, rho, s0,
         ⟨false, [], taLL, .nil,
-          .trav () .wahr taTravBody (alleIndizes (taD.count ())) (.dann .nil (.ende taRetF))⟩⟩,
+          .trav () .tru taTravBody (alleIndizes (taD.count ())) (.dann .nil (.ende taRetF))⟩⟩,
         sp, lg⟩) ∧
       (∃ st rho s0 sp lg, (ms 4).faeden 0 = ⟨st, ⟨taFuelle, rho, s0,
         ⟨true, [.index (taD.count ())], taLL, .cons taI0 .nil,
-          .dann taTravBody (.travRest () .wahr taTravBody [taI1] (.dann .nil (.ende taRetF)))⟩⟩,
+          .dann taTravBody (.travRest () .tru taTravBody [taI1] (.dann .nil (.ende taRetF)))⟩⟩,
         sp, lg⟩) ∧
       ((ms 4).speicher.slots () 0 ()).n = 0 ∧ ((ms 5).speicher.slots () 0 ()).n = 1 ∧
       ((ms 8).speicher.slots () 1 ()).n = 0 ∧ ((ms 9).speicher.slots () 1 ()).n = 1 ∧

@@ -363,7 +363,7 @@ theorem gsem_gleit {Λ Λ' : List (Res D)} (op : GleitOp) {l1 h1 l2 h2 lo hi : I
     (hkx : ∀ κ, G.kan = some κ → x ≠ κ.wx ∧ x ≠ κ.gx)
     (ha : ExprCorr X K ca a) (hb : ExprCorr X K cb b)
     (hr : BlockSemG X m G (K.push (.fl lo hi) x) rest cr) :
-    BlockSemG X m G K (Block.gleit op a b lo hi rest)
+    BlockSemG X m G K (Block.float op a b lo hi rest)
       (.seq (.set x (.int false .w64) ((CX.fbin op f64 ca cb).zs G.gs)) cr) := by
   intro σ st ρG ρC hcw hrel hnf
   have hc' : corrW X.EL (σ.lese Λ (a.orte ++ b.orte)) st := (corrW_lese _ _ _ _ _).mpr hcw
@@ -376,7 +376,7 @@ theorem gsem_gleit {Λ Λ' : List (Res D)} (op : GleitOp) {l1 h1 l2 h2 lo hi : I
         (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρG).x)), st2) := by
     show ev X.EL.lay X.orc X.fr (.fbin op f64 (ca.zs G.gs) (cb.zs G.gs)) st ρC = _
     rw [ev_fbin h1 h2, cFloatBin_ein op _ _ hwa hwb]
-  have hex : execBlock X.O X.passes X.R (Block.gleit op a b lo hi rest) σ ρG =
+  have hex : execBlock X.O X.passes X.R (Block.float op a b lo hi rest) σ ρG =
       match gleitPasst lo hi (gleitRechne op
           (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρG).x
           (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρG).x) with
@@ -408,10 +408,10 @@ theorem gsem_gleitLit {Λ Λ' : List (Res D)} (q : Int × Int) {lo hi : Int × I
     (hK : K.okB = true) (hf : K.freshB x = true) (hg : x ∉ geister G.gs)
     (hkx : ∀ κ, G.kan = some κ → x ≠ κ.wx ∧ x ≠ κ.gx)
     (hr : BlockSemG X m G (K.push (.fl lo hi) x) rest cr) :
-    BlockSemG X m G K (Block.gleitLit q lo hi rest)
+    BlockSemG X m G K (Block.floatLit q lo hi rest)
       (.seq (.set x (.int false .w64) (.lit (fEin f64 (bruch q)))) cr) := by
   intro σ st ρG ρC hcw hrel hnf
-  have hex : execBlock X.O X.passes X.R (Block.gleitLit q lo hi rest) σ ρG =
+  have hex : execBlock X.O X.passes X.R (Block.floatLit q lo hi rest) σ ρG =
       match gleitPasst lo hi (bruch q) with
       | some v => (execBlock X.O X.passes X.R rest σ (.cons v ρG)).schrumpf
       | none => .logik .bereich := rfl
@@ -439,7 +439,7 @@ theorem gsem_gleitVon {Λ Λ' : List (Res D)} (t : CIT) {l1 h1 : Int} {lo hi : I
     (hkx : ∀ κ, G.kan = some κ → x ≠ κ.wx ∧ x ≠ κ.gx)
     (he : ExprCorr X K ce e) (ht : t.holds l1 h1)
     (hr : BlockSemG X m G (K.push (.fl lo hi) x) rest cr) :
-    BlockSemG X m G K (Block.gleitVon e lo hi rest)
+    BlockSemG X m G K (Block.floatOf e lo hi rest)
       (.seq (.set x (.int false .w64) ((CX.fvon f64 t ce).zs G.gs)) cr) := by
   intro σ st ρG ρC hcw hrel hnf
   have hc' : corrW X.EL (σ.lese Λ e.orte) st := (corrW_lese _ _ _ _ _).mpr hcw
@@ -453,7 +453,7 @@ theorem gsem_gleitVon {Λ Λ' : List (Res D)} (t : CIT) {l1 h1 : Int} {lo hi : I
   have hcv : conv t (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG).n =
       some (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG).n :=
     conv_id ⟨by have := ht.1; omega, by have := ht.2; omega⟩
-  have hex : execBlock X.O X.passes X.R (Block.gleitVon e lo hi rest) σ ρG =
+  have hex : execBlock X.O X.passes X.R (Block.floatOf e lo hi rest) σ ρG =
       match gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG).n) with
       | some v => (execBlock X.O X.passes X.R rest (σ.lese Λ e.orte) (.cons v ρG)).schrumpf
       | none => .logik .bereich := rfl
@@ -540,14 +540,14 @@ theorem gsem_gleitNarrow {Λ Λ' : List (Res D)} {lo hi lo' hi' : Int × Int}
       EnvRelG X G (K.push (.fl lo' hi') y) (.cons v ρG) ρC st)
     (hs : EndSemG X m false G K sonst csonst)
     (hr : BlockSemG X m G (K.push (.fl lo' hi') y) rest crest) :
-    BlockSemG X m G K (Block.gleitNarrow e lo' hi' sonst rest)
+    BlockSemG X m G K (Block.floatNarrow e lo' hi' sonst rest)
       (.seq (.ite (.lnot cc) csonst .skip) crest) := by
   intro σ st ρG ρC hcw hrel hnf
   have hc' : corrW X.EL (σ.lese Λ e.orte) st := (corrW_lese _ _ _ _ _).mpr hcw
   obtain ⟨st1, h1, hs1⟩ := hc _ st ρG ρC hc' hrel
   have hc1 := corrW_same hc' hs1
   have hrel1 := envRelG_same hs1 hrel
-  have hex : execBlock X.O X.passes X.R (Block.gleitNarrow e lo' hi' sonst rest) σ ρG =
+  have hex : execBlock X.O X.passes X.R (Block.floatNarrow e lo' hi' sonst rest) σ ρG =
       match gleitPasst lo' hi' (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρG).x with
       | some v => (execBlock X.O X.passes X.R rest (σ.lese Λ e.orte) (.cons v ρG)).schrumpf
       | none => (execEnd X.O X.passes X.R sonst (σ.lese Λ e.orte) ρG).zuAusgang := rfl
@@ -580,13 +580,13 @@ theorem gleitNarrow_bind_var {Λ : List (Res D)} {lo hi lo' hi' : Int × Int}
   intro σ st ρG ρC v _ hrel hv
   refine ⟨⟨fun τ y => ?_, hrel.1.2.1, hrel.1.2.2⟩, hrel.2⟩
   cases y with
-  | hier =>
+  | here =>
       have h : ghostify X.EL.lay X.fr G.gs ρC st (K.loc x) = .int (fEin f64 (ρG.get x).x)
           ∧ wf f64 (ρG.get x).x := hrel.1.1 _ x
       have hv' : v.x = (ρG.get x).x := hv
       show ghostify X.EL.lay X.fr G.gs ρC st (K.loc x) = .int (fEin f64 v.x) ∧ wf f64 v.x
       rw [hv']; exact h
-  | dort y => exact hrel.1.1 _ y
+  | there y => exact hrel.1.1 _ y
 
 end Bloecke
 

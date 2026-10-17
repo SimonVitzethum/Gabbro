@@ -325,7 +325,7 @@ fn ptr_write_var_index_prints() {
     );
     assert_eq!(
         gedruckt(&b, "f"),
-        "(.cons2 (.assignDurch T x 0 true (.var 1) (.wide 0 100 (.lit 1))) [] .ret)"
+        "(.cons2 (.assignThru T x 0 true (.var 1) (.wide 0 100 (.lit 1))) [] .ret)"
     );
 }
 
@@ -480,7 +480,7 @@ fn reference_104_prints() {
     let b = read("beispiele/104-referenz.gab");
     assert_eq!(
         gedruckt(&b, "einzahlen"),
-        "(.cons2 (.assignDurch Konto stand 0 true (.var 1) (.wide 0 100 (.lit 100))) [] (.consCall lies 2 [] ?hp .ret))"
+        "(.cons2 (.assignThru Konto stand 0 true (.var 1) (.wide 0 100 (.lit 100))) [] (.consCall lies 2 [] ?hp .ret))"
     );
     assert_eq!(
         gedruckt(&b, "lies"),

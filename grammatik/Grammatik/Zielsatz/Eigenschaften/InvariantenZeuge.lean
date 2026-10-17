@@ -178,10 +178,10 @@ theorem inv_erwerb_und_eintritt : ∃ Md Me Mf : RufMaschineG mD,
     (mSp.welt []) log0 m30 mHpSetzeA (fun _ h => nomatch h) (.ende mRestA) σ0 hz0 hoff0 hfrei0
   -- thread 0: `pruefeA()` and its return; thread 0 is then finished
   obtain ⟨Mc, sc, hZc⟩ := w_rufEnde (P := mP) (O := mO) (passes := 0) hza.1 mPruefeA .nil
-    mHpPruefe rfl (.ret .keine List.Perm.nil) .nil rfl (mHeld0 _)
+    mHpPruefe rfl (.ret .empty List.Perm.nil) .nil rfl (mHeld0 _)
   have hrc : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) Mc := .schritt _ _ _ hra sc
   obtain ⟨Md, sd, hGd⟩ := w_rueckP (P := mP) (O := mO) (passes := 0) hZc.1 _ [] rfl
-    (PopArt.wie rfl) .keine List.Perm.nil .nil rfl (mHeld0 _)
+    (PopArt.wie rfl) .empty List.Perm.nil .nil rfl (mHeld0 _)
   have hrd : RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) Md := .schritt _ _ _ hrc sd
   have hF0 : FertigG Md 0 := ⟨by rw [hGd.1], by rw [hGd.1]; rfl⟩
   have hoffd0 : offen (Md.faeden 0).spur = [] := by

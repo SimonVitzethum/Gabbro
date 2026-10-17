@@ -72,7 +72,7 @@ theorem sonde06 : beqTop
 -- (the `ist_intty` arm, never `Grund`) -- same shape.
 theorem sonde07 : beqTop
     (parseTop tok07)
-    (.ok (.grund "Geraetelug" "ZuTief")) = true := by
+    (.ok (.why "Geraetelug" "ZuTief")) = true := by
   decide
 -- 44-register-einmal-lesen.gab:103. Rust: `Grund{grund, fall}` --
 -- same shape.
@@ -105,8 +105,8 @@ theorem sonde11 : beqTop
 theorem sonde12 : beqTop
     (parseTop tok12)
     (.ok (.bin "&&"
-      (.bin ">=" (.variable "x") (.gleit "0.0"))
-      (.bin "<=" (.variable "x") (.gleit "1.0")))) = true := by
+      (.bin ">=" (.variable "x") (.float "0.0"))
+      (.bin "<=" (.variable "x") (.float "1.0")))) = true := by
   decide
 -- 26-gleitkomma.gab:57. Rust: `Gleitkomma{bits, dyadisch,
 -- gerundet=false}` per literal; the Lean tree keeps the canonical

@@ -745,13 +745,13 @@ end Folgen
 def Stmt.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | _ => false
 
 def Endblock.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .cons s _ => s.istRueck
   | _ => false
 
@@ -777,7 +777,7 @@ theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
   | ende e =>
       cases e with
       | ret _ hp => exact hp
-      | retGrund _ hp => exact hp
+      | retWhy _ hp => exact hp
       | cons s _ => exact s.istRueck_perm h
       | _ => simp [GRest.anRueck, Endblock.istRueck] at h
   | dann b _ =>
@@ -913,7 +913,7 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onTag _ arms, h => by
       simp only [mS]
       exact mArms_boden arms fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
-  | .onGrund _ arms, h => by
+  | .onWhy _ arms, h => by
       simp only [mS]
       exact mGArms_boden arms fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
   | .call g _ _ _, _ => by simp only [mS]; exact hr g
@@ -939,19 +939,19 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [mS]
       exact mB_boden body fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
   | .assignSlot .., _ => rfl
-  | .assignDurch .., _ => rfl
+  | .assignThru .., _ => rfl
   | .assignGlob .., _ => rfl
-  | .schreibBytes .., _ => rfl
+  | .putBytes .., _ => rfl
   | .assignVar .., _ => rfl
-  | .uebergang .., _ => rfl
+  | .shift .., _ => rfl
   | .axiomCall .., _ => rfl
-  | .regSchreib .., _ => rfl
+  | .regWrite .., _ => rfl
   | .transition .., _ => rfl
   | .publish .., _ => rfl
   | .advances .., _ => rfl
   | .retires .., _ => rfl
   | .ret .., _ => rfl
-  | .retGrund .., _ => rfl
+  | .retWhy .., _ => rfl
   | .leave _, _ => rfl
   | .next _, _ => rfl
 
@@ -982,10 +982,10 @@ theorem mB_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden err fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
-  | .regLies _ _ rest, h => by
+  | .regRead _ _ rest, h => by
       simp only [mB]
       exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
-  | .regLiesElse _ _ _ sonst rest, h => by
+  | .regReadElse _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
@@ -999,20 +999,20 @@ theorem mB_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
-  | .pruefung _ sonst rest, h => by
+  | .check _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
-  | .gleit _ _ _ _ _ rest, h => by
+  | .float _ _ _ _ _ rest, h => by
       simp only [mB]
       exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
-  | .gleitLit _ _ _ rest, h => by
+  | .floatLit _ _ _ rest, h => by
       simp only [mB]
       exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
-  | .gleitVon _ _ _ rest, h => by
+  | .floatOf _ _ _ rest, h => by
       simp only [mB]
       exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
-  | .gleitNarrow _ _ _ sonst rest, h => by
+  | .floatNarrow _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
@@ -1037,7 +1037,7 @@ theorem mGArms_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
 theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → Endblock.BodenOk b e → mE A e = true
   | .ret .., _ => rfl
-  | .retGrund .., _ => rfl
+  | .retWhy .., _ => rfl
   | .leave _, _ => rfl
   | .next _, _ => rfl
   | .cons s rest, h => by

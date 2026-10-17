@@ -197,29 +197,29 @@ theorem gHp_distribute_b_in_M_write_b : RufPasst gD (vertragVon gD g_distribute_
   hb := fun c h => by have hV : (vertragVon gD g_distribute_b).boden = some 1 := rfl; rw [hV] at h; cases h; exact ⟨2, rfl, by decide⟩
 
 def gBody_write_a : Endblock gD (vertragVon gD g_write_a) false gCtx_write_a gL_write_a :=
-  (.cons (.assignSlot GTab.T GTFeld.v ((.var .hier)) ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_write_a gL_write_a (.int 1 1))) : Expr gD gCtx_write_a gL_write_a (.int 0 4294967295)) (by decide) gDarf_write_a_T) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignSlot GTab.T GTFeld.v ((.var .here)) ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_write_a gL_write_a (.int 1 1))) : Expr gD gCtx_write_a gL_write_a (.int 0 4294967295)) (by decide) gDarf_write_a_T) (.ret .empty (List.Perm.refl _)))
 
 def gBody_distribute_a : Endblock gD (vertragVon gD g_distribute_a) false gCtx_distribute_a gL_distribute_a :=
-  (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_write_a (.cons ((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_distribute_a gL_distribute_a_in_L (.index (gD.count GTab.T)))) .nil) gHp_distribute_a_in_L_write_a rfl) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.L (fun M => by cases M <;> decide) (.cons (.call g_write_a (.cons ((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_distribute_a gL_distribute_a_in_L (.index (gD.count GTab.T)))) .nil) gHp_distribute_a_in_L_write_a rfl) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gBody_write_b : Endblock gD (vertragVon gD g_write_b) false gCtx_write_b gL_write_b :=
-  (.cons (.assignSlot GTab.U GUFeld.v ((.var .hier)) ((.weiter (by decide) (by decide) (((.lit 2)) : Expr gD gCtx_write_b gL_write_b (.int 2 2))) : Expr gD gCtx_write_b gL_write_b (.int 0 4294967295)) (by decide) gDarf_write_b_U) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignSlot GTab.U GUFeld.v ((.var .here)) ((.widen (by decide) (by decide) (((.lit 2)) : Expr gD gCtx_write_b gL_write_b (.int 2 2))) : Expr gD gCtx_write_b gL_write_b (.int 0 4294967295)) (by decide) gDarf_write_b_U) (.ret .empty (List.Perm.refl _)))
 
 def gBody_distribute_b : Endblock gD (vertragVon gD g_distribute_b) false gCtx_distribute_b gL_distribute_b :=
-  (.cons (.locks GLock.M (fun M => by cases M <;> decide) (.cons (.call g_write_b (.cons ((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_distribute_b gL_distribute_b_in_M (.index (gD.count GTab.U)))) .nil) gHp_distribute_b_in_M_write_b rfl) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.M (fun M => by cases M <;> decide) (.cons (.call g_write_b (.cons ((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_distribute_b gL_distribute_b_in_M (.index (gD.count GTab.U)))) .nil) gHp_distribute_b_in_M_write_b rfl) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .write_a => .wahr
-    | .distribute_a => .wahr
-    | .write_b => .wahr
-    | .distribute_b => .wahr
+    | .write_a => .tru
+    | .distribute_a => .tru
+    | .write_b => .tru
+    | .distribute_b => .tru
   ensures
-    | .write_a => .wahr
-    | .distribute_a => .wahr
-    | .write_b => .wahr
-    | .distribute_b => .wahr
+    | .write_a => .tru
+    | .distribute_a => .tru
+    | .write_b => .tru
+    | .distribute_b => .tru
   rumpf
     | .write_a => gBody_write_a
     | .distribute_a => gBody_distribute_a

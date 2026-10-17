@@ -80,7 +80,7 @@ def InvGutGrundA (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
       ∀ (σ : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f σ ρ →
         ∀ (σ' : World D) (r : Fin (D.gruende f)),
           execEndHA (V := vertragVon D f) S O' U A passes R (P.rumpf f) σ ρ =
-            EndAusgang.grund σ' r → InvAmRueck P f σ'
+            EndAusgang.why σ' r → InvAmRueck P f σ'
 
 theorem invGutGrundA_mono {P : Programm D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
     {T T' : D.Tab ⊕ D.Glob → Prop} (hT : ∀ c, T c → T' c) {f : D.Fn}

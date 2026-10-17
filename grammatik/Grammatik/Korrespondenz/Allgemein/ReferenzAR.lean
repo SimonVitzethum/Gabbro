@@ -201,13 +201,13 @@ def arAxStmtAt : Stmt arD (vertragVon arD ()) false [] arL arL :=
 
 /-- `main` body: call the axiom, return. -/
 def arRumpf : Endblock arD (vertragVon arD ()) false [] arL :=
-  .cons arAxStmtAt (.ret .keine (by rfl))
+  .cons arAxStmtAt (.ret .empty (by rfl))
 
 /-- The program: `main` requires `true`, ensures `true`, calls `ruf0`. -/
 def arP : Programm arD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf := fun _ => arStart ▸ arRumpf
 
 /-- `arP.rumpf` of `main` is the axiom-call body. -/
@@ -332,7 +332,7 @@ def arMB : RufMaschineF arD :=
      ⟨(arM1.faeden 1).stapel,
       ⟨(arM1.faeden 1).kopf.f, (arM1.faeden 1).kopf.rho,
        (arM1.faeden 1).kopf.s0,
-       ⟨false, [], arL, .nil, (.ret .keine (by rfl))⟩⟩,
+       ⟨false, [], arL, .nil, (.ret .empty (by rfl))⟩⟩,
       arS1.spur,
       (arM1.faeden 1).log⟩,
    arM1.lauf ++ rufEigenF 1 [],
@@ -341,7 +341,7 @@ def arMB : RufMaschineF arD :=
 theorem arSchrittB : RufSchrittF arP arO 0 arM1 1 arMB := by
   have hhead : (arM1.faeden 1).kopf.rest =
       ⟨false, [], arL, .nil,
-        .cons arAxStmtAt (.ret .keine (by rfl))⟩ := rfl
+        .cons arAxStmtAt (.ret .empty (by rfl))⟩ := rfl
   have hstep : (execStmt arO 0 keinRuf arAxStmtAt
       (arM1.weltVon 1) .nil) =
       Ausgang.ok (D := arD) (V := vertragVon arD (arM1.faeden 1).kopf.f)

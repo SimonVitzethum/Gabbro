@@ -72,7 +72,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       simp only [ruS, execStmtHA]
       rw [orte2, leseA_worldR hA, eval_ru, eval_ru, schreibSlot_worldR]
       rfl
-  | _, _, Λ, _, .assignDurch p t ht f i e hw hL, σ, ρ => by
+  | _, _, Λ, _, .assignThru p t ht f i e hw hL, σ, ρ => by
       refine Or.inl ?_
       simp only [ruS, execStmtHA]
       rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
@@ -83,7 +83,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       simp only [ruS, execStmtHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru, schreibGlob_worldR]
       rfl
-  | _, _, Λ, _, .schreibBytes t f hf n i hlo hhi e hw hL, σ, ρ => by
+  | _, _, Λ, _, .putBytes t f hf n i hlo hhi e hw hL, σ, ρ => by
       refine Or.inl ?_
       simp only [ruS, execStmtHA]
       rw [orte2, leseA_worldR hA, eval_ru, eval_ru, schreibBytes_worldR t f hf]
@@ -93,7 +93,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       simp only [ruS, execStmtHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru, envR_set]
       rfl
-  | _, _, Λ, _, .uebergang (lo := lo) (hi := hi) t f hτ i von nach hn he hw hL, σ, ρ => by
+  | _, _, Λ, _, .shift (lo := lo) (hi := hi) t f hτ i von nach hn he hw hL, σ, ρ => by
       refine Or.inl ?_
       simp only [ruS, execStmtHA]
       erw [show (Sum.inl t :: (ruE i).orte : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) =
@@ -129,7 +129,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       simp only [ruS, execStmtHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru]
       exact execArmsHA_ru arms _ _ ρ
-  | _, _, Λ, _, .onGrund r arms, σ, ρ => by
+  | _, _, Λ, _, .onWhy r arms, σ, ρ => by
       simp only [ruS, execStmtHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru]
       exact execGrundHA_ru arms _ _ ρ
@@ -144,7 +144,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
         cases hx : R g (leseA A σ Λ args.orte)
             (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
         | ok σ' v => (try erw [hx]); exact Or.inl rfl
-        | grund σ' r => exact (Fin.cast hr r).elim0
+        | why σ' r => exact (Fin.cast hr r).elim0
         | logik e => (try erw [hx]); exact Or.inl rfl
         | hardware e => (try erw [hx]); exact Or.inl rfl
       · erw [h1, h2]
@@ -168,7 +168,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
             cases hx : R g (leseA A σ Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
                 (leseA A σ Λ (p.orte ++ args.orte)) args (leseA A σ Λ (p.orte ++ args.orte)) ρ)) with
             | ok σ' v => (try erw [hx]); exact Or.inl rfl
-            | grund σ' r => exact keinGrundSig hg hr r
+            | why σ' r => exact keinGrundSig hg hr r
             | logik e => (try erw [hx]); exact Or.inl rfl
             | hardware e => (try erw [hx]); exact Or.inl rfl
           · erw [h1, h2]
@@ -226,7 +226,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
           cases w with
           | none => rfl
           | some _ => rfl
-  | _, _, Λ, _, .regSchreib r hk e, σ, ρ => by
+  | _, _, Λ, _, .regWrite r hk e, σ, ρ => by
       refine Or.inl ?_
       simp only [ruS, execStmtHA]
       rw [ruE_orte, leseA_worldR hA]
@@ -252,7 +252,7 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       simp only [ruS, execStmtHA]
       erw [ruErg_orte, leseA_worldR hA, evalErg_ru]
       rfl
-  | _, _, _, _, .retGrund .., σ, ρ => Or.inl rfl
+  | _, _, _, _, .retWhy .., σ, ρ => Or.inl rfl
   | _, _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, _, .next _, σ, ρ => Or.inl rfl
 
@@ -288,7 +288,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
             simp only [rufR]
             erw [execBlockHA_vorΛ, ergWert_ru he]
             exact AusRelRu.schrumpf (execBlockHA_ru rest σ' (Env.cons (ergWert he v) ρ))
-        | grund σ' r => exact (Fin.cast hr r).elim0
+        | why σ' r => exact (Fin.cast hr r).elim0
         | logik e => (try erw [hx]); exact Or.inl rfl
         | hardware e => (try erw [hx]); exact Or.inl rfl
       · erw [h1, h2]
@@ -315,7 +315,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
                 erw [execBlockHA_vorΛ, ergWert_ru (ergSig hg he)]
                 exact AusRelRu.schrumpf
                   (execBlockHA_ru rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))
-            | grund σ' r => exact keinGrundSig hg hr r
+            | why σ' r => exact keinGrundSig hg hr r
             | logik e => (try erw [hx]); exact Or.inl rfl
             | hardware e => (try erw [hx]); exact Or.inl rfl
           · erw [h1, h2]
@@ -333,7 +333,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
             simp only [rufR]
             erw [execBlockHA_vorΛ, ergWert_ru he]
             exact AusRelRu.schrumpf (execBlockHA_ru rest σ' (Env.cons (ergWert he v) ρ))
-        | grund σ' r =>
+        | why σ' r =>
             try erw [hx]
             simp only [rufR]
             erw [execEndHA_umΛ]
@@ -367,8 +367,8 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
             exact AusRelRu.schrumpf (execBlockHA_ru rest σ' (Env.cons (ergWert he v) ρ))
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
             exact EndRel.zuAusgang (EndRel.schrumpf
-              (execEndHA_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ)))
-  | _, _, _, _, .regLies r hk rest, σ, ρ => by
+              (execEndHA_ru err σ' (Env.cons (τ := .why (D.agruende a)) r ρ)))
+  | _, _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
       cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
@@ -381,7 +381,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
           | true =>
               simp only [if_true]
               exact AusRelRu.schrumpf (execBlockHA_ru rest σ (Env.cons v ρ))
-  | _, _, Λ, _, .regLiesElse r hk zusage sonst rest, σ, ρ => by
+  | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
       cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
@@ -432,7 +432,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
           (Env.cons (⟨(eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))
       · erw [dif_neg hc, dif_neg hc]
         exact EndRel.zuAusgang (execEndHA_ru sonst _ ρ)
-  | _, _, Λ, _, .pruefung c sonst rest, σ, ρ => by
+  | _, _, Λ, _, .check c sonst rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru]
       cases h : (eval (leseA A σ Λ c.orte) c (leseA A σ Λ c.orte) ρ : Bool) with
@@ -442,7 +442,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
       | true =>
           simp only [wahr?, valR_bool, h, if_true]
           exact execBlockHA_ru rest _ ρ
-  | _, _, Λ, _, .gleit op a b lo hi rest, σ, ρ => by
+  | _, _, Λ, _, .float op a b lo hi rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [orte2, leseA_worldR hA, eval_ru, eval_ru]
       try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
@@ -451,19 +451,19 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
           (eval (leseA A σ Λ (a.orte ++ b.orte)) b (leseA A σ Λ (a.orte ++ b.orte)) ρ).x) with
       | none => exact Or.inl rfl
       | some v => exact AusRelRu.schrumpf (execBlockHA_ru rest _ (Env.cons v ρ))
-  | _, _, _, _, .gleitLit q lo hi rest, σ, ρ => by
+  | _, _, _, _, .floatLit q lo hi rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       cases gleitPasst lo hi (bruch q) with
       | none => exact Or.inl rfl
       | some v => exact AusRelRu.schrumpf (execBlockHA_ru rest _ (Env.cons v ρ))
-  | _, _, Λ, _, .gleitVon e lo hi rest, σ, ρ => by
+  | _, _, Λ, _, .floatOf e lo hi rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru]
       try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
       cases gleitPasst lo hi (gleitAusInt (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n) with
       | none => exact Or.inl rfl
       | some v => exact AusRelRu.schrumpf (execBlockHA_ru rest _ (Env.cons v ρ))
-  | _, _, Λ, _, .gleitNarrow e lo hi sonst rest, σ, ρ => by
+  | _, _, Λ, _, .floatNarrow e lo hi sonst rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [ruE_orte, leseA_worldR hA, eval_ru]
       try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
@@ -480,7 +480,7 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
       simp only [ruEnd, execEndHA]
       erw [ruErg_orte, leseA_worldR hA, evalErg_ru]
       rfl
-  | _, _, _, .retGrund .., σ, ρ => Or.inl rfl
+  | _, _, _, .retWhy .., σ, ρ => Or.inl rfl
   | _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, .next _, σ, ρ => Or.inl rfl
   | _, _, _, .cons s rest, σ, ρ => by
@@ -521,7 +521,7 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
             rw [ergWert_ru he]
             exact EndRel.schrumpf (execEndHA_ru rest σ' (Env.cons (ergWert he v) ρ))
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
-            exact EndRel.schrumpf (execEndHA_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ))
+            exact EndRel.schrumpf (execEndHA_ru err σ' (Env.cons (τ := .why (D.agruende a)) r ρ))
 
 theorem execArmsHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

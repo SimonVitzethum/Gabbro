@@ -18,10 +18,10 @@ namespace Gabbro.Grammatik
 /-! ## 1. `narrow len to 0 .. 1024 else { return 0; } return len;` -/
 
 def sonst74 : Endblock d74 V74s false Γ74 [] :=
-  .ret (.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _)
+  .ret (.val (Expr.widen (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _)
 
 def narrowRest : Block d74 V74s false (.int 0 1024 :: Γ74) [] [] :=
-  .cons (Stmt.ret (.wert (Expr.weiter (by decide) (by decide) (Expr.var .hier))) (List.Perm.refl _)) .nil
+  .cons (Stmt.ret (.val (Expr.widen (by decide) (by decide) (Expr.var .here))) (List.Perm.refl _)) .nil
 
 def narrowBlk : Block d74 V74s false Γ74 [] [] :=
   Block.narrow (Expr.var vLen) 0 1024 sonst74 narrowRest
@@ -34,7 +34,7 @@ def cNarrow : CS :=
 
 theorem sonst74_corr : EndSemG xS74 0 false G0 k74 sonst74 (.ret (some (cU64, .lit 0))) := by
   have hE : ErgCorr xS74 k74 (Λ := []) (e := some u64T)
-      (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0))) (some (cU64, .lit 0)) :=
+      (ErgExpr.val (Expr.widen (by decide) (by decide) (Expr.lit 0))) (some (cU64, .lit 0)) :=
     ⟨cU64, .lit 0, rfl, ecorr_weiter _ _ _ _ (ecorr_lit _ _ 0), rfl⟩
   have hR : EndCorrG xS74 0 false G0 k74 sonst74 ((CS.ret (some (cU64, .lit 0))).zs G0.gs) :=
     EndCorrG.ret rfl (List.Perm.refl _) hE
@@ -43,8 +43,8 @@ theorem sonst74_corr : EndSemG xS74 0 false G0 k74 sonst74 (.ret (some (cU64, .l
 theorem narrowRest_corr : BlockSemG xS74 0 G0 (k74.push (.int 0 1024) 2) narrowRest
     (.seq (.ret (some (cU64, .var 2))) .skip) := by
   have hE : ErgCorr xS74 (k74.push (.int 0 1024) 2) (Λ := []) (e := some u64T)
-      (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.var .hier))) (some (cU64, .var 2)) :=
-    ⟨cU64, .var 2, rfl, ecorr_weiter _ _ _ _ (ecorr_var _ _ .hier), rfl⟩
+      (ErgExpr.val (Expr.widen (by decide) (by decide) (Expr.var .here))) (some (cU64, .var 2)) :=
+    ⟨cU64, .var 2, rfl, ecorr_weiter _ _ _ _ (ecorr_var _ _ .here), rfl⟩
   exact cCorrG_block _ _ _ (BlockCorrG.cons
     (liftG xS74 0 G0 _ (scorr_ret xS74 0 _ (V := V74s) (l := false) (List.Perm.refl _) hE)
       (fun _ h => nomatch h) (fun κ hk => by simp [G0] at hk) (keeps_ret _ _ _ _ _)
@@ -93,7 +93,7 @@ theorem narrow_zeuge :
 /-! ## 2. The check: `if (!(len <= 1024)) { return 0; }` -/
 
 def pruefBlk : Block d74 V74s false Γ74 [] [] :=
-  Block.pruefung (Expr.le (Expr.var vLen) (Expr.lit 1024)) sonst74 .nil
+  Block.check (Expr.le (Expr.var vLen) (Expr.lit 1024)) sonst74 .nil
 
 def cPruef : CS :=
   .seq (.ite (.lnot (.cmp .le CIT.u64 (.var 2) (.lit 1024))) (.ret (some (cU64, .lit 0))) .skip) .skip
@@ -129,7 +129,7 @@ theorem pruef_zeuge :
 
 /-- Every arm returns the reason it matched. -/
 def armFwd (i : Nat) (h : i < 12) : Block d74 V74w false Γ74 [] [] :=
-  .cons (Stmt.retGrund ⟨i, h⟩ (List.Perm.refl _)) .nil
+  .cons (Stmt.retWhy ⟨i, h⟩ (List.Perm.refl _)) .nil
 
 def armsFwd : GrundArms d74 V74w false Γ74 [] [] 12 :=
   .cons (armFwd 0 (by decide)) (.cons (armFwd 1 (by decide)) (.cons (armFwd 2 (by decide))
@@ -139,7 +139,7 @@ def armsFwd : GrundArms d74 V74w false Γ74 [] [] 12 :=
     .nil)))))))))))
 
 theorem armsFwd_grund : ∀ (i : Fin 12) (σ : World d74) (ρ : Env d74 Γ74),
-    execBlock o74 0 (rufAt p74 o74 0 0) (armsFwd.get i) σ ρ = .grund σ (id i) := by
+    execBlock o74 0 (rufAt p74 o74 0 0) (armsFwd.get i) σ ρ = .why σ (id i) := by
   intro i σ ρ
   match i with
   | ⟨0, _⟩ => rfl
@@ -169,7 +169,7 @@ theorem fit74 : ∀ i : Fin 12, valFits cIo (.int ((i : Nat) : Int)) = true := b
     every arm returns its reason, against `*_grund = 9; return false;`. -/
 theorem fwd74_corr (wp gp : CPtr) {f x : Nat} (hg : gp.blk = .stk f x) :
     StmtCorrG xW74 0 ⟨[], some (κ74 wp gp)⟩ k74
-      (Stmt.onGrund (Expr.grund 12 ⟨9, by decide⟩) armsFwd)
+      (Stmt.onWhy (Expr.why 12 ⟨9, by decide⟩) armsFwd)
       (.seq (.store (.var 4) cIo (.lit 9)) (.ret (some (cBoolTy, .lit 0)))) :=
   kcorr_weiterleiten xW74 0 _ k74 (κ74 wp gp) rfl (ecorr_grundLit xW74 k74 12 ⟨9, by decide⟩) id
     armsFwd_grund (fun _ => rfl) fit74 hg
@@ -191,14 +191,14 @@ theorem fwd_zeuge :
     refine ⟨?_, ⟨rfl, rfl, by decide, by decide⟩, fun _ hq => (nomatch hq)⟩
     refine ⟨fun τ x => ?_, fun _ hq => (nomatch hq), fun _ hq => (nomatch hq)⟩
     cases x with
-    | hier => rfl
-    | dort y =>
+    | here => rfl
+    | there y =>
         cases y with
-        | hier => rfl
-        | dort z =>
+        | here => rfl
+        | there z =>
             cases z with
-            | hier => rfl
-            | dort w => exact nomatch w
+            | here => rfl
+            | there w => exact nomatch w
   obtain ⟨o, hx, hO⟩ := fwd74_corr ⟨.stk 2 4, 0⟩ ⟨.stk 2 5, 0⟩ rfl w74 stFwd _ _ (corr74 _ _)
     hrel rfl
   obtain ⟨st', ho, -, hm⟩ := hO

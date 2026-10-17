@@ -71,11 +71,11 @@ theorem kM0_wurzeln :
 abbrev kLocksTR := ruS (V := vertragVon kD kTaktVert) (l := false) kLocksT
 abbrev kRetTR :=
   ruEnd (V := vertragVon kD kTaktVert) (l := false) (Γ := []) (Λ := [])
-    (Endblock.ret (D := kD) .keine List.Perm.nil)
+    (Endblock.ret (D := kD) .empty List.Perm.nil)
 abbrev kLocksRR := ruS (V := vertragVon kD kRufVert) (l := false) kLocksR
 abbrev kRetRR :=
   ruEnd (V := vertragVon kD kRufVert) (l := false) (Γ := []) (Λ := [])
-    (Endblock.ret (D := kD) .keine List.Perm.nil)
+    (Endblock.ret (D := kD) .empty List.Perm.nil)
 
 /-! ## 3. The handler set the program declares -/
 
@@ -218,14 +218,14 @@ def kLocksTRing : Stmt kD (vertragVon kD kTaktVert) false [] [] [] :=
   .locks KLock.ring (fun _ h => nomatch h) .nil
 
 def kRumpfTaktRing : Endblock kD (vertragVon kD kTaktVert) false [] [] :=
-  .cons kLocksTRing (.ret .keine List.Perm.nil)
+  .cons kLocksTRing (.ret .empty List.Perm.nil)
 
 /-- **The `gift/460` shape**: example 59 whose handler `takt_verteiler` takes `RING` -- which
     `ruf_verteiler`, an ordinary thread, takes too, and which does not mask interrupts. -/
 def kPv : Programm kD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .zaehle => kRumpfZaehle
     | .taktVert => kRumpfTaktRing

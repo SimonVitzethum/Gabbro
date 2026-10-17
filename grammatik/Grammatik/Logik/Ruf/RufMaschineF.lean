@@ -37,7 +37,7 @@ inductive RufEreignisF (D : Deklaration) where
   | eintritt (f : D.Fn) (rho : Env D (D.params f)) (s0 : World D)
   | rueck (f : D.Fn) (rho : Env D (D.params f))
       (v : ErgVal D (D.erg f)) (s0 s1 : World D)
-  | grund (f : D.Fn) (rho : Env D (D.params f))
+  | why (f : D.Fn) (rho : Env D (D.params f))
       (r : Fin (D.gruende f)) (s0 s1 : World D)
 
 /-! ## 2. Frames, threads, the machine -/
@@ -750,13 +750,13 @@ def rufRumpfF : Endblock rufDF (vertragVon rufDF rufIncF) false
     (rufDF.params rufIncF)
     (Signatur.anfang rufDF (rufDF.signatur rufIncF)) :=
   .cons (.assignSlot () ()
-    (.weiter (by decide) (by decide) (.lit 0) :
+    (.widen (by decide) (by decide) (.lit 0) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.index (rufDF.count ())))
-    ((.weiter (by decide) (by decide) (.var .hier) :
+    ((.widen (by decide) (by decide) (.var .here) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 5))) rfl (fun w => nomatch w))
-    (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+    (.ret (.val ((.widen (by decide) (by decide) (.var .here) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 6)))) (by decide))
 
@@ -771,7 +771,7 @@ theorem rufHpF : RufPasst rufDF (vertragVon rufDF rufCallerF)
 
 /-- The call arguments: the single parameter variable. -/
 def rufArgsF : Args rufDF [Ty.int 0 5] [] (rufDF.params rufIncF) :=
-  (rufDF_params rufCallerF).symm ▸ Args.cons (.var .hier) Args.nil
+  (rufDF_params rufCallerF).symm ▸ Args.cons (.var .here) Args.nil
 
 /-- The caller body: a single `call` to the callee, returning to the empty
     end. Note the caller contract is `vertragVon rufDF rufCallerF` (same
@@ -781,7 +781,7 @@ def rufCallerRumpfF : Endblock rufDF (vertragVon rufDF rufCallerF) false
     (Signatur.anfang rufDF (rufDF.signatur rufCallerF)) :=
   (rufDF_params rufCallerF).symm ▸
     (.cons (.call rufIncF rufArgsF rufHpF rfl)
-      (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+      (.ret (.val ((.widen (by decide) (by decide) (.var .here) :
         Expr rufDF (rufDF.params rufIncF) [] (.int 0 6)))) (by decide)) :
       Endblock rufDF (vertragVon rufDF rufCallerF) false
         (rufDF.params rufIncF) (nach rufDF rufIncF []))
@@ -791,8 +791,8 @@ def rufCallerRumpfF : Endblock rufDF (vertragVon rufDF rufCallerF) false
     memory move and the log events matter. -/
 def rufPF : Programm rufDF where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | true => rufRumpfF
     | false => rufCallerRumpfF
@@ -814,16 +814,16 @@ def leafSF : Stmt rufDF (vertragVon rufDF rufIncF) false (rufDF.params rufIncF)
     (Signatur.anfang rufDF (rufDF.signatur rufIncF))
     (Signatur.anfang rufDF (rufDF.signatur rufIncF)) :=
   .assignSlot () ()
-    (.weiter (by decide) (by decide) (.lit 0) :
+    (.widen (by decide) (by decide) (.lit 0) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.index (rufDF.count ())))
-    ((.weiter (by decide) (by decide) (.var .hier) :
+    ((.widen (by decide) (by decide) (.var .here) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 5))) rfl (fun w => nomatch w)
 
 def restF : Endblock rufDF (vertragVon rufDF rufIncF) false (rufDF.params rufIncF)
     (Signatur.anfang rufDF (rufDF.signatur rufIncF)) :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+  (.ret (.val ((.widen (by decide) (by decide) (.var .here) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 6)))) (by decide))
 
@@ -980,7 +980,7 @@ theorem schritt1F : RufSchrittF rufPF rufOF 0 M0F 0 M1F := by
        rhoCallerF,
        .cons (.call rufIncF rufArgsF rufHpF rfl)
         ((rufDF_params rufCallerF).symm ▸
-          (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+          (.ret (.val ((.widen (by decide) (by decide) (.var .here) :
             Expr rufDF (rufDF.params rufIncF) [] (.int 0 6)))) (by decide)) :
           Endblock rufDF (vertragVon rufDF rufCallerF) false
             (rufDF.params rufIncF) (nach rufDF rufIncF []))⟩ := by
@@ -1010,7 +1010,7 @@ theorem reach1F : RufErreichbarF rufPF rufOF 0 M0F M1F := by
 def eF : ErgExpr rufDF (rufDF.params rufIncF)
     (Signatur.anfang rufDF (rufDF.signatur rufIncF))
     (vertragVon rufDF rufIncF).erg :=
-  (.wert ((.weiter (by decide) (by decide) (.var .hier) :
+  (.val ((.widen (by decide) (by decide) (.var .here) :
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 6))))
 

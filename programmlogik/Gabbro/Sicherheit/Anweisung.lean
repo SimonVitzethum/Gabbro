@@ -72,7 +72,7 @@ open Gabbro.Body
     aus einer erklaerten Liste von Faellen. -/
 inductive Ge where
   | form (sh : Shape)
-  | grund (faelle : List String)
+  | why (faelle : List String)
   deriving DecidableEq, Repr
 
 /-- Der Sichtbereich: eine LISTE, kein Funktionsraum -- so ist er vergleichbar, und die
@@ -92,7 +92,7 @@ def formen (Δ : Umgebung) : Lokal := fun n =>
 /-- Ein Wert traegt, was der Sichtbereich ueber ihn sagt. -/
 def Ge.haelt : Ge → Value → Prop
   | .form sh, v => v.hasShape sh = true
-  | .grund cs, v => ∃ r, r ∈ cs ∧ v = .reason r
+  | .why cs, v => ∃ r, r ∈ cs ∧ v = .reason r
 
 /-- Die Lokalen liegen in ihrem Sichtbereich. -/
 def WFU (Δ : Umgebung) (β : Binding) : Prop :=
@@ -408,7 +408,7 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
       | some S =>
           if S.gruende = [] then none else
           if !endetMitAusgang P.sig onErr then none else
-          match binde Δ err (.grund S.gruende) with
+          match binde Δ err (.why S.gruende) with
           | some ΔE =>
               match pruefeBlock P erg ΔE onErr with
               | some _ =>
@@ -421,7 +421,7 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
       | none => none
   | Δ, .onReason (.name g) arms =>
       match such Δ g with
-      | some (.grund cs) =>
+      | some (.why cs) =>
           if alleGruendeHabenArm arms cs then pruefeArme P erg Δ arms else none
       | _ => none
   | _, .onReason _ _ => none
@@ -563,11 +563,11 @@ inductive LogikS (ρ : Env) : Stmt → State → Prop
 
 inductive LogikB (ρ : Env) : List Stmt → State → Prop
   | kopf {a rest s} : LogikS ρ a s → LogikB ρ (a :: rest) s
-  | weiter {a rest s s'} : step ρ a s = .running s' → LogikB ρ rest s' → LogikB ρ (a :: rest) s
+  | widen {a rest s s'} : step ρ a s = .running s' → LogikB ρ rest s' → LogikB ρ (a :: rest) s
 
 inductive LogikA (ρ : Env) : List (String × List Stmt) → String → State → Prop
-  | hier {n b rest x s} : n = x → LogikB ρ b s → LogikA ρ ((n, b) :: rest) x s
-  | dort {n b rest x s} : n ≠ x → LogikA ρ rest x s → LogikA ρ ((n, b) :: rest) x s
+  | here {n b rest x s} : n = x → LogikB ρ b s → LogikA ρ ((n, b) :: rest) x s
+  | there {n b rest x s} : n ≠ x → LogikA ρ rest x s → LogikA ρ ((n, b) :: rest) x s
 
 inductive LogikT (ρ : Env) : List (String × Option String × List Stmt) → String → Option Int →
     State → Prop
@@ -575,7 +575,7 @@ inductive LogikT (ρ : Env) : List (String × Option String × List Stmt) → St
       LogikB ρ b { s with local' := bindLocal s.local' v (.int k) } →
       LogikT ρ ((n, some v, b) :: rest) x (some k) s
   | hierOhne {n b rest x p s} : n = x → LogikB ρ b s → LogikT ρ ((n, none, b) :: rest) x p s
-  | dort {n bd b rest x p s} : n ≠ x → LogikT ρ rest x p s → LogikT ρ ((n, bd, b) :: rest) x p s
+  | there {n bd b rest x p s} : n ≠ x → LogikT ρ rest x p s → LogikT ρ ((n, bd, b) :: rest) x p s
 
 end
 
@@ -1650,7 +1650,7 @@ theorem pruefeBlock_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklari
               rw [ho] at hr; simp only [Ergebnis] at hr
               rcases pruefeBlock_sicher P Γ ρ hD hU hS erg rest Δ1 Δ' s' h hr.1 hr.2 with hr2 | hlog2
               · left; exact Ergebnis_schwaecher (pruefe_erweitert P erg a Δ Δ1 h1) (erweitert_refl _) hr2
-              · right; exact LogikB.weiter ho hlog2
+              · right; exact LogikB.widen ho hlog2
           | returned s' v => rw [ho] at hr; left; exact hr
           | exited s' => rw [ho] at hr; left; exact hr
           | left s' => rw [ho] at hr; left; exact hr
@@ -1677,7 +1677,7 @@ theorem pruefeArme_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
           rcases pruefeBlock_sicher P Γ ρ hD hU hS erg b Δ Δb s hb hw hl with hr | hlog
           · left
             exact Ergebnis_schwaecher (erweitert_refl _) (pruefeBlock_erweitert P erg b Δ Δb hb) hr
-          · right; exact LogikA.hier rfl hlog
+          · right; exact LogikA.here rfl hlog
         · simp only [hnx, ↓reduceIte]
           have hx' : rest.any (fun a => a.1 == x) = true := by
             simp only [List.any_cons, Bool.or_eq_true, beq_iff_eq] at hx
@@ -1686,7 +1686,7 @@ theorem pruefeArme_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
             · exact hx
           rcases pruefeArme_sicher P Γ ρ hD hU hS erg Δ rest Δ' x s h hx' hw hl with hr | hlog
           · left; exact hr
-          · right; exact LogikA.dort hnx hlog
+          · right; exact LogikA.there hnx hlog
       · cases h
 
 theorem pruefeTags_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P.D Γ)
@@ -1789,7 +1789,7 @@ theorem pruefeTags_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
               · cases h
           rcases pruefeTags_sicher P Γ ρ hD hU hS erg Δ cs rest Δ' x p s hrest hu hx' hok hw hl with hr | hlog
           · left; exact hr
-          · right; exact LogikT.dort htx hlog
+          · right; exact LogikT.there htx hlog
       · cases h
 
 end

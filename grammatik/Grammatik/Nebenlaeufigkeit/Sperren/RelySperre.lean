@@ -98,7 +98,7 @@ theorem blatt_erhaelt_globs
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
-  | assignDurch p u ht fld i e hw hL =>
+  | assignThru p u ht fld i e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
@@ -114,7 +114,7 @@ theorem blatt_erhaelt_globs
       · simp only [World.schreibGlob, merke_globs_gleich]
         exact (storeGlob_fremd_global _ (Ne.symm hgx) _).trans
           (lese_globs_gleich _ _ _ _)
-  | schreibBytes u fld hf n i hlo hhi e hw hL =>
+  | putBytes u fld hf n i hlo hhi e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rw [schreibBytes_globs_gleich]
@@ -123,7 +123,7 @@ theorem blatt_erhaelt_globs
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
-  | uebergang u fld hτ i von nach hn he hw hL =>
+  | shift u fld hτ i von nach hn he hw hL =>
       simp only [execStmt] at hstep
       split at hstep
       · simp only [Ausgang.welt, Option.some.injEq] at hstep
@@ -133,7 +133,7 @@ theorem blatt_erhaelt_globs
   | ite c tb eb => simp [Stmt.istBlatt] at hleaf
   | onOption o pb ab => simp [Stmt.istBlatt] at hleaf
   | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onGrund r arms => simp [Stmt.istBlatt] at hleaf
+  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
   | call fn args hp hr => simp [Stmt.istBlatt] at hleaf
   | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
   | locks Lk hr body => simp [Stmt.istBlatt] at hleaf
@@ -170,7 +170,7 @@ theorem blatt_erhaelt_globs
               exact hframe.2 x heq
             exact e1.trans (lese_globs_gleich _ _ _ _)
       · simp [Ausgang.welt] at hstep
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
@@ -202,7 +202,7 @@ theorem blatt_erhaelt_globs
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
-  | retGrund r hΛe =>
+  | retWhy r hΛe =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
@@ -505,8 +505,8 @@ theorem wit_reach :
 /-- The thread-0 step statement: a local assignment, touching no
     memory and recording no events. -/
 def witStmt0 : Stmt refD (vertragVon refD refEin) false [.bool] [] [] :=
-  .assignVar (τ := .bool) Var.hier
-    (.falsch : Expr refD [.bool] [] .bool)
+  .assignVar (τ := .bool) Var.here
+    (.fls : Expr refD [.bool] [] .bool)
 
 /-- Its environment: the local starts `false`. -/
 def witRho0 : Env refD [.bool] := .cons false .nil
@@ -612,16 +612,16 @@ def gProg : PCProg gD
 def gPr : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | () => .wahr
+    | () => .tru
   ensures
-    | () => .wahr
+    | () => .tru
   rumpf
     | () => .ret (Γ := []) (Λ := [Res.held (D := gD) ()])
-        .keine (List.Perm.refl _)
+        .empty (List.Perm.refl _)
 
 /-- The written value `5` in range. -/
 def gWriteE : Expr gD [] [Res.held (D := gD) ()] (.int 0 10) :=
-  .weiter (by decide) (by decide) (.lit 5)
+  .widen (by decide) (by decide) (.lit 5)
 
 /-- The global write holds its guard statically. -/
 theorem gDarfHeld : gdarf gD () [Res.held (D := gD) ()] := by
@@ -772,8 +772,8 @@ theorem gReach :
 /-- The thread-0 step statement: a local assignment, touching no memory. -/
 def gStmt0 : Stmt gD (Vertrag.vonSig gD (gD.signatur ())) false [.bool]
     [] [] :=
-  .assignVar (τ := .bool) Var.hier
-    (.falsch : Expr gD [.bool] [] .bool)
+  .assignVar (τ := .bool) Var.here
+    (.fls : Expr gD [.bool] [] .bool)
 
 /-- Its environment: the local starts `false`. -/
 def gRho0 : Env gD [.bool] := .cons false .nil

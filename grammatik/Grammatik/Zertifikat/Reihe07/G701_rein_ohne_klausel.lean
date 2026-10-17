@@ -109,14 +109,14 @@ abbrev gL_rein_ohne_klausel : List (Res gD) := []
 
 
 def gBody_rein_ohne_klausel : Endblock gD (vertragVon gD g_rein_ohne_klausel) false gCtx_rein_ohne_klausel gL_rein_ohne_klausel :=
-  (.ret (.wert (.var .hier)) (List.Perm.refl _))
+  (.ret (.val (.var .here)) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .rein_ohne_klausel => .wahr
+    | .rein_ohne_klausel => .tru
   ensures
-    | .rein_ohne_klausel => .wahr
+    | .rein_ohne_klausel => .tru
   rumpf
     | .rein_ohne_klausel => gBody_rein_ohne_klausel
 

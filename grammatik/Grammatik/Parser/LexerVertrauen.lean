@@ -291,7 +291,7 @@ theorem quelle_bom_spaet :
 theorem lexVertrauen_weiter :
     lexVertrauen "const A : u32 = 1;" = .ok
       [Token.wort "const", Token.ident "A", Token.zeichen ":",
-       Token.wort "u32", Token.zeichen "=", Token.zahl 1,
+       Token.wort "u32", Token.zeichen "=", Token.num 1,
        Token.zeichen ";", Token.ende] := by
   decide
 

@@ -114,27 +114,27 @@ abbrev g1Reg : g1D.Reg := ()
 
 /-- `if true { let x = holen(); }` -/
 def g1AxStmt : Stmt g1D (vertragVon g1D g1Haupt) false [] [] [] :=
-  .ite .wahr (.bindAxiom g1Holen .nil rfl (fun e => nomatch e) (fun e => nomatch e)
+  .ite .tru (.bindAxiom g1Holen .nil rfl (fun e => nomatch e) (fun e => nomatch e)
     (fun e => nomatch e) (fun e => nomatch e) .nil) .nil
 
 /-- `if true { let t = temp; }` -/
 def g1RegStmt : Stmt g1D (vertragVon g1D g1Haupt) false [] [] [] :=
-  .ite .wahr (.regLies g1Reg rfl .nil) .nil
+  .ite .tru (.regRead g1Reg rfl .nil) .nil
 
 /-- **Probe G1-A**: probe A's contract (`ensures false`) behind one call of an axiom with an
     `ok | err` result. -/
 def g1PA : Programm g1D where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
-  rumpf _ := .cons g1AxStmt (.ret .keine List.Perm.nil)
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
+  rumpf _ := .cons g1AxStmt (.ret .empty List.Perm.nil)
 
 /-- **Probe G1-R**: probe A's contract behind one read of a float register. -/
 def g1PR : Programm g1D where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
-  rumpf _ := .cons g1RegStmt (.ret .keine List.Perm.nil)
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
+  rumpf _ := .cons g1RegStmt (.ret .empty List.Perm.nil)
 
 /-- The lock family of `g1D`: there is no lock. -/
 def g1S : SperrInv g1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩

@@ -119,14 +119,14 @@ abbrev gL_tut_nichts : List (Res gD) := []
 
 
 def gBody_tut_nichts : Endblock gD (vertragVon gD g_tut_nichts) false gCtx_tut_nichts gL_tut_nichts :=
-  (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_tut_nichts gL_tut_nichts (.int 1 1))) : Expr gD gCtx_tut_nichts gL_tut_nichts (.int 0 4294967295))) (List.Perm.refl _))
+  (.ret (.val ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_tut_nichts gL_tut_nichts (.int 1 1))) : Expr gD gCtx_tut_nichts gL_tut_nichts (.int 0 4294967295))) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .tut_nichts => .wahr
+    | .tut_nichts => .tru
   ensures
-    | .tut_nichts => .wahr
+    | .tut_nichts => .tru
   rumpf
     | .tut_nichts => gBody_tut_nichts
 

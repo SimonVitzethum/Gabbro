@@ -117,14 +117,14 @@ abbrev gL_lies : List (Res gD) := []
 theorem gGDarf_lies_ANFANG : gdarf gD GGlob.ANFANG gL_lies := by unfold gdarf; decide
 
 def gBody_lies : Endblock gD (vertragVon gD g_lies) false gCtx_lies gL_lies :=
-  (.cons (.onTag (Expr.glob (D := gD) GGlob.ANFANG gGDarf_lies_ANFANG) (.cons (.cons (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_lies gL_lies (.int 0 0))) : Expr gD gCtx_lies gL_lies (.int 0 4294967295))) (List.Perm.refl _)) .nil) (.cons (.cons (.ret (.wert (.var .hier)) (List.Perm.refl _)) .nil) .nil))) (.ret (.wert ((.weiter (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_lies gL_lies (.int 0 0))) : Expr gD gCtx_lies gL_lies (.int 0 4294967295))) (List.Perm.refl _)))
+  (.cons (.onTag (Expr.glob (D := gD) GGlob.ANFANG gGDarf_lies_ANFANG) (.cons (.cons (.ret (.val ((.widen (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_lies gL_lies (.int 0 0))) : Expr gD gCtx_lies gL_lies (.int 0 4294967295))) (List.Perm.refl _)) .nil) (.cons (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) .nil))) (.ret (.val ((.widen (by decide) (by decide) (((.lit 0)) : Expr gD gCtx_lies gL_lies (.int 0 0))) : Expr gD gCtx_lies gL_lies (.int 0 4294967295))) (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .lies => .wahr
+    | .lies => .tru
   ensures
-    | .lies => .wahr
+    | .lies => .tru
   rumpf
     | .lies => gBody_lies
 

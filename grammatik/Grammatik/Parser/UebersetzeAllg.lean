@@ -387,12 +387,12 @@ def fieldHitB (u : UProg) (t : Fin u.tabellen.length) (fname : String) :
 def lowVar : (Γ : Ctx) → (j : Nat) → (τ : Ty) → Except String (Var Γ τ)
   | [], _, _ => .error "parameter outside"
   | σ :: Γ, 0, τ =>
-    if h : σ = τ then by rw [h]; exact .ok Var.hier
+    if h : σ = τ then by rw [h]; exact .ok Var.here
     else .error "parameter shape foreign"
   | _ :: Γ, j + 1, τ =>
     match lowVar Γ j τ with
     | .error e => .error e
-    | .ok v => .ok (Var.dort v)
+    | .ok v => .ok (Var.there v)
 
 /-- Position of a parameter name. -/
 def paramPos : List (String × Ty) → String → Except String Nat
@@ -416,7 +416,7 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .lit n =>
     if h1 : 0 ≤ n then
       if h2 : n ≤ (declOf u).count t - 1 then
-        .ok (Expr.weiter h1 h2 (Expr.lit n))
+        .ok (Expr.widen h1 h2 (Expr.lit n))
       else .error "index outside count"
     else .error "index outside count"
   | .param p =>
@@ -459,12 +459,12 @@ def LowSide.times {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : Low
 def LowSide.conv {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (lo hi : Int)
     (x : LowSide u Γ Λ) : Except String (LowSide u Γ Λ) :=
   if h1 : lo ≤ x.weit.1 then
-    if h2 : x.weit.2 ≤ hi then .ok { weit := (lo, hi), term := Expr.weiter h1 h2 x.term }
+    if h2 : x.weit.2 ≤ hi then .ok { weit := (lo, hi), term := Expr.widen h1 h2 x.term }
     else .error "conversion outside target range"
   else .error "conversion outside target range"
 
 /-- `a & b` over non-negative ranges (M137): `Expr.band`, range `0 .. hi(a)`. -/
-def LowSide.und {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+def LowSide.and {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
   if h0 : 0 ≤ x.weit.1 then
     if h0' : 0 ≤ y.weit.1 then
@@ -478,7 +478,7 @@ def bitsFuer (m : Int) : Nat := Nat.log2 m.toNat + 1
 /-- `a | b` over non-negative ranges: `Expr.bor` at the smallest width holding both. The
     result range `0 .. 2^w - 1` contains every value of the bitwise or whatever the width, so the
     narrowest one is sound. -/
-def LowSide.oder {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+def LowSide.or {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
   if h0 : 0 ≤ x.weit.1 then
     if h0' : 0 ≤ y.weit.1 then
@@ -561,7 +561,7 @@ def durchTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       Res.von (declOf u) wdd ∈ Λ) :
     Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
   rw [← fh.hint]
-  exact Expr.durch (D := declOf u) (Expr.var v) ⟨num, h⟩
+  exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
     (tabNr_some u num h) fh.idx i hL
 
 /-- A `slot` term at its recorded range. -/
@@ -580,7 +580,7 @@ def altTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
   rw [← fh.hint]
-  exact Expr.altSlot (D := declOf u) t fh.idx i hL
+  exact Expr.oldS (D := declOf u) t fh.idx i hL
 
 /-- A slot read through a pointer parameter (positions shift
     by `sh`, see `lowIdx`). -/
@@ -679,8 +679,8 @@ def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match lowSideVal u Γ Λ fn a with
     | .error e => .error e
     | .ok x => LowSide.conv lo hi x
-  | .band a b => lowZwei LowSide.und (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | .bor a b => lowZwei LowSide.oder (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
+  | .band a b => lowZwei LowSide.and (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
+  | .bor a b => lowZwei LowSide.or (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
   | .bxor a b => lowZwei LowSide.xoder (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
   | _ => .error "side in body without G form"
 
@@ -707,7 +707,7 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                   Res.von (declOf u) wdd ∈ Λ) then
                 .ok (by
                   rw [← fh.hbool]
-                  exact Expr.durch (D := declOf u) (Expr.var v) ⟨num, h⟩
+                  exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
                     (tabNr_some u num h) fh.idx i hL)
               else .error "access without held guard"
       else .error "pointer table unknown"
@@ -772,8 +772,8 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match lowSideEns u Γ Λ fn er a with
     | .error e => .error e
     | .ok x => LowSide.conv lo hi x
-  | .band a b => lowZwei LowSide.und (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .bor a b => lowZwei LowSide.oder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .band a b => lowZwei LowSide.and (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .bor a b => lowZwei LowSide.or (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .bxor a b => lowZwei LowSide.xoder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .erg =>
     match er with
@@ -796,7 +796,7 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .ok s2 =>
         match op with
         | "==" => .ok (Expr.eq s1.term s2.term)
-        | "!=" => .ok (Expr.nicht (Expr.eq s1.term s2.term))
+        | "!=" => .ok (Expr.not (Expr.eq s1.term s2.term))
         | "<" => .ok (Expr.lt s1.term s2.term)
         | "<=" => .ok (Expr.le s1.term s2.term)
         | ">" => .ok (Expr.lt s2.term s1.term)
@@ -808,34 +808,34 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option (Int × Int)) :
     UEns → Except String (Expr (declOf u) Γ Λ .bool)
   | .cmp op a b => lowCmp u Γ Λ fn er op a b
-  | .wahr => .ok Expr.wahr
-  | .falsch => .ok Expr.falsch
-  | .und a b =>
+  | .tru => .ok Expr.tru
+  | .fls => .ok Expr.fls
+  | .and a b =>
     match lowEns u Γ Λ fn er a with
     | .error e => .error e
     | .ok x =>
       match lowEns u Γ Λ fn er b with
       | .error e => .error e
-      | .ok y => .ok (Expr.und x y)
-  | .oder a b =>
+      | .ok y => .ok (Expr.and x y)
+  | .or a b =>
     match lowEns u Γ Λ fn er a with
     | .error e => .error e
     | .ok x =>
       match lowEns u Γ Λ fn er b with
       | .error e => .error e
-      | .ok y => .ok (Expr.oder x y)
-  | .nicht a =>
+      | .ok y => .ok (Expr.or x y)
+  | .not a =>
     match lowEns u Γ Λ fn er a with
     | .error e => .error e
-    | .ok x => .ok (Expr.nicht x)
+    | .ok x => .ok (Expr.not x)
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
 
-/-- The `ensures` conjunction (empty is `.wahr`). -/
+/-- The `ensures` conjunction (empty is `.tru`). -/
 def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option (Int × Int)) :
     List UEns → Except String (Expr (declOf u) Γ Λ .bool)
-  | [] => .ok Expr.wahr
+  | [] => .ok Expr.tru
   | e :: rest =>
     match lowEns u Γ Λ fn er e with
     | .error err => .error err
@@ -844,8 +844,8 @@ def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .error err => .error err
       | .ok y =>
         match y with
-        | Expr.wahr => .ok x
-        | _ => .ok (Expr.und x y)
+        | Expr.tru => .ok x
+        | _ => .ok (Expr.and x y)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
 

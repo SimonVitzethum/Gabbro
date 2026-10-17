@@ -125,19 +125,19 @@ abbrev gL_produkt : List (Res gD) := []
 
 
 def gBody_summe : Endblock gD (vertragVon gD g_summe) false gCtx_summe gL_summe :=
-  (.bind ((.var .hier) : Expr gD gCtx_summe gL_summe (.int 0 4294967295)) (.bind ((.var (.dort (.dort .hier))) : Expr gD ((.int 0 4294967295) :: gCtx_summe) gL_summe (.int 0 4294967295)) (.ret (.wert ((.weiter (by decide) (by decide) (.add (.var (.dort .hier)) (.var .hier))) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_summe)) gL_summe (.int 0 18446744073709551615))) (List.Perm.refl _))))
+  (.bind ((.var .here) : Expr gD gCtx_summe gL_summe (.int 0 4294967295)) (.bind ((.var (.there (.there .here))) : Expr gD ((.int 0 4294967295) :: gCtx_summe) gL_summe (.int 0 4294967295)) (.ret (.val ((.widen (by decide) (by decide) (.add (.var (.there .here)) (.var .here))) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_summe)) gL_summe (.int 0 18446744073709551615))) (List.Perm.refl _))))
 
 def gBody_produkt : Endblock gD (vertragVon gD g_produkt) false gCtx_produkt gL_produkt :=
-  (.bind ((.var .hier) : Expr gD gCtx_produkt gL_produkt (.int 0 4294967295)) (.bind ((.var (.dort (.dort .hier))) : Expr gD ((.int 0 4294967295) :: gCtx_produkt) gL_produkt (.int 0 4294967295)) (.bind ((.mul (.var (.dort .hier)) (.var .hier)) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_produkt)) gL_produkt (.int 0 18446744065119617025)) (.ret (.wert ((.weiter (by decide) (by decide) (.var .hier)) : Expr gD ((.int 0 18446744065119617025) :: ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_produkt))) gL_produkt (.int 0 18446744073709551615))) (List.Perm.refl _)))))
+  (.bind ((.var .here) : Expr gD gCtx_produkt gL_produkt (.int 0 4294967295)) (.bind ((.var (.there (.there .here))) : Expr gD ((.int 0 4294967295) :: gCtx_produkt) gL_produkt (.int 0 4294967295)) (.bind ((.mul (.var (.there .here)) (.var .here)) : Expr gD ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_produkt)) gL_produkt (.int 0 18446744065119617025)) (.ret (.val ((.widen (by decide) (by decide) (.var .here)) : Expr gD ((.int 0 18446744065119617025) :: ((.int 0 4294967295) :: ((.int 0 4294967295) :: gCtx_produkt))) gL_produkt (.int 0 18446744073709551615))) (List.Perm.refl _)))))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .summe => .wahr
-    | .produkt => .wahr
+    | .summe => .tru
+    | .produkt => .tru
   ensures
-    | .summe => .wahr
-    | .produkt => .wahr
+    | .summe => .tru
+    | .produkt => .tru
   rumpf
     | .summe => gBody_summe
     | .produkt => gBody_produkt

@@ -6,7 +6,7 @@
   * `Expr.ptrOf` / `Ty.ptr` (Syntax.lean), `zeiger_hat_waechter`,
     `zeiger_schreibt_mit_recht`, `exec_rahmen` (Satz.lean) -- proved;
   * `ecorr_ptrOf`, `ptrOk_sound`, `exOk_sound` (KorrespondenzAllg.lean) -- proved;
-  * `kostenExpr .ptrOf = 0`, `kostenStmt .assignDurch` (KostenG.lean) -- defined;
+  * `kostenExpr .ptrOf = 0`, `kostenStmt .assignThru` (KostenG.lean) -- defined;
   * `antwortTyB .ptr = true`, `einpassen_voll` at `.ptr`, `antwortB_iff`
     (EinpassenVoll.lean) -- a pointer type always answers (`()`), so the
     answer component (`antwortenB`, Zielsatz/Akzeptiert.lean) needs no new
@@ -103,7 +103,7 @@ theorem zDarfW : darf wD () [] :=
 
 /-- Index `0` of four slots. -/
 def zIdxW : Expr wD [] [] (.index (wD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The `rw` pointer to the table. -/
 def zPtrW : Expr wD [] [] (.ptr 0 true) :=
@@ -111,15 +111,15 @@ def zPtrW : Expr wD [] [] (.ptr 0 true) :=
 
 /-- A `u32` value. -/
 def zWertW : Expr wD [] [] wU32 :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The read through the pointer. -/
 def zDurchW : Expr wD [] [] wU32 :=
-  .durch zPtrW () rfl () zIdxW zDarfW
+  .thru zPtrW () rfl () zIdxW zDarfW
 
 /-- The write through the pointer. -/
 def zSchreibW : Stmt wD wV false [] [] [] :=
-  .assignDurch zPtrW () rfl () zIdxW zWertW rfl zDarfW
+  .assignThru zPtrW () rfl () zIdxW zWertW rfl zDarfW
 
 /-- **WITNESS for `zeiger_hat_waechter`**: the read carries the guard,
     beside the nominal refusal (number `1` names no table) so the pair is

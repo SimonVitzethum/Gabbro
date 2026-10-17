@@ -4,7 +4,7 @@ Ty.int	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable 
 Ty.bool	LOWERED	crates/gabbro-check/src/llvm.rs::senke_typ	i1 or void/unreachable; no runtime representation for an inhabitant of never.
 Ty.opt	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable surface types only; arbitrary model bounds are not an implementation promise.
 Ty.sum	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable surface types only; arbitrary model bounds are not an implementation promise.
-Ty.grund	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable surface types only; arbitrary model bounds are not an implementation promise.
+Ty.why	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable surface types only; arbitrary model bounds are not an implementation promise.
 Ty.never	LOWERED	crates/gabbro-check/src/llvm.rs::senke_typ	i1 or void/unreachable; no runtime representation for an inhabitant of never.
 Ty.fl	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable surface types only; arbitrary model bounds are not an implementation promise.
 Ty.fnptr	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_typ	Machine-representable surface types only; arbitrary model bounds are not an implementation promise.
@@ -89,20 +89,20 @@ RufPasst.hk	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Sta
 RufPasst.hh	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 RufPasst.hx	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 RufPasst.hb	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
-Var.hier	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
-Var.dort	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+Var.here	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+Var.there	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Expr.lit	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.wahr	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.falsch	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.tru	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.fls	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.var	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.glob	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.slot	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.durch	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.thru	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.ptrOf	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.fnref	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.altGlob	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
-Expr.altSlot	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
-Expr.weiter	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.oldG	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
+Expr.oldS	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
+Expr.widen	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.add	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.sub	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.neg	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
@@ -111,7 +111,7 @@ Expr.div	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supporte
 Expr.rem	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.sdiv	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.srem	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.leseBytes	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_expr	Surface byte views lower through indexed pointers; no exported byte-view constructor.
+Expr.getBytes	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_expr	Surface byte views lower through indexed pointers; no exported byte-view constructor.
 Expr.band	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.bor	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.bxor	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
@@ -122,37 +122,37 @@ Expr.le	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported
 Expr.eq	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.fllt	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.flle	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.und	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.oder	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.nicht	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.and	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.or	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.not	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.none	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.some	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.istSome	MODEL_ONLY	-	Model helper without its own surface spelling.
-Expr.fall	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
-Expr.grund	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.case	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
+Expr.why	LOWERED	crates/gabbro-check/src/llvm.rs::senke_expr	Lowered on supported runtime carrier widths; no final-byte correctness claim.
 Expr.forallSlots	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
 Expr.existsSlots	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
 Expr.reaches	ERASED	crates/gabbro-check/src/llvm.rs::senke_expr	Specification/contract expression; no independent executable value.
-NutzlastExpr.keine	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
-NutzlastExpr.zahl	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+NutzlastExpr.empty	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+NutzlastExpr.num	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Args.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Args.cons	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
-ErgExpr.keine	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
-ErgExpr.wert	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+ErgExpr.empty	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
+ErgExpr.val	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 GleitOp.add	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Finite float surface operations exist; G float export remains incomplete.
 GleitOp.sub	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Finite float surface operations exist; G float export remains incomplete.
 GleitOp.mul	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Finite float surface operations exist; G float export remains incomplete.
 GleitOp.div	PARTIAL	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Finite float surface operations exist; G float export remains incomplete.
 Stmt.assignSlot	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
-Stmt.assignDurch	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
+Stmt.assignThru	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.assignGlob	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
-Stmt.schreibBytes	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
+Stmt.putBytes	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.assignVar	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
-Stmt.uebergang	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
+Stmt.shift	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.ite	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.onOption	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.onTag	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
-Stmt.onGrund	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
+Stmt.onWhy	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.call	LOWERED	crates/gabbro-check/src/llvm/stackless.rs::lower	Direct and compatible indirect cycles use explicit frames and a loop dispatcher; pure tail cycles use jumps.
 Stmt.callInd	LOWERED	crates/gabbro-check/src/llvm/stackless.rs::lower	Direct and compatible indirect cycles use explicit frames and a loop dispatcher; pure tail cycles use jumps.
 Stmt.locks	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_sperrt	Exclusive locks supported; shared acquisition and interrupt masking refused.
@@ -161,13 +161,13 @@ Stmt.traverse	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on sup
 Stmt.retry	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.forever	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.axiomCall	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_tor_ruf	Direct gates supported; stack-carrying, paired and unbound gates remain refused.
-Stmt.regSchreib	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	No G Reg exporter path; volatile surface devices are a separate supported representation.
+Stmt.regWrite	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	No G Reg exporter path; volatile surface devices are a separate supported representation.
 Stmt.transition	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	No G Reg exporter path; volatile surface devices are a separate supported representation.
 Stmt.publish	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_publish	Payload-free release supported; payload hand-off is refused (Y103).
 Stmt.advances	ERASED	crates/gabbro-check/src/llvm.rs::senke_stmt	Checked proof bookkeeping, absent from runtime bytes.
 Stmt.retires	ERASED	crates/gabbro-check/src/llvm.rs::senke_stmt	Checked proof bookkeeping, absent from runtime bytes.
 Stmt.ret	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
-Stmt.retGrund	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
+Stmt.retWhy	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.leave	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.next	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Block.nil	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
@@ -178,18 +178,18 @@ Block.bindCallInd	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-fl
 Block.bindCallElse	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Block.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
 Block.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
-Block.regLies	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
-Block.regLiesElse	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
+Block.regRead	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
+Block.regReadElse	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
 Block.awaits	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Block.exchange	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Block.narrow	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
-Block.pruefung	ERASED	crates/gabbro-check/src/llvm.rs::senke_stmt	Proof-only assertion, no independent machine operation.
-Block.gleit	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
-Block.gleitLit	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
-Block.gleitVon	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
-Block.gleitNarrow	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
+Block.check	ERASED	crates/gabbro-check/src/llvm.rs::senke_stmt	Proof-only assertion, no independent machine operation.
+Block.float	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
+Block.floatLit	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
+Block.floatOf	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
+Block.floatNarrow	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Finite surface float lowering exists; the G exporter does not construct Ty.fl.
 Endblock.ret	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
-Endblock.retGrund	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
+Endblock.retWhy	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.leave	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.next	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.cons	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.

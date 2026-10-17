@@ -30,11 +30,11 @@ theorem eval_umΛ {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (h : Λ = Λ') (e
   subst h; rfl
 
 /-- A `requires true` of `P` stays `true` on `P.mitRuhe`. -/
-theorem req_mitRuhe_wahr (P : Programm D) (f : D.Fn) (hf : P.requires f = .wahr)
+theorem req_mitRuhe_wahr (P : Programm D) (f : D.Fn) (hf : P.requires f = .tru)
     (σ : World D.mitRuhe) (ρ : Env D.mitRuhe (D.mitRuhe.params (some f))) :
     ReqAmEintritt P.mitRuhe (some f) σ ρ := by
   refine (congrArg wahr? (eval_umΛ (anfang_map (D.signatur f)) (ruE (P.requires f)) σ σ ρ)).trans ?_
-  have e : ruE (P.requires f) = ruE (Expr.wahr (D := D)) := by rw [hf]
+  have e : ruE (P.requires f) = ruE (Expr.tru (D := D)) := by rw [hf]
   rw [e]
   rfl
 

@@ -72,7 +72,7 @@ theorem hoare_call (P : Programm D) (O : Orakel D) (passes : Nat)
   obtain ⟨hlese, hargs, hr0eq, hreq⟩ := hPre
   have hrun2 : (match R f s0 rho0 with
     | .ok σ'' _ => Ausgang.ok (V := V) (l := l) (Γ := Γ) σ'' ρ
-    | .grund _ r => keinGrund hr r
+    | .why _ r => keinGrund hr r
     | .logik e => Ausgang.logik e
     | .hardware e => Ausgang.hardware e) = Ausgang.ok σ' ρ' := by
     rw [← hlese, ← hargs]
@@ -82,7 +82,7 @@ theorem hoare_call (P : Programm D) (O : Orakel D) (passes : Nat)
     simp only [hRv] at hrun2
     cases hrun2
     exact ⟨hr0eq, v, rfl, hR f _ _ hreq _ _ hRv⟩
-  | grund σ'' r =>
+  | why σ'' r =>
     simp only [hRv] at hrun2
     exact (Fin.cast hr r).elim0
   | logik e =>
@@ -111,7 +111,7 @@ theorem rufD_erg_any70 (f : rufD.Fn) : rufD.erg f = some (.int 0 6) := by
 
 /-- Witness value: param + 1, pinned to `Zahl 0 6` so `Zahl.add` unifies. -/
 def witVal70 (ρ : Env rufD [Ty.int 0 5]) : ErgVal rufD (some (.int 0 6)) :=
-  Zahl.add (ρ.get Var.hier) (⟨1, by decide, by decide⟩ : Zahl 0 1)
+  Zahl.add (ρ.get Var.here) (⟨1, by decide, by decide⟩ : Zahl 0 1)
 
 /-- Witness handler on `rufD`: if `requires` holds at the entry world
     with the given arguments, answer by evaluating the body `param + 1`
@@ -146,7 +146,7 @@ theorem hRwit70 : RespektiertVertraege (D := rufD) rufPD Rwit70 := by
     with concrete values and prove them: the handler respect fact
     `hRwit70` above, plus a reached call whose statement ends normally
     with the evaluated arguments. The statement is a `.call` of
-    `rufIncD` with argument `.var .hier` from caller env `rufRhoD`;
+    `rufIncD` with argument `.var .here` from caller env `rufRhoD`;
     the entry world is `rufWeltD` (argument reads are empty), the
     handler answers `.ok` with `param + 1 = 3`, and `ensures` holds
     for the actual values by `ruf_ens_am_ortD`. -/

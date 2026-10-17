@@ -36,11 +36,11 @@ inductive CertGrundArms2 (D : Deklaration) (V : Vertrag D) : Nat → Type where
     travels as proof); `onTag`/`onGrund` carry the scrutinee shapes the
     CUT-3 rows already print (`fall` payload check, `r < n`). -/
 inductive CertStmt2 (D : Deklaration) (V : Vertrag D) where
-  | assignDurch (t : D.Tab) (f : D.Feld t) (n : Nat) (rw : Bool) (i e : CertExpr D)
+  | assignThru (t : D.Tab) (f : D.Feld t) (n : Nat) (rw : Bool) (i e : CertExpr D)
   | callInd (f : D.Fn) (n : Nat) (Λc : List (Res D)) (hp : RufPasst D V (D.sigNr n) Λc)
   | onTag (cs : List (Option (Int × Int))) (i : Nat) (p : Option (CertExpr D))
     (arms : CertArms2 D V cs)
-  | onGrund (n r : Nat) (arms : CertGrundArms2 D V n)
+  | onWhy (n r : Nat) (arms : CertGrundArms2 D V n)
 
 /-! ## Arm validity: every side condition recomputed -/
 
@@ -170,7 +170,7 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
       cases p with
       | none =>
         simp only [certCut3PayloadOk] at hp
-        exact ⟨Expr.fall cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.keine),
+        exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.empty),
           trivial⟩
       | some _ =>
         simp [certCut3PayloadOk] at hp
@@ -183,7 +183,7 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
         simp only [certCut3PayloadOk] at hp
         have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
         obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
-        exact ⟨Expr.fall cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.zahl ee),
+        exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.num ee),
           trivial⟩
 
 /-! ## Statement validity: every side condition recomputed -/
@@ -196,7 +196,7 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
     check and the arm list; `onGrund` the reason bound and the arm list. -/
 def certStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) : CertStmt2 D V → Prop
-  | .assignDurch t f n rw i e =>
+  | .assignThru t f n rw i e =>
     rw = true ∧ D.tabNr n = some t ∧
       certRange D Γ Λ i = some (0, D.count t - 1) ∧
       certRange D Γ Λ e ≠ none ∧
@@ -208,7 +208,7 @@ def certStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
   | .onTag cs i p arms =>
     i < cs.length ∧ certCut3PayloadOk D Γ Λ cs[i]? p = true ∧
       certArms2Gueltig D V l Γ Λ Λ' arms ∧ Λ = Λ'
-  | .onGrund n r arms =>
+  | .onWhy n r arms =>
     r < n ∧ certGrundArms2Gueltig D V l Γ Λ Λ' arms ∧ Λ = Λ'
 
 /-- Second-batch validity as `Decidable`, by structural recursion. -/
@@ -216,7 +216,7 @@ def decStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) (s : CertStmt2 D V) :
     Decidable (certStmt2Gueltig D V l Γ Λ Λ' s) :=
   match s with
-  | .assignDurch t f n rw i e =>
+  | .assignThru t f n rw i e =>
     inferInstanceAs (Decidable (rw = true ∧ D.tabNr n = some t ∧
       certRange D Γ Λ i = some (0, D.count t - 1) ∧
       certRange D Γ Λ e ≠ none ∧
@@ -231,7 +231,7 @@ def decStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     inferInstanceAs (Decidable (i < cs.length ∧
       certCut3PayloadOk D Γ Λ cs[i]? p = true ∧
       certArms2Gueltig D V l Γ Λ Λ' arms ∧ Λ = Λ'))
-  | .onGrund n r arms =>
+  | .onWhy n r arms =>
     haveI := decGrundArms2Gueltig D V l Γ Λ Λ' arms
     inferInstanceAs (Decidable (r < n ∧
       certGrundArms2Gueltig D V l Γ Λ Λ' arms ∧ Λ = Λ'))
@@ -250,7 +250,7 @@ theorem assignDurch_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
     (Γ : Ctx) (Λ Λ' : List (Res D)) (t : D.Tab) (f : D.Feld t) (n : Nat)
     (rw : Bool) (i e : CertExpr D)
     (h : certStmt2Gueltig D V l Γ Λ Λ'
-      (.assignDurch t f n rw i e)) :
+      (.assignThru t f n rw i e)) :
     ∃ _ : Stmt D V l Γ Λ Λ', True := by
   simp only [certStmt2Gueltig] at h
   obtain ⟨hrw, htab, hii, hne, htyp, hw, hL, hout⟩ := h
@@ -267,7 +267,7 @@ theorem assignDurch_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
     have hτ : D.typ t f = .int lo hi' := intVonTyp_eq hft
     obtain ⟨ee, _⟩ := zeugnis_sound e lo hi' he
     have ee' : Expr D Γ Λ (D.typ t f) := by rw [hτ]; exact ee
-    exact ⟨Stmt.assignDurch (Expr.ptrOf t n htab true) t htab f ei ee' hw hL,
+    exact ⟨Stmt.assignThru (Expr.ptrOf t n htab true) t htab f ei ee' hw hL,
       trivial⟩
 
 /-- `callInd` soundness (nullary callees, the R-2 fragment): the signature
@@ -304,13 +304,13 @@ theorem onTag_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     scrutinee, the arm print to `GrundArms`. Every hypothesis is used. -/
 theorem onGrund_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) (n r : Nat) (arms : CertGrundArms2 D V n)
-    (h : certStmt2Gueltig D V l Γ Λ Λ' (.onGrund n r arms)) :
+    (h : certStmt2Gueltig D V l Γ Λ Λ' (.onWhy n r arms)) :
     ∃ _ : Stmt D V l Γ Λ Λ', True := by
   simp only [certStmt2Gueltig] at h
   obtain ⟨hlt, harms, hout⟩ := h
   subst hout
   obtain ⟨as, _⟩ := grundArms2_sound D V l Γ Λ Λ arms harms
-  exact ⟨Stmt.onGrund (Expr.grund n ⟨r, hlt⟩) as, trivial⟩
+  exact ⟨Stmt.onWhy (Expr.why n ⟨r, hlt⟩) as, trivial⟩
 
 /-! ## Block certificates: the five remaining `Block` shapes
 
@@ -329,10 +329,10 @@ inductive CertSeq2 (D : Deklaration) (V : Vertrag D) where
   | cons2 (s : CertStmt2 D V) (Λm : List (Res D)) (rest : CertSeq2 D V)
   | bindCallInd (f : D.Fn) (n : Nat) (lo hi : Int) (Λc : List (Res D))
     (hp : RufPasst D V (D.sigNr n) Λc) (rest : CertSeq2 D V)
-  | gleit (op : GleitOp) (a b : CertFl D) (lo hi : Int × Int) (rest : CertSeq2 D V)
-  | gleitLit (q lo hi : Int × Int) (rest : CertSeq2 D V)
-  | gleitVon (e : CertExpr D) (lo hi : Int × Int) (rest : CertSeq2 D V)
-  | gleitNarrow (e : CertFl D) (lo hi : Int × Int) (sonst : CertEnd D V)
+  | float (op : GleitOp) (a b : CertFl D) (lo hi : Int × Int) (rest : CertSeq2 D V)
+  | floatLit (q lo hi : Int × Int) (rest : CertSeq2 D V)
+  | floatOf (e : CertExpr D) (lo hi : Int × Int) (rest : CertSeq2 D V)
+  | floatNarrow (e : CertFl D) (lo hi : Int × Int) (sonst : CertEnd D V)
     (rest : CertSeq2 D V)
 
 /-- Second-batch block validity. `bindCallInd` recomputes the signature
@@ -349,15 +349,15 @@ def certSeq2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     D.sig f = n ∧ Λ = Λc ∧ (D.sigNr n).params = [] ∧
       (D.sigNr n).gruende = 0 ∧ (D.sigNr n).erg = some (.int lo hi) ∧
       certSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest
-  | .gleit _ a b lo hi rest =>
+  | .float _ a b lo hi rest =>
     certFlTyp D Γ Λ a ≠ none ∧ certFlTyp D Γ Λ b ≠ none ∧
       certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
-  | .gleitLit _ lo hi rest =>
+  | .floatLit _ lo hi rest =>
     certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
-  | .gleitVon e lo hi rest =>
+  | .floatOf e lo hi rest =>
     certRange D Γ Λ e ≠ none ∧
       certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
-  | .gleitNarrow e lo hi sonst rest =>
+  | .floatNarrow e lo hi sonst rest =>
     certFlTyp D Γ Λ e ≠ none ∧ certEndGueltig D V l Γ Λ sonst ∧
       certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
 
@@ -379,20 +379,20 @@ def decSeq2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       (D.sigNr n).params = [] ∧ (D.sigNr n).gruende = 0 ∧
       (D.sigNr n).erg = some (.int lo hi) ∧
       certSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest))
-  | .gleit _ a b lo hi rest =>
+  | .float _ a b lo hi rest =>
     haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
     inferInstanceAs (Decidable (certFlTyp D Γ Λ a ≠ none ∧
       certFlTyp D Γ Λ b ≠ none ∧
       certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
-  | .gleitLit _ lo hi rest =>
+  | .floatLit _ lo hi rest =>
     haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
     inferInstanceAs
       (Decidable (certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
-  | .gleitVon e lo hi rest =>
+  | .floatOf e lo hi rest =>
     haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
     inferInstanceAs (Decidable (certRange D Γ Λ e ≠ none ∧
       certSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest))
-  | .gleitNarrow e lo hi sonst rest =>
+  | .floatNarrow e lo hi sonst rest =>
     haveI := decEndGueltig D V l Γ Λ sonst
     haveI := decSeq2Gueltig D V l (.fl lo hi :: Γ) Λ Λ' rest
     inferInstanceAs (Decidable (certFlTyp D Γ Λ e ≠ none ∧
@@ -414,7 +414,7 @@ theorem stmt2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     ∃ _ : Stmt D V l Γ Λ Λ', True := by
   revert h
   match s with
-  | .assignDurch t f n rw i e =>
+  | .assignThru t f n rw i e =>
     intro h
     exact assignDurch_sound D V l Γ Λ Λ' t f n rw i e h
   | .callInd f n Λc hp =>
@@ -423,7 +423,7 @@ theorem stmt2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
   | .onTag cs i p arms =>
     intro h
     exact onTag_sound D V l Γ Λ Λ' cs i p arms h
-  | .onGrund n r arms =>
+  | .onWhy n r arms =>
     intro h
     exact onGrund_sound D V l Γ Λ Λ' n r arms h
 
@@ -464,7 +464,7 @@ theorem seq2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       seq2_sound D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest hrest
     exact ⟨Block.bindCallInd (Expr.fnref f n hsig)
       (by rw [hpar]; exact Args.nil) he hp hgr r', trivial⟩
-  | .gleit op a b lo hi rest =>
+  | .float op a b lo hi rest =>
     intro h
     simp only [certSeq2Gueltig] at h
     cases ha : certFlTyp D Γ Λ a with
@@ -477,13 +477,13 @@ theorem seq2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
         obtain ⟨eb, _⟩ := certFl_sound b _ _ hb
         obtain ⟨r', _⟩ :=
           seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest h.2.2
-        exact ⟨Block.gleit op ea eb lo hi r', trivial⟩
-  | .gleitLit q lo hi rest =>
+        exact ⟨Block.float op ea eb lo hi r', trivial⟩
+  | .floatLit q lo hi rest =>
     intro h
     simp only [certSeq2Gueltig] at h
     obtain ⟨r', _⟩ := seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest h
-    exact ⟨Block.gleitLit q lo hi r', trivial⟩
-  | .gleitVon e lo hi rest =>
+    exact ⟨Block.floatLit q lo hi r', trivial⟩
+  | .floatOf e lo hi rest =>
     intro h
     simp only [certSeq2Gueltig] at h
     obtain ⟨hne, hrest⟩ := h
@@ -493,8 +493,8 @@ theorem seq2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       obtain ⟨l1, h1⟩ := p
       obtain ⟨ee, _⟩ := zeugnis_sound e l1 h1 he
       obtain ⟨r', _⟩ := seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest hrest
-      exact ⟨Block.gleitVon ee lo hi r', trivial⟩
-  | .gleitNarrow e lo hi sonst rest =>
+      exact ⟨Block.floatOf ee lo hi r', trivial⟩
+  | .floatNarrow e lo hi sonst rest =>
     intro h
     simp only [certSeq2Gueltig] at h
     obtain ⟨hne, hsonst, hrest⟩ := h
@@ -505,7 +505,7 @@ theorem seq2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       obtain ⟨ee, _⟩ := certFl_sound e l1 h1 hf
       obtain ⟨es, _⟩ := end_sound D V l Γ Λ sonst hsonst
       obtain ⟨r', _⟩ := seq2_sound D V l (.fl lo hi :: Γ) Λ Λ' rest hrest
-      exact ⟨Block.gleitNarrow ee lo hi es r', trivial⟩
+      exact ⟨Block.floatNarrow ee lo hi es r', trivial⟩
 
 /-! ## Block soundness, one lemma per constructor
 
@@ -527,33 +527,33 @@ theorem bindCallInd_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
 theorem gleit_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) (op : GleitOp) (a b : CertFl D) (lo hi : Int × Int)
     (rest : CertSeq2 D V)
-    (h : certSeq2Gueltig D V l Γ Λ Λ' (.gleit op a b lo hi rest)) :
+    (h : certSeq2Gueltig D V l Γ Λ Λ' (.float op a b lo hi rest)) :
     ∃ _ : Block D V l Γ Λ Λ', True :=
-  seq2_sound D V l Γ Λ Λ' (.gleit op a b lo hi rest) h
+  seq2_sound D V l Γ Λ Λ' (.float op a b lo hi rest) h
 
 /-- `gleitLit` soundness. -/
 theorem gleitLit_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) (q lo hi : Int × Int) (rest : CertSeq2 D V)
-    (h : certSeq2Gueltig D V l Γ Λ Λ' (.gleitLit q lo hi rest)) :
+    (h : certSeq2Gueltig D V l Γ Λ Λ' (.floatLit q lo hi rest)) :
     ∃ _ : Block D V l Γ Λ Λ', True :=
-  seq2_sound D V l Γ Λ Λ' (.gleitLit q lo hi rest) h
+  seq2_sound D V l Γ Λ Λ' (.floatLit q lo hi rest) h
 
 /-- `gleitVon` soundness. -/
 theorem gleitVon_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) (e : CertExpr D) (lo hi : Int × Int)
     (rest : CertSeq2 D V)
-    (h : certSeq2Gueltig D V l Γ Λ Λ' (.gleitVon e lo hi rest)) :
+    (h : certSeq2Gueltig D V l Γ Λ Λ' (.floatOf e lo hi rest)) :
     ∃ _ : Block D V l Γ Λ Λ', True :=
-  seq2_sound D V l Γ Λ Λ' (.gleitVon e lo hi rest) h
+  seq2_sound D V l Γ Λ Λ' (.floatOf e lo hi rest) h
 
 /-- `gleitNarrow` soundness. -/
 theorem gleitNarrow_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
     (Γ : Ctx) (Λ Λ' : List (Res D)) (e : CertFl D) (lo hi : Int × Int)
     (sonst : CertEnd D V) (rest : CertSeq2 D V)
     (h : certSeq2Gueltig D V l Γ Λ Λ'
-      (.gleitNarrow e lo hi sonst rest)) :
+      (.floatNarrow e lo hi sonst rest)) :
     ∃ _ : Block D V l Γ Λ Λ', True :=
-  seq2_sound D V l Γ Λ Λ' (.gleitNarrow e lo hi sonst rest) h
+  seq2_sound D V l Γ Λ Λ' (.floatNarrow e lo hi sonst rest) h
 
 /-! ## Non-falling blocks: `lift` plus new-statement cons
 
@@ -653,7 +653,7 @@ theorem assignDurch_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.assignDurch () () 0 true (.wide 0 1 (.lit 0)) (.wide 0 100 (.lit 100)),
+  ⟨.assignThru () () 0 true (.wide 0 1 (.lit 0)) (.wide 0 100 (.lit 100)),
     by decide, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `callInd_sound`: the indirect call of the
@@ -689,7 +689,7 @@ theorem onGrund_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.onGrund 1 0 (.cons .nil .nil),
+  ⟨.onWhy 1 0 (.cons .nil .nil),
     by decide, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `bindCallInd_sound`: the indirect
@@ -713,7 +713,7 @@ theorem gleit_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.gleit .add (.varFl 0) (.varFl 0) (0, 0) (1, 1) (.lift .nil),
+  ⟨.float .add (.varFl 0) (.varFl 0) (0, 0) (1, 1) (.lift .nil),
     by decide, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `gleitLit_sound`: the float literal step. -/
@@ -724,7 +724,7 @@ theorem gleitLit_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.gleitLit (0, 0) (0, 0) (1, 1) (.lift .nil),
+  ⟨.floatLit (0, 0) (0, 0) (1, 1) (.lift .nil),
     by decide, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `gleitVon_sound`: the int-to-float step
@@ -736,7 +736,7 @@ theorem gleitVon_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.gleitVon (.lit 7) (0, 0) (1, 1) (.lift .nil),
+  ⟨.floatOf (.lit 7) (0, 0) (1, 1) (.lift .nil),
     by decide, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `gleitNarrow_sound`: narrowing a float
@@ -748,7 +748,7 @@ theorem gleitNarrow_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.gleitNarrow (.varFl 0) (0, 0) (1, 1) .ret (.lift .nil),
+  ⟨.floatNarrow (.varFl 0) (0, 0) (1, 1) .ret (.lift .nil),
     by decide, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `zeugnisStmt2_sound`: a body that writes
@@ -760,7 +760,7 @@ theorem zeugnisStmt2_sound_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨.cons2E (.assignDurch () () 0 true (.wide 0 1 (.lit 0))
+  ⟨.cons2E (.assignThru () () 0 true (.wide 0 1 (.lit 0))
     (.wide 0 100 (.lit 100))) [Res.held (D := refD) ()]
     (.liftE refCertEin), by decide, MB, refB_erreicht, refB_schreibt⟩
 
@@ -770,14 +770,14 @@ theorem zeugnisStmt2_sound_zeuge :
     `rw = true` check fails, so the print is provably not valid. -/
 example : ¬ certStmt2Gueltig refD (vertragVon refD refEin) false
     [.int 0 10] [Res.held (D := refD) ()] [Res.held (D := refD) ()]
-    (.assignDurch () () 0 false (.wide 0 1 (.lit 0))
+    (.assignThru () () 0 false (.wide 0 1 (.lit 0))
       (.wide 0 100 (.lit 100))) := by
   decide
 
 /-- FORGED reason: reason `1` of one does not exist. -/
 example : ¬ certStmt2Gueltig refD (vertragVon refD refEin) false
     [.int 0 10] [Res.held (D := refD) ()] [Res.held (D := refD) ()]
-    (.onGrund 1 1 (.cons .nil .nil)) := by
+    (.onWhy 1 1 (.cons .nil .nil)) := by
   decide
 
 /-- FORGED payload: the caseless `sum` carries no `zahl` payload. -/

@@ -94,19 +94,19 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignSlot t f i e _ _, σ, ρ =>
       let σ := leseA A σ Λ (i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
-  | .assignDurch p t _ f i e _ _, σ, ρ =>
+  | .assignThru p t _ f i e _ _, σ, ρ =>
       let σ := leseA A σ Λ (p.orte ++ i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
   | .assignGlob g e _ _, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       .ok (σ.schreibGlob g Λ (eval σ e σ ρ)) ρ
-  | .schreibBytes t f hf n i _ _ e _ _, σ, ρ =>
+  | .putBytes t f hf n i _ _ e _ _, σ, ρ =>
       let σ := leseA A σ Λ (i.orte ++ e.orte)
       .ok (σ.schreibBytes t f hf Λ (eval σ i σ ρ).n (zahlZuBytes n (eval σ e σ ρ).n)) ρ
   | .assignVar x e, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       .ok σ (ρ.set x (eval σ e σ ρ))
-  | .uebergang t f hτ i von nach hn _ _ _, σ, ρ =>
+  | .shift t f hτ i von nach hn _ _ _, σ, ρ =>
       let σ := leseA A σ Λ (.inl t :: i.orte)
       let k := (eval σ i σ ρ).n
       if (hτ ▸ σ.slots t k f : Zahl _ _).n = von
@@ -123,14 +123,14 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onTag v arms, σ, ρ =>
       let σ := leseA A σ Λ v.orte
       execArmsHA arms (eval σ v σ ρ) σ ρ
-  | .onGrund r arms, σ, ρ =>
+  | .onWhy r arms, σ, ρ =>
       let σ := leseA A σ Λ r.orte
       execGrundHA arms (eval σ r σ ρ) σ ρ
   | .call f args _ hr, σ, ρ =>
       let σ := leseA A σ Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' _ => .ok σ' ρ
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .callInd p args _ hr, σ, ρ =>
@@ -138,7 +138,7 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let ⟨f, hf⟩ := eval σ p σ ρ
       match R f σ (umsig hf (evalArgs σ args σ ρ)) with
       | .ok σ' _ => .ok σ' ρ
-      | .grund _ r => keinGrundSig hf hr r
+      | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .locks L _ body, σ, ρ => freiH S L (execBlockHA body ((U L σ).nimmt L) ρ)
@@ -159,7 +159,7 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some _) => .ok σ' ρ
       | (_, Option.none) => .hardware (.annahme a)
-  | .regSchreib r _ e, σ, ρ =>
+  | .regWrite r _ e, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       let _ := O.regSchreib r (roh (eval σ e σ ρ))
       .ok σ ρ
@@ -175,7 +175,7 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ret e _, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
-  | .retGrund r _, σ, _ => .grund σ r
+  | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
 
@@ -193,7 +193,7 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let σ := leseA A σ Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' v => (execBlockHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
-      | .grund _ r => keinGrund hr r
+      | .why _ r => keinGrund hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindCallInd p args he _ hr rest, σ, ρ =>
@@ -201,14 +201,14 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let ⟨f, hf⟩ := eval σ p σ ρ
       match R f σ (umsig hf (evalArgs σ args σ ρ)) with
       | .ok σ' v => (execBlockHA rest σ' (.cons (ergWert (ergSig hf he) v) ρ)).schrumpf
-      | .grund _ r => keinGrundSig hf hr r
+      | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindCallElse f args he _ _ err rest, σ, ρ =>
       let σ := leseA A σ Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
       | .ok σ' v => (execBlockHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
-      | .grund σ' r => (execEndHA err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | .why σ' r => (execEndHA err σ' (.cons r ρ)).schrumpf.zuAusgang
       | .logik e => .logik e
       | .hardware e => .hardware e
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
@@ -222,13 +222,13 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | (σ', Option.some (Sum.inl v)) => (execBlockHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (σ', Option.some (Sum.inr r)) => (execEndHA err σ' (.cons r ρ)).schrumpf.zuAusgang
       | (_, Option.none) => .hardware (.annahme a)
-  | .regLies r _ rest, σ, ρ =>
+  | .regRead r _ rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlockHA rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
-  | .regLiesElse r _ zusage sonst rest, σ, ρ =>
+  | .regReadElse r _ zusage sonst rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := leseA A σ Λ zusage.orte
@@ -249,24 +249,24 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlockHA rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEndHA sonst σ ρ).zuAusgang
-  | .pruefung c sonst rest, σ, ρ =>
+  | .check c sonst rest, σ, ρ =>
       let σ := leseA A σ Λ c.orte
       if wahr? (eval σ c σ ρ) then execBlockHA rest σ ρ else (execEndHA sonst σ ρ).zuAusgang
-  | .gleit op a b lo hi rest, σ, ρ =>
+  | .float op a b lo hi rest, σ, ρ =>
       let σ := leseA A σ Λ (a.orte ++ b.orte)
       match gleitPasst lo hi (gleitRechne op (eval σ a σ ρ).x (eval σ b σ ρ).x) with
       | Option.some v => (execBlockHA rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitLit q lo hi rest, σ, ρ =>
+  | .floatLit q lo hi rest, σ, ρ =>
       match gleitPasst lo hi (bruch q) with
       | Option.some v => (execBlockHA rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitVon e lo hi rest, σ, ρ =>
+  | .floatOf e lo hi rest, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       match gleitPasst lo hi (gleitAusInt (eval σ e σ ρ).n) with
       | Option.some v => (execBlockHA rest σ (.cons v ρ)).schrumpf
       | Option.none => .logik .bereich
-  | .gleitNarrow e lo hi sonst rest, σ, ρ =>
+  | .floatNarrow e lo hi sonst rest, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       match gleitPasst lo hi (eval σ e σ ρ).x with
       | Option.some v => (execBlockHA rest σ (.cons v ρ)).schrumpf
@@ -277,14 +277,14 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ret e _, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
-  | .retGrund r _, σ, _ => .grund σ r
+  | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
   | .cons s rest, σ, ρ =>
       match execStmtHA s σ ρ with
       | .ok σ' ρ' => execEndHA rest σ' ρ'
       | .zurueck σ' v => .zurueck σ' v
-      | .grund σ' r => .grund σ' r
+      | .why σ' r => .why σ' r
       | .leave h σ' ρ' => .leave h σ' ρ'
       | .next h σ' ρ' => .next h σ' ρ'
       | .logik e => .logik e
@@ -347,19 +347,19 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignSlot t f i e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
-  | .assignDurch p t _ f i e _ _, hT, σ, ρ => by
+  | .assignThru p t _ f i e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .assignGlob g e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
-  | .schreibBytes t f hf n i _ _ e _ _, hT, σ, ρ => by
+  | .putBytes t f hf n i _ _ e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .assignVar x e, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
-  | .uebergang t f hτ i von nach hn _ _ _, hT, σ, ρ => by
+  | .shift t f hτ i von nach hn _ _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .ite c t e, hT, σ, ρ => by
@@ -378,7 +378,7 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h1 : ∀ x ∈ v.orte, ¬ T x := fun x h => hT x (by simp [stmtOrteP, h])
       have h2 : ∀ x ∈ armsOrteP P arms, ¬ T x := fun x h => hT x (by simp [stmtOrteP, h])
       simp only [execStmtHA, execStmtH, leseA_frei hA h1, Arms.execHA_frei arms h2] <;> (try rfl)
-  | .onGrund r arms, hT, σ, ρ => by
+  | .onWhy r arms, hT, σ, ρ => by
       have h1 : ∀ x ∈ r.orte, ¬ T x := fun x h => hT x (by simp [stmtOrteP, h])
       have h2 : ∀ x ∈ grundArmsOrteP P arms, ¬ T x := fun x h => hT x (by simp [stmtOrteP, h])
       simp only [execStmtHA, execStmtH, leseA_frei hA h1]
@@ -421,7 +421,7 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .axiomCall a args _ _ _ _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
-  | .regSchreib r _ e, hT, σ, ρ => by
+  | .regWrite r _ e, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .transition .., _, _, _ => rfl
@@ -433,7 +433,7 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ret e _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -474,9 +474,9 @@ theorem Block.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
         Endblock.execHA_frei err h3] <;> (try rfl)
-  | .regLies r _ rest, hT, σ, ρ => by
+  | .regRead r _ rest, hT, σ, ρ => by
       simp only [execBlockHA, execBlockH, Block.execHA_frei rest hT] <;> (try rfl)
-  | .regLiesElse r _ zusage sonst rest, hT, σ, ρ => by
+  | .regReadElse r _ zusage sonst rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ zusage.orte, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
@@ -499,24 +499,24 @@ theorem Block.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
-  | .pruefung c sonst rest, hT, σ, ρ => by
+  | .check c sonst rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ c.orte, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
-  | .gleit op a b lo hi rest, hT, σ, ρ => by
+  | .float op a b lo hi rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ a.orte ++ b.orte, ¬ T x := fun x h => hT x (by
         simp only [List.mem_append] at h; rcases h with h | h <;> simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2] <;> (try rfl)
-  | .gleitLit q lo hi rest, hT, σ, ρ => by
+  | .floatLit q lo hi rest, hT, σ, ρ => by
       simp only [execBlockHA, execBlockH, Block.execHA_frei rest hT] <;> (try rfl)
-  | .gleitVon e lo hi rest, hT, σ, ρ => by
+  | .floatOf e lo hi rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2] <;> (try rfl)
-  | .gleitNarrow e lo hi sonst rest, hT, σ, ρ => by
+  | .floatNarrow e lo hi sonst rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
@@ -529,7 +529,7 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ret e _, hT, σ, ρ => by
       simp only [endblockOrteP] at hT
       simp only [execEndHA, execEndH, leseA_frei hA hT] <;> (try rfl)
-  | .retGrund .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, hT, σ, ρ => by

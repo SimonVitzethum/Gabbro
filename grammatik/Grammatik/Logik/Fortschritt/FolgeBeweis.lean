@@ -75,9 +75,9 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
-  | _, _, e, .regLies _ _ rest, w, w', hw, h => by
+  | _, _, e, .regRead _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
-  | _, _, e, .regLiesElse _ _ _ sonst rest, w, w', hw, h => by
+  | _, _, e, .regReadElse _ _ _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
   | _, _, e, .awaits _ _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
@@ -85,15 +85,15 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .narrow _ _ _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
-  | _, _, e, .pruefung _ sonst rest, w, w', hw, h => by
+  | _, _, e, .check _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
-  | _, _, e, .gleit _ _ _ _ _ rest, w, w', hw, h => by
+  | _, _, e, .float _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
-  | _, _, e, .gleitLit _ _ _ rest, w, w', hw, h => by
+  | _, _, e, .floatLit _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
-  | _, _, e, .gleitVon _ _ _ rest, w, w', hw, h => by
+  | _, _, e, .floatOf _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
-  | _, _, e, .gleitNarrow _ _ _ sonst rest, w, w', hw, h => by
+  | _, _, e, .floatNarrow _ _ _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
 
 /-- The check of an end block is monotone in the armed bit. -/
@@ -102,7 +102,7 @@ theorem fE_mono {l : Bool} :
       (w = true → w' = true) → fE Φ e w b = true → fE Φ e w' b = true
   | _, _, e, .ret _ _, w, w', hw, h => by
       simp only [fE, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢; exact h.imp id hw
-  | _, _, e, .retGrund _ _, w, w', hw, h => by
+  | _, _, e, .retWhy _ _, w, w', hw, h => by
       simp only [fE, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢; exact h.imp id hw
   | _, _, _, .leave _, _, _, _, _ => rfl
   | _, _, _, .next _, _, _, _, _ => rfl
@@ -149,7 +149,7 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ) (w : Bool),
       fB Φ e w b.alsBlock.2 = fE Φ e w b
   | _, _, .ret _ _, w => by simp [Endblock.alsBlock, fB, fS, fE, fNach]
-  | _, _, .retGrund _ _, w => by simp [Endblock.alsBlock, fB, fS, fE, fNach]
+  | _, _, .retWhy _ _, w => by simp [Endblock.alsBlock, fB, fS, fE, fNach]
   | _, _, .leave _, w => by simp [Endblock.alsBlock, fB, fS, fE]
   | _, _, .next _, w => by simp [Endblock.alsBlock, fB, fS, fE]
   | _, _, .cons s rest, w => by
@@ -193,7 +193,7 @@ theorem fR_anRueck (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | ende b =>
       cases b with
       | ret _ _ => simpa [GRest.fR, fE] using h
-      | retGrund _ _ => simpa [GRest.fR, fE] using h
+      | retWhy _ _ => simpa [GRest.fR, fE] using h
       | cons s _ =>
           cases s <;> simp_all [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, GRest.fR, fE, fS]
       | _ => simp [GRest.anRueck, Endblock.istRueck] at ha

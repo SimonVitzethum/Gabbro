@@ -128,26 +128,26 @@ theorem ziel_ort_ganz_zeuge :
 
 /-- The loop of the probe: `traverse konto invariant false {}`. -/
 def paTrav {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false Γ Λ Λ :=
-  .traverse () .falsch .nil
+  .traverse () .fls .nil
 
 def paRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL :=
-  .cons paTrav (.ret .keine (by rfl))
+  .cons paTrav (.ret .empty (by rfl))
 
 def paRumpfLies : Endblock zD (vertragVon zD zLies) false [] zL :=
-  .cons paTrav (.ret (.wert zHundert) (by rfl))
+  .cons paTrav (.ret (.val zHundert) (by rfl))
 
 def paRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL :=
-  .cons paTrav (.ret .keine (by rfl))
+  .cons paTrav (.ret .empty (by rfl))
 
 def paRumpfHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] :=
-  .cons paTrav (.ret .keine List.Perm.nil)
+  .cons paTrav (.ret .empty List.Perm.nil)
 
 /-- **Probe A**: every function `ensures false`, every body
     `traverse () invariant false {}; return`. -/
 def paP : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .falsch
+  requires := fun _ => .tru
+  ensures := fun _ => .fls
   rumpf
     | .ein => paRumpfEin
     | .lies => paRumpfLies
@@ -220,9 +220,9 @@ theorem paP_halt : ∃ M : RufMaschineG zD, RufErreichbarG paP zO 0 (RufStartG p
       ⟨false, [], [], .nil, .ende paRumpfHaupt⟩⟩, [],
       [RufEreignisF.eintritt zHaupt .nil (zSp.welt [])]⟩ := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := paP) (O := zO) (passes := 0) h00 paTrav
-    (.ret .keine List.Perm.nil) .nil rfl rfl
-  obtain ⟨M2, s2, hZ2⟩ := w_dannTrav (P := paP) (O := zO) (passes := 0) hZ1.1 () .falsch .nil .nil
-    (.ende (.ret .keine List.Perm.nil)) .nil rfl
+    (.ret .empty List.Perm.nil) .nil rfl rfl
+  obtain ⟨M2, s2, hZ2⟩ := w_dannTrav (P := paP) (O := zO) (passes := 0) hZ1.1 () .fls .nil .nil
+    (.ende (.ret .empty List.Perm.nil)) .nil rfl
   refine ⟨M2, .schritt _ _ _ (.schritt _ _ _ .start s1) s2, fun h => ?_⟩
   have h0 := h 0
   unfold PrueftG at h0
@@ -243,21 +243,21 @@ theorem lInv_wahr {Γ : Ctx} (σ₀ σ : World zD) (ρ : Env zD Γ) : wahr? (eva
 /-- The loop: `traverse konto invariant konto[0] <= 100 {}`. -/
 def lTrav {V : Vertrag zD} : Stmt zD V false [] zL zL := .traverse () lInv .nil
 
-def lRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL := .cons lTrav (.ret .keine (by rfl))
+def lRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL := .cons lTrav (.ret .empty (by rfl))
 
 def lRumpfLies : Endblock zD (vertragVon zD zLies) false [] zL :=
-  .cons lTrav (.ret (.wert zHundert) (by rfl))
+  .cons lTrav (.ret (.val zHundert) (by rfl))
 
-def lRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .cons lTrav (.ret .keine (by rfl))
+def lRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .cons lTrav (.ret .empty (by rfl))
 
-def lRumpfHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .keine List.Perm.nil
+def lRumpfHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .empty List.Perm.nil
 
 /-- **The loop program**: the three lock holders run the loop and return,
     `haupt` returns; every contract `true`. -/
 def lP : Programm zD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .ein => lRumpfEin
     | .lies => lRumpfLies
@@ -323,15 +323,15 @@ theorem lP_lauf (O' : Orakel zD) (R : ∀ f : zD.Fn, World zD → Env zD (zD.par
   | haupt => exact ⟨_, _, rfl⟩
   | ein =>
       obtain ⟨σ', h⟩ := execEnd_trav_leer (V := vertragVon zD zEin) (Λ := zL) O' 0 R () lInv
-        (.ret .keine (by rfl)) σ ρ (fun _ _ _ => lInv_wahr _ _ _)
+        (.ret .empty (by rfl)) σ ρ (fun _ _ _ => lInv_wahr _ _ _)
       exact ⟨_, _, h⟩
   | lies =>
       obtain ⟨σ', h⟩ := execEnd_trav_leer (V := vertragVon zD zLies) (Λ := zL) O' 0 R () lInv
-        (.ret (.wert zHundert) (by rfl)) σ ρ (fun _ _ _ => lInv_wahr _ _ _)
+        (.ret (.val zHundert) (by rfl)) σ ρ (fun _ _ _ => lInv_wahr _ _ _)
       exact ⟨_, _, h⟩
   | wrap =>
       obtain ⟨σ', h⟩ := execEnd_trav_leer (V := vertragVon zD zWrap) (Λ := zL) O' 0 R () lInv
-        (.ret .keine (by rfl)) σ ρ (fun _ _ _ => lInv_wahr _ _ _)
+        (.ret .empty (by rfl)) σ ρ (fun _ _ _ => lInv_wahr _ _ _)
       exact ⟨_, _, h⟩
 
 theorem lP_koerperZ : ∀ f : zD.Fn, KoerperGutZ lP 0 (axWahr zD) f := by
@@ -364,7 +364,7 @@ theorem ziel_ort_ganz_schleife :
     ∃ M2 : RufMaschineG zD, RufErreichbarG lP zO 0 (RufStartG lP zSp lInit) M2 ∧
       (∃ (spur : List (Ereignis zD)) (log : List (RufEreignisF zD)),
         M2.faeden 0 = ⟨[], ⟨zWrap, .nil, zSp.welt [], ⟨false, [], zL, .nil,
-          .trav () lInv .nil (alleIndizes (zD.count ())) (.dann .nil (.ende (.ret .keine (by rfl))))⟩⟩,
+          .trav () lInv .nil (alleIndizes (zD.count ())) (.dann .nil (.ende (.ret .empty (by rfl))))⟩⟩,
           spur, log⟩) ∧
       wahr? (eval ((M2.weltVon 0).lese zL (lInv (Γ := [])).orte) lInv
         ((M2.weltVon 0).lese zL (lInv (Γ := [])).orte) .nil) = true ∧
@@ -376,9 +376,9 @@ theorem ziel_ort_ganz_schleife :
       ⟨false, [], zL, .nil, .ende lRumpfWrap⟩⟩, startSpur zWrap,
       [RufEreignisF.eintritt zWrap .nil (zSp.welt [])]⟩ := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := lP) (O := zO) (passes := 0) h00 lTrav
-    (.ret .keine (by rfl)) .nil rfl rfl
+    (.ret .empty (by rfl)) .nil rfl rfl
   obtain ⟨M2, s2, hZ2⟩ := w_dannTrav (P := lP) (O := zO) (passes := 0) hZ1.1 () lInv .nil .nil
-    (.ende (.ret .keine (by rfl))) .nil rfl
+    (.ende (.ret .empty (by rfl))) .nil rfl
   have hr2 : RufErreichbarG lP zO 0 (RufStartG lP zSp lInit) M2 :=
     .schritt _ _ _ (.schritt _ _ _ .start s1) s2
   have h0 := (hZ M2 hr2).2.1 0
@@ -389,7 +389,7 @@ theorem ziel_ort_ganz_schleife :
     rw [hZ2.spur, offen_weltVon, hZ1.spur]
     rfl
   obtain ⟨M3, s3, _⟩ := w_travNext (P := lP) (O := zO) (passes := 0) hZ2.1 () lInv .nil _ _
-    (.dann .nil (.ende (.ret .keine (by rfl)))) .nil rfl
+    (.dann .nil (.ende (.ret .empty (by rfl)))) .nil rfl
     (by rw [hZ2.welt] at hw ⊢; exact hw) (hgL (by rw [← hZ2.spur]; exact hoff)).heldIn
   refine ⟨zO_gut, zO_lokal, zFs_voll, lP_fragmentG, lP_fussG, lP_koerperZ, lP_start,
     lInit_exklusiv, M2, hr2, ⟨_, _, hZ2.1⟩, ?_, M3, s3⟩
@@ -409,9 +409,9 @@ theorem ziel_ort_ganz_fortschritt_zeuge :
       ⟨false, [], zL, .nil, .ende lRumpfWrap⟩⟩, startSpur zWrap,
       [RufEreignisF.eintritt zWrap .nil (zSp.welt [])]⟩ := rfl
   obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := lP) (O := zO) (passes := 0) h00 lTrav
-    (.ret .keine (by rfl)) .nil rfl rfl
+    (.ret .empty (by rfl)) .nil rfl rfl
   obtain ⟨M2, s2, hZ2⟩ := w_dannTrav (P := lP) (O := zO) (passes := 0) hZ1.1 () lInv .nil .nil
-    (.ende (.ret .keine (by rfl))) .nil rfl
+    (.ende (.ret .empty (by rfl))) .nil rfl
   have hr2 : RufErreichbarG lP zO 0 (RufStartG lP zSp lInit) M2 :=
     .schritt _ _ _ (.schritt _ _ _ .start s1) s2
   have hA : AnPruefungG M2 0 := by

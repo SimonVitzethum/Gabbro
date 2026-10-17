@@ -22,7 +22,7 @@ namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
 def tt01 : List Token :=
-  [.wort "table", .ident "Zustand", .wort "count", .zahl 4,
+  [.wort "table", .ident "Zustand", .wort "count", .num 4,
    .zeichen "{", .wort "slot", .zeichen "{", .ident "bereit",
    .zeichen ":", .wort "u32", .zeichen ",", .zeichen "}",
    .zeichen "}", .ende]
@@ -40,7 +40,7 @@ theorem t01 : beqTopTief (parseTopTief tt01)
 -- table). Rust: `Tabelle` with one slot field -- same shape.
 def tt02 : List Token :=
   [.wort "lock", .ident "Sperre", .wort "protects", .zeichen "{",
-   .ident "Zustand", .zeichen "}", .wort "rank", .zahl 0,
+   .ident "Zustand", .zeichen "}", .wort "rank", .num 0,
    .zeichen ";", .ende]
 theorem t02_lex :
     lex "lock Sperre protects { Zustand } rank 0;" = .ok tt02 := by
@@ -55,7 +55,7 @@ def tt03 : List Token :=
   [.wort "device", .ident "Geraet", .zeichen "(", .ident "basis",
    .zeichen ":", .wort "u64", .zeichen ")", .wort "at",
    .wort "mmio", .zeichen "{", .wort "reg", .ident "ST",
-   .zeichen ":", .wort "u32", .zeichen "@", .zahl 0,
+   .zeichen ":", .wort "u32", .zeichen "@", .num 0,
    .wort "class", .wort "r", .wort "depends", .zeichen "{",
    .ident "Zustand", .zeichen "}", .zeichen "}", .ende]
 theorem t03_lex :
@@ -78,7 +78,7 @@ def tt04 : List Token :=
    .zeichen "->", .wort "u32", .wort "requires", .ident "Held",
    .zeichen "(", .ident "Sperre", .zeichen ")", .wort "effects",
    .zeichen "{", .wort "reads", .ident "d", .zeichen "}",
-   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops",
+   .wort "costs", .zeichen "<=", .num 8, .wort "ops",
    .zeichen "{", .wort "let", .ident "stand", .zeichen "=",
    .ident "d", .zeichen ".", .ident "ST", .zeichen ";",
    .wort "return", .ident "stand", .zeichen ";", .zeichen "}",
@@ -106,10 +106,10 @@ def tt05 : List Token :=
    .wort "requires", .ident "Held", .zeichen "(", .ident "Sperre",
    .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
    .ident "Zustand", .zeichen "}", .wort "costs", .zeichen "<=",
-   .zahl 8, .wort "ops", .zeichen "{", .ident "Zustand",
+   .num 8, .wort "ops", .zeichen "{", .ident "Zustand",
    .zeichen ".", .wort "slots", .zeichen "[", .ident "i",
    .zeichen "]", .zeichen ".", .ident "bereit", .zeichen "=",
-   .wort "w", .zeichen ";", .wort "return", .zahl 0,
+   .wort "w", .zeichen ";", .wort "return", .num 0,
    .zeichen ";", .zeichen "}", .ende]
 theorem t05_lex :
     lex "impl fn schreiben(i : index into Zustand, w : u32) -> u32 requires Held(Sperre) effects { writes Zustand } costs <= 8 ops { Zustand.slots[i].bereit = w; return 0; }" =
@@ -155,7 +155,7 @@ theorem t07 : beqTopTief (parseTopTief tt07)
 -- flag -- same shape.
 def tt08 : List Token :=
   [.wort "type", .ident "Zaehler", .zeichen "=", .wort "u32",
-   .wort "in", .zahl 0, .zeichen "..", .zahl 65535, .zeichen ";",
+   .wort "in", .num 0, .zeichen "..", .num 65535, .zeichen ";",
    .ende]
 theorem t08_lex :
     lex "type Zaehler = u32 in 0 .. 65535;" = .ok tt08 := by
@@ -201,7 +201,7 @@ theorem t10 : beqTopTief (parseTopTief tt10)
 -- same shape.
 def tt11 : List Token :=
   [.wort "const", .ident "NSLOTS", .zeichen ":", .wort "u32",
-   .zeichen "=", .zahl 4096, .zeichen ";", .ende]
+   .zeichen "=", .num 4096, .zeichen ";", .ende]
 theorem t11_lex :
     lex "const NSLOTS : u32 = 4096;" = .ok tt11 := by
   decide
@@ -211,7 +211,7 @@ theorem t11 : beqTopTief (parseTopTief tt11)
 -- beispiele/01-tabelle.gab:10. Rust: `Konst` -- same shape.
 def tt12 : List Token :=
   [.wort "static", .wort "mut", .ident "zaehler", .zeichen ":",
-   .wort "u32", .zeichen "=", .zahl 0, .zeichen ";", .ende]
+   .wort "u32", .zeichen "=", .num 0, .zeichen ";", .ende]
 theorem t12_lex :
     lex "static mut zaehler : u32 = 0;" = .ok tt12 := by
   decide
@@ -223,7 +223,7 @@ theorem t12 : beqTopTief (parseTopTief tt12)
 -- shape.
 def tt13 : List Token :=
   [.wort "static", .ident "KERNZAHL", .zeichen ":", .wort "u32",
-   .zeichen "=", .zahl 64, .wort "section", .text ".rodata",
+   .zeichen "=", .num 64, .wort "section", .text ".rodata",
    .zeichen ";", .ende]
 theorem t13_lex :
     lex "static KERNZAHL : u32 = 64 section \".rodata\";" =
@@ -237,7 +237,7 @@ theorem t13 : beqTopTief (parseTopTief tt13)
 -- section -- same shape.
 def tt14 : List Token :=
   [.wort "static", .wort "mut", .ident "zaehl", .zeichen ":",
-   .wort "u32", .zeichen "=", .zahl 0, .wort "shared",
+   .wort "u32", .zeichen "=", .num 0, .wort "shared",
    .zeichen ";", .ende]
 theorem t14_lex :
     lex "static mut zaehl : u32 = 0 shared;" = .ok tt14 := by
@@ -252,7 +252,7 @@ def tt15 : List Token :=
    .zeichen "(", .ident "p", .zeichen ":", .ident "Pa",
    .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
    .ident "halde", .zeichen "}", .wort "costs", .zeichen "<=",
-   .zahl 64, .wort "ops", .zeichen ";", .ende]
+   .num 64, .wort "ops", .zeichen ";", .ende]
 theorem t15_lex :
     lex "extern fn speicher_freigeben(p : Pa) effects { writes halde } costs <= 64 ops;" =
       .ok tt15 := by
@@ -308,7 +308,7 @@ def tt17 : List Token :=
    .ident "tor", .zeichen ":", .wort "u16", .zeichen ",",
    .ident "wert", .zeichen ":", .wort "u8", .zeichen ")",
    .wort "effects", .zeichen "{", .wort "writes", .ident "GERAET",
-   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 1,
+   .zeichen "}", .wort "costs", .zeichen "<=", .num 1,
    .wort "ops", .wort "arch", .ident "x86_64", .zeichen "=",
    .wort "asm", .zeichen "{", .text "outb %[wert], %[tor]",
    .wort "in", .zeichen "{", .ident "wert", .zeichen ":",
@@ -333,7 +333,7 @@ theorem t17 : beqTopTief (parseTopTief tt17)
 -- the assembler body rides raw and balanced (see CUTS).
 def tt18 : List Token :=
   [.wort "impl", .wort "fn", .ident "f", .zeichen "(", .zeichen ")",
-   .wort "deadline", .zeichen "<=", .zahl 10, .wort "ops",
+   .wort "deadline", .zeichen "<=", .num 10, .wort "ops",
    .wort "arch", .ident "x86_64", .wort "falsifier", .ident "s",
    .zeichen ";", .ende]
 theorem t18_lex :
@@ -355,7 +355,7 @@ def tt19 : List Token :=
    .zeichen "(", .ident "region", .zeichen ":", .ident "SumTab",
    .zeichen ")", .zeichen "->", .ident "SumTab", .wort "effects",
    .zeichen "{", .wort "pure", .zeichen "}", .wort "costs",
-   .zeichen "<=", .zahl 8, .wort "ops", .wort "decreases",
+   .zeichen "<=", .num 8, .wort "ops", .wort "decreases",
    .ident "region", .zeichen ".", .ident "v", .zeichen "{",
    .wort "return", .ident "region", .zeichen ";", .zeichen "}",
    .ende]
@@ -376,8 +376,8 @@ theorem t19 : beqTopTief (parseTopTief tt19)
 -- Rust: `Translator` -- same shape (a `pure` contract with a
 -- `decreases` witness).
 def tt20 : List Token :=
-  [.wort "arena", .ident "Log", .wort "capacity", .zahl 2,
-   .zeichen "..", .zahl 8, .wort "of", .wort "u32", .zeichen ";",
+  [.wort "arena", .ident "Log", .wort "capacity", .num 2,
+   .zeichen "..", .num 8, .wort "of", .wort "u32", .zeichen ";",
    .ende]
 theorem t20_lex :
     lex "arena Log capacity 2 .. 8 of u32;" = .ok tt20 := by
@@ -389,7 +389,7 @@ theorem t20 : beqTopTief (parseTopTief tt20)
 def tt21 : List Token :=
   [.wort "format", .ident "Elf64Kopf", .wort "endian",
    .wort "little", .zeichen "{", .ident "e_typ", .zeichen ":",
-   .wort "u16", .wort "in", .zahl 1, .zeichen "..", .zahl 4,
+   .wort "u16", .wort "in", .num 1, .zeichen "..", .num 4,
    .zeichen ",", .ident "e_maschine", .zeichen ":", .wort "u16",
    .zeichen ",", .ident "e_shoff", .zeichen ":", .wort "u64",
    .wort "offset_into", .wort "Self", .wort "where",
@@ -424,10 +424,10 @@ theorem t21 : beqTopTief (parseTopTief tt21)
 -- `reserved` fields -- same shape.
 def tt22 : List Token :=
   [.wort "reason", .ident "KappenFehler", .zeichen "{",
-   .ident "KeinSlot", .zeichen "=", .zahl 1,
+   .ident "KeinSlot", .zeichen "=", .num 1,
    .text "kein freier Slot mehr", .ident "Ungueltig",
-   .zeichen "=", .zahl 2, .text "abgelaufenes Handle",
-   .ident "HatKinder", .zeichen "=", .zahl 3,
+   .zeichen "=", .num 2, .text "abgelaufenes Handle",
+   .ident "HatKinder", .zeichen "=", .num 3,
    .text "erst die Nachfahren einsammeln", .wort "exhaustive",
    .zeichen "}", .ende]
 theorem t22_lex :
@@ -459,7 +459,7 @@ theorem t23 : beqTopTief (parseTopTief tt23)
       [{ tname := "schalten",
          schritte := [(.variable "licht", .variable "rot",
            .variable "gruen")],
-         voraus := .some (.bin "==" (.variable "bereit") .wahr),
+         voraus := .some (.bin "==" (.variable "bereit") .tru),
          wirkung := [.schreibt (.variable "licht")] }]]) = true := by
   decide
 -- Synthetic (no `state` item in the corpus, measured 2026-09-13;
@@ -513,12 +513,12 @@ def tt26 : List Token :=
    .wort "else", .zeichen "(", .ident "e1", .zeichen ")",
    .zeichen "{", .wort "return", .wort "false", .zeichen ";",
    .zeichen "}", .wort "if", .ident "tiefe_max", .zeichen "*",
-   .zahl 4, .zeichen ">=", .ident "g", .zeichen "*", .zahl 3,
+   .num 4, .zeichen ">=", .ident "g", .zeichen "*", .num 3,
    .zeichen "{", .wort "return", .wort "false", .zeichen ";",
    .zeichen "}", .wort "return", .wort "true", .zeichen ";",
    .zeichen "}", .wort "floor", .ident "kerne_gemessen",
-   .zeichen ">=", .zahl 2, .zeichen ",", .ident "tiefe_max",
-   .zeichen ">=", .zahl 1, .wort "counterprobe",
+   .zeichen ">=", .num 2, .zeichen ",", .ident "tiefe_max",
+   .zeichen ">=", .num 1, .wort "counterprobe",
    .text "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen.",
    .wort "expects", .ident "sonde_tiefer_stapel", .zeichen "}",
    .ende]
@@ -537,11 +537,11 @@ theorem t26 : beqTopTief (parseTopTief tt26)
         kannScheitern :=
           (.block
             [.lassElse "g" "groesse_gemessen()" "e1"
-              (.block [] (.some (.ret (.some .falsch)))),
+              (.block [] (.some (.ret (.some .fls)))),
               .wenn (.bin ">=" (.bin "*" (.variable "tiefe_max") (.lit 4))
                 (.bin "*" (.variable "g") (.lit 3)))
-                (.block [] (.some (.ret (.some .falsch)))) [] .none]
-            (.some (.ret (.some .wahr)))),
+                (.block [] (.some (.ret (.some .fls)))) [] .none]
+            (.some (.ret (.some .tru)))),
         boden := [.bin ">=" (.variable "kerne_gemessen") (.lit 2),
           .bin ">=" (.variable "tiefe_max") (.lit 1)],
         sonde := .some ("Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen.",
@@ -577,9 +577,9 @@ theorem t27 : beqTopTief (parseTopTief tt27)
 -- Rust: `Tabelle` with generated `ops` and an `occupied` field
 -- -- same shape.
 def tt28 : List Token :=
-  [.wort "table", .ident "T", .wort "count", .zahl 4,
+  [.wort "table", .ident "T", .wort "count", .num 4,
    .zeichen "{", .wort "const", .ident "WURZEL", .zeichen ":",
-   .wort "u32", .zeichen "=", .zahl 0, .zeichen ";",
+   .wort "u32", .zeichen "=", .num 0, .zeichen ";",
    .wort "slot", .zeichen "{", .ident "b", .zeichen ":",
    .wort "bool", .zeichen ",", .zeichen "}", .zeichen "}",
    .ende]
@@ -597,7 +597,7 @@ theorem t28 : beqTopTief (parseTopTief tt28)
 -- beispiele/01-tabelle.gab (the `WURZEL` table constant beside a
 -- slot). Rust: `Tabelle` with a `const` member -- same shape.
 def tt29 : List Token :=
-  [.wort "table", .ident "K", .wort "count", .zahl 4,
+  [.wort "table", .ident "K", .wort "count", .num 4,
    .zeichen "{", .wort "tree", .zeichen "{", .wort "parent",
    .ident "elter", .zeichen ",", .wort "child",
    .ident "erstes_kind", .zeichen ",", .wort "sibling",
@@ -619,11 +619,11 @@ theorem t29 : beqTopTief (parseTopTief tt29)
 -- beispiele/01-tabelle.gab (the «B41b» edge beside a slot).
 -- Rust: `Tabelle` with a `tree` member -- same shape.
 def tt30 : List Token :=
-  [.wort "table", .ident "T", .wort "count", .zahl 4,
+  [.wort "table", .ident "T", .wort "count", .num 4,
    .zeichen "{", .wort "slot", .zeichen "{", .ident "b",
    .zeichen ":", .wort "bool", .zeichen ",", .zeichen "}",
    .wort "invariant", .ident "inv", .wort "cost", .ident "O",
-   .zeichen "(", .zahl 1, .zeichen ")", .wort "runs",
+   .zeichen "(", .num 1, .zeichen ")", .wort "runs",
    .wort "online", .zeichen ":", .ident "T", .zeichen ".",
    .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
    .zeichen ".", .ident "b", .zeichen ";", .zeichen "}",
@@ -688,7 +688,7 @@ def tt34 : List Token :=
    .wort "offline", .zeichen ":", .ident "Faeden",
    .zeichen ".", .wort "slots", .zeichen "[",
    .ident "wartende", .zeichen "]", .zeichen ".",
-   .ident "gruende", .zeichen ">", .zahl 0, .zeichen ";",
+   .ident "gruende", .zeichen ">", .num 0, .zeichen ";",
    .zeichen "}", .ende]
 theorem t34_lex :
     lex "group Zustellung over { Endpunkte, Faeden } { invariant wartende_haben_grund cost O(n) runs offline : Faeden.slots[wartende].gruende > 0; }" =
@@ -726,9 +726,9 @@ theorem t36 : beqTopTief (parseTopTief tt36)
 -- beispiele/23-akkumulatoren.gab:45. Rust: `Accumulates` with a
 -- cell count -- same shape.
 def tt37 : List Token :=
-  [.wort "walk", .ident "Seitentabelle", .wort "levels", .zahl 4,
+  [.wort "walk", .ident "Seitentabelle", .wort "levels", .num 4,
    .zeichen "{", .wort "node", .zeichen ":", .zeichen "[",
-   .ident "Pte", .zeichen ";", .zahl 512, .zeichen "]",
+   .ident "Pte", .zeichen ";", .num 512, .zeichen "]",
    .zeichen ",", .wort "down", .zeichen ":", .ident "rahmen",
    .wort "when", .ident "it", .zeichen ".", .ident "praesent",
    .zeichen "&&", .zeichen "!", .ident "it", .zeichen ".",
@@ -747,7 +747,7 @@ theorem t37 : beqTopTief (parseTopTief tt37)
 -- they quantify, see CUTS). Rust: `Walk` with node, down and
 -- leaf -- same shape.
 def tt38 : List Token :=
-  [.wort "entry", .ident "entry_a", .wort "vector", .zahl 128,
+  [.wort "entry", .ident "entry_a", .wort "vector", .num 128,
    .wort "arch", .ident "x86_64", .zeichen "{", .wort "regs",
    .wort "in", .zeichen "{", .zeichen "}", .wort "regs",
    .wort "out", .zeichen "{", .zeichen "}", .wort "preserves",
@@ -813,7 +813,7 @@ def tt41 : List Token :=
    .zeichen ":", .wort "u64", .zeichen ")", .zeichen "->",
    .wort "u64", .wort "or", .ident "IoError", .wort "abi",
    .ident "linux", .wort "arch", .ident "x86_64", .wort "number",
-   .zahl 1, .wort "regs", .wort "in", .zeichen "{",
+   .num 1, .wort "regs", .wort "in", .zeichen "{",
    .ident "rdi", .zeichen "=", .ident "fd", .zeichen ",",
    .ident "rsi", .zeichen "=", .ident "buf", .zeichen ",",
    .ident "rdx", .zeichen "=", .ident "len", .zeichen "}",
@@ -824,7 +824,7 @@ def tt41 : List Token :=
    .zeichen ",", .ident "EINTR", .zeichen "=>",
    .ident "Interrupted", .zeichen ",", .ident "EAGAIN",
    .zeichen "=>", .ident "WouldBlock", .zeichen "}",
-   .wort "requires", .ident "len", .zeichen "<=", .zahl 1024,
+   .wort "requires", .ident "len", .zeichen "<=", .num 1024,
    .wort "ensures", .wort "result", .zeichen "<=", .ident "len",
    .wort "effects", .zeichen "{", .wort "pure", .zeichen "}",
    .wort "assume", .ident "linux_write_contract", .wort "falsifier",
@@ -843,20 +843,20 @@ def tt42 : List Token :=
    .ident "t", .zeichen ":", .wort "ptr", .zeichen "<",
    .wort "normal", .zeichen ",", .wort "r", .zeichen ">",
    .ident "SumTab", .zeichen ")", .zeichen "->", .wort "u32",
-   .wort "in", .zahl 0, .zeichen "..", .zahl 400, .wort "payload",
+   .wort "in", .num 0, .zeichen "..", .num 400, .wort "payload",
    .ident "SumTab", .wort "ensures", .wort "result",
-   .zeichen "<=", .zahl 400, .wort "effects", .zeichen "{",
+   .zeichen "<=", .num 400, .wort "effects", .zeichen "{",
    .wort "reads", .ident "t", .zeichen ".", .wort "slots",
-   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 16,
+   .zeichen "}", .wort "costs", .zeichen "<=", .num 16,
    .wort "ops", .zeichen "{", .wort "return", .ident "t",
-   .zeichen ".", .wort "slots", .zeichen "[", .zahl 0,
+   .zeichen ".", .wort "slots", .zeichen "[", .num 0,
    .zeichen "]", .zeichen ".", .ident "v", .zeichen "+",
    .ident "t", .zeichen ".", .wort "slots", .zeichen "[",
-   .zahl 1, .zeichen "]", .zeichen ".", .ident "v",
+   .num 1, .zeichen "]", .zeichen ".", .ident "v",
    .zeichen "+", .ident "t", .zeichen ".", .wort "slots",
-   .zeichen "[", .zahl 2, .zeichen "]", .zeichen ".",
+   .zeichen "[", .num 2, .zeichen "]", .zeichen ".",
    .ident "v", .zeichen "+", .ident "t", .zeichen ".",
-   .wort "slots", .zeichen "[", .zahl 3, .zeichen "]",
+   .wort "slots", .zeichen "[", .num 3, .zeichen "]",
    .zeichen ".", .ident "v", .zeichen ";", .zeichen "}",
    .ende]
 theorem t42_lex :
@@ -872,9 +872,9 @@ theorem t42 : beqTopTief (parseTopTief tt42)
 def tt43 : List Token :=
   [.wort "lock", .ident "KAPPEN", .wort "protects", .zeichen "{",
    .ident "belegt", .zeichen ",", .ident "rechte", .zeichen ",",
-   .ident "objekt", .zeichen "}", .wort "rank", .zahl 0,
-   .wort "held", .zeichen "<=", .zahl 3, .wort "ops",
-   .wort "shared", .wort "held", .zeichen "<=", .zahl 4,
+   .ident "objekt", .zeichen "}", .wort "rank", .num 0,
+   .wort "held", .zeichen "<=", .num 3, .wort "ops",
+   .wort "shared", .wort "held", .zeichen "<=", .num 4,
    .wort "ops", .zeichen ";", .ende]
 theorem t43_lex :
     lex "lock KAPPEN protects { belegt, rechte, objekt } rank 0 held <= 3 ops shared held <= 4 ops;" =
@@ -888,8 +888,8 @@ theorem t43 : beqTopTief (parseTopTief tt43)
 def tt44 : List Token :=
   [.wort "lock", .ident "KAPPEN", .wort "protects", .zeichen "{",
    .ident "eintraege", .zeichen ",", .ident "baum", .zeichen "}",
-   .wort "rank", .zahl 0, .wort "held", .zeichen "<=",
-   .zahl 400, .wort "ops", .wort "masks", .ident "irqs",
+   .wort "rank", .num 0, .wort "held", .zeichen "<=",
+   .num 400, .wort "ops", .wort "masks", .ident "irqs",
    .zeichen ";", .ende]
 theorem t44_lex :
     lex "lock KAPPEN protects { eintraege, baum } rank 0 held <= 400 ops masks irqs;" =
@@ -905,11 +905,11 @@ def tt45 : List Token :=
   [.wort "device", .ident "D", .wort "at", .wort "mmio",
    .zeichen "{", .wort "bank", .ident "FRR", .wort "at",
    .ident "CAP", .zeichen ".", .ident "FRO", .zeichen "*",
-   .zahl 16, .wort "stride", .zahl 16, .wort "count", .zahl 256,
+   .num 16, .wort "stride", .num 16, .wort "count", .num 256,
    .zeichen "{", .wort "reg", .ident "FR_LO", .zeichen ":",
-   .wort "u64", .zeichen "@", .zahl 0, .wort "class", .wort "rw",
+   .wort "u64", .zeichen "@", .num 0, .wort "class", .wort "rw",
    .wort "reg", .ident "FR_HI", .zeichen ":", .wort "u64",
-   .zeichen "@", .zahl 8, .wort "class", .wort "rw",
+   .zeichen "@", .num 8, .wort "class", .wort "rw",
    .zeichen "}", .zeichen "}", .ende]
 theorem t45_lex :
     lex "device D at mmio { bank FRR at CAP.FRO * 16 stride 16 count 256 { reg FR_LO : u64 @0x0 class rw reg FR_HI : u64 @0x8 class rw } }" =
@@ -927,14 +927,14 @@ def tt46 : List Token :=
    .wort "mmio", .zeichen "{", .wort "mirrors", .ident "GCMD",
    .wort "from", .ident "GSTS", .zeichen ";", .wort "reg",
    .ident "GCMD", .zeichen ":", .wort "u32", .zeichen "@",
-   .zahl 24, .wort "class", .wort "w", .wort "fields",
-   .zeichen "{", .ident "SRTP", .zeichen "@", .zahl 30,
-   .zeichen ",", .ident "TE", .zeichen "@", .zahl 31,
+   .num 24, .wort "class", .wort "w", .wort "fields",
+   .zeichen "{", .ident "SRTP", .zeichen "@", .num 30,
+   .zeichen ",", .ident "TE", .zeichen "@", .num 31,
    .zeichen ",", .zeichen "}", .wort "transition",
    .ident "setze_rtp", .zeichen "{", .ident "GCMD", .zeichen ".",
-   .ident "SRTP", .zeichen ":", .zahl 0, .zeichen "->",
-   .zahl 1, .zeichen "}", .wort "requires", .ident "GSTS",
-   .zeichen ".", .ident "TES", .zeichen "==", .zahl 0,
+   .ident "SRTP", .zeichen ":", .num 0, .zeichen "->",
+   .num 1, .zeichen "}", .wort "requires", .ident "GSTS",
+   .zeichen ".", .ident "TES", .zeichen "==", .num 0,
    .wort "effects", .zeichen "{", .wort "writes", .ident "GCMD",
    .zeichen "}", .zeichen "}", .ende]
 theorem t46_lex :
@@ -985,7 +985,7 @@ theorem t48 : beqTopTief (parseTopTief tt48)
 def tt49 : List Token :=
   [.wort "when", .ident "TESTBUILD", .wort "static", .wort "mut",
    .ident "hoechstmarke", .zeichen ":", .ident "Fuellstand",
-   .zeichen "=", .zahl 0, .zeichen ";", .ende]
+   .zeichen "=", .num 0, .zeichen ";", .ende]
 theorem t49_lex :
     lex "when TESTBUILD static mut hoechstmarke : Fuellstand = 0;" =
       .ok tt49 := by
@@ -998,10 +998,10 @@ theorem t49 : beqTopTief (parseTopTief tt49)
 -- same shape.
 def tt50 : List Token :=
   [.wort "const", .wort "fn", .ident "quad", .zeichen "(",
-   .ident "i", .zeichen ":", .wort "u32", .wort "in", .zahl 0,
-   .zeichen "..", .zahl 64, .zeichen ")", .zeichen "->",
+   .ident "i", .zeichen ":", .wort "u32", .wort "in", .num 0,
+   .zeichen "..", .num 64, .zeichen ")", .zeichen "->",
    .wort "u32", .wort "effects", .zeichen "{", .wort "pure",
-   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 4,
+   .zeichen "}", .wort "costs", .zeichen "<=", .num 4,
    .wort "ops", .zeichen "{", .wort "return", .ident "i",
    .zeichen "*", .ident "i", .zeichen ";", .zeichen "}",
    .ende]
@@ -1025,20 +1025,20 @@ def tt51 : List Token :=
    .wort "reads", .ident "Buch", .zeichen ".", .wort "slots",
    .zeichen ",", .wort "writes", .ident "Buch", .zeichen ".",
    .wort "slots", .zeichen ",", .wort "locks", .ident "BUCH",
-   .zeichen "}", .wort "costs", .zeichen "<=", .zahl 8,
+   .zeichen "}", .wort "costs", .zeichen "<=", .num 8,
    .wort "ops", .zeichen "{", .ident "Buch", .zeichen ".",
    .wort "slots", .zeichen "[", .ident "p", .zeichen "]",
    .zeichen ".", .ident "belegt", .zeichen "=", .wort "false",
    .zeichen ";", .ident "Buch", .zeichen ".", .wort "slots",
    .zeichen "[", .ident "p", .zeichen "]", .zeichen ".",
-   .ident "wert", .zeichen "=", .zahl 0, .zeichen ";",
+   .ident "wert", .zeichen "=", .num 0, .zeichen ";",
    .zeichen "}", .ende]
 theorem t51_lex :
     lex "impl fn freigeben(p : index into Buch) refines ist_frei requires Held(BUCH), Buch.slots[p].belegt effects { reads Buch.slots, writes Buch.slots, locks BUCH } costs <= 8 ops { Buch.slots[p].belegt = false; Buch.slots[p].wert = 0; }" =
       .ok tt51 := by
   decide
 theorem t51 : beqTopTief (parseTopTief tt51)
-    (.ok [.funktionT { art := "impl", name := "freigeben", params := [("p", .index false "Buch")], ergebnis := .none, fehler := .none, klauseln := [.verfeinert ["ist_frei"], .voraus (.ruf "Held" [.variable "BUCH"]), .voraus (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt"), .wirkung [.liest (.feld (.variable "Buch") "slots"), .schreibt (.feld (.variable "Buch") "slots"), .sperrt false (.variable "BUCH")], .kosten (.lit 8)] } (.block [.zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt") "=" .falsch, .zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "wert") "=" (.lit 0)] .none)]) = true := by
+    (.ok [.funktionT { art := "impl", name := "freigeben", params := [("p", .index false "Buch")], ergebnis := .none, fehler := .none, klauseln := [.verfeinert ["ist_frei"], .voraus (.ruf "Held" [.variable "BUCH"]), .voraus (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt"), .wirkung [.liest (.feld (.variable "Buch") "slots"), .schreibt (.feld (.variable "Buch") "slots"), .sperrt false (.variable "BUCH")], .kosten (.lit 8)] } (.block [.zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "belegt") "=" .fls, .zuweis (.feld (.index (.feld (.variable "Buch") "slots") (.variable "p")) "wert") "=" (.lit 0)] .none)]) = true := by
   decide
 -- beispiele/50-verfeinerung.gab (the `freigeben` refinement).
 -- Rust: `Funktion` with `refines`, two `requires` and three
@@ -1047,7 +1047,7 @@ def tt52 : List Token :=
   [.wort "extern", .wort "fn", .ident "groesse_gemessen",
    .zeichen "(", .zeichen ")", .zeichen "->", .ident "Stapelgroesse",
    .wort "or", .ident "MessFehler", .wort "ensures",
-   .wort "result", .zeichen ">=", .zahl 1, .wort "effects",
+   .wort "result", .zeichen ">=", .num 1, .wort "effects",
    .zeichen "{", .wort "reads", .ident "stapel", .zeichen "}",
    .zeichen ";", .ende]
 theorem t52_lex :
@@ -1102,7 +1102,7 @@ theorem t54 : beqTopTief (parseTopTief tt54)
 -- `advances a -> b` (beispiele/02-geraet.gab:129),
 -- `retires` (beispiele/07-eintritt-und-boot.gab:137).
 def tt55 : List Token :=
-  [.wort "table", .ident "Halde", .wort "count", .zahl 1048576,
+  [.wort "table", .ident "Halde", .wort "count", .num 1048576,
    .wort "backed", .ident "hinterlegt", .zeichen "{",
    .wort "slot", .zeichen "{", .ident "b", .zeichen ":",
    .wort "bool", .zeichen ",", .zeichen "}", .zeichen "}",
@@ -1125,7 +1125,7 @@ def ttVar : List Token :=
    .ident "fmt", .zeichen ":", .ident "Text", .zeichen ",",
    .zeichen "..", .zeichen ".", .zeichen ",",
    .ident "a", .zeichen ":", .wort "u64", .zeichen ")",
-   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops", .zeichen ";", .ende]
+   .wort "costs", .zeichen "<=", .num 8, .wort "ops", .zeichen ";", .ende]
 theorem tVar_lex :
     lex "extern fn druck(fmt : Text, ..., a : u64) costs <= 8 ops;" = .ok ttVar := by
   decide
@@ -1137,17 +1137,17 @@ theorem tVar : beqTopTief (parseTopTief ttVar)
   decide
 def ttEnd : List Token :=
   [.wort "module", .ident "beispiel112", .zeichen "{",
-  .wort "table", .ident "Zustand", .wort "count", .zahl 4,
+  .wort "table", .ident "Zustand", .wort "count", .num 4,
    .zeichen "{", .wort "slot", .zeichen "{", .ident "bereit",
    .zeichen ":", .wort "u32", .zeichen ",", .zeichen "}",
    .zeichen "}",
   .wort "lock", .ident "Sperre", .wort "protects", .zeichen "{",
-   .ident "Zustand", .zeichen "}", .wort "rank", .zahl 0,
+   .ident "Zustand", .zeichen "}", .wort "rank", .num 0,
    .zeichen ";",
   .wort "device", .ident "Geraet", .zeichen "(", .ident "basis",
    .zeichen ":", .wort "u64", .zeichen ")", .wort "at",
    .wort "mmio", .zeichen "{", .wort "reg", .ident "ST",
-   .zeichen ":", .wort "u32", .zeichen "@", .zahl 0,
+   .zeichen ":", .wort "u32", .zeichen "@", .num 0,
    .wort "class", .wort "r", .wort "depends", .zeichen "{",
    .ident "Zustand", .zeichen "}", .zeichen "}",
   .wort "impl", .wort "fn", .ident "lesen", .zeichen "(",
@@ -1155,7 +1155,7 @@ def ttEnd : List Token :=
    .zeichen "->", .wort "u32", .wort "requires", .ident "Held",
    .zeichen "(", .ident "Sperre", .zeichen ")", .wort "effects",
    .zeichen "{", .wort "reads", .ident "d", .zeichen "}",
-   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops",
+   .wort "costs", .zeichen "<=", .num 8, .wort "ops",
    .zeichen "{", .wort "let", .ident "stand", .zeichen "=",
    .ident "d", .zeichen ".", .ident "ST", .zeichen ";",
    .wort "return", .ident "stand", .zeichen ";", .zeichen "}",
@@ -1166,10 +1166,10 @@ def ttEnd : List Token :=
    .wort "requires", .ident "Held", .zeichen "(", .ident "Sperre",
    .zeichen ")", .wort "effects", .zeichen "{", .wort "writes",
    .ident "Zustand", .zeichen "}", .wort "costs", .zeichen "<=",
-   .zahl 8, .wort "ops", .zeichen "{", .ident "Zustand",
+   .num 8, .wort "ops", .zeichen "{", .ident "Zustand",
    .zeichen ".", .wort "slots", .zeichen "[", .ident "i",
    .zeichen "]", .zeichen ".", .ident "bereit", .zeichen "=",
-   .wort "w", .zeichen ";", .wort "return", .zahl 0,
+   .wort "w", .zeichen ";", .wort "return", .num 0,
    .zeichen ";", .zeichen "}",
   .zeichen "}", .ende]
 set_option maxHeartbeats 1600000 in
@@ -1213,8 +1213,8 @@ theorem tEnd : beqTopTief (parseTopTief ttEnd)
 -- beispiele/112-register-traeger-bewacht.gab, whole file (38 lines): the smallest whole corpus file with a table, a lock and contracted functions. Module, table, lock, device and both function bodies parse end to end with nothing skipped.
 def tt56 : List Token :=
   [.wort "const", .ident "T", .zeichen ":", .zeichen "[",
-   .wort "u32", .zeichen ";", .zahl 2, .zeichen "]",
-   .zeichen "=", .zeichen "[", .zahl 1, .zeichen ",", .zahl 2,
+   .wort "u32", .zeichen ";", .num 2, .zeichen "]",
+   .zeichen "=", .zeichen "[", .num 1, .zeichen ",", .num 2,
    .zeichen "]", .zeichen ";", .ende]
 theorem t56_lex :
     lex "const T : [u32; 2] = [1, 2];" = .ok tt56 := by
@@ -1245,9 +1245,9 @@ def tt58 : List Token :=
    .zeichen ":", .wort "u64", .zeichen ")", .wort "at",
    .wort "mmio", .zeichen "{", .wort "reg", .ident "AVAIL_IDX",
    .zeichen ":", .wort "u16", .wort "wrapping", .zeichen "@",
-   .zahl 258, .wort "class", .wort "rw", .wort "reg",
+   .num 258, .wort "class", .wort "rw", .wort "reg",
    .ident "RING_LEN", .zeichen ":", .wort "u16", .zeichen "@",
-   .zahl 260, .wort "class", .wort "r", .zeichen "}", .ende]
+   .num 260, .wort "class", .wort "r", .zeichen "}", .ende]
 theorem t58_lex :
     lex "device Ring(basis : u64) at mmio { reg AVAIL_IDX : u16 wrapping @0x102 class rw reg RING_LEN : u16 @0x104 class r }" =
       .ok tt58 := by

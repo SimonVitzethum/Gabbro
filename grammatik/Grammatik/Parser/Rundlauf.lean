@@ -60,17 +60,17 @@ theorem beqSExpr_klingt : ∀ (a b : SExpr),
       first
         | exact absurd h Bool.false_ne_true
         | (simp only [beq_iff_eq] at h; exact congrArg SExpr.lit h)
-  | gleit s =>
+  | float s =>
     cases b <;> simp only [beqSExpr] at h <;>
       first
         | exact absurd h Bool.false_ne_true
-        | (simp only [strEq_eq] at h; exact congrArg SExpr.gleit h)
-  | wahr =>
+        | (simp only [strEq_eq] at h; exact congrArg SExpr.float h)
+  | tru =>
     cases b <;> simp only [beqSExpr] at h <;>
       first
         | exact absurd h Bool.false_ne_true
         | exact rfl
-  | falsch =>
+  | fls =>
     cases b <;> simp only [beqSExpr] at h <;>
       first
         | exact absurd h Bool.false_ne_true
@@ -139,7 +139,7 @@ theorem beqSExpr_klingt : ∀ (a b : SExpr),
       first
         | exact absurd h Bool.false_ne_true
         | exact rfl
-  | grund g f =>
+  | why g f =>
     cases b <;> simp only [beqSExpr] at h <;> try exact absurd h Bool.false_ne_true
     simp only [Bool.and_eq_true, strEq_eq] at h
     obtain ⟨h1, h2⟩ := h
@@ -175,9 +175,9 @@ theorem beqTop_klingt : ∀ (a b : SExpr),
 mutual
 def groesse : SExpr → Nat
   | .lit _ => 1
-  | .gleit _ => 1
-  | .wahr => 1
-  | .falsch => 1
+  | .float _ => 1
+  | .tru => 1
+  | .fls => 1
   | .variable _ => 1
   | .feld x _ => groesse x + 1
   | .index x i => groesse x + groesse i + 1
@@ -189,7 +189,7 @@ def groesse : SExpr → Nat
   | .eingebaut _ xs => groesseListe xs + 1
   | .alt x => groesse x + 1
   | .ergebnis => 1
-  | .grund _ _ => 1
+  | .why _ _ => 1
 def groesseListe : List SExpr → Nat
   | [] => 0
   | x :: xs => groesse x + groesseListe xs
@@ -222,10 +222,10 @@ def brennstoff (e : SExpr) : Nat :=
 -- print as `wort` (their parser arms match `wort` only).
 mutual
 def druckToks : SExpr → List Token
-  | .lit n => [.zahl n]
-  | .gleit s => [.gleit s]
-  | .wahr => [.wort "true"]
-  | .falsch => [.wort "false"]
+  | .lit n => [.num n]
+  | .float s => [.float s]
+  | .tru => [.wort "true"]
+  | .fls => [.wort "false"]
   | .variable s => [.ident s]
   | .feld x f => druckToks x ++ [.zeichen ".", .ident f]
   | .index x i =>
@@ -246,7 +246,7 @@ def druckToks : SExpr → List Token
   | .alt x =>
     [.wort "old", .zeichen "("] ++ druckToks x ++ [.zeichen ")"]
   | .ergebnis => [.wort "result"]
-  | .grund g f => [.ident g, .zeichen "::", .ident f]
+  | .why g f => [.ident g, .zeichen "::", .ident f]
 def druckToksListe : List SExpr → List Token
   | [] => []
   | [x] => druckToks x
@@ -301,9 +301,9 @@ def istTypWortVar : SExpr → Bool
 mutual
 def gut : SExpr → Bool
   | .lit _ => true
-  | .gleit _ => true
-  | .wahr => true
-  | .falsch => true
+  | .float _ => true
+  | .tru => true
+  | .fls => true
   | .variable s => !istKeinPlatz s
   | .feld x _ => gutPlatz x
   | .index x i => gutPlatz x && gut i
@@ -318,7 +318,7 @@ def gut : SExpr → Bool
   | .eingebaut _ _ => false
   | .alt x => gutPlatz x
   | .ergebnis => true
-  | .grund g _ =>
+  | .why g _ =>
     !istKeinPlatz g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
 def gutPlatz : SExpr → Bool
@@ -393,8 +393,8 @@ theorem stopOder : ∀ (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhig] at h
@@ -413,8 +413,8 @@ theorem stopUnd : ∀ (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhig] at h
@@ -433,8 +433,8 @@ theorem stopVgl : ∀ (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhig] at h
@@ -486,8 +486,8 @@ theorem stopBit : ∀ (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhig] at h
@@ -539,8 +539,8 @@ theorem stopAdd : ∀ (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhig] at h
@@ -587,8 +587,8 @@ theorem stopMul : ∀ (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhig] at h
@@ -634,8 +634,8 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhigSuff] at h
@@ -677,9 +677,9 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
     intro e hs
     cases e with
     | lit m => exact Nat.le_refl _
-    | gleit s => exact Nat.le_refl _
-    | wahr => exact Nat.le_refl _
-    | falsch => exact Nat.le_refl _
+    | float s => exact Nat.le_refl _
+    | tru => exact Nat.le_refl _
+    | fls => exact Nat.le_refl _
     | «variable» s => exact Nat.le_refl _
     | feld x f =>
       have hx : groesse x ≤ n := by
@@ -739,7 +739,7 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
       simp only [druckToks, List.length_append, List.length] at ⊢
       omega
     | ergebnis => exact Nat.le_refl _
-    | grund g f =>
+    | why g f =>
       simp only [druckToks, List.length] at ⊢
       omega
 
@@ -786,9 +786,9 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
   intro x h
   cases x with
   | lit m => simp [gutPlatz] at h
-  | gleit s => simp [gutPlatz] at h
-  | wahr => simp [gutPlatz] at h
-  | falsch => simp [gutPlatz] at h
+  | float s => simp [gutPlatz] at h
+  | tru => simp [gutPlatz] at h
+  | fls => simp [gutPlatz] at h
   | «variable» s =>
     simp only [gutPlatz] at h
     simp only [gut] at ⊢
@@ -812,7 +812,7 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
   | eingebaut f xs => simp [gutPlatz] at h
   | alt x => simp [gutPlatz] at h
   | ergebnis => simp [gutPlatz] at h
-  | grund g f => simp [gutPlatz] at h
+  | why g f => simp [gutPlatz] at h
 
 -- Head and tail of a `gut` list stay `gut`.
 theorem gutListe_Kopf : ∀ (x : SExpr) (xs : List SExpr),
@@ -938,19 +938,19 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       subst hm
       intro h
       simp at h
-    | gleit s =>
+    | float s =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
       simp at h
-    | wahr =>
+    | tru =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
       simp at h
-    | falsch =>
+    | fls =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
@@ -1277,7 +1277,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       subst hm
       intro h
       simp at h
-    | grund g f =>
+    | why g f =>
       simp only [druckToks] at hm
       rw [List.mem_cons, List.mem_cons, List.mem_singleton] at hm
       obtain rfl | rfl | rfl := hm
@@ -1312,19 +1312,19 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       intro h
       simp at h
-    | gleit s =>
+    | float s =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
       simp at h
-    | wahr =>
+    | tru =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
       simp at h
-    | falsch =>
+    | fls =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
@@ -1440,7 +1440,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       intro h
       simp at h
-    | grund g f =>
+    | why g f =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
@@ -1522,8 +1522,8 @@ theorem sammleSeg_stop : ∀ (segs : List String) (t : List Token),
     cases hd with
     | ident s => rfl
     | wort s => rfl
-    | zahl n => rfl
-    | gleit s => rfl
+    | num n => rfl
+    | float s => rfl
     | text s => rfl
     | zeichen s =>
       simp only [ruhigSuff] at h
@@ -1545,8 +1545,8 @@ theorem ruhigSuff_nopar : ∀ (t : List Token), ruhigSuff t = true →
     cases hd with
     | ident s => simp at hcon
     | wort s => simp at hcon
-    | zahl n => simp at hcon
-    | gleit s => simp at hcon
+    | num n => simp at hcon
+    | float s => simp at hcon
     | text s => simp at hcon
     | zeichen s =>
       simp only [ruhigSuff] at h
@@ -1902,9 +1902,9 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     intro p hs hg
     cases p with
     | lit m => simp [gutPlatz] at hg
-    | gleit s => simp [gutPlatz] at hg
-    | wahr => simp [gutPlatz] at hg
-    | falsch => simp [gutPlatz] at hg
+    | float s => simp [gutPlatz] at hg
+    | tru => simp [gutPlatz] at hg
+    | fls => simp [gutPlatz] at hg
     | «variable» a =>
       simp only [gutPlatz] at hg
       exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
@@ -1963,7 +1963,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | eingebaut f xs => simp [gutPlatz] at hg
     | alt x => simp [gutPlatz] at hg
     | ergebnis => simp [gutPlatz] at hg
-    | grund g f => simp [gutPlatz] at hg
+    | why g f => simp [gutPlatz] at hg
 
 -- Suffix chains through `parseSuffixe`, by list induction. Index
 -- payloads parse via `R n` (smaller); fuel carries one spare per
@@ -2152,8 +2152,8 @@ theorem prim_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
   simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
 theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
     ruhigGleit rest = true →
-    12 * (groesse (.gleit s) + 1) + groesse (.gleit s) ≤ F + 7 →
-    parsePrimary F (druckToks (.gleit s) ++ rest) = .ok (.gleit s, rest) := by
+    12 * (groesse (.float s) + 1) + groesse (.float s) ≤ F + 7 →
+    parsePrimary F (druckToks (.float s) ++ rest) = .ok (.float s, rest) := by
   intro s rest F hg hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -2170,21 +2170,21 @@ theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
       have ne := strNe_of w "rounded" hf
       simp [ne]
     | ident v => rfl
-    | zahl n => rfl
-    | gleit g => rfl
+    | num n => rfl
+    | float g => rfl
     | text t => rfl
     | zeichen z => rfl
     | ende => rfl
 theorem prim_wahr : ∀ (rest : List Token) (F : Nat),
-    12 * (groesse .wahr + 1) + groesse .wahr ≤ F + 7 →
-    parsePrimary F (druckToks .wahr ++ rest) = .ok (.wahr, rest) := by
+    12 * (groesse .tru + 1) + groesse .tru ≤ F + 7 →
+    parsePrimary F (druckToks .tru ++ rest) = .ok (.tru, rest) := by
   intro rest F hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
 theorem prim_falsch : ∀ (rest : List Token) (F : Nat),
-    12 * (groesse .falsch + 1) + groesse .falsch ≤ F + 7 →
-    parsePrimary F (druckToks .falsch ++ rest) = .ok (.falsch, rest) := by
+    12 * (groesse .fls + 1) + groesse .fls ≤ F + 7 →
+    parsePrimary F (druckToks .fls ++ rest) = .ok (.fls, rest) := by
   intro rest F hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -2200,9 +2200,9 @@ theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
     (!istKeinPlatz g) = true → (!istIntWort g) = true →
     (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
     ruhigSuff rest = true →
-    12 * (groesse (.grund g f) + 1) + groesse (.grund g f) ≤ F + 7 →
-    parsePrimary F (druckToks (.grund g f) ++ rest) =
-      .ok (.grund g f, rest) := by
+    12 * (groesse (.why g f) + 1) + groesse (.why g f) ≤ F + 7 →
+    parsePrimary F (druckToks (.why g f) ++ rest) =
+      .ok (.why g f, rest) := by
   intro g f rest F hkp hit hzuk hself hr hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -2268,9 +2268,9 @@ theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
   have htwf : istTypWortVar x = false := nichtWahr_falsch _ htw
   cases x with
   | lit m => rfl
-  | gleit s => rfl
-  | wahr => rfl
-  | falsch => rfl
+  | float s => rfl
+  | tru => rfl
+  | fls => rfl
   | «variable» s =>
     simp only [istTypWortVar] at htwf
     simp [htwf]
@@ -2284,7 +2284,7 @@ theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
   | eingebaut f xs => rfl
   | alt x => rfl
   | ergebnis => rfl
-  | grund g f => rfl
+  | why g f => rfl
 -- `eingebaut` through `parsePrimary`: head word, then place or
 -- pair arguments. `sizeof`/`lenof` take places (`parseOrt`);
 -- `aligned` takes two whole expressions. Singleton argument lists

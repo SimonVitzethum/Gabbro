@@ -63,7 +63,7 @@ theorem schritt_logArt {M M' : RufMaschineG D} {u : Faden}
       (M'.faeden u).log = RufEreignisF.rueck g rho v s0 s1 :: (M.faeden u).log ∧
         s1.speicher = M'.speicher) ∨
     (∃ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
-      (M'.faeden u).log = RufEreignisF.grund g rho r s0 s1 :: (M.faeden u).log ∧
+      (M'.faeden u).log = RufEreignisF.why g rho r s0 s1 :: (M.faeden u).log ∧
         s1.speicher = M'.speicher) := by
   cases hs <;> (try simp only [rufUpdateG_self]) <;> first
     | exact Or.inl trivial
@@ -91,10 +91,10 @@ theorem rufLogPasstG_eind :
       | rueck _ _ _ _ _ _ _ h2 =>
           have := ih h2
           exact (List.cons.inj this).2
-  | grund ks log f rho s0 r s1 h ih =>
+  | why ks log f rho s0 r s1 h ih =>
       intro h'
       cases h' with
-      | grund _ _ _ _ _ _ _ h2 =>
+      | why _ _ _ _ _ _ _ h2 =>
           have := ih h2
           exact (List.cons.inj this).2
 
@@ -117,7 +117,7 @@ theorem schritt_schluessel (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env 
       RufEreignisF.rueck g rho v s0 s1 ∈ (M'.faeden u).log ∧ s1.speicher = M'.speicher) ∨
     (∃ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       RufFadenSchluesselG (M.faeden u) = ⟨g, rho, s0⟩ :: RufFadenSchluesselG (M'.faeden u) ∧
-      RufEreignisF.grund g rho r s0 s1 ∈ (M'.faeden u).log ∧ s1.speicher = M'.speicher) := by
+      RufEreignisF.why g rho r s0 s1 ∈ (M'.faeden u).log ∧ s1.speicher = M'.speicher) := by
   have h0 := rufErreichbarG_passt P O passes sp init M hr u
   have h1 := rufErreichbarG_passt P O passes sp init M' (.schritt _ _ _ hr hs) u
   unfold RufFadenPasstG at h0 h1
@@ -140,7 +140,7 @@ theorem schritt_schluessel (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env 
     rw [he] at h1
     generalize RufFadenSchluesselG (M'.faeden u) = ks at h1 ⊢
     cases h1 with
-    | grund _ _ _ _ _ _ _ h2 => exact (rufLogPasstG_eind h2 h0).symm
+    | why _ _ _ _ _ _ _ h2 => exact (rufLogPasstG_eind h2 h0).symm
 
 end Schluessel
 
@@ -184,11 +184,11 @@ theorem fertig_retKopf {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
   | ende e' =>
       cases e' with
       | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inl rfl⟩
-      | retGrund g hp => exact absurd ⟨g, hp, Or.inl rfl⟩ hKt
+      | retWhy g hp => exact absurd ⟨g, hp, Or.inl rfl⟩ hKt
       | cons s rest =>
           cases s with
           | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
-          | retGrund g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ hKt
+          | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ hKt
           | _ => simp [GRest.anRueck, Endblock.istRueck, Stmt.istRueck] at han
       | _ => simp [GRest.anRueck, Endblock.istRueck] at han
   | dann b k =>
@@ -196,7 +196,7 @@ theorem fertig_retKopf {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
       | cons s rest =>
           cases s with
           | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
-          | retGrund g hp => exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ hKt
+          | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ hKt
           | _ => simp [GRest.anRueck, Block.istRueck, Stmt.istRueck] at han
       | _ => simp [GRest.anRueck, Block.istRueck] at han
   | _ => simp [GRest.anRueck] at han

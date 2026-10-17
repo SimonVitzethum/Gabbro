@@ -135,19 +135,19 @@ theorem gDarf_belegen_Objekte : darf gD GTab.Objekte gL_belegen := by unfold dar
 theorem gDarf_stand_Objekte : darf gD GTab.Objekte gL_stand := by unfold darf; decide
 
 def gBody_stand : Endblock gD (vertragVon gD g_stand) false gCtx_stand gL_stand :=
-  (.ret (.wert (Expr.durch (D := gD) (.var .hier) GTab.Objekte rfl GObjekteFeld.zaehler ((.var (.dort .hier))) gDarf_stand_Objekte)) (List.Perm.refl _))
+  (.ret (.val (Expr.thru (D := gD) (.var .here) GTab.Objekte rfl GObjekteFeld.zaehler ((.var (.there .here))) gDarf_stand_Objekte)) (List.Perm.refl _))
 
 def gBody_belegen : Endblock gD (vertragVon gD g_belegen) false gCtx_belegen gL_belegen :=
-  (.cons (.assignDurch (.var .hier) GTab.Objekte rfl GObjekteFeld.benutzt ((.var (.dort .hier))) .wahr (by decide) gDarf_belegen_Objekte) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignThru (.var .here) GTab.Objekte rfl GObjekteFeld.benutzt ((.var (.there .here))) .tru (by decide) gDarf_belegen_Objekte) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .stand => .wahr
-    | .belegen => .wahr
+    | .stand => .tru
+    | .belegen => .tru
   ensures
-    | .stand => .wahr
-    | .belegen => .wahr
+    | .stand => .tru
+    | .belegen => .tru
   rumpf
     | .stand => gBody_stand
     | .belegen => gBody_belegen

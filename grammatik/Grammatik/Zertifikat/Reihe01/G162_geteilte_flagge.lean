@@ -134,19 +134,19 @@ theorem gGDarf_lies_STAND : gdarf gD GGlob.STAND gL_lies := by unfold gdarf; dec
 theorem gGDarf_melde_STAND : gdarf gD GGlob.STAND gL_melde := by unfold gdarf; decide
 
 def gBody_melde : Endblock gD (vertragVon gD g_melde) false gCtx_melde gL_melde :=
-  (.cons (.publish GGlob.STAND ((.weiter (by decide) (by decide) (((.lit 7)) : Expr gD gCtx_melde gL_melde (.int 7 7))) : Expr gD gCtx_melde gL_melde (.int 0 4294967295)) [] rfl (by decide) gGDarf_melde_STAND) (.ret .keine (List.Perm.refl _)))
+  (.cons (.publish GGlob.STAND ((.widen (by decide) (by decide) (((.lit 7)) : Expr gD gCtx_melde gL_melde (.int 7 7))) : Expr gD gCtx_melde gL_melde (.int 0 4294967295)) [] rfl (by decide) gGDarf_melde_STAND) (.ret .empty (List.Perm.refl _)))
 
 def gBody_lies : Endblock gD (vertragVon gD g_lies) false gCtx_lies gL_lies :=
-  (.bind ((Expr.glob (D := gD) GGlob.STAND gGDarf_lies_STAND) : Expr gD gCtx_lies gL_lies (.int 0 4294967295)) (.ret (.wert (.var .hier)) (List.Perm.refl _)))
+  (.bind ((Expr.glob (D := gD) GGlob.STAND gGDarf_lies_STAND) : Expr gD gCtx_lies gL_lies (.int 0 4294967295)) (.ret (.val (.var .here)) (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .melde => .wahr
-    | .lies => .wahr
+    | .melde => .tru
+    | .lies => .tru
   ensures
-    | .melde => .wahr
-    | .lies => .wahr
+    | .melde => .tru
+    | .lies => .tru
   rumpf
     | .melde => gBody_melde
     | .lies => gBody_lies

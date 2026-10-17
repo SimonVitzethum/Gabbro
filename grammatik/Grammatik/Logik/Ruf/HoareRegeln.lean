@@ -51,23 +51,23 @@ inductive StmtOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       StmtOhneRuf (.assignSlot t f i e hw hL)
-  | assignDurch (n : Nat) (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
+  | assignThru (n : Nat) (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      StmtOhneRuf (.assignDurch p t ht f i e hw hL)
+      StmtOhneRuf (.assignThru p t ht f i e hw hL)
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
       (hL : gdarf D g Λ) :
       StmtOhneRuf (.assignGlob g e hw hL)
-  | schreibBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
+  | putBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
       (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t)
       (e : Expr D Γ Λ (.int 0 (256 ^ n - 1))) (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      StmtOhneRuf (.schreibBytes t f hf n i hlo hhi e hw hL)
+      StmtOhneRuf (.putBytes t f hf n i hlo hhi e hw hL)
   | assignVar {τ : Ty} (x : Var Γ τ) (e : Expr D Γ Λ τ) :
       StmtOhneRuf (.assignVar (τ := τ) x e)
-  | uebergang (t : D.Tab) (f : D.Feld t) (hτ : D.typ t f = .int lo hi)
+  | shift (t : D.Tab) (f : D.Feld t) (hτ : D.typ t f = .int lo hi)
       (i : Expr D Γ Λ (.index (D.count t))) (von nach : Int) (hn : lo ≤ nach ∧ nach ≤ hi)
       (he : D.erlaubt t f von nach = true) (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      StmtOhneRuf (.uebergang t f hτ i von nach hn he hw hL)
+      StmtOhneRuf (.shift t f hτ i von nach hn he hw hL)
   | ite (c : Expr D Γ Λ .bool) (t e : Block D V l Γ Λ Λ')
       (ht : BlockOhneRuf t) (he : BlockOhneRuf e) :
       StmtOhneRuf (.ite c t e)
@@ -77,9 +77,9 @@ inductive StmtOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | onTag (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
       (ha : ArmsOhneRuf arms) :
       StmtOhneRuf (.onTag v arms)
-  | onGrund (r : Expr D Γ Λ (.grund n)) (arms : GrundArms D V l Γ Λ Λ' n)
+  | onWhy (r : Expr D Γ Λ (.why n)) (arms : GrundArms D V l Γ Λ Λ' n)
       (ha : GrundArmsOhneRuf arms) :
-      StmtOhneRuf (.onGrund r arms)
+      StmtOhneRuf (.onWhy r arms)
   | locks (L : D.Lock) (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
       (body : Block D V l Γ (.held L :: Λ) (.held L :: Λ)) (hb : BlockOhneRuf body) :
       StmtOhneRuf (.locks L hr body)
@@ -101,8 +101,8 @@ inductive StmtOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
       StmtOhneRuf (.axiomCall a args h hw hg hd hgd)
-  | regSchreib (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :
-      StmtOhneRuf (.regSchreib r hk e)
+  | regWrite (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :
+      StmtOhneRuf (.regWrite r hk e)
   | transition (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (m : D.Reg)
       (hm : D.spiegel r = some m) (hl : (D.rklasse m).lesbar = true) (maske bits : Int) :
       StmtOhneRuf (.transition r hk m hm hl maske bits)
@@ -115,8 +115,8 @@ inductive StmtOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
       StmtOhneRuf (.retires m s h a)
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : List.Perm Λ V.ende) :
       StmtOhneRuf (.ret e hΛ)
-  | retGrund (r : Fin V.gruende) (hΛ : List.Perm Λ V.ende) :
-      StmtOhneRuf (.retGrund r hΛ)
+  | retWhy (r : Fin V.gruende) (hΛ : List.Perm Λ V.ende) :
+      StmtOhneRuf (.retWhy r hΛ)
   | leave (h : l = true) :
       StmtOhneRuf (.leave h)
   | next (h : l = true) :
@@ -131,14 +131,14 @@ inductive BlockOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | bind (e : Expr D Γ Λ τ) (rest : Block D V l (τ :: Γ) Λ Λ')
       (hr : BlockOhneRuf rest) :
       BlockOhneRuf (.bind e rest)
-  | regLies (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
+  | regRead (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
       (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.regLies r hk rest)
-  | regLiesElse (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
+      BlockOhneRuf (.regRead r hk rest)
+  | regReadElse (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
       (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
       (rest : Block D V l (D.rtyp r :: Γ) Λ Λ')
       (he : EndOhneRuf sonst) (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.regLiesElse r hk zusage sonst rest)
+      BlockOhneRuf (.regReadElse r hk zusage sonst rest)
   | awaits (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
       (hL : gdarf D g Λ)
       (rest : Block D V l (D.gtyp g :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :
@@ -151,32 +151,32 @@ inductive BlockOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
       (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
       (he : EndOhneRuf sonst) (hr : BlockOhneRuf rest) :
       BlockOhneRuf (.narrow e lo' hi' sonst rest)
-  | pruefung (c : Expr D Γ Λ .bool) (sonst : Endblock D V l Γ Λ)
+  | check (c : Expr D Γ Λ .bool) (sonst : Endblock D V l Γ Λ)
       (rest : Block D V l Γ Λ Λ')
       (he : EndOhneRuf sonst) (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.pruefung c sonst rest)
-  | gleit (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
+      BlockOhneRuf (.check c sonst rest)
+  | float (op : GleitOp) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2))
       (lo hi : Int × Int)
       (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.gleit op a b lo hi rest)
-  | gleitLit (q : Int × Int) (lo hi : Int × Int)
+      BlockOhneRuf (.float op a b lo hi rest)
+  | floatLit (q : Int × Int) (lo hi : Int × Int)
       (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.gleitLit q lo hi rest)
-  | gleitVon (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
+      BlockOhneRuf (.floatLit q lo hi rest)
+  | floatOf (e : Expr D Γ Λ (.int l1 h1)) (lo hi : Int × Int)
       (rest : Block D V l (.fl lo hi :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.gleitVon e lo hi rest)
-  | gleitNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int)
+      BlockOhneRuf (.floatOf e lo hi rest)
+  | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int)
       (sonst : Endblock D V l Γ Λ)
       (rest : Block D V l (.fl lo hi :: Γ) Λ Λ')
       (he : EndOhneRuf sonst) (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.gleitNarrow e lo hi sonst rest)
+      BlockOhneRuf (.floatNarrow e lo hi sonst rest)
 
 inductive EndOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
     Endblock D V l Γ Λ → Prop where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : List.Perm Λ V.ende) :
       EndOhneRuf (.ret e hΛ)
-  | retGrund (r : Fin V.gruende) (hΛ : List.Perm Λ V.ende) :
-      EndOhneRuf (.retGrund r hΛ)
+  | retWhy (r : Fin V.gruende) (hΛ : List.Perm Λ V.ende) :
+      EndOhneRuf (.retWhy r hΛ)
   | leave (h : l = true) :
       EndOhneRuf (.leave h)
   | next (h : l = true) :
@@ -268,7 +268,7 @@ theorem hoare_seq (O : Orakel D) (passes : Nat)
         exact hrun
       exact hrest σ1 ρ1 hmid σ' ρ' hcont
   | zurueck σ1 v => rw [hstep] at hrun; exact absurd hrun (by simp)
-  | grund σ1 r => rw [hstep] at hrun; exact absurd hrun (by simp)
+  | why σ1 r => rw [hstep] at hrun; exact absurd hrun (by simp)
   | leave h σ1 ρ1 => rw [hstep] at hrun; exact absurd hrun (by simp)
   | next h σ1 ρ1 => rw [hstep] at hrun; exact absurd hrun (by simp)
   | logik e => rw [hstep] at hrun; exact absurd hrun (by simp)
@@ -465,8 +465,8 @@ theorem traverseKey {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
                 have hsame : execBlock (l := true) (Γ := .index (D.count t) :: Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) σ' ρ').1 (.cons k ρ') = Ausgang.zurueck σ'' v := by
                   rw [← hsch]; exact (hb' _ _).symm
                 simp only [hsame, hsch]
-            | grund σ'' r =>
-                have hsame : execBlock (l := true) (Γ := .index (D.count t) :: Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) σ' ρ').1 (.cons k ρ') = Ausgang.grund σ'' r := by
+            | why σ'' r =>
+                have hsame : execBlock (l := true) (Γ := .index (D.count t) :: Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) σ' ρ').1 (.cons k ρ') = Ausgang.why σ'' r := by
                   rw [← hsch]; exact (hb' _ _).symm
                 simp only [hsame, hsch]
             | leave h σ'' ρ'' =>
@@ -529,8 +529,8 @@ theorem retryKey {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
               have hsame : execBlock (l := true) (Γ := Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ bis.orte, wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ))) σ' ρ').1 ρ' = Ausgang.zurueck σ'' v := by
                 rw [← hsch]; exact (hb' _ _).symm
               simp only [hsame, hsch]
-          | grund σ'' r =>
-              have hsame : execBlock (l := true) (Γ := Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ bis.orte, wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ))) σ' ρ').1 ρ' = Ausgang.grund σ'' r := by
+          | why σ'' r =>
+              have hsame : execBlock (l := true) (Γ := Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ bis.orte, wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ))) σ' ρ').1 ρ' = Ausgang.why σ'' r := by
                 rw [← hsch]; exact (hb' _ _).symm
               simp only [hsame, hsch]
           | leave h σ'' ρ'' =>
@@ -583,8 +583,8 @@ theorem foreverKey {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
               have hsame : execBlock (l := true) (Γ := Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) σ' ρ').1 ρ' = Ausgang.zurueck σ'' v := by
                 rw [← hsch]; exact (hb' _ _).symm
               simp only [hsame, hsch]
-          | grund σ'' r =>
-              have hsame : execBlock (l := true) (Γ := Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) σ' ρ').1 ρ' = Ausgang.grund σ'' r := by
+          | why σ'' r =>
+              have hsame : execBlock (l := true) (Γ := Γ) O passes R₂ body ((fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) σ' ρ').1 ρ' = Ausgang.why σ'' r := by
                 rw [← hsch]; exact (hb' _ _).symm
               simp only [hsame, hsch]
           | leave h σ'' ρ'' =>
@@ -650,8 +650,8 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact iha _ _ _
 )
     (fun r arms ha iha σ ρ => by
-        show execStmt O passes R₁ (.onGrund (V := V) r arms) σ ρ =
-          execStmt O passes R₂ (.onGrund (V := V) r arms) σ ρ
+        show execStmt O passes R₁ (.onWhy (V := V) r arms) σ ρ =
+          execStmt O passes R₂ (.onWhy (V := V) r arms) σ ρ
         simp only [execStmt]
         exact iha _ _ _
 )
@@ -782,7 +782,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         cases execStmt O passes R₂ s σ ρ with
         | ok σ1 ρ1 => simp only [hr']
         | zurueck σ1 v => rfl
-        | grund σ1 r => rfl
+        | why σ1 r => rfl
         | leave h σ1 ρ1 => rfl
         | next h σ1 ρ1 => rfl
         | logik e => rfl
@@ -874,8 +874,8 @@ theorem blockOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact iha _ _ _
 )
     (fun r arms ha iha σ ρ => by
-        show execStmt O passes R₁ (.onGrund (V := V) r arms) σ ρ =
-          execStmt O passes R₂ (.onGrund (V := V) r arms) σ ρ
+        show execStmt O passes R₁ (.onWhy (V := V) r arms) σ ρ =
+          execStmt O passes R₂ (.onWhy (V := V) r arms) σ ρ
         simp only [execStmt]
         exact iha _ _ _
 )
@@ -1006,7 +1006,7 @@ theorem blockOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         cases execStmt O passes R₂ s σ ρ with
         | ok σ1 ρ1 => simp only [hr']
         | zurueck σ1 v => rfl
-        | grund σ1 r => rfl
+        | why σ1 r => rfl
         | leave h σ1 ρ1 => rfl
         | next h σ1 ρ1 => rfl
         | logik e => rfl
@@ -1098,8 +1098,8 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         exact iha _ _ _
 )
     (fun r arms ha iha σ ρ => by
-        show execStmt O passes R₁ (.onGrund (V := V) r arms) σ ρ =
-          execStmt O passes R₂ (.onGrund (V := V) r arms) σ ρ
+        show execStmt O passes R₁ (.onWhy (V := V) r arms) σ ρ =
+          execStmt O passes R₂ (.onWhy (V := V) r arms) σ ρ
         simp only [execStmt]
         exact iha _ _ _
 )
@@ -1230,7 +1230,7 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         cases execStmt O passes R₂ s σ ρ with
         | ok σ1 ρ1 => simp only [hr']
         | zurueck σ1 v => rfl
-        | grund σ1 r => rfl
+        | why σ1 r => rfl
         | leave h σ1 ρ1 => rfl
         | next h σ1 ρ1 => rfl
         | logik e => rfl
@@ -1323,8 +1323,8 @@ theorem armsOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact iha _ _ _
 )
     (fun r arms ha iha σ ρ => by
-        show execStmt O passes R₁ (.onGrund (V := V) r arms) σ ρ =
-          execStmt O passes R₂ (.onGrund (V := V) r arms) σ ρ
+        show execStmt O passes R₁ (.onWhy (V := V) r arms) σ ρ =
+          execStmt O passes R₂ (.onWhy (V := V) r arms) σ ρ
         simp only [execStmt]
         exact iha _ _ _
 )
@@ -1455,7 +1455,7 @@ theorem armsOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         cases execStmt O passes R₂ s σ ρ with
         | ok σ1 ρ1 => simp only [hr']
         | zurueck σ1 v => rfl
-        | grund σ1 r => rfl
+        | why σ1 r => rfl
         | leave h σ1 ρ1 => rfl
         | next h σ1 ρ1 => rfl
         | logik e => rfl

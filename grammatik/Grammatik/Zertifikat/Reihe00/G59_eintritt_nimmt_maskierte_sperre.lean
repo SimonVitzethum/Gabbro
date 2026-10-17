@@ -199,29 +199,29 @@ theorem gHp_ruf_verteiler_in_RING_bearbeite : RufPasst gD (vertragVon gD g_ruf_v
   hb := fun c h => by have hV : (vertragVon gD g_ruf_verteiler).boden = some 0 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
 
 def gBody_zaehle : Endblock gD (vertragVon gD g_zaehle) false gCtx_zaehle gL_zaehle :=
-  (.cons (.assignSlot GTab.Takte GTakteFeld.stand ((.var .hier)) ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_zaehle gL_zaehle (.int 1 1))) : Expr gD gCtx_zaehle gL_zaehle (.int 0 18446744073709551615)) (by decide) gDarf_zaehle_Takte) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignSlot GTab.Takte GTakteFeld.stand ((.var .here)) ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_zaehle gL_zaehle (.int 1 1))) : Expr gD gCtx_zaehle gL_zaehle (.int 0 18446744073709551615)) (by decide) gDarf_zaehle_Takte) (.ret .empty (List.Perm.refl _)))
 
 def gBody_takt_verteiler : Endblock gD (vertragVon gD g_takt_verteiler) false gCtx_takt_verteiler gL_takt_verteiler :=
-  (.cons (.locks GLock.TAKT (fun M => by cases M <;> decide) (.cons (.call g_zaehle (.cons ((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_takt_verteiler gL_takt_verteiler_in_TAKT (.index (gD.count GTab.Takte)))) .nil) gHp_takt_verteiler_in_TAKT_zaehle rfl) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.TAKT (fun M => by cases M <;> decide) (.cons (.call g_zaehle (.cons ((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_takt_verteiler gL_takt_verteiler_in_TAKT (.index (gD.count GTab.Takte)))) .nil) gHp_takt_verteiler_in_TAKT_zaehle rfl) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gBody_bearbeite : Endblock gD (vertragVon gD g_bearbeite) false gCtx_bearbeite gL_bearbeite :=
-  (.cons (.assignSlot GTab.Auftraege GAuftraegeFeld.stand ((.var .hier)) ((.weiter (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_bearbeite gL_bearbeite (.int 1 1))) : Expr gD gCtx_bearbeite gL_bearbeite (.int 0 18446744073709551615)) (by decide) gDarf_bearbeite_Auftraege) (.ret .keine (List.Perm.refl _)))
+  (.cons (.assignSlot GTab.Auftraege GAuftraegeFeld.stand ((.var .here)) ((.widen (by decide) (by decide) (((.lit 1)) : Expr gD gCtx_bearbeite gL_bearbeite (.int 1 1))) : Expr gD gCtx_bearbeite gL_bearbeite (.int 0 18446744073709551615)) (by decide) gDarf_bearbeite_Auftraege) (.ret .empty (List.Perm.refl _)))
 
 def gBody_ruf_verteiler : Endblock gD (vertragVon gD g_ruf_verteiler) false gCtx_ruf_verteiler gL_ruf_verteiler :=
-  (.cons (.locks GLock.RING (fun M => by cases M <;> decide) (.cons (.call g_bearbeite (.cons ((.weiter (by decide) (by decide) (.lit 0) : Expr gD gCtx_ruf_verteiler gL_ruf_verteiler_in_RING (.index (gD.count GTab.Auftraege)))) .nil) gHp_ruf_verteiler_in_RING_bearbeite rfl) .nil)) (.ret .keine (List.Perm.refl _)))
+  (.cons (.locks GLock.RING (fun M => by cases M <;> decide) (.cons (.call g_bearbeite (.cons ((.widen (by decide) (by decide) (.lit 0) : Expr gD gCtx_ruf_verteiler gL_ruf_verteiler_in_RING (.index (gD.count GTab.Auftraege)))) .nil) gHp_ruf_verteiler_in_RING_bearbeite rfl) .nil)) (.ret .empty (List.Perm.refl _)))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .zaehle => .wahr
-    | .takt_verteiler => .wahr
-    | .bearbeite => .wahr
-    | .ruf_verteiler => .wahr
+    | .zaehle => .tru
+    | .takt_verteiler => .tru
+    | .bearbeite => .tru
+    | .ruf_verteiler => .tru
   ensures
-    | .zaehle => .wahr
-    | .takt_verteiler => .wahr
-    | .bearbeite => .wahr
-    | .ruf_verteiler => .wahr
+    | .zaehle => .tru
+    | .takt_verteiler => .tru
+    | .bearbeite => .tru
+    | .ruf_verteiler => .tru
   rumpf
     | .zaehle => gBody_zaehle
     | .takt_verteiler => gBody_takt_verteiler

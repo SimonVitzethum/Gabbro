@@ -30,7 +30,7 @@ def tyBits : Gabbro.Grammatik.Ty → Option Nat
   | .int lo hi => some (Grammatik.Speichermodell.Darstellung.bits lo hi)
   | .bool => some 1
   | .opt n => some (Grammatik.Speichermodell.Darstellung.bits 0 n)
-  | .grund n => if 1 ≤ n then
+  | .why n => if 1 ≤ n then
       some (Grammatik.Speichermodell.Darstellung.bits 0 ((n : Int) - 1))
       else none
   | _ => none
@@ -87,7 +87,7 @@ theorem encN_lt {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
           exact Grammatik.Speichermodell.Darstellung.enc_lt_two_pow 0 n _
             (by have h1 := Gabbro.Grammatik.Zahl.lo_le z; omega)
             (by have h2 := Gabbro.Grammatik.Zahl.le_hi z; omega)
-  | grund n =>
+  | why n =>
       simp only [tyBits] at hb
       split at hb
       · cases hb
@@ -140,7 +140,7 @@ theorem decN_encN {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
           exact Grammatik.Speichermodell.Darstellung.dec_enc 0
             (Gabbro.Grammatik.Zahl.n z) (Gabbro.Grammatik.Zahl.n z)
             (Gabbro.Grammatik.Zahl.lo_le z) (by omega)
-  | grund n =>
+  | why n =>
       simp only [tyLo, encN]
       exact Grammatik.Speichermodell.Darstellung.dec_enc 0
         ((v.val : Nat) : Int) ((v.val : Nat) : Int)
@@ -219,7 +219,7 @@ theorem tyBits_opt255 : tyBits (.opt 255) = some 8 := by decide
 theorem tyBits_opt256 : tyBits (.opt 256) = some 9 := by decide
 
 /-- 1000 `grund` cases need 10 bits. -/
-theorem tyBits_grund1000 : tyBits (.grund 1000) = some 10 := by decide
+theorem tyBits_grund1000 : tyBits (.why 1000) = some 10 := by decide
 
 /-- `u32 in 0 .. 100` fits one byte. -/
 theorem narrowCell_int100 : narrowCell (.int 0 100) = some 1 := by decide

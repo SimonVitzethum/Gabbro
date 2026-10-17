@@ -51,7 +51,7 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .ite _ t e => mB A t && mB A e
   | .onOption _ p a => mB A p && mB A a
   | .onTag _ arms => mArms A arms
-  | .onGrund _ arms => mGArms A arms
+  | .onWhy _ arms => mGArms A arms
   | .call g _ _ _ => A.ruf g
   | .callInd (n := n) _ _ _ _ => A.ind n
   | .locks L _ body => A.sperre L && mB A body
@@ -60,19 +60,19 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retry _ _ body ueber => mB A body && mB A ueber
   | .forever _ _ body => mB A body
   | .assignSlot .. => true
-  | .assignDurch .. => true
+  | .assignThru .. => true
   | .assignGlob .. => true
-  | .schreibBytes .. => true
+  | .putBytes .. => true
   | .assignVar .. => true
-  | .uebergang .. => true
+  | .shift .. => true
   | .axiomCall .. => true
-  | .regSchreib .. => true
+  | .regWrite .. => true
   | .transition .. => true
   | .publish .. => true
   | .advances .. => true
   | .retires .. => true
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -86,16 +86,16 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallElse g _ _ _ _ err rest => A.ruf g && mE A err && mB A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mB A rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mB A rest
-  | .regLies _ _ rest => mB A rest
-  | .regLiesElse _ _ _ sonst rest => mE A sonst && mB A rest
+  | .regRead _ _ rest => mB A rest
+  | .regReadElse _ _ _ sonst rest => mE A sonst && mB A rest
   | .awaits _ _ _ _ rest => mB A rest
   | .exchange _ _ _ _ rest => mB A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mB A rest
-  | .pruefung _ sonst rest => mE A sonst && mB A rest
-  | .gleit _ _ _ _ _ rest => mB A rest
-  | .gleitLit _ _ _ rest => mB A rest
-  | .gleitVon _ _ _ rest => mB A rest
-  | .gleitNarrow _ _ _ sonst rest => mE A sonst && mB A rest
+  | .check _ sonst rest => mE A sonst && mB A rest
+  | .float _ _ _ _ _ rest => mB A rest
+  | .floatLit _ _ _ rest => mB A rest
+  | .floatOf _ _ _ rest => mB A rest
+  | .floatNarrow _ _ _ sonst rest => mE A sonst && mB A rest
 
 def mArms (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -110,7 +110,7 @@ def mGArms (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => mS A s && mE A rest
@@ -151,7 +151,7 @@ variable {V : Vertrag D} {l : Bool}
 theorem mB_alsBlock (A : Merkmal D) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), mB A e.alsBlock.2 = mE A e
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by

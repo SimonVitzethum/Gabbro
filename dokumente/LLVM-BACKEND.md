@@ -404,7 +404,7 @@ here simplifies a case, the register wins.
 | Model/surface boundary | Remaining work | Refusal |
 |---|---|---|
 | `Deklaration.maskiert` | lowered (`llvm/masken.rs`); open: the hardware run (privileged), nesting of masks beyond save/restore per lock | `Y102` for a word other than `irqs` |
-| `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register lowers to `in`/`out` on x86_64 (`llvm/portraum.rs`) and is refused `Y102` on aarch64, `gift/1470`, which has no port space) | `Y10x` |
+| `Deklaration.Reg`, `Stmt.regWrite`, `Block.regRead*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register lowers to `in`/`out` on x86_64 (`llvm/portraum.rs`) and is refused `Y102` on aarch64, `gift/1470`, which has no port space) | `Y10x` |
 | `Stmt.publish` with payload, `Stmt.locks` shared | lowered (release/acquire; reader/writer lock); the Lean side stays OFFEN O25 for unguarded payloads and the lock primitive is unproved in Lean | – |
 | `Deklaration.Ax`, `Block.bindAxiom*` | paired/unbound gates; stack gates and `child` lowered (`llvm/stapeltor.rs`), `aarch64` only where the program binds an `aarch64` gate | `Y102` |
 | `Programm.unterbricht` | x86_64 entries and aarch64 vector-table entries lowered (`llvm/eintritte.rs`), asm bodies (`llvm/assembler.rs`); open: stack switch/IST, EOI, the IDT / VBAR write itself, boot/entrust (refused by name: foreign bodies in the model) | `Y102` |

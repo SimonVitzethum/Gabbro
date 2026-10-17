@@ -70,7 +70,7 @@ theorem d4_call_tor {V : Vertrag D4} {l : Bool} {Γ : Ctx}
   simp only [execStmt, ht]
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
   | ok σ' v => intro h; cases h
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
   | hardware e => intro h; cases h
 
@@ -103,14 +103,14 @@ theorem ein4_R : KoerperGutR P4 0 ein4 := by
       cases h1
       unfold EnsAmRueck
       rw [ens_ein4]
-      show decide ((σ.slots t4 (ρ.get (.dort .hier)).n f4).n ≤
-        (σ2.slots t4 (ρ.get (.dort .hier)).n f4).n) = true
-      have e3 := (hfr (ρ.get (.dort .hier)).n f4).trans
+      show decide ((σ.slots t4 (ρ.get (.there .here)).n f4).n ≤
+        (σ2.slots t4 (ρ.get (.there .here)).n f4).n) = true
+      have e3 := (hfr (ρ.get (.there .here)).n f4).trans
         (storeSlot_hit (D := D4) _ t4 _ f4 _)
-      have h100 : (σ2.slots t4 (ρ.get (.dort .hier)).n f4).n = 100 :=
+      have h100 : (σ2.slots t4 (ρ.get (.there .here)).n f4).n = 100 :=
         (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
       apply decide_eq_true
-      exact Int.le_trans (σ.slots t4 (ρ.get (.dort .hier)).n f4).le_hi (Int.le_of_eq h100.symm)
+      exact Int.le_trans (σ.slots t4 (ρ.get (.there .here)).n f4).le_hi (Int.le_of_eq h100.symm)
     · rename_i r _
       exact r.elim0
     · cases h2
@@ -208,14 +208,14 @@ theorem env4 : EnvRel EL4 (zert104[0]'(by decide)).lay rho7 rho0 := by
   refine ⟨?_, fun q hq => absurd hq List.not_mem_nil, fun q hq => absurd hq List.not_mem_nil⟩
   intro τ x
   cases x with
-  | hier => exact ⟨t4, rfl, rfl⟩
-  | dort y =>
+  | here => exact ⟨t4, rfl, rfl⟩
+  | there y =>
       cases y with
-      | hier => rfl
-      | dort z =>
+      | here => rfl
+      | there z =>
           cases z with
-          | hier => rfl
-          | dort w => exact nomatch w
+          | here => rfl
+          | there w => exact nomatch w
 
 /-- **WITNESS of `schlusssatz` on 104** (every premise of the theorem holds
     jointly: the chain `kette_104`, the oracle `O4` with the hardware

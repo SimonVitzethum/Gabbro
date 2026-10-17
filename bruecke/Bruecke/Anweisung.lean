@@ -37,8 +37,8 @@ def castNachStmt (u : UProg) (caller callee : Fin u.fns.length)
 
 theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
-    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
-    (ht : (declOf u).tabNr t.val = some t)
+    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.wert true))
+    (ht : (declOf u).tabNr t.wert = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2))
     (hw : V.schreibt t = true)
@@ -317,7 +317,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
       · split at h <;> cases h
       · cases h
       · cases h
-  | wert sd =>
+  | val sd =>
     simp only [argExpr] at hb
     simp only [lowCallArgOne, lowCallArgOneL] at h
     split at h
@@ -562,7 +562,7 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
                 simp only [execStmt]
                 cases hR : R callee σr (evalArgs σr a σr ρ) with
                 | ok σ' v => exact .inl ⟨σ', v, rfl, rfl⟩
-                | grund σ' r => exact absurd r.isLt (by have := sigGruende_zero u callee; omega)
+                | why σ' r => exact absurd r.isLt (by have := sigGruende_zero u callee; omega)
                 | logik e => exact .inr (.inl ⟨e, rfl, rfl⟩)
                 | hardware e => exact .inr (.inr ⟨e, rfl, rfl⟩)
           · cases h

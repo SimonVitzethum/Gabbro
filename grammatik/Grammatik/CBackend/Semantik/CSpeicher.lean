@@ -1368,7 +1368,7 @@ def encW {F : Type} {sig : F → Nat} : (τ : Ty) → Val F sig τ → Int
   | .int _ _, v => Zahl.n v
   | .bool, b => if (show Bool from b) then 1 else 0
   | .opt n, o => encOpt n o
-  | .grund n, i => ((show Fin n from i) : Nat)
+  | .why n, i => ((show Fin n from i) : Nat)
   | _, _ => 0
 
 /-- The C cell type holds every encoded value of the Gabbro type: the
@@ -1377,7 +1377,7 @@ def tyFits : Ty → CTy → Bool
   | .int lo hi, .int sgn w => decide (cLo sgn w ≤ lo) && decide (hi ≤ cHi sgn w)
   | .bool, .int sgn w => decide (cLo sgn w ≤ 0) && decide (1 ≤ cHi sgn w)
   | .opt n, .int sgn w => decide (cLo sgn w ≤ 0) && decide (0 ≤ n) && decide (n ≤ cHi sgn w)
-  | .grund n, .int sgn w => decide (cLo sgn w ≤ 0) && decide ((n : Int) ≤ cHi sgn w)
+  | .why n, .int sgn w => decide (cLo sgn w ≤ 0) && decide ((n : Int) ≤ cHi sgn w)
   | _, _ => false
 
 /-- A fitting cell type holds the encoded value: the store's range check
@@ -1420,7 +1420,7 @@ theorem encW_fits {F : Type} {sig : F → Nat} (τ : Ty) (c : CTy) (v : Val F si
                 have := z.le_hi
                 simp only [valFits, encOpt]; exact decide_eq_true ⟨by omega, by omega⟩
           exact ho v
-  | grund n =>
+  | why n =>
       cases c with
       | ptr => exact absurd h (by simp [tyFits])
       | int sgn w =>

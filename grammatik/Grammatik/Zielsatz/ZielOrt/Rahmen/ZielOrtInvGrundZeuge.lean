@@ -128,11 +128,11 @@ theorem igDarf : darf igD () igL := by
 
 def igIdx {Γ : Ctx} {Λ : List (Res igD)} (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 1) :
     Expr igD Γ Λ (.index (igD.count ())) :=
-  .weiter (lo := k) (hi := k) h0 h1 (.lit k)
+  .widen (lo := k) (hi := k) h0 h1 (.lit k)
 
 def igWert {Γ : Ctx} {Λ : List (Res igD)} (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 10) :
     Expr igD Γ Λ (igD.typ () ()) :=
-  .weiter (lo := k) (hi := k) h0 h1 (.lit k)
+  .widen (lo := k) (hi := k) h0 h1 (.lit k)
 
 /-- `invariant gleich: konto[0] == konto[1]`. -/
 def igInv : Expr igD [] (invSicht igD ()) .bool :=
@@ -154,7 +154,7 @@ def igS1 : Stmt igD (vertragVon igD igSetze) false [] igL igL :=
 
 /-- `return R` from `setze`. -/
 def igGrund : Endblock igD (vertragVon igD igSetze) false [] igL :=
-  .retGrund ⟨0, by decide⟩ (List.Perm.refl _)
+  .retWhy ⟨0, by decide⟩ (List.Perm.refl _)
 
 /-- `setze` (correct): both slots `5`, then the reason. -/
 def igRumpfGut : Endblock igD (vertragVon igD igSetze) false [] igL :=
@@ -178,10 +178,10 @@ def igH (Γ : Ctx) (k : Int) (hk0 : 0 ≤ k) (hk1 : k ≤ 1) :
   igSchreib igHaupt rfl (Γ := Γ) k 1 hk0 hk1 (by decide) (by decide)
 
 /-- The reason branch of `haupt`: re-establish, return. -/
-def igErr : Endblock igD (vertragVon igD igHaupt) false (.grund (igD.gruende igSetze) :: [])
+def igErr : Endblock igD (vertragVon igD igHaupt) false (.why (igD.gruende igSetze) :: [])
     (nach igD igSetze igL) :=
   .cons (igH _ 0 (by decide) (by decide)) (.cons (igH _ 1 (by decide) (by decide))
-    (.ret .keine (List.Perm.refl _)))
+    (.ret .empty (List.Perm.refl _)))
 
 /-- `let x = setze() else { r => … }`, the value branch empty. -/
 def igB : Block igD (vertragVon igD igHaupt) false [] igL igL :=
@@ -190,18 +190,18 @@ def igB : Block igD (vertragVon igD igHaupt) false [] igL igL :=
 /-- The tail of `haupt`: re-establish, return. -/
 def igTail : Endblock igD (vertragVon igD igHaupt) false [] igL :=
   .cons (igH [] 0 (by decide) (by decide)) (.cons (igH [] 1 (by decide) (by decide))
-    (.ret .keine (List.Perm.refl _)))
+    (.ret .empty (List.Perm.refl _)))
 
 def igRumpfHaupt : Endblock igD (vertragVon igD igHaupt) false [] igL :=
   .cons (.breaking () igB) igTail
 
 def igRumpfNichts : Endblock igD (vertragVon igD igNichts) false [] [] :=
-  .ret .keine List.Perm.nil
+  .ret .empty List.Perm.nil
 
 def igP (setze : Endblock igD (vertragVon igD igSetze) false [] igL) : Programm igD where
   invariante := fun _ => igInv
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | .haupt => igRumpfHaupt
     | .setze => setze
@@ -272,7 +272,7 @@ theorem igHaupt_fall (S : SperrInv igD) (O : Orakel igD) (U : Umwelt igD) (passe
     (∃ σ1 v1, R igSetze (σ.lese igL []) .nil = .ok σ1 v1 ∧
       execEndH (V := vertragVon igD igHaupt) S O U passes R ((igP setze).rumpf igHaupt) σ ρ =
         execEndH S O U passes R igTail σ1 ρ) ∨
-    (∃ σ1 r1, R igSetze (σ.lese igL []) .nil = .grund σ1 r1 ∧
+    (∃ σ1 r1, R igSetze (σ.lese igL []) .nil = .why σ1 r1 ∧
       execEndH (V := vertragVon igD igHaupt) S O U passes R ((igP setze).rumpf igHaupt) σ ρ =
         (execEndH S O U passes R igErr σ1 (.cons r1 ρ)).schrumpf) ∨
     (∃ e1, R igSetze (σ.lese igL []) .nil = .logik e1 ∧
@@ -286,7 +286,7 @@ theorem igHaupt_fall (S : SperrInv igD) (O : Orakel igD) (U : Umwelt igD) (passe
       show execEndH S O U passes R igRumpfHaupt σ ρ = _
       simp only [igRumpfHaupt, igB, execEndH, execStmtH, execBlockH, Args.orte, evalArgs, hR]
       rfl
-  | grund σ1 r1 =>
+  | why σ1 r1 =>
       refine Or.inr (Or.inl ⟨σ1, r1, rfl, ?_⟩)
       show execEndH S O U passes R igRumpfHaupt σ ρ = _
       simp only [igRumpfHaupt, igB, execEndH, execStmtH, execBlockH, Args.orte, evalArgs, hR]
@@ -564,7 +564,7 @@ theorem igPschlecht_verletzt : ∃ M : RufMaschineG igD,
 theorem igGut_zeuge : ∃ M : RufMaschineG igD,
     RufErreichbarG igPgut igO 0 (RufStartG igPgut igSp igInit) M ∧
     ∃ (r : Fin (igD.gruende igSetze)) (s0 s1 : World igD),
-      RufEreignisF.grund igSetze .nil r s0 s1 ∈ (M.faeden 0).log ∧
+      RufEreignisF.why igSetze .nil r s0 s1 ∈ (M.faeden 0).log ∧
       InvAmRueck igPgut igSetze s1 ∧
       (s1.slots () 0 ()).n = 5 ∧ (s1.slots () 1 ()).n = 5 := by
   obtain ⟨M3, s0, log, hr3, hz3, hw3, hoff3, hsl3⟩ := igVorlauf igRumpfGut
@@ -589,7 +589,7 @@ theorem igGut_zeuge : ∃ M : RufMaschineG igD,
   have hr6 : RufErreichbarG igPgut igO 0 (RufStartG igPgut igSp igInit) M6 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ hr3 s4) s5) s6
   obtain ⟨r, a, b, hm, hb⟩ : ∃ (r : Fin (igD.gruende igSetze)) (a b : World igD),
-      RufEreignisF.grund igSetze .nil r a b ∈ (M6.faeden 0).log ∧ b = M5.weltVon 0 := by
+      RufEreignisF.why igSetze .nil r a b ∈ (M6.faeden 0).log ∧ b = M5.weltVon 0 := by
     rw [hG6.1]; exact ⟨_, _, _, List.mem_cons_self, rfl⟩
   refine ⟨M6, hr6, r, a, b, hm, (igPgut_zertifiziert M6 hr6).2 0 _ hm _ _ _ _ _ rfl, ?_, ?_⟩
   · rw [hb, hZ5.welt, hZ4.welt, hw3]

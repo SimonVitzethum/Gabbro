@@ -337,7 +337,7 @@ impl VTy {
             VTy::Index { table } => {
                 format!("(.index (gD.count {}))", tab_ctor(model, *table))
             }
-            VTy::Grund { n } => format!("(.grund {n})"),
+            VTy::Grund { n } => format!("(.why {n})"),
             VTy::Sum { cases, .. } => format!("(.sum {})", sum_list(cases)),
             VTy::Nie => ".never".to_string(),
         }
@@ -762,7 +762,7 @@ fn refuse_linear(t: &TypDecl) -> Refusal {
 fn refuse_kein_ty(t: &TypDecl, r: &TypExpr) -> Refusal {
     let grund: &str = match r {
         TypExpr::Float(_) => "a float alias is `Ty.fl lo hi` with its bounds as FRACTIONS, and \
-            this exporter builds no `Ty.fl` and none of the `Block.gleit*` statements",
+            this exporter builds no `Ty.fl` and none of the `Block.float*` statements",
         TypExpr::Feld(_) => "an array alias has no `Ty` at all: a row of values is a `Tab` with \
             that many slots (`Syntax.lean` §9), not one `Wert`",
         TypExpr::FnZeiger(_) => "a function-pointer alias is `Ty.fnptr n`, where `n` is the \
@@ -1007,15 +1007,15 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                     let wo = other.name().map(|n| format!(" {}", n.text)).unwrap_or_default();
                     let grund: &str = match other {
                         ItemArt::Device(_) => "a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, \
-                            and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`",
+                            and its accesses are `Block.regRead`/`Stmt.regWrite`; this exporter builds no `Reg`",
                         ItemArt::Format(_) => "a `format` is a `Tab` with `count 1` whose `where` clauses are \
-                            `Block.pruefung` (Syntax.lean §9); this exporter builds no such table",
+                            `Block.check` (Syntax.lean §9); this exporter builds no such table",
                         ItemArt::Gruppe(_) => "a `group` is a `D.Inv` over more than one carrier (Syntax.lean §11); \
                             this exporter writes `Inv := Empty`",
                         ItemArt::Accumulates(_) => "an `accumulates` is a `Glob` plus a generated assignment \
                             (Syntax.lean §11); this exporter generates none",
                         ItemArt::State(_) => "a `state` declaration fills `D.erlaubt`, and its assignments are \
-                            `Stmt.uebergang`; this exporter writes `erlaubt := fun _ _ _ _ => false`",
+                            `Stmt.shift`; this exporter writes `erlaubt := fun _ _ _ _ => false`",
                         ItemArt::Axiom(_) | ItemArt::Entrust(_) =>
                             "a foreign body is `D.Ax` with `aparams`/`aerg`/`aschreibt`, called through \
                             `Stmt.axiomCall`/`Block.bindAxiom`; this exporter builds an `Ax` only for a \
@@ -1828,8 +1828,8 @@ fn read_record(t: &TypDecl, felder: &[FeldDecl], scope: &Scope) -> Result<TableM
                 "LG002",
                 format!(
                     "field {} of record {} carries a `format` clause (`@bitpos`, \
-                     `offset_into`, `where`, `reserved`); a `where` is `Block.pruefung` and \
-                     the byte views are `Expr.leseBytes`, and this exporter builds neither",
+                     `offset_into`, `where`, `reserved`); a `where` is `Block.check` and \
+                     the byte views are `Expr.getBytes`, and this exporter builds neither",
                     f.name.text, t.name.text
                 ),
             ));
@@ -2587,9 +2587,9 @@ impl<'a> Ctx<'a> {
     /// The de Bruijn variable at stack position `j`.
     fn var(&self, j: usize) -> String {
         let depth = if self.with_result { j + 1 } else { j };
-        let mut s = ".hier".to_string();
+        let mut s = ".here".to_string();
         for _ in 0..depth {
-            s = format!("(.dort {s})");
+            s = format!("(.there {s})");
         }
         format!("(.var {s})")
     }
@@ -2692,7 +2692,7 @@ fn glob_read(
         )));
     }
     let proof = gdarf_at(ctx, model, fname, gi, out);
-    let ctor = if alt { "Expr.altGlob" } else { "Expr.glob" };
+    let ctor = if alt { "Expr.oldG" } else { "Expr.glob" };
     Some(Ok((
         format!("({ctor} (D := gD) {} {proof})", glob_ctor(model, gi)),
         model.globs[gi].ty.clone(),
@@ -2767,7 +2767,7 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
             } else {
                 Err(refuse("LG004", format!(
                     "a value of the tagged type {a} in {fname} is no value of {b}, and `Ty.sum` \
-                     has no widening (`Expr.weiter` is over integer ranges)")))
+                     has no widening (`Expr.widen` is over integer ranges)")))
             }
         }
         _ => {
@@ -2780,7 +2780,7 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
             if alo == elo && ahi == ehi {
                 Ok(base)
             } else if elo <= alo && ahi <= ehi {
-                Ok(format!("((.weiter (by decide) (by decide) {base}) : Expr gD {} {} {})",
+                Ok(format!("((.widen (by decide) (by decide) {base}) : Expr gD {} {} {})",
                     ctx.gamma, ctx.lambda, expected.term(model)))
             } else {
                 Err(refuse("LG004", format!("range {alo}..{ahi} in {fname} fits no {}", expected.term(model))))
@@ -2801,7 +2801,7 @@ fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result
             if n < 0 || n >= count {
                 return Err(refuse("LG003", format!("index {n} in {fname} is outside `count {count}`")));
             }
-            Ok(format!("((.weiter (by decide) (by decide) (.lit {n}) : {}))", ctx.index_ty(model, t)))
+            Ok(format!("((.widen (by decide) (by decide) (.lit {n}) : {}))", ctx.index_ty(model, t)))
         }
         ExprArt::Ort(o) if o.suffixe.is_empty() => {
             let Some((j, ty, _)) = ctx.lookup(&o.basis.text) else {
@@ -2876,7 +2876,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
         if !holds_guards(&ctx.held, model, t) {
             return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
         }
-        let index = format!("((.weiter (by decide) (by decide) (.lit 0) : {}))", ctx.index_ty(model, t));
+        let index = format!("((.widen (by decide) (by decide) (.lit 0) : {}))", ctx.index_ty(model, t));
         let ty = model.tables[t].fields[fi].ty.clone();
         return Ok((t, fi, index, Some(j), ty));
     }
@@ -2932,7 +2932,7 @@ fn tagged_case(scope: &Scope, name: &str, fname: &str) -> Result<Option<(String,
             "LG005",
             format!(
                 "the case name {name} in {fname} belongs to more than one tagged type ({}), and \
-                 `Expr.fall` names exactly ONE `Ty.sum`: this exporter has no expected type here \
+                 `Expr.case` names exactly ONE `Ty.sum`: this exporter has no expected type here \
                  to choose with",
                 hits.iter().map(|(t, _)| t.as_str()).collect::<Vec<_>>().join(", ")
             ),
@@ -2959,7 +2959,7 @@ fn tr_fall(
     let vty = VTy::Sum { name: tyname.to_string(), cases: cases.clone() };
     let case_name = cases[ci].0.clone();
     let nutz = match (cases[ci].1, arg) {
-        (None, None) => ".keine".to_string(),
+        (None, None) => ".empty".to_string(),
         (None, Some(_)) => {
             return Err(refuse("LG003", format!(
                 "case {case_name} of {tyname} carries no payload, and {fname} passes one")));
@@ -2970,7 +2970,7 @@ fn tr_fall(
         }
         (Some((lo, hi)), Some(e)) => {
             let v = tr_value(e, &VTy::Int { lo, hi, bits: None }, ctx, model, scope, fname, out)?;
-            format!("(.zahl {v})")
+            format!("(.num {v})")
         }
     };
     // Fully ascribed: `Expr.fall` leaves `Γ`/`Λ`/`D` implicit, and an
@@ -2978,7 +2978,7 @@ fn tr_fall(
     // leave them metavariables while the `Fin` proof elaborates.
     Ok((
         format!(
-            "((.fall {} ⟨{ci}, by decide⟩ {nutz}) : Expr gD {} {} {})",
+            "((.case {} ⟨{ci}, by decide⟩ {nutz}) : Expr gD {} {} {})",
             sum_list(&cases),
             ctx.gamma,
             ctx.lambda,
@@ -3003,8 +3003,8 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             let n = i128::try_from(*n).map_err(|_| refuse("LG003", format!("literal in {fname} too large")))?;
             Ok((lit_term(n, ctx), VTy::Int { lo: n, hi: n, bits: None }))
         }
-        ExprArt::Wahr => Ok((".wahr".to_string(), VTy::Bool)),
-        ExprArt::Falsch => Ok((".falsch".to_string(), VTy::Bool)),
+        ExprArt::Wahr => Ok((".tru".to_string(), VTy::Bool)),
+        ExprArt::Falsch => Ok((".fls".to_string(), VTy::Bool)),
         ExprArt::Ort(o) if o.suffixe.is_empty() => {
             // A limit word (`u32::max`) travels as its number.
             if let Some((_, _, wert)) = crate::umgebung::grenzwort(o) {
@@ -3044,7 +3044,7 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             let (t, fi, index, through, ty) = slot_access(o, ctx, model, fname)?;
             let proof = darf_at(ctx, model, fname, t, out);
             let base = if let Some(j) = through {
-                format!("(Expr.durch (D := gD) {} {} rfl {} ({index}) {proof})", ctx.var(j), tab_ctor(model, t), feld_ctor(model, t, fi))
+                format!("(Expr.thru (D := gD) {} {} rfl {} ({index}) {proof})", ctx.var(j), tab_ctor(model, t), feld_ctor(model, t, fi))
             } else {
                 format!("(Expr.slot (D := gD) {} {} ({index}) {proof})", tab_ctor(model, t), feld_ctor(model, t, fi))
             };
@@ -3060,7 +3060,7 @@ fn tr_typed(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out:
             let Some(ty) = ctx.cf.result.clone() else {
                 return Err(refuse("LG003", format!("`result` in {fname} has no G form here")));
             };
-            Ok(("(.var .hier)".to_string(), ty))
+            Ok(("(.var .here)".to_string(), ty))
         }
         ExprArt::Klammer(x) => tr_typed(x, ctx, model, scope, fname, out),
         ExprArt::Binaer(op, a, b) => tr_binaer(*op, a, b, ctx, model, scope, fname, out),
@@ -3160,7 +3160,7 @@ fn tr_binaer(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sc
             }
             let term = match op {
                 BinOp::Gleich => format!("(.eq {la} {lb})"),
-                BinOp::Ungleich => format!("(.nicht (.eq {la} {lb}))"),
+                BinOp::Ungleich => format!("(.not (.eq {la} {lb}))"),
                 BinOp::Kleiner => format!("(.lt {la} {lb})"),
                 BinOp::KleinerGleich => format!("(.le {la} {lb})"),
                 BinOp::Groesser => format!("(.lt {lb} {la})"),
@@ -3177,7 +3177,7 @@ fn tr_unaer(op: UnOp, x: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: 
     match op {
         UnOp::Nicht => {
             let e = tr_bool(x, ctx, model, scope, fname, out)?;
-            Ok((format!("(.nicht {e})"), VTy::Bool))
+            Ok((format!("(.not {e})"), VTy::Bool))
         }
         UnOp::Negativ => {
             let (e, ty) = tr_typed(x, ctx, model, scope, fname, out)?;
@@ -3368,7 +3368,7 @@ fn tr_old(o: &Ort, ctx: &Ctx, model: &Model, fname: &str, out: &mut Out) -> Resu
         return Err(refuse("LG003", format!("`old` of {} in {fname} has no G form", o.text())));
     }
     let proof = darf_at(ctx, model, fname, t, out);
-    Ok((format!("(Expr.altSlot (D := gD) {} {} ({index}) {proof})", tab_ctor(model, t), feld_ctor(model, t, fi)), ty))
+    Ok((format!("(Expr.oldS (D := gD) {} {} ({index}) {proof})", tab_ctor(model, t), feld_ctor(model, t, fi)), ty))
 }
 
 /// One side of an `ensures` comparison: the term and its type.
@@ -3394,7 +3394,7 @@ fn tr_side(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: 
             let (t, fi, index, through, ty) = slot_access(o, ctx, model, fname)?;
             let proof = darf_at(ctx, model, fname, t, out);
             let base = if let Some(j) = through {
-                format!("(Expr.durch (D := gD) {} {} rfl {} ({index}) {proof})", ctx.var(j), tab_ctor(model, t), feld_ctor(model, t, fi))
+                format!("(Expr.thru (D := gD) {} {} rfl {} ({index}) {proof})", ctx.var(j), tab_ctor(model, t), feld_ctor(model, t, fi))
             } else {
                 format!("(Expr.slot (D := gD) {} {} ({index}) {proof})", tab_ctor(model, t), feld_ctor(model, t, fi))
             };
@@ -3407,7 +3407,7 @@ fn tr_side(e: &Expr, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: 
             let Some(ty) = ctx.cf.result.clone() else {
                 return Err(refuse("LG003", format!("`result` in {fname} has no G form here")));
             };
-            Ok(("(.var .hier)".to_string(), ty))
+            Ok(("(.var .here)".to_string(), ty))
         }
         ExprArt::Alt(o) => tr_old(o, ctx, model, fname, out),
         ExprArt::Klammer(x) => tr_side(x, ctx, model, scope, fname, out),
@@ -3427,7 +3427,7 @@ fn tr_cmp(op: &BinOp, l: &Expr, r: &Expr, ctx: &Ctx, model: &Model, scope: &Scop
     // `.eq`/`.lt`/`.le` read both sides as they stand.
     match op {
         BinOp::Gleich => Ok(format!("(.eq {ls} {rs})")),
-        BinOp::Ungleich => Ok(format!("(.nicht (.eq {ls} {rs}))")),
+        BinOp::Ungleich => Ok(format!("(.not (.eq {ls} {rs}))")),
         BinOp::Kleiner => Ok(format!("(.lt {ls} {rs})")),
         BinOp::KleinerGleich => Ok(format!("(.le {ls} {rs})")),
         BinOp::Groesser => Ok(format!("(.lt {rs} {ls})")),
@@ -3589,14 +3589,14 @@ fn tr_ensures(p: &Pred, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, ou
     match &p.art {
         PredArt::Vergleich(e) => match &e.art {
             ExprArt::Binaer(op, l, r) if op.ist_vergleich() => tr_cmp(op, l, r, ctx, model, scope, fname, out),
-            ExprArt::Wahr => Ok(".wahr".to_string()),
-            ExprArt::Falsch => Ok(".falsch".to_string()),
+            ExprArt::Wahr => Ok(".tru".to_string()),
+            ExprArt::Falsch => Ok(".fls".to_string()),
             _ => Err(refuse("LG003", format!("{}-clause in {fname} has no G form", ctx.quelle()))),
         },
         PredArt::Klammer(q) => tr_ensures(q, ctx, model, scope, fname, out),
-        PredArt::Und(a, b) => Ok(format!("(.und {} {})", tr_ensures(a, ctx, model, scope, fname, out)?, tr_ensures(b, ctx, model, scope, fname, out)?)),
-        PredArt::Oder(a, b) => Ok(format!("(.oder {} {})", tr_ensures(a, ctx, model, scope, fname, out)?, tr_ensures(b, ctx, model, scope, fname, out)?)),
-        PredArt::Nicht(q) => Ok(format!("(.nicht {})", tr_ensures(q, ctx, model, scope, fname, out)?)),
+        PredArt::Und(a, b) => Ok(format!("(.and {} {})", tr_ensures(a, ctx, model, scope, fname, out)?, tr_ensures(b, ctx, model, scope, fname, out)?)),
+        PredArt::Oder(a, b) => Ok(format!("(.or {} {})", tr_ensures(a, ctx, model, scope, fname, out)?, tr_ensures(b, ctx, model, scope, fname, out)?)),
+        PredArt::Nicht(q) => Ok(format!("(.not {})", tr_ensures(q, ctx, model, scope, fname, out)?)),
         _ => Err(refuse("LG003", format!("{}-clause in {fname} has no G form", ctx.quelle()))),
     }
 }
@@ -3931,10 +3931,10 @@ fn tr_ret_end(e: &Option<Expr>, ctx: &Ctx, model: &Model, scope: &Scope, fname: 
         return Err(refuse("LG004", format!("`return` under `locks` in {fname} has no G form")));
     }
     match (&ctx.cf.result, e) {
-        (None, None) => Ok("(.ret .keine (List.Perm.refl _))".to_string()),
+        (None, None) => Ok("(.ret .empty (List.Perm.refl _))".to_string()),
         (Some(ty), Some(v)) => {
             let val = tr_value(v, ty, ctx, model, scope, fname, out)?;
-            Ok(format!("(.ret (.wert {val}) (List.Perm.refl _))"))
+            Ok(format!("(.ret (.val {val}) (List.Perm.refl _))"))
         }
         _ => Err(refuse("LG004", format!("`return` in {fname} disagrees with its result"))),
     }
@@ -3947,10 +3947,10 @@ fn tr_ret_stmt(e: &Option<Expr>, ctx: &Ctx, model: &Model, scope: &Scope, fname:
         return Err(refuse("LG004", format!("`return` under `locks` in {fname} has no G form")));
     }
     match (&ctx.cf.result, e) {
-        (None, None) => Ok("(.ret .keine (List.Perm.refl _))".to_string()),
+        (None, None) => Ok("(.ret .empty (List.Perm.refl _))".to_string()),
         (Some(ty), Some(v)) => {
             let val = tr_value(v, ty, ctx, model, scope, fname, out)?;
-            Ok(format!("(.ret (.wert {val}) (List.Perm.refl _))"))
+            Ok(format!("(.ret (.val {val}) (List.Perm.refl _))"))
         }
         _ => Err(refuse("LG004", format!("`return` in {fname} disagrees with its result"))),
     }
@@ -4002,7 +4002,7 @@ fn tr_on_tag(m: &MatchStmt, rest_empty_tail: bool, ctx: &Ctx, model: &Model, sco
         return Err(refuse("LG004", format!(
             "`match` in {fname} is not over a `tagged` value: the specification carries an \
              `option` match as `Stmt.onOption` (with `Ty.opt`/`Expr.some`/`Expr.istSome`) and a \
-             reason match as `Stmt.onGrund`; this exporter builds neither")));
+             reason match as `Stmt.onWhy`; this exporter builds neither")));
     };
     for z in &m.zweige {
         if !cases.iter().any(|(n, _)| n == &z.variante.text) {
@@ -4102,7 +4102,7 @@ fn tr_traverse(t: &Traverse, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Che
     };
     // The invariant is over the outer context (the binder is not in scope).
     let inv = match &t.invariante {
-        None => ".wahr".to_string(),
+        None => ".tru".to_string(),
         Some(p) => tr_inv_bool(p, ctx, model, scope, fname, out)?,
     };
     let inner = ctx.looping(t.variable.text.clone(), ti);
@@ -4118,14 +4118,14 @@ fn tr_inv_bool(p: &Pred, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, o
                 let (term, _) = tr_cmp_bool(op, l, r, ctx, model, scope, fname, out)?;
                 Ok(term)
             }
-            ExprArt::Wahr => Ok(".wahr".to_string()),
-            ExprArt::Falsch => Ok(".falsch".to_string()),
+            ExprArt::Wahr => Ok(".tru".to_string()),
+            ExprArt::Falsch => Ok(".fls".to_string()),
             _ => Err(refuse("LG006", format!("loop invariant in {fname} has no G form"))),
         },
         PredArt::Klammer(q) => tr_inv_bool(q, ctx, model, scope, fname, out),
-        PredArt::Und(a, b) => Ok(format!("(.und {} {})", tr_inv_bool(a, ctx, model, scope, fname, out)?, tr_inv_bool(b, ctx, model, scope, fname, out)?)),
-        PredArt::Oder(a, b) => Ok(format!("(.oder {} {})", tr_inv_bool(a, ctx, model, scope, fname, out)?, tr_inv_bool(b, ctx, model, scope, fname, out)?)),
-        PredArt::Nicht(q) => Ok(format!("(.nicht {})", tr_inv_bool(q, ctx, model, scope, fname, out)?)),
+        PredArt::Und(a, b) => Ok(format!("(.and {} {})", tr_inv_bool(a, ctx, model, scope, fname, out)?, tr_inv_bool(b, ctx, model, scope, fname, out)?)),
+        PredArt::Oder(a, b) => Ok(format!("(.or {} {})", tr_inv_bool(a, ctx, model, scope, fname, out)?, tr_inv_bool(b, ctx, model, scope, fname, out)?)),
+        PredArt::Nicht(q) => Ok(format!("(.not {})", tr_inv_bool(q, ctx, model, scope, fname, out)?)),
         _ => Err(refuse("LG006", format!("loop invariant in {fname} has no G form"))),
     }
 }
@@ -4139,7 +4139,7 @@ fn tr_cmp_bool(op: &BinOp, l: &Expr, r: &Expr, ctx: &Ctx, model: &Model, scope: 
     }
     let term = match op {
         BinOp::Gleich => format!("(.eq {la} {lb})"),
-        BinOp::Ungleich => format!("(.nicht (.eq {la} {lb}))"),
+        BinOp::Ungleich => format!("(.not (.eq {la} {lb}))"),
         BinOp::Kleiner => format!("(.lt {la} {lb})"),
         BinOp::KleinerGleich => format!("(.le {la} {lb})"),
         BinOp::Groesser => format!("(.lt {lb} {la})"),
@@ -4204,7 +4204,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                     VTy::Ptr { write: true, .. } => {},
                     _ => return Err(refuse("LG004", format!("write through a read-only pointer in {fname}"))),
                 }
-                format!("(.assignDurch {} {} rfl {} ({index}) {val} (by decide) {proof})",
+                format!("(.assignThru {} {} rfl {} ({index}) {val} (by decide) {proof})",
                     ctx.var(j), tab_ctor(model, t), feld_ctor(model, t, fi))
             } else {
                 format!("(.assignSlot {} {} ({index}) {val} (by decide) {proof})",
@@ -4789,7 +4789,7 @@ fn check_body(cf: &CheckedFn, _model: &Model) -> Result<(), Refusal> {
 fn tr_endblock(cf: &CheckedFn, model: &Model, scope: &Scope, fns: &[CheckedFn], out: &mut Out) -> Result<String, Refusal> {
     let mut ctx = body_ctx(cf, model);
     tr_rest(&cf.body.anweisungen, &mut ctx, model, scope, fns, &cf.name, out,
-        "(.ret .keine (List.Perm.refl _))".to_string(), true)
+        "(.ret .empty (List.Perm.refl _))".to_string(), true)
 }
 
 /// One `ensures` contract as an `Expr` term (`.wahr` where there is none).
@@ -4803,7 +4803,7 @@ fn tr_contract(cf: &CheckedFn, model: &Model, scope: &Scope, out: &mut Out) -> R
     let mut acc = first;
     for p in it {
         let t = tr_ensures(p, &ctx, model, scope, &cf.name, out)?;
-        acc = format!("(.und {acc} {t})");
+        acc = format!("(.and {acc} {t})");
     }
     Ok(Some(acc))
 }
@@ -4821,7 +4821,7 @@ fn tr_contract_requires(cf: &CheckedFn, model: &Model, scope: &Scope, out: &mut 
     let mut acc = first;
     for p in it {
         let t = tr_ensures(p, &ctx, model, scope, &cf.name, out)?;
-        acc = format!("(.und {acc} {t})");
+        acc = format!("(.and {acc} {t})");
     }
     Ok(Some(acc))
 }
@@ -5737,12 +5737,12 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("  invariante := fun i => nomatch i\n");
     out.push_str("  requires\n");
     for f in fns {
-        let rhs = if f.requires.is_empty() { ".wahr".to_string() } else { format!("gReq_{}", lean_fn(&f.name)) };
+        let rhs = if f.requires.is_empty() { ".tru".to_string() } else { format!("gReq_{}", lean_fn(&f.name)) };
         out.push_str(&format!("    | .{} => {rhs}\n", lean_fn(&f.name)));
     }
     out.push_str("  ensures\n");
     for f in fns {
-        let rhs = if f.ensures.is_empty() { ".wahr".to_string() } else { format!("gEns_{}", lean_fn(&f.name)) };
+        let rhs = if f.ensures.is_empty() { ".tru".to_string() } else { format!("gEns_{}", lean_fn(&f.name)) };
         out.push_str(&format!("    | .{} => {rhs}\n", lean_fn(&f.name)));
     }
     out.push_str("  rumpf\n");

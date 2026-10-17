@@ -262,18 +262,18 @@ def miniV0 : ErgVal miniContrD (miniContrD.erg fTrue) :=
 
 /-- `requires`: the parameter equals 2. -/
 def miniReq : Expr miniContrD (miniContrD.params fTrue) [] .bool :=
-  .eq (.var .hier)
-    ((.weiter (by decide) (by decide) (.lit 2) :
+  .eq (.var .here)
+    ((.widen (by decide) (by decide) (.lit 2) :
       Expr miniContrD (miniContrD.params fTrue) [] (.int 0 5)))
 
 /-- `ensures`: the result equals the parameter plus one.
-    Context `[.int 0 5, .int 0 5]`: result at `.hier`, parameter at `.dort .hier`. -/
+    Context `[.int 0 5, .int 0 5]`: result at `.here`, parameter at `.there .here`. -/
 def miniEnsLit : Expr miniContrD [.int 0 5, .int 0 5] [] .bool :=
-  .eq (.weiter (by decide) (by decide) (.var .hier) :
+  .eq (.widen (by decide) (by decide) (.var .here) :
       Expr miniContrD [.int 0 5, .int 0 5] [] (.int 0 6))
-    (.weiter (by decide) (by decide)
-      (.add (.var (.dort .hier))
-        (.weiter (by decide) (by decide) (.lit 1) :
+    (.widen (by decide) (by decide)
+      (.add (.var (.there .here))
+        (.widen (by decide) (by decide) (.lit 1) :
           Expr miniContrD [.int 0 5, .int 0 5] [] (.int 0 1))) :
       Expr miniContrD [.int 0 5, .int 0 5] [] (.int 0 6))
 
@@ -291,8 +291,8 @@ def miniContrP : Programm miniContrD where
   requires := fun _ => miniReq
   ensures := fun _ => miniEnsCtx ▸ miniEnsLit
   rumpf
-    | true => .ret (.wert (.var .hier)) (List.Perm.refl [])
-    | false => .ret (.wert (.var .hier)) (List.Perm.refl [])
+    | true => .ret (.val (.var .here)) (List.Perm.refl [])
+    | false => .ret (.val (.var .here)) (List.Perm.refl [])
 
 /-- The empty world over the tiny declaration (all-true slots). -/
 def miniWelt : World miniContrD :=

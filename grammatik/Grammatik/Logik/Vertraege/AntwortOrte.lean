@@ -4,7 +4,7 @@
              (round-6 finding W1, 2026-09-15).
 
   THE FINDING (W1). `HaltArt.nieZurueck` named every axiom call or register read whose
-  declared answer type is EMPTY (`AntwortLeer`): `never`, `.grund 0`, an empty range, a sum
+  declared answer type is EMPTY (`AntwortLeer`): `never`, `.why 0`, an empty range, a sum
   without a value, a pointer type no function has. Its reason in Spec's ONE list -- "the
   continuation is unreachable in the C as in G" -- is true only for an axiom `-> never`,
   whose C prototype is `_Noreturn`. For every other empty type, and for every register, the
@@ -42,7 +42,7 @@ def Stmt.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .ite _ t e => t.ants ++ e.ants
   | .onOption _ p a => p.ants ++ a.ants
   | .onTag _ arms => arms.ants
-  | .onGrund _ arms => arms.ants
+  | .onWhy _ arms => arms.ants
   | .locks _ _ body => body.ants
   | .breaking _ body => body.ants
   | .traverse _ _ body => body.ants
@@ -63,21 +63,21 @@ def Block.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
-  | .regLies r _ rest => .inr r :: rest.ants
-  | .regLiesElse r _ _ sonst rest => .inr r :: (sonst.ants ++ rest.ants)
+  | .regRead r _ rest => .inr r :: rest.ants
+  | .regReadElse r _ _ sonst rest => .inr r :: (sonst.ants ++ rest.ants)
   | .awaits _ _ _ _ rest => rest.ants
   | .exchange _ _ _ _ rest => rest.ants
   | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
-  | .pruefung _ sonst rest => sonst.ants ++ rest.ants
-  | .gleit _ _ _ _ _ rest => rest.ants
-  | .gleitLit _ _ _ rest => rest.ants
-  | .gleitVon _ _ _ rest => rest.ants
-  | .gleitNarrow _ _ _ sonst rest => sonst.ants ++ rest.ants
+  | .check _ sonst rest => sonst.ants ++ rest.ants
+  | .float _ _ _ _ _ rest => rest.ants
+  | .floatLit _ _ _ rest => rest.ants
+  | .floatOf _ _ _ rest => rest.ants
+  | .floatNarrow _ _ _ sonst rest => sonst.ants ++ rest.ants
 
 def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List (D.Ax ⊕ D.Reg)
   | .ret .. => []
-  | .retGrund .. => []
+  | .retWhy .. => []
   | .leave .. => []
   | .next .. => []
   | .cons s rest => s.ants ++ rest.ants
@@ -118,7 +118,7 @@ theorem stelleC_iff {x : D.Ax ⊕ D.Reg} : stelleC D x = true ↔ StelleOk D x :
 theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.ants = e.ants
   | _, _, .ret _ _ => rfl
-  | _, _, .retGrund _ _ => rfl
+  | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by

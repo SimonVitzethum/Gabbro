@@ -210,7 +210,7 @@ def kProg (c : KCert D) : CProg := fun n =>
 /-- Every variable of a context, with its type. -/
 def varsOf : (Γ : Ctx) → List (Σ τ, Var Γ τ)
   | [] => []
-  | τ :: Γ => ⟨τ, .hier⟩ :: (varsOf Γ).map fun p => ⟨p.1, .dort p.2⟩
+  | τ :: Γ => ⟨τ, .here⟩ :: (varsOf Γ).map fun p => ⟨p.1, .there p.2⟩
 
 /-- A type is a pointer to table `t`. -/
 def istZeigerAuf (t : D.Tab) : Ty → Bool
@@ -256,21 +256,21 @@ def exOk {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) (c : CX) : Bool :=
   -- explicit conversion `(T)(e)` (`u64(a)`, the implicit one made explicit): then `T` must hold the
   -- operand's range, so the cast keeps the number (`ecorr_cast`). The recursion is on the Gabbro
   -- operand `e`, a subterm, so the check stays structural.
-  | .weiter (lo := lo) (hi := hi) _ _ e, c =>
+  | .widen (lo := lo) (hi := hi) _ _ e, c =>
       exOk e c || (match c with
         | .cast t c' => decide (t.holds lo hi) && exOk e c'
         | _ => false)
   | .slot t f i _, c => match c with
     | .ld (.slotA b ci n ss off) τc => slotOk EL K b n ss off τc t f && exOk i ci
     | _ => false
-  | .durch _ t _ f i _, c => match c with
+  | .thru _ t _ f i _, c => match c with
     | .ld (.slotA b ci n ss off) τc => slotOk EL K b n ss off τc t f && exOk i ci
     | _ => false
   | .ptrOf t _ _ _, c => ptrOk EL K c t
-  | .wahr, c => match c with
+  | .tru, c => match c with
     | .lit m => decide (m = 1)
     | _ => false
-  | .falsch, c => match c with
+  | .fls, c => match c with
     | .lit m => decide (m = 0)
     | _ => false
   | .glob g _, c => match c with
@@ -336,13 +336,13 @@ def exOk {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) (c : CX) : Bool :=
   | .eq (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, c => match c with
     | .cmp .eq t ca cb => randOk t l1 h1 l2 h2 && exOk a ca && exOk b cb
     | _ => false
-  | .und a b, c => match c with
+  | .and a b, c => match c with
     | .land ca cb => exOk a ca && exOk b cb
     | _ => false
-  | .oder a b, c => match c with
+  | .or a b, c => match c with
     | .lor ca cb => exOk a ca && exOk b cb
     | _ => false
-  | .nicht a, c => match c with
+  | .not a, c => match c with
     | .lnot ca => exOk a ca
     | _ => false
   | _, _ => false
@@ -367,8 +367,8 @@ def voidOk (x : Nat) : Bool := (varsOf Γ).any fun p => decide (K.loc p.2 = x)
 
 /-- The answer of a `return`. -/
 def ergOk {Λ : List (Res D)} : {e : Option Ty} → ErgExpr D Γ Λ e → Option (CTy × CX) → Bool
-  | _, .keine, none => true
-  | some τ, .wert e, some (τc, ce) => declOk τ τc && exOk EL K e ce
+  | _, .empty, none => true
+  | some τ, .val e, some (τc, ce) => declOk τ τc && exOk EL K e ce
   | _, _, _ => false
 
 /-- **THE `else` OF A CHECKED REGISTER READ**: a `return`, and nothing else.
@@ -399,7 +399,7 @@ variable (EL : EmitLay D) (fnum : D.Fn → Nat) (c : KCert D)
 def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnvLay D Γ)
     (s0 : Stmt D V l Γ Λ Λ') (r0 : GRow) (GT : GerTafel D := {}) : Bool :=
   match s0, r0 with
-  | .assignDurch _ t _ f i e _ _, r => match r with
+  | .assignThru _ t _ f i e _ _, r => match r with
     | .storeSlot kp ci n ss off τc ce =>
         slotOk EL K (.var kp) n ss off τc t f && exOk EL K i ci && exOk EL K e ce
     | .storeNamed tn ci n ss off τc ce =>
@@ -436,7 +436,7 @@ def stOk0 {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEn
   -- value is any covered expression. `Stmt.regSchreib` is `hardwareFrei`
   -- already (a write has no answer that can fail), so this arm costs the
   -- `hardwareFrei` reading of the check NOTHING.
-  | .regSchreib rg _ e, r => match r with
+  | .regWrite rg _ e, r => match r with
     | .storeReg cp w ce =>
         regAdrOk GT cp rg && decide (w = GT.wid rg) && exOk EL K e ce
     | _ => false
@@ -495,7 +495,7 @@ def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
       -- `T x = (*(volatile T *)(cp));` -- THE DEVICE READ (H9). The answer
       -- is bound to a fresh C local of a type the register's fits.
       | .loadReg y τc cp w => (match b with
-          | .regLies (r := rg) _ rest =>
+          | .regRead (r := rg) _ rest =>
               GT.ein && K.okB && K.freshB y && tyFits (D.rtyp rg) τc &&
                 regAdrOk GT cp rg && decide (w = GT.wid rg) &&
                 blOk (K.push (D.rtyp rg) y) rest rs GT
@@ -505,7 +505,7 @@ def blOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : CEnv
       -- program, and its failure a BRANCH: `sonstOk` decides that branch
       -- against the emitted `return`.
       | .loadRegElse y τc cp w cc cr => (match b with
-          | .regLiesElse (r := rg) _ zusage sonst rest =>
+          | .regReadElse (r := rg) _ zusage sonst rest =>
               GT.ein && K.okB && K.freshB y && tyFits (D.rtyp rg) τc &&
                 regAdrOk GT cp rg && decide (w = GT.wid rg) &&
                 exOk EL (K.push (D.rtyp rg) y) zusage cc &&
@@ -781,7 +781,7 @@ theorem gerSchreib_step (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) (m : N
     (rg : D.Reg) (hkl : (D.rklasse rg).schreibbar = true)
     {e : Expr D Γ Λ (D.rtyp rg)} {cp ce : CX} (hadr : regAdrOk GT cp rg = true)
     (he : ExprCorr X K ce e) :
-    StmtCorr X m K (Stmt.regSchreib (V := V) (l := l) rg hkl e)
+    StmtCorr X m K (Stmt.regWrite (V := V) (l := l) rg hkl e)
       (.vstore cp (.int false (GT.wid rg)) ce) := by
   intro σ st ρG ρC hc hr _
   have hein := regAdrOk_ein hadr
@@ -816,10 +816,10 @@ theorem bsem_regLies (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) (m : Nat)
     (hadr : regAdrOk GT cp rg = true) (hfit : tyFits (D.rtyp rg) τc = true)
     (hK : K.okB = true) (hf : K.freshB x = true)
     (hrest : BlockSem X m (K.push (D.rtyp rg) x) rest cr) :
-    BlockSem X m K (Block.regLies rg hkl rest)
+    BlockSem X m K (Block.regRead rg hkl rest)
       (.seq (.set x τc (.vld cp (.int false (GT.wid rg)))) cr) := by
   intro σ st ρG ρC hc hr hnf
-  have hex : execBlock X.O X.passes X.R (Block.regLies rg hkl rest) σ ρG =
+  have hex : execBlock X.O X.passes X.R (Block.regRead rg hkl rest) σ ρG =
       (match einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) with
        | Option.some v =>
            if D.rzusage rg v then (execBlock X.O X.passes X.R rest σ (.cons v ρG)).schrumpf
@@ -862,12 +862,12 @@ theorem bsem_regLiesElse (X : TVCtx D) (hP : GerAnnahme X.EL X.orc X.O GT) (m : 
     (hzus : ExprCorr X (K.push (D.rtyp rg) x) cc zusage)
     (herg : ErgCorr X K e0 crr)
     (hrest : BlockSem X m (K.push (D.rtyp rg) x) rest cr) :
-    BlockSem X m K (Block.regLiesElse rg hkl zusage (Endblock.ret e0 hΛ) rest)
+    BlockSem X m K (Block.regReadElse rg hkl zusage (Endblock.ret e0 hΛ) rest)
       (.seq (.seq (.set x τc (.vld cp (.int false (GT.wid rg))))
         (.ite (.lnot cc) (.ret crr) .skip)) cr) := by
   intro σ st ρG ρC hc hr hnf
   have hex : execBlock X.O X.passes X.R
-      (Block.regLiesElse rg hkl zusage (Endblock.ret e0 hΛ) rest) σ ρG =
+      (Block.regReadElse rg hkl zusage (Endblock.ret e0 hΛ) rest) σ ρG =
       (match einpassen X.O.zeiger (D.rtyp rg) (X.O.regLies rg σ) with
        | Option.some v =>
            if wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρG)) then
@@ -1018,7 +1018,7 @@ theorem exOk_ld {t : D.Tab} {f : D.Feld t} {e : Expr D Γ Λ (D.typ t f)}
     ends in the lemma. NOTHING new is assumed. -/
 
 theorem exOk_wahr {c : CX} (h : (match c with | .lit m => decide (m = 1) | _ => false) = true) :
-    ExprCorr X K c (Expr.wahr (D := D) (Γ := Γ) (Λ := Λ)) := by
+    ExprCorr X K c (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)) := by
   cases c with
   | lit m =>
       have hm : m = 1 := of_decide_eq_true h
@@ -1027,7 +1027,7 @@ theorem exOk_wahr {c : CX} (h : (match c with | .lit m => decide (m = 1) | _ => 
   | _ => exact absurd h (by simp)
 
 theorem exOk_falsch {c : CX} (h : (match c with | .lit m => decide (m = 0) | _ => false) = true) :
-    ExprCorr X K c (Expr.falsch (D := D) (Γ := Γ) (Λ := Λ)) := by
+    ExprCorr X K c (Expr.fls (D := D) (Γ := Γ) (Λ := Λ)) := by
   cases c with
   | lit m =>
       have hm : m = 0 := of_decide_eq_true h
@@ -1340,7 +1340,7 @@ include iha ihb
 
 theorem exOk_und {c : CX} (h : (match c with
     | .land ca cb => exOk X.EL K a ca && exOk X.EL K b cb
-    | _ => false) = true) : ExprCorr X K c (.und a b) := by
+    | _ => false) = true) : ExprCorr X K c (.and a b) := by
   cases c with
   | land ca cb =>
       simp only [Bool.and_eq_true] at h
@@ -1349,7 +1349,7 @@ theorem exOk_und {c : CX} (h : (match c with
 
 theorem exOk_oder {c : CX} (h : (match c with
     | .lor ca cb => exOk X.EL K a ca && exOk X.EL K b cb
-    | _ => false) = true) : ExprCorr X K c (.oder a b) := by
+    | _ => false) = true) : ExprCorr X K c (.or a b) := by
   cases c with
   | lor ca cb =>
       simp only [Bool.and_eq_true] at h
@@ -1362,7 +1362,7 @@ end BoolArme
 theorem exOk_nicht {a : Expr D Γ Λ .bool} {c : CX}
     (iha : ∀ ca, exOk X.EL K a ca = true → ExprCorr X K ca a)
     (h : (match c with | .lnot ca => exOk X.EL K a ca | _ => false) = true) :
-    ExprCorr X K c (.nicht a) := by
+    ExprCorr X K c (.not a) := by
   cases c with
   | lnot ca => exact ecorr_nicht X K (iha ca h)
   | _ => exact absurd h (by simp)
@@ -1371,7 +1371,7 @@ theorem exOk_sound : ∀ {τ : Ty} (e : Expr D Γ Λ τ) (c : CX), exOk X.EL K e
     ExprCorr X K c e
   | _, .lit _, _, h => exOk_lit X K h
   | _, .var _, _, h => exOk_var X K h
-  | _, .weiter (lo := lo) (hi := hi) h1 h2 e, c, h => by
+  | _, .widen (lo := lo) (hi := hi) h1 h2 e, c, h => by
       simp only [exOk, Bool.or_eq_true] at h
       rcases h with h | h
       · exact ecorr_weiter X K h1 h2 (exOk_sound e c h)
@@ -1381,10 +1381,10 @@ theorem exOk_sound : ∀ {τ : Ty} (e : Expr D Γ Λ τ) (c : CX), exOk X.EL K e
             exact ecorr_weiter X K h1 h2 (ecorr_cast X K t (exOk_sound e c' h.2) h.1)
         | _ => exact absurd h (by simp)
   | _, .slot _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
-  | _, .durch _ _ _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
+  | _, .thru _ _ _ _ i _, _, h => exOk_ld X K h (fun _ _ => rfl) (fun ci hi => exOk_sound i ci hi)
   | _, .ptrOf _ _ _ _, _, h => ecorr_ptrOf X K (ptrOk_sound X K h)
-  | _, .wahr, _, h => exOk_wahr X K h
-  | _, .falsch, _, h => exOk_falsch X K h
+  | _, .tru, _, h => exOk_wahr X K h
+  | _, .fls, _, h => exOk_falsch X K h
   | _, .glob .., _, h => exOk_glob X K h
   | _, .add a b, _, h =>
       exOk_add X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
@@ -1420,23 +1420,23 @@ theorem exOk_sound : ∀ {τ : Ty} (e : Expr D Γ Λ τ) (c : CX), exOk X.EL K e
       exOk_le X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
   | _, .eq a b, _, h =>
       exOk_eqE X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
-  | _, .und a b, _, h =>
+  | _, .and a b, _, h =>
       exOk_und X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
-  | _, .oder a b, _, h =>
+  | _, .or a b, _, h =>
       exOk_oder X K (fun ca hc => exOk_sound a ca hc) (fun cb hc => exOk_sound b cb hc) h
-  | _, .nicht a, _, h => exOk_nicht X K (fun ca hc => exOk_sound a ca hc) h
+  | _, .not a, _, h => exOk_nicht X K (fun ca hc => exOk_sound a ca hc) h
   | _, .fnref .., _, h => absurd h (by simp [exOk])
-  | _, .altGlob .., _, h => absurd h (by simp [exOk])
-  | _, .altSlot .., _, h => absurd h (by simp [exOk])
+  | _, .oldG .., _, h => absurd h (by simp [exOk])
+  | _, .oldS .., _, h => absurd h (by simp [exOk])
   | _, .neg .., _, h => absurd h (by simp [exOk])
-  | _, .leseBytes .., _, h => absurd h (by simp [exOk])
+  | _, .getBytes .., _, h => absurd h (by simp [exOk])
   | _, .fllt .., _, h => absurd h (by simp [exOk])
   | _, .flle .., _, h => absurd h (by simp [exOk])
   | _, .none .., _, h => absurd h (by simp [exOk])
   | _, .some .., _, h => absurd h (by simp [exOk])
   | _, .istSome .., _, h => absurd h (by simp [exOk])
-  | _, .fall .., _, h => absurd h (by simp [exOk])
-  | _, .grund .., _, h => absurd h (by simp [exOk])
+  | _, .case .., _, h => absurd h (by simp [exOk])
+  | _, .why .., _, h => absurd h (by simp [exOk])
   | _, .forallSlots .., _, h => absurd h (by simp [exOk])
   | _, .existsSlots .., _, h => absurd h (by simp [exOk])
   | _, .reaches .., _, h => absurd h (by simp [exOk])
@@ -1446,11 +1446,11 @@ theorem ergOk_sound : ∀ {e : Option Ty} (r : ErgExpr D Γ Λ e) (cr : Option (
     ergOk X.EL K r cr = true → ErgCorr X K r cr := by
   intro e r cr h
   cases r with
-  | keine =>
+  | empty =>
       cases cr with
       | none => rfl
       | some _ => exact absurd h (by simp [ergOk])
-  | wert e =>
+  | val e =>
       cases cr with
       | none => exact absurd h (by simp [ergOk])
       | some q =>
@@ -1512,11 +1512,11 @@ theorem argsTo_of : ∀ {τs : List Ty} (args : Args D Γ Λ τs) (cs : List CX)
       · refine ⟨?_, fun q hq => absurd hq List.not_mem_nil, fun q hq => absurd hq List.not_mem_nil⟩
         intro τ' y
         cases y with
-        | hier =>
+        | here =>
             show ValCorr X.EL τ (eval σ e σ ρG) (lokUpd ρ1 x v x)
             simp only [lokUpd, if_pos]
             exact hv
-        | dort y =>
+        | there y =>
             show ValCorr X.EL τ' ((evalArgs σ rest σ ρG).get y)
               (lokUpd ρ1 x v ((x :: ps.map Prod.fst).getD (y.idx + 1) 0))
             have hy : y.idx < (ps.map Prod.fst).length := by
@@ -1573,7 +1573,7 @@ theorem stOk0_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
       stOk0 X.EL fnum c K₀ s r GT = true → StmtCorr X mm K₀ s (growRow r) := by
   intro mm V l Γ₀ Λ₀ Λ₁ K₀ s r h
   cases s with
-  | assignDurch p t ht f i e hw hL =>
+  | assignThru p t ht f i e hw hL =>
       cases r with
       | storeSlot kp ci n ss off τc ce =>
           simp only [stOk0, Bool.and_eq_true] at h
@@ -1658,7 +1658,7 @@ theorem stOk0_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
                   exact scorr_call X K₀ mm g args hp hr hFk
                     (argsTo_of X K₀ args cargs k.params ha (of_decide_eq_true hnd))
       | _ => exact absurd h (by simp [stOk0])
-  | regSchreib rg hkl e =>
+  | regWrite rg hkl e =>
       cases r with
       | storeReg cp w ce =>
           simp only [stOk0, Bool.and_eq_true] at h
@@ -1761,7 +1761,7 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
               | _ => exact absurd h (by simp [blOk])
           | loadReg y τc cp w =>
               cases b with
-              | regLies rg hkl rest =>
+              | regRead rg hkl rest =>
                   simp only [blOk, Bool.and_eq_true] at h
                   obtain ⟨⟨⟨⟨⟨⟨-, hK⟩, hfr⟩, hfit⟩, hadr⟩, hw⟩, hrest⟩ := h
                   have hw' : w = GT.wid rg := of_decide_eq_true hw
@@ -1771,7 +1771,7 @@ theorem stOkBl_sound (hF : AlleRufe X fnum c) (GT : GerTafel D)
               | _ => exact absurd h (by simp [blOk])
           | loadRegElse y τc cp w cc crr =>
               cases b with
-              | regLiesElse rg hkl zusage sonst rest =>
+              | regReadElse rg hkl zusage sonst rest =>
                   cases sonst with
                   | ret e0 hΛ =>
                       simp only [blOk, sonstOk, Bool.and_eq_true] at h
@@ -2053,11 +2053,11 @@ theorem stOkBl_hardwareFrei (GT : GerTafel D) (hein : GT.ein = false) : ∀ (n :
           -- stands untouched -- which is what the two closed chains need.
           | loadReg y τc cp w =>
               cases b with
-              | regLies rg hkl rest => exact absurd h (by simp [blOk, hein])
+              | regRead rg hkl rest => exact absurd h (by simp [blOk, hein])
               | _ => exact absurd h (by simp [blOk])
           | loadRegElse y τc cp w cc crr =>
               cases b with
-              | regLiesElse rg hkl zusage sonst rest => exact absurd h (by simp [blOk, hein])
+              | regReadElse rg hkl zusage sonst rest => exact absurd h (by simp [blOk, hein])
               | _ => exact absurd h (by simp [blOk])
           | call fc cargs dst =>
               cases dst with
@@ -2136,7 +2136,7 @@ theorem korrOk_hardwareFrei {P : Programm D} {fs : List D.Fn} {GT : GerTafel D}
 /-- **NO CALL OF A CERTIFIED PROGRAM ENDS IN A HARDWARE OUTCOME** -- for a
     certificate that names NO DEVICE (`GT.ein = false`, the default table).
     The premise is not decoration: a certificate that carries a register READ
-    row carries `Block.regLies`/`.regLiesElse`, and those are two of the five
+    row carries `Block.regLies`/`.regReadElse`, and those are two of the five
     sources of a hardware outcome. What the device chain buys is paid for
     HERE, and the price stands in the premise list. -/
 theorem korrOk_rufAt_ohneHardware {P : Programm D} {fs : List D.Fn} {GT : GerTafel D}
@@ -2211,7 +2211,7 @@ CUTS -- what this file does not do, by name.
   `korrOk_rufAt_ohneHardware` (§5 -- a register READ is two of the five
   sources of a hardware outcome, so the reading CANNOT hold for a device
   certificate) and `korrOk_endR` (KorrOkAdaequat.lean -- `BlockR` has both
-  device constructors, but `BlockR.regLiesElse` is stated at `l = false`
+  device constructors, but `BlockR.regReadElse` is stated at `l = false`
   while that induction runs at every `l`). `hardwareFrei` itself is
   UNTOUCHED, and `rufAt_ohneHardware` holds exactly as before for every
   program that avoids the five forms.

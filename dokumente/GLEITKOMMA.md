@@ -17,8 +17,8 @@ scope), and its landmines section is what survived.*
   hi`, `Gleit lo hi`); `f64` without `in` is sugar for the widest finite range. So there is no NaN quadrant:
   `<`/`<=` are total (`Expr.fllt`, `Expr.flle`).
 * `rounded` is compulsory at a literal that is not exactly representable; `narrow x to finite` and float range
-  narrowing are checked branches (`Block.gleitNarrow`); `let y = a op b`, `1.5 rounded`, `f64(n)` are
-  `Block.gleit`/`gleitLit`/`gleitVon`.
+  narrowing are checked branches (`Block.floatNarrow`); `let y = a op b`, `1.5 rounded`, `f64(n)` are
+  `Block.float`/`gleitLit`/`gleitVon`.
 * A result that leaves its declared range or is not finite is **`logik bereich`**: the program's own logic under
   the kernel IEEE model, which the user proves never happens. (Until 2026-09-15 it was a hardware stop,
   `hardware ieee`; verdict F1 of `dokumente/BEWEIS.md` moved it, since the model decides it from
@@ -118,12 +118,12 @@ of Gabbro's result": the assumption is exactly the gap between Annex F and the m
 
 | Emitted C | Gabbro | Lemma |
 |---|---|---|
-| `double c = a op b;` | `Block.gleit` | `gsem_gleit` |
-| `double c = LIT;` | `Block.gleitLit` | `gsem_gleitLit` |
-| `double c = n;` | `Block.gleitVon` | `gsem_gleitVon` |
+| `double c = a op b;` | `Block.float` | `gsem_gleit` |
+| `double c = LIT;` | `Block.floatLit` | `gsem_gleitLit` |
+| `double c = n;` | `Block.floatOf` | `gsem_gleitVon` |
 | `a < b`, `<=`, `>`, `>=` | `Expr.fllt/flle` | `ecorr_fllt/flle/flgt/flge` |
-| `if (!(x >= LO && x <= HI)) {...}` | `Block.gleitNarrow` | `gsem_gleitNarrow` + `narrowCondF_ge_le` |
-| `if (!isfinite(x)) {...}` | `Block.gleitNarrow` (own range) | `gsem_gleitNarrow` + `narrowCondF_endlich` |
+| `if (!(x >= LO && x <= HI)) {...}` | `Block.floatNarrow` | `gsem_gleitNarrow` + `narrowCondF_ge_le` |
+| `if (!isfinite(x)) {...}` | `Block.floatNarrow` (own range) | `gsem_gleitNarrow` + `narrowCondF_endlich` |
 
 Witness: `klemmen_corr` (`CFormenFZeuge.lean`) for `beispiele/26-gleitkomma.gab`. Covered: every float operator,
 comparison, integer conversion and class test written in `double`, as a premise of the correspondence. Not

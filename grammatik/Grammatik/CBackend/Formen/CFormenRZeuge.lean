@@ -146,17 +146,17 @@ abbrev V74s : Vertrag d74 := vertragVon d74 fSchreibe
 /-- The three parameters, `fd` first. -/
 abbrev Γ74 : Ctx := [u64T, u64T, u64T]
 
-def vFd : Var Γ74 u64T := .hier
-def vBuf : Var Γ74 u64T := .dort .hier
-def vLen : Var Γ74 u64T := .dort (.dort .hier)
+def vFd : Var Γ74 u64T := .here
+def vBuf : Var Γ74 u64T := .there .here
+def vLen : Var Γ74 u64T := .there (.there .here)
 
 /-! ## 2. The stand-in body of `write` -/
 
 /-- `if fd == 0 { return BadFd; } return len;` -/
 def rumpfWrite : Endblock d74 V74w false Γ74 [] :=
   .cons (Stmt.ite (Expr.eq (Expr.var vFd) (Expr.lit 0))
-      (.cons (Stmt.retGrund ⟨9, by decide⟩ (List.Perm.refl _)) .nil) .nil)
-    (.ret (.wert (Expr.var vLen)) (List.Perm.refl _))
+      (.cons (Stmt.retWhy ⟨9, by decide⟩ (List.Perm.refl _)) .nil) .nil)
+    (.ret (.val (Expr.var vLen)) (List.Perm.refl _))
 
 /-! ## 3. The body of `schreibe` -/
 
@@ -168,9 +168,9 @@ def armNie {Γ : Ctx} : Block d74 V74s false Γ [] [] :=
 
 /-- `{ return 0; }` -/
 def armNull {Γ : Ctx} : Block d74 V74s false Γ [] [] :=
-  .cons (Stmt.ret (.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _)) .nil
+  .cons (Stmt.ret (.val (Expr.widen (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _)) .nil
 
-abbrev ΓE : Ctx := .grund 12 :: Γ74
+abbrev ΓE : Ctx := .why 12 :: Γ74
 
 /-- The twelve arms: indices 4, 9, 11 are the reasons, all `return 0;`. -/
 def arms74 : GrundArms d74 V74s false ΓE [] [] 12 :=
@@ -180,12 +180,12 @@ def arms74 : GrundArms d74 V74s false ΓE [] [] 12 :=
 
 /-- `else (e) { match e { … } }` -/
 def err74 : Endblock d74 V74s false ΓE [] :=
-  .cons (Stmt.onGrund (Expr.var .hier) arms74)
-    (.ret (.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _))
+  .cons (Stmt.onWhy (Expr.var .here) arms74)
+    (.ret (.val (Expr.widen (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _))
 
 /-- `return n;` -/
 def rest74 : Block d74 V74s false (u64T :: Γ74) [] [] :=
-  .cons (Stmt.ret (.wert (Expr.var .hier)) (List.Perm.refl _)) .nil
+  .cons (Stmt.ret (.val (Expr.var .here)) (List.Perm.refl _)) .nil
 
 def args74 : Args d74 Γ74 [] (d74.params fWrite) :=
   .cons (Expr.var vFd) (.cons (Expr.var vBuf) (.cons (Expr.var vLen) .nil))
@@ -204,12 +204,12 @@ def block74 : Block d74 V74s false Γ74 [] [] :=
 
 def rumpfSchreibe : Endblock d74 V74s false Γ74 [] :=
   .cons (Stmt.breaking () block74)
-    (.ret (.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _))
+    (.ret (.val (Expr.widen (by decide) (by decide) (Expr.lit 0))) (List.Perm.refl _))
 
 def p74 : Programm d74 where
-  invariante := fun _ => .wahr
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  invariante := fun _ => .tru
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf
     | true => rumpfWrite
     | false => rumpfSchreibe
@@ -317,7 +317,7 @@ theorem write_end (wp gp : CPtr) (hsw : ∃ f' x', wp.blk = .stk f' x')
     ecorr_eq xW74 k74 CIT.u64 (ecorr_var xW74 k74 vFd) (ecorr_lit xW74 k74 0)
       ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
   have ht : BlockSemG xW74 0 ⟨[], some (κ74 wp gp)⟩ k74
-      (Block.cons (Stmt.retGrund (V := V74w) (l := false) ⟨9, by decide⟩ (List.Perm.refl _)) .nil)
+      (Block.cons (Stmt.retWhy (V := V74w) (l := false) ⟨9, by decide⟩ (List.Perm.refl _)) .nil)
       (.seq (retGrundCS (κ74 wp gp) 9) .skip) :=
     cCorrG_block _ _ _ (BlockCorrG.cons
       (kcorr_retGrund xW74 0 _ k74 (κ74 wp gp) rfl ⟨9, by decide⟩ (List.Perm.refl _) rfl hg)
@@ -325,10 +325,10 @@ theorem write_end (wp gp : CPtr) (hsw : ∃ f' x', wp.blk = .stk f' x')
   have he : BlockSemG xW74 0 ⟨[], some (κ74 wp gp)⟩ k74 (Block.nil (V := V74w) (l := false)
       (Γ := Γ74) (Λ := [])) .skip :=
     cCorrG_block _ _ _ BlockCorrG.nil
-  have hE : ErgCorrK xW74 k74 cU64 (Λ := []) (e := some u64T) (ErgExpr.wert (Expr.var vLen))
+  have hE : ErgCorrK xW74 k74 cU64 (Λ := []) (e := some u64T) (ErgExpr.val (Expr.var vLen))
       (some (CX.var 2)) := ⟨.var 2, rfl, ecorr_var xW74 k74 vLen, rfl⟩
   have hR : EndCorrG xW74 0 true ⟨[], some (κ74 wp gp)⟩ k74
-      (Endblock.ret (V := V74w) (l := false) (ErgExpr.wert (Expr.var vLen)) (List.Perm.refl _))
+      (Endblock.ret (V := V74w) (l := false) (ErgExpr.val (Expr.var vLen)) (List.Perm.refl _))
       (retKCS (κ74 wp gp) [] (some (CX.var 2))) :=
     EndCorrG.retK (κ74 wp gp) rfl (List.Perm.refl _) hE hw
   have hI := gcorr_ite xW74 0 ⟨[], some (κ74 wp gp)⟩ k74 hc ht he
@@ -431,14 +431,14 @@ theorem args74_to : ArgsToK xS74 g74 k74 args74 [.var 0, .var 1, .var 2] 4 5 cWr
                     rfl
                   · refine ⟨fun τ x => ?_, fun _ hq => (nomatch hq), fun _ hq => (nomatch hq)⟩
                     cases x with
-                    | hier => rfl
-                    | dort y =>
+                    | here => rfl
+                    | there y =>
                         cases y with
-                        | hier => rfl
-                        | dort z =>
+                        | here => rfl
+                        | there z =>
                             cases z with
-                            | hier => rfl
-                            | dort w => exact nomatch w
+                            | here => rfl
+                            | there w => exact nomatch w
 
 /-- `ret` changes no memory: it keeps every cell. -/
 theorem keeps_ret (X : TVCtx d74) (G : GCtx) {Γ : Ctx} (K : CEnvLay d74 Γ) (τ : CTy) (c : CX) :
@@ -449,9 +449,9 @@ theorem keeps_ret (X : TVCtx d74) (G : GCtx) {Γ : Ctx} (K : CEnvLay d74 Γ) (τ
 
 /-- `{ return 0; }` in the error block (the reason `e` a ghost). -/
 theorem armNull_corr :
-    BlockSemG xS74 0 g74 (k74.push (.grund 12) 8) (armNull (Γ := ΓE)) cArm := by
-  have hE : ErgCorr xS74 (k74.push (.grund 12) 8) (Λ := []) (e := some u64T)
-      (ErgExpr.wert (Expr.weiter (by decide) (by decide) (Expr.lit 0))) (some (cU64, .lit 0)) :=
+    BlockSemG xS74 0 g74 (k74.push (.why 12) 8) (armNull (Γ := ΓE)) cArm := by
+  have hE : ErgCorr xS74 (k74.push (.why 12) 8) (Λ := []) (e := some u64T)
+      (ErgExpr.val (Expr.widen (by decide) (by decide) (Expr.lit 0))) (some (cU64, .lit 0)) :=
     ⟨cU64, .lit 0, rfl, ecorr_weiter _ _ _ _ (ecorr_lit _ _ 0), rfl⟩
   exact cCorrG_block _ _ _ (BlockCorrG.cons
     (liftG xS74 0 g74 _ (scorr_ret xS74 0 _ (V := V74s) (l := false) (List.Perm.refl _) hE)
@@ -476,15 +476,15 @@ theorem arms74_nie : ∀ (i : Fin 12) (σ : World d74) (ρ : Env d74 ΓE),
   | ⟨11, _⟩ => rfl
 
 theorem onGrund74_nie : ∀ (σ : World d74) (ρ : Env d74 ΓE),
-    (execStmt xS74.O xS74.passes xS74.R (Stmt.onGrund (Expr.var .hier) arms74 (V := V74s)
+    (execStmt xS74.O xS74.passes xS74.R (Stmt.onWhy (Expr.var .here) arms74 (V := V74s)
       (Λ := []) (l := false)) σ ρ).istOk = false :=
   fun σ ρ => (congrArg Ausgang.istOk (execGrund_get _ _ _ arms74 _ _ _)).trans (arms74_nie _ _ _)
 
 /-- The error block: `switch (e) { … } __builtin_unreachable();`. -/
-theorem err74_corr : EndSemG xS74 0 false g74 (k74.push (.grund 12) 8) err74
+theorem err74_corr : EndSemG xS74 0 false g74 (k74.push (.why 12) 8) err74
     (.seq (.sw (.ld (.addrL 5) cIo) cArms) (.expr .trap)) := by
   have harms : ∀ i : Fin 12, (∃ c, cArms.lookup ((i : Nat) : Int) = some (.seq c .brk) ∧
-      BlockSemG xS74 0 g74 (k74.push (.grund 12) 8) (arms74.get i) c) ∨
+      BlockSemG xS74 0 g74 (k74.push (.why 12) 8) (arms74.get i) c) ∨
       (∀ σ ρ, (execBlock xS74.O xS74.passes xS74.R (arms74.get i) σ ρ).istFehler = true) := by
     intro i
     match i with
@@ -500,9 +500,9 @@ theorem err74_corr : EndSemG xS74 0 false g74 (k74.push (.grund 12) 8) err74
     | ⟨9, _⟩ => exact .inl ⟨cArm, rfl, armNull_corr⟩
     | ⟨10, _⟩ => exact .inr fun _ _ => rfl
     | ⟨11, _⟩ => exact .inl ⟨cArm, rfl, armNull_corr⟩
-  have hs := gcorr_onGrund xS74 0 g74 (k74.push (.grund 12) 8) (V := V74s) (l := false)
+  have hs := gcorr_onGrund xS74 0 g74 (k74.push (.why 12) 8) (V := V74s) (l := false)
     (Λ := []) (Λ' := []) (arms := arms74) (carms := cArms)
-    (ecorr_var xS74 (k74.push (.grund 12) 8) .hier) harms
+    (ecorr_var xS74 (k74.push (.why 12) 8) .here) harms
   have hs' := gcorr_seqTot xS74 0 g74 _ (.expr .trap) hs onGrund74_nie
   exact cCorrG_end _ _ _ _ (EndCorrG.endet hs' onGrund74_nie)
 
@@ -510,8 +510,8 @@ theorem err74_corr : EndSemG xS74 0 false g74 (k74.push (.grund 12) 8) err74
 theorem rest74_corr : BlockSemG xS74 0 g74 (k74.push u64T 7) rest74
     (.seq (.ret (some (cU64, .ld (.addrL 4) cU64))) .skip) := by
   have hE : ErgCorr xS74 (k74.push u64T 7) (Λ := []) (e := some u64T)
-      (ErgExpr.wert (Expr.var .hier)) (some (cU64, .var 7)) :=
-    ⟨cU64, .var 7, rfl, ecorr_var xS74 (k74.push u64T 7) .hier, rfl⟩
+      (ErgExpr.val (Expr.var .here)) (some (cU64, .var 7)) :=
+    ⟨cU64, .var 7, rfl, ecorr_var xS74 (k74.push u64T 7) .here, rfl⟩
   exact cCorrG_block _ _ _ (BlockCorrG.cons
     (liftG_zs xS74 0 g74 _ (scorr_ret xS74 0 _ (V := V74s) (l := false) (List.Perm.refl _) hE) rfl
       (fun _ _ => rfl) (fun κ hk => by simp [g74] at hk) (keeps_ret _ _ _ _ _)
@@ -570,14 +570,14 @@ theorem envRel74 (a b c : Nat) (ha : a ≤ 18446744073709551615) (hb : b ≤ 184
       (lokUpd (lokUpd (lokUpd (fun _ => .undef) 2 (.int c)) 1 (.int b)) 0 (.int a)) := by
   refine ⟨fun τ x => ?_, fun _ hq => (nomatch hq), fun _ hq => (nomatch hq)⟩
   cases x with
-  | hier => rfl
-  | dort y =>
+  | here => rfl
+  | there y =>
       cases y with
-      | hier => rfl
-      | dort z =>
+      | here => rfl
+      | there z =>
           cases z with
-          | hier => rfl
-          | dort w => exact nomatch w
+          | here => rfl
+          | there w => exact nomatch w
 
 theorem bind74 (a b c : Nat) (ha : a ≤ 18446744073709551615) (hb : b ≤ 18446744073709551615)
     (hc : c ≤ 18446744073709551615) :

@@ -74,7 +74,7 @@ theorem oblig_call_tor {V : Vertrag G104_referenz_oblig.gD} {l : Bool} {Γ : Ctx
   simp only [execStmt, ht]
   cases hR : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
   | ok σ' v => intro h; cases h
-  | grund σ' r => exact (Fin.cast hr r).elim0
+  | why σ' r => exact (Fin.cast hr r).elim0
   | logik e => intro h; cases h; exact hOV _ _ _ _ hR g' rfl
   | hardware e => intro h; cases h
 
@@ -120,14 +120,14 @@ theorem oblig_einzahlen_R : KoerperGutR G104_referenz_oblig.gP 0 g_einzahlen := 
       have hfr := (hR.2 g_lies _ _ σ2 w hRv).1.1 GTab.Konto rfl
       simp only [execStmt] at h1
       cases h1
-      show decide ((σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n ≤
-        (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n) = true
-      have e3 := (hfr (ρ.get (.dort .hier)).n GKontoFeld.stand).trans
+      show decide ((σ.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n ≤
+        (σ2.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n) = true
+      have e3 := (hfr (ρ.get (.there .here)).n GKontoFeld.stand).trans
         (storeSlot_hit (D := G104_referenz_oblig.gD) _ GTab.Konto _ GKontoFeld.stand _)
-      have h100 : (σ2.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).n = 100 :=
+      have h100 : (σ2.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).n = 100 :=
         (congrArg (fun z : Zahl 0 100 => z.n) e3).trans rfl
       apply decide_eq_true
-      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.dort .hier)).n GKontoFeld.stand).le_hi
+      exact Int.le_trans (σ.slots GTab.Konto (ρ.get (.there .here)).n GKontoFeld.stand).le_hi
         (Int.le_of_eq h100.symm)
     · rename_i r _
       exact r.elim0

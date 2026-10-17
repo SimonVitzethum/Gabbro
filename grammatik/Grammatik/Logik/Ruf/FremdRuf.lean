@@ -448,17 +448,17 @@ theorem fremdruf_falsch_abgelehnt : ¬ AxVertragO fdQfalsch fdO := by
 /-- The program: true everywhere, write-only body below. -/
 def fdP : Programm fdD where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
-  rumpf := fun _ => .ret .keine (by rfl)
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ => .ret .empty (by rfl)
 
 /-- Index `0` into the two-slot table. -/
 def fdIdx : Expr fdD [] ([] : List (Res fdD)) (.index (fdD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- The stored value `5` in range. -/
 def fdVal5 : Expr fdD [] ([] : List (Res fdD)) (.int 0 100) :=
-  .weiter (by decide) (by decide) (.lit 5)
+  .widen (by decide) (by decide) (.lit 5)
 
 /-- The write `konto[0] := 5` at empty holdings. -/
 def fdWriteSt : Stmt fdD (vertragVon fdD fdArbeit) false [] [] [] :=

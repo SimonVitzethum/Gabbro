@@ -16,7 +16,7 @@
     * `D1`: `Tab = Unit` (one table), one field `()` of type `.bool`;
       `count = 1`; `Fn = Unit` (one function); `schreibt = true` everywhere;
       nothing guarded (`braucht = []`), hence `darf` holds trivially.
-    * `P1`: `requires = .wahr` (always true); `ensures = .slot () () i0`
+    * `P1`: `requires = .tru` (always true); `ensures = .slot () () i0`
       (the slot's current boolean value, read at index 0).
     * Writing leaf: `assignSlot () () i0 e` where `e` is the negation of the
       slot's current value. Firing it from a thread world whose slot reads
@@ -100,7 +100,7 @@ def V1 : Vertrag D1 :=
 
 /-- Index expression `0` into the single table (valid: `0 <= 0 <= count - 1 = 0`). -/
 def i0 : Expr D1 [] [] (.index (D1.count ())) :=
-  .weiter (by decide) (by decide) (.lit 0)
+  .widen (by decide) (by decide) (.lit 0)
 
 /-- Slot read `T.slots[0]` as a boolean contract expression. -/
 def slotE : Expr D1 [] [] .bool :=
@@ -108,7 +108,7 @@ def slotE : Expr D1 [] [] .bool :=
 
 /-- Value expression: the negation of the slot's current value. -/
 def negE : Expr D1 [] [] .bool :=
-  .nicht slotE
+  .not slotE
 
 /-- The writing leaf: `T.slots[0] := not T.slots[0]`. -/
 def writeLeaf : Stmt D1 V1 false [] [] [] :=
@@ -123,9 +123,9 @@ theorem writeLeaf_nicht_fest : writeLeaf.speicherfest = false := rfl
 /-- The program: `requires = true`; `ensures = T.slots[0]`. -/
 def P1 : Programm D1 where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
+  requires := fun _ => .tru
   ensures := fun _ => .slot () () i0 (fun w => nomatch w)
-  rumpf := fun _ => .ret .keine (List.Perm.refl [])
+  rumpf := fun _ => .ret .empty (List.Perm.refl [])
 
 /-- The oracle: no axioms, no registers, no globals. -/
 def O1 : Orakel D1 where
@@ -163,7 +163,7 @@ theorem qensures_ist_slot (s : World D1) :
         (ergEnv (D := D1) (D1.erg ()) v r)) = s.slots () 0 () := rfl
     rw [hval, h]
 
-/-- `QRequires P1` at `()` always holds (it is `.wahr`). -/
+/-- `QRequires P1` at `()` always holds (it is `.tru`). -/
 theorem qrequires_immer (s : World D1) :
     Extraktion.QRequires (D := D1) P1 () s := by
   intro r
@@ -343,7 +343,7 @@ end Gabbro.Grammatik.BG
     a full `PCReach` derivation ending in the firing machine: the firing fact
     holds at every machine (reachable or not), so reachability is named but
     not discharged per step.
-  * `QRequires` survives the write (it is `.wahr`); only the `QEnsures` leg --
+  * `QRequires` survives the write (it is `.tru`); only the `QEnsures` leg --
     and hence the conjunction -- is refuted. A contract pair where the write
     breaks `requires` too is not built here.
 -/

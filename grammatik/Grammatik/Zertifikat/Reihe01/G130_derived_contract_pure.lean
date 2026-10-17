@@ -109,14 +109,14 @@ abbrev gL_add : List (Res gD) := []
 
 
 def gBody_add : Endblock gD (vertragVon gD g_add) false gCtx_add gL_add :=
-  (.ret (.wert (.add (.var .hier) (.var (.dort .hier)))) (List.Perm.refl _))
+  (.ret (.val (.add (.var .here) (.var (.there .here)))) (List.Perm.refl _))
 
 def gP : Programm gD where
   invariante := fun i => nomatch i
   requires
-    | .add => .wahr
+    | .add => .tru
   ensures
-    | .add => .wahr
+    | .add => .tru
   rumpf
     | .add => gBody_add
 

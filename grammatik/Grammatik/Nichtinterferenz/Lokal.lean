@@ -27,15 +27,15 @@ mutual
 def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .assignSlot _ _ i e _ _ => i.orte.all S && e.orte.all S
-  | .assignDurch p _ _ _ i e _ _ => p.orte.all S && i.orte.all S && e.orte.all S
+  | .assignThru p _ _ _ i e _ _ => p.orte.all S && i.orte.all S && e.orte.all S
   | .assignGlob _ e _ _ => e.orte.all S
-  | .schreibBytes _ _ _ _ i _ _ e _ _ => i.orte.all S && e.orte.all S
+  | .putBytes _ _ _ _ i _ _ e _ _ => i.orte.all S && e.orte.all S
   | .assignVar _ e => e.orte.all S
-  | .uebergang t _ _ i _ _ _ _ _ _ => S (.inl t) && i.orte.all S
+  | .shift t _ _ i _ _ _ _ _ _ => S (.inl t) && i.orte.all S
   | .ite c t e => c.orte.all S && nB S Ax t && nB S Ax e
   | .onOption o p a => o.orte.all S && nB S Ax p && nB S Ax a
   | .onTag v arms => v.orte.all S && nA S Ax arms
-  | .onGrund r arms => r.orte.all S && nG S Ax arms
+  | .onWhy r arms => r.orte.all S && nG S Ax arms
   | .call _ args _ _ => args.orte.all S
   | .callInd p args _ _ => p.orte.all S && args.orte.all S
   | .locks _ _ body => nB S Ax body
@@ -44,13 +44,13 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .retry _ bis body ueber => bis.orte.all S && nB S Ax body && nB S Ax ueber
   | .forever _ inv body => inv.orte.all S && nB S Ax body
   | .axiomCall a args _ _ _ _ _ => Ax a && args.orte.all S
-  | .regSchreib _ _ e => e.orte.all S
+  | .regWrite _ _ e => e.orte.all S
   | .transition .. => true
   | .publish _ e _ _ _ _ => e.orte.all S
   | .advances .. => true
   | .retires .. => true
   | .ret e _ => e.orte.all S
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -64,22 +64,22 @@ def nB (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .bindCallElse _ args _ _ _ err rest => args.orte.all S && nE S Ax err && nB S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nB S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nB S Ax rest
-  | .regLies r _ rest => (D.rtraeger r).all S && nB S Ax rest
-  | .regLiesElse r _ zusage sonst rest =>
+  | .regRead r _ rest => (D.rtraeger r).all S && nB S Ax rest
+  | .regReadElse r _ zusage sonst rest =>
       (D.rtraeger r).all S && zusage.orte.all S && nE S Ax sonst && nB S Ax rest
   | .awaits g _ _ _ rest => S (.inr g) && nB S Ax rest
   | .exchange g neu _ _ rest => S (.inr g) && neu.orte.all S && nB S Ax rest
   | .narrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nB S Ax rest
-  | .pruefung c sonst rest => c.orte.all S && nE S Ax sonst && nB S Ax rest
-  | .gleit _ a b _ _ rest => a.orte.all S && b.orte.all S && nB S Ax rest
-  | .gleitLit _ _ _ rest => nB S Ax rest
-  | .gleitVon e _ _ rest => e.orte.all S && nB S Ax rest
-  | .gleitNarrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nB S Ax rest
+  | .check c sonst rest => c.orte.all S && nE S Ax sonst && nB S Ax rest
+  | .float _ a b _ _ rest => a.orte.all S && b.orte.all S && nB S Ax rest
+  | .floatLit _ _ _ rest => nB S Ax rest
+  | .floatOf e _ _ rest => e.orte.all S && nB S Ax rest
+  | .floatNarrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nB S Ax rest
 
 def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret e _ => e.orte.all S
-  | .retGrund .. => true
+  | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => nS S Ax s && nE S Ax rest
@@ -232,7 +232,7 @@ def AusRel (T : D.Tab ⊕ D.Glob → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     Ausgang V l Γ → Ausgang V l Γ → Prop
   | .ok σ ρ, .ok σ' ρ' => WRel T σ σ' ∧ ρ = ρ'
   | .zurueck σ v, .zurueck σ' v' => WRel T σ σ' ∧ v = v'
-  | .grund σ r, .grund σ' r' => WRel T σ σ' ∧ r = r'
+  | .why σ r, .why σ' r' => WRel T σ σ' ∧ r = r'
   | .leave _ σ ρ, .leave _ σ' ρ' => WRel T σ σ' ∧ ρ = ρ'
   | .next _ σ ρ, .next _ σ' ρ' => WRel T σ σ' ∧ ρ = ρ'
   | .logik _, .logik _ => True
@@ -259,7 +259,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only [execStmt, AusRel]
       rw [h1.eval i (alle_von hST hn.1) ρ, h1.eval e (alle_von hST hn.2) ρ]
       exact ⟨h1.schreibSlot _ _ _ _ _, trivial⟩
-  | assignDurch p t ht f i e hw hL =>
+  | assignThru p t ht f i e hw hL =>
       simp only [nS, Bool.and_eq_true] at hn
       have h1 := h.lese Λ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt, AusRel]
@@ -271,7 +271,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only [execStmt, AusRel]
       rw [h1.eval e (alle_von hST hn) ρ]
       exact ⟨h1.schreibGlob _ _ _, trivial⟩
-  | schreibBytes t f hf n i hlo hhi e hw hL =>
+  | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [nS, Bool.and_eq_true] at hn
       have h1 := h.lese Λ (i.orte ++ e.orte)
       simp only [execStmt, AusRel]
@@ -283,7 +283,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only [execStmt, AusRel]
       rw [h1.eval e (alle_von hST hn) ρ]
       exact ⟨h1, rfl⟩
-  | uebergang t f hτ i von nach hn' he hw hL =>
+  | shift t f hτ i von nach hn' he hw hL =>
       simp only [nS, Bool.and_eq_true] at hn
       have h1 := h.lese Λ (.inl t :: i.orte)
       have hi := h1.eval i (alle_von hST hn.2) ρ
@@ -313,7 +313,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only at e1 e2 ⊢
       subst e1
       cases r1 <;> simp only [AusRel] <;> first | exact ⟨e2, trivial⟩ | exact ⟨e2, rfl⟩ | trivial
-  | regSchreib r hk e =>
+  | regWrite r hk e =>
       simp only [execStmt, AusRel]
       exact ⟨h.lese Λ e.orte, trivial⟩
   | transition r hk m hm hl maske bits =>
@@ -337,7 +337,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only [execStmt, AusRel]
       rw [h1.evalErg e (alle_von hST hn) ρ]
       exact ⟨h1, rfl⟩
-  | retGrund r hp =>
+  | retWhy r hp =>
       simp only [execStmt, AusRel]
       exact ⟨h, trivial⟩
   | leave h' =>

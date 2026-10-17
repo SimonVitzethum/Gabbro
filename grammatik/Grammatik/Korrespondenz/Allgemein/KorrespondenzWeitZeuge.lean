@@ -132,8 +132,8 @@ abbrev wCtx : Ctx := [wU32, wU32]
 
 def wK : CEnvLay wD wCtx := ⟨[0, 1], [], []⟩
 
-def x0 : Expr wD wCtx [] wU32 := .var .hier
-def x1 : Expr wD wCtx [] wU32 := .var (.dort .hier)
+def x0 : Expr wD wCtx [] wU32 := .var .here
+def x1 : Expr wD wCtx [] wU32 := .var (.there .here)
 
 theorem wGdarf (g : Bool) : gdarf wD g [] := fun _ hw => absurd hw List.not_mem_nil
 
@@ -150,10 +150,10 @@ abbrev wA : wD.Glob := true
 
 /-- `true` / `false`. -/
 theorem probe_wahr :
-    exOk wEL wK (Expr.wahr (D := wD) (Γ := wCtx) (Λ := [])) (.lit 1) = true ∧
-    exOk wEL wK (Expr.wahr (D := wD) (Γ := wCtx) (Λ := [])) (.lit 0) = false ∧
-    exOk wEL wK (Expr.falsch (D := wD) (Γ := wCtx) (Λ := [])) (.lit 0) = true ∧
-    exOk wEL wK (Expr.falsch (D := wD) (Γ := wCtx) (Λ := [])) (.lit 1) = false := by
+    exOk wEL wK (Expr.tru (D := wD) (Γ := wCtx) (Λ := [])) (.lit 1) = true ∧
+    exOk wEL wK (Expr.tru (D := wD) (Γ := wCtx) (Λ := [])) (.lit 0) = false ∧
+    exOk wEL wK (Expr.fls (D := wD) (Γ := wCtx) (Λ := [])) (.lit 0) = true ∧
+    exOk wEL wK (Expr.fls (D := wD) (Γ := wCtx) (Λ := [])) (.lit 1) = false := by
   decide
 
 /-- `a + b`: the sum of two `u32` needs a 64-bit computation type; `uint32_t`
@@ -200,10 +200,10 @@ theorem probe_div_rem :
     -- it accepts the same expression at a dividend that cannot be
     `INT64_MIN`. -/
 def i64Voll : Expr wD wCtx [] (.int (-9223372036854775808) 9223372036854775807) :=
-  .weiter (by decide) (by decide) (Expr.lit 0)
+  .widen (by decide) (by decide) (Expr.lit 0)
 
 def i64Eng : Expr wD wCtx [] (.int (-9223372036854775807) 9223372036854775807) :=
-  .weiter (by decide) (by decide) (Expr.lit 0)
+  .widen (by decide) (by decide) (Expr.lit 0)
 
 theorem probe_sdiv_srem :
     exOk wEL wK (Expr.sdiv (Or.inr (by decide)) i64Eng (.lit (-1)))
@@ -280,22 +280,22 @@ theorem probe_cmp_typ :
 
 /-- `a && b`, `a || b`, `!a`. -/
 theorem probe_bool :
-    exOk wEL wK (Expr.und (Expr.lt x0 x1) (Expr.eq x0 x1))
+    exOk wEL wK (Expr.and (Expr.lt x0 x1) (Expr.eq x0 x1))
       (.land (.cmp .lt CIT.u32 (.var 0) (.var 1)) (.cmp .eq CIT.u32 (.var 0) (.var 1)))
       = true ∧
-    exOk wEL wK (Expr.und (Expr.lt x0 x1) (Expr.eq x0 x1))
+    exOk wEL wK (Expr.and (Expr.lt x0 x1) (Expr.eq x0 x1))
       (.lor (.cmp .lt CIT.u32 (.var 0) (.var 1)) (.cmp .eq CIT.u32 (.var 0) (.var 1)))
       = false ∧
-    exOk wEL wK (Expr.oder (Expr.lt x0 x1) (Expr.eq x0 x1))
+    exOk wEL wK (Expr.or (Expr.lt x0 x1) (Expr.eq x0 x1))
       (.lor (.cmp .lt CIT.u32 (.var 0) (.var 1)) (.cmp .eq CIT.u32 (.var 0) (.var 1)))
       = true ∧
-    exOk wEL wK (Expr.oder (Expr.lt x0 x1) (Expr.eq x0 x1))
+    exOk wEL wK (Expr.or (Expr.lt x0 x1) (Expr.eq x0 x1))
       (.land (.cmp .lt CIT.u32 (.var 0) (.var 1)) (.cmp .eq CIT.u32 (.var 0) (.var 1)))
       = false ∧
-    exOk wEL wK (Expr.nicht (Expr.lt x0 x1)) (.lnot (.cmp .lt CIT.u32 (.var 0) (.var 1)))
+    exOk wEL wK (Expr.not (Expr.lt x0 x1)) (.lnot (.cmp .lt CIT.u32 (.var 0) (.var 1)))
       = true ∧
-    exOk wEL wK (Expr.nicht (Expr.lt x0 x1)) (.cmp .lt CIT.u32 (.var 0) (.var 1)) = false ∧
-    exOk wEL wK (Expr.nicht (Expr.lt x0 x1)) (.cmp .ge CIT.u32 (.var 0) (.var 1)) = false := by
+    exOk wEL wK (Expr.not (Expr.lt x0 x1)) (.cmp .lt CIT.u32 (.var 0) (.var 1)) = false ∧
+    exOk wEL wK (Expr.not (Expr.lt x0 x1)) (.cmp .ge CIT.u32 (.var 0) (.var 1)) = false := by
   decide
 
 /-- A plain file-scope scalar `G`: its own block number and its own cell
@@ -329,16 +329,16 @@ def wZert : KCert wD := []
     a computation type too narrow for the sum. -/
 theorem probe_setOp :
     stOk wEL wFnum wZert wK
-      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .hier (.lit 0) (by decide) (by decide))
+      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .here (.lit 0) (by decide) (by decide))
       (.setOp 0 (.int false .w32) .add CIT.u32 (.lit 0)) = true ∧
     stOk wEL wFnum wZert wK
-      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .hier (.lit 0) (by decide) (by decide))
+      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .here (.lit 0) (by decide) (by decide))
       (.setOp 1 (.int false .w32) .add CIT.u32 (.lit 0)) = false ∧
     stOk wEL wFnum wZert wK
-      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .hier (.lit 0) (by decide) (by decide))
+      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .here (.lit 0) (by decide) (by decide))
       (.setOp 0 (.int false .w32) .sub CIT.u32 (.lit 0)) = false ∧
     stOk wEL wFnum wZert wK
-      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .hier (.lit 0) (by decide) (by decide))
+      (Stmt.plusGleich (V := wV) (l := false) (Λ := []) .here (.lit 0) (by decide) (by decide))
       (.setOp 0 (.int false .w32) .add CIT.u8 (.lit 0)) = false := by
   decide
 
@@ -406,11 +406,11 @@ theorem wEnvRel (a b : Nat) (ha : a ≤ 4294967295) (hb : b ≤ 4294967295) :
   refine ⟨?_, fun q hq => absurd hq List.not_mem_nil, fun q hq => absurd hq List.not_mem_nil⟩
   intro τ x
   cases x with
-  | hier => rfl
-  | dort y =>
+  | here => rfl
+  | there y =>
       cases y with
-      | hier => rfl
-      | dort z => exact nomatch z
+      | here => rfl
+      | there z => exact nomatch z
 
 /-- **WITNESS**: the C text `b >= a` IS the emitted form of Gabbro's
     `a <= b` (`Zucker.ge b a`), and it answers `1` where the Gabbro

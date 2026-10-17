@@ -49,7 +49,7 @@ def wBis : Expr refD [.int 0 10] [Res.held (D := refD) ()] .bool :=
 
 /-- Index `1`. -/
 def wIdx1 : Expr refD [.int 0 10] [Res.held (D := refD) ()] (.index (refD.count ())) :=
-  .weiter (by decide) (by decide) (.lit 1)
+  .widen (by decide) (by decide) (.lit 1)
 
 /-- The pass: `konto[0] = 100;`. -/
 def wBody : Block refD (vertragVon refD refEin) true [.int 0 10] [Res.held (D := refD) ()]
@@ -234,7 +234,7 @@ def w66F : w66D.Fn := ()
 def w66V : Vertrag w66D := vertragVon w66D w66F
 
 /-- `until bereit` -/
-def w66Bis : Expr w66D [.bool] [] .bool := .var .hier
+def w66Bis : Expr w66D [.bool] [] .bool := .var .here
 
 /-- `gib_auf();` -- a foreign call whose answer is `never`. -/
 def w66Ueb : Block w66D w66V false [.bool] [] [] :=
@@ -246,12 +246,12 @@ def w66Retry : Stmt w66D w66V false [.bool] [] [] := .retry 64 w66Bis .nil w66Ue
 
 /-- The body: the loop, then `return bereit;`. -/
 def w66Rumpf : Endblock w66D w66V false [.bool] [] :=
-  .cons w66Retry (.ret (.wert (.var .hier)) (List.Perm.refl _))
+  .cons w66Retry (.ret (.val (.var .here)) (List.Perm.refl _))
 
 def w66P : Programm w66D where
   invariante := fun i => nomatch i
-  requires := fun _ => .wahr
-  ensures := fun _ => .wahr
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
   rumpf := fun _ => w66Rumpf
 
 /-- The oracle: a foreign answer `0`, which does not fit `never`. -/
@@ -315,13 +315,13 @@ theorem w66Ueb_corr (m : Nat) : BlockSem xW66 m kW66 w66Ueb (.ext 0 [] none) := 
 /-- The loop of `warte_auf_fertig` against the model's `retry`. -/
 theorem w66_retry (m m' : Nat) :
     StmtCorr xW66 m kW66 w66Retry (retryCS 1 64 (.var 0) .skip m' (.ext 0 [] none)) :=
-  scorr_retry xW66 m m' kW66 (z := 1) rfl rfl 64 (by decide) (ecorr_var xW66 kW66 .hier) .nil .skip
+  scorr_retry xW66 m m' kW66 (z := 1) rfl rfl 64 (by decide) (ecorr_var xW66 kW66 .here) .nil .skip
     (cCorr_block xW66 m' BlockCorr.nil) rfl w66Ueb _ (w66Ueb_corr m) w66Ueb_nie
 
 /-- The body of `warte_auf_fertig` against its emitted body. -/
 theorem w66_end (m : Nat) : EndCorr xW66 m true kW66 w66Rumpf cW66Body :=
   EndCorr.cons (w66_retry m 0) (EndCorr.ret (List.Perm.refl _)
-    ⟨cBool, .var 0, rfl, ecorr_var xW66 kW66 .hier, rfl⟩)
+    ⟨cBool, .var 0, rfl, ecorr_var xW66 kW66 .here, rfl⟩)
 
 /-- THE CALLEE RELATION of `warte_auf_fertig` at depth 1. -/
 theorem w66_fn : FnCorr w66EL (rufAt w66P w66O 0 1) (CallAt w66EL.lay tvOrc tvXR w66CProg 1)
@@ -343,8 +343,8 @@ theorem w66_envRel : EnvRel w66EL kW66 w66Rho (lokUpd (fun _ => .undef) 0 (.int 
   refine ⟨?_, fun q hq => (nomatch hq), fun q hq => (nomatch hq)⟩
   intro τ x
   cases x with
-  | hier => rfl
-  | dort y => exact nomatch y
+  | here => rfl
+  | there y => exact nomatch y
 
 /-- WITNESS (rule 13), `warte_auf_fertig(true)` END TO END: the Gabbro
     call returns `true`; the emitted C, called with `1`, runs its `retry`

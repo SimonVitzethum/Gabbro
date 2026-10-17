@@ -1004,7 +1004,7 @@ fn accepts_bool_field() {
         {\n    if t.slots[i].b {\n        return t.slots[i].b;\n    }\n    t.slots[i].b = true;\n    return t.slots[i].b;\n}\n\
         }\n";
     let text = export("leang_bool", &tree(q)).expect("bool must export");
-    for teil in ["| .T, .b => (.bool)", "(.ite", ".wahr"] {
+    for teil in ["| .T, .b => (.bool)", "(.ite", ".tru"] {
         assert!(text.contains(teil), "bool export must contain {teil:?}:\n{text}");
     }
 }
@@ -1120,7 +1120,7 @@ fn export_104_carries_the_unit() {
 #[test]
 fn export_104_requires_stays_true() {
     let text = export_file("104-referenz.gab");
-    for teil in ["    | .einzahlen => .wahr", "    | .lies => .wahr"] {
+    for teil in ["    | .einzahlen => .tru", "    | .lies => .tru"] {
         assert!(text.contains(teil), "104 export must contain {teil:?}");
     }
     assert!(
@@ -1283,8 +1283,8 @@ fn tagged_type_travels_as_sum() {
     for teil in [
         "params := [(.sum [none, some (0, 100)])]",
         "erg := some ((.sum [none, some (0, 100)]))",
-        ".fall [none, some (0, 100)] ⟨1, by decide⟩ (.zahl",
-        ".fall [none, some (0, 100)] ⟨0, by decide⟩ .keine",
+        ".case [none, some (0, 100)] ⟨1, by decide⟩ (.num",
+        ".case [none, some (0, 100)] ⟨0, by decide⟩ .empty",
         ".onTag",
     ] {
         assert!(text.contains(teil), "tagged export must contain {teil:?}:\n{text}");
@@ -1310,7 +1310,7 @@ fn tagged_slot_and_static_travel() {
         "| .T, .was => ((.sum [none, some (0, 4294967295)]))",
         "| .T, .was => ⟨⟨0, by decide⟩, ()⟩",
         "| .ANFANG => ⟨⟨1, by decide⟩, ⟨5, by decide, by decide⟩⟩",
-        ".onTag (Expr.durch",
+        ".onTag (Expr.thru",
     ] {
         assert!(text.contains(teil), "tagged carrier export must contain {teil:?}:\n{text}");
     }
@@ -1411,8 +1411,8 @@ fn record_travels_as_table_of_count_one() {
         "| Zelle",
         "count := fun | .Zelle => 1",
         "| .Zelle, .wert => ((.int 0 1000)) | .Zelle, .fertig => (.bool)",
-        "Expr.durch",
-        ".assignDurch",
+        "Expr.thru",
+        ".assignThru",
     ] {
         assert!(text.contains(teil), "record export must contain {teil:?}:\n{text}");
     }
@@ -1684,7 +1684,7 @@ fn accepts_int_typed_slot_index() {
         { return T.slots[w].v; }\n\
         }\n";
     let text2 = export("leang_idxn", &tree(q2)).expect("a narrower integer index must export");
-    assert!(text2.contains(".weiter"), "the narrower index must travel through a coercion: {text2}");
+    assert!(text2.contains(".widen"), "the narrower index must travel through a coercion: {text2}");
     assert!(
         text.contains("example : programmImFragmentG gP gFs = true := by decide"),
         "the fragment check must travel: {text}"
@@ -2018,7 +2018,7 @@ fn exports_top_level_gates_as_end_block_binders() {
     for teil in [
         "(.bindAxiom GAx.getpid .nil rfl",
         "(.bindAxiom GAx.exit_group (.cons",
-        "(fun _ h => nomatch h) (.ret .keine (List.Perm.refl _)))",
+        "(fun _ h => nomatch h) (.ret .empty (List.Perm.refl _)))",
     ] {
         assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
     }
