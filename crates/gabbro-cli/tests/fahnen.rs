@@ -144,6 +144,18 @@ const FAHNEN: &[Fahne] = &[
         ],
     },
     Fahne {
+        erstname: "--per-file",
+        zweitname: "--je-datei",
+        // Without the flag the two examples are ONE program whose `linux_write_contract`
+        // contradicts itself and the command falls; with it each file stands alone.
+        lebendig: &[
+            "annahmen",
+            "--per-file",
+            "beispiele/74-syscall-schreiben.gab",
+            "beispiele/182-fallible-gate.gab",
+        ],
+    },
+    Fahne {
         erstname: "--dry-run",
         zweitname: "--trocken",
         // Without a manifest both spellings fail identically BEFORE the flag is read --
@@ -621,7 +633,7 @@ fn der_waechter_feuert_auf_eine_neue_deutsche_fahne() {
     // Layer 1: completeness. A new German-only flag in a source is not in the register.
     let erfunden = r#"
         let zaehler = rest.iter().any(|a| a == "--zaehler");
-        let ohne = rest.iter().any(|a| a == "--je-datei");
+        let ohne = rest.iter().any(|a| a == "--je-zeile");
     "#;
     let gefunden = fahnen_in(erfunden);
     let register: BTreeSet<String> = FAHNEN
@@ -642,7 +654,7 @@ fn der_waechter_feuert_auf_eine_neue_deutsche_fahne() {
 
     // Layer 2: the word list names the reason.
     assert_eq!(deutsches_wort("--zaehler"), Some("zaehler"));
-    assert_eq!(deutsches_wort("--je-datei"), Some("je"));
+    assert_eq!(deutsches_wort("--je-zeile"), Some("je"));
 
     // And the same two layers stay SILENT on the names this tree actually carries.
     for f in FAHNEN {

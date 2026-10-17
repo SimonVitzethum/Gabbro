@@ -953,8 +953,10 @@ fn hilfe() {
                                     the caller's file alone carries `K003` and is skipped
   gabbro fragments|fragmente <file.md>…
                                     every ```gabbro block of a markdown file, one by one
-  gabbro assumptions|annahmen <file.gab>…
-                                    the assumption manifest: proved under A1…An
+  gabbro assumptions|annahmen [--per-file|--je-datei] <file.gab>…
+                                    the assumption manifest: proved under A1…An.
+                                    `--per-file` treats every file as its own program
+                                    (a corpus run), one manifest each
   gabbro passes|paesse [--per-statement]
                                     the pass list -- built AND open -- and THE PASS
                                     REGISTER: the sentence each pass owes, with its
@@ -2999,7 +3001,19 @@ fn befehl_abi_vergleich(
     std::process::ExitCode::SUCCESS
 }
 
-fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
+fn befehl_annahmen(rest: &[String]) -> std::process::ExitCode {
+    // **`--per-file` / `--je-datei`: every file is its OWN program.** Without it the files
+    // are the units of ONE program and one assumption set (`SYNTAX.md` §12): two units
+    // declaring the same name differently contradict each other, and the command falls.
+    // A corpus run (`gabbro annahmen beispiele/*.gab`) is not one program -- examples 74,
+    // 90, 96, 149, 163 and 182 each declare their own `linux_write_contract` -- so the flag
+    // keeps the sets apart and prints one manifest per file. *A conflict INSIDE one file
+    // still falls*: the flag separates programs, it does not hide a contradiction.
+    let je_datei = rest.iter().any(|a| a == "--per-file" || a == "--je-datei");
+    let dateien: Vec<&String> = rest
+        .iter()
+        .filter(|a| *a != "--per-file" && *a != "--je-datei")
+        .collect();
     if dateien.is_empty() {
         eprintln!("gabbro annahmen: no file named");
         return std::process::ExitCode::from(2);
@@ -3021,7 +3035,23 @@ fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
         }
         // **With the source**, so an `axiom`'s `requires` reaches the manifest as WORDING
         // and not only as a count -- see `manifest::Eintrag::voraussetzungen`.
-        alle.extend(manifest::sammle_mit_quelle(&baum, &quelle));
+        let eigene = manifest::sammle_mit_quelle(&baum, &quelle);
+        if je_datei {
+            let (eigene, streit) = manifest::vereinige(eigene);
+            if !streit.is_empty() {
+                for s in &streit {
+                    eprintln!("gabbro annahmen: {datei}: {s}");
+                }
+                return std::process::ExitCode::from(1);
+            }
+            println!("== {datei}");
+            print!("{}", manifest::zeige(&eigene));
+        } else {
+            alle.extend(eigene);
+        }
+    }
+    if je_datei {
+        return std::process::ExitCode::SUCCESS;
     }
     // **Menge, nicht Liste** (`SYNTAX.md` §12). Zwei Dateien duerfen dieselbe Annahme
     // erklaeren -- aber sie zaehlt einmal. Erklaeren sie sie VERSCHIEDEN, ist das ein
