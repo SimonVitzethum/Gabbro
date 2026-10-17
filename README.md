@@ -20,18 +20,34 @@ they disagree, the header wins. The honest sentence is **"the goal theorem is
 proved over the model, with a witness and non-degeneracy"** — not "Gabbro is
 verified" ([details](#5-proved-and-not-proved)).
 
-The working backend emits C11 plus inline assembly. The selected next target is
-**AArch64 (Armv9-A)**, built on the Sail Arm specification
-([sail-arm](https://github.com/rems-project/sail-arm)): Sail supplies the
-sequential instruction semantics, the multicore memory model is being added in
-Lean on top of it, and a direct compiler with Lean validation of the final
-binary follows. None of this is implemented yet ([plan](ARM-PLAN.md)).
+There is **no standard library, no libc and no runtime you link**. Everything a
+program does to the outside world goes through its own `syscall` items (raw
+kernel gates with declared registers, contracts and error channels) or through
+hardware register forms; the operating system is user logic, never an assumption
+of the language. Networking, files, TLS, HTTP and the like are not built in and
+not forbidden: they are written in Gabbro, in your program or in a binding
+library (`bibliothek/`), over those gates, and checked like any other code. The
+container, text and time helpers a program needs on every page are planned as
+native Gabbro modules ([PLAN-STDLIB](dokumente/PLAN-STDLIB.md)), not as C behind
+a border.
+
+Two backends exist. The **LLVM backend** is the current target: checked Gabbro
+lowers directly to LLVM IR (x86-64 and AArch64), with no C, no libc and no linked
+runtime — locks, threads and arenas are generated IR over raw kernel gates
+([LLVM-BACKEND](dokumente/LLVM-BACKEND.md), status in
+[LLVM-MODELLSTAND](dokumente/LLVM-MODELLSTAND.md)). The older **C11 emitter**
+(`emit.rs`) is deprecated and stays only as a legacy check. Neither backend is
+verified: the final-binary refinement needs a complete Lean model of the CPU,
+which is built on the Sail Arm specification
+([sail-arm](https://github.com/rems-project/sail-arm)) plus a multicore memory
+model in Lean, and is not finished ([plan](ARM-PLAN.md)).
 
 ## 1. Quick start
 
-Install **Rust 1.86 or newer** and a **C11 compiler available as `cc`**.
-The Rust crates have no third-party dependencies. The current backend uses
-`cc` when building Gabbro programs; checking source does not require it.
+Install **Rust 1.86 or newer**. The Rust crates have no third-party dependencies.
+Checking source needs nothing else. `gabbro build` with the legacy C11 backend uses
+a C compiler available as `cc`; the LLVM backend needs the LLVM tools `opt`, `llc`
+and `ld.lld` instead (`instrumente/baue-llvm.sh`).
 Ensure `~/.cargo/bin` is on your `PATH`.
 
 ```bash
@@ -75,7 +91,7 @@ oleans via `lake exe cache get`). The goal theorem itself does not import it, an
 | `…_zeuge` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
 | `…probeA/D…`, `w1_abgelehnt` | programs the checker **refuses** — a checker that accepts everything would make the theorem worthless |
 
-The C-backend translation evidence lives on the [provenance page](dokumente/PROJECT-STATUS.md#translation-chain) — the recipe above prints only the goal-theorem sentences.
+The translation evidence (legacy C chain, LLVM certificate) is described in [PLAN-UEBERSETZUNGSVALIDIERUNG](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) and [LLVM-BACKEND](dokumente/LLVM-BACKEND.md) §7 — the recipe above prints only the goal-theorem sentences.
 
 **What those lines do NOT say:** an axiom list proves a *proof* valid, not the
 *statement*. The three axioms prove no model fidelity and remove no premise:
@@ -102,17 +118,17 @@ still requiring the new validator and its proof.
 
 ## 4. Status
 
-Measured snapshot 2026-10-01 — every figure carries its command; provenance and limits in [PROJECT-STATUS](dokumente/PROJECT-STATUS.md).
+Measured snapshot 2026-10-01 — every figure carries its command; provenance and limits in [MESSUNGEN](dokumente/MESSUNGEN.md) and `messung/KENNZAHLEN.md`.
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 482 diagnostics · `gabbro passes` |
-| **Grammar** | **188 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 497 diagnostics · `gabbro passes` |
+| **Grammar** | **189 EBNF rules**, closed and reachable | vocabulary covers every terminal, 245 / 245 |
 | **Proof templates** | **41, of which 30 are machine-checked** | `gabbro templates` |
-| **Corpus** | 157 clean examples, 858 poison files | `cargo test --no-fail-fast` |
-| **Backend** | working C11 backend (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`); every emitted unit is compiled, part executed against a handwritten twin | `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 57, each with deadline, two-way speech test, red on abort, pinned locale; **75 of 89 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
-| **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
+| **Corpus** | 170 clean examples, 898 poison files | `cargo test --no-fail-fast` |
+| **Backend** | LLVM backend (current target, no C) plus the deprecated C11 emitter (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`; every emitted unit compiled, part executed against a handwritten twin) | `./instrumente/baue-llvm.sh`, `./instrumente/pruefe-emission.sh` |
+| **Guardians** | 54, each with deadline, two-way speech test, red on abort, pinned locale; **75 of 89 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
+| **Blind spots** | **72 blind · 176 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2431 and 110 clause sites | `gabbro ceremony` |
 
 Mutation tests damage one rule at a time: 422 mutations, one anchor each
@@ -133,7 +149,7 @@ hold 3512 lines of Isar; new proofs go to Lean only.
 Not proved, still open: no pass proved individually (sentences measured on
 checked cases, never the rule); complete Rust backend validation, final-byte
 validation and hardware/concurrency correspondence **OPEN**; the direct
-AArch64 backend is not implemented — never call the compiler or a binary verified.
+final-binary validator is not implemented — never call the compiler or a binary verified.
 Most accepted programs are not judged in Lean at all; the rest are refused by
 the exporter and listed by name as not claimed in
 [`REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt).
@@ -141,7 +157,8 @@ the exporter and listed by name as not claimed in
 ## 6. Documents
 
 - [ARM-PLAN.md](ARM-PLAN.md) — the AArch64 direction: Sail Arm model, multicore memory model, compiler
-- [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), [provenance](dokumente/PROJECT-STATUS.md)
+- [Own and aliasing](dokumente/A1-OWN-PAPER.md) — `own`, rules R014/R015, the Lean object model, `noalias`
+- [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), [measurements](dokumente/MESSUNGEN.md), [LLVM backend](dokumente/LLVM-BACKEND.md)
 
 > **How this repository is written — AI agents, and where the human stands.**
 > Agents do implementation, checking and coordination; Simon decides what counts

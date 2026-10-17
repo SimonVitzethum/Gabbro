@@ -525,9 +525,9 @@ def readme_muster():
         (r"no cell\*\* \*\(of (\d+) pairs\)\*", n_paare, "Zellen der Tafel"),
     ]
 
-    n_thy = len(list((WURZEL / "beweise").glob("*.thy")))
+    n_thy = len(list((WURZEL / "grammatik" / "Beweise").glob("*.thy")))
     # `count("\\n")` und nicht `split`: das ist, was `wc -l` zaehlt, und danach wird gefragt.
-    n_isar = sum(f.read_text().count("\n") for f in (WURZEL / "beweise").glob("*.thy"))
+    n_isar = sum(f.read_text().count("\n") for f in (WURZEL / "grammatik" / "Beweise").glob("*.thy"))
     fuer += [
         (r"The (\d+) theories in", str(n_thy), "Theorien (Fliesstext)"),
         # **Two patterns stood here for one thing, and both had hit nothing since

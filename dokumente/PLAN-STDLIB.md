@@ -30,6 +30,12 @@ buffer, no queue, no timer wheel, no strings, no hash, no sort.
 world with its own rules; they stay system calls at the program's own border, declared where
 they are used.
 
+*There is no hidden standard library behind this line: Gabbro has no libc, no built-in
+socket, file or TLS layer, and nothing is linked at run time. A program, or a binding library
+such as `bibliothek/linux/`, performs every OS call itself through `syscall` items with their
+own contracts. An HTTP or TLS server is therefore not impossible, only not built in: it is
+written in Gabbro over raw system calls and checked like any other code.*
+
 *Note what "out" does NOT mean: the firewall's netlink work stays in the firewall. The library
 gives it the ring buffer and the checksum, not the socket.*
 

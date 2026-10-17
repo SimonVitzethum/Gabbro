@@ -404,9 +404,9 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N587** (new 2026-10-15: N586 slot release has static death; before that N584/N585 pressure sampling) |
-| Gift (poison-probe) numbers | **1444** (new 2026-10-15: gifts 1439-1442 release discipline, 1443 small-element link; before that `beispiele/gift/1438`) |
-| Example numbers | **1162** (new 2026-10-15: example 1161 slot release; before that `beispiele/1160`) |
+| Diagnostic codes | **N587**; alias rules took **R014**/**R015**, next `R016` (new 2026-10-15: N586 slot release has static death; before that N584/N585 pressure sampling) |
+| Gift (poison-probe) numbers | **1445** (gift 1444 = `1444-alias-sicht-und-quelle`, `R014`; before that 2026-10-15: gifts 1439-1442 release discipline, 1443 small-element link; before that `beispiele/gift/1438`) |
+| Example numbers | **1164** (1162/1163 taken, 1163 = `sicht-neben-eigener-quelle`; before that 2026-10-15: example 1161 slot release; before that `beispiele/1160`) |
 | Lane numbers | **1403** next free; allocate unique IDs from the actual live coordinator registry. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'

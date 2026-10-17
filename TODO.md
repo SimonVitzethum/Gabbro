@@ -1,9 +1,9 @@
 # Offen — was dem Projekt noch fehlt
 
-*Updated 2026-10-17 for memory, stack and model-based LLVM coverage. Enthält NUR Offenes aus fünf Gebieten:
+*Updated 2026-10-17 for memory, stack, `own`/alias separation and model-based LLVM coverage. Enthält NUR Offenes aus fünf Gebieten:
 LLVM-Backend, Lean-Modell, Prüfer, Übersetzungsvalidierung, Heap. IDs (`Oxx`) sind
 stabil — Kommentare im Baum, die `OFFEN Oxx` nennen, meinen diese Abschnitte
-(`TODO.md` selbst ist gelöscht, Historie in Git). Geschlossenes und
+(Historie in Git). Geschlossenes und
 Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 ## 1. Heap and stack (updated 2026-10-17)
@@ -76,9 +76,15 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 - **O11 (hüterlose Invariante).** Eine `table`/`group`-Invariante, die keine
   Funktion `maintains`, wird von NICHTS gebucht (`N275`–`N277` prüfen nur
   verankerte).
-- **Alias (Entscheidung ausstehend).** Zwei Zeiger auf ein Objekt bleiben
-  ununterscheidbar (M3, Sperren-Rest). Schließen heißt: `own` an Rufgrenzen
-  prüfen oder 113 Zeilen Zeremonie schreiben — Richtungsentscheidung, kein Bau.
+- **Alias / `own` (gebaut 2026-10-17, Reste offen).** `R014` (Fehler) und `R015`
+  (Hinweis) trennen Zeigerwurzeln an Rufgrenzen; Lean hat `ParamGetrennt` und
+  `ObjGetrennt` (Objekte unterhalb einer Tabelle) samt Brücke zu `R014`; LLVM setzt
+  `noalias` an interne schreibbare Zeigerparameter. Papier: `dokumente/A1-OWN-PAPER.md`.
+  Offen: Records über Byte-Puffern (Bereichsobjekte im Modell, `LG005`/`LG001`);
+  die vier Brücken-Hypothesen (`ParamVerschieden`, `RechteOk`, `HerkunftTreu`,
+  `FrischNeu` nur für den Modell-Allokator) und der `let`-Lauf des Prüfers in Lean;
+  `R004`/`R007` als Sonderfälle von `R014`; Mutationslauf für `R014`/`R015`;
+  `noalias` ist kein Lean-Urteil (O27).
 - **O26-Rest (fremde Sperrprimitive).** Eigene Primitive geprüft (`N481`–`N483`);
   fremde bleiben angenommen (schwaches Gedächtnis nimmt acquire/release an).
 
