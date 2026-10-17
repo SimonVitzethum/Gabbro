@@ -17,7 +17,7 @@
     with `_Noreturn` and `__builtin_unreachable()`: the code behind the call
     is dead in G as in the C.
     **Witness:** the real certified program `beispiele/174` (its gate
-    `exit_group`, `Zertifikat/G174_tor_im_modell.lean`).
+    `exit_group`, `Schablonen/ZeugeTorModell.lean`, a frozen export).
 
   * `start.nolibc` -- the generated process entry of a `nolibc` program
     (`bau.rs::prozess_start`): `xor %ebp,%ebp; and $-16,%rsp; call main; ud2`.
@@ -34,7 +34,7 @@
   instantiating ALL its premises jointly.
 -/
 
-import Grammatik.Zertifikat.Reihe01.G174_tor_im_modell
+import Grammatik.Bausteine.Schablonen.ZeugeTorModell
 import Grammatik.Kern.Semantik.Syscall
 
 namespace Gabbro.Grammatik

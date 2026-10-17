@@ -262,7 +262,7 @@ and its slot is live (`N586` makes use-after-free a static error).
    content for exported dynamic programs, keep every old leg word for word. Re-prove `gabbro_ziel` on the new
    statement; two independent verdicts as for every extension of the goal (AGENTS.md section 1).
 5. **Exporter (`lean_g.rs`).** Lift `LG005` for arenas and `LG001` for `maintains`/invariants only for the forms
-   phases 1–3 cover; everything else stays refused by name. Regenerate `REGISTER.txt`: the booked success
+   phases 1–3 cover; everything else stays refused by name. Run `cargo test --test zertifikate -- --nocapture`: the booked success
    measure is the number of CERTIFIED arena programs.
 6. **Checker.** Only afterwards align the Rust checker with the model: O11 (an invariant no function maintains
    is accepted by nothing but `N583`'s online case), `maintains` completeness, walk bounds; a form the checker

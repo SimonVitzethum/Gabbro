@@ -148,7 +148,7 @@ validation and hardware/concurrency correspondence **OPEN**; the direct
 final-binary validator is not implemented — never call the compiler or a binary verified.
 Most accepted programs are not judged in Lean at all; the rest are refused by
 the exporter and listed by name as not claimed in
-[`REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt).
+`target/zertifikate/REGISTER.txt`, written on every `cargo test --test zertifikate`.
 
 ## 6. Documents
 
