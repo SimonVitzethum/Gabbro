@@ -620,23 +620,20 @@ text, and (c) there is a theorem that the IR's behaviour refines the source form
 against the Lean function byte for byte (differential validator in the Lean guardian), and the Rust code is
 a fast copy of a specification, not a second source of truth.
 
-**Track L: refinement down to the binary (retargeted by Simon, 2026-10-17).** Lowering to LLVM IR in Lean brings little:
-LLVM itself is outside the validated chain, so an IR theorem does not reach a binary. Only refinement all the way down to
-machine bytes counts. The IR model and the expression refinement built first (`Grammatik/Llvm/`, about 6 000 lines) are
-the template, not the target: Track L now targets AArch64 machine code.
-1. **L0 interface.** A small abstract machine interface in Lean (state, memory, `step`, instruction `enc`/`dec` to bytes,
-   the facts a concrete CPU model must satisfy as hypotheses), plus a toy instance with a witness. No second CPU
-   interpreter on the trust path: the real instance is the Arm model that Simon builds in parallel (`arm/`, Sail-based,
-   multicore memory model in Lean); one connecting lemma instantiates the interface with it.
-2. **L1 core lowering** machine G to instruction sequences (scalars, ranges, table slots, `ite`, calls, returns) with the
-   refinement theorem against the interface: the machine run from the lowered bytes simulates `execBlock`, via an
-   explicit representation relation between `World` and the machine state.
-3. **L2 memory forms** (arenas, `free`, stack and recursion), **L3 concurrency** (locks, `publish`/`await`, threads;
-   refinement into the GX weak-memory machine), **L4 hardware forms** (entries, `asm`, devices) with named hardware
-   assumptions, **L5 validator**: a Lean checker for the untrusted Rust backend's output bytes (decode, compare with the
-   Lean lowering, relocation and image mapping).
-The Rust backend stays an untrusted producer; the LLVM backend serves as a running reference compiler and a source of
-cross-checks until the direct backend exists. The estimate of 36 000-54 000 Lean lines stands for the whole track.
+**Track L: refinement down to the binary, in two halves (Simon, 2026-10-17).** Lowering to LLVM IR brings little: LLVM is
+outside the validated chain. Only refinement all the way to machine bytes counts. That needs a CPU model, which Simon builds
+in parallel (`arm/`); Track L does NOT start it and builds no AArch64 interface, encoder or toy CPU. It builds the half that
+needs no CPU model:
+1. **A target-independent low-level language of our own** in Lean (`Grammatik/Code/`; not LLVM): word-sized registers or
+   locals, byte memory with the GX interface for atomics, ALU operations with explicit width and wraparound,
+   compare/branch/loop, call/return with a frame, atomics with orderings, a stack; with its semantics.
+2. **The lowering from machine G to it** as a Lean function and the **refinement theorems**: expressions, straight-line code,
+   `ite`, calls (L1); memory forms: arenas, `free`, stack and recursion (L2); concurrency: locks, `publish`/`await`, threads,
+   refined into GX (L3); hardware forms with named assumptions (L4).
+The first LLVM-flavoured draft (`Grammatik/Llvm/`, ~6 000 lines) is the template and is deleted once `Code` supersedes it.
+**Out of scope until the CPU model exists:** `Code` to bytes (instruction selection, encoding, relocation, image mapping) and the
+Lean validator for the Rust backend's bytes; the report of Track L states which properties of `Code` that step will need. The
+LLVM backend stays as the running reference compiler. Estimate for the half: 25 000-40 000 Lean lines.
 
 **Track P: a complete Lean parser** (`Grammatik/Parser/`, today 22 700 lines for the fragment tables, locks,
 `impl fn` with pointer/index/range parameters, comparison contracts, straight-line bodies, direct calls).
