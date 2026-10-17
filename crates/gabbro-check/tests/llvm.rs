@@ -24,7 +24,7 @@ fn wurzel() -> PathBuf {
 fn lean_model_coverage_register_is_complete() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let result = std::process::Command::new("python3")
-        .arg(root.join("instrumente/pruefe-llvm-modelldeckung.py"))
+        .arg(root.join("instrumente/teile/llvm-modelldeckung.py"))
         .current_dir(&root)
         .output()
         .expect("run the model coverage guardian");

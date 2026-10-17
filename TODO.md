@@ -73,6 +73,12 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 ## 3. Prüfer
 
+- **Wächter-Reste (vier Wächter seit 2026-10-17).** `bruecke/` wird nicht gemessen (sein `lake build`
+  scheitert am fehlenden `mathlib`-Eintrag); der baumweite `gabbro prove`-Lauf und der E1-Vergleich
+  (Pflichten-Manifest) hängen in keinem Wächter; der Mutationslauf über den Prüfer ist ersatzlos
+  gestrichen; 8 600 deutsche Kommentarzeilen im Prüfer sind nicht bewacht. Details:
+  `dokumente/WERKZEUGKASTEN.md`.
+
 - **O11 (hüterlose Invariante).** Eine `table`/`group`-Invariante, die keine
   Funktion `maintains`, wird von NICHTS gebucht (`N275`–`N277` prüfen nur
   verankerte).
@@ -83,7 +89,7 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
   Offen: Records über Byte-Puffern (Bereichsobjekte im Modell, `LG005`/`LG001`);
   die vier Brücken-Hypothesen (`ParamVerschieden`, `RechteOk`, `HerkunftTreu`,
   `FrischNeu` nur für den Modell-Allokator) und der `let`-Lauf des Prüfers in Lean;
-  `R004`/`R007` als Sonderfälle von `R014`; Mutationslauf für `R014`/`R015`;
+  `R004`/`R007` als Sonderfälle von `R014`; Mutationslauf (gestrichen mit den 80 Wächtern, kein Ersatz);
   `noalias` ist kein Lean-Urteil (O27).
 - **O26-Rest (fremde Sperrprimitive).** Eigene Primitive geprüft (`N481`–`N483`);
   fremde bleiben angenommen (schwaches Gedächtnis nimmt acquire/release an).

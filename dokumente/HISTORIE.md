@@ -51,7 +51,8 @@ decision is written. Dates are commit or decision dates, not measurement dates.
 | 2026-10-17 | Real threads for `start`; recursion lowered to loops with growable continuation storage; the LLVM backend measured against the Lean constructor register | `dbda971d`, `9a2b9986`, `158047cc` |
 | 2026-10-17 | **`own`, aliasing and `noalias`**: `R014` refuses two pointer arguments with one root, an untraceable pointer is *unknown* and equals every root (a soundness gap closed), `R015` names the boundary assumption; Lean model of objects below a table (`ParamGetrennt`, `ObjGetrennt`) with a bridge to `R014`; `noalias` on writable pointer parameters of internal functions | `704719db`, `74d7c90d`, `bf760447`, `be9320a4`, `a6a2e2d6`, `4bb5e944` |
 | 2026-10-17 | The emission check stops being a push gate (the C backend is deprecated) | `acb9b5dd` |
-| 2026-10-17 | **Documentation consolidation**: 163 Markdown files become 30 (README, `AGENTS.md`, `CLAUDE.md`, `TODO.md`, `ARM-PLAN.md`, 21 documents, three machine-read ledgers) | this commit series |
+| 2026-10-17 | **Documentation consolidation**: 163 Markdown files become 30 (README, `AGENTS.md`, `CLAUDE.md`, `TODO.md`, `ARM-PLAN.md`, 21 documents, three machine-read ledgers; the ledgers went in the four-guardian cut below) | this commit series |
+| 2026-10-17 | **Exactly four guardians** (Simon): Lean model, LLVM compiler, checker, GabbroV. 81 guardians, counters and tools (the 54 `pruefe-*`, 22 `zaehle-*`, the mutation run, the C-emitter stages) and the ledgers they read (`KENNZAHLEN`, `PASSREGISTER`, `RUECKLAUFWERTE` and ten `.txt` registers) are deleted; the Markdown set is 27 files. Also the same day: the `u32 + u32 -> u64` hole closed by reverting `94e526fd` (gifts 1445-1447, example 1164), `gabbro llvm-cert` printing valid Lean, port-space devices refused by name (`Y102`, gift 1470), `annahmen --per-file` | `git show 414feafc:instrumente/` holds the retired scripts |
 
 ---
 

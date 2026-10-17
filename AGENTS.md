@@ -144,8 +144,8 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 
 - **Lean layout** (Simon, 2026-10-05): every folder holds at most **20 entries** (files plus folders), and every Lean
   file lives in a sensible folder. Mandatory, also retroactively. The placement rules are
-  `instrumente/lean-layout-rules.py`; `python3 instrumente/lean-layout.py --check` is the guardian
-  (`instrumente/pruefe-lean-layout.py`) and `--apply` moves new modules into place and rewrites imports and
+  `instrumente/teile/lean-layout-rules.py`; `python3 instrumente/teile/lean-layout.py --check` runs inside
+  the Lean guardian (`instrumente/pruefe-lean.py`) and `--apply` moves new modules into place and rewrites imports and
   references (the merge gate runs it after every merge). A module no rule matches goes to a `Neu` folder
   when its folder would overflow; the coordinator turns those into rules. Never leave a folder above 20.
 
@@ -368,11 +368,9 @@ opus/…:opus/…` first.
 1. Refresh the lanes' warm Lean cache from the merge build.
 2. Bundle master, run `cargo test --no-fail-fast`, and push only if the tests and the key grep
    are clean and origin is not ahead. If origin moved, `git pull` (merge) first and run it again.
-   - **The C-emitter check is NOT a push gate any more** (Simon, 2026-10-17): the C backend is
-     deprecated (section 3, 2026-10-15). `instrumente/pruefe-emission.sh` stays as a standalone
-     legacy check; run it when `emit.rs` or the C runtime changes, not before every push.
-   - Its counters (`MARKE_EMIT`, `MARKE_EMIT_G`, `MARKE_EMIT_M`) are re-measured by whoever runs
-     it, with a dated reason per bump.
+   - **The push gate is the four guardians** (`./instrumente/abnahme.py`, Simon 2026-10-17: exactly
+     four). The C-emitter check (`pruefe-emission.sh`) is retired together with its counters
+     (`MARKE_EMIT*`): the C backend is deprecated (section 3, 2026-10-15) and no longer guarded.
 
 ## 6. Opus agents (Claude subagents, max 2)
 
@@ -388,7 +386,7 @@ opus/…:opus/…` first.
     Until there is a staged cache, either copy `programmlogik/.lake`
     from a tree that has one, or keep `cargo test` off the lane and say so in the report;
   - a stale `programmlogik/.lake` is worse than none: an `incompatible header` makes
-    `pruefe-lean-programm.sh` announce *"the exported program is not valid Lean"*, which is a
+    `gabbro prove` announce *"the exported program is not valid Lean"*, which is a
     sentence about the olean and not about the program (met in the acceptance run of
     2026-09-15);
   - build with `lake build` in the agent's own directory, never in this checkout while
@@ -422,7 +420,7 @@ A ledger of reservations drifts; the highest number in the tree does not.*
   merger in the same merge.
 - The test `keine_zwei_korpusdateien_teilen_eine_nummer` catches collisions between lanes.
 - **Every new refusal code comes with its sentence** in `saetze.rs` in the same commit
-  (`pruefe-saetze.py`), and with a poison probe.
+  (the sentence register in `pruefe-pruefer.py`), and with a poison probe.
 
 ## 8. Files that matter
 
@@ -434,9 +432,8 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 | Plans | `dokumente/BEWEIS.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 historical C record), `dokumente/PRUEFER.md`, `dokumente/BEWEIS.md`, `GLEITKOMMA.md` |
 | Theorem map | `dokumente/SATZKARTE.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
 | Known absences | `TODO.md` (O1–O14) |
-| Guardian-booked figures | `messung/KENNZAHLEN.md` (moved out of the old TODO.md; `pruefe-zahlen.py` reads it) |
-| Verdicts | `messung/URTEIL-*-2026-09-1*.md`; lane reports `messung/muse/MUSE-REPORT-NN.md` |
-| Instruments | `instrumente/zaehle-kette.py` (existing C-chain count; does not validate x86 bytes), `pruefe-cformen.py` (three states: lemma / assumption / uncovered), `pruefe-emission.sh`, `abnahme.py` (all guardians), `mutiere-pruefer.py` |
+| Verdicts | `dokumente/BEWEIS.md` part C (one table); the old reports are in Git |
+| Guardians | `instrumente/abnahme.py` runs the four: `pruefe-lean.py`, `pruefe-llvm.py`, `pruefe-pruefer.py`, `pruefe-gabbrov.py` (`dokumente/WERKZEUGKASTEN.md`) |
 | Rust tools | `gabbro lean-g` (exporter), `gabbro obligations --g`, `gabbro counterexample`, `gabbro corr-lean`, `gabbro certificate`, `gabbro pruefe --fix`, `gabbro abgeleitet`, `gabbro zeremonie`, `gabbro paesse` |
 
 ## 9. Pitfalls that cost real time (each happened)
@@ -473,14 +470,10 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 - **Semantic merge breaks** show up only in the build: a new structure field needs `none`
   appended at every literal, and an arity change in `lean_g.rs` needs every caller updated.
   Always build after a merge, even a clean one.
-- **Sorry is mechanically refused at merge** (Simon, 2026-10-04):
-  `instrumente/pruefe-kein-sorry.py` runs in the merge gate over the candidate
-  (`--rev muse/NN --diff master`): `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`
-  in `grammatik/` code, unrecorded `axiom` declarations (allowlist:
-  `instrumente/kein-sorry-allowlist.txt`, currently only `dma_inhalt`), and added
-  X86 theorems without `#print axioms` all fail the merge. `bruecke/` and
-  `programmlogik/` are out of scope by design (documented `sorry` patterns owned
-  by their lanes).
+- **Sorry is mechanically refused** (Simon, 2026-10-04): the Lean guardian (`instrumente/pruefe-lean.py`)
+  fails on `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe` in `grammatik/` code and on any `axiom`
+  not recorded in `instrumente/teile/kein-sorry-allowlist.txt` (currently only `dma_inhalt`); the GabbroV
+  guardian does the same for `programmlogik/Proofs` and `programmlogik/gabbrov`. `bruecke/` is not measured.
 
 **Machines:**
 

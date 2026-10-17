@@ -47,7 +47,7 @@ model in Lean, and is not finished ([plan](ARM-PLAN.md)).
 Install **Rust 1.86 or newer**. The Rust crates have no third-party dependencies.
 Checking source needs nothing else. `gabbro build` with the legacy C11 backend uses
 a C compiler available as `cc`; the LLVM backend needs the LLVM tools `opt`, `llc`
-and `ld.lld` instead (`instrumente/baue-llvm.sh`).
+and `ld.lld` instead (`instrumente/teile/baue-llvm.sh`).
 Ensure `~/.cargo/bin` is on your `PATH`.
 
 ```bash
@@ -118,7 +118,7 @@ still requiring the new validator and its proof.
 
 ## 4. Status
 
-Measured snapshot 2026-10-01 — every figure carries its command; provenance and limits in [MESSUNGEN](dokumente/MESSUNGEN.md) and `messung/KENNZAHLEN.md`.
+Measured snapshot 2026-10-17 — every figure carries its command; since the four-guardian cut these figures are dated results, not guarded values (see [MESSUNGEN](dokumente/MESSUNGEN.md) and [WERKZEUGKASTEN](dokumente/WERKZEUGKASTEN.md)).
 
 | | | |
 |---|---|---|
@@ -126,13 +126,12 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 | **Grammar** | **189 EBNF rules**, closed and reachable | vocabulary covers every terminal, 245 / 245 |
 | **Proof templates** | **41, of which 30 are machine-checked** | `gabbro templates` |
 | **Corpus** | 170 clean examples, 898 poison files | `cargo test --no-fail-fast` |
-| **Backend** | LLVM backend (current target, no C) plus the deprecated C11 emitter (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`; every emitted unit compiled, part executed against a handwritten twin) | `./instrumente/baue-llvm.sh`, `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 54, each with deadline, two-way speech test, red on abort, pinned locale; **64 of 78 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
+| **Backend** | LLVM backend (current target, no C), x86_64 and aarch64; the C11 emitter is deprecated and no longer guarded | `./instrumente/pruefe-llvm.py` |
+| **Guardians** | exactly 4: Lean model, LLVM compiler, checker, GabbroV; each prints its work quantity, `2` means not measured | `./instrumente/abnahme.py` |
 | **Blind spots** | **72 blind · 176 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2564 and 110 clause sites | `gabbro ceremony` |
 
-Mutation tests damage one rule at a time: 422 mutations, one anchor each
-(`./instrumente/mutiere-pruefer.py`). The 15 theories in [`grammatik/Beweise/`](grammatik/Beweise/)
+The 15 theories in [`grammatik/Beweise/`](grammatik/Beweise/)
 hold 3512 lines of Isar; new proofs go to Lean only.
 
 ## 5. Proved and not proved

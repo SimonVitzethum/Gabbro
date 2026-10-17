@@ -8,7 +8,7 @@ verbund,onramp}.rs`.*
 **Which backend this drives.** `gabbro build` is the build of the **legacy C11 path**: it emits C per unit
 (`C-SPEICHERMODELL.md`), compiles it with the manifest's `compiler` line, links, and writes the generated drivers.
 The LLVM backend ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)) is not reachable through a manifest today: it is driven by
-`gabbro llvm [--unit]` and `instrumente/baue-llvm.sh`. A manifest word that selects the backend does not exist.
+`gabbro llvm [--unit]` and `instrumente/teile/baue-llvm.sh`. A manifest word that selects the backend does not exist.
 
 ## 1. The decision: Cargo-like with a manifest, not a generator
 

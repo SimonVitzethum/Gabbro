@@ -23,7 +23,7 @@ stage 4). Targets: `x86_64` and `aarch64`, both LP64 little endian, as data
 |---|---|
 | `gabbro llvm [--target=x86_64\|aarch64] [--unit] [--testbuild] f.gab…` | IR text to stdout; `--unit` lowers the named files as one translation unit |
 | `gabbro llvm-cert [--target=…] [--unit] f.gab…` | the Lean certificate beside the IR, same run, no LLVM inside (section 8) |
-| `instrumente/baue-llvm.sh [f.gab…]` | end to end for both targets: check, IR, `opt`+`llc`, `ld.lld`, no-libc check, run (aarch64 under `qemu-aarch64`), compare |
+| `instrumente/teile/baue-llvm.sh [f.gab…]` | end to end for both targets: check, IR, `opt`+`llc`, `ld.lld`, no-libc check, run (aarch64 under `qemu-aarch64`), compare |
 | `crates/gabbro-check/tests/llvm.rs` | IR tests without the LLVM toolchain; `tests/noalias.rs` the `noalias` rule; `tests/beispiele.rs` runs the emitter over the `Y` gift probes |
 
 `gabbro build` (the manifest build, [`BAUSYSTEM.md`](BAUSYSTEM.md)) does not drive this
@@ -221,7 +221,7 @@ coverage denominator.
 cargo test -p gabbro-check --lib llvm:: --no-fail-fast      # execution witnesses
 cargo test -p gabbro-check --test llvm --no-fail-fast       # IR tests
 cargo test -p gabbro-check --test noalias --no-fail-fast
-./instrumente/baue-llvm.sh [f.gab…]                          # end to end, both targets
+./instrumente/teile/baue-llvm.sh [f.gab…]                          # end to end, both targets
 ```
 
 ## 7. Coverage against the Lean model
