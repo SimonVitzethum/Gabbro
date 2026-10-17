@@ -1,0 +1,96 @@
+-- nachricht -- message passing with a payload across two real threads (LLVM backend).
+--
+-- `erzeuger` writes two payload words and publishes the flag `BEREIT` (release store);
+-- `verbraucher` polls the flag with `awaits` (acquire load) and, on the confirming branch,
+-- reads both payload words. The sum is 42 on every schedule: a reader that saw the flag but
+-- not the payload would return 40, 2 or 0. If the producer never publishes inside the polling
+-- bound the watchdog `abbruch` leaves with exit code 99 (loud, never 42).
+-- Expected exit code: 42 on both targets.
+module messung::nachricht {
+
+pub static mut nutzlast_a : u32 in 0 .. 1000 = 0;
+pub static mut nutzlast_b : u32 in 0 .. 1000 = 0;
+pub static mut ergebnis   : u32 in 0 .. 2000 = 0;
+
+pub atomic BEREIT : bool release;
+
+-- The checker's payload rule (N291, OFFEN O25) still wants every cross-thread payload guarded by a
+-- lock; the flag round trip stays the object of the test (the release store and the acquire
+-- load carry the payload IR), the lock guards the payload words as the rule demands.
+pub lock NL protects { nutzlast_a, nutzlast_b, ergebnis } rank 0 held <= 16 ops;
+
+assume erzeuger_laeuft
+    "The producer thread runs and publishes within the polling bound."
+    falsifier sonde_erzeuger_laeuft;
+
+assume linux_ende
+    "The kernel ends the process with the given status."
+    falsifier sonde_ende;
+
+syscall ende(code : u64) -> u64
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_ende falsifier sonde_ende;
+syscall ende(code : u64) -> u64
+    abi linux arch aarch64 number 94
+    regs in { x0 = code }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_ende falsifier sonde_ende;
+
+impl fn abbruch()
+    effects { diverges }
+    costs   <= 16 ops
+{
+    let r : u64 = ende(99);
+}
+
+impl fn erzeuger()
+    effects { writes nutzlast_a, writes nutzlast_b, publishes BEREIT, locks NL }
+    costs   <= 32 ops
+{
+    locks NL {
+        nutzlast_a = 40;
+        nutzlast_b = 2;
+    }
+    BEREIT = true publishes { nutzlast_a, nutzlast_b };
+}
+
+impl fn verbraucher()
+    effects { reads BEREIT, reads nutzlast_a, reads nutzlast_b, writes ergebnis, locks NL, diverges }
+    costs   <= 400000000 ops
+{
+    retry warten bounded 100000000 ops
+        progress erzeuger_laeuft
+        on_exceeded abbruch
+        effects { reads BEREIT, reads nutzlast_a, reads nutzlast_b, writes ergebnis, locks NL }
+    {
+        let fertig = BEREIT awaits { nutzlast_a, nutzlast_b };
+        if fertig {
+            locks NL {
+                ergebnis = nutzlast_a + nutzlast_b;
+            }
+            leave warten;
+        }
+    }
+}
+
+pub fn main() -> u32
+    effects { reads ergebnis, writes ergebnis, reads BEREIT, writes nutzlast_a, writes nutzlast_b, reads nutzlast_a, reads nutzlast_b, publishes BEREIT, locks NL, diverges }
+    costs   <= 500000000 ops
+{
+    start { erzeuger, verbraucher };
+    locks NL {
+        return ergebnis;
+    }
+}
+
+}
