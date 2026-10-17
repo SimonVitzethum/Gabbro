@@ -8,7 +8,7 @@ verbund,onramp}.rs`.*
 **Which backend this drives.** `gabbro build` is the build of the **legacy C11 path**: it emits C per unit
 (`C-SPEICHERMODELL.md`), compiles it with the manifest's `compiler` line, links, and writes the generated drivers.
 The LLVM backend ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)) is not reachable through a manifest today: it is driven by
-`gabbro llvm [--unit]` and `instrumente/baue-llvm.sh`. A manifest word that selects the backend does not exist.
+`gabbro llvm [--unit]` and `instrumente/teile/baue-llvm.sh`. A manifest word that selects the backend does not exist.
 
 ## 1. The decision: Cargo-like with a manifest, not a generator
 
@@ -108,9 +108,9 @@ module, a non-module unit compiles it beside its own object (`<unit>.fremd<N>.o`
 module include mechanism and is refused elsewhere. The arenas are NOT in the manifest (only their storage `provision`): the emitted unit
 carries `#define GABBRO_ARENEN`, and the driver binds exactly that list (`W7`).
 
-Measured where it can only be measured: `instrumente/pruefe-kernelmodul.sh` builds the module probes through
-`gabbro build` and loads them **in QEMU, never into the host's kernel**; `instrumente/pruefe-os-bindung.sh` checks what
-the runtimes still take from the OS; `instrumente/pruefe-metall.sh`/`pruefe-freistehend.sh` the bare-metal stages.
+Measured where it can only be measured (by retired stages, 2026-10-17, see git history; not guarded today): the retired `pruefe-kernelmodul` built the module probes through
+`gabbro build` and loaded them **in QEMU, never into the host's kernel**; the retired `pruefe-os-bindung` checked what
+the runtimes still took from the OS; the retired `pruefe-metall` and `pruefe-freistehend` were the bare-metal stages.
 
 ## 4. Incremental by CONTENT, not by timestamp
 
@@ -187,7 +187,7 @@ A `unit ... program` names exactly one entry, an ordinary `pub fn main` (`main` 
 refusals from foreign tools one or three tools downstream (`ld`: undefined `main`; `cc -Werror=main`: a private or
 mistyped `main`); `N039` covers only two EXPORTED `main`. The rule fires in `bau.rs::eintrittsregel`, before any C. It
 carries no identifier: a `Satz` says what is true of a program the checker passed, and a manifest is read by no pass
-(`paesse.rs` holds the passes at twelve, `pruefe-saetze.py` counts identifiers owing a statement as a ratchet). The same
+(`paesse.rs` holds the passes at twelve, the sentence ratchet of `instrumente/pruefe-pruefer.py` counts identifiers owing a statement). The same
 reading governs every manifest refusal here (module in two units, cycle, empty unit, linker refusal, `kmod`, `provision`,
 `note`, `nolibc` hooks, module rules, bindings): no `-- erwartet: CODE` probe can name them; the probes are `.bau` files.
 **Name collisions with C** (`putchar`, `exit`, ...) are `N041` (`C-SPEICHERMODELL.md` section 8): a Gabbro program does not

@@ -182,7 +182,7 @@ Freeing the last live slot of a ~1 MiB chunk returns its whole interior pages (`
 profile); `reset` returns the used payload pages; both keep the reservation, access rights and committed prefix.
 Residency is not virtual commit; page return is best effort and partial boundary pages can stay. `reset X at i
 count n` on a static array zeroes exactly the checked interval and, with declared bindings, returns its whole
-interior pages (`instrumente/pruefe-seiten-zurueck.sh` measures the resident-set drop). Nothing is decommitted
+interior pages (the retired `pruefe-seiten-zurueck` measured the resident-set drop; not guarded today). Nothing is decommitted
 and no revoked-page bitmap exists.
 
 ## 7. Lean model
@@ -224,8 +224,8 @@ a table of `count = hi` plus a `used` global; `arenaAlloc_unter_schranke`), `Are
 ## 9. Re-measuring
 
 ```
-python3 instrumente/pruefe-llvm-modelldeckung.py        # which arena/slot model members the LLVM backend lowers
-./instrumente/pruefe-seiten-zurueck.sh                    # resident-set drop after a range/page return (legacy C runtime, heavy)
+./instrumente/pruefe-llvm.py                              # runs teile/llvm-modelldeckung.py: which arena/slot model members the LLVM backend lowers
+# resident-set drop after a range/page return (legacy C runtime): measured by the retired pruefe-seiten-zurueck (2026-10-17); not guarded today
 cargo test -p gabbro-check --lib llvm:: --no-fail-fast    # small-slot reuse, page discard, range reset, thread groups
 cargo test -p gabbro-check --test paesse --no-fail-fast   # arena_* checker rules with their clean twins
 ```

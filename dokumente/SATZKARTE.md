@@ -1,5 +1,7 @@
 # SATZKARTE-C: goal-family premise map, re-measured 2026-09-12 (lane 97)
 
+*Note (2026-10-17): the dated blocks below name measuring scripts; those marked "retired" were removed on 2026-10-17 (see git history, `git show 414feafc:instrumente/<name>`) and their figures are historical results. Only the four guardians run by `instrumente/abnahme.py` and `cargo test` measure today.*
+
 Replaces the class column of SATZKARTE-A (§2) with the four binding classes:
 (a) USER obligation, (b) HARDWARE assumption, (c) DISCHARGED by a merged
 theorem (named), (d) STILL OPEN language duty. Covers every premise of every
@@ -3048,14 +3050,14 @@ index-fixed map (`ks = [(1, 0)]`), a missing call row -- each refused.
 
 ### 27.6 The counter
 
-`instrumente/zaehle-kette.py` counts a chain as closed only for a program with a Lean-checked
+The retired `zaehle-kette` counted a chain as closed only for a program with a Lean-checked
 instance of `schlusssatz`: a `CHAIN-INSTANCE <program> <name>` marker, `def <name> : Kette <src>`
 with `<src>` byte-identical to the file, the instance's certificate text-identical to the
 printer's `KCert`, an application `schlusssatz <name>`, and with `--lean` a green `lake build`
 plus sieve (a) (the pipeline evaluated in Lean over every program) and (d). Measured on
 `ki-pc-fisch-101`: **CHAIN COUNT 2 of 111** (104, 108; before: 1 of 101). On the way, the C-form
 census read 104's `(void)lies(k, i);` as a call inside an expression; repaired in
-`pruefe-cformen.py` (PLAN §6.3).
+retired `pruefe-cformen` (PLAN §6.3).
 
 ### 27.7 What remains
 
@@ -3133,7 +3135,7 @@ kernel), and the note there says how to build it without a mutual block.
 (`parseC`), `CBackend/Parser/CProben.lean` (the refusals), `CBackend/Parser/Bruecke.lean` (`A2`, `kFuns`,
 `schlusssatz_text`), `CText104.lean` + `CText104Zeuge.lean`, `CText108.lean`, and the two
 theorems added at the end of `Kette104Satz.lean`. Guardian:
-`instrumente/pruefe-ctext.py`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG.md §6.6.*
+retired `pruefe-ctext`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG.md §6.6.*
 
 ### 29.1 What was assumed, and what is proved instead
 
@@ -3293,7 +3295,7 @@ are reported separately.*
 `lex_ofList`), `Grammatik/Korrespondenz/Kette/Schlusssatz.lean` (`uebersetzeAllg_von_zeichen`),
 `Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
 `Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
-`Grammatik/Korrespondenz/Kette/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), `instrumente/zaehle-kette.py`.
+`Grammatik/Korrespondenz/Kette/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), retired `zaehle-kette`.
 Report: `messung/muse/OPUS-BERICHT-O13.md` (retired report, in the history).*
 
 | Theorem | What it says |
@@ -3307,8 +3309,8 @@ Report: `messung/muse/OPUS-BERICHT-O13.md` (retired report, in the history).*
 `kette108`, `kette_104 : Kette src104real`, `kette_108 : Kette src108` are character for
 character what they were; `Kette` is still indexed by a `String`, `uebersetzeAllg` still
 takes one, and `src104real` IS its text by definition (`String.ofList` of the pinned
-pieces). `zaehle-kette.py` still compares the pin against `beispiele/*.gab` byte for byte
-(it reads the `SRC-BEGIN` block now) -- measured after the repair: **chain count 2 of 2
+pieces). The retired `zaehle-kette` still compared the pin against `beispiele/*.gab` byte for byte
+(it read the `SRC-BEGIN` block then) -- measured after the repair: **chain count 2 of 2
 CLOSED**, all five sieves green with `--lean`. Axioms: the standard three for every theorem
 in every file touched. No `sorry`, no `native_decide`, no new `axiom`.
 
@@ -3476,7 +3478,7 @@ so no arena program closes a chain yet. The form exists; the export does not.
 *Added 2026-09-15 (Opus lane `pflicht`). Files: `Grammatik/Korrespondenz/Korpus/GenOblig104.lean` (REGENERATED),
 `Grammatik/Korrespondenz/Allgemein/Pflicht104.lean` (migrated), `Grammatik/Korrespondenz/Korpus/GenOblig108.lean` (new, generated),
 `Grammatik/Korrespondenz/Allgemein/Pflicht108.lean` (new), imported by `Grammatik.lean`. Guardian:
-`instrumente/pruefe-genlean.py`. Report: `messung/muse/OPUS-BERICHT-PFLICHT.md` (retired report, in the history).*
+retired `pruefe-genlean`. Report: `messung/muse/OPUS-BERICHT-PFLICHT.md` (retired report, in the history).*
 
 **What was missing.** Lane 198 made `gabbro lean-g` produce a full `Zielsatz.Einheit gE` and
 `gabbro obligations --g` state `def nutzerPflicht := Zielsatz.NutzerPflicht gE` beside the
@@ -3520,9 +3522,9 @@ here. *`beispiele/124` is not a third candidate: it does not export at all (`LG0
 gabbro_ziel` is unchanged. The whole library builds: 254 jobs, exit 0. No `sorry`, no
 `native_decide`, no new `axiom`.
 
-**The guardian.** `instrumente/pruefe-genlean.py` re-runs `gabbro lean-g` / `gabbro
-obligations --g` on every COMMITTED generated Lean file and compares the WHOLE FILE byte for
-byte. It finds its work by the generator's own first line (`-- GENERATED by \`gabbro …\``),
+**The guardian (retired 2026-10-17, see git history; not guarded today).** `pruefe-genlean` re-ran `gabbro lean-g` / `gabbro
+obligations --g` on every COMMITTED generated Lean file and compared the WHOLE FILE byte for
+byte. It found its work by the generator's own first line (`-- GENERATED by \`gabbro …\``),
 so there is no second register beside the tree. Measured: 2 of 2 files byte-identical, 18 582
 bytes; and red on a single changed byte, green again after restoring.
 
@@ -3539,7 +3541,7 @@ bytes; and red on a single changed byte, green again after restoring.
 **The statement that changed.** `schlusssatz` (the generic closing theorem, §27) kept every
 hypothesis it had -- `Kette src`, `hH`, `hXR`, `hA1`, `hA4` -- and gained three conclusions
 between part 4 and part 5. Nothing was weakened; `schlusssatz_104` and `schlusssatz_124` are
-untouched, and the chain count is unchanged at **2 of 113** (`zaehle-kette.py --lean`:
+untouched, and the chain count is unchanged at **2 of 113** (retired `zaehle-kette`:
 (a) 2, (b) 15, (c) 15, (d) ~~60~~ **55**, (e) 2).
 
 > *The 60 was measured with a guardian that classified a C statement by its TEXT and booked an
@@ -3953,7 +3955,7 @@ review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, 
 - The Rust checker does not run `erschoepfendB`. `N411` decides the same predicate by an
   interval sweep over M1's range of the scrutinee; the agreement is by reading.
 - That `emit.rs` writes exactly `swFaelle arms rumpf` (stacked labels in front of one body
-  per arm, no `default`) is read off the emitter, not proved. The `pruefe-cformen.py` rows
+  per arm, no `default`) is read off the emitter, not proved. The `pruefe-cformen` rows (retired 2026-10-17)
   `stmt:switch-int`/`stmt:case-int` stay uncovered (state iii), with the lemma OPEN.
 - The witness's `switch` scrutinee is the literal of the value the fixture read, not the
   emitted load of `konto[0]`. The earlier conjuncts about the fixture's reached run
@@ -4062,7 +4064,7 @@ no longer imports `ReferenzB`. `#print axioms gabbro_ziel` unchanged.
 
 **What is NOT claimed.** The model side (`Expr.slot` over `nestIdx`) and the memory relation
 of a static C array (`corrW` for `T a[M][N]`) are not stated: this is the C address equality
-lifted through the load. `pruefe-cformen.py` has no nested-array row; the content of a mutable
+lifted through the load. The retired `pruefe-cformen` had no nested-array row; the content of a mutable
 static-array read inherits the uncovered `expr:array-read`.
 
 **Axioms:** `propext`, `Classical.choice`, `Quot.sound`; `#print axioms gabbro_ziel` unchanged.
@@ -4159,7 +4161,7 @@ the footprint legs `N290`-`N293` always paired thread indices, which is the occu
 `Getrennt`. `N315` (idle duplicate) is retired -- an idle routine is the empty pool and the goal
 covers it -- and gift 976 with it. The exporter's `LG001` for repeated starts (fix lane F4) is
 lifted: `beispiele/157-worker-pool.gab` exports with both occurrences and agrees
-(`pruefe-akzeptiert-diff.py`, 0 findings; its self-test runs the pool positive).
+(retired `pruefe-akzeptiert-diff`, 0 findings; its self-test runs the pool positive).
 
 **What is NOT claimed.** Per-core writes (`accumulates … per cpu`) stay unmodelled (OFFEN
 O17). A routine declared ONCE on several threads is outside (d). The run witness takes three
@@ -4233,9 +4235,9 @@ reached `Ziel` only through `klon_ziel` (§39, outside the statement), a `start`
 
 **Rust side.** The exporter carries every `start` root as `gE.gestartet` (parameterless, each
 once; `check_gestartet`), the statement leaves no G term, and a starter's lifted `locks` effect
-is no refusal. `pruefe-akzeptiert-diff.py` rebuilds `ws` from the source with the roots doubled,
-pins the export against it (K5), and compares `N458`/`N462` with `wurzeln`/`einzeln`; its
-self-test has a positive (`messung/proben/faden-start-pool.gab`) and a negative (a root needing a
+is no refusal. The retired `pruefe-akzeptiert-diff` rebuilt `ws` from the source with the roots doubled,
+pinned the export against it (K5), and compared `N458`/`N462` with `wurzeln`/`einzeln`; its
+self-test had a positive (`messung/proben/faden-start-pool.gab`) and a negative (a root needing a
 lock). A `child` still does not export: its stack gate is a foreign body (`Ax := Empty`).
 
 **What is NOT claimed.** Per-spawn arguments (a child reading its handed values), a root
@@ -4284,7 +4286,7 @@ over-approximation). Machine W is G over this memory, with the weak choice at th
 
 **Rust side.** Nothing changed and nothing needed to: the DRF theorem uses no memory order, the
 emitter lowers every atomic access through an explicit `atomic_*_explicit` call (lane 152) and
-the driver's locks are `pthread_mutex`. `pruefe-akzeptiert-diff.py`: 19 agreements, 0 findings,
+the driver's locks are `pthread_mutex`. retired `pruefe-akzeptiert-diff`: 19 agreements, 0 findings,
 self-test both directions (the instrument now also reads the local `lean-probe`'s exit line).
 
 **Assumptions of the reading** (Spec.lean header, five, repaired after the Spec-diff verdict,
@@ -4510,7 +4512,7 @@ Gift 1204; snippet tests in `tests/fusswache2.rs` (body-only shared read, thread
 single thread stay silent). Corpus diff: only the gift. With it, the Rust footprint legs decide
 `fussWXB` (atomics exempt as before, contracts over shared atomics refused), i.e. the Rust checker
 is the Bool of `AkzeptiertX` on this component -- measured by gift and snippets, not by
-`pruefe-akzeptiert-diff.py`, which cannot compare atomic programs (the exporter refuses them,
+retired `pruefe-akzeptiert-diff`, which cannot compare atomic programs (the exporter refuses them,
 `LG001`; the script lists `N484` under `fuss`, 22/22 agree, self-test ok).
 
 **What is NOT claimed, and why `Spec.lean` is unchanged.** The thread machine (`ZielF`: spawn,
@@ -4594,7 +4596,7 @@ graphs and `H102` were hypotheses of the leg, so the conjunct added no content
 
 **Rust side.** `H102` unchanged; the exporter writes `gP.unterbricht` for every `via idt` root
 (only `beispiele/59` among the certified programs; every other certificate changed by one header
-line). `pruefe-akzeptiert-diff.py` gains the component `masken` ↔ `H102`, pin K6 (exported
+line). the retired `pruefe-akzeptiert-diff` gained the component `masken` ↔ `H102`, pin K6 (exported
 handler set = source `via idt` roots), and a self-test pair (59 accepted; 59 without the mask =
 gift 460 refused at `masken` alone).
 
@@ -4639,7 +4641,7 @@ component's premise; both are recorded here because §57 reads differently now.
 | **before** | `masks irqs` was a promise about the environment with nothing keeping it in the emitted C, and `Kontext::unterbricht` -- the premise of `maskenB`/`H102` -- was the literal path word `idt` |
 | **now** | the RUNTIME keeps the promise per flavour: bare metal `METALL_SPERRE_MASKIERT` (Opus agent J), Linux kernel module the MASKED pair the program bound (`laufzeit/kmodul/sperre.h` over `bindung.h`; `raw_spin_lock_irqsave` in `bibliothek/linux-kmod`, under the named assumption `kern_bindung_maskiert` -- K7, 2026-09-28). `unterbricht` is "the entry carries a `via` path", in `kontexte.rs` and in `lean_g.rs` alike |
 | **why it is strictly stronger** | more dispatch roots become handlers, so `maskenB` has to hold over more programs. 0 corpus diff: nine `via` words at an `entry`, all `idt`. Witnesses `beispiele/gift/1364` (0 errors before, `H102` after) and `beispiele/166` (the same with `masks irqs`, clean and CERTIFIED as `G166_eintritt_irq_maskiert`) |
-| **measured** | `pruefe-akzeptiert-diff.py`: all ten pins on 29/29 comparable programs, `--selbsttest` green both ways (`masken` accepts 59, refuses the `gift/460` shape at `masken` alone). In QEMU, `pruefe-kernelmodul.sh` probe `takt`: `ticks=26 landed=0` -- 26 hardirq arrivals, none inside a critical section on the holding core -- and the unmasked mutation does not finish |
+| **measured** | retired `pruefe-akzeptiert-diff`: all ten pins on 29/29 comparable programs, `--selbsttest` green both ways (`masken` accepts 59, refuses the `gift/460` shape at `masken` alone). In QEMU, retired `pruefe-kernelmodul` probe `takt`: `ticks=26 landed=0` -- 26 hardirq arrivals, none inside a critical section on the holding core -- and the unmasked mutation does not finish |
 | **what is still NOT claimed** | `KernPlan` is not RELATED to the C in translation validation: the C is measured to keep the promise, and the chain does not prove it. The vector, the registers and the steps still have no form in `Einheit`, and handler re-entry stays outside (OFFEN O19) |
 
 **A by-product worth keeping.** The lock list was written into the emitted C first, and the
@@ -4769,8 +4771,8 @@ harness), and the binding's storage and report calls are Gabbro (`bibliothek/lin
 
 `Zielsatz/Kern/Spec.lean`: comment only, header block "arena runtime"; (d) `Laufzeit.reserve` and
 `.commit` reworded (the storage is the program's binding under the proved template; no definition,
-premise or conclusion moves). Measured: `pruefe-os-bindung.sh` GREEN and all 8 harness gifts
-caught; `miss-arena-decke.sh` GREEN (10 MiB and 32 GiB ceilings, same binary); `pruefe-osfrei.py`
+premise or conclusion moves). Measured: retired `pruefe-os-bindung` GREEN and all 8 harness gifts
+caught; retired `miss-arena-decke` GREEN (10 MiB and 32 GiB ceilings, same binary); retired `pruefe-osfrei`
 0 tokens (3 before, the Spec's own). Hosted C0 1174 -> 818 lines.
 
 ## 65. Hosted locks and the page return without C: `sperre.ticket`, `region.leeren` (C-free lane, 2026-09-30)
@@ -4794,8 +4796,8 @@ gate) as a region:
 | **`leeren_teilung`** | SchablonenArena §2 | edges and pages cover the range exactly, the pages fit the rest (the binding's `requires`), both ends on a page |
 | `leeren_zeuge`, `leeren_ohne_seite` | SchablonenArena §2 | WITNESS (10000 bytes from 5000); a range inside one page has no whole page |
 
-Measured: `pruefe-seiten-zurueck.sh` GREEN (RSS 2504 -> 1608 KiB bound, stays unbound, poison
-caught -- the numbers of the C binding it replaces); `pruefe-os-bindung.sh` GREEN with the ticket
+Measured: retired `pruefe-seiten-zurueck` GREEN (RSS 2504 -> 1608 KiB bound, stays unbound, poison
+caught -- the numbers of the C binding it replaces); retired `pruefe-os-bindung` GREEN with the ticket
 lock, gifts 1-8 caught. Hosted C0 818 -> 687 lines.
 
 ## 66. Hosted threads without pthread: `tor.trampolin` and `faden.laufzeit` (C-free lane, 2026-09-30)
@@ -4819,8 +4821,8 @@ two callee-saved registers the gate neither binds nor destroys (`C187` otherwise
 
 The driver's stacks are regions of the binding (`gabbro_os_reserve`/`_commit`) with the lowest page
 left unwritable. Found on the way: `N572` (every stack-gate call hands to a `child` region) and
-the clone trap's store order (OFFEN O38). Measured: `pruefe-os-bindung.sh` GREEN (the os-probe's
-two roots, arena and lock, no pthread), 8 gifts caught; `pruefe-emission.sh` ALL PASS including
+the clone trap's store order (OFFEN O38). Measured: retired `pruefe-os-bindung` GREEN (the os-probe's
+two roots, arena and lock, no pthread), 8 gifts caught; retired `pruefe-emission` ALL PASS including
 the 200000-round join race and the concurrent twin (20 of 20); hosted C0 687 -> 28 lines.
 
 ## 67. The `child` triple's region outlined: `tor.kind` (C-free lane, 2026-09-30, OFFEN O38)
@@ -4865,9 +4867,9 @@ driver; every kernel call below the unit is the program's binding.
 
 `Zielsatz/Kern/Spec.lean`: comment only -- (M11) now names the compiler's C11 atomics instead of the
 LKMM table (review: `messung/SERVER-0E-SPEC-DIFF.md` (retired report, in the history) Part IV), and (d) `Laufzeit.reserve` names
-the static pool. Measured: `instrumente/pruefe-kernelmodul.sh` GREEN on all three probes (halde:
+the static pool. Measured: retired `pruefe-kernelmodul` GREEN on all three probes (halde:
 refuse-on-full at the provision; takt: `landed=0` over 38 ticks; atomar: 512/256/0/3), 12 of 12
-gifts caught; `instrumente/zaehle-c.py` kmod runtime share 1344 -> 0 lines (what stays is the
+gifts caught; retired `zaehle-c` kmod runtime share 1344 -> 0 lines (what stays is the
 binding's `linux-kmod.c` and the probes' own C).
 
 ## 69. Code a generated driver hands in: `entry fn`, and the kernel thread start without C (C-free lane, 2026-10-01, C2 slice 3, OFFEN O39)
@@ -4925,9 +4927,9 @@ four memory functions (`<unit>.metall.speicher.c`) and the two header names besi
 NOT proved: that the compiler calls the memory functions only with ranges it owns, and that the
 loader zeroes `.bss` (the bare-metal block's `lader`). `Zielsatz/Kern/Spec.lean` unchanged (the arena
 on metal is still the static storage premise (d) names; its parenthesis naming `arena.c` in the
-Opus agent L block is a dated remark). Measured: `instrumente/pruefe-metall.sh` 18 images booted
+Opus agent L block is a dated remark). Measured: retired `pruefe-metall` 18 images booted
 on `qemu -smp 4`, every expectation held, 8 gifts bite (158-else with a pool of exactly the floor
-answers 1); `pruefe-freistehend.sh` 338 of 338; `zaehle-c.py` metal 2090 -> 1879 lines, 7 -> 4
+answers 1); retired `pruefe-freistehend` 338 of 338; retired `zaehle-c` metal 2090 -> 1879 lines, 7 -> 4
 files.
 
 ## 71. The bare-metal image's locks and rcu read sides: `sperre.metall`, `sperre.maskiert`, `rcu.metall` (C-free lane, 2026-10-05, C3 slice 2)

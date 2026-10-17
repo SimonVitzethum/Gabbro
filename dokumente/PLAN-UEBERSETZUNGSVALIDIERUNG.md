@@ -143,7 +143,7 @@ not by trusting the Rust passes or building a second model of the source languag
 source (`Syntax`/`Semantik`) plus checked target blocks is the reference; no persistent SSA IR,
 no second interpreter** (decision of lanes 594/606, 2026-10-01; §8). Measurement: report semantic
 families and generic theorems plus final-byte chains the proved validator accepted. Corpus chain
-counts are coverage diagnostics. `instrumente/zaehle-kette.py` measures **C chains** and must not
+counts are coverage diagnostics. The retired `zaehle-kette` (2026-10-17; not guarded today) measured **C chains** and must not
 be relabelled a binary validator. An effort estimate needs a measured generic pilot (decoding, a
 memory access, an atomic/lock mapping, final-image binding); instruction count alone misses
 layout, flags, allocation, concurrency, floats and progress.
@@ -216,18 +216,18 @@ Closed chains (instances marked `CHAIN-INSTANCE` in Lean): `beispiele/104-refere
 (`kette_104`, real text with comments, witness `kette_104_zeuge`) and
 `beispiele/108-disjoint-start-locks.gab` (`kette_108`, two declared concurrent starts). Three more
 are marked `CHAIN-GENERIC` in `bruecke/Bruecke/Instanzen/` (69, 73, 130; generic `ketteAllg`).
-Counts are **diagnostics**: 2 of 129 on 2026-09-26; `zaehle-kette.py` without `--lean` on
-2026-10-17 reads "0 of 170 closed (Lean not re-run)" with sieve totals (b) 28, (c) 16, (d) 66 —
+Counts are **diagnostics**: 2 of 129 on 2026-09-26; the retired `zaehle-kette` without `--lean` on
+2026-10-17 read "0 of 170 closed (Lean not re-run)" with sieve totals (b) 28, (c) 16, (d) 66 —
 **a Lean-run measurement was not repeated for this document.** The sieves, in order: (a) Lean
 parse and elaboration of the generic pipeline (the binding one), (b) `lean-g` export, (c)
 `gabbro certificate` prints every body, (d) every emitted C form is in state *lemma* or *named
-assumption* (`pruefe-cformen.py`), (e) the generic correspondence certificate prints without
+assumption* (the retired `pruefe-cformen`), (e) the generic correspondence certificate prints without
 `KREFUSAL`. **Coverage is multiplicative in the sieves and inside sieve (b):** a lane probe that
 skipped the two largest first-refusal groups found every one of the 24 programs stopped at a
 second wall, so closing a group completely can move the count by zero. First refusals are not
 programs gained.
 
-*A guardian finding that moved a number the right way:* `pruefe-cformen.py` keyed rows by statement
+*A guardian finding that moved a number the right way:* the retired `pruefe-cformen` keyed rows by statement
 text, so `return c.len;` and `return (Nachricht){…};` were one row, covered by a scalar lemma that
 says nothing about a struct (`CTy` is `int | ptr`). Re-keyed by destination, sieve (d) fell from
 60 to 55 and the uncovered forms rose by four — *a number that falls because the instrument
@@ -273,7 +273,7 @@ definitions). No hardware or oracle premise for 104 (no axiom, register, device,
 ### 6.6 A2 discharged: the emitted text is parsed in Lean
 
 `CBackend/Parser/{CLexer,CParse,CProben,Bruecke}.lean`, `CBackend/Semantik/CText104*.lean`,
-`CText108.lean`; guardian `instrumente/pruefe-ctext.py`. `parseC : List Char → Option (List CFun)`
+`CText108.lean`; guardian: the retired `pruefe-ctext` (not guarded today). `parseC : List Char → Option (List CFun)`
 reads the emitted subset (prelude with two `_Static_assert` pins, integer `#define`s, table
 structs, `static` declarations, `(void)x;`, slot stores, direct calls, `return` over literals,
 locals and slot reads) and `a2_104 : parseC ctext104 = some (kFuns zert104)` holds by kernel
@@ -567,9 +567,9 @@ hypotheses, M2 → the Λ index, M3 → `durch`/`assignDurch` guards, M4 → loo
 |---|---|
 | derivation datum | `crates/gabbro-check/src/ableitung.rs` is the **effects/costs derivation** (`gabbro derived`, `gabbro effects`), *not* the Syntax.lean elaboration; there is no `gabbro-ableitung` crate (`ls crates`: three crates) and no `gabbro ableite --lean` |
 | the Rust-to-Lean seam | `gabbro lean`, `gabbro lean-g` (exporter, `lean_g.rs`), `gabbro obligations --g`: partial (REGISTER: 34 CERTIFIED, 211 UNCERTIFIED, each UNCERTIFIED with its first refusal `LG001`–`LG007`) |
-| Sugar twin | `Kern/Syntax/Zucker.lean` exists; no `pruefe-zucker.py` |
-| `pruefe-deckung.py` (extended with a rule → constructor column) | the script exists but guards a different thing: the hand-written Lean mirrors `Form`/`Reason` of `programmlogik/Gabbro/Coverage.lean` against `lean.rs`. The planned third column is not built |
-| `pruefe-ableitung.sh`, `vergleiche-bedeutung.sh`, `gabbro spur` | **do not exist** |
+| Sugar twin | `Kern/Syntax/Zucker.lean` exists; there was never a `pruefe-zucker` |
+| the retired `pruefe-deckung` (extended with a rule → constructor column) | the script guarded a different thing (now `cargo test -p gabbro-check --lib lean::deckung_tests`): the hand-written Lean mirrors `Form`/`Reason` of `programmlogik/Gabbro/Coverage.lean` against `lean.rs`. The planned third column is not built |
+| `pruefe-ableitung`, `vergleiche-bedeutung`, `gabbro spur` | **never existed** (the retired guardian set of 2026-10-17 had none of them) |
 | `TESTBUILD` | exists as a build flag (`gabbro emit|llvm --testbuild`, items marked `when TESTBUILD`); the trace recorder and the `Gesittet` checker are not built |
 | Pass retirement (U8) | not started; the Rust passes remain the checker, the Lean Bool `Akzeptiert` decides premise (a) for certified programs |
 
@@ -601,7 +601,7 @@ lemma `_start` (stack, entry register state, exit/never-return), priced like the
 optimiser is priced per *property*, not per pass: the validator checks that the final bytes refine
 the source, so the cost is the per-access memory bridge (shared with the native plan) plus loop and
 `llvm.assume` reasoning strong enough to follow optimised code. The x86-64/AArch64 agreement
-automated in `instrumente/baue-llvm.sh` is a standing falsifier for backend bugs at zero proof cost.
+automated in `instrumente/teile/baue-llvm.sh` (run by `instrumente/pruefe-llvm.py`) is a standing falsifier for backend bugs at zero proof cost.
 Not claimed: no validated binary exists; `korrOk` is C-only; the per-access bridge is open.
 
 ---
@@ -611,10 +611,10 @@ Not claimed: no validated binary exists; `korrOk` is C-only; the per-access brid
 | Old reference in code | Now | Where it is cited |
 |---|---|---|
 | `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3 item 2 / "stage (a)" | §6 | `Korrespondenz/Allgemein/KorrespondenzAllg.lean:6`, `Kette/Schlusssatz.lean:4`, `Kette/Schlusssatz104.lean:4` |
-| §3 item 4 and §7 / "stage (b)" | §7 | `CBackend/Semantik/CNebenlaeufig.lean:4`, `instrumente/pruefe-cformen.py:321` |
+| §3 item 4 and §7 / "stage (b)" | §7 | `CBackend/Semantik/CNebenlaeufig.lean:4`, retired `pruefe-cformen` |
 | §1 / "section 1" (T3) | §1 | `Parser/{Lexer,Ausdruck,Anweisung}.lean`, `Korrespondenz/Zeugnis/ZeugnisStmt*.lean` |
-| §3 / "section 3" (chain count) | §6.3 | `instrumente/zaehle-kette.py:9`, `pruefe-cformen.py:17` |
-| §6.4, §6.5, §6.10 | unchanged | `instrumente/pruefe-ctext.py:11`, `KorrOkAdaequat.lean:6`, `CText104.lean:11`, `KorrespondenzGeraetZeuge.lean:27`, `Kette/Schlusssatz.lean:528` |
+| §3 / "section 3" (chain count) | §6.3 | retired `zaehle-kette`, retired `pruefe-cformen` |
+| §6.4, §6.5, §6.10 | unchanged | retired `pruefe-ctext`, `KorrOkAdaequat.lean:6`, `CText104.lean:11`, `KorrespondenzGeraetZeuge.lean:27`, `Kette/Schlusssatz.lean:528` |
 | §7, §7.6 | unchanged | `Kette/Schlusssatz124.lean:4`, `Kette/Schlusssatz124Ticket.lean:4` |
 | *(no section named)* | | `Bausteine/Schablonen/Schablonen*.lean:4`, `CBackend/Semantik/CTicket.lean:4`, `CBackend/Parser/CLexer.lean:4`, `Zielsatz/Kern/Spec.lean:1140` |
 | `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §1.3, §2.1 | §9 | `Korrespondenz/Zeugnis/Zeugnis.lean:6,31`, `crates/gabbro-check/src/emit.rs:9582` |

@@ -65,7 +65,7 @@ Three routes were weighed:
 
 * **(a) per-type instantiation by hand** (honest, multiplies the library by the number of element types);
 * **(b) a generator** that writes the module from a description, the result checked as any source, with a guardian that the
-  generated file is what the generator writes (the precedent: `instrumente/pruefe-genlean.py`);
+  generated file is what the generator writes (the precedent: the retired `pruefe-genlean`, 2026-10-17);
 * **(c) a type parameter in the language**: `Ty` is deliberately non-recursive, and a parametrised table would be a new
   shape in every pass and in `Akzeptiert`. The product-former lane refused this kind of change on measurement (OFFEN O15,
   priced and REJECTED for zero corpus use), and the same rule applies: it must pay for itself in programs.

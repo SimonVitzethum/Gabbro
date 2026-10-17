@@ -1,8 +1,7 @@
 # PRUEFER — the Gabbro checker
 
-*Consolidated 2026-10-17 from `PLAN.md`, `PFLICHTEN.md`, `dokumente/PRUEFER.md`, `SONDENDECKUNG.md`,
-`dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `UNFALSIFIZIERBAR.md`,
-`dokumente/PRUEFER.md` and about twenty `messung/` reports. Claims were checked against the
+*Consolidated 2026-10-17 from `PLAN.md`, the retired `PFLICHTEN`, `SONDENDECKUNG` and `UNFALSIFIZIERBAR` registers,
+several older checker documents and about twenty `messung/` reports. Claims were checked against the
 tree on that day (source, `gabbro paesse`, the corpus, the guardians) except where the text says
 "not re-measured" or "booked". Dated diary entries and lane numbers are not kept — git has them.
 Rule and diagnostic codes, `OFFEN Oxx` ids and example/gift numbers are stable and stay.*
@@ -37,12 +36,12 @@ measures it. **What it is not:** the language (`SPRACHE.md`, `SYNTAX.md`), the g
   item above the floor is a *nameable* thing the checker does not yet carry (§9). The ceiling of
   what a language can take away was measured on 100 recorded traps: 72 % (language 36 %,
   measurement discipline 36 %), the other 28 % (tooling, wrong meaning) no language removes —
-  the classification is `messung/fallen-klassifikation.tsv`, derived by `instrumente/zaehle-fallen.sh`;
+  the classification is `messung/fallen-klassifikation.tsv`, derived by the retired `zaehle-fallen` (2026-10-17, see git history);
   `BEWEIS.md` carries the argument.
 
 Counts that move (examples, gifts, codes, sentences) are given with the command that re-measures
-them (§13). Figures marked *booked* are the last values the guardians hold in
-`messung/KENNZAHLEN.md`.
+them (§13). Figures marked *booked* are historical results of the retired counters and the retired
+`KENNZAHLEN` register (2026-10-17, see git history); they are not guarded today.
 
 ---
 
@@ -62,7 +61,7 @@ the specification: `SPRACHE.md` part III §6, `lib.rs` head).
 
 **Shared maps.** `Umgebung::sammle(baum)` builds the name maps (keyed *qualified*: `a::b::f`; a
 bare-name lookup inside a `module` block returns `None` every time and looks like a rule that
-does not fire — `pruefe-aufloesung.py` guards the class), `aufrufgraph.rs` builds the call hull
+does not fire — the retired `pruefe-aufloesung` guarded the class; not guarded today), `aufrufgraph.rs` builds the call hull
 (a **lower** bound where an edge is unknown; checks that only demand more from the caller are
 sound over an incomplete hull, checks that need completeness refuse or say "undecidable" — `E009`, `V003`, `W003`,
 `H021`), `ableitung.rs` is the fixpoint over *bodies* as against the hull over *declarations*.
@@ -148,29 +147,26 @@ exporter refusals, certificate refusals).
 
 `L` is used twice (lexer `L001`–`L004`, linearity `L101`–`L109`); the `1xx` block keeps them apart.
 
-### 3.2 Rules for issuing a code (all guarded)
+### 3.2 Rules for issuing a code
 
 1. **One code, one rule, one file.** A code may appear on many lines but in one file
-   (`pruefe-kennungen.py`), and a code names one rule (`pruefe-vergabe.py`; `M120` was once issued
+   (held by stage 3 of `instrumente/pruefe-pruefer.py`, `teile/kennungen.py`), and a code names one rule (retired `pruefe-vergabe`; `M120` was once issued
    for two rules in one file and the first guardian was blind to it; the register also lists `M139`
-   under two sentences, `m1.bereich` and `m1.gestalt`, which was not re-checked against that
-   guardian). *Measured today:*
-   `pruefe-kennungen.py` reports 3 multiply-issued codes — `N004`/`N005` (`namen.rs` and
+   under two sentences, `m1.bereich` and `m1.gestalt`). *Measured on 2026-10-17 by that stage (booked with its reason there):* 3 multiply-issued codes — `N004`/`N005` (`namen.rs` and
    `zielbindung.rs`, the same rule "names no declared assumption", re-applied to every `target`
    binding) and `Y103` (`llvm.rs`, `llvm/memory.rs`). The first pair is deliberate re-use of one
-   rule, which the guardian nevertheless counts as a violation (see §15).
-2. **Every new refusal ships its sentence** in `saetze.rs` in the same commit (`pruefe-saetze.py`
-   ratchet, "codes without a sentence") **and a poison probe** — a program in `beispiele/gift/`
+   rule, which that guardian counted as a violation (see §15).
+2. **Every new refusal ships its sentence** in `saetze.rs` in the same commit (`gabbro paesse` lists
+   the sentences; stage 2 of `instrumente/pruefe-pruefer.py`, `teile/saetze.py`, holds the ratchet "codes without a sentence") **and a poison probe** — a program in `beispiele/gift/`
    whose first line is `-- erwartet: CODE`. A code with a sentence and no probe is a promise
    nothing measures.
 3. **A refusal is never turned into a warning, and never widened to fit a corpus file.** A check
    that fires on a legitimate program is repaired by making the program's intent expressible, not
    by weakening the rule (`dokumente/PRUEFER.md` §2, now §10).
-4. **A refusal that names a rule must say why** (`pruefe-gruende.py`: a rule built for the
+4. **A refusal that names a rule must say why** (measured by the retired `pruefe-gruende`: a rule built for the
    obvious reason does not cover the load-bearing one — `N011` caught ghosts in memory because
-   they have no size, not because they cannot be stored). Diagnostic text is English
-   (`pruefe-englisch.py`).
-5. **A note that claims a check its rule does not perform is a defect** (`pruefe-zitate.py`;
+   they have no size, not because they cannot be stored). Diagnostic text is English.
+5. **A note that claims a check its rule does not perform is a defect** (measured by the retired `pruefe-zitate`;
    `R003` once *said* "`class w` on a register means the same" and no line did it, so
    `return d.NUR_W.A;` passed — fixed by `R005`/`R006`).
 
@@ -268,7 +264,7 @@ Details worth knowing:
   out, then the `use` lines on the way; it is module-aware and `use`-aware. Without `--unit`,
   `gabbro pruefe` gives each file its own `Umgebung`; see §11.
 * **Vocabulary.** The word list is closed (`kw.rs`, `SYNTAX.md` vocabulary table, guarded by
-  `pruefe-wortschatz.py`). A closed list collides with names in foreign code at a measurable
+  retired `pruefe-wortschatz`). A closed list collides with names in foreign code at a measurable
   rate (K3, below, §11); since then keywords are *contextual* — `node`, `index`, `next`,
   `old`, `release`, … are accepted as identifiers where the grammar expects an identifier
   (re-measured 2026-10-17 with a probe: a `let node = …; let index = …; let next = …;` body
@@ -825,8 +821,7 @@ with binding structure, (4) expansion into the core with a certificate and error
 
 ## 7. The assumption layer, probes, and the bar for `unfalsifiable`
 
-*(Formerly `SONDENDECKUNG.md`, `UNFALSIFIZIERBAR.md`. Both files hold **machine-read registers**;
-see §13.4 before deleting either.)*
+*(Formerly the `SONDENDECKUNG` and `UNFALSIFIZIERBAR` registers, retired 2026-10-17 with their guardians; see git history.)*
 
 ### 7.1 The model
 
@@ -841,10 +836,10 @@ runnable here). A name resolving to a unit function must be able to go red (`N05
 
 An assumption is in exactly one of three states:
 
-| State | Watched by | Ratchet |
+| State | Watched by (today: nobody) | Ratchet |
 |---|---|---|
-| **unfalsifiable**, under a criterion | `instrumente/pruefe-unfalsifizierbar.py` | down |
-| **falsifiable, probe stands as a program** | `instrumente/pruefe-sondendeckung.py` | up (`A_p`) |
+| **unfalsifiable**, under a criterion | the retired `pruefe-unfalsifizierbar` | down |
+| **falsifiable, probe stands as a program** | the retired `pruefe-sondendeckung` | up (`A_p`) |
 | **falsifiable, probe MISSING** | nobody, until the quota existed | — |
 
 ### 7.2 The bar for `unfalsifiable` (written before any row was classified)
@@ -868,7 +863,7 @@ nothing, so each carries a test that can say no.
   or the program's own text has no external probe by construction — it is misfiled, a pass or
   poison probe refutes it); **`R4`** if no observation could distinguish truth from falsity,
   nothing rests on it.
-* *Live state* (`pruefe-unfalsifizierbar.py`, run 2026-10-17): **8 clauses in the tree, 8 rows, 1
+* *Live state* (measured by the retired `pruefe-unfalsifizierbar`, run 2026-10-17): **8 clauses in the tree, 8 rows, 1
   ADMITTED** (`ipi_kommt_an`, under `U2`), the rest refused under `R1`–`R4`; 6 construction sites
   of `Klasse::NichtFalsifizierbar` in `manifest.rs`; ALL PASS (line numbers of three rows are
   stale by one or two lines: a notice, not a failure). Three teeth: row set equals corpus both
@@ -899,14 +894,12 @@ means `sonden/<probe>.c` exists, nothing about whether it runs green.
   floor; the floor stays *reachable*; orphans; `SONDEN_MIT_PROGRAMM` equals `sonden/*.c` (coverage
   claimed in the checker with no program behind it would raise `A_p` with no program written);
   plus four teeth over the reader (so a blind scanner is not green: `W17`).
-* *Booked state* (last full run in the file's own text; **not reproducible in this worktree**,
+* *Booked state* (last full run of the retired guardian; **not reproducible today**,
   see next bullet): 18 of 51 falsifiable assumptions carry a probe that stands as a program; the
   floor was met on 2026-09-04 at 6 of 39 = 0.154; the register has since grown to 55 rows, 79
   distinct probe names stand across the non-poison corpus, 26 of them outside the register.
-* **`pruefe-sondendeckung.py` aborts today** with `ABBRUCH: not one probe under sonden/ -- NOTHING
-  was measured`: it reads `W / "sonden"`, and the probes moved to `instrumente/sonden/` in the
-  directory sort-out (`6744cf30`). *The guardian is right to abort and the cause is the path, not
-  the tree* — see §15.
+* **`A_p` is not guarded today:** `pruefe-sondendeckung` (which measured it) was retired on 2026-10-17
+  (see git history); the figures above are its last measurements.
 * **What no tooth does:** whether a probe would actually refute its assumption; that is nobody's
   script. A declared dependency can also be omitted from the declarations altogether.
 
@@ -914,7 +907,7 @@ means `sonden/<probe>.c` exists, nothing about whether it runs green.
 
 ## 8. The pass register: sentences, states, ratchets
 
-*(Formerly `PLAN.md` PL, `messung/PASSREGISTER.md`; code: `saetze.rs`.)*
+*(Formerly `PLAN.md` PL and the retired `PASSREGISTER` register; code: `saetze.rs`.)*
 
 ### 8.1 Sentences, states, ratchets
 
@@ -936,7 +929,7 @@ correctness argument is written and human-reviewed, not machine-checked: `sperre
 | sentences | **216** over 12 of 12 passes | `gabbro paesse` |
 | measured / argued / conjectured / proved | **208 / 2 / 6 / 0** | same |
 | diagnostic codes claimed by a sentence | **443** | same |
-| codes without a sentence — the ratchet | **55 booked** (not re-measured: `pruefe-saetze.py` aborts in this worktree because the binary is older than the sources) | `./instrumente/pruefe-saetze.py` |
+| codes without a sentence — the ratchet | **55 booked** (ratchet held by `instrumente/pruefe-pruefer.py` stage 2, `teile/saetze.py`) | `./instrumente/pruefe-pruefer.py` |
 
 The six *conjectured* sentences are `v2.relationale-verengung`, `v3.variantenverengung`,
 `m3.barriere`, `m2.geisterloeschung`, `emitter.reissstelle`, `gruppe.invariante` — each
@@ -953,15 +946,15 @@ sentence in the same commit.
 
 **The three steps of the register** (old PL.1–PL.3):
 
-1. **PL.1 — the register** (`gabbro paesse`), plus `pruefe-saetze.py` (the second tooth: no code
-   without a sentence; sentences carry codes that exist).
+1. **PL.1 — the register** (`gabbro paesse`), (its second tooth, the ratchet "no code without a
+   sentence", is stage 2 of `instrumente/pruefe-pruefer.py`).
 2. **PL.2 — the first sentences that matter** were selected and a first batch of rule models
    proved (§12.1).
 3. **PL.3 — the bridge between the model and the Rust**, in three candidate ways; the one taken
    is **(c)**: per-case evidence — the poison probes and mutation anchors that the register
    names, not a proof about the implementation. A sentence's `gemessen_an` therefore points at
    files; `gabbro schablonen --gate` (tooth 3) falls while a *proved* template has a premise no
-   pass establishes (`pruefe-schablonen.py`).
+   pass establishes (the retired `pruefe-schablonen` ran this tooth; `gabbro schablonen --gate` still does).
 
 Reservations in the sentences that are worth reading *before* trusting a green run (full text:
 `gabbro paesse --je-satz`):
@@ -989,16 +982,16 @@ Reservations in the sentences that are worth reading *before* trusting a green r
   it: *nobody knows something.* Found by hand three times in two weeks (`rank` declared and in
   the certificate but held against no lock order; `opaque` declared as a prohibition that bit at
   no computation; `ensures` counted in the certificate and held against no body) before it got a
-  tool: `pruefe-klauseln.py` holds every `pub` field of every AST struct against the set of
+  tool, the retired `pruefe-klauseln` (2026-10-17; not guarded today), which held every `pub` field of every AST struct against the set of
   fields some pass accesses, with the readers split in two camps — *checked* under
   `gabbro-check/src`, merely *lowered and reported* in `emit.rs`/`zeugnis.rs`/`gabbro-cli` — and
-  the separation is the statement. One level up, `pruefe-konstrukte.py`: a *construct* with no
+  the separation is the statement. One level up, the retired `pruefe-konstrukte`: a *construct* with no
   generator.
 * **The sixth class — proved, and established by nothing.** A sentence is **proved** and its
   premise is established by no pass: *one knows something false.* `device.konstruktor` stood as
   proved while its main theorem assumed `getrennt r s` and nothing computed it (the offset was only
   lowered). Whoever reads "proved" in the certificate concludes non-overlap, and the proof covers
-  the gap instead of showing it. **Tooth 3** (`gabbro schablonen --gate`, `pruefe-schablonen.py`):
+  the gap instead of showing it. **Tooth 3** (`gabbro schablonen --gate`):
   every proved template binds its premises, and `durch` has three strengths — *a pass* (covers every
   program the translator ever sees), *a mutation probe* (covers the generator, once — the bridge of
   PL.3), *none* (the sentence hangs in the air). Measured when introduced: 17 premises of 9 proved
@@ -1036,7 +1029,7 @@ Reservations in the sentences that are worth reading *before* trusting a green r
 
 ## 9. Obligations: what a human still owes
 
-*(Formerly `PFLICHTEN.md` and the `H`/K100 plans.)*
+*(Formerly the retired `PFLICHTEN` register and the `H`/K100 plans.)*
 
 `gabbro pflichten <file.gab>` — *"what a HUMAN still owes here. Counted, not discharged."* The
 register is the checker's honest answer to "what did you not prove for me": every duty a clause
@@ -1070,10 +1063,10 @@ only the machine* is **plumbing (K)** and must fall in a pass; one that *mention
 criterion was applied by hand to the ten frozen fragments of the kernel code Gabbro was designed
 for (`messung/fragmente/F01`–`F10`, one `.gab` each: cap space, VT-d, IPC fastpath, a virtio
 driver, a service loop, a test scaffold, a loader, a scheduler, an MMU walker, a DTB parser).
-`zaehle-pflichten.py --spalten` reads the table rows in `PFLICHTEN.md`: **239 obligations, 173 K
-and 66 L** (run 2026-10-17). **`H` — the plumbing duties still hanging — is 1** (the lowering of
-`F3` has no differential test; `zaehle-pflichten.py --haengend`: Notation 0, Absenkung 1; the
-other nine fragments' lowerings are measured by execution in `pruefe-emission.sh`). *Do not read
+The retired `zaehle-pflichten` read the table rows of the retired `PFLICHTEN` register: **239 obligations, 173 K
+and 66 L** (last run 2026-10-17; not guarded today). **`H` — the plumbing duties still hanging — is 1** (the lowering of
+`F3` has no differential test; same retired counter: Notation 0, Absenkung 1; the
+other nine fragments' lowerings were measured by execution in the retired `pruefe-emission`, a legacy C check). *Do not read
 `H = 0` as "the lowering is right": it would mean no obligation is open, and the lowering proof is
 a different layer.* Nor as a statement about Gabbro: the ten fragments were chosen for
 difficulty by people looking at the language, and a corpus nobody saw while building is what
@@ -1117,7 +1110,7 @@ refusals into warnings (gives up a class); uncounted exits.
 | 6 | **Lean side: better handed-over goals, more tactics** (`gabbro_simp`, `gabbro_wf`); every tactic produces a kernel-checked proof | not re-measured here |
 
 Ceremony (booked, *not re-measured*): `111 von 1559` sites may fall as of 2026-09-13; the count is
-corpus-dependent and every lane re-books it "measured, not added up" (`zaehle-zeremonie.py`).
+corpus-dependent and every lane re-books it "measured, not added up" (measured by the retired `zaehle-zeremonie`; not guarded today; `gabbro zeremonie --table` prints the sites).
 
 ---
 
@@ -1137,14 +1130,14 @@ and has proved none has met V and not K); not the other way round.
 documents beside them, so "N of M corpus programs lower" measures the selection. The instruments
 that replace it:
 
-| Instrument | What it counts |
+| Instrument (the `retired` rows are not guarded today) | What it counts |
 |---|---|
 | `gabbro blindstellen <clean>… -- <poison>…` | **FORM × POSITION** over a corpus and the *empty* cells; a cell with 0 sites is *unreachable*, not "checked"; a cell only the poison corpus occupies is booked separately |
-| `pruefe-grammatiktafel.py` | **FORM × RESPONSIBILITY** from the **grammar** (not a corpus); `UNGEDECKT` must be empty. "Lowered" is a statement about the word, not about every position the grammar allows it in (a *quantifier* domain lowers; the same word as a *traversal* domain is refused by name — four measured refusals would have vanished behind one green cell) |
-| `pruefe-reichweite.py` | the second class of zero: a body no pass **reads** |
-| `pruefe-abstieg.py` | does every pass descend into every statement kind that carries a sub-block ("touching is not checking", `W13`) |
-| `pruefe-konstrukte.py`, `pruefe-klauseln.py` | a construct without a generator; a clause *declared, carried, never read* — 48 sites found where four were expected |
-| `zaehle-absagen.py` | the **emitter's** refusal forms (`C001` has ONE site, `fn weigere`; what counts is its callers) and per form its state |
+| retired `pruefe-grammatiktafel` | **FORM × RESPONSIBILITY** from the **grammar** (not a corpus); `UNGEDECKT` had to be empty. "Lowered" is a statement about the word, not about every position the grammar allows it in (a *quantifier* domain lowers; the same word as a *traversal* domain is refused by name — four measured refusals would have vanished behind one green cell) |
+| retired `pruefe-reichweite` | the second class of zero: a body no pass **reads** |
+| retired `pruefe-abstieg` | does every pass descend into every statement kind that carries a sub-block ("touching is not checking", `W13`) |
+| retired `pruefe-konstrukte`, retired `pruefe-klauseln` | a construct without a generator; a clause *declared, carried, never read* — 48 sites found where four were expected |
+| retired `zaehle-absagen` | the **emitter's** refusal forms (`C001` has ONE site, `fn weigere`; what counts is its callers) and per form its state |
 
 **The generator side (2026-08-30; not re-measured):** of the valid corpus programs (checker: 0
 errors) all but two lowered; the refusals were named. Of the programs with checker errors nearly
@@ -1199,13 +1192,13 @@ closed or named:
   channel had no probe or mutation: one rule on two arms with a probe on one; a probe that
   carried its name and not its subject; and *an invalid mutation is a shrunk population* (a quota
   over a shrinking denominator reads like coverage).
-* **A foreign body's promise is a fact** (`FREMDVERENGUNG`): an `ensures result <op> number/place`
+* **A foreign body's promise is a fact** (the retired `FREMDVERENGUNG` register): an `ensures result <op> number/place`
   on a bodiless `extern fn` narrows the caller's type (`fremdverengung.rs`). Measured on
   2026-08-21: of 109 foreign bodies in the corpus 12 state their duty and **1** narrowed anything
   at the caller (most name no `result`, two already stood in the declared type). The certificate
-  counts the *effective* narrowing, not the present clause (`zaehle-fremdverengung.py`).
+  counts the *effective* narrowing, not the present clause (measured by the retired `zaehle-fremdverengung`).
 * **The checker does in Rust what `M104` forbids**: an `as` that wraps in silence cost two real
-  bugs on 2026-09-01; `pruefe-umwandlungen.py` guards the class.
+  bugs on 2026-09-01; the retired `pruefe-umwandlungen` guarded the class; not guarded today.
 
 ---
 
@@ -1269,8 +1262,8 @@ axiom layer, foreign bodies, the emitter and the C, the checker implementation, 
 sentence a finished proof would carry reads: *plumbing-safe by `exec_sicher` under the named
 premises; memory-safe under the assumptions; alias: for a pointer pair at a call `R014`/`R015`
 (§5), otherwise not carried; race-free under the memory-model assumptions; terminating: necessary
-conditions; functionally open on the person's obligations.* The guardian is
-`instrumente/pruefe-sicherheit.sh` (eight speech tests present, no `sorry` *term*, build green,
+conditions; functionally open on the person's obligations.* The retired guardian
+`pruefe-sicherheit` (2026-10-17) checked (eight speech tests present, no `sorry` *term*, build green,
 `#print axioms` ⊆ `propext, Classical.choice, Quot.sound`, a finding ratchet that may fall).
 
 ### 12.3 The G exporter and the goal Bool
@@ -1325,8 +1318,7 @@ small-step with a per-thread call log, and there L50/L52 are the leg `folge`, L2
 content the legs `invSicht`/`sperrSicht`/`sperrWechsel`, L34 an existence statement with a witness
 (`OFFEN O1`). The rows are the *centre* of the case for GabbroV: `D013` checks only that the
 invariant exists, not that the block restores it, and the statement that site needs is L34. The
-count may not grow without an edit of the guardian; **the guardian `pruefe-ausnahmen.py` named in
-the old text does not exist in the tree any more** (§15).
+count is unguarded: the guardian `pruefe-ausnahmen` named in the old text never existed (§15).
 
 ---
 
@@ -1337,22 +1329,19 @@ the old text does not exist in the tree any more** (§15).
 | Evidence | Where | What it says |
 |---|---|---|
 | **clean corpus** | `beispiele/*.gab` (170 programs, numbered; real, checked, most also emitted and run) | each must pass the checker with 0 errors (`jedes_beispiel_geht_sauber_durch`) |
-| **poison corpus** | `beispiele/gift/*.gab` (898 files) — the first line is `-- erwartet: CODE` | each must fall **with that code** (`jedes_gift_faellt_mit_seinem_code`). The test asks `contains`, not `==`: a probe is green once its code stands *anywhere* in the list. `zaehle-gifttreffer.py` asks the stricter question — does the expected code fall **alone** |
+| **poison corpus** | `beispiele/gift/*.gab` (898 files) — the first line is `-- erwartet: CODE` | each must fall **with that code** (`jedes_gift_faellt_mit_seinem_code`). The test asks `contains`, not `==`: a probe is green once its code stands *anywhere* in the list. the retired `zaehle-gifttreffer` asked the stricter question — does the expected code fall **alone** (not guarded today) |
 | **both directions** | `der_korpus_hat_beide_richtungen`; `keine_zwei_korpusdateien_teilen_eine_nummer` | a rule has a positive and a poison side; example/gift numbers are unique |
 | **frozen excerpts and probes** | `messung/fragmente/F01`–`F10`, `messung/k3-fragmente/`, `messung/proben/`, `messung/einheit-proben/`, `messung/*-proben/` (265 `.gab` under `messung/`) | the kernel fragments the language was designed against; the K3 foreign fragments; one-purpose probes cited by sentences |
 | **unit tests** | `crates/gabbro-check/tests/*.rs` (about 60 files; with `gabbro-cli/tests` ~1,250 `#[test]`), `crates/gabbro-cli/tests/*.rs`, in-source tests (~260) | `rechenwerk.rs` (arithmetic and range cases), `paesse.rs` (per-pass cases), `beispiele.rs`, `seam.rs`, `noalias.rs`, `wurzeln.rs`, … (`grep -c '#\[test\]'`, 2026-10-17) |
-| **mutations** | `./instrumente/mutiere-pruefer.py` (booked: **388** mutations, ~13 min 20 s locally; `--anker` counts anchor presence by reading text, no build) | a poison probe measures that a rule *fires*; a mutation measures that a rule *is the thing that fires*: each mutation edits the checker's source and the test suite must catch it. The booked catch rate is 375 of 376 valid mutations; the one survivor falls at `pruefe-emission.sh` stage 9 instead — "375 of 376 is a statement about `cargo test`, not about the tree" |
+| **mutations** | measured by the retired `mutiere-pruefer` (2026-10-17, see git history; **not guarded today**; historical: **388** mutations, ~13 min 20 s locally) | a poison probe measures that a rule *fires*; a mutation measures that a rule *is the thing that fires*: each mutation edits the checker's source and the test suite must catch it. The booked catch rate is 375 of 376 valid mutations; the one survivor fell at the retired `pruefe-emission` stage 9 (legacy C check) instead — "375 of 376 is a statement about `cargo test`, not about the tree" |
 | **sentences** | §8 | the register says which of the above measures which rule |
 | **the register's blind-spot instruments** | §11 | what *nobody wrote* and what *no pass reads* |
 
-*A run in this worktree on 2026-10-17:* `mutiere-pruefer.py --anker` prints its speech-test
-line `lebender Katalog still: GESCHEITERT` and **34 mutations that "measure NOTHING"** (anchors
-that are missing or ambiguous, e.g. `let-else-ueber-place-verliert-den-typ`, `bau-glaubt-das-erzeugnis`,
-`absage-nennt-wieder-den-erstnamen` ambiguous 2×). The booked figure (`KENNZAHLEN.md`) is 386 of
-413 anchors at 2026-09-14. **Not re-measured on a clean tree** — a worktree whose sources and
-binary differ in age is an apparatus problem, not a finding; it is recorded in §15 so the next run
-on the main checkout decides. *A mutation run needs a clean `crates/`; two runs on the same files
-destroy each other.*
+*Last run of the retired mutation guardian, 2026-10-17 (in a worktree, not on a clean tree):* its
+anchor mode reported 34 mutations that "measure NOTHING" (anchors missing or ambiguous, e.g.
+`let-else-ueber-place-verliert-den-typ`, `bau-glaubt-das-erzeugnis`); the booked figure was 386 of
+413 anchors at 2026-09-14. Not re-measured; the guardian is retired and mutation testing of the
+checker is **not guarded today**.
 
 ### 13.2 Commands
 
@@ -1362,34 +1351,26 @@ gabbro pruefe <file.gab>…            gabbro paesse [--je-satz]          gabbro
 gabbro abgeleitet <file.gab>…        gabbro zeremonie --table           gabbro blindstellen <clean>… -- <poison>…
 gabbro kontexte|alias|k-bedingung|annahmen|schablonen [--gate]|zeugnis <file>…
 
-# the guardians over the checker (each prints the numbers it holds and its own speech test)
-./instrumente/pruefe-saetze.py            # ratchet: codes without a sentence; sentences with invented codes
-./instrumente/pruefe-kennungen.py         # one code, one file        ./instrumente/pruefe-vergabe.py   # one code, one rule
-./instrumente/pruefe-klauseln.py          # every pub AST field has a reader (class "declared, never read")
-./instrumente/pruefe-konstrukte.py        # every construct has a generator
-./instrumente/pruefe-abstieg.py           # every pass descends into every sub-block statement
-./instrumente/pruefe-reichweite.py        # bodies no pass reads
-./instrumente/pruefe-grammatiktafel.py    # FORM × RESPONSIBILITY from the grammar; UNGEDECKT must be empty
-./instrumente/pruefe-gruende.py  pruefe-zitate.py  pruefe-umwandlungen.py  pruefe-aufloesung.py   # defect classes of §3.2 / §8.2
-./instrumente/pruefe-sondendeckung.py     # A_p (§7.3)         ./instrumente/pruefe-unfalsifizierbar.py  # §7.2
-./instrumente/pruefe-sonden.sh            # the probe runner   ./instrumente/pruefe-sicherheit.sh      # §12.2
-./instrumente/pruefe-schablonen.py        # tooth 3            ./instrumente/pruefe-zahlen.py          # every booked figure vs its command
-./instrumente/zaehle-pflichten.py --haengend|--spalten   zaehle-zeremonie.py   zaehle-fremdverengung.py
-./instrumente/zaehle-gifttreffer.py       zaehle-absagen.py      zaehle-probenzweige.py
-./instrumente/mutiere-pruefer.py [--anker]                       ./instrumente/abnahme.py [--voll]   # everything
+# the four guardians (since 2026-10-17 the whole set), each prints its numbers and its own speech test
+./instrumente/pruefe-pruefer.py           # the checker: cargo test --workspace (poison corpus, clean corpus, tables),
+                                          #   sentence ratchet (teile/saetze.py), one code one place (teile/kennungen.py)
+./instrumente/pruefe-lean.py              # the Lean model: lake build, gabbro_ziel axioms, no sorry/axiom, layout
+./instrumente/pruefe-llvm.py              # the LLVM compiler: cargo test --test llvm, model coverage, end to end on x86_64 and aarch64
+./instrumente/pruefe-gabbrov.py           # GabbroV: lake build programmlogik, no sorry, gabbro prove over the proof units
+./instrumente/abnahme.py                  # all four together
 cargo test --no-fail-fast                                        # one run at a time; free -g beside it
 ```
 
-`abnahme.py` runs every guardian and names a verdict per guardian; `--voll` also runs the
-mutation run and the proof tree (needs Isabelle for `pruefe-beweise.sh`). *A guardian that aborts
-reads like one that passed — look for the numbers it no longer prints.* After a mutation run the
-next `abnahme.py` is red because every checker source has a newer mtime than the binary; the cure
-is a build, never a `touch` on the binary.
+`abnahme.py` runs the four guardians and names a verdict per guardian. *A guardian that aborts
+reads like one that passed — look for the numbers it no longer prints.* The roughly eighty
+further guardians, counters, ratchets and the mutation run (`mutiere-pruefer`, 388 mutations)
+were retired on 2026-10-17 (see git history, `git show 414feafc:instrumente/<name>`); what they
+measured is **not guarded today** unless a `gabbro` subcommand or `cargo test` covers it.
 
 ### 13.3 Rules of measuring (the ones that recur in code comments)
 
-* **A figure names the command that recomputes it** (`W7`); `pruefe-zahlen.py` holds each booked
-  figure against its command. A figure carried forward without re-measuring is a forgotten one:
+* **A figure names the command that recomputes it** (`W7`); the retired `pruefe-zahlen` held each booked
+  figure against its command (2026-10-17; not guarded today). A figure carried forward without re-measuring is a forgotten one:
   recompute, do not increment.
 * **Run the unchanged checker on the template before building** (`W24`): a sweep over templates
   that do not parse measures the parse error, not the question.
@@ -1413,19 +1394,14 @@ is a build, never a `touch` on the binary.
 * **No construct without measured need** (Regel A): a language addition is bought by a count of
   sites in real code, or by a refusal that would otherwise be silent.
 
-### 13.4 Machine-read documents (do not delete without retargeting the guardian)
+### 13.4 Machine-read documents (retired)
 
-Some guardians parse prose or tables **in the documents this one replaces**. A guardian pattern
-must change **before** the document it reads changes (`CLAUDE.md`):
-
-* `SONDENDECKUNG.md` — the register table of falsifiable assumptions
-  (`pruefe-sondendeckung.py`, `pruefe-zahlen.py`);
-* `UNFALSIFIZIERBAR.md` — the register table of `unfalsifiable` clauses (`pruefe-unfalsifizierbar.py`);
-* `PFLICHTEN.md` — the K/L row tables of the ten fragments (`zaehle-pflichten.py`,
-  `pruefe-zahlen.py`, `pruefe-notation.py`, `pruefe-widerruf.py`, `zaehle-bereichspflichten.py`);
-* `PLAN.md` — table cells and sentences read by `pruefe-zahlen.py` (pass-register and template
-  figures, `H`), `pruefe-widerruf.py` (sentences that contradict what was built), `pruefe-todo.py`
-  (labels shared with `TODO.md`), `pruefe-syntax.sh` (document lists).
+Until 2026-10-17 several guardians parsed prose and tables in the documents this one replaces
+(the `SONDENDECKUNG`, `UNFALSIFIZIERBAR` and `PFLICHTEN` register tables, `PLAN.md` table cells).
+Those guardians and registers were retired (see git history); **no guardian reads these documents
+any more**, and a document may change without retargeting a pattern. What the four guardians
+(`instrumente/pruefe-pruefer.py`, `-lean.py`, `-llvm.py`, `-gabbrov.py`, run by `abnahme.py`) read
+is stated in their own docstrings.
 
 ---
 
@@ -1437,12 +1413,12 @@ must change **before** the document it reads changes (`CLAUDE.md`):
 |---|---|---|
 | passes in the register | 12 (3 built, 9 carried, 0 partly built, 0 open) | `gabbro paesse` |
 | sentences | 216 (208 measured, 2 argued, 6 conjectured, 0 proved) | `gabbro paesse` |
-| codes claimed by a sentence | 443 (about 500 code-shaped literals in the crates) | `gabbro paesse`; `pruefe-kennungen.py` |
+| codes claimed by a sentence | 443 (about 500 code-shaped literals in the crates) | `gabbro paesse` |
 | next free diagnostic code | `N587` | `grep -rhoE '\bN[0-9]{3}\b' crates \| sort -u \| tail` |
 | clean examples / gift probes | 170 / 898 (highest numbers: example 1163, gift 1444) | `ls beispiele beispiele/gift` |
-| `unfalsifiable` clauses | 8, 1 admitted | `pruefe-unfalsifizierbar.py` |
-| hanging plumbing duties `H` | 1 (`F3` lowering without a differential test) | `zaehle-pflichten.py --haengend` |
-| obligations over the ten fragments | 239 = 173 K + 66 L | `zaehle-pflichten.py --spalten` |
+| `unfalsifiable` clauses | 8, 1 admitted (measured 2026-10-17 by the retired `pruefe-unfalsifizierbar`; not guarded today) | `grep -rn unfalsifiable beispiele` |
+| hanging plumbing duties `H` | 1 (`F3` lowering without a differential test; measured by the retired `zaehle-pflichten`, 2026-10-17; not guarded today) | — |
+| obligations over the ten fragments | 239 = 173 K + 66 L (historical: retired `zaehle-pflichten`, booked 2026-09) | `gabbro pflichten <file.gab>` per file |
 | the goal theorem | proved over the model; `#print axioms` = `propext`, `Classical.choice`, `Quot.sound` (booked, not re-run here: no Lean build was run for this document) | `BEWEIS.md`, `SATZKARTE.md` |
 | the checker as a *proved* artefact | not: the Rust checker is related to the Lean Bool by witnesses (§12.4), not by theorem | — |
 
@@ -1464,7 +1440,7 @@ state in the tree on 2026-10-17, where it differs from `TODO.md`, the difference
 | **O24** | strings are checked, not represented (NUL, `max` ceiling, aggregates) | §4.4 |
 | **O25** | closed in `TODO.md`'s appendix (the rely *is* the goal); the LLVM section still lists "`publish` with payload (11 sites), `OFFEN O25`" — an inconsistency inside `TODO.md` | goal theorem |
 | **O26** (rest) | foreign lock primitives are assumed (own ones are checked: `N481`–`N483`) | §4.10 |
-| **O27** | source forms without a complete G export: float, byte-pointer/string, dynamic-arena forms; coverage is the Lean constructor/field register (`pruefe-llvm-modelldeckung.py`), **not counts of examples** | `lean_g.rs`; `dokumente/LLVM-BACKEND.md` |
+| **O27** | source forms without a complete G export: float, byte-pointer/string, dynamic-arena forms; coverage is the Lean constructor/field register (`instrumente/teile/llvm-modelldeckung.py`, run by `pruefe-llvm.py`), **not counts of examples** | `lean_g.rs`; `dokumente/LLVM-BACKEND.md` |
 | **O28** (rest) | link: no independent review of the spec diff, no semantic equivalence of contracts, no certificate for linked programs | §4.15 |
 | **O37** | regions in G: no byte pointers in the model; nothing releases a region; Gabbro bodies do not pass an extent on | §4.13 |
 | **O40** (rest) | emitter names: the checker half is built (`N042`); module-qualified names are missing in both emitters | §4.2 |
@@ -1503,29 +1479,26 @@ O33, O39 not checker subjects.
 Measured while writing this document; none of them was repaired here (the scope was
 documentation). Each is checkable by the command given.
 
-1. **`pruefe-sondendeckung.py` aborts** (`ABBRUCH: not one probe under sonden/`): its constant
-   `SONDEN = W / "sonden"` predates the move of the probes to `instrumente/sonden/` (commit
-   `6744cf30`). Run `python3 instrumente/pruefe-sondendeckung.py`. `A_p` is therefore unguarded.
-2. **`pruefe-ausnahmen.py` does not exist**, but `dokumente/PRUEFER.md` and `UNFALSIFIZIERBAR.md` name it as
-   the guardian of the four GabbroV exception rows; `pruefe-waechter.py` mentions it only in a
-   comment. The count of exception rows is unguarded.
+1. **`A_p` was unguarded** when `pruefe-sondendeckung` aborted on the moved probe directory
+   (`instrumente/sonden/`, commit `6744cf30`); the guardian was retired on 2026-10-17 (see git history).
+2. **The count of the four GabbroV exception rows is unguarded:** the guardian `pruefe-ausnahmen`
+   named for it never existed, and the retired `pruefe-waechter` mentioned it only in a comment.
 3. **`gabbro annahmen beispiele/*.gab` aborts** with *"`linux_write_contract` is declared twice with
    different content — a contradiction in the assumption set"*: six examples at the top level
    (`74`, `90`, `96`, `149`, `163`, `182`) declare an assumption of that name with different
-   statements. `pruefe-zahlen.py` reads exactly this command for the figure `A`.
+   statements. The retired `pruefe-zahlen` (2026-10-17) read exactly this command for the figure `A`.
 4. **`AGENTS.md` §7 counters lag the tree:** `beispiele/gift/1444-…` and `beispiele/1161`–`1163`
    exist, so the next free numbers are gift **1445** and example **1164** (the row says 1444 and
    1162). `N587` is correct.
-5. **Booked figures lag `gabbro paesse`:** `messung/KENNZAHLEN.md` holds *198 sentences, 190
-   measured, 419 codes*; the binary says **216, 208, 443**. `messung/PASSREGISTER.md` carries the
+5. **Booked figures lagged `gabbro paesse`:** the retired `KENNZAHLEN` register held *198 sentences, 190
+   measured, 419 codes*; the binary says **216, 208, 443**. The retired `PASSREGISTER` register carried the
    headline "56 sentences over twelve passes". The pass-register figures are re-booked from this
    document's §8.
 6. **German diagnostic text in the checker:** `N584` and `N585` (`arena.rs`) are written in
-   German (`… fragt … nach freiem Speicher, und das nennt kein Tor …`); `pruefe-englisch.py` is
-   the guardian and the working language of diagnostics is English.
-7. **`pruefe-kennungen.py` reports 3 doubly-issued codes:** `N004`/`N005` (`namen.rs` +
+   German (`… fragt … nach freiem Speicher, und das nennt kein Tor …`); the working language of diagnostics is English.
+7. **The retired `pruefe-kennungen` reported 3 doubly-issued codes:** `N004`/`N005` (`namen.rs` +
    `zielbindung.rs`, the same rule re-applied per `target` binding, so deliberate) and `Y103`
-   (`llvm.rs` + `llvm/memory.rs`). The guardian counts a deliberate reuse like an accident.
+   (`llvm.rs` + `llvm/memory.rs`). That guardian counted a deliberate reuse like an accident.
 8. **`TODO.md` lags the tree in four places** (§14.2): `H102`'s `via idt` limit (widened), `O11`
    "booked by NOTHING" (`N583`), the alias decision (slices 1–4 built), `O25` listed as both
    closed and open.
@@ -1534,16 +1507,14 @@ documentation). Each is checkable by the command given.
 10. **Sentence reservations that predate later work:** `v2.relationale-verengung` ("no alias
     analysis anywhere in this checker"), `m3.zeigerrecht` ("only the BASE NAME"; fine), `m1.fnzeiger`
     (an old struck line is kept in its text).
-11. **Measurement context:** in this worktree `pruefe-saetze.py` (and the other guardians that read
-    `target/debug/gabbro`) abort with "binary older than N source files", and `mutiere-pruefer.py
-    --anker` reports 34 anchors that measure nothing and a failing speech line. These are apparatus
-    findings of a worktree whose files are newer than the shared binary, **not** findings about the
-    tree — re-run on a built main checkout before booking.
+11. **Measurement context:** the guardians that read `target/debug/gabbro` abort with "binary older
+    than N source files" in a worktree whose files are newer than the shared binary. That is an
+    apparatus finding, **not** a finding about the tree — build, then re-run.
 12. **Not carried over from the old files because it could not be verified today:** the
     synthetic-unit timing table of «Z» (899 ms, 610 ms rebuild), the `.gabi` details beyond the
     sentences (representations of one type across libraries, template proof-state merging), the
     float plan's per-stage status F0–F8 beyond `GLEITKOMMA.md`, the 175/24 occupied/poison-only
-    cells of the grammar table (struck in `KENNZAHLEN.md` on 2026-09-27), the ceremony count after
+    cells of the grammar table (struck in retired `KENNZAHLEN` register on 2026-09-27), the ceremony count after
     2026-09-13, and the K001 off-by-one mutation table of five domains.
 
 ---
@@ -1572,13 +1543,13 @@ different file (the Lean model's plan) and is **not** covered here.
 | `dokumente/PRUEFER.md` §2, levers 1, 3, 4 | §10 ("What cannot be made lighter", levers 1, 3, 4) |
 | `dokumente/PRUEFER.md` §4 (S4 seam witnesses) | §12.4 |
 | `dokumente/PRUEFER.md` §2 | §11 ("Why a corpus count does not answer V") |
-| `PFLICHTEN.md` F10, F1 rows | §9 (rows that rules cite) |
+| retired `PFLICHTEN` register F10, F1 rows | §9 (rows that rules cite) |
 | `PFLICHTEN-KORRESPONDENZ.md`, `PFLICHTEN-ORDNUNG.md` (cited from `pflichten.rs`) | not covered: those files are not in the consolidated set; §9 is the overview |
-| `UNFALSIFIZIERBAR.md` (`saetze.rs`) | §7.2 |
-| `SONDENDECKUNG.md`, `dokumente/PRUEFER.md` (guardians) | §7.3, §12.5 — and §13.4: the guardians read the old files |
+| retired `UNFALSIFIZIERBAR` register (`saetze.rs`) | §7.2 |
+| retired `SONDENDECKUNG` register, `dokumente/PRUEFER.md` (guardians) | §7.3, §12.5 — and §13.4: the guardians read the old files |
 | `dokumente/PRUEFER.md` §5, `dokumente/PRUEFER.md` §2c, `dokumente/PRUEFER.md` §7 | §4.3 (the three bullets under "What the measurements found") |
 | `dokumente/PRUEFER.md` §3, §4.1, §4.2 | §11 (the K3 table) |
 | `dokumente/PRUEFER.md` §1.1–§1.3, §2.3, §2.4 | §11 ("Forms that mean nothing"), §4.3 (`D017`–`D025`) |
 | `dokumente/PRUEFER.md` §3, §4 | §4.7, §11 |
 | `dokumente/PRUEFER.md` §3–§5 | §4.2 (`N041`/`N042`) |
-| `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `FREMDVERENGUNG.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md` | §11; §4.3 (K001); §4.13 (`absenkung.rs` bound 18; the measured maximum was 17, the bound 18 = 17 + 1); `ERSTNAMEN` (English first names of the CLI sub-commands and flags, guarded by `crates/gabbro-cli/tests/fahnen.rs`) is a CLI fact, not covered |
+| `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, retired `FREMDVERENGUNG` register, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md` | §11; §4.3 (K001); §4.13 (`absenkung.rs` bound 18; the measured maximum was 17, the bound 18 = 17 + 1); `ERSTNAMEN` (English first names of the CLI sub-commands and flags, guarded by `crates/gabbro-cli/tests/fahnen.rs`) is a CLI fact, not covered |

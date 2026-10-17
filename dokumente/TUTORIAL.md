@@ -40,7 +40,7 @@ irreducible are marked. *Open that file beside this one.*
 > **C11 emitter and a C compiler** (the `compiler cc …` line of the manifest). That path is
 > **deprecated** and stays only where it builds; the **current backend is LLVM**:
 > `gabbro llvm [--target=x86_64|aarch64]` writes IR for the checked unit and
-> `instrumente/baue-llvm.sh` links a static binary with no C, no libc and no linked runtime
+> `instrumente/teile/baue-llvm.sh` links a static binary with no C, no libc and no linked runtime
 > ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)). The checker is the same for both: what this file
 > teaches (ranges, `effects`, `costs`, `narrow`) is decided before either backend runs.
 >
@@ -511,7 +511,7 @@ error: [P002] `const` is a word of the vocabulary, not an identifier
 ```
 
 *(The refusal's own text still says "221"; the table has 248 words today — the count the
-`instrumente/zaehle-wortschatz.py` ratchet guards. The seventeen are unchanged.)*
+retired `zaehle-wortschatz` ratchet guarded (2026-10-17; not guarded today). The seventeen are unchanged.)*
 
 **There is no way to escape a keyword.** Pick another name; the table is in
 [`dokumente/SYNTAX.md`](SYNTAX.md), and the refusal names the word it read.

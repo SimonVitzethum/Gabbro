@@ -3,11 +3,11 @@
 *Consolidated 2026-10-17. It replaces the former `GABBROV.md`, `programmlogik/PLAN.md`,
 `dokumente/GABBROV.md`, `passlogik/README.md` and `dokumente/GABBROV.md`, and
 the measurement reports `messung/gabbrov/{GABBROV-ZERTIFIKAT,MANIFEST-COMPLETENESS,MANIFEST-TEXT}.md`
-and `messung/GABBROV-V2.txt`. History is in git. Three files stay because guardians read them as
-data: [`messung/gabbrov/PFLICHTEN-KORRESPONDENZ.txt`](../messung/gabbrov/PFLICHTEN-KORRESPONDENZ.txt)
-(parsed by `instrumente/pruefe-manifest.py`),
-[`programmlogik/gabbrov/KORRESPONDENZ.txt`](../programmlogik/gabbrov/KORRESPONDENZ.txt) (rows parsed
-by `zaehle-pflichten.py --korrespondenz`) and the machine-read rows of this file (§5, §11).*
+and the retired `messung/GABBROV-V2.txt`. History is in git. The data file [`programmlogik/gabbrov/KORRESPONDENZ.txt`](../programmlogik/gabbrov/KORRESPONDENZ.txt)
+stays; the guardians that parsed the retired mapping table `PFLICHTEN-KORRESPONDENZ.txt` and the obligation
+registers (`pruefe-manifest`, `zaehle-pflichten`) were retired on 2026-10-17 (see git history), so
+no guardian reads those rows or the machine-read rows of this file (§5, §11) any more. GabbroV is
+measured today by `instrumente/pruefe-gabbrov.py`.*
 
 > **What GabbroV is, in one sentence.** The part of Gabbro that takes what a person must still
 > say — the logic obligations of their program — states it as Lean, checks it against a model of
@@ -30,8 +30,8 @@ frame, lock, race, termination, phase, leafness, publication — is the checker'
 generated schemata, no SMT, no solver). **Logic** — *this function does the right thing* — is the
 programmer's, and Gabbro **emits** every open logic obligation. Plumbing that rests on logic
 (`SPRACHE.md` §8.3) falls constructively but is booked as logic. So the cut is narrow: **logic
-and assumptions only**. Over the ten fragments of `FRAGMENTE.md`, `dokumente/PFLICHTEN.txt`
-(held by `instrumente/zaehle-pflichten.py --spalten`) books `239 = 173 K + 66 L`: about a quarter
+and assumptions only**. Over the ten fragments of `FRAGMENTE.md`, the retired `PFLICHTEN` register
+(counted by the retired `zaehle-pflichten`, booked 2026-09) books `239 = 173 K + 66 L`: about a quarter
 of the obligations reach GabbroV.
 
 **Components** (all in the tree):
@@ -95,11 +95,11 @@ not below them.
 **E1, the completeness check, is wired into the tool**, not hung beside it: `zeige` counts the
 records it wrote against `sammle` and the run ends with `E1 FAILED` on a divergence (a ninth kind
 added to `Art` and forgotten in the print loop would otherwise be counted in the header and
-printed in no line). The outer comparison — manifest lines against the GabbroV population — is
-`instrumente/pruefe-manifest.py`, which derives the split from the mapping table
-`PFLICHTEN-KORRESPONDENZ.txt` (states `CARRIED`, `BLOCKED`, `DROPPED`, `NO CLAUSE`), refuses a
-`BLOCKED` row whose fragment emits a register, and prints the 16-odd `K` lines it must not spend
-as logic. **It is red by design**: when last run (2026-10-17) `43 of 63` obligations reached no
+printed in no line). The outer comparison — manifest lines against the GabbroV population — was
+the retired `pruefe-manifest` (2026-10-17; not guarded today), which derived the split from the mapping table
+the retired `PFLICHTEN-KORRESPONDENZ.txt` (states `CARRIED`, `BLOCKED`, `DROPPED`, `NO CLAUSE`), refused a
+`BLOCKED` row whose fragment emits a register, and printed the 16-odd `K` lines it must not spend
+as logic. **It was red by design**: when last run (2026-10-17) `43 of 63` obligations reached no
 manifest line, with 20 lines carried, 13 blocked on one fragment's repair, 5 dropped and 25 with
 no clause; two mapping rows (F01 `cdt_wohlgeformt`) name a line the run no longer produces and
 need re-derivation. The honest ceiling without a language change is 24–25 of 63: a `claim`
@@ -107,8 +107,8 @@ with a `can_fail` block is an assumption with a falsifier, and a `format … whe
 discharged by the decoder (a line for it would read `open` and be false).
 
 **The order of a format change** (the rule that cost nothing and saved a silent failure): count
-the readers first — three parse the plain text (`tests/beispiele.rs` red loudly; `pruefe-zahlen.py`
-and `messung/gabbrov/manifest-lage.sh` would go *silently* wrong, the sum becoming `0`), seven tools
+the readers first — three parse the plain text (`tests/beispiele.rs` red loudly; `messung/gabbrov/manifest-lage.sh`
+(and the former `pruefe-zahlen`) would go *silently* wrong, the sum becoming `0`), seven tools
 read the same register through `--lean`/`--isabelle` and are untouched, two registries know the
 flags; then widen every reader to both formats **while the emitter still writes the old one**;
 only then move the writer. A reader taught the new format after the writer moved has a window in
@@ -146,7 +146,7 @@ for free).
 **The three `progress` rebookings (verified 2026-09-03).** The ten fragments carry exactly three
 `progress` clauses (`F04` `device_completes_or_faults`, `F05` `client_calls_or_endpoint_revoked`,
 `F10` `token_verbraucht`); a `progress` name must resolve to a declared falsifiable `assume`
-(`S003`/`S004`), and `PFLICHTEN.txt` had booked each also as a logic obligation (`L42`, `L46`,
+(`S003`/`S004`), and the retired `PFLICHTEN` register had booked each also as a logic obligation (`L42`, `L46`,
 `L66`). The emitted manifest never double-booked them: `gabbro annahmen` lists all three,
 `gabbro pflichten` emits no obligation from any `progress` clause. The `K`/`L` column stays
 (it is machine-versus-subject, and a discharged obligation still counts); what moves is
@@ -154,15 +154,15 @@ GabbroV's population, and the figure is derived by command, not by subtraction:
 
 | | | source |
 |---|---:|---|
-| `L` rows of the ten fragments | 66 | `zaehle-pflichten.py --spalten` |
-| of these, discharged by the assumption layer | 3 | `zaehle-pflichten.py --gabbrov` |
-| **GabbroV's obligation population** | **63** | `zaehle-pflichten.py --gabbrov` |
+| `L` rows of the ten fragments | 66 | retired `zaehle-pflichten` (booked 2026-09; historical) |
+| of these, discharged by the assumption layer | 3 | same (historical) |
+| **GabbroV's obligation population** | **63** | same (historical) |
 | of the 63, not sayable in the fragment | 8 | `L11 L12 L13 · L24 L34 L50 L52 · L57` |
 | of the 63, sayable | 55 | |
 
 | | before | after | |
 |---|---:|---:|---|
-| `PFLICHTEN.txt` total | 239 | 239 | unchanged |
+| `PFLICHTEN` register total (retired) | 239 | 239 | unchanged |
 | GabbroV's obligation population | 66 | **63** | the three are discharged by the assumption layer |
 
 (An older figure of "164 K" was never a measurement of the tree: it is what the counter's own
@@ -225,8 +225,8 @@ inside `pred` (`B14`, the `L02` mutual sibling chain). It is the difference betw
 *passed* on `L01`; today only `== Some(k)` comparisons check in `pred`, indexing *through* the
 option stays blocked.
 
-**The correspondence table** (`programmlogik/gabbrov/KORRESPONDENZ.txt`, held by `python3
-instrumente/zaehle-pflichten.py --korrespondenz`): one row per Lean construct with its named
+**The correspondence table** (`programmlogik/gabbrov/KORRESPONDENZ.txt`; the retired `zaehle-pflichten --korrespondenz`
+held it): one row per Lean construct with its named
 Gabbro counterpart, every name resolving where its side lives. Rows are `GREEN` (the nine
 constructs `∧∨¬→`, `=≠`, quantifiers over table domains, `World`, `State`, `wrapTo`, `.int`,
 `SpecShape`, `reachesIn`, `Atom`), `YELLOW` (Gabbro can, Lean cannot: ends undecided and needs a
@@ -242,8 +242,8 @@ it can say and the shape of every declared place — and **no specification**. A
 `Spec.lean` (for example `nur_dieses_fach`, a frame property with a quantifier no `spec fn` can
 express). Three poisoned specifications each fall: one demands a value the body does not write, one demands
 the cleared compartment stay untouched, one names a field no table declares. The third falls
-with "unsolved goals", which reads like a fault in the program; `instrumente/pruefe-lean-programm.sh`
-holds every place a specification names against the program's place list and says the true thing.
+with "unsolved goals", which reads like a fault in the program; `gabbro prove` (run by
+`instrumente/pruefe-gabbrov.py`) holds every place a specification names against the program's place list and says the true thing.
 What no dictionary catches: a typo from one real field to another proves a true statement about
 the wrong place — the check bounds the hazard, it does not remove it.
 
@@ -298,7 +298,7 @@ class as an aborting measurement run); it needs samples against real behaviour, 
 
 | | | |
 |---|---|---|
-| **GabbroV's obligation population** | **63** | `zaehle-pflichten.py --gabbrov` |
+| **GabbroV's obligation population** | **63** | retired `zaehle-pflichten` (historical) |
 | of these, discharged by the assumption layer | 3 | |
 
 ## 12. Open questions
@@ -372,8 +372,8 @@ unit.gab ──► gabbro pflichten --lean ──► Duty/<Unit>.lean ──► 
   Lean front end (§14).
 * **The measurement** — `programmlogik/_pruefung/` (scratch, untracked): `lauf.sh` runs every
   generated module through `lean` and counts (it never stops at an error); `probe.sh <module>`
-  shows what `gabbro_auto?` leaves; `instrumente/pruefe-lean-pflichten.sh` runs the channel
-  tree-wide.
+  shows what `gabbro_auto?` leaves; the retired `pruefe-lean-pflichten`
+  ran the channel tree-wide (`gabbro prove` over the proof units is run by `instrumente/pruefe-gabbrov.py`).
 
 ### 13.3 The model (former PLAN §3.1)
 
@@ -414,7 +414,7 @@ every invariant in scope; arrays as pseudo-tables (`Rec.field`, static arrays, `
 `∃ v, r = some v` for a shapeless answer, `none ∨ reason` for an error channel, `False` for
 `-> never`). **The lock invariant** (2026-09-29): `locks L { … }` on a lock with an invariant is
 `.call lock_acquire_L` (an assumed contract), the body, `.call lock_release_L` (precondition = the
-invariant); probes `instrumente/pruefe-sperre-beweis.sh`.
+invariant); probes: the retired `pruefe-sperre-beweis` (not guarded today).
 
 ### 13.6 The register of what the emitter decides (former PLAN §16, run 30)
 
@@ -518,12 +518,12 @@ statement the grammar fixes is handed over). "The tactic closes it" is **not** a
 success is a property of a run, so `carriedByTactic` is a verdict whose `Discharges` is `False`.
 Two general lemmas are false without a side condition, and the negations are proved
 (`store_without_the_shape_can_break_WF`, `a_contract_says_nothing_where_its_precondition_fails`);
-that is a statement about the emitter. **The guard** `instrumente/pruefe-deckung.py` holds the
+that is a statement about the emitter. **The guard** (the retired `pruefe-deckung`, now `cargo test -p gabbro-check --lib lean::deckung_tests`) holds the
 hand-written mirrors `Form`/`Reason` against `lean.rs` (the population both ways, the order, every
 tag and kind, an arm in `classify` for every form and no catch-all) and
 `lean::deckung_tests` reads `Coverage.lean` at compile time. **Lesson (§11.1):** a register can be
 one step behind its sibling (`PassCounter` stood in neither `LeanReason::ALL` nor
-`zaehle-lean.py`'s reasons: a refusal would have been counted in a balance line and named in no
+the retired `zaehle-lean`'s reasons: a refusal would have been counted in a balance line and named in no
 reason line — smaller, the direction that flatters); *a test over a register must not take that
 register as its own population.* **What no guard covers:** that `Form` is the whole grammar
 (`parse.rs` against `Form` is a third register with no guard), and that the mapping names the
@@ -648,13 +648,13 @@ README): a differential test between `kostenK` here and what `gabbro pruefe` com
 
 | Figure | Command |
 |---|---|
-| population, rebooking | `python3 instrumente/zaehle-pflichten.py --gabbrov` (63 / 3, measured 2026-10-17) |
-| correspondence table | `python3 instrumente/zaehle-pflichten.py --korrespondenz` |
-| manifest completeness | `python3 instrumente/pruefe-manifest.py` (red by design, §2) |
+| population, rebooking | retired `zaehle-pflichten` (63 / 3, measured 2026-10-17; historical, not guarded today) |
+| correspondence table | retired `zaehle-pflichten --korrespondenz` (not guarded today) |
+| manifest completeness | retired `pruefe-manifest` (red by design, §2; not guarded today) |
 | manifest, per fragment | `bash messung/gabbrov/manifest-lage.sh` |
-| the Lean channel over the corpus | `programmlogik/_pruefung/lauf.sh` (local scratch; **not** concurrently with `cargo test` in one tree: `gabbro prove` rebuilds the model and replaces the `.olean` the running `lean` reads — 52 phantom errors on 2026-09-08), `instrumente/pruefe-lean-pflichten.sh` |
-| the specification channel | `instrumente/pruefe-lean-programm.sh` |
-| the coverage register | `python3 instrumente/pruefe-deckung.py`; `cargo test -p gabbro-check --lib lean::deckung_tests` |
+| the Lean channel over the corpus | `programmlogik/_pruefung/lauf.sh` (local scratch; **not** concurrently with `cargo test` in one tree: `gabbro prove` rebuilds the model and replaces the `.olean` the running `lean` reads — 52 phantom errors on 2026-09-08), retired `pruefe-lean-pflichten` |
+| the specification channel | `gabbro prove`, run by `instrumente/pruefe-gabbrov.py` |
+| the coverage register | `cargo test -p gabbro-check --lib lean::deckung_tests` |
 | the bridge | `cd bruecke && lake build` |
 | `passlogik` | `cd passlogik && lake build Abnahme` |
 | certificate ceiling | `python3 messung/gabbrov/cert-theorien.py` |
@@ -681,4 +681,4 @@ ceiling, the build state of `bruecke/` and `programmlogik/`, and every axiom set
 | `PLAN.md` §12.4 (two measurement collisions) | §16 |
 | `dokumente/GABBROV.md` | §7 |
 | `passlogik/README.md`, `dokumente/GABBROV.md` | §15 |
-| `messung/gabbrov/MANIFEST-*`, `dokumente/GABBROV.md`, `messung/GABBROV-V2.txt` | §2, §5, §6 |
+| `messung/gabbrov/MANIFEST-*`, `dokumente/GABBROV.md`, the retired `messung/GABBROV-V2.txt` | §2, §5, §6 |

@@ -57,7 +57,7 @@ data, and reduces in the kernel.
   to `+inf`, `0/0` NaN, `1/0` inf; a mutant without the zero rule fails six witnesses at build.
 * **Differential check:** the model against hardware C over 21,128 vectors (4 ops x 2 widths, random and edge
   pairs, every signed-zero pairing, the comparisons) gave 20,736 exact, 392 both-NaN, 0 mismatches (lane 166 and
-  its follow-up). The driver script `instrumente/pruefe-gleitkomma.py` is **not in the tree today**; the number is
+  its follow-up). The driver script `pruefe-gleitkomma` is **not in the tree** (retired before 2026-10-17); the number is
   the recorded result.
 
 ## 3. What the semantics reads (the switch from `Float`)
@@ -128,7 +128,7 @@ of Gabbro's result": the assumption is exactly the gap between Annex F and the m
 Witness: `klemmen_corr` (`CFormenFZeuge.lean`) for `beispiele/26-gleitkomma.gab`. Covered: every float operator,
 comparison, integer conversion and class test written in `double`, as a premise of the correspondence. Not
 covered: binary32 correspondence (the width cut), floats in tables or globals, NaN payloads, and the literal
-conversion beyond the per-witness bits (`kHalb_bits`). `pruefe-cformen.py` classifies float forms by `double`
+conversion beyond the per-witness bits (`kHalb_bits`). the retired `pruefe-cformen` classified float forms by `double`
 names and float literals (rows `stmt:float-decl-arith/-lit/-conv`, `stmt:float-narrow-range/-finite`,
 `expr:float-cmp`; dated uncovered rows `expr:float-lit-inline` and `stmt:float`).
 

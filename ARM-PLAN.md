@@ -50,7 +50,7 @@ with the Sail text, not a hardware correspondence; vendor-undefined behaviour st
 ## C emitter archive (2026-10-07)
 
 The C11 backend (`crates/gabbro-check/src/emit.rs`, `certemit.rs`, `schablonen.rs`, `tearing.rs`,
-`crates/gabbro-cli/src/treiber.rs`, `laufzeit/`, `bibliothek/`, `instrumente/pruefe-emission.sh`) is
+`crates/gabbro-cli/src/treiber.rs`, `laufzeit/`, `bibliothek/`, the retired `pruefe-emission`) is
 archived as legacy evidence: git tag `archiv/c-emitter-2026-10-07` and a tarball outside the repo
 (`gabbro-arm/archiv/c-emitter-2026-10-07.tar.gz`). It stays in the tree because the checker, the
 examples and the AArch64 compatibility work (Sonnet C) still build on it; the direct AArch64
