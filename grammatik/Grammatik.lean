@@ -320,6 +320,8 @@ import Grammatik.Korrespondenz.Korpus.Korpus109
 import Grammatik.Korrespondenz.Korpus.Korpus125
 import Grammatik.Proben.SimPruef
 import Grammatik.Bausteine.Arena.ArenaDyn
+import Grammatik.Bausteine.Arena.ArenaSeiten
+import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset
 import Grammatik.Logik.Ruf.FremdRuf
 import Grammatik.Zielsatz.Faeden.PoolSym

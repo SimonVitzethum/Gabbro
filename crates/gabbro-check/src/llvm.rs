@@ -44,38 +44,28 @@
 //! * **Pipeline:** `opt -O3` (Middle-End) plus `llc -O3` (Codegen); `llc` allein fährt die
 //!   Middle-End-Pipeline nicht (gemessen langsamer als `-O0`).
 //!
-//! ## Geltungsbereich (was senkt ab, was fällt)
+//! ## Coverage and runtime
 //!
-//! * Typen: alles außer Geräte-/Register-Räumen, körperlosen `opaque` und Varianten
-//!   (`Y101`). Darunter: Bereichszahlen (ggf. verengt), `bool`, Gleitkomma, Felder,
-//!   Verbunde, Zeichenketten, Zeiger, `fn`-Zeiger, `index into`, Tabellen (als Adressen),
-//!   Geister (gelöscht), körperlos-lineare Marken (1 Byte).
-//! * Items: Funktionen (inkl. `or`-Kanal-Ablehnung, Geister), direkte `via`-freie Tore
-//!   (errno-Dekodierung nur leer), Konstanten, Statics, Tabellen, Arenen, Atomics,
-//!   exklusive Schlösser, Gründe (gelöscht). KEINE Absenkung: maskierte Schlösser,
-//!   Stapel-Tore, Fehlerkanal-Tore, Kernel-Paarungen, Entries, `asm` (`Y102`).
-//! * Anweisungen: alles außer geteilten Sperren, Publish/Await/Exchange und exotischen
-//!   Domänen (`Y103`). Darunter: `locks` (exklusiv, Freigabe an jedem Ausgang), `start`
-//!   (Fäden: `clone` + Futex-Join je `start`-Wurzel — echte Nebenläufigkeit),
-//!   `alloc`/`grow`/`reset`, `traverse` (Zählschleife über Elemente/Slots),
-//!   `retry`/`forever` (Zählschleife mit Schranke), `narrow` (Prüfung + `assume`),
-//!   `breaking` (Rumpf läuft), `observes` (Zaun plus Rumpf), `child` (Rumpf läuft).
-//! * Ausdrücke: alles außer `aligned`, `Zaehle`, unauflösbaren Rufen (`Y104`).
-//!   Darunter: `old`/`result` nur in Vertrags-Annahmen, `Some`/`None`, Gründe.
-//! * Match: ganzzahlig (`switch` ohne `default` — Abdeckung hält der Prüfer) und
-//!   Variante (Markenversand); der Rest ist `Y106`.
+//! Coverage is classified against Lean constructors and declaration fields in
+//! `dokumente/llvm-modelldeckung.tsv`, checked by
+//! `instrumente/pruefe-llvm-modelldeckung.py`. Examples are execution witnesses,
+//! never the coverage denominator. Unsupported forms still refuse by name.
 //!
-//! ## Laufzeit aus dem Erzeuger (nur der Kern darunter)
+//! Every cyclic direct/compatible indirect call component is lowered to a loop
+//! dispatcher with explicit continuation frames (`stackless.rs`). The existing
+//! tail-cycle fast path uses jumps without suspended frames. Frames live in
+//! checked, growable anonymous chunks, released on unwind; native call depth
+//! does not grow with source recursion. Exhausted memory fail-stops explicitly.
 //!
-//! Schlösser (Ticket-Wörter), Arenen (Reservierung plus Zähler) und der Eintritt
-//! (`_start`) entstehen als generiertes IR — kein Laufzeitobjekt, keine Verlinkung.
-//! Darunter liegt nur der Kern (rohe Tor-Nummern je Ziel, im Erzeuger gebucht).
-//! Fäden (`start`) laufen als echte Fäden: jede Wurzel kriegt einen eigenen
-//! Stapel (8 MiB, 1 MiB Prefix-Reserve) und ein Fertig-Wort (global,
-//! `gabbro_faden_N_*`), läuft im Kind (`CLONE_THREAD`), meldet fertig
-//! (Wort + Futex-`wake`) und endet mit `exit`; der Starter schließt jeden
-//! Join (Wort + Futex-`wait`-Schleife). Fehlerpfade sind laut (`ud2`/`brk`):
-//! `unreachable` allein faltet der Optimierer zu `llvm.assume` (gemessen).
+//! Thread groups are spawned before joining. A tiny ABI-specific trampoline is
+//! necessary at the SP switch; the child never resumes a parent LLVM frame.
+//! Each invocation owns a mapping with control word, guard and stack. Join waits
+//! for kernel clear_child_tid (after exit), then releases the complete mapping.
+//! This is still the Linux runtime profile, not an OS-neutral implementation.
+//!
+//! Arena free links live outside payloads. Empty payload chunks can be discarded
+//! without losing LIFO reuse or changing the committed-prefix model. Physical
+//! residency is distinct from reservation and virtual access rights.
 //!
 //! ## Die Stille-Invariante (Soundness)
 //!
@@ -96,6 +86,11 @@ use gabbro_syntax::kw::Kw;
 use gabbro_syntax::span::Span;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
+
+mod stackless;
+mod memory;
+#[cfg(test)]
+mod test_tools;
 
 // ===================================================================================
 // Ziele
@@ -568,6 +563,7 @@ struct Senke<'a> {
     eintritt: Option<(String, Option<u32>)>,
     plaene: BTreeMap<String, FnPlan>,
     globale: BTreeMap<String, Global>,
+    global_align: BTreeMap<String, u64>,
     aliase: BTreeMap<String, TypExpr>,
     rekorde: BTreeMap<String, Vec<(String, TypExpr)>>,
     varianten: BTreeMap<String, (String, Option<TypExpr>)>,
@@ -591,13 +587,6 @@ struct Senke<'a> {
     beleg_funktionen: Vec<(String, Vec<String>, String, String)>,
     nebenlaeufig: Vec<String>,
     start_wurzeln: BTreeSet<String>,
-    faden_nr: u32,
-    /// Fertig-Wörter je gestarteter Wurzel (`gabbro_faden_N_*`, in
-    /// Senk-Reihenfolge): Rahmen-relative Adressen dürfen nie in ein Kind --
-    /// `ptrtoint(alloca)` senkt zu `lea [rsp+…]`, und im Kind zeigt `rsp`
-    /// anderswohin (gemessen: Weckruf an `oben-8` statt ans Wort). Globale
-    /// sind absolut und stimmen in beiden.
-    faden_worte: Vec<String>,
     /// Rufer-Name je Vollname (Kollision → `m_f`, sonst kurz).
     emitnamen: BTreeMap<String, String>,
     /// Schleifenplan je Zyklus-Mitglied (Vollname → Info).
@@ -761,49 +750,7 @@ fn groesse_von_typ(s: &mut Senke, t: &TypExpr) -> Option<u64> {
 }
 
 fn groesse_von_ll(s: &Senke, ll: &LlTyp) -> Option<u64> {
-    match ll {
-        LlTyp::Int(w) => Some((*w as u64).div_ceil(8)),
-        LlTyp::F32 => Some(4),
-        LlTyp::F64 => Some(8),
-        LlTyp::Ptr => Some(8),
-        LlTyp::Void => Some(0),
-        LlTyp::Feld(e, n) => Some(groesse_von_ll(s, e)?.checked_mul(*n)?),
-        LlTyp::Anon(fs) => {
-            let mut sum = 0u64;
-            for f in fs {
-                sum = sum.checked_add(groesse_von_ll(s, f)?)?;
-            }
-            Some(sum)
-        }
-        LlTyp::Benannt(n) => {
-            // Bekannte Layouts: Rekorde/Varianten/Zeichenketten aus dem Beleg.
-            if let Some(felder) = s.rekorde.get(n.strip_suffix("$breit").unwrap_or(n)).cloned() {
-                let eng = !n.ends_with("$breit");
-                let alt_egal: Option<u64> = None;
-                let _ = alt_egal;
-                let mut sum = 0u64;
-                // Größe ohne Senke-Rekursion: direkt über die Feldtypen falten.
-                for (_, ft) in &felder {
-                    sum = sum.checked_add(groesse_statisch(s, ft, eng)?)?;
-                }
-                Some(sum)
-            } else if let Some((faelle, _)) = s.variant_typen.get(n.strip_suffix("$breit").unwrap_or(n)).cloned() {
-                let eng = !n.ends_with("$breit");
-                let mut groesste = 0u64;
-                for (_, nt) in &faelle {
-                    if let Some(nt) = nt {
-                        groesste = groesste.max(groesse_statisch(s, nt, eng)?);
-                    }
-                }
-                Some(4 + groesste)
-            } else if let Some(rest) = n.strip_prefix("gabstr") {
-                let max: u64 = rest.parse().ok()?;
-                Some(4 + max)
-            } else {
-                None
-            }
-        }
-    }
+    stackless::layout(&ll.text(), &s.beleg_typen).map(|(size, _)| size)
 }
 
 /// Statische Größe ohne Layout-Rückgriff (keine Rekursion in `sorge_*`).
@@ -1146,7 +1093,7 @@ fn sorge_variante(s: &mut Senke, tname: &str, eng: bool) {
     let mut ok = true;
     for (_, nl) in &faelle {
         if let Some(nt) = nl {
-            match groesse_statisch(s, nt, eng) {
+            match groesse_von_typ(s, nt) {
                 Some(n) => groesste = groesste.max(n),
                 None => {
                     ok = false;
@@ -2300,11 +2247,10 @@ fn adresse_von_ort(k: &mut Koerper, ort: &Ort) -> Option<Adresse> {
                                     return None;
                                 }
                             };
-                            let breite = reg.ll.breite().unwrap_or(32);
                             let off = k.tmp();
                             k.zeile(&format!("{off} = getelementptr i8, ptr {roh}, i64 {}", reg.versatz));
                             let bc = k.tmp();
-                            k.zeile(&format!("{bc} = bitcast ptr {off} to i{breite}*"));
+                            k.zeile(&format!("{bc} = getelementptr i8, ptr {off}, i64 0"));
                             ptr = bc.clone();
                             geladen = Some(bc.clone());
                             ll = reg.ll.clone();
@@ -2887,7 +2833,7 @@ fn senke_varianten_wert(
         let pp = k.tmp();
         k.zeile(&format!("{pp} = getelementptr %{lname}, ptr {slot}, i32 0, i32 1"));
         let pc = k.tmp();
-        k.zeile(&format!("{pc} = bitcast ptr {pp} to {}*", nll.text()));
+        k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
         k.zeile(&format!("store {} {}, ptr {pc}, align 1", nll.text(), w.text));
         let t1 = k.tmp();
         k.zeile(&format!("{t1} = load %{lname}, ptr {slot}, align 8"));
@@ -2934,7 +2880,7 @@ fn senke_option_wert(k: &mut Koerper, name: &str, r: &Ruf, span: Span) -> Option
     let pp = k.tmp();
     k.zeile(&format!("{pp} = getelementptr %gabopt, ptr {slot}, i32 0, i32 1"));
     let pc = k.tmp();
-    k.zeile(&format!("{pc} = bitcast ptr {pp} to {}*", v.typ.text()));
+    k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
     k.zeile(&format!("store {} {}, ptr {pc}, align 1", v.typ.text(), v.text));
     let t1 = k.tmp();
     k.zeile(&format!("{t1} = load %gabopt, ptr {slot}, align 8"));
@@ -3228,17 +3174,12 @@ fn senke_stmt(k: &mut Koerper, st: &Stmt) {
         StmtArt::Alloc(a) => senke_alloc(k, a, st.span),
         StmtArt::ResetArena(name) => {
             if k.s.arenen.contains_key(&name.text) {
-                k.zeile(&format!("store i64 0, ptr {}, align 8", gteil(&name.text, "belegt")));
-                // **TODO §1-B:** eine frische Generation hat keine freien
-                // Slots (der Commit bleibt stehen, die Liste nicht).
-                k.zeile(&format!("store i64 -1, ptr {}, align 8", gteil(&name.text, "frei")));
+                memory::reset(k, &name.text, st.span);
             } else {
                 weigere(k.s, "Y103", st.span, format!("reset of unknown arena {}", name.text));
             }
         }
-        StmtArt::ResetSlot(_) => {
-            weigere(k.s, "Y103", st.span, "static range give-back".to_string());
-        }
+        StmtArt::ResetSlot(r) => memory::reset_range(k, r, st.span),
         StmtArt::Grow(g) => senke_grow(k, g, st.span),
         // **TODO §1-B:** the slot release (intrusive free list).
         StmtArt::Frei(f) => senke_frei(k, f, st.span),
@@ -3345,7 +3286,7 @@ fn senke_let_sonst(k: &mut Koerper, l: &LetSonst, span: Span) {
                 None => (LlTyp::Int(8), Zeichen::U, None),
             };
             let pc = k.tmp();
-            k.zeile(&format!("{pc} = bitcast ptr {pp} to {}*", ell.text()));
+            k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
             let lv = k.tmp();
             k.zeile(&format!("{lv} = load {}, ptr {pc}, align 1", ell.text()));
             let slot = k.alloca(&ell.text());
@@ -3681,7 +3622,7 @@ fn senke_match(k: &mut Koerper, m: &MatchStmt, span: Span) {
                     let pp = k.tmp();
                     k.zeile(&format!("{pp} = getelementptr {}, ptr {slot}, i32 0, i32 1", v.typ.text()));
                     let pc = k.tmp();
-                    k.zeile(&format!("{pc} = bitcast ptr {pp} to {}*", nll.text()));
+                    k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
                     let lv = k.tmp();
                     k.zeile(&format!("{lv} = load {}, ptr {pc}, align 1", nll.text()));
                     let bslot = k.alloca(&nll.text());
@@ -4153,25 +4094,13 @@ fn arena_zelle(k: &mut Koerper, tisch: &str, idx: &str) -> Option<String> {
 /// also steht die Schranke hier, benannt statt schweigend).
 fn senke_frei(k: &mut Koerper, f: &FreiStmt, span: Span) {
     let tisch = f.ort.basis.text.clone();
-    let ai = match k.s.arenen.get(&tisch).cloned() {
+    let _ai = match k.s.arenen.get(&tisch).cloned() {
         Some(x) => x,
         None => {
             weigere(k.s, "Y103", span, format!("release from unknown arena {tisch}"));
             return;
         }
     };
-    if ai.groesse < 8 {
-        weigere(
-            k.s,
-            "Y103",
-            span,
-            format!(
-                "release from arena {tisch} with {}-byte elements cannot carry the link",
-                ai.groesse
-            ),
-        );
-        return;
-    }
     let ix = match f.ort.suffixe.as_slice() {
         [OrtSuffix::Index(e)] => e,
         _ => {
@@ -4187,15 +4116,13 @@ fn senke_frei(k: &mut Koerper, f: &FreiStmt, span: Span) {
         Some(w) => w.text,
         None => return,
     };
-    let zelle = match arena_zelle(k, &tisch, &idx) {
-        Some(z) => z,
-        None => return,
-    };
+    let zelle = memory::meta_cell(k, &tisch, &idx, false);
     let frei_g = gteil(&tisch, "frei");
     let kopf = k.tmp();
     k.zeile(&format!("{kopf} = load i64, ptr {frei_g}, align 8"));
-    k.zeile(&format!("store i64 {kopf}, ptr {zelle}, align {}", nat_align(&ai.elem)));
+    k.zeile(&format!("store i64 {kopf}, ptr {zelle}, align 8"));
     k.zeile(&format!("store i64 {idx}, ptr {frei_g}, align 8"));
+    memory::live_change(k, &tisch, &idx, false, span);
 }
 
 fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
@@ -4217,6 +4144,13 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
     let gname_tisch = a.tisch.text.clone();
     let weiter = k.block("alloc_weiter");
     let voll = k.block("alloc_voll");
+    // Both predecessor paths must initialise the SAME binding. Separate
+    // allocas here let the free-list path read an uninitialised index at -O0.
+    let islot = k.alloca("i32");
+    k.lege_an(a.name.text.clone(), Bindung {
+        ptr: islot.clone(), ll: LlTyp::Int(32), zeichen: Zeichen::U,
+        form: None, fluechtig: false,
+    });
     // Freiliste zuerst (TODO §1-B): wiederverwendete Slots brauchen weder
     // Commit noch Abtastung -- der Speicher steht bereit. Der Pfad mündet
     // in `fertig`, nicht in `weiter`: `weiter` liest den Hochwasser-Zähler,
@@ -4239,20 +4173,29 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
         Some(z) => z,
         None => return,
     };
+    if let Some(sample) = ai.sample.clone() {
+        let p = memory::meta_cell(k, &gname_tisch, &kopf, true);
+        let live = k.tmp(); k.zeile(&format!("{live} = load i64, ptr {p}, align 8"));
+        let empty = k.tmp(); k.zeile(&format!("{empty} = icmp eq i64 {live}, 0"));
+        let probe = k.block("arena_reuse_probe"); let ready = k.block("arena_reuse_ready");
+        k.zeile(&format!("br i1 {empty}, label %{probe}, label %{ready}")); k.beendet = true;
+        let _ = writeln!(k.text, "{probe}:"); k.beendet = false;
+        let Some(value) = call_sample(k, &sample, span).and_then(|v| angleiche(k, v, &LlTyp::Int(64), Zeichen::U)) else { return; };
+        let low = k.tmp(); k.zeile(&format!("{low} = icmp ult i64 {}, {}", value.text, sample.schwelle));
+        k.zeile(&format!("br i1 {low}, label %{voll}, label %{ready}")); k.beendet = true;
+        let _ = writeln!(k.text, "{ready}:"); k.beendet = false;
+    }
+    let link = memory::meta_cell(k, &gname_tisch, &kopf, false);
     let nach = k.tmp();
-    k.zeile(&format!("{nach} = load i64, ptr {zelle_f}, align {}", nat_align(&ai.elem)));
+    k.zeile(&format!("{nach} = load i64, ptr {link}, align 8"));
     k.zeile(&format!("store i64 {nach}, ptr {frei_g}, align 8"));
     k.zeile(&format!("store {} {}, ptr {zelle_f}, align {}", ai.elem.text(), w.text, nat_align(&ai.elem)));
+    memory::live_change(k, &gname_tisch, &kopf, true, span);
     // Index binden (schmal -- der Zähler passt immer). Derselbe Schwanz wie
     // unten, wiederholt statt über einen Join: zwei Pfade, kein Phi.
-    let islot_f = k.alloca("i32");
     let trunc_f = k.tmp();
     k.zeile(&format!("{trunc_f} = trunc i64 {kopf} to i32"));
-    k.zeile(&format!("store i32 {trunc_f}, ptr {islot_f}, align 4"));
-    k.lege_an(
-        a.name.text.clone(),
-        Bindung { ptr: islot_f, ll: LlTyp::Int(32), zeichen: Zeichen::U, form: None , fluechtig: false },
-    );
+    k.zeile(&format!("store i32 {trunc_f}, ptr {islot}, align 4"));
     k.zeile(&format!("br label %{fertig}"));
     k.beendet = true;
     let _ = writeln!(k.text, "{hochwasser}:");
@@ -4272,13 +4215,12 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
         Some(b) => {
             senke_block(k, b);
             if !k.beendet {
-                k.zeile(&format!("br label %{weiter}"));
+                falle(k);
             }
             k.beendet = true;
         }
         None => {
-            k.zeile("unreachable");
-            k.beendet = true;
+            falle(k);
         }
     }
     let _ = writeln!(k.text, "{weiter}:");
@@ -4304,18 +4246,14 @@ fn senke_alloc(k: &mut Koerper, a: &AllocStmt, span: Span) {
         ai.elem.text()
     ));
     k.zeile(&format!("store {} {}, ptr {zelle}, align {}", ai.elem.text(), w.text, nat_align(&ai.elem)));
+    memory::live_change(k, &gname_tisch, &idx, true, span);
     let neu = k.tmp();
     k.zeile(&format!("{neu} = add i64 {idx}, 1"));
     k.zeile(&format!("store i64 {neu}, ptr {belegt}, align 8"));
     // Index binden (schmal — der Zähler passt immer).
-    let islot = k.alloca("i32");
     let trunc = k.tmp();
     k.zeile(&format!("{trunc} = trunc i64 {idx} to i32"));
     k.zeile(&format!("store i32 {trunc}, ptr {islot}, align 4"));
-    k.lege_an(
-        a.name.text.clone(),
-        Bindung { ptr: islot, ll: LlTyp::Int(32), zeichen: Zeichen::U, form: None , fluechtig: false },
-    );
     // Hochwasser-Pfad mündet in `fertig` (wie die Freiliste oben).
     k.zeile(&format!("br label %{fertig}"));
     k.beendet = true;
@@ -4380,251 +4318,102 @@ fn falle(k: &mut Koerper) {
     k.beendet = true;
 }
 
-/// Kind-Stapel in Bytes (8 MiB gemappt, davon 1 MiB Reserve am Kopf: das
-/// Kind setzt mitten in der Vater-Funktion fort -- mit nacktem `rsp` träfe
-/// jeder rahmenrelative Spill bis dahin ins Unkartierte. Die Reserve deckt
-/// alle Prefix-Spill (eine Handvoll lebender Werte) tausendfach ab; dem
-/// Wurzel-Ruf bleiben 7 MiB. Nur berührte Seiten kosten RAM.
+/// A mapped thread region: a control page, a 64 KiB inaccessible guard,
+/// and 8 MiB of stack. The child never resumes compiler-generated parent code.
 const FADEN_STAPEL: u64 = 8 * 1024 * 1024;
-/// Reserve am Stapelkopf für die Kind-Prefix-Spill (1 MiB, 16-aligniert).
-const FADEN_RESERVE: u64 = 1024 * 1024;
-
-/// Klon-Flaggen: echte Fäden (Threadgruppe teilen: `CLONE_THREAD` -- wartebar
-/// sind sie dann nicht, der Join läuft über ein Futex-Wort, kein `wait4`).
-const KLON_FLAGGEN: i64 = 0x100 | 0x200 | 0x400 | 0x800 | 0x10000 | 0x40000;
-
-/// Futex-Operationen (privat: kein prozessübergreifendes Teilen nötig).
-const FUTEX_WARTE_PRIVAT: i64 = 128;
-const FUTEX_WECKE_PRIVAT: i64 = 129;
+const FADEN_GUARD: u64 = 65536;
+const FADEN_REGION: u64 = FADEN_STAPEL + 2 * FADEN_GUARD;
+/// CLONE_CHILD_CLEARTID: the kernel clears the per-invocation word AFTER exit.
+const KLON_FLAGGEN: i64 = 0x100 | 0x200 | 0x400 | 0x800 | 0x10000 | 0x40000 | 0x200000;
 
 fn senke_start(k: &mut Koerper, s: &StartStmt, span: Span) {
-    // `start`: echte Fäden (rohes `clone`, kein libc). Jede Wurzel kriegt
-    // einen eigenen Stapel (`mmap`, 8 MiB) und ein Fertig-Wort, läuft im Kind
-    // (`CLONE_THREAD`), meldet fertig (Wort + Futex-`wake`) und endet mit
-    // `exit`; der Starter schließt jeden Join (Wort + Futex-`wait` in einer
-    // Schleife: geweckt, unterbrochen und `EAGAIN` heißen nochmal, jeder
-    // andere Fehlschlag ist die laute Falle), bevor es weitergeht --
-    // sequentiell wäre ein Ablauf unter vielen, und der Prüfer
-    // (Nebenläufigkeit, Sperrdisziplin) gilt für alle. `start` trägt kein
-    // `else`, und Raten statt Fallen würde jeden Pass davor aufheben.
-    for wurzel in &s.roots {
-        let n = kurzname(wurzel);
-        if !k.s.fns.contains_key(&n) {
-            weigere(k.s, "Y103", span, format!("unknown thread root {n}"));
+    let mut regions = Vec::new();
+    for root in &s.roots {
+        let Some((name, _)) = loese_fn(k.s, &k.modul, root) else {
+            weigere(k.s, "Y103", span, format!("unknown thread root {}", root.text()));
             return;
+        };
+        k.s.start_wurzeln.insert(name.clone());
+        let regs = runtime_args(k.s.ziel, &["0".into(), FADEN_REGION.to_string(), "0".into(), "34".into(), "-1".into(), "0".into()]);
+        let Some(base) = laufzeit_ruf(k, "mmap", &regs, span) else { return; };
+        runtime_success(k, &base);
+        let accessible = base.clone();
+        let regs = runtime_args(k.s.ziel, &[base.clone(), FADEN_GUARD.to_string(), "3".into()]);
+        let Some(rc) = laufzeit_ruf(k, "mprotect", &regs, span) else { return; };
+        runtime_success(k, &rc);
+        let stack = k.tmp();
+        k.zeile(&format!("{stack} = add i64 {base}, {}", 2 * FADEN_GUARD));
+        let regs = runtime_args(k.s.ziel, &[stack, FADEN_STAPEL.to_string(), "3".into()]);
+        let Some(rc) = laufzeit_ruf(k, "mprotect", &regs, span) else { return; };
+        runtime_success(k, &rc);
+        let word = k.tmp();
+        k.zeile(&format!("{word} = inttoptr i64 {accessible} to ptr"));
+        k.zeile(&format!("store atomic i32 1, ptr {word} release, align 4"));
+        let top = k.tmp();
+        k.zeile(&format!("{top} = add i64 {base}, {FADEN_REGION}"));
+        let child = k.tmp();
+        // This assembly is necessary at the stack switch: entering an ordinary
+        // LLVM block with a replaced SP invalidates its frame/spill addresses.
+        // The child calls the root on an aligned fresh stack and uses no stack
+        // after it returns. The kernel, not an early userspace store, ends join.
+        if k.s.ziel.name == "x86_64" {
+            k.zeile(&format!("{child} = call i64 asm sideeffect \"syscall; testq %rax, %rax; jnz 1f; xorq %rbp, %rbp; callq *%r12; movq $$60, %rax; xorq %rdi, %rdi; syscall; ud2; 1:\", \"={{rax}},{{rax}},{{rdi}},{{rsi}},{{rdx}},{{r10}},{{r8}},{{r12}},~{{rcx}},~{{r11}},~{{flags}},~{{memory}}\"(i64 56, i64 {KLON_FLAGGEN}, i64 {top}, i64 0, i64 {accessible}, i64 0, ptr {})", gname(&name)));
+        } else {
+            k.zeile(&format!("{child} = call i64 asm sideeffect \"svc #0; cbnz x0, 1f; mov x29, xzr; blr x19; mov x8, #93; mov x0, #0; svc #0; brk #0; 1:\", \"={{x0}},{{x8}},{{x0}},{{x1}},{{x2}},{{x3}},{{x4}},{{x19}},~{{x30}},~{{memory}}\"(i64 220, i64 {KLON_FLAGGEN}, i64 {top}, i64 0, i64 0, i64 {accessible}, ptr {})", gname(&name)));
         }
-        k.s.start_wurzeln.insert(n.clone());
-        // Fertig-Wort (absolute Globale aus `sammle_faden_worte` --
-        // nie Rahmen-relativ: im Kind zeigt `rsp` anderswohin).
-        let nr = k.s.faden_nr;
-        k.s.faden_nr += 1;
-        let worte = match k.s.faden_worte.get(nr as usize).cloned() {
-            Some(x) => x,
-            None => {
-                weigere(k.s, "Y103", span, "thread word without number".to_string());
-                return;
-            }
-        };
-        let fertig_g = format!("@{worte}_fertig");
-        k.zeile(&format!("store i32 0, ptr {fertig_g}, align 4"));
-        // Die Adresse ist absolut (`rip`-relativ), also kind-sicher.
-        let fertig = k.tmp();
-        k.zeile(&format!("{fertig} = ptrtoint ptr {fertig_g} to i64"));
-        // Stapel (`mmap`, lesbar+schreibbar, privat+anonym).
-        let stapel_regs = if k.s.ziel.name == "x86_64" {
-            vec![
-                ("rdi".to_string(), "0".to_string()),
-                ("rsi".to_string(), format!("{FADEN_STAPEL}")),
-                ("rdx".to_string(), "3".to_string()),
-                ("r10".to_string(), "34".to_string()),
-                ("r8".to_string(), "-1".to_string()),
-                ("r9".to_string(), "0".to_string()),
-            ]
-        } else {
-            vec![
-                ("x0".to_string(), "0".to_string()),
-                ("x1".to_string(), format!("{FADEN_STAPEL}")),
-                ("x2".to_string(), "3".to_string()),
-                ("x3".to_string(), "34".to_string()),
-                ("x4".to_string(), "-1".to_string()),
-                ("x5".to_string(), "0".to_string()),
-            ]
-        };
-        let stapel = match laufzeit_ruf(k, "mmap", &stapel_regs, span) {
-            Some(x) => x,
-            None => return,
-        };
-        let stapel_schlecht = ruf_fehlschlag(k, &stapel);
-        let stapel_ok = k.block("faden_stapel");
-        let stapel_falle = k.block("faden_kein_stapel");
-        k.zeile(&format!("br i1 {stapel_schlecht}, label %{stapel_falle}, label %{stapel_ok}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{stapel_falle}:");
-        k.beendet = false;
-        falle(k);
-        let _ = writeln!(k.text, "{stapel_ok}:");
-        k.beendet = false;
-        // Stapelspitze (der Stapel wächst nach unten), minus Reserve: das
-        // Kind startet mit nacktem `rsp`, also zeigt es in die Reserve
-        // (alle Prefix-Spill darüber sind kartiert).
-        let oben = k.tmp();
-        k.zeile(&format!("{oben} = add i64 {stapel}, {}", FADEN_STAPEL - FADEN_RESERVE));
-        // Klon (Threadgruppe teilen; TID wird nicht gebraucht -- der Join
-        // läuft übers Wort).
-        let klon_regs = if k.s.ziel.name == "x86_64" {
-            vec![
-                ("rdi".to_string(), format!("{KLON_FLAGGEN}")),
-                ("rsi".to_string(), oben.clone()),
-                ("rdx".to_string(), "0".to_string()),
-                ("r10".to_string(), "0".to_string()),
-                ("r8".to_string(), "0".to_string()),
-            ]
-        } else {
-            vec![
-                ("x0".to_string(), format!("{KLON_FLAGGEN}")),
-                ("x1".to_string(), oben.clone()),
-                ("x2".to_string(), "0".to_string()),
-                ("x3".to_string(), "0".to_string()),
-                ("x4".to_string(), "0".to_string()),
-            ]
-        };
-        let kind = match laufzeit_ruf(k, "clone", &klon_regs, span) {
-            Some(x) => x,
-            None => return,
-        };
-        // Die Klon-Antwort bleibt Register-Wert (pro Prozess selbstkonsistent:
-        // jeder spillt und lädt seinen eigenen Stapel); nur ADRESSEN aus dem
-        // Vater-Rahmen sind im Kind falsch und stehen deshalb global.
-        let klon_schlecht = ruf_fehlschlag(k, &kind);
-        let klon_ok = k.block("faden_geklont");
-        let klon_falle = k.block("faden_kein_kind");
-        k.zeile(&format!("br i1 {klon_schlecht}, label %{klon_falle}, label %{klon_ok}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{klon_falle}:");
-        k.beendet = false;
-        falle(k);
-        let _ = writeln!(k.text, "{klon_ok}:");
-        k.beendet = false;
-        // Kind (Antwort 0): Wurzel laufen, fertig melden (Wort + Wake),
-        // `exit`, nie zurück.
-        let ist_kind = k.tmp();
-        k.zeile(&format!("{ist_kind} = icmp eq i64 {kind}, 0"));
-        let kind_arm = k.block("faden_kind");
-        let weiter = k.block("faden_gestartet");
-        k.zeile(&format!("br i1 {ist_kind}, label %{kind_arm}, label %{weiter}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{kind_arm}:");
-        k.beendet = false;
-        k.zeile(&format!("call void {}()", gname(&n)));
-        k.zeile(&format!("store i32 1, ptr {fertig_g}, align 4"));
-        let weck_regs = if k.s.ziel.name == "x86_64" {
-            vec![
-                ("rdi".to_string(), fertig.clone()),
-                ("rsi".to_string(), format!("{FUTEX_WECKE_PRIVAT}")),
-                ("rdx".to_string(), "1".to_string()),
-                ("r10".to_string(), "0".to_string()),
-                ("r8".to_string(), "0".to_string()),
-                ("r9".to_string(), "0".to_string()),
-            ]
-        } else {
-            vec![
-                ("x0".to_string(), fertig.clone()),
-                ("x1".to_string(), format!("{FUTEX_WECKE_PRIVAT}")),
-                ("x2".to_string(), "1".to_string()),
-                ("x3".to_string(), "0".to_string()),
-                ("x4".to_string(), "0".to_string()),
-                ("x5".to_string(), "0".to_string()),
-            ]
-        };
-        let geweckt = match laufzeit_ruf(k, "futex", &weck_regs, span) {
-            Some(x) => x,
-            None => return,
-        };
-        // Das Wecken selbst darf nicht fehlschlagen (sonst schliefe der
-        // Starter bei verlorenem Weckruf ewig).
-        let weck_schlecht = ruf_fehlschlag(k, &geweckt);
-        let weck_ok = k.block("faden_geweckt");
-        let weck_falle = k.block("faden_kein_weckruf");
-        k.zeile(&format!("br i1 {weck_schlecht}, label %{weck_falle}, label %{weck_ok}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{weck_falle}:");
-        k.beendet = false;
-        falle(k);
-        let _ = writeln!(k.text, "{weck_ok}:");
-        k.beendet = false;
-        let exit_regs = if k.s.ziel.name == "x86_64" {
-            vec![("rdi".to_string(), "0".to_string())]
-        } else {
-            vec![("x0".to_string(), "0".to_string())]
-        };
-        if laufzeit_ruf(k, "exit", &exit_regs, span).is_none() {
-            return;
-        }
-        falle(k);
-        let _ = writeln!(k.text, "{weiter}:");
-        k.beendet = false;
-        // Join: Wort lesen; fertig heißt weiter, sonst schlafen (mit
-        // erwartetem Wert 0 -- wer zuerst fertig war, gibt `EAGAIN`, und
-        // die Schleife sieht es dann).
-        let join_kopf = k.block("faden_join");
-        k.zeile(&format!("br label %{join_kopf}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{join_kopf}:");
-        k.beendet = false;
-        let stand = k.tmp();
-        k.zeile(&format!("{stand} = load i32, ptr {fertig_g}, align 4"));
-        let durch = k.tmp();
-        k.zeile(&format!("{durch} = icmp eq i32 {stand}, 1"));
-        let join_ok = k.block("faden_beigetreten");
-        let join_warte = k.block("faden_schlaeft");
-        k.zeile(&format!("br i1 {durch}, label %{join_ok}, label %{join_warte}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{join_warte}:");
-        k.beendet = false;
-        let warte_regs = if k.s.ziel.name == "x86_64" {
-            vec![
-                ("rdi".to_string(), fertig.clone()),
-                ("rsi".to_string(), format!("{FUTEX_WARTE_PRIVAT}")),
-                ("rdx".to_string(), "0".to_string()),
-                ("r10".to_string(), "0".to_string()),
-                ("r8".to_string(), "0".to_string()),
-                ("r9".to_string(), "0".to_string()),
-            ]
-        } else {
-            vec![
-                ("x0".to_string(), fertig.clone()),
-                ("x1".to_string(), format!("{FUTEX_WARTE_PRIVAT}")),
-                ("x2".to_string(), "0".to_string()),
-                ("x3".to_string(), "0".to_string()),
-                ("x4".to_string(), "0".to_string()),
-                ("x5".to_string(), "0".to_string()),
-            ]
-        };
-        let geschlafen = match laufzeit_ruf(k, "futex", &warte_regs, span) {
-            Some(x) => x,
-            None => return,
-        };
-        // Geweckt (0), unterbrochen (-4) und überholt (-11) heißen nochmal;
-        // jeder andere Fehlschlag ist die laute Falle.
-        let nicht0 = k.tmp();
-        k.zeile(&format!("{nicht0} = icmp ne i64 {geschlafen}, 0"));
-        let nicht_unterbrochen = k.tmp();
-        k.zeile(&format!("{nicht_unterbrochen} = icmp ne i64 {geschlafen}, -4"));
-        let nicht_ueberholt = k.tmp();
-        k.zeile(&format!("{nicht_ueberholt} = icmp ne i64 {geschlafen}, -11"));
-        let schlimm12 = k.tmp();
-        k.zeile(&format!("{schlimm12} = and i1 {nicht0}, {nicht_unterbrochen}"));
-        let schlimm = k.tmp();
-        k.zeile(&format!("{schlimm} = and i1 {schlimm12}, {nicht_ueberholt}"));
-        let join_falle = k.block("faden_kein_join");
-        k.zeile(&format!("br i1 {schlimm}, label %{join_falle}, label %{join_kopf}"));
-        k.beendet = true;
-        let _ = writeln!(k.text, "{join_falle}:");
-        k.beendet = false;
-        falle(k);
-        let _ = writeln!(k.text, "{join_ok}:");
-        k.beendet = false;
+        runtime_success(k, &child);
+        regions.push((base, word, accessible));
     }
+    // Spawn the whole group before joining any root.
+    for (base, word, address) in regions {
+        let head = k.block("faden_join");
+        let sleep = k.block("faden_wait");
+        let joined = k.block("faden_joined");
+        k.zeile(&format!("br label %{head}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{head}:"); k.beendet = false;
+        let value = k.tmp();
+        k.zeile(&format!("{value} = load atomic i32, ptr {word} acquire, align 4"));
+        let done = k.tmp();
+        k.zeile(&format!("{done} = icmp eq i32 {value}, 0"));
+        k.zeile(&format!("br i1 {done}, label %{joined}, label %{sleep}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{sleep}:"); k.beendet = false;
+        // The kernel's clear_child_tid wake uses shared FUTEX_WAIT (0), not
+        // FUTEX_WAIT_PRIVATE. EAGAIN/EINTR are retryable, other errors trap.
+        let regs = runtime_args(k.s.ziel, &[address, "0".into(), "1".into(), "0".into(), "0".into(), "0".into()]);
+        let Some(rc) = laufzeit_ruf(k, "futex", &regs, span) else { return; };
+        let ok = k.tmp(); let interrupted = k.tmp(); let raced = k.tmp(); let retry = k.tmp(); let allowed = k.tmp();
+        k.zeile(&format!("{ok} = icmp eq i64 {rc}, 0"));
+        k.zeile(&format!("{interrupted} = icmp eq i64 {rc}, -4"));
+        k.zeile(&format!("{raced} = icmp eq i64 {rc}, -11"));
+        k.zeile(&format!("{retry} = or i1 {interrupted}, {raced}"));
+        k.zeile(&format!("{allowed} = or i1 {ok}, {retry}"));
+        let fail = k.block("faden_join_failed");
+        k.zeile(&format!("br i1 {allowed}, label %{head}, label %{fail}"));
+        k.beendet = true;
+        let _ = writeln!(k.text, "{fail}:"); k.beendet = false; falle(k);
+        let _ = writeln!(k.text, "{joined}:"); k.beendet = false;
+        let regs = runtime_args(k.s.ziel, &[base, FADEN_REGION.to_string()]);
+        let Some(rc) = laufzeit_ruf(k, "munmap", &regs, span) else { return; };
+        runtime_success(k, &rc);
+    }
+}
+
+/// Register assignment is shared by all runtime memory operations.
+fn runtime_args(ziel: &Ziel, values: &[String]) -> Vec<(String, String)> {
+    let names = if ziel.name == "x86_64" { ["rdi", "rsi", "rdx", "r10", "r8", "r9"] }
+        else { ["x0", "x1", "x2", "x3", "x4", "x5"] };
+    names.into_iter().zip(values.iter().cloned()).map(|(r, v)| (r.into(), v)).collect()
+}
+
+fn runtime_success(k: &mut Koerper, answer: &str) {
+    let bad = ruf_fehlschlag(k, answer);
+    let failure = k.block("runtime_failure"); let success = k.block("runtime_success");
+    k.zeile(&format!("br i1 {bad}, label %{failure}, label %{success}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{failure}:"); k.beendet = false; falle(k);
+    let _ = writeln!(k.text, "{success}:"); k.beendet = false;
 }
 
 // ===================================================================================
@@ -4916,9 +4705,15 @@ fn sammle_arena(s: &mut Senke, a: &ArenaDecl, span: Span) {
             return;
         }
     };
+    let info = ArenaInfo { elem, form: a.element.clone(), groesse, lo, hi, max, sample };
+    if max.checked_mul(groesse.max(1)).is_none_or(|n| n > i64::MAX as u64 - 1048576)
+        || memory::metadata_size(&info).is_none_or(|n| n > i64::MAX as u64 - 1048576) {
+        weigere(s, "Y103", span, format!("arena {} exceeds the addressable extent", a.name.text));
+        return;
+    }
     s.arenen.insert(
         a.name.text.clone(),
-        ArenaInfo { elem, form: a.element.clone(), groesse, lo, hi, max, sample },
+        info,
     );
 }
 
@@ -5360,6 +5155,9 @@ fn sammle_statisch(s: &mut Senke, sd: &StatischDecl, span: Span) {
     };
     // `= 0` an Aggregaten heißt null (wie überall in dieser Sprache).
     let init = konst_init_text(s, &sd.wert, &ll);
+    if let Some(align) = sd.ausrichtung.as_ref().and_then(|e| konst_u64(s, e)) {
+        s.global_align.insert(n.clone(), align);
+    }
     match init {
         Some(t) => {
             s.globale.insert(n, Global { typ: ll, zeichen: z, form: sd.typ.clone(), konstant: !sd.veraenderlich, init_text: Some(t) });
@@ -5368,7 +5166,6 @@ fn sammle_statisch(s: &mut Senke, sd: &StatischDecl, span: Span) {
             weigere(s, "Y101", span, format!("static {n} with non-constant initializer"));
         }
     }
-    let _ = sd.ausrichtung;
     let _ = sd.section;
     let _ = sd.oeffentlich;
 }
@@ -5783,7 +5580,8 @@ fn emit_globale(s: &mut Senke) {    // Skalare und Felder.
     for (n, g) in &globale {
         let init = g.init_text.clone().unwrap_or_else(|| "zeroinitializer".to_string());
         let link = if g.konstant { "constant" } else { "global" };
-        let _ = writeln!(s.rumpf, "@{} = {link} {} {init}, align {}", escape_name(n), g.typ.text(), nat_align(&g.typ));
+        let alignment = s.global_align.get(n).copied().unwrap_or(u64::from(nat_align(&g.typ)));
+        let _ = writeln!(s.rumpf, "@{} = {link} {} {init}, align {alignment}", escape_name(n), g.typ.text());
     }
     // Tabellen: `%Tab = type { [N x %Tab$slot] }` plus Global.
     let tabellen: Vec<(String, (u64, String))> = s.tabellen.clone().into_iter().collect();
@@ -5840,39 +5638,7 @@ fn emit_globale(s: &mut Senke) {    // Skalare und Felder.
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "belegt"));
         let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "bereit"));
         let _ = writeln!(s.rumpf, "{} = global i64 -1, align 8", gteil(n, "frei"));
-    }
-    // Faden-Wörter je gestarteter Wurzel (Fertig-Wort): absolut adressiert,
-    // nie rahmen-relativ (siehe `faden_worte`).
-    for n in &s.faden_worte.clone() {
-        let _ = writeln!(s.rumpf, "@{n}_fertig = global i32 0, align 4");
-    }
-}
-
-/// Faden-Wörter sammeln (in Senk-Reihenfolge): jede `start`-Wurzel kriegt
-/// ihre Nummer, bevor `emit_globale` die Wörter schreibt und `senke_start`
-/// sie per Zähler (`faden_nr`) verbraucht. Beide Läufe sehen dieselbe
-/// `plaene`-Ordnung (BTreeMap) und dieselbe Block-Ordnung
-/// (`crate::unterbloecke`), also dieselbe Nummernfolge.
-fn sammle_faden_worte(s: &mut Senke) {
-    fn block(b: &Block, aus: &mut Vec<String>, nr: &mut u32) {
-        for st in &b.anweisungen {
-            if let StmtArt::Start(st) = &st.art {
-                for _ in &st.roots {
-                    aus.push(format!("gabbro_faden_{nr}"));
-                    *nr += 1;
-                }
-            }
-            for k in crate::unterbloecke(st) {
-                block(k, aus, nr);
-            }
-        }
-    }
-    let plaene: Vec<(String, FnPlan)> = s.plaene.clone().into_iter().collect();
-    let mut nr = 0u32;
-    for (_, plan) in &plaene {
-        if let FnPlan::Impl { rumpf, .. } = plan {
-            block(rumpf, &mut s.faden_worte, &mut nr);
-        }
+        let _ = writeln!(s.rumpf, "{} = global i64 0, align 8", gteil(n, "meta"));
     }
 }
 
@@ -5901,6 +5667,7 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         eintritt: None,
         plaene: BTreeMap::new(),
         globale: BTreeMap::new(),
+        global_align: BTreeMap::new(),
         aliase: BTreeMap::new(),
         rekorde: BTreeMap::new(),
         varianten: BTreeMap::new(),
@@ -5922,8 +5689,6 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         beleg_funktionen: Vec::new(),
         nebenlaeufig: Vec::new(),
         start_wurzeln: BTreeSet::new(),
-        faden_nr: 0,
-        faden_worte: Vec::new(),
         emitnamen: BTreeMap::new(),
         rek: BTreeMap::new(),
         tab_slots: BTreeMap::new(),
@@ -5953,9 +5718,12 @@ pub fn emittiere_llvm_mit_beleg(
     sammle(&mut s, baum, bau);
     vergebe_emitnamen(&mut s);
     baue_rek_plan(&mut s);
-    sammle_faden_worte(&mut s);
     emit_globale(&mut s);
     emit_funktionen(&mut s);
+    match stackless::lower(&s.rumpf, ziel, &s.beleg_typen) {
+        Ok(body) => s.rumpf = body,
+        Err(reason) => weigere(&mut s, "Y103", Span::neu(0, 0), format!("continuation lowering: {reason}")),
+    }
     emit_start(&mut s);
     let mut aus = String::new();
     let _ = writeln!(aus, "; Gabbro→LLVM CANDIDATE for {} (untrusted — checker first)", ziel.triple);
@@ -6029,7 +5797,7 @@ fn or_fuer(s: &mut Senke, ergebnis: &Option<TypExpr>, grund: &str, span: Span) -
     match ergebnis {
         Some(t) => {
             let (nll, _) = senke_typ(s, t)?;
-            let groesse = match groesse_statisch(s, t, false) {
+            let groesse = match groesse_von_ll(s, &nll) {
                 Some(g) => g,
                 None => {
                     weigere(s, "Y102", span, "error channel over unsized answer".to_string());
@@ -6070,7 +5838,7 @@ fn or_ok_wert(k: &mut Koerper, or: &OrKanal, v: Wert) -> Option<Wert> {
             pp.clone()
         } else {
             let c = k.tmp();
-            k.zeile(&format!("{c} = bitcast ptr {pp} to {}*", or.nutz.text()));
+            k.zeile(&format!("{c} = getelementptr i8, ptr {pp}, i64 0"));
             c
         };
         k.zeile(&format!("store {} {}, ptr {pc}, align 1", or.nutz.text(), w.text));
@@ -6091,7 +5859,7 @@ fn or_err_wert(k: &mut Koerper, or: &OrKanal, grund_text: &str) -> Wert {
     let pp = k.tmp();
     k.zeile(&format!("{pp} = getelementptr {}, ptr {slot}, i32 0, i32 1", st.text()));
     let pc = k.tmp();
-    k.zeile(&format!("{pc} = bitcast ptr {pp} to i32*"));
+    k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
     k.zeile(&format!("store i32 {grund_text}, ptr {pc}, align 1"));
     let t = k.tmp();
     k.zeile(&format!("{t} = load {}, ptr {slot}, align 8", st.text()));
@@ -6268,7 +6036,7 @@ fn senke_let_sonst_ruf(k: &mut Koerper, l: &LetSonst, r: &Ruf, span: Span) {
     k.beendet = false;
     // Grund binden (i32 mit Grundform — `match e` versendet darüber).
     let pc = k.tmp();
-    k.zeile(&format!("{pc} = bitcast ptr {pp} to i32*"));
+    k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
     let gv = k.tmp();
     k.zeile(&format!("{gv} = load i32, ptr {pc}, align 1"));
     let gslot = k.alloca("i32");
@@ -6318,7 +6086,7 @@ fn senke_let_sonst_ruf(k: &mut Koerper, l: &LetSonst, r: &Ruf, span: Span) {
         v
     } else {
         let pc2 = k.tmp();
-        k.zeile(&format!("{pc2} = bitcast ptr {pp} to {}*", ell.text()));
+        k.zeile(&format!("{pc2} = getelementptr i8, ptr {pp}, i64 0"));
         let v = k.tmp();
         k.zeile(&format!("{v} = load {}, ptr {pc2}, align 1", ell.text()));
         v
@@ -7092,7 +6860,7 @@ fn senke_match_option(k: &mut Koerper, m: &MatchStmt, v: &Wert, span: Span) {
             let pp = k.tmp();
             k.zeile(&format!("{pp} = getelementptr %gabopt, ptr {slot}, i32 0, i32 1"));
             let pc = k.tmp();
-            k.zeile(&format!("{pc} = bitcast ptr {pp} to i32*"));
+            k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
             let lv = k.tmp();
             k.zeile(&format!("{lv} = load i32, ptr {pc}, align 1"));
             let bslot = k.alloca("i32");
@@ -7452,7 +7220,7 @@ fn senke_transition(
         let off = k.tmp();
         k.zeile(&format!("{off} = getelementptr i8, ptr {roh}, i64 {}", dr.versatz));
         let bc = k.tmp();
-        k.zeile(&format!("{bc} = bitcast ptr {off} to i{breite}*"));
+        k.zeile(&format!("{bc} = getelementptr i8, ptr {off}, i64 0"));
         if feld.is_empty() {
             // Ganzes Register schreiben (flüchtig).
             let n = falte_int(*nach, breite);
@@ -7541,7 +7309,7 @@ fn opt_lesen(k: &mut Koerper, addr: &str) -> (String, String) {
     let pp = k.tmp();
     k.zeile(&format!("{pp} = getelementptr %gabopt, ptr {addr}, i32 0, i32 1"));
     let pc = k.tmp();
-    k.zeile(&format!("{pc} = bitcast ptr {pp} to i32*"));
+    k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
     let last = k.tmp();
     k.zeile(&format!("{last} = load i32, ptr {pc}, align 1"));
     (ist, last)
@@ -8071,7 +7839,7 @@ fn gabopt_bauen(k: &mut Koerper, v: Wert) -> Option<Wert> {
     let pp = k.tmp();
     k.zeile(&format!("{pp} = getelementptr %gabopt, ptr {slot}, i32 0, i32 1"));
     let pc = k.tmp();
-    k.zeile(&format!("{pc} = bitcast ptr {pp} to {}*", v.typ.text()));
+    k.zeile(&format!("{pc} = getelementptr i8, ptr {pp}, i64 0"));
     k.zeile(&format!("store {} {}, ptr {pc}, align 1", v.typ.text(), v.text));
     let t1 = k.tmp();
     k.zeile(&format!("{t1} = load %gabopt, ptr {slot}, align 8"));
@@ -9174,11 +8942,15 @@ fn laufzeit_tor(s: &Senke, name: &str) -> Option<(i64, &'static str, &'static st
     match (s.ziel.name, name) {
         ("x86_64", "mmap") => Some((9, "syscall", "rax")),
         ("x86_64", "mprotect") => Some((10, "syscall", "rax")),
+        ("x86_64", "munmap") => Some((11, "syscall", "rax")),
+        ("x86_64", "madvise") => Some((28, "syscall", "rax")),
         ("x86_64", "clone") => Some((56, "syscall", "rax")),
         ("x86_64", "futex") => Some((202, "syscall", "rax")),
         ("x86_64", "exit") => Some((60, "syscall", "rax")),
         ("aarch64", "mmap") => Some((222, "svc #0", "x0")),
         ("aarch64", "mprotect") => Some((226, "svc #0", "x0")),
+        ("aarch64", "munmap") => Some((215, "svc #0", "x0")),
+        ("aarch64", "madvise") => Some((233, "svc #0", "x0")),
         ("aarch64", "clone") => Some((220, "svc #0", "x0")),
         ("aarch64", "futex") => Some((98, "svc #0", "x0")),
         ("aarch64", "exit") => Some((93, "svc #0", "x0")),
@@ -9230,24 +9002,8 @@ fn ruf_fehlschlag(k: &mut Koerper, roh: &str) -> String {
 
 /// Elementbreite einer Arena (mindestens 1).
 fn arena_breite(ai: &ArenaInfo) -> u64 {
-    groesse_von_ll_direkt(&ai.elem).max(1)
+    ai.groesse.max(1)
 }
-
-fn groesse_von_ll_direkt(ll: &LlTyp) -> u64 {
-    match ll {
-        LlTyp::Int(w) => (*w as u64).div_ceil(8).max(1),
-        LlTyp::F32 => 4,
-        LlTyp::F64 => 8,
-        LlTyp::Ptr => 8,
-        LlTyp::Void => 1,
-        LlTyp::Feld(e, n) => groesse_von_ll_direkt(e).saturating_mul(*n).max(1),
-        LlTyp::Anon(fs) => fs.iter().map(groesse_von_ll_direkt).sum::<u64>().max(1),
-        LlTyp::Benannt(_) => 8,
-    }
-}
-
-/// Commit-Schritt (1 MiB — Vielfaches von 4K/16K/64K-Seiten auf beiden Zielen).
-const COMMIT_SCHRITT: u64 = 1048576;
 
 /// Stellt bereit: `bereit >= bedarf` Elemente (sonst `voll`). Reserve einmalig
 /// (`PROT_NONE` — Adressraum ohne RAM), Commit per `mprotect` bei Bedarf.
@@ -9297,6 +9053,21 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     k.beendet = true;
     let _ = writeln!(k.text, "{ok_arm}:");
     k.beendet = false;
+    // The side metadata has its own anonymous reservation. Only free links
+    // and live-count words are touched; its size does not preallocate RAM.
+    let meta_bytes = memory::metadata_size(&ai)?;
+    let args = runtime_args(k.s.ziel, &["0".into(), meta_bytes.to_string(), "3".into(), "34".into(), "-1".into(), "0".into()]);
+    let meta = laufzeit_ruf(k, "mmap", &args, span)?;
+    let bad_meta = ruf_fehlschlag(k, &meta);
+    let meta_ok = k.block("arena_metadata"); let meta_fail = k.block("arena_metadata_failed");
+    k.zeile(&format!("br i1 {bad_meta}, label %{meta_fail}, label %{meta_ok}")); k.beendet = true;
+    let _ = writeln!(k.text, "{meta_fail}:"); k.beendet = false;
+    let args = runtime_args(k.s.ziel, &[roh.clone(), gesamt.to_string()]);
+    let unmapped = laufzeit_ruf(k, "munmap", &args, span)?;
+    runtime_success(k, &unmapped);
+    k.zeile(&format!("br label %{voll}")); k.beendet = true;
+    let _ = writeln!(k.text, "{meta_ok}:"); k.beendet = false;
+    k.zeile(&format!("store i64 {meta}, ptr {}, align 8", gteil(tisch, "meta")));
     k.zeile(&format!("store i64 {roh}, ptr {basis}, align 8"));
     k.zeile(&format!("br label %{hat_arm}"));
     k.beendet = true;

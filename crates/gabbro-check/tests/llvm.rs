@@ -18,6 +18,19 @@ fn wurzel() -> PathBuf {
         .join("beispiele")
 }
 
+/// Coverage is an explicit register of actual Lean constructors/fields, never
+/// a count of successfully compiled examples. New model members fail closed.
+#[test]
+fn lean_model_coverage_register_is_complete() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let result = std::process::Command::new("python3")
+        .arg(root.join("instrumente/pruefe-llvm-modelldeckung.py"))
+        .current_dir(&root)
+        .output()
+        .expect("run the model coverage guardian");
+    assert!(result.status.success(), "{}\n{}", String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
+}
+
 fn senke(
     quelle: &str,
     name: &str,
@@ -113,7 +126,6 @@ fn verweigerung_ist_zielunabhaengig() {
         ("1428-sperre-ohne-llvm.gab", "Y102"),
         ("1433-geteilte-sperre-ohne-llvm.gab", "Y103"),
         ("1430-aligned-ohne-llvm.gab", "Y104"),
-        ("1443-freigabe-kleines-element.gab", "Y103"),
     ] {
         let quelle =
             std::fs::read_to_string(wurzel().join("gift").join(datei)).expect("{datei} lesbar");
@@ -455,8 +467,8 @@ fn faden_sind_echt() {
         let (ir, codes) = senke(&quelle, "1162-echte-faeden.gab", ziel);
         let f = fehler(&codes);
         assert!(f.is_empty(), "Start auf {} fällt mit {f:?}", ziel.name);
-        assert!(ir.contains("gabbro_faden_0_fertig"), "kein Fertig-Wort auf {}:\n{ir}", ziel.name);
-        assert!(ir.contains("faden_kind"), "kein Kind-Arm auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("load atomic i32") && ir.contains(" acquire"), "kein atomarer Join auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("faden_joined"), "kein Join auf {}:\n{ir}", ziel.name);
         assert!(!ir.contains("llvm.assume"), "gefaltete Prüfung auf {}:\n{ir}", ziel.name);
     }
 }
