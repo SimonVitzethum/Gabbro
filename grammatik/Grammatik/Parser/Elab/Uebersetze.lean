@@ -543,7 +543,7 @@ def uSchutzAux : List UTab → List SExpr → Except String (List String)
     and the shared hold have no G form; the `held` budget is
     ignored like `costs` (both travel nowhere). -/
 def uSperre (tabs : List UTab) : SItemTief → Except String ULock
-  | .sperreT n ps (.lit rk) _ .none .none =>
+  | .sperreT n ps (.lit rk) _ .none .none .none =>
     match uSchutzAux tabs ps with
     | .error e => .error e
     | .ok ts => .ok { name := n, rank := Int.ofNat rk, schutz := ts }
@@ -1292,7 +1292,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .konstT _ _ _ :: rest => uRestFehler rest
   | .typT _ _ _ _ _ :: rest => uRestFehler rest
   | .tabelleT _ _ _ _ _ _ :: rest => uRestFehler rest
-  | .sperreT _ _ _ _ _ _ :: rest => uRestFehler rest
+  | .sperreT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .funktionT _ _ :: rest => uRestFehler rest
   | .eingangT _ :: rest => uRestFehler rest
   | _ :: _ => .error "Gegenstand ohne G-Form"
@@ -1333,7 +1333,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok tabs =>
         let lockItems := ms.filter (fun
-          | .sperreT _ _ _ _ _ _ => true | _ => false)
+          | .sperreT _ _ _ _ _ _ _ => true | _ => false)
         match uSeq (lockItems.map (uSperre tabs)) with
         | .error e => .error e
         | .ok locks =>
@@ -2201,7 +2201,7 @@ def items104 : List SItemTief :=
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
     .sperreT "M" [.variable "stand"] (.lit 0)
-      (.some (.lit 50)) .none .none,
+      (.some (.lit 50)) .none .none .none,
     .funktionT
       { art := "impl", name := "einzahlen",
         params := [("k", .ptr "normal" "rw" (.atom "Konto")),

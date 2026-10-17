@@ -13,50 +13,6 @@ namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000
 
-/- A surface type: SYNTAX.md section 2 `typeexpr` without spans or
-    checks. `atom` is one name, `pfad` a `::` path, `ptr` a
-    `ptr<space, rights>` capability, `index` an `[option] index
-    into T`, `bereich` a `base in lo .. hi` range (`exkl` for
-    `..<`), `reihe` an array, `wickelnd` a `wrapping` width and
-    `einbettet` an `embeds [hi:lo] [scale e]` field. A brace or
-    `fn(…)` group (`structty`, `variants`, `fnptr`) rides `roh`,
-    balanced but uninterpreted (see CUTS). -/
-inductive STyp
-  | atom : String → STyp
-  | pfad : List String → STyp
-  | ptr : String → String → STyp → STyp
-  | index : Bool → String → STyp
-  | bereich : STyp → SExpr → SExpr → Bool → STyp
-  | reihe : STyp → SExpr → STyp
-  | wickelnd : STyp → STyp
-  | einbettet : STyp → String → Option SExpr → STyp
-  | roh : String → STyp
-  deriving Repr
-
--- Shape equality on surface types, as a `Bool`: one recursive
--- function plus the list helper, exactly like
--- `beqSExpr`/`beqSExprList` (which reduce by kernel evaluation).
-mutual
-def beqSTyp : STyp → STyp → Bool
-  | .atom a, .atom b => strEq a b
-  | .pfad a, .pfad b => beqWorte a b
-  | .ptr r1 w1 t1, .ptr r2 w2 t2 =>
-    strEq r1 r2 && strEq w1 w2 && beqSTyp t1 t2
-  | .index o1 t1, .index o2 t2 => (o1 == o2) && strEq t1 t2
-  | .bereich b1 l1 h1 x1, .bereich b2 l2 h2 x2 =>
-    beqSTyp b1 b2 && beqSExpr l1 l2 && beqSExpr h1 h2 && (x1 == x2)
-  | .reihe t1 n1, .reihe t2 n2 => beqSTyp t1 t2 && beqSExpr n1 n2
-  | .wickelnd t1, .wickelnd t2 => beqSTyp t1 t2
-  | .einbettet b1 s1 x1, .einbettet b2 s2 x2 =>
-    beqSTyp b1 b2 && strEq s1 s2 && beqOptExpr x1 x2
-  | .roh a, .roh b => strEq a b
-  | _, _ => false
-def beqSTypList : List STyp → List STyp → Bool
-  | [], [] => true
-  | x :: xs, y :: ys => beqSTyp x y && beqSTypList xs ys
-  | _, _ => false
-end
-
 /- A surface effect: one arm of SYNTAX.md section 6 `eff`
     (`efflist`), the place arms as `SExpr` (`parse.rs` reads them
     as places; this reader has no `pred` reader, so contracts ride
@@ -164,14 +120,9 @@ def beqParamList : List (String × STyp) → List (String × STyp) → Bool
   | x :: xs, y :: ys => beqParam x y && beqParamList xs ys
   | _, _ => false
 
-def beqOptTyp : Option STyp → Option STyp → Bool
-  | none, none => true
-  | some a, some b => beqSTyp a b
-  | _, _ => false
-
 def beqFnSig : FnSig → FnSig → Bool
   | s, t => strEq s.art t.art && strEq s.name t.name &&
-    beqParamList s.params t.params && beqOptTyp s.ergebnis t.ergebnis &&
+    beqParamList s.params t.params && beqSTypOpt s.ergebnis t.ergebnis &&
     beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln
 
 /- One slot/format field: SYNTAX.md sections 9-10 `slotfeld`
@@ -304,13 +255,17 @@ def beqSGruppenInvList : List SGruppenInv → List SGruppenInv → Bool
     expression or an array literal (lane 111). -/
 inductive SKonstWert
   | einzeln : SExpr → SKonstWert
-  | reihe : List SExpr → SKonstWert
+  | reihe : List SKonstWert → SKonstWert
   deriving Repr
 
 mutual
 def beqSKonstWert : SKonstWert → SKonstWert → Bool
   | .einzeln a, .einzeln b => beqSExpr a b
-  | .reihe a, .reihe b => beqSExprList a b
+  | .reihe a, .reihe b => beqSKonstWertList a b
+  | _, _ => false
+def beqSKonstWertList : List SKonstWert → List SKonstWert → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqSKonstWert x y && beqSKonstWertList xs ys
   | _, _ => false
 end
 
@@ -514,41 +469,80 @@ def beqSHerkunft : SHerkunft → SHerkunft → Bool
   | .kernHerkunft a, .kernHerkunft b => beqWorte a b
   | _, _ => false
 
-/- A `syscall` declaration: SYNTAX.md section 12.1 `syscalldecl`.
-    `sfehlerAbb` is the `errors` map; `svoraus`/`ssichert` the
-    contract lists. -/
+/- The binding of a gate to one kernel ABI: SYNTAX.md section 12.1 `sysbind`. `errs` is the
+    `errors` map (`errno [= n] => Ground`), `stack` the handed-stack registers. -/
+structure SBind where
+  num : SExpr
+  rin : List SRegBind
+  rout : List SRegBind
+  stack : List String
+  clob : List String
+  errs : List (String × Option SExpr × String)
+  deriving Repr
+
+def beqErrsList : List (String × Option SExpr × String) →
+    List (String × Option SExpr × String) → Bool
+  | [], [] => true
+  | (a, n, b) :: xs, (c, m, d) :: ys =>
+    strEq a c && beqOptExpr n m && strEq b d && beqErrsList xs ys
+  | _, _ => false
+
+def beqSBind : SBind → SBind → Bool
+  | a, b => beqSExpr a.num b.num && beqSRegBindList a.rin b.rin &&
+    beqSRegBindList a.rout b.rout && beqWorte a.stack b.stack &&
+    beqWorte a.clob b.clob && beqErrsList a.errs b.errs
+
+/- The contract of a gate: SYNTAX.md section 12.1 `syscontract`. -/
+structure SGate where
+  req : List SExpr
+  ens : List SExpr
+  eff : List SEffekt
+  cost : Option SExpr
+  deriving Repr
+
+def beqSGate : SGate → SGate → Bool
+  | a, b => beqSExprList a.req b.req && beqSExprList a.ens b.ens &&
+    beqSEffektList a.eff b.eff && beqOptExpr a.cost b.cost
+
+/- How a gate is bound: literally (`abi A arch X <sysbind> <pair>`) or through a variable
+    (`via V`, SYNTAX.md section 12.3). -/
+inductive SWay
+  | lit : String → String → SBind → SHerkunft → SWay
+  | via : String → SWay
+  deriving Repr
+
+def beqSWay : SWay → SWay → Bool
+  | .lit a x b h, .lit c y d k => strEq a c && strEq x y && beqSBind b d && beqSHerkunft h k
+  | .via a, .via b => strEq a b
+  | _, _ => false
+
+/- A `syscall` gate: SYNTAX.md section 12.1 `syscalldecl`. -/
 structure SSyscall where
   sname : String
   sparams : List (String × STyp)
   sergebnis : Option STyp
   sfehler : Option String
-  abi : String
-  sarch : String
-  nummer : SExpr
-  sregRein : List SRegBind
-  sregRaus : List SRegBind
-  szerstoert : List String
-  sfehlerAbb : List (String × String)
-  svoraus : List SExpr
-  ssichert : List SExpr
-  swirkung : List SEffekt
-  sherkunft : SHerkunft
+  way : SWay
+  gate : SGate
   deriving Repr
 
 def beqSSyscall : SSyscall → SSyscall → Bool
   | a, b => strEq a.sname b.sname &&
     beqParamList a.sparams b.sparams &&
-    beqOptTyp a.sergebnis b.sergebnis && beqOptWort a.sfehler b.sfehler &&
-    strEq a.abi b.abi && strEq a.sarch b.sarch &&
-    beqSExpr a.nummer b.nummer &&
-    beqSRegBindList a.sregRein b.sregRein &&
-    beqSRegBindList a.sregRaus b.sregRaus &&
-    beqWorte a.szerstoert b.szerstoert &&
-    beqKanteList a.sfehlerAbb b.sfehlerAbb &&
-    beqSExprList a.svoraus b.svoraus &&
-    beqSExprList a.ssichert b.ssichert &&
-    beqSEffektList a.swirkung b.swirkung &&
-    beqSHerkunft a.sherkunft b.sherkunft
+    beqSTypOpt a.sergebnis b.sergebnis && beqOptWort a.sfehler b.sfehler &&
+    beqSWay a.way b.way && beqSGate a.gate b.gate
+
+def beqGoalBinds : List (String × SBind × SHerkunft) → List (String × SBind × SHerkunft) → Bool
+  | [], [] => true
+  | (a, b, h) :: xs, (c, d, k) :: ys =>
+    strEq a c && beqSBind b d && beqSHerkunft h k && beqGoalBinds xs ys
+  | _, _ => false
+
+def beqGoalOpt : Option (String × String × List (String × SBind × SHerkunft)) →
+    Option (String × String × List (String × SBind × SHerkunft)) → Bool
+  | none, none => true
+  | some (a, x, bs), some (b, y, cs) => strEq a b && strEq x y && beqGoalBinds bs cs
+  | _, _ => false
 
 def beqOptExprList : Option (List SExpr) → Option (List SExpr) → Bool
   | none, none => true
@@ -583,14 +577,14 @@ inductive SItemTief
   | useT : List String → SItemTief
   | typT : List String → String → List STyp → List String → Option STyp → SItemTief
   | konstT : String → STyp → SKonstWert → SItemTief
-  | statikT : Bool → String → STyp → SExpr → Option String → Bool → SItemTief
+  | statikT : Bool → String → STyp → SKonstWert → Option SExpr → Option String → Bool → SItemTief
   | funktionT : FnSig → SAnw → SItemTief
   | protoT : FnSig → SItemTief
   | specT : FnSig → SExpr → SItemTief
   | asmT : FnSig → String → SItemTief
   | formatT : String → Option SExpr → Option String → List SFeld → SItemTief
   | tabelleT : String → Option SExpr → Option String → Option String → Bool → List STabTeil → SItemTief
-  | arenaT : String → SExpr → SExpr → STyp → SItemTief
+  | arenaT : String → SExpr → SExpr → Option SExpr → STyp → Option (List String × SExpr) → SItemTief
   | grundT : String → List (String × SExpr × String) → Bool → SItemTief
   | zustandT : String → List STrans → SItemTief
   | geraetT : String → List (String × STyp) → String → List SGerTeil → SItemTief
@@ -598,7 +592,7 @@ inductive SItemTief
   | axiomaT : String → List (String × STyp) → Option STyp → Option SExpr → List SEffekt → SAnKlasse → SItemTief
   | pruefungT : SCheck → SItemTief
   | atomarT : String → STyp → Option (List SExpr) → Option String → Option String → SItemTief
-  | sperreT : String → List SExpr → SExpr → Option SExpr → Option SExpr → Option String → SItemTief
+  | sperreT : String → List SExpr → SExpr → Option SExpr → Option SExpr → Option String → Option SExpr → SItemTief
   | rcuT : String → List SExpr → Option SExpr → SItemTief
   | gruppeT : String → List String → List SGruppenInv → SItemTief
   | nebenT : List (List String) → SItemTief
@@ -608,10 +602,19 @@ inductive SItemTief
   | anvertrautT : String → String → String → List SRegBind → String → String → SItemTief
   | startT : String → String → List SBootSchritt → List String → SItemTief
   | sysrufT : SSyscall → SItemTief
+  /-- `syscall V;`: a system call as a named variable (SYNTAX.md 12.3). -/
+  | varT : String → SItemTief
+  /-- `target T;` (the selection) or `target T abi A arch X { V = … }` (the bindings). -/
+  | goalT : String → Option (String × String × List (String × SBind × SHerkunft)) → SItemTief
   | uebersetzerT : String → FnSig → SAnw → SItemTief
   | profilT : Bool → List SProfEintrag → SItemTief
   | torT : SItemTief → SItemTief
   deriving Repr
+
+def beqOptPfadExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
+  | none, none => true
+  | some (a, x), some (b, y) => beqWorte a b && beqSExpr x y
+  | _, _ => false
 
 mutual
 def beqSItemTief : SItemTief → SItemTief → Bool
@@ -619,12 +622,12 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .useT a, .useT b => beqWorte a b
   | .typT f1 a t1 o1 r1, .typT f2 b t2 o2 r2 =>
     beqWorte f1 f2 && strEq a b && beqSTypList t1 t2 &&
-    beqWorte o1 o2 && beqOptTyp r1 r2
+    beqWorte o1 o2 && beqSTypOpt r1 r2
   | .konstT a t v, .konstT b u w =>
     strEq a b && beqSTyp t u && beqSKonstWert v w
-  | .statikT m1 a t v s1 g1, .statikT m2 b u w s2 g2 =>
-    (m1 == m2) && strEq a b && beqSTyp t u && beqSExpr v w &&
-    beqOptWort s1 s2 && (g1 == g2)
+  | .statikT m1 a t v l1 s1 g1, .statikT m2 b u w l2 s2 g2 =>
+    (m1 == m2) && strEq a b && beqSTyp t u && beqSKonstWert v w &&
+    beqOptExpr l1 l2 && beqOptWort s1 s2 && (g1 == g2)
   | .funktionT s b, .funktionT t d => beqFnSig s t && beqSAnw b d
   | .protoT s, .protoT t => beqFnSig s t
   | .specT s p, .specT t q => beqFnSig s t && beqSExpr p q
@@ -634,8 +637,9 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .tabelleT a c b o g p, .tabelleT d f e h i q =>
     strEq a d && beqOptExpr c f && beqOptWort b e &&
     beqOptWort o h && (g == i) && beqSTabTeilList p q
-  | .arenaT a l h t, .arenaT b m i u =>
-    strEq a b && beqSExpr l m && beqSExpr h i && beqSTyp t u
+  | .arenaT a l h x t p, .arenaT b m i y u q =>
+    strEq a b && beqSExpr l m && beqSExpr h i && beqOptExpr x y && beqSTyp t u &&
+    beqOptPfadExpr p q
   | .grundT a c e, .grundT b d f =>
     strEq a b && beqGrundFallList c d && (e == f)
   | .zustandT a t, .zustandT b u => strEq a b && beqSTransList t u
@@ -644,15 +648,15 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .annahmeT a c t k, .annahmeT b d u l =>
     strEq a b && beqOptWort c d && strEq t u && beqSAnKlasse k l
   | .axiomaT a p r q e k, .axiomaT b s t u f l =>
-    strEq a b && beqParamList p s && beqOptTyp r t &&
+    strEq a b && beqParamList p s && beqSTypOpt r t &&
     beqOptExpr q u && beqSEffektList e f && beqSAnKlasse k l
   | .pruefungT a, .pruefungT b => beqSCheck a b
   | .atomarT a t p o b, .atomarT c u q s d =>
     strEq a c && beqSTyp t u && beqOptExprList p q &&
     beqOptWort o s && beqOptWort b d
-  | .sperreT a p r h s m, .sperreT b q t i u n =>
+  | .sperreT a p r h s m v, .sperreT b q t i u n w =>
     strEq a b && beqSExprList p q && beqSExpr r t &&
-    beqOptExpr h i && beqOptExpr s u && beqOptWort m n
+    beqOptExpr h i && beqOptExpr s u && beqOptWort m n && beqOptExpr v w
   | .rcuT a p r, .rcuT b q s =>
     strEq a b && beqSExprList p q && beqOptExpr r s
   | .gruppeT a m i, .gruppeT b n j =>
@@ -668,6 +672,8 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .startT a c s d, .startT b e t f =>
     strEq a b && strEq c e && beqSBootSchrittList s t && beqWorte d f
   | .sysrufT a, .sysrufT b => beqSSyscall a b
+  | .varT a, .varT b => strEq a b
+  | .goalT a x, .goalT b y => strEq a b && beqGoalOpt x y
   | .uebersetzerT f s b, .uebersetzerT g t d =>
     strEq f g && beqFnSig s t && beqSAnw b d
   | .profilT a e, .profilT b f =>
@@ -690,90 +696,6 @@ end
 -- Predicates ride `SExpr` (no `pred` reader, same cut as item 1
 -- of `Anweisung.lean`); comma lists allow a trailing comma (see
 -- CUTS).
-
-/-- The clause head words of `fndecl` (SYNTAX.md section 6). -/
-def istKlauselKopf (s : String) : Bool :=
-  ["requires", "ensures", "maintains", "refines", "effects",
-   "costs", "deadline", "decreases", "by", "section", "arch",
-   "payload", "advances", "retires"].any (strEq · s)
-
-/-- A `::` path: one name plus `sammleSegmente`. -/
-def nimmPfad : List Token → Except String (List String × List Token)
-  | t :: rest => match nameText t with
-    | some s => let (segs, r) := sammleSegmente rest [s]; .ok (segs, r)
-    | none => .error "path expected"
-  | [] => .error "path expected"
-
-/-- A string literal token (claims, sections, assumptions). -/
-def nimmTextTok : List Token → Except String (String × List Token)
-  | .text s :: rest => .ok (s, rest)
-  | _ => .error "string expected"
-
-/-- Is the next token this punctuation? -/
-def istZeichenZ (z : String) : List Token → Bool
-  | .zeichen s :: _ => strEq s z
-  | _ => false
-
-/-- Raw words of a balanced group whose opener is already
-    counted (`pr`/`pk`/`pg` are the pending `)`/`]`/`}`).
-    Structural on the token list. -/
-def sammleAusgewogen : List Token → Nat → Nat → Nat →
-    Except String (String × List Token)
-  | [], _, _, _ => .error "unbalanced group"
-  | (.zeichen s :: rest), pr, pk, pg =>
-    if strEq s "(" then match sammleAusgewogen rest (pr + 1) pk pg with
-      | .ok (h, r) => .ok ("( " ++ h, r)
-      | .error e => .error e
-    else if strEq s ")" then
-      if pr == 0 then .error "unbalanced group"
-      else if pr == 1 && pk == 0 && pg == 0 then .ok (") ", rest)
-      else match sammleAusgewogen rest (pr - 1) pk pg with
-        | .ok (h, r) => .ok (") " ++ h, r)
-        | .error e => .error e
-    else if strEq s "[" then match sammleAusgewogen rest pr (pk + 1) pg with
-      | .ok (h, r) => .ok ("[ " ++ h, r)
-      | .error e => .error e
-    else if strEq s "]" then
-      if pk == 0 then .error "unbalanced group"
-      else if pr == 0 && pk == 1 && pg == 0 then .ok ("] ", rest)
-      else match sammleAusgewogen rest pr (pk - 1) pg with
-        | .ok (h, r) => .ok ("] " ++ h, r)
-        | .error e => .error e
-    else if strEq s "{" then match sammleAusgewogen rest pr pk (pg + 1) with
-      | .ok (h, r) => .ok ("{ " ++ h, r)
-      | .error e => .error e
-    else if strEq s "}" then
-      if pg == 0 then .error "unbalanced group"
-      else if pr == 0 && pk == 0 && pg == 1 then .ok ("} ", rest)
-      else match sammleAusgewogen rest pr pk (pg - 1) with
-        | .ok (h, r) => .ok ("} " ++ h, r)
-        | .error e => .error e
-    else match sammleAusgewogen rest pr pk pg with
-      | .ok (h, r) => .ok (s ++ " " ++ h, r)
-      | .error e => .error e
-  | (t :: rest), pr, pk, pg => match sammleAusgewogen rest pr pk pg with
-    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
-    | .error e => .error e
-
-/-- Raw words until a clause head, a body `{`, `;`, `=` or the
-    end (the `by` tail). Structural on the token list. -/
-def nimmBisKopf : List Token → Except String (String × List Token)
-  | [] => .ok ("", [])
-  | (.wort s :: rest) =>
-    if istKlauselKopf s then .ok ("", .wort s :: rest)
-    else match nimmBisKopf rest with
-      | .ok (h, r) => .ok (s ++ " " ++ h, r)
-      | .error e => .error e
-  | (.zeichen s :: rest) =>
-    if strEq s "{" || strEq s ";" || strEq s "=" then
-      .ok ("", .zeichen s :: rest)
-    else match nimmBisKopf rest with
-      | .ok (h, r) => .ok (s ++ " " ++ h, r)
-      | .error e => .error e
-  | (.ende :: rest) => .ok ("", .ende :: rest)
-  | (t :: rest) => match nimmBisKopf rest with
-    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
-    | .error e => .error e
 
 /-- The assumption class: `falsifier n` or `unfalsifiable "…"`. -/
 def parseKlasse : List Token → Except String (SAnKlasse × List Token)
@@ -804,107 +726,6 @@ def parseNamenListe (f : Nat) : List Token →
         | _ => .ok ([n], rest)
 
 mutual
-def parseTyp (f : Nat) (toks : List Token) :
-    Except String (STyp × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match toks with
-    | .wort s :: rest =>
-      if strEq s "ptr" then match fordereZeichen "<" rest with
-        | .error e => .error e
-        | .ok r1 => match nimmName r1 with
-          | .error e => .error e
-          | .ok (raum, r2) => match fordereZeichen "," r2 with
-            | .error e => .error e
-            | .ok r3 => match nimmName r3 with
-              | .error e => .error e
-              | .ok (rechte, r4) => match fordereZeichen ">" r4 with
-                | .error e => .error e
-                | .ok r5 => match parseTyp f r5 with
-                  | .error e => .error e
-                  | .ok (ziel, r) => .ok (.ptr raum rechte ziel, r)
-      else if strEq s "option" then match rest with
-        | .wort t :: rest' =>
-          if strEq t "index" then match nimmWort "into" rest' with
-            | .error e => .error e
-            | .ok r => match nimmName r with
-              | .error e => .error e
-              | .ok (n, r') => .ok (.index true n, r')
-          else .error "type expected"
-        | _ => .error "type expected"
-      else if strEq s "index" then match nimmWort "into" rest with
-        | .error e => .error e
-        | .ok r => match nimmName r with
-          | .error e => .error e
-          | .ok (n, r') => .ok (.index false n, r')
-      else if strEq s "fn" then match fordereZeichen "(" rest with
-        | .error e => .error e
-        | .ok r => match sammleAusgewogen r 1 0 0 with
-          | .error e => .error e
-          | .ok (h, r') =>
-            match nimmBisKopf r' with
-            | .error e => .error e
-            | .ok (t, r'') => .ok (.roh ("fn ( " ++ h ++ t), r'')
-      else match nimmPfad toks with
-        | .error e => .error e
-        | .ok (segs, r) => match segs with
-          | [] => .error "type expected"
-          | [a] => parseTypNach f (.atom a) r
-          | _ => parseTypNach f (.pfad segs) r
-    | .ident _ :: _ => match nimmPfad toks with
-      | .error e => .error e
-      | .ok (segs, r) => match segs with
-        | [] => .error "type expected"
-        | [a] => parseTypNach f (.atom a) r
-        | _ => parseTypNach f (.pfad segs) r
-    | .zeichen "{" :: rest => match nimmBereichWorte rest 1 with
-      | .error e => .error e
-      | .ok (h, r) => .ok (.roh ("{ " ++ h), r)
-    | .zeichen "[" :: rest => match parseTyp f rest with
-      | .error e => .error e
-      | .ok (t, r1) => match fordereZeichen ";" r1 with
-        | .error e => .error e
-        | .ok r2 => match parseOr f r2 with
-          | .error e => .error e
-          | .ok (n, r3) => match fordereZeichen "]" r3 with
-            | .error e => .error e
-            | .ok r => .ok (.reihe t n, r)
-    | _ => .error "type expected"
-/-- The `in range` / `wrapping` / `embeds` suffixes behind a base
-    type (`intty`, `slottype`, `fieldty`). -/
-def parseTypNach (f : Nat) (basis : STyp) (toks : List Token) :
-    Except String (STyp × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match toks with
-    | .wort s :: rest =>
-      if strEq s "in" then match parseOr f rest with
-        | .error e => .error e
-        | .ok (lo, r1) => match r1 with
-          | .zeichen o :: r2 =>
-            if strEq o ".." || strEq o "..<" then
-              match parseOr f r2 with
-              | .error e => .error e
-              | .ok (hi, r) =>
-                parseTypNach f (.bereich basis lo hi (strEq o "..<")) r
-            else .error "range expected"
-          | _ => .error "range expected"
-      else if strEq s "wrapping" then
-        parseTypNach f (.wickelnd basis) rest
-      else if strEq s "embeds" then match fordereZeichen "[" rest with
-        | .error e => .error e
-        | .ok r1 => match sammleAusgewogen r1 0 1 0 with
-          | .error e => .error e
-          | .ok (h, r2) => match r2 with
-            | .wort t :: r3 =>
-              if strEq t "scale" then match parseOr f r3 with
-                | .error e => .error e
-                | .ok (e, r) =>
-                  parseTypNach f (.einbettet basis h (some e)) r
-              else parseTypNach f (.einbettet basis h none) r2
-            | _ => parseTypNach f (.einbettet basis h none) r2
-      else .ok (basis, toks)
-    | _ => .ok (basis, toks)
 /-- One effect arm of `eff`. -/
 def parseEffekt (f : Nat) (toks : List Token) :
     Except String (SEffekt × List Token) :=
@@ -1906,26 +1727,34 @@ def parseKonstNach (f : Nat) (toks : List Token) :
             | .ok (v, r5) => match fordereZeichen ";" r5 with
               | .error e => .error e
               | .ok r => .ok (.konstT n t v, r)
-/-- A `constwert`: an expression or an array literal (lane 111). -/
+/-- A `constwert`: an expression or an array literal, whose rows may nest (lanes 111, 170). -/
 def parseKonstWert (f : Nat) (toks : List Token) :
     Except String (SKonstWert × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .zeichen "[" :: rest => match rest with
-      | .zeichen "]" :: r => .ok (.reihe [], r)
-      | _ => match parsePredListe f rest with
-        | .error e => .error e
-        | .ok (es, r1) => match r1 with
-          | .zeichen "," :: r2 => match fordereZeichen "]" r2 with
-            | .error e => .error e
-            | .ok r => .ok (.reihe es, r)
-          | _ => match fordereZeichen "]" r1 with
-            | .error e => .error e
-            | .ok r => .ok (.reihe es, r)
-    | _ => match parseOr f toks with
-      | .error e => .error e
-      | .ok (e, r) => .ok (.einzeln e, r)
+    | .zeichen "[" :: rest => do
+      let (xs, r) ← parseKonstZeilen f rest
+      pure (.reihe xs, r)
+    | _ => do
+      let (e, r) ← parseOr f toks
+      pure (.einzeln e, r)
+/-- The elements of an array literal behind its `[`, up to and including the `]`
+    (a trailing comma is allowed). -/
+def parseKonstZeilen (f : Nat) (toks : List Token) :
+    Except String (List SKonstWert × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "]" :: r => .ok ([], r)
+    | _ => do
+      let (v, r1) ← parseKonstWert f toks
+      match r1 with
+      | .zeichen "," :: r2 => do
+        let (vs, r3) ← parseKonstZeilen f r2
+        pure (v :: vs, r3)
+      | .zeichen "]" :: r => pure ([v], r)
+      | _ => .error "wanted ]"
 /-- `static [mut] n : T = e [section s] [shared] ;`. -/
 def parseStatikTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
@@ -1948,46 +1777,35 @@ def parseStatikNach (f : Nat) (ver : Bool) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match nimmName toks with
-    | .error e => .error e
-    | .ok (n, r1) => match fordereZeichen ":" r1 with
-      | .error e => .error e
-      | .ok r2 => match parseTyp f r2 with
-        | .error e => .error e
-        | .ok (t, r3) => match fordereZeichen "=" r3 with
-          | .error e => .error e
-          | .ok r4 => match parseOr f r4 with
-            | .error e => .error e
-            | .ok (e, r5) => match parseStatikRest r5 with
-              | .error e => .error e
-              | .ok ((sec, g), r) => .ok
-                (.statikT ver n t e sec g, r)
-def parseStatikRest : List Token →
-    Except String ((Option String × Bool) × List Token)
-  | toks => match toks with
-    | .wort s :: rest =>
-      if strEq s "section" then match nimmTextTok rest with
-        | .error e => .error e
-        | .ok (t, r1) => match r1 with
-          | .wort u :: r2 =>
-            if strEq u "shared" then match fordereZeichen ";" r2 with
-              | .error e => .error e
-              | .ok r => .ok (((some t, true)), r)
-            else match fordereZeichen ";" r1 with
-              | .error e => .error e
-              | .ok r => .ok (((some t, false)), r)
-          | _ => match fordereZeichen ";" r1 with
-            | .error e => .error e
-            | .ok r => .ok (((some t, false)), r)
-      else if strEq s "shared" then match fordereZeichen ";" rest with
-        | .error e => .error e
-        | .ok r => .ok (((none, true)), r)
-      else match fordereZeichen ";" toks with
-        | .error e => .error e
-        | .ok r => .ok (((none, false)), r)
-    | _ => match fordereZeichen ";" toks with
-      | .error e => .error e
-      | .ok r => .ok (((none, false)), r)
+  | f + 1 => do
+    let (n, r1) ← nimmName toks
+    let r2 ← fordereZeichen ":" r1
+    let (t, r3) ← parseTyp f r2
+    let r4 ← fordereZeichen "=" r3
+    let (v, r5) ← parseKonstWert f r4
+    let ((al, sec, sh), r) ← parseStatikRest f r5
+    pure (.statikT ver n t v al sec sh, r)
+/-- Behind the initialiser: `[aligned e] [section "s"] [shared] ;`, in this order. -/
+def parseStatikRest (f : Nat) (toks : List Token) :
+    Except String ((Option SExpr × Option String × Bool) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (al, r1) ← (match toks with
+      | .wort "aligned" :: rest => do
+        let (e, r) ← parseOr f rest
+        pure (some e, r)
+      | _ => pure (none, toks))
+    let (sec, r2) ← (match r1 with
+      | .wort "section" :: rest => do
+        let (t, r) ← nimmTextTok rest
+        pure (some t, r)
+      | _ => pure (none, r1))
+    let (sh, r3) : Bool × List Token := match r2 with
+      | .wort "shared" :: rest => (true, rest)
+      | _ => (false, r2)
+    let r ← fordereZeichen ";" r3
+    pure ((al, sec, sh), r)
 /-- `translator n for g(params) [-> T] clauses block`. -/
 def parseTranslatorTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
@@ -2032,7 +1850,7 @@ def parseFormatRest (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .zeichen "@" :: rest => match rest with
-      | .wort s :: r1 =>
+      | .ident s :: r1 =>
         if strEq s "version" then match parseOr f r1 with
           | .error e => .error e
           | .ok (v, r2) => match parseFormatRest f r2 with
@@ -2174,30 +1992,42 @@ def parseKante : List Token → Except String ((String × String) × List Token)
       | .ok (n, r) => .ok (((s, n)), r)
     else .error "edge expected"
   | _ => .error "edge expected"
-/-- `arena n capacity lo .. hi of T ;`. -/
+/-- `arena n capacity lo .. hi [max m] of T [pb path blw e] ;` (`pb`/`blw` read as names: the
+    sampling clause of the unbounded heap, TODO 1-B). -/
 def parseArenaTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match nimmWort "arena" toks with
-    | .error e => .error e
-    | .ok r1 => match nimmName r1 with
-      | .error e => .error e
-      | .ok (n, r2) => match nimmWort "capacity" r2 with
-        | .error e => .error e
-        | .ok r3 => match parseOr f r3 with
-          | .error e => .error e
-          | .ok (lo, r4) => match fordereZeichen ".." r4 with
-            | .error e => .error e
-            | .ok r5 => match parseOr f r5 with
-              | .error e => .error e
-              | .ok (hi, r6) => match nimmWort "of" r6 with
-                | .error e => .error e
-                | .ok r7 => match parseTyp f r7 with
-                  | .error e => .error e
-                  | .ok (t, r8) => match fordereZeichen ";" r8 with
-                    | .error e => .error e
-                    | .ok r => .ok (.arenaT n lo hi t, r)
+  | f + 1 => do
+    let r1 ← nimmWort "arena" toks
+    let (n, r2) ← nimmName r1
+    let r3 ← nimmWort "capacity" r2
+    let (lo, r4) ← parseOr f r3
+    let r5 ← fordereZeichen ".." r4
+    let (hi, r6) ← parseOr f r5
+    let (mx, r7) ← (match r6 with
+      | .wort "max" :: rest => do
+        let (e, r) ← parseOr f rest
+        pure (some e, r)
+      | _ => pure (none, r6))
+    let r8 ← nimmWort "of" r7
+    let (t, r9) ← parseTyp f r8
+    let (pb, r10) ← (match r9 with
+      | .zeichen ";" :: _ => pure (none, r9)
+      | t1 :: rest => match nameText t1 with
+        | some w =>
+          if strEq w "pb" then do
+            let (p, ra) ← nimmPfad rest
+            let (b, rb) ← nimmName ra
+            if strEq b "blw" then do
+              let (e, rc) ← parseOr f rb
+              pure (some (p, e), rc)
+            else .error "blw expected"
+          else .error "wanted ;"
+        | none => .error "wanted ;"
+      | [] => .error "wanted ;")
+    let r ← fordereZeichen ";" r10
+    pure (.arenaT n lo hi mx t pb, r)
 /-- `reason n { c = num "text" … [exhaustive] }` (cases are
     whitespace-separated, commas allowed). -/
 def parseGrundTief (f : Nat) (toks : List Token) :
@@ -2572,66 +2402,46 @@ def parseAtomarRest (f : Nat)
     | _ => match fordereZeichen ";" toks with
       | .error e => .error e
       | .ok r => .ok (acc, r)
-/-- `lock n protects {…} rank e [held <= e ops]
-    [shared held <= e ops] [masks m] ;`. -/
+/-- `lock n protects {…} rank e [held <= e ops] [shared held <= e ops] [masks m]
+    [invariant p] ;`, the clauses in this order (`parse.rs` `lockdecl`). -/
 def parseSperreTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match nimmWort "lock" toks with
-    | .error e => .error e
-    | .ok r1 => match nimmName r1 with
-      | .error e => .error e
-      | .ok (n, r2) => match nimmWort "protects" r2 with
-        | .error e => .error e
-        | .ok r3 => match parsePlatzListe f r3 with
-          | .error e => .error e
-          | .ok (ps, r4) => match nimmWort "rank" r4 with
-            | .error e => .error e
-            | .ok r5 => match parseOr f r5 with
-              | .error e => .error e
-              | .ok (rk, r6) => match parseSperreRest f r6 with
-                | .error e => .error e
-                | .ok (((h, sh, m)), r) => .ok
-                  (.sperreT n ps rk h sh m, r)
-def parseSperreRest (f : Nat) (toks : List Token) :
-    Except String
-      ((Option SExpr × Option SExpr × Option String) × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match toks with
-    | .wort s :: rest =>
-      if strEq s "held" then match fordereZeichen "<=" rest with
-        | .error e => .error e
-        | .ok r1 => match parseOr f r1 with
-          | .error e => .error e
-          | .ok (e, r2) => match nimmWort "ops" r2 with
-            | .error e => .error e
-            | .ok r3 => match parseSperreRest f r3 with
-              | .error e => .error e
-              | .ok (((_, sh, m)), r) => .ok ((((some e, sh, m))), r)
-      else if strEq s "shared" then match nimmWort "held" rest with
-        | .error e => .error e
-        | .ok r1 => match fordereZeichen "<=" r1 with
-          | .error e => .error e
-          | .ok r2 => match parseOr f r2 with
-            | .error e => .error e
-            | .ok (e, r3) => match nimmWort "ops" r3 with
-              | .error e => .error e
-              | .ok r4 => match parseSperreRest f r4 with
-                | .error e => .error e
-                | .ok (((h, _, m)), r) => .ok ((((h, some e, m))), r)
-      else if strEq s "masks" then match nimmName rest with
-        | .error e => .error e
-        | .ok (m, r1) => match parseSperreRest f r1 with
-          | .error e => .error e
-          | .ok (((h, sh, _)), r) => .ok ((((h, sh, some m))), r)
-      else match fordereZeichen ";" toks with
-        | .error e => .error e
-        | .ok r => .ok ((((none, none, none))), r)
-    | _ => match fordereZeichen ";" toks with
-      | .error e => .error e
-      | .ok r => .ok ((((none, none, none))), r)
+  | f + 1 => do
+    let r1 ← nimmWort "lock" toks
+    let (n, r2) ← nimmName r1
+    let r3 ← nimmWort "protects" r2
+    let (ps, r4) ← parsePlatzListe f r3
+    let r5 ← nimmWort "rank" r4
+    let (rk, r6) ← parseOr f r5
+    let (h, r7) ← (match r6 with
+      | .wort "held" :: rest => do
+        let r ← fordereZeichen "<=" rest
+        let (e, ra) ← parseOr f r
+        let rb ← nimmWort "ops" ra
+        pure (some e, rb)
+      | _ => pure (none, r6))
+    let (sh, r8) ← (match r7 with
+      | .wort "shared" :: rest => do
+        let r0 ← nimmWort "held" rest
+        let r ← fordereZeichen "<=" r0
+        let (e, ra) ← parseOr f r
+        let rb ← nimmWort "ops" ra
+        pure (some e, rb)
+      | _ => pure (none, r7))
+    let (m, r9) ← (match r8 with
+      | .wort "masks" :: rest => do
+        let (w, r) ← nimmName rest
+        pure (some w, r)
+      | _ => pure (none, r8))
+    let (inv, r10) ← (match r9 with
+      | .wort "invariant" :: rest => do
+        let (p, r) ← parseOr f rest
+        pure (some p, r)
+      | _ => pure (none, r9))
+    let r ← fordereZeichen ";" r10
+    pure (.sperreT n ps rk h sh m inv, r)
 /-- `rcu n protects {…} [reclaims p] ;`. -/
 def parseRcuTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
@@ -3070,158 +2880,167 @@ def parseBootSchritte (f : Nat) (toks : List Token) :
           | .ok (ss, r) => .ok (st :: ss, r)
       else .ok ([], toks)
     | _ => .ok ([], toks)
-/-- A `syscall` declaration (SYNTAX.md section 12.1). -/
+/-- `syscall V ;` (a variable) or a gate: `syscall g(params) [-> T] [or R]` then either the literal
+    binding `abi A arch X <sysbind> <contract> <pair>` or `via V <contract> ;` (SYNTAX.md 12.1, 12.3). -/
 def parseSysrufTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match nimmWort "syscall" toks with
-    | .error e => .error e
-    | .ok r1 => match nimmName r1 with
-      | .error e => .error e
-      | .ok (n, r2) => match parseParams f r2 with
-        | .error e => .error e
-        | .ok (ps, r3) => match parseErgebnis f r3 with
-          | .error e => .error e
-          | .ok (erg, fehler, r4) => match nimmWort "abi" r4 with
-            | .error e => .error e
-            | .ok r5 => match nimmName r5 with
-              | .error e => .error e
-              | .ok (abi, r6) => match nimmWort "arch" r6 with
-                | .error e => .error e
-                | .ok r7 => match nimmName r7 with
-                  | .error e => .error e
-                  | .ok (arch, r8) => match nimmWort "number" r8 with
-                    | .error e => .error e
-                    | .ok r9 => match parseOr f r9 with
-                      | .error e => .error e
-                      | .ok (num, r10) => match nimmWort "regs" r10 with
-                        | .error e => .error e
-                        | .ok r11 => match nimmWort "in" r11 with
-                          | .error e => .error e
-                          | .ok r12 => match parseRegBindListe f r12 with
-                            | .error e => .error e
-                            | .ok (ri, r13) =>
-                              match nimmWort "regs" r13 with
-                              | .error e => .error e
-                              | .ok r14 => match nimmWort "out" r14 with
-                                | .error e => .error e
-                                | .ok r15 =>
-                                  match parseRegBindListe f r15 with
-                                  | .error e => .error e
-                                  | .ok (ro, r16) =>
-                                    match nimmWort "clobbers" r16 with
-                                    | .error e => .error e
-                                    | .ok r17 =>
-                                      match parseNamenEingeklammert f r17 with
-                                      | .error e => .error e
-                                      | .ok (cb, r18) =>
-                                        match nimmWort "errors" r18 with
-                                        | .error e => .error e
-                                        | .ok r19 =>
-                                          match parseFehlerAbb f r19 with
-                                          | .error e => .error e
-                                          | .ok (em, r20) =>
-                                            match parseSysrufRest f r20 with
-                                            | .error e => .error e
-                                            | .ok (((rq, en, ef, hk)), r) =>
-                                              .ok (.sysrufT
-                                                ({ sname := n,
-                                                   sparams := ps,
-                                                   sergebnis := erg,
-                                                   sfehler := fehler,
-                                                   abi, sarch := arch,
-                                                   nummer := num,
-                                                   sregRein := ri,
-                                                   sregRaus := ro,
-                                                   szerstoert := cb,
-                                                   sfehlerAbb := em,
-                                                   svoraus := rq,
-                                                   ssichert := en,
-                                                   swirkung := ef,
-                                                   sherkunft := hk } :
-                                                  SSyscall), r)
-/-- The `errors {…}` map: `errno => Ground` pairs. -/
-def parseFehlerAbb (f : Nat) (toks : List Token) :
-    Except String (List (String × String) × List Token) :=
+  | f + 1 => do
+    let r1 ← nimmWort "syscall" toks
+    let (n, r2) ← nimmName r1
+    match r2 with
+    | .zeichen ";" :: r => pure (.varT n, r)
+    | _ => do
+      let (ps, r3) ← parseParams f r2
+      let (erg, fehler, r4) ← parseErgebnis f r3
+      match r4 with
+      | .wort "via" :: r5 => do
+        let (v, r6) ← nimmName r5
+        let (cv, r7) ← parseGate f r6
+        let r ← fordereZeichen ";" r7
+        pure (.sysrufT { sname := n, sparams := ps, sergebnis := erg, sfehler := fehler,
+                         way := .via v, gate := cv }, r)
+      | _ => do
+        let r5 ← nimmWort "abi" r4
+        let (abi, r6) ← nimmName r5
+        let r7 ← nimmWort "arch" r6
+        let (arch, r8) ← nimmName r7
+        let (bd, r9) ← parseBind f r8
+        let (cv, r10) ← parseGate f r9
+        let (hk, r) ← parseHerkunft r10
+        pure (.sysrufT { sname := n, sparams := ps, sergebnis := erg, sfehler := fehler,
+                         way := .lit abi arch bd hk, gate := cv }, r)
+/-- `sysbind` (SYNTAX.md 12.1): `number e regs in {…} regs out {…} {stack r} clobbers {…} errors {…}`. -/
+def parseBind (f : Nat) (toks : List Token) :
+    Except String (SBind × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match fordereZeichen "{" toks with
-    | .error e => .error e
-    | .ok r => match r with
-      | .zeichen "}" :: r' => .ok ([], r')
-      | _ => match nimmName r with
-        | .error e => .error e
-        | .ok (a, r1) => match fordereZeichen "=>" r1 with
-          | .error e => .error e
-          | .ok r2 => match nimmName r2 with
-            | .error e => .error e
-            | .ok (b, r3) => match r3 with
-              | .zeichen "," :: r4 => match r4 with
-                | .zeichen "}" :: r5 => .ok ([(a, b)], r5)
-                | _ => match parseFehlerAbbRest f r4 with
-                  | .error e => .error e
-                  | .ok (ps, r') => .ok ((a, b) :: ps, r')
-              | _ => match fordereZeichen "}" r3 with
-                | .error e => .error e
-                | .ok r' => .ok ([(a, b)], r')
-def parseFehlerAbbRest (f : Nat) (toks : List Token) :
-    Except String (List (String × String) × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match nimmName toks with
-    | .error e => .error e
-    | .ok (a, r1) => match fordereZeichen "=>" r1 with
-      | .error e => .error e
-      | .ok r2 => match nimmName r2 with
-        | .error e => .error e
-        | .ok (b, r3) => match r3 with
-          | .zeichen "," :: r4 => match r4 with
-            | .zeichen "}" :: r5 => .ok ([(a, b)], r5)
-            | _ => match parseFehlerAbbRest f r4 with
-              | .error e => .error e
-              | .ok (ps, r') => .ok ((a, b) :: ps, r')
-          | _ => match fordereZeichen "}" r3 with
-            | .error e => .error e
-            | .ok r' => .ok ([(a, b)], r')
-/-- Behind the `errors` map: contracts, effects, assumption. -/
-def parseSysrufRest (f : Nat) (toks : List Token) :
-    Except String
-      ((List SExpr × List SExpr × List SEffekt × SHerkunft) × List Token) :=
+  | f + 1 => do
+    let r1 ← nimmWort "number" toks
+    let (num, r2) ← parseOr f r1
+    let r3 ← nimmWort "regs" r2
+    let r4 ← nimmWort "in" r3
+    let (ri, r5) ← parseRegBindListe f r4
+    let r6 ← nimmWort "regs" r5
+    let r7 ← nimmWort "out" r6
+    let (ro, r8) ← parseRegBindListe f r7
+    let (sk, r9) ← parseStackKlauseln f r8
+    let r10 ← nimmWort "clobbers" r9
+    let (cb, r11) ← parseNamenEingeklammert f r10
+    let r12 ← nimmWort "errors" r11
+    let (em, r) ← parseFehlerAbb f r12
+    pure ({ num := num, rin := ri, rout := ro, stack := sk, clob := cb, errs := em }, r)
+/-- `{ "stack" ident }` between `regs out` and `clobbers`. -/
+def parseStackKlauseln (f : Nat) (toks : List Token) :
+    Except String (List String × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .wort s :: rest =>
-      if strEq s "requires" then match parsePredListe f rest with
-        | .error e => .error e
-        | .ok (ps, r1) => match parseSysrufRest f r1 with
-          | .error e => .error e
-          | .ok (((qs, en, ef, hk)), r) => .ok ((((ps ++ qs, en, ef, hk))), r)
-      else if strEq s "ensures" then match parsePredListe f rest with
-        | .error e => .error e
-        | .ok (ps, r1) => match parseSysrufRest f r1 with
-          | .error e => .error e
-          | .ok (((rq, qs, ef, hk)), r) => .ok ((((rq, ps ++ qs, ef, hk))), r)
-      else if strEq s "effects" then match parseEffektBlock f rest with
-        | .error e => .error e
-        | .ok (es, r1) => match parseSysrufRest f r1 with
-          | .error e => .error e
-          | .ok (((rq, en, _, hk)), r) => .ok ((((rq, en, es, hk))), r)
-      else if strEq s "assume" then match nimmName rest with
-        | .error e => .error e
-        | .ok (a, r1) => match parseKlasse r1 with
-          | .error e => .error e
-          | .ok (k, r2) => match fordereZeichen ";" r2 with
-            | .error e => .error e
-            | .ok r => .ok (((([], [], [],
-              .annahmeHerkunft a k))), r)
-      else if strEq s "kernel" then match nimmPfad rest with
-        | .error e => .error e
-        | .ok (p, r1) => match fordereZeichen ";" r1 with
-          | .error e => .error e
-          | .ok r => .ok (((([], [], [], .kernHerkunft p))), r)
-      else .error "syscall expected"
-    | _ => .error "syscall expected"
+    | .wort "stack" :: rest => do
+      let (n, r1) ← nimmName rest
+      let (ns, r) ← parseStackKlauseln f r1
+      pure (n :: ns, r)
+    | _ => pure ([], toks)
+/-- The `errors {…}` map: `errno [= n] => Ground` pairs. -/
+def parseFehlerAbb (f : Nat) (toks : List Token) :
+    Except String (List (String × Option SExpr × String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let r ← fordereZeichen "{" toks
+    parseFehlerAbbRest f r
+/-- The pairs of an `errors` map behind its `{`, up to and including the `}`. -/
+def parseFehlerAbbRest (f : Nat) (toks : List Token) :
+    Except String (List (String × Option SExpr × String) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "}" :: r => .ok ([], r)
+    | _ => do
+      let (a, r1) ← nimmName toks
+      let (num, r2) ← (match r1 with
+        | .zeichen "=" :: r => do
+          let (e, r') ← parseOr f r
+          pure (some e, r')
+        | _ => pure (none, r1))
+      let r3 ← fordereZeichen "=>" r2
+      let (b, r4) ← nimmName r3
+      match r4 with
+      | .zeichen "," :: r5 => do
+        let (xs, r6) ← parseFehlerAbbRest f r5
+        pure ((a, num, b) :: xs, r6)
+      | _ => do
+        let r5 ← fordereZeichen "}" r4
+        pure ([(a, num, b)], r5)
+/-- `syscontract`: `[requires p,…] [ensures p,…] effects {…} [costs <= e ops]`. -/
+def parseGate (f : Nat) (toks : List Token) :
+    Except String (SGate × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (rq, r1) ← (match toks with
+      | .wort "requires" :: rest => parsePredListe f rest
+      | _ => pure ([], toks))
+    let (en, r2) ← (match r1 with
+      | .wort "ensures" :: rest => parsePredListe f rest
+      | _ => pure ([], r1))
+    let r3 ← nimmWort "effects" r2
+    let (ef, r4) ← parseEffektBlock f r3
+    let (ko, r5) ← (match r4 with
+      | .wort "costs" :: rest => do
+        let r ← fordereZeichen "<=" rest
+        let (e, ra) ← parseOr f r
+        let rb ← nimmWort "ops" ra
+        pure (some e, rb)
+      | _ => pure (none, r4))
+    pure ({ req := rq, ens := en, eff := ef, cost := ko }, r5)
+/-- `syspair`: `assume a (falsifier s | unfalsifiable "…") ;` or `kernel path ;`. -/
+def parseHerkunft (toks : List Token) :
+    Except String (SHerkunft × List Token) :=
+  match toks with
+  | .wort "assume" :: rest => do
+    let (a, r1) ← nimmName rest
+    let (k, r2) ← parseKlasse r1
+    let r ← fordereZeichen ";" r2
+    pure (.annahmeHerkunft a k, r)
+  | .wort "kernel" :: rest => do
+    let (p, r1) ← nimmPfad rest
+    let r ← fordereZeichen ";" r1
+    pure (.kernHerkunft p, r)
+  | _ => .error "syscall expected"
+/-- `target T ;` (the selection) or `target T abi A arch X { V = <sysbind> <pair> … }` (SYNTAX.md 12.3). -/
+def parseGoalTief (f : Nat) (toks : List Token) :
+    Except String (SItemTief × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let r1 ← nimmWort "target" toks
+    let (n, r2) ← nimmName r1
+    match r2 with
+    | .zeichen ";" :: r => pure (.goalT n none, r)
+    | _ => do
+      let r3 ← nimmWort "abi" r2
+      let (abi, r4) ← nimmName r3
+      let r5 ← nimmWort "arch" r4
+      let (arch, r6) ← nimmName r5
+      let r7 ← fordereZeichen "{" r6
+      let (bs, r) ← parseGoalBinds f r7
+      pure (.goalT n (some (abi, arch, bs)), r)
+/-- The bindings `V = sysbind syspair` of a target body, up to and including its `}`. -/
+def parseGoalBinds (f : Nat) (toks : List Token) :
+    Except String (List (String × SBind × SHerkunft) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "}" :: r => .ok ([], r)
+    | _ => do
+      let (v, r1) ← nimmName toks
+      let r2 ← fordereZeichen "=" r1
+      let (bd, r3) ← parseBind f r2
+      let (hk, r4) ← parseHerkunft r3
+      let (bs, r) ← parseGoalBinds f r4
+      pure ((v, bd, hk) :: bs, r)
 /-- `profile {…} ;` / `requires profile {…} ;` (section 12.2). -/
 def parseProfilTief (f : Nat) (bedarf : Bool) (toks : List Token) :
     Except String (SItemTief × List Token) :=
@@ -3348,6 +3167,7 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
         else if strEq s "entrust" then parseAnvertrautTief f nach
         else if strEq s "boot" then parseStartTief f nach
         else if strEq s "syscall" then parseSysrufTief f nach
+        else if strEq s "target" then parseGoalTief f nach
         else .error "item expected"
       | _ => .error "item expected"
 /-- The leading `fn`/`type` modifiers (`parse.rs` `item`); `const`

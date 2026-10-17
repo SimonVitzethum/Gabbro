@@ -142,6 +142,10 @@ def artAnw : SAnw → String
   | .rueck .. => "mid-return"
   | .allocS .. => "alloc"
   | .resetS .. => "reset"
+  | .grow .. => "grow"
+  | .free .. => "free"
+  | .child .. => "child"
+  | .start .. => "start"
   | .sonst .. => "else"
   | .block .. => "block"
 
@@ -182,6 +186,8 @@ def artItem : SItemTief → String
   | .anvertrautT .. => "anvertrautT"
   | .startT .. => "startT"
   | .sysrufT .. => "sysrufT"
+  | .varT .. => "varT"
+  | .goalT .. => "goalT"
   | .uebersetzerT .. => "uebersetzerT"
   | .profilT .. => "profilT"
   | .torT .. => "torT"
@@ -220,7 +226,7 @@ def sammleSperren (tabs : List UTab) :
   | [] => []
   | it :: rest =>
     match it with
-    | .sperreT n _ _ _ _ _ =>
+    | .sperreT n _ _ _ _ _ _ =>
       (n, uSperre tabs it) :: sammleSperren tabs rest
     | _ => sammleSperren tabs rest
 

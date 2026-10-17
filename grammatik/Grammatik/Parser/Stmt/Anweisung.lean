@@ -8,7 +8,7 @@
   (`parseStmt`, `parseBlock`, `parseTopStmt`, `parseTopBlock`).
   Probes live in `Parser/AnweisungProben.lean`.
 -/
-import Grammatik.Parser.Expr.Ausdruck
+import Grammatik.Parser.Expr.Typ
 
 namespace Gabbro.Grammatik.Parser
 
@@ -53,9 +53,9 @@ inductive SEnde
   | naechst : String → SEnde
 deriving Repr
 inductive SAnw
-  | lass : Bool → String → SExpr → SAnw
-  | lassElse : String → String → String → SAnw → SAnw
-  | lassLib : Bool → String → String → String → SAnw
+  | lass : Bool → String → Option STyp → SExpr → SAnw
+  | lassElse : String → Option STyp → SExpr → String → SAnw → SAnw
+  | lassLib : Bool → String → Option STyp → String → String → SAnw
   | zuweis : SExpr → String → SExpr → SAnw
   | shift : SExpr → String → String → SAnw
   | ruf : String → List SExpr → SAnw
@@ -78,8 +78,17 @@ inductive SAnw
   | tauscht : String → SExpr → String → SAnw
   | schreitet : String → String → SAnw
   | rueck : Option SExpr → SAnw
-  | allocS : Bool → String → String → SExpr → Option SAnw → SAnw
-  | resetS : String → SAnw
+  | allocS : Bool → String → Option STyp → String → SExpr → Option SAnw → SAnw
+  /-- `reset A [at i count n];` -/
+  | resetS : String → Option (SExpr × SExpr) → SAnw
+  /-- `grow A by e else { … };` -/
+  | grow : String → SExpr → SAnw → SAnw
+  /-- `free A[i];` -/
+  | free : SExpr → SAnw
+  /-- `child { … }` -/
+  | child : SAnw → SAnw
+  /-- `start { f, g };` -/
+  | start : List String → SAnw
   | sonst : String → SAnw
   | block : List SAnw → Option SEnde → SAnw
 deriving Repr
@@ -89,11 +98,6 @@ deriving Repr
 -- `beqSExpr`/`beqSExprList` (which reduce by kernel evaluation).
 -- The small non-recursive equalities stand first so the mutual
 -- block below can use them.
-def beqOptExpr : Option SExpr → Option SExpr → Bool
-  | none, none => true
-  | some a, some b => beqSExpr a b
-  | _, _ => false
-
 /-- Equality on enders (plain: no tree recursion). -/
 def beqSEnde : SEnde → SEnde → Bool
   | .ret x, .ret y => beqOptExpr x y
@@ -101,28 +105,23 @@ def beqSEnde : SEnde → SEnde → Bool
   | .naechst a, .naechst b => strEq a b
   | _, _ => false
 
+def beqOptPaar : Option (SExpr × SExpr) → Option (SExpr × SExpr) → Bool
+  | none, none => true
+  | some (a, b), some (c, d) => beqSExpr a c && beqSExpr b d
+  | _, _ => false
+
 def beqOptEnde : Option SEnde → Option SEnde → Bool
   | none, none => true
   | some a, some b => beqSEnde a b
   | _, _ => false
 
-def beqOptWort : Option String → Option String → Bool
-  | none, none => true
-  | some a, some b => strEq a b
-  | _, _ => false
-
-def beqWorte : List String → List String → Bool
-  | [], [] => true
-  | x :: xs, y :: ys => strEq x y && beqWorte xs ys
-  | _, _ => false
-
 mutual
 def beqSAnw : SAnw → SAnw → Bool
-  | .lass m a x, .lass n b y => m == n && strEq a b && beqSExpr x y
-  | .lassElse a f e b, .lassElse c g h d =>
-    strEq a c && strEq f g && strEq e h && beqSAnw b d
-  | .lassLib m a l f, .lassLib n b m2 g =>
-    m == n && strEq a b && strEq l m2 && strEq f g
+  | .lass m a t x, .lass n b u y => m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
+  | .lassElse a t f e b, .lassElse c u g h d =>
+    strEq a c && beqSTypOpt t u && beqSExpr f g && strEq e h && beqSAnw b d
+  | .lassLib m a t l f, .lassLib n b u m2 g =>
+    m == n && strEq a b && beqSTypOpt t u && strEq l m2 && strEq f g
   | .zuweis z o x, .zuweis w p y =>
     beqSExpr z w && strEq o p && beqSExpr x y
   | .shift z a b, .shift w c d =>
@@ -156,9 +155,13 @@ def beqSAnw : SAnw → SAnw → Bool
     strEq n m && beqSExpr o p && strEq k l
   | .schreitet a b, .schreitet c d => strEq a c && strEq b d
   | .rueck x, .rueck y => beqOptExpr x y
-  | .allocS m n t w s, .allocS k o u v r =>
-    m == k && strEq n o && strEq t u && beqSExpr w v && beqOptAnw s r
-  | .resetS a, .resetS b => strEq a b
+  | .allocS m n y t w s, .allocS k o z u v r =>
+    m == k && strEq n o && beqSTypOpt y z && strEq t u && beqSExpr w v && beqOptAnw s r
+  | .resetS a x, .resetS b y => strEq a b && beqOptPaar x y
+  | .grow a e b, .grow c f d => strEq a c && beqSExpr e f && beqSAnw b d
+  | .free a, .free b => beqSExpr a b
+  | .child a, .child b => beqSAnw a b
+  | .start a, .start b => beqWorte a b
   | .sonst a, .sonst b => strEq a b
   | .block ss e, .block ts f => beqSAnwList ss ts && beqOptEnde e f
   | _, _ => false
@@ -178,148 +181,6 @@ end
 -- empty blocks gets stuck). Tuple lists would need their own
 -- helpers, so `else if` branches ride as `sonstWenn` nodes and
 -- `match` arms as `arm` nodes instead.
-
-/-- Expect the keyword `w` (a `wort` token with this text). -/
-def nimmWort (w : String) : List Token → Except String (List Token)
-  | .wort s :: rest => if strEq s w then .ok rest else .error ("wanted " ++ w)
-  | _ => .error ("wanted " ++ w)
-
-/-- Expect the punctuation `z` (a `zeichen` token with this text). -/
-def fordereZeichen (z : String) : List Token → Except String (List Token)
-  | .zeichen s :: rest => if strEq s z then .ok rest else .error ("wanted " ++ z)
-  | _ => .error ("wanted " ++ z)
-
-/-- Take one name (an identifier or a contextual keyword, as in
-    `parse.rs` `erwarte_ident`). -/
-def nimmName : List Token → Except String (String × List Token)
-  | t :: rest => match nameText t with
-    | some s => .ok (s, rest)
-    | none => .error "name expected"
-  | [] => .error "name expected"
-
-/-- Is this token the head word `w` (a `wort` token with this text)?
-    `parse.rs` `wort_ist_anweisungskopf` decides head-vs-place by the
-    NEXT token; the dispatch below does the same (see
-    `istKopfForm`). -/
-def istWort (w : String) : List Token → Bool
-  | .wort s :: _ => strEq s w
-  | _ => false
-
-/-- The place continuations of `parse.rs` `ist_ortfortsetzung`:
-    after one of these a head word is a place, never a form. -/
-def istOrtsFort (toks : List Token) : Bool :=
-  match toks with
-  | .zeichen "=" :: _ => true
-  | .zeichen "+=" :: _ => true
-  | .zeichen "-=" :: _ => true
-  | .zeichen "&=" :: _ => true
-  | .zeichen "|=" :: _ => true
-  | .zeichen "." :: _ => true
-  | .zeichen "->" :: _ => true
-  | .zeichen "[" :: _ => true
-  | .zeichen "::" :: _ => true
-  | _ => false
-
-/-- Head-word test: `w` opens its form unless a place continuation
-    follows (`parse.rs` `wort_ist_anweisungskopf`). -/
-def istKopfForm (w : String) : List Token → Bool
-  | .wort s :: rest => strEq s w && !istOrtsFort rest
-  | _ => false
-
-/-- One token as raw text (for unsplit headers). -/
-def zeigeTok : Token → String
-  | .ident s => s
-  | .wort s => s
-  | .num n => toString n
-  | .float s => s
-  | .text s => "\"" ++ s ++ "\""
-  | .zeichen s => s
-  | .ende => "<ende>"
-
-/-- Collect raw words until the stop word at depth zero (braces
-    tracked). Used for loop headers and other unsplit prefixes. -/
-def nimmBisWort (stopp : String) : List Token → Nat → Except String (String × List Token)
-  | [], _ => .error ("wanted " ++ stopp)
-  | (.wort s :: rest), tiefe =>
-    if strEq s stopp && tiefe == 0 then .ok ("", .wort s :: rest)
-    else match nimmBisWort stopp rest tiefe with
-      | .ok (h, r) => .ok (s ++ " " ++ h, r)
-      | .error e => .error e
-  | (.zeichen "{" :: rest), tiefe => match nimmBisWort stopp rest (tiefe + 1) with
-    | .ok (h, r) => .ok ("{ " ++ h, r)
-    | .error e => .error e
-  | (.zeichen "}" :: rest), tiefe =>
-    if tiefe == 0 then .error ("wanted " ++ stopp)
-    else match nimmBisWort stopp rest (tiefe - 1) with
-      | .ok (h, r) => .ok ("} " ++ h, r)
-      | .error e => .error e
-  | (t :: rest), tiefe => match nimmBisWort stopp rest tiefe with
-    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
-    | .error e => .error e
-
-/-- Collect raw words until the punctuation `stopp` at depth zero
-    (braces tracked). Used for type ascriptions and loop headers. -/
-def nimmBisZeichen (stopp : String) : List Token → Nat → Except String (String × List Token)
-  | [], _ => .error ("wanted " ++ stopp)
-  | (.zeichen s :: rest), tiefe =>
-    if tiefe == 0 && strEq s stopp then .ok ("", .zeichen s :: rest)
-    else if strEq s "{" then match nimmBisZeichen stopp rest (tiefe + 1) with
-      | .ok (h, r) => .ok ("{ " ++ h, r)
-      | .error e => .error e
-    else if strEq s "}" then
-      if tiefe == 0 then .error ("wanted " ++ stopp)
-      else match nimmBisZeichen stopp rest (tiefe - 1) with
-        | .ok (h, r) => .ok ("} " ++ h, r)
-        | .error e => .error e
-    else match nimmBisZeichen stopp rest tiefe with
-      | .ok (h, r) => .ok (s ++ " " ++ h, r)
-      | .error e => .error e
-  | (t :: rest), tiefe => match nimmBisZeichen stopp rest tiefe with
-    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
-    | .error e => .error e
-
-/-- Skip a brace-balanced `{ … }` region (the `libregion` of a
-    library call, captured without interpreting, SYNTAX.md §7). -/
-def nimmBereich : List Token → Nat → Except String (List Token)
-  | [], _ => .error "wanted }"
-  | (.zeichen "{" :: rest), tiefe => nimmBereich rest (tiefe + 1)
-  | (.zeichen "}" :: rest), 1 => .ok rest
-  | (.zeichen "}" :: rest), tiefe + 2 => nimmBereich rest (tiefe + 1)
-  | (_ :: rest), tiefe => nimmBereich rest tiefe
-
-/-- Raw words of a brace-balanced region (the caller consumed the
-    opening `{`; depth counts the pending closes). Structural on the
-    token list. -/
-def nimmBereichWorte : List Token → Nat → Except String (String × List Token)
-  | [], _ => .error "wanted }"
-  | (.zeichen "{" :: rest), tiefe => match nimmBereichWorte rest (tiefe + 1) with
-    | .ok (h, r) => .ok ("{ " ++ h, r)
-    | .error e => .error e
-  | (.zeichen "}" :: rest), 1 => .ok ("} ", rest)
-  | (.zeichen "}" :: rest), tiefe + 2 => match nimmBereichWorte rest (tiefe + 1) with
-    | .ok (h, r) => .ok ("} " ++ h, r)
-    | .error e => .error e
-  | (t :: rest), tiefe => match nimmBereichWorte rest tiefe with
-    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
-    | .error e => .error e
-
-/-- A loop header until the body `{`: the `effects {…}` clause of
-    `retry`/`forever` is stepped over balanced (every other header
-    clause is brace-free). Structural on the token list. -/
-def schleifenKopf : List Token → Nat → Except String (String × List Token)
-  | [], _ => .error "loop without body"
-  | _, 0 => .error "out of fuel"
-  | ((.wort s :: .zeichen "{" :: rest)), n + 1 =>
-    if strEq s "effects" then match nimmBereichWorte rest 1 with
-      | .ok (h, r) => match schleifenKopf r n with
-        | .ok (h2, r2) => .ok ("effects { " ++ h ++ h2, r2)
-        | .error e => .error e
-      | .error e => .error e
-    else .ok (s ++ " ", .zeichen "{" :: rest)
-  | (.zeichen "{" :: rest), _ => .ok ("", .zeichen "{" :: rest)
-  | (t :: rest), n + 1 => match schleifenKopf rest n with
-    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
-    | .error e => .error e
 
 /-- Split a trailing `return`/`leave`/`next` off a statement list:
     an `endblock` reads as `block pre (some …)`, a plain `block` as
@@ -364,115 +225,149 @@ def parseStmt (f : Nat) (toks : List Token) :
       else if strEq w "next" then parseWeiter f rest
       else if strEq w "return" then parseRueck f rest
       else if strEq w "reset" then parseReset f rest
+      else if strEq w "grow" then parseGrow f rest
+      else if strEq w "free" then parseFree f rest
+      else if strEq w "child" then parseChild f rest
       else if strEq w "transition" then parseUebergang f rest
       else if strEq w "advances" then parseSchreitet f rest
       else parsePlatzStmt f toks
+    | .ident "start" :: .zeichen "{" :: rest => parseStart f rest
     | .zeichen "@" :: _ => parseLibStmt f toks
     | _ => parsePlatzStmt f toks
+/-- `let [mut] x [: T] = …` (behind the `let`): the optional type ascription is READ now (it was
+    skipped as raw words), then the right side decides the form. -/
 def parseLet (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 =>
-    let (m, t1) := match toks with
-      | .wort s :: rest => if strEq s "mut" then (true, rest) else (false, toks)
+  | f + 1 => do
+    let (m, t1) : Bool × List Token := match toks with
+      | .wort "mut" :: rest => (true, rest)
       | _ => (false, toks)
-    match nimmName t1 with
-    | .error e => .error e
-    | .ok (name, rest) =>
-      let rest' := match rest with
-        | .zeichen ":" :: _ => match nimmBisZeichen "=" rest 0 with
-          | .ok (_, r) => r
-          | .error _ => rest
-        | _ => rest
-      match fordereZeichen "=" rest' with
-      | .error e => .error e
-      | .ok nach =>
-        match nach with
-        | .zeichen "@" :: _ => parseLetLib f m name nach
-        | .wort s :: t :: .zeichen "(" :: _ =>
-          if strEq s "alloc" then match nameText t with
-            | some _ => parseLetAlloc f m name nach
-            | none => parseLetExpr f m name nach
-          else parseLetExpr f m name nach
-        | _ => parseLetExpr f m name nach
-def parseLetLib (f : Nat) (m : Bool) (name : String)
+    let (name, r1) ← nimmName t1
+    let (ty, r2) ← (match r1 with
+      | .zeichen ":" :: r => do
+        let (t, r') ← parseTyp f r
+        pure (some t, r')
+      | _ => pure (none, r1))
+    let nach ← fordereZeichen "=" r2
+    match nach with
+    | .zeichen "@" :: _ => parseLetLib f m name ty nach
+    | .wort s :: t :: .zeichen "(" :: _ =>
+      if strEq s "alloc" then match nameText t with
+        | some _ => parseLetAlloc f m name ty nach
+        | none => parseLetExpr f m name ty nach
+      else parseLetExpr f m name ty nach
+    | _ => parseLetExpr f m name ty nach
+def parseLetLib (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
     (toks : List Token) : Except String (SAnw × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match parseLibRuf f toks with
-    | .ok ((l, g, _), rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.lassLib m name l g, rest')
-      | .error e => .error e
-    | .error e => .error e
-def parseLetAlloc (f : Nat) (m : Bool) (name : String)
+  | f + 1 => do
+    let ((l, g, _), rest) ← parseLibRuf f toks
+    let rest' ← fordereZeichen ";" rest
+    pure (.lassLib m name ty l g, rest')
+def parseLetAlloc (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
     (toks : List Token) : Except String (SAnw × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .wort _ :: rest => match nimmName rest with
-      | .ok (tisch, rest') => match fordereZeichen "(" rest' with
-        | .ok rest'' => match parseOr f rest'' with
-          | .ok (w, rest3) => match fordereZeichen ")" rest3 with
-            | .ok rest4 =>
-              let (sonst, rest5) : Option SAnw × List Token :=
-                match rest4 with
-                | .wort s :: _ =>
-                  if strEq s "else" then match parseBlock f rest4.tail with
-                    | .ok (b, r) => (some b, r)
-                    | .error _ => (none, rest4)
-                  else (none, rest4)
-                | _ => (none, rest4)
-              match sonst with
-              | some _ => match fordereZeichen ";" rest5 with
-                | .ok rest6 => .ok (.allocS m name tisch w sonst, rest6)
-                | .error e => .error e
-              | none => match fordereZeichen ";" rest5 with
-                | .ok rest6 => .ok (.allocS m name tisch w none, rest6)
-                | .error e => .error e
-            | .error e => .error e
-          | .error e => .error e
-        | .error e => .error e
-      | .error e => .error e
+    | .wort _ :: rest => do
+      let (tisch, rest') ← nimmName rest
+      let rest'' ← fordereZeichen "(" rest'
+      let (w, rest3) ← parseOr f rest''
+      let rest4 ← fordereZeichen ")" rest3
+      let (sonst, rest5) : Option SAnw × List Token ← (match rest4 with
+        | .wort "else" :: r => do
+          let (b, r') ← parseBlock f r
+          pure (some b, r')
+        | _ => pure (none, rest4))
+      let rest6 ← fordereZeichen ";" rest5
+      pure (.allocS m name ty tisch w sonst, rest6)
     | _ => .error "alloc without table"
-def parseLetExpr (f : Nat) (m : Bool) (name : String)
+def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
     (toks : List Token) : Except String (SAnw × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match parseOr f toks with
-    | .error e => .error e
-    | .ok (e, rest) => match rest with
-      | .wort s :: _ =>
-        if strEq s "else" then match rest.tail with
-          | .zeichen "(" :: rest' => match nimmName rest' with
-            | .ok (fehler, rest'') => match fordereZeichen ")" rest'' with
-              | .ok rest3 => match parseBlock f rest3 with
-                | .ok (b, rest4) =>
-                  .ok (.lassElse name (druck e) fehler b, rest4)
-                | .error e => .error e
-              | .error e => .error e
-            | .error e => .error e
-          | _ => .error "else without ("
-        else if strEq s "awaits" then match rest.tail with
-          | .zeichen "{" :: rest' => match nimmBisZeichen "}" rest' 0 with
-            | .ok (pl, rest'') => match fordereZeichen "}" rest'' with
-              | .ok rest3 => match fordereZeichen ";" rest3 with
-                | .ok rest4 => .ok (.erwartet name e pl, rest4)
-                | .error e => .error e
-              | .error e => .error e
-            | .error e => .error e
-          | _ => .error "awaits without {"
-        else if strEq s "exchange" then match nimmBisZeichen ";" rest.tail 0 with
-          | .ok (k, rest') => match fordereZeichen ";" rest' with
-            | .ok rest'' => .ok (.tauscht name e k, rest'')
-            | .error e => .error e
-          | .error e => .error e
-        else match fordereZeichen ";" rest with
-          | .ok rest' => .ok (.lass m name e, rest')
-          | .error e => .error e
-      | _ => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.lass m name e, rest')
-        | .error e => .error e
+  | f + 1 => do
+    let (e, rest) ← parseOr f toks
+    match rest with
+    | .wort "else" :: .zeichen "(" :: rest' => do
+      let (fehler, rest'') ← nimmName rest'
+      let rest3 ← fordereZeichen ")" rest''
+      let (b, rest4) ← parseBlock f rest3
+      pure (.lassElse name ty e fehler b, rest4)
+    | .wort "else" :: _ => .error "else without ("
+    | .wort "awaits" :: .zeichen "{" :: rest' => do
+      let (pl, rest'') ← nimmBisZeichen "}" rest' 0
+      let rest3 ← fordereZeichen "}" rest''
+      let rest4 ← fordereZeichen ";" rest3
+      pure (.erwartet name e pl, rest4)
+    | .wort "awaits" :: _ => .error "awaits without {"
+    | .wort "exchange" :: rest' => do
+      let (k, rest'') ← nimmBisZeichen ";" rest' 0
+      let rest3 ← fordereZeichen ";" rest''
+      pure (.tauscht name e k, rest3)
+    | _ => do
+      let rest' ← fordereZeichen ";" rest
+      pure (.lass m name ty e, rest')
+/-- `grow A by e else { … } ;` (lane 257, SYNTAX.md 9.1), behind the `grow`. -/
+def parseGrow (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (a, r1) ← nimmName toks
+    let r2 ← nimmWort "by" r1
+    let (e, r3) ← parseOr f r2
+    let r4 ← nimmWort "else" r3
+    let (b, r5) ← parseBlock f r4
+    let r ← fordereZeichen ";" r5
+    pure (.grow a e b, r)
+/-- `free A[i] ;` (TODO 1-B, SYNTAX.md 9.1), behind the `free`: the place is read as a place. -/
+def parseFree (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (p, r1) ← parseOrt f toks
+    let r ← fordereZeichen ";" r1
+    pure (.free p, r)
+/-- `child { … }` (lane O-1, SYNTAX.md 12.1), behind the `child`. -/
+def parseChild (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (b, r) ← parseBlock f toks
+    pure (.child b, r)
+/-- `start { f, g } ;` (lane 253; `start` is no keyword), behind the `start {`. A trailing comma is
+    allowed, as in `parse.rs` `startform`. -/
+def parseStart (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (ps, r1) ← parseStartWurzeln f toks
+    let r ← fordereZeichen ";" r1
+    pure (.start ps, r)
+/-- The root paths of a `start { … }`, up to and including the `}`. -/
+def parseStartWurzeln (f : Nat) (toks : List Token) :
+    Except String (List String × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (n, r1) ← nimmName toks
+    let (segs, r2) := sammleSegmente r1 [n]
+    let p := "::".intercalate segs
+    match r2 with
+    | .zeichen "," :: .zeichen "}" :: r => pure ([p], r)
+    | .zeichen "," :: r3 => do
+      let (ps, r) ← parseStartWurzeln f r3
+      pure (p :: ps, r)
+    | _ => do
+      let r ← fordereZeichen "}" r2
+      pure ([p], r)
 def parsePlatzStmt (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
@@ -752,15 +647,22 @@ def parseRueck (f : Nat) (toks : List Token) :
       | .ok (x, rest) => match fordereZeichen ";" rest with
         | .ok rest' => .ok (.rueck (some x), rest')
         | .error e => .error e
+/-- `reset A [at i count n] ;` (SYNTAX.md 9.1, the range form of M-ALLTAG C), behind the `reset`. -/
 def parseReset (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match nimmName toks with
-    | .error e => .error e
-    | .ok (a, rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.resetS a, rest')
-      | .error e => .error e
+  | f + 1 => do
+    let (a, rest) ← nimmName toks
+    let (rg, r1) ← (match rest with
+      | .wort "at" :: r => do
+        let (i, r2) ← parseOr f r
+        let r3 ← nimmWort "count" r2
+        let (n, r4) ← parseOr f r3
+        pure (some (i, n), r4)
+      | _ => pure (none, rest))
+    let r ← fordereZeichen ";" r1
+    pure (.resetS a rg, r)
 def parseUebergang (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
