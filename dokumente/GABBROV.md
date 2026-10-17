@@ -555,6 +555,15 @@ pointer/index/range parameters, comparison contracts over slot reads, `old` and 
 bodies of slot writes, direct calls, a trailing return. Everything else is an explicit
 `.error` (no new diagnostic codes).
 
+**Coverage of the Lean parser, measured 2026-10-17** (`Parser/Cover/Census.lean`, matrix in
+`PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9b): the parser now lives in `Parser/{Lex,Expr,Stmt,Item,Round,Elab,Cover}`;
+153 of the 170 `beispiele/` files parse as a whole (116 before), 9 elaborate. New readers: current `syscall`
+grammar (`via`, `costs`, numbered `errors`, `stack`), `syscall V;`, `target`, lock `invariant`, `arena max/pb/blw`,
+`static aligned` and initialiser lists, nested const arrays, `string max N`, `entry fn(..)`, typed `let`,
+`reset .. at .. count`, `grow`, `free`, `child`, `start { }`. Still missing: predicate forms, string literals and
+calls through places in `SExpr`; no printer or round trip for statements and items; elaboration only for the
+fragment above.
+
 **The bridge** (`bruecke/Bruecke/`, a Lake project over `grammatik` and the original `programmlogik`
 sources, Mathlib-free, toolchain v4.33.1; ≈5 000 lines, 16 files plus the instances `Instanz104/108/130/69/73`):
 

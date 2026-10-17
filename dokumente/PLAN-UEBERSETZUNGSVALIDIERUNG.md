@@ -661,6 +661,259 @@ optimisation inside the validated chain means either validating LLVM's output (A
 or doing the passes in Lean; decide after L1. Meanwhile the checker-derived facts (`!range`, `noalias`,
 `llvm.assume`, `!tbaa`) are the optimisations Gabbro has that C does not.
 
+## 9b. Track P coverage matrix (measured 2026-10-17)
+
+Instruments: `grammatik/Grammatik/Parser/Cover/Census.lean` (lexes, parses in depth and elaborates every
+`beispiele/*.gab`, reports the first failing items of each file) and `instrumente/parser-deckung.py` (the 189-row
+rule matrix below; `--run` re-measures). Columns: reader `S` structured, `P` partial (a spelling refused or a part
+dropped), `R` raw words kept, `X` none; printer `E` = `druckToks` exists; rtrip `P` = round-trip theorem for the
+printable (`gut`) shapes; elab `U` = `elabU`/`lowerAllg` lowers it; corpus = files using the rule's head word.
+
+| measure | before (5abb6e08) | after the first slice |
+|---|---|---|
+| files that lex | 170 / 170 | 170 / 170 |
+| files that parse as a whole | 116 / 170 | 153 / 170 |
+| files that elaborate (`elabU`) | 9 / 170 | 9 / 170 |
+| exporter-certified programs (`REGISTER.txt`, 29 in `beispiele/`) elaborated | 9 / 29 | 9 / 29 |
+| rules, reader S / P / R / X | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 |
+| rules with a printer, a round trip | 28, 28 (expressions only) | 28, 28 |
+| rules with an elaboration | 58 | 58 |
+
+Findings. (1) The reader had no printer and no round trip beyond expressions: statements and items have none, and
+the expression round trip covers the `gut` shapes only (`Rundlauf3` names the nesting blocker). (2) Elaboration is
+the bottleneck, not the reader: 85 parsed files stop at an item kind with no G form (`static` 34, bodiless `fn` 29,
+`atomic` 13, `reason` 12, `device` 11, `assume` 10 ...) and 7 at a statement. (3) Of the 20 exporter-certified
+programs not yet elaborated, 7 were blocked by the reader (lock invariants 118, 119, 124, 157; syscall gates 174,
+181, 182; all read now) and 13 need G forms: `masks`/entry-via (59, 165, 166), `concurrent` roots (108), atomics
+(116, 162), statics (121, 187), tagged types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193).
+(4) The lexer table lacked five words (`grow`, `pb`, `blw`, `free`, `target`); `SYNTAX.md` has no rule for the
+statement `start { f, g };` that `parse.rs` reads.
+
+Still unread (17 files): predicates `forall`/`exists`/`in`/`reaches`/`=>` and `count` (12), string literals (3),
+a call through a place `v->f(x)` (2), `deadline ... arch ... falsifier` (1). All sit in the expression reader,
+whose round-trip proofs (`Rundlauf*`, 43 `cases` sites per constructor) must be extended with it.
+
+| rule | group | reader | printer | rtrip | elab | corpus files | note |
+|---|---|---|---|---|---|---|---|
+| `ident` | lex | S | . | . | . |  | `lex`, total (`lex_total`) |
+| `letter` | lex | S | . | . | . |  |  |
+| `digit` | lex | S | . | . | . |  |  |
+| `hexdigit` | lex | S | . | . | . |  |  |
+| `int` | lex | S | . | . | . |  | `Token.num` (value only: the spelling is lost) |
+| `dec` | lex | S | . | . | . |  |  |
+| `hex` | lex | S | . | . | . |  |  |
+| `bin` | lex | S | . | . | . |  |  |
+| `float` | lex | S | . | . | . |  |  |
+| `string` | lex | S | . | . | . |  | `Token.text`; the expression reader has no string primary |
+| `char` | lex | S | . | . | . |  |  |
+| `quote` | lex | S | . | . | . |  |  |
+| `newline` | lex | S | . | . | . |  |  |
+| `comment` | lex | S | . | . | . |  |  |
+| `path` | lex | S | . | . | . |  | `nimmPfad` |
+| `pathseg` | lex | S | . | . | . |  |  |
+| `identlist` | lex | S | . | . | . |  |  |
+| `regbind` | lex | S | . | . | . |  | `SRegBind` |
+| `program` | item | S | . | . | U |  | `parseTopTief`; `elabU` takes tables, locks, impl fns, consts, entries |
+| `item` | item | S | . | . | U |  | `SItemTief`, 32 constructors |
+| `buildgate` | item | S | . | . | . | 1 | `torT` |
+| `bootdecl` | item | S | . | . | . | 1 | `startT` |
+| `bootstep` | item | S | . | . | . | 1 | `SBootSchritt` |
+| `entrydecl` | item | S | . | . | U | 9 | `SEingang`; `elabU` reads only the dispatch roots |
+| `entrustdecl` | item | S | . | . | . | 1 |  |
+| `entryextra` | item | S | . | . | . | 10 |  |
+| `syscalldecl` | item | S | . | . | . | 17 | literal, `via V` and `syscall V;` forms |
+| `sysbind` | item | S | . | . | . | 17 |  |
+| `syscontract` | item | S | . | . | . |  |  |
+| `syspair` | item | S | . | . | . | 37 |  |
+| `targetdecl` | item | S | . | . | . | 11 | `goalT`; the lexer table gained `target` |
+| `targetbind` | item | S | . | . | . | 11 | `goalT` bindings |
+| `errmap` | item | S | . | . | . | 17 | `errno [= n] => R` |
+| `accdecl` | item | S | . | . | . | 2 | `akkumT` |
+| `moduledecl` | item | P | . | . | U | 170 | `modulT`; `pub` is dropped |
+| `usedecl` | item | S | . | . | . | 2 |  |
+| `constdecl` | item | S | . | . | U | 67 | `konstT` |
+| `constexpr` | item | S | E | P | U |  | an `SExpr` |
+| `constwert` | item | S | . | . | . |  | nested rows (`SKonstWert`) |
+| `arraylit` | item | S | . | . | . | 3 | nested rows |
+| `staticdecl` | item | S | . | . | . | 43 | `aligned`, array initialiser lists; `pub` dropped |
+| `typedecl` | item | S | . | . | U | 59 | `typT`; elab reads range aliases |
+| `markorder` | item | S | . | . | . | 3 |  |
+| `typeexpr` | type | P | . | . | U |  | `STyp`; struct, variants, fn pointer ride raw |
+| `stringty` | type | S | . | . | . | 8 | `STyp.str` |
+| `stringkopf` | type | S | . | . | . | 8 | `STyp.str` |
+| `indexty` | type | S | . | . | U | 46 | `STyp.index` |
+| `nevertype` | type | S | . | . | . | 31 |  |
+| `intty` | type | S | . | . | U | 164 |  |
+| `uint` | type | S | . | . | U | 163 |  |
+| `int` | type | S | . | . | U | 8 | second definition of `int` (signed sugar) |
+| `nonzero` | type | S | . | . | . |  |  |
+| `floatty` | type | P | . | . | . | 1 | read as an atom plus `in`; no float elaboration |
+| `frange` | type | P | . | . | . | 1 |  |
+| `fexpr` | type | P | . | . | . | 1 |  |
+| `boolty` | type | S | . | . | U | 60 |  |
+| `range` | type | S | . | . | U | 77 |  |
+| `array` | type | S | . | . | . | 19 | `STyp.reihe` |
+| `structty` | type | R | . | . | . | 25 | balanced, uninterpreted |
+| `field` | type | R | . | . | . |  | inside a struct type: raw; inside `format`/`slot`: `SFeld` |
+| `fieldty` | type | R | . | . | . |  |  |
+| `bitpos` | type | S | . | . | . | 18 |  |
+| `variants` | type | R | . | . | . | 10 | balanced, uninterpreted |
+| `fnptr` | type | R | . | . | . | 4 | balanced, uninterpreted |
+| `fncontract` | type | S | . | . | . |  |  |
+| `entryfn` | type | P | . | . | . | 1 | `STyp.entry`: parameter words raw |
+| `typelist` | type | S | . | . | . |  |  |
+| `params` | type | S | . | . | U |  |  |
+| `fnptrparams` | type | R | . | . | . |  |  |
+| `fnptrparam` | type | R | . | . | . |  |  |
+| `ptrty` | type | P | . | . | U | 67 | one right word; `r + w` and `own @ x` read as a name |
+| `space` | type | S | . | . | U |  |  |
+| `rights` | type | P | . | . | U |  |  |
+| `right` | type | P | . | . | U |  |  |
+| `expr` | expr | S | E | P | U |  | `SExpr`; `druckToks`, `parse_druck_*` for `gutKern`..`gutEmb` |
+| `orexpr` | expr | S | E | P | U |  |  |
+| `andexpr` | expr | S | E | P | U |  |  |
+| `cmpexpr` | expr | S | E | P | U |  |  |
+| `bitexpr` | expr | S | E | P | U |  |  |
+| `addexpr` | expr | S | E | P | U |  |  |
+| `mulexpr` | expr | S | E | P | U |  |  |
+| `unary` | expr | S | E | P | U |  |  |
+| `fnvalue` | expr | S | E | P | . | 16 | `fnwert` |
+| `primary` | expr | P | E | P | U |  | no string primary, no `count` |
+| `stringlit` | expr | X | . | . | . | 3 | no `SExpr` constructor |
+| `countexpr` | expr | X | . | . | . | 1 |  |
+| `reasonval` | expr | S | E | P | . | 8 | `SExpr.why` |
+| `optionexpr` | expr | S | E | P | . | 12 | `ruf "Some"` |
+| `paren` | expr | S | E | P | U |  |  |
+| `call` | expr | S | E | P | U |  |  |
+| `arglist` | expr | S | E | P | U |  |  |
+| `arg` | expr | P | E | P | U |  | the label of `P(a: 1)` is dropped |
+| `builtin` | expr | S | E | P | U | 20 |  |
+| `oldexpr` | expr | S | E | P | U | 4 | `SExpr.alt` |
+| `place` | expr | S | E | P | U |  |  |
+| `placesuffix` | expr | S | E | P | U |  |  |
+| `placelist` | expr | S | E | P | U |  |  |
+| `pred` | pred | P | E | P | U |  | an `SExpr`; the quantified forms have no shape |
+| `orpred` | pred | S | E | P | U |  |  |
+| `andpred` | pred | S | E | P | U |  |  |
+| `notpred` | pred | P | E | P | U | 29 | `=>` has no shape |
+| `atompred` | pred | P | E | P | U |  |  |
+| `heldpred` | pred | S | E | P | U | 32 | rides `ruf "Held"` |
+| `quant` | pred | X | . | . | . | 11 | refused: `reserved head forall` (12 files) |
+| `domain` | pred | X | . | . | . | 22 |  |
+| `member` | pred | X | . | . | . |  |  |
+| `reach` | pred | X | . | . | . | 2 |  |
+| `predlist` | pred | S | . | . | U |  |  |
+| `fndecl` | fn | S | . | . | U | 167 | `FnSig` + `SAnw`; elab: `impl fn` only |
+| `asmrumpf` | fn | R | . | . | . | 3 | `asmT`, body raw |
+| `asmops` | fn | R | . | . | . |  |  |
+| `asmop` | fn | R | . | . | . |  |  |
+| `inductlist` | fn | R | . | . | . | 1 | raw string |
+| `induct` | fn | R | . | . | . |  |  |
+| `efflist` | fn | S | . | . | U |  |  |
+| `eff` | fn | S | . | . | U | 166 |  |
+| `breakstmt` | stmt | S | . | . | . | 2 | `bricht` |
+| `block` | stmt | S | . | . | U |  | `SAnw.block` |
+| `endblock` | stmt | S | . | . | U |  |  |
+| `endstmt` | stmt | S | . | . | U | 137 |  |
+| `stmt` | stmt | S | . | . | U |  | `SAnw`; no printer; `start { }` is read but SYNTAX.md has no rule for it |
+| `leavestmt` | stmt | S | . | . | . | 10 |  |
+| `nextstmt` | stmt | S | . | . | . | 4 |  |
+| `advstmt` | stmt | S | . | . | . | 3 |  |
+| `awaitload` | stmt | P | . | . | . | 8 | payload list raw |
+| `exchstmt` | stmt | R | . | . | . | 6 | transform raw |
+| `xform` | stmt | R | . | . | . | 6 |  |
+| `letstmt` | stmt | S | . | . | . | 88 | the type ascription is read (`lass`, `lassElse`, `lassLib`, `allocS`) |
+| `assign` | stmt | S | . | . | U |  | slot writes only in elab |
+| `stateassign` | stmt | S | . | . | . | 0 |  |
+| `exprstmt` | stmt | S | . | . | U |  | direct calls only in elab |
+| `ifstmt` | stmt | S | . | . | . | 56 | `wenn`, `sonstWenn` |
+| `matchstmt` | stmt | S | . | . | . | 23 | `matchS` |
+| `matcharm` | stmt | S | . | . | . | 23 | `arm` |
+| `narrowstmt` | stmt | P | . | . | . | 22 | target range kept as raw words |
+| `allocstmt` | stmt | S | . | . | . | 7 | `allocS` |
+| `resetstmt` | stmt | S | . | . | . | 6 | with `at i count n` |
+| `growstmt` | stmt | S | . | . | . | 1 | `SAnw.grow` |
+| `freestmt` | stmt | S | . | . | . | 1 | `SAnw.free` |
+| `childstmt` | stmt | S | . | . | . | 4 | `SAnw.child` |
+| `libcall` | stmt | R | . | . | . | 2 | region skipped balanced |
+| `libregion` | stmt | R | . | . | . |  |  |
+| `translatordecl` | stmt | S | . | . | . | 7 | `uebersetzerT` |
+| `loopform` | stmt | R | . | . | . | 26 | header raw |
+| `traverse` | stmt | R | . | . | . | 15 | header raw |
+| `retry` | stmt | R | . | . | . | 9 |  |
+| `forever` | stmt | R | . | . | . | 10 |  |
+| `table` | decl | S | . | . | U | 74 | `tabelleT`; elab: integer fields |
+| `treedecl` | decl | S | . | . | . | 8 |  |
+| `kante` | decl | S | . | . | . |  |  |
+| `occdecl` | decl | S | . | . | . | 1 |  |
+| `opdecl` | decl | S | . | . | . | 154 |  |
+| `opname` | decl | S | . | . | . |  |  |
+| `walkdecl` | decl | S | . | . | . | 1 | `SWeg` |
+| `slotdecl` | decl | S | . | . | U | 73 |  |
+| `slotfeld` | decl | S | . | . | U |  |  |
+| `arena` | decl | P | . | . | . | 7 | `max`, `pb`/`blw` read; `pub` dropped |
+| `slottype` | decl | S | . | . | . | 7 |  |
+| `invariant` | decl | S | . | . | . | 15 |  |
+| `costexpr` | decl | S | . | . | . | 9 |  |
+| `format` | decl | S | . | . | . | 6 | `@version` read |
+| `reason` | decl | S | . | . | . | 28 | `grundT` |
+| `state` | decl | S | . | . | . | 1 | `zustandT` |
+| `device` | decl | S | . | . | . | 13 | `geraetT` |
+| `mirrors` | decl | S | . | . | . | 4 |  |
+| `bank` | decl | R | . | . | . | 1 | `bankRoh` |
+| `regdecl` | decl | S | . | . | . | 13 | `SReg` |
+| `regklasse` | decl | S | . | . | . |  |  |
+| `regphasen` | decl | S | . | . | . |  |  |
+| `regfeld` | decl | S | . | . | . |  |  |
+| `carrier` | decl | S | . | . | . | 2 |  |
+| `transition` | decl | S | . | . | . | 5 | `STrans` |
+| `transset` | decl | S | . | . | . |  |  |
+| `placeshift` | decl | S | . | . | . |  |  |
+| `shiftplace` | decl | S | . | . | . |  |  |
+| `atomicdecl` | conc | S | . | . | . | 14 | `atomarT` |
+| `publishstmt` | conc | P | . | . | . | 14 | payload list raw |
+| `nutzlast` | conc | R | . | . | . |  |  |
+| `lockdecl` | conc | S | . | . | U | 44 | `invariant` read (`sperreT` 7th field) |
+| `lockstmt` | conc | S | . | . | U | 42 | `sperrt` |
+| `rcudecl` | conc | S | . | . | . | 3 |  |
+| `observestmt` | conc | S | . | . | . | 3 |  |
+| `gruppedecl` | conc | S | . | . | . | 1 |  |
+| `concurrentdecl` | conc | S | . | . | . | 6 | `nebenT` |
+| `assume` | assume | S | . | . | . | 31 |  |
+| `axiom` | assume | S | . | . | . | 3 |  |
+| `profiledecl` | assume | S | . | . | . | 2 |  |
+| `requiresprofile` | assume | S | . | . | . | 2 |  |
+| `profileentry` | assume | S | . | . | . |  |  |
+| `check` | assume | S | . | . | . | 3 |  |
+
+rules: 190 rows, 189 distinct rule names (SYNTAX.md defines 189; `int` is defined twice)
+reader   P=18, R=22, S=144, X=6
+printer  .=162, E=28
+rtrip    .=162, P=28
+elab     .=132, U=58
+rules with all four columns present (round trip partial: `gut` shapes only): 20
+corpus: 170 files; lex ok 170; whole-file parse ok 153; elab ok 9
+parse failures (first blocker of each):
+   01-tabelle.gab | table Kappenraum count NSLOTS { const WURZEL : ## reserved head forall
+   07-eintritt-und-boot.gab | walk Seitentabelle levels 4 { node : [ ## reserved head forall
+   09-ohne-zeiger.gab | table Kappenraum count NSLOTS { tree { parent ## reserved head forall
+   1127-literal-ok.gab | impl fn nimm ( ) -> u32 effects ## expression expected
+   126-vergleichssortierung.gab | impl fn ordne ( v : ptr < ## wanted {
+   161-zeichenkette.gab | impl fn baue ( ) -> string max ## expression expected
+   17-gruppe-ueber-zwei-sperren.gab | group Zustellung over { Endpunkte , Faeden } ## reserved head forall
+   18-vorfahren.gab | table Topologie count NGERAETE { tree { parent ## reserved head forall
+   192-namenfeld.gab | impl fn lege ( i : u32 in ## expression expected
+   39-auftragsdienst.gab | table Auftraege count NAUFTRAEGE { tree { parent ## reserved head forall
+   47-ops-wortmenge.gab | table Verzeichnis count N { slot { benutzt ## reserved head forall
+   49-dispatch-tabelle.gab | impl fn ausgeben ( t : ptr < ## wanted {
+   53-zwei-orte.gab | table Endpunkt count NKERNE { slot { benutzt ## reserved head forall
+   55-kindkette.gab | table Kappraum count NKAPPEN { tree { parent ## reserved head forall
+   56-auftragsring.gab | impl fn einreihen ( r : ptr < ## fn without body
+   57-faedenhalt.gab | impl fn alle_anhalten ( ) requires Held ( ## reserved head forall
+   71-frist-und-zaehlung.gab | impl fn zaehle_werte ( schwelle : u32 in ## wanted ;
+
+---
+
 ## 10. Cited section numbers
 
 | Old reference in code | Now | Where it is cited |
