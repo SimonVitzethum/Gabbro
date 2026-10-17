@@ -206,9 +206,8 @@ statement by statement, that the row is the emitted form of the statement. Sound
 depth (`korrOk_fnCorr`, induction through `cCorr_ruf`); each row is one existing T4 lemma.
 Widened 2026-09-15 from 6 to 27 of 42 `Expr` constructors and from 4 to 5 of 27 `Stmt`
 constructors, every arm with a positive probe and a **planted defect**. Seen failing
-(`korrOk_faellt`): wrong field offset, wrong stored value, a missing call row. The printer
-(`crates/gabbro-check/src/corrlean.rs`, `gabbro corr-lean`) prints `KCert` with the exporter's map
-but is narrower than the check (`+ - *` and `== < <= >` only).
+(`korrOk_faellt`): wrong field offset, wrong stored value, a missing call row. The printer for the C
+correlation (`gabbro corr-lean`) is removed with the C emitter (2026-10-17).
 
 ### 6.3 The chain count and where programs stop
 

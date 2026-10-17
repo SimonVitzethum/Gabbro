@@ -220,7 +220,6 @@ pub mod zeugnis;
 // CertExpr validity certificates, `corrcert` collects per-run
 // correspondence rows, `kostenledger` renders the ops/deadline ledger.
 pub mod certstmt;
-pub mod corrlean;
 pub mod zeremonie;
 /// Bounded-string length discipline (lane 256): specified, not wired.
 pub mod zeichenfolge;

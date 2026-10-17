@@ -213,8 +213,7 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   checker or printers exists for particular programs, and GabbroV is to be proved right for EVERY
   program (theorems over every source text), with its statements computed in Lean from the
   source rather than trusted from a Rust print. Per-program Lean files are witnesses only, off
-  the trust path. Known violation to remove: `corrlean.rs`'s `Cert104` section (rows only for
-  functions named `einzahlen`/`lies`).
+  the trust path.
 - **No handwritten C in a finished Gabbro binary, as far as possible** (Simon, 2026-09-30).
   Runtimes (`laufzeit/`), binding libraries (`bibliothek/`) and program support code are
   written in Gabbro; OS access goes through Gabbro `syscall` items (raw system calls, no libc
@@ -440,7 +439,7 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 | Known absences | `TODO.md` (O1–O14) |
 | Verdicts | `dokumente/BEWEIS.md` part C (one table); the old reports are in Git |
 | Guardians | `instrumente/abnahme.py` runs the four: `pruefe-lean.py`, `pruefe-llvm.py`, `pruefe-pruefer.py`, `pruefe-gabbrov.py` (`dokumente/WERKZEUGKASTEN.md`) |
-| Rust tools | `gabbro lean-g` (exporter), `gabbro obligations --g`, `gabbro counterexample`, `gabbro corr-lean`, `gabbro certificate`, `gabbro pruefe --fix`, `gabbro abgeleitet`, `gabbro zeremonie`, `gabbro paesse` |
+| Rust tools | `gabbro lean-g` (exporter), `gabbro obligations --g`, `gabbro counterexample`, `gabbro certificate`, `gabbro pruefe --fix`, `gabbro abgeleitet`, `gabbro zeremonie`, `gabbro paesse` |
 
 ## 9. Pitfalls that cost real time (each happened)
 
