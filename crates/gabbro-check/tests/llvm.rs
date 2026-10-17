@@ -124,7 +124,7 @@ fn verweigerung_ist_zielunabhaengig() {
     for (datei, code) in [
         ("1427-opaque-ohne-llvm.gab", "Y101"),
         ("1428-sperre-ohne-llvm.gab", "Y102"),
-        ("1433-geteilte-sperre-ohne-llvm.gab", "Y103"),
+        ("196-descendants-nur-mit-elter.gab", "Y103"),
         ("1430-aligned-ohne-llvm.gab", "Y104"),
     ] {
         let quelle =
@@ -522,4 +522,188 @@ fn beleg_elaboriert_mit_lean() {
         let _ = std::fs::remove_dir_all(&verz);
         assert!(aus.status.success(), "lean rejects certificate {name}:\n{ausgabe}");
     }
+}
+
+// ---------------------------------------------------------------------------------------
+// Concurrency: `publish`/`await` with payload and the shared (reader) lock
+// ---------------------------------------------------------------------------------------
+
+fn atom_quelle(ordnung: &str) -> String {
+    format!(
+        "module atomprobe {{
+static mut nutzlast : u64 = 0;
+atomic FLAGGE : u32 {ordnung};
+impl fn melde(w : u64)
+    effects {{ writes nutzlast, publishes FLAGGE }}
+    costs   <= 8 ops
+{{
+    nutzlast = w;
+    FLAGGE = 1 publishes {{ nutzlast }};
+}}
+impl fn lies() -> u64
+    effects {{ reads FLAGGE, reads nutzlast }}
+    costs   <= 8 ops
+{{
+    let f = FLAGGE awaits {{ nutzlast }};
+    if f == 1 {{
+        return nutzlast;
+    }}
+    return 0;
+}}
+}}
+"
+    )
+}
+
+/// **`publishes { payload }` is a release store, `awaits { payload }` an acquire load** (the
+/// payload writes precede the store in program order, the payload reads follow the load), on
+/// both targets, and no `Y103` stands in the way any more.
+#[test]
+fn publish_mit_nutzlast_ist_release_await_ist_acquire() {
+    for ordnung in ["release", "acquire"] {
+        let quelle = atom_quelle(ordnung);
+        for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+            let (ir, codes) = senke(&quelle, "atomprobe", ziel);
+            assert!(fehler(&codes).is_empty(), "{ordnung} auf {}: {codes:?}", ziel.name);
+            assert!(ir.contains("store atomic i32 %") && ir.contains(", ptr @\"FLAGGE\" release, align 4"), "kein release:\n{ir}");
+            assert!(ir.contains("load atomic i32, ptr @\"FLAGGE\" acquire"), "kein acquire:\n{ir}");
+            // The payload store stands BEFORE the flag store in the text of `melde`.
+            let melde = ir.split("define void @\"melde\"").nth(1).expect("melde");
+            let nutz = melde.find("store i64").expect("Nutzlast-Speicher");
+            let flagge = melde.find("store atomic").expect("Flaggen-Speicher");
+            assert!(nutz < flagge, "Nutzlast nach der Flagge:\n{melde}");
+            // `await` is ONE load, not a loop.
+            assert_eq!(ir.matches("load atomic i32, ptr @\"FLAGGE\"").count(), 1, "{ir}");
+        }
+    }
+}
+
+/// A `seq` atomic keeps its strength: never weaker than the declaration. (An atomic with no
+/// ordering word and a payload is the checker's `V005`.)
+#[test]
+fn publish_und_await_halten_seq_cst() {
+    for ordnung in ["seq"] {
+        let quelle = atom_quelle(ordnung);
+        let (ir, codes) = senke(&quelle, "atomprobe", &ZIEL_X86_64);
+        assert!(fehler(&codes).is_empty(), "{ordnung}: {codes:?}");
+        assert!(ir.contains(", ptr @\"FLAGGE\" seq_cst, align 4"), "{ordnung}:\n{ir}");
+        assert!(ir.contains("load atomic i32, ptr @\"FLAGGE\" seq_cst"), "{ordnung}:\n{ir}");
+    }
+}
+
+/// Examples that stood on `Y103: publish with payload` lower on both targets now.
+#[test]
+fn publish_beispiele_senken_auf_beiden_zielen() {
+    for datei in [
+        "117-message-passing-flag.gab",
+        "141-atomic-array-pairing.gab",
+        "14-paarung-ueber-zwischenfunktion.gab",
+        "39-auftragsdienst.gab",
+        "41-handschlag.gab",
+        "42-zaehlwerk.gab",
+        "43-gegenprobe.gab",
+    ] {
+        let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
+        for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+            let (_, codes) = senke(&quelle, datei, ziel);
+            assert!(fehler(&codes).is_empty(), "{datei} auf {}: {codes:?}", ziel.name);
+        }
+    }
+}
+
+/// **The shared lock is a reader/writer lock:** a reader passes the ticket gate, counts itself
+/// in (`acq_rel`), opens the gate again and counts itself out with `release`; a writer waits
+/// for the count to reach zero (`acquire` load) after its ticket. Same on both targets.
+#[test]
+fn geteilte_sperre_ist_leser_schreiber() {
+    for datei in ["10-geteilte-sperre.gab", "13-zeuge-mit-staerke.gab"] {
+        let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
+        for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
+            let (ir, codes) = senke(&quelle, datei, ziel);
+            assert!(fehler(&codes).is_empty(), "{datei} auf {}: {codes:?}", ziel.name);
+            assert!(ir.contains(".leser\" = global i32 0, align 4"), "{datei}: kein Leserwort:\n{ir}");
+            assert!(ir.contains(".leser\", i32 1 acq_rel"), "{datei}: Eintritt\n{ir}");
+            assert!(ir.contains(".leser\", i32 1 release"), "{datei}: Austritt\n{ir}");
+        }
+    }
+    let quelle = std::fs::read_to_string(wurzel().join("10-geteilte-sperre.gab")).expect("lesbar");
+    let (ir, _) = senke(&quelle, "10", &ZIEL_X86_64);
+    // The writer (`rechte_setzen`) drains the readers after its ticket.
+    let schreiber = ir.split("define void @\"rechte_setzen\"").nth(1).expect("Schreiber");
+    assert!(schreiber.contains("load atomic i32, ptr @\"KAPPEN.leser\" acquire"), "{schreiber}");
+    // An exclusive-only lock carries no reader word and no drain.
+    let nur = "module nurex {
+static mut x : u32 = 0;
+lock L protects { x } rank 0 held <= 4 ops;
+impl fn f()
+    effects { writes x, locks L }
+    costs <= 16 ops
+{
+    locks L {
+        x = 1;
+    }
+}
+}
+";
+    let (ir, codes) = senke(nur, "nurex", &ZIEL_X86_64);
+    assert!(fehler(&codes).is_empty(), "{codes:?}");
+    assert!(!ir.contains("L.leser"), "{ir}");
+}
+
+/// **A `return` inside an `if` inside `locks` releases on its own path only**; the path that
+/// falls through still releases at the end of the block (it kept the lock for ever once).
+#[test]
+fn return_im_wenn_im_sperrblock_gibt_beide_pfade_frei() {
+    let quelle = "module sperrpfad {
+static mut x : u32 = 0;
+lock L protects { x } rank 0 held <= 8 ops;
+impl fn f(a : bool) -> u32
+    effects { reads x, locks L }
+    costs <= 32 ops
+{
+    locks L {
+        if a {
+            return x;
+        }
+    }
+    return 0;
+}
+}
+";
+    let (ir, codes) = senke(quelle, "sperrpfad", &ZIEL_X86_64);
+    assert!(fehler(&codes).is_empty(), "{codes:?}");
+    let f = ir.split("define i32 @\"f\"").nth(1).expect("f");
+    assert_eq!(f.matches("atomicrmw add ptr @\"L.bereit\", i32 1 seq_cst").count(), 2, "{f}");
+}
+
+/// **A field behind the first one is addressed by its own GEP** (it was read from the record's
+/// base once: `paar.b` aliased `paar.a`).
+#[test]
+fn zweites_feld_hat_eigene_adresse() {
+    let quelle = "module felder {
+pub table paar count 1 {
+    slot {
+        a : u32,
+        b : u32,
+    }
+}
+pub fn f() -> u32
+    effects { reads paar.slots, writes paar.slots }
+    costs <= 16 ops
+{
+    paar.slots[0].b = 7;
+    return paar.slots[0].b;
+}
+}
+";
+    let (ir, codes) = senke(quelle, "felder", &ZIEL_X86_64);
+    assert!(fehler(&codes).is_empty(), "{codes:?}");
+    // The pointer of the first GEP on field 1 is what the store uses.
+    let gep = ir
+        .lines()
+        .filter(|z| z.trim_end().ends_with(", i32 0, i32 1"))
+        .filter_map(|z| z.trim().split(" = ").next())
+        .next()
+        .expect("GEP auf Feld 1");
+    assert!(ir.contains(&format!(", ptr {gep}, align 4, !tbaa")), "{ir}");
 }

@@ -41,7 +41,7 @@ cannot lower is refused **by name** instead of guessed (the `C001` rule of the C
 |---|---|---|
 | `Y101` | a type or a declaration without a lowering (bodiless or layout-less records, odd device registers, non-constant table counts, float words outside `f32`/`f64`…) | `beispiele/gift/1427` |
 | `Y102` | an item or a gate shape: masked locks, stack-carrying, kernel-paired and unbound gates, assembly bodies, a gate without a body for the target (`arch` mismatch) | `gift/1428` |
-| `Y103` | a statement: shared lock acquisition, `publish` with payload, non-constant bounds in arenas/`retry`/`exchange`, unlowerable tree walks and traversals, pressure probes of the wrong shape, a runtime gate the target lacks | `gift/1433` |
+| `Y103` | a statement: non-constant bounds in arenas/`retry`/`exchange`, unlowerable tree walks and traversals, pressure probes of the wrong shape, a runtime gate the target lacks (`publish` with payload and shared lock acquisition are lowered, see Locks and Publication) | `gift/196` |
 | `Y104` | an expression: alignment probe, library call, bitwise operations on floats, unknown places/registers/functions, contract-only expressions in a body | `gift/1430` |
 | `Y106` | a match shape without lowering | `gift/1432` |
 | `Y105` | retired (the error channel is fully lowered) | – |
@@ -69,8 +69,8 @@ reading aid.
 | `fnptr`, `ptr` | `ptr`; `&f` and indirect calls through the declared signature; device spaces as `volatile` |
 | bounded strings | layout, literals, `lenof`, index, copy, concat, lexicographic compare |
 | tables, slots, `count` | named layouts, GEP indices; `ops insert/remove/relabel` as inlined mutations; counting `count k in …` as a loop |
-| globals, atomics | plain cells; atomics with their orderings, arrays included; `await`/`exchange` bounded; `publish nothing` a release store |
-| `locks` | generated ticket lock (exclusive acquisition) |
+| globals, atomics | plain cells; atomics with their orderings, arrays included; `publish` (with or without payload) a release store, `await` ONE acquire load; `exchange` bounded |
+| `locks` | generated ticket lock (exclusive); `locks shared` a reader/writer lock on the same ticket gate |
 | `traverse`, tree walks | slots, elems, queues, ancestors (strict), descendants (post-order, stackless) |
 | `retry`, `forever`, `breaking`, `leave`/`next` | counted bound with `bis` and named overrun handler; loops; the body runs; by name |
 | `or R` channel | fallible signatures, `let … else` (option-index unpacking), reason values and matches, errno decoding at gates, `return e` propagation |
@@ -105,8 +105,43 @@ retrying interruptions and raced waits. The word is initialised before `clone`;
 unmap the whole region. This reuses `SchablonenFaden.faden_warte_korrekt`'s gate-contract
 ordering; kernel behaviour stays user logic, not a new hardware assumption.
 
-**Locks.** Exclusive acquisition is a generated ticket lock. Shared acquisition and
-IRQ-masking locks are refused (`Y103`, `Y102`).
+**Locks.** Exclusive acquisition is a generated ticket lock (`<L>.naechst`, `<L>.bereit`).
+A lock that declares `shared held` (the checker refuses `locks shared` on any other one,
+`gift/39`) is a reader/writer lock and carries a third `i32` word `<L>.leser`, the number of
+readers inside. No C, no libc, the same IR on both targets (`llvm/leser_schreiber.rs`):
+
+* *writer* (`locks L`): ticket as before, then wait until `leser == 0` (`acquire` load); it
+  holds the ticket for the whole section, release is `bereit += 1`;
+* *reader* (`locks shared L`): ticket, `leser += 1` (`acq_rel`), `bereit += 1` (the gate is
+  open again), section, then `leser -= 1` (`release`).
+
+Invariant: a reader enters only while it owns the ticket, so while a writer owns it no new
+reader appears; a reader that entered earlier is counted before the writer's ticket is served
+(the gate release is a `seq_cst` RMW the writer's `seq_cst` load of `bereit` observes), and the
+writer waits for the matching `release` decrement, so reader sections happen-before the
+writer's. The writer's `bereit += 1` publishes its section to the next reader's gate load.
+Readers run concurrently with each other; tickets are FIFO, so a queued writer is overtaken by
+no later reader (no writer starvation) and all waiting is a spin on a word the other side
+changes (no sleep primitive, so no lost wakeup). `return`, `leave` and `next` release exactly
+the locks taken inside the construct, per path (a `return` in an `if` inside `locks` releases on
+that path; the fall-through path releases at the end of the block). IRQ-masking locks are
+refused (`Y102`). Evidence: `messung/llvm/leserschreiber.gab` (two readers, one writer, a torn
+pair; exit 42 on both targets; with the writer's drain removed from the IR the same program
+fails 9 runs in 10).
+
+**Publication.** `X = v publishes { payload };` is a `store atomic ... release` and
+`let f = X awaits { payload };` ONE `load atomic ... acquire` (`llvm/publizieren.rs`): the
+payload writes precede the flag store and the payload reads follow the flag load in program
+order, and release/acquire keep them on their side on x86_64 (TSO) and aarch64 (`stlr`/`ldar`).
+SPRACHE.md §11.1/§11.5: `publishes` forces at least release, `awaits` at least acquire; the
+declared ordering is only ever strengthened (`seq` and the default stay `seq_cst`), never
+weakened, and a payload on `relaxed` or an undeclared atomic is the checker's `V005`. The
+checker's payload rule (N291) still demands the payload carriers be guarded by a lock in a
+program with concurrent roots, so a checked concurrent test (`messung/llvm/nachricht.gab`)
+guards them as well; the ordering evidence is the emitted IR (`tests/llvm.rs`) plus the
+round trip, not a stress test of a bare payload. (Earlier `await` lowered to a spin loop
+comparing the flag against the payload places -- a different program; it is one load, as in
+the C emitter.)
 
 **Recursion without native stack growth.** Pure tail cycles keep a jump-only fast path.
 Every other cyclic direct (or compatible indirect) call component becomes one dispatcher loop
@@ -248,8 +283,7 @@ here simplifies a case, the register wins.
 |---|---|---|
 | `Deklaration.maskiert` | IRQ masking and interrupt nesting | `Y102` |
 | `Deklaration.Reg`, `Stmt.regSchreib`, `Block.regLies*` | model-register/export bridge (memory-space surface devices lower through `volatile`; a `device ... at port` register is refused `Y102`, `gift/1470`, because x86 port space has no lowering yet and aarch64 has none) | `Y10x` |
-| `Stmt.publish` with payload | OFFEN O25, not covered by the goal theorem | `Y103` |
-| `Stmt.locks` shared | an own primitive, unproved | `Y103` |
+| `Stmt.publish` with payload, `Stmt.locks` shared | lowered (release/acquire; reader/writer lock); the Lean side stays OFFEN O25 for unguarded payloads and the lock primitive is unproved in Lean | – |
 | `Deklaration.Ax`, `Block.bindAxiom*` | stack-carrying/paired/unbound gates, `child` (the internal `start` trampoline does not implement that source form) | `Y102` |
 | `Programm.unterbricht` | hardware-dispatched entries, boot/entrust/asm lowering | `Y102` |
 | library call surface | library resolution and payload model | `Y104` |
