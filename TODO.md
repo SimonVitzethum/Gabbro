@@ -85,10 +85,6 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
   `FrischNeu` nur für den Modell-Allokator) und der `let`-Lauf des Prüfers in Lean;
   `R004`/`R007` als Sonderfälle von `R014`; Mutationslauf für `R014`/`R015`;
   `noalias` ist kein Lean-Urteil (O27).
-- **M104 wide-result hole (found 2026-10-17 by the doc check).** `pub fn f(a : u32, b : u32) -> u64 { return a + b; }`
-  checks with 0 errors, and `gabbro llvm` lowers it to a 32-bit `add` plus `zext`, so the sum wraps
-  before it widens. The note text in `m1.rs` still says a wider return type does not widen the
-  operands. Needs a decision: refuse (as before) or widen the operands. Not fixed.
 - **O26-Rest (fremde Sperrprimitive).** Eigene Primitive geprüft (`N481`–`N483`);
   fremde bleiben angenommen (schwaches Gedächtnis nimmt acquire/release an).
 

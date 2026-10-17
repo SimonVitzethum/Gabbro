@@ -405,8 +405,8 @@ opus/…:opus/…` first.
 | Kind | Next free |
 |---|---|
 | Diagnostic codes | **N587** (slot release took N586). The alias rules took **R014**/**R015**: next `R016` |
-| Gift (poison-probe) numbers | **1445** (`beispiele/gift/1444-alias-sicht-und-quelle.gab` is the last) |
-| Example numbers | **1164** (`beispiele/1163-sicht-neben-eigener-quelle.gab` is the last) |
+| Gift (poison-probe) numbers | **1448** (`beispiele/gift/1447-produkt-im-weiten-return.gab` is the last) |
+| Example numbers | **1165** (`beispiele/1164-operanden-zuerst-weiten.gab` is the last) |
 | Lane numbers | **1403**: allocate unique IDs from the live coordinator registry |
 
 *The per-lane reservation ledger that stood here (2026-09 to 2026-10) is history: `git log -p AGENTS.md`
