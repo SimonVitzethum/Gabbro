@@ -3401,6 +3401,24 @@ pub const M3: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m3.rs::getrennte_wurzeln; dokumente/A1-OWN-PAPER.md",
     },
     Satz {
+        name: "m3.zeiger_wurzel_grenze",
+        kennungen: &["R015"],
+        aussage: "A function that assumes two of its pointer parameters distinct -- one of them \
+                  writable or `own` -- and is `pub` or called by no body of its unit says so: \
+                  the distinctness is a NAMED assumption about a caller outside the unit.",
+        vorbehalt: "Slice 3 of `dokumente/A1-OWN-PAPER.md`. A HINT, not a refusal: nothing here \
+                    can prove what the outside world passes, and refusing would be a tightening \
+                    of every exported function with a pointer pair. The Lean side of the \
+                    assumption is the premise of slice 2. Whether it should grow into an \
+                    explicit `own` at the boundary is open and is recorded, not decided.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "`crates/gabbro-check/tests/wurzeln.rs` drives both directions (one hint at \
+                      the uncalled function, none for two read-only pointers or for a function \
+                      called inside its unit); `messung/netz/udp-echo.gab::echo_beantworten`, \
+                      the real stale-checksum shape, now carries the hint.",
+        fundstelle: "crates/gabbro-check/src/m3.rs::getrennte_wurzeln; dokumente/A1-OWN-PAPER.md",
+    },
+    Satz {
         name: "m3.registerklasse",
         kennungen: &["R005", "R006"],
         aussage: "A `device` register field is read only if its class permits reading and \

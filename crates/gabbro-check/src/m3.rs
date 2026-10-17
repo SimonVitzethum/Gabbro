@@ -565,6 +565,63 @@ fn getrennte_wurzeln(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     }
+    // **`R015` -- the BOUNDARY (slice 3 of `dokumente/A1-OWN-PAPER.md`).** A function with two
+    // pointer parameters, one of them writable or `own`, ASSUMES their roots distinct (the
+    // inherited precondition). Inside the unit every call is held against it by `R014`; a
+    // function that is `pub` or that no body of the unit calls is entered from outside, and
+    // nothing here can prove it. That is not a refusal -- it is a NAMED ASSUMPTION about the
+    // caller, said at the function so that it is read and not inherited in silence.
+    let mut gerufen: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if let FnRumpf::Block(rumpf) = &f.rumpf {
+                let mut rufe = Vec::new();
+                alle_rufe(rumpf, &mut rufe);
+                for r in rufe {
+                    if let CallTarget::Path(p) = &r.ziel {
+                        for k in u.kandidaten_aufloesbar(modul, &p.text()) {
+                            gerufen.insert(k);
+                        }
+                    }
+                }
+            }
+        }
+    });
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let voll = crate::umgebung::qualifiziere(modul, &f.name.text);
+        let Some(form) = formen.get(&voll) else {
+            return;
+        };
+        let zeiger: Vec<usize> = (0..form.zeiger.len()).filter(|i| form.zeiger[*i].0).collect();
+        let empfindlich = zeiger.iter().any(|i| form.zeiger[*i].1);
+        if zeiger.len() < 2 || !empfindlich {
+            return;
+        }
+        if !f.oeffentlich && gerufen.contains(&voll) {
+            return;
+        }
+        let namen: Vec<&str> = zeiger.iter().map(|i| f.parameter[*i].name.text.as_str()).collect();
+        absagen.schiebe(
+            Absage::hinweis(
+                "R015",
+                f.name.span,
+                format!(
+                    "`{}` assumes the pointer parameters `{}` point at distinct objects, and \
+                     no call inside this unit proves it",
+                    f.name.text,
+                    namen.join("`, `")
+                ),
+            )
+            .mit_notiz(
+                "one of them is writable or `own`: a caller outside the unit must pass distinct \
+                 roots, and a re-view of one is not distinct from it (`R014` holds the calls \
+                 inside the unit)",
+            ),
+        );
+    });
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;

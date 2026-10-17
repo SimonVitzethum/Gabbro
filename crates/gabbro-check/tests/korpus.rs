@@ -345,6 +345,9 @@ const BENANNT: &[&str] = &[
     "R013",
     // 2026-10-17, slice 1 of `dokumente/A1-OWN-PAPER.md`: two names, one root.
     "R014",
+    // The boundary beside it: a function that assumes two pointers distinct and is entered
+    // from outside the unit says so (a hint, not a refusal).
+    "R015",
     // **Die Versiegelung eines `asm`-Rumpfes** («OPT3»): `arch`, `effects`, `costs`, und ein
     // Operand, der ein Parameter sein muss. Geprueft wird die FORM, nicht der Befehlstext --
     // den liest Gabbro nicht, und das ist der Kern der Sache.
