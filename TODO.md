@@ -45,6 +45,8 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 - **O6 (DEMAND 3 als schrankenloser Rangzeuge).** Geht für die Widerlegung;
   die Beweis-Richtung (`unsat`) über der Rangform plus vier ungezogene
   Erreichbarkeits-Zeilen bleiben bei der Demand.
+- **Dynamische Datenstrukturen + Tabellen-/Gruppeninvarianten im Ziel (Plan 2026-10-17).** Lean zuerst, dann Exporteur,
+  Prüfer, Compiler: `dokumente/PLAN-DYNAMISCH.md` §8a (sieben Stufen, drei Entscheidungen offen). Umfasst O4–O6, O11, O14, O20, O29.
 - **O14 (Arena-Ketten: zwei Statement-Formen ohne Form).** Spezifikation und
   Exporteur haben die Form; zwei Statement-Gestalten schließen keine Kette.
 - **O19-Rest (Handler und Kerne).** `Einheit` nennt keinen Handler, G hat keine

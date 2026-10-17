@@ -221,6 +221,72 @@ a table of `count = hi` plus a `used` global; `arenaAlloc_unter_schranke`), `Are
   section 8; `PLAN-UEBERSETZUNGSVALIDIERUNG.md`).
 * The commit cost: the runtime's per-slot commit cost is a declared number (`K003`), not measured here.
 
+## 8a. Plan: dynamic data structures and their invariants inside the goal (2026-10-17, Simon's order)
+
+**Order rule (Simon, 2026-10-17): the Lean model first, then exporter, checker, compiler.** Nothing in
+this plan is built in Rust before the Lean part it rests on exists and `gabbro_ziel` still prints exactly
+`propext`, `Classical.choice`, `Quot.sound`. Every change of the statement is a reviewed `Spec.lean` diff.
+
+**Target.** Structures that grow without a static element bound (lists, stacks, trees, hash chains over
+arena slots, capability trees) are IN the statement, and `table`/`group` invariants over them are claimed
+legs (`invRuhe`, `invSicht`), not vacuous. Today both are false: dynamic structures are NOT CLAIMED
+(OFFEN O29, now scoped in), the exporter writes `Inv := Empty` and refuses `maintains` (`LG001`), and every
+arena program (examples 98, 99, 153, 154, 158, 1160, 1161) is UNCERTIFIED (`LG005`, OFFEN O14).
+
+**The approach that exists (what is built on):** an arena is sugar over a table of `count = hi` plus a `used`
+global (`ArenaZucker.lean`, `arenaAlloc_unter_schranke`); `DynArena`/`DynForm` add the committed prefix
+(`dynGrow`, `dynAlloc_simuliert`: a dynamic run under its committed count simulates the static-max program);
+`FreiZustand` models slot release (`freiFree`, double free gives `none`, `frei_rundlauf`); invariants are
+declared on `table`/`group`/`walk` (`maintains`, `breaking`, `ops`, kind `E` preservation duties, `N275`–`N277`,
+`N496`, `N583`); `traverse`/`walk` express a bounded path through linked slots (`by consuming`, `floor`).
+A link is an INDEX into an arena table, never a pointer, so a link is well-formed iff it is below `committed`
+and its slot is live (`N586` makes use-after-free a static error).
+
+**Phases, in order:**
+1. **Model the missing statements in machine G (Lean, `Bausteine/Arena/`).** `grow` and `free` as `Block`
+   forms over the existing sugar (they exist as lemmas, not as G blocks), with the proof that each
+   preserves memory safety and the contract legs; `reset` generations as a type index (exists) lifted to G.
+   Exit: `ArenaForm`/`DynForm` have G constructors; `dynAlloc_simuliert` extended by `dynGrow_simuliert`,
+   `freiFree_simuliert`.
+2. **Invariants over live slots (Lean, `Erhaltung.lean`, `Durchgaenge.lean`).** A new invariant family
+   `InvDyn`: a predicate over the set of LIVE slots of a table plus the links among them (links in range,
+   acyclic along a declared walk, tree shape for the capability tree, freelist disjoint from live slots).
+   Preservation theorems for the three mutators (`alloc`+link, `free`+unlink, link update under a lock) in the
+   style of the existing table invariants, plus non-degenerate witnesses (`..._zeuge`) and a counter-model
+   (a broken invariant that the model rejects). Closes the proof side of O4/O5/O6 (capability derivation tree:
+   `delete_leaf`, `revoke`, the sibling consistency demand).
+3. **Concurrency (OFFEN O20).** Generations and the commit ceiling assume one control thread. Model `grow` as a
+   locked commit (the commit is a lock-guarded step, per-thread allocation from a guarded arena) and prove the
+   leg `Laufzeit.commit` as a consequence of the lock discipline instead of a named assumption where possible.
+4. **`Spec.lean` diff.** Remove 'dynamic data structures' from NOT CLAIMED, let `invRuhe`/`invSicht` carry
+   content for exported dynamic programs, keep every old leg word for word. Re-prove `gabbro_ziel` on the new
+   statement; two independent verdicts as for every extension of the goal (AGENTS.md section 1).
+5. **Exporter (`lean_g.rs`).** Lift `LG005` for arenas and `LG001` for `maintains`/invariants only for the forms
+   phases 1–3 cover; everything else stays refused by name. Regenerate `REGISTER.txt`: the booked success
+   measure is the number of CERTIFIED arena programs.
+6. **Checker.** Only afterwards align the Rust checker with the model: O11 (an invariant no function maintains
+   is accepted by nothing but `N583`'s online case), `maintains` completeness, walk bounds; a form the checker
+   accepts and the model lacks is a checker bug (a refusal, never a warning).
+7. **Compiler.** No new lowering is needed: the LLVM backend already lowers arenas, `grow`, sampling and slot
+   release; the certificate's `llvmArenen` rows are checked against the model (the Lean consumer of `llvm-cert`
+   is the open item of PLAN-UEBERSETZUNGSVALIDIERUNG).
+
+**Evidence for done:** three new examples (a singly linked list over a dynamic arena, a binary tree with a
+sibling-consistency invariant, a hash chain) that are CERTIFIED with a non-vacuous invariant, each with a
+poison probe whose broken invariant the checker refuses AND the model rejects; `gabbro_ziel` on the standard
+axioms; the guardians green.
+
+**Decisions Simon has to make before phase 1:**
+(a) first structures: list and tree (recommended; the tree is the capability tree of O4–O6) or hash chains first;
+(b) element links stay indices into one arena (recommended: no pointers, no int-to-pointer, consistent with
+`own`) — or links across arenas are in scope;
+(c) whether `free` across function boundaries (needs the `own` boundary rule of `A1-OWN-PAPER.md`) belongs to
+this round or follows it.
+
+**Size and critical path.** Phases 1–2 are the long Lean pieces (Opus agents, one at a time on `grammatik/`,
+each with a warm `.lake`); phase 4 is the reviewed statement change; 5–6 are small Rust. Counts are not
+completion evidence: the exit conditions above are.
+
 ## 9. Re-measuring
 
 ```
