@@ -70,13 +70,13 @@ theorem erstAblehnung_104_zeuge :
 
 /-! ## Step 2: elaborate past `static` items -/
 
-/-- **Is this a `static` item?** (`statikT`, `SItemTief`,
+/-- **Is this a `static` item?** (`globT`, `SItemTief`,
     `ElementTief.lean`): named storage with an initializer. The measured
     most common FIRST blocker (probe tally 2026-10-07: 22 of 157 corpus
-    files stop at a `statikT` in `uRestFehler`, more than any other item
+    files stop at a `globT` in `uRestFehler`, more than any other item
     kind). -/
 def istStatik : SItemTief → Bool
-  | .statikT .. => true
+  | .globT .. => true
   | _ => false
 
 /-- **Is this a `concurrent` item?** (`nebenT`, `SItemTief`,
@@ -147,16 +147,16 @@ theorem elabU02_stimmt_zeuge :
 
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `konstT`,
-    `typT`, `tabelleT`, `sperreT`, `funktionT`, `eingangT`) except the
+    `typT`, `tabelleT`, `lockT`, `funktionT`, `eingangT`) except the
     inert kinds `elabU02` forgives (`static`, `concurrent`). -/
 def istGegenstand : SItemTief → Bool
   | .konstT .. => false
   | .typT .. => false
   | .tabelleT .. => false
-  | .sperreT .. => false
+  | .lockT .. => false
   | .funktionT .. => false
   | .eingangT .. => false
-  | .statikT .. => false
+  | .globT .. => false
   | .nebenT .. => false
   | _ => true
 
@@ -170,12 +170,12 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | konstT _ _ _ => simp [istGegenstand] at he
   | typT _ _ _ _ _ => simp [istGegenstand] at he
   | tabelleT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | sperreT _ _ _ _ _ _ _ => simp [istGegenstand] at he
+  | lockT _ _ _ _ _ _ _ => simp [istGegenstand] at he
   | funktionT _ _ => simp [istGegenstand] at he
   | eingangT _ => simp [istGegenstand] at he
   | modulT _ _ => rfl
   | useT _ => rfl
-  | statikT _ _ _ _ _ _ _ => simp [istGegenstand] at he
+  | globT _ _ _ _ _ _ _ => simp [istGegenstand] at he
   | protoT _ => rfl
   | specT _ _ => rfl
   | asmT _ _ => rfl
@@ -209,7 +209,7 @@ def istAngenommen : SItemTief → Bool
   | .konstT .. => true
   | .typT .. => true
   | .tabelleT .. => true
-  | .sperreT .. => true
+  | .lockT .. => true
   | .funktionT .. => true
   | .eingangT .. => true
   | _ => false
@@ -224,12 +224,12 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | konstT _ _ _ => rfl
   | typT _ _ _ _ _ => rfl
   | tabelleT _ _ _ _ _ _ => rfl
-  | sperreT _ _ _ _ _ _ _ => rfl
+  | lockT _ _ _ _ _ _ _ => rfl
   | funktionT _ _ => rfl
   | eingangT _ => rfl
   | modulT _ _ => simp [istAngenommen] at he
   | useT _ => simp [istAngenommen] at he
-  | statikT _ _ _ _ _ _ _ => simp [istAngenommen] at he
+  | globT _ _ _ _ _ _ _ => simp [istAngenommen] at he
   | protoT _ => simp [istAngenommen] at he
   | specT _ _ => simp [istAngenommen] at he
   | asmT _ _ => simp [istAngenommen] at he
@@ -267,12 +267,12 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | konstT _ _ _ => simp [istAngenommen] at ha
   | typT _ _ _ _ _ => simp [istAngenommen] at ha
   | tabelleT _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | sperreT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
+  | lockT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
   | funktionT _ _ => simp [istAngenommen] at ha
   | eingangT _ => simp [istAngenommen] at ha
   | modulT _ _ => simp [istGegenstand] at he
   | useT _ => simp [istGegenstand] at he
-  | statikT _ _ _ _ _ _ _ => rfl
+  | globT _ _ _ _ _ _ _ => rfl
   | protoT _ => simp [istGegenstand] at he
   | specT _ _ => simp [istGegenstand] at he
   | asmT _ _ => simp [istGegenstand] at he

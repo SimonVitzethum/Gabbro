@@ -105,7 +105,7 @@ def istTabelle : SItemTief → Bool
 
 /-- True for lock items. -/
 def istSperre : SItemTief → Bool
-  | .sperreT .. => true
+  | .lockT .. => true
   | _ => false
 
 /-- A function item as head plus body. -/
@@ -115,9 +115,9 @@ def alsFunktion : SItemTief → Option (FnSig × SAnw)
 
 /-- Statement tag (all 30 arms of `SAnw`; `Anweisung.lean`). -/
 def artAnw : SAnw → String
-  | .lass .. => "let"
-  | .lassElse .. => "let-else"
-  | .lassLib .. => "let-lib"
+  | .bind .. => "let"
+  | .bindElse .. => "let-else"
+  | .bindLib .. => "let-lib"
   | .zuweis .. => "assign"
   | .shift .. => "transition"
   | .ruf .. => "call"
@@ -161,7 +161,7 @@ def artItem : SItemTief → String
   | .useT .. => "useT"
   | .typT .. => "typT"
   | .konstT .. => "konstT"
-  | .statikT .. => "statikT"
+  | .globT .. => "globT"
   | .funktionT .. => "funktionT"
   | .protoT .. => "protoT"
   | .specT .. => "specT"
@@ -176,7 +176,7 @@ def artItem : SItemTief → String
   | .axiomaT .. => "axiomaT"
   | .pruefungT .. => "pruefungT"
   | .atomarT .. => "atomarT"
-  | .sperreT .. => "sperreT"
+  | .lockT .. => "lockT"
   | .rcuT .. => "rcuT"
   | .gruppeT .. => "gruppeT"
   | .nebenT .. => "nebenT"
@@ -226,7 +226,7 @@ def sammleSperren (tabs : List UTab) :
   | [] => []
   | it :: rest =>
     match it with
-    | .sperreT n _ _ _ _ _ _ =>
+    | .lockT n _ _ _ _ _ _ =>
       (n, uSperre tabs it) :: sammleSperren tabs rest
     | _ => sammleSperren tabs rest
 

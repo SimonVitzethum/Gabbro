@@ -219,7 +219,7 @@ def uMembers : List SItemTief → List SItemTief
     (`LG005`: a count must be a numeral). -/
 def uConsts : List SItemTief → List (String × Int)
   | [] => []
-  | .konstT n _ (.einzeln (.lit v)) :: rest =>
+  | .konstT n _ (.one (.lit v)) :: rest =>
     (n, Int.ofNat v) :: uConsts rest
   | _ :: rest => uConsts rest
 
@@ -407,9 +407,9 @@ def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) 
     evaluator above. -/
 def uConstsRech (fns : List UKonstFn) : List SItemTief → List (String × Int) → List (String × Int)
   | [], acc => acc
-  | .konstT n _ (.einzeln (.lit v)) :: rest, acc =>
+  | .konstT n _ (.one (.lit v)) :: rest, acc =>
     uConstsRech fns rest (acc ++ [(n, Int.ofNat v)])
-  | .konstT n (.atom w) (.einzeln e) :: rest, acc =>
+  | .konstT n (.atom w) (.one e) :: rest, acc =>
     match uTypName [] w with
     | .ok (lo, hi) =>
       match uKonstWert lo hi fns acc 64 e with
@@ -543,7 +543,7 @@ def uSchutzAux : List UTab → List SExpr → Except String (List String)
     and the shared hold have no G form; the `held` budget is
     ignored like `costs` (both travel nowhere). -/
 def uSperre (tabs : List UTab) : SItemTief → Except String ULock
-  | .sperreT n ps (.lit rk) _ .none .none .none =>
+  | .lockT n ps (.lit rk) _ .none .none .none =>
     match uSchutzAux tabs ps with
     | .error e => .error e
     | .ok ts => .ok { name := n, rank := Int.ofNat rk, schutz := ts }
@@ -1292,7 +1292,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .konstT _ _ _ :: rest => uRestFehler rest
   | .typT _ _ _ _ _ :: rest => uRestFehler rest
   | .tabelleT _ _ _ _ _ _ :: rest => uRestFehler rest
-  | .sperreT _ _ _ _ _ _ _ :: rest => uRestFehler rest
+  | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .funktionT _ _ :: rest => uRestFehler rest
   | .eingangT _ :: rest => uRestFehler rest
   | _ :: _ => .error "Gegenstand ohne G-Form"
@@ -1333,7 +1333,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok tabs =>
         let lockItems := ms.filter (fun
-          | .sperreT _ _ _ _ _ _ _ => true | _ => false)
+          | .lockT _ _ _ _ _ _ _ => true | _ => false)
         match uSeq (lockItems.map (uSperre tabs)) with
         | .error e => .error e
         | .ok locks =>
@@ -2191,7 +2191,7 @@ def uStand104 : SExpr :=
     (`u104parse` checks it against the reader). -/
 def items104 : List SItemTief :=
   [.modulT "beispiel::referenz" [
-    .konstT "NKONTO" (.atom "u32") (.einzeln (.lit 2)),
+    .konstT "NKONTO" (.atom "u32") (.one (.lit 2)),
     .typT [] "Betrag" [] []
       (.some (.bereich (.atom "u32") (.lit 0) (.lit 10) false)),
     .typT [] "Stand" [] []
@@ -2200,7 +2200,7 @@ def items104 : List SItemTief :=
       [.tPlatz [{ fname := "stand", ftyp := .atom "Stand",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
-    .sperreT "M" [.variable "stand"] (.lit 0)
+    .lockT "M" [.variable "stand"] (.lit 0)
       (.some (.lit 50)) .none .none .none,
     .funktionT
       { art := "impl", name := "einzahlen",

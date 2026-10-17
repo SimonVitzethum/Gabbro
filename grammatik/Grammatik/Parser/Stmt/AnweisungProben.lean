@@ -69,7 +69,7 @@ theorem s04_lex :
     lex "let x : u64 = SQUARES[a];" = .ok st04 := by
   decide
 theorem s04 : beqTopStmt (parseTopStmt st04)
-    (.ok (.lass false "x" (.some (.atom "u64"))
+    (.ok (.bind false "x" (.some (.atom "u64"))
       (.index (.variable "SQUARES") (.variable "a")))) = true := by
   decide
 -- beispiele/92-const-squares.gab (the type ascription is read,
@@ -81,7 +81,7 @@ theorem s05_lex :
     lex "let mut n : u32 = 0;" = .ok st05 := by
   decide
 theorem s05 : beqTopStmt (parseTopStmt st05)
-    (.ok (.lass true "n" (.some (.atom "u32")) (.lit 0))) = true := by
+    (.ok (.bind true "n" (.some (.atom "u32")) (.lit 0))) = true := by
   decide
 -- beispiele/46-verneinung.gab:45. Rust: `Let` with `veraenderlich`
 -- -- same shape.
@@ -96,7 +96,7 @@ theorem s06_lex :
       .ok st06 := by
   decide
 theorem s06 : beqTopStmt (parseTopStmt st06)
-    (.ok (.lassElse "g" .none (.ruf "groesse_gemessen" []) "e1"
+    (.ok (.bindElse "g" .none (.ruf "groesse_gemessen" []) "e1"
       (.block [] (.some (.ret (.some .fls)))))) = true := by
   decide
 -- beispiele/06-annahmen.gab:136. Rust: `LetSonst` with a call
@@ -160,7 +160,7 @@ theorem s10_lex :
     lex "let s = @summe#sum() { 10 20 30 40 };" = .ok st10 := by
   decide
 theorem s10 : beqTopStmt (parseTopStmt st10)
-    (.ok (.lassLib false "s" .none "summe" "sum")) = true := by
+    (.ok (.bindLib false "s" .none "summe" "sum")) = true := by
   decide
 -- beispiele/107-summe-zwei-rufe.gab:36. Rust: `Let` over a
 -- `LibraryCall` -- same shape (the region is captured balanced,

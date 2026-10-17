@@ -28,7 +28,7 @@ set_option maxRecDepth 100000
 
     Expressions ride as `SExpr`; headers the reader does not split
     store their raw words (`traverseS` etc. carry the header text).
-    Against `ast.rs` `StmtArt`: `lass` = `Let`, `lassElse` =
+    Against `ast.rs` `StmtArt`: `bind` = `Let`, `bindElse` =
     `LetSonst`, `zuweis` = `Zuweisung`, `wenn` = `Wenn`, `matchS` =
     `Match`, `traverseS`/`retryS`/`foreverS` = `Schleife`, `bricht`
     = `Bricht`, `narrowS` = `Narrow`, `sperrt` = `Sperrt`,
@@ -53,9 +53,9 @@ inductive SEnde
   | naechst : String → SEnde
 deriving Repr
 inductive SAnw
-  | lass : Bool → String → Option STyp → SExpr → SAnw
-  | lassElse : String → Option STyp → SExpr → String → SAnw → SAnw
-  | lassLib : Bool → String → Option STyp → String → String → SAnw
+  | bind : Bool → String → Option STyp → SExpr → SAnw
+  | bindElse : String → Option STyp → SExpr → String → SAnw → SAnw
+  | bindLib : Bool → String → Option STyp → String → String → SAnw
   | zuweis : SExpr → String → SExpr → SAnw
   | shift : SExpr → String → String → SAnw
   | ruf : String → List SExpr → SAnw
@@ -117,10 +117,10 @@ def beqOptEnde : Option SEnde → Option SEnde → Bool
 
 mutual
 def beqSAnw : SAnw → SAnw → Bool
-  | .lass m a t x, .lass n b u y => m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
-  | .lassElse a t f e b, .lassElse c u g h d =>
+  | .bind m a t x, .bind n b u y => m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
+  | .bindElse a t f e b, .bindElse c u g h d =>
     strEq a c && beqSTypOpt t u && beqSExpr f g && strEq e h && beqSAnw b d
-  | .lassLib m a t l f, .lassLib n b u m2 g =>
+  | .bindLib m a t l f, .bindLib n b u m2 g =>
     m == n && strEq a b && beqSTypOpt t u && strEq l m2 && strEq f g
   | .zuweis z o x, .zuweis w p y =>
     beqSExpr z w && strEq o p && beqSExpr x y
@@ -266,7 +266,7 @@ def parseLetLib (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
   | f + 1 => do
     let ((l, g, _), rest) ← parseLibRuf f toks
     let rest' ← fordereZeichen ";" rest
-    pure (.lassLib m name ty l g, rest')
+    pure (.bindLib m name ty l g, rest')
 def parseLetAlloc (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
     (toks : List Token) : Except String (SAnw × List Token) :=
   match f with
@@ -296,7 +296,7 @@ def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
       let (fehler, rest'') ← nimmName rest'
       let rest3 ← fordereZeichen ")" rest''
       let (b, rest4) ← parseBlock f rest3
-      pure (.lassElse name ty e fehler b, rest4)
+      pure (.bindElse name ty e fehler b, rest4)
     | .wort "else" :: _ => .error "else without ("
     | .wort "awaits" :: .zeichen "{" :: rest' => do
       let (pl, rest'') ← nimmBisZeichen "}" rest' 0
@@ -310,7 +310,7 @@ def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
       pure (.tauscht name e k, rest3)
     | _ => do
       let rest' ← fordereZeichen ";" rest
-      pure (.lass m name ty e, rest')
+      pure (.bind m name ty e, rest')
 /-- `grow A by e else { … } ;` (lane 257, SYNTAX.md 9.1), behind the `grow`. -/
 def parseGrow (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -348,11 +348,11 @@ def parseStart (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => do
-    let (ps, r1) ← parseStartWurzeln f toks
+    let (ps, r1) ← parseStartRoots f toks
     let r ← fordereZeichen ";" r1
     pure (.start ps, r)
 /-- The root paths of a `start { … }`, up to and including the `}`. -/
-def parseStartWurzeln (f : Nat) (toks : List Token) :
+def parseStartRoots (f : Nat) (toks : List Token) :
     Except String (List String × List Token) :=
   match f with
   | 0 => .error "out of fuel"
@@ -363,7 +363,7 @@ def parseStartWurzeln (f : Nat) (toks : List Token) :
     match r2 with
     | .zeichen "," :: .zeichen "}" :: r => pure ([p], r)
     | .zeichen "," :: r3 => do
-      let (ps, r) ← parseStartWurzeln f r3
+      let (ps, r) ← parseStartRoots f r3
       pure (p :: ps, r)
     | _ => do
       let r ← fordereZeichen "}" r2
