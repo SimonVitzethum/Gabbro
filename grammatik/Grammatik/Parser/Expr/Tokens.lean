@@ -21,11 +21,6 @@ def beqOptWort : Option String → Option String → Bool
   | some a, some b => strEq a b
   | _, _ => false
 
-def beqWorte : List String → List String → Bool
-  | [], [] => true
-  | x :: xs, y :: ys => strEq x y && beqWorte xs ys
-  | _, _ => false
-
 /-- Expect the keyword `w` (a `wort` token with this text). -/
 def nimmWort (w : String) : List Token → Except String (List Token)
   | .wort s :: rest => if strEq s w then .ok rest else .error ("wanted " ++ w)

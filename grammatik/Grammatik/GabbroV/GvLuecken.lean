@@ -99,9 +99,9 @@ theorem gvLuecke_fragment_ohne_atomar (u : UProg) :
 theorem gvLuecke_elabU_refuses_statics :
     ∀ (ms : List SItemTief) (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr)
       (s : Option String) (g : Bool),
-      .statikT m a t v al s g ∈ uMembers ms → ¬ ∃ u, elabU ms = .ok u := by
+      .globT m a t v al s g ∈ uMembers ms → ¬ ∃ u, elabU ms = .ok u := by
   have aux : ∀ (l : List SItemTief),
-      (∃ m a t v al s g, .statikT m a t v al s g ∈ l) →
+      (∃ m a t v al s g, .globT m a t v al s g ∈ l) →
       ∃ e, uRestFehler l = .error e := by
     intro l
     induction l with
@@ -114,32 +114,32 @@ theorem gvLuecke_elabU_refuses_statics :
       obtain ⟨m, a, t, v, al, s, g, hm⟩ := hmem
       cases x with
       | konstT _ _ _ =>
-        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | typT _ _ _ _ _ =>
-        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | tabelleT _ _ _ _ _ _ =>
-        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | sperreT _ _ _ _ _ _ _ =>
-        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+      | lockT _ _ _ _ _ _ _ =>
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | funktionT _ _ =>
-        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | eingangT _ =>
-        have hmt : .statikT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
       | modulT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | useT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | statikT _ _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | globT _ _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | protoT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | specT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | asmT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩

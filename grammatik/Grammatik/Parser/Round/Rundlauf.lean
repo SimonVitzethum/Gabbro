@@ -39,6 +39,22 @@ theorem strKlingt : ∀ (a b : String), strEq a b = true → a = b := by
 theorem strEq_eq (a b : String) : strEq a b = true ↔ a = b :=
   ⟨strKlingt a b, by intro h; subst h; exact beq_self_eq_true _⟩
 
+/-- Word-list equality is sound. -/
+theorem beqWorte_klingt : ∀ (a b : List String), beqWorte a b = true → a = b := by
+  intro a
+  induction a with
+  | nil =>
+    intro b h
+    cases b <;> simp [beqWorte] at h ⊢
+  | cons x xs ih =>
+    intro b h
+    cases b with
+    | nil => simp [beqWorte] at h
+    | cons y ys =>
+      simp only [beqWorte, Bool.and_eq_true, strEq_eq] at h
+      obtain ⟨h1, h2⟩ := h
+      rw [h1, ih _ h2]
+
 -- Soundness of the structural equality on surface trees, with its
 -- list helper: a `true` comparison means Leibniz equality. Proved
 -- mutually, following the recursion of `beqSExpr` itself. Each arm
@@ -144,6 +160,11 @@ theorem beqSExpr_klingt : ∀ (a b : SExpr),
     simp only [Bool.and_eq_true, strEq_eq] at h
     obtain ⟨h1, h2⟩ := h
     rw [h1, h2]
+  | ext k ns xs =>
+    cases b <;> simp only [beqSExpr] at h <;> try exact absurd h Bool.false_ne_true
+    simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨⟨h1, h2⟩, h3⟩ := h
+    rw [h1, beqWorte_klingt _ _ h2, beqSExprList_klingt _ _ h3]
 theorem beqSExprList_klingt : ∀ (xs ys : List SExpr),
     beqSExprList xs ys = true → xs = ys := by
   intro xs ys h
@@ -190,6 +211,7 @@ def groesse : SExpr → Nat
   | .alt x => groesse x + 1
   | .ergebnis => 1
   | .why _ _ => 1
+  | .ext _ _ _ => 1
 def groesseListe : List SExpr → Nat
   | [] => 0
   | x :: xs => groesse x + groesseListe xs
@@ -247,6 +269,7 @@ def druckToks : SExpr → List Token
     [.wort "old", .zeichen "("] ++ druckToks x ++ [.zeichen ")"]
   | .ergebnis => [.wort "result"]
   | .why g f => [.ident g, .zeichen "::", .ident f]
+  | .ext _ _ _ => [.ende]
 def druckToksListe : List SExpr → List Token
   | [] => []
   | [x] => druckToks x
@@ -321,6 +344,7 @@ def gut : SExpr → Bool
   | .why g _ =>
     !istKeinPlatz g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
+  | .ext _ _ _ => false
 def gutPlatz : SExpr → Bool
   | .variable s => !istKeinPlatz s
   | .feld x _ => gutPlatz x
@@ -641,11 +665,12 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
       simp only [Bool.or_eq_false_iff, and_assoc] at hf
-      obtain ⟨c1, c2, c3, -, -⟩ := hf
+      obtain ⟨c1, c2, c3, -, c5⟩ := hf
       have ne1 := strNe_of s "." c1
       have ne2 := strNe_of s "->" c2
       have ne3 := strNe_of s "[" c3
-      simp [parseSuffixe, ne1, ne2, ne3]
+      have ne5 := strNe_of s "(" c5
+      simp [parseSuffixe, ne1, ne2, ne3, ne5]
     | ende => rfl
 
 -- Trees handled at the primary level (prefix `un` trees and
@@ -742,6 +767,9 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
     | why g f =>
       simp only [druckToks, List.length] at ⊢
       omega
+    | ext xk xn xs =>
+      simp only [druckToks, List.length] at ⊢
+      omega
 
 -- An element is no bigger than its list.
 theorem groesse_mem_le : ∀ (xs : List SExpr) (x : SExpr),
@@ -813,6 +841,7 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
   | alt x => simp [gutPlatz] at h
   | ergebnis => simp [gutPlatz] at h
   | why g f => simp [gutPlatz] at h
+  | ext xk xn xs => simp [gutPlatz] at h
 
 -- Head and tail of a `gut` list stay `gut`.
 theorem gutListe_Kopf : ∀ (x : SExpr) (xs : List SExpr),
@@ -1287,6 +1316,12 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         simp at h
       · intro h
         simp at h
+    | ext xk xn xs =>
+      simp only [druckToks] at hm
+      rw [List.mem_singleton] at hm
+      subst hm
+      intro h
+      simp at h
 
 -- A printed `gut` tree never starts with `)` (heads are literals,
 -- names or openers; suffix chains delver into the base, operators
@@ -1441,6 +1476,12 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       intro h
       simp at h
     | why g f =>
+      simp only [druckToks] at hT
+      injection hT with ha _
+      subst ha
+      intro h
+      simp at h
+    | ext xk xn xs =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
@@ -1964,6 +2005,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | alt x => simp [gutPlatz] at hg
     | ergebnis => simp [gutPlatz] at hg
     | why g f => simp [gutPlatz] at hg
+    | ext xk xn xs => simp [gutPlatz] at hg
 
 -- Suffix chains through `parseSuffixe`, by list induction. Index
 -- payloads parse via `R n` (smaller); fuel carries one spare per
@@ -2285,6 +2327,7 @@ theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
   | alt x => rfl
   | ergebnis => rfl
   | why g f => rfl
+  | ext xk xn xs => rfl
 -- `eingebaut` through `parsePrimary`: head word, then place or
 -- pair arguments. `sizeof`/`lenof` take places (`parseOrt`);
 -- `aligned` takes two whole expressions. Singleton argument lists

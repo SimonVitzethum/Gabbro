@@ -148,6 +148,23 @@ def nimmBisKopf : List Token → Except String (String × List Token)
     | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
     | .error e => .error e
 
+/-- `rights = right { "+" right }`, `right = r | w | rw | x | own [ "@" ident ]`, kept as one string
+    (`rw+own`, `own@h`). -/
+def parseRechte : Nat → List Token → Except String (String × List Token)
+  | 0, _ => .error "out of fuel"
+  | f + 1, toks => do
+    let (n, r) ← nimmName toks
+    let (s, r1) ← (match r with
+      | .zeichen "@" :: t => do
+        let (a, r') ← nimmName t
+        pure (n ++ "@" ++ a, r')
+      | _ => pure (n, r))
+    match r1 with
+    | .zeichen "+" :: r2 => do
+      let (rest, r3) ← parseRechte f r2
+      pure (s ++ "+" ++ rest, r3)
+    | _ => pure (s, r1)
+
 mutual
 def parseTyp (f : Nat) (toks : List Token) :
     Except String (STyp × List Token) :=
@@ -161,7 +178,7 @@ def parseTyp (f : Nat) (toks : List Token) :
           | .error e => .error e
           | .ok (raum, r2) => match fordereZeichen "," r2 with
             | .error e => .error e
-            | .ok r3 => match nimmName r3 with
+            | .ok r3 => match parseRechte f r3 with
               | .error e => .error e
               | .ok (rechte, r4) => match fordereZeichen ">" r4 with
                 | .error e => .error e

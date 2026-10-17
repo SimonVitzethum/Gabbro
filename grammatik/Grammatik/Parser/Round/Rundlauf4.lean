@@ -278,6 +278,7 @@ theorem legsAlt : ∀ (e : SExpr), altNeu e = true → Legs e := by
     exact altLegs x hg
   | ergebnis => simp [altNeu] at hg
   | why g f => simp [altNeu] at hg
+  | ext xk xn xs => simp [altNeu] at hg
 
 -- Every `ergebnisNeu` tree has legs.
 theorem legsErgebnis : ∀ (e : SExpr), ergebnisNeu e = true → Legs e := by
@@ -299,6 +300,7 @@ theorem legsErgebnis : ∀ (e : SExpr), ergebnisNeu e = true → Legs e := by
   | alt x => simp [ergebnisNeu] at hg
   | ergebnis => exact ergebnisLegs
   | why g f => simp [ergebnisNeu] at hg
+  | ext xk xn xs => simp [ergebnisNeu] at hg
 
 -- Every `fnwertNeu` tree has legs.
 theorem legsFnwert : ∀ (e : SExpr), fnwertNeu e = true → Legs e := by
@@ -320,6 +322,7 @@ theorem legsFnwert : ∀ (e : SExpr), fnwertNeu e = true → Legs e := by
   | alt x => simp [fnwertNeu] at hg
   | ergebnis => simp [fnwertNeu] at hg
   | why g f => simp [fnwertNeu] at hg
+  | ext xk xn xs => simp [fnwertNeu] at hg
 
 -- Every `grundNeu` tree has legs.
 theorem legsGrund : ∀ (e : SExpr), grundNeu e = true → Legs e := by
@@ -346,6 +349,7 @@ theorem legsGrund : ∀ (e : SExpr), grundNeu e = true → Legs e := by
     obtain ⟨hAB, hzuk⟩ := hABC
     obtain ⟨hkp, hit⟩ := hAB
     exact grundLegs g f hkp hit hzuk hself
+  | ext xk xn xs => simp [grundNeu] at hg
 
 -- Every level-6-new tree has legs (the `obtain` shape mirrors
 -- `legsEmb`: the four-way `||` splits left-nested).
@@ -405,6 +409,7 @@ theorem gut_of_altNeu : ∀ (e : SExpr), altNeu e = true → gut e = true := by
     exact gutPlatz_of_gutKernPlatz x hg
   | ergebnis => simp [altNeu] at hg
   | why g f => simp [altNeu] at hg
+  | ext xk xn xs => simp [altNeu] at hg
 
 -- Bridge for the `ergebnis` layer.
 theorem gut_of_ergebnisNeu : ∀ (e : SExpr),
@@ -427,6 +432,7 @@ theorem gut_of_ergebnisNeu : ∀ (e : SExpr),
   | alt x => simp [ergebnisNeu] at hg
   | ergebnis => rfl
   | why g f => simp [ergebnisNeu] at hg
+  | ext xk xn xs => simp [ergebnisNeu] at hg
 
 -- Bridge for the `fnwert` layer.
 theorem gut_of_fnwertNeu : ∀ (e : SExpr),
@@ -449,6 +455,7 @@ theorem gut_of_fnwertNeu : ∀ (e : SExpr),
   | alt x => simp [fnwertNeu] at hg
   | ergebnis => simp [fnwertNeu] at hg
   | why g f => simp [fnwertNeu] at hg
+  | ext xk xn xs => simp [fnwertNeu] at hg
 
 -- Bridge for the `grund` layer (exactly `gut`'s side
 -- conditions; stepwise `obtain` -- the flattened four-pattern
@@ -479,6 +486,7 @@ theorem gut_of_grundNeu : ∀ (e : SExpr),
     obtain ⟨hkp, hit⟩ := hAB
     simp only [gut, Bool.and_eq_true] at ⊢
     exact ⟨⟨⟨hkp, hit⟩, hzuk⟩, hself⟩
+  | ext xk xn xs => simp [grundNeu] at hg
 
 -- Bridge for the level-6 predicate (via the four layer
 -- bridges above).

@@ -5107,7 +5107,7 @@ special cases of `R014` (they stay separate rules); records over byte buffers (r
 
 Statement-level facts, no theorem moved: `lex_keywords` and `wortschatz_248` now hold over the 248 words of `kw.rs`
 (five were missing); `u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben`
-probes hold over the changed readers (`sperreT` 7 fields, `statikT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`).
-Measured, not proved: 153 of 170 corpus files parse as a whole, 9 elaborate (`Parser/Cover/Census.lean`,
+probes hold over the changed readers (`lockT` 7 fields, `globT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`).
+Measured, not proved: 170 of 170 corpus files parse as a whole, 9 elaborate (`Parser/Cover/Census.lean`,
 `instrumente/parser-deckung.py`). NOT proved: any round trip for statements or items; elaboration beyond tables,
 locks and `impl fn` over integers. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
