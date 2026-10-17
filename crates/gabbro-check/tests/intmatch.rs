@@ -17,32 +17,7 @@
 
 use gabbro_syntax::diag::Stufe;
 
-/// One pure function over a scrutinee of type `typ`.
-fn einheit_typ(typ: &str, rumpf: &str) -> String {
-    format!(
-        "module test::intmatch {{\n\
-         impl fn klassifiziere(x : {typ}) -> u32\n\
-         \x20   effects {{ pure }}\n\
-         \x20   costs   <= 64 ops\n\
-         {{\n\
-         {rumpf}\
-         }}\n\
-         }}\n"
-    )
-}
 
-fn einheit(rumpf: &str) -> String {
-    format!(
-        "module test::intmatch {{\n\
-         impl fn klassifiziere(x : u32) -> u32\n\
-         \x20   effects {{ pure }}\n\
-         \x20   costs   <= 64 ops\n\
-         {{\n\
-         {rumpf}\
-         }}\n\
-         }}\n"
-    )
-}
 
 /// **Review G07 (2026-09-21): an integer `match` does not end a `narrow` arm.**
 ///

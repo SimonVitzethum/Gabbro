@@ -450,7 +450,7 @@ impl<'a> Walker<'a> {
                         self.walk(&z.rumpf, true);
                     }
                 }
-                StmtArt::Schleife(sch) => {
+                StmtArt::Schleife(_sch) => {
                     for e in crate::eigene_ausdruecke(s) {
                         self.check_calls_in_expr(e);
                         self.kill_for_expr(e);
