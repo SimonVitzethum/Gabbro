@@ -98,7 +98,7 @@ rules('grammatik/Grammatik', [
     (r'^(Unterbrechung|Verschachtelt|Verklemmung|LesenStabil|StabilBewacht|Trennung|Schiebung|Wettlauf|Geteilt|WacheGlobal|DisziplinBedarf|FadenMaschine|FadenMerkmal|MehrfadenLauf|MehrfadenZeuge|TravAwaits\w+)$', 'Nebenlaeufigkeit/Allgemein'),
     (r'^(Ruf\w+|FremdRuf|HoareRuf|HoareRegeln)$', 'Logik/Ruf'),
     (r'^(Folge\w*|Fortschritt\w*|Lebendigkeit\w*|KostenG\w*)$', 'Logik/Fortschritt'),
-    (r'^(AxiomVertrag|VertragOrtB|VertragsFuss|AntwortOrte|QLeer|RahmenTreu|Getrennt\w*|HandlerKongruenz|EinpassenVoll|Komposition|Uebersetzung)$', 'Logik/Vertraege'),
+    (r'^(AxiomVertrag|VertragOrtB|VertragsFuss|AntwortOrte|QLeer|RahmenTreu|Getrennt\w*|Objekt\w*|HandlerKongruenz|EinpassenVoll|Komposition|Uebersetzung)$', 'Logik/Vertraege'),
     (r'^ZielOrt(Rahmen\w*|Inv\w*|Ax\w*|Einfaden\w*|Mehrfaden)$', 'Zielsatz/ZielOrt/Rahmen'),
     (r'^ZielOrt(Geraet\w*|Sperre\w*|Beweis)$', 'Zielsatz/ZielOrt/Geraet'),
     (r'^ZielOrt\w*$', 'Zielsatz/ZielOrt/Grundlage'),

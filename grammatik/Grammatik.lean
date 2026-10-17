@@ -290,6 +290,10 @@ import Grammatik.Logik.Ruf.RufOhneHardwareZeuge
 import Grammatik.Logik.Vertraege.RahmenTreu
 import Grammatik.Logik.Vertraege.Getrennt
 import Grammatik.Logik.Vertraege.GetrenntZeuge
+import Grammatik.Logik.Vertraege.Objekte
+import Grammatik.Logik.Vertraege.ObjektRahmen
+import Grammatik.Logik.Vertraege.ObjektWurzel
+import Grammatik.Logik.Vertraege.ObjektZeuge
 import Grammatik.Logik.Vertraege.HandlerKongruenz
 import Grammatik.Logik.Ruf.RufTiefe
 import Grammatik.Logik.Ruf.RufLogik
