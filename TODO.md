@@ -98,6 +98,12 @@ Entferntes steht im Anhang, je mit einer Zeile Grund.*
 
 ## 4. LLVM-Backend
 
+- **LLVM-Absenkungen ohne Lean-Modell (2026-10-17, Regel: Sprache folgt dem Lean-Modell).** Gebaut und nur als
+  Text/qemu belegt: aarch64-`entry` (die Bedeutung von `vector`/`via` auf aarch64 ist eine Lesart des
+  Absenkers, `SPRACHE.md` und das Modell sagen dazu nichts), `masks irqs`, x86_64-Port-Raum, Assembler-Körper.
+  Verweigert, weil jede Absenkung Semantik erfände: `boot` und `entrust` (Quellform ohne Anweisung, Lean zuerst).
+  Zu tun: die aarch64-Bedeutung von `vector`/`via` ins Modell, dann `boot`/`entrust` im Modell festlegen.
+
 Volltabelle in `dokumente/LLVM-BACKEND.md` §5. Kurzform:
 
 - **O22 — group execution and stack lifecycle built 2026-10-17.** Every
