@@ -110,72 +110,6 @@ def varS (Γ : Ctx) : Sz (Σ τ, Var Γ τ) := fun c => (genVar Γ).filter fun p
 theorem mem_varS {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : (⟨τ, x⟩ : Σ τ, Var Γ τ) ∈ varS Γ (groesseVar x) :=
   List.mem_filter.2 ⟨genVar_vollst Γ τ x, by simp⟩
 
-/-- A sum case: absent (cost one) or with a payload range. -/
-def fallS : Sz (Option (Int × Int)) :=
-  Sz.vereint (Sz.blatt [none]) (Sz.knoten (Sz.bind paarI fun p => Sz.pure (some p)))
-
-theorem mem_fallS [Zahlen] {c : Option (Int × Int)} (h : groesseFall c < unendlich) :
-    c ∈ fallS (groesseFall c) := by
-  cases c with
-  | none =>
-    exact Sz.mem_vereint_l (Sz.mem_blatt (by simp))
-  | some p =>
-    obtain ⟨lo, hi⟩ := p
-    simp only [groesseFall] at h ⊢
-    have h1 : Zahlen.kost lo < unendlich := by omega
-    have h2 : Zahlen.kost hi < unendlich := by omega
-    have hp : (lo, hi) ∈ paarI (kostI (lo, hi)) := mem_paarI rfl (by unfold kostI; simp only; omega)
-    have := Sz.mem_vereint_r (A := Sz.blatt [none])
-      (Sz.mem_knoten (Sz.mem_bind hp (Sz.mem_pure (some (lo, hi))))  :
-        some (lo, hi) ∈ Sz.knoten (Sz.bind paarI fun p => Sz.pure (some p)) _)
-    exact Sz.mem_cast this (by unfold kostI; simp only; omega)
-
-/-- The lists of sum cases by fuel (each case costs at least one, so the length is bounded by the size). -/
-def faelleS : Nat → Sz (List (Option (Int × Int)))
-  | 0 => Sz.pure []
-  | f + 1 => Sz.vereint (Sz.pure []) (Sz.bind fallS fun c => Sz.map (c :: ·) (faelleS f))
-
-/-- The lists of sum cases of exact cost `k`. -/
-def faelle : Sz (List (Option (Int × Int))) := fun k => faelleS k k
-
-theorem groesseFall_pos (c : Option (Int × Int)) : 1 ≤ groesseFall c := by
-  cases c with
-  | none => simp [groesseFall]
-  | some p => simp only [groesseFall]; omega
-
-theorem length_le_groesseFaelle (cs : List (Option (Int × Int))) : cs.length ≤ groesseFaelle cs := by
-  induction cs with
-  | nil => simp [groesseFaelle]
-  | cons c cs ih =>
-    have := groesseFall_pos c
-    simp only [groesseFaelle, List.length_cons]
-    omega
-
-theorem mem_faelleS : ∀ (f : Nat) (cs : List (Option (Int × Int))), cs.length ≤ f →
-    groesseFaelle cs < unendlich → cs ∈ faelleS f (groesseFaelle cs) := by
-  intro f
-  induction f with
-  | zero =>
-    intro cs h _
-    cases cs with
-    | nil => exact Sz.mem_pure []
-    | cons c cs => simp at h
-  | succ f ih =>
-    intro cs h hu
-    cases cs with
-    | nil => exact Sz.mem_vereint_l (Sz.mem_pure [])
-    | cons c cs =>
-      simp only [groesseFaelle] at hu ⊢
-      have hc : c ∈ fallS (groesseFall c) := mem_fallS (by omega)
-      have hr := ih cs (by simpa using h) (by omega)
-      have := Sz.mem_vereint_r (A := Sz.pure [])
-        (Sz.mem_bind (F := fun c' => Sz.map (c' :: ·) (faelleS f)) hc (Sz.mem_map (f := (c :: ·)) hr))
-      exact this
-
-theorem mem_faelle {cs : List (Option (Int × Int))} (hu : groesseFaelle cs < unendlich) :
-    cs ∈ faelle (groesseFaelle cs) :=
-  mem_faelleS _ cs (by have := length_le_groesseFaelle cs; omega) hu
-
 /-- The payload expression of a sum case. -/
 def nutzS (E : Sz (SE D Γ Λ)) : (o : Option (Int × Int)) → Sz (NutzlastExpr D Γ Λ o)
   | none => Sz.blatt [.empty]
@@ -187,7 +121,7 @@ section Klauseln
 
 variable (E : Sz (SE D Γ Λ))
 
-def gLit : Sz (SE D Γ Λ) := Sz.knoten (Sz.bind zS fun n => Sz.pure ⟨.int n n, .lit n⟩)
+def gLit : Sz (SE D Γ Λ) := Sz.knoten (Sz.bind zW fun n => Sz.pure ⟨.int n n, .lit n⟩)
 
 def gBool : Sz (SE D Γ Λ) := Sz.blatt [⟨.bool, .tru⟩, ⟨.bool, .fls⟩]
 
@@ -313,7 +247,7 @@ def gIstSome : Sz (SE D Γ Λ) :=
   Sz.knoten (Sz.bind (optS E) fun ⟨_, e⟩ => Sz.pure ⟨.bool, .istSome e⟩)
 
 def gCase : Sz (SE D Γ Λ) :=
-  Sz.knoten (Sz.bind faelle fun cs => Sz.bind (Sz.wahl (List.finRange cs.length)) fun i =>
+  Sz.knoten (Sz.bind sfS fun cs => Sz.bind (Sz.wahl (List.finRange cs.length)) fun i =>
     Sz.bind (nutzS E (cs.get i)) fun nz => Sz.pure ⟨.sum cs, .case cs i nz⟩)
 
 def gWhy : Sz (SE D Γ Λ) :=

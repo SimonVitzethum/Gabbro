@@ -32,9 +32,12 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     have hs := hS _ s (by omega)
     have hr := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
     blk (bCons O Ss), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hs hr <| Sz.mem_pure _) (by omega)
-  | bind e rest =>
+  | @bind _ _ τ _ _ e rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO ⊢
-    have he := hE _ e (by omega)
+    have hok := bindOk_of (τ := τ) (by omega)
+    have h0 := kostT_null hok
+    have he : (⟨τ, e⟩ : SE D Γ Λ) ∈ (E (groesseExpr e)).filter (fun p => Zahlen.bindOk p.1) :=
+      List.mem_filter.2 ⟨hE _ e (by omega), hok⟩
     have hr := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
     blk (bBind O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS he hr <| Sz.mem_pure _) (by omega)
   | bindCall f args he hp hr rest =>
@@ -104,9 +107,11 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     have he := hE _ e (by omega)
     have hso := hN sonst (by omega)
     have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.int lo' hi') (by omega)
+    have h0 := kostT_null hok
     blk (bNarrow O E Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_intS he) <|
       Sz.mem_bind (mem_zS (n := lo') rfl (by omega)) <| Sz.mem_bind (mem_zS (n := hi') rfl (by omega)) <|
-      Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+      Sz.mem_wenn hok <| Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | check c sonst rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO ⊢
     have hc := hE _ c (by omega)
@@ -121,25 +126,31 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
     have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
     have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
     blk (bFloat O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (mem_gleitOps op)) <|
       Sz.mem_bind (mem_flS ha) <| Sz.mem_bind (mem_flS hb) <| Sz.mem_bind hlo <| Sz.mem_bind hhi <|
-      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+      Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | floatLit q lo hi rest =>
     simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
     have hq : q ∈ paarS (Zahlen.kostP q) := mem_paarS rfl (by omega)
     have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
     have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
     have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
     blk (bFloatLit O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind hq <| Sz.mem_bind hlo <|
-      Sz.mem_bind hhi <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+      Sz.mem_bind hhi <| Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | floatOf e lo hi rest =>
     simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
     have he := hE _ e (by omega)
     have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
     have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
     have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
     blk (bFloatOf O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_intS he) <| Sz.mem_bind hlo <|
-      Sz.mem_bind hhi <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+      Sz.mem_bind hhi <| Sz.mem_wenn hok <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | floatNarrow e lo hi sonst rest =>
     simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
     have he := hE _ e (by omega)
@@ -147,8 +158,10 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
     have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
     have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    have hok := bindOk_of (τ := Ty.fl lo hi) (by omega)
+    have h0 := kostT_null hok
     blk (bFloatNarrow O E Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_flS he) <| Sz.mem_bind hlo <|
-      Sz.mem_bind hhi <| Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <|
+      Sz.mem_bind hhi <| Sz.mem_wenn hok <| Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <|
       Sz.mem_pure _) (by omega)
 
 set_option maxHeartbeats 8000000 in
@@ -175,9 +188,12 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
     have hs := hS _ s (by omega)
     have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
     blk (eCons O Ss), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hs hr <| Sz.mem_pure _) (by omega)
-  | bind x rest =>
+  | @bind _ _ τ _ x rest =>
     simp only [groesseEnd] at hu hE hS hO ⊢
-    have hx := hE _ x (by omega)
+    have hok := bindOk_of (τ := τ) (by omega)
+    have h0 := kostT_null hok
+    have hx : (⟨τ, x⟩ : SE D Γ Λ) ∈ (E (groesseExpr x)).filter (fun p => Zahlen.bindOk p.1) :=
+      List.mem_filter.2 ⟨hE _ x (by omega), hok⟩
     have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
     blk (eBind O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hx hr <| Sz.mem_pure _) (by omega)
   | bindAxiom a args he hw hg hd hgd rest =>

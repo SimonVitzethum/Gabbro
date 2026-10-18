@@ -17,22 +17,12 @@ open Gabbro.Grammatik
 
 variable {D : Deklaration} [Zahlen]
 
-/-- The size of a sum case: the case once, a payload bound by its cost. -/
-def groesseFall : Option (Int × Int) → Nat
-  | none => 1
-  | some (lo, hi) => 1 + Zahlen.kost lo + Zahlen.kost hi
-
-/-- The size of a list of sum cases. -/
-def groesseFaelle : List (Option (Int × Int)) → Nat
-  | [] => 0
-  | c :: cs => groesseFall c + groesseFaelle cs
-
 /-- The size of a pair of integers. -/
 def groessePaar (p : Int × Int) : Nat := Zahlen.kostP p
 
 mutual
 def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Nat
-  | _, _, _, .lit n => 1 + Zahlen.kost n
+  | _, _, _, .lit n => 1 + Zahlen.kostW n
   | _, _, _, .tru => 1
   | _, _, _, .fls => 1
   | _, _, _, .var x => 1 + groesseVar x
@@ -69,7 +59,7 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .none n => 1 + Zahlen.kost n
   | _, _, _, @Expr.some _ _ _ n e => 1 + Zahlen.kost n + groesseExpr e
   | _, _, _, .istSome e => 1 + groesseExpr e
-  | _, _, _, .case cs _ nutz => 1 + groesseFaelle cs + groesseNutz nutz
+  | _, _, _, .case cs _ nutz => 1 + Zahlen.kostS cs + groesseNutz nutz
   | _, _, _, .why n _ => 1 + Zahlen.kostN n
   | _, _, _, .forallSlots _ body _ => 1 + groesseExpr body
   | _, _, _, .existsSlots _ body _ => 1 + groesseExpr body
@@ -101,7 +91,7 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
   | _, _, _, _, .assignVar x e => 1 + groesseVar x + groesseExpr e
   | _, _, _, _, .shift _ _ _ i von nach _ _ _ _ => 1 + groesseExpr i + Zahlen.kost von + Zahlen.kost nach
   | _, _, _, _, .ite c t e => 1 + groesseExpr c + groesseBlock t + groesseBlock e
-  | _, _, _, _, .onOption o p a => 1 + groesseExpr o + groesseBlock p + groesseBlock a
+  | _, _, _, _, .onOption (n := n) o p a => 1 + Zahlen.kostT (Ty.index n) + groesseExpr o + groesseBlock p + groesseBlock a
   | _, _, _, _, .onTag v arms => 1 + groesseExpr v + groesseArms arms
   | _, _, _, _, .onWhy r arms => 1 + groesseExpr r + groesseGrundArms arms
   | _, _, _, _, .call _ args _ _ => 1 + groesseArgs args
@@ -114,7 +104,7 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
   | _, _, _, _, .forever _ inv body => 1 + groesseExpr inv + groesseBlock body
   | _, _, _, _, .axiomCall _ args _ _ _ _ _ => 1 + groesseArgs args
   | _, _, _, _, .regWrite _ _ e => 1 + groesseExpr e
-  | _, _, _, _, .transition _ _ _ _ _ maske bits => 1 + Zahlen.kost maske + Zahlen.kost bits
+  | _, _, _, _, .transition _ _ _ _ _ maske bits => 1 + Zahlen.kostW maske + Zahlen.kostW bits
   | _, _, _, _, .publish _ e _ _ _ _ => 1 + groesseExpr e
   | _, _, _, _, .advances _ _ _ _ => 1
   | _, _, _, _, .retires _ _ _ _ => 1
@@ -126,7 +116,7 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
 def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V l Γ Λ Λ' → Nat
   | _, _, _, _, .nil => 1
   | _, _, _, _, .cons s rest => 1 + groesseStmt s + groesseBlock rest
-  | _, _, _, _, .bind e rest => 1 + groesseExpr e + groesseBlock rest
+  | _, _, _, _, .bind (τ := τ) e rest => 1 + Zahlen.kostT τ + groesseExpr e + groesseBlock rest
   | _, _, _, _, .bindCall _ args _ _ _ rest => 1 + groesseArgs args + groesseBlock rest
   | _, _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseBlock rest
   | _, _, _, _, .bindCallElse _ args _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseBlock rest
@@ -138,14 +128,18 @@ def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V 
   | _, _, _, _, .awaits _ _ _ _ rest => 1 + groesseBlock rest
   | _, _, _, _, .exchange _ neu _ _ rest => 1 + groesseExpr neu + groesseBlock rest
   | _, _, _, _, .narrow e lo' hi' sonst rest =>
-    1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' + groesseEnd sonst + groesseBlock rest
+    1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' + Zahlen.kostT (.int lo' hi') + groesseEnd sonst +
+      groesseBlock rest
   | _, _, _, _, .check c sonst rest => 1 + groesseExpr c + groesseEnd sonst + groesseBlock rest
   | _, _, _, _, .float _ a b lo hi rest =>
-    1 + groesseExpr a + groesseExpr b + groessePaar lo + groessePaar hi + groesseBlock rest
-  | _, _, _, _, .floatLit q lo hi rest => 1 + groessePaar q + groessePaar lo + groessePaar hi + groesseBlock rest
-  | _, _, _, _, .floatOf e lo hi rest => 1 + groesseExpr e + groessePaar lo + groessePaar hi + groesseBlock rest
+    1 + groesseExpr a + groesseExpr b + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseBlock rest
+  | _, _, _, _, .floatLit q lo hi rest =>
+    1 + groessePaar q + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseBlock rest
+  | _, _, _, _, .floatOf e lo hi rest =>
+    1 + groesseExpr e + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseBlock rest
   | _, _, _, _, .floatNarrow e lo hi sonst rest =>
-    1 + groesseExpr e + groessePaar lo + groessePaar hi + groesseEnd sonst + groesseBlock rest
+    1 + groesseExpr e + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseEnd sonst +
+      groesseBlock rest
 
 def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ → Nat
   | _, _, _, .ret e _ => 1 + groesseErg e
@@ -153,7 +147,7 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .leave _ => 1
   | _, _, _, .next _ => 1
   | _, _, _, .cons s rest => 1 + groesseStmt s + groesseEnd rest
-  | _, _, _, .bind e rest => 1 + groesseExpr e + groesseEnd rest
+  | _, _, _, .bind (τ := τ) e rest => 1 + Zahlen.kostT τ + groesseExpr e + groesseEnd rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => 1 + groesseArgs args + groesseEnd rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
 

@@ -61,7 +61,8 @@ def sIte : Sz (SS D V l Γ Λ) :=
     Sz.bind (fun j => ofTy (Bs j) p.1) fun e => Sz.pure ⟨p.1, .ite c p.2 e⟩)
 
 def sOnOption : Sz (SS D V l Γ Λ) :=
-  Sz.knoten (Sz.bindS (optS E) (fun n m => O.bl l (.index n :: Γ) Λ m) fun _ o p =>
+  Sz.knoten (Sz.bindS (fun i => (optS E i).filter fun p => Zahlen.bindOk (Ty.index p.1))
+    (fun n m => O.bl l (.index n :: Γ) Λ m) fun _ o p =>
     Sz.bind (fun j => ofTy (Bs j) p.1) fun a => Sz.pure ⟨p.1, .onOption o p.2 a⟩)
 
 def sOnTag : Sz (SS D V l Γ Λ) :=
@@ -121,7 +122,7 @@ def sRegWrite : Sz (SS D V l Γ Λ) :=
 def sTransition : Sz (SS D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r => Sz.bind (Sz.wahl Aufz.reg) fun m' =>
     Sz.wenn ((D.rklasse r).schreibbar = true) fun hk => Sz.wenn (D.spiegel r = some m') fun hm =>
-      Sz.wenn ((D.rklasse m').lesbar = true) fun hl => Sz.bind zS fun maske => Sz.bind zS fun bits =>
+      Sz.wenn ((D.rklasse m').lesbar = true) fun hl => Sz.bind zW fun maske => Sz.bind zW fun bits =>
         Sz.pure ⟨Λ, .transition r hk m' hm hl maske bits⟩)
 
 def sPublish : Sz (SS D V l Γ Λ) :=

@@ -87,46 +87,94 @@ def _root_.Gabbro.Grammatik.Programm.haut (P : Programm D) : Haut D := ⟨P.rump
 /-- The size of a skeleton: the sizes of the bodies (a handler flag is a free choice). -/
 def groesseHaut (h : Haut D) : Nat := (Aufz.fn.map fun f => groesseEnd (h.rumpf f)).sum
 
-/-- The bodies of a function by exact size, from its table (bound `n`), kept when `ok` accepts them. -/
-def rumpfS (ok : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f)
-    (Signatur.anfang D (D.signatur f)) → Bool) (f : D.Fn) (n : Nat) :
-    Sz (Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))) := fun k =>
-  (tabN (genT (vertragVon D f) n n false (D.params f) (Signatur.anfang D (D.signatur f))) k).filter (ok f)
+/-- The body of a function. -/
+abbrev Rumpf (D : Deklaration) (f : D.Fn) : Type :=
+  Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))
 
-/-- **The skeletons of exact size `k`** with every body of size at most `n` accepted by `ok`. -/
-def hautS (ok : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f)
-    (Signatur.anfang D (D.signatur f)) → Bool) (n : Nat) : Sz (Haut D) :=
-  Sz.bind (piS (fun f => rumpfS ok f n) Aufz.fn) fun rs =>
+/-- The bodies of a function by exact size (the buckets `0 .. n` of its table), kept when `ok` accepts them. -/
+def rumpfT (ok : ∀ f : D.Fn, Rumpf D f → Bool) (f : D.Fn) (n : Nat) : List (List (Rumpf D f)) :=
+  let t := tabN (genT (vertragVon D f) n n false (D.params f) (Signatur.anfang D (D.signatur f)))
+  (List.range (n + 1)).map fun k => (t k).filter (ok f)
+
+/-- The tables of the bodies of every function: built once, read at every size. -/
+def rumpfTab (ok : ∀ f : D.Fn, Rumpf D f → Bool) (n : Nat) : List (Σ f : D.Fn, List (List (Rumpf D f))) :=
+  Aufz.fn.map fun f => ⟨f, rumpfT ok f n⟩
+
+/-- The bodies of a function by exact size, read from the tables. -/
+def rumpfS (tbls : List (Σ f : D.Fn, List (List (Rumpf D f)))) (f : D.Fn) : Sz (Rumpf D f) :=
+  fun k => ((ofTy tbls f).headD []).getD k []
+
+/-- **The skeletons of exact size `k`** from the tables of the bodies. -/
+def hautT (tbls : List (Σ f : D.Fn, List (List (Rumpf D f)))) : Sz (Haut D) :=
+  Sz.bind (piS (rumpfS tbls) Aufz.fn) fun rs =>
     Sz.bind (piS (fun _ => Sz.wahl [false, true]) Aufz.fn) fun us =>
       Sz.pure ⟨fun f => rs f (Aufz.fn_mem f), fun f => us f (Aufz.fn_mem f)⟩
 
-/-- **Completeness of the skeletons**: a skeleton whose bodies have size at most `n` and are accepted by `ok` is in
-    the stream of its size. -/
-theorem hautS_vollst (ok : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f)
-    (Signatur.anfang D (D.signatur f)) → Bool) (n : Nat) (h : Haut D)
-    (hn : ∀ f, groesseEnd (h.rumpf f) ≤ n) (hu : ∀ f, groesseEnd (h.rumpf f) < unendlich)
-    (hok : ∀ f, ok f (h.rumpf f) = true) : h ∈ hautS ok n (groesseHaut h) := by
-  have hr : (fun f _ => h.rumpf f) ∈ piS (fun f => rumpfS ok f n) Aufz.fn (groesseHaut h) := by
+/-- **The skeletons of exact size `k`** with every body of size at most `n` accepted by `ok`. -/
+def hautS (ok : ∀ f : D.Fn, Rumpf D f → Bool) (n : Nat) : Sz (Haut D) := hautT (rumpfTab ok n)
+
+/-- **Completeness of the skeletons from tables**: a skeleton whose every body is in its stream is in the stream of
+    its size. -/
+theorem hautT_vollst (tbls : List (Σ f : D.Fn, List (List (Rumpf D f)))) (h : Haut D)
+    (hm : ∀ f, h.rumpf f ∈ rumpfS tbls f (groesseEnd (h.rumpf f))) : h ∈ hautT tbls (groesseHaut h) := by
+  have hr : (fun f _ => h.rumpf f) ∈ piS (rumpfS tbls) Aufz.fn (groesseHaut h) := by
     unfold groesseHaut
-    refine mem_piS (L := fun f => rumpfS ok f n) h.rumpf (fun f => groesseEnd (h.rumpf f)) Aufz.fn ?_
-    intro f _
-    unfold rumpfS
-    refine List.mem_filter.2 ⟨?_, hok f⟩
-    exact (genT_vollst (vertragVon D f) n n false (D.params f) (Signatur.anfang D (D.signatur f))).2.2 _
-      (hn f) (hn f) (hu f)
+    exact mem_piS (L := rumpfS tbls) h.rumpf (fun f => groesseEnd (h.rumpf f)) Aufz.fn (fun f _ => hm f)
   have hus : (fun f _ => h.unterbricht f) ∈ piS (fun _ => Sz.wahl [false, true]) Aufz.fn 0 := by
     have := mem_piS (L := fun _ : D.Fn => Sz.wahl [false, true]) h.unterbricht (fun _ => 0) Aufz.fn
       (fun f _ => Sz.mem_wahl (by cases hb : h.unterbricht f <;> simp))
     have hz : ((Aufz.fn (D := D)).map fun _ => 0).sum = 0 := summe_null _
     rw [hz] at this
     exact this
-  have hm := Sz.mem_bind
+  have hm' := Sz.mem_bind
     (F := fun rs => Sz.bind (piS (fun _ => Sz.wahl [false, true]) Aufz.fn) fun us =>
       Sz.pure (⟨fun f => rs f (Aufz.fn_mem f), fun f => us f (Aufz.fn_mem f)⟩ : Haut D))
     hr (Sz.mem_bind hus (Sz.mem_pure _))
   have : groesseHaut h + (0 + 0) = groesseHaut h := by omega
-  rw [this] at hm
-  exact hm
+  rw [this] at hm'
+  exact hm'
+
+/-- The entry of a function in the tables of every function is its table. -/
+theorem ofTy_rumpfTab (T : ∀ f : D.Fn, List (List (Rumpf D f))) (f : D.Fn) :
+    (ofTy (Aufz.fn.map fun f' => (⟨f', T f'⟩ : Σ f : D.Fn, List (List (Rumpf D f)))) f).headD [] = T f := by
+  have hall : ∀ x ∈ ofTy (Aufz.fn.map fun f' => (⟨f', T f'⟩ : Σ f : D.Fn, List (List (Rumpf D f)))) f, x = T f := by
+    intro x hx
+    unfold ofTy at hx
+    obtain ⟨p, hp, hpx⟩ := List.mem_filterMap.1 hx
+    obtain ⟨f', _, rfl⟩ := List.mem_map.1 hp
+    by_cases h : f' = f
+    · subst h
+      simp at hpx
+      exact hpx.symm
+    · simp [h] at hpx
+  have hne : (⟨f, T f⟩ : Σ f : D.Fn, List (List (Rumpf D f))) ∈
+      (Aufz.fn.map fun f' => (⟨f', T f'⟩ : Σ f : D.Fn, List (List (Rumpf D f)))) := List.mem_map.2 ⟨f, Aufz.fn_mem f, rfl⟩
+  have hmem := mem_ofTy hne
+  cases hl : ofTy (Aufz.fn.map fun f' => (⟨f', T f'⟩ : Σ f : D.Fn, List (List (Rumpf D f)))) f with
+  | nil => rw [hl] at hmem; exact absurd hmem List.not_mem_nil
+  | cons x xs =>
+    have := hall x (by rw [hl]; exact List.mem_cons_self)
+    simpa using this
+
+/-- A body the filter accepts, of size at most the bound, is in its stream. -/
+theorem rumpfTab_mem (ok : ∀ f : D.Fn, Rumpf D f → Bool) (n : Nat) (f : D.Fn) (e : Rumpf D f)
+    (hn : groesseEnd e ≤ n) (hu : groesseEnd e < unendlich) (hok : ok f e = true) :
+    e ∈ rumpfS (rumpfTab ok n) f (groesseEnd e) := by
+  unfold rumpfS rumpfTab
+  rw [ofTy_rumpfTab (fun f => rumpfT ok f n) f]
+  unfold rumpfT
+  have hk : groesseEnd e < n + 1 := by omega
+  simp only [List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_range hk, Option.map_some,
+    Option.getD_some]
+  exact List.mem_filter.2 ⟨(genT_vollst (vertragVon D f) n n false (D.params f)
+    (Signatur.anfang D (D.signatur f))).2.2 e hn hn hu, hok⟩
+
+/-- **Completeness of the skeletons**: a skeleton whose bodies have size at most `n` and are accepted by `ok` is in
+    the stream of its size. -/
+theorem hautS_vollst (ok : ∀ f : D.Fn, Rumpf D f → Bool) (n : Nat) (h : Haut D)
+    (hn : ∀ f, groesseEnd (h.rumpf f) ≤ n) (hu : ∀ f, groesseEnd (h.rumpf f) < unendlich)
+    (hok : ∀ f, ok f (h.rumpf f) = true) : h ∈ hautS ok n (groesseHaut h) :=
+  hautT_vollst _ h fun f => rumpfTab_mem ok n f (h.rumpf f) (hn f) (hu f) (hok f)
 
 /-! ## Programs with every contract -/
 

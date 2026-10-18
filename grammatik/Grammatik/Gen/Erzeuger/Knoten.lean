@@ -100,6 +100,7 @@ def finde (cs : List (CEintrag V)) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (m 
 /-- The table of a context: from the cache if it covers the request, else built. -/
 def findeOder (cs : List (CEintrag V)) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (m : Nat)
     (dflt : Unit → List (Eimer V l Γ Λ)) : List (Eimer V l Γ Λ) :=
+  if m = 0 then [([], [], [])] else
   match finde cs l Γ Λ m with
   | some t => t
   | none => dflt ()
@@ -131,14 +132,18 @@ def knotenKeys (n : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (Et : List (L
   [(true, Γ, Λ, n - 2)] ++
   (Aufz.lock.map fun L => (l, Γ, Res.held L :: Λ, n - 1))
 
+/-- The keys worth caching: a child table with a bound of at least one. -/
+def knotenKeys' (n : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (Et : List (List (SE D Γ Λ))) : List (Schl D) :=
+  (knotenKeys n l Γ Λ Et).filter fun k => 0 < k.2.2.2
+
 /-- **The table of a context by size**: the buckets `0 .. n`, by fuel. -/
 def genT (V : Vertrag D) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : List (Res D)) → List (Eimer V l Γ Λ)
   | _, 0, _, _, _ => [([], [], [])]
   | 0, n + 1, _, _, _ => List.replicate (n + 2) ([], [], [])
   | f + 1, n + 1, l, Γ, Λ =>
-    let Et := genE (n + 1) (n + 1) Γ Λ
+    let Et := genE n n Γ Λ
     let gen := fun m l' Γ' Λ' => genT V f m l' Γ' Λ'
-    tabT (orakelC V gen ((knotenKeys (n + 1) l Γ Λ Et).map (CEintrag.neu V gen))) (tab Et) (n + 1)
+    tabT (orakelC V gen ((knotenKeys' (n + 1) l Γ Λ Et).map (CEintrag.neu V gen))) (tab Et) (n + 1)
 
 theorem groesseStmt_pos {Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') : 1 ≤ groesseStmt s := by
   cases s <;> simp only [groesseStmt] <;> omega
@@ -227,6 +232,13 @@ theorem findeOder_vollst (V : Vertrag D)
     (Λ : List (Res D)) (m : Nat) :
     TVoll V l Γ Λ f m (findeOder (keys.map (CEintrag.neu V gen)) l Γ Λ m fun _ => gen m l Γ Λ) := by
   unfold findeOder
+  by_cases hm0 : m = 0
+  · rw [if_pos hm0]
+    refine ⟨fun Λ' s hle _ _ => ?_, fun Λ' b hle _ _ => ?_, fun e hle _ _ => ?_⟩
+    · have := groesseStmt_pos s; omega
+    · have := groesseBlock_pos b; omega
+    · have := groesseEnd_pos e; omega
+  rw [if_neg hm0]
   cases hf : finde (keys.map (CEintrag.neu V gen)) l Γ Λ m with
   | none => exact hgen m l Γ Λ
   | some t =>
@@ -284,17 +296,17 @@ theorem genT_vollst (V : Vertrag D) : ∀ (f n : Nat) (l : Bool) (Γ : Ctx) (Λ 
       · have := groesseStmt_pos s; omega
       · have := groesseBlock_pos b; omega
       · have := groesseEnd_pos e; omega
-    · let Et := genE (nmax + 1) (nmax + 1) Γ Λ
+    · let Et := genE nmax nmax Γ Λ
       let gen := fun m l' Γ' Λ' => genT V f m l' Γ' Λ'
-      let O := orakelC V gen ((knotenKeys (nmax + 1) l Γ Λ Et).map (CEintrag.neu V gen))
+      let O := orakelC V gen ((knotenKeys' (nmax + 1) l Γ Λ Et).map (CEintrag.neu V gen))
       let E : Sz (SE D Γ Λ) := tab Et
       have hgen : genT V (f + 1) (nmax + 1) l Γ Λ = tabT O E (nmax + 1) := rfl
       rw [hgen]
       have hOU : ∀ K, K ≤ f + 1 → K ≤ unendlich → OUnter O K := fun K hK hKu =>
         ounter_orakelC V gen f ih _ K hK hKu
-      have hEv : ∀ (τ : Ty) (e : Expr D Γ Λ τ), groesseExpr e ≤ nmax + 1 → groesseExpr e < unendlich →
+      have hEv : ∀ (τ : Ty) (e : Expr D Γ Λ τ), groesseExpr e ≤ nmax → groesseExpr e < unendlich →
           (⟨τ, e⟩ : SE D Γ Λ) ∈ E (groesseExpr e) :=
-        fun τ e hle hu => genE_vollst (nmax + 1) (nmax + 1) Γ Λ τ e hle hle hu
+        fun τ e hle hu => genE_vollst nmax nmax Γ Λ τ e hle hle hu
       have key : ∀ n, n ≤ nmax + 1 → TVoll V l Γ Λ (f + 1) n (tabT O E n) := by
         intro n
         induction n with

@@ -31,7 +31,8 @@ def bCons : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bindS Ss (fun Λ' m => O.bl l Γ Λ' m) fun _ s r => Sz.pure ⟨r.1, .cons s r.2⟩)
 
 def bBind : Sz (SB D V l Γ Λ) :=
-  Sz.knoten (Sz.bindS E (fun τ m => O.bl l (τ :: Γ) Λ m) fun _ e r => Sz.pure ⟨r.1, .bind e r.2⟩)
+  Sz.knoten (Sz.bindS (fun i => (E i).filter fun p => Zahlen.bindOk p.1) (fun τ m => O.bl l (τ :: Γ) Λ m)
+    fun _ e r => Sz.pure ⟨r.1, .bind e r.2⟩)
 
 def bBindCall : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f => mitSome (D.erg f) fun {τ} he =>
@@ -97,7 +98,7 @@ def bExchange : Sz (SB D V l Γ Λ) :=
 
 def bNarrow : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (intS E) fun ⟨_, _, e⟩ => Sz.bind zS fun lo' => Sz.bind zS fun hi' =>
-    Sz.bind Ns fun sonst =>
+    Sz.wenn (Zahlen.bindOk (.int lo' hi') = true) fun _ => Sz.bind Ns fun sonst =>
       Sz.bindR (Sz.pure ()) (fun m => O.bl l (.int lo' hi' :: Γ) Λ m) fun _ x =>
         Sz.pure ⟨x.1, .narrow e lo' hi' sonst x.2⟩)
 
@@ -108,22 +109,25 @@ def bCheck : Sz (SB D V l Γ Λ) :=
 def bFloat : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl gleitOps) fun op => Sz.bind (flS E) fun ⟨_, _, a⟩ =>
     Sz.bind (flS E) fun ⟨_, _, b⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+      Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
       Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
         Sz.pure ⟨x.1, .float op a b lo hi x.2⟩)
 
 def bFloatLit : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind paarS fun q => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
     Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
       Sz.pure ⟨x.1, .floatLit q lo hi x.2⟩)
 
 def bFloatOf : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (intS E) fun ⟨_, _, e⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
     Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
       Sz.pure ⟨x.1, .floatOf e lo hi x.2⟩)
 
 def bFloatNarrow : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (flS E) fun ⟨_, _, e⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
-    Sz.bind Ns fun sonst =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ => Sz.bind Ns fun sonst =>
       Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
         Sz.pure ⟨x.1, .floatNarrow e lo hi sonst x.2⟩)
 
@@ -143,7 +147,8 @@ def eCons : Sz (Endblock D V l Γ Λ) :=
   Sz.knoten (Sz.bindS Ss (fun Λ' m => O.en l Γ Λ' m) fun _ s r => Sz.pure (.cons s r))
 
 def eBind : Sz (Endblock D V l Γ Λ) :=
-  Sz.knoten (Sz.bindS E (fun τ m => O.en l (τ :: Γ) Λ m) fun _ e r => Sz.pure (.bind e r))
+  Sz.knoten (Sz.bindS (fun i => (E i).filter fun p => Zahlen.bindOk p.1) (fun τ m => O.en l (τ :: Γ) Λ m)
+    fun _ e r => Sz.pure (.bind e r))
 
 def eBindAxiom : Sz (Endblock D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a => mitSome (D.aerg a) fun {τ} he =>

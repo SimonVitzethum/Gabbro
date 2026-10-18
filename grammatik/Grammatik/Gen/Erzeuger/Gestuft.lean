@@ -11,9 +11,9 @@
   splits `i + (k - i)`, so the work is proportional to the number of terms of that size and nothing else.
 
   THE NUMERIC SCHEME is the one place where the statement is parametrised. `exakt M` costs a number by its
-  magnitude (`|n|` for `|n| ≤ M`, infinity beyond): the statement of the first generator. `kanon N` costs the
-  numbers of a finite alphabet `N` one each and every other number infinity: the reduction "constants folded to
-  the boundary values of the declaration". A theorem about a size bound below `unendlich` therefore speaks only of
+  magnitude (`|n|` for `|n| ≤ M`, infinity beyond): the statement of the first generator. `kanon N` makes the
+  numbers of a finite alphabet `N` a FREE CHOICE (cost zero, like the choice of a table or a field) and every
+  other number infinite: the reduction "constants folded to the boundary values of the declaration". A theorem about a size bound below `unendlich` therefore speaks only of
   programs whose numbers the scheme names; this is stated, not hidden.
 -/
 import Grammatik.Gen.Erzeuger.Grund
@@ -29,9 +29,14 @@ def unendlich : Nat := 1000000000
 
 /-- **The numeric scheme**: the cost of a free integer / natural number and the numbers of each cost. -/
 class Zahlen where
+  /-- The BOUNDS of a type (a widening, a narrowing, an optional index, a case range, a transition endpoint). -/
   kost : Int → Nat
   liste : Nat → List Int
   mem : ∀ n, kost n < unendlich → n ∈ liste (kost n)
+  /-- The VALUES of a literal, a mask, the bits of a transition. -/
+  kostW : Int → Nat
+  listeW : Nat → List Int
+  memW : ∀ n, kostW n < unendlich → n ∈ listeW (kostW n)
   kostN : Nat → Nat
   listeN : Nat → List Nat
   memN : ∀ n, kostN n < unendlich → n ∈ listeN (kostN n)
@@ -39,12 +44,29 @@ class Zahlen where
   kostP : Int × Int → Nat
   listeP : Nat → List (Int × Int)
   memP : ∀ p, kostP p < unendlich → p ∈ listeP (kostP p)
+  /-- The sum types (the case lists of a tagged value) that exist: a free choice, every other list costs infinity. -/
+  sfaelle : List (List (Option (Int × Int)))
+  /-- The types a `let`-bound expression may have (a bound variable carries a type of the declaration; a computed range
+      is widened to one of them before it is bound). -/
+  bindOk : Ty → Bool
 
 /-- Numbers by magnitude, up to `M` (costs `|n|`; a natural number costs itself). -/
 def Zahlen.exakt (M : Nat) : Zahlen where
   kost n := if n.natAbs ≤ M then n.natAbs else unendlich
   liste c := if c = 0 then [0] else [(c : Int), -(c : Int)]
   mem n h := by
+    by_cases hM : n.natAbs ≤ M
+    · simp only [hM, if_true]
+      by_cases h0 : n.natAbs = 0
+      · have : n = 0 := by omega
+        simp [this]
+      · simp only [h0, if_false, List.mem_cons, List.not_mem_nil, or_false]
+        omega
+    · simp only [hM, if_false] at h
+      exact absurd h (Nat.lt_irrefl _)
+  kostW n := if n.natAbs ≤ M then n.natAbs else unendlich
+  listeW c := if c = 0 then [0] else [(c : Int), -(c : Int)]
+  memW n h := by
     by_cases hM : n.natAbs ≤ M
     · simp only [hM, if_true]
       by_cases h0 : n.natAbs = 0
@@ -61,6 +83,9 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     · simp [hM]
     · simp only [hM, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
+  bindOk := fun _ => true
+  sfaelle := let c : List (Option (Int × Int)) := [none, some (0, 0), some (0, 1)]
+    [] :: (c.map fun a => [a]) ++ c.flatMap fun a => c.map fun b => [a, b]
   kostP p := (if p.1.natAbs ≤ M then p.1.natAbs else unendlich) + (if p.2.natAbs ≤ M then p.2.natAbs else unendlich)
   listeP c := (List.range (c + 1)).flatMap fun (a : Nat) =>
     (if a = 0 then [(0 : Int)] else [(a : Int), -(a : Int)]).flatMap fun x =>
@@ -98,24 +123,35 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     · simp only [h0, if_false, List.mem_cons, List.not_mem_nil, or_false, Int.ofNat_eq_natCast]
       omega
 
-/-- A finite alphabet: every listed number costs one, every other number infinity. -/
-def Zahlen.kanon (N : List Int) (NN : List Nat) (NP : List (Int × Int)) : Zahlen where
-  kost n := if n ∈ N then 1 else unendlich
-  liste c := if c = 1 then N else []
+/-- A finite alphabet: every listed number is a FREE CHOICE (cost zero, like the choice of a table or a field),
+    every other number costs infinity. -/
+def Zahlen.kanon (N W : List Int) (NN : List Nat) (NP : List (Int × Int)) (SF : List (List (Option (Int × Int))))
+    (BT : List Ty) : Zahlen where
+  sfaelle := SF
+  bindOk := fun τ => decide (τ ∈ BT)
+  kost n := if n ∈ N then 0 else unendlich
+  liste c := if c = 0 then N else []
   mem n h := by
     by_cases hn : n ∈ N
     · simp [hn]
     · simp only [hn, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
-  kostN n := if n ∈ NN then 1 else unendlich
-  listeN c := if c = 1 then NN else []
+  kostW n := if n ∈ W then 0 else unendlich
+  listeW c := if c = 0 then W else []
+  memW n h := by
+    by_cases hn : n ∈ W
+    · simp [hn]
+    · simp only [hn, if_false] at h
+      exact absurd h (Nat.lt_irrefl _)
+  kostN n := if n ∈ NN then 0 else unendlich
+  listeN c := if c = 0 then NN else []
   memN n h := by
     by_cases hn : n ∈ NN
     · simp [hn]
     · simp only [hn, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
-  kostP p := if p ∈ NP then 1 else unendlich
-  listeP c := if c = 1 then NP else []
+  kostP p := if p ∈ NP then 0 else unendlich
+  listeP c := if c = 0 then NP else []
   memP p h := by
     by_cases hn : p ∈ NP
     · simp [hn]
@@ -290,6 +326,13 @@ end Sz
 /-- The integers of cost exactly `c`. -/
 def zS [Zahlen] : Sz Int := fun c => Zahlen.liste c
 
+/-- The values (of a literal) of cost exactly `c`. -/
+def zW [Zahlen] : Sz Int := fun c => Zahlen.listeW c
+
+theorem mem_zW [Zahlen] {n : Int} {c : Nat} (h : Zahlen.kostW n = c) (hc : c < unendlich) : n ∈ zW c := by
+  subst h
+  exact Zahlen.memW n hc
+
 /-- The naturals of cost exactly `c`. -/
 def nS [Zahlen] : Sz Nat := fun c => Zahlen.listeN c
 
@@ -309,20 +352,37 @@ theorem mem_paarS [Zahlen] {p : Int × Int} {c : Nat} (h : Zahlen.kostP p = c) (
   subst h
   exact Zahlen.memP p hc
 
-/-- Pairs of integers charged number by number (the payload range of a sum case). -/
-def paarI [Zahlen] : Sz (Int × Int) := Sz.bind zS fun a => Sz.bind zS fun b => Sz.pure (a, b)
+/-- The cost of the type of a `let`-bound expression: free if the scheme allows it. -/
+def Zahlen.kostT [Zahlen] (τ : Ty) : Nat := if Zahlen.bindOk τ = true then 0 else unendlich
 
-/-- The cost of such a pair. -/
-def kostI [Zahlen] (p : Int × Int) : Nat := Zahlen.kost p.1 + Zahlen.kost p.2
+theorem bindOk_of [Zahlen] {τ : Ty} (h : Zahlen.kostT τ < unendlich) : Zahlen.bindOk τ = true := by
+  unfold Zahlen.kostT at h
+  by_cases hc : Zahlen.bindOk τ = true
+  · exact hc
+  · simp only [hc, if_false] at h
+    exact absurd h (Nat.lt_irrefl _)
 
-theorem mem_paarI [Zahlen] {p : Int × Int} {c : Nat} (h : kostI p = c) (hc : c < unendlich) : p ∈ paarI c := by
-  obtain ⟨a, b⟩ := p
-  unfold kostI at h
-  simp only at h
-  have h1 : Zahlen.kost a < unendlich := by omega
-  have h2 : Zahlen.kost b < unendlich := by omega
-  have h2' : (a, b) ∈ (Sz.bind zS fun b' => Sz.pure (a, b')) (Zahlen.kost b + 0) :=
-    Sz.mem_bind (mem_zS rfl h2) (Sz.mem_pure _)
-  exact Sz.mem_cast (Sz.mem_bind (mem_zS rfl h1) h2') (by omega)
+theorem kostT_null [Zahlen] {τ : Ty} (h : Zahlen.bindOk τ = true) : Zahlen.kostT τ = 0 := by
+  unfold Zahlen.kostT
+  simp [h]
+
+/-- The sum types that exist, as a free choice. -/
+def sfS [Zahlen] : Sz (List (Option (Int × Int))) := Sz.wahl Zahlen.sfaelle
+
+/-- The cost of a case list: free if the scheme names it. -/
+def Zahlen.kostS [Zahlen] (cs : List (Option (Int × Int))) : Nat :=
+  if cs ∈ Zahlen.sfaelle then 0 else unendlich
+
+theorem kostS_null [Zahlen] {cs : List (Option (Int × Int))} (h : cs ∈ Zahlen.sfaelle) : Zahlen.kostS cs = 0 := by
+  unfold Zahlen.kostS
+  simp [h]
+
+theorem mem_sfS [Zahlen] {cs : List (Option (Int × Int))} (h : Zahlen.kostS cs < unendlich) :
+    cs ∈ Zahlen.sfaelle := by
+  unfold Zahlen.kostS at h
+  by_cases hc : cs ∈ Zahlen.sfaelle
+  · exact hc
+  · simp only [hc, if_false] at h
+    exact absurd h (Nat.lt_irrefl _)
 
 end Gabbro.Grammatik.Gen

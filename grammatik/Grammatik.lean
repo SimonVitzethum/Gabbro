@@ -490,3 +490,10 @@ import Grammatik.Gen.Erzeuger.Knoten
 import Grammatik.Gen.Erzeuger.Programm
 import Grammatik.Gen.Erzeuger.Gueltig
 import Grammatik.Gen.Erzeuger.Probe
+import Grammatik.Gen.Familie.Spez
+import Grammatik.Gen.Familie.Familie
+import Grammatik.Gen.Abdeckung.Mitglieder
+import Grammatik.Gen.Abdeckung.Erklaerung
+import Grammatik.Gen.Abdeckung.Zustaende
+import Grammatik.Gen.Abdeckung.Messung
+import Grammatik.Gen.Abdeckung.Lauf

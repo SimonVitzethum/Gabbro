@@ -86,12 +86,15 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
     have he := hB _ e (by omega)
     stm (sIte E Bs), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_tyS hc) <| Sz.mem_bind ht <|
       Sz.mem_bind (mem_ofTy he) <| Sz.mem_pure _) (by omega)
-  | onOption o p a =>
+  | @onOption _ _ n _ _ o p a =>
     simp only [groesseStmt] at hu hE hB hO ⊢
-    have ho := hE _ o (by omega)
+    have hok := bindOk_of (τ := Ty.index n) (by omega)
+    have h0 := kostT_null hok
+    have ho : (⟨n, o⟩ : Σ n : Int, Expr D Γ Λ (.opt n)) ∈ (optS E (groesseExpr o)).filter
+        (fun p => Zahlen.bindOk (Ty.index p.1)) := List.mem_filter.2 ⟨mem_optS (hE _ o (by omega)), hok⟩
     have hp := hO.bl (groesseBlock p + (groesseBlock a + 0)) _ _ _ _ p (by omega) (by omega)
     have ha := hB _ a (by omega)
-    stm (sOnOption O E Bs), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS (mem_optS ho) hp <|
+    stm (sOnOption O E Bs), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS ho hp <|
       Sz.mem_bind (mem_ofTy ha) <| Sz.mem_pure _) (by omega)
   | onTag v arms =>
     simp only [groesseStmt] at hu hE hB hO ⊢
@@ -160,7 +163,7 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
     simp only [groesseStmt] at hu hE hB hO ⊢
     stm sTransition, Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem r)) <|
       Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem m')) <| Sz.mem_wenn hk <| Sz.mem_wenn hm <| Sz.mem_wenn hl <|
-      Sz.mem_bind (mem_zS (n := maske) rfl (by omega)) <| Sz.mem_bind (mem_zS (n := bits) rfl (by omega)) <|
+      Sz.mem_bind (mem_zW (n := maske) rfl (by omega)) <| Sz.mem_bind (mem_zW (n := bits) rfl (by omega)) <|
       Sz.mem_pure _) (by omega)
   | publish g e payload hp hw hL =>
     simp only [groesseStmt] at hu hE hB hO ⊢

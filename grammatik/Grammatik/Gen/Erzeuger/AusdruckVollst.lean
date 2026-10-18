@@ -57,7 +57,7 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
   | lit n =>
     simp only [groesseExpr] at hu ⊢
     ausd (gLit (D := D) (Γ := Γ) (Λ := Λ)),
-      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_zS (n := n) rfl (by omega)) (Sz.mem_pure _))) (by omega)
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_zW (n := n) rfl (by omega)) (Sz.mem_pure _))) (by omega)
   | tru =>
     simp only [groesseExpr]
     ausd (gBool (D := D) (Γ := Γ) (Λ := Λ)), Sz.mem_blatt (by simp)
@@ -274,7 +274,9 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
     ausd (gIstSome E), Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_optS he) (Sz.mem_pure _))) (by omega)
   | case cs i nutz =>
     simp only [groesseExpr] at hu hE hQ ⊢
-    have hf := mem_faelle (cs := cs) (by omega)
+    have hm := mem_sfS (cs := cs) (by omega)
+    have h0 := kostS_null hm
+    have hf : cs ∈ sfS 0 := Sz.mem_wahl hm
     ausd (gCase E),
       Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind hf (Sz.mem_bind (Sz.mem_wahl (List.mem_finRange i))
         (Sz.mem_bind (mem_nutzS hE nutz (by omega)) (Sz.mem_pure _))))) (by omega)
