@@ -415,6 +415,8 @@ pub fn pass_mit(
             da.extend(h.into_iter().map(|(n, _)| n));
         }
         let zt = zeigerziele(f);
+        let mut lokal: Vec<String> = f.parameter.iter().map(|p| p.name.text.clone()).collect();
+        crate::wirkungen::lokale(b, &mut lokal);
         let rh = Rufhalte {
             u: &u,
             g: &g,
@@ -424,6 +426,7 @@ pub fn pass_mit(
             modul,
             wo: &f.name.text,
             zt: &zt,
+            lokal: &lokal,
         };
         schutz(b, &da, &[], &rh, absagen);
         });
@@ -1452,6 +1455,9 @@ fn schutz(
         })
     };
     let pruefe = |o: &Ort, absagen: &mut Absagen| {
+        if o.suffixe.is_empty() && rh.lokal.iter().any(|l| l == &o.basis.text) {
+            return;
+        }
         let t = platz_text(o, rh.zt);
         let Some(sperre) = deckt(&t) else { return };
         if da.iter().any(|d| d == &sperre) {
@@ -1691,6 +1697,9 @@ struct Rufhalte<'a> {
     wo: &'a str,
     /// Pointer parameters of the function walked, with the table each names (`zeigerziele`).
     zt: &'a BTreeMap<String, String>,
+    /// Names bound in the function (parameters, `let`s, binders): a bare read of one is a read of a
+    /// LOCAL, never of a protected field that happens to share the name.
+    lokal: &'a [String],
 }
 
 impl Rufhalte<'_> {
@@ -2191,7 +2200,43 @@ pub(crate) fn zeigerziele(f: &FnDecl) -> BTreeMap<String, String> {
             }
         }
     }
+    // A pointer LOCAL is the same capability under another name: `let q : ptr<..> T = p;`,
+    // `let q = p;`, `let q = &T;`. Two passes, so a chain of copies resolves.
+    if let FnRumpf::Block(b) = &f.rumpf {
+        zeiger_lets(b, &mut m);
+        zeiger_lets(b, &mut m);
+    }
     m
+}
+
+fn zeiger_lets(b: &Block, m: &mut BTreeMap<String, String>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Let(l) = &s.art {
+            let aus_typ = match &l.typ {
+                Some(TypExpr::Zeiger(pt)) => match &pt.ziel {
+                    TypExpr::Pfad(pf) => pf.teile.last().map(|t| t.text.clone()),
+                    _ => None,
+                },
+                _ => None,
+            };
+            if let Some(t) = aus_typ.or_else(|| zeiger_wert(&l.wert, m)) {
+                m.insert(l.name.text.clone(), t);
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            zeiger_lets(k, m);
+        }
+    }
+}
+
+/// The table a pointer-valued expression names: a known pointer name, or `&T`.
+fn zeiger_wert(e: &Expr, m: &BTreeMap<String, String>) -> Option<String> {
+    match &e.art {
+        ExprArt::Klammer(x) => zeiger_wert(x, m),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => m.get(&o.basis.text).cloned(),
+        ExprArt::FnWert(p) => p.einfach().map(|i| i.text.clone()),
+        _ => None,
+    }
 }
 
 /// A place TEXT (`p.slots[…].v`, `p->f`) with a root that is a pointer parameter replaced by the table

@@ -212,7 +212,7 @@ fn sammle_rufe_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
 /// Bis 2026-08-15 verlangte `E005` fuer `let mut i = 0; i += 1;` einen Eintrag in der
 /// Wirkungsliste -- eine Funktion, die nur zaehlt, konnte nicht `pure` sein. Gefunden am
 /// Fragmentlauf (`FRAGMENTE.md`, kstackmark), wo genau das aufschlug.
-fn lokale(b: &Block, aus: &mut Vec<String>) {
+pub(crate) fn lokale(b: &Block, aus: &mut Vec<String>) {
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Let(l) => aus.push(l.name.text.clone()),

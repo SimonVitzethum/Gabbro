@@ -238,6 +238,21 @@ pub fn katalog() -> Vec<Atom> {
         Atom { id: "c.ptr.w", lean: "Expr.ptrOf/Stmt.call", decls: &[T], items: &[PTR_W], eff: &["writes T.slots"], wache: tr, body: "wp(&T, 0);", ..A },
         Atom { id: "c.ptr.r", lean: "Expr.ptrOf/Block.bindCall", decls: &[T], items: &[PTR_R], eff: &["reads T.slots"], wache: tr, body: "let x@ = rp(&T, 0);", ..A },
     ]);
+    // ---------------------------------------------------------------- calls under locks of their own
+    // `LG` is a lock of its own (rank 0, protecting the table `G`), so these atoms nest with the `L` of the
+    // guard modes (rank 0 as well: equal rank) and with each other.
+    const GT: &str = "table G count 4 { slot { v : u32 in 0 .. 100, } }";
+    const LGD: &str = "lock LG protects { G } rank 0 held <= 100 ops;";
+    const GLNIMMT: &str = "impl fn gl() effects { writes G.slots, locks LG } costs <= 20 ops { locks LG { G.slots[0].v = 1; } }";
+    const GLFORDERT: &str = "impl fn gh() requires Held(LG) effects { writes G.slots, locks LG } costs <= 20 ops { G.slots[0].v = 1; }";
+    const IDX_W: &str = "impl fn wi(i : index into T)\n    {HELD}effects { writes T.slots }\n    costs <= 8 ops\n{\n    T.slots[i].v = 3;\n}";
+    v.extend([
+        Atom { id: "c.lg.take", lean: "Stmt.call(takes)", decls: &[GT, LGD], items: &[GLNIMMT], eff: &["writes G.slots", "locks LG"], body: "gl();", ..A },
+        Atom { id: "c.lg.take.inside", lean: "Stmt.locks/call(takes)", decls: &[GT, LGD], items: &[GLNIMMT], eff: &["writes G.slots", "locks LG"], body: "locks LG {\n        gl();\n    }", sicher: false, ..A },
+        Atom { id: "c.lg.req.in", lean: "Stmt.locks/call(held)", decls: &[GT, LGD], items: &[GLFORDERT], eff: &["writes G.slots", "locks LG"], body: "locks LG {\n        gh();\n    }", ..A },
+        Atom { id: "c.lg.req.out", lean: "Stmt.call(held)", decls: &[GT, LGD], items: &[GLFORDERT], eff: &["writes G.slots", "locks LG"], body: "gh();", sicher: false, ..A },
+        Atom { id: "c.idx.w", lean: "Stmt.call/Args", decls: &[T], items: &[IDX_W], eff: &["writes T.slots"], wache: tr, body: "wi(1);", ..A },
+    ]);
     // ---------------------------------------------------------------- floats and gates
     v.extend([
         Atom { id: "k.inv.held", lean: "SperrInv", decls: &[PQ, LK], params: "k@ : ptr<normal, rw> P, m@ : ptr<normal, rw> Q", req: "Held(K)", eff: &["writes k@.slots", "writes m@.slots", "locks K"], body: "k@.slots[0].x = 30;\n    m@.slots[0].y = 70;", ..A },

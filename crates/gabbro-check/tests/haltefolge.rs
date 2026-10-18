@@ -219,3 +219,29 @@ impl fn b() effects {{ writes U.slots }} costs <= 20 ops {{ U.slots[0].v = 1; }}
 concurrent {{ a, b }};\n}}\n"
     ));
 }
+
+#[test]
+fn zeigerkopie_ist_dieselbe_faehigkeit() {
+    // a local pointer copy, or `&T` bound to a local, names the table like the parameter does
+    for kopf in ["let q : ptr<normal, rw> T = p;", "let q = p;"] {
+        faellt(
+            &modul(&format!(
+                "impl fn f(p : ptr<normal, rw> T, i : index into T) effects {{ writes p.slots }} costs <= 100 ops {{ {kopf} q.slots[i].v = 3; }}"
+            )),
+            "H007",
+        );
+        sauber(&modul(&format!(
+            "impl fn f(p : ptr<normal, rw> T, i : index into T) requires Held(L) effects {{ writes p.slots, locks L }} costs <= 100 ops {{ {kopf} q.slots[i].v = 3; }}"
+        )));
+    }
+    faellt(
+        &modul("impl fn f(i : index into T) effects { writes T.slots } costs <= 100 ops { let q : ptr<normal, rw> T = &T; q.slots[i].v = 3; }"),
+        "H007",
+    );
+}
+
+#[test]
+fn lokaler_name_ist_kein_geschuetztes_feld() {
+    // a local `v` shares its name with the protected field `v`: reading it reads the local
+    sauber(&modul("impl fn f(w : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { pure } costs <= 10 ops { let v : u32 in 0 .. 9 = w; return v; }"));
+}
