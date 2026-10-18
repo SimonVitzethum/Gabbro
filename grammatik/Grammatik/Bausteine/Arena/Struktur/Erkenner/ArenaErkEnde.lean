@@ -11,7 +11,7 @@
                                        function body -- `if true { <block> }` is the embedding;
     `forever`, `traverse`, `retry`  -- loops over recognized bodies.
 
-  `erkE_erhaelt`: if `ErkE K a e`, `K.Ok σ` and `Passt K a σ ρ`, the run of `e` ends in `return` or `return why`, in a world where
+  `erkE_erhaelt`: if `ErkE K a e`, `K.Ok σ` and `StrukturPasst K a σ ρ`, the run of `e` ends in `return` or `return why`, in a world where
   `K.Ok` holds (a recognized body never produces `leave` or `next`). This is the form of the premise the statement needs:
   every function that writes a word of a declared structure has `ErkE K Abs.leer (P.rumpf f)`.
 -/
@@ -63,15 +63,15 @@ variable {A : FreiForm D} (K : Dekl A) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
 
 /-- **The promise about an end block:** every outcome is a return or a failure in a world where the arena invariant holds. -/
 def FolgtE (a : Abs) (e : Endblock D V l Γ Λ) : Prop :=
-  ∀ (σ : World D) (ρ : Env D Γ), K.Ok σ → Passt K a σ ρ →
-    ∀ b : Abs, Post K b (execEnd O passes R e σ ρ).zuAusgang
+  ∀ (σ : World D) (ρ : Env D Γ), K.Ok σ → StrukturPasst K a σ ρ →
+    ∀ b : Abs, StrukturPost K b (execEnd O passes R e σ ρ).zuAusgang
 
 /-- A statement followed by an end block. -/
-theorem Post.cons_stmtE {a : Abs} {Λ1 : List (Res D)} {s : Stmt D V l Γ Λ Λ1} {rest : Endblock D V l Γ Λ1}
-    {σ : World D} {ρ : Env D Γ} (b : Abs) (hp : Post K a (execStmt O passes R s σ ρ))
-    (ihr : ∀ (σ : World D) (ρ : Env D Γ), K.Ok σ → Passt K a σ ρ →
-      Post K b (execEnd O passes R rest σ ρ).zuAusgang) :
-    Post K b (execEnd O passes R (.cons s rest) σ ρ).zuAusgang := by
+theorem StrukturPost.cons_stmtE {a : Abs} {Λ1 : List (Res D)} {s : Stmt D V l Γ Λ Λ1} {rest : Endblock D V l Γ Λ1}
+    {σ : World D} {ρ : Env D Γ} (b : Abs) (hp : StrukturPost K a (execStmt O passes R s σ ρ))
+    (ihr : ∀ (σ : World D) (ρ : Env D Γ), K.Ok σ → StrukturPasst K a σ ρ →
+      StrukturPost K b (execEnd O passes R rest σ ρ).zuAusgang) :
+    StrukturPost K b (execEnd O passes R (.cons s rest) σ ρ).zuAusgang := by
   simp only [execEnd]
   generalize execStmt O passes R s σ ρ = o at hp ⊢
   cases o with
@@ -97,37 +97,37 @@ theorem erkE_erhaelt {a : Abs} {e : Endblock D V l Γ Λ} (h : ErkE K a e) : Fol
         execStmt O passes R (Stmt.assignSlot (l := l) A.tab A.feld i e hwT hLT) σ ρ = .ok σ' ρ ∧
         Dekl.Gleich K σ σ' :=
       ⟨_, rfl, (Dekl.Gleich.lese σ Λ _).trans (Dekl.Gleich.nutzlast _ Λ _ _)⟩
-    refine Post.cons_stmtE O passes R K (a := a) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
+    refine StrukturPost.cons_stmtE O passes R K (a := a) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
     rw [hex]
     exact ⟨hgl.ok hS, hgl.passt hP⟩
   | @ite Λ Λ1 a a1 a2 a3 c t e rest ht he h1 h2 h ih =>
     intro σ ρ hS hP b
     have hgl : Dekl.Gleich K σ (σ.lese Λ c.orte) := Dekl.Gleich.lese σ Λ c.orte
-    refine Post.cons_stmtE O passes R K (a := a3) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
+    refine StrukturPost.cons_stmtE O passes R K (a := a3) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
     simp only [execStmt]
     split
-    · exact Post.schwacher K h1 (erk_erhaelt O passes R K ht _ ρ (hgl.ok hS) (hgl.passt hP))
-    · exact Post.schwacher K h2 (erk_erhaelt O passes R K he _ ρ (hgl.ok hS) (hgl.passt hP))
+    · exact StrukturPost.schwacher K h1 (erk_erhaelt O passes R K ht _ ρ (hgl.ok hS) (hgl.passt hP))
+    · exact StrukturPost.schwacher K h2 (erk_erhaelt O passes R K he _ ρ (hgl.ok hS) (hgl.passt hP))
   | @forever Λ a a1 k0 an inv body rest hin hb hs h ih =>
     intro σ ρ hS hP b
-    refine Post.cons_stmtE O passes R K (a := a) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
+    refine StrukturPost.cons_stmtE O passes R K (a := a) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
     exact forever_post O passes R K an _ (leseTest_inv inv) body (erk_erhaelt O passes R K hb) hs a passes σ ρ hS
-      (Passt.schwacher K hin hP)
+      (StrukturPasst.schwacher K hin hP)
   | @traverse Λ a a1 k0 t inv body rest hin hb hs h ih =>
     intro σ ρ hS hP b
-    refine Post.cons_stmtE O passes R K (a := k0) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
+    refine StrukturPost.cons_stmtE O passes R K (a := k0) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
     exact traverse_post O passes R K _ (leseTest_inv inv) body (erk_erhaelt O passes R K hb) hs
-      (alleIndizes (D.count t)) σ ρ hS (Passt.schwacher K hin hP)
+      (alleIndizes (D.count t)) σ ρ hS (StrukturPasst.schwacher K hin hP)
   | @retry Λ a a1 au a3 k0 n bis body ueber rest hin hb hs hu h3 h4 h ih =>
     intro σ ρ hS hP b
-    refine Post.cons_stmtE O passes R K (a := a3) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
+    refine StrukturPost.cons_stmtE O passes R K (a := a3) b ?_ (fun σ ρ hS hP => ih σ ρ hS hP b)
     exact retry_post O passes R K _ (leseTest_inv bis) body ueber (erk_erhaelt O passes R K hb) hs
-      (erk_erhaelt O passes R K hu) h3 h4 n σ ρ hS (Passt.schwacher K hin hP)
+      (erk_erhaelt O passes R K hu) h3 h4 n σ ρ hS (StrukturPasst.schwacher K hin hP)
 
 /-- **A function body that knows nothing at entry** (every parameter `offen`) returns, or fails, in a world where the arena
     invariant holds. -/
 theorem erkE_koerper {e : Endblock D V l Γ Λ} (h : ErkE K Abs.leer e) (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ)
-    (b : Abs) : Post K b (execEnd O passes R e σ ρ).zuAusgang :=
+    (b : Abs) : StrukturPost K b (execEnd O passes R e σ ρ).zuAusgang :=
   erkE_erhaelt O passes R K h σ ρ hS
     ⟨fun _ hx => absurd hx (by simp [Abs.leer]), fun _ hx => absurd hx (by simp [Abs.leer]),
       fun _ hx => absurd hx (by simp [Abs.leer]), fun _ _ hx _ _ => absurd hx (by simp [Abs.leer])⟩ b

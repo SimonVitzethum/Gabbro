@@ -305,7 +305,7 @@ theorem rein_vollK3 : Rein vollK3 := Rein.ret _ _
 /-- The run of a body, named: a long run is stated through an equation, not unfolded by the elaborator. -/
 theorem lauf_post {l : Bool} {Γ : Ctx} {a' : Abs} {b : Block FD2 FV2 l Γ [] []} (h : Erk K2 Abs.leer b a')
     (σ : World FD2) (ρ : Env FD2 Γ) (hS : K2.Ok σ) {o : Ausgang FV2 l Γ}
-    (ho : execBlock oF2 0 rF2 b σ ρ = o) : Post K2 a' o :=
+    (ho : execBlock oF2 0 rF2 b σ ρ = o) : StrukturPost K2 a' o :=
   erk_koerper_lauf oF2 0 rF2 K2 h σ ρ hS ho
 
 /-! ### Accepted: a tree move and a list read in one body -/

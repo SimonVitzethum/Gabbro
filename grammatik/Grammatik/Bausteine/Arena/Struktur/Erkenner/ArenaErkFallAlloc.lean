@@ -33,12 +33,12 @@ theorem fall_frisch {a a'' : Abs} (v : Expr D Γ Λ (D.typ A.tab A.feld))
   · obtain ⟨σ', k, he, hkn, hf, hok', hmono, hnew⟩ :=
       frischAlloc_ausfuehren O passes R A v hwT hLT hwG hLG voll rest σ ρ hlt hS.1
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hGL : Dekl.GlL K σ σ' := Dekl.GlL.fremd hf
     have hGB : Dekl.GlB K σ σ' := Dekl.GlB.fremd hf
     have hnot := Dekl.nicht_in_stand K hS (j := k.n) (by omega)
     refine ih σ' (.cons k ρ) (Dekl.Ok.gleich hGL hGB hok' (fun j hj => hmono j ?_) hS)
-      (Passt.ext_frei K k (Passt.gleich K hGL hGB hmono hP) hnew (fun hm => hnot.1 ((hGL.inL _).mp hm))
+      (StrukturPasst.ext_frei K k (StrukturPasst.gleich K hGL hGB hmono hP) hnew (fun hm => hnot.1 ((hGL.inL _).mp hm))
         (fun hm => hnot.2 ((hGB.inB _).mp hm)) (fun y hy e => by have := (hP.1 y hy).1.2.1; omega))
     rcases hj with hj | hj
     · exact Dekl.InL.lebt hS.2.1 hj
@@ -57,12 +57,12 @@ theorem fall_nimm {a a'' : Abs} (v : Expr D Γ Λ (D.typ A.tab A.feld))
   · obtain ⟨σ', k, he, hkn, hf, hok', hmono, hnew, hauf⟩ :=
       nimmAlloc_ausfuehren O passes R A v hwT hLT hwK hLK voll rest σ ρ hlt hS.1
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hGL : Dekl.GlL K σ σ' := Dekl.GlL.fremd hf
     have hGB : Dekl.GlB K σ σ' := Dekl.GlB.fremd hf
     have hnot := Dekl.nicht_in_frei K hS hauf
     refine ih σ' (.cons k ρ) (Dekl.Ok.gleich hGL hGB hok' (fun j hj => hmono j ?_) hS)
-      (Passt.ext_frei K k (Passt.gleich K hGL hGB hmono hP) hnew (fun hm => hnot.1 ((hGL.inL _).mp hm))
+      (StrukturPasst.ext_frei K k (StrukturPasst.gleich K hGL hGB hmono hP) hnew (fun hm => hnot.1 ((hGL.inL _).mp hm))
         (fun hm => hnot.2 ((hGB.inB _).mp hm)) (fun y hy e => (hP.1 y hy).1.2.2 (by rw [e]; exact hauf)))
     rcases hj with hj | hj
     · exact Dekl.InL.lebt hS.2.1 hj
@@ -83,7 +83,7 @@ theorem fall_frei {a a' : Abs} (x : Var Γ (Ty.index (D.count A.tab)))
   have hGL : Dekl.GlL K σ σ' := Dekl.GlL.fremd hf
   have hGB : Dekl.GlB K σ σ' := Dekl.GlB.fremd hf
   refine ih σ' ρ (Dekl.Ok.gleich hGL hGB hok' (fun j hj => hmono j ?_ ?_) hS)
-    (Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
+    (StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
   · rcases hj with hj | hj
     · exact Dekl.InL.lebt hS.2.1 hj
     · exact Dekl.InB.lebt hS.2.2.1 hj
@@ -112,9 +112,9 @@ theorem fall_wachs {a a'' : Abs} (n : Int) (hwK : V.gschreibt A.komm = true)
   by_cases hg : 0 ≤ A.komSt σ + n ∧ A.komSt σ + n ≤ D.count A.tab
   · obtain ⟨he, -, -, -⟩ := dynGrow_commit O passes R A.toDynForm n hwK hLK voll rest σ ρ hg.1 hg.2
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hgl := Dekl.Gleich.wachs A K n Λ σ hg.1 hg.2
-    exact ih _ _ (hgl.ok hS) (Passt.ext_offen K (hgl.passt hP))
+    exact ih _ _ (hgl.ok hS) (StrukturPasst.ext_offen K (hgl.passt hP))
   · rw [dynGrow_voll O passes R A.toDynForm n hwK hLK voll rest σ ρ hg]
     exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K _ _ hS)
 
@@ -124,7 +124,7 @@ theorem fall_pruefe {a a' : Abs} (c : Expr D Γ Λ .bool) (voll : Endblock D V l
   intro σ ρ hS hP
   simp only [execBlock]
   split
-  · exact ih _ ρ (Dekl.Ok.lese K Λ _ hS) (Passt.lese K Λ _ hP)
+  · exact ih _ ρ (Dekl.Ok.lese K Λ _ hS) (StrukturPasst.lese K Λ _ hP)
   · exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K Λ _ hS)
 
 theorem fall_nutzlast {a a' : Abs} (i : Expr D Γ Λ (.index (D.count A.tab)))
@@ -136,7 +136,7 @@ theorem fall_nutzlast {a a' : Abs} (i : Expr D Γ Λ (.index (D.count A.tab)))
       execStmt O passes R (Stmt.assignSlot (l := l) A.tab A.feld i e hwT hLT) σ ρ = .ok σ' ρ ∧
       Dekl.Gleich K σ σ' :=
     ⟨_, rfl, (Dekl.Gleich.lese σ Λ _).trans (Dekl.Gleich.nutzlast _ Λ _ _)⟩
-  refine Post.cons_stmt K O passes R (a := a) ?_ ih
+  refine StrukturPost.cons_stmt K O passes R (a := a) ?_ ih
   rw [hex]
   exact ⟨hgl.ok hS, hgl.passt hP⟩
 
@@ -147,11 +147,11 @@ theorem fall_ite {Λ1 : List (Res D)} {a a1 a2 a3 a' : Abs} (c : Expr D Γ Λ .b
     Folgt K O passes R a (Block.cons (Stmt.ite c t e) rest) a' := by
   intro σ ρ hS hP
   have hgl : Dekl.Gleich K σ (σ.lese Λ c.orte) := Dekl.Gleich.lese σ Λ c.orte
-  refine Post.cons_stmt K O passes R (a := a3) ?_ ih
+  refine StrukturPost.cons_stmt K O passes R (a := a3) ?_ ih
   simp only [execStmt]
   split
-  · exact Post.schwacher K h1 (iht _ ρ (hgl.ok hS) (hgl.passt hP))
-  · exact Post.schwacher K h2 (ihe _ ρ (hgl.ok hS) (hgl.passt hP))
+  · exact StrukturPost.schwacher K h1 (iht _ ρ (hgl.ok hS) (hgl.passt hP))
+  · exact StrukturPost.schwacher K h2 (ihe _ ρ (hgl.ok hS) (hgl.passt hP))
 
 end Faelle
 

@@ -39,8 +39,8 @@ theorem kern_wurzelEin {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
     (hwG : V.gschreibt b.Wz.g = true) (hLG : gdarf D b.Wz.g Λ)
     (rest : Block D V l Γ Λ Λ') (hx : a x.pos = .frei)
     (ih : Folgt K O passes R (a.set x.pos .baum) rest a')
-    (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) (hP : Passt K a σ ρ) (hg : b.Wz.st σ = D.count A.tab) :
-    Post K a' (execBlock O passes R (Block.wurzelSetze b.Lf b.Rf b.Wz x hwT hLT hwG hLG rest) σ ρ) := by
+    (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) (hP : StrukturPasst K a σ ρ) (hg : b.Wz.st σ = D.count A.tab) :
+    StrukturPost K a' (execBlock O passes R (Block.wurzelSetze b.Lf b.Rf b.Wz x hwT hLT hwG hLG rest) σ ρ) := by
   obtain ⟨hlebt, hnotL, hnotB⟩ := hP.1 x hx
   obtain ⟨σ', he, hrm, hbok, hok', hlebt', hmem⟩ :=
     baum_wurzel_ein_zug O passes R b.Lf b.Rf b.Wz b.hd x hwT hLT hwG hLG rest σ ρ hS.1 hlebt
@@ -57,7 +57,7 @@ theorem kern_wurzelEin {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
     have hjx := (hmem j).mp ((Dekl.InB_some hb σ' j).mp hjB)
     subst hjx
     exact hnotL ((hGL.inL _).mp hjL)
-  refine ih σ' ρ hOk (Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
+  refine ih σ' ρ hOk (StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
   · rcases Abs.set_eq hy with ⟨-, h⟩ | ⟨hyx, hy'⟩
     · cases h
     · obtain ⟨hly, hnl, hnb⟩ := hP.1 y hy'
@@ -84,7 +84,7 @@ theorem fall_wurzelEin {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
   split
   · rename_i hc
     exact kern_wurzelEin O passes R K b hb x hwT hLT hwG hLG rest hx ih _ ρ (Dekl.Ok.lese K Λ _ hS)
-      (Passt.lese K Λ _ hP) ((wurzelLeer_wahr b.Wz hLG _ ρ).mp hc)
+      (StrukturPasst.lese K Λ _ hP) ((wurzelLeer_wahr b.Wz hLG _ ρ).mp hc)
   · exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K Λ _ hS)
 
 /-! ## 2. Reading the tree -/
@@ -99,9 +99,9 @@ theorem fall_wurzelKopf {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
   by_cases hne : b.Wz.st σ < D.count A.tab
   · obtain ⟨k, he, hkn⟩ := linkKopfBind_ausfuehren O passes R b.Wz hLG voll rest σ ρ hne
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hgl : Dekl.Gleich K σ (σ.lese Λ [Sum.inr b.Wz.g]) := Dekl.Gleich.lese σ Λ _
-    exact ih _ (.cons k ρ) (hgl.ok hS) (Passt.ext_baum K k (hgl.passt hP)
+    exact ih _ (.cons k ρ) (hgl.ok hS) (StrukturPasst.ext_baum K k (hgl.passt hP)
       ((hgl.b.inB _).mpr ((Dekl.InB_some hb σ _).mpr (by rw [hkn]; exact InBaum.wurzel hbok hne))))
   · rw [linkKopfBind_voll O passes R b.Wz hLG voll rest σ ρ hne]
     exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K _ _ hS)
@@ -115,14 +115,14 @@ theorem fall_kind {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
   by_cases hn : C.wert σ (ρ.get p).n < D.count A.tab
   · obtain ⟨k, he, hkn⟩ := linkNachBind_ausfuehren O passes R C p hLT voll rest σ ρ hn
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hgl : Dekl.Gleich K σ (σ.lese Λ [Sum.inl A.tab]) := Dekl.Gleich.lese σ Λ _
     have hpb := (Dekl.InB_some hb σ _).mp (hP.2.2.1 p hp)
     have hmem : InBaum (D.count A.tab) (b.Lf.wert σ) (b.Rf.wert σ) (b.Wz.st σ) (C.wert σ (ρ.get p).n) := by
       rcases hC with rfl | rfl
       · exact hpb.links hn
       · exact hpb.rechts hn
-    exact ih _ (.cons k ρ) (hgl.ok hS) (Passt.ext_baum K k (hgl.passt hP)
+    exact ih _ (.cons k ρ) (hgl.ok hS) (StrukturPasst.ext_baum K k (hgl.passt hP)
       ((hgl.b.inB _).mpr ((Dekl.InB_some hb σ _).mpr (by rw [hkn]; exact hmem))))
   · rw [linkNachBind_voll O passes R C p hLT voll rest σ ρ hn]
     exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K _ _ hS)
@@ -131,13 +131,13 @@ theorem fall_kind {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
 
 /-- What follows a leaf in, from the facts the executed form leaves. -/
 theorem haengen_nach {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (i : Var Γ (Ty.index (D.count A.tab)))
-    (hx : a i.pos = .frei) {σ σ' : World D} (ρ : Env D Γ) (hS : K.Ok σ) (hP : Passt K a σ ρ)
+    (hx : a i.pos = .frei) {σ σ' : World D} (ρ : Env D Γ) (hS : K.Ok σ) (hP : StrukturPasst K a σ ρ)
     (hrm : LinkRahmen A [b.Lf.f, b.Rf.f] [] σ σ') (hbok : BaumOk A b.Lf b.Rf b.Wz σ') (hok' : A.FreiOk σ')
     (hlebt' : ∀ j, A.Lebt σ' j ↔ A.Lebt σ j)
     (hmem : ∀ j, InBaum (D.count A.tab) (b.Lf.wert σ') (b.Rf.wert σ') (b.Wz.st σ') j ↔
       (j = (ρ.get i).n ∨ InBaum (D.count A.tab) (b.Lf.wert σ) (b.Rf.wert σ) (b.Wz.st σ) j))
     {rest : Block D V l Γ Λ Λ'} (ih : Folgt K O passes R (a.set i.pos .baum) rest a') :
-    Post K a' (execBlock O passes R rest σ' ρ) := by
+    StrukturPost K a' (execBlock O passes R rest σ' ρ) := by
   obtain ⟨hlebt, hnotL, hnotB⟩ := hP.1 i hx
   have hGL : Dekl.GlL K σ σ' := Dekl.GlL.baum K hb hrm (by simp) (by simp)
   have hmemK : ∀ j, K.InB σ' j ↔ (j = (ρ.get i).n ∨ K.InB σ j) := fun j => by
@@ -149,7 +149,7 @@ theorem haengen_nach {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (i : V
     rcases (hmemK j).mp hjB with rfl | hm
     · exact hnotL ((hGL.inL _).mp hjL)
     · exact hS.2.2.2 j ⟨(hGL.inL _).mp hjL, hm⟩
-  refine ih σ' ρ hOk (Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
+  refine ih σ' ρ hOk (StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
   · rcases Abs.set_eq hy with ⟨-, h⟩ | ⟨hyi, hy'⟩
     · cases h
     · obtain ⟨hly, hnl, hnb⟩ := hP.1 y hy'
@@ -172,8 +172,8 @@ theorem kern_haengen {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (Cp Co
     (p i : Var Γ (Ty.index (D.count A.tab))) (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
     (rest : Block D V l Γ Λ Λ') (hp : a p.pos = .baum) (hi : a i.pos = .frei)
     (ih : Folgt K O passes R (a.set i.pos .baum) rest a')
-    (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) (hP : Passt K a σ ρ) (hg : Cp.wert σ (ρ.get p).n = D.count A.tab) :
-    Post K a' (execBlock O passes R (Block.blattEin Cp Co p i hwT hLT rest) σ ρ) := by
+    (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) (hP : StrukturPasst K a σ ρ) (hg : Cp.wert σ (ρ.get p).n = D.count A.tab) :
+    StrukturPost K a' (execBlock O passes R (Block.blattEin Cp Co p i hwT hLT rest) σ ρ) := by
   have hbok : BaumOk A b.Lf b.Rf b.Wz σ := (Dekl.BOk_some hb σ).mp hS.2.2.1
   have hpb := (Dekl.InB_some hb σ _).mp (hP.2.2.1 p hp)
   obtain ⟨hlebt, hnotL, hnotB⟩ := hP.1 i hi
@@ -202,7 +202,7 @@ theorem fall_haengen {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (Cp Co
   split
   · rename_i hc
     exact kern_haengen O passes R K b hb Cp Co hs p i hwT hLT rest hp hi ih _ ρ (Dekl.Ok.lese K Λ _ hS)
-      (Passt.lese K Λ _ hP) ((leerTest_wahr Cp p hLT _ ρ).mp hc)
+      (StrukturPasst.lese K Λ _ hP) ((leerTest_wahr Cp p hLT _ ρ).mp hc)
   · exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K Λ _ hS)
 
 /-! ## 4. Cutting a leaf off -/
@@ -210,25 +210,25 @@ theorem fall_haengen {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (Cp Co
 /-- What follows a cut, from the facts the executed form leaves: the slot `k` left the tree (it was in it), the
     other members are among the old ones, the list is where it was. The binder is a new OWNED slot. -/
 theorem nach_schnitt {a a'' : Abs} {σ σ' : World D} {k : Wert D (Ty.index (D.count A.tab))} (ρ : Env D Γ)
-    (hS : K.Ok σ) (hP : Passt K a σ ρ) (hGL : Dekl.GlL K σ σ') (hok' : A.FreiOk σ') (hbok' : K.BOk σ')
+    (hS : K.Ok σ) (hP : StrukturPasst K a σ ρ) (hGL : Dekl.GlL K σ σ') (hok' : A.FreiOk σ') (hbok' : K.BOk σ')
     (hlebt' : ∀ j, A.Lebt σ' j ↔ A.Lebt σ j) (hsub : ∀ j, K.InB σ' j → K.InB σ j) (hk : K.InB σ k.n)
     (hnotin : ¬ K.InB σ' k.n) (hlebtk : A.Lebt σ' k.n)
     {rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ'}
     (ih : Folgt K O passes R ((a.forget .baum).ext .frei) rest a'') :
-    Post K a'' (execBlock O passes R rest σ' (.cons k ρ)) := by
+    StrukturPost K a'' (execBlock O passes R rest σ' (.cons k ρ)) := by
   have hkL : ¬ K.InL σ k.n := fun h => hS.2.2.2 _ ⟨h, hk⟩
   have hOk : K.Ok σ' := by
     refine ⟨hok', hGL.lok (fun j hj => (hlebt' j).mpr (Dekl.InL.lebt hS.2.1 hj)) hS.2.1, hbok', ?_⟩
     rintro j ⟨hjL, hjB⟩
     exact hS.2.2.2 j ⟨(hGL.inL j).mp hjL, hsub j hjB⟩
-  have hP0 : Passt K (a.forget .baum) σ' ρ := by
-    refine Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_)
+  have hP0 : StrukturPasst K (a.forget .baum) σ' ρ := by
+    refine StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_)
     · obtain ⟨hy', -⟩ := Abs.forget_eq hy (by decide)
       obtain ⟨hly, hnl, hnb⟩ := hP.1 y hy'
       exact ⟨hy', (hlebt' _).mpr hly, fun hm => hnl ((hGL.inL _).mp hm), fun hm => hnb (hsub _ hm)⟩
     · exact (hGL.inL _).mpr (hP.2.1 y (Abs.forget_eq hy (by decide)).1)
     · exact absurd rfl (Abs.forget_eq hy (by decide)).2
-  refine ih σ' (.cons k ρ) hOk (Passt.ext_frei K k hP0 hlebtk (fun hm => hkL ((hGL.inL _).mp hm)) hnotin ?_)
+  refine ih σ' (.cons k ρ) hOk (StrukturPasst.ext_frei K k hP0 hlebtk (fun hm => hkL ((hGL.inL _).mp hm)) hnotin ?_)
   intro y hy e
   have hy' := (Abs.forget_eq hy (by decide)).1
   exact (hP.1 y hy').2.2 (by rw [e]; exact hk)
@@ -251,7 +251,7 @@ theorem fall_abschneiden {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
           baum_abschneiden_links_zug O passes R b.Wz b.Lf b.Rf b.hd.symm p hwT hLT voll voll2 rest σ ρ hS.1 hbok
             hpb hi hl.1 hl.2
         rw [he]
-        apply Post.schrumpf
+        apply StrukturPost.schrumpf
         exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp) (by simp)) hok'
           ((Dekl.BOk_some hb σ').mpr hbok') hlebt'
           (fun j hj => (Dekl.InB_some hb σ j).mpr (hsub j ((Dekl.InB_some hb σ' j).mp hj)))
@@ -260,14 +260,14 @@ theorem fall_abschneiden {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
           baum_abschneiden_rechts_zug O passes R b.Wz b.Lf b.Rf b.hd p hwT hLT voll voll2 rest σ ρ hS.1 hbok
             hpb hi hl.1 hl.2
         rw [he]
-        apply Post.schrumpf
+        apply StrukturPost.schrumpf
         exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp) (by simp)) hok'
           ((Dekl.BOk_some hb σ').mpr hbok') hlebt'
           (fun j hj => (Dekl.InB_some hb σ j).mpr (hsub j ((Dekl.InB_some hb σ' j).mp hj)))
           ((Dekl.InB_some hb σ _).mpr hkin) (fun h => hnotin ((Dekl.InB_some hb σ' _).mp h)) hlebtk ih
     · obtain ⟨k, o2, he⟩ := abschneiden_nichtblatt O passes R b.Lf b.Rf C p hwT hLT voll voll2 rest σ ρ hi hl
       rw [he]
-      apply Post.schrumpf
+      apply StrukturPost.schrumpf
       exact Rein.post K O passes R hv2 _ _ (Dekl.Ok.lese K Λ o2 (Dekl.Ok.lese K Λ _ hS))
   · rw [abschneiden_voll O passes R b.Lf b.Rf C p hwT hLT voll voll2 rest σ ρ hi]
     exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K _ _ hS)
@@ -285,14 +285,14 @@ theorem fall_wurzelAus {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
     · obtain ⟨σ', k, he, hrm, hkn, hbok', hok', hlebt', hempty, hlebtk, hkin⟩ :=
         baum_wurzel_aus_zug O passes R b.Lf b.Rf b.Wz hwG hLG hLT voll voll2 rest σ ρ hS.1 hbok hi hl.1 hl.2
       rw [he]
-      apply Post.schrumpf
+      apply StrukturPost.schrumpf
       exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp) (by simp)) hok'
         ((Dekl.BOk_some hb σ').mpr hbok') hlebt'
         (fun j hj => absurd ((Dekl.InB_some hb σ' j).mp hj) (hempty j))
         ((Dekl.InB_some hb σ _).mpr hkin) (fun h => hempty _ ((Dekl.InB_some hb σ' _).mp h)) hlebtk ih
     · obtain ⟨k, o2, he⟩ := wurzelAus_nichtblatt O passes R b.Lf b.Rf b.Wz hwG hLG hLT voll voll2 rest σ ρ hi hl
       rw [he]
-      apply Post.schrumpf
+      apply StrukturPost.schrumpf
       exact Rein.post K O passes R hv2 _ _ (Dekl.Ok.lese K Λ o2 (Dekl.Ok.lese K Λ _ hS))
   · rw [wurzelAus_voll O passes R b.Lf b.Rf b.Wz hwG hLG hLT voll voll2 rest σ ρ hi]
     exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K _ _ hS)

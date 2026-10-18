@@ -4,7 +4,7 @@
              invariant at EVERY exit, a body that falls off meets the abstract state it ends in, and no recognized body
              ends in a `leave` or a `next`.
 
-    `erk_erhaelt`  -- `Erk K a b a'`, `K.Ok σ` and `Passt K a σ ρ` give `Post K a'` of the run of `b` from `(σ, ρ)`.
+    `erk_erhaelt`  -- `Erk K a b a'`, `K.Ok σ` and `StrukturPasst K a σ ρ` give `StrukturPost K a'` of the run of `b` from `(σ, ρ)`.
     `erk_koerper`  -- the corollary a function needs: a body that knows nothing at entry (every position `offen`).
 
   The proof is an induction on the derivation; each case is a theorem of `ArenaErkFallAlloc.lean` (allocator, guards,
@@ -77,7 +77,7 @@ theorem erk_erhaelt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a' : Abs} {
     every exit. -/
 theorem erk_koerper {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a' : Abs} {b : Block D V l Γ Λ Λ'}
     (h : Erk K Abs.leer b a') (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) :
-    Post K a' (execBlock O passes R b σ ρ) :=
+    StrukturPost K a' (execBlock O passes R b σ ρ) :=
   erk_erhaelt O passes R K h σ ρ hS
     ⟨fun _ hx => absurd hx (by simp [Abs.leer]), fun _ hx => absurd hx (by simp [Abs.leer]),
       fun _ hx => absurd hx (by simp [Abs.leer]), fun _ _ hx _ _ => absurd hx (by simp [Abs.leer])⟩
@@ -86,7 +86,7 @@ theorem erk_koerper {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a' : Abs} {b 
     evaluated to state the promise (a long run is expensive to unfold by the elaborator). -/
 theorem erk_koerper_lauf {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a' : Abs} {b : Block D V l Γ Λ Λ'}
     (h : Erk K Abs.leer b a') (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) {o : Ausgang V l Γ}
-    (ho : execBlock O passes R b σ ρ = o) : Post K a' o :=
+    (ho : execBlock O passes R b σ ρ = o) : StrukturPost K a' o :=
   ho ▸ erk_koerper O passes R K h σ ρ hS
 
 end Beweis

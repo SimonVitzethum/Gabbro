@@ -26,9 +26,9 @@
   `traverse` and `retry` fall off in `k0`; `forever` never falls off (only `leave` could end it, which no recognized body
   has), so what follows it is recognized from the entry state.
 
-  THE CLAIM. `Dekl.Ok` is the invariant of the arena. `Passt K a σ ρ` says the world and the variables keep what `a` says.
-  `erk_erhaelt` (`ArenaErkennerBeweis.lean`): if `Erk K a b a'`, `K.Ok σ` and `Passt K a σ ρ`, then EVERY outcome of running
-  `b` has `K.Ok`, a block that falls off also has `Passt K a'`, and `leave`/`next` never happen.
+  THE CLAIM. `Dekl.Ok` is the invariant of the arena. `StrukturPasst K a σ ρ` says the world and the variables keep what `a` says.
+  `erk_erhaelt` (`ArenaErkennerBeweis.lean`): if `Erk K a b a'`, `K.Ok σ` and `StrukturPasst K a σ ρ`, then EVERY outcome of running
+  `b` has `K.Ok`, a block that falls off also has `StrukturPasst K a'`, and `leave`/`next` never happen.
 -/
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaDekl
 import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
@@ -89,7 +89,7 @@ variable {A : FreiForm D} (K : Dekl A)
 /-- **The meaning of an abstract state in a world and an environment.** A `frei` variable names a live slot that is in
     neither structure; a `liste` variable names a list member; a `baum` variable a tree member; two `frei` variables name
     two slots. -/
-def Passt (a : Abs) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) : Prop :=
+def StrukturPasst (a : Abs) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) : Prop :=
   (∀ x : Var Γ (Ty.index (D.count A.tab)), a x.pos = .frei →
       A.Lebt σ (ρ.get x).n ∧ ¬ K.InL σ (ρ.get x).n ∧ ¬ K.InB σ (ρ.get x).n) ∧
   (∀ x : Var Γ (Ty.index (D.count A.tab)), a x.pos = .liste → K.InL σ (ρ.get x).n) ∧
@@ -99,8 +99,8 @@ def Passt (a : Abs) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) : Prop :=
 
 /-- **What the recognizer promises of an outcome:** wherever the run ends the arena is well formed; a block that falls
     off also meets the abstract state it ends in; a block never ends in a `leave` or a `next`. -/
-def Post {V : Vertrag D} {l : Bool} {Γ : Ctx} (a : Abs) : Ausgang V l Γ → Prop
-  | .ok σ ρ => K.Ok σ ∧ Passt K a σ ρ
+def StrukturPost {V : Vertrag D} {l : Bool} {Γ : Ctx} (a : Abs) : Ausgang V l Γ → Prop
+  | .ok σ ρ => K.Ok σ ∧ StrukturPasst K a σ ρ
   | .zurueck σ _ => K.Ok σ
   | .why σ _ => K.Ok σ
   | .leave _ _ _ => False

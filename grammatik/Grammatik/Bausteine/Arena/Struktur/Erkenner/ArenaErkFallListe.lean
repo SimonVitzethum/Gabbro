@@ -56,7 +56,7 @@ theorem fall_push {a a' : Abs} (d : ListDekl A) (hd : K.liste = some d)
     rcases hvor j ((Dekl.InL_some hd σ' j).mp hjL) with rfl | hm
     · exact hnotB ((hGB.inB _).mp hjB)
     · exact hS.2.2.2 j ⟨(Dekl.InL_some hd σ j).mpr hm, (hGB.inB _).mp hjB⟩
-  refine ih σ' ρ hOk (Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
+  refine ih σ' ρ hOk (StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_))
   · rcases Abs.set_eq hy with ⟨-, h⟩ | ⟨hyx, hy'⟩
     · cases h
     · obtain ⟨hly, hnl, hnb⟩ := hP.1 y hy'
@@ -89,7 +89,7 @@ theorem fall_pop {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
   · obtain ⟨σ', k, he, hrm, hkn, hl', hok', hlebt, hnot, hlebtk, hg, hsub⟩ :=
       liste_pop_zug O passes R d.L d.G hwG hLG hLT voll rest σ ρ hl hS.1 hne
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp) (by simp)
     have hhead : K.InL σ k.n := (Dekl.InL_some hd σ _).mpr (by rw [hkn]; exact kopf_auf hl hne)
     have hnotB : ¬ K.InB σ k.n := fun hb => hS.2.2.2 _ ⟨hhead, hb⟩
@@ -99,15 +99,15 @@ theorem fall_pop {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
       rintro j ⟨hjL, hjB⟩
       exact hS.2.2.2 j ⟨(Dekl.InL_some hd σ j).mpr (hsub _ ((Dekl.InL_some hd σ' j).mp hjL)),
         (hGB.inB _).mp hjB⟩
-    have hP0 : Passt K (a.forget .liste) σ' ρ := by
-      refine Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_)
+    have hP0 : StrukturPasst K (a.forget .liste) σ' ρ := by
+      refine StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_)
       · obtain ⟨hy', -⟩ := Abs.forget_eq hy (by decide)
         obtain ⟨hly, hnl, hnb⟩ := hP.1 y hy'
         exact ⟨hy', (hlebt _).mpr hly, fun hm => hnl ((Dekl.InL_some hd σ _).mpr
           (hsub _ ((Dekl.InL_some hd σ' _).mp hm))), fun hm => hnb ((hGB.inB _).mp hm)⟩
       · exact absurd rfl (Abs.forget_eq hy (by decide)).2
       · exact (hGB.inB _).mpr (hP.2.2.1 y (Abs.forget_eq hy (by decide)).1)
-    refine ih σ' (.cons k ρ) hOk (Passt.ext_frei K k hP0 hlebtk ?_ (fun hm => hnotB ((hGB.inB _).mp hm)) ?_)
+    refine ih σ' (.cons k ρ) hOk (StrukturPasst.ext_frei K k hP0 hlebtk ?_ (fun hm => hnotB ((hGB.inB _).mp hm)) ?_)
     · exact fun hm => hnot ((Dekl.InL_some hd σ' _).mp hm)
     · intro y hy e
       have hy' := (Abs.forget_eq hy (by decide)).1
@@ -128,7 +128,7 @@ theorem fall_unlink {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
     obtain ⟨σ', k, he, hrm, hkn, hl', hok', hlebt, hnot, hlebtk, hnp, hsub⟩ :=
       liste_unlink_zug O passes R d.L d.G p hwT hLT voll rest σ ρ hl hS.1 hpa hi
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp) (by simp)
     have hmem : K.InL σ k.n := (Dekl.InL_some hd σ _).mpr (by rw [hkn]; exact auf_nach hpa hi)
     have hnotB : ¬ K.InB σ k.n := fun hb => hS.2.2.2 _ ⟨hmem, hb⟩
@@ -138,15 +138,15 @@ theorem fall_unlink {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
       rintro j ⟨hjL, hjB⟩
       exact hS.2.2.2 j ⟨(Dekl.InL_some hd σ j).mpr (hsub _ ((Dekl.InL_some hd σ' j).mp hjL)),
         (hGB.inB _).mp hjB⟩
-    have hP0 : Passt K (a.forget .liste) σ' ρ := by
-      refine Passt.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_)
+    have hP0 : StrukturPasst K (a.forget .liste) σ' ρ := by
+      refine StrukturPasst.wechsel K hP (fun y hy => ?_) (fun y hy => ?_) (fun y hy => ?_)
       · obtain ⟨hy', -⟩ := Abs.forget_eq hy (by decide)
         obtain ⟨hly, hnl, hnb⟩ := hP.1 y hy'
         exact ⟨hy', (hlebt _).mpr hly, fun hm => hnl ((Dekl.InL_some hd σ _).mpr
           (hsub _ ((Dekl.InL_some hd σ' _).mp hm))), fun hm => hnb ((hGB.inB _).mp hm)⟩
       · exact absurd rfl (Abs.forget_eq hy (by decide)).2
       · exact (hGB.inB _).mpr (hP.2.2.1 y (Abs.forget_eq hy (by decide)).1)
-    refine ih σ' (.cons k ρ) hOk (Passt.ext_frei K k hP0 hlebtk ?_ (fun hm => hnotB ((hGB.inB _).mp hm)) ?_)
+    refine ih σ' (.cons k ρ) hOk (StrukturPasst.ext_frei K k hP0 hlebtk ?_ (fun hm => hnotB ((hGB.inB _).mp hm)) ?_)
     · exact fun hm => hnot ((Dekl.InL_some hd σ' _).mp hm)
     · intro y hy e
       have hy' := (Abs.forget_eq hy (by decide)).1
@@ -164,9 +164,9 @@ theorem fall_kopf {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
   by_cases hne : d.G.st σ < D.count A.tab
   · obtain ⟨k, he, hkn⟩ := linkKopfBind_ausfuehren O passes R d.G hLG voll rest σ ρ hne
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hgl : Dekl.Gleich K σ (σ.lese Λ [Sum.inr d.G.g]) := Dekl.Gleich.lese σ Λ _
-    exact ih _ (.cons k ρ) (hgl.ok hS) (Passt.ext_liste K k (hgl.passt hP)
+    exact ih _ (.cons k ρ) (hgl.ok hS) (StrukturPasst.ext_liste K k (hgl.passt hP)
       ((hgl.l.inL _).mpr ((Dekl.InL_some hd σ _).mpr (by rw [hkn]; exact kopf_auf hl hne))))
   · rw [linkKopfBind_voll O passes R d.G hLG voll rest σ ρ hne]
     exact Rein.post K O passes R hv _ _ (Dekl.Ok.lese K _ _ hS)
@@ -180,9 +180,9 @@ theorem fall_nach {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
   by_cases hn : d.L.wert σ (ρ.get p).n < D.count A.tab
   · obtain ⟨k, he, hkn⟩ := linkNachBind_ausfuehren O passes R d.L p hLT voll rest σ ρ hn
     rw [he]
-    apply Post.schrumpf
+    apply StrukturPost.schrumpf
     have hgl : Dekl.Gleich K σ (σ.lese Λ [Sum.inl A.tab]) := Dekl.Gleich.lese σ Λ _
-    exact ih _ (.cons k ρ) (hgl.ok hS) (Passt.ext_liste K k (hgl.passt hP)
+    exact ih _ (.cons k ρ) (hgl.ok hS) (StrukturPasst.ext_liste K k (hgl.passt hP)
       ((hgl.l.inL _).mpr ((Dekl.InL_some hd σ _).mpr
         (by rw [hkn]; exact auf_nach ((Dekl.InL_some hd σ _).mp (hP.2.1 p hp)) hn))))
   · rw [linkNachBind_voll O passes R d.L p hLT voll rest σ ρ hn]
