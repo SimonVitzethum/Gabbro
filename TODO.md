@@ -12,7 +12,7 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
 
 **Phase A: dynamic data structures and their invariants** (plan: `dokumente/PLAN-DYNAMISCH.md` section 8a; covers O4-O6, O11, O14, O20, O29).
  1. `free`/`grow` as G blocks over the arena sugar; free-list invariant (`ArenaFrei.lean` is built, phase 1 part one).
- 2. Invariants over live slots: links in range, acyclic along a walk, tree shape (capability tree), freelist disjoint from live slots; preservation theorems with witnesses and counter-models. DONE for list and tree as lemmas over forms (2026-10-18, `PLAN-DYNAMISCH.md` 8a.1, SATZKARTE 79); open: executed link stores, the `Akzeptiert` recognizer, sibling consistency (O6), hash chain.
+ 2. Invariants over live slots: links in range, acyclic along a walk, tree shape (capability tree), freelist disjoint from live slots; preservation theorems with witnesses and counter-models. DONE for list and tree as lemmas over forms and on the EXECUTED link forms, `grow` composed, the list recognizer `erk_erhaelt` proved, sibling consistency (O6) and hash chains proved over abstract link functions (2026-10-18, `PLAN-DYNAMISCH.md` 8a.1, SATZKARTE 79); open: the tree recognizer and loops, wiring the recognizer into `Akzeptiert`, executed parent-store/`revoke`/table-bucket forms.
  3. Concurrency of arenas (O20): `grow` as a locked commit.
  4. `Spec.lean` diff (dynamic structures and table/group invariants leave NOT CLAIMED; `invRuhe`/`invSicht` non-vacuous), `gabbro_ziel` re-proved, two independent verdicts.
  5. Exporter/elaboration, then checker (O11), then the three examples (list, tree, hash chain) with certificates and poison probes.

@@ -289,7 +289,7 @@ completion evidence: the exit conditions above are.
 
 ### 8a.1 Phase 2 status (2026-10-18): `InvDyn` for the list and the tree, proved in Lean
 
-**What is proved** (`grammatik/Grammatik/Bausteine/Arena/`, axioms `propext`/`Classical.choice`/`Quot.sound` at most; no
+**What is proved in the first pass** (`grammatik/Grammatik/Bausteine/Arena/Struktur/`, axioms `propext`/`Classical.choice`/`Quot.sound` at most; no
 `sorry`; `gabbro_ziel` untouched: none of these modules is imported by `Zielsatz/`):
 
 | Piece | File | Statement |
@@ -310,17 +310,31 @@ Hypotheses are the checker-visible ones: single release and no use after release
 no longer linked), a pushed slot is unlinked and live, a hung leaf has an empty child place, and `k.n = stand` is
 what `arenaAlloc`'s guard binds.
 
-**Open inside phase 2 (not claimed):**
-* the executed forms of the link stores (a `Block.linkPush`/`linkPop` over `assignSlot` and `assignGlob`, like
-  `freiRumpf`) and the multi-store move `lnk[p] = lnk[i]` for arbitrary bodies: today the stores' effect is a hypothesis;
-* the recognizer that turns `Akzeptiert` plus `maintains`/`breaking`/`ops` clauses into those hypotheses for every
-  accepted body (the generic theorem, not a per-program one): without it the preservation theorems are lemmas about
-  forms, not yet a leg of the goal;
-* sibling consistency of the capability tree (O6) as a further predicate over `Lf`/`Rf` and the parent link, and `revoke`
-  (cutting a whole subtree: needs `blatt_aus` for subtrees and the release of each slot);
-* the hash chain (array of list heads: `ListOk` per bucket plus pairwise disjointness of the buckets);
-* `LinkKopf` must also exclude the committed word `komm` before `grow` is composed with these moves (`grow` writes it);
-  `Fremd` does not mention `komm` because none of the three allocator blocks writes it;
+**Closed since (2026-10-18, second pass, all in `grammatik/Grammatik/Bausteine/Arena/Struktur/`; the dynamic-structure modules moved there for the 20-entry limit):**
+
+| Open item of the first pass | Now | File |
+|---|---|---|
+| executed forms of the link stores | PROVED. `Block.linkPush`/`linkPop`/`linkUnlink` (list) and `Block.blattEin`/`blattAus` (tree, left and right) over `assignSlot`/`assignGlob`/`narrow`, for any bound index variable and any continuation. `*_ausfuehren` give the store facts, `liste_push_zug`/`liste_pop_zug`/`liste_unlink_zug` and `baum_einfuegen_*_zug`/`baum_blatt_aus_*_zug` keep `ListOk`/`BaumOk` ON THE EXECUTED BLOCKS. `linkKopfBind`/`linkNachBind` read the head/successor. Guard failures (`*_voll`) end in the `else`. | `ArenaLinkForm`, `ArenaBaumForm` |
+| `LinkKopf` excludes `komm`; `grow` composes | PROVED. `LinkKopf.h3 : g ≠ komm`, `Fremd` names `komm`; `nachGrow_gleich`; `grow_liste`, `grow_baum`: the executed `grow` keeps `FreiOk`, every liveness, `ListOk`/`BaumOk`; `dynGrow_voll`. | `ArenaWachs` |
+| allocator moves in the middle of a body | PROVED. `Block.freiVar` (`free` of ANY bound index), `frischAlloc_ausfuehren`, `nimmAlloc_ausfuehren` (+ `*_voll`) for every continuation; `arenaRumpf_ausfuehren`. | `ArenaAllocForm` |
+| the recognizer | PROVED FOR THE LIST (and the free list). `Erk a b a'` (`ArenaErkenner`): a body is accepted iff it is built from the proved moves (alloc from counter / free list, `free`, push, pop, unlink, head and successor reads, `grow`, guards with a store-free `else` (`Rein`), payload stores, branches) over an abstract state per bound variable (`frei` owned, `glied` member, `offen` unknown; the Lean model of the `N586` name table). **`erk_erhaelt`**: `Erk a b a'`, `StrukturOk σ`, `Passt a σ ρ` give `StrukturOk` at EVERY exit of the run of `b` and `Passt a'` when it falls off; **`erk_koerper`**: a body that knows nothing at entry. The proof applies the executed-form theorems; their hypotheses are exactly what the abstract state says. Witnesses: `nimmPush_konkret` and `kopfUnlinkFrei_konkret` RUN accepted bodies on the real arena; planted defects with NO derivation (rejected through the soundness theorem and a real run): `nimmPushPush_abgelehnt` (a slot linked twice), `nimmFreiFrei_abgelehnt` (double release), `nimmFreiPush_abgelehnt` (use after release), `pushFremd_abgelehnt` (a slot the body does not own). | `ArenaErkenner`, `ArenaErkennerLemmas`, `ArenaErkennerBeweis`, `ArenaErkennerZeuge`, `ArenaAuf` |
+| sibling consistency (O6), abstract half | PROVED over the abstract binary tree. `SibF` (first child has parent `j`, next sibling has the parent of `j`); the slots after a leaf in/out (`einfuegen_mitglieder`, `blatt_aus_mitglieder`); `sib_einfuegen_links/rechts` (the new child gets parent `p`, the new sibling the parent of `p`), `sib_blatt_aus_*`; planted defect `sib_ohne_vater_bricht` and concrete witness/defect (`sib_einfuegen_zeuge`, `sib_defekt_bricht`). | `ArenaSibling` |
+| hash chain, abstract half | PROVED over the abstract link function. `HashOkF` (every bucket a `ListOkF`, chains pairwise disjoint); `hash_push` (the slot is on NO bucket), `hash_pop`, `hash_unlink`; witness `hash_push_zeuge`, planted defect `hash_defekt_bricht` (a slot on two buckets). | `ArenaHash` |
+
+**Still open inside phase 2 (not claimed):**
+* the recognizer for the TREE bodies (the executed tree forms exist; their hypotheses "member of the tree", "empty child
+  place", "leaf" are not yet tracked by an abstract state with guards), and for bodies that hold a list AND a tree on one
+  arena;
+* the recognizer is NOT yet a component of `Akzeptiert` and `Spec.lean`/`gabbro_ziel` do not mention it (8a.3 stays a
+  proposal): there is no generic statement that every ACCEPTED unit's writers of a dynamic structure are `Erk`-derivable,
+  and no `Block` that the Rust checker accepts is translated to an `Erk` derivation (the exporter does not exist for these forms);
+* executed forms for the parent store of the capability tree (`par[i] = p`), for `revoke` (cutting a whole subtree: needs
+  `blatt_aus` for subtrees and the release of each slot), and for a bucket head held in a TABLE field (the hash
+  chain's `hd` is an abstract function today, not a field read through `Wert.umTyp`);
+* a recognizer rule for loops (`traverse`, `retry`, `forever`) over structures: a body with a loop that moves a link is
+  not derivable;
+* the vocabulary is closed: any other store into a link field or head, a `bind` that copies an owned index (aliases),
+  a call that may move a link, has no derivation and is refused; widening it means a new constructor with its theorem;
 * a link field that holds an index of ANOTHER arena (decision (b) says: not in scope).
 
 ### 8a.2 Concurrency of arenas (O20): design note, phase 3, nothing built yet
@@ -338,7 +352,7 @@ what `arenaAlloc`'s guard binds.
   and why `invSicht` (observed by the guard holder) is the weaker, already present form.
 * **`grow` as a locked commit.** `grow` writes only `komm` (`dynGrow_commit`); `Lebt`/`ListOk`/`BaumOk` read slots below
   `stand <= komm` and the free list, so they are untouched (a `dynGrow_fremd` lemma, same proof as `*_fremd`, once
-  `LinkKopf` excludes `komm`). The leg `Laufzeit.commit` (the OS gate's contract: success names readable storage) stays a
+  `LinkKopf` excludes `komm`, DONE). The leg `Laufzeit.commit` (the OS gate's contract: success names readable storage) stays a
   named hardware/binding assumption; what changes is that two threads cannot interleave a commit with an allocation,
   because both hold `L`.
 * **What the model still lacks:** a statement that two sections on one arena commute up to slot names (no ABA on a
@@ -346,7 +360,7 @@ what `arenaAlloc`'s guard binds.
   `N586` per thread and needs the cross-thread form: a slot a thread holds is not on the free list unless that thread
   freed it). A lock-free free list (Treiber stack) is phase B item 5, not this.
 * **Next steps:** (1) the section theorem `abschnitt_erhaelt`: a body built only from the proved moves preserves
-  `S.inv L` from acquire to release; (2) `dynGrow_fremd`; (3) the slot-ownership predicate for the ABA point.
+  `S.inv L` from acquire to release; (2) `dynGrow_fremd` (DONE 2026-10-18 as `nachGrow_gleich`, `grow_liste`, `grow_baum` in `ArenaWachs`); (3) the slot-ownership predicate for the ABA point (the recognizer's `frei` status is the single-thread form of it).
 
 ### 8a.3 Proposal (NOT applied): the `Spec.lean` diff for step 4
 
@@ -374,7 +388,10 @@ dynamic structures need their own declaration form and their own `Holds`, beside
 5. Proof: `gabbro_ziel` gets the two legs from the section theorem (8a.2) and the preservation theorems of 8a.1 by the
    same induction over machine steps that proves `invRuhe`; the axioms stay `propext`, `Classical.choice`, `Quot.sound`.
    Review: two independent verdicts as for every extension of the goal (AGENTS.md section 1).
-   Until 8a.1's "open" list is closed, this diff would claim more than is proved; it is a proposal.
+   Status 2026-10-18: the premise of item 4 (a recognizer whose acceptance yields the invariant) is PROVED for list bodies
+   (`erk_erhaelt`, 8a.1); still missing before this diff may be applied: the tree recognizer, loops, the wiring of the recognizer
+   into `Akzeptiert` (a Bool `dynB` over the writers of every declared structure), the per-structure `DynForm` declaration in
+   `Kern/Syntax`, and the lock-section theorem of 8a.2. Until those exist the diff would claim more than is proved; it is a proposal.
 
 ## 9. Re-measuring
 
