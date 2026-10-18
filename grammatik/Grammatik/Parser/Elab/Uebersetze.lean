@@ -159,6 +159,12 @@ inductive UStmt
   | axCall : String → List UArg → UStmt
   /-- `let x = f(..);` at an `extern fn` with an answer (`Block.bindAxiom`, `Endblock.bindAxiom`). -/
   | bindAx : String → String → List UArg → UStmt
+  /-- `retry L until p bounded n ops .. on_exceeded h { .. }` (`Stmt.retry`): `retryBeg n p`, the pass's statements
+      with the ender (`leave`/`next` or none), `ifElse`, the overflow block (the handler's call), `blkEnd`. -/
+  | retryBeg : Nat → UEns → UStmt
+  /-- `forever L per_pass bounded n ops .. progress a { .. }` (`Stmt.forever`): `foreverBeg k` (the position of
+      the assumption `a`), the pass's statements with the ender, `blkEnd`. -/
+  | foreverBeg : Nat → UStmt
   /-- `narrow x to lo .. hi else { .. }` (`Block.narrow`): `narrowBeg x lo hi`, the statements of the `else`
       branch with its ender (`ret`/`leave`/`next`), `blkEnd`; the rest of the block reads `x` at `lo .. hi`. -/
   | narrowBeg : String → Int → Int → UStmt
@@ -263,6 +269,8 @@ structure UCtx where
   globs : List UGlob := []
   /-- The names of the `let mut` locals in scope (a later binding of the same name takes it out). -/
   muts : List String := []
+  /-- The unit's `assume` items (`D.Annahme`, beside the memory model's `a10`), in order. -/
+  annahmen : List String := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -323,6 +331,8 @@ structure UProg where
   fns : List UFn
   /-- The foreign bodies (`extern fn`). -/
   axs : List UAx := []
+  /-- The `assume` items, in order (`D.Annahme`). -/
+  annahmen : List String := []
   /-- The dispatch roots of the unit's `entry` items (function names, each a parameterless function of
       the unit): thread roots of the goal's runtime premise (`Einheit.starts`). -/
   roots : List String := []
@@ -1538,6 +1548,86 @@ def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option 
 def uMitLokal (ctx : UCtx) (x : String) (k : UParamArt) (ty : Ty) (muts : List String) : UCtx :=
   { ctx with names := x :: ctx.names, kinds := k :: ctx.kinds, types := ty :: ctx.types, bits := 0 :: ctx.bits, muts := muts }
 
+/-- The words that start a section of a `retry`/`forever` header. -/
+def uSchleifenWort (s : String) : Bool :=
+  strEq s "until" || strEq s "bounded" || strEq s "per_pass" || strEq s "progress" ||
+    strEq s "on_exceeded" || strEq s "effects" || strEq s "leaves"
+
+/-- A loop header split into its sections: the key word (empty for the leading label) and the tokens up to
+    the next key word at brace depth zero. -/
+def uKopfAbschnitte : List Token → Nat → String → List Token → List (String × List Token) →
+    List (String × List Token)
+  | [], _, k, acc, out => out ++ [(k, acc.reverse)]
+  | t :: rest, d, k, acc, out =>
+    match t with
+    | .zeichen "{" => uKopfAbschnitte rest (d + 1) k (t :: acc) out
+    | .zeichen "}" => uKopfAbschnitte rest (d - 1) k (t :: acc) out
+    | .wort w =>
+      if d == 0 && uSchleifenWort w then uKopfAbschnitte rest d w [] (out ++ [(k, acc.reverse)])
+      else uKopfAbschnitte rest d k (t :: acc) out
+    | .ident w =>
+      if d == 0 && uSchleifenWort w then uKopfAbschnitte rest d w [] (out ++ [(k, acc.reverse)])
+      else uKopfAbschnitte rest d k (t :: acc) out
+    | _ => uKopfAbschnitte rest d k (t :: acc) out
+
+/-- The tokens of a section by key word. -/
+def uAbschnitt (secs : List (String × List Token)) (k : String) : Option (List Token) :=
+  (secs.find? (fun s => strEq s.1 k)).map (·.2)
+
+/-- A loop header's sections (the raw header of `SAnw.retry`/`SAnw.loop` read again by the lexer). -/
+def uSchleifenKopf2 (h : String) : Except String (List (String × List Token)) :=
+  match lex h with
+  | .error _ => .error "loop header without G form"
+  | .ok toks0 => .ok (uKopfAbschnitte (toks0.filter (fun k => match k with | .ende => false | _ => true)) 0 "" [] [])
+
+/-- A name section: one word. -/
+def uEinName : Option (List Token) → Option String
+  | some [.ident n] => some n
+  | some [.wort n] => some n
+  | _ => none
+
+/-- `bounded N ops`. -/
+def uOpsZahl (ctx : UCtx) : Option (List Token) → Option Nat
+  | some [.num n, .wort _] => some n
+  | some [.num n, .ident _] => some n
+  | some [.ident c, .wort _] => (ctx.lits.find? (fun k => strEq k.1 c)).bind fun k => if 0 ≤ k.2 then some k.2.toNat else none
+  | _ => none
+
+/-- The header of a `retry`: the label, the pass bound, the predicate, the handler. `progress` must name an
+    `assume` item. -/
+def uRetryKopf (ctx : UCtx) (h : String) : Except String (String × Nat × UEns × String) :=
+  match uSchleifenKopf2 h with
+  | .error e => .error e
+  | .ok secs =>
+    match uAbschnitt secs "until", uOpsZahl ctx (uAbschnitt secs "bounded"), uEinName (uAbschnitt secs "progress"),
+        uEinName (uAbschnitt secs "on_exceeded") with
+    | some pt, some n, some a, some y =>
+      if !(ctx.annahmen.any (strEq · a)) then .error ("assumption unknown: " ++ a)
+      else
+        match parseTop (pt ++ [Token.ende]) with
+        | .error _ => .error "retry condition without G form"
+        | .ok p =>
+          match uBool ctx p with
+          | .error e => .error e
+          | .ok pv => .ok ((match uAbschnitt secs "" with | some [.ident l] => l | some [.wort l] => l | _ => ""), n, pv, y)
+    | none, _, _, _ => .error "retry without until without G form"
+    | _, _, _, _ => .error "retry header without G form"
+
+/-- The header of a `forever`: the label and the position of the assumption `progress` names. -/
+def uForeverKopf (ctx : UCtx) (h : String) : Except String (String × Nat) :=
+  match uSchleifenKopf2 h with
+  | .error e => .error e
+  | .ok secs =>
+    match uAbschnitt secs "leaves" with
+    | some _ => .error "forever leaves without G form"
+    | none =>
+      match uEinName (uAbschnitt secs "progress") with
+      | none => .error "forever without progress without G form"
+      | some a =>
+        match ctx.annahmen.findIdx? (fun x => strEq x a) with
+        | none => .error ("assumption unknown: " ++ a)
+        | some k => .ok ((match uAbschnitt secs "" with | some [.ident l] => l | some [.wort l] => l | _ => ""), k)
+
 /-- The value of a bound of a narrowed range: a numeral, a negated numeral or a named constant. -/
 def uNarrowWert (ctx : UCtx) : List Token → Option Int
   | [.num n] => some (Int.ofNat n)
@@ -1758,6 +1848,38 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx' rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok (st :: xs, cE)
+  | f + 1, ctx, .retry h (.block ss e) :: rest =>
+    match uRetryKopf ctx h with
+    | .error err => .error err
+    | .ok (lab, cnt, bis, ueb) =>
+      match uAnwReihe tabs koepfe f { ctx with loops := lab :: ctx.loops } ss with
+      | .error err => .error err
+      | .ok (body, ctxB) =>
+        match uEndeStmt ctxB e with
+        | .error err => .error err
+        | .ok endS =>
+          match uRuf ctx tabs koepfe ueb [] with
+          | .error err => .error err
+          | .ok (callee, xs) =>
+            if !callee.ext then .error "on_exceeded names no foreign body"
+            else
+              match uAnwReihe tabs koepfe f ctx rest with
+              | .error err => .error err
+              | .ok (ys, cE) =>
+                .ok ([UStmt.retryBeg cnt bis] ++ body ++ endS ++ [UStmt.ifElse, UStmt.axCall ueb xs, UStmt.blkEnd] ++ ys, cE)
+  | f + 1, ctx, .loop h (.block ss e) :: rest =>
+    match uForeverKopf ctx h with
+    | .error err => .error err
+    | .ok (lab, k) =>
+      match uAnwReihe tabs koepfe f { ctx with loops := lab :: ctx.loops } ss with
+      | .error err => .error err
+      | .ok (body, ctxB) =>
+        match uEndeStmt ctxB e with
+        | .error err => .error err
+        | .ok endS =>
+          match uAnwReihe tabs koepfe f ctx rest with
+          | .error err => .error err
+          | .ok (ys, cE) => .ok ([UStmt.foreverBeg k] ++ body ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
   | f + 1, ctx, .trim (.variable x) t (.block ss e) :: rest =>
     match uNarrowKopf ctx x t with
     | .error err => .error err
@@ -1861,22 +1983,22 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
-    (fname : String) : UCtx :=
+    (fname : String) (annahmen : List String := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool,
-    fname, bits := kopf.bits, alias, lits, globs }
+    fname, bits := kopf.bits, alias, lits, globs, annahmen }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
 def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
-    (koerper : SAnw) : Except String UFn :=
+    (koerper : SAnw) (annahmen : List String := []) : Except String UFn :=
   match elabKopf consts alias tabs locks globs sig with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name
+    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, body, r) =>
@@ -1978,6 +2100,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .atomT .. :: rest => uRestFehler rest
   | .arenaT .. :: rest => uRestFehler rest
   | .protoT .. :: rest => uRestFehler rest
+  | .assumT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
@@ -2103,14 +2226,16 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok axKoepfe =>
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe
-    match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b)) with
+    let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
+    match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b annahmen)) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln fns ms with
     | .error e => .error e
     | .ok roots =>
       .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs,
-            axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg }) }
+            axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg }),
+            annahmen }
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -2412,7 +2537,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2449,7 +2574,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
@@ -2801,7 +2926,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"

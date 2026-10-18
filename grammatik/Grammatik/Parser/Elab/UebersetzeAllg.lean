@@ -272,8 +272,8 @@ def declOf (u : UProg) : Deklaration where
   rklasse := fun e => nomatch e
   spiegel := fun e => nomatch e
   rzusage := fun e => nomatch e
-  Annahme := Unit
-  a10 := ()
+  Annahme := Option (Fin u.annahmen.length)
+  a10 := none
   geteilt_bewacht :=
     fun t h => notEmpty_ne_nil _ (show ((!((needsAt u t).isEmpty)) = true) from h)
   invarianten_gehalten := fun _ i => nomatch i

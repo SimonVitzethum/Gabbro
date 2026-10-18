@@ -56,7 +56,7 @@ theorem erstAblehnung_104_zeuge :
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
     `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
-    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`). -/
+    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`). -/
 def istGegenstand : SItemTief → Bool
   | .constT .. => false
   | .typeT .. => false
@@ -68,6 +68,7 @@ def istGegenstand : SItemTief → Bool
   | .atomT .. => false
   | .arenaT .. => false
   | .protoT .. => false
+  | .assumT .. => false
   | .concT .. => false
   | _ => true
 
@@ -95,7 +96,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | whyT _ _ _ => rfl
   | stateT _ _ => rfl
   | devT _ _ _ _ => rfl
-  | assumT _ _ _ _ => rfl
+  | assumT _ _ _ _ => simp [istGegenstand] at he
   | axiomT _ _ _ _ _ _ => rfl
   | checkT _ => rfl
   | atomT _ _ _ _ _ => simp [istGegenstand] at he
@@ -126,6 +127,7 @@ def istAngenommen : SItemTief → Bool
   | .atomT .. => true
   | .arenaT .. => true
   | .protoT .. => true
+  | .assumT .. => true
   | .concT .. => true
   | _ => false
 
@@ -153,7 +155,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | whyT _ _ _ => simp [istAngenommen] at he
   | stateT _ _ => simp [istAngenommen] at he
   | devT _ _ _ _ => simp [istAngenommen] at he
-  | assumT _ _ _ _ => simp [istAngenommen] at he
+  | assumT _ _ _ _ => rfl
   | axiomT _ _ _ _ _ _ => simp [istAngenommen] at he
   | checkT _ => simp [istAngenommen] at he
   | atomT _ _ _ _ _ => rfl
@@ -196,7 +198,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | whyT _ _ _ => simp [istGegenstand] at he
   | stateT _ _ => simp [istGegenstand] at he
   | devT _ _ _ _ => simp [istGegenstand] at he
-  | assumT _ _ _ _ => simp [istGegenstand] at he
+  | assumT _ _ _ _ => simp [istAngenommen] at ha
   | axiomT _ _ _ _ _ _ => simp [istGegenstand] at he
   | checkT _ => simp [istGegenstand] at he
   | atomT _ _ _ _ _ => simp [istAngenommen] at ha

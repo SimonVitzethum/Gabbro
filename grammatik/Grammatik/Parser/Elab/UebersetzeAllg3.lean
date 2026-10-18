@@ -146,6 +146,20 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .retryBeg cnt bis :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.retryBeg cnt bis) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .foreverBeg k :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.foreverBeg k) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .bind x d v :: rest =>
     match lowBindWert u Γ Λ fn d v with
     | .error e => .error e
@@ -298,6 +312,25 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .error e => .error e
         | .ok (body, .blkEnd :: rest') => .ok (Stmt.traverse t iv body, rest')
         | .ok (_, _) => .error "lower: a traverse is not closed"
+  | Γ, fn, n + 1, Λ, pe, .retryBeg cnt bis, rest =>
+    match lowEns u Γ Λ fn none bis with
+    | .error e => .error e
+    | .ok bv =>
+      match lowSeqL (l := true) u caller Γ fn n Λ pe rest with
+      | .error e => .error e
+      | .ok (body, .ifElse :: rest1) =>
+        match lowSeqL (l := l) u caller Γ fn n Λ pe rest1 with
+        | .error e => .error e
+        | .ok (ueb, .blkEnd :: rest2) => .ok (Stmt.retry cnt bv body ueb, rest2)
+        | .ok (_, _) => .error "lower: a retry is not closed"
+      | .ok (_, _) => .error "lower: a retry has no overflow part"
+  | Γ, fn, n + 1, Λ, pe, .foreverBeg k, rest =>
+    if hk : k < u.annahmen.length then
+      match lowSeqL (l := true) u caller Γ fn n Λ pe rest with
+      | .error e => .error e
+      | .ok (body, .blkEnd :: rest') => .ok (Stmt.forever (D := declOf u) (some ⟨k, hk⟩) Expr.tru body, rest')
+      | .ok (_, _) => .error "lower: a forever is not closed"
+    else .error "lower: assumption unknown"
   | _, _, _ + 1, _, _, _, _ => .error "lower: not a structured statement"
 
 /-- The `else` branch of a narrowing as an end block: its statements and the ender (`return`, `leave`, `next`),
@@ -365,6 +398,20 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .retryBeg cnt bis :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.retryBeg cnt bis) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .foreverBeg k :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.foreverBeg k) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
@@ -464,6 +511,20 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       | .ok e => .ok (Endblock.cons st e)
   | Γ, fn, n + 1, (.loopBeg b t i) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.loopBeg b t i) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, (.retryBeg c b) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.retryBeg c b) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, (.foreverBeg k) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.foreverBeg k) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with
