@@ -495,6 +495,7 @@ import Grammatik.Code.Conc.LockWitness
 import Grammatik.Code.Conc.Mask
 import Grammatik.Code.Conc.MaskNeed
 import Grammatik.Code.Conc.MaskRel
+import Grammatik.Code.Conc.MaskWitness
 import Grammatik.Code.Conc.Shared
 import Grammatik.Code.Conc.SharedWitness
 import Grammatik.Code.Conc.GXWitness

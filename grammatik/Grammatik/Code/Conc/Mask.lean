@@ -88,4 +88,8 @@ theorem maskOff_run {mb : Nat} {rm rx : Reg} {M : Modl} {S : Sees} {fn : Nat} {l
     have hv : (Opd.reg rm).ev rs = some x := hrm
     simp only [maskOff, seqI, stepI_imsk hl hv hs])
 
+#print axioms Gabbro.Code.Lower.stepI_imsk
+#print axioms Gabbro.Code.Lower.maskOn_run
+#print axioms Gabbro.Code.Lower.maskOff_run
+
 end Gabbro.Code.Lower
