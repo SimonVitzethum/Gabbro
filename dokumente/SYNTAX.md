@@ -991,8 +991,8 @@ startstmt  = ident "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §1
    its path touches that anyone writes is guarded, atomic or per-core (`N457`).
    `child = 1;` stays an assignment, like at
    `reset` above. The inline trap has landed (lane 260, the proved template `tor.kind`); the C11 emitter
-   refuses by name (`C185`) only a `child` outside the lowered gate+guard+region triple; the model side (`CloneHandoff.lean`, fix lane F9) models the child as a
-   spawned thread, standalone beside the goal theorem (SATZKARTE §39). No new word: `child` is the
+   refuses by name (`C185`) only a `child` outside the lowered gate+guard+region triple; the model side is the thread machine of the goal theorem (a `child` is a
+   `kind` step; witness `spawn_kind_ziel`, SATZKARTE §49; the standalone clone machine of SATZKARTE §39 was removed with the C backend). No new word: `child` is the
    `tree` word (§9, `kante`). *)
 ```
 
@@ -2909,7 +2909,7 @@ conditions (M102, SG-3, M137, width), reads (variables, globals, slots
 with exact index types and recomputed guards), straight-line int blocks
 with linear balance; CUT shapes for floats, options, sums, grounds,
 quantifiers, `reaches`, pointer reads and `RufPasst`-carrying calls.
-Lean: `Grammatik/Korrespondenz/Zeugnis/Zeugnis.lean`. The printer stays trust base.
+Lean: `Grammatik/Korpus/Zeugnis/Zeugnis.lean`. The printer stays trust base.
 
 ### 21.7 What this section does NOT move
 

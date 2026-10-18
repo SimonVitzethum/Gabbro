@@ -456,8 +456,7 @@ the optimiser, priced per property (the bytes must simulate G/GX) and not per pa
 hardware instruction semantics (Sail Arm model, `ARM-PLAN.md`) are the shared critical path.
 Standing falsifier at zero proof cost: the x86-64/aarch64 agreement `baue-llvm.sh` checks.
 
-**Not claimed:** no validated binary exists; the correspondence record (`korrOk`) is C-only; the
-per-access target bridge is open; the checker's carried residues (alias analysis, `E010` reach,
+**Not claimed:** no validated binary exists; the per-access target bridge is open; the checker's carried residues (alias analysis, `E010` reach,
 cost assumptions, pairing memory-model statement) stay out of the binary-safety argument.
 
 ## 11. Audit: what the compiler still hardwires about an architecture or an OS (2026-10-18)
