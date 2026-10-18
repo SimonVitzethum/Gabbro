@@ -16,9 +16,9 @@
     `offen` -- nothing known: a parameter, a copy, a released name (`N586`: a dead name is never `frei`, so it can be
                neither linked nor released again).
 
-  THE CLAIM. `Inv` is the structure invariant (`FreiOk` and `ListOk`). `Passt a σ ρ` says the world and the variables
-  keep what `a` says. `erk_erhaelt` (`ArenaErkennerBeweis.lean`): if `Erk a b a'`, `Inv σ` and `Passt a σ ρ`, then EVERY
-  outcome of running `b` (it falls off, returns, fails, leaves) has `Inv`, and a block that falls off also has `Passt a'`.
+  THE CLAIM. `Inv` is the structure invariant (`FreiOk` and `ListOk`). `StrukturPasst a σ ρ` says the world and the variables
+  keep what `a` says. `erk_erhaelt` (`ArenaErkennerBeweis.lean`): if `Erk a b a'`, `Inv σ` and `StrukturPasst a σ ρ`, then EVERY
+  outcome of running `b` (it falls off, returns, fails, leaves) has `Inv`, and a block that falls off also has `StrukturPasst a'`.
   The proof applies the executed-form theorems (`liste_*_zug`, `frischAlloc_ausfuehren`, `freiVar_lebt`, `grow_liste`, ...):
   the recognizer is exactly the side conditions of those theorems, discharged by the abstract state.
 -/
@@ -83,7 +83,7 @@ def StrukturOk (σ : World D) : Prop := A.FreiOk σ ∧ ListOk A L G σ
 
 /-- **The meaning of an abstract state in a world and an environment.** A `frei` variable names a live slot that is not
     linked; a `glied` variable names a member; two `frei` variables name two slots. -/
-def Passt (a : Abs) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) : Prop :=
+def StrukturPasst (a : Abs) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) : Prop :=
   (∀ x : Var Γ (Ty.index (D.count A.tab)), a x.pos = .frei →
       A.Lebt σ (ρ.get x).n ∧ ¬ Auf (D.count A.tab) (L.wert σ) (G.st σ) (ρ.get x).n) ∧
   (∀ x : Var Γ (Ty.index (D.count A.tab)), a x.pos = .glied →
@@ -93,8 +93,8 @@ def Passt (a : Abs) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) : Prop :=
 
 /-- **What the recognizer promises of an outcome:** wherever the run ends the structure is well formed; a block that falls
     off also meets the abstract state it ends in. -/
-def Post {V : Vertrag D} {l : Bool} {Γ : Ctx} (a : Abs) : Ausgang V l Γ → Prop
-  | .ok σ ρ => StrukturOk A L G σ ∧ Passt A L G a σ ρ
+def StrukturPost {V : Vertrag D} {l : Bool} {Γ : Ctx} (a : Abs) : Ausgang V l Γ → Prop
+  | .ok σ ρ => StrukturOk A L G σ ∧ StrukturPasst A L G a σ ρ
   | .zurueck σ _ => StrukturOk A L G σ
   | .why σ _ => StrukturOk A L G σ
   | .leave _ σ _ => StrukturOk A L G σ

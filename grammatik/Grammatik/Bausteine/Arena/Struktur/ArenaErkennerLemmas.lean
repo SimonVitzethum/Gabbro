@@ -55,18 +55,18 @@ theorem Abs.set_glied {a : Abs} {m n : Nat} {s : Status} (h : a.set m s n = .gli
 
 /-! ## 3. What the abstract state means -/
 
-section Passt
+section StrukturPasst
 variable (A : FreiForm D) (L : LinkFeld A) (G : LinkKopf A)
 
 /-- The state loses a binder: what held for the longer context holds for the shorter one. -/
-theorem Passt.tail {a : Abs} {τ : Ty} {Γ : Ctx} {σ : World D} {k : Wert D τ} {ρ : Env D Γ}
-    (h : Passt A L G a σ (.cons k ρ)) : Passt A L G a.tail σ ρ :=
+theorem StrukturPasst.tail {a : Abs} {τ : Ty} {Γ : Ctx} {σ : World D} {k : Wert D τ} {ρ : Env D Γ}
+    (h : StrukturPasst A L G a σ (.cons k ρ)) : StrukturPasst A L G a.tail σ ρ :=
   ⟨fun x hx => h.1 (.there x) hx, fun x hx => h.2.1 (.there x) hx,
     fun x y hx hy hne => h.2.2 (.there x) (.there y) hx hy (by simpa [Var.pos] using hne)⟩
 
 /-- A weaker state is met wherever a stronger one is. -/
-theorem Passt.schwacher {a b : Abs} (hs : Abs.Schwacher b a) {Γ : Ctx} {σ : World D} {ρ : Env D Γ}
-    (h : Passt A L G a σ ρ) : Passt A L G b σ ρ := by
+theorem StrukturPasst.schwacher {a b : Abs} (hs : Abs.Schwacher b a) {Γ : Ctx} {σ : World D} {ρ : Env D Γ}
+    (h : StrukturPasst A L G a σ ρ) : StrukturPasst A L G b σ ρ := by
   have key : ∀ (n : Nat) (s : Status), s ≠ .offen → b n = s → a n = s := by
     intro n s hne hb
     rcases hs n with e | e
@@ -76,8 +76,8 @@ theorem Passt.schwacher {a b : Abs} (hs : Abs.Schwacher b a) {Γ : Ctx} {σ : Wo
     fun x y hx hy hne => h.2.2 x y (key _ _ (by decide) hx) (key _ _ (by decide) hy) hne⟩
 
 /-- A new binder with the status `offen` costs nothing, whatever it holds (a commit's new committed word). -/
-theorem Passt.ext_offen {a : Abs} {τ : Ty} {Γ : Ctx} {σ : World D} {k : Wert D τ} {ρ : Env D Γ}
-    (h : Passt A L G a σ ρ) : Passt A L G (a.ext .offen) σ (.cons k ρ) := by
+theorem StrukturPasst.ext_offen {a : Abs} {τ : Ty} {Γ : Ctx} {σ : World D} {k : Wert D τ} {ρ : Env D Γ}
+    (h : StrukturPasst A L G a σ ρ) : StrukturPasst A L G (a.ext .offen) σ (.cons k ρ) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x y hx hy hne => ?_⟩
   · cases x with
     | here => exact absurd hx (by simp [Var.pos, Abs.ext])
@@ -93,10 +93,10 @@ theorem Passt.ext_offen {a : Abs} {τ : Ty} {Γ : Ctx} {σ : World D} {k : Wert 
       | there y' => exact h.2.2 x' y' hx hy (by simpa [Var.pos] using hne)
 
 /-- A new OWNED binder: it names a live, unlinked slot that differs from every owned slot. -/
-theorem Passt.ext_frei {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D Γ} (k : Wert D (Ty.index (D.count A.tab)))
-    (hP : Passt A L G a σ ρ) (h1 : A.Lebt σ k.n) (h2 : ¬ Auf (D.count A.tab) (L.wert σ) (G.st σ) k.n)
+theorem StrukturPasst.ext_frei {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D Γ} (k : Wert D (Ty.index (D.count A.tab)))
+    (hP : StrukturPasst A L G a σ ρ) (h1 : A.Lebt σ k.n) (h2 : ¬ Auf (D.count A.tab) (L.wert σ) (G.st σ) k.n)
     (h3 : ∀ y : Var Γ (Ty.index (D.count A.tab)), a y.pos = .frei → (ρ.get y).n ≠ k.n) :
-    Passt A L G (a.ext .frei) σ (.cons k ρ) := by
+    StrukturPasst A L G (a.ext .frei) σ (.cons k ρ) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x y hx hy hne => ?_⟩
   · cases x with
     | here => exact ⟨h1, h2⟩
@@ -115,9 +115,9 @@ theorem Passt.ext_frei {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D Γ} (k : 
       | there y' => exact hP.2.2 x' y' hx hy (by simpa [Var.pos] using hne)
 
 /-- A new MEMBER binder. -/
-theorem Passt.ext_glied {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D Γ} (k : Wert D (Ty.index (D.count A.tab)))
-    (hP : Passt A L G a σ ρ) (h1 : Auf (D.count A.tab) (L.wert σ) (G.st σ) k.n) :
-    Passt A L G (a.ext .glied) σ (.cons k ρ) := by
+theorem StrukturPasst.ext_glied {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D Γ} (k : Wert D (Ty.index (D.count A.tab)))
+    (hP : StrukturPasst A L G a σ ρ) (h1 : Auf (D.count A.tab) (L.wert σ) (G.st σ) k.n) :
+    StrukturPasst A L G (a.ext .glied) σ (.cons k ρ) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x y hx hy hne => ?_⟩
   · cases x with
     | here => exact absurd hx (by simp [Var.pos, Abs.ext])
@@ -133,21 +133,21 @@ theorem Passt.ext_glied {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D Γ} (k :
       | there y' => exact hP.2.2 x' y' hx hy (by simpa [Var.pos] using hne)
 
 /-- Members are forgotten; the owned slots keep their facts in the new world `σ'`. -/
-theorem Passt.entglied {a : Abs} {Γ : Ctx} {σ σ' : World D} {ρ : Env D Γ} (hP : Passt A L G a σ ρ)
+theorem StrukturPasst.entglied {a : Abs} {Γ : Ctx} {σ σ' : World D} {ρ : Env D Γ} (hP : StrukturPasst A L G a σ ρ)
     (hfr : ∀ y : Var Γ (Ty.index (D.count A.tab)), a y.pos = .frei →
       A.Lebt σ' (ρ.get y).n ∧ ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') (ρ.get y).n) :
-    Passt A L G a.entglied σ' ρ :=
+    StrukturPasst A L G a.entglied σ' ρ :=
   ⟨fun y hy => hfr y ((Abs.entglied_frei a y.pos).mp hy),
     fun y hy => absurd hy (Abs.entglied_ne_glied a y.pos),
     fun x y hx hy hne => hP.2.2 x y ((Abs.entglied_frei a _).mp hx) ((Abs.entglied_frei a _).mp hy) hne⟩
 
 /-- One position becomes unknown; the other facts hold in the new world `σ'`. -/
-theorem Passt.set_offen {a : Abs} {Γ : Ctx} {σ σ' : World D} {ρ : Env D Γ} (m : Nat) (hP : Passt A L G a σ ρ)
+theorem StrukturPasst.set_offen {a : Abs} {Γ : Ctx} {σ σ' : World D} {ρ : Env D Γ} (m : Nat) (hP : StrukturPasst A L G a σ ρ)
     (hfr : ∀ y : Var Γ (Ty.index (D.count A.tab)), a y.pos = .frei → y.pos ≠ m →
       A.Lebt σ' (ρ.get y).n ∧ ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') (ρ.get y).n)
     (hgl : ∀ y : Var Γ (Ty.index (D.count A.tab)), a y.pos = .glied →
       Auf (D.count A.tab) (L.wert σ') (G.st σ') (ρ.get y).n) :
-    Passt A L G (a.set m .offen) σ' ρ :=
+    StrukturPasst A L G (a.set m .offen) σ' ρ :=
   ⟨fun y hy => by
       obtain ⟨hne, hy'⟩ := Abs.set_frei hy (by decide)
       exact hfr y hy' hne,
@@ -157,7 +157,7 @@ theorem Passt.set_offen {a : Abs} {Γ : Ctx} {σ σ' : World D} {ρ : Env D Γ} 
       · exact hgl y h,
     fun x y hx hy hne => hP.2.2 x y (Abs.set_frei hx (by decide)).2 (Abs.set_frei hy (by decide)).2 hne⟩
 
-end Passt
+end StrukturPasst
 
 /-! ## 4. Runs that move none of the five quantities the structures read -/
 
@@ -204,7 +204,7 @@ theorem Gleich.auf {σ σ' : World D} (h : Gleich A L G σ σ') (j : Int) :
   rw [funext h.lnk, h.head]
 
 theorem Gleich.passt {σ σ' : World D} (h : Gleich A L G σ σ') {a : Abs} {Γ : Ctx} {ρ : Env D Γ}
-    (hp : Passt A L G a σ ρ) : Passt A L G a σ' ρ :=
+    (hp : StrukturPasst A L G a σ ρ) : StrukturPasst A L G a σ' ρ :=
   ⟨fun x hx => ⟨(h.lebt A L G _).mpr (hp.1 x hx).1, fun hm => (hp.1 x hx).2 ((h.auf A L G _).mp hm)⟩,
     fun x hx => (h.auf A L G _).mpr (hp.2.1 x hx), hp.2.2⟩
 
@@ -236,8 +236,8 @@ theorem auf_fremd {σ σ' : World D} (hf : A.Fremd σ σ') (j : Int) :
   rw [L.wert_fremd' hf, G.st_fremd hf]
 
 /-- The abstract state survives an allocator run, as long as every live slot stays live. -/
-theorem Passt.fremd {σ σ' : World D} (hf : A.Fremd σ σ') (hmono : ∀ j, A.Lebt σ j → A.Lebt σ' j)
-    {a : Abs} {Γ : Ctx} {ρ : Env D Γ} (hP : Passt A L G a σ ρ) : Passt A L G a σ' ρ :=
+theorem StrukturPasst.fremd {σ σ' : World D} (hf : A.Fremd σ σ') (hmono : ∀ j, A.Lebt σ j → A.Lebt σ' j)
+    {a : Abs} {Γ : Ctx} {ρ : Env D Γ} (hP : StrukturPasst A L G a σ ρ) : StrukturPasst A L G a σ' ρ :=
   ⟨fun x hx => ⟨hmono _ (hP.1 x hx).1, fun hm => (hP.1 x hx).2 ((auf_fremd A L G hf _).mp hm)⟩,
     fun x hx => (auf_fremd A L G hf _).mpr (hP.2.1 x hx), hP.2.2⟩
 
@@ -285,16 +285,16 @@ theorem liste_freigegeben_bricht (A : FreiForm D) (L : LinkFeld A) (G : LinkKopf
 
 /-! ## 6. The outcomes -/
 
-section Post
+section StrukturPost
 variable (A : FreiForm D) (L : LinkFeld A) (G : LinkKopf A) {V : Vertrag D} {l : Bool}
 
 /-- A shorter context: the outcome of a sub-block is read in the outer context. -/
-theorem Post.schrumpf {a : Abs} {τ : Ty} {Γ : Ctx} {o : Ausgang V l (τ :: Γ)}
-    (h : Post A L G a o) : Post A L G a.tail o.schrumpf := by
+theorem StrukturPost.schrumpf {a : Abs} {τ : Ty} {Γ : Ctx} {o : Ausgang V l (τ :: Γ)}
+    (h : StrukturPost A L G a o) : StrukturPost A L G a.tail o.schrumpf := by
   cases o with
   | ok σ ρ' =>
     cases ρ' with
-    | cons k ρ => exact ⟨h.1, Passt.tail A L G h.2⟩
+    | cons k ρ => exact ⟨h.1, StrukturPasst.tail A L G h.2⟩
   | zurueck σ v => exact h
   | why σ r => exact h
   | leave hh σ ρ' => exact h
@@ -303,8 +303,8 @@ theorem Post.schrumpf {a : Abs} {τ : Ty} {Γ : Ctx} {o : Ausgang V l (τ :: Γ)
   | hardware e => trivial
 
 /-- An outcome that does not fall off does not mention the abstract state. -/
-theorem Post.nicht_ok {a b : Abs} {Γ : Ctx} {o : Ausgang V l Γ} (h : Post A L G a o)
-    (hno : ∀ σ ρ, o ≠ .ok σ ρ) : Post A L G b o := by
+theorem StrukturPost.nicht_ok {a b : Abs} {Γ : Ctx} {o : Ausgang V l Γ} (h : StrukturPost A L G a o)
+    (hno : ∀ σ ρ, o ≠ .ok σ ρ) : StrukturPost A L G b o := by
   cases o with
   | ok σ ρ => exact absurd rfl (hno σ ρ)
   | zurueck σ v => exact h
@@ -315,10 +315,10 @@ theorem Post.nicht_ok {a b : Abs} {Γ : Ctx} {o : Ausgang V l Γ} (h : Post A L 
   | hardware e => trivial
 
 /-- A weaker state is promised wherever a stronger one is. -/
-theorem Post.schwacher {a b : Abs} (hs : Abs.Schwacher b a) {Γ : Ctx} {o : Ausgang V l Γ}
-    (h : Post A L G a o) : Post A L G b o := by
+theorem StrukturPost.schwacher {a b : Abs} (hs : Abs.Schwacher b a) {Γ : Ctx} {o : Ausgang V l Γ}
+    (h : StrukturPost A L G a o) : StrukturPost A L G b o := by
   cases o with
-  | ok σ ρ => exact ⟨h.1, Passt.schwacher A L G hs h.2⟩
+  | ok σ ρ => exact ⟨h.1, StrukturPasst.schwacher A L G hs h.2⟩
   | zurueck σ v => exact h
   | why σ r => exact h
   | leave hh σ ρ' => exact h
@@ -328,13 +328,13 @@ theorem Post.schwacher {a b : Abs} (hs : Abs.Schwacher b a) {Γ : Ctx} {o : Ausg
 
 /-- **A statement followed by a block:** if the statement's outcome meets `a`, and every continuation from `a` meets
     `a'`, the sequence meets `a'`. -/
-theorem Post.cons_stmt (O : Orakel D) (passes : Nat)
+theorem StrukturPost.cons_stmt (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {a a' : Abs} {Γ : Ctx} {Λ Λ1 Λ' : List (Res D)}
     {s : Stmt D V l Γ Λ Λ1} {rest : Block D V l Γ Λ1 Λ'} {σ : World D} {ρ : Env D Γ}
-    (hp : Post A L G a (execStmt O passes R s σ ρ))
-    (ihr : ∀ (σ : World D) (ρ : Env D Γ), StrukturOk A L G σ → Passt A L G a σ ρ →
-      Post A L G a' (execBlock O passes R rest σ ρ)) :
-    Post A L G a' (execBlock O passes R (.cons s rest) σ ρ) := by
+    (hp : StrukturPost A L G a (execStmt O passes R s σ ρ))
+    (ihr : ∀ (σ : World D) (ρ : Env D Γ), StrukturOk A L G σ → StrukturPasst A L G a σ ρ →
+      StrukturPost A L G a' (execBlock O passes R rest σ ρ)) :
+    StrukturPost A L G a' (execBlock O passes R (.cons s rest) σ ρ) := by
   simp only [execBlock]
   generalize execStmt O passes R s σ ρ = o at hp ⊢
   cases o with
@@ -350,13 +350,13 @@ theorem Post.cons_stmt (O : Orakel D) (passes : Nat)
 theorem Rein.post (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {a : Abs} {Γ : Ctx} {Λ : List (Res D)}
     {voll : Endblock D V l Γ Λ} (hv : Rein voll) (σ : World D) (ρ : Env D Γ) (h : StrukturOk A L G σ) :
-    Post A L G a (execEnd O passes R voll σ ρ).zuAusgang := by
+    StrukturPost A L G a (execEnd O passes R voll σ ρ).zuAusgang := by
   cases hv with
   | ret e hΛ => exact (Gleich.lese A L G σ Λ _).strukturOk A L G h
   | retWhy r hΛ => exact h
   | leave hh => exact h
   | next hh => exact h
 
-end Post
+end StrukturPost
 
 end Gabbro.Grammatik
