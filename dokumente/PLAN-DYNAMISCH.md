@@ -848,6 +848,72 @@ instead of resting on a hardware schedule premise, and the mask enters `Code` as
   instruction (Lean first; the checker and the compiler follow after both verdicts, CLAUDE.md order).
 * `Mem` semantics: the mask word is a memory cell only in the Lean model; that it is the CPU's register is H1.
 
+### 8a.5 The reader/writer lock (Lean 2026-10-18; the `Spec.lean` diff and the syntax are PROPOSALS, nothing in `Zielsatz/Kern/` changed)
+
+**Decision (Simon, 2026-10-18):** the strongest variant for safety and power, effort irrelevant: the language gets a reader/writer lock, and it
+goes into the Lean model FIRST (CLAUDE.md order: model, then checker, compiler, `SYNTAX.md`/`SPRACHE.md`; this round is the model only).
+Status, measured by `lake build` of the new modules and `#print axioms` (every theorem: `propext`, `Classical.choice`, `Quot.sound` at most; no
+`sorry`; `gabbro_ziel` and `Spec.lean` untouched, no existing module imports the new ones, `Grammatik.lean` does):
+
+**The design (the smallest sound one), as a LAYER over machine G.** `Stmt.locks`, `Res.held`, the events `nimmt`/`gibt` and `RufFreiG` carry no
+mode; a mode in them is a root change of `Kern/Syntax` (every module rebuilds) and a rewrite of everything about `offen`. The mask layer showed
+the other way. The layer parameter is `lese : Faden → D.Lock → Prop` (thread `t` takes `L` SHARED; every other acquisition is exclusive; one
+mode per thread and lock). A layer step (`RwSchritt`) is a G step, or a SHARED ACQUISITION `RwAcq`: the acting thread is a reader of `L`, every
+other thread that holds `L` is a reader of `L`, and the step is machine G's own `dannLocks` step of the thread in the machine `ohneFremde`
+(the other threads' traces blank, so `RufFreiG` holds there), the other threads kept. So the acquisition's content (rank premises `hr`/`hrang`,
+`hself`, the event `nimmt L`, the residue) is G's, not restated; the release is G's `freiGib`; an EXCLUSIVE acquisition keeps G's `RufFreiG`:
+NO other thread holds the lock, a reader included.
+
+| Step | Where | Result |
+|---|---|---|
+| 1. layer + embedding + no change without a reader | `Zielsatz/Eigenschaften/RwSchritt.lean` | `RwSchritt`, `RwAcq`, `RwLauf`; `rwSchritt_of_G`, `rwLauf_of_laufG` (every G step and run is a layer step and run); **`rwSchritt_ohne_leser`, `rwLauf_ohne_leser`** (`lese = fun _ _ => False`: the layer's step IS G's step, its runs ARE `LaufG`: a program with no shared acquisition keeps its meaning, as a theorem); `rwSchritt_akteur` (every layer step is a G step of the acting thread in a machine that agrees on its record and the memory: how per-thread facts transfer), `rwSchritt_delta`, `rwAcq_speicher` (an acquisition touches no memory), **`rw_nimmt`** (a lock that enters the actor's held set was free, or the actor is a reader and every other holder is a reader) |
+| 1. exclusion: many readers XOR one writer | same | **`RwExkl`** (two different holders of `L` are both readers of `L`), **`rwExkl_schritt`, `rwExkl_lauf`**, `rwExkl_start`, `rw_schreiber_allein` (a writer holds alone), `rw_leser_unter_sich`, `rwExkl_ohne_leser` (with no reader it is G's old exclusivity) |
+| 2. rank order and the deadlock leg | `RwRang.lean` | `rangInvG_rw` (G's per-thread rank invariant along every layer run), **`kein_warteZyklus_rw`** (`KeinWarteZyklus` on every layer run: shared holders do not weaken the rank argument), `WartetAufRw`/`KeinWarteZyklusRw`/`keinWarteZyklusRw_aus` (a reader waits only for a writer, a writer for every holder: a SUBRELATION, so the plain statement carries), **`rw_leser_geht`** (progress: a reader at `locks L` while only readers hold `L` has a layer step; G alone would hold it back) |
+| 2. race freedom, order through the lock | `RwOrdnung.lean` | `LeserLos` (the discipline: a reader of `L` writes no carrier `L` guards), `spurInv_rw_lauf`, `zugriff_haelt_rw` (every access to a guarded carrier holds the guard, before and after), **`sperre_ordnet_rw`** (`fs i` holds `L` after step `i`, another thread holds it before step `j`, one of the two a writer: `fs i` releases and then `fs j` acquires, `i < r < a < j`: `GeordnetRw`), **`rennfrei_rw`, `rennfreiRw_aus`** (no write-write and no write-read race on a guarded carrier, in the shape of `RennfreiBis`; read-read pairs do not conflict), **`rwSicht_schritt`** (the `sperrSicht` of a shared lock: a step accesses a guarded carrier only if its thread holds `L`; while ANY other thread holds `L`, as reader or writer, no step changes it) |
+| 2. the lock invariant: visible to readers, re-established by writers only | `RwInv.lean` | `SperrInvRw` (every lock all of whose holders are readers has `S.inv`), **`sperrInvRw_schritt`, `sperrInvRw_lauf`** (the only owed step is a WRITER's release, G's `hfrei`; a reader's acquire and release owe nothing), **`leser_sieht_inv`** (a reader sees `S.inv L` at every machine of its section), `schreiber_erst_frei` |
+| witnesses (kernel-checked runs) | `RwZeuge.lean`, `RwZeugeLeser.lean` | **`leser_schreiber_lauf`**: one run of twelve layer steps: thread 1 takes the lock, thread 2 takes it SHARED (G alone refuses: `nicht_bereit_an_sperre`; the layer admits: `RwAcq`), both hold at once; the writer stands at the lock with NO step; both readers leave; the writer takes the lock and holds it alone; a late reader is held back; `RwExkl` along the run; `GeordnetRw` at the reader-then-writer pair (the non-degenerate instance of `sperre_ordnet_rw`) |
+| planted defects | same | (a) **a writer admitted while a reader holds**: the shared-acquisition recipe without `leser`/`andere` (the writer's lock step in the blank machine, kept next to the others) breaks `RwExkl` at the machine reached (last conjunct of `leser_schreiber_lauf`); (b) **a reader that writes a guarded carrier**: `leser_schreibt_rennt` (fixture `InvZeuge`: two readers hold the lock by signature and both write `konto[0]`; the accesses are not ordered, so `LeserLos` fails: derived from `rennfrei_rw`, not assumed); (c) **rank violation**: `leser_rekursiv_verweigert` (a reader taking the lock it already holds, the recursive read lock, is refused by `hr`: unprovable in a section that holds the lock; the typed syntax has no term for the violation, so the defect is the premise itself) |
+| 4. `Code`: the lowering | `Code/Conc/RwLock.lean`, `RwLockRel.lean`, `RwLockWitness.lean` | ONE state word per lock (the cell `lblk`; the serving cell stays unused): `0` free, `2 k` held by `k` readers, `1` the writer. Blocks (ISA-neutral, release/acquire atomics, no fence, no ISA instruction): `wrTake` (`cas(state, 0, 1)`, acquire), `wrRel` (`astor 0`, release), `rdLoad` (`aload`, relaxed; again while `1`), `rdTake` (`rn := rs + 2`; `cas(state, rs, rn)`, acquire; again on failure), `rdRel` (`armw sub 2`, release); every outcome has its run (`wr_take_ok/fail`, `wr_rel_run`, `rd_load_wait/go`, `rd_take_ok/fail`, `rd_rel_run`). The invariant **`RwRel`** (ghost readers and writer, the word, G's held locks counted, the mode) and the steps: loads and failed takes G-silent; **`rd_take_ok_step`** IS the layer's shared acquisition (`lese u L`, every other holder a reader, `u` did not hold) and the relation holds for the machine whose `offen` gained `L`; **`wr_take_ok_step`** is G's `dannLocks` (`RufFreiG`: the word `0` means nobody holds); both releases are G's `freiGib`; **`rwRel_exkl`** (the invariant implies `RwExkl`); `rw_store_post` (a state-word store leaves the representation alone). Witness **`rw_witness`**: two loads, a winning take, a LOSING take (the race: the word moved), a reload, a winning take (both readers hold, word 4), the writer's take fails (word 4), both release, the writer's take wins with `RufFreiG`; `RwRel` after every step. ONE named assumption, `hroom`: fewer than `2 ^ (wbits - 1) - 1` readers at once (the counterpart of the ticket lock's outstanding-tickets bound). |
+
+**The syntax, PROPOSED for `SYNTAX.md` (short English words, at most five letters; nothing implemented, nothing in the parser):**
+* the declaration: `lock L rank N rw` (`rw` marks a lock that may be taken in both modes; a lock without it is exclusive-only and `reads L` on it is refused);
+* the shared section: `reads L { ... }` (five letters; `locks L { ... }` stays the exclusive form, so no existing program changes);
+* the signature clause: `reads L` beside `holds L` (a function that needs `L` held at least shared; `holds L` is exclusive and implies it; the call rule
+  (`RufPasst`) compares modes: a shared holding cannot call a function that `holds L`);
+* the discipline (to be derived by the checker, a refusal with its sentence and a poison probe): inside `reads L { ... }` and in a function whose
+  signature has `reads L` no carrier guarded by `L` may be written, directly or through a callee (`TraegerSchreibt`), and `L` may not be taken
+  again (the rank premise already forbids it: `leser_rekursiv_verweigert`). A reader that wants to write releases and takes `locks L` (no upgrade).
+
+**The proposal for `Spec.lean` (step 3; to be reviewed as a diff together with the combined diff of 8a.3, NOT applied; `Deklaration` is split there, nothing here pre-empts it).**
+Two ways, and the layer decides between them:
+1. **(recommended for the final language) the mode in G.** `Deklaration.teilt : Lock → Bool := fun _ => false` (one more DEFAULTED field of the
+   8a.3 list: the ~84 `Deklaration … where` fixtures stay unchanged); `Res.held L m`, `Stmt.locks L m hr body`, `Ereignis.nimmt L m h`, `gibt L m`
+   with `m : Modus` (`excl`/`shared`), `offen` over `(L, m)`; `RufFreiG M f L m` becomes "every other holder of `L` holds shared, and `m = shared`
+   (or there is none)"; `Akzeptiert` gains the component `leserlosB` (the discipline above). Then `lese` disappears (the mode is in the trace: this also removes the layer's
+   one-mode-per-thread-and-lock restriction), every theorem of 8a.5 becomes a theorem about G itself (`rwSchritt_ohne_leser` becomes the statement that
+   `m = excl` everywhere is the old machine), and EVERY leg of `Ziel` is proved once for the new G: the legs the layer does not prove (below) come for free.
+2. **a layer statement** `GabbroZielRw` beside `GabbroZielVerbund`: `Ziel`'s legs over `RwLauf`, with `lese` an `Einheit` datum and `LeserLos` a component of `Akzeptiert`.
+   It needs a layer twin for each leg that is proved by reachability induction over G (list below), i.e. a re-proof of the `ZielOrt/` development.
+
+**Findings (each named, none hidden; NO contradiction with the goal theorem):**
+* The goal theorem is untouched and consistent: `lese = ⊥` is G (`rwLauf_ohne_leser`), and a G step is a layer step. It says nothing about programs that take a lock shared;
+  covering them is the `Spec.lean` diff above.
+* **What the layer proves over layer runs:** `speicherSicher` (`spurInv_rw_lauf`), `rennfrei` (`rennfreiRw_aus`, with `LeserLos`), `sperrInv` (`sperrInvRw_lauf`, with the writer's
+  release obligation), `sperrWechsel`/`sperrSicht` (`rw_nimmt`, `sperrInvRw_schritt`, `rwSicht_schritt`, `leser_sieht_inv`), `keinWarteZyklus` (`kein_warteZyklus_rw`).
+  **What it does NOT prove:** `schwach` (`SchwachSC`, the DRF leg over the layer: the release/acquire edges of a reader's take and release are an exclusive lock's, but not re-proved),
+  `vertrag`/`invRueck`/`invGrund`/`invRuhe`/`invSicht`, `folge`, `fortschritt`, `zeit`, `keinKernHalt`: they are proved by reachability induction over `RufErreichbarG`,
+  and a layer-reachable machine is not G-reachable (the shared acquisition is no G step), so each needs a layer twin (the per-thread facts transfer through `rwSchritt_akteur`; the
+  rely/guarantee ones through `rwSicht_schritt`). That is the cost of the layer, and the reason for recommendation 1: with the mode in G the legs are proved once.
+* `LeserLos` is a PREMISE in the layer (a run property), as `KernPlan`/`masken` were for the mask; the checker rule that derives it (no write of a `L`-guarded carrier in a `reads L` section or a
+  `reads L` function) is a proposal, not built.
+* One mode per (thread, lock): a thread that takes `L` shared never takes it exclusively (a restriction of the layer, removed by recommendation 1).
+* The lock is a spin lock without fairness: a stream of readers can delay a writer forever (the goal claims no starvation freedom; `FortschrittG` names no fairness either). A
+  writer-preference variant (a pending-writer bit in the word, readers refuse while it is set) is NOT modelled; it would add one bit and no new soundness argument.
+* The word's counter bound (`hroom`) is the one numeric assumption of the lowering and is named in every take step.
+* **Spec.lean text that changes under recommendation 1:** the header's "exclusive lock" sentences, `RufFreiG` (T1), `Ereignis`, `offen`, `Res`, `Stmt.locks`, `D.Lock`'s companion field, and the definitions
+  `SperrInvG`/`SperrWechselG`/`SperrSichtG` (which read `offen`): `SperrInvG` becomes the `SperrInvRw` form ("every lock whose holders are all shared holders has its invariant").
+* The Rust side is untouched: the exporter, the checker (`U003`, `H`-rules) and the LLVM backend know no mode (Lean first; the checker and the compiler follow after both verdicts, CLAUDE.md).
+
 ## 9. Re-measuring
 
 ```
