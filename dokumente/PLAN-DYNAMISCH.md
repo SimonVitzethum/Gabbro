@@ -425,108 +425,381 @@ at most, no `sorry`; `gabbro_ziel` and `Spec.lean` untouched: none of these modu
 form of `N586`); two sections commute up to slot names; per-thread arenas need nothing new (the legs above do not mention them); a lock-free free list (Treiber) is Phase B item 5;
 the commit bound (finding 4); the footprint repair (finding 1).
 
-### 8a.3 Proposal (NOT applied): the `Spec.lean` diff for step 4 (revised 2026-10-18, third pass)
+### 8a.3 The combined `Spec.lean` diff for decisions 1-3 (plan of 2026-10-18; NOT applied, nothing built)
 
-**Design change against the first proposal.** The first proposal added two new legs `dynRuhe`/`dynSicht` beside `invRuhe`/`invSicht`. The
-third pass shows a cheaper and more honest route: **a declared arena is one more INVARIANT NAME of `D.invs` whose meaning is `Dekl.Ok`
-instead of the evaluation of an `Expr`**. Then `invRuhe` (every invariant that reads only its carriers and held at the start holds
-whenever no thread is inside a writer) and `invSicht` (the same for a thread that holds a guard) become contentful for dynamic structures
-WITHOUT a new leg, with the machinery that proves them today (`invRuheG_aus`, `InvZu`, `schuldet`). What changes is where the obligation
-"every writer restores the invariant at its return" comes from: for an ordinary invariant it is user logic (b) (`InvGutSA`); for an arena
-invariant it is the recognizer, a premise on the unit that Lean checks (`erkE_koerper`).
+**This section replaces the third-pass proposal (D1-D5 of the arena diff) and §11.3 (D1-D6 of the payload diff).** One `Spec.lean`
+diff carries three decisions Simon took on 2026-10-18 (strongest variant for safety and power, effort irrelevant):
 
-All of it is modelled in Lean already except the wiring; nothing below is applied, and `Spec.lean`, the Rust checker and the exporter are unchanged.
+1. **Footprint.** `Deklaration.traeger : Inv → List (Tab ⊕ Glob)`, COMPUTED from `Dekl.orte` for an arena invariant instead of being listed
+   by hand; `schuldet` counts `gschreibt` too.
+2. **Arena invariant, inductive.** One more invariant name in `D.invs` whose meaning is `Dekl.Ok`; established in the initial state by the
+   start obligation (`StartPflicht`), preserved by every function that owes it; a SHARED arena is the lock invariant (`abschnitt_start`).
+   No exporter-written pseudo-`requires`.
+3. **Payload.** The order is derived per atomic (no free `ord` quantifier for racy-payload flags); flag invariants are the target
+   (havoc only as a named intermediate stage); `D.nutzlast` widens to table cells; the design anticipates re-publication (epochs), the
+   first cut is one-shot.
 
-**D1. `Kern/Syntax` (the declarations move down; their lemmas stay in `Bausteine/Arena/`).** New file `Kern/Syntax/Arenen.lean`, imported by
-`Syntax.lean` before `Programm`, holding only the STRUCTURES: `ArenaForm`, `DynForm`, `FreiForm`, `LinkFeld`, `LinkKopf`, `ListDekl`,
-`BaumDekl`, `Dekl`. (They mention only `Deklaration`; `Wert.umTyp` is needed for the readers `wert`/`st`, so the readers move with them.)
-`Programm` gets ONE field with a default, so every old program keeps its meaning:
+Legend used below: **[V]** read in the tree or measured in this session; **[M]** measured by running Lean 4.33.1 on a throw-away mock
+(`kratz`, not committed); **[U]** unverified estimate or assumption, to be checked at the step named. Nothing in this section was built
+against the real tree: the worktree has no `.lake`, so no `lake build` ran. Order rule (CLAUDE.md): everything is Lean first; the Rust
+exporter changes by ONE line (A.9); the checker and the compiler follow only after both verdicts.
+
+#### 0. Findings that shape the diff (reported, not resolved silently)
+
+No pair among decisions 1-3 is contradictory in intent. Eight constraints surfaced while planning; T1 and T3 change the text of the
+earlier proposals, T2 and T6 are costs the earlier text did not carry. Simon should confirm T1 and T3 before the work starts.
+
+* **T1. Decision 1 forces the arena declaration into `Deklaration` (changes 8a.3's old D1: `Programm.arena`).** The arena structures
+  (`ArenaForm`, `DynForm`, `FreiForm`, `LinkFeld`, `LinkKopf`, `ListDekl`, `BaumDekl`, `Dekl`) mention only `Tab`, `Feld`, `Glob`, `count`,
+  `typ`, `gtyp` and `Ty` [V: read in `ArenaZucker`, `ArenaDyn`, `ArenaFrei`, `ArenaListe`, `ArenaDekl`] and are parameterised by a
+  `Deklaration`. A field of `Deklaration` cannot mention `Dekl D`. So `D.traeger` can only be computed from `Dekl.orte` if the arena
+  carries no `D` in its type: `Deklaration extends DeklBasis` where `DeklBasis` holds exactly those six fields (and their `DecidableEq`
+  instances), the arena structures are parameterised by `DeklBasis`, and `Deklaration` gets the field `arena : Inv → Option (Dekl ..)`.
+  **[M]** A mock with this shape elaborates: `where` literals in the style of the ~84 fixtures [V: 84 `Deklaration … where`], a computed
+  `traeger`/`schuldet`, `rfl` proofs of `traeger = orte`, and `CoeOut Deklaration DeklBasis` so that `(A : ArenaF D)` still elaborates
+  (`/…/scratchpad/exp1.lean`, `lean` exit 0). Not measured: the 60 real Arena files, `D.mitRuhe`, universe or instance trouble at scale.
+  Consequence: `Programm` gets NO new field, so its 80 `Programm … where` literals [V] and the exporter's `Programm` literal stay untouched.
+  Fallback R1 if the spike (M1) fails: keep `traeger` a field and add the premise `∀ i K, arena i = some K → traeger i = K.orte` to (a);
+  that is "listed by hand and checked", not "computed", and Simon should decide whether it is acceptable before it is used.
+* **T2. `rufAt` cannot see `Dekl.Ok` (the layering fact the earlier text missed).** `rufAt` (`Kern/Semantik/Semantik/T2.lean`, lines 397-399)
+  evaluates `P.invariante i` at every return of an owing function and answers `logik .invariante i` on failure; every statement `InvAmOrtG`,
+  `invRuhe`, … rests on that check. Its import closure is 9 modules; the closure of `Dekl.Ok` is 68, of which 59 are not below `rufAt`
+  (20,296 lines, including `Kern/Semantik/Maschine/T1-T9`, `RufMaschineD`, `Wettlauf`) [V: `deps2.py` over `import` lines]. So the new meaning
+  `InvHaelt … := Dekl.Ok` is NOT available where the semantics checks it. Chosen resolution (L1): a Bool `Dekl.okB` defined in a new Kern
+  module between `Semantik/T1` and `T2` (fuel-bounded walks over `World` readers) plus `okB_iff : K.okB σ = true ↔ K.Ok σ` proved downstream
+  (O5). Rejected alternatives: (α) `rufAt` skips arena invariants and `InvAmOrtG` for them is proved from the certificate by induction over machines
+  (leaves `P.invariante i` junk for an arena name, adds a special-case branch to the one proof that serves every other invariant, and the
+  semantics that defines every other leg would no longer check this one); (L3) a `Programm` field `invOk : Inv → World → Bool` with a premise
+  tying it to `Dekl.Ok` (the meaning would again be exporter-written). Either remains an option if O5 proves too costly; (L1) is the strongest.
+  Remaining wart of (L1) and (α) alike: `Programm.invariante` stays total, so for an arena name it carries an ignored expression
+  (the exporter writes `tru`); planted-defect O7b shows the meaning does not come from it.
+* **T3. A shared arena is the lock invariant ONLY; it is NOT a `D.invs` member.** `Deklaration.invarianten_gehalten` (U003 as a declaration
+  fact) says: a function whose signature writes a carrier of an invariant holds EVERY guard lock of every carrier in its signature
+  (`haelt`). The realistic shared shape is `g := locks L { f(); }` (finding 3 of 8a.2): `g` writes the arena through `f` but takes `L`
+  itself, so `L ∉ haelt g`; with the arena as a `D.invs` member `invarianten_gehalten` would forbid exactly the program the section
+  theorem covers [U: read from the field text and the 8a.2 finding; not run]. Decision 2 already says "shared via the lock invariant";
+  this entry records that it is also a REQUIREMENT. Per-thread (unguarded, thread-local) arenas are `D.invs` members and are the only ones
+  decision 1's footprint concerns. A shared arena needs no new text in `Spec.lean`: `sperrInv`, `sperrWechsel`, `sperrSicht` already say it
+  for the user's lock family `E.S`; the new content is the section certificate (O17) and that the certificate's statement forces `E.S = K.sperr L0`.
+* **T4. A flag invariant is not a `D.invs` member either.** The payload is written BEFORE the publish, so an `InvRuhe`-style claim ("holds
+  whenever no thread is inside a writer", hypothesis: holds at the start memory) is false or vacuous for it. It is a hand-off invariant
+  (publisher duty at the `publish` step, reader's rely after the confirmed `awaits`), the structural twin of a lock invariant (duty at
+  the release, rely at the acquire). It rides in the same family: new defaulted fields of `SperrInv` (A.3, C9). Its payload carriers are
+  exempt from `VertragsFrei` for their OWN flag only (A.4).
+* **T5. The statement runs over `D.mitRuhe`.** `GabbroZiel` ends in `ZielFX E.P.mitRuhe E.S.mitRuhe …` over `D.mitRuhe` [V: Spec.lean
+  2295], whose `typ`/`gtyp` are `tyR` of the old ones and whose `Fn` is `Option D.Fn` [V: MitRuhe.lean 150-200]. Every new field of
+  `Deklaration` needs a `mitRuhe` line, and the arena needs a translation `Dekl.mitRuhe` with `Dekl.Ok (worldR σ) ↔ Dekl.Ok σ`
+  (O6). Not in either earlier text.
+* **T6. The entry fact needs a joint induction (the cost 8a.3's D5 understated).** `InvGutS` quantifies over EVERY world meeting
+  `ReqAmEintritt`. `erkE_koerper` gives `Dekl.Ok` at exits only from a world that meets it at entry, and a body started in a broken
+  arena may fail the `rufAt` check, i.e. answer `logik`. So (b) for an arena invariant must carry the entry assumption (the inductive
+  reading of decision 2: `InvGutSE`, O9). The replay that proves `invRueck` applies the user obligation at the world of every call, so
+  it needs the entry fact there, while `invRuhe` (the only source of that fact) needs the replay's returns (`hIR`
+  in `invRuhe_erreichbar` [V]): a circle. It is broken by one joint induction over reachable machines (O10), not by the proof
+  structure as it stands. For a per-thread arena written by one start (`Getrennt`) the entry fact at a call by a thread outside every
+  owing frame IS `invRuhe` at the previous machine; inside a writer frame it is the abstract state of the recognizer
+  (needs the call constructor, T7). `invGutSD2_arena`'s premise `hein` is exactly this fact.
+* **T7. `ErkE` covers only leaf writers: callers and section owners have no derivation.** `Erk` has no call constructor and no `locks`
+  constructor [V: 8a.1 "Still open"]. `schuldet` is derived from transitive effects, so a function that merely CALLS a writer owes the
+  invariant too and needs its own certificate; likewise `g := locks L { f(); }`. Soundness of the diff is NOT affected (an uncertifiable program
+  just cannot satisfy the premise and is outside the statement; it is never unsoundly inside), usability is: a program with nested writers
+  cannot instantiate the theorem until O14/O15 exist. Named in the header and in the NOT CLAIMED list.
+* **T8. Decision 3's order premise narrows a universal; the choice of how far is open.** `SchwachX` quantifies `∀ ord`. Restricting
+  `ord` at ALL flags with a payload (derived order) is the simplest and matches the language (`publishes` forces release, SPRACHE 11.1);
+  it removes from the statement the (absurd) lowerings of an unraced payload flag as relaxed, and `GabbroZielSC` can then no longer
+  be derived from the order-restricted `SchwachX` for such units, only from the direct proof `Beweis.lean` already contains
+  (`gabbro_ziel_sc` [V: header, Beweis.lean]). Restricting only at `PubFlagge` (flags of a RACY payload, vacuous elsewhere) loses
+  nothing. The plan takes the second (no unit and no run covered today is dropped), with the derived order `D.ordnung` as its content.
+
+#### A. The merged edit list
+
+**A.1 `Kern/Syntax/` (a ROOT change: every one of the 714 modules rebuilds; do all of it once).**
+
+| # | Edit | Where | Fallout |
+|---|---|---|---|
+| A1.1 | New `Kern/Syntax/Basis.lean`: `structure DeklBasis` = `Tab`, `[decTab]`, `count`, `Feld`, `[decFeld]`, `typ`, `Glob`, `[decGlob]`, `gtyp`; `attribute [instance] DeklBasis.decTab …` | new | the `attribute [instance] Deklaration.decTab …` line at `Syntax.lean` 183 moves; instances then resolve through the parent projection **[M]** |
+| A1.2 | New `Kern/Syntax/Arenen.lean`: the STRUCTURES `ArenaForm`, `DynForm`, `FreiForm`, `LinkFeld`, `LinkKopf`, `ListDekl`, `BaumDekl`, `Dekl` over `DeklBasis`, plus `Dekl.lesGlobs`, `Dekl.orte` (def only; both mention only structure fields [V]) | moved declarations: `ArenaZucker` 106, `ArenaDyn` 271 (namespace `ArenaDyn` renamed at its uses), `ArenaFrei` 46, `ArenaListe` 38/46, `ArenaDekl` 29-47, `ArenaSperreTraeger` 30/35 | their readers (`stand`, `komSt`, `wert`, `st`) need `World`/`Wert.umTyp` and STAY in `Bausteine/Arena/`; `Wert.umTyp` is not needed by the structures **[U: re-check at the spike]** |
+| A1.3 | `Deklaration extends DeklBasis` (the six fields leave the list at line 111); `CoeOut Deklaration DeklBasis` | `Syntax.lean` 111-208 | 0 literals break (`where` syntax, 84 of them); `{ D with … }` forms unaffected **[U]**; the lemma statements `(A : FreiForm D)` elaborate through the coercion **[M, mock only]** |
+| A1.4 | New field `arena : Inv → Option (Dekl toDeklBasis) := fun _ => none` (needs `FreiForm`, so after `Inv`) | `Deklaration` | default: every old declaration keeps its meaning; `Deklaration.mitRuhe` gets `arena := fun i => (D.arena i).map Dekl.mitRuhe` (T5) |
+| A1.5 | The old list field becomes `traegerFrei : Inv → List (Tab ⊕ Glob)` (carriers of an EXPRESSION invariant); `def Deklaration.traeger i := (D.arena i).elim (D.traegerFrei i) Dekl.orte` | `Deklaration` | 85 lines say `traeger := …` [V]; 79 are `nomatch`/`.elim`/`[]` and only need the rename, three list tables (`InvZeuge` 99, `MehrfadenZeuge` 116, `ZielOrtInvGrundZeuge` 92) and need `.inl`, `MitRuhe` 179 copies the field, `Extraktion/T1` 379 and `Geteilt` 358 belong to the unrelated `Bau` structure [V]. EXPORTER: `lean_g.rs` 5541 writes `traeger := fun e => nomatch e`: one line, same commit (A.9) |
+| A1.6 | `invarianten_gehalten` restated over `Tab ⊕ Glob`: `(traeger i).any (Sum.elim (sigNr n).schreibt (sigNr n).gschreibt) = true → ∀ c ∈ traeger i, ∀ L, Sum.inl L ∈ (Sum.elim braucht gbraucht c) → L ∈ (sigNr n).haelt` | `Deklaration` | the exporter writes `fun _ i => nomatch i` (lean_g.rs 5594), still valid; 84 fixtures prove it by `nomatch` [U: spot-checked, not all]; `MitRuhe.lean` 196 follows; used in `Satz/T4` 431, `AtomarInv` 32, `Interferenz` 162 |
+| A1.7 | `D.nutzlast : Glob → List (Tab ⊕ Glob)`; `Stmt.publish` and `Block.awaits` payload parameter `List (D.Tab ⊕ D.Glob)` (the equation `payload = D.nutzlast g` is unchanged) | `Syntax.lean` 131, 520-521, 573-574 | mirrors: `Hoare/HoareRegeln/T1` 110/142, `Satz/T1` 179-184, `Code/Conc/Await`, `CFormenH`, `PaarungAusgenommen` (`InterferenzAllgemein/T1` 615); literals with a non-trivial `nutzlast` are few (`AtomarZeuge` and kin) [U: count at the spike] |
+| A1.8 | `invSicht i` (line 647) folds `Sum.elim braucht gbraucht` over `traeger i` | `Syntax.lean` 647 | `Programm.invariante : Expr D [] (invSicht D i) .bool` keeps its type; for an arena name the value is ignored (T2) |
+| A1.9 | NOT edited: `Programm` (no new field), `Einheit` (no new field), `Programm.mitRuhe` | | the 80 `Programm` literals and the 47 files that mention `Einheit` are untouched |
+
+**A.2 `Kern/Semantik/` and the arena base.**
+
+| # | Edit | Where |
+|---|---|---|
+| A2.1 | `schuldet f i := (D.traeger i).any (Sum.elim (D.schreibt f) (D.gschreibt f))` | `Semantik/T1.lean` 478 |
+| A2.2 | New Kern module `Semantik/ArenaPruef.lean` (between `T1` and `T2`): `Dekl.okB : Dekl A → World D → Bool` by fuel-bounded walks (free list, list, tree preorder with `Nodup`, disjointness) over `World` readers | new |
+| A2.3 | `rufAt` check: `invPruef P i σ' := (D.arena i).elim (wahr? (eval σ' (P.invariante i) σ' .nil)) (fun K => K.okB σ')`; the read recording uses `P.invariante i`'s `orte` for `none` and `K.orte` for `some` (guarded by `invSicht D i`, which holds by A1.8) | `Semantik/T2.lean` 397-399 |
+| A2.4 | consumers of the old check (30 files [V: 14 `RufLogik`, 6 `RufAtNachB`, 14 `MitRuheSemantik/T3-T4`, 19 `Extraktion/T3-T4`, 8+4 `CFormenR/M`, `RahmenTreu`, `HandlerKongruenz`, `VertragOrtB`, `ObjektRahmen/T2` …]) restated through `invPruef`; each lemma has a `none` case that is the old proof | listed files |
+
+**A.3 `Nebenlaeufigkeit/Sperren/SperreSem/T1.lean` (`SperrInv`) and the H-semantics.**
+`structure SperrInv` gains two DEFAULTED fields (stage P2, flag invariants):
 ```
-structure Programm where
-  invariante : ...                                   -- unchanged
-  ...
-  unterbricht : D.Fn → Bool := fun _ => false        -- unchanged
-+ /-- `i` names the invariant of a declared ARENA (Phase A): its meaning is `Dekl.Ok`, not the evaluation of `invariante i`. -/
-+ arena : D.Inv → Option (Σ A : FreiForm D, Dekl A) := fun _ => none
++ pub    : D.Glob → Speicher D → Bool := fun _ _ => true      -- the hand-off invariant of the flag `g`
++ pubOrte : D.Glob → List (D.Tab ⊕ D.Glob) := fun g => D.nutzlast g  -- derived, not listed by hand
 ```
-and `Deklaration` needs no new field: the carriers of an arena invariant are the arena's table and the words its `Dekl` reads, listed in
-`D.traeger i` as for any invariant (`D.traeger`, `D.braucht` give the guards).
+`execBlockH`/`execBlockHA` get a `publish` case beside the lock-release check: the publisher's world after the store must satisfy
+`S.pub g`, else `logik` (the twin of `freiH_post`). The family `Block/Endblock.execH_ohne` ("a body without `locks` runs the same under
+`execBlockH`") gains the matching premise (no `publish` with a failing `S.pub`; with the default family it is the old lemma). `SperrInv.mitRuhe`
+(`⟨S.orte, fun L s => …⟩`, an ANONYMOUS constructor [V]) becomes a record literal. Literals of `SperrInv` that use `⟨_, _⟩` break: count
+at M2 **[U]**.
 
-**D2. `Spec.lean` / `ZielOrt/Rahmen/ZielOrtInv.lean`: the meaning of an invariant.**
-```
+**A.4 `Spec.lean`: the exact edits, in file order.** (No text of `GabbroZiel`, `GabbroZielSC`, `GabbroZielVerbund` changes: they quantify
+over the structures edited below.)
+
+* **C1 `InvTraeger`** (line 1922). The arena reads exactly `K.orte` (`Dekl.ok_gleich_wort`, a THEOREM), the expression invariant reads its list:
+  ```
+  def InvTraeger (P : Programm D) (i : D.Inv) : Prop :=
+  - ∀ c ∈ (P.invariante i).orte, ∃ t ∈ D.traeger i, c = Sum.inl t
+  + match D.arena i with
+  + | none => ∀ c ∈ (P.invariante i).orte, c ∈ D.traeger i
+  + | some _ => True
+  ```
+* **C2 `InvHaelt`** (`ZielOrt/Rahmen/ZielOrtInv.lean` 41, not `Spec.lean` but part of the reviewed diff, the statement mentions it):
+  ```
   def InvHaelt (P : Programm D) (i : D.Inv) (σ : World D) : Prop :=
--   wahr? (eval σ (P.invariante i) σ .nil) = true
-+   match P.arena i with
-+   | none => wahr? (eval σ (P.invariante i) σ .nil) = true
-+   | some s => s.2.Ok σ
-```
-`InvTraeger P i` (the invariant reads only its declared carriers) is proved for an arena invariant by a lemma `dekl_ok_traeger` (the words
-`Dekl.Ok` reads are the words `D.traeger i` lists) instead of the `.orte` computation; the premise "the arena declares its words in
-`D.traeger`" is a field check of the exporter (a Prop in the unit, see D4). `InvRuheG`, `InvSichtG`, `InvAmRueck`, `schuldet` are used
-unchanged; `Ziel`/`ZielF`/`ZielX`/`ZielFX` get NO new conjunct, every old conjunct stays word for word.
+  - wahr? (eval σ (P.invariante i) σ .nil) = true
+  + invPruef P i σ = true            -- `Dekl.okB` for an arena name, the evaluation otherwise (A2.3)
+  ```
+  `InvHaeltD2` of `ArenaSperreInv.lean` (the compiled proposal) is deleted afterwards (no legacy); its lemmas are restated over `InvHaelt`.
+* **C3 `InvRuheG`** (1939): the start hypothesis is dropped for an arena name, because (b) now proves it (C4):
+  ```
+    ∀ i ∈ D.invs, InvTraeger P i →
+  -   InvHaelt P i (M0.speicher.welt []) → InvZu M i → InvHaelt P i (M.speicher.welt [])
+  +   (D.arena i = none → InvHaelt P i (M0.speicher.welt [])) → InvZu M i → InvHaelt P i (M.speicher.welt [])
+  ```
+  Same edit in `InvSichtG` (1946), whose guard clause becomes
+  `∃ c ∈ D.traeger i, ∃ L, Sum.inl L ∈ Sum.elim D.braucht D.gbraucht c ∧ L ∈ offen (M.faeden t).spur`. For an expression invariant (`arena = none`)
+  both legs are word for word the old ones when `traeger` lists only tables (the case today).
+* **C4 `StartPflicht`** (1665): one more clause, the start obligation of decision 2:
+  ```
+  structure StartPflicht (E : Einheit D) : Prop where
+    sperren : ∀ L, E.S.inv L E.sp0 = true
+    req : …
+  + arena : ∀ i K, D.arena i = some K → InvHaelt E.P i (E.sp0.welt [])
+  ```
+  Its proof for a closed `sp0` is `by decide` through `okB` (O5 gives the decision procedure); for `arena := fun _ => none` it is vacuous (an
+  `autoParam` default `by intro i K h; simp at h` is the plan **[U]**; fallback: edit the 14 files that build a `StartPflicht` [V:
+  `GvAtomRely`, `GvLuecken`, `GvStartPflicht`, `Pflicht104/108`, `GenOblig104/108`, `Beweis`, `SpecProben`, `Akzeptiert`, `FaedenVor`, `Proben`,
+  `ZeugeTorModell`]). `StartPflichtVor` (`FaedenVor` 42) and `startZulaessig_aus` take the clause along.
+* **C5 `SchwachX`** (2200): the order premise of decision 3, derived, vacuous without a racy payload:
+  ```
+  + /-- The orders a lowering may choose for the flags of a racy payload: at least the DERIVED order of the declaration. -/
+  + def OrdAb (P : Programm D) (ws : List D.Fn) (ord : D.Glob → Speichermodell.Ordnung) : Prop :=
+  +   ∀ g, PubFlagge P ws g → D.ordnung g = .freigabe → ord g = .freigabe
+    def SchwachX … (Tg …) (M0 M) : Prop :=
+  -   ∀ ord W W' u σ M'' wahl neu, RufErreichbarW … ord …
+  +   ∀ ord, OrdAb P ws ord → ∀ W W' u σ M'' wahl neu, RufErreichbarW … ord …
+  ```
+  `SchwachX`/`ZielX` get the parameter `ws` (the declared starts; today they get `Tg := GeteiltV P ws`, from which `ws` is not recoverable).
+  `Deklaration.ordnung g := if (D.nutzlast g).isEmpty then .entspannt else .freigabe` is a DEFINITION in `Speichermodell/Maschine/MaschineW.lean`
+  next to `ordVon` (not a field: the language derives release for every flag with a payload, SPRACHE 11.1/11.5). `PubFlagge P ws g :=
+  D.atomar g = true ∧ ∃ c, c ∈ D.nutzlast g ∧ PubLesbar P ws c`.
+* **C6 `AkzeptiertSpecX`** (2109): one new field and two changed ones, for payload carriers only (this is `PubRegel`, §11.4 R0-R4):
+  ```
+  + pub  : PubRegel P fs ws                       -- R0-R4, decided by the new component `pubB` (A.5)
+    fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws ∪ PubLesbar P ws) f   -- a payload READ is no longer refused at `fuss`
+    renn : ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ PubLesbar P ws c → SchreibGetrennt P fs ws c
+  ```
+  `PubLesbar P ws c`: plain, unguarded, in `D.nutzlast f` of ONE flag `f`, `VertragsFrei` except for `f`'s own flag invariant, written by ONE declared
+  start that is not `Mehrfach`. `PubRegel` (one-shot first cut): single writer; on every path of that start's call graph (callees and loops
+  included) every write of `c` is followed by the unique `publishes f` and by NO later write of `c` (`hstill`); `f` has one `publishes` site
+  and a published value its initial value does not carry (`hnicht`); `rueck f = none` (the one-shot rule, A.6); every read of `c` in another
+  start's graph is dominated by a confirming `awaits f` branch on every path. The order is not a field of `PubRegel`: it is `D.ordnung`.
+* **C7 `NutzerPflichtA`** (2152): the rely set grows by the payload carriers (stage P1) and the unit carries the arena certificate:
+  ```
+    structure NutzerPflichtA (E : Einheit D) : Prop where
+  -   logik : LogikPflichtA E.P E.S E.Q (GeteiltA E.P E.ws)
+  +   logik : LogikPflichtA E.P E.S E.Q (fun c => GeteiltA E.P E.ws c ∨ PubLesbar E.P E.ws c)  -- reader: payload constrained by `S.pub` (stage P2)
+      start : StartPflicht E
+  +   arena : ArenaZeuge E            -- O14-O17, stage 1 of decision 2's certificate; moves to (a) with `ErkB` (O18)
+  ```
+  `LogikPflichtA`'s `InvGutSA` is restated for owed ARENA invariants as `InvGutSE` (entry assumption, O9); the user does not prove arena
+  preservation by hand, `ArenaZeuge` carries `ErkE` (per-thread, per owing function) or the section certificate (shared, per `locks` statement).
+  `KoerperGutSA`'s havoc at a confirmed payload read is `HavocPub` (O22): every value in `S.pub g`'s payload, no longer every value. Stage P1 is
+  `S.pub := fun _ _ => true`.
+* **C8 `ZielX` and `ZielFX`** (2218, 2254): ONE new leg, the view-level race freedom of a payload carrier (§11.3 D4, now over `OrdAb`):
+  ```
+  + pubSicht : PubSicht P O passes ws M0 M
+  def PubSicht … := ∀ ord, OrdAb P ws ord → ∀ W W' u σ M'' wahl neu, RufErreichbarW … → W.g = M → SchrittW … →
+      ∀ c, PubLesbar P ws c → (LiestG … ∨ SchreibG …) → ∀ m ∈ W.hist c, m.ts ≤ W.sicht u c
+  ```
+  `ZielFX.spawnSicht` already lists `InvRuheG` and takes the C3 change for free. `Ziel`/`ZielF` (the G statements) get NO new leg; they are
+  the corollary `gabbro_ziel_sc_aus` (T8). `rennfrei` becomes `RennfreiBisGA` with the `PubLesbar` exemption, `¬ AtomarAusgenommen c → ¬ PubLesbar … c →`.
+* **C9 `SperrInv`** (A.3): `pub`, `pubOrte` as above. `SperrInvLokal S` gets the twin clause (`S.pub g` reads only `S.pubOrte g`).
+* **C10 `Einheit`**: no change (`S` carries the hand-off family). **`Einheit.ws`** unchanged.
+* **C11 `Pruefer` / `PrueferX`**: the structure text is unchanged (its `korrekt` targets `AkzeptiertSpecX`); `Pruefer.alsX` and
+  `akzeptiertX_pruefer` are re-proved for the new field.
+* **C12 `GabbroZielVerbund`** (2486) and `NutzerTeilA`/`SchnittstelleSpec`: the arena certificate and `PubRegel` are per OWN function of each unit;
+  a payload flag or an arena invariant ACROSS the link stays NOT CLAIMED and refused (`lok`), as an atomic across the link is today.
 
-**D3. The writer obligation for an arena invariant (premise side).** For `i` with `P.arena i = some s`, `NutzerPflicht`'s `InvGutSA` is not
-demanded (the user does not prove it); instead the unit carries, for every function that owes `i` (`schuldet f i = true`), a recognizer
-derivation of its body:
-```
-+ structure DynZeuge (P : Programm D) : Prop where
-+   schreiber : ∀ i ∈ D.invs, ∀ s, P.arena i = some s → ∀ f, schuldet f i = true → ErkE s.2 Abs.leer (P.rumpf f)
-```
-`ErkE` is a Prop; the derivation is a proof term the EXPORTER writes and Lean's kernel checks, so nothing about the Rust side is trusted.
-Where it lives: as a field of `Einheit` (`dynZeuge : DynZeuge P`, a Prop-valued field with no default, so every unit carries it; for a
-program without arenas it is `by intro i hi s hs; simp [Programm.arena] at hs`-trivial), not in the Bool of `AkzeptiertSpec`
-(the Bool would need a decision procedure for `Erk`, which does not exist and would need `DecidableEq` on `Block`). The one generic theorem
-that connects it to the proof of `invRuhe`:
-```
-+ theorem invGutS_arena : ErkE s.2 Abs.leer (P.rumpf f) → <the arena part of InvGutSA>   -- from `erkE_koerper`
-```
-`InvGutSA` runs `execEndH` (lock invariants and havoc); a recognized body has no `locks` statement, so `execEndH = execEnd` on it
-(a generic lemma `execEndH_eq_execEnd`, to be proved: induction over `Endblock` with no `Stmt.locks`).
+**A.5 `Zielsatz/Kern/Akzeptiert.lean` and `Atomar/AtomarAkzeptiert.lean` (the concrete Lean checker).** New component `pubB : Bool` with
+`pubB_iff : pubB P fs ws = true ↔ PubRegel P fs ws` (a syntax-directed walk over `Endblock` with an abstract state "flags confirmed" and
+"payload written since the publish", the same pattern as `Abs` of the recognizer, closed by the call fixpoint `reachB`); `AkzeptiertX` gains it
+and `akzeptiertSpecX_of` its case. Stage 1 of the arena certificate is NOT in (a); at the target stage a component `arenaB : Bool` (decided by
+`ErkB`, a Bool recognizer with `erkB_sound`, O18) moves `arena` from `NutzerPflichtA` into `AkzeptiertSpecX`.
 
-**D4. The statement.** `gabbro_ziel` gains no conjunct; the NOT CLAIMED entry "dynamic unbounded data structures" shrinks to: a heap without a
-ceiling, recursive types, links across arenas, hash chains and the sibling demand until their recognizers exist, bodies that call a function, a
-walk that releases every slot of a revoked subtree, `leave`/`next` in loop bodies. `Einheit` gains the one field of D3.
+**A.6 Re-publication anticipated (decision 3), first cut one-shot.** Hooks only, no semantics beyond one-shot:
+(i) `SperrInv.pub g` and `PubFlagge` speak of the MESSAGE the confirming read returned, not of "the" publish (`erwartet_bestaetigt` already does);
+(ii) `PubRegel` carries `rueck : D.Glob → Option D.Glob := fun _ => none` (the reverse flag) and the first cut demands `none`; the later rule
+replaces `hstill` ("no write after the publish") by "no write between the publish and the reader's ack of THAT epoch" (an interval of the
+flag's history, `StillBis c m_pub m_ack`, with `m_ack = ∞` in the first cut); (iii) the flag value carries an epoch number only at the later
+stage (`D.epoche : Glob → Nat := fun _ => 1` is a reserved name, not added now); (iv) `payload_mp_wert` is stated per message, so the
+epoch generalisation is an instance, not a rewrite **[U: reread the proof at O21]**. A ring or a Treiber stack (item 5) is the first user.
 
-**D5. The proof of the new content.** `invRuheG_aus` needs, for every invariant, (i) the invariant at every function RETURN of a function that
-owes it (`InvAmOrtG`, here from `invGutS_arena`), (ii) the invariant at the start memory (a hypothesis of the leg), (iii) that a step of a thread
-outside every writer of `i` moves no carrier of `i` (the footprint of `schuldet`: `TraegerGleich`). All three are statements about carriers and
-returns, not about the shape of the predicate, so the induction over machine steps is the existing one; the two places that read the predicate
-(`InvTraeger`, the evaluation) are D2. Review: two independent verdicts, as for every extension of the goal (AGENTS.md section 1).
+**A.7 `Nebenlaeufigkeit/Sperren/MitRuhe*.lean`.** `Deklaration.mitRuhe` (the field list at 150-200): `arena`, `traegerFrei`; `nutzlast := D.nutzlast`
+unchanged in type; `SperrInv.mitRuhe` carries `pub` (translated back through `speicherZ`); `Programm.mitRuhe` unchanged. New: `Dekl.mitRuhe`,
+`Dekl.ok_mitRuhe` (O6), `okB_mitRuhe`. The existing `invHaelt_mitRuhe`-type lemmas gain the arena case.
 
-**Premises of the diff, status after step 3 (2026-10-18; each line says proved or open):**
- 1. the section theorem for SHARED arenas: **PROVED** (`abschnitt_erk`, `abschnitt_rufe`, `abschnitt_start`, `arena_ziel`, `grow_atomar`; 8a.2). The ownership predicate of the ABA
-    point across a release stays OPEN; for a per-thread arena the three points of D5 suffice.
- 2. the bridge from the machine-G steps of a writer's frame to the big-step `execEnd` that `erkE_koerper` talks about: **PROVED for loop-free writers** as `erkE_maschine`
-    (`rufG_adaequat_ruf` + `erkE_koerper`; premises: coverage `EndR`, certificate `ErkE`) and, with the coverage derived from the certificate (`erkE_endR`), as `erkE_maschine_erk`
-    (premises: `ErkE` + `schleifenfrei`; witness `erkE_maschine_zeuge`). OPEN: writers with loops (the machine fragment has no guard inside a loop body).
- 3. `execEndH_eq_execEnd` for bodies without `Stmt.locks`: **PROVED** for the recognized fragment (`erk_ohneLocks`, `erkE_ohneLocks`, `erkE_execEndH`; the generic statement was
-    `Endblock.execH_ohne` already); `dekl_ok_traeger`: **PROVED** as `Dekl.ok_gleich_wort` (the invariant reads only `Dekl.orte`, and not the trace).
-    D3's `invGutS_arena`: **PROVED** as `invGutSD2_arena` against `InvHaeltD2` (the proposed meaning), with the entry premise `hein` (finding 2 of 8a.2).
- 4. the exporter writing `ErkE` derivations (Rust `lean_g.rs`): OPEN (the vocabulary is closed; a form outside it stays refused by name).
- 5. calls inside writers (the recognizer has no call constructor; the CALL form of the SECTION is proved, a writer that calls a helper is not), the hash and sibling recognizers, the release
-    of a whole revoked subtree: OPEN.
- 6. the migration D1: **NOT DONE; analysed.** The eight structures (`ArenaForm`, `DynForm`, `FreiForm`, `LinkFeld`, `LinkKopf`, `ListDekl`, `BaumDekl`, `Dekl`) mention only `Deklaration`
-    (and `Ty`), so their declarations can move; their readers (`stand`, `komSt`, `wert`, `st`) need `World` and `Wert.umTyp` and stay in `Bausteine/Arena/`. But `Programm` lives at the END of
-    `Kern/Syntax/Syntax.lean` (line 653) in the same file as `Deklaration` (line 111): a new `Kern/Syntax/Arenen.lean` that `Syntax.lean` imports cannot import `Deklaration`.
-    The migration therefore needs `Syntax.lean` split at the `Deklaration` boundary (`Syntax/Deklaration.lean`, `Syntax/Arenen.lean`, then the rest) or the structures inserted into
-    `Syntax.lean` before `Programm`; either changes the root of the Lean tree, so the whole of `grammatik/` rebuilds (~800 files, one lake run at a time), every positional `Programm`
-    literal needs the new field appended (`none` / `fun _ => none`), and the namespace of `DynForm` (`ArenaDyn`) is renamed at its uses. Measured here: nothing built; this needs a
-    sitting of its own and the build to be green before the diff is reviewed.
- 7. NEW (finding 1 of 8a.2): the footprint. `schuldet`/`InvTraeger` count tables only; `pop` and `wurzelAus` write only a head word; D5 (iii) needs either `traeger : Inv → List (Tab ⊕ Glob)` or an
-    arena case in `schuldet` (`K.orte.any (writes f)`). DECISION needed (Simon): it changes `Deklaration` or `schuldet`, both in the statement.
- 8. NEW (finding 2): the arena at entry (`hein`): a pseudo-`requires` the exporter writes, or the premise that writers are called inside a section / a closed machine.
- 9. NEW (finding 4): the commit bound `stand <= komSt` is not part of the lock invariant; Lean-only repairs: `0 ≤ n` in `Erk.wachs` DONE; a `dynFrisch` constructor and frames over `zaehl`/`komm` open.
+**A.8 Header text of `Spec.lean` and NOT CLAIMED (exact places, from the file).**
+* Atomic-rely block, line ~185-187, "WHAT STAYS NAMED … hand-off of a PLAIN payload read without a lock (still refused, verdict P3; OFFEN O25's
+  remainder)": REPLACED by: the one-shot hand-off of a plain payload (or table) read after a confirming `awaits` IS claimed (leg `pubSicht`, premise
+  `OrdAb`, component `pub`); the reader's rely is the flag invariant `S.pub` (stage P2) or, named as the intermediate stage while P2's proof is open,
+  every value (P1). The P3 remarks (lines ~854-861) get "UNGUARDED payload across threads is refused" replaced by the `PubRegel` conditions.
+* Invariant block, line ~329 ("THE GAP") and ~412 ("an invariant reading carriers outside `D.traeger`"): `D.traeger` is computed for an arena;
+  an arena invariant is established by `StartPflicht.arena`; `InvTraeger` is a theorem for it.
+* Assumption (2) of the reading (the emitters lower atomics with the orders the declaration derives): add "load-bearing for the flag of a racy
+  payload: `D.ordnung g = freigabe` is the lowering's lower bound".
+* NOT CLAIMED, line ~1362: the entry "a table/group invariant … one that is false in the start memory (the start is the legs' hypothesis, not a
+  (b) duty)" gets "except an ARENA invariant, whose start memory is (b)'s duty (`StartPflicht.arena`)"; the entry "the publish/await hand-off of
+  an unguarded PLAIN payload (refused by the checker, see P3; …)" is REPLACED by the F-list below; the entry "DYNAMIC UNBOUNDED DATA STRUCTURES
+  …, OFFEN O29" and the paragraph "NOT this case: an `arena A capacity lo .. hi max M of T`" (lines ~1437-1462) shrink to the F-list below.
 
-**The exact Spec.lean diff, refreshed (D1-D5 as written above, with these changes; STILL NOT APPLIED -- it needs Simon's review and two independent verdicts):**
- * D1 stands as written, with the file split of item 6.
- * D2 stands; the proposed `InvHaelt` match is `InvHaeltD2` in `ArenaSperreInv.lean` (so the D2 text can be copied from a compiled definition). `InvTraeger` for an arena invariant is
-   `Dekl.orte`-based (`ok_gleich_wort`), over `Tab ⊕ Glob` if item 7 is decided that way.
- * D3: the field of `Einheit` is `dynZeuge : DynZeuge P` as written; its consumer is `invGutSD2_arena` (proved), which takes the entry fact `hein` -- add the premise of item 8.
-   `execEndH = execEnd` on a recognized body is proved (`erkE_execEndH`).
- * D4: the NOT CLAIMED list shrinks as written; add: the commit bound, an arena under a lock-free free list, loops in a writer's machine correspondence (item 2), the ABA ownership predicate.
- * D5: (i) is `invGutSD2_arena` + the existing return leg; (ii) is the leg's hypothesis; (iii) needs item 7. For a SHARED arena the three legs of `Ziel` already say what is needed
-   (`arena_ziel`), with `S := K.sperr L` as the lock family of the unit: `sperrOrte` (the checker's `protects` fact) is the only premise, `SperrInvLokal` is a theorem (`sperr_lokal`).
-Until items 4, 5, 7 and 8 are settled and item 6 is built the diff would claim more than is proved; it stays a proposal.
+**A.9 Rust (the only line).** `crates/gabbro-check/src/lean_g.rs` 5541: `traeger := fun e => nomatch e` becomes `traegerFrei := fun e => nomatch e`,
+in the SAME commit as M2, so `pruefe-pruefer.py` (which builds exported Lean) stays green. Nothing else in `crates/` changes in this diff: the
+exporter still writes `Inv := Empty`, `LG001`/`LG005` stay; lifting them is plan step 5 and needs the diff applied and both verdicts.
+
+#### B. Lean proof obligations the diff creates, in dependency order
+
+Every row needs: no `sorry`/`native_decide`/new `axiom`; `#print axioms` on the new theorem and on `gabbro_ziel` exactly `propext`,
+`Classical.choice`, `Quot.sound`; a witness on a NON-DEGENERATE fixture (`Zeugenpflicht`) and a planted defect the model rejects.
+"Exists" = [V] in the tree today.
+
+| # | Statement | Lives in | Discharged by | Witness | Planted defect |
+|---|---|---|---|---|---|
+| O1 | `Deklaration extends DeklBasis` builds; every theorem of the tree compiles unchanged in meaning | Syntax, ~60 Arena files | refactor; build | `d0` shape **[M]**; a real arena fixture (`FD` re-stated) | none (pure refactor); `#print axioms gabbro_ziel` identical to the pre-refactor print (recorded at M0) |
+| O2 | `traeger_arena : D.arena i = some K → D.traeger i = K.orte` and `traeger_frei` (both `rfl`) | `Syntax/Arenen` | by definition | a fixture whose `traegerFrei` lists junk for an arena name: `traeger` ignores it | a declaration that cannot list `komm` by hand any more: the bug class "footprint listed wrong" is unrepresentable; test is `traeger_arena_unabhaengig` |
+| O3 | `schuldet` over `Tab ⊕ Glob`: `schuldet_pop`: a function whose only effect writes the list head owes the arena invariant (finding 1 of 8a.2) | `Semantik/T1`, `Interferenz` (`schuldet_hat_schreibtraeger` restated) | O2 + definition | `pop` body of `ArenaErkZeuge*` (a head-only writer) owes `i` | the same function under the OLD `schuldet` (tables only) owes nothing: `pop_alt_schuldet_nicht` documents what is repaired |
+| O4 | `invarianten_gehalten` over `Tab ⊕ Glob`; proofs of the three consumers (`Satz/T4` 431, `AtomarInv` 32, `Interferenz` 162) | `Syntax`, those files | existing proofs generalised | an arena fixture whose writer holds the guard locks | a writer without the lock: the field is unprovable (`invarianten_gehalten_verletzt`) |
+| O5 | `Dekl.okB` (Kern) and `okB_iff : K.okB σ = true ↔ K.Ok σ`; `okB` decides `Ok` on a closed world by `decide` | `Semantik/ArenaPruef`, `Struktur/Erkenner/ArenaOkB` | NEW: fuel-bounded walk is sound and complete for `KetteF`/`BaumF`/`FreiOk`; completeness needs the fuel bound `count` (the chain visits distinct slots below `count`: `Nodup` ⇒ length ≤ `count`) **[U: the hardest of the Kern pieces]** | `okB w0 = true` (the four-slot arena of `ArenaDynZeuge`), by `rfl` | `okB` false at the worlds of `liste_defekt_bricht`, `doppelGlied_abgelehnt`, a cycle |
+| O6 | `Dekl.mitRuhe`; `Dekl.ok_mitRuhe : K.mitRuhe.Ok (worldR σ) ↔ K.Ok σ`; `okB_mitRuhe` | `Nebenlaeufigkeit/Sperren/MitRuhe*` | NEW; reads only ints through `Wert.umTyp` and `tyR (Ty.int a b) = Ty.int a b` **[U]** | the arena fixture under `.mitRuhe` | an arena whose `hz` proof would not survive `tyR`: not representable |
+| O7 | `invPruef`; `rufAt` check restated; every consumer lemma (A2.4) keeps its statement for `arena = none` | `Semantik/T2` + 30 files | the old proof is the `none` case; new `some` case from O5 | `rufAt` on the arena fixture returns `ok` after a recognized body; **O7b** returns `logik (.invariante i)` after the planted `stray` store (reuse `stray_bricht`) | `P.invariante i := fun … => tru` for an arena name: the check still fires (`invariante_ignoriert`) |
+| O8 | `InvHaelt` (C2) with `invHaelt_speicher` (reads only `σ.speicher`); `InvTraeger` for an arena is trivial and `ok_gleich_wort` gives the reads-only fact the leg needs | `ZielOrtInv`, `ArenaSperreTraeger` | `ok_spur`, `ok_gleich_wort` exist | as O7 | n/a |
+| O9 | `InvGutSE`: `InvGutS` with the entry assumption for owed arena invariants; `invGutSE_arena`: from `ErkE K Abs.leer (P.rumpf f)` | `ZielOrtInv`, `Struktur/Sperre/ArenaSperreInv` | `invGutSD2_arena` (exists, takes `hein`); restated with `hein` as part of the hypothesis | `erk_nimmPush`-type body | a body whose derivation is missing (`stray_abgelehnt`) |
+| O10 | **Joint induction** `arena_eintritt`: on every reachable machine, at every call entry of an owing function by thread `u` whose other frames are not owing, the memory meets `Dekl.Ok`; proved together with `invRueck`/`invGrund` (T6) | NEW `Zielsatz/Arena/ArenaEintritt.lean` | the induction of `invRuhe_erreichbar` with the replay (`ziel_ort`) as the other conjunct; per-thread uniqueness of the writer from `lokW`/`Getrennt` (`schritt_traeger` for the other threads) **[U: scope 600-1500 lines; the largest proof of the diff]** | the machine run of `erkE_maschine_zeuge` extended to two calls | a program whose first call enters a broken start memory: rejected by `StartPflicht.arena` (`start_defekt_abgelehnt`) |
+| O11 | `invRuheG_aus`/`invSicht_aus` over `Tab ⊕ Glob` carriers and the dropped start hypothesis | `Eigenschaften/Invarianten.lean` 205-350 | the block `hgl` (205+ lines [V]) split by `Sum` case: tables by `schuldet`, globals by `gschreibt`; arena by `ok_gleich_wort` | an arena unit: `invRuhe` concludes `Ok` at a closed machine | closed-set violated: a thread inside a writer (the claim is not made: `invRuhe_nicht_im_schreiber`) |
+| O12 | `StartPflicht.arena` is discharged for the declared `sp0` by `okB`; `startZulaessig_aus` and `FaedenVor` take the clause | `Zielsatz/Kern/Beweis`, `FaedenVor` | O5 + `decide` | `sp0` of the fixture | `sp0` with a head `0` (a valid slot, not `nil = count`): `startPflicht_arena_falsch` |
+| O13 | Section for a shared arena: `locks L0 { … }` with `L0`'s family `K.sperr L0` | exists (`abschnitt_erk`, `abschnitt_rufe`, `arena_ziel`) | none new | exists (`abschnitt_zeuge`, `abschnitt_rufe_lauf`) | exists (`stray_bricht`, `abschnitt_defekt_schleife`) |
+| O14 | `Erk.ruf`: a call constructor, soundness by induction on call depth through `rufAt_erk` (T7) | `Struktur/Erkenner/ArenaErkRuf` | `rufAt_erk` (exists, one level); new induction on `rufTief` | a writer that calls a recognized helper | a call to a function with no derivation |
+| O15 | `Erk.sektion`: `locks L0 { Rufe }` and the inline form as constructors, soundness by `abschnitt_rufe`/`abschnitt_erk` (T7) | same | `abschnitt_*` (exist) | `g := locks L { f(); }` as an owing function | `f` not requiring `L` |
+| O16 | `ArenaZeuge E`: per-thread arena: every `f` with `schuldet f i` has `ErkE`; shared: every `locks L0` statement body of a function is recognized and `E.S = K.sperr L0`; `ArenaZeuge E → InvGutSE …` | `Zielsatz/Arena/ArenaZeuge` | O9, O13-O15 | the fixtures | `E.S` not `K.sperr L0`: `arenaZeuge_andere_sperre` |
+| O17 | `Dekl.sperr` section certificate over a statement walk (`Endblock.locksAlle`) | same | NEW syntax walk like `schleifenfrei` | as O15 | a section on another lock |
+| O18 | TARGET stage of the certificate: Bool `ErkB`, `erkB_sound : ErkB K a b = some a' → Erk K a b a'`, loop states by a monotone fixpoint over the finite `Abs` lattice; then `arena` moves from `NutzerPflichtA` into `AkzeptiertSpecX` | `Struktur/Erkenner/ArenaErkB`, `Akzeptiert` | NEW **[U: the second-largest piece; `Erk` has loop-state constructors that guess `k0`, a decision procedure must iterate]** | the accepted fixtures return `some` | the rejected fixtures return `none` |
+| O19 | `D.ordnung`, `OrdAb`, `PubFlagge`; `SchwachX` restated; the embedding "old `SchwachX` ⇒ new" (instantiation) and, for a unit with no `PubLesbar`, the equivalence | `MaschineW`, `Spec`, `Atomar/AtomarPflicht`-style embedding file | instantiation of a universal (easy) | a flag with payload, `ord` = release | `ord` relaxed at a racy flag: `OrdAb` fails, the counter-models `mp_flagge_*_erlaubt` apply |
+| O20 | `PubLesbar`, `PubRegel`, `pubB` and `pubB_iff`; `fuss`/`renn` exemptions in `AkzeptiertSpecX` | `Atomar/AtomarAkzeptiert*`, new `Atomar/PubRegel.lean` | NEW walk (R1 `hstill` through callees and loops, R3 dominance with branch facts) | `PubRegel` holds for the first fixture | the five counter-models of 11.1 as five programs the rule refuses: write after publish, read before await, relaxed flag (`ordnung` is derived, so this one is refused by `renn`'s premise), two writers, two publish sites |
+| O21 | Frame invariant `Merkmal.erwartet` (the confirming branch fact holds at the read, nobody wrote the flag since); `schritt_sichtInvA` extended with the payload disjunct; `pubSicht` for every reachable machine of GX | `Atomar/AtomarSichtPub` | `payload_mp`, `payload_mp_wert`, `payload_schreib`, `gesehen_einzelschreiber`, `still_of_kein_schreiben`, `erwartet_bestaetigt` (all exist, §80) | the first fixture's two-thread run (about five G steps, the scale of `w_nicht_sc`) | the rewrite-after-publish program: `pubSicht` fails there and `PubRegel` refuses it |
+| O22 | `HavocPub`: at a confirmed payload read the environment answers a value the flag invariant allows; stage P1: any value; stage P2: `S.pub g`; the publisher's duty is the `publish` hook (A.3) and `execH_ohne` family restated | `Speichermodell/Atomar/AtomarSem` + `SperreSem` | NEW; mirrors `HavocOk`/`freiH_post` | a publisher that establishes `Φ` and a reader that uses it | a publisher that does not: the hook answers `logik` (`pub_defekt_schleife`) |
+| O23 | The replay instantiation of `LogikPflichtA` for `T := GeteiltA ∪ PubLesbar` (the residue lemmas `ziel_ort_atomar_voll`, `AtomarReplay/T1-T3`) | `Atomar/AtomarReplay*` | if they use only "`T c` ⇒ `VertragsFrei c` and unguarded" it is a re-instantiation, otherwise the largest single cost of decision 3 **[U: read at M9]** | as O22 | n/a |
+| O24 | `gabbro_ziel_sc_aus` and `gabbro_ziel` re-proved; `gabbro_ziel_sc` direct (`Beweis.lean`) kept | `Beweis`, `BeweisAtomar` | all of the above | the standing witnesses | `#print axioms` check in the guardian |
+| O25 | First applied witnesses: one per-thread arena unit (`Inv := Unit`, `arena := some`, `invs := [()]`, a writer, a start memory) AND one racy-payload unit (a declaration, two bodies, ~5 G steps; the "first witness of the applied diff" 11.1 promised) | `Zielsatz/Kern/SpecProben*`, `AkzeptiertZeuge` | the diff itself | both units reach `Ziel` conclusions with CONTENT (`invRuhe` names `Ok`; `pubSicht` names a payload) | the unit of O7b and the rewrite-after-publish unit |
+
+Planted-defect rule for the review (E): every row's defect is a PROGRAM or DECLARATION that the model rejects (theorem `…_abgelehnt` or
+a run that ends `logik`), not a comment.
+
+#### C. Migration order (green at every commit, `gabbro_ziel` on exactly the three axioms)
+
+A commit is green when `./instrumente/pruefe-lean.py` is (it runs `lake build`, the axiom print and the layout check) and, for the
+commits that touch the exporter line, `pruefe-pruefer.py` too. Heavy runs one at a time, `free -g` beside them, `cargo test` never in the
+tree while `lake` runs.
+
+| Step | Content | Rebuild | Green because |
+|---|---|---|---|
+| M0 | Baseline (documents only): `lake build` cold time and peak RAM, `#print axioms gabbro_ziel`, counts of the literals named above | 1 cold build, measured | nothing changed |
+| M1 | **Spike, not committed**: A1.1-A1.3 only (`DeklBasis`, `Arenen`, `extends`, the coercion) in a scratch worktree, building the closure of `ArenaDekl` then `Grammatik` | full | decides T1: success keeps the plan, failure falls back to R1 (Simon decides) |
+| M2 | **FR-1, everything that touches `Syntax.lean`, in ONE commit**: A1.1-A1.9 (split, `arena` field with default, `traegerFrei` + computed `traeger`, `invarianten_gehalten'`, widened `nutzlast`, `invSicht`), the `mitRuhe` field lines, A2.1 (`schuldet`), the three table fixtures, the exporter line | full (714) | every old unit has `arena := none`, tables-only footprints and `nomatch` payloads: each theorem is its own special case; consumers fixed in the same commit (~40 lines for `D.traeger`, `Interferenz`, `Satz/T4`, the `hgl` block of `Invarianten`) |
+| M3 | **FR-2, Kern semantics:** A2.2 `okB` (definition only), A2.3 `invPruef`, A2.4 the 30 consumers; `okB_iff` NOT yet needed because no unit has an arena name in the corpus | full downstream of `T1` (~714) | for `arena = none` the check is the old one; the `some` branch is unreachable in every existing proof |
+| M4 | O5 `okB_iff`, O6 `Dekl.mitRuhe`/`ok_mitRuhe`, O2/O3 witnesses, O8 | new files + dependents of nothing | additive |
+| M5 | Arena obligations of the Spec diff: O9 (`InvGutSE`), O11, O12 as LEMMAS over the OLD `Spec.lean` (their statements mention `StartPflicht.arena`, which is not there yet: state them with the clause as a separate hypothesis) | partial (Zielsatz proofs) | additive; `Spec.lean` untouched |
+| M6 | O10 joint induction (`arena_eintritt`), O14, O15, O16, O17 | new files | additive; this is the large proof, it can stall without turning the tree red |
+| M7 | Payload Lean modules without `Spec.lean`: O19-O23 as lemmas over a copy of the legs, O25 payload witness | new files | additive |
+| M8 | **THE `Spec.lean` COMMIT:** C1-C12, A.3, A.5, header text, the NOT CLAIMED edits, `gabbro_ziel`/`gabbro_ziel_sc_aus`/`Beweis` re-proved with the M5-M7 lemmas, `SpecProben` witnesses (O25 both) | Spec closure and dependents (~197 + ~120 [U]) | it applies lemmas that are already green; if O10 or O23 is not ready the commit takes the fallback stage named in B (arena: certificate premise with `ErkE` leaves only; payload: stage P1 havoc, named in the header as "the reader assumes nothing") and ships honestly |
+| M9 | O18 `ErkB` (target stage of the certificate): `arena` moves from (b) to (a) (a SECOND `Spec.lean` diff, small, reviewed again) | partial | additive then a diff |
+| M10 | Documents: `SATZKARTE`, `TODO`, this file, `SPRACHE` 11.5 rule text, `OFFEN` lists | none | texts |
+
+`gabbro_ziel` keeps its three axioms because every new module is reviewed with `#print axioms` and the guardian prints it; nothing in this
+plan adds an `axiom` or `Classical` beyond `propext`/`Classical.choice`/`Quot.sound` (the existing `Dekl.sperr` already uses `Classical.decide` [V]).
+
+#### D. Rebuild cost
+
+* Size [V]: 712 `.lean` files under `grammatik/Grammatik/`, 275,543 lines; `import Grammatik` pulls 714 modules; `Syntax.lean`'s own closure is 6, so
+  an edit there rebuilds all of them; `Spec.lean`'s closure is 197 modules; `Dekl.Ok`'s is 68.
+* Time [U]: the only whole-library figure in the records is 5 min 20 s at 6.86 GB peak for 247 jobs on `ki-pc-fisch-101` (2026-09-15,
+  SATZKARTE §29) and 19 min 44 s for 226 jobs earlier (SATZKARTE lines 2646 and 2808). The tree has ~2.9 times the jobs; this
+  machine has 20 cores and 31 GB (`free -g`: 20 GB cache). A linear guess is 15-40 minutes per cold full build. M0 replaces the guess.
+* Number of full rebuilds the plan forces: **three** (M1 spike, M2, M3) plus the `Spec.lean` partial (M8) and its small sequel (M9). Splitting
+  rule: (1) every `Syntax.lean`-level change goes into M2, reviewed as a diff BEFORE it lands, because a later correction costs another
+  full rebuild; (2) develop each later step against its own closure target (`lake build Grammatik.Zielsatz.Kern.Spec`, or one module) and run
+  `lake build Grammatik` only at the commit; (3) M4-M7 are additive modules with no dependents, so they rebuild only themselves and can
+  proceed in parallel by two agents in their own worktrees (at most two Opus agents, each with a warm `.lake` and warm `programmlogik/.lake`,
+  never two lakes in one tree); (4) M2 and M3 may be merged into one commit if a single full build is preferred over two, at the price of a
+  bigger red window; the plan keeps them apart because the failure modes differ (types and instances vs the semantics of a check);
+  (5) the RAM rule of CLAUDE.md stands: `lean-bau` only, one build at a time.
+
+#### E. The two-independent-verdicts protocol (AGENTS.md section 1; applies to M8 and again to M9)
+
+* **Reviewers:** one Muse lane and one Opus agent, each in its OWN worktree with its own warm `.lake`, neither seeing the other's output
+  until both reports are filed. Both are told to ATTACK the diff (find an unsatisfiable premise, a free parameter, a vacuous leg, a unit the
+  statement now drops, a unit it now wrongly includes), not to confirm it.
+* **What each receives (identical packets):** (1) the exact `git diff master..branch` of `Zielsatz/Kern/Spec.lean`, `ZielOrtInv.lean`, `SperreSem/T1.lean`,
+  `Kern/Syntax/*` and the new `Basis`/`Arenen`/`ArenaPruef`; (2) the rewritten header and NOT CLAIMED text; (3) `#print axioms gabbro_ziel`
+  and the guardian output (`pruefe-lean.py`); (4) the list of every new definition and the position it is used in the statement;
+  (5) the two applied witnesses (O25) and the planted-defect theorems of section B, as names to read, not as claims; (6) section A of this
+  document as orientation. They do NOT receive: section F's claims, the author's own verdict, the migration log, or each other's text.
+* **Questions both must answer in writing (each with a yes, a no or "found: …"):** is each new premise satisfiable on a non-degenerate unit
+  (`StartPflicht.arena`, `ArenaZeuge`, `OrdAb`, `PubRegel`, `S.pub`)? Does any old unit lose coverage (the embeddings of B: O19, O24)? Is the
+  meaning of an arena name fixed by the declaration and not by anything the exporter or the user writes (`P.invariante` of an arena name
+  is ignored, O7b)? Does `D.traeger` for an arena equal `K.orte` by definition and does `schuldet` now count the `pop`-only writer (O3)? Is the
+  flag order premise vacuous without a racy payload (diff of `SchwachX`)? Can a relaxed lowering of a racy flag still reach `Ziel` (it must not)?
+  Does the NOT CLAIMED text say every gap of section F, and nothing claimed there is claimed in a leg?
+* **What each reviewer also runs:** the planted-defect programs of section B (each must be rejected), `lake build`, the axiom print, and a
+  counter-model hunt of their own on the new premises (the six earlier rounds found P1 unsatisfiable lock invariant, P2 free parameters, P3
+  payload races, F1 out-of-range floats, G1 `einpassen`, W1 empty answer types: the same classes are the checklist).
+* **Decision rule:** both "the goal with named gaps, no unnamed gap found" and the guardians green: merge, tag `milestone-…-spec-arena-payload`,
+  push (after the key grep). One "found": a repair lane, then BOTH reviewers re-read the repaired diff (a repair is reviewed by the pair, not by the
+  author). A reviewer may not be reused for the second verdict of the same diff.
+
+#### F. What stays NOT CLAIMED afterwards
+
+*Arena side.* A heap without a ceiling; recursive types; links across arenas; hash chains and the sibling demand until their recognizers exist
+(`HashOk`/`SibOk` have executed forms, `Dekl` has no hash component); a walk that releases every slot of a revoked subtree; `leave`/`next` in loop
+bodies; writers with loops in the MACHINE correspondence (`erkE_maschine` covers loop-free bodies; the big-step `erkE_koerper` covers loops);
+until O14/O15, a writer that calls a writer and a caller of a writer (T7); the commit bound `stand ≤ komSt` in the lock invariant and in every
+frame (finding 4 of 8a.2); the ABA ownership predicate across a release; two sections commute up to slot names; a lock-free free list (Treiber
+stack, item 5); a thread that keeps a slot index across a release (`N586` per thread, the cross-thread form); an arena invariant read by a
+second start (not thread-local: it must be a lock invariant, and the unit is refused otherwise); the arena invariant INSIDE a running writer
+(the guarantee is at returns, `invRuhe` at closed machines, and at lock moves).
+*Payload side.* A flag written more than once, an `exchange … publishes/awaits` (RMW pairing); re-publication and reuse of a payload cell (rings,
+Treiber stack, seqlock, RCU: needs the reverse flag, hooks only, A.6); a payload published through TWO flags; cell-level separation inside one
+table (the carrier is the whole table: two starts writing different cells of one payload table are refused, not covered); a device/DMA payload; a
+payload or an arena ACROSS a link (O28); the `seq_cst` total order (item 4, `seq` is release/acquire in the model); `consume`; fences; a flag
+invariant under stage P1 (named as such while P2 is open); a hardware lowering that is WEAKER than `D.ordnung` at a racy flag (assumption (2) of
+the reading, now load-bearing).
+*Standing items unchanged:* termination and waiting bounds, stack depth, the C and the hardware, starvation freedom, probabilistic statements,
+floats beyond the kernel model, invariants inside a held section, a start declared once on several threads, the Rust checker as the Lean Bool
+only as far as it is (it is NOT yet the Lean Bool for `PubRegel`, `ArenaZeuge`/`ErkB`).
+
+#### G. Verification ledger (what this plan did and did not check)
+
+[V] read or measured: every file, line and count quoted above (`Syntax.lean` 111/653/647, `rufAt` 397-399, `schuldet` 478, `InvRuhe*`,
+`Spec.lean` 1481-2300, 1362-1470, the 84/85/80 literal counts, the 59-module/20,296-line layering fact, 712 files / 275,543 lines, the three
+fixtures with a non-empty `traeger`, the exporter lines 5541/5594, the header places). [M] one mock (`exp1.lean`) compiled under Lean 4.33.1:
+`Deklaration extends DeklBasis`, the computed `traeger`/`schuldet`, `where` literals, the coercion. [U] everything marked: no `lake` ran, no
+real file was edited, the real `Arena` files were not recompiled against `DeklBasis`, O5's completeness, O10's scale, the literal fallout of
+`SperrInv`/`StartPflicht`, all timings, the `autoParam` default, and whether T3's reading of `invarianten_gehalten` holds in the Rust U003.
 
 ## 9. Re-measuring
 
@@ -556,7 +829,7 @@ artefact, never inside it. **Status: the writer's hook (`kostenledger::ablegen`)
 (`rustc --test crates/gabbro-check/src/kostenledger.rs`). The design stays as the answer to "a number that lives
 only in the checking run is a number the artefact cannot defend".
 
-## 11. Message passing with a plain payload (Phase B item 1, 2026-10-18): the model is proved; the `Spec.lean` diff and the `N291` replacement are PROPOSED, not applied
+## 11. Message passing with a plain payload (Phase B item 1, 2026-10-18): the model is proved; the `Spec.lean` diff is merged into 8a.3, the `N291` replacement is PROPOSED, nothing applied
 
 *Why this file:* it already holds the other `Spec.lean` proposal (8a.3), and the lock-free structures of Phase B item 5 (SPSC/MPSC ring, Treiber
 stack) are dynamic data structures whose payload reads this item makes possible. Lean side: `grammatik/Grammatik/Speichermodell/Payload/`
@@ -609,91 +882,23 @@ G steps (the scale of `w_nicht_sc`, a few hundred lines); it should be the first
 | the reader's flag message is the published one | `erwartet_bestaetigt`: confirming branch, flag initial value non-confirming, flag written once | the branch fact is in the language (SPRACHE 11.5 rule 2); the checker needs the dominance rule R3 to use it |
 | the reader's payload read happens after the confirmed await | the static dominance rule | R3; its dynamic form is a frame invariant (D5) |
 
-### 11.3 Proposed `Spec.lean` diff (NOT applied; review as a diff of `Spec.lean` before anything moves)
+### 11.3 The `Spec.lean` diff for the payload: SUPERSEDED by §8a.3 (2026-10-18, decisions 1-3)
 
-**Design.** The result is the existing atomic rely, extended by ONE kind of carrier. A *published payload carrier* is read by another thread
-without a lock, so the user's sequential proof cannot assume its value (the rely: havoc at its reads, as for a shared atomic), but the weak
-memory gives that read the writer's value (`payload_mp_wert`), so the machine statement stays exact (`schwach`: payload carriers are NOT in the
-presented-memory set `Tg`). The race leg moves from "lock-ordered" to "view-ordered" for these carriers. `PaarungAusgenommen`
-(`Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein/T1.lean`, defined and unused today) is the starting point:
-`∃ a p, c = .inr p ∧ p ∈ D.nutzlast a ∧ D.atomar a = true`.
+The six items D1-D6 that stood here are merged into the ONE diff of §8a.3 and changed by Simon's decision 3 (2026-10-18). Where each went:
 
-**D1. The order premise: changes the QUANTIFIER of `schwach` (a narrowing; the one real decision, 11.5).** Today `SchwachX` and `ZielX.schwach`
-quantify `∀ ord : D.Glob → Ordnung`. The theorem needs `ord f = freigabe` for the flag of every racy payload. New, in the atomic-rely definitions
-block of `Spec.lean`:
-```
-/-- Flags of racy published payloads. -/
-def PubFlagge (P : Programm D) (fs ws : List D.Fn) (g : D.Glob) : Prop :=
-  D.atomar g = true ∧ ∃ c, c ∈ D.nutzlast g ∧ PubLesbar P fs ws c   -- over carriers once `nutzlast` is widened (D6)
+| Old item | Now | Changed by decision 3 |
+|---|---|---|
+| D1 order premise `PubFlagge` on a free `ord` | §8a.3 C5: `OrdAb`, content = the DERIVED order `D.ordnung g` (a definition from `D.nutzlast`, not a field and not a premise on a free function); vacuous without a racy payload | the order is derived per atomic |
+| D2 static component `pub`, `PubLesbar`, `fuss`, `renn` | §8a.3 C6 and A.5 (`pubB`, `pubB_iff`, O20) | `PubLesbar` may mention the flag's own invariant; table carriers allowed (D6) |
+| D3 rely set (havoc at payload reads) | §8a.3 C7: stage P1 (havoc) is the NAMED INTERMEDIATE; the target is stage P2, the flag invariant `S.pub g` (publisher duty at the `publish` hook, reader's rely after the confirmed `awaits`, `HavocPub`, O22) | flag invariants are the target |
+| D4 race leg `PubSicht` | §8a.3 C8 (`pubSicht`, over `OrdAb`) and O21 | none |
+| D5 proof obligations | §8a.3 section B rows O19-O25 (statement, location, discharge, witness, planted defect) | none |
+| D6 widen `D.nutzlast` | §8a.3 A1.7 (`List (Tab ⊕ Glob)`, `Stmt.publish`, `Block.awaits`, the Hoare mirror, `PaarungAusgenommen`); the carrier is the whole TABLE (cell-level separation stays NOT CLAIMED) | table cells in the first diff |
 
-def SchwachX ... :=
-  ∀ ord, (∀ g, PubFlagge P fs ws g → ord g = .freigabe) →          -- NEW premise, vacuous without a racy payload
-    ∀ W W' u σ M'' wahl neu, ...                                   -- as today
-```
-With no racy payload the premise is vacuous and `SchwachX` is word for word the one of today, so `gabbro_ziel_sc_aus` (the statement of before as a
-corollary, through `zielF_of_X`) and the earlier embeddings keep their proofs. Assumption (2) of the reading (the emitters lower atomics with the
-orders the declaration derives) is already named; D1 makes it load-bearing for this one case. Counter-models if the premise is dropped:
-`mp_flagge_*_erlaubt`.
-
-**D2. The static component.** `AkzeptiertSpecX` gains ONE field `pub : PubRegel P fs ws` (decided by a new component `pubB` of `AkzeptiertX`), and
-two fields change for payload carriers only:
-* `PubLesbar P fs ws c` (the carriers the rule admits): plain (`¬ AtomarAusgenommen c`), unguarded, in `D.nutzlast f` of one flag `f`,
-  `VertragsFrei P c` (no contract, owed invariant or lock invariant mentions it: the demand `GeteiltV` makes too), written by ONE declared start
-  `w₀` that is not `Mehrfach`.
-* `fuss`: `FussSX P S lok (GeteiltV P ws)` keeps the atomics; `PubLesbar` becomes one more admitted disjunct at footprint carriers READ, so a
-  payload read is no longer refused at `fuss`.
-* `renn` (`SchreibGetrennt`) exempts `PubLesbar` carriers; the race leg of D4 takes its place.
-* `PubRegel` itself is the Lean twin of R0-R4 (11.4): single writer; every write of `c` in `w₀`'s call graph is followed on every path by the unique
-  `publishes f` and by NO later write of `c` (`hstill`); `f` is written by that one publish only, with a value the initial value of `f` does not
-  carry (`hnicht`); every read of `c` in another start's graph is dominated by a confirming `awaits f` branch on every path.
-
-**D3. The rely set of (b).** `NutzerPflichtA E` becomes `LogikPflichtA E.P E.S E.Q (GeteiltA E.P E.ws ∪ PubLesbar E.P fs E.ws)` (the set `T` is
-already a parameter of `LogikPflichtA`, `KoerperGutSA`, `HavocA`). A reader proves its body for EVERY value of the payload at its confirmed read.
-This is the weakest sound rely; the stronger one (the reader assumes what the publisher established: a *flag invariant* in the role of a lock
-invariant) belongs to item 5 and needs `S`-like data in the unit. `GeteiltV` is unchanged, so machine GX (`FadenErreichbarX`, `ZielFX`) still presents
-arbitrary values only at shared ATOMICS. Open: whether the replay residue lemmas (`ziel_ort_atomar_voll`, `AtomarReplay/T1-T3`) use `GeteiltV`-specific
-facts beyond membership of `T`. If they only need `T c → VertragsFrei c ∧ unguarded c`, D3 is a re-instantiation; otherwise it is the largest single cost
-of the item.
-
-**D4. The race leg.** `RennfreiBisGA` today demands, for every unguarded non-atomic carrier, a guard lock ordering two accesses of different
-threads. It exempts `PubLesbar` carriers, and `ZielX`/`ZielFX` gain one leg:
-```
-def PubSicht (P O passes M0 M) (fs ws) : Prop :=
-  ∀ ord, (∀ g, PubFlagge P fs ws g → ord g = .freigabe) → ∀ W W' u σ M'' wahl neu,
-    RufErreichbarW P O passes ord (RufStartW M0) W → W.g = M → SchrittW P O passes ord W u W' σ M'' wahl neu →
-    ∀ c, PubLesbar P fs ws c → (LiestG (mitSpeicher W.g σ) M'' u c ∨ SchreibG (mitSpeicher W.g σ) M'' u c) →
-      ∀ m ∈ W.hist c, m.ts ≤ W.sicht u c   -- the accessor's view contains the whole history: no `HbRace`
-```
-This is view-level race freedom for payload carriers and the third disjunct of the existing view invariant `SichtInvA` (an unguarded read carrier is
-seen newest by its one reader; a guarded one by the lock holder; **a payload carrier by the publisher, and by every thread after its confirmed
-await**). A read then returns the newest message (`Lesbar` plus distinct timestamps), so the presented memory is G's: `SchwachX`'s second conjunct
-holds at payload carriers without putting them into `Tg`. This is where `payload_mp_wert` is used.
-
-**D5. Proof obligations the diff creates (none built):** (i) a frame invariant `Merkmal.erwartet` in the style of `MerkInvG`: at a program point
-inside the confirming branch of `awaits f` the thread's trace contains the confirming read of `f`, and nobody wrote `f` since (from `PubRegel`'s
-dominance, by induction on the call stack, as `abg`/`reachB` do for call graphs); (ii) the extension of `schritt_sichtInvA` with the payload
-disjunct, using `payload_mp`, `payload_schreib`, `gesehen_einzelschreiber`, `still_of_kein_schreiben`, `erwartet_bestaetigt`; (iii) D3's replay
-instantiation; (iv) `gabbro_ziel_sc_aus` re-proved (the new premise is vacuous there); (v) the concrete witness of 11.1 as the first `PubLesbar`
-fixture; (vi) `gesehen_einzelschreiber`'s `hnur` discharged from `PubLesbar`'s single writer.
-
-**D6. The syntax model.** `D.nutzlast : D.Glob → List D.Glob` names only GLOBALS; the language's payloads are places (`FP_STATES[tid]`, a table
-cell). Widening it to `List (D.Tab ⊕ D.Glob)` changes `Deklaration` (Syntax.lean), `Stmt.publish` and `Block.awaits` (the equations
-`payload = D.nutzlast g`) and the Rust exporter (it must name table carriers); it comes before D1-D5 apply to anything but plain globals.
-`PaarungAusgenommen` is restated over carriers.
-
-**Header text of `Spec.lean` that changes** (the places O25c edited): the atomic-rely block's "WHAT STAYS NAMED: the publish/await hand-off of a PLAIN
-payload read without a lock" (line ~187) and the verdict-P3 remarks (lines ~854-861); the NOT CLAIMED entry "the publish/await hand-off of an
-unguarded PLAIN payload (refused by the checker, see P3; the part of OFFEN O25 that remains after lane O25c)" (line ~1379); assumption (2) of the
-reading (add: the orders of payload flags are release/acquire, now load-bearing); the schwach-leg paragraph (the new premise).
-**Leaves NOT CLAIMED:** the one-shot publish/await of a plain payload read after a confirming await.
-**Stays NOT CLAIMED:** re-publication and reuse of the payload cell (rings, Treiber stack, seqlock, RCU: item 5, needs a reverse flag); a flag written
-more than once or an `exchange ... publishes/awaits` (RMW pairing); table cells as payload until D6; a device/DMA payload; a payload across a link
-(O28); a flag invariant (the reader assuming content); the `seq_cst` total order (item 4); `consume`; fences.
-
-**Effect on `gabbro_ziel`.** The statement gains one premise in `schwach` (vacuous without a racy payload), one conjunct `pubSicht`, one component in (a)
-(`pub`) and a larger rely set in (b). It covers strictly more units (those with a one-shot plain payload read racily), and by D1's vacuity every
-unit and run covered before is covered with the same legs. `#print axioms gabbro_ziel` stays `propext`, `Classical.choice`, `Quot.sound`: the new
-Lean modules use exactly those (checked for `PayloadHb`, `PayloadLitmus`, `PayloadLB`).
+Re-publication (the old "stays NOT CLAIMED: reuse of the payload cell") is anticipated by hooks (§8a.3 A.6: the reverse flag `rueck`,
+an interval form of `hstill`, per-message statements) and still NOT claimed beyond one-shot. The header places and the NOT CLAIMED lists that
+change are §8a.3 A.8 and F. `#print axioms gabbro_ziel` stays `propext`, `Classical.choice`, `Quot.sound` (checked for `PayloadHb`,
+`PayloadLitmus`, `PayloadLB`; the new modules are checked at each step of §8a.3 C).
 
 ### 11.4 Checker-rule sketch: the replacement of `N291` for payload carriers (NOT implemented)
 
@@ -724,14 +929,26 @@ replacement is a global footprint exemption built from those facts, not a weaken
 * **Lean first.** Nothing above is implemented before D1-D6 are applied in Lean; the Rust rule must decide `PubRegel` (the Lean Bool `pubB`), not
   approximate it; a form the rule cannot decide stays refused by name.
 
-### 11.5 Decisions needed from Simon
+**Amendments by decision 3 (2026-10-18; the rule text above stays the model of what `PubRegel` decides, these lines change it):**
+* **R0 (carrier)** widens: a payload place is a TABLE or a global (`D.nutzlast : Glob → List (Tab ⊕ Glob)`); the name equality of `paarung::form`
+  is up to index substitution, but the Lean carrier is the whole table, so a table used as payload of flag `f` is written by the one publisher only.
+  "No `requires`/`ensures`/invariant mentions it" becomes "except the flag invariant of its OWN flag" (§8a.3 T4).
+* **R4 (order)** becomes the derived order: `D.ordnung g = freigabe` for every flag with a payload; the model quantifies over lowerings at least
+  that strong (§8a.3 C5). A relaxed flag with a payload stays refused where it is (`V004`/`V005`), and the model no longer needs it as an assumption.
+* **R5 (one-shot, anticipates re-publication)** NEW: `rueck f = none`; the later rule replaces R1's "no later write of `c`" by "no write between
+  the publish and the reader's ack of that epoch".
+* **R6 (flag invariant)** NEW, target stage: the publisher's world at `publishes f` meets `S.pub f` (checked by the semantics, like a lock release);
+  a reader assumes it at the confirmed read. Until the proof of O22/O23 exists the header names the stage "the reader assumes nothing" (P1).
+* Next free numbers are unchanged until the checker work starts (code `N587`, gift 1471, example 1165, alias rule `R016`).
 
-1. **D1, the quantifier over `ord`.** Narrow it for racy-payload flags (above), or give `Deklaration` a derived order per atomic (`D.ordnung`) and
-   quantify only over the hardware lowering of THAT. The second is cleaner (orders become part of the unit instead of a premise on a free function) but
-   touches `Deklaration` and the exporter. Recommended: do it together with D6, since both change `Deklaration`.
-2. **D3, the rely strength.** Havoc at payload reads (cheap; the reader proves for every value), or flag invariants now (the reader assumes the
-   publisher's post-state; needs a carrier-invariant mechanism beside `S`). Recommended: havoc first, invariants with item 5, where rings need them.
-3. **D6, widen `D.nutzlast` to carriers (tables)** first, or accept plain-global payloads only for the first round. Recommended: widen; the language's
-   own examples (`FP_STATES[tid]`) publish table cells (not measured on the 11 waiting corpus examples).
-4. **One-shot only?** The rule as written covers a payload published once per run (an initialisation hand-off); reuse is item 5. Confirm that one-shot
-   is the intended first cut.
+### 11.5 Decisions (taken by Simon, 2026-10-18; they replace the four questions that stood here)
+
+1. **D1, the order:** derived per atomic (`D.ordnung`), no free `ord` quantifier for racy-payload flags (§8a.3 C5, T8: the premise is on racy flags
+   only, so no unit covered today is dropped).
+2. **D3, the rely:** flag invariants are the target (stage P2); havoc (stage P1) is only the named intermediate stage while the proof of the hand-off
+   hook and the replay instantiation (§8a.3 O22/O23) is open.
+3. **D6, `D.nutzlast`:** widened to table carriers in the first diff.
+4. **One-shot:** the first cut; re-publication is anticipated by the hooks of §8a.3 A.6 and stays NOT CLAIMED.
+
+Open for Simon after the planning pass: §8a.3 T1 (the arena declaration lives in `Deklaration`, not in `Programm`) and T3 (a shared arena is a lock
+invariant ONLY, not a `D.invs` member) change the text of the earlier proposal and should be confirmed before M1 starts.
