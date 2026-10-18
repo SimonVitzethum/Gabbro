@@ -1,239 +1,198 @@
 /-
   File:      Grammatik/Gen/Erzeuger/BlockVollst.lean
-  Subject:   COMPLETENESS of the block and end-block generators, one step each (see `AnweisungVollst.lean`).
+  Subject:   COMPLETENESS of the block and end-block clauses, one step each (see `AnweisungVollst.lean`).
 -/
 import Grammatik.Gen.Erzeuger.AnweisungVollst
 
 namespace Gabbro.Grammatik.Gen
 
+set_option linter.unusedSectionVars false
+
 open Gabbro.Grammatik
 
-variable {D : Deklaration} [Aufz D] {V : Vertrag D}
+variable {D : Deklaration} [Aufz D] [Zahlen] {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
-/-- Close `x ∈ blockS ...` from `hc : x ∈ clause`. -/
-macro "blk_fin " h:ident : tactic =>
-  `(tactic| (unfold blockS; simp only [List.mem_append]; simp only [$h:ident, or_true, true_or]))
-
-/-- Close `x ∈ endS ...` from `hc : x ∈ clause`. -/
-macro "end_fin " h:ident : tactic =>
-  `(tactic| (unfold endS; simp only [List.mem_append]; simp only [$h:ident, or_true, true_or]))
+/-- Close `x ∈ blockS ...` / `x ∈ endS ...` from `hc : x ∈ clause k`. -/
+macro "blk " c:term ", " h:term : tactic =>
+  `(tactic| exact Sz.mem_alle (c := $c) (by simp) $h)
 
 set_option maxHeartbeats 8000000 in
-theorem block_schritt {m : Nat} (ih : Vollst V m) :
-    ∀ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (b : Block D V l Γ Λ Λ'),
-      groesseBlock b ≤ m + 1 → (⟨Λ', b⟩ : SB D V l Γ Λ) ∈ (genRek V (m + 1)).bl l Γ Λ := by
-  obtain ⟨ihS, ihB, ihE⟩ := ih
-  intro l Γ Λ Λ' b h
-  show _ ∈ blockS m (genRek V m) l Γ Λ
-  have hexa : ∀ {Γ : Ctx} {Λ : List (Res D)} (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ m + 1 →
-      a ∈ genArgs (genExpr m Γ Λ) τs := fun τs a ha => mem_genArgs (fun τ e he => hx_aus m e he) τs a ha
+/-- **Completeness of the block clauses.** -/
+theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) (Bs : Sz (SB D V l Γ Λ))
+    (Ns : Sz (Endblock D V l Γ Λ)) {Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (hu : groesseBlock b < unendlich)
+    (hE : Unter E (groesseBlock b)) (hS : SUnter Ss (groesseBlock b)) (hB : BUnter Bs (groesseBlock b))
+    (hN : NUnter Ns (groesseBlock b)) (hO : OUnter O (groesseBlock b)) :
+    (⟨Λ', b⟩ : SB D V l Γ Λ) ∈ blockS O E Ss Bs Ns (groesseBlock b) := by
   cases b with
   | nil =>
-    have hc : (⟨_, .nil⟩ : SB D V l Γ Λ) ∈ bNil l Γ Λ := by simp [bNil]
-    blk_fin hc
+    simp only [groesseBlock]
+    blk bNil, Sz.mem_blatt (by simp)
   | cons s rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .cons s rest⟩ : SB D V l Γ Λ) ∈ bCons (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨⟨_, s⟩, ihS _ _ _ _ s (by omega),
-        List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hs := hS _ s (by omega)
+    have hr := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bCons O Ss), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hs hr <| Sz.mem_pure _) (by omega)
   | bind e rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .bind e rest⟩ : SB D V l Γ Λ) ∈ bBind m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨⟨_, e⟩, hx_aus m e (by omega),
-        List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have he := hE _ e (by omega)
+    have hr := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBind O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS he hr <| Sz.mem_pure _) (by omega)
   | bindCall f args he hp hr rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .bindCall f args he hp hr rest⟩ : SB D V l Γ Λ) ∈ bBindCall m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨f, Aufz.fn_mem f, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hp, dif_pos hr]
-          exact List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩)⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBindCall O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.fn_mem f)) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
   | bindCallInd p args he hp hr rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .bindCallInd p args he hp hr rest⟩ : SB D V l Γ Λ) ∈ bBindCallInd m (genRek V m) l Γ Λ :=
-      mem_mitFnptrR (hx_aus m p (by omega)) (List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hp, dif_pos hr]
-          exact List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩)⟩)
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hpp := hE _ p (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBindCallInd O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
   | bindCallElse f args he hp hr err rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .bindCallElse f args he hp hr err rest⟩ : SB D V l Γ Λ) ∈ bBindCallElse m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨f, Aufz.fn_mem f, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hp, dif_pos hr]
-          exact List.mem_flatMap.2 ⟨err, ihE _ _ _ err (by omega),
-            List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩)⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have herr := hO.en (groesseEnd err + (0 + (groesseBlock rest + 0))) _ _ _ err (by omega) (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBindCallElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.fn_mem f)) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | bindAxiom a args he hw hg hd hgd rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .bindAxiom a args he hw hg hd hgd rest⟩ : SB D V l Γ Λ) ∈ bBindAxiom m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨a, Aufz.ax_mem a, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hw, dif_pos hg, dif_pos hd, dif_pos hgd]
-          exact List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩)⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBindAxiom O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.ax_mem a)) <|
+      mem_mitSome he <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <| Sz.mem_wenn hgd <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
   | bindAxiomElse a args he hr hw hg hd hgd err rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .bindAxiomElse a args he hr hw hg hd hgd err rest⟩ : SB D V l Γ Λ) ∈
-        bBindAxiomElse m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨a, Aufz.ax_mem a, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hr, dif_pos hw, dif_pos hg, dif_pos hd, dif_pos hgd]
-          exact List.mem_flatMap.2 ⟨err, ihE _ _ _ err (by omega),
-            List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩)⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have herr := hO.en (groesseEnd err + (0 + (groesseBlock rest + 0))) _ _ _ err (by omega) (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBindAxiomElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.ax_mem a)) <|
+      mem_mitSome he <| Sz.mem_wenn hr <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <|
+      Sz.mem_wenn hgd <| Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | regRead r hk rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .regRead r hk rest⟩ : SB D V l Γ Λ) ∈ bRegRead (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨r, Aufz.reg_mem r, by
-        rw [dif_pos hk]
-        exact List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bRegRead O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem r)) <|
+      Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | regReadElse r hk z sonst rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .regReadElse r hk z sonst rest⟩ : SB D V l Γ Λ) ∈ bRegReadElse m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨r, Aufz.reg_mem r, by
-        rw [dif_pos hk]
-        exact List.mem_flatMap.2 ⟨z, mem_ofTy (hx_aus m z (by omega)),
-          List.mem_flatMap.2 ⟨sonst, ihE _ _ _ sonst (by omega),
-            List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hz := hO.ex (groesseExpr z + (groesseEnd sonst + (0 + (groesseBlock rest + 0)))) _ _ _ z
+      (by omega) (by omega)
+    have hso := hN sonst (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bRegReadElse O Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem r)) <|
+      Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) (mem_tyS hz) <|
+      Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | awaits g payload hp hL rest =>
-    simp only [groesseBlock] at h
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
     subst hp
-    have hc : (⟨_, .awaits g (D.nutzlast g) rfl hL rest⟩ : SB D V l Γ Λ) ∈ bAwaits (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨g, Aufz.glob_mem g, by
-        rw [dif_pos hL]
-        exact List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩
-    blk_fin hc
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
+      Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | exchange g neu hw hL rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .exchange g neu hw hL rest⟩ : SB D V l Γ Λ) ∈ bExchange m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨g, Aufz.glob_mem g, List.mem_flatMap.2 ⟨neu, mem_ofTy (hx_aus m neu (by omega)), by
-        rw [dif_pos hw, dif_pos hL]
-        exact List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hne := hO.ex (groesseExpr neu + (0 + (groesseBlock rest + 0))) _ _ _ neu (by omega) (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bExchange O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
+      Sz.mem_wenn hw <| Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) (mem_tyS hne) <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | narrow e lo' hi' sonst rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .narrow e lo' hi' sonst rest⟩ : SB D V l Γ Λ) ∈ bNarrow m (genRek V m) l Γ Λ :=
-      mem_mitIntR (hx_aus m e (by omega)) (List.mem_flatMap.2 ⟨lo', mem_ints (by omega),
-        List.mem_flatMap.2 ⟨hi', mem_ints (by omega), List.mem_flatMap.2 ⟨sonst, ihE _ _ _ sonst (by omega),
-          List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩⟩)
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have he := hE _ e (by omega)
+    have hso := hN sonst (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bNarrow O E Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_intS he) <|
+      Sz.mem_bind (mem_zS (n := lo') rfl (by omega)) <| Sz.mem_bind (mem_zS (n := hi') rfl (by omega)) <|
+      Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | check c sonst rest =>
-    simp only [groesseBlock] at h
-    have hc : (⟨_, .check c sonst rest⟩ : SB D V l Γ Λ) ∈ bCheck m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨c, mem_ofTy (hx_aus m c (by omega)), List.mem_flatMap.2 ⟨sonst,
-        ihE _ _ _ sonst (by omega), List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩
-    blk_fin hc
-  | float op a b lo hi rest =>
-    simp only [groesseBlock, groessePaar] at h
-    have hc : (⟨_, .float op a b lo hi rest⟩ : SB D V l Γ Λ) ∈ bFloat m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨op, mem_gleitOps op, mem_mitFl2R (hx_aus m a (by omega)) (hx_aus m b (by omega))
-        (List.mem_flatMap.2 ⟨lo, mem_paare (by omega) (by omega), List.mem_flatMap.2 ⟨hi,
-          mem_paare (by omega) (by omega),
-          List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩)⟩
-    blk_fin hc
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hc := hE _ c (by omega)
+    have hso := hN sonst (by omega)
+    have hre := hB _ rest (by omega)
+    blk (bCheck E Bs Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_tyS hc) <| Sz.mem_bind hso <|
+      Sz.mem_bind hre <| Sz.mem_pure _) (by omega)
+  | float op a b' lo hi rest =>
+    simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b' (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bFloat O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (mem_gleitOps op)) <|
+      Sz.mem_bind (mem_flS ha) <| Sz.mem_bind (mem_flS hb) <| Sz.mem_bind hlo <| Sz.mem_bind hhi <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | floatLit q lo hi rest =>
-    simp only [groesseBlock, groessePaar] at h
-    have hc : (⟨_, .floatLit q lo hi rest⟩ : SB D V l Γ Λ) ∈ bFloatLit m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨q, mem_paare (by omega) (by omega), List.mem_flatMap.2 ⟨lo,
-        mem_paare (by omega) (by omega), List.mem_flatMap.2 ⟨hi, mem_paare (by omega) (by omega),
-          List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩⟩
-    blk_fin hc
+    simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
+    have hq : q ∈ paarS (Zahlen.kostP q) := mem_paarS rfl (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bFloatLit O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind hq <| Sz.mem_bind hlo <|
+      Sz.mem_bind hhi <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | floatOf e lo hi rest =>
-    simp only [groesseBlock, groessePaar] at h
-    have hc : (⟨_, .floatOf e lo hi rest⟩ : SB D V l Γ Λ) ∈ bFloatOf m (genRek V m) l Γ Λ :=
-      mem_mitIntR (hx_aus m e (by omega)) (List.mem_flatMap.2 ⟨lo, mem_paare (by omega) (by omega),
-        List.mem_flatMap.2 ⟨hi, mem_paare (by omega) (by omega),
-          List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩)
-    blk_fin hc
+    simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
+    have he := hE _ e (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bFloatOf O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_intS he) <| Sz.mem_bind hlo <|
+      Sz.mem_bind hhi <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | floatNarrow e lo hi sonst rest =>
-    simp only [groesseBlock, groessePaar] at h
-    have hc : (⟨_, .floatNarrow e lo hi sonst rest⟩ : SB D V l Γ Λ) ∈ bFloatNarrow m (genRek V m) l Γ Λ :=
-      mem_mitFlR (hx_aus m e (by omega)) (List.mem_flatMap.2 ⟨lo, mem_paare (by omega) (by omega),
-        List.mem_flatMap.2 ⟨hi, mem_paare (by omega) (by omega), List.mem_flatMap.2 ⟨sonst,
-          ihE _ _ _ sonst (by omega), List.mem_map.2 ⟨⟨_, rest⟩, ihB _ _ _ _ rest (by omega), rfl⟩⟩⟩⟩)
-    blk_fin hc
+    simp only [groesseBlock, groessePaar] at hu hE hS hB hN hO ⊢
+    have he := hE _ e (by omega)
+    have hso := hN sonst (by omega)
+    have hlo : lo ∈ paarS (Zahlen.kostP lo) := mem_paarS rfl (by omega)
+    have hhi : hi ∈ paarS (Zahlen.kostP hi) := mem_paarS rfl (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bFloatNarrow O E Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_flS he) <| Sz.mem_bind hlo <|
+      Sz.mem_bind hhi <| Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <|
+      Sz.mem_pure _) (by omega)
 
 set_option maxHeartbeats 8000000 in
-theorem end_schritt {m : Nat} (ih : Vollst V m) :
-    ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (e : Endblock D V l Γ Λ),
-      groesseEnd e ≤ m + 1 → e ∈ (genRek V (m + 1)).en l Γ Λ := by
-  obtain ⟨ihS, ihB, ihE⟩ := ih
-  intro l Γ Λ e h
-  show _ ∈ endS m (genRek V m) l Γ Λ
-  have hexa : ∀ {Γ : Ctx} {Λ : List (Res D)} (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ m + 1 →
-      a ∈ genArgs (genExpr m Γ Λ) τs := fun τs a ha => mem_genArgs (fun τ e he => hx_aus m e he) τs a ha
+/-- **Completeness of the end-block clauses.** -/
+theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) (e : Endblock D V l Γ Λ)
+    (hu : groesseEnd e < unendlich) (hE : Unter E (groesseEnd e)) (hS : SUnter Ss (groesseEnd e))
+    (hO : OUnter O (groesseEnd e)) : e ∈ endS O E Ss (groesseEnd e) := by
   cases e with
-  | ret e hΛ =>
-    simp only [groesseEnd] at h
-    have hc : (Endblock.ret e hΛ : Endblock D V l Γ Λ) ∈ eRet m l Γ Λ :=
-      List.mem_flatMap.2 ⟨e, mem_genErg (fun τ e he => hx_aus m e he) _ e (by omega), by
-        rw [dif_pos hΛ]; simp⟩
-    end_fin hc
+  | ret x hΛ =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    blk (eRet E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_ergS hE x (by omega)) <|
+      Sz.mem_wenn hΛ <| Sz.mem_pure _) (by omega)
   | retWhy r hΛ =>
-    have hc : (Endblock.retWhy r hΛ : Endblock D V l Γ Λ) ∈ eRetWhy l Γ Λ :=
-      List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp⟩
-    end_fin hc
+    simp only [groesseEnd]
+    blk eRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp⟩)
   | leave hl =>
-    have hc : (Endblock.leave hl : Endblock D V l Γ Λ) ∈ eLeave l Γ Λ := by
-      unfold eLeave; rw [dif_pos hl]; simp
-    end_fin hc
+    simp only [groesseEnd]
+    blk eLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp)
   | next hl =>
-    have hc : (Endblock.next hl : Endblock D V l Γ Λ) ∈ eNext l Γ Λ := by
-      unfold eNext; rw [dif_pos hl]; simp
-    end_fin hc
+    simp only [groesseEnd]
+    blk eNext, Sz.mem_blatt (by rw [dif_pos hl]; simp)
   | cons s rest =>
-    simp only [groesseEnd] at h
-    have hc : (Endblock.cons s rest : Endblock D V l Γ Λ) ∈ eCons (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨⟨_, s⟩, ihS _ _ _ _ s (by omega),
-        List.mem_map.2 ⟨rest, ihE _ _ _ rest (by omega), rfl⟩⟩
-    end_fin hc
-  | bind e rest =>
-    simp only [groesseEnd] at h
-    have hc : (Endblock.bind e rest : Endblock D V l Γ Λ) ∈ eBind m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨⟨_, e⟩, hx_aus m e (by omega),
-        List.mem_map.2 ⟨rest, ihE _ _ _ rest (by omega), rfl⟩⟩
-    end_fin hc
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hs := hS _ s (by omega)
+    have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eCons O Ss), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hs hr <| Sz.mem_pure _) (by omega)
+  | bind x rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hx := hE _ x (by omega)
+    have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBind O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hx hr <| Sz.mem_pure _) (by omega)
   | bindAxiom a args he hw hg hd hgd rest =>
-    simp only [groesseEnd] at h
-    have hc : (Endblock.bindAxiom a args he hw hg hd hgd rest : Endblock D V l Γ Λ) ∈
-        eBindAxiom m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨a, Aufz.ax_mem a, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hw, dif_pos hg, dif_pos hd, dif_pos hgd]
-          exact List.mem_map.2 ⟨rest, ihE _ _ _ rest (by omega), rfl⟩)⟩⟩
-    end_fin hc
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBindAxiom O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.ax_mem a)) <|
+      mem_mitSome he <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <| Sz.mem_wenn hgd <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr <| Sz.mem_pure _) (by omega)
   | bindAxiomElse a args he hr hw hg hd hgd err rest =>
-    simp only [groesseEnd] at h
-    have hc : (Endblock.bindAxiomElse a args he hr hw hg hd hgd err rest : Endblock D V l Γ Λ) ∈
-        eBindAxiomElse m (genRek V m) l Γ Λ :=
-      List.mem_flatMap.2 ⟨a, Aufz.ax_mem a, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
-        mem_mitSome he (by
-          rw [dif_pos hr, dif_pos hw, dif_pos hg, dif_pos hd, dif_pos hgd]
-          exact List.mem_flatMap.2 ⟨err, ihE _ _ _ err (by omega),
-            List.mem_map.2 ⟨rest, ihE _ _ _ rest (by omega), rfl⟩⟩)⟩⟩
-    end_fin hc
-
-/-- **Completeness of the statement, block and end-block generators**: everything of size at most `m` is
-    generated at fuel `m`. -/
-theorem genRek_vollst (V : Vertrag D) : ∀ m, Vollst V m := by
-  intro m
-  induction m with
-  | zero =>
-    refine ⟨?_, ?_, ?_⟩
-    · intro l Γ Λ Λ' s h
-      cases s <;> (simp only [groesseStmt] at h; omega)
-    · intro l Γ Λ Λ' b h
-      cases b <;> (simp only [groesseBlock] at h; omega)
-    · intro l Γ Λ e h
-      cases e <;> (simp only [groesseEnd] at h; omega)
-  | succ m ih =>
-    exact ⟨stmt_schritt ih, block_schritt ih, end_schritt ih⟩
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have herr := hO.en (groesseEnd err + (0 + (groesseEnd rest + 0))) _ _ _ err (by omega) (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBindAxiomElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.ax_mem a)) <|
+      mem_mitSome he <| Sz.mem_wenn hr <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <|
+      Sz.mem_wenn hgd <| Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
 
 end Gabbro.Grammatik.Gen

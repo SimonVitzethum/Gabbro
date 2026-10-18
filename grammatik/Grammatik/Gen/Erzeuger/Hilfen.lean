@@ -1,150 +1,46 @@
 /-
   File:      Grammatik/Gen/Erzeuger/Hilfen.lean
-  Subject:   The pieces the statement generators share: the recursion record `Rek` (the generated statements,
-             blocks and end blocks of one fuel), generic matchers on integer-typed and optional-typed indices,
-             the generators of argument lists, result expressions and match arms, each with its completeness
-             lemma.
+  Subject:   What the statement, block and end-block clauses share: the ORACLE (`Orakel`: the expressions, blocks and
+             end blocks of OTHER contexts, up to a bound), the statements / blocks of the context at hand, the
+             matchers on an optional type, the generators of argument lists, result expressions and match arms,
+             each with its completeness lemma.
 -/
 import Grammatik.Gen.Erzeuger.AusdruckVollst
 import Grammatik.Gen.Erzeuger.Entscheidung
-import Grammatik.Gen.Erzeuger.Groesse
 
 namespace Gabbro.Grammatik.Gen
 
+set_option linter.unusedSectionVars false
+
 open Gabbro.Grammatik
 
-variable {D : Deklaration}
+variable {D : Deklaration} [Aufz D] [Zahlen]
 
-/-- A statement with its held resources after it. -/
+/-- A statement with the resources held after it. -/
 abbrev SS (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : Type :=
   Σ Λ' : List (Res D), Stmt D V l Γ Λ Λ'
 
-/-- A block with its held resources after it. -/
+/-- A block with the resources held after it. -/
 abbrev SB (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : Type :=
   Σ Λ' : List (Res D), Block D V l Γ Λ Λ'
 
-/-- The generated statements, blocks and end blocks of one fuel, at every context. -/
-structure Rek (V : Vertrag D) where
-  st : ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)), List (SS D V l Γ Λ)
-  bl : ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)), List (SB D V l Γ Λ)
-  en : ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)), List (Endblock D V l Γ Λ)
+/-- **The oracle**: the expressions, blocks and end blocks of every OTHER context, by exact size, valid for the sizes
+    up to the bound it is given. (The statements are always those of the context at hand.) -/
+structure Orakel (V : Vertrag D) where
+  ex : ∀ (Γ : Ctx) (Λ : List (Res D)), Nat → Sz (SE D Γ Λ)
+  bl : ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)), Nat → Sz (SB D V l Γ Λ)
+  en : ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)), Nat → Sz (Endblock D V l Γ Λ)
 
-/-! ## Matchers on indices -/
+/-- The oracle holds every term of size below `K`, in the bucket of its size, for every bound that reaches it. -/
+structure OUnter {V : Vertrag D} (O : Orakel V) (K : Nat) : Prop where
+  ex : ∀ (m : Nat) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) (e : Expr D Γ Λ τ), groesseExpr e < K → groesseExpr e ≤ m →
+    (⟨τ, e⟩ : SE D Γ Λ) ∈ O.ex Γ Λ m (groesseExpr e)
+  bl : ∀ (m : Nat) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (b : Block D V l Γ Λ Λ'), groesseBlock b < K →
+    groesseBlock b ≤ m → (⟨Λ', b⟩ : SB D V l Γ Λ) ∈ O.bl l Γ Λ m (groesseBlock b)
+  en : ∀ (m : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (e : Endblock D V l Γ Λ), groesseEnd e < K →
+    groesseEnd e ≤ m → e ∈ O.en l Γ Λ m (groesseEnd e)
 
-variable {Γ : Ctx} {Λ : List (Res D)}
-
-/-- The integer-typed terms of a list, with any result type `R`. -/
-def mitIntR {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {lo hi : Int}, Expr D Γ Λ (.int lo hi) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.int _ _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitIntR {R : Type} {es : List (SE D Γ Λ)} {f} {lo hi : Int} {a : Expr D Γ Λ (.int lo hi)} {x : R}
-    (ha : (⟨.int lo hi, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitIntR es f := by
-  unfold mitIntR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-/-- The float-typed terms of a list. -/
-def mitFlR {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {lo hi : Int × Int}, Expr D Γ Λ (.fl lo hi) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.fl _ _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitFlR {R : Type} {es : List (SE D Γ Λ)} {f} {lo hi : Int × Int} {a : Expr D Γ Λ (.fl lo hi)} {x : R}
-    (ha : (⟨.fl lo hi, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitFlR es f := by
-  unfold mitFlR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-/-- Float pairs. -/
-def mitFl2R {R : Type} (es : List (SE D Γ Λ))
-    (f : ∀ {l1 h1 l2 h2 : Int × Int}, Expr D Γ Λ (.fl l1 h1) → Expr D Γ Λ (.fl l2 h2) → List R) : List R :=
-  es.flatMap fun p => es.flatMap fun q => match p, q with
-    | ⟨.fl _ _, a⟩, ⟨.fl _ _, b⟩ => f a b
-    | _, _ => []
-
-theorem mem_mitFl2R {R : Type} {es : List (SE D Γ Λ)} {f} {l1 h1 l2 h2 : Int × Int} {a : Expr D Γ Λ (.fl l1 h1)}
-    {b : Expr D Γ Λ (.fl l2 h2)} {x : R}
-    (ha : (⟨.fl l1 h1, a⟩ : SE D Γ Λ) ∈ es) (hb : (⟨.fl l2 h2, b⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a b) :
-    x ∈ mitFl2R es f := by
-  unfold mitFl2R
-  rw [List.mem_flatMap]
-  refine ⟨_, ha, ?_⟩
-  rw [List.mem_flatMap]
-  exact ⟨_, hb, hx⟩
-
-/-- A term whose type is a pointer or a function pointer or an option or a sum or a reason... one matcher
-    per index shape: the generic form is `ofTy` at a computed type; these four read the index off the term. -/
-def mitPtrR {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {n : Nat} {rw : Bool}, Expr D Γ Λ (.ptr n rw) → List R) :
-    List R :=
-  es.flatMap fun p => match p with
-    | ⟨.ptr _ _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitPtrR {R : Type} {es : List (SE D Γ Λ)} {f} {n : Nat} {rw : Bool} {a : Expr D Γ Λ (.ptr n rw)} {x : R}
-    (ha : (⟨.ptr n rw, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitPtrR es f := by
-  unfold mitPtrR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-/-- A term of type `ptr n true` (a pointer with the right to write). -/
-def mitPtrT {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {n : Nat}, Expr D Γ Λ (.ptr n true) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.ptr _ true, a⟩ => f a
-    | _ => []
-
-theorem mem_mitPtrT {R : Type} {es : List (SE D Γ Λ)} {f} {n : Nat} {a : Expr D Γ Λ (.ptr n true)} {x : R}
-    (ha : (⟨.ptr n true, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitPtrT es f := by
-  unfold mitPtrT
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-def mitFnptrR {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {n : Nat}, Expr D Γ Λ (.fnptr n) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.fnptr _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitFnptrR {R : Type} {es : List (SE D Γ Λ)} {f} {n : Nat} {a : Expr D Γ Λ (.fnptr n)} {x : R}
-    (ha : (⟨.fnptr n, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitFnptrR es f := by
-  unfold mitFnptrR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-def mitOptR {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {n : Int}, Expr D Γ Λ (.opt n) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.opt _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitOptR {R : Type} {es : List (SE D Γ Λ)} {f} {n : Int} {a : Expr D Γ Λ (.opt n)} {x : R}
-    (ha : (⟨.opt n, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitOptR es f := by
-  unfold mitOptR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-def mitSumR {R : Type} (es : List (SE D Γ Λ))
-    (f : ∀ {cs : List (Option (Int × Int))}, Expr D Γ Λ (.sum cs) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.sum _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitSumR {R : Type} {es : List (SE D Γ Λ)} {f} {cs : List (Option (Int × Int))}
-    {a : Expr D Γ Λ (.sum cs)} {x : R}
-    (ha : (⟨.sum cs, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitSumR es f := by
-  unfold mitSumR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
-
-def mitWhyR {R : Type} (es : List (SE D Γ Λ)) (f : ∀ {n : Nat}, Expr D Γ Λ (.why n) → List R) : List R :=
-  es.flatMap fun p => match p with
-    | ⟨.why _, a⟩ => f a
-    | _ => []
-
-theorem mem_mitWhyR {R : Type} {es : List (SE D Γ Λ)} {f} {n : Nat} {a : Expr D Γ Λ (.why n)} {x : R}
-    (ha : (⟨.why n, a⟩ : SE D Γ Λ) ∈ es) (hx : x ∈ f a) : x ∈ mitWhyR es f := by
-  unfold mitWhyR
-  rw [List.mem_flatMap]
-  exact ⟨_, ha, hx⟩
+/-! ## Matchers on an optional or integer type -/
 
 /-- The bounds of an integer type. -/
 def tySchranken : Ty → Option (Int × Int)
@@ -157,100 +53,125 @@ theorem tySchranken_eq {τ : Ty} {p : Int × Int} (h : tySchranken τ = some p) 
   rfl
 
 /-- `τ = .int lo hi` read off a type that is not a variable (a field type, a register type). -/
-def mitTypInt {R : Type} (τ : Ty) (f : ∀ {lo hi : Int}, τ = .int lo hi → List R) : List R :=
-  (tySchranken τ).toList.attach.flatMap fun p => f (tySchranken_eq (by simpa using p.2))
+def mitTypInt {R : Type} (τ : Ty) (f : ∀ {lo hi : Int}, τ = .int lo hi → Sz R) : Sz R := fun k =>
+  (tySchranken τ).toList.attach.flatMap fun p => f (tySchranken_eq (by simpa using p.2)) k
 
-theorem mem_mitTypInt {R : Type} {τ : Ty} {f} {lo hi : Int} {x : R} (h : τ = .int lo hi) (hx : x ∈ f h) :
-    x ∈ mitTypInt τ f := by
+theorem mem_mitTypInt {R : Type} {τ : Ty} {f : ∀ {lo hi : Int}, τ = .int lo hi → Sz R} {lo hi : Int} {x : R}
+    {k : Nat} (h : τ = .int lo hi) (hx : x ∈ f h k) : x ∈ mitTypInt τ f k := by
   unfold mitTypInt
   rw [List.mem_flatMap]
   have hs : tySchranken τ = some (lo, hi) := by subst h; rfl
   exact ⟨⟨(lo, hi), by simp [hs]⟩, List.mem_attach _ _, hx⟩
 
 /-- `o = some τ`, read off an optional type (a callee's result). -/
-def mitSome {R : Type} (o : Option Ty) (f : ∀ {τ : Ty}, o = some τ → List R) : List R :=
-  o.toList.attach.flatMap fun p => f (by simpa using p.2 : o = some p.1)
+def mitSome {R : Type} (o : Option Ty) (f : ∀ {τ : Ty}, o = some τ → Sz R) : Sz R := fun k =>
+  o.toList.attach.flatMap fun p => f (by simpa using p.2 : o = some p.1) k
 
-theorem mem_mitSome {R : Type} {o : Option Ty} {f} {τ : Ty} {x : R} (h : o = some τ) (hx : x ∈ f h) :
-    x ∈ mitSome o f := by
+theorem mem_mitSome {R : Type} {o : Option Ty} {f : ∀ {τ : Ty}, o = some τ → Sz R} {τ : Ty} {x : R} {k : Nat}
+    (h : o = some τ) (hx : x ∈ f h k) : x ∈ mitSome o f k := by
   unfold mitSome
   rw [List.mem_flatMap]
   exact ⟨⟨τ, by simp [h]⟩, List.mem_attach _ _, hx⟩
 
+/-! ## The pointer-with-write-right view -/
+
+/-- The expressions of type `ptr n true`. -/
+def ptrTS {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) : Sz (Σ n : Nat, Expr D Γ Λ (.ptr n true)) := fun i =>
+  (E i).filterMap fun p => match p with
+    | ⟨.ptr n true, a⟩ => some ⟨n, a⟩
+    | _ => none
+
+theorem mem_ptrTS {Γ : Ctx} {Λ : List (Res D)} {E : Sz (SE D Γ Λ)} {i : Nat} {n : Nat}
+    {a : Expr D Γ Λ (.ptr n true)} (h : (⟨.ptr n true, a⟩ : SE D Γ Λ) ∈ E i) :
+    (⟨n, a⟩ : Σ n : Nat, Expr D Γ Λ (.ptr n true)) ∈ ptrTS E i :=
+  List.mem_filterMap.2 ⟨_, h, rfl⟩
+
 /-! ## Arguments and results -/
 
-/-- The argument lists of a parameter list. -/
-def genArgs (es : List (SE D Γ Λ)) : (τs : List Ty) → List (Args D Γ Λ τs)
-  | [] => [.nil]
-  | τ :: τs => (ofTy es τ).flatMap fun e => (genArgs es τs).map fun r => .cons e r
+variable {Γ : Ctx} {Λ : List (Res D)}
 
-theorem mem_genArgs {es : List (SE D Γ Λ)} {m : Nat}
-    (hes : ∀ τ (e : Expr D Γ Λ τ), groesseExpr e ≤ m → (⟨τ, e⟩ : SE D Γ Λ) ∈ es) :
-    ∀ (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ m + 1 → a ∈ genArgs es τs := by
+/-- The argument lists of a parameter list. -/
+def argsS (E : Sz (SE D Γ Λ)) : (τs : List Ty) → Sz (Args D Γ Λ τs)
+  | [] => Sz.blatt [.nil]
+  | τ :: τs => Sz.knoten (Sz.bind (tyS E τ) fun e => Sz.bind (argsS E τs) fun r => Sz.pure (.cons e r))
+
+theorem mem_argsS {E : Sz (SE D Γ Λ)} {K : Nat} (hE : Unter E K) :
+    ∀ (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ K → a ∈ argsS E τs (groesseArgs a) := by
   intro τs a
   induction a with
-  | nil => intro _; simp [genArgs]
+  | nil => intro _; exact Sz.mem_blatt (by simp)
   | cons e rest ih =>
     intro h
-    simp only [groesseArgs] at h
-    simp only [genArgs, List.mem_flatMap, List.mem_map]
-    exact ⟨e, mem_ofTy (hes _ e (by omega)), rest, ih (by omega), rfl⟩
+    simp only [groesseArgs] at h ⊢
+    have he := hE _ e (by omega)
+    exact Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS he) (Sz.mem_bind (ih (by omega)) (Sz.mem_pure _))))
+      (by omega)
 
 /-- The result expressions of a result type. -/
-def genErg (es : List (SE D Γ Λ)) : (o : Option Ty) → List (ErgExpr D Γ Λ o)
-  | none => [.empty]
-  | some τ => (ofTy es τ).map fun e => .val e
+def ergS (E : Sz (SE D Γ Λ)) : (o : Option Ty) → Sz (ErgExpr D Γ Λ o)
+  | none => Sz.blatt [.empty]
+  | some τ => Sz.knoten (Sz.map ErgExpr.val (tyS E τ))
 
-theorem mem_genErg {es : List (SE D Γ Λ)} {m : Nat}
-    (hes : ∀ τ (e : Expr D Γ Λ τ), groesseExpr e ≤ m → (⟨τ, e⟩ : SE D Γ Λ) ∈ es) :
-    ∀ (o : Option Ty) (a : ErgExpr D Γ Λ o), groesseErg a ≤ m + 1 → a ∈ genErg es o := by
-  intro o a
+theorem mem_ergS {E : Sz (SE D Γ Λ)} {K : Nat} (hE : Unter E K) {o : Option Ty} (a : ErgExpr D Γ Λ o)
+    (h : groesseErg a ≤ K) : a ∈ ergS E o (groesseErg a) := by
   cases a with
-  | empty => intro _; simp [genErg]
+  | empty => exact Sz.mem_blatt (by simp)
   | val e =>
-    intro h
-    simp only [groesseErg] at h
-    simp only [genErg, List.mem_map]
-    exact ⟨e, mem_ofTy (hes _ e (by omega)), rfl⟩
+    simp only [groesseErg] at h ⊢
+    have he := hE _ e (by omega)
+    have hm : ErgExpr.val e ∈ ergS E (some _) (groesseExpr e + 1) :=
+      Sz.mem_knoten (Sz.mem_map (f := ErgExpr.val) (mem_tyS he))
+    exact Sz.mem_cast hm (by omega)
 
 /-! ## Match arms -/
 
 variable {V : Vertrag D}
 
 /-- The arms of a tag type: the head block fixes the resources after the arms, the rest must end there too. -/
-def genArms (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) :
-    (cs : List (Option (Int × Int))) → List (Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs)
-  | [] => [⟨Λ, .nil⟩]
-  | c :: cs => (R.bl l (ArmCtx Γ c) Λ).flatMap fun p =>
-      (ofTy (genArms R l Γ Λ cs) p.1).map fun r => ⟨p.1, .cons p.2 r⟩
+def armsS (O : Orakel V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) :
+    (cs : List (Option (Int × Int))) → Sz (Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs)
+  | [] => Sz.blatt [⟨Λ, .nil⟩]
+  | c :: cs => Sz.knoten (Sz.bindR (Sz.pure ()) (fun m => O.bl l (ArmCtx Γ c) Λ m) fun _ p =>
+      Sz.bind (fun j => ofTy (armsS O l Γ Λ cs j) p.1) fun r => Sz.pure ⟨p.1, .cons p.2 r⟩)
 
-theorem mem_genArms {R : Rek V} {m : Nat}
-    (hbl : ∀ l Γ Λ Λ' (b : Block D V l Γ Λ Λ'), groesseBlock b ≤ m → (⟨Λ', b⟩ : SB D V l Γ Λ) ∈ R.bl l Γ Λ) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option (Int × Int))} {Λ' : List (Res D)}
-      (a : Arms D V l Γ Λ Λ' cs),
-      groesseArms a ≤ m + 1 → (⟨Λ', a⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs) ∈ genArms R l Γ Λ cs
-  | _, _, _, _, _, .nil, _ => by simp [genArms]
-  | _, _, _, _, _, .cons b rest, h => by
-    simp only [groesseArms] at h
-    simp only [genArms, List.mem_flatMap, List.mem_map]
-    exact ⟨⟨_, b⟩, hbl _ _ _ _ b (by omega), _, mem_ofTy (mem_genArms hbl rest (by omega)), rfl⟩
+theorem mem_armsS {O : Orakel V} {K : Nat} (hO : OUnter O K) {l : Bool} :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option (Int × Int))} {Λ' : List (Res D)}
+      (a : Arms D V l Γ Λ Λ' cs), groesseArms a ≤ K →
+      (⟨Λ', a⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs) ∈ armsS O l Γ Λ cs (groesseArms a)
+  | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp)
+  | Γ, Λ, _, _, .cons b rest, h => by
+    simp only [groesseArms] at h ⊢
+    have hb := hO.bl _ _ _ _ _ b (by omega) (Nat.le_refl _)
+    have hb' := hO.bl (groesseBlock b + groesseArms rest) _ _ _ _ b (by omega) (by omega)
+    have hr := mem_armsS hO rest (by omega)
+    have hm := Sz.mem_bindR (A := Sz.pure ()) (i := 0) (Sz.mem_pure ()) hb'
+      (F := fun _ p => Sz.bind (fun j => ofTy (armsS O l Γ Λ _ j) p.1) fun r => Sz.pure ⟨p.1, .cons p.2 r⟩)
+      (y := (⟨_, .cons b rest⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' _))
+      (j' := groesseArms rest)
+      (Sz.mem_cast (Sz.mem_bind (mem_ofTy hr) (Sz.mem_pure _)) (by omega))
+    exact Sz.mem_cast (Sz.mem_knoten hm) (by omega)
 
 /-- The arms of a reason type. -/
-def genGrundArms (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) :
-    (n : Nat) → List (Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' n)
-  | 0 => [⟨Λ, .nil⟩]
-  | n + 1 => (R.bl l Γ Λ).flatMap fun p =>
-      (ofTy (genGrundArms R l Γ Λ n) p.1).map fun r => ⟨p.1, .cons p.2 r⟩
+def grundArmsS (O : Orakel V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) :
+    (n : Nat) → Sz (Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' n)
+  | 0 => Sz.blatt [⟨Λ, .nil⟩]
+  | n + 1 => Sz.knoten (Sz.bindR (Sz.pure ()) (fun m => O.bl l Γ Λ m) fun _ p =>
+      Sz.bind (fun j => ofTy (grundArmsS O l Γ Λ n j) p.1) fun r => Sz.pure ⟨p.1, .cons p.2 r⟩)
 
-theorem mem_genGrundArms {R : Rek V} {m : Nat}
-    (hbl : ∀ l Γ Λ Λ' (b : Block D V l Γ Λ Λ'), groesseBlock b ≤ m → (⟨Λ', b⟩ : SB D V l Γ Λ) ∈ R.bl l Γ Λ) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {Λ' : List (Res D)} (a : GrundArms D V l Γ Λ Λ' n),
-      groesseGrundArms a ≤ m + 1 →
-        (⟨Λ', a⟩ : Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' n) ∈ genGrundArms R l Γ Λ n
-  | _, _, _, _, _, .nil, _ => by simp [genGrundArms]
-  | _, _, _, _, _, .cons b rest, h => by
-    simp only [groesseGrundArms] at h
-    simp only [genGrundArms, List.mem_flatMap, List.mem_map]
-    exact ⟨⟨_, b⟩, hbl _ _ _ _ b (by omega), _, mem_ofTy (mem_genGrundArms hbl rest (by omega)), rfl⟩
+theorem mem_grundArmsS {O : Orakel V} {K : Nat} (hO : OUnter O K) {l : Bool} :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {Λ' : List (Res D)}
+      (a : GrundArms D V l Γ Λ Λ' n), groesseGrundArms a ≤ K →
+      (⟨Λ', a⟩ : Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' n) ∈ grundArmsS O l Γ Λ n (groesseGrundArms a)
+  | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp)
+  | Γ, Λ, _, _, .cons b rest, h => by
+    simp only [groesseGrundArms] at h ⊢
+    have hb' := hO.bl (groesseBlock b + groesseGrundArms rest) _ _ _ _ b (by omega) (by omega)
+    have hr := mem_grundArmsS hO rest (by omega)
+    have hm := Sz.mem_bindR (A := Sz.pure ()) (i := 0) (Sz.mem_pure ()) hb'
+      (F := fun _ p => Sz.bind (fun j => ofTy (grundArmsS O l Γ Λ _ j) p.1) fun r => Sz.pure ⟨p.1, .cons p.2 r⟩)
+      (y := (⟨_, .cons b rest⟩ : Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' _))
+      (j' := groesseGrundArms rest)
+      (Sz.mem_cast (Sz.mem_bind (mem_ofTy hr) (Sz.mem_pure _)) (by omega))
+    exact Sz.mem_cast (Sz.mem_knoten hm) (by omega)
 
 end Gabbro.Grammatik.Gen

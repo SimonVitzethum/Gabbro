@@ -1,288 +1,382 @@
 /-
   File:      Grammatik/Gen/Erzeuger/AusdruckVollst.lean
-  Subject:   The generator of expressions by fuel, and its COMPLETENESS: every typed expression of size at most
-             `m` is generated (`genExpr_vollst`). The proof cases on the term; a constructor without a clause
-             stops the build.
+  Subject:   The COMPLETENESS of the expression clauses (`exprS_vollst`: an expression of size `k` is among the
+             items of size `k`, given the expressions of the sizes below), the TABLE of the expressions of one
+             context by size (`genE`), and its completeness (`genE_vollst`): every typed expression of size at
+             most `n` is in the bucket of its size. The proof cases on the term; a constructor without a clause
+             stops the build, so new syntax shows up as a gap by itself.
 -/
 import Grammatik.Gen.Erzeuger.Ausdruck
 
 namespace Gabbro.Grammatik.Gen
 
+set_option linter.unusedSectionVars false
+
 open Gabbro.Grammatik
 
-variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+variable {D : Deklaration} [Aufz D] [Zahlen] {Γ : Ctx} {Λ : List (Res D)}
 
-/-- The expressions of fuel `m + 1` from the expressions `es` of fuel `m` (`rek`: the same at other contexts). -/
-def genExprS [Aufz D] (m : Nat) (es : List (SE D Γ Λ)) (rek : ∀ Γ' : Ctx, List (SE D Γ' Λ)) :
-    List (SE D Γ Λ) :=
-  gLit m ++ gBool ++ gVar Γ Λ ++ gGlob ++ gSlot es ++ gThru es ++ gPtrOf m ++ gFnref ++ gOldG ++ gOldS es ++
-  gWiden m es ++ gAdd es ++ gSub es ++ gNeg es ++ gMul es ++ gDiv es ++ gRem es ++ gSdiv es ++ gSrem es ++
-  gGetBytes m es ++ gBand es ++ gBor m es ++ gBxor m es ++ gShl m es ++ gShr m es ++ gLt es ++ gLe es ++ gEq es ++
-  gFllt es ++ gFlle es ++ gAnd es ++ gOr es ++ gNot es ++ gNone m ++ gSome m es ++ gIstSome es ++ gCase m es ++
-  gWhy m ++ gForall rek ++ gExists rek ++ gReaches es
+/-- Every expression of size below `k` is in the stream, in the bucket of its size. -/
+def Unter (E : Sz (SE D Γ Λ)) (k : Nat) : Prop :=
+  ∀ (τ : Ty) (e : Expr D Γ Λ τ), groesseExpr e < k → (⟨τ, e⟩ : SE D Γ Λ) ∈ E (groesseExpr e)
 
-/-- **The generator of expressions**: all typed expressions of size at most `m`, by fuel. -/
-def genExpr [Aufz D] : Nat → (Γ : Ctx) → (Λ : List (Res D)) → List (SE D Γ Λ)
-  | 0, _, _ => []
-  | m + 1, Γ, Λ => genExprS m (genExpr m Γ Λ) (fun Γ' => genExpr m Γ' Λ)
-
-/-- Close `x ∈ genExprS ...` from `hc : x ∈ clause`. -/
-macro "gen_fin " h:ident : tactic =>
-  `(tactic| (unfold genExprS; simp only [List.mem_append]; simp only [$h:ident, or_true, true_or]))
+/-- The oracle of the quantifier bodies holds every expression of size below `k`, at every context, for every
+    bound that reaches its size. -/
+def QUnter (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (k : Nat) : Prop :=
+  ∀ (n : Nat) (Γ' : Ctx) (τ : Ty) (e : Expr D Γ' Λ τ), groesseExpr e < k → groesseExpr e ≤ n →
+    (⟨τ, e⟩ : SE D Γ' Λ) ∈ Q Γ' n (groesseExpr e)
 
 theorem mem_dif {P : Prop} [Decidable P] {α : Type} {g : P → α} (h : P) :
     g h ∈ (if h' : P then [g h'] else []) := by
   rw [dif_pos h]; simp
 
+theorem groesseExpr_pos {τ : Ty} (e : Expr D Γ Λ τ) : 1 ≤ groesseExpr e := by
+  cases e <;> simp only [groesseExpr] <;> omega
+
+theorem mem_nutzS {E : Sz (SE D Γ Λ)} {K : Nat} (hE : Unter E K) {o : Option (Int × Int)}
+    (x : NutzlastExpr D Γ Λ o) (hx : groesseNutz x ≤ K) : x ∈ nutzS E o (groesseNutz x) := by
+  cases x with
+  | empty => exact Sz.mem_blatt (by simp)
+  | num e =>
+    simp only [groesseNutz] at hx ⊢
+    have he := hE _ e (by omega)
+    have hm : NutzlastExpr.num e ∈ nutzS E (some (_, _)) (groesseExpr e + 1) :=
+      Sz.mem_knoten (Sz.mem_map (f := NutzlastExpr.num) (mem_tyS he))
+    exact Sz.mem_cast hm (by omega)
+
+/-- Close `x ∈ exprS ...` from `hc : x ∈ clause k`. -/
+macro "ausd " c:term ", " h:term : tactic =>
+  `(tactic| exact Sz.mem_alle (c := $c) (by simp) $h)
+
 set_option maxHeartbeats 4000000 in
-/-- **Completeness of the generator of expressions**: a typed expression of size at most `m` is generated. -/
-theorem genExpr_vollst [Aufz D] : ∀ (m : Nat) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) (e : Expr D Γ Λ τ),
-    groesseExpr e ≤ m → (⟨τ, e⟩ : SE D Γ Λ) ∈ genExpr m Γ Λ := by
-  intro m
-  induction m with
+/-- **Completeness of the expression clauses.** -/
+theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE D Γ Λ)) {τ : Ty} (e : Expr D Γ Λ τ)
+    (hu : groesseExpr e < unendlich) (hE : Unter E (groesseExpr e)) (hQ : QUnter Q (groesseExpr e)) :
+    (⟨τ, e⟩ : SE D Γ Λ) ∈ exprS Q E (groesseExpr e) := by
+  cases e with
+  | lit n =>
+    simp only [groesseExpr] at hu ⊢
+    ausd (gLit (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_zS (n := n) rfl (by omega)) (Sz.mem_pure _))) (by omega)
+  | tru =>
+    simp only [groesseExpr]
+    ausd (gBool (D := D) (Γ := Γ) (Λ := Λ)), Sz.mem_blatt (by simp)
+  | fls =>
+    simp only [groesseExpr]
+    ausd (gBool (D := D) (Γ := Γ) (Λ := Λ)), Sz.mem_blatt (by simp)
+  | var x =>
+    simp only [groesseExpr] at hu ⊢
+    ausd (gVar (D := D) (Λ := Λ) Γ),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_varS x) (Sz.mem_pure _))) (by omega)
+  | glob g hL =>
+    simp only [groesseExpr]
+    ausd (gGlob (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_blatt (List.mem_flatMap.2 ⟨g, Aufz.glob_mem g, mem_dif hL⟩)
+  | slot t f i hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hi := hE _ i (by omega)
+    ausd (gSlot E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
+        (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f))
+          (Sz.mem_bind (mem_tyS hi) (Sz.mem_wenn hL (Sz.mem_pure _)))))) (by omega)
+  | thru p t ht f i hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hp := hE _ p (by omega)
+    have hi := hE _ i (by omega)
+    ausd (gThru E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_ptrS hp) (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
+        (Sz.mem_wenn ht (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f))
+          (Sz.mem_bind (mem_tyS hi) (Sz.mem_wenn hL (Sz.mem_pure _)))))))) (by omega)
+  | ptrOf t n ht rw =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    ausd (gPtrOf (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := n) rfl (by omega))
+        (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) (Sz.mem_wenn ht (Sz.mem_bind
+          (Sz.mem_wahl (by cases rw <;> simp)) (Sz.mem_pure _)))))) (by omega)
+  | fnref f n hn =>
+    subst hn
+    simp only [groesseExpr]
+    ausd (gFnref (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_blatt (List.mem_map.2 ⟨f, Aufz.fn_mem f, rfl⟩)
+  | oldG g hL =>
+    simp only [groesseExpr]
+    ausd (gOldG (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_blatt (List.mem_flatMap.2 ⟨g, Aufz.glob_mem g, mem_dif hL⟩)
+  | oldS t f i hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hi := hE _ i (by omega)
+    ausd (gOldS E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
+        (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f))
+          (Sz.mem_bind (mem_tyS hi) (Sz.mem_wenn hL (Sz.mem_pure _)))))) (by omega)
+  | @widen lo' lo hi hi' _ _ h1 h2 e =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have he := hE _ e (by omega)
+    ausd (gWiden E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS he) (Sz.mem_bind (mem_zS (n := lo') rfl (by omega))
+        (Sz.mem_bind (mem_zS (n := hi') rfl (by omega)) (Sz.mem_wenn h1 (Sz.mem_wenn h2 (Sz.mem_pure _))))))) (by omega)
+  | add a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gAdd E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb) (Sz.mem_pure _)))) (by omega)
+  | sub a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gSub E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb) (Sz.mem_pure _)))) (by omega)
+  | neg a =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    ausd (gNeg E), Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_pure _))) (by omega)
+  | mul a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gMul E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb) (Sz.mem_pure _)))) (by omega)
+  | div p0 p1 a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gDiv E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb)
+        (Sz.mem_wenn p0 (Sz.mem_wenn p1 (Sz.mem_pure _)))))) (by omega)
+  | rem p0 p1 a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gRem E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb)
+        (Sz.mem_wenn p0 (Sz.mem_wenn p1 (Sz.mem_pure _)))))) (by omega)
+  | sdiv hb' a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gSdiv E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb)
+        (Sz.mem_wenn hb' (Sz.mem_pure _))))) (by omega)
+  | srem hb' a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gSrem E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb)
+        (Sz.mem_wenn hb' (Sz.mem_pure _))))) (by omega)
+  | getBytes t f hf n i hlo hhi hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hi := hE _ i (by omega)
+    ausd (gGetBytes E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
+        (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) (Sz.mem_wenn hf
+          (Sz.mem_bind (mem_nS (n := n) rfl (by omega)) (Sz.mem_bind (mem_intS hi)
+            (Sz.mem_wenn hlo (Sz.mem_wenn hhi (Sz.mem_wenn hL (Sz.mem_pure _)))))))))) (by omega)
+  | band h0 h0' a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gBand E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb)
+        (Sz.mem_wenn h0 (Sz.mem_wenn h0' (Sz.mem_pure _)))))) (by omega)
+  | bor w h0 h0' hw1 hw2 a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gBor E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := w) rfl (by omega)) (Sz.mem_bind (mem_intS ha)
+        (Sz.mem_bind (mem_intS hb) (Sz.mem_wenn h0 (Sz.mem_wenn h0' (Sz.mem_wenn hw1
+          (Sz.mem_wenn hw2 (Sz.mem_pure _))))))))) (by omega)
+  | bxor w h0 h0' hw1 hw2 a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gBxor E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := w) rfl (by omega)) (Sz.mem_bind (mem_intS ha)
+        (Sz.mem_bind (mem_intS hb) (Sz.mem_wenn h0 (Sz.mem_wenn h0' (Sz.mem_wenn hw1
+          (Sz.mem_wenn hw2 (Sz.mem_pure _))))))))) (by omega)
+  | shl w hw1 hw2 h0 h0' a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gShl E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := w) rfl (by omega)) (Sz.mem_bind (mem_intS ha)
+        (Sz.mem_bind (mem_intS hb) (Sz.mem_wenn hw1 (Sz.mem_wenn hw2 (Sz.mem_wenn h0
+          (Sz.mem_wenn h0' (Sz.mem_pure _))))))))) (by omega)
+  | shr w hw1 hw2 h0 h0' a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gShr E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := w) rfl (by omega)) (Sz.mem_bind (mem_intS ha)
+        (Sz.mem_bind (mem_intS hb) (Sz.mem_wenn hw1 (Sz.mem_wenn hw2 (Sz.mem_wenn h0
+          (Sz.mem_wenn h0' (Sz.mem_pure _))))))))) (by omega)
+  | lt a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gLt E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb) (Sz.mem_pure _)))) (by omega)
+  | le a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gLe E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb) (Sz.mem_pure _)))) (by omega)
+  | eq a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gEq E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_intS ha) (Sz.mem_bind (mem_intS hb) (Sz.mem_pure _)))) (by omega)
+  | fllt a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gFllt E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_flS ha) (Sz.mem_bind (mem_flS hb) (Sz.mem_pure _)))) (by omega)
+  | flle a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gFlle E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_flS ha) (Sz.mem_bind (mem_flS hb) (Sz.mem_pure _)))) (by omega)
+  | and a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gAnd E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS ha) (Sz.mem_bind (mem_tyS hb) (Sz.mem_pure _)))) (by omega)
+  | or a b =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gOr E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS ha) (Sz.mem_bind (mem_tyS hb) (Sz.mem_pure _)))) (by omega)
+  | not a =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    ausd (gNot E), Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS ha) (Sz.mem_pure _))) (by omega)
+  | none n =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    ausd (gNone (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_zS (n := n) rfl (by omega)) (Sz.mem_pure _))) (by omega)
+  | @some _ _ n e =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have he := hE _ e (by omega)
+    ausd (gSome E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_zS (n := n) rfl (by omega))
+        (Sz.mem_bind (mem_tyS he) (Sz.mem_pure _)))) (by omega)
+  | istSome e =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have he := hE _ e (by omega)
+    ausd (gIstSome E), Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_optS he) (Sz.mem_pure _))) (by omega)
+  | case cs i nutz =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hf := mem_faelle (cs := cs) (by omega)
+    ausd (gCase E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind hf (Sz.mem_bind (Sz.mem_wahl (List.mem_finRange i))
+        (Sz.mem_bind (mem_nutzS hE nutz (by omega)) (Sz.mem_pure _))))) (by omega)
+  | why n r =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    ausd (gWhy (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := n) rfl (by omega))
+        (Sz.mem_bind (Sz.mem_wahl (List.mem_finRange r)) (Sz.mem_pure _)))) (by omega)
+  | forallSlots t body hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hb := hQ (groesseExpr body) _ _ body (by omega) (Nat.le_refl _)
+    have hc : (⟨.bool, .forallSlots t body hL⟩ : SE D Γ Λ) ∈ gForall Q (groesseExpr body + 1) :=
+      List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨body, mem_tyS hb, mem_dif hL⟩⟩
+    ausd (gForall Q), Sz.mem_cast hc (by omega)
+  | existsSlots t body hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have hb := hQ (groesseExpr body) _ _ body (by omega) (Nat.le_refl _)
+    have hc : (⟨.bool, .existsSlots t body hL⟩ : SE D Γ Λ) ∈ gExists Q (groesseExpr body + 1) :=
+      List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨body, mem_tyS hb, mem_dif hL⟩⟩
+    ausd (gExists Q), Sz.mem_cast hc (by omega)
+  | reaches t f hf a b hL =>
+    simp only [groesseExpr] at hu hE hQ ⊢
+    have ha := hE _ a (by omega)
+    have hb := hE _ b (by omega)
+    ausd (gReaches E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
+        (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) (Sz.mem_wenn hf (Sz.mem_bind (mem_tyS ha)
+          (Sz.mem_bind (mem_tyS hb) (Sz.mem_wenn hL (Sz.mem_pure _)))))))) (by omega)
+
+/-! ## The table by size -/
+
+/-- The buckets `0 .. n` of a step function: bucket `0` is `leer`, bucket `k + 1` is the step on the buckets below. -/
+def buckets {β : Type} (leer : β) (step : List β → Nat → β) : Nat → List β
+  | 0 => [leer]
+  | n + 1 => (buckets leer step n) ++ [step (buckets leer step n) (n + 1)]
+
+/-- A table of buckets as a stream. -/
+def tab {α : Type} (t : List (List α)) : Sz α := fun i => t.getD i []
+
+theorem length_buckets {β : Type} (leer : β) (step : List β → Nat → β) :
+    ∀ n, (buckets leer step n).length = n + 1 := by
+  intro n
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [buckets, ih]
+
+theorem getD_buckets_alt {β : Type} (leer : β) (step : List β → Nat → β) {n i : Nat} (d : β) (h : i ≤ n) :
+    (buckets leer step (n + 1)).getD i d = (buckets leer step n).getD i d := by
+  simp only [buckets]
+  have hl : i < (buckets leer step n).length := by rw [length_buckets]; omega
+  simp [List.getD_eq_getElem?_getD, List.getElem?_append_left hl]
+
+theorem getD_buckets_neu {β : Type} (leer : β) (step : List β → Nat → β) (n : Nat) (d : β) :
+    (buckets leer step (n + 1)).getD (n + 1) d = step (buckets leer step n) (n + 1) := by
+  simp only [buckets]
+  have hl := length_buckets leer step n
+  have : n + 1 = (buckets leer step n).length := by omega
+  rw [this]
+  simp [List.getD_eq_getElem?_getD]
+
+/-- **The expressions of one context by size**: the buckets `0 .. n`; the bodies of a quantifier are drawn from
+    the table of the extended context, by fuel `f` (a nesting costs at least one, so `f ≥ size` suffices). -/
+def genE : Nat → Nat → (Γ : Ctx) → (Λ : List (Res D)) → List (List (SE D Γ Λ))
+  | 0, n, _, _ => List.replicate (n + 1) []
+  | f + 1, n, Γ, Λ => buckets [] (fun prev k => exprS (fun Γ' j => tab (genE f j Γ' Λ)) (tab prev) k) n
+
+/-- **Completeness of the expression table**: every typed expression of size at most `n` (and at most the fuel) is
+    in the bucket of its size. -/
+theorem genE_vollst : ∀ (f n : Nat) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) (e : Expr D Γ Λ τ),
+    groesseExpr e ≤ n → groesseExpr e ≤ f → groesseExpr e < unendlich →
+    (⟨τ, e⟩ : SE D Γ Λ) ∈ tab (genE f n Γ Λ) (groesseExpr e) := by
+  intro f
+  induction f with
   | zero =>
-    intro Γ Λ τ e h
-    cases e <;> (simp only [groesseExpr] at h; omega)
-  | succ m ih =>
-    intro Γ Λ τ e h
-    simp only [genExpr]
-    cases e with
-    | lit n =>
-      have hc : (⟨.int n n, .lit n⟩ : SE D Γ Λ) ∈ gLit m :=
-        List.mem_map.2 ⟨n, mem_ints (by simp only [groesseExpr] at h; omega), rfl⟩
-      gen_fin hc
-    | tru =>
-      have hc : (⟨.bool, .tru⟩ : SE D Γ Λ) ∈ gBool := by simp [gBool]
-      gen_fin hc
-    | fls =>
-      have hc : (⟨.bool, .fls⟩ : SE D Γ Λ) ∈ gBool := by simp [gBool]
-      gen_fin hc
-    | var x =>
-      have hc : (⟨_, .var x⟩ : SE D Γ Λ) ∈ gVar Γ Λ := List.mem_map.2 ⟨⟨_, x⟩, genVar_vollst _ _ x, rfl⟩
-      gen_fin hc
-    | glob g hL =>
-      have hc : (⟨_, .glob g hL⟩ : SE D Γ Λ) ∈ gGlob :=
-        List.mem_flatMap.2 ⟨g, Aufz.glob_mem g, mem_dif hL⟩
-      gen_fin hc
-    | slot t f i hL =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .slot t f i hL⟩ : SE D Γ Λ) ∈ gSlot (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨f, Aufz.feld_mem t f,
-          List.mem_flatMap.2 ⟨i, mem_ofTy (ih _ _ _ i (by omega)), mem_dif hL⟩⟩⟩
-      gen_fin hc
-    | thru p t ht f i hL =>
-      simp only [groesseExpr] at h
-      have hp := ih _ _ _ p (by omega)
-      have hc : (⟨_, .thru p t ht f i hL⟩ : SE D Γ Λ) ∈ gThru (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨_, hp, List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, by
-          rw [dif_pos ht]
-          exact List.mem_flatMap.2 ⟨f, Aufz.feld_mem t f,
-            List.mem_flatMap.2 ⟨i, mem_ofTy (ih _ _ _ i (by omega)), mem_dif hL⟩⟩⟩⟩
-      gen_fin hc
-    | ptrOf t n ht rw =>
-      have hc : (⟨_, .ptrOf t n ht rw⟩ : SE D Γ Λ) ∈ gPtrOf m :=
-        List.mem_flatMap.2 ⟨n, List.mem_range.2 (by simp only [groesseExpr] at h; omega),
-          List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, by
-            rw [dif_pos ht]
-            exact List.mem_map.2 ⟨rw, by cases rw <;> simp, rfl⟩⟩⟩
-      gen_fin hc
-    | fnref f n hn =>
-      subst hn
-      have hc : (⟨_, .fnref f (D.sig f) rfl⟩ : SE D Γ Λ) ∈ gFnref :=
-        List.mem_map.2 ⟨f, Aufz.fn_mem f, rfl⟩
-      gen_fin hc
-    | oldG g hL =>
-      have hc : (⟨_, .oldG g hL⟩ : SE D Γ Λ) ∈ gOldG :=
-        List.mem_flatMap.2 ⟨g, Aufz.glob_mem g, mem_dif hL⟩
-      gen_fin hc
-    | oldS t f i hL =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .oldS t f i hL⟩ : SE D Γ Λ) ∈ gOldS (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨f, Aufz.feld_mem t f,
-          List.mem_flatMap.2 ⟨i, mem_ofTy (ih _ _ _ i (by omega)), mem_dif hL⟩⟩⟩
-      gen_fin hc
-    | @widen lo' lo hi hi' _ _ h1 h2 e =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .widen h1 h2 e⟩ : SE D Γ Λ) ∈ gWiden m (genExpr m Γ Λ) :=
-        mem_mitInt (ih _ _ _ e (by omega)) (List.mem_flatMap.2 ⟨lo', mem_ints (by omega),
-          List.mem_flatMap.2 ⟨hi', mem_ints (by omega), by
-            rw [dif_pos h1, dif_pos h2]; simp⟩⟩)
-      gen_fin hc
-    | add a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .add a b⟩ : SE D Γ Λ) ∈ gAdd (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | sub a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .sub a b⟩ : SE D Γ Λ) ∈ gSub (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | neg a =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .neg a⟩ : SE D Γ Λ) ∈ gNeg (genExpr m Γ Λ) :=
-        mem_mitInt (ih _ _ _ a (by omega)) (by simp)
-      gen_fin hc
-    | mul a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .mul a b⟩ : SE D Γ Λ) ∈ gMul (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | div p0 p1 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .div p0 p1 a b⟩ : SE D Γ Λ) ∈ gDiv (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by rw [dif_pos p0, dif_pos p1]; simp)
-      gen_fin hc
-    | rem p0 p1 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .rem p0 p1 a b⟩ : SE D Γ Λ) ∈ gRem (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by rw [dif_pos p0, dif_pos p1]; simp)
-      gen_fin hc
-    | sdiv hb a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .sdiv hb a b⟩ : SE D Γ Λ) ∈ gSdiv (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by rw [dif_pos hb]; simp)
-      gen_fin hc
-    | srem hb a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .srem hb a b⟩ : SE D Γ Λ) ∈ gSrem (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by rw [dif_pos hb]; simp)
-      gen_fin hc
-    | getBytes t f hf n i hlo hhi hL =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .getBytes t f hf n i hlo hhi hL⟩ : SE D Γ Λ) ∈ gGetBytes m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨f, Aufz.feld_mem t f, by
-          rw [dif_pos hf]
-          exact List.mem_flatMap.2 ⟨n, List.mem_range.2 (by omega),
-            mem_mitInt (ih _ _ _ i (by omega)) (by rw [dif_pos hlo, dif_pos hhi, dif_pos hL]; simp)⟩⟩⟩
-      gen_fin hc
-    | band p0 p1 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .band p0 p1 a b⟩ : SE D Γ Λ) ∈ gBand (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by rw [dif_pos p0, dif_pos p1]; simp)
-      gen_fin hc
-    | bor w p0 p1 q1 q2 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .bor w p0 p1 q1 q2 a b⟩ : SE D Γ Λ) ∈ gBor m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨w, List.mem_range.2 (by omega),
-          mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega))
-            (by rw [dif_pos p0, dif_pos p1, dif_pos q1, dif_pos q2]; simp)⟩
-      gen_fin hc
-    | bxor w p0 p1 q1 q2 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .bxor w p0 p1 q1 q2 a b⟩ : SE D Γ Λ) ∈ gBxor m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨w, List.mem_range.2 (by omega),
-          mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega))
-            (by rw [dif_pos p0, dif_pos p1, dif_pos q1, dif_pos q2]; simp)⟩
-      gen_fin hc
-    | shl w q1 q2 p0 p1 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .shl w q1 q2 p0 p1 a b⟩ : SE D Γ Λ) ∈ gShl m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨w, List.mem_range.2 (by omega),
-          mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega))
-            (by rw [dif_pos q1, dif_pos q2, dif_pos p0, dif_pos p1]; simp)⟩
-      gen_fin hc
-    | shr w q1 q2 p0 p1 a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .shr w q1 q2 p0 p1 a b⟩ : SE D Γ Λ) ∈ gShr m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨w, List.mem_range.2 (by omega),
-          mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega))
-            (by rw [dif_pos q1, dif_pos q2, dif_pos p0, dif_pos p1]; simp)⟩
-      gen_fin hc
-    | lt a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .lt a b⟩ : SE D Γ Λ) ∈ gLt (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | le a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .le a b⟩ : SE D Γ Λ) ∈ gLe (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | eq a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .eq a b⟩ : SE D Γ Λ) ∈ gEq (genExpr m Γ Λ) :=
-        mem_mitInt2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | fllt a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .fllt a b⟩ : SE D Γ Λ) ∈ gFllt (genExpr m Γ Λ) :=
-        mem_mitFl2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | flle a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .flle a b⟩ : SE D Γ Λ) ∈ gFlle (genExpr m Γ Λ) :=
-        mem_mitFl2 (ih _ _ _ a (by omega)) (ih _ _ _ b (by omega)) (by simp)
-      gen_fin hc
-    | and a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .and a b⟩ : SE D Γ Λ) ∈ gAnd (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨a, mem_ofTy (ih _ _ _ a (by omega)),
-          List.mem_map.2 ⟨b, mem_ofTy (ih _ _ _ b (by omega)), rfl⟩⟩
-      gen_fin hc
-    | or a b =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .or a b⟩ : SE D Γ Λ) ∈ gOr (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨a, mem_ofTy (ih _ _ _ a (by omega)),
-          List.mem_map.2 ⟨b, mem_ofTy (ih _ _ _ b (by omega)), rfl⟩⟩
-      gen_fin hc
-    | not a =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .not a⟩ : SE D Γ Λ) ∈ gNot (genExpr m Γ Λ) :=
-        List.mem_map.2 ⟨a, mem_ofTy (ih _ _ _ a (by omega)), rfl⟩
-      gen_fin hc
-    | none n =>
-      have hc : (⟨_, .none n⟩ : SE D Γ Λ) ∈ gNone m :=
-        List.mem_map.2 ⟨n, mem_ints (by simp only [groesseExpr] at h; omega), rfl⟩
-      gen_fin hc
-    | @some _ _ n e =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .some e⟩ : SE D Γ Λ) ∈ gSome m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨n, mem_ints (by omega),
-          List.mem_map.2 ⟨e, mem_ofTy (ih _ _ _ e (by omega)), rfl⟩⟩
-      gen_fin hc
-    | istSome e =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .istSome e⟩ : SE D Γ Λ) ∈ gIstSome (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨_, ih _ _ _ e (by omega), by simp⟩
-      gen_fin hc
-    | case cs i nutz =>
-      simp only [groesseExpr] at h
-      have hl := length_le_groesseFaelle cs
-      have hb : ∀ c ∈ cs, ∀ lo hi, c = some (lo, hi) → lo.natAbs ≤ m ∧ hi.natAbs ≤ m := by
-        intro c hc lo hi hch
-        subst hch
-        have := mem_groesseFaelle hc
-        omega
-      have hc : (⟨_, .case cs i nutz⟩ : SE D Γ Λ) ∈ gCase m (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨cs, mem_listenBis m m cs (by omega) hb,
-          List.mem_flatMap.2 ⟨i, List.mem_finRange i,
-            List.mem_map.2 ⟨nutz, mem_nutzAt (fun τ e he => ih _ _ τ e he) _ nutz (by omega), rfl⟩⟩⟩
-      gen_fin hc
-    | why n r =>
-      have hc : (⟨_, .why n r⟩ : SE D Γ Λ) ∈ gWhy m :=
-        List.mem_flatMap.2 ⟨n, List.mem_range.2 (by simp only [groesseExpr] at h; omega),
-          List.mem_map.2 ⟨r, List.mem_finRange r, rfl⟩⟩
-      gen_fin hc
-    | forallSlots t body hL =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .forallSlots t body hL⟩ : SE D Γ Λ) ∈ gForall (fun Γ' => genExpr m Γ' Λ) :=
-        List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨body,
-          mem_ofTy (ih _ _ _ body (by omega)), mem_dif hL⟩⟩
-      gen_fin hc
-    | existsSlots t body hL =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .existsSlots t body hL⟩ : SE D Γ Λ) ∈ gExists (fun Γ' => genExpr m Γ' Λ) :=
-        List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨body,
-          mem_ofTy (ih _ _ _ body (by omega)), mem_dif hL⟩⟩
-      gen_fin hc
-    | reaches t f hf a b hL =>
-      simp only [groesseExpr] at h
-      have hc : (⟨_, .reaches t f hf a b hL⟩ : SE D Γ Λ) ∈ gReaches (genExpr m Γ Λ) :=
-        List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨f, Aufz.feld_mem t f, by
-          rw [dif_pos hf]
-          exact List.mem_flatMap.2 ⟨a, mem_ofTy (ih _ _ _ a (by omega)),
-            List.mem_flatMap.2 ⟨b, mem_ofTy (ih _ _ _ b (by omega)), mem_dif hL⟩⟩⟩⟩
-      gen_fin hc
+    intro n Γ Λ τ e _ hf _
+    have := groesseExpr_pos e
+    omega
+  | succ f ih =>
+    intro n Γ Λ τ e hn hf hu
+    induction n generalizing τ e with
+    | zero =>
+      have := groesseExpr_pos e
+      omega
+    | succ n ihn =>
+      show _ ∈ tab (buckets [] (fun prev k => exprS (fun Γ' j => tab (genE f j Γ' Λ)) (tab prev) k) (n + 1)) _
+      by_cases hlt : groesseExpr e ≤ n
+      · unfold tab
+        rw [getD_buckets_alt _ _ _ hlt]
+        exact ihn τ e hlt hf hu
+      · have heq : groesseExpr e = n + 1 := by omega
+        unfold tab
+        rw [heq, getD_buckets_neu]
+        have hE : Unter (Γ := Γ) (tab (buckets [] (fun prev k => exprS (fun Γ' j => tab (genE f j Γ' Λ)) (tab prev) k) n))
+            (groesseExpr e) := by
+          intro τ' e' hlt'
+          exact ihn τ' e' (by omega) (by omega) (by omega)
+        have hQ : QUnter (fun Γ' j => tab (genE f j Γ' Λ)) (groesseExpr e) := by
+          intro j Γ' τ' e' hlt' hj
+          exact ih j Γ' Λ τ' e' hj (by omega) (by omega)
+        have := exprS_vollst (fun Γ' j => tab (genE f j Γ' Λ))
+          (tab (buckets [] (fun prev k => exprS (fun Γ' j => tab (genE f j Γ' Λ)) (tab prev) k) n)) e hu hE hQ
+        rw [heq] at this
+        exact this
 
 end Gabbro.Grammatik.Gen
