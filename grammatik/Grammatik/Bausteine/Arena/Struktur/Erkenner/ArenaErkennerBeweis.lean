@@ -11,7 +11,7 @@
   are exactly what the abstract state `a` says, and the guard of every `narrow`/`check` either passes (the form runs) or
   fails (the `else` branch, which `Rein` forces to be store-free, ends the run in the world the guard saw).
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaErkennerLemmas
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerLemmas
 
 namespace Gabbro.Grammatik
 

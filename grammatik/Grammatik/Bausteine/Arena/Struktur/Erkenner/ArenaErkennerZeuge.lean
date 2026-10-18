@@ -15,8 +15,8 @@
     * a push of a parameter (nothing is known of it),
     * a store into a link field that is no move.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaErkennerBeweis
-import Grammatik.Bausteine.Arena.Struktur.ArenaFormZeuge
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerBeweis
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaFormZeuge
 
 namespace Gabbro.Grammatik
 

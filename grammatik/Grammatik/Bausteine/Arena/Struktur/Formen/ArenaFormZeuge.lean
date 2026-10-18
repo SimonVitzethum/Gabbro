@@ -12,8 +12,8 @@
     * `grow_zeuge`    -- a commit by `1` on a world whose committed word is below the ceiling keeps list and free list.
 -/
 import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaumForm
-import Grammatik.Bausteine.Arena.Struktur.ArenaWachs
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
 
 namespace Gabbro.Grammatik
 

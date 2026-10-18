@@ -22,9 +22,9 @@
   The proof applies the executed-form theorems (`liste_*_zug`, `frischAlloc_ausfuehren`, `freiVar_lebt`, `grow_liste`, ...):
   the recognizer is exactly the side conditions of those theorems, discharged by the abstract state.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaAllocForm
-import Grammatik.Bausteine.Arena.Struktur.ArenaLinkForm
-import Grammatik.Bausteine.Arena.Struktur.ArenaWachs
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
 
 namespace Gabbro.Grammatik
 

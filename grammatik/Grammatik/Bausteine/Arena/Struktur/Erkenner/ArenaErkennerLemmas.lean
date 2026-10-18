@@ -6,7 +6,7 @@
              that stores nothing keeps the invariant, and the list survives a run that only touched the allocator's
              places.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaErkenner
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkenner
 
 namespace Gabbro.Grammatik
 
