@@ -81,13 +81,15 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
       obtain rfl := Option.some.inj h
       exact ⟨F, fitsT_supp hs⟩
   | _, _, _, .glob g hgl, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      by_cases hs : supp (D.gtyp g) = true
-      · simp only [lowerE, hs, if_true] at h
-        obtain ⟨c', hc', F⟩ := loadG_frag lay (D.gtyp g) (σ.globs g) hs (.glob (lay.ggblk g))
-          (lay.ggblk g) 0 m rs r rfl (hR.2 g hs)
+      by_cases hs : (supp (D.gtyp g) && !lay.shared g) = true
+      · have hs0 : supp (D.gtyp g) = true := (Bool.and_eq_true_iff.mp hs).1
+        have hsh : lay.shared g = false := by simpa using (Bool.and_eq_true_iff.mp hs).2
+        simp only [lowerE, hs, if_true] at h
+        obtain ⟨c', hc', F⟩ := loadG_frag lay (D.gtyp g) (σ.globs g) hs0 (.glob (lay.ggblk g))
+          (lay.ggblk g) 0 m rs r rfl ((hR.2 g hs0).2 hsh)
         rw [hc'] at h
         obtain rfl := Option.some.inj h
-        exact ⟨F, fitsT_supp hs⟩
+        exact ⟨F, fitsT_supp hs0⟩
       · simp [lowerE, hs] at h
   | _, _, _, .ptrOf t n ht rw, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h

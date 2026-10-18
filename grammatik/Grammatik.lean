@@ -449,5 +449,8 @@ import Grammatik.Code.Model.Witness
 import Grammatik.Code.Refine.Expr
 import Grammatik.Code.Refine.Calls.Func
 import Grammatik.Code.Refine.Witness
+import Grammatik.Code.Conc.Present
+import Grammatik.Code.Conc.Shared
+import Grammatik.Code.Conc.SharedWitness
 import Grammatik.Code.Conc.Witness
 import Grammatik.Code.Model.Need
