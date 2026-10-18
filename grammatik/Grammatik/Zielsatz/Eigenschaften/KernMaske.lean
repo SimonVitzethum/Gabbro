@@ -245,6 +245,18 @@ def KernLauf (P : Programm D) (O : Orakel D) (passes : Nat) (kern : Faden → Na
 def KernStart (kern : Faden → Nat) (M0 : RufMaschineG D) (Z0 : KernZ D) : Prop :=
   Z0.m = M0 ∧ MaskeOk kern M0 Z0.mask ∧ ∀ g, ¬ Z0.begonnen g
 
+/-- The guarded successor of `Z` when thread `f` steps to the machine `M'`. -/
+def KernZ.weiter (kern : Faden → Nat) (Z : KernZ D) (f : Faden) (M' : RufMaschineG D) : KernZ D :=
+  ⟨M', maskeNach kern Z.mask f (M'.faeden f).spur, fun g => g = f ∨ Z.begonnen g⟩
+
+/-- A G step is a guarded step to `Z.weiter` as soon as the two guards hold. -/
+theorem kernSchritt_weiter {P : Programm D} {O : Orakel D} {passes : Nat} {kern : Faden → Nat}
+    {H : Faden → Prop} {Z : KernZ D} {f : Faden} {M' : RufMaschineG D}
+    (hs : RufSchrittG P O passes Z.m f M') (he : H f → ¬ Z.begonnen f → Z.mask (kern f) = [])
+    (hv : ∀ g, H g → Z.begonnen g → ¬ FertigG Z.m g → kern g = kern f → g = f) :
+    KernSchritt P O passes kern H Z f (Z.weiter kern f M') :=
+  ⟨hs, he, hv, rfl, rfl⟩
+
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {kern : Faden → Nat}
   {H : Faden → Prop} {M0 : RufMaschineG D} {Z0 : KernZ D} {zs : Nat → KernZ D}
   {fs : Nat → Faden} {n : Nat}
