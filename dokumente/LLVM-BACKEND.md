@@ -87,7 +87,7 @@ runtime base. No int-to-pointer conversion enters the language.
 ## 4. The generated runtime (Linux profile)
 
 All of it is IR; the only thing underneath is the kernel. The compiler books the raw gate
-numbers for `mmap`, `mprotect`, `munmap`, `madvise` and `futex` itself (`laufzeit_tor` in
+numbers for `mmap`, `mprotect`, `munmap`, `madvise`, `clone`, `futex` and `exit` itself (`laufzeit_tor` in
 `llvm.rs`), so **this runtime is a Linux profile, not an OS-neutral one**; arbitrary OS
 profiles remain open (see `PLAN-HARDWARE.md`, `DESIGN.md`). User gates (`syscall` items)
 lower from direct declarations: explicit `number`, `regs in/out`, clobbers, `abi linux`, a
@@ -335,6 +335,16 @@ clean corpus units (x86_64), 131 `llvm.assume`, 192 `!range`, 1182 `!tbaa` (182 
 | writable pointer parameter of a qualifying internal function | `noalias` (rule below) |
 | `requires N <= lenof(p)` | `dereferenceable(N)` |
 | `requires aligned(p, N)` | `align N` |
+| a plain `+`, `-`, `*` on operands of one known sign (M104: no result leaves the operands' width) | `nuw` (unsigned) / `nsw` (signed); `+% -% *%` carry no flag |
+| an index into a fixed array (M4/M103: proven below the length) | `getelementptr inbounds` |
+
+Every such fact is counted per kind: the IR ends with `; gabbro-fact KIND N` lines
+(`tests/llvm_fakten.rs` pins the kinds, the wrapping forms and both targets). Considered and NOT
+emitted: `nounwind` (LLVM infers it; the stackless pass parses function headers), `willreturn`
+and `norecurse` (no checker fact proves them for a function: `costs` bound ops, not recursion
+or return of gate calls), `readonly` (the `effects` lists are checked as supersets, so the
+function attribute would need the inverse fact), `llvm.loop` bounds (no loop-bound fact reaches
+the lowering; `retry` bounds are counters in the IR already).
 
 **The `noalias` rule (2026-10-17, `A1-OWN-PAPER.md` slice 4).** `noalias` is a fact about the
 whole call, so a writable pointer parameter gets it only when the checker holds the whole call:
@@ -412,7 +422,9 @@ here simplifies a case, the register wins.
 | static pointer decay | global array-address initialiser | – |
 | `ArenaForm` / `DynForm`, `free` | full G exporter and statement bridge (`LG005`) | – |
 | module-qualified emitted names | OFFEN O40 remainder: LLVM mangles `m_` only on a collision | – |
-| OS profiles | the runtime books Linux gates; OS-neutral bindings and the per-access target-to-GX proof | – |
+| integer widths beyond 64 bits | the SURFACE refuses them (`P008`: sugar widths run 1..64); a language change (Lean model first), after which `iN` lowering needs only the `range_knoten`/`falte_int` width limits lifted | `P008` (reader) |
+| `Expr.getBytes`, paired/unbound gates, float words outside `f32`/`f64` | no exported constructor / no model form; each is a language question, not a lowering | `Y104`/`Y102`/`Y101` |
+| OS profiles | the runtime books Linux gates (audit and the language proposals L1-L8: section 11); OS-neutral bindings and the per-access target-to-GX proof | – |
 
 `TODO.md` section 4 carries these with their IDs.
 
@@ -447,3 +459,72 @@ Standing falsifier at zero proof cost: the x86-64/aarch64 agreement `baue-llvm.s
 **Not claimed:** no validated binary exists; the correspondence record (`korrOk`) is C-only; the
 per-access target bridge is open; the checker's carried residues (alias analysis, `E010` reach,
 cost assumptions, pairing memory-model statement) stay out of the binary-safety argument.
+
+## 11. Audit: what the compiler still hardwires about an architecture or an OS (2026-10-18)
+
+**Rule (Simon, 2026-10-18, final):** the compiler contains NO system call, not even in one small
+per-target table. Numbers, register names and the trap instruction come only from the user's
+Gabbro source (`syscall ... regs in/out` items, binding libraries under `bibliothek/`); the
+memory runtime (heap/arena backing, thread stacks) and the process exit come from user-declared
+gates too, so any LLVM architecture can be a target without per-architecture work in `llvm.rs`.
+This section is the measured list of where `llvm.rs` / `llvm/` still breaks the rule, and the
+language (Lean model FIRST) change each item needs. Nothing below was changed in the language
+by the audit; the items are proposals and wait for the Lean model.
+
+Already generic (no per-architecture text): all statement and expression lowering, atomics and
+orderings (`publish`/`await`, ticket and reader/writer locks are plain `atomicrmw`/`load atomic`
+IR), `!range`, `noalias`, `nuw`/`nsw`, `inbounds`, `llvm.assume`, and since 2026-10-18 the loud
+trap (`falle`: the `llvm.trap` intrinsic instead of `ud2` / `brk #1`).
+
+| # | Where | What is hardwired | Needs |
+|---|---|---|---|
+| A1 | `laufzeit_tor` (`llvm.rs`), `laufzeit_ruf`, `runtime_args`, `ruf_fehlschlag` | Linux syscall numbers of `mmap`, `mprotect`, `munmap`, `madvise`, `clone`, `futex`, `exit` for x86_64 and aarch64; the argument register names; the number register (`rax`/`x8`); the `-4095..-1` errno range; `MAP_PRIVATE|MAP_ANONYMOUS` (34) and `PROT_*` constants | L1, L2 |
+| A2 | `arena_bereit` and the arena commit/release paths (`llvm.rs`) | the arena reserve is `mmap(PROT_NONE)`, commit is `mprotect`, give-back is `munmap`/`madvise`; the 2b stage (heap stays `PROT_NONE` until used) rests on exactly these | L1 |
+| A3 | `stackless.rs` (`reserve`/`unmap` helpers, test `_start`) | the continuation-stack chunks are `mmap`ed and `munmap`ed with the same raw numbers; the test `_start` exits with `exit_group` | L1, L3 |
+| A4 | thread start (`senke_start`, `KLON_FLAGGEN`, `FADEN_REGION`, futex join) | raw `clone` with Linux flags and a futex join (`CLONE_CHILD_CLEARTID`), one inline-asm trampoline per target (x86_64 `syscall; ... callq *%r12`, aarch64 `svc #0; ... blr x19`), the 8 MiB stack, the guard | L1, L2, L4 |
+| A5 | `emit_start` (`llvm.rs`) | `_start` calls `main` and exits with `exit_group` (231 / 94) | L3 |
+| A6 | `senke_tor_ruf`, `sammle_tor` (`llvm.rs`) | a USER gate takes its number, registers and clobbers from the source, but the trap instruction (`syscall` / `svc #0`), the number register (`rax` / `x8`) and the answer register come from the target name + `abi linux` | L2 |
+| A7 | `llvm/stapeltor.rs` | the instruction sequence after the gate (`test`/`jnz`, `cbnz`, stack realignment, frame-pointer clear, trap) per target | L2 |
+| A8 | `llvm/eintritte.rs` | complete per-target stubs as `module asm`: x86_64 IDT stubs (`fxsave`, `iretq`, error-code twins), aarch64 `VBAR_EL1` table (`eret`, `q0`-`q31`) | L5 |
+| A9 | `llvm/masken.rs` | `pushfq; cli; popq` / `pushq; popfq` and `mrs daif; msr daifset` | L6 |
+| A10 | `llvm/portraum.rs` | x86 `in`/`out`; refused on aarch64 (no port space) | L6 |
+| A11 | `llvm/assembler.rs` | `asm` bodies: the text is the user's, but the mapping of x86 one-letter register classes (`a b c d S D` to `{ax}` ...) and the aarch64 `x`-names are compiler tables | L7 |
+| A12 | `ZIEL_X86_64`, `ZIEL_AARCH64`, `ziel_fuer` | triple and datalayout of two targets, both `*-linux-gnu`; a third architecture needs a new constant, not a new lowering | L8 |
+
+Proposals (each a language/Lean-model change; none is made here):
+
+* **L1 region provider gate.** A form that declares, in Gabbro, the gates an arena or the thread
+  runtime obtains memory from: three roles `reserve(bytes) -> region`, `commit(region, bytes)`,
+  `release(region, bytes)`, each an ordinary `syscall`/`extern` item with a contract (the
+  region answer is the sanctioned "memory from outside comes as a REGION" form: fresh, disjoint,
+  declared extent). The arena then names its provider (`arena X ... from P`) and the lowering emits
+  generic calls to those gates; the 2b property (no RAM before use) becomes a contract of
+  `commit`, not a property of Linux. Lean first: the model has `DynArena`/`FreiZustand` and the
+  region answer, but no provider role.
+* **L2 trap clause for gates.** `syscall ... abi A arch X number N regs in {...}` states the
+  number and the registers; it lacks the trap instruction and the number register. Propose
+  `trap "<instruction>" number in <reg>` (the instruction text is user data, passed to LLVM inline
+  asm; the compiler checks nothing about it), after which A6, A7 and the runtime gates use only
+  declared data. Lean first: the gate model (`Ax`, `RufMaschineG`) already treats the call as an
+  axiom with a contract; the clause only adds the lowering data to the declaration, no new semantics.
+* **L3 process exit gate.** `_start` needs a gate to end the process: `entry process main exits via G`
+  (G an ordinary gate declared by the program). Lean: the program-end event of the machine.
+* **L4 thread start as a declared template.** The clone template (flags, trampoline) is the
+  user's: a `start` backed by a stack gate (`stack r`, `child`, which already lowers) plus a
+  join word, so the compiler keeps no `clone`/`futex`. The model's `SchablonenFaden` already proves
+  the template against the gate contract.
+* **L5 entry stubs from declarations.** The stubs are machine code that saves registers: either the
+  user writes them as `asm` bodies (A11 exists) and `entry` names the vector table symbol, or the
+  language gets register-save declarations. Lean: `Programm.unterbricht` and the `entry` forms.
+* **L6 hardware forms as declared registers.** Interrupt masking and port space become `device`
+  registers with a named assumption and user-supplied access text (ties to the model `Reg` forms,
+  still REFUSED in the register).
+* **L7 register class table from the program.** Constraint letters for `asm` come from the
+  declaration (`regs in { rdi = x }` already names the register; only the one-letter shorthand
+  is a compiler table).
+* **L8 targets as data.** Triple and datalayout as a `target` declaration (the grammar has
+  `targetdecl` for syscall variables, section 12.3 of `SYNTAX.md`), so a new architecture is a
+  Gabbro file.
+
+Until L1-L4 exist, A1-A5 are a Linux profile of the compiler (Section 4 says so) and the
+guardian stage 2b (`pruefe-llvm.py`) measures it as such.
