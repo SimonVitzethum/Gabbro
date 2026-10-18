@@ -7,7 +7,7 @@
              former, recorded as a model gap) and `match e { C => { .. } }` (`Stmt.onWhy`, one arm per case).
              A bare call of such a function has no form (`Stmt.call` needs `gruende = 0`).
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben24
 

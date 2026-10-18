@@ -5,7 +5,7 @@
              end-block form exists, so a foreign call stands at the top of a body). An `extern fn` that
              writes, has a `requires`/`ensures` or an `or` channel has no form here.
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben20
 

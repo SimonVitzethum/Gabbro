@@ -5,7 +5,7 @@
              shifts (`Expr.shl`/`shr`), the unary minus (`Expr.neg`) and signed range types
              (`in -40 .. 40`). Table-free sources (kernel memory).
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben15
 

@@ -5,7 +5,7 @@
              `0 .. hi`; `reset A;` is the store of zero into the counter (`Stmt.assignGlob`), `A[i]` the slot
              read of `wert`. `alloc` (`Block.arenaAlloc`, a nested block with an `else`) is not elaborated yet.
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben19
 

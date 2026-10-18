@@ -5,7 +5,7 @@
              nested block only: `Endblock` has no such former, recorded as a model gap) and the lock floors
              (`Signatur.boden`): a lock held across a call must rank below the callee's floor (`RufPasst.hx`).
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben17
 

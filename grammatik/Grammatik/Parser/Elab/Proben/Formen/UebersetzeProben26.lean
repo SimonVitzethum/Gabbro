@@ -6,7 +6,7 @@
              `let y = g(..) else (e) { .. }` (`Endblock.bindAxiomElse`: the end-block form exists, so the
              handling stands at the top of a body, unlike `bindCallElse`).
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben26
 

@@ -5,7 +5,7 @@
              range or `bool`; only a `mut` static is written, and only where the function declares
              `writes X`.
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben12
 

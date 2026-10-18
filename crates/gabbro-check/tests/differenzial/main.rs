@@ -255,6 +255,19 @@ fn zeige_programme() {
     }
 }
 
+/// Write every source of the space to `kratz/diff/alle/p<n>.gab` (about 70 000 files), for the pure-Lean runner over
+/// the WHOLE space (`Parser/Cover/DifferenzLauf.lean`, run in directories of a few thousand) without the exporter
+/// route: `cargo test --test differenzial schreibe_alle_quellen -- --ignored`.
+#[test]
+#[ignore]
+fn schreibe_alle_quellen() {
+    let dir = kratz().join("alle");
+    std::fs::create_dir_all(&dir).unwrap();
+    for p in raum() {
+        std::fs::write(dir.join(format!("p{}.gab", p.n)), &p.src).unwrap();
+    }
+}
+
 /// Write the Lean file of the programs whose name contains `GABBRO_DIFF_LEAN` to
 /// `kratz/diff/eins.lean` (run it with `lake env lean`; for reading the full Lean error).
 #[test]

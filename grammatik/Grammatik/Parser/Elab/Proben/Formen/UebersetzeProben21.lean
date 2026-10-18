@@ -6,7 +6,7 @@
              `forever L per_pass bounded n ops on_exceeded h effects { .. } progress a { .. }` is `Stmt.forever`
              at the assumption `a`. The header rides raw in the surface tree and is read again by the lexer.
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben21
 

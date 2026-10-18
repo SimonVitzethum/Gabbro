@@ -4,7 +4,7 @@
              lexing: the kernel lexes a table source in 20 GB). `Stmt.traverse` has a body with `l = true`,
              the binder is an index into the table, and `leave`/`next` exist only inside a loop.
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben9
 

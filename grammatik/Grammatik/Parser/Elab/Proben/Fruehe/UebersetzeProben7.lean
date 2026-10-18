@@ -3,7 +3,7 @@
   Subject:   Track P: `let` inside and after a `locks` block, at the U level (no lexing: the kernel
              lexes a table source in 20 GB). The binding of a `locks` block is the block's own.
 -/
-import Grammatik.Parser.Elab.Proben.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben7
 
