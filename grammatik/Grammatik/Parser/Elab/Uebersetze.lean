@@ -96,6 +96,15 @@ inductive UArg
   | val : USide → UArg
   deriving DecidableEq, Repr
 
+/-- The trailing return: nothing, or a value (a literal, a
+    numeric parameter or a slot read). -/
+inductive URet
+  | empty : URet
+  | val : USide → URet
+  /-- A `bool` result: a truth value. -/
+  | bool : UEns → URet
+  deriving DecidableEq, Repr
+
 /-- One body statement: a slot write through a pointer (`assign`)
     or at a table (`assignTab`), or a direct call. -/
 inductive UStmt
@@ -105,25 +114,28 @@ inductive UStmt
   | assignB : String → String → UIdx → UEns → UStmt
   | assignTabB : String → String → UIdx → UEns → UStmt
   | call : String → List UArg → UStmt
-  /-- `locks L { ... }` is written FLAT: `sperrtAuf L`, the block's statements, `sperrtZu` (the
+  /-- `locks L { ... }` is written FLAT: `sperrtAuf L`, the block's statements, `zu` (the
       elaborator writes them balanced, the lowering reads them back as one block). A nested
       constructor would make `UStmt` a nested inductive, and the derived `DecidableEq`/`Repr` the
       pins use would go. -/
   | sperrtAuf : String → UStmt
-  | sperrtZu : UStmt
+  | zu : UStmt
   /-- `let x [: T] = v;` of a number: binds `x` for the rest of the block (flat, like the locks
       markers). `T`'s range is the annotation the value must fit; the type the binding carries is the
       COMPUTED range of `v`, which the lowering reads (`Block.bind`). -/
   | bind : String → Option (Int × Int) → USide → UStmt
-  deriving DecidableEq, Repr
-
-/-- The trailing return: nothing, or a value (a literal, a
-    numeric parameter or a slot read). -/
-inductive URet
-  | empty : URet
-  | val : USide → URet
-  /-- A `bool` result: a truth value. -/
-  | bool : UEns → URet
+  /-- `if c { … } else { … }` is flat too: `wennAuf c`, the then-statements, `sonst`, the else-statements,
+      `zu` (an `else if` is an `if` in the else part; an absent `else` is an empty one). -/
+  | wennAuf : UEns → UStmt
+  | sonst : UStmt
+  /-- `traverse i over slots of T [invariant p] { … }`: `schleifeAuf binder table invariant`, the body, `zu`.
+      The binder is an index into `T` inside the body, and `leave`/`next` name it. -/
+  | schleifeAuf : String → String → UEns → UStmt
+  /-- `return [v];` inside a block (`Stmt.ret`; the trailing return of a body stays `URet`). -/
+  | ret : URet → UStmt
+  /-- `leave i;` / `next i;`: exit / end the pass of the innermost `traverse` (`Stmt.leave`/`Stmt.next`). -/
+  | leave : String → UStmt
+  | next : String → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -180,6 +192,8 @@ structure UCtx where
   aliase : List (String × (Int × Int))
   /-- The unit's `const N : T = v;` -- inlined as a number at every use (`tr_typed`). -/
   konst : List (String × Int)
+  /-- The binders of the enclosing `traverse` loops, innermost first (`leave i`/`next i` name the first). -/
+  schleifen : List String := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -203,6 +217,10 @@ structure UFn where
     shadows a parameter), `Block.bind` puts its type first in the context. -/
 def UFn.mitBindung (f : UFn) (x : String) (w : Int × Int) : UFn :=
   { f with params := (x, .int w.1 w.2) :: f.params, parten := .int :: f.parten }
+
+/-- The scope inside `traverse b over slots of T`: `b` is an index into table number `num` of `cnt` slots. -/
+def UFn.mitIndex (f : UFn) (b : String) (num : Nat) (cnt : Int) : UFn :=
+  { f with params := (b, .index cnt) :: f.params, parten := .index num :: f.parten }
 
 /-- The result type of an elaborated function: `bool`, an integer range, or none. -/
 def UFn.ergTy (f : UFn) : Option Ty :=
@@ -1220,6 +1238,84 @@ def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option 
                                       ptypen := .int lo hi :: ctx.ptypen,
                                       pbreiten := uParamBreite ty :: ctx.pbreiten })
 
+/-- The trailing return (the `check_body`/`tr_body` of
+    `lean_g.rs`): a result falls off nowhere, and a missing
+    result returns nowhere. -/
+def uEnde (ctx : UCtx) : Option SEnde → Except String URet
+  | .none =>
+    match ctx.res with
+    | .some _ => .error "Funktion mit Ergebnis faellt durch"
+    | .none => if ctx.ergBool then .error "Funktion mit Ergebnis faellt durch" else .ok .empty
+  | .some (.ret .none) =>
+    match ctx.res with
+    | .some _ => .error "Rueckgabe ohne Wert mit Ergebnis"
+    | .none => if ctx.ergBool then .error "Rueckgabe ohne Wert mit Ergebnis" else .ok .empty
+  | .some (.ret (.some v)) =>
+    if ctx.ergBool then
+      match uBool ctx v with
+      | .error e => .error e
+      | .ok b => .ok (.bool b)
+    else
+    match ctx.res with
+    | .none => .error "Rueckgabe mit Wert ohne Ergebnis"
+    | .some _ =>
+      match uWertBody ctx v with
+      | .error e => .error e
+      | .ok s => .ok (.val s)
+  | .some _ => .error "Blockende ohne G-Form"
+
+/-- The ender of a nested block as a statement: `return [v]` (against the function's result), or
+    `leave i`/`next i` naming the innermost `traverse` binder. -/
+def uEndeStmt (ctx : UCtx) : Option SEnde → Except String (List UStmt)
+  | .none => .ok []
+  | .some (.ret v) =>
+    match uEnde ctx (.some (.ret v)) with
+    | .error e => .error e
+    | .ok r => .ok [UStmt.ret r]
+  | .some (.leave m) =>
+    if ctx.schleifen.head? == some m then .ok [UStmt.leave m]
+    else .error "leave ohne innerste Schleife ohne G-Form"
+  | .some (.next m) =>
+    if ctx.schleifen.head? == some m then .ok [UStmt.next m]
+    else .error "next ohne innerste Schleife ohne G-Form"
+
+/-- The header of `traverse b over slots of S by unvisited [touches …] [invariant p]`: the table (named
+    directly or through a pointer parameter), the invariant over the OUTER context (the binder is not in
+    scope there), and the context of the body, where the binder is an index into the table and the
+    innermost loop label. Other domains, `of e` and `by consuming` have no G form. -/
+def uSchleifenKopf (ctx : UCtx) (b : String) (o : Option SExpr) (k : String) (s : SExpr) (m : String)
+    (inv : Option SExpr) : Except String (String × UEns × UCtx) :=
+  if o.isSome then .error "traverse of ohne G-Form"
+  else if !strEq k "slots" then .error "traverse-Bereich ohne G-Form"
+  else if !strEq m "unvisited" then .error "traverse by consuming ohne G-Form"
+  else
+    match (match s with
+        | .variable tn =>
+          match ctx.tabellen.findIdx? (fun x => strEq x.name tn) with
+          | .some num => .ok (tn, num)
+          | .none =>
+            match uParamNr ctx tn with
+            | .error e => .error e
+            | .ok j =>
+              match uArtBei ctx.parten j with
+              | .ok (.ptr num _) =>
+                match ctx.tabellen[num]? with
+                | .some tb => .ok (tb.name, num)
+                | .none => .error "Zeigertabelle unbekannt"
+              | _ => .error "traverse-Bereich ohne G-Form"
+        | _ => .error "traverse-Bereich ohne G-Form" : Except String (String × Nat)) with
+    | .error e => .error e
+    | .ok (tab, num) =>
+      match (match inv with
+          | .none => .ok UEns.tru
+          | .some p => uBool ctx p : Except String UEns) with
+      | .error e => .error e
+      | .ok iv =>
+        let cnt : Int := match ctx.tabellen[num]? with | .some tb => tb.count | .none => 0
+        .ok (tab, iv, { ctx with pnamen := b :: ctx.pnamen, parten := .index num :: ctx.parten,
+                                 ptypen := .index cnt :: ctx.ptypen, pbreiten := 0 :: ctx.pbreiten,
+                                 schleifen := b :: ctx.schleifen })
+
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
@@ -1251,8 +1347,52 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           | .ok (body, _) =>
             match uAnwReihe tabs koepfe f ctx rest with
             | .error e => .error e
-            | .ok (xs, cE) => .ok ([UStmt.sperrtAuf l] ++ body ++ [UStmt.sperrtZu] ++ xs, cE)
+            | .ok (xs, cE) => .ok ([UStmt.sperrtAuf l] ++ body ++ [UStmt.zu] ++ xs, cE)
       | _ => .error "Sperrausdruck ohne G-Form"
+  | f + 1, ctx, .cond c (.block ss e) ei els :: rest =>
+    match uBool ctx c with
+    | .error err => .error err
+    | .ok cv =>
+      match uAnwReihe tabs koepfe f ctx ss with
+      | .error err => .error err
+      | .ok (body, ctxB) =>
+        match uEndeStmt ctxB e with
+        | .error err => .error err
+        | .ok endS =>
+          let sonst : Option SAnw :=
+            match ei with
+            | .elsif c2 b2 :: ei' => some (.block [.cond c2 b2 ei' els] .none)
+            | _ => els
+          match (match sonst with
+              | .none => .ok []
+              | .some (.block ss2 e2) =>
+                match uAnwReihe tabs koepfe f ctx ss2 with
+                | .error err => .error err
+                | .ok (b2, ctx2) =>
+                  match uEndeStmt ctx2 e2 with
+                  | .error err => .error err
+                  | .ok end2 => .ok (b2 ++ end2)
+              | .some _ => .error "else ohne Block ohne G-Form" : Except String (List UStmt)) with
+          | .error err => .error err
+          | .ok elseS =>
+            match uAnwReihe tabs koepfe f ctx rest with
+            | .error err => .error err
+            | .ok (xs, cE) =>
+              .ok ([UStmt.wennAuf cv] ++ body ++ endS ++ [UStmt.sonst] ++ elseS ++ [UStmt.zu] ++ xs, cE)
+  | f + 1, ctx, .each bnd o k s m _ inv (.block ss e) :: rest =>
+    match uSchleifenKopf ctx bnd o k s m inv with
+    | .error err => .error err
+    | .ok (tab, inv, ctxS) =>
+      match uAnwReihe tabs koepfe f ctxS ss with
+      | .error err => .error err
+      | .ok (body, ctxB) =>
+        match uEndeStmt ctxB e with
+        | .error err => .error err
+        | .ok endS =>
+          match uAnwReihe tabs koepfe f ctx rest with
+          | .error err => .error err
+          | .ok (xs, cE) =>
+            .ok ([UStmt.schleifeAuf bnd tab inv] ++ body ++ endS ++ [UStmt.zu] ++ xs, cE)
   | f + 1, ctx, s :: rest =>
     match uAnw1 ctx tabs koepfe s with
     | .error e => .error e
@@ -1260,32 +1400,6 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
-
-/-- The trailing return (the `check_body`/`tr_body` of
-    `lean_g.rs`): a result falls off nowhere, and a missing
-    result returns nowhere. -/
-def uEnde (ctx : UCtx) : Option SEnde → Except String URet
-  | .none =>
-    match ctx.res with
-    | .some _ => .error "Funktion mit Ergebnis faellt durch"
-    | .none => if ctx.ergBool then .error "Funktion mit Ergebnis faellt durch" else .ok .empty
-  | .some (.ret .none) =>
-    match ctx.res with
-    | .some _ => .error "Rueckgabe ohne Wert mit Ergebnis"
-    | .none => if ctx.ergBool then .error "Rueckgabe ohne Wert mit Ergebnis" else .ok .empty
-  | .some (.ret (.some v)) =>
-    if ctx.ergBool then
-      match uBool ctx v with
-      | .error e => .error e
-      | .ok b => .ok (.bool b)
-    else
-    match ctx.res with
-    | .none => .error "Rueckgabe mit Wert ohne Ergebnis"
-    | .some _ =>
-      match uWertBody ctx v with
-      | .error e => .error e
-      | .ok s => .ok (.val s)
-  | .some _ => .error "Blockende ohne G-Form"
 
 /-- Pass two: contracts and body of one function. -/
 def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
@@ -1728,7 +1842,8 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
       match lowerNachLies tabs pnamen ptypen rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ | .bind .. :: _, _ =>
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .zu :: _, _ | .bind .. :: _, _ | .wennAuf _ :: _, _ | .sonst :: _, _
+    | .schleifeAuf .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf nach Ruf ohne G-Form"
 
@@ -1762,7 +1877,8 @@ def lowerSaetzeEin (tabs : List UTab) (pnamen : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ | .bind .. :: _, _ =>
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .zu :: _, _ | .bind .. :: _, _ | .wennAuf _ :: _, _ | .sonst :: _, _
+    | .schleifeAuf .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf ohne G-Form"
 
@@ -2419,6 +2535,12 @@ def beqUArgList : List UArg → List UArg → Bool
   | x :: xs, y :: ys => beqUArg x y && beqUArgList xs ys
   | _, _ => false
 
+def beqURet : URet → URet → Bool
+  | .empty, .empty => true
+  | .val a, .val b => beqUSide a b
+  | .bool a, .bool b => beqUEns a b
+  | _, _ => false
+
 def beqUStmt : UStmt → UStmt → Bool
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
@@ -2428,19 +2550,18 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && strEq f g && beqUIdx x y && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
   | .sperrtAuf a, .sperrtAuf b => strEq a b
-  | .sperrtZu, .sperrtZu => true
+  | .zu, .zu => true
   | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && beqUSide s t
+  | .wennAuf a, .wennAuf b => beqUEns a b
+  | .sonst, .sonst => true
+  | .schleifeAuf a t i, .schleifeAuf b u j => strEq a b && strEq t u && beqUEns i j
+  | .ret a, .ret b => beqURet a b
+  | .leave a, .leave b | .next a, .next b => strEq a b
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
   | [], [] => true
   | x :: xs, y :: ys => beqUStmt x y && beqUStmtList xs ys
-  | _, _ => false
-
-def beqURet : URet → URet → Bool
-  | .empty, .empty => true
-  | .val a, .val b => beqUSide a b
-  | .bool a, .bool b => beqUEns a b
   | _, _ => false
 
 def beqUParamArt : UParamArt → UParamArt → Bool

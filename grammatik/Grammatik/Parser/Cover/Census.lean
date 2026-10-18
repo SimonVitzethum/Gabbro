@@ -14,7 +14,7 @@
   The numbers in `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a come from this run.
 -/
 import Grammatik.GabbroV.GvZensus
-import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeAllg3
 
 namespace Gabbro.Grammatik.Parser.Cover
 

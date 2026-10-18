@@ -447,7 +447,7 @@ theorem zensus104_leer : befundeElab (uMembers items104) = [] := by
   decide
 
 /-- **Synthetic two-blocker fixture**: a table with an unknown field
-    type plus a function with an `if` body (real table, real body). -/
+    type plus a function with a `match` body (real table, real body). -/
 def wMultiItems : List SItemTief :=
   [.modT "beispiel::zeuge"
     [.tableT "T" (.some (.lit 1)) .none .none false
@@ -457,16 +457,16 @@ def wMultiItems : List SItemTief :=
     .fnT
       { art := "impl", name := "f", params := [],
         res := .none, fehler := .none, klauseln := [] }
-      (.block [.cond (.tru) (.block [] .none) [] .none]
+      (.block [.cases (.tru) []]
         (.some (.ret .none)))]]
 
 /-- **Exactness on the fixture**: exactly the table finding and the
-    `if`-statement finding, in stage order, nothing else. -/
+    `match`-statement finding, in stage order, nothing else. -/
 theorem zensusMulti_exakt :
     befundeElab (uMembers wMultiItems) =
       [{ stufe := "tabelle", art := "tabelle", name := "T",
          meldung := "Typ unbekannt: Unbekannt" },
-       { stufe := "rumpf", art := "if", name := "f",
+       { stufe := "rumpf", art := "match", name := "f",
          meldung := "Anweisung ohne G-Form" }] := by
   decide
 

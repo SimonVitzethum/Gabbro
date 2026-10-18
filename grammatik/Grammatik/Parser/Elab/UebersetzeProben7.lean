@@ -30,12 +30,12 @@ def ok? (u : UProg) : String :=
 /-- A `let` inside `locks L { ... }` binds for the rest of that block and is written to a slot. -/
 theorem locks_let_ok :
     ok? (prog [.sperrtAuf "L", .bind "x" (some (0, 4294967295)) (.param "n"),
-      .assign "k" "v" (.param "i") (.param "x"), .sperrtZu]) = "OK" := by
+      .assign "k" "v" (.param "i") (.param "x"), .zu]) = "OK" := by
   decide +kernel
 
 /-- ... and it does not outlive the block. -/
 theorem locks_let_scope :
-    ok? (prog [.sperrtAuf "L", .bind "x" none (.param "n"), .sperrtZu,
+    ok? (prog [.sperrtAuf "L", .bind "x" none (.param "n"), .zu,
       .assign "k" "v" (.param "i") (.param "x")]) = "name unknown: x" := by
   decide +kernel
 

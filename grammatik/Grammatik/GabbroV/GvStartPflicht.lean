@@ -19,7 +19,7 @@
 -/
 import Grammatik.Parser.Elab.Uebersetze
 import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeAllg3
 import Grammatik.Kern.Syntax.Typen
 import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Kern.Semantik.Semantik
