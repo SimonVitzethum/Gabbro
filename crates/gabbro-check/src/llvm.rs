@@ -9422,8 +9422,10 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     k.beendet = false;
     // The side metadata has its own anonymous reservation. Only free links
     // and live-count words are touched; its size does not preallocate RAM.
+    // MAP_NORESERVE (0x4000) keeps the kernel's overcommit check from counting
+    // the reservation against RAM: a reservation larger than RAM must still map.
     let meta_bytes = memory::metadata_size(&ai)?;
-    let args = runtime_args(k.s.ziel, &["0".into(), meta_bytes.to_string(), "3".into(), "34".into(), "-1".into(), "0".into()]);
+    let args = runtime_args(k.s.ziel, &["0".into(), meta_bytes.to_string(), "3".into(), "16418".into(), "-1".into(), "0".into()]);
     let meta = laufzeit_ruf(k, "mmap", &args, span)?;
     let bad_meta = ruf_fehlschlag(k, &meta);
     let meta_ok = k.block("arena_metadata"); let meta_fail = k.block("arena_metadata_failed");
