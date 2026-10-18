@@ -18,6 +18,7 @@
 -/
 import Grammatik.Bausteine.Arena.Struktur.ArenaListe
 import Grammatik.Bausteine.Arena.Struktur.ArenaAuf
+import Grammatik.Bausteine.Arena.Struktur.ArenaRahmen
 
 namespace Gabbro.Grammatik
 
@@ -191,10 +192,16 @@ theorem linkPush_ausfuehren
     ∃ σ' : World D,
       execBlock (V := V) O passes R (Block.linkPush L G x hwT hLT hwG hLG rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
+      LinkRahmen A [L.f] [G.g] σ σ' ∧
       G.st σ' = (ρ.get x).n ∧ L.wert σ' (ρ.get x).n = G.st σ ∧
       (∀ j, j ≠ (ρ.get x).n → L.wert σ' j = L.wert σ j) ∧
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
-  refine ⟨_, rfl, ?_⟩
+  refine ⟨_, rfl, ?_, ?_⟩
+  · refine ⟨fun C hC => funext fun j => ?_, fun G' hG' => ?_⟩
+    · have hne : C.f ≠ L.f := fun e => hC (by simp [e])
+      simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
+    · have hne : G'.g ≠ G.g := fun e => hG' (by simp [e])
+      simp [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
   simp only [eval, Block.linkKopfAlsFeld, Block.linkIdxAlsKopf, eval_umTyp, Expr.orte, orte_umTyp,
     List.nil_append, LinkKopf.st_schreibGlob_selbst, LinkKopf.st_schreibSlot, LinkKopf.st_lese,
     LinkFeld.wert_schreibGlob, LinkFeld.wert_lese,
@@ -217,13 +224,18 @@ theorem linkPop_ausfuehren
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.linkPop L G hwG hLG hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [] [G.g] σ σ' ∧
       k.n = G.st σ ∧ G.st σ' = L.wert σ (G.st σ) ∧ (∀ j, L.wert σ' j = L.wert σ j) ∧
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
   have hk : (0 : Int) ≤ G.st σ ∧ G.st σ ≤ D.count A.tab - 1 := ⟨(Wert.umTyp G.hg (σ.globs G.g)).lo_le, by omega⟩
   simp only [Block.linkPop, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
   rw [dif_pos (by exact hk)]
-  refine ⟨?s, ?k, ?e, ?n, ?r⟩
+  refine ⟨?s, ?k, ?e, ?rh, ?n, ?r⟩
   case e => rfl
+  case rh =>
+    refine ⟨fun C _ => rfl, fun G' hG' => ?_⟩
+    have hne : G'.g ≠ G.g := fun e => hG' (by simp [e])
+    simp [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
   case n => rfl
   case r =>
     simp only [eval, Block.linkWeiter, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append, List.cons_append,
@@ -243,25 +255,32 @@ theorem linkUnlink_ausfuehren
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.linkUnlink L p hwT hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [L.f] [] σ σ' ∧
       k.n = L.wert σ (ρ.get p).n ∧ G.st σ' = G.st σ ∧
       L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) ∧
       (∀ j, j ≠ (ρ.get p).n → L.wert σ' j = L.wert σ j) ∧
-      A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
+      A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ ∧
+      (∀ t' : D.Tab, t' ≠ A.tab → ∀ (k : Int) (f : D.Feld t'), σ'.slots t' k f = σ.slots t' k f) := by
   have hk : (0 : Int) ≤ L.wert σ (ρ.get p).n ∧ L.wert σ (ρ.get p).n ≤ D.count A.tab - 1 :=
     ⟨(Wert.umTyp L.hf (σ.slots A.tab (ρ.get p).n L.f)).lo_le, by omega⟩
   simp only [Block.linkUnlink, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte]
   rw [dif_pos (by exact hk)]
-  refine ⟨?s, ?k, ?e, ?n, ?r⟩
+  refine ⟨?s, ?k, ?e, ?rh, ?n, ?r⟩
   case e => rfl
+  case rh =>
+    refine ⟨fun C hC => funext fun j => ?_, fun G' _ => rfl⟩
+    have hne : C.f ≠ L.f := fun e => hC (by simp [e])
+    simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
   case n => rfl
   case r =>
     simp only [eval, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append, List.cons_append,
       List.append_nil, LinkKopf.st_schreibSlot, LinkKopf.st_lese, LinkFeld.wert_lese,
       A.kopfSt_schreibSlot, FreiForm.naechst_lese, FreiForm.kopfSt_lese, ArenaForm.stand_lese,
       ArenaForm.stand_schreibSlot, A.naechst_schreibSlot_ne _ _ _ _ _ L.h2, Env.get_cons_there, Env.get_cons_here]
-    refine ⟨trivial, ?_, fun j hj => ?_, trivial, fun _ => trivial, trivial⟩
+    refine ⟨trivial, ?_, fun j hj => ?_, trivial, fun _ => trivial, trivial, fun t' ht' k f => ?_⟩
     · exact L.wert_schreibSlot_selbst _ _ _ _
     · exact L.wert_schreibSlot_anderer _ _ _ _ _ hj
+    · exact World.slots_schreibSlot_andere_tabelle _ _ _ _ _ _ _ _ _ ht'
 
 /-- **`pop` on an empty list takes its `else`:** nothing moves but the recorded read. -/
 theorem linkPop_voll
@@ -350,17 +369,18 @@ theorem liste_push_zug
     ∃ σ' : World D,
       execBlock (V := V) O passes R (Block.linkPush L G x hwT hLT hwG hLG rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
+      LinkRahmen A [L.f] [G.g] σ σ' ∧
       ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧ G.st σ' = (ρ.get x).n ∧
       L.wert σ' (ρ.get x).n = G.st σ ∧
       (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j →
         j = (ρ.get x).n ∨ Auf (D.count A.tab) (L.wert σ) (G.st σ) j) ∧
       (∀ j, Auf (D.count A.tab) (L.wert σ) (G.st σ) j → Auf (D.count A.tab) (L.wert σ') (G.st σ') j) := by
-  obtain ⟨σ', he, hg, hli, ho, hk, hn, hs⟩ :=
+  obtain ⟨σ', he, hrm, hg, hli, ho, hk, hn, hs⟩ :=
     linkPush_ausfuehren O passes R L G x hwT hLT hwG hLG rest σ ρ
   have hchain : ∃ Ls, KetteF (D.count A.tab) (L.wert σ) (G.st σ) Ls := by
     obtain ⟨Ls, hk0, -, -⟩ := hl; exact ⟨Ls, hk0⟩
   have hc : (ρ.get x).n < D.count A.tab := by have := hi.2.1; have := A.stand_le σ; omega
-  exact ⟨σ', he, liste_push A L G hl _ hi hnot hk hn hs hg hli ho, A.freiOk_gleich hk hn hs hok,
+  exact ⟨σ', he, hrm, liste_push A L G hl _ hi hnot hk hn hs hg hli ho, A.freiOk_gleich hk hn hs hok,
     A.lebt_gleich hk hn hs, hg, hli,
     auf_push_vor hchain hi.1 hc hnot hg hli ho, auf_push_nach hchain hi.1 hc hnot hg hli ho⟩
 
@@ -373,13 +393,14 @@ theorem liste_pop_zug
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.linkPop L G hwG hLG hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [] [G.g] σ σ' ∧
       k.n = G.st σ ∧ ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
       ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧ G.st σ' = L.wert σ (G.st σ) ∧
       (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j → Auf (D.count A.tab) (L.wert σ) (G.st σ) j) := by
-  obtain ⟨σ', k, he, hkn, hg, ho, hk, hn, hs⟩ :=
+  obtain ⟨σ', k, he, hrm, hkn, hg, ho, hk, hn, hs⟩ :=
     linkPop_ausfuehren O passes R L G hwG hLG hLT voll rest σ ρ hne
   obtain ⟨h1, h2, h3⟩ := liste_pop A L G hl hne hk hn hs hg ho
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hg,
+  exact ⟨σ', k, he, hrm, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hg,
     auf_pop_vor (by obtain ⟨Ls, hk0, -, -⟩ := hl; exact ⟨Ls, hk0⟩) hne hg (fun j => ho j)⟩
 
 /-- **Executed `unlink` keeps the list.** `p` is on the list and has a successor `i`; the binder holds `i`, which is
@@ -393,14 +414,15 @@ theorem liste_unlink_zug
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.linkUnlink L p hwT hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [L.f] [] σ σ' ∧
       k.n = L.wert σ (ρ.get p).n ∧ ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
       ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧
       L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) ∧
       (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j → Auf (D.count A.tab) (L.wert σ) (G.st σ) j) := by
-  obtain ⟨σ', k, he, hkn, hg, hnp, ho, hk, hn, hs⟩ :=
+  obtain ⟨σ', k, he, hrm, hkn, hg, hnp, ho, hk, hn, hs, -⟩ :=
     linkUnlink_ausfuehren O passes R L G p hwT hLT voll rest σ ρ hi
   obtain ⟨h1, h2, h3⟩ := liste_unlink A L G hl _ hp hi hk hn hs hg hnp ho
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hnp,
+  exact ⟨σ', k, he, hrm, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hnp,
     by rw [hg]; exact auf_unlink_vor hl hp rfl hi hnp ho⟩
 
 end Bedeutung

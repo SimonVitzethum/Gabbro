@@ -148,3 +148,10 @@ rules('grammatik/Grammatik/Logik/Ruf', [
 rules('grammatik/Grammatik/Bausteine/Arena', [
     (r'^Arena(Kette|Baum|BaumWelt|Liste|Lebt|Fremd|Frei|DynZeuge|Auf|AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Hash|Sibling|Erkenner\w*)$', 'Struktur'),
 ])
+
+# Inside `Struktur`: the executed forms and the recognizer family get their own sub-folders (room for the 20-entry limit,
+# 2026-10-18, Phase A third pass).
+rules('grammatik/Grammatik/Bausteine/Arena/Struktur', [
+    (r'^Arena(AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Form\w+|HashForm|HashZug|HashZeuge|SibForm|SibZug)$', 'Formen'),
+    (r'^Arena(Erk\w*)$', 'Erkenner'),
+])

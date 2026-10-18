@@ -321,20 +321,38 @@ what `arenaAlloc`'s guard binds.
 | sibling consistency (O6), abstract half | PROVED over the abstract binary tree. `SibF` (first child has parent `j`, next sibling has the parent of `j`); the slots after a leaf in/out (`einfuegen_mitglieder`, `blatt_aus_mitglieder`); `sib_einfuegen_links/rechts` (the new child gets parent `p`, the new sibling the parent of `p`), `sib_blatt_aus_*`; planted defect `sib_ohne_vater_bricht` and concrete witness/defect (`sib_einfuegen_zeuge`, `sib_defekt_bricht`). | `ArenaSibling` |
 | hash chain, abstract half | PROVED over the abstract link function. `HashOkF` (every bucket a `ListOkF`, chains pairwise disjoint); `hash_push` (the slot is on NO bucket), `hash_pop`, `hash_unlink`; witness `hash_push_zeuge`, planted defect `hash_defekt_bricht` (a slot on two buckets). | `ArenaHash` |
 
+**Closed in the third pass (2026-10-18, all in `grammatik/Grammatik/Bausteine/Arena/Struktur/`; sub-folders `Formen/` (executed forms) and `Erkenner/` (recognizer); axioms `propext`/`Classical.choice`/`Quot.sound` at most, no `sorry`; `gabbro_ziel` untouched):**
+
+| Open item of the second pass | Now | Files |
+|---|---|---|
+| recognizer for TREE bodies; bodies that hold a list AND a tree | PROVED, as ONE recognizer. `Erk K a b a'` runs over a declaration `K : Dekl A` of the arena (`liste`, `baum`: one list, one tree, both or neither; `getrennt`: different words). Status per variable `frei` (live, in NEITHER structure) / `liste` / `baum` / `offen`. The invariant is `Dekl.Ok` = free list + `ListOk` + `BaumOk` + DISJOINTNESS of the two (so a slot that leaves the list may be released: it is no tree member). Tree moves are GUARDED forms (the guard is part of the form, its `else` store-free): `haengen` (`check Cp[p] == nil`), `abschneiden` (`narrow` + `check leaf`), `wurzelEin` (`check root == nil`), `wurzelAus`; reading the root/children reuses `linkKopfBind`/`linkNachBind`. **`erk_erhaelt`**: every exit keeps `K.Ok`, a body that falls off meets its abstract state, and no recognized body ends in `leave`/`next`. The old list-only recognizer is REPLACED (it is the case `baum := none`). | `ArenaDekl`, `ArenaErkenner`, `ArenaErkennerLemmas`, `ArenaErkFallAlloc`, `ArenaErkFallListe`, `ArenaErkFallBaum`, `ArenaErkFallSchleife`, `ArenaErkennerBeweis`; forms `ArenaBaumFormG`, `ArenaBaumFormZug`, `ArenaBaumWurzel`; frame `ArenaRahmen` |
+| loops in the recognizer | PROVED for `forever`, `traverse`, `retry`. A loop is recognized when its body, started in a LOOP STATE `k0`, ends in a state at least as strong as `k0` (`Abs.Schwacher`); `traverse`/`retry` fall off in `k0` (`retry` also through the overflow block), `forever` never falls off. `leave`/`next` are not in the vocabulary (an `else` is only `return`/`return why`), which is what makes the rules sound without an exit state. Inductions on the fuel (`foreverLauf`), the index list (`traverseLauf`), the bound (`retryLauf`). | `ArenaErkFallSchleife` |
+| function bodies | PROVED. A function body is an `Endblock`; `ErkE K a e` accepts a run of recognized statements ending in `return`/`return why`; block forms enter through a branch (`if true { <block> }`). `erkE_erhaelt`/`erkE_koerper`: the body returns or fails in a world where `K.Ok` holds. | `ArenaErkEnde` |
+| executed form for the PARENT store | PROVED. `Block.blattEinErst` (first child, `par[i] = p`) and `Block.blattEinBruder` (next sibling, `par[i] = par[p]`) over `blattEin`; `parStore_ausfuehren`, `blattEin{Erst,Bruder}_ausfuehren`; **`sib_haengenErst_zug`, `sib_haengenBruder_zug`, `sib_abschneiden_links/rechts_zug`** keep `BaumOk` AND `SibOk` (`SibF` on a world) on the executed block. | `ArenaSibForm`, `ArenaSibZug` |
+| `revoke` of a subtree | PROVED for the tree and the sibling demand. `unterbaum_aus_ok` (abstract: cutting a whole subtree at a child place keeps the tree well formed; the remaining members are old members outside the subtree; the subtree's slots are not members any more) with right mirror and `sib_unterbaum_aus_*`; **`baum_unterbaum_aus_links/rechts_zug`** on the executed `Block.blattAus` WITHOUT the leaf hypotheses: `BaumOk` and `SibOk` hold on the remaining tree and every slot of the cut subtree is a live ORPHAN, so a release of one slot keeps the tree (`baum_frei`). | `ArenaBaumUnter`, `ArenaSibZug` |
+| bucket head in a TABLE field | PROVED. `BucketKopf` (a field of a second table holds the head), `Block.hashPush/hashPop/hashKopf`, `hashPop_ausfuehren`, `hashUnlink_ausfuehren`; **`hash_push_zug`, `hash_pop_zug`, `hash_unlink_zug`** keep `HashOk` (`HashOkF` with the heads read out of the table field) on the executed blocks; the popped/unlinked slot is live and on NO bucket. | `ArenaHashForm`, `ArenaHashZug` |
+| witnesses and planted defects | RUN by evaluation (`rfl` for short runs, `decide +kernel` for long ones) on real worlds, the soundness theorem applied: tree `baumHang`, `baumSchnitt`; list+tree `kombiHang`, `kombiVersetzen` (a slot moves from the tree to the list), `kombiEnde` (a function body); loops `drain` (`retry`), `drainForever`, `fuell` (`traverse`); parent/revoke `erst_zeuge`, `bruder_zeuge`, `revoke_zeuge`; hash `push_zeuge`, `pop_zeuge`. Defects with NO derivation (soundness theorem + a real run that breaks the invariant): double hang, hang of a non-owned slot (the root below itself), use after release (tree); a slot pushed into the list that is a tree member (`doppelGlied`: each structure well formed, the DISJOINTNESS fails); a slot linked in again on every pass of a `retry`. Planted defects of the forms: a new sibling without the parent of `p`, a child released while still linked, a slot pushed into a second bucket. | `ArenaErkZeugeBaum`, `ArenaErkZeugeKombi`, `ArenaErkZeugeSchleife`, `ArenaErkZeugeSib`, `ArenaErkZeugeEnde`, `ArenaHashZeuge` |
+
+Design notes: (1) the executed forms each carry their FRAME (`LinkRahmen A fs gs σ σ'`: every link field outside `fs` and every link head
+outside `gs` reads as before), so the move of one structure is shown not to touch the other (`Dekl.getrennt`); (2) `Erk` takes the loop and
+guard shapes from `Code/Refine/Loop.lean` only as a reference for the machine-G semantics, the soundness proofs are about `execBlock`;
+(3) a long run is stated through an equation (`erk_koerper_lauf`), because the elaborator unfolds a long `execBlock` term at great cost.
+
 **Still open inside phase 2 (not claimed):**
-* the recognizer for the TREE bodies (the executed tree forms exist; their hypotheses "member of the tree", "empty child
-  place", "leaf" are not yet tracked by an abstract state with guards), and for bodies that hold a list AND a tree on one
-  arena;
-* the recognizer is NOT yet a component of `Akzeptiert` and `Spec.lean`/`gabbro_ziel` do not mention it (8a.3 stays a
-  proposal): there is no generic statement that every ACCEPTED unit's writers of a dynamic structure are `Erk`-derivable,
-  and no `Block` that the Rust checker accepts is translated to an `Erk` derivation (the exporter does not exist for these forms);
-* executed forms for the parent store of the capability tree (`par[i] = p`), for `revoke` (cutting a whole subtree: needs
-  `blatt_aus` for subtrees and the release of each slot), and for a bucket head held in a TABLE field (the hash
-  chain's `hd` is an abstract function today, not a field read through `Wert.umTyp`);
-* a recognizer rule for loops (`traverse`, `retry`, `forever`) over structures: a body with a loop that moves a link is
-  not derivable;
-* the vocabulary is closed: any other store into a link field or head, a `bind` that copies an owned index (aliases),
-  a call that may move a link, has no derivation and is refused; widening it means a new constructor with its theorem;
+* the recognizer is NOT yet a component of `Akzeptiert` and `Spec.lean`/`gabbro_ziel` do not mention it (8a.3 stays a proposal): there is
+  no generic statement that every ACCEPTED unit's writers of a dynamic structure are `ErkE`-derivable, and no `Block` that the Rust checker
+  accepts is translated to an `ErkE` derivation (the exporter does not exist for these forms); `ErkE` is a Prop (a certificate), there is no Bool
+  decision procedure;
+* calls: a recognized body calls no function (`Erk` has no call constructor); a writer that calls a helper needs the callee's contract (its
+  `ensures` must say what it does to the structure);
+* the release of EVERY slot of a revoked subtree: after the cut the orphans are live and releasable one by one, but a walk that frees them all is a
+  loop whose abstract state (the not yet released orphans) the recognizer does not carry; `revoke` as one recognized body is therefore only the cut;
+* a recognizer for hash chains (`HashOk` has executed forms and witnesses, `Dekl` has no hash component) and for the sibling demand (`SibOk` has
+  executed forms, the recognizer does not track the parent store: a body that hangs a slot with the plain `haengen` and no parent store is accepted
+  although it breaks `SibOk`; the capability tree needs `Dekl` to name the parent field and the moves to be the `blattEinErst/Bruder` forms);
+* `leave`/`next` inside loop bodies (a loop body can only exit by `return`/`return why` or by falling off);
+* the vocabulary is closed: any other store into a link field or head, a `bind` that copies an owned index (aliases), has no derivation and is
+  refused; widening it means a new constructor with its theorem;
 * a link field that holds an index of ANOTHER arena (decision (b) says: not in scope).
 
 ### 8a.2 Concurrency of arenas (O20): design note, phase 3, nothing built yet
@@ -362,36 +380,84 @@ what `arenaAlloc`'s guard binds.
 * **Next steps:** (1) the section theorem `abschnitt_erhaelt`: a body built only from the proved moves preserves
   `S.inv L` from acquire to release; (2) `dynGrow_fremd` (DONE 2026-10-18 as `nachGrow_gleich`, `grow_liste`, `grow_baum` in `ArenaWachs`); (3) the slot-ownership predicate for the ABA point (the recognizer's `frei` status is the single-thread form of it).
 
-### 8a.3 Proposal (NOT applied): the `Spec.lean` diff for step 4
+### 8a.3 Proposal (NOT applied): the `Spec.lean` diff for step 4 (revised 2026-10-18, third pass)
 
-Today an invariant is an `Expr ... .bool` over a table's carriers (`Programm.invariante`, `InvTraeger`, `InvRuheG`,
-`InvSichtG`). A chain or a tree is not a bounded boolean expression (no quantifier over a growing index set), so the
-dynamic structures need their own declaration form and their own `Holds`, beside `D.invs`, not inside it.
+**Design change against the first proposal.** The first proposal added two new legs `dynRuhe`/`dynSicht` beside `invRuhe`/`invSicht`. The
+third pass shows a cheaper and more honest route: **a declared arena is one more INVARIANT NAME of `D.invs` whose meaning is `Dekl.Ok`
+instead of the evaluation of an `Expr`**. Then `invRuhe` (every invariant that reads only its carriers and held at the start holds
+whenever no thread is inside a writer) and `invSicht` (the same for a thread that holds a guard) become contentful for dynamic structures
+WITHOUT a new leg, with the machinery that proves them today (`invRuheG_aus`, `InvZu`, `schuldet`). What changes is where the obligation
+"every writer restores the invariant at its return" comes from: for an ordinary invariant it is user logic (b) (`InvGutSA`); for an arena
+invariant it is the recognizer, a premise on the unit that Lean checks (`erkE_koerper`).
 
-1. `Deklaration` (Kern, Syntax.lean) gets one field with a default, so every old declaration keeps its meaning:
-   `dyn : List DynForm := []` where a `DynForm` names the arena table, counter, free head, free link and ONE structure
-   `liste (kopf, lnk) | baum (wurzel, lft, rgt)` (the data of `LinkFeld`/`LinkKopf` in `ArenaListe.lean`; the types move
-   down into Kern so that `Spec` can mention them, the lemmas stay in Bausteine).
-2. `Spec.lean` gets two legs, shaped exactly like `invRuhe`/`invSicht`:
-   * `DynRuhe P M0 M := ∀ s ∈ D.dyn, DynHaelt s (M0.speicher.welt []) → DynZu M s → DynHaelt s (M.speicher.welt [])`
-   * `DynSicht P M0 M := ∀ s ∈ D.dyn, DynHaelt s (M0 ...) → ∀ t, (no frame in a writer of s) → (holds a guard of s's table)
-     → DynHaelt s (M ...)`
-   with `DynHaelt s σ := FreiOk ∧ ListOk (or BaumOk)` and `DynZu` = no unfinished thread has a frame of a function
-   whose effects write one of the structure's fields or words. For a shared arena `S.inv L` additionally contains `DynHaelt`
-   (`sperrWechsel` then carries the section theorem of 8a.2).
-3. `Ziel` gets `dynRuhe`, `dynSicht` as new conjuncts; every old conjunct stays word for word. The NOT CLAIMED entry
-   "dynamic unbounded data structures" shrinks to: heap without a ceiling, recursive types, links across arenas,
-   hash chains until proved.
-4. The premise side: (a) gets a rule that every function that writes a structure field or word is a `maintains`
-   function whose body the Lean recognizer matches against the proved moves; (b) stays as is (user logic: `requires`,
-   `ensures`); a DynForm in a unit is only exported when the recognizer accepts every writer.
-5. Proof: `gabbro_ziel` gets the two legs from the section theorem (8a.2) and the preservation theorems of 8a.1 by the
-   same induction over machine steps that proves `invRuhe`; the axioms stay `propext`, `Classical.choice`, `Quot.sound`.
-   Review: two independent verdicts as for every extension of the goal (AGENTS.md section 1).
-   Status 2026-10-18: the premise of item 4 (a recognizer whose acceptance yields the invariant) is PROVED for list bodies
-   (`erk_erhaelt`, 8a.1); still missing before this diff may be applied: the tree recognizer, loops, the wiring of the recognizer
-   into `Akzeptiert` (a Bool `dynB` over the writers of every declared structure), the per-structure `DynForm` declaration in
-   `Kern/Syntax`, and the lock-section theorem of 8a.2. Until those exist the diff would claim more than is proved; it is a proposal.
+All of it is modelled in Lean already except the wiring; nothing below is applied, and `Spec.lean`, the Rust checker and the exporter are unchanged.
+
+**D1. `Kern/Syntax` (the declarations move down; their lemmas stay in `Bausteine/Arena/`).** New file `Kern/Syntax/Arenen.lean`, imported by
+`Syntax.lean` before `Programm`, holding only the STRUCTURES: `ArenaForm`, `DynForm`, `FreiForm`, `LinkFeld`, `LinkKopf`, `ListDekl`,
+`BaumDekl`, `Dekl`. (They mention only `Deklaration`; `Wert.umTyp` is needed for the readers `wert`/`st`, so the readers move with them.)
+`Programm` gets ONE field with a default, so every old program keeps its meaning:
+```
+structure Programm where
+  invariante : ...                                   -- unchanged
+  ...
+  unterbricht : D.Fn → Bool := fun _ => false        -- unchanged
++ /-- `i` names the invariant of a declared ARENA (Phase A): its meaning is `Dekl.Ok`, not the evaluation of `invariante i`. -/
++ arena : D.Inv → Option (Σ A : FreiForm D, Dekl A) := fun _ => none
+```
+and `Deklaration` needs no new field: the carriers of an arena invariant are the arena's table and the words its `Dekl` reads, listed in
+`D.traeger i` as for any invariant (`D.traeger`, `D.braucht` give the guards).
+
+**D2. `Spec.lean` / `ZielOrt/Rahmen/ZielOrtInv.lean`: the meaning of an invariant.**
+```
+  def InvHaelt (P : Programm D) (i : D.Inv) (σ : World D) : Prop :=
+-   wahr? (eval σ (P.invariante i) σ .nil) = true
++   match P.arena i with
++   | none => wahr? (eval σ (P.invariante i) σ .nil) = true
++   | some s => s.2.Ok σ
+```
+`InvTraeger P i` (the invariant reads only its declared carriers) is proved for an arena invariant by a lemma `dekl_ok_traeger` (the words
+`Dekl.Ok` reads are the words `D.traeger i` lists) instead of the `.orte` computation; the premise "the arena declares its words in
+`D.traeger`" is a field check of the exporter (a Prop in the unit, see D4). `InvRuheG`, `InvSichtG`, `InvAmRueck`, `schuldet` are used
+unchanged; `Ziel`/`ZielF`/`ZielX`/`ZielFX` get NO new conjunct, every old conjunct stays word for word.
+
+**D3. The writer obligation for an arena invariant (premise side).** For `i` with `P.arena i = some s`, `NutzerPflicht`'s `InvGutSA` is not
+demanded (the user does not prove it); instead the unit carries, for every function that owes `i` (`schuldet f i = true`), a recognizer
+derivation of its body:
+```
++ structure DynZeuge (P : Programm D) : Prop where
++   schreiber : ∀ i ∈ D.invs, ∀ s, P.arena i = some s → ∀ f, schuldet f i = true → ErkE s.2 Abs.leer (P.rumpf f)
+```
+`ErkE` is a Prop; the derivation is a proof term the EXPORTER writes and Lean's kernel checks, so nothing about the Rust side is trusted.
+Where it lives: as a field of `Einheit` (`dynZeuge : DynZeuge P`, a Prop-valued field with no default, so every unit carries it; for a
+program without arenas it is `by intro i hi s hs; simp [Programm.arena] at hs`-trivial), not in the Bool of `AkzeptiertSpec`
+(the Bool would need a decision procedure for `Erk`, which does not exist and would need `DecidableEq` on `Block`). The one generic theorem
+that connects it to the proof of `invRuhe`:
+```
++ theorem invGutS_arena : ErkE s.2 Abs.leer (P.rumpf f) → <the arena part of InvGutSA>   -- from `erkE_koerper`
+```
+`InvGutSA` runs `execEndH` (lock invariants and havoc); a recognized body has no `locks` statement, so `execEndH = execEnd` on it
+(a generic lemma `execEndH_eq_execEnd`, to be proved: induction over `Endblock` with no `Stmt.locks`).
+
+**D4. The statement.** `gabbro_ziel` gains no conjunct; the NOT CLAIMED entry "dynamic unbounded data structures" shrinks to: a heap without a
+ceiling, recursive types, links across arenas, hash chains and the sibling demand until their recognizers exist, bodies that call a function, a
+walk that releases every slot of a revoked subtree, `leave`/`next` in loop bodies. `Einheit` gains the one field of D3.
+
+**D5. The proof of the new content.** `invRuheG_aus` needs, for every invariant, (i) the invariant at every function RETURN of a function that
+owes it (`InvAmOrtG`, here from `invGutS_arena`), (ii) the invariant at the start memory (a hypothesis of the leg), (iii) that a step of a thread
+outside every writer of `i` moves no carrier of `i` (the footprint of `schuldet`: `TraegerGleich`). All three are statements about carriers and
+returns, not about the shape of the predicate, so the induction over machine steps is the existing one; the two places that read the predicate
+(`InvTraeger`, the evaluation) are D2. Review: two independent verdicts, as for every extension of the goal (AGENTS.md section 1).
+
+**What is still missing before this diff may be applied** (each named, none hidden):
+ 1. the section theorem for SHARED arenas (8a.2: `S.inv L` containing `Dekl.Ok`, `abschnitt_erhaelt` from acquire to release) and the ownership predicate of
+    the ABA point; for a per-thread arena the three points of D5 suffice;
+ 2. the bridge from the machine-G small steps of a writer's frame to the big-step `execEnd` that `erkE_koerper` talks about
+    (`RufAdaequat` has it for the sequential semantics; the recognized fragment is a subset of the covered statements, but the statement is not proved);
+ 3. the generic lemma `execEndH_eq_execEnd` for bodies without `Stmt.locks`, and `dekl_ok_traeger`;
+ 4. the exporter writing `ErkE` derivations (Rust `lean_g.rs`; the recognizer's vocabulary is closed, a form outside it stays refused by name);
+ 5. calls inside writers (the recognizer has no call constructor), the hash and sibling recognizers, the release of a whole revoked subtree;
+ 6. the migration D1 (moving the structures into `Kern/Syntax` renames modules and needs a full rebuild of everything above `Syntax.lean`).
+Until those exist the diff would claim more than is proved; it is a proposal.
 
 ## 9. Re-measuring
 

@@ -91,6 +91,17 @@ theorem blatt_aus_mitglieder {c : Int} {l l' r : Int → Int} {w p i : Int} {Liv
   refine ⟨⟨S0, hb, hperm.symm.subset (List.mem_cons_of_mem _ hj)⟩, fun e => ?_⟩
   exact (List.nodup_cons.mp hnd').1 (e ▸ hj)
 
+/-- **Leaf out at the right place** (the mirror): every slot of the new tree was in the old tree, and `i` is not in it. -/
+theorem blatt_aus_rechts_mitglieder {c : Int} {l r r' : Int → Int} {w p i : Int} {Live : Int → Prop}
+    (h : BaumOkF c l r w Live) (hp : InBaum c l r w p) (hpi : r p = i)
+    (h0i : 0 ≤ i) (hi : i < c) (hll : l i = c) (hrl : r i = c)
+    (hrp : r' p = c) (hor : ∀ j, j ≠ p → r' j = r j) :
+    ∀ j, InBaum c l r' w j → InBaum c l r w j ∧ j ≠ i := by
+  intro j hj
+  have := blatt_aus_mitglieder (l := r) (r := l) (l' := r') h.spiegel hp.spiegel hpi h0i hi hrl hll hrp hor j
+    hj.spiegel
+  exact ⟨this.1.spiegel, this.2⟩
+
 /-! ## 2. The demand is kept -/
 
 /-- **Leaf in as the first child:** the new child's parent is `p`. -/

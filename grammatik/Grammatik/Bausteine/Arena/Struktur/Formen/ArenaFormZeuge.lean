@@ -12,8 +12,8 @@
     * `grow_zeuge`    -- a commit by `1` on a world whose committed word is below the ceiling keeps list and free list.
 -/
 import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaumForm
-import Grammatik.Bausteine.Arena.Struktur.ArenaWachs
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
 
 namespace Gabbro.Grammatik
 
@@ -48,7 +48,7 @@ theorem push_zeuge (O : Orakel FD) (passes : Nat)
             (fgdarf _) .nil) w0 rho3
         = .ok σ' rho3 ∧
       ListOk FA LL LG σ' ∧ LG.st σ' = 3 ∧ LL.wert σ' 3 = 2 := by
-  obtain ⟨σ1, he1, hl1, -, -, hg, hli, -, -⟩ := liste_push_zug O passes R LL LG (V := FV) (l := false)
+  obtain ⟨σ1, he1, -, hl1, -, -, hg, hli, -, -⟩ := liste_push_zug O passes R LL LG (V := FV) (l := false)
     (Γ := [Ty.index (FD.count FA.tab)]) (Λ := []) (Λ' := []) .here rfl fdarf rfl (fgdarf _) .nil w0
     rho3 listOk_w0 freiOk_w0 (by rw [rho3_n]; exact lebt_3)
     (by rw [lg_w0, rho3_n]; exact nicht_auf_3)
@@ -62,7 +62,7 @@ theorem pop_zeuge' (O : Orakel FD) (passes : Nat)
       execBlock (V := FV) O passes R
           (Block.linkPop (l := false) (Γ := []) (Λ' := []) LL LG rfl (fgdarf _) fdarf voll .nil) w0 .nil = .ok σ' .nil ∧
       ListOk FA LL LG σ' ∧ LG.st σ' = 0 ∧ FA.Lebt σ' 2 := by
-  obtain ⟨σ1, k, he1, hkn, hl1, -, -, hnot, hlebt, hg, -⟩ := liste_pop_zug O passes R LL LG (V := FV) (l := false) (Γ := [])
+  obtain ⟨σ1, k, he1, -, hkn, hl1, -, -, hnot, hlebt, hg, -⟩ := liste_pop_zug O passes R LL LG (V := FV) (l := false) (Γ := [])
     (Λ := []) (Λ' := []) rfl (fgdarf _) fdarf voll .nil w0 .nil listOk_w0 freiOk_w0 (by rw [lg_w0]; decide)
   refine ⟨σ1, he1, hl1, ?_, ?_⟩
   · rw [hg, lg_w0, ll_w0]; rfl
@@ -92,7 +92,7 @@ theorem blattEin_zeuge (O : Orakel FD) (passes : Nat)
       execBlock (V := FV) O passes R
           (Block.blattEin (l := false) (Λ' := []) RR LL .here (.there .here) rfl fdarf .nil) w0 rho23 = .ok σ' rho23 ∧
       BaumOk FA LL RR LG σ' ∧ InBaum 4 (LL.wert σ') (RR.wert σ') (LG.st σ') 3 := by
-  obtain ⟨σ1, he1, h1, h2, -, -⟩ := baum_einfuegen_rechts_zug O passes R LG LL RR (V := FV) (l := false)
+  obtain ⟨σ1, he1, -, h1, h2, -, -, -⟩ := baum_einfuegen_rechts_zug O passes R LG LL RR (V := FV) (l := false)
     (Λ := []) (Λ' := []) (by decide) .here (.there .here) rfl fdarf .nil w0 rho23 freiOk_w0 baumOk_w0
     hp_2 (by rw [rr_w0]) (lebt_3) nicht_in_3
   exact ⟨σ1, he1, h1, h2⟩
@@ -109,7 +109,7 @@ theorem blattAus_zeuge (O : Orakel FD) (passes : Nat)
           (Block.blattAus (l := false) (Γ := [Ty.index (FD.count FA.tab)]) (Λ' := []) LL .here rfl fdarf
             (voll) .nil) w0 rho2 = .ok σ' rho2 ∧
       BaumOk FA LL RR LG σ' ∧ ¬ InBaum 4 (LL.wert σ') (RR.wert σ') (LG.st σ') 0 ∧ FA.Lebt σ' 0 := by
-  obtain ⟨σ1, k, he1, hkn, h1, -, -, h2, h3⟩ := baum_blatt_aus_links_zug O passes R LG LL RR (V := FV) (l := false)
+  obtain ⟨σ1, k, he1, -, hkn, h1, -, -, h2, h3, -, -⟩ := baum_blatt_aus_links_zug O passes R LG LL RR (V := FV) (l := false)
     (Λ := []) (Λ' := []) (by decide) .here rfl fdarf voll .nil w0 rho2 freiOk_w0 baumOk_w0
     hp_2 (by show LL.wert w0 2 < 4; rw [ll_w0]; decide)
     (by show LL.wert w0 (LL.wert w0 2) = 4; rw [ll_w0, ll_w0]; decide)
@@ -130,7 +130,7 @@ theorem unlink_zeuge (O : Orakel FD) (passes : Nat)
           (Block.linkUnlink (l := false) (Γ := [Ty.index (FD.count FA.tab)]) (Λ' := []) LL .here rfl fdarf
             voll .nil) w0 rho2 = .ok σ' rho2 ∧
       ListOk FA LL LG σ' ∧ ¬ Auf 4 (LL.wert σ') (LG.st σ') 0 ∧ FA.Lebt σ' 0 ∧ LL.wert σ' 2 = 4 := by
-  obtain ⟨σ1, k, he1, hkn, h1, -, -, h2, h3, hnp, -⟩ := liste_unlink_zug O passes R LL LG (V := FV) (l := false)
+  obtain ⟨σ1, k, he1, -, hkn, h1, -, -, h2, h3, hnp, -⟩ := liste_unlink_zug O passes R LL LG (V := FV) (l := false)
     (Λ := []) (Λ' := []) .here rfl fdarf voll .nil w0 rho2 listOk_w0 freiOk_w0
     (by show Auf 4 (LL.wert w0) (LG.st w0) 2; rw [lg_w0]; exact ⟨[2, 0], listeKette_w0, by simp⟩)
     (by show LL.wert w0 2 < 4; rw [ll_w0]; decide)
