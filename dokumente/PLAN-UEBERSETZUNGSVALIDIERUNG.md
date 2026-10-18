@@ -706,7 +706,7 @@ and `ri=` leaf items, no theorem); elab `U` = `elabU`/`lowerAllg` lowers it; cor
 | files that elaborate (`elabU`), all of them also lower | 9 / 170 | 9 / 170 | 9 / 170 | 13 / 170 | **17 / 170** |
 | exporter-certified programs (29 in `beispiele/`; the register file is gone, the list is in git at 3068f537) elaborated | 9 / 29 | 9 / 29 | 9 / 29 | 13 / 29 | **17 / 29** |
 | rules, reader S / P / R / X (190 rules) | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 | 158 / 11 / 22 / 0 | 158 / 11 / 22 / 0 | 159 / 12 / 20 / 0 |
-| rules with a printer, a round trip (proved P + measured M) | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) | **118, 28 + 90** |
+| rules with a printer, a round trip (proved P + measured M) | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) | **118, 34 + 84** |
 | rules with an elaboration | 58 | 58 | 58 | 59 | 66 |
 | function bodies / printable items of the corpus that print and read back as the same tree | n/a | n/a | n/a | n/a | **429 / 429, 1020 / 1020** (of 1287 leaf items) |
 
@@ -725,8 +725,12 @@ contract end (not under `locks`). 1164, 190 and 193 lift. (b) Statics: `UGlob`, 
 (types, every statement form), `Print/Item` (partial: `entry`, `device`, `format`, `arena`, `walk`, `assume`, `reason`,
 `atomic`, `syscall`, `target` ... answer `none`), the spelling of the predicate forms in `druckToks`. (d) The English
 rename of the elaborator's data types, fields and refusal strings (`tabs`, `locks`, `roots`, `names`, `kinds`, `held`,
-`lockBeg`, `ifBeg`, ...). Open in this phase: the printers of the other item kinds, a THEOREM for the statement
-round trip (it is measured), atomics, tagged types, lock invariants and gates.
+`lockBeg`, `ifBeg`, ...). (e) The first statement-level round-trip THEOREM (`Round/RundlaufAnw`..`3`):
+`rundlauf_block_einfach` -- a block of `return`/`leave`/`next` and number `let` over `gutPrim` expressions prints and
+reads back through `parseBlock` as the same tree (witness `rundlauf_block_einfach_zeuge`, planted defect
+`schliesse_ende_noetig`: `schliesseBlock` reads a trailing `return` as the ender). Open in this phase: the printers of
+the other item kinds, the statement theorem beyond the straight-line core (assignments, calls, `if`, nested blocks:
+measured only), atomics, tagged types, lock invariants and gates.
 
 Findings. (1) The expression round trip is a theorem on the `gut` shapes (`Rundlauf3` names the nesting blocker); the
 statement and item round trips are measured, and the `SExpr.ext` forms now have a spelling in `druckToks` (decided per
@@ -860,17 +864,17 @@ and `bank` bodies (`R`).
 | `efflist` | fn | S | E | M | U |  |  |
 | `eff` | fn | S | E | M | U | 166 |  |
 | `breakstmt` | stmt | S | E | M | . | 2 | `waive` |
-| `block` | stmt | S | E | M | U |  | `SAnw.block` |
-| `endblock` | stmt | S | E | M | U |  |  |
-| `endstmt` | stmt | S | E | M | U | 137 |  |
+| `block` | stmt | S | E | P | U |  | `SAnw.block` |
+| `endblock` | stmt | S | E | P | U |  |  |
+| `endstmt` | stmt | S | E | P | U | 137 |  |
 | `stmt` | stmt | S | E | M | U |  | `SAnw`; no printer; `start { }` is read but SYNTAX.md has no rule for it |
-| `leavestmt` | stmt | S | E | M | U | 10 |  |
-| `nextstmt` | stmt | S | E | M | U | 4 |  |
+| `leavestmt` | stmt | S | E | P | U | 10 |  |
+| `nextstmt` | stmt | S | E | P | U | 4 |  |
 | `advstmt` | stmt | S | E | M | . | 3 |  |
 | `awaitload` | stmt | P | E | M | . | 8 | payload list raw |
 | `exchstmt` | stmt | R | E | M | . | 6 | transform raw |
 | `xform` | stmt | R | E | M | . | 6 |  |
-| `letstmt` | stmt | S | E | M | U | 88 | the type ascription is read (`bind`, `bindElse`, `bindLib`, `alloc`) |
+| `letstmt` | stmt | S | E | P | U | 88 | the type ascription is read (`bind`, `bindElse`, `bindLib`, `alloc`) |
 | `assign` | stmt | S | E | M | U |  | slot writes only in elab |
 | `stateassign` | stmt | S | E | M | . | 0 |  |
 | `exprstmt` | stmt | S | E | M | U |  | direct calls only in elab |
@@ -934,6 +938,14 @@ and `bank` bodies (`R`).
 | `requiresprofile` | assume | S | . | . | . | 2 |  |
 | `profileentry` | assume | S | . | . | . |  |  |
 | `check` | assume | S | . | . | . | 3 |  |
+
+rules: 191 rows, 190 distinct rule names (SYNTAX.md defines 190; `int` is defined twice)
+reader   P=12, R=20, S=159
+printer  .=73, E=118
+rtrip    .=73, M=84, P=34
+elab     .=125, U=66
+rules with all four columns present (round trip: proved on `gut` shapes (P) or measured (M)): 57
+corpus: 170 files; lex ok 170; whole-file parse ok 170; elab ok 17; lower ok 17
 
 rules: 191 rows, 190 distinct rule names (SYNTAX.md defines 190; `int` is defined twice)
 reader   P=12, R=20, S=159

@@ -5118,8 +5118,11 @@ initialiser (`sp0GlobWert`, `sp0Of_glob`, `sp0OkB_glob`) and an initialiser outs
 (`let`, `if`, `return`, `traverse`, `locks`, statics; each with a refused twin). Measured, not proved: 170 of 170 corpus
 files parse as a whole, 17 elaborate and lower (`Parser/Cover/Census.lean`, `instrumente/parser-deckung.py`); 429 of 429
 function bodies and 1020 of 1020 printable items print and read back as the same tree (`Print/Stmt`, `Print/Item`,
-`Print/Proben`; the expression round trip is the theorem, the statement and item round trips are not). NOT proved: a
-round-trip theorem for statements or items; elaboration beyond tables, locks, statics and `impl fn` over integers with
+`Print/Proben`). Proved: the expression round trip on the `gut` shapes and, new, the statement round trip of the
+straight-line core: `parseStmt_einfach`, `parseStmts_einfach`, `rundlauf_block_einfach` (a block of `return`, `leave`,
+`next` and number `let` over `gutPrim` expressions, hypothesis `EndeGut`; witness `rundlauf_block_einfach_zeuge`, planted
+defect `schliesse_ende_noetig`; `Round/RundlaufAnw`..`3`). NOT proved: a round-trip theorem for the other statements
+(assignments, calls, `if`, nested blocks) or for items; elaboration beyond tables, locks, statics and `impl fn` over integers with
 `let`/`if`/`traverse`/`return`. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
 
 ## 78. `Code`: the target-independent low-level language and the lowering refinement (Track L, 2026-10-18, `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a)
