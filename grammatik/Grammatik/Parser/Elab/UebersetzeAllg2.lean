@@ -862,7 +862,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .narrowBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

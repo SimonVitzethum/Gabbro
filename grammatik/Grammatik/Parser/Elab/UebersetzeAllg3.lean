@@ -180,6 +180,23 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
             rw [nach_eq u k.callee Λ]
             exact b
           .ok (Block.bindCall (D := declOf u) k.callee k.args hE k.hp hr b', r)
+  | Γ, fn, n + 1, Λ, pe, .narrowBeg x lo hi :: rest =>
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        match lowVar Γ j (.int l1 h1) with
+        | .error e => .error e
+        | .ok v =>
+          match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+          | .error e => .error e
+          | .ok (sonst, .blkEnd :: rest') =>
+            match lowSeqL (l := l) u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe rest' with
+            | .error e => .error e
+            | .ok (b, r) => .ok (Block.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
+          | .ok (_, _) => .error "lower: a narrow is not closed"
+      | _ => .error "lower: narrow of a non-number"
   | Γ, fn, n + 1, Λ, pe, .ret v :: rest =>
     match lowRetStmt u caller Γ fn Λ pe v with
     | .error e => .error e
@@ -250,6 +267,80 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .ok (body, .blkEnd :: rest') => .ok (Stmt.traverse t iv body, rest')
         | .ok (_, _) => .error "lower: a traverse is not closed"
   | _, _, _ + 1, _, _, _, _ => .error "lower: not a structured statement"
+
+/-- The `else` branch of a narrowing as an end block: its statements and the ender (`return`, `leave`, `next`),
+    which must not fall through; the marker `blkEnd` that closes the branch is left to the caller. -/
+def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
+    (Γ : Ctx) → UFn → Nat → (Λ : List (Res (declOf u))) → AtTop u caller Λ → List UStmt →
+    Except String (Endblock (declOf u) (verOf u caller) l Γ Λ × List UStmt)
+  | _, _, 0, _, _, _ => .error "lower: blocks nested too deep"
+  | _, _, _ + 1, _, _, [] => .error "lower: an else branch falls through"
+  | _, _, _ + 1, _, _, .blkEnd :: _ => .error "lower: an else branch falls through"
+  | _, _, _ + 1, _, _, .ifElse :: _ => .error "lower: an else branch falls through"
+  | Γ, fn, _ + 1, Λ, pe, .ret v :: rest =>
+    match pe with
+    | none => .error "lower: return under locks has no G form"
+    | some ⟨h⟩ =>
+      match lowErg u caller Γ fn v with
+      | .error e => .error e
+      | .ok erg => .ok (by subst h; exact Endblock.ret erg (endPerm_ok u caller), rest)
+  | _, _, _ + 1, _, _, .leave _ :: rest =>
+    if h : l = true then .ok (Endblock.leave h, rest) else .error "lower: leave outside a traverse"
+  | _, _, _ + 1, _, _, .next _ :: rest =>
+    if h : l = true then .ok (Endblock.next h, rest) else .error "lower: next outside a traverse"
+  | Γ, fn, n + 1, Λ, pe, .bind x d v :: rest =>
+    match lowBindWert u Γ Λ fn d v with
+    | .error e => .error e
+    | .ok s =>
+      match lowEndL (l := l) u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.bind s.term b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindB x v :: rest =>
+    match lowEns u Γ Λ fn none v with
+    | .error e => .error e
+    | .ok ev =>
+      match lowEndL (l := l) u caller (.bool :: Γ) (fn.mitBindungB x) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.bind ev b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindMut x lo hi v :: rest =>
+    match lowWertAt u Γ Λ fn lo hi v with
+    | .error e => .error e
+    | .ok ev =>
+      match lowEndL (l := l) u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.bind ev b, r)
+  | _, _, _ + 1, _, _, .bindCall .. :: _ =>
+    .error "lower: a value call in an else branch has no G form (Endblock lacks bindCall)"
+  | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
+    .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
+  | Γ, fn, n + 1, Λ, pe, .lockBeg g :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.lockBeg g) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .ifBeg c :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.ifBeg c) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, s :: rest =>
+    match lowStmtL u caller Γ fn Λ s with
+    | .error e => .error e
+    | .ok st =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
 end
 
 /-! ## Bodies and program assembly -/
@@ -273,6 +364,8 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       | .ok e => .ok (Endblock.bind s.term e)
   | _, _, _ + 1, .bindCall .. :: _, _ =>
     .error "lower: a value call at the top level of a body has no G form (Endblock lacks bindCall)"
+  | _, _, _ + 1, .narrowBeg .. :: _, _ =>
+    .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
   | Γ, fn, n + 1, .bindB x v :: rest, r =>
     match lowEns u Γ (resOf u caller) fn none v with
     | .error e => .error e

@@ -154,6 +154,9 @@ inductive UStmt
   | setVar : String → USide → UStmt
   /-- `let x = f(..);` (`Block.bindCall`): the callee's value, bound at the callee's result type. -/
   | bindCall : String → String → List UArg → UStmt
+  /-- `narrow x to lo .. hi else { .. }` (`Block.narrow`): `narrowBeg x lo hi`, the statements of the `else`
+      branch with its ender (`ret`/`leave`/`next`), `blkEnd`; the rest of the block reads `x` at `lo .. hi`. -/
+  | narrowBeg : String → Int → Int → UStmt
   | setVarB : String → UEns → UStmt
   /-- `if c { … } else { … }` is flat too: `wennAuf c`, the then-statements, `sonst`, the else-statements,
       `zu` (an `else if` is an `if` in the else part; an absent `else` is an empty one). -/
@@ -1471,11 +1474,58 @@ def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option 
                                       types := .int lo hi :: ctx.types,
                                       bits := uParamBreite ty :: ctx.bits })
 
-/-- `let [mut] x [: T] = v;`: a number (the binding carries the computed range of `v`, or with `mut` the
-    declared one) or a truth value; the statement and the context for the rest of the block. -/
+/-- The context after a local `x` of kind `k` and type `ty`. -/
 def uMitLokal (ctx : UCtx) (x : String) (k : UParamArt) (ty : Ty) (muts : List String) : UCtx :=
   { ctx with names := x :: ctx.names, kinds := k :: ctx.kinds, types := ty :: ctx.types, bits := 0 :: ctx.bits, muts := muts }
 
+/-- The value of a bound of a narrowed range: a numeral, a negated numeral or a named constant. -/
+def uNarrowWert (ctx : UCtx) : List Token → Option Int
+  | [.num n] => some (Int.ofNat n)
+  | [.zeichen "-", .num n] => some (-(Int.ofNat n))
+  | [.ident c] => (ctx.lits.find? (fun k => strEq k.1 c)).map (·.2)
+  | [.wort c] => (ctx.lits.find? (fun k => strEq k.1 c)).map (·.2)
+  | _ => none
+
+/-- A range text `lo .. hi` / `lo ..< hi` split at the dots: the left tokens, whether the upper bound is
+    exclusive, the right tokens. -/
+def uTeileBereich : List Token → List Token → Option (List Token × Bool × List Token)
+  | _, [] => none
+  | acc, .zeichen ".." :: rest => some (acc.reverse, false, rest)
+  | acc, .zeichen "..<" :: rest => some (acc.reverse, true, rest)
+  | acc, t :: rest => uTeileBereich (t :: acc) rest
+
+/-- The target range of `narrow x to T else ..`: a range (`lo .. hi`, `lo ..< hi`) or a type word. -/
+def uNarrowBereich (ctx : UCtx) (t : String) : Except String (Int × Int) :=
+  match lex t with
+  | .error _ => .error "narrow range without G form"
+  | .ok toks0 =>
+    let toks := toks0.filter (fun k => match k with | .ende => false | _ => true)
+    match uTeileBereich [] toks with
+    | some (l, ex, r) =>
+      match uNarrowWert ctx l, uNarrowWert ctx r with
+      | some a, some b => .ok (a, if ex then b - 1 else b)
+      | _, _ => .error "narrow bound without G form"
+    | none =>
+      match toks with
+      | [.ident n] => uTypName ctx.alias n
+      | [.wort n] => uTypName ctx.alias n
+      | _ => .error "narrow range without G form"
+
+/-- The binding the rest of the block reads after a narrowing: `x` at the narrowed range. -/
+def uNarrowKopf (ctx : UCtx) (x : String) (t : String) : Except String (Int × Int × UCtx) :=
+  match uParamNr ctx x with
+  | .error e => .error e
+  | .ok j =>
+    match uArtBei ctx.kinds j with
+    | .ok .int =>
+      match uNarrowBereich ctx t with
+      | .error e => .error e
+      | .ok (lo, hi) =>
+        .ok (lo, hi, uMitLokal ctx x UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m x)))
+    | _ => .error "narrow of a non-number"
+
+/-- `let [mut] x [: T] = v;`: a number (the binding carries the computed range of `v`, or with `mut` the
+    declared one) or a truth value; the statement and the context for the rest of the block. -/
 def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : SExpr) :
     Except String (UStmt × UCtx) :=
   let muts : List String := if mu then x :: ctx.muts else ctx.muts.filter (fun m => !strEq m x)
@@ -1641,6 +1691,21 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx' rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok (st :: xs, cE)
+  | f + 1, ctx, .trim (.variable x) t (.block ss e) :: rest =>
+    match uNarrowKopf ctx x t with
+    | .error err => .error err
+    | .ok (lo, hi, ctx') =>
+      match uAnwReihe tabs koepfe f ctx ss with
+      | .error err => .error err
+      | .ok (body, ctxB) =>
+        match (match e with
+            | .none => .error "narrow else falls through"
+            | .some _ => uEndeStmt ctxB e : Except String (List UStmt)) with
+        | .error err => .error err
+        | .ok endS =>
+          match uAnwReihe tabs koepfe f ctx' rest with
+          | .error err => .error err
+          | .ok (xs, cE) => .ok ([UStmt.narrowBeg x lo hi] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
   | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
     if g then .error "shared lock without G form"
     else
@@ -2207,7 +2272,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2244,7 +2309,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
