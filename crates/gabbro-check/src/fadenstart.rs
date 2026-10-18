@@ -9,24 +9,20 @@
 //! | code | rule | where |
 //! |---|---|---|
 //! | `N458` | every root is an `impl fn` with a body, no parameters, no result and no signature-held lock | here |
-//! | `N459` | no root twice in one statement (`start { h, h }`) | here |
-//! | `N460` | no root the runtime starts already: a `concurrent` member, an `entry` root, a `boot` dispatch | here |
 //! | `N461` | no `start` while the starter holds something: inside `locks`, `observes`, `breaking`, or under `requires Held` | here |
 //! | `N462` | every started root is pool-safe: each carrier its graph touches that anyone writes is guarded, atomic or per-core | `fusswache2.rs` (`startfaeden`) |
 //! | -- | the roots are edges of the call graph: effects, locks and incompleteness reach the starter (`E008`, `E009`) | `aufrufgraph.rs` |
 //! | -- | the statement costs the sum of the roots' declared costs plus two primitives per root | `kosten.rs` |
 //!
-//! **The ownership rule (review G12 F3).** Boot starts every `concurrent` member
-//! (`lean_g::check_starts`, the generated driver), so a member that a `start` names
-//! would run twice -- once from the declaration, once from the statement. A thread is
-//! therefore started by EXACTLY ONE of the two: a `concurrent` member (and an
-//! `entry`/`boot` root) by the runtime, a `start` root by the statement, never both
-//! (`N460`). The started roots are no `concurrent` members, so the declared-pair race
-//! component (`N300`/`N301`, `W001`) never pairs them; what makes them race-free instead
-//! is `N462`, the fail-safe shape `N457` gives a `child` path: a started root runs beside
-//! the other roots of its statement, beside every declared start and beside other
-//! instances of itself (a `start` in a loop, in two starters, in a pool routine), and it
-//! may touch a carrier somebody writes only under a lock, atomically or per core.
+//! **No ownership rule.** A root that is also a `concurrent` member, an `entry` root or a `boot`
+//! dispatch runs once from the declaration and again from the statement: two instances of one
+//! routine, which is a pool, and the model judges every run-time root as one (`Einheit.ws` lists it
+//! twice, `einzelnPoolB`). What makes a started root race-free is `N462`, the fail-safe shape
+//! `N457` gives a `child` path: a started root runs beside the other roots of its statement,
+//! beside every declared start and beside other instances of itself (a `start` in a loop, in two
+//! starters, in a pool routine, a member started again), and it may touch a carrier somebody
+//! writes only under a lock, atomically or per core. (`N460` refused the overlap until fix lane
+//! F10 made the model's `einzeln` a pool test; since then it refused what the model accepts.)
 //!
 //! **Why no held lock at the statement (`N461`).** The starter joins the roots before it
 //! proceeds. A root that takes a lock the starter holds waits for the starter, which
@@ -171,35 +167,6 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
 
-    // The roots the runtime starts: `concurrent` members, `entry` roots, `boot` dispatch.
-    let mut laufzeit: BTreeMap<String, String> = BTreeMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
-        ItemArt::Concurrent(c) => {
-            for pfad in &c.koerper {
-                if let Some(k) = g.aufloesen(&u, modul, &pfad.text()) {
-                    laufzeit
-                        .entry(k)
-                        .or_insert_with(|| format!("a `concurrent` member (`{}`)", pfad.text()));
-                }
-            }
-        }
-        ItemArt::Boot(b) => {
-            if let Some(k) = g.aufloesen(&u, modul, &b.dispatch.text()) {
-                laufzeit
-                    .entry(k)
-                    .or_insert_with(|| format!("the `boot` dispatch of `{}`", b.name.text));
-            }
-        }
-        _ => {}
-    });
-    for k in crate::kontexte::erhebe(baum) {
-        if let Some(voll) = g.aufloesen(&u, &k.modul, &k.wurzel) {
-            laufzeit
-                .entry(voll)
-                .or_insert_with(|| format!("the root of `entry {}`", k.name));
-        }
-    }
-
     for fd in &funde {
         // **`N461` -- the one issuance site: a start under a holding context.**
         if let Some(k) = &fd.kontext {
@@ -219,7 +186,6 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 absagen,
             );
         }
-        let mut gesehen: BTreeSet<String> = BTreeSet::new();
         for w in &fd.st.roots {
             let span = w.teile.last().map(|i| i.span).unwrap_or(fd.st.span);
             let pfad = w.text();
@@ -227,38 +193,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             let Some(k) = g.aufloesen(&u, &fd.modul, &pfad) else {
                 continue;
             };
-            // **`N459` -- the one issuance site: a root twice in one statement.**
-            if !gesehen.insert(k.clone()) {
-                melde(
-                    "N459",
-                    span,
-                    format!(
-                        "`start` names `{pfad}` twice -- one statement starts each root once"
-                    ),
-                    "a root named twice would be two threads running one routine, and \
-                     the statement has no pool form: the symmetric pool is the \
-                     `concurrent` declaration's (`PoolSicher`, open item O18) -- name \
-                     each root once",
-                    absagen,
-                );
-                continue;
-            }
-            // **`N460` -- the one issuance site: a root the runtime starts already.**
-            if let Some(wer) = laufzeit.get(&k) {
-                melde(
-                    "N460",
-                    span,
-                    format!(
-                        "`start` names `{pfad}`, which is {wer} -- the runtime starts it \
-                         already, and the statement would run it a second time"
-                    ),
-                    "a thread has exactly one owner: the runtime starts every \
-                     `concurrent` member, `entry` root and `boot` dispatch at boot, the \
-                     statement starts its own roots -- drop the root from the \
-                     declaration, or drop it from the statement",
-                    absagen,
-                );
-            }
+            // A root named twice is a pool: the model judges every run-time root as a pool
+            // routine (`Einheit.ws` lists it twice, `einzelnPoolB`), and `N462` below holds each
+            // started root to exactly that.
             // **`N458` -- the one issuance site: a root that is not a thread root.**
             let grund = match funktionen.get(&k) {
                 None => Some("it is no function of this unit".to_string()),

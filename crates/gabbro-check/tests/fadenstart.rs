@@ -7,7 +7,7 @@
 //!   declares its roots' effects checks clean;
 //! * the statement costs the sum of the roots' declared costs plus two per root -- `K001`
 //!   below the sum, clean at it;
-//! * `N458` root shape, `N459` duplicate root, `N460` a root the runtime starts already,
+//! * `N458` root shape, a duplicate root or a `concurrent` member started again is a pool (clean if pool-safe),
 //!   `N461` a start under a holding context, `N462` a root that is not pool-safe;
 //! * `W003` for a root that resolves to nothing (lane 253's rule, pinned here as its
 //!   handoff list asked).
@@ -124,30 +124,51 @@ impl fn chef() effects { pure } costs <= 100 ops { start { fremd }; }",
     );
 }
 
-// ---- N459 duplicate ----------------------------------------------------------------
+// ---- a root twice is a pool ------------------------------------------------------------
 
 #[test]
-fn n459_wurzel_doppelt() {
-    faellt(
+fn wurzel_doppelt_ist_ein_pool() {
+    // The model judges every run-time root as a pool routine (`Einheit.ws`), so a pool-safe root
+    // named twice in one statement is admitted: its one write is guarded.
+    sauber(
         "impl fn chef() effects { writes g, locks L } costs <= 100 ops { start { arbeiterA, arbeiterA }; }",
-        "N459",
     );
 }
 
-// ---- N460 ownership ----------------------------------------------------------------
+#[test]
+fn wurzel_doppelt_ungeschuetzt_faellt_an_n462() {
+    faellt(
+        "impl fn roh() effects { writes h } costs <= 20 ops { h = 1; }
+impl fn chef() effects { writes h } costs <= 100 ops { start { roh, roh }; }",
+        "N462",
+    );
+}
+
+// ---- a member started again is a pool ----------------------------------------------------
 
 #[test]
-fn n460_concurrent_mitglied() {
-    faellt(
+fn concurrent_mitglied_noch_einmal_gestartet_ist_ein_pool() {
+    // Two instances of one routine are a pool, and the model judges every run-time root as one:
+    // the member's one write is guarded, so the statement may start it again.
+    sauber(
         "impl fn chef() effects { writes g, locks L } costs <= 100 ops { start { arbeiterA }; }
 concurrent { arbeiterA, chef };",
-        "N460",
     );
 }
 
 #[test]
-fn n460_zwilling_ohne_mitgliedschaft_ist_sauber() {
-    // The same roots, started by the statement only: one owner each.
+fn concurrent_mitglied_ungeschuetzt_gestartet_faellt_an_n462() {
+    faellt(
+        "impl fn roh() effects { writes h } costs <= 20 ops { h = 1; }
+impl fn chef() effects { writes h } costs <= 100 ops { start { roh }; }
+concurrent { roh, chef };",
+        "N462",
+    );
+}
+
+#[test]
+fn zwilling_ohne_mitgliedschaft_ist_sauber() {
+    // The same roots, started by the statement only.
     sauber(
         "impl fn chef() effects { writes g, locks L } costs <= 100 ops { start { arbeiterA }; }
 concurrent { arbeiterB, chef };",

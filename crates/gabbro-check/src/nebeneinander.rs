@@ -24,8 +24,7 @@
 //! A `start { f, g };` root that resolves to nothing refuses the same way
 //! (`W003`, lane 253) -- the statement names declared roots, never fresh paths.
 //! Everything else about the statement is `fadenstart.rs`'s (fix lane F4): a
-//! started root is no `concurrent` member (`N460`), so no pair of this pass
-//! names it, and its race freedom is `N462` (`fusswache2.rs`).
+//! started root is judged by `N462` (`fusswache2.rs`), not paired here.
 //!
 //! ## What this pass does NOT do
 //!

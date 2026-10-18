@@ -1,0 +1,21 @@
+// 1167 -- a `concurrent` member that the starter starts again is a pool, and a pool-safe routine may be one.
+//
+// `arbeiterA` runs once from the `concurrent` declaration and again from `start { arbeiterA }`: two
+// instances of one routine. The model judges every run-time root as a pool routine (`Einheit.ws`), so the
+// overlap is admitted exactly when the routine is pool-safe -- its one write is guarded by `L`. (`N460`
+// refused the overlap until the differential harness showed that the model accepts it; the unguarded twin
+// falls at `N462`, `gift/1479`.)
+module beispiel1167 {
+
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 100 ops;
+
+impl fn arbeiterA() effects { writes g, locks L } costs <= 20 ops { locks L { g = 1; } }
+
+impl fn chef() effects { writes g, locks L } costs <= 100 ops {
+    start { arbeiterA };
+}
+
+concurrent { arbeiterA, chef };
+
+}

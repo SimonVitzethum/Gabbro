@@ -5,9 +5,9 @@
 //! NAMED, pre-existing code -- this lane spends no new diagnostic code.
 //!
 //! These are PARSE probes only. The fixture below names the same roots in
-//! `concurrent` and in `start`, which the checker refuses since fix lane F4
-//! (`N460`: a thread has one owner, and boot starts every member); the
-//! checker rules live in `gabbro-check/tests/fadenstart.rs`.
+//! `concurrent` and in `start` (a member started again is a pool, which the
+//! checker holds to `N462`); the checker rules live in
+//! `gabbro-check/tests/fadenstart.rs`.
 
 use gabbro_syntax::diag::Stufe;
 

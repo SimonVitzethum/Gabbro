@@ -21,12 +21,13 @@
 mod atome;
 mod bau;
 mod lauf;
+mod sonder;
 
 use std::collections::BTreeMap;
 
 use atome::{katalog, Atom};
 use bau::{bau, modi, Arr, Mode};
-use lauf::{exportiere, lean_stapel, rust_verdict, LeanV, RustV, Stueck};
+use lauf::{exportiere, lean_stapel, pur_stapel, rust_verdict, LeanV, PurV, RustV, Stueck};
 
 pub struct Prog {
     pub n: usize,
@@ -42,28 +43,33 @@ impl Prog {
     }
 }
 
-/// The whole combination space, in a fixed order.
+/// Build the programs of one shape over a list of atoms (one per admissible mode).
+fn erzeuge(arr: Arr, atoms: &[&Atom], out: &mut Vec<Prog>) {
+    for mode in modi(atoms) {
+        let n = out.len();
+        if let Some(src) = bau(&format!("p{n}"), arr, mode, atoms) {
+            out.push(Prog { n, arr, mode, atoms: atoms.iter().map(|a| a.id).collect(), src });
+        }
+    }
+}
+
+/// The whole combination space, in a fixed order: every atom alone (`One`, `Pool`), the written-out
+/// units of `sonder.rs`, then every ordered pair of atoms under `Seq`, `Par` and `Call`.
 pub fn raum() -> Vec<Prog> {
     let kat = katalog();
-    let mut out = Vec::new();
-    let mut n = 0usize;
-    let mut push = |arr: Arr, atoms: Vec<&Atom>, out: &mut Vec<Prog>| {
-        for mode in modi(&atoms) {
-            let name = format!("p{n}");
-            if let Some(src) = bau(&name, arr, mode, &atoms) {
-                out.push(Prog { n, arr, mode, atoms: atoms.iter().map(|a| a.id).collect(), src });
-                n += 1;
-            }
-        }
-    };
+    let mut out: Vec<Prog> = Vec::new();
     for a in &kat {
-        push(Arr::One, vec![a], &mut out);
-        push(Arr::Pool, vec![a], &mut out);
+        erzeuge(Arr::One, &[a], &mut out);
+        erzeuge(Arr::Pool, &[a], &mut out);
+    }
+    for (id, src) in sonder::sonder() {
+        let n = out.len();
+        out.push(Prog { n, arr: Arr::One, mode: Mode::Free, atoms: vec![id], src: src.replace("gen::u", &format!("gen::p{n}")) });
     }
     for arr in [Arr::Seq, Arr::Par, Arr::Call] {
         for a in &kat {
             for b in &kat {
-                push(arr, vec![a, b], &mut out);
+                erzeuge(arr, &[a, b], &mut out);
             }
         }
     }
@@ -80,6 +86,8 @@ pub struct Messung {
     pub src: String,
     pub rust: RustV,
     pub lean: LeanV,
+    /// The verdict of the pure-Lean path (no exporter).
+    pub pur: PurV,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -96,11 +104,14 @@ pub enum Klasse {
     C,
     /// The reader refused: a generator defect.
     Syntax,
+    /// Not measured by Lean (the run was switched off).
+    Offen,
 }
 
 pub fn klasse(m: &Messung) -> Klasse {
     match (&m.rust, &m.lean) {
         (RustV::Syntax(_), _) => Klasse::Syntax,
+        (_, LeanV::NotRun) | (_, LeanV::Defekt(_)) => Klasse::Offen,
         (RustV::Accept, LeanV::Accept) => Klasse::Beide,
         (RustV::Accept, LeanV::NoForm(_)) => Klasse::D,
         (RustV::Accept, _) => Klasse::B,
@@ -128,7 +139,7 @@ pub fn messe(progs: &[Prog], mit_lean: bool, dir: &std::path::Path) -> Vec<Messu
                 }
             }
         }
-        ms.push(Messung { n: p.n, name: p.name(), arr: p.arr, mode: p.mode, atoms: p.atoms.clone(), src: p.src.clone(), rust, lean });
+        ms.push(Messung { n: p.n, name: p.name(), arr: p.arr, mode: p.mode, atoms: p.atoms.clone(), src: p.src.clone(), rust, lean, pur: PurV::NotRun });
     }
     if mit_lean {
         std::fs::create_dir_all(dir).unwrap();
@@ -138,6 +149,17 @@ pub fn messe(progs: &[Prog], mit_lean: bool, dir: &std::path::Path) -> Vec<Messu
             let urteile = lean_stapel(&st, &datei).expect("the Lean run");
             for ((i, _), u) in chunk.iter().zip(urteile) {
                 ms[*i].lean = u;
+            }
+        }
+        // The pure-Lean path over every program the reader accepted: no exporter in the loop.
+        if std::env::var("GABBRO_DIFF_OHNE_REIN").is_err() {
+            let quellen: Vec<(usize, String)> =
+                ms.iter().filter(|m| !matches!(m.rust, RustV::Syntax(_))).map(|m| (m.n, m.src.clone())).collect();
+            let rein = pur_stapel(&quellen, &dir.join("quellen")).expect("the pure Lean run");
+            for m in ms.iter_mut() {
+                if let Some(v) = rein.get(&m.n) {
+                    m.pur = v.clone();
+                }
             }
         }
     }
@@ -161,6 +183,7 @@ fn lean_lage(m: &Messung) -> String {
         LeanV::Accept => "accept".into(),
         LeanV::Reject => "reject".into(),
         LeanV::Elab(e) => format!("elab({})", e),
+        LeanV::Defekt(e) => format!("defekt({})", e),
         LeanV::NoForm(c) => format!("noform({c})"),
         LeanV::Verletzt(c) => format!("verletzt({c})"),
         LeanV::NotRun => "-".into(),
@@ -174,7 +197,13 @@ pub fn zeile(m: &Messung) -> String {
         RustV::Refuse(c) => format!("refuse[{}]", c.join(",")),
         RustV::Syntax(c) => format!("SYNTAX[{}]", c.join(",")),
     };
-    format!("{:?}\t{}\trust={}\tlean={}\tp{}", klasse(m), m.name, r, lean_lage(m), m.n)
+    let pur = match &m.pur {
+        PurV::Accept => "accept".to_string(),
+        PurV::Reject => "reject".to_string(),
+        PurV::KeinForm(e) => format!("noform({})", e.chars().take(60).collect::<String>()),
+        PurV::NotRun => "-".to_string(),
+    };
+    format!("{:?}\t{}\trust={}\tlean={}\tp{}\tpur={}", klasse(m), m.name, r, lean_lage(m), m.n, pur)
 }
 
 fn auswahl(alle: Vec<Prog>, scheibe: usize) -> Vec<Prog> {
@@ -221,6 +250,139 @@ fn schreibe_lean_datei() {
     std::fs::write(kratz().join("eins.lean"), text).unwrap();
 }
 
+/// The whole space through the Rust checker and the exporter (no Lean): how many programs, how
+/// the checker and the exporter split them. Prints the table; asserts nothing but readability.
+#[test]
+fn gesamtraum_rust_und_export() {
+    if std::env::var("GABBRO_DIFF_GESAMT").is_err() {
+        return;
+    }
+    let alle = raum();
+    let ms = messe(&alle, false, &kratz());
+    let mut z: BTreeMap<String, usize> = BTreeMap::new();
+    for m in &ms {
+        let r = match &m.rust {
+            RustV::Accept => "accept",
+            RustV::Refuse(_) => "refuse",
+            RustV::Syntax(_) => "SYNTAX",
+        };
+        let e = match &m.lean {
+            LeanV::NoForm(_) => "noform",
+            LeanV::Verletzt(_) => "verletzt",
+            _ => "exported",
+        };
+        *z.entry(format!("rust={r} export={e}")).or_insert(0) += 1;
+    }
+    eprintln!("space {}: {z:?}", alle.len());
+    if std::env::var("GABBRO_DIFF_ZEILEN").is_ok() {
+        for m in &ms {
+            eprintln!("{}", zeile(m));
+        }
+    }
+    assert_eq!(ms.iter().filter(|m| klasse(m) == Klasse::Syntax).count(), 0);
+}
+
+/// The report: the counts per class, per atom (every program the atom stands in), and the
+/// classes of (a) and (b) with a minimal example (the shortest source) each.
+pub fn bericht(ms: &[Messung]) -> String {
+    let mut out = String::new();
+    let z = zaehle(ms);
+    out.push_str(&format!("programs {}, classes {z:?}\n\n", ms.len()));
+    // counts per atom
+    let mut je_atom: BTreeMap<&str, BTreeMap<Klasse, usize>> = BTreeMap::new();
+    for m in ms {
+        for a in &m.atoms {
+            *je_atom.entry(a).or_default().entry(klasse(m)).or_insert(0) += 1;
+        }
+    }
+    out.push_str("per atom (every program the atom stands in): Beide / (b) B / (d) D / (a) A / (c) C / open\n");
+    for (a, c) in &je_atom {
+        let g = |k: Klasse| c.get(&k).copied().unwrap_or(0);
+        out.push_str(&format!(
+            "  {a:<22} {:>5} {:>4} {:>5} {:>4} {:>5} {:>5}\n",
+            g(Klasse::Beide), g(Klasse::B), g(Klasse::D), g(Klasse::A), g(Klasse::C), g(Klasse::Offen)
+        ));
+    }
+    // classes of (a) and (b): grouped by the refusal codes (a) or by the model's reason (b)
+    for (k, name) in [(Klasse::A, "(a)"), (Klasse::B, "(b)")] {
+        let mut g: BTreeMap<String, Vec<&Messung>> = BTreeMap::new();
+        for m in ms.iter().filter(|m| klasse(m) == k) {
+            let schluessel = match (&m.rust, &m.lean) {
+                (RustV::Refuse(c), _) => format!("checker refuses {}", c.join(",")),
+                (_, l) => format!("model: {}", lean_lage(&Messung { lean: l.clone(), ..m.clone() }).chars().take(90).collect::<String>()),
+            };
+            g.entry(schluessel).or_default().push(m);
+        }
+        out.push_str(&format!("\nclass {name}: {} programs in {} groups\n", g.values().map(Vec::len).sum::<usize>(), g.len()));
+        for (s, v) in &g {
+            let kleinste = v.iter().min_by_key(|m| (m.atoms.len(), m.src.len())).unwrap();
+            out.push_str(&format!("  {:>5}  {s}\n         minimal: {}\n", v.len(), kleinste.name));
+        }
+    }
+    out
+}
+
+/// The pure-Lean path (`Parser/Cover/Differenz.lean`) against the Rust checker and against the
+/// exporter route: how much of the measured space it decides, and where it agrees.
+pub fn rein_bericht(ms: &[Messung]) -> String {
+    let mut out = String::new();
+    let gelaufen: Vec<&Messung> = ms.iter().filter(|m| m.pur != PurV::NotRun).collect();
+    let entschieden: Vec<&&Messung> = gelaufen.iter().filter(|m| matches!(m.pur, PurV::Accept | PurV::Reject)).collect();
+    out.push_str(&format!(
+        "\npure-Lean path: {} programs sent, {} decided (accept/reject), {} outside the fragment of Track P\n",
+        gelaufen.len(), entschieden.len(), gelaufen.len() - entschieden.len()
+    ));
+    // by the first refused stage
+    let mut stufen: BTreeMap<String, usize> = BTreeMap::new();
+    for m in &gelaufen {
+        if let PurV::KeinForm(e) = &m.pur {
+            let k = e.split(':').next().unwrap_or("").to_string();
+            *stufen.entry(k).or_insert(0) += 1;
+        }
+    }
+    out.push_str(&format!("  refused by stage: {stufen:?}\n"));
+    let mut z: BTreeMap<String, usize> = BTreeMap::new();
+    let mut beispiele: BTreeMap<String, &Messung> = BTreeMap::new();
+    for m in &entschieden {
+        let rust = match &m.rust { RustV::Accept => "rust-accept", _ => "rust-refuse" };
+        let pur = if m.pur == PurV::Accept { "pure-accept" } else { "pure-reject" };
+        let exp = match &m.lean {
+            LeanV::Accept => "export-accept",
+            LeanV::Reject => "export-reject",
+            LeanV::Elab(_) | LeanV::Verletzt(_) => "export-model-refuses",
+            _ => "export-none",
+        };
+        let k = format!("{rust} {pur} {exp}");
+        *z.entry(k.clone()).or_insert(0) += 1;
+        let better = beispiele.get(&k).is_none_or(|b| (m.atoms.len(), m.src.len()) < (b.atoms.len(), b.src.len()));
+        if better {
+            beispiele.insert(k, m);
+        }
+    }
+    for (k, n) in &z {
+        out.push_str(&format!("  {n:>6}  {k}   (minimal: {})\n", beispiele[k].name));
+    }
+    out
+}
+
+/// **The whole space, Lean included** (about ten minutes): `cargo test --test differenzial
+/// vollraum -- --ignored --nocapture`. Writes `kratz/diff/bericht.txt`.
+#[test]
+#[ignore]
+fn vollraum() {
+    let alle = raum();
+    let ms = messe(&alle, true, &kratz());
+    let b = format!("{}{}", bericht(&ms), rein_bericht(&ms));
+    std::fs::write(kratz().join("bericht.txt"), &b).unwrap();
+    let mut tsv = String::new();
+    for m in &ms {
+        tsv.push_str(&zeile(m));
+        tsv.push('\n');
+    }
+    std::fs::write(kratz().join("voll.tsv"), tsv).unwrap();
+    eprintln!("{b}");
+}
+
 /// The slice of the space and its measurement; prints the table when `GABBRO_DIFF_ZEILEN` is set.
 #[test]
 fn schnitt_gegen_das_modell() {
@@ -230,7 +392,7 @@ fn schnitt_gegen_das_modell() {
     let mit_lean = std::env::var("GABBRO_DIFF_OHNE_LEAN").is_err();
     let ms = messe(&progs, mit_lean, &kratz());
     let z = zaehle(&ms);
-    eprintln!("space {gesamt}, slice {}, classes {z:?}", ms.len());
+    eprintln!("space {gesamt}, slice {}, classes {z:?}{}", ms.len(), rein_bericht(&ms));
     if std::env::var("GABBRO_DIFF_ZEILEN").is_ok() {
         for m in &ms {
             eprintln!("{}", zeile(m));

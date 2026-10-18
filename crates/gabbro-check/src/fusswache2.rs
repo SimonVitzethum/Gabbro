@@ -1664,8 +1664,9 @@ fn race(
 
 /// **`N462` -- a started root is a thread for race freedom** (fix lane F4, review G12 F2.3).
 ///
-/// A `start { f, g };` root is no `concurrent` member (`N460` refuses the overlap), so the
-/// declared-pair race component (`race`, `N300`/`N301`) never pairs it with anything. It
+/// A `start { f, g };` root is a thread of its own: the declared-pair race component (`race`,
+/// `N300`/`N301`) pairs only the `concurrent` members, and a root that is a member as well is a
+/// second instance of it, which this rule holds to pool safety. A started root
 /// runs beside the other roots of its statement, beside every declared start (the
 /// starter's siblings), and beside other instances of itself: nothing bounds how often a
 /// `start` runs -- in a loop, in two starters, in a routine that is itself started twice.

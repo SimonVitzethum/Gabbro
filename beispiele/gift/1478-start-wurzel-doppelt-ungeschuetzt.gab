@@ -1,0 +1,17 @@
+// erwartet: N462
+// 1478: **a root named twice that is not pool-safe falls at N462.**
+//
+// The twin of `beispiele/1166`. Two threads run `roh`, and its one write is guarded by no lock and is no
+// atomic: the model's `einzelnPoolB` refuses it, and so does the checker -- the duplicate is no rule of
+// its own, the pool-safety is.
+module gift1478 {
+
+static mut h : u64 = 0;
+
+impl fn roh() effects { writes h } costs <= 20 ops { h = 1; }
+
+impl fn chef() effects { writes h } costs <= 100 ops {
+    start { roh, roh };
+}
+
+}

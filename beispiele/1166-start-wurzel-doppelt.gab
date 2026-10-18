@@ -1,0 +1,18 @@
+// 1166 -- one root named twice in one `start` is a pool, and a pool-safe routine may be one.
+//
+// The model judges every run-time root as a pool routine (`Einheit.ws` lists it twice, `einzelnPoolB`
+// demands it pool-safe), so `start { arbeiterA, arbeiterA }` is admitted exactly when `arbeiterA` is
+// pool-safe: its one write is guarded by `L`. (Before the differential harness `N459` refused it
+// although the model accepts it; the unguarded twin falls at `N462`, `gift/1478`.)
+module beispiel1166 {
+
+static mut g : u64 = 0;
+lock L protects { g } rank 0 held <= 100 ops;
+
+impl fn arbeiterA() effects { writes g, locks L } costs <= 20 ops { locks L { g = 1; } }
+
+impl fn chef() effects { writes g, locks L } costs <= 100 ops {
+    start { arbeiterA, arbeiterA };
+}
+
+}

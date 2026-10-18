@@ -34,6 +34,10 @@ pub enum Mode {
     Locks,
     Held,
     Bare,
+    /// Only the first atom's carrier access is wrapped in `locks L`; the second one is bare.
+    LocksErst,
+    /// Only the second atom's carrier access is wrapped in `locks L`; the first one is bare.
+    LocksZweit,
 }
 
 impl Arr {
@@ -55,6 +59,8 @@ impl Mode {
             Mode::Locks => "Locks",
             Mode::Held => "Held",
             Mode::Bare => "Bare",
+            Mode::LocksErst => "LocksErst",
+            Mode::LocksZweit => "LocksZweit",
         }
     }
 }
@@ -89,7 +95,11 @@ pub fn zulaessig(arr: Arr, atoms: &[&Atom]) -> bool {
 /// The modes a set of atoms is built under.
 pub fn modi(atoms: &[&Atom]) -> Vec<Mode> {
     if atoms.iter().any(|a| a.wache != Wache::Keine) {
-        vec![Mode::Free, Mode::Locks, Mode::Held, Mode::Bare]
+        let mut m = vec![Mode::Free, Mode::Locks, Mode::Held, Mode::Bare];
+        if atoms.len() == 2 {
+            m.extend([Mode::LocksErst, Mode::LocksZweit]);
+        }
+        m
     } else {
         vec![Mode::Free]
     }
@@ -103,16 +113,24 @@ struct Teil {
     klausel: String,
     req: String,
     ohne_kosten: bool,
+    ens: String,
+    kosten_n: u32,
 }
 
 fn teil(a: &Atom, i: usize, mode: Mode) -> Teil {
-    let guarded = a.wache != Wache::Keine && matches!(mode, Mode::Locks | Mode::Held);
+    let guarded = a.wache != Wache::Keine
+        && match mode {
+            Mode::Locks | Mode::Held => true,
+            Mode::LocksErst => i == 0,
+            Mode::LocksZweit => i == 1,
+            Mode::Free | Mode::Bare => false,
+        };
     let mut eff: Vec<String> = a.eff.iter().map(|e| slot(e, i)).collect();
     if guarded {
         eff.push("locks L".to_string());
     }
     let mut body = slot(a.body, i);
-    if guarded && mode == Mode::Locks {
+    if guarded && mode != Mode::Held {
         let inner: String = body.lines().map(|l| format!("    {l}\n")).collect();
         body = format!("locks L {{\n{inner}    }}");
     }
@@ -128,6 +146,8 @@ fn teil(a: &Atom, i: usize, mode: Mode) -> Teil {
         klausel: slot(a.klausel, i),
         req: slot(a.req, i),
         ohne_kosten: a.ohne_kosten,
+        ens: slot(a.ens, i),
+        kosten_n: a.kosten_n,
     }
 }
 
@@ -156,10 +176,13 @@ fn fn_text(name: &str, ts: &[&Teil], body: &str, mode: Mode, wache: bool, kosten
         reqs.push("Held(L)");
     }
     let req = if reqs.is_empty() { String::new() } else { format!("\n    requires {}", reqs.join(", ")) };
-    let kosten = if ts.iter().any(|t| t.ohne_kosten) { String::new() } else { format!("\n    costs <= {kosten_n} ops") };
+    let ens = ts.iter().map(|t| t.ens.as_str()).find(|e| !e.is_empty());
+    let ens = ens.map(|e| format!("\n    ensures {e}")).unwrap_or_default();
+    let kn = ts.iter().map(|t| t.kosten_n).find(|k| *k > 0).unwrap_or(kosten_n);
+    let kosten = if ts.iter().any(|t| t.ohne_kosten) { String::new() } else { format!("\n    costs <= {kn} ops") };
     let kl = if klausel.is_empty() { String::new() } else { format!("\n    {klausel}") };
     format!(
-        "impl fn {name}({}){ret}{req}\n    effects {{ {} }}{kosten}{kl}\n{{\n    {}\n}}\n",
+        "impl fn {name}({}){ret}{req}{ens}\n    effects {{ {} }}{kosten}{kl}\n{{\n    {}\n}}\n",
         params.join(", "),
         effekte(ts),
         body.replace('\n', "\n    ")

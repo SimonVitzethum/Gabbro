@@ -49,6 +49,10 @@ pub struct Atom {
     pub req: &'static str,
     /// The function carries no `costs` clause (a `forever` body has no total cost).
     pub ohne_kosten: bool,
+    /// Text of an `ensures` clause (without the word).
+    pub ens: &'static str,
+    /// A cost bound that replaces the assembler's generous one.
+    pub kosten_n: u32,
 }
 
 pub const A: Atom = Atom {
@@ -65,6 +69,8 @@ pub const A: Atom = Atom {
     klausel: "",
     req: "",
     ohne_kosten: false,
+    ens: "",
+    kosten_n: 0,
 };
 
 const T: &str = "table T count 4 { slot { v : u32 in 0 .. 100, w : u32 in 0 .. 100, } }";
@@ -223,6 +229,35 @@ pub fn katalog() -> Vec<Atom> {
         Atom { id: "f.add.bad", lean: "Block.float", params: "x@ : f64 in 0.0 .. 1.0", ret: " -> f64 in 0.0 .. 1.0", body: "let y@ : f64 in 0.0 .. 1.0 = x@ + x@;\n    return y@;", sicher: false, ..A },
         Atom { id: "f.narrow", lean: "Block.floatNarrow", params: "x@ : f64", ret: " -> f64 in 0.0 .. 1.0", body: "narrow x@ to 0.0 .. 1.0 else { return 0.5; }\n    return x@;", ..A },
         Atom { id: "f.lit", lean: "Block.floatLit", ret: " -> f64 in 0.0 .. 1.0", body: "let y@ : f64 in 0.0 .. 1.0 = 0.5 rounded;\n    return y@;", ..A },
+    ]);
+    // ---------------------------------------------------------------- contracts
+    v.extend([
+        Atom { id: "x.ens.ok", lean: "Vertrag.ensures", params: "a@ : u32 in 0 .. 100", ret: " -> u32 in 0 .. 100", ens: "result == a@", body: "return a@;", ..A },
+        Atom { id: "x.ens.bad", lean: "Vertrag.ensures", params: "a@ : u32 in 0 .. 100", ret: " -> u32 in 0 .. 100", ens: "result == 7", body: "return a@;", sicher: false, ..A },
+        Atom { id: "x.req", lean: "Vertrag.requires", params: "a@ : u32 in 0 .. 100", req: "a@ < 50", ret: " -> u32 in 0 .. 100", body: "return a@;", ..A },
+        Atom { id: "x.cost.low", lean: "Vertrag.costs", params: "a@ : u32 in 0 .. 100", kosten_n: 1, ret: " -> u32 in 0 .. 100", body: "let y@ : u32 in 0 .. 100 = a@;\n    return y@;", sicher: false, ..A },
+        Atom { id: "x.eff.pure.bad", lean: "Vertrag.effects", decls: &[T], eff: &[], body: "T.slots[0].v = 1;", sicher: false, ..A },
+    ]);
+    // ---------------------------------------------------------------- more types
+    v.extend([
+        Atom { id: "y.opt.ret", lean: "Ty.opt/Expr.some", decls: &[NTN], params: "i@ : index into N", ret: " -> option index into N", body: "return Some(i@);", ..A },
+        Atom { id: "y.opt.none", lean: "Ty.opt/Expr.none", decls: &[NTN], ret: " -> option index into N", body: "return None;", ..A },
+        Atom { id: "y.alias", lean: "Ty.int", decls: &["type Pa = u32 in 0 .. 9;"], params: "a@ : Pa", ret: " -> Pa", body: "return a@;", ..A },
+        Atom { id: "y.bool", lean: "Ty.bool", params: "a@ : bool", ret: " -> bool", body: "if a@ { return false; }\n    return true;", ..A },
+        Atom { id: "y.u8", lean: "Ty.int", params: "a@ : u8", ret: " -> u8", body: "return a@;", ..A },
+        Atom { id: "y.array.field", lean: "Ty (no form)", decls: &["table W count 4 { slot { a : [u32; 4], } }"], eff: &[], body: "let n@ : u32 = 1;", ..A },
+        Atom { id: "y.record", lean: "Ty (no form)", decls: &["type Zelle = { x : u32 in 0 .. 9, y : u32 in 0 .. 9, };"], params: "c@ : ptr<normal, r> Zelle", eff: &["reads c@"], ret: " -> u32 in 0 .. 9", body: "return c@->x;", ..A },
+    ]);
+    // ---------------------------------------------------------------- starts, entries, hardware
+    const ROOTS: &str = "impl fn ra() effects { pure } costs <= 4 ops { return; }\nimpl fn rb() effects { pure } costs <= 4 ops { return; }";
+    v.extend([
+        Atom { id: "n.start", lean: "gestartet", items: &[ROOTS], body: "start { ra, rb };", ..A },
+        Atom { id: "n.start.twice", lean: "gestartet", items: &[ROOTS], body: "start { ra, ra };", sicher: false, ..A },
+        Atom { id: "h.entry", lean: "Programm.unterbricht (no form)", items: &[CALLEE_UNIT], decls: &["entry gp vector 13 arch x86_64 {\n    regs in  { }\n    regs out { }\n    preserves { rax, rbx, rcx, rdx, rsi, rdi, rbp, r8, r9, r10, r11, r12, r13, r14, r15 }\n    clobbers  { }\n    stack gp_stapel per cpu ist 1 nested never\n    dispatch hv;\n}"], body: "return;", ..A },
+        Atom { id: "h.device", lean: "D.Reg (no form)", decls: &["opaque type Pa = u64;", "device Dv(basis : Pa) at mmio {\n    reg R : u32 @0x0 class rw\n}"], params: "d@ : ptr<mmio, rw> Dv", eff: &["reads d@", "writes d@"], body: "d@.R = 1;", ..A },
+        Atom { id: "h.asm", lean: "asm (no form)", decls: &["static mut GERAET : u32 = 0;"], items: &["impl fn aus(tor : u16, wert : u8)\n    effects { writes GERAET }\n    costs <= 1 ops\n    arch x86_64\n    = asm {\n        \"outb %[wert], %[tor]\"\n        in { wert : \"a\", tor : \"d\" }\n        clobbers { memory }\n    };"], eff: &["writes GERAET"], body: "aus(112, 1);", ..A },
+        Atom { id: "k.shared", lean: "Lock.shared (no form)", decls: &[U, "lock LS protects { U } rank 0 held <= 100 ops shared held <= 100 ops;"], eff: &["reads U.slots", "locks shared LS"], body: "locks shared LS {\n        let x@ : u32 in 0 .. 100 = U.slots[0].v;\n    }", ..A },
+        Atom { id: "k.shared.write", lean: "Lock.shared (no form)", decls: &[U, "lock LS protects { U } rank 0 held <= 100 ops shared held <= 100 ops;"], eff: &["writes U.slots", "locks shared LS"], body: "locks shared LS {\n        U.slots[0].v = 1;\n    }", sicher: false, ..A },
     ]);
     v
 }

@@ -31,8 +31,13 @@ pub enum LeanV {
     Accept,
     /// `Akzeptiert` evaluates to `false`.
     Reject,
-    /// The export does not elaborate (first error line).
+    /// The export does not elaborate because a premise of the model fails (a `by decide` side
+    /// condition that Lean PROVES false): the model refuses the typed term (first error line).
     Elab(String),
+    /// The export does not elaborate for a reason that says nothing about the program (an
+    /// unknown constant, a type mismatch of the export's own shape, a `decide` that does not
+    /// evaluate): a defect of the exporter, no verdict (first error line).
+    Defekt(String),
     /// The exporter has no G form for the program (`LGxxx`).
     NoForm(String),
     /// The export refuses because the program breaks a premise of the model (a guard not held,
@@ -164,6 +169,52 @@ pub fn lean_lauf(datei: &Path) -> Result<(String, String), String> {
     ))
 }
 
+/// The verdict of the PURE-Lean path on one source text (`Parser/Cover/Differenz.lean`: lex, parse,
+/// elaborate, lower, `AkzeptiertX`), with no Rust exporter in the loop.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PurV {
+    Accept,
+    Reject,
+    /// A stage of the Lean pipeline refused (`parse-err`, `elab-err`, `lower-err`): the fragment of
+    /// Track P does not cover the program; no verdict.
+    KeinForm(String),
+    NotRun,
+}
+
+/// Run the pure-Lean path over the given sources (written as `<n>.gab` under `dir`); the verdict of
+/// each by its number.
+pub fn pur_stapel(quellen: &[(usize, String)], dir: &Path) -> Result<std::collections::BTreeMap<usize, PurV>, String> {
+    let _ = std::fs::remove_dir_all(dir);
+    std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    for (n, q) in quellen {
+        std::fs::write(dir.join(format!("p{n}.gab")), q).map_err(|e| format!("write: {e}"))?;
+    }
+    let out = Command::new(lake())
+        .current_dir(wurzel().join("grammatik"))
+        .env_remove("ELAN_TOOLCHAIN")
+        .args(["env", "lean", "-j2", "-M6144", "--run", "Grammatik/Parser/Cover/Differenz.lean"])
+        .arg(dir)
+        .output()
+        .map_err(|e| format!("`lake env lean --run` could not run: {e}"))?;
+    let aus = String::from_utf8_lossy(&out.stdout).into_owned();
+    let _ = std::fs::write(dir.with_extension("log"), format!("{aus}\n---\n{}", String::from_utf8_lossy(&out.stderr)));
+    let mut m = std::collections::BTreeMap::new();
+    for l in aus.lines() {
+        let Some((name, v)) = l.split_once('\t') else { continue };
+        let Some(n) = name.strip_prefix('p').and_then(|s| s.strip_suffix(".gab")).and_then(|s| s.parse::<usize>().ok())
+        else {
+            continue;
+        };
+        let v = match v {
+            "accept" => PurV::Accept,
+            "reject" => PurV::Reject,
+            other => PurV::KeinForm(other.chars().take(120).collect()),
+        };
+        m.insert(n, v);
+    }
+    Ok(m)
+}
+
 /// The Lean verdicts of one batch, in the order of `stuecke`.
 pub fn lean_stapel(stuecke: &[Stueck], datei: &Path) -> Result<Vec<LeanV>, String> {
     let (text, bereiche) = stapel_datei(stuecke);
@@ -200,9 +251,13 @@ pub fn lean_stapel(stuecke: &[Stueck], datei: &Path) -> Result<Vec<LeanV>, Strin
     }
     for (i, e) in ersterfehler.into_iter().enumerate() {
         if let Some(e) = e {
-            urteil[i] = LeanV::Elab(e);
+            urteil[i] = if e.contains("proved that the proposition") {
+                LeanV::Elab(e)
+            } else {
+                LeanV::Defekt(e)
+            };
         } else if urteil[i] == LeanV::NotRun {
-            urteil[i] = LeanV::Elab("no verdict line and no error (Lean run aborted?)".to_string());
+            urteil[i] = LeanV::Defekt("no verdict line and no error (Lean run aborted?)".to_string());
         }
     }
     Ok(urteil)

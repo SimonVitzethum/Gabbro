@@ -1003,12 +1003,13 @@ is the statement, `start = 1;` stays an assignment. The shape is the `concurrent
 (`"start" "{" path { "," path } [ "," ] "}" ";"`). The named roots run as threads of their
 own and are JOINED before the starter proceeds; no detached form exists. The rules:
 
-* **One owner per thread.** Boot starts every `concurrent` member, `entry` root and `boot`
-  dispatch; the statement starts its own roots; a root may not be both (`N460`). So no root
-  runs twice, and `concurrent { A, B };` beside `start { A, B };` falls.
+* **A root may be a member as well.** Boot starts every `concurrent` member, `entry` root and `boot`
+  dispatch; a root the statement names too runs a second time: two instances of one routine are a
+  pool, held to `N462` like every started root (`concurrent { A, B };` beside `start { A, B };`
+  is clean when `A` and `B` are pool-safe).
 * **A root is a thread root:** an `impl fn` with a body, no parameters, no result, no
-  signature-held lock (`N458`), named once per statement (`N459` -- the statement has no
-  pool form; the symmetric pool is the declaration's, O18).
+  signature-held lock (`N458`); a root named twice is a pool and is admitted exactly when it
+  is pool-safe (`N462`), as the model judges every run-time root.
 * **The starter holds nothing across the join:** no `start` inside `locks`/`observes`/
   `breaking` or under `requires Held` (`N461`). A root taking a lock its starter holds would
   wait for the starter, which waits for the root.

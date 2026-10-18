@@ -1605,8 +1605,11 @@ fn check_fn(
     // on the roots' threads, never in this body: G carries no locks effect in a
     // signature (the floor `boden` is computed from what the body takes), so the effect
     // travels nowhere, and the roots' own bodies take the lock (Opus agent A, 2026-09-26).
+    // A body with calls is not refused here: `E008` lifts a callee's `locks L` into the caller's
+    // line, the line travels nowhere (G has no locks effect), and whether the call is made with
+    // the callee's `requires Held` in hand is the call site's `RufPasst` proof -- decided by Lean.
     for l in &effect_locks {
-        if !held.contains(l) && !taken.contains(l) && !scan.startet {
+        if !held.contains(l) && !taken.contains(l) && !scan.startet && scan.calls.is_empty() {
             return Err(refuse_modell(
                 "LG001",
                 format!("function {}: `locks {}` is neither held by signature nor taken in the body",
@@ -3155,6 +3158,29 @@ fn tr_binaer(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sc
         BinOp::BitUnd | BinOp::BitOder | BinOp::BitXor | BinOp::SchiebLinks | BinOp::SchiebRechts => {
             tr_bitop(op, a, b, ctx, model, scope, fname, out)
         }
+        // `/` and `%` (`M102`): `Expr.div`/`rem` over a non-negative numerator and a denominator
+        // from `1 ..`; `Expr.sdiv`/`srem` where the denominator merely excludes zero. The result
+        // ranges are the ones the model's types carry.
+        BinOp::Geteilt | BinOp::Rest => {
+            let (la, ta) = tr_typed(a, ctx, model, scope, fname, out)?;
+            let (lb, tb) = tr_typed(b, ctx, model, scope, fname, out)?;
+            let (Some((l1, h1)), Some((l2, h2))) = (ta.range(model), tb.range(model)) else {
+                return Err(refuse("LG003", format!("division in {fname} has no G form")));
+            };
+            let geteilt = op == BinOp::Geteilt;
+            if l1 >= 0 && l2 >= 1 {
+                let hi = if geteilt { h1 } else { h2 - 1 };
+                let ctor = if geteilt { "div" } else { "rem" };
+                Ok((format!("(.{ctor} (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi, bits: None }))
+            } else if l2 >= 1 || h2 <= -1 {
+                let betrag = |lo: i128, hi: i128| lo.abs().max(hi.abs());
+                let m = if geteilt { betrag(l1, h1) } else { betrag(l2, h2) - 1 };
+                let ctor = if geteilt { "sdiv" } else { "srem" };
+                Ok((format!("(.{ctor} (by decide) {la} {lb})"), VTy::Int { lo: -m, hi: m, bits: None }))
+            } else {
+                Err(refuse_modell("LG003", format!("denominator in {fname} does not exclude zero (`M102`)")))
+            }
+        }
         BinOp::Und | BinOp::Oder => {
             let la = tr_bool(a, ctx, model, scope, fname, out)?;
             let lb = tr_bool(b, ctx, model, scope, fname, out)?;
@@ -3279,7 +3305,12 @@ fn tr_bitop(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sco
                 return Err(refuse("LG003", format!("bit operation in {fname} leaves its width")));
             }
             let ctor = if op == BinOp::BitOder { "bor" } else { "bxor" };
-            Ok((format!("(.{ctor} {w} (by decide) (by decide) (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi: top - 1, bits: Some(w) }))
+            // The width argument of `Expr.bor`/`bxor` is FREE (`h1, h2 < 2^w`) and the result is
+            // `0 .. 2^w - 1`: the checker's range is the smallest mask over the larger operand
+            // (`typen::bitweise`), which is the smallest `w` -- not the storage width.
+            let k = 128 - h1.max(h2).max(0).leading_zeros();
+            let hi = (1i128 << k) - 1;
+            Ok((format!("(.{ctor} {k} (by decide) (by decide) (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi, bits: breite_weiter(0, hi, w) }))
         }
         BinOp::SchiebLinks | BinOp::SchiebRechts => {
             if h1 >= top || h2 >= w as i128 {
@@ -3845,20 +3876,20 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
     // `RufPasst.hw`: the callee writes no carrier the caller does not.
     for t in &callee.writes {
         if !ctx.cf.writes.contains(t) {
-            return Err(refuse("LG004", format!("call of {} in {fname} writes beyond its caller (`RufPasst.hw`)", callee.name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} writes beyond its caller (`RufPasst.hw`)", callee.name)));
         }
     }
     // `RufPasst.hg`: the same for GLOBALS.
     for g in &callee.gwrites {
         if !ctx.cf.gwrites.contains(g) {
-            return Err(refuse("LG004", format!("call of {} in {fname} writes the global {} beyond its caller (`RufPasst.hg`)", callee.name, model.globs[*g].name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} writes the global {} beyond its caller (`RufPasst.hg`)", callee.name, model.globs[*g].name)));
         }
     }
     // `RufPasst.hh`: the callee's held set is a SUBSET of the caller's.
     let caller_holds: std::collections::BTreeSet<usize> = ctx.held.iter().copied().collect();
     let callee_holds: std::collections::BTreeSet<usize> = callee.held.iter().copied().collect();
     if !callee_holds.is_subset(&caller_holds) {
-        return Err(refuse("LG004", format!("call of {} in {fname} requires a lock its caller does not hold (`RufPasst.hh`)", callee.name)));
+        return Err(refuse_modell("LG004", format!("call of {} in {fname} requires a lock its caller does not hold (`RufPasst.hh`)", callee.name)));
     }
     // `RufPasst.hx`: every extra lock ranks below the callee's floor. The
     // printed proof argues per lock (`cases L`): the floor witness where
@@ -3872,7 +3903,7 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
         None
     } else {
         let Some(c) = callee.boden else {
-            return Err(refuse("LG004", format!("call of {} in {fname} holds locks beyond a floorless callee (`RufPasst.hx`)", callee.name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} holds locks beyond a floorless callee (`RufPasst.hx`)", callee.name)));
         };
         Some(c)
     };
@@ -3881,18 +3912,18 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
         if witness || callee.held.contains(&li) || !caller_holds.contains(&li) {
             continue;
         }
-        return Err(refuse("LG004", format!("call of {} in {fname} holds {} at or above its floor (`RufPasst.hx`)", callee.name, model.locks[li].name)));
+        return Err(refuse_modell("LG004", format!("call of {} in {fname} holds {} at or above its floor (`RufPasst.hx`)", callee.name, model.locks[li].name)));
     }
     // `RufPasst.hb`: the caller's floor is at most the callee's.
     let hb = match (ctx.cf.boden, callee.boden) {
         (Some(c0), Some(c1)) => {
             if c0 > c1 {
-                return Err(refuse("LG004", format!("call of {} in {fname} runs a higher floor into a lower one (`RufPasst.hb`)", callee.name)));
+                return Err(refuse_modell("LG004", format!("call of {} in {fname} runs a higher floor into a lower one (`RufPasst.hb`)", callee.name)));
             }
             Some((c0, c1))
         }
         (Some(_), None) => {
-            return Err(refuse("LG004", format!("call of {} in {fname} runs a floored caller into a floorless callee (`RufPasst.hb`)", callee.name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} runs a floored caller into a floorless callee (`RufPasst.hb`)", callee.name)));
         }
         _ => None,
     };
@@ -4183,8 +4214,16 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             // a `by decide` that fails is a Lean error, not a named refusal.
             if z.ziel.suffixe.is_empty() && ctx.lookup(&z.ziel.basis.text).is_none() {
                 if let Some(gi) = model.globs.iter().position(|g| g.name == z.ziel.basis.text) {
-                    if !ctx.cf.gwrites.contains(&gi) {
+                    if model.globs[gi].atomar {
+                        // The store to an atomic is `Stmt.publish` (`A = v publishes ..;`), a different
+                        // statement from the plain assignment: a bare `A = v;` has no form in the model
+                        // and the checker refuses it (`N270`); it never travels as `assignGlob`.
                         return Err(refuse("LG004", format!(
+                            "bare store to the atomic {} in {fname} has no G form: a store is `Stmt.publish`",
+                            z.ziel.basis.text)));
+                    }
+                    if !ctx.cf.gwrites.contains(&gi) {
+                        return Err(refuse_modell("LG004", format!(
                             "{fname} writes the global {} without an `effects {{ writes {} }}` -- \
                              the write right `Signatur.gschreibt` has nothing to stand on",
                             z.ziel.basis.text, z.ziel.basis.text)));
@@ -4358,7 +4397,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                      is not covered by the goal theorem (OFFEN O25)")));
             }
             if !ctx.cf.gwrites.contains(&gi) {
-                return Err(refuse("LG004", format!(
+                return Err(refuse_modell("LG004", format!(
                     "{fname} publishes {} without an `effects {{ writes {} }}` -- \
                      the write right `Signatur.gschreibt` has nothing to stand on",
                     pb.ziel.basis.text, pb.ziel.basis.text)));
@@ -4388,7 +4427,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             };
             let gi = model.arenas[ai].glob;
             if !ctx.cf.gwrites.contains(&gi) {
-                return Err(refuse("LG004", format!(
+                return Err(refuse_modell("LG004", format!(
                     "`reset {}` in {fname} without an `effects {{ writes {} }}` -- \
                      the write right `Signatur.gschreibt` has nothing to stand on",
                     name.text, name.text)));
@@ -4439,7 +4478,17 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         // point among them (`N461` makes it lock-free). So the G body carries nothing here and
         // goes on with the rest. Not a silent skip: the roots are exported, and the goal
         // theorem covers the threads they become.
-        StmtArt::Start(_) => tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock),
+        StmtArt::Start(_) => {
+            // The statement is a thread-machine step with an empty held list (the starter joins
+            // the roots, and a root taking a lock its starter holds would wait on it): a `start`
+            // under a held lock has no representation in the model. Refused here, not exported
+            // as a lock-free start (`N461` is the checker's half).
+            if !ctx.held.is_empty() {
+                return Err(refuse_modell("LG004", format!(
+                    "`start` in {fname} stands under a held lock: the model's start step has an empty held list")));
+            }
+            tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)
+        }
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
         // **`leave i;` / `next i;` over a `traverse` binder is `Stmt.leave`/`Stmt.next`**
@@ -4660,7 +4709,7 @@ fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[
              travel into the term -- see TODO.md O14")));
     };
     if !ctx.cf.writes.contains(&ti) || !ctx.cf.gwrites.contains(&gi) {
-        return Err(refuse("LG004", format!(
+        return Err(refuse_modell("LG004", format!(
             "`alloc {aname}` in {fname} without an `effects {{ writes {aname} }}` -- \
              the write rights `Signatur.schreibt`/`gschreibt` have nothing to stand on")));
     }

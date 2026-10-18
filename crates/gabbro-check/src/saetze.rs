@@ -4954,14 +4954,11 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "faden.start",
-        kennungen: &["N458", "N459", "N460", "N461", "N462"],
+        kennungen: &["N458", "N461", "N462"],
         aussage: "A hosted thread start `start { f, g };` that passed names roots that \
                   are threads and nothing else: each is an `impl fn` with a body, no \
-                  parameters, no result and no signature-held lock (`N458`), named once \
-                  per statement (`N459`), and started by the statement ALONE -- no root \
-                  is a `concurrent` member, an `entry` root or a `boot` dispatch, which \
-                  the runtime starts already (`N460`: one owner per thread, so no root \
-                  runs twice). The starter holds nothing across the join: no `start` \
+                  parameters, no result and no signature-held lock (`N458`), and may be a `concurrent` member, an `entry` root or a `boot` dispatch as \
+                  well (two instances of one routine are a pool, held to `N462`). The starter holds nothing across the join: no `start` \
                   stands inside `locks`, `observes` or `breaking` or in a function with \
                   `requires Held` (`N461`), so no root waits for a lock its starter \
                   holds. Every started root is pool-safe: each table, mutable static, \
@@ -4978,8 +4975,8 @@ pub const PHASEN: &[Satz] = &[
                     and the Lean checker Bool judges each root as a pool routine -- \
                     `wurzelnB` is `N458`'s signature-lock half, `einzelnPoolB` is \
                     `N462` (a root stands twice in `Einheit.ws`), and `N461` is the side \
-                    condition of the model's `start` step; `N459`/`N460` have no model \
-                    counterpart, which needs neither. The emitter lowers it since \
+                    condition of the model's `start` step; `N459` and `N460` are gone (the model accepts what they refused). A root named twice in one statement is a \
+                    pool, admitted exactly when it is pool-safe (`N462`). The emitter lowers it since \
                     lane 260 (one raw-clone spawn per root on unit-owned stacks, \
                     joined before the starter proceeds; unresolvable, bodiless, \
                     non-nullary or repeated roots stay `C001`). `N462` is fail-safe, not \
@@ -4990,9 +4987,8 @@ pub const PHASEN: &[Satz] = &[
                     A root that never returns keeps its starter waiting; that is a \
                     progress question the rules do not decide.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: `1148` (`N458`: a root with a parameter), `1149` \
-                      (`N459`: `start { h, h }`), `1150` (`N460`: a root that is also a \
-                      `concurrent` member), `1151` (`N461`: `start` inside `locks L` \
+        gemessen_an: "beispiele/gift: `1148` (`N458`: a root with a parameter), `1149` (gone: a root named twice is no refusal of its own; `1166` is the clean twin, \
+                      `1478` the unguarded one that falls at `N462`), `1150` (gone: a member that is started as well is a pool, `1167` is the clean twin, `1479` the unguarded one), `1151` (`N461`: `start` inside `locks L` \
                       with a root taking `L`), `1152` (`N462`: two roots writing one \
                       unguarded static), `1153` (`E008`: a `pure` starter), `1154` \
                       (`K001`: the roots' costs). The clean side: \
