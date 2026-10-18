@@ -79,14 +79,27 @@ def boolFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : 
   | some q => (tabAt u t).bools.contains q.1
   | none => false
 
-/-- The field type: `bool` for a bool field, else the recorded range, or `.int 0 0` off the table
-    (unreachable through `fieldRangeO`, kept for totality). -/
+/-- The number of the table an option field points at (`none` for a field that is no option). -/
+def optNumAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Nat :=
+  match (tabAt u t).cols[f.val]? with
+  | some q => ((tabAt u t).opts.find? (fun p => p.1 == q.1)).map (·.2)
+  | none => none
+
+/-- The count of the table an option field points at: the `n` of its type `Ty.opt n`. -/
+def optFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Int :=
+  (optNumAt u t f).bind fun num => (u.tabs[num]?).map (·.count)
+
+/-- The field type: `bool` for a bool field, `opt` for an option field, else the recorded range, or `.int 0 0`
+    off the table (unreachable through `fieldRangeO`, kept for totality). -/
 def typAt (u : UProg) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : Ty :=
   if boolFeldAt u t f then .bool else
-  match fieldRangeO u t f with
-  | some w => .int w.1 w.2
-  | none => .int 0 0
+  match optFeldAt u t f with
+  | some n => .opt n
+  | none =>
+    match fieldRangeO u t f with
+    | some w => .int w.1 w.2
+    | none => .int 0 0
 
 /-- The guards of a table: the locks whose `schutz` names it. -/
 def needsAt (u : UProg) (t : Fin u.tabs.length) :
@@ -94,6 +107,27 @@ def needsAt (u : UProg) (t : Fin u.tabs.length) :
   List.finRange u.locks.length |>.filterMap fun l =>
     if (lockAt u l).guard.any (· == (tabAt u t).name) then some (.inl l)
     else none
+
+def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
+
+/-- The guards of a static: the locks whose `protects` list names it (`gbraucht`). -/
+def gneedsAt (u : UProg) (g : Fin u.globs.length) :
+    List (Fin u.locks.length ⊕ (Empty × Nat)) :=
+  List.finRange u.locks.length |>.filterMap fun l =>
+    if (lockAt u l).guard.any (· == (globAt u g).name) then some (.inl l)
+    else none
+
+/-- The foreign body at an index. -/
+def uaxAt (u : UProg) (a : Fin u.axs.length) : UAx := u.axs.get a
+
+/-- A foreign body by name. -/
+def uaxIdx : (xs : List UAx) → (n : String) → Except String (Fin xs.length)
+  | [], n => .error ("function unknown: " ++ n)
+  | a :: rest, n =>
+    if a.name == n then .ok 0
+    else match uaxIdx rest n with
+      | .error e => .error e
+      | .ok j => .ok j.succ
 
 /-- The held locks of a function, as indices (names the declaration
     does not know are dropped; `elabU` output never has them). -/
@@ -109,8 +143,6 @@ def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.lengt
       | .error e => .error e
       | .ok j => .ok j.succ
 
-def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
-
 /-- The write flag of a function at a static. -/
 def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
   f.gputs.any (· == (globAt u g).name)
@@ -119,17 +151,67 @@ def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
 def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
   f.puts.any (· == (tabAt u t).name)
 
+/-! ## Lock floors (`Signatur.boden`)
+
+    The floor of a function is the lowest rank of any lock taken on a path from it (its own `locks L` blocks
+    and, through its calls, the callees'); a function that takes none has the floor `hoch`, above every rank
+    of the unit. A unit without locks has no floors. This is the rule of the exporter (`resolve_floors`):
+    an extra lock held across a call ranks below the callee's floor (`RufPasst.hx`), so every lock the callee
+    takes ranks above everything held (`H006` across the call boundary). -/
+
+/-- The rank of a lock by name. -/
+def lockRank (u : UProg) (n : String) : Option Int :=
+  (u.locks.find? (fun l => l.name == n)).map (·.rank)
+
+def optMin : Option Int → Option Int → Option Int
+  | none, b => b
+  | a, none => a
+  | some a, some b => some (min a b)
+
+/-- The lowest rank a function takes directly (its `locks L { .. }` blocks). -/
+def directFloor (u : UProg) (f : UFn) : Option Int :=
+  f.body.foldl (fun acc st => match st with
+    | .lockBeg n => optMin acc (lockRank u n)
+    | _ => acc) none
+
+/-- The functions a function calls directly. -/
+def callNames (f : UFn) : List String :=
+  f.body.filterMap fun st => match st with
+    | .call c _ => some c
+    | .bindCall _ c _ => some c
+    | _ => none
+
+/-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/
+def floorStep (u : UProg) (cur : List (String × Option Int)) : List (String × Option Int) :=
+  u.fns.map fun f =>
+    (f.name, (callNames f).foldl
+      (fun acc c => optMin acc ((cur.find? (fun p => p.1 == c)).bind (·.2))) (directFloor u f))
+
+/-- `n` rounds (a path through the call graph is at most as long as the number of functions). -/
+def floorsN (u : UProg) : Nat → List (String × Option Int)
+  | 0 => u.fns.map fun f => (f.name, directFloor u f)
+  | n + 1 => floorStep u (floorsN u n)
+
+/-- The floor of a function: `none` in a unit without locks, else the lowest rank on any path from it, or
+    one above the highest rank of the unit when the paths take no lock. -/
+def floorOf (u : UProg) (f : UFn) : Option Int :=
+  if u.locks.isEmpty then none
+  else some (match ((floorsN u u.fns.length).find? (fun p => p.1 == f.name)).bind (·.2) with
+    | some c => c
+    | none => (u.locks.map (·.rank)).foldl max 0 + 1)
+
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
   params := f.params.map (·.2)
   erg := f.ergTy
-  gruende := 0
+  gruende := f.gruende
   haelt := heldAt u f
   schreibt := writesAt u f
   gschreibt := writesGAt u f
   konsumiert := []
   produziert := []
+  boden := floorOf u f
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
@@ -174,7 +256,7 @@ def declOf (u : UProg) : Deklaration where
   nutzlast := fun _ => []
   atomar := fun g => (globAt u g).atomic
   geteilt := fun t => (!((needsAt u t).isEmpty))
-  ggeteilt := fun _ => false
+  ggeteilt := fun g => (!((gneedsAt u g).isEmpty))
   Lock := Fin u.locks.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
@@ -183,7 +265,7 @@ def declOf (u : UProg) : Deklaration where
   decMarke := inferInstance
   stufen := fun e => nomatch e
   braucht := needsAt u
-  gbraucht := fun _ => []
+  gbraucht := gneedsAt u
   eigner := fun _ => []
   Fn := Fin u.fns.length
   sig := fun f => f.val
@@ -193,22 +275,24 @@ def declOf (u : UProg) : Deklaration where
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
-  Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  Ax := Fin u.axs.length
+  aparams := fun a => (uaxAt u a).params
+  aerg := fun a => (uaxAt u a).res
+  aschreibt := fun _ _ => false
+  agschreibt := fun _ _ => false
+  agruende := fun a => (uaxAt u a).gruende
   Reg := Empty
   rtyp := fun e => nomatch e
   rklasse := fun e => nomatch e
   spiegel := fun e => nomatch e
   rzusage := fun e => nomatch e
-  Annahme := Unit
-  a10 := ()
+  Annahme := Option (Fin u.annahmen.length)
+  a10 := none
   geteilt_bewacht :=
     fun t h => notEmpty_ne_nil _ (show ((!((needsAt u t).isEmpty)) = true) from h)
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun _ h => Bool.noConfusion h
+  ggeteilt_bewacht :=
+    fun g h => Or.inl (notEmpty_ne_nil _ (show ((!((gneedsAt u g).isEmpty)) = true) from h))
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
 
@@ -271,13 +355,23 @@ theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
   rw [List.getElem?_eq_getElem hlt]
   exact ⟨_, rfl⟩
 
-/-- The type of a NON-bool field is the recorded range. -/
+/-- The type of a field that is neither a bool nor an option is the recorded range. -/
 theorem typAt_of (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) (w : Int × Int)
-    (h : fieldRangeO u t fld = some w) (hb : boolFeldAt u t fld = false) :
+    (h : fieldRangeO u t fld = some w) (hb : boolFeldAt u t fld = false)
+    (ho : optFeldAt u t fld = none) :
     typAt u t fld = .int w.1 w.2 := by
   unfold typAt
-  rw [hb, h]
+  rw [hb, ho, h]
+  rfl
+
+/-- The type of an option field is `opt` of the count of its table. -/
+theorem typAt_opt (u : UProg) (t : Fin u.tabs.length)
+    (fld : Fin (fieldCount u t)) (n : Int) (hb : boolFeldAt u t fld = false)
+    (ho : optFeldAt u t fld = some n) :
+    typAt u t fld = .opt n := by
+  unfold typAt
+  rw [hb, ho]
   rfl
 
 /-- The type of a bool field is `bool`. -/
@@ -381,9 +475,43 @@ def fieldHit (u : UProg) (t : Fin u.tabs.length) (fname : String) :
     have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t :=
       fieldPos_lt _ _ _ h
     if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = false then
-      .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
-        typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb⟩
+      if ho : optFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = none then
+        .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
+          typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb ho⟩
+      else .error "option field as a number"
     else .error "bool field as a number"
+
+/-- An option field hit: the index, the count `n` of its table and the fact that its type is `opt n`. -/
+structure OptHit (u : UProg) (t : Fin u.tabs.length) where
+  idx : Fin (fieldCount u t)
+  n : Int
+  hopt : typAt u t idx = .opt n
+  /-- The table the option indexes, and that its count is `n`. -/
+  tnum : Nat
+  hlt : tnum < u.tabs.length
+  hcnt : (declOf u).count ⟨tnum, hlt⟩ = n
+
+/-- Find an OPTION field of a table by name. -/
+def fieldHitO (u : UProg) (t : Fin u.tabs.length) (fname : String) :
+    Except String (OptHit u t) :=
+  match h : fieldAtPos (tabAt u t).cols fname with
+  | none => .error "field unknown"
+  | some _ =>
+    have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t :=
+      fieldPos_lt _ _ _ h
+    if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = false then
+      match ho : optFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ with
+      | some n =>
+        match optNumAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ with
+        | none => .error "option table unknown"
+        | some tnum =>
+          if hl : tnum < u.tabs.length then
+            if hc : (declOf u).count ⟨tnum, hl⟩ = n then
+              .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, n, typAt_opt u t _ n hb ho, tnum, hl, hc⟩
+            else .error "option table count foreign"
+          else .error "option table unknown"
+      | none => .error "number field as an option"
+    else .error "bool field as an option"
 
 /-- Find a BOOL field of a table by name. -/
 def fieldHitB (u : UProg) (t : Fin u.tabs.length) (fname : String) :
@@ -445,6 +573,17 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           | .error e => .error e
           | .ok v => .ok (Expr.var v)
         else .error "index of foreign table"
+      | some .int =>
+        match fn.params[j]? with
+        | some (_, .int lo hi) =>
+          if h1 : 0 ≤ lo then
+            if h2 : hi ≤ (declOf u).count t - 1 then
+              match lowVar Γ (sh + j) (.int lo hi) with
+              | .error e => .error e
+              | .ok v => .ok (Expr.widen h1 h2 (Expr.var v))
+            else .error "index outside count"
+          else .error "index outside count"
+        | _ => .error "index without G form"
       | _ => .error "index without G form"
 
 /-- A sided term with its range. -/
@@ -519,6 +658,80 @@ def LowSide.xoder {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : Low
       else .error "bit operation outside its width"
     else .error "bit operation over a negative range"
   else .error "bit operation over a negative range"
+
+/-- `a / b` (M102): `Expr.div` for a non-negative numerator over a denominator from `1`, else the signed
+    `Expr.sdiv` when the denominator excludes zero; a denominator that may be zero has no term. -/
+def LowSide.durch {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.range.1 then
+    if h1 : 1 ≤ y.range.1 then
+      .ok { range := (0, x.range.2), term := Expr.div h0 h1 x.term y.term }
+    else
+      if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+        .ok { range := (-(betragMax x.range.1 x.range.2), betragMax x.range.1 x.range.2),
+              term := Expr.sdiv hb x.term y.term }
+      else .error "division by a denominator that may be zero"
+  else
+    if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+      .ok { range := (-(betragMax x.range.1 x.range.2), betragMax x.range.1 x.range.2),
+            term := Expr.sdiv hb x.term y.term }
+    else .error "division by a denominator that may be zero"
+
+/-- `a % b`: `Expr.rem`, or the signed `Expr.srem`, under the same conditions as `/`. -/
+def LowSide.rest {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.range.1 then
+    if h1 : 1 ≤ y.range.1 then
+      .ok { range := (0, y.range.2 - 1), term := Expr.rem h0 h1 x.term y.term }
+    else
+      if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+        .ok { range := (-(betragMax y.range.1 y.range.2 - 1), betragMax y.range.1 y.range.2 - 1),
+              term := Expr.srem hb x.term y.term }
+      else .error "division by a denominator that may be zero"
+  else
+    if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+      .ok { range := (-(betragMax y.range.1 y.range.2 - 1), betragMax y.range.1 y.range.2 - 1),
+            term := Expr.srem hb x.term y.term }
+    else .error "division by a denominator that may be zero"
+
+/-- The width a shift of `x` by `y` names: the smallest that holds the operand and exceeds the amount. -/
+def schiebeBreite (x y : Int × Int) : Nat := max (bitsFuer x.2) (y.2.toNat + 1)
+
+/-- `a << b` over non-negative ranges (M137): `Expr.shl` at the width `schiebeBreite`. A shift amount beyond 4096
+    gives a result range no type holds (and `2 ^ n` would not be computed): refused as a value outside any range. -/
+def LowSide.links {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if 4096 < y.range.2 then .error "value outside range"
+  else if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      if hw1 : x.range.2 < (2 : Int) ^ schiebeBreite x.range y.range then
+        if hw2 : y.range.2 < ((schiebeBreite x.range y.range : Nat) : Int) then
+          .ok { range := (0, x.range.2 * 2 ^ y.range.2.toNat),
+                term := Expr.shl (schiebeBreite x.range y.range) hw1 hw2 h0 h0' x.term y.term }
+        else .error "shift outside its width"
+      else .error "shift outside its width"
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- `a >> b`: `Expr.shr`, range `0 .. hi(a)`. -/
+def LowSide.rechts {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if 4096 < y.range.2 then .error "value outside range"
+  else if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      if hw1 : x.range.2 < (2 : Int) ^ schiebeBreite x.range y.range then
+        if hw2 : y.range.2 < ((schiebeBreite x.range y.range : Nat) : Int) then
+          .ok { range := (0, x.range.2),
+                term := Expr.shr (schiebeBreite x.range y.range) hw1 hw2 h0 h0' x.term y.term }
+        else .error "shift outside its width"
+      else .error "shift outside its width"
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- `-a`: `Expr.neg`. -/
+def LowSide.minusEins {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x : LowSide u Γ Λ) :
+    LowSide u Γ Λ :=
+  { range := (-x.range.2, -x.range.1), term := Expr.neg x.term }
 
 /-- Two lowered operands into one lowered result (the first error wins). -/
 def lowZwei {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
@@ -661,17 +874,13 @@ def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           .ok { range := fh.range, term := altTerm u Γ Λ t fh i hL }
         else .error "access without held guard"
 
-/-- No static is guarded (`gbraucht` is empty), so every read finds its guard held. -/
-theorem gdarf_globs (u : UProg) (g : Fin u.globs.length) (Λ : List (Res (declOf u))) :
-    gdarf (declOf u) g Λ :=
-  fun w hw => (List.not_mem_nil (show w ∈ ([] : List _) from hw)).elim
-
 /-- A number static read (`Expr.glob`): its type is the recorded range. -/
 def lowGlobSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
     Except String (LowSide u Γ Λ) :=
   match globIdx u.globs p with
   | .error e => .error e
   | .ok g =>
+    if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
     match h : (globAt u g).ty with
     | .int lo hi =>
       .ok { range := (lo, hi), term := by
@@ -681,8 +890,9 @@ def lowGlobSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
                 rfl
               show Expr (declOf u) Γ Λ (.int lo hi)
               rw [← hg]
-              exact Expr.glob g (gdarf_globs u g Λ) }
+              exact Expr.glob (D := declOf u) g hd }
     | .bool => .error "bool static as a number"
+    else .error "access without held guard"
 
 /-- A `bool` static read as a truth value. -/
 def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
@@ -690,6 +900,7 @@ def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
   match globIdx u.globs p with
   | .error e => .error e
   | .ok g =>
+    if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
     match h : (globAt u g).ty with
     | .bool =>
       .ok (by
@@ -698,47 +909,9 @@ def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
           rw [h]
           rfl
         rw [← hg]
-        exact Expr.glob g (gdarf_globs u g Λ))
+        exact Expr.glob (D := declOf u) g hd)
     | .int _ _ => .error "number static as a truth value"
-
-/-- A value side in a body: a literal, a numeric parameter or a
-    slot read (`result` and `old` have no G form here). -/
-def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) : USide → Except String (LowSide u Γ Λ)
-  | .lit n => .ok { range := (n, n), term := Expr.lit n }
-  | .param p => lowParamSide u Γ Λ fn 0 p
-  | .glob p => lowGlobSide u Γ Λ p
-  | .slot b f ix => lowDurch u Γ Λ fn 0 b f ix
-  | .tab b f ix => lowTabRead u Γ Λ fn 0 b f ix
-  | .add a b =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideVal u Γ Λ fn b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.plus x y)
-  | .sub a b =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideVal u Γ Λ fn b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.minus x y)
-  | .mul a b =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideVal u Γ Λ fn b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.times x y)
-  | .conv lo hi a =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x => LowSide.conv lo hi x
-  | .band a b => lowZwei LowSide.and (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | .bor a b => lowZwei LowSide.or (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | .bxor a b => lowZwei LowSide.xoder (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | _ => .error "side in body without G form"
+    else .error "access without held guard"
 
 /-- A `bool` slot read through a pointer parameter (positions shift by `sh`): the place's truth value. -/
 def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -832,6 +1005,14 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .band a b => lowZwei LowSide.and (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .bor a b => lowZwei LowSide.or (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .bxor a b => lowZwei LowSide.xoder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .div a b => lowZwei LowSide.durch (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .rem a b => lowZwei LowSide.rest (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .shl a b => lowZwei LowSide.links (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .shr a b => lowZwei LowSide.rechts (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .neg a =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x => .ok (LowSide.minusEins x)
   | .erg =>
     match er with
     | some (a, b) =>
@@ -839,6 +1020,12 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .error e => .error e
       | .ok v => .ok { range := (a, b), term := Expr.var v }
     | none => .error "result without result"
+
+/-- A value side in a body: the sides of an `ensures` without `old` and `result` (a body reads neither). -/
+def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (s : USide) : Except String (LowSide u Γ Λ) :=
+  if seiteAltErg s then .error "side in body without G form"
+  else lowSideEns u Γ Λ fn none s
 
 /-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
 def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -886,6 +1073,13 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .globB p => lowGlobBool u Γ Λ p
+  | .var p =>
+    match paramPos fn.params p with
+    | .error e => .error e
+    | .ok j =>
+      match lowVar Γ ((if er.isSome then 1 else 0) + j) .bool with
+      | .error e => .error e
+      | .ok v => .ok (Expr.var v)
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
 

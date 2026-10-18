@@ -5,7 +5,7 @@
              without a lock and stored by `A = v publishes nothing;` only where the function declares
              `writes A`; a payload, an `observed by` word and a plain store have no G form.
 -/
-import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben13
 
@@ -34,7 +34,7 @@ theorem undeclared_refused_stufe : stufe undeclared_refused = "lower: write with
 /-- A plain store to an atomic is no store of the model. -/
 def plain_refused : String :=
   "module m { atomic S : u32 relaxed; impl fn w() effects { writes S } { S = 7; } }"
-theorem plain_refused_stufe : stufe plain_refused = "elab: plain write to an atomic without G form" := by
+theorem plain_refused_stufe : stufe plain_refused = "elab: plain write to an atomic: every store is a publish" := by
   decide +kernel
 
 /-- A payload is the publish/await hand-off, which the goal theorem does not cover. -/

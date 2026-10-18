@@ -1504,9 +1504,11 @@ down): the payload hand-off without a lock (`PLAN-DYNAMISCH.md` 8a.3 and 11: the
 `Akzeptiert`, 8a.3); the reader/writer lock (`Lock` carries `rang` and `maskiert` only, 8a.5); declared
 costs (`K001`: the model has per-pass budgets and no bound per function; a `kostenB P fs` component over the
 call graph); effects other than write rights (`E006`/`E008`/`E010`: `Signatur` carries `schreibt`/`gschreibt`
-and the held list, not `reads`/`locks`). In the exporter only (the model has the form): `retry`/`exchange`
-handlers (`extern fn .. -> never`), option and array fields, `let mut`, a top-level `let` of a number
-whose type is a tagged sum.
+and the held list, not `reads`/`locks`). In the exporter only (the model has the form): `exchange`
+handlers, array fields, and, at the top of a body, the `Block` formers `Endblock` lacks (`bindCall`, `bindCallElse`,
+`narrow`, `check`, `awaits`, `float*`, `arenaAlloc`); the pure-Lean elaboration refuses those by name.
+
+**Update 2026-10-18 (Track P, phase 2 (5)).** On the 1 814-program slice the pure-Lean route now decides 1 335 programs (73.6 %, was 493); no violation beyond two recorded findings (exporter LG001 on an unused `locks L`, `EXPORT_ENGER`; the checker accepts a `retry` `until` predicate reading a guarded table without the lock, 7 programs, `PRUEFER_BEFUNDE`). The whole-space figure below is the earlier one, not re-measured. Generator findings: constructors reaching a final program 16 -> 22 of 72 (`SAnw.ret`, `retry`, `start`, `reset`, `call`, `SExpr.un` newly); `cases`, `trim`, `alloc`, `loop`, `bindElse`, `shift` stay at 0 accepted.
 
 **The pure-Lean route and Track P.** On the whole space the pure-Lean route was sent 61 944 programs and decided 12 937 (21 %: 3 609 accepted, 9 328 refused by a
 premise of the model or by `reject`), 49 007 are outside the fragment (48 518 at elaboration, 489 at lowering). Where it

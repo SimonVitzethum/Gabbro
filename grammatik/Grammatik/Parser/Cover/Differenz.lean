@@ -33,7 +33,7 @@ open Gabbro.Grammatik.Zielsatz
 def wurzelIdx (u : UProg) (name : String) : Option (Fin u.fns.length) :=
   (List.finRange u.fns.length).find? fun f => (fnAt u f).name == name
 
-/-- **The lock family of an elaborated unit**: the carriers each lock protects (the tables whose guard
+/-- **The lock family of an elaborated unit**: the carriers each lock protects (the tables and the statics whose guard
     list names it), and no invariant predicate (`fun _ _ => true`) -- the family the exporter writes as
     `gS` for a lock without an `invariant` clause. (`SperrInv.leer` protects NOTHING, so the footprint
     component would refuse every read under a lock.) -/
@@ -42,7 +42,11 @@ def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
       ((List.finRange u.tabs.length).filter fun t =>
         ((declOf u).braucht t).any fun x => match x with
           | .inl l => l == L
-          | .inr _ => false).map Sum.inl
+          | .inr _ => false).map Sum.inl ++
+      ((List.finRange u.globs.length).filter fun g =>
+        ((declOf u).gbraucht g).any fun x => match x with
+          | .inl l => l == L
+          | .inr _ => false).map Sum.inr
     inv := fun _ _ => true }
 
 /-- **The checker of the goal theorem on an elaborated unit**: the lowered program, the lock family
@@ -53,7 +57,7 @@ def akzeptiertU (u : UProg) : Except String Bool :=
   | .error e => .error e
   | .ok (P, fs) =>
     haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
-    let ws : List (declOf u).Fn := u.roots.filterMap fun n => wurzelIdx u n
+    let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
@@ -67,7 +71,7 @@ def komponenten (u : UProg) : Except String String :=
   | .error e => .error e
   | .ok (P, fs) =>
     haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
-    let ws : List (declOf u).Fn := u.roots.filterMap fun n => wurzelIdx u n
+    let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr

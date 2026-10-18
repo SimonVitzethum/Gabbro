@@ -95,6 +95,17 @@ rules('grammatik/Grammatik/Parser', [
     (r'^Uebersetze\w*$', 'Elab'),
 ])
 
+# The elaboration's witness files (Track P): one folder of their own, so `Elab` stays under the limit.
+rules('grammatik/Grammatik/Parser/Elab', [
+    (r'^UebersetzeProben\w*$', 'Proben'),
+])
+
+# The witnesses of the first thirteen walls, and those of the forms added since (14 and up): two folders.
+rules('grammatik/Grammatik/Parser/Elab/Proben', [
+    (r'^UebersetzeProben([2-9]|1[0-3])?$', 'Fruehe'),
+    (r'^UebersetzeProben\d+$', 'Formen'),
+])
+
 rules('grammatik/Grammatik', [
     (r'^(Syntax|Typen|Konstanten|Fehler|Satz|Zucker|Marken|MarkenInstanzA|Profil|Koernung|Bits|Geist|Extraktion|Ziel)$', 'Kern/Syntax'),
     (r'^(Semantik|Maschine|MaschinenKette|Erhaltung|Terminierung|Ueberlauf|Fristlauf|Durchgaenge|Budget|Adressraum|Syscall|SyscallPaarung|Geraet|GanzzahlMatch)$', 'Kern/Semantik'),

@@ -56,7 +56,7 @@ theorem erstAblehnung_104_zeuge :
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
     `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
-    kind the unit may carry (`concurrent`, `static`). -/
+    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`, `reason`, `syscall` gates and their bindings). -/
 def istGegenstand : SItemTief → Bool
   | .constT .. => false
   | .typeT .. => false
@@ -66,6 +66,13 @@ def istGegenstand : SItemTief → Bool
   | .entryT .. => false
   | .globT .. => false
   | .atomT .. => false
+  | .arenaT .. => false
+  | .protoT .. => false
+  | .assumT .. => false
+  | .whyT .. => false
+  | .callT .. => false
+  | .varT .. => false
+  | .goalT .. => false
   | .concT .. => false
   | _ => true
 
@@ -85,15 +92,15 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | modT _ _ => rfl
   | useT _ => rfl
   | globT _ _ _ _ _ _ _ => simp [istGegenstand] at he
-  | protoT _ => rfl
+  | protoT _ => simp [istGegenstand] at he
   | specT _ _ => rfl
   | asmT _ _ => rfl
   | formatT _ _ _ _ => rfl
-  | arenaT _ _ _ _ _ _ => rfl
-  | whyT _ _ _ => rfl
+  | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
+  | whyT _ _ _ => simp [istGegenstand] at he
   | stateT _ _ => rfl
   | devT _ _ _ _ => rfl
-  | assumT _ _ _ _ => rfl
+  | assumT _ _ _ _ => simp [istGegenstand] at he
   | axiomT _ _ _ _ _ _ => rfl
   | checkT _ => rfl
   | atomT _ _ _ _ _ => simp [istGegenstand] at he
@@ -104,9 +111,9 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | walkT _ => rfl
   | trustT _ _ _ _ _ _ => rfl
   | bootT _ _ _ _ => rfl
-  | callT _ => rfl
-  | varT _ => rfl
-  | goalT _ _ => rfl
+  | callT _ => simp [istGegenstand] at he
+  | varT _ => simp [istGegenstand] at he
+  | goalT _ _ => simp [istGegenstand] at he
   | transT _ _ _ => rfl
   | profT _ _ => rfl
   | gateT _ => rfl
@@ -122,6 +129,13 @@ def istAngenommen : SItemTief → Bool
   | .entryT .. => true
   | .globT .. => true
   | .atomT .. => true
+  | .arenaT .. => true
+  | .protoT .. => true
+  | .assumT .. => true
+  | .whyT .. => true
+  | .callT .. => true
+  | .varT .. => true
+  | .goalT .. => true
   | .concT .. => true
   | _ => false
 
@@ -141,15 +155,15 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | modT _ _ => simp [istAngenommen] at he
   | useT _ => simp [istAngenommen] at he
   | globT _ _ _ _ _ _ _ => rfl
-  | protoT _ => simp [istAngenommen] at he
+  | protoT _ => rfl
   | specT _ _ => simp [istAngenommen] at he
   | asmT _ _ => simp [istAngenommen] at he
   | formatT _ _ _ _ => simp [istAngenommen] at he
-  | arenaT _ _ _ _ _ _ => simp [istAngenommen] at he
-  | whyT _ _ _ => simp [istAngenommen] at he
+  | arenaT _ _ _ _ _ _ => rfl
+  | whyT _ _ _ => rfl
   | stateT _ _ => simp [istAngenommen] at he
   | devT _ _ _ _ => simp [istAngenommen] at he
-  | assumT _ _ _ _ => simp [istAngenommen] at he
+  | assumT _ _ _ _ => rfl
   | axiomT _ _ _ _ _ _ => simp [istAngenommen] at he
   | checkT _ => simp [istAngenommen] at he
   | atomT _ _ _ _ _ => rfl
@@ -160,9 +174,9 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | walkT _ => simp [istAngenommen] at he
   | trustT _ _ _ _ _ _ => simp [istAngenommen] at he
   | bootT _ _ _ _ => simp [istAngenommen] at he
-  | callT _ => simp [istAngenommen] at he
-  | varT _ => simp [istAngenommen] at he
-  | goalT _ _ => simp [istAngenommen] at he
+  | callT _ => rfl
+  | varT _ => rfl
+  | goalT _ _ => rfl
   | transT _ _ _ => simp [istAngenommen] at he
   | profT _ _ => simp [istAngenommen] at he
   | gateT _ => simp [istAngenommen] at he
@@ -184,15 +198,15 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | modT _ _ => simp [istGegenstand] at he
   | useT _ => simp [istGegenstand] at he
   | globT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | protoT _ => simp [istGegenstand] at he
+  | protoT _ => simp [istAngenommen] at ha
   | specT _ _ => simp [istGegenstand] at he
   | asmT _ _ => simp [istGegenstand] at he
   | formatT _ _ _ _ => simp [istGegenstand] at he
-  | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | whyT _ _ _ => simp [istGegenstand] at he
+  | arenaT _ _ _ _ _ _ => simp [istAngenommen] at ha
+  | whyT _ _ _ => simp [istAngenommen] at ha
   | stateT _ _ => simp [istGegenstand] at he
   | devT _ _ _ _ => simp [istGegenstand] at he
-  | assumT _ _ _ _ => simp [istGegenstand] at he
+  | assumT _ _ _ _ => simp [istAngenommen] at ha
   | axiomT _ _ _ _ _ _ => simp [istGegenstand] at he
   | checkT _ => simp [istGegenstand] at he
   | atomT _ _ _ _ _ => simp [istAngenommen] at ha
@@ -203,9 +217,9 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | walkT _ => simp [istGegenstand] at he
   | trustT _ _ _ _ _ _ => simp [istGegenstand] at he
   | bootT _ _ _ _ => simp [istGegenstand] at he
-  | callT _ => simp [istGegenstand] at he
-  | varT _ => simp [istGegenstand] at he
-  | goalT _ _ => simp [istGegenstand] at he
+  | callT _ => simp [istAngenommen] at ha
+  | varT _ => simp [istAngenommen] at ha
+  | goalT _ _ => simp [istAngenommen] at ha
   | transT _ _ _ => simp [istGegenstand] at he
   | profT _ _ => simp [istGegenstand] at he
   | gateT _ => simp [istGegenstand] at he

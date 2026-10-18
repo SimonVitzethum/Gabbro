@@ -196,6 +196,15 @@ const PUR_VERLETZT: &[&str] = &[
     "write through a read pointer",
     "conversion outside target range",
     "index outside count",
+    "division by a denominator that may be zero",
+    "bit operation over a negative range",
+    "call without held guard",
+    "a held lock does not rank below the callee's floor",
+    "start under a held lock",
+    // Rules of the surface the elaboration enforces (the checker refuses them too): a bare store to an atomic
+    // (every store is a `publishes`, `N270`) and a write to an immutable static.
+    "plain write to an atomic",
+    "write to an immutable static",
 ];
 
 /// Run the pure-Lean path over the given sources (written as `<n>.gab` under `dir`); the verdict of

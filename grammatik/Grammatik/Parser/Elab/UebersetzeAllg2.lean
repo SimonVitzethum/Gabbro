@@ -16,7 +16,7 @@
   with `G104_referenz.gD`), the real-text lexer pin for 104, and one
   theorem chaining all stages for 104.
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg
+import Grammatik.Parser.Elab.UebersetzeOpt
 import Grammatik.Korpus.Programme.Export108
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
@@ -88,26 +88,32 @@ theorem sigProduziert_nil (u : UProg) (i : Fin u.fns.length) :
   rw [sigAt_get u i]
   rfl
 
-/-- No lock floor on a signature (the default `none`). -/
-theorem sigBoden_none (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).boden = none := by
+/-- The lock floor of a signature is the computed floor of the function. -/
+theorem sigBoden_eq (u : UProg) (i : Fin u.fns.length) :
+    ((declOf u).signatur i).boden = floorOf u (fnAt u i) := by
   show (sigAt u i.val).boden = _
   rw [sigAt_get u i]
   rfl
 
-/-- No lock floor on a body contract. -/
-theorem vBoden_none (u : UProg) (c : Fin u.fns.length) :
-    (vertragVon (declOf u) c).boden = none := by
+/-- The same for a body contract. -/
+theorem vBoden_eq (u : UProg) (c : Fin u.fns.length) :
+    (vertragVon (declOf u) c).boden = floorOf u (fnAt u c) := by
   show (sigAt u c.val).boden = _
   rw [sigAt_get u c]
   rfl
 
-/-- No error channel anywhere. -/
-theorem sigGruende_zero (u : UProg) (i : Fin u.fns.length) :
-    (declOf u).gruende i = 0 := by
+/-- The number of reasons of a signature is the recorded one. -/
+theorem sigGruende_eq (u : UProg) (i : Fin u.fns.length) :
+    (declOf u).gruende i = (fnAt u i).gruende := by
   show (sigAt u i.val).gruende = _
   rw [sigAt_get u i]
   rfl
+
+/-- A unit whose functions have no reason channel has none on any signature. -/
+theorem sigGruende_null (u : UProg) (h : ∀ g ∈ u.fns, g.gruende = 0) (i : Fin u.fns.length) :
+    (declOf u).gruende i = 0 := by
+  rw [sigGruende_eq]
+  exact h _ (List.get_mem u.fns i)
 
 /-- The contract result is the recorded type (`bool`, a range, or none). -/
 theorem vErg_eq (u : UProg) (c : Fin u.fns.length) :
@@ -319,6 +325,93 @@ def lowAssignTabL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
             else .error "write without right"
           else .error "access without held guard"
 
+/-- An option write through a pointer into an option field, at the field's type `opt n`. -/
+def assignDurchStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length) (oh : OptHit u t)
+    (p : Expr (declOf u) Γ Λ (.ptr t.val true)) (ht : (declOf u).tabNr t.val = some t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t))) (e : Expr (declOf u) Γ Λ (.opt oh.n))
+    (hw : V.schreibt t = true) (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t oh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t oh.idx)
+    rw [oh.hopt]
+    exact e
+  exact Stmt.assignThru (D := declOf u) p t ht oh.idx i e2 hw hL
+
+/-- An option write at a table into an option field. -/
+def assignSlotStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length) (oh : OptHit u t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t))) (e : Expr (declOf u) Γ Λ (.opt oh.n))
+    (hw : V.schreibt t = true) (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t oh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t oh.idx)
+    rw [oh.hopt]
+    exact e
+  exact Stmt.assignSlot (D := declOf u) t oh.idx i e2 hw hL
+
+/-- An option value written through a pointer parameter into an option field. -/
+def lowAssignDurchOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : UOpt) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params b with
+  | .error e => .error e
+  | .ok j =>
+    match fn.kinds[j]? with
+    | some (.ptr num true) =>
+      if h : num < u.tabs.length then
+        match fieldHitO u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok oh =>
+          match lowVar Γ j (.ptr num true) with
+          | .error e => .error e
+          | .ok pv =>
+            match lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix with
+            | .error e => .error e
+            | .ok i =>
+              match lowOpt u Γ Λ fn 0 oh.tnum oh.hlt v with
+              | .error e => .error e
+              | .ok e0 =>
+                have e : Expr (declOf u) Γ Λ (.opt oh.n) := by rw [← oh.hcnt]; exact e0
+                if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ then
+                  if hw : writesAt u (fnAt u caller) ⟨num, h⟩ = true then
+                    have hwV : (verOf u caller).schreibt ⟨num, h⟩ = true := by
+                      show (vertragVon (declOf u) caller).schreibt ⟨num, h⟩ = true
+                      rw [vSchreibt_eq u caller ⟨num, h⟩]
+                      exact hw
+                    .ok (assignDurchStmtO u Γ Λ (verOf u caller) ⟨num, h⟩ oh (Expr.var pv) (tabNr_some u num h) i e hwV hL)
+                  else .error "write without right"
+                else .error "access without held guard"
+      else .error "pointer table unknown"
+    | _ => .error "place without G form"
+
+/-- An option value written at a table into an option field. -/
+def lowAssignTabOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : UOpt) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match tabIdx u.tabs b with
+  | .error e => .error e
+  | .ok t =>
+    match fieldHitO u t fname with
+    | .error e => .error e
+    | .ok oh =>
+      match lowIdx u Γ Λ fn 0 t ix with
+      | .error e => .error e
+      | .ok i =>
+        match lowOpt u Γ Λ fn 0 oh.tnum oh.hlt v with
+        | .error e => .error e
+        | .ok e0 =>
+          have e : Expr (declOf u) Γ Λ (.opt oh.n) := by rw [← oh.hcnt]; exact e0
+          if hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+            if hw : writesAt u (fnAt u caller) t = true then
+              have hwV : (verOf u caller).schreibt t = true := by
+                show (vertragVon (declOf u) caller).schreibt t = true
+                rw [vSchreibt_eq u caller t]
+                exact hw
+              .ok (assignSlotStmtO u Γ Λ (verOf u caller) t oh i e hwV hL)
+            else .error "write without right"
+          else .error "access without held guard"
+
 /-- A truth value written through a pointer parameter into a bool field. -/
 def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
@@ -469,7 +562,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             else .error "argument right without G form"
           else .error "argument type without G form"
         else .error "argument type without G form"
-      | .val _ => .error "value for pointer without G form"
+      | .val _ | .bval _ | .oval _ => .error "value for pointer without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
@@ -503,6 +596,21 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
         | .error e => .error e
         | .ok e => .ok e
       | _ => .error "argument without G form"
+    | .bool, .bool =>
+      match a with
+      | .bval b => lowEns u Γ Λ fn none b
+      | _ => .error "argument without G form"
+    | .opt num, .opt n =>
+      match a with
+      | .oval o =>
+        if hnum : num < u.tabs.length then
+          if hn : (declOf u).count ⟨num, hnum⟩ = n then
+            match lowOpt u Γ Λ fn 0 num hnum o with
+            | .error e => .error e
+            | .ok e => .ok (by rw [← hn]; exact e)
+          else .error "argument type without G form"
+        else .error "option table unknown"
+      | _ => .error "argument without G form"
     | _, _ => .error "argument type without G form"
 
 /-- The argument list against kinds and recorded types. -/
@@ -535,13 +643,34 @@ theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
   show Untermulti ([] : List (Res (declOf u))) Λ
   exact ⟨[], List.Perm.refl _, by simp⟩
 
-/-- The floors line up (`RufPasst.hb`, both `none`). -/
-theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length) :
+/-- The caller's floor is at most the callee's (the Bool the lowering decides). -/
+def floorLeB (u : UProg) (caller callee : Fin u.fns.length) : Bool :=
+  match floorOf u (fnAt u caller), floorOf u (fnAt u callee) with
+  | none, _ => true
+  | some _, none => false
+  | some c, some c' => decide (c ≤ c')
+
+/-- The floors line up (`RufPasst.hb`). -/
+theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
+    (h : floorLeB u caller callee = true) :
     ∀ c, (vertragVon (declOf u) caller).boden = some c →
       ∃ c', ((declOf u).signatur callee).boden = some c' ∧
         c ≤ c' := fun c hc => by
-  rw [vBoden_none u caller] at hc
-  simp at hc
+  rw [vBoden_eq u caller] at hc
+  rw [sigBoden_eq u callee]
+  unfold floorLeB at h
+  rw [hc] at h
+  cases hb : floorOf u (fnAt u callee) with
+  | none => rw [hb] at h; simp at h
+  | some c' =>
+    rw [hb] at h
+    exact ⟨c', rfl, of_decide_eq_true h⟩
+
+/-- An extra held lock ranks below the callee's floor (the Bool the lowering decides). -/
+def floorUeberB (u : UProg) (callee : Fin u.fns.length) (L : (declOf u).Lock) : Bool :=
+  match floorOf u (fnAt u callee) with
+  | some c => decide ((declOf u).rang L < c)
+  | none => false
 
 /-- The held locks named in a resource list, at the
     declaration lock type (so membership synthesizes). -/
@@ -590,15 +719,17 @@ def castNachStmtL {l : Bool} (u : UProg) (caller callee : Fin u.fns.length) (Γ 
   rw [nach_eq u callee Λ] at s
   exact s
 
-/-- A direct call: arguments plus the harvested `RufPasst`
-    (`hw` over the write flags, `hh` over the callee held list,
-    `hx` over the lock carrier -- vacuous past the exact held
-    set, since every floor is `none`). -/
-def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
-    (Λ : List (Res (declOf u)))
-    (cname : String) (args : List UArg) :
-    Except String (Stmt (declOf u) (verOf u caller) l
-      Γ Λ Λ) :=
+/-- The head of a direct call: the callee, its arguments and the harvested `RufPasst` (`hw` over the write
+    flags, `hh` over the callee held list, `hx` over the lock carrier -- vacuous past the exact held set,
+    since every floor is `none`). The statement `Stmt.call` and the binding `Block.bindCall` share it. -/
+structure RufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  callee : Fin u.fns.length
+  args : Args (declOf u) Γ Λ ((declOf u).params callee)
+  hp : RufPasst (declOf u) (verOf u caller) ((declOf u).signatur callee) Λ
+
+def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (cname : String) (args : List UArg) :
+    Except String (RufKopf u caller Γ Λ) :=
   match fnIdx u.fns cname with
   | .error e => .error e
   | .ok callee =>
@@ -614,8 +745,9 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
             writesGAt u (fnAt u caller) g = true then
         if hH : ∀ L ∈ ((declOf u).signatur callee).haelt,
             Res.held (D := declOf u) L ∈ Λ then
+         if hB : floorLeB u caller callee = true then
           if hX : ∀ L ∈ heldLocksD u Λ,
-              L ∈ ((declOf u).signatur callee).haelt then
+              L ∈ ((declOf u).signatur callee).haelt ∨ floorUeberB u callee L = true then
             have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
                 true → (vertragVon (declOf u) caller).schreibt t =
                 true := fun t ht => by
@@ -627,30 +759,83 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
                 L ∉ ((declOf u).signatur callee).haelt →
                 ∃ c, ((declOf u).signatur callee).boden = some c ∧
                   (declOf u).rang L < c :=
-              fun L hL hn =>
-                absurd (hX L (heldLocksD_mem u _ L hL)) hn
+              fun L hL hn => by
+                rcases hX L (heldLocksD_mem u _ L hL) with h | h
+                · exact absurd h hn
+                · rw [sigBoden_eq u callee]
+                  unfold floorUeberB at h
+                  cases hf : floorOf u (fnAt u callee) with
+                  | none => rw [hf] at h; simp at h
+                  | some c =>
+                    rw [hf] at h
+                    exact ⟨c, rfl, of_decide_eq_true h⟩
             have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
                 true → (vertragVon (declOf u) caller).gschreibt g =
                 true := fun g hg0 => by
               rw [sigGSchreibt_eq u callee g] at hg0
               rw [vGSchreibt_eq u caller g]
               exact hG g hg0
-            have hp : RufPasst (declOf u)
-                (vertragVon (declOf u) caller)
-                ((declOf u).signatur callee)
-                Λ :=
-              { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee }
-            have s : Stmt (declOf u) (verOf u caller) l
-                Γ Λ
-                (nach (declOf u) callee Λ) :=
-              Stmt.call (D := declOf u) callee a hp
-                (sigGruende_zero u callee)
-            .ok (castNachStmtL u caller callee Γ Λ s)
-          else .error "call under foreign lock without G form"
+            .ok { callee := callee, args := a,
+                  hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx,
+                          hb := rufHb_ok u caller callee hB } }
+          else .error "call: a held lock does not rank below the callee's floor"
+         else .error "call: the caller's lock floor is above the callee's"
         else .error "call without held guard"
        else .error "call writes without right"
       else .error "call writes without right"
 
+/-- The head of a call of a foreign body: the axiom and its arguments. -/
+structure AxKopf (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  ax : Fin u.axs.length
+  args : Args (declOf u) Γ Λ ((declOf u).aparams ax)
+
+def lowAxKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (cname : String) (args : List UArg) :
+    Except String (AxKopf u Γ Λ) :=
+  match uaxIdx u.axs cname with
+  | .error e => .error e
+  | .ok a =>
+    match lowCallArgsAuxL u caller Γ fn Λ (uaxAt u a).kinds ((declOf u).aparams a) args with
+    | .error e => .error e
+    | .ok xs => .ok ⟨a, xs⟩
+
+/-- A foreign body writes nothing: the four write premises of `axiomCall`/`bindAxiom` hold vacuously. -/
+theorem ax_schreibt_nie (u : UProg) (a : Fin u.axs.length) (t : Fin u.tabs.length) :
+    (declOf u).aschreibt a t = false := rfl
+
+theorem ax_gschreibt_nie (u : UProg) (a : Fin u.axs.length) (g : Fin u.globs.length) :
+    (declOf u).agschreibt a g = false := rfl
+
+/-- The answer of a foreign body, for the statement (none) or the binding (a type). -/
+def withAxErg {α : Type} (u : UProg) (a : Fin u.axs.length)
+    (Kn : (declOf u).aerg a = none → Except String α)
+    (Ks : (τ : Ty) → (declOf u).aerg a = some τ → Except String α) : Except String α :=
+  match hE : (declOf u).aerg a with
+  | none => Kn hE
+  | some τ => Ks τ hE
+
+/-- `f(..);` at a foreign body with no answer: `Stmt.axiomCall`. -/
+def axiomStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (Λ : List (Res (declOf u))) (k : AxKopf u Γ Λ) (h : (declOf u).aerg k.ax = none) :
+    Stmt (declOf u) (verOf u caller) l Γ Λ Λ :=
+  Stmt.axiomCall (D := declOf u) k.ax k.args h
+    (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+    (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+    (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+    (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+
+/-- A direct call as a statement. -/
+def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u)))
+    (cname : String) (args : List UArg) :
+    Except String (Stmt (declOf u) (verOf u caller) l
+      Γ Λ Λ) :=
+  match lowRufKopf u caller Γ fn Λ cname args with
+  | .error e => .error e
+  | .ok k =>
+    if hr : (declOf u).gruende k.callee = 0 then
+      .ok (castNachStmtL u caller k.callee Γ Λ (Stmt.call (D := declOf u) k.callee k.args k.hp hr))
+    else .error "call of a function with a reason channel needs `let .. else`"
 
 /-- A write of a static (`Stmt.assignGlob`): only where the function declares `writes X`. -/
 def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -676,7 +861,9 @@ def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.assignGlob g e2 hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.assignGlob (D := declOf u) g e2 hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number static"
 
@@ -704,7 +891,9 @@ def lowAssignGlobBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.assignGlob g e2 hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.assignGlob (D := declOf u) g e2 hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool static"
 
@@ -733,7 +922,9 @@ def lowStoreAtomL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.publish g e2 [] rfl hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number atomic"
 
@@ -761,9 +952,42 @@ def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.publish g e2 [] rfl hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool atomic"
+
+/-- `x = v;` at a `let mut` number: `Stmt.assignVar`, the value fitted into the variable's range. -/
+def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (x : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params x with
+  | .error e => .error e
+  | .ok j =>
+    match fn.params[j]? with
+    | some (_, .int lo hi) =>
+      match lowVar Γ j (.int lo hi) with
+      | .error e => .error e
+      | .ok var =>
+        match lowWertAt u Γ Λ fn lo hi v with
+        | .error e => .error e
+        | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
+    | _ => .error "assignment to a non-number variable"
+
+/-- The same for a truth value. -/
+def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (x : String) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params x with
+  | .error e => .error e
+  | .ok j =>
+    match lowVar Γ j .bool with
+    | .error e => .error e
+    | .ok var =>
+      match lowEns u Γ Λ fn none v with
+      | .error e => .error e
+      | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
 
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
@@ -774,14 +998,18 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignTab b f ix v => lowAssignTabL u caller Γ fn Λ b f ix v
   | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
   | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
+  | .assignOpt b f ix v => lowAssignDurchOL u caller Γ fn Λ b f ix v
+  | .assignTabOpt b f ix v => lowAssignTabOL u caller Γ fn Λ b f ix v
   | .assignGlob n v => lowAssignGlobL u caller Γ fn Λ n v
   | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
   | .storeAtom n v => lowStoreAtomL u caller Γ fn Λ n v
   | .storeAtomB n v => lowStoreAtomBL u caller Γ fn Λ n v
+  | .setVar x v => lowSetVarL u caller Γ fn Λ x v
+  | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

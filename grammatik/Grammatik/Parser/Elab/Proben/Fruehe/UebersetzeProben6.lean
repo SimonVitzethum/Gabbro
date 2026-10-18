@@ -5,7 +5,7 @@
              pushes it), the annotation is a check, the scope ends with the block, and a body read
              after a `let` sees the extended context. Sources are short on purpose (kernel memory).
 -/
-import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben6
 
@@ -25,9 +25,9 @@ def unbound_refused : String :=
   "module m { impl fn s(a : u32) -> u32 { let x : u32 = a; return y; } }"
 theorem unbound_refused_stufe : stufe unbound_refused = "elab: name unknown: y" := by decide +kernel
 
-/-- `let mut` has no G form here. -/
-def mut_refused : String :=
+/-- WITNESS (was a planted defect until `let mut` got its G form, `Stmt.assignVar`): `let mut` with a type. -/
+def mut_typed_ok : String :=
   "module m { impl fn s(a : u32) -> u32 { let mut x : u32 = a; return x; } }"
-theorem mut_refused_stufe : stufe mut_refused = "elab: stmt without G form" := by decide +kernel
+theorem mut_typed_ok_stufe : stufe mut_typed_ok = "OK" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben6

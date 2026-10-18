@@ -86,7 +86,7 @@ theorem hp4 : RufPasst D4 (vertragVon D4 ein4) (D4.signatur lies4) L4 where
     have e : L = m4 := Fin.ext (by have h : L.val < 1 := L.isLt; show L.val = 0; omega)
     subst e
     exact List.mem_singleton_self _) hn
-  hb := rufHb_ok uExp104 ein4 lies4
+  hb := rufHb_ok uExp104 ein4 lies4 (by decide)
 
 /-- `einzahlen`'s body, as the parser lowers it: the write through `k`, the
     call of `lies` on a fresh read-only pointer and `i`, the return. -/
@@ -257,7 +257,7 @@ theorem nutzer4 : NutzerPflicht E4 where
   logik := ⟨fun passes f => ⟨koerperGutS_alle fsA.2 ohneEwig4 koerperS4 passes f, invGutS_leer rfl f,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ r _ => by
         have h := r.isLt
-        have h0 : D4.gruende f = 0 := sigGruende_zero uExp104 f
+        have h0 : D4.gruende f = 0 := sigGruende_null uExp104 (by decide) f
         omega⟩,
     fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
   start := ⟨fun _ => rfl, fun _ h => absurd h List.not_mem_nil⟩

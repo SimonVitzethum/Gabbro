@@ -255,6 +255,19 @@ fn zeige_programme() {
     }
 }
 
+/// Write every source of the space to `kratz/diff/alle/p<n>.gab` (about 70 000 files), for the pure-Lean runner over
+/// the WHOLE space (`Parser/Cover/DifferenzLauf.lean`, run in directories of a few thousand) without the exporter
+/// route: `cargo test --test differenzial schreibe_alle_quellen -- --ignored`.
+#[test]
+#[ignore]
+fn schreibe_alle_quellen() {
+    let dir = kratz().join("alle");
+    std::fs::create_dir_all(&dir).unwrap();
+    for p in raum() {
+        std::fs::write(dir.join(format!("p{}.gab", p.n)), &p.src).unwrap();
+    }
+}
+
 /// Write the Lean file of the programs whose name contains `GABBRO_DIFF_LEAN` to
 /// `kratz/diff/eins.lean` (run it with `lake env lean`; for reading the full Lean error).
 #[test]
@@ -323,6 +336,22 @@ pub const ERWARTET_A: &[(&str, &str)] = &[
     ("K001,N511", "both of the above in one unit"),
 ];
 
+/// Premises the EXPORTER reports as the model's (`refuse_modell`) although the Lean model has no such
+/// component, so the pure-Lean route, which is the model, accepts: `LG001` (an `effects { locks L }` line
+/// that is neither held by signature nor taken in the body; `G` carries no `locks` effect, the checker's
+/// `H011`/`E006` is a rule beyond `Akzeptiert`, class (a)).
+const EXPORT_ENGER: &[&str] = &["LG001"];
+
+/// **Findings against the CHECKER** that the pure-Lean route (the model) makes and the checker has not yet
+/// repaired (atom, the model's message, what is wrong). Each is a program the checker accepts and the model
+/// refuses for a premise it holds: class (b), a checker bug, found by a form the Lean elaboration gained after
+/// the harness was written. The Rust checker is not touched here (Track P); the test falls on any NEW pair.
+const PRUEFER_BEFUNDE: &[(&str, &str, &str)] = &[
+    ("l.retry", "access without held guard",
+     "the `until` predicate of a `retry` reads a table its lock guards without holding the lock (`H020` does not look \
+      into the loop header): a data race the model refuses (`Expr.thru`/`Expr.slot` carry `darf`)"),
+];
+
 /// Check the classification of a measured set against what the harness stands for. Returns one line per
 /// violation: a class (b) program, a class (a) group that is not in [`ERWARTET_A`], a disagreement of the
 /// pure-Lean path with the checker or with the exporter route.
@@ -344,10 +373,14 @@ pub fn verstoesse(ms: &[Messung]) -> Vec<String> {
         // the pure-Lean path decides the same as the checker and the exporter route
         let rust_ja = m.rust == RustV::Accept;
         match (&m.pur, rust_ja) {
+            // A known finding against the checker (recorded in `PRUEFER_BEFUNDE`), not a new violation.
+            (PurV::Verletzt(t), true) if PRUEFER_BEFUNDE.iter().any(|(a, teil, _)| m.atoms.contains(a) && t.contains(teil)) => {}
             (PurV::Reject | PurV::Verletzt(_), true) => out.push(format!("pure-Lean refuses what the checker accepts: {}", zeile(m))),
             _ => {}
         }
         match (&m.pur, &m.lean) {
+            // The exporter refuses by a premise the Lean model does not carry (finding, PRUEFER 12.6): not a violation.
+            (PurV::Accept, LeanV::Verletzt(t)) if EXPORT_ENGER.iter().any(|c| t.starts_with(c)) => {}
             (PurV::Accept, LeanV::Reject | LeanV::Elab(_) | LeanV::Verletzt(_)) => {
                 out.push(format!("pure-Lean accepts what the exporter route refuses: {}", zeile(m)))
             }
