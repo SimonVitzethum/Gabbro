@@ -184,6 +184,17 @@ pub fn katalog() -> Vec<Atom> {
         Atom { id: "t.u.write", lean: "Stmt.assignSlot", decls: &[U], eff: &["writes U.slots"], body: "U.slots[0].v = 5;", ..A },
         Atom { id: "t.traverse.locked", lean: "Stmt.traverse", decls: &[T], eff: &["reads T", "writes T.slots"], wache: tr, body: "traverse e@ over slots of T by unvisited touches writes T.slots {\n        T.slots[e@].w = 3;\n    }", ..A },
     ]);
+    // ---------------------------------------------------------------- indices and conditional locking
+    v.extend([
+        Atom { id: "t.oob.w", lean: "Expr.widen(index)", decls: &[T], eff: &["writes T.slots"], wache: tr, body: "T.slots[9].v = 1;", sicher: false, ..A },
+        Atom { id: "t.oob.r", lean: "Expr.widen(index)", decls: &[T], eff: &["reads T.slots"], wache: tr, body: "let x@ : u32 in 0 .. 100 = T.slots[4].v;", sicher: false, ..A },
+        Atom { id: "t.idx.ok", lean: "Expr.widen(index)", decls: &[T], params: "a@ : u32 in 0 .. 3", eff: &["writes T.slots"], wache: tr, body: "T.slots[a@].v = 1;", ..A },
+        Atom { id: "t.idx.bad", lean: "Expr.widen(index)", decls: &[T], params: "a@ : u32 in 0 .. 4", eff: &["writes T.slots"], wache: tr, body: "T.slots[a@].v = 1;", sicher: false, ..A },
+        Atom { id: "k.cond.ok", lean: "Stmt.ite/locks", decls: &[T, "lock LC protects { T } rank 0 held <= 100 ops;"], params: "a@ : u32 in 0 .. 9", eff: &["reads T.slots", "locks LC"], body: "if a@ < 5 {\n        locks LC {\n            let x@ : u32 in 0 .. 100 = T.slots[0].v;\n        }\n    }", ..A },
+        Atom { id: "k.cond.bad", lean: "Stmt.ite/locks", decls: &[T, "lock LC protects { T } rank 0 held <= 100 ops;"], params: "a@ : u32 in 0 .. 9", eff: &["reads T.slots", "locks LC"], body: "if a@ < 5 {\n        locks LC {\n            let x@ : u32 in 0 .. 100 = T.slots[0].v;\n        }\n    } else {\n        let y@ : u32 in 0 .. 100 = T.slots[1].v;\n    }", sicher: false, ..A },
+        Atom { id: "k.loop", lean: "Stmt.traverse/locks", decls: &[T, "lock LC protects { T } rank 0 held <= 100 ops;"], eff: &["writes T.slots", "reads T", "locks LC"], body: "traverse e@ over slots of T by unvisited touches writes T.slots {\n        locks LC {\n            T.slots[e@].w = 1;\n        }\n    }", ..A },
+        Atom { id: "k.ret.in", lean: "Stmt.ret under locks (no form)", decls: &[T, "lock LC protects { T } rank 0 held <= 100 ops;"], eff: &["reads T.slots", "locks LC"], ret: " -> u32 in 0 .. 100", body: "locks LC {\n        return T.slots[0].v;\n    }\n    return 0;", ..A },
+    ]);
     // ---------------------------------------------------------------- statics and atomics
     let sr = Wache::S;
     v.extend([

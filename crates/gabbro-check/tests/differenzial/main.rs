@@ -21,6 +21,7 @@
 mod atome;
 mod bau;
 mod lauf;
+mod mutanten;
 mod sonder;
 
 use std::collections::BTreeMap;
@@ -42,6 +43,20 @@ impl Prog {
         format!("{}/{}/{}", self.arr.name(), self.mode.name(), self.atoms.join("+"))
     }
 }
+
+/// The corpus examples whose export succeeds (`gabbro lean-g`): the Lean model has a form for every
+/// construct in them. Their mutants are part of the space (`mutanten.rs`).
+const KORPUS_EXPORTIERT: &[&str] = &[
+    "104-referenz", "108-disjoint-start-locks", "109-lockfree-entry-roots", "116-payload-free-counter",
+    "1164-operanden-zuerst-weiten", "1166-start-wurzel-doppelt", "1167-start-wurzel-und-mitglied",
+    "118-sperrinvariante-erhaltung", "119-sperrinvariante-bloecke", "120-tagged-construction",
+    "121-tagged-static-init", "124-two-threads-private", "130-derived-contract-pure",
+    "15-own-traegt-beide-rechte", "157-worker-pool", "16-by-ops-am-feld", "162-geteilte-flagge",
+    "165-gp-eintritt", "166-eintritt-irq-maskiert", "174-tor-im-modell", "181-gate-at-top-level",
+    "182-fallible-gate", "187-bool-statisch", "190-erster-treffer", "193-zwei-tabellen-kein-fehlablauf",
+    "34-markierter-wert", "59-eintritt-nimmt-maskierte-sperre", "62-grenzwort-im-ausdruck",
+    "69-integer-conversion", "73-sugar-widths", "93-const-scalars",
+];
 
 /// Build the programs of one shape over a list of atoms (one per admissible mode).
 fn erzeuge(arr: Arr, atoms: &[&Atom], out: &mut Vec<Prog>) {
@@ -65,6 +80,13 @@ pub fn raum() -> Vec<Prog> {
     for (id, src) in sonder::sonder() {
         let n = out.len();
         out.push(Prog { n, arr: Arr::One, mode: Mode::Free, atoms: vec![id], src: src.replace("gen::u", &format!("gen::p{n}")) });
+    }
+    // mutants of the corpus examples the exporter certifies (the model has a form for all of them)
+    let beispiele = lauf::wurzel().join("beispiele");
+    for (stem, id, src) in mutanten::korpus_mutanten(&beispiele, KORPUS_EXPORTIERT) {
+        let n = out.len();
+        let name: &'static str = Box::leak(format!("mut:{stem}:{id}").into_boxed_str());
+        out.push(Prog { n, arr: Arr::One, mode: Mode::Free, atoms: vec![name], src });
     }
     for arr in [Arr::Seq, Arr::Par, Arr::Call, Arr::CallKnapp] {
         for a in &kat {
@@ -280,7 +302,7 @@ fn gesamtraum_rust_und_export() {
             eprintln!("{}", zeile(m));
         }
     }
-    assert_eq!(ms.iter().filter(|m| klasse(m) == Klasse::Syntax).count(), 0);
+    assert_eq!(ms.iter().filter(|m| klasse(m) == Klasse::Syntax && !m.name.contains("mut:")).count(), 0);
 }
 
 /// The report: the counts per class, per atom (every program the atom stands in), and the
@@ -394,7 +416,11 @@ fn vollraum() {
 fn schnitt_gegen_das_modell() {
     let alle = raum();
     let gesamt = alle.len();
-    let progs = auswahl(alle, umgebung("GABBRO_DIFF_SLICE", 1800));
+    let progs = match std::env::var("GABBRO_DIFF_NUR") {
+        // every program whose name contains the text, no stride (for one family of the space)
+        Ok(nur) => alle.into_iter().filter(|p| p.name().contains(&nur)).collect(),
+        Err(_) => auswahl(alle, umgebung("GABBRO_DIFF_SLICE", 1800)),
+    };
     let mit_lean = std::env::var("GABBRO_DIFF_OHNE_LEAN").is_err();
     let ms = messe(&progs, mit_lean, &kratz());
     let z = zaehle(&ms);
@@ -404,5 +430,6 @@ fn schnitt_gegen_das_modell() {
             eprintln!("{}", zeile(m));
         }
     }
-    assert_eq!(z.get(&Klasse::Syntax), None, "a generated program does not read");
+    let kaputt: Vec<&Messung> = ms.iter().filter(|m| klasse(m) == Klasse::Syntax && !m.name.contains("mut:")).collect();
+    assert!(kaputt.is_empty(), "a generated program does not read: {:?}", kaputt.iter().map(|m| &m.name).collect::<Vec<_>>());
 }
