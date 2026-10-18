@@ -64,7 +64,10 @@ inductive SAnw
   | elsif : SExpr → SAnw → SAnw
   | cases : SExpr → List SAnw → SAnw
   | arm : String → Option String → SAnw → SAnw
-  | each : String → SAnw → SAnw
+  /-- `traverse b [of e] over KIND of S by MODE [decreases …] [touches …] [invariant p] { … }`:
+      binder, `of` start, domain kind word (`slots`, `ancestors`, …), domain subject, mode word,
+      the raw words of `decreases`/`touches`, the invariant, the body. -/
+  | each : String → Option SExpr → String → SExpr → String → String → Option SExpr → SAnw → SAnw
   | retry : String → SAnw → SAnw
   | loop : String → SAnw → SAnw
   | waive : List String → SAnw → SAnw
@@ -135,7 +138,9 @@ def beqSAnw : SAnw → SAnw → Bool
   | .cases g a, .cases h b => beqSExpr g h && beqSAnwList a b
   | .arm v b t, .arm w c u =>
     strEq v w && beqOptWort b c && beqSAnw t u
-  | .each h b, .each i d => strEq h i && beqSAnw b d
+  | .each b o k s m r i d, .each b2 o2 k2 s2 m2 r2 i2 d2 =>
+    strEq b b2 && beqOptExpr o o2 && strEq k k2 && beqSExpr s s2 && strEq m m2 && strEq r r2 &&
+      beqOptExpr i i2 && beqSAnw d d2
   | .retry h b, .retry i d => strEq h i && beqSAnw b d
   | .loop h b, .loop i d => strEq h i && beqSAnw b d
   | .waive inv b, .waive jnv d =>
@@ -203,6 +208,19 @@ def schliesseBlock : List SAnw → SAnw
 -- after a block form, `P033`) match one by one. Predicates, domains,
 -- `xform` bodies, payload lists and type ascriptions ride as raw
 -- words (see CUTS).
+/-- The raw words of a `traverse` header up to `invariant` or the body `{` (brace-free clauses). -/
+def traverseRest : List Token → Except String (String × List Token)
+  | [] => .error "loop without body"
+  | (.zeichen "{" :: rest) => .ok ("", .zeichen "{" :: rest)
+  | (.wort s :: rest) =>
+    if strEq s "invariant" then .ok ("", .wort s :: rest)
+    else match traverseRest rest with
+      | .error e => .error e
+      | .ok (h, r) => .ok (s ++ " " ++ h, r)
+  | (t :: rest) => match traverseRest rest with
+    | .error e => .error e
+    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
+
 mutual
 def parseStmt (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -214,7 +232,7 @@ def parseStmt (f : Nat) (toks : List Token) :
       else if strEq w "let" then parseLet f rest
       else if strEq w "if" then parseWenn f rest
       else if strEq w "match" then parseMatchS f rest
-      else if strEq w "traverse" then parseSchleife f rest 0
+      else if strEq w "traverse" then parseTraverse f rest
       else if strEq w "retry" then parseSchleife f rest 1
       else if strEq w "forever" then parseSchleife f rest 2
       else if strEq w "breaking" then parseBricht f rest
@@ -531,7 +549,46 @@ def parseArme (f : Nat) (toks : List Token) :
           | .ok (b, rest3) => match parseArme f rest3 with
             | .error e => .error e
             | .ok (arms, rest4) => .ok ((.arm v binder b) :: arms, rest4)
-/-- `traverse` (0), `retry` (1), `forever` (2): the header rides raw
+/-- `traverse` with a structured header (SYNTAX.md section 8). -/
+def parseTraverse (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (b, r1) =>
+      match (match r1 with
+          | .wort "of" :: r => match parseOr f r with
+            | .error e => .error e
+            | .ok (e, r') => .ok (some e, r')
+          | _ => .ok (none, r1) : Except String (Option SExpr × List Token)) with
+      | .error e => .error e
+      | .ok (o, r2) => match nimmWort "over" r2 with
+        | .error e => .error e
+        | .ok r3 => match nimmName r3 with
+          | .error e => .error e
+          | .ok (k, r4) => match nimmWort "of" r4 with
+            | .error e => .error e
+            | .ok r5 => match parseOr f r5 with
+              | .error e => .error e
+              | .ok (s, r6) => match nimmWort "by" r6 with
+                | .error e => .error e
+                | .ok r7 => match nimmName r7 with
+                  | .error e => .error e
+                  | .ok (m, r8) => match traverseRest r8 with
+                    | .error e => .error e
+                    | .ok (raw, r9) =>
+                      match (match r9 with
+                          | .wort "invariant" :: r => match parseOr f r with
+                            | .error e => .error e
+                            | .ok (i, r') => .ok (some i, r')
+                          | _ => .ok (none, r9) : Except String (Option SExpr × List Token)) with
+                      | .error e => .error e
+                      | .ok (inv, r10) => match parseBlock f r10 with
+                        | .error e => .error e
+                        | .ok (body, rest') => .ok (.each b o k s m raw inv body, rest')
+
+/-- `retry` (1), `forever` (2): the header rides raw
     (domains, bounds, invariants need the `pred` reader), the body is
     a block. -/
 def parseSchleife (f : Nat) (toks : List Token) (art : Nat) :
@@ -543,8 +600,7 @@ def parseSchleife (f : Nat) (toks : List Token) (art : Nat) :
     | .ok (h, rest) => match parseBlock f rest with
       | .error e => .error e
       | .ok (b, rest') =>
-        if art == 0 then .ok (.each h b, rest')
-        else if art == 1 then .ok (.retry h b, rest')
+        if art == 1 then .ok (.retry h b, rest')
         else .ok (.loop h b, rest')
 def parseBricht (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=

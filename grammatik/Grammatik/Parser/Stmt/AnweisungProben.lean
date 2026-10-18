@@ -223,7 +223,7 @@ theorem s14_lex :
       .ok st14 := by
   decide
 theorem s14 : beqTopStmt (parseTopStmt st14)
-    (.ok (.each "e over slots of q by unvisited "
+    (.ok (.each "e" none "slots" (.variable "q") "unvisited" "" none
       (.block [] .none))) = true := by
   decide
 -- beispiele/04-schleifen.gab (the `dienstschleife` header, body

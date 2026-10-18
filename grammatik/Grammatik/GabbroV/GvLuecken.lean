@@ -40,7 +40,7 @@ theorem gvLuecke_sp4_ist_sp0 (h : sp0OkB uExp104 = true) :
     subst ef
     rfl
   have hgl : sp4.globs = (sp0Of uExp104 h).globs :=
-    funext fun g => nomatch g
+    funext fun g => g.elim0
   show (⟨sp4.slots, sp4.globs⟩ : Speicher D4) =
     ⟨(sp0Of uExp104 h).slots, (sp0Of uExp104 h).globs⟩
   rw [hsl, hgl]
@@ -59,14 +59,14 @@ theorem gvLuecke_start104 : StartPflicht E4 :=
 /-- **The refusal fixture** (`uLuecke`): one table, one non-`bool` field of range
     `1 .. 100` (holds no zero), no locks, no functions. -/
 def uLuecke : UProg :=
-  { tabellen := [{ name := "T", count := 1, felder := [("v", (1, 100))] }],
-    sperren := [], fns := [] }
+  { tabs := [{ name := "T", count := 1, cols := [("v", (1, 100))] }],
+    locks := [], fns := [] }
 
 /-- **L_c: a witnessed refusal.** The obstructions (`sp0_luecke`,
     `sp0_lueckeB`) quantify over every field; this exhibits one: a unit with a
     non-`bool` field of range `1 .. 100`, where the decider answers `false`. -/
 theorem gvLuecke_luecke_zeuge :
-    ∃ (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t))
+    ∃ (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
     (w : Int × Int),
     boolFeldAt u t f = false ∧ fieldRangeO u t f = some w ∧
       (w.1 > 0 ∨ 0 > w.2) ∧ sp0OkB u = false :=
@@ -85,94 +85,30 @@ theorem gvLuecke_lokal_leer (D : Deklaration) :
 
 /-- **L_e: atomic freedom on fragment declarations.** `GvAtomRely` cites a
     `declOf_kein_atomar` that does not exist in the tree (dangling reference);
-    the `declOf`-side statement feeding `gv_plain_gibt_relyDuty_parserfragment`
-    on fragment units (from `Glob = Empty`, like `gv_104_ohne_atomar`). -/
-theorem gvLuecke_fragment_ohne_atomar (u : UProg) :
+    the `declOf`-side statement feeding `gv_plain_gibt_relyDuty_parserfragment`: a unit without an `atomic`
+    item has no atomic carrier (`atomar g` is the `atomic` flag of the static), like `gv_104_ohne_atomar`. -/
+theorem gvLuecke_fragment_ohne_atomar (u : UProg) (h : ∀ g ∈ u.globs, g.atomic = false) :
     ∀ g : (declOf u).Glob, (declOf u).atomar g = false :=
-  fun g => nomatch g
+  fun g => h _ (List.get_mem u.globs g)
 
-/-- **L_f: the parser refuses statics loudly.** `gv_fragment_kein_static`
-    shows no static reaches `declOf`; here the other half: a source static is
-    refused, never silently dropped (`uRestFehler`'s catch-all,
-    `Uebersetze.lean` line 1298). Parser territory (agent 02); proved here from
-    the accepted definitions, touching no `Parser/` file. -/
-theorem gvLuecke_elabU_refuses_statics :
-    ∀ (ms : List SItemTief) (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr)
-      (s : Option String) (g : Bool),
-      .globT m a t v al s g ∈ uMembers ms → ¬ ∃ u, elabU ms = .ok u := by
-  have aux : ∀ (l : List SItemTief),
-      (∃ m a t v al s g, .globT m a t v al s g ∈ l) →
-      ∃ e, uRestFehler l = .error e := by
-    intro l
-    induction l with
-    | nil =>
-      intro hmem
-      obtain ⟨m, a, t, v, al, s, g, hm⟩ := hmem
-      exact (List.not_mem_nil hm).elim
-    | cons x xs ih =>
-      intro hmem
-      obtain ⟨m, a, t, v, al, s, g, hm⟩ := hmem
-      cases x with
-      | constT _ _ _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | typeT _ _ _ _ _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | tableT _ _ _ _ _ _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | lockT _ _ _ _ _ _ _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | fnT _ _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | entryT _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | modT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | useT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | globT _ _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | protoT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | specT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | asmT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | formatT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | arenaT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | whyT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | stateT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | devT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | assumT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | axiomT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | checkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | atomT _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | rcuT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | groupT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | concT _ =>
-        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
-        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
-        exact ⟨e, by simp only [uRestFehler, he]⟩
-      | accT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | walkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | trustT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | bootT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | callT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | varT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | goalT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | transT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | profT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | gateT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-  intro ms m a t v al s g hmem hex
-  obtain ⟨u, hu⟩ := hex
-  obtain ⟨e, he⟩ := aux (uMembers ms) ⟨m, a, t, v, al, s, g, hmem⟩
-  simp only [elabU, he] at hu
-  exact nomatch hu
+/-- **L_f: a static with no `Glob` form is refused loudly.** A placement (`aligned`, `section`) or a
+    `shared` word is a property of the storage, which a `Glob` does not carry: the static reader stops with
+    an error, it never drops the word. Parser territory; proved from the accepted definition. -/
+theorem gvLuecke_statik_ohne_form
+    (consts : List (String × Int)) (alias : List (String × (Int × Int)))
+    (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr) (s : Option String)
+    (sh : Bool) (rest : List SItemTief) (h : al.isSome = true ∨ s.isSome = true ∨ sh = true) :
+    ∃ e, uGlobs consts alias (.globT m a t v al s sh :: rest) = .error e := by
+  refine ⟨"static placement without G form", ?_⟩
+  simp only [uGlobs]
+  have h' : (al.isSome || s.isSome || sh) = true := by
+    cases h with
+    | inl h1 => simp [h1]
+    | inr h2 =>
+      cases h2 with
+      | inl h3 => simp [h3]
+      | inr h4 => simp [h4]
+  simp [h']
 
 /-
   CUTS (review gaps, agent 01 follow-up -- ALL CLOSED as theorems):
@@ -202,6 +138,6 @@ theorem gvLuecke_elabU_refuses_statics :
 #print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_luecke_zeuge
 #print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_lokal_leer
 #print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_fragment_ohne_atomar
-#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_elabU_refuses_statics
+#print axioms Gabbro.Grammatik.GabbroV.GvLuecken.gvLuecke_statik_ohne_form
 
 end Gabbro.Grammatik.GabbroV.GvLuecken

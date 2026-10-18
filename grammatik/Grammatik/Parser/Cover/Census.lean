@@ -14,7 +14,9 @@
   The numbers in `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a come from this run.
 -/
 import Grammatik.GabbroV.GvZensus
-import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeAllg3
+import Grammatik.Parser.Print.Stmt
+import Grammatik.Parser.Print.Item
 
 namespace Gabbro.Grammatik.Parser.Cover
 
@@ -90,6 +92,24 @@ def tally (rs : List Res) : String :=
     " | kinds=" ++ String.intercalate "," oks ++
     " | blockers=" ++ String.intercalate " ;; " (errs.take 4)
 
+/-- The function bodies of a unit, nested modules opened. -/
+def koerperVon (ms : List SItemTief) : List SAnw :=
+  (uMembers ms).filterMap fun it => match it with
+    | .fnT _ b => some b
+    | _ => none
+
+/-- Round trip of every function body: print, read back, compare (`ok/total`). -/
+def rundlaufZahl (items : List SItemTief) : String :=
+  let bs := koerperVon items
+  toString (bs.filter rundlaufBlock).length ++ "/" ++ toString bs.length
+
+/-- Round trip of every leaf item (modules opened): `ok/total`. -/
+def rundlaufItemZahl (items : List SItemTief) : String :=
+  let leaves := (uMembers items).filter fun it => match it with
+    | .modT .. => false
+    | _ => true
+  toString (leaves.filter rundlaufItem).length ++ "/" ++ toString leaves.length
+
 def line (name src : String) : String :=
   match lex src with
   | .error e => name ++ " | lex=err:" ++ zeigeLexFehler e
@@ -105,7 +125,13 @@ def line (name src : String) : String :=
           | .error e => "err:" ++ e
         | .error _ => "n/a"
       | .error _ => "n/a"
-    name ++ " | lex=ok | parse=" ++ okTxt whole ++ " | elab=" ++ el ++ " | lower=" ++ lo ++ " | " ++ tally (scanAll toks)
+    let rt := match whole with
+      | .ok items => rundlaufZahl items
+      | .error _ => "n/a"
+    let ri := match whole with
+      | .ok items => rundlaufItemZahl items
+      | .error _ => "n/a"
+    name ++ " | lex=ok | parse=" ++ okTxt whole ++ " | elab=" ++ el ++ " | lower=" ++ lo ++ " | rt=" ++ rt ++ " | ri=" ++ ri ++ " | " ++ tally (scanAll toks)
 
 def run (args : List String) : IO Unit := do
   let dir : System.FilePath := (args.headD "../beispiele")

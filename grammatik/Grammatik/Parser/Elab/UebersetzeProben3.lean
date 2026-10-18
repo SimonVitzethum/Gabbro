@@ -55,7 +55,7 @@ def entry_unknown_refused : String :=
 theorem entry_unknown_refused_stufe : stufe entry_unknown_refused = "elab: dispatch names an unknown function: nix" := by decide +kernel
 
 /-- The elaborated roots and handlers of a source (`none` when a stage stops it). -/
-def wurzeln (s : String) : Option (List String × List String) :=
+def roots (s : String) : Option (List String × List String) :=
   match lex s with
   | .error _ => none
   | .ok toks =>
@@ -64,20 +64,20 @@ def wurzeln (s : String) : Option (List String × List String) :=
     | .ok items =>
       match elabU (pre108 items) with
       | .error _ => none
-      | .ok u => some (u.wurzeln, u.handler)
+      | .ok u => some (u.roots, u.hands)
 
-theorem via_is_root_and_handler : wurzeln entry_via_ok = some (["w"], ["w"]) := by decide +kernel
-theorem plain_entry_is_no_handler : wurzeln entry1_ok = some (["w"], []) := by decide +kernel
+theorem via_is_root_and_handler : roots entry_via_ok = some (["w"], ["w"]) := by decide +kernel
+theorem plain_entry_is_no_handler : roots entry1_ok = some (["w"], []) := by decide +kernel
 
 def locks_plain : String :=
   "module m { table T count 2 { slot { v : u32, } } lock L protects { T } rank 0; impl fn w() { } }"
 
 def conc_ok : String := "module m { impl fn w() { } impl fn v() { } concurrent { w, v }; }"
-theorem conc_ok_roots : wurzeln conc_ok = some (["w", "v"], []) := by decide +kernel
+theorem conc_ok_roots : roots conc_ok = some (["w", "v"], []) := by decide +kernel
 
 def conc_first : String :=
   "module m { impl fn w() { } impl fn v() { } entry e vector 1 arch x86_64 { regs in { } regs out { } preserves { } clobbers { } stack k per cpu nested never dispatch m::v; } concurrent { w }; }"
-theorem concurrent_roots_come_first : wurzeln conc_first = some (["w", "v"], []) := by decide +kernel
+theorem concurrent_roots_come_first : roots conc_first = some (["w", "v"], []) := by decide +kernel
 
 def conc_params_refused : String := "module m { impl fn p(i : u32 in 0 .. 1) { } concurrent { p }; }"
 theorem conc_params_refused_stufe :
@@ -103,7 +103,7 @@ def maskFlags (s : String) : Option (List Bool) :=
     | .ok items =>
       match elabU (pre108 items) with
       | .error _ => none
-      | .ok u => some (u.sperren.map (·.masks))
+      | .ok u => some (u.locks.map (·.masks))
 
 theorem mask_irqs_is_read : maskFlags mask_src = some [true] := by decide +kernel
 theorem mask_irqs_lowers : stufe mask_src = "OK" := by decide +kernel
