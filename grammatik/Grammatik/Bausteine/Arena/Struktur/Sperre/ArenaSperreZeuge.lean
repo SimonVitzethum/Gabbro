@@ -29,13 +29,7 @@ namespace SperreZeuge
 open InvDynZeuge
 
 /-- The contract of the witness bodies: they run with `()` held and end holding it (a locked arena operation). -/
-def FVL : Vertrag FDL where
-  schreibt := fun _ => true
-  gschreibt := fun _ => true
-  erg := none
-  gruende := 0
-  haelt := [()]
-  produziert := []
+abbrev FVL : Vertrag FDL := vertragVon FDL ()
 
 /-- Held locks inside the section. -/
 abbrev HL : List (Res FDL) := [Res.held ()]

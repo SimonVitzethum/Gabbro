@@ -146,7 +146,7 @@ rules('grammatik/Grammatik/Logik/Ruf', [
 # The arena family: the dynamic structures over live slots (list, tree, recognizer; PLAN-DYNAMISCH 8a) live in `Struktur`
 # (room for the 20-entry limit, 2026-10-18).
 rules('grammatik/Grammatik/Bausteine/Arena', [
-    (r'^Arena(Kette|Baum|BaumWelt|Liste|Lebt|Fremd|Frei|DynZeuge|Auf|AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Hash|Sibling|Erkenner\w*)$', 'Struktur'),
+    (r'^Arena(Kette|Baum|BaumWelt|Liste|Lebt|Fremd|Frei|DynZeuge|Auf|AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Hash|Sibling|Erkenner\w*|Sperre\w*)$', 'Struktur'),
 ])
 
 # Inside `Struktur`: the executed forms and the recognizer family get their own sub-folders (room for the 20-entry limit,
@@ -154,4 +154,6 @@ rules('grammatik/Grammatik/Bausteine/Arena', [
 rules('grammatik/Grammatik/Bausteine/Arena/Struktur', [
     (r'^Arena(AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Form\w+|HashForm|HashZug|HashZeuge|SibForm|SibZug)$', 'Formen'),
     (r'^Arena(Erk\w*)$', 'Erkenner'),
+    # the shared arena: lock invariant, section theorem, machine bridge, witnesses (Phase A step 3, 2026-10-18)
+    (r'^Arena(Sperre\w*)$', 'Sperre'),
 ])

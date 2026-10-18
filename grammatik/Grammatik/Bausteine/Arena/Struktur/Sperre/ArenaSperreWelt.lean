@@ -53,7 +53,7 @@ open InvDynZeuge
     { params := []
       erg := none
       gruende := 0
-      haelt := []
+      haelt := [()]
       schreibt := fun _ => true
       gschreibt := fun _ => true
       konsumiert := []
