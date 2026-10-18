@@ -242,6 +242,80 @@ def brennstoff (e : SExpr) : Nat :=
 -- `None` would lex to a keyword and need its special case.
 -- `sizeof`/`lenof`/`aligned`, `old`, `result`, `true`/`false`
 -- print as `wort` (their parser arms match `wort` only).
+/-- A `::` path as name and separator tokens. -/
+def pfadToks : List String → List Token
+  | [] => []
+  | [a] => [.ident a]
+  | a :: rest => [.ident a, .zeichen "::"] ++ pfadToks rest
+
+/-- Printed operands, comma separated. -/
+def kommaToks : List (List Token) → List Token
+  | [] => []
+  | [x] => x
+  | x :: xs => x ++ [.zeichen ","] ++ kommaToks xs
+
+/-- A `domain` (SYNTAX.md section 5) from its kind word, names and printed places: the inverse of
+    `parseDomain`. -/
+def domToks (dk : String) (ds : List String) (ops : List (List Token)) : List Token :=
+  if strEq dk "threads" then [.wort "threads"]
+  else if strEq dk "fields" then [.wort "fields", .wort "of"] ++ pfadToks ds
+  else if strEq dk "chain" then
+    match ds, ops with
+    | [x, y], [p] =>
+      [.wort "chain", .zeichen "(", .ident x, .zeichen ",", .ident y, .zeichen ")", .wort "in"] ++ p
+    | _, _ => [.ende]
+  else if strEq dk "queue" then [.wort "queue"] ++ ops.headD []
+  else [.wort dk, .wort "of"] ++ ops.headD []
+
+/-- The spelling of the `ext` forms (layout at `XKind`), from the printed sub-expressions: the predicate
+    forms ride in parentheses, which `parsePredAtom` reads back through its `( pred )` arm; a string and a
+    call through a place print as themselves. Outside the `gut` core, so no round-trip theorem rests on it:
+    the witnesses of `Print/ExtProben` decide it per form. -/
+def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List Token :=
+  match k with
+  | .text => match ns with
+    | [s] => [.text s]
+    | _ => [.ende]
+  | .call => match ts with
+    | c :: args => c ++ [.zeichen "("] ++ kommaToks args ++ [.zeichen ")"]
+    | [] => [.ende]
+  | .imp => match ts with
+    | [a, b] => [.zeichen "("] ++ a ++ [.zeichen "=>"] ++ b ++ [.zeichen ")"]
+    | _ => [.ende]
+  | .reach => match ns, ts with
+    | [f], [a, b] => [.zeichen "("] ++ a ++ [.wort "reaches"] ++ b ++ [.wort "via", .ident f, .zeichen ")"]
+    | _, _ => [.ende]
+  | .mem => match ns, ts with
+    | dk :: ds, e :: ops => [.zeichen "("] ++ e ++ [.wort "in"] ++ domToks dk ds ops ++ [.zeichen ")"]
+    | _, _ => [.ende]
+  | .all => druckQuant "forall" ns ts
+  | .any => druckQuant "exists" ns ts
+  | .count => druckQuant "count" ns ts
+where
+  druckQuant (w : String) (ns : List String) (ts : List (List Token)) : List Token :=
+    match ns, ts.reverse with
+    | x :: dk :: ds, body :: opsRev =>
+      [.zeichen "(", .wort w, .ident x, .wort "in"] ++ domToks dk ds opsRev.reverse ++
+        [.zeichen ":"] ++ body ++ [.zeichen ")"]
+    | _, _ => [.ende]
+
+theorem druckQuant_ne_nil (w : String) (ns : List String) (ts : List (List Token)) :
+    druckExtToks.druckQuant w ns ts ≠ [] := by
+  unfold druckExtToks.druckQuant
+  split <;> simp
+
+theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Token)) :
+    druckExtToks k ns ts ≠ [] := by
+  cases k <;> simp only [druckExtToks]
+  · exact druckQuant_ne_nil _ _ _
+  · exact druckQuant_ne_nil _ _ _
+  · exact druckQuant_ne_nil _ _ _
+  · split <;> simp
+  · split <;> simp
+  · split <;> simp
+  · split <;> simp
+  · split <;> simp
+
 mutual
 def druckToks : SExpr → List Token
   | .lit n => [.num n]
@@ -269,7 +343,10 @@ def druckToks : SExpr → List Token
     [.wort "old", .zeichen "("] ++ druckToks x ++ [.zeichen ")"]
   | .res => [.wort "result"]
   | .why g f => [.ident g, .zeichen "::", .ident f]
-  | .ext _ _ _ => [.ende]
+  | .ext k ns xs => druckExtToks k ns (druckToksViele xs)
+def druckToksViele : List SExpr → List (List Token)
+  | [] => []
+  | x :: xs => druckToks x :: druckToksViele xs
 def druckToksListe : List SExpr → List Token
   | [] => []
   | [x] => druckToks x
@@ -768,7 +845,9 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
       simp only [druckToks, List.length] at ⊢
       omega
     | ext xk xn xs =>
-      simp only [druckToks, List.length] at ⊢
+      have hl : 0 < (druckExtToks xk xn (druckToksViele xs)).length :=
+        List.length_pos_iff.mpr (druckExtToks_ne_nil _ _ _)
+      simp only [druckToks, groesse]
       omega
 
 -- An element is no bigger than its list.
@@ -1316,12 +1395,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         simp at h
       · intro h
         simp at h
-    | ext xk xn xs =>
-      simp only [druckToks] at hm
-      rw [List.mem_singleton] at hm
-      subst hm
-      intro h
-      simp at h
+    | ext xk xn xs => exact absurd hg (by simp [gut])
 
 -- A printed `gut` tree never starts with `)` (heads are literals,
 -- names or openers; suffix chains delver into the base, operators
@@ -1481,12 +1555,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       intro h
       simp at h
-    | ext xk xn xs =>
-      simp only [druckToks] at hT
-      injection hT with ha _
-      subst ha
-      intro h
-      simp at h
+    | ext xk xn xs => exact absurd hg (by simp [gut])
 
 -- The round-trip invariant at size bound `n`: every level parses
 -- every `gut` tree from its printed tokens with fuel linear in
