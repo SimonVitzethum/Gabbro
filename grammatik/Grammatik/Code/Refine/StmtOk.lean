@@ -81,7 +81,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       hE, hW, hc => by
       simp only [lowerS] at h
       simp only [execStmt, OutOk]
-      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerErg_ok lay hL cenv e lb st st' blks h M S fn hM
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerRet_ok lay hL cenv V.gruende e lb st st' blks h M S fn hM
         (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs ks dst hR hE hc
       exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, _, .leave .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW,
@@ -586,8 +586,12 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp [lowerS] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
-  | _, _, _, _, .retWhy .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .retWhy r _, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerS] at h
+      simp only [execStmt, OutOk]
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerWhy_ok lay cenv V.gruende V.erg r.val lb st st' blks h M S fn hM
+        m rs ks dst
+      exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
 
 theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
@@ -638,7 +642,9 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · rw [hx] at IHs
         simp only [hx]
         exact IHs
-      · simp only [hx, OutOk]
+      · rw [hx] at IHs
+        simp only [hx]
+        exact IHs
       · rw [hx] at IHs
         simp only [hx]
         exact outok_mono hle _ IHs
@@ -789,7 +795,10 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       rcases hRf : R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
         ⟨σ', v⟩ | ⟨σ', r⟩ | e | e
       · simp only [hRf]
-        have hw := ergImg_ergWert lay he v
+        have hw : retImg lay (D.gruende f) (D.erg f) v = some (encR lay τ (ergWert he v)) := by
+          unfold retImg
+          rw [if_pos hr]
+          exact ergImg_ergWert lay he v
         obtain ⟨m', hreach, hRn, hWn, hK⟩ := call_run_some hFn hCall hRf hb0 (pre := ca) (post := cb) (r := r1) (ks := ks) (dst := dst)
           (by simp) hw hs1' hmap hRl hW
         -- the cells of the locals survive the call
@@ -1004,7 +1013,7 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       hc => by
       simp only [lowerEnd] at h
       simp only [execEnd, EndOk]
-      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerErg_ok lay hL cenv e lb st st' blks h M S fn hM
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerRet_ok lay hL cenv V.gruende e lb st st' blks h M S fn hM
         (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs ks dst hR hE hc
       exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, .leave .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -1053,7 +1062,9 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       · rw [hx] at IHs
         simp only [hx]
         exact IHs
-      · simp only [hx, EndOk]
+      · rw [hx] at IHs
+        simp only [hx]
+        exact IHs
       · rw [hx] at IHs
         simp only [hx]
         exact runOk_mono hle IHs
@@ -1106,8 +1117,12 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp only [execEnd]
       try rw [← hσl]
       exact endok_bind hreach hFbind hcell hc (Nat.le_succ_of_le (Nat.le_trans hr1 hra)) _ IHr
-  | _, _, _, .retWhy .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+  | _, _, _, .retWhy r _, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd] at h
+      simp only [execEnd, EndOk]
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerWhy_ok lay cenv V.gruende V.erg r.val lb st st' blks h M S fn hM
+        m rs ks dst
+      exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, .bindAxiom .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by

@@ -167,7 +167,9 @@ theorem retry_loop {lay : Layout D} (hL : LayoutOk lay) {cenv : List Reg} {lv : 
         · rw [hx] at IH1
           simp only [hx, OutOk]
           exact runRet_lift hReach hFa (by omega) hc IH1
-        · simp only [hx, OutOk]
+        · rw [hx] at IH1
+          simp only [hx, OutOk]
+          exact runRet_lift hReach hFa (by omega) hc IH1
         · rw [hx] at IH1
           simp only [hx, OutOk]
           exact runOk_mono hro (runOk_lift hReach hFa (by omega) hc IH1)

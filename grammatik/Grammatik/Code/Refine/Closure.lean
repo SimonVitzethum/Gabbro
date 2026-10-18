@@ -104,11 +104,39 @@ theorem rufAt_ok_inv (P : Programm D) (O : Orakel D) (passes : Nat) (n : Nat) (f
     | exact absurd ‹false = true› (by decide)
     | (cases h; done)
 
+/-- A `why` answer of the source meaning of a call comes from a `why` of the body. -/
+theorem rufAt_why_inv (P : Programm D) (O : Orakel D) (passes : Nat) (n : Nat) (f : D.Fn)
+    (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (r : Fin (D.gruende f))
+    (h : rufAt P O passes (n + 1) f σ ρ = RufAusgang.why σ' r) :
+    execEnd (V := vertragVon D f) O passes (rufAt P O passes n) (P.rumpf f)
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ = EndAusgang.why σ' r := by
+  simp only [rufAt] at h
+  split at h
+  · cases h
+  rename_i hreq
+  split at h
+  · rename_i σ'' v'' hx
+    split at h
+    · cases h
+    rename_i hens
+    split at h
+    · cases h
+    · cases h
+  · rename_i σ'' r'' hx
+    injection h with h1 h2
+    subst h1
+    have h2' : r'' = r := h2
+    subst h2'
+    exact hx
+  all_goals first
+    | exact absurd ‹false = true› (by decide)
+    | (cases h; done)
+
 /-- **The recursion is closed.** For every depth `n`, the lowered functions refine the source meaning
     of a call `rufAt n`: if `rufAt n f σ ρ = ok σ' v`, the IR function of `f`, entered with the images
     of the arguments, runs to a `ret` of the image of `v`, leaves a memory that represents `σ'`, and
-    keeps the caller's memory (`Keep`). The module is assumed to hold the lowering of every function
-    and nothing else about the callees. -/
+    keeps the caller's memory (`Keep`); if it is `why σ' r`, it runs to a `ret` of the reason's word. The
+    module is assumed to hold the lowering of every function and nothing else about the callees. -/
 theorem lowerFn_callref (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (O : Orakel D)
     (passes : Nat) (M : Modl) (S : Sees) (name : D.Fn → String)
     (hfun : ∀ f, ∃ func, lowerFn lay P f (name f) = some func ∧ M.funs[lay.fno f]? = some func) :
@@ -117,15 +145,21 @@ theorem lowerFn_callref (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (O
   intro n
   induction n with
   | zero =>
-      intro f σ ρ σ' v h
-      simp [rufAt] at h
+      refine ⟨fun f σ ρ σ' v h => ?_, fun f σ ρ σ' r h => ?_⟩
+      · simp [rufAt] at h
+      · simp [rufAt] at h
   | succ n ih =>
-      intro f σ ρ σ' v hok m rs ks dst hR hW hA
-      obtain ⟨σ'', hex, hrep⟩ := rufAt_ok_inv P O passes n f σ ρ σ' v hok
-      obtain ⟨func, hlf, hM⟩ := hfun f
-      obtain ⟨m', f', hr, hf1, hf2, hret, hR', hW', hK⟩ := lowerFn_run lay hL P f (name f) func hlf M S
-        (lay.fno f) hM O passes (rufAt P O passes n) hFn ih
-        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ m rs ks dst hR hW hA σ'' v hex
-      exact ⟨m', f', hr, hf1, hf2, hret, (hrep lay m').2 hR', hW', hK⟩
+      refine ⟨fun f σ ρ σ' v hok m rs ks dst hR hW hA => ?_, fun f σ ρ σ' r hwhy m rs ks dst hR hW hA => ?_⟩
+      · obtain ⟨σ'', hex, hrep⟩ := rufAt_ok_inv P O passes n f σ ρ σ' v hok
+        obtain ⟨func, hlf, hM⟩ := hfun f
+        obtain ⟨m', f', hr, hf1, hf2, hret, hR', hW', hK⟩ := lowerFn_run lay hL P f (name f) func hlf M S
+          (lay.fno f) hM O passes (rufAt P O passes n) hFn ih
+          (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ m rs ks dst hR hW hA σ'' v hex
+        exact ⟨m', f', hr, hf1, hf2, hret, (hrep lay m').2 hR', hW', hK⟩
+      · have hex := rufAt_why_inv P O passes n f σ ρ σ' r hwhy
+        obtain ⟨func, hlf, hM⟩ := hfun f
+        exact lowerFn_run_why lay hL P f (name f) func hlf M S (lay.fno f) hM O passes (rufAt P O passes n)
+          hFn ih (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ m rs ks dst
+          hR hW hA σ' r hex
 
 end Gabbro.Code.Lower

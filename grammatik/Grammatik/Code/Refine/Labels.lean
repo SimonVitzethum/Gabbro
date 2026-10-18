@@ -331,6 +331,52 @@ theorem lowerErg_lbl (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List (R
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
 
+theorem lowerErgF_lbl (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List (Res D)}
+    {eo : Option GTy} (e : ErgExpr D Γ Λ eo) (lb : Lbl) (st st' : St) (blks : List Block)
+    (h : lowerErgF lay cenv n e lb st = some (blks, st')) : LblWf lb st st' blks := by
+  cases e with
+  | empty =>
+      simp only [lowerErgF] at h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact lw_single rfl (Nat.le_refl _)
+      · simp at h
+  | @val τ e =>
+      cases τ with
+      | int lo hi =>
+          simp only [lowerErgF] at h
+          rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
+          · simp [he] at h
+          simp only [he] at h
+          split at h
+          · rcases hnc : numCode lo hi (retW n (some (.int lo hi))) (n + 1) 0 oe r1 with ⟨cn, on, r2⟩
+            rw [hnc] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            exact lw_single rfl (Nat.le_refl _)
+          · simp at h
+      | _ => simp [lowerErgF] at h
+
+theorem lowerRet_lbl (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List (Res D)}
+    {eo : Option GTy} (e : ErgExpr D Γ Λ eo) (lb : Lbl) (st st' : St) (blks : List Block)
+    (h : lowerRet lay cenv n e lb st = some (blks, st')) : LblWf lb st st' blks := by
+  unfold lowerRet at h
+  by_cases hn : n = 0
+  · rw [if_pos hn] at h
+    exact lowerErg_lbl lay cenv e lb st st' blks h
+  · rw [if_neg hn] at h
+    exact lowerErgF_lbl lay cenv n e lb st st' blks h
+
+theorem lowerWhy_lbl (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (st st' : St) (blks : List Block)
+    (h : lowerWhy n eo r lb st = some (blks, st')) : LblWf lb st st' blks := by
+  unfold lowerWhy at h
+  split at h
+  · simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact lw_single rfl (Nat.le_refl _)
+  · simp at h
+
 variable {V : Vertrag D}
 
 mutual
@@ -383,7 +429,7 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       exact lw_two (b := ⟨lb, [], cc, .br oc st.l (st.l + 1)⟩) rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
   | _, _, _, _, .ret e _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      exact lowerErg_lbl lay cenv e lb st st' blks h
+      exact lowerRet_lbl lay cenv V.gruende e lb st st' blks h
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, hlt, h => by
@@ -573,8 +619,9 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
-  | _, _, _, _, .retWhy .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .retWhy r _, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      exact lowerWhy_lbl V.gruende V.erg r.val lb st st' blks h
   | _, _, _, _, .leave .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -716,7 +763,7 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerEnd lay cenv lv b lb st = some (blks, st') → LblWf lb st st' blks
   | _, _, _, .ret e _, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
-      exact lowerErg_lbl lay cenv e lb st st' blks h
+      exact lowerRet_lbl lay cenv V.gruende e lb st st' blks h
   | _, _, _, .cons s rest, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
       rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
@@ -746,8 +793,9 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       obtain ⟨m2, n2, a2⟩ := lowerEnd_lbl lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ s2 b2
         (by show (st.l : Nat) < st.l + 1; omega) hr
       exact lw_bind (b := ⟨lb, [], ce ++ cb, .jmp st.l⟩) rfl hlt (by exact m2) ⟨n2, a2⟩
-  | _, _, _, .retWhy .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+  | _, _, _, .retWhy r _, lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd] at h
+      exact lowerWhy_lbl V.gruende V.erg r.val lb st st' blks h
   | _, _, _, .leave .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h

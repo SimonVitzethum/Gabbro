@@ -229,7 +229,9 @@ theorem traverse_loop {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : 
         · rw [hx] at IH1
           simp only [hx, OutOk]
           exact runRet_bind (Reach.trans hH hB) hFbind hcell hc (by omega) IH1
-        · simp only [hx, OutOk]
+        · rw [hx] at IH1
+          simp only [hx, OutOk]
+          exact runRet_bind (Reach.trans hH hB) hFbind hcell hc (by omega) IH1
         · -- `leave`: the loop ends
           rw [hx] at IH1
           simp only [hx]

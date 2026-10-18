@@ -62,7 +62,9 @@ theorem forever_ok {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : Ora
         · rw [hx] at IH1
           simp only [hx]
           exact IH1
-        · simp only [hx, OutOk]
+        · rw [hx] at IH1
+          simp only [hx]
+          exact IH1
         · rw [hx] at IH1
           simp only [hx]
           exact IH1

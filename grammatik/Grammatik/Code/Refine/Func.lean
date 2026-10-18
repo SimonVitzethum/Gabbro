@@ -154,7 +154,53 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
     (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
     (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
     ∃ m' f', Reach M S (.run m ⟨fn, 0, 0, rs, dst⟩ ks) (.run m' f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
-      RetAt M f' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
+      RetAt M f' (retImg lay (D.gruende f) (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
+  have hnd := lowerFn_nodup lay P f name func hf
+  unfold lowerFn at hf
+  rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
+  · simp [hp] at hf
+  simp only [hp] at hf
+  rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
+  · simp [hl] at hf
+  simp only [hl, Option.some.injEq] at hf
+  subst hf
+  have hM : ∀ b ∈ (⟨0, [], pc, .jmp 1⟩ :: blks : List Block), M.blk fn b.lbl = some b :=
+    fun b hb => blk_of_nodup hfn hnd hb
+  have hM2 : InM M fn blks := fun b hb => hM b (List.mem_cons_of_mem _ hb)
+  have hb0 := hM _ (List.mem_cons_self ..)
+  have SS := lowerEnd_shape lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl
+  obtain ⟨bk, hbk, hkp⟩ := kok_of_shape SS hM2
+  obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1, hFr1, hcell1⟩ :=
+    prologue_ok lay ρ 0 (D.params f).length hp hR hW hA (by omega)
+  have hreach := reach_block_jmp (S := S) (ks := ks) (dst := dst) hb0 rfl hbk hkp hs1
+  have hK0 : KOk M fn 0 := ⟨_, hb0, rfl⟩
+  have hEnd := lowerEnd_ok lay hL cenv (0, 0) O passes R (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl M S fn hM2
+    ⟨hK0, hK0⟩ hFn hCall σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1
+  rw [hex] at hEnd
+  obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW', hFe⟩ := hEnd
+  refine ⟨m', f', Reach.trans hreach hr2, hf1, hf2, hret, hR', hW', ?_⟩
+  refine ⟨Nat.le_trans hFr1.2.1 hFe.2.1, ?_⟩
+  intro b hf hb o t w hl
+  refine hFe.2.2 b hf (Nat.lt_of_lt_of_le hb hFr1.2.1) ?_ o t w (hFr1.2.2 b hf hb (by
+    rintro ⟨r0, hr0, _⟩; exact nomatch hr0) o t w hl)
+  rintro ⟨r0, hr0, hrs⟩
+  have := hcell1 r0 hr0 b hrs
+  omega
+
+/-- **The same for the answer `why`**: the module holds the lowered function `f` as function number
+    `fn`. If its body returns `v` in machine G (from a world that the memory represents, with the
+    arguments in registers `0 ..`), the IR run from the entry frame reaches a `ret` of the image of
+    `v`, and the memory it leaves represents the world the body returned. -/
+theorem lowerFn_run_why (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D.Fn) (name : String)
+    (func : Func) (hf : lowerFn lay P f name = some func) (M : Modl) (S : Sees) (fn : Nat)
+    (hfn : M.funs[fn]? = some func) (O : Orakel D) (passes : Nat)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) (hFn : FnOk lay M)
+    (hCall : CallRef lay M S R)
+    (σ : World D) (ρ : Env D (D.params f)) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg)
+    (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (r : Fin (D.gruende f))
+    (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.why σ' r) :
+    ∃ m' f', Reach M S (.run m ⟨fn, 0, 0, rs, dst⟩ ks) (.run m' f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
+      RetAt M f' (whyImg (D.gruende f) (D.erg f) r.val) ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
   have hnd := lowerFn_nodup lay P f name func hf
   unfold lowerFn at hf
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
@@ -196,7 +242,7 @@ theorem lowerFn_runs (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : 
     (σ : World D) (ρ : Env D (D.params f)) (m : Mem) (rs : Regs)
     (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
     (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
-    ∃ m', Runs M S (.run m ⟨fn, 0, 0, rs, none⟩ []) m' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
+    ∃ m', Runs M S (.run m ⟨fn, 0, 0, rs, none⟩ []) m' (retImg lay (D.gruende f) (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
   obtain ⟨m', f', hr, _, _, hret, hR', hW', _⟩ := lowerFn_run lay hL P f name func hf M S fn hfn O passes R hFn hCall σ ρ m rs [] none
     hR hW hA σ' v hex
   exact ⟨m', Reach.trans hr (reach_ret_fin hret m'), hR', hW'⟩

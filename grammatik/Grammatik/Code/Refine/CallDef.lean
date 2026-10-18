@@ -45,15 +45,26 @@ def FnOk (lay : Layout D) (M : Modl) : Prop :=
     ∃ func blk, M.funs[lay.fno f]? = some func ∧ func.params = irParams (D.params f) ∧
       func.blks.head? = some blk ∧ blk.lbl = 0 ∧ blk.phis = []
 
-/-- **The callees refine `R`** (the abstract frame invariant of a call). -/
-def CallRef (lay : Layout D) (M : Modl) (S : Sees)
-    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) : Prop :=
-  ∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (v : ErgVal D (D.erg f)),
+/-- **The callees refine `R`** (the abstract frame invariant of a call). A call of `f` that the source
+    answers with a value `ok σ' v` runs to a `ret` of the image of `v` (the plain image for a function
+    without reasons, the answer word otherwise: `retImg`); one that it answers with a reason `why σ' r`
+    runs to a `ret` of the reason's word (`whyImg`). Either way the memory represents the world the call
+    left and keeps the caller's. -/
+structure CallRef (lay : Layout D) (M : Modl) (S : Sees)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) : Prop where
+  ok : ∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (v : ErgVal D (D.erg f)),
     R f σ ρ = RufAusgang.ok σ' v →
     ∀ (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg),
       Rep lay σ m → WfL lay m → ArgRegs lay rs 0 ρ →
       ∃ m' f', Reach M S (.run m ⟨lay.fno f, 0, 0, rs, dst⟩ ks) (.run m' f' ks) ∧
-        f'.fn = lay.fno f ∧ f'.dst = dst ∧ RetAt M f' (ergImg lay (D.erg f) v) ∧
+        f'.fn = lay.fno f ∧ f'.dst = dst ∧ RetAt M f' (retImg lay (D.gruende f) (D.erg f) v) ∧
+        Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m'
+  why : ∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (r : Fin (D.gruende f)),
+    R f σ ρ = RufAusgang.why σ' r →
+    ∀ (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg),
+      Rep lay σ m → WfL lay m → ArgRegs lay rs 0 ρ →
+      ∃ m' f', Reach M S (.run m ⟨lay.fno f, 0, 0, rs, dst⟩ ks) (.run m' f' ks) ∧
+        f'.fn = lay.fno f ∧ f'.dst = dst ∧ RetAt M f' (whyImg (D.gruende f) (D.erg f) r.val) ∧
         Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m'
 
 /-! ## The callee frame -/

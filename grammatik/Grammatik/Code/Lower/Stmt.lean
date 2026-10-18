@@ -1,4 +1,5 @@
 import Grammatik.Code.Lower.Expr
+import Grammatik.Code.Lower.Fail
 
 /-
   File:      Grammatik/Code/Lower/Stmt.lean
@@ -104,6 +105,34 @@ def lowerErg (lay : Layout D) (cenv : List Reg) :
       match lowerE lay cenv e s.r with
       | some (ce, oe, r1) => some ([⟨lb, [], ce, .ret (some oe)⟩], { s with r := r1 })
       | none => none
+
+/-- `return` of a function with `n > 0` reasons: the answer word (`Lower/Fail.lean`): a value is
+    `(n + 1) * (v - lo)` (the payload packing with case number `0`), no value is `0`. -/
+def lowerErgF (lay : Layout D) (cenv : List Reg) (n : Nat) :
+    {Γ : Ctx} → {Λ : List (Res D)} → {eo : Option GTy} → ErgExpr D Γ Λ eo → Lbl → St →
+      Option (List Block × St)
+  | _, _, _, .empty, lb, s =>
+      if failOk n none then some ([⟨lb, [], [], .ret (some (.int (retW n none) 0))⟩], s) else none
+  | _, _, _, .val (τ := τ) e, lb, s =>
+      match τ, e with
+      | .int lo hi, e =>
+          match lowerE lay cenv e s.r with
+          | some (ce, oe, r1) =>
+              if failOk n (some (.int lo hi)) then
+                match numCode lo hi (retW n (some (.int lo hi))) (n + 1) 0 oe r1 with
+                | (cn, on, r2) => some ([⟨lb, [], ce ++ cn, .ret (some on)⟩], { s with r := r2 })
+              else none
+          | none => none
+      | _, _ => none
+
+/-- `return` of a value, in a function with `n` reasons or none. -/
+def lowerRet (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List (Res D)} {eo : Option GTy}
+    (e : ErgExpr D Γ Λ eo) (lb : Lbl) (s : St) : Option (List Block × St) :=
+  if n = 0 then lowerErg lay cenv e lb s else lowerErgF lay cenv n e lb s
+
+/-- `return why r`: the reason's word. -/
+def lowerWhy (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (s : St) : Option (List Block × St) :=
+  if failOk n eo then some ([⟨lb, [], [], .ret (some (.int (retW n eo) ((r : Int) + 1)))⟩], s) else none
 
 variable {V : Vertrag D}
 
@@ -232,7 +261,8 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
           else none
       | none => none
-  | _, _, _, _, .ret e _, lb, k, s => lowerErg lay cenv e lb s
+  | _, _, _, _, .ret e _, lb, k, s => lowerRet lay cenv V.gruende e lb s
+  | _, _, _, _, .retWhy r _, lb, k, s => lowerWhy V.gruende V.erg r.val lb s
   | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, _, .forever _ _ body, lb, k, s => lowerB lay cenv (k, lb) body lb lb s
@@ -394,7 +424,8 @@ def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W 
 def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →
       Lbl → St → Option (List Block × St)
-  | _, _, _, .ret e _, lb, s => lowerErg lay cenv e lb s
+  | _, _, _, .ret e _, lb, s => lowerRet lay cenv V.gruende e lb s
+  | _, _, _, .retWhy r _, lb, s => lowerWhy V.gruende V.erg r.val lb s
   | _, _, _, .leave _, lb, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, .next _, lb, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, .cons st rest, lb, s =>

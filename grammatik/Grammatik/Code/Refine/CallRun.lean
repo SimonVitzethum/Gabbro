@@ -62,7 +62,8 @@ theorem call_core {lay : Layout D} {M : Modl} {S : Sees}
     (hpre : seqI pre m rs = some (m, rs1)) (hops : ops.mapM (Opd.ev rs1) = some (argImgs lay ρa))
     (hR : Rep lay σl m) (hW : WfL lay m) :
     ∃ m' f', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' f' (⟨fn, lb, pre.length, rs1, dst⟩ :: ks)) ∧
-      f'.dst = d ∧ RetAt M f' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
+      f'.dst = d ∧ RetAt M f' (retImg lay (D.gruende f) (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧
+        Keep lay m m' := by
   have hstr : Stretch M fn lb 0 pre := ⟨blk, hb, fun i hi => by
     simp [hbody, List.getElem?_append_left hi]⟩
   have h1 := reach_seq M S pre m ⟨fn, lb, 0, rs, dst⟩ ks m rs1 hstr hpre
@@ -70,7 +71,7 @@ theorem call_core {lay : Layout D} {M : Modl} {S : Sees}
   obtain ⟨g, hg, hgfn, hgl, hgpc, hgd, hgA⟩ := callee_frame hFn f ρa d
   have h2 := step_call (M := M) (S := S) (f := ⟨fn, lb, pre.length, rs1, dst⟩) (blk := blk) (m := m)
     (ks := ks) hb hi hops hg
-  obtain ⟨m', f', hr, hf1, hf2, hret, hRn, hWn, hK⟩ := hCall f σl ρa σ' v hRf m g.regs
+  obtain ⟨m', f', hr, hf1, hf2, hret, hRn, hWn, hK⟩ := hCall.ok f σl ρa σ' v hRf m g.regs
     (⟨fn, lb, pre.length, rs1, dst⟩ :: ks) d hR hW hgA
   have hgeq : g = ⟨lay.fno f, 0, 0, g.regs, d⟩ := by
     cases g
@@ -101,7 +102,7 @@ theorem call_run_some {lay : Layout D} {M : Modl} {S : Sees}
     {fn : Nat} {lb : Lbl} {blk : Block} (hb : M.blk fn lb = some blk) {pre post : List Instr}
     {r : Reg} {ops : List Opd} (hbody : blk.body = pre ++ Instr.call (some r) (lay.fno f) ops :: post)
     {m : Mem} {rs rs1 : Regs} {ks : List Frame} {dst : Option Reg} {w : Val}
-    (hw : ergImg lay (D.erg f) v = some w)
+    (hw : retImg lay (D.gruende f) (D.erg f) v = some w)
     (hpre : seqI pre m rs = some (m, rs1)) (hops : ops.mapM (Opd.ev rs1) = some (argImgs lay ρa))
     (hR : Rep lay σl m) (hW : WfL lay m) :
     ∃ m', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks)

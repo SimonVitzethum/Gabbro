@@ -728,6 +728,59 @@ theorem lowerErg_shape (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List 
       obtain ⟨rfl, rfl⟩ := this
       exact ⟨⟨_, _, rfl, rfl⟩, by simp, m1⟩
 
+theorem lowerErgF_shape (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List (Res D)}
+    {eo : Option GTy} (e : ErgExpr D Γ Λ eo) (lb : Lbl) (st st' : St) (blks : List Block)
+    (h : lowerErgF lay cenv n e lb st = some (blks, st')) : Shape lb st st' blks := by
+  cases e with
+  | empty =>
+      simp only [lowerErgF] at h
+      split at h
+      · have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        exact ⟨⟨_, _, rfl, rfl⟩, by simp, Nat.le_refl _⟩
+      · simp at h
+  | @val τ e =>
+      cases τ with
+      | int lo hi =>
+          simp only [lowerErgF] at h
+          rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
+          · simp [he] at h
+          have m1 := lowerE_mono lay cenv e st.r _ he
+          simp only [he] at h
+          split at h
+          · rcases hnc : numCode lo hi (retW n (some (.int lo hi))) (n + 1) 0 oe r1 with ⟨cn, on, r2⟩
+            have m2 := numCode_mono (lo := lo) (hi := hi) (W := retW n (some (.int lo hi))) (L := n + 1)
+              (i := 0) (oe := oe) (r := r1)
+            rw [hnc] at m2 h
+            have := Option.some.inj h
+            simp only [Prod.mk.injEq] at this
+            obtain ⟨rfl, rfl⟩ := this
+            simp only at m1 m2 ⊢
+            exact ⟨⟨_, _, rfl, rfl⟩, by simp, by show st.r ≤ r2; omega⟩
+          · simp at h
+      | _ => simp [lowerErgF] at h
+
+theorem lowerRet_shape (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List (Res D)}
+    {eo : Option GTy} (e : ErgExpr D Γ Λ eo) (lb : Lbl) (st st' : St) (blks : List Block)
+    (h : lowerRet lay cenv n e lb st = some (blks, st')) : Shape lb st st' blks := by
+  unfold lowerRet at h
+  by_cases hn : n = 0
+  · rw [if_pos hn] at h
+    exact lowerErg_shape lay cenv e lb st st' blks h
+  · rw [if_neg hn] at h
+    exact lowerErgF_shape lay cenv n e lb st st' blks h
+
+theorem lowerWhy_shape (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (st st' : St) (blks : List Block)
+    (h : lowerWhy n eo r lb st = some (blks, st')) : Shape lb st st' blks := by
+  unfold lowerWhy at h
+  split at h
+  · have := Option.some.inj h
+    simp only [Prod.mk.injEq] at this
+    obtain ⟨rfl, rfl⟩ := this
+    exact ⟨⟨_, _, rfl, rfl⟩, by simp, Nat.le_refl _⟩
+  · simp at h
+
 mutual
 
 theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
@@ -864,7 +917,7 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         omega
   | _, _, _, _, .ret e _, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
-      exact lowerErg_shape lay cenv e lb st st' blks h
+      exact lowerRet_shape lay cenv V.gruende e lb st st' blks h
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, h => by
@@ -1059,8 +1112,9 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
-  | _, _, _, _, .retWhy .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .retWhy r _, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      exact lowerWhy_shape V.gruende V.erg r.val lb st st' blks h
   | _, _, _, _, .leave .., lb, k, st, st', blks, h => by
       simp only [lowerS, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -1256,7 +1310,7 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerEnd lay cenv lv b lb st = some (blks, st') → Shape lb st st' blks
   | _, _, _, .ret e _, lb, st, st', blks, h => by
       simp only [lowerEnd] at h
-      exact lowerErg_shape lay cenv e lb st st' blks h
+      exact lowerRet_shape lay cenv V.gruende e lb st st' blks h
   | _, _, _, .cons s rest, lb, st, st', blks, h => by
       simp only [lowerEnd] at h
       rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
@@ -1305,8 +1359,9 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · have a2 := S2.2.2
         simp only at m1 m2 a2 ⊢
         omega
-  | _, _, _, .retWhy .., lb, st, st', blks, h => by
-      simp [lowerEnd] at h
+  | _, _, _, .retWhy r _, lb, st, st', blks, h => by
+      simp only [lowerEnd] at h
+      exact lowerWhy_shape V.gruende V.erg r.val lb st st' blks h
   | _, _, _, .leave .., lb, st, st', blks, h => by
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h

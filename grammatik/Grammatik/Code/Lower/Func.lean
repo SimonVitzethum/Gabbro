@@ -36,6 +36,9 @@ def retTy : Option GTy → Ty
   | none => .void
   | some τ => regTy τ
 
+/-- The IR type of a function's answer, with its failure channel: the plain image, or the answer word. -/
+def retTyF (n : Nat) (eo : Option GTy) : Ty := if n = 0 then retTy eo else .int (retW n eo)
+
 /-- The IR parameters of a function with these parameter types. -/
 def irParams (ps : List GTy) : List Param :=
   ps.zipIdx.map fun (τ, i) => ⟨regTy τ, i⟩
@@ -46,7 +49,7 @@ def lowerFn (lay : Layout D) (P : Programm D) (f : D.Fn) (name : String) : Optio
   | some (pc, cenv, r) =>
       match lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with
       | some (blks, _) =>
-          some ⟨name, irParams (D.params f), retTy (D.erg f), ⟨0, [], pc, .jmp 1⟩ :: blks⟩
+          some ⟨name, irParams (D.params f), retTyF (D.gruende f) (D.erg f), ⟨0, [], pc, .jmp 1⟩ :: blks⟩
       | none => none
   | none => none
 
