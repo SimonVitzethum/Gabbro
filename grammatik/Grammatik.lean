@@ -367,6 +367,8 @@ import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallListe
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallBaum
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallSchleife
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeBaum
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeSchleife
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
 import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
 import Grammatik.Bausteine.Arena.Struktur.ArenaHash
 import Grammatik.Bausteine.Schablonen.SchablonenStapel

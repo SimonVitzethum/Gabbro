@@ -82,9 +82,17 @@ theorem erk_koerper {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a' : Abs} {b 
     ⟨fun _ hx => absurd hx (by simp [Abs.leer]), fun _ hx => absurd hx (by simp [Abs.leer]),
       fun _ hx => absurd hx (by simp [Abs.leer]), fun _ _ hx _ _ => absurd hx (by simp [Abs.leer])⟩
 
+/-- **The same, for an outcome that is only named:** the run of the body is given as an equation, so that nothing has to be
+    evaluated to state the promise (a long run is expensive to unfold by the elaborator). -/
+theorem erk_koerper_lauf {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a' : Abs} {b : Block D V l Γ Λ Λ'}
+    (h : Erk K Abs.leer b a') (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) {o : Ausgang V l Γ}
+    (ho : execBlock O passes R b σ ρ = o) : Post K a' o :=
+  ho ▸ erk_koerper O passes R K h σ ρ hS
+
 end Beweis
 
 end Gabbro.Grammatik
 
 #print axioms Gabbro.Grammatik.erk_erhaelt
 #print axioms Gabbro.Grammatik.erk_koerper
+#print axioms Gabbro.Grammatik.erk_koerper_lauf
