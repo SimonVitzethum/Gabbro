@@ -300,6 +300,41 @@ theorem blatt_aus_rechts_ok {c : Int} {l r r' : Int → Int} {w p i : Int} {Live
   obtain ⟨h1, h2⟩ := blatt_aus_ok (l := r) (r := l) (l' := r') h.spiegel hp.spiegel hpi h0i hi hrl hll hl hrp hor
   exact ⟨h1.spiegel, fun e => h2 e.spiegel⟩
 
+/-- A child (when it is a slot) of a member is a member. -/
+theorem BaumF.kind_mem {c : Int} {l r : Int → Int} {k : Int} {S : List Int} (h : BaumF c l r k S)
+    {p : Int} (hm : p ∈ S) : (l p < c → l p ∈ S) ∧ (r p < c → r p ∈ S) := by
+  induction h with
+  | nil => simp at hm
+  | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
+    by_cases hkp : p = k
+    · subst hkp
+      refine ⟨fun hl => ?_, fun hr => ?_⟩
+      · cases h1 with
+        | nil => exact absurd hl (Int.lt_irrefl _)
+        | node _ _ _ T1 T2 g1 g2 => simp
+      · cases h2 with
+        | nil => exact absurd hr (Int.lt_irrefl _)
+        | node _ _ _ T1 T2 g1 g2 => simp
+    · have hm' : p ∈ S1 ∨ p ∈ S2 := by
+        simp only [List.mem_cons, List.mem_append] at hm
+        rcases hm with e | e | e
+        · exact absurd e hkp
+        · exact Or.inl e
+        · exact Or.inr e
+      rcases hm' with e | e
+      · exact ⟨fun hl => by have := (ih1 e).1 hl; simp [this], fun hr => by have := (ih1 e).2 hr; simp [this]⟩
+      · exact ⟨fun hl => by have := (ih2 e).1 hl; simp [this], fun hr => by have := (ih2 e).2 hr; simp [this]⟩
+
+theorem InBaum.links {c : Int} {l r : Int → Int} {w p : Int} (h : InBaum c l r w p) (hl : l p < c) :
+    InBaum c l r w (l p) := by
+  obtain ⟨S, hb, hm⟩ := h
+  exact ⟨S, hb, (hb.kind_mem hm).1 hl⟩
+
+theorem InBaum.rechts {c : Int} {l r : Int → Int} {w p : Int} (h : InBaum c l r w p) (hr : r p < c) :
+    InBaum c l r w (r p) := by
+  obtain ⟨S, hb, hm⟩ := h
+  exact ⟨S, hb, (hb.kind_mem hm).2 hr⟩
+
 /-! ## 2. Witnesses (non-degenerate, and the mutations run on them) -/
 
 /-- A concrete list `2 -> 0` in a table of 4 slots, with `1` live and free to link: pushing `1` gives `1 -> 2 -> 0`. -/

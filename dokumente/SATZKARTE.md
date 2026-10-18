@@ -5151,3 +5151,24 @@ PARAMETER `Conf` (run at 64 bit little endian and 32 bit big endian in the witne
 NOT proved: calls and recursion, loops, `match`, memory forms (arenas, `grow`), concurrency into GX,
 the label-uniqueness of a lowered function (`blk_of_nodup` takes it as a hypothesis), `Code -> bytes`.
 `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
+
+## 79. Invariants over live slots: `ListOk`, `BaumOk` and the allocator (Phase A step 2, 2026-10-18, `PLAN-DYNAMISCH.md` 8a.1)
+
+`grammatik/Grammatik/Bausteine/Arena/` (ArenaKette, ArenaBaum, ArenaLebt, ArenaFremd, ArenaListe, ArenaBaumWelt, ArenaDynZeuge).
+Links are indices into one arena table, `count` is the nil marker. A slot is LIVE when it is below the used counter and
+not on the free list (`Lebt`). `ListOk`/`BaumOk` say: the chain/tree from the head/root exists (finite, links in range),
+its slots are pairwise distinct (acyclic list, tree shape) and every one is live.
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `push_ok`, `pop_ok`, `unlink_ok`, `push_doppelt_bricht` | `ArenaKette` | live and unlinked slot; head below `count`; predecessor on the chain |
+| `einfuegen_ok`, `blatt_aus_ok`, mirrors `*_rechts_ok`, `einfuegen_doppelt_bricht`, `InBaum.links` | `ArenaBaum` | empty child place; leaf with no children |
+| `lebt_bump`, `lebt_abheb`, `lebt_frei` | `ArenaLebt` | facts the executed free-list blocks give (`FreiOk` before) |
+| `freiRumpf_fremd`, `freiNimm_fremd`, `frischRumpf_fremd`; `frisch_lebt`, `nimm_lebt`, `frei_lebt` | `ArenaFremd` | `k.n = stand` for the counter branch; `kopf < count` for the list branch; slot live for `free` |
+| `liste_frisch`, `liste_nimm`, `liste_frei`, `liste_push/pop/unlink`, `liste_pop_frei` | `ArenaListe` | `ListOk`, `FreiOk` before; link-store facts as hypotheses |
+| `baum_frisch`, `baum_nimm`, `baum_frei`, `baum_einfuegen_*`, `baum_blatt_aus_*`, `baum_frei_nach_blatt` | `ArenaBaumWelt` | likewise |
+| witnesses `pop_zeuge`, `einfuegen_zeuge`, `nimm_zeuge` (executed), `listOk_w0`, `baumOk_w0`, `freiOk_w0`; defect `liste_defekt_bricht` | `ArenaDynZeuge` | none (a concrete full arena, slot 1 on the free list) |
+
+NOT proved: executed forms of the link stores, the recognizer from `Akzeptiert` to the move hypotheses for every accepted
+body, sibling consistency (O6), hash chains, `grow` composed with the moves, concurrency (design note 8a.2). These
+modules are not imported by `Zielsatz/`; `Spec.lean` unchanged (the diff is a proposal in 8a.3); `gabbro_ziel` untouched.
