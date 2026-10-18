@@ -1,6 +1,7 @@
 import Grammatik.Code.Refine.Stmt
 import Grammatik.Code.Refine.Loop
 import Grammatik.Code.Refine.Traverse
+import Grammatik.Code.Refine.Retry
 import Grammatik.Code.Refine.CallRun
 
 /-
@@ -495,8 +496,65 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
             (alleIndizes (D.count t)) 0 hmap (Nat.zero_le _) σ ρ m
             (rs.set st.r (Val.ofInt (Ar.wid 0 (D.count t)) ((0 : Nat) : Int))) hR hE0 hW hc (regs_set_same _ _ _))
       · simp [hcn] at h
-  | _, _, _, _, .retry .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .retry (Λ := Λ) n bis body ueb, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m,
+      rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerS] at h
+      by_cases hcn : retryOk n = true
+      · simp only [hcn, if_true] at h
+        rcases hcb : lowerE lay cenv bis (st.r + 1) with _ | ⟨cb, ob, r1⟩
+        · simp [hcb] at h
+        simp only [hcb] at h
+        rcases hb1 : lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ with _ | ⟨bb, s1⟩
+        · simp [hb1] at h
+        simp only [hb1] at h
+        rcases hb2 : lowerB lay cenv lv ueb (st.l + 2) k s1 with _ | ⟨bo, s2⟩
+        · simp [hb2] at h
+        simp only [hb2] at h
+        have h' := Option.some.inj h
+        simp only [Prod.mk.injEq] at h'
+        obtain ⟨rfl, rfl⟩ := h'
+        have S1 := lowerB_shape lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ s1 bb hb1
+        have S2 := lowerB_shape lay cenv lv ueb (st.l + 2) k s1 s2 bo hb2
+        have hM0 : M.blk fn lb = some ⟨lb, [], [.bin st.r .add (Ar.wid 0 (n : Int))
+            (.int (Ar.wid 0 (n : Int)) 0) (.int (Ar.wid 0 (n : Int)) 0)], .jmp st.l⟩ :=
+          hM _ (List.mem_cons_self ..)
+        have hMH : M.blk fn st.l = some ⟨st.l, [], cb, .br ob k (st.l + 1)⟩ :=
+          hM _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
+        have hMT : M.blk fn (st.l + 1) = some ⟨st.l + 1, [], [], .brc .ult (Ar.wid 0 (n : Int)) (.reg st.r)
+            (.int (Ar.wid 0 (n : Int)) (n : Int)) (st.l + 4) (st.l + 2)⟩ :=
+          hM _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+        have hMI : M.blk fn (st.l + 3) = some ⟨st.l + 3, [], [.bin st.r .add (Ar.wid 0 (n : Int))
+            (.reg st.r) (.int (Ar.wid 0 (n : Int)) 1)], .jmp st.l⟩ :=
+          hM _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))))
+        have hMbb : InM M fn bb := fun b hb' => hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+          (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ hb')))))
+        have hMbo : InM M fn bo := fun b hb' => hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+          (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _ hb')))))
+        have hKbd := kok_of_shape S1 hMbb
+        have hKov := kok_of_shape S2 hMbo
+        have hKI : KOk M fn (st.l + 3) := ⟨_, hMI, rfl⟩
+        have hKH : KOk M fn st.l := ⟨_, hMH, rfl⟩
+        simp only [execStmt]
+        have hinit : seqI [Instr.bin st.r .add (Ar.wid 0 (n : Int)) (.int (Ar.wid 0 (n : Int)) 0)
+            (.int (Ar.wid 0 (n : Int)) 0)] m rs
+            = some (m, rs.set st.r (Val.ofInt (Ar.wid 0 (n : Int)) ((0 : Nat) : Int))) := by
+          simp [seqI, stepI, Opd.ev, val_bin_add]
+        obtain ⟨bkh, hbkh, hkph⟩ := hKH
+        have hI0 := reach_block_jmp (S := S) (ks := ks) (dst := dst) hM0 rfl hbkh hkph hinit
+        have hE0 := envRep_regs (rs' := rs.set st.r (Val.ofInt (Ar.wid 0 (n : Int)) ((0 : Nat) : Int))) cenv ρ
+          (fun x hx => regs_set_ne rs st.r x _ (Nat.ne_of_lt (hc x hx))) hE
+        exact outok_lift hI0 (fr_regs (fun x hx => regs_set_ne rs st.r x _ (Nat.ne_of_lt hx))) (Nat.le_refl _) hc _
+          (retry_loop (lay := lay) hL (lv := lv) (O := O) (passes := passes) (R := R) (cenv := cenv) n bis body ueb
+            (c := st.r) (H := st.l) (T := st.l + 1) (OV := st.l + 2) (I := st.l + 3) (BD := st.l + 4)
+            (cb := cb) (ob := ob) (r1 := r1) (rb := s1.r) (ro := s2.r) (retryOk_fits hcn) hcb S1.2.2 S2.2.2
+            hMH hMT hMI hk hKbd hKov
+            (fun σ ρ m rs hR hE hW hc => lowerB_ok lay hL cenv (k, st.l + 3) O passes R body (st.l + 4)
+              (st.l + 3) ⟨r1, st.l + 5⟩ s1 bb hb1 M S fn hMbb hKI ⟨hk, hKI⟩ hFn hCall σ ρ m rs ks dst hR hE hW hc)
+            (fun σ ρ m rs hR hE hW hc => lowerB_ok lay hL cenv lv O passes R ueb (st.l + 2) k s1 s2 bo hb2
+              M S fn hMbo hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc)
+            n 0 (by omega) σ ρ m (rs.set st.r (Val.ofInt (Ar.wid 0 (n : Int)) ((0 : Nat) : Int))) hR hE0 hW hc
+            (regs_set_same _ _ _))
+      · simp [hcn] at h
   | _, _, _, _, .forever (Λ := Λ) a inv body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks,
       dst, hR, hE, hW, hc => by
       simp only [lowerS] at h

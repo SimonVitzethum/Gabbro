@@ -11,6 +11,7 @@ import Grammatik.Code.Refine.Closure
       fn put(i : index 4)              { konto[i].v = 7; return; }             -- slot write
       fn wipe()  { traverse konto { konto[k].v = 0; } return; }                 -- the LOOP
       fn main()  { if true { let x = get(2); narrow x to 0 .. 50 else return; }   -- let-call, narrow
+                   retry 2 until false { } on_exceeded { }                     -- the bounded retry loop
                    put(1); wipe();                                              -- calls
                    return; }
 
@@ -164,16 +165,17 @@ def argK (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 3) {Γ : Ctx} {Λ : List (Res wD)}
     Args wD Γ Λ [.int 0 3] :=
   .cons (.widen (lo := k) (hi := k) h0 h1 (.lit k)) .nil
 
-/-- `main()`: under `if true`, a call that binds its result and a `narrow`; then two calls. -/
+/-- `main()`: under `if true`, a call that binds its result and a `narrow`; a `retry`; then two calls. -/
 def rMain : Endblock wD (vertragVon wD WFn.main) false []
     (Signatur.anfang wD (wD.signatur WFn.main)) :=
   .cons (.ite .tru
       (Block.bindCall (τ := .int 0 100) WFn.get (argK 2 (by decide) (by decide)) rfl wHpGet rfl
         (Block.narrow (.var .here) 0 50 (.ret .empty (List.Perm.refl _)) .nil))
       .nil)
+    (.cons (.retry 2 .fls .nil .nil)
     (.cons (.call WFn.put (argK 1 (by decide) (by decide)) wHpPut rfl)
       (.cons (.call WFn.wipe .nil wHpWipe rfl)
-        (.ret .empty (List.Perm.refl _))))
+        (.ret .empty (List.Perm.refl _)))))
 
 /-- The program. -/
 def wP : Programm wD where
@@ -277,16 +279,15 @@ theorem wit64_callref (S : Sees) (passes : Nat) :
     two blocks of its body, the return). -/
 theorem wit64_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.length) = some 8 := rfl
 
-/-- The calling function has the calls and the `narrow`: eleven blocks. -/
-theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 11 := rfl
+/-- The calling function has the calls, the `narrow` and the `retry`: seventeen blocks. -/
+theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := rfl
 
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit64_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =
     RufAusgang.ok σ' v := ⟨_, _, rfl⟩
 
-set_option maxHeartbeats 2000000 in
 /-- ... and so is that of `main`, which calls the other three (depth 3 suffices). -/
-theorem wit64_main_ok : isOk (rufAt wP wO 0 3 WFn.main w0 .nil) = true := by decide
+theorem wit64_main_ok : isOk (rufAt wP wO 0 3 WFn.main w0 .nil) = true := by decide +kernel
 
 end C64
 
@@ -315,16 +316,12 @@ theorem wit32_callref (S : Sees) (passes : Nat) :
     two blocks of its body, the return). -/
 theorem wit32_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.length) = some 8 := rfl
 
-/-- The calling function has the calls and the `narrow`: eleven blocks. -/
-theorem wit32_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 11 := rfl
+/-- The calling function has the calls, the `narrow` and the `retry`: seventeen blocks. -/
+theorem wit32_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := rfl
 
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit32_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =
     RufAusgang.ok σ' v := ⟨_, _, rfl⟩
-
-set_option maxHeartbeats 2000000 in
-/-- ... and so is that of `main`, which calls the other three (depth 3 suffices). -/
-theorem wit32_main_ok : isOk (rufAt wP wO 0 3 WFn.main w0 .nil) = true := by decide
 
 end C32
 

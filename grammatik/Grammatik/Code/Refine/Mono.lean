@@ -11,6 +11,7 @@ import Grammatik.Code.Lower.Stmt
 
 namespace Gabbro.Code.Lower
 
+
 variable [Conf]
 
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
@@ -657,8 +658,40 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           simp only at m1 m2 a2 ⊢
           omega
       · simp [hc] at h
-  | _, _, _, _, .retry .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .retry n bis body ueb, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      by_cases hc : retryOk n = true
+      · simp only [hc, if_true] at h
+        rcases hcb : lowerE lay cenv bis (st.r + 1) with _ | ⟨cb, ob, r1⟩
+        · simp [hcb] at h
+        have m1 := lowerE_mono lay cenv bis (st.r + 1) _ hcb
+        simp only [hcb] at h
+        rcases hb1 : lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ with _ | ⟨bb, s1⟩
+        · simp [hb1] at h
+        have S1 := lowerB_shape lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ s1 bb hb1
+        simp only [hb1] at h
+        rcases hb2 : lowerB lay cenv lv ueb (st.l + 2) k s1 with _ | ⟨bo, s2⟩
+        · simp [hb2] at h
+        have S2 := lowerB_shape lay cenv lv ueb (st.l + 2) k s1 s2 bo hb2
+        simp only [hb2] at h
+        have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+        · intro b hb
+          simp only [List.mem_cons, List.mem_append] at hb
+          rcases hb with rfl | rfl | rfl | rfl | hb | hb
+          · rfl
+          · rfl
+          · rfl
+          · rfl
+          · exact S1.2.1 b hb
+          · exact S2.2.1 b hb
+        · have a1 := S1.2.2
+          have a2 := S2.2.2
+          simp only at m1 a1 a2 ⊢
+          omega
+      · simp [hc] at h
   | _, _, _, _, .forever _ _ body, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       exact lowerB_shape lay cenv (k, lb) body lb lb st st' blks h

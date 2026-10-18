@@ -58,6 +58,19 @@ def bindCode (τ : GTy) (oe : Opd) (r1 : Nat) : Option (List Instr × Nat × Nat
       else none
   | none => none
 
+/-- The pass counter of a `retry` of `n` passes fits the widths the lowering knows (a `Bool` test:
+    `n ≤ 2 ^ 62`, see `retryOk_fits`; it is a test the unifier can evaluate on a variable without
+    unrolling a huge numeral, which a test of `Ar.Fits` is not). -/
+def retryOk (n : Nat) : Bool := Nat.ble n (2 ^ 62)
+
+theorem retryOk_fits {n : Nat} (h : retryOk n = true) : Ar.Fits 0 (n : Int) 128 := by
+  unfold retryOk at h
+  have hn := Nat.le_of_ble_eq_true h
+  unfold Ar.Fits
+  simp only [Int.le_refl, if_true]
+  have h1 : ((n : Nat) : Int) ≤ 2 ^ 62 := by exact_mod_cast hn
+  omega
+
 /-- `return` of an optional value. -/
 def lowerErg (lay : Layout D) (cenv : List Reg) :
     {Γ : Ctx} → {Λ : List (Res D)} → {eo : Option GTy} → ErgExpr D Γ Λ eo → Lbl → St →
@@ -166,6 +179,26 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
                           ⟨s.l + 1, [], cv ++ cb, .jmp (s.l + 3)⟩ ::
                           ⟨s.l + 2, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.reg s.r)
                             (.int (Ar.wid 0 (D.count t)) 1)], .jmp s.l⟩ :: bb, s1)
+                | none => none
+            | none => none
+        | none => none
+      else none
+  | _, _, _, _, .retry n bis body ueb, lb, k, s =>
+      -- a counter register `s.r` counts the passes made; the test of `bis` comes first in every pass
+      if retryOk n = true then
+        match lowerE lay cenv bis (s.r + 1) with
+        | some (cb, ob, r1) =>
+            match lowerB lay cenv (k, s.l + 3) body (s.l + 4) (s.l + 3) ⟨r1, s.l + 5⟩ with
+            | some (bb, s1) =>
+                match lowerB lay cenv lv ueb (s.l + 2) k s1 with
+                | some (bo, s2) =>
+                    some (⟨lb, [], [.bin s.r .add (Ar.wid 0 (n : Int)) (.int (Ar.wid 0 (n : Int)) 0)
+                            (.int (Ar.wid 0 (n : Int)) 0)], .jmp s.l⟩ ::
+                          ⟨s.l, [], cb, .br ob k (s.l + 1)⟩ ::
+                          ⟨s.l + 1, [], [], .brc .ult (Ar.wid 0 (n : Int)) (.reg s.r)
+                            (.int (Ar.wid 0 (n : Int)) (n : Int)) (s.l + 4) (s.l + 2)⟩ ::
+                          ⟨s.l + 3, [], [.bin s.r .add (Ar.wid 0 (n : Int)) (.reg s.r)
+                            (.int (Ar.wid 0 (n : Int)) 1)], .jmp s.l⟩ :: (bb ++ bo), s2)
                 | none => none
             | none => none
         | none => none

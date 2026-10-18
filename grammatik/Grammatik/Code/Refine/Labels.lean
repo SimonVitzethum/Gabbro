@@ -230,6 +230,68 @@ theorem lw_loop {lb : Nat} {st s1 : St} {b0 bH bB bI : Block} {bb : List Block}
     · right; omega
     · have := a x hx; right; omega
 
+/-- The shape of `retry`: an initialising block `lb`, the test block `st.l`, the pass-count block
+    `st.l + 1`, the increment block `st.l + 3`, the lowered body (entry label `st.l + 4`, labels from
+    `st.l + 5`) and the lowered overflow block (entry label `st.l + 2`, labels from the end of the body). -/
+theorem lw_retry {lb : Nat} {st s1 s2 : St} {b0 bH bT bI : Block} {bb bo : List Block}
+    (h0 : b0.nl = lb) (hH : bH.nl = st.l) (hT : bT.nl = st.l + 1) (hI : bI.nl = st.l + 3)
+    (hlt : lb < st.l) (m1 : st.l + 5 ≤ s1.l) (m2 : s1.l ≤ s2.l)
+    (W1 : (bb.map Block.lbl).Nodup ∧ ∀ x ∈ bb, x.nl = st.l + 4 ∨ (st.l + 5 ≤ x.nl ∧ x.nl < s1.l))
+    (W2 : (bo.map Block.lbl).Nodup ∧ ∀ x ∈ bo, x.nl = st.l + 2 ∨ (s1.l ≤ x.nl ∧ x.nl < s2.l)) :
+    LblWf lb st s2 (b0 :: bH :: bT :: bI :: (bb ++ bo)) := by
+  obtain ⟨n1, a1⟩ := W1
+  obtain ⟨n2, a2⟩ := W2
+  have nd0 : ((bb ++ bo).map Block.lbl).Nodup := by
+    refine lw_app (a1 := fun x => x = st.l + 4 ∨ (st.l + 5 ≤ x ∧ x < s1.l))
+      (a2 := fun x => x = st.l + 2 ∨ (s1.l ≤ x ∧ x < s2.l)) n1 n2 ?_ ?_ ?_
+    · intro x hx; exact a1 x hx
+    · intro x hx; exact a2 x hx
+    · intro x hx hy; omega
+  have hmem : ∀ x ∈ bb ++ bo, x.nl = st.l + 2 ∨ (st.l + 4 ≤ x.nl ∧ x.nl < s2.l) := by
+    intro x hx
+    rcases List.mem_append.mp hx with hx | hx
+    · have := a1 x hx; omega
+    · have := a2 x hx; omega
+  have nd1 : ((bI :: (bb ++ bo)).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => x = st.l + 2 ∨ (st.l + 4 ≤ x ∧ x < s2.l)) hI ?_ nd0 ?_
+    · intro x hx; omega
+    · intro x hx; exact hmem x hx
+  have nd2 : ((bT :: bI :: (bb ++ bo)).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => st.l + 2 ≤ x ∧ x < s2.l) hT ?_ nd1 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · show st.l + 2 ≤ x.nl ∧ x.nl < s2.l; omega
+      · have := hmem x hx; show st.l + 2 ≤ x.nl ∧ x.nl < s2.l; omega
+  have nd3 : ((bH :: bT :: bI :: (bb ++ bo)).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => st.l + 1 ≤ x ∧ x < s2.l) hH ?_ nd2 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | rfl | hx
+      · show st.l + 1 ≤ x.nl ∧ x.nl < s2.l; omega
+      · show st.l + 1 ≤ x.nl ∧ x.nl < s2.l; omega
+      · have := hmem x hx; show st.l + 1 ≤ x.nl ∧ x.nl < s2.l; omega
+  refine ⟨by omega, ?_, ?_⟩
+  · refine lw_head (a1 := fun x => st.l ≤ x ∧ x < s2.l) h0 ?_ nd3 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | rfl | rfl | hx
+      · show st.l ≤ x.nl ∧ x.nl < s2.l; omega
+      · show st.l ≤ x.nl ∧ x.nl < s2.l; omega
+      · show st.l ≤ x.nl ∧ x.nl < s2.l; omega
+      · have := hmem x hx; show st.l ≤ x.nl ∧ x.nl < s2.l; omega
+  · intro x hx
+    simp only [List.mem_cons] at hx
+    rcases hx with rfl | rfl | rfl | rfl | hx
+    · exact Or.inl h0
+    · right; omega
+    · right; omega
+    · right; omega
+    · have := hmem x hx; right; omega
+
 variable [Conf] {D : Deklaration}
 
 theorem lowerErg_lbl (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List (Res D)} {eo : Option GTy}
@@ -346,8 +408,28 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         exact lw_loop (b0 := ⟨lb, [], _, .jmp st.l⟩) (bH := ⟨st.l, [], [], _⟩) (bB := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 3)⟩)
           (bI := ⟨st.l + 2, [], _, .jmp st.l⟩) rfl rfl rfl rfl hlt m2' ⟨n2, a2⟩
       · simp [hc] at h
-  | _, _, _, _, .retry .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .retry n bis body ueb, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      by_cases hc : retryOk n = true
+      · simp only [hc, if_true] at h
+        rcases hcb : lowerE lay cenv bis (st.r + 1) with _ | ⟨cb, ob, r1⟩
+        · simp [hcb] at h
+        simp only [hcb] at h
+        rcases hb1 : lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ with _ | ⟨bb, s1⟩
+        · simp [hb1] at h
+        simp only [hb1] at h
+        rcases hb2 : lowerB lay cenv lv ueb (st.l + 2) k s1 with _ | ⟨bo, s2⟩
+        · simp [hb2] at h
+        simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ s1 bb
+          (by show (st.l + 4 : Nat) < st.l + 5; omega) hb1
+        have m1' : st.l + 5 ≤ s1.l := m1
+        obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv lv ueb (st.l + 2) k s1 s2 bo
+          (by show (st.l + 2 : Nat) < s1.l; omega) hb2
+        exact lw_retry (b0 := ⟨lb, [], _, .jmp st.l⟩) (bH := ⟨st.l, [], cb, _⟩) (bT := ⟨st.l + 1, [], [], _⟩)
+          (bI := ⟨st.l + 3, [], _, .jmp st.l⟩) rfl rfl rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
+      · simp [hc] at h
   | _, _, _, _, .forever _ _ body, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       exact lowerB_lbl lay cenv (k, lb) body lb lb st st' blks hlt h
