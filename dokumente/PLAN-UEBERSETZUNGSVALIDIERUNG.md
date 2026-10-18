@@ -662,8 +662,10 @@ LLVM backend stays as the running reference compiler. Estimate for the half: 25 
    arithmetic forms `sdiv`, `srem`, shifts and bit operations (each needs the proof that G's ranges give the
    instruction's precondition at the width the lowering picks; `div`/`rem` are done), indirect calls, calls with a
    failure channel.
-3. **L2 memory forms.** Arenas, `grow`, `free`/free list (`ArenaFrei.lean` is its model), sampling, the page
-   return; stack and recursion lowering. ~6 000–9 000.
+3. **L2 memory forms.** Stack and recursion lowering are done (calls with the abstract frame invariant `CallRef`/`Keep`,
+   `lowerFn_callref`). Arenas, `grow`, `free`/free list (`ArenaFrei.lean`) are SUGAR in the Lean model (assignments over
+   the arena's carriers, no new `Stmt` constructor), so they need no lowering of their own: they lower, with the proved
+   refinement, once the elaboration expands them (Track P). Still open: sampling, the page return.
 4. **L3 concurrency.** Ticket lock, reader/writer lock, masked acquisition (the lock refinement of the open
    item 'lock primitive not proved'), `publish`/`await` as release/acquire, threads and `child` with handed
    stacks; refinement into GX. ~8 000–12 000.
