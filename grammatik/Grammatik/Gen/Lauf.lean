@@ -64,14 +64,14 @@ def Ergebnis.text : Ergebnis → String
   | .start => "no-start-memory"
 
 /-- Run the function `main` of an elaborated program under the model's semantics: initial memory
-    `sp0Of`, an oracle with no axioms, recursion depth and forever-passes `tiefe`. -/
+    `sp0Of`, an oracle whose foreign bodies (`extern fn`) answer 0 and no registers, recursion depth and forever-passes `tiefe`. -/
 def fuehreMain (tiefe : Nat) (u : UProg) (P : Programm (declOf u)) : Ergebnis :=
   match (List.finRange u.fns.length).find? (fun i => (u.fns.get i).name == "main") with
   | none => .keinMain
   | some f =>
     if h : sp0OkB u = true then
       let O : Orakel (declOf u) :=
-        { wirkt := (fun a => nomatch a), regLies := (fun r => nomatch r),
+        { wirkt := (fun _ σ _ => (σ, 0)), regLies := (fun r => nomatch r),
           regSchreib := (fun r => nomatch r), sichtbar := (fun _ _ => true) }
       let σ := (sp0Of u h).welt []
       if hp : (declOf u).params f = [] then

@@ -56,7 +56,7 @@ theorem erstAblehnung_104_zeuge :
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
     `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
-    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`). -/
+    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`). -/
 def istGegenstand : SItemTief → Bool
   | .constT .. => false
   | .typeT .. => false
@@ -67,6 +67,7 @@ def istGegenstand : SItemTief → Bool
   | .globT .. => false
   | .atomT .. => false
   | .arenaT .. => false
+  | .protoT .. => false
   | .concT .. => false
   | _ => true
 
@@ -86,7 +87,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | modT _ _ => rfl
   | useT _ => rfl
   | globT _ _ _ _ _ _ _ => simp [istGegenstand] at he
-  | protoT _ => rfl
+  | protoT _ => simp [istGegenstand] at he
   | specT _ _ => rfl
   | asmT _ _ => rfl
   | formatT _ _ _ _ => rfl
@@ -124,6 +125,7 @@ def istAngenommen : SItemTief → Bool
   | .globT .. => true
   | .atomT .. => true
   | .arenaT .. => true
+  | .protoT .. => true
   | .concT .. => true
   | _ => false
 
@@ -143,7 +145,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | modT _ _ => simp [istAngenommen] at he
   | useT _ => simp [istAngenommen] at he
   | globT _ _ _ _ _ _ _ => rfl
-  | protoT _ => simp [istAngenommen] at he
+  | protoT _ => rfl
   | specT _ _ => simp [istAngenommen] at he
   | asmT _ _ => simp [istAngenommen] at he
   | formatT _ _ _ _ => simp [istAngenommen] at he
@@ -186,7 +188,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | modT _ _ => simp [istGegenstand] at he
   | useT _ => simp [istGegenstand] at he
   | globT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | protoT _ => simp [istGegenstand] at he
+  | protoT _ => simp [istAngenommen] at ha
   | specT _ _ => simp [istGegenstand] at he
   | asmT _ _ => simp [istGegenstand] at he
   | formatT _ _ _ _ => simp [istGegenstand] at he

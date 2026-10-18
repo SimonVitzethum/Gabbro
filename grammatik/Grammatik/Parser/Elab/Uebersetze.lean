@@ -154,6 +154,11 @@ inductive UStmt
   | setVar : String → USide → UStmt
   /-- `let x = f(..);` (`Block.bindCall`): the callee's value, bound at the callee's result type. -/
   | bindCall : String → String → List UArg → UStmt
+  /-- `f(..);` at an `extern fn` (a foreign body, `D.Ax`): `Stmt.axiomCall` for an answer-less one, else the
+      binding `bindAxiom` of an unnamed answer. -/
+  | axCall : String → List UArg → UStmt
+  /-- `let x = f(..);` at an `extern fn` with an answer (`Block.bindAxiom`, `Endblock.bindAxiom`). -/
+  | bindAx : String → String → List UArg → UStmt
   /-- `narrow x to lo .. hi else { .. }` (`Block.narrow`): `narrowBeg x lo hi`, the statements of the `else`
       branch with its ender (`ret`/`leave`/`next`), `blkEnd`; the rest of the block reads `x` at `lo .. hi`. -/
   | narrowBeg : String → Int → Int → UStmt
@@ -302,11 +307,22 @@ def UFn.mitIndex (f : UFn) (b : String) (num : Nat) (cnt : Int) : UFn :=
 def UFn.ergTy (f : UFn) : Option Ty :=
   if f.resBool then some Ty.bool else f.res.map fun r => .int r.1 r.2
 
+/-- One foreign body (`extern fn`, `D.Ax`): its parameters and its answer (`none`, a number, a truth value or
+    `never`); it writes nothing. -/
+structure UAx where
+  name : String
+  params : List Ty
+  kinds : List UParamArt
+  res : Option Ty
+  deriving DecidableEq, Repr
+
 /-- The elaborated program: tables, locks, functions. -/
 structure UProg where
   tabs : List UTab
   locks : List ULock
   fns : List UFn
+  /-- The foreign bodies (`extern fn`). -/
+  axs : List UAx := []
   /-- The dispatch roots of the unit's `entry` items (function names, each a parameterless function of
       the unit): thread roots of the goal's runtime premise (`Einheit.starts`). -/
   roots : List String := []
@@ -819,6 +835,11 @@ def uGrenzwort (ctx : UCtx) : SExpr → Option Int
     | .error _ => none
   | _ => none
 
+/-- An error of the place reader that names a premise of the model (the read is outside the table, or the guard
+    is not held), not a missing form: it must reach the verdict, not be masked by the leaf's own message. -/
+def uPraemisse (e : String) : Bool :=
+  strEq e "index outside count" || strEq e "access without held guard"
+
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. -/
 def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Except String USide
@@ -907,7 +928,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .some v => .ok (.lit v)
     | .none =>
       match uZugriff ctx e with
-      | .error x => .error (if strEq x "index outside count" then x else "compare side without G form")
+      | .error x => .error (if uPraemisse x then x else "compare side without G form")
       | .ok (.thru b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "bool field as a number" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
@@ -976,7 +997,7 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     | .none => .error "ensures clause without G form"
   | e =>
     match uZugriff ctx e with
-    | .error _ => .error "ensures clause without G form"
+    | .error x => .error (if uPraemisse x then x else "ensures clause without G form")
     | .ok (.thru b, tb, f, ix) =>
       if uBoolFeld ctx tb f then .ok (.slotB b f ix) else .error "ensures clause without G form"
     | .ok (.tabelle b, tb, f, ix) =>
@@ -1025,7 +1046,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .some v => .ok (.lit v)
     | .none =>
       match uZugriff ctx e with
-      | .error x => .error (if strEq x "index outside count" then x else "value without G form")
+      | .error x => .error (if uPraemisse x then x else "value without G form")
       | .ok (.thru b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "bool field as a number" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
@@ -1060,6 +1081,16 @@ structure UFnKopf where
   held : List String
   /-- The statics it writes. -/
   gputs : List String := []
+  /-- A foreign body (`extern fn`): called as `D.Ax`, never as a function of the unit. -/
+  ext : Bool := false
+  /-- The answer of a foreign body is `never` (the call does not return). -/
+  resNever : Bool := false
+
+/-- The answer type of a foreign body. -/
+def UFnKopf.axErg (k : UFnKopf) : Option Ty :=
+  if k.resNever then some Ty.never
+  else if k.resBool then some Ty.bool
+  else k.res.map fun r => Ty.int r.1 r.2
 
 /-- The storage width of a declared parameter type: a bare unsigned word, with or without a range
     (`u8 in 0 .. 15` is stored in 8 bits); `0` for everything else. -/
@@ -1486,7 +1517,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
   | .call c args =>
     match uRuf ctx tabs koepfe c args with
     | .error e => .error e
-    | .ok (_, xs) => .ok (.call c xs)
+    | .ok (callee, xs) => .ok (if callee.ext then .axCall c xs else .call c xs)
   | _ => .error "stmt without G form"
 
 /-- The context after `let x [: T]`: the annotated range (when there is one) and the context in which the
@@ -1605,6 +1636,13 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
         | .error err => .error err
         | .ok (callee, xs) =>
           let muts : List String := ctx.muts.filter (fun m => !strEq m x)
+          if callee.ext then
+            match callee.axErg with
+            | .none => .error "call without a value"
+            | .some Ty.bool => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.bool Ty.bool muts)
+            | .some (Ty.int lo hi) => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
+            | .some _ => .error "answer of a foreign fn without G form"
+          else
           match callee.resBool, callee.res with
           | true, _ =>
             match t with
@@ -1939,6 +1977,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .globT .. :: rest => uRestFehler rest
   | .atomT .. :: rest => uRestFehler rest
   | .arenaT .. :: rest => uRestFehler rest
+  | .protoT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
@@ -1992,6 +2031,41 @@ def uWurzeln (fns : List UFn) (ms : List SItemTief) : Except String (List String
   let b ← uEingangsWurzeln fns ms
   pure (a ++ b)
 
+/-- The clauses an `extern fn` may carry: `effects { pure | diverges | reads .. }` and `costs`; a `requires`,
+    an `ensures` or a write has no form (`D.Ax` carries no contract here). -/
+def uAxKlauseln : List SKlausel → Except String Unit
+  | [] => .ok ()
+  | .effs es :: rest =>
+    if es.all (fun e => match e with | .pure => true | .loops => true | .reads _ => true | _ => false) then
+      uAxKlauseln rest
+    else .error "foreign fn effect without G form"
+  | .cost _ :: rest => uAxKlauseln rest
+  | _ :: _ => .error "foreign fn clause without G form"
+
+/-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
+def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) : FnSig → Except String UFnKopf
+  | { art, name, params, res, fehler := .none, klauseln } =>
+    if !strEq art "extern" then .error "foreign fn without G form"
+    else
+      match uAxKlauseln klauseln with
+      | .error e => .error e
+      | .ok _ =>
+        match uSeq (params.map (uParam alias tabs)) with
+        | .error e => .error e
+        | .ok ps =>
+          let base : UFnKopf :=
+            { name, names := ps.map (·.1), kinds := ps.map (·.2.2), types := ps.map (·.2.1), res := .none,
+              bits := params.map (fun p => uParamBreite p.2), held := [], ext := true }
+          match res with
+          | .none => .ok base
+          | .some (.atom "never") => .ok { base with resNever := true }
+          | .some (.atom "bool") => .ok { base with resBool := true }
+          | .some t =>
+            match uErgBereich alias t with
+            | .error e => .error e
+            | .ok r => .ok { base with res := .some r }
+  | _ => .error "foreign fn with an or channel without G form"
+
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
 def elabU : List SItemTief → Except String UProg
@@ -2025,13 +2099,18 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
-    let koepfe := kopfPaare.map (·.1)
+    match uSeq ((ms.filterMap (fun | .protoT sig => some sig | _ => none)).map (elabAxKopf alias tabs)) with
+    | .error e => .error e
+    | .ok axKoepfe =>
+    let koepfe := kopfPaare.map (·.1) ++ axKoepfe
     match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b)) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln fns ms with
     | .error e => .error e
-    | .ok roots => .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs }
+    | .ok roots =>
+      .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs,
+            axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg }) }
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -2333,7 +2412,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2370,7 +2449,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
@@ -2722,7 +2801,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"

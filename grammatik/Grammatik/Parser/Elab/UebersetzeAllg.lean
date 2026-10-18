@@ -104,6 +104,18 @@ def gneedsAt (u : UProg) (g : Fin u.globs.length) :
     if (lockAt u l).guard.any (· == (globAt u g).name) then some (.inl l)
     else none
 
+/-- The foreign body at an index. -/
+def uaxAt (u : UProg) (a : Fin u.axs.length) : UAx := u.axs.get a
+
+/-- A foreign body by name. -/
+def uaxIdx : (xs : List UAx) → (n : String) → Except String (Fin xs.length)
+  | [], n => .error ("function unknown: " ++ n)
+  | a :: rest, n =>
+    if a.name == n then .ok 0
+    else match uaxIdx rest n with
+      | .error e => .error e
+      | .ok j => .ok j.succ
+
 /-- The held locks of a function, as indices (names the declaration
     does not know are dropped; `elabU` output never has them). -/
 def heldAt (u : UProg) (f : UFn) : List (Fin u.locks.length) :=
@@ -250,11 +262,11 @@ def declOf (u : UProg) : Deklaration where
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
-  Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  Ax := Fin u.axs.length
+  aparams := fun a => (uaxAt u a).params
+  aerg := fun a => (uaxAt u a).res
+  aschreibt := fun _ _ => false
+  agschreibt := fun _ _ => false
   Reg := Empty
   rtyp := fun e => nomatch e
   rklasse := fun e => nomatch e

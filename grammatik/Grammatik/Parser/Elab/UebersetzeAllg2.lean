@@ -680,6 +680,46 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
        else .error "call writes without right"
       else .error "call writes without right"
 
+/-- The head of a call of a foreign body: the axiom and its arguments. -/
+structure AxKopf (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  ax : Fin u.axs.length
+  args : Args (declOf u) Γ Λ ((declOf u).aparams ax)
+
+def lowAxKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (cname : String) (args : List UArg) :
+    Except String (AxKopf u Γ Λ) :=
+  match uaxIdx u.axs cname with
+  | .error e => .error e
+  | .ok a =>
+    match lowCallArgsAuxL u caller Γ fn Λ (uaxAt u a).kinds ((declOf u).aparams a) args with
+    | .error e => .error e
+    | .ok xs => .ok ⟨a, xs⟩
+
+/-- A foreign body writes nothing: the four write premises of `axiomCall`/`bindAxiom` hold vacuously. -/
+theorem ax_schreibt_nie (u : UProg) (a : Fin u.axs.length) (t : Fin u.tabs.length) :
+    (declOf u).aschreibt a t = false := rfl
+
+theorem ax_gschreibt_nie (u : UProg) (a : Fin u.axs.length) (g : Fin u.globs.length) :
+    (declOf u).agschreibt a g = false := rfl
+
+/-- The answer of a foreign body, for the statement (none) or the binding (a type). -/
+def withAxErg {α : Type} (u : UProg) (a : Fin u.axs.length)
+    (Kn : (declOf u).aerg a = none → Except String α)
+    (Ks : (τ : Ty) → (declOf u).aerg a = some τ → Except String α) : Except String α :=
+  match hE : (declOf u).aerg a with
+  | none => Kn hE
+  | some τ => Ks τ hE
+
+/-- `f(..);` at a foreign body with no answer: `Stmt.axiomCall`. -/
+def axiomStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (Λ : List (Res (declOf u))) (k : AxKopf u Γ Λ) (h : (declOf u).aerg k.ax = none) :
+    Stmt (declOf u) (verOf u caller) l Γ Λ Λ :=
+  Stmt.axiomCall (D := declOf u) k.ax k.args h
+    (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+    (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+    (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+    (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+
 /-- A direct call as a statement. -/
 def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
@@ -862,7 +902,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .narrowBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

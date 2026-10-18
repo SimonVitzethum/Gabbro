@@ -180,6 +180,38 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
             rw [nach_eq u k.callee Λ]
             exact b
           .ok (Block.bindCall (D := declOf u) k.callee k.args hE k.hp hr b', r)
+  | Γ, fn, n + 1, Λ, pe, .axCall c args :: rest =>
+    match lowAxKopf u caller Γ fn Λ c args with
+    | .error e => .error e
+    | .ok k =>
+      withAxErg u k.ax
+        (fun h =>
+          match lowSeqL (l := l) u caller Γ fn n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r) => .ok (Block.cons (axiomStmt u caller Γ Λ k h) b, r))
+        (fun τ hE =>
+          match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy "#ax" τ) n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r) =>
+            .ok (Block.bindAxiom (D := declOf u) k.ax k.args hE
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
+  | Γ, fn, n + 1, Λ, pe, .bindAx x c args :: rest =>
+    match lowAxKopf u caller Γ fn Λ c args with
+    | .error e => .error e
+    | .ok k =>
+      withAxErg u k.ax (fun _ => .error "call without a value")
+        (fun τ hE =>
+          match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r) =>
+            .ok (Block.bindAxiom (D := declOf u) k.ax k.args hE
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
   | Γ, fn, n + 1, Λ, pe, .narrowBeg x lo hi :: rest =>
     match paramPos fn.params x with
     | .error e => .error e
@@ -311,6 +343,10 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       | .ok (b, r) => .ok (Endblock.bind ev b, r)
   | _, _, _ + 1, _, _, .bindCall .. :: _ =>
     .error "lower: a value call in an else branch has no G form (Endblock lacks bindCall)"
+  | _, _, _ + 1, _, _, .axCall .. :: _ =>
+    .error "lower: a foreign call in an else branch has no G form here"
+  | _, _, _ + 1, _, _, .bindAx .. :: _ =>
+    .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
   | Γ, fn, n + 1, Λ, pe, .lockBeg g :: rest =>
@@ -362,6 +398,38 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind s.term e)
+  | Γ, fn, n + 1, .axCall c args :: rest, r =>
+    match lowAxKopf u caller Γ fn (resOf u caller) c args with
+    | .error e => .error e
+    | .ok k =>
+      withAxErg u k.ax
+        (fun h =>
+          match lowBodyF u caller Γ fn n rest r with
+          | .error e => .error e
+          | .ok e => .ok (Endblock.cons (axiomStmt u caller Γ (resOf u caller) k h) e))
+        (fun τ hE =>
+          match lowBodyF u caller (τ :: Γ) (fn.mitTy "#ax" τ) n rest r with
+          | .error e => .error e
+          | .ok e =>
+            .ok (Endblock.bindAxiom (D := declOf u) k.ax k.args hE
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) e))
+  | Γ, fn, n + 1, .bindAx x c args :: rest, r =>
+    match lowAxKopf u caller Γ fn (resOf u caller) c args with
+    | .error e => .error e
+    | .ok k =>
+      withAxErg u k.ax (fun _ => .error "call without a value")
+        (fun τ hE =>
+          match lowBodyF u caller (τ :: Γ) (fn.mitTy x τ) n rest r with
+          | .error e => .error e
+          | .ok e =>
+            .ok (Endblock.bindAxiom (D := declOf u) k.ax k.args hE
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) e))
   | _, _, _ + 1, .bindCall .. :: _, _ =>
     .error "lower: a value call at the top level of a body has no G form (Endblock lacks bindCall)"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
