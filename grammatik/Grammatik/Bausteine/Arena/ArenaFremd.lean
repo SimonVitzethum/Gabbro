@@ -16,9 +16,11 @@ variable {D : Deklaration}
 
 namespace FreiForm
 
-/-- `σ'` differs from `σ` at most in the counter, the head of the free list, the payload and the free link. -/
+/-- `σ'` differs from `σ` at most in the counter, the head of the free list, the committed word, the payload and the
+    free link. (The three allocator blocks do not write the committed word; `grow` writes nothing else, so the same
+    frame serves the composition of `grow` with every move.) -/
 def Fremd (A : FreiForm D) (σ σ' : World D) : Prop :=
-  (∀ g, g ≠ A.zaehl → g ≠ A.kopf → σ'.globs g = σ.globs g) ∧
+  (∀ g, g ≠ A.zaehl → g ≠ A.kopf → g ≠ A.komm → σ'.globs g = σ.globs g) ∧
   (∀ k (f : D.Feld A.tab), f ≠ A.feld → f ≠ A.nxt → σ'.slots A.tab k f = σ.slots A.tab k f)
 
 end FreiForm
@@ -37,7 +39,7 @@ theorem freiRumpf_fremd (A : FreiForm D)
           (Block.freiRumpf (l := l) (Λ' := Λ) A hwT hLT hwK hLK (.nil)) σ (.cons k ρ)
         = .ok σ' (.cons k ρ) ∧ A.Fremd σ σ' := by
   refine ⟨_, rfl, ?_, ?_⟩
-  · intro g _ hk
+  · intro g _ hk _
     simp [eval, hk]
   · intro k' f hf hn
     simp [eval, World.slots_schreibSlot_ne, hn]
@@ -55,7 +57,7 @@ theorem freiNimm_fremd (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
   simp only [Block.freiNimm, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
   rw [dif_pos (by exact hk)]
   refine ⟨_, rfl, ?_, ?_⟩
-  · intro g _ hk
+  · intro g _ hk _
     simp [eval, hk]
   · intro k' f hf hn
     simp [eval, World.slots_schreibSlot_ne, hf]
@@ -69,7 +71,7 @@ theorem frischRumpf_fremd (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld
           (Block.arenaRumpf (l := l) (Λ' := Λ) A.toArenaForm v hwT hLT hwG hLG .nil) σ (.cons k ρ)
         = .ok σ' (.cons k ρ) ∧ A.Fremd σ σ' := by
   refine ⟨_, rfl, ?_, ?_⟩
-  · intro g hz _
+  · intro g hz _ _
     simp [eval, Block.arenaBump, hz]
   · intro k' f hf hn
     simp [eval, Block.arenaBump, World.slots_schreibSlot_ne, hf]

@@ -41,12 +41,14 @@ structure LinkFeld (A : FreiForm D) where
   h1 : f ≠ A.feld
   h2 : f ≠ A.nxt
 
-/-- A link head: an index global, not the counter and not the head of the free list. -/
+/-- A link head: an index global, not the counter, not the head of the free list and not the committed word
+    (`grow` writes `komm`, so a head that is `komm` would be moved by a commit). -/
 structure LinkKopf (A : FreiForm D) where
   g : D.Glob
   hg : D.gtyp g = Ty.int 0 (D.count A.tab)
   h1 : g ≠ A.zaehl
   h2 : g ≠ A.kopf
+  h3 : g ≠ A.komm
 
 namespace LinkFeld
 variable {A : FreiForm D}
@@ -70,7 +72,7 @@ variable {A : FreiForm D}
 def st (G : LinkKopf A) (σ : World D) : Int := (Wert.umTyp G.hg (σ.globs G.g)).n
 
 theorem st_fremd (G : LinkKopf A) {σ σ' : World D} (h : A.Fremd σ σ') : G.st σ' = G.st σ := by
-  simp only [st, h.1 G.g G.h1 G.h2]
+  simp only [st, h.1 G.g G.h1 G.h2 G.h3]
 
 end LinkKopf
 

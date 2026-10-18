@@ -110,6 +110,7 @@ def LG : LinkKopf FA where
   hg := rfl
   h1 := by decide
   h2 := by decide
+  h3 := by decide
 
 /-- The right child link (field `3`). -/
 def RR : LinkFeld FA where
