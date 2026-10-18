@@ -708,6 +708,63 @@ def lowAssignGlobBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
         else .error "write without right"
     | .int _ _ => .error "number for a bool static"
 
+/-- The store of a payload-free atomic (`Stmt.publish` with the empty payload): only where the function
+    declares `writes A`. -/
+def lowStoreAtomL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (n : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match globIdx u.globs n with
+  | .error e => .error e
+  | .ok g =>
+    match h : (globAt u g).ty with
+    | .int lo hi =>
+      match lowWertAt u Γ Λ fn lo hi v with
+      | .error e => .error e
+      | .ok e =>
+        if hw : writesGAt u (fnAt u caller) g = true then
+          have hwV : (verOf u caller).gschreibt g = true := by
+            show (vertragVon (declOf u) caller).gschreibt g = true
+            rw [vGSchreibt_eq u caller g]
+            exact hw
+          have hg : (declOf u).gtyp g = .int lo hi := by
+            show (globAt u g).ty.toTy = _
+            rw [h]
+            rfl
+          have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
+            rw [hg]
+            exact e
+          .ok (Stmt.publish g e2 [] rfl hwV (gdarf_globs u g Λ))
+        else .error "write without right"
+    | .bool => .error "truth value for a number atomic"
+
+/-- The same for a `bool` atomic. -/
+def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (n : String) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match globIdx u.globs n with
+  | .error e => .error e
+  | .ok g =>
+    match h : (globAt u g).ty with
+    | .bool =>
+      match lowEns u Γ Λ fn none v with
+      | .error e => .error e
+      | .ok e =>
+        if hw : writesGAt u (fnAt u caller) g = true then
+          have hwV : (verOf u caller).gschreibt g = true := by
+            show (vertragVon (declOf u) caller).gschreibt g = true
+            rw [vGSchreibt_eq u caller g]
+            exact hw
+          have hg : (declOf u).gtyp g = .bool := by
+            show (globAt u g).ty.toTy = _
+            rw [h]
+            rfl
+          have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
+            rw [hg]
+            exact e
+          .ok (Stmt.publish g e2 [] rfl hwV (gdarf_globs u g Λ))
+        else .error "write without right"
+    | .int _ _ => .error "number for a bool atomic"
+
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -719,6 +776,8 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
   | .assignGlob n v => lowAssignGlobL u caller Γ fn Λ n v
   | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
+  | .storeAtom n v => lowStoreAtomL u caller Γ fn Λ n v
+  | .storeAtomB n v => lowStoreAtomBL u caller Γ fn Λ n v
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"

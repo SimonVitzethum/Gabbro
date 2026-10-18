@@ -703,8 +703,8 @@ and `ri=` leaf items, no theorem); elab `U` = `elabU`/`lowerAllg` lowers it; cor
 |---|---|---|---|---|---|
 | files that lex | 170 / 170 | 170 / 170 | 170 / 170 | 170 / 170 | 170 / 170 |
 | files that parse as a whole | 116 / 170 | 153 / 170 | 170 / 170 | 170 / 170 | 170 / 170 |
-| files that elaborate (`elabU`), all of them also lower | 9 / 170 | 9 / 170 | 9 / 170 | 13 / 170 | **17 / 170** |
-| exporter-certified programs (29 in `beispiele/`; the register file is gone, the list is in git at 3068f537) elaborated | 9 / 29 | 9 / 29 | 9 / 29 | 13 / 29 | **17 / 29** |
+| files that elaborate (`elabU`), all of them also lower | 9 / 170 | 9 / 170 | 9 / 170 | 13 / 170 | **19 / 170** |
+| exporter-certified programs (29 in `beispiele/`; the register file is gone, the list is in git at 3068f537) elaborated | 9 / 29 | 9 / 29 | 9 / 29 | 13 / 29 | **19 / 29** |
 | rules, reader S / P / R / X (190 rules) | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 | 158 / 11 / 22 / 0 | 158 / 11 / 22 / 0 | 159 / 12 / 20 / 0 |
 | rules with a printer, a round trip (proved P + measured M) | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) | **174, 34 + 140** |
 | rules with an elaboration | 58 | 58 | 58 | 59 | 66 |
@@ -720,7 +720,9 @@ read runs of statements for every loop flag `l`, and a `return` inside a block s
 contract end (not under `locks`). 1164, 190 and 193 lift. (b) Statics: `UGlob`, `Expr.glob`, `Stmt.assignGlob`,
 `Deklaration.Glob := Fin n`; the call rule checks the written statics; `sp0Of` starts each static at its initialiser
 (`sp0GlobWert`, refusal `sp0_glob_luecke`); the theorems that assumed `Glob = Empty` are redone generically
-(`GvStartPflicht`, `GvLuecken`). 187 lifts; 121 waits for tagged types. The measuring-lane wrapper elaborators
+(`GvStartPflicht`, `GvLuecken`). 187 lifts; 121 waits for tagged types. Payload-free atomics (`atomic A : T`, `A = v publishes nothing;`, a read
+as `Expr.glob`) are the same carrier with `atomar := UGlob.atomic` and `Stmt.publish` with the empty payload: 162 and
+116 lift; a payload, `observed by` and a plain store to an atomic have no G form (refused by name). The measuring-lane wrapper elaborators
 `elabU02`..`elabU05` (they dropped statics, prototypes, format and reason items) are deleted. (c) Printers: `Print/Stmt`
 (types, every statement form), `Print/Item` (every one of the 35 item kinds), the spelling of the predicate forms in
 `druckToks`. (d) The English

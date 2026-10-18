@@ -65,6 +65,7 @@ def istGegenstand : SItemTief → Bool
   | .fnT .. => false
   | .entryT .. => false
   | .globT .. => false
+  | .atomT .. => false
   | .concT .. => false
   | _ => true
 
@@ -95,7 +96,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | assumT _ _ _ _ => rfl
   | axiomT _ _ _ _ _ _ => rfl
   | checkT _ => rfl
-  | atomT _ _ _ _ _ => rfl
+  | atomT _ _ _ _ _ => simp [istGegenstand] at he
   | rcuT _ _ _ => rfl
   | groupT _ _ _ => rfl
   | concT _ => simp [istGegenstand] at he
@@ -120,6 +121,7 @@ def istAngenommen : SItemTief → Bool
   | .fnT .. => true
   | .entryT .. => true
   | .globT .. => true
+  | .atomT .. => true
   | .concT .. => true
   | _ => false
 
@@ -150,7 +152,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | assumT _ _ _ _ => simp [istAngenommen] at he
   | axiomT _ _ _ _ _ _ => simp [istAngenommen] at he
   | checkT _ => simp [istAngenommen] at he
-  | atomT _ _ _ _ _ => simp [istAngenommen] at he
+  | atomT _ _ _ _ _ => rfl
   | rcuT _ _ _ => simp [istAngenommen] at he
   | groupT _ _ _ => simp [istAngenommen] at he
   | concT _ => rfl
@@ -193,7 +195,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | assumT _ _ _ _ => simp [istGegenstand] at he
   | axiomT _ _ _ _ _ _ => simp [istGegenstand] at he
   | checkT _ => simp [istGegenstand] at he
-  | atomT _ _ _ _ _ => simp [istGegenstand] at he
+  | atomT _ _ _ _ _ => simp [istAngenommen] at ha
   | rcuT _ _ _ => simp [istGegenstand] at he
   | groupT _ _ _ => simp [istGegenstand] at he
   | concT _ => simp [istAngenommen] at ha

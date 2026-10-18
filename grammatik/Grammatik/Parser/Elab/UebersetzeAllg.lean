@@ -172,7 +172,7 @@ def declOf (u : UProg) : Deklaration where
   decGlob := inferInstance
   gtyp := fun g => (globAt u g).ty.toTy
   nutzlast := fun _ => []
-  atomar := fun _ => false
+  atomar := fun g => (globAt u g).atomic
   geteilt := fun t => (!((needsAt u t).isEmpty))
   ggeteilt := fun _ => false
   Lock := Fin u.locks.length

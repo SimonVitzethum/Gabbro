@@ -120,6 +120,9 @@ inductive UStmt
   /-- `X = v;` at a `static mut` (`Stmt.assignGlob`), the value a number or a truth value. -/
   | assignGlob : String → USide → UStmt
   | assignGlobB : String → UEns → UStmt
+  /-- `A = v publishes nothing;` at an `atomic` (`Stmt.publish` with the empty payload). -/
+  | storeAtom : String → USide → UStmt
+  | storeAtomB : String → UEns → UStmt
   | call : String → List UArg → UStmt
   /-- `locks L { ... }` is written FLAT: `sperrtAuf L`, the block's statements, `zu` (the
       elaborator writes them balanced, the lowering reads them back as one block). A nested
@@ -185,6 +188,8 @@ structure UGlob where
   ty : GTy
   init : Int
   var : Bool := false
+  /-- An `atomic` item (`Deklaration.atomar`): read and stored without a lock, ordered by the machine. -/
+  atomic : Bool := false
   deriving DecidableEq, Repr
 
 /-- A parameter kind: a pointer to a table, an index into one,
@@ -1246,6 +1251,7 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
     | .none => .error e
     | .some gl =>
       if !gl.var then .error "write to an immutable static"
+      else if gl.atomic then .error "plain write to an atomic without G form"
       else
         match gl.ty with
         | .bool =>
@@ -1257,6 +1263,27 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
           | .error x => .error x
           | .ok v => .ok (.assignGlob g v)
   | _ => .error e
+
+/-- `A = v publishes nothing;`: the store of a payload-free atomic. -/
+def uAtomSchreib (ctx : UCtx) (ziel wert : SExpr) (p : String) : Except String UStmt :=
+  match ziel with
+  | .variable g =>
+    match ctx.globs.find? (fun x => strEq x.name g) with
+    | .none => .error "publishes without an atomic without G form"
+    | .some gl =>
+      if !gl.atomic then .error "publishes without an atomic without G form"
+      else if !strEq p "nothing" then .error "publishes with a payload without G form"
+      else
+        match gl.ty with
+        | .bool =>
+          match uBool ctx wert with
+          | .error x => .error x
+          | .ok v => .ok (.storeAtomB g v)
+        | _ =>
+          match uWertBody ctx wert with
+          | .error x => .error x
+          | .ok v => .ok (.storeAtom g v)
+  | _ => .error "publishes without an atomic without G form"
 
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; compound assignment, mid-body
@@ -1290,6 +1317,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         match uWertBody ctx wert with
         | .error e => .error e
         | .ok v => .ok (.assignTab b f ix v)
+  | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .call c args =>
     match koepfe.find? (fun k => strEq k.name c) with
     | .none => .error ("call unknown: " ++ c)
@@ -1559,6 +1587,25 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         match uGlobs consts alias rest with
         | .error e => .error e
         | .ok gs => .ok ({ name := n, ty, init := z, var := m } :: gs)
+  | .atomT n t pub _ obs :: rest =>
+    if obs.isSome then .error "atomic observed by a device without G form"
+    else
+      match pub with
+      | some (_ :: _) => .error "atomic with a payload without G form"
+      | _ =>
+        match (match t with
+            | .atom "bool" => .ok GTy.bool
+            | _ =>
+              match uErgBereich alias t with
+              | .error e => .error e
+              | .ok (lo, hi) =>
+                if lo ≤ 0 ∧ 0 ≤ hi then .ok (GTy.int lo hi)
+                else .error "atomic starts at zero outside its range" : Except String GTy) with
+        | .error e => .error e
+        | .ok ty =>
+          match uGlobs consts alias rest with
+          | .error e => .error e
+          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true } :: gs)
   | _ :: rest => uGlobs consts alias rest
 
 /-- Items outside the fragment: everything but constants,
@@ -1571,6 +1618,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .tableT _ _ _ _ _ _ :: rest => uRestFehler rest
   | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .globT .. :: rest => uRestFehler rest
+  | .atomT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
@@ -1941,7 +1989,8 @@ def lowerNachLies (tabs : List UTab) (names : List String)
     Except String
       (Endblock G104_referenz.gD (vertragVon G104_referenz.gD G104_referenz.g_einzahlen) false UCtxEin
         (nach G104_referenz.gD G104_referenz.g_lies ULEin))
-  | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ => .error "static without G form in the 104 lowering"
+  | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
+    .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -1969,7 +2018,8 @@ def lowerNachLies (tabs : List UTab) (names : List String)
     `tr_body` of `lean_g.rs`). -/
 def lowerSaetzeEin (tabs : List UTab) (names : List String)
     (types : List Ty) : List UStmt → URet → Except String UKoerpEin
-  | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ => .error "static without G form in the 104 lowering"
+  | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
+    .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -2672,6 +2722,8 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && strEq f g && beqUIdx x y && beqUEns s t
   | .assignGlob a s, .assignGlob b t => strEq a b && beqUSide s t
   | .assignGlobB a s, .assignGlobB b t => strEq a b && beqUEns s t
+  | .storeAtom a s, .storeAtom b t => strEq a b && beqUSide s t
+  | .storeAtomB a s, .storeAtomB b t => strEq a b && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
   | .lockBeg a, .lockBeg b => strEq a b
   | .blkEnd, .blkEnd => true
@@ -2745,7 +2797,7 @@ def beqULockList : List ULock → List ULock → Bool
   | _, _ => false
 
 def beqUGlob : UGlob → UGlob → Bool
-  | a, b => strEq a.name b.name && decide (a.ty = b.ty) && a.init == b.init && a.var == b.var
+  | a, b => strEq a.name b.name && decide (a.ty = b.ty) && a.init == b.init && a.var == b.var && a.atomic == b.atomic
 
 def beqUGlobList : List UGlob → List UGlob → Bool
   | [], [] => true

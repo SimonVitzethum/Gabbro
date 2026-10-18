@@ -5112,11 +5112,12 @@ Statics (2026-10-18): `declOf` carries `Glob := Fin u.globs.length` (`gdarf_glob
 checks the written statics (`sigGSchreibt_eq`, `vGSchreibt_eq`), the initial memory starts each static at its
 initialiser (`sp0GlobWert`, `sp0Of_glob`, `sp0OkB_glob`) and an initialiser outside its type has none
 (`sp0_glob_luecke`); `gv_startPflicht_zeuge` holds on the array unit and on the static unit `uStatik`;
-`gvLuecke_fragment_ohne_atomar` (no static of `declOf` is atomic) and `gvLuecke_statik_ohne_form` (a placement or a
+`gvLuecke_fragment_ohne_atomar` (a unit without an `atomic` item has no atomic carrier; `atomar` is the flag of the
+static, payload-free atomics elaborate) and `gvLuecke_statik_ohne_form` (a placement or a
 `shared` word on a static is refused) replace the `Glob = Empty` statements. `GvParserFragment3`/`4` and the wrappers
 `elabU02`..`elabU05` are deleted (they dropped items the elaborator now reads or refuses). Probes: `UebersetzeProben4`..`12`
 (`let`, `if`, `return`, `traverse`, `locks`, statics; each with a refused twin). Measured, not proved: 170 of 170 corpus
-files parse as a whole, 17 elaborate and lower (`Parser/Cover/Census.lean`, `instrumente/parser-deckung.py`); 429 of 429
+files parse as a whole, 19 elaborate and lower (`Parser/Cover/Census.lean`, `instrumente/parser-deckung.py`); 429 of 429
 function bodies and 1287 of 1287 leaf items print and read back as the same tree (`Print/Stmt`, `Print/Item`,
 `Print/Proben`). Proved: the expression round trip on the `gut` shapes and, new, the statement round trip of the
 straight-line core: `parseStmt_einfach`, `parseStmts_einfach`, `rundlauf_block_einfach` (a block of `return`, `leave`,

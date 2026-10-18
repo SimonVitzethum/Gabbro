@@ -85,12 +85,11 @@ theorem gvLuecke_lokal_leer (D : Deklaration) :
 
 /-- **L_e: atomic freedom on fragment declarations.** `GvAtomRely` cites a
     `declOf_kein_atomar` that does not exist in the tree (dangling reference);
-    the `declOf`-side statement feeding `gv_plain_gibt_relyDuty_parserfragment`
-    on fragment units: no static of `declOf` is atomic (`atomar := fun _ => false`), like
-    `gv_104_ohne_atomar`. -/
-theorem gvLuecke_fragment_ohne_atomar (u : UProg) :
+    the `declOf`-side statement feeding `gv_plain_gibt_relyDuty_parserfragment`: a unit without an `atomic`
+    item has no atomic carrier (`atomar g` is the `atomic` flag of the static), like `gv_104_ohne_atomar`. -/
+theorem gvLuecke_fragment_ohne_atomar (u : UProg) (h : ∀ g ∈ u.globs, g.atomic = false) :
     ∀ g : (declOf u).Glob, (declOf u).atomar g = false :=
-  fun _ => rfl
+  fun g => h _ (List.get_mem u.globs g)
 
 /-- **L_f: a static with no `Glob` form is refused loudly.** A placement (`aligned`, `section`) or a
     `shared` word is a property of the storage, which a `Glob` does not carry: the static reader stops with
