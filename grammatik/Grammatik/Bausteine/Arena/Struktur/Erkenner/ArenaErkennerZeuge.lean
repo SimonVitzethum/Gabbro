@@ -1,8 +1,8 @@
 /-
   File:      Grammatik/ArenaErkennerZeuge.lean
-  Subject:   THE RECOGNIZER ON A REAL ARENA (PLAN-DYNAMISCH.md section 8a.1, step (3)): bodies it ACCEPTS and RUNS, and
+  Subject:   THE RECOGNIZER ON A REAL ARENA, LIST HALF (PLAN-DYNAMISCH.md section 8a.1): bodies it ACCEPTS and RUNS, and
              planted defects it REJECTS, on the concrete four-slot arena of `ArenaDynZeuge.lean` (slot `1` on the free
-             list, list `2 -> 0`).
+             list, list `2 -> 0`), declared as an arena with a list and no tree (`KL`).
 
   Accepted (witnesses, run from the real world `w0`):
     * `nimm_push`   -- take slot `1` off the free list and link it in at the head of the list: the list becomes
@@ -24,6 +24,21 @@ open Gabbro.Grammatik.ArenaDyn Gabbro.Grammatik.ArenaKette
 
 namespace InvDynZeuge
 
+/-- **The arena of the witnesses carries the list, and no tree.** -/
+def KL : Dekl FA where
+  liste := some ⟨LL, LG⟩
+  baum := none
+  getrennt := fun _ _ _ h => by cases h
+
+/-- The scenario world meets the invariant of the arena: free list, list, and (no tree, so) disjointness. -/
+theorem ok_w0 : KL.Ok w0 :=
+  ⟨freiOk_w0, (Dekl.LOk_some (K := KL) (d := ⟨LL, LG⟩) rfl w0).mpr listOk_w0, Dekl.BOk_none (K := KL) rfl w0,
+    fun j hj => Dekl.InB_none (K := KL) rfl w0 j hj.2⟩
+
+/-- A world that meets the arena invariant has a well formed list. -/
+theorem listOk_von {σ : World FD} (h : KL.Ok σ) : ListOk FA LL LG σ :=
+  (Dekl.LOk_some (K := KL) (d := ⟨LL, LG⟩) rfl σ).mp h.2.1
+
 /-- The index context of the bodies below: one index variable, so far. -/
 abbrev G1 : Ctx := [Ty.index (FD.count FA.tab)]
 
@@ -34,20 +49,21 @@ def nimmPush (voll : Endblock FD FV false [] []) : Block FD FV false [] [] [] :=
 
 /-- **The recognizer accepts it** -- from a state that knows nothing. -/
 theorem erk_nimmPush (voll : Endblock FD FV false [] []) (hv : Rein voll) :
-    Erk FA LL LG Abs.leer (nimmPush voll) (((Abs.leer.ext .frei).set 0 .glied).tail) :=
+    Erk KL Abs.leer (nimmPush voll) (((Abs.leer.ext .frei).set 0 .liste).tail) :=
   Erk.nimm sieben rfl fdarf rfl (fgdarf _) voll _ hv
-    (Erk.push (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.ext, Var.pos]) (Erk.nil _))
+    (Erk.push ⟨LL, LG⟩ rfl (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.ext, Var.pos])
+      (Erk.nil _))
 
 /-- **Run on the real world:** the slot that came off the free list is the new head of the list, and the invariant
     holds -- as the recognizer promised. -/
 theorem nimmPush_zeuge (O : Orakel FD) (passes : Nat)
     (R : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f) (voll : Endblock FD FV false [] []) (hv : Rein voll) :
     ∃ σ' : World FD, execBlock (V := FV) O passes R (nimmPush voll) w0 .nil = .ok σ' .nil ∧
-      StrukturOk FA LL LG σ' ∧ LG.st σ' = 1 := by
-  have hpost := erk_koerper O passes R FA LL LG (erk_nimmPush voll hv) w0 .nil ⟨freiOk_w0, listOk_w0⟩
+      KL.Ok σ' ∧ LG.st σ' = 1 := by
+  have hpost := erk_koerper O passes R KL (erk_nimmPush voll hv) w0 .nil ok_w0
   obtain ⟨σ1, k, he1, hkn, -⟩ := nimmAlloc_ausfuehren O passes R FA sieben rfl fdarf rfl (fgdarf _) voll
     (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil) w0 .nil (by rw [kopf_w0]; decide) freiOk_w0
-  obtain ⟨σ2, he2, hg2, -⟩ := linkPush_ausfuehren O passes R LL LG (V := FV) (l := false) (Γ := G1) (Λ := []) (Λ' := [])
+  obtain ⟨σ2, he2, -, hg2, -⟩ := linkPush_ausfuehren O passes R LL LG (V := FV) (l := false) (Γ := G1) (Λ := []) (Λ' := [])
     .here rfl fdarf rfl (fgdarf _) .nil σ1 (.cons k .nil)
   have hrun : execBlock (V := FV) O passes R (nimmPush voll) w0 .nil = .ok σ2 .nil := by
     unfold nimmPush
@@ -80,11 +96,11 @@ def kopfUnlinkFrei : Block FD FV false [] [] [] :=
 /-- **The recognizer accepts it:** the head is a member, so its successor may be unlinked; the unlinked slot is owned,
     so it may be released. -/
 theorem erk_kopfUnlinkFrei :
-    Erk FA LL LG Abs.leer kopfUnlinkFrei
-      ((((Abs.leer.ext .glied).entglied.ext .frei).set 0 .offen).tail.tail) :=
-  Erk.kopf (fgdarf _) voll0 _ rein_voll0
-    (Erk.unlink (.here : Var G1 _) rfl fdarf voll1 _ (by simp [Abs.ext, Var.pos]) rein_voll1
-      (Erk.frei (.here : Var G2 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.entglied, Abs.ext, Var.pos])
+    Erk KL Abs.leer kopfUnlinkFrei
+      ((((((Abs.leer.ext .liste).forget .liste).ext .frei).set 0 .offen).tail).tail) :=
+  Erk.kopf ⟨LL, LG⟩ rfl (fgdarf _) voll0 _ rein_voll0
+    (Erk.unlink ⟨LL, LG⟩ rfl (.here : Var G1 _) rfl fdarf voll1 _ (by simp [Abs.ext, Var.pos]) rein_voll1
+      (Erk.frei (.here : Var G2 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.forget, Abs.ext, Var.pos])
         (Erk.nil _)))
 
 /-- **Run on the real world:** the list `2 -> 0` becomes `2`, the slot `0` is released onto the free list, and the
@@ -92,14 +108,14 @@ theorem erk_kopfUnlinkFrei :
 theorem kopfUnlinkFrei_zeuge (O : Orakel FD) (passes : Nat)
     (R : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f) :
     ∃ σ' : World FD, execBlock (V := FV) O passes R kopfUnlinkFrei w0 .nil = .ok σ' .nil ∧
-      StrukturOk FA LL LG σ' ∧ LL.wert σ' 2 = 4 ∧ FA.kopfSt σ' = 0 := by
-  have hpost := erk_koerper O passes R FA LL LG erk_kopfUnlinkFrei w0 .nil ⟨freiOk_w0, listOk_w0⟩
+      KL.Ok σ' ∧ LL.wert σ' 2 = 4 ∧ FA.kopfSt σ' = 0 := by
+  have hpost := erk_koerper O passes R KL erk_kopfUnlinkFrei w0 .nil ok_w0
   obtain ⟨k1, he1, hk1⟩ := linkKopfBind_ausfuehren O passes R LG (V := FV) (l := false) (Γ := []) (Λ := []) (Λ' := [])
     (fgdarf _) voll0
     (Block.linkUnlink LL (.here : Var G1 _) rfl fdarf voll1
       (Block.freiVar FA (.here : Var G2 _) rfl fdarf rfl (fgdarf _) .nil)) w0 .nil (by rw [lg_w0]; decide)
   have hk1' : k1.n = 2 := by rw [hk1, lg_w0]
-  obtain ⟨σb, k2, he2, hk2, hg2, hnp, ho2, -⟩ := linkUnlink_ausfuehren O passes R LL LG (V := FV) (l := false)
+  obtain ⟨σb, k2, he2, -, hk2, hg2, hnp, ho2, -⟩ := linkUnlink_ausfuehren O passes R LL LG (V := FV) (l := false)
     (Γ := G1) (Λ := []) (Λ' := []) (.here : Var G1 _) rfl fdarf voll1
     (Block.freiVar FA (.here : Var G2 _) rfl fdarf rfl (fgdarf _) .nil) (w0.lese [] [Sum.inr LG.g]) (.cons k1 .nil)
     (by show LL.wert w0 k1.n < 4; rw [hk1', ll_w0]; decide)
@@ -149,17 +165,17 @@ def nimmPushPush : Block FD FV false [] [] [] :=
       (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil))
 
 /-- **A double push has no derivation:** the slot is linked into itself, so no list exists. -/
-theorem nimmPushPush_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer nimmPushPush a' := by
+theorem nimmPushPush_abgelehnt (a' : Abs) : ¬ Erk KL Abs.leer nimmPushPush a' := by
   intro h
-  have hpost := erk_koerper oF 0 rF FA LL LG h w0 .nil ⟨freiOk_w0, listOk_w0⟩
+  have hpost := erk_koerper oF 0 rF KL h w0 .nil ok_w0
   obtain ⟨σ1, k, he1, hkn, -⟩ := nimmAlloc_ausfuehren oF 0 rF FA sieben rfl fdarf rfl (fgdarf _) voll0
     (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _)
       (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil)) w0 .nil
     (by rw [kopf_w0]; decide) freiOk_w0
-  obtain ⟨σ2, he2, hg2, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := []) (Λ' := [])
+  obtain ⟨σ2, he2, -, hg2, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := []) (Λ' := [])
     .here rfl fdarf rfl (fgdarf _)
     (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil) σ1 (.cons k .nil)
-  obtain ⟨σ3, he3, hg3, hli3, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := [])
+  obtain ⟨σ3, he3, -, hg3, hli3, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := [])
     (Λ' := []) .here rfl fdarf rfl (fgdarf _) .nil σ2 (.cons k .nil)
   have hrun : execBlock (V := FV) oF 0 rF nimmPushPush w0 .nil = .ok σ3 .nil := by
     unfold nimmPushPush
@@ -172,7 +188,7 @@ theorem nimmPushPush_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer nimmPushPus
   have hg2' : LG.st σ2 = k.n := hg2
   have hg3' : LG.st σ3 = k.n := hg3
   have hli3' : LL.wert σ3 k.n = LG.st σ2 := hli3
-  exact liste_schleife_bricht FA LL LG σ3 k.n hk3 hg3' (by rw [hli3', hg2']) hpost.1.2
+  exact liste_schleife_bricht FA LL LG σ3 k.n hk3 hg3' (by rw [hli3', hg2']) (listOk_von hpost.1)
 
 /-- A slot is released TWICE. -/
 def nimmFreiFrei : Block FD FV false [] [] [] :=
@@ -181,9 +197,9 @@ def nimmFreiFrei : Block FD FV false [] [] [] :=
       (Block.freiVar FA (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil))
 
 /-- **A double release has no derivation:** the second release makes the head of the free list link to itself. -/
-theorem nimmFreiFrei_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer nimmFreiFrei a' := by
+theorem nimmFreiFrei_abgelehnt (a' : Abs) : ¬ Erk KL Abs.leer nimmFreiFrei a' := by
   intro h
-  have hpost := erk_koerper oF 0 rF FA LL LG h w0 .nil ⟨freiOk_w0, listOk_w0⟩
+  have hpost := erk_koerper oF 0 rF KL h w0 .nil ok_w0
   obtain ⟨σ1, k, he1, hkn, -⟩ := nimmAlloc_ausfuehren oF 0 rF FA sieben rfl fdarf rfl (fgdarf _) voll0
     (Block.freiVar FA (.here : Var G1 _) rfl fdarf rfl (fgdarf _)
       (Block.freiVar FA (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil)) w0 .nil
@@ -214,9 +230,9 @@ def nimmFreiPush : Block FD FV false [] [] [] :=
 
 /-- **A use after release has no derivation:** the released slot is the head of the free list AND of the list, and a
     list slot must be live. -/
-theorem nimmFreiPush_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer nimmFreiPush a' := by
+theorem nimmFreiPush_abgelehnt (a' : Abs) : ¬ Erk KL Abs.leer nimmFreiPush a' := by
   intro h
-  have hpost := erk_koerper oF 0 rF FA LL LG h w0 .nil ⟨freiOk_w0, listOk_w0⟩
+  have hpost := erk_koerper oF 0 rF KL h w0 .nil ok_w0
   obtain ⟨σ1, k, he1, hkn, -⟩ := nimmAlloc_ausfuehren oF 0 rF FA sieben rfl fdarf rfl (fgdarf _) voll0
     (Block.freiVar FA (.here : Var G1 _) rfl fdarf rfl (fgdarf _)
       (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil)) w0 .nil
@@ -224,7 +240,7 @@ theorem nimmFreiPush_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer nimmFreiPus
   obtain ⟨σ2, he2, hk2, -⟩ := freiVar_ausfuehren oF 0 rF FA (V := FV) (l := false) (Γ := G1) (Λ := []) (Λ' := [])
     .here rfl fdarf rfl (fgdarf _)
     (Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil) σ1 (.cons k .nil)
-  obtain ⟨σ3, he3, hg3, -, -, hk3, -, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := [])
+  obtain ⟨σ3, he3, -, hg3, -, -, hk3, -, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := [])
     (Λ' := []) .here rfl fdarf rfl (fgdarf _) .nil σ2 (.cons k .nil)
   have hrun : execBlock (V := FV) oF 0 rF nimmFreiPush w0 .nil = .ok σ3 .nil := by
     unfold nimmFreiPush
@@ -240,33 +256,33 @@ theorem nimmFreiPush_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer nimmFreiPus
   have hauf : FA.AufListe σ3 (LG.st σ3) := by
     rw [hg3', ← hhead]
     exact FreiForm.aufListe_kopf FA hpost.1.1 (by rw [hhead]; exact hkl)
-  exact liste_freigegeben_bricht FA LL LG σ3 (by rw [hg3']; exact hkl) hauf hpost.1.2
+  exact liste_freigegeben_bricht FA LL LG σ3 (by rw [hg3']; exact hkl) hauf (listOk_von hpost.1)
 
 /-- A push of a slot the body does not own: a parameter that is already a member of the list. -/
 def pushFremd : Block FD FV false G1 [] [] :=
   Block.linkPush LL LG (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil
 
 /-- **A push of a slot the body does not own has no derivation:** run on the member `2`, it links `2` into itself. -/
-theorem pushFremd_abgelehnt (a' : Abs) : ¬ Erk FA LL LG Abs.leer pushFremd a' := by
+theorem pushFremd_abgelehnt (a' : Abs) : ¬ Erk KL Abs.leer pushFremd a' := by
   intro h
-  have hpost := erk_koerper oF 0 rF FA LL LG h w0 rho2 ⟨freiOk_w0, listOk_w0⟩
-  obtain ⟨σ1, he1, hg1, hli1, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := [])
+  have hpost := erk_koerper oF 0 rF KL h w0 rho2 ok_w0
+  obtain ⟨σ1, he1, -, hg1, hli1, -⟩ := linkPush_ausfuehren oF 0 rF LL LG (V := FV) (l := false) (Γ := G1) (Λ := [])
     (Λ' := []) .here rfl fdarf rfl (fgdarf _) .nil w0 rho2
   have hrun : execBlock (V := FV) oF 0 rF pushFremd w0 rho2 = .ok σ1 rho2 := by
     unfold pushFremd; rw [he1]; rfl
   rw [hrun] at hpost
   have hg1' : LG.st σ1 = 2 := hg1
   have hli1' : LL.wert σ1 2 = LG.st w0 := hli1
-  exact liste_schleife_bricht FA LL LG σ1 2 (by decide) hg1' (by rw [hli1', lg_w0]) hpost.1.2
+  exact liste_schleife_bricht FA LL LG σ1 2 (by decide) hg1' (by rw [hli1', lg_w0]) (listOk_von hpost.1)
 
 /-- The first witness, instantiated: a real oracle, a real `else`, a real run. -/
 theorem nimmPush_konkret : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF (nimmPush voll0) w0 .nil = .ok σ' .nil ∧
-    StrukturOk FA LL LG σ' ∧ LG.st σ' = 1 :=
+    KL.Ok σ' ∧ LG.st σ' = 1 :=
   nimmPush_zeuge oF 0 rF voll0 rein_voll0
 
 /-- The second witness, instantiated. -/
 theorem kopfUnlinkFrei_konkret : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF kopfUnlinkFrei w0 .nil = .ok σ' .nil ∧
-    StrukturOk FA LL LG σ' ∧ LL.wert σ' 2 = 4 ∧ FA.kopfSt σ' = 0 :=
+    KL.Ok σ' ∧ LL.wert σ' 2 = 4 ∧ FA.kopfSt σ' = 0 :=
   kopfUnlinkFrei_zeuge oF 0 rF
 
 end InvDynZeuge

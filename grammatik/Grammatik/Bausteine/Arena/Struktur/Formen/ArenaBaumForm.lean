@@ -16,6 +16,7 @@
 -/
 import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
 import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
+import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
 
 namespace Gabbro.Grammatik
 
@@ -70,12 +71,17 @@ theorem blattEin_ausfuehren (Cp Co : LinkFeld A) (hd : Cp.f ≠ Co.f)
     ∃ σ' : World D,
       execBlock (V := V) O passes R (Block.blattEin Cp Co p i hwT hLT rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
+      LinkRahmen A [Cp.f, Co.f] [] σ σ' ∧
       Cp.wert σ' (ρ.get p).n = (ρ.get i).n ∧ Cp.wert σ' (ρ.get i).n = D.count A.tab ∧
       Co.wert σ' (ρ.get i).n = D.count A.tab ∧
       (∀ j, j ≠ (ρ.get p).n → j ≠ (ρ.get i).n → Cp.wert σ' j = Cp.wert σ j) ∧
       (∀ j, j ≠ (ρ.get i).n → Co.wert σ' j = Co.wert σ j) ∧ G.st σ' = G.st σ ∧
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
-  refine ⟨_, rfl, ?_⟩
+  refine ⟨_, rfl, ?_, ?_⟩
+  · refine ⟨fun C hC => funext fun j => ?_, fun G' _ => rfl⟩
+    have h1 : C.f ≠ Cp.f := fun e => hC (by simp [e])
+    have h2 : C.f ≠ Co.f := fun e => hC (by simp [e])
+    simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h2]
   simp only [eval, Block.linkNil, Block.linkIdxAlsFeld, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
     LinkKopf.st_schreibSlot, LinkKopf.st_lese, LinkFeld.wert_lese,
     FreiForm.kopfSt_schreibSlot, FreiForm.kopfSt_lese, ArenaForm.stand_lese, ArenaForm.stand_schreibSlot,
@@ -102,6 +108,7 @@ theorem blattAus_ausfuehren (C : LinkFeld A) (p : Var Γ (Ty.index (D.count A.ta
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.blattAus C p hwT hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [C.f] [] σ σ' ∧
       k.n = C.wert σ (ρ.get p).n ∧ C.wert σ' (ρ.get p).n = D.count A.tab ∧
       (∀ j, j ≠ (ρ.get p).n → C.wert σ' j = C.wert σ j) ∧
       (∀ C' : LinkFeld A, C'.f ≠ C.f → ∀ j, C'.wert σ' j = C'.wert σ j) ∧ G.st σ' = G.st σ ∧
@@ -110,8 +117,12 @@ theorem blattAus_ausfuehren (C : LinkFeld A) (p : Var Γ (Ty.index (D.count A.ta
     ⟨(Wert.umTyp C.hf (σ.slots A.tab (ρ.get p).n C.f)).lo_le, by omega⟩
   simp only [Block.blattAus, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte]
   rw [dif_pos (by exact hk)]
-  refine ⟨?s, ?k, ?e, ?n, ?r⟩
+  refine ⟨?s, ?k, ?e, ?rh, ?n, ?r⟩
   case e => rfl
+  case rh =>
+    refine ⟨fun C' hC' => funext fun j => ?_, fun G' _ => rfl⟩
+    have h1 : C'.f ≠ C.f := fun e => hC' (by simp [e])
+    simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1]
   case n => rfl
   case r =>
     simp only [eval, Block.linkNil, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
@@ -126,7 +137,8 @@ theorem blattAus_ausfuehren (C : LinkFeld A) (p : Var Γ (Ty.index (D.count A.ta
 /-! ## The tree invariant on the executed forms -/
 
 /-- **Executed `leaf in` at the left keeps the tree.** `p` is a member with an empty left place, `i` is live and not in
-    the tree (what `N586` and the walk establish). Afterwards `i` is a member. Valid for every continuation. -/
+    the tree (what `N586` and the walk establish). Afterwards `i` is a member, and the members are exactly the old ones
+    and `i`. Valid for every continuation. -/
 theorem baum_einfuegen_links_zug (Lf Rf : LinkFeld A) (hd : Lf.f ≠ Rf.f)
     (p i : Var Γ (Ty.index (D.count A.tab)))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ) (rest : Block D V l Γ Λ Λ')
@@ -137,13 +149,18 @@ theorem baum_einfuegen_links_zug (Lf Rf : LinkFeld A) (hd : Lf.f ≠ Rf.f)
     ∃ σ' : World D,
       execBlock (V := V) O passes R (Block.blattEin Lf Rf p i hwT hLT rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
+      LinkRahmen A [Lf.f, Rf.f] [] σ σ' ∧
       BaumOk A Lf Rf G σ' ∧ InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') (ρ.get i).n ∧
-      A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) := by
+      A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
+      (∀ j, InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') j ↔
+        (j = (ρ.get i).n ∨ InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) j)) := by
   have hpi : (ρ.get p).n ≠ (ρ.get i).n := fun e => hnot (e ▸ hp)
-  obtain ⟨σ', he, hlp, hli, hri, hol, hor, hg, hk, hn, hs⟩ :=
+  obtain ⟨σ', he, hrm, hlp, hli, hri, hol, hor, hg, hk, hn, hs⟩ :=
     blattEin_ausfuehren O passes R G Lf Rf hd p i hwT hLT rest σ ρ hpi
   obtain ⟨h1, h2⟩ := baum_einfuegen_links A Lf Rf G hb _ _ hp hpl hi hnot hk hn hs hg hlp hli hri hol hor
-  exact ⟨σ', he, h1, h2, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs⟩
+  have hc : (ρ.get i).n < D.count A.tab := by have := hi.2.1; have := A.stand_le σ; omega
+  have hmem := einfuegen_mitglieder hb hp hpl hi.1 hc hnot hlp hli hri hol hor
+  exact ⟨σ', he, hrm, h1, h2, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, by rw [hg]; exact hmem⟩
 
 /-- **Executed `leaf in` at the right keeps the tree** (the mirror). -/
 theorem baum_einfuegen_rechts_zug (Lf Rf : LinkFeld A) (hd : Rf.f ≠ Lf.f)
@@ -156,16 +173,22 @@ theorem baum_einfuegen_rechts_zug (Lf Rf : LinkFeld A) (hd : Rf.f ≠ Lf.f)
     ∃ σ' : World D,
       execBlock (V := V) O passes R (Block.blattEin Rf Lf p i hwT hLT rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
+      LinkRahmen A [Rf.f, Lf.f] [] σ σ' ∧
       BaumOk A Lf Rf G σ' ∧ InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') (ρ.get i).n ∧
-      A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) := by
+      A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
+      (∀ j, InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') j ↔
+        (j = (ρ.get i).n ∨ InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) j)) := by
   have hpi : (ρ.get p).n ≠ (ρ.get i).n := fun e => hnot (e ▸ hp)
-  obtain ⟨σ', he, hrp, hri, hli, hor, hol, hg, hk, hn, hs⟩ :=
+  obtain ⟨σ', he, hrm, hrp, hri, hli, hor, hol, hg, hk, hn, hs⟩ :=
     blattEin_ausfuehren O passes R G Rf Lf hd p i hwT hLT rest σ ρ hpi
   obtain ⟨h1, h2⟩ := baum_einfuegen_rechts A Lf Rf G hb _ _ hp hpr hi hnot hk hn hs hg hrp hri hli hor hol
-  exact ⟨σ', he, h1, h2, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs⟩
+  have hc : (ρ.get i).n < D.count A.tab := by have := hi.2.1; have := A.stand_le σ; omega
+  have hmem := einfuegen_rechts_mitglieder hb hp hpr hi.1 hc hnot hrp hri hli hor hol
+  exact ⟨σ', he, hrm, h1, h2, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, by rw [hg]; exact hmem⟩
 
 /-- **Executed `leaf out` at the left keeps the tree.** `p` is a member whose left child `i` is a leaf (both places
-    empty). The binder holds `i`, which is live and no longer in the tree, so it may be released. -/
+    empty). The binder holds `i`, which is live and no longer in the tree, so it may be released; the slot WAS in the
+    tree and the new members are among the old ones. -/
 theorem baum_blatt_aus_links_zug (Lf Rf : LinkFeld A) (hd : Rf.f ≠ Lf.f)
     (p : Var Γ (Ty.index (D.count A.tab)))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -178,13 +201,23 @@ theorem baum_blatt_aus_links_zug (Lf Rf : LinkFeld A) (hd : Rf.f ≠ Lf.f)
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.blattAus Lf p hwT hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [Lf.f] [] σ σ' ∧
       k.n = Lf.wert σ (ρ.get p).n ∧ BaumOk A Lf Rf G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
-      ¬ InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n := by
-  obtain ⟨σ', k, he, hkn, hlp, hol, hoth, hg, hk, hn, hs⟩ :=
+      ¬ InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧
+      InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) k.n ∧
+      (∀ j, InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') j →
+        InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) j) := by
+  obtain ⟨σ', k, he, hrm, hkn, hlp, hol, hoth, hg, hk, hn, hs⟩ :=
     blattAus_ausfuehren O passes R G Lf p hwT hLT voll rest σ ρ hi
   obtain ⟨h1, h2, h3⟩ := baum_blatt_aus_links A Lf Rf G hb _ _ hp rfl hi (hkn ▸ k.lo_le) hll hrl hk hn hs hg hlp hol
     (fun j => hoth Rf hd j)
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3⟩
+  have hr : Rf.wert σ' = Rf.wert σ := funext fun j => hoth Rf hd j
+  have hmem := blatt_aus_mitglieder hb hp rfl (hkn ▸ k.lo_le) hi hll hrl hlp hol
+  have hin : InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) (Lf.wert σ (ρ.get p).n) := hp.links hi
+  refine ⟨σ', k, he, hrm, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3,
+    hkn ▸ hin, fun j hj => ?_⟩
+  rw [hr, hg] at hj
+  exact (hmem j hj).1
 
 /-- **Executed `leaf out` at the right keeps the tree** (the mirror). -/
 theorem baum_blatt_aus_rechts_zug (Lf Rf : LinkFeld A) (hd : Lf.f ≠ Rf.f)
@@ -199,13 +232,23 @@ theorem baum_blatt_aus_rechts_zug (Lf Rf : LinkFeld A) (hd : Lf.f ≠ Rf.f)
     ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
       execBlock (V := V) O passes R (Block.blattAus Rf p hwT hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
+      LinkRahmen A [Rf.f] [] σ σ' ∧
       k.n = Rf.wert σ (ρ.get p).n ∧ BaumOk A Lf Rf G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
-      ¬ InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n := by
-  obtain ⟨σ', k, he, hkn, hrp, hor, hoth, hg, hk, hn, hs⟩ :=
+      ¬ InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧
+      InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) k.n ∧
+      (∀ j, InBaum (D.count A.tab) (Lf.wert σ') (Rf.wert σ') (G.st σ') j →
+        InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) j) := by
+  obtain ⟨σ', k, he, hrm, hkn, hrp, hor, hoth, hg, hk, hn, hs⟩ :=
     blattAus_ausfuehren O passes R G Rf p hwT hLT voll rest σ ρ hi
   obtain ⟨h1, h2, h3⟩ := baum_blatt_aus_rechts A Lf Rf G hb _ _ hp rfl hi (hkn ▸ k.lo_le) hll hrl hk hn hs hg hrp hor
     (fun j => hoth Lf hd j)
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3⟩
+  have hl : Lf.wert σ' = Lf.wert σ := funext fun j => hoth Lf hd j
+  have hmem := blatt_aus_rechts_mitglieder hb hp rfl (hkn ▸ k.lo_le) hi hll hrl hrp hor
+  have hin : InBaum (D.count A.tab) (Lf.wert σ) (Rf.wert σ) (G.st σ) (Rf.wert σ (ρ.get p).n) := hp.rechts hi
+  refine ⟨σ', k, he, hrm, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3,
+    hkn ▸ hin, fun j hj => ?_⟩
+  rw [hl, hg] at hj
+  exact (hmem j hj).1
 
 end Bedeutung
 

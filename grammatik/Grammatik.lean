@@ -357,6 +357,16 @@ import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkenner
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerLemmas
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerBeweis
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+import Grammatik.Bausteine.Arena.Struktur.ArenaRahmen
+import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWurzel
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormG
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormZug
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaDekl
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallAlloc
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallListe
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallBaum
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallSchleife
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeBaum
 import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
 import Grammatik.Bausteine.Arena.Struktur.ArenaHash
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
