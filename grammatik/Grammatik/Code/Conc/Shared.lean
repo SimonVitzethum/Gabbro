@@ -57,7 +57,6 @@ theorem await_ok_shared (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
-    (IH : ∀ a, BOk lay (a :: cenv) lv O passes R rest)
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
     (hg : lay.shared g = true)
@@ -69,7 +68,7 @@ theorem await_ok_shared (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
     PresentedAt g σ (σ.storeGlob g xg) ∧
     OutOk lay cenv lv M (Sees.shared lay) fn lb k st.r st'.r m rs ks dst
       (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) (σ.storeGlob g xg) ρ) :=
-  await_ok_gx lay hL cenv lv O passes R g payload hp hgd rest IH lb k st st' blks h M (Sees.shared lay) fn hM hk hlv
+  await_ok_gx lay hL cenv lv O passes R g payload hp hgd rest lb k st st' blks h M (Sees.shared lay) fn hM hk hlv
     hFn hCall σ xg ρ m rs ks dst (rep_storeGlob_shared g hg xg hR) hE hW hc
     (sees_shared_at lay m g hg .acq xg (atomicG_supp (lowerAwait_atomic h)))
 
