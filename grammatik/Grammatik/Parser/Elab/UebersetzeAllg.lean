@@ -100,38 +100,53 @@ def needsAt (u : UProg) (t : Fin u.tabs.length) :
 def heldAt (u : UProg) (f : UFn) : List (Fin u.locks.length) :=
   f.held.filterMap fun n => (lockIdx u.locks n).toOption
 
+/-- A static by name. -/
+def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.length)
+  | [], n => .error ("static unknown: " ++ n)
+  | g :: rest, n =>
+    if g.name == n then .ok 0
+    else match globIdx rest n with
+      | .error e => .error e
+      | .ok j => .ok j.succ
+
+def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
+
+/-- The write flag of a function at a static. -/
+def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
+  f.gputs.any (· == (globAt u g).name)
+
 /-- The write flag of a function at a table. -/
 def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
   f.puts.any (· == (tabAt u t).name)
 
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
-    Signatur (Fin u.tabs.length) Empty (Fin u.locks.length) Empty where
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
   params := f.params.map (·.2)
   erg := f.ergTy
   gruende := 0
   haelt := heldAt u f
   schreibt := writesAt u f
-  gschreibt := fun e => nomatch e
+  gschreibt := writesGAt u f
   konsumiert := []
   produziert := []
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
-    Signatur (Fin u.tabs.length) Empty (Fin u.locks.length) Empty where
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
   params := []
   erg := none
   gruende := 0
   haelt := []
   schreibt := fun _ => false
-  gschreibt := fun e => nomatch e
+  gschreibt := fun _ => false
   konsumiert := []
   produziert := []
 
 /-- The `n`th signature, or the dummy (an out-of-range number names
     no function). -/
 def sigAt (u : UProg) (n : Nat) :
-    Signatur (Fin u.tabs.length) Empty (Fin u.locks.length) Empty :=
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty :=
   if h : n < u.fns.length then mkSig u (u.fns.get ⟨n, h⟩) else dummySig u
 
 /-- A non-empty emptiness test means a non-empty list. -/
@@ -153,13 +168,13 @@ def declOf (u : UProg) : Deklaration where
   typ := typAt u
   erlaubt := fun _ _ _ _ => false
   tabNr := fun n => if h : n < u.tabs.length then some ⟨n, h⟩ else none
-  Glob := Empty
+  Glob := Fin u.globs.length
   decGlob := inferInstance
-  gtyp := fun e => nomatch e
-  nutzlast := fun e => nomatch e
-  atomar := fun e => nomatch e
+  gtyp := fun g => (globAt u g).ty.toTy
+  nutzlast := fun _ => []
+  atomar := fun _ => false
   geteilt := fun t => (!((needsAt u t).isEmpty))
-  ggeteilt := fun e => nomatch e
+  ggeteilt := fun _ => false
   Lock := Fin u.locks.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
@@ -168,7 +183,7 @@ def declOf (u : UProg) : Deklaration where
   decMarke := inferInstance
   stufen := fun e => nomatch e
   braucht := needsAt u
-  gbraucht := fun e => nomatch e
+  gbraucht := fun _ => []
   eigner := fun _ => []
   Fn := Fin u.fns.length
   sig := fun f => f.val
@@ -193,7 +208,7 @@ def declOf (u : UProg) : Deklaration where
   geteilt_bewacht :=
     fun t h => notEmpty_ne_nil _ (show ((!((needsAt u t).isEmpty)) = true) from h)
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  ggeteilt_bewacht := fun _ h => Bool.noConfusion h
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
 
@@ -646,12 +661,53 @@ def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           .ok { range := fh.range, term := altTerm u Γ Λ t fh i hL }
         else .error "access without held guard"
 
+/-- No static is guarded (`gbraucht` is empty), so every read finds its guard held. -/
+theorem gdarf_globs (u : UProg) (g : Fin u.globs.length) (Λ : List (Res (declOf u))) :
+    gdarf (declOf u) g Λ :=
+  fun w hw => (List.not_mem_nil (show w ∈ ([] : List _) from hw)).elim
+
+/-- A number static read (`Expr.glob`): its type is the recorded range. -/
+def lowGlobSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
+    Except String (LowSide u Γ Λ) :=
+  match globIdx u.globs p with
+  | .error e => .error e
+  | .ok g =>
+    match h : (globAt u g).ty with
+    | .int lo hi =>
+      .ok { range := (lo, hi), term := by
+              have hg : (declOf u).gtyp g = .int lo hi := by
+                show (globAt u g).ty.toTy = _
+                rw [h]
+                rfl
+              show Expr (declOf u) Γ Λ (.int lo hi)
+              rw [← hg]
+              exact Expr.glob g (gdarf_globs u g Λ) }
+    | .bool => .error "bool static as a number"
+
+/-- A `bool` static read as a truth value. -/
+def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
+    Except String (Expr (declOf u) Γ Λ .bool) :=
+  match globIdx u.globs p with
+  | .error e => .error e
+  | .ok g =>
+    match h : (globAt u g).ty with
+    | .bool =>
+      .ok (by
+        have hg : (declOf u).gtyp g = .bool := by
+          show (globAt u g).ty.toTy = _
+          rw [h]
+          rfl
+        rw [← hg]
+        exact Expr.glob g (gdarf_globs u g Λ))
+    | .int _ _ => .error "number static as a truth value"
+
 /-- A value side in a body: a literal, a numeric parameter or a
     slot read (`result` and `old` have no G form here). -/
 def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) : USide → Except String (LowSide u Γ Λ)
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p => lowParamSide u Γ Λ fn 0 p
+  | .glob p => lowGlobSide u Γ Λ p
   | .slot b f ix => lowDurch u Γ Λ fn 0 b f ix
   | .tab b f ix => lowTabRead u Γ Λ fn 0 b f ix
   | .add a b =>
@@ -741,6 +797,7 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     lowParamSide u Γ Λ fn (if er.isSome then 1 else 0) p
+  | .glob p => lowGlobSide u Γ Λ p
   | .slot b f ix =>
     lowDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tab b f ix =>
@@ -828,6 +885,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match lowEns u Γ Λ fn er a with
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
+  | .globB p => lowGlobBool u Γ Λ p
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
 

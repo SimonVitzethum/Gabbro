@@ -10,10 +10,11 @@
   * fragment slots are zero-initialised (`sp0Of`, the Lean side of the
     exporter's `gSp0` slot half, `crates/gabbro-check/src/lean_g.rs`);
     `Sp0Ok` (decided by `sp0OkB`) says every range holds zero;
-  * declared `static` initialisers travel through `gvInitWert` (the Lean
-    side of `GInit`); out-of-range has no value (the `check_sp0` refusal).
-  The exact classes where no initial memory exists are proved (`sp0_luecke`,
-  `gv_fragment_kein_static`), not just stated. Reuses the accepted
+  * a declared `static` starts at its initialiser (`sp0GlobWert`, the Lean
+    side of `GInit`); an initialiser outside its type has no value (the
+    `check_sp0` refusal, `sp0GlobOkB`).
+  The exact classes where no initial memory exists are proved (`sp0_luecke`),
+  not just stated. Reuses the accepted
   definitions of `Zielsatz/`, `Semantik` and `Parser/` unchanged; no new
   interpreter, no import from `programmlogik/`.
 -/
@@ -56,11 +57,56 @@ def sp0FeldOkB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : 
   | some q => (tabAt u t).bools.contains q.1 || decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2)
   | none => false
 
-/-- **The `Sp0Ok` decider** (`sp0OkB`): the per-field test over every table and
-    every field index (`List.finRange`, like `lowerAllg`'s own coverage). -/
-def sp0OkB (u : UProg) : Bool :=
+/-- **The tables of the decider** (`sp0TabOkB`): the per-field test over every table and every field index
+    (`List.finRange`, like `lowerAllg`'s own coverage). -/
+def sp0TabOkB (u : UProg) : Bool :=
   (List.finRange u.tabs.length).all fun t =>
     (List.finRange (fieldCount u t)).all fun f => sp0FeldOkB u t f
+
+/-- **A static holds its initialiser** (`sp0GlobOkB`): an integer static starts inside its range, a `bool`
+    static at `0` or `1`. -/
+def sp0GlobOkB (u : UProg) (g : Fin u.globs.length) : Bool :=
+  match (globAt u g).ty with
+  | .int lo hi => decide (lo ≤ (globAt u g).init ∧ (globAt u g).init ≤ hi)
+  | .bool => (globAt u g).init == 0 || (globAt u g).init == 1
+
+/-- **The `Sp0Ok` decider** (`sp0OkB`): every slot starts at zero and every static at its initialiser. -/
+def sp0OkB (u : UProg) : Bool :=
+  sp0TabOkB u && (List.finRange u.globs.length).all fun g => sp0GlobOkB u g
+
+/-- The table half of the decider. -/
+theorem sp0OkB_tab (u : UProg) (h : sp0OkB u = true) : sp0TabOkB u = true :=
+  ((Bool.and_eq_true _ _).mp h).1
+
+/-- The static half of the decider, at one static. -/
+theorem sp0OkB_glob (u : UProg) (h : sp0OkB u = true) (g : Fin u.globs.length) :
+    sp0GlobOkB u g = true :=
+  (List.all_eq_true.mp ((Bool.and_eq_true _ _).mp h).2) g (List.mem_finRange g)
+
+/-- **The initial value of a static** (`sp0GlobWert`): the declared numeral (inside its range by
+    `sp0GlobOkB`), or the truth value `init = 1`. -/
+def sp0GlobWert (u : UProg) (g : Fin u.globs.length) (h : sp0GlobOkB u g = true) :
+    Wert (declOf u) ((declOf u).gtyp g) :=
+  match hq : (globAt u g).ty with
+  | .int lo hi => by
+      have hg : (declOf u).gtyp g = .int lo hi := by
+        show (globAt u g).ty.toTy = _
+        rw [hq]
+        rfl
+      rw [hg]
+      have hc : decide (lo ≤ (globAt u g).init ∧ (globAt u g).init ≤ hi) = true := by
+        unfold sp0GlobOkB at h
+        rw [hq] at h
+        exact h
+      have hb := of_decide_eq_true hc
+      exact ⟨(globAt u g).init, hb.1, hb.2⟩
+  | .bool => by
+      have hg : (declOf u).gtyp g = .bool := by
+        show (globAt u g).ty.toTy = _
+        rw [hq]
+        rfl
+      rw [hg]
+      exact decide ((globAt u g).init = 1)
 
 /-- **The zero value at one field** (`sp0FeldWert`): `false` at a `bool` field,
     `⟨0, _, _⟩` at an integer field whose range holds `0` -- the Lean side of
@@ -133,7 +179,8 @@ theorem sp0FeldOkB_klingt (u : UProg) (t : Fin u.tabs.length)
     the accepted lookups; every premise is used. -/
 theorem sp0OkB_klingt (u : UProg) (h : sp0OkB u = true) : Sp0Ok u := by
   intro t f
-  unfold sp0OkB at h
+  have h := sp0OkB_tab u h
+  unfold sp0TabOkB at h
   have ht := (List.all_eq_true.mp h) t (List.mem_finRange t)
   have hf := (List.all_eq_true.mp ht) f (List.mem_finRange f)
   exact sp0FeldOkB_klingt u t f hf
@@ -142,17 +189,17 @@ theorem sp0OkB_klingt (u : UProg) (h : sp0OkB u = true) : Sp0Ok u := by
     gives every field test. Assembly only; every premise is used. -/
 theorem sp0FeldOkB_of (u : UProg) (h : sp0OkB u = true) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : sp0FeldOkB u t f = true := by
-  unfold sp0OkB at h
+  have h := sp0OkB_tab u h
+  unfold sp0TabOkB at h
   have ht := (List.all_eq_true.mp h) t (List.mem_finRange t)
   exact (List.all_eq_true.mp ht) f (List.mem_finRange f)
 
-/-- **The computed initial memory** (`sp0Of`): slots at zero through
-    `sp0FeldWert`, no globals (`Glob = Empty`, so `nomatch`). This is the Lean
-    side of the exporter's `gSp0`: the loader establishes exactly this memory
-    (`Laufzeit.lader`). -/
+/-- **The computed initial memory** (`sp0Of`): slots at zero through `sp0FeldWert`, statics at their
+    initialisers through `sp0GlobWert`. This is the Lean side of the exporter's `gSp0`: the loader
+    establishes exactly this memory (`Laufzeit.lader`). -/
 def sp0Of (u : UProg) (h : sp0OkB u = true) : Speicher (declOf u) where
   slots := fun t _ f => sp0FeldWert u t f (sp0FeldOkB_of u h t f)
-  globs := fun e => nomatch e
+  globs := fun g => sp0GlobWert u g (sp0OkB_glob u h g)
 
 /-- **No zero memory where a range misses zero** (`sp0_luecke`): a non-`bool`
     field whose recorded range holds no `0` refutes `Sp0Ok` -- the Lean side of
@@ -187,64 +234,27 @@ theorem sp0_lueckeB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t
   · exact absurd (sp0OkB_klingt u hok) (sp0_luecke u t f hb w hr hmiss)
   · exact Bool.eq_false_iff.mpr hok
 
-/-- **The parser's fragment elaborates no statics** (`gv_fragment_kein_static`):
-    `declOf` sets `Glob := Empty`
-    (`grammatik/Grammatik/Parser/UebersetzeAllg.lean` line 156). Measured fact:
-    a `static` (with its declared initialiser) never reaches the fragment, so
-    the fragment's whole initial memory is the zero memory `sp0Of`; static
-    initialisers live exporter-side (`gvInitWert`). Agent 02 may widen what is
-    elaborated; `Parser/` is untouched. -/
-theorem gv_fragment_kein_static (u : UProg) : (declOf u).Glob = Empty := rfl
+/-- **A static starts at its initialiser** (`sp0Of_glob`): by definition of the computed memory. -/
+theorem sp0Of_glob (u : UProg) (h : sp0OkB u = true) (g : Fin u.globs.length) :
+    (sp0Of u h).globs g = sp0GlobWert u g (sp0OkB_glob u h g) := rfl
 
-/-! ## Static initialisers: the Lean side of `GInit` -/
+/-! ## Static initialisers -/
 
-/-- **Declared initialiser forms** (`GvInit`): a numeral or `true`/`false` -- the
-    two spellings `read_static` accepts (`crates/gabbro-check/src/lean_g.rs`
-    lines 1988-2014: `Bool` takes `Wahr`/`Falsch`, `Int` takes a numeral in
-    range, anything else is `LG003`). `tagged` (`Sum`) initialisers are NOT
-    modelled here (open, see CUTS). -/
-inductive GvInit : Type
-  | int : Int → GvInit
-  | bool : Bool → GvInit
-
-/-- **The initialiser travels** (`gvInitWert`): the Lean side of `GInit`
-    (`lean_g.rs` lines 460-466). An in-range numeral becomes the value, a
-    `bool` spelling becomes itself; a mismatch or an out-of-range numeral has
-    no value (`none`: the `LG003` refusal). -/
-def gvInitWert {F : Type} {sig : F → Nat} : (ty : Ty) → GvInit → Option (Val F sig ty)
-  | .int lo hi, .int n =>
-    if h : lo ≤ n ∧ n ≤ hi then some ⟨n, h.1, h.2⟩ else none
-  | .bool, .bool b => some b
-  | _, _ => none
-
-/-- **A `bool` initialiser travels** (`gvInitWert_bool`). -/
-theorem gvInitWert_bool {F : Type} {sig : F → Nat} (b : Bool) :
-    gvInitWert (F := F) (sig := sig) .bool (.bool b) = some b := rfl
-
-/-- **A `bool` spelling at an integer type is refused** (`gvInitWert_int_bool_none`). -/
-theorem gvInitWert_int_bool_none {F : Type} {sig : F → Nat} (lo hi : Int) (b : Bool) :
-    gvInitWert (F := F) (sig := sig) (.int lo hi) (.bool b) = none := rfl
-
-/-- **An in-range numeral travels** (`gvInitWert_int_ok`): the value is the
-    numeral (`read_static`'s `GInit::Int(n)`, `lean_g.rs` lines 1997-2014).
-    Every premise is used. -/
-theorem gvInitWert_int_ok {F : Type} {sig : F → Nat} (lo hi n : Int)
-    (h1 : lo ≤ n) (h2 : n ≤ hi) :
-    ∃ v : Zahl lo hi,
-      gvInitWert (F := F) (sig := sig) (.int lo hi) (.int n) = some v ∧ v.n = n :=
-  ⟨⟨n, h1, h2⟩, by simp only [gvInitWert]; rw [dif_pos ⟨h1, h2⟩]; rfl, rfl⟩
-
-/-- **An out-of-range numeral is refused** (`gvInitWert_int_none`): the `LG003`
-    arm (`lean_g.rs` lines 2004-2012). Every premise is used. -/
-theorem gvInitWert_int_none {F : Type} {sig : F → Nat} (lo hi n : Int)
-    (hmiss : n < lo ∨ hi < n) :
-    gvInitWert (F := F) (sig := sig) (.int lo hi) (.int n) = none := by
-  have hneg : ¬(lo ≤ n ∧ n ≤ hi) := by
+/-- **An out-of-range initialiser has no initial memory** (`sp0_glob_luecke`): the `LG003` arm of the
+    exporter (`lean_g.rs` `read_static`), the Lean side of the refusal. Every premise is used: `hty` fixes
+    the range, `hmiss` with the bounds closes by `omega`. -/
+theorem sp0_glob_luecke (u : UProg) (g : Fin u.globs.length) (lo hi : Int)
+    (hty : (globAt u g).ty = .int lo hi)
+    (hmiss : (globAt u g).init < lo ∨ hi < (globAt u g).init) : sp0OkB u = false := by
+  by_cases hok : sp0OkB u = true
+  · have hg := sp0OkB_glob u hok g
+    unfold sp0GlobOkB at hg
+    rw [hty] at hg
+    have hb := of_decide_eq_true hg
     cases hmiss with
     | inl hm => omega
     | inr hm => omega
-  simp only [gvInitWert]
-  rw [dif_neg hneg]
+  · exact Bool.eq_false_iff.mpr hok
 
 /-! ## The bridge: `StartPflicht` from lowering plus zero memory -/
 
@@ -287,39 +297,45 @@ theorem gv_startPflicht (u : UProg) (P : Programm (declOf u))
 
 /-! ## The joint witness -/
 
-/-- **Joint witness for the bridge** (`gv_startPflicht_zeuge`): all premises
-    jointly on the non-degenerate fixture `uExp104` -- the decider accepts the
-    array unit (`Konto` count 2, `stand` in `0 .. 100`), `einzahlen` writes
-    `Konto`, a NON-ZERO static initialiser (`64`) travels through `gvInitWert`
-    in the fragment's own declaration context, and the fragment has no statics.
-    No single fragment unit carries both an array and a static (`Glob` is
-    empty), so the witness pairs them: this is the task-shape finding, not a
-    weakening. -/
+/-- **A unit with a static** (`beispiele/187`): `static mut ANHALTEN : bool = false;`, a writer and a reader. -/
+def uStatik : UProg :=
+  { tabs := [], locks := [],
+    fns := [{ name := "halte", params := [], kinds := [], res := none, held := [], puts := [],
+              gputs := ["ANHALTEN"], gives := [], body := [.assignGlobB "ANHALTEN" .tru], ret := .empty },
+            { name := "gehalten", params := [], kinds := [], res := none, resBool := true, held := [],
+              puts := [], gives := [], body := [], ret := .bool (.globB "ANHALTEN") }],
+    globs := [{ name := "ANHALTEN", ty := .bool, init := 0, var := true }] }
+
+/-- The lowering accepts the unit. -/
+def lowOk (u : UProg) : Bool :=
+  match lowerAllg u with
+  | .ok _ => true
+  | .error _ => false
+
+/-- **Joint witness for the bridge** (`gv_startPflicht_zeuge`): all premises jointly on non-degenerate
+    fixtures -- the decider accepts the array unit `uExp104` (`Konto` count 2, `stand` in `0 .. 100`,
+    `einzahlen` writes `Konto`) and the static unit `uStatik` (its `bool` static starts at `false`, the
+    lowering accepts the writer and the reader), and an initialiser outside its range has no memory. -/
 theorem gv_startPflicht_zeuge :
     sp0OkB uExp104 = true ∧
     (declOf uExp104).count ⟨0, by decide⟩ = 2 ∧
     writesAt uExp104 (fnAt uExp104 ⟨0, by decide⟩) ⟨0, by decide⟩ = true ∧
-    (∃ v : Zahl 0 100,
-      gvInitWert (F := (declOf uExp104).Fn) (sig := (declOf uExp104).sig)
-        (.int 0 100) (.int 64) = some v ∧ v.n = 64) ∧
-    (declOf uExp104).Glob = Empty :=
-  ⟨by decide, by decide, by decide,
-    gvInitWert_int_ok 0 100 64 (by decide) (by decide),
-    gv_fragment_kein_static uExp104⟩
+    sp0OkB uStatik = true ∧
+    lowOk uStatik = true ∧
+    (sp0Of uStatik (by decide)).globs ⟨0, by decide⟩ = (false : Wert (declOf uStatik) Ty.bool) ∧
+    sp0OkB { uStatik with globs := [{ name := "N", ty := .int 0 9, init := 10 }] } = false :=
+  ⟨by decide, by decide, by decide, by decide, by decide +kernel, rfl, by decide⟩
 
 end Gabbro.Grammatik.GabbroV
 /- CUTS: PROVED here -- `Sp0Ok` with its decider (`sp0OkB` over the per-field
     test `sp0FeldOkB`, sound by `sp0OkB_klingt`/`sp0FeldOkB_klingt`); the computed
     zero memory (`sp0FeldWert` from the very `Bool` tests, `sp0FeldOkB_of`,
     `sp0Of`); the obstructions (`sp0_luecke`, checkable as `sp0_lueckeB`);
-    the fragment-shape fact (`gv_fragment_kein_static`: `Glob = Empty`); the
-    static-initialiser model (`GvInit`/`gvInitWert` for `int`/`bool` with
-    travel/refusal lemmas); the bridge (`gv_lowerAllg_requires`,
+    the static memory (`sp0GlobWert`, `sp0Of_glob`, refusal `sp0_glob_luecke`); the bridge (`gv_lowerAllg_requires`,
     `gv_startPflicht`: `StartPflicht` from lowering plus `sp0OkB`, no
     `Initially`); the joint non-degenerate witness (`gv_startPflicht_zeuge`
-    on `uExp104` plus a non-zero `gvInitWert` initialiser).
-    NOT covered: `tagged` (`Sum`) initialisers in `gvInitWert` (exporter
-    `read_static`'s third arm, `lean_g.rs` lines 2020-2079); the `Body`-side
+    on `uExp104` and the static unit `uStatik`).
+    NOT covered: `tagged` (`Sum`) statics (exporter `read_static`'s third arm); the `Body`-side
     `Initially` (`WF shapeOf`) transfer, which needs `programmlogik/` compiled
     in context (the `bruecke/` project, out of this file's scope -- its S4
     already closes the shape half for 104/108). Full `./lean-bau`: exit 0,
@@ -332,11 +348,7 @@ end Gabbro.Grammatik.GabbroV
 #print axioms Gabbro.Grammatik.GabbroV.sp0FeldOkB_of
 #print axioms Gabbro.Grammatik.GabbroV.sp0Of
 #print axioms Gabbro.Grammatik.GabbroV.sp0_lueckeB
-#print axioms Gabbro.Grammatik.GabbroV.gv_fragment_kein_static
-#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_bool
-#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_int_bool_none
-#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_int_ok
-#print axioms Gabbro.Grammatik.GabbroV.gvInitWert_int_none
+#print axioms Gabbro.Grammatik.GabbroV.sp0_glob_luecke
 #print axioms Gabbro.Grammatik.GabbroV.gv_lowerAllg_requires
 #print axioms Gabbro.Grammatik.GabbroV.gv_startPflicht
 #print axioms Gabbro.Grammatik.GabbroV.gv_startPflicht_zeuge

@@ -55,6 +55,8 @@ inductive USide
   | slot : String → String → UIdx → USide
   | tab : String → String → UIdx → USide
   | old : String → String → UIdx → USide
+  /-- A number static (`ANHALTEN`, `LIMIT`): `Expr.glob`. -/
+  | glob : String → USide
   | erg : USide
   /-- Integer arithmetic (`+`, `-`, `*`): the range of the result is computed by the
       lowering, exactly as `Expr.add`/`sub`/`mul` carry it in their type. -/
@@ -83,6 +85,8 @@ inductive UEns
       the truth value itself, not a number. -/
   | slotB : String → String → UIdx → UEns
   | tabB : String → String → UIdx → UEns
+  /-- A `bool` static read as a truth value. -/
+  | globB : String → UEns
   deriving DecidableEq, Repr
 
 /-- A call argument: a pointer variable passed through
@@ -113,6 +117,9 @@ inductive UStmt
   /-- The same two writes into a `bool` field: the right side is a truth value. -/
   | assignB : String → String → UIdx → UEns → UStmt
   | assignTabB : String → String → UIdx → UEns → UStmt
+  /-- `X = v;` at a `static mut` (`Stmt.assignGlob`), the value a number or a truth value. -/
+  | assignGlob : String → USide → UStmt
+  | assignGlobB : String → UEns → UStmt
   | call : String → List UArg → UStmt
   /-- `locks L { ... }` is written FLAT: `sperrtAuf L`, the block's statements, `zu` (the
       elaborator writes them balanced, the lowering reads them back as one block). A nested
@@ -161,6 +168,25 @@ structure ULock where
   masks : Bool := false
   deriving DecidableEq, Repr
 
+/-- The type of a static: ONE value, an integer range or `bool` (what a `Glob` carries here). -/
+inductive GTy
+  | int : Int → Int → GTy
+  | bool : GTy
+  deriving DecidableEq, Repr
+
+def GTy.toTy : GTy → Ty
+  | .int lo hi => .int lo hi
+  | .bool => .bool
+
+/-- One elaborated static (`static [mut] n : T = init;`): `init` is its `sp0` value (a numeral, `0`/`1` for a
+    `bool`). `var` is `mut`: only a `mut` static is written. -/
+structure UGlob where
+  name : String
+  ty : GTy
+  init : Int
+  var : Bool := false
+  deriving DecidableEq, Repr
+
 /-- A parameter kind: a pointer to a table, an index into one,
     or a plain integer range (kept beside the `Ty` so an index
     parameter stays recognizable after `Ty.index` unfolds it to
@@ -194,6 +220,8 @@ structure UCtx where
   lits : List (String × Int)
   /-- The binders of the enclosing `traverse` loops, innermost first (`leave i`/`next i` name the first). -/
   loops : List String := []
+  /-- The unit's statics. -/
+  globs : List UGlob := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -208,6 +236,8 @@ structure UFn where
   resBool : Bool := false
   held : List String
   puts : List String
+  /-- The statics it writes (`effects { writes X }`). -/
+  gputs : List String := []
   gives : List UEns
   body : List UStmt
   ret : URet
@@ -237,6 +267,8 @@ structure UProg where
   /-- The functions entered by HARDWARE: the dispatch roots of the `entry` items that carry a `via`
       word (`Programm.unterbricht`, `Kontext::unterbricht` of the checker). Each is also a root. -/
   hands : List String := []
+  /-- The statics (`Deklaration.Glob`). -/
+  globs : List UGlob := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -747,6 +779,15 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     | .error _ => blatt (.call f [a])
   | e => blatt e
 
+/-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
+def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=
+  match ctx.globs.find? (fun g => strEq g.name p) with
+  | .some g =>
+    match g.ty with
+    | .bool => .error "bool static as a number"
+    | _ => .ok (.glob p)
+  | .none => .error ("name unknown: " ++ p)
+
 /-- One side of an `ensures` comparison (the `tr_side` of
     `lean_g.rs`): literals, numeric parameters, named constants, limit words, slot reads,
     `old` and `result` travel, with the arithmetic layer of `uRechne`; a pointer parameter in a
@@ -758,7 +799,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .error _ =>
       match ctx.lits.find? (fun k => strEq k.1 p) with
       | .some k => .ok (.lit k.2)
-      | .none => .error ("name unknown: " ++ p)
+      | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer in a compare without G form"
@@ -829,6 +870,13 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     | .ok a => .ok (.not a)
   | .tru => .ok .tru
   | .fls => .ok .fls
+  | .variable g =>
+    match ctx.globs.find? (fun x => strEq x.name g) with
+    | .some gl =>
+      match gl.ty with
+      | .bool => .ok (.globB g)
+      | _ => .error "number static as a truth value"
+    | .none => .error "ensures clause without G form"
   | e =>
     match uZugriff ctx e with
     | .error _ => .error "ensures clause without G form"
@@ -867,7 +915,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .error _ =>
       match ctx.lits.find? (fun k => strEq k.1 p) with
       | .some k => .ok (.lit k.2)
-      | .none => .error ("name unknown: " ++ p)
+      | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer as value without G form"
@@ -911,6 +959,8 @@ structure UFnKopf where
   resBool : Bool := false
   bits : List Nat := []
   held : List String
+  /-- The statics it writes. -/
+  gputs : List String := []
 
 /-- The storage width of a declared parameter type: a bare unsigned word, with or without a range
     (`u8 in 0 .. 15` is stored in 8 bits); `0` for everything else. -/
@@ -1019,37 +1069,50 @@ def uSchreibtOrt (kopf : UFnKopf) (tabs : List UTab) : SExpr →
 structure UEffekte where
   locks : List String
   puts : List String
+  gputs : List String := []
 
-def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) :
+/-- A written name is a static when it is no parameter and no table. -/
+def uIstGlobName (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) (g : String) : Bool :=
+  !(kopf.names.any (strEq · g)) && !(tabs.any (fun x => strEq x.name g)) && globs.any (fun x => strEq x.name g)
+
+def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs : List UGlob) :
     List SEffekt → Except String UEffekte
   | [] => .ok { locks := [], puts := [] }
   | .locks false (.variable l) :: rest =>
     match locks.find? (fun x => strEq x.name l) with
     | .none => .error ("lock unknown: " ++ l)
     | .some _ =>
-      match uEffekteAux kopf tabs locks rest with
+      match uEffekteAux kopf tabs locks globs rest with
       | .error e => .error e
       | .ok r => .ok { r with locks := l :: r.locks }
   | .writes o :: rest =>
+    match (match o with
+        | .variable g => if uIstGlobName kopf tabs globs g then some g else none
+        | _ => none : Option String) with
+    | some g =>
+      match uEffekteAux kopf tabs locks globs rest with
+      | .error e => .error e
+      | .ok r => .ok { r with gputs := g :: r.gputs }
+    | none =>
     match uSchreibtOrt kopf tabs o with
     | .error e => .error e
     | .ok t =>
-      match uEffekteAux kopf tabs locks rest with
+      match uEffekteAux kopf tabs locks globs rest with
       | .error e => .error e
       | .ok r => .ok { r with puts := t :: r.puts }
-  | .reads _ :: rest => uEffekteAux kopf tabs locks rest
-  | .pure :: rest => uEffekteAux kopf tabs locks rest
-  | .loops :: rest => uEffekteAux kopf tabs locks rest
+  | .reads _ :: rest => uEffekteAux kopf tabs locks globs rest
+  | .pure :: rest => uEffekteAux kopf tabs locks globs rest
+  | .loops :: rest => uEffekteAux kopf tabs locks globs rest
   | _ :: _ => .error "effect without G form"
 
-def uEffekte (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) :
+def uEffekte (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs : List UGlob) :
     List SKlausel → Except String UEffekte
   | ks =>
     let es := uWirkungen ks
     -- An omitted `effects` is DERIVED by the checker (lane 191); here it is read as the empty
     -- set. That is never more permissive than the derived one: a body that writes a table or
     -- takes a lock is refused by the lowering (`hw : V.schreibt t = true` has no proof).
-    uEffekteAux kopf tabs locks es
+    uEffekteAux kopf tabs locks globs es
 where
   uWirkungen : List SKlausel → List SEffekt
     | [] => []
@@ -1090,7 +1153,7 @@ def uEindeutig (xs : List String) : List String :=
     Returns the head and the written tables. -/
 def elabKopf (_consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (locks : List ULock) : FnSig → Except String (UFnKopf × List String)
+    (locks : List ULock) (globs : List UGlob) : FnSig → Except String (UFnKopf × List String)
   | { art, name, params, res, fehler := .none, klauseln } =>
     if !strEq art "impl" then .error "fn is not impl"
     else
@@ -1110,25 +1173,23 @@ def elabKopf (_consts : List (String × Int))
               { name, names, kinds, types, res := .none,
                 bits := params.map (fun p => uParamBreite p.2),
                 held := uEindeutig held }
-            match uEffekte kopf tabs locks klauseln with
+            match uEffekte kopf tabs locks globs klauseln with
             | .error e => .error e
             | .ok eff =>
-              -- A `locks L` effect no longer needs `requires Held(L)`: a `locks L { .. }` statement
-              -- acquires it inside the body, and an access whose guard is not held is refused by
-              -- the LOWERING (`access without held guard`), so nothing is claimed here.
-              if false then
-                .error "locks without requires Held"
-              else
-                let schreibt := uEindeutig eff.puts
-                match res with
-                | .none => .ok (kopf, schreibt)
-                | .some (.atom "bool") =>
-                  .ok ({ kopf with resBool := true }, schreibt)
-                | .some t =>
-                  match uErgBereich alias t with
-                  | .error e => .error e
-                  | .ok r =>
-                    .ok ({ kopf with res := .some r }, schreibt)
+              -- A `locks L` effect needs no `requires Held(L)`: a `locks L { .. }` statement acquires
+              -- it inside the body, and an access whose guard is not held is refused by the LOWERING
+              -- (`access without held guard`), so nothing is claimed here.
+              let puts := uEindeutig eff.puts
+              let kopf := { kopf with gputs := uEindeutig eff.gputs }
+              match res with
+              | .none => .ok (kopf, puts)
+              | .some (.atom "bool") =>
+                .ok ({ kopf with resBool := true }, puts)
+              | .some t =>
+                match uErgBereich alias t with
+                | .error e => .error e
+                | .ok r =>
+                  .ok ({ kopf with res := .some r }, puts)
   | _ => .error "fn with an or channel without G form"
 
 /-- One call argument against the callee's parameter kind (the
@@ -1177,6 +1238,26 @@ def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
       | .ok xs => .ok (x :: xs)
   | _, _ => .error "argument count without G form"
 
+/-- `X = v;` where `X` is a static (the place reader found no slot): only a `mut` static is written. -/
+def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String UStmt :=
+  match ziel with
+  | .variable g =>
+    match ctx.globs.find? (fun x => strEq x.name g) with
+    | .none => .error e
+    | .some gl =>
+      if !gl.var then .error "write to an immutable static"
+      else
+        match gl.ty with
+        | .bool =>
+          match uBool ctx wert with
+          | .error x => .error x
+          | .ok v => .ok (.assignGlobB g v)
+        | _ =>
+          match uWertBody ctx wert with
+          | .error x => .error x
+          | .ok v => .ok (.assignGlob g v)
+  | _ => .error e
+
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; compound assignment, mid-body
     `return` and every other statement are explicit errors). -/
@@ -1184,7 +1265,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     SAnw → Except String UStmt
   | .set ziel "=" wert =>
     match uZugriff ctx ziel with
-    | .error e => .error e
+    | .error e => uGlobSchreib ctx ziel wert e
     | .ok (.thru b, tb, f, ix) =>
       match uStelle ctx.names b with
       | .error e => .error e
@@ -1421,23 +1502,23 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
 
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
-    (tabs : List UTab) (locks : List ULock) (kopf : UFnKopf)
+    (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
     (fname : String) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool,
-    fname, bits := kopf.bits, alias, lits }
+    fname, bits := kopf.bits, alias, lits, globs }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
 def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (locks : List ULock) (koepfe : List UFnKopf) (sig : FnSig)
+    (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
     (koerper : SAnw) : Except String UFn :=
-  match elabKopf consts alias tabs locks sig with
+  match elabKopf consts alias tabs locks globs sig with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon alias consts tabs locks kopf sig.name
+    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, body, r) =>
@@ -1445,10 +1526,43 @@ def elabUFunktion (consts : List (String × Int))
             params := kopf.names.zip kopf.types,
             kinds := kopf.kinds,
             res := kopf.res, resBool := kopf.resBool, held := kopf.held,
-            puts := schreibt, gives, body, ret := r }
+            puts := schreibt, gputs := kopf.gputs, gives, body, ret := r }
+
+/-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
+    as the initial value; a placement, an alignment or a `shared` word has no `Glob` form. -/
+def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
+    List SItemTief → Except String (List UGlob)
+  | [] => .ok []
+  | .globT m n t v al sec sh :: rest =>
+    if al.isSome || sec.isSome || sh then .error "static placement without G form"
+    else
+      match (match t with
+          | .atom "bool" =>
+            match v with
+            | .one .tru => .ok (GTy.bool, (1 : Int))
+            | .one .fls => .ok (GTy.bool, (0 : Int))
+            | _ => .error "static initialiser without G form"
+          | _ =>
+            match uErgBereich alias t with
+            | .error e => .error e
+            | .ok (lo, hi) =>
+              match (match v with
+                  | .one (.lit k) => .ok (Int.ofNat k)
+                  | .one (.variable c) => uSuch "const" consts c
+                  | _ => .error "static initialiser without G form" : Except String Int) with
+              | .error e => .error e
+              | .ok z =>
+                if lo ≤ z ∧ z ≤ hi then .ok (GTy.int lo hi, z)
+                else .error "static initialiser outside its range" : Except String (GTy × Int)) with
+      | .error e => .error e
+      | .ok (ty, z) =>
+        match uGlobs consts alias rest with
+        | .error e => .error e
+        | .ok gs => .ok ({ name := n, ty, init := z, var := m } :: gs)
+  | _ :: rest => uGlobs consts alias rest
 
 /-- Items outside the fragment: everything but constants,
-    type aliases, tables, locks and functions is an explicit
+    type aliases, statics, tables, locks and functions is an explicit
     error (the refused rows of `collect`). -/
 def uRestFehler : List SItemTief → Except String Unit
   | [] => .ok ()
@@ -1456,6 +1570,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .typeT _ _ _ _ _ :: rest => uRestFehler rest
   | .tableT _ _ _ _ _ _ :: rest => uRestFehler rest
   | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
+  | .globT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
@@ -1519,32 +1634,31 @@ def elabU : List SItemTief → Except String UProg
     match uRestFehler ms with
     | .error e => .error e
     | .ok _ =>
-      let tabItems := ms.filter (fun
-        | .tableT _ _ _ _ _ _ => true | _ => false)
-      match uSeq (tabItems.map (uTabelle consts alias)) with
-      | .error e => .error e
-      | .ok tabs =>
-        let lockItems := ms.filter (fun
-          | .lockT _ _ _ _ _ _ _ => true | _ => false)
-        match uSeq (lockItems.map (uSperre tabs)) with
-        | .error e => .error e
-        | .ok locks =>
-          let fnItems := ms.filterMap (fun
-            | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
-            | _ => none)
-          match uSeq (fnItems.map (fun (s, _) =>
-            elabKopf consts alias tabs locks s)) with
-          | .error e => .error e
-          | .ok [] => .error "unit without a fn"
-          | .ok kopfPaare =>
-            let koepfe := kopfPaare.map (·.1)
-            match uSeq (fnItems.map (fun (s, b) =>
-              elabUFunktion consts alias tabs locks koepfe s b)) with
-            | .error e => .error e
-            | .ok fns =>
-              match uWurzeln fns ms with
-              | .error e => .error e
-              | .ok roots => .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms }
+    match uGlobs consts alias ms with
+    | .error e => .error e
+    | .ok globs =>
+    match uSeq ((ms.filter (fun
+        | .tableT _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias)) with
+    | .error e => .error e
+    | .ok tabs =>
+    match uSeq ((ms.filter (fun
+        | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre tabs)) with
+    | .error e => .error e
+    | .ok locks =>
+    let fnItems := ms.filterMap (fun
+      | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
+      | _ => none)
+    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs s)) with
+    | .error e => .error e
+    | .ok [] => .error "unit without a fn"
+    | .ok kopfPaare =>
+    let koepfe := kopfPaare.map (·.1)
+    match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b)) with
+    | .error e => .error e
+    | .ok fns =>
+    match uWurzeln fns ms with
+    | .error e => .error e
+    | .ok roots => .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs }
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -1606,6 +1720,7 @@ structure USeiteT where
 
 def lowerSeiteEin (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteT
+  | .glob _ => .error "static without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with
@@ -1686,6 +1801,7 @@ def lowerVglEin (tabs : List UTab) (names : List String)
 /-- One `ensures` predicate in `einzahlen`. -/
 def lowerSichertEin (tabs : List UTab) (names : List String)
     (types : List Ty) : UEns → Except String UEnsEin
+  | .globB _ => .error "static without G form in the 104 lowering"
   | .cmp op a b => lowerVglEin tabs names types op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -1825,6 +1941,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
     Except String
       (Endblock G104_referenz.gD (vertragVon G104_referenz.gD G104_referenz.g_einzahlen) false UCtxEin
         (nach G104_referenz.gD G104_referenz.g_lies ULEin))
+  | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ => .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -1852,6 +1969,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
     `tr_body` of `lean_g.rs`). -/
 def lowerSaetzeEin (tabs : List UTab) (names : List String)
     (types : List Ty) : List UStmt → URet → Except String UKoerpEin
+  | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ => .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -1992,6 +2110,7 @@ structure USeiteE where
 def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     USide → Except String USeiteE
+  | .glob _ => .error "static without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with
@@ -2088,6 +2207,7 @@ def lowerVglLies (tabs : List UTab) (names : List String)
 def lowerSichertLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     UEns → Except String UEnsLies
+  | .globB _ => .error "static without G form in the 104 lowering"
   | .cmp op a b => lowerVglLies tabs names types res op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -2227,7 +2347,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
@@ -2501,6 +2621,7 @@ def beqUSide : USide → USide → Bool
   | .old a f x, .old b g y =>
     strEq a b && strEq f g && beqUIdx x y
   | .erg, .erg => true
+  | .glob a, .glob b => strEq a b
   | .add a b, .add c d | .sub a b, .sub c d | .mul a b, .mul c d
   | .band a b, .band c d | .bor a b, .bor c d | .bxor a b, .bxor c d =>
     beqUSide a c && beqUSide b d
@@ -2517,6 +2638,7 @@ def beqUEns : UEns → UEns → Bool
   | .not a, .not b => beqUEns a b
   | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
     strEq a b && strEq f g && beqUIdx x y
+  | .globB a, .globB b => strEq a b
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool
@@ -2548,6 +2670,8 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignB a f x s, .assignB b g y t | .assignTabB a f x s, .assignTabB b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUEns s t
+  | .assignGlob a s, .assignGlob b t => strEq a b && beqUSide s t
+  | .assignGlobB a s, .assignGlobB b t => strEq a b && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
   | .lockBeg a, .lockBeg b => strEq a b
   | .blkEnd, .blkEnd => true
@@ -2620,12 +2744,20 @@ def beqULockList : List ULock → List ULock → Bool
   | x :: xs, y :: ys => beqULock x y && beqULockList xs ys
   | _, _ => false
 
+def beqUGlob : UGlob → UGlob → Bool
+  | a, b => strEq a.name b.name && decide (a.ty = b.ty) && a.init == b.init && a.var == b.var
+
+def beqUGlobList : List UGlob → List UGlob → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqUGlob x y && beqUGlobList xs ys
+  | _, _ => false
+
 def beqUFn : UFn → UFn → Bool
   | a, b => strEq a.name b.name &&
     beqTyParamList a.params b.params &&
     beqUParamArtList a.kinds b.kinds &&
     beqOptWeite a.res b.res && a.resBool == b.resBool &&
-    beqStrList a.held b.held && beqStrList a.puts b.puts &&
+    beqStrList a.held b.held && beqStrList a.puts b.puts && beqStrList a.gputs b.gputs &&
     beqUEnsList a.gives b.gives &&
     beqUStmtList a.body b.body && beqURet a.ret b.ret
 
@@ -2637,7 +2769,7 @@ def beqUFnList : List UFn → List UFn → Bool
 def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabs b.tabs &&
     beqULockList a.locks b.locks && beqUFnList a.fns b.fns &&
-    beqStrList a.roots b.roots && beqStrList a.hands b.hands
+    beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool

@@ -60,6 +60,20 @@ theorem vSchreibt_eq (u : UProg) (c : Fin u.fns.length)
   rw [sigAt_get u c]
   rfl
 
+/-- Callee writes of a static through the declaration. -/
+theorem sigGSchreibt_eq (u : UProg) (i : Fin u.fns.length) (g : Fin u.globs.length) :
+    ((declOf u).signatur i).gschreibt g = writesGAt u (fnAt u i) g := by
+  show (sigAt u i.val).gschreibt g = _
+  rw [sigAt_get u i]
+  rfl
+
+/-- Body writes of a static through the declaration. -/
+theorem vGSchreibt_eq (u : UProg) (c : Fin u.fns.length) (g : Fin u.globs.length) :
+    (vertragVon (declOf u) c).gschreibt g = writesGAt u (fnAt u c) g := by
+  show (sigAt u c.val).gschreibt g = _
+  rw [sigAt_get u c]
+  rfl
+
 /-- No consumed marks travel. -/
 theorem sigKonsumiert_nil (u : UProg) (i : Fin u.fns.length) :
     ((declOf u).signatur i).konsumiert = [] := by
@@ -595,6 +609,9 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
       if hW : ∀ t : Fin u.tabs.length,
           writesAt u (fnAt u callee) t = true →
             writesAt u (fnAt u caller) t = true then
+       if hG : ∀ g : Fin u.globs.length,
+          writesGAt u (fnAt u callee) g = true →
+            writesGAt u (fnAt u caller) g = true then
         if hH : ∀ L ∈ ((declOf u).signatur callee).haelt,
             Res.held (D := declOf u) L ∈ Λ then
           if hX : ∀ L ∈ heldLocksD u Λ,
@@ -614,9 +631,10 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
                 absurd (hX L (heldLocksD_mem u _ L hL)) hn
             have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
                 true → (vertragVon (declOf u) caller).gschreibt g =
-                true := by
-              intro g _
-              cases g
+                true := fun g hg0 => by
+              rw [sigGSchreibt_eq u callee g] at hg0
+              rw [vGSchreibt_eq u caller g]
+              exact hG g hg0
             have hp : RufPasst (declOf u)
                 (vertragVon (declOf u) caller)
                 ((declOf u).signatur callee)
@@ -630,8 +648,65 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
             .ok (castNachStmtL u caller callee Γ Λ s)
           else .error "call under foreign lock without G form"
         else .error "call without held guard"
+       else .error "call writes without right"
       else .error "call writes without right"
 
+
+/-- A write of a static (`Stmt.assignGlob`): only where the function declares `writes X`. -/
+def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (n : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match globIdx u.globs n with
+  | .error e => .error e
+  | .ok g =>
+    match h : (globAt u g).ty with
+    | .int lo hi =>
+      match lowWertAt u Γ Λ fn lo hi v with
+      | .error e => .error e
+      | .ok e =>
+        if hw : writesGAt u (fnAt u caller) g = true then
+          have hwV : (verOf u caller).gschreibt g = true := by
+            show (vertragVon (declOf u) caller).gschreibt g = true
+            rw [vGSchreibt_eq u caller g]
+            exact hw
+          have hg : (declOf u).gtyp g = .int lo hi := by
+            show (globAt u g).ty.toTy = _
+            rw [h]
+            rfl
+          have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
+            rw [hg]
+            exact e
+          .ok (Stmt.assignGlob g e2 hwV (gdarf_globs u g Λ))
+        else .error "write without right"
+    | .bool => .error "truth value for a number static"
+
+/-- The same for a `bool` static. -/
+def lowAssignGlobBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (n : String) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match globIdx u.globs n with
+  | .error e => .error e
+  | .ok g =>
+    match h : (globAt u g).ty with
+    | .bool =>
+      match lowEns u Γ Λ fn none v with
+      | .error e => .error e
+      | .ok e =>
+        if hw : writesGAt u (fnAt u caller) g = true then
+          have hwV : (verOf u caller).gschreibt g = true := by
+            show (vertragVon (declOf u) caller).gschreibt g = true
+            rw [vGSchreibt_eq u caller g]
+            exact hw
+          have hg : (declOf u).gtyp g = .bool := by
+            show (globAt u g).ty.toTy = _
+            rw [h]
+            rfl
+          have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
+            rw [hg]
+            exact e
+          .ok (Stmt.assignGlob g e2 hwV (gdarf_globs u g Λ))
+        else .error "write without right"
+    | .int _ _ => .error "number for a bool static"
 
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
@@ -642,6 +717,8 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignTab b f ix v => lowAssignTabL u caller Γ fn Λ b f ix v
   | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
   | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
+  | .assignGlob n v => lowAssignGlobL u caller Γ fn Λ n v
+  | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"

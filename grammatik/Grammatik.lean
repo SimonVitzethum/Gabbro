@@ -172,6 +172,7 @@ import Grammatik.Parser.Elab.UebersetzeProben8
 import Grammatik.Parser.Elab.UebersetzeProben9
 import Grammatik.Parser.Elab.UebersetzeProben10
 import Grammatik.Parser.Elab.UebersetzeProben11
+import Grammatik.Parser.Elab.UebersetzeProben12
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.CBackend.Formen.CFormenW
 import Grammatik.CBackend.Formen.CFormenWZeuge
@@ -402,8 +403,6 @@ import Grammatik.GabbroV.GvTreeParent
 import Grammatik.GabbroV.GvSplits
 import Grammatik.GabbroV.GvParserFragment
 import Grammatik.GabbroV.GvLuecken
-import Grammatik.GabbroV.GvParserFragment3
-import Grammatik.GabbroV.GvParserFragment4
 import Grammatik.GabbroV.GvVerkettung
 import Grammatik.GabbroV.GvKetten
 import Grammatik.GabbroV.GvBruecke
