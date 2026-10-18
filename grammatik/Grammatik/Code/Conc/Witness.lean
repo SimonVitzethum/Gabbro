@@ -86,6 +86,8 @@ def cLay : Layout cD where
   rty := fun _ => .fld (.int 8) .unit
   fidx := fun _ _ => 0
   ggblk := fun _ => 1
+  lblk := fun _ => 2
+  lsrv := fun _ => 3
   shared := fun _ => true
   fno := fun _ => 0
 

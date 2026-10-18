@@ -31,12 +31,17 @@ theorem cLayOk : LayoutOk cLay where
   inj := fun _ _ _ _ _ _ => rfl
   tinj := fun _ _ _ => rfl
   gdis := fun t g => by cases t; cases g; decide
+  lkT := fun L t => by cases L; cases t; exact ⟨by decide, by decide⟩
+  lkG := fun L g => by cases L; cases g; exact ⟨by decide, by decide⟩
+  lkX := fun L L' => by cases L; cases L'; decide
+  lkN := fun _ _ _ => rfl
+  lkS := fun _ _ _ => rfl
   ginj := fun _ _ _ => rfl
   shAtomic := fun _ _ => rfl
   fsm := fun _ _ => Nat.two_pow_pos _
 
-/-- The table block (one byte) and the word cell of the global, both zero. -/
-def mem0 : Mem := ((Mem.alloc ⟨fun _ => none, 0⟩ 1 true).1.alloc 8 true).1
+/-- The table block (one byte), the word cell of the global and the two word cells of the lock (blocks 2 and 3), all zero. -/
+def mem0 : Mem := ((((Mem.alloc ⟨fun _ => none, 0⟩ 1 true).1.alloc 8 true).1.alloc 8 true).1.alloc 8 true).1
 
 /-- Every slot `0`, the global `5`. -/
 def wld5 : World cD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun _ => ⟨5, by decide, by decide⟩, []⟩
@@ -113,15 +118,20 @@ theorem cCall : CallRef cLay cMod (Sees.shared cLay) cR :=
   ⟨fun _ _ _ _ _ h => (nomatch h), fun _ _ _ _ _ h => (nomatch h)⟩
 
 theorem cMem_wf : WfL cLay mem0 := by
-  refine ⟨?_, fun t => ?_, fun g => ?_⟩
+  refine ⟨?_, fun t => ?_, fun g => ?_, fun L => ?_⟩
   · intro b hb
-    by_cases h1 : b = 1
-    · subst h1; decide
-    · by_cases h0 : b = 0
-      · subst h0; decide
-      · simp [mem0, Mem.alloc, Mem.setBlk, h1, h0] at hb
+    by_cases h3 : b = 3
+    · subst h3; decide
+    · by_cases h2 : b = 2
+      · subst h2; decide
+      · by_cases h1 : b = 1
+        · subst h1; decide
+        · by_cases h0 : b = 0
+          · subst h0; decide
+          · simp [mem0, Mem.alloc, Mem.setBlk, h3, h2, h1, h0] at hb
   · cases t; decide
   · cases g; decide
+  · cases L; exact ⟨by decide, by decide⟩
 
 /-- **`await` of a shared atomic, instantiated.** The memory holds `0` at the cell, the world `5`, and the thread
     reads `7` (an answer of the GX interface): the lowered `await` runs from its entry label to the continuation, in a

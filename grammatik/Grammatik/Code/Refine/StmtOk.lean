@@ -317,7 +317,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       have hFr : Fr lay cenv st.r m rs m' rs2 := fr_store hst2 (Or.inr ⟨a, hamem, hrb⟩) (fun x hx => by
         rw [hag2 x (Nat.lt_of_lt_of_le hx hr1), hag1 x hx])
       refine ⟨m', rs2, reach_block_jmp hb rfl hbk hkp hseq, ?_, hFr⟩
-      have hRn : Rep lay σl m' := rep_store_other hRl hst2 hfr
+      have hRn : Rep lay σl m' := rep_store_other hRl hst2 ⟨hfr.1, hfr.2.1⟩
       have hag : ∀ r ∈ cenv, rs2 r = rs r := fun r hr => by
         have l1 : r < r1 := Nat.lt_of_lt_of_le (hc r hr) hr1
         rw [hag2 r l1, hag1 r (hc r hr)]

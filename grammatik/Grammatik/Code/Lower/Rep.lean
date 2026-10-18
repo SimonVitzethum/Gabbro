@@ -70,6 +70,10 @@ structure Layout (D : Deklaration) where
   rty : D.Tab → Ty
   fidx : (t : D.Tab) → D.Feld t → Nat
   ggblk : D.Glob → Nat
+  /-- The ticket lock of lock `L` (`Conc/Lock.lean`): the block of its next-ticket word and the block of its
+      serving-ticket word. -/
+  lblk : D.Lock → Nat
+  lsrv : D.Lock → Nat
   /-- The SHARED atomics: globals other threads write, whose cell the weak memory answers (machine GX's `Tg`).
       The representation leaves their cells free. -/
   shared : D.Glob → Bool
@@ -86,6 +90,11 @@ structure LayoutOk {D : Deklaration} (lay : Layout D) : Prop where
   tinj : ∀ t u, lay.gblk t = lay.gblk u → t = u
   gdis : ∀ t g, lay.gblk t ≠ lay.ggblk g
   ginj : ∀ g h, lay.ggblk g = lay.ggblk h → g = h
+  lkT : ∀ L t, lay.lblk L ≠ lay.gblk t ∧ lay.lsrv L ≠ lay.gblk t
+  lkG : ∀ L g, lay.lblk L ≠ lay.ggblk g ∧ lay.lsrv L ≠ lay.ggblk g
+  lkX : ∀ L L', lay.lblk L ≠ lay.lsrv L'
+  lkN : ∀ L L', lay.lblk L = lay.lblk L' → L = L'
+  lkS : ∀ L L', lay.lsrv L = lay.lsrv L' → L = L'
   /-- a shared global is an atomic -/
   shAtomic : ∀ g, lay.shared g = true → D.atomar g = true
   /-- field positions stay far below the signed word range -/

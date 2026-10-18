@@ -50,7 +50,13 @@ theorem post_mono {lay : Layout D} {cenv : List Reg} {Γ : Ctx} {σ : World D} {
   ⟨h.1, h.2.1, h.2.2.1, fun x hx => Nat.lt_of_lt_of_le (h.2.2.2 x hx) hle⟩
 
 theorem not_fresh_glob {lay : Layout D} (g : D.Glob) : ¬ Fresh lay (lay.ggblk g) :=
-  fun h => h.2 g rfl
+  fun h => h.2.1 g rfl
+
+theorem not_fresh_lblk {lay : Layout D} (L : D.Lock) : ¬ Fresh lay (lay.lblk L) :=
+  fun h => (h.2.2 L).1 rfl
+
+theorem not_fresh_lsrv {lay : Layout D} (L : D.Lock) : ¬ Fresh lay (lay.lsrv L) :=
+  fun h => (h.2.2 L).2 rfl
 
 theorem not_fresh_tab {lay : Layout D} (t : D.Tab) : ¬ Fresh lay (lay.gblk t) :=
   fun h => h.1 t rfl

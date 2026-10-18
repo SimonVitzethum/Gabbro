@@ -21,7 +21,8 @@ open Gabbro.Grammatik (Deklaration Env Wert Ctx Var)
 variable {D : Deklaration}
 
 /-- A block that is no table and no global. -/
-def Fresh (lay : Layout D) (b : Nat) : Prop := (∀ t, b ≠ lay.gblk t) ∧ (∀ g, b ≠ lay.ggblk g)
+def Fresh (lay : Layout D) (b : Nat) : Prop :=
+  (∀ t, b ≠ lay.gblk t) ∧ (∀ g, b ≠ lay.ggblk g) ∧ (∀ L, b ≠ lay.lblk L ∧ b ≠ lay.lsrv L)
 
 /-- The environment `ρ` lives in the cells the registers `cenv` point to. -/
 def EnvRep (lay : Layout D) (rs : Regs) (m : Mem) : {Γ : Ctx} → List Reg → Env D Γ → Prop
@@ -138,21 +139,23 @@ theorem alloc_load_some {m : Mem} (hw : m.Wf) (n : Nat) (z : Bool) :
 
 /-! ## A new local -/
 
-/-- The memory with its global blocks: every table and global has a block that exists. -/
+/-- The memory with its global blocks: every table, global and lock has a block that exists. -/
 def WfL (lay : Layout D) (m : Mem) : Prop :=
-  m.Wf ∧ (∀ t, lay.gblk t < m.next) ∧ (∀ g, lay.ggblk g < m.next)
+  m.Wf ∧ (∀ t, lay.gblk t < m.next) ∧ (∀ g, lay.ggblk g < m.next) ∧ (∀ L, lay.lblk L < m.next ∧ lay.lsrv L < m.next)
 
 theorem wfL_store {lay : Layout D} {m m' : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
     (h : m.store b o t v = some m') (hw : WfL lay m) : WfL lay m' := by
-  refine ⟨store_wf h hw.1, fun t' => ?_, fun g => ?_⟩
+  refine ⟨store_wf h hw.1, fun t' => ?_, fun g => ?_, fun L => ?_⟩
   · rw [store_next h]; exact hw.2.1 t'
-  · rw [store_next h]; exact hw.2.2 g
+  · rw [store_next h]; exact hw.2.2.1 g
+  · rw [store_next h]; exact hw.2.2.2 L
 
 theorem wfL_alloc {lay : Layout D} {m : Mem} (hw : WfL lay m) (n : Nat) (z : Bool) :
     WfL lay (m.alloc n z).1 := by
-  refine ⟨alloc_wf hw.1 n z, fun t' => ?_, fun g => ?_⟩
+  refine ⟨alloc_wf hw.1 n z, fun t' => ?_, fun g => ?_, fun L => ?_⟩
   · have := hw.2.1 t'; simp only [Mem.alloc]; omega
-  · have := hw.2.2 g; simp only [Mem.alloc]; omega
+  · have := hw.2.2.1 g; simp only [Mem.alloc]; omega
+  · have := hw.2.2.2 L; simp only [Mem.alloc]; omega
 
 theorem alloc_blk (m : Mem) (n : Nat) (z : Bool) :
     ∃ cells, (m.alloc n z).1.blks m.next = some ⟨n, cells⟩ := by
