@@ -697,10 +697,12 @@ def LowSide.rest {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowS
 /-- The width a shift of `x` by `y` names: the smallest that holds the operand and exceeds the amount. -/
 def schiebeBreite (x y : Int × Int) : Nat := max (bitsFuer x.2) (y.2.toNat + 1)
 
-/-- `a << b` over non-negative ranges (M137): `Expr.shl` at the width `schiebeBreite`. -/
+/-- `a << b` over non-negative ranges (M137): `Expr.shl` at the width `schiebeBreite`. A shift amount beyond 4096
+    gives a result range no type holds (and `2 ^ n` would not be computed): refused as a value outside any range. -/
 def LowSide.links {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
-  if h0 : 0 ≤ x.range.1 then
+  if 4096 < y.range.2 then .error "value outside range"
+  else if h0 : 0 ≤ x.range.1 then
     if h0' : 0 ≤ y.range.1 then
       if hw1 : x.range.2 < (2 : Int) ^ schiebeBreite x.range y.range then
         if hw2 : y.range.2 < ((schiebeBreite x.range y.range : Nat) : Int) then
@@ -714,7 +716,8 @@ def LowSide.links {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : Low
 /-- `a >> b`: `Expr.shr`, range `0 .. hi(a)`. -/
 def LowSide.rechts {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
-  if h0 : 0 ≤ x.range.1 then
+  if 4096 < y.range.2 then .error "value outside range"
+  else if h0 : 0 ≤ x.range.1 then
     if h0' : 0 ≤ y.range.1 then
       if hw1 : x.range.2 < (2 : Int) ^ schiebeBreite x.range y.range then
         if hw2 : y.range.2 < ((schiebeBreite x.range y.range : Nat) : Int) then
