@@ -8,13 +8,13 @@
   body `locks () { }; return`); thread 0 runs `h` and is the WRITER, threads 1, 2, 3 run `t` and are
   READERS (`lw t _ := t ≠ 0`).
 
-  * `leser_schreiber_lauf` -- ONE kernel-checked run of eleven layer steps. Thread 1 takes the lock,
+  * `leser_schreiber_lauf` -- ONE kernel-checked run of twelve layer steps. Thread 1 takes the lock,
     thread 2 takes it SHARED (`RwAcq`) while thread 1 holds it: both hold at once. Machine G alone
     cannot step thread 2 there (`nicht_bereit_an_sperre`): the layer is what admits it. The writer
     (thread 0) then stands at the lock and has NO step in the layer (G refuses: another thread
     holds; the shared rule refuses: it is not a reader). Both readers leave, the writer takes the
     lock (a G step) and holds it alone, and a reader (thread 3) that arrives meanwhile is held
-    back. `RwExkl` holds along the run (`rwExkl_lauf`, from the start).
+    back. The order through the lock is witnessed too (`sperre_ordnet_rw` at the reader-then-writer pair). `RwExkl` holds along the run (`rwExkl_lauf`, from the start).
   * PLANTED DEFECT (last conjunct): the shared-acquisition recipe WITHOUT its premises `leser` and
     `andere` -- the writer's own lock step in the blank machine, kept next to the others -- admits
     the writer next to both readers, and the exclusion invariant fails at the machine reached. So
@@ -62,13 +62,13 @@ theorem exkl0 : RwExkl lw M00 := rwExkl_start P0 (wSp false) (wInit false) init_
 theorem fremd_w {M M' : RufMaschineG D0} {f : Faden} (h : RwSchritt P0 O0 0 lw M f M') {g : Faden}
     (hg : g ≠ f) : M'.faeden g = M.faeden g := rwSchritt_fremd h g hg
 
-/-- **TWO READERS HOLD ONE LOCK, THE WRITER WAITS, THEN HOLDS IT ALONE.** One run of eleven layer steps:
+/-- **TWO READERS HOLD ONE LOCK, THE WRITER WAITS, THEN HOLDS IT ALONE.** One run of twelve layer steps:
     thread 1 takes the lock, thread 2 takes it SHARED, thread 0 (the writer) stands at the lock; both
     readers leave; the writer takes the lock; a reader (thread 3) that arrives is held back. The
     last conjunct is the planted defect: the shared-acquisition recipe WITHOUT its premises admits the
     writer at the machine of step 5, and exclusion fails there. -/
 theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → Faden),
-    RwLauf P0 O0 0 lw M00 ms fs 11 ∧
+    RwLauf P0 O0 0 lw M00 ms fs 12 ∧
     -- machine G alone cannot admit the second reader ...
     (¬ ∃ M', RufSchrittG P0 O0 0 (ms 3) 2 M') ∧ AnSperre (ms 3) 2 () ∧
     -- ... the layer does
@@ -80,7 +80,9 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     -- after the readers left, the writer holds the lock alone
     () ∈ offen ((ms 10).faeden 0).spur ∧ (∀ g, g ≠ 0 → () ∉ offen ((ms 10).faeden g).spur) ∧
     -- a reader that arrives meanwhile is held back
-    AnSperre (ms 11) 3 () ∧ (¬ ∃ M', RwSchritt P0 O0 0 lw (ms 11) 3 M') ∧ RwExkl lw (ms 11) ∧
+    AnSperre (ms 12) 3 () ∧ (¬ ∃ M', RwSchritt P0 O0 0 lw (ms 12) 3 M') ∧ RwExkl lw (ms 12) ∧
+    -- the order through the lock: the reader's section (step 1) before the writer's (step 10)
+    fs 1 ≠ fs 10 ∧ GeordnetRw ms fs () 1 10 ∧
     -- PLANTED DEFECT: without `andere` and `leser` the writer is admitted next to both readers
     (∃ Mh0 Mx : RufMaschineG D0, RufSchrittG P0 O0 0 (ohneFremde (ms 5) 0) 0 Mh0 ∧
       Mx = { Mh0 with faeden := rufUpdateG (ms 5).faeden 0 (Mh0.faeden 0) } ∧ ¬ RwExkl lw Mx) := by
@@ -293,14 +295,20 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     intro g hg
     rw [rufSchrittG_fremd s10 g hg]
     exact hfrei10 g hg
+  -- the writer leaves its (empty) section but still holds the lock
+  obtain ⟨N10, s10b, hZ10b⟩ := w_dannLeer (P := P0) (O := O0) (passes := 0) (M := M10) (f := 0)
+    hZ10.1 (.frei () (.dann .nil (.ende (wRet false WFn.h)))) .nil rfl
+  have hold10b : () ∈ offen (N10.faeden 0).spur := by
+    rw [hZ10b.1]
+    exact hold10
   -- thread 3 (a reader) arrives
-  have f3 : M10.faeden 3 = M00.faeden 3 := by
-    rw [rufSchrittG_fremd s10 3 (by decide), rufSchrittG_fremd s9 3 (by decide),
+  have f3 : N10.faeden 3 = M00.faeden 3 := by
+    rw [rufSchrittG_fremd s10b 3 (by decide), rufSchrittG_fremd s10 3 (by decide), rufSchrittG_fremd s9 3 (by decide),
       rufSchrittG_fremd s8 3 (by decide), rufSchrittG_fremd s7 3 (by decide),
       rufSchrittG_fremd s6 3 (by decide), rufSchrittG_fremd s5 3 (by decide), fremd_w s4 (by decide),
       rufSchrittG_fremd s3 3 (by decide), rufSchrittG_fremd s2 3 (by decide),
       rufSchrittG_fremd s1 3 (by decide)]
-  obtain ⟨M11, s11, hZ11⟩ := w_endeEntf (P := P0) (O := O0) (passes := 0) (M := M10)
+  obtain ⟨M11, s11, hZ11⟩ := w_endeEntf (P := P0) (O := O0) (passes := 0) (M := N10)
     (f := 3) f3 (wLocksS false WFn.t) (wRet false WFn.t) .nil rfl rfl
   have hAn3 : AnSperre M11 3 () := by
     unfold AnSperre
@@ -309,29 +317,45 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
       .ende (wRet false WFn.t), rfl⟩
   have hold11 : () ∈ offen (M11.faeden 0).spur := by
     rw [rufSchrittG_fremd s11 0 (by decide)]
-    exact hold10
+    exact hold10b
   -- the run
-  obtain ⟨ms1, fs1, l1, m1, _⟩ := rwLauf_schritt (rwLauf_nil (P := P0) (O := O0) (passes := 0)
+  obtain ⟨ms1, fs1, l1, m1, k1, n1, p1⟩ := rwLauf_schritt (rwLauf_nil (P := P0) (O := O0) (passes := 0)
     (lese := lw) M00) rfl (rwSchritt_of_G s1)
-  obtain ⟨ms2, fs2, l2, m2, k2, _⟩ := rwLauf_schritt l1 m1 (rwSchritt_of_G s2)
-  obtain ⟨ms3, fs3, l3, m3, k3, _⟩ := rwLauf_schritt l2 m2 (rwSchritt_of_G s3)
-  obtain ⟨ms4, fs4, l4, m4, k4, _⟩ := rwLauf_schritt l3 m3 s4
-  obtain ⟨ms5, fs5, l5, m5, k5, _⟩ := rwLauf_schritt l4 m4 (rwSchritt_of_G s5)
-  obtain ⟨ms6, fs6, l6, m6, k6, _⟩ := rwLauf_schritt l5 m5 (rwSchritt_of_G s6)
-  obtain ⟨ms7, fs7, l7, m7, k7, _⟩ := rwLauf_schritt l6 m6 (rwSchritt_of_G s7)
-  obtain ⟨ms8, fs8, l8, m8, k8, _⟩ := rwLauf_schritt l7 m7 (rwSchritt_of_G s8)
-  obtain ⟨ms9, fs9, l9, m9, k9, _⟩ := rwLauf_schritt l8 m8 (rwSchritt_of_G s9)
-  obtain ⟨ms10, fs10, l10, m10, k10, _⟩ := rwLauf_schritt l9 m9 (rwSchritt_of_G s10)
-  obtain ⟨ms11, fs11, l11, m11, k11, _⟩ := rwLauf_schritt l10 m10 (rwSchritt_of_G s11)
-  have back : ∀ j, j ≤ 5 → ms11 j = ms5 j := by
+  obtain ⟨ms2, fs2, l2, m2, k2, n2, p2⟩ := rwLauf_schritt l1 m1 (rwSchritt_of_G s2)
+  obtain ⟨ms3, fs3, l3, m3, k3, n3, p3⟩ := rwLauf_schritt l2 m2 (rwSchritt_of_G s3)
+  obtain ⟨ms4, fs4, l4, m4, k4, n4, p4⟩ := rwLauf_schritt l3 m3 s4
+  obtain ⟨ms5, fs5, l5, m5, k5, n5, p5⟩ := rwLauf_schritt l4 m4 (rwSchritt_of_G s5)
+  obtain ⟨ms6, fs6, l6, m6, k6, n6, p6⟩ := rwLauf_schritt l5 m5 (rwSchritt_of_G s6)
+  obtain ⟨ms7, fs7, l7, m7, k7, n7, p7⟩ := rwLauf_schritt l6 m6 (rwSchritt_of_G s7)
+  obtain ⟨ms8, fs8, l8, m8, k8, n8, p8⟩ := rwLauf_schritt l7 m7 (rwSchritt_of_G s8)
+  obtain ⟨ms9, fs9, l9, m9, k9, n9, p9⟩ := rwLauf_schritt l8 m8 (rwSchritt_of_G s9)
+  obtain ⟨ms10, fs10, l10, m10, k10, n10, p10⟩ := rwLauf_schritt l9 m9 (rwSchritt_of_G s10)
+  obtain ⟨ms11, fs11, l11, m11, k11, n11, p11⟩ := rwLauf_schritt l10 m10 (rwSchritt_of_G s10b)
+  obtain ⟨ms12, fs12, l12, m12, k12, n12, p12⟩ := rwLauf_schritt l11 m11 (rwSchritt_of_G s11)
+  have back : ∀ j, j ≤ 5 → ms12 j = ms5 j := by
     intro j hj
-    rw [k11 j (by omega), k10 j (by omega), k9 j (by omega), k8 j (by omega), k7 j (by omega),
-      k6 j (by omega)]
-  have hm3 : ms11 3 = M3 := by rw [back 3 (by omega), k5 3 (by omega), k4 3 (by omega), m3]
-  have hm4 : ms11 4 = M4 := by rw [back 4 (by omega), k5 4 (by omega), m4]
-  have hm5 : ms11 5 = M5 := by rw [back 5 (by omega), m5]
-  have hm10 : ms11 10 = M10 := by rw [k11 10 (by omega), m10]
-  refine ⟨ms11, fs11, l11, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    rw [k12 j (by omega), k11 j (by omega), k10 j (by omega), k9 j (by omega), k8 j (by omega),
+      k7 j (by omega), k6 j (by omega)]
+  have hm2 : ms12 2 = M2 := by
+    rw [back 2 (by omega), k5 2 (by omega), k4 2 (by omega), k3 2 (by omega), m2]
+  have hm3 : ms12 3 = M3 := by rw [back 3 (by omega), k5 3 (by omega), k4 3 (by omega), m3]
+  have hm4 : ms12 4 = M4 := by rw [back 4 (by omega), k5 4 (by omega), m4]
+  have hm5 : ms12 5 = M5 := by rw [back 5 (by omega), m5]
+  have hm10 : ms12 10 = M10 := by rw [k12 10 (by omega), k11 10 (by omega), m10]
+  have hf1 : fs12 1 = 1 := by
+    rw [p12 1 (by omega), p11 1 (by omega), p10 1 (by omega), p9 1 (by omega), p8 1 (by omega),
+      p7 1 (by omega), p6 1 (by omega), p5 1 (by omega), p4 1 (by omega), p3 1 (by omega), n2]
+  have hf10 : fs12 10 = 0 := by rw [p12 10 (by omega), n11]
+  have hfg : fs12 1 ≠ fs12 10 := by rw [hf1, hf10]; decide
+  have hordn : GeordnetRw ms12 fs12 () 1 10 := by
+    refine sperre_ordnet_rw O0_gut l12 exkl0 1 10 (by omega) (by omega) hfg () ?_ ?_ ?_
+    · rw [hf1, hm2]; exact hold1
+    · rw [hf10, hm10]; exact hold10
+    · refine Or.inr ?_
+      rw [hf10]
+      intro h
+      exact h rfl
+  refine ⟨ms12, fs12, l12, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hfg, hordn, ?_⟩
   · rw [hm3]; exact hblock
   · rw [hm3]; exact hAn2
   · rw [hm3]; exact ⟨M4, hacq, hm4.symm⟩
@@ -343,15 +367,15 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     · exact nicht_bereit_an_sperre hAn0 (u := 1) (by decide) hold1'' ⟨M', hM'⟩
     · exact hL.leser rfl
   · intro h; exact h rfl
-  · exact rwExkl_lauf O0_gut l11 exkl0 5 (by omega)
+  · exact rwExkl_lauf O0_gut l12 exkl0 5 (by omega)
   · rw [hm10]; exact hold10
   · rw [hm10]; exact hfree10
-  · rw [m11]; exact hAn3
-  · rw [m11]
+  · rw [m12]; exact hAn3
+  · rw [m12]
     rintro ⟨M', hM' | ⟨L, hL⟩⟩
     · exact nicht_bereit_an_sperre hAn3 (u := 0) (by decide) hold11 ⟨M', hM'⟩
     · exact hL.andere 0 (by decide) hold11 rfl
-  · exact rwExkl_lauf O0_gut l11 exkl0 11 (Nat.le_refl 11)
+  · exact rwExkl_lauf O0_gut l12 exkl0 12 (Nat.le_refl 12)
   · rw [hm5]; exact ⟨Mw, Mx, sw, rfl, hmx⟩
 
 /-- **A reader cannot take the lock it already holds**: in a section that holds `()`, the premise `hr` of
