@@ -56,7 +56,7 @@
 //! * `RELEASE HOLDS (syntactic)` -- at every exit each conjunct of the invariant follows
 //!   from the acquire frame, the section's direct writes and the callees' `ensures`
 //!   equalities, with no uncounted call in the section. This is NOT a proof (inequality
-//!   promises beyond constants, arithmetic between promised cells, aliasing beyond declared
+//!   promises beyond constants, arithmetic between cells of unknown value, aliasing beyond declared
 //!   carriers and pointer parameters, and transitive promises through more than equality
 //!   are all beyond this text), only the absence of a syntactic gap.
 //! * `RELEASE UNPROVED` -- the exact gap: conjuncts no callee promises and no write
@@ -820,7 +820,52 @@ impl Lauf<'_> {
         }
     }
 
+    /// The exact integer value of an expression under the collected facts: a constant, a cell with a
+    /// known value, and `+ - *` of two such values (the model's `Expr.add`/`sub`/`mul` are exact: the
+    /// range of the result grows, nothing wraps). `None` where any leaf is not known.
+    fn zahl(&self, e: &Expr) -> Option<i128> {
+        match &e.art {
+            ExprArt::Klammer(x) => self.zahl(x),
+            ExprArt::Binaer(op @ (BinOp::Plus | BinOp::Minus | BinOp::Mal), a, b) => {
+                let (x, y) = (self.zahl(a)?, self.zahl(b)?);
+                match op {
+                    BinOp::Plus => x.checked_add(y),
+                    BinOp::Minus => x.checked_sub(y),
+                    _ => x.checked_mul(y),
+                }
+            }
+            _ => {
+                let leer_gebunden: BTreeSet<String> = BTreeSet::new();
+                let leer_subst: BTreeMap<String, Norm> = BTreeMap::new();
+                match self.kanon(&norm_expr(
+                    e,
+                    &leer_gebunden,
+                    &self.params,
+                    &leer_subst,
+                    &self.lokal,
+                    &self.welt.konstanten,
+                )) {
+                    Norm::Zahl(v) => Some(v),
+                    _ => None,
+                }
+            }
+        }
+    }
+
     fn folgt_cmp(&self, op: BinOp, a: &Expr, b: &Expr) -> bool {
+        // Arithmetic over known cells and constants is evaluated (`x + y == 100` with `x == 30` and
+        // `y == 70` established in the section): a sum invariant is the commonest one.
+        if let (Some(x), Some(y)) = (self.zahl(a), self.zahl(b)) {
+            return match op {
+                BinOp::Gleich => x == y,
+                BinOp::Ungleich => x != y,
+                BinOp::Kleiner => x < y,
+                BinOp::KleinerGleich => x <= y,
+                BinOp::Groesser => x > y,
+                BinOp::GroesserGleich => x >= y,
+                _ => false,
+            };
+        }
         let leer_gebunden: BTreeSet<String> = BTreeSet::new();
         let leer_subst: BTreeMap<String, Norm> = BTreeMap::new();
         let _leer_lokal: BTreeMap<String, i128> = BTreeMap::new();

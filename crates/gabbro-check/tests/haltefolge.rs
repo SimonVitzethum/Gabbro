@@ -160,3 +160,62 @@ fn zeiger_und_tabelle_sind_ein_ort() {
         "E005",
     );
 }
+
+#[test]
+fn summeninvariante_wird_ausgerechnet() {
+    // `x + y == 100` at the release: the section establishes `x == 30` and `y == 70`, and the sum is
+    // evaluated (the release analysis knew equalities between cells and constants, not arithmetic).
+    let kopf = "table P count 2 { slot { x : u32 in 0 .. 100, } }
+table Q count 2 { slot { y : u32 in 0 .. 100, } }
+lock K protects { P, Q } rank 0 held <= 50 ops invariant P.slots[0].x + Q.slots[0].y == 100;
+";
+    let f = |y: u32| {
+        format!(
+            "module t {{\n{kopf}impl fn f(k : ptr<normal, rw> P, m : ptr<normal, rw> Q) effects {{ writes k.slots, writes m.slots, locks K }} costs <= 40 ops {{
+    locks K {{ k.slots[0].x = 30; m.slots[0].y = {y}; }}
+}}\n}}\n"
+        )
+    };
+    sauber(&f(70));
+    faellt(&f(71), "N511");
+}
+
+#[test]
+fn traverse_ueber_die_slots_liest_keine_zelle() {
+    // a pool of two threads walks `slots of T` and writes each cell under the lock: the walk reads no cell,
+    // so the unguarded `T` of the object is no footprint read (the model's `Stmt.traverse`)
+    let pool = |rumpf: &str| {
+        modul(&format!(
+            "impl fn f() effects {{ reads T, writes T.slots, locks L }} costs <= 40000 ops {{
+    traverse e over slots of T by unvisited touches writes T.slots {{ {rumpf} }}
+}}
+concurrent {{ f, f }};"
+        ))
+    };
+    sauber(&pool("locks L { T.slots[e].v = 1; }"));
+    // the body's own unguarded read of a cell stays refused
+    faellt(&pool("let x : u32 in 0 .. 100 = T.slots[e].v;"), "N291");
+}
+
+#[test]
+fn adresse_als_argument_traegt_die_wirkung_zum_rufer() {
+    // `&T` names the table: the callee's `writes p.slots` is `writes T.slots` at the caller, so the race
+    // component reads the pair instead of refusing it as unresolvable (`W003`)
+    let kopf = "table T count 4 { slot { v : u32 in 0 .. 100, } }
+table U count 4 { slot { v : u32 in 0 .. 100, } }
+impl fn w(p : ptr<normal, rw> T, i : index into T) effects { writes p.slots } costs <= 8 ops { p.slots[i].v = 3; }
+";
+    // two roots writing the same table through the call: a real race
+    faellt(
+        &format!("module t {{\n{kopf}impl fn a() effects {{ writes T.slots }} costs <= 20 ops {{ w(&T, 0); }}
+impl fn b() effects {{ writes T.slots }} costs <= 20 ops {{ w(&T, 1); }}
+concurrent {{ a, b }};\n}}\n"),
+        "N300",
+    );
+    // a root writing another table beside it: disjoint, accepted
+    sauber(&format!(
+        "module t {{\n{kopf}impl fn a() effects {{ writes T.slots }} costs <= 20 ops {{ w(&T, 0); }}
+impl fn b() effects {{ writes U.slots }} costs <= 20 ops {{ U.slots[0].v = 1; }}
+concurrent {{ a, b }};\n}}\n"
+    ));
+}

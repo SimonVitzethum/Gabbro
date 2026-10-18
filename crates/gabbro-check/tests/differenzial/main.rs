@@ -305,6 +305,61 @@ fn gesamtraum_rust_und_export() {
     assert_eq!(ms.iter().filter(|m| klasse(m) == Klasse::Syntax && !m.name.contains("mut:")).count(), 0);
 }
 
+/// **The classes of (a) the harness expects**, by the checker's refusal codes, each with the reason the
+/// model accepts and the checker refuses. A group outside this list is NEW incompleteness (the test
+/// falls and the group must be fixed in the checker or entered here with its reason); a group that no
+/// longer occurs is a fix and needs no edit. None of these may be fixed by weakening the checker
+/// (CLAUDE.md): each is a rule the language keeps beyond what `Akzeptiert` decides, and `PRUEFER.md`
+/// 12.6 names the Lean change that would carry it.
+pub const ERWARTET_A: &[(&str, &str)] = &[
+    ("K001", "costs: a declared op bound the body exceeds -- the model carries no budgets (`Akzeptiert` has no cost component)"),
+    ("E006", "a `locks L` the body takes and the effects do not name -- effects are a frame, the model carries only write rights"),
+    ("E006,H011", "as E006, and the declared `locks` line then redeems nothing"),
+    ("E006,H011,W001", "as E006, with the race question of the same unit"),
+    ("E008", "a callee's `reads`/`locks` effect the caller's line does not lift -- the model's `RufPasst` tracks write rights only"),
+    ("M101", "a `const fn` body out of its declared range -- constants travel as computed numbers, the body is outside the model"),
+    ("N275", "a lock invariant reading a carrier the lock does not protect -- `SperrInvOk` is assumed by construction, owed by the user (`SperrInvLokal`)"),
+    ("N511", "a lock invariant the section does not re-establish -- the release duty is the user's (`InvGutS`), the checker proves what it can"),
+    ("K001,N511", "both of the above in one unit"),
+];
+
+/// Check the classification of a measured set against what the harness stands for. Returns one line per
+/// violation: a class (b) program, a class (a) group that is not in [`ERWARTET_A`], a disagreement of the
+/// pure-Lean path with the checker or with the exporter route.
+pub fn verstoesse(ms: &[Messung]) -> Vec<String> {
+    let mut out = Vec::new();
+    for m in ms {
+        match klasse(m) {
+            Klasse::B => out.push(format!("(b) the checker accepts, the model refuses: {}", zeile(m))),
+            Klasse::A => {
+                if let RustV::Refuse(c) = &m.rust {
+                    let k = c.join(",");
+                    if !ERWARTET_A.iter().any(|(e, _)| *e == k) {
+                        out.push(format!("(a) new incompleteness, refused with [{k}]: {}", zeile(m)));
+                    }
+                }
+            }
+            _ => {}
+        }
+        // the pure-Lean path decides the same as the checker and the exporter route
+        let rust_ja = m.rust == RustV::Accept;
+        match (&m.pur, rust_ja) {
+            (PurV::Reject | PurV::Verletzt(_), true) => out.push(format!("pure-Lean refuses what the checker accepts: {}", zeile(m))),
+            _ => {}
+        }
+        match (&m.pur, &m.lean) {
+            (PurV::Accept, LeanV::Reject | LeanV::Elab(_) | LeanV::Verletzt(_)) => {
+                out.push(format!("pure-Lean accepts what the exporter route refuses: {}", zeile(m)))
+            }
+            (PurV::Reject, LeanV::Accept) => {
+                out.push(format!("pure-Lean rejects what the exporter route accepts: {}", zeile(m)))
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
 /// The report: the counts per class, per atom (every program the atom stands in), and the
 /// classes of (a) and (b) with a minimal example (the shortest source) each.
 pub fn bericht(ms: &[Messung]) -> String {
@@ -340,6 +395,9 @@ pub fn bericht(ms: &[Messung]) -> String {
         for (s, v) in &g {
             let kleinste = v.iter().min_by_key(|m| (m.atoms.len(), m.src.len())).unwrap();
             out.push_str(&format!("  {:>5}  {s}\n         minimal: {}\n", v.len(), kleinste.name));
+            for l in kleinste.src.lines() {
+                out.push_str(&format!("           | {l}\n"));
+            }
         }
     }
     out
@@ -400,7 +458,8 @@ pub fn rein_bericht(ms: &[Messung]) -> String {
 fn vollraum() {
     let alle = raum();
     let ms = messe(&alle, true, &kratz());
-    let b = format!("{}{}", bericht(&ms), rein_bericht(&ms));
+    let v = verstoesse(&ms);
+    let b = format!("{}{}\nviolations of the classification: {}\n{}\n", bericht(&ms), rein_bericht(&ms), v.len(), v.join("\n"));
     std::fs::write(kratz().join("bericht.txt"), &b).unwrap();
     let mut tsv = String::new();
     for m in &ms {
@@ -432,4 +491,8 @@ fn schnitt_gegen_das_modell() {
     }
     let kaputt: Vec<&Messung> = ms.iter().filter(|m| klasse(m) == Klasse::Syntax && !m.name.contains("mut:")).collect();
     assert!(kaputt.is_empty(), "a generated program does not read: {:?}", kaputt.iter().map(|m| &m.name).collect::<Vec<_>>());
+    if mit_lean {
+        let v = verstoesse(&ms);
+        assert!(v.is_empty(), "{} violation(s) of the differential classification:\n{}", v.len(), v.join("\n"));
+    }
 }

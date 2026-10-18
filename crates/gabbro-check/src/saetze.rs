@@ -3972,7 +3972,10 @@ pub const WIRKUNGEN: &[Satz] = &[
                     `N294` fires only against signature-held outers, where `H006`/`H012` \
                     stay silent; same-lock pairs are exempt there as here. Device reads, \
                     `syscall`/`axiom` contracts, `maintains` and `= pred ;` carry no \
-                    footprint.",
+                    footprint. A `traverse`/`count` over a plain `slots of T` reads no \
+                    cell (it walks the declared indices): only the body's own reads \
+                    count, and domains over structure (descendants, chains) still read \
+                    their links.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/124 (two-thread witness, silent), beispiele/125 (shared \
                       read under its lock, silent); beispiele/gift/952 (shared read, \
@@ -5809,12 +5812,14 @@ pub const SPERREN: &[Satz] = &[
                   acquire, the section's own writes and what its callees PROMISE
                   (their `ensures`), never their bodies: untouched conjuncts ride the
                   frame, `cell == const` writes and `==` promises are decided as
-                  equalities, and a constant against a constant is computed. What
+                  equalities, and `+ - *` over constants and over cells with an established
+                  value is computed (a sum invariant `x + y == 100` closes after `x = 30;
+                  y = 70;`). What
                   cannot be shown falls here (`N511`), naming the invariant, the
                   lock, the exit and the cells whose value is not determined.",
         vorbehalt: "**Decided, never proved.** The reading is syntactic and one-sided:
-                    inequality promises beyond constants, arithmetic between promised
-                    cells, aliasing beyond declared carriers and `ptr` parameters,
+                    inequality promises beyond constants, arithmetic between cells whose
+                    value is not established, aliasing beyond declared carriers and `ptr` parameters,
                     and index names (a `const` index and its literal spell different
                     cells) are all beyond it -- a missed form stays on the obliging
                     side and falls. Conditional calls never promise, conditional
@@ -5826,7 +5831,7 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1261 (the old weak `setze` shape of 124, N511),
                       1262 (a callee overwriting a promised cell, N511), 1263 (an
-                      early `return` before the promise, N511), 1264 (a direct
+                      early `return` before the promise, N511), 1481 (a sum invariant the section breaks, N511; clean twin 1168), 1264 (a direct
                       write of one cell of an equality, N511) -- each falls with
                       N511. The silent direction is beispiele/119 (the bound
                       re-established by a direct write through a `ptr` parameter),
@@ -6652,7 +6657,11 @@ pub const SPERREN: &[Satz] = &[
                     checkable on their own, and what falls is the claim that they may run \
                     together. Like `E009` it is the honest third state beside pass and \
                     refuse -- but here it bites (`Fehler`, not `Hinweis`), because an \
-                    unchecked concurrency claim is not a frame anyone may rely on.",
+                    unchecked concurrency claim is not a frame anyone may rely on. An \
+                    argument `&T` (the address of a declared table) names `T`: the \
+                    callee's `writes p.slots` is `writes T.slots` at the caller; until the \
+                    differential harness found it, such a call made every pair it stood in \
+                    unresolvable.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/706 (unresolvable member -- `W003` alone) and \
                       /707 (disjoint write sets behind a recursive hull: `W003` as \

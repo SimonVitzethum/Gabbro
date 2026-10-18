@@ -1,0 +1,22 @@
+// erwartet: N511
+// 1481: **a sum invariant that the section breaks falls at N511 (the twin of `beispiele/1168`).**
+//
+// The section writes `x = 30` and `y = 71` through pointers; the invariant says `x + y == 100`. The release
+// analysis evaluates the sum from the facts the section establishes (`30 + 71`), and `101` is not `100`.
+module gift1481 {
+
+table P count 2 { slot { x : u32 in 0 .. 100, } }
+table Q count 2 { slot { y : u32 in 0 .. 100, } }
+lock K protects { P, Q } rank 0 held <= 50 ops invariant P.slots[0].x + Q.slots[0].y == 100;
+
+impl fn f(k : ptr<normal, rw> P, m : ptr<normal, rw> Q)
+    effects { writes k.slots, writes m.slots, locks K }
+    costs <= 40 ops
+{
+    locks K {
+        k.slots[0].x = 30;
+        m.slots[0].y = 71;
+    }
+}
+
+}
