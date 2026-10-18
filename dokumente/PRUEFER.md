@@ -1200,22 +1200,57 @@ closed or named:
 * **The checker does in Rust what `M104` forbids**: an `as` that wraps in silence cost two real
   bugs on 2026-09-01; the retired `pruefe-umwandlungen` guarded the class; not guarded today.
 
-### Completeness against the model: programs the Lean model accepts (2026-10-18)
+### Completeness against the model: the generator of valid programs, proved complete (2026-10-18)
 
-A corpus count cannot answer completeness (above), so the denominator here is the model itself:
-`grammatik/Grammatik/Gen/` builds programs **the Lean model accepts** and the checker must then accept too.
-How: a generic term generator reads the constructors of the surface AST (`SAnw`, `SExpr`, `STyp`, `SEnde`,
-`XKind`) off their inductive types (`getConstInfoInduct`; a new constructor is generated with no edit, and
-`Gen/Proben.lean` fails the build for a constructor it cannot produce); the Track P pipeline (`parseTopTief`,
-`elabU`, `lowerAllg`) decides validity by lowering to a G term; the model's own semantics (`rufAt`/`execEnd`
-from `sp0Of`) gives the value `main` returns. `instrumente/teile/gen-differenz.py` (stage 5 of
-`pruefe-llvm.py`, small N; `--n 90` by hand) asks the checker, the exporter and the compiler. Nothing is
-committed: the programs are regenerated from a seed into `.tmp/gen-differenz`.
+A corpus count cannot answer completeness (above), so the denominator is the model itself, and the generator
+of programs is a Lean definition with its own proof: `grammatik/Grammatik/Gen/Erzeuger/`. No syntax is written
+by hand; the generator is read off the model's intrinsically typed families.
 
-Measured with 90 programs over three frames (13,284 candidate statements, 720 accepted by the model, print and
-read round trip to normal form 90 of 90): **checker refuses 46 of 90**, `gabbro lean-g` refuses 13 more of the
-accepted ones, 44 pass the checker, the exporter and both targets. Every refusal is a case where the model
-accepts and a Rust pass does not; the minimal examples (shrunk by statement lines) name five classes:
+* **What it generates**: every `Programm D` (per invariant its predicate, per function `requires`, `ensures`,
+  a body that does not fall off, the handler flag) over a declaration `D` with complete enumerations
+  (`Aufz D`: tables, fields, statics, locks, marks, functions, invariants, axioms, registers, assumptions).
+  Terms are intrinsically typed, so every generated term is WELL TYPED; every proof argument of a rule
+  (`darf`, `gdarf`, `RufPasst`, `Perm`, the lock-rank premise, the write rights) is DECIDED by the generator
+  (`if h : P then ... else []`), so a generated term carries the rule's own premise as a proof.
+* **How**: lists of dependent pairs `(type, term)` by fuel; one clause per constructor (`Expr` 44,
+  `Stmt` 27, `Block` 18, `Endblock` 8, `Arms`/`GrundArms`/`Args`/`ErgExpr`/`NutzlastExpr`/`Var`); the size of a
+  term counts every node and the magnitude of every free number (literal, bound, width, count, retry budget).
+* **Theorems** (kernel-checked, `propext`/`Classical.choice`/`Quot.sound` only):
+  `genExpr_vollst`, `genRek_vollst` (statements, blocks, end blocks), `genProg_vollst`: a term or program of size
+  at most `m` is generated. `Gueltig.lean`: with `valid P := AkzeptiertX P S fs ls cs ws = true`
+  **(S)** `gueltig_korrekt` (a generated valid program is accepted), **(C)** `gueltig_vollst`
+  (`valid P ∧ groesseProg P ≤ m → P ∈ genGueltig .. m`), `gueltig_alle` (the union over `m` is EVERY valid
+  program). The same for the ten components of `AkzeptiertX` (`komp c`: fragment, closedness, footprint, lock
+  ranks, lock sites, roots, single pool, race freedom, answers, masks): `NurAn c P` = component `c` false and
+  the other nine true; `bad_korrekt`, `bad_vollst`, `bad_alle`: the single-fault refusals of every component are
+  generated, bounded by size, and only those.
+* **Witnesses and a planted defect** (`Probe.lean`, a concrete declaration `probeD`): the generator produces
+  literals, negations, table slots; `-0` (size 2) is in `genExpr 2` by the theorem; a generator WITHOUT the
+  clause of `neg` does not contain it, decided by the kernel (`defekt_luecke`); the empty program is accepted by
+  `AkzeptiertX` (decided) and generated at its size (`probeP_erzeugt`); the same program with one root declared
+  twice is refused by exactly component 6 (decided) and generated under that label (`probeP_bad_erzeugt`).
+* **Named limits of the statement** (exact, nothing weakened):
+  (1) the quantifier is `∀ D` with an `Aufz D`, not a generator OF declarations: a `Deklaration` is a structure
+  of types and functions with proofs, so the register members of the declaration side (`Deklaration` 51,
+  `Signatur` 9, `Vertrag` 7, `Ty` 9, `Regklasse` 5, `Res` 2, `RufPasst` 6, and the arena/dyn/free-list/
+  continuation families, 30; 119 of 235) are parameters, not generated; a generator of small concrete
+  declarations is a separate piece of work. The 116 register members of the term level are covered (`Expr` 42,
+  `Stmt` 27, `Block` 18, `Endblock` 8, `Arms` 2, `GrundArms` 2, `Args` 2, `ErgExpr` 2, `NutzlastExpr` 2,
+  `Var` 2, `Programm` 5, `GleitOp` 4; the proof cases on each constructor, so a new one stops the build).
+  (2) acceptance is a property of the WHOLE program (race freedom, footprint, single pool are over all
+  functions), not prefix-closed, so the program-level generators are generate-then-decide over the complete
+  typed enumeration: valid by definition, not by yield; growing a program with acceptance as an invariant
+  exists only for the surface fragment the elaborator lowers.
+  (3) there is no G -> source text printer: the model has no surface syntax, and the elaborator
+  (`elabU`/`lowerAllg`) maps source into a small fragment (statics, tables, locks, `let`, `if`, `traverse`
+  over slots, statement calls, `return`) whose image is a tiny part of the generated set; an inverse is the
+  elaborator's inverse and belongs to Track P. So a generated program is a G term; the round trip
+  print, parse, elaborate holds only where a source form exists.
+  (4) the enumeration is exhaustive and therefore exponential in the size bound: it is the statement's
+  witness, not a sampler; the bounded `decide` instances are kept at size 2 on a one-table probe.
+
+Findings of the FIRST generator (random surface trees, deleted with this change; the programs are regenerable
+from the repository history before it): the checker refused 46 of 90 programs the model accepted, in five classes:
 
 | Code | Minimal program body (frame: `A, B : u8`, `T.slots[k].v : u8`) | Model | Reading |
 |---|---|---|---|
@@ -1230,15 +1265,9 @@ under `^`; checker, elaborator and compiler accept) and `LG006` (7) for `travers
 (loop invariant has no exporter form; the elaborator has one). The compiler (`gabbro llvm`) refused none and no
 binary disagreed with the model on x86_64 or aarch64.
 
-What the generator does **not** reach is as informative: 5,528 of 13,284 candidates die in the elaborator with
-`stmt without G form`, i.e. the elaborator covers a fragment (statics, tables, locks, `let`, `if`, `traverse`
-over `slots`, direct calls as statements, `return`); `match`, `retry`, `forever`, value calls (`let x = f(..)`),
-options, sums, `why`, floats, pointers and atomics never elaborate, so no generated program contains them. Of
-the 72 surface constructors 18 occur in a final program; the other 54 are listed by the driver with their
-generated/accepted counts, never skipped silently. Of the 114 register members of the term families
-(`dokumente/llvm-modelldeckung.tsv`: `Expr`, `Stmt`, `Block`, `Endblock`, `Arms`, `Args`, `Ty`) 31 appear in
-the G terms the exporter writes for the generated programs. Closing that gap is elaborator work (Track P), not
-generator work: the generated space follows the type, the accepted space follows `elabU`.
+The elaborator covers only a fragment (5,528 of 13,284 candidates died with `stmt without G form`); `match`, `retry`,
+`forever`, value calls, options, sums, `why`, floats, pointers and atomics never elaborated. That gap is why the
+generator of this section works on the G terms directly.
 
 ---
 
@@ -1368,6 +1397,12 @@ count is unguarded: the guardian `pruefe-ausnahmen` named in the old text never 
 (`Akzeptiert`, whose soundness is `gabbro_ziel`); an unsafe program is not valid, a refusal is never turned
 into a warning and `ensures` is never derived. The harness measures where the Rust checker and the Lean
 model part, over the model's forms and their combinations (never over the corpus).
+
+**Open (2026-10-18, Simon's decision).** The harness still builds its programs from a hand-written catalogue
+of atoms (`atome.rs`, with unsafe twins and mutants). The rule is that all valid programs and their variations
+come from the Lean definition, with no hand-written syntax; the generator that does so, with its completeness
+theorem, is section 11 (`Gen/Erzeuger/`). It produces G terms, and the harness needs source text, so the atoms
+stay until a G to source route exists (named limit (3) of section 11). They are not to be extended.
 
 **Where it lives.** `crates/gabbro-check/tests/differenzial/` is an ordinary integration test, so it runs
 inside `cargo test --workspace` and therefore inside `instrumente/pruefe-pruefer.py` (no fifth guardian).
