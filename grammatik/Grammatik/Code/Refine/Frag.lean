@@ -186,6 +186,20 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
       have hl' : m.load b o .ptr = some (encR lay (.ptr n rw) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
+  | opt n =>
+      have hf : Ar.Fits (-1) (n - 1) 128 := by simpa [supp] using hs
+      refine ⟨([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      apply frag_one
+      have hl' : m.load b o (.int (Ar.wid (-1) (n - 1))) = some (encR lay (.opt n) v) := by
+        simpa [memTy, regTy, encM] using hl
+      exact stepI_load hp hl'
+  | why n =>
+      have hf : Ar.Fits 0 ((n : Int) - 1) 128 := by simpa [supp] using hs
+      refine ⟨([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      apply frag_one
+      have hl' : m.load b o (.int (Ar.wid 0 ((n : Int) - 1))) = some (encR lay (.why n) v) := by
+        simpa [memTy, regTy, encM] using hl
+      exact stepI_load hp hl'
   | _ => simp [supp] at hs
 
 /-! ## Addresses -/

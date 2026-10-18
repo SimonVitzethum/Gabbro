@@ -67,6 +67,11 @@ def loadG (τ : GTy) (p : Opd) (r : Nat) : Option LR :=
       some ([.load r (.int 8) p, .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)],
             .reg (r + 1), r + 2)
   | .ptr _ _ => some ([.load r .ptr p], .reg r, r + 1)
+  | .opt n =>
+      if Ar.Fits (-1) (n - 1) 128 then some ([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1) else none
+  | .why n =>
+      if Ar.Fits 0 ((n : Int) - 1) 128 then
+        some ([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1) else none
   | _ => none
 
 /-- Does an integer type fit the widths the lowering knows? -/
@@ -278,6 +283,27 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
       match lowerE lay cenv a r with
       | some (ca, oa, r1) => some (ca ++ [.bin r1 .xor 1 oa (.int 1 1)], .reg r1, r1 + 1)
       | none => none
+  -- `opt n`: the integer `-1` for absent, the index otherwise (`encR`)
+  | _, _, _, .none n, r =>
+      if Ar.Fits (-1) (n - 1) 128 then some ([], .int (Ar.wid (-1) (n - 1)) (-1), r) else none
+  | _, _, _, .some (n := n) e, r =>
+      match lowerE lay cenv e r with
+      | some (ca, oa, r1) =>
+          if Ar.Fits (-1) (n - 1) 128 ∧ Ar.Fits 0 (n - 1) 128 then
+            (cvtG (.int 0 (n - 1)) (.int (-1) (n - 1)) oa r1).map fun x => (ca ++ x.1, x.2.1, x.2.2)
+          else none
+      | none => none
+  | _, _, _, .istSome (n := n) e, r =>
+      match lowerE lay cenv e r with
+      | some (ca, oa, r1) =>
+          if Ar.Fits (-1) (n - 1) 128 then
+            some (ca ++ [.icmp r1 .sge (Ar.wid (-1) (n - 1)) oa (.int (Ar.wid (-1) (n - 1)) 0)],
+              .reg r1, r1 + 1)
+          else none
+      | none => none
+  | _, _, _, .why n i, r =>
+      if Ar.Fits 0 ((n : Int) - 1) 128 then some ([], .int (Ar.wid 0 ((n : Int) - 1)) (i.val : Int), r)
+      else none
   | _, _, _, _, _ => none
 
 /-- The lowering of the arguments of a call: the code, the operands that hold the values (their

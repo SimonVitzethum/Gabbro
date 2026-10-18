@@ -31,13 +31,12 @@ theorem cvtG_mono {σ τ : GTy} {o : Opd} {r : Nat} {c : LR} (h : cvtG σ τ o r
 
 theorem loadG_mono {τ : GTy} {p : Opd} {r : Nat} {c : LR} (h : loadG τ p r = some c) : r ≤ c.2.2 := by
   unfold loadG at h
-  split at h
-  · split at h
-    · obtain rfl := Option.some.inj h; simp
-    · simp at h
-  · obtain rfl := Option.some.inj h; simp
-  · obtain rfl := Option.some.inj h; simp
-  · simp at h
+  split at h <;> first
+    | (obtain rfl := Option.some.inj h; simp; done)
+    | (split at h <;> first
+        | (obtain rfl := Option.some.inj h; simp; done)
+        | (simp at h; done))
+    | (simp at h; done)
 
 theorem slotAddr_mono {lay : Layout D} {t : D.Tab} {f : D.Feld t} {base : Opd} {iτ : GTy} {oi : Opd}
     {r : Nat} {c : LR} (h : slotAddr lay t f base iτ oi r = some c) : r ≤ c.2.2 := by
@@ -116,13 +115,12 @@ theorem cmpRest_mono {pu ps : IPred} {σa σb : GTy} {oa ob : Opd} {r : Nat} {c 
 
 theorem cvtM_mono {τ : GTy} {o : Opd} {r : Nat} {c : LR} (h : cvtM τ o r = some c) : r ≤ c.2.2 := by
   unfold cvtM at h
-  split at h
-  · obtain rfl := Option.some.inj h; simp
-  · split at h
-    · obtain rfl := Option.some.inj h; simp
-    · simp at h
-  · obtain rfl := Option.some.inj h; simp
-  · simp at h
+  split at h <;> first
+    | (obtain rfl := Option.some.inj h; simp; done)
+    | (split at h <;> first
+        | (obtain rfl := Option.some.inj h; simp; done)
+        | (simp at h; done))
+    | (simp at h; done)
 
 theorem storeTo_mono {τ : GTy} {oe : Opd} {r1 : Nat} {p : Opd} {cs : List Instr} {r2 : Nat}
     (h : storeTo τ oe r1 p = some (cs, r2)) : r1 ≤ r2 := by
@@ -452,15 +450,43 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
   | _, _, _, .flle .., r, c, h => by
       simp [lowerE] at h
   | _, _, _, .none .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .some .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .istSome .., r, c, h => by
-      simp [lowerE] at h
+      simp only [lowerE] at h
+      split at h
+      · obtain rfl := Option.some.inj h; exact Nat.le_refl _
+      · simp at h
+  | _, _, _, .some (n := n) e, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv e r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv e r _ ha
+      simp only [ha] at h
+      split at h
+      · rcases hcv : cvtG (.int 0 (n - 1)) (.int (-1) (n - 1)) oa r1 with _ | ⟨c2, o2, r2⟩
+        · simp [hcv] at h
+        have m2 := cvtG_mono hcv
+        simp only [hcv, Option.map_some] at h
+        obtain rfl := Option.some.inj h
+        simp only at m1 m2 ⊢
+        omega
+      · simp at h
+  | _, _, _, .istSome e, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv e r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv e r _ ha
+      simp only [ha] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        simp only at m1 ⊢
+        omega
+      · simp at h
   | _, _, _, .case .., r, c, h => by
       simp [lowerE] at h
   | _, _, _, .why .., r, c, h => by
-      simp [lowerE] at h
+      simp only [lowerE] at h
+      split at h
+      · obtain rfl := Option.some.inj h; exact Nat.le_refl _
+      · simp at h
   | _, _, _, .forallSlots .., r, c, h => by
       simp [lowerE] at h
   | _, _, _, .existsSlots .., r, c, h => by

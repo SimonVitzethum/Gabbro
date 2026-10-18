@@ -1,4 +1,5 @@
 import Grammatik.Code.Refine.Env
+import Grammatik.Code.Refine.Match.Opt
 
 /-
   File:      Grammatik/Code/Refine/Expr.lean
@@ -524,16 +525,60 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
       simp [lowerE] at h
   | _, _, _, .flle .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
-  | _, _, _, .none .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .some .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .istSome .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+  | _, _, _, .none n, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        exact ⟨frag_intc m rs r _ _, fitsT_nonint (fun lo hi e => nomatch e)⟩
+      · simp at h
+  | _, _, _, .some (n := n) e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      simp only [he] at h
+      split at h
+      · rename_i hfit
+        rcases hcv : cvtG (.int 0 (n - 1)) (.int (-1) (n - 1)) oe r1 with _ | ⟨c2, o2, r2⟩
+        · simp [hcv] at h
+        simp only [hcv, Option.map_some] at h
+        obtain rfl := Option.some.inj h
+        obtain ⟨Ie, _⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
+        refine ⟨frag_two (ct := (c2, o2, r2)) Ie (fun rsA hag hoe hlte => ?_),
+          fitsT_nonint (fun lo hi e => nomatch e)⟩
+        obtain ⟨c', hc', F⟩ := cvtG_frag (lb := -1) (hb := n - 1) hfit.2
+          (eval σ₀ e σ ρ).lo_le (eval σ₀ e σ ρ).le_hi hoe hlte
+        rw [hcv] at hc'
+        obtain rfl := Option.some.inj hc'
+        exact F
+      · simp at h
+  | _, _, _, .istSome (n := n) e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      simp only [he] at h
+      split at h
+      · rename_i hfit
+        obtain rfl := Option.some.inj h
+        obtain ⟨Ie, _⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
+        refine ⟨frag_two (ct := ([.icmp r1 .sge (Ar.wid (-1) (n - 1)) oe (.int (Ar.wid (-1) (n - 1)) 0)], .reg r1, r1 + 1)) Ie (fun rsA hag hoe hlte => ?_),
+          fitsT_nonint (fun lo hi e => nomatch e)⟩
+        show Frag m rsA r1 _ (Val.bool (eval σ₀ e σ ρ).isSome)
+        generalize eval σ₀ e σ ρ = v at hoe ⊢
+        cases v with
+        | none => exact istSome_frag hfit (-1) (Or.inl rfl) oe r1 m rsA hoe hlte
+        | some k =>
+            have := istSome_frag hfit k.n (Or.inr ⟨k.lo_le, k.le_hi⟩) oe r1 m rsA hoe hlte
+            rw [decide_eq_true k.lo_le] at this
+            exact this
+      · simp at h
   | _, _, _, .case .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
-  | _, _, _, .why .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+  | _, _, _, .why n i, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        exact ⟨frag_intc m rs r _ _, fitsT_nonint (fun lo hi e => nomatch e)⟩
+      · simp at h
   | _, _, _, .forallSlots .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
   | _, _, _, .existsSlots .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by

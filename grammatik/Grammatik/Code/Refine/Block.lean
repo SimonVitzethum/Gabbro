@@ -113,6 +113,18 @@ theorem cvtM_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = tr
       simp only [cvtM] at h
       obtain rfl := Option.some.inj h
       exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
+  | opt n =>
+      simp only [cvtM] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
+      · simp at h
+  | why n =>
+      simp only [cvtM] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
+      · simp at h
   | _ => simp [supp] at hs
 
 /-- **What the store code does**: the new memory is the old one with the value stored. -/
