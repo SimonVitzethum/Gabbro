@@ -340,6 +340,11 @@ import Grammatik.Proben.SimPruef
 import Grammatik.Bausteine.Arena.ArenaDyn
 import Grammatik.Bausteine.Arena.ArenaSeiten
 import Grammatik.Bausteine.Arena.ArenaFrei
+import Grammatik.Bausteine.Arena.ArenaKette
+import Grammatik.Bausteine.Arena.ArenaBaum
+import Grammatik.Bausteine.Arena.ArenaLebt
+import Grammatik.Bausteine.Arena.ArenaFremd
+import Grammatik.Bausteine.Arena.ArenaListe
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset
 import Grammatik.Logik.Ruf.FremdRuf
