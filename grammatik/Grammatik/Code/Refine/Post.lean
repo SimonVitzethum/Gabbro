@@ -29,7 +29,7 @@ def ergImg (lay : Layout D) : (eo : Option GTy) → ErgVal D eo → Option Val
 /-- The frame stands at a `ret` terminator whose operand evaluates to `vo`. -/
 def RetAt (M : Modl) (f : Frame) (vo : Option Val) : Prop :=
   ∃ blk, M.blk f.fn f.lbl = some blk ∧ blk.body.length ≤ f.pc ∧
-    ((blk.term = .ret none ∧ vo = none) ∨ ∃ o, blk.term = .ret (some o) ∧ o.ev f.regs = vo)
+    ((blk.term = .ret none ∧ vo = none) ∨ ∃ o v, blk.term = .ret (some o) ∧ vo = some v ∧ o.ev f.regs = some v)
 
 /-- What holds after a normal exit. -/
 def Post (lay : Layout D) (cenv : List Reg) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) (m : Mem)
@@ -63,7 +63,7 @@ theorem lowerErg_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) {Γ :
     (ks : List Frame) (dst : Option Reg) (hR : Rep lay σ m) (hE : EnvRep lay rs m cenv ρ)
     (hc : ∀ x ∈ cenv, x < st.r) :
     ∃ f', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
-      RetAt M f' (ergImg lay eo (evalErg σ₀ e σ ρ)) := by
+      RetAt M f' (ergImg lay eo (evalErg σ₀ e σ ρ)) ∧ Fr lay cenv st.r m rs m f'.regs := by
   cases e with
   | empty =>
       simp only [lowerErg] at h
@@ -71,7 +71,8 @@ theorem lowerErg_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) {Γ :
       simp only [Prod.mk.injEq] at h'
       obtain ⟨rfl, rfl⟩ := h'
       have hb := hM _ (List.mem_singleton_self _)
-      exact ⟨⟨fn, lb, 0, rs, dst⟩, Reach.refl _, rfl, rfl, _, hb, Nat.le_refl _, Or.inl ⟨rfl, rfl⟩⟩
+      exact ⟨⟨fn, lb, 0, rs, dst⟩, Reach.refl _, rfl, rfl, ⟨_, hb, Nat.le_refl _, Or.inl ⟨rfl, rfl⟩⟩,
+        fr_regs (fun _ _ => rfl)⟩
   | val e =>
       simp only [lowerErg] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
@@ -82,9 +83,9 @@ theorem lowerErg_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) {Γ :
       obtain ⟨rfl, rfl⟩ := h'
       have hb := hM _ (List.mem_singleton_self _)
       obtain ⟨Fe, _⟩ := lowerE_ok lay hL e cenv st.r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
-      obtain ⟨rs1, hs1, _, _, _, hev⟩ := Fe
+      obtain ⟨rs1, hs1, _, hag1, _, hev⟩ := Fe
       have hr := reach_block_end (S := S) (ks := ks) (dst := dst) hb hs1
-      exact ⟨⟨fn, lb, ce.length, rs1, dst⟩, hr, rfl, rfl, _, hb, Nat.le_refl _,
-        Or.inr ⟨oe, rfl, hev⟩⟩
+      exact ⟨⟨fn, lb, ce.length, rs1, dst⟩, hr, rfl, rfl, ⟨_, hb, Nat.le_refl _,
+        Or.inr ⟨oe, _, rfl, rfl, hev⟩⟩, fr_regs hag1⟩
 
 end Gabbro.Code.Lower

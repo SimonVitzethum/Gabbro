@@ -5,17 +5,20 @@ import Grammatik.Code.Lower.Expr
   Subject:   TRACK L, PHASE L1 -- THE LOWERING OF STATEMENTS, BLOCKS AND END BLOCKS, as Lean
              functions to IR basic blocks.
 
-  `lowerS lay cenv s lb k st` lowers statement `s` to IR blocks that start at label `lb` and,
+  `lowerS lay cenv lv s lb k st` lowers statement `s` to IR blocks that start at label `lb` and,
   when `s` completes normally, jump to label `k`; `st` carries the next free register and the next
   free label (both numbered in program order); the result is the list of new blocks and the new
   state. `lowerB` does the same for a `Block` (`nil` is a block that just jumps on), `lowerEnd`
   for an end block, which never falls through: every path ends in `ret`.
 
   THE FRAGMENT: assignments to table slots (also through a pointer), globals and local
-  variables; `if`/`else`; `return`; `let` (an `alloc` cell plus its first store); `check` (a
-  failed condition runs the `else` end block). Every other form lowers to `none`
-  (a form with no `Code` lowering is refused by name). A variable is a stack cell whose register is
-  `cenv[i]`; a `bool` is a byte in memory (`cvtM`).
+  variables; `if`/`else`; `return`; `let` (an `alloc` cell plus its first store); `check` and
+  `narrow` (a failed condition runs the `else` end block); `leave`/`next` (a jump to the loop's
+  targets `lv`); the loops `forever`, `traverse` (a counter register) and `retry` (a counter
+  register, the test first, an overflow block); the calls `f(..)` and `let x = f(..)` (the result
+  goes to a fresh register and then to a cell). Every other form lowers to `none` (a form with no
+  `Code` lowering is refused by name). A variable is a stack cell whose register is `cenv[i]`;
+  a `bool` is a byte in memory (`cvtM`).
 -/
 
 namespace Gabbro.Code.Lower
@@ -58,6 +61,19 @@ def bindCode (τ : GTy) (oe : Opd) (r1 : Nat) : Option (List Instr × Nat × Nat
       else none
   | none => none
 
+/-- The pass counter of a `retry` of `n` passes fits the widths the lowering knows (a `Bool` test:
+    `n ≤ 2 ^ 62`, see `retryOk_fits`; it is a test the unifier can evaluate on a variable without
+    unrolling a huge numeral, which a test of `Ar.Fits` is not). -/
+def retryOk (n : Nat) : Bool := Nat.ble n (2 ^ 62)
+
+theorem retryOk_fits {n : Nat} (h : retryOk n = true) : Ar.Fits 0 (n : Int) 128 := by
+  unfold retryOk at h
+  have hn := Nat.le_of_ble_eq_true h
+  unfold Ar.Fits
+  simp only [Int.le_refl, if_true]
+  have h1 : ((n : Nat) : Int) ≤ 2 ^ 62 := by exact_mod_cast hn
+  omega
+
 /-- `return` of an optional value. -/
 def lowerErg (lay : Layout D) (cenv : List Reg) :
     {Γ : Ctx} → {Λ : List (Res D)} → {eo : Option GTy} → ErgExpr D Γ Λ eo → Lbl → St →
@@ -72,7 +88,7 @@ variable {V : Vertrag D}
 
 mutual
 
-def lowerS (lay : Layout D) (cenv : List Reg) :
+def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Gabbro.Grammatik.Stmt D V l Γ Λ Λ' →
       Lbl → Lbl → St → Option (List Block × St)
   | _, _, _, _, .assignSlot t f i e _ _, lb, k, s =>
@@ -134,24 +150,72 @@ def lowerS (lay : Layout D) (cenv : List Reg) :
   | _, _, _, _, .ite c tb eb, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerB lay cenv tb s.l k ⟨r1, s.l + 2⟩ with
+          match lowerB lay cenv lv tb s.l k ⟨r1, s.l + 2⟩ with
           | some (bt, s1) =>
-              match lowerB lay cenv eb (s.l + 1) k s1 with
+              match lowerB lay cenv lv eb (s.l + 1) k s1 with
               | some (be, s2) => some (⟨lb, [], cc, .br oc s.l (s.l + 1)⟩ :: (bt ++ be), s2)
               | none => none
           | none => none
       | none => none
   | _, _, _, _, .ret e _, lb, k, s => lowerErg lay cenv e lb s
+  | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
+  | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
+  | _, _, _, _, .forever _ _ body, lb, k, s => lowerB lay cenv (k, lb) body lb lb s
+  | _, _, _, _, .call f args _ _, lb, k, s =>
+      match lowerArgs lay cenv args s.r with
+      | some (ca, ops, r1) =>
+          some ([⟨lb, [], ca ++ [.call none (lay.fno f) ops], .jmp k⟩], { s with r := r1 })
+      | none => none
+  | _, _, _, _, .traverse t _ body, lb, k, s =>
+      -- a counter register `s.r` counts the passes; the loop variable is a cell made per pass
+      if 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128 then
+        match cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg s.r) (s.r + 1) with
+        | some (cv, ov, r1) =>
+            match bindCode (.int 0 (D.count t - 1)) ov r1 with
+            | some (cb, a, r2) =>
+                match lowerB lay (a :: cenv) (k, s.l + 2) body (s.l + 3) (s.l + 2) ⟨r2, s.l + 4⟩ with
+                | some (bb, s1) =>
+                    some (⟨lb, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.int (Ar.wid 0 (D.count t)) 0)
+                            (.int (Ar.wid 0 (D.count t)) 0)], .jmp s.l⟩ ::
+                          ⟨s.l, [], [], .brc .ult (Ar.wid 0 (D.count t)) (.reg s.r)
+                            (.int (Ar.wid 0 (D.count t)) (D.count t)) (s.l + 1) k⟩ ::
+                          ⟨s.l + 1, [], cv ++ cb, .jmp (s.l + 3)⟩ ::
+                          ⟨s.l + 2, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.reg s.r)
+                            (.int (Ar.wid 0 (D.count t)) 1)], .jmp s.l⟩ :: bb, s1)
+                | none => none
+            | none => none
+        | none => none
+      else none
+  | _, _, _, _, .retry n bis body ueb, lb, k, s =>
+      -- a counter register `s.r` counts the passes made; the test of `bis` comes first in every pass
+      if retryOk n = true then
+        match lowerE lay cenv bis (s.r + 1) with
+        | some (cb, ob, r1) =>
+            match lowerB lay cenv (k, s.l + 3) body (s.l + 4) (s.l + 3) ⟨r1, s.l + 5⟩ with
+            | some (bb, s1) =>
+                match lowerB lay cenv lv ueb (s.l + 2) k s1 with
+                | some (bo, s2) =>
+                    some (⟨lb, [], [.bin s.r .add (Ar.wid 0 (n : Int)) (.int (Ar.wid 0 (n : Int)) 0)
+                            (.int (Ar.wid 0 (n : Int)) 0)], .jmp s.l⟩ ::
+                          ⟨s.l, [], cb, .br ob k (s.l + 1)⟩ ::
+                          ⟨s.l + 1, [], [], .brc .ult (Ar.wid 0 (n : Int)) (.reg s.r)
+                            (.int (Ar.wid 0 (n : Int)) (n : Int)) (s.l + 4) (s.l + 2)⟩ ::
+                          ⟨s.l + 3, [], [.bin s.r .add (Ar.wid 0 (n : Int)) (.reg s.r)
+                            (.int (Ar.wid 0 (n : Int)) 1)], .jmp s.l⟩ :: (bb ++ bo), s2)
+                | none => none
+            | none => none
+        | none => none
+      else none
   | _, _, _, _, _, _, _, _ => none
 
-def lowerB (lay : Layout D) (cenv : List Reg) :
+def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Gabbro.Grammatik.Block D V l Γ Λ Λ' →
       Lbl → Lbl → St → Option (List Block × St)
   | _, _, _, _, .nil, lb, k, s => some ([⟨lb, [], [], .jmp k⟩], s)
   | _, _, _, _, .cons st rest, lb, k, s =>
-      match lowerS lay cenv st lb s.l ⟨s.r, s.l + 1⟩ with
+      match lowerS lay cenv lv st lb s.l ⟨s.r, s.l + 1⟩ with
       | some (b1, s1) =>
-          match lowerB lay cenv rest s.l k s1 with
+          match lowerB lay cenv lv rest s.l k s1 with
           | some (b2, s2) => some (b1 ++ b2, s2)
           | none => none
       | none => none
@@ -160,31 +224,65 @@ def lowerB (lay : Layout D) (cenv : List Reg) :
       | some (ce, oe, r1) =>
           match bindCode τ oe r1 with
           | some (cb, a, r2) =>
-              match lowerB lay (a :: cenv) rest s.l k ⟨r2, s.l + 1⟩ with
+              match lowerB lay (a :: cenv) lv rest s.l k ⟨r2, s.l + 1⟩ with
               | some (b2, s2) => some (⟨lb, [], ce ++ cb, .jmp s.l⟩ :: b2, s2)
+              | none => none
+          | none => none
+      | none => none
+  | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, s =>
+      match lowerE lay cenv (Expr.and (Expr.le (Expr.lit lo') e) (Expr.le e (Expr.lit hi'))) s.r with
+      | some (cc, oc, r1) =>
+          match lowerE lay cenv e r1 with
+          | some (ce, oe, r2) =>
+              match cvtG (.int lo hi) (.int lo' hi') oe r2 with
+              | some (cv, ov, r3) =>
+                  match bindCode (.int lo' hi') ov r3 with
+                  | some (cb, a, r4) =>
+                      match lowerEnd lay cenv lv sonst s.l ⟨r4, s.l + 3⟩ with
+                      | some (be, s1) =>
+                          match lowerB lay (a :: cenv) lv rest (s.l + 2) k s1 with
+                          | some (br, s2) =>
+                              some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ ::
+                                ⟨s.l + 1, [], ce ++ cv ++ cb, .jmp (s.l + 2)⟩ :: (be ++ br), s2)
+                          | none => none
+                      | none => none
+                  | none => none
+              | none => none
+          | none => none
+      | none => none
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) f args _ _ _ rest, lb, k, s =>
+      match lowerArgs lay cenv args s.r with
+      | some (ca, ops, r1) =>
+          match bindCode τ (.reg r1) (r1 + 1) with
+          | some (cb, a, r2) =>
+              match lowerB lay (a :: cenv) lv rest s.l k ⟨r2, s.l + 1⟩ with
+              | some (b2, s2) =>
+                  some (⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp s.l⟩ :: b2, s2)
               | none => none
           | none => none
       | none => none
   | _, _, _, _, .check c sonst rest, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerEnd lay cenv sonst s.l ⟨r1, s.l + 2⟩ with
+          match lowerEnd lay cenv lv sonst s.l ⟨r1, s.l + 2⟩ with
           | some (be, s1) =>
-              match lowerB lay cenv rest (s.l + 1) k s1 with
+              match lowerB lay cenv lv rest (s.l + 1) k s1 with
               | some (br, s2) => some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ :: (be ++ br), s2)
               | none => none
           | none => none
       | none => none
   | _, _, _, _, _, _, _, _ => none
 
-def lowerEnd (lay : Layout D) (cenv : List Reg) :
+def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →
       Lbl → St → Option (List Block × St)
   | _, _, _, .ret e _, lb, s => lowerErg lay cenv e lb s
+  | _, _, _, .leave _, lb, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
+  | _, _, _, .next _, lb, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, .cons st rest, lb, s =>
-      match lowerS lay cenv st lb s.l ⟨s.r, s.l + 1⟩ with
+      match lowerS lay cenv lv st lb s.l ⟨s.r, s.l + 1⟩ with
       | some (b1, s1) =>
-          match lowerEnd lay cenv rest s.l s1 with
+          match lowerEnd lay cenv lv rest s.l s1 with
           | some (b2, s2) => some (b1 ++ b2, s2)
           | none => none
       | none => none
@@ -193,7 +291,7 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) :
       | some (ce, oe, r1) =>
           match bindCode τ oe r1 with
           | some (cb, a, r2) =>
-              match lowerEnd lay (a :: cenv) rest s.l ⟨r2, s.l + 1⟩ with
+              match lowerEnd lay (a :: cenv) lv rest s.l ⟨r2, s.l + 1⟩ with
               | some (b2, s2) => some (⟨lb, [], ce ++ cb, .jmp s.l⟩ :: b2, s2)
               | none => none
           | none => none
