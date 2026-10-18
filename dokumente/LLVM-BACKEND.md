@@ -391,6 +391,17 @@ cargo test -p gabbro-check --test noalias --no-fail-fast
 ./instrumente/teile/baue-llvm.sh [f.gab…]                    # end to end, both targets (`pruefe-llvm.py` runs it over its programs)
 ```
 
+Generated programs (2026-10-18): stage 5 of `pruefe-llvm.py` (`instrumente/teile/gen-differenz.py`) compiles
+programs the Lean model accepts, for x86_64 and aarch64, runs them and compares the exit status with the value
+the model's semantics gives `main` (`rufAt`/`execEnd` from the initial memory; the status is the value modulo
+256). Measured with 90 programs over three frames: 44 passed the checker and the exporter and were compiled;
+all 44 returned the model's value on both targets. No `Y1xx` refusal and no mismatch occurred, but the compiler
+only ever sees what the checker accepts, and the generated space is the fragment the Track P elaborator lowers
+(statics, tables, locks, `let`, `if`, `traverse` over slots, statement calls; no `match`, loops other than
+`traverse`, options, sums, floats, pointers, atomics, gates): 31 of the 114 term-family members of the register
+appear in the exported G terms. This is a differential on the lowered core, not a coverage claim for the rest of
+the register; the checker and exporter refusals found on the way are in `PRUEFER.md` section 11.
+
 ## 7. Coverage against the Lean model
 
 The denominator is the Lean model, never examples. `dokumente/llvm-modelldeckung.tsv` is a

@@ -474,3 +474,8 @@ import Grammatik.Code.Gate.Maske
 import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.Korpus.Programme.Einheit104
 import Grammatik.Korpus.Programme.Einheit108
+import Grammatik.Gen.Reflect
+import Grammatik.Gen.Lauf
+import Grammatik.Gen.Rahmen
+import Grammatik.Gen.Bau
+import Grammatik.Gen.Proben

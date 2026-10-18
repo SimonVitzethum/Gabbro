@@ -11,6 +11,10 @@ Stages (a stage that cannot run is reported NICHT GEMESSEN and the run is not gr
      space's `in`/`out`) cannot run in user space, so `llc -filetype=obj` + `llvm-objdump -d` must show
      the intended instructions. 4. The aarch64 exception entries RUN under `qemu-system-aarch64 -M virt`
      (`teile/eintritt-a64-qemu.sh`: two `svc`, the generated stub, `eret`).
+  5. Generated programs (`teile/gen-differenz.py`, N from `GABBRO_GEN_N`, default 3): the Lean model's generator
+     builds programs it accepts, with the value its semantics gives `main`; the checker must accept them
+     (refusals are COUNTED as incompleteness findings, not failures), and the binaries on x86_64 and
+     aarch64 must return that value (a mismatch is red).
   2. End to end (`teile/baue-llvm.sh`): checker, IR, `opt -O3`, `llc`, `ld.lld`, static binary
      without INTERP/NEEDED, run on x86_64 natively and on aarch64 under qemu; both targets must
      return the SAME code, and it must be the expected one.
@@ -135,9 +139,25 @@ def stufe_eintritt_a64():
     return ok
 
 
+def stufe_erzeugt():
+    n = os.environ.get("GABBRO_GEN_N", "3")
+    p = subprocess.run([sys.executable, str(W / "instrumente/teile/gen-differenz.py"), "--n", n, "--seed", "1",
+                        "--ziel", "5", "--versuche", "200"], cwd=W, env=ENV, capture_output=True, text=True, timeout=7200)
+    kopf = [l for l in p.stdout.splitlines() if l.strip().startswith("gen:")]
+    if p.returncode == 2:
+        print("  5 erzeugt: NICHT GEMESSEN", (kopf or [p.stdout[-200:]])[0].strip())
+        return None
+    print(f"  5 erzeugt: {'ok' if p.returncode == 0 else 'ROT'} ({kopf[0].strip()[5:] if kopf else '?'})")
+    for l in kopf[1:3]:
+        print("            " + l.strip()[5:][:240])
+    if p.returncode != 0:
+        print(p.stdout[-1500:])
+    return p.returncode == 0
+
+
 def main():
     print("== Wächter 2: LLVM-Compiler ==")
-    erg = [stufe_tests(), stufe_ende_zu_ende(), stufe_befehle(), stufe_eintritt_a64()]
+    erg = [stufe_tests(), stufe_ende_zu_ende(), stufe_befehle(), stufe_eintritt_a64(), stufe_erzeugt()]
     if False in erg: print("== LLVM: ROT =="); return 1
     if None in erg: print("== LLVM: TEILMESSUNG (nicht alles gemessen) =="); return 2
     print("== LLVM: GRUEN =="); return 0
