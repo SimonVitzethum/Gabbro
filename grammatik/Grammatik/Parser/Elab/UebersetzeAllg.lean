@@ -95,6 +95,15 @@ def needsAt (u : UProg) (t : Fin u.tabs.length) :
     if (lockAt u l).guard.any (· == (tabAt u t).name) then some (.inl l)
     else none
 
+def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
+
+/-- The guards of a static: the locks whose `protects` list names it (`gbraucht`). -/
+def gneedsAt (u : UProg) (g : Fin u.globs.length) :
+    List (Fin u.locks.length ⊕ (Empty × Nat)) :=
+  List.finRange u.locks.length |>.filterMap fun l =>
+    if (lockAt u l).guard.any (· == (globAt u g).name) then some (.inl l)
+    else none
+
 /-- The held locks of a function, as indices (names the declaration
     does not know are dropped; `elabU` output never has them). -/
 def heldAt (u : UProg) (f : UFn) : List (Fin u.locks.length) :=
@@ -108,8 +117,6 @@ def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.lengt
     else match globIdx rest n with
       | .error e => .error e
       | .ok j => .ok j.succ
-
-def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
 
 /-- The write flag of a function at a static. -/
 def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
@@ -174,7 +181,7 @@ def declOf (u : UProg) : Deklaration where
   nutzlast := fun _ => []
   atomar := fun g => (globAt u g).atomic
   geteilt := fun t => (!((needsAt u t).isEmpty))
-  ggeteilt := fun _ => false
+  ggeteilt := fun g => (!((gneedsAt u g).isEmpty))
   Lock := Fin u.locks.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
@@ -183,7 +190,7 @@ def declOf (u : UProg) : Deklaration where
   decMarke := inferInstance
   stufen := fun e => nomatch e
   braucht := needsAt u
-  gbraucht := fun _ => []
+  gbraucht := gneedsAt u
   eigner := fun _ => []
   Fn := Fin u.fns.length
   sig := fun f => f.val
@@ -208,7 +215,8 @@ def declOf (u : UProg) : Deklaration where
   geteilt_bewacht :=
     fun t h => notEmpty_ne_nil _ (show ((!((needsAt u t).isEmpty)) = true) from h)
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun _ h => Bool.noConfusion h
+  ggeteilt_bewacht :=
+    fun g h => Or.inl (notEmpty_ne_nil _ (show ((!((gneedsAt u g).isEmpty)) = true) from h))
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
 
@@ -661,17 +669,13 @@ def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           .ok { range := fh.range, term := altTerm u Γ Λ t fh i hL }
         else .error "access without held guard"
 
-/-- No static is guarded (`gbraucht` is empty), so every read finds its guard held. -/
-theorem gdarf_globs (u : UProg) (g : Fin u.globs.length) (Λ : List (Res (declOf u))) :
-    gdarf (declOf u) g Λ :=
-  fun w hw => (List.not_mem_nil (show w ∈ ([] : List _) from hw)).elim
-
 /-- A number static read (`Expr.glob`): its type is the recorded range. -/
 def lowGlobSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
     Except String (LowSide u Γ Λ) :=
   match globIdx u.globs p with
   | .error e => .error e
   | .ok g =>
+    if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
     match h : (globAt u g).ty with
     | .int lo hi =>
       .ok { range := (lo, hi), term := by
@@ -681,8 +685,9 @@ def lowGlobSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
                 rfl
               show Expr (declOf u) Γ Λ (.int lo hi)
               rw [← hg]
-              exact Expr.glob g (gdarf_globs u g Λ) }
+              exact Expr.glob (D := declOf u) g hd }
     | .bool => .error "bool static as a number"
+    else .error "access without held guard"
 
 /-- A `bool` static read as a truth value. -/
 def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
@@ -690,6 +695,7 @@ def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
   match globIdx u.globs p with
   | .error e => .error e
   | .ok g =>
+    if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
     match h : (globAt u g).ty with
     | .bool =>
       .ok (by
@@ -698,8 +704,9 @@ def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
           rw [h]
           rfl
         rw [← hg]
-        exact Expr.glob g (gdarf_globs u g Λ))
+        exact Expr.glob (D := declOf u) g hd)
     | .int _ _ => .error "number static as a truth value"
+    else .error "access without held guard"
 
 /-- A value side in a body: a literal, a numeric parameter or a
     slot read (`result` and `old` have no G form here). -/

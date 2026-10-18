@@ -594,23 +594,24 @@ def uTabelle (consts : List (String × Int))
               bools := (fs.filter (·.2)).map (·.1.1) }
   | _ => .error "table without G form"
 
-/-- A `protects` carrier by table or by field name (the guard
-    loop of `read_lock`): a table name, or a field of exactly
-    one table. -/
-def uTraegerTab : List UTab → String → Except String String
-  | [], c => .error ("guard unknown: " ++ c)
+/-- A `protects` carrier: a table name, a field of exactly one table (the guard loop of `read_lock`), or
+    a static (`gbraucht`, the lock guards that static). -/
+def uTraegerTab (globs : List UGlob) : List UTab → String → Except String String
+  | [], c =>
+    if globs.any (fun g => strEq g.name c) then .ok c
+    else .error ("guard unknown: " ++ c)
   | t :: rest, c =>
     if strEq t.name c then .ok t.name
     else if t.cols.any (fun (f, _) => strEq f c) then .ok t.name
-    else uTraegerTab rest c
+    else uTraegerTab globs rest c
 
-def uSchutzAux : List UTab → List SExpr → Except String (List String)
+def uSchutzAux (globs : List UGlob) : List UTab → List SExpr → Except String (List String)
   | _, [] => .ok []
   | tabs, .variable c :: rest =>
-    match uTraegerTab tabs c with
+    match uTraegerTab globs tabs c with
     | .error e => .error e
     | .ok t =>
-      match uSchutzAux tabs rest with
+      match uSchutzAux globs tabs rest with
       | .error e => .error e
       | .ok ts => .ok (t :: ts)
   | _, _ :: _ => .error "guard carrier without G form"
@@ -618,14 +619,14 @@ def uSchutzAux : List UTab → List SExpr → Except String (List String)
 /-- One lock: a numeric rank and the guarded tables. Masking
     and the shared hold have no G form; the `held` budget is
     ignored like `costs` (both travel nowhere). -/
-def uSperre (tabs : List UTab) : SItemTief → Except String ULock
+def uSperre (globs : List UGlob) (tabs : List UTab) : SItemTief → Except String ULock
   | .lockT n ps (.lit rk) _ .none .none .none =>
-    match uSchutzAux tabs ps with
+    match uSchutzAux globs tabs ps with
     | .error e => .error e
     | .ok ts => .ok { name := n, rank := Int.ofNat rk, guard := ts }
   | .lockT n ps (.lit rk) _ .none (.some m) .none =>
     if strEq m "irqs" then
-      match uSchutzAux tabs ps with
+      match uSchutzAux globs tabs ps with
       | .error e => .error e
       | .ok ts => .ok { name := n, rank := Int.ofNat rk, guard := ts, masks := true }
     else .error "lock masks something but irqs: no G form"
@@ -1690,7 +1691,7 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok tabs =>
     match uSeq ((ms.filter (fun
-        | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre tabs)) with
+        | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
     | .error e => .error e
     | .ok locks =>
     let fnItems := ms.filterMap (fun

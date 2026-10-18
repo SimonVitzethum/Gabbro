@@ -221,14 +221,14 @@ def sammleTabellen (consts : List (String × Int))
     | _ => sammleTabellen consts alias rest
 
 /-- Collect per-lock outcomes (against the clean tables). -/
-def sammleSperren (tabs : List UTab) :
+def sammleSperren (globs : List UGlob) (tabs : List UTab) :
     List SItemTief → List (String × Except String ULock)
   | [] => []
   | it :: rest =>
     match it with
     | .lockT n _ _ _ _ _ _ =>
-      (n, uSperre tabs it) :: sammleSperren tabs rest
-    | _ => sammleSperren tabs rest
+      (n, uSperre globs tabs it) :: sammleSperren globs tabs rest
+    | _ => sammleSperren globs tabs rest
 
 /-- Collect per-head outcomes (against clean tables and locks). -/
 def sammleKoepfe (consts : List (String × Int))
@@ -323,10 +323,10 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let alias := uAliase ms
   let tabs := sammleTabellen consts alias ms
   let tabOk := werte tabs
-  let locks := sammleSperren tabOk ms
-  let lockOk := werte locks
   let globR := uGlobs consts alias ms
   let globOk := match globR with | .ok gs => gs | .error _ => []
+  let locks := sammleSperren globOk tabOk ms
+  let lockOk := werte locks
   let fns := ms.filterMap alsFunktion
   let koepfe := sammleKoepfe consts alias tabOk lockOk globOk fns
   let kopfOk := (werte koepfe).map fun p => p.1

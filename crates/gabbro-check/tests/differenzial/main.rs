@@ -323,6 +323,12 @@ pub const ERWARTET_A: &[(&str, &str)] = &[
     ("K001,N511", "both of the above in one unit"),
 ];
 
+/// Premises the EXPORTER reports as the model's (`refuse_modell`) although the Lean model has no such
+/// component, so the pure-Lean route, which is the model, accepts: `LG001` (an `effects { locks L }` line
+/// that is neither held by signature nor taken in the body; `G` carries no `locks` effect, the checker's
+/// `H011`/`E006` is a rule beyond `Akzeptiert`, class (a)).
+const EXPORT_ENGER: &[&str] = &["LG001"];
+
 /// Check the classification of a measured set against what the harness stands for. Returns one line per
 /// violation: a class (b) program, a class (a) group that is not in [`ERWARTET_A`], a disagreement of the
 /// pure-Lean path with the checker or with the exporter route.
@@ -348,6 +354,8 @@ pub fn verstoesse(ms: &[Messung]) -> Vec<String> {
             _ => {}
         }
         match (&m.pur, &m.lean) {
+            // The exporter refuses by a premise the Lean model does not carry (finding, PRUEFER 12.6): not a violation.
+            (PurV::Accept, LeanV::Verletzt(t)) if EXPORT_ENGER.iter().any(|c| t.starts_with(c)) => {}
             (PurV::Accept, LeanV::Reject | LeanV::Elab(_) | LeanV::Verletzt(_)) => {
                 out.push(format!("pure-Lean accepts what the exporter route refuses: {}", zeile(m)))
             }

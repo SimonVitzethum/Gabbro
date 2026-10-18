@@ -676,7 +676,9 @@ def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.assignGlob g e2 hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.assignGlob (D := declOf u) g e2 hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number static"
 
@@ -704,7 +706,9 @@ def lowAssignGlobBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.assignGlob g e2 hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.assignGlob (D := declOf u) g e2 hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool static"
 
@@ -733,7 +737,9 @@ def lowStoreAtomL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.publish g e2 [] rfl hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number atomic"
 
@@ -761,7 +767,9 @@ def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
           have e2 : Expr (declOf u) Γ Λ ((declOf u).gtyp g) := by
             rw [hg]
             exact e
-          .ok (Stmt.publish g e2 [] rfl hwV (gdarf_globs u g Λ))
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+          else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool atomic"
 
