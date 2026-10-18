@@ -37,16 +37,15 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // *Verloren geht dabei nichts:* in einer vollstaendigen Uebersetzungseinheit muss jeder
     // Name aufloesen -- ein unbekannter faellt bereits im Namenspass. Die Einschraenkung
     // kostet also nur im Ausschnitt, und dort ist sie richtig.
-    let mut konstanten: Vec<String> = Vec::new();
-    let mut weltnamen: Vec<String> = Vec::new();
-    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
-        ItemArt::Konst(k) => konstanten.push(k.name.text.clone()),
-        ItemArt::Statisch(x) => weltnamen.push(x.name.text.clone()),
-        ItemArt::Atomic(x) => weltnamen.push(x.name.text.clone()),
-        ItemArt::Tabelle(x) => weltnamen.push(x.name.text.clone()),
-        ItemArt::Device(x) => weltnamen.push(x.name.text.clone()),
-        ItemArt::State(x) => weltnamen.push(x.name.text.clone()),
-        _ => {}
+    let (konstanten, weltnamen) = welt_und_konstanten(baum);
+    // The arenas: a place a callee can write (`reset`, `alloc`, `grow`, `free`), compared at the call
+    // boundary (`E008`) like a table. Not a world name for `E010`: the model tracks WRITES across a call
+    // (`RufPasst.hw`/`hg`), and a read of an arena has never been a declared effect.
+    let mut arenen: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Arena(x) = &item.art {
+            arenen.push(x.name.text.clone());
+        }
     });
     // **E220/E221 need the whole program before any function:** whether a carrier is
     // read-only is a statement about every function, so the writer set is computed
@@ -60,7 +59,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let ab = crate::ableitung::leite_ab(baum, true);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Funktion(f) => {
-            funktion(f, modul, &g, &u, &konstanten, &weltnamen, &schreiber, &ab, absagen)
+            funktion(f, modul, &g, &u, &konstanten, &weltnamen, &arenen, &schreiber, &ab, absagen)
         }
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         ItemArt::Check(c) => probenrumpf(c, modul, &g, absagen),
@@ -891,6 +890,7 @@ fn rumpf_gegen_wirkungen(
     // Schreibzugriff auf `i` oder `i.feld` gehoert dem Stapel, einer auf `p.slots[i]` der Welt.
     let mut lok = Vec::new();
     lokale(b, &mut lok);
+    let zt = crate::geteilt::zeigerziele(f);
     for (ort, span) in &taten.schreibt {
         let grund = ort.split(['.', '[', '-']).next().unwrap_or(ort);
         if lok.iter().any(|l| l == grund) {
@@ -910,7 +910,13 @@ fn rumpf_gegen_wirkungen(
             );
             continue;
         }
-        if !schreibrechte.iter().any(|e| deckt(e, ort)) {
+        // A write through a pointer parameter and a write at the table it points to are one place
+        // (`D.Tab`: the model names the table, not the pointer), so a declared `writes p.slots`
+        // covers `T.slots[..]` and the converse.
+        if !schreibrechte.iter().any(|e| {
+            deckt(e, ort)
+                || deckt(&crate::geteilt::zeiger_text(e, &zt), &crate::geteilt::zeiger_text(ort, &zt))
+        }) {
             absagen.schiebe(
                 Absage::fehler(
                     "E005",
@@ -1096,6 +1102,7 @@ fn funktion(
     u: &crate::umgebung::Umgebung,
     konstanten: &[String],
     weltnamen: &[String],
+    arenen: &[String],
     schreiber: &std::collections::BTreeSet<String>,
     ab: &crate::ableitung::Ableitung,
     absagen: &mut Absagen,
@@ -1157,7 +1164,7 @@ fn funktion(
                 rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
                 let rk = RufKontext { f, g, u, modul };
                 traverse_gegen_touches(b, &f.name.text, konstanten, weltnamen, Some(&rk), absagen);
-                aufrufwirkungen(f, modul, w, g, weltnamen, absagen);
+                aufrufwirkungen(f, modul, w, g, weltnamen, arenen, absagen);
             }
         }
     }
@@ -1397,6 +1404,7 @@ fn aufrufwirkungen(
     w: &Wirkungen,
     g: &crate::aufrufgraph::Graph,
     weltnamen: &[String],
+    arenen: &[String],
     absagen: &mut Absagen,
 ) {
     // **Eine Wirkung auf einen EIGENEN lokalen Namen ist hier eingelöst** (2026-08-19).
@@ -1544,7 +1552,7 @@ fn aufrufwirkungen(
                 continue;
             };
             let grund = ort.split(['.', '[']).next().unwrap_or(ort);
-            if !weltnamen.iter().any(|k| k == grund) {
+            if !weltnamen.iter().any(|k| k == grund) && !arenen.iter().any(|k| k == grund) {
                 continue; // kein bekannter Weltzustand -- der Pass sagt nichts
             }
             if eigene_orte.iter().any(|e| {

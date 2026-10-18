@@ -1,0 +1,20 @@
+// erwartet: E008
+// 1480: **a callee that writes an arena is a different place from the caller's `writes s` (E008).**
+//
+// `ga` resets the arena `R`; `f` declares `writes s` and calls it. The frame names the PLACES, and an arena
+// is a place: `RufPasst.hg` of the model refuses a callee that writes a global beyond its caller. Before the
+// differential harness found it the arena named no world state, so `E008` compared only the kind of touch
+// and let the write through.
+module gift1480 {
+
+arena R capacity 2 .. 8 of u32;
+static mut s : u32 in 0 .. 100 = 7;
+
+impl fn ga() effects { writes R } costs <= 20 ops { reset R; }
+
+impl fn f() effects { writes s } costs <= 100 ops {
+    ga();
+    s = 1;
+}
+
+}

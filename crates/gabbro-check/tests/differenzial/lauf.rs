@@ -175,11 +175,28 @@ pub fn lean_lauf(datei: &Path) -> Result<(String, String), String> {
 pub enum PurV {
     Accept,
     Reject,
+    /// A stage of the Lean pipeline refused BY A PREMISE OF THE MODEL (an access without its guard, a
+    /// write without the right, a lock against a held lock of higher rank, a value outside its
+    /// range): the model refuses the program, as `LeanV::Verletzt` does for the exporter route.
+    Verletzt(String),
     /// A stage of the Lean pipeline refused (`parse-err`, `elab-err`, `lower-err`): the fragment of
     /// Track P does not cover the program; no verdict.
     KeinForm(String),
     NotRun,
 }
+
+/// The messages of the Lean elaboration and lowering that name a violated premise of the model (the
+/// others say a form is missing).
+const PUR_VERLETZT: &[&str] = &[
+    "access without held guard",
+    "write without right",
+    "locks against a held lock",
+    "value outside range",
+    "value outside the annotated range",
+    "write through a read pointer",
+    "conversion outside target range",
+    "index outside count",
+];
 
 /// Run the pure-Lean path over the given sources (written as `<n>.gab` under `dir`); the verdict of
 /// each by its number.
@@ -189,10 +206,20 @@ pub fn pur_stapel(quellen: &[(usize, String)], dir: &Path) -> Result<std::collec
     for (n, q) in quellen {
         std::fs::write(dir.join(format!("p{n}.gab")), q).map_err(|e| format!("write: {e}"))?;
     }
+    // The library module must be built (the script imports its olean): cheap when up to date.
+    let bau = Command::new(lake())
+        .current_dir(wurzel().join("grammatik"))
+        .env_remove("ELAN_TOOLCHAIN")
+        .args(["build", "Grammatik.Parser.Cover.Differenz"])
+        .output()
+        .map_err(|e| format!("`lake build` could not run: {e}"))?;
+    if !bau.status.success() {
+        return Err(format!("`lake build Grammatik.Parser.Cover.Differenz` failed:\n{}", String::from_utf8_lossy(&bau.stdout)));
+    }
     let out = Command::new(lake())
         .current_dir(wurzel().join("grammatik"))
         .env_remove("ELAN_TOOLCHAIN")
-        .args(["env", "lean", "-j2", "-M6144", "--run", "Grammatik/Parser/Cover/Differenz.lean"])
+        .args(["env", "lean", "-j2", "-M6144", "--run", "Grammatik/Parser/Cover/DifferenzLauf.lean"])
         .arg(dir)
         .output()
         .map_err(|e| format!("`lake env lean --run` could not run: {e}"))?;
@@ -208,6 +235,7 @@ pub fn pur_stapel(quellen: &[(usize, String)], dir: &Path) -> Result<std::collec
         let v = match v {
             "accept" => PurV::Accept,
             "reject" => PurV::Reject,
+            other if PUR_VERLETZT.iter().any(|p| other.contains(p)) => PurV::Verletzt(other.chars().take(120).collect()),
             other => PurV::KeinForm(other.chars().take(120).collect()),
         };
         m.insert(n, v);

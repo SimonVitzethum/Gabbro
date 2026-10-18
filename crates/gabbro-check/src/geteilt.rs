@@ -2180,7 +2180,7 @@ fn schreibprobe(
 /// `Stmt.assignThru` carry the same `darf` as `slot`): `p.slots[i].v` touches the places `T`'s
 /// lock protects. Until this map the guard rules matched the place TEXT, whose root is the
 /// parameter's name, so a pointer access passed every lock rule with no lock held.
-fn zeigerziele(f: &FnDecl) -> BTreeMap<String, String> {
+pub(crate) fn zeigerziele(f: &FnDecl) -> BTreeMap<String, String> {
     let mut m = BTreeMap::new();
     for p in &f.parameter {
         if let TypExpr::Zeiger(pt) = &p.typ {
@@ -2192,6 +2192,16 @@ fn zeigerziele(f: &FnDecl) -> BTreeMap<String, String> {
         }
     }
     m
+}
+
+/// A place TEXT (`p.slots[…].v`, `p->f`) with a root that is a pointer parameter replaced by the table
+/// it points to: the one name the model has for the place (`D.Tab`).
+pub(crate) fn zeiger_text(text: &str, zt: &BTreeMap<String, String>) -> String {
+    let ende = text.find(['.', '[', '-']).unwrap_or(text.len());
+    match zt.get(&text[..ende]) {
+        Some(tab) if ende < text.len() => format!("{tab}{}", &text[ende..]),
+        _ => text.to_string(),
+    }
 }
 
 /// The place as the lock rules read it: a root that is a pointer parameter is replaced by the

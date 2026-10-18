@@ -91,6 +91,7 @@ const GATE: &str = "assume linux_getpid \"getpid answers a pid\" falsifier sonde
 pub fn katalog() -> Vec<Atom> {
     let mut v: Vec<Atom> = Vec::new();
     // ---------------------------------------------------------------- expressions (Expr)
+    let tr = Wache::T;
     let zwei = "a@ : i32 in -100 .. 100, b@ : i32 in -100 .. 100";
     let pos = "a@ : u32 in 0 .. 100, b@ : u32 in 1 .. 50";
     let null = "a@ : u32 in 0 .. 100, b@ : u32 in 0 .. 50";
@@ -143,9 +144,9 @@ pub fn katalog() -> Vec<Atom> {
     ]);
     // ---------------------------------------------------------------- loops
     v.extend([
-        Atom { id: "l.traverse", lean: "Stmt.traverse", decls: &[T], params: "t@ : ptr<normal, rw> T", eff: &["writes t@.slots"], body: "traverse e@ over slots of t@ by unvisited touches writes t@.slots {\n        t@.slots[e@].v = 3;\n    }", ..A },
-        Atom { id: "l.traverse.leave", lean: "Stmt.traverse/leave", decls: &[T], params: "t@ : ptr<normal, r> T", eff: &["reads t@.slots"], body: "traverse e@ over slots of t@ by unvisited touches reads t@.slots {\n        if t@.slots[e@].v == 3 { leave e@; }\n    }", ..A },
-        Atom { id: "l.retry", lean: "Stmt.retry", decls: &[T, EXTERN_NIE, "assume ok_ \"the cell changes\" falsifier sonde_ok;"], params: "t@ : ptr<normal, r> T", eff: &["reads t@.slots"], body: "retry warten@ until t@.slots[0].v == 1\n        bounded 8 ops\n        progress ok_\n        on_exceeded zeit\n        effects { reads t@.slots }\n    { }", ..A },
+        Atom { id: "l.traverse", lean: "Stmt.traverse", decls: &[T], params: "t@ : ptr<normal, rw> T", eff: &["writes t@.slots"], body: "traverse e@ over slots of t@ by unvisited touches writes t@.slots {\n        t@.slots[e@].v = 3;\n    }", wache: tr, ..A },
+        Atom { id: "l.traverse.leave", lean: "Stmt.traverse/leave", decls: &[T], params: "t@ : ptr<normal, r> T", eff: &["reads t@.slots"], body: "traverse e@ over slots of t@ by unvisited touches reads t@.slots {\n        if t@.slots[e@].v == 3 { leave e@; }\n    }", wache: tr, ..A },
+        Atom { id: "l.retry", lean: "Stmt.retry", decls: &[T, EXTERN_NIE, "assume ok_ \"the cell changes\" falsifier sonde_ok;"], params: "t@ : ptr<normal, r> T", eff: &["reads t@.slots"], body: "retry warten@ until t@.slots[0].v == 1\n        bounded 8 ops\n        progress ok_\n        on_exceeded zeit\n        effects { reads t@.slots }\n    { }", wache: tr, ..A },
         Atom { id: "l.forever", lean: "Stmt.forever", decls: &[EXTERN_NIE, "extern fn tick() effects { pure } costs <= 1 ops;", "assume tickt \"the timer ticks\" falsifier sonde_tickt;"], eff: &["diverges"], ohne_kosten: true, body: "forever dienst@ per_pass bounded 64 ops on_exceeded zeit effects { pure } progress tickt {\n        tick();\n    }", ..A },
     ]);
     // ---------------------------------------------------------------- calls
@@ -168,7 +169,6 @@ pub fn katalog() -> Vec<Atom> {
         Atom { id: "m.reason", lean: "Stmt.onWhy", decls: &[REASON], items: &[REASON_FN], ret: " -> u32 in 0 .. 9", body: "let y@ = hr(4) else (e@) {\n        match e@ {\n            Weg => { return 0; }\n        }\n        return 0;\n    }\n    return y@;", ..A },
     ]);
     // ---------------------------------------------------------------- tables
-    let tr = Wache::T;
     v.extend([
         Atom { id: "t.read", lean: "Expr.slot", decls: &[T], eff: &["reads T.slots"], wache: tr, body: "let x@ : u32 in 0 .. 100 = T.slots[2].v;", ..A },
         Atom { id: "t.write", lean: "Stmt.assignSlot", decls: &[T], eff: &["writes T.slots"], wache: tr, body: "T.slots[2].v = 3;", ..A },
@@ -218,6 +218,14 @@ pub fn katalog() -> Vec<Atom> {
         Atom { id: "k.masks", lean: "Deklaration.maskiert", decls: &[U, "lock LM protects { U } rank 0 held <= 100 ops masks irqs;"], eff: &["writes U.slots", "locks LM"], body: "locks LM { U.slots[0].v = 1; }", ..A },
         Atom { id: "k.call.in", lean: "Stmt.call(held)", decls: &[U, LA], items: &["impl fn ku() requires Held(LA) effects { writes U.slots, locks LA } costs <= 8 ops { U.slots[0].v = 1; }"], eff: &["writes U.slots", "locks LA"], body: "locks LA { ku(); }", ..A },
         Atom { id: "k.call.out", lean: "Stmt.call(held)", decls: &[U, LA], items: &["impl fn ku() requires Held(LA) effects { writes U.slots, locks LA } costs <= 8 ops { U.slots[0].v = 1; }"], eff: &["writes U.slots", "locks LA"], body: "ku();", sicher: false, ..A },
+    ]);
+    // ---------------------------------------------------------------- pointers through calls
+    // The callee takes a pointer to `T`; in the lock modes it `requires Held(L)` (`{HELD}`).
+    const PTR_W: &str = "impl fn wp(p : ptr<normal, rw> T, i : index into T)\n    {HELD}effects { writes p.slots }\n    costs <= 8 ops\n{\n    p.slots[i].v = 3;\n}";
+    const PTR_R: &str = "impl fn rp(p : ptr<normal, r> T, i : index into T) -> u32 in 0 .. 100\n    {HELD}effects { reads p.slots }\n    costs <= 8 ops\n{\n    return p.slots[i].v;\n}";
+    v.extend([
+        Atom { id: "c.ptr.w", lean: "Expr.ptrOf/Stmt.call", decls: &[T], items: &[PTR_W], eff: &["writes T.slots"], wache: tr, body: "wp(&T, 0);", ..A },
+        Atom { id: "c.ptr.r", lean: "Expr.ptrOf/Block.bindCall", decls: &[T], items: &[PTR_R], eff: &["reads T.slots"], wache: tr, body: "let x@ = rp(&T, 0);", ..A },
     ]);
     // ---------------------------------------------------------------- floats and gates
     v.extend([

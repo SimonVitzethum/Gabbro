@@ -26,6 +26,9 @@ pub enum Arr {
     Seq,
     Par,
     Call,
+    /// Like `Call`, and the caller's `effects` name only its own atom: the callee's writes and locks
+    /// are NOT lifted into the caller's line (`E008` / `RufPasst.hw`/`hg` refuse it).
+    CallKnapp,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -48,6 +51,7 @@ impl Arr {
             Arr::Seq => "Seq",
             Arr::Par => "Par",
             Arr::Call => "Call",
+            Arr::CallKnapp => "CallKnapp",
         }
     }
 }
@@ -88,7 +92,7 @@ pub fn zulaessig(arr: Arr, atoms: &[&Atom]) -> bool {
                 && !rekursiv(atoms[0])
                 && !rekursiv(atoms[1])
         }
-        Arr::Par | Arr::Call => atoms.len() == 2 && kurz(atoms[0]) && kurz(atoms[1]),
+        Arr::Par | Arr::Call | Arr::CallKnapp => atoms.len() == 2 && kurz(atoms[0]) && kurz(atoms[1]),
     }
 }
 
@@ -213,6 +217,7 @@ pub fn bau(name: &str, arr: Arr, mode: Mode, atoms: &[&Atom]) -> Option<String> 
             }
         }
     }
+    let held = if mode == Mode::Free { "" } else { "requires Held(L)\n    " };
     let mut out = format!("module gen::{name} {{\n");
     for d in &decls {
         out.push_str(d);
@@ -229,7 +234,7 @@ pub fn bau(name: &str, arr: Arr, mode: Mode, atoms: &[&Atom]) -> Option<String> 
         out.push_str(&format!("lock L protects {{ {} }} rank 0 held <= 100 ops;\n", p.join(", ")));
     }
     for i in &items {
-        out.push_str(i);
+        out.push_str(&i.replace("{HELD}", held));
         out.push('\n');
     }
     match arr {
@@ -248,11 +253,12 @@ pub fn bau(name: &str, arr: Arr, mode: Mode, atoms: &[&Atom]) -> Option<String> 
             out.push_str(&fn_text("fb", &[&ts[1]], &ts[1].body, mode, atoms[1].wache != Wache::Keine, 40000));
             out.push_str("concurrent { fa, fb };\n");
         }
-        Arr::Call => {
+        Arr::Call | Arr::CallKnapp => {
             out.push_str(&fn_text("ga", &[&ts[0]], &ts[0].body, mode, atoms[0].wache != Wache::Keine, 20000));
             let body = format!("ga();\n    {}", ts[1].body);
             let w = atoms[0].wache != Wache::Keine || atoms[1].wache != Wache::Keine;
-            out.push_str(&fn_text("f", &[&ts[0], &ts[1]], &body, mode, w, 40000));
+            let eigene: &[&Teil] = if arr == Arr::CallKnapp { &[&ts[1]] } else { &[&ts[0], &ts[1]] };
+            out.push_str(&fn_text("f", eigene, &body, mode, w, 40000));
         }
     }
     out.push_str("}\n");

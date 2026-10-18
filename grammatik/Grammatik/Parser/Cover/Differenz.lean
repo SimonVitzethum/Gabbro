@@ -12,12 +12,10 @@
                             -- the fragment of Track P does not cover the program (the first stage that
                                refused, with its message): no verdict, never a guess.
 
-  `main` reads every `*.gab` of a directory and prints `NAME<TAB>VERDICT`. The Rust differential harness
-  (`crates/gabbro-check/tests/differenzial`) runs it over the generated programs and compares it with the
-  Rust checker AND with the exporter route, so the pure-Lean path validates the exporter and the checker
-  from source, and the coverage of the generated space it decides is measured.
-
-  Run (from `grammatik/`): `lake env lean --run Grammatik/Parser/Cover/Differenz.lean <dir>`.
+  `DifferenzLauf.lean` is the runner (`main`: every `*.gab` of a directory, `NAME<TAB>VERDICT`); the Rust
+  differential harness (`crates/gabbro-check/tests/differenzial`) runs it over the generated programs and
+  compares it with the Rust checker AND with the exporter route, so the pure-Lean path validates the
+  exporter and the checker from source, and the coverage of the generated space it decides is measured.
 -/
 import Grammatik.GabbroV.GvZensus
 import Grammatik.Parser.Elab.UebersetzeAllg3
@@ -109,16 +107,4 @@ def zerlegt (src : String) : String :=
         | .error e => "lower-err: " ++ e
         | .ok s => s ++ " roots=" ++ toString u.roots
 
-def run (args : List String) : IO Unit := do
-  let zerlegen := args.headD "" == "--komponenten"
-  let args := if zerlegen then args.tail else args
-  let dir : System.FilePath := args.headD "."
-  let entries ← dir.readDir
-  let names := ((entries.map (·.fileName)).filter (·.endsWith ".gab")).qsort (· < ·)
-  for n in names do
-    let src ← IO.FS.readFile (dir / n)
-    IO.println (n ++ "\t" ++ (if zerlegen then zerlegt src else verdict src))
-
 end Gabbro.Grammatik.Parser.Cover.Differenz
-
-def main (args : List String) : IO Unit := Gabbro.Grammatik.Parser.Cover.Differenz.run args

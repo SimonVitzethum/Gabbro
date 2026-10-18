@@ -3846,6 +3846,17 @@ fn tr_arg(a: &Expr, pty: &ParamTy, ctx: &Ctx, model: &Model, scope: &Scope, fnam
                 _ => Err(refuse("LG004", format!("argument {} in {fname} has no G form", o.text()))),
             }
         }
+        // `&T` -- the address of a declared table, the one address there is (`Expr.ptrOf`): the
+        // pointer of the right table with the callee's rights.
+        (ParamTy::Ptr { table, write }, ExprArt::FnWert(pf)) => {
+            let Some(name) = pf.einfach() else {
+                return Err(refuse("LG004", format!("address in {fname} names no table")));
+            };
+            if model.tables.get(*table).is_none_or(|t| t.name != name.text) {
+                return Err(refuse("LG004", format!("address {} in {fname} is not the table the callee takes", name.text)));
+            }
+            Ok(format!("(.ptrOf {} {table} rfl {write})", tab_ctor(model, *table)))
+        }
         (ParamTy::Index { table }, _) => {
             let idx = tr_index(a, *table, ctx, model, fname)?;
             Ok(idx)

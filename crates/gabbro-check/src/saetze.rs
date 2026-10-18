@@ -3796,7 +3796,9 @@ pub const WIRKUNGEN: &[Satz] = &[
                     parameters, constants and anything that is not \
                     `static`/`atomic`/`table`/`device`/`state` fall out silently. Coverage \
                     is a PREFIX TEXT COMPARISON on the rendered place, so two names for the \
-                    same location are two places. The statement walker is hand-written with \
+                    same location are two places -- except that a pointer parameter and the \
+                    table it points to are ONE place for `E005` (the model names the table, \
+                    `tests/haltefolge.rs`). The statement walker is hand-written with \
                     a `_` arm and misses the source of a `let … else` and the `until` \
                     predicate of a `retry`; `lenof(TABLE)` is not a read \
                     at all. ~~The object of a `traverse` was missed the same way until \
@@ -3861,9 +3863,13 @@ pub const WIRKUNGEN: &[Satz] = &[
                     an assumption, not a finding. Closure is computed over SETS, not paths. \
                     And places are compared only for known world state: for everything else \
                     only the KIND is compared, so `writes a` covers `writes b`. `E010`'s \
-                    reach is a drawn LINE -- known world state only.",
+                    reach is a drawn LINE -- known world state only. An ARENA is a place \
+                    compared at the call boundary (a callee's `writes R` through `reset`/`alloc`/\
+                    `grow` is a different place from the caller's `writes s`); until the \
+                    differential harness found it, an arena named none and the frame ended at \
+                    the call. (Its reads stay undeclared: the model tracks writes across a call.)",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 10 probes on `E008`, probes on `E006` and `E007`. \
+        gemessen_an: "beispiele/gift: 10 probes on `E008` (`1480`: a callee writing an arena), probes on `E006` and `E007`. \
                       `E009` is a hint. **Probe 261 measures the recursive case since \
                       2026-08-24** -- the case the sentence used to exclude, and it gave zero \
                       errors before. Anchor: \

@@ -66,7 +66,7 @@ pub fn raum() -> Vec<Prog> {
         let n = out.len();
         out.push(Prog { n, arr: Arr::One, mode: Mode::Free, atoms: vec![id], src: src.replace("gen::u", &format!("gen::p{n}")) });
     }
-    for arr in [Arr::Seq, Arr::Par, Arr::Call] {
+    for arr in [Arr::Seq, Arr::Par, Arr::Call, Arr::CallKnapp] {
         for a in &kat {
             for b in &kat {
                 erzeuge(arr, &[a, b], &mut out);
@@ -201,6 +201,7 @@ pub fn zeile(m: &Messung) -> String {
         PurV::Accept => "accept".to_string(),
         PurV::Reject => "reject".to_string(),
         PurV::KeinForm(e) => format!("noform({})", e.chars().take(60).collect::<String>()),
+        PurV::Verletzt(e) => format!("verletzt({})", e.chars().take(60).collect::<String>()),
         PurV::NotRun => "-".to_string(),
     };
     format!("{:?}\t{}\trust={}\tlean={}\tp{}\tpur={}", klasse(m), m.name, r, lean_lage(m), m.n, pur)
@@ -327,9 +328,10 @@ pub fn bericht(ms: &[Messung]) -> String {
 pub fn rein_bericht(ms: &[Messung]) -> String {
     let mut out = String::new();
     let gelaufen: Vec<&Messung> = ms.iter().filter(|m| m.pur != PurV::NotRun).collect();
-    let entschieden: Vec<&&Messung> = gelaufen.iter().filter(|m| matches!(m.pur, PurV::Accept | PurV::Reject)).collect();
+    let entschieden: Vec<&&Messung> =
+        gelaufen.iter().filter(|m| matches!(m.pur, PurV::Accept | PurV::Reject | PurV::Verletzt(_))).collect();
     out.push_str(&format!(
-        "\npure-Lean path: {} programs sent, {} decided (accept/reject), {} outside the fragment of Track P\n",
+        "\npure-Lean path: {} programs sent, {} decided (accept, reject, or a model premise violated), {} outside the fragment of Track P\n",
         gelaufen.len(), entschieden.len(), gelaufen.len() - entschieden.len()
     ));
     // by the first refused stage
@@ -345,7 +347,11 @@ pub fn rein_bericht(ms: &[Messung]) -> String {
     let mut beispiele: BTreeMap<String, &Messung> = BTreeMap::new();
     for m in &entschieden {
         let rust = match &m.rust { RustV::Accept => "rust-accept", _ => "rust-refuse" };
-        let pur = if m.pur == PurV::Accept { "pure-accept" } else { "pure-reject" };
+        let pur = match m.pur {
+            PurV::Accept => "pure-accept",
+            PurV::Reject => "pure-reject",
+            _ => "pure-model-refuses",
+        };
         let exp = match &m.lean {
             LeanV::Accept => "export-accept",
             LeanV::Reject => "export-reject",
