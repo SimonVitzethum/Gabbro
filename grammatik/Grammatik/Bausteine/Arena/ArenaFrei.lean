@@ -179,6 +179,11 @@ theorem nxtWert_n (A : FreiForm D) (x : Int) (h0 : 0 ≤ x) (h1 : x ≤ D.count 
     A.kopfSt (σ.schreibGlob A.kopf Λ v) = (Wert.umTyp A.hkopf v).n := by
   simp only [kopfSt, World.schreibGlob, World.merke, World.storeGlob, dif_pos]
 
+@[simp] theorem kopfSt_schreibGlob_zaehl (A : FreiForm D) (σ : World D) (Λ : List (Res D))
+    (v : Wert D (D.gtyp A.zaehl)) : A.kopfSt (σ.schreibGlob A.zaehl Λ v) = A.kopfSt σ := by
+  simp only [kopfSt, World.schreibGlob, World.merke, World.storeGlob,
+    dif_neg (fun h : A.kopf = A.zaehl => A.hk1 h)]
+
 @[simp] theorem kopfSt_schreibSlot (A : FreiForm D) (σ : World D) (Λ : List (Res D))
     (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
     A.kopfSt (σ.schreibSlot t Λ k f v) = A.kopfSt σ := rfl
@@ -279,6 +284,62 @@ theorem frei_erhaelt_von (A : FreiForm D) (σ σ' : World D) (i : Int)
     · exact ⟨h0, h1⟩
     · exact hlt j hj
 
+/-- A store into the PAYLOAD field leaves every link where it was (`hf`: the link is not the payload). -/
+theorem naechst_schreibSlot_feld (A : FreiForm D) (σ : World D) (Λ : List (Res D)) (i j : Int)
+    (v : Wert D (D.typ A.tab A.feld)) :
+    A.naechst (σ.schreibSlot A.tab Λ i A.feld v) j = A.naechst σ j := by
+  have hne : ¬ (A.nxt = A.feld) := A.hf
+  simp only [naechst, World.schreibSlot, World.merke, World.storeSlot, dif_pos]
+  by_cases h : j = i
+  · subst h
+    simp only [if_true]
+    rw [dif_neg hne]
+  · simp only [if_neg h]
+
+/-- A store into the payload field does not move the head. -/
+@[simp] theorem kopfSt_schreibSlot_feld (A : FreiForm D) (σ : World D) (Λ : List (Res D)) (i : Int)
+    (v : Wert D (D.typ A.tab A.feld)) : A.kopfSt (σ.schreibSlot A.tab Λ i A.feld v) = A.kopfSt σ := rfl
+
+/-- **Taking the head off hands out a slot that is no longer on the list.** From the facts the executed form gives
+    (the head becomes the old head's link, links and counter as before): the list stays well formed, and the slot
+    handed out is not on it -- it cannot be handed out twice. -/
+theorem abheben_sicher (A : FreiForm D) (σ σ' : World D)
+    (hne : A.kopfSt σ < D.count A.tab) (hok : A.FreiOk σ)
+    (hk' : A.kopfSt σ' = A.naechst σ (A.kopfSt σ))
+    (ho : ∀ j, A.naechst σ' j = A.naechst σ j) (hs : A.stand σ' = A.stand σ) :
+    A.FreiOk σ' ∧ ¬ A.AufListe σ' (A.kopfSt σ) := by
+  obtain ⟨L, hk, hnd, hlt⟩ := hok
+  generalize hg : A.kopfSt σ = kk at hk hne hk'
+  cases hk with
+  | nil => exact absurd hne (Int.lt_irrefl _)
+  | cons k h0 hk1 L1 h1 =>
+    have hch : A.Kette σ' (A.kopfSt σ') L1 := by
+      rw [hk']
+      exact Kette.uebertragen h1 (fun j _ => ho j)
+    refine ⟨⟨L1, hch, (List.nodup_cons.mp hnd).2, fun j hj => ?_⟩, ?_⟩
+    · rw [hs]; exact hlt j (List.mem_cons_of_mem _ hj)
+    · rintro ⟨L', hL', hmem⟩
+      have : L' = L1 := Kette.eindeutig hL' hch
+      subst this
+      exact (List.nodup_cons.mp hnd).1 hmem
+
+/-- **A fresh slot from the high-water mark is not on the list** (every listed slot is below the used counter), and
+    the list stays well formed when the counter grows by one and no link moves. -/
+theorem bump_sicher (A : FreiForm D) (σ σ' : World D) (hok : A.FreiOk σ)
+    (hk' : A.kopfSt σ' = A.kopfSt σ) (ho : ∀ j, A.naechst σ' j = A.naechst σ j)
+    (hs : A.stand σ' = A.stand σ + 1) :
+    A.FreiOk σ' ∧ ¬ A.AufListe σ' (A.stand σ) := by
+  obtain ⟨L, hk, hnd, hlt⟩ := hok
+  have hch : A.Kette σ' (A.kopfSt σ') L := by
+    rw [hk']; exact Kette.uebertragen hk (fun j _ => ho j)
+  refine ⟨⟨L, hch, hnd, fun j hj => ?_⟩, ?_⟩
+  · rw [hs]; have := hlt j hj; omega
+  · rintro ⟨L', hL', hmem⟩
+    have : L' = L := Kette.eindeutig hL' hch
+    subst this
+    have := hlt _ hmem
+    omega
+
 /-- Without the hypothesis the claim is FALSE: freeing a slot that is already the head makes the head's
     link point at itself. The model's reading of why `N586` refuses a double release. -/
 theorem doppelt_bricht (A : FreiForm D) (σ : World D) (Λ : List (Res D)) (i : Int)
@@ -314,6 +375,24 @@ def freiRumpf (A : FreiForm D)
     Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ' :=
   .cons (.assignSlot A.tab A.nxt (Expr.var .here) (freiKopfAlt A hLK) hwT hLT)
     (.cons (.assignGlob A.kopf (freiKopfNeu A) hwK hLK) rest)
+
+/-- The head's link as the new head, at the head word's declared type: `kopf = nxt[i]`. -/
+def freiKopfWeiter (A : FreiForm D) (hLT : darf D A.tab Λ) :
+    Expr D (Ty.index (D.count A.tab) :: Γ) Λ (D.gtyp A.kopf) :=
+  Expr.umTyp (A.hnxt.trans A.hkopf.symm) (Expr.slot A.tab A.nxt (Expr.var .here) hLT)
+
+/-- **`let i = alloc A (v) else B;` from the free list** (the list is non-empty): `i = kopf; kopf = nxt[i];
+    slot[i].feld = v`. `narrow` of the head into the index range: it fits when the list is non-empty. -/
+def freiNimm (A : FreiForm D)
+    (v : Expr D Γ Λ (D.typ A.tab A.feld))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (hwK : V.gschreibt A.kopf = true) (hLK : gdarf D A.kopf Λ)
+    (voll : Endblock D V l Γ Λ)
+    (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') :
+    Block D V l Γ Λ Λ' :=
+  .narrow (Expr.umTyp A.hkopf (Expr.glob A.kopf hLK)) 0 (D.count A.tab - 1) voll
+    (.cons (.assignGlob A.kopf (freiKopfWeiter A hLT) hwK hLK)
+      (.cons (.assignSlot A.tab A.feld (Expr.var .here) (Expr.weaken v) hwT hLT) rest))
 
 end Block
 
@@ -372,6 +451,60 @@ theorem freiRumpf_erhaelt (A : FreiForm D)
         = .ok σ' (.cons k ρ) ∧ A.FreiOk σ' := by
   obtain ⟨σ', he, h1', h2', h3', h4'⟩ := freiRumpf_fakten O passes R (l := l) A hwT hLT hwK hLK σ k ρ
   exact ⟨σ', he, A.frei_erhaelt_von σ σ' k.n k.lo_le h1 hn hok h1' h2' h3' h4'⟩
+
+/-- **Taking a slot off the free list**, read off the executed form: it hands out the old head, the head becomes the
+    head's link, no other link moves and the used counter stays. -/
+theorem freiNimm_fakten (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (hwK : V.gschreibt A.kopf = true) (hLK : gdarf D A.kopf Λ)
+    (voll : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hne : A.kopfSt σ < D.count A.tab) :
+    ∃ σ' : World D,
+      execBlock (V := V) O passes R
+          (Block.freiNimm (Λ' := Λ) A v hwT hLT hwK hLK voll .nil) σ ρ = .ok σ' ρ ∧
+      A.kopfSt σ' = A.naechst σ (A.kopfSt σ) ∧
+      (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
+  have hk : (0 : Int) ≤ A.kopfSt σ ∧ A.kopfSt σ ≤ D.count A.tab - 1 :=
+    ⟨A.kopfSt_nonneg σ, by omega⟩
+  simp only [Block.freiNimm, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
+  rw [dif_pos (by exact hk)]
+  refine ⟨_, rfl, ?_, ?_, ?_⟩
+  all_goals simp only [eval, Block.freiKopfWeiter, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
+    List.cons_append, List.append_nil, FreiForm.kopfSt_schreibGlob_kopf, FreiForm.kopfSt_schreibSlot_feld,
+    FreiForm.naechst_schreibGlob, FreiForm.naechst_schreibSlot_feld, FreiForm.naechst_lese, FreiForm.kopfSt_lese,
+    ArenaForm.stand_lese, FreiForm.stand_schreibGlob_kopf, ArenaForm.stand_schreibSlot]
+  all_goals first | trivial | (intro j; trivial) | exact umTyp_trans_n _ _ _
+
+/-- **`alloc` from the free list keeps the list well formed and never hands out a listed slot** -- on the executed form. -/
+theorem freiNimm_erhaelt (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (hwK : V.gschreibt A.kopf = true) (hLK : gdarf D A.kopf Λ)
+    (voll : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hne : A.kopfSt σ < D.count A.tab) (hok : A.FreiOk σ) :
+    ∃ σ' : World D,
+      execBlock (V := V) O passes R
+          (Block.freiNimm (Λ' := Λ) A v hwT hLT hwK hLK voll .nil) σ ρ = .ok σ' ρ ∧
+      A.FreiOk σ' ∧ ¬ A.AufListe σ' (A.kopfSt σ) := by
+  obtain ⟨σ', he, h1, h2, h3⟩ := freiNimm_fakten O passes R (l := l) A v hwT hLT hwK hLK voll σ ρ hne
+  exact ⟨σ', he, (A.abheben_sicher σ σ' hne hok h1 h2 h3).1, (A.abheben_sicher σ σ' hne hok h1 h2 h3).2⟩
+
+/-- **A fresh slot from the used counter** (the list is empty or ignored): `dynAlloc`'s rest stores the payload and
+    bumps the counter. The facts about the world it leaves: the head and every link stay, the counter grows by one. -/
+theorem frischRumpf_fakten (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (hwG : V.gschreibt A.zaehl = true) (hLG : gdarf D A.zaehl Λ)
+    (σ : World D) (k : Wert D (Ty.index (D.count A.tab))) (ρ : Env D Γ) :
+    ∃ σ' : World D,
+      execBlock (V := V) O passes R
+          (Block.arenaRumpf (l := l) (Λ' := Λ) A.toArenaForm v hwT hLT hwG hLG .nil) σ (.cons k ρ)
+        = .ok σ' (.cons k ρ) ∧
+      A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = k.n + 1 := by
+  refine ⟨_, rfl, ?_, ?_, ?_⟩
+  all_goals simp only [eval, Block.arenaRumpf, Block.arenaBump, eval_umTyp, orte_umTyp, Expr.orte,
+    List.nil_append, FreiForm.kopfSt_schreibGlob_zaehl, FreiForm.kopfSt_schreibSlot_feld,
+    FreiForm.naechst_schreibGlob, FreiForm.naechst_schreibSlot_feld, FreiForm.naechst_lese,
+    FreiForm.kopfSt_lese, ArenaForm.stand_lese, ArenaForm.stand_schreibGlob, Wert.umTyp_hin_her]
+  all_goals first | trivial | (intro j; trivial) | exact umTyp_trans_n _ _ _ | rfl
 
 end Bedeutung
 

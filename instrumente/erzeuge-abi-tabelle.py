@@ -2,10 +2,10 @@
 """Generate `crates/gabbro-check/src/abi_tabelle.rs` from the Lean ABI records.
 
 The Lean files are the ONE source (Sonnet G, 2026-10-07):
-  * `Kern/Semantik/Syscall.lean`     -- `inductive SysReg` (the x86_64 register file),
-  * `Kern/Semantik/SyscallArm.lean`  -- `inductive ArmReg` (`x (n : Fin N)`), `nummerRegLinux`,
+  * `Kern/Semantik/Syscall/Syscall.lean`     -- `inductive SysReg` (the x86_64 register file),
+  * `Kern/Semantik/Syscall/SyscallArm.lean`  -- `inductive ArmReg` (`x (n : Fin N)`), `nummerRegLinux`,
                                         `argRegs`, `ergebnisReg`, the `def nr<Name> : Nat := N` table,
-  * `Kern/Semantik/SyscallArmLinux.lean` -- `klonStapelReg`.
+  * `Kern/Semantik/Syscall/SyscallArmLinux.lean` -- `klonStapelReg`.
 The Rust checker's per-architecture register tables (`syscall.rs`: N066, N446, A005, A006) read the
 generated module, so an x86 or an aarch64 row cannot drift from the model.
 
@@ -28,7 +28,8 @@ AUS = WURZEL / 'crates/gabbro-check/src/abi_tabelle.rs'
 
 
 def lies(name):
-    return (SEM / name).read_text()
+    # the Syscall modules sit in a sub-folder since 2026-10-17
+    return (SEM / ('Syscall' if name.startswith('Syscall') else '.') / name).read_text()
 
 
 def konstruktoren(text, induktiv):

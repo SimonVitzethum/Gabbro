@@ -4,7 +4,7 @@ defaultTargets = ["Grammatik"]
 # Bound native compiler workers/heap. Raised 2026-10-17 (Simon: Lean may run with up to 16 GiB; the kernel
 # check of `Parser/ElementTiefProben.lean` hit "excessive memory consumption" at 4 GiB).
 # Weak arguments preserve build traces; they change resource use, not proofs.
-weakLeanArgs = ["-j4", "-M16384"]
+weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true"]
 
 # Mathlib ALLOWED EVERYWHERE since 2026-10-08 (Simon: "mathlib darf ueberall genutzt werden").
 # Pinned to the tag whose toolchain equals this project's (v4.33.1); precompiled oleans via

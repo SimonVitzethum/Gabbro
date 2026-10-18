@@ -6632,7 +6632,7 @@ pub const SPERREN: &[Satz] = &[
                       dispatch roots). A start holding ANY signature lock, shared \
                       or not, falls under `N303` (`wurzelnB`, gift/967).",
         fundstelle: "crates/gabbro-check/src/startexklusiv.rs; \
-                     grammatik/Grammatik/Logik/Ruf/RufMaschineG.lean (`StartExklusiv`); \
+                     grammatik/Grammatik/Logik/Ruf/Maschine/RufMaschineG.lean (`StartExklusiv`); \
                      grammatik/Grammatik/Proben/AuditZiel.lean (probe B)",
     },
 ];

@@ -26,7 +26,7 @@
   With it, a thread of a reachable machine can stand at an empty answer type only at an
   axiom `-> never` (`fort_dann`, Fortschritt.lean; `KopfHalt .nieZurueck`, Spec.lean).
 -/
-import Grammatik.Logik.Ruf.RufAdaequatG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 
 namespace Gabbro.Grammatik
 

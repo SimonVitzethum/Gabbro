@@ -40,7 +40,7 @@
      reachable from the single-threaded start has that shape.
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
-import Grammatik.Logik.Ruf.RufAdaequatRufG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
 
 namespace Gabbro.Grammatik
 

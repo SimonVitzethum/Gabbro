@@ -36,7 +36,7 @@
   type is `Prop` itself. Every premise is used by its proof.
 -/
 import Grammatik.Zielsatz.Eigenschaften.NeverAsm
-import Grammatik.Logik.Ruf.RufMaschineF
+import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 
 namespace Gabbro.Grammatik.Zielsatz

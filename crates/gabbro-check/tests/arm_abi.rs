@@ -96,7 +96,7 @@ fn das_klon_tor_bindet_die_kind_adresse_in_x4_und_den_stapel_in_x1() {
     let text = lies("bibliothek/linux/linux-aarch64.gab");
     assert!(text.contains("stack x1"));
     // Lean states the same facts in SyscallArmLinux.lean.
-    let l = lies("grammatik/Grammatik/Kern/Semantik/SyscallArmLinux.lean");
+    let l = lies("grammatik/Grammatik/Kern/Semantik/Syscall/SyscallArmLinux.lean");
     assert!(l.contains("[(xr 0, 0), (xr 1, 1), (xr 2, 2), (xr 4, 3)]"));
     assert!(l.contains("def klonStapelReg : ArmReg := xr 1"));
 }

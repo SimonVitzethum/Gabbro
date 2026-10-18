@@ -1,0 +1,507 @@
+/- Part 2 of 5 of `EigenZustandD` (split by instrumente/teile/lean-teilen.py; the umbrella `EigenZustandD.lean` imports all parts). -/
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T1
+
+namespace Gabbro.Grammatik.EZD
+
+open Gabbro.Grammatik
+variable {D : Deklaration}
+
+/-- `schreibBytes t` with a positive count records a write event for `t`.
+    Split on `n`: at `n = 0` the byte list is empty (length `0`), so the
+    fold is the identity and the head case below needs `n = m+1`, where the
+    byte list has length `m+1 > 0` and the definitional unfold exposes the
+    first `schreibSlot` write. -/
+theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {t : D.Tab} {f : D.Feld t} {hf : D.typ t f = .int 0 255} {n : Nat}
+    {lo hi : Int}
+    {i : Expr D Γ Λ (.int lo hi)} {hlo : 0 ≤ lo} {hhi : hi + n ≤ D.count t}
+    {e : Expr D Γ Λ (.int 0 (256 ^ n - 1))}
+    {hw : V.schreibt t = true} {hL : darf D t Λ}
+    (hn : 0 < n)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (.putBytes t f hf n i hlo hhi e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt
+      = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    ∃ ev ∈ neu, ev.traeger = some (Sum.inl t) := by
+  -- Name the entry world, index, value, and byte list.
+  have hlen : (zahlZuBytes n (eval (σ.lese Λ (i.orte ++ e.orte)) e
+      (σ.lese Λ (i.orte ++ e.orte)) ρ).n).length = n :=
+    zahlZuBytes_length n _
+  -- Split on `n`: `n = 0` contradicts `hn`; at `n = m+1` unfold one step.
+  cases hn' : n with
+  | zero => omega
+  | succ m =>
+      -- Abbreviate the value whose bytes are written.
+      have hz : (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n =
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+          (σ.lese Λ (i.orte ++ e.orte)) ρ).n := rfl
+      -- The byte list is `b0 :: bs` for some head and tail.
+      obtain ⟨b0, bs, hbs⟩ : ∃ b0 bs, zahlZuBytes (m + 1)
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n = b0 :: bs := by
+        cases hbl : zahlZuBytes (m + 1)
+            (eval (σ.lese Λ (i.orte ++ e.orte)) e
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n with
+        | nil =>
+            have hlen2 := zahlZuBytes_length (m + 1)
+              (eval (σ.lese Λ (i.orte ++ e.orte)) e
+                (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+            rw [hbl] at hlen2
+            simp at hlen2
+        | cons b0 bs => exact ⟨b0, bs, rfl⟩
+      clear hz
+      -- Rewrite `n` to `m+1` everywhere it matters.
+      have hnEq : n = m + 1 := by omega
+      subst hnEq
+      -- Abbreviate the entry world and index for readability.
+      have hσL : σ.lese Λ (i.orte ++ e.orte) =
+          σ.lese Λ (i.orte ++ e.orte) := rfl
+      clear hσL
+      have hfold₂ : (σ.lese Λ (i.orte ++ e.orte)).schreibBytes t f hf Λ
+          (eval (σ.lese Λ (i.orte ++ e.orte)) i
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+          (zahlZuBytes (m + 1)
+            (eval (σ.lese Λ (i.orte ++ e.orte)) e
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n) =
+          (((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+            (eval (σ.lese Λ (i.orte ++ e.orte)) i
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+            (cast (congrArg (Wert D) hf).symm
+              (b0 : Wert D (.int 0 255)))).schreibBytes
+            t f hf Λ
+            ((eval (σ.lese Λ (i.orte ++ e.orte)) i
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n + 1) bs) := by
+        rw [hbs]
+        rfl
+      -- `hstep` fires the same statement (after `subst`, `n = m+1`
+      -- definitionally); unfold its fold the same way and conclude.
+      have hrfl : (execStmt O passes keinRuf
+          ((.putBytes t f hf (m + 1) i hlo hhi e hw hL :
+            Stmt D V l Γ Λ Λ)) σ ρ).welt =
+          Ausgang.welt (D := D) (V := V) (l := l) (Γ := Γ) (Ausgang.ok
+            ((σ.lese Λ (i.orte ++ e.orte)).schreibBytes t f hf Λ
+              (eval (σ.lese Λ (i.orte ++ e.orte)) i
+                (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+              (zahlZuBytes (m + 1)
+                (eval (σ.lese Λ (i.orte ++ e.orte)) e
+                  (σ.lese Λ (i.orte ++ e.orte)) ρ).n)) ρ) := rfl
+      have hstepFold : (execStmt O passes keinRuf
+            ((.putBytes t f hf (m + 1) i hlo hhi e hw hL :
+              Stmt D V l Γ Λ Λ)) σ ρ).welt =
+            some ((((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+              (eval (σ.lese Λ (i.orte ++ e.orte)) i
+                (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+              (cast (congrArg (Wert D) hf).symm
+                (b0 : Wert D (.int 0 255)))).schreibBytes
+              t f hf Λ
+              ((eval (σ.lese Λ (i.orte ++ e.orte)) i
+                (σ.lese Λ (i.orte ++ e.orte)) ρ).n + 1) bs)) := by
+          rw [hrfl, Ausgang.welt, hfold₂]
+      -- Now `hstep` and `hstepFold` agree; extract the outcome world.
+      have hσ' : σ' = (((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+            (eval (σ.lese Λ (i.orte ++ e.orte)) i
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+            (cast (congrArg (Wert D) hf).symm
+              (b0 : Wert D (.int 0 255)))).schreibBytes
+            t f hf Λ
+            ((eval (σ.lese Λ (i.orte ++ e.orte)) i
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n + 1) bs) :=
+          Option.some_inj.mp (hstep.symm.trans hstepFold)
+        -- The head write event sits in the tail fold spur by the suffix lemma.
+      have hmem0 : Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt ∈
+            ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+              (eval (σ.lese Λ (i.orte ++ e.orte)) i
+                (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+              (cast (congrArg (Wert D) hf).symm
+                (b0 : Wert D (.int 0 255)))).spur :=
+          List.mem_cons_self
+      obtain ⟨preTail, hpreTail⟩ := schreibBytes_spur_suffix
+          ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+            (eval (σ.lese Λ (i.orte ++ e.orte)) i
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+            (cast (congrArg (Wert D) hf).symm
+              (b0 : Wert D (.int 0 255))))
+          t f hf Λ _ bs
+      have hmemFold : Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ σ'.spur := by
+          rw [hσ']
+          rw [hpreTail]
+          exact List.mem_append_right _ hmem0
+        -- Cancel the common `lese` suffix: `neu` is the fold prefix.
+      have hspur₀ : (σ.lese Λ (i.orte ++ e.orte)).spur =
+            ((i.orte ++ e.orte).map fun o => match o with
+              | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+              | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := rfl
+      obtain ⟨pre, hpre⟩ := schreibBytes_spur_suffix
+          (σ.lese Λ (i.orte ++ e.orte)) t f hf Λ
+          (eval (σ.lese Λ (i.orte ++ e.orte)) i
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n
+          (zahlZuBytes (m + 1)
+            (eval (σ.lese Λ (i.orte ++ e.orte)) e
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n)
+      have hσspur : σ'.spur = pre ++ (σ.lese Λ (i.orte ++ e.orte)).spur := by
+          -- `hσ'` unfolds the outcome to the tail fold; `hpre` states the
+          -- whole fold spur. Rewrite the goal through both equations.
+          rw [hσ']
+          rw [← hfold₂]
+          exact hpre
+      -- Cancel the common suffix: `neu` is the fold prefix plus reads.
+      have hcancel : neu = pre ++ ((i.orte ++ e.orte).map fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) := by
+        have hassoc : (pre ++ ((i.orte ++ e.orte).map fun o => match o with
+              | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+              | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt)) ++ σ.spur =
+            pre ++ (((i.orte ++ e.orte).map fun o => match o with
+              | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+              | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur) :=
+          List.append_assoc _ _ _
+        have hfull₂ : neu ++ σ.spur =
+            (pre ++ ((i.orte ++ e.orte).map fun o => match o with
+              | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+              | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt)) ++ σ.spur := by
+          rw [hassoc, ← hspur₀, ← hσspur]; exact hneu.symm
+        exact List.append_cancel_right hfull₂
+      -- Split the head event over `pre ++ reads ++ old`.
+      have hevσ₂ : Ereignis.zugriff t true Λ
+          (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ neu ++ σ.spur := by
+        rw [← hneu]; exact hmemFold
+      rw [hcancel] at hevσ₂
+      have hsplit : Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ pre ∨
+          Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt ∈
+            ((i.orte ++ e.orte).map fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ∨
+          Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ σ.spur := by
+        have hmem : Ereignis.zugriff t true Λ
+              (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ pre ++
+            (((i.orte ++ e.orte).map fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur) := by
+          rw [← List.append_assoc]; exact hevσ₂
+        rw [List.mem_append, List.mem_append] at hmem
+        exact hmem
+      rcases hsplit with hmemPre | hmemRead | hmemOld
+      · refine ⟨Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt, ?_, rfl⟩
+        rw [hcancel]
+        exact List.mem_append_left _ hmemPre
+      · obtain ⟨o, ho, hcon⟩ := List.mem_map.mp hmemRead
+        cases o with
+        | inl t2 =>
+            simp only at hcon
+            have hflag := congrArg (ereignisSchreibt (D := D)) hcon
+            simp only [ereignisSchreibt] at hflag
+            exact absurd hflag (by simp)
+        | inr g' =>
+            simp only at hcon
+            exact absurd hcon (by simp)
+      · -- Old: the head write coincides with an old event. Reuse the
+        -- `hmemFold`-in-`pre` argument: the head is in the tail fold spur,
+        -- whose `preTail` part injects into `pre` by suffix cancellation.
+        -- `hmemFold` was proved from `hpreTail`; `hpre` covers the whole
+        -- fold. The head is in `pre` iff the tail split puts it there --
+        -- but we are in the old case. Close by noting `hevσ₂` already
+        -- split this way: contradiction is impossible, so use `hmemPre`
+        -- from re-splitting `hmemFold` through `hpre` (not `hpreTail`).
+        have hHeadPre : Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt ∈ pre := by
+          have hmem : Ereignis.zugriff t true Λ
+              (σ.lese Λ (i.orte ++ e.orte)).haelt ∈
+              pre ++ (σ.lese Λ (i.orte ++ e.orte)).spur := by
+            rw [← hσspur]; exact hmemFold
+          rw [hspur₀] at hmem
+          rw [List.mem_append] at hmem
+          rcases hmem with hG | hH
+          · exact hG
+          · rw [List.mem_append] at hH
+            rcases hH with hI | hJ
+            · obtain ⟨o, ho, hcon⟩ := List.mem_map.mp hI
+              cases o with
+              | inl t2 =>
+                  simp only at hcon
+                  have hflag := congrArg (ereignisSchreibt (D := D)) hcon
+                  simp only [ereignisSchreibt] at hflag
+                  exact absurd hflag (by simp)
+              | inr g' =>
+                  simp only at hcon
+                  exact absurd hcon (by simp)
+            · -- Old again at the `hpre` level: iterate once more via
+              -- `hpreTail` -- the tail fold spur is strictly shorter, so
+              -- one unroll reaches `preTail` or the head world. The head
+              -- world spur is `[head] ++ lese`, so membership there is the
+              -- head itself or a read (closed above) or older (same shape,
+              -- one level down). Since the byte list is finite, this
+              -- terminates -- but Lean needs the induction. Instead observe
+              -- `hmemFold` came from `hpreTail`'s RIGHT disjunct already
+              -- (`hmem0`), i.e. the head IS in the head-world spur, hence
+              -- in `preTail`'s base -- no. Direct: `hmem0` IS the head in
+              -- the head spur; `hpreTail` puts the tail fold spur over it.
+              -- The whole fold spur `hpre` extends the same base, so the
+              -- head is at a FIXED position in `pre`: it is `pre`'s suffix
+              -- element. Positional: `pre = preTail ++ [head]`.
+              have hpos : pre = preTail ++ [Ereignis.zugriff t true Λ
+                  (σ.lese Λ (i.orte ++ e.orte)).haelt] := by
+                -- `hpreTail` extends the head spur `[head] ++ lese-spur`;
+                -- `hpre` extends the same `lese-spur` through the whole fold
+                -- (equal by `hfold₂`). Chain them and cancel the suffix.
+                have hchain : preTail ++ ([Ereignis.zugriff t true Λ
+                    (σ.lese Λ (i.orte ++ e.orte)).haelt] ++
+                    (σ.lese Λ (i.orte ++ e.orte)).spur) =
+                    pre ++ (σ.lese Λ (i.orte ++ e.orte)).spur := by
+                  have e1 : (((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+                      (eval (σ.lese Λ (i.orte ++ e.orte)) i
+                        (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+                      (cast (congrArg (Wert D) hf).symm
+                        (b0 : Wert D (.int 0 255)))).schreibBytes
+                      t f hf Λ
+                      ((eval (σ.lese Λ (i.orte ++ e.orte)) i
+                        (σ.lese Λ (i.orte ++ e.orte)) ρ).n + 1) bs).spur =
+                      preTail ++ ([Ereignis.zugriff t true Λ
+                        (σ.lese Λ (i.orte ++ e.orte)).haelt] ++
+                        (σ.lese Λ (i.orte ++ e.orte)).spur) := by
+                    rw [hpreTail]
+                    rfl
+                  rw [← e1, ← hfold₂]
+                  exact hpre
+                have hchain2 : preTail ++ ([Ereignis.zugriff t true Λ
+                    (σ.lese Λ (i.orte ++ e.orte)).haelt] ++
+                    (σ.lese Λ (i.orte ++ e.orte)).spur) =
+                    pre ++ (σ.lese Λ (i.orte ++ e.orte)).spur :=
+                  hchain
+                have hchain3 : (preTail ++ [Ereignis.zugriff t true Λ
+                    (σ.lese Λ (i.orte ++ e.orte)).haelt]) ++
+                    (σ.lese Λ (i.orte ++ e.orte)).spur =
+                    pre ++ (σ.lese Λ (i.orte ++ e.orte)).spur := by
+                  rw [List.append_assoc]
+                  exact hchain2
+                have hpos2 : preTail ++ [Ereignis.zugriff t true Λ
+                    (σ.lese Λ (i.orte ++ e.orte)).haelt] = pre :=
+                  List.append_cancel_right hchain3
+                exact hpos2.symm
+              rw [hpos]
+              exact List.mem_append_right _ List.mem_cons_self
+        refine ⟨Ereignis.zugriff t true Λ
+            (σ.lese Λ (i.orte ++ e.orte)).haelt, ?_, rfl⟩
+        rw [hcancel]
+        exact List.mem_append_left _ hHeadPre
+
+/-! ## 3. The oracle arm: `axiomCall` writes stay inside the declared frame.
+
+  `GutO` says the oracle answer's world differs from the entry world at most
+  on carriers with `D.aschreibt/D.agschreibt = true`. Hence a slot of `t`
+  with `D.aschreibt a t = false` survives any `axiomCall a` step.
+  Proved via `axiomAntwort_gut` (the `Gut` package) rather than by unfolding
+  `execStmt`: the `Rahmen` half is exactly the needed slot equality. -/
+
+/-- The oracle frame keeps a non-written table slot, via the unconditional
+    `Rahmen` conjunct of `GutO` (the trace clause is conditional and not
+    needed here). -/
+theorem axiomCall_slots_frame (O : Orakel D) (hO : GutO O) (a : D.Ax)
+    (t : D.Tab) (ht : D.aschreibt a t = false)
+    (sg : World D) (rho : Env D (D.aparams a)) (k : Int) (f : D.Feld t) :
+    (O.wirkt a sg rho).1.slots t k f = sg.slots t k f := by
+  -- `hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg (axiomAntwort ..).1`;
+  -- project the `Rahmen` slot leg at `ht`.
+  have hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg
+      (axiomAntwort O a sg rho).1 := (hO a sg rho).1
+  have hEq := hR.1 t ht k f
+  -- `(axiomAntwort ..).1 = (wirkt ..).1` by `rfl` on the pair projection.
+  have hProj : (axiomAntwort O a sg rho).1 =
+      (O.wirkt a sg rho).1 := rfl
+  rw [hProj] at hEq
+  exact hEq
+
+/-! ## 4. Slot preservation per leaf shape: every non-recording leaf keeps `slots t`.
+
+  Each lemma below takes the firing equation `hstep` for ONE statement form
+  and concludes `σ'.slots t k f = σ.slots t k f` for every table `t`. All are
+  used by their proofs (rule 3): the two global-writing forms (`assignGlob`,
+  `publish`) by the step lemma's global case, the rest by the compound-case
+  analysis there. Forms that write a table slot (`assignSlot`, `assignDurch`,
+  `uebergang`, `schreibBytes`) are NOT here: they record their event (§2). -/
+
+/-- `assignGlob` writes a global: every table slot rides along. -/
+theorem assignGlob_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {g : D.Glob} {e : Expr D Γ Λ (D.gtyp g)}
+    {hw : V.gschreibt g = true} {hL : gdarf D g Λ}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignGlob (V := V) (l := l) g e hw hL) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.assignGlob (V := V) (l := l) g e hw hL) sg rho).welt =
+      some ((sg.lese Λ e.orte).schreibGlob g Λ
+        (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = ((sg.lese Λ e.orte).schreibGlob g Λ
+      (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `publish` writes a global: every table slot rides along. -/
+theorem publish_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {g : D.Glob} {e : Expr D Γ Λ (D.gtyp g)} {payload : List D.Glob}
+    {hp : payload = D.nutzlast g} {hw : V.gschreibt g = true} {hL : gdarf D g Λ}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.publish (V := V) (l := l) g e payload hp hw hL) sg rho).welt
+      = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.publish (V := V) (l := l) g e payload hp hw hL) sg rho).welt =
+      some ((sg.lese Λ e.orte).schreibGlob g Λ
+        (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = ((sg.lese Λ e.orte).schreibGlob g Λ
+      (eval (sg.lese Λ e.orte) e (sg.lese Λ e.orte) rho)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `assignVar` touches only the environment: every table slot rides along. -/
+theorem assignVar_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {x : Var Γ τ} {e : Expr D Γ Λ τ}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignVar (V := V) (l := l) x e) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.assignVar (V := V) (l := l) x e) sg rho).welt =
+      some (sg.lese Λ e.orte) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `regSchreib` touches only the device: every table slot rides along. -/
+theorem regSchreib_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : D.Reg} {hk : (D.rklasse r).schreibbar = true} {e : Expr D Γ Λ (D.rtyp r)}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.regWrite (V := V) (l := l) r hk e) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.regWrite (V := V) (l := l) r hk e) sg rho).welt =
+      some (sg.lese Λ e.orte) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-- `ret` only reads: every table slot rides along. -/
+theorem ret_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {e : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.ret (V := V) (l := l) e hΛ) sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  have hcomp : (execStmt O passes keinRuf
+      (Stmt.ret (V := V) (l := l) e hΛ) sg rho).welt =
+      some (sg.lese Λ e.orte) := rfl
+  rw [hcomp] at hstep
+  have hsg' : sg' = sg.lese Λ e.orte := Option.some_inj.mp hstep.symm
+  rw [hsg']
+  rfl
+
+/-! ## 5. Identity leaves: `transition`, `advances`, `retires`, `retGrund`,
+    `leave`, `next` compute `.ok/.leave/.next` of the entry world or `σ`
+    itself; every table slot rides along by one substitution. -/
+
+/-- `transition` keeps every table slot (device-only step). -/
+theorem transition_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : D.Reg} {hk : (D.rklasse r).schreibbar = true} {m : D.Reg}
+    {hm : D.spiegel r = some m} {hl : (D.rklasse m).lesbar = true}
+    {maske bits : Int}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.transition (V := V) (l := l) r hk m hm hl maske bits)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `advances` keeps every table slot (mark step, memory-free). -/
+theorem advances_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {mm : D.Marke} {a : Nat} {h : Res.marke mm a ∈ Λ} {hs : a + 1 < D.stufen mm}
+    (s : Stmt D V l Γ Λ ((Λ.erase (.marke mm a)) ++ [.marke mm (a + 1)]))
+    (hs : s = Stmt.advances (V := V) (l := l) mm a h hs)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `retires` keeps every table slot (mark step, memory-free). -/
+theorem retires_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {mm : D.Marke} {s2 : Nat} {h : Res.marke mm s2 ∈ Λ} {a : D.Annahme}
+    (s : Stmt D V l Γ Λ (Λ.erase (.marke mm s2)))
+    (hs : s = Stmt.retires (V := V) (l := l) mm s2 h a)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `retGrund` keeps every table slot (control step, memory-free). -/
+theorem retGrund_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : Fin V.gruende} {hΛ : Λ.Perm V.ende}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.retWhy (V := V) (l := l) r hΛ)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+/-- `leave` keeps every table slot (control step, memory-free). -/
+theorem leave_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {h : l = true}
+    (s : Stmt D V l Γ Λ Λ)
+    (hs : s = Stmt.leave (V := V) (l := l) h)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+  subst hstep
+  rfl
+
+
+end Gabbro.Grammatik.EZD

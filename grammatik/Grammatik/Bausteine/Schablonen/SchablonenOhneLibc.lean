@@ -35,7 +35,7 @@
 -/
 
 import Grammatik.Bausteine.Schablonen.ZeugeTorModell
-import Grammatik.Kern.Semantik.Syscall
+import Grammatik.Kern.Semantik.Syscall.Syscall
 
 namespace Gabbro.Grammatik
 

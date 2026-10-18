@@ -25,7 +25,7 @@
   continuation KEPT -- peels the `abbruch` layer, leaves the loop, closes
   the empty block and returns, logging exactly that `7`.
 -/
-import Grammatik.Logik.Ruf.RufAdaequatRufG
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
 
 namespace Gabbro.Grammatik
 

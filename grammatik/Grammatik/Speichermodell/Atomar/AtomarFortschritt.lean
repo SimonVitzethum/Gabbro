@@ -21,7 +21,7 @@ import Grammatik.Speichermodell.Atomar.AtomarLauf
 import Grammatik.Speichermodell.Atomar.AtomarZeuge
 import Grammatik.Logik.Fortschritt.Fortschritt
 import Grammatik.Logik.Vertraege.AntwortOrte
-import Grammatik.Logik.Ruf.RufHaeltG
+import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
 
 namespace Gabbro.Grammatik
 

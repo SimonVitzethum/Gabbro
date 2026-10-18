@@ -128,3 +128,17 @@ rules('grammatik/Grammatik', [
 PINNED.update([
     'grammatik/Grammatik/Zielsatz/BeweisAtomar.lean',
 ])
+
+# The system-call modules of the semantics (made room when big files were split into parts on 2026-10-17).
+rules('grammatik/Grammatik/Kern/Semantik', [
+    (r'^Syscall\w*$', 'Syscall'),
+])
+
+# The call-semantics family: sub-folders by theme (room for the split parts, 2026-10-17).
+rules('grammatik/Grammatik/Logik/Ruf', [
+    (r'^(HoareRegeln|HoareRuf)$', 'Hoare'),
+    (r'^RufAdaequat\w*$', 'Adaequat'),
+    (r'^RufMaschine\w*$', 'Maschine'),
+    (r'^(RufUmkehrRufG|RufHaeltG)$', 'Umkehr'),
+    (r'^RufOhneHardware\w*$', 'Ohne'),
+])
