@@ -4,7 +4,7 @@
              `traverse`, early `return`), bodies, `lowerAllg`, and the 104/108 pins and the chain.
              Split from `UebersetzeAllg2` (which keeps the single statements and calls); same namespace.
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeSum
 import Grammatik.Bausteine.Arena.ArenaZucker
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
@@ -54,6 +54,28 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
     | some _ => .error "number returned for a non-number result"
     | none => .error "return with value without result"
   | .why _ => .error "reason as a value without G form"
+  | .sum v =>
+    match hE : (fnAt u caller).ergTy with
+    | some (.sum cs) =>
+      match (fnAt u caller).resSum with
+      | some (sidx, _) =>
+        if hs : sidx < u.sums.length then
+          if hc : (u.sums.get ⟨sidx, hs⟩).spec = cs then
+            match lowSVal u Γ (resOf u caller) fn 0 sidx hs v with
+            | .error e => .error e
+            | .ok ev =>
+              have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+                rw [show (verOf u caller).erg =
+                  (vertragVon (declOf u) caller).erg from rfl,
+                  vErg_eq u caller, hE]
+                show ErgExpr (declOf u) Γ (resOf u caller) (Option.some (.sum cs))
+                exact ErgExpr.val (by rw [← hc]; exact ev)
+              .ok eW
+          else .error "result type foreign"
+        else .error "tagged type unknown"
+      | none => .error "tagged result without type"
+    | some _ => .error "tagged value returned for a different result"
+    | none => .error "return with value without result"
   | .opt o =>
     match hE : (fnAt u caller).ergTy with
     | some (.opt n) =>
@@ -316,6 +338,23 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
+  | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindSum x sidx v :: rest =>
+    if hs : sidx < u.sums.length then
+      match lowSVal u Γ Λ fn 0 sidx hs v with
+      | .error e => .error e
+      | .ok ev =>
+        match lowSeqL (l := l) u caller (.sum (u.sums.get ⟨sidx, hs⟩).spec :: Γ)
+            (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r) => .ok (Block.bind ev b, r)
+    else .error "tagged type unknown"
   | Γ, fn, n + 1, Λ, pe, .matchWhyBeg e :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.matchWhyBeg e) rest with
     | .error e => .error e
@@ -468,6 +507,22 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .ok (ueb, .blkEnd :: rest2) => .ok (Stmt.retry cnt bv body ueb, rest2)
         | .ok (_, _) => .error "lower: a retry is not closed"
       | .ok (_, _) => .error "lower: a retry has no overflow part"
+  | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs, rest =>
+    if hs : sidx < u.sums.length then
+      match paramPos fn.params m with
+      | .error err => .error err
+      | .ok j =>
+        match fn.params[j]? with
+        | some (_, .sum cs) =>
+          match lowVar Γ j (.sum cs) with
+          | .error err => .error err
+          | .ok v =>
+            match lowArmsT (l := l) u caller Γ fn n Λ pe cs bs rest with
+            | .error err => .error err
+            | .ok (arms, .blkEnd :: rest') => .ok (Stmt.onTag (D := declOf u) (Expr.var v) arms, rest')
+            | .ok (_, _) => .error "lower: a match is not closed"
+        | _ => .error "lower: match of a non-tagged value"
+    else .error "tagged type unknown"
   | Γ, fn, n + 1, Λ, pe, .matchWhyBeg e, rest =>
     match paramPos fn.params e with
     | .error err => .error err
@@ -505,6 +560,41 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       | .ok (_, _) => .error "lower: a forever is not closed"
     else .error "lower: assumption unknown"
   | _, _, _ + 1, _, _, _, _ => .error "lower: not a structured statement"
+
+/-- The arms of a tagged match: one block per case of the specification, the payload of a case with one bound by
+    the next binder name, separated by `ifElse`; the marker that closes the match is left to the caller. -/
+def lowArmsT {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
+    (Γ : Ctx) → UFn → Nat → (Λ : List (Res (declOf u))) → AtTop u caller Λ →
+    (cs : List (Option (Int × Int))) → List String → List UStmt →
+    Except String (Arms (declOf u) (verOf u caller) l Γ Λ Λ cs × List UStmt)
+  | _, _, 0, _, _, _, _, _ => .error "lower: blocks nested too deep"
+  | _, _, _ + 1, _, _, [], _, rest => .ok (Arms.nil, rest)
+  | Γ, fn, n + 1, Λ, pe, none :: cs', bs, rest =>
+    match lowSeqL (l := l) u caller Γ fn n Λ pe rest with
+    | .error e => .error e
+    | .ok (b, r) =>
+      match cs' with
+      | [] => .ok (Arms.cons b Arms.nil, r)
+      | c' :: cs'' =>
+        match r with
+        | .ifElse :: r' =>
+          match lowArmsT (l := l) u caller Γ fn n Λ pe (c' :: cs'') (bs.drop 1) r' with
+          | .error e => .error e
+          | .ok (arms, r2) => .ok (Arms.cons b arms, r2)
+        | _ => .error "lower: a match has fewer arms than cases"
+  | Γ, fn, n + 1, Λ, pe, some (lo, hi) :: cs', bs, rest =>
+    match lowSeqL (l := l) u caller (.int lo hi :: Γ) (fn.mitBindung (bs.headD "") (lo, hi)) n Λ pe rest with
+    | .error e => .error e
+    | .ok (b, r) =>
+      match cs' with
+      | [] => .ok (Arms.cons b Arms.nil, r)
+      | c' :: cs'' =>
+        match r with
+        | .ifElse :: r' =>
+          match lowArmsT (l := l) u caller Γ fn n Λ pe (c' :: cs'') (bs.drop 1) r' with
+          | .error e => .error e
+          | .ok (arms, r2) => .ok (Arms.cons b arms, r2)
+        | _ => .error "lower: a match has fewer arms than cases"
 
 /-- The arms of a reason match: `m` blocks, one per reason, separated by `ifElse`; the marker that closes the
     match is left to the caller. -/
@@ -586,6 +676,23 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
   | _, _, _ + 1, _, _, .bindElse .. :: _ =>
     .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
+    | .error err => .error err
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error err => .error err
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindSum x sidx v :: rest =>
+    if hs : sidx < u.sums.length then
+      match lowSVal u Γ Λ fn 0 sidx hs v with
+      | .error e => .error e
+      | .ok ev =>
+        match lowEndL (l := l) u caller (.sum (u.sums.get ⟨sidx, hs⟩).spec :: Γ)
+            (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r) => .ok (Endblock.bind ev b, r)
+    else .error "tagged type unknown"
   | Γ, fn, n + 1, Λ, pe, .matchWhyBeg e :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.matchWhyBeg e) rest with
     | .error err => .error err
@@ -714,6 +821,23 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
   | _, _, _ + 1, .bindElse .. :: _, _ =>
     .error "lower: a let else at the top level of a body has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, (.matchTagBeg sidx m bs) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.matchTagBeg sidx m bs) rest with
+    | .error err => .error err
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error err => .error err
+      | .ok ee => .ok (Endblock.cons st ee)
+  | Γ, fn, n + 1, .bindSum x sidx v :: rest, r =>
+    if hs : sidx < u.sums.length then
+      match lowSVal u Γ (resOf u caller) fn 0 sidx hs v with
+      | .error e => .error e
+      | .ok ev =>
+        match lowBodyF u caller (.sum (u.sums.get ⟨sidx, hs⟩).spec :: Γ)
+            (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) n rest r with
+        | .error e => .error e
+        | .ok ee => .ok (Endblock.bind ev ee)
+    else .error "tagged type unknown"
   | Γ, fn, n + 1, (.matchWhyBeg e) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.matchWhyBeg e) rest with
     | .error err => .error err

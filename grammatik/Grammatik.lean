@@ -175,6 +175,7 @@ import Grammatik.Parser.Elab.Proben.UebersetzeProben21
 import Grammatik.Parser.Elab.Proben.UebersetzeProben22
 import Grammatik.Parser.Elab.Proben.UebersetzeProben23
 import Grammatik.Parser.Elab.Proben.UebersetzeProben24
+import Grammatik.Parser.Elab.Proben.UebersetzeProben25
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
@@ -270,6 +271,7 @@ import Grammatik.Zielsatz.Kern.ProbenG1
 import Grammatik.Zielsatz.Kern.ProbenW1
 import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeSum
 import Grammatik.Parser.Elab.UebersetzeAllg3
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Logik.Fortschritt.Fortschritt

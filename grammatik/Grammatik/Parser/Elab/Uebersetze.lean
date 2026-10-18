@@ -108,6 +108,12 @@ inductive UOpt
   | tab : String → String → UIdx → UOpt
   deriving DecidableEq, Repr
 
+/-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
+inductive USVal
+  | fall : Nat → Option USide → USVal
+  | var : String → USVal
+  deriving DecidableEq, Repr
+
 /-- A call argument: a pointer variable passed through
     (`var`), a fresh `rw`-to-`r` pointer to a table with the
     callee's rights (`freshPtr`, the pass-a-fresh-pointer idiom
@@ -134,6 +140,8 @@ inductive URet
   | opt : UOpt → URet
   /-- `return R::C;` at a function with the reason channel `R`: the position of the case `C` (`retWhy`). -/
   | why : Nat → URet
+  /-- A tagged value as the result. -/
+  | sum : USVal → URet
   deriving DecidableEq, Repr
 
 /-- One body statement: a slot write through a pointer (`assign`)
@@ -183,6 +191,12 @@ inductive UStmt
   /-- `let i = alloc A (v) else { .. };` (`Block.arenaAlloc`, sugar over `narrow`): `allocBeg i A v`, the
       statements of the full-arena branch with its ender, `blkEnd`; the rest reads `i` as an index into `A`. -/
   | allocBeg : String → String → USide → UStmt
+  /-- `let x = v;` of a tagged value, `T` the position of its declaration. -/
+  | bindSum : String → Nat → USVal → UStmt
+  /-- `match m { C => { .. } .. }` over a tagged value (`Stmt.onTag`): `matchTagBeg T m binders`, one arm per case in
+      declaration order (each its statements with its ender; `binders` names the payload variable of a case with
+      a payload, empty otherwise), separated by `ifElse`, closed by `blkEnd`. -/
+  | matchTagBeg : Nat → String → List String → UStmt
   /-- `let x = f(..) else (e) { .. };` (`Block.bindCallElse`): `bindElse x f args e`, the statements of the
       `else` branch (an end block, `e` bound as the reason) with its ender, `blkEnd`. -/
   | bindElse : String → String → List UArg → String → UStmt
@@ -277,6 +291,16 @@ structure UWhy where
   cases : List String
   deriving DecidableEq, Repr
 
+/-- A `tagged type` declaration: its cases in order, each with the range of its payload or none
+    (`Ty.sum` of their specifications). -/
+structure USum where
+  name : String
+  cases : List (String × Option (Int × Int))
+  deriving DecidableEq, Repr
+
+/-- The specification of a tagged type: the payload range of each case (`Ty.sum cs`). -/
+def USum.spec (s : USum) : List (Option (Int × Int)) := s.cases.map (·.2)
+
 /-- A parameter kind: a pointer to a table, an index into one,
     or a plain integer range (kept beside the `Ty` so an index
     parameter stays recognizable after `Ty.index` unfolds it to
@@ -291,6 +315,8 @@ inductive UParamArt
   | opt : Nat → UParamArt
   /-- A reason (`Ty.why n`): the reason bound by `let .. else (e) { .. }`, `n` the position of its declaration. -/
   | why : Nat → UParamArt
+  /-- A value of a tagged type (`Ty.sum`), `n` the position of its declaration. -/
+  | sum : Nat → UParamArt
   deriving DecidableEq, Repr
 
 /-- The elaboration context of one function body or contract:
@@ -328,6 +354,10 @@ structure UCtx where
   whys : List UWhy := []
   /-- The reason channel of the function (`-> T or R`): the position of `R` and its number of cases. -/
   kanal : Option (Nat × Nat) := none
+  /-- The unit's `tagged type` declarations, in order. -/
+  sums : List USum := []
+  /-- The result is a tagged type: its position and its specification. -/
+  resSum : Option (Nat × List (Option (Int × Int))) := none
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -342,6 +372,8 @@ structure UFn where
   resBool : Bool := false
   /-- The result is `option index into T`: the number and the count of `T` (then `res` is `none`). -/
   resOpt : Option (Nat × Int) := none
+  /-- The result is a tagged type: its position and its specification (then `res` is `none`). -/
+  resSum : Option (Nat × List (Option (Int × Int))) := none
   /-- The number of reasons of the channel `-> T or R` (`Signatur.gruende`), 0 without a channel. -/
   gruende : Nat := 0
   held : List String
@@ -368,6 +400,10 @@ def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
   | .bool => f.mitBindungB x
   | _ => f
 
+/-- The scope after `let x` of a tagged value of the type at `num` with the specification `cs`. -/
+def UFn.mitSum (f : UFn) (x : String) (num : Nat) (cs : List (Option (Int × Int))) : UFn :=
+  { f with params := (x, Ty.sum cs) :: f.params, kinds := .sum num :: f.kinds }
+
 /-- The scope after `let x` of an option value over the table `num` of `cnt` slots. -/
 def UFn.mitOpt (f : UFn) (x : String) (num : Nat) (cnt : Int) : UFn :=
   { f with params := (x, Ty.opt cnt) :: f.params, kinds := .opt num :: f.kinds }
@@ -381,7 +417,10 @@ def UFn.ergTy (f : UFn) : Option Ty :=
   if f.resBool then some Ty.bool else
   match f.resOpt with
   | some (_, n) => some (Ty.opt n)
-  | none => f.res.map fun r => .int r.1 r.2
+  | none =>
+    match f.resSum with
+    | some (_, cs) => some (Ty.sum cs)
+    | none => f.res.map fun r => .int r.1 r.2
 
 /-- One foreign body (`extern fn`, `D.Ax`): its parameters and its answer (`none`, a number, a truth value or
     `never`); it writes nothing. -/
@@ -403,6 +442,8 @@ structure UProg where
   annahmen : List String := []
   /-- The `reason` declarations, in order. -/
   whys : List UWhy := []
+  /-- The `tagged type` declarations, in order. -/
+  sums : List USum := []
   /-- The roots of every `start { .. };` of a body, each once, in body order: the threads created at run time
       (`Einheit.gestartet`; the checker Bool judges them as pool routines, they stand twice in `Einheit.ws`). -/
   gestartet : List String := []
@@ -1187,6 +1228,8 @@ structure UFnKopf where
   resOpt : Option (Nat × Int) := none
   /-- The reason channel: the position of `R` among the unit's reasons and its number of cases. -/
   kanal : Option (Nat × Nat) := none
+  /-- The result is a tagged type: its position and its specification. -/
+  resSum : Option (Nat × List (Option (Int × Int))) := none
   bits : List Nat := []
   held : List String
   /-- The statics it writes. -/
@@ -1211,7 +1254,7 @@ def uParamBreite : STyp → Nat
   | _ => 0
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
-def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) :
+def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := []) :
     String × STyp → Except String (String × Ty × UParamArt)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
@@ -1233,6 +1276,16 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) :
     match uTabNr tabs t with
     | .error e => .error e
     | .ok (num, c) => .ok (n, .opt c, .opt num)
+  | (n, .atom a) =>
+    match sums.findIdx? (fun s => strEq s.name a) with
+    | .some k =>
+      match sums[k]? with
+      | .some s => .ok (n, Ty.sum s.spec, UParamArt.sum k)
+      | .none => .error ("type unknown: " ++ a)
+    | .none =>
+      match uTyp alias tabs (.atom a) with
+      | .error e => .error e
+      | .ok ty => .ok (n, ty, .int)
   | (n, t) =>
     match uTyp alias tabs t with
     | .error e => .error e
@@ -1408,14 +1461,15 @@ def uEindeutig (xs : List String) : List String :=
     Returns the head and the written tables. -/
 def elabKopf (_consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) : FnSig → Except String (UFnKopf × List String)
+    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := []) :
+    FnSig → Except String (UFnKopf × List String)
   | { art, name, params, res, fehler, klauseln } =>
     if !strEq art "impl" then .error "fn is not impl"
     else
       match uOhneKlauselForm klauseln with
       | .error e => .error e
       | .ok _ =>
-        match uSeq (params.map (uParam alias tabs)) with
+        match uSeq (params.map (uParam alias tabs sums)) with
         | .error e => .error e
         | .ok ps =>
           let names := ps.map (·.1)
@@ -1455,6 +1509,16 @@ def elabKopf (_consts : List (String × Int))
                 match uTabNr tabs tn with
                 | .error e => .error e
                 | .ok (num, c) => .ok ({ kopf with resOpt := some (num, c) }, puts)
+              | .some (.atom a) =>
+                match sums.findIdx? (fun s => strEq s.name a) with
+                | .some k =>
+                  match sums[k]? with
+                  | .some s => .ok ({ kopf with resSum := some (k, s.spec) }, puts)
+                  | .none => .error ("type unknown: " ++ a)
+                | .none =>
+                  match uErgBereich alias (.atom a) with
+                  | .error e => .error e
+                  | .ok r => .ok ({ kopf with res := .some r }, puts)
               | .some t =>
                 match uErgBereich alias t with
                 | .error e => .error e
@@ -1496,6 +1560,46 @@ def uOpt (ctx : UCtx) (num : Nat) : SExpr → Except String UOpt
     match uOptEin ctx e with
     | .error x => .error x
     | .ok (o, m) => if m == num then .ok o else .error "option of a foreign table"
+
+/-- A tagged value read off an expression, with the position of its type: a variable, a payload-free case or a
+    case with a payload. -/
+def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
+  | .variable v =>
+    match uParamNr ctx v with
+    | .ok j =>
+      match uArtBei ctx.kinds j with
+      | .ok (.sum s) => .ok (.var v, s)
+      | _ => .error "tagged value without G form"
+    | .error _ =>
+      match ctx.sums.findIdx? (fun s => s.cases.any (fun c => strEq c.1 v && c.2.isNone)) with
+      | .none => .error ("name unknown: " ++ v)
+      | .some k =>
+        match ctx.sums[k]? with
+        | .none => .error "tagged type unknown"
+        | .some s =>
+          match s.cases.findIdx? (fun c => strEq c.1 v) with
+          | .some i => .ok (.fall i .none, k)
+          | .none => .error ("name unknown: " ++ v)
+  | .call c [a] =>
+    match ctx.sums.findIdx? (fun s => s.cases.any (fun x => strEq x.1 c && x.2.isSome)) with
+    | .none => .error "tagged value without G form"
+    | .some k =>
+      match ctx.sums[k]? with
+      | .none => .error "tagged type unknown"
+      | .some s =>
+        match s.cases.findIdx? (fun x => strEq x.1 c) with
+        | .none => .error "tagged value without G form"
+        | .some i =>
+          match uWertBody ctx a with
+          | .error e => .error e
+          | .ok sd => .ok (.fall i (.some sd), k)
+  | _ => .error "tagged value without G form"
+
+/-- A tagged value of the type at `sidx`. -/
+def uSVal (ctx : UCtx) (sidx : Nat) (e : SExpr) : Except String USVal :=
+  match uSValEin ctx e with
+  | .error x => .error x
+  | .ok (v, k) => if k == sidx then .ok v else .error "tagged value of a foreign type"
 
 /-- One call argument against the callee's parameter kind (the
     `tr_arg` of `lean_g.rs`): a pointer variable through, a
@@ -1890,7 +1994,13 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
       | .ok b => .ok (.bindB x b, boolCtx)
       | .error _ =>
         match uOptEin ctx e with
-        | .error _ => .error err
+        | .error _ =>
+          match uSValEin ctx e with
+          | .error _ => .error err
+          | .ok (sv, k) =>
+            match ctx.sums[k]? with
+            | .none => .error err
+            | .some sm => .ok (.bindSum x k sv, uMitLokal ctx x (UParamArt.sum k) (Ty.sum sm.spec) muts)
         | .ok (o, num) =>
           match ctx.tabs[num]? with
           | .none => .error err
@@ -1912,9 +2022,21 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     callee's result type (`Block.bindCall`; a range annotation must contain the result range). -/
 def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool) (x : String)
     (t : Option STyp) (e : SExpr) : Except String (UStmt × UCtx) :=
+  match (match t with | .some (.atom a) => ctx.sums.findIdx? (fun (s : USum) => strEq s.name a) | _ => none : Option Nat) with
+  | .some k =>
+    if mu then .error "let mut of a tagged value without G form"
+    else
+      match ctx.sums[k]? with
+      | .none => .error "tagged type unknown"
+      | .some sm =>
+        match uSVal ctx k e with
+        | .error err => .error err
+        | .ok sv =>
+          .ok (.bindSum x k sv, uMitLokal ctx x (UParamArt.sum k) (Ty.sum sm.spec) (ctx.muts.filter (fun m => !strEq m x)))
+  | .none =>
   match e with
   | .call c args =>
-    match koepfe.find? (fun k => strEq k.name c) with
+    match koepfe.find? (fun (k : UFnKopf) => strEq k.name c) with
     | .none => uBindWertAllg ctx mu x t e
     | .some _ =>
       if mu then .error "let mut of a call without G form"
@@ -1961,11 +2083,11 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
   | .none =>
     match ctx.res with
     | .some _ => .error "fn with a result falls off"
-    | .none => if ctx.resBool || ctx.resOpt.isSome then .error "fn with a result falls off" else .ok .empty
+    | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome then .error "fn with a result falls off" else .ok .empty
   | .some (.ret .none) =>
     match ctx.res with
     | .some _ => .error "return without value with result"
-    | .none => if ctx.resBool || ctx.resOpt.isSome then .error "return without value with result" else .ok .empty
+    | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome then .error "return without value with result" else .ok .empty
   | .some (.ret (.some (.why r c))) =>
     match ctx.kanal, ctx.whys.findIdx? (fun w => strEq w.name r) with
     | .some (k, _), .some j =>
@@ -1980,6 +2102,12 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
     | .none, _ => .error "return of a reason without a reason channel"
     | _, .none => .error ("reason unknown: " ++ r)
   | .some (.ret (.some v)) =>
+    match ctx.resSum with
+    | .some (sidx, _) =>
+      match uSVal ctx sidx v with
+      | .error e => .error e
+      | .ok sv => .ok (.sum sv)
+    | .none =>
     match ctx.resOpt with
     | .some (num, _) =>
       match uOpt ctx num v with
@@ -2090,11 +2218,41 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           match uParamNr ctx e with
           | .ok j =>
             match uArtBei ctx.kinds j with
-            | .ok (.why num) => some (e, num)
+            | .ok (.why num) => some (e, 0, num)
+            | .ok (.sum num) => some (e, 1, num)
             | _ => none
           | .error _ => none
-        | _ => none : Option (String × Nat)) with
-    | .some (e, num) =>
+        | _ => none : Option (String × Nat × Nat)) with
+    | .some (e, 1, num) =>
+      match ctx.sums[num]? with
+      | .none => .error "tagged type unknown"
+      | .some sm =>
+        if arms.length != sm.cases.length then .error "match arms without G form"
+        else
+        match uSeq (sm.cases.map fun (cn, pl) =>
+            match arms.find? (fun a => match a with | .arm n _ _ => strEq n cn | _ => false) with
+            | .some (.arm _ bnd (.block ss en)) =>
+              match (match pl, bnd with
+                  | .none, .none => some (ctx, "")
+                  | .some (lo, hi), .some k =>
+                    some (uMitLokal ctx k UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m k)), k)
+                  | _, _ => none : Option (UCtx × String)) with
+              | .none => .error "match arm payload without G form"
+              | .some (cx, k) =>
+                match uAnwReihe tabs koepfe f cx ss with
+                | .error err => .error err
+                | .ok (bd, ctxB) =>
+                  match uEndeStmt ctxB en with
+                  | .error err => .error err
+                  | .ok endS => .ok (k, bd ++ endS)
+            | _ => .error "match arms without G form") with
+        | .error err => .error err
+        | .ok arme =>
+          match uAnwReihe tabs koepfe f ctx rest with
+          | .error err => .error err
+          | .ok (ys, cE) =>
+            .ok ([UStmt.matchTagBeg num e (arme.map (·.1))] ++ uMitTrenner (arme.map (·.2)) ++ [UStmt.blkEnd] ++ ys, cE)
+    | .some (e, _, num) =>
       match ctx.whys[num]? with
       | .none => .error "reason unknown"
       | .some w =>
@@ -2336,29 +2494,31 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
-    (fname : String) (annahmen : List String := []) (whys : List UWhy := []) : UCtx :=
+    (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
-    fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal }
+    fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
+    resSum := kopf.resSum }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
 def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
-    (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) : Except String UFn :=
-  match elabKopf consts alias tabs locks globs whys sig with
+    (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := []) :
+    Except String UFn :=
+  match elabKopf consts alias tabs locks globs whys sums sig with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys
+    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, body, r) =>
       .ok { name := sig.name,
             params := kopf.names.zip kopf.types,
             kinds := kopf.kinds,
-            res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
+            res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
             gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
             puts := schreibt, gputs := kopf.gputs, gives, body, ret := r }
 
@@ -2564,6 +2724,80 @@ def uStartNamen : Nat → SAnw → List String
 def uOhneDoppelte (xs : List String) : List String :=
   xs.foldl (fun acc x => if acc.any (fun y => strEq y x) then acc else acc ++ [x]) []
 
+/-- The numeral a token list is. -/
+def uZahlTok : List Token → Option Int
+  | [.num n] => some (Int.ofNat n)
+  | [.zeichen "-", .num n] => some (-(Int.ofNat n))
+  | _ => none
+
+/-- A payload type: a type word, or `T in lo .. hi`. -/
+def uNutzTyp (alias : List (String × (Int × Int))) : List Token → Except String (Int × Int)
+  | [.ident n] => uTypName alias n
+  | [.wort n] => uTypName alias n
+  | ts =>
+    match uTeileBereich [] ts with
+    | some (_ :: .wort "in" :: lo, ex, hi) =>
+      match uZahlTok lo, uZahlTok hi with
+      | some a, some b => .ok (a, if ex then b - 1 else b)
+      | _, _ => .error "payload range without G form"
+    | _ => .error "payload type without G form"
+
+/-- The tokens up to the closing parenthesis, and the rest behind it. -/
+def uBisKlammer : List Token → List Token → Option (List Token × List Token)
+  | _, [] => none
+  | acc, .zeichen ")" :: rest => some (acc.reverse, rest)
+  | acc, t :: rest => uBisKlammer (t :: acc) rest
+
+/-- The cases of a tagged type from its tokens (`Leer , Kurz ( u32 in 0 .. 100 )`), `fuel` bounds the length. -/
+def uSumFaelle (alias : List (String × (Int × Int))) :
+    Nat → List Token → Except String (List (String × Option (Int × Int)))
+  | 0, _ => .error "tagged type too long"
+  | _, [] => .ok []
+  | f + 1, .ident n :: .zeichen "," :: rest =>
+    match uSumFaelle alias f rest with
+    | .error e => .error e
+    | .ok r => .ok ((n, none) :: r)
+  | _ + 1, [.ident n] => .ok [(n, none)]
+  | f + 1, .ident n :: .zeichen "(" :: rest =>
+    match uBisKlammer [] rest with
+    | none => .error "tagged case without G form"
+    | some (ty, rest2) =>
+      match uNutzTyp alias ty with
+      | .error e => .error e
+      | .ok r =>
+        match rest2 with
+        | [] => .ok [(n, some r)]
+        | .zeichen "," :: rest3 =>
+          match uSumFaelle alias f rest3 with
+          | .error e => .error e
+          | .ok more => .ok ((n, some r) :: more)
+        | _ => .error "tagged case without G form"
+  | _ + 1, _ => .error "tagged case without G form"
+
+/-- The `tagged type` items of a unit. -/
+def uSums (alias : List (String × (Int × Int))) : List SItemTief → Except String (List USum)
+  | [] => .ok []
+  | .typeT ["tagged"] n _ _ (.some (.raw txt)) :: rest =>
+    match lex txt with
+    | .error _ => .error "tagged type without G form"
+    | .ok toks0 =>
+      let toks := toks0.filter (fun k => match k with | .ende => false | _ => true)
+      match toks with
+      | .zeichen "{" :: inner =>
+        match inner.reverse with
+        | .zeichen "}" :: rev =>
+          match uSumFaelle alias 10000 rev.reverse with
+          | .error e => .error e
+          | .ok cs =>
+            if cs.isEmpty then .error "tagged type without cases"
+            else
+              match uSums alias rest with
+              | .error e => .error e
+              | .ok r => .ok ({ name := n, cases := cs } :: r)
+        | _ => .error "tagged type without G form"
+      | _ => .error "tagged type without G form"
+  | _ :: rest => uSums alias rest
+
 /-- The `reason` items of a unit: the names of their cases in order; a reason that is not `exhaustive` has no
     G form (`Ty.why n` has exactly `n` reasons). -/
 def uWhys : List SItemTief → Except String (List UWhy)
@@ -2609,7 +2843,10 @@ def elabU : List SItemTief → Except String UProg
     match uWhys ms with
     | .error e => .error e
     | .ok whys =>
-    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys s)) with
+    match uSums alias ms with
+    | .error e => .error e
+    | .ok sums =>
+    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s)) with
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
@@ -2618,7 +2855,7 @@ def elabU : List SItemTief → Except String UProg
     | .ok axKoepfe =>
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
-    match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys)) with
+    match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums)) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln fns ms with
@@ -2630,7 +2867,7 @@ def elabU : List SItemTief → Except String UProg
     | .ok gestartet =>
       .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs, gestartet,
             axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg }),
-            annahmen, whys }
+            annahmen, whys, sums }
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -2916,7 +3153,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
-  | [], .bool _ | [], .opt _ | [], .why _ => .error "truth value returned without result"
+  | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs names types b f ix v with
@@ -2932,7 +3169,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2945,7 +3182,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
-  | [], .bool _ | [], .opt _ | [], .why _ => .error "truth value returned without result"
+  | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs names types b f ix v with
@@ -2969,7 +3206,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
@@ -3321,7 +3558,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
