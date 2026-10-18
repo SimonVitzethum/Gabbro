@@ -12,7 +12,7 @@
   linked `2 -> 0` (list) respectively `2` the root with the single child `0` (tree). The planted defect: the same
   list while slot `2` is ALSO on the free list -- the model rejects it (`liste_defekt_bricht`).
 -/
-import Grammatik.Bausteine.Arena.ArenaBaumWelt
+import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
 
 namespace Gabbro.Grammatik
 
@@ -110,6 +110,7 @@ def LG : LinkKopf FA where
   hg := rfl
   h1 := by decide
   h2 := by decide
+  h3 := by decide
 
 /-- The right child link (field `3`). -/
 def RR : LinkFeld FA where

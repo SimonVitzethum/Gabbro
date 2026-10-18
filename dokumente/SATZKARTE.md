@@ -5159,7 +5159,7 @@ NOT proved: `match` (`onOption`, `onTag`, `onWhy`: needs the types `opt`, `sum`,
 
 ## 79. Invariants over live slots: `ListOk`, `BaumOk` and the allocator (Phase A step 2, 2026-10-18, `PLAN-DYNAMISCH.md` 8a.1)
 
-`grammatik/Grammatik/Bausteine/Arena/` (ArenaKette, ArenaBaum, ArenaLebt, ArenaFremd, ArenaListe, ArenaBaumWelt, ArenaDynZeuge).
+`grammatik/Grammatik/Bausteine/Arena/Struktur/` (ArenaKette, ArenaBaum, ArenaLebt, ArenaFremd, ArenaListe, ArenaBaumWelt, ArenaDynZeuge; second pass below: ArenaAuf, ArenaAllocForm, ArenaLinkForm, ArenaBaumForm, ArenaWachs, ArenaFormZeuge, ArenaErkenner, ArenaErkennerLemmas, ArenaErkennerBeweis, ArenaErkennerZeuge, ArenaSibling, ArenaHash).
 Links are indices into one arena table, `count` is the nil marker. A slot is LIVE when it is below the used counter and
 not on the free list (`Lebt`). `ListOk`/`BaumOk` say: the chain/tree from the head/root exists (finite, links in range),
 its slots are pairwise distinct (acyclic list, tree shape) and every one is live.
@@ -5174,6 +5174,23 @@ its slots are pairwise distinct (acyclic list, tree shape) and every one is live
 | `baum_frisch`, `baum_nimm`, `baum_frei`, `baum_einfuegen_*`, `baum_blatt_aus_*`, `baum_frei_nach_blatt` | `ArenaBaumWelt` | likewise |
 | witnesses `pop_zeuge`, `einfuegen_zeuge`, `nimm_zeuge` (executed), `listOk_w0`, `baumOk_w0`, `freiOk_w0`; defect `liste_defekt_bricht` | `ArenaDynZeuge` | none (a concrete full arena, slot 1 on the free list) |
 
-NOT proved: executed forms of the link stores, the recognizer from `Akzeptiert` to the move hypotheses for every accepted
-body, sibling consistency (O6), hash chains, `grow` composed with the moves, concurrency (design note 8a.2). These
-modules are not imported by `Zielsatz/`; `Spec.lean` unchanged (the diff is a proposal in 8a.3); `gabbro_ziel` untouched.
+Second pass (2026-10-18, `PLAN-DYNAMISCH.md` 8a.1):
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| executed link forms `Block.linkPush/linkPop/linkUnlink/linkKopfBind/linkNachBind`; `linkPush/Pop/Unlink_ausfuehren` (the store facts, for ANY continuation); `liste_push_zug`, `liste_pop_zug`, `liste_unlink_zug` (the list invariant ON THE EXECUTED BLOCK, plus the new head/link and which slots are members); guard failure `linkPop_voll`, `linkUnlink_voll`, `linkKopfBind_voll`, `linkNachBind_voll` | `ArenaLinkForm` | live unlinked slot / non-empty list / member `p` (each a fact of the abstract state in the recognizer) |
+| executed tree forms `Block.blattEin/blattAus` (left, right); `blattEin_ausfuehren`, `blattAus_ausfuehren`; `baum_einfuegen_links/rechts_zug`, `baum_blatt_aus_links/rechts_zug` | `ArenaBaumForm` | member `p`, empty child place, live slot not in the tree, leaf (hypotheses on the world BEFORE the move); the two child fields are two fields |
+| `LinkKopf.h3`, `Fremd` names `komm`; `nachGrow_gleich`; `grow_liste`, `grow_baum` (the executed `grow` keeps `FreiOk`, every liveness, `ListOk`/`BaumOk`); `dynGrow_voll` | `ArenaWachs`, `ArenaListe`, `ArenaFremd` | committed word + `n` within the ceiling (what `narrow` decides) |
+| `Block.freiVar` (`free` of any bound index), `freiVar_ausfuehren`, `freiVar_lebt`; `arenaRumpf_ausfuehren`, `frischAlloc_ausfuehren`, `frischAlloc_voll`, `nimmAlloc_fakten`, `nimmAlloc_ausfuehren`, `nimmAlloc_voll` | `ArenaAllocForm` | `FreiOk`; the slot live; `stand < count` / `kopf < count` |
+| `auf_push_vor/nach/kopf`, `auf_pop_vor`, `auf_unlink_vor`: who is on the chain after a move | `ArenaAuf` | the hypotheses of `push_ok`/`pop_ok`/`unlink_ok` |
+| **the recognizer** `Erk`, `Rein`, `StrukturPasst`, `StrukturOk`, `StrukturPost`; **`erk_erhaelt`**, **`erk_koerper`**: every accepted list body keeps the structure invariant at EVERY exit and meets its abstract state when it falls off | `ArenaErkenner`, `ArenaErkennerLemmas`, `ArenaErkennerBeweis` | `StrukturOk` and `StrukturPasst a` at entry (`StrukturPasst Abs.leer` is trivial for a function) |
+| witnesses: `nimmPush_konkret`, `kopfUnlinkFrei_konkret` (accepted bodies RUN on the real arena), the forms RUN (`push_zeuge`, `pop_zeuge'`, `unlink_zeuge`, `blattEin_zeuge`, `blattAus_zeuge`, `grow_zeuge`); planted defects with NO derivation: `nimmPushPush_abgelehnt`, `nimmFreiFrei_abgelehnt`, `nimmFreiPush_abgelehnt`, `pushFremd_abgelehnt` (through `erk_koerper` and a real run that breaks the invariant: `liste_schleife_bricht`, `FreiForm.schleife_bricht`, `liste_freigegeben_bricht`) | `ArenaErkennerZeuge`, `ArenaFormZeuge` | none |
+| sibling consistency `SibF`; `einfuegen_mitglieder`, `einfuegen_rechts_mitglieder`, `blatt_aus_mitglieder`; `sib_einfuegen_links/rechts`, `sib_blatt_aus_links/rechts`; `sib_ohne_vater_bricht`; witness `sib_einfuegen_zeuge`, defect `sib_defekt_bricht` | `ArenaSibling` | the parent store of the move; abstract link functions |
+| hash chains `HashOkF`; `hash_push` (slot on no bucket), `hash_pop`, `hash_unlink`; witness `hash_push_zeuge`, defect `hash_defekt_bricht` | `ArenaHash` | abstract link function, bucket heads as a function |
+
+NOT proved: the recognizer for TREE bodies and for bodies with loops; the recognizer is not a component of `Akzeptiert` and
+no generic statement says every accepted unit's structure writers are `Erk`-derivable (8a.3 stays a proposal); executed forms for the
+parent store, `revoke` (a subtree) and a bucket head held in a table field (sibling consistency and hash chains are proved over
+abstract link functions only); a copy of an owned index (alias) and any other store into a link field have no derivation;
+concurrency (design note 8a.2). These modules are not imported by `Zielsatz/`; `Spec.lean` unchanged (the diff is a proposal in 8a.3);
+`gabbro_ziel` untouched.
