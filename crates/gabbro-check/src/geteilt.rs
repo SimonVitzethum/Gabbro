@@ -107,6 +107,10 @@ struct Rufwissen<'a> {
     g: &'a crate::aufrufgraph::Graph,
     verlangt: &'a BTreeMap<String, Vec<(String, bool)>>,
     modul: &'a str,
+    /// The locks the function being walked holds BY SIGNATURE (`requires Held(L[, shared])`),
+    /// with their strength (`true` = shared). The model's `Stmt.locks` and `RufPasst` read the
+    /// held list `Λ` of a body, and a signature-held lock stands in it from the first statement.
+    fest: Vec<(String, bool)>,
     /// **Where `nimmt` gets its locks from -- and the two answers are not the same.**
     ///
     /// `None` is today's basis: the hull over the DECLARED `effects`. `Some(..)` is the
@@ -285,7 +289,11 @@ pub fn pass_mit(
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let rw = Rufwissen { u: &u, g: &g, verlangt: &verlangt, modul, abgeleitet };
+        let mut fest: Vec<(String, bool)> = Vec::new();
+        for p in &f.requires {
+            crate::aufrufgraph::held_aus_pred(p, &mut fest);
+        }
+        let rw = Rufwissen { u: &u, g: &g, verlangt: &verlangt, modul, fest, abgeleitet };
         block(b, &[], &[], &[], &sperren, &rw, &mut geteilt_genommen, absagen);
     });
 
@@ -406,6 +414,7 @@ pub fn pass_mit(
             crate::aufrufgraph::held_aus_pred(p, &mut h);
             da.extend(h.into_iter().map(|(n, _)| n));
         }
+        let zt = zeigerziele(f);
         let rh = Rufhalte {
             u: &u,
             g: &g,
@@ -414,6 +423,7 @@ pub fn pass_mit(
             rcu: &rcu_domaenen,
             modul,
             wo: &f.name.text,
+            zt: &zt,
         };
         schutz(b, &da, &[], &rh, absagen);
         });
@@ -1191,7 +1201,8 @@ fn h020(
             crate::aufrufgraph::held_aus_pred(p, &mut h);
             verlangt.extend(h.into_iter().map(|(n, _)| n));
         }
-        h020_block(b, &[], &linie, &verlangt, sperren, rcu, &f.name.text, absagen);
+        let zt = zeigerziele(f);
+        h020_block(b, &[], &linie, &verlangt, sperren, rcu, &f.name.text, &zt, absagen);
     });
 }
 
@@ -1205,10 +1216,11 @@ fn h020_block(
     sperren: &BTreeMap<String, Sperre>,
     rcu: &BTreeMap<String, Vec<String>>,
     wo: &str,
+    zt: &BTreeMap<String, String>,
     absagen: &mut Absagen,
 ) {
     let pruefe = |o: &Ort, absagen: &mut Absagen| {
-        let t = o.text();
+        let t = platz_text(o, zt);
         // RCU-touching writes stay `H010`'s, even line-covered ones -- one missing
         // guard draws one refusal, and `H010` gives the better message.
         if rcu
@@ -1240,7 +1252,7 @@ fn h020_block(
                 o.span,
                 format!(
                     "`{t}` is protected by `{sperre}`, and no guard is held at this \
-                     write -- the `locks {sperre}` line covers `{wo}`, not this site"
+                     access -- the `locks {sperre}` line covers `{wo}`, not this site"
                 ),
             )
             .mit_notiz(
@@ -1259,24 +1271,44 @@ fn h020_block(
             StmtArt::Sperrt(l) => {
                 let mut tiefer = offen.to_vec();
                 tiefer.push(l.sperre.text());
-                h020_block(&l.rumpf, &tiefer, linie, verlangt, sperren, rcu, wo, absagen);
+                h020_block(&l.rumpf, &tiefer, linie, verlangt, sperren, rcu, wo, zt, absagen);
             }
             // **`observes` holds NOTHING, but the walker still enters** -- the same
             // blind-spot reasoning as at `H007`: a write hiding in a read block is
             // still a write.
             StmtArt::Observiert(o) => {
-                h020_block(&o.rumpf, offen, linie, verlangt, sperren, rcu, wo, absagen);
+                h020_block(&o.rumpf, offen, linie, verlangt, sperren, rcu, wo, zt, absagen);
             }
-            StmtArt::Zuweisung(z) => pruefe(&z.ziel, absagen),
-            StmtArt::Publish(p) => pruefe(&p.ziel, absagen),
+            // A READ is an access like a write (`Expr.slot`/`Expr.glob` carry the same `darf` as
+            // `assignSlot`/`assignGlob`): the line covers the function, not the site.
+            StmtArt::Zuweisung(z) => {
+                pruefe(&z.ziel, absagen);
+                orte_in(&z.wert, &mut |o| pruefe(o, absagen));
+            }
+            StmtArt::Publish(p) => {
+                pruefe(&p.ziel, absagen);
+                orte_in(&p.wert, &mut |o| pruefe(o, absagen));
+            }
             StmtArt::Exchange(e) => pruefe(&e.ort, absagen),
+            StmtArt::Let(l) => orte_in(&l.wert, &mut |o| pruefe(o, absagen)),
+            StmtArt::Return(Some(x)) => orte_in(x, &mut |o| pruefe(o, absagen)),
+            StmtArt::Ruf(r) => {
+                for a in &r.argumente {
+                    orte_in(a, &mut |o| pruefe(o, absagen));
+                }
+            }
+            StmtArt::Wenn(w) => {
+                for (bed, _) in &w.zweige {
+                    orte_in(bed, &mut |o| pruefe(o, absagen));
+                }
+            }
             _ => {}
         }
         // `locks` and `observes` walked above already -- they carry the changed state
         // (or the unchanged one, for `observes`), like in `schutz` in this file.
         if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_)) {
             for k in crate::unterbloecke(s) {
-                h020_block(k, offen, linie, verlangt, sperren, rcu, wo, absagen);
+                h020_block(k, offen, linie, verlangt, sperren, rcu, wo, zt, absagen);
             }
         }
     }
@@ -1420,7 +1452,7 @@ fn schutz(
         })
     };
     let pruefe = |o: &Ort, absagen: &mut Absagen| {
-        let t = o.text();
+        let t = platz_text(o, rh.zt);
         let Some(sperre) = deckt(&t) else { return };
         if da.iter().any(|d| d == &sperre) {
             return;
@@ -1657,6 +1689,8 @@ struct Rufhalte<'a> {
     rcu: &'a BTreeMap<String, Vec<String>>,
     modul: &'a str,
     wo: &'a str,
+    /// Pointer parameters of the function walked, with the table each names (`zeigerziele`).
+    zt: &'a BTreeMap<String, String>,
 }
 
 impl Rufhalte<'_> {
@@ -1980,6 +2014,34 @@ fn block(
         match &s.art {
             StmtArt::Sperrt(l) => {
                 let name = l.sperre.text();
+                // **`N588` -- a lock taken while the body already holds it exclusively.**
+                // Equal rank is no order, and the same lock is the first case of equal rank:
+                // `Stmt.locks` demands every held lock to rank STRICTLY below the one taken
+                // (`hr`), so the nested take is no term of the model -- it is a self-deadlock.
+                // The held exclusive set is the enclosing exclusive blocks and the locks of
+                // `requires Held(L)`; shared outers are `H003`'s (the upgrade), not this rule's.
+                let schon_exklusiv = exklusiv.contains(&name)
+                    || rw.fest.iter().any(|(n, g)| n == &name && !*g)
+                    || (!offen.contains(&name) && kette.iter().any(|(n, _)| n == &name));
+                if schon_exklusiv {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N588",
+                            l.sperre.span,
+                            format!("`{name}` is taken here while this body already holds it"),
+                        )
+                        .mit_notiz(format!(
+                            "equal rank is no order: `{name}` is held by an enclosing `locks` \
+                             block or by `requires Held({name})`, and taking it again waits on \
+                             itself"
+                        ))
+                        .mit_notiz(
+                            "the model's `Stmt.locks` demands every held lock to rank strictly \
+                             below the one taken (`hr`); the honest form is to drop the inner \
+                             take, the lock is already held",
+                        ),
+                    );
+                }
                 if l.geteilt {
                     if !genommen.contains(&name) {
                         genommen.push(name.clone());
@@ -2012,7 +2074,7 @@ fn block(
                     block(&l.rumpf, &tiefer, &kette2, exklusiv, sperren, rw, genommen, absagen);
                 } else {
                     // S003 -- Hochstufung. Auf einer Drehsperre ist das kein Stilfehler.
-                    if offen.contains(&name) {
+                    if offen.contains(&name) || rw.fest.iter().any(|(n, g)| n == &name && *g) {
                         absagen.schiebe(
                             Absage::fehler(
                                 "H003",
@@ -2112,6 +2174,40 @@ fn schreibprobe(
 
 /// Trifft das Schreibziel `getan` den geschützten Platz `platz`? Der Platz kann als
 /// Grundname (`slots`) oder als Pfad (`c.slots`) stehen; das Ziel trägt seinen Zeiger vorn.
+/// **The table each pointer parameter of `f` names** (`p : ptr<normal, rw> T` gives `p -> T`).
+///
+/// An access THROUGH a pointer is the same access as a direct one (`Expr.thru` and
+/// `Stmt.assignThru` carry the same `darf` as `slot`): `p.slots[i].v` touches the places `T`'s
+/// lock protects. Until this map the guard rules matched the place TEXT, whose root is the
+/// parameter's name, so a pointer access passed every lock rule with no lock held.
+fn zeigerziele(f: &FnDecl) -> BTreeMap<String, String> {
+    let mut m = BTreeMap::new();
+    for p in &f.parameter {
+        if let TypExpr::Zeiger(pt) = &p.typ {
+            if let TypExpr::Pfad(pf) = &pt.ziel {
+                if let Some(t) = pf.teile.last() {
+                    m.insert(p.name.text.clone(), t.text.clone());
+                }
+            }
+        }
+    }
+    m
+}
+
+/// The place as the lock rules read it: a root that is a pointer parameter is replaced by the
+/// table it points to.
+fn platz_text(o: &Ort, zt: &BTreeMap<String, String>) -> String {
+    let t = o.text();
+    // A bare pointer name is the pointer VALUE (an argument, a copy), not an access to a slot.
+    if o.suffixe.is_empty() {
+        return t;
+    }
+    match zt.get(&o.basis.text) {
+        Some(tab) => format!("{tab}{}", &t[o.basis.text.len()..]),
+        None => t,
+    }
+}
+
 fn beruehrt(platz: &str, getan: &str) -> bool {
     let kern = platz.rsplit('.').next().unwrap_or(platz);
     getan.split(['.', '[']).any(|t| t == kern)
@@ -2158,6 +2254,71 @@ fn rufprobe(
     let Some(pfad) = r.path() else {
         return;
     };
+    // **`N587` -- a call whose callee `requires Held(L)` owes `L` held AT THE CALL.**
+    //
+    // `RufPasst` of the model reads the held list of the call site against the callee's
+    // signature: every `requires Held(L)` of the callee must stand in the caller's `Λ` -- an
+    // enclosing `locks L` block or the caller's own `requires Held(L)`. An `effects { locks L }`
+    // line of the caller is no hold (`E008` lifts the callee's lock into the caller's line, and
+    // `H011` then counts a callee whose hull carries it as redeeming it -- a circle that held
+    // nothing). Measured: `f` with `effects { locks L }` calling `ku` (`requires Held(L)`) passed
+    // with no lock taken anywhere.
+    if let Some(forderungen) = rw.forderungen(&pfad.text()) {
+        for (sperre, _) in forderungen {
+            let gehalten = kette.iter().any(|(n, _)| n == sperre)
+                || rw.fest.iter().any(|(n, _)| n == sperre);
+            if !gehalten {
+                let name = pfad.teile.last().map(|t| t.text.as_str()).unwrap_or("?");
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N587",
+                        span,
+                        format!(
+                            "`{name}` requires `Held({sperre})`, and `{sperre}` is not held at this call"
+                        ),
+                    )
+                    .mit_notiz(
+                        "held at a call counts as: an enclosing `locks` block or the caller's own \
+                         `requires Held(…)`; an `effects { locks … }` line does not hold the lock",
+                    )
+                    .mit_notiz(
+                        "the honest forms: take the lock around the call, or demand it from the \
+                         caller with `requires Held(…)`",
+                    ),
+                );
+            }
+        }
+    }
+    // **`N588` through a call** -- the callee TAKES a lock the caller already holds
+    // exclusively (a callee that only `requires` it holds it by signature, no second take).
+    {
+        let ex_gehalten = |n: &str| {
+            (kette.iter().any(|(k, _)| k == n) && !offen.iter().any(|o| o == n))
+                || rw.fest.iter().any(|(k, g)| k == n && !*g)
+        };
+        for genommen in rw.nimmt(&pfad.text()) {
+            let fordert = rw
+                .forderungen(&pfad.text())
+                .is_some_and(|f| f.iter().any(|(s, _)| s == &genommen));
+            if !fordert && ex_gehalten(&genommen) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N588",
+                        span,
+                        format!("this call takes `{genommen}` while the caller already holds it"),
+                    )
+                    .mit_notiz(format!(
+                        "equal rank is no order: the callee's effect hull takes `{genommen}`, and \
+                         it is held here by an enclosing `locks` block or by `requires Held(…)`"
+                    ))
+                    .mit_notiz(
+                        "the model's `RufPasst` demands the held locks to rank strictly below the \
+                         callee's floor; the honest form is to call it with the lock released",
+                    ),
+                );
+            }
+        }
+    }
     if !kette.is_empty() {
         for genommen in rw.nimmt(&pfad.text()) {
             let Some(neu) = sperren.get(&genommen).and_then(|x| x.rang) else {

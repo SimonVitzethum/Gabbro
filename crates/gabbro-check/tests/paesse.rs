@@ -1801,7 +1801,7 @@ fn ein_praedikat_darf_nennen_was_ein_rumpf_nicht_kann() {
             "module p {{\nstatic mut Z : u32 = 0;\n\
              lock L protects {{ Z }} rank 0 held <= 100 ops masks irqs;\n\
              impl fn f() requires {req} effects {{ writes Z, locks L }} costs <= 40 ops \
-             {{ locks L {{ Z = 1; }} }}\n}}"
+             {{ Z = 1; }}\n}}"
         )
     };
     faellt_nicht(&sperre("Held(L)"));

@@ -1,0 +1,61 @@
+// 1165 -- how a lock is held across a call, and how it is held at a pointer access (the clean side of
+// `gift/1472` .. `1477`).
+//
+// The held list of a body is the locks of its signature (`requires Held(L)`) and of the enclosing
+// `locks L { .. }` blocks -- never an `effects { locks L }` line. A callee that `requires Held(L)` is
+// called with `L` held (`N587`); a lock already held is not taken again (`N588`); an access through a
+// pointer to a protected table is an access to that table (`H007`, `H020`).
+module beispiel1165 {
+
+table T count 4 { slot { v : u32 in 0 .. 100, } }
+lock L protects { T } rank 0 held <= 100 ops;
+
+// The writer and the reader hold `L` by signature: the caller's duty.
+impl fn schreibe(p : ptr<normal, rw> T, i : index into T)
+    requires Held(L)
+    effects { writes p.slots, locks L }
+    costs <= 8 ops
+{
+    p.slots[i].v = 3;
+}
+
+impl fn lies(p : ptr<normal, r> T, i : index into T) -> u32 in 0 .. 100
+    requires Held(L)
+    effects { reads p.slots, locks L }
+    costs <= 8 ops
+{
+    return p.slots[i].v;
+}
+
+// Held by signature, passed on to a callee that requires it: no second take.
+impl fn gib_weiter(p : ptr<normal, rw> T, i : index into T)
+    requires Held(L)
+    effects { writes p.slots, locks L }
+    costs <= 40 ops
+{
+    schreibe(p, i);
+}
+
+// Not held on entry: the block takes `L` once and the callee runs inside it.
+impl fn nimm_und_schreibe(p : ptr<normal, rw> T, i : index into T)
+    effects { writes p.slots, locks L }
+    costs <= 60 ops
+{
+    locks L {
+        schreibe(p, i);
+    }
+}
+
+// A read at a site under the block, not beside it.
+impl fn nimm_und_lies(p : ptr<normal, r> T, i : index into T) -> u32 in 0 .. 100
+    effects { reads p.slots, locks L }
+    costs <= 60 ops
+{
+    locks L {
+        let x : u32 in 0 .. 100 = lies(p, i);
+        return x;
+    }
+    return 0;
+}
+
+}

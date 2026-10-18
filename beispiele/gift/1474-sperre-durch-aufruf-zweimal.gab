@@ -1,0 +1,29 @@
+// erwartet: N588
+// 1474: **a call whose callee takes a lock the caller holds is refused (N588).**
+//
+// `g` takes `LA` itself; `f` calls it inside its own `locks LA` block. The callee's hull takes the lock
+// the caller holds: a self-deadlock through the call, the shape `H012` skipped for the same lock.
+module gift1474 {
+
+table U count 4 { slot { v : u32 in 0 .. 100, } }
+lock LA protects { U } rank 0 held <= 100 ops;
+
+impl fn g()
+    effects { writes U.slots, locks LA }
+    costs <= 40 ops
+{
+    locks LA {
+        U.slots[0].v = 1;
+    }
+}
+
+impl fn f()
+    effects { writes U.slots, locks LA }
+    costs <= 100 ops
+{
+    locks LA {
+        g();
+    }
+}
+
+}

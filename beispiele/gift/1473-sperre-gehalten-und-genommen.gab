@@ -1,0 +1,21 @@
+// erwartet: N588
+// 1473: **a lock held by `requires Held(L)` and taken again in the body is refused (N588).**
+//
+// The signature already holds `LA`; the `locks LA` block in the body takes it a second time. The
+// held list of a body starts with the signature's locks, so the take has no rank above `LA`.
+module gift1473 {
+
+table U count 4 { slot { v : u32 in 0 .. 100, } }
+lock LA protects { U } rank 0 held <= 100 ops;
+
+impl fn f()
+    requires Held(LA)
+    effects { writes U.slots, locks LA }
+    costs <= 100 ops
+{
+    locks LA {
+        U.slots[0].v = 1;
+    }
+}
+
+}

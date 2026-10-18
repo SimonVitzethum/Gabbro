@@ -5644,6 +5644,30 @@ pub const SPERREN: &[Satz] = &[
                      dokumente/SPRACHE.md",
     },
     Satz {
+        name: "sperren.haltefolge",
+        kennungen: &["N587", "N588"],
+        aussage: "The held list of a body is read the way the model reads it: a call whose \
+                  callee `requires Held(L)` has `L` HELD at the call -- an enclosing `locks L` \
+                  block or the caller's own `requires Held(L)`, never an `effects { locks L }` \
+                  line (`N587`; `RufPasst`) -- and a lock is never taken while the body \
+                  already holds it exclusively, by an enclosing block, by `requires Held(L)`, \
+                  or through a callee whose hull takes it (`N588`; `Stmt.locks` demands every \
+                  held lock to rank STRICTLY below the one taken, and a lock does not rank \
+                  below itself). Equal rank is the first case of equal rank, which `H006` \
+                  states and had skipped for the identical lock.",
+        vorbehalt: "`N588` leaves shared holds to `H003` (the upgrade) and does not refuse a \
+                    second SHARED take of a shared lock; the model has no shared take. A \
+                    callee that only `requires` a lock is told from one that takes it by its \
+                    `requires Held(L)`; over an incomplete hull neither rule refuses (R16). \
+                    An indirect call names no callee and is covered by `N036` (a `fn(…)` type \
+                    may not promise `locks`/`requires`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1472 (nested block), 1473 (`requires Held` then `locks`), \
+                      1474 (through a call), 1475 (`N587`); found by the differential harness \
+                      `tests/differenzial`, class (b): the checker accepted, the model refused.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs (`block`, `rufprobe`)",
+    },
+    Satz {
         name: "sperren.geteilt",
         kennungen: &["H001", "H002", "H003", "H004", "H005"],
         aussage: "Holding a lock SHARED means reading the protected places and not writing \
@@ -5668,7 +5692,10 @@ pub const SPERREN: &[Satz] = &[
         name: "sperren.schutz",
         kennungen: &["H007", "H008", "H009", "H010", "H011", "H017"],
         aussage: "Every access to a place named in some lock's `protects` happens while that \
-                  lock is held (`H007`), every declared `locks` effect is really redeemed by \
+                  lock is held (`H007`) -- an access THROUGH a pointer parameter \
+                  (`p.slots[i].v`, `p->f`) is the access to the table the pointer names, the \
+                  same as a direct one (`Expr.thru`/`Stmt.assignThru` carry the `darf` of \
+                  `slot`) -- every declared `locks` effect is really redeemed by \
                   a take (`H011`), and for RCU-protected places a READ stands inside an \
                   `observes` block (`H009`) while a WRITE stands additionally under a real \
                   lock (`H010`). Since 2026-08-21 every DOMAIN NAME is explained by an `rcu` \
@@ -5722,11 +5749,18 @@ pub const SPERREN: &[Satz] = &[
     Satz {
         name: "sperren effects-locks-zeile",
         kennungen: &["H020"],
-        aussage: "A direct write to a lock-protected place needs more cover
-                  than the `effects { locks L }` line alone (`H020`).",
+        aussage: "A direct access (read or write, direct or through a pointer \
+                  parameter) to a lock-protected place needs more cover than the \
+                  `effects { locks L }` line alone (`H020`): an enclosing `locks` block \
+                  or `requires Held(L)`.",
         vorbehalt: "**Exempt with named owners:** `spec fn`, `requires
-                    Held(L)`, RCU-touched places, reads, calls. Disjoint from
-                    `H007` by construction (no line is H007's case).",
+                    Held(L)`, RCU-touched places, accesses inside a `let ... else` \
+                    source and call ARGUMENTS other than a plain place read, calls \
+                    (`N587` for the callee's `requires Held`). Disjoint from \
+                    `H007` by construction (no line is H007's case). Reads were exempt \
+                    until the differential harness (`tests/differenzial`) found the \
+                    model refusing them: `Expr.slot` carries the same `darf` as \
+                    `assignSlot`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/737 (must fall) and 739 (hull-redeemed
                       boundary); inline test h020_silence_and_single_fire_738

@@ -1,0 +1,23 @@
+// erwartet: N588
+// 1472: **the same lock taken inside its own block is refused (N588).**
+//
+// `locks L { locks L { .. } }` waits on itself. The model's `Stmt.locks` demands every held lock to
+// rank STRICTLY below the one taken (`hr`), and a lock does not rank below itself; `H006` skipped the
+// same-lock pair as "H003's" and `H003` only knew shared-then-exclusive, so the nesting passed.
+module gift1472 {
+
+table U count 4 { slot { v : u32 in 0 .. 100, } }
+lock LA protects { U } rank 0 held <= 100 ops;
+
+impl fn f()
+    effects { writes U.slots, locks LA }
+    costs <= 100 ops
+{
+    locks LA {
+        locks LA {
+            U.slots[0].v = 1;
+        }
+    }
+}
+
+}

@@ -44,12 +44,15 @@ impl fn fremd(z : ptr<normal, rw> Zaehlwerk)
     z.wert = 0;
 }
 
+// `fremd` owes `ANDERE` held at the call (`N587`): the shared block takes it around that one call.
 impl fn aufloesen(k : ptr<normal, r> Raum, i : index into Raum, z : ptr<normal, rw> Zaehlwerk) -> Rechte
-    effects { reads k.slots, writes z, locks shared KAPPEN }
-    costs   <= 8 ops
+    effects { reads k.slots, writes z, locks shared KAPPEN, locks ANDERE }
+    costs   <= 16 ops
 {
     locks shared KAPPEN {
-        fremd(z);
+        locks ANDERE {
+            fremd(z);
+        }
         return liest(k, i);
     }
     return 0;

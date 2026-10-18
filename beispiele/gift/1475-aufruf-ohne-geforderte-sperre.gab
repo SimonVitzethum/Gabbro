@@ -1,0 +1,27 @@
+// erwartet: N587
+// 1475: **a call whose callee `requires Held(L)` is refused where `L` is not held (N587).**
+//
+// `f` names `locks LA` in its effects and takes no lock: the effects line is no hold. `ku` writes the
+// protected table with the caller's duty to hold `LA`, and nobody does -- `RufPasst` of the model reads
+// the held list of the call site. (Before N587 this passed, and two threads running `f` raced on `U`.)
+module gift1475 {
+
+table U count 4 { slot { v : u32 in 0 .. 100, } }
+lock LA protects { U } rank 0 held <= 100 ops;
+
+impl fn ku()
+    requires Held(LA)
+    effects { writes U.slots, locks LA }
+    costs <= 8 ops
+{
+    U.slots[0].v = 1;
+}
+
+impl fn f()
+    effects { writes U.slots, locks LA }
+    costs <= 100 ops
+{
+    ku();
+}
+
+}

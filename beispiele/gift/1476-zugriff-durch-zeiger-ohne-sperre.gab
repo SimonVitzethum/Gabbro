@@ -1,0 +1,19 @@
+// erwartet: H007
+// 1476: **an access THROUGH a pointer to a protected table needs the lock like a direct one (H007).**
+//
+// `Expr.thru` and `Stmt.assignThru` carry the same `darf` as `slot`: the pointer is the capability to
+// name the table, not a way around its guard. The lock rules matched the place text, whose root is the
+// parameter's name, so `p.slots[i].v = 3` passed with no lock held anywhere.
+module gift1476 {
+
+table T count 4 { slot { v : u32 in 0 .. 100, } }
+lock L protects { T } rank 0 held <= 100 ops;
+
+impl fn f(p : ptr<normal, rw> T, i : index into T)
+    effects { writes p.slots }
+    costs <= 100 ops
+{
+    p.slots[i].v = 3;
+}
+
+}

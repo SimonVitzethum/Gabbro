@@ -128,7 +128,7 @@ pub fn export(
 }
 
 fn refuse(code: &'static str, message: String) -> Refusal {
-    Refusal { code, message }
+    Refusal { code, message, modell: false }
 }
 
 // ---------------------------------------------------------------------------------------

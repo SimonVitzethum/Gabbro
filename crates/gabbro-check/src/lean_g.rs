@@ -252,6 +252,10 @@ use gabbro_syntax::kw::Kw;
 pub struct Refusal {
     pub code: &'static str,
     pub message: String,
+    /// `true` where the program VIOLATES A PREMISE OF THE MODEL (a guard not held, a rank not
+    /// above everything held, a range that does not fit): the model refuses it. `false` where
+    /// the exporter merely has no G form for a construct. The differential harness reads it.
+    pub modell: bool,
 }
 
 impl std::fmt::Display for Refusal {
@@ -261,7 +265,12 @@ impl std::fmt::Display for Refusal {
 }
 
 fn refuse(code: &'static str, message: String) -> Refusal {
-    Refusal { code, message }
+    Refusal { code, message, modell: false }
+}
+
+/// A refusal because the program breaks a premise of the model (see `Refusal::modell`).
+fn refuse_modell(code: &'static str, message: String) -> Refusal {
+    Refusal { code, message, modell: true }
 }
 
 /// An integer bound as Lean parses it: a negative numeral cannot stand
@@ -1598,7 +1607,7 @@ fn check_fn(
     // travels nowhere, and the roots' own bodies take the lock (Opus agent A, 2026-09-26).
     for l in &effect_locks {
         if !held.contains(l) && !taken.contains(l) && !scan.startet {
-            return Err(refuse(
+            return Err(refuse_modell(
                 "LG001",
                 format!("function {}: `locks {}` is neither held by signature nor taken in the body",
                     f.name, model.locks[*l].name),
@@ -2686,7 +2695,7 @@ fn glob_read(
 ) -> Option<Result<(String, VTy), Refusal>> {
     let gi = model.globs.iter().position(|g| g.name == o.basis.text)?;
     if !holds_gguards(&ctx.held, model, gi) {
-        return Some(Err(refuse(
+        return Some(Err(refuse_modell(
             "LG004",
             format!("read of the global {} in {fname} holds no guard (no proof)", o.basis.text),
         )));
@@ -2772,10 +2781,10 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
         }
         _ => {
             let Some((alo, ahi)) = actual.range(model) else {
-                return Err(refuse("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
+                return Err(refuse_modell("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
             };
             let Some((elo, ehi)) = expected.range(model) else {
-                return Err(refuse("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
+                return Err(refuse_modell("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
             };
             if alo == elo && ahi == ehi {
                 Ok(base)
@@ -2783,7 +2792,7 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
                 Ok(format!("((.widen (by decide) (by decide) {base}) : Expr gD {} {} {})",
                     ctx.gamma, ctx.lambda, expected.term(model)))
             } else {
-                Err(refuse("LG004", format!("range {alo}..{ahi} in {fname} fits no {}", expected.term(model))))
+                Err(refuse_modell("LG004", format!("range {alo}..{ahi} in {fname} fits no {}", expected.term(model))))
             }
         }
     }
@@ -2799,7 +2808,7 @@ fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result
         ExprArt::Zahl(n) => {
             let n = i128::try_from(*n).map_err(|_| refuse("LG003", format!("index in {fname} too large")))?;
             if n < 0 || n >= count {
-                return Err(refuse("LG003", format!("index {n} in {fname} is outside `count {count}`")));
+                return Err(refuse_modell("LG003", format!("index {n} in {fname} is outside `count {count}`")));
             }
             Ok(format!("((.widen (by decide) (by decide) (.lit {n}) : {}))", ctx.index_ty(model, t)))
         }
@@ -2841,7 +2850,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
         if let Some(a) = model.arenas.iter().find(|a| a.name == o.basis.text) {
             let t = a.table;
             if !holds_guards(&ctx.held, model, t) {
-                return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+                return Err(refuse_modell("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
             }
             let index = tr_index(idx, t, ctx, model, fname)?;
             let ty = model.tables[t].fields[0].ty.clone();
@@ -2874,7 +2883,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
             return Err(refuse("LG005", format!("unknown field {} in {fname}", o.text())));
         };
         if !holds_guards(&ctx.held, model, t) {
-            return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+            return Err(refuse_modell("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
         }
         let index = format!("((.widen (by decide) (by decide) (.lit 0) : {}))", ctx.index_ty(model, t));
         let ty = model.tables[t].fields[fi].ty.clone();
@@ -2900,7 +2909,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
         return Err(refuse("LG005", format!("unknown field {} in {fname}", o.text())));
     };
     if !holds_guards(&ctx.held, model, t) {
-        return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+        return Err(refuse_modell("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
     }
     let index = tr_index(idx, t, ctx, model, fname)?;
     let ty = model.tables[t].fields[fi].ty.clone();
@@ -3149,7 +3158,7 @@ fn tr_binaer(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sc
         BinOp::Und | BinOp::Oder => {
             let la = tr_bool(a, ctx, model, scope, fname, out)?;
             let lb = tr_bool(b, ctx, model, scope, fname, out)?;
-            let ctor = if op == BinOp::Und { "und" } else { "oder" };
+            let ctor = if op == BinOp::Und { "and" } else { "or" };
             Ok((format!("(.{ctor} {la} {lb})"), VTy::Bool))
         }
         BinOp::Gleich | BinOp::Ungleich | BinOp::Kleiner | BinOp::KleinerGleich | BinOp::Groesser | BinOp::GroesserGleich => {
@@ -3969,16 +3978,23 @@ fn tr_ite(w: &WennStmt, rest_empty_tail: bool, ctx: &Ctx, model: &Model, scope: 
         }
         None => ".nil".to_string(),
     };
+    // `acc` is the else BLOCK of the branch built next; an `else if` is a block holding one
+    // `ite` statement, so every branch but the outermost wraps its statement in `.cons .. .nil`.
     let mut acc = else_term;
-    for (c, b) in w.zweige.iter().rev() {
+    let mut stmt = String::new();
+    let n = w.zweige.len();
+    for (k, (c, b)) in w.zweige.iter().rev().enumerate() {
         if rest_empty_tail && contains_return(b) {
             return Err(refuse("LG004", format!("`return` inside `if` in {fname} has no G form")));
         }
         let cond = tr_bool(c, ctx, model, scope, fname, out)?;
         let then = tr_block(&b.anweisungen, ctx, model, scope, fns, fname, out)?;
-        acc = format!("(.ite {cond} {then} {acc})");
+        stmt = format!("(.ite {cond} {then} {acc})");
+        if k + 1 < n {
+            acc = format!("(.cons {stmt} .nil)");
+        }
     }
-    Ok(acc)
+    Ok(stmt)
 }
 
 /// **`match m { … }` over a `tagged` value is `Stmt.onTag`** (`Syntax.lean`
@@ -4063,7 +4079,7 @@ fn tr_locks(sp: &SperrtStmt, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Che
     };
     for h in &ctx.held {
         if model.locks[*h].rank >= model.locks[li].rank {
-            return Err(refuse("LG004", format!("`locks {}` in {fname} takes no rank above everything held", model.locks[li].name)));
+            return Err(refuse_modell("LG004", format!("`locks {}` in {fname} takes no rank above everything held", model.locks[li].name)));
         }
     }
     let inner = ctx.locked(li, &model.locks[li].name);
@@ -4174,7 +4190,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                             z.ziel.basis.text, z.ziel.basis.text)));
                     }
                     if !holds_gguards(&ctx.held, model, gi) {
-                        return Err(refuse("LG004", format!(
+                        return Err(refuse_modell("LG004", format!(
                             "write of the global {} in {fname} holds no guard (no proof)",
                             z.ziel.basis.text)));
                     }
@@ -4348,7 +4364,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                     pb.ziel.basis.text, pb.ziel.basis.text)));
             }
             if !holds_gguards(&ctx.held, model, gi) {
-                return Err(refuse("LG004", format!(
+                return Err(refuse_modell("LG004", format!(
                     "store of the atomic {} in {fname} holds no guard (no proof)", pb.ziel.basis.text)));
             }
             let gty = model.globs[gi].ty.clone();
@@ -4559,7 +4575,7 @@ fn check_annotation(computed: &VTy, annotated: &VTy, model: &Model, fname: &str,
             if alo <= clo && chi <= ahi {
                 Ok(())
             } else {
-                Err(refuse("LG004", format!("`let {name}` in {fname} exceeds its annotation")))
+                Err(refuse_modell("LG004", format!("`let {name}` in {fname} exceeds its annotation")))
             }
         }
     }
@@ -4649,7 +4665,7 @@ fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[
              the write rights `Signatur.schreibt`/`gschreibt` have nothing to stand on")));
     }
     if !holds_guards(&ctx.held, model, ti) || !holds_gguards(&ctx.held, model, gi) {
-        return Err(refuse("LG004", format!("`alloc {aname}` in {fname} holds no guard (no proof)")));
+        return Err(refuse_modell("LG004", format!("`alloc {aname}` in {fname} holds no guard (no proof)")));
     }
     // The value, at the element type of the synthesised table.
     let ety = model.tables[ti].fields[0].ty.clone();
@@ -5630,7 +5646,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     for f in fns {
         tags.push((f.name.clone(), String::new()));
     }
-    for (fname, tag, _) in collected.darf.clone() {
+    for (fname, tag, _) in collected.darf.iter().chain(collected.gdarf.iter()).cloned() {
         if !tags.contains(&(fname.clone(), tag.clone())) {
             tags.push((fname, tag));
         }
@@ -5644,10 +5660,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         let f = fns.iter().find(|f| &f.name == fname).expect("known function");
         let mut held = f.held.clone();
         if !tag.is_empty() {
-            // The tag records the taken locks in order (`_in_L[_in_M]`).
+            // The tag records the taken locks outermost first (`_in_L[_in_M]`); `Stmt.locks`
+            // conses its witness onto the held list, so the INNERMOST lock stands first.
             for part in tag.split("_in_").skip(1) {
                 if let Some(li) = model.locks.iter().position(|l| l.name == part) {
-                    held.push(li);
+                    held.insert(0, li);
                 }
             }
         }
