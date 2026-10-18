@@ -7,8 +7,8 @@ import Grammatik.Code.Refine.Closure
   One concrete program, built by hand in machine G, every new lowering form of Track L in it:
 
       table konto count 4 { v : 0 .. 100 }           -- one table, four slots
-      fn get(i : index 4) -> 0 .. 100  { return konto[i].v; }                  -- slot read
-      fn put(i : index 4)              { konto[i].v = 7; return; }             -- slot write
+      fn get(i : index 4) -> 0 .. 100  { return konto[i % 4].v; }              -- slot read, remainder
+      fn put(i : index 4)              { konto[i].v = 7 / 2; return; }         -- slot write, division
       fn wipe()  { traverse konto { konto[k].v = 0; } return; }                 -- the LOOP
       fn main()  { if true { let x = get(2); narrow x to 0 .. 50 else return; }   -- let-call, narrow
                    retry 2 until false { } on_exceeded { }                     -- the bounded retry loop
@@ -123,16 +123,17 @@ def wD : Deklaration where
 
 theorem wDarf (Λ : List (Res wD)) : darf wD () Λ := fun w hw => nomatch hw
 
-/-- `get(i)`: `return konto[i].v`. -/
+/-- `get(i)`: `return konto[i % 4].v` (a remainder: the divisor is a fact of the range). -/
 def rGet : Endblock wD (vertragVon wD WFn.get) false [.int 0 3]
     (Signatur.anfang wD (wD.signatur WFn.get)) :=
-  .ret (.val (.slot () () (.var .here) (wDarf _))) (List.Perm.refl _)
+  .ret (.val (.slot () () (.rem (by decide) (by decide) (.var .here) (.lit 4)) (wDarf _))) (List.Perm.refl _)
 
-/-- `put(i)`: `konto[i].v = 7; return`. -/
+/-- `put(i)`: `konto[i].v = 7 / 2; return` (a division by a number `>= 1`). -/
 def rPut : Endblock wD (vertragVon wD WFn.put) false [.int 0 3]
     (Signatur.anfang wD (wD.signatur WFn.put)) :=
   .cons (.assignSlot () () (.var .here)
-    (.widen (lo := 7) (hi := 7) (by decide) (by decide) (.lit 7)) rfl (wDarf _))
+    (.widen (lo := 0) (hi := 7) (by decide) (by decide) (.div (by decide) (by decide) (.lit 7) (.lit 2)))
+    rfl (wDarf _))
     (.ret .empty (List.Perm.refl _))
 
 /-- `wipe()`: `traverse konto { konto[k].v = 0 }; return`. -/
@@ -224,6 +225,12 @@ def isOk {f : wD.Fn} : RufAusgang f → Bool
   | .ok _ _ => true
   | _ => false
 
+/-- Does the lowered function contain a binary instruction with this operator? -/
+def usesOp (op : BinOp) (f : Func) : Bool :=
+  f.blks.any fun b => b.body.any fun i => match i with
+    | .bin _ o _ _ _ => decide (o = op)
+    | _ => false
+
 section Gen
 
 variable [Conf]
@@ -282,6 +289,11 @@ theorem wit64_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.lengt
 /-- The calling function has the calls, the `narrow` and the `retry`: seventeen blocks. -/
 theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := rfl
 
+/-- `put` lowers its division to an unsigned division, `get` its remainder to an unsigned remainder. -/
+theorem wit64_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = some true := by decide +kernel
+
+theorem wit64_get_urem : (lowerFn wLay wP WFn.get "get").map (usesOp .urem) = some true := by decide +kernel
+
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit64_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =
     RufAusgang.ok σ' v := ⟨_, _, rfl⟩
@@ -322,6 +334,11 @@ theorem wit32_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.lengt
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit32_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =
     RufAusgang.ok σ' v := ⟨_, _, rfl⟩
+
+/-- `put` lowers its division to an unsigned division, `get` its remainder to an unsigned remainder. -/
+theorem wit32_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = some true := by decide +kernel
+
+theorem wit32_get_urem : (lowerFn wLay wP WFn.get "get").map (usesOp .urem) = some true := by decide +kernel
 
 end C32
 

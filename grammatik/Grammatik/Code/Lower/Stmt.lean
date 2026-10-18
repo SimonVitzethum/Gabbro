@@ -12,10 +12,13 @@ import Grammatik.Code.Lower.Expr
   for an end block, which never falls through: every path ends in `ret`.
 
   THE FRAGMENT: assignments to table slots (also through a pointer), globals and local
-  variables; `if`/`else`; `return`; `let` (an `alloc` cell plus its first store); `check` (a
-  failed condition runs the `else` end block). Every other form lowers to `none`
-  (a form with no `Code` lowering is refused by name). A variable is a stack cell whose register is
-  `cenv[i]`; a `bool` is a byte in memory (`cvtM`).
+  variables; `if`/`else`; `return`; `let` (an `alloc` cell plus its first store); `check` and
+  `narrow` (a failed condition runs the `else` end block); `leave`/`next` (a jump to the loop's
+  targets `lv`); the loops `forever`, `traverse` (a counter register) and `retry` (a counter
+  register, the test first, an overflow block); the calls `f(..)` and `let x = f(..)` (the result
+  goes to a fresh register and then to a cell). Every other form lowers to `none` (a form with no
+  `Code` lowering is refused by name). A variable is a stack cell whose register is `cenv[i]`;
+  a `bool` is a byte in memory (`cvtM`).
 -/
 
 namespace Gabbro.Code.Lower

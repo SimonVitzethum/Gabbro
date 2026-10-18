@@ -69,6 +69,31 @@ theorem binRest_mono {op : BinOp} {τ σa σb : GTy} {oa ob : Opd} {r : Nat} {c 
         omega
       · simp at h
 
+theorem divRest_mono {op : BinOp} {τ σa σb : GTy} {oa ob : Opd} {r : Nat} {c : LR}
+    (h : divRest op τ σa σb oa ob r = some c) : r ≤ c.2.2 := by
+  unfold divRest at h
+  split at h
+  · rename_i la ha lb hb
+    simp only at h
+    rcases hc1 : cvtG (.int la ha) (joinT (.int la ha) (.int lb hb)) oa r with _ | ⟨c1, oa', r1⟩
+    · simp [hc1] at h
+    have m1 := cvtG_mono hc1
+    simp only [hc1] at h
+    rcases hc2 : cvtG (.int lb hb) (joinT (.int la ha) (.int lb hb)) ob r1 with _ | ⟨c2, ob', r2⟩
+    · simp [hc2] at h
+    have m2 := cvtG_mono hc2
+    simp only [hc2] at h
+    split at h
+    · rcases hc3 : cvtG (joinT (.int la ha) (.int lb hb)) τ (.reg r2) (r2 + 1) with _ | ⟨c3, o3, r3⟩
+      · simp [hc3] at h
+      have m3 := cvtG_mono hc3
+      simp only [hc3] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+    · simp at h
+  · simp at h
+
 theorem cmpRest_mono {pu ps : IPred} {σa σb : GTy} {oa ob : Opd} {r : Nat} {c : LR}
     (h : cmpRest pu ps σa σb oa ob r = some c) : r ≤ c.2.2 := by
   unfold cmpRest at h
@@ -372,10 +397,40 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp [lowerE] at h
   | _, _, _, .oldS .., r, c, h => by
       simp [lowerE] at h
-  | _, _, _, .div .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .rem .., r, c, h => by
-      simp [lowerE] at h
+  | _, _, _, .div h0 h1 a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb
+      simp only [hb] at h
+      rcases hr : divRest .udiv (ety (Expr.div h0 h1 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := divRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+  | _, _, _, .rem h0 h1 a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb
+      simp only [hb] at h
+      rcases hr : divRest .urem (ety (Expr.rem h0 h1 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := divRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
   | _, _, _, .sdiv .., r, c, h => by
       simp [lowerE] at h
   | _, _, _, .srem .., r, c, h => by

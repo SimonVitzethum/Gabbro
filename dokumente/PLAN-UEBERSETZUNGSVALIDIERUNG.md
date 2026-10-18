@@ -650,10 +650,18 @@ LLVM backend stays as the running reference compiler. Estimate for the half: 25 
    the witness), the small-step semantics with an oracle at the atomic load only (linked to the weak-memory
    interface and `Speichermodell.Ordnung`), SC determinism, a kernel-computed witness, and `Need`, the
    list of obligations a CPU model must provide for `Code -> bytes` (the same for x86-64, AArch64, RISC-V).
-2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`): expressions (`lowerE_ok`), statements, blocks,
-   end blocks (`lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: slot, pointer, global and variable assignment, `if`,
-   `let`, `check`, `return`) and the function prologue (`prologue_ok`, `lowerFn`). Open: calls, loops, `match`,
-   `narrow`, division and shifts (the lowering emits none until G's ranges prove the precondition).
+2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`, 2026-10-18, `SATZKARTE.md` section 78): expressions
+   (`lowerE_ok`), statements, blocks, end blocks (`lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: the four assignments, `if`,
+   `let`, `check`, `narrow`, `return`, `leave`/`next`, the loops `forever`/`traverse`/`retry`, the calls `call` and
+   `let x = f(..)`, and `/`, `%` on non-negative numerators and denominators `>= 1`), the function prologue and the **closing function theorem** (`lowerFn_run`: a body that returns `v`
+   makes the IR function return the image of `v`; label uniqueness is proved, `lowerFn_nodup`), and **the recursion
+   closed** (`lowerFn_callref`: for every depth `n` the lowered functions refine the source meaning of a call, by
+   induction on `n`; the frame invariant of a call is `CallRef`/`Keep`). The statements carry one clause per source
+   outcome and the frame of the run (`Fr`). A hand-built witness program instantiates the chain at both targets
+   (`Refine/Witness.lean`). Open: `match` (`onOption`/`onTag`/`onWhy`: needs `opt`/`sum`/`why` in the lowering), the
+   arithmetic forms `sdiv`, `srem`, shifts and bit operations (each needs the proof that G's ranges give the
+   instruction's precondition at the width the lowering picks; `div`/`rem` are done), indirect calls, calls with a
+   failure channel.
 3. **L2 memory forms.** Arenas, `grow`, `free`/free list (`ArenaFrei.lean` is its model), sampling, the page
    return; stack and recursion lowering. ~6 000–9 000.
 4. **L3 concurrency.** Ticket lock, reader/writer lock, masked acquisition (the lock refinement of the open

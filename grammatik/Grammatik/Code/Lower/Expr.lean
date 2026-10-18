@@ -10,7 +10,8 @@ import Grammatik.Code.Lower.Rep
   `alloc` cell whose register is `cenv[x.idx]`.
 
   THE FRAGMENT: constants, variables, globals, table slots (also through a pointer),
-  widening, `+ - * neg`, `< <= ==`, `&& || !`. Every other form lowers to `none` (the Rust
+  widening, `+ - * neg`, `/ %` on non-negative numerators and denominators `>= 1` (the instruction's
+  precondition is a fact of the ranges), `< <= ==`, `&& || !`. Every other form lowers to `none` (the Rust
   the lowering refuses it); `none` is also the answer for a type outside `supp`
   or a range beyond 128 bits. Integer ranges live in `Ar.wid` bits; an operation is carried out at
   the width of its RESULT range, its operands moved there by `cvt` (`sext`/`zext` by the sign of
@@ -107,6 +108,27 @@ def cmpRest (pu ps : IPred) (σa σb : GTy) (oa ob : Opd) (r : Nat) : Option LR 
       | none => none
   | _, _ => none
 
+/-- The tail of an unsigned division or remainder (`div`, `rem`: the numerator is `>= 0` and the
+    denominator `>= 1`, so the instruction's precondition -- a nonzero divisor -- holds): both operands
+    at the width of the JOINED range (so the divisor is not truncated), the instruction, then the
+    result moved to the width of its own type. -/
+def divRest (op : BinOp) (τ σa σb : GTy) (oa ob : Opd) (r : Nat) : Option LR :=
+  match σa, σb with
+  | .int _ _, .int _ _ =>
+      let j := joinT σa σb
+      match cvtG σa j oa r with
+      | some (c1, oa', r1) =>
+          match cvtG σb j ob r1 with
+          | some (c2, ob', r2) =>
+              if fitsT j && fitsT τ then
+                match cvtG j τ (.reg r2) (r2 + 1) with
+                | some (c3, o3, r3) => some (c1 ++ c2 ++ [.bin r2 op (twid j) oa' ob'] ++ c3, o3, r3)
+                | none => none
+              else none
+          | none => none
+      | none => none
+  | _, _ => none
+
 /-- The type of an expression, as a value. -/
 def ety {Γ : Ctx} {Λ : List (Gabbro.Grammatik.Res D)} {τ : GTy} (_ : Expr D Γ Λ τ) : GTy := τ
 
@@ -194,6 +216,24 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
       | some (ca, oa, r1) =>
           match binRest .sub (ety (Expr.neg a)) (.int 0 0) (ety a) (.int (twid (.int 0 0)) 0) oa r1 with
           | some (c, o, r2) => some (ca ++ c, o, r2)
+          | none => none
+      | none => none
+  | _, _, _, .div h0 h1 a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (divRest .udiv (ety (Expr.div h0 h1 a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .rem h0 h1 a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (divRest .urem (ety (Expr.rem h0 h1 a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
           | none => none
       | none => none
   | _, _, _, .lt a b, r =>
