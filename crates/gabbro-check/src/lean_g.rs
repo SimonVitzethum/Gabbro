@@ -252,6 +252,10 @@ use gabbro_syntax::kw::Kw;
 pub struct Refusal {
     pub code: &'static str,
     pub message: String,
+    /// `true` where the program VIOLATES A PREMISE OF THE MODEL (a guard not held, a rank not
+    /// above everything held, a range that does not fit): the model refuses it. `false` where
+    /// the exporter merely has no G form for a construct. The differential harness reads it.
+    pub modell: bool,
 }
 
 impl std::fmt::Display for Refusal {
@@ -261,7 +265,12 @@ impl std::fmt::Display for Refusal {
 }
 
 fn refuse(code: &'static str, message: String) -> Refusal {
-    Refusal { code, message }
+    Refusal { code, message, modell: false }
+}
+
+/// A refusal because the program breaks a premise of the model (see `Refusal::modell`).
+fn refuse_modell(code: &'static str, message: String) -> Refusal {
+    Refusal { code, message, modell: true }
 }
 
 /// An integer bound as Lean parses it: a negative numeral cannot stand
@@ -1596,9 +1605,12 @@ fn check_fn(
     // on the roots' threads, never in this body: G carries no locks effect in a
     // signature (the floor `boden` is computed from what the body takes), so the effect
     // travels nowhere, and the roots' own bodies take the lock (Opus agent A, 2026-09-26).
+    // A body with calls is not refused here: `E008` lifts a callee's `locks L` into the caller's
+    // line, the line travels nowhere (G has no locks effect), and whether the call is made with
+    // the callee's `requires Held` in hand is the call site's `RufPasst` proof -- decided by Lean.
     for l in &effect_locks {
-        if !held.contains(l) && !taken.contains(l) && !scan.startet {
-            return Err(refuse(
+        if !held.contains(l) && !taken.contains(l) && !scan.startet && scan.calls.is_empty() {
+            return Err(refuse_modell(
                 "LG001",
                 format!("function {}: `locks {}` is neither held by signature nor taken in the body",
                     f.name, model.locks[*l].name),
@@ -2686,7 +2698,7 @@ fn glob_read(
 ) -> Option<Result<(String, VTy), Refusal>> {
     let gi = model.globs.iter().position(|g| g.name == o.basis.text)?;
     if !holds_gguards(&ctx.held, model, gi) {
-        return Some(Err(refuse(
+        return Some(Err(refuse_modell(
             "LG004",
             format!("read of the global {} in {fname} holds no guard (no proof)", o.basis.text),
         )));
@@ -2772,10 +2784,10 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
         }
         _ => {
             let Some((alo, ahi)) = actual.range(model) else {
-                return Err(refuse("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
+                return Err(refuse_modell("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
             };
             let Some((elo, ehi)) = expected.range(model) else {
-                return Err(refuse("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
+                return Err(refuse_modell("LG004", format!("type in {fname} has no coercion to {}", expected.term(model))));
             };
             if alo == elo && ahi == ehi {
                 Ok(base)
@@ -2783,7 +2795,7 @@ fn fit(base: String, actual: &VTy, expected: &VTy, ctx: &Ctx, model: &Model, fna
                 Ok(format!("((.widen (by decide) (by decide) {base}) : Expr gD {} {} {})",
                     ctx.gamma, ctx.lambda, expected.term(model)))
             } else {
-                Err(refuse("LG004", format!("range {alo}..{ahi} in {fname} fits no {}", expected.term(model))))
+                Err(refuse_modell("LG004", format!("range {alo}..{ahi} in {fname} fits no {}", expected.term(model))))
             }
         }
     }
@@ -2799,7 +2811,7 @@ fn tr_index(e: &Expr, t: usize, ctx: &Ctx, model: &Model, fname: &str) -> Result
         ExprArt::Zahl(n) => {
             let n = i128::try_from(*n).map_err(|_| refuse("LG003", format!("index in {fname} too large")))?;
             if n < 0 || n >= count {
-                return Err(refuse("LG003", format!("index {n} in {fname} is outside `count {count}`")));
+                return Err(refuse_modell("LG003", format!("index {n} in {fname} is outside `count {count}`")));
             }
             Ok(format!("((.widen (by decide) (by decide) (.lit {n}) : {}))", ctx.index_ty(model, t)))
         }
@@ -2841,7 +2853,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
         if let Some(a) = model.arenas.iter().find(|a| a.name == o.basis.text) {
             let t = a.table;
             if !holds_guards(&ctx.held, model, t) {
-                return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+                return Err(refuse_modell("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
             }
             let index = tr_index(idx, t, ctx, model, fname)?;
             let ty = model.tables[t].fields[0].ty.clone();
@@ -2874,7 +2886,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
             return Err(refuse("LG005", format!("unknown field {} in {fname}", o.text())));
         };
         if !holds_guards(&ctx.held, model, t) {
-            return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+            return Err(refuse_modell("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
         }
         let index = format!("((.widen (by decide) (by decide) (.lit 0) : {}))", ctx.index_ty(model, t));
         let ty = model.tables[t].fields[fi].ty.clone();
@@ -2900,7 +2912,7 @@ fn slot_access(o: &Ort, ctx: &Ctx, model: &Model, fname: &str) -> Result<(usize,
         return Err(refuse("LG005", format!("unknown field {} in {fname}", o.text())));
     };
     if !holds_guards(&ctx.held, model, t) {
-        return Err(refuse("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
+        return Err(refuse_modell("LG004", format!("access to {} in {fname} holds no guard (no proof)", o.text())));
     }
     let index = tr_index(idx, t, ctx, model, fname)?;
     let ty = model.tables[t].fields[fi].ty.clone();
@@ -3146,10 +3158,33 @@ fn tr_binaer(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sc
         BinOp::BitUnd | BinOp::BitOder | BinOp::BitXor | BinOp::SchiebLinks | BinOp::SchiebRechts => {
             tr_bitop(op, a, b, ctx, model, scope, fname, out)
         }
+        // `/` and `%` (`M102`): `Expr.div`/`rem` over a non-negative numerator and a denominator
+        // from `1 ..`; `Expr.sdiv`/`srem` where the denominator merely excludes zero. The result
+        // ranges are the ones the model's types carry.
+        BinOp::Geteilt | BinOp::Rest => {
+            let (la, ta) = tr_typed(a, ctx, model, scope, fname, out)?;
+            let (lb, tb) = tr_typed(b, ctx, model, scope, fname, out)?;
+            let (Some((l1, h1)), Some((l2, h2))) = (ta.range(model), tb.range(model)) else {
+                return Err(refuse("LG003", format!("division in {fname} has no G form")));
+            };
+            let geteilt = op == BinOp::Geteilt;
+            if l1 >= 0 && l2 >= 1 {
+                let hi = if geteilt { h1 } else { h2 - 1 };
+                let ctor = if geteilt { "div" } else { "rem" };
+                Ok((format!("(.{ctor} (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi, bits: None }))
+            } else if l2 >= 1 || h2 <= -1 {
+                let betrag = |lo: i128, hi: i128| lo.abs().max(hi.abs());
+                let m = if geteilt { betrag(l1, h1) } else { betrag(l2, h2) - 1 };
+                let ctor = if geteilt { "sdiv" } else { "srem" };
+                Ok((format!("(.{ctor} (by decide) {la} {lb})"), VTy::Int { lo: -m, hi: m, bits: None }))
+            } else {
+                Err(refuse_modell("LG003", format!("denominator in {fname} does not exclude zero (`M102`)")))
+            }
+        }
         BinOp::Und | BinOp::Oder => {
             let la = tr_bool(a, ctx, model, scope, fname, out)?;
             let lb = tr_bool(b, ctx, model, scope, fname, out)?;
-            let ctor = if op == BinOp::Und { "und" } else { "oder" };
+            let ctor = if op == BinOp::Und { "and" } else { "or" };
             Ok((format!("(.{ctor} {la} {lb})"), VTy::Bool))
         }
         BinOp::Gleich | BinOp::Ungleich | BinOp::Kleiner | BinOp::KleinerGleich | BinOp::Groesser | BinOp::GroesserGleich => {
@@ -3270,7 +3305,12 @@ fn tr_bitop(op: BinOp, a: &Expr, b: &Expr, ctx: &Ctx, model: &Model, scope: &Sco
                 return Err(refuse("LG003", format!("bit operation in {fname} leaves its width")));
             }
             let ctor = if op == BinOp::BitOder { "bor" } else { "bxor" };
-            Ok((format!("(.{ctor} {w} (by decide) (by decide) (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi: top - 1, bits: Some(w) }))
+            // The width argument of `Expr.bor`/`bxor` is FREE (`h1, h2 < 2^w`) and the result is
+            // `0 .. 2^w - 1`: the checker's range is the smallest mask over the larger operand
+            // (`typen::bitweise`), which is the smallest `w` -- not the storage width.
+            let k = 128 - h1.max(h2).max(0).leading_zeros();
+            let hi = (1i128 << k) - 1;
+            Ok((format!("(.{ctor} {k} (by decide) (by decide) (by decide) (by decide) {la} {lb})"), VTy::Int { lo: 0, hi, bits: breite_weiter(0, hi, w) }))
         }
         BinOp::SchiebLinks | BinOp::SchiebRechts => {
             if h1 >= top || h2 >= w as i128 {
@@ -3806,6 +3846,17 @@ fn tr_arg(a: &Expr, pty: &ParamTy, ctx: &Ctx, model: &Model, scope: &Scope, fnam
                 _ => Err(refuse("LG004", format!("argument {} in {fname} has no G form", o.text()))),
             }
         }
+        // `&T` -- the address of a declared table, the one address there is (`Expr.ptrOf`): the
+        // pointer of the right table with the callee's rights.
+        (ParamTy::Ptr { table, write }, ExprArt::FnWert(pf)) => {
+            let Some(name) = pf.einfach() else {
+                return Err(refuse("LG004", format!("address in {fname} names no table")));
+            };
+            if model.tables.get(*table).is_none_or(|t| t.name != name.text) {
+                return Err(refuse("LG004", format!("address {} in {fname} is not the table the callee takes", name.text)));
+            }
+            Ok(format!("(.ptrOf {} {table} rfl {write})", tab_ctor(model, *table)))
+        }
         (ParamTy::Index { table }, _) => {
             let idx = tr_index(a, *table, ctx, model, fname)?;
             Ok(idx)
@@ -3836,20 +3887,20 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
     // `RufPasst.hw`: the callee writes no carrier the caller does not.
     for t in &callee.writes {
         if !ctx.cf.writes.contains(t) {
-            return Err(refuse("LG004", format!("call of {} in {fname} writes beyond its caller (`RufPasst.hw`)", callee.name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} writes beyond its caller (`RufPasst.hw`)", callee.name)));
         }
     }
     // `RufPasst.hg`: the same for GLOBALS.
     for g in &callee.gwrites {
         if !ctx.cf.gwrites.contains(g) {
-            return Err(refuse("LG004", format!("call of {} in {fname} writes the global {} beyond its caller (`RufPasst.hg`)", callee.name, model.globs[*g].name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} writes the global {} beyond its caller (`RufPasst.hg`)", callee.name, model.globs[*g].name)));
         }
     }
     // `RufPasst.hh`: the callee's held set is a SUBSET of the caller's.
     let caller_holds: std::collections::BTreeSet<usize> = ctx.held.iter().copied().collect();
     let callee_holds: std::collections::BTreeSet<usize> = callee.held.iter().copied().collect();
     if !callee_holds.is_subset(&caller_holds) {
-        return Err(refuse("LG004", format!("call of {} in {fname} requires a lock its caller does not hold (`RufPasst.hh`)", callee.name)));
+        return Err(refuse_modell("LG004", format!("call of {} in {fname} requires a lock its caller does not hold (`RufPasst.hh`)", callee.name)));
     }
     // `RufPasst.hx`: every extra lock ranks below the callee's floor. The
     // printed proof argues per lock (`cases L`): the floor witness where
@@ -3863,7 +3914,7 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
         None
     } else {
         let Some(c) = callee.boden else {
-            return Err(refuse("LG004", format!("call of {} in {fname} holds locks beyond a floorless callee (`RufPasst.hx`)", callee.name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} holds locks beyond a floorless callee (`RufPasst.hx`)", callee.name)));
         };
         Some(c)
     };
@@ -3872,18 +3923,18 @@ fn tr_call_args(r: &Ruf, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Checked
         if witness || callee.held.contains(&li) || !caller_holds.contains(&li) {
             continue;
         }
-        return Err(refuse("LG004", format!("call of {} in {fname} holds {} at or above its floor (`RufPasst.hx`)", callee.name, model.locks[li].name)));
+        return Err(refuse_modell("LG004", format!("call of {} in {fname} holds {} at or above its floor (`RufPasst.hx`)", callee.name, model.locks[li].name)));
     }
     // `RufPasst.hb`: the caller's floor is at most the callee's.
     let hb = match (ctx.cf.boden, callee.boden) {
         (Some(c0), Some(c1)) => {
             if c0 > c1 {
-                return Err(refuse("LG004", format!("call of {} in {fname} runs a higher floor into a lower one (`RufPasst.hb`)", callee.name)));
+                return Err(refuse_modell("LG004", format!("call of {} in {fname} runs a higher floor into a lower one (`RufPasst.hb`)", callee.name)));
             }
             Some((c0, c1))
         }
         (Some(_), None) => {
-            return Err(refuse("LG004", format!("call of {} in {fname} runs a floored caller into a floorless callee (`RufPasst.hb`)", callee.name)));
+            return Err(refuse_modell("LG004", format!("call of {} in {fname} runs a floored caller into a floorless callee (`RufPasst.hb`)", callee.name)));
         }
         _ => None,
     };
@@ -3969,16 +4020,23 @@ fn tr_ite(w: &WennStmt, rest_empty_tail: bool, ctx: &Ctx, model: &Model, scope: 
         }
         None => ".nil".to_string(),
     };
+    // `acc` is the else BLOCK of the branch built next; an `else if` is a block holding one
+    // `ite` statement, so every branch but the outermost wraps its statement in `.cons .. .nil`.
     let mut acc = else_term;
-    for (c, b) in w.zweige.iter().rev() {
+    let mut stmt = String::new();
+    let n = w.zweige.len();
+    for (k, (c, b)) in w.zweige.iter().rev().enumerate() {
         if rest_empty_tail && contains_return(b) {
             return Err(refuse("LG004", format!("`return` inside `if` in {fname} has no G form")));
         }
         let cond = tr_bool(c, ctx, model, scope, fname, out)?;
         let then = tr_block(&b.anweisungen, ctx, model, scope, fns, fname, out)?;
-        acc = format!("(.ite {cond} {then} {acc})");
+        stmt = format!("(.ite {cond} {then} {acc})");
+        if k + 1 < n {
+            acc = format!("(.cons {stmt} .nil)");
+        }
     }
-    Ok(acc)
+    Ok(stmt)
 }
 
 /// **`match m { … }` over a `tagged` value is `Stmt.onTag`** (`Syntax.lean`
@@ -4063,7 +4121,7 @@ fn tr_locks(sp: &SperrtStmt, ctx: &Ctx, model: &Model, scope: &Scope, fns: &[Che
     };
     for h in &ctx.held {
         if model.locks[*h].rank >= model.locks[li].rank {
-            return Err(refuse("LG004", format!("`locks {}` in {fname} takes no rank above everything held", model.locks[li].name)));
+            return Err(refuse_modell("LG004", format!("`locks {}` in {fname} takes no rank above everything held", model.locks[li].name)));
         }
     }
     let inner = ctx.locked(li, &model.locks[li].name);
@@ -4167,14 +4225,22 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             // a `by decide` that fails is a Lean error, not a named refusal.
             if z.ziel.suffixe.is_empty() && ctx.lookup(&z.ziel.basis.text).is_none() {
                 if let Some(gi) = model.globs.iter().position(|g| g.name == z.ziel.basis.text) {
-                    if !ctx.cf.gwrites.contains(&gi) {
+                    if model.globs[gi].atomar {
+                        // The store to an atomic is `Stmt.publish` (`A = v publishes ..;`), a different
+                        // statement from the plain assignment: a bare `A = v;` has no form in the model
+                        // and the checker refuses it (`N270`); it never travels as `assignGlob`.
                         return Err(refuse("LG004", format!(
+                            "bare store to the atomic {} in {fname} has no G form: a store is `Stmt.publish`",
+                            z.ziel.basis.text)));
+                    }
+                    if !ctx.cf.gwrites.contains(&gi) {
+                        return Err(refuse_modell("LG004", format!(
                             "{fname} writes the global {} without an `effects {{ writes {} }}` -- \
                              the write right `Signatur.gschreibt` has nothing to stand on",
                             z.ziel.basis.text, z.ziel.basis.text)));
                     }
                     if !holds_gguards(&ctx.held, model, gi) {
-                        return Err(refuse("LG004", format!(
+                        return Err(refuse_modell("LG004", format!(
                             "write of the global {} in {fname} holds no guard (no proof)",
                             z.ziel.basis.text)));
                     }
@@ -4342,13 +4408,13 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
                      is not covered by the goal theorem (OFFEN O25)")));
             }
             if !ctx.cf.gwrites.contains(&gi) {
-                return Err(refuse("LG004", format!(
+                return Err(refuse_modell("LG004", format!(
                     "{fname} publishes {} without an `effects {{ writes {} }}` -- \
                      the write right `Signatur.gschreibt` has nothing to stand on",
                     pb.ziel.basis.text, pb.ziel.basis.text)));
             }
             if !holds_gguards(&ctx.held, model, gi) {
-                return Err(refuse("LG004", format!(
+                return Err(refuse_modell("LG004", format!(
                     "store of the atomic {} in {fname} holds no guard (no proof)", pb.ziel.basis.text)));
             }
             let gty = model.globs[gi].ty.clone();
@@ -4372,7 +4438,7 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             };
             let gi = model.arenas[ai].glob;
             if !ctx.cf.gwrites.contains(&gi) {
-                return Err(refuse("LG004", format!(
+                return Err(refuse_modell("LG004", format!(
                     "`reset {}` in {fname} without an `effects {{ writes {} }}` -- \
                      the write right `Signatur.gschreibt` has nothing to stand on",
                     name.text, name.text)));
@@ -4423,7 +4489,17 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         // point among them (`N461` makes it lock-free). So the G body carries nothing here and
         // goes on with the rest. Not a silent skip: the roots are exported, and the goal
         // theorem covers the threads they become.
-        StmtArt::Start(_) => tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock),
+        StmtArt::Start(_) => {
+            // The statement is a thread-machine step with an empty held list (the starter joins
+            // the roots, and a root taking a lock its starter holds would wait on it): a `start`
+            // under a held lock has no representation in the model. Refused here, not exported
+            // as a lock-free start (`N461` is the checker's half).
+            if !ctx.held.is_empty() {
+                return Err(refuse_modell("LG004", format!(
+                    "`start` in {fname} stands under a held lock: the model's start step has an empty held list")));
+            }
+            tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)
+        }
         StmtArt::Narrow(_) => Err(refuse("LG004", format!("`narrow` in {fname} has no G form in this fragment"))),
         StmtArt::Observiert(_) => Err(refuse("LG004", format!("`observes` in {fname} has no G form in this fragment"))),
         // **`leave i;` / `next i;` over a `traverse` binder is `Stmt.leave`/`Stmt.next`**
@@ -4559,7 +4635,7 @@ fn check_annotation(computed: &VTy, annotated: &VTy, model: &Model, fname: &str,
             if alo <= clo && chi <= ahi {
                 Ok(())
             } else {
-                Err(refuse("LG004", format!("`let {name}` in {fname} exceeds its annotation")))
+                Err(refuse_modell("LG004", format!("`let {name}` in {fname} exceeds its annotation")))
             }
         }
     }
@@ -4644,12 +4720,12 @@ fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[
              travel into the term -- see TODO.md O14")));
     };
     if !ctx.cf.writes.contains(&ti) || !ctx.cf.gwrites.contains(&gi) {
-        return Err(refuse("LG004", format!(
+        return Err(refuse_modell("LG004", format!(
             "`alloc {aname}` in {fname} without an `effects {{ writes {aname} }}` -- \
              the write rights `Signatur.schreibt`/`gschreibt` have nothing to stand on")));
     }
     if !holds_guards(&ctx.held, model, ti) || !holds_gguards(&ctx.held, model, gi) {
-        return Err(refuse("LG004", format!("`alloc {aname}` in {fname} holds no guard (no proof)")));
+        return Err(refuse_modell("LG004", format!("`alloc {aname}` in {fname} holds no guard (no proof)")));
     }
     // The value, at the element type of the synthesised table.
     let ety = model.tables[ti].fields[0].ty.clone();
@@ -5630,7 +5706,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     for f in fns {
         tags.push((f.name.clone(), String::new()));
     }
-    for (fname, tag, _) in collected.darf.clone() {
+    for (fname, tag, _) in collected.darf.iter().chain(collected.gdarf.iter()).cloned() {
         if !tags.contains(&(fname.clone(), tag.clone())) {
             tags.push((fname, tag));
         }
@@ -5644,10 +5720,11 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         let f = fns.iter().find(|f| &f.name == fname).expect("known function");
         let mut held = f.held.clone();
         if !tag.is_empty() {
-            // The tag records the taken locks in order (`_in_L[_in_M]`).
+            // The tag records the taken locks outermost first (`_in_L[_in_M]`); `Stmt.locks`
+            // conses its witness onto the held list, so the INNERMOST lock stands first.
             for part in tag.split("_in_").skip(1) {
                 if let Some(li) = model.locks.iter().position(|l| l.name == part) {
-                    held.push(li);
+                    held.insert(0, li);
                 }
             }
         }

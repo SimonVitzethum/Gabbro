@@ -372,7 +372,8 @@ fn kandidatenpool(
 
 /// Read Orten of one expression, indices included -- the `geteilt.rs` coverage at one
 /// site: every `Ort` in the tree plus every index under it, plus traverse/`count`
-/// domains, which are reads of their carriers.
+/// domains over STRUCTURE (descendants, ancestors, chains, queues: they read links) -- a plain
+/// `slots of T` reads no cell.
 fn orte_aus_expr(e: &Expr, aus: &mut Vec<Ort>) {
     match &e.art {
         ExprArt::Ort(o) => {
@@ -425,6 +426,10 @@ fn orte_aus_expr(e: &Expr, aus: &mut Vec<Ort>) {
 
 fn domaene_ort(d: &Domaene, aus: &mut Vec<Ort>) {
     match d {
+        // `slots of T` walks the INDICES `0 ..< count`: a declared constant, no read of any slot (the
+        // model's `Stmt.traverse` reads nothing at its object). The cells the body reads are the
+        // body's own reads; the effects frame still names the object (`E010`, `wirkungen.rs`).
+        Domaene::SlotsVon(o) if o.suffixe.is_empty() => {}
         Domaene::SlotsVon(o)
         | Domaene::NachfahrenVon(o)
         | Domaene::VorfahrenVon(o)
@@ -1664,8 +1669,9 @@ fn race(
 
 /// **`N462` -- a started root is a thread for race freedom** (fix lane F4, review G12 F2.3).
 ///
-/// A `start { f, g };` root is no `concurrent` member (`N460` refuses the overlap), so the
-/// declared-pair race component (`race`, `N300`/`N301`) never pairs it with anything. It
+/// A `start { f, g };` root is a thread of its own: the declared-pair race component (`race`,
+/// `N300`/`N301`) pairs only the `concurrent` members, and a root that is a member as well is a
+/// second instance of it, which this rule holds to pool safety. A started root
 /// runs beside the other roots of its statement, beside every declared start (the
 /// starter's siblings), and beside other instances of itself: nothing bounds how often a
 /// `start` runs -- in a loop, in two starters, in a routine that is itself started twice.

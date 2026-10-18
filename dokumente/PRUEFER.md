@@ -1362,6 +1362,133 @@ count is unguarded: the guardian `pruefe-ausnahmen` named in the old text never 
 
 ---
 
+### 12.6 The differential harness: the checker against the Lean model (2026-10-18)
+
+**The order.** Every valid Gabbro program must be accepted; *valid* is what the Lean model accepts
+(`Akzeptiert`, whose soundness is `gabbro_ziel`); an unsafe program is not valid, a refusal is never turned
+into a warning and `ensures` is never derived. The harness measures where the Rust checker and the Lean
+model part, over the model's forms and their combinations (never over the corpus).
+
+**Where it lives.** `crates/gabbro-check/tests/differenzial/` is an ordinary integration test, so it runs
+inside `cargo test --workspace` and therefore inside `instrumente/pruefe-pruefer.py` (no fifth guardian).
+`atome.rs` is the catalogue of ATOMS, one or more per form of the model (`Expr`, `Stmt`, `Block`, `Endblock`,
+`Ty`, the lock, atomic, arena, gate, entry, contract and effect components), each with its UNSAFE twin
+(`.bad`); `bau.rs` assembles units out of one or two atoms; `sonder.rs` holds whole units that do not
+decompose (a lock shared by a thread and a handler, a lock-rank ring, `concurrent` beside `start`);
+`mutanten.rs` mutates the 31 corpus examples the exporter certifies; `lauf.rs` runs the three verdicts;
+`main.rs` classifies, reports and asserts.
+
+**The combination space, written down** (`bau.rs` header):
+
+```text
+program = Shape x Mode x Atom^k        k = 1 for One and Pool, k = 2 for Seq, Par, Call, CallKnapp
+Shape   = One | Pool (the function twice in `concurrent`) | Seq (two atoms in one body)
+        | Par (two concurrent roots) | Call (first atom in a callee) | CallKnapp (and the caller's
+          `effects` do not lift the callee's)
+Mode    = Free | Locks (`locks L { .. }` around the access) | Held (`requires Held(L)`) | Bare (the lock is
+          declared and not taken) | LocksErst | LocksZweit (only one of the two atoms takes it)
+```
+
+**Size.** The space has 61 948 programs before the last additions (about 170 atoms, 6 shapes, 6 modes, 15 written-out
+units, the corpus mutants), 62 000+ after; the checker and the exporter judge all of them in about four minutes, Lean
+evaluates the 12 700 that export (45-60 minutes, `vollraum`). The default test runs a deterministic slice of about 1 800
+(every single-atom program and a stride over the pairs, mutants included) in two minutes.
+
+**The three verdicts.** (1) *Rust*: `lies` + `pruefe`, accepted = no diagnostic at error level. (2) *Exporter
+route*: `lean_g::export_ns` turns the unit into a `Programm gD` term, `Refusal::modell` says whether a refusal
+is a premise of the model (a guard not held, a rank not above everything held, a range that does not fit)
+or only a missing form, and the exports are compiled in batches of 150 with one `#eval` of
+`akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs` each; a `by decide` Lean proves false is the model refusing the
+typed term (`Elab`), any other Lean error is an exporter defect and counts as *no verdict*. (3) *Pure-Lean
+route*: `grammatik/Grammatik/Parser/Cover/Differenz.lean` lexes, parses, elaborates (`elabU`), lowers and
+evaluates `AkzeptiertX` on source text with no exporter in the loop (`DifferenzLauf.lean` is its runner).
+
+**Classes.** (a) the model accepts and the checker refuses: INCOMPLETENESS; (b) the checker accepts and the
+model refuses: a CHECKER BUG, fixed at once; (c) both refuse; (d) the checker accepts and the exporter has no
+form: the model is silent (named by its `LGxxx`), not a disagreement. A pure-Lean verdict that parts from the
+checker or from the exporter route is a violation.
+
+**Measured** (whole space, 61 948 programs, before the fixes of the last three commits): both accept 10 284, (b) **0**,
+(d) 6 688 (the exporter has no form), (a) 893 in 11 groups, (c) both refuse or the model is silent 44 079. Of the 893,
+`W003` (182), `N291` (2), 95 % of `N511` and `E005` were fixed afterwards; the groups left are listed below. A program the
+checker accepts and the exporter reports as a model violation: none (the first run found 686 such, all of the classes
+below). The slice of the final tree asserts (b) = 0, every (a) group in `ERWARTET_A`, and no disagreement of the
+pure-Lean route.
+
+**Class (b), found and fixed (each with a poison probe, a clean twin and a sentence; `tests/haltefolge.rs`
+pins every boundary).**
+
+| class | minimal source | fix |
+|---|---|---|
+| a lock taken while already held | `locks L { locks L { .. } }`; `requires Held(L)` then `locks L`; a call to a callee that takes `L` inside `locks L` | `N588` (`H006`/`H012` had skipped the same lock as `H003`'s, and `H003` knew only shared-then-exclusive) |
+| a call whose callee `requires Held(L)` | `effects { locks L }` on the caller and `ku();` with no lock held (two threads raced on the table) | `N587`: the effects line is no hold |
+| an access through a pointer | `p.slots[i].v = 3;` with `p : ptr T` and `lock L protects { T }`, also through a local copy `let q = p;` | `H007`/`H020` read the place through the table the pointer names |
+| a read covered only by the effects line | `locks L { T.slots[0].v = 1; }` then `let x = T.slots[1].v;` | `H020` covers reads as it covered writes (`Expr.slot` carries the same `darf`) |
+| a callee writing an arena | `ga()` does `reset R;`, the caller declares `writes s` | `E008` compares arenas as places |
+| (found by reading, fixed in the same stroke) | `locks`/`requires Held` chains through `&T` arguments | the argument names `T`; no more `W003` for a pair it stood in |
+
+**Class (a), fixed.** `N459`/`N460` refused a root named twice in a `start`, and a `concurrent` member that the
+statement starts again; the model judges every run-time root as a pool routine (`Einheit.ws`), so both are
+gone and pool safety stays with `N462` (clean twins `1166`/`1167`, poison twins `1478`/`1479`). `E005` took a
+pointer parameter and the table it points to for two places. `N511` now evaluates `+ - *` over established
+cells (a sum invariant closes after `x = 30; y = 70;`, `1168`/`1481`). `N291`/`E247` no longer read a cell
+at the object of a `traverse` over `slots of T`. `W003` no longer fires for a call with an `&T` argument.
+
+**Class (a), left (`ERWARTET_A` in `main.rs`; none may be fixed by weakening the checker).** Each is a rule
+the language keeps beyond what `Akzeptiert` decides; the test falls on any NEW group.
+
+| refusal | minimal source | why the model accepts |
+|---|---|---|
+| `K001` (95) | `impl fn f(a : u32 in 0 .. 100) -> u32 in 0 .. 100 effects { pure } costs <= 1 ops { let y : u32 in 0 .. 100 = a; return y; }` | declared op bounds: `Akzeptiert` has no cost component |
+| `E006`, `E006,H011` | a corpus unit with `locks L` dropped from `effects` (`mut:119-sperrinvariante-bloecke:drop-effect0.1`) | the model carries write rights and the held list, not a `locks` effect |
+| `E008` (256) | a corpus unit with the callee's `reads`/`locks` item dropped from the caller's line (`mut:1166-start-wurzel-doppelt:drop-effect1.0`) | `RufPasst` tracks writes only |
+| `N511` (348 before the fix of sums) | `locks K { k.slots[0].x = 30; m.slots[0].y = 71; }` with `invariant P.slots[0].x + Q.slots[0].y == 100` | the release duty is the user's (`InvGutS`); the checker proves what it can |
+| `N275` | `lock K protects { P } .. invariant P.slots[0].x + Q.slots[0].y == 100` | `SperrInvOk` is assumed by construction (`SperrInvLokal`, the user's) |
+| `M101` | `const fn doppelt(n : u32 in 0 .. 1001) -> u32 in 0 .. 2000 { return n + n; }` | constants travel as computed numbers; the body is outside the model |
+
+The coordinator's list of classes found by the generator agent is folded in as follows. `H007` on a local named like a
+protected field: fixed here (a bare read of a parameter or `let` is no read of the field; the direction was
+over-refusal, not a hole). `M104` (`let y = A + B` with two `u8`: the model's exact range 0..510 against the checker's
+operand width), `N001` (shadowing, which the de Bruijn model allows), `M133` (a vacuous traverse invariant has no model
+form) and `M147` (the stale-read rule is not in the model) are RULINGS on the language, not checker repairs: Lean first,
+then `SYNTAX.md`, then the checker; they stay open and belong to the same `ERWARTET_A` mechanism once a rule is chosen.
+`LG003`/`LG006` (mixed widths under `^`, `invariant (B < 200)`) are exporter gaps, class (d).
+
+**Class (d) and what the model would need (the exact Lean change, nothing of it applied).** Below the
+statement (no `Spec.lean` diff): (1) `return` under `locks`: `Stmt.ret` demands `Λ.Perm V.ende`, so a
+`return` inside `locks L { .. }` has no term (12 corpus programs: 10, 13, 18, 42, 48, 71, 125, 147, 148, 159,
+1162, 1165); a `Stmt.retFrei` with `hΛ : ∃ extra, (∀ r ∈ extra, ∃ L, r = Res.held L) ∧ Λ.Perm (V.ende ++ extra)`
+and the release of `extra` in `execEnd` (every induction over `Stmt` gains a case). (2) The formers `Endblock`
+lacks that `Block` has: `bindCall`, `bindCallElse`, `narrow`, `check`, `awaits`, `exchange`, `float*`,
+`regRead`, an `ite` whose branches both return; a top-level `let y = f(x);`, `narrow x to ..` or an `if` with
+two returning arms has no term (the exporter says "no G form at the top level of a body"); each is the
+`Block` former with an `Endblock` rest, as `bindAxiom` already is. (3) `Block.arenaAlloc` is a `Block` former
+only (sugar over `Block.narrow`): `Endblock.arenaAlloc`. Statement-level (a Spec proposal, already written
+down): the payload hand-off without a lock (`PLAN-DYNAMISCH.md` 8a.3 and 11: the `N291` replacement and the
+`AkzeptiertX` component); the dynamic structures (the recognizer `Erk` is not a component of
+`Akzeptiert`, 8a.3); the reader/writer lock (`Lock` carries `rang` and `maskiert` only, 8a.5); declared
+costs (`K001`: the model has per-pass budgets and no bound per function; a `kostenB P fs` component over the
+call graph); effects other than write rights (`E006`/`E008`/`E010`: `Signatur` carries `schreibt`/`gschreibt`
+and the held list, not `reads`/`locks`). In the exporter only (the model has the form): `retry`/`exchange`
+handlers (`extern fn .. -> never`), option and array fields, `let mut`, a top-level `let` of a number
+whose type is a tagged sum.
+
+**The pure-Lean route and Track P.** On the whole space the pure-Lean route was sent 61 944 programs and decided 12 937 (21 %: 3 609 accepted, 9 328 refused by a
+premise of the model or by `reject`), 49 007 are outside the fragment (48 518 at elaboration, 489 at lowering). Where it
+decides it agrees with the checker on every program the checker accepts (3 609 of 3 609) and with the exporter route on
+every program both decide; its only departures from the checker are the 158 `K001`-style refusals the model does not carry. The elaboration is the bottleneck (as the coverage
+matrix of section 9b said): the measured refusals, by message, are the work list of Track P. Not extended in
+this branch: the 39 modules that depend on `Elab/Uebersetze.lean` carry kernel-evaluated witnesses, and a
+new `USide`/`UStmt` constructor reaches the GabbroV bridge proofs.
+
+**How to run.** `cargo test -p gabbro-check --test differenzial` (the default slice, about two minutes);
+`GABBRO_DIFF_NUR=<name part>` restricts to one family, `GABBRO_DIFF_ZEILEN=1` prints one line per program,
+`GABBRO_DIFF_OHNE_LEAN=1` / `GABBRO_DIFF_OHNE_REIN=1` switch the Lean legs off,
+`GABBRO_DIFF_GESAMT=1 .. gesamtraum` runs the whole space through the checker and the exporter (three
+minutes), `.. vollraum -- --ignored` runs the whole space with both Lean legs (about one hour; writes
+`.claude/muse-arbeit/kratz/diff/bericht.txt` with the counts per atom, the minimal source of every class
+and the violations).
+
 ## 13. Evidence apparatus and how to re-measure
 
 ### 13.1 What a claim about the checker rests on

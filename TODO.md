@@ -125,6 +125,11 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
   `certstmt.rs`, `E247`-Hinweis auf C-Gründe, `retired`-Codes (16 Zeilen). Alles entfernen, nicht
   umbenennen. Entschieden (Simon, 2026-10-18): `grammatik/Grammatik/CBackend` (22 233 Zeilen, archivierte C-Kette) ist Legacy des Modells und wurde gelöscht.
 
+- **Differential harness (2026-10-18, `PRUEFER.md` 12.6).** Class (b) is empty over 62 000 generated programs; the groups of class (a) left
+  (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components, and the model gaps
+  (`return` under `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change.
+  Open rulings: `M104`, `N001`, `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
+
 - **Wächter-Reste (vier Wächter seit 2026-10-17).** `bruecke/` wird nicht gemessen (sein `lake build`
   scheitert am fehlenden `mathlib`-Eintrag); der baumweite `gabbro prove`-Lauf und der E1-Vergleich
   (Pflichten-Manifest) hängen in keinem Wächter; der Mutationslauf über den Prüfer ist ersatzlos

@@ -56,7 +56,8 @@ impl fn registriere() -> Rueckruf
     return Rueckruf(cb: &schreibe);
 }
 
-// The admitted call: under the lock the callback's carriers are the caller's
+// The admitted call: under the lock (held by signature; a second `locks PUFFER` would take it
+// twice, `N588`) the callback's carriers are the caller's
 // footprint (`E249`/`N293` stay silent), the hull carries `writes Puffer.slots`
 // through the pointer, and the costs read the slot's `8`.
 impl fn bediene(t : ptr<normal, r> Rueckruf, k : u32)
@@ -64,9 +65,7 @@ impl fn bediene(t : ptr<normal, r> Rueckruf, k : u32)
     effects { reads t, writes Puffer.slots, locks PUFFER }
     costs   <= 24 ops
 {
-    locks PUFFER {
-        t->cb(k);
-    }
+    t->cb(k);
 }
 
 }

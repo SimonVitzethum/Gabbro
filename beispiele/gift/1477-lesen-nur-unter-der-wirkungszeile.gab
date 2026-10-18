@@ -1,0 +1,23 @@
+// erwartet: H020
+// 1477: **a READ covered only by the `locks` line is refused (H020).**
+//
+// The `locks L` line redeems the function (`H011`) through the locked write, and it guards nothing at
+// the other site: the read of `T.slots[1].v` stands outside every block. `Expr.slot` carries the same
+// `darf` as `assignSlot`, so a read of a guarded carrier needs the guard held AT THE SITE.
+module gift1477 {
+
+table T count 4 { slot { v : u32 in 0 .. 100, } }
+lock L protects { T } rank 0 held <= 100 ops;
+
+impl fn f() -> u32 in 0 .. 100
+    effects { reads T.slots, writes T.slots, locks L }
+    costs <= 100 ops
+{
+    locks L {
+        T.slots[0].v = 1;
+    }
+    let x : u32 in 0 .. 100 = T.slots[1].v;
+    return x;
+}
+
+}

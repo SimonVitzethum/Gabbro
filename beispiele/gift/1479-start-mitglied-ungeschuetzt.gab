@@ -1,0 +1,19 @@
+// erwartet: N462
+// 1479: **a `concurrent` member started again that is not pool-safe falls at N462.**
+//
+// The twin of `beispiele/1167`. `roh` runs from the declaration and again from `start { roh }`, and its one
+// write is guarded by no lock and is no atomic: two instances race on `h`. The overlap is no rule of its
+// own (the model judges the second instance as a pool routine), the pool-safety is.
+module gift1479 {
+
+static mut h : u64 = 0;
+
+impl fn roh() effects { writes h } costs <= 20 ops { h = 1; }
+
+impl fn chef() effects { writes h } costs <= 100 ops {
+    start { roh };
+}
+
+concurrent { roh, chef };
+
+}

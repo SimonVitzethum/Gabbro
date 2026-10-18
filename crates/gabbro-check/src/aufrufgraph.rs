@@ -1007,6 +1007,21 @@ fn ort_unter_klammern(e: &Expr) -> Option<&Ort> {
     }
 }
 
+/// The name an argument gives the callee's parameter: a place, or `&T` -- the address of a declared
+/// table, the one address there is (`Expr.ptrOf`), which stands for `T` itself: the callee's
+/// `writes p.slots` is `writes T.slots` at the caller. (An `&T` argument made the hull unresolvable:
+/// `W003` refused every `concurrent` pair a call with an address argument stood in.)
+fn argument_name(a: &Expr) -> Option<String> {
+    if let Some(o) = ort_unter_klammern(a) {
+        return Some(o.text());
+    }
+    match &a.art {
+        ExprArt::Klammer(x) => argument_name(x),
+        ExprArt::FnWert(p) => p.einfach().map(|i| i.text.clone()),
+        _ => None,
+    }
+}
+
 /// Aus `sammle_kanten` herausgehoben (2026-08-20): auch ein VERTRAG ruft, und der
 /// Vertragsleser steht eine Ebene hoeher.
 fn nimm_ruf(
@@ -1017,11 +1032,7 @@ fn nimm_ruf(
     u: &crate::umgebung::Umgebung,
     modul: &str,
 ) {
-    let args: Vec<Option<String>> = r
-        .argumente
-        .iter()
-        .map(|a| ort_unter_klammern(a).map(|o| o.text()))
-        .collect();
+    let args: Vec<Option<String>> = r.argumente.iter().map(argument_name).collect();
     match &r.ziel {
         CallTarget::Path(p) => {
             if let Some(n) = p.teile.last() {

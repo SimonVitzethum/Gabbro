@@ -3796,7 +3796,9 @@ pub const WIRKUNGEN: &[Satz] = &[
                     parameters, constants and anything that is not \
                     `static`/`atomic`/`table`/`device`/`state` fall out silently. Coverage \
                     is a PREFIX TEXT COMPARISON on the rendered place, so two names for the \
-                    same location are two places. The statement walker is hand-written with \
+                    same location are two places -- except that a pointer parameter and the \
+                    table it points to are ONE place for `E005` (the model names the table, \
+                    `tests/haltefolge.rs`). The statement walker is hand-written with \
                     a `_` arm and misses the source of a `let … else` and the `until` \
                     predicate of a `retry`; `lenof(TABLE)` is not a read \
                     at all. ~~The object of a `traverse` was missed the same way until \
@@ -3861,9 +3863,13 @@ pub const WIRKUNGEN: &[Satz] = &[
                     an assumption, not a finding. Closure is computed over SETS, not paths. \
                     And places are compared only for known world state: for everything else \
                     only the KIND is compared, so `writes a` covers `writes b`. `E010`'s \
-                    reach is a drawn LINE -- known world state only.",
+                    reach is a drawn LINE -- known world state only. An ARENA is a place \
+                    compared at the call boundary (a callee's `writes R` through `reset`/`alloc`/\
+                    `grow` is a different place from the caller's `writes s`); until the \
+                    differential harness found it, an arena named none and the frame ended at \
+                    the call. (Its reads stay undeclared: the model tracks writes across a call.)",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 10 probes on `E008`, probes on `E006` and `E007`. \
+        gemessen_an: "beispiele/gift: 10 probes on `E008` (`1480`: a callee writing an arena), probes on `E006` and `E007`. \
                       `E009` is a hint. **Probe 261 measures the recursive case since \
                       2026-08-24** -- the case the sentence used to exclude, and it gave zero \
                       errors before. Anchor: \
@@ -3966,7 +3972,10 @@ pub const WIRKUNGEN: &[Satz] = &[
                     `N294` fires only against signature-held outers, where `H006`/`H012` \
                     stay silent; same-lock pairs are exempt there as here. Device reads, \
                     `syscall`/`axiom` contracts, `maintains` and `= pred ;` carry no \
-                    footprint.",
+                    footprint. A `traverse`/`count` over a plain `slots of T` reads no \
+                    cell (it walks the declared indices): only the body's own reads \
+                    count, and domains over structure (descendants, chains) still read \
+                    their links.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/124 (two-thread witness, silent), beispiele/125 (shared \
                       read under its lock, silent); beispiele/gift/952 (shared read, \
@@ -4954,14 +4963,11 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "faden.start",
-        kennungen: &["N458", "N459", "N460", "N461", "N462"],
+        kennungen: &["N458", "N461", "N462"],
         aussage: "A hosted thread start `start { f, g };` that passed names roots that \
                   are threads and nothing else: each is an `impl fn` with a body, no \
-                  parameters, no result and no signature-held lock (`N458`), named once \
-                  per statement (`N459`), and started by the statement ALONE -- no root \
-                  is a `concurrent` member, an `entry` root or a `boot` dispatch, which \
-                  the runtime starts already (`N460`: one owner per thread, so no root \
-                  runs twice). The starter holds nothing across the join: no `start` \
+                  parameters, no result and no signature-held lock (`N458`), and may be a `concurrent` member, an `entry` root or a `boot` dispatch as \
+                  well (two instances of one routine are a pool, held to `N462`). The starter holds nothing across the join: no `start` \
                   stands inside `locks`, `observes` or `breaking` or in a function with \
                   `requires Held` (`N461`), so no root waits for a lock its starter \
                   holds. Every started root is pool-safe: each table, mutable static, \
@@ -4978,8 +4984,8 @@ pub const PHASEN: &[Satz] = &[
                     and the Lean checker Bool judges each root as a pool routine -- \
                     `wurzelnB` is `N458`'s signature-lock half, `einzelnPoolB` is \
                     `N462` (a root stands twice in `Einheit.ws`), and `N461` is the side \
-                    condition of the model's `start` step; `N459`/`N460` have no model \
-                    counterpart, which needs neither. The emitter lowers it since \
+                    condition of the model's `start` step; `N459` and `N460` are gone (the model accepts what they refused). A root named twice in one statement is a \
+                    pool, admitted exactly when it is pool-safe (`N462`). The emitter lowers it since \
                     lane 260 (one raw-clone spawn per root on unit-owned stacks, \
                     joined before the starter proceeds; unresolvable, bodiless, \
                     non-nullary or repeated roots stay `C001`). `N462` is fail-safe, not \
@@ -4990,9 +4996,8 @@ pub const PHASEN: &[Satz] = &[
                     A root that never returns keeps its starter waiting; that is a \
                     progress question the rules do not decide.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: `1148` (`N458`: a root with a parameter), `1149` \
-                      (`N459`: `start { h, h }`), `1150` (`N460`: a root that is also a \
-                      `concurrent` member), `1151` (`N461`: `start` inside `locks L` \
+        gemessen_an: "beispiele/gift: `1148` (`N458`: a root with a parameter), `1149` (gone: a root named twice is no refusal of its own; `1166` is the clean twin, \
+                      `1478` the unguarded one that falls at `N462`), `1150` (gone: a member that is started as well is a pool, `1167` is the clean twin, `1479` the unguarded one), `1151` (`N461`: `start` inside `locks L` \
                       with a root taking `L`), `1152` (`N462`: two roots writing one \
                       unguarded static), `1153` (`E008`: a `pure` starter), `1154` \
                       (`K001`: the roots' costs). The clean side: \
@@ -5644,6 +5649,30 @@ pub const SPERREN: &[Satz] = &[
                      dokumente/SPRACHE.md",
     },
     Satz {
+        name: "sperren.haltefolge",
+        kennungen: &["N587", "N588"],
+        aussage: "The held list of a body is read the way the model reads it: a call whose \
+                  callee `requires Held(L)` has `L` HELD at the call -- an enclosing `locks L` \
+                  block or the caller's own `requires Held(L)`, never an `effects { locks L }` \
+                  line (`N587`; `RufPasst`) -- and a lock is never taken while the body \
+                  already holds it exclusively, by an enclosing block, by `requires Held(L)`, \
+                  or through a callee whose hull takes it (`N588`; `Stmt.locks` demands every \
+                  held lock to rank STRICTLY below the one taken, and a lock does not rank \
+                  below itself). Equal rank is the first case of equal rank, which `H006` \
+                  states and had skipped for the identical lock.",
+        vorbehalt: "`N588` leaves shared holds to `H003` (the upgrade) and does not refuse a \
+                    second SHARED take of a shared lock; the model has no shared take. A \
+                    callee that only `requires` a lock is told from one that takes it by its \
+                    `requires Held(L)`; over an incomplete hull neither rule refuses (R16). \
+                    An indirect call names no callee and is covered by `N036` (a `fn(…)` type \
+                    may not promise `locks`/`requires`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1472 (nested block), 1473 (`requires Held` then `locks`), \
+                      1474 (through a call), 1475 (`N587`); found by the differential harness \
+                      `tests/differenzial`, class (b): the checker accepted, the model refused.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs (`block`, `rufprobe`)",
+    },
+    Satz {
         name: "sperren.geteilt",
         kennungen: &["H001", "H002", "H003", "H004", "H005"],
         aussage: "Holding a lock SHARED means reading the protected places and not writing \
@@ -5668,7 +5697,10 @@ pub const SPERREN: &[Satz] = &[
         name: "sperren.schutz",
         kennungen: &["H007", "H008", "H009", "H010", "H011", "H017"],
         aussage: "Every access to a place named in some lock's `protects` happens while that \
-                  lock is held (`H007`), every declared `locks` effect is really redeemed by \
+                  lock is held (`H007`) -- an access THROUGH a pointer parameter \
+                  (`p.slots[i].v`, `p->f`) is the access to the table the pointer names, the \
+                  same as a direct one (`Expr.thru`/`Stmt.assignThru` carry the `darf` of \
+                  `slot`) -- every declared `locks` effect is really redeemed by \
                   a take (`H011`), and for RCU-protected places a READ stands inside an \
                   `observes` block (`H009`) while a WRITE stands additionally under a real \
                   lock (`H010`). Since 2026-08-21 every DOMAIN NAME is explained by an `rcu` \
@@ -5722,11 +5754,18 @@ pub const SPERREN: &[Satz] = &[
     Satz {
         name: "sperren effects-locks-zeile",
         kennungen: &["H020"],
-        aussage: "A direct write to a lock-protected place needs more cover
-                  than the `effects { locks L }` line alone (`H020`).",
+        aussage: "A direct access (read or write, direct or through a pointer \
+                  parameter) to a lock-protected place needs more cover than the \
+                  `effects { locks L }` line alone (`H020`): an enclosing `locks` block \
+                  or `requires Held(L)`.",
         vorbehalt: "**Exempt with named owners:** `spec fn`, `requires
-                    Held(L)`, RCU-touched places, reads, calls. Disjoint from
-                    `H007` by construction (no line is H007's case).",
+                    Held(L)`, RCU-touched places, accesses inside a `let ... else` \
+                    source and call ARGUMENTS other than a plain place read, calls \
+                    (`N587` for the callee's `requires Held`). Disjoint from \
+                    `H007` by construction (no line is H007's case). Reads were exempt \
+                    until the differential harness (`tests/differenzial`) found the \
+                    model refusing them: `Expr.slot` carries the same `darf` as \
+                    `assignSlot`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/737 (must fall) and 739 (hull-redeemed
                       boundary); inline test h020_silence_and_single_fire_738
@@ -5773,12 +5812,14 @@ pub const SPERREN: &[Satz] = &[
                   acquire, the section's own writes and what its callees PROMISE
                   (their `ensures`), never their bodies: untouched conjuncts ride the
                   frame, `cell == const` writes and `==` promises are decided as
-                  equalities, and a constant against a constant is computed. What
+                  equalities, and `+ - *` over constants and over cells with an established
+                  value is computed (a sum invariant `x + y == 100` closes after `x = 30;
+                  y = 70;`). What
                   cannot be shown falls here (`N511`), naming the invariant, the
                   lock, the exit and the cells whose value is not determined.",
         vorbehalt: "**Decided, never proved.** The reading is syntactic and one-sided:
-                    inequality promises beyond constants, arithmetic between promised
-                    cells, aliasing beyond declared carriers and `ptr` parameters,
+                    inequality promises beyond constants, arithmetic between cells whose
+                    value is not established, aliasing beyond declared carriers and `ptr` parameters,
                     and index names (a `const` index and its literal spell different
                     cells) are all beyond it -- a missed form stays on the obliging
                     side and falls. Conditional calls never promise, conditional
@@ -5790,7 +5831,7 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1261 (the old weak `setze` shape of 124, N511),
                       1262 (a callee overwriting a promised cell, N511), 1263 (an
-                      early `return` before the promise, N511), 1264 (a direct
+                      early `return` before the promise, N511), 1481 (a sum invariant the section breaks, N511; clean twin 1168), 1264 (a direct
                       write of one cell of an equality, N511) -- each falls with
                       N511. The silent direction is beispiele/119 (the bound
                       re-established by a direct write through a `ptr` parameter),
@@ -6616,7 +6657,11 @@ pub const SPERREN: &[Satz] = &[
                     checkable on their own, and what falls is the claim that they may run \
                     together. Like `E009` it is the honest third state beside pass and \
                     refuse -- but here it bites (`Fehler`, not `Hinweis`), because an \
-                    unchecked concurrency claim is not a frame anyone may rely on.",
+                    unchecked concurrency claim is not a frame anyone may rely on. An \
+                    argument `&T` (the address of a declared table) names `T`: the \
+                    callee's `writes p.slots` is `writes T.slots` at the caller; until the \
+                    differential harness found it, such a call made every pair it stood in \
+                    unresolvable.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/706 (unresolvable member -- `W003` alone) and \
                       /707 (disjoint write sets behind a recursive hull: `W003` as \
