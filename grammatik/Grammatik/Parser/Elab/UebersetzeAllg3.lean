@@ -831,6 +831,13 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, n + 1, .ret v :: rest, r =>
+    match lowRetStmt (l := false) u caller Γ fn (resOf u caller) (some ⟨rfl⟩) v with
+    | .error e => .error e
+    | .ok st =>
+      match lowBodyF u caller Γ fn n rest r with
+      | .error e => .error e
+      | .ok ee => .ok (Endblock.cons st ee)
   | _, _, _ + 1, .bindElse .. :: _, _ =>
     .error "lower: a let else at the top level of a body has no G form (Endblock lacks bindCallElse)"
   | Γ, fn, n + 1, .bindAxElse y c args e :: rest, r =>
