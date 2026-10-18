@@ -46,7 +46,7 @@ theorem erk_erhaelt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a' : Abs} {
     exact fall_nimm O passes R K v hwT hLT hwK hLK voll rest hv ih
   | @frei l Γ Λ Λ' a a' x hwT hLT hwK hLK rest hx h ih =>
     exact fall_frei O passes R K x hwT hLT hwK hLK rest hx ih
-  | @wachs l Γ Λ Λ' a a'' n hwK hLK voll rest hv h ih =>
+  | @wachs l Γ Λ Λ' a a'' n hn hwK hLK voll rest hv h ih =>
     exact fall_wachs O passes R K n hwK hLK voll rest hv ih
   | @pruefe l Γ Λ Λ' a a' c voll rest hv h ih =>
     exact fall_pruefe O passes R K c voll rest hv ih

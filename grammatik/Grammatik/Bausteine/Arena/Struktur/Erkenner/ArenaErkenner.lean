@@ -176,8 +176,10 @@ inductive Erk : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Abs �
       (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ) (hwK : V.gschreibt A.kopf = true)
       (hLK : gdarf D A.kopf Λ) (rest : Block D V l Γ Λ Λ') (hx : a x.pos = .frei)
       (h : Erk (a.set x.pos .offen) rest a') : Erk a (Block.freiVar A x hwT hLT hwK hLK rest) a'
-  /-- ALLOCATOR. `grow A by n else voll;` -- the committed word moves, nothing the structures read; the binder is unknown. -/
-  | wachs {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a'' : Abs} (n : Int) (hwK : V.gschreibt A.komm = true)
+  /-- ALLOCATOR. `grow A by n else voll;` -- the committed word moves, nothing the structures read; the binder is unknown.
+      `0 ≤ n`: a commit never shrinks the committed word (the surface demands `n >= 1`, `R-grow-const`; step 3 of Phase A, 2026-10-18). -/
+  | wachs {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a'' : Abs} (n : Int) (hn : 0 ≤ n)
+      (hwK : V.gschreibt A.komm = true)
       (hLK : gdarf D A.komm Λ) (voll : Endblock D V l Γ Λ)
       (rest : Block D V l (Ty.int 0 (D.count A.tab) :: Γ) Λ Λ') (hv : Rein voll)
       (h : Erk (a.ext .offen) rest a'') : Erk a (Block.dynGrowB A.toDynForm n hwK hLK voll rest) a''.tail

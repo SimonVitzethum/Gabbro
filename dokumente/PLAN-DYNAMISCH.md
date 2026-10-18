@@ -355,7 +355,7 @@ guard shapes from `Code/Refine/Loop.lean` only as a reference for the machine-G 
   refused; widening it means a new constructor with its theorem;
 * a link field that holds an index of ANOTHER arena (decision (b) says: not in scope).
 
-### 8a.2 Concurrency of arenas (O20): design note, phase 3, nothing built yet
+### 8a.2 Concurrency of arenas (O20): design note and Lean status (phase 3, step 3, 2026-10-18)
 
 * **Per-thread arena (per cpu, thread-local carrier).** The footprint rule already forbids another thread from
   touching the carriers; the free list, the counter and the links change in one thread, so `ListOk`/`BaumOk` hold at
@@ -377,8 +377,53 @@ guard shapes from `Code/Refine/Loop.lean` only as a reference for the machine-G 
   freed and re-allocated slot across a section boundary: a thread must not keep an index across a release; that is
   `N586` per thread and needs the cross-thread form: a slot a thread holds is not on the free list unless that thread
   freed it). A lock-free free list (Treiber stack) is phase B item 5, not this.
-* **Next steps:** (1) the section theorem `abschnitt_erhaelt`: a body built only from the proved moves preserves
-  `S.inv L` from acquire to release; (2) `dynGrow_fremd` (DONE 2026-10-18 as `nachGrow_gleich`, `grow_liste`, `grow_baum` in `ArenaWachs`); (3) the slot-ownership predicate for the ABA point (the recognizer's `frei` status is the single-thread form of it).
+* **Next steps (2026-10-17 note), now answered:** (1) the section theorem: PROVED (`abschnitt_erk`, `abschnitt_rufe`, below); (2) `dynGrow_fremd`: DONE
+  (`nachGrow_gleich`, `grow_liste`, `grow_baum`); (3) the slot-ownership predicate for the ABA point: NOT done (see "Still open").
+
+**What is proved in step 3** (`grammatik/Grammatik/Bausteine/Arena/Struktur/Sperre/`, 13 modules, imported by `Grammatik.lean`; axioms `propext`/`Classical.choice`/`Quot.sound`
+at most, no `sorry`; `gabbro_ziel` and `Spec.lean` untouched: none of these modules is imported by `Zielsatz/`, they import `Spec.lean`):
+
+| Piece | Statement | File |
+|---|---|---|
+| the arena as a lock invariant | `Dekl.orte` (table, committed word, counter, free head, list head, tree root); `ok_gleich_wort` (= premise `dekl_ok_traeger`: `Dekl.Ok` reads only those words, and not the trace); the lock family `Dekl.sperr K L0` (`inv L0 = Dekl.Ok`, `orte L0 = K.orte`, every other lock `true`); `sperr_inv_iff'`, `sperr_lokal` (`SperrInvLokal`, the user's duty, discharged once for every arena), `sperr_ok` (`SperrInvOk` from the one declaration fact `Bewacht c L0`) | `ArenaSperreTraeger` |
+| a recognized body is lock-free (= premise `execEndH_eq_execEnd`) | `Rein.ohneLocks`, `erk_ohneLocks`, `erkE_ohneLocks`; `erkE_execEndH`, `erk_execBlockH` (the existing `Block/Endblock.execH_ohne` applied); `erk_erhaeltH`, **`erkE_koerperH`**: the soundness theorems over `execBlockH`/`execEndH` for ANY lock family and environment move | `ArenaSperreOhne` |
+| **the section theorem** | `freiH_post` (a release after an arena-preserving outcome keeps the arena and the check cannot fail); **`abschnitt_erk`**: `locks L { body }` with `Erk K Abs.leer body a'` under `HavocOk (K.sperr L) U`: every exit meets `Dekl.Ok`, none is `leave`/`next`, and the only `logik` outcome is one the body already had (the release check adds no failure); `abschnitt_start` (the world a section starts in meets the invariant, from the third clause of `HavocOk`); the CALL form: `Rufe` (a section body that is a run of calls of recognized functions), `RErhaelt`, `rufe_post`, **`abschnitt_rufe`** | `ArenaSperreAbschnitt` |
+| a recognized callee through the program semantics | **`rufAt_erk`**: for every `f` with `ErkE K Abs.leer (P.rumpf f)`, `rufAt P O passes n` answers (value or reason) in an arena-consistent world from one (the premise `RErhaelt` of the call form; also for the patched `rufFrei`, which only maps `logik` to `hardware`) | `ArenaSperreRuf` |
+| the three legs of the goal on the arena family | `arena_ruhe` (`sperrInv`), `arena_wechsel` (`sperrWechsel`: acquire starts from and ends in a whole arena, release hands over a whole arena), `arena_sicht` (`sperrSicht`), `komm_nur_halter` (the committed word is accessed by a holder alone, and no other thread moves it while `L` is held), `arena_ziel` (all three from `Ziel P (K.sperr L) ..`) | `ArenaSperreMaschine` |
+| **`grow` as a locked commit** | `lesGlobs_ne_komm`; **`grow_ok_iff`, `grow_atomar`**: a commit is ONE store to `komm`, no word the structures read is `komm`, so the arena invariant holds after it iff before, every liveness and the counter are as before, `komSt' = komSt + n`; `komm_wachstum`; **`grow_gesperrt`** (a section whose body starts with `grow` is an `abschnitt_erk` instance) | `ArenaSperreWachs` |
+| the writer obligation of an arena invariant (D3), against the proposed meaning (D2) | `InvHaeltD2` (`arena i = some ⟨A, K⟩ ↦ K.Ok σ`), `InvAmRueckD2`, `InvGutSM` (`InvGutS` with an arbitrary meaning; `invGutS_iff_M`), **`invGutSD2_arena`**: if every owed arena invariant of `f` has `ErkE K Abs.leer (P.rumpf f)`, the arena is whole at entry and the user's obligation covers the other invariants, then `InvGutS` of the proposed meaning holds; `invGutSD2_ohne` | `ArenaSperreInv` |
+| the machine bridge (premise 2) | **`erkE_maschine`**: from a thread of the call machine whose world meets the arena invariant at the entry of a writer's body `b` with `EndR A (Tief P A n) b` (coverage) and `ErkE K Abs.leer b` (certificate), the steps of the thread reach a machine whose frame is popped with the return value, whose shared memory is the return world's AND meets the arena invariant (`rufG_adaequat_ruf` + `erkE_koerper`, joined at `execEnd`) | `ArenaSperreBruecke` |
+| coverage from the certificate | `Stmt/Block/Endblock.schleifenfrei` (looks through the statement forms of the fragment, refuses `forever`/`traverse`/`retry`); **`erk_blockR`, `erkE_endR`**: a loop-free `Erk`/`ErkE` derivation IS `BlockR`/`EndR` (every move unfolds into `narrow`/`check`/`assignSlot`/`assignGlob`, every `else` is a bare return); **`erkE_maschine_erk`**: the machine bridge with the ONE certificate (`ErkE` + `schleifenfrei`), no separate `EndR` | `ArenaSperreAbdeckung` |
+| witnesses and planted defects | the declaration `FDL` (the four-slot arena, shared under one lock; only the lock fields differ from `FD`), `KLL`, `w0L`, `ok_w0L`, `sperr_ok_zeuge`; the section `locks () { nimm; push }` RUN over an environment move of the acquire (`abschnitt_zeuge`: ends `.ok`, arena whole, head `1`, release check passed; `havoc_U0` shows the hypothesis `HavocOk` is satisfiable); PLANTED DEFECT `lnk[2] = 2` in a section (`stray_bricht`, `abschnitt_defekt_schleife`: the release check FIRES, the section ends `logik schleife`; `stray_abgelehnt`: no `Erk` derivation; `stray_kein_havoc`: no environment move hands the stray world to an acquirer); `grow_zeuge_L`, `grow_ueber_decke`; PLANTED GAP `wachs_negativ_schrumpft` (below); the machine witness `erkE_maschine_zeuge` (a thread holding `()` runs the writer by machine steps, covered AND recognized, memory whole, head `1`); the call form: `rErhaelt_PL`, `abschnitt_rufe_zeuge`, `abschnitt_rufe_lauf` (`locks () { f(); }` over `rufAt`, run) | `ArenaSperreWelt`, `ArenaSperreZeuge`, `ArenaSperreWachsZeuge`, `ArenaSperreMaschZeuge` |
+
+**Findings of step 3 (each named, none hidden):**
+ 1. **The footprint of a pure `pop` escapes `schuldet`.** `InvTraeger` and `schuldet` count TABLES only (`D.traeger : Inv → List Tab`). The recognized moves `pop`
+    (`head = lnk[i]`) and `wurzelAus` (`root = nil`) write ONLY a global (a head word) that `Dekl.Ok` reads: a function that does just that owes no arena invariant by `schuldet`,
+    and premise (iii) of D5 ("a step of a thread outside every writer moves no carrier of `i`") is false for it. (`invRuhe` stays TRUE for such a function, because one store
+    `pop_ok` keeps `Dekl.Ok`; it is the footprint ARGUMENT that fails.) Repair, needs a decision: arena carriers are `Tab ⊕ Glob` -- `Deklaration.traeger` becomes
+    `Inv → List (Tab ⊕ Glob)` and `schuldet` counts `D.gschreibt` too, or an arena invariant is owed by every function that writes ANY word of `Dekl.orte`
+    (`K.orte.any (writes f)`), which needs no change of `Deklaration` but a case in `schuldet`.
+ 2. **The arena at ENTRY.** `erkE_koerper` gives the arena at every exit FROM an arena-consistent entry; `InvGutS` runs from any world meeting `ReqAmEintritt`, and an expression
+    `requires` cannot say `Dekl.Ok`. For a shared arena the entry is the lock invariant at the acquire (`abschnitt_start`); for a per-thread arena it is the start memory and `invRuhe`.
+    `invGutSD2_arena` takes it as the premise `hein`; the Spec diff must say where it comes from (a `requires`-pseudo clause `arena_whole` that the exporter writes and the
+    caller discharges, or the premise "every call of a writer is inside a section or a closed machine").
+ 3. **A `locks` body cannot hold `return`.** `Rein` demands `Λ.Perm V.ende` and a `return` inside `locks L` has `held L` in `Λ`; so the inline form `abschnitt_erk` is typable
+    only where `V.ende` contains the held lock (a writer that returns holding the lock), and the realistic section is the CALL form `locks L { f(..); }` with `f` requiring `L`
+    (`abschnitt_rufe`, run in `abschnitt_rufe_lauf`).
+ 4. **The commit bound `stand <= komSt` is NOT in the lock invariant.** `Dekl.Ok` does not read `komm`; the recognized alloc `frisch` is guarded by the static bound `hi`
+    (`Block.arenaAlloc`), not by `komSt` (`Block.dynAlloc` is not a recognized form); the executed forms' frames name the link words, not `zaehl`/`komm`; and the model's `grow` accepts
+    `n < 0` (`wachs_negativ_schrumpft`: `komm 2 -> 1`; the surface demands `n >= 1`, `R-grow-const`) -- `Erk.wachs` now carries the premise `0 ≤ n` (repaired in step 3: before it
+    accepted any `n`; the soundness proof is unchanged because the Ok-invariant never reads `komm`). The theorems say: the commit never breaks anything the structures read
+    (`grow_atomar`) and is a lock-guarded carrier (`komm_nur_halter`); "every live slot is committed storage" needs (a) `n >= 0` in `Erk.wachs` (DONE), (b) a `dynFrisch` constructor
+    over `Block.dynAlloc`, (c) the frame of every form extended to `zaehl`/`komm`. Lean-only repairs; (b) and (c) not done.
+ 5. **The machine bridge covers loop-free writers.** `EndR` has no guard inside a loop body (`narrow`/`check` need `Block D V false`), so a recognized body with a loop is a statement about
+    `execEnd` (`erkE_koerper`) only; its machine correspondence needs the loop fragment extended to guards.
+ 6. **`Erk` and `EndR` were two separate derivations; now one.** `erkE_endR` (`ArenaSperreAbdeckung`) derives the coverage from a loop-free certificate, `erkE_maschine_erk` is the bridge
+    with that single premise (the Rust side needs only the exporter's `ErkE`; the checker's `programmImFragmentG` is no longer a second source of the same fact).
+
+**Still open in 8a.2 (not claimed):** the ownership predicate for the ABA point across a release (a slot a thread holds is not on the free list unless that thread freed it; the cross-thread
+form of `N586`); two sections commute up to slot names; per-thread arenas need nothing new (the legs above do not mention them); a lock-free free list (Treiber) is Phase B item 5;
+the commit bound (finding 4); the footprint repair (finding 1).
 
 ### 8a.3 Proposal (NOT applied): the `Spec.lean` diff for step 4 (revised 2026-10-18, third pass)
 
@@ -448,16 +493,40 @@ outside every writer of `i` moves no carrier of `i` (the footprint of `schuldet`
 returns, not about the shape of the predicate, so the induction over machine steps is the existing one; the two places that read the predicate
 (`InvTraeger`, the evaluation) are D2. Review: two independent verdicts, as for every extension of the goal (AGENTS.md section 1).
 
-**What is still missing before this diff may be applied** (each named, none hidden):
- 1. the section theorem for SHARED arenas (8a.2: `S.inv L` containing `Dekl.Ok`, `abschnitt_erhaelt` from acquire to release) and the ownership predicate of
-    the ABA point; for a per-thread arena the three points of D5 suffice;
- 2. the bridge from the machine-G small steps of a writer's frame to the big-step `execEnd` that `erkE_koerper` talks about
-    (`RufAdaequat` has it for the sequential semantics; the recognized fragment is a subset of the covered statements, but the statement is not proved);
- 3. the generic lemma `execEndH_eq_execEnd` for bodies without `Stmt.locks`, and `dekl_ok_traeger`;
- 4. the exporter writing `ErkE` derivations (Rust `lean_g.rs`; the recognizer's vocabulary is closed, a form outside it stays refused by name);
- 5. calls inside writers (the recognizer has no call constructor), the hash and sibling recognizers, the release of a whole revoked subtree;
- 6. the migration D1 (moving the structures into `Kern/Syntax` renames modules and needs a full rebuild of everything above `Syntax.lean`).
-Until those exist the diff would claim more than is proved; it is a proposal.
+**Premises of the diff, status after step 3 (2026-10-18; each line says proved or open):**
+ 1. the section theorem for SHARED arenas: **PROVED** (`abschnitt_erk`, `abschnitt_rufe`, `abschnitt_start`, `arena_ziel`, `grow_atomar`; 8a.2). The ownership predicate of the ABA
+    point across a release stays OPEN; for a per-thread arena the three points of D5 suffice.
+ 2. the bridge from the machine-G steps of a writer's frame to the big-step `execEnd` that `erkE_koerper` talks about: **PROVED for loop-free writers** as `erkE_maschine`
+    (`rufG_adaequat_ruf` + `erkE_koerper`; premises: coverage `EndR`, certificate `ErkE`) and, with the coverage derived from the certificate (`erkE_endR`), as `erkE_maschine_erk`
+    (premises: `ErkE` + `schleifenfrei`; witness `erkE_maschine_zeuge`). OPEN: writers with loops (the machine fragment has no guard inside a loop body).
+ 3. `execEndH_eq_execEnd` for bodies without `Stmt.locks`: **PROVED** for the recognized fragment (`erk_ohneLocks`, `erkE_ohneLocks`, `erkE_execEndH`; the generic statement was
+    `Endblock.execH_ohne` already); `dekl_ok_traeger`: **PROVED** as `Dekl.ok_gleich_wort` (the invariant reads only `Dekl.orte`, and not the trace).
+    D3's `invGutS_arena`: **PROVED** as `invGutSD2_arena` against `InvHaeltD2` (the proposed meaning), with the entry premise `hein` (finding 2 of 8a.2).
+ 4. the exporter writing `ErkE` derivations (Rust `lean_g.rs`): OPEN (the vocabulary is closed; a form outside it stays refused by name).
+ 5. calls inside writers (the recognizer has no call constructor; the CALL form of the SECTION is proved, a writer that calls a helper is not), the hash and sibling recognizers, the release
+    of a whole revoked subtree: OPEN.
+ 6. the migration D1: **NOT DONE; analysed.** The eight structures (`ArenaForm`, `DynForm`, `FreiForm`, `LinkFeld`, `LinkKopf`, `ListDekl`, `BaumDekl`, `Dekl`) mention only `Deklaration`
+    (and `Ty`), so their declarations can move; their readers (`stand`, `komSt`, `wert`, `st`) need `World` and `Wert.umTyp` and stay in `Bausteine/Arena/`. But `Programm` lives at the END of
+    `Kern/Syntax/Syntax.lean` (line 653) in the same file as `Deklaration` (line 111): a new `Kern/Syntax/Arenen.lean` that `Syntax.lean` imports cannot import `Deklaration`.
+    The migration therefore needs `Syntax.lean` split at the `Deklaration` boundary (`Syntax/Deklaration.lean`, `Syntax/Arenen.lean`, then the rest) or the structures inserted into
+    `Syntax.lean` before `Programm`; either changes the root of the Lean tree, so the whole of `grammatik/` rebuilds (~800 files, one lake run at a time), every positional `Programm`
+    literal needs the new field appended (`none` / `fun _ => none`), and the namespace of `DynForm` (`ArenaDyn`) is renamed at its uses. Measured here: nothing built; this needs a
+    sitting of its own and the build to be green before the diff is reviewed.
+ 7. NEW (finding 1 of 8a.2): the footprint. `schuldet`/`InvTraeger` count tables only; `pop` and `wurzelAus` write only a head word; D5 (iii) needs either `traeger : Inv → List (Tab ⊕ Glob)` or an
+    arena case in `schuldet` (`K.orte.any (writes f)`). DECISION needed (Simon): it changes `Deklaration` or `schuldet`, both in the statement.
+ 8. NEW (finding 2): the arena at entry (`hein`): a pseudo-`requires` the exporter writes, or the premise that writers are called inside a section / a closed machine.
+ 9. NEW (finding 4): the commit bound `stand <= komSt` is not part of the lock invariant; Lean-only repairs: `0 ≤ n` in `Erk.wachs` DONE; a `dynFrisch` constructor and frames over `zaehl`/`komm` open.
+
+**The exact Spec.lean diff, refreshed (D1-D5 as written above, with these changes; STILL NOT APPLIED -- it needs Simon's review and two independent verdicts):**
+ * D1 stands as written, with the file split of item 6.
+ * D2 stands; the proposed `InvHaelt` match is `InvHaeltD2` in `ArenaSperreInv.lean` (so the D2 text can be copied from a compiled definition). `InvTraeger` for an arena invariant is
+   `Dekl.orte`-based (`ok_gleich_wort`), over `Tab ⊕ Glob` if item 7 is decided that way.
+ * D3: the field of `Einheit` is `dynZeuge : DynZeuge P` as written; its consumer is `invGutSD2_arena` (proved), which takes the entry fact `hein` -- add the premise of item 8.
+   `execEndH = execEnd` on a recognized body is proved (`erkE_execEndH`).
+ * D4: the NOT CLAIMED list shrinks as written; add: the commit bound, an arena under a lock-free free list, loops in a writer's machine correspondence (item 2), the ABA ownership predicate.
+ * D5: (i) is `invGutSD2_arena` + the existing return leg; (ii) is the leg's hypothesis; (iii) needs item 7. For a SHARED arena the three legs of `Ziel` already say what is needed
+   (`arena_ziel`), with `S := K.sperr L` as the lock family of the unit: `sperrOrte` (the checker's `protects` fact) is the only premise, `SperrInvLokal` is a theorem (`sperr_lokal`).
+Until items 4, 5, 7 and 8 are settled and item 6 is built the diff would claim more than is proved; it stays a proposal.
 
 ## 9. Re-measuring
 
