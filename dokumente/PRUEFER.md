@@ -1200,6 +1200,46 @@ closed or named:
 * **The checker does in Rust what `M104` forbids**: an `as` that wraps in silence cost two real
   bugs on 2026-09-01; the retired `pruefe-umwandlungen` guarded the class; not guarded today.
 
+### Completeness against the model: programs the Lean model accepts (2026-10-18)
+
+A corpus count cannot answer completeness (above), so the denominator here is the model itself:
+`grammatik/Grammatik/Gen/` builds programs **the Lean model accepts** and the checker must then accept too.
+How: a generic term generator reads the constructors of the surface AST (`SAnw`, `SExpr`, `STyp`, `SEnde`,
+`XKind`) off their inductive types (`getConstInfoInduct`; a new constructor is generated with no edit, and
+`Gen/Proben.lean` fails the build for a constructor it cannot produce); the Track P pipeline (`parseTopTief`,
+`elabU`, `lowerAllg`) decides validity by lowering to a G term; the model's own semantics (`rufAt`/`execEnd`
+from `sp0Of`) gives the value `main` returns. `instrumente/teile/gen-differenz.py` (stage 5 of
+`pruefe-llvm.py`, small N; `--n 90` by hand) asks the checker, the exporter and the compiler. Nothing is
+committed: the programs are regenerated from a seed into `.tmp/gen-differenz`.
+
+Measured with 90 programs over three frames (13,284 candidate statements, 720 accepted by the model, print and
+read round trip to normal form 90 of 90): **checker refuses 46 of 90**, `gabbro lean-g` refuses 13 more of the
+accepted ones, 44 pass the checker, the exporter and both targets. Every refusal is a case where the model
+accepts and a Rust pass does not; the minimal examples (shrunk by statement lines) name five classes:
+
+| Code | Minimal program body (frame: `A, B : u8`, `T.slots[k].v : u8`) | Model | Reading |
+|---|---|---|---|
+| `M104` (37 of 46) | `let y = A + B;` | range `0 .. 510`, accepted | the checker's rule is the OPERANDS' width; the model's `Expr.add` carries the exact range and `Block.bind` takes it. Either the elaborator is looser than SYNTAX §4 or `M104` is stricter than G: needs a ruling, then the Lean side first |
+| `M133` (7) | `traverse i over slots of T by unvisited invariant true { }` | accepted (`UStmt.loopBeg`) | a vacuous `invariant` is a checker rule the model has no form for |
+| `N001` (4) | `let z = 2; let z = A;` | accepted (de Bruijn) | shadowing is refused by the checker; the model has no such rule |
+| `M147` (1) | `let r = T.slots[1].v; T.slots[1].v = 3; return r \| 5;` | accepted | the stale-read rule (carrier written since `r` was read) is not in the model |
+| `H007` (seen once in 90 programs) | `let w = U.slots[0].n; return w;` with `lock L protects { v, w }` | accepted | a LOCAL named like a protected field is read as the field: name capture, a checker bug |
+
+Exporter (`gabbro lean-g` after a clean check): `LG003` (6) for `A ^ C` with `A : u8`, `C : u16` (mixed widths
+under `^`; checker, elaborator and compiler accept) and `LG006` (7) for `traverse ... invariant (B < 200) { ... }`
+(loop invariant has no exporter form; the elaborator has one). The compiler (`gabbro llvm`) refused none and no
+binary disagreed with the model on x86_64 or aarch64.
+
+What the generator does **not** reach is as informative: 5,528 of 13,284 candidates die in the elaborator with
+`stmt without G form`, i.e. the elaborator covers a fragment (statics, tables, locks, `let`, `if`, `traverse`
+over `slots`, direct calls as statements, `return`); `match`, `retry`, `forever`, value calls (`let x = f(..)`),
+options, sums, `why`, floats, pointers and atomics never elaborate, so no generated program contains them. Of
+the 72 surface constructors 18 occur in a final program; the other 54 are listed by the driver with their
+generated/accepted counts, never skipped silently. Of the 114 register members of the term families
+(`dokumente/llvm-modelldeckung.tsv`: `Expr`, `Stmt`, `Block`, `Endblock`, `Arms`, `Args`, `Ty`) 31 appear in
+the G terms the exporter writes for the generated programs. Closing that gap is elaborator work (Track P), not
+generator work: the generated space follows the type, the accepted space follows `elabU`.
+
 ---
 
 ## 12. The Lean mirror

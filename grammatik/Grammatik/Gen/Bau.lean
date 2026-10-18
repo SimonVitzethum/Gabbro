@@ -72,13 +72,6 @@ def erwaehnt (s : String) (c : String) : Bool :=
   let cs := s.toList
   go cs cs.length
 
-unsafe def evalAnwsU (e : Lean.Expr) : MetaM (List SAnw) :=
-  evalExpr (List SAnw) (mkApp (mkConst ``List [levelZero]) (mkConst ``SAnw)) e
-unsafe def evalExprsU (e : Lean.Expr) : MetaM (List SExpr) :=
-  evalExpr (List SExpr) (mkApp (mkConst ``List [levelZero]) (mkConst ``SExpr)) e
-@[implemented_by evalAnwsU] opaque evalAnws : Lean.Expr → MetaM (List SAnw)
-@[implemented_by evalExprsU] opaque evalExprs : Lean.Expr → MetaM (List SExpr)
-
 /-- A batch of `n` generated values of type `T` (budget `fuel`), as one evaluation. -/
 def charge (k : Kontext) (typ : Name) (n fuel : Nat) : MetaM Lean.Expr := do
   let mut es := #[]
@@ -109,7 +102,8 @@ structure Bau where
 def kurz (s : String) : String := String.ofList (s.toList.take 40)
 
 /-- Grow a program in frame `r`: up to `ziel` statements within `versuche` candidates. -/
-def baue (k0 : Kontext) (fi ziel versuche tiefe : Nat) : MetaM Bau := do
+def baue (evA : Lean.Expr → MetaM (List SAnw)) (evE : Lean.Expr → MetaM (List SExpr))
+    (k0 : Kontext) (fi ziel versuche tiefe : Nat) : MetaM Bau := do
   let r := rahmen[fi]!
   let mut lok : List String := []
   let mut ss : List SAnw := []
@@ -118,7 +112,7 @@ def baue (k0 : Kontext) (fi ziel versuche tiefe : Nat) : MetaM Bau := do
   let mut ab : List String := []
   let mut n := 0
   while n < versuche && ss.length < ziel do
-    let cs ← evalAnws (← charge (kontextFuer k0 fi lok) ``SAnw 64 (2 + n % 3))
+    let cs ← evA (← charge (kontextFuer k0 fi lok) ``SAnw 64 (2 + n % 3))
     for c in cs do
       if n ≥ versuche || ss.length ≥ ziel then break
       n := n + 1
@@ -143,7 +137,7 @@ def baue (k0 : Kontext) (fi ziel versuche tiefe : Nat) : MetaM Bau := do
   let mut m := 0
   while m < 8 && !fertig do
     m := m + 1
-    for c in (← evalExprs (← charge (kontextFuer k0 fi lok) ``SExpr 64 (1 + m % 3))) do
+    for c in (← evE (← charge (kontextFuer k0 fi lok) ``SExpr 64 (1 + m % 3))) do
       if fertig then break
       match pruefeLauf tiefe (einheitToks r ss c) with
       | .ok (.wert _) => e := c; fertig := true

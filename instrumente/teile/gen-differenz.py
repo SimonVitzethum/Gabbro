@@ -37,7 +37,7 @@ def erzeuge(out, seed, n, ziel, versuche):
                        capture_output=True, text=True, timeout=7200)
     if b.returncode != 0:
         return b
-    p = subprocess.run(["lake", "env", "lean", "--run", "Grammatik/Gen/Main.lean", str(out), str(seed),
+    p = subprocess.run(["lake", "env", "lean", "--run", "../instrumente/teile/gen/Treiber.lean", str(out), str(seed),
                         str(n), str(ziel), str(versuche)], cwd=W / "grammatik", env=env,
                        capture_output=True, text=True, timeout=7200)
     return p

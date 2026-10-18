@@ -1,6 +1,9 @@
 /-
-  File:      Grammatik/Gen/Main.lean
-  Subject:   Generator, the driver. `lake env lean --run Grammatik/Gen/Main.lean OUT SEED N ZIEL VERSUCHE`
+  File:      instrumente/teile/gen/Treiber.lean
+  Subject:   Generator, the driver (a tool beside the guardians, not part of the model: it lives outside
+             `grammatik/` because it evaluates generated terms with the `unsafe` evaluation API of the
+             Lean meta level, which the Lean guardian forbids inside the model).
+             `cd grammatik; lake env lean --run ../instrumente/teile/gen/Treiber.lean OUT SEED N ZIEL VERSUCHE`
              builds N programs (seeds SEED .. SEED+N-1, frames in turn), writes `OUT/g<seed>.gab` with the
              model's expected result in `OUT/g<seed>.exp` for each program whose model run returns a value,
              and prints the per-constructor census (generated / accepted / in a final program). Constructors
@@ -13,6 +16,13 @@ import Grammatik.Gen.Bau
 namespace Gabbro.Grammatik.Gen
 
 open Lean Meta Gabbro.Grammatik.Parser
+
+unsafe def evalAnwsU (e : Lean.Expr) : MetaM (List SAnw) :=
+  evalExpr (List SAnw) (mkApp (mkConst ``List [Level.zero]) (mkConst ``SAnw)) e
+unsafe def evalExprsU (e : Lean.Expr) : MetaM (List SExpr) :=
+  evalExpr (List SExpr) (mkApp (mkConst ``List [Level.zero]) (mkConst ``SExpr)) e
+@[implemented_by evalAnwsU] opaque evalAnws : Lean.Expr → MetaM (List SAnw)
+@[implemented_by evalExprsU] opaque evalExprs : Lean.Expr → MetaM (List SExpr)
 
 /-- Number of values (by `Repr`) that mention each constructor. -/
 def zaehle (cs : List Name) (vs : List String) : List (String × Nat) :=
@@ -37,7 +47,7 @@ def lauf (out : String) (seed n ziel versuche : Nat) : MetaM Unit := do
   for i in [0:n] do
     IO.setRandSeed (seed + i)
     let r := rahmen[i % rahmen.length]!
-    let b ← baue k (i % rahmen.length) ziel versuche 100
+    let b ← baue evalAnws evalExprs k (i % rahmen.length) ziel versuche 100
     tries := tries + b.versuche
     taken := taken + b.stmts.length
     alleR := alleR ++ reprs b.alle
@@ -91,5 +101,5 @@ def main (args : List String) : IO UInt32 := do
     let _ ← (x.run' {} {}).toIO { fileName := "<gen>", fileMap := default, maxHeartbeats := 0 } { env := env }
     return 0
   | _ =>
-    IO.eprintln "usage: Main.lean OUT SEED N ZIEL VERSUCHE | werte FILE"
+    IO.eprintln "usage: Treiber.lean OUT SEED N ZIEL VERSUCHE | werte FILE"
     return 2
