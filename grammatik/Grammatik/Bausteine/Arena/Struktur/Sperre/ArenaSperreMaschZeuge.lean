@@ -8,7 +8,7 @@
              frame, its shared memory meets the arena invariant, and the head of the list is slot `1`.
 -/
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreBruecke
+import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbdeckung
 
 namespace Gabbro.Grammatik
 
@@ -50,17 +50,12 @@ def ML : RufMaschineG FDL :=
 
 theorem ml_welt : (ML.weltVon 0).slots = w0L.slots ∧ (ML.weltVon 0).globs = w0L.globs := ⟨rfl, rfl⟩
 
-/-- The writer is covered by the machine's fragment, at every depth. -/
+theorem schreiberL_schleifenfrei : schreiberL.schleifenfrei = true := rfl
+
+/-- The writer is covered by the machine's fragment, at every depth -- derived from the certificate (`erkE_endR`), no second
+    derivation is written. -/
 theorem schreiberL_R (A : FDL.Lock → Prop) (n : Nat) : EndR A (Tief PL A n) schreiberL :=
-  EndR.cons _ _
-    (StmtR.ite _ _ _
-      (BlockR.narrow _ _ _ _ _ (EndR.ret _ _)
-        (BlockR.cons _ _ (StmtR.blatt _ (BlattG.assignGlob _ _ _ _))
-          (BlockR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _))
-            (BlockR.cons _ _ (StmtR.blatt _ (BlattG.assignSlot _ _ _ _ _ _))
-              (BlockR.cons _ _ (StmtR.blatt _ (BlattG.assignGlob _ _ _ _)) BlockR.nil)))))
-      BlockR.nil)
-    (EndR.ret _ _)
+  erkE_endR erkE_schreiberL rfl schreiberL_schleifenfrei
 
 theorem held_spurL : HeldGenau HL (offen spurL) := by
   intro L
@@ -110,8 +105,8 @@ theorem erkE_maschine_zeuge :
     ∃ (M' : RufMaschineG FDL) (σ' : World FDL), RufLaufG PL oL 0 0 ML M' ∧ M'.speicher = σ'.speicher ∧
       KLL.Ok (M'.speicher.welt []) ∧ LGL.st σ' = 1 := by
   obtain ⟨σ', v, hex, hlg⟩ := schreiber_exec oL 0 (rufRumpf PL oL 0 1) (ML.weltVon 0) rfl rfl
-  obtain ⟨M', ext, hl, -, hsp, -, hok⟩ := erkE_maschine KLL PL oL 0 1 ML 0 () Env.nil w0L untenL [] spurL [] (Γ := [])
-    (Λ := HL) Env.nil schreiberL (fun _ => False) (schreiberL_R _ 1) erkE_schreiberL rfl rfl held_spurL
+  obtain ⟨M', ext, hl, -, hsp, -, hok⟩ := erkE_maschine_erk (Alk := fun _ => False) (K := KLL) PL oL 0 1 ML 0 () Env.nil w0L untenL [] spurL []
+    (Γ := []) (Λ := HL) Env.nil schreiberL erkE_schreiberL schreiberL_schleifenfrei rfl rfl held_spurL
     (frei_ML _ (fun _ h => h)) (by show KLL.Ok (ML.speicher.welt spurL); exact (Dekl.ok_spur w0L spurL).mpr ok_w0L) σ' v hex
   exact ⟨M', σ', hl, hsp, hok, hlg⟩
 

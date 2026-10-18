@@ -391,6 +391,7 @@ import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWachs
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWachsZeuge
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreBruecke
+import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbdeckung
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschZeuge
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset

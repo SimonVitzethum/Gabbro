@@ -380,7 +380,7 @@ guard shapes from `Code/Refine/Loop.lean` only as a reference for the machine-G 
 * **Next steps (2026-10-17 note), now answered:** (1) the section theorem: PROVED (`abschnitt_erk`, `abschnitt_rufe`, below); (2) `dynGrow_fremd`: DONE
   (`nachGrow_gleich`, `grow_liste`, `grow_baum`); (3) the slot-ownership predicate for the ABA point: NOT done (see "Still open").
 
-**What is proved in step 3** (`grammatik/Grammatik/Bausteine/Arena/Struktur/Sperre/`, 12 modules, imported by `Grammatik.lean`; axioms `propext`/`Classical.choice`/`Quot.sound`
+**What is proved in step 3** (`grammatik/Grammatik/Bausteine/Arena/Struktur/Sperre/`, 13 modules, imported by `Grammatik.lean`; axioms `propext`/`Classical.choice`/`Quot.sound`
 at most, no `sorry`; `gabbro_ziel` and `Spec.lean` untouched: none of these modules is imported by `Zielsatz/`, they import `Spec.lean`):
 
 | Piece | Statement | File |
@@ -393,6 +393,7 @@ at most, no `sorry`; `gabbro_ziel` and `Spec.lean` untouched: none of these modu
 | **`grow` as a locked commit** | `lesGlobs_ne_komm`; **`grow_ok_iff`, `grow_atomar`**: a commit is ONE store to `komm`, no word the structures read is `komm`, so the arena invariant holds after it iff before, every liveness and the counter are as before, `komSt' = komSt + n`; `komm_wachstum`; **`grow_gesperrt`** (a section whose body starts with `grow` is an `abschnitt_erk` instance) | `ArenaSperreWachs` |
 | the writer obligation of an arena invariant (D3), against the proposed meaning (D2) | `InvHaeltD2` (`arena i = some ⟨A, K⟩ ↦ K.Ok σ`), `InvAmRueckD2`, `InvGutSM` (`InvGutS` with an arbitrary meaning; `invGutS_iff_M`), **`invGutSD2_arena`**: if every owed arena invariant of `f` has `ErkE K Abs.leer (P.rumpf f)`, the arena is whole at entry and the user's obligation covers the other invariants, then `InvGutS` of the proposed meaning holds; `invGutSD2_ohne` | `ArenaSperreInv` |
 | the machine bridge (premise 2) | **`erkE_maschine`**: from a thread of the call machine whose world meets the arena invariant at the entry of a writer's body `b` with `EndR A (Tief P A n) b` (coverage) and `ErkE K Abs.leer b` (certificate), the steps of the thread reach a machine whose frame is popped with the return value, whose shared memory is the return world's AND meets the arena invariant (`rufG_adaequat_ruf` + `erkE_koerper`, joined at `execEnd`) | `ArenaSperreBruecke` |
+| coverage from the certificate | `Stmt/Block/Endblock.schleifenfrei` (looks through the statement forms of the fragment, refuses `forever`/`traverse`/`retry`); **`erk_blockR`, `erkE_endR`**: a loop-free `Erk`/`ErkE` derivation IS `BlockR`/`EndR` (every move unfolds into `narrow`/`check`/`assignSlot`/`assignGlob`, every `else` is a bare return); **`erkE_maschine_erk`**: the machine bridge with the ONE certificate (`ErkE` + `schleifenfrei`), no separate `EndR` | `ArenaSperreAbdeckung` |
 | witnesses and planted defects | the declaration `FDL` (the four-slot arena, shared under one lock; only the lock fields differ from `FD`), `KLL`, `w0L`, `ok_w0L`, `sperr_ok_zeuge`; the section `locks () { nimm; push }` RUN over an environment move of the acquire (`abschnitt_zeuge`: ends `.ok`, arena whole, head `1`, release check passed; `havoc_U0` shows the hypothesis `HavocOk` is satisfiable); PLANTED DEFECT `lnk[2] = 2` in a section (`stray_bricht`, `abschnitt_defekt_schleife`: the release check FIRES, the section ends `logik schleife`; `stray_abgelehnt`: no `Erk` derivation; `stray_kein_havoc`: no environment move hands the stray world to an acquirer); `grow_zeuge_L`, `grow_ueber_decke`; PLANTED GAP `wachs_negativ_schrumpft` (below); the machine witness `erkE_maschine_zeuge` (a thread holding `()` runs the writer by machine steps, covered AND recognized, memory whole, head `1`); the call form: `rErhaelt_PL`, `abschnitt_rufe_zeuge`, `abschnitt_rufe_lauf` (`locks () { f(); }` over `rufAt`, run) | `ArenaSperreWelt`, `ArenaSperreZeuge`, `ArenaSperreWachsZeuge`, `ArenaSperreMaschZeuge` |
 
 **Findings of step 3 (each named, none hidden):**
@@ -417,8 +418,8 @@ at most, no `sorry`; `gabbro_ziel` and `Spec.lean` untouched: none of these modu
     over `Block.dynAlloc`, (c) the frame of every form extended to `zaehl`/`komm`. Lean-only repairs; (b) and (c) not done.
  5. **The machine bridge covers loop-free writers.** `EndR` has no guard inside a loop body (`narrow`/`check` need `Block D V false`), so a recognized body with a loop is a statement about
     `execEnd` (`erkE_koerper`) only; its machine correspondence needs the loop fragment extended to guards.
- 6. **`Erk` and `EndR` are two separate derivations.** `erkE_maschine` takes both as premises; there is no theorem `ErkE (loop-free) → EndR`. For an accepted unit the checker's
-    `programmImFragmentG` supplies the coverage and the exporter would supply `ErkE`; the embedding would remove the double certificate.
+ 6. **`Erk` and `EndR` were two separate derivations; now one.** `erkE_endR` (`ArenaSperreAbdeckung`) derives the coverage from a loop-free certificate, `erkE_maschine_erk` is the bridge
+    with that single premise (the Rust side needs only the exporter's `ErkE`; the checker's `programmImFragmentG` is no longer a second source of the same fact).
 
 **Still open in 8a.2 (not claimed):** the ownership predicate for the ABA point across a release (a slot a thread holds is not on the free list unless that thread freed it; the cross-thread
 form of `N586`); two sections commute up to slot names; per-thread arenas need nothing new (the legs above do not mention them); a lock-free free list (Treiber) is Phase B item 5;
@@ -496,8 +497,8 @@ returns, not about the shape of the predicate, so the induction over machine ste
  1. the section theorem for SHARED arenas: **PROVED** (`abschnitt_erk`, `abschnitt_rufe`, `abschnitt_start`, `arena_ziel`, `grow_atomar`; 8a.2). The ownership predicate of the ABA
     point across a release stays OPEN; for a per-thread arena the three points of D5 suffice.
  2. the bridge from the machine-G steps of a writer's frame to the big-step `execEnd` that `erkE_koerper` talks about: **PROVED for loop-free writers** as `erkE_maschine`
-    (`rufG_adaequat_ruf` + `erkE_koerper`; premises: coverage `EndR`, certificate `ErkE`; witness `erkE_maschine_zeuge`). OPEN: writers with loops (the machine fragment has no guard inside a
-    loop body), and the embedding `ErkE (loop-free) → EndR` that would remove the double certificate.
+    (`rufG_adaequat_ruf` + `erkE_koerper`; premises: coverage `EndR`, certificate `ErkE`) and, with the coverage derived from the certificate (`erkE_endR`), as `erkE_maschine_erk`
+    (premises: `ErkE` + `schleifenfrei`; witness `erkE_maschine_zeuge`). OPEN: writers with loops (the machine fragment has no guard inside a loop body).
  3. `execEndH_eq_execEnd` for bodies without `Stmt.locks`: **PROVED** for the recognized fragment (`erk_ohneLocks`, `erkE_ohneLocks`, `erkE_execEndH`; the generic statement was
     `Endblock.execH_ohne` already); `dekl_ok_traeger`: **PROVED** as `Dekl.ok_gleich_wort` (the invariant reads only `Dekl.orte`, and not the trace).
     D3's `invGutS_arena`: **PROVED** as `invGutSD2_arena` against `InvHaeltD2` (the proposed meaning), with the entry premise `hein` (finding 2 of 8a.2).
