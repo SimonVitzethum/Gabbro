@@ -265,6 +265,15 @@ def stepI : Instr → Mem → Regs → Option (Mem × Regs)
           else none
       | _, _, _ => none
   | .fence _, m, rs => some (m, rs)
+  | .imsk d p v, m, rs =>
+      match p.ev rs, v.ev rs with
+      | some (.ptr b o), some x =>
+          if atomicOk (.int Conf.wbits) then
+            match m.load b o (.int Conf.wbits) with
+            | some old => (m.store b o (.int Conf.wbits) x).map fun m' => (m', rs.set d old)
+            | none => none
+          else none
+      | _, _ => none
   | .fact c, m, rs =>
       match c.ev rs with
       | some (.int 1 x) => if x = 1 then some (m, rs) else none
