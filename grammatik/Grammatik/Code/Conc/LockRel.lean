@@ -381,4 +381,26 @@ theorem release_step {lay : Layout D} (hL : LayoutOk lay) {M : RufMaschineG D} {
       exact hG' v
     · simp [hv, hG' v]
 
+/-- **A store into a lock cell leaves everything else alone**: the representation of every world, the memory's global
+    blocks and every thread's locals (the cells are no table, no global and no local). So the lock steps compose
+    with `stmt_gx` and the other refinement theorems. -/
+theorem lock_store_post {lay : Layout D} (hL : LayoutOk lay) {L : D.Lock} {m m' : Mem} {b : Nat}
+    (hb : b = lay.lblk L ∨ b = lay.lsrv L) {o : Int} {t : Ty} {v : Val} (hs : m.store b o t v = some m') :
+    (∀ σ : Gabbro.Grammatik.World D, Rep lay σ m → Rep lay σ m') ∧ (WfL lay m → WfL lay m') ∧
+      (∀ (rs : Regs) (cenv : List Reg) {Γ : Gabbro.Grammatik.Ctx} (ρ : Gabbro.Grammatik.Env D Γ),
+        EnvRep lay rs m cenv ρ → EnvRep lay rs m' cenv ρ) := by
+  have hnf : ¬ Fresh lay b := by
+    rcases hb with rfl | rfl
+    · exact not_fresh_lblk L
+    · exact not_fresh_lsrv L
+  refine ⟨fun σ hR => rep_store_other hR hs ⟨fun t' e => ?_, fun g e => ?_⟩, fun hw => wfL_store hs hw,
+    fun rs cenv {Γ} ρ hE => envRep_load cenv ρ (fun r hr b' hb' hf o' t' v' hl =>
+      fresh_load_store hs hnf b' o' t' v' hf hl) hE⟩
+  · rcases hb with rfl | rfl
+    · exact (hL.lkT L t').1 e
+    · exact (hL.lkT L t').2 e
+  · rcases hb with rfl | rfl
+    · exact (hL.lkG L g).1 e
+    · exact (hL.lkG L g).2 e
+
 end Gabbro.Code.Lower
