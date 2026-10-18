@@ -4,7 +4,7 @@
              a static as a carrier; a read or a write of `s` needs `Held(L)` (`Expr.glob`/`Stmt.assignGlob` carry
              `gdarf`), and the lowering refuses an access without it. Table-free sources (kernel memory).
 -/
-import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben14
 

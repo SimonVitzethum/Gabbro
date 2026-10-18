@@ -182,6 +182,9 @@ structure UTab where
       placeholder range `0 .. 1`, so every field index is the position it always was); its
       TYPE is `Ty.bool`, and it is never read or written as a number. -/
   bools : List String := []
+  /-- The table of an `arena A capacity lo .. hi of T;` (`ArenaForm.tab`): `count` is `hi`, the one field is
+      `wert`, and the counter is the static `A#used` (`ArenaForm.zaehl`). -/
+  arena : Bool := false
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -654,7 +657,7 @@ def uTraegerTab (globs : List UGlob) : List UTab → String → Except String St
     if globs.any (fun g => strEq g.name c) then .ok c
     else .error ("guard unknown: " ++ c)
   | t :: rest, c =>
-    if strEq t.name c then .ok t.name
+    if strEq t.name c then (if t.arena then .error "arena under a lock without G form" else .ok t.name)
     else if t.cols.any (fun (f, _) => strEq f c) then .ok t.name
     else uTraegerTab globs rest c
 
@@ -747,6 +750,21 @@ inductive UBasis
 
 def uZugriff (ctx : UCtx) : SExpr →
     Except String (UBasis × String × String × UIdx)
+  | .index (.variable b) idx =>
+    match ctx.tabs.find? (fun x => strEq x.name b) with
+    | .some tb =>
+      if !tb.arena then .error "place without G form"
+      else
+        match uHaeltWaechter ctx tb.name with
+        | .error e => .error e
+        | .ok _ =>
+          match uTabNrAux ctx.tabs 0 tb.name with
+          | .error e => .error e
+          | .ok (num, _) =>
+            match uIndex ctx tb.name num idx with
+            | .error e => .error e
+            | .ok ix => .ok (.tabelle b, tb.name, "wert", ix)
+    | .none => .error "place without G form"
   | .field (.index (.field (.variable b) s) idx) f =>
     if !strEq s "slots" then .error "place without G form"
     else
@@ -1171,6 +1189,14 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
       | .ok r => .ok { r with locks := l :: r.locks }
   | .writes o :: rest =>
     match (match o with
+        | .variable a => if tabs.any (fun x => x.arena && strEq x.name a) then some a else none
+        | _ => none : Option String) with
+    | some a =>
+      match uEffekteAux kopf tabs locks globs rest with
+      | .error e => .error e
+      | .ok r => .ok { r with puts := a :: r.puts, gputs := (a ++ "#used") :: r.gputs }
+    | none =>
+    match (match o with
         | .variable g => if uIstGlobName kopf tabs globs g then some g else none
         | _ => none : Option String) with
     | some g =>
@@ -1454,6 +1480,9 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     SAnw → Except String UStmt
   | .set ziel op wert => uSetze ctx ziel op wert
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
+  | .reset a .none =>
+    if ctx.tabs.any (fun x => x.arena && strEq x.name a) then .ok (.assignGlob (a ++ "#used") (.lit 0))
+    else .error ("arena unknown: " ++ a)
   | .call c args =>
     match uRuf ctx tabs koepfe c args with
     | .error e => .error e
@@ -1872,6 +1901,32 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
           | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true } :: gs)
   | _ :: rest => uGlobs consts alias rest
 
+/-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
+    field `wert`, and the counter static `A#used` over `0 .. hi` starting at zero. A dynamic ceiling and a
+    placement have no form here. -/
+def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
+    List SItemTief → Except String (List UTab × List UGlob)
+  | [] => .ok ([], [])
+  | .arenaT n _ hi mx t pb :: rest =>
+    match mx, pb with
+    | .some _, _ => .error "arena with a dynamic ceiling without G form"
+    | _, .some _ => .error "arena placement without G form"
+    | .none, .none =>
+      match uAnzahl consts hi with
+      | .error e => .error e
+      | .ok h =>
+        match uFeldTyp alias t with
+        | .error e => .error e
+        | .ok r =>
+          match uArenen consts alias rest with
+          | .error e => .error e
+          | .ok (ts, gs) =>
+            if 0 < h then
+              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true } :: ts,
+                   { name := n ++ "#used", ty := GTy.int 0 h, init := 0, var := true } :: gs)
+            else .error "arena of no slots"
+  | _ :: rest => uArenen consts alias rest
+
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
     error (the refused rows of `collect`). -/
@@ -1883,6 +1938,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .globT .. :: rest => uRestFehler rest
   | .atomT .. :: rest => uRestFehler rest
+  | .arenaT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
@@ -1948,11 +2004,16 @@ def elabU : List SItemTief → Except String UProg
     | .ok _ =>
     match uGlobs consts alias ms with
     | .error e => .error e
-    | .ok globs =>
+    | .ok globs0 =>
     match uSeq ((ms.filter (fun
         | .tableT _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias)) with
     | .error e => .error e
-    | .ok tabs =>
+    | .ok tabs0 =>
+    match uArenen consts alias ms with
+    | .error e => .error e
+    | .ok (arTabs, arGlobs) =>
+    let tabs := tabs0 ++ arTabs
+    let globs := globs0 ++ arGlobs
     match uSeq ((ms.filter (fun
         | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
     | .error e => .error e
@@ -3115,7 +3176,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

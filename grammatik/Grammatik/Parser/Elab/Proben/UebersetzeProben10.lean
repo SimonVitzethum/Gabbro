@@ -2,7 +2,7 @@
   File:      Grammatik/Parser/Elab/UebersetzeProben10.lean
   Subject:   Wall 3: `bool` probes (split from `UebersetzeProben`: the kernel probes of one file share one memory budget).
 -/
-import Grammatik.Parser.Elab.UebersetzeProben
+import Grammatik.Parser.Elab.Proben.UebersetzeProben
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben10
 

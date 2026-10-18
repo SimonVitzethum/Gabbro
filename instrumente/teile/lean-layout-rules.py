@@ -95,6 +95,11 @@ rules('grammatik/Grammatik/Parser', [
     (r'^Uebersetze\w*$', 'Elab'),
 ])
 
+# The elaboration's witness files (Track P): one folder of their own, so `Elab` stays under the limit.
+rules('grammatik/Grammatik/Parser/Elab', [
+    (r'^UebersetzeProben\w*$', 'Proben'),
+])
+
 rules('grammatik/Grammatik', [
     (r'^(Syntax|Typen|Konstanten|Fehler|Satz|Zucker|Marken|MarkenInstanzA|Profil|Koernung|Bits|Geist|Extraktion|Ziel)$', 'Kern/Syntax'),
     (r'^(Semantik|Maschine|MaschinenKette|Erhaltung|Terminierung|Ueberlauf|Fristlauf|Durchgaenge|Budget|Adressraum|Syscall|SyscallPaarung|Geraet|GanzzahlMatch)$', 'Kern/Semantik'),

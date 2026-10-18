@@ -5,7 +5,7 @@
              pushes it), the annotation is a check, the scope ends with the block, and a body read
              after a `let` sees the extended context. Sources are short on purpose (kernel memory).
 -/
-import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben6
 

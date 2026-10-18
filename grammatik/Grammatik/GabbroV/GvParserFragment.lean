@@ -56,7 +56,7 @@ theorem erstAblehnung_104_zeuge :
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
     `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
-    kind the unit may carry (`concurrent`, `static`). -/
+    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`). -/
 def istGegenstand : SItemTief → Bool
   | .constT .. => false
   | .typeT .. => false
@@ -66,6 +66,7 @@ def istGegenstand : SItemTief → Bool
   | .entryT .. => false
   | .globT .. => false
   | .atomT .. => false
+  | .arenaT .. => false
   | .concT .. => false
   | _ => true
 
@@ -89,7 +90,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | specT _ _ => rfl
   | asmT _ _ => rfl
   | formatT _ _ _ _ => rfl
-  | arenaT _ _ _ _ _ _ => rfl
+  | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
   | whyT _ _ _ => rfl
   | stateT _ _ => rfl
   | devT _ _ _ _ => rfl
@@ -122,6 +123,7 @@ def istAngenommen : SItemTief → Bool
   | .entryT .. => true
   | .globT .. => true
   | .atomT .. => true
+  | .arenaT .. => true
   | .concT .. => true
   | _ => false
 
@@ -145,7 +147,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | specT _ _ => simp [istAngenommen] at he
   | asmT _ _ => simp [istAngenommen] at he
   | formatT _ _ _ _ => simp [istAngenommen] at he
-  | arenaT _ _ _ _ _ _ => simp [istAngenommen] at he
+  | arenaT _ _ _ _ _ _ => rfl
   | whyT _ _ _ => simp [istAngenommen] at he
   | stateT _ _ => simp [istAngenommen] at he
   | devT _ _ _ _ => simp [istAngenommen] at he
@@ -188,7 +190,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | specT _ _ => simp [istGegenstand] at he
   | asmT _ _ => simp [istGegenstand] at he
   | formatT _ _ _ _ => simp [istGegenstand] at he
-  | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
+  | arenaT _ _ _ _ _ _ => simp [istAngenommen] at ha
   | whyT _ _ _ => simp [istGegenstand] at he
   | stateT _ _ => simp [istGegenstand] at he
   | devT _ _ _ _ => simp [istGegenstand] at he

@@ -5,7 +5,7 @@
              without a lock and stored by `A = v publishes nothing;` only where the function declares
              `writes A`; a payload, an `observed by` word and a plain store have no G form.
 -/
-import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben13
 

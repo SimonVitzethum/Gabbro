@@ -4,7 +4,7 @@
              must not fall through; the rest of the block reads `x` at the narrowed range). In a nested block
              only: a body is an `Endblock`, which has no `narrow` former (recorded as a model gap).
 -/
-import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.Proben.UebersetzeProben3
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben18
 

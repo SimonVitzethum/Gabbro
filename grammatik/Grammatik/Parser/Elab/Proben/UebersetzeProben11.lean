@@ -2,7 +2,7 @@
   File:      Grammatik/Parser/Elab/UebersetzeProben11.lean
   Subject:   Walls 4 and 5: `own`/`~p` and constants (split from `UebersetzeProben`: the kernel probes of one file share one memory budget).
 -/
-import Grammatik.Parser.Elab.UebersetzeProben
+import Grammatik.Parser.Elab.Proben.UebersetzeProben
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben11
 
