@@ -72,6 +72,9 @@ def loadG (τ : GTy) (p : Opd) (r : Nat) : Option LR :=
   | .why n =>
       if Ar.Fits 0 ((n : Int) - 1) 128 then
         some ([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1) else none
+  | .sum cs =>
+      if Ar.Fits 0 (sumTop cs) 128 then
+        some ([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1) else none
   | _ => none
 
 /-- Does an integer type fit the widths the lowering knows? -/

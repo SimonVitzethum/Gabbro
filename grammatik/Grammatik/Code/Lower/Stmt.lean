@@ -42,6 +42,7 @@ def cvtM (τ : GTy) (o : Opd) (r : Nat) : Option LR :=
   | .ptr _ _ => some ([], o, r)
   | .opt n => if Ar.Fits (-1) (n - 1) 128 then some ([], o, r) else none
   | .why n => if Ar.Fits 0 ((n : Int) - 1) 128 then some ([], o, r) else none
+  | .sum cs => if Ar.Fits 0 (sumTop cs) 128 then some ([], o, r) else none
   | _ => none
 
 /-- `store` of a value (already in its memory image) to a pointer operand. -/
@@ -75,6 +76,24 @@ theorem retryOk_fits {n : Nat} (h : retryOk n = true) : Ar.Fits 0 (n : Int) 128 
   simp only [Int.le_refl, if_true]
   have h1 : ((n : Nat) : Int) ≤ 2 ^ 62 := by exact_mod_cast hn
   omega
+
+/-- The payload of an arm of a `match` on a tagged value, as the integer of its own range: from the
+    scrutinee's word `ov` (`W` bits, below `top`) the quotient by the number of cases `L` (an unsigned
+    division by a constant above zero), plus the low bound of the payload (modulo `2^w`), then the
+    result moved to the width of its own range. The three steps run at the width of the range
+    `min 0 lo .. max top hi`, which holds the word, the quotient and the payload alike. -/
+def payCode (top : Int) (W L : Nat) (lo hi : Int) (ov : Opd) (r : Nat) : Option LR :=
+  if Ar.Fits (min 0 lo) (max top hi) 128 then
+    match cvt W (Ar.wid (min 0 lo) (max top hi)) false ov r with
+    | (c1, o1, r1) =>
+        match cvtG (.int (min 0 lo) (max top hi)) (.int lo hi) (.reg (r1 + 1)) (r1 + 2) with
+        | some (c3, o3, r3) =>
+            some (c1 ++ [.bin r1 .udiv (Ar.wid (min 0 lo) (max top hi)) o1
+                    (.int (Ar.wid (min 0 lo) (max top hi)) (L : Int)),
+                  .bin (r1 + 1) .add (Ar.wid (min 0 lo) (max top hi)) (.reg r1)
+                    (.int (Ar.wid (min 0 lo) (max top hi)) lo)] ++ c3, o3, r3)
+        | none => none
+  else none
 
 /-- `return` of an optional value. -/
 def lowerErg (lay : Layout D) (cenv : List Reg) :
@@ -192,6 +211,23 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | some (ba, s1) =>
                 some (⟨lb, [], cr, .sw (Ar.wid 0 ((n : Int) - 1)) orr s.l
                         ((List.range n).map fun (i : Nat) => ((i : Int), (s.l + 1 + i : Nat)))⟩ ::
+                      ⟨s.l, [], [], .dead⟩ :: ba, s1)
+            | none => none
+          else none
+      | none => none
+  | _, _, _, _, .onTag (cs := cs) v arms, lb, k, s =>
+      -- the case number is the word modulo `L`; a `switch` on it picks the arm, which takes its payload
+      -- (the word divided by `L`) from the same word (`lowerAr`)
+      match lowerE lay cenv v s.r with
+      | some (cv, ov, r1) =>
+          if Ar.Fits 0 (sumTop cs) 128 then
+            match lowerAr lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (s.l + 1) k
+                ⟨r1 + 1, s.l + 1 + cs.length⟩ with
+            | some (ba, s1) =>
+                some (⟨lb, [], cv ++ [.bin r1 .urem (Ar.wid 0 (sumTop cs)) ov
+                        (.int (Ar.wid 0 (sumTop cs)) (cs.length : Int))],
+                      .sw (Ar.wid 0 (sumTop cs)) (.reg r1) s.l
+                        ((List.range cs.length).map fun (i : Nat) => ((i : Int), (s.l + 1 + i : Nat)))⟩ ::
                       ⟨s.l, [], [], .dead⟩ :: ba, s1)
             | none => none
           else none
@@ -324,6 +360,36 @@ def lowerGA (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           | some (b2, s2) => some (b1 ++ b2, s2)
           | none => none
       | none => none
+
+/-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i`; an arm with a payload
+    first computes it (`payCode`) and makes it a new local, then runs its body; an arm without one is
+    just its body. -/
+def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat) (ov : Opd) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+      Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs → Lbl → Lbl → St → Option (List Block × St)
+  | _, _, _, _, _, .nil, _, _, s => some ([], s)
+  | _, _, _, _, _, .cons (c := c) b rest, lb, k, s =>
+      match c, b with
+      | none, b =>
+          match lowerB lay cenv lv b lb k s with
+          | some (b1, s1) =>
+              match lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with
+              | some (b2, s2) => some (b1 ++ b2, s2)
+              | none => none
+          | none => none
+      | some (lo, hi), b =>
+          match payCode top W L lo hi ov s.r with
+          | some (cp, op, r1) =>
+              match bindCode (.int lo hi) op r1 with
+              | some (cb, a, r2) =>
+                  match lowerB lay (a :: cenv) lv b s.l k ⟨r2, s.l + 1⟩ with
+                  | some (bb, s1) =>
+                      match lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with
+                      | some (b2, s2) => some (⟨lb, [], cp ++ cb, .jmp s.l⟩ :: bb ++ b2, s2)
+                      | none => none
+                  | none => none
+              | none => none
+          | none => none
 
 def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →

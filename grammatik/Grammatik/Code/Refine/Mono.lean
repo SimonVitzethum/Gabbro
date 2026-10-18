@@ -148,6 +148,24 @@ theorem bindCode_mono {τ : GTy} {oe : Opd} {r1 : Nat} {cb : List Instr} {a : Na
       exact ⟨by simpa using cvtM_mono hc, rfl⟩
     · simp at h
 
+theorem payCode_mono {top : Int} {W L : Nat} {lo hi : Int} {ov : Opd} {r : Nat} {c : LR}
+    (h : payCode top W L lo hi ov r = some c) : r ≤ c.2.2 := by
+  unfold payCode at h
+  split at h
+  · rcases hc : cvt W (Ar.wid (min 0 lo) (max top hi)) false ov r with ⟨c1, o1, r1⟩
+    have m1 := cvt_mono W (Ar.wid (min 0 lo) (max top hi)) false ov r
+    rw [hc] at m1 h
+    simp only at m1 h
+    rcases hv : cvtG (.int (min 0 lo) (max top hi)) (.int lo hi) (.reg (r1 + 1)) (r1 + 2) with
+      _ | ⟨c3, o3, r3⟩
+    · simp [hv] at h
+    have m3 := cvtG_mono hv
+    simp only [hv] at h
+    obtain rfl := Option.some.inj h
+    simp only at m1 m3 ⊢
+    omega
+  · simp at h
+
 /-- **Registers only go up.** -/
 theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : GTy} (e : Expr D Γ Λ τ) (r : Nat) (c : LR),
@@ -722,8 +740,33 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           simp only at m1 m2 m3 a1 a2 ⊢
           omega
       · simp at h
-  | _, _, _, _, .onTag .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .onTag (cs := cs) v arms, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      rcases hv : lowerE lay cenv v st.r with _ | ⟨cv, ov, r1⟩
+      · simp [hv] at h
+      have m1 := lowerE_mono lay cenv v st.r _ hv
+      simp only [hv] at h
+      split at h
+      · rcases hga : lowerAr lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (st.l + 1) k
+            ⟨r1 + 1, st.l + 1 + cs.length⟩ with _ | ⟨ba, s1⟩
+        · simp [hga] at h
+        have G := lowerAr_shape lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms
+          (st.l + 1) k ⟨r1 + 1, st.l + 1 + cs.length⟩ s1 ba hga
+        simp only [hga] at h
+        have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+        · intro b hb
+          simp only [List.mem_cons] at hb
+          rcases hb with rfl | rfl | hb
+          · rfl
+          · rfl
+          · exact G.1 b hb
+        · have a1 := G.2
+          simp only at m1 a1 ⊢
+          omega
+      · simp at h
   | _, _, _, _, .onWhy (n := n) r arms, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
@@ -1108,6 +1151,68 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h => by
       simp [lowerEnd] at h
+
+/-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
+theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
+    (ov : Opd) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Lbl) (st st' : St) (blks : List Block),
+      lowerAr lay cenv lv top W L ov arms lb k st = some (blks, st') →
+      (∀ b ∈ blks, b.phis = []) ∧ st.r ≤ st'.r
+  | _, _, _, _, _, .nil, lb, k, st, st', blks, h => by
+      simp only [lowerAr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨by simp, Nat.le_refl _⟩
+  | _, _, _, _, _, .cons (c := none) b rest, lb, k, st, st', blks, h => by
+      simp only [lowerAr] at h
+      rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
+      · simp [hb] at h
+      have S1 := lowerB_shape lay cenv lv b lb k st s1 b1 hb
+      simp only [hb] at h
+      rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      have S2 := lowerAr_shape lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2 hr
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨?_, ?_⟩
+      · intro x hx
+        rcases List.mem_append.mp hx with hx | hx
+        · exact S1.2.1 x hx
+        · exact S2.1 x hx
+      · have a1 := S1.2.2
+        have a2 := S2.2
+        omega
+  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, st, st', blks, h => by
+      simp only [lowerAr] at h
+      rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
+      · simp [hp] at h
+      have m1 := payCode_mono hp
+      simp only [hp] at h
+      rcases hb : bindCode (.int lo hi) op r1 with _ | ⟨cb, a, r2⟩
+      · simp [hb] at h
+      have m2 := bindCode_mono hb
+      simp only [hb] at h
+      rcases hb1 : lowerB lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ with _ | ⟨bb, s1⟩
+      · simp [hb1] at h
+      have S1 := lowerB_shape lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ s1 bb hb1
+      simp only [hb1] at h
+      rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      have S2 := lowerAr_shape lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2 hr
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨?_, ?_⟩
+      · intro x hx
+        rcases List.mem_append.mp hx with hx | hx
+        · simp only [List.mem_cons] at hx
+          rcases hx with rfl | hx
+          · rfl
+          · exact S1.2.1 x hx
+        · exact S2.1 x hx
+      · have a1 := S1.2.2
+        have a2 := S2.2
+        simp only at m1 m2 a1 a2 ⊢
+        omega
 
 /-- The arms of a `match` on a reason: no phis, the register counter does not fall. -/
 theorem lowerGA_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :

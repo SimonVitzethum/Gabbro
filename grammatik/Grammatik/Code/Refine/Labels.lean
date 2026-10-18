@@ -292,6 +292,27 @@ theorem lw_retry {lb : Nat} {st s1 s2 : St} {b0 bH bT bI : Block} {bb bo : List 
     · right; omega
     · have := hmem x hx; right; omega
 
+/-- One more arm in front of the arms that follow: the first arm has entry label `lb` and the counter's
+    labels, the rest have the entry labels `lb + 1 ..` and labels from the end of the first arm. -/
+theorem lw_arm_cons {lb n' : Nat} {st s1 s2 : St} {b1 b2 : List Block} (hn : lb + (n' + 1) ≤ st.l)
+    (W1 : LblWf lb st s1 b1)
+    (W2 : s1.l ≤ s2.l ∧ (b2.map Block.lbl).Nodup ∧
+      ∀ x ∈ b2, (lb + 1 ≤ x.nl ∧ x.nl < lb + 1 + n') ∨ (s1.l ≤ x.nl ∧ x.nl < s2.l)) :
+    st.l ≤ s2.l ∧ ((b1 ++ b2).map Block.lbl).Nodup ∧
+      ∀ x ∈ b1 ++ b2, (lb ≤ x.nl ∧ x.nl < lb + (n' + 1)) ∨ (st.l ≤ x.nl ∧ x.nl < s2.l) := by
+  obtain ⟨m1, n1, a1⟩ := W1
+  obtain ⟨m2, n2, a2⟩ := W2
+  refine ⟨by omega, ?_, ?_⟩
+  · refine lw_app (a1 := fun x => x = lb ∨ (st.l ≤ x ∧ x < s1.l))
+      (a2 := fun x => (lb + 1 ≤ x ∧ x < lb + 1 + n') ∨ (s1.l ≤ x ∧ x < s2.l)) n1 n2 ?_ ?_ ?_
+    · intro x hx; exact a1 x hx
+    · intro x hx; exact a2 x hx
+    · intro x hx hy; omega
+  · intro x hx
+    rcases List.mem_append.mp hx with hx | hx
+    · have := a1 x hx; omega
+    · have := a2 x hx; omega
+
 variable [Conf] {D : Deklaration}
 
 theorem lowerErg_lbl (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List (Res D)} {eo : Option GTy}
@@ -395,8 +416,51 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             (.int (Ar.wid (-1) (n - 1)) 0) st.l (st.l + 1)⟩)
           (b1 := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 2)⟩) rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
       · simp at h
-  | _, _, _, _, .onTag .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .onTag (cs := cs) v arms, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      rcases hv : lowerE lay cenv v st.r with _ | ⟨cv, ov, r1⟩
+      · simp [hv] at h
+      simp only [hv] at h
+      split at h
+      · rcases hga : lowerAr lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (st.l + 1) k
+            ⟨r1 + 1, st.l + 1 + cs.length⟩ with _ | ⟨ba, s1⟩
+        · simp [hga] at h
+        simp only [hga, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨m1, n1, a1⟩ := lowerAr_lbl lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms
+          (st.l + 1) k ⟨r1 + 1, st.l + 1 + cs.length⟩ s1 ba
+          (by show (st.l + 1 : Nat) + cs.length ≤ st.l + 1 + cs.length; omega) hga
+        have m1' : st.l + 1 + cs.length ≤ s1.l := m1
+        have hlt' : @LT.lt Nat instLTNat lb st.l := hlt
+        have a1' : ∀ x ∈ ba, (st.l + 1 ≤ x.nl ∧ x.nl < st.l + 1 + cs.length) ∨
+            (st.l + 1 + cs.length ≤ x.nl ∧ x.nl < s1.l) := a1
+        have nd1 : (((⟨st.l, [], [], .dead⟩ : Block) :: ba).map Block.lbl).Nodup := by
+          refine lw_head (lb := st.l) (a1 := fun x => st.l + 1 ≤ x ∧ x < s1.l) rfl ?_ n1 ?_
+          · intro x hx; omega
+          · intro x hx
+            have := a1' x hx
+            show st.l + 1 ≤ x.nl ∧ x.nl < s1.l
+            omega
+        refine ⟨by omega, ?_, ?_⟩
+        · refine lw_head (lb := lb) (a1 := fun x => st.l ≤ x ∧ x < s1.l) (b := ⟨lb, [], cv ++ [.bin r1 .urem
+              (Ar.wid 0 (sumTop cs)) ov (.int (Ar.wid 0 (sumTop cs)) (cs.length : Int))],
+              .sw (Ar.wid 0 (sumTop cs)) (.reg r1) st.l
+              ((List.range cs.length).map fun (i : Nat) => ((i : Int), (st.l + 1 + i : Nat)))⟩) rfl ?_ nd1 ?_
+          · intro x hx; omega
+          · intro x hx
+            simp only [List.mem_cons] at hx
+            rcases hx with rfl | hx
+            · exact ⟨Nat.le_refl _, by show st.l < s1.l; omega⟩
+            · have := a1' x hx
+              show st.l ≤ x.nl ∧ x.nl < s1.l
+              omega
+        · intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | rfl | hx
+          · exact Or.inl rfl
+          · exact Or.inr ⟨Nat.le_refl _, by show st.l < s1.l; omega⟩
+          · have := a1' x hx; right; omega
+      · simp at h
   | _, _, _, _, .onWhy (n := n) r arms, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
@@ -696,6 +760,59 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, hlt, h => by
       simp [lowerEnd] at h
+
+/-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i` (below `st.l`), the counter
+    hands out labels from `st.l`; all labels are distinct. -/
+theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
+    (ov : Opd) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Nat) (st st' : St) (blks : List Block),
+      lb + cs.length ≤ st.l → lowerAr lay cenv lv top W L ov arms lb k st = some (blks, st') →
+      st.l ≤ st'.l ∧ (blks.map Block.lbl).Nodup ∧
+        ∀ x ∈ blks, (lb ≤ x.nl ∧ x.nl < lb + cs.length) ∨ (st.l ≤ x.nl ∧ x.nl < st'.l)
+  | _, _, _, _, _, .nil, lb, k, st, st', blks, hn, h => by
+      simp only [lowerAr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨Nat.le_refl _, by simp, by simp⟩
+  | _, _, _, _, _, .cons (c := none) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
+      simp only [lowerAr] at h
+      rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
+      · simp [hb] at h
+      simp only [hb] at h
+      rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hn' : lb + (cs'.length + 1) ≤ st.l := hn
+      have W1 := lowerB_lbl lay cenv lv b lb k st s1 b1 (show @LT.lt Nat instLTNat lb st.l by omega) hb
+      obtain ⟨m2, n2, a2⟩ := lowerAr_lbl lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2
+        (by show lb + 1 + cs'.length ≤ s1.l; have := W1.1; omega) hr
+      exact lw_arm_cons (n' := cs'.length) hn' W1 ⟨m2, n2, a2⟩
+  | _, _, _, _, _, .cons (c := some (lo, hi)) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
+      simp only [lowerAr] at h
+      rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
+      · simp [hp] at h
+      simp only [hp] at h
+      rcases hb : bindCode (.int lo hi) op r1 with _ | ⟨cb, a, r2⟩
+      · simp [hb] at h
+      simp only [hb] at h
+      rcases hb1 : lowerB lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ with _ | ⟨bb, s1⟩
+      · simp [hb1] at h
+      simp only [hb1] at h
+      rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hn' : lb + (cs'.length + 1) ≤ st.l := hn
+      obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ s1 bb
+        (by show (st.l : Nat) < st.l + 1; omega) hb1
+      have m1' : st.l + 1 ≤ s1.l := m1
+      have W1 : LblWf lb st s1 (⟨lb, [], cp ++ cb, .jmp st.l⟩ :: bb) :=
+        lw_bind (b := ⟨lb, [], cp ++ cb, .jmp st.l⟩) rfl
+          (show @LT.lt Nat instLTNat lb st.l by omega) m1' ⟨n1, a1⟩
+      obtain ⟨m2, n2, a2⟩ := lowerAr_lbl lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2
+        (by show lb + 1 + cs'.length ≤ s1.l; have := W1.1; omega) hr
+      exact lw_arm_cons (n' := cs'.length) hn' W1 ⟨m2, n2, a2⟩
 
 /-- The arms of a `match` on a reason: arm `i` has entry label `lb + i` (below `st.l`), the counter hands
     out labels from `st.l`; all labels are distinct. -/
