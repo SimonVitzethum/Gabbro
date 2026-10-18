@@ -1,5 +1,6 @@
 import Grammatik.Code.Refine.StmtOk
 import Grammatik.Code.Refine.Labels
+import Grammatik.Code.Refine.CallDef
 import Grammatik.Code.Lower.Func
 
 /-
@@ -33,16 +34,6 @@ open Gabbro.Grammatik (Deklaration Programm Vertrag vertragVon Ctx Res Env Wert 
   EndAusgang ErgVal execEnd)
 
 variable {D : Deklaration}
-
-/-- The register images of the arguments, in order. -/
-def argImgs (lay : Layout D) : {Γ : Ctx} → Env D Γ → List Val
-  | _, .nil => []
-  | _, .cons (τ := τ) v ρ => encR lay τ v :: argImgs lay ρ
-
-/-- Register `i + j` holds the image of argument `j`. -/
-def ArgRegs (lay : Layout D) (rs : Regs) : {Γ : Ctx} → Nat → Env D Γ → Prop
-  | _, _, .nil => True
-  | _, i, .cons (τ := τ) v ρ => rs i = some (encR lay τ v) ∧ ArgRegs lay rs (i + 1) ρ
 
 /-- **The prologue builds the environment.** -/
 theorem prologue_ok (lay : Layout D) :
@@ -157,7 +148,8 @@ theorem reach_ret_fin {M : Modl} {S : Sees} {f : Frame} {vo : Option Val} (h : R
 theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D.Fn) (name : String)
     (func : Func) (hf : lowerFn lay P f name = some func) (M : Modl) (S : Sees) (fn : Nat)
     (hfn : M.funs[fn]? = some func) (O : Orakel D) (passes : Nat)
-    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) (hFn : FnOk lay M)
+    (hCall : CallRef lay M S R)
     (σ : World D) (ρ : Env D (D.params f)) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg)
     (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
     (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
@@ -183,7 +175,7 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
   have hreach := reach_block_jmp (S := S) (ks := ks) (dst := dst) hb0 rfl hbk hkp hs1
   have hK0 : KOk M fn 0 := ⟨_, hb0, rfl⟩
   have hEnd := lowerEnd_ok lay hL cenv (0, 0) O passes R (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl M S fn hM2
-    ⟨hK0, hK0⟩ σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1
+    ⟨hK0, hK0⟩ hFn hCall σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1
   rw [hex] at hEnd
   obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW', hFe⟩ := hEnd
   refine ⟨m', f', Reach.trans hreach hr2, hf1, hf2, hret, hR', hW', ?_⟩
@@ -199,12 +191,13 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
 theorem lowerFn_runs (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D.Fn) (name : String)
     (func : Func) (hf : lowerFn lay P f name = some func) (M : Modl) (S : Sees) (fn : Nat)
     (hfn : M.funs[fn]? = some func) (O : Orakel D) (passes : Nat)
-    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) (hFn : FnOk lay M)
+    (hCall : CallRef lay M S R)
     (σ : World D) (ρ : Env D (D.params f)) (m : Mem) (rs : Regs)
     (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
     (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
     ∃ m', Runs M S (.run m ⟨fn, 0, 0, rs, none⟩ []) m' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
-  obtain ⟨m', f', hr, _, _, hret, hR', hW', _⟩ := lowerFn_run lay hL P f name func hf M S fn hfn O passes R σ ρ m rs [] none
+  obtain ⟨m', f', hr, _, _, hret, hR', hW', _⟩ := lowerFn_run lay hL P f name func hf M S fn hfn O passes R hFn hCall σ ρ m rs [] none
     hR hW hA σ' v hex
   exact ⟨m', Reach.trans hr (reach_ret_fin hret m'), hR', hW'⟩
 

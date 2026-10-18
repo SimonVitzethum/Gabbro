@@ -240,4 +240,18 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
       | none => none
   | _, _, _, _, _ => none
 
+/-- The lowering of the arguments of a call: the code, the operands that hold the values (their
+    register images, in order), and the next free register. -/
+def lowerArgs (lay : Layout D) (cenv : List Reg) :
+    {Γ : Ctx} → {Λ : List (Gabbro.Grammatik.Res D)} → {τs : List GTy} → Gabbro.Grammatik.Args D Γ Λ τs →
+      Nat → Option (List Instr × List Opd × Nat)
+  | _, _, _, .nil, r => some ([], [], r)
+  | _, _, _, .cons e rest, r =>
+      match lowerE lay cenv e r with
+      | some (ce, oe, r1) =>
+          match lowerArgs lay cenv rest r1 with
+          | some (cr, os, r2) => some (ce ++ cr, oe :: os, r2)
+          | none => none
+      | none => none
+
 end Gabbro.Code.Lower

@@ -13,7 +13,7 @@ namespace Gabbro.Code.Lower
 
 variable [Conf]
 
-open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr)
+open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 
 variable {D : Deklaration}
 
@@ -412,6 +412,27 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
   | _, _, _, .reaches .., r, c, h => by
       simp [lowerE] at h
 
+theorem lowerArgs_mono (lay : Layout D) (cenv : List Reg) :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List GTy} (args : Args D Γ Λ τs) (r : Nat)
+      (c : List Instr × List Opd × Nat), lowerArgs lay cenv args r = some c → r ≤ c.2.2
+  | _, _, _, .nil, r, c, h => by
+      simp only [lowerArgs, Option.some.injEq] at h
+      subst h
+      exact Nat.le_refl _
+  | _, _, _, .cons e rest, r, c, h => by
+      simp only [lowerArgs] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      have m1 := lowerE_mono lay cenv e r _ he
+      simp only [he] at h
+      rcases hr : lowerArgs lay cenv rest r1 with _ | ⟨cr, os, r2⟩
+      · simp [hr] at h
+      have m2 := lowerArgs_mono lay cenv rest r1 _ hr
+      simp only [hr, Option.some.injEq] at h
+      subst h
+      simp only at m1 m2 ⊢
+      omega
+
 variable {V : Vertrag D}
 
 /-- The facts every lowering result has. -/
@@ -586,8 +607,16 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .onWhy .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
-  | _, _, _, _, .call .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .call f args _ _, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
+      · simp [hla] at h
+      have m1 := lowerArgs_mono lay cenv args st.r _ hla
+      simp only [hla, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨⟨_, _, rfl, rfl⟩, by simp, ?_⟩
+      simp only at m1 ⊢
+      omega
   | _, _, _, _, .callInd .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, h => by
@@ -742,8 +771,32 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         have a2 := S2.2.2
         simp only at m1 a1 a2 ⊢
         omega
-  | _, _, _, _, .bindCall .., lb, k, st, st', blks, h => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) f args _ _ _ rest, lb, k, st, st', blks, h => by
+      simp only [lowerB] at h
+      rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
+      · simp [hla] at h
+      have m1 := lowerArgs_mono lay cenv args st.r _ hla
+      simp only [hla] at h
+      rcases hb : bindCode τ (.reg r1) (r1 + 1) with _ | ⟨cb, a, r2⟩
+      · simp [hb] at h
+      have m2 := bindCode_mono hb
+      simp only [hb] at h
+      rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      have S2 := lowerB_shape lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ s2 b2 hr
+      simp only [hr] at h
+      have := Option.some.inj h
+      simp only [Prod.mk.injEq] at this
+      obtain ⟨rfl, rfl⟩ := this
+      refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+      · intro b hb
+        simp only [List.mem_cons] at hb
+        rcases hb with rfl | hb
+        · rfl
+        · exact S2.2.1 b hb
+      · have a2 := S2.2.2
+        simp only at m1 m2 a2 ⊢
+        omega
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h => by
       simp [lowerB] at h
   | _, _, _, _, .bindCallElse .., lb, k, st, st', blks, h => by

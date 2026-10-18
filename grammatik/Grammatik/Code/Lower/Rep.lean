@@ -60,6 +60,8 @@ structure Layout (D : Deklaration) where
   rty : D.Tab → Ty
   fidx : (t : D.Tab) → D.Feld t → Nat
   ggblk : D.Glob → Nat
+  /-- The number of the IR function that is function `f` of the program. -/
+  fno : D.Fn → Nat
 
 /-- The assumptions about the layout. -/
 structure LayoutOk {D : Deklaration} (lay : Layout D) : Prop where

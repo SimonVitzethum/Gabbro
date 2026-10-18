@@ -145,6 +145,11 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, _, .forever _ _ body, lb, k, s => lowerB lay cenv (k, lb) body lb lb s
+  | _, _, _, _, .call f args _ _, lb, k, s =>
+      match lowerArgs lay cenv args s.r with
+      | some (ca, ops, r1) =>
+          some ([⟨lb, [], ca ++ [.call none (lay.fno f) ops], .jmp k⟩], { s with r := r1 })
+      | none => none
   | _, _, _, _, .traverse t _ body, lb, k, s =>
       -- a counter register `s.r` counts the passes; the loop variable is a cell made per pass
       if 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128 then
@@ -206,6 +211,17 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
                           | none => none
                       | none => none
                   | none => none
+              | none => none
+          | none => none
+      | none => none
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) f args _ _ _ rest, lb, k, s =>
+      match lowerArgs lay cenv args s.r with
+      | some (ca, ops, r1) =>
+          match bindCode τ (.reg r1) (r1 + 1) with
+          | some (cb, a, r2) =>
+              match lowerB lay (a :: cenv) lv rest s.l k ⟨r2, s.l + 1⟩ with
+              | some (b2, s2) =>
+                  some (⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp s.l⟩ :: b2, s2)
               | none => none
           | none => none
       | none => none

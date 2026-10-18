@@ -15,7 +15,7 @@ import Grammatik.Code.Refine.Mono
 
 namespace Gabbro.Code.Lower
 
-open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr)
+open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 
 /-- The label of a block, as a `Nat` (`omega` does not see through the abbreviation `Lbl`). -/
 def _root_.Gabbro.Code.Block.nl (b : Block) : Nat := b.lbl
@@ -311,8 +311,13 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .onWhy .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
-  | _, _, _, _, .call .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .call f args _ _, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
+      · simp [hla] at h
+      simp only [hla, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .callInd .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, hlt, h => by
@@ -424,8 +429,22 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv lv rest (st.l + 1) k s1 s2 br
         (by show (st.l + 1 : Nat) < s1.l; omega) hb2
       exact lw_two (b := ⟨lb, [], cc, .br oc (st.l + 1) st.l⟩) rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
-  | _, _, _, _, .bindCall .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) f args _ _ _ rest, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerB] at h
+      rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
+      · simp [hla] at h
+      simp only [hla] at h
+      rcases hb : bindCode τ (.reg r1) (r1 + 1) with _ | ⟨cb, a, r2⟩
+      · simp [hb] at h
+      simp only [hb] at h
+      rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ s2 b2
+        (by show (st.l : Nat) < st.l + 1; omega) hr
+      exact lw_bind (b := ⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp st.l⟩) rfl hlt (by exact m2)
+        ⟨n2, a2⟩
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, hlt, h => by
       simp [lowerB] at h
   | _, _, _, _, .bindCallElse .., lb, k, st, st', blks, hlt, h => by
