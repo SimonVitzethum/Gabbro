@@ -30,6 +30,11 @@ import Grammatik.Speichermodell.Atomar.Atomar
     memory at `c` IS the memory `t` wrote: it reads the payload, not a stale or a later value.
   * `payload_kein_rennen` -- no `HbRace`: after the await the payload write is ordered before
     the reader's access.
+  * `gesehen_einzelschreiber`, `still_of_kein_schreiben` -- the two memory facts of
+    `payload_mp_wert` from thread-level facts: only `t` writes `c`; no step after the write
+    writes `c`.
+  * `erwartet_bestaetigt` -- the BRANCH FACT (SPRACHE §11.5 rule 2): a reader that branched on
+    a value no earlier message of the flag carries read the message the publish added.
 
   The release/acquire hand-off these build on is `hb_uebergabe` (Atomar.lean); this file adds
   the payload write on the writer's side (`payload_schreib`), the run segments between the
@@ -236,6 +241,46 @@ theorem payload_mp_wert {c f : D.Tab ⊕ D.Glob} {t u : Faden}
   rw [heq, hwert] at this
   exact this
 
+/-- **The two memory facts of `payload_mp_wert` from two thread-level facts.** (i) If only
+    thread `t` ever writes `c` on the runs from the start (`hnur`: the single-writer part of the
+    footprint rule), then at every machine W reaches `t` has seen every message of `c`: the
+    initial message sits at timestamp 0, and `t`'s own write sets its view to its timestamp. -/
+theorem gesehen_einzelschreiber {M0 : RufMaschineG D} {t : Faden} {c : D.Tab ⊕ D.Glob}
+    (hnur : ∀ X v X' σ M'' wahl neu, RufErreichbarW P O passes ord (RufStartW M0) X →
+      SchrittW P O passes ord X v X' σ M'' wahl neu → SchreibG (mitSpeicher X.g σ) M'' v c →
+      v = t)
+    {W : RufMaschineW D} (hr : RufErreichbarW P O passes ord (RufStartW M0) W) :
+    ∀ m ∈ W.hist c, m.ts ≤ W.sicht t c := by
+  induction hr with
+  | start =>
+      intro m hm
+      simp only [RufStartW, List.mem_singleton] at hm
+      subst hm
+      exact Nat.zero_le _
+  | schritt X X' v hr hs ih =>
+      obtain ⟨σ, M'', wahl, neu, h⟩ := hs
+      intro m hm
+      by_cases hw : SchreibG (mitSpeicher X.g σ) M'' v c
+      · have hvt := hnur X v X' σ M'' wahl neu hr h hw
+        subst hvt
+        rw [h.histS c hw] at hm
+        rcases List.mem_cons.mp hm with rfl | hm
+        · rw [h.sichtS c hw]; exact Nat.le_refl _
+        · exact Nat.le_trans (ih m hm) (sicht_waechst h _ c)
+      · rw [h.histU c hw] at hm
+        exact Nat.le_trans (ih m hm) (sicht_waechst h _ c)
+
+/-- (ii) If no step after `Wb` writes `c`, no step adds a message at `c`
+    (`SchrittW.histU`): the `hstill` premise of `payload_mp_wert`. -/
+theorem still_of_kein_schreiben {Wb : RufMaschineW D} {c : D.Tab ⊕ D.Glob}
+    (hkein : ∀ X v X' σ M'' wahl neu, RufErreichbarW P O passes ord Wb X →
+      SchrittW P O passes ord X v X' σ M'' wahl neu → ¬ SchreibG (mitSpeicher X.g σ) M'' v c) :
+    ∀ X X' v, RufErreichbarW P O passes ord Wb X → RufSchrittW P O passes ord X v X' →
+      X'.hist c = X.hist c := by
+  intro X X' v hX hs
+  obtain ⟨σ, M'', wahl, neu, h⟩ := hs
+  exact h.histU c (hkein X v X' σ M'' wahl neu hX h)
+
 /-! ## 5. The branch fact: a confirmed awaited value identifies the publish -/
 
 /-- **A confirming value identifies the published message** (the Lean side of SPRACHE §11.5 rule 2,
@@ -274,3 +319,5 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.payload_mp_wert
 #print axioms Gabbro.Grammatik.payload_kein_rennen
 #print axioms Gabbro.Grammatik.erwartet_bestaetigt
+#print axioms Gabbro.Grammatik.gesehen_einzelschreiber
+#print axioms Gabbro.Grammatik.still_of_kein_schreiben

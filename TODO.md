@@ -19,7 +19,7 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
  Open decisions: first structures (recommended list and tree), links as indices in one arena (recommended), `free` across function boundaries (follows the `own` boundary rule).
 
 **Phase B: weak memory, items 1-5** (state: GX/W model carries atomics with the rely; release/acquire enforced).
- 1. Message passing with a plain payload under release/acquire without a lock (O25, `N291`): model first (happens-before over the payload), then the checker rule; 11 corpus examples wait for it.
+ 1. Message passing with a plain payload under release/acquire without a lock (O25, `N291`): model first (happens-before over the payload), then the checker rule; 11 corpus examples wait for it. **State 2026-10-18:** the memory-model half is PROVED (`Speichermodell/Payload/`, SATZKARTE §80: message passing, no race after the await, the value, counter-models, litmus tests); the `Spec.lean` diff D1-D6 and the checker rule R0-R4 are proposed in `PLAN-DYNAMISCH.md` §11 (not applied; four decisions for Simon in §11.5); no concrete W/GX fixture yet.
  2. Weak memory beyond DRF-SC: name and prove what is claimed (standard patterns), shrink the NOT CLAIMED line.
  3. Hardware bridge: x86-TSO, ARMv8 and RISC-V (RVWMO) refine W/GX, access by access, through the ISA-neutral `Need` list of Track L (needs the CPU models, built by Simon).
  4. Orderings and primitives: `consume`, `seq_cst` total order, stand-alone fences, mixed-size access, atomics over floats; litmus tests as the yardstick (MP, SB, LB, IRIW: allowed or forbidden as the model says).
