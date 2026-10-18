@@ -1,4 +1,5 @@
 import Grammatik.Code.Refine.Post
+import Grammatik.Code.Refine.Struct.Shape
 
 /-
   File:      Grammatik/Code/Refine/Stmt.lean
@@ -46,9 +47,9 @@ def RunOk (lay : Layout D) (cenv : List Reg) (M : Modl) (S : Sees) (fn : Nat) (l
 /-- A `return` of a lowered statement: the frame stands at a `ret` of the image of `v`, and the memory
     it leaves represents the world `σ'` the source left (the RETURNED world: what a caller sees). -/
 def RunRet (lay : Layout D) (cenv : List Reg) (M : Modl) (S : Sees) (fn : Nat) (lb : Lbl) (r0 : Nat)
-    (σ' : World D) (v : ErgVal D V.erg) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg) : Prop :=
+    (σ' : World D) (vo : Option Val) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg) : Prop :=
   ∃ m' f', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
-    RetAt M f' (ergImg lay V.erg v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Fr lay cenv r0 m rs m' f'.regs
+    RetAt M f' vo ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Fr lay cenv r0 m rs m' f'.regs
 
 /-- The blocks of a lowering are found by their labels, and the continuation is a block without phis. -/
 def InM (M : Modl) (fn : Nat) (blks : List Block) : Prop := ∀ b ∈ blks, M.blk fn b.lbl = some b
@@ -64,8 +65,8 @@ def OutOk (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (M : Modl) (S : S
     (lb k : Lbl) (r0 r' : Nat) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg)
     {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Prop
   | .ok σ' ρ' => RunOk lay cenv M S fn lb k r0 r' σ' ρ' m rs ks dst
-  | .zurueck σ' v => RunRet lay cenv M S fn lb r0 σ' v m rs ks dst
-  | .why _ _ => True
+  | .zurueck σ' v => RunRet lay cenv M S fn lb r0 σ' (retImg lay V.gruende V.erg v) m rs ks dst
+  | .why σ' r => RunRet lay cenv M S fn lb r0 σ' (whyImg V.gruende V.erg r.val) m rs ks dst
   | .leave _ σ' ρ' => RunOk lay cenv M S fn lb lv.1 r0 r' σ' ρ' m rs ks dst
   | .next _ σ' ρ' => RunOk lay cenv M S fn lb lv.2 r0 r' σ' ρ' m rs ks dst
   | .logik _ => True
@@ -75,8 +76,8 @@ def OutOk (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (M : Modl) (S : S
 def EndOk (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (M : Modl) (S : Sees) (fn : Nat)
     (lb : Lbl) (r0 r' : Nat) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg)
     {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → Prop
-  | .zurueck σ' v => RunRet lay cenv M S fn lb r0 σ' v m rs ks dst
-  | .why _ _ => True
+  | .zurueck σ' v => RunRet lay cenv M S fn lb r0 σ' (retImg lay V.gruende V.erg v) m rs ks dst
+  | .why σ' r => RunRet lay cenv M S fn lb r0 σ' (whyImg V.gruende V.erg r.val) m rs ks dst
   | .leave _ σ' ρ' => RunOk lay cenv M S fn lb lv.1 r0 r' σ' ρ' m rs ks dst
   | .next _ σ' ρ' => RunOk lay cenv M S fn lb lv.2 r0 r' σ' ρ' m rs ks dst
   | .logik _ => True
@@ -117,7 +118,7 @@ theorem runOk_lift {lb lb1 k : Lbl} {r1 : Nat} {m m1 : Mem} {rs rs1 : Regs} {Γ 
   exact ⟨m', rs', Reach.trans h hr, hP, fr_trans hF hF2 hle hc⟩
 
 theorem runRet_lift {lb lb1 : Lbl} {r1 : Nat} {m m1 : Mem} {rs rs1 : Regs} {σ' : World D}
-    {v : ErgVal D V.erg}
+    {v : Option Val}
     (h : Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m1 ⟨fn, lb1, 0, rs1, dst⟩ ks))
     (hF : Fr lay cenv r0 m rs m1 rs1) (hle : r0 ≤ r1) (hc : ∀ x ∈ cenv, x < r0)
     (h' : RunRet lay cenv M S fn lb1 r1 σ' v m1 rs1 ks dst) :
@@ -141,7 +142,7 @@ theorem outok_lift {lb lb1 : Lbl} {r1 : Nat} {m m1 : Mem} {rs rs1 : Regs}
       OutOk lay cenv lv M S fn lb k r0 r' m rs ks dst o
   | .ok σ' ρ', h' => runOk_lift h hF hle hc h'
   | .zurueck σ' v, h' => runRet_lift h hF hle hc h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => runRet_lift h hF hle hc h'
   | .leave _ σ' ρ', h' => runOk_lift h hF hle hc h'
   | .next _ σ' ρ', h' => runOk_lift h hF hle hc h'
   | .logik _, _ => trivial
@@ -154,7 +155,7 @@ theorem endok_lift {lb lb1 : Lbl} {r1 : Nat} {m m1 : Mem} {rs rs1 : Regs}
     ∀ o : EndAusgang V l Γ, EndOk lay cenv lv M S fn lb1 r1 r' m1 rs1 ks dst o →
       EndOk lay cenv lv M S fn lb r0 r' m rs ks dst o
   | .zurueck σ' v, h' => runRet_lift h hF hle hc h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => runRet_lift h hF hle hc h'
   | .leave _ σ' ρ', h' => runOk_lift h hF hle hc h'
   | .next _ σ' ρ', h' => runOk_lift h hF hle hc h'
   | .logik _, _ => trivial
@@ -167,7 +168,7 @@ theorem outok_mono {lb : Lbl} {m : Mem} {rs : Regs} {r1 r2 : Nat} (hle : r1 ≤ 
       OutOk lay cenv lv M S fn lb k r0 r2 m rs ks dst o
   | .ok σ' ρ', h' => runOk_mono hle h'
   | .zurueck σ' v, h' => h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => h'
   | .leave _ σ' ρ', h' => runOk_mono hle h'
   | .next _ σ' ρ', h' => runOk_mono hle h'
   | .logik _, _ => trivial
@@ -178,7 +179,7 @@ theorem endok_mono {lb : Lbl} {m : Mem} {rs : Regs} {r1 r2 : Nat} (hle : r1 ≤ 
     ∀ o : EndAusgang V l Γ, EndOk lay cenv lv M S fn lb r0 r1 m rs ks dst o →
       EndOk lay cenv lv M S fn lb r0 r2 m rs ks dst o
   | .zurueck σ' v, h' => h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => h'
   | .leave _ σ' ρ', h' => runOk_mono hle h'
   | .next _ σ' ρ', h' => runOk_mono hle h'
   | .logik _, _ => trivial
@@ -189,7 +190,7 @@ theorem outok_of_endok {lb : Lbl} {m : Mem} {rs : Regs} {l : Bool} {Γ : Ctx} :
     ∀ o : EndAusgang V l Γ, EndOk lay cenv lv M S fn lb r0 r' m rs ks dst o →
       OutOk lay cenv lv M S fn lb k r0 r' m rs ks dst o.zuAusgang
   | .zurueck σ' v, h' => h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => h'
   | .leave _ σ' ρ', h' => h'
   | .next _ σ' ρ', h' => h'
   | .logik _, _ => trivial
@@ -208,7 +209,7 @@ theorem runOk_bind {lb lb1 : Lbl} {ri : Nat} {a : Reg} {τ : GTy} {m m1 : Mem} {
   exact ⟨m', rs', Reach.trans h hr, post_tail ρ' hP, fr_bind hF hcell hca hri hF2⟩
 
 theorem runRet_bind {lb lb1 : Lbl} {ri : Nat} {a : Reg} {m m1 : Mem} {rs rs3 : Regs} {σ' : World D}
-    {v : ErgVal D V.erg}
+    {v : Option Val}
     (h : Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m1 ⟨fn, lb1, 0, rs3, dst⟩ ks))
     (hF : Fr lay cenv r0 m rs m1 rs3) (hcell : ∀ b, rs3 a = some (.ptr b 0) → m.next ≤ b)
     (hca : ∀ x ∈ cenv, x < r0) (hri : r0 ≤ ri)
@@ -227,7 +228,7 @@ theorem outok_bind {lb lb1 : Lbl} {ri : Nat} {a : Reg} {τ : GTy} {m m1 : Mem} {
       OutOk lay cenv lv M S fn lb k r0 r' m rs ks dst o.schrumpf
   | .ok σ' ρ', h' => runOk_bind h hF hcell hca hri h'
   | .zurueck σ' v, h' => runRet_bind h hF hcell hca hri h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => runRet_bind h hF hcell hca hri h'
   | .leave _ σ' ρ', h' => runOk_bind h hF hcell hca hri h'
   | .next _ σ' ρ', h' => runOk_bind h hF hcell hca hri h'
   | .logik _, _ => trivial
@@ -240,7 +241,7 @@ theorem endok_bind {lb lb1 : Lbl} {ri : Nat} {a : Reg} {τ : GTy} {m m1 : Mem} {
     ∀ o : EndAusgang V l (τ :: Γ), EndOk lay (a :: cenv) lv M S fn lb1 ri r' m1 rs3 ks dst o →
       EndOk lay cenv lv M S fn lb r0 r' m rs ks dst o.schrumpf
   | .zurueck σ' v, h' => runRet_bind h hF hcell hca hri h'
-  | .why _ _, _ => trivial
+  | .why σ' r, h' => runRet_bind h hF hcell hca hri h'
   | .leave _ σ' ρ', h' => runOk_bind h hF hcell hca hri h'
   | .next _ σ' ρ', h' => runOk_bind h hF hcell hca hri h'
   | .logik _, _ => trivial

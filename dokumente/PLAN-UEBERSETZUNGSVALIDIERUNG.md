@@ -653,22 +653,40 @@ LLVM backend stays as the running reference compiler. Estimate for the half: 25 
 2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`, 2026-10-18, `SATZKARTE.md` section 78): expressions
    (`lowerE_ok`), statements, blocks, end blocks (`lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: the four assignments, `if`,
    `let`, `check`, `narrow`, `return`, `leave`/`next`, the loops `forever`/`traverse`/`retry`, the calls `call` and
-   `let x = f(..)`, and `/`, `%` on non-negative numerators and denominators `>= 1`), the function prologue and the **closing function theorem** (`lowerFn_run`: a body that returns `v`
+   `let x = f(..)`), the function prologue and the **closing function theorem** (`lowerFn_run`: a body that returns `v`
    makes the IR function return the image of `v`; label uniqueness is proved, `lowerFn_nodup`), and **the recursion
    closed** (`lowerFn_callref`: for every depth `n` the lowered functions refine the source meaning of a call, by
-   induction on `n`; the frame invariant of a call is `CallRef`/`Keep`). The statements carry one clause per source
-   outcome and the frame of the run (`Fr`). A hand-built witness program instantiates the chain at both targets
-   (`Refine/Witness.lean`). Open: `match` (`onOption`/`onTag`/`onWhy`: needs `opt`/`sum`/`why` in the lowering), the
-   arithmetic forms `sdiv`, `srem`, shifts and bit operations (each needs the proof that G's ranges give the
-   instruction's precondition at the width the lowering picks; `div`/`rem` are done), indirect calls, calls with a
-   failure channel.
+   induction on `n`; the frame invariant of a call is `CallRef`/`Keep`). Added on 2026-10-18 (session 2 of Track L):
+   * **`match`**: `opt n`, `why n` and `sum cs` are words (a tagged value is ONE word `i + L * (n - lo)`), the
+     expressions `none`/`some`/`istSome`/`why`/`case`, the statements `onOption`, `onWhy`, `onTag` (`onOption_ok`,
+     `onWhy_ok`, `onTag_ok`); the arms are found one at a time inside the lowering of all arms (`lowerGA_get`,
+     `lowerAr_get`) and the mutual theorem carries structural companions (`lowerGA_ok`, `lowerAr_ok`).
+   * **`sdiv`, `srem`, `&`, `|`, `^`, `<<`, `>>`**: each runs at a width chosen so that the instruction's precondition
+     is a fact of G's ranges (the dividend is never `INT_MIN`, the divisor is nonzero, the shift amount is below the
+     width because the range contains `2 ^ h2`), proved in `Refine/Bits/Forms.lean`.
+   * **the failure channel**: a function with reasons answers one word (`Lower/Fail.lean`), `return why`, the why
+     outcome as a real clause of the statement theorem, `CallRef` with a `why` clause, `bindCallElse` (`bindCallElse_ok`).
+   The statements carry one clause per source outcome (`ok`, `return`, `why`, `leave`, `next`) and the frame of the run
+   (`Fr`). A hand-built witness program instantiates the chain at both targets (`Refine/Witness.lean`: eight functions,
+   among them the three matches, the seven arithmetic forms and a failure channel taken at both arms). Open: `bindCallInd`,
+   `bindAxiom(Else)`, `regRead`, floats, `getBytes`/`putBytes`/`shift`, indirect calls, and a failure-channel function whose
+   answer is not void or an integer range (refused by name, `failOk`).
 3. **L2 memory forms.** Stack and recursion lowering are done (calls with the abstract frame invariant `CallRef`/`Keep`,
    `lowerFn_callref`). Arenas, `grow`, `free`/free list (`ArenaFrei.lean`) are SUGAR in the Lean model (assignments over
    the arena's carriers, no new `Stmt` constructor), so they need no lowering of their own: they lower, with the proved
    refinement, once the elaboration expands them (Track P). Still open: sampling, the page return.
-4. **L3 concurrency.** Ticket lock, reader/writer lock, masked acquisition (the lock refinement of the open
-   item 'lock primitive not proved'), `publish`/`await` as release/acquire, threads and `child` with handed
-   stacks; refinement into GX. ~8 000–12 000.
+4. **L3 concurrency (STARTED 2026-10-18, `Grammatik/Code/Conc/`, separate from `lowerS`).** Built and proved: the lowering of
+   `publish` (a release store into the atomic global's word cell) and `await` (an acquire load, the word a new
+   local), refused unless the cell is word-sized (`atomicG`); `publish_ok` for EVERY memory-model interface
+   (a store does not consult it), `await_ok` (if the interface allows the image of the world's value, the lowered code
+   refines G's `await` on that world), `await_ok_sc` (the exact SC refinement) and `await_ok_gx` (the same on a
+   PRESENTED world of machine GX, `PresentedAt`: the same slots and globals but the shared atomic); a witness at both
+   targets. **Open, with the reason:** a weakly answered load whose answer differs from the cell the memory holds -- the
+   memory then does not represent the presented world at the atomic, so `Rep` must be relaxed to a `RepX` that leaves
+   the cells of the shared atomics free (machine GX: "agrees outside `Tg`"), and every refinement proof of `Refine/`
+   carries it; the thread machine over `Code` (views, `child`, `join`, handed stacks) and the simulation of a
+   `RufSchrittGX` step by IR steps; the ticket lock, the reader/writer lock and masked acquisition (their cells are
+   not in `Rep` either: the lock state needs the same relaxation of the representation). ~8 000-12 000 lines remain.
 5. **L4 hardware forms.** `entry` (x86_64 IDT stubs, aarch64 vectors), `asm` bodies, port space, `device`
    registers, system-call gates: each with its named hardware assumption, no invented semantics.
    ~4 000–6 000. `boot` and `entrust` stay refused until the language gives them a semantics in the model.

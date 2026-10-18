@@ -1,4 +1,7 @@
 import Grammatik.Code.Refine.Env
+import Grammatik.Code.Refine.Match.Opt
+import Grammatik.Code.Refine.Match.Case
+import Grammatik.Code.Refine.Bits.Forms
 
 /-
   File:      Grammatik/Code/Refine/Expr.lean
@@ -22,40 +25,6 @@ open Gabbro.Grammatik (Deklaration Expr Env Wert Ctx Var World Res eval Zahl)
 
 variable {D : Deklaration}
 
-/-- A fragment, then one that reads its result. -/
-theorem frag_two {m : Mem} {rs : Regs} {r : Nat} {ca : List Instr} {oa : Opd} {r1 : Nat}
-    {va : Val} {ct : LR} {vt : Val}
-    (Fa : Frag m rs r (ca, oa, r1) va)
-    (Ft : ∀ rsA, (∀ x, x < r → rsA x = rs x) → oa.ev rsA = some va → OpdLt oa r1 →
-      Frag m rsA r1 ct vt) :
-    Frag m rs r (ca ++ ct.1, ct.2.1, ct.2.2) vt := by
-  obtain ⟨rsA, hs, hr, hag, hlt, hev⟩ := Fa
-  exact frag_trans (c1 := (ca, oa, r1)) hs hr hag (Ft rsA hag hev hlt)
-
-/-- Two fragments, then one that reads both results. -/
-theorem frag_three {m : Mem} {rs : Regs} {r : Nat} {ca cb : List Instr} {oa ob : Opd}
-    {r1 r2 : Nat} {va vb : Val} {ct : LR} {vt : Val}
-    (Fa : Frag m rs r (ca, oa, r1) va)
-    (Fb : ∀ rsA, (∀ x, x < r → rsA x = rs x) → Frag m rsA r1 (cb, ob, r2) vb)
-    (Ft : ∀ rsB, (∀ x, x < r → rsB x = rs x) → oa.ev rsB = some va → ob.ev rsB = some vb →
-        OpdLt oa r2 → OpdLt ob r2 → Frag m rsB r2 ct vt) :
-    Frag m rs r (ca ++ cb ++ ct.1, ct.2.1, ct.2.2) vt := by
-  obtain ⟨rsA, hs, hr, hag, hlt, hev⟩ := Fa
-  obtain ⟨rsB, hsB, hrB, hagB, hltB, hevB⟩ := Fb rsA hag
-  have e1 : r ≤ r1 := hr
-  have hagAB : ∀ x, x < r → rsB x = rs x := fun x hx => by
-    rw [hagB x (Nat.lt_of_lt_of_le hx e1), hag x hx]
-  have hlt2 : OpdLt oa r2 := fun x hx => by
-    have h5 : (x : Nat) < r1 := hlt x hx
-    have h6 : r1 ≤ r2 := hrB
-    exact Nat.lt_of_lt_of_le h5 h6
-  have hoa : oa.ev rsB = some va := by
-    rw [ev_agree hagB hlt]; exact hev
-  have T := frag_trans (c1 := (cb, ob, r2)) (rs := rsA) (r := r1) hsB hrB hagB
-    (Ft rsB hagAB hoa hevB hlt2 hltB)
-  have T2 := frag_trans (c1 := (ca, oa, r1)) (rs := rs) (r := r) hs hr hag (by simpa using T)
-  simpa [List.append_assoc] using T2
-
 theorem ofInt_true : Val.ofInt 1 1 = Val.bool true := by decide
 theorem ofInt_false : Val.ofInt 1 0 = Val.bool false := by decide
 
@@ -73,6 +42,8 @@ theorem fitsT_supp {τ : GTy} (h : supp τ = true) : FitsT τ := by
   intro lo hi e; subst e; simpa [supp] using h
 
 theorem fitsT_nonint {τ : GTy} (h : ∀ lo hi, τ ≠ .int lo hi) : FitsT τ := fun lo hi e => absurd e (h lo hi)
+
+mutual
 
 /-- **Every lowered expression computes what `eval` computes.** -/
 theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
@@ -504,41 +475,301 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
           have := (eval σ₀ b σ ρ).le_hi
           exact Int.le_trans (by omega) (Int.le_max_right h1 h2))
         oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
-  | _, _, _, .sdiv .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .srem .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+  | _, _, _, .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .sdiv (jsdiv l1 h1 l2 h2) (ety (Expr.sdiv hb a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jsdiv l1 h1 l2 h2).1 (jsdiv l1 h1 l2 h2).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := sdiv_hop l1 h1 l2 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hb hfJ
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .sdiv (Int.tdiv) (jsdiv l1 h1 l2 h2).1 (jsdiv l1 h1 l2 h2).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
+  | _, _, _, .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .srem (jsrem l1 h1 l2 h2) (ety (Expr.srem hb a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jsrem l1 h1 l2 h2).1 (jsrem l1 h1 l2 h2).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := srem_hop l1 h1 l2 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hb hfJ
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .srem (Int.tmod) (jsrem l1 h1 l2 h2).1 (jsrem l1 h1 l2 h2).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
   | _, _, _, .getBytes .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
-  | _, _, _, .band .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .bor .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .bxor .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .shl .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .shr .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+  | _, _, _, .band (h1 := h1) (h2 := h2) h0 h0' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .and (jbit h1 h2 h1) (ety (Expr.band h0 h0' a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jbit h1 h2 h1).1 (jbit h1 h2 h1).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := band_hop h1 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hfJ
+        (Int.le_trans h0 (eval σ₀ a σ ρ).lo_le) (eval σ₀ a σ ρ).le_hi (Int.le_trans h0' (eval σ₀ b σ ρ).lo_le)
+        (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .and (fun a b => ((a.toNat &&& b.toNat : Nat) : Int)) (jbit h1 h2 h1).1 (jbit h1 h2 h1).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
+  | _, _, _, .bor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .or (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jbit h1 h2 (2 ^ w - 1)).1 (jbit h1 h2 (2 ^ w - 1)).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := bor_hop w h1 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hw1 hw2 hfJ
+        (Int.le_trans h0 (eval σ₀ a σ ρ).lo_le) (eval σ₀ a σ ρ).le_hi (Int.le_trans h0' (eval σ₀ b σ ρ).lo_le)
+        (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .or (fun a b => ((a.toNat ||| b.toNat : Nat) : Int)) (jbit h1 h2 (2 ^ w - 1)).1 (jbit h1 h2 (2 ^ w - 1)).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
+  | _, _, _, .bxor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .xor (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bxor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jbit h1 h2 (2 ^ w - 1)).1 (jbit h1 h2 (2 ^ w - 1)).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := bxor_hop w h1 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hw1 hw2 hfJ
+        (Int.le_trans h0 (eval σ₀ a σ ρ).lo_le) (eval σ₀ a σ ρ).le_hi (Int.le_trans h0' (eval σ₀ b σ ρ).lo_le)
+        (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .xor (fun a b => ((a.toNat ^^^ b.toNat : Nat) : Int)) (jbit h1 h2 (2 ^ w - 1)).1 (jbit h1 h2 (2 ^ w - 1)).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
+  | _, _, _, .shl (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .shl (jshl h1 h2) (ety (Expr.shl w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jshl h1 h2).1 (jshl h1 h2).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := shl_hop h1 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hfJ
+        (Int.le_trans h0 (eval σ₀ a σ ρ).lo_le) (eval σ₀ a σ ρ).le_hi (Int.le_trans h0' (eval σ₀ b σ ρ).lo_le)
+        (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .shl (fun a b => a * 2 ^ b.toNat) (jshl h1 h2).1 (jshl h1 h2).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
+  | _, _, _, .shr (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      simp only [hb'] at h
+      rcases hbr : opRest .lshr (jshr h1 h2) (ety (Expr.shr w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with
+        _ | ⟨ct, ot, r3⟩
+      · simp [hbr] at h
+      simp only [hbr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
+      have hra := Frag.le Ia
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hra
+      obtain ⟨_, Ifb⟩ := lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rs hR hE hc1
+      have hfJ : Ar.Fits (jshr h1 h2).1 (jshr h1 h2).2 128 := by simpa [fitsT] using (opRest_fits hbr).1
+      refine ⟨frag_three (ct := (ct, ot, r3)) Ia (fun rsA hag =>
+          (lowerE_ok lay hL b cenv r1 (cb, ob, r2) hb' σ₀ σ ρ m rsA hR
+            (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE) hc1).1)
+        (fun rsB hagB hoa hob hla hlb => ?_), fitsT_of (opRest_fits hbr).2⟩
+      obtain ⟨hop, hz1, hz2⟩ := shr_hop h1 h2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n hfJ
+        (Int.le_trans h0 (eval σ₀ a σ ρ).lo_le) (eval σ₀ a σ ρ).le_hi (Int.le_trans h0' (eval σ₀ b σ ρ).lo_le)
+        (eval σ₀ b σ ρ).le_hi
+      exact opRest_frag .lshr (fun a b => a / 2 ^ b.toNat) (jshr h1 h2).1 (jshr h1 h2).2 (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n (Ifa _ _ rfl) (Ifb _ _ rfl)
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
+        oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
   | _, _, _, .fllt .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
   | _, _, _, .flle .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
-  | _, _, _, .none .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .some .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .istSome .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .case .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
-  | _, _, _, .why .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+  | _, _, _, .none n, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        exact ⟨frag_intc m rs r _ _, fitsT_nonint (fun lo hi e => nomatch e)⟩
+      · simp at h
+  | _, _, _, .some (n := n) e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      simp only [he] at h
+      split at h
+      · rename_i hfit
+        rcases hcv : cvtG (.int 0 (n - 1)) (.int (-1) (n - 1)) oe r1 with _ | ⟨c2, o2, r2⟩
+        · simp [hcv] at h
+        simp only [hcv, Option.map_some] at h
+        obtain rfl := Option.some.inj h
+        obtain ⟨Ie, _⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
+        refine ⟨frag_two (ct := (c2, o2, r2)) Ie (fun rsA hag hoe hlte => ?_),
+          fitsT_nonint (fun lo hi e => nomatch e)⟩
+        obtain ⟨c', hc', F⟩ := cvtG_frag (lb := -1) (hb := n - 1) hfit.2
+          (eval σ₀ e σ ρ).lo_le (eval σ₀ e σ ρ).le_hi hoe hlte
+        rw [hcv] at hc'
+        obtain rfl := Option.some.inj hc'
+        exact F
+      · simp at h
+  | _, _, _, .istSome (n := n) e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      simp only [he] at h
+      split at h
+      · rename_i hfit
+        obtain rfl := Option.some.inj h
+        obtain ⟨Ie, _⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
+        refine ⟨frag_two (ct := ([.icmp r1 .sge (Ar.wid (-1) (n - 1)) oe (.int (Ar.wid (-1) (n - 1)) 0)], .reg r1, r1 + 1)) Ie (fun rsA hag hoe hlte => ?_),
+          fitsT_nonint (fun lo hi e => nomatch e)⟩
+        show Frag m rsA r1 _ (Val.bool (eval σ₀ e σ ρ).isSome)
+        generalize eval σ₀ e σ ρ = v at hoe ⊢
+        cases v with
+        | none => exact istSome_frag hfit (-1) (Or.inl rfl) oe r1 m rsA hoe hlte
+        | some k =>
+            have := istSome_frag hfit k.n (Or.inr ⟨k.lo_le, k.le_hi⟩) oe r1 m rsA hoe hlte
+            rw [decide_eq_true k.lo_le] at this
+            exact this
+      · simp at h
+  | _, _, _, .case cs i nutz, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      split at h
+      · exact ⟨lowerNutz_ok lay hL _ _ _ nutz cenv r c h σ₀ σ ρ m rs hR hE hc,
+          fitsT_nonint (fun lo hi e => nomatch e)⟩
+      · simp at h
+  | _, _, _, .why n i, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerE] at h
+      split at h
+      · obtain rfl := Option.some.inj h
+        exact ⟨frag_intc m rs r _ _, fitsT_nonint (fun lo hi e => nomatch e)⟩
+      · simp at h
   | _, _, _, .forallSlots .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
   | _, _, _, .existsSlots .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
   | _, _, _, .reaches .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp [lowerE] at h
+
+/-- The payload of a `case` expression: the code computes the word of the value. -/
+theorem lowerNutz_ok (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat) :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+      (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (cenv : List Reg) (r : Nat) (c0 : LR),
+      lowerNutz lay cenv W L i nutz r = some c0 →
+      ∀ (σ₀ σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs),
+        Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) →
+        Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff c (Gabbro.Grammatik.evalNutz σ₀ nutz σ ρ)))
+  | _, _, _, .empty, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerNutz, Option.some.injEq] at h
+      subst h
+      have e : ∀ u : Gabbro.Grammatik.Nutzlast none, (i : Int) + L * payOff none u = i := fun u => by simp [payOff]
+      rw [e]
+      exact frag_intc m rs r W (i : Int)
+  | _, _, _, .num (lo := lo) (hi := hi) e, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      simp only [lowerNutz] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      simp only [he] at h
+      rcases hn : numCode lo hi W L i oe r1 with ⟨cn, on, r2⟩
+      rw [hn] at h
+      simp only [Option.some.injEq] at h
+      subst h
+      obtain ⟨Ie, Ife⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
+      refine frag_two (ct := (cn, on, r2)) Ie (fun rsA hag hoe hlte => ?_)
+      have F := numCode_frag (lo := lo) (hi := hi) W L i (eval σ₀ e σ ρ).n (Ife lo hi rfl)
+        (eval σ₀ e σ ρ).lo_le (eval σ₀ e σ ρ).le_hi oe r1 m rsA hoe hlte
+      rw [hn] at F
+      exact F
+
+end
 
 end Gabbro.Code.Lower

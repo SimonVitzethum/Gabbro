@@ -2,6 +2,7 @@ import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Code.Model.Facts
 import Grammatik.Code.Model.Layout
 import Grammatik.Code.Lower.Arith
+import Grammatik.Code.Lower.Sum
 
 /-
   File:      Grammatik/Code/Lower/Rep.lean
@@ -36,13 +37,20 @@ def supp : GTy → Bool
   | .int lo hi => decide (Ar.Fits lo hi 128)
   | .bool => true
   | .ptr _ _ => true
+  | .opt n => decide (Ar.Fits (-1) (n - 1) 128)
+  | .why n => decide (Ar.Fits 0 ((n : Int) - 1) 128)
+  | .sum cs => decide (Ar.Fits 0 (sumTop cs) 128)
   | _ => false
 
-/-- The register type. -/
+/-- The register type. An `opt n` is the integer `-1` (absent) or the index, in `-1 .. n - 1`; a
+    `why n` is the number of the reason, in `0 .. n - 1`. -/
 def regTy : GTy → Ty
   | .int lo hi => .int (Ar.wid lo hi)
   | .bool => .int 1
   | .ptr _ _ => .ptr
+  | .opt n => .int (Ar.wid (-1) (n - 1))
+  | .why n => .int (Ar.wid 0 ((n : Int) - 1))
+  | .sum cs => .int (Ar.wid 0 (sumTop cs))
   | _ => .void
 
 /-- The memory type (a `bool` is a byte in memory). -/
@@ -112,6 +120,9 @@ def encR (lay : Layout D) : (τ : GTy) → Wert D τ → Val
   | .ptr n _, _ => match D.tabNr n with
       | some t => .ptr (lay.gblk t) 0
       | none => .ptr nullBlk 0
+  | .opt n, v => Val.ofInt (Ar.wid (-1) (n - 1)) (Gabbro.Grammatik.roh v)
+  | .why n, v => Val.ofInt (Ar.wid 0 ((n : Int) - 1)) (Gabbro.Grammatik.roh v)
+  | .sum cs, v => Val.ofInt (Ar.wid 0 (sumTop cs)) (packZ v)
   | _, _ => Val.ofInt 1 0
 
 /-- The image of a value in memory. -/
@@ -133,6 +144,9 @@ theorem dec_enc_encM (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = 
   | ptr n rw =>
       simp only [memTy, regTy, encM, encR]
       cases D.tabNr n <;> exact dec_enc_ptr _ _
+  | opt n => exact dec_enc_int _ _
+  | why n => exact dec_enc_int _ _
+  | sum cs => exact dec_enc_int _ _
   | _ => simp [supp] at h
 
 /-! ## The world in memory -/

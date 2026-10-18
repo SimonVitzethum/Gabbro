@@ -74,6 +74,40 @@ theorem frag_const (m : Mem) (rs : Regs) (r : Nat) (o : Opd) (v : Val) (h : o.ev
     (hc : OpdLt o r) : Frag m rs r ([], o, r) v :=
   ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hc, h⟩
 
+/-- A fragment, then one that reads its result. -/
+theorem frag_two {m : Mem} {rs : Regs} {r : Nat} {ca : List Instr} {oa : Opd} {r1 : Nat}
+    {va : Val} {ct : LR} {vt : Val}
+    (Fa : Frag m rs r (ca, oa, r1) va)
+    (Ft : ∀ rsA, (∀ x, x < r → rsA x = rs x) → oa.ev rsA = some va → OpdLt oa r1 →
+      Frag m rsA r1 ct vt) :
+    Frag m rs r (ca ++ ct.1, ct.2.1, ct.2.2) vt := by
+  obtain ⟨rsA, hs, hr, hag, hlt, hev⟩ := Fa
+  exact frag_trans (c1 := (ca, oa, r1)) hs hr hag (Ft rsA hag hev hlt)
+
+/-- Two fragments, then one that reads both results. -/
+theorem frag_three {m : Mem} {rs : Regs} {r : Nat} {ca cb : List Instr} {oa ob : Opd}
+    {r1 r2 : Nat} {va vb : Val} {ct : LR} {vt : Val}
+    (Fa : Frag m rs r (ca, oa, r1) va)
+    (Fb : ∀ rsA, (∀ x, x < r → rsA x = rs x) → Frag m rsA r1 (cb, ob, r2) vb)
+    (Ft : ∀ rsB, (∀ x, x < r → rsB x = rs x) → oa.ev rsB = some va → ob.ev rsB = some vb →
+        OpdLt oa r2 → OpdLt ob r2 → Frag m rsB r2 ct vt) :
+    Frag m rs r (ca ++ cb ++ ct.1, ct.2.1, ct.2.2) vt := by
+  obtain ⟨rsA, hs, hr, hag, hlt, hev⟩ := Fa
+  obtain ⟨rsB, hsB, hrB, hagB, hltB, hevB⟩ := Fb rsA hag
+  have e1 : r ≤ r1 := hr
+  have hagAB : ∀ x, x < r → rsB x = rs x := fun x hx => by
+    rw [hagB x (Nat.lt_of_lt_of_le hx e1), hag x hx]
+  have hlt2 : OpdLt oa r2 := fun x hx => by
+    have h5 : (x : Nat) < r1 := hlt x hx
+    have h6 : r1 ≤ r2 := hrB
+    exact Nat.lt_of_lt_of_le h5 h6
+  have hoa : oa.ev rsB = some va := by
+    rw [ev_agree hagB hlt]; exact hev
+  have T := frag_trans (c1 := (cb, ob, r2)) (rs := rsA) (r := r1) hsB hrB hagB
+    (Ft rsB hagAB hoa hevB hlt2 hltB)
+  have T2 := frag_trans (c1 := (ca, oa, r1)) (rs := rs) (r := r) hs hr hag (by simpa using T)
+  simpa [List.append_assoc] using T2
+
 /-! ## Changing width -/
 
 /-- `z` is representable in `w` bits, signed or unsigned. -/
@@ -184,6 +218,27 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
       refine ⟨([.load r .ptr p], .reg r, r + 1), by simp [loadG], ?_⟩
       apply frag_one
       have hl' : m.load b o .ptr = some (encR lay (.ptr n rw) v) := by
+        simpa [memTy, regTy, encM] using hl
+      exact stepI_load hp hl'
+  | opt n =>
+      have hf : Ar.Fits (-1) (n - 1) 128 := by simpa [supp] using hs
+      refine ⟨([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      apply frag_one
+      have hl' : m.load b o (.int (Ar.wid (-1) (n - 1))) = some (encR lay (.opt n) v) := by
+        simpa [memTy, regTy, encM] using hl
+      exact stepI_load hp hl'
+  | why n =>
+      have hf : Ar.Fits 0 ((n : Int) - 1) 128 := by simpa [supp] using hs
+      refine ⟨([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      apply frag_one
+      have hl' : m.load b o (.int (Ar.wid 0 ((n : Int) - 1))) = some (encR lay (.why n) v) := by
+        simpa [memTy, regTy, encM] using hl
+      exact stepI_load hp hl'
+  | sum cs =>
+      have hf : Ar.Fits 0 (sumTop cs) 128 := by simpa [supp] using hs
+      refine ⟨([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      apply frag_one
+      have hl' : m.load b o (.int (Ar.wid 0 (sumTop cs))) = some (encR lay (.sum cs) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
   | _ => simp [supp] at hs

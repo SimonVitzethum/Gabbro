@@ -1,4 +1,4 @@
-import Grammatik.Code.Refine.Closure
+import Grammatik.Code.Refine.Calls.Closure
 
 /-
   File:      Grammatik/Code/Refine/Witness.lean
@@ -37,6 +37,10 @@ inductive WFn where
   | put
   | wipe
   | main
+  | mt
+  | bits
+  | fail
+  | callf
   deriving DecidableEq
 
 def sigGet : Signatur Unit Empty Unit Empty where
@@ -55,6 +59,17 @@ def sigPut : Signatur Unit Empty Unit Empty where
   gruende := 0
   haelt := []
   schreibt := fun _ => true
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+/-- A function with a failure channel: one argument, an answer in `0 .. 100`, two reasons. -/
+def sigFail : Signatur Unit Empty Unit Empty where
+  params := [.int 0 3]
+  erg := some (.int 0 100)
+  gruende := 2
+  haelt := []
+  schreibt := fun _ => false
   gschreibt := fun e => nomatch e
   konsumiert := []
   produziert := []
@@ -96,10 +111,10 @@ def wD : Deklaration where
   gbraucht := fun e => nomatch e
   eigner := fun _ => []
   Fn := WFn
-  sig := fun | .get => 0 | .put => 1 | _ => 2
-  sigNr := fun | 0 => sigGet | 1 => sigPut | _ => sigNoArg
+  sig := fun | .get => 0 | .put => 1 | .fail => 3 | _ => 2
+  sigNr := fun | 0 => sigGet | 1 => sigPut | 3 => sigFail | _ => sigNoArg
   eigner_nie_erzeugt := fun n _ _ _ h => by
-    rcases n with _ | _ | n <;> simp [sigGet, sigPut, sigNoArg] at h
+    rcases n with _ | _ | _ | _ | n <;> simp [sigGet, sigPut, sigNoArg, sigFail] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -178,6 +193,69 @@ def rMain : Endblock wD (vertragVon wD WFn.main) false []
       (.cons (.call WFn.wipe .nil wHpWipe rfl)
         (.ret .empty (List.Perm.refl _)))))
 
+/-- `mt()`: the three matches. `match some(2)` (an option: the present arm binds the index), `match` on
+    the reason number 1 of 3 (a switch), `match` on the tagged value of case 1 with payload 5 (the case
+    expression builds the word, the match takes it apart again). -/
+def rMt : Endblock wD (vertragVon wD WFn.mt) false []
+    (Signatur.anfang wD (wD.signatur WFn.mt)) :=
+  .cons (.onOption (n := 4)
+      (.some (.widen (lo := 2) (hi := 2) (by decide) (by decide) (.lit 2)))
+      (.cons (.assignSlot () () (.var .here)
+        (.widen (lo := 1) (hi := 1) (by decide) (by decide) (.lit 1)) rfl (wDarf _)) .nil)
+      .nil)
+  (.cons (.onWhy (n := 3) (.why 3 ⟨1, by decide⟩)
+      (.cons .nil (.cons (.cons (.assignSlot () ()
+          (.widen (lo := 0) (hi := 0) (by decide) (by decide) (.lit 0))
+          (.widen (lo := 2) (hi := 2) (by decide) (by decide) (.lit 2)) rfl (wDarf _)) .nil)
+        (.cons .nil .nil))))
+  (.cons (.onTag (cs := [none, some (0, 9)])
+      (.case [none, some (0, 9)] ⟨1, by decide⟩
+        (.num (.widen (lo := 5) (hi := 5) (by decide) (by decide) (.lit 5))))
+      (.cons .nil (.cons (c := some (0, 9))
+        (.cons (.assignSlot () ()
+          (.widen (lo := 0) (hi := 0) (by decide) (by decide) (.lit 0))
+          (.widen (lo := 0) (hi := 9) (by decide) (by decide) (.var .here)) rfl (wDarf _)) .nil)
+        .nil)))
+  (.ret .empty (List.Perm.refl _))))
+
+/-- `bits()`: the signed and bitwise forms, each on literals: signed division and remainder, `&`, `|`, `^`,
+    `<<`, `>>` (every one's precondition is a fact of the ranges, `Refine/Bits/Forms.lean`). -/
+def rBits : Endblock wD (vertragVon wD WFn.bits) false []
+    (Signatur.anfang wD (wD.signatur WFn.bits)) :=
+  .bind (.sdiv (by decide) (.lit 100) (.lit 3))
+  (.bind (.srem (by decide) (.lit 7) (.lit 3))
+  (.bind (.band (by decide) (by decide) (.lit 12) (.lit 10))
+  (.bind (.bor 8 (by decide) (by decide) (by decide) (by decide) (.lit 5) (.lit 6))
+  (.bind (.bxor 8 (by decide) (by decide) (by decide) (by decide) (.lit 5) (.lit 6))
+  (.bind (.shl 8 (by decide) (by decide) (by decide) (by decide) (.lit 3) (.lit 2))
+  (.bind (.shr 8 (by decide) (by decide) (by decide) (by decide) (.lit 200) (.lit 3))
+  (.ret .empty (List.Perm.refl _))))))))
+
+/-- `fail(i)`: `return why 1` below 2, else `return konto[i].v` (an answer word, or a reason). -/
+def rFail : Endblock wD (vertragVon wD WFn.fail) false [.int 0 3]
+    (Signatur.anfang wD (wD.signatur WFn.fail)) :=
+  .cons (.ite (.lt (.var .here) (.lit 2))
+      (.cons (.retWhy ⟨1, by decide⟩ (List.Perm.refl _)) .nil) .nil)
+    (.ret (.val (.slot () () (.var .here) (wDarf _))) (List.Perm.refl _))
+
+theorem wHpFail : RufPasst wD (vertragVon wD WFn.callf) (wD.signatur WFn.fail) [] where
+  hw := fun _ _ => rfl
+  hg := fun g => nomatch g
+  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hh := fun _ h => nomatch h
+
+/-- `callf()`: two calls that may fail, `let x = fail(3) else (r) { .. }` (answers a value: the `else` arm
+    is not taken) and `let y = fail(1) else (r) { return }` (answers the reason `1`: the `else` arm returns). -/
+def rCallf : Endblock wD (vertragVon wD WFn.callf) false []
+    (Signatur.anfang wD (wD.signatur WFn.callf)) :=
+  .cons (.ite .tru
+      (Block.bindCallElse (τ := .int 0 100) WFn.fail (argK 3 (by decide) (by decide)) rfl wHpFail (by decide)
+        (.ret .empty (List.Perm.refl _)) .nil) .nil)
+  (.cons (.ite .tru
+      (Block.bindCallElse (τ := .int 0 100) WFn.fail (argK 1 (by decide) (by decide)) rfl wHpFail (by decide)
+        (.ret .empty (List.Perm.refl _)) .nil) .nil)
+  (.ret .empty (List.Perm.refl _)))
+
 /-- The program. -/
 def wP : Programm wD where
   invariante := fun i => nomatch i
@@ -188,6 +266,10 @@ def wP : Programm wD where
     | .put => rPut
     | .wipe => rWipe
     | .main => rMain
+    | .mt => rMt
+    | .bits => rBits
+    | .fail => rFail
+    | .callf => rCallf
 
 /-! ## 3. The layout, the module, the oracle -/
 
@@ -196,6 +278,10 @@ def wName : WFn → String
   | .put => "put"
   | .wipe => "wipe"
   | .main => "main"
+  | .mt => "mt"
+  | .bits => "bits"
+  | .fail => "fail"
+  | .callf => "callf"
 
 /-- `konto` is global block 0, an array of four records of one byte-sized field; the four functions are
     the IR functions 0 .. 3. -/
@@ -205,7 +291,7 @@ def wLay : Layout wD where
   rty := fun _ => .fld (.int 8) .unit
   fidx := fun _ _ => 0
   ggblk := fun e => nomatch e
-  fno := fun | .get => 0 | .put => 1 | .wipe => 2 | .main => 3
+  fno := fun | .get => 0 | .put => 1 | .wipe => 2 | .main => 3 | .mt => 4 | .bits => 5 | .fail => 6 | .callf => 7
 
 def wO : Orakel wD where
   wirkt := fun a => nomatch a
@@ -231,6 +317,9 @@ def usesOp (op : BinOp) (f : Func) : Bool :=
     | .bin _ o _ _ _ => decide (o = op)
     | _ => false
 
+/-- Does the lowered function contain a block whose terminator satisfies this test? -/
+def usesTerm (p : Term → Bool) (f : Func) : Bool := f.blks.any fun b => p b.term
+
 section Gen
 
 variable [Conf]
@@ -254,7 +343,7 @@ theorem wLayOk : LayoutOk wLay where
 
 /-- The IR functions of the four functions, in order (a function whose lowering fails is left out). -/
 def wFuncs : List Func :=
-  [WFn.get, WFn.put, WFn.wipe, WFn.main].filterMap fun f => lowerFn wLay wP f (wName f)
+  [WFn.get, WFn.put, WFn.wipe, WFn.main, WFn.mt, WFn.bits, WFn.fail, WFn.callf].filterMap fun f => lowerFn wLay wP f (wName f)
 
 /-- The module of the lowered functions. -/
 def wMod : Modl := ⟨[], wFuncs⟩
@@ -271,6 +360,10 @@ local instance conf64 : Conf := ⟨64, false, Or.inr rfl⟩
 theorem wit64_lowers : ∀ f, ∃ func, lowerFn wLay wP f (wName f) = some func ∧ wMod.funs[wLay.fno f]? = some func := by
   intro f
   cases f
+  · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
   · exact ⟨_, rfl, rfl⟩
   · exact ⟨_, rfl, rfl⟩
   · exact ⟨_, rfl, rfl⟩
@@ -293,6 +386,33 @@ theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.lengt
 theorem wit64_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = some true := by decide +kernel
 
 theorem wit64_get_urem : (lowerFn wLay wP WFn.get "get").map (usesOp .urem) = some true := by decide +kernel
+
+/-- The three matches lower: `mt` has a `switch` (the reason and the tagged value), a signed branch (the
+    option), the case number and the payload are an unsigned remainder and division. -/
+theorem wit64_mt_forms : (lowerFn wLay wP WFn.mt "mt").map (fun f =>
+    usesTerm (fun | .sw .. => true | _ => false) f && usesTerm (fun | .brc .slt .. => true | _ => false) f &&
+    usesOp .urem f && usesOp .udiv f) = some true := by decide +kernel
+
+/-- The failure channel: `fail` answers its word by a multiplication (`ret`) and subtraction-free reason words;
+    `callf` takes the word apart with an unsigned remainder and division and branches. -/
+theorem wit64_fail_forms : (lowerFn wLay wP WFn.fail "fail").map (fun f => usesOp .mul f) = some true ∧
+    (lowerFn wLay wP WFn.callf "callf").map (fun f => usesOp .urem f && usesOp .udiv f && usesOp .sub f) =
+      some true := by
+  constructor <;> decide +kernel
+
+/-- ... and the source meaning of `callf` is an `ok`: it takes the value arm once and the reason arm once. -/
+theorem wit64_callf_ok : isOk (rufAt wP wO 0 3 WFn.callf w0 .nil) = true := by decide +kernel
+
+/-- The signed and bitwise forms lower to their instructions: signed division and remainder, and, or, xor,
+    shift left, logical shift right. -/
+theorem wit64_bits_forms : (lowerFn wLay wP WFn.bits "bits").map (fun f =>
+    usesOp .sdiv f && usesOp .srem f && usesOp .and f && usesOp .or f && usesOp .xor f && usesOp .shl f &&
+    usesOp .lshr f) = some true := by decide +kernel
+
+theorem wit64_bits_ok : isOk (rufAt wP wO 0 1 WFn.bits w0 .nil) = true := by decide +kernel
+
+/-- ... and the source meaning of `mt` is an `ok`: the premise of the refinement is not vacuous. -/
+theorem wit64_mt_ok : isOk (rufAt wP wO 0 1 WFn.mt w0 .nil) = true := by decide +kernel
 
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit64_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =
@@ -317,6 +437,10 @@ theorem wit32_lowers : ∀ f, ∃ func, lowerFn wLay wP f (wName f) = some func 
   · exact ⟨_, rfl, rfl⟩
   · exact ⟨_, rfl, rfl⟩
   · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
+  · exact ⟨_, rfl, rfl⟩
 
 /-- **The closing theorem, instantiated**: for every recursion depth, the lowered functions refine the
     source meaning of a call. -/
@@ -330,6 +454,22 @@ theorem wit32_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.lengt
 
 /-- The calling function has the calls, the `narrow` and the `retry`: seventeen blocks. -/
 theorem wit32_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := rfl
+
+/-- The three matches lower, at the other target too. -/
+theorem wit32_mt_forms : (lowerFn wLay wP WFn.mt "mt").map (fun f =>
+    usesTerm (fun | .sw .. => true | _ => false) f && usesTerm (fun | .brc .slt .. => true | _ => false) f &&
+    usesOp .urem f && usesOp .udiv f) = some true := by decide +kernel
+
+/-- The failure channel lowers at the other target too. -/
+theorem wit32_fail_forms : (lowerFn wLay wP WFn.fail "fail").map (fun f => usesOp .mul f) = some true ∧
+    (lowerFn wLay wP WFn.callf "callf").map (fun f => usesOp .urem f && usesOp .udiv f && usesOp .sub f) =
+      some true := by
+  constructor <;> decide +kernel
+
+/-- The signed and bitwise forms lower at the other target too. -/
+theorem wit32_bits_forms : (lowerFn wLay wP WFn.bits "bits").map (fun f =>
+    usesOp .sdiv f && usesOp .srem f && usesOp .and f && usesOp .or f && usesOp .xor f && usesOp .shl f &&
+    usesOp .lshr f) = some true := by decide +kernel
 
 /-- The premise of `CallRef` is not vacuous: the source meaning of `get(1)` is an `ok`. -/
 theorem wit32_get_ok : ∃ σ' v, rufAt wP wO 0 1 WFn.get w0 (argEnv 1 (by decide) (by decide)) =

@@ -1,8 +1,12 @@
 import Grammatik.Code.Refine.Stmt
-import Grammatik.Code.Refine.Loop
-import Grammatik.Code.Refine.Traverse
-import Grammatik.Code.Refine.Retry
-import Grammatik.Code.Refine.CallRun
+import Grammatik.Code.Refine.Loops.Loop
+import Grammatik.Code.Refine.Loops.Traverse
+import Grammatik.Code.Refine.Loops.Retry
+import Grammatik.Code.Refine.Calls.CallRun
+import Grammatik.Code.Refine.Match.OnOption
+import Grammatik.Code.Refine.Match.Why
+import Grammatik.Code.Refine.Match.Tag
+import Grammatik.Code.Refine.Match.Else
 
 /-
   File:      Grammatik/Code/Refine/StmtOk.lean
@@ -78,7 +82,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       hE, hW, hc => by
       simp only [lowerS] at h
       simp only [execStmt, OutOk]
-      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerErg_ok lay hL cenv e lb st st' blks h M S fn hM
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerRet_ok lay hL cenv V.gruende e lb st st' blks h M S fn hM
         (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs ks dst hR hE hc
       exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, _, .leave .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW,
@@ -395,12 +399,21 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp [lowerS] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
-  | _, _, _, _, .onOption .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
-  | _, _, _, _, .onTag .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
-  | _, _, _, _, .onWhy .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .onOption o p a, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      onOption_ok lay hL cenv lv O passes R o p a
+        (fun c lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerB_ok lay hL (c :: cenv) lv O passes R p lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        (fun lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerB_ok lay hL cenv lv O passes R a lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
+  | _, _, _, _, .onTag v arms, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      onTag_ok lay hL cenv lv O passes R v arms (lowerAr_ok lay hL cenv lv O passes R arms) lb k st st' blks h M S fn
+        hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
+  | _, _, _, _, .onWhy r arms, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      onWhy_ok lay hL cenv lv O passes R r arms (lowerGA_ok lay hL cenv lv O passes R arms) lb k st st' blks h M S fn
+        hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .call (Λ := Λ) f args _ hr, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs,
       ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
@@ -574,8 +587,12 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp [lowerS] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
-  | _, _, _, _, .retWhy .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .retWhy r _, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerS] at h
+      simp only [execStmt, OutOk]
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerWhy_ok lay cenv V.gruende V.erg r.val lb st st' blks h M S fn hM
+        m rs ks dst
+      exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
 
 theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
@@ -626,7 +643,9 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · rw [hx] at IHs
         simp only [hx]
         exact IHs
-      · simp only [hx, OutOk]
+      · rw [hx] at IHs
+        simp only [hx]
+        exact IHs
       · rw [hx] at IHs
         simp only [hx]
         exact outok_mono hle _ IHs
@@ -777,7 +796,10 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       rcases hRf : R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
         ⟨σ', v⟩ | ⟨σ', r⟩ | e | e
       · simp only [hRf]
-        have hw := ergImg_ergWert lay he v
+        have hw : retImg lay (D.gruende f) (D.erg f) v = some (encR lay τ (ergWert he v)) := by
+          unfold retImg
+          rw [if_pos hr]
+          exact ergImg_ergWert lay he v
         obtain ⟨m', hreach, hRn, hWn, hK⟩ := call_run_some hFn hCall hRf hb0 (pre := ca) (post := cb) (r := r1) (ks := ks) (dst := dst)
           (by simp) hw hs1' hmap hRl hW
         -- the cells of the locals survive the call
@@ -827,8 +849,16 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · simp only [OutOk]
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerB] at h
-  | _, _, _, _, .bindCallElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv,
+      hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      bindCallElse_ok lay hL cenv lv O passes R f args he hp hr err rest
+        (fun a lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerB_ok lay hL (a :: cenv) lv O passes R rest lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        (fun a lb' st1 st1' blks' h' M' S' fn' hM' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerEnd_ok lay hL (a :: cenv) lv O passes R err lb' st1 st1' blks' h' M' S' fn' hM' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerB] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -992,7 +1022,7 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       hc => by
       simp only [lowerEnd] at h
       simp only [execEnd, EndOk]
-      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerErg_ok lay hL cenv e lb st st' blks h M S fn hM
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerRet_ok lay hL cenv V.gruende e lb st st' blks h M S fn hM
         (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs ks dst hR hE hc
       exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, .leave .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -1041,7 +1071,9 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       · rw [hx] at IHs
         simp only [hx]
         exact IHs
-      · simp only [hx, EndOk]
+      · rw [hx] at IHs
+        simp only [hx]
+        exact IHs
       · rw [hx] at IHs
         simp only [hx]
         exact runOk_mono hle IHs
@@ -1094,12 +1126,47 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp only [execEnd]
       try rw [← hσl]
       exact endok_bind hreach hFbind hcell hc (Nat.le_succ_of_le (Nat.le_trans hr1 hra)) _ IHr
-  | _, _, _, .retWhy .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+  | _, _, _, .retWhy r _, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd] at h
+      simp only [execEnd, EndOk]
+      obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerWhy_ok lay cenv V.gruende V.erg r.val lb st st' blks h M S fn hM
+        m rs ks dst
+      exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, .bindAxiom .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerEnd] at h
+
+/-- Every arm body of a `match` on a tagged value refines (the structural companion of `lowerB_ok`). -/
+theorem lowerAr_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
+    (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (i : Fin cs.length),
+      ArmBOk lay cenv lv O passes R (cs.get i) (garmT arms i)
+  | _, _, _, _, _, .cons (c := none) b _, ⟨0, _⟩ =>
+      fun lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc =>
+        lowerB_ok lay hL cenv lv O passes R b lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst
+          hR hE hW hc
+  | _, _, _, _, _, .cons (c := some (lo, hi)) b _, ⟨0, _⟩ =>
+      fun a lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc =>
+        lowerB_ok lay hL (a :: cenv) lv O passes R b lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs
+          ks dst hR hE hW hc
+  | _, _, _, _, _, .cons _ rest, ⟨i + 1, hi⟩ =>
+      lowerAr_ok lay hL cenv lv O passes R rest ⟨i, Nat.lt_of_succ_lt_succ hi⟩
+
+/-- Every arm of a `match` on a reason refines (the arms are subterms, so this is the structural
+    companion of `lowerB_ok`). -/
+theorem lowerGA_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
+    (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+      (arms : Gabbro.Grammatik.GrundArms D V l Γ Λ Λ' n) (i : Fin n),
+      BOk lay cenv lv O passes R (garm arms i)
+  | _, _, _, _, _, .cons b _, ⟨0, _⟩ =>
+      fun lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc =>
+        lowerB_ok lay hL cenv lv O passes R b lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst
+          hR hE hW hc
+  | _, _, _, _, _, .cons _ rest, ⟨i + 1, hi⟩ =>
+      lowerGA_ok lay hL cenv lv O passes R rest ⟨i, Nat.lt_of_succ_lt_succ hi⟩
 
 end
 
