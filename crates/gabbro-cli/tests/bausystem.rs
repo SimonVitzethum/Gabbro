@@ -184,10 +184,14 @@ fn gift_eine_einheit_die_nicht_durchgeht() {
 fn ein_anderes_ziel_baut_neu() {
     // A manifest of its own, with its own output directory: the other tests build `MANIFEST`
     // in parallel, and two targets in one directory would be the collision this test guards.
+    // The output directory is per process and emptied first: a product left by an earlier
+    // (or interrupted) run would make "current" and "built" depend on history, not on the input.
+    let aus_dir = format!("target/bau-ziel-{}", std::process::id());
+    let _ = std::fs::remove_dir_all(concat!(env!("CARGO_MANIFEST_DIR"), "/../..").to_owned() + "/" + &aus_dir);
     let pfad = std::env::temp_dir().join(format!("gabbro-ziel-{}.bau", std::process::id()));
     std::fs::write(
         &pfad,
-        "out target/bau-ziel\nunit lager object\n    programmlogik/beispiel/lager.gab\n    programmlogik/beispiel/betrieb.gab\n",
+        format!("out {aus_dir}\nunit lager object\n    programmlogik/beispiel/lager.gab\n    programmlogik/beispiel/betrieb.gab\n"),
     )
     .expect("manifest written");
     let m = pfad.to_str().unwrap();
@@ -204,6 +208,7 @@ fn ein_anderes_ziel_baut_neu() {
         aus.contains("built    lager"),
         "ONE changed target rebuilds, though not a source byte moved:\n{aus}"
     );
+    let _ = std::fs::remove_dir_all(concat!(env!("CARGO_MANIFEST_DIR"), "/../..").to_owned() + "/" + &aus_dir);
 }
 
 /// **The products that needed C are refused BY NAME**, and each refusal says what was removed.
