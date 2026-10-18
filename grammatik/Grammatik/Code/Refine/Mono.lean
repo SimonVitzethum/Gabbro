@@ -724,8 +724,31 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · simp at h
   | _, _, _, _, .onTag .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
-  | _, _, _, _, .onWhy .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .onWhy (n := n) r arms, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
+      · simp [hr] at h
+      have m1 := lowerE_mono lay cenv r st.r _ hr
+      simp only [hr] at h
+      split at h
+      · rcases hga : lowerGA lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ with _ | ⟨ba, s1⟩
+        · simp [hga] at h
+        have G := lowerGA_shape lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ s1 ba hga
+        simp only [hga] at h
+        have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+        · intro b hb
+          simp only [List.mem_cons] at hb
+          rcases hb with rfl | rfl | hb
+          · rfl
+          · rfl
+          · exact G.1 b hb
+        · have a1 := G.2
+          simp only at m1 a1 ⊢
+          omega
+      · simp at h
   | _, _, _, _, .call f args _ _, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
@@ -1085,6 +1108,36 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h => by
       simp [lowerEnd] at h
+
+/-- The arms of a `match` on a reason: no phis, the register counter does not fall. -/
+theorem lowerGA_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+      (arms : Gabbro.Grammatik.GrundArms D V l Γ Λ Λ' n) (lb k : Lbl) (st st' : St) (blks : List Block),
+      lowerGA lay cenv lv arms lb k st = some (blks, st') →
+      (∀ b ∈ blks, b.phis = []) ∧ st.r ≤ st'.r
+  | _, _, _, _, _, .nil, lb, k, st, st', blks, h => by
+      simp only [lowerGA, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨by simp, Nat.le_refl _⟩
+  | _, _, _, _, _, .cons b rest, lb, k, st, st', blks, h => by
+      simp only [lowerGA] at h
+      rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
+      · simp [hb] at h
+      have S1 := lowerB_shape lay cenv lv b lb k st s1 b1 hb
+      simp only [hb] at h
+      rcases hr : lowerGA lay cenv lv rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      have S2 := lowerGA_shape lay cenv lv rest (lb + 1) k s1 s2 b2 hr
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨?_, ?_⟩
+      · intro x hx
+        rcases List.mem_append.mp hx with hx | hx
+        · exact S1.2.1 x hx
+        · exact S2.1 x hx
+      · have a1 := S1.2.2
+        have a2 := S2.2
+        omega
 
 end
 

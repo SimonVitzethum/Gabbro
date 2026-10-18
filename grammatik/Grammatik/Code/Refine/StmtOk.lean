@@ -4,6 +4,7 @@ import Grammatik.Code.Refine.Traverse
 import Grammatik.Code.Refine.Retry
 import Grammatik.Code.Refine.CallRun
 import Grammatik.Code.Refine.Match.OnOption
+import Grammatik.Code.Refine.Match.Why
 
 /-
   File:      Grammatik/Code/Refine/StmtOk.lean
@@ -407,8 +408,9 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
         lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .onTag .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
-  | _, _, _, _, .onWhy .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .onWhy r arms, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      onWhy_ok lay hL cenv lv O passes R r arms (lowerGA_ok lay hL cenv lv O passes R arms) lb k st st' blks h M S fn
+        hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .call (Λ := Λ) f args _ hr, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs,
       ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
@@ -1108,6 +1110,20 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerEnd] at h
+
+/-- Every arm of a `match` on a reason refines (the arms are subterms, so this is the structural
+    companion of `lowerB_ok`). -/
+theorem lowerGA_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
+    (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+      (arms : Gabbro.Grammatik.GrundArms D V l Γ Λ Λ' n) (i : Fin n),
+      BOk lay cenv lv O passes R (garm arms i)
+  | _, _, _, _, _, .cons b _, ⟨0, _⟩ =>
+      fun lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc =>
+        lowerB_ok lay hL cenv lv O passes R b lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst
+          hR hE hW hc
+  | _, _, _, _, _, .cons _ rest, ⟨i + 1, hi⟩ =>
+      lowerGA_ok lay hL cenv lv O passes R rest ⟨i, Nat.lt_of_succ_lt_succ hi⟩
 
 end
 

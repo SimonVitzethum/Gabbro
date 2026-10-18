@@ -397,8 +397,46 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · simp at h
   | _, _, _, _, .onTag .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
-  | _, _, _, _, .onWhy .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .onWhy (n := n) r arms, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
+      · simp [hr] at h
+      simp only [hr] at h
+      split at h
+      · rcases hga : lowerGA lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ with _ | ⟨ba, s1⟩
+        · simp [hga] at h
+        simp only [hga, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨m1, n1, a1⟩ := lowerGA_lbl lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ s1 ba
+          (by show (st.l + 1 : Nat) + n ≤ st.l + 1 + n; omega) hga
+        have m1' : st.l + 1 + n ≤ s1.l := m1
+        have hlt' : @LT.lt Nat instLTNat lb st.l := hlt
+        have a1' : ∀ x ∈ ba, (st.l + 1 ≤ x.nl ∧ x.nl < st.l + 1 + n) ∨ (st.l + 1 + n ≤ x.nl ∧ x.nl < s1.l) := a1
+        have nd1 : (((⟨st.l, [], [], .dead⟩ : Block) :: ba).map Block.lbl).Nodup := by
+          refine lw_head (lb := st.l) (a1 := fun x => st.l + 1 ≤ x ∧ x < s1.l) rfl ?_ n1 ?_
+          · intro x hx; omega
+          · intro x hx
+            have := a1' x hx
+            show st.l + 1 ≤ x.nl ∧ x.nl < s1.l
+            omega
+        refine ⟨by omega, ?_, ?_⟩
+        · refine lw_head (lb := lb) (a1 := fun x => st.l ≤ x ∧ x < s1.l) (b := ⟨lb, [], cr, .sw (Ar.wid 0 ((n : Int) - 1)) orr st.l
+              ((List.range n).map fun (i : Nat) => ((i : Int), (st.l + 1 + i : Nat)))⟩) rfl ?_ nd1 ?_
+          · intro x hx; omega
+          · intro x hx
+            simp only [List.mem_cons] at hx
+            rcases hx with rfl | hx
+            · exact ⟨Nat.le_refl _, by show st.l < s1.l; omega⟩
+            · have := a1' x hx
+              show st.l ≤ x.nl ∧ x.nl < s1.l
+              omega
+        · intro x hx
+          simp only [List.mem_cons] at hx
+          rcases hx with rfl | rfl | hx
+          · exact Or.inl rfl
+          · exact Or.inr ⟨Nat.le_refl _, by show st.l < s1.l; omega⟩
+          · have := a1' x hx; right; omega
+      · simp at h
   | _, _, _, _, .call f args _ _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
@@ -658,6 +696,42 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, hlt, h => by
       simp [lowerEnd] at h
+
+/-- The arms of a `match` on a reason: arm `i` has entry label `lb + i` (below `st.l`), the counter hands
+    out labels from `st.l`; all labels are distinct. -/
+theorem lowerGA_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+      (arms : Gabbro.Grammatik.GrundArms D V l Γ Λ Λ' n) (lb k : Nat) (st st' : St) (blks : List Block),
+      lb + n ≤ st.l → lowerGA lay cenv lv arms lb k st = some (blks, st') →
+      st.l ≤ st'.l ∧ (blks.map Block.lbl).Nodup ∧
+        ∀ x ∈ blks, (lb ≤ x.nl ∧ x.nl < lb + n) ∨ (st.l ≤ x.nl ∧ x.nl < st'.l)
+  | _, _, _, _, _, .nil, lb, k, st, st', blks, hn, h => by
+      simp only [lowerGA, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨Nat.le_refl _, by simp, by simp⟩
+  | _, _, _, _, _, .cons (n := n') b rest, lb, k, st, st', blks, hn, h => by
+      simp only [lowerGA] at h
+      rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
+      · simp [hb] at h
+      simp only [hb] at h
+      rcases hr : lowerGA lay cenv lv rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
+      · simp [hr] at h
+      simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hn' : lb + (n' + 1) ≤ st.l := hn
+      obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv b lb k st s1 b1 (show @LT.lt Nat instLTNat lb st.l by omega) hb
+      obtain ⟨m2, n2, a2⟩ := lowerGA_lbl lay cenv lv rest (lb + 1) k s1 s2 b2
+        (by show lb + 1 + n' ≤ s1.l; omega) hr
+      refine ⟨by omega, ?_, ?_⟩
+      · refine lw_app (a1 := fun x => x = lb ∨ (st.l ≤ x ∧ x < s1.l))
+          (a2 := fun x => (lb + 1 ≤ x ∧ x < lb + 1 + n') ∨ (s1.l ≤ x ∧ x < s2.l)) n1 n2 ?_ ?_ ?_
+        · intro x hx; exact a1 x hx
+        · intro x hx; exact a2 x hx
+        · intro x hx hy; omega
+      · intro x hx
+        rcases List.mem_append.mp hx with hx | hx
+        · have := a1 x hx; omega
+        · have := a2 x hx; omega
 
 end
 

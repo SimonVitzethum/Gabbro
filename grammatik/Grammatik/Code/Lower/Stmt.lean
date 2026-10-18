@@ -182,6 +182,20 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
           else none
       | none => none
+  | _, _, _, _, .onWhy (n := n) r arms, lb, k, s =>
+      -- a `switch` on the reason's number; the arms have the labels `s.l + 1 + i`, a block that is
+      -- never entered (`dead`) answers the numbers `>= n`
+      match lowerE lay cenv r s.r with
+      | some (cr, orr, r1) =>
+          if Ar.Fits 0 ((n : Int) - 1) 128 then
+            match lowerGA lay cenv lv arms (s.l + 1) k ⟨r1, s.l + 1 + n⟩ with
+            | some (ba, s1) =>
+                some (⟨lb, [], cr, .sw (Ar.wid 0 ((n : Int) - 1)) orr s.l
+                        ((List.range n).map fun (i : Nat) => ((i : Int), (s.l + 1 + i : Nat)))⟩ ::
+                      ⟨s.l, [], [], .dead⟩ :: ba, s1)
+            | none => none
+          else none
+      | none => none
   | _, _, _, _, .ret e _, lb, k, s => lowerErg lay cenv e lb s
   | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
@@ -297,6 +311,19 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           | none => none
       | none => none
   | _, _, _, _, _, _, _, _ => none
+
+/-- The arms of a `match` on a reason: arm `i` is lowered at label `lb + i`, one after the other. -/
+def lowerGA (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
+      Gabbro.Grammatik.GrundArms D V l Γ Λ Λ' n → Lbl → Lbl → St → Option (List Block × St)
+  | _, _, _, _, _, .nil, _, _, s => some ([], s)
+  | _, _, _, _, _, .cons b rest, lb, k, s =>
+      match lowerB lay cenv lv b lb k s with
+      | some (b1, s1) =>
+          match lowerGA lay cenv lv rest (lb + 1) k s1 with
+          | some (b2, s2) => some (b1 ++ b2, s2)
+          | none => none
+      | none => none
 
 def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →
