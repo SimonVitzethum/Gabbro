@@ -50,9 +50,11 @@ def lauf (out : String) (seed n ziel versuche : Nat) : MetaM Unit := do
       IO.FS.writeFile (name ++ ".exp") s!"{v}\n"
       gespeichert := gespeichert + 1
       finalR := finalR ++ reprs b.stmts ++ [reprStr b.ender]
-      if rundlaufBlock (.block b.stmts (some (.ret (some b.ender)))) then rt := rt + 1
+      let blk := SAnw.block b.stmts (some (.ret (some b.ender)))
+      if rundlaufNormal blk then rt := rt + 1
+      else IO.FS.writeFile (name ++ ".rundlauf") (reprStr blk ++ "\n")
     | _ => pure ()
-  IO.println s!"programs {gespeichert}/{n}; candidates {tries}, accepted {taken}; print/parse round trip ok {rt}/{gespeichert}"
+  IO.println s!"programs {gespeichert}/{n}; candidates {tries}, accepted {taken}; print/parse round trip (to normal form) ok {rt}/{gespeichert}"
   IO.println "model refusals (stage message, count):"
   for (m, c) in (stop.toList.toArray.qsort (fun a b => a.2 > b.2)).toList.take 12 do
     IO.println s!"  {c}\t{m}"
@@ -66,7 +68,7 @@ def lauf (out : String) (seed n ziel versuche : Nat) : MetaM Unit := do
   IO.println s!"constructors in no final program: {luecken.length} of {alleCtors.length}"
 
 
-/-- `eval FILE`: the model's verdict on a source text (`refused: stage`, or the value `main` returns). -/
+/-- `werte FILE`: the model's verdict on a source text (`refused: stage`, or the value `main` returns). -/
 def werte (datei : String) : IO Unit := do
   let s ← IO.FS.readFile datei
   match lex s with
@@ -81,13 +83,13 @@ end Gabbro.Grammatik.Gen
 open Lean Gabbro.Grammatik.Gen in
 def main (args : List String) : IO UInt32 := do
   match args with
-  | ["eval", datei] => werte datei; return 0
+  | ["werte", datei] => werte datei; return 0
   | [out, seed, n, ziel, versuche] =>
     initSearchPath (← findSysroot)
     let env ← importModules #[{ module := `Grammatik.Gen.Bau }] {} 0
     let x : MetaM Unit := lauf out seed.toNat! n.toNat! ziel.toNat! versuche.toNat!
-    let _ ← (x.run' {} {}).toIO { fileName := "<gen>", fileMap := default } { env := env }
+    let _ ← (x.run' {} {}).toIO { fileName := "<gen>", fileMap := default, maxHeartbeats := 0 } { env := env }
     return 0
   | _ =>
-    IO.eprintln "usage: Main.lean OUT SEED N ZIEL VERSUCHE | eval FILE"
+    IO.eprintln "usage: Main.lean OUT SEED N ZIEL VERSUCHE | werte FILE"
     return 2

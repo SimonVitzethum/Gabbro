@@ -15,12 +15,13 @@ namespace Gabbro.Grammatik.Gen
 
 open Lean Meta Gabbro.Grammatik.Parser
 
-/-- The seeds of a frame by role (0 integer, 1 truth value, 2 place, 3 lock). -/
+/-- The seeds of a frame by role (0 integer, 1 truth value, 2 place, 3 lock, 4 table). -/
 def Saat.rolle (s : Saat) : Nat → List String
   | 0 => s.ints
   | 1 => s.bools
   | 2 => s.plaetze
-  | _ => s.sperren
+  | 3 => s.sperren
+  | _ => s.tabellen
 
 /-- Seed `code` = frame * 10000 + role * 1000 + index, parsed by the reader. -/
 def saatExpr (code : Nat) : SExpr :=
@@ -35,6 +36,9 @@ def saatExpr (code : Nat) : SExpr :=
 def rumpfText (ss : List SAnw) (e : SExpr) : String :=
   toksText (druckAnw (.block ss (some (.ret (some e)))))
 
+/-- A seed that names a local. -/
+def saatLokal (n : String) : SExpr := .variable n
+
 /-- The tokens of a whole unit of frame `r`. -/
 def einheitToks (r : Rahmen) (ss : List SAnw) (e : SExpr) : List Token :=
   rohToks (r.text (rumpfText ss e))
@@ -44,6 +48,14 @@ def liest (c : SAnw) : Option String :=
   match parseTopBlock (druckAnw (.block [c] none) ++ [.ende]) with
   | .ok _ => none
   | .error e => some e
+
+/-- Round trip up to normal form: the reader folds a trailing `leave`/`next` of a block into the block's
+    ender, so a generated tree that has it as the last statement is not a reader image; the printed form of the
+    READ tree must read back as itself. Exact equality (`rundlaufBlock`) is the check on reader images. -/
+def rundlaufNormal (b : SAnw) : Bool :=
+  match parseTopBlock (druckAnw b ++ [.ende]) with
+  | .ok b' => rundlaufBlock b'
+  | .error _ => false
 
 /-- The constructor names a value mentions (by its `Repr`; a name counts when no identifier character
     follows it, so `ret` is not found in `retry`). -/
@@ -74,8 +86,8 @@ def charge (k : Kontext) (typ : Name) (n fuel : Nat) : MetaM Lean.Expr := do
   mkListLit (mkConst typ) es.toList
 
 /-- The generation context of frame `i`: the closure of `SAnw`, and the frame's seeds. -/
-def kontextFuer (k0 : Kontext) (i : Nat) : Kontext :=
-  { k0 with saatTyp := ``SExpr, saatFn := ``saatExpr,
+def kontextFuer (k0 : Kontext) (i : Nat) (lok : List String := []) : Kontext :=
+  { k0 with saatTyp := ``SExpr, saatFn := ``saatExpr, saatLokal := ``saatLokal, lokale := lok,
             saat := fun role =>
               match rahmenSaaten[i]? with
               | some s => some (i * 10000 + role * 1000, (s.rolle role).length)
@@ -99,14 +111,14 @@ def kurz (s : String) : String := String.ofList (s.toList.take 40)
 /-- Grow a program in frame `r`: up to `ziel` statements within `versuche` candidates. -/
 def baue (k0 : Kontext) (fi ziel versuche tiefe : Nat) : MetaM Bau := do
   let r := rahmen[fi]!
-  let k := kontextFuer k0 fi
+  let mut lok : List String := []
   let mut ss : List SAnw := []
   let mut alle : List SAnw := []
   let mut gen : List SAnw := []
   let mut ab : List String := []
   let mut n := 0
   while n < versuche && ss.length < ziel do
-    let cs ← evalAnws (← charge k ``SAnw 64 (2 + n % 3))
+    let cs ← evalAnws (← charge (kontextFuer k0 fi lok) ``SAnw 64 (2 + n % 3))
     for c in cs do
       if n ≥ versuche || ss.length ≥ ziel then break
       n := n + 1
@@ -114,17 +126,24 @@ def baue (k0 : Kontext) (fi ziel versuche tiefe : Nat) : MetaM Bau := do
       match liest c with
       | some e => ab := ("parse: " ++ kurz e) :: ab; continue
       | none => pure ()
-      match pruefeLauf tiefe (einheitToks r (ss ++ [c]) (.lit 0)) with
-      | .ok (.wert _) => ss := ss ++ [c]; gen := c :: gen
+      match pruefeLauf2 tiefe (einheitToks r (ss ++ [c]) (.lit 0)) with
+      | .ok (.wert _, l) => ss := ss ++ [c]; gen := c :: gen; lok := l
       | .ok _ => ab := "model run stops" :: ab
       | .error e => ab := kurz e :: ab
   -- the result expression
   let mut e : SExpr := .lit 0
   let mut fertig := false
+  -- the digest of the frame's numeric places first: the result then shows what the body did to the state
+  match rahmenSaaten[fi]?.bind (fun sa => (parseTopAusText sa.digest).toOption) with
+  | some d =>
+    match pruefeLauf tiefe (einheitToks r ss d) with
+    | .ok (.wert _) => e := d; fertig := true
+    | _ => pure ()
+  | none => pure ()
   let mut m := 0
   while m < 8 && !fertig do
     m := m + 1
-    for c in (← evalExprs (← charge k ``SExpr 64 (1 + m % 3))) do
+    for c in (← evalExprs (← charge (kontextFuer k0 fi lok) ``SExpr 64 (1 + m % 3))) do
       if fertig then break
       match pruefeLauf tiefe (einheitToks r ss c) with
       | .ok (.wert _) => e := c; fertig := true

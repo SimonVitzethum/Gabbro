@@ -478,3 +478,4 @@ import Grammatik.Gen.Reflect
 import Grammatik.Gen.Lauf
 import Grammatik.Gen.Rahmen
 import Grammatik.Gen.Bau
+import Grammatik.Gen.Proben

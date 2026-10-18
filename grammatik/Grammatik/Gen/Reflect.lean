@@ -35,8 +35,9 @@ def rollen : List (String × List String) :=
   , ("SExpr.call.0", ["h"])
   , ("SExpr.built.0", ["sizeof", "lenof"])
   , ("SAnw.call.0", ["h"])
-  , ("SAnw.bind.1", ["x", "y", "z", "a", "c"])
+  , ("SAnw.bind.1", ["x", "y", "z", "a", "c", "p", "q", "r", "s", "t", "u", "w"])
   , ("SAnw.each.0", ["i", "j", "k"])
+  , ("SAnw.arm.0", ["0", "1", "2", "3"])
   , ("SAnw.each.2", ["slots"])
   , ("SAnw.each.4", ["unvisited"])
   , ("SAnw.each.5", [""])
@@ -62,15 +63,19 @@ def erzwinge : List (String × String) :=
   , ("SAnw.watch.1", "SAnw.block"), ("SAnw.grow.2", "SAnw.block"), ("SAnw.child.0", "SAnw.block")
   , ("SAnw.bindElse.4", "SAnw.block"), ("SAnw.alloc.5", "SAnw.block") ]
 
+/-- Fields that introduce a name: the pool loses the names already in scope (a second `let` of the same
+    name is refused by the checker, rule `N001`, though the model's de Bruijn terms allow it). -/
+def binderRollen : List String := ["SAnw.bind.1"]
+
 /-- Probability (percent) that a field listed in `saatRollen` takes a seed of its role. -/
 def saatProzent : Nat := 75
 
 /-- Seed roles of expression fields: key `Type.ctor.fieldIndex` to the role (0 integer value, 1 truth
-    value, 2 assignable place, 3 lock name). The seeds themselves are computed from the frame. -/
+    value, 2 assignable place, 3 lock name, 4 table name). The seeds themselves are computed from the frame. -/
 def saatRollen : List (String × Nat) :=
   [("SAnw.bind.3", 0), ("SAnw.set.2", 0), ("SAnw.set.0", 2), ("SAnw.cond.0", 1), ("SAnw.elsif.0", 1),
    ("SAnw.locks.1", 3), ("SAnw.ret.0", 0), ("SEnde.ret.0", 0), ("SAnw.call.1", 0), ("SAnw.cases.0", 0),
-   ("SAnw.each.6", 1), ("SExpr.bin.1", 0), ("SExpr.bin.2", 0), ("SExpr.un.1", 0), ("SExpr.index.1", 0)]
+   ("SAnw.each.6", 1), ("SAnw.each.3", 4), ("SExpr.bin.1", 0), ("SExpr.bin.2", 0), ("SExpr.un.1", 0), ("SExpr.index.1", 0)]
 
 /-- The last two components of a name: `Gabbro.Grammatik.Parser.SAnw.bind` to `SAnw.bind`. -/
 def kurzName (n : Name) : String :=
@@ -101,6 +106,9 @@ structure Kontext where
       the first code and the count. -/
   saatTyp : Name := .anonymous
   saatFn : Name := .anonymous
+  /-- a function `String → T` that makes a seed of `saatTyp` from a name, and the names in scope. -/
+  saatLokal : Name := .anonymous
+  lokale : List String := []
   saat : Nat → Option (Nat × Nat) := fun _ => none
 
 /-- A field type that needs a value of a non-base type of the closure (no `Option`/`List` escape). -/
@@ -152,6 +160,7 @@ partial def erzeuge (k : Kontext) (ty : Expr) (fuel : Nat) (schl : String) : Met
   | .const n us =>
     if n == ``String then
       let pool := (rollen.lookup schl).getD namenPool
+      let pool := if binderRollen.contains schl then pool.filter (!k.lokale.contains ·) else pool
       return mkStrLit (← waehle pool)
     else if n == ``Nat then
       return mkNatLit (← waehle zahlenPool)
@@ -174,7 +183,9 @@ partial def erzeuge (k : Kontext) (ty : Expr) (fuel : Nat) (schl : String) : Met
       -- seeds: a declared place or call stands in for a generated value of this type
       match (if n == k.saatTyp then (saatRollen.lookup schl).bind k.saat else none) with
       | some (base, cnt) =>
-        if cnt > 0 && (← wuerfle 1 100) ≤ saatProzent then
+        if (saatRollen.lookup schl) == some 0 && !k.lokale.isEmpty && (← wuerfle 1 100) ≤ 40 then
+          return mkApp (mkConst k.saatLokal) (mkStrLit (← waehle k.lokale))
+        else if cnt > 0 && (← wuerfle 1 100) ≤ saatProzent then
           return mkApp (mkConst k.saatFn) (mkNatLit (base + (← wuerfle 0 (cnt - 1))))
         else erzeugeInd k n fuel schl
       | none => erzeugeInd k n fuel schl

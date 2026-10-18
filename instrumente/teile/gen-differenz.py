@@ -32,6 +32,11 @@ def sh(cmd, timeout=300, cwd=None):
 
 def erzeuge(out, seed, n, ziel, versuche):
     env = {k: v for k, v in ENV.items() if k != "ELAN_TOOLCHAIN"}
+    # the generator is interpreted from the built modules: bring them up to date first (a no-op when current)
+    b = subprocess.run(["lake", "build", "Grammatik.Gen.Bau"], cwd=W / "grammatik", env=env,
+                       capture_output=True, text=True, timeout=7200)
+    if b.returncode != 0:
+        return b
     p = subprocess.run(["lake", "env", "lean", "--run", "Grammatik/Gen/Main.lean", str(out), str(seed),
                         str(n), str(ziel), str(versuche)], cwd=W / "grammatik", env=env,
                        capture_output=True, text=True, timeout=7200)
@@ -68,6 +73,25 @@ def uebersetze(datei, ziel, tls):
     except subprocess.TimeoutExpired:
         return "timeout", None
     return None, r.returncode
+
+
+TYPEN = {"Expr", "Stmt", "Block", "Endblock", "Arms", "GrundArms", "Args", "Ty", "ErgExpr", "NutzlastExpr"}
+
+
+def abdeckung(texte):
+    """Coverage keyed by the model-coverage register (`dokumente/llvm-modelldeckung.tsv`): which constructor
+    members of the term types appear in the G terms the exporter writes for the generated programs
+    (`gabbro lean-g`). A member is matched by its `.name` token, so a name two types share (`ret`, `bind`,
+    `cons`) counts for each of them: the figure is an upper bound for those."""
+    zeilen = (W / "dokumente/llvm-modelldeckung.tsv").read_text().splitlines()
+    mitglieder = [z.split("\t") for z in zeilen if z and not z.startswith("#")]
+    mitglieder = [(m[0], m[1]) for m in mitglieder if m[0].split(".")[0] in TYPEN]
+    text = "".join(texte)
+    def da(m):
+        t, n = m.split(".")
+        return re.search(r"(?<![A-Za-z0-9_])\." + re.escape(n) + r"\b|\b" + t + r"\." + re.escape(n) + r"\b", text)
+    erreicht = [m for m, _ in mitglieder if da(m)]
+    return mitglieder, erreicht
 
 
 def schrumpfe(text, hat_befund):
@@ -113,7 +137,8 @@ def main():
     tls.mkdir(parents=True, exist_ok=True)
     klassen = collections.Counter()
     pcodes, ycodes = collections.Counter(), collections.Counter()
-    beispiele, abweichungen = {}, []
+    beispiele, abweichungen, gtexte = {}, [], []
+    lcodes = collections.Counter()
     dateien = sorted(out.glob("g*.gab"))
     for datei in dateien:
         soll = int(datei.with_suffix(".exp").read_text().strip()) % 256
@@ -127,6 +152,20 @@ def main():
                 return pruefer(tmp) and pruefer(tmp)[0] == c
             beispiele.setdefault(("P", codes[0]), schrumpfe(datei.read_text(), noch))
             continue
+        lg = sh([str(GABBRO), "lean-g", str(datei)])
+        if lg.returncode == 0:
+            gtexte.append(lg.stdout)
+        else:
+            klassen["exporter-refusal"] += 1
+            lc = re.findall(r"\[(LG\d+)\]", lg.stderr) or ["?"]
+            lcodes.update(lc)
+
+            def lnoch(t, c=lc[0]):
+                tmp = tls / "schrumpf.gab"
+                tmp.write_text(t)
+                q = sh([str(GABBRO), "lean-g", str(tmp)])
+                return q.returncode != 0 and f"[{c}]" in q.stderr
+            beispiele.setdefault(("LG", lc[0]), schrumpfe(datei.read_text(), lnoch))
         ergebnis = {}
         for ziel in ("x86_64", "aarch64"):
             ergebnis[ziel] = uebersetze(datei, ziel, tls)
@@ -146,8 +185,17 @@ def main():
     print(f"  gen: {len(dateien)} Programme; " + ", ".join(f"{k}={v}" for k, v in sorted(klassen.items())))
     if pcodes:
         print("  gen: Pruefer-Absagen (Unvollstaendigkeit):", dict(pcodes))
+    if lcodes:
+        print("  gen: Exporter-Absagen (`gabbro lean-g` verweigert ein vom Pruefer angenommenes Programm):", dict(lcodes))
     if ycodes:
         print("  gen: Erzeuger-Absagen (Abdeckungsluecke):", dict(ycodes))
+    if dateien:
+        mitglieder, erreicht = abdeckung(gtexte)
+        offen = [m for m, _ in mitglieder if m not in erreicht]
+        print(f"  gen: Registerglieder (Expr/Stmt/Block/Endblock/Arms/Args/Ty) in erzeugten G-Termen erreicht: "
+              f"{len(erreicht)} von {len(mitglieder)}")
+        if offen:
+            print("  gen: nicht erreicht:", ", ".join(offen))
     for (art, code), text in beispiele.items():
         print(f"  --- kleinstes Beispiel {art}/{code} ---\n" + text.rstrip())
     for name, soll, rcs in abweichungen:

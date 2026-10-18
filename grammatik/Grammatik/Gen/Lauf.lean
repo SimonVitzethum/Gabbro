@@ -83,10 +83,22 @@ def fuehreMain (tiefe : Nat) (u : UProg) (P : Programm (declOf u)) : Ergebnis :=
       else .keinMain
     else .start
 
-/-- Accept-and-run from tokens: `none` when the model refuses (with the stage message), else the result. -/
-def pruefeLauf (tiefe : Nat) (toks : List Token) : Except String Ergebnis :=
+/-- The names `main` binds with `let` (flat, nested blocks included): the locals a later statement may name. -/
+def lokale (u : UProg) : List String :=
+  match u.fns.find? (fun f => f.name == "main") with
+  | none => []
+  | some f => f.body.filterMap fun st => match st with | .bind n _ _ => some n | _ => none
+
+/-- Accept-and-run from tokens: the stage message when the model refuses, else the result and the locals. -/
+def pruefeLauf2 (tiefe : Nat) (toks : List Token) : Except String (Ergebnis × List String) :=
   match uebersetzeToks toks with
   | .error e => .error e
-  | .ok ⟨u, P, _⟩ => .ok (fuehreMain tiefe u P)
+  | .ok ⟨u, P, _⟩ => .ok (fuehreMain tiefe u P, lokale u)
+
+/-- Accept-and-run from tokens: `none` when the model refuses (with the stage message), else the result. -/
+def pruefeLauf (tiefe : Nat) (toks : List Token) : Except String Ergebnis :=
+  match pruefeLauf2 tiefe toks with
+  | .error e => .error e
+  | .ok (r, _) => .ok r
 
 end Gabbro.Grammatik.Gen

@@ -44,22 +44,31 @@ def Rahmen.text (r : Rahmen) (rumpf : String) : String :=
 /-- Statics and one table, no lock; a helper. -/
 def rahmenA : Rahmen where
   name := "A"
-  kopf := "module gen { pub static mut A : u8 = 0; pub static mut B : u8 = 3; pub static mut F : bool = false;" ++
-    " table T count 4 { slot { v : u8, w : u8, b : bool, } }" ++
+  kopf := "module gen { pub static mut A : u8 = 0; pub static mut B : u8 = 3; pub static mut F : bool = false; pub static mut C : u16 = 0;" ++
+    " table T count 4 { slot { v : u8, w : u8, b : bool, x : u16, } }" ++
     " impl fn h(a : u8, b : u8) -> u8 costs <= 10 ops { return b; }"
-  effs := "reads A, writes A, reads B, writes B, reads F, writes F, reads T.slots, writes T.slots"
+  effs := "reads A, writes A, reads B, writes B, reads F, writes F, reads C, writes C, reads T.slots, writes T.slots, reads T"
 
 /-- A lock over one table, a second table, statics under no lock. -/
 def rahmenB : Rahmen where
   name := "B"
-  kopf := "module gen { pub static mut A : u8 = 1; pub static mut B : u8 = 0;" ++
+  kopf := "module gen { pub static mut A : u8 = 1; pub static mut B : u8 = 0; pub static mut D : u32 = 0;" ++
     " table T count 3 { slot { v : u8, w : u8, } }" ++
     " table U count 2 { slot { n : u8, b : bool, } }" ++
     " lock L protects { v, w } rank 0 held <= 100 ops;"
-  effs := "reads A, writes A, reads B, writes B, reads T.slots, writes T.slots, reads U.slots, writes U.slots"
+  effs := "reads A, writes A, reads B, writes B, reads D, writes D, reads T.slots, writes T.slots, reads U.slots, writes U.slots, reads T, reads U"
   sperren := ["L"]
 
-def rahmen : List Rahmen := [rahmenA, rahmenB]
+/-- Narrow ranges, so that sums and products of two places fit the operand width (checker rule `M104`) and
+    arithmetic reaches the compiler. -/
+def rahmenC : Rahmen where
+  name := "C"
+  kopf := "module gen { pub static mut A : u8 in 0 .. 40 = 0; pub static mut B : u8 in 0 .. 40 = 3;" ++
+    " pub static mut S : i16 = 0;" ++
+    " table T count 3 { slot { v : u8 in 0 .. 40, w : i16, b : bool, } }"
+  effs := "reads A, writes A, reads B, writes B, reads S, writes S, reads T.slots, writes T.slots, reads T"
+
+def rahmen : List Rahmen := [rahmenA, rahmenB, rahmenC]
 
 /-- The seeds of a frame as expression texts, by role. -/
 structure Saat where
@@ -67,6 +76,9 @@ structure Saat where
   bools : List String := []
   plaetze : List String := []
   sperren : List String := []
+  tabellen : List String := []
+  /-- the numeric places read together: the digest the program returns (`a ^ b ^ ...`). -/
+  digest : String := "0"
 
 /-- Places `T.slots[k].f` of the first slots of a table, split into numeric and truth-valued. -/
 def tabPlaetze (t : UTab) : List String × List String :=
@@ -87,7 +99,9 @@ def saatVon (u : UProg) : Saat :=
   { ints := pn ++ ["0", "1", "2", "5", "255"] ++ sum
     bools := pb ++ ["true", "false"] ++ vgl
     plaetze := (gi ++ gb).filter (·.var) |>.map (·.name) |> (· ++ tp.flatMap (fun p => p.1 ++ p.2))
-    sperren := u.locks.map (·.name) }
+    sperren := u.locks.map (·.name)
+    tabellen := u.tabs.map (·.name)
+    digest := " ^ ".intercalate (pn.take 24) }
 
 /-- The seeds of each frame. -/
 def rahmenSaaten : List Saat :=
