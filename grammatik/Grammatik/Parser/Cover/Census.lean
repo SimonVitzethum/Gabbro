@@ -14,11 +14,13 @@
   The numbers in `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a come from this run.
 -/
 import Grammatik.GabbroV.GvZensus
+import Grammatik.Parser.Elab.UebersetzeAllg2
 
 namespace Gabbro.Grammatik.Parser.Cover
 
 open Gabbro.Grammatik.GabbroV.GvZensus
 open Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 /-- One item outcome: `ok` with the constructor tag, or `err` with the first tokens and the message. -/
 inductive Res
@@ -96,7 +98,14 @@ def line (name src : String) : String :=
     let el := match whole with
       | .ok items => okTxt (elabU items)
       | .error _ => "n/a"
-    name ++ " | lex=ok | parse=" ++ okTxt whole ++ " | elab=" ++ el ++ " | " ++ tally (scanAll toks)
+    let lo := match whole with
+      | .ok items => match elabU items with
+        | .ok u => match lowerAllg u with
+          | .ok _ => "ok"
+          | .error e => "err:" ++ e
+        | .error _ => "n/a"
+      | .error _ => "n/a"
+    name ++ " | lex=ok | parse=" ++ okTxt whole ++ " | elab=" ++ el ++ " | lower=" ++ lo ++ " | " ++ tally (scanAll toks)
 
 def run (args : List String) : IO Unit := do
   let dir : System.FilePath := (args.headD "../beispiele")

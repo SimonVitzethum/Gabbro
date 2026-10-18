@@ -44,16 +44,16 @@ def itemsFail (toks : List Token) : Bool :=
   | .error _ => true
 
 def cx : SExpr := .variable "c"
-def sl : SExpr := .index (.feld cx "slots") (.variable "s")
+def sl : SExpr := .index (.field cx "slots") (.variable "s")
 
 theorem forall_slots : predIs [.wort "forall", .ident "s", .wort "in", .wort "slots", .wort "of", .ident "c", .zeichen ":", .ident "c", .zeichen ".", .wort "slots", .zeichen "[", .ident "s", .zeichen "]", .zeichen ".", .wort "x", .zeichen "==", .num 1, .ende]
-    (.ext .all ["s", "slots"] [cx, .bin "==" (.feld sl "x") (.lit 1)]) = true := by decide
+    (.ext .all ["s", "slots"] [cx, .bin "==" (.field sl "x") (.lit 1)]) = true := by decide
 
 theorem exists_queue : predIs [.wort "exists", .ident "j", .wort "in", .wort "queue", .wort "r", .zeichen ":", .wort "r", .zeichen ".", .ident "p", .zeichen "[", .ident "j", .zeichen "]", .zeichen "==", .num 0, .ende]
-    (.ext .any ["j", "queue"] [.variable "r", .bin "==" (.index (.feld (.variable "r") "p") (.variable "j")) (.lit 0)]) = true := by decide
+    (.ext .any ["j", "queue"] [.variable "r", .bin "==" (.index (.field (.variable "r") "p") (.variable "j")) (.lit 0)]) = true := by decide
 
 theorem implies_in_body : predIs [.wort "forall", .ident "s", .wort "in", .wort "slots", .wort "of", .ident "c", .zeichen ":", .ident "c", .zeichen ".", .ident "a", .zeichen "==", .num 1, .zeichen "=>", .ident "c", .zeichen ".", .ident "b", .zeichen "==", .num 2, .ende]
-    (.ext .all ["s", "slots"] [cx, .ext .imp [] [.bin "==" (.feld cx "a") (.lit 1), .bin "==" (.feld cx "b") (.lit 2)]]) = true := by decide
+    (.ext .all ["s", "slots"] [cx, .ext .imp [] [.bin "==" (.field cx "a") (.lit 1), .bin "==" (.field cx "b") (.lit 2)]]) = true := by decide
 
 theorem reaches_via : predIs [.wort "forall", .ident "s", .wort "in", .wort "slots", .wort "of", .ident "c", .zeichen ":", .ident "c", .zeichen ".", .wort "slots", .zeichen "[", .ident "s", .zeichen "]", .wort "reaches", .ident "ROOT", .wort "via", .ident "up", .ende]
     (.ext .all ["s", "slots"] [cx, .ext .reach ["up"] [sl, .variable "ROOT"]]) = true := by decide
@@ -65,19 +65,19 @@ theorem nested_quant : predIs [.wort "forall", .ident "j", .wort "in", .wort "qu
     (.ext .all ["j", "queue"] [.variable "r", .ext .all ["k", "queue"] [.variable "r", .bin "==" (.variable "j") (.variable "k")]]) = true := by decide
 
 theorem paren_pred : predIs [.zeichen "(", .wort "forall", .ident "s", .wort "in", .wort "slots", .wort "of", .ident "c", .zeichen ":", .ident "s", .zeichen "==", .num 0, .zeichen ")", .zeichen "&&", .ident "c", .zeichen ".", .wort "x", .zeichen "==", .num 1, .ende]
-    (.bin "&&" (.ext .all ["s", "slots"] [cx, .bin "==" (.variable "s") (.lit 0)]) (.bin "==" (.feld cx "x") (.lit 1))) = true := by decide
+    (.bin "&&" (.ext .all ["s", "slots"] [cx, .bin "==" (.variable "s") (.lit 0)]) (.bin "==" (.field cx "x") (.lit 1))) = true := by decide
 
 theorem count_expr : exprIs [.wort "count", .ident "k", .wort "in", .wort "slots", .wort "of", .ident "c", .zeichen ":", .ident "c", .zeichen ".", .wort "slots", .zeichen "[", .ident "k", .zeichen "]", .zeichen ".", .ident "u", .ende]
-    (.ext .count ["k", "slots"] [cx, .feld (.index (.feld cx "slots") (.variable "k")) "u"]) = true := by decide
+    (.ext .count ["k", "slots"] [cx, .field (.index (.field cx "slots") (.variable "k")) "u"]) = true := by decide
 
 theorem text_literal : exprIs [.text "hi", .ende]
     (.ext .text ["hi"] []) = true := by decide
 
 theorem call_through_place : exprIs [.ident "v", .zeichen "->", .ident "cmp", .zeichen "(", .ident "a", .zeichen ",", .ident "b", .zeichen ")", .ende]
-    (.ext .call [] [.pfeil (.variable "v") "cmp", .variable "a", .variable "b"]) = true := by decide
+    (.ext .call [] [.arrow (.variable "v") "cmp", .variable "a", .variable "b"]) = true := by decide
 
 theorem plain_call_unchanged : exprIs [.ident "f", .zeichen "(", .ident "a", .zeichen ")", .ende]
-    (.ruf "f" [.variable "a"]) = true := by decide
+    (.call "f" [.variable "a"]) = true := by decide
 
 theorem forall_needs_colon : predFails [.wort "forall", .ident "s", .wort "in", .wort "slots", .wort "of", .ident "c", .ident "c", .zeichen ".", .wort "x", .zeichen "==", .num 1, .ende] = true := by decide
 
@@ -97,13 +97,13 @@ theorem start_stmt : stmtIs [.ident "start", .zeichen "{", .ident "f", .zeichen 
 theorem start_is_no_keyword : stmtFails [.ident "start", .ident "f", .zeichen ";", .ende] = true := by decide
 
 theorem reset_range : stmtIs [.wort "reset", .ident "A", .wort "at", .num 1, .wort "count", .num 2, .zeichen ";", .ende]
-    (.resetS "A" (.some (.lit 1, .lit 2))) = true := by decide
+    (.reset "A" (.some (.lit 1, .lit 2))) = true := by decide
 
 theorem typed_let : stmtIs [.wort "let", .wort "x", .zeichen ":", .wort "u64", .zeichen "=", .ident "a", .zeichen ";", .ende]
     (.bind false "x" (.some (.atom "u64")) (.variable "a")) = true := by decide
 
 theorem call_stmt_through_place : stmtIs [.ident "v", .zeichen "->", .ident "go", .zeichen "(", .num 1, .zeichen ")", .zeichen ";", .ende]
-    (.ruf "v->go" [.lit 1]) = true := by decide
+    (.call "v->go" [.lit 1]) = true := by decide
 
 theorem gate_via : itemsOk [.wort "syscall", .ident "g", .zeichen "(", .ident "a", .zeichen ":", .wort "u64", .zeichen ")", .zeichen "->", .wort "u64", .wort "via", .ident "V", .wort "effects", .zeichen "{", .wort "pure", .zeichen "}", .wort "costs", .zeichen "<=", .num 8, .wort "ops", .zeichen ";", .ende] = true := by decide
 

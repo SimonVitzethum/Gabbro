@@ -93,16 +93,16 @@ theorem elabU03_verweigert_noch (items : List SItemTief)
 /-- **Synthetic witness items**: one table, one uncalled prototype, one
     clean function. Non-degenerate: a real table and a real body. -/
 def wProtoItems : List SItemTief :=
-  [.modulT "beispiel::zeuge"
-    [.tabelleT "T" (.some (.lit 1)) .none .none false
-      [.tPlatz [{ fname := "v", ftyp := .atom "u32",
+  [.modT "beispiel::zeuge"
+    [.tableT "T" (.some (.lit 1)) .none .none false
+      [.tSlot [{ fname := "v", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
     .protoT { art := "impl", name := "h", params := [],
-              ergebnis := .none, fehler := .none, klauseln := [] },
-    .funktionT
+              res := .none, fehler := .none, klauseln := [] },
+    .fnT
       { art := "impl", name := "f", params := [],
-        ergebnis := .none, fehler := .none, klauseln := [] }
+        res := .none, fehler := .none, klauseln := [] }
       (.block [] .none)]]
 
 /-- **The witness program**: the table and the function; the prototype
@@ -112,8 +112,8 @@ def wProtoProg : UProg :=
                    felder := [("v", 0, 4294967295)], bools := [] }],
     sperren := [],
     fns := [{ name := "f", params := [], parten := [],
-              ergebnis := .none, ergBool := false,
-              held := [], schreibt := [], sichert := [],
+              res := .none, ergBool := false,
+              held := [], schreibt := [], gives := [],
               saetze := [], rueck := .empty }],
     wurzeln := [] }
 
@@ -162,16 +162,16 @@ def schrankeZahl (ks : List (String × Int)) : SExpr → Option Nat
     as written. Anything else passes through and stays loudly refused
     downstream. -/
 def normTyp (ks : List (String × Int)) : STyp → STyp
-  | .bereich t lo hi true =>
+  | .range t lo hi true =>
     match schrankeZahl ks lo, schrankeZahl ks hi with
     | .some a, .some b =>
-      if a < b then .bereich t (.lit a) (.lit (b - 1)) false
-      else .bereich t lo hi true
-    | _, _ => .bereich t lo hi true
-  | .bereich t lo hi false =>
+      if a < b then .range t (.lit a) (.lit (b - 1)) false
+      else .range t lo hi true
+    | _, _ => .range t lo hi true
+  | .range t lo hi false =>
     match schrankeZahl ks lo, schrankeZahl ks hi with
-    | .some a, .some b => .bereich t (.lit a) (.lit b) false
-    | _, _ => .bereich t lo hi false
+    | .some a, .some b => .range t (.lit a) (.lit b) false
+    | _, _ => .range t lo hi false
   | t => t
 
 /-- Normalize declaration-level type positions (function parameter and
@@ -181,22 +181,22 @@ def normFeld (ks : List (String × Int)) (f : SFeld) : SFeld :=
   { f with ftyp := normTyp ks f.ftyp }
 
 def normTeil (ks : List (String × Int)) : STabTeil → STabTeil
-  | .tPlatz fds => .tPlatz (fds.map (normFeld ks))
+  | .tSlot fds => .tSlot (fds.map (normFeld ks))
   | t => t
 
 def normSig (ks : List (String × Int)) (s : FnSig) : FnSig :=
   { s with
     params := s.params.map (fun p => (p.1, normTyp ks p.2)),
-    ergebnis := s.ergebnis.map (normTyp ks) }
+    res := s.res.map (normTyp ks) }
 
 def normAlias (ks : List (String × Int)) : STyp → STyp :=
   normTyp ks
 
 def normItem (ks : List (String × Int)) : SItemTief → SItemTief
-  | .tabelleT n c a b g parts =>
-    .tabelleT n c a b g (parts.map (normTeil ks))
-  | .funktionT s k => .funktionT (normSig ks s) k
-  | .typT f n ps o r => .typT f n (ps.map (normTyp ks)) o
+  | .tableT n c a b g parts =>
+    .tableT n c a b g (parts.map (normTeil ks))
+  | .fnT s k => .fnT (normSig ks s) k
+  | .typeT f n ps o r => .typeT f n (ps.map (normTyp ks)) o
     (r.map (normAlias ks))
   | it => it
 
@@ -236,17 +236,17 @@ theorem elabU04_verweigert_noch (items : List SItemTief)
 /-- **Synthetic witness items**: one table and one function whose
     parameter uses an exclusive bound. -/
 def wExklusivItems : List SItemTief :=
-  [.modulT "beispiel::zeuge"
-    [.tabelleT "T" (.some (.lit 2)) .none .none false
-      [.tPlatz [{ fname := "v", ftyp := .atom "u32",
+  [.modT "beispiel::zeuge"
+    [.tableT "T" (.some (.lit 2)) .none .none false
+      [.tSlot [{ fname := "v", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
-    .funktionT
+    .fnT
       { art := "impl", name := "f",
         params := [("i",
-          .bereich (.atom "u32") (.lit 0) (.lit 2) true)],
-        ergebnis := .some
-          (.bereich (.atom "u32") (.lit 0) (.lit 100) false),
+          .range (.atom "u32") (.lit 0) (.lit 2) true)],
+        res := .some
+          (.range (.atom "u32") (.lit 0) (.lit 100) false),
         fehler := .none, klauseln := [] }
       (.block [] (.some (.ret (.some (.variable "i")))))]]
 
@@ -256,9 +256,9 @@ def wExklusivProg : UProg :=
                    felder := [("v", 0, 4294967295)], bools := [] }],
     sperren := [],
     fns := [{ name := "f", params := [("i", .int 0 1)],
-              parten := [.int], ergebnis := .some (0, 100),
+              parten := [.int], res := .some (0, 100),
               ergBool := false, held := [], schreibt := [],
-              sichert := [], saetze := [],
+              gives := [], saetze := [],
               rueck := .val (.param "i") }],
     wurzeln := [] }
 

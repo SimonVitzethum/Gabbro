@@ -96,7 +96,7 @@ theorem beqSExpr_klingt : ∀ (a b : SExpr),
       first
         | exact absurd h Bool.false_ne_true
         | (simp only [strEq_eq] at h; exact congrArg SExpr.variable h)
-  | feld x f =>
+  | field x f =>
     cases b <;> simp only [beqSExpr] at h <;> try exact absurd h Bool.false_ne_true
     simp only [Bool.and_eq_true, strEq_eq] at h
     obtain ⟨h1, h2⟩ := h
@@ -109,7 +109,7 @@ theorem beqSExpr_klingt : ∀ (a b : SExpr),
     have e1 := beqSExpr_klingt _ _ h1
     have e2 := beqSExpr_klingt _ _ h2
     rw [e1, e2]
-  | pfeil x f =>
+  | arrow x f =>
     cases b <;> simp only [beqSExpr] at h <;> try exact absurd h Bool.false_ne_true
     simp only [Bool.and_eq_true, strEq_eq] at h
     obtain ⟨h1, h2⟩ := h
@@ -128,29 +128,29 @@ theorem beqSExpr_klingt : ∀ (a b : SExpr),
     have e1 := beqSExpr_klingt _ _ h1
     have e2 := beqSExpr_klingt _ _ h2
     rw [ho, e1, e2]
-  | ruf f xs =>
+  | call f xs =>
     cases b <;> simp only [beqSExpr] at h <;> try exact absurd h Bool.false_ne_true
     simp only [Bool.and_eq_true, strEq_eq] at h
     obtain ⟨hs, hl⟩ := h
     have el := beqSExprList_klingt _ _ hl
     rw [hs, el]
-  | fnwert f =>
+  | fnref f =>
     cases b <;> simp only [beqSExpr] at h <;>
       first
         | exact absurd h Bool.false_ne_true
-        | (simp only [strEq_eq] at h; exact congrArg SExpr.fnwert h)
-  | eingebaut f xs =>
+        | (simp only [strEq_eq] at h; exact congrArg SExpr.fnref h)
+  | built f xs =>
     cases b <;> simp only [beqSExpr] at h <;> try exact absurd h Bool.false_ne_true
     simp only [Bool.and_eq_true, strEq_eq] at h
     obtain ⟨hs, hl⟩ := h
     have el := beqSExprList_klingt _ _ hl
     rw [hs, el]
-  | alt x =>
+  | old x =>
     cases b <;> simp only [beqSExpr] at h <;>
       first
         | exact absurd h Bool.false_ne_true
         | (rw [beqSExpr_klingt x _ h])
-  | ergebnis =>
+  | res =>
     cases b <;> simp only [beqSExpr] at h <;>
       first
         | exact absurd h Bool.false_ne_true
@@ -200,16 +200,16 @@ def groesse : SExpr → Nat
   | .tru => 1
   | .fls => 1
   | .variable _ => 1
-  | .feld x _ => groesse x + 1
+  | .field x _ => groesse x + 1
   | .index x i => groesse x + groesse i + 1
-  | .pfeil x _ => groesse x + 1
+  | .arrow x _ => groesse x + 1
   | .un _ x => groesse x + 1
   | .bin _ l r => groesse l + groesse r + 1
-  | .ruf _ xs => groesseListe xs + 1
-  | .fnwert _ => 1
-  | .eingebaut _ xs => groesseListe xs + 1
-  | .alt x => groesse x + 1
-  | .ergebnis => 1
+  | .call _ xs => groesseListe xs + 1
+  | .fnref _ => 1
+  | .built _ xs => groesseListe xs + 1
+  | .old x => groesse x + 1
+  | .res => 1
   | .why _ _ => 1
   | .ext _ _ _ => 1
 def groesseListe : List SExpr → Nat
@@ -249,10 +249,10 @@ def druckToks : SExpr → List Token
   | .tru => [.wort "true"]
   | .fls => [.wort "false"]
   | .variable s => [.ident s]
-  | .feld x f => druckToks x ++ [.zeichen ".", .ident f]
+  | .field x f => druckToks x ++ [.zeichen ".", .ident f]
   | .index x i =>
     druckToks x ++ [.zeichen "["] ++ druckToks i ++ [.zeichen "]"]
-  | .pfeil x f => druckToks x ++ [.zeichen "->", .ident f]
+  | .arrow x f => druckToks x ++ [.zeichen "->", .ident f]
   | .un o x =>
     [.zeichen o] ++
       if istAtom x then druckToks x
@@ -260,14 +260,14 @@ def druckToks : SExpr → List Token
   | .bin o l r =>
     [.zeichen "("] ++ druckToks l ++ [.zeichen o] ++ druckToks r ++
       [.zeichen ")"]
-  | .ruf f xs =>
+  | .call f xs =>
     [.ident f, .zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
-  | .fnwert p => [.zeichen "&", .ident p]
-  | .eingebaut f xs =>
+  | .fnref p => [.zeichen "&", .ident p]
+  | .built f xs =>
     [.wort f, .zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
-  | .alt x =>
+  | .old x =>
     [.wort "old", .zeichen "("] ++ druckToks x ++ [.zeichen ")"]
-  | .ergebnis => [.wort "result"]
+  | .res => [.wort "result"]
   | .why g f => [.ident g, .zeichen "::", .ident f]
   | .ext _ _ _ => [.ende]
 def druckToksListe : List SExpr → List Token
@@ -316,10 +316,10 @@ def istTypWortVar : SExpr → Bool
 -- heads under `istKeinPlatz` are refused; unknown operator
 -- spellings match no level; `sizeof`/`lenof` take a place through
 -- `parseOrt`, `old` takes a place, `aligned` takes two whole
--- expressions and nothing else is an `eingebaut`; a `Grund` with
+-- expressions and nothing else is an `built`; a `Grund` with
 -- an integer, sugared-width or `Self` head reads as a field or
 -- fails; suffixes attach only to place bases, so `feld`/`index`/
--- `pfeil` need a `gutPlatz` base (`grundKette` multi-segment
+-- `arrow` need a `gutPlatz` base (`grundKette` multi-segment
 -- paths print as field chains and parse back through suffixes).
 mutual
 def gut : SExpr → Bool
@@ -328,28 +328,28 @@ def gut : SExpr → Bool
   | .tru => true
   | .fls => true
   | .variable s => !istKeinPlatz s
-  | .feld x _ => gutPlatz x
+  | .field x _ => gutPlatz x
   | .index x i => gutPlatz x && gut i
-  | .pfeil x _ => gutPlatz x
+  | .arrow x _ => gutPlatz x
   | .un o x => gutOpUn o && gut x
   | .bin o l r => gutOpBin o && gut l && gut r
-  | .ruf f xs => !istKeinPlatz f && gutListe xs
-  | .fnwert _ => true
-  | .eingebaut "sizeof" [x] => gutPlatz x && (!istTypWortVar x)
-  | .eingebaut "lenof" [x] => gutPlatz x && (!istTypWortVar x)
-  | .eingebaut "aligned" [a, b] => gut a && gut b
-  | .eingebaut _ _ => false
-  | .alt x => gutPlatz x
-  | .ergebnis => true
+  | .call f xs => !istKeinPlatz f && gutListe xs
+  | .fnref _ => true
+  | .built "sizeof" [x] => gutPlatz x && (!istTypWortVar x)
+  | .built "lenof" [x] => gutPlatz x && (!istTypWortVar x)
+  | .built "aligned" [a, b] => gut a && gut b
+  | .built _ _ => false
+  | .old x => gutPlatz x
+  | .res => true
   | .why g _ =>
     !istKeinPlatz g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
   | .ext _ _ _ => false
 def gutPlatz : SExpr → Bool
   | .variable s => !istKeinPlatz s
-  | .feld x _ => gutPlatz x
+  | .field x _ => gutPlatz x
   | .index x i => gutPlatz x && gut i
-  | .pfeil x _ => gutPlatz x
+  | .arrow x _ => gutPlatz x
   | _ => false
 def gutListe : List SExpr → Bool
   | [] => true
@@ -674,11 +674,11 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
     | ende => rfl
 
 -- Trees handled at the primary level (prefix `un` trees and
--- `fnwert` live at the unary level: `parsePrimary` fails on their
+-- `fnref` live at the unary level: `parsePrimary` fails on their
 -- operator heads, so the round trip never asks it about them).
 def primFrei : SExpr → Bool
   | .un _ _ => false
-  | .fnwert _ => false
+  | .fnref _ => false
   | _ => true
 
 -- Every tree has size at least one (empties the zero case of every
@@ -706,7 +706,7 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
     | tru => exact Nat.le_refl _
     | fls => exact Nat.le_refl _
     | «variable» s => exact Nat.le_refl _
-    | feld x f =>
+    | field x f =>
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
         omega
@@ -720,7 +720,7 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
       have hlen := ih x hx
       simp only [druckToks, List.length_append, List.length] at ⊢
       omega
-    | pfeil x f =>
+    | arrow x f =>
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
         omega
@@ -745,25 +745,25 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
       have hlen := ih l hl
       simp only [druckToks, List.length_append, List.length] at ⊢
       omega
-    | ruf f xs =>
+    | call f xs =>
       simp only [druckToks, List.length_append,
         List.length] at ⊢
       omega
-    | fnwert p =>
+    | fnref p =>
       simp only [druckToks, List.length] at ⊢
       omega
-    | eingebaut f xs =>
+    | built f xs =>
       simp only [druckToks, List.length_append,
         List.length] at ⊢
       omega
-    | alt x =>
+    | old x =>
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
         omega
       have hlen := ih x hx
       simp only [druckToks, List.length_append, List.length] at ⊢
       omega
-    | ergebnis => exact Nat.le_refl _
+    | res => exact Nat.le_refl _
     | why g f =>
       simp only [druckToks, List.length] at ⊢
       omega
@@ -821,7 +821,7 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
     simp only [gutPlatz] at h
     simp only [gut] at ⊢
     exact h
-  | feld x f =>
+  | field x f =>
     simp only [gutPlatz] at h
     simp only [gut] at ⊢
     exact h
@@ -829,17 +829,17 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
     simp only [gutPlatz, Bool.and_eq_true] at h
     simp only [gut, Bool.and_eq_true] at ⊢
     exact h
-  | pfeil x f =>
+  | arrow x f =>
     simp only [gutPlatz] at h
     simp only [gut] at ⊢
     exact h
   | un o x => simp [gutPlatz] at h
   | bin o l r => simp [gutPlatz] at h
-  | ruf f xs => simp [gutPlatz] at h
-  | fnwert f => simp [gutPlatz] at h
-  | eingebaut f xs => simp [gutPlatz] at h
-  | alt x => simp [gutPlatz] at h
-  | ergebnis => simp [gutPlatz] at h
+  | call f xs => simp [gutPlatz] at h
+  | fnref f => simp [gutPlatz] at h
+  | built f xs => simp [gutPlatz] at h
+  | old x => simp [gutPlatz] at h
+  | res => simp [gutPlatz] at h
   | why g f => simp [gutPlatz] at h
   | ext xk xn xs => simp [gutPlatz] at h
 
@@ -908,42 +908,42 @@ theorem keinDP_list : ∀ (n : Nat)
           omega
         exact ihzs hzs (gutListe_Schwanz x (y :: ys) hg) t hmR
 
--- Shape equations for `eingebaut` printability, as plain rewrite
+-- Shape equations for `built` printability, as plain rewrite
 -- rules (kernel-checked; the `gut` match has literal and shape
 -- arms that `simp` equations do not select).
 theorem gut_sizeof_one : ∀ (x : SExpr),
-    gut (.eingebaut "sizeof" [x]) = (gutPlatz x && (!istTypWortVar x)) := by
+    gut (.built "sizeof" [x]) = (gutPlatz x && (!istTypWortVar x)) := by
   intro x
   rfl
 theorem gut_sizeof_multi : ∀ (x y : SExpr) (ys : List SExpr),
-    gut (.eingebaut "sizeof" (x :: y :: ys)) = false := by
+    gut (.built "sizeof" (x :: y :: ys)) = false := by
   intro x y ys
   rfl
 theorem gut_lenof_one : ∀ (x : SExpr),
-    gut (.eingebaut "lenof" [x]) = (gutPlatz x && (!istTypWortVar x)) := by
+    gut (.built "lenof" [x]) = (gutPlatz x && (!istTypWortVar x)) := by
   intro x
   rfl
 theorem gut_lenof_multi : ∀ (x y : SExpr) (ys : List SExpr),
-    gut (.eingebaut "lenof" (x :: y :: ys)) = false := by
+    gut (.built "lenof" (x :: y :: ys)) = false := by
   intro x y ys
   rfl
 theorem gut_aligned_one : ∀ (a : SExpr),
-    gut (.eingebaut "aligned" [a]) = false := by
+    gut (.built "aligned" [a]) = false := by
   intro a
   rfl
 theorem gut_aligned_two : ∀ (a b : SExpr),
-    gut (.eingebaut "aligned" [a, b]) = (gut a && gut b) := by
+    gut (.built "aligned" [a, b]) = (gut a && gut b) := by
   intro a b
   rfl
 theorem gut_aligned_multi : ∀ (a b c : SExpr) (xs : List SExpr),
-    gut (.eingebaut "aligned" (a :: b :: c :: xs)) = false := by
+    gut (.built "aligned" (a :: b :: c :: xs)) = false := by
   intro a b c xs
   rfl
 
 -- No `:` in a printed `gut` tree (the printer emits none, so the
 -- argument-label strip of `parseArg` never fires on printed
 -- output). By size induction. The `ruf` arm descends into its
--- argument list through `keinDP_list`; the `eingebaut` arm splits
+-- argument list through `keinDP_list`; the `built` arm splits
 -- the `gut` match (the head word and argument shape substitute in
 -- every arm). Operator heads need `gut` (a `:` operator would
 -- print); every other head discriminates by constructor.
@@ -991,7 +991,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       subst hm
       intro h
       simp at h
-    | feld x f =>
+    | field x f =>
       simp only [gut] at hg
       simp only [druckToks] at hm
       rw [List.mem_append] at hm
@@ -1032,7 +1032,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         subst hmR
         intro h
         simp at h
-    | pfeil x f =>
+    | arrow x f =>
       simp only [gut] at hg
       simp only [druckToks] at hm
       rw [List.mem_append] at hm
@@ -1120,7 +1120,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         subst hmR
         intro h
         simp at h
-    | ruf f xs =>
+    | call f xs =>
       simp only [gut, Bool.and_eq_true] at hg
       obtain ⟨hf, hxs⟩ := hg
       have hgl : groesseListe xs ≤ n := by
@@ -1142,7 +1142,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         subst hmR
         intro h
         simp at h
-    | fnwert p =>
+    | fnref p =>
       simp only [druckToks] at hm
       rw [List.mem_cons, List.mem_singleton] at hm
       obtain rfl | rfl := hm
@@ -1150,7 +1150,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         simp at h
       · intro h
         simp at h
-    | eingebaut f xs =>
+    | built f xs =>
       cases he1 : decEq f "sizeof" with
       | isTrue e1 =>
         subst e1
@@ -1278,7 +1278,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
                   rw [gut_aligned_multi] at hg
                   exact absurd hg Bool.false_ne_true
           | isFalse ne3 => simp [gut, ne1, ne2, ne3] at hg
-    | alt x =>
+    | old x =>
       simp only [gut] at hg
       have hxg := gut_of_gutPlatz x hg
       have hxx : groesse x ≤ n := by
@@ -1300,7 +1300,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         subst hmR
         intro h
         simp at h
-    | ergebnis =>
+    | res =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
@@ -1371,7 +1371,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       intro h
       simp at h
-    | feld x f =>
+    | field x f =>
       simp only [gut] at hg
       have hne : druckToks x ≠ [] := by
         intro he
@@ -1408,7 +1408,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       injection hT with ha _
       subst ha
       exact ihb
-    | pfeil x f =>
+    | arrow x f =>
       simp only [gut] at hg
       have hne : druckToks x ≠ [] := by
         intro he
@@ -1445,31 +1445,31 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       intro h
       simp at h
-    | ruf f xs =>
+    | call f xs =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h
       simp at h
-    | fnwert p =>
+    | fnref p =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
       simp at h
-    | eingebaut f xs =>
+    | built f xs =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h
       simp at h
-    | alt x =>
+    | old x =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h
       simp at h
-    | ergebnis =>
+    | res =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
@@ -1767,18 +1767,18 @@ theorem sammleSeg_paren : ∀ (f : String) (R : List Token),
 theorem kopf_ruf_head : ∀ (F : Nat) (f : String) (R : List Token),
     parseKopf (F + 1) (Token.ident f :: Token.zeichen "(" :: R) =
       match parseArgs F R with
-      | .ok (args, rest'') => .ok (.ruf f args, rest'')
+      | .ok (args, rest'') => .ok (.call f args, rest'')
       | .error e => .error e := by
   intro F f R
   unfold parseKopf
   rfl
 theorem prim_ruf : ∀ (n : Nat) (Rn : R n)
     (f : String) (xs : List SExpr) (rest : List Token) (F : Nat),
-    groesse (.ruf f xs) ≤ n + 1 → gut (.ruf f xs) = true →
+    groesse (.call f xs) ≤ n + 1 → gut (.call f xs) = true →
     ruhigSuff rest = true →
-    12 * (groesse (.ruf f xs) + 1) + groesse (.ruf f xs) + 1 ≤ F →
-    parsePrimary F (druckToks (.ruf f xs) ++ rest) =
-      .ok (.ruf f xs, rest) := by
+    12 * (groesse (.call f xs) + 1) + groesse (.call f xs) + 1 ≤ F →
+    parsePrimary F (druckToks (.call f xs) ++ rest) =
+      .ok (.call f xs, rest) := by
   intro n Rn f xs rest F hs hg hr hF
   simp only [gut, Bool.and_eq_true] at hg
   obtain ⟨hf, hxs⟩ := hg
@@ -1818,8 +1818,8 @@ def suffToks : List SuffFrag → List Token
     .zeichen "[" :: druckToks i ++ [.zeichen "]"] ++ suffToks s
 def applySuff : SExpr → List SuffFrag → SExpr
   | e, [] => e
-  | e, .dot f :: s => applySuff (.feld e f) s
-  | e, .arrow f :: s => applySuff (.pfeil e f) s
+  | e, .dot f :: s => applySuff (.field e f) s
+  | e, .arrow f :: s => applySuff (.arrow e f) s
   | e, .idx i :: s => applySuff (.index e i) s
 def suffGroesse : List SuffFrag → Nat
   | [] => 0
@@ -1949,7 +1949,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     | «variable» a =>
       simp only [gutPlatz] at hg
       exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
-    | feld x f =>
+    | field x f =>
       simp only [gutPlatz] at hg
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
@@ -1982,7 +1982,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · simp only [suffGroesse_append, suffGroesse] at ⊢
         simp only [groesse, groesse_applySuff] at hs
         omega
-    | pfeil x f =>
+    | arrow x f =>
       simp only [gutPlatz] at hg
       have hx : groesse x ≤ n := by
         simp only [groesse] at hs
@@ -1999,11 +1999,11 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
         omega
     | un o x => simp [gutPlatz] at hg
     | bin o l r => simp [gutPlatz] at hg
-    | ruf f xs => simp [gutPlatz] at hg
-    | fnwert f => simp [gutPlatz] at hg
-    | eingebaut f xs => simp [gutPlatz] at hg
-    | alt x => simp [gutPlatz] at hg
-    | ergebnis => simp [gutPlatz] at hg
+    | call f xs => simp [gutPlatz] at hg
+    | fnref f => simp [gutPlatz] at hg
+    | built f xs => simp [gutPlatz] at hg
+    | old x => simp [gutPlatz] at hg
+    | res => simp [gutPlatz] at hg
     | why g f => simp [gutPlatz] at hg
     | ext xk xn xs => simp [gutPlatz] at hg
 
@@ -2038,14 +2038,14 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       simp only [parseSuffixe] at ⊢
       -- ⊢ : parseSuffixe F' (feld base f) (suffToks suff ++ rest) = ...
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.feld base f) ≤ n + 1 := by
+      have hs2 : suffGroesse suff + groesse (.field base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
-      have hF2 : 12 * (suffGroesse suff + groesse (.feld base f) + 1) +
+      have hF2 : 12 * (suffGroesse suff + groesse (.field base f) + 1) +
           suffGroesse suff ≤ F' := by
         simp only [suffGroesse, groesse] at hs hF ⊢
         omega
-      exact ih (SExpr.feld base f) rest F' hs2 hg hr hF2
+      exact ih (SExpr.field base f) rest F' hs2 hg hr hF2
     | arrow f =>
       intro base rest F hs hg hr hF
       simp only [suffGut] at hg
@@ -2054,14 +2054,14 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       simp only [suffToks, List.cons_append] at ⊢
       simp only [parseSuffixe] at ⊢
       simp only [applySuff] at ⊢
-      have hs2 : suffGroesse suff + groesse (.pfeil base f) ≤ n + 1 := by
+      have hs2 : suffGroesse suff + groesse (.arrow base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
         omega
-      have hF2 : 12 * (suffGroesse suff + groesse (.pfeil base f) + 1) +
+      have hF2 : 12 * (suffGroesse suff + groesse (.arrow base f) + 1) +
           suffGroesse suff ≤ F' := by
         simp only [suffGroesse, groesse] at hs hF ⊢
         omega
-      exact ih (SExpr.pfeil base f) rest F' hs2 hg hr hF2
+      exact ih (SExpr.arrow base f) rest F' hs2 hg hr hF2
     | idx i =>
       intro base rest F hs hg hr hF
       simp only [suffGut, Bool.and_eq_true] at hg
@@ -2183,7 +2183,7 @@ theorem prim_platz : ∀ (n : Nat) (Rn : R n)
 
 -- Atomic `parsePrimary` outcomes (no children, no loops, no
 -- follows inspected): unfold with successor fuel and let the
--- concrete head select its arm. (`fnwert` is absent: it lives at
+-- concrete head select its arm. (`fnref` is absent: it lives at
 -- the unary level.)
 theorem prim_lit : ∀ (m : Nat) (rest : List Token) (F : Nat),
     12 * (groesse (.lit m) + 1) + groesse (.lit m) ≤ F + 7 →
@@ -2232,8 +2232,8 @@ theorem prim_falsch : ∀ (rest : List Token) (F : Nat),
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
 theorem prim_ergebnis : ∀ (rest : List Token) (F : Nat),
-    12 * (groesse .ergebnis + 1) + groesse .ergebnis ≤ F + 7 →
-    parsePrimary F (druckToks .ergebnis ++ rest) = .ok (.ergebnis, rest) := by
+    12 * (groesse .res + 1) + groesse .res ≤ F + 7 →
+    parsePrimary F (druckToks .res ++ rest) = .ok (.res, rest) := by
   intro rest F hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -2271,10 +2271,10 @@ theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
 -- `old` through `parsePrimary`: head word, place, close paren.
 theorem prim_alt : ∀ (n : Nat) (Rn : R n)
     (x : SExpr) (rest : List Token) (F : Nat),
-    groesse (.alt x) ≤ n + 1 → gut (.alt x) = true →
+    groesse (.old x) ≤ n + 1 → gut (.old x) = true →
     ruhigSuff rest = true →
-    12 * (groesse (.alt x) + 1) + groesse (.alt x) + 1 ≤ F →
-    parsePrimary F (druckToks (.alt x) ++ rest) = .ok (.alt x, rest) := by
+    12 * (groesse (.old x) + 1) + groesse (.old x) + 1 ≤ F →
+    parsePrimary F (druckToks (.old x) ++ rest) = .ok (.old x, rest) := by
   intro n Rn x rest F hs hg hr hF
   simp only [gut] at hg
   have hF1 : 1 ≤ F := by omega
@@ -2293,7 +2293,7 @@ theorem prim_alt : ∀ (n : Nat) (Rn : R n)
   simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
   simp only [hO, List.cons_append] at ⊢
 
--- `eingebaut` through `parsePrimary`: head word, then place or
+-- `built` through `parsePrimary`: head word, then place or
 -- pair arguments. `sizeof`/`lenof` take places (`parseOrt`);
 -- `aligned` takes two whole expressions.
 -- `sizeof`/`lenof` refuse bare type-word variables and accept
@@ -2303,9 +2303,9 @@ theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
     (match x with
       | .variable s =>
         if istTypWort s = true then Except.error (w ++ " over a type")
-        else .ok (SExpr.eingebaut w [x], rest)
-      | _ => .ok (SExpr.eingebaut w [x], rest)) =
-      .ok (SExpr.eingebaut w [x], rest) := by
+        else .ok (SExpr.built w [x], rest)
+      | _ => .ok (SExpr.built w [x], rest)) =
+      .ok (SExpr.built w [x], rest) := by
   intro w x rest hpx htw
   have htwf : istTypWortVar x = false := nichtWahr_falsch _ htw
   cases x with
@@ -2316,19 +2316,19 @@ theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
   | «variable» s =>
     simp only [istTypWortVar] at htwf
     simp [htwf]
-  | feld x f => rfl
+  | field x f => rfl
   | index x i => rfl
-  | pfeil x f => rfl
+  | arrow x f => rfl
   | un o x => rfl
   | bin o l r => rfl
-  | ruf f xs => rfl
-  | fnwert f => rfl
-  | eingebaut f xs => rfl
-  | alt x => rfl
-  | ergebnis => rfl
+  | call f xs => rfl
+  | fnref f => rfl
+  | built f xs => rfl
+  | old x => rfl
+  | res => rfl
   | why g f => rfl
   | ext xk xn xs => rfl
--- `eingebaut` through `parsePrimary`: head word, then place or
+-- `built` through `parsePrimary`: head word, then place or
 -- pair arguments. `sizeof`/`lenof` take places (`parseOrt`);
 -- `aligned` takes two whole expressions. Singleton argument lists
 -- unfold to the element (`args_einzeln`) before the place/expression

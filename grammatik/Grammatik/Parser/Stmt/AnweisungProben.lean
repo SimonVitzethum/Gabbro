@@ -14,7 +14,7 @@
   Corpus sites stand at each probe; probes with no corpus line say
   so (`{ }` bodies stand for the corpus block at the cited site).
 -/
-import Grammatik.Parser.Item.Element
+import Grammatik.Parser.Stmt.Anweisung
 
 namespace Gabbro.Grammatik.Parser
 
@@ -28,8 +28,8 @@ theorem s01_lex :
     lex "r.slots[i].belegt = true;" = .ok st01 := by
   decide
 theorem s01 : beqTopStmt (parseTopStmt st01)
-    (.ok (.zuweis
-      (.feld (.index (.feld (.variable "r") "slots")
+    (.ok (.set
+      (.field (.index (.field (.variable "r") "slots")
         (.variable "i")) "belegt")
       "=" .tru)) = true := by
   decide
@@ -43,8 +43,8 @@ theorem s02_lex :
     lex "c.slots[s].marke += 1;" = .ok st02 := by
   decide
 theorem s02 : beqTopStmt (parseTopStmt st02)
-    (.ok (.zuweis
-      (.feld (.index (.feld (.variable "c") "slots")
+    (.ok (.set
+      (.field (.index (.field (.variable "c") "slots")
         (.variable "s")) "marke")
       "+=" (.lit 1))) = true := by
   decide
@@ -57,7 +57,7 @@ theorem s03_lex :
     lex "wurzel_setzen(v);" = .ok st03 := by
   decide
 theorem s03 : beqTopStmt (parseTopStmt st03)
-    (.ok (.ruf "wurzel_setzen" [.variable "v"])) = true := by
+    (.ok (.call "wurzel_setzen" [.variable "v"])) = true := by
   decide
 -- beispiele/02-geraet.gab (the `uebersetzung_an` call shape).
 -- Rust: `Ruf` on a one-segment path -- same shape.
@@ -96,7 +96,7 @@ theorem s06_lex :
       .ok st06 := by
   decide
 theorem s06 : beqTopStmt (parseTopStmt st06)
-    (.ok (.bindElse "g" .none (.ruf "groesse_gemessen" []) "e1"
+    (.ok (.bindElse "g" .none (.call "groesse_gemessen" []) "e1"
       (.block [] (.some (.ret (.some .fls)))))) = true := by
   decide
 -- beispiele/06-annahmen.gab:136. Rust: `LetSonst` with a call
@@ -111,7 +111,7 @@ theorem s07_lex :
       .ok st07 := by
   decide
 theorem s07 : beqTopStmt (parseTopStmt st07)
-    (.ok (.erwartet "fertig" (.variable "FARBE_FERTIG")
+    (.ok (.await "fertig" (.variable "FARBE_FERTIG")
       "farbbericht ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:60. Rust: `AwaitLoad` -- same
@@ -128,7 +128,7 @@ theorem s08_lex :
       .ok st08 := by
   decide
 theorem s08 : beqTopStmt (parseTopStmt st08)
-    (.ok (.tauscht "alt" (.variable "ZAEHLER")
+    (.ok (.swap "alt" (.variable "ZAEHLER")
       "update ( v ) bounded 4 ops on_exceeded streit { } publishes nothing ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:104 (block emptied). Rust:
@@ -146,7 +146,7 @@ theorem s09_lex :
       .ok st09 := by
   decide
 theorem s09 : beqTopStmt (parseTopStmt st09)
-    (.ok (.tauscht "genommen" (.variable "BESITZER")
+    (.ok (.swap "genommen" (.variable "BESITZER")
       "f when old ( BESITZER ) == 0 returns erfolg publishes nothing ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:131. Rust: `Exchange` with
@@ -172,7 +172,7 @@ theorem s11_lex :
     lex "if fertig { return farbbericht; }" = .ok st11 := by
   decide
 theorem s11 : beqTopStmt (parseTopStmt st11)
-    (.ok (.wenn (.variable "fertig")
+    (.ok (.cond (.variable "fertig")
       (.block [] (.some (.ret (.some (.variable "farbbericht")))))
       [] .none)) = true := by
   decide
@@ -187,8 +187,8 @@ theorem s12_lex :
     lex "if a { } else if b { } else { }" = .ok st12 := by
   decide
 theorem s12 : beqTopStmt (parseTopStmt st12)
-    (.ok (.wenn (.variable "a") (.block [] .none)
-      [(.sonstWenn (.variable "b") (.block [] .none))]
+    (.ok (.cond (.variable "a") (.block [] .none)
+      [(.elsif (.variable "b") (.block [] .none))]
       (.some (.block [] .none)))) = true := by
   decide
 -- No corpus occurrence of `else if` (measured 2026-09-13): the
@@ -206,8 +206,8 @@ theorem s13_lex :
       .ok st13 := by
   decide
 theorem s13 : beqTopStmt (parseTopStmt st13)
-    (.ok (.matchS
-      (.feld (.index (.feld (.variable "c") "slots")
+    (.ok (.cases
+      (.field (.index (.field (.variable "c") "slots")
         (.variable "s")) "vorheriges")
       [(.arm "Some" (.some "p") (.block [] .none)),
        (.arm "None" .none (.block [] .none))])) = true := by
@@ -223,7 +223,7 @@ theorem s14_lex :
       .ok st14 := by
   decide
 theorem s14 : beqTopStmt (parseTopStmt st14)
-    (.ok (.traverseS "e over slots of q by unvisited "
+    (.ok (.each "e over slots of q by unvisited "
       (.block [] .none))) = true := by
   decide
 -- beispiele/04-schleifen.gab (the `dienstschleife` header, body
@@ -239,7 +239,7 @@ theorem s15_lex :
       .ok st15 := by
   decide
 theorem s15 : beqTopStmt (parseTopStmt st15)
-    (.ok (.retryS "warten until ok bounded 8 ops on_exceeded haengt "
+    (.ok (.retry "warten until ok bounded 8 ops on_exceeded haengt "
       (.block [] .none))) = true := by
   decide
 -- beispiele/02-geraet.gab:65 (shortened). Rust:
@@ -256,7 +256,7 @@ theorem s16_lex :
       .ok st16 := by
   decide
 theorem s16 : beqTopStmt (parseTopStmt st16)
-    (.ok (.foreverS
+    (.ok (.loop
       "dienst per_pass bounded 4096 ops on_exceeded w effects { pure } progress tick "
       (.block [] .none))) = true := by
   decide
@@ -270,7 +270,7 @@ theorem s17_lex :
     lex "breaking antwortpflicht_paarig { }" = .ok st17 := by
   decide
 theorem s17 : beqTopStmt (parseTopStmt st17)
-    (.ok (.bricht ["antwortpflicht_paarig"]
+    (.ok (.waive ["antwortpflicht_paarig"]
       (.block [] .none))) = true := by
   decide
 -- beispiele/53-zwei-orte.gab:64 (body emptied). Rust: `Bricht`
@@ -285,7 +285,7 @@ theorem s18_lex :
       .ok st18 := by
   decide
 theorem s18 : beqTopStmt (parseTopStmt st18)
-    (.ok (.narrowS (.variable "roh") "0 .. GRENZE "
+    (.ok (.trim (.variable "roh") "0 .. GRENZE "
       (.block [] (.some (.ret (.some (.lit 0))))))) = true := by
   decide
 -- beispiele/08-bereiche.gab:127. Rust: `Narrow` over a range --
@@ -299,7 +299,7 @@ theorem s19_lex :
       .ok st19 := by
   decide
 theorem s19 : beqTopStmt (parseTopStmt st19)
-    (.ok (.narrowS (.variable "x") "finite"
+    (.ok (.trim (.variable "x") "finite"
       (.block [] (.some (.ret (.some (.variable "HALB"))))))) = true := by
   decide
 -- beispiele/26-gleitkomma.gab:73. Rust: `Narrow` to `finite` --
@@ -311,7 +311,7 @@ theorem s20_lex :
     lex "locks P { }" = .ok st20 := by
   decide
 theorem s20 : beqTopStmt (parseTopStmt st20)
-    (.ok (.sperrt false (.variable "P")
+    (.ok (.locks false (.variable "P")
       (.block [] .none))) = true := by
   decide
 -- beispiele/71-frist-und-zaehlung.gab (body emptied). Rust:
@@ -323,7 +323,7 @@ theorem s21_lex :
     lex "locks shared PLANER { }" = .ok st21 := by
   decide
 theorem s21 : beqTopStmt (parseTopStmt st21)
-    (.ok (.sperrt true (.variable "PLANER")
+    (.ok (.locks true (.variable "PLANER")
       (.block [] .none))) = true := by
   decide
 -- beispiele/04-schleifen.gab (the `locks PLANER` shape with the
@@ -335,7 +335,7 @@ theorem s22_lex :
     lex "observes BACCT { }" = .ok st22 := by
   decide
 theorem s22 : beqTopStmt (parseTopStmt st22)
-    (.ok (.beobachtet "BACCT" (.block [] .none))) = true := by
+    (.ok (.watch "BACCT" (.block [] .none))) = true := by
   decide
 -- beispiele/31-rcu.gab:39 (body emptied). Rust: `Observiert` --
 -- same shape.
@@ -345,7 +345,7 @@ theorem s23_lex :
     lex "leave dienst;" = .ok st23 := by
   decide
 theorem s23 : beqTopStmt (parseTopStmt st23)
-    (.ok (.verlasse "dienst")) = true := by
+    (.ok (.leave "dienst")) = true := by
   decide
 -- beispiele/04-schleifen.gab. Rust: `Leave` -- same shape.
 def st24 : List Token :=
@@ -354,7 +354,7 @@ theorem s24_lex :
     lex "next dienst;" = .ok st24 := by
   decide
 theorem s24 : beqTopStmt (parseTopStmt st24)
-    (.ok (.widen "dienst")) = true := by
+    (.ok (.next "dienst")) = true := by
   decide
 -- SYNTAX.md `nextstmt` (no corpus occurrence beside `leave`
 -- sites; measured 2026-09-13). Rust: `Next` -- same shape.
@@ -367,7 +367,7 @@ theorem s25_lex :
       .ok st25 := by
   decide
 theorem s25 : beqTopStmt (parseTopStmt st25)
-    (.ok (.publiziert (.variable "FARBE_FERTIG") .tru
+    (.ok (.emit (.variable "FARBE_FERTIG") .tru
       "farbbericht ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:52. Rust: `Publish` with a
@@ -379,7 +379,7 @@ theorem s26_lex :
     lex "TIEFE_MAX = t publishes nothing;" = .ok st26 := by
   decide
 theorem s26 : beqTopStmt (parseTopStmt st26)
-    (.ok (.publiziert (.variable "TIEFE_MAX") (.variable "t")
+    (.ok (.emit (.variable "TIEFE_MAX") (.variable "t")
       "nothing")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:72. Rust: `Publish` with
@@ -392,8 +392,8 @@ theorem s27_lex :
     lex "return r.slots[i].belegt;" = .ok st27 := by
   decide
 theorem s27 : beqTopStmt (parseTopStmt st27)
-    (.ok (.rueck (.some
-      (.feld (.index (.feld (.variable "r") "slots")
+    (.ok (.ret (.some
+      (.field (.index (.field (.variable "r") "slots")
         (.variable "i")) "belegt")))) = true := by
   decide
 -- beispiele/15 (the `uebernehmen` exit). Rust: `Return` over a
@@ -404,7 +404,7 @@ theorem s28_lex :
     lex "return;" = .ok st28 := by
   decide
 theorem s28 : beqTopStmt (parseTopStmt st28)
-    (.ok (.rueck .none)) = true := by
+    (.ok (.ret .none)) = true := by
   decide
 -- beispiele/06-annahmen.gab:101. Rust: `Return` with no value --
 -- same shape.
@@ -415,7 +415,7 @@ theorem s29_lex :
     lex "return Fehler::Buchfuehrung;" = .ok st29 := by
   decide
 theorem s29 : beqTopStmt (parseTopStmt st29)
-    (.ok (.rueck (.some (.why "Fehler" "Buchfuehrung")))) = true := by
+    (.ok (.ret (.some (.why "Fehler" "Buchfuehrung")))) = true := by
   decide
 -- beispiele/48-grund-mit-erzeuger.gab (the error-return shape).
 -- Rust: `Return` over a `Grund` -- same shape.
@@ -429,7 +429,7 @@ theorem s30_lex :
   decide
 theorem s30 : beqTopStmt (parseTopStmt st30)
     (.ok (.shift
-      (.feld (.index (.feld (.variable "T") "slots")
+      (.field (.index (.field (.variable "T") "slots")
         (.variable "i")) "s")
       "Idle" "Busy")) = true := by
   decide
@@ -445,7 +445,7 @@ theorem s31_lex :
     lex "advances setup -> live;" = .ok st31 := by
   decide
 theorem s31 : beqTopStmt (parseTopStmt st31)
-    (.ok (.schreitet "setup" "live")) = true := by
+    (.ok (.step "setup" "live")) = true := by
   decide
 -- beispiele/02-geraet.gab:129. The phase step as a statement --
 -- `parse.rs` has no statement-level counterpart either (it rides
@@ -459,7 +459,7 @@ theorem s32_lex :
     lex "let a = alloc Log (10);" = .ok st32 := by
   decide
 theorem s32 : beqTopStmt (parseTopStmt st32)
-    (.ok (.allocS false "a" .none "Log" (.lit 10) .none)) = true := by
+    (.ok (.alloc false "a" .none "Log" (.lit 10) .none)) = true := by
   decide
 -- beispiele/98-arena-erklaert.gab:11. Rust: `Alloc` with no
 -- `else` -- same shape.
@@ -474,7 +474,7 @@ theorem s33_lex :
       .ok st33 := by
   decide
 theorem s33 : beqTopStmt (parseTopStmt st33)
-    (.ok (.allocS false "c" .none "Log"
+    (.ok (.alloc false "c" .none "Log"
       (.bin "+" (.variable "a") (.variable "b"))
       (.some (.block [] (.some (.ret (.some (.lit 0)))))))) = true := by
   decide
@@ -487,7 +487,7 @@ theorem s34_lex :
     lex "reset Log;" = .ok st34 := by
   decide
 theorem s34 : beqTopStmt (parseTopStmt st34)
-    (.ok (.resetS "Log" .none)) = true := by
+    (.ok (.reset "Log" .none)) = true := by
   decide
 -- beispiele/98-arena-erklaert.gab:16. Rust: `ResetArena` --
 -- same shape.
@@ -500,463 +500,11 @@ theorem s35_lex :
     lex "@spirv#kernel(n) { dispatch 0 };" = .ok st35 := by
   decide
 theorem s35 : beqTopStmt (parseTopStmt st35)
-    (.ok (.libruf "spirv" "kernel" 1)) = true := by
+    (.ok (.lcall "spirv" "kernel" 1)) = true := by
   decide
 -- SYNTAX.md §7 (the library-call example). Rust: `LibraryCall`
 -- in statement position -- same shape (one argument, region
 -- skipped balanced).
-def et01 : List Token :=
-  [.wort "module", .ident "beispiel", .zeichen "::",
-   .ident "eigen", .zeichen "{", .zeichen "}", .ende]
-theorem e01_lex :
-    lex "module beispiel::eigen { }" = .ok et01 := by
-  decide
-theorem e01 : beqTopItems (parseTopItems et01)
-    (.ok [(.modul "beispiel :: eigen " [])]) = true := by
-  decide
--- beispiele/15 (the module head, body emptied). Rust: `Modul`
--- with the path and the member list -- same shape (the path
--- rides raw).
-def et02 : List Token :=
-  [.wort "use", .ident "gpu", .zeichen "::", .ident "spirv",
-   .zeichen ";", .ende]
-theorem e02_lex :
-    lex "use gpu::spirv;" = .ok et02 := by
-  decide
-theorem e02 : beqTopItems (parseTopItems et02)
-    (.ok [(.useS "gpu :: spirv ")]) = true := by
-  decide
--- beispiele/100-hardwareprofil.gab (the `use` shape). Rust:
--- `Use` -- same shape (the path rides raw).
-def et03 : List Token :=
-  [.wort "type", .ident "Fuellstand", .zeichen "=",
-   .wort "u32", .wort "in", .num 0, .zeichen "..",
-   .ident "VOLL", .zeichen ";", .ende]
-theorem e03_lex :
-    lex "type Fuellstand = u32 in 0 .. VOLL;" = .ok et03 := by
-  decide
-theorem e03 : beqTopItems (parseTopItems et03)
-    (.ok [(.typS "Fuellstand")]) = true := by
-  decide
--- beispiele/52-baugatter.gab (the `Fuellstand` shape). Rust:
--- `Typ` -- same shape (the right-hand side is skipped, not
--- validated).
-def et04 : List Token :=
-  [.wort "const", .ident "NSLOTS", .zeichen ":",
-   .wort "u32", .zeichen "=", .num 16, .zeichen ";", .ende]
-theorem e04_lex :
-    lex "const NSLOTS : u32 = 16;" = .ok et04 := by
-  decide
-theorem e04 : beqTopItems (parseTopItems et04)
-    (.ok [(.konstS "NSLOTS")]) = true := by
-  decide
--- beispiele/71-frist-und-zaehlung.gab. Rust: `Konst` -- same
--- shape.
-def et05 : List Token :=
-  [.wort "static", .wort "mut", .ident "hoechstmarke",
-   .zeichen ":", .ident "Fuellstand", .zeichen "=",
-   .num 0, .zeichen ";", .ende]
-theorem e05_lex :
-    lex "static mut hoechstmarke : Fuellstand = 0;" =
-      .ok et05 := by
-  decide
-theorem e05 : beqTopItems (parseTopItems et05)
-    (.ok [(.statikS "hoechstmarke")]) = true := by
-  decide
--- beispiele/52-baugatter.gab. Rust: `Statisch` -- same shape.
-def et06 : List Token :=
-  [.wort "extern", .wort "fn", .ident "geraet_haengt",
-   .zeichen "(", .zeichen ")", .zeichen "->", .wort "never",
-   .wort "effects", .zeichen "{", .wort "diverges",
-   .zeichen "}", .zeichen ";", .ende]
-theorem e06_lex :
-    lex "extern fn geraet_haengt() -> never effects { diverges };" =
-      .ok et06 := by
-  decide
-theorem e06 : beqTopItems (parseTopItems et06)
-    (.ok [(.protoS "geraet_haengt")]) = true := by
-  decide
--- beispiele/02-geraet.gab:74. Rust: `Funktion` with no body --
--- same shape (a bodiless declaration rides `protoS`).
-def et07 : List Token :=
-  [.wort "spec", .wort "fn", .ident "ist_blatt",
-   .zeichen "(", .ident "c", .zeichen ":", .wort "u32",
-   .zeichen ")", .zeichen "->", .wort "bool", .wort "effects",
-   .zeichen "{", .wort "pure", .zeichen "}", .zeichen "=",
-   .ident "c", .zeichen "==", .ident "c", .zeichen ";", .ende]
-theorem e07_lex :
-    lex "spec fn ist_blatt(c : u32) -> bool effects { pure } = c == c;" =
-      .ok et07 := by
-  decide
-theorem e07 : beqTopItems (parseTopItems et07)
-    (.ok [(.protoS "ist_blatt")]) = true := by
-  decide
--- beispiele/01-tabelle.gab:81 (signature shortened). Rust:
--- `Funktion` with a `= pred` body -- same shape (the predicate
--- is skipped, not validated).
-def et08 : List Token :=
-  [.wort "format", .ident "Manifest", .zeichen "@",
-   .ident "version", .num 1, .wort "endian", .wort "little",
-   .zeichen "{", .zeichen "}", .ende]
-theorem e08_lex :
-    lex "format Manifest @version 1 endian little { }" =
-      .ok et08 := by
-  decide
-theorem e08 : beqTopItems (parseTopItems et08)
-    (.ok [(.formatS "Manifest")]) = true := by
-  decide
--- beispiele/04-schleifen.gab (the `Manifest` head, body
--- emptied). Rust: `Format` -- same shape.
-def et09 : List Token :=
-  [.wort "table", .ident "Region", .wort "count", .num 8,
-   .zeichen "{", .wort "slot", .zeichen "{",
-   .ident "belegt", .zeichen ":", .wort "bool", .zeichen ",",
-   .zeichen "}", .zeichen "}", .ende]
-theorem e09_lex :
-    lex "table Region count 8 { slot { belegt : bool, } }" =
-      .ok et09 := by
-  decide
-theorem e09 : beqTopItems (parseTopItems et09)
-    (.ok [(.tabelle "Region")]) = true := by
-  decide
--- beispiele/15 (the `Region` table). Rust: `Tabelle` -- same
--- shape (slots, invariants and ops are skipped balanced).
-def et10 : List Token :=
-  [.wort "arena", .ident "Log", .wort "capacity", .num 2,
-   .zeichen "..", .num 8, .wort "of", .wort "u32",
-   .zeichen ";", .ende]
-theorem e10_lex :
-    lex "arena Log capacity 2 .. 8 of u32;" = .ok et10 := by
-  decide
-theorem e10 : beqTopItems (parseTopItems et10)
-    (.ok [(.arenaS "Log")]) = true := by
-  decide
--- beispiele/98-arena-erklaert.gab:8. Rust: `Arena` -- same
--- shape.
-def et11 : List Token :=
-  [.wort "reason", .ident "KappenFehler", .zeichen "{",
-   .zeichen "}", .ende]
-theorem e11_lex :
-    lex "reason KappenFehler { }" = .ok et11 := by
-  decide
-theorem e11 : beqTopItems (parseTopItems et11)
-    (.ok [(.grundS "KappenFehler")]) = true := by
-  decide
--- beispiele/01-tabelle.gab:24 (body emptied). Rust: `Reason` --
--- same shape.
-def et12 : List Token :=
-  [.wort "state", .ident "S", .zeichen "{", .zeichen "}",
-   .ende]
-theorem e12_lex :
-    lex "state S { }" = .ok et12 := by
-  decide
-theorem e12 : beqTopItems (parseTopItems et12)
-    (.ok [(.zustandS "S")]) = true := by
-  decide
--- No corpus occurrence of a `state` item (measured 2026-09-13):
--- the shape probe for the SYNTAX.md `state` production. Rust:
--- `StateDecl` -- same head shape.
-def et13 : List Token :=
-  [.wort "device", .ident "Vtd", .zeichen "(",
-   .ident "basis", .zeichen ":", .ident "Pa", .zeichen ")",
-   .wort "at", .wort "mmio", .zeichen "{", .zeichen "}",
-   .ende]
-theorem e13_lex :
-    lex "device Vtd(basis : Pa) at mmio { }" = .ok et13 := by
-  decide
-theorem e13 : beqTopItems (parseTopItems et13)
-    (.ok [(.geraetS "Vtd")]) = true := by
-  decide
--- beispiele/02-geraet.gab:14 (body emptied). Rust: `Device` --
--- same shape (registers, banks and transitions are skipped
--- balanced).
-def et14 : List Token :=
-  [.wort "assume", .ident "vtd_te_wirksam",
-   .text "GCMD.TE schaltet die Uebersetzung scharf.",
-   .wort "falsifier", .ident "sonde_vtd_te", .zeichen ";",
-   .ende]
-theorem e14_lex :
-    lex "assume vtd_te_wirksam \"GCMD.TE schaltet die Uebersetzung scharf.\" falsifier sonde_vtd_te;" =
-      .ok et14 := by
-  decide
-theorem e14 : beqTopItems (parseTopItems et14)
-    (.ok [(.annahmeS "vtd_te_wirksam")]) = true := by
-  decide
--- beispiele/02-geraet.gab:47 (string shortened). Rust: `Assume`
--- -- same shape (the string is one token).
-def et15 : List Token :=
-  [.wort "axiom", .ident "rdtsc", .zeichen "(", .zeichen ")",
-   .wort "effects", .zeichen "{", .wort "reads",
-   .ident "zeitzaehler", .zeichen "}", .wort "falsifier",
-   .ident "sonde_tsc", .zeichen ";", .ende]
-theorem e15_lex :
-    lex "axiom rdtsc() effects { reads zeitzaehler } falsifier sonde_tsc;" =
-      .ok et15 := by
-  decide
-theorem e15 : beqTopItems (parseTopItems et15)
-    (.ok [(.axiomaS "rdtsc")]) = true := by
-  decide
--- beispiele/06-annahmen.gab:82. Rust: `Axiom` -- same shape.
-def et16 : List Token :=
-  [.wort "check", .ident "stapel_wasserstand", .zeichen "{",
-   .zeichen "}", .ende]
-theorem e16_lex :
-    lex "check stapel_wasserstand { }" = .ok et16 := by
-  decide
-theorem e16 : beqTopItems (parseTopItems et16)
-    (.ok [(.pruefungS "stapel_wasserstand")]) = true := by
-  decide
--- beispiele/06-annahmen.gab:127 (body emptied). Rust: `Check`
--- -- same shape.
-def et17 : List Token :=
-  [.wort "atomic", .ident "FARBE_FERTIG", .zeichen ":",
-   .wort "bool", .wort "publishes", .zeichen "{",
-   .ident "farbbericht", .zeichen "}", .wort "release",
-   .zeichen ";", .ende]
-theorem e17_lex :
-    lex "atomic FARBE_FERTIG : bool publishes { farbbericht } release;" =
-      .ok et17 := by
-  decide
-theorem e17 : beqTopItems (parseTopItems et17)
-    (.ok [(.atomarS "FARBE_FERTIG")]) = true := by
-  decide
--- beispiele/05-nebenlaeufigkeit.gab (the `FARBE_FERTIG` shape).
--- Rust: `AtomicDecl` -- same shape.
-def et18 : List Token :=
-  [.wort "lock", .ident "P", .wort "protects", .zeichen "{",
-   .ident "Plaetze", .zeichen "}", .wort "rank", .num 1,
-   .zeichen ";", .ende]
-theorem e18_lex :
-    lex "lock P protects { Plaetze } rank 1;" = .ok et18 := by
-  decide
-theorem e18 : beqTopItems (parseTopItems et18)
-    (.ok [(.sperreS "P")]) = true := by
-  decide
--- beispiele/71-frist-und-zaehlung.gab. Rust: `LockDecl` --
--- same shape.
-def et19 : List Token :=
-  [.wort "rcu", .ident "BACCT", .wort "protects",
-   .zeichen "{", .ident "Konten", .zeichen "}",
-   .wort "reclaims", .ident "frei", .zeichen ";", .ende]
-theorem e19_lex :
-    lex "rcu BACCT protects { Konten } reclaims frei;" =
-      .ok et19 := by
-  decide
-theorem e19 : beqTopItems (parseTopItems et19)
-    (.ok [(.rcuS "BACCT")]) = true := by
-  decide
--- beispiele/31-rcu.gab:24. Rust: `RcuDecl` -- same shape.
-def et20 : List Token :=
-  [.wort "group", .ident "Zustellung", .wort "over",
-   .zeichen "{", .ident "Endpunkte", .zeichen ",",
-   .ident "Faeden", .zeichen "}", .zeichen "{",
-   .zeichen "}", .ende]
-theorem e20_lex :
-    lex "group Zustellung over { Endpunkte, Faeden } { }" =
-      .ok et20 := by
-  decide
-theorem e20 : beqTopItems (parseTopItems et20)
-    (.ok [(.gruppeS "Zustellung")]) = true := by
-  decide
--- beispiele/17-gruppe-ueber-zwei-sperren.gab:42 (invariant
--- block emptied). Rust: `GruppeDecl` -- same shape.
-def et21 : List Token :=
-  [.wort "concurrent", .zeichen "{", .ident "read_a",
-   .zeichen ",", .ident "read_c", .zeichen "}",
-   .zeichen ";", .ende]
-theorem e21_lex :
-    lex "concurrent { read_a, read_c };" = .ok et21 := by
-  decide
-theorem e21 : beqTopItems (parseTopItems et21)
-    (.ok [(.nebenS "{ read_a , read_c } ")]) = true := by
-  decide
--- beispiele/108-disjoint-start-locks.gab:39. Rust:
--- `ConcurrentDecl` -- same shape (the member list rides raw).
-def et22 : List Token :=
-  [.wort "accumulates", .ident "hoechststand", .zeichen ":",
-   .wort "u64", .wort "merge", .wort "max", .wort "per",
-   .wort "cpu", .ident "NKERNE", .zeichen ";", .ende]
-theorem e22_lex :
-    lex "accumulates hoechststand : u64 merge max per cpu NKERNE;" =
-      .ok et22 := by
-  decide
-theorem e22 : beqTopItems (parseTopItems et22)
-    (.ok [(.akkumS "hoechststand")]) = true := by
-  decide
--- beispiele/05-nebenlaeufigkeit.gab:40. Rust: `AccDecl` --
--- same shape.
-def et23 : List Token :=
-  [.wort "walk", .ident "Seitentabelle", .wort "levels",
-   .num 4, .zeichen "{", .zeichen "}", .ende]
-theorem e23_lex :
-    lex "walk Seitentabelle levels 4 { }" = .ok et23 := by
-  decide
-theorem e23 : beqTopItems (parseTopItems et23)
-    (.ok [(.wegS "Seitentabelle")]) = true := by
-  decide
--- beispiele/07-eintritt-und-boot.gab:26 (body emptied). Rust:
--- `WalkDecl` -- same shape.
-def et24 : List Token :=
-  [.wort "entry", .ident "nmi", .wort "vector", .num 2,
-   .wort "via", .ident "idt", .wort "arch", .ident "x86_64",
-   .zeichen "{", .zeichen "}", .ende]
-theorem e24_lex :
-    lex "entry nmi vector 2 via idt arch x86_64 { }" =
-      .ok et24 := by
-  decide
-theorem e24 : beqTopItems (parseTopItems et24)
-    (.ok [(.eingangS "nmi")]) = true := by
-  decide
--- beispiele/07-eintritt-und-boot.gab:72 (body emptied). Rust:
--- `EntryDecl` -- same shape.
-def et25 : List Token :=
-  [.wort "entrust", .ident "jitpuffer", .wort "at",
-   .ident "Gastbild", .wort "arch", .ident "x86_64",
-   .zeichen "{", .zeichen "}", .ende]
-theorem e25_lex :
-    lex "entrust jitpuffer at Gastbild arch x86_64 { }" =
-      .ok et25 := by
-  decide
-theorem e25 : beqTopItems (parseTopItems et25)
-    (.ok [(.anvertrautS "jitpuffer")]) = true := by
-  decide
--- beispiele/25-entrust.gab:32 (body emptied). Rust:
--- `EntrustDecl` -- same shape.
-def et26 : List Token :=
-  [.wort "boot", .ident "multiboot1", .wort "arch",
-   .ident "x86_64", .zeichen "{", .zeichen "}", .ende]
-theorem e26_lex :
-    lex "boot multiboot1 arch x86_64 { }" = .ok et26 := by
-  decide
-theorem e26 : beqTopItems (parseTopItems et26)
-    (.ok [(.startS "multiboot1")]) = true := by
-  decide
--- beispiele/07-eintritt-und-boot.gab:86 (body emptied). Rust:
--- `BootDecl` -- same shape.
-def et27 : List Token :=
-  [.wort "syscall", .ident "write", .zeichen "(",
-   .ident "fd", .zeichen ":", .wort "u64", .zeichen ")",
-   .zeichen "->", .wort "u64", .wort "or", .ident "IoError",
-   .wort "abi", .ident "linux", .wort "arch", .ident "x86_64",
-   .wort "number", .num 1, .wort "regs", .wort "in",
-   .zeichen "{", .ident "rdi", .zeichen "=", .ident "fd",
-   .zeichen "}", .wort "regs", .wort "out", .zeichen "{",
-   .ident "rax", .zeichen "}", .wort "clobbers",
-   .zeichen "{", .ident "rcx", .zeichen "}", .wort "errors",
-   .zeichen "{", .ident "EBADF", .zeichen "=>",
-   .ident "BadFd", .zeichen "}", .wort "effects",
-   .zeichen "{", .wort "pure", .zeichen "}", .wort "assume",
-   .ident "linux_write_contract", .wort "falsifier",
-   .ident "sonde_write", .zeichen ";", .ende]
-theorem e27_lex :
-    lex "syscall write(fd : u64) -> u64 or IoError abi linux arch x86_64 number 1 regs in { rdi = fd } regs out { rax } clobbers { rcx } errors { EBADF => BadFd } effects { pure } assume linux_write_contract falsifier sonde_write;" =
-      .ok et27 := by
-  decide
-theorem e27 : beqTopItems (parseTopItems et27)
-    (.ok [(.sysrufS "write")]) = true := by
-  decide
--- beispiele/74-syscall-schreiben.gab:27 (register maps and
--- clauses shortened). Rust: `SyscallDecl` -- same shape (maps
--- and clauses are skipped balanced).
-def et28 : List Token :=
-  [.wort "translator", .ident "build", .wort "for",
-   .wort "kernel", .zeichen "(", .ident "region",
-   .zeichen ":", .ident "KernelTab", .zeichen ")",
-   .zeichen "->", .ident "KernelTab", .wort "effects",
-   .zeichen "{", .wort "pure", .zeichen "}", .wort "costs",
-   .zeichen "<=", .num 8, .wort "ops", .wort "decreases",
-   .ident "region", .zeichen ".", .ident "words",
-   .zeichen "{", .wort "return", .ident "region",
-   .zeichen ";", .zeichen "}", .ende]
-theorem e28_lex :
-    lex "translator build for kernel(region : KernelTab) -> KernelTab effects { pure } costs <= 8 ops decreases region.words { return region; }" =
-      .ok et28 := by
-  decide
-theorem e28 : beqTopItems (parseTopItems et28)
-    (.ok [(.uebersetzerS "build"
-      (.block [] (.some (.ret (.some (.variable "region"))))))]) = true := by
-  decide
--- beispiele/100-hardwareprofil.gab:40. A translator with a real
--- body -- the name and the block ride; the linkage clauses are
--- skipped like a function header.
-def et29 : List Token :=
-  [.wort "profile", .zeichen "{", .wort "arch",
-   .ident "x86_64", .zeichen ";", .zeichen "}",
-   .zeichen ";", .ende]
-theorem e29_lex :
-    lex "profile { arch x86_64; };" = .ok et29 := by
-  decide
-theorem e29 : beqTopItems (parseTopItems et29)
-    (.ok [(.profilS false)]) = true := by
-  decide
--- beispiele/100-hardwareprofil.gab:50 (entries shortened).
--- Rust: `ProfilBlock` -- same shape (entries ride unchecked).
-def et30 : List Token :=
-  [.wort "requires", .wort "profile", .zeichen "{",
-   .wort "arch", .ident "x86_64", .zeichen ";",
-   .zeichen "}", .zeichen ";", .ende]
-theorem e30_lex :
-    lex "requires profile { arch x86_64; };" = .ok et30 := by
-  decide
-theorem e30 : beqTopItems (parseTopItems et30)
-    (.ok [(.profilS true)]) = true := by
-  decide
--- beispiele/100-hardwareprofil.gab:26 (entries shortened).
--- Rust: `ProfilBedarf` -- same shape.
-def et31 : List Token :=
-  [.wort "when", .ident "TESTBUILD", .wort "static",
-   .wort "mut", .ident "hoechstmarke", .zeichen ":",
-   .ident "Fuellstand", .zeichen "=", .num 0,
-   .zeichen ";", .ende]
-theorem e31_lex :
-    lex "when TESTBUILD static mut hoechstmarke : Fuellstand = 0;" =
-      .ok et31 := by
-  decide
-theorem e31 : beqTopItems (parseTopItems et31)
-    (.ok [(.torS (.statikS "hoechstmarke"))]) = true := by
-  decide
--- beispiele/52-baugatter.gab (the gated `static`). Rust: the
--- `when` gate over an item -- same shape (`TESTBUILD` lexes as
--- an identifier, not a keyword).
-def ft01 : List Token :=
-  [.wort "impl", .wort "fn", .ident "uebernehmen",
-   .zeichen "(", .wort "r", .zeichen ":", .wort "ptr",
-   .zeichen "<", .wort "normal", .zeichen ",", .wort "own",
-   .zeichen ">", .ident "Region", .zeichen ",", .ident "i",
-   .zeichen ":", .wort "index", .wort "into",
-   .ident "Region", .zeichen ")", .zeichen "->", .wort "bool",
-   .wort "effects", .zeichen "{", .wort "reads", .wort "r",
-   .zeichen ".", .wort "slots", .zeichen ",", .wort "writes",
-   .wort "r", .zeichen ".", .wort "slots", .zeichen "}",
-   .wort "costs", .zeichen "<=", .num 4, .wort "ops",
-   .zeichen "{", .wort "r", .zeichen ".", .wort "slots",
-   .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
-   .ident "belegt", .zeichen "=", .wort "true", .zeichen ";",
-   .wort "return", .wort "r", .zeichen ".", .wort "slots",
-   .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
-   .ident "belegt", .zeichen ";", .zeichen "}", .ende]
-theorem f01_lex :
-    lex "impl fn uebernehmen(r : ptr<normal, own> Region, i : index into Region) -> bool effects { reads r.slots, writes r.slots } costs <= 4 ops { r.slots[i].belegt = true; return r.slots[i].belegt; }" =
-      .ok ft01 := by
-  decide
-theorem f01 : beqTopItems (parseTopItems ft01)
-    (.ok [(.funktion "uebernehmen"
-      (.block
-        [(.zuweis
-          (.feld (.index (.feld (.variable "r") "slots")
-            (.variable "i")) "belegt")
-          "=" .tru)]
-        (.some (.ret (.some
-          (.feld (.index (.feld (.variable "r") "slots")
-            (.variable "i")) "belegt"))))))]) = true := by
-  decide
--- beispiele/15-own-traegt-beide-rechte.gab: the smallest
--- corpus function with a two-statement body (66 tokens): the
--- `impl` prefix is skipped, the header clauses (`ptr<…>`
--- signature, `effects`, `costs`) are stepped over, the body
--- parses end to end -- an assignment plus the `return` ender.
--- Newlines are whitespace to the lexer, so the single-line form
--- above carries exactly the corpus tokens.
 
 end Gabbro.Grammatik.Parser
 
@@ -976,11 +524,9 @@ end Gabbro.Grammatik.Parser
     full corpus block. The one full block is `f01`.
   * Synthetic probes (no corpus occurrence, measured 2026-09-13):
     `s12` (`else if`), `s24` (`next`), `s30` (`stateassign`),
-    `e12` (`state` item). The `s31` (`advances`) shape has no
+    (the item probes live in `ElementTiefProben`). The `s31` (`advances`) shape has no
     statement-level counterpart in `parse.rs` either (it rides in
     the checker); the probe pins the SYNTAX.md production.
 -/
 
 #print axioms Gabbro.Grammatik.Parser.s01
-#print axioms Gabbro.Grammatik.Parser.e01
-#print axioms Gabbro.Grammatik.Parser.f01

@@ -50,8 +50,8 @@ RULES = [
     # --- section 1: program, items
     ("program", "item", "S", ".", ".", "U", None, "`parseTopTief`; `elabU` takes tables, locks, impl fns, consts, entries"),
     ("item", "item", "S", ".", ".", "U", None, "`SItemTief`, 32 constructors"),
-    ("buildgate", "item", "S", ".", ".", ".", r"\bwhen\s+TESTBUILD", "`torT`"),
-    ("bootdecl", "item", "S", ".", ".", ".", r"^\s*boot\s", "`startT`"),
+    ("buildgate", "item", "S", ".", ".", ".", r"\bwhen\s+TESTBUILD", "`gateT`"),
+    ("bootdecl", "item", "S", ".", ".", ".", r"^\s*boot\s", "`bootT`"),
     ("bootstep", "item", "S", ".", ".", ".", r"^\s*step\s", "`SBootSchritt`"),
     ("entrydecl", "item", "S", ".", ".", "U", r"^\s*(pub\s+)?entry\s+[a-z_A-Z]", "`SEingang`; `elabU` reads only the dispatch roots"),
     ("entrustdecl", "item", "S", ".", ".", ".", r"^\s*entrust\s", ""),
@@ -63,8 +63,8 @@ RULES = [
     ("targetdecl", "item", "S", ".", ".", ".", "^\\s*target\\s", "`goalT`; the lexer table gained `target`"),
     ("targetbind", "item", "S", ".", ".", ".", "^\\s*target\\s", "`goalT` bindings"),
     ("errmap", "item", "S", ".", ".", ".", "\\berrors\\s*\\{", "`errno [= n] => R`"),
-    ("accdecl", "item", "S", ".", ".", ".", r"^\s*accumulates\s", "`akkumT`"),
-    ("moduledecl", "item", "P", ".", ".", "U", r"^\s*(pub\s+)?module\s", "`modulT`; `pub` is dropped"),
+    ("accdecl", "item", "S", ".", ".", ".", r"^\s*accumulates\s", "`accT`"),
+    ("moduledecl", "item", "P", ".", ".", "U", r"^\s*(pub\s+)?module\s", "`modT`; `pub` is dropped"),
     ("usedecl", "item", "S", ".", ".", ".", r"^\s*(pub\s+)?use\s", ""),
     ("constdecl", "item", "S", ".", ".", "U", r"^\s*(pub\s+)?const\s+[A-Za-z_]", "`konstT`"),
     ("constexpr", "item", "S", "E", "P", "U", None, "an `SExpr`"),
@@ -114,12 +114,12 @@ RULES = [
     ("addexpr", "expr", "S", "E", "P", "U", None, ""),
     ("mulexpr", "expr", "S", "E", "P", "U", None, ""),
     ("unary", "expr", "S", "E", "P", "U", None, ""),
-    ("fnvalue", "expr", "S", "E", "P", ".", r"&\s*[A-Za-z_]", "`fnwert`"),
+    ("fnvalue", "expr", "S", "E", "P", ".", r"&\s*[A-Za-z_]", "`fnref`"),
     ("primary", "expr", "S", "E", "P", "U", None, "string literal and `count` read; both `ext`"),
     ("stringlit", "expr", "S", ".", ".", ".", r'=\s*"|\(\s*"', "`ext .text`"),
     ("countexpr", "expr", "S", ".", ".", ".", "\\bcount\\s+\\w+\\s+in\\b", "`ext .count`"),
     ("reasonval", "expr", "S", "E", "P", ".", r"\b[A-Z]\w*::[A-Z]\w*", "`SExpr.why`"),
-    ("optionexpr", "expr", "S", "E", "P", ".", r"\b(Some|None)\b", "`ruf \"Some\"`"),
+    ("optionexpr", "expr", "S", "E", "P", ".", r"\b(Some|None)\b", "`call` named Some"),
     ("paren", "expr", "S", "E", "P", "U", None, ""),
     ("call", "expr", "S", "E", "P", "U", None, ""),
     ("arglist", "expr", "S", "E", "P", "U", None, ""),
@@ -151,7 +151,7 @@ RULES = [
     ("efflist", "fn", "S", ".", ".", "U", None, ""),
     ("eff", "fn", "S", ".", ".", "U", r"\beffects\s*\{", ""),
     # --- section 7: statements
-    ("breakstmt", "stmt", "S", ".", ".", ".", r"\bbreaking\s", "`bricht`"),
+    ("breakstmt", "stmt", "S", ".", ".", ".", r"\bbreaking\s", "`waive`"),
     ("block", "stmt", "S", ".", ".", "U", None, "`SAnw.block`"),
     ("endblock", "stmt", "S", ".", ".", "U", None, ""),
     ("endstmt", "stmt", "S", ".", ".", "U", r"\b(return|leave|next)\b", ""),
@@ -162,15 +162,15 @@ RULES = [
     ("awaitload", "stmt", "P", ".", ".", ".", r"\bawaits\s*\{", "payload list raw"),
     ("exchstmt", "stmt", "R", ".", ".", ".", r"\bexchange\s", "transform raw"),
     ("xform", "stmt", "R", ".", ".", ".", r"\bexchange\s", ""),
-    ("letstmt", "stmt", "S", ".", ".", ".", "\\blet\\s", "the type ascription is read (`bind`, `bindElse`, `bindLib`, `allocS`)"),
+    ("letstmt", "stmt", "S", ".", ".", ".", "\\blet\\s", "the type ascription is read (`bind`, `bindElse`, `bindLib`, `alloc`)"),
     ("assign", "stmt", "S", ".", ".", "U", None, "slot writes only in elab"),
     ("stateassign", "stmt", "S", ".", ".", ".", r"\btransition\s+[^{]*:\s*\w+\s*->", ""),
     ("exprstmt", "stmt", "S", ".", ".", "U", None, "direct calls only in elab"),
-    ("ifstmt", "stmt", "S", ".", ".", ".", r"\bif\s", "`wenn`, `sonstWenn`"),
-    ("matchstmt", "stmt", "S", ".", ".", ".", r"\bmatch\s", "`matchS`"),
+    ("ifstmt", "stmt", "S", ".", ".", ".", r"\bif\s", "`cond`, `elsif`"),
+    ("matchstmt", "stmt", "S", ".", ".", ".", r"\bmatch\s", "`cases`"),
     ("matcharm", "stmt", "S", ".", ".", ".", r"=>\s*\{", "`arm`"),
     ("narrowstmt", "stmt", "P", ".", ".", ".", r"\bnarrow\s", "target range kept as raw words"),
-    ("allocstmt", "stmt", "S", ".", ".", ".", r"\balloc\s", "`allocS`"),
+    ("allocstmt", "stmt", "S", ".", ".", ".", r"\balloc\s", "`alloc`"),
     ("resetstmt", "stmt", "S", ".", ".", ".", "\\breset\\s", "with `at i count n`"),
     ("growstmt", "stmt", "S", ".", ".", ".", "^\\s*grow\\s", "`SAnw.grow`"),
     ("freestmt", "stmt", "S", ".", ".", ".", "^\\s*free\\s", "`SAnw.free`"),
@@ -178,13 +178,13 @@ RULES = [
     ("startstmt", "stmt", "S", ".", ".", ".", "^\\s*start\\s*\\{", "`SAnw.start`; written into SYNTAX.md 2026-10-17"),
     ("libcall", "stmt", "R", ".", ".", ".", r"@\s*\w+\s*#", "region skipped balanced"),
     ("libregion", "stmt", "R", ".", ".", ".", None, ""),
-    ("translatordecl", "stmt", "S", ".", ".", ".", r"\btranslator\s", "`uebersetzerT`"),
+    ("translatordecl", "stmt", "S", ".", ".", ".", r"\btranslator\s", "`transT`"),
     ("loopform", "stmt", "R", ".", ".", ".", r"\b(traverse|retry|forever)\b", "header raw"),
     ("traverse", "stmt", "R", ".", ".", ".", r"\btraverse\s", "header raw"),
     ("retry", "stmt", "R", ".", ".", ".", r"\bretry\b", ""),
     ("forever", "stmt", "R", ".", ".", ".", r"\bforever\b", ""),
     # --- sections 9-10: tables, formats, devices
-    ("table", "decl", "S", ".", ".", "U", r"\btable\s", "`tabelleT`; elab: integer fields"),
+    ("table", "decl", "S", ".", ".", "U", r"\btable\s", "`tableT`; elab: integer fields"),
     ("treedecl", "decl", "S", ".", ".", ".", r"\btree\s*\{", ""),
     ("kante", "decl", "S", ".", ".", ".", None, ""),
     ("occdecl", "decl", "S", ".", ".", ".", r"\boccupied\s", ""),
@@ -198,11 +198,11 @@ RULES = [
     ("invariant", "decl", "S", ".", ".", ".", r"\binvariant\s", ""),
     ("costexpr", "decl", "S", ".", ".", ".", r"\bcost\s+O\s*\(", ""),
     ("format", "decl", "S", ".", ".", ".", "\\bformat\\s", "`@version` read"),
-    ("reason", "decl", "S", ".", ".", ".", r"^\s*(pub\s+)?reason\s", "`grundT`"),
-    ("state", "decl", "S", ".", ".", ".", r"^\s*state\s", "`zustandT`"),
-    ("device", "decl", "S", ".", ".", ".", r"\bdevice\s", "`geraetT`"),
+    ("reason", "decl", "S", ".", ".", ".", r"^\s*(pub\s+)?reason\s", "`whyT`"),
+    ("state", "decl", "S", ".", ".", ".", r"^\s*state\s", "`stateT`"),
+    ("device", "decl", "S", ".", ".", ".", r"\bdevice\s", "`devT`"),
     ("mirrors", "decl", "S", ".", ".", ".", r"\bmirrors\s", ""),
-    ("bank", "decl", "R", ".", ".", ".", r"\bbank\s", "`bankRoh`"),
+    ("bank", "decl", "R", ".", ".", ".", r"\bbank\s", "`bank`"),
     ("regdecl", "decl", "S", ".", ".", ".", r"\breg\s", "`SReg`"),
     ("regklasse", "decl", "S", ".", ".", ".", None, ""),
     ("regphasen", "decl", "S", ".", ".", ".", None, ""),
@@ -213,15 +213,15 @@ RULES = [
     ("placeshift", "decl", "S", ".", ".", ".", None, ""),
     ("shiftplace", "decl", "S", ".", ".", ".", None, ""),
     # --- sections 11-14: concurrency, assumptions, profiles, checks
-    ("atomicdecl", "conc", "S", ".", ".", ".", r"\batomic\s", "`atomarT`"),
+    ("atomicdecl", "conc", "S", ".", ".", ".", r"\batomic\s", "`atomT`"),
     ("publishstmt", "conc", "P", ".", ".", ".", r"\bpublishes\s", "payload list raw"),
     ("nutzlast", "conc", "R", ".", ".", ".", None, ""),
     ("lockdecl", "conc", "S", ".", ".", "U", "^\\s*(pub\\s+)?lock\\s", "`invariant` read (`lockT` 7th field)"),
-    ("lockstmt", "conc", "S", ".", ".", "U", r"\blocks\s+\w", "`sperrt`"),
+    ("lockstmt", "conc", "S", ".", ".", "U", r"\blocks\s+\w", "`locks`"),
     ("rcudecl", "conc", "S", ".", ".", ".", r"^\s*rcu\s", ""),
     ("observestmt", "conc", "S", ".", ".", ".", r"\bobserves\s", ""),
     ("gruppedecl", "conc", "S", ".", ".", ".", r"^\s*group\s", ""),
-    ("concurrentdecl", "conc", "S", ".", ".", ".", r"^\s*concurrent\s", "`nebenT`"),
+    ("concurrentdecl", "conc", "S", ".", ".", "U", r"^\s*concurrent\s", "`concT`"),
     ("assume", "assume", "S", ".", ".", ".", r"^\s*assume\s", ""),
     ("axiom", "assume", "S", ".", ".", ".", r"^\s*axiom\s", ""),
     ("profiledecl", "assume", "S", ".", ".", ".", r"^\s*profile\s*\{", ""),
@@ -283,6 +283,7 @@ def main(argv):
     total = len(corpus)
     parse_ok = [n for n, f in census.items() if f[2] == "parse=ok"]
     elab_ok = [n for n, f in census.items() if f[3] == "elab=ok"]
+    lower_ok = [n for n, f in census.items() if len(f) > 4 and f[4] == "lower=ok"]
     lex_err = [n for n, f in census.items() if f[1] != "lex=ok"]
     rows = []
     for rule, grp, rd, pr, rt, el, rx, note in RULES:
@@ -314,7 +315,7 @@ def main(argv):
         print(f"{k:8}", ", ".join(f"{a}={b}" for a, b in sorted(c.items())))
     full = sum(1 for r in rows if r[2] == "S" and r[3] == "E" and r[4] == "P" and r[5] == "U")
     print(f"rules with all four columns present (round trip partial: `gut` shapes only): {full}")
-    print(f"corpus: {total} files; lex ok {total - len(lex_err)}; whole-file parse ok {len(parse_ok)}; elab ok {len(elab_ok)}")
+    print(f"corpus: {total} files; lex ok {total - len(lex_err)}; whole-file parse ok {len(parse_ok)}; elab ok {len(elab_ok)}; lower ok {len(lower_ok)}")
     bad = [n for n in census if census[n][2] != "parse=ok"]
     if bad:
         print("parse failures (first blocker of each):")

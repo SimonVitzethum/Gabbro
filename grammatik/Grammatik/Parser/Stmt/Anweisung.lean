@@ -27,20 +27,20 @@ set_option maxRecDepth 100000
     as `block all none` (see `schliesseBlock`).
 
     Expressions ride as `SExpr`; headers the reader does not split
-    store their raw words (`traverseS` etc. carry the header text).
+    store their raw words (`each` etc. carry the header text).
     Against `ast.rs` `StmtArt`: `bind` = `Let`, `bindElse` =
-    `LetSonst`, `zuweis` = `Zuweisung`, `wenn` = `Wenn`, `matchS` =
-    `Match`, `traverseS`/`retryS`/`foreverS` = `Schleife`, `bricht`
-    = `Bricht`, `narrowS` = `Narrow`, `sperrt` = `Sperrt`,
-    `beobachtet` = `Observiert`, `verlasse` = `Leave`, `weiter` =
-    `Next`, `publiziert` = `Publish`, `erwartet` = `AwaitLoad`,
-    `tauscht` = `Exchange`, `rueck` = `Return`, `ruf` = `Ruf`,
-    `libruf` = `LibraryCall`, `allocS` = `Alloc`, `resetS` =
+    `LetSonst`, `set` = `Zuweisung`, `wenn` = `Wenn`, `cases` =
+    `Match`, `each`/`retry`/`loop` = `Schleife`, `waive`
+    = `Bricht`, `trim` = `Narrow`, `locks` = `Sperrt`,
+    `watch` = `Observiert`, `leave` = `Leave`, `weiter` =
+    `Next`, `emit` = `Publish`, `erwartet` = `AwaitLoad`,
+    `swap` = `Exchange`, `rueck` = `Return`, `ruf` = `Ruf`,
+    `lcall` = `LibraryCall`, `alloc` = `Alloc`, `reset` =
     `ResetArena`; `uebergang` is the `stateassign`
-    (`transition … : A -> B`), `schreitet` the `advstmt`
-    (`advances a -> b`). An `else if` rides as a `sonstWenn` node
+    (`transition … : A -> B`), `step` the `advstmt`
+    (`advances a -> b`). An `else if` rides as a `elsif` node
     in the `wenn` list, a `match` arm as an `arm` node in the
-    `matchS` list -- pair-nodes instead of tuple lists, so the
+    `cases` list -- pair-nodes instead of tuple lists, so the
     equality below stays a two-function block like
     `beqSExpr`/`beqSExprList` (see above). Against `parse.rs` `Block`: recovery and
     spans are dropped; a lone `;` (`P033`) is a parse error here. -/
@@ -49,38 +49,38 @@ set_option maxRecDepth 100000
     before `SAnw` so the `Repr` instance is in scope. -/
 inductive SEnde
   | ret : Option SExpr → SEnde
-  | fort : String → SEnde
-  | naechst : String → SEnde
+  | leave : String → SEnde
+  | next : String → SEnde
 deriving Repr
 inductive SAnw
   | bind : Bool → String → Option STyp → SExpr → SAnw
   | bindElse : String → Option STyp → SExpr → String → SAnw → SAnw
   | bindLib : Bool → String → Option STyp → String → String → SAnw
-  | zuweis : SExpr → String → SExpr → SAnw
+  | set : SExpr → String → SExpr → SAnw
   | shift : SExpr → String → String → SAnw
-  | ruf : String → List SExpr → SAnw
-  | libruf : String → String → Nat → SAnw
-  | wenn : SExpr → SAnw → List SAnw → Option SAnw → SAnw
-  | sonstWenn : SExpr → SAnw → SAnw
-  | matchS : SExpr → List SAnw → SAnw
+  | call : String → List SExpr → SAnw
+  | lcall : String → String → Nat → SAnw
+  | cond : SExpr → SAnw → List SAnw → Option SAnw → SAnw
+  | elsif : SExpr → SAnw → SAnw
+  | cases : SExpr → List SAnw → SAnw
   | arm : String → Option String → SAnw → SAnw
-  | traverseS : String → SAnw → SAnw
-  | retryS : String → SAnw → SAnw
-  | foreverS : String → SAnw → SAnw
-  | bricht : List String → SAnw → SAnw
-  | narrowS : SExpr → String → SAnw → SAnw
-  | sperrt : Bool → SExpr → SAnw → SAnw
-  | beobachtet : String → SAnw → SAnw
-  | verlasse : String → SAnw
-  | widen : String → SAnw
-  | publiziert : SExpr → SExpr → String → SAnw
-  | erwartet : String → SExpr → String → SAnw
-  | tauscht : String → SExpr → String → SAnw
-  | schreitet : String → String → SAnw
-  | rueck : Option SExpr → SAnw
-  | allocS : Bool → String → Option STyp → String → SExpr → Option SAnw → SAnw
+  | each : String → SAnw → SAnw
+  | retry : String → SAnw → SAnw
+  | loop : String → SAnw → SAnw
+  | waive : List String → SAnw → SAnw
+  | trim : SExpr → String → SAnw → SAnw
+  | locks : Bool → SExpr → SAnw → SAnw
+  | watch : String → SAnw → SAnw
+  | leave : String → SAnw
+  | next : String → SAnw
+  | emit : SExpr → SExpr → String → SAnw
+  | await : String → SExpr → String → SAnw
+  | swap : String → SExpr → String → SAnw
+  | step : String → String → SAnw
+  | ret : Option SExpr → SAnw
+  | alloc : Bool → String → Option STyp → String → SExpr → Option SAnw → SAnw
   /-- `reset A [at i count n];` -/
-  | resetS : String → Option (SExpr × SExpr) → SAnw
+  | reset : String → Option (SExpr × SExpr) → SAnw
   /-- `grow A by e else { … };` -/
   | grow : String → SExpr → SAnw → SAnw
   /-- `free A[i];` -/
@@ -89,7 +89,7 @@ inductive SAnw
   | child : SAnw → SAnw
   /-- `start { f, g };` -/
   | start : List String → SAnw
-  | sonst : String → SAnw
+  | other : String → SAnw
   | block : List SAnw → Option SEnde → SAnw
 deriving Repr
 
@@ -101,8 +101,8 @@ deriving Repr
 /-- Equality on enders (plain: no tree recursion). -/
 def beqSEnde : SEnde → SEnde → Bool
   | .ret x, .ret y => beqOptExpr x y
-  | .fort a, .fort b => strEq a b
-  | .naechst a, .naechst b => strEq a b
+  | .leave a, .leave b => strEq a b
+  | .next a, .next b => strEq a b
   | _, _ => false
 
 def beqOptPaar : Option (SExpr × SExpr) → Option (SExpr × SExpr) → Bool
@@ -122,47 +122,47 @@ def beqSAnw : SAnw → SAnw → Bool
     strEq a c && beqSTypOpt t u && beqSExpr f g && strEq e h && beqSAnw b d
   | .bindLib m a t l f, .bindLib n b u m2 g =>
     m == n && strEq a b && beqSTypOpt t u && strEq l m2 && strEq f g
-  | .zuweis z o x, .zuweis w p y =>
+  | .set z o x, .set w p y =>
     beqSExpr z w && strEq o p && beqSExpr x y
   | .shift z a b, .shift w c d =>
     beqSExpr z w && strEq a c && strEq b d
-  | .ruf f a, .ruf g b => strEq f g && beqSExprList a b
-  | .libruf l f n, .libruf m g k =>
+  | .call f a, .call g b => strEq f g && beqSExprList a b
+  | .lcall l f n, .lcall m g k =>
     strEq l m && strEq f g && n == k
-  | .wenn c t ei s, .wenn d u fi v =>
+  | .cond c t ei s, .cond d u fi v =>
     beqSExpr c d && beqSAnw t u && beqSAnwList ei fi && beqOptAnw s v
-  | .sonstWenn c t, .sonstWenn d u => beqSExpr c d && beqSAnw t u
-  | .matchS g a, .matchS h b => beqSExpr g h && beqSAnwList a b
+  | .elsif c t, .elsif d u => beqSExpr c d && beqSAnw t u
+  | .cases g a, .cases h b => beqSExpr g h && beqSAnwList a b
   | .arm v b t, .arm w c u =>
     strEq v w && beqOptWort b c && beqSAnw t u
-  | .traverseS h b, .traverseS i d => strEq h i && beqSAnw b d
-  | .retryS h b, .retryS i d => strEq h i && beqSAnw b d
-  | .foreverS h b, .foreverS i d => strEq h i && beqSAnw b d
-  | .bricht inv b, .bricht jnv d =>
+  | .each h b, .each i d => strEq h i && beqSAnw b d
+  | .retry h b, .retry i d => strEq h i && beqSAnw b d
+  | .loop h b, .loop i d => strEq h i && beqSAnw b d
+  | .waive inv b, .waive jnv d =>
     beqWorte inv jnv && beqSAnw b d
-  | .narrowS o z s, .narrowS p w t =>
+  | .trim o z s, .trim p w t =>
     beqSExpr o p && strEq z w && beqSAnw s t
-  | .sperrt g o b, .sperrt h p d =>
+  | .locks g o b, .locks h p d =>
     g == h && beqSExpr o p && beqSAnw b d
-  | .beobachtet d b, .beobachtet e c => strEq d e && beqSAnw b c
-  | .verlasse l, .verlasse m => strEq l m
-  | .widen l, .widen m => strEq l m
-  | .publiziert z w p, .publiziert y v q =>
+  | .watch d b, .watch e c => strEq d e && beqSAnw b c
+  | .leave l, .leave m => strEq l m
+  | .next l, .next m => strEq l m
+  | .emit z w p, .emit y v q =>
     beqSExpr z y && beqSExpr w v && strEq p q
-  | .erwartet n q e, .erwartet m p f =>
+  | .await n q e, .await m p f =>
     strEq n m && beqSExpr q p && strEq e f
-  | .tauscht n o k, .tauscht m p l =>
+  | .swap n o k, .swap m p l =>
     strEq n m && beqSExpr o p && strEq k l
-  | .schreitet a b, .schreitet c d => strEq a c && strEq b d
-  | .rueck x, .rueck y => beqOptExpr x y
-  | .allocS m n y t w s, .allocS k o z u v r =>
+  | .step a b, .step c d => strEq a c && strEq b d
+  | .ret x, .ret y => beqOptExpr x y
+  | .alloc m n y t w s, .alloc k o z u v r =>
     m == k && strEq n o && beqSTypOpt y z && strEq t u && beqSExpr w v && beqOptAnw s r
-  | .resetS a x, .resetS b y => strEq a b && beqOptPaar x y
+  | .reset a x, .reset b y => strEq a b && beqOptPaar x y
   | .grow a e b, .grow c f d => strEq a c && beqSExpr e f && beqSAnw b d
   | .free a, .free b => beqSExpr a b
   | .child a, .child b => beqSAnw a b
   | .start a, .start b => beqWorte a b
-  | .sonst a, .sonst b => strEq a b
+  | .other a, .other b => strEq a b
   | .block ss e, .block ts f => beqSAnwList ss ts && beqOptEnde e f
   | _, _ => false
 def beqSAnwList : List SAnw → List SAnw → Bool
@@ -179,7 +179,7 @@ end
 -- blocks compile to the irreducible `PSum` fixed point, which
 -- `decide` cannot unfold (measured 2026-09-13 -- even comparing two
 -- empty blocks gets stuck). Tuple lists would need their own
--- helpers, so `else if` branches ride as `sonstWenn` nodes and
+-- helpers, so `else if` branches ride as `elsif` nodes and
 -- `match` arms as `arm` nodes instead.
 
 /-- Split a trailing `return`/`leave`/`next` off a statement list:
@@ -188,9 +188,9 @@ end
 def schliesseBlock : List SAnw → SAnw
   | [] => .block [] none
   | ss => match ss.getLast? with
-    | some (.rueck x) => .block ss.dropLast (some (.ret x))
-    | some (.verlasse l) => .block ss.dropLast (some (.fort l))
-    | some (.widen l) => .block ss.dropLast (some (.naechst l))
+    | some (.ret x) => .block ss.dropLast (some (.ret x))
+    | some (.leave l) => .block ss.dropLast (some (.leave l))
+    | some (.next l) => .block ss.dropLast (some (.next l))
     | _ => .block ss none
 
 -- The statement levels of SYNTAX.md section 7 (`stmt`, `block`,
@@ -283,7 +283,7 @@ def parseLetAlloc (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
           pure (some b, r')
         | _ => pure (none, rest4))
       let rest6 ← fordereZeichen ";" rest5
-      pure (.allocS m name ty tisch w sonst, rest6)
+      pure (.alloc m name ty tisch w sonst, rest6)
     | _ => .error "alloc without table"
 def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
     (toks : List Token) : Except String (SAnw × List Token) :=
@@ -302,12 +302,12 @@ def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
       let (pl, rest'') ← nimmBisZeichen "}" rest' 0
       let rest3 ← fordereZeichen "}" rest''
       let rest4 ← fordereZeichen ";" rest3
-      pure (.erwartet name e pl, rest4)
+      pure (.await name e pl, rest4)
     | .wort "awaits" :: _ => .error "awaits without {"
     | .wort "exchange" :: rest' => do
       let (k, rest'') ← nimmBisZeichen ";" rest' 0
       let rest3 ← fordereZeichen ";" rest''
-      pure (.tauscht name e k, rest3)
+      pure (.swap name e k, rest3)
     | _ => do
       let rest' ← fordereZeichen ";" rest
       pure (.bind m name ty e, rest')
@@ -386,16 +386,16 @@ def parseKopfStmt (f : Nat) (toks : List Token) :
   | f + 1 => match parseKopf f toks with
     | .error e => .error e
     | .ok (e, rest) => match e with
-      | .ruf c args => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.ruf c args, rest')
+      | .call c args => match fordereZeichen ";" rest with
+        | .ok rest' => .ok (.call c args, rest')
         | .error e => .error e
       | .ext .call _ (callee :: args) => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.ruf (druck callee) args, rest')
+        | .ok rest' => .ok (.call (druck callee) args, rest')
         | .error e => .error e
       | _ => match rest with
         | .zeichen "(" :: _ => match parseArgs f rest.tail with
           | .ok (args, rest') => match fordereZeichen ";" rest' with
-            | .ok rest'' => .ok (.ruf (druck e) args, rest'')
+            | .ok rest'' => .ok (.call (druck e) args, rest'')
             | .error e => .error e
           | .error e => .error e
         | .zeichen op :: _ =>
@@ -409,23 +409,23 @@ def parseKopfStmt (f : Nat) (toks : List Token) :
                   if strEq op "=" then match rest'.tail with
                     | .wort p :: rest'' =>
                       if strEq p "nothing" then match fordereZeichen ";" rest'' with
-                        | .ok rest3 => .ok (.publiziert e w "nothing", rest3)
+                        | .ok rest3 => .ok (.emit e w "nothing", rest3)
                         | .error e => .error e
                       else .error "publishes without payload"
                     | .zeichen "{" :: rest'' => match nimmBisZeichen "}" rest'' 0 with
                       | .ok (pl, rest3) => match fordereZeichen "}" rest3 with
                         | .ok rest4 => match fordereZeichen ";" rest4 with
-                          | .ok rest5 => .ok (.publiziert e w pl, rest5)
+                          | .ok rest5 => .ok (.emit e w pl, rest5)
                           | .error e => .error e
                         | .error e => .error e
                       | .error e => .error e
                     | _ => .error "publishes without payload"
                   else .error "a publication sits on `=`, not on a compound assignment"
                 else match fordereZeichen ";" rest' with
-                  | .ok rest'' => .ok (.zuweis e op w, rest'')
+                  | .ok rest'' => .ok (.set e op w, rest'')
                   | .error e => .error e
               | _ => match fordereZeichen ";" rest' with
-                | .ok rest'' => .ok (.zuweis e op w, rest'')
+                | .ok rest'' => .ok (.set e op w, rest'')
                 | .error e => .error e
           else .error "assignment or call expected"
         | _ => .error "assignment or call expected"
@@ -458,7 +458,7 @@ def parseLibStmt (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match parseLibRuf f toks with
     | .ok ((l, g, n), rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.libruf l g n, rest')
+      | .ok rest' => .ok (.lcall l g n, rest')
       | .error e => .error e
     | .error e => .error e
 def parseWenn (f : Nat) (toks : List Token) :
@@ -471,7 +471,7 @@ def parseWenn (f : Nat) (toks : List Token) :
       | .error e => .error e
       | .ok (t, rest') => match parseElseIfs f rest' [] with
         | .error e => .error e
-        | .ok ((eis, s), rest'') => .ok (.wenn c t eis s, rest'')
+        | .ok ((eis, s), rest'') => .ok (.cond c t eis s, rest'')
 def parseElseIfs (f : Nat) (toks : List Token)
     (acc : List SAnw) :
     Except String ((List SAnw × Option SAnw) × List Token) :=
@@ -485,7 +485,7 @@ def parseElseIfs (f : Nat) (toks : List Token)
             | .error e => .error e
             | .ok (c, rest') => match parseBlock f rest' with
               | .error e => .error e
-              | .ok (b, rest'') => parseElseIfs f rest'' (acc ++ [.sonstWenn c b])
+              | .ok (b, rest'') => parseElseIfs f rest'' (acc ++ [.elsif c b])
           else match parseBlock f rest with
             | .error e => .error e
             | .ok (b, rest') => .ok ((acc, some b), rest')
@@ -505,7 +505,7 @@ def parseMatchS (f : Nat) (toks : List Token) :
       | .ok rest' => match parseArme f rest' with
         | .error e => .error e
         | .ok (arms, rest'') => match fordereZeichen "}" rest'' with
-          | .ok rest3 => .ok (.matchS g arms, rest3)
+          | .ok rest3 => .ok (.cases g arms, rest3)
           | .error e => .error e
 def parseArme (f : Nat) (toks : List Token) :
     Except String (List SAnw × List Token) :=
@@ -543,9 +543,9 @@ def parseSchleife (f : Nat) (toks : List Token) (art : Nat) :
     | .ok (h, rest) => match parseBlock f rest with
       | .error e => .error e
       | .ok (b, rest') =>
-        if art == 0 then .ok (.traverseS h b, rest')
-        else if art == 1 then .ok (.retryS h b, rest')
-        else .ok (.foreverS h b, rest')
+        if art == 0 then .ok (.each h b, rest')
+        else if art == 1 then .ok (.retry h b, rest')
+        else .ok (.loop h b, rest')
 def parseBricht (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
@@ -554,7 +554,7 @@ def parseBricht (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok (inv, rest) => match parseBlock f rest with
       | .error e => .error e
-      | .ok (b, rest') => .ok (.bricht inv b, rest')
+      | .ok (b, rest') => .ok (.waive inv b, rest')
 def nimmIdentList (f : Nat) (toks : List Token) :
     Except String (List String × List Token) :=
   match f with
@@ -579,21 +579,21 @@ def parseNarrow (f : Nat) (toks : List Token) :
             if strEq z "finite" then match rest'' with
               | .wort e :: rest3 =>
                 if strEq e "else" then match parseBlock f rest3 with
-                  | .ok (b, rest4) => .ok (.narrowS o "finite" b, rest4)
+                  | .ok (b, rest4) => .ok (.trim o "finite" b, rest4)
                   | .error e => .error e
                 else .error "narrow without else"
               | _ => .error "narrow without else"
             else match nimmBisWort "else" rest' 0 with
               | .ok (t, rest3) => match nimmWort "else" rest3 with
                 | .ok rest4 => match parseBlock f rest4 with
-                  | .ok (b, rest5) => .ok (.narrowS o t b, rest5)
+                  | .ok (b, rest5) => .ok (.trim o t b, rest5)
                   | .error e => .error e
                 | .error e => .error e
               | .error e => .error e
           | _ => match nimmBisWort "else" rest' 0 with
             | .ok (t, rest3) => match nimmWort "else" rest3 with
               | .ok rest4 => match parseBlock f rest4 with
-                | .ok (b, rest5) => .ok (.narrowS o t b, rest5)
+                | .ok (b, rest5) => .ok (.trim o t b, rest5)
                 | .error e => .error e
               | .error e => .error e
             | .error e => .error e
@@ -611,7 +611,7 @@ def parseSperrt (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok (o, rest) => match parseBlock f rest with
       | .error e => .error e
-      | .ok (b, rest') => .ok (.sperrt g o b, rest')
+      | .ok (b, rest') => .ok (.locks g o b, rest')
 def parseBeobachtet (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
@@ -620,7 +620,7 @@ def parseBeobachtet (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok (d, rest) => match parseBlock f rest with
       | .error e => .error e
-      | .ok (b, rest') => .ok (.beobachtet d b, rest')
+      | .ok (b, rest') => .ok (.watch d b, rest')
 def parseVerlasse (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
@@ -628,7 +628,7 @@ def parseVerlasse (f : Nat) (toks : List Token) :
   | f + 1 => match nimmName toks with
     | .error e => .error e
     | .ok (l, rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.verlasse l, rest')
+      | .ok rest' => .ok (.leave l, rest')
       | .error e => .error e
 def parseWeiter (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -637,18 +637,18 @@ def parseWeiter (f : Nat) (toks : List Token) :
   | f + 1 => match nimmName toks with
     | .error e => .error e
     | .ok (l, rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.widen l, rest')
+      | .ok rest' => .ok (.next l, rest')
       | .error e => .error e
 def parseRueck (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .zeichen ";" :: rest => .ok (.rueck none, rest)
+    | .zeichen ";" :: rest => .ok (.ret none, rest)
     | _ => match parseOr f toks with
       | .error e => .error e
       | .ok (x, rest) => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.rueck (some x), rest')
+        | .ok rest' => .ok (.ret (some x), rest')
         | .error e => .error e
 /-- `reset A [at i count n] ;` (SYNTAX.md 9.1, the range form of M-ALLTAG C), behind the `reset`. -/
 def parseReset (f : Nat) (toks : List Token) :
@@ -665,7 +665,7 @@ def parseReset (f : Nat) (toks : List Token) :
         pure (some (i, n), r4)
       | _ => pure (none, rest))
     let r ← fordereZeichen ";" r1
-    pure (.resetS a rg, r)
+    pure (.reset a rg, r)
 def parseUebergang (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
   match f with
@@ -694,7 +694,7 @@ def parseSchreitet (f : Nat) (toks : List Token) :
       | .ok rest' => match nimmName rest' with
         | .error e => .error e
         | .ok (b, rest'') => match fordereZeichen ";" rest'' with
-          | .ok rest3 => .ok (.schreitet a b, rest3)
+          | .ok rest3 => .ok (.step a b, rest3)
           | .error e => .error e
 def parseBlock (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -797,7 +797,7 @@ end Gabbro.Grammatik.Parser
       two-function shape compiles to `brecOn`, which reduces.
       Consequence: statements AND blocks live in the ONE type
       `SAnw` (a block is a node), `else if` branches ride as
-      `sonstWenn` nodes and `match` arms as `arm` nodes, and the
+      `elsif` nodes and `match` arms as `arm` nodes, and the
       equality block stays three functions. Any new tuple-list
       field on `SAnw` re-opens this trap.
 -/

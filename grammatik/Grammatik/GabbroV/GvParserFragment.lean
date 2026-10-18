@@ -43,13 +43,13 @@ theorem erstAblehnung_104_zeuge :
   CUTS (agent 02 -- widen the elaborated fragment):
   1. PROVED here: the first-rejection classifier (`ErstAblehnung`,
      `erstAblehnung`, 104-acceptance, no axioms); the inert-item skip
-     (`istStatik`, `istNeben`, `istInert`, `ohneInert`, `elabU02`) with
+     (`istStatik`, `istInert`, `ohneInert`, `elabU02`) with
      correctness (`ohneInert_id`, `elabU02_stimmt`, 104-agreement) and
      refusal (`uRestFehler_kopf`, `kopf_gut`, `schritt`, `faellt`,
      `elabU_bei_RestFehler`, `elabU02_verweigert_noch` with a synthetic
      `use` witness); and the corpus witness pair for 108
-     (`w108_vorher`, `w108_jetzt`: refused by `elabU`, elaborated by
-     `elabU02`; `lowerAllg` also succeeds per probe #3).
+     (`w108_jetzt`: elaborated by `elabU` itself since the `concurrent` roots
+     are read; `lowerAllg` also succeeds per probe #3).
   2. NOT proved: anything beyond the elaborator -- no duty, bridge,
      start-duty or TSO statement; no case for the other 24 off-fragment
      item kinds (each still refused; distribution measured in probe
@@ -59,7 +59,7 @@ theorem erstAblehnung_104_zeuge :
      so nothing is wrongly accepted; the inner-content case is
      unanalyzed).
   3. Elaboration lesson (for the next lane): write pasted surface
-     literals in the tree's dotted style (`.tabelleT`, `.atom`, like
+     literals in the tree's dotted style (`.tableT`, `.atom`, like
      `items104`); pasting `repr` output with fully-qualified
      constructors failed to parse here ("unexpected identifier;
      expected '}'" at the second struct field).
@@ -79,23 +79,14 @@ def istStatik : SItemTief → Bool
   | .globT .. => true
   | _ => false
 
-/-- **Is this a `concurrent` item?** (`nebenT`, `SItemTief`,
-    `ElementTief.lean`): thread-set names. The accepted `pre108`
-    (`UebersetzeAllg2.lean`) strips them: they have no G form. -/
-def istNeben : SItemTief → Bool
-  | .nebenT .. => true
-  | _ => false
-
-/-- **Is this item inert for the elaborated fragment?** A `static`
-    denotes storage the fragment cannot name; a `concurrent` item names
-    thread sets the fragment cannot see. Neither contributes a table, a
-    lock, a function or a root -- and a use of a dropped static fails
-    loudly downstream ("Name unbekannt" at the body). -/
+/-- **Is this item inert for the elaborated fragment?** A `static` denotes storage the fragment cannot
+    name: it contributes no table, lock, function or root, and a use of a dropped static fails loudly
+    downstream ("Name unbekannt" at the body). (`concurrent` items were inert here until 2026-10-18; the
+    elaborator reads them into the thread roots now.) -/
 def istInert (it : SItemTief) : Bool :=
-  istStatik it || istNeben it
+  istStatik it
 
-/-- **Drop inert top-level items (`static`, `concurrent`).** Like the
-    accepted `stripTopNeben` and the silent skip of non-literal
+/-- **Drop inert top-level items (`static`).** Like the silent skip of non-literal
     `const`s (`uConsts`): what is dropped denotes nothing the fragment
     can name, so on the elaborated fragment the projection refuses
     nothing silently. -/
@@ -146,18 +137,18 @@ theorem elabU02_stimmt_zeuge :
 /-! ## Step 2 (refusal): what is still rejected -/
 
 /-- **Is this item outside the elaborated fragment?** True for every
-    `SItemTief` kind `uRestFehler` refuses (everything but `konstT`,
-    `typT`, `tabelleT`, `lockT`, `funktionT`, `eingangT`) except the
-    inert kinds `elabU02` forgives (`static`, `concurrent`). -/
+    `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
+    `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
+    inert kind `elabU02` forgives (`static`). -/
 def istGegenstand : SItemTief → Bool
-  | .konstT .. => false
-  | .typT .. => false
-  | .tabelleT .. => false
+  | .constT .. => false
+  | .typeT .. => false
+  | .tableT .. => false
   | .lockT .. => false
-  | .funktionT .. => false
-  | .eingangT .. => false
+  | .fnT .. => false
+  | .entryT .. => false
   | .globT .. => false
-  | .nebenT .. => false
+  | .concT .. => false
   | _ => true
 
 /-- **One off-fragment item fails the item check.** By cases over all
@@ -167,13 +158,13 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = true) :
     uRestFehler (hd :: tl) = .error "Gegenstand ohne G-Form" := by
   cases hd with
-  | konstT _ _ _ => simp [istGegenstand] at he
-  | typT _ _ _ _ _ => simp [istGegenstand] at he
-  | tabelleT _ _ _ _ _ _ => simp [istGegenstand] at he
+  | constT _ _ _ => simp [istGegenstand] at he
+  | typeT _ _ _ _ _ => simp [istGegenstand] at he
+  | tableT _ _ _ _ _ _ => simp [istGegenstand] at he
   | lockT _ _ _ _ _ _ _ => simp [istGegenstand] at he
-  | funktionT _ _ => simp [istGegenstand] at he
-  | eingangT _ => simp [istGegenstand] at he
-  | modulT _ _ => rfl
+  | fnT _ _ => simp [istGegenstand] at he
+  | entryT _ => simp [istGegenstand] at he
+  | modT _ _ => rfl
   | useT _ => rfl
   | globT _ _ _ _ _ _ _ => simp [istGegenstand] at he
   | protoT _ => rfl
@@ -181,37 +172,38 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | asmT _ _ => rfl
   | formatT _ _ _ _ => rfl
   | arenaT _ _ _ _ _ _ => rfl
-  | grundT _ _ _ => rfl
-  | zustandT _ _ => rfl
-  | geraetT _ _ _ _ => rfl
-  | annahmeT _ _ _ _ => rfl
-  | axiomaT _ _ _ _ _ _ => rfl
-  | pruefungT _ => rfl
-  | atomarT _ _ _ _ _ => rfl
+  | whyT _ _ _ => rfl
+  | stateT _ _ => rfl
+  | devT _ _ _ _ => rfl
+  | assumT _ _ _ _ => rfl
+  | axiomT _ _ _ _ _ _ => rfl
+  | checkT _ => rfl
+  | atomT _ _ _ _ _ => rfl
   | rcuT _ _ _ => rfl
-  | gruppeT _ _ _ => rfl
-  | nebenT _ => simp [istGegenstand] at he
-  | akkumT _ _ _ _ => rfl
-  | wegT _ => rfl
-  | anvertrautT _ _ _ _ _ _ => rfl
-  | startT _ _ _ _ => rfl
-  | sysrufT _ => rfl
+  | groupT _ _ _ => rfl
+  | concT _ => simp [istGegenstand] at he
+  | accT _ _ _ _ => rfl
+  | walkT _ => rfl
+  | trustT _ _ _ _ _ _ => rfl
+  | bootT _ _ _ _ => rfl
+  | callT _ => rfl
   | varT _ => rfl
   | goalT _ _ => rfl
-  | uebersetzerT _ _ _ => rfl
-  | profilT _ _ => rfl
-  | torT _ => rfl
+  | transT _ _ _ => rfl
+  | profT _ _ => rfl
+  | gateT _ => rfl
 
 /-- **Is this item accepted by the item check?** Exactly the six kinds
     `uRestFehler` recurses on (accepted heads step past; inert heads and
     off-fragment heads refuse at once). -/
 def istAngenommen : SItemTief → Bool
-  | .konstT .. => true
-  | .typT .. => true
-  | .tabelleT .. => true
+  | .constT .. => true
+  | .typeT .. => true
+  | .tableT .. => true
   | .lockT .. => true
-  | .funktionT .. => true
-  | .eingangT .. => true
+  | .fnT .. => true
+  | .entryT .. => true
+  | .concT .. => true
   | _ => false
 
 /-- **An accepted head steps past the item check.** The mirror of
@@ -221,13 +213,13 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
     (he : istAngenommen hd = true) :
     uRestFehler (hd :: tl) = uRestFehler tl := by
   cases hd with
-  | konstT _ _ _ => rfl
-  | typT _ _ _ _ _ => rfl
-  | tabelleT _ _ _ _ _ _ => rfl
+  | constT _ _ _ => rfl
+  | typeT _ _ _ _ _ => rfl
+  | tableT _ _ _ _ _ _ => rfl
   | lockT _ _ _ _ _ _ _ => rfl
-  | funktionT _ _ => rfl
-  | eingangT _ => rfl
-  | modulT _ _ => simp [istAngenommen] at he
+  | fnT _ _ => rfl
+  | entryT _ => rfl
+  | modT _ _ => simp [istAngenommen] at he
   | useT _ => simp [istAngenommen] at he
   | globT _ _ _ _ _ _ _ => simp [istAngenommen] at he
   | protoT _ => simp [istAngenommen] at he
@@ -235,42 +227,42 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | asmT _ _ => simp [istAngenommen] at he
   | formatT _ _ _ _ => simp [istAngenommen] at he
   | arenaT _ _ _ _ _ _ => simp [istAngenommen] at he
-  | grundT _ _ _ => simp [istAngenommen] at he
-  | zustandT _ _ => simp [istAngenommen] at he
-  | geraetT _ _ _ _ => simp [istAngenommen] at he
-  | annahmeT _ _ _ _ => simp [istAngenommen] at he
-  | axiomaT _ _ _ _ _ _ => simp [istAngenommen] at he
-  | pruefungT _ => simp [istAngenommen] at he
-  | atomarT _ _ _ _ _ => simp [istAngenommen] at he
+  | whyT _ _ _ => simp [istAngenommen] at he
+  | stateT _ _ => simp [istAngenommen] at he
+  | devT _ _ _ _ => simp [istAngenommen] at he
+  | assumT _ _ _ _ => simp [istAngenommen] at he
+  | axiomT _ _ _ _ _ _ => simp [istAngenommen] at he
+  | checkT _ => simp [istAngenommen] at he
+  | atomT _ _ _ _ _ => simp [istAngenommen] at he
   | rcuT _ _ _ => simp [istAngenommen] at he
-  | gruppeT _ _ _ => simp [istAngenommen] at he
-  | nebenT _ => simp [istAngenommen] at he
-  | akkumT _ _ _ _ => simp [istAngenommen] at he
-  | wegT _ => simp [istAngenommen] at he
-  | anvertrautT _ _ _ _ _ _ => simp [istAngenommen] at he
-  | startT _ _ _ _ => simp [istAngenommen] at he
-  | sysrufT _ => simp [istAngenommen] at he
+  | groupT _ _ _ => simp [istAngenommen] at he
+  | concT _ => rfl
+  | accT _ _ _ _ => simp [istAngenommen] at he
+  | walkT _ => simp [istAngenommen] at he
+  | trustT _ _ _ _ _ _ => simp [istAngenommen] at he
+  | bootT _ _ _ _ => simp [istAngenommen] at he
+  | callT _ => simp [istAngenommen] at he
   | varT _ => simp [istAngenommen] at he
   | goalT _ _ => simp [istAngenommen] at he
-  | uebersetzerT _ _ _ => simp [istAngenommen] at he
-  | profilT _ _ => simp [istAngenommen] at he
-  | torT _ => simp [istAngenommen] at he
+  | transT _ _ _ => simp [istAngenommen] at he
+  | profT _ _ => simp [istAngenommen] at he
+  | gateT _ => simp [istAngenommen] at he
 
 /-- **A head that is neither accepted nor excused fails at once.** With
     no fragment excuse (`istGegenstand` false) and no accepted shape
-    (`istAngenommen` false) the head is inert (`static`, `concurrent`)
+    (`istAngenommen` false) the head is inert (`static`)
     or worse, and `uRestFehler` refuses it without looking at the tail. -/
 theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = false) (ha : istAngenommen hd = false) :
     uRestFehler (hd :: tl) = .error "Gegenstand ohne G-Form" := by
   cases hd with
-  | konstT _ _ _ => simp [istAngenommen] at ha
-  | typT _ _ _ _ _ => simp [istAngenommen] at ha
-  | tabelleT _ _ _ _ _ _ => simp [istAngenommen] at ha
+  | constT _ _ _ => simp [istAngenommen] at ha
+  | typeT _ _ _ _ _ => simp [istAngenommen] at ha
+  | tableT _ _ _ _ _ _ => simp [istAngenommen] at ha
   | lockT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | funktionT _ _ => simp [istAngenommen] at ha
-  | eingangT _ => simp [istAngenommen] at ha
-  | modulT _ _ => simp [istGegenstand] at he
+  | fnT _ _ => simp [istAngenommen] at ha
+  | entryT _ => simp [istAngenommen] at ha
+  | modT _ _ => simp [istGegenstand] at he
   | useT _ => simp [istGegenstand] at he
   | globT _ _ _ _ _ _ _ => rfl
   | protoT _ => simp [istGegenstand] at he
@@ -278,26 +270,26 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | asmT _ _ => simp [istGegenstand] at he
   | formatT _ _ _ _ => simp [istGegenstand] at he
   | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | grundT _ _ _ => simp [istGegenstand] at he
-  | zustandT _ _ => simp [istGegenstand] at he
-  | geraetT _ _ _ _ => simp [istGegenstand] at he
-  | annahmeT _ _ _ _ => simp [istGegenstand] at he
-  | axiomaT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | pruefungT _ => simp [istGegenstand] at he
-  | atomarT _ _ _ _ _ => simp [istGegenstand] at he
+  | whyT _ _ _ => simp [istGegenstand] at he
+  | stateT _ _ => simp [istGegenstand] at he
+  | devT _ _ _ _ => simp [istGegenstand] at he
+  | assumT _ _ _ _ => simp [istGegenstand] at he
+  | axiomT _ _ _ _ _ _ => simp [istGegenstand] at he
+  | checkT _ => simp [istGegenstand] at he
+  | atomT _ _ _ _ _ => simp [istGegenstand] at he
   | rcuT _ _ _ => simp [istGegenstand] at he
-  | gruppeT _ _ _ => simp [istGegenstand] at he
-  | nebenT _ => rfl
-  | akkumT _ _ _ _ => simp [istGegenstand] at he
-  | wegT _ => simp [istGegenstand] at he
-  | anvertrautT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | startT _ _ _ _ => simp [istGegenstand] at he
-  | sysrufT _ => simp [istGegenstand] at he
+  | groupT _ _ _ => simp [istGegenstand] at he
+  | concT _ => simp [istAngenommen] at ha
+  | accT _ _ _ _ => simp [istGegenstand] at he
+  | walkT _ => simp [istGegenstand] at he
+  | trustT _ _ _ _ _ _ => simp [istGegenstand] at he
+  | bootT _ _ _ _ => simp [istGegenstand] at he
+  | callT _ => simp [istGegenstand] at he
   | varT _ => simp [istGegenstand] at he
   | goalT _ _ => simp [istGegenstand] at he
-  | uebersetzerT _ _ _ => simp [istGegenstand] at he
-  | profilT _ _ => simp [istGegenstand] at he
-  | torT _ => simp [istGegenstand] at he
+  | transT _ _ _ => simp [istGegenstand] at he
+  | profT _ _ => simp [istGegenstand] at he
+  | gateT _ => simp [istGegenstand] at he
 
 /-- **An off-fragment item anywhere fails the item check.** Induction:
     empty lists hold no witness; a bad head fails at once, otherwise the
@@ -341,8 +333,8 @@ theorem elabU_bei_RestFehler (ms : List SItemTief) (e : String)
   simp [elabU, hR]
 
 /-- **Units that still carry an off-fragment item are still refused.**
-    The refusal half of the widening: only inert items (`static`,
-    `concurrent`) are forgiven. The premise is read after stripping and
+    The refusal half of the widening: only inert items (`static`)
+    are forgiven. The premise is read after stripping and
     re-unwrapping, exactly where `elabU` checks (nested modules
     re-unwrap; see CUTS). -/
 theorem elabU02_verweigert_noch (items : List SItemTief)
@@ -364,60 +356,57 @@ theorem elabU02_verweigert_noch_zeuge :
 /-- **108's parsed items** (`beispiele/108-disjoint-start-locks.gab`,
     printed by `.tmp/probe_repr108.lean`, pasted in the tree's dotted
     style like `items104`): one table, two readers, and the single
-    blocking `concurrent` item. -/
+    `concurrent` item (the thread roots). -/
 def w108items : List SItemTief :=
-  [.modulT "beispiel::disjoint_start_locks"
-    [.tabelleT "T" (.some (.lit 4)) .none .none false
-      [.tPlatz [{ fname := "v", ftyp := .atom "u32",
+  [.modT "beispiel::disjoint_start_locks"
+    [.tableT "T" (.some (.lit 4)) .none .none false
+      [.tSlot [{ fname := "v", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
-    .funktionT
+    .fnT
       { art := "impl", name := "read_a", params := [],
-        ergebnis := .some (.atom "u32"), fehler := .none,
-        klauseln := [.wirkung [.liest (.feld (.variable "T") "slots")],
-                     .kosten (.lit 4)] }
+        res := .some (.atom "u32"), fehler := .none,
+        klauseln := [.effs [.reads (.field (.variable "T") "slots")],
+                     .cost (.lit 4)] }
       (.block []
-        (.some (.ret (.some (.feld
-          (.index (.feld (.variable "T") "slots") (.lit 0)) "v"))))),
-    .funktionT
+        (.some (.ret (.some (.field
+          (.index (.field (.variable "T") "slots") (.lit 0)) "v"))))),
+    .fnT
       { art := "impl", name := "read_c", params := [],
-        ergebnis := .some (.atom "u32"), fehler := .none,
-        klauseln := [.wirkung [.liest (.feld (.variable "T") "slots")],
-                     .kosten (.lit 4)] }
+        res := .some (.atom "u32"), fehler := .none,
+        klauseln := [.effs [.reads (.field (.variable "T") "slots")],
+                     .cost (.lit 4)] }
       (.block []
-        (.some (.ret (.some (.feld
-          (.index (.feld (.variable "T") "slots") (.lit 1)) "v"))))),
-    .nebenT [["read_a"], ["read_c"]]]]
+        (.some (.ret (.some (.field
+          (.index (.field (.variable "T") "slots") (.lit 1)) "v"))))),
+    .concT [["read_a"], ["read_c"]]]]
 
 /-- **108's elaborated program** under `elabU02` (same probe, pasted):
-    the table and both readers, the `concurrent` names gone. -/
+    the table and both readers, the `concurrent` members as thread roots. -/
 def w108prog : UProg :=
   { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)], bools := [] }],
     sperren := [],
     fns := [{ name := "read_a", params := [], parten := [],
-              ergebnis := .some (0, 4294967295), ergBool := false,
-              held := [], schreibt := [], sichert := [], saetze := [],
+              res := .some (0, 4294967295), ergBool := false,
+              held := [], schreibt := [], gives := [], saetze := [],
               rueck := .val (.tab "T" "v" (.lit 0)) },
             { name := "read_c", params := [], parten := [],
-              ergebnis := .some (0, 4294967295), ergBool := false,
-              held := [], schreibt := [], sichert := [], saetze := [],
+              res := .some (0, 4294967295), ergBool := false,
+              held := [], schreibt := [], gives := [], saetze := [],
               rueck := .val (.tab "T" "v" (.lit 1)) }],
-    wurzeln := [] }
+    wurzeln := ["read_a", "read_c"] }
 
-/-- **108 was refused before**: `elabU` stops at the `concurrent`
-    item with "Gegenstand ohne G-Form" (probe #1, measured). Stated with
-    `beqElabU` like `u104elab` (`UProg` has no `DecidableEq` instance). -/
-theorem w108_vorher :
-    beqElabU (elabU w108items) (.error "Gegenstand ohne G-Form") = true := by
-  decide
-
-/-- **108 elaborates now**: `elabU02` yields exactly the pasted program
-    (probe #3: elab *and* `lowerAllg` succeed on 108). -/
+/-- **108 elaborates**: `elabU` (and so `elabU02`) yields exactly the pasted program, the `concurrent`
+    members as its thread roots (probe #3: elab *and* `lowerAllg` succeed on 108). -/
 theorem w108_jetzt : beqElabU (elabU02 w108items) (.ok w108prog) = true := by
   decide
 
-#print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.w108_vorher
+/-- The `concurrent` roots are not dropped: plain `elabU` agrees. -/
+theorem w108_ohne_umweg : beqElabU (elabU w108items) (.ok w108prog) = true := by
+  decide
+
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.w108_jetzt
+#print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.w108_ohne_umweg
 
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.uRestFehler_kopf
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.uRestFehler_kopf_gut
