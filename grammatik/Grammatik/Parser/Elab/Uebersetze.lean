@@ -175,6 +175,12 @@ inductive UStmt
       with its ender (the binder `k` an index into `T`), `ifElse`, the `None` arm's statements with its ender,
       `blkEnd`. -/
   | matchBeg : Nat → UOpt → String → UStmt
+  /-- `start { f, g };`: the spawn and the join are thread-machine steps, not G statements (the roots travel as
+      `UProg.gestartet`); the statement leaves no term. -/
+  | startS : UStmt
+  /-- `let i = alloc A (v) else { .. };` (`Block.arenaAlloc`, sugar over `narrow`): `allocBeg i A v`, the
+      statements of the full-arena branch with its ender, `blkEnd`; the rest reads `i` as an index into `A`. -/
+  | allocBeg : String → String → USide → UStmt
   /-- `let x = f(..);` (`Block.bindCall`): the callee's value, bound at the callee's result type. -/
   | bindCall : String → String → List UArg → UStmt
   /-- `f(..);` at an `extern fn` (a foreign body, `D.Ax`): `Stmt.axiomCall` for an answer-less one, else the
@@ -373,6 +379,9 @@ structure UProg where
   axs : List UAx := []
   /-- The `assume` items, in order (`D.Annahme`). -/
   annahmen : List String := []
+  /-- The roots of every `start { .. };` of a body, each once, in body order: the threads created at run time
+      (`Einheit.gestartet`; the checker Bool judges them as pool routines, they stand twice in `Einheit.ws`). -/
+  gestartet : List String := []
   /-- The dispatch roots of the unit's `entry` items (function names, each a parameterless function of
       the unit): thread roots of the goal's runtime premise (`Einheit.starts`). -/
   roots : List String := []
@@ -1655,6 +1664,8 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     match uRuf ctx tabs koepfe c args with
     | .error e => .error e
     | .ok (callee, xs) => .ok (if callee.ext then .axCall c xs else .call c xs)
+  | .start _ =>
+    if ctx.held.isEmpty then .ok .startS else .error "start under a held lock: the start step has an empty held list"
   | _ => .error "stmt without G form"
 
 /-- The context after `let x [: T]`: the annotated range (when there is one) and the context in which the
@@ -2023,6 +2034,38 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 | .ok (ys, cE) =>
                   .ok ([UStmt.matchBeg num o k] ++ sbody ++ sEnd ++ [UStmt.ifElse] ++ nbody ++ nEnd ++ [UStmt.blkEnd] ++ ys, cE)
       | _, _ => .error "match arms without G form"
+  | f + 1, ctx, .ret v :: rest =>
+    match uEnde ctx (some (.ret v)) with
+    | .error err => .error err
+    | .ok r =>
+      match uAnwReihe tabs koepfe f ctx rest with
+      | .error err => .error err
+      | .ok (xs, cE) => .ok (UStmt.ret r :: xs, cE)
+  | f + 1, ctx, .alloc mu x t an v (.some (.block ss e)) :: rest =>
+    if mu || t.isSome then .error "alloc binding without G form"
+    else
+      match ctx.tabs.findIdx? (fun y => y.arena && strEq y.name an) with
+      | .none => .error ("arena unknown: " ++ an)
+      | .some num =>
+        match ctx.tabs[num]? with
+        | .none => .error "arena unknown"
+        | .some tb =>
+          match uWertBody ctx v with
+          | .error err => .error err
+          | .ok sv =>
+            match uAnwReihe tabs koepfe f ctx ss with
+            | .error err => .error err
+            | .ok (body, ctxB) =>
+              match (match e with
+                  | .none => .error "alloc else falls through"
+                  | .some _ => uEndeStmt ctxB e : Except String (List UStmt)) with
+              | .error err => .error err
+              | .ok endS =>
+                match uAnwReihe tabs koepfe f (uMitLokal ctx x (UParamArt.index num) (Ty.index tb.count)
+                    (ctx.muts.filter (fun m => !strEq m x))) rest with
+                | .error err => .error err
+                | .ok (xs, cE) => .ok ([UStmt.allocBeg x an sv] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
+  | f + 1, ctx, .alloc .. :: _ => .error "alloc without else without G form"
   | f + 1, ctx, .retry h (.block ss e) :: rest =>
     match uRetryKopf ctx h with
     | .error err => .error err
@@ -2364,6 +2407,26 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) : FnSi
             | .ok r => .ok { base with res := .some r }
   | _ => .error "foreign fn with an or channel without G form"
 
+/-- The roots of the `start { .. };` statements of a body, in order (`fuel` bounds the nesting). -/
+def uStartNamen : Nat → SAnw → List String
+  | 0, _ => []
+  | _ + 1, .start ns => ns
+  | f + 1, .block ss _ => ss.flatMap (uStartNamen f)
+  | f + 1, .cond _ b ei els => uStartNamen f b ++ ei.flatMap (uStartNamen f) ++ (els.map (uStartNamen f)).getD []
+  | f + 1, .elsif _ b => uStartNamen f b
+  | f + 1, .each _ _ _ _ _ _ _ b => uStartNamen f b
+  | f + 1, .retry _ b => uStartNamen f b
+  | f + 1, .loop _ b => uStartNamen f b
+  | f + 1, .locks _ _ b => uStartNamen f b
+  | f + 1, .trim _ _ b => uStartNamen f b
+  | f + 1, .cases _ arms => arms.flatMap (uStartNamen f)
+  | f + 1, .arm _ _ b => uStartNamen f b
+  | _, _ => []
+
+/-- Each root once, in order. -/
+def uOhneDoppelte (xs : List String) : List String :=
+  xs.foldl (fun acc x => if acc.any (fun y => strEq y x) then acc else acc ++ [x]) []
+
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
 def elabU : List SItemTief → Except String UProg
@@ -2409,7 +2472,11 @@ def elabU : List SItemTief → Except String UProg
     match uWurzeln fns ms with
     | .error e => .error e
     | .ok roots =>
-      .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs,
+    match uSeq ((uOhneDoppelte (fnItems.flatMap (fun (_, b) => uStartNamen 100000 b))).map
+        (fun d => uStart fns "start" d)) with
+    | .error e => .error e
+    | .ok gestartet =>
+      .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs, gestartet,
             axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg }),
             annahmen }
 
@@ -2713,7 +2780,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2750,7 +2817,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
@@ -3102,7 +3169,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"

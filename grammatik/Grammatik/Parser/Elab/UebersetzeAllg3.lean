@@ -5,6 +5,7 @@
              Split from `UebersetzeAllg2` (which keeps the single statements and calls); same namespace.
 -/
 import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Bausteine.Arena.ArenaZucker
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 
@@ -132,6 +133,42 @@ def withErg {α : Type} (u : UProg) (callee : Fin u.fns.length)
   match hE : (declOf u).erg callee with
   | none => .error "call without a value"
   | some τ => K τ hE
+
+/-- **`let i = alloc A (v) else { .. };`** as the sugar `Block.arenaAlloc` of `ArenaZucker`: the arena's table,
+    its element field and its counter static form the `ArenaForm`; the stores need the write rights and the
+    guards at both carriers. -/
+def mkAllocBlock {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (t : Fin u.tabs.length) (g : Fin u.globs.length) (fh : FieldHit u t)
+    (ev0 : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (voll : Endblock (declOf u) (verOf u caller) l Γ Λ)
+    (b : Block (declOf u) (verOf u caller) l (Ty.index ((declOf u).count t) :: Γ) Λ Λ) :
+    Except String (Block (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  if hz : (declOf u).gtyp g = Ty.int 0 ((declOf u).count t) then
+    if hp : 0 < (declOf u).count t then
+      let A : ArenaForm (declOf u) := { tab := t, feld := fh.idx, zaehl := g, hz := hz, hpos := hp }
+      have ev : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
+        show Expr (declOf u) Γ Λ (typAt u t fh.idx)
+        rw [fh.hint]
+        exact ev0
+      if hwT : writesAt u (fnAt u caller) t = true then
+        if hwG : writesGAt u (fnAt u caller) g = true then
+          if hLT : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+            if hLG : ∀ wdd ∈ (declOf u).gbraucht g, Res.von (declOf u) wdd ∈ Λ then
+              have hwT' : (verOf u caller).schreibt t = true := by
+                show (vertragVon (declOf u) caller).schreibt t = true
+                rw [vSchreibt_eq u caller t]
+                exact hwT
+              have hwG' : (verOf u caller).gschreibt g = true := by
+                show (vertragVon (declOf u) caller).gschreibt g = true
+                rw [vGSchreibt_eq u caller g]
+                exact hwG
+              .ok (Block.arenaAlloc (D := declOf u) A ev hwT' hLT hwG' hLG voll b)
+            else .error "access without held guard"
+          else .error "access without held guard"
+        else .error "write without right"
+      else .error "write without right"
+    else .error "arena of no slots"
+  else .error "arena counter foreign"
 
 /-! ## Runs of statements -/
 
@@ -265,6 +302,31 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
               (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
+  | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
+  | Γ, fn, n + 1, Λ, pe, .allocBeg x an v :: rest =>
+    match tabIdx u.tabs an with
+    | .error e => .error e
+    | .ok t =>
+      match globIdx u.globs (an ++ "#used") with
+      | .error e => .error e
+      | .ok g =>
+        match fieldHit u t "wert" with
+        | .error e => .error e
+        | .ok fh =>
+          match lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v with
+          | .error e => .error e
+          | .ok ev0 =>
+            match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+            | .error e => .error e
+            | .ok (voll, .blkEnd :: rest') =>
+              match lowSeqL (l := l) u caller (Ty.index ((declOf u).count t) :: Γ)
+                  (fn.mitIndex x t.val ((declOf u).count t)) n Λ pe rest' with
+              | .error e => .error e
+              | .ok (b, r) =>
+                match mkAllocBlock u caller Γ Λ t g fh ev0 voll b with
+                | .error e => .error e
+                | .ok blk => .ok (blk, r)
+            | .ok (_, _) => .error "lower: an alloc is not closed"
   | Γ, fn, n + 1, Λ, pe, .narrowBeg x lo hi :: rest =>
     match paramPos fn.params x with
     | .error e => .error e
@@ -436,6 +498,9 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
+  | _, _, _ + 1, _, _, .allocBeg .. :: _ =>
+    .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowEndL (l := l) u caller Γ fn n Λ pe rest
   | Γ, fn, n + 1, Λ, pe, .lockBeg g :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.lockBeg g) rest with
     | .error e => .error e
@@ -552,6 +617,9 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a value call at the top level of a body has no G form (Endblock lacks bindCall)"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
+  | _, _, _ + 1, .allocBeg .. :: _, _ =>
+    .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, n + 1, .startS :: rest, r => lowBodyF u caller Γ fn n rest r
   | Γ, fn, n + 1, .bindB x v :: rest, r =>
     match lowEns u Γ (resOf u caller) fn none v with
     | .error e => .error e

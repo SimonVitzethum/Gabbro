@@ -57,7 +57,7 @@ def akzeptiertU (u : UProg) : Except String Bool :=
   | .error e => .error e
   | .ok (P, fs) =>
     haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
-    let ws : List (declOf u).Fn := u.roots.filterMap fun n => wurzelIdx u n
+    let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
@@ -71,7 +71,7 @@ def komponenten (u : UProg) : Except String String :=
   | .error e => .error e
   | .ok (P, fs) =>
     haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
-    let ws : List (declOf u).Fn := u.roots.filterMap fun n => wurzelIdx u n
+    let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
     let ls : List (declOf u).Lock := List.finRange u.locks.length
     let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
