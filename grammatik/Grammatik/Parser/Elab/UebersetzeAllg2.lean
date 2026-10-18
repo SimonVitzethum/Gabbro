@@ -88,16 +88,16 @@ theorem sigProduziert_nil (u : UProg) (i : Fin u.fns.length) :
   rw [sigAt_get u i]
   rfl
 
-/-- No lock floor on a signature (the default `none`). -/
-theorem sigBoden_none (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).boden = none := by
+/-- The lock floor of a signature is the computed floor of the function. -/
+theorem sigBoden_eq (u : UProg) (i : Fin u.fns.length) :
+    ((declOf u).signatur i).boden = floorOf u (fnAt u i) := by
   show (sigAt u i.val).boden = _
   rw [sigAt_get u i]
   rfl
 
-/-- No lock floor on a body contract. -/
-theorem vBoden_none (u : UProg) (c : Fin u.fns.length) :
-    (vertragVon (declOf u) c).boden = none := by
+/-- The same for a body contract. -/
+theorem vBoden_eq (u : UProg) (c : Fin u.fns.length) :
+    (vertragVon (declOf u) c).boden = floorOf u (fnAt u c) := by
   show (sigAt u c.val).boden = _
   rw [sigAt_get u c]
   rfl
@@ -539,13 +539,34 @@ theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
   show Untermulti ([] : List (Res (declOf u))) Λ
   exact ⟨[], List.Perm.refl _, by simp⟩
 
-/-- The floors line up (`RufPasst.hb`, both `none`). -/
-theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length) :
+/-- The caller's floor is at most the callee's (the Bool the lowering decides). -/
+def floorLeB (u : UProg) (caller callee : Fin u.fns.length) : Bool :=
+  match floorOf u (fnAt u caller), floorOf u (fnAt u callee) with
+  | none, _ => true
+  | some _, none => false
+  | some c, some c' => decide (c ≤ c')
+
+/-- The floors line up (`RufPasst.hb`). -/
+theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
+    (h : floorLeB u caller callee = true) :
     ∀ c, (vertragVon (declOf u) caller).boden = some c →
       ∃ c', ((declOf u).signatur callee).boden = some c' ∧
         c ≤ c' := fun c hc => by
-  rw [vBoden_none u caller] at hc
-  simp at hc
+  rw [vBoden_eq u caller] at hc
+  rw [sigBoden_eq u callee]
+  unfold floorLeB at h
+  rw [hc] at h
+  cases hb : floorOf u (fnAt u callee) with
+  | none => rw [hb] at h; simp at h
+  | some c' =>
+    rw [hb] at h
+    exact ⟨c', rfl, of_decide_eq_true h⟩
+
+/-- An extra held lock ranks below the callee's floor (the Bool the lowering decides). -/
+def floorUeberB (u : UProg) (callee : Fin u.fns.length) (L : (declOf u).Lock) : Bool :=
+  match floorOf u (fnAt u callee) with
+  | some c => decide ((declOf u).rang L < c)
+  | none => false
 
 /-- The held locks named in a resource list, at the
     declaration lock type (so membership synthesizes). -/
@@ -594,15 +615,17 @@ def castNachStmtL {l : Bool} (u : UProg) (caller callee : Fin u.fns.length) (Γ 
   rw [nach_eq u callee Λ] at s
   exact s
 
-/-- A direct call: arguments plus the harvested `RufPasst`
-    (`hw` over the write flags, `hh` over the callee held list,
-    `hx` over the lock carrier -- vacuous past the exact held
-    set, since every floor is `none`). -/
-def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
-    (Λ : List (Res (declOf u)))
-    (cname : String) (args : List UArg) :
-    Except String (Stmt (declOf u) (verOf u caller) l
-      Γ Λ Λ) :=
+/-- The head of a direct call: the callee, its arguments and the harvested `RufPasst` (`hw` over the write
+    flags, `hh` over the callee held list, `hx` over the lock carrier -- vacuous past the exact held set,
+    since every floor is `none`). The statement `Stmt.call` and the binding `Block.bindCall` share it. -/
+structure RufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  callee : Fin u.fns.length
+  args : Args (declOf u) Γ Λ ((declOf u).params callee)
+  hp : RufPasst (declOf u) (verOf u caller) ((declOf u).signatur callee) Λ
+
+def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (cname : String) (args : List UArg) :
+    Except String (RufKopf u caller Γ Λ) :=
   match fnIdx u.fns cname with
   | .error e => .error e
   | .ok callee =>
@@ -618,8 +641,9 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
             writesGAt u (fnAt u caller) g = true then
         if hH : ∀ L ∈ ((declOf u).signatur callee).haelt,
             Res.held (D := declOf u) L ∈ Λ then
+         if hB : floorLeB u caller callee = true then
           if hX : ∀ L ∈ heldLocksD u Λ,
-              L ∈ ((declOf u).signatur callee).haelt then
+              L ∈ ((declOf u).signatur callee).haelt ∨ floorUeberB u callee L = true then
             have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
                 true → (vertragVon (declOf u) caller).schreibt t =
                 true := fun t ht => by
@@ -631,30 +655,42 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
                 L ∉ ((declOf u).signatur callee).haelt →
                 ∃ c, ((declOf u).signatur callee).boden = some c ∧
                   (declOf u).rang L < c :=
-              fun L hL hn =>
-                absurd (hX L (heldLocksD_mem u _ L hL)) hn
+              fun L hL hn => by
+                rcases hX L (heldLocksD_mem u _ L hL) with h | h
+                · exact absurd h hn
+                · rw [sigBoden_eq u callee]
+                  unfold floorUeberB at h
+                  cases hf : floorOf u (fnAt u callee) with
+                  | none => rw [hf] at h; simp at h
+                  | some c =>
+                    rw [hf] at h
+                    exact ⟨c, rfl, of_decide_eq_true h⟩
             have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
                 true → (vertragVon (declOf u) caller).gschreibt g =
                 true := fun g hg0 => by
               rw [sigGSchreibt_eq u callee g] at hg0
               rw [vGSchreibt_eq u caller g]
               exact hG g hg0
-            have hp : RufPasst (declOf u)
-                (vertragVon (declOf u) caller)
-                ((declOf u).signatur callee)
-                Λ :=
-              { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee }
-            have s : Stmt (declOf u) (verOf u caller) l
-                Γ Λ
-                (nach (declOf u) callee Λ) :=
-              Stmt.call (D := declOf u) callee a hp
-                (sigGruende_zero u callee)
-            .ok (castNachStmtL u caller callee Γ Λ s)
-          else .error "call under foreign lock without G form"
+            .ok { callee := callee, args := a,
+                  hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx,
+                          hb := rufHb_ok u caller callee hB } }
+          else .error "call: a held lock does not rank below the callee's floor"
+         else .error "call: the caller's lock floor is above the callee's"
         else .error "call without held guard"
        else .error "call writes without right"
       else .error "call writes without right"
 
+/-- A direct call as a statement. -/
+def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u)))
+    (cname : String) (args : List UArg) :
+    Except String (Stmt (declOf u) (verOf u caller) l
+      Γ Λ Λ) :=
+  match lowRufKopf u caller Γ fn Λ cname args with
+  | .error e => .error e
+  | .ok k =>
+    .ok (castNachStmtL u caller k.callee Γ Λ
+      (Stmt.call (D := declOf u) k.callee k.args k.hp (sigGruende_zero u k.callee)))
 
 /-- A write of a static (`Stmt.assignGlob`): only where the function declares `writes X`. -/
 def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -826,7 +862,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

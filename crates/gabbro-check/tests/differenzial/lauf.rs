@@ -198,6 +198,8 @@ const PUR_VERLETZT: &[&str] = &[
     "index outside count",
     "division by a denominator that may be zero",
     "bit operation over a negative range",
+    "call without held guard",
+    "a held lock does not rank below the callee's floor",
 ];
 
 /// Run the pure-Lean path over the given sources (written as `<n>.gab` under `dir`); the verdict of

@@ -126,6 +126,55 @@ def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
 def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
   f.puts.any (· == (tabAt u t).name)
 
+/-! ## Lock floors (`Signatur.boden`)
+
+    The floor of a function is the lowest rank of any lock taken on a path from it (its own `locks L` blocks
+    and, through its calls, the callees'); a function that takes none has the floor `hoch`, above every rank
+    of the unit. A unit without locks has no floors. This is the rule of the exporter (`resolve_floors`):
+    an extra lock held across a call ranks below the callee's floor (`RufPasst.hx`), so every lock the callee
+    takes ranks above everything held (`H006` across the call boundary). -/
+
+/-- The rank of a lock by name. -/
+def lockRank (u : UProg) (n : String) : Option Int :=
+  (u.locks.find? (fun l => l.name == n)).map (·.rank)
+
+def optMin : Option Int → Option Int → Option Int
+  | none, b => b
+  | a, none => a
+  | some a, some b => some (min a b)
+
+/-- The lowest rank a function takes directly (its `locks L { .. }` blocks). -/
+def directFloor (u : UProg) (f : UFn) : Option Int :=
+  f.body.foldl (fun acc st => match st with
+    | .lockBeg n => optMin acc (lockRank u n)
+    | _ => acc) none
+
+/-- The functions a function calls directly. -/
+def callNames (f : UFn) : List String :=
+  f.body.filterMap fun st => match st with
+    | .call c _ => some c
+    | .bindCall _ c _ => some c
+    | _ => none
+
+/-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/
+def floorStep (u : UProg) (cur : List (String × Option Int)) : List (String × Option Int) :=
+  u.fns.map fun f =>
+    (f.name, (callNames f).foldl
+      (fun acc c => optMin acc ((cur.find? (fun p => p.1 == c)).bind (·.2))) (directFloor u f))
+
+/-- `n` rounds (a path through the call graph is at most as long as the number of functions). -/
+def floorsN (u : UProg) : Nat → List (String × Option Int)
+  | 0 => u.fns.map fun f => (f.name, directFloor u f)
+  | n + 1 => floorStep u (floorsN u n)
+
+/-- The floor of a function: `none` in a unit without locks, else the lowest rank on any path from it, or
+    one above the highest rank of the unit when the paths take no lock. -/
+def floorOf (u : UProg) (f : UFn) : Option Int :=
+  if u.locks.isEmpty then none
+  else some (match ((floorsN u u.fns.length).find? (fun p => p.1 == f.name)).bind (·.2) with
+    | some c => c
+    | none => (u.locks.map (·.rank)).foldl max 0 + 1)
+
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
@@ -137,6 +186,7 @@ def mkSig (u : UProg) (f : UFn) :
   gschreibt := writesGAt u f
   konsumiert := []
   produziert := []
+  boden := floorOf u f
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
@@ -453,6 +503,17 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           | .error e => .error e
           | .ok v => .ok (Expr.var v)
         else .error "index of foreign table"
+      | some .int =>
+        match fn.params[j]? with
+        | some (_, .int lo hi) =>
+          if h1 : 0 ≤ lo then
+            if h2 : hi ≤ (declOf u).count t - 1 then
+              match lowVar Γ (sh + j) (.int lo hi) with
+              | .error e => .error e
+              | .ok v => .ok (Expr.widen h1 h2 (Expr.var v))
+            else .error "index outside count"
+          else .error "index outside count"
+        | _ => .error "index without G form"
       | _ => .error "index without G form"
 
 /-- A sided term with its range. -/

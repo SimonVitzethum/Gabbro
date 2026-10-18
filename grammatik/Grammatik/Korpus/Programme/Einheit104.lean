@@ -86,7 +86,7 @@ theorem hp4 : RufPasst D4 (vertragVon D4 ein4) (D4.signatur lies4) L4 where
     have e : L = m4 := Fin.ext (by have h : L.val < 1 := L.isLt; show L.val = 0; omega)
     subst e
     exact List.mem_singleton_self _) hn
-  hb := rufHb_ok uExp104 ein4 lies4
+  hb := rufHb_ok uExp104 ein4 lies4 (by decide)
 
 /-- `einzahlen`'s body, as the parser lowers it: the write through `k`, the
     call of `lies` on a fresh read-only pointer and `i`, the return. -/

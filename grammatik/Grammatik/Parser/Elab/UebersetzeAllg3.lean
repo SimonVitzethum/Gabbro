@@ -104,6 +104,13 @@ theorem rangOkB_sound (u : UProg) (Λ : List (Res (declOf u))) (L : (declOf u).L
   have := List.all_eq_true.mp h M hm
   exact of_decide_eq_true this
 
+/-- The result type of a callee, for a binding (`he` of `Block.bindCall`); a callee without a value binds nothing. -/
+def withErg {α : Type} (u : UProg) (callee : Fin u.fns.length)
+    (K : (τ : Ty) → (declOf u).erg callee = some τ → Except String α) : Except String α :=
+  match hE : (declOf u).erg callee with
+  | none => .error "call without a value"
+  | some τ => K τ hE
+
 /-! ## Runs of statements -/
 
 mutual
@@ -160,6 +167,19 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.bind ev b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindCall x cname args :: rest =>
+    match lowRufKopf u caller Γ fn Λ cname args with
+    | .error e => .error e
+    | .ok k =>
+      withErg u k.callee fun τ hE =>
+        match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r) =>
+          have hr : (declOf u).gruende k.callee = 0 := sigGruende_zero u k.callee
+          have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) Λ := by
+            rw [nach_eq u k.callee Λ]
+            exact b
+          .ok (Block.bindCall (D := declOf u) k.callee k.args hE k.hp hr b', r)
   | Γ, fn, n + 1, Λ, pe, .ret v :: rest =>
     match lowRetStmt u caller Γ fn Λ pe v with
     | .error e => .error e
@@ -251,6 +271,8 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind s.term e)
+  | _, _, _ + 1, .bindCall .. :: _, _ =>
+    .error "lower: a value call at the top level of a body has no G form (Endblock lacks bindCall)"
   | Γ, fn, n + 1, .bindB x v :: rest, r =>
     match lowEns u Γ (resOf u caller) fn none v with
     | .error e => .error e

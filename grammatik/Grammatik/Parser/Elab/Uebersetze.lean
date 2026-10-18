@@ -152,6 +152,8 @@ inductive UStmt
   | bindMut : String → Int → Int → USide → UStmt
   /-- `x = v;` at a `let mut` local (`Stmt.assignVar`), a number or a truth value. -/
   | setVar : String → USide → UStmt
+  /-- `let x = f(..);` (`Block.bindCall`): the callee's value, bound at the callee's result type. -/
+  | bindCall : String → String → List UArg → UStmt
   | setVarB : String → UEns → UStmt
   /-- `if c { … } else { … }` is flat too: `wennAuf c`, the then-statements, `sonst`, the else-statements,
       `zu` (an `else if` is an `if` in the else part; an absent `else` is an empty one). -/
@@ -279,6 +281,12 @@ def UFn.mitBindung (f : UFn) (x : String) (w : Int × Int) : UFn :=
 /-- The scope after a `let x` of a truth value. -/
 def UFn.mitBindungB (f : UFn) (x : String) : UFn :=
   { f with params := (x, Ty.bool) :: f.params, kinds := .bool :: f.kinds }
+
+/-- The scope after `let x = v` of a value of type `τ` (a number or a truth value). -/
+def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
+  | .int lo hi => f.mitBindung x (lo, hi)
+  | .bool => f.mitBindungB x
+  | _ => f
 
 /-- The scope inside `traverse b over slots of T`: `b` is an index into table number `num` of `cnt` slots. -/
 def UFn.mitIndex (f : UFn) (b : String) (num : Nat) (cnt : Int) : UFn :=
@@ -722,6 +730,7 @@ def uIndex (ctx : UCtx) (t : String) (num : Nat) : SExpr → Except String UIdx
       match uArtBei ctx.kinds j with
       | .ok (.index m) =>
         if m == num then .ok (.param p) else .error "index of foreign table"
+      | .ok .int => .ok (.param p)
       | _ => .error "index without G form"
   | _ => .error "index without G form"
 
@@ -877,7 +886,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .some v => .ok (.lit v)
     | .none =>
       match uZugriff ctx e with
-      | .error _ => .error "compare side without G form"
+      | .error x => .error (if strEq x "index outside count" then x else "compare side without G form")
       | .ok (.thru b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "bool field as a number" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
@@ -995,7 +1004,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .some v => .ok (.lit v)
     | .none =>
       match uZugriff ctx e with
-      | .error _ => .error "value without G form"
+      | .error x => .error (if strEq x "index outside count" then x else "value without G form")
       | .ok (.thru b, tb, f, ix) =>
         if uBoolFeld ctx tb f then .error "bool field as a number" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
@@ -1284,6 +1293,10 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
             | .none => .error "pointer table unknown"
         else .error "argument of foreign table"
       | _ => .error "pointer argument without G form"
+  | .ptr num w, .fnref t =>
+    match tabs[num]? with
+    | .some tb => if strEq tb.name t then .ok (.freshPtr tb.name w) else .error "argument of foreign table"
+    | .none => .error "pointer table unknown"
   | .index num, a =>
     match tabs[num]? with
     | .none => .error "index table unknown"
@@ -1356,6 +1369,20 @@ def uAtomSchreib (ctx : UCtx) (ziel wert : SExpr) (p : String) : Except String U
           | .ok v => .ok (.storeAtom g v)
   | _ => .error "publishes without an atomic without G form"
 
+/-- A direct call: the callee and its arguments against the callee's parameter kinds. The callee's required
+    locks must be held (`RufPasst.hh`); an extra lock of the caller must rank below the callee's floor
+    (`RufPasst.hx`), which the lowering decides (`floorUeberB`). -/
+def uRuf (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (c : String) (args : List SExpr) :
+    Except String (UFnKopf × List UArg) :=
+  match koepfe.find? (fun k => strEq k.name c) with
+  | .none => .error ("call unknown: " ++ c)
+  | .some callee =>
+    if !(callee.held.all (fun l => ctx.held.any (strEq · l))) then .error "call without held guard"
+    else
+      match uArgs ctx tabs callee.kinds args with
+      | .error e => .error e
+      | .ok xs => .ok (callee, xs)
+
 /-- `place = v;` at a slot or a static (the place reader decides which). -/
 def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
   match uZugriff ctx ziel with
@@ -1425,18 +1452,9 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
   | .set ziel op wert => uSetze ctx ziel op wert
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .call c args =>
-    match koepfe.find? (fun k => strEq k.name c) with
-    | .none => .error ("call unknown: " ++ c)
-    | .some callee =>
-      if !(callee.held.all (fun l =>
-        ctx.held.any (strEq · l))) ||
-         !(ctx.held.all (fun l =>
-        callee.held.any (strEq · l))) then
-        .error "call under foreign lock without G form"
-      else
-        match uArgs ctx tabs callee.kinds args with
-        | .error e => .error e
-        | .ok xs => .ok (.call c xs)
+    match uRuf ctx tabs koepfe c args with
+    | .error e => .error e
+    | .ok (_, xs) => .ok (.call c xs)
   | _ => .error "stmt without G form"
 
 /-- The context after `let x [: T]`: the annotated range (when there is one) and the context in which the
@@ -1455,7 +1473,10 @@ def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option 
 
 /-- `let [mut] x [: T] = v;`: a number (the binding carries the computed range of `v`, or with `mut` the
     declared one) or a truth value; the statement and the context for the rest of the block. -/
-def uBindWert (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : SExpr) :
+def uMitLokal (ctx : UCtx) (x : String) (k : UParamArt) (ty : Ty) (muts : List String) : UCtx :=
+  { ctx with names := x :: ctx.names, kinds := k :: ctx.kinds, types := ty :: ctx.types, bits := 0 :: ctx.bits, muts := muts }
+
+def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : SExpr) :
     Except String (UStmt × UCtx) :=
   let muts : List String := if mu then x :: ctx.muts else ctx.muts.filter (fun m => !strEq m x)
   let boolCtx : UCtx := { ctx with names := x :: ctx.names, kinds := UParamArt.bool :: ctx.kinds,
@@ -1489,6 +1510,43 @@ def uBindWert (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : SExpr
           | .some (lo, hi) => .ok (.bindMut x lo hi sd, { ctx' with muts := muts })
           | .none => .error "let mut without a type"
         else .ok (.bind x d sd, { ctx' with muts := muts })
+
+/-- `let [mut] x [: T] = v;` where `v` may be a call of a function of the unit: its value is bound at the
+    callee's result type (`Block.bindCall`; a range annotation must contain the result range). -/
+def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool) (x : String)
+    (t : Option STyp) (e : SExpr) : Except String (UStmt × UCtx) :=
+  match e with
+  | .call c args =>
+    match koepfe.find? (fun k => strEq k.name c) with
+    | .none => uBindWertAllg ctx mu x t e
+    | .some _ =>
+      if mu then .error "let mut of a call without G form"
+      else
+        match uRuf ctx tabs koepfe c args with
+        | .error err => .error err
+        | .ok (callee, xs) =>
+          let muts : List String := ctx.muts.filter (fun m => !strEq m x)
+          match callee.resBool, callee.res with
+          | true, _ =>
+            match t with
+            | .some (.atom "bool") =>
+              .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.bool (Ty.bool) muts)
+            | .none =>
+              .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.bool (Ty.bool) muts)
+            | .some _ => .error "let of a truth value with a number type"
+          | false, .some (lo, hi) =>
+            match (match t with
+                | .none => .ok true
+                | .some ty =>
+                  match uErgBereich ctx.alias ty with
+                  | .error err => .error err
+                  | .ok (a, b) => .ok (decide (a ≤ lo) && decide (hi ≤ b)) : Except String Bool) with
+            | .error err => .error err
+            | .ok false => .error "let: value outside the annotated range"
+            | .ok true =>
+              .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
+          | false, .none => .error "call without a value"
+  | _ => uBindWertAllg ctx mu x t e
 
 /-- The trailing return (the `check_body`/`tr_body` of
     `lean_g.rs`): a result falls off nowhere, and a missing
@@ -1577,7 +1635,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
   | f + 1, ctx, .bind mu x t e :: rest =>
-    match uBindWert ctx mu x t e with
+    match uBindWert ctx tabs koepfe mu x t e with
     | .error err => .error err
     | .ok (st, ctx') =>
       match uAnwReihe tabs koepfe f ctx' rest with
@@ -2149,7 +2207,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2186,7 +2244,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
