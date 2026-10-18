@@ -513,3 +513,5 @@ import Grammatik.Code.Conc.Witness
 import Grammatik.Code.Model.Need
 import Grammatik.Speichermodell.Payload.PayloadHb
 import Grammatik.Speichermodell.Payload.PayloadLB
+import Grammatik.Hardware.Anbieter.Region
+import Grammatik.Hardware.Anbieter.Arena
