@@ -79,6 +79,34 @@ theorem call_core {lay : Layout D} {M : Modl} {S : Sees}
   rw [← hgeq] at hr
   refine ⟨m', f', Reach.trans (by simpa using h1) (Reach.trans (Reach.one h2) hr), hf2, hret, hRn, hWn, hK⟩
 
+/-- **The core of a lowered call that the source answers with a reason.** -/
+theorem call_core_why {lay : Layout D} {M : Modl} {S : Sees}
+    {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    (hFn : FnOk lay M) (hCall : CallRef lay M S R) {f : D.Fn} {σl σ' : World D}
+    {ρa : Env D (D.params f)} {r : Fin (D.gruende f)} (hRf : R f σl ρa = RufAusgang.why σ' r)
+    {fn : Nat} {lb : Lbl} {blk : Block} (hb : M.blk fn lb = some blk) {pre post : List Instr}
+    {d : Option Reg} {ops : List Opd} (hbody : blk.body = pre ++ Instr.call d (lay.fno f) ops :: post)
+    {m : Mem} {rs rs1 : Regs} {ks : List Frame} {dst : Option Reg}
+    (hpre : seqI pre m rs = some (m, rs1)) (hops : ops.mapM (Opd.ev rs1) = some (argImgs lay ρa))
+    (hR : Rep lay σl m) (hW : WfL lay m) :
+    ∃ m' f', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' f' (⟨fn, lb, pre.length, rs1, dst⟩ :: ks)) ∧
+      f'.dst = d ∧ RetAt M f' (whyImg (D.gruende f) (D.erg f) r.val) ∧ Rep lay σ' m' ∧ WfL lay m' ∧
+        Keep lay m m' := by
+  have hstr : Stretch M fn lb 0 pre := ⟨blk, hb, fun i hi => by
+    simp [hbody, List.getElem?_append_left hi]⟩
+  have h1 := reach_seq M S pre m ⟨fn, lb, 0, rs, dst⟩ ks m rs1 hstr hpre
+  have hi : blk.body[pre.length]? = some (.call d (lay.fno f) ops) := by simp [hbody]
+  obtain ⟨g, hg, hgfn, hgl, hgpc, hgd, hgA⟩ := callee_frame hFn f ρa d
+  have h2 := step_call (M := M) (S := S) (f := ⟨fn, lb, pre.length, rs1, dst⟩) (blk := blk) (m := m)
+    (ks := ks) hb hi hops hg
+  obtain ⟨m', f', hr, hf1, hf2, hret, hRn, hWn, hK⟩ := hCall.why f σl ρa σ' r hRf m g.regs
+    (⟨fn, lb, pre.length, rs1, dst⟩ :: ks) d hR hW hgA
+  have hgeq : g = ⟨lay.fno f, 0, 0, g.regs, d⟩ := by
+    cases g
+    simp_all
+  rw [← hgeq] at hr
+  refine ⟨m', f', Reach.trans (by simpa using h1) (Reach.trans (Reach.one h2) hr), hf2, hret, hRn, hWn, hK⟩
+
 /-- A lowered call whose result is not wanted. -/
 theorem call_run_none {lay : Layout D} {M : Modl} {S : Sees}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
@@ -109,6 +137,23 @@ theorem call_run_some {lay : Layout D} {M : Modl} {S : Sees}
         (.run m' ⟨fn, lb, pre.length + 1, rs1.set r w, dst⟩ ks) ∧
       Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
   obtain ⟨m', f', hr, hd, hret, hRn, hWn, hK⟩ := call_core hFn hCall hRf hb hbody hpre hops hR hW
+  exact ⟨m', Reach.trans hr ((reach_ret_back hret).2 r w hd hw), hRn, hWn, hK⟩
+
+/-- A lowered call that the source answers with a reason, whose answer word goes to register `r`. -/
+theorem call_run_why_some {lay : Layout D} {M : Modl} {S : Sees}
+    {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    (hFn : FnOk lay M) (hCall : CallRef lay M S R) {f : D.Fn} {σl σ' : World D}
+    {ρa : Env D (D.params f)} {rr : Fin (D.gruende f)} (hRf : R f σl ρa = RufAusgang.why σ' rr)
+    {fn : Nat} {lb : Lbl} {blk : Block} (hb : M.blk fn lb = some blk) {pre post : List Instr}
+    {r : Reg} {ops : List Opd} (hbody : blk.body = pre ++ Instr.call (some r) (lay.fno f) ops :: post)
+    {m : Mem} {rs rs1 : Regs} {ks : List Frame} {dst : Option Reg} {w : Val}
+    (hw : whyImg (D.gruende f) (D.erg f) rr.val = some w)
+    (hpre : seqI pre m rs = some (m, rs1)) (hops : ops.mapM (Opd.ev rs1) = some (argImgs lay ρa))
+    (hR : Rep lay σl m) (hW : WfL lay m) :
+    ∃ m', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks)
+        (.run m' ⟨fn, lb, pre.length + 1, rs1.set r w, dst⟩ ks) ∧
+      Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
+  obtain ⟨m', f', hr, hd, hret, hRn, hWn, hK⟩ := call_core_why hFn hCall hRf hb hbody hpre hops hR hW
   exact ⟨m', Reach.trans hr ((reach_ret_back hret).2 r w hd hw), hRn, hWn, hK⟩
 
 /-! ## The arguments of a call -/

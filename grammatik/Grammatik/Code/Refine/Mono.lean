@@ -781,6 +781,75 @@ theorem lowerWhy_shape (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (st st' 
     exact ⟨⟨_, _, rfl, rfl⟩, by simp, Nat.le_refl _⟩
   · simp at h
 
+/-- A call with a failure channel: the shape of its lowering, given the shape of the two continuations. -/
+theorem bindCallElse_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {τ : GTy} (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
+    (hp : Gabbro.Grammatik.RufPasst D V (D.signatur f) Λ) (hr : 0 < D.gruende f)
+    (err : Gabbro.Grammatik.Endblock D V l (.why (D.gruende f) :: Γ) (Gabbro.Grammatik.nach D f Λ))
+    (rest : Gabbro.Grammatik.Block D V l (τ :: Γ) (Gabbro.Grammatik.nach D f Λ) Λ') (lb k : Lbl)
+    (st st' : St) (blks : List Block)
+    (IHrest : ∀ a st1 s1 bo, lowerB lay (a :: cenv) lv rest (st.l + 2) k st1 = some (bo, s1) →
+      Shape (st.l + 2) st1 s1 bo)
+    (IHerr : ∀ a st1 s2 be, lowerEnd lay (a :: cenv) lv err (st.l + 3) st1 = some (be, s2) →
+      Shape (st.l + 3) st1 s2 be)
+    (h : lowerB lay cenv lv (Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest) lb k st
+      = some (blks, st')) : Shape lb st st' blks := by
+  unfold lowerB at h
+  rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
+  · simp [hla] at h
+  have m1 := lowerArgs_mono lay cenv args st.r _ hla
+  simp only [hla] at h
+  unfold lowerElse at h
+  cases τ with
+  | int lo hi =>
+      simp only at h
+      split at h
+      · rcases hp' : payCode (failTop (D.gruende f) (some (.int lo hi))) (retW (D.gruende f) (some (.int lo hi)))
+            (D.gruende f + 1) lo hi (.reg r1) (r1 + 2) with _ | ⟨cp, op, r2⟩
+        · simp [hp'] at h
+        have m2 := payCode_mono hp'
+        simp only [hp'] at h
+        rcases hb : bindCode (.int lo hi) op r2 with _ | ⟨cb, a, r3⟩
+        · simp [hb] at h
+        have m3 := bindCode_mono hb
+        simp only [hb] at h
+        rcases hb1 : lowerB lay (a :: cenv) lv rest (st.l + 2) k ⟨r3, st.l + 4⟩ with _ | ⟨bo, s1⟩
+        · simp [hb1] at h
+        have S1 := IHrest a _ _ _ hb1
+        simp only [hb1] at h
+        rcases hc : cvt (retW (D.gruende f) (some (.int lo hi))) (Ar.wid 0 ((D.gruende f : Int) - 1)) false
+            (.reg s1.r) (s1.r + 1) with ⟨cv, ov, r4⟩
+        have m4 := cvt_mono (retW (D.gruende f) (some (.int lo hi))) (Ar.wid 0 ((D.gruende f : Int) - 1)) false
+          (.reg s1.r) (s1.r + 1)
+        rw [hc] at m4 h
+        simp only at m4 h
+        rcases hb2 : bindCode (.why (D.gruende f)) ov r4 with _ | ⟨cb2, a2, r5⟩
+        · simp [hb2] at h
+        have m5 := bindCode_mono hb2
+        simp only [hb2] at h
+        rcases hb3 : lowerEnd lay (a2 :: cenv) lv err (st.l + 3) ⟨r5, s1.l⟩ with _ | ⟨be, s2⟩
+        · simp [hb3] at h
+        have S2 := IHerr a2 _ _ _ hb3
+        simp only [hb3] at h
+        have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+        · intro b hb'
+          simp only [List.mem_cons, List.mem_append] at hb'
+          rcases hb' with rfl | rfl | rfl | hb' | hb'
+          · rfl
+          · rfl
+          · rfl
+          · exact S1.2.1 b hb'
+          · exact S2.2.1 b hb'
+        · have a1 := S1.2.2
+          have a2' := S2.2.2
+          simp only at m1 m2 m3 m4 m5 a1 a2' ⊢
+          omega
+      · simp at h
+  | _ => simp at h
+
 mutual
 
 theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
@@ -1238,8 +1307,10 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         omega
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h => by
       simp [lowerB] at h
-  | _, _, _, _, .bindCallElse .., lb, k, st, st', blks, h => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h =>
+      bindCallElse_shape lay cenv lv f args he hp hr err rest lb k st st' blks
+        (fun a st1 s1 bo hk => lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k st1 s1 bo hk)
+        (fun a st1 s2 be hk => lowerEnd_shape lay (a :: cenv) lv err (st.l + 3) st1 s2 be hk) h
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, h => by
       simp [lowerB] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, h => by

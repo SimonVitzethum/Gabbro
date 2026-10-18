@@ -313,6 +313,67 @@ theorem lw_arm_cons {lb n' : Nat} {st s1 s2 : St} {b1 b2 : List Block} (hn : lb 
     · have := a1 x hx; omega
     · have := a2 x hx; omega
 
+/-- The shape of a call with a failure channel: a head block `lb` (call, case number, branch), the value arm's
+    entry `st.l` and the reason arm's entry `st.l + 1`, then the value continuation (entry `st.l + 2`, labels from
+    `st.l + 4`) and the reason continuation (entry `st.l + 3`, labels from the end of the first). -/
+theorem lw_else {lb : Nat} {st s1 s2 : St} {b0 bA bB : Block} {bo be : List Block}
+    (hb0 : b0.nl = lb) (hA : bA.nl = st.l) (hB : bB.nl = st.l + 1) (hlt : lb < st.l) (m1 : st.l + 4 ≤ s1.l)
+    (m2 : s1.l ≤ s2.l)
+    (W1 : (bo.map Block.lbl).Nodup ∧ ∀ x ∈ bo, x.nl = st.l + 2 ∨ (st.l + 4 ≤ x.nl ∧ x.nl < s1.l))
+    (W2 : (be.map Block.lbl).Nodup ∧ ∀ x ∈ be, x.nl = st.l + 3 ∨ (s1.l ≤ x.nl ∧ x.nl < s2.l)) :
+    LblWf lb st s2 (b0 :: bA :: bB :: (bo ++ be)) := by
+  obtain ⟨n1, a1⟩ := W1
+  obtain ⟨n2, a2⟩ := W2
+  have hmem : ∀ x ∈ bo ++ be, x.nl = st.l + 2 ∨ x.nl = st.l + 3 ∨ (st.l + 4 ≤ x.nl ∧ x.nl < s2.l) := by
+    intro x hx
+    rcases List.mem_append.mp hx with hx | hx
+    · have := a1 x hx; omega
+    · have := a2 x hx; omega
+  have nd0 : ((bo ++ be).map Block.lbl).Nodup := by
+    refine lw_app (a1 := fun x => x = st.l + 2 ∨ (st.l + 4 ≤ x ∧ x < s1.l))
+      (a2 := fun x => x = st.l + 3 ∨ (s1.l ≤ x ∧ x < s2.l)) n1 n2 ?_ ?_ ?_
+    · intro x hx; exact a1 x hx
+    · intro x hx; exact a2 x hx
+    · intro x hx hy; omega
+  have nd1 : ((bB :: (bo ++ be)).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => st.l + 2 ≤ x ∧ x < s2.l) hB ?_ nd0 ?_
+    · intro x hx; omega
+    · intro x hx
+      have := hmem x hx
+      show st.l + 2 ≤ x.nl ∧ x.nl < s2.l
+      omega
+  have nd2 : ((bA :: bB :: (bo ++ be)).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => st.l + 1 ≤ x ∧ x < s2.l) hA ?_ nd1 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · show st.l + 1 ≤ x.nl ∧ x.nl < s2.l
+        omega
+      · have := hmem x hx
+        show st.l + 1 ≤ x.nl ∧ x.nl < s2.l
+        omega
+  refine ⟨by omega, ?_, ?_⟩
+  · refine lw_head (a1 := fun x => st.l ≤ x ∧ x < s2.l) hb0 ?_ nd2 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | rfl | hx
+      · show st.l ≤ x.nl ∧ x.nl < s2.l
+        omega
+      · show st.l ≤ x.nl ∧ x.nl < s2.l
+        omega
+      · have := hmem x hx
+        show st.l ≤ x.nl ∧ x.nl < s2.l
+        omega
+  · intro x hx
+    simp only [List.mem_cons] at hx
+    rcases hx with rfl | rfl | rfl | hx
+    · exact Or.inl hb0
+    · right; omega
+    · right; omega
+    · have := hmem x hx; right; omega
+
 variable [Conf] {D : Deklaration}
 
 theorem lowerErg_lbl (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List (Res D)} {eo : Option GTy}
@@ -378,6 +439,64 @@ theorem lowerWhy_lbl (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (st st' : 
   · simp at h
 
 variable {V : Vertrag D}
+
+/-- A call with a failure channel: its blocks' labels are distinct, given the continuations'. -/
+theorem bindCallElse_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {τ : GTy} (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
+    (hp : Gabbro.Grammatik.RufPasst D V (D.signatur f) Λ) (hr : 0 < D.gruende f)
+    (err : Gabbro.Grammatik.Endblock D V l (.why (D.gruende f) :: Γ) (Gabbro.Grammatik.nach D f Λ))
+    (rest : Gabbro.Grammatik.Block D V l (τ :: Γ) (Gabbro.Grammatik.nach D f Λ) Λ') (lb k : Lbl)
+    (st st' : St) (blks : List Block) (hlt : (lb : Nat) < st.l)
+    (IHrest : ∀ a st1 s1 bo, (st.l + 2 : Nat) < st1.l →
+      lowerB lay (a :: cenv) lv rest (st.l + 2) k st1 = some (bo, s1) → LblWf (st.l + 2) st1 s1 bo)
+    (IHerr : ∀ a st1 s2 be, (st.l + 3 : Nat) < st1.l →
+      lowerEnd lay (a :: cenv) lv err (st.l + 3) st1 = some (be, s2) → LblWf (st.l + 3) st1 s2 be)
+    (h : lowerB lay cenv lv (Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest) lb k st
+      = some (blks, st')) : LblWf lb st st' blks := by
+  unfold lowerB at h
+  rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
+  · simp [hla] at h
+  simp only [hla] at h
+  unfold lowerElse at h
+  cases τ with
+  | int lo hi =>
+      simp only at h
+      split at h
+      · rcases hp' : payCode (failTop (D.gruende f) (some (.int lo hi))) (retW (D.gruende f) (some (.int lo hi)))
+            (D.gruende f + 1) lo hi (.reg r1) (r1 + 2) with _ | ⟨cp, op, r2⟩
+        · simp [hp'] at h
+        simp only [hp'] at h
+        rcases hb : bindCode (.int lo hi) op r2 with _ | ⟨cb, a, r3⟩
+        · simp [hb] at h
+        simp only [hb] at h
+        rcases hb1 : lowerB lay (a :: cenv) lv rest (st.l + 2) k ⟨r3, st.l + 4⟩ with _ | ⟨bo, s1⟩
+        · simp [hb1] at h
+        have W1 := IHrest a _ _ _ (by show (st.l + 2 : Nat) < st.l + 4; omega) hb1
+        simp only [hb1] at h
+        rcases hc : cvt (retW (D.gruende f) (some (.int lo hi))) (Ar.wid 0 ((D.gruende f : Int) - 1)) false
+            (.reg s1.r) (s1.r + 1) with ⟨cv, ov, r4⟩
+        rw [hc] at h
+        simp only at h
+        rcases hb2 : bindCode (.why (D.gruende f)) ov r4 with _ | ⟨cb2, a2, r5⟩
+        · simp [hb2] at h
+        simp only [hb2] at h
+        have m1' : st.l + 4 ≤ s1.l := W1.1
+        rcases hb3 : lowerEnd lay (a2 :: cenv) lv err (st.l + 3) ⟨r5, s1.l⟩ with _ | ⟨be, s2⟩
+        · simp [hb3] at h
+        have W2 := IHerr a2 _ _ _ (by show (st.l + 3 : Nat) < s1.l; omega) hb3
+        simp only [hb3, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact lw_else (b0 := ⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops,
+              .bin (r1 + 1) .urem (retW (D.gruende f) (some (.int lo hi))) (.reg r1)
+                (.int (retW (D.gruende f) (some (.int lo hi))) ((D.gruende f + 1 : Nat) : Int))],
+            .brc .eq (retW (D.gruende f) (some (.int lo hi))) (.reg (r1 + 1))
+              (.int (retW (D.gruende f) (some (.int lo hi))) 0) st.l (st.l + 1)⟩)
+          (bA := ⟨st.l, [], cp ++ cb, .jmp (st.l + 2)⟩)
+          (bB := ⟨st.l + 1, [], .bin s1.r .sub (retW (D.gruende f) (some (.int lo hi))) (.reg (r1 + 1))
+            (.int (retW (D.gruende f) (some (.int lo hi))) 1) :: (cv ++ cb2), .jmp (st.l + 3)⟩)
+          rfl rfl rfl hlt m1' W2.1 ⟨W1.2.1, W1.2.2⟩ ⟨W2.2.1, W2.2.2⟩
+      · simp at h
+  | _ => simp at h
 
 mutual
 
@@ -704,8 +823,10 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         ⟨n2, a2⟩
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, hlt, h => by
       simp [lowerB] at h
-  | _, _, _, _, .bindCallElse .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, hlt, h =>
+      bindCallElse_lbl lay cenv lv f args he hp hr err rest lb k st st' blks hlt
+        (fun a st1 s1 bo hlt' hk => lowerB_lbl lay (a :: cenv) lv rest (st.l + 2) k st1 s1 bo hlt' hk)
+        (fun a st1 s2 be hlt' hk => lowerEnd_lbl lay (a :: cenv) lv err (st.l + 3) st1 s2 be hlt' hk) h
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, hlt, h => by
       simp [lowerB] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, hlt, h => by

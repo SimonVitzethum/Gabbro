@@ -6,6 +6,7 @@ import Grammatik.Code.Refine.CallRun
 import Grammatik.Code.Refine.Match.OnOption
 import Grammatik.Code.Refine.Match.Why
 import Grammatik.Code.Refine.Match.Tag
+import Grammatik.Code.Refine.Match.Else
 
 /-
   File:      Grammatik/Code/Refine/StmtOk.lean
@@ -848,8 +849,16 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · simp only [OutOk]
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerB] at h
-  | _, _, _, _, .bindCallElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv,
+      hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      bindCallElse_ok lay hL cenv lv O passes R f args he hp hr err rest
+        (fun a lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerB_ok lay hL (a :: cenv) lv O passes R rest lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        (fun a lb' st1 st1' blks' h' M' S' fn' hM' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerEnd_ok lay hL (a :: cenv) lv O passes R err lb' st1 st1' blks' h' M' S' fn' hM' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerB] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by

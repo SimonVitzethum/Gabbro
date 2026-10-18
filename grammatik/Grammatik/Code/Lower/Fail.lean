@@ -34,10 +34,10 @@ variable [Conf]
 /-- The width of the answer word. -/
 def retW (n : Nat) (eo : Option GTy) : Nat := Ar.wid 0 (failTop n eo)
 
-/-- The failure channel is in the fragment: the word fits, the answer is void or an integer range. -/
+/-- The failure channel is in the fragment: the word fits, the answer is void or a non-empty integer range. -/
 def failOk (n : Nat) (eo : Option GTy) : Bool :=
   decide (Ar.Fits 0 (failTop n eo) 128) &&
-    (match eo with | none => true | some (.int _ _) => true | some _ => false)
+    (match eo with | none => true | some (.int lo hi) => decide (lo ≤ hi) | some _ => false)
 
 /-- The word of a value answer. -/
 def okZ (n : Nat) : (eo : Option GTy) → ErgVal D eo → Int

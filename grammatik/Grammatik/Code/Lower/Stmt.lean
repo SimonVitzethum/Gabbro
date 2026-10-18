@@ -134,6 +134,46 @@ def lowerRet (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List 
 def lowerWhy (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (s : St) : Option (List Block × St) :=
   if failOk n eo then some ([⟨lb, [], [], .ret (some (.int (retW n eo) ((r : Int) + 1)))⟩], s) else none
 
+/-- **A call with a failure channel**, as a lowering with its two continuations given: the call, the case
+    number (the answer word modulo `n + 1`), a branch to the value arm (case `0`: the word divided by
+    `n + 1` plus `lo`, a new local, then `kRest`) or to the reason arm (the case number minus one, a new
+    local, then `kErr`). Labels: `st.l` the value arm's entry, `st.l + 1` the reason arm's entry, `st.l + 2`
+    and `st.l + 3` the continuations' entries; their counters start at `st.l + 4` and run on. -/
+def lowerElse (lay : Layout D) (cenv : List Reg) (fno n : Nat) (τ : GTy) (ca : List Instr) (ops : List Opd)
+    (r1 : Nat) (lb : Lbl) (s : St) (kRest : Reg → St → Option (List Block × St))
+    (kErr : Reg → St → Option (List Block × St)) : Option (List Block × St) :=
+  match τ with
+  | .int lo hi =>
+      if failOk n (some (.int lo hi)) ∧ Ar.Fits 0 ((n : Int) - 1) 128 then
+        match payCode (failTop n (some (.int lo hi))) (retW n (some (.int lo hi))) (n + 1) lo hi (.reg r1) (r1 + 2) with
+        | some (cp, op, r2) =>
+            match bindCode (.int lo hi) op r2 with
+            | some (cb, a, r3) =>
+                match kRest a ⟨r3, s.l + 4⟩ with
+                | some (bo, s1) =>
+                    match cvt (retW n (some (.int lo hi))) (Ar.wid 0 ((n : Int) - 1)) false (.reg s1.r) (s1.r + 1) with
+                    | (cv, ov, r4) =>
+                        match bindCode (.why n) ov r4 with
+                        | some (cb2, a2, r5) =>
+                            match kErr a2 ⟨r5, s1.l⟩ with
+                            | some (be, s2) =>
+                                some (⟨lb, [], ca ++ [.call (some r1) fno ops,
+                                        .bin (r1 + 1) .urem (retW n (some (.int lo hi))) (.reg r1)
+                                          (.int (retW n (some (.int lo hi))) ((n + 1 : Nat) : Int))],
+                                      .brc .eq (retW n (some (.int lo hi))) (.reg (r1 + 1))
+                                        (.int (retW n (some (.int lo hi))) 0) s.l (s.l + 1)⟩ ::
+                                      ⟨s.l, [], cp ++ cb, .jmp (s.l + 2)⟩ ::
+                                      ⟨s.l + 1, [], .bin s1.r .sub (retW n (some (.int lo hi))) (.reg (r1 + 1))
+                                          (.int (retW n (some (.int lo hi))) 1) :: (cv ++ cb2), .jmp (s.l + 3)⟩ ::
+                                      (bo ++ be), s2)
+                            | none => none
+                        | none => none
+                | none => none
+            | none => none
+        | none => none
+      else none
+  | _ => none
+
 variable {V : Vertrag D}
 
 mutual
@@ -365,6 +405,13 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
                   some (⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp s.l⟩ :: b2, s2)
               | none => none
           | none => none
+      | none => none
+  | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse (τ := τ) f args _ _ _ err rest, lb, k, s =>
+      match lowerArgs lay cenv args s.r with
+      | some (ca, ops, r1) =>
+          lowerElse lay cenv (lay.fno f) (D.gruende f) τ ca ops r1 lb s
+            (fun a st => lowerB lay (a :: cenv) lv rest (s.l + 2) k st)
+            (fun a st => lowerEnd lay (a :: cenv) lv err (s.l + 3) st)
       | none => none
   | _, _, _, _, .check c sonst rest, lb, k, s =>
       match lowerE lay cenv c s.r with
