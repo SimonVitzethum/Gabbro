@@ -166,7 +166,31 @@ theorem payCode_mono {top : Int} {W L : Nat} {lo hi : Int} {ov : Opd} {r : Nat} 
     omega
   · simp at h
 
-/-- **Registers only go up.** -/
+/-- An integer operation at a chosen width: registers only go up. -/
+theorem opRest_mono {op : BinOp} {j : Int × Int} {τ σa σb : GTy} {oa ob : Opd} {r : Nat} {c : LR}
+    (h : opRest op j τ σa σb oa ob r = some c) : r ≤ c.2.2 := by
+  unfold opRest at h
+  split at h
+  · rename_i la ha lb hb
+    rcases hc1 : cvtG (.int la ha) (.int j.1 j.2) oa r with _ | ⟨c1, oa', r1⟩
+    · simp [hc1] at h
+    have m1 := cvtG_mono hc1
+    simp only [hc1] at h
+    rcases hc2 : cvtG (.int lb hb) (.int j.1 j.2) ob r1 with _ | ⟨c2, ob', r2⟩
+    · simp [hc2] at h
+    have m2 := cvtG_mono hc2
+    simp only [hc2] at h
+    split at h
+    · rcases hc3 : cvtG (.int j.1 j.2) τ (.reg r2) (r2 + 1) with _ | ⟨c3, o3, r3⟩
+      · simp [hc3] at h
+      have m3 := cvtG_mono hc3
+      simp only [hc3] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+    · simp at h
+  · simp at h
+
 theorem numCode_mono {lo hi : Int} {W L i : Nat} {oe : Opd} {r : Nat} :
     r ≤ (numCode lo hi W L i oe r).2.2 := by
   unfold numCode
@@ -178,6 +202,7 @@ theorem numCode_mono {lo hi : Int} {W L i : Nat} {oe : Opd} {r : Nat} :
 
 mutual
 
+/-- **Registers only go up.** -/
 theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : GTy} (e : Expr D Γ Λ τ) (r : Nat) (c : LR),
       lowerE lay cenv e r = some c → r ≤ c.2.2
@@ -458,22 +483,127 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       obtain rfl := Option.some.inj h
       simp only at m1 m2 m3 ⊢
       omega
-  | _, _, _, .sdiv .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .srem .., r, c, h => by
-      simp [lowerE] at h
+  | _, _, _, .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .sdiv (jsdiv l1 h1 l2 h2) (ety (Expr.sdiv hb a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+  | _, _, _, .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .srem (jsrem l1 h1 l2 h2) (ety (Expr.srem hb a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
   | _, _, _, .getBytes .., r, c, h => by
       simp [lowerE] at h
-  | _, _, _, .band .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .bor .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .bxor .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .shl .., r, c, h => by
-      simp [lowerE] at h
-  | _, _, _, .shr .., r, c, h => by
-      simp [lowerE] at h
+  | _, _, _, .band (h1 := h1) (h2 := h2) h0 h0' a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .and (jbit h1 h2 h1) (ety (Expr.band h0 h0' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+  | _, _, _, .bor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .or (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+  | _, _, _, .bxor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .xor (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bxor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+  | _, _, _, .shl (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .shl (jshl h1 h2) (ety (Expr.shl w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
+  | _, _, _, .shr (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, r, c, h => by
+      simp only [lowerE] at h
+      rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
+      · simp [ha] at h
+      have m1 := lowerE_mono lay cenv a r _ ha
+      simp only [ha] at h
+      rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
+      · simp [hb'] at h
+      have m2 := lowerE_mono lay cenv b r1 _ hb'
+      simp only [hb'] at h
+      rcases hr : opRest .lshr (jshr h1 h2) (ety (Expr.shr w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
+      · simp [hr] at h
+      have m3 := opRest_mono hr
+      simp only [hr, Option.map_some] at h
+      obtain rfl := Option.some.inj h
+      simp only at m1 m2 m3 ⊢
+      omega
   | _, _, _, .fllt .., r, c, h => by
       simp [lowerE] at h
   | _, _, _, .flle .., r, c, h => by

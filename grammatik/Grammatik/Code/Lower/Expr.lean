@@ -137,6 +137,49 @@ def divRest (op : BinOp) (τ σa σb : GTy) (oa ob : Opd) (r : Nat) : Option LR 
       | none => none
   | _, _ => none
 
+/-- The range a signed division is carried out in: it holds both operands and the result, is signed
+    (it reaches `-1`), and stays one below the operands' least, so that the dividend is never the least
+    number of the width (`INT_MIN / -1` is no instruction's defined behaviour). -/
+def jsdiv (l1 h1 l2 h2 : Int) : Int × Int :=
+  (min (min l1 l2) (min (-(Gabbro.Grammatik.betragMax l1 h1)) (-1)) - 1,
+   max (max h1 h2) (max (Gabbro.Grammatik.betragMax l1 h1) 1))
+
+/-- The same for a signed remainder (its result lies within the divisor's magnitude). -/
+def jsrem (l1 h1 l2 h2 : Int) : Int × Int :=
+  (min (min l1 l2) (min (-(Gabbro.Grammatik.betragMax l2 h2 - 1)) (-1)) - 1,
+   max (max h1 h2) (max (Gabbro.Grammatik.betragMax l2 h2 - 1) 1))
+
+/-- The range a bit operation is carried out in: unsigned, holding both operands and the result `hr`. -/
+def jbit (h1 h2 hr : Int) : Int × Int := (0, max (max h1 h2) hr)
+
+/-- The range a left shift is carried out in: it holds the operands, the result, and `2 ^ h2`, so that the
+    width exceeds the largest shift amount `h2` (a shift by the width or more is no instruction's defined
+    behaviour). -/
+def jshl (h1 h2 : Int) : Int × Int :=
+  (0, max (max h1 h2) (max (h1 * 2 ^ h2.toNat) (2 ^ h2.toNat)))
+
+/-- The same for a right shift. -/
+def jshr (h1 h2 : Int) : Int × Int := (0, max (max h1 h2) (2 ^ h2.toNat))
+
+/-- The tail of an integer operation carried out at the width of the range `j`: both operands moved
+    there, the instruction, then the result moved to the width of its own type. -/
+def opRest (op : BinOp) (j : Int × Int) (τ σa σb : GTy) (oa ob : Opd) (r : Nat) : Option LR :=
+  match σa, σb with
+  | .int _ _, .int _ _ =>
+      match cvtG σa (.int j.1 j.2) oa r with
+      | some (c1, oa', r1) =>
+          match cvtG σb (.int j.1 j.2) ob r1 with
+          | some (c2, ob', r2) =>
+              if fitsT (.int j.1 j.2) && fitsT τ then
+                match cvtG (.int j.1 j.2) τ (.reg r2) (r2 + 1) with
+                | some (c3, o3, r3) =>
+                    some (c1 ++ c2 ++ [.bin r2 op (twid (.int j.1 j.2)) oa' ob'] ++ c3, o3, r3)
+                | none => none
+              else none
+          | none => none
+      | none => none
+  | _, _ => none
+
 /-- The type of an expression, as a value. -/
 def ety {Γ : Ctx} {Λ : List (Gabbro.Grammatik.Res D)} {τ : GTy} (_ : Expr D Γ Λ τ) : GTy := τ
 
@@ -318,6 +361,69 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
   | _, _, _, .why n i, r =>
       if Ar.Fits 0 ((n : Int) - 1) 128 then some ([], .int (Ar.wid 0 ((n : Int) - 1)) (i.val : Int), r)
       else none
+  | _, _, _, .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .sdiv (jsdiv l1 h1 l2 h2) (ety (Expr.sdiv hb a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .srem (jsrem l1 h1 l2 h2) (ety (Expr.srem hb a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .band (h1 := h1) (h2 := h2) h0 h0' a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .and (jbit h1 h2 h1) (ety (Expr.band h0 h0' a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .bor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .or (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob
+                r2).map fun x => (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .bxor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .xor (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bxor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob
+                r2).map fun x => (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .shl (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .shl (jshl h1 h2) (ety (Expr.shl w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
+  | _, _, _, .shr (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, r =>
+      match lowerE lay cenv a r with
+      | some (ca, oa, r1) =>
+          match lowerE lay cenv b r1 with
+          | some (cb, ob, r2) =>
+              (opRest .lshr (jshr h1 h2) (ety (Expr.shr w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2).map fun x =>
+                (ca ++ cb ++ x.1, x.2.1, x.2.2)
+          | none => none
+      | none => none
   | _, _, _, .case cs i nutz, r =>
       if Ar.Fits 0 (sumTop cs) 128 then lowerNutz lay cenv (Ar.wid 0 (sumTop cs)) cs.length i.val nutz r
       else none
