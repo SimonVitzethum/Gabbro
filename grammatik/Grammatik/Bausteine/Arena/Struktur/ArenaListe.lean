@@ -23,8 +23,8 @@
     * `liste_pop_frei` -- the stack discipline: pop the head, then release exactly that slot.
   The counter-theorem for a double link is `ArenaKette.push_doppelt_bricht`.
 -/
-import Grammatik.Bausteine.Arena.ArenaFremd
-import Grammatik.Bausteine.Arena.ArenaKette
+import Grammatik.Bausteine.Arena.Struktur.ArenaFremd
+import Grammatik.Bausteine.Arena.Struktur.ArenaKette
 
 namespace Gabbro.Grammatik
 

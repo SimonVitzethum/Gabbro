@@ -6,7 +6,7 @@
              link of the arena. Every other global and every other field of the table stays word for word.
              A link structure in its own fields is therefore untouched by every allocator move.
 -/
-import Grammatik.Bausteine.Arena.ArenaLebt
+import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
 
 namespace Gabbro.Grammatik
 

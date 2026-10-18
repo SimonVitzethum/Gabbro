@@ -14,8 +14,8 @@
   child place `Cp[p]` is empty (leaf in) and that `i` is a leaf (leaf out) are facts about the world BEFORE the
   move; the checker establishes them by names (`N586`) and guards. The two child fields are two fields (`hd`).
 -/
-import Grammatik.Bausteine.Arena.ArenaLinkForm
-import Grammatik.Bausteine.Arena.ArenaBaumWelt
+import Grammatik.Bausteine.Arena.Struktur.ArenaLinkForm
+import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
 
 namespace Gabbro.Grammatik
 

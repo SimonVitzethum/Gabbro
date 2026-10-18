@@ -18,8 +18,8 @@
   then released). The `sibling-consistency demand` of O6 is a further predicate over the same functions; it is the
   next piece (PLAN-DYNAMISCH 8a).
 -/
-import Grammatik.Bausteine.Arena.ArenaListe
-import Grammatik.Bausteine.Arena.ArenaBaum
+import Grammatik.Bausteine.Arena.Struktur.ArenaListe
+import Grammatik.Bausteine.Arena.Struktur.ArenaBaum
 
 namespace Gabbro.Grammatik
 

@@ -16,7 +16,8 @@
   `execBlock (form … rest) σ ρ = execBlock rest σ' ρ'` (`schrumpf` drops the binder of a `narrow`), together with the
   frame facts (link field, head, and the allocator's three views: head of the free list, free links, counter).
 -/
-import Grammatik.Bausteine.Arena.ArenaListe
+import Grammatik.Bausteine.Arena.Struktur.ArenaListe
+import Grammatik.Bausteine.Arena.Struktur.ArenaAuf
 
 namespace Gabbro.Grammatik
 
@@ -160,6 +161,16 @@ def linkUnlink (L : LinkFeld A) (p : Var Γ (Ty.index (D.count A.tab)))
   .narrow (Expr.umTyp L.hf (Expr.slot A.tab L.f (Expr.var p) hLT)) 0 (D.count A.tab - 1) voll
     (.cons (.assignSlot A.tab L.f (Expr.var (.there p)) (Expr.slot A.tab L.f (Expr.var .here) hLT) hwT hLT) rest)
 
+/-- **`let i = head else voll;  rest`** -- read the head without moving it; the binder holds the head slot. -/
+def linkKopfBind (G : LinkKopf A) (hLG : gdarf D G.g Λ) (voll : Endblock D V l Γ Λ)
+    (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') : Block D V l Γ Λ Λ' :=
+  .narrow (Expr.umTyp G.hg (Expr.glob G.g hLG)) 0 (D.count A.tab - 1) voll rest
+
+/-- **`let q = lnk[p] else voll;  rest`** -- read the successor of `p` without moving anything. -/
+def linkNachBind (L : LinkFeld A) (p : Var Γ (Ty.index (D.count A.tab))) (hLT : darf D A.tab Λ)
+    (voll : Endblock D V l Γ Λ) (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') : Block D V l Γ Λ Λ' :=
+  .narrow (Expr.umTyp L.hf (Expr.slot A.tab L.f (Expr.var p) hLT)) 0 (D.count A.tab - 1) voll rest
+
 end Block
 
 /-! ## 3. What the executed forms leave -/
@@ -252,6 +263,80 @@ theorem linkUnlink_ausfuehren
     · exact L.wert_schreibSlot_selbst _ _ _ _
     · exact L.wert_schreibSlot_anderer _ _ _ _ _ hj
 
+/-- **`pop` on an empty list takes its `else`:** nothing moves but the recorded read. -/
+theorem linkPop_voll
+    (hwG : V.gschreibt G.g = true) (hLG : gdarf D G.g Λ) (hLT : darf D A.tab Λ)
+    (voll : Endblock D V l Γ Λ) (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ) (hn : ¬ G.st σ < D.count A.tab) :
+    execBlock (V := V) O passes R (Block.linkPop L G hwG hLG hLT voll rest) σ ρ
+      = (execEnd O passes R voll (σ.lese Λ [Sum.inr G.g]) ρ).zuAusgang := by
+  have hn' : ¬ ((0 : Int) ≤ G.st σ ∧ G.st σ ≤ D.count A.tab - 1) := by
+    intro h; exact hn (by omega)
+  simp only [Block.linkPop, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
+  rw [dif_neg (by exact hn')]
+
+/-- **`unlink` with no successor takes its `else`.** -/
+theorem linkUnlink_voll
+    (p : Var Γ (Ty.index (D.count A.tab)))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (voll : Endblock D V l Γ Λ) (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ) (hn : ¬ L.wert σ (ρ.get p).n < D.count A.tab) :
+    execBlock (V := V) O passes R (Block.linkUnlink L p hwT hLT voll rest) σ ρ
+      = (execEnd O passes R voll (σ.lese Λ [Sum.inl A.tab]) ρ).zuAusgang := by
+  have hn' : ¬ ((0 : Int) ≤ L.wert σ (ρ.get p).n ∧ L.wert σ (ρ.get p).n ≤ D.count A.tab - 1) := by
+    intro h; exact hn (by omega)
+  simp only [Block.linkUnlink, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte]
+  rw [dif_neg (by exact hn')]
+
+/-- **Reading the head binds it when the list is non-empty** (and moves nothing but the recorded read). -/
+theorem linkKopfBind_ausfuehren (hLG : gdarf D G.g Λ) (voll : Endblock D V l Γ Λ)
+    (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hne : G.st σ < D.count A.tab) :
+    ∃ k : Wert D (Ty.index (D.count A.tab)),
+      execBlock (V := V) O passes R (Block.linkKopfBind G hLG voll rest) σ ρ
+        = (execBlock (V := V) O passes R rest (σ.lese Λ [Sum.inr G.g]) (.cons k ρ)).schrumpf ∧
+      k.n = G.st σ := by
+  have hk : (0 : Int) ≤ G.st σ ∧ G.st σ ≤ D.count A.tab - 1 := ⟨(Wert.umTyp G.hg (σ.globs G.g)).lo_le, by omega⟩
+  simp only [Block.linkKopfBind, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
+  rw [dif_pos (by exact hk)]
+  exact ⟨_, rfl, rfl⟩
+
+/-- **Reading the head on an empty list takes the `else`.** -/
+theorem linkKopfBind_voll (hLG : gdarf D G.g Λ) (voll : Endblock D V l Γ Λ)
+    (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hn : ¬ G.st σ < D.count A.tab) :
+    execBlock (V := V) O passes R (Block.linkKopfBind G hLG voll rest) σ ρ
+      = (execEnd O passes R voll (σ.lese Λ [Sum.inr G.g]) ρ).zuAusgang := by
+  have hn' : ¬ ((0 : Int) ≤ G.st σ ∧ G.st σ ≤ D.count A.tab - 1) := by
+    intro h; exact hn (by omega)
+  simp only [Block.linkKopfBind, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
+  rw [dif_neg (by exact hn')]
+
+/-- **Reading the successor of `p` binds it when there is one.** -/
+theorem linkNachBind_ausfuehren (p : Var Γ (Ty.index (D.count A.tab))) (hLT : darf D A.tab Λ)
+    (voll : Endblock D V l Γ Λ) (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ) (hne : L.wert σ (ρ.get p).n < D.count A.tab) :
+    ∃ k : Wert D (Ty.index (D.count A.tab)),
+      execBlock (V := V) O passes R (Block.linkNachBind L p hLT voll rest) σ ρ
+        = (execBlock (V := V) O passes R rest (σ.lese Λ [Sum.inl A.tab]) (.cons k ρ)).schrumpf ∧
+      k.n = L.wert σ (ρ.get p).n := by
+  have hk : (0 : Int) ≤ L.wert σ (ρ.get p).n ∧ L.wert σ (ρ.get p).n ≤ D.count A.tab - 1 :=
+    ⟨(Wert.umTyp L.hf (σ.slots A.tab (ρ.get p).n L.f)).lo_le, by omega⟩
+  simp only [Block.linkNachBind, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte]
+  rw [dif_pos (by exact hk)]
+  exact ⟨_, rfl, rfl⟩
+
+/-- **Reading the successor of `p` with none takes the `else`.** -/
+theorem linkNachBind_voll (p : Var Γ (Ty.index (D.count A.tab))) (hLT : darf D A.tab Λ)
+    (voll : Endblock D V l Γ Λ) (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ) (hn : ¬ L.wert σ (ρ.get p).n < D.count A.tab) :
+    execBlock (V := V) O passes R (Block.linkNachBind L p hLT voll rest) σ ρ
+      = (execEnd O passes R voll (σ.lese Λ [Sum.inl A.tab]) ρ).zuAusgang := by
+  have hn' : ¬ ((0 : Int) ≤ L.wert σ (ρ.get p).n ∧ L.wert σ (ρ.get p).n ≤ D.count A.tab - 1) := by
+    intro h; exact hn (by omega)
+  simp only [Block.linkNachBind, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte]
+  rw [dif_neg (by exact hn')]
+
 /-! ## 4. The list invariant on the executed forms -/
 
 /-- **Executed `push` keeps the list.** `x` names a live slot that is not linked (the checker's `N586` and the
@@ -266,11 +351,18 @@ theorem liste_push_zug
       execBlock (V := V) O passes R (Block.linkPush L G x hwT hLT hwG hLG rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
       ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧ G.st σ' = (ρ.get x).n ∧
-      L.wert σ' (ρ.get x).n = G.st σ := by
+      L.wert σ' (ρ.get x).n = G.st σ ∧
+      (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j →
+        j = (ρ.get x).n ∨ Auf (D.count A.tab) (L.wert σ) (G.st σ) j) ∧
+      (∀ j, Auf (D.count A.tab) (L.wert σ) (G.st σ) j → Auf (D.count A.tab) (L.wert σ') (G.st σ') j) := by
   obtain ⟨σ', he, hg, hli, ho, hk, hn, hs⟩ :=
     linkPush_ausfuehren O passes R L G x hwT hLT hwG hLG rest σ ρ
+  have hchain : ∃ Ls, KetteF (D.count A.tab) (L.wert σ) (G.st σ) Ls := by
+    obtain ⟨Ls, hk0, -, -⟩ := hl; exact ⟨Ls, hk0⟩
+  have hc : (ρ.get x).n < D.count A.tab := by have := hi.2.1; have := A.stand_le σ; omega
   exact ⟨σ', he, liste_push A L G hl _ hi hnot hk hn hs hg hli ho, A.freiOk_gleich hk hn hs hok,
-    A.lebt_gleich hk hn hs, hg, hli⟩
+    A.lebt_gleich hk hn hs, hg, hli,
+    auf_push_vor hchain hi.1 hc hnot hg hli ho, auf_push_nach hchain hi.1 hc hnot hg hli ho⟩
 
 /-- **Executed `pop` keeps the list.** The binder holds the old head, which is live and no longer linked, so it may be
     released (`liste_pop_frei`). Valid for every continuation. -/
@@ -282,11 +374,13 @@ theorem liste_pop_zug
       execBlock (V := V) O passes R (Block.linkPop L G hwG hLG hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
       k.n = G.st σ ∧ ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
-      ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧ G.st σ' = L.wert σ (G.st σ) := by
+      ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧ G.st σ' = L.wert σ (G.st σ) ∧
+      (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j → Auf (D.count A.tab) (L.wert σ) (G.st σ) j) := by
   obtain ⟨σ', k, he, hkn, hg, ho, hk, hn, hs⟩ :=
     linkPop_ausfuehren O passes R L G hwG hLG hLT voll rest σ ρ hne
   obtain ⟨h1, h2, h3⟩ := liste_pop A L G hl hne hk hn hs hg ho
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hg⟩
+  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hg,
+    auf_pop_vor (by obtain ⟨Ls, hk0, -, -⟩ := hl; exact ⟨Ls, hk0⟩) hne hg (fun j => ho j)⟩
 
 /-- **Executed `unlink` keeps the list.** `p` is on the list and has a successor `i`; the binder holds `i`, which is
     live and no longer linked, so it may be released. Valid for every continuation. -/
@@ -301,11 +395,13 @@ theorem liste_unlink_zug
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
       k.n = L.wert σ (ρ.get p).n ∧ ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
       ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧
-      L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) := by
+      L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) ∧
+      (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j → Auf (D.count A.tab) (L.wert σ) (G.st σ) j) := by
   obtain ⟨σ', k, he, hkn, hg, hnp, ho, hk, hn, hs⟩ :=
     linkUnlink_ausfuehren O passes R L G p hwT hLT voll rest σ ρ hi
   obtain ⟨h1, h2, h3⟩ := liste_unlink A L G hl _ hp hi hk hn hs hg hnp ho
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hnp⟩
+  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hnp,
+    by rw [hg]; exact auf_unlink_vor hl hp rfl hi hnp ho⟩
 
 end Bedeutung
 

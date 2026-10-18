@@ -9,7 +9,7 @@
     * `einfuegen_ok`, `blatt_aus_ok` (left place) and their right-hand mirrors: a leaf in at an empty child place,
       a leaf out. `einfuegen_doppelt_bricht` is the model's reading of the refusal to link a slot below itself.
 -/
-import Grammatik.Bausteine.Arena.ArenaKette
+import Grammatik.Bausteine.Arena.Struktur.ArenaKette
 
 namespace Gabbro.Grammatik.ArenaKette
 

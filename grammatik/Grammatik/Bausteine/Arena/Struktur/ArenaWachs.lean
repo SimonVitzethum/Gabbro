@@ -12,7 +12,7 @@
     * `grow_liste`, `grow_baum` -- the executed `grow` keeps `FreiOk`, every liveness, `ListOk` resp. `BaumOk`, and
       continues in the commit world with the new committed word bound (`dynGrow_commit`'s equation).
 -/
-import Grammatik.Bausteine.Arena.ArenaBaumWelt
+import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
 
 namespace Gabbro.Grammatik
 
@@ -49,6 +49,18 @@ variable (O : Orakel D) (passes : Nat)
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 variable (A : FreiForm D) (L : LinkFeld A) (G : LinkKopf A)
+
+/-- **`grow` past the ceiling takes its `else`:** nothing moves but the recorded read. -/
+theorem dynGrow_voll (A : DynForm D) (n : Int) (hwK : V.gschreibt A.komm = true) (hLK : gdarf D A.komm Λ)
+    (voll : Endblock D V l Γ Λ) (rest : Block D V l (Ty.int 0 (D.count A.tab) :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ) (hn : ¬ (0 ≤ A.komSt σ + n ∧ A.komSt σ + n ≤ D.count A.tab)) :
+    execBlock (V := V) O passes R (Block.dynGrowB A n hwK hLK voll rest) σ ρ
+      = (execEnd O passes R voll (σ.lese Λ [Sum.inr A.komm]) ρ).zuAusgang := by
+  have hb : ¬ ((0 : Int) ≤ (Wert.umTyp A.hk (σ.globs A.komm)).n + n ∧
+      (Wert.umTyp A.hk (σ.globs A.komm)).n + n ≤ D.count A.tab) := hn
+  simp only [Block.dynGrowB, Block.dynSumme, execBlock, eval_umTyp, orte_umTyp, eval,
+    Expr.orte, World.globs_lese, Zahl.add, List.append_nil]
+  rw [dif_neg hb]
 
 /-- **The executed `grow` keeps the free list, every liveness and the list.** The guard that fits (`h0`, `h`) is what
     `narrow` decides; the continuation runs in the commit world with the new committed word bound. -/
