@@ -832,7 +832,7 @@ fn kommentare_in_beide_richtungen() {
     faellt_nicht("const A : u32 = 1; // Zeile\n/* a /* b */ noch Kommentar */ const B : u32 = 2;");
     faellt_nicht("/// Doku\nconst A : u32 = 1;\n//// gewoehnlich\n///// auch");
     // Marker in einem Text sind keine Kommentare.
-    faellt_nicht("assume a \"x // y /* z\";");
+    faellt_nicht("assume a \"x // y /* z\" unfalsifiable \"r\";");
     // Der alte `--`-Kommentar ist keiner mehr; ein offener Blockkommentar ist ein Lexfehler.
     faellt_mit("const A : u32 = 1; -- Kommentar\n", "P006");
     faellt_mit("const A : u32 = 1;\n/* offen /* innen */ aussen offen", "L008");
