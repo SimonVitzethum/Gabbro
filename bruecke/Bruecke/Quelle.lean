@@ -1,4 +1,4 @@
-import Grammatik.Korrespondenz.Kette.Schlusssatz
+import Grammatik.Parser.Elab.UebersetzePipeline
 import Bruecke.Pruefung
 import Bruecke.Start
 import Bruecke.Atomar
@@ -163,34 +163,11 @@ theorem nutzerA_aus_quelle {src : String} (hp : Pflichten src) {u : UProg}
 #print axioms nutzer_aus_quelle
 #print axioms nutzerA_aus_quelle
 
-/-! ## The closed chain of a table-free unit, from the source
+/-! ## Enumerations of a unit built from a source
 
-`Kette src` (`Grammatik/Schlusssatz.lean`) is the data of the translation-validation chain of a source
-text: the parsed unit, the checker's Bool, premise (b), the emitter's layout and the correspondence
-certificate. For a unit WITHOUT tables (and, as always here, without globals) the emitter's layout is
-EMPTY -- there is no table block and no global block -- so it needs no per-program data: `emitLayLeer`.
-`ketteAllg` assembles the chain from the generic pieces, and a per-program instance supplies only what
-is a WITNESS: the Bool proofs (`decide`) and the certificate literal `gabbro corr-lean` prints, which
-`korrOk` checks. Premise (b) is `nutzer_aus_quelle`. -/
-
-/-- The emitter's layout of a unit with no tables and no globals: nothing is laid out. -/
-def emitLayLeer (u : UProg) (ht : u.tabellen = []) : EmitLay (declOf u) where
-  lay := fun _ => none
-  tnr := fun t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  tnr_inj := fun t _ _ => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  trec := fun t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  lay_tab := fun t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  trec_wf := fun t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  trec_count := fun t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  fnr := fun t _ => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  fnr_lt := fun t _ => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  fnr_inj := fun t _ _ _ => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  fnr_fits := fun t _ => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-  gnr := fun g => nomatch g
-  gnr_inj := fun g => nomatch g
-  gty := fun g => nomatch g
-  lay_glob := fun g => nomatch g
-  gty_fits := fun g => nomatch g
+The checker's Bool `akzeptiert_pruefer.akzeptiert` is decided over enumerations of the unit's functions, locks
+and carriers; a per-program instance decides it by computation (`decide`).
+-/
 
 /-- `nullB` is part of the computed duties. -/
 theorem pflichten_null {src : String} (hp : Pflichten src) {u : UProg} {P : Programm (declOf u)}
@@ -212,27 +189,5 @@ def aufzTraegerLeer (u : UProg) (ht : u.tabellen = []) : Zielsatz.Aufzaehlung ((
   ⟨[], fun c => match c with
     | .inl t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
     | .inr g => nomatch g⟩
-
-/-- **THE CLOSED CHAIN OF A TABLE-FREE UNIT, from its source text.** Premises: the computed duties
-    `Pflichten src` (GabbroV's proofs), the front end's acceptance, the unit has no tables, the
-    checker's Bool (a computation) and the certificate with its check (`korrOk`, a computation). -/
-def ketteAllg {src : String} (hp : Pflichten src) {u : UProg} {P : Programm (declOf u)}
-    {fs0 : List (declOf u).Fn} (h : uebersetzeAllg src = .ok ⟨u, P, fs0⟩) (ht : u.tabellen = [])
-    (zert : KCert (declOf u))
-    (hakz : akzeptiert_pruefer.akzeptiert (einheitAllg u P (pflichten_null hp h))
-      (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht).1 = true)
-    (hz : korrOk (emitLayLeer u ht) fnNr zert P (aufzFn u).1 = true) : Kette src where
-  u := u
-  E := einheitAllg u P (pflichten_null hp h)
-  fs0 := fs0
-  uebersetzt := h
-  fs := aufzFn u
-  ls := aufzLock u
-  cs := aufzTraegerLeer u ht
-  akzeptiert := hakz
-  nutzer := (nutzer_aus_quelle hp h).2
-  EL := emitLayLeer u ht
-  zert := zert
-  zertOk := hz
 
 end Gabbro.Bruecke

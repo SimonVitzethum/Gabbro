@@ -65,7 +65,7 @@ def bitlen (n : Nat) : Nat := bitlenAux n n
     length of `bexpMax`. (Lane 166 wrote `Nat.log2 (bexpMax + 1)`; `Nat.log2`
     is well-founded recursion, and the KERNEL, forced to evaluate it inside a
     defeq check over a stuck float, recursed out of its stack -- measured
-    2026-09-14 in `CFormenF.lean`. `bitlen` is structural.) -/
+    2026-09-14. `bitlen` is structural.) -/
 def Format.ebits (F : Format) : Nat := bitlen F.bexpMax
 
 /-- The five IEEE cases, as data. -/

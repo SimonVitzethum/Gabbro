@@ -28,7 +28,6 @@
 import Grammatik.Zielsatz.Faeden.FaedenVor
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
-import Grammatik.CBackend.Semantik.CloneHandoff
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -660,48 +659,5 @@ theorem start_unter_sperre_zeuge : ∃ K : FadenMaschine zD.mitRuhe,
 #print axioms Gabbro.Grammatik.Zielsatz.kind_unter_sperre_spec
 #print axioms Gabbro.Grammatik.Zielsatz.start_unter_sperre_kein_schritt
 #print axioms Gabbro.Grammatik.Zielsatz.start_unter_sperre_zeuge
-
-/-! ## 6. Fix lane F9's clone machine is a special case -/
-
-/-- **Every run of the standalone clone machine (CloneHandoff.lean) is a thread-machine run**
-    with the same G state and the same live set: a clone `spawn` is a `kind` step, a live step
-    is a `lauf` step, and nobody ever joins. So `klon_ziel` is now a corollary of `gabbro_ziel`
-    as well (`klon_ziel_faden`), with the thread-machine legs on top. -/
-theorem klon_als_faden {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-    {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)} {lebt0 : Faden → Bool}
-    {K : KlonMaschine D} (h : KlonErreichbar P O passes (KlonStart P sp init lebt0) K) :
-    ∃ F : FadenMaschine D, FadenErreichbar P O passes (FadenStart P sp init lebt0) F ∧
-      F.m = K.m ∧ F.lebt = K.lebt ∧ ∀ t, F.wartet t = [] := by
-  induction h with
-  | start => exact ⟨_, .start, rfl, rfl, fun _ => rfl⟩
-  | schritt K K' _ hs ih =>
-      obtain ⟨F, hF, hm, hl, hw⟩ := ih
-      cases hs with
-      | lauf f M' hf hs' =>
-          refine ⟨⟨M', F.lebt, F.wartet, F.rang, F.uhr⟩,
-            .schritt _ _ hF (FadenSchritt.lauf F f M' (by rw [hl]; exact hf) (hw f)
-              (by rw [hm]; exact hs')), rfl, hl, hw⟩
-      | spawn p c hp hc =>
-          refine ⟨_, .schritt _ _ hF (FadenSchritt.kind F p c (by rw [hl]; exact hp) (hw p)
-              (by rw [hl]; exact hc)), hm, ?_, hw⟩
-          show (fun t => if t = c then true else F.lebt t) = _
-          rw [hl]
-
-/-- `klon_ziel` through the thread machine: every leg of `ZielF` on every clone run. -/
-theorem klon_ziel_faden (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn]
-    (E : Einheit D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
-    (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true)
-    (hN : NutzerPflicht E) (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat)
-    (sp : Speicher D.mitRuhe)
-    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
-    (hL : Laufzeit E sp init) (lebt0 : Faden → Bool) (K : KlonMaschine D.mitRuhe)
-    (hK : KlonErreichbar E.P.mitRuhe O.mitRuhe passes (KlonStart E.P.mitRuhe sp init lebt0) K) :
-    ∃ F : FadenMaschine D.mitRuhe, F.m = K.m ∧
-      ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) F := by
-  obtain ⟨F, hF, hm, -, -⟩ := klon_als_faden hK
-  exact ⟨F, hm, gabbro_ziel_sc C D E fs ls cs hC hN O hH passes sp init hL lebt0 F hF⟩
-
-#print axioms Gabbro.Grammatik.Zielsatz.klon_als_faden
-#print axioms Gabbro.Grammatik.Zielsatz.klon_ziel_faden
 
 end Gabbro.Grammatik.Zielsatz

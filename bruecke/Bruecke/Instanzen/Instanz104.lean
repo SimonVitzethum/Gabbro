@@ -1,7 +1,6 @@
 import Bruecke.Pflichten
 import Bruecke.Pruefung
-import Grammatik.Korrespondenz.Kette.Kette104
-import Grammatik.Korrespondenz.Kette.Kette104Satz
+import Grammatik.Korpus.Programme.Einheit104
 import Bruecke.Start
 import Bruecke.Atomar
 import Bruecke.Quelle
@@ -10,7 +9,7 @@ import Duty.Duty104Referenz
 /-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
 
     S1+S2 instance: `beispiele/104-referenz.gab`.
-    The parse is anchored at the source text by `Kette104.uebersetzt4`
+    The parse is anchored at the source text by `Einheit104.uebersetzt4`
     (`uebersetzeAllg src104real = .ok ⟨uExp104, …⟩`); every printed definition of
     `Duty104Referenz.lean` is checked against the Lean computation from `uExp104`. -/
 
@@ -22,10 +21,10 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg (fnAt)
 
 def u := uExp104
 
-/-- The anchor: the SOURCE TEXT (`src104real`, byte for byte, pinned in `Kette104`) elaborates to
+/-- The anchor: the SOURCE TEXT (`src104real`, byte for byte, pinned in `Einheit104`) elaborates to
     `u`, in Lean. Every check below is about the program of that text. -/
 theorem verankert : ∃ P fs, Gabbro.Grammatik.uebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real = .ok ⟨u, P, fs⟩ :=
-  ⟨_, _, Gabbro.Grammatik.Kette104.uebersetzt4⟩
+  ⟨_, _, Gabbro.Grammatik.Einheit104.uebersetzt4⟩
 
 def ein : UFn := u.fns[0]'(by decide)
 def lies : UFn := u.fns[1]'(by decide)
@@ -58,13 +57,13 @@ example : meetsU u wellFormed ein ((zuBody u ein).getD []) = einzahlen_meets_sta
 example : meetsU u wellFormed lies ((zuBody u lies).getD []) = lies_meets_statement := rfl
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
-theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Kette104.E4 :=
-  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Kette104.low4)
+theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit104.E4 :=
+  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Einheit104.low4)
 
 /-! BRIDGE-CLOSED beispiele/104-referenz.gab nutzer_bruecke
 
     S3 instance: the simulation theorem (`Bruecke/Simulation.lean`, `bruecke_nutzer`) applied to the
-    parser's program of 104. Its premises, each checked here: the lowering (`Kette104.low4`), the
+    parser's program of 104. Its premises, each checked here: the lowering (`Einheit104.low4`), the
     name conditions and the rank of the call graph (decided), and the DUTIES -- GabbroV's own
     proofs `einzahlen_meets` and `lies_meets` from `Duty104Referenz.lean`, the statements the
     per-unit `rfl` checks above tie to the Lean computation. The conclusion is premise (b) of the
@@ -93,22 +92,17 @@ theorem rang : Rang u (rangAuto u) := rang_of (by decide)
     duty proofs of GabbroV. -/
 
 theorem pflichten_104 : Pflichten Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
-  ⟨u, uOf_eq Gabbro.Grammatik.Kette104.uebersetzt4, by decide, by decide, by decide, meets_alle⟩
+  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by decide, by decide, by decide, meets_alle⟩
 
 /-- Premise (b) for the unit the GENERIC construction builds from the text. -/
 theorem nutzer_generisch : ∃ hn : nullB u = true,
-    Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u Gabbro.Grammatik.Kette104.P4 hn) :=
-  nutzer_aus_quelle pflichten_104 Gabbro.Grammatik.Kette104.uebersetzt4
+    Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u Gabbro.Grammatik.Einheit104.P4 hn) :=
+  nutzer_aus_quelle pflichten_104 Gabbro.Grammatik.Einheit104.uebersetzt4
 
 /-- **THE CLOSED BRIDGE OF 104**: premise (b) of the goal theorem, from GabbroV's duty proofs. -/
-theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Kette104.E4 :=
-  bruecke_nutzer Gabbro.Grammatik.Kette104.low4 stimmig (rangAuto u) rang meets_alle
-    Gabbro.Grammatik.Kette104.E4 rfl rfl rfl
-
-/-- The closed chain of 104 with its premise (b) taken from the bridge instead of the hand proof
-    `nutzer4`: source text, checker, GabbroV's duties, the correspondence to the C. -/
-def kette_104_bruecke : Gabbro.Grammatik.Kette Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
-  { Gabbro.Grammatik.Kette104.kette_104 with nutzer := nutzer_bruecke }
+theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Einheit104.E4 :=
+  bruecke_nutzer Gabbro.Grammatik.Einheit104.low4 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Einheit104.E4 rfl rfl rfl
 
 /-- **WITNESS of the simulation theorem** (`bruecke_nutzer`): its premises hold jointly on a real
     program with a call -- the parser's lowering of 104, the name conditions, a rank, and every
@@ -118,22 +112,20 @@ theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.G
     Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg u = .ok (P, fs) ∧ Stimmig u ∧ Rang u (rangAuto u) ∧
     (∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧ meetsU u (wfU u) (fnAt u c) body) ∧
     ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).saetze :=
-  ⟨u, _, _, Gabbro.Grammatik.Kette104.low4, stimmig, rang, meets_alle,
+  ⟨u, _, _, Gabbro.Grammatik.Einheit104.low4, stimmig, rang, meets_alle,
     ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" false, .val (.param "i")], by decide⟩⟩
 
 /-! BRIDGE-ATOMIC beispiele/104-referenz.gab nutzerA_bruecke -/
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
-theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Kette104.E4 :=
-  bruecke_nutzerA Gabbro.Grammatik.Kette104.low4 stimmig (rangAuto u) rang meets_alle
-    Gabbro.Grammatik.Kette104.E4 rfl rfl rfl
+theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Einheit104.E4 :=
+  bruecke_nutzerA Gabbro.Grammatik.Einheit104.low4 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Einheit104.E4 rfl rfl rfl
 
 #print axioms nutzerA_bruecke
 
 
-/-! BRIDGE-CHAIN beispiele/104-referenz.gab kette_104_bruecke -/
 
-#print axioms kette_104_bruecke
 
 #print axioms nutzer_bruecke
 #print axioms bruecke_zeuge

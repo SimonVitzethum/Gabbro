@@ -4,7 +4,7 @@
              at the type level (agent 03, usability/efficiency team).
 
   `Darstellung.lean` proves the layout over bare `Int` ranges;
-  `CSpeicher.lean` encodes Gabbro values as C integers (`encW`).
+  `encW` (below) encodes Gabbro values as integers.
   This file joins them: `tyBits` (bits per `Ty`, with the `option`
   sentinel and the `grund` case count as values), `encN` (the offset
   encoding of a value), the fit (`encN_lt`), the round trip
@@ -16,7 +16,27 @@
 -/
 import Grammatik.Speichermodell.Darstellung
 import Grammatik.Kern.Syntax.Typen
-import Grammatik.CBackend.Semantik.CSpeicher
+
+namespace Gabbro.Grammatik
+
+/-- The integer encoding of an `option index into T`: the index, or the sentinel `n`
+    (`T_NONE`) for `none`. -/
+def encOpt (n : Int) : Option (Zahl 0 (n - 1)) → Int
+  | none => n
+  | some z => z.n
+
+/-- The integer encoding of a Gabbro value: the number for ranges, `0`/`1` for `bool`, the index
+    or the sentinel `N` for `option index into T`, the case number for `reason`. The remaining
+    types have no integer cell. (Until 2026-10-18 this lived in `CSpeicher.lean`, the C memory
+    model, deleted with the C emitter.) -/
+def encW {F : Type} {sig : F → Nat} : (τ : Ty) → Val F sig τ → Int
+  | .int _ _, v => Zahl.n v
+  | .bool, b => if (show Bool from b) then 1 else 0
+  | .opt n, o => encOpt n o
+  | .why n, i => ((show Fin n from i) : Nat)
+  | _, _ => 0
+
+end Gabbro.Grammatik
 
 namespace Grammatik.Speichermodell.DarstellungTy
 
@@ -50,7 +70,7 @@ def encN {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
 
 /-- **The offset encoding of every value fits in `tyBits`.**
     Ranges via `Darstellung.enc_lt_two_pow` (with `Zahl.lo_le` /
-    `le_hi`, as `encW_fits` does); `option` via `encOpt` (the sentinel
+    `le_hi`, as the range check does); `option` via `encOpt` (the sentinel
     `n` included); `grund` via `Fin`. -/
 theorem encN_lt {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
     (b : Nat) (hb : tyBits t = some b)

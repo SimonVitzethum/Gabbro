@@ -20,15 +20,14 @@
   * THE DISCHARGE (`ohneHardware_zeuge`). The same program with an oracle
     whose answer does fit is NOT what saves it -- `axP`'s body carries the
     form, so the check refuses it (`hardwareFrei = false`). What saves a
-    chain is the ABSENCE of the form: `korrOk` refuses every one of the five,
-    and the discharge is exercised on a body that really runs
+    program is the ABSENCE of the form: the check `hardwareFrei` refuses every one of the
+    five, and the discharge is exercised on a body that really runs
     (`ohneHardware_zeuge`: `haupt`'s body has the check, calls `zaehle`, and
     the handler premise is what carries the call).
 -/
 import Grammatik.Logik.Ruf.Ohne.RufOhneHardware
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
 import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.CBackend.Formen.CFormenM
 
 namespace Gabbro.Grammatik
 
@@ -91,8 +90,7 @@ theorem axOBoese_rufAt (passes n : Nat) (σ : World axD) :
     the model's call still ends in an error -- the one error class the
     premises do not speak about. The shape is the axiom call; the reason is
     that `AxVertragO` is conditional on the answer fitting. The check of
-    `RufOhneHardware.lean` sees the shape (`hardwareFrei = false`), and so
-    does the certificate check, which has no row for it at all. -/
+    `RufOhneHardware.lean` sees the shape (`hardwareFrei = false`). -/
 theorem befund_hardware_bleibt :
     -- the checker's fragment admits the body, and the footprint checks
     programmImFragmentV axP axFs = true ∧ fussOrtB axP axFs = true ∧

@@ -33,7 +33,7 @@ import Grammatik.Speichermodell.Atomar.AtomarRec
 import Grammatik.Zielsatz.Atomar.AtomarPflicht
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
-import Grammatik.Korrespondenz.Allgemein.Pflicht104
+import Grammatik.Korpus.Referenz.Pflicht104
 
 namespace Gabbro.Grammatik.GabbroV.GvAtomRely
 

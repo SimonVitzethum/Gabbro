@@ -459,8 +459,7 @@ end Haupt
     translated world and parameters, ends in the translated outcome of the
     body of `f` in `P` under `O` -- for every budget and every pair of call
     handlers that answer translated calls with translated answers
-    (`RufRu`). The generic form of `gPB_wie_gP_einzahlen`/`gPB_wie_gP_lies`
-    (Schlusssatz104.lean). -/
+    (`RufRu`). The generic form of `gPB_wie_gP_einzahlen`/`gPB_wie_gP_lies`. -/
 theorem rumpf_mitRuhe_verhalten (P : Programm D) (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (R' : ∀ f : D.mitRuhe.Fn, World D.mitRuhe → Env D.mitRuhe (D.mitRuhe.params f) →

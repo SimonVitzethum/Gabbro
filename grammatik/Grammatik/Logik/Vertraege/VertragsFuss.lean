@@ -10,7 +10,7 @@
   `Ziel.lean` shapes from a positive check.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 
 namespace Gabbro.Grammatik
 

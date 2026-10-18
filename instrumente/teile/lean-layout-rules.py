@@ -86,10 +86,6 @@ rules('grammatik/Grammatik/Zertifikat', [
     (r'^G[89]\d\d_', 'Reihe08'),
 ])
 
-rules('grammatik/Grammatik/CParser', [
-    (r'.*', '../CBackend/Parser'),
-])
-
 rules('grammatik/Grammatik/Parser', [
     (r'^(Lexer|LexerVertrauen|WortStellung)$', 'Lex'),
     (r'^Ausdruck\w*$', 'Expr'),
@@ -101,8 +97,8 @@ rules('grammatik/Grammatik/Parser', [
 
 rules('grammatik/Grammatik', [
     (r'^(Syntax|Typen|Konstanten|Fehler|Satz|Zucker|Marken|MarkenInstanzA|Profil|Koernung|Bits|Geist|Extraktion|Ziel)$', 'Kern/Syntax'),
-    (r'^(Semantik|Maschine|MaschinenKette|Erhaltung|ErhaltungT4|Terminierung|Ueberlauf|Fristlauf|Durchgaenge|Budget|Adressraum|Syscall|SyscallPaarung|Geraet)$', 'Kern/Semantik'),
-    (r'^(Sperre\w*|Sperr\w+|RelySperre|FremdSperre|MitRuhe\w*|ExportSperre)$', 'Nebenlaeufigkeit/Sperren'),
+    (r'^(Semantik|Maschine|MaschinenKette|Erhaltung|Terminierung|Ueberlauf|Fristlauf|Durchgaenge|Budget|Adressraum|Syscall|SyscallPaarung|Geraet|GanzzahlMatch)$', 'Kern/Semantik'),
+    (r'^(Sperre\w*|Sperr\w+|RelySperre|FremdSperre|MitRuhe\w*|ExportSperre|Ressourcen\w+|Ressourceninvariante)$', 'Nebenlaeufigkeit/Sperren'),
     (r'^(Rennfrei\w+|Interferenz\w*|EigenZustand\w*)$', 'Nebenlaeufigkeit/Rennfreiheit'),
     (r'^(Unterbrechung|Verschachtelt|Verklemmung|LesenStabil|StabilBewacht|Trennung|Schiebung|Wettlauf|Geteilt|WacheGlobal|DisziplinBedarf|FadenMaschine|FadenMerkmal|MehrfadenLauf|MehrfadenZeuge|TravAwaits\w+)$', 'Nebenlaeufigkeit/Allgemein'),
     (r'^(Ruf\w+|FremdRuf|HoareRuf|HoareRegeln)$', 'Logik/Ruf'),
@@ -111,16 +107,14 @@ rules('grammatik/Grammatik', [
     (r'^ZielOrt(Rahmen\w*|Inv\w*|Ax\w*|Einfaden\w*|Mehrfaden)$', 'Zielsatz/ZielOrt/Rahmen'),
     (r'^ZielOrt(Geraet\w*|Sperre\w*|Beweis)$', 'Zielsatz/ZielOrt/Geraet'),
     (r'^ZielOrt\w*$', 'Zielsatz/ZielOrt/Grundlage'),
-    (r'^(CForm\w*)$', 'CBackend/Formen'),
-    (r'^(CSemantik|CSpeicher|CSLInvariante\w*|CText\d+\w*|CTicket|CNebenlaeufig|ZeichenfolgeC|ZeichenfolgeGebunden|CloneHandoff)$', 'CBackend/Semantik'),
-    (r'^(Korrespondenz\w*|KorrOk\w+|Pflicht\d+|Referenz\w*)$', 'Korrespondenz/Allgemein'),
-    (r'^(Kette\w*|Schlusssatz\w*)$', 'Korrespondenz/Kette'),
-    (r'^(Korpus\d+|Export\d+|GenOblig\d+|TermIdent\d+)$', 'Korrespondenz/Korpus'),
-    (r'^(Zeugnis\w*|Zertifikate)$', 'Korrespondenz/Zeugnis'),
+    (r'^(Pflicht\d+|Referenz\w*)$', 'Korpus/Referenz'),
+    (r'^(Korpus\d+|Export\d+|GenOblig\d+|TermIdent\d+|Einheit\d+)$', 'Korpus/Programme'),
+    (r'^(Zeugnis\w*|Zertifikate)$', 'Korpus/Zeugnis'),
+    (r'^Zeichenfolge\w*$', 'Bausteine/Zeichenfolge'),
     (r'^Schablonen\w*$', 'Bausteine/Schablonen'),
     (r'^(Arena\w*|Bibliothek)$', 'Bausteine/Arena'),
     (r'^(Gleitkomma\w*|GleitZeuge)$', 'Bausteine/Gleitkomma'),
-    (r'^(AuditFinal|AuditW5|AuditZiel|BitVecProben|BlattGegenbeispiel|ProbeD|SimPruef|SonstLeaveZeuge|HelferZeuge|InvZeuge)$', 'Proben'),
+    (r'^(AuditFinal|AuditW5|AuditZiel|BitVecProben|BlattGegenbeispiel|ProbeD|SonstLeaveZeuge|HelferZeuge|InvZeuge)$', 'Proben'),
 ])
 
 # Compatibility shims at an OLD module path. They are never moved. The coordinator's merge gate still probes

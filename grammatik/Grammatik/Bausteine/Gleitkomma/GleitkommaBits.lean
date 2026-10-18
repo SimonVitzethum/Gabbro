@@ -1,8 +1,8 @@
 /-
   File:      Grammatik/GleitkommaBits.lean
   Subject:   Bit patterns back to values, and well-formedness of every
-             result of the IEEE-754 model (`Gleitkomma.lean`) -- what the C
-             side of the float correspondence (`CFormenF.lean`) reads.
+             result of the IEEE-754 model (`Gleitkomma.lean`) -- what a
+             bit-pattern view of a float reads.
 
   Kept apart from `Gleitkomma.lean` so the model file (imported by
   `Typen.lean`, hence by everything) does not change for the C side.
@@ -13,7 +13,7 @@ namespace Gabbro.Grammatik.Gleitkomma
 
 /-! ## Bits back to values, and every result well-formed
 
-  The C side (`CFormenF.lean`) holds a float as its bit pattern
+  A bit-pattern view holds a float as its bit pattern
   (`zuBits`); `ausBits` reads it back. The two are inverse on well-formed
   triples of a format whose exponent field is exactly full (`dicht`:
   `2 ^ ebits = bexpMax + 1`, true for binary32 and binary64), and every op

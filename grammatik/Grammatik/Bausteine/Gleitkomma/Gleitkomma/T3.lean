@@ -152,7 +152,7 @@ theorem zeuge_fleNullen : fle f64 (nullN f64) (nullP f64) = true
     `GleitkommaBits.lean` (`add_wf` ... `rundeBruch_wf`).
   - binary32/binary64 only; no f16, no 80-bit, no decimal.
   - The semantics computes with this model since 2026-09-14 (Typen.lean,
-    Semantik.lean); the C side reads it through `CFormenF.lean`.
+    Semantik.lean).
   - The `set_option` thresholds above are elaboration-only.
 -/
 

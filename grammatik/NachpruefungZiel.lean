@@ -1,5 +1,5 @@
 /-
-  The cheap check: the goal theorem alone, without the translation-validation chain files.
+  The cheap check: the goal theorem alone.
   Run:  lake build Grammatik.Zielsatz.BeweisAtomar && lake env lean NachpruefungZiel.lean
 -/
 import Grammatik.Zielsatz.Kern.Beweis

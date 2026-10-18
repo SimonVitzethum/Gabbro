@@ -2,8 +2,7 @@
   File:      Grammatik/Verschachtelt.lean
   Subject:   Nested arrays `[[T; N]; M]` in the model: the DECISION (a
              stated flattening, `M[i][j]` is cell `i*N + j` of a table with
-             `count M*N`), its lemmas, the correspondence to C's row-major
-             `T a[M][N]`, and a witness.
+             `count M*N`), its lemmas and a witness.
 
   THE SURFACE (lane 170, merged 2026-09-14, MUSE-REPORT-170.md): the checker
   proves every index per dimension (`M103`), the shape (`N285`) and the
@@ -30,12 +29,10 @@
   A whole-row store has no term (a row is not a value of the model) --
   N287 as a theorem shape.
 
-  THE C SIDE: `a[i][j]` on `T a[M][N]` is `*(*(a + i) + j)` (C11
-  6.5.2.1p3-4): the model writes it `ld (idx (idx a i M (N*es)) j N es)`;
-  `ev_idx_nested` proves it addresses the same byte as the flat access
-  `idx a (i*N + j) (M*N) es` -- row-major, exactly the flattening.
+  (The correspondence to C's row-major `T a[M][N]` addressing, `ev_idx_nested`, was deleted
+  with the C emitter; tag `archiv/c-emitter-2026-10-17`.)
 -/
-import Grammatik.CBackend.Formen.CFormen
+import Grammatik.Kern.Semantik.Semantik
 
 namespace Gabbro.Grammatik
 
@@ -116,58 +113,7 @@ theorem eval_nestIdx {Γ : Ctx} {Λ : List (Res D)} (M N : Nat) (hM : 0 < M) (hN
     (eval σ₀ (nestIdx M N hM hN i j) σ ρ).n =
       flachIndex N (eval σ₀ i σ ρ).n (eval σ₀ j σ ρ).n := rfl
 
-/-! ## 3. C: row-major `a[i][j]` is the flat access -/
-
-/-- **`a[i][j]` on `T a[M][N]` addresses the flat cell `i*N + j`**: the
-    nested element address (row `i` of `M`, `N*es` bytes a row, then
-    element `j` of `N`) is the address of element `i*N + j` of `M*N`, from
-    any object start `0 ≤ q.off` and indices within their dimensions. -/
-theorem ev_idx_nested (L : CLayout) (orc : DevOrc) (fr : Nat) {p ci cj ck : CX} {st : CSt}
-    {ρ : CLok} {q : CPtr} {i j : Int} (M N es : Nat) (hq : 0 ≤ q.off)
-    (hp : ev L orc fr p st ρ = some (.ptr q, st)) (hi : ev L orc fr ci st ρ = some (.int i, st))
-    (hj : ev L orc fr cj st ρ = some (.int j, st))
-    (hk : ev L orc fr ck st ρ = some (.int (flachIndex N i j), st))
-    (hi0 : 0 ≤ i) (hiM : i < M) (hj0 : 0 ≤ j) (hjN : j < N) :
-    ev L orc fr (.idx (.idx p ci M (N * es)) cj N es) st ρ =
-      ev L orc fr (.idx p ck (M * N) es) st ρ := by
-  obtain ⟨hb0, hbM⟩ := flach_bereich M N i j hi0 hiM hj0 hjN
-  have hflat : (0 ≤ flachIndex N i j ∧ flachIndex N i j < ((M * N : Nat) : Int)) := by
-    refine ⟨hb0, ?_⟩; push_cast; exact hbM
-  simp only [ev, hp, hi, hk]
-  rw [if_pos ⟨hi0, hiM⟩, if_pos hflat]
-  have hoff : 0 ≤ i * ((N * es : Nat) : Int) := Int.mul_nonneg hi0 (by omega)
-  have hsum : i * ((N * es : Nat) : Int) + j * (es : Int) = flachIndex N i j * (es : Int) := by
-    unfold flachIndex; push_cast
-    rw [Int.add_mul, Int.mul_assoc]
-  cases h1 : ptrAdd L q (i * ((N * es : Nat) : Int)) 1 with
-  | some q1 =>
-      simp only []
-      rw [hj]
-      simp only []
-      rw [if_pos ⟨hj0, hjN⟩, ptrAdd_add h1, hsum]
-  | none =>
-      simp only []
-      -- the row is outside the object, so is the element (it lies further in)
-      have : ptrAdd L q (flachIndex N i j * (es : Int)) 1 = none := by
-        unfold ptrAdd at h1 ⊢
-        cases hL : L q.blk with
-        | none => rfl
-        | some B =>
-            rw [hL] at h1
-            dsimp only at h1 ⊢
-            have hn : ¬ (0 ≤ q.off + i * ((N * es : Nat) : Int) * ((1 : Nat) : Int) ∧
-                q.off + i * ((N * es : Nat) : Int) * ((1 : Nat) : Int) ≤ (B.lay.size : Int)) := by
-              intro hc; rw [if_pos hc] at h1; exact absurd h1 (by simp)
-            have hj' : 0 ≤ j * (es : Int) := Int.mul_nonneg hj0 (by omega)
-            rw [if_neg]
-            intro hc
-            apply hn
-            simp only [Int.natCast_one, Int.mul_one] at hc ⊢
-            rw [← hsum] at hc
-            omega
-      rw [this]
-
-/-! ## 4. Witness: `[[u32; 4]; 3]`, `M[1][2] = 7`, read back -/
+/-! ## 3. Witness: `[[u32; 4]; 3]`, `M[1][2] = 7`, read back -/
 
 /-- The one function's signature: writes the table. -/
 def nvSig : Signatur Unit Empty Empty Empty where
@@ -278,20 +224,10 @@ theorem nv_bijektiv :
     (∀ k : Fin 12, ∃ i : Fin 3, ∃ j : Fin 4, (k : Int) = flachIndex 4 i j) := by
   decide
 
-/-- The C address of `a[1][2]` on `uint32_t a[3][4]` (4-byte elements) is
-    byte 24 = element 6: `ev_idx_nested` at the witness's numbers. -/
-theorem nv_c_adresse (L : CLayout) (orc : DevOrc) (fr : Nat) (st : CSt) (ρ : CLok) (q : CPtr)
-    (hq : 0 ≤ q.off) (p : CX) (hp : ev L orc fr p st ρ = some (.ptr q, st)) :
-    ev L orc fr (.idx (.idx p (.lit 1) 3 (4 * 4)) (.lit 2) 4 4) st ρ =
-      ev L orc fr (.idx p (.lit 6) (3 * 4) 4) st ρ :=
-  ev_idx_nested L orc fr 3 4 4 hq hp rfl rfl rfl (by decide) (by decide) (by decide) (by decide)
-
 #print axioms flach_injektiv
 #print axioms flach_zerlegung
 #print axioms eval_nestIdx
-#print axioms ev_idx_nested
 #print axioms nv_lauf
-#print axioms nv_c_adresse
 
 end Gabbro.Grammatik
 

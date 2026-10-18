@@ -7,9 +7,9 @@ variable {D : Deklaration}
 variable {V : Vertrag D}
 
 /-- `retry until p bounded n … on_exceeded { … }`: hoechstens `n` Durchgaenge. After the
-    last pass `p` is checked once more (the emitted C's `if (z >= N && !(p))`): a pass
+    last pass `p` is checked once more: a pass
     that makes `p` true is a success, and only otherwise the overflow block runs, from
-    the world that recorded the read (corrected 2026-09-13, `CFormenW.lean`; before,
+    the world that recorded the read (corrected 2026-09-13; before,
     the `0` case ran the overflow block without the check). -/
 def retryLauf (schritt : World D → Env D Γ → Ausgang V true Γ) (bis : World D → Env D Γ → World D × Bool)
     (ueberlauf : World D → Env D Γ → Ausgang V l Γ) :

@@ -17,17 +17,17 @@ import Grammatik.Logik.Vertraege.AxiomVertrag
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
-import Grammatik.Korrespondenz.Kette.Kette104Satz
+import Grammatik.Korpus.Programme.Einheit104
 
 namespace Gabbro.Grammatik.GabbroV.GvLuecken
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser
-  Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Kette104 Gabbro.Grammatik.GabbroV
+  Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Einheit104 Gabbro.Grammatik.GabbroV
 
 /-- **L_a: the computed memory is 104's declared memory.** `gv_startPflicht`
     concludes over `sp0Of`, but 104's unit carries the independently defined
-    `sp4` (`Kette104Satz.sp4`: slots at `⟨0, _, _⟩`, no globals). Both sides
+    `sp4` (`Einheit104.sp4`: slots at `⟨0, _, _⟩`, no globals). Both sides
     compute to `⟨0, _, _⟩`/`nomatch` field-wise (proofs identified by proof
     irrelevance). -/
 theorem gvLuecke_sp4_ist_sp0 (h : sp0OkB uExp104 = true) :
@@ -46,7 +46,7 @@ theorem gvLuecke_sp4_ist_sp0 (h : sp0OkB uExp104 = true) :
   rw [hsl, hgl]
 
 /-- **L_b: the bridge conclusion on the real 104 unit.** `StartPflicht E4`
-    from `gv_startPflicht` with `Kette104.low4`, `hSp0` by `decide`, `hP`/`hS`
+    from `gv_startPflicht` with `Einheit104.low4`, `hSp0` by `decide`, `hP`/`hS`
     by `rfl` (`E4.P := P4`, `E4.S := SperrInv.leer D4`) and L_a for `hsp0`. -/
 theorem gvLuecke_start104_of (h : sp0OkB uExp104 = true)
     (hsp0 : E4.sp0 = sp0Of uExp104 h) : StartPflicht E4 :=

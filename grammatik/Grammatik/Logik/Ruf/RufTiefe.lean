@@ -9,7 +9,7 @@
   Depth is the ONE thing in the sequential semantics that is not a property
   of the program -- it is a number a chain author picks -- and every
   statement conditional on "the call ends in no model error"
-  (`Schlusssatz.lean`, part 4) carries the `abstieg` residue because of it.
+  carries the `abstieg` residue because of it.
 
   THE THEOREM. Raising the depth by one changes NOTHING except where the old
   depth ran out:

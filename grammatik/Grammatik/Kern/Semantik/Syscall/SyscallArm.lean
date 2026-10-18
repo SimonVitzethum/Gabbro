@@ -349,8 +349,8 @@ end Arm
      them against a kernel.
    - No machine-G / `Programm` / `Ax` wiring: `SysAbiArm` is not yet accepted by `Ax`, which
      holds the x86 `SysAbi`. The generalisation (`SysAbi` over a register type) is in
-     `messung/ARM-KOMPATIBILITAET-D.md`; it would edit `Syscall.lean`, `SyscallPaarung.lean`,
-     `CloneHandoff.lean` and is not done here.
+     `messung/ARM-KOMPATIBILITAET-D.md`; it would edit `Syscall.lean` and `SyscallPaarung.lean`
+     and is not done here.
    - `CloneAbi` (the handed-stack shape) has no AArch64 counterpart yet; only the alignment
      premises of the templates are mirrored. `faden_warte_korrekt` and the futex template are
      architecture-neutral (see the report) and untouched.

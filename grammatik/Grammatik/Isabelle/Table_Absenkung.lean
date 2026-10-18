@@ -20,9 +20,10 @@
 
   No bridge to the model semantics: the layout half (`M-3`, "the lowering
   allocates N slots") is about `emit.rs`, which has no counterpart in the
-  Lean grammar model. The template's carrying half over the real semantics
-  is already tied in `Grammatik.SchablonenT5Sem` (section 2); the standalone
-  index sets here admit no direct embedding into `Expr ... (.index n)`.
+  Lean grammar model (and the C emitter's layout it was tied to, `EmitLay`, was removed
+  on 2026-10-18); the standalone index sets here admit no direct embedding into
+  `Expr ... (.index n)`. The index bound itself is `indexschranke_eval`
+  (`Grammatik.SchablonenT5Sem`, section 1).
 -/
 
 namespace Gabbro.Grammatik.TableAbsenkung

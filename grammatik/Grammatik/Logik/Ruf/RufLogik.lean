@@ -5,10 +5,10 @@
              (`HandlerKongruenz.lean`) is there to carry the obligation from
              the handler class it is quantified over to `rufAt`.
 
-  WHERE THIS SITS. `Schlusssatz.lean` part 4 is conditional on
-  `(rufAt K.E.P O passes n f σ ρG).istFehler = false`. The model has two error
-  classes; the HARDWARE one is discharged for every certified program
-  (`korrOk_rufAt_ohneHardware`, clause 4b). What is left is the writer's
+  WHERE THIS SITS. A statement about a call that is conditional on
+  `(rufAt P O passes n f σ ρG).istFehler = false` meets the model's two error
+  classes; the HARDWARE one is discharged for every program whose bodies carry no
+  oracle form (`rufAt_ohneHardware`, `RufOhneHardware.lean`). What is left is the writer's
   logic, and the reason it was left is NOT that the user proves too little:
   `KoerperGutS` (Zielsatz/Spec.lean (b)) covers every body-own `logik` outcome
   and the caller duty. The reason is that it is quantified over handlers in
@@ -453,8 +453,8 @@ theorem rufAt_nurAbstieg (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
     IS in the handler class the user's obligation is quantified over. That
     is the fact the discharge above turns into a statement about `logik`
     outcomes; it is stated on its own because it is the answer to "is
-    `rufAt` in `RespektiertRahmen`?", which the CUTS of `Schlusssatz.lean`
-    used to answer with "no, and here is the missing half". -/
+    `rufAt` in `RespektiertRahmen`?", which used to be answered with "no,
+    and here is the missing half". -/
 theorem rufAt_respektiertRahmen (hTO : TreuO O) :
     ∀ n : Nat, RespektiertVertraege P (rufAt P O passes n) ∧
       (∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D)
