@@ -145,6 +145,26 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, _, .forever _ _ body, lb, k, s => lowerB lay cenv (k, lb) body lb lb s
+  | _, _, _, _, .traverse t _ body, lb, k, s =>
+      -- a counter register `s.r` counts the passes; the loop variable is a cell made per pass
+      if 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128 then
+        match cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg s.r) (s.r + 1) with
+        | some (cv, ov, r1) =>
+            match bindCode (.int 0 (D.count t - 1)) ov r1 with
+            | some (cb, a, r2) =>
+                match lowerB lay (a :: cenv) (k, s.l + 2) body (s.l + 3) (s.l + 2) ⟨r2, s.l + 4⟩ with
+                | some (bb, s1) =>
+                    some (⟨lb, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.int (Ar.wid 0 (D.count t)) 0)
+                            (.int (Ar.wid 0 (D.count t)) 0)], .jmp s.l⟩ ::
+                          ⟨s.l, [], [], .brc .ult (Ar.wid 0 (D.count t)) (.reg s.r)
+                            (.int (Ar.wid 0 (D.count t)) (D.count t)) (s.l + 1) k⟩ ::
+                          ⟨s.l + 1, [], cv ++ cb, .jmp (s.l + 3)⟩ ::
+                          ⟨s.l + 2, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.reg s.r)
+                            (.int (Ar.wid 0 (D.count t)) 1)], .jmp s.l⟩ :: bb, s1)
+                | none => none
+            | none => none
+        | none => none
+      else none
   | _, _, _, _, _, _, _, _ => none
 
 def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :

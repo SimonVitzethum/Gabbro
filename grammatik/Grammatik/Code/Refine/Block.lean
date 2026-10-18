@@ -1,5 +1,6 @@
 import Grammatik.Code.Lower.Stmt
 import Grammatik.Code.Refine.Expr
+import Grammatik.Code.Refine.Frame
 
 /-
   File:      Grammatik/Code/Refine/Block.lean
@@ -183,7 +184,8 @@ theorem bindCode_run (lay : Layout D) {τ : GTy} {σ : World D} {Γ : Ctx} {cenv
     {cb : List Instr} {a : Nat} {r2 : Nat} (h : bindCode τ oe r1 = some (cb, a, r2)) :
     ∃ m1 rs3, seqI cb m rs = some (m1, rs3) ∧ Rep lay σ m1 ∧
       EnvRep lay rs3 m1 (a :: cenv) (Env.cons v ρ) ∧ WfL lay m1 ∧ r1 ≤ a ∧ r2 = a + 1 ∧
-      (∀ x, x < r1 → rs3 x = rs x) := by
+      (∀ x, x < r1 → rs3 x = rs x) ∧ Fr lay cenv r1 m rs m1 rs3 ∧
+      (∀ b, rs3 a = some (.ptr b 0) → m.next ≤ b) := by
   unfold bindCode at h
   rcases hcm : cvtM τ oe r1 with _ | ⟨cm, om, r3⟩
   · simp [hcm] at h
@@ -217,9 +219,20 @@ theorem bindCode_run (lay : Layout D) {τ : GTy} {σ : World D} {Γ : Ctx} {cenv
     envRep_load cenv ρ (fun r hr' b hb' hf o t w hl => hmem b (hblt r hr' b hb') o t w hl) hE3
   refine ⟨m1, rs3, hseq, hrep1 σ hW hR, ⟨⟨hs, m.next, hra,
     ⟨fun t => Nat.ne_of_gt (hW.2.1 t), fun g => Nat.ne_of_gt (hW.2.2 g)⟩, hld1,
-    fun r' hr' b' hb' => Nat.ne_of_lt (hblt r' hr' b' hb')⟩, hE3'⟩, hwl1 hW, hr1', rfl, ?_⟩
-  intro x hx
-  have l3 : x < r3 := Nat.lt_of_lt_of_le hx hr1'
-  rw [hag3 x (Nat.ne_of_lt l3), hag2 x hx]
+    fun r' hr' b' hb' => Nat.ne_of_lt (hblt r' hr' b' hb')⟩, hE3'⟩, hwl1 hW, hr1', rfl, ?_, ?_, ?_⟩
+  · intro x hx
+    have l3 : x < r3 := Nat.lt_of_lt_of_le hx hr1'
+    rw [hag3 x (Nat.ne_of_lt l3), hag2 x hx]
+  · refine ⟨?_, by rw [hnext]; omega, ?_⟩
+    · intro x hx
+      have l3 : x < r3 := Nat.lt_of_lt_of_le hx hr1'
+      rw [hag3 x (Nat.ne_of_lt l3), hag2 x hx]
+    · intro b _ hb _ o t w hl
+      exact hmem b hb o t w hl
+  · intro b hb
+    rw [hra] at hb
+    have := Option.some.inj hb
+    injection this with e1 e2
+    exact Nat.le_of_eq e1
 
 end Gabbro.Code.Lower

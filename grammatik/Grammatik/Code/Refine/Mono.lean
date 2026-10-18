@@ -594,8 +594,40 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
-  | _, _, _, _, .traverse .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
+      · simp only [hc, and_self, if_true] at h
+        rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
+          _ | ⟨cv, ov, r1⟩
+        · simp [hv] at h
+        have m1 := cvtG_mono hv
+        simp only [hv] at h
+        rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
+        · simp [hb] at h
+        have m2 := bindCode_mono hb
+        simp only [hb] at h
+        rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
+          _ | ⟨bb, s1⟩
+        · simp [hb2] at h
+        have S2 := lowerB_shape lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb hb2
+        simp only [hb2] at h
+        have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+        · intro b hb
+          simp only [List.mem_cons] at hb
+          rcases hb with rfl | rfl | rfl | rfl | hb
+          · rfl
+          · rfl
+          · rfl
+          · rfl
+          · exact S2.2.1 b hb
+        · have a2 := S2.2.2
+          simp only at m1 m2 a2 ⊢
+          omega
+      · simp [hc] at h
   | _, _, _, _, .retry .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
   | _, _, _, _, .forever _ _ body, lb, k, st, st', blks, h => by

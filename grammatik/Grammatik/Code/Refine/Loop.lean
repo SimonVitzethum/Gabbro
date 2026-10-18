@@ -28,15 +28,15 @@ variable {D : Deklaration} {V : Vertrag D}
     fuel. -/
 theorem forever_ok {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : Orakel D} {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {M : Modl} {S : Sees} {fn : Nat}
-    {lb k : Lbl} {st st' : St} {ks : List Frame} {dst : Option Reg} {l : Bool} {Γ : Ctx}
+    {lb k : Lbl} {r0 r' : Nat} {ks : List Frame} {dst : Option Reg} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (a : D.Annahme) (inv : Gabbro.Grammatik.Expr D Γ Λ .bool)
     (body : Gabbro.Grammatik.Block D V true Γ Λ Λ)
     (IHb : ∀ (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ →
-      WfL lay m → (∀ x ∈ cenv, x < st.r) →
-      OutOk lay cenv (k, lb) M S fn lb lb st' m rs ks dst (execBlock O passes R body σ ρ)) :
+      WfL lay m → (∀ x ∈ cenv, x < r0) →
+      OutOk lay cenv (k, lb) M S fn lb lb r0 r' m rs ks dst (execBlock O passes R body σ ρ)) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ →
-      WfL lay m → (∀ x ∈ cenv, x < st.r) →
-      OutOk lay cenv lv M S fn lb k st' m rs ks dst
+      WfL lay m → (∀ x ∈ cenv, x < r0) →
+      OutOk lay cenv lv M S fn lb k r0 r' m rs ks dst
         (foreverLauf a (fun σ ρ => execBlock O passes R body σ ρ)
           (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
           n σ ρ : Ausgang V l Γ) := by
@@ -55,10 +55,10 @@ theorem forever_ok {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : Ora
         rcases hx : execBlock O passes R body (σ.lese Λ inv.orte) ρ with ⟨σ1, ρ1⟩ | ⟨σ1, v1⟩ | ⟨σ1, r1⟩ |
           ⟨h1, σ1, ρ1⟩ | ⟨h1, σ1, ρ1⟩ | e1 | e1
         · rw [hx] at IH1
-          obtain ⟨m1, rs1, hr1, hP1⟩ := IH1
+          obtain ⟨m1, rs1, hr1, hP1, hF1⟩ := IH1
           obtain ⟨hRp, hEp, hWp, hcp⟩ := hP1
           simp only [hx]
-          exact outok_lift hr1 _ (ih σ1 ρ1 m1 rs1 hRp hEp hWp hc)
+          exact outok_lift hr1 hF1 (Nat.le_refl _) hc _ (ih σ1 ρ1 m1 rs1 hRp hEp hWp hc)
         · rw [hx] at IH1
           simp only [hx]
           exact IH1
@@ -67,10 +67,10 @@ theorem forever_ok {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : Ora
           simp only [hx]
           exact IH1
         · rw [hx] at IH1
-          obtain ⟨m1, rs1, hr1, hP1⟩ := IH1
+          obtain ⟨m1, rs1, hr1, hP1, hF1⟩ := IH1
           obtain ⟨hRp, hEp, hWp, hcp⟩ := hP1
           simp only [hx]
-          exact outok_lift hr1 _ (ih σ1 ρ1 m1 rs1 hRp hEp hWp hc)
+          exact outok_lift hr1 hF1 (Nat.le_refl _) hc _ (ih σ1 ρ1 m1 rs1 hRp hEp hWp hc)
         · simp only [hx, OutOk]
         · simp only [hx, OutOk]
 

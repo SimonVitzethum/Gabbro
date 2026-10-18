@@ -50,13 +50,15 @@ theorem prologue_ok (lay : Layout D) :
       prologue Γ i r = some (code, cenv0, r') → ∀ {σ : World D} {m : Mem} {rs : Regs},
       Rep lay σ m → WfL lay m → ArgRegs lay rs i ρ → i + Γ.length ≤ r →
       ∃ m1 rs1, seqI code m rs = some (m1, rs1) ∧ Rep lay σ m1 ∧ WfL lay m1 ∧
-        EnvRep lay rs1 m1 cenv0 ρ ∧ r ≤ r' ∧ (∀ x, x < r → rs1 x = rs x) ∧ ∀ x ∈ cenv0, x < r'
+        EnvRep lay rs1 m1 cenv0 ρ ∧ r ≤ r' ∧ (∀ x, x < r → rs1 x = rs x) ∧ (∀ x ∈ cenv0, x < r') ∧
+        Fr lay [] 0 m rs m1 rs1 ∧ (∀ x ∈ cenv0, ∀ b, rs1 x = some (.ptr b 0) → m.next ≤ b)
   | _, .nil, i, r, code, cenv0, r', h, σ, m, rs, hR, hW, hA, hlen => by
       simp only [prologue] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
       obtain ⟨rfl, rfl, rfl⟩ := h'
-      exact ⟨m, rs, rfl, hR, hW, trivial, Nat.le_refl _, fun _ _ => rfl, fun x hx => nomatch hx⟩
+      exact ⟨m, rs, rfl, hR, hW, trivial, Nat.le_refl _, fun _ _ => rfl, (fun x hx => nomatch hx),
+        fr_regs (fun x hx => absurd hx (Nat.not_lt_zero _)), fun x hx => nomatch hx⟩
   | _, .cons (τ := τ) (Γ := Γ') v ρ', i, r, code, cenv0, r', h, σ, m, rs, hR, hW, hA, hlen => by
       simp only [prologue] at h
       rcases hp : prologue Γ' (i + 1) r with _ | ⟨c2, as, r1⟩
@@ -70,13 +72,14 @@ theorem prologue_ok (lay : Layout D) :
       obtain ⟨rfl, rfl, rfl⟩ := h'
       obtain ⟨hA0, hA1⟩ := hA
       have hlen' : (i + 1) + Γ'.length ≤ r := by simpa [Nat.add_assoc, Nat.add_comm 1] using hlen
-      obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1⟩ :=
+      obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1, hFr1, hcell1⟩ :=
         prologue_ok lay ρ' (i + 1) r hp hR hW hA1 hlen'
       have hir : i < r := by simp at hlen; omega
       have hrs1 : rs1 i = some (encR lay τ v) := by rw [hag1 i hir]; exact hA0
-      obtain ⟨m2, rs2, hs2, hR2, hE2, hW2, hra, hr2e, hag2⟩ := bindCode_run lay v (.reg i) r1 m1 rs1
+      obtain ⟨m2, rs2, hs2, hR2, hE2, hW2, hra, hr2e, hag2, hFb, hcell2⟩ :=
+        bindCode_run lay v (.reg i) r1 m1 rs1
         hR1 hE1 hW1 hrs1 (opdlt_reg i r1 (Nat.lt_of_lt_of_le hir hr1)) hbd1 hb
-      refine ⟨m2, rs2, ?_, hR2, hW2, hE2, ?_, ?_, ?_⟩
+      refine ⟨m2, rs2, ?_, hR2, hW2, hE2, ?_, ?_, ?_, ?_, ?_⟩
       · rw [seqI_append, hs1, Option.bind_some]; exact hs2
       · rw [hr2e]; exact Nat.le_succ_of_le (Nat.le_trans hr1 hra)
       · intro x hx
@@ -86,6 +89,19 @@ theorem prologue_ok (lay : Layout D) :
         · rw [hr2e]; exact Nat.lt_succ_self _
         · rw [hr2e]
           exact Nat.lt_of_lt_of_le (hbd1 x hx') (Nat.le_succ_of_le hra)
+      · refine ⟨fun x hx => absurd hx (Nat.not_lt_zero _), Nat.le_trans hFr1.2.1 hFb.2.1, ?_⟩
+        intro b hf hb _ o t w hl
+        refine hFb.2.2 b hf (Nat.lt_of_lt_of_le hb hFr1.2.1) ?_ o t w (hFr1.2.2 b hf hb (by
+          rintro ⟨r0, hr0, _⟩; exact nomatch hr0) o t w hl)
+        rintro ⟨r0, hr0, hrs⟩
+        have := hcell1 r0 hr0 b hrs
+        omega
+      · intro x hx b hrb
+        rcases List.mem_cons.mp hx with rfl | hx'
+        · have := hcell2 b hrb
+          exact Nat.le_trans hFr1.2.1 this
+        · rw [hag2 x (hbd1 x hx')] at hrb
+          exact hcell1 x hx' b hrb
 
 /-- If the labels of a function are distinct, every block is found by its label. -/
 theorem blk_of_nodup {M : Modl} {fn : Nat} {func : Func} (hfn : M.funs[fn]? = some func)
@@ -120,7 +136,7 @@ theorem lowerFn_nodup (lay : Layout D) (P : Programm D) (f : D.Fn) (name : Strin
   simp only [hl, Option.some.injEq] at hf
   subst hf
   obtain ⟨m, n, a⟩ := lowerEnd_lbl lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ s' blks (by show (1 : Nat) < 2; omega) hl
-  refine lw_head (b := ⟨0, [], pc, .jmp 1⟩) (a1 := fun x => 1 ≤ x) rfl (fun x hx => by show 0 < x; omega) n ?_
+  refine lw_head (b := ⟨0, [], pc, .jmp 1⟩) (a1 := fun x => 1 ≤ x) rfl (fun x hx => by show x ≠ 0; omega) n ?_
   intro x hx
   have : x.nl = 1 ∨ (2 ≤ x.nl ∧ x.nl < s'.l) := a x hx
   show 1 ≤ x.nl
@@ -146,7 +162,7 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
     (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
     (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
     ∃ m' f', Reach M S (.run m ⟨fn, 0, 0, rs, dst⟩ ks) (.run m' f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
-      RetAt M f' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
+      RetAt M f' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧ Keep lay m m' := by
   have hnd := lowerFn_nodup lay P f name func hf
   unfold lowerFn at hf
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
@@ -162,15 +178,22 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
   have hb0 := hM _ (List.mem_cons_self ..)
   have SS := lowerEnd_shape lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl
   obtain ⟨bk, hbk, hkp⟩ := kok_of_shape SS hM2
-  obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1⟩ :=
+  obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1, hFr1, hcell1⟩ :=
     prologue_ok lay ρ 0 (D.params f).length hp hR hW hA (by omega)
   have hreach := reach_block_jmp (S := S) (ks := ks) (dst := dst) hb0 rfl hbk hkp hs1
   have hK0 : KOk M fn 0 := ⟨_, hb0, rfl⟩
   have hEnd := lowerEnd_ok lay hL cenv (0, 0) O passes R (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl M S fn hM2
     ⟨hK0, hK0⟩ σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1
   rw [hex] at hEnd
-  obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW'⟩ := hEnd
-  exact ⟨m', f', Reach.trans hreach hr2, hf1, hf2, hret, hR', hW'⟩
+  obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW', hFe⟩ := hEnd
+  refine ⟨m', f', Reach.trans hreach hr2, hf1, hf2, hret, hR', hW', ?_⟩
+  refine ⟨Nat.le_trans hFr1.2.1 hFe.2.1, ?_⟩
+  intro b hf hb o t w hl
+  refine hFe.2.2 b hf (Nat.lt_of_lt_of_le hb hFr1.2.1) ?_ o t w (hFr1.2.2 b hf hb (by
+    rintro ⟨r0, hr0, _⟩; exact nomatch hr0) o t w hl)
+  rintro ⟨r0, hr0, hrs⟩
+  have := hcell1 r0 hr0 b hrs
+  omega
 
 /-- With no caller, the run of the lowered function ends with the image of the returned value. -/
 theorem lowerFn_runs (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D.Fn) (name : String)
@@ -181,7 +204,7 @@ theorem lowerFn_runs (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : 
     (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
     (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
     ∃ m', Runs M S (.run m ⟨fn, 0, 0, rs, none⟩ []) m' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
-  obtain ⟨m', f', hr, _, _, hret, hR', hW'⟩ := lowerFn_run lay hL P f name func hf M S fn hfn O passes R σ ρ m rs [] none
+  obtain ⟨m', f', hr, _, _, hret, hR', hW', _⟩ := lowerFn_run lay hL P f name func hf M S fn hfn O passes R σ ρ m rs [] none
     hR hW hA σ' v hex
   exact ⟨m', Reach.trans hr (reach_ret_fin hret m'), hR', hW'⟩
 

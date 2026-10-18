@@ -182,6 +182,54 @@ theorem lw_narrow {lb : Nat} {st s1 s2 : St} {b0 b1 : Block} {be br : List Block
     · have := a1 x hx; right; omega
     · have := a2 x hx; right; omega
 
+/-- The shape of `traverse`: an initialising block `lb`, a test block `st.l`, a bind block `st.l + 1`, an
+    increment block `st.l + 2`, and the lowered body (entry label `st.l + 3`, labels from `st.l + 4`). -/
+theorem lw_loop {lb : Nat} {st s1 : St} {b0 bH bB bI : Block} {bb : List Block}
+    (h0 : b0.nl = lb) (hH : bH.nl = st.l) (hB : bB.nl = st.l + 1) (hI : bI.nl = st.l + 2)
+    (hlt : lb < st.l) (m1 : st.l + 4 ≤ s1.l)
+    (W : (bb.map Block.lbl).Nodup ∧ ∀ x ∈ bb, x.nl = st.l + 3 ∨ (st.l + 4 ≤ x.nl ∧ x.nl < s1.l)) :
+    LblWf lb st s1 (b0 :: bH :: bB :: bI :: bb) := by
+  obtain ⟨n, a⟩ := W
+  have nd1 : ((bI :: bb).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => x = st.l + 3 ∨ (st.l + 4 ≤ x ∧ x < s1.l)) hI ?_ n ?_
+    · intro x hx; omega
+    · intro x hx; exact a x hx
+  have nd2 : ((bB :: bI :: bb).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => st.l + 2 ≤ x ∧ x < s1.l) hB ?_ nd1 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · show st.l + 2 ≤ x.nl ∧ x.nl < s1.l; omega
+      · have := a x hx; show st.l + 2 ≤ x.nl ∧ x.nl < s1.l; omega
+  have nd3 : ((bH :: bB :: bI :: bb).map Block.lbl).Nodup := by
+    refine lw_head (a1 := fun x => st.l + 1 ≤ x ∧ x < s1.l) hH ?_ nd2 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | rfl | hx
+      · show st.l + 1 ≤ x.nl ∧ x.nl < s1.l; omega
+      · show st.l + 1 ≤ x.nl ∧ x.nl < s1.l; omega
+      · have := a x hx; show st.l + 1 ≤ x.nl ∧ x.nl < s1.l; omega
+  refine ⟨by omega, ?_, ?_⟩
+  · refine lw_head (a1 := fun x => st.l ≤ x ∧ x < s1.l) h0 ?_ nd3 ?_
+    · intro x hx; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | rfl | rfl | hx
+      · show st.l ≤ x.nl ∧ x.nl < s1.l; omega
+      · show st.l ≤ x.nl ∧ x.nl < s1.l; omega
+      · show st.l ≤ x.nl ∧ x.nl < s1.l; omega
+      · have := a x hx; show st.l ≤ x.nl ∧ x.nl < s1.l; omega
+  · intro x hx
+    simp only [List.mem_cons] at hx
+    rcases hx with rfl | rfl | rfl | rfl | hx
+    · exact Or.inl h0
+    · right; omega
+    · right; omega
+    · right; omega
+    · have := a x hx; right; omega
+
 variable [Conf] {D : Deklaration}
 
 theorem lowerErg_lbl (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List (Res D)} {eo : Option GTy}
@@ -271,8 +319,28 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
-  | _, _, _, _, .traverse .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
+      · simp only [hc, and_self, if_true] at h
+        rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
+          _ | ⟨cv, ov, r1⟩
+        · simp [hv] at h
+        simp only [hv] at h
+        rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
+        · simp [hb] at h
+        simp only [hb] at h
+        rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
+          _ | ⟨bb, s1⟩
+        · simp [hb2] at h
+        simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb
+          (by show (st.l + 3 : Nat) < st.l + 4; omega) hb2
+        have m2' : st.l + 4 ≤ s1.l := m2
+        exact lw_loop (b0 := ⟨lb, [], _, .jmp st.l⟩) (bH := ⟨st.l, [], [], _⟩) (bB := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 3)⟩)
+          (bI := ⟨st.l + 2, [], _, .jmp st.l⟩) rfl rfl rfl rfl hlt m2' ⟨n2, a2⟩
+      · simp [hc] at h
   | _, _, _, _, .retry .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
   | _, _, _, _, .forever _ _ body, lb, k, st, st', blks, hlt, h => by
