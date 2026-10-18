@@ -400,6 +400,7 @@ import Grammatik.Zielsatz.Faeden.PoolSym
 import Grammatik.Zielsatz.Eigenschaften.Masken
 import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
 import Grammatik.Zielsatz.Eigenschaften.KernMaske
+import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
 import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.CBackend.Formen.CFormMatch

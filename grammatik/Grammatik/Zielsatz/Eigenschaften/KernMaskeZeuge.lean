@@ -24,6 +24,7 @@
     from the guards, not assumed.
 -/
 import Grammatik.Zielsatz.Eigenschaften.KernMaske
+import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
 import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
 namespace Gabbro.Grammatik.Zielsatz.KernMaskeFix
@@ -399,6 +400,15 @@ theorem einbettung_zeuge : ∃ zs : Nat → KernZ (wD true),
   rw [hm 2 (Nat.le_refl 2)]
   exact hh2
 
+/-- **`KernHaltE` itself on the safe variant** (through `kernHaltE_iff_M`: the start holds no
+    lock): the leg of `Ziel`, with `KernPlan` as the premise it still is in `Spec.lean`. -/
+theorem mit_maske_sicher_E (M : RufMaschineG (wD true)) :
+    KernHaltE (wP true) (wO true) 0 (wM0 true) M :=
+  (kernHaltE_iff_M (fun t L hL => by
+    rw [wM0_offen] at hL
+    exact absurd hL List.not_mem_nil)).2 (mit_maske_sicher M)
+
+
 end Gabbro.Grammatik.Zielsatz.KernMaskeFix
 
 #print axioms Gabbro.Grammatik.Zielsatz.KernMaskeFix.w_prefix
@@ -407,4 +417,5 @@ end Gabbro.Grammatik.Zielsatz.KernMaskeFix
 #print axioms Gabbro.Grammatik.Zielsatz.KernMaskeFix.mit_maske_nach_freigabe
 #print axioms Gabbro.Grammatik.Zielsatz.KernMaskeFix.mit_maske_sicher
 #print axioms Gabbro.Grammatik.Zielsatz.KernMaskeFix.w_masken_falsch
+#print axioms Gabbro.Grammatik.Zielsatz.KernMaskeFix.mit_maske_sicher_E
 #print axioms Gabbro.Grammatik.Zielsatz.KernMaskeFix.einbettung_zeuge
