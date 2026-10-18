@@ -683,8 +683,45 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
-  | _, _, _, _, .onOption .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .onOption (n := n) o p a, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      rcases ho : lowerE lay cenv o st.r with _ | ⟨co, oo, r1⟩
+      · simp [ho] at h
+      have m1 := lowerE_mono lay cenv o st.r _ ho
+      simp only [ho] at h
+      split at h
+      · rcases hv : cvtG (.int (-1) (n - 1)) (.int 0 (n - 1)) oo r1 with _ | ⟨cv, ov, r2⟩
+        · simp [hv] at h
+        have m2 := cvtG_mono hv
+        simp only [hv] at h
+        rcases hb : bindCode (.int 0 (n - 1)) ov r2 with _ | ⟨cb, c, r3⟩
+        · simp [hb] at h
+        have m3 := bindCode_mono hb
+        simp only [hb] at h
+        rcases hb1 : lowerB lay cenv lv a st.l k ⟨r3, st.l + 3⟩ with _ | ⟨ba, s1⟩
+        · simp [hb1] at h
+        have S1 := lowerB_shape lay cenv lv a st.l k ⟨r3, st.l + 3⟩ s1 ba hb1
+        simp only [hb1] at h
+        rcases hb2 : lowerB lay (c :: cenv) lv p (st.l + 2) k s1 with _ | ⟨bp, s2⟩
+        · simp [hb2] at h
+        have S2 := lowerB_shape lay (c :: cenv) lv p (st.l + 2) k s1 s2 bp hb2
+        simp only [hb2] at h
+        have := Option.some.inj h
+        simp only [Prod.mk.injEq] at this
+        obtain ⟨rfl, rfl⟩ := this
+        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+        · intro b hb
+          simp only [List.mem_cons, List.mem_append] at hb
+          rcases hb with rfl | rfl | hb | hb
+          · rfl
+          · rfl
+          · exact S1.2.1 b hb
+          · exact S2.2.1 b hb
+        · have a1 := S1.2.2
+          have a2 := S2.2.2
+          simp only at m1 m2 m3 a1 a2 ⊢
+          omega
+      · simp at h
   | _, _, _, _, .onTag .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
   | _, _, _, _, .onWhy .., lb, k, st, st', blks, h => by

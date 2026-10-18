@@ -159,6 +159,29 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
               | none => none
           | none => none
       | none => none
+  | _, _, _, _, .onOption (n := n) o p a, lb, k, s =>
+      -- the word is `-1` for absent: a signed compare with zero picks the arm; the index of the
+      -- present arm is a new local (the word moved to the unsigned width of `0 .. n - 1`)
+      match lowerE lay cenv o s.r with
+      | some (co, oo, r1) =>
+          if Ar.Fits (-1) (n - 1) 128 ∧ Ar.Fits 0 (n - 1) 128 then
+            match cvtG (.int (-1) (n - 1)) (.int 0 (n - 1)) oo r1 with
+            | some (cv, ov, r2) =>
+                match bindCode (.int 0 (n - 1)) ov r2 with
+                | some (cb, c, r3) =>
+                    match lowerB lay cenv lv a s.l k ⟨r3, s.l + 3⟩ with
+                    | some (ba, s1) =>
+                        match lowerB lay (c :: cenv) lv p (s.l + 2) k s1 with
+                        | some (bp, s2) =>
+                            some (⟨lb, [], co, .brc .slt (Ar.wid (-1) (n - 1)) oo
+                                    (.int (Ar.wid (-1) (n - 1)) 0) s.l (s.l + 1)⟩ ::
+                                  ⟨s.l + 1, [], cv ++ cb, .jmp (s.l + 2)⟩ :: (ba ++ bp), s2)
+                        | none => none
+                    | none => none
+                | none => none
+            | none => none
+          else none
+      | none => none
   | _, _, _, _, .ret e _, lb, k, s => lowerErg lay cenv e lb s
   | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)

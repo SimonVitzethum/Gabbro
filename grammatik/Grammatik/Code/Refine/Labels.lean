@@ -367,8 +367,34 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
-  | _, _, _, _, .onOption .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .onOption (n := n) o p a, lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS] at h
+      rcases ho : lowerE lay cenv o st.r with _ | ⟨co, oo, r1⟩
+      · simp [ho] at h
+      simp only [ho] at h
+      split at h
+      · rcases hv : cvtG (.int (-1) (n - 1)) (.int 0 (n - 1)) oo r1 with _ | ⟨cv, ov, r2⟩
+        · simp [hv] at h
+        simp only [hv] at h
+        rcases hb : bindCode (.int 0 (n - 1)) ov r2 with _ | ⟨cb, c, r3⟩
+        · simp [hb] at h
+        simp only [hb] at h
+        rcases hb1 : lowerB lay cenv lv a st.l k ⟨r3, st.l + 3⟩ with _ | ⟨ba, s1⟩
+        · simp [hb1] at h
+        simp only [hb1] at h
+        rcases hb2 : lowerB lay (c :: cenv) lv p (st.l + 2) k s1 with _ | ⟨bp, s2⟩
+        · simp [hb2] at h
+        simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv a st.l k ⟨r3, st.l + 3⟩ s1 ba
+          (by show (st.l : Nat) < st.l + 3; omega) hb1
+        have m1' : st.l + 3 ≤ s1.l := m1
+        obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (c :: cenv) lv p (st.l + 2) k s1 s2 bp
+          (by show (st.l + 2 : Nat) < s1.l; omega) hb2
+        exact lw_narrow (b0 := ⟨lb, [], co, .brc .slt (Ar.wid (-1) (n - 1)) oo
+            (.int (Ar.wid (-1) (n - 1)) 0) st.l (st.l + 1)⟩)
+          (b1 := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 2)⟩) rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
+      · simp at h
   | _, _, _, _, .onTag .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
   | _, _, _, _, .onWhy .., lb, k, st, st', blks, hlt, h => by

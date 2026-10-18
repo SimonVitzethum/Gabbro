@@ -3,6 +3,7 @@ import Grammatik.Code.Refine.Loop
 import Grammatik.Code.Refine.Traverse
 import Grammatik.Code.Refine.Retry
 import Grammatik.Code.Refine.CallRun
+import Grammatik.Code.Refine.Match.OnOption
 
 /-
   File:      Grammatik/Code/Refine/StmtOk.lean
@@ -395,8 +396,15 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp [lowerS] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
-  | _, _, _, _, .onOption .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .onOption o p a, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
+      onOption_ok lay hL cenv lv O passes R o p a
+        (fun c lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerB_ok lay hL (c :: cenv) lv O passes R p lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        (fun lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
+          lowerB_ok lay hL cenv lv O passes R a lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn'
+            hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
+        lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .onTag .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
   | _, _, _, _, .onWhy .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
