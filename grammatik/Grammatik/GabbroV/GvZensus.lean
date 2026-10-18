@@ -265,19 +265,30 @@ def sichertVon : List SKlausel → List SExpr
   | .gives e :: rest => e :: sichertVon rest
   | _ :: rest => sichertVon rest
 
+/-- The findings of a run of statements, every one tried alone (no short-circuit); a statement that
+    elaborates hands its context on (a `let` binds for the rest), one that fails leaves it unchanged.
+    Also returns the context after the run, for the trailing return. -/
+def befundeReihe (tabs : List UTab) (koepfe : List UFnKopf) (fname : String) :
+    UCtx → List SAnw → List Befund × UCtx
+  | ctx, [] => ([], ctx)
+  | ctx, s :: rest =>
+    match uAnwReihe tabs koepfe 1000000 ctx [s] with
+    | .error e =>
+      let (bs, cE) := befundeReihe tabs koepfe fname ctx rest
+      (({ stufe := "rumpf", art := artAnw s, name := fname, meldung := e } : Befund) :: bs, cE)
+    | .ok (_, ctx') => befundeReihe tabs koepfe fname ctx' rest
+
 /-- Findings of one body: every statement tried, every ensures
     predicate tried, the trailing return tried (mirrors `elabFn`,
     without short-circuit). -/
 def befundeRumpf (ctx : UCtx) (tabs : List UTab)
     (koepfe : List UFnKopf) (fname : String) (klauseln : List SKlausel)
     (koerper : SAnw) : List Befund :=
-  let saetze :=
+  let lauf :=
     match koerper with
-    | .block ss _ => ss.map fun s =>
-      match uAnw ctx tabs koepfe s with
-      | .error e => some ({ stufe := "rumpf", art := artAnw s, name := fname, meldung := e } : Befund)
-      | .ok _ => none
-    | _ => [some ({ stufe := "rumpf", art := "rumpf", name := fname, meldung := "Funktionsrumpf ohne G-Form" } : Befund)]
+    | .block ss _ => befundeReihe tabs koepfe fname ctx ss
+    | _ => ([({ stufe := "rumpf", art := "rumpf", name := fname, meldung := "Funktionsrumpf ohne G-Form" } : Befund)], ctx)
+  let saetze := lauf.1
   let gives :=
     (sichertVon klauseln).map fun e =>
       match uSichert ctx e with
@@ -286,11 +297,11 @@ def befundeRumpf (ctx : UCtx) (tabs : List UTab)
   let ret :=
     match koerper with
     | .block _ ende =>
-      match uEnde ctx ende with
+      match uEnde lauf.2 ende with
       | .error m => [({ stufe := "rueckgabe", art := "return", name := fname, meldung := m } : Befund)]
       | .ok _ => []
     | _ => []
-  saetze.filterMap id ++ gives.filterMap id ++ ret
+  saetze ++ gives.filterMap id ++ ret
 
 /-- Findings of one function: head first, then the body descent (needs
     a good head for the context; a failed head hides its body, as in

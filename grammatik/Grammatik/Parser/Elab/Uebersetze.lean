@@ -111,6 +111,10 @@ inductive UStmt
       pins use would go. -/
   | sperrtAuf : String → UStmt
   | sperrtZu : UStmt
+  /-- `let x [: T] = v;` of a number: binds `x` for the rest of the block (flat, like the locks
+      markers). `T`'s range is the annotation the value must fit; the type the binding carries is the
+      COMPUTED range of `v`, which the lowering reads (`Block.bind`). -/
+  | bind : String → Option (Int × Int) → USide → UStmt
   deriving DecidableEq, Repr
 
 /-- The trailing return: nothing, or a value (a literal, a
@@ -194,6 +198,11 @@ structure UFn where
   saetze : List UStmt
   rueck : URet
   deriving DecidableEq, Repr
+
+/-- The scope after a `let x` of a number with the computed range `w`: `x` is the first name (it
+    shadows a parameter), `Block.bind` puts its type first in the context. -/
+def UFn.mitBindung (f : UFn) (x : String) (w : Int × Int) : UFn :=
+  { f with params := (x, .int w.1 w.2) :: f.params, parten := .int :: f.parten }
 
 /-- The result type of an elaborated function: `bool`, an integer range, or none. -/
 def UFn.ergTy (f : UFn) : Option Ty :=
@@ -1197,34 +1206,60 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         | .ok xs => .ok (.call c xs)
   | _ => .error "Anweisung ohne G-Form"
 
-/-- One body statement as a LIST (a `locks` block is several flat statements). `locks L { ... }`: the
-    body is elaborated with `L` HELD (guards, calls); a shared hold, a `return` inside the block and
-    every other lock expression are refused. Structural in a fuel. -/
-def uAnwL (f : Nat) (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
-    SAnw → Except String (List UStmt) :=
-  match f with
-  | 0 => fun _ => .error "Verschachtelung ohne G-Form"
-  | f + 1 => fun s =>
-    match s with
-    | .locks g lk (.block ss .none) =>
-      if g then .error "geteilte Sperre ohne G-Form"
-      else
-        match lk with
-        | .variable l =>
-          match ctx.sperren.find? (fun x => strEq x.name l) with
-          | .none => .error ("Sperre unbekannt: " ++ l)
-          | .some _ =>
-            match ss.mapM (fun q => uAnwL f { ctx with gehalten := l :: ctx.gehalten } tabs koepfe q) with
-            | .error e => .error e
-            | .ok body => .ok ([UStmt.sperrtAuf l] ++ body.flatten ++ [UStmt.sperrtZu])
-        | _ => .error "Sperrausdruck ohne G-Form"
-    | e =>
-      match uAnw1 ctx tabs koepfe e with
-      | .error x => .error x
-      | .ok st => .ok [st]
+/-- The context after `let x [: T]`: the annotated range (when there is one) and the context in which the
+    rest of the block reads `x` as a numeric parameter that shadows any earlier name. -/
+def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option (Int × Int) × UCtx)
+  | .none =>
+    .ok (.none, { ctx with pnamen := x :: ctx.pnamen, parten := .int :: ctx.parten,
+                           ptypen := .int 0 0 :: ctx.ptypen, pbreiten := 0 :: ctx.pbreiten })
+  | .some ty =>
+    match uErgBereich ctx.aliase ty with
+    | .error e => .error e
+    | .ok (lo, hi) =>
+      .ok (.some (lo, hi), { ctx with pnamen := x :: ctx.pnamen, parten := .int :: ctx.parten,
+                                      ptypen := .int lo hi :: ctx.ptypen,
+                                      pbreiten := uParamBreite ty :: ctx.pbreiten })
 
-def uAnw (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (s : SAnw) : Except String (List UStmt) :=
-  uAnwL 32 ctx tabs koepfe s
+/-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
+    `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
+    end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
+    Structural in a fuel (one unit per statement and per block). -/
+def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
+    Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
+  | 0, _, _ => .error "Verschachtelung ohne G-Form"
+  | _ + 1, ctx, [] => .ok ([], ctx)
+  | f + 1, ctx, .bind false x t e :: rest =>
+    match uWertBody ctx e with
+    | .error err => .error err
+    | .ok s =>
+      match uBindKopf ctx x t with
+      | .error err => .error err
+      | .ok (d, ctx') =>
+        match uAnwReihe tabs koepfe f ctx' rest with
+        | .error err => .error err
+        | .ok (xs, cE) => .ok (UStmt.bind x d s :: xs, cE)
+  | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
+    if g then .error "geteilte Sperre ohne G-Form"
+    else
+      match lk with
+      | .variable l =>
+        match ctx.sperren.find? (fun x => strEq x.name l) with
+        | .none => .error ("Sperre unbekannt: " ++ l)
+        | .some _ =>
+          match uAnwReihe tabs koepfe f { ctx with gehalten := l :: ctx.gehalten } ss with
+          | .error e => .error e
+          | .ok (body, _) =>
+            match uAnwReihe tabs koepfe f ctx rest with
+            | .error e => .error e
+            | .ok (xs, cE) => .ok ([UStmt.sperrtAuf l] ++ body ++ [UStmt.sperrtZu] ++ xs, cE)
+      | _ => .error "Sperrausdruck ohne G-Form"
+  | f + 1, ctx, s :: rest =>
+    match uAnw1 ctx tabs koepfe s with
+    | .error e => .error e
+    | .ok st =>
+      match uAnwReihe tabs koepfe f ctx rest with
+      | .error e => .error e
+      | .ok (xs, cE) => .ok (st :: xs, cE)
 
 /-- The trailing return (the `check_body`/`tr_body` of
     `lean_g.rs`): a result falls off nowhere, and a missing
@@ -1262,11 +1297,10 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
   | .ok gives =>
     match koerper with
     | .block ss ende =>
-      match uSeq (ss.map (uAnw ctx ctx.tabellen koepfe)) with
+      match uAnwReihe ctx.tabellen koepfe 1000000 ctx ss with
       | .error e => .error e
-      | .ok saetzeL =>
-        let saetze := saetzeL.flatten
-        match uEnde ctx ende with
+      | .ok (saetze, ctxE) =>
+        match uEnde ctxE ende with
         | .error e => .error e
         | .ok r => .ok (gives, saetze, r)
     | _ => .error "Funktionsrumpf ohne G-Form"
@@ -1694,7 +1728,7 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
       match lowerNachLies tabs pnamen ptypen rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ =>
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ | .bind .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf nach Ruf ohne G-Form"
 
@@ -1728,7 +1762,7 @@ def lowerSaetzeEin (tabs : List UTab) (pnamen : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ =>
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ | .bind .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf ohne G-Form"
 
@@ -2395,6 +2429,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
   | .sperrtAuf a, .sperrtAuf b => strEq a b
   | .sperrtZu, .sperrtZu => true
+  | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && beqUSide s t
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool

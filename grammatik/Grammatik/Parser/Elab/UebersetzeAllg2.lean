@@ -229,29 +229,29 @@ def assignSlotStmtB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   exact Stmt.assignSlot (D := declOf u) t bh.idx i e2 hw hL
 
 /-- A slot write through a pointer parameter. -/
-def lowAssignDurchL (u : UProg) (caller : Fin u.fns.length)
+def lowAssignDurchL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (b fname : String) (ix : UIdx) (v : USide) :
     Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) Λ Λ) :=
-  match paramPos (fnAt u caller).params b with
+      Γ Λ Λ) :=
+  match paramPos fn.params b with
   | .error e => .error e
   | .ok j =>
-    match (fnAt u caller).parten[j]? with
+    match fn.parten[j]? with
     | some (.ptr num true) =>
       if h : num < u.tabellen.length then
         match fieldHit u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
-          match lowVar (ctxOf u caller) j (.ptr num true) with
+          match lowVar Γ j (.ptr num true) with
           | .error e => .error e
           | .ok pv =>
-            match lowIdx u (ctxOf u caller) Λ
-                (fnAt u caller) 0 ⟨num, h⟩ ix with
+            match lowIdx u Γ Λ
+                fn 0 ⟨num, h⟩ ix with
             | .error e => .error e
             | .ok i =>
-              match lowWertAt u (ctxOf u caller) Λ
-                  (fnAt u caller) fh.weit.1 fh.weit.2 v with
+              match lowWertAt u Γ Λ
+                  fn fh.weit.1 fh.weit.2 v with
               | .error e => .error e
               | .ok e =>
                 if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
@@ -264,7 +264,7 @@ def lowAssignDurchL (u : UProg) (caller : Fin u.fns.length)
                         ⟨num, h⟩ = true
                       rw [vSchreibt_eq u caller ⟨num, h⟩]
                       exact hw
-                    .ok (assignDurchStmt u (ctxOf u caller)
+                    .ok (assignDurchStmt u Γ
                       Λ (verOf u caller) ⟨num, h⟩
                       fh (Expr.var pv) (tabNr_some u num h) i e
                       hwV hL)
@@ -274,23 +274,23 @@ def lowAssignDurchL (u : UProg) (caller : Fin u.fns.length)
     | _ => .error "place without G form"
 
 /-- A slot write at a table. -/
-def lowAssignTabL (u : UProg) (caller : Fin u.fns.length)
+def lowAssignTabL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (b fname : String) (ix : UIdx) (v : USide) :
     Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) Λ Λ) :=
+      Γ Λ Λ) :=
   match tabIdx u.tabellen b with
   | .error e => .error e
   | .ok t =>
     match fieldHit u t fname with
     | .error e => .error e
     | .ok fh =>
-      match lowIdx u (ctxOf u caller) Λ
-          (fnAt u caller) 0 t ix with
+      match lowIdx u Γ Λ
+          fn 0 t ix with
       | .error e => .error e
       | .ok i =>
-        match lowWertAt u (ctxOf u caller) Λ
-            (fnAt u caller) fh.weit.1 fh.weit.2 v with
+        match lowWertAt u Γ Λ
+            fn fh.weit.1 fh.weit.2 v with
         | .error e => .error e
         | .ok e =>
           if hL : ∀ wdd ∈ (declOf u).braucht t,
@@ -300,35 +300,35 @@ def lowAssignTabL (u : UProg) (caller : Fin u.fns.length)
                 show (vertragVon (declOf u) caller).schreibt t = true
                 rw [vSchreibt_eq u caller t]
                 exact hw
-              .ok (assignSlotStmt u (ctxOf u caller)
+              .ok (assignSlotStmt u Γ
                 Λ (verOf u caller) t fh i e hwV hL)
             else .error "write without right"
           else .error "access without held guard"
 
 /-- A truth value written through a pointer parameter into a bool field. -/
-def lowAssignDurchBL (u : UProg) (caller : Fin u.fns.length)
+def lowAssignDurchBL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (b fname : String) (ix : UIdx) (v : UEns) :
     Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) Λ Λ) :=
-  match paramPos (fnAt u caller).params b with
+      Γ Λ Λ) :=
+  match paramPos fn.params b with
   | .error e => .error e
   | .ok j =>
-    match (fnAt u caller).parten[j]? with
+    match fn.parten[j]? with
     | some (.ptr num true) =>
       if h : num < u.tabellen.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok bh =>
-          match lowVar (ctxOf u caller) j (.ptr num true) with
+          match lowVar Γ j (.ptr num true) with
           | .error e => .error e
           | .ok pv =>
-            match lowIdx u (ctxOf u caller) Λ
-                (fnAt u caller) 0 ⟨num, h⟩ ix with
+            match lowIdx u Γ Λ
+                fn 0 ⟨num, h⟩ ix with
             | .error e => .error e
             | .ok i =>
-              match lowEns u (ctxOf u caller) Λ
-                  (fnAt u caller) none v with
+              match lowEns u Γ Λ
+                  fn none v with
               | .error e => .error e
               | .ok e =>
                 if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
@@ -341,7 +341,7 @@ def lowAssignDurchBL (u : UProg) (caller : Fin u.fns.length)
                         ⟨num, h⟩ = true
                       rw [vSchreibt_eq u caller ⟨num, h⟩]
                       exact hw
-                    .ok (assignDurchStmtB u (ctxOf u caller)
+                    .ok (assignDurchStmtB u Γ
                       Λ (verOf u caller) ⟨num, h⟩
                       bh (Expr.var pv) (tabNr_some u num h) i e
                       hwV hL)
@@ -351,23 +351,23 @@ def lowAssignDurchBL (u : UProg) (caller : Fin u.fns.length)
     | _ => .error "place without G form"
 
 /-- A truth value written at a table into a bool field. -/
-def lowAssignTabBL (u : UProg) (caller : Fin u.fns.length)
+def lowAssignTabBL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (b fname : String) (ix : UIdx) (v : UEns) :
     Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) Λ Λ) :=
+      Γ Λ Λ) :=
   match tabIdx u.tabellen b with
   | .error e => .error e
   | .ok t =>
     match fieldHitB u t fname with
     | .error e => .error e
     | .ok bh =>
-      match lowIdx u (ctxOf u caller) Λ
-          (fnAt u caller) 0 t ix with
+      match lowIdx u Γ Λ
+          fn 0 t ix with
       | .error e => .error e
       | .ok i =>
-        match lowEns u (ctxOf u caller) Λ
-            (fnAt u caller) none v with
+        match lowEns u Γ Λ
+            fn none v with
         | .error e => .error e
         | .ok e =>
           if hL : ∀ wdd ∈ (declOf u).braucht t,
@@ -377,7 +377,7 @@ def lowAssignTabBL (u : UProg) (caller : Fin u.fns.length)
                 show (vertragVon (declOf u) caller).schreibt t = true
                 rw [vSchreibt_eq u caller t]
                 exact hw
-              .ok (assignSlotStmtB u (ctxOf u caller)
+              .ok (assignSlotStmtB u Γ
                 Λ (verOf u caller) t bh i e hwV hL)
             else .error "write without right"
           else .error "access without held guard"
@@ -391,11 +391,11 @@ def uIdxOfSide : USide → Except String UIdx
 
 /-- One call argument against the callee parameter kind and the
     recorded parameter type (the `tr_arg` of `lean_g.rs`). -/
-def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
+def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (k : UParamArt) (t : Ty) : UArg →
     Except String
-      (Expr (declOf u) (ctxOf u caller) Λ t)
+      (Expr (declOf u) Γ Λ t)
   | a =>
     match k, t with
     | .ptr num w, .ptr n w' =>
@@ -403,20 +403,20 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
       | .var p =>
         if hN : n = num then
           if hW : w' = w then
-            match paramPos (fnAt u caller).params p with
+            match paramPos fn.params p with
             | .error e => .error e
             | .ok j =>
-              match (fnAt u caller).parten[j]? with
+              match fn.parten[j]? with
               | some (.ptr num2 w2) =>
                 if hC : num2 = num then
                   if w2 = w then
-                    match lowVar (ctxOf u caller) j
+                    match lowVar Γ j
                         (.ptr n w') with
                     | .error e => .error e
                     | .ok x => .ok (Expr.var x)
                   else
                     if h : num < u.tabellen.length then
-                      have eP : Expr (declOf u) (ctxOf u caller)
+                      have eP : Expr (declOf u) Γ
                           Λ (.ptr n w') := by
                         rw [hN, hW]
                         exact Expr.ptrOf (D := declOf u) ⟨num, h⟩
@@ -446,7 +446,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
                   have ht : (declOf u).tabNr num = some ft := by
                     rw [← hE]
                     exact tabNr_some u num hTlt
-                  have eP : Expr (declOf u) (ctxOf u caller)
+                  have eP : Expr (declOf u) Γ
                       Λ (.ptr n w') := by
                     rw [hN, hW]
                     exact Expr.ptrOf (D := declOf u) ft num ht w
@@ -467,11 +467,11 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
                 match uIdxOfSide s with
                 | .error e => .error e
                 | .ok ix =>
-                  match lowIdx u (ctxOf u caller) Λ
-                      (fnAt u caller) 0 ⟨num, h⟩ ix with
+                  match lowIdx u Γ Λ
+                      fn 0 ⟨num, h⟩ ix with
                   | .error e => .error e
                   | .ok e =>
-                    have eI : Expr (declOf u) (ctxOf u caller)
+                    have eI : Expr (declOf u) Γ
                         Λ (.int lo hi) := by
                       rw [hLo, hHi]
                       exact e
@@ -484,19 +484,19 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length)
     | .int, .int lo hi =>
       match a with
       | .val s =>
-        match lowWertAt u (ctxOf u caller) Λ
-            (fnAt u caller) lo hi s with
+        match lowWertAt u Γ Λ
+            fn lo hi s with
         | .error e => .error e
         | .ok e => .ok e
       | _ => .error "argument without G form"
     | _, _ => .error "argument type without G form"
 
 /-- The argument list against kinds and recorded types. -/
-def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length)
+def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) :
     (ks : List UParamArt) → (ts : List Ty) → (as : List UArg) →
     Except String
-      (Args (declOf u) (ctxOf u caller) Λ ts)
+      (Args (declOf u) Γ Λ ts)
   | [], ts, as =>
     match ts, as with
     | [], [] => .ok Args.nil
@@ -504,10 +504,10 @@ def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length)
   | k :: ks, ts, as =>
     match ts, as with
     | t :: ts', a :: as' =>
-      match lowCallArgOneL u caller Λ k t a with
+      match lowCallArgOneL u caller Γ fn Λ k t a with
       | .error e => .error e
       | .ok e =>
-        match lowCallArgsAuxL u caller Λ ks ts' as' with
+        match lowCallArgsAuxL u caller Γ fn Λ ks ts' as' with
         | .error e => .error e
         | .ok rest => .ok (Args.cons e rest)
     | _, _ => .error "argument count without G form"
@@ -567,11 +567,11 @@ theorem heldLocksD_mem (u : UProg) (Λ : List (Res (declOf u)))
         exact ih hm
 
 /-- A `nach` step back at the held resources. -/
-def castNachStmtL (u : UProg) (caller callee : Fin u.fns.length)
+def castNachStmtL (u : UProg) (caller callee : Fin u.fns.length) (Γ : Ctx)
     (Λ : List (Res (declOf u)))
-    (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
+    (s : Stmt (declOf u) (verOf u caller) false Γ
       Λ (nach (declOf u) callee Λ)) :
-    Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
+    Stmt (declOf u) (verOf u caller) false Γ
       Λ Λ := by
   rw [nach_eq u callee Λ] at s
   exact s
@@ -580,15 +580,15 @@ def castNachStmtL (u : UProg) (caller callee : Fin u.fns.length)
     (`hw` over the write flags, `hh` over the callee held list,
     `hx` over the lock carrier -- vacuous past the exact held
     set, since every floor is `none`). -/
-def lowCallL (u : UProg) (caller : Fin u.fns.length)
+def lowCallL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (cname : String) (args : List UArg) :
     Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) Λ Λ) :=
+      Γ Λ Λ) :=
   match fnIdx u.fns cname with
   | .error e => .error e
   | .ok callee =>
-    match lowCallArgsAuxL u caller Λ (fnAt u callee).parten
+    match lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).parten
         ((declOf u).params callee) args with
     | .error e => .error e
     | .ok a =>
@@ -623,72 +623,41 @@ def lowCallL (u : UProg) (caller : Fin u.fns.length)
                 Λ :=
               { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee }
             have s : Stmt (declOf u) (verOf u caller) false
-                (ctxOf u caller) Λ
+                Γ Λ
                 (nach (declOf u) callee Λ) :=
               Stmt.call (D := declOf u) callee a hp
                 (sigGruende_zero u callee)
-            .ok (castNachStmtL u caller callee Λ s)
+            .ok (castNachStmtL u caller callee Γ Λ s)
           else .error "call under foreign lock without G form"
         else .error "call without held guard"
       else .error "call writes without right"
 
 
-/-! The function-level entry points: `Λ` is the function's held resources (`resOf`). -/
-
-def lowAssignDurch (u : UProg) (caller : Fin u.fns.length)
-    (b fname : String) (ix : UIdx) (v : USide) :
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
-  lowAssignDurchL u caller (resOf u caller) b fname ix v
-
-def lowAssignTab (u : UProg) (caller : Fin u.fns.length)
-    (b fname : String) (ix : UIdx) (v : USide) :
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
-  lowAssignTabL u caller (resOf u caller) b fname ix v
-
-def lowAssignDurchB (u : UProg) (caller : Fin u.fns.length)
-    (b fname : String) (ix : UIdx) (v : UEns) :
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
-  lowAssignDurchBL u caller (resOf u caller) b fname ix v
-
-def lowAssignTabB (u : UProg) (caller : Fin u.fns.length)
-    (b fname : String) (ix : UIdx) (v : UEns) :
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
-  lowAssignTabBL u caller (resOf u caller) b fname ix v
-
-def lowCall (u : UProg) (caller : Fin u.fns.length)
-    (cname : String) (args : List UArg) :
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller) (resOf u caller)) :=
-  lowCallL u caller (resOf u caller) cname args
-
-/-- One body statement. -/
-def lowStmt (u : UProg) (caller : Fin u.fns.length) : UStmt →
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller) (resOf u caller))
-  | .assign b f ix v => lowAssignDurch u caller b f ix v
-  | .assignTab b f ix v => lowAssignTab u caller b f ix v
-  | .assignB b f ix v => lowAssignDurchB u caller b f ix v
-  | .assignTabB b f ix v => lowAssignTabB u caller b f ix v
-  | .call c args => lowCall u caller c args
-  | .sperrtAuf _ => .error "lower: a locks block opens here (flat markers are read by the block reader)"
-  | .sperrtZu => .error "lower: a locks block closes here without opening"
-
-/-- One non-marker statement at the held list `Λ`. -/
-def lowStmtL (u : UProg) (caller : Fin u.fns.length)
+/-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
+    `let` bindings read so far). -/
+def lowStmtL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) : UStmt →
-    Except String (Stmt (declOf u) (verOf u caller) false
-      (ctxOf u caller) Λ Λ)
-  | .assign b f ix v => lowAssignDurchL u caller Λ b f ix v
-  | .assignTab b f ix v => lowAssignTabL u caller Λ b f ix v
-  | .assignB b f ix v => lowAssignDurchBL u caller Λ b f ix v
-  | .assignTabB b f ix v => lowAssignTabBL u caller Λ b f ix v
-  | .call c args => lowCallL u caller Λ c args
+    Except String (Stmt (declOf u) (verOf u caller) false Γ Λ Λ)
+  | .assign b f ix v => lowAssignDurchL u caller Γ fn Λ b f ix v
+  | .assignTab b f ix v => lowAssignTabL u caller Γ fn Λ b f ix v
+  | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
+  | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
+  | .call c args => lowCallL u caller Γ fn Λ c args
   | .sperrtAuf _ => .error "lower: a locks block opens here"
   | .sperrtZu => .error "lower: a locks block closes here without opening"
+  | .bind .. => .error "lower: a let binds here (read by the block reader)"
+
+/-- A `let` value in the scope: its lowered side, inside the annotated range when there is one. -/
+def lowBindWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (d : Option (Int × Int)) (v : USide) : Except String (LowSide u Γ Λ) :=
+  match lowSideVal u Γ Λ fn v with
+  | .error e => .error e
+  | .ok s =>
+    match d with
+    | none => .ok s
+    | some (lo, hi) =>
+      if lo ≤ s.weit.1 ∧ s.weit.2 ≤ hi then .ok s
+      else .error "let: value outside the annotated range"
 
 /-- The rank rule of `locks L`: every held lock ranks below `L` (`H006`), as a Bool. -/
 def rangOkB (u : UProg) (Λ : List (Res (declOf u))) (L : (declOf u).Lock) : Bool :=
@@ -705,41 +674,48 @@ theorem rangOkB_sound (u : UProg) (Λ : List (Res (declOf u))) (L : (declOf u).L
 
 mutual
 /-- A flat run of statements at `Λ`, up to (not including) the `sperrtZu` that ends it, or the
-    end of the list; returns the block and what is left. Structural in the fuel. -/
+    end of the list; returns the block and what is left. A `let` binds for the rest of the run: its
+    type is the COMPUTED range of the value (as the exporter pushes it) and the scope grows by it.
+    Structural in the fuel. -/
 def lowSeqL (u : UProg) (caller : Fin u.fns.length) :
-    Nat → (Λ : List (Res (declOf u))) → List UStmt →
-    Except String (Block (declOf u) (verOf u caller) false (ctxOf u caller) Λ Λ ×
-      List UStmt)
-  | 0, _, _ => .error "lower: locks nesting too deep"
-  | _ + 1, _, [] => .ok (Block.nil, [])
-  | _ + 1, _, .sperrtZu :: rest => .ok (Block.nil, .sperrtZu :: rest)
-  | n + 1, Λ, .sperrtAuf g :: rest =>
-    match lowLocksL u caller n Λ g rest with
+    (Γ : Ctx) → UFn → Nat → (Λ : List (Res (declOf u))) → List UStmt →
+    Except String (Block (declOf u) (verOf u caller) false Γ Λ Λ × List UStmt)
+  | _, _, 0, _, _ => .error "lower: locks nesting too deep"
+  | _, _, _ + 1, _, [] => .ok (Block.nil, [])
+  | _, _, _ + 1, _, .sperrtZu :: rest => .ok (Block.nil, .sperrtZu :: rest)
+  | Γ, fn, n + 1, Λ, .sperrtAuf g :: rest =>
+    match lowLocksL u caller Γ fn n Λ g rest with
     | .error e => .error e
     | .ok (st, rest') =>
-      match lowSeqL u caller n Λ rest' with
+      match lowSeqL u caller Γ fn n Λ rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
-  | n + 1, Λ, s :: rest =>
-    match lowStmtL u caller Λ s with
+  | Γ, fn, n + 1, Λ, .bind x d v :: rest =>
+    match lowBindWert u Γ Λ fn d v with
+    | .error e => .error e
+    | .ok s =>
+      match lowSeqL u caller (.int s.weit.1 s.weit.2 :: Γ) (fn.mitBindung x s.weit) n Λ rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.bind s.term b, r)
+  | Γ, fn, n + 1, Λ, s :: rest =>
+    match lowStmtL u caller Γ fn Λ s with
     | .error e => .error e
     | .ok st =>
-      match lowSeqL u caller n Λ rest with
+      match lowSeqL u caller Γ fn n Λ rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
 
 /-- `locks g { … }`: the lock by name, the rank rule, the body up to the closing marker. -/
 def lowLocksL (u : UProg) (caller : Fin u.fns.length) :
-    Nat → (Λ : List (Res (declOf u))) → String → List UStmt →
-    Except String (Stmt (declOf u) (verOf u caller) false (ctxOf u caller) Λ Λ ×
-      List UStmt)
-  | 0, _, _, _ => .error "lower: locks nesting too deep"
-  | n + 1, Λ, g, rest =>
+    (Γ : Ctx) → UFn → Nat → (Λ : List (Res (declOf u))) → String → List UStmt →
+    Except String (Stmt (declOf u) (verOf u caller) false Γ Λ Λ × List UStmt)
+  | _, _, 0, _, _, _ => .error "lower: locks nesting too deep"
+  | Γ, fn, n + 1, Λ, g, rest =>
     match lockIdx u.sperren g with
     | .error e => .error e
     | .ok L =>
       if hr : rangOkB u Λ L = true then
-        match lowSeqL u caller n (Res.held L :: Λ) rest with
+        match lowSeqL u caller Γ fn n (Res.held L :: Λ) rest with
         | .error e => .error e
         | .ok (body, .sperrtZu :: rest') =>
           .ok (Stmt.locks L (rangOkB_sound u Λ L hr) body, rest')
@@ -758,16 +734,16 @@ theorem endPerm_ok (u : UProg) (caller : Fin u.fns.length) :
     (vertragVon (declOf u) caller).ende from rfl, ende_eq u caller]
 
 /-- The trailing return. -/
-def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
+def lowEnd (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet →
     Except String (Endblock (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller))
+      Γ (resOf u caller))
   | .empty =>
     match hE : (fnAt u caller).ergTy with
     | none =>
       have hV : (verOf u caller).erg = none := by
         show (vertragVon (declOf u) caller).erg = none
         rw [vErg_eq u caller, hE]
-      have eK : ErgExpr (declOf u) (ctxOf u caller)
+      have eK : ErgExpr (declOf u) Γ
           (resOf u caller) (verOf u caller).erg := by
         rw [hV]
         exact ErgExpr.empty
@@ -776,16 +752,16 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
   | .val s =>
     match hE : (fnAt u caller).ergTy with
     | some (.int lo hi) =>
-      match lowWertAt u (ctxOf u caller) (resOf u caller)
-          (fnAt u caller) lo hi s with
+      match lowWertAt u Γ (resOf u caller)
+          fn lo hi s with
       | .error e => .error e
       | .ok v =>
-        have eW : ErgExpr (declOf u) (ctxOf u caller)
+        have eW : ErgExpr (declOf u) Γ
             (resOf u caller) (verOf u caller).erg := by
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
             vErg_eq u caller, hE]
-          show ErgExpr (declOf u) (ctxOf u caller)
+          show ErgExpr (declOf u) Γ
             (resOf u caller) (Option.some (.int lo hi))
           exact ErgExpr.val v
         .ok (Endblock.ret eW (endPerm_ok u caller))
@@ -794,10 +770,10 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
   | .bool b =>
     match hE : (fnAt u caller).ergTy with
     | some .bool =>
-      match lowEns u (ctxOf u caller) (resOf u caller) (fnAt u caller) none b with
+      match lowEns u Γ (resOf u caller) fn none b with
       | .error e => .error e
       | .ok v =>
-        have eW : ErgExpr (declOf u) (ctxOf u caller)
+        have eW : ErgExpr (declOf u) Γ
             (resOf u caller) (verOf u caller).erg := by
           rw [show (verOf u caller).erg =
             (vertragVon (declOf u) caller).erg from rfl,
@@ -807,35 +783,41 @@ def lowEnd (u : UProg) (caller : Fin u.fns.length) : URet →
     | some _ => .error "truth value returned for a non-bool result"
     | none => .error "return with value without result"
 
-/-- The body reader, structural in a fuel: straight-line writes and direct calls and flat `locks`
-    blocks, then the trailing return. -/
+/-- The body reader, structural in a fuel: straight-line writes, direct calls, flat `locks`
+    blocks and `let` bindings (the scope `Γ`/`fn` grows by each), then the trailing return. -/
 def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
-    Nat → List UStmt → URet →
-    Except String (Endblock (declOf u) (verOf u caller) false
-      (ctxOf u caller) (resOf u caller))
-  | 0, _, _ => .error "lower: body too long"
-  | _ + 1, [], r => lowEnd u caller r
-  | n + 1, .sperrtAuf g :: rest, r =>
-    match lowLocksL u caller 32 (resOf u caller) g rest with
+    (Γ : Ctx) → UFn → Nat → List UStmt → URet →
+    Except String (Endblock (declOf u) (verOf u caller) false Γ (resOf u caller))
+  | _, _, 0, _, _ => .error "lower: body too long"
+  | Γ, fn, _ + 1, [], r => lowEnd u caller Γ fn r
+  | Γ, fn, n + 1, .sperrtAuf g :: rest, r =>
+    match lowLocksL u caller Γ fn 32 (resOf u caller) g rest with
     | .error e => .error e
     | .ok (st, rest') =>
-      match lowBodyF u caller n rest' r with
+      match lowBodyF u caller Γ fn n rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | n + 1, s :: rest, r =>
-    match lowStmt u caller s with
+  | Γ, fn, n + 1, .bind x d v :: rest, r =>
+    match lowBindWert u Γ (resOf u caller) fn d v with
+    | .error e => .error e
+    | .ok s =>
+      match lowBodyF u caller (.int s.weit.1 s.weit.2 :: Γ) (fn.mitBindung x s.weit) n rest r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.bind s.term e)
+  | Γ, fn, n + 1, s :: rest, r =>
+    match lowStmtL u caller Γ fn (resOf u caller) s with
     | .error e => .error e
     | .ok st =>
-      match lowBodyF u caller n rest r with
+      match lowBodyF u caller Γ fn n rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
 
-/-- The body: straight-line writes and direct calls, then the trailing return. -/
+/-- The body: the statements of a function, then the trailing return, in the scope of its parameters. -/
 def lowBody (u : UProg) (caller : Fin u.fns.length)
     (ss : List UStmt) (r : URet) :
     Except String (Endblock (declOf u) (verOf u caller) false
       (ctxOf u caller) (resOf u caller)) :=
-  lowBodyF u caller (ss.length + 1) ss r
+  lowBodyF u caller (ctxOf u caller) (fnAt u caller) (ss.length + 1) ss r
 
 /-- The ensures type of a lowered function. -/
 abbrev EnsTy (u : UProg) (f : Fin u.fns.length) :=
