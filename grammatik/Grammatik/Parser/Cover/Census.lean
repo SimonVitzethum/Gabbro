@@ -103,13 +103,12 @@ def rundlaufZahl (items : List SItemTief) : String :=
   let bs := koerperVon items
   toString (bs.filter rundlaufBlock).length ++ "/" ++ toString bs.length
 
-/-- Round trip of every leaf item (modules opened): `ok/printable/total`. -/
+/-- Round trip of every leaf item (modules opened): `ok/total`. -/
 def rundlaufItemZahl (items : List SItemTief) : String :=
   let leaves := (uMembers items).filter fun it => match it with
     | .modT .. => false
     | _ => true
-  let rs := leaves.filterMap rundlaufItem
-  toString (rs.filter id).length ++ "/" ++ toString rs.length ++ "/" ++ toString leaves.length
+  toString (leaves.filter rundlaufItem).length ++ "/" ++ toString leaves.length
 
 def line (name src : String) : String :=
   match lex src with

@@ -102,12 +102,12 @@ theorem rt_item_fn :
                          fehler := none, klauseln := [.needs (.bin "<" (.variable "a") (.lit 9)),
                            .gives (.bin "==" .res (.variable "a")), .effs [.reads (.variable "T"), .pure],
                            .cost (.lit 4)] }
-      (.block [] (some (.ret (some (.variable "a")))))) = some true := by
+      (.block [] (some (.ret (some (.variable "a")))))) = true := by
   decide +kernel
 theorem rt_item_data :
     rundlaufItem (.tableT "T" (some (.lit 4)) none none false
       [.tSlot [{ fname := "v", ftyp := .atom "u32", pos := none, bezug := none, wo := none,
-                 reserviert := false, byOps := true }]]) = some true := by
+                 reserviert := false, byOps := true }]]) = true := by
   decide +kernel
 
 end Gabbro.Grammatik.Parser

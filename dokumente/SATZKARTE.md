@@ -5117,7 +5117,7 @@ initialiser (`sp0GlobWert`, `sp0Of_glob`, `sp0OkB_glob`) and an initialiser outs
 `elabU02`..`elabU05` are deleted (they dropped items the elaborator now reads or refuses). Probes: `UebersetzeProben4`..`12`
 (`let`, `if`, `return`, `traverse`, `locks`, statics; each with a refused twin). Measured, not proved: 170 of 170 corpus
 files parse as a whole, 17 elaborate and lower (`Parser/Cover/Census.lean`, `instrumente/parser-deckung.py`); 429 of 429
-function bodies and 1020 of 1020 printable items print and read back as the same tree (`Print/Stmt`, `Print/Item`,
+function bodies and 1287 of 1287 leaf items print and read back as the same tree (`Print/Stmt`, `Print/Item`,
 `Print/Proben`). Proved: the expression round trip on the `gut` shapes and, new, the statement round trip of the
 straight-line core: `parseStmt_einfach`, `parseStmts_einfach`, `rundlauf_block_einfach` (a block of `return`, `leave`,
 `next` and number `let` over `gutPrim` expressions, hypothesis `EndeGut`; witness `rundlauf_block_einfach_zeuge`, planted

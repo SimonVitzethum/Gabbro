@@ -706,9 +706,9 @@ and `ri=` leaf items, no theorem); elab `U` = `elabU`/`lowerAllg` lowers it; cor
 | files that elaborate (`elabU`), all of them also lower | 9 / 170 | 9 / 170 | 9 / 170 | 13 / 170 | **17 / 170** |
 | exporter-certified programs (29 in `beispiele/`; the register file is gone, the list is in git at 3068f537) elaborated | 9 / 29 | 9 / 29 | 9 / 29 | 13 / 29 | **17 / 29** |
 | rules, reader S / P / R / X (190 rules) | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 | 158 / 11 / 22 / 0 | 158 / 11 / 22 / 0 | 159 / 12 / 20 / 0 |
-| rules with a printer, a round trip (proved P + measured M) | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) | **118, 34 + 84** |
+| rules with a printer, a round trip (proved P + measured M) | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) | **174, 34 + 140** |
 | rules with an elaboration | 58 | 58 | 58 | 59 | 66 |
-| function bodies / printable items of the corpus that print and read back as the same tree | n/a | n/a | n/a | n/a | **429 / 429, 1020 / 1020** (of 1287 leaf items) |
+| function bodies / printable items of the corpus that print and read back as the same tree | n/a | n/a | n/a | n/a | **429 / 429, 1287 / 1287** |
 
 Phase 2 (3), first slice: `masks irqs` (`ULock.masks` -> `D.maskiert`), entry `via` (`UProg.handler` -> `Programm.unterbricht`), `concurrent` roots ahead of the dispatch roots, nested modules, and the dropped `deadline ... arch ... falsifier` clause lift 108, 166, 59 and 165 (13 of 29). Open in this phase: statics, `let`/`check`/`traverse`, atomics, tagged types, lock invariants and gates (each needs its G form in `declOf`: `Glob`, `Inv`, `Ax`, `Ty.sum`, or a variable context in `lowSeqL`), and the printers and round trips.
 
@@ -722,14 +722,14 @@ contract end (not under `locks`). 1164, 190 and 193 lift. (b) Statics: `UGlob`, 
 (`sp0GlobWert`, refusal `sp0_glob_luecke`); the theorems that assumed `Glob = Empty` are redone generically
 (`GvStartPflicht`, `GvLuecken`). 187 lifts; 121 waits for tagged types. The measuring-lane wrapper elaborators
 `elabU02`..`elabU05` (they dropped statics, prototypes, format and reason items) are deleted. (c) Printers: `Print/Stmt`
-(types, every statement form), `Print/Item` (partial: `entry`, `device`, `format`, `arena`, `walk`, `assume`, `reason`,
-`atomic`, `syscall`, `target` ... answer `none`), the spelling of the predicate forms in `druckToks`. (d) The English
+(types, every statement form), `Print/Item` (every one of the 35 item kinds), the spelling of the predicate forms in
+`druckToks`. (d) The English
 rename of the elaborator's data types, fields and refusal strings (`tabs`, `locks`, `roots`, `names`, `kinds`, `held`,
 `lockBeg`, `ifBeg`, ...). (e) The first statement-level round-trip THEOREM (`Round/RundlaufAnw`..`3`):
 `rundlauf_block_einfach` -- a block of `return`/`leave`/`next` and number `let` over `gutPrim` expressions prints and
 reads back through `parseBlock` as the same tree (witness `rundlauf_block_einfach_zeuge`, planted defect
-`schliesse_ende_noetig`: `schliesseBlock` reads a trailing `return` as the ender). Open in this phase: the printers of
-the other item kinds, the statement theorem beyond the straight-line core (assignments, calls, `if`, nested blocks:
+`schliesse_ende_noetig`: `schliesseBlock` reads a trailing `return` as the ender). Open in this phase: the
+statement theorem beyond the straight-line core (assignments, calls, `if`, nested blocks:
 measured only), atomics, tagged types, lock invariants and gates.
 
 Findings. (1) The expression round trip is a theorem on the `gut` shapes (`Rundlauf3` names the nesting blocker); the
@@ -765,22 +765,22 @@ and `bank` bodies (`R`).
 | `pathseg` | lex | S | . | . | . |  |  |
 | `identlist` | lex | S | . | . | . |  |  |
 | `regbind` | lex | S | . | . | . |  | `SRegBind` |
-| `program` | item | S | . | . | U |  | `parseTopTief`; `elabU` takes tables, locks, impl fns, consts, entries |
-| `item` | item | S | . | . | U |  | `SItemTief`, 32 constructors |
-| `buildgate` | item | S | . | . | . | 1 | `gateT` |
-| `bootdecl` | item | S | . | . | . | 1 | `bootT` |
-| `bootstep` | item | S | . | . | . | 1 | `SBootSchritt` |
-| `entrydecl` | item | S | . | . | U | 9 | `SEingang`; `elabU` reads only the dispatch roots |
-| `entrustdecl` | item | S | . | . | . | 1 |  |
-| `entryextra` | item | S | . | . | . | 10 |  |
-| `syscalldecl` | item | S | . | . | . | 17 | literal, `via V` and `syscall V;` forms |
-| `sysbind` | item | S | . | . | . | 17 |  |
-| `syscontract` | item | S | . | . | . |  |  |
-| `syspair` | item | S | . | . | . | 37 |  |
-| `targetdecl` | item | S | . | . | . | 11 | `goalT`; the lexer table gained `target` |
-| `targetbind` | item | S | . | . | . | 11 | `goalT` bindings |
-| `errmap` | item | S | . | . | . | 17 | `errno [= n] => R` |
-| `accdecl` | item | S | . | . | . | 2 | `accT` |
+| `program` | item | S | E | M | U |  | `parseTopTief`; `elabU` takes tables, locks, impl fns, consts, entries |
+| `item` | item | S | E | M | U |  | `SItemTief`, 32 constructors |
+| `buildgate` | item | S | E | M | . | 1 | `gateT` |
+| `bootdecl` | item | S | E | M | . | 1 | `bootT` |
+| `bootstep` | item | S | E | M | . | 1 | `SBootSchritt` |
+| `entrydecl` | item | S | E | M | U | 9 | `SEingang`; `elabU` reads only the dispatch roots |
+| `entrustdecl` | item | S | E | M | . | 1 |  |
+| `entryextra` | item | S | E | M | . | 10 |  |
+| `syscalldecl` | item | S | E | M | . | 17 | literal, `via V` and `syscall V;` forms |
+| `sysbind` | item | S | E | M | . | 17 |  |
+| `syscontract` | item | S | E | M | . |  |  |
+| `syspair` | item | S | E | M | . | 37 |  |
+| `targetdecl` | item | S | E | M | . | 11 | `goalT`; the lexer table gained `target` |
+| `targetbind` | item | S | E | M | . | 11 | `goalT` bindings |
+| `errmap` | item | S | E | M | . | 17 | `errno [= n] => R` |
+| `accdecl` | item | S | E | M | . | 2 | `accT` |
 | `moduledecl` | item | P | E | M | U | 170 | `modT`; `pub` is dropped |
 | `usedecl` | item | S | E | M | . | 2 |  |
 | `constdecl` | item | S | E | M | U | 67 | `konstT` |
@@ -794,11 +794,11 @@ and `bank` bodies (`R`).
 | `stringty` | type | S | E | M | . | 8 | `STyp.str` |
 | `stringkopf` | type | S | E | M | . | 8 | `STyp.str` |
 | `indexty` | type | S | E | M | U | 46 | `STyp.index` |
-| `nevertype` | type | S | . | . | . | 31 |  |
+| `nevertype` | type | S | E | M | . | 31 |  |
 | `intty` | type | S | E | M | U | 164 |  |
 | `uint` | type | S | E | M | U | 163 |  |
 | `int` | type | S | E | M | U | 8 | second definition of `int` (signed sugar) |
-| `nonzero` | type | S | . | . | . |  |  |
+| `nonzero` | type | S | E | M | . |  |  |
 | `floatty` | type | P | E | M | . | 1 | read as an atom plus `in`; no float elaboration |
 | `frange` | type | P | E | M | . | 1 |  |
 | `fexpr` | type | P | E | M | . | 1 |  |
@@ -811,12 +811,12 @@ and `bank` bodies (`R`).
 | `bitpos` | type | S | E | M | . | 18 |  |
 | `variants` | type | R | E | M | . | 10 | balanced, uninterpreted |
 | `fnptr` | type | R | E | M | . | 4 | balanced, uninterpreted |
-| `fncontract` | type | S | . | . | . |  |  |
+| `fncontract` | type | S | E | M | . |  |  |
 | `entryfn` | type | P | E | M | . | 1 | `STyp.entry`: parameter words raw |
 | `typelist` | type | S | E | M | . |  |  |
 | `params` | type | S | E | M | U |  |  |
-| `fnptrparams` | type | R | . | . | . |  |  |
-| `fnptrparam` | type | R | . | . | . |  |  |
+| `fnptrparams` | type | R | E | M | . |  |  |
+| `fnptrparam` | type | R | E | M | . |  |  |
 | `ptrty` | type | S | E | M | U | 67 | rights kept as one string (`rw+own`, `own@h`) |
 | `space` | type | S | E | M | U |  |  |
 | `rights` | type | S | E | M | U |  | `parseRechte` |
@@ -854,13 +854,13 @@ and `bank` bodies (`R`).
 | `domain` | pred | S | E | M | . | 22 | the eight domains, as names and place operands of `ext` |
 | `member` | pred | S | E | M | . |  | `ext .mem` |
 | `reach` | pred | S | E | M | . | 2 | `ext .reach` |
-| `predlist` | pred | S | . | . | U |  |  |
+| `predlist` | pred | S | E | M | U |  |  |
 | `fndecl` | fn | S | E | M | U | 167 | `FnSig` + `SAnw`; elab: `impl fn` only |
-| `asmrumpf` | fn | R | . | . | . | 3 | `asmT`, body raw |
-| `asmops` | fn | R | . | . | . |  |  |
-| `asmop` | fn | R | . | . | . |  |  |
-| `inductlist` | fn | R | . | . | . | 1 | raw string |
-| `induct` | fn | R | . | . | . |  |  |
+| `asmrumpf` | fn | R | E | M | . | 3 | `asmT`, body raw |
+| `asmops` | fn | R | E | M | . |  |  |
+| `asmop` | fn | R | E | M | . |  |  |
+| `inductlist` | fn | R | E | M | . | 1 | raw string |
+| `induct` | fn | R | E | M | . |  |  |
 | `efflist` | fn | S | E | M | U |  |  |
 | `eff` | fn | S | E | M | U | 166 |  |
 | `breakstmt` | stmt | S | E | M | . | 2 | `waive` |
@@ -890,7 +890,7 @@ and `bank` bodies (`R`).
 | `startstmt` | stmt | S | E | M | . | 2 | `SAnw.start`; written into SYNTAX.md 2026-10-17 |
 | `libcall` | stmt | R | E | M | . | 2 | region skipped balanced |
 | `libregion` | stmt | R | E | M | . |  |  |
-| `translatordecl` | stmt | S | . | . | . | 7 | `transT` |
+| `translatordecl` | stmt | S | E | M | . | 7 | `transT` |
 | `loopform` | stmt | P | E | M | U | 26 | header raw |
 | `traverse` | stmt | S | E | M | U | 15 | header raw |
 | `retry` | stmt | R | E | M | . | 9 |  |
@@ -901,43 +901,51 @@ and `bank` bodies (`R`).
 | `occdecl` | decl | S | E | M | . | 1 |  |
 | `opdecl` | decl | S | E | M | . | 154 |  |
 | `opname` | decl | S | E | M | . |  |  |
-| `walkdecl` | decl | S | . | . | . | 1 | `SWeg` |
+| `walkdecl` | decl | S | E | M | . | 1 | `SWeg` |
 | `slotdecl` | decl | S | E | M | U | 73 |  |
 | `slotfeld` | decl | S | E | M | U |  |  |
-| `arena` | decl | P | . | . | . | 7 | `max`, `pb`/`blw` read; `pub` dropped |
-| `slottype` | decl | S | . | . | . | 7 |  |
+| `arena` | decl | P | E | M | . | 7 | `max`, `pb`/`blw` read; `pub` dropped |
+| `slottype` | decl | S | E | M | . | 7 |  |
 | `invariant` | decl | S | E | M | . | 15 |  |
 | `costexpr` | decl | S | E | M | . | 9 |  |
-| `format` | decl | S | . | . | . | 6 | `@version` read |
-| `reason` | decl | S | . | . | . | 28 | `whyT` |
-| `state` | decl | S | . | . | . | 1 | `stateT` |
-| `device` | decl | S | . | . | . | 13 | `devT` |
-| `mirrors` | decl | S | . | . | . | 4 |  |
-| `bank` | decl | R | . | . | . | 1 | `bank` |
-| `regdecl` | decl | S | . | . | . | 13 | `SReg` |
-| `regklasse` | decl | S | . | . | . |  |  |
-| `regphasen` | decl | S | . | . | . |  |  |
-| `regfeld` | decl | S | . | . | . |  |  |
-| `carrier` | decl | S | . | . | . | 2 |  |
-| `transition` | decl | S | . | . | . | 5 | `STrans` |
-| `transset` | decl | S | . | . | . |  |  |
-| `placeshift` | decl | S | . | . | . |  |  |
-| `shiftplace` | decl | S | . | . | . |  |  |
-| `atomicdecl` | conc | S | . | . | . | 14 | `atomT` |
+| `format` | decl | S | E | M | . | 6 | `@version` read |
+| `reason` | decl | S | E | M | . | 28 | `whyT` |
+| `state` | decl | S | E | M | . | 1 | `stateT` |
+| `device` | decl | S | E | M | . | 13 | `devT` |
+| `mirrors` | decl | S | E | M | . | 4 |  |
+| `bank` | decl | R | E | M | . | 1 | `bank` |
+| `regdecl` | decl | S | E | M | . | 13 | `SReg` |
+| `regklasse` | decl | S | E | M | . |  |  |
+| `regphasen` | decl | S | E | M | . |  |  |
+| `regfeld` | decl | S | E | M | . |  |  |
+| `carrier` | decl | S | E | M | . | 2 |  |
+| `transition` | decl | S | E | M | . | 5 | `STrans` |
+| `transset` | decl | S | E | M | . |  |  |
+| `placeshift` | decl | S | E | M | . |  |  |
+| `shiftplace` | decl | S | E | M | . |  |  |
+| `atomicdecl` | conc | S | E | M | . | 14 | `atomT` |
 | `publishstmt` | conc | P | E | M | . | 14 | payload list raw |
 | `nutzlast` | conc | R | E | M | . |  |  |
 | `lockdecl` | conc | S | E | M | U | 44 | `invariant` read (`lockT` 7th field) |
-| `lockstmt` | conc | S | . | . | U | 42 | `locks` |
-| `rcudecl` | conc | S | . | . | . | 3 |  |
+| `lockstmt` | conc | S | E | M | U | 42 | `locks` |
+| `rcudecl` | conc | S | E | M | . | 3 |  |
 | `observestmt` | conc | S | E | M | . | 3 |  |
-| `gruppedecl` | conc | S | . | . | . | 1 |  |
+| `gruppedecl` | conc | S | E | M | . | 1 |  |
 | `concurrentdecl` | conc | S | E | M | U | 6 | `concT` |
-| `assume` | assume | S | . | . | . | 31 |  |
-| `axiom` | assume | S | . | . | . | 3 |  |
-| `profiledecl` | assume | S | . | . | . | 2 |  |
-| `requiresprofile` | assume | S | . | . | . | 2 |  |
-| `profileentry` | assume | S | . | . | . |  |  |
-| `check` | assume | S | . | . | . | 3 |  |
+| `assume` | assume | S | E | M | . | 31 |  |
+| `axiom` | assume | S | E | M | . | 3 |  |
+| `profiledecl` | assume | S | E | M | . | 2 |  |
+| `requiresprofile` | assume | S | E | M | . | 2 |  |
+| `profileentry` | assume | S | E | M | . |  |  |
+| `check` | assume | S | E | M | . | 3 |  |
+
+rules: 191 rows, 190 distinct rule names (SYNTAX.md defines 190; `int` is defined twice)
+reader   P=12, R=20, S=159
+printer  .=17, E=174
+rtrip    .=17, M=140, P=34
+elab     .=125, U=66
+rules with all four columns present (round trip: proved on `gut` shapes (P) or measured (M)): 62
+corpus: 170 files; lex ok 170; whole-file parse ok 170; elab ok 17; lower ok 17
 
 rules: 191 rows, 190 distinct rule names (SYNTAX.md defines 190; `int` is defined twice)
 reader   P=12, R=20, S=159
