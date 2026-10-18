@@ -53,6 +53,20 @@ theorem auf_push_nach {c : Int} {nx nx' : Int → Int} {kopf kopf' i : Int}
   subst this
   exact ⟨i :: L', hch, List.mem_cons_of_mem _ hm⟩
 
+/-- After `push i`: `i` is a member (the head). -/
+theorem auf_push_kopf {c : Int} {nx nx' : Int → Int} {kopf kopf' i : Int}
+    (hchain : ∃ L, KetteF c nx kopf L) (h0 : 0 ≤ i) (hi : i < c) (hnot : ¬ Auf c nx kopf i)
+    (hk' : kopf' = i) (hn' : nx' i = kopf) (ho : ∀ j, j ≠ i → nx' j = nx j) :
+    Auf c nx' kopf' i := by
+  obtain ⟨L, hk⟩ := hchain
+  have hiL : i ∉ L := fun hm => hnot ⟨L, hk, hm⟩
+  have hch : KetteF c nx' kopf' (i :: L) := by
+    rw [hk']
+    refine KetteF.cons i h0 hi L ?_
+    rw [hn']
+    exact hk.uebertragen (fun j hj => ho j (fun e => hiL (e ▸ hj)))
+  exact ⟨i :: L, hch, List.mem_cons_self⟩
+
 /-- After `pop`: every member of the new chain was a member before. -/
 theorem auf_pop_vor {c : Int} {nx nx' : Int → Int} {kopf kopf' : Int}
     (hchain : ∃ L, KetteF c nx kopf L) (hne : kopf < c)
@@ -90,5 +104,6 @@ end Gabbro.Grammatik.ArenaKette
 
 #print axioms Gabbro.Grammatik.ArenaKette.auf_push_vor
 #print axioms Gabbro.Grammatik.ArenaKette.auf_push_nach
+#print axioms Gabbro.Grammatik.ArenaKette.auf_push_kopf
 #print axioms Gabbro.Grammatik.ArenaKette.auf_pop_vor
 #print axioms Gabbro.Grammatik.ArenaKette.auf_unlink_vor

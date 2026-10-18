@@ -357,6 +357,8 @@ import Grammatik.Bausteine.Arena.Struktur.ArenaErkenner
 import Grammatik.Bausteine.Arena.Struktur.ArenaErkennerLemmas
 import Grammatik.Bausteine.Arena.Struktur.ArenaErkennerBeweis
 import Grammatik.Bausteine.Arena.Struktur.ArenaErkennerZeuge
+import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
+import Grammatik.Bausteine.Arena.Struktur.ArenaHash
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset
 import Grammatik.Logik.Ruf.FremdRuf
