@@ -402,6 +402,12 @@ import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
 import Grammatik.Zielsatz.Eigenschaften.KernMaske
 import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
 import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
+import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+import Grammatik.Zielsatz.Eigenschaften.RwRang
+import Grammatik.Zielsatz.Eigenschaften.RwOrdnung
+import Grammatik.Zielsatz.Eigenschaften.RwInv
+import Grammatik.Zielsatz.Eigenschaften.RwZeuge
+import Grammatik.Zielsatz.Eigenschaften.RwZeugeLeser
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.CBackend.Formen.CFormMatch
 import Grammatik.Zielsatz.Eigenschaften.Divergenz
@@ -496,6 +502,9 @@ import Grammatik.Code.Conc.Mask
 import Grammatik.Code.Conc.MaskNeed
 import Grammatik.Code.Conc.MaskRel
 import Grammatik.Code.Conc.MaskWitness
+import Grammatik.Code.Conc.RwLock
+import Grammatik.Code.Conc.RwLockRel
+import Grammatik.Code.Conc.RwLockWitness
 import Grammatik.Code.Conc.Shared
 import Grammatik.Code.Conc.SharedWitness
 import Grammatik.Code.Conc.GXWitness

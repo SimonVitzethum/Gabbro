@@ -83,6 +83,11 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
   named hardware assumption `MaskHw` and the refinement (`MaskRel.lean`, `irq_guard`); `PLAN-DYNAMISCH.md` 8a.4, SATZKARTE 81. Open: the `Spec.lean`
   proposal (8a.4, not applied) and its GA twin; the composition of the `Code` steps with the interleaving of all threads of a core (H3); re-entry and
   handler-on-handler preemption; `Einheit` names no handler; `H102` fires only on `via idt`; no Rust/LLVM emitter for `imsk`.
+- **Reader/writer lock (decision 2026-10-18).** In Lean as the layer `RwSchritt` over machine G (`RwSchritt/RwRang/RwOrdnung/RwInv.lean`): exclusion
+  (many readers XOR one writer), rank order and no wait cycle, no write-write/write-read race (premise `LeserLos`), the lock invariant visible to readers and
+  owed by writers only; witnesses (two readers + a writer, kernel-checked) and planted defects (`RwZeuge`, `RwZeugeLeser`); `Code` lowering on one state word with
+  `cas`/`aload`/`armw` and the refinement `RwRel` (`RwLock*.lean`); `PLAN-DYNAMISCH.md` 8a.5, SATZKARTE 82. Open: the `Spec.lean` diff (mode in G recommended) and the
+  syntax (`lock L rank N rw`, `reads L { }`, signature `reads L`: proposals), the legs of `Ziel` with no layer twin, the checker rule deriving `LeserLos`, fairness; no Rust/LLVM.
 - **O20 (Arenen unter Nebenläufigkeit).** Generationen und Commit-Decke nehmen
   einen Kontrollfaden und einmal betretene Wurzeln an. Seit 2026-10-18 (Lean, Phase A Schritt 3) ist eine
   geteilte Arena die Sperrinvariante (`Dekl.sperr`), der Abschnittssatz steht (`abschnitt_erk`/`abschnitt_rufe`),
