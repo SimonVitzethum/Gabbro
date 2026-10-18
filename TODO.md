@@ -78,10 +78,11 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
   Prüfer, Compiler: `dokumente/PLAN-DYNAMISCH.md` §8a (sieben Stufen, drei Entscheidungen offen). Umfasst O4–O6, O11, O14, O20, O29.
 - **O14 (Arena-Ketten: zwei Statement-Formen ohne Form).** Spezifikation und
   Exporteur haben die Form; zwei Statement-Gestalten schließen keine Kette.
-- **O19-Rest (Handler und Kerne).** `Einheit` nennt keinen Handler, G hat keine
-  Kerne (`kern`, `H`, Rufgraphen, Maskendisziplin sind Hypothesen des Beins);
-  C realisiert kein Maskieren (nichts für die Validierungskette);
-  Re-Entry und Handler-auf-Handler draußen; `H102` feuert nur auf `via idt`.
+- **O19-Rest (handlers and cores).** Since 2026-10-18 (Lean): G has a per-core mask state over the layer `KernZ` (`KernMaske.lean`), the core
+  schedule is DERIVED from the machine (`kernPlan_aus_lauf`, `kernHaltM_aus`, `kernHaltE_iff_M`: the same statement), and `Code` has `Instr.imsk` with the
+  named hardware assumption `MaskHw` and the refinement (`MaskRel.lean`, `irq_guard`); `PLAN-DYNAMISCH.md` 8a.4, SATZKARTE 81. Open: the `Spec.lean`
+  proposal (8a.4, not applied) and its GA twin; the composition of the `Code` steps with the interleaving of all threads of a core (H3); re-entry and
+  handler-on-handler preemption; `Einheit` names no handler; `H102` fires only on `via idt`; no Rust/LLVM emitter for `imsk`.
 - **O20 (Arenen unter Nebenläufigkeit).** Generationen und Commit-Decke nehmen
   einen Kontrollfaden und einmal betretene Wurzeln an. Seit 2026-10-18 (Lean, Phase A Schritt 3) ist eine
   geteilte Arena die Sperrinvariante (`Dekl.sperr`), der Abschnittssatz steht (`abschnitt_erk`/`abschnitt_rufe`),

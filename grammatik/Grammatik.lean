@@ -399,6 +399,9 @@ import Grammatik.Logik.Ruf.FremdRuf
 import Grammatik.Zielsatz.Faeden.PoolSym
 import Grammatik.Zielsatz.Eigenschaften.Masken
 import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
+import Grammatik.Zielsatz.Eigenschaften.KernMaske
+import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
+import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.CBackend.Formen.CFormMatch
 import Grammatik.Zielsatz.Eigenschaften.Divergenz
@@ -489,6 +492,10 @@ import Grammatik.Code.Conc.GXStep
 import Grammatik.Code.Conc.Lock
 import Grammatik.Code.Conc.LockRel
 import Grammatik.Code.Conc.LockWitness
+import Grammatik.Code.Conc.Mask
+import Grammatik.Code.Conc.MaskNeed
+import Grammatik.Code.Conc.MaskRel
+import Grammatik.Code.Conc.MaskWitness
 import Grammatik.Code.Conc.Shared
 import Grammatik.Code.Conc.SharedWitness
 import Grammatik.Code.Conc.GXWitness

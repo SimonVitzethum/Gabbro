@@ -5260,3 +5260,24 @@ NOT proved: a concrete two-thread run of machine W/GX over a program with a plai
 
 NOT proved in step 3 (named in `PLAN-DYNAMISCH.md` 8a.2/8a.3): the ABA ownership predicate; the commit bound `stand <= komSt` in the lock invariant (the recognized alloc is guarded by `hi` not `komSt`, the forms' frames do not name `zaehl`/`komm`; `Erk.wachs` now demands `0 ≤ n`); the footprint of a pure `pop`/`wurzelAus` (`schuldet` counts tables only); the arena at ENTRY of a writer (premise `hein`); the machine correspondence of writers with loops;
 the migration D1 (analysed, not built); the exporter; `Spec.lean` unchanged, the diff D1-D5 stays a proposal.
+
+## 81. The per-core interrupt-mask state of machine G, `KernHaltE` derived, and the mask as `Code` (O19 rest, 2026-10-18, `PLAN-DYNAMISCH.md` 8a.4)
+
+*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/{KernMaske,KernMaskeGleich,KernMaskeZeuge}.lean`, `grammatik/Grammatik/Code/Conc/{Mask,MaskNeed,MaskRel,MaskWitness}.lean`, `Code/Model/{Syntax,Semantics}.lean` (one instruction). Model only: `Spec.lean`, the Rust checker, the exporter and the LLVM backend are unchanged, `gabbro_ziel` is untouched (nothing in `Zielsatz/` imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` at most.*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `fertig_kein_schritt` (a finished thread has no step), `fertig_bleibt`, `fertig_lauf` | `KernMaske` | none |
+| `MaskeKern`, `maskEintr`, `maskeNach`, `MaskeOk` (a pair is in a core's list iff the thread runs on it, holds the lock, the lock is declared `masks irqs`), **`maskeOk_schritt`**, **`maske_nichtleer_iff`** (a core is masked iff one of its threads holds a masking lock: nesting included), `mask_leer_ohne`, `maskeOk_leer_ohne` | `KernMaske` | `D.maskiert L = false` for the last two |
+| `KernZ`, `KernSchritt` (entry only when unmasked, run to completion, acquisition masks / release unmasks), `KernLauf`, `KernStart`, `KernZ.weiter`, `kernSchritt_weiter`; **`kernLauf_laufG`** (a guarded run is a G run); `kernLauf_maskeOk`, `kernLauf_begonnen` | `KernMaske` | `KernStart` |
+| **`kernPlan_aus_lauf`**: every guarded run meets `KernPlan` (the schedule is DERIVED) | `KernMaske` | `KernStart` |
+| `KernHaltM`; **`kernHaltM_aus`** (= `kernHaltE_aus` with the schedule proved) | `KernMaske` | closure `abg`, discipline `masken`, `hvoll` |
+| **`laufG_kernLauf`** (no handler: every G run lifts, machine for machine), `kernLauf_ungemaskt` (no masking lock: no core is ever masked) | `KernMaske` | no handler / `maskiert = false` |
+| **`kernPlan_lift`** (every run `KernPlan` admits is a guarded run), **`kernHaltE_iff_M`**: `KernHaltE ↔ KernHaltM`, so replacing the leg is no weakening | `KernMaskeGleich` | no thread of the start holds a masking lock |
+| witnesses: `ohne_maske_verklemmt` (unmasked lock: the handler enters at a held lock, waits, nothing steps, `¬ KernHaltM`; `w_masken_falsch`), `mit_maske_verweigert` (masked: the mask is set, the model refuses the entry step; the planted defect is that step, a step of plain G), `mit_maske_nach_freigabe`, `mit_maske_sicher`, `mit_maske_sicher_E`, `einbettung_zeuge`; the fixture `wD m` (one program, two declarations, `maskiert := fun _ => m`) | `KernMaskeZeuge` | none |
+| `Instr.imsk` (`stepI`: word exchange on the mask cell), `maskOn`/`maskOff`, `stepI_imsk`, `maskOn_run`, `maskOff_run`, `tk_one_ne` | `Mask` (+ `Model/`) | cell holds a word |
+| the NAMED assumption `MaskHw` (H1 the mask word is the register, H2 interrupts only on an unmasked core, H3 no thread switch on a masked core; ISA-neutral) | `MaskNeed` | none (an obligation structure, not an instance) |
+| `MaskCells` (cover: G masked implies the word is nonzero), `MaskDisj`, `maskCells_store_other`, **`maskCells_ticket`**, `lockRel_mask_store`, **`mask_on_step`**, **`maskCells_nach`**, **`mask_off_step`**, **`irq_guard`** (with `MaskHw`: a handler entry on core `c` happens only where `mk c = []`, the premise `eintritt` of `KernSchritt`) | `MaskRel` | layout facts `MaskDisj`; `hex`/`hx` ghost premises |
+| witnesses: **`mask_witness`** (one thread through the lowered section: `LockRel` and `MaskCells` at both stops), `maskHw_witness` (satisfiable), `maskHw_planted` (planted defect: a CPU that interrupts a masked core meets no `MaskHw`), `irq_refused_inside`; fixture `mD`/`mLay`/`mMod` | `MaskWitness` | none |
+
+NOT proved: the `Spec.lean` restatement (a PROPOSAL, `PLAN-DYNAMISCH.md` 8a.4: move the layer into `Spec.lean`, `KernHaltE := KernHaltM`, drop `KernPlan`), its GA twin `KernHaltEA`; the composition of the `Code` steps with the interleaving of ALL threads of a core (H3 is a named premise; the restore step has a ghost premise); handler re-entry and handler-on-handler preemption (a begun handler blocks every other thread of its core, as in `KernPlan`); a Rust/LLVM emitter for `imsk` (Lean first); several cores in the `Code` witness (one core).

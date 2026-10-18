@@ -801,6 +801,53 @@ fixtures with a non-empty `traeger`, the exporter lines 5541/5594, the header pl
 real file was edited, the real `Arena` files were not recompiled against `DeklBasis`, O5's completeness, O10's scale, the literal fallout of
 `SperrInv`/`StartPflicht`, all timings, the `autoParam` default, and whether T3's reading of `invarianten_gehalten` holds in the Rust U003.
 
+### 8a.4 The interrupt-mask state of machine G (O19 rest; Lean 2026-10-18; the `Spec.lean` diff is a PROPOSAL, nothing in `Zielsatz/Kern/` changed)
+
+**Decision (Simon, 2026-10-18):** the strongest variant. Machine G gets a per-core interrupt-mask state, `KernHaltE` is derived from the model
+instead of resting on a hardware schedule premise, and the mask enters `Code` as a hardware form with a named assumption. Status, measured by
+`lake build` of the new modules and `#print axioms` (every theorem: `propext`, `Classical.choice`, `Quot.sound` at most; no `sorry`;
+`gabbro_ziel` and `Spec.lean` untouched, no existing module imports the new ones):
+
+| Step | Where | Result |
+|---|---|---|
+| 1. mask state + semantics | `Zielsatz/Eigenschaften/KernMaske.lean` | layer `KernZ` over `RufMaschineG` (G machine, `MaskeKern`, begun set), step `KernSchritt kern H` (entry only when the core is unmasked, run to completion, acquisition masks / release unmasks / nesting by recomputing the acting thread's entries from its held locks) |
+| 1. embedding | same | `kernLauf_laufG` (a guarded run IS a G run: every leg of `Ziel` holds on it); `laufG_kernLauf` (with no handler every G run lifts, machine for machine); `mask_leer_ohne` / `kernLauf_ungemaskt` (no `masks irqs` lock: no core is ever masked); `maske_nichtleer_iff` (a core is masked iff a thread of it holds a masking lock) |
+| 2. the sentence | same | `kernPlan_aus_lauf` (`KernPlan` DERIVED from the guards; uses `fertig_kein_schritt`: a finished thread has no step), `KernHaltM`, **`kernHaltM_aus`** (= `kernHaltE_aus` with the schedule proved; premises: closure `abg` and the discipline `masken` only) |
+| 2. same statement | `KernMaskeGleich.lean` | `kernPlan_lift` (every run `KernPlan` admits lifts to a guarded run) and **`kernHaltE_iff_M`**: `KernHaltE ↔ KernHaltM` for a start in which no thread holds a masking lock (true for every declared root: `Akzeptiert.wurzeln`). Replacing the leg is therefore NOT a weakening |
+| 2. witness + planted defects | `KernMaskeZeuge.lean` | ONE program (one lock, handler `h`, ordinary `t`), two declarations differing only in `maskiert`: `ohne_maske_verklemmt` (unmasked: the handler enters at a lock its core's thread holds, waits, every other thread is held by run to completion, `¬ KernHaltM`; `w_masken_falsch`: the checker refuses it), `mit_maske_verweigert` (masked: the core's mask is set, the model REFUSES the handler's entry step; the planted defect is that very step, a step of plain G), `mit_maske_nach_freigabe` (after the release the entry is admitted), `mit_maske_sicher` / `mit_maske_sicher_E` (`KernHaltM` and `KernHaltE` on every run), `einbettung_zeuge` |
+| 4. `Code` | `Code/Model/{Syntax,Semantics}.lean`, `Code/Conc/{Mask,MaskNeed,MaskRel,MaskWitness}.lean` | `Instr.imsk d p v` (ISA-neutral word exchange on the core's mask word), lowering blocks `maskOn`/`maskOff` around the ticket lock (save/restore: nesting with no static caller knowledge), runs `maskOn_run`/`maskOff_run`; the named assumption **`MaskHw`** (H1 the mask word IS the register: nonzero means masked; H2 an interrupt is taken only on an unmasked core; H3 a masked core does not switch threads); the refinement: cover invariant `MaskCells` (G masked implies the word is nonzero: the hardware is only ever MORE masked than G), `mask_on_step`, `mask_off_step`, `maskCells_nach` (G's `nimmt`/`gibt`), `maskCells_ticket` (the ticket steps keep it), **`irq_guard`** (with `MaskHw`, a handler entry on core `c` happens only where `mk c = []`: the premise `eintritt` of `KernSchritt`); witness `mask_witness` (one thread through the lowered section, `LockRel` and `MaskCells` at both stops), `maskHw_witness` (satisfiable), `maskHw_planted` (a CPU that interrupts a masked core meets none) |
+
+**The proposal for `Spec.lean` (step 3; to be reviewed as a diff with the combined diff of 8a.3, NOT applied):**
+1. Move `MaskeKern`, `maskEintr`, `maskeNach`, `KernZ`, `KernSchritt`, `KernLauf`, `KernStart` from `KernMaske.lean` into `Spec.lean` just before
+   `KernHaltE` (they use only `RufSchrittG`, `FertigG`, `offen`, `Faden`, `HandlerVon`, all already there); `KernMaske.lean` keeps the lemmas.
+2. Redefine `KernHaltE` as today's `KernHaltM` (`∀ kern Z0 zs fs n, KernStart … → KernLauf … (HandlerVon P M0) … → …`) and delete `KernPlan` from
+   `Spec.lean` (no legacy: `KernPlan` survives only as the hypothesis of the engine lemma `kernHaltG_gilt` in `Masken.lean`, where it is a lemma
+   premise, not a statement). `Beweis.lean:178` uses `kernHaltM_aus` instead of `kernHaltE_aus`.
+3. The atomic twin `KernHaltEA` (`BeweisAtomar.lean:164`, over GA runs) needs the same layer over `RufSchrittGA`: `kernPlan_aus_lauf` and
+   `fertig_kein_schritt` are proved for `RufSchrittG`; the GA step is `RufSchrittG` plus the atomic-read answer, so the lift is expected to be
+   mechanical but is NOT done (`[U]`).
+4. The header's named hardware assumptions lose `KernPlan` ("a named core schedule") and gain nothing: the schedule is the machine's. What stays
+   named is what only the program or the CPU can supply: the discipline (a), and, for `Code`, `MaskHw`.
+5. Equivalence is proved (`kernHaltE_iff_M`), so the diff is a restatement and not a tightening or a weakening; the premise "no thread of the
+   start holds a masking lock" becomes a field of the start obligation (it is `wurzelnB`'s `haelt = []` for every declared root).
+
+**Findings (each named, none hidden):**
+* No contradiction with the goal theorem: guarded runs are G runs.
+* The mask list is DERIVED from the held locks (`maskeNach` recomputes the acting thread's entries), so it is an explicit state with a proved
+  consistency invariant (`MaskeOk`), not an independent one; `Code` cannot derive it, which is why the hardware needs the cover invariant and the
+  saved word.
+* G's thread interleaving on one core is free beyond the handler rule. Real hardware saves and restores the mask per thread at a context
+  switch; the cover and the LIFO restore of the saved word are faithful only under H3 (a masked core does not switch threads). H3 is a named
+  premise of `MaskHw`; its composition with the interleaving of ALL threads of a core is NOT proved (the restore step has a ghost premise,
+  `mk' c ≠ [] → saved word ≠ 0`, discharged only in the witness).
+* The guard blocks EVERY other thread of the core while a begun handler is unfinished, including a second handler's first step: handler-on-handler
+  preemption and re-entry are still out (as in `KernPlan`).
+* The discipline stays load-bearing: without `masks irqs` the same program deadlocks (`ohne_maske_verklemmt`); the model derives the schedule, it does
+  not conjure the lock declaration. `H102` still fires only on `via idt` roots.
+* The Rust side is untouched: `Instr.imsk`, `maskOn`/`maskOff` exist only in the Lean `Code`; the LLVM backend and the exporter know no mask
+  instruction (Lean first; the checker and the compiler follow after both verdicts, CLAUDE.md order).
+* `Mem` semantics: the mask word is a memory cell only in the Lean model; that it is the CPU's register is H1.
+
 ## 9. Re-measuring
 
 ```

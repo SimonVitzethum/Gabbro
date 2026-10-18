@@ -100,6 +100,10 @@ inductive Instr where
   /-- One abstract compare-and-swap: `d` gets the old value, `ok` the success flag. -/
   | cas (d ok : Reg) (t : Ty) (p e n : Opd) (so fo : Order)
   | fence (o : Order)
+  /-- The INTERRUPT MASK of the executing core, as one word cell (`d := old word; word := v`, nonzero masks).
+      The cell `p` addresses is the core's architectural mask word, not RAM: that is a named hardware
+      assumption (`Conc/MaskNeed.lean`), no ISA instruction is named here. -/
+  | imsk (d : Reg) (p v : Opd)
   /-- `[d :=] call f(args)` -- a direct call of function number `f` of the module. -/
   | call (d : Option Reg) (f : Nat) (args : List Opd)
   /-- Stuck when `c` is zero: a fact the checker has proved, handed to the optimiser. -/
