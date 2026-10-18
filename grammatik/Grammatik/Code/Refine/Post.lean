@@ -29,7 +29,7 @@ def ergImg (lay : Layout D) : (eo : Option GTy) → ErgVal D eo → Option Val
 /-- The frame stands at a `ret` terminator whose operand evaluates to `vo`. -/
 def RetAt (M : Modl) (f : Frame) (vo : Option Val) : Prop :=
   ∃ blk, M.blk f.fn f.lbl = some blk ∧ blk.body.length ≤ f.pc ∧
-    ((blk.term = .ret none ∧ vo = none) ∨ ∃ o, blk.term = .ret (some o) ∧ o.ev f.regs = vo)
+    ((blk.term = .ret none ∧ vo = none) ∨ ∃ o v, blk.term = .ret (some o) ∧ vo = some v ∧ o.ev f.regs = some v)
 
 /-- What holds after a normal exit. -/
 def Post (lay : Layout D) (cenv : List Reg) {Γ : Ctx} (σ : World D) (ρ : Env D Γ) (m : Mem)
@@ -85,6 +85,6 @@ theorem lowerErg_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) {Γ :
       obtain ⟨rs1, hs1, _, _, _, hev⟩ := Fe
       have hr := reach_block_end (S := S) (ks := ks) (dst := dst) hb hs1
       exact ⟨⟨fn, lb, ce.length, rs1, dst⟩, hr, rfl, rfl, _, hb, Nat.le_refl _,
-        Or.inr ⟨oe, rfl, hev⟩⟩
+        Or.inr ⟨oe, _, rfl, rfl, hev⟩⟩
 
 end Gabbro.Code.Lower

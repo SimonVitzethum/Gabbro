@@ -35,11 +35,12 @@ def RunOk (lay : Layout D) (cenv : List Reg) (M : Modl) (S : Sees) (fn : Nat) (l
   ∃ m' rs', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' ⟨fn, k, 0, rs', dst⟩ ks) ∧
     Post lay cenv σ' ρ' m' rs' st'.r
 
-/-- A `return` of a lowered statement. -/
-def RunRet (lay : Layout D) (M : Modl) (S : Sees) (fn : Nat) (lb : Lbl) (v : ErgVal D V.erg)
-    (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg) : Prop :=
+/-- A `return` of a lowered statement: the frame stands at a `ret` of the image of `v`, and the memory
+    it leaves represents the world `σ'` the source left (the RETURNED world: what a caller sees). -/
+def RunRet (lay : Layout D) (M : Modl) (S : Sees) (fn : Nat) (lb : Lbl) (σ' : World D)
+    (v : ErgVal D V.erg) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg) : Prop :=
   ∃ m' f', Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
-    RetAt M f' (ergImg lay V.erg v)
+    RetAt M f' (ergImg lay V.erg v) ∧ Rep lay σ' m' ∧ WfL lay m'
 
 /-- The blocks of a lowering are found by their labels, and the continuation is a block without phis. -/
 def InM (M : Modl) (fn : Nat) (blks : List Block) : Prop := ∀ b ∈ blks, M.blk fn b.lbl = some b

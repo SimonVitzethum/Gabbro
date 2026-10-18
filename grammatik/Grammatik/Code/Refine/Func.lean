@@ -1,4 +1,5 @@
 import Grammatik.Code.Refine.StmtOk
+import Grammatik.Code.Refine.Labels
 import Grammatik.Code.Lower.Func
 
 /-
@@ -11,10 +12,17 @@ import Grammatik.Code.Lower.Func
       function `lowerFn` runs, from an entry frame whose registers carry the arguments, to a
       `ret` whose operand is the image of `v`.**
 
+    * `lowerFn_nodup` -- the labels of a lowered function are distinct (proved from the lowering,
+      `Labels.lean`; it is no hypothesis any more);
+    * `reach_ret_fin` -- a frame at a `ret` with no caller finishes the run with that result;
+    * `lowerFn_run` -- **the closing function theorem**: if the body of `f` returns `v` in
+      machine G, the IR run from the entry frame reaches a `ret` of the image of `v` and leaves a
+      memory that represents the returned world; with no caller it ends `fin m' (image of v)`.
+
   Named hypotheses (nothing is assumed beyond them): the layout (`LayoutOk`), the module holds
-  the lowered function and its labels are distinct (`hnd`), the memory represents the world and
-  has its global blocks, the argument registers carry the arguments (`ArgRegs`), and the body is
-  in the call-free fragment (it is, if `lowerFn` succeeds).
+  the lowered function, the memory represents the world and has its global blocks, the argument
+  registers carry the arguments (`ArgRegs`), and the body is in the call-free fragment (it is, if
+  `lowerFn` succeeds).
 -/
 
 namespace Gabbro.Code.Lower
@@ -98,5 +106,80 @@ theorem blk_of_nodup {M : Modl} {fn : Nat} {func : Func} (hfn : M.funs[fn]? = so
           exact ih hn.2 ht
   simp only [Modl.blk, hfn, Option.bind_some]
   exact key func.blks hnd hb
+
+/-- The labels of a lowered function are distinct: the entry block has label 0, the body uses 1 and
+    the labels the counter hands out from 2. -/
+theorem lowerFn_nodup (lay : Layout D) (P : Programm D) (f : D.Fn) (name : String) (func : Func)
+    (hf : lowerFn lay P f name = some func) : (func.blks.map Block.lbl).Nodup := by
+  unfold lowerFn at hf
+  rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
+  · simp [hp] at hf
+  simp only [hp] at hf
+  rcases hl : lowerEnd lay cenv (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
+  · simp [hl] at hf
+  simp only [hl, Option.some.injEq] at hf
+  subst hf
+  obtain ⟨m, n, a⟩ := lowerEnd_lbl lay cenv (P.rumpf f) 1 ⟨r, 2⟩ s' blks (by show (1 : Nat) < 2; omega) hl
+  refine lw_head (b := ⟨0, [], pc, .jmp 1⟩) (a1 := fun x => 1 ≤ x) rfl (fun x hx => by show 0 < x; omega) n ?_
+  intro x hx
+  have : x.nl = 1 ∨ (2 ≤ x.nl ∧ x.nl < s'.l) := a x hx
+  show 1 ≤ x.nl
+  omega
+
+/-- A frame at a `ret` with no caller finishes the run with that result. -/
+theorem reach_ret_fin {M : Modl} {S : Sees} {f : Frame} {vo : Option Val} (h : RetAt M f vo)
+    (m : Mem) : Reach M S (.run m f []) (.fin m vo) := by
+  obtain ⟨blk, hb, hl, h2⟩ := h
+  rcases h2 with ⟨ht, rfl⟩ | ⟨o, v, ht, rfl, hv⟩
+  · exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, finish]))
+  · exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, hv, finish]))
+
+/-- **The closing function theorem.** The module holds the lowered function `f` as function number
+    `fn`. If its body returns `v` in machine G (from a world that the memory represents, with the
+    arguments in registers `0 ..`), the IR run from the entry frame reaches a `ret` of the image of
+    `v`, and the memory it leaves represents the world the body returned. -/
+theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D.Fn) (name : String)
+    (func : Func) (hf : lowerFn lay P f name = some func) (M : Modl) (S : Sees) (fn : Nat)
+    (hfn : M.funs[fn]? = some func) (O : Orakel D) (passes : Nat)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D (D.params f)) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg)
+    (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
+    (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
+    ∃ m' f', Reach M S (.run m ⟨fn, 0, 0, rs, dst⟩ ks) (.run m' f' ks) ∧ f'.fn = fn ∧ f'.dst = dst ∧
+      RetAt M f' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
+  have hnd := lowerFn_nodup lay P f name func hf
+  unfold lowerFn at hf
+  rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
+  · simp [hp] at hf
+  simp only [hp] at hf
+  rcases hl : lowerEnd lay cenv (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
+  · simp [hl] at hf
+  simp only [hl, Option.some.injEq] at hf
+  subst hf
+  have hM : ∀ b ∈ (⟨0, [], pc, .jmp 1⟩ :: blks : List Block), M.blk fn b.lbl = some b :=
+    fun b hb => blk_of_nodup hfn hnd hb
+  have hM2 : InM M fn blks := fun b hb => hM b (List.mem_cons_of_mem _ hb)
+  have hb0 := hM _ (List.mem_cons_self ..)
+  have SS := lowerEnd_shape lay cenv (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl
+  obtain ⟨bk, hbk, hkp⟩ := kok_of_shape SS hM2
+  obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1⟩ :=
+    prologue_ok lay ρ 0 (D.params f).length hp hR hW hA (by omega)
+  have hreach := reach_block_jmp (S := S) (ks := ks) (dst := dst) hb0 rfl hbk hkp hs1
+  obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW'⟩ := lowerEnd_ok lay hL cenv O passes R (P.rumpf f) 1 ⟨r, 2⟩ s'
+    blks hl M S fn hM2 σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1 σ' v hex
+  exact ⟨m', f', Reach.trans hreach hr2, hf1, hf2, hret, hR', hW'⟩
+
+/-- With no caller, the run of the lowered function ends with the image of the returned value. -/
+theorem lowerFn_runs (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D.Fn) (name : String)
+    (func : Func) (hf : lowerFn lay P f name = some func) (M : Modl) (S : Sees) (fn : Nat)
+    (hfn : M.funs[fn]? = some func) (O : Orakel D) (passes : Nat)
+    (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D (D.params f)) (m : Mem) (rs : Regs)
+    (hR : Rep lay σ m) (hW : WfL lay m) (hA : ArgRegs lay rs 0 ρ) (σ' : World D) (v : ErgVal D (D.erg f))
+    (hex : execEnd (V := vertragVon D f) O passes R (P.rumpf f) σ ρ = Gabbro.Grammatik.EndAusgang.zurueck σ' v) :
+    ∃ m', Runs M S (.run m ⟨fn, 0, 0, rs, none⟩ []) m' (ergImg lay (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' := by
+  obtain ⟨m', f', hr, _, _, hret, hR', hW'⟩ := lowerFn_run lay hL P f name func hf M S fn hfn O passes R σ ρ m rs [] none
+    hR hW hA σ' v hex
+  exact ⟨m', Reach.trans hr (reach_ret_fin hret m'), hR', hW'⟩
 
 end Gabbro.Code.Lower

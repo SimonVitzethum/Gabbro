@@ -27,7 +27,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (O : Or
         (∀ σ' ρ', execStmt O passes R s σ ρ = Ausgang.ok σ' ρ' →
           RunOk lay cenv M S fn lb k st' σ' ρ' m rs ks dst) ∧
         (∀ σ' v, execStmt O passes R s σ ρ = Ausgang.zurueck σ' v →
-          RunRet lay M S fn lb v m rs ks dst)
+          RunRet lay M S fn lb σ' v m rs ks dst)
   | _, _, _, _, .assignGlob (Λ := Λ) g e _ _, lb, k, st, st', blks, h, M, S, fn, hM, hk, σ, ρ, m, rs,
       ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
@@ -82,7 +82,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (O : Or
         obtain ⟨rfl, rfl⟩ := hex
         obtain ⟨f', hr, hf1, hf2, hret⟩ := lowerErg_ok lay hL cenv e lb st st' blks h M S fn hM (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m
           rs ks dst hR hE hc
-        exact ⟨m, f', hr, hf1, hf2, hret⟩
+        exact ⟨m, f', hr, hf1, hf2, hret, hR, hW⟩
   | _, _, _, _, .assignSlot (Λ := Λ) t f i e _ _, lb, k, st, st', blks, h, M, S, fn, hM, hk, σ, ρ, m, rs,
       ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
@@ -452,7 +452,7 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (O : Or
         (∀ σ' ρ', execBlock O passes R b σ ρ = Ausgang.ok σ' ρ' →
           RunOk lay cenv M S fn lb k st' σ' ρ' m rs ks dst) ∧
         (∀ σ' v, execBlock O passes R b σ ρ = Ausgang.zurueck σ' v →
-          RunRet lay M S fn lb v m rs ks dst)
+          RunRet lay M S fn lb σ' v m rs ks dst)
   | _, _, _, _, .nil, lb, k, st, st', blks, h, M, S, fn, hM, hk, σ, ρ, m, rs, ks, dst, hR, hE, hW,
       hc => by
       simp only [lowerB] at h
@@ -709,7 +709,7 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (O : 
       ∀ (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg),
         Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) →
         ∀ σ' v, execEnd O passes R e σ ρ = EndAusgang.zurueck σ' v →
-          RunRet lay M S fn lb v m rs ks dst
+          RunRet lay M S fn lb σ' v m rs ks dst
   | _, _, _, .ret (Λ := Λ) e _, lb, st, st', blks, h, M, S, fn, hM, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc,
       σ', v, hex => by
       simp only [lowerEnd] at h
@@ -717,7 +717,7 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (O : 
       obtain ⟨rfl, rfl⟩ := hex
       obtain ⟨f', hr, hf1, hf2, hret⟩ := lowerErg_ok lay hL cenv e lb st st' blks h M S fn hM
         (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs ks dst hR hE hc
-      exact ⟨m, f', hr, hf1, hf2, hret⟩
+      exact ⟨m, f', hr, hf1, hf2, hret, hR, hW⟩
   | _, _, _, .cons s rest, lb, st, st', blks, h, M, S, fn, hM, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc, σ',
       v, hex => by
       simp only [lowerEnd] at h
