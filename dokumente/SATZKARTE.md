@@ -5105,12 +5105,22 @@ special cases of `R014` (they stay separate rules); records over byte buffers (r
 
 ## 77. The Lean parser as a measured front end: coverage matrix, no new theorem (Track P, 2026-10-17)
 
-Statement-level facts, no theorem moved: `lex_keywords` and `wortschatz_248` now hold over the 248 words of `kw.rs`
-(five were missing); `u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben`
-probes hold over the changed readers (`lockT` 7 fields, `globT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`).
-Measured, not proved: 170 of 170 corpus files parse as a whole, 9 elaborate (`Parser/Cover/Census.lean`,
-`instrumente/parser-deckung.py`). NOT proved: any round trip for statements or items; elaboration beyond tables,
-locks and `impl fn` over integers. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
+Statement-level facts: `lex_keywords` and `wortschatz_248` hold over the 248 words of `kw.rs` (five were missing);
+`u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben` probes hold over the
+changed readers (`lockT` 7 fields, `globT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`, `SAnw.each` structured).
+Statics (2026-10-18): `declOf` carries `Glob := Fin u.globs.length` (`gdarf_globs`: no static is guarded), the call rule
+checks the written statics (`sigGSchreibt_eq`, `vGSchreibt_eq`), the initial memory starts each static at its
+initialiser (`sp0GlobWert`, `sp0Of_glob`, `sp0OkB_glob`) and an initialiser outside its type has none
+(`sp0_glob_luecke`); `gv_startPflicht_zeuge` holds on the array unit and on the static unit `uStatik`;
+`gvLuecke_fragment_ohne_atomar` (no static of `declOf` is atomic) and `gvLuecke_statik_ohne_form` (a placement or a
+`shared` word on a static is refused) replace the `Glob = Empty` statements. `GvParserFragment3`/`4` and the wrappers
+`elabU02`..`elabU05` are deleted (they dropped items the elaborator now reads or refuses). Probes: `UebersetzeProben4`..`12`
+(`let`, `if`, `return`, `traverse`, `locks`, statics; each with a refused twin). Measured, not proved: 170 of 170 corpus
+files parse as a whole, 17 elaborate and lower (`Parser/Cover/Census.lean`, `instrumente/parser-deckung.py`); 429 of 429
+function bodies and 1020 of 1020 printable items print and read back as the same tree (`Print/Stmt`, `Print/Item`,
+`Print/Proben`; the expression round trip is the theorem, the statement and item round trips are not). NOT proved: a
+round-trip theorem for statements or items; elaboration beyond tables, locks, statics and `impl fn` over integers with
+`let`/`if`/`traverse`/`return`. `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_ziel` untouched.
 
 ## 78. `Code`: the target-independent low-level language and the lowering refinement (Track L, 2026-10-18, `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a)
 
