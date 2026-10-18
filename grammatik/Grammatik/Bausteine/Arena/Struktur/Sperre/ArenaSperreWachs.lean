@@ -76,12 +76,12 @@ theorem grow_gesperrt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} 
     (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L) (n : Int) (hwK : V.gschreibt A.komm = true)
     (hLK : gdarf D A.komm (Res.held L :: Λ)) (voll : Endblock D V l Γ (Res.held L :: Λ))
     (rest : Block D V l (Ty.int 0 (D.count A.tab) :: Γ) (Res.held L :: Λ) (Res.held L :: Λ)) {a'' : Abs}
-    (hv : Rein voll) (h : Erk K (Abs.leer.ext .offen) rest a'') (hU : HavocOk (K.sperr L) U) (σ : World D)
+    (hn : 0 ≤ n) (hv : Rein voll) (h : Erk K (Abs.leer.ext .offen) rest a'') (hU : HavocOk (K.sperr L) U) (σ : World D)
     (ρ : Env D Γ) :
     StrukturPost K Abs.leer
       (execStmtH (K.sperr L) O U passes R
         (Stmt.locks L hr (Block.dynGrowB A.toDynForm n hwK hLK voll rest)) σ ρ) :=
-  (abschnitt_erk K L O U passes R hr (Erk.wachs n hwK hLK voll rest hv h) hU σ ρ).1
+  (abschnitt_erk K L O U passes R hr (Erk.wachs n hn hwK hLK voll rest hv h) hU σ ρ).1
 
 end Wachs
 

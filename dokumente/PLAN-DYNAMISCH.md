@@ -410,10 +410,11 @@ at most, no `sorry`; `gabbro_ziel` and `Spec.lean` untouched: none of these modu
     only where `V.ende` contains the held lock (a writer that returns holding the lock), and the realistic section is the CALL form `locks L { f(..); }` with `f` requiring `L`
     (`abschnitt_rufe`, run in `abschnitt_rufe_lauf`).
  4. **The commit bound `stand <= komSt` is NOT in the lock invariant.** `Dekl.Ok` does not read `komm`; the recognized alloc `frisch` is guarded by the static bound `hi`
-    (`Block.arenaAlloc`), not by `komSt` (`Block.dynAlloc` is not a recognized form); the executed forms' frames name the link words, not `zaehl`/`komm`; and `Erk.wachs` accepts
-    `n < 0` (`wachs_negativ_schrumpft`: `komm 2 -> 1`; the surface demands `n >= 1`, `R-grow-const`). The theorems say: the commit never breaks anything the structures read
-    (`grow_atomar`) and is a lock-guarded carrier (`komm_nur_halter`); "every live slot is committed storage" needs (a) `n >= 0` in `Erk.wachs`, (b) a `dynFrisch` constructor
-    over `Block.dynAlloc`, (c) the frame of every form extended to `zaehl`/`komm`. Lean-only repairs, not done.
+    (`Block.arenaAlloc`), not by `komSt` (`Block.dynAlloc` is not a recognized form); the executed forms' frames name the link words, not `zaehl`/`komm`; and the model's `grow` accepts
+    `n < 0` (`wachs_negativ_schrumpft`: `komm 2 -> 1`; the surface demands `n >= 1`, `R-grow-const`) -- `Erk.wachs` now carries the premise `0 ≤ n` (repaired in step 3: before it
+    accepted any `n`; the soundness proof is unchanged because the Ok-invariant never reads `komm`). The theorems say: the commit never breaks anything the structures read
+    (`grow_atomar`) and is a lock-guarded carrier (`komm_nur_halter`); "every live slot is committed storage" needs (a) `n >= 0` in `Erk.wachs` (DONE), (b) a `dynFrisch` constructor
+    over `Block.dynAlloc`, (c) the frame of every form extended to `zaehl`/`komm`. Lean-only repairs; (b) and (c) not done.
  5. **The machine bridge covers loop-free writers.** `EndR` has no guard inside a loop body (`narrow`/`check` need `Block D V false`), so a recognized body with a loop is a statement about
     `execEnd` (`erkE_koerper`) only; its machine correspondence needs the loop fragment extended to guards.
  6. **`Erk` and `EndR` are two separate derivations.** `erkE_maschine` takes both as premises; there is no theorem `ErkE (loop-free) → EndR`. For an accepted unit the checker's
@@ -513,7 +514,7 @@ returns, not about the shape of the predicate, so the induction over machine ste
  7. NEW (finding 1 of 8a.2): the footprint. `schuldet`/`InvTraeger` count tables only; `pop` and `wurzelAus` write only a head word; D5 (iii) needs either `traeger : Inv → List (Tab ⊕ Glob)` or an
     arena case in `schuldet` (`K.orte.any (writes f)`). DECISION needed (Simon): it changes `Deklaration` or `schuldet`, both in the statement.
  8. NEW (finding 2): the arena at entry (`hein`): a pseudo-`requires` the exporter writes, or the premise that writers are called inside a section / a closed machine.
- 9. NEW (finding 4): the commit bound `stand <= komSt` is not part of the lock invariant; Lean-only repairs (`n >= 0` in `Erk.wachs`, a `dynFrisch` constructor, frames over `zaehl`/`komm`).
+ 9. NEW (finding 4): the commit bound `stand <= komSt` is not part of the lock invariant; Lean-only repairs: `0 ≤ n` in `Erk.wachs` DONE; a `dynFrisch` constructor and frames over `zaehl`/`komm` open.
 
 **The exact Spec.lean diff, refreshed (D1-D5 as written above, with these changes; STILL NOT APPLIED -- it needs Simon's review and two independent verdicts):**
  * D1 stands as written, with the file split of item 6.

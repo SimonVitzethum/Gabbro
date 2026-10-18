@@ -51,7 +51,7 @@ theorem erk_ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a' : Abs}
     simp [Block.freiNimm, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
   | frei x hwT hLT hwK hLK rest hx h ih =>
     simp [Block.freiVar, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, ih]
-  | wachs n hwK hLK voll rest hv h ih =>
+  | wachs n hn hwK hLK voll rest hv h ih =>
     simp [Block.dynGrowB, Block.dynSumme, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
   | pruefe c voll rest hv h ih =>
     simp [Block.ohneLocks, hv.ohneLocks, ih]

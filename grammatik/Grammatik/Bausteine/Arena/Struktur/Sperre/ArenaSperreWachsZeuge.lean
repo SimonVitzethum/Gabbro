@@ -7,10 +7,10 @@
                                after, every liveness and the counter are as before (`grow_atomar` on a real world; the
                                list `2 -> 0` and the free list `[1]` are non-empty, so nothing is vacuous);
     * `grow_ueber_decke`    -- a commit past the ceiling is refused by the guard (`2 + 3 > 4`): the `else` branch runs;
-    * `wachs_negativ_schrumpft` -- A PLANTED GAP, not a defect of the theorem: the model's `grow` accepts a NEGATIVE `n`
-                               and then SHRINKS the committed word (`2 -> 1`); the surface forbids it (`n >= 1`,
-                               `R-grow-const`), `Erk.wachs` does not. It does not touch the arena invariant (`grow_atomar`
-                               holds for every `n`), but it would break a commit bound `stand <= komSt`; named in 8a.3.
+    * `wachs_negativ_schrumpft` -- WHY `Erk.wachs` DEMANDS `0 ≤ n` (repaired in this step; before, it accepted any `n`): the
+                               model's `grow` itself accepts a NEGATIVE `n` and then SHRINKS the committed word (`2 -> 1`);
+                               the surface forbids it (`n >= 1`, `R-grow-const`). It does not touch the arena invariant
+                               (`grow_atomar` holds for every `n`), but it would break a commit bound `stand <= komSt`.
 -/
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWachs
