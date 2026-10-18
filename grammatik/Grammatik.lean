@@ -349,6 +349,8 @@ import Grammatik.Bausteine.Arena.ArenaBaumWelt
 import Grammatik.Bausteine.Arena.ArenaDynZeuge
 import Grammatik.Bausteine.Arena.ArenaLinkForm
 import Grammatik.Bausteine.Arena.ArenaWachs
+import Grammatik.Bausteine.Arena.ArenaBaumForm
+import Grammatik.Bausteine.Arena.ArenaFormZeuge
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset
 import Grammatik.Logik.Ruf.FremdRuf

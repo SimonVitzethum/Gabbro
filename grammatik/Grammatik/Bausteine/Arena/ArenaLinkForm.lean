@@ -265,11 +265,12 @@ theorem liste_push_zug
     ∃ σ' : World D,
       execBlock (V := V) O passes R (Block.linkPush L G x hwT hLT hwG hLG rest) σ ρ
           = execBlock (V := V) O passes R rest σ' ρ ∧
-      ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧ G.st σ' = (ρ.get x).n := by
+      ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧ G.st σ' = (ρ.get x).n ∧
+      L.wert σ' (ρ.get x).n = G.st σ := by
   obtain ⟨σ', he, hg, hli, ho, hk, hn, hs⟩ :=
     linkPush_ausfuehren O passes R L G x hwT hLT hwG hLG rest σ ρ
   exact ⟨σ', he, liste_push A L G hl _ hi hnot hk hn hs hg hli ho, A.freiOk_gleich hk hn hs hok,
-    A.lebt_gleich hk hn hs, hg⟩
+    A.lebt_gleich hk hn hs, hg, hli⟩
 
 /-- **Executed `pop` keeps the list.** The binder holds the old head, which is live and no longer linked, so it may be
     released (`liste_pop_frei`). Valid for every continuation. -/
@@ -281,11 +282,11 @@ theorem liste_pop_zug
       execBlock (V := V) O passes R (Block.linkPop L G hwG hLG hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
       k.n = G.st σ ∧ ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
-      ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n := by
+      ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧ G.st σ' = L.wert σ (G.st σ) := by
   obtain ⟨σ', k, he, hkn, hg, ho, hk, hn, hs⟩ :=
     linkPop_ausfuehren O passes R L G hwG hLG hLT voll rest σ ρ hne
   obtain ⟨h1, h2, h3⟩ := liste_pop A L G hl hne hk hn hs hg ho
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3⟩
+  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hg⟩
 
 /-- **Executed `unlink` keeps the list.** `p` is on the list and has a successor `i`; the binder holds `i`, which is
     live and no longer linked, so it may be released. Valid for every continuation. -/
@@ -299,11 +300,12 @@ theorem liste_unlink_zug
       execBlock (V := V) O passes R (Block.linkUnlink L p hwT hLT voll rest) σ ρ
           = (execBlock (V := V) O passes R rest σ' (.cons k ρ)).schrumpf ∧
       k.n = L.wert σ (ρ.get p).n ∧ ListOk A L G σ' ∧ A.FreiOk σ' ∧ (∀ j, A.Lebt σ' j ↔ A.Lebt σ j) ∧
-      ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n := by
+      ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧
+      L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) := by
   obtain ⟨σ', k, he, hkn, hg, hnp, ho, hk, hn, hs⟩ :=
     linkUnlink_ausfuehren O passes R L G p hwT hLT voll rest σ ρ hi
   obtain ⟨h1, h2, h3⟩ := liste_unlink A L G hl _ hp hi hk hn hs hg hnp ho
-  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3⟩
+  exact ⟨σ', k, he, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hnp⟩
 
 end Bedeutung
 
