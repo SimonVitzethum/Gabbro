@@ -5,7 +5,7 @@ import Grammatik.Code.Lower.Expr
   Subject:   TRACK L, PHASE L1 -- THE LOWERING OF STATEMENTS, BLOCKS AND END BLOCKS, as Lean
              functions to IR basic blocks.
 
-  `lowerS lay cenv s lb k st` lowers statement `s` to IR blocks that start at label `lb` and,
+  `lowerS lay cenv lv s lb k st` lowers statement `s` to IR blocks that start at label `lb` and,
   when `s` completes normally, jump to label `k`; `st` carries the next free register and the next
   free label (both numbered in program order); the result is the list of new blocks and the new
   state. `lowerB` does the same for a `Block` (`nil` is a block that just jumps on), `lowerEnd`
@@ -72,7 +72,7 @@ variable {V : Vertrag D}
 
 mutual
 
-def lowerS (lay : Layout D) (cenv : List Reg) :
+def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Gabbro.Grammatik.Stmt D V l Γ Λ Λ' →
       Lbl → Lbl → St → Option (List Block × St)
   | _, _, _, _, .assignSlot t f i e _ _, lb, k, s =>
@@ -134,24 +134,26 @@ def lowerS (lay : Layout D) (cenv : List Reg) :
   | _, _, _, _, .ite c tb eb, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerB lay cenv tb s.l k ⟨r1, s.l + 2⟩ with
+          match lowerB lay cenv lv tb s.l k ⟨r1, s.l + 2⟩ with
           | some (bt, s1) =>
-              match lowerB lay cenv eb (s.l + 1) k s1 with
+              match lowerB lay cenv lv eb (s.l + 1) k s1 with
               | some (be, s2) => some (⟨lb, [], cc, .br oc s.l (s.l + 1)⟩ :: (bt ++ be), s2)
               | none => none
           | none => none
       | none => none
   | _, _, _, _, .ret e _, lb, k, s => lowerErg lay cenv e lb s
+  | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
+  | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, _, _, _, _, _ => none
 
-def lowerB (lay : Layout D) (cenv : List Reg) :
+def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Gabbro.Grammatik.Block D V l Γ Λ Λ' →
       Lbl → Lbl → St → Option (List Block × St)
   | _, _, _, _, .nil, lb, k, s => some ([⟨lb, [], [], .jmp k⟩], s)
   | _, _, _, _, .cons st rest, lb, k, s =>
-      match lowerS lay cenv st lb s.l ⟨s.r, s.l + 1⟩ with
+      match lowerS lay cenv lv st lb s.l ⟨s.r, s.l + 1⟩ with
       | some (b1, s1) =>
-          match lowerB lay cenv rest s.l k s1 with
+          match lowerB lay cenv lv rest s.l k s1 with
           | some (b2, s2) => some (b1 ++ b2, s2)
           | none => none
       | none => none
@@ -160,7 +162,7 @@ def lowerB (lay : Layout D) (cenv : List Reg) :
       | some (ce, oe, r1) =>
           match bindCode τ oe r1 with
           | some (cb, a, r2) =>
-              match lowerB lay (a :: cenv) rest s.l k ⟨r2, s.l + 1⟩ with
+              match lowerB lay (a :: cenv) lv rest s.l k ⟨r2, s.l + 1⟩ with
               | some (b2, s2) => some (⟨lb, [], ce ++ cb, .jmp s.l⟩ :: b2, s2)
               | none => none
           | none => none
@@ -168,23 +170,25 @@ def lowerB (lay : Layout D) (cenv : List Reg) :
   | _, _, _, _, .check c sonst rest, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerEnd lay cenv sonst s.l ⟨r1, s.l + 2⟩ with
+          match lowerEnd lay cenv lv sonst s.l ⟨r1, s.l + 2⟩ with
           | some (be, s1) =>
-              match lowerB lay cenv rest (s.l + 1) k s1 with
+              match lowerB lay cenv lv rest (s.l + 1) k s1 with
               | some (br, s2) => some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ :: (be ++ br), s2)
               | none => none
           | none => none
       | none => none
   | _, _, _, _, _, _, _, _ => none
 
-def lowerEnd (lay : Layout D) (cenv : List Reg) :
+def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →
       Lbl → St → Option (List Block × St)
   | _, _, _, .ret e _, lb, s => lowerErg lay cenv e lb s
+  | _, _, _, .leave _, lb, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
+  | _, _, _, .next _, lb, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, .cons st rest, lb, s =>
-      match lowerS lay cenv st lb s.l ⟨s.r, s.l + 1⟩ with
+      match lowerS lay cenv lv st lb s.l ⟨s.r, s.l + 1⟩ with
       | some (b1, s1) =>
-          match lowerEnd lay cenv rest s.l s1 with
+          match lowerEnd lay cenv lv rest s.l s1 with
           | some (b2, s2) => some (b1 ++ b2, s2)
           | none => none
       | none => none
@@ -193,7 +197,7 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) :
       | some (ce, oe, r1) =>
           match bindCode τ oe r1 with
           | some (cb, a, r2) =>
-              match lowerEnd lay (a :: cenv) rest s.l ⟨r2, s.l + 1⟩ with
+              match lowerEnd lay (a :: cenv) lv rest s.l ⟨r2, s.l + 1⟩ with
               | some (b2, s2) => some (⟨lb, [], ce ++ cb, .jmp s.l⟩ :: b2, s2)
               | none => none
           | none => none

@@ -164,10 +164,10 @@ variable {V : Vertrag D}
 
 mutual
 
-theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) :
+theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ')
       (lb k : Lbl) (st st' : St) (blks : List Block), (lb : Nat) < st.l →
-      lowerS lay cenv s lb k st = some (blks, st') → LblWf lb st st' blks
+      lowerS lay cenv lv s lb k st = some (blks, st') → LblWf lb st st' blks
   | _, _, _, _, .assignSlot t f i e _ _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       repeat (split at h <;> try (simp at h; done))
@@ -197,17 +197,17 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) :
       rcases hc : lowerE lay cenv c st.r with _ | ⟨cc, oc, r1⟩
       · simp [hc] at h
       simp only [hc] at h
-      rcases hb1 : lowerB lay cenv tb st.l k ⟨r1, st.l + 2⟩ with _ | ⟨bt, s1⟩
+      rcases hb1 : lowerB lay cenv lv tb st.l k ⟨r1, st.l + 2⟩ with _ | ⟨bt, s1⟩
       · simp [hb1] at h
       simp only [hb1] at h
-      rcases hb2 : lowerB lay cenv eb (st.l + 1) k s1 with _ | ⟨be, s2⟩
+      rcases hb2 : lowerB lay cenv lv eb (st.l + 1) k s1 with _ | ⟨be, s2⟩
       · simp [hb2] at h
       simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv tb st.l k ⟨r1, st.l + 2⟩ s1 bt
+      obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv tb st.l k ⟨r1, st.l + 2⟩ s1 bt
         (by show (st.l : Nat) < st.l + 2; omega) hb1
       have m1' : st.l + 2 ≤ s1.l := m1
-      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv eb (st.l + 1) k s1 s2 be
+      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv lv eb (st.l + 1) k s1 s2 be
         (by show (st.l + 1 : Nat) < s1.l; omega) hb2
       exact lw_two (b := ⟨lb, [], cc, .br oc st.l (st.l + 1)⟩) rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
   | _, _, _, _, .ret e _, lb, k, st, st', blks, hlt, h => by
@@ -252,31 +252,35 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) :
   | _, _, _, _, .retWhy .., lb, k, st, st', blks, hlt, h => by
       simp [lowerS] at h
   | _, _, _, _, .leave .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .next .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact lw_single rfl (Nat.le_refl _)
 
-theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) :
+theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Gabbro.Grammatik.Block D V l Γ Λ Λ')
       (lb k : Lbl) (st st' : St) (blks : List Block), (lb : Nat) < st.l →
-      lowerB lay cenv b lb k st = some (blks, st') → LblWf lb st st' blks
+      lowerB lay cenv lv b lb k st = some (blks, st') → LblWf lb st st' blks
   | _, _, _, _, .nil, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .cons s rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
-      rcases hs : lowerS lay cenv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
+      rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
       · simp [hs] at h
       simp only [hs] at h
-      rcases hr : lowerB lay cenv rest st.l k s1 with _ | ⟨b2, s2⟩
+      rcases hr : lowerB lay cenv lv rest st.l k s1 with _ | ⟨b2, s2⟩
       · simp [hr] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨m1, n1, a1⟩ := lowerS_lbl lay cenv s lb st.l ⟨st.r, st.l + 1⟩ s1 b1
+      obtain ⟨m1, n1, a1⟩ := lowerS_lbl lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ s1 b1
         (Nat.lt_succ_of_lt hlt) hs
       have m1' : st.l + 1 ≤ s1.l := m1
-      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv rest st.l k s1 s2 b2 (Nat.lt_of_lt_of_le (Nat.lt_succ_self _) m1') hr
+      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv lv rest st.l k s1 s2 b2 (Nat.lt_of_lt_of_le (Nat.lt_succ_self _) m1') hr
       exact lw_seq hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
   | _, _, _, _, Gabbro.Grammatik.Block.bind (τ := τ) e rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
@@ -286,11 +290,11 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) :
       rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
       · simp [hb] at h
       simp only [hb] at h
-      rcases hr : lowerB lay (a :: cenv) rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
+      rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
       · simp [hr] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) rest st.l k ⟨r2, st.l + 1⟩ s2 b2
+      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ s2 b2
         (by show (st.l : Nat) < st.l + 1; omega) hr
       exact lw_bind (b := ⟨lb, [], ce ++ cb, .jmp st.l⟩) rfl hlt (by exact m2) ⟨n2, a2⟩
   | _, _, _, _, .check c sonst rest, lb, k, st, st', blks, hlt, h => by
@@ -298,17 +302,17 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) :
       rcases hc : lowerE lay cenv c st.r with _ | ⟨cc, oc, r1⟩
       · simp [hc] at h
       simp only [hc] at h
-      rcases hb1 : lowerEnd lay cenv sonst st.l ⟨r1, st.l + 2⟩ with _ | ⟨be, s1⟩
+      rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r1, st.l + 2⟩ with _ | ⟨be, s1⟩
       · simp [hb1] at h
       simp only [hb1] at h
-      rcases hb2 : lowerB lay cenv rest (st.l + 1) k s1 with _ | ⟨br, s2⟩
+      rcases hb2 : lowerB lay cenv lv rest (st.l + 1) k s1 with _ | ⟨br, s2⟩
       · simp [hb2] at h
       simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨m1, n1, a1⟩ := lowerEnd_lbl lay cenv sonst st.l ⟨r1, st.l + 2⟩ s1 be
+      obtain ⟨m1, n1, a1⟩ := lowerEnd_lbl lay cenv lv sonst st.l ⟨r1, st.l + 2⟩ s1 be
         (by show (st.l : Nat) < st.l + 2; omega) hb1
       have m1' : st.l + 2 ≤ s1.l := m1
-      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv rest (st.l + 1) k s1 s2 br
+      obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay cenv lv rest (st.l + 1) k s1 s2 br
         (by show (st.l + 1 : Nat) < s1.l; omega) hb2
       exact lw_two (b := ⟨lb, [], cc, .br oc (st.l + 1) st.l⟩) rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
   | _, _, _, _, .bindCall .., lb, k, st, st', blks, hlt, h => by
@@ -340,26 +344,26 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) :
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, hlt, h => by
       simp [lowerB] at h
 
-theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) :
+theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ)
       (lb : Lbl) (st st' : St) (blks : List Block), (lb : Nat) < st.l →
-      lowerEnd lay cenv b lb st = some (blks, st') → LblWf lb st st' blks
+      lowerEnd lay cenv lv b lb st = some (blks, st') → LblWf lb st st' blks
   | _, _, _, .ret e _, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
       exact lowerErg_lbl lay cenv e lb st st' blks h
   | _, _, _, .cons s rest, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
-      rcases hs : lowerS lay cenv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
+      rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
       · simp [hs] at h
       simp only [hs] at h
-      rcases hr : lowerEnd lay cenv rest st.l s1 with _ | ⟨b2, s2⟩
+      rcases hr : lowerEnd lay cenv lv rest st.l s1 with _ | ⟨b2, s2⟩
       · simp [hr] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨m1, n1, a1⟩ := lowerS_lbl lay cenv s lb st.l ⟨st.r, st.l + 1⟩ s1 b1
+      obtain ⟨m1, n1, a1⟩ := lowerS_lbl lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ s1 b1
         (Nat.lt_succ_of_lt hlt) hs
       have m1' : st.l + 1 ≤ s1.l := m1
-      obtain ⟨m2, n2, a2⟩ := lowerEnd_lbl lay cenv rest st.l s1 s2 b2 (Nat.lt_of_lt_of_le (Nat.lt_succ_self _) m1') hr
+      obtain ⟨m2, n2, a2⟩ := lowerEnd_lbl lay cenv lv rest st.l s1 s2 b2 (Nat.lt_of_lt_of_le (Nat.lt_succ_self _) m1') hr
       exact lw_seq hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
   | _, _, _, Gabbro.Grammatik.Endblock.bind (τ := τ) e rest, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
@@ -369,19 +373,23 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) :
       rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
       · simp [hb] at h
       simp only [hb] at h
-      rcases hr : lowerEnd lay (a :: cenv) rest st.l ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
+      rcases hr : lowerEnd lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
       · simp [hr] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨m2, n2, a2⟩ := lowerEnd_lbl lay (a :: cenv) rest st.l ⟨r2, st.l + 1⟩ s2 b2
+      obtain ⟨m2, n2, a2⟩ := lowerEnd_lbl lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ s2 b2
         (by show (st.l : Nat) < st.l + 1; omega) hr
       exact lw_bind (b := ⟨lb, [], ce ++ cb, .jmp st.l⟩) rfl hlt (by exact m2) ⟨n2, a2⟩
   | _, _, _, .retWhy .., lb, st, st', blks, hlt, h => by
       simp [lowerEnd] at h
   | _, _, _, .leave .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact lw_single rfl (Nat.le_refl _)
   | _, _, _, .next .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact lw_single rfl (Nat.le_refl _)
   | _, _, _, .bindAxiom .., lb, st, st', blks, hlt, h => by
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, hlt, h => by

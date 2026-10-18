@@ -115,11 +115,11 @@ theorem lowerFn_nodup (lay : Layout D) (P : Programm D) (f : D.Fn) (name : Strin
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
   · simp [hp] at hf
   simp only [hp] at hf
-  rcases hl : lowerEnd lay cenv (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
+  rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
   · simp [hl] at hf
   simp only [hl, Option.some.injEq] at hf
   subst hf
-  obtain ⟨m, n, a⟩ := lowerEnd_lbl lay cenv (P.rumpf f) 1 ⟨r, 2⟩ s' blks (by show (1 : Nat) < 2; omega) hl
+  obtain ⟨m, n, a⟩ := lowerEnd_lbl lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ s' blks (by show (1 : Nat) < 2; omega) hl
   refine lw_head (b := ⟨0, [], pc, .jmp 1⟩) (a1 := fun x => 1 ≤ x) rfl (fun x hx => by show 0 < x; omega) n ?_
   intro x hx
   have : x.nl = 1 ∨ (2 ≤ x.nl ∧ x.nl < s'.l) := a x hx
@@ -152,7 +152,7 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
   · simp [hp] at hf
   simp only [hp] at hf
-  rcases hl : lowerEnd lay cenv (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
+  rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
   · simp [hl] at hf
   simp only [hl, Option.some.injEq] at hf
   subst hf
@@ -160,13 +160,16 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
     fun b hb => blk_of_nodup hfn hnd hb
   have hM2 : InM M fn blks := fun b hb => hM b (List.mem_cons_of_mem _ hb)
   have hb0 := hM _ (List.mem_cons_self ..)
-  have SS := lowerEnd_shape lay cenv (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl
+  have SS := lowerEnd_shape lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl
   obtain ⟨bk, hbk, hkp⟩ := kok_of_shape SS hM2
   obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1⟩ :=
     prologue_ok lay ρ 0 (D.params f).length hp hR hW hA (by omega)
   have hreach := reach_block_jmp (S := S) (ks := ks) (dst := dst) hb0 rfl hbk hkp hs1
-  obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW'⟩ := lowerEnd_ok lay hL cenv O passes R (P.rumpf f) 1 ⟨r, 2⟩ s'
-    blks hl M S fn hM2 σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1 σ' v hex
+  have hK0 : KOk M fn 0 := ⟨_, hb0, rfl⟩
+  have hEnd := lowerEnd_ok lay hL cenv (0, 0) O passes R (P.rumpf f) 1 ⟨r, 2⟩ s' blks hl M S fn hM2
+    ⟨hK0, hK0⟩ σ ρ m1 rs1 ks dst hR1 hE1 hW1 hbd1
+  rw [hex] at hEnd
+  obtain ⟨m', f', hr2, hf1, hf2, hret, hR', hW'⟩ := hEnd
   exact ⟨m', f', Reach.trans hreach hr2, hf1, hf2, hret, hR', hW'⟩
 
 /-- With no caller, the run of the lowered function ends with the image of the returned value. -/

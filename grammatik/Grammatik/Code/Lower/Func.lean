@@ -44,7 +44,7 @@ def irParams (ps : List GTy) : List Param :=
 def lowerFn (lay : Layout D) (P : Programm D) (f : D.Fn) (name : String) : Option Func :=
   match prologue (D.params f) 0 (D.params f).length with
   | some (pc, cenv, r) =>
-      match lowerEnd lay cenv (P.rumpf f) 1 ⟨r, 2⟩ with
+      match lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with
       | some (blks, _) =>
           some ⟨name, irParams (D.params f), retTy (D.erg f), ⟨0, [], pc, .jmp 1⟩ :: blks⟩
       | none => none
