@@ -399,6 +399,7 @@ import Grammatik.Logik.Ruf.FremdRuf
 import Grammatik.Zielsatz.Faeden.PoolSym
 import Grammatik.Zielsatz.Eigenschaften.Masken
 import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
+import Grammatik.Zielsatz.Eigenschaften.KernMaske
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.CBackend.Formen.CFormMatch
 import Grammatik.Zielsatz.Eigenschaften.Divergenz
