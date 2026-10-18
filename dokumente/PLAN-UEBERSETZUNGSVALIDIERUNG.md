@@ -698,15 +698,17 @@ structured, `P` partial (a spelling refused or a part dropped), `R` raw words ke
 `druckToks` exists; rtrip `P` = round-trip theorem for the printable (`gut`) shapes; elab `U` = `elabU`/`lowerAllg`
 lowers it; corpus = files using the rule's head word.
 
-| measure | start (5abb6e08) | phase 1 | phase 2 (1)+(2) |
-|---|---|---|---|
-| files that lex | 170 / 170 | 170 / 170 | 170 / 170 |
-| files that parse as a whole | 116 / 170 | 153 / 170 | **170 / 170** |
-| files that elaborate (`elabU`) | 9 / 170 | 9 / 170 | 9 / 170 |
-| exporter-certified programs (29 in `beispiele/`) elaborated | 9 / 29 | 9 / 29 | 9 / 29 |
-| rules, reader S / P / R / X (190 rules) | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 | **158 / 11 / 22 / 0** |
-| rules with a printer, a round trip | 28, 28 | 28, 28 | 28, 28 (expressions only) |
-| rules with an elaboration | 58 | 58 | 58 |
+| measure | start (5abb6e08) | phase 1 | phase 2 (1)+(2) | phase 2 (3) first slice |
+|---|---|---|---|---|
+| files that lex | 170 / 170 | 170 / 170 | 170 / 170 | 170 / 170 |
+| files that parse as a whole | 116 / 170 | 153 / 170 | 170 / 170 | 170 / 170 |
+| files that elaborate (`elabU`), all of them also lower | 9 / 170 | 9 / 170 | 9 / 170 | **13 / 170** |
+| exporter-certified programs (29 in `beispiele/`; the register file is gone, the list is in git at 3068f537) elaborated | 9 / 29 | 9 / 29 | 9 / 29 | **13 / 29** |
+| rules, reader S / P / R / X (190 rules) | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 | 158 / 11 / 22 / 0 | 158 / 11 / 22 / 0 |
+| rules with a printer, a round trip | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) |
+| rules with an elaboration | 58 | 58 | 58 | 59 |
+
+Phase 2 (3), first slice: `masks irqs` (`ULock.masks` -> `D.maskiert`), entry `via` (`UProg.handler` -> `Programm.unterbricht`), `concurrent` roots ahead of the dispatch roots, nested modules, and the dropped `deadline ... arch ... falsifier` clause lift 108, 166, 59 and 165 (13 of 29). Open in this phase: statics, `let`/`check`/`traverse`, atomics, tagged types, lock invariants and gates (each needs its G form in `declOf`: `Glob`, `Inv`, `Ax`, `Ty.sum`, or a variable context in `lowSeqL`), and the printers and round trips.
 
 Findings. (1) Statements and items have no printer and no round trip; the expression round trip covers the `gut`
 shapes only (`Rundlauf3` names the nesting blocker), and the new `SExpr.ext` forms are outside `gut` (no spelling in
@@ -742,8 +744,8 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `regbind` | lex | S | . | . | . |  | `SRegBind` |
 | `program` | item | S | . | . | U |  | `parseTopTief`; `elabU` takes tables, locks, impl fns, consts, entries |
 | `item` | item | S | . | . | U |  | `SItemTief`, 32 constructors |
-| `buildgate` | item | S | . | . | . | 1 | `torT` |
-| `bootdecl` | item | S | . | . | . | 1 | `startT` |
+| `buildgate` | item | S | . | . | . | 1 | `gateT` |
+| `bootdecl` | item | S | . | . | . | 1 | `bootT` |
 | `bootstep` | item | S | . | . | . | 1 | `SBootSchritt` |
 | `entrydecl` | item | S | . | . | U | 9 | `SEingang`; `elabU` reads only the dispatch roots |
 | `entrustdecl` | item | S | . | . | . | 1 |  |
@@ -755,8 +757,8 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `targetdecl` | item | S | . | . | . | 11 | `goalT`; the lexer table gained `target` |
 | `targetbind` | item | S | . | . | . | 11 | `goalT` bindings |
 | `errmap` | item | S | . | . | . | 17 | `errno [= n] => R` |
-| `accdecl` | item | S | . | . | . | 2 | `akkumT` |
-| `moduledecl` | item | P | . | . | U | 170 | `modulT`; `pub` is dropped |
+| `accdecl` | item | S | . | . | . | 2 | `accT` |
+| `moduledecl` | item | P | . | . | U | 170 | `modT`; `pub` is dropped |
 | `usedecl` | item | S | . | . | . | 2 |  |
 | `constdecl` | item | S | . | . | U | 67 | `konstT` |
 | `constexpr` | item | S | E | P | U |  | an `SExpr` |
@@ -804,12 +806,12 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `addexpr` | expr | S | E | P | U |  |  |
 | `mulexpr` | expr | S | E | P | U |  |  |
 | `unary` | expr | S | E | P | U |  |  |
-| `fnvalue` | expr | S | E | P | . | 16 | `fnwert` |
+| `fnvalue` | expr | S | E | P | . | 16 | `fnref` |
 | `primary` | expr | S | E | P | U |  | string literal and `count` read; both `ext` |
 | `stringlit` | expr | S | . | . | . | 3 | `ext .text` |
 | `countexpr` | expr | S | . | . | . | 1 | `ext .count` |
 | `reasonval` | expr | S | E | P | . | 8 | `SExpr.why` |
-| `optionexpr` | expr | S | E | P | . | 12 | `ruf "Some"` |
+| `optionexpr` | expr | S | E | P | . | 12 | `call` named Some |
 | `paren` | expr | S | E | P | U |  |  |
 | `call` | expr | S | E | P | U |  |  |
 | `arglist` | expr | S | E | P | U |  |  |
@@ -838,7 +840,7 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `induct` | fn | R | . | . | . |  |  |
 | `efflist` | fn | S | . | . | U |  |  |
 | `eff` | fn | S | . | . | U | 166 |  |
-| `breakstmt` | stmt | S | . | . | . | 2 | `bricht` |
+| `breakstmt` | stmt | S | . | . | . | 2 | `waive` |
 | `block` | stmt | S | . | . | U |  | `SAnw.block` |
 | `endblock` | stmt | S | . | . | U |  |  |
 | `endstmt` | stmt | S | . | . | U | 137 |  |
@@ -849,15 +851,15 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `awaitload` | stmt | P | . | . | . | 8 | payload list raw |
 | `exchstmt` | stmt | R | . | . | . | 6 | transform raw |
 | `xform` | stmt | R | . | . | . | 6 |  |
-| `letstmt` | stmt | S | . | . | . | 88 | the type ascription is read (`bind`, `bindElse`, `bindLib`, `allocS`) |
+| `letstmt` | stmt | S | . | . | . | 88 | the type ascription is read (`bind`, `bindElse`, `bindLib`, `alloc`) |
 | `assign` | stmt | S | . | . | U |  | slot writes only in elab |
 | `stateassign` | stmt | S | . | . | . | 0 |  |
 | `exprstmt` | stmt | S | . | . | U |  | direct calls only in elab |
-| `ifstmt` | stmt | S | . | . | . | 56 | `wenn`, `sonstWenn` |
-| `matchstmt` | stmt | S | . | . | . | 23 | `matchS` |
+| `ifstmt` | stmt | S | . | . | . | 56 | `cond`, `elsif` |
+| `matchstmt` | stmt | S | . | . | . | 23 | `cases` |
 | `matcharm` | stmt | S | . | . | . | 23 | `arm` |
 | `narrowstmt` | stmt | P | . | . | . | 22 | target range kept as raw words |
-| `allocstmt` | stmt | S | . | . | . | 7 | `allocS` |
+| `allocstmt` | stmt | S | . | . | . | 7 | `alloc` |
 | `resetstmt` | stmt | S | . | . | . | 6 | with `at i count n` |
 | `growstmt` | stmt | S | . | . | . | 1 | `SAnw.grow` |
 | `freestmt` | stmt | S | . | . | . | 1 | `SAnw.free` |
@@ -865,12 +867,12 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `startstmt` | stmt | S | . | . | . | 2 | `SAnw.start`; written into SYNTAX.md 2026-10-17 |
 | `libcall` | stmt | R | . | . | . | 2 | region skipped balanced |
 | `libregion` | stmt | R | . | . | . |  |  |
-| `translatordecl` | stmt | S | . | . | . | 7 | `uebersetzerT` |
+| `translatordecl` | stmt | S | . | . | . | 7 | `transT` |
 | `loopform` | stmt | R | . | . | . | 26 | header raw |
 | `traverse` | stmt | R | . | . | . | 15 | header raw |
 | `retry` | stmt | R | . | . | . | 9 |  |
 | `forever` | stmt | R | . | . | . | 10 |  |
-| `table` | decl | S | . | . | U | 74 | `tabelleT`; elab: integer fields |
+| `table` | decl | S | . | . | U | 74 | `tableT`; elab: integer fields |
 | `treedecl` | decl | S | . | . | . | 8 |  |
 | `kante` | decl | S | . | . | . |  |  |
 | `occdecl` | decl | S | . | . | . | 1 |  |
@@ -884,11 +886,11 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `invariant` | decl | S | . | . | . | 15 |  |
 | `costexpr` | decl | S | . | . | . | 9 |  |
 | `format` | decl | S | . | . | . | 6 | `@version` read |
-| `reason` | decl | S | . | . | . | 28 | `grundT` |
-| `state` | decl | S | . | . | . | 1 | `zustandT` |
-| `device` | decl | S | . | . | . | 13 | `geraetT` |
+| `reason` | decl | S | . | . | . | 28 | `whyT` |
+| `state` | decl | S | . | . | . | 1 | `stateT` |
+| `device` | decl | S | . | . | . | 13 | `devT` |
 | `mirrors` | decl | S | . | . | . | 4 |  |
-| `bank` | decl | R | . | . | . | 1 | `bankRoh` |
+| `bank` | decl | R | . | . | . | 1 | `bank` |
 | `regdecl` | decl | S | . | . | . | 13 | `SReg` |
 | `regklasse` | decl | S | . | . | . |  |  |
 | `regphasen` | decl | S | . | . | . |  |  |
@@ -898,15 +900,15 @@ types (34, 120), `let`/`traverse`/early `return` (1164, 190, 193); the other 7 (
 | `transset` | decl | S | . | . | . |  |  |
 | `placeshift` | decl | S | . | . | . |  |  |
 | `shiftplace` | decl | S | . | . | . |  |  |
-| `atomicdecl` | conc | S | . | . | . | 14 | `atomarT` |
+| `atomicdecl` | conc | S | . | . | . | 14 | `atomT` |
 | `publishstmt` | conc | P | . | . | . | 14 | payload list raw |
 | `nutzlast` | conc | R | . | . | . |  |  |
 | `lockdecl` | conc | S | . | . | U | 44 | `invariant` read (`lockT` 7th field) |
-| `lockstmt` | conc | S | . | . | U | 42 | `sperrt` |
+| `lockstmt` | conc | S | . | . | U | 42 | `locks` |
 | `rcudecl` | conc | S | . | . | . | 3 |  |
 | `observestmt` | conc | S | . | . | . | 3 |  |
 | `gruppedecl` | conc | S | . | . | . | 1 |  |
-| `concurrentdecl` | conc | S | . | . | . | 6 | `nebenT` |
+| `concurrentdecl` | conc | S | . | . | U | 6 | `concT` |
 | `assume` | assume | S | . | . | . | 31 |  |
 | `axiom` | assume | S | . | . | . | 3 |  |
 | `profiledecl` | assume | S | . | . | . | 2 |  |
