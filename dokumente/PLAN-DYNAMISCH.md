@@ -287,6 +287,95 @@ this round or follows it.
 each with a warm `.lake`); phase 4 is the reviewed statement change; 5–6 are small Rust. Counts are not
 completion evidence: the exit conditions above are.
 
+### 8a.1 Phase 2 status (2026-10-18): `InvDyn` for the list and the tree, proved in Lean
+
+**What is proved** (`grammatik/Grammatik/Bausteine/Arena/`, axioms `propext`/`Classical.choice`/`Quot.sound` at most; no
+`sorry`; `gabbro_ziel` untouched: none of these modules is imported by `Zielsatz/`):
+
+| Piece | File | Statement |
+|---|---|---|
+| chain `KetteF`, `ListOkF` | `ArenaKette` | finite chain from a head, pairwise distinct slots, every slot live; `push_ok`, `pop_ok`, `unlink_ok` (delete after a predecessor, by a permutation argument), `push_doppelt_bricht` (pushing a linked slot gives a self loop: no chain exists) |
+| tree `BaumF`, `BaumOkF` | `ArenaBaum` | tree shape = `Nodup` of the preorder slot list (subtrees disjoint, no slot its own ancestor); `einfuegen_ok`/`blatt_aus_ok` (left) and `*_rechts_ok` (mirror), `einfuegen_doppelt_bricht`, `InBaum.links/rechts` |
+| live slots `Lebt` | `ArenaLebt` | `Lebt = below the counter and not on the free list`; `lebt_bump` (alloc from the counter), `lebt_abheb` (alloc from the free list), `lebt_frei`: every other live slot stays live, the new slot is live, the freed slot is dead |
+| the allocator's frame `Fremd` | `ArenaFremd` | the EXECUTED forms `arenaRumpf`, `freiNimm`, `freiRumpf` write only counter, free head, payload and free link (`*_fremd`); `frisch_lebt`, `nimm_lebt`, `frei_lebt` bundle execution, frame, free list and liveness |
+| list `ListOk` | `ArenaListe` | `liste_frisch`, `liste_nimm` (both alloc branches: list and free list stay well formed, the new slot is live and unlinked), `liste_frei` (free of a live, unlinked slot), `liste_push`, `liste_pop`, `liste_unlink`, `liste_pop_frei` (stack discipline) |
+| tree `BaumOk` | `ArenaBaumWelt` | `baum_frisch`, `baum_nimm`, `baum_frei`, `baum_einfuegen_links/rechts`, `baum_blatt_aus_links/rechts`, `baum_frei_nach_blatt` |
+| witnesses, planted defect | `ArenaDynZeuge` | a concrete full arena (4 slots) with slot `1` on the free list, list `2 -> 0` and tree `2 (left 0)`; `pop_zeuge`, `einfuegen_zeuge`, the EXECUTED `alloc` from the free list (`nimm_zeuge`); the defect "a linked slot is also on the free list" is rejected (`liste_defekt_bricht`) |
+
+**Shape of the guarantee.** The invariant is a predicate over the world (`ListOk A L G σ`, `BaumOk ...`), not a new
+carrier. The allocator moves are proved on the executed `Block` forms (the three blocks of `ArenaFrei.lean`); the
+link stores (`lnk[p] = ..`, `head = ..`) are plain `assignSlot`/`assignGlob` and are proved as statements about the
+worlds they leave (`liste_push` and the rest take the store facts as hypotheses, exactly as `abheben_sicher`).
+Hypotheses are the checker-visible ones: single release and no use after release (`N586`: the freed slot is live and
+no longer linked), a pushed slot is unlinked and live, a hung leaf has an empty child place, and `k.n = stand` is
+what `arenaAlloc`'s guard binds.
+
+**Open inside phase 2 (not claimed):**
+* the executed forms of the link stores (a `Block.linkPush`/`linkPop` over `assignSlot` and `assignGlob`, like
+  `freiRumpf`) and the multi-store move `lnk[p] = lnk[i]` for arbitrary bodies: today the stores' effect is a hypothesis;
+* the recognizer that turns `Akzeptiert` plus `maintains`/`breaking`/`ops` clauses into those hypotheses for every
+  accepted body (the generic theorem, not a per-program one): without it the preservation theorems are lemmas about
+  forms, not yet a leg of the goal;
+* sibling consistency of the capability tree (O6) as a further predicate over `Lf`/`Rf` and the parent link, and `revoke`
+  (cutting a whole subtree: needs `blatt_aus` for subtrees and the release of each slot);
+* the hash chain (array of list heads: `ListOk` per bucket plus pairwise disjointness of the buckets);
+* `LinkKopf` must also exclude the committed word `komm` before `grow` is composed with these moves (`grow` writes it);
+  `Fremd` does not mention `komm` because none of the three allocator blocks writes it;
+* a link field that holds an index of ANOTHER arena (decision (b) says: not in scope).
+
+### 8a.2 Concurrency of arenas (O20): design note, phase 3, nothing built yet
+
+* **Per-thread arena (per cpu, thread-local carrier).** The footprint rule already forbids another thread from
+  touching the carriers; the free list, the counter and the links change in one thread, so `ListOk`/`BaumOk` hold at
+  every step boundary of that thread by `ArenaListe`/`ArenaBaumWelt` plus the statements above. No new leg.
+* **Shared arena under a lock.** The counter, the free head, the commit word and the link fields are carriers guarded
+  by one lock `L` (`protects`). The existing lock legs already say what is needed: `sperrWechsel` (every acquire starts
+  from and every release leaves a memory where `S.inv L` holds) and `sperrSicht` (no other thread moves a carrier while `L`
+  is held). The structure invariant IS the lock invariant: `S.inv L := FreiOk ∧ ListOk ∧ BaumOk` (and the commit bound
+  `stand <= komSt`). The proof obligation is a whole critical section: acquire with the invariant, run the
+  alloc/link/unlink/free moves, release with the invariant. Between two stores the invariant is broken (`free` after
+  its first store, a linked slot not yet pushed): that is why it is claimed at the lock moves and NOT inside the section,
+  and why `invSicht` (observed by the guard holder) is the weaker, already present form.
+* **`grow` as a locked commit.** `grow` writes only `komm` (`dynGrow_commit`); `Lebt`/`ListOk`/`BaumOk` read slots below
+  `stand <= komm` and the free list, so they are untouched (a `dynGrow_fremd` lemma, same proof as `*_fremd`, once
+  `LinkKopf` excludes `komm`). The leg `Laufzeit.commit` (the OS gate's contract: success names readable storage) stays a
+  named hardware/binding assumption; what changes is that two threads cannot interleave a commit with an allocation,
+  because both hold `L`.
+* **What the model still lacks:** a statement that two sections on one arena commute up to slot names (no ABA on a
+  freed and re-allocated slot across a section boundary: a thread must not keep an index across a release; that is
+  `N586` per thread and needs the cross-thread form: a slot a thread holds is not on the free list unless that thread
+  freed it). A lock-free free list (Treiber stack) is phase B item 5, not this.
+* **Next steps:** (1) the section theorem `abschnitt_erhaelt`: a body built only from the proved moves preserves
+  `S.inv L` from acquire to release; (2) `dynGrow_fremd`; (3) the slot-ownership predicate for the ABA point.
+
+### 8a.3 Proposal (NOT applied): the `Spec.lean` diff for step 4
+
+Today an invariant is an `Expr ... .bool` over a table's carriers (`Programm.invariante`, `InvTraeger`, `InvRuheG`,
+`InvSichtG`). A chain or a tree is not a bounded boolean expression (no quantifier over a growing index set), so the
+dynamic structures need their own declaration form and their own `Holds`, beside `D.invs`, not inside it.
+
+1. `Deklaration` (Kern, Syntax.lean) gets one field with a default, so every old declaration keeps its meaning:
+   `dyn : List DynForm := []` where a `DynForm` names the arena table, counter, free head, free link and ONE structure
+   `liste (kopf, lnk) | baum (wurzel, lft, rgt)` (the data of `LinkFeld`/`LinkKopf` in `ArenaListe.lean`; the types move
+   down into Kern so that `Spec` can mention them, the lemmas stay in Bausteine).
+2. `Spec.lean` gets two legs, shaped exactly like `invRuhe`/`invSicht`:
+   * `DynRuhe P M0 M := ∀ s ∈ D.dyn, DynHaelt s (M0.speicher.welt []) → DynZu M s → DynHaelt s (M.speicher.welt [])`
+   * `DynSicht P M0 M := ∀ s ∈ D.dyn, DynHaelt s (M0 ...) → ∀ t, (no frame in a writer of s) → (holds a guard of s's table)
+     → DynHaelt s (M ...)`
+   with `DynHaelt s σ := FreiOk ∧ ListOk (or BaumOk)` and `DynZu` = no unfinished thread has a frame of a function
+   whose effects write one of the structure's fields or words. For a shared arena `S.inv L` additionally contains `DynHaelt`
+   (`sperrWechsel` then carries the section theorem of 8a.2).
+3. `Ziel` gets `dynRuhe`, `dynSicht` as new conjuncts; every old conjunct stays word for word. The NOT CLAIMED entry
+   "dynamic unbounded data structures" shrinks to: heap without a ceiling, recursive types, links across arenas,
+   hash chains until proved.
+4. The premise side: (a) gets a rule that every function that writes a structure field or word is a `maintains`
+   function whose body the Lean recognizer matches against the proved moves; (b) stays as is (user logic: `requires`,
+   `ensures`); a DynForm in a unit is only exported when the recognizer accepts every writer.
+5. Proof: `gabbro_ziel` gets the two legs from the section theorem (8a.2) and the preservation theorems of 8a.1 by the
+   same induction over machine steps that proves `invRuhe`; the axioms stay `propext`, `Classical.choice`, `Quot.sound`.
+   Review: two independent verdicts as for every extension of the goal (AGENTS.md section 1).
+   Until 8a.1's "open" list is closed, this diff would claim more than is proved; it is a proposal.
+
 ## 9. Re-measuring
 
 ```
