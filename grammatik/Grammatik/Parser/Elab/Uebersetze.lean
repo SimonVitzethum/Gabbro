@@ -141,6 +141,8 @@ structure ULock where
   name : String
   rank : Int
   schutz : List String
+  /-- `masks irqs`: taking the lock masks interrupts (`D.maskiert`, lane 255). -/
+  masks : Bool := false
   deriving DecidableEq, Repr
 
 /-- A parameter kind: a pointer to a table, an index into one,
@@ -205,14 +207,24 @@ structure UProg where
   /-- The dispatch roots of the unit's `entry` items (function names, each a parameterless function of
       the unit): thread roots of the goal's runtime premise (`Einheit.starts`). -/
   wurzeln : List String := []
+  /-- The functions entered by HARDWARE: the dispatch roots of the `entry` items that carry a `via`
+      word (`Programm.unterbricht`, `Kontext::unterbricht` of the checker). Each is also a root. -/
+  handler : List String := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
     list passes through (104 wraps everything in
     `module beispiel::referenz`). -/
-def uMembers : List SItemTief → List SItemTief
-  | [.modT _ ms] => ms
-  | ms => ms
+def uFlach : Nat → List SItemTief → List SItemTief
+  | 0, ms => ms
+  | _ + 1, [] => []
+  | f + 1, .modT _ b :: rest => uFlach f b ++ uFlach f rest
+  | f + 1, it :: rest => it :: uFlach f rest
+
+/-- The members of a unit: every module wrapper is opened, so the items of nested modules stand in one
+    list (`lean_g.rs` resolves names by their last segment as well). The fuel is one unit per item
+    visited; a unit past it keeps its module wrapper and is then refused loudly by `uRestFehler`. -/
+def uMembers (ms : List SItemTief) : List SItemTief := uFlach 100000 ms
 
 /-- The constant scope: `const N : u32 = v;` travels as
     (`N`, `v`); any other `const` form has no G form
@@ -547,6 +559,12 @@ def uSperre (tabs : List UTab) : SItemTief → Except String ULock
     match uSchutzAux tabs ps with
     | .error e => .error e
     | .ok ts => .ok { name := n, rank := Int.ofNat rk, schutz := ts }
+  | .lockT n ps (.lit rk) _ .none (.some m) .none =>
+    if strEq m "irqs" then
+      match uSchutzAux tabs ps with
+      | .error e => .error e
+      | .ok ts => .ok { name := n, rank := Int.ofNat rk, schutz := ts, masks := true }
+    else .error "lock masks something but irqs: no G form"
   | _ => .error "Sperre ohne G-Form"
 
 /-- A parameter position by name (the `param_index` of
@@ -1015,19 +1033,16 @@ where
     | .effs _ :: _ => true
     | _ :: rest => uHatWirkung rest
 
-/-- Clauses without G counterpart (the refused row of
-    `check_fn`): the `or` channel, `refines`, `maintains`,
-    `deadline`, `decreases`, `by`, `arch`, `advances`,
-    `retires`. `costs`, `section` and `payload` travel nowhere
-    and are ignored, like in `lean_g.rs`. -/
+/-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`, `decreases`,
+    `by`, `advances`, `retires`. `costs`, `section` and `payload` travel nowhere and are ignored, like in
+    `lean_g.rs`; so is `deadline <= n ops arch X falsifier p` (with its `arch` word): the date is owed to the
+    machine and discharged by a probe, so the clause is dropped like `costs` (lane 255 of the exporter). -/
 def uOhneKlauselForm : List SKlausel → Except String Unit
   | [] => .ok ()
   | .refs _ :: _ => .error "Klausel ohne G-Form"
   | .keeps _ :: _ => .error "Klausel ohne G-Form"
-  | .limit _ :: _ => .error "Klausel ohne G-Form"
   | .drops _ :: _ => .error "Klausel ohne G-Form"
   | .induc _ :: _ => .error "Klausel ohne G-Form"
-  | .arch _ :: _ => .error "Klausel ohne G-Form"
   | .moves _ _ :: _ => .error "Klausel ohne G-Form"
   | .quits _ :: _ => .error "Klausel ohne G-Form"
   | _ :: rest => uOhneKlauselForm rest
@@ -1295,27 +1310,56 @@ def uRestFehler : List SItemTief → Except String Unit
   | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
+  | .concT _ :: rest => uRestFehler rest
   | _ :: _ => .error "Gegenstand ohne G-Form"
 
-/-- The dispatch roots of the `entry` items: no handler word (`via` -- the interrupt model of the
-    goal is not built here), no run-time expression, ONE dispatch target that names a parameterless
-    function of the unit. Everything else about the entry (vector, registers, stack) is the
+/-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
+def uStart (fns : List UFn) (quelle d : String) : Except String String :=
+  match fns.find? (fun f => strEq f.name d) with
+  | .some f =>
+    if f.params.isEmpty then .ok d
+    else .error (quelle ++ " names a function with parameters: no start-argument form: " ++ d)
+  | .none => .error (quelle ++ " names an unknown function: " ++ d)
+
+/-- The roots of the `concurrent` items, in order (their members come first, as in `check_starts`). -/
+def uNebenWurzeln (fns : List UFn) : List SItemTief → Except String (List String)
+  | [] => .ok []
+  | .concT ps :: rest => do
+    let here ← uSeq (ps.map fun p => match p.getLast? with
+      | .some d => uStart fns "concurrent member" d
+      | .none => .error "empty path in concurrent")
+    let more ← uNebenWurzeln fns rest
+    pure (here ++ more)
+  | _ :: rest => uNebenWurzeln fns rest
+
+/-- The dispatch roots of the `entry` items: ONE dispatch target that names a parameterless function of
+    the unit. Everything else about the entry (vector, registers, stack) is the
     hardware side and stays with the checker. -/
-def uWurzeln (fns : List UFn) : List SItemTief → Except String (List String)
+def uEingangsWurzeln (fns : List UFn) : List SItemTief → Except String (List String)
   | [] => .ok []
   | .entryT e :: rest =>
-    match e.via, e.ist, e.dispatch.getLast? with
-    | .none, .none, .some d =>
-      match fns.find? (fun f => strEq f.name d) with
-      | .some f =>
-        if f.params.isEmpty then
-          match uWurzeln fns rest with
-          | .error x => .error x
-          | .ok ws => .ok (d :: ws)
-        else .error "Eingang auf Funktion mit Parametern ohne G-Form"
-      | .none => .error ("Eingang: Funktion unbekannt: " ++ d)
-    | _, _, _ => .error "Eingang mit Handler ohne G-Form"
-  | _ :: rest => uWurzeln fns rest
+    match e.dispatch.getLast? with
+    | .some d => do
+      let w ← uStart fns "dispatch" d
+      let ws ← uEingangsWurzeln fns rest
+      pure (w :: ws)
+    | .none => .error "entry without a dispatch: no G form"
+  | _ :: rest => uEingangsWurzeln fns rest
+
+/-- The handlers: the dispatch targets of the entries that carry a `via` word. -/
+def uHandler : List SItemTief → List String
+  | [] => []
+  | .entryT e :: rest =>
+    match e.via, e.dispatch.getLast? with
+    | .some _, .some d => d :: uHandler rest
+    | _, _ => uHandler rest
+  | _ :: rest => uHandler rest
+
+/-- The thread roots: `concurrent` members, then entry dispatch roots. -/
+def uWurzeln (fns : List UFn) (ms : List SItemTief) : Except String (List String) := do
+  let a ← uNebenWurzeln fns ms
+  let b ← uEingangsWurzeln fns ms
+  pure (a ++ b)
 
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
@@ -1352,7 +1396,7 @@ def elabU : List SItemTief → Except String UProg
             | .ok fns =>
               match uWurzeln fns ms with
               | .error e => .error e
-              | .ok wurzeln => .ok { tabellen := tabs, sperren := locks, fns, wurzeln }
+              | .ok wurzeln => .ok { tabellen := tabs, sperren := locks, fns, wurzeln, handler := uHandler ms }
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -2033,7 +2077,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabellen := [tab], sperren := [lock], fns := [fe, fl], wurzeln := [] } =>
+  | { tabellen := [tab], sperren := [lock], fns := [fe, fl], wurzeln := [], handler := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "Programmform ohne G-Form"
@@ -2413,7 +2457,7 @@ def beqUTabList : List UTab → List UTab → Bool
 
 def beqULock : ULock → ULock → Bool
   | a, b => strEq a.name b.name && a.rank == b.rank &&
-    beqStrList a.schutz b.schutz
+    beqStrList a.schutz b.schutz && a.masks == b.masks
 
 def beqULockList : List ULock → List ULock → Bool
   | [], [] => true
@@ -2437,7 +2481,7 @@ def beqUFnList : List UFn → List UFn → Bool
 def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabellen b.tabellen &&
     beqULockList a.sperren b.sperren && beqUFnList a.fns b.fns &&
-    beqStrList a.wurzeln b.wurzeln
+    beqStrList a.wurzeln b.wurzeln && beqStrList a.handler b.handler
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool

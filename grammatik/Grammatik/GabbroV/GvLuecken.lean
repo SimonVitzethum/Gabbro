@@ -154,7 +154,10 @@ theorem gvLuecke_elabU_refuses_statics :
       | atomT _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | rcuT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | groupT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | concT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | concT _ =>
+        have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
+        obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
+        exact ⟨e, by simp only [uRestFehler, he]⟩
       | accT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | walkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
       | trustT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩

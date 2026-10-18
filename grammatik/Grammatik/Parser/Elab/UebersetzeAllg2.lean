@@ -932,6 +932,7 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
   requires := fun _ => Expr.tru
   ensures := fun f => E f
   rumpf := fun f => B f
+  unterbricht := fun f => u.handler.any (fun n => strEq n (fnAt u f).name)
 
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it. -/
@@ -1163,15 +1164,6 @@ def normTabTeilU32 : STabTeil → STabTeil
 def normSigU32 (s : FnSig) : FnSig :=
   { s with params := s.params.map (fun p => (p.1, normTypU32 p.2)), res := s.res.map normTypU32 }
 
-/-- Drop `concurrent` items (`concT` has no G form). Top
-    level only, like `uMembers`: nested modules are refused by
-    `uRestFehler` afterwards, loudly. Single recursion, so the
-    kernel reduces it (nested-subterm recursion does not). -/
-def stripTopNeben : List SItemTief → List SItemTief
-  | [] => []
-  | .concT _ :: rest => stripTopNeben rest
-  | it :: rest => it :: stripTopNeben rest
-
 /-- One item with bare `u32` normalised (no module recursion:
     `uMembers` unwraps the single module `elabU` supports). -/
 def normU32Item : SItemTief → SItemTief
@@ -1185,10 +1177,10 @@ def normTopU32 : List SItemTief → List SItemTief
   | [] => []
   | it :: rest => normU32Item it :: normTopU32 rest
 
-/-- The 108 preprocessing: unwrap like `elabU`, strip
-    `concurrent`, then normalise bare `u32`, before `elabU`. -/
+/-- The preprocessing of the bridge instances: unwrap like `elabU`, then normalise bare `u32`,
+    before `elabU` (`concurrent` items are elaborated into the thread roots now). -/
 def pre108 (items : List SItemTief) : List SItemTief :=
-  normTopU32 (stripTopNeben (uMembers items))
+  normTopU32 (uMembers items)
 
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 
@@ -1456,7 +1448,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 1)) }] }
+def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 1)) }], wurzeln := ["read_a", "read_c"] }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide
@@ -1522,8 +1514,8 @@ end Gabbro.Grammatik.Parser.UebersetzeAllg2
      `ensures` positions ride one past the result when one is
      present. Without it `lowerAllg` fails on every result-bearing
      function whose contract reads a slot (measured on `lies`).
-  4. 108 is done the same way as 104: `pre108` strips
-     `concurrent` (`concT`) and normalises bare `u32` to its
+  4. 108 is done the same way as 104: `pre108` unwraps the
+     module and normalises bare `u32` to its
      full range before `elabU`; `toks108`/`items108`/`uExp108`
      are probe-generated literals (`#eval` + `Repr`, then pinned
      by `lex108`/`parse108`/`elab108`), with the fragment,

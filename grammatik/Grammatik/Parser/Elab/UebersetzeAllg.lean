@@ -163,7 +163,7 @@ def declOf (u : UProg) : Deklaration where
   Lock := Fin u.sperren.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
-  maskiert := fun _ => false
+  maskiert := fun l => (lockAt u l).masks
   Marke := Empty
   decMarke := inferInstance
   stufen := fun e => nomatch e

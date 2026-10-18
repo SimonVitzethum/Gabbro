@@ -119,7 +119,7 @@ RULES = [
     ("stringlit", "expr", "S", ".", ".", ".", r'=\s*"|\(\s*"', "`ext .text`"),
     ("countexpr", "expr", "S", ".", ".", ".", "\\bcount\\s+\\w+\\s+in\\b", "`ext .count`"),
     ("reasonval", "expr", "S", "E", "P", ".", r"\b[A-Z]\w*::[A-Z]\w*", "`SExpr.why`"),
-    ("optionexpr", "expr", "S", "E", "P", ".", r"\b(Some|None)\b", "`call "Some"`"),
+    ("optionexpr", "expr", "S", "E", "P", ".", r"\b(Some|None)\b", "`call` named Some"),
     ("paren", "expr", "S", "E", "P", "U", None, ""),
     ("call", "expr", "S", "E", "P", "U", None, ""),
     ("arglist", "expr", "S", "E", "P", "U", None, ""),
@@ -221,7 +221,7 @@ RULES = [
     ("rcudecl", "conc", "S", ".", ".", ".", r"^\s*rcu\s", ""),
     ("observestmt", "conc", "S", ".", ".", ".", r"\bobserves\s", ""),
     ("gruppedecl", "conc", "S", ".", ".", ".", r"^\s*group\s", ""),
-    ("concurrentdecl", "conc", "S", ".", ".", ".", r"^\s*concurrent\s", "`concT`"),
+    ("concurrentdecl", "conc", "S", ".", ".", "U", r"^\s*concurrent\s", "`concT`"),
     ("assume", "assume", "S", ".", ".", ".", r"^\s*assume\s", ""),
     ("axiom", "assume", "S", ".", ".", ".", r"^\s*axiom\s", ""),
     ("profiledecl", "assume", "S", ".", ".", ".", r"^\s*profile\s*\{", ""),
@@ -283,6 +283,7 @@ def main(argv):
     total = len(corpus)
     parse_ok = [n for n, f in census.items() if f[2] == "parse=ok"]
     elab_ok = [n for n, f in census.items() if f[3] == "elab=ok"]
+    lower_ok = [n for n, f in census.items() if len(f) > 4 and f[4] == "lower=ok"]
     lex_err = [n for n, f in census.items() if f[1] != "lex=ok"]
     rows = []
     for rule, grp, rd, pr, rt, el, rx, note in RULES:
@@ -314,7 +315,7 @@ def main(argv):
         print(f"{k:8}", ", ".join(f"{a}={b}" for a, b in sorted(c.items())))
     full = sum(1 for r in rows if r[2] == "S" and r[3] == "E" and r[4] == "P" and r[5] == "U")
     print(f"rules with all four columns present (round trip partial: `gut` shapes only): {full}")
-    print(f"corpus: {total} files; lex ok {total - len(lex_err)}; whole-file parse ok {len(parse_ok)}; elab ok {len(elab_ok)}")
+    print(f"corpus: {total} files; lex ok {total - len(lex_err)}; whole-file parse ok {len(parse_ok)}; elab ok {len(elab_ok)}; lower ok {len(lower_ok)}")
     bad = [n for n in census if census[n][2] != "parse=ok"]
     if bad:
         print("parse failures (first blocker of each):")
