@@ -250,6 +250,42 @@ theorem rwExkl_start (P : Programm D) (sp : Speicher D)
   intro t u L htu ht hu
   exact absurd ((offen_start sp init u L).mp hu) (hex t u htu L ((offen_start sp init t L).mp ht))
 
+/-! ## 5. Building runs -/
+
+theorem rwLauf_nil (M0 : RufMaschineG D) : RwLauf P O passes lese M0 (fun _ => M0) (fun _ => 0) 0 :=
+  ⟨rfl, fun k hk => absurd hk (Nat.not_lt_zero k)⟩
+
+/-- One more step at the end of a run (the witnesses build their runs with this). The earlier
+    machines and actors are kept; the new actor is `f`. -/
+theorem rwLauf_schritt {M0 : RufMaschineG D} {ms : Nat → RufMaschineG D} {fs : Nat → Faden}
+    {n : Nat} (hl : RwLauf P O passes lese M0 ms fs n) {M M' : RufMaschineG D} {f : Faden}
+    (hm : ms n = M) (hs : RwSchritt P O passes lese M f M') :
+    ∃ (ms' : Nat → RufMaschineG D) (fs' : Nat → Faden),
+      RwLauf P O passes lese M0 ms' fs' (n + 1) ∧ ms' (n + 1) = M' ∧ (∀ k, k ≤ n → ms' k = ms k) ∧
+        fs' n = f ∧ (∀ k, k < n → fs' k = fs k) := by
+  refine ⟨fun k => if k ≤ n then ms k else M', fun k => if k < n then fs k else f, ⟨?_, ?_⟩, ?_, ?_,
+    ?_, ?_⟩
+  · simp only [Nat.zero_le, if_true]; exact hl.1
+  · intro k hk
+    by_cases hkn : k < n
+    · have h1 : k ≤ n := by omega
+      have h2 : k + 1 ≤ n := by omega
+      simp only [h1, h2, hkn, if_true]
+      exact hl.2 k hkn
+    · have hk' : k = n := by omega
+      subst hk'
+      have h2 : ¬ k + 1 ≤ k := by omega
+      simp only [Nat.le_refl, if_true, h2, hkn, if_false]
+      rw [hm]
+      exact hs
+  · have : ¬ n + 1 ≤ n := by omega
+    simp [this]
+  · intro k hk
+    simp [hk]
+  · simp
+  · intro k hk
+    simp [hk]
+
 end Gabbro.Grammatik.Zielsatz
 
 #print axioms Gabbro.Grammatik.Zielsatz.rwExkl_lauf
