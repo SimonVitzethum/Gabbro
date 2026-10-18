@@ -44,7 +44,7 @@ def verOf (u : UProg) (c : Fin u.fns.length) : Vertrag (declOf u) :=
 
 /-- Callee writes through the declaration. -/
 theorem sigSchreibt_eq (u : UProg) (i : Fin u.fns.length)
-    (t : Fin u.tabellen.length) :
+    (t : Fin u.tabs.length) :
     ((declOf u).signatur i).schreibt t =
       writesAt u (fnAt u i) t := by
   show (sigAt u i.val).schreibt t = _
@@ -53,7 +53,7 @@ theorem sigSchreibt_eq (u : UProg) (i : Fin u.fns.length)
 
 /-- Body writes through the declaration. -/
 theorem vSchreibt_eq (u : UProg) (c : Fin u.fns.length)
-    (t : Fin u.tabellen.length) :
+    (t : Fin u.tabs.length) :
     (vertragVon (declOf u) c).schreibt t =
       writesAt u (fnAt u c) t := by
   show (sigAt u c.val).schreibt t = _
@@ -157,18 +157,18 @@ def lowWertAt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   match lowSideVal u Γ Λ fn v with
   | .error e => .error e
   | .ok s =>
-    if h1 : lo ≤ s.weit.1 then
-      if h2 : s.weit.2 ≤ hi then .ok (Expr.widen h1 h2 s.term)
+    if h1 : lo ≤ s.range.1 then
+      if h2 : s.range.2 ≤ hi then .ok (Expr.widen h1 h2 s.term)
       else .error "value outside range"
     else .error "value outside range"
 
 /-- A `durch` write at its recorded range. -/
 def assignDurchStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
-    (e : Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
     (hw : V.schreibt t = true)
     (hL : ∀ wdd ∈ (declOf u).braucht t,
       Res.von (declOf u) wdd ∈ Λ) :
@@ -181,10 +181,10 @@ def assignDurchStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
 
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (fh : FieldHit u t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
-    (e : Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
     (hw : V.schreibt t = true)
     (hL : ∀ wdd ∈ (declOf u).braucht t,
       Res.von (declOf u) wdd ∈ Λ) :
@@ -197,7 +197,7 @@ def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))
 
 /-- A `durch` write into a BOOL field. -/
 def assignDurchStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (bh : BoolHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
@@ -214,7 +214,7 @@ def assignDurchStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (bh : BoolHit u t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ .bool)
@@ -237,9 +237,9 @@ def lowAssignDurchL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
   match paramPos fn.params b with
   | .error e => .error e
   | .ok j =>
-    match fn.parten[j]? with
+    match fn.kinds[j]? with
     | some (.ptr num true) =>
-      if h : num < u.tabellen.length then
+      if h : num < u.tabs.length then
         match fieldHit u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
@@ -251,7 +251,7 @@ def lowAssignDurchL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
             | .error e => .error e
             | .ok i =>
               match lowWertAt u Γ Λ
-                  fn fh.weit.1 fh.weit.2 v with
+                  fn fh.range.1 fh.range.2 v with
               | .error e => .error e
               | .ok e =>
                 if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
@@ -279,7 +279,7 @@ def lowAssignTabL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
     (b fname : String) (ix : UIdx) (v : USide) :
     Except String (Stmt (declOf u) (verOf u caller) l
       Γ Λ Λ) :=
-  match tabIdx u.tabellen b with
+  match tabIdx u.tabs b with
   | .error e => .error e
   | .ok t =>
     match fieldHit u t fname with
@@ -290,7 +290,7 @@ def lowAssignTabL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
       | .error e => .error e
       | .ok i =>
         match lowWertAt u Γ Λ
-            fn fh.weit.1 fh.weit.2 v with
+            fn fh.range.1 fh.range.2 v with
         | .error e => .error e
         | .ok e =>
           if hL : ∀ wdd ∈ (declOf u).braucht t,
@@ -314,9 +314,9 @@ def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
   match paramPos fn.params b with
   | .error e => .error e
   | .ok j =>
-    match fn.parten[j]? with
+    match fn.kinds[j]? with
     | some (.ptr num true) =>
-      if h : num < u.tabellen.length then
+      if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok bh =>
@@ -356,7 +356,7 @@ def lowAssignTabBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     (b fname : String) (ix : UIdx) (v : UEns) :
     Except String (Stmt (declOf u) (verOf u caller) l
       Γ Λ Λ) :=
-  match tabIdx u.tabellen b with
+  match tabIdx u.tabs b with
   | .error e => .error e
   | .ok t =>
     match fieldHitB u t fname with
@@ -406,7 +406,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             match paramPos fn.params p with
             | .error e => .error e
             | .ok j =>
-              match fn.parten[j]? with
+              match fn.kinds[j]? with
               | some (.ptr num2 w2) =>
                 if hC : num2 = num then
                   if w2 = w then
@@ -415,7 +415,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
                     | .error e => .error e
                     | .ok x => .ok (Expr.var x)
                   else
-                    if h : num < u.tabellen.length then
+                    if h : num < u.tabs.length then
                       have eP : Expr (declOf u) Γ
                           Λ (.ptr n w') := by
                         rw [hN, hW]
@@ -431,15 +431,15 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
         if hN : n = num then
           if hW : w' = w then
             if hW2 : w2 = w then
-              match tabIdx u.tabellen tname with
+              match tabIdx u.tabs tname with
               | .error e => .error e
               | .ok ft =>
                 if hT : ft.val = num then
-                  have hTlt : num < u.tabellen.length := by
+                  have hTlt : num < u.tabs.length := by
                     rw [← hT]
                     exact ft.isLt
                   have hE : (⟨num, hTlt⟩ :
-                      Fin u.tabellen.length) = ft := by
+                      Fin u.tabs.length) = ft := by
                     apply Fin.ext
                     show num = ft.val
                     exact hT.symm
@@ -461,7 +461,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
       | .int lo hi =>
         match a with
         | .val s =>
-          if h : num < u.tabellen.length then
+          if h : num < u.tabs.length then
             if hLo : lo = 0 then
               if hHi : hi = (declOf u).count ⟨num, h⟩ - 1 then
                 match uIdxOfSide s with
@@ -588,11 +588,11 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   match fnIdx u.fns cname with
   | .error e => .error e
   | .ok callee =>
-    match lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).parten
+    match lowCallArgsAuxL u caller Γ fn Λ (fnAt u callee).kinds
         ((declOf u).params callee) args with
     | .error e => .error e
     | .ok a =>
-      if hW : ∀ t : Fin u.tabellen.length,
+      if hW : ∀ t : Fin u.tabs.length,
           writesAt u (fnAt u callee) t = true →
             writesAt u (fnAt u caller) t = true then
         if hH : ∀ L ∈ ((declOf u).signatur callee).haelt,
@@ -643,9 +643,9 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
   | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
   | .call c args => lowCallL u caller Γ fn Λ c args
-  | .sperrtAuf _ => .error "lower: a locks block opens here"
-  | .zu => .error "lower: a block closes here without opening"
-  | .bind .. | .wennAuf _ | .sonst | .schleifeAuf .. =>
+  | .lockBeg _ => .error "lower: a locks block opens here"
+  | .blkEnd => .error "lower: a block closes here without opening"
+  | .bind .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"
@@ -660,7 +660,7 @@ def lowBindWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     match d with
     | none => .ok s
     | some (lo, hi) =>
-      if lo ≤ s.weit.1 ∧ s.weit.2 ≤ hi then .ok s
+      if lo ≤ s.range.1 ∧ s.range.2 ≤ hi then .ok s
       else .error "let: value outside the annotated range"
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

@@ -23,11 +23,11 @@ theorem shadow_ok_stufe : stufe shadow_ok = "OK" := by decide +kernel
 /-- An unbound name stays an elaboration error. -/
 def unbound_refused : String :=
   "module m { impl fn s(a : u32) -> u32 { let x : u32 = a; return y; } }"
-theorem unbound_refused_stufe : stufe unbound_refused = "elab: Name unbekannt: y" := by decide +kernel
+theorem unbound_refused_stufe : stufe unbound_refused = "elab: name unknown: y" := by decide +kernel
 
 /-- `let mut` has no G form here. -/
 def mut_refused : String :=
   "module m { impl fn s(a : u32) -> u32 { let mut x : u32 = a; return x; } }"
-theorem mut_refused_stufe : stufe mut_refused = "elab: Anweisung ohne G-Form" := by decide +kernel
+theorem mut_refused_stufe : stufe mut_refused = "elab: stmt without G form" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben6

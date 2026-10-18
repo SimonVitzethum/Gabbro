@@ -41,7 +41,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
     `check_sp0` (`crates/gabbro-check/src/lean_g.rs`): a range holding no
     zero has no `sp0` value and is refused BY NAME. -/
 def Sp0Ok (u : UProg) : Prop :=
-  ∀ (t : Fin u.tabellen.length) (f : Fin (fieldCount u t)),
+  ∀ (t : Fin u.tabs.length) (f : Fin (fieldCount u t)),
     boolFeldAt u t f = true ∨
       ∃ w, fieldRangeO u t f = some w ∧ w.1 ≤ 0 ∧ 0 ≤ w.2
 
@@ -51,15 +51,15 @@ def Sp0Ok (u : UProg) : Prop :=
     match on these very `Bool` tests, so the `Prop` evidence is only rewritten,
     never eliminated into a value (large elimination from `Or`/`Exists` into
     `Type` is refused by the kernel: `propRecLargeElim`). -/
-def sp0FeldOkB (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t)) : Bool :=
-  match (tabAt u t).felder[f.val]? with
+def sp0FeldOkB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Bool :=
+  match (tabAt u t).cols[f.val]? with
   | some q => (tabAt u t).bools.contains q.1 || decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2)
   | none => false
 
 /-- **The `Sp0Ok` decider** (`sp0OkB`): the per-field test over every table and
     every field index (`List.finRange`, like `lowerAllg`'s own coverage). -/
 def sp0OkB (u : UProg) : Bool :=
-  (List.finRange u.tabellen.length).all fun t =>
+  (List.finRange u.tabs.length).all fun t =>
     (List.finRange (fieldCount u t)).all fun f => sp0FeldOkB u t f
 
 /-- **The zero value at one field** (`sp0FeldWert`): `false` at a `bool` field,
@@ -67,10 +67,10 @@ def sp0OkB (u : UProg) : Bool :=
     the exporter's `gSp0` slot half (`crates/gabbro-check/src/lean_g.rs`
     lines 456-466: a slot starts at zero because no surface form names a slot
     initialiser). -/
-def sp0FeldWert (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t))
+def sp0FeldWert (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
     (h : sp0FeldOkB u t f = true) :
     Wert (declOf u) ((declOf u).typ t f) :=
-  match hq : (tabAt u t).felder[f.val]? with
+  match hq : (tabAt u t).cols[f.val]? with
   | some q =>
     match hb : (tabAt u t).bools.contains q.1 with
     | true => by
@@ -109,12 +109,12 @@ def sp0FeldWert (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t
     `sp0FeldOkB u t f = true` the field is a `bool` field or carries a range
     holding `0`. The goal is a `Prop`, so the `Bool` tests split without any
     large elimination. -/
-theorem sp0FeldOkB_klingt (u : UProg) (t : Fin u.tabellen.length)
+theorem sp0FeldOkB_klingt (u : UProg) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) (h : sp0FeldOkB u t f = true) :
     boolFeldAt u t f = true ∨
       ∃ w, fieldRangeO u t f = some w ∧ w.1 ≤ 0 ∧ 0 ≤ w.2 := by
   unfold sp0FeldOkB at h
-  cases hqe : (tabAt u t).felder[f.val]? with
+  cases hqe : (tabAt u t).cols[f.val]? with
   | none =>
     simp [hqe] at h
   | some q =>
@@ -140,7 +140,7 @@ theorem sp0OkB_klingt (u : UProg) (h : sp0OkB u = true) : Sp0Ok u := by
 
 /-- **Per-field evidence from the decider** (`sp0FeldOkB_of`): `sp0OkB u = true`
     gives every field test. Assembly only; every premise is used. -/
-theorem sp0FeldOkB_of (u : UProg) (h : sp0OkB u = true) (t : Fin u.tabellen.length)
+theorem sp0FeldOkB_of (u : UProg) (h : sp0OkB u = true) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : sp0FeldOkB u t f = true := by
   unfold sp0OkB at h
   have ht := (List.all_eq_true.mp h) t (List.mem_finRange t)
@@ -160,7 +160,7 @@ def sp0Of (u : UProg) (h : sp0OkB u = true) : Speicher (declOf u) where
     `crates/gabbro-check/src/lean_g.rs` line 3727). Every premise is used:
     `hb` kills the `bool` case, `hr` fixes the range, `hmiss` with the bounds
     closes by `omega`. -/
-theorem sp0_luecke (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t))
+theorem sp0_luecke (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
     (hb : boolFeldAt u t f = false) (w : Int × Int) (hr : fieldRangeO u t f = some w)
     (hmiss : w.1 > 0 ∨ 0 > w.2) : ¬ Sp0Ok u := by
   intro h
@@ -180,7 +180,7 @@ theorem sp0_luecke (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount 
     checkable form of `sp0_luecke` -- where a recorded range misses zero the
     decider answers `false` (contrapositive of `sp0OkB_klingt`). Every premise
     is used through `sp0_luecke`. -/
-theorem sp0_lueckeB (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t))
+theorem sp0_lueckeB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
     (hb : boolFeldAt u t f = false) (w : Int × Int) (hr : fieldRangeO u t f = some w)
     (hmiss : w.1 > 0 ∨ 0 > w.2) : sp0OkB u = false := by
   by_cases hok : sp0OkB u = true

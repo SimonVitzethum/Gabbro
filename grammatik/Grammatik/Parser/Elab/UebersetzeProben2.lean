@@ -54,6 +54,6 @@ theorem locks_rank_down_stufe : stufe locks_rank_down = "lower: lower: locks aga
 
 def locks_call_needing_it : String :=
   "module m { table T count 2 { slot { v : u32, } } lock L protects { T } rank 0; impl fn g(k : ptr<normal, rw> T, i : index into T) effects { writes k.slots, locks L } { locks L { k.slots[i].v = 1; } } impl fn w(k : ptr<normal, rw> T, i : index into T) effects { writes k.slots, locks L } { locks L { g(k, i); } } }"
-theorem locks_call_needing_it_stufe : stufe locks_call_needing_it = "elab: Ruf ueber fremde Sperrmenge ohne G-Form" := by decide +kernel
+theorem locks_call_needing_it_stufe : stufe locks_call_needing_it = "elab: call under foreign lock without G form" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben2

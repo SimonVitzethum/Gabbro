@@ -93,7 +93,7 @@ def wGrundItems : List SItemTief :=
 /-- **Refused before**: `elabU04` stops at the ground. -/
 theorem wGrund_vorher :
     beqElabU (elabU04 wGrundItems)
-      (.error "Gegenstand ohne G-Form") = true := by
+      (.error "item without G form") = true := by
   decide
 
 /-- **Elaborates now**: `elabU05` yields the table and the function. -/
@@ -181,7 +181,7 @@ def wFormatItems : List SItemTief :=
 /-- **Refused before**: `elabU05` stops at the format. -/
 theorem wFormat_vorher :
     beqElabU (elabU05 wFormatItems)
-      (.error "Gegenstand ohne G-Form") = true := by
+      (.error "item without G form") = true := by
   decide
 
 /-- **Elaborates now**: `elabU06` yields the table and the function. -/

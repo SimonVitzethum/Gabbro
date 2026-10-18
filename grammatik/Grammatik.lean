@@ -164,6 +164,14 @@ import Grammatik.Parser.Stmt.AnweisungProben
 import Grammatik.Parser.Elab.UebersetzeProben
 import Grammatik.Parser.Elab.UebersetzeProben2
 import Grammatik.Parser.Elab.UebersetzeProben3
+import Grammatik.Parser.Elab.UebersetzeProben4
+import Grammatik.Parser.Elab.UebersetzeProben5
+import Grammatik.Parser.Elab.UebersetzeProben6
+import Grammatik.Parser.Elab.UebersetzeProben7
+import Grammatik.Parser.Elab.UebersetzeProben8
+import Grammatik.Parser.Elab.UebersetzeProben9
+import Grammatik.Parser.Elab.UebersetzeProben10
+import Grammatik.Parser.Elab.UebersetzeProben11
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.CBackend.Formen.CFormenW
 import Grammatik.CBackend.Formen.CFormenWZeuge
@@ -271,6 +279,7 @@ import Grammatik.Zielsatz.Kern.ProbenG1
 import Grammatik.Zielsatz.Kern.ProbenW1
 import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 import Grammatik.Parser.Elab.UebersetzeAllg2
+import Grammatik.Parser.Elab.UebersetzeAllg3
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Logik.Fortschritt.Fortschritt
 import Grammatik.Logik.Fortschritt.FortschrittZeuge

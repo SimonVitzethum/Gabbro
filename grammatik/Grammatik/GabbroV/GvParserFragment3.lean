@@ -26,7 +26,7 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.GabbroV.GvParserFragment
 
 /-- **Is this a prototype?** (`protoT`: a bodiless function
-    declaration). Callers of it fail loudly as "Ruf unbekannt"
+    declaration). Callers of it fail loudly as "call unknown"
     (measured on 72); uncalled ones are inert, like dropped statics. -/
 def istProto : SItemTief → Bool
   | .protoT .. => true
@@ -108,19 +108,19 @@ def wProtoItems : List SItemTief :=
 /-- **The witness program**: the table and the function; the prototype
     is gone. -/
 def wProtoProg : UProg :=
-  { tabellen := [{ name := "T", count := 1,
-                   felder := [("v", 0, 4294967295)], bools := [] }],
-    sperren := [],
-    fns := [{ name := "f", params := [], parten := [],
-              res := .none, ergBool := false,
-              held := [], schreibt := [], gives := [],
-              saetze := [], rueck := .empty }],
-    wurzeln := [] }
+  { tabs := [{ name := "T", count := 1,
+                   cols := [("v", 0, 4294967295)], bools := [] }],
+    locks := [],
+    fns := [{ name := "f", params := [], kinds := [],
+              res := .none, resBool := false,
+              held := [], puts := [], gives := [],
+              body := [], ret := .empty }],
+    roots := [] }
 
 /-- **Refused before**: `elabU02` stops at the prototype. -/
 theorem wProto_vorher :
     beqElabU (elabU02 wProtoItems)
-      (.error "Gegenstand ohne G-Form") = true := by
+      (.error "item without G form") = true := by
   decide
 
 /-- **Elaborates now**: `elabU03` yields exactly the pasted program. -/
@@ -252,20 +252,20 @@ def wExklusivItems : List SItemTief :=
 
 /-- **The witness program**: the parameter reads `0 .. 1`. -/
 def wExklusivProg : UProg :=
-  { tabellen := [{ name := "T", count := 2,
-                   felder := [("v", 0, 4294967295)], bools := [] }],
-    sperren := [],
+  { tabs := [{ name := "T", count := 2,
+                   cols := [("v", 0, 4294967295)], bools := [] }],
+    locks := [],
     fns := [{ name := "f", params := [("i", .int 0 1)],
-              parten := [.int], res := .some (0, 100),
-              ergBool := false, held := [], schreibt := [],
-              gives := [], saetze := [],
-              rueck := .val (.param "i") }],
-    wurzeln := [] }
+              kinds := [.int], res := .some (0, 100),
+              resBool := false, held := [], puts := [],
+              gives := [], body := [],
+              ret := .val (.param "i") }],
+    roots := [] }
 
 /-- **Refused before**: `elabU02` has no exclusive-bound form. -/
 theorem wExklusiv_vorher :
     beqElabU (elabU02 wExklusivItems)
-      (.error "Typ ohne G-Form") = true := by
+      (.error "type without G form") = true := by
   decide
 
 /-- **Elaborates now**: `elabU04` yields exactly the pasted program. -/

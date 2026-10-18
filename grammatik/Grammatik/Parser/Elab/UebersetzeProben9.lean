@@ -15,11 +15,11 @@ set_option maxRecDepth 100000
 
 /-- One table with a `bool` field, one lock, one function `w(k)` with the given flat body. -/
 def prog (body : List UStmt) (held : List String := ["L"]) : UProg :=
-  { tabellen := [{ name := "T", count := 2, felder := [("f", 0, 1)], bools := ["f"] }],
-    sperren := [{ name := "L", rank := 0, schutz := ["T"] }],
-    fns := [{ name := "w", params := [("k", .ptr 0 true)], parten := [.ptr 0 true], res := none,
-              held := held, schreibt := ["T"], gives := [], saetze := body, rueck := .empty }],
-    wurzeln := [] }
+  { tabs := [{ name := "T", count := 2, cols := [("f", 0, 1)], bools := ["f"] }],
+    locks := [{ name := "L", rank := 0, guard := ["T"] }],
+    fns := [{ name := "w", params := [("k", .ptr 0 true)], kinds := [.ptr 0 true], res := none,
+              held := held, puts := ["T"], gives := [], body := body, ret := .empty }],
+    roots := [] }
 
 def ok? (u : UProg) : String :=
   match lowerAllg u with
@@ -28,10 +28,10 @@ def ok? (u : UProg) : String :=
 
 /-- Claim the first free slot: `traverse i … { if k.slots[i].f { k.slots[i].f = false; leave i; } }`. -/
 def claim : List UStmt :=
-  [.schleifeAuf "i" "T" .tru,
-    .wennAuf (.slotB "k" "f" (.param "i")),
+  [.loopBeg "i" "T" .tru,
+    .ifBeg (.slotB "k" "f" (.param "i")),
     .assignB "k" "f" (.param "i") .fls, .leave "i",
-    .sonst, .zu, .zu]
+    .ifElse, .blkEnd, .blkEnd]
 
 theorem claim_ok : ok? (prog claim) = "OK" := by decide +kernel
 
@@ -43,20 +43,20 @@ theorem next_outside : ok? (prog [.next "i"]) = "lower: next outside a traverse"
 
 /-- The binder is an index into the table, and only inside the loop. -/
 theorem binder_scope :
-    ok? (prog [.schleifeAuf "i" "T" .tru, .zu, .assignB "k" "f" (.param "i") .fls])
+    ok? (prog [.loopBeg "i" "T" .tru, .blkEnd, .assignB "k" "f" (.param "i") .fls])
       = "name unknown: i" := by decide +kernel
 
 /-- A `return` under `locks` has no G form: `Stmt.ret` needs the held list to be the contract end. -/
 theorem ret_under_locks :
-    ok? (prog [.sperrtAuf "L", .ret .empty, .zu] []) = "lower: return under locks has no G form" := by
+    ok? (prog [.lockBeg "L", .ret .empty, .blkEnd] []) = "lower: return under locks has no G form" := by
   decide +kernel
 
 /-- A traverse over an unknown table is refused by name. -/
 theorem traverse_unknown :
-    ok? (prog [.schleifeAuf "i" "Nix" .tru, .zu]) = "table unknown: Nix" := by decide +kernel
+    ok? (prog [.loopBeg "i" "Nix" .tru, .blkEnd]) = "table unknown: Nix" := by decide +kernel
 
 /-- An unclosed traverse is refused. -/
 theorem traverse_unclosed :
-    ok? (prog [.schleifeAuf "i" "T" .tru]) = "lower: a traverse is not closed" := by decide +kernel
+    ok? (prog [.loopBeg "i" "T" .tru]) = "lower: a traverse is not closed" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben9

@@ -81,7 +81,7 @@ def istStatik : SItemTief → Bool
 
 /-- **Is this item inert for the elaborated fragment?** A `static` denotes storage the fragment cannot
     name: it contributes no table, lock, function or root, and a use of a dropped static fails loudly
-    downstream ("Name unbekannt" at the body). (`concurrent` items were inert here until 2026-10-18; the
+    downstream ("name unknown" at the body). (`concurrent` items were inert here until 2026-10-18; the
     elaborator reads them into the thread roots now.) -/
 def istInert (it : SItemTief) : Bool :=
   istStatik it
@@ -156,7 +156,7 @@ def istGegenstand : SItemTief → Bool
     the rest reduce to the refusal arm. -/
 theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = true) :
-    uRestFehler (hd :: tl) = .error "Gegenstand ohne G-Form" := by
+    uRestFehler (hd :: tl) = .error "item without G form" := by
   cases hd with
   | constT _ _ _ => simp [istGegenstand] at he
   | typeT _ _ _ _ _ => simp [istGegenstand] at he
@@ -254,7 +254,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
     or worse, and `uRestFehler` refuses it without looking at the tail. -/
 theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = false) (ha : istAngenommen hd = false) :
-    uRestFehler (hd :: tl) = .error "Gegenstand ohne G-Form" := by
+    uRestFehler (hd :: tl) = .error "item without G form" := by
   cases hd with
   | constT _ _ _ => simp [istAngenommen] at ha
   | typeT _ _ _ _ _ => simp [istAngenommen] at ha
@@ -296,7 +296,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     witness sits in the tail. -/
 theorem uRestFehler_faellt (l : List SItemTief)
     (h : ∃ it ∈ l, istGegenstand it = true) :
-    uRestFehler l = .error "Gegenstand ohne G-Form" := by
+    uRestFehler l = .error "item without G form" := by
   induction l with
   | nil =>
     cases h with
@@ -384,17 +384,17 @@ def w108items : List SItemTief :=
 /-- **108's elaborated program** under `elabU02` (same probe, pasted):
     the table and both readers, the `concurrent` members as thread roots. -/
 def w108prog : UProg :=
-  { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)], bools := [] }],
-    sperren := [],
-    fns := [{ name := "read_a", params := [], parten := [],
-              res := .some (0, 4294967295), ergBool := false,
-              held := [], schreibt := [], gives := [], saetze := [],
-              rueck := .val (.tab "T" "v" (.lit 0)) },
-            { name := "read_c", params := [], parten := [],
-              res := .some (0, 4294967295), ergBool := false,
-              held := [], schreibt := [], gives := [], saetze := [],
-              rueck := .val (.tab "T" "v" (.lit 1)) }],
-    wurzeln := ["read_a", "read_c"] }
+  { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], bools := [] }],
+    locks := [],
+    fns := [{ name := "read_a", params := [], kinds := [],
+              res := .some (0, 4294967295), resBool := false,
+              held := [], puts := [], gives := [], body := [],
+              ret := .val (.tab "T" "v" (.lit 0)) },
+            { name := "read_c", params := [], kinds := [],
+              res := .some (0, 4294967295), resBool := false,
+              held := [], puts := [], gives := [], body := [],
+              ret := .val (.tab "T" "v" (.lit 1)) }],
+    roots := ["read_a", "read_c"] }
 
 /-- **108 elaborates**: `elabU` (and so `elabU02`) yields exactly the pasted program, the `concurrent`
     members as its thread roots (probe #3: elab *and* `lowerAllg` succeed on 108). -/

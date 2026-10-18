@@ -59,14 +59,14 @@ theorem gvLuecke_start104 : StartPflicht E4 :=
 /-- **The refusal fixture** (`uLuecke`): one table, one non-`bool` field of range
     `1 .. 100` (holds no zero), no locks, no functions. -/
 def uLuecke : UProg :=
-  { tabellen := [{ name := "T", count := 1, felder := [("v", (1, 100))] }],
-    sperren := [], fns := [] }
+  { tabs := [{ name := "T", count := 1, cols := [("v", (1, 100))] }],
+    locks := [], fns := [] }
 
 /-- **L_c: a witnessed refusal.** The obstructions (`sp0_luecke`,
     `sp0_lueckeB`) quantify over every field; this exhibits one: a unit with a
     non-`bool` field of range `1 .. 100`, where the decider answers `false`. -/
 theorem gvLuecke_luecke_zeuge :
-    ∃ (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t))
+    ∃ (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
     (w : Int × Int),
     boolFeldAt u t f = false ∧ fieldRangeO u t f = some w ∧
       (w.1 > 0 ∨ 0 > w.2) ∧ sp0OkB u = false :=
@@ -137,37 +137,37 @@ theorem gvLuecke_elabU_refuses_statics :
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | modT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | useT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | globT _ _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | protoT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | specT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | asmT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | formatT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | arenaT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | whyT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | stateT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | devT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | assumT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | axiomT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | checkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | atomT _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | rcuT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | groupT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | modT _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | useT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | globT _ _ _ _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | protoT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | specT _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | asmT _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | formatT _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | arenaT _ _ _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | whyT _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | stateT _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | devT _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | assumT _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | axiomT _ _ _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | checkT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | atomT _ _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | rcuT _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | groupT _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
       | concT _ =>
         have hmt : .globT m a t v al s g ∈ xs := by simpa [List.mem_cons] using hm
         obtain ⟨e, he⟩ := ih ⟨m, a, t, v, al, s, g, hmt⟩
         exact ⟨e, by simp only [uRestFehler, he]⟩
-      | accT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | walkT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | trustT _ _ _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | bootT _ _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | callT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | varT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | goalT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | transT _ _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | profT _ _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
-      | gateT _ => exact ⟨"Gegenstand ohne G-Form", by simp only [uRestFehler]⟩
+      | accT _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | walkT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | trustT _ _ _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | bootT _ _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | callT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | varT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | goalT _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | transT _ _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | profT _ _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
+      | gateT _ => exact ⟨"item without G form", by simp only [uRestFehler]⟩
   intro ms m a t v al s g hmem hex
   obtain ⟨u, hu⟩ := hex
   obtain ⟨e, he⟩ := aux (uMembers ms) ⟨m, a, t, v, al, s, g, hmem⟩

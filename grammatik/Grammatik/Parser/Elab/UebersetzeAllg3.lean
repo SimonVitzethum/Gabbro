@@ -116,24 +116,24 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     Except String (Block (declOf u) (verOf u caller) l Γ Λ Λ × List UStmt)
   | _, _, 0, _, _, _ => .error "lower: blocks nested too deep"
   | _, _, _ + 1, _, _, [] => .ok (Block.nil, [])
-  | _, _, _ + 1, _, _, .zu :: rest => .ok (Block.nil, .zu :: rest)
-  | _, _, _ + 1, _, _, .sonst :: rest => .ok (Block.nil, .sonst :: rest)
-  | Γ, fn, n + 1, Λ, pe, .sperrtAuf g :: rest =>
-    match lowStructL u caller Γ fn n Λ pe (.sperrtAuf g) rest with
+  | _, _, _ + 1, _, _, .blkEnd :: rest => .ok (Block.nil, .blkEnd :: rest)
+  | _, _, _ + 1, _, _, .ifElse :: rest => .ok (Block.nil, .ifElse :: rest)
+  | Γ, fn, n + 1, Λ, pe, .lockBeg g :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.lockBeg g) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
-  | Γ, fn, n + 1, Λ, pe, .wennAuf c :: rest =>
-    match lowStructL u caller Γ fn n Λ pe (.wennAuf c) rest with
+  | Γ, fn, n + 1, Λ, pe, .ifBeg c :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.ifBeg c) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
-  | Γ, fn, n + 1, Λ, pe, .schleifeAuf bnd tab inv :: rest =>
-    match lowStructL u caller Γ fn n Λ pe (.schleifeAuf bnd tab inv) rest with
+  | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowSeqL u caller Γ fn n Λ pe rest' with
@@ -143,7 +143,7 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     match lowBindWert u Γ Λ fn d v with
     | .error e => .error e
     | .ok s =>
-      match lowSeqL u caller (.int s.weit.1 s.weit.2 :: Γ) (fn.mitBindung x s.weit) n Λ pe rest with
+      match lowSeqL u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n Λ pe rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.bind s.term b, r)
   | Γ, fn, n + 1, Λ, pe, .ret v :: rest =>
@@ -180,31 +180,31 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     (Γ : Ctx) → UFn → Nat → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ × List UStmt)
   | _, _, 0, _, _, _, _ => .error "lower: blocks nested too deep"
-  | Γ, fn, n + 1, Λ, _, .sperrtAuf g, rest =>
-    match lockIdx u.sperren g with
+  | Γ, fn, n + 1, Λ, _, .lockBeg g, rest =>
+    match lockIdx u.locks g with
     | .error e => .error e
     | .ok L =>
       if hr : rangOkB u Λ L = true then
         match lowSeqL u caller Γ fn n (Res.held L :: Λ) none rest with
         | .error e => .error e
-        | .ok (body, .zu :: rest') =>
+        | .ok (body, .blkEnd :: rest') =>
           .ok (Stmt.locks L (rangOkB_sound u Λ L hr) body, rest')
         | .ok (_, _) => .error "lower: a locks block is not closed"
       else .error "lower: locks against a held lock of higher or equal rank"
-  | Γ, fn, n + 1, Λ, pe, .wennAuf c, rest =>
+  | Γ, fn, n + 1, Λ, pe, .ifBeg c, rest =>
     match lowEns u Γ Λ fn none c with
     | .error e => .error e
     | .ok cv =>
       match lowSeqL u caller Γ fn n Λ pe rest with
       | .error e => .error e
-      | .ok (tb, .sonst :: rest1) =>
+      | .ok (tb, .ifElse :: rest1) =>
         match lowSeqL u caller Γ fn n Λ pe rest1 with
         | .error e => .error e
-        | .ok (eb, .zu :: rest2) => .ok (Stmt.ite cv tb eb, rest2)
+        | .ok (eb, .blkEnd :: rest2) => .ok (Stmt.ite cv tb eb, rest2)
         | .ok (_, _) => .error "lower: an if is not closed"
       | .ok (_, _) => .error "lower: an if has no else part"
-  | Γ, fn, n + 1, Λ, pe, .schleifeAuf bnd tab inv, rest =>
-    match tabIdx u.tabellen tab with
+  | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv, rest =>
+    match tabIdx u.tabs tab with
     | .error e => .error e
     | .ok t =>
       match lowEns u Γ Λ fn none inv with
@@ -213,7 +213,7 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         match lowSeqL (l := true) u caller (Ty.index ((declOf u).count t) :: Γ)
             (fn.mitIndex bnd t.val ((declOf u).count t)) n Λ pe rest with
         | .error e => .error e
-        | .ok (body, .zu :: rest') => .ok (Stmt.traverse t iv body, rest')
+        | .ok (body, .blkEnd :: rest') => .ok (Stmt.traverse t iv body, rest')
         | .ok (_, _) => .error "lower: a traverse is not closed"
   | _, _, _ + 1, _, _, _, _ => .error "lower: not a structured statement"
 end
@@ -234,25 +234,25 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     match lowBindWert u Γ (resOf u caller) fn d v with
     | .error e => .error e
     | .ok s =>
-      match lowBodyF u caller (.int s.weit.1 s.weit.2 :: Γ) (fn.mitBindung x s.weit) n rest r with
+      match lowBodyF u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind s.term e)
-  | Γ, fn, n + 1, (.sperrtAuf g) :: rest, r =>
-    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.sperrtAuf g) rest with
+  | Γ, fn, n + 1, (.lockBeg g) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.lockBeg g) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.wennAuf c) :: rest, r =>
-    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.wennAuf c) rest with
+  | Γ, fn, n + 1, (.ifBeg c) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.ifBeg c) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.schleifeAuf b t i) :: rest, r =>
-    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.schleifeAuf b t i) rest with
+  | Γ, fn, n + 1, (.loopBeg b t i) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.loopBeg b t i) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with
@@ -293,7 +293,7 @@ def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
       (fnAt u c).gives with
   | .error e => .error e
   | .ok e0 =>
-    match lowBody u c (fnAt u c).saetze (fnAt u c).rueck with
+    match lowBody u c (fnAt u c).body (fnAt u c).ret with
     | .error e => .error e
     | .ok b0 =>
       have e1 : EnsTy u c := by
@@ -368,7 +368,7 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
   requires := fun _ => Expr.tru
   ensures := fun f => E f
   rumpf := fun f => B f
-  unterbricht := fun f => u.handler.any (fun n => strEq n (fnAt u f).name)
+  unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
 
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it. -/
@@ -415,18 +415,18 @@ theorem lowerAllg104data :
     (declOf uExp104).rang ⟨0, by decide⟩ = 0 ∧
     G104_referenz.gD.rang G104_referenz.GLock.M = 0 ∧
     (declOf uExp104).braucht ⟨0, by decide⟩ =
-      ([.inl (⟨0, by decide⟩ : Fin uExp104.sperren.length)] :
+      ([.inl (⟨0, by decide⟩ : Fin uExp104.locks.length)] :
         List ((declOf uExp104).Lock ⊕
           ((declOf uExp104).Marke × Nat))) ∧
     G104_referenz.gD.braucht G104_referenz.GTab.Konto =
       [.inl G104_referenz.GLock.M] ∧
     ((declOf uExp104).signatur ⟨0, by decide⟩).haelt =
-      ([(⟨0, by decide⟩ : Fin uExp104.sperren.length)] :
+      ([(⟨0, by decide⟩ : Fin uExp104.locks.length)] :
         List (declOf uExp104).Lock) ∧
     G104_referenz.gD.haelt G104_referenz.g_einzahlen =
       [G104_referenz.GLock.M] ∧
     ((declOf uExp104).signatur ⟨1, by decide⟩).haelt =
-      ([(⟨0, by decide⟩ : Fin uExp104.sperren.length)] :
+      ([(⟨0, by decide⟩ : Fin uExp104.locks.length)] :
         List (declOf uExp104).Lock) ∧
     G104_referenz.gD.haelt G104_referenz.g_lies =
       [G104_referenz.GLock.M] ∧
@@ -884,7 +884,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabellen := [{ name := "T", count := 4, felder := [("v", 0, 4294967295)] }], sperren := [], fns := [{ name := "read_a", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], parten := [], res := some (0, 4294967295), held := [], schreibt := [], gives := [], saetze := [], rueck := .val (.tab "T" "v" (.lit 1)) }], wurzeln := ["read_a", "read_c"] }
+def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"] }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide

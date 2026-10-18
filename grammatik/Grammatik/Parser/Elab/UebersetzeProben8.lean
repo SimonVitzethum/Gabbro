@@ -31,7 +31,7 @@ theorem early_range_stufe : stufe early_range = "lower: value outside range" := 
 /-- A function with a result that ends in an `if` without a trailing return falls off: refused. -/
 def falls_off : String :=
   "module m { impl fn f(a : u8) -> u8 { if a == 0 { return 1; } } }"
-theorem falls_off_stufe : stufe falls_off = "elab: Funktion mit Ergebnis faellt durch" := by decide +kernel
+theorem falls_off_stufe : stufe falls_off = "elab: fn with a result falls off" := by decide +kernel
 
 /-- A `let` inside a branch is the branch's own. -/
 def let_branch : String :=
@@ -40,6 +40,6 @@ theorem let_branch_stufe : stufe let_branch = "OK" := by decide +kernel
 
 def let_branch_scope : String :=
   "module m { impl fn f(a : u8) -> u16 { if a == 0 { let x : u16 = a; return x; } return x; } }"
-theorem let_branch_scope_stufe : stufe let_branch_scope = "elab: Name unbekannt: x" := by decide +kernel
+theorem let_branch_scope_stufe : stufe let_branch_scope = "elab: name unknown: x" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben8

@@ -25,20 +25,20 @@ open Gabbro.Grammatik.Parser.Uebersetze
 /-! ## Declaration data looked up from `UProg` -/
 
 /-- The table at an index. -/
-def tabAt (u : UProg) (t : Fin u.tabellen.length) : UTab :=
-  u.tabellen.get t
+def tabAt (u : UProg) (t : Fin u.tabs.length) : UTab :=
+  u.tabs.get t
 
 /-- The lock at an index. -/
-def lockAt (u : UProg) (l : Fin u.sperren.length) : ULock :=
-  u.sperren.get l
+def lockAt (u : UProg) (l : Fin u.locks.length) : ULock :=
+  u.locks.get l
 
 /-- The function at an index. -/
 def fnAt (u : UProg) (f : Fin u.fns.length) : UFn :=
   u.fns.get f
 
 /-- The field count of a table. -/
-def fieldCount (u : UProg) (t : Fin u.tabellen.length) : Nat :=
-  (tabAt u t).felder.length
+def fieldCount (u : UProg) (t : Fin u.tabs.length) : Nat :=
+  (tabAt u t).cols.length
 
 /-- A table index by name (structural, so the `Fin` proof is free). -/
 def tabIdx : (tabs : List UTab) → (n : String) → Except String (Fin tabs.length)
@@ -69,19 +69,19 @@ def fnIdx : (fns : List UFn) → (n : String) → Except String (Fin fns.length)
 
 /-- A field range by table and field index (`some` always: the
     index is inside the table's field list). -/
-def fieldRangeO (u : UProg) (t : Fin u.tabellen.length)
+def fieldRangeO (u : UProg) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : Option (Int × Int) :=
-  ((tabAt u t).felder[f.val]?).map (·.2)
+  ((tabAt u t).cols[f.val]?).map (·.2)
 
 /-- The field is a `bool` field (named in `bools`). -/
-def boolFeldAt (u : UProg) (t : Fin u.tabellen.length) (f : Fin (fieldCount u t)) : Bool :=
-  match (tabAt u t).felder[f.val]? with
+def boolFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Bool :=
+  match (tabAt u t).cols[f.val]? with
   | some q => (tabAt u t).bools.contains q.1
   | none => false
 
 /-- The field type: `bool` for a bool field, else the recorded range, or `.int 0 0` off the table
     (unreachable through `fieldRangeO`, kept for totality). -/
-def typAt (u : UProg) (t : Fin u.tabellen.length)
+def typAt (u : UProg) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : Ty :=
   if boolFeldAt u t f then .bool else
   match fieldRangeO u t f with
@@ -89,24 +89,24 @@ def typAt (u : UProg) (t : Fin u.tabellen.length)
   | none => .int 0 0
 
 /-- The guards of a table: the locks whose `schutz` names it. -/
-def needsAt (u : UProg) (t : Fin u.tabellen.length) :
-    List (Fin u.sperren.length ⊕ (Empty × Nat)) :=
-  List.finRange u.sperren.length |>.filterMap fun l =>
-    if (lockAt u l).schutz.any (· == (tabAt u t).name) then some (.inl l)
+def needsAt (u : UProg) (t : Fin u.tabs.length) :
+    List (Fin u.locks.length ⊕ (Empty × Nat)) :=
+  List.finRange u.locks.length |>.filterMap fun l =>
+    if (lockAt u l).guard.any (· == (tabAt u t).name) then some (.inl l)
     else none
 
 /-- The held locks of a function, as indices (names the declaration
     does not know are dropped; `elabU` output never has them). -/
-def heldAt (u : UProg) (f : UFn) : List (Fin u.sperren.length) :=
-  f.held.filterMap fun n => (lockIdx u.sperren n).toOption
+def heldAt (u : UProg) (f : UFn) : List (Fin u.locks.length) :=
+  f.held.filterMap fun n => (lockIdx u.locks n).toOption
 
 /-- The write flag of a function at a table. -/
-def writesAt (u : UProg) (f : UFn) (t : Fin u.tabellen.length) : Bool :=
-  f.schreibt.any (· == (tabAt u t).name)
+def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
+  f.puts.any (· == (tabAt u t).name)
 
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
-    Signatur (Fin u.tabellen.length) Empty (Fin u.sperren.length) Empty where
+    Signatur (Fin u.tabs.length) Empty (Fin u.locks.length) Empty where
   params := f.params.map (·.2)
   erg := f.ergTy
   gruende := 0
@@ -118,7 +118,7 @@ def mkSig (u : UProg) (f : UFn) :
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
-    Signatur (Fin u.tabellen.length) Empty (Fin u.sperren.length) Empty where
+    Signatur (Fin u.tabs.length) Empty (Fin u.locks.length) Empty where
   params := []
   erg := none
   gruende := 0
@@ -131,7 +131,7 @@ def dummySig (u : UProg) :
 /-- The `n`th signature, or the dummy (an out-of-range number names
     no function). -/
 def sigAt (u : UProg) (n : Nat) :
-    Signatur (Fin u.tabellen.length) Empty (Fin u.sperren.length) Empty :=
+    Signatur (Fin u.tabs.length) Empty (Fin u.locks.length) Empty :=
   if h : n < u.fns.length then mkSig u (u.fns.get ⟨n, h⟩) else dummySig u
 
 /-- A non-empty emptiness test means a non-empty list. -/
@@ -145,14 +145,14 @@ theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
     carriers (`Fin`) for tables, locks, fields and functions; no
     globals, marks, invariants, axioms, registers or assumptions. -/
 def declOf (u : UProg) : Deklaration where
-  Tab := Fin u.tabellen.length
+  Tab := Fin u.tabs.length
   decTab := inferInstance
   count := fun t => (tabAt u t).count
   Feld := fun t => Fin (fieldCount u t)
   decFeld := fun _ => inferInstance
   typ := typAt u
   erlaubt := fun _ _ _ _ => false
-  tabNr := fun n => if h : n < u.tabellen.length then some ⟨n, h⟩ else none
+  tabNr := fun n => if h : n < u.tabs.length then some ⟨n, h⟩ else none
   Glob := Empty
   decGlob := inferInstance
   gtyp := fun e => nomatch e
@@ -160,7 +160,7 @@ def declOf (u : UProg) : Deklaration where
   atomar := fun e => nomatch e
   geteilt := fun t => (!((needsAt u t).isEmpty))
   ggeteilt := fun e => nomatch e
-  Lock := Fin u.sperren.length
+  Lock := Fin u.locks.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
   maskiert := fun l => (lockAt u l).masks
@@ -248,16 +248,16 @@ theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
   exact List.append_nil _
 
 /-- Every field index has its recorded range. -/
-theorem rangeO_some (u : UProg) (t : Fin u.tabellen.length)
+theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) :
     ∃ w, fieldRangeO u t fld = some w := by
   unfold fieldRangeO
-  have hlt : fld.val < (tabAt u t).felder.length := fld.isLt
+  have hlt : fld.val < (tabAt u t).cols.length := fld.isLt
   rw [List.getElem?_eq_getElem hlt]
   exact ⟨_, rfl⟩
 
 /-- The type of a NON-bool field is the recorded range. -/
-theorem typAt_of (u : UProg) (t : Fin u.tabellen.length)
+theorem typAt_of (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) (w : Int × Int)
     (h : fieldRangeO u t fld = some w) (hb : boolFeldAt u t fld = false) :
     typAt u t fld = .int w.1 w.2 := by
@@ -266,7 +266,7 @@ theorem typAt_of (u : UProg) (t : Fin u.tabellen.length)
   rfl
 
 /-- The type of a bool field is `bool`. -/
-theorem typAt_bool (u : UProg) (t : Fin u.tabellen.length)
+theorem typAt_bool (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) (hb : boolFeldAt u t fld = true) :
     typAt u t fld = .bool := by
   unfold typAt
@@ -274,10 +274,10 @@ theorem typAt_bool (u : UProg) (t : Fin u.tabellen.length)
   rfl
 
 /-- `tabNr` at a live number. -/
-theorem tabNr_some (u : UProg) (num : Nat) (h : num < u.tabellen.length) :
-    (declOf u).tabNr num = some (⟨num, h⟩ : Fin u.tabellen.length) := by
-  show (if h' : num < u.tabellen.length then
-    (some ⟨num, h'⟩ : Option (Fin u.tabellen.length)) else none) = _
+theorem tabNr_some (u : UProg) (num : Nat) (h : num < u.tabs.length) :
+    (declOf u).tabNr num = some (⟨num, h⟩ : Fin u.tabs.length) := by
+  show (if h' : num < u.tabs.length then
+    (some ⟨num, h'⟩ : Option (Fin u.tabs.length)) else none) = _
   rw [dif_pos h]
 
 /-! ## Generic lowering: field search, variables -/
@@ -345,41 +345,41 @@ theorem fieldAtPos_get (fs : List (String × (Int × Int))) (n : String)
       exact ih'
 
 /-- A field hit: the index, its range, and the lookup equation. -/
-structure FieldHit (u : UProg) (t : Fin u.tabellen.length) where
+structure FieldHit (u : UProg) (t : Fin u.tabs.length) where
   idx : Fin (fieldCount u t)
-  weit : Int × Int
-  hit : fieldRangeO u t idx = some weit
+  range : Int × Int
+  hit : fieldRangeO u t idx = some range
   /-- The field is a number: its type is the recorded range. -/
-  hint : typAt u t idx = .int weit.1 weit.2
+  hint : typAt u t idx = .int range.1 range.2
 
 /-- A bool field hit: the index and the fact that its type is `bool`. -/
-structure BoolHit (u : UProg) (t : Fin u.tabellen.length) where
+structure BoolHit (u : UProg) (t : Fin u.tabs.length) where
   idx : Fin (fieldCount u t)
   hbool : typAt u t idx = .bool
 
 /-- Find a field of a table by name. -/
-def fieldHit (u : UProg) (t : Fin u.tabellen.length) (fname : String) :
+def fieldHit (u : UProg) (t : Fin u.tabs.length) (fname : String) :
     Except String (FieldHit u t) :=
-  match h : fieldAtPos (tabAt u t).felder fname with
+  match h : fieldAtPos (tabAt u t).cols fname with
   | none => .error "field unknown"
   | some w =>
-    have hlt : fieldPos (tabAt u t).felder fname < fieldCount u t :=
+    have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t :=
       fieldPos_lt _ _ _ h
-    if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).felder fname, hlt⟩ = false then
-      .ok ⟨⟨fieldPos (tabAt u t).felder fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
+    if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = false then
+      .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
         typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb⟩
     else .error "bool field as a number"
 
 /-- Find a BOOL field of a table by name. -/
-def fieldHitB (u : UProg) (t : Fin u.tabellen.length) (fname : String) :
+def fieldHitB (u : UProg) (t : Fin u.tabs.length) (fname : String) :
     Except String (BoolHit u t) :=
-  match h : fieldAtPos (tabAt u t).felder fname with
+  match h : fieldAtPos (tabAt u t).cols fname with
   | none => .error "field unknown"
   | some w =>
-    have hlt : fieldPos (tabAt u t).felder fname < fieldCount u t :=
+    have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t :=
       fieldPos_lt _ _ _ h
-    if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).felder fname, hlt⟩ = true then
-      .ok ⟨⟨fieldPos (tabAt u t).felder fname, hlt⟩, typAt_bool u t _ hb⟩
+    if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = true then
+      .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, typAt_bool u t _ hb⟩
     else .error "number field as a truth value"
 
 /-- A variable by position and expected type (the `beq` re-checks the
@@ -411,7 +411,7 @@ def paramPos : List (String × Ty) → String → Except String Nat
     `0` in a body, `1` in an `ensures` context with a result, where
     the result rides first). -/
 def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (sh : Nat) (t : Fin u.tabellen.length) : UIdx →
+    (fn : UFn) (sh : Nat) (t : Fin u.tabs.length) : UIdx →
     Except String (Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
   | .lit n =>
     if h1 : 0 ≤ n then
@@ -423,7 +423,7 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match paramPos fn.params p with
     | .error e => .error e
     | .ok j =>
-      match fn.parten[j]? with
+      match fn.kinds[j]? with
       | some (.index m) =>
         if m == t.val then
           match lowVar Γ (sh + j) (.index ((declOf u).count t)) with
@@ -434,41 +434,41 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 
 /-- A sided term with its range. -/
 structure LowSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
-  weit : Int × Int
-  term : Expr (declOf u) Γ Λ (.int weit.1 weit.2)
+  range : Int × Int
+  term : Expr (declOf u) Γ Λ (.int range.1 range.2)
 
 /-- Arithmetic on sided terms: the range is what `Expr.add`/`sub`/`mul` carry in their type. -/
 def LowSide.plus {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     LowSide u Γ Λ :=
-  { weit := (x.weit.1 + y.weit.1, x.weit.2 + y.weit.2), term := Expr.add x.term y.term }
+  { range := (x.range.1 + y.range.1, x.range.2 + y.range.2), term := Expr.add x.term y.term }
 
 def LowSide.minus {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     LowSide u Γ Λ :=
-  { weit := (x.weit.1 - y.weit.2, x.weit.2 - y.weit.1), term := Expr.sub x.term y.term }
+  { range := (x.range.1 - y.range.2, x.range.2 - y.range.1), term := Expr.sub x.term y.term }
 
 def LowSide.times {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     LowSide u Γ Λ :=
-  { weit := (imin (imin (x.weit.1 * y.weit.1) (x.weit.1 * y.weit.2))
-                  (imin (x.weit.2 * y.weit.1) (x.weit.2 * y.weit.2)),
-             imax (imax (x.weit.1 * y.weit.1) (x.weit.1 * y.weit.2))
-                  (imax (x.weit.2 * y.weit.1) (x.weit.2 * y.weit.2))),
+  { range := (imin (imin (x.range.1 * y.range.1) (x.range.1 * y.range.2))
+                  (imin (x.range.2 * y.range.1) (x.range.2 * y.range.2)),
+             imax (imax (x.range.1 * y.range.1) (x.range.1 * y.range.2))
+                  (imax (x.range.2 * y.range.1) (x.range.2 * y.range.2))),
     term := Expr.mul x.term y.term }
 
 /-- The integer conversion `T(e)`: the widening `Expr.weiter` to the target range, when the
     operand's range fits (as M1 decides it); otherwise the lowering REFUSES. -/
 def LowSide.conv {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (lo hi : Int)
     (x : LowSide u Γ Λ) : Except String (LowSide u Γ Λ) :=
-  if h1 : lo ≤ x.weit.1 then
-    if h2 : x.weit.2 ≤ hi then .ok { weit := (lo, hi), term := Expr.widen h1 h2 x.term }
+  if h1 : lo ≤ x.range.1 then
+    if h2 : x.range.2 ≤ hi then .ok { range := (lo, hi), term := Expr.widen h1 h2 x.term }
     else .error "conversion outside target range"
   else .error "conversion outside target range"
 
 /-- `a & b` over non-negative ranges (M137): `Expr.band`, range `0 .. hi(a)`. -/
 def LowSide.and {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
-  if h0 : 0 ≤ x.weit.1 then
-    if h0' : 0 ≤ y.weit.1 then
-      .ok { weit := (0, x.weit.2), term := Expr.band h0 h0' x.term y.term }
+  if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      .ok { range := (0, x.range.2), term := Expr.band h0 h0' x.term y.term }
     else .error "bit operation over a negative range"
   else .error "bit operation over a negative range"
 
@@ -480,12 +480,12 @@ def bitsFuer (m : Int) : Nat := Nat.log2 m.toNat + 1
     narrowest one is sound. -/
 def LowSide.or {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
-  if h0 : 0 ≤ x.weit.1 then
-    if h0' : 0 ≤ y.weit.1 then
-      if hw1 : x.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
-        if hw2 : y.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
-          .ok { weit := (0, (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) - 1),
-                term := Expr.bor (bitsFuer (imax x.weit.2 y.weit.2)) h0 h0' hw1 hw2 x.term y.term }
+  if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      if hw1 : x.range.2 < (2 : Int) ^ bitsFuer (imax x.range.2 y.range.2) then
+        if hw2 : y.range.2 < (2 : Int) ^ bitsFuer (imax x.range.2 y.range.2) then
+          .ok { range := (0, (2 : Int) ^ bitsFuer (imax x.range.2 y.range.2) - 1),
+                term := Expr.bor (bitsFuer (imax x.range.2 y.range.2)) h0 h0' hw1 hw2 x.term y.term }
         else .error "bit operation outside its width"
       else .error "bit operation outside its width"
     else .error "bit operation over a negative range"
@@ -494,12 +494,12 @@ def LowSide.or {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSid
 /-- `a ^ b` over non-negative ranges: `Expr.bxor`, like `oder`. -/
 def LowSide.xoder {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
     Except String (LowSide u Γ Λ) :=
-  if h0 : 0 ≤ x.weit.1 then
-    if h0' : 0 ≤ y.weit.1 then
-      if hw1 : x.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
-        if hw2 : y.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
-          .ok { weit := (0, (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) - 1),
-                term := Expr.bxor (bitsFuer (imax x.weit.2 y.weit.2)) h0 h0' hw1 hw2 x.term y.term }
+  if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      if hw1 : x.range.2 < (2 : Int) ^ bitsFuer (imax x.range.2 y.range.2) then
+        if hw2 : y.range.2 < (2 : Int) ^ bitsFuer (imax x.range.2 y.range.2) then
+          .ok { range := (0, (2 : Int) ^ bitsFuer (imax x.range.2 y.range.2) - 1),
+                term := Expr.bxor (bitsFuer (imax x.range.2 y.range.2)) h0 h0' hw1 hw2 x.term y.term }
         else .error "bit operation outside its width"
       else .error "bit operation outside its width"
     else .error "bit operation over a negative range"
@@ -519,16 +519,16 @@ def lowZwei {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
 /-- The table a basis names: a pointer parameter's target, or a
     table (for `old`, where both spellings travel). -/
 def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
-    Except String (Fin u.tabellen.length) :=
+    Except String (Fin u.tabs.length) :=
   match paramPos fn.params b with
   | .ok j =>
-    match fn.parten[j]? with
+    match fn.kinds[j]? with
     | some (.ptr num _) =>
-      if h : num < u.tabellen.length then .ok ⟨num, h⟩
+      if h : num < u.tabs.length then .ok ⟨num, h⟩
       else .error "pointer table unknown"
     | _ => .error "place without G form"
   | .error _ =>
-    match tabIdx u.tabellen b with
+    match tabIdx u.tabs b with
     | .ok t => .ok t
     | .error e => .error e
 
@@ -540,45 +540,45 @@ def lowParamSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   match paramPos fn.params p with
   | .error e => .error e
   | .ok j =>
-    match fn.parten[j]? with
+    match fn.kinds[j]? with
     | some (.ptr _ _) => .error "pointer as value without G form"
     | some _ =>
       match fn.params[j]? with
       | some (_, .int a b) =>
         match lowVar Γ (sh + j) (.int a b) with
         | .error e => .error e
-        | .ok v => .ok { weit := (a, b), term := Expr.var v }
+        | .ok v => .ok { range := (a, b), term := Expr.var v }
       | _ => .error "parameter without G form"
     | none => .error "parameter without G form"
 
 /-- A `durch` term at its recorded range (the `rw` turns the
     goal into the field type, where the constructor fits). -/
 def durchTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (num : Nat) (w : Bool) (h : num < u.tabellen.length)
+    (num : Nat) (w : Bool) (h : num < u.tabs.length)
     (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr num w))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
       Res.von (declOf u) wdd ∈ Λ) :
-    Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
+    Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2) := by
   rw [← fh.hint]
   exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
     (tabNr_some u num h) fh.idx i hL
 
 /-- A `slot` term at its recorded range. -/
 def slotTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (t : Fin u.tabellen.length) (fh : FieldHit u t)
+    (t : Fin u.tabs.length) (fh : FieldHit u t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
-    Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
+    Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2) := by
   rw [← fh.hint]
   exact Expr.slot (D := declOf u) t fh.idx i hL
 
 /-- An `altSlot` term at its recorded range. -/
 def altTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (t : Fin u.tabellen.length) (fh : FieldHit u t)
+    (t : Fin u.tabs.length) (fh : FieldHit u t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
-    Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2) := by
+    Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2) := by
   rw [← fh.hint]
   exact Expr.oldS (D := declOf u) t fh.idx i hL
 
@@ -590,9 +590,9 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   match paramPos fn.params b with
   | .error e => .error e
   | .ok j =>
-    match fn.parten[j]? with
+    match fn.kinds[j]? with
     | some (.ptr num w) =>
-      if h : num < u.tabellen.length then
+      if h : num < u.tabs.length then
         match fieldHit u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
@@ -604,7 +604,7 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
             | .ok i =>
               if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
                   Res.von (declOf u) wdd ∈ Λ) then
-                .ok { weit := fh.weit, term := durchTerm u Γ Λ num w h fh v i hL }
+                .ok { range := fh.range, term := durchTerm u Γ Λ num w h fh v i hL }
               else .error "access without held guard"
       else .error "pointer table unknown"
     | _ => .error "place without G form"
@@ -613,7 +613,7 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
     Except String (LowSide u Γ Λ) :=
-  match tabIdx u.tabellen b with
+  match tabIdx u.tabs b with
   | .error e => .error e
   | .ok t =>
     match fieldHit u t fname with
@@ -624,7 +624,7 @@ def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .ok i =>
         if hL : (∀ wdd ∈ (declOf u).braucht t,
             Res.von (declOf u) wdd ∈ Λ) then
-          .ok { weit := fh.weit, term := slotTerm u Γ Λ t fh i hL }
+          .ok { range := fh.range, term := slotTerm u Γ Λ t fh i hL }
         else .error "access without held guard"
 
 /-- An entry read (`old`) at a resolved table (positions
@@ -643,14 +643,14 @@ def lowAltRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .ok i =>
         if hL : (∀ wdd ∈ (declOf u).braucht t,
             Res.von (declOf u) wdd ∈ Λ) then
-          .ok { weit := fh.weit, term := altTerm u Γ Λ t fh i hL }
+          .ok { range := fh.range, term := altTerm u Γ Λ t fh i hL }
         else .error "access without held guard"
 
 /-- A value side in a body: a literal, a numeric parameter or a
     slot read (`result` and `old` have no G form here). -/
 def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) : USide → Except String (LowSide u Γ Λ)
-  | .lit n => .ok { weit := (n, n), term := Expr.lit n }
+  | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p => lowParamSide u Γ Λ fn 0 p
   | .slot b f ix => lowDurch u Γ Λ fn 0 b f ix
   | .tab b f ix => lowTabRead u Γ Λ fn 0 b f ix
@@ -691,9 +691,9 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   match paramPos fn.params b with
   | .error e => .error e
   | .ok j =>
-    match fn.parten[j]? with
+    match fn.kinds[j]? with
     | some (.ptr num w) =>
-      if h : num < u.tabellen.length then
+      if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
@@ -717,7 +717,7 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 def lowBoolTab (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
     Except String (Expr (declOf u) Γ Λ .bool) :=
-  match tabIdx u.tabellen b with
+  match tabIdx u.tabs b with
   | .error e => .error e
   | .ok t =>
     match fieldHitB u t fname with
@@ -738,7 +738,7 @@ def lowBoolTab (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option (Int × Int)) :
     USide → Except String (LowSide u Γ Λ)
-  | .lit n => .ok { weit := (n, n), term := Expr.lit n }
+  | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     lowParamSide u Γ Λ fn (if er.isSome then 1 else 0) p
   | .slot b f ix =>
@@ -780,7 +780,7 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | some (a, b) =>
       match lowVar Γ 0 (.int a b) with
       | .error e => .error e
-      | .ok v => .ok { weit := (a, b), term := Expr.var v }
+      | .ok v => .ok { range := (a, b), term := Expr.var v }
     | none => .error "result without result"
 
 /-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/

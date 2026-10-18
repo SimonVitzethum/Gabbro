@@ -211,14 +211,14 @@ def werte {α : Type} : List (String × Except String α) → List α
 
 /-- Collect per-table outcomes. -/
 def sammleTabellen (consts : List (String × Int))
-    (aliase : List (String × (Int × Int))) :
+    (alias : List (String × (Int × Int))) :
     List SItemTief → List (String × Except String UTab)
   | [] => []
   | it :: rest =>
     match it with
     | .tableT n _ _ _ _ _ =>
-      (n, uTabelle consts aliase it) :: sammleTabellen consts aliase rest
-    | _ => sammleTabellen consts aliase rest
+      (n, uTabelle consts alias it) :: sammleTabellen consts alias rest
+    | _ => sammleTabellen consts alias rest
 
 /-- Collect per-lock outcomes (against the clean tables). -/
 def sammleSperren (tabs : List UTab) :
@@ -232,13 +232,13 @@ def sammleSperren (tabs : List UTab) :
 
 /-- Collect per-head outcomes (against clean tables and locks). -/
 def sammleKoepfe (consts : List (String × Int))
-    (aliase : List (String × (Int × Int))) (tabs : List UTab)
+    (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) :
     List (FnSig × SAnw) → List (String × Except String (UFnKopf × List String))
   | [] => []
   | (sig, _) :: rest =>
-    (sig.name, elabKopf consts aliase tabs locks sig) ::
-      sammleKoepfe consts aliase tabs locks rest
+    (sig.name, elabKopf consts alias tabs locks sig) ::
+      sammleKoepfe consts alias tabs locks rest
 
 /-- Indexed collection (positions ride along for reporting). -/
 def sammleIdx {α β : Type} (f : Nat → α → Except String β) :
@@ -287,8 +287,8 @@ def befundeRumpf (ctx : UCtx) (tabs : List UTab)
   let lauf :=
     match koerper with
     | .block ss _ => befundeReihe tabs koepfe fname ctx ss
-    | _ => ([({ stufe := "rumpf", art := "rumpf", name := fname, meldung := "Funktionsrumpf ohne G-Form" } : Befund)], ctx)
-  let saetze := lauf.1
+    | _ => ([({ stufe := "rumpf", art := "rumpf", name := fname, meldung := "fn body without G form" } : Befund)], ctx)
+  let body := lauf.1
   let gives :=
     (sichertVon klauseln).map fun e =>
       match uSichert ctx e with
@@ -301,32 +301,32 @@ def befundeRumpf (ctx : UCtx) (tabs : List UTab)
       | .error m => [({ stufe := "rueckgabe", art := "return", name := fname, meldung := m } : Befund)]
       | .ok _ => []
     | _ => []
-  saetze ++ gives.filterMap id ++ ret
+  body ++ gives.filterMap id ++ ret
 
 /-- Findings of one function: head first, then the body descent (needs
     a good head for the context; a failed head hides its body, as in
     `elabU`). -/
 def befundeFn (consts : List (String × Int))
-    (aliase : List (String × (Int × Int))) (tabs : List UTab)
+    (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (koepfe : List UFnKopf) (sig : FnSig)
     (koerper : SAnw) : List Befund :=
-  match elabKopf consts aliase tabs locks sig with
+  match elabKopf consts alias tabs locks sig with
   | .error e => [({ stufe := "kopf", art := "fn-head", name := sig.name, meldung := e } : Befund)]
   | .ok (kopf, _) =>
-    let ctx := uCtxVon aliase consts tabs locks kopf sig.name
+    let ctx := uCtxVon alias consts tabs locks kopf sig.name
     befundeRumpf ctx tabs koepfe sig.name sig.klauseln koerper
 
 /-- Findings of a whole elaborated item list (collect mode over the
     `elabU` stages; cascades documented in CUTS). -/
 def befundeElab (ms : List SItemTief) : List Befund :=
   let consts := uConstsRech (uKonstFns ms) ms []
-  let aliase := uAliase ms
-  let tabs := sammleTabellen consts aliase ms
+  let alias := uAliase ms
+  let tabs := sammleTabellen consts alias ms
   let tabOk := werte tabs
   let locks := sammleSperren tabOk ms
   let lockOk := werte locks
   let fns := ms.filterMap alsFunktion
-  let koepfe := sammleKoepfe consts aliase tabOk lockOk fns
+  let koepfe := sammleKoepfe consts alias tabOk lockOk fns
   let kopfOk := (werte koepfe).map fun p => p.1
   let tabF := tabs.filterMap fun (n, r) => match r with
     | .error e => some ({ stufe := "tabelle", art := "tabelle", name := n, meldung := e } : Befund)
@@ -335,9 +335,9 @@ def befundeElab (ms : List SItemTief) : List Befund :=
     | .error e => some ({ stufe := "sperre", art := "sperre", name := n, meldung := e } : Befund)
     | .ok _ => none
   let fnF := fns.map fun (sig, koerper) =>
-    befundeFn consts aliase tabOk lockOk kopfOk sig koerper
+    befundeFn consts alias tabOk lockOk kopfOk sig koerper
   let fnsOk := (fns.map fun (sig, koerper) =>
-    (sig.name, elabUFunktion consts aliase tabOk lockOk kopfOk sig koerper)).filterMap
+    (sig.name, elabUFunktion consts alias tabOk lockOk kopfOk sig koerper)).filterMap
     fun (_, r) => match r with
       | .ok v => some v
       | .error _ => none
@@ -465,9 +465,9 @@ def wMultiItems : List SItemTief :=
 theorem zensusMulti_exakt :
     befundeElab (uMembers wMultiItems) =
       [{ stufe := "tabelle", art := "tabelle", name := "T",
-         meldung := "Typ unbekannt: Unbekannt" },
+         meldung := "type unknown: Unbekannt" },
        { stufe := "rumpf", art := "match", name := "f",
-         meldung := "Anweisung ohne G-Form" }] := by
+         meldung := "stmt without G form" }] := by
   decide
 
 #print axioms Gabbro.Grammatik.GabbroV.GvZensus.zensus104_leer

@@ -14,13 +14,13 @@ set_option maxRecDepth 100000
 
 /-- One table, one lock, one function `w(k, i, n)` with the given flat body. -/
 def prog (body : List UStmt) : UProg :=
-  { tabellen := [{ name := "T", count := 2, felder := [("v", 0, 4294967295)] }],
-    sperren := [{ name := "L", rank := 0, schutz := ["T"] }],
+  { tabs := [{ name := "T", count := 2, cols := [("v", 0, 4294967295)] }],
+    locks := [{ name := "L", rank := 0, guard := ["T"] }],
     fns := [{ name := "w",
               params := [("k", .ptr 0 true), ("i", .index 2), ("n", .int 0 255)],
-              parten := [.ptr 0 true, .index 0, .int], res := none, held := [],
-              schreibt := ["T"], gives := [], saetze := body, rueck := .empty }],
-    wurzeln := [] }
+              kinds := [.ptr 0 true, .index 0, .int], res := none, held := [],
+              puts := ["T"], gives := [], body := body, ret := .empty }],
+    roots := [] }
 
 def ok? (u : UProg) : String :=
   match lowerAllg u with
@@ -29,13 +29,13 @@ def ok? (u : UProg) : String :=
 
 /-- A `let` inside `locks L { ... }` binds for the rest of that block and is written to a slot. -/
 theorem locks_let_ok :
-    ok? (prog [.sperrtAuf "L", .bind "x" (some (0, 4294967295)) (.param "n"),
-      .assign "k" "v" (.param "i") (.param "x"), .zu]) = "OK" := by
+    ok? (prog [.lockBeg "L", .bind "x" (some (0, 4294967295)) (.param "n"),
+      .assign "k" "v" (.param "i") (.param "x"), .blkEnd]) = "OK" := by
   decide +kernel
 
 /-- ... and it does not outlive the block. -/
 theorem locks_let_scope :
-    ok? (prog [.sperrtAuf "L", .bind "x" none (.param "n"), .zu,
+    ok? (prog [.lockBeg "L", .bind "x" none (.param "n"), .blkEnd,
       .assign "k" "v" (.param "i") (.param "x")]) = "name unknown: x" := by
   decide +kernel
 
