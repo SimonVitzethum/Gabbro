@@ -707,7 +707,7 @@ and `ri=` leaf items, no theorem); elab `U` = `elabU`/`lowerAllg` lowers it; cor
 | exporter-certified programs (29 in `beispiele/`; the register file is gone, the list is in git at 3068f537) elaborated | 9 / 29 | 9 / 29 | 9 / 29 | 13 / 29 | **19 / 29** |
 | rules, reader S / P / R / X (190 rules) | 127 / 27 / 22 / 14 | 144 / 18 / 22 / 6 | 158 / 11 / 22 / 0 | 158 / 11 / 22 / 0 | 159 / 12 / 20 / 0 |
 | rules with a printer, a round trip (proved P + measured M) | 28, 28 | 28, 28 | 28, 28 | 28, 28 (expressions only) | **174, 34 + 140** |
-| rules with an elaboration | 58 | 58 | 58 | 59 | 66 |
+| rules with an elaboration | 58 | 58 | 58 | 59 | 68 |
 | function bodies / printable items of the corpus that print and read back as the same tree | n/a | n/a | n/a | n/a | **429 / 429, 1287 / 1287** |
 
 Phase 2 (3), first slice: `masks irqs` (`ULock.masks` -> `D.maskiert`), entry `via` (`UProg.handler` -> `Programm.unterbricht`), `concurrent` roots ahead of the dispatch roots, nested modules, and the dropped `deadline ... arch ... falsifier` clause lift 108, 166, 59 and 165 (13 of 29). Open in this phase: statics, `let`/`check`/`traverse`, atomics, tagged types, lock invariants and gates (each needs its G form in `declOf`: `Glob`, `Inv`, `Ax`, `Ty.sum`, or a variable context in `lowSeqL`), and the printers and round trips.
@@ -925,8 +925,8 @@ and `bank` bodies (`R`).
 | `transset` | decl | S | E | M | . |  |  |
 | `placeshift` | decl | S | E | M | . |  |  |
 | `shiftplace` | decl | S | E | M | . |  |  |
-| `atomicdecl` | conc | S | E | M | . | 14 | `atomT` |
-| `publishstmt` | conc | P | E | M | . | 14 | payload list raw |
+| `atomicdecl` | conc | S | E | M | U | 14 | `atomT` |
+| `publishstmt` | conc | P | E | M | U | 14 | payload list raw |
 | `nutzlast` | conc | R | E | M | . |  |  |
 | `lockdecl` | conc | S | E | M | U | 44 | `invariant` read (`lockT` 7th field) |
 | `lockstmt` | conc | S | E | M | U | 42 | `locks` |
@@ -940,6 +940,14 @@ and `bank` bodies (`R`).
 | `requiresprofile` | assume | S | E | M | . | 2 |  |
 | `profileentry` | assume | S | E | M | . |  |  |
 | `check` | assume | S | E | M | . | 3 |  |
+
+rules: 191 rows, 190 distinct rule names (SYNTAX.md defines 190; `int` is defined twice)
+reader   P=12, R=20, S=159
+printer  .=17, E=174
+rtrip    .=17, M=140, P=34
+elab     .=123, U=68
+rules with all four columns present (round trip: proved on `gut` shapes (P) or measured (M)): 63
+corpus: 170 files; lex ok 170; whole-file parse ok 170; elab ok 19; lower ok 19
 
 rules: 191 rows, 190 distinct rule names (SYNTAX.md defines 190; `int` is defined twice)
 reader   P=12, R=20, S=159

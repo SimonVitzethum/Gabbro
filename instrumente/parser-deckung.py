@@ -215,8 +215,8 @@ RULES = [
     ("placeshift", "decl", "S", "E", "M", ".", None, ""),
     ("shiftplace", "decl", "S", "E", "M", ".", None, ""),
     # --- sections 11-14: concurrency, assumptions, profiles, checks
-    ("atomicdecl", "conc", "S", "E", "M", ".", r"\batomic\s", "`atomT`"),
-    ("publishstmt", "conc", "P", "E", "M", ".", r"\bpublishes\s", "payload list raw"),
+    ("atomicdecl", "conc", "S", "E", "M", "U", r"\batomic\s", "`atomT`"),
+    ("publishstmt", "conc", "P", "E", "M", "U", r"\bpublishes\s", "payload list raw"),
     ("nutzlast", "conc", "R", "E", "M", ".", None, ""),
     ("lockdecl", "conc", "S", "E", "M", "U", "^\\s*(pub\\s+)?lock\\s", "`invariant` read (`lockT` 7th field)"),
     ("lockstmt", "conc", "S", "E", "M", "U", r"\blocks\s+\w", "`locks`"),
