@@ -1,6 +1,6 @@
 import Bruecke.Pflichten
 import Bruecke.Pruefung
-import Grammatik.Korrespondenz.Kette.Kette108
+import Grammatik.Korpus.Programme.Einheit108
 import Bruecke.Start
 import Bruecke.Atomar
 import Bruecke.Quelle
@@ -19,7 +19,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg (fnAt)
 def u := Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108
 
 theorem verankert : ∃ P fs, Gabbro.Grammatik.uebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 = .ok ⟨u, P, fs⟩ :=
-  ⟨_, _, Gabbro.Grammatik.Kette108.uebersetzt8⟩
+  ⟨_, _, Gabbro.Grammatik.Einheit108.uebersetzt8⟩
 
 def ra : UFn := u.fns[0]'(by decide)
 def rc : UFn := u.fns[1]'(by decide)
@@ -46,8 +46,8 @@ example : meetsU u wellFormed ra ((zuBody u ra).getD []) = read_a_meets_statemen
 example : meetsU u wellFormed rc ((zuBody u rc).getD []) = read_c_meets_statement := rfl
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
-theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Kette108.E8 :=
-  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Kette108.low8)
+theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit108.E8 :=
+  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Einheit108.low8)
 
 /-! BRIDGE-CLOSED beispiele/108-disjoint-start-locks.gab nutzer_bruecke
 
@@ -78,30 +78,24 @@ theorem rang : Rang u (rangAuto u) := rang_of (by decide)
     output and GabbroV's duty proofs. -/
 
 theorem pflichten_108 : Pflichten Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
-  ⟨u, uOf_eq Gabbro.Grammatik.Kette108.uebersetzt8, by decide, by decide, by decide, meets_alle⟩
+  ⟨u, uOf_eq Gabbro.Grammatik.Einheit108.uebersetzt8, by decide, by decide, by decide, meets_alle⟩
 
 /-- **THE CLOSED BRIDGE OF 108**: premise (b) of the goal theorem, from GabbroV's duty proofs. -/
-theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Kette108.E8 :=
-  bruecke_nutzer Gabbro.Grammatik.Kette108.low8 stimmig (rangAuto u) rang meets_alle
-    Gabbro.Grammatik.Kette108.E8 rfl rfl rfl
-
-/-- The closed chain of 108 with its premise (b) taken from the bridge. -/
-def kette_108_bruecke : Gabbro.Grammatik.Kette Gabbro.Grammatik.Parser.UebersetzeAllg2.src108 :=
-  { Gabbro.Grammatik.Kette108.kette_108 with nutzer := nutzer_bruecke }
+theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Einheit108.E8 :=
+  bruecke_nutzer Gabbro.Grammatik.Einheit108.low8 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Einheit108.E8 rfl rfl rfl
 
 /-! BRIDGE-ATOMIC beispiele/108-disjoint-start-locks.gab nutzerA_bruecke -/
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
-theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Kette108.E8 :=
-  bruecke_nutzerA Gabbro.Grammatik.Kette108.low8 stimmig (rangAuto u) rang meets_alle
-    Gabbro.Grammatik.Kette108.E8 rfl rfl rfl
+theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Einheit108.E8 :=
+  bruecke_nutzerA Gabbro.Grammatik.Einheit108.low8 stimmig (rangAuto u) rang meets_alle
+    Gabbro.Grammatik.Einheit108.E8 rfl rfl rfl
 
 #print axioms nutzerA_bruecke
 
 
-/-! BRIDGE-CHAIN beispiele/108-disjoint-start-locks.gab kette_108_bruecke -/
 
-#print axioms kette_108_bruecke
 
 #print axioms nutzer_bruecke
 

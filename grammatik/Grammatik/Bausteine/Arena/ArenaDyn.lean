@@ -12,11 +12,10 @@
   explicitly by `grow`. Commit is monotone within a run; growth beyond `M`
   is a refusal, never a runtime surprise. Fault latency/cost arrives as a
   NAMED hardware assumption read as data (`faultKosten`), never justified
-  here. The C plug-in point is `CSpeicher.lean` (read-only): the virtual
-  region is the arena block's `Fin M` index set, the committed prefix the
-  `Fin c` usable part; nothing here edits that file.
+  here. The virtual region is the arena block's `Fin M` index set, the
+  committed prefix the `Fin c` usable part.
 -/
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 import Grammatik.Bausteine.Arena.ArenaZucker
 
 namespace Gabbro.Grammatik.ArenaDyn

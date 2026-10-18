@@ -11,7 +11,7 @@
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Kern.Syntax.Satz
 import Grammatik.Proben.BlattGegenbeispiel
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 
 namespace Gabbro.Grammatik.EZD
 

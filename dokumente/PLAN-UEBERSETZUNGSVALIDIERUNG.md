@@ -1,21 +1,21 @@
 # Translation validation: from source to the final binary
 
 *Rewritten 2026-10-17. It absorbs `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` (the derivation plan, now §9) and
-`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` (the optimiser specification, now §8), and compresses the dated
-C-backend proof record of §§6–7. Section numbers 0–7 are the ones code comments cite; see §10
-for the renames.*
+`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` (the optimiser specification, now §8), and held the dated
+C-backend proof record in §§6–7, which was removed on 2026-10-18 with the C line (tag
+`archiv/c-emitter-2026-10-17`). Section numbers 0–7 stay as they were; see §10 for the renames.*
 
 ## Status in one paragraph
 
 **Nothing of the final-byte chain exists.** No hardware model is complete, no validator for a
 loaded binary exists, no producer is trusted. What exists is: the goal theorem over the model
 (`gabbro_ziel`), model certificates per program (`gabbro obligations --g`), the GabbroV bridge
-for the user's logic, a closed **legacy chain for the C backend** (two programs, §6–§7, retained
-as historical evidence and regression), proved generator templates (`gabbro templates`: 41 entries,
+for the user's logic, proved generator templates (`gabbro templates`: 41 entries,
 **30 proved**, 8 designed, 3 carried), a certificate printer for the LLVM backend that currently
 does not elaborate in Lean (§9), and a written optimiser specification with no code (§8).
 Backend truth (2026-10-17): the **LLVM backend is current** (untrusted, `LLVM-BACKEND.md`); the C11
-emitter is deprecated (decided 2026-10-07, `ARM-PLAN.md`); the x86-64 hardware model was stopped
+emitter was removed (final, 2026-10-17; the C correspondence chain and its Lean model were deleted
+on 2026-10-18; the last tree with the C line carries the tag `archiv/c-emitter-2026-10-17`); the x86-64 hardware model was stopped
 and **archived** on 2026-10-10 (git branch `archive`, commit `7c693cb7`); the selected target is
 **AArch64 (Armv9-A) on the Sail Arm model** with the multicore memory model added in Lean
 (`PLAN-HARDWARE.md` §2.3, `ARM-PLAN.md`). `TODO.md` §5 states it: validation comes **much later**,
@@ -60,14 +60,13 @@ image has its final output checked.
 | Piece | Task | Present status (2026-10-17) |
 |---|---|---|
 | **T3** | Lean source parser and elaborator compute `P`, layouts and duties | `grammatik/Grammatik/Parser/` (lexer, expressions, statements, `Uebersetze`) and the GabbroV front end (`GvParserFragment*`, `bruecke/Bruecke/Quelle.lean`). Sieve (a) was 5 of 148 programs on 2026-09-30 (tag `milestone-2026-09-30-parser-generic-chain5`); narrow fragment, **binding sieve** of the chain count |
-| **T1** | Generic soundness of the certificate: typing, safety, goal premises | model certificates per constructor (`Korrespondenz/Zeugnis/`), `target/zertifikate/REGISTER.txt` (generated on demand) (**34 CERTIFIED / 211 UNCERTIFIED** lines, 2026-10-17). An accepted program outside both lists or a stale row turns `cargo test` red (`tests/zertifikate.rs`) |
+| **T1** | Generic soundness of the certificate: typing, safety, goal premises | model certificates per constructor (`Korpus/Zeugnis/`), `target/zertifikate/REGISTER.txt` (generated on demand) (**34 CERTIFIED / 211 UNCERTIFIED** lines, 2026-10-17). An accepted program outside both lists or a stale row turns `cargo test` red (`tests/zertifikate.rs`) |
 | **T4** | Target instruction semantics, byte decoder, byte-addressed memory, per-access memory model | **AArch64: in construction** (`arm/`, `PLAN-HARDWARE.md` §2.3, ~5 900 Lean lines; no decoder, no Sail bridge, no branches/FP, memory model not assembled). x86-64: archived |
-| **T2** | Sound validator from the final image to `P`/GX | none for a binary. Legacy: `korrOk` (decides a C certificate statement by statement, §6.2) |
-| **T5** | Generic runtime, entry, lock, call and hardware templates bound to the target semantics | `gabbro templates`: 41 entries, 30 proved against **C or abstract machine** semantics (`Bausteine/Schablonen/*`, `CTicket.lean`, `SyscallArm*.lean` mirrors the AArch64 Linux call ABI as data); machine-code correspondence open |
+| **T2** | Sound validator from the final image to `P`/GX | none for a binary |
+| **T5** | Generic runtime, entry, lock, call and hardware templates bound to the target semantics | `gabbro templates`: 41 entries, 30 proved against **abstract machine** semantics (`Bausteine/Schablonen/*`, `SyscallArm*.lean` mirrors the AArch64 Linux call ABI as data); machine-code correspondence open |
 
-`CSpeicher`, `CSemantik`, `CParse`, `korrOk` and `CNebenlaeufig` describe the C backend. Their
-closed chains do **not** establish correspondence for any binary. Changing the target does not
-make an uncovered construct verified.
+There is no correspondence chain for any binary. Changing the target does not make an uncovered
+construct verified.
 
 ## 2. Machine profile and instruction selection
 
@@ -98,8 +97,8 @@ opt-in unbounded region concerns Turing completeness in the abstract model, not 
 GXMaschine}.lean`, `Speichermodell/Atomar/AtomarW.lean`, `Zielsatz/Kern/Spec.lean`: `SchwachX`,
 `ZielX`, `GabbroZiel`; proof `Zielsatz/Atomar/BeweisAtomar.lean`). Existing race freedom,
 contract, lock, lifecycle and progress proofs are the source-side foundation, not a second
-concurrency language. The abstract ticket-lock results in `CBackend/Semantik/CTicket.lean` may be
-reused; the concrete instruction sequence needs its own proof.
+concurrency language. The concrete lock instruction sequence needs its own proof
+(the ticket-lock results of the deleted C line are in the tag `archiv/c-emitter-2026-10-17`).
 
 **The missing theorem goes from machine behaviour to allowed model behaviour**: a relation from
 per-access executions of the validated image (AArch64: the axiomatic model of `arm/`) to W and
@@ -143,7 +142,7 @@ not by trusting the Rust passes or building a second model of the source languag
 source (`Syntax`/`Semantik`) plus checked target blocks is the reference; no persistent SSA IR,
 no second interpreter** (decision of lanes 594/606, 2026-10-01; §8). Measurement: report semantic
 families and generic theorems plus final-byte chains the proved validator accepted. Corpus chain
-counts are coverage diagnostics. The retired `zaehle-kette` (2026-10-17; not guarded today) measured **C chains** and must not
+counts are coverage diagnostics. The retired `zaehle-kette` (2026-10-17; not guarded today) measured C chains of the removed C line and must not
 be relabelled a binary validator. An effort estimate needs a measured generic pilot (decoding, a
 memory access, an atomic/lock mapping, final-image binding); instruction count alone misses
 layout, flags, allocation, concurrency, floats and progress.
@@ -168,239 +167,30 @@ a seat per proved template, tooth 3: every proved template binds its premises to
 generator-written pieces (`tor.nie`, `tor.fehlbar`, `tor.region`, `tor.trampolin`, `tor.kind`,
 `start.nolibc`, `arena.dyn`, `sperre.ticket`, `region.leeren`, `faden.laufzeit`, the module and
 bare-metal families `arena.modul`, `modul.lebenslauf`, `faden.modul`, `metall.*`) have Lean files
-in `grammatik/Grammatik/Bausteine/Schablonen/`. They are proved against the **C** semantics or an
+in `grammatik/Grammatik/Bausteine/Schablonen/`. They are proved against an
 abstract machine; moving them to machine bytes is the T5 work still open.
 
 ---
 
-**Historical C-backend validation record (§§6–7).** Dated statements, measurements, assumptions
-and open C tasks, kept for audit and reuse. They are superseded as a work order by §§0–5; none is
-evidence of a binary chain.
+**§§6–7 (removed, C backend).** They were the dated record of the C-backend validation: stage (a),
+the generic C chain `schlusssatz` with the correspondence certificate `korrOk` over the emitted C
+(§6, beispiele/104 and 108), and stage (b), the concurrent C theorem for beispiele/124 (§7). The C
+emitter is removed for good, and on 2026-10-18 the whole C line was deleted from the Lean model
+(`grammatik/Grammatik/CBackend/`, `Korrespondenz/Kette/`, the C-certificate files of
+`Korrespondenz/Allgemein/`, the template file tied to the C ticket lock, `SchablonenMetallSperre`, and the C-layout half of `SchablonenT5Sem`). It existed and lives in the
+tag `archiv/c-emitter-2026-10-17`; it was never evidence of a binary chain. The source-level facts it
+carried stayed and moved: the Lean translation pipeline `uebersetzeAllg`
+(`Parser/Elab/UebersetzePipeline.lean`), the corpus units with their user logic
+(`Korpus/Programme/Einheit104.lean`, `Einheit108.lean`), the reference fixtures (`Korpus/Referenz/`) and
+the model certificates (`Korpus/Zeugnis/`).
 
-## 6. Stage (a): the generic C chain (`schlusssatz`), beispiele/104 and 108
+## 6. Stage (a): removed (C backend)
 
-*Added 2026-09-15; the stage names "(a)" (single-threaded, §6) and "(b)" (concurrent, §7) are the
-ones cited from Lean headers as "§3 item 2" and "§3 item 4" of the earlier plan version.* Files:
-`grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (T2 proper),
-`Korrespondenz/Kette/Schlusssatz.lean` (the theorem), `Kette104*.lean`, `Kette108.lean`,
-`SchlusssatzZeuge.lean`. Axioms of every named theorem: the standard three.
+See the note above; no content.
 
-### 6.1 The statement
+## 7. Stage (b): removed (C backend)
 
-A **closed chain** for `src` is `K : Kette src`: the generic Lean pipeline `uebersetzeAllg`
-(lex, parse, preprocessing, elaborate, `lowerAllg`) produces the code; `E : Einheit (declOf u)` is
-the program as the goal theorem's unit; `akzeptiert_pruefer.akzeptiert E … = true` (premise (a));
-`NutzerPflicht E` (premise (b)); and `korrOk EL fnNr zert E.P fs = true` for the emitter's layout
-and correspondence certificate (T2). `schlusssatz (K : Kette src) O hH orc XR hXR bin tief hA1 sp
-init hA4` takes the named world hypotheses (hardware `HardwareAnnahmen`, deterministic foreign
-calls `XR.Funktional`, `hA1`: every run of the binary's `f` is a run of the C semantics of the
-certified unit, `hA4`: single-threaded start) and concludes: **(1)** parse fidelity, **(2)** the
-checker Bool and the certificate check, **(3)** the model judgement, **(4)** every C run ends
-related to the Gabbro outcome (`korrOk_jeder_lauf`), **(5)** the machine (`K.E.P.mitRuhe`,
-every leg of `Ziel` via `gabbro_ziel`), **(6)** every run of the binary, under `hA1`.
-
-### 6.2 T2 proper: `korrOk`
-
-One decidable check for every program: it walks every body with its printed rows and decides,
-statement by statement, that the row is the emitted form of the statement. Sound at every call
-depth (`korrOk_fnCorr`, induction through `cCorr_ruf`); each row is one existing T4 lemma.
-Widened 2026-09-15 from 6 to 27 of 42 `Expr` constructors and from 4 to 5 of 27 `Stmt`
-constructors, every arm with a positive probe and a **planted defect**. Seen failing
-(`korrOk_faellt`): wrong field offset, wrong stored value, a missing call row. The printer for the C
-correlation (`gabbro corr-lean`) is removed with the C emitter (2026-10-17).
-
-### 6.3 The chain count and where programs stop
-
-Closed chains (instances marked `CHAIN-INSTANCE` in Lean): `beispiele/104-referenz.gab`
-(`kette_104`, real text with comments, witness `kette_104_zeuge`) and
-`beispiele/108-disjoint-start-locks.gab` (`kette_108`, two declared concurrent starts). Three more
-are marked `CHAIN-GENERIC` in `bruecke/Bruecke/Instanzen/` (69, 73, 130; generic `ketteAllg`).
-Counts are **diagnostics**: 2 of 129 on 2026-09-26; the retired `zaehle-kette` without `--lean` on
-2026-10-17 read "0 of 170 closed (Lean not re-run)" with sieve totals (b) 28, (c) 16, (d) 66 —
-**a Lean-run measurement was not repeated for this document.** The sieves, in order: (a) Lean
-parse and elaboration of the generic pipeline (the binding one), (b) `lean-g` export, (c)
-`gabbro certificate` prints every body, (d) every emitted C form is in state *lemma* or *named
-assumption* (the retired `pruefe-cformen`), (e) the generic correspondence certificate prints without
-`KREFUSAL`. **Coverage is multiplicative in the sieves and inside sieve (b):** a lane probe that
-skipped the two largest first-refusal groups found every one of the 24 programs stopped at a
-second wall, so closing a group completely can move the count by zero. First refusals are not
-programs gained.
-
-*A guardian finding that moved a number the right way:* the retired `pruefe-cformen` keyed rows by statement
-text, so `return c.len;` and `return (Nachricht){…};` were one row, covered by a scalar lemma that
-says nothing about a struct (`CTy` is `int | ptr`). Re-keyed by destination, sieve (d) fell from
-60 to 55 and the uncovered forms rose by four — *a number that falls because the instrument
-started to see is not a regression; the 60 was.* Carrying aggregates in the C model would have
-unblocked zero programs.
-
-### 6.4 The by-hand theorem of one program: `schlusssatz_104`
-
-Kept in `Korrespondenz/Kette/Schlusssatz104.lean` (2026-09-14), restated with the named
-assumptions as hypotheses: parse fidelity by lex/parse/elaborate/lower equations; the model
-certificates are the print of `gP`'s bodies; the model judgement at every `forever` budget; every
-C run of `einzahlen`/`lies` ends related to the Gabbro result; the machine `gPB` (`gP` plus the
-runtime's idle root, related by a kernel-checked renaming) satisfies the goal conclusion for every
-`LaufzeitStart` start. **Finding:** no G theorem applies to a machine of `gP` alone, since G starts
-every thread in some function and both functions hold `M` by signature, so there is no idle root
-(`gP_kein_exklusiv`, `gP_kein_ruhig`): the idle root is runtime data (`gDB`/`gPB`, assumption A4).
-What stays outside Lean: A1 (the binary *is* the compiled behaviour), A2 (the emitted text means
-`refCProg`; **discharged for the generic chain by `parseC`, §6.6**), A3 (layout pins; reduces to
-A1+A2 plus one lemma), A4 (the runtime starts in a `LaufzeitStart` shape), A5 (kernel and
-definitions). No hardware or oracle premise for 104 (no axiom, register, device, global or `awaits`).
-
-### 6.5 What stays open (generic theorem)
-
-- **Sieve (a) binds.** Widening `korrOk` does not move the count while the Lean parser and
-  elaborator (T3) stop most programs; measured: 23 arms added, count unchanged.
-- **`korrOk` still refuses** a `traverse` with a non-literal bound, `!=`, a `(T)(e)` wrapper and
-  `_Atomic` globals (each with a proved lemma but no row), floats (no `ecorr_*`, no float operand).
-- **The arena stops at the exporter**, no longer at the specification: `alloc`/`reset` are sugar
-  over `Block.narrow` + `Stmt.assignSlot` + `Stmt.assignGlob` (`Bausteine/Arena/ArenaZucker.lean`),
-  the exporter builds the pair; `beispiele/98`/`99` stop at two statement *shapes* (an `alloc`
-  without `else`; an `alloc` at the top level of a body).
-- **The unit's data** (lock invariants, axiom ensures, declared starts, initial memory) are written
-  next to the source by the chain's author; **the user's logic is per program** (that is the goal's
-  intent, not a gap).
-- **Part 4's condition** (the Gabbro call ends in no model error) was halved twice, see §6.8, §6.9,
-  §6.12: the hardware class is gone provably; what is left is the `abstieg` residue, a computation
-  at one depth.
-- **The adequacy chain** (one active thread of G against `rufAt`) is not re-instantiated; four things
-  stand between part 4 and part 5 (the fragment is not one of them): `rufG_adaequat_ruf` realises
-  `rufRumpf` not `rufAt` (the traces differ, `befund_vertrag`), `Tief P A n` carries the depth
-  residue, and the adequacy is existential. The congruence lemma of §6.9 does not close it.
-
-### 6.6 A2 discharged: the emitted text is parsed in Lean
-
-`CBackend/Parser/{CLexer,CParse,CProben,Bruecke}.lean`, `CBackend/Semantik/CText104*.lean`,
-`CText108.lean`; guardian: the retired `pruefe-ctext` (not guarded today). `parseC : List Char → Option (List CFun)`
-reads the emitted subset (prelude with two `_Static_assert` pins, integer `#define`s, table
-structs, `static` declarations, `(void)x;`, slot stores, direct calls, `return` over literals,
-locals and slot reads) and `a2_104 : parseC ctext104 = some (kFuns zert104)` holds by kernel
-reduction, `ctext104` byte-identical to `gabbro emit`. From it `cProgC ctext = kProg zert` and
-`schlusssatz_text`. Measured over the corpus then: 4 of 113 programs inside the subset. **Cost
-lesson (OFFEN O13, closed):** kernel-reducing a `String` literal went through the array
-representation (33.7 GB for the first character of a 1 419-byte literal); the same text as a
-`List Char` of short pieces costs 3.3 GB; the dominant Gabbro-side cost was one theorem unfolding
-`uebersetzeAllg` at a concrete source (`uebersetzeAllg_von_zeichen` unfolds it once, at a variable).
-The whole library then built from empty in 5 min 20 s at 6.86 GB peak (2026-09-15).
-
-### 6.7 The certificate's block structure
-
-`stOk` and `blOk` form one `mutual` over `GRow`/`List GRow` (structural, no fuel: *a mutual
-recursion through a fuel argument compiles to a mutual `Nat.brecOn` and is exponential*); arms for
-`if` (`scorr_ite`), `let x = f(…)` (`bsem_bindCall`) and `traverse` (`scorr_traverse`, with a
-literal bound equal to the table count, fresh `x`, body not writing `x`). `stOk` 5 → 7 of 27
-`Stmt` constructors; `blOk` reads 4 of 17 `Block` constructors.
-
-### 6.8 Part 4's hardware class is provably empty
-
-`korrOk` refuses the five forms whose outcome is `hardware` (axiom call/bind, register read,
-`awaits`, `forever`), so `rufAt` never ends in one (`korrOk_rufAt_ohneHardware`, conclusion 4b);
-`Hardware.ieee` is no longer produced. **Finding with a witness (`befund_hardware_bleibt`):**
-premise (c) `HardwareAnnahmen` does *not* rule the hardware error out — `AxVertragO` constrains the
-oracle only where the raw answer fits the declared type, and an oracle with an out-of-range raw
-answer meets every premise vacuously while `rufAt` stops at every depth and budget.
-
-### 6.9 The handler congruence
-
-If two handlers answer at every key either the same outcome or, on the first side, an error whose
-mark lies in a set `Er`, then every statement, block and terminal block runs the same under both
-or errors with a mark in `Er` (`Logik/Vertraege/HandlerKongruenz.lean`, one-sided on purpose so
-depth monotonicity has a premise). Consequences: `abstieg` is stable upward (`rufAt_stabil_ab`,
-`Logik/Ruf/RufTiefe.lean`), and `vorbedingung` of a callee, `nachbedingung`, `invariante`,
-`schleife`, `vorzustand`, `bereich` are discharged by `KoerperGutS`/`InvGutS`. It does **not**
-close the `rufAt` ↔ machine G item: those differ in the *world* the body runs from (contract
-reads), not in a handler's answers.
-
-### 6.10 A device chain
-
-`korrOk` carries three of the five hardware forms (`Stmt.regWrite`, `Block.regRead`,
-`Block.regReadElse`): *if the profile holds and the register answers inside its declared type,
-every run of the emitted C corresponds* — nothing about the device is claimed. The `requires …
-else` channel is the interesting one: a broken device promise becomes a **branch**, so
-`Hardware.geraet` cannot arise from it. `korrOk` gained a last parameter `GT : GerTafel D`
-(default: the empty table, under which every device row is refused, so the two closed chains
-call it unchanged). The premise "the window is mapped" cannot be an assumption of the profile (as
-an assumption it is false whenever there is a register); it moved into `EmitLay.devs` and
-`corrW`'s third clause (17 of 300 `corrW` occurrences changed). Price: `korrOk_rufAt_ohneHardware`
-now carries `GT.ein = false`. Witness `KorrespondenzGeraetZeuge.lean` carries all three forms and
-refuses seven planted defects. Corpus: 25 of 113 programs carry one of the five forms; none passed
-sieve (a).
-
-### 6.11 Sieve (d) was 60 because the guardian could not see a C type
-
-See §6.3: re-keyed by destination (return slot, fresh local, memory, parameter), 60 → 55.
-
-### 6.12 The frame at every world
-
-`Logik/Vertraege/RahmenTreu.lean`: `Treu W G σ σ' = Rahmen ∧ σ'.haelt = σ.haelt` is proved over the
-whole grammar with the third fact of `Gut` (events good, trace consistent — the only part needing
-`HeldB`) deleted from the *conclusion*. So the frame holds at **every** world (route "find a
-counterexample" was false; `List.erase` removes the first occurrence, the one `nimmt` just put
-there). `schlusssatz` clause 4e(ii) lost its hypothesis; of part 4's condition only the depth
-residue of 4e(i) remains. Witness on a locked program: `nurAbstieg_zeuge_104`.
-
-## 7. Stage (b): the concurrent C theorem, beispiele/124
-
-*2026-09-15.* Files: `CBackend/Semantik/CNebenlaeufig.lean` (generic), `Korrespondenz/Korpus/Korpus124.lean`,
-`Korrespondenz/Kette/Schlusssatz124.lean`, `CBackend/Semantik/CTicket.lean`,
-`Korrespondenz/Kette/Schlusssatz124Ticket.lean`.
-
-**7.1 Program.** Six corpus programs start more than one thread (07, 59, 108, 109, 124, 125). 124 is
-the smallest with two threads and a lock that has a G form. The exporter refused it (`LG003`, the
-`requires` of `setze`), so `kP` is hand-written from the source bodies; the source's `setze`
-contract is too weak for premise (b) as written (the release check fails for a callee answer the
-contract admits), so `kP` keeps the stronger model contract.
-
-**7.2 Semantics.** A configuration `KonfC` is the shared C state, one thread state per `Faden`,
-and the holder of each lock. A step `SchrittC` is taken by one freely chosen thread: split, leave
-the root body, call the lock primitive, or run one **synchronisation-free statement as a block**
-with the existing big-step semantics. Every schedule is a run, so it is sequentially consistent;
-blocks between synchronisation points are justified by DRF-SC and its region corollary (Adve–Hill
-1990, Boehm–Adve 2008, Batty et al. 2011). Footprints `fussR`/`fussW` name objects to call depth;
-`RennfreiC` demands conflicting steps of different threads be ordered through a lock.
-
-**7.3 Statement.** `schlusssatz_124` concludes: the start is `startC`, `Laufzeit` holds, `RennfreiC`,
-every reachable C configuration is related (`R124`) to a G machine with `Ziel`, and every
-observation of a real execution is that of a block interleaving. In the C memory: a free lock
-means `konto[0] == konto[1]` and a returned `hauptA` means `privA[0] == 7`.
-
-**7.4 Premises by name.** DRF-SC (`DRFSC E LP K0 Echt`, one proposition: the C11 DRF-SC theorem plus
-the compiler's mapping of C11 synchronisation to the hardware profile — named, not proved); thread
-creation (`FadenStartC`, the runtime); the lock primitive (`LaufzeitC.sperre`, **proved for the
-ticket lock** since §7.7, still a premise of the generic theorem); the holder releases (a property
-of the emitted program, the checker's lock discipline — the runtime does not check it,
-`gib_ohne_wache`); (a)–(d) of the goal theorem discharged inside (124 has no axiom, register or
-device).
-
-**7.5 What is proved.** Generic: a simulation certificate `SimC` lifts every C run to a G run
-(`sim_lauf`), with G's race freedom it gives `RennfreiC` (`rennfreiC_aus_sim`). For 124: `sim124`
-covers every SC run from every start the runtime premise admits; a 20-step witness shows thread 1
-blocked while thread 0 holds the lock, the race freedom order through the lock, and the final
-memory facts by the theorem.
-
-**7.6 Open, each step named.** (1) Region serialisability inside `DRFSC` needs a fine-grained C
-semantics and the commutation argument. (2) Footprint soundness in general (`FussTreu`) needs an
-access-instrumented `Exec`. (3) The run-level race-freedom conclusion at the granularity of the
-ticket lock's four instructions needs the stutter-free compression of a `LaufT` into a `LaufC`
-(index arithmetic, not written). (4) A **checker** for concurrent correspondence certificates
-(T2 for stage (b)); `sim124` is built by hand. (5) The G program from the source (parse fidelity
-has no counterpart for 124). (6) The emitted text as data: `c124` is hand-transcribed; 124 is not
-in `parseC`'s subset. (7) Semantics extensions: a lock call is a step only at the top of a root's
-continuation; foreign calls and volatile accesses are outside the direct fragment; a `forever` root
-has no step; atomics are neither exempt from `RennfreiC` nor a source of ordering.
-
-**7.7 The lock stops being a premise.** Two routes: bridge to `FifoSperre` in `Lebendigkeit.lean`
-(a predicate over infinite scheduled runs sharing no vocabulary with stage (b); not the smaller
-step) or write the ticket lock in the C semantics (four rules `zieht`, `dreht`, `tritt`, `gibt`:
-`fetch_add(&next, 1)`, spin on `load(&now) != my`, `store(&now, now + 1)`). The second was chosen.
-Proved: `TInv` survives every instruction, mutual exclusion, non-reentrancy, FIFO (`ticket_fifo`)
-and the refinement `ticketLP_sperrAbstrakt`; `schlusssatz_124_ticket` carries no lock premise. **Two
-findings, each with a witness:** the ticket lock reveals more than held-or-free
-(`ticket_mehr_als_frei`: a waiting thread can measure its queue position), so the non-interference
-entry `sperrAbstrakt_nur_eigen` is a statement about the specification, not the implementation;
-and the release performs no check (`gib_ohne_wache`): one unheld release lets the next ticket in,
-so the `.gib` half is discharged only for well-nested callers.
+See the note above; no content.
 
 ---
 
@@ -601,7 +391,7 @@ optimiser is priced per *property*, not per pass: the validator checks that the 
 the source, so the cost is the per-access memory bridge (shared with the native plan) plus loop and
 `llvm.assume` reasoning strong enough to follow optimised code. The x86-64/AArch64 agreement
 automated in `instrumente/teile/baue-llvm.sh` (run by `instrumente/pruefe-llvm.py`) is a standing falsifier for backend bugs at zero proof cost.
-Not claimed: no validated binary exists; `korrOk` is C-only; the per-access bridge is open.
+Not claimed: no validated binary exists; the per-access bridge is open.
 
 ---
 
@@ -1032,14 +822,10 @@ corpus: 170 files; lex ok 170; whole-file parse ok 170; elab ok 17; lower ok 17
 
 | Old reference in code | Now | Where it is cited |
 |---|---|---|
-| `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3 item 2 / "stage (a)" | §6 | `Korrespondenz/Allgemein/KorrespondenzAllg.lean:6`, `Kette/Schlusssatz.lean:4`, `Kette/Schlusssatz104.lean:4` |
-| §3 item 4 and §7 / "stage (b)" | §7 | `CBackend/Semantik/CNebenlaeufig.lean:4`, retired `pruefe-cformen` |
-| §1 / "section 1" (T3) | §1 | `Parser/{Lexer,Ausdruck,Anweisung}.lean`, `Korrespondenz/Zeugnis/ZeugnisStmt*.lean` |
-| §3 / "section 3" (chain count) | §6.3 | retired `zaehle-kette`, retired `pruefe-cformen` |
-| §6.4, §6.5, §6.10 | unchanged | retired `pruefe-ctext`, `KorrOkAdaequat.lean:6`, `CText104.lean:11`, `KorrespondenzGeraetZeuge.lean:27`, `Kette/Schlusssatz.lean:528` |
-| §7, §7.6 | unchanged | `Kette/Schlusssatz124.lean:4`, `Kette/Schlusssatz124Ticket.lean:4` |
-| *(no section named)* | | `Bausteine/Schablonen/Schablonen*.lean:4`, `CBackend/Semantik/CTicket.lean:4`, `CBackend/Parser/CLexer.lean:4`, `Zielsatz/Kern/Spec.lean:1140` |
-| `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §1.3, §2.1 | §9 | `Korrespondenz/Zeugnis/Zeugnis.lean:6,31`, `crates/gabbro-check/src/emit.rs:9582` |
+| `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3 item 2 / "stage (a)", §3 item 4 and §7 / "stage (b)", §6.x, §7.x | §6, §7 | removed (C backend, tag `archiv/c-emitter-2026-10-17`); Lean files that cited them were deleted |
+| §1 / "section 1" (T3) | §1 | `Parser/{Lexer,Ausdruck,Anweisung}.lean`, `Korpus/Zeugnis/ZeugnisStmt*.lean` |
+| *(no section named)* | | `Bausteine/Schablonen/Schablonen*.lean:4`, `Zielsatz/Kern/Spec.lean:1140` |
+| `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §1.3, §2.1 | §9 | `Korpus/Zeugnis/Zeugnis.lean:6,31`, `crates/gabbro-check/src/emit.rs:9582` |
 | `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` | §8 | no reader found by `grep` in `crates/ instrumente/ grammatik/` |
 
 Absorbed and safe to delete once the references above are rewritten: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`,

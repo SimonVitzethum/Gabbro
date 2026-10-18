@@ -30,22 +30,28 @@
   whose bodies pass the check, `rufAt` never ends in `hardware`, at any
   depth, from any world, with any arguments (`rufAt_ohneHardware`).
 
-  WHY IT MATTERS. The closing theorem (`Schlusssatz.lean`, plan §6.5) carries
-  the condition "the Gabbro call ends in no model error" on part 4. Neither
+  WHY IT MATTERS. A statement about a call that carries the condition "the Gabbro call ends
+  in no model error" (the closing theorem of the deleted C chain did) meets this. Neither
   the checker's Bool nor the user's duty says anything about the `hardware`
   half: `HardwareAnnahmen` (Zielsatz/Spec.lean (c)) is CONDITIONAL -- it
   constrains the oracle only *where* the raw answer fits the declared type --
   and `KoerperGutS` speaks about `logik` outcomes only. So the `hardware`
   half of the condition is not discharged by the goal theorem's premises,
   and it is discharged HERE, syntactically, for every program whose bodies
-  carry no oracle form -- which every program with a correspondence
-  certificate does (`korrOk_hardwareFrei`, KorrespondenzAllg.lean).
+  carry no oracle form (the check `hardwareFrei`).
 -/
 import Grammatik.Kern.Semantik.Semantik
 
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
+
+/-- The outcome of a call is an error: a `logik` or a `hardware` outcome. (Until 2026-10-18 this
+    lived with the C correspondence of the calls, `CFormenM.lean`.) -/
+def RufAusgang.istFehler {f : D.Fn} : RufAusgang f → Bool
+  | .logik _ => true
+  | .hardware _ => true
+  | _ => false
 
 /-! ## 1. A handler that answers no hardware outcome -/
 

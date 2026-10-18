@@ -46,13 +46,12 @@ open Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.Zielsatz.probeD_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.w1_abgelehnt
 
-/-! ## 3. Translation validation: the two closed chains and the concurrent program -/
+/-! ## 3. The corpus units: the user's logic of two real programs
 
--- Stage (a), generic, instantiated for `beispiele/104` and `beispiele/108`.
-#print axioms Gabbro.Grammatik.schlusssatz
-#print axioms Gabbro.Grammatik.Kette104.kette_104_zeuge
-#print axioms Gabbro.Grammatik.Kette108.kette_108_zeuge
+`beispiele/104` and `beispiele/108` are parsed by the Lean pipeline from their real source text and
+lowered to machine G; `NutzerPflicht` (premise (b) of the goal theorem) is proved on the parsed
+bodies. (The C correspondence chain of these units was deleted with the C emitter: tag
+`archiv/c-emitter-2026-10-17`.) -/
 
--- Stage (b): every SC-interleaved run of the emitted C of `beispiele/124`, simulated in G.
-#print axioms Gabbro.Grammatik.K124.schlusssatz_124
-#print axioms Gabbro.Grammatik.K124.schlusssatz_124_zeuge
+#print axioms Gabbro.Grammatik.Einheit104.nutzer4
+#print axioms Gabbro.Grammatik.Einheit108.nutzer8

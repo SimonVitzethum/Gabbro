@@ -104,33 +104,12 @@ suffix rule keeps `f32` literals single-rounded: `(float)0.1 == 0.1f`).
 
 ## 5. The backends
 
-**Legacy C11 backend** (`C-SPEICHERMODELL.md`): `f32 -> float`, `f64 -> double`; a per-unit prelude
-(`KOPF_GLEITKOMMA`) forbids `-ffast-math` and fixes `-ffp-contract=off`; float literals carry `f` exactly when the
-node computes in `float` (else C would lift to `double` and round twice); mixed `float`/`double` arithmetic is
-refused. The Lean C semantics holds a float as its bit pattern (`fEin`/`fAus`) and has four forms: `CX.fbin`,
-`CX.fcmp` (six comparisons, NaN unordered), `CX.fvon`, `CX.fin` (`isfinite`), computing Annex F by this model
-(`CFormenF.lean`).
-
-**`gleitkomma_ieee (u : FloatUnit)`** says: on binary32 and binary64 the float unit of the built binary computes
-exactly `cFloatBin`, `cFloatCmp`, `cFloatVonInt`, `cFloatEndlich`. It is satisfiable (`gleitkomma_ieee_annexF`),
-and `maschine_fbin/fcmp_*/fvon/fin` turn it into "the machine's result on the bits of two Gabbro values is the bits
-of Gabbro's result": the assumption is exactly the gap between Annex F and the machine, and it has one Lean name.
-
-| Emitted C | Gabbro | Lemma |
-|---|---|---|
-| `double c = a op b;` | `Block.float` | `gsem_gleit` |
-| `double c = LIT;` | `Block.floatLit` | `gsem_gleitLit` |
-| `double c = n;` | `Block.floatOf` | `gsem_gleitVon` |
-| `a < b`, `<=`, `>`, `>=` | `Expr.fllt/flle` | `ecorr_fllt/flle/flgt/flge` |
-| `if (!(x >= LO && x <= HI)) {...}` | `Block.floatNarrow` | `gsem_gleitNarrow` + `narrowCondF_ge_le` |
-| `if (!isfinite(x)) {...}` | `Block.floatNarrow` (own range) | `gsem_gleitNarrow` + `narrowCondF_endlich` |
-
-Witness: `klemmen_corr` (`CFormenFZeuge.lean`) for `beispiele/26-gleitkomma.gab`. Covered: every float operator,
-comparison, integer conversion and class test written in `double`, as a premise of the correspondence. Not
-covered: binary32 correspondence (the width cut), floats in tables or globals, NaN payloads, and the literal
-conversion beyond the per-witness bits (`kHalb_bits`). the retired `pruefe-cformen` classified float forms by `double`
-names and float literals (rows `stmt:float-decl-arith/-lit/-conv`, `stmt:float-narrow-range/-finite`,
-`expr:float-cmp`; dated uncovered rows `expr:float-lit-inline` and `stmt:float`).
+**Legacy C11 backend** (removed 2026-10-17, `C-SPEICHERMODELL.md`): `f32 -> float`, `f64 -> double`, with a
+per-unit prelude that forbade `-ffast-math` and fixed `-ffp-contract=off`. Its Lean side (the C float forms
+`CX.fbin/fcmp/fvon/fin`, the correspondence lemmas `gsem_gleit*`, `ecorr_fl*`, the witness `klemmen_corr`, and the
+named assumption `gleitkomma_ieee` over a `FloatUnit`, satisfiable by `annexF`) was deleted on 2026-10-18 with the C
+line; it lives in the tag `archiv/c-emitter-2026-10-17`. The model side (`Gleitkomma*.lean`, `GFloat`, `gleitRechne`)
+stays; the goal theorem never depended on the C-side assumption (floats beyond the kernel are the user's logic).
 
 **LLVM backend** (`LLVM-BACKEND.md`): `float`/`double` cells, hex-float literals, `fpext`/`fptrunc` between the
 widths, `Ty.fl` not built by the G exporter (direct surface lowering); range narrowing with constant or runtime

@@ -34,8 +34,8 @@ a border.
 There is one backend: **LLVM**. Checked Gabbro lowers directly to LLVM IR (x86-64 and
 AArch64), with no C, no libc and no linked runtime — locks, threads and arenas are generated
 IR over raw kernel gates ([LLVM-BACKEND](dokumente/LLVM-BACKEND.md)). The C11 emitter was
-removed on 2026-10-17 (repository tag `archiv/c-emitter-2026-10-17`; its Lean proofs stay as
-archived evidence). The backend is not verified: the final-binary refinement needs a complete
+removed on 2026-10-17 (repository tag `archiv/c-emitter-2026-10-17`, which also holds its Lean line, deleted on
+2026-10-18). The backend is not verified: the final-binary refinement needs a complete
 Lean model of the CPU, which is built on the Sail Arm specification
 ([sail-arm](https://github.com/rems-project/sail-arm)) plus a multicore memory
 model in Lean, and is not finished ([plan](ARM-PLAN.md)).
@@ -106,9 +106,7 @@ and shows its work — **every accepted program gets a Lean-checked certificate:
 The five pieces ([plan](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) §§0–5):
 **T3** Lean parser (source → `P`; items in, generics and round-trip in flight);
 **T1** model certificates per constructor; **T4** AArch64 semantics (derived
-from the Sail Arm model) and image decoding (planned — C semantics stay as
-backend evidence); **T2** final-byte correspondence validator (planned —
-`korrOk` is C-only); **T5** proof templates for runtime, entries, locks,
+from the Sail Arm model) and image decoding (planned); **T2** final-byte correspondence validator (planned); **T5** proof templates for runtime, entries, locks,
 recurring duties (register below). Concurrency reuses W / GX; the per-access
 bridge to the Arm memory model is open — a proved validator refuses bad output,
 still requiring the new validator and its proof.

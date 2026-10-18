@@ -12,7 +12,7 @@
              exactly when it holds at f (req_mitRuhe_iff), and every CALL --
              requires, body, ensures, owed invariants, at every depth -- of
              P.mitRuhe at some f behaves as the call of P at f
-             (rufAt_mitRuhe; the generic form of gPB_wie_gP, Schlusssatz104).
+             (rufAt_mitRuhe; the generic form of gPB_wie_gP).
 
   NOT here (open): the same for execEndH, the lock-aware semantics the user
   obligation KoerperGutS is stated against (it quantifies over oracles,

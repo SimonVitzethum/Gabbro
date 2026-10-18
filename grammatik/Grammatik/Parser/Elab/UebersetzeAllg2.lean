@@ -17,7 +17,7 @@
   theorem chaining all stages for 104.
 -/
 import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Korrespondenz.Korpus.Export108
+import Grammatik.Korpus.Programme.Export108
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 

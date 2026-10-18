@@ -33,7 +33,7 @@
 
   NOT proved: the switch itself (`metall_schalte`, `start.S`: the register file and stack as the
   hardware keeps them -- wall D of `messung/C3-WAENDE.md`), the C11 orderings of the join word,
-  and the queue lock (the runtime-internal ticket lock of `CTicket.lean`, held with IF = 0, so
+  and the queue lock (the runtime-internal ticket lock, held with IF = 0, so
   the two queue operations below run one at a time per core).
 
   No `sorry`, no `native_decide`, no new axiom; each theorem has a witness instantiating ALL its

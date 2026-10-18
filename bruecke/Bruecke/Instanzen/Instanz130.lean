@@ -106,33 +106,20 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
   nutzer_aus_quelle pflichten h
 
-/-! CHAIN-GENERIC beispiele/130-derived-contract-pure.gab kette_130
+/-! BRIDGE-GENERIC beispiele/130-derived-contract-pure.gab acceptance
 
-    P4: the closed translation-validation chain of `beispiele/130`, assembled by the GENERIC
-    `ketteAllg` (`Quelle.lean`): no tables, so the emitter's layout is empty; premise (b) is
-    `nutzer_aus_quelle`. What the instance adds is WITNESS data only: the checker's Bool (a
-    computation) and the certificate literal `gabbro corr-lean` printed (checked by `korrOk`). -/
+    The checker's Bool on the unit the front end builds from `quelle` (no tables: the carriers
+    enumeration is empty), by computation. -/
 
 def P130 : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u) :=
   ((lowerAllg u).toOption.get low_ok).1
 
 theorem ht : u.tabellen = [] := rfl
 
-/-- Pasted from `gabbro corr-lean beispiele/130-derived-contract-pure.gab`, generic section. -/
-def zert130 : KCert (declOf u) :=
-  [{ params := [(0, .int false .w32), (1, .int false .w32)], locals := [], rows := [GRow.ret (some ((.int false .w32), (.bin .add CIT.u32 (.var 0) (.var 1))))], vm := [0, 1], pp := [], ks := [] }]
-
 theorem akz130 : akzeptiert_pruefer.akzeptiert (einheitAllg u P130 (pflichten_null pflichten uebersetzt))
     (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht).1 = true := by decide
 
-theorem zert130_ok : korrOk (emitLayLeer u ht) fnNr zert130 P130 (aufzFn u).1 = true := by decide
-
-/-- **THE CLOSED CHAIN OF `beispiele/130`**: source text, checker Bool, GabbroV's duties, the
-    correspondence to the C -- every field a theorem. -/
-def kette_130 : Kette quelle := ketteAllg pflichten uebersetzt ht zert130 akz130 zert130_ok
-
 #print axioms pflichten
 #print axioms nutzer
-#print axioms kette_130
 
 end Gabbro.Bruecke.I130

@@ -9,13 +9,13 @@
   over `GenErreichbar` -- no such state-level lemma existed before, only
   the run-level `ForeignExclusion`); a leaf step of a thread not holding
   `L` then leaves the slots of an `L`-guarded table unchanged
-  (`blatt_erhaelt_slots` from CSLInvariante.lean) and the globals of an
+  (`blatt_erhaelt_slots` from `Ressourceninvariante.lean`) and the globals of an
   `L`-guarded global unchanged (`blatt_erhaelt_globs`, proved here as the
   global mirror). Take/release steps keep memory by construction.
 -/
 import Grammatik.Kern.Semantik.Maschine
-import Grammatik.CBackend.Semantik.CSLInvariante
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante
+import Grammatik.Korpus.Referenz.ReferenzB
 import Grammatik.Nebenlaeufigkeit.Allgemein.WacheGlobal
 
 namespace Gabbro.Grammatik

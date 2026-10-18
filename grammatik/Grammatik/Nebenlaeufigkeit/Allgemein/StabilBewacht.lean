@@ -27,7 +27,7 @@
   slot 5, a different slot of the same shared table.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 
 namespace Gabbro.Grammatik
 

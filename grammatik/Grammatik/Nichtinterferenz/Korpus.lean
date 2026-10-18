@@ -24,8 +24,8 @@
   (`dokumente/NICHTINTERFERENZ.md`, §9).
 -/
 import Grammatik.Nichtinterferenz.Zeuge
-import Grammatik.Korrespondenz.Korpus.Export104
-import Grammatik.Korrespondenz.Korpus.Export108
+import Grammatik.Korpus.Programme.Export104
+import Grammatik.Korpus.Programme.Export108
 import Grammatik.Nebenlaeufigkeit.Sperren.ExportSperre
 import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
 

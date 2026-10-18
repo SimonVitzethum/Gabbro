@@ -15,9 +15,51 @@
   a second semantics: it applies the SAME `schritt` to the SAME states.
 -/
 import Grammatik.Kern.Semantik.Semantik
-import Grammatik.CBackend.Formen.CFormenI
 
 namespace Gabbro.Grammatik.GabbroV.GvTraversal
+
+open Gabbro.Grammatik
+
+/-! ## 0. The schedule of a `traverse`, as numbers
+
+    (These two facts about `alleIndizes` lived in `CFormenI.lean`, the C correspondence of the
+    forms, deleted with the C emitter; they are statements about the model's own schedule.) -/
+
+/-- The indices a `traverse` visits, as numbers: `0, 1, …, count - 1`. -/
+theorem alleIndizes_n (n : Int) :
+    (alleIndizes n).map Zahl.n = (List.range n.toNat).map (fun k : Nat => (k : Int)) := by
+  unfold alleIndizes
+  rw [List.map_filterMap]
+  have hgen : ∀ (l : List Nat), (∀ k ∈ l, k < n.toNat) →
+      l.filterMap (fun (k : Nat) =>
+        (if h : ((k : Nat) : Int) ≤ n - 1 then
+          some (⟨((k : Nat) : Int), by omega, h⟩ : Zahl 0 (n - 1)) else none).map Zahl.n) =
+      l.map (fun k : Nat => (k : Int)) := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons a l ih =>
+        intro hl
+        have ha := hl a (List.mem_cons_self ..)
+        rw [List.filterMap_cons, dif_pos (by omega)]
+        simp only [Option.map_some, List.map_cons]
+        rw [ih (fun k hk => hl k (List.mem_cons_of_mem _ hk))]
+  exact hgen _ (fun k hk => List.mem_range.mp hk)
+
+theorem alleIndizes_get (n : Int) (j : Nat) (hj : j < (alleIndizes n).length) :
+    ((alleIndizes n)[j]).n = j := by
+  have h := alleIndizes_n n
+  have hj' : j < ((alleIndizes n).map Zahl.n).length := by simpa using hj
+  have e1 : ((alleIndizes n).map Zahl.n)[j] = ((alleIndizes n)[j]).n := List.getElem_map ..
+  rw [← e1]
+  have hj'' : j < ((List.range n.toNat).map (fun k : Nat => (k : Int))).length := by
+    rw [← h]; exact hj'
+  have e2 : ((alleIndizes n).map Zahl.n)[j] =
+      ((List.range n.toNat).map (fun k : Nat => (k : Int)))[j] := by
+    simp only [h]
+  rw [e2]
+  simp
+
 
 /-! ## 1. The visited set: what "covered" means
 

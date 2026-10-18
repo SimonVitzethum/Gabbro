@@ -19,7 +19,7 @@
   `laufzeit_vor_neu`).
 -/
 import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 
 namespace Gabbro.Grammatik
 

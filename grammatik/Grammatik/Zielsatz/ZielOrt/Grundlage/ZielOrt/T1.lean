@@ -50,7 +50,7 @@
 import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
 import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
 import Grammatik.Logik.Ruf.Hoare.HoareRuf
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre
 
 namespace Gabbro.Grammatik

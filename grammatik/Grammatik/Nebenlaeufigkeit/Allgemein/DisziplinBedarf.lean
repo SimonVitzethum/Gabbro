@@ -15,7 +15,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Korrespondenz.Allgemein.ReferenzB
+import Grammatik.Korpus.Referenz.ReferenzB
 
 namespace Gabbro.Grammatik
 

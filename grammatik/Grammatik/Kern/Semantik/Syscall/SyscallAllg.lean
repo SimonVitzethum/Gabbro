@@ -18,8 +18,8 @@
     `SyscallPaarung.lean` paired through `Arm.schreibAbiArm` (number 64), next to the x86 one.
 
   NOT done here (see the CUTS at the end): the Rust exporter `lean_g.rs` still names x86 registers;
-  `CloneHandoff.lean`'s `CloneAbi` is untouched (it imports machine G); `CloneAbiG` restates its
-  shape generically (the x86 embedding IS proved, in `CloneHandoff.lean` §3b: `cloneAbi_good_iff`).
+  `CloneAbiG` states the generic clone shape (the x86-specific `CloneAbi` and its embedding
+  `cloneAbi_good_iff` lived in `CloneHandoff.lean`, deleted 2026-10-18 with the C backend).
 -/
 import Grammatik.Kern.Semantik.Syscall.SyscallPaarung
 import Grammatik.Kern.Semantik.Syscall.SyscallArmLinux
@@ -267,9 +267,8 @@ end Gabbro.Grammatik
      `--pruefe`); `lean_g.rs` names no register (the exporter drops the ABI, header "NO FORM").
    - `swKArm`'s kernel side restates the x86 toy kernel with another record: it proves that the
      generalisation accepts an AArch64 record, not anything about the Linux kernel.
-   - `CloneHandoff.lean` §3b embeds `CloneAbi` into `CloneAbiG SysAbi` (exact up to "`rax` is no
-     input"); the clone machine and `ChildNoReturn` do not read the record. `CloneAbiG` carries
-     the SHAPE (`N446`) only.
+   - `CloneAbiG` carries the SHAPE (`N446`) only; the clone machine and `ChildNoReturn` of the
+     deleted `CloneHandoff.lean` never read the record.
 -/
 
 #print axioms Gabbro.Grammatik.arch_gut_arm

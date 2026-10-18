@@ -8,7 +8,7 @@
   to the semantics. Every lemma below is proved in Lean 4.33.1 over a
   small SELF-INVENTED model of the template named in its doc comment;
   these models are not connected to Gabbro's semantics (`execStmt` /
-  `execEnd`, `World`, `EmitLay`), so they prove nothing about any
+  `execEnd`, `World`), so they prove nothing about any
   Gabbro program. The semantics-tied versions live in
   `Grammatik/SchablonenT5Sem.lean`. Every lemma comes with a
   `NAME_zeuge` that instantiates ALL premises JOINTLY on concrete

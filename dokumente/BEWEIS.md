@@ -270,7 +270,7 @@ recorded `axiom`, `dma_inhalt`, is outside the goal's axiom set).
 | progress, time | `Logik/Fortschritt/` (`KostenG`, `Lebendigkeit`, `Folge`, `Fortschritt`) |
 | noninterference | `Nichtinterferenz/` (11 files, ≈4 150 lines) |
 | floats, arenas, templates | `Bausteine/Gleitkomma`, `Bausteine/Arena`, `Bausteine/Schablonen` |
-| legacy C backend proofs | `CBackend/` (forms, parser, `Semantik/`: `CSemantik`, `CSpeicher`, `CTicket`, `CNebenlaeufig`, `CloneHandoff`), `Korrespondenz/` (the closing theorem, chain instances for 104 and 108) |
+| C backend proofs | deleted 2026-10-18 (tag `archiv/c-emitter-2026-10-17`); the reference fixtures and corpus units that sat beside them are `Korpus/` |
 | source → model | `Parser/` (the Lean parser, T3), `GabbroV/` (the GabbroV side, see `GABBROV.md`) |
 | generated per program | `Zertifikat/` |
 
@@ -408,11 +408,10 @@ sense even where no data flows); one labelling with an auditor domain above both
 **Premises, counted:** `flussB` is checker-decidable from labels; the enumerations are
 exporter facts; the hardware entries (`GutO`, `RegLokal`, `OrakelTreu`) and the scheduler class
 are named assumptions; **user logic: none** — a program need not be verified to be isolated,
-only labelled and checked. For the C: the runtime list is one structure, `LaufzeitC`
-(`CBackend/Semantik/CNebenlaeufig.lean`); the ticket lock *is* proved to be the abstract lock
-(`CTicket.lean`: exclusion, FIFO), but the old entry "reveals only held or free" is **false** of it
+only labelled and checked. For the C line (deleted 2026-10-18, tag `archiv/c-emitter-2026-10-17`): the ticket lock was proved to be the
+abstract lock (exclusion, FIFO), but the old entry "reveals only held or free" was **false** of it
 (a waiter can measure its queue position), and "release only one's own" is a checker guarantee,
-not a runtime one. Carrying a *pair* of runs to C needs two facts not proved. Comparison with
+not a runtime one. Carrying a *pair* of runs to C needed two facts not proved. Comparison with
 seL4's confidentiality proof: seL4 proves one kernel for a static schedule; here the metatheorem
 holds for every program of the language over G, and does not reach the code.
 
@@ -501,15 +500,13 @@ invariant hangs on a template.
 ## E2. The route to the machine
 
 *Backend truth (2026-10-17).* The LLVM backend is current (`gabbro llvm`, `gabbro llvm-cert`,
-see `LLVM-BACKEND.md`); the C11 emitter is deprecated (2026-10-15) and stays building where it
-builds. The target-level proof — source → model → machine code of AArch64 or x86-64 — needs a
+see `LLVM-BACKEND.md`); the C11 emitter was removed (2026-10-17, final). The target-level proof — source → model → machine code of AArch64 or x86-64 — needs a
 complete Lean model of the CPU and the per-access bridge from the target's memory model to W/GX
 (`PLAN-UEBERSETZUNGSVALIDIERUNG.md`, `TODO.md` §5); it is not started and nothing here claims
-it. The C-level proofs (`CBackend/`, chain instances 104 and 108) are legacy evidence: the
-sequential stage is closed for those two programs, the concurrent stage (`LaufzeitC`: thread
-creation, the lock primitive, DRF-SC) is proved as theorems about named assumptions and the
-ticket lock. The retired `zaehle-kette` counted closed chains and the retired `pruefe-cformen` classified
-every emitted C form as lemma / assumption / uncovered (at the 2026-09-26 audit: 51 / 4 / 27).
+it. The C-level proofs (`CBackend/`, the chain instances for 104 and 108, `LaufzeitC`) were deleted
+on 2026-10-18 with the C backend; they live in the tag `archiv/c-emitter-2026-10-17`. The retired `zaehle-kette`
+counted closed chains and the retired `pruefe-cformen` classified every emitted C form as lemma /
+assumption / uncovered (at the 2026-09-26 audit: 51 / 4 / 27); both measured the removed C line.
 
 ## Item 2 — which C (legacy C lowering)
 

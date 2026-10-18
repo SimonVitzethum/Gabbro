@@ -31,7 +31,7 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
  3. Interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37).
  4. Termination, waiting bounds and fairness, stack depth, floats beyond the IEEE kernel.
  5. Benchmark against GCC `-O3`: only after the compiler lowers much more and strong optimisation is in (Simon).
- 6. Housekeeping: C remnants (C templates in `schablonen.rs`, Lean folder `CBackend`, 13 compiler warnings), file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`), the old Isabelle `.thy` set.
+ 6. Housekeeping: C remnants (C templates in `schablonen.rs`; the Lean folder `CBackend` and the C correspondence chain were deleted 2026-10-18), 13 compiler warnings, file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`), the old Isabelle `.thy` set.
  7. DONE 2026-10-18 (Simon's decision): comments as in most languages. `//` to end of line, nesting `/* */` (depth counter), `///` doc comment as trivia (`Token.doku`, `lexDoku`; `////` is ordinary); the `--` comment is removed everywhere; an open `/* ` is `L008`. Lean first (`Parser/Lex/Lexer.lean`, `LexerDoku.lean`: `lex_ohne_doku`), then `lex.rs`, then ~1270 `.gab`/`.gabi` files and the doc blocks rewritten (SATZKARTE 83). Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
 
 ---
@@ -117,14 +117,13 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
 - **Legacy-Bereinigung, Stand 2026-10-17 abends:** `cnamen.rs`, `N041`/`N046`/`N052` mit Sätzen und 17 Gift-Proben und 42 tote
   Funktionen/Konstanten in Quelltext und Tests sind entfernt. Offen: 13 Compiler-Warnungen in `llvm.rs`/`nulpfad.rs`/
   `certstmt.rs` (zwei unerreichbare Muster, darunter der Verbund-Init für Konstanten, nie gelesene Felder), die
-  C-Schablonen in `schablonen.rs`, der Lean-Ordner `CBackend` (17 Lean-Module außerhalb hängen daran),
+  C-Schablonen in `schablonen.rs`, der Lean-Ordner `CBackend` (gelöscht 2026-10-18, mit der C-Korrespondenzkette; Tag `archiv/c-emitter-2026-10-17`),
   Kommentare mit `emit.rs`/C11. (Ursprüngliche Liste:
 - **Legacy-Bereinigung (feste Regel 2026-10-17: kein Legacy in Compiler, Prüfer, Parser).** Gemessen in `crates/`:
   C11 in 79 Zeilen (23 Dateien), `emit.rs`/`gabbro emit` in 172 Zeilen (38 Dateien, meist Kommentare),
   C-Namensregeln (`cnamen.rs`, `erzeugernamen.rs`, `N041`-Familie), C-Schablonen in `schablonen.rs`,
   `certstmt.rs`, `E247`-Hinweis auf C-Gründe, `retired`-Codes (16 Zeilen). Alles entfernen, nicht
-  umbenennen. Offene Entscheidung: gilt `grammatik/Grammatik/CBackend` (22 233 Zeilen, archivierte C-Kette) als Legacy
-  des Modells?
+  umbenennen. Entschieden (Simon, 2026-10-18): `grammatik/Grammatik/CBackend` (22 233 Zeilen, archivierte C-Kette) ist Legacy des Modells und wurde gelöscht.
 
 - **Wächter-Reste (vier Wächter seit 2026-10-17).** `bruecke/` wird nicht gemessen (sein `lake build`
   scheitert am fehlenden `mathlib`-Eintrag); der baumweite `gabbro prove`-Lauf und der E1-Vergleich

@@ -32,9 +32,9 @@ a remote build machine, this file wins for execution.*
 2. **Only if both say yes:** transfer everything into the checker (Rust `crates/gabbro-check`)
    and the emitter (`emit.rs`).
 3. **Then:** translation validation, i.e. source → model → direct x86-64 machine bytes,
-   checked in Lean (selected target since Simon's decision, 2026-10-01). The current C11 backend
-   and its existing validation proofs remain legacy evidence; no direct x86 backend is yet
-   implemented. Reuse W / GX for concurrency and prove the per-access x86-TSO bridge.
+   checked in Lean (selected target since Simon's decision, 2026-10-01). The C11 backend and its
+   validation proofs were removed (2026-10-17 and 2026-10-18; tag `archiv/c-emitter-2026-10-17`); no
+   direct x86 backend is yet implemented. Reuse W / GX for concurrency and prove the per-access x86-TSO bridge.
 
 **Where this stands (2026-09-15):**
 
@@ -48,7 +48,7 @@ a remote build machine, this file wins for execution.*
 
 **What may be said:** "The goal theorem is proved over the model, with a witness and
 non-degeneracy." **What may NOT be said:** "Gabbro is verified." The checker inside the statement
-is the Lean Bool `Akzeptiert`, not the Rust checker, and the bridge to the C is only partly built.
+is the Lean Bool `Akzeptiert`, not the Rust checker, and no bridge to any binary is built.
 The [proof-status section](README.md#5-proved-and-not-proved) says exactly this; keep it that way.
 
 ## 2. The goal theorem — what a newcomer must know
@@ -119,8 +119,8 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 - **The C emitter is REMOVED** (Simon, 2026-10-17, final). LLVM (`llvm.rs`, `llvm/`) is the
   only backend; `gabbro build` drives it (checker, IR, `opt`, `llc`, `ld.lld`) and refuses
   module/kmod/metal products by name. The last tree with the C emitter carries the tag
-  `archiv/c-emitter-2026-10-17`; the Lean proofs under `grammatik/Grammatik/CBackend` stay as
-  archived evidence. Orientation stays: checker + Lean model; no construct is shaped for a
+  `archiv/c-emitter-2026-10-17`, which also holds its Lean line (`grammatik/Grammatik/CBackend`
+  and the C correspondence chain, deleted 2026-10-18). Orientation stays: checker + Lean model; no construct is shaped for a
   backend, and a form LLVM cannot lower is refused by name (`Y1xx`). This entry wins wherever
   older notes still orient work on C emission (`emit.rs`, `C001`, `pruefe-emission.sh`).
 - **Direction change: AArch64 instead of x86-64** (Simon, 2026-10-07). All work on the x86-64
@@ -231,10 +231,9 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 - **Everything new is modelled in Lean before it is merged** (Simon, 2026-09-30): every new
   construct, runtime primitive, template or binding form gets its machine-G semantics and checker
   side with `gabbro_ziel` still proved (a reviewed `Spec.lean` diff if the statement moves), the
-  Lean front end and exporter, GabbroV's `Body` model with the bridge simulation, and a C
-  correspondence lemma or proved template for every new emitted form of the current C backend.
-  For the selected direct x86 target, require the analogous correspondence through decoded final
-  machine bytes, including concurrency; a C lemma alone does not discharge it. Without its Lean
+  Lean front end and exporter, and GabbroV's `Body` model with the bridge simulation. (The C
+  correspondence lemma that stood here lapsed with the C emitter.) For the selected direct x86
+  target, require the correspondence through decoded final machine bytes, including concurrency. Without its Lean
   part a feature stays unmerged (`NEEDS LEAN`).
 - **The operating system is user logic, never an assumption, and nothing is OS-specific**
   (Simon, 2026-09-30): a system or kernel call is a generic call whose contract the program or
@@ -433,8 +432,8 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 |---|---|
 | The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (review target), `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean` |
 | Model | `RufMaschineG.lean` (machine G), `Semantik.lean` (`execEnd`, `rufAt`), `SperreBeweis.lean`, `Lebendigkeit.lean`, `Gleitkomma*.lean`, `EinpassenVoll.lean`, `AntwortOrte.lean`, `Nichtinterferenz/` |
-| Translation validation | Active target: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 (source → final x86 bytes, W / GX reuse). Existing C proof record: `Schlusssatz104.lean` (first chain), `Schlusssatz.lean` + `KorrespondenzAllg.lean` (stage (a) generic, `korrOk`), `Kette104*.lean`, `Kette108.lean`, `CNebenlaeufig.lean` + `Schlusssatz124.lean` + `Korpus124.lean` (stage (b)), `CFormen*.lean`, `CSpeicher.lean`, `CSemantik.lean`, `Parser/` (T3) |
-| Plans | `dokumente/BEWEIS.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 historical C record), `dokumente/PRUEFER.md`, `dokumente/BEWEIS.md`, `GLEITKOMMA.md` |
+| Translation validation | Active target: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 (source → final x86 bytes, W / GX reuse). The C proof record (C correspondence chain) was deleted on 2026-10-18 (tag `archiv/c-emitter-2026-10-17`); present: `Parser/` (T3), `Parser/Elab/UebersetzePipeline.lean`, `Korpus/` (reference fixtures, corpus units `Einheit104/108`, model certificates `Zeugnis/`) |
+| Plans | `dokumente/BEWEIS.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 removed, C backend), `dokumente/PRUEFER.md`, `dokumente/BEWEIS.md`, `GLEITKOMMA.md` |
 | Theorem map | `dokumente/SATZKARTE.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
 | Known absences | `TODO.md` (O1–O14) |
 | Verdicts | `dokumente/BEWEIS.md` part C (one table); the old reports are in Git |
