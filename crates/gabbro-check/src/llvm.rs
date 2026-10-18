@@ -601,6 +601,8 @@ struct Senke<'a> {
     gkonst: BTreeMap<String, (u64, bool)>,
     arenen: BTreeMap<String, ArenaInfo>,
     braucht_assume: bool,
+    /// The loud trap of `falle` is the generic `llvm.trap` intrinsic (no ISA instruction).
+    braucht_trap: bool,
     braucht_fabs: bool,
     beleg_typen: Vec<(String, String)>,
     beleg_annahmen: Vec<String>,
@@ -636,10 +638,20 @@ struct Senke<'a> {
     /// Qualified names of the functions whose WRITABLE pointer parameters carry `noalias`
     /// beyond `own` (`noalias_innen`).
     noalias_innen: BTreeSet<String>,
+    /// Facts handed to LLVM, counted per kind (`nuw`, `nsw`, `inbounds`, `nounwind`, ...).
+    /// Written as `; gabbro-fact KIND N` lines at the end of the IR.
+    fakten: BTreeMap<&'static str, u64>,
     /// `asm`-Rümpfe (Vollname → fertige Funktion, `llvm/assembler.rs`).
     asm_defs: BTreeMap<String, assembler::Def>,
     /// `asm`-Rümpfe für die andere Maschine (Vollname → Kurzname, Maschine, Stelle).
     fremde_asm: BTreeMap<String, (String, String, Span)>,
+}
+
+impl Senke<'_> {
+    /// Book one fact handed to LLVM (kind counted, see `fakten`).
+    fn fakt(&mut self, art: &'static str) {
+        *self.fakten.entry(art).or_insert(0) += 1;
+    }
 }
 
 fn gname(n: &str) -> String {
@@ -1928,6 +1940,16 @@ fn gemein_int(a: &Wert, b: &Wert) -> Option<(u32, Zeichen)> {
     }
 }
 
+/// Which no-wrap flag the operands justify: `nuw` when both known signs are unsigned, `nsw`
+/// when both are signed, none when the two differ or neither sign is known.
+fn nowrap_flag(a: Zeichen, b: Zeichen) -> Option<&'static str> {
+    match (a, b) {
+        (Zeichen::U, Zeichen::U) | (Zeichen::U, Zeichen::Egal) | (Zeichen::Egal, Zeichen::U) => Some("nuw"),
+        (Zeichen::S, Zeichen::S) | (Zeichen::S, Zeichen::Egal) | (Zeichen::Egal, Zeichen::S) => Some("nsw"),
+        _ => None,
+    }
+}
+
 fn senke_binaer(
     k: &mut Koerper,
     op: BinOp,
@@ -2044,19 +2066,39 @@ fn senke_binaer(
             return None;
         }
     };
+    let flag = nowrap_flag(va.zeichen, vb.zeichen);
     let xa = angleiche(k, va, &LlTyp::Int(w), z)?;
     let xb = angleiche(k, vb, &LlTyp::Int(w), z)?;
     let t = k.tmp();
     let signed = z == Zeichen::S;
+    // Plain `+ - *` carry `nuw`/`nsw`: the checker (M104) refuses every sum, difference or
+    // product that could leave the operands' width, so no value of such an operation wraps.
+    // The wrapping forms (`+% -% *%`) carry no flag.
+    let mit = |k: &mut Koerper, wrap: bool| -> &'static str {
+        match (wrap, flag) {
+            (false, Some("nuw")) => {
+                k.s.fakt("nuw");
+                " nuw"
+            }
+            (false, Some(_)) => {
+                k.s.fakt("nsw");
+                " nsw"
+            }
+            _ => "",
+        }
+    };
     match op {
         BinOp::Plus | BinOp::PlusWrap => {
-            k.zeile(&format!("{t} = add i{w} {}, {}", xa.text, xb.text));
+            let f = mit(k, matches!(op, BinOp::PlusWrap));
+            k.zeile(&format!("{t} = add{f} i{w} {}, {}", xa.text, xb.text));
         }
         BinOp::Minus | BinOp::MinusWrap => {
-            k.zeile(&format!("{t} = sub i{w} {}, {}", xa.text, xb.text));
+            let f = mit(k, matches!(op, BinOp::MinusWrap));
+            k.zeile(&format!("{t} = sub{f} i{w} {}, {}", xa.text, xb.text));
         }
         BinOp::Mal | BinOp::MalWrap => {
-            k.zeile(&format!("{t} = mul i{w} {}, {}", xa.text, xb.text));
+            let f = mit(k, matches!(op, BinOp::MalWrap));
+            k.zeile(&format!("{t} = mul{f} i{w} {}, {}", xa.text, xb.text));
         }
         BinOp::Geteilt => {
             let m = if signed { "sdiv" } else { "udiv" };
@@ -2458,8 +2500,10 @@ fn adresse_von_ort_mit(k: &mut Koerper, ort: &Ort, port_ok: bool) -> Option<Adre
                             continue;
                         }
                         let t = k.tmp();
+                        // M4 (M103): the index of a fixed array is proven below its length.
+                        k.s.fakt("inbounds");
                         k.zeile(&format!(
-                            "{t} = getelementptr {}, ptr {cur}, i32 0, {} {}",
+                            "{t} = getelementptr inbounds {}, ptr {cur}, i32 0, {} {}",
                             ll.text(),
                             ii.typ.text(),
                             ii.text
@@ -4486,11 +4530,10 @@ fn senke_grow(k: &mut Koerper, g: &GrowStmt, span: Span) {
 /// Seitenwirkung, die kein Pass entfernen oder durchschauen kann; das
 /// `unreachable` dahinter ist dann wahrhaftig unerreichbar.
 fn falle(k: &mut Koerper) {
-    if k.s.ziel.name == "x86_64" {
-        k.zeile("call void asm sideeffect \"ud2\", \"~{memory}\"()");
-    } else {
-        k.zeile("call void asm sideeffect \"brk #1\", \"~{memory}\"()");
-    }
+    // The generic intrinsic: every LLVM target lowers it to its own trapping instruction,
+    // and no pass removes it (it has a side effect). No per-architecture text here.
+    k.s.braucht_trap = true;
+    k.zeile("call void @llvm.trap()");
     k.zeile("unreachable");
     k.beendet = true;
 }
@@ -6050,6 +6093,7 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         gkonst: BTreeMap::new(),
         arenen: BTreeMap::new(),
         braucht_assume: false,
+        braucht_trap: false,
         braucht_fabs: false,
         beleg_typen: Vec::new(),
         beleg_annahmen: Vec::new(),
@@ -6071,6 +6115,7 @@ fn neue_senke<'a>(absagen: &'a mut Absagen, ziel: &'static Ziel) -> Senke<'a> {
         meta_nr: 0,
         eng_modus: true,
         noalias_innen: BTreeSet::new(),
+        fakten: BTreeMap::new(),
         asm_defs: BTreeMap::new(),
         fremde_asm: BTreeMap::new(),
     }
@@ -6106,6 +6151,9 @@ pub fn emittiere_llvm_mit_beleg(
     if s.braucht_assume {
         let _ = writeln!(aus, "declare void @llvm.assume(i1 noundef)");
     }
+    if s.braucht_trap {
+        let _ = writeln!(aus, "declare void @llvm.trap() cold noreturn nounwind");
+    }
     if s.braucht_fabs {
         let _ = writeln!(aus, "declare float @llvm.fabs.f32(float)");
         let _ = writeln!(aus, "declare double @llvm.fabs.f64(double)");
@@ -6114,6 +6162,9 @@ pub fn emittiere_llvm_mit_beleg(
     aus.push_str(&s.helfer);
     for (nr, def) in &s.meta_knoten {
         let _ = writeln!(aus, "!{nr} = {def}");
+    }
+    for (art, n) in &s.fakten {
+        let _ = writeln!(aus, "; gabbro-fact {art} {n}");
     }
     if s.mit_eintritt {
         aus = eintritte::ohne_rote_zone(&aus);

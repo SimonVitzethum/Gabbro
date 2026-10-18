@@ -34,7 +34,7 @@ Deklaration.tabNr	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layout
 Deklaration.Glob	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
 Deklaration.decGlob	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.gtyp	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
-Deklaration.nutzlast	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Empty payload supported; nonempty publish payload refused.
+Deklaration.nutzlast	LOWERED	crates/gabbro-check/src/llvm.rs::sammle	Payload stores are ordered by the release store of the flag, the acquire load orders the payload loads (llvm/publizieren.rs; messung/llvm/nachricht.gab on both targets).
 Deklaration.atomar	LOWERED	crates/gabbro-check/src/llvm.rs::sammle	Atomic words/arrays with declared orderings.
 Deklaration.geteilt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.ggeteilt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
@@ -155,15 +155,15 @@ Stmt.onTag	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on suppor
 Stmt.onWhy	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.call	LOWERED	crates/gabbro-check/src/llvm/stackless.rs::lower	Direct and compatible indirect cycles use explicit frames and a loop dispatcher; pure tail cycles use jumps.
 Stmt.callInd	LOWERED	crates/gabbro-check/src/llvm/stackless.rs::lower	Direct and compatible indirect cycles use explicit frames and a loop dispatcher; pure tail cycles use jumps.
-Stmt.locks	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_sperrt	Exclusive locks supported; shared acquisition and interrupt masking refused.
+Stmt.locks	LOWERED	crates/gabbro-check/src/llvm.rs::senke_sperrt	Exclusive, shared (reader/writer, llvm/leser_schreiber.rs) and `masks irqs` locks (llvm/masken.rs: save, mask, restore the SAVED state); a lock masking another word is refused by name (Y102).
 Stmt.breaking	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.traverse	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.retry	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
 Stmt.forever	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.
-Stmt.axiomCall	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_tor_ruf	Direct gates supported; stack-carrying, paired and unbound gates remain refused.
+Stmt.axiomCall	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_tor_ruf	Direct, errno and stack-carrying gates supported (llvm/stapeltor.rs); paired and unbound gates remain refused by name (Y102).
 Stmt.regWrite	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	No G Reg exporter path; volatile surface devices are a separate supported representation.
 Stmt.transition	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	No G Reg exporter path; volatile surface devices are a separate supported representation.
-Stmt.publish	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_publish	Payload-free release supported; payload hand-off is refused (Y103).
+Stmt.publish	LOWERED	crates/gabbro-check/src/llvm.rs::senke_publish	Release store of the flag; a payload hand-off is the payload stores before it (llvm/publizieren.rs).
 Stmt.advances	ERASED	crates/gabbro-check/src/llvm.rs::senke_stmt	Checked proof bookkeeping, absent from runtime bytes.
 Stmt.retires	ERASED	crates/gabbro-check/src/llvm.rs::senke_stmt	Checked proof bookkeeping, absent from runtime bytes.
 Stmt.ret	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Lowered on supported carriers; nested blocks retain their control flow.

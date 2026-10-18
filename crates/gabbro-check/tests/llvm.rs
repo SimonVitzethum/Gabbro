@@ -458,7 +458,7 @@ fn freigabe_als_liste() {
 /// **Fäden sind echt (keine direkten Rufe).** `start` senkt je Wurzel `clone`
 /// plus Futex-Join mit globalem Fertig-Wort (`gabbro_faden_N_*`, nie
 /// rahmen-relativ) -- auf beiden Zielen, ohne `llvm.assume`-gefaltete
-/// Fehlerprüfung (laute Fallen: `ud2`/`brk`).
+/// Fehlerprüfung (laute Fallen: der generische `llvm.trap`, kein ISA-Befehl im Erzeuger).
 #[test]
 fn faden_sind_echt() {
     let quelle = std::fs::read_to_string(wurzel().join("1162-echte-faeden.gab"))
@@ -470,6 +470,7 @@ fn faden_sind_echt() {
         assert!(ir.contains("load atomic i32") && ir.contains(" acquire"), "kein atomarer Join auf {}:\n{ir}", ziel.name);
         assert!(ir.contains("faden_joined"), "kein Join auf {}:\n{ir}", ziel.name);
         assert!(!ir.contains("llvm.assume"), "gefaltete Prüfung auf {}:\n{ir}", ziel.name);
+        assert!(ir.contains("call void @llvm.trap()"), "keine laute Falle auf {}:\n{ir}", ziel.name);
     }
 }
 
