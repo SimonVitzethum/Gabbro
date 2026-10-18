@@ -152,6 +152,6 @@ rules('grammatik/Grammatik/Bausteine/Arena', [
 # Inside `Struktur`: the executed forms and the recognizer family get their own sub-folders (room for the 20-entry limit,
 # 2026-10-18, Phase A third pass).
 rules('grammatik/Grammatik/Bausteine/Arena/Struktur', [
-    (r'^Arena(AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Form\w+)$', 'Formen'),
+    (r'^Arena(AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Form\w+|HashForm|HashZug|HashZeuge|SibForm|SibZug)$', 'Formen'),
     (r'^Arena(Erk\w*)$', 'Erkenner'),
 ])

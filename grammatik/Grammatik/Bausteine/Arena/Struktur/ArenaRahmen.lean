@@ -15,6 +15,12 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- A store into one table leaves every slot of every other table. -/
+theorem World.slots_schreibSlot_andere_tabelle (σ : World D) (t t' : D.Tab) (Λ : List (Res D)) (k : Int)
+    (f : D.Feld t) (v : Wert D (D.typ t f)) (k' : Int) (f' : D.Feld t') (h : t' ≠ t) :
+    (σ.schreibSlot t Λ k f v).slots t' k' f' = σ.slots t' k' f' := by
+  simp only [World.schreibSlot, World.merke, World.storeSlot, dif_neg h]
+
 /-- **The frame of a run:** link fields outside `fs` and link heads outside `gs` read as before. -/
 structure LinkRahmen (A : FreiForm D) (fs : List (D.Feld A.tab)) (gs : List D.Glob) (σ σ' : World D) : Prop where
   feld : ∀ C : LinkFeld A, C.f ∉ fs → C.wert σ' = C.wert σ

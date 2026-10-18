@@ -259,7 +259,8 @@ theorem linkUnlink_ausfuehren
       k.n = L.wert σ (ρ.get p).n ∧ G.st σ' = G.st σ ∧
       L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) ∧
       (∀ j, j ≠ (ρ.get p).n → L.wert σ' j = L.wert σ j) ∧
-      A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
+      A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ ∧
+      (∀ t' : D.Tab, t' ≠ A.tab → ∀ (k : Int) (f : D.Feld t'), σ'.slots t' k f = σ.slots t' k f) := by
   have hk : (0 : Int) ≤ L.wert σ (ρ.get p).n ∧ L.wert σ (ρ.get p).n ≤ D.count A.tab - 1 :=
     ⟨(Wert.umTyp L.hf (σ.slots A.tab (ρ.get p).n L.f)).lo_le, by omega⟩
   simp only [Block.linkUnlink, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte]
@@ -276,9 +277,10 @@ theorem linkUnlink_ausfuehren
       List.append_nil, LinkKopf.st_schreibSlot, LinkKopf.st_lese, LinkFeld.wert_lese,
       A.kopfSt_schreibSlot, FreiForm.naechst_lese, FreiForm.kopfSt_lese, ArenaForm.stand_lese,
       ArenaForm.stand_schreibSlot, A.naechst_schreibSlot_ne _ _ _ _ _ L.h2, Env.get_cons_there, Env.get_cons_here]
-    refine ⟨trivial, ?_, fun j hj => ?_, trivial, fun _ => trivial, trivial⟩
+    refine ⟨trivial, ?_, fun j hj => ?_, trivial, fun _ => trivial, trivial, fun t' ht' k f => ?_⟩
     · exact L.wert_schreibSlot_selbst _ _ _ _
     · exact L.wert_schreibSlot_anderer _ _ _ _ _ hj
+    · exact World.slots_schreibSlot_andere_tabelle _ _ _ _ _ _ _ _ _ ht'
 
 /-- **`pop` on an empty list takes its `else`:** nothing moves but the recorded read. -/
 theorem linkPop_voll
@@ -417,7 +419,7 @@ theorem liste_unlink_zug
       ¬ Auf (D.count A.tab) (L.wert σ') (G.st σ') k.n ∧ A.Lebt σ' k.n ∧
       L.wert σ' (ρ.get p).n = L.wert σ (L.wert σ (ρ.get p).n) ∧
       (∀ j, Auf (D.count A.tab) (L.wert σ') (G.st σ') j → Auf (D.count A.tab) (L.wert σ) (G.st σ) j) := by
-  obtain ⟨σ', k, he, hrm, hkn, hg, hnp, ho, hk, hn, hs⟩ :=
+  obtain ⟨σ', k, he, hrm, hkn, hg, hnp, ho, hk, hn, hs, -⟩ :=
     linkUnlink_ausfuehren O passes R L G p hwT hLT voll rest σ ρ hi
   obtain ⟨h1, h2, h3⟩ := liste_unlink A L G hl _ hp hi hk hn hs hg hnp ho
   exact ⟨σ', k, he, hrm, hkn, h1, A.freiOk_gleich hk hn hs hok, A.lebt_gleich hk hn hs, hkn ▸ h2, hkn ▸ h3, hnp,

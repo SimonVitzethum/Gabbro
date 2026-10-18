@@ -369,6 +369,13 @@ import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallSchleife
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeBaum
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeSchleife
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
+import Grammatik.Bausteine.Arena.Struktur.ArenaBaumUnter
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashForm
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashZug
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashZeuge
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibForm
+import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibZug
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeSib
 import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
 import Grammatik.Bausteine.Arena.Struktur.ArenaHash
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
