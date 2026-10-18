@@ -280,6 +280,7 @@ def declOf (u : UProg) : Deklaration where
   aerg := fun a => (uaxAt u a).res
   aschreibt := fun _ _ => false
   agschreibt := fun _ _ => false
+  agruende := fun a => (uaxAt u a).gruende
   Reg := Empty
   rtyp := fun e => nomatch e
   rklasse := fun e => nomatch e

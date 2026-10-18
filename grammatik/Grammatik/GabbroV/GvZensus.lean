@@ -320,7 +320,7 @@ def befundeFn (consts : List (String × Int))
     `elabU` stages; cascades documented in CUTS). -/
 def befundeElab (ms : List SItemTief) : List Befund :=
   let consts := uConstsRech (uKonstFns ms) ms []
-  let alias := uAliase ms
+  let alias := uAliase ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
   let tabs := sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ => some n | _ => none)) ms
   let tabOk := werte tabs
   let globR := uGlobs consts alias ms

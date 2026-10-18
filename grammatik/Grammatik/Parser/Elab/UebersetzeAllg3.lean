@@ -338,6 +338,8 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
+  | _, _, _ + 1, _, _, .bindAxElse .. :: _ =>
+    .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
     | .error e => .error e
@@ -674,6 +676,16 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
   | _, _, _ + 1, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, n + 1, Λ, pe, .bindAxElse y c args e :: rest =>
+    match lowAxKopf u caller Γ fn Λ c args with
+    | .error err => .error err
+    | .ok k =>
+      if hr : 0 < (declOf u).agruende k.ax then
+        withAxErg u k.ax (fun _ => .error "call without a value") fun τ hE =>
+          match lowEndL (l := l) u caller (Ty.why ((declOf u).agruende k.ax) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).agruende k.ax)) n Λ pe [] with
+          | _ => .error "lower: a let else in an else branch has no G form here"
+      else .error "lower: let else of a foreign call without a reason channel"
   | _, _, _ + 1, _, _, .bindElse .. :: _ =>
     .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
@@ -821,6 +833,26 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
   | _, _, _ + 1, .bindElse .. :: _, _ =>
     .error "lower: a let else at the top level of a body has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, .bindAxElse y c args e :: rest, r =>
+    match lowAxKopf u caller Γ fn (resOf u caller) c args with
+    | .error err => .error err
+    | .ok k =>
+      if hr : 0 < (declOf u).agruende k.ax then
+        withAxErg u k.ax (fun _ => .error "call without a value") fun τ hE =>
+          match lowEndL (l := false) u caller (Ty.why ((declOf u).agruende k.ax) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).agruende k.ax)) blockFuel (resOf u caller) (some ⟨rfl⟩) rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: rest') =>
+            match lowBodyF u caller (τ :: Γ) (fn.mitTy y τ) n rest' r with
+            | .error err => .error err
+            | .ok ee =>
+              .ok (Endblock.bindAxiomElse (D := declOf u) k.ax k.args hE hr
+                (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+                (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+                (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
+                (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) errb ee)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: let else of a foreign call without a reason channel"
   | Γ, fn, n + 1, (.matchTagBeg sidx m bs) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.matchTagBeg sidx m bs) rest with
     | .error err => .error err
