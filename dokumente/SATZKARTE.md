@@ -5164,7 +5164,7 @@ NOT proved: the memory forms sampling and the page return; indirect calls; `bind
 
 ## 79. Invariants over live slots: `ListOk`, `BaumOk` and the allocator (Phase A step 2, 2026-10-18, `PLAN-DYNAMISCH.md` 8a.1)
 
-`grammatik/Grammatik/Bausteine/Arena/Struktur/` (ArenaKette, ArenaBaum, ArenaLebt, ArenaFremd, ArenaListe, ArenaBaumWelt, ArenaDynZeuge; second pass below: ArenaAuf, `Formen/` ArenaAllocForm, ArenaLinkForm, ArenaBaumForm, ArenaWachs, ArenaFormZeuge, `Erkenner/` ArenaErkenner, ArenaErkennerLemmas, ArenaErkennerBeweis, ArenaErkennerZeuge, ArenaSibling, ArenaHash; third pass below: ArenaRahmen, ArenaBaumWurzel, ArenaBaumUnter, `Formen/` ArenaBaumFormG, ArenaBaumFormZug, ArenaSibForm, ArenaSibZug, ArenaHashForm, ArenaHashZug, ArenaHashZeuge, `Erkenner/` ArenaDekl, ArenaErkFallAlloc, ArenaErkFallListe, ArenaErkFallBaum, ArenaErkFallSchleife, ArenaErkEnde, ArenaErkZeugeBaum, ArenaErkZeugeKombi, ArenaErkZeugeSchleife, ArenaErkZeugeSib, ArenaErkZeugeEnde).
+`grammatik/Grammatik/Bausteine/Arena/Struktur/` (ArenaKette, ArenaBaum, ArenaLebt, ArenaFremd, ArenaListe, ArenaBaumWelt, ArenaDynZeuge; second pass below: ArenaAuf, `Formen/` ArenaAllocForm, ArenaLinkForm, ArenaBaumForm, ArenaWachs, ArenaFormZeuge, `Erkenner/` ArenaErkenner, ArenaErkennerLemmas, ArenaErkennerBeweis, ArenaErkennerZeuge, ArenaSibling, ArenaHash; third pass below: ArenaRahmen, ArenaBaumWurzel, ArenaBaumUnter, `Formen/` ArenaBaumFormG, ArenaBaumFormZug, ArenaSibForm, ArenaSibZug, ArenaHashForm, ArenaHashZug, ArenaHashZeuge, `Erkenner/` ArenaDekl, ArenaErkFallAlloc, ArenaErkFallListe, ArenaErkFallBaum, ArenaErkFallSchleife, ArenaErkEnde, ArenaErkZeugeBaum, ArenaErkZeugeKombi, ArenaErkZeugeSchleife, ArenaErkZeugeSib, ArenaErkZeugeEnde; step 3 below: `Sperre/` ArenaSperreTraeger, ArenaSperreOhne, ArenaSperreAbschnitt, ArenaSperreRuf, ArenaSperreMaschine, ArenaSperreInv, ArenaSperreWelt, ArenaSperreZeuge, ArenaSperreWachs, ArenaSperreWachsZeuge, ArenaSperreBruecke, ArenaSperreMaschZeuge).
 Links are indices into one arena table, `count` is the nil marker. A slot is LIVE when it is below the used counter and
 not on the free list (`Lebt`). `ListOk`/`BaumOk` say: the chain/tree from the head/root exists (finite, links in range),
 its slots are pairwise distinct (acyclic list, tree shape) and every one is live.
@@ -5218,3 +5218,21 @@ slot of a revoked subtree (only the cut and the release of one orphan are proved
 (`SibOk`/`HashOk` have executed forms and witnesses only: the recognizer's `haengen` does not track the parent store); `leave`/`next` in loop
 bodies; a copy of an owned index (alias) and any other store into a link field have no derivation; concurrency (design note 8a.2). These
 modules are not imported by `Zielsatz/`; `Spec.lean` unchanged; `gabbro_ziel` untouched.
+
+Step 3 (2026-10-18, `PLAN-DYNAMISCH.md` 8a.2; sub-folder `Sperre/`, 12 modules; they import `Spec.lean`, nothing in `Zielsatz/` imports them): a SHARED arena is a lock invariant.
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `Dekl.orte`, `lesGlobs`; **`ok_gleich_wort`** (`Dekl.Ok` reads only table + `lesGlobs`: premise `dekl_ok_traeger`), `ok_spur`; the lock family `Dekl.sperr K L0` (`inv L0 = Dekl.Ok`), `sperr_inv_iff'`, `sperr_lokal` (= `SperrInvLokal`), `sperr_ok` (= `SperrInvOk`) | `ArenaSperreTraeger` | `Bewacht c L0` for every arena carrier (the checker's `sperrOrte`) |
+| `Rein.ohneLocks`, `erk_ohneLocks`, `erkE_ohneLocks`, `erkE_execEndH`, `erk_execBlockH`, `erk_erhaeltH`, **`erkE_koerperH`** (the soundness theorems over `execBlockH`/`execEndH`) | `ArenaSperreOhne` | `K.Ok` at entry |
+| `freiH_post`; **`abschnitt_erk`** (inline section), `abschnitt_start`; `Rufe`, `RErhaelt`, `rufe_post`, **`abschnitt_rufe`** (call section) | `ArenaSperreAbschnitt` | `HavocOk (K.sperr L) U`; the body is `Erk K Abs.leer` / a run of recognized calls |
+| **`rufAt_erk`** | `ArenaSperreRuf` | the callee's body is `ErkE K Abs.leer`; the world at the call meets `K.Ok` |
+| `arena_ruhe`, `arena_wechsel`, `arena_sicht`, `komm_nur_halter`, `arena_ziel` (the legs `sperrInv`/`sperrWechsel`/`sperrSicht` of `Ziel` for `S := K.sperr L`) | `ArenaSperreMaschine` | the legs |
+| `lesGlobs_ne_komm`, **`grow_ok_iff`, `grow_atomar`**, `komm_wachstum`, **`grow_gesperrt`** | `ArenaSperreWachs` | the commit fits (`narrow`'s guard); `0 ≤ n` for monotonicity |
+| `InvHaeltD2`, `InvAmRueckD2`, `InvGutSM`, `invGutS_iff_M`, **`invGutSD2_arena`**, `invGutSD2_ohne` | `ArenaSperreInv` | owed arena invariants have `ErkE`; the arena is whole at entry (`hein`); the user's obligation for the others |
+| **`erkE_maschine`** | `ArenaSperreBruecke` | `EndR A (Tief P A n) b` (coverage) and `ErkE K Abs.leer b` (certificate); the thread's world meets `K.Ok` at entry; the machine premises of `rufG_adaequat_ruf` |
+| witnesses: `FDL`/`KLL`/`w0L`/`ok_w0L`/`sperr_ok_zeuge`; `havoc_U0`, `abschnitt_zeuge`, `erk_nimmPushL`; `grow_zeuge_L`, `grow_ueber_decke`; `erkE_maschine_zeuge`, `rErhaelt_PL`, `abschnitt_rufe_zeuge`, `abschnitt_rufe_lauf`; planted defects: `stray_bricht`, `abschnitt_defekt_schleife` (the release check fires), `stray_abgelehnt` (no derivation), `stray_kein_havoc`; planted gap `wachs_negativ_schrumpft` | `ArenaSperreWelt`, `ArenaSperreZeuge`, `ArenaSperreWachsZeuge`, `ArenaSperreMaschZeuge` | none |
+
+NOT proved in step 3 (named in `PLAN-DYNAMISCH.md` 8a.2/8a.3): the ABA ownership predicate; the commit bound `stand <= komSt` in the lock invariant (`Erk.wachs` accepts `n < 0`, the recognized alloc is guarded by `hi`
+not `komSt`); the footprint of a pure `pop`/`wurzelAus` (`schuldet` counts tables only); the arena at ENTRY of a writer (premise `hein`); the machine correspondence of writers with loops and of `Erk` ⊆ `EndR`;
+the migration D1 (analysed, not built); the exporter; `Spec.lean` unchanged, the diff D1-D5 stays a proposal.

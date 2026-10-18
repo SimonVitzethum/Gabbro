@@ -13,7 +13,7 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
 **Phase A: dynamic data structures and their invariants** (plan: `dokumente/PLAN-DYNAMISCH.md` section 8a; covers O4-O6, O11, O14, O20, O29).
  1. `free`/`grow` as G blocks over the arena sugar; free-list invariant (`ArenaFrei.lean` is built, phase 1 part one).
  2. Invariants over live slots: links in range, acyclic along a walk, tree shape (capability tree), freelist disjoint from live slots; preservation theorems with witnesses and counter-models. DONE in Lean (2026-10-18, third pass, `PLAN-DYNAMISCH.md` 8a.1, SATZKARTE 79): list, tree and BOTH on one arena as ONE recognizer `Erk K` (guarded tree forms, disjointness of the two structures, loops `forever`/`traverse`/`retry`, function bodies `ErkE`), executed forms for the parent store, `revoke` of a subtree and bucket heads in a table field (`BaumOk`/`SibOk`/`HashOk` kept on executed blocks), witnesses run on real worlds and planted defects. Open: wiring the recognizer into `Akzeptiert` (8a.3, revised proposal: an arena as an invariant name, the `ErkE` derivation a certificate in the unit), the exporter for these forms, calls inside writers, the release of a whole revoked subtree, recognizers for hash chains and the sibling demand.
- 3. Concurrency of arenas (O20): `grow` as a locked commit.
+ 3. Concurrency of arenas (O20): `grow` as a locked commit. DONE in Lean (2026-10-18, `PLAN-DYNAMISCH.md` 8a.2, SATZKARTE 79 step 3): a shared arena IS the lock invariant (`Dekl.sperr`), the section theorem (`abschnitt_erk` inline, `abschnitt_rufe` call form, `rufAt_erk`), `grow_atomar`/`grow_gesperrt`/`komm_nur_halter`, the machine bridge `erkE_maschine` (loop-free writers), `invGutSD2_arena` (D3 against the proposed meaning D2), `ok_gleich_wort` (`dekl_ok_traeger`), `erkE_execEndH`; witnesses, planted defects. Open: the ABA ownership predicate, the commit bound (`Erk.wachs` accepts `n < 0`, no `dynFrisch` form), the footprint of a pure `pop` (`schuldet` counts tables only: a DECISION for step 4), the arena at writer entry, loops in the machine bridge, the migration D1 (needs `Syntax.lean` split and a full rebuild).
  4. `Spec.lean` diff (dynamic structures and table/group invariants leave NOT CLAIMED; `invRuhe`/`invSicht` non-vacuous), `gabbro_ziel` re-proved, two independent verdicts.
  5. Exporter/elaboration, then checker (O11), then the three examples (list, tree, hash chain) with certificates and poison probes.
  Open decisions: first structures (recommended list and tree), links as indices in one arena (recommended), `free` across function boundaries (follows the `own` boundary rule).
@@ -83,7 +83,10 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
   C realisiert kein Maskieren (nichts für die Validierungskette);
   Re-Entry und Handler-auf-Handler draußen; `H102` feuert nur auf `via idt`.
 - **O20 (Arenen unter Nebenläufigkeit).** Generationen und Commit-Decke nehmen
-  einen Kontrollfaden und einmal betretene Wurzeln an.
+  einen Kontrollfaden und einmal betretene Wurzeln an. Seit 2026-10-18 (Lean, Phase A Schritt 3) ist eine
+  geteilte Arena die Sperrinvariante (`Dekl.sperr`), der Abschnittssatz steht (`abschnitt_erk`/`abschnitt_rufe`),
+  `grow` ist ein gesperrter, unsichtbarer Commit (`grow_atomar`); offen: ABA-Besitzprädikat, Commit-Schranke,
+  Fußabdruck von `pop` (`schuldet`), Eintrittsfakt eines Schreibers.
 - **O21 (`child` ohne Modell).** Der Kind-Faden existiert im Prüfer; sein Code
   zwischen Torruf und Region ist für das Kind ungeprüft.
 - **O23 (Tor-Vorbedingungen nicht im Ziel).** NUL-Pfad und Rahmenlänge sind
