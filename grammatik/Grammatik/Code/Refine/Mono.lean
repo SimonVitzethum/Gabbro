@@ -167,6 +167,17 @@ theorem payCode_mono {top : Int} {W L : Nat} {lo hi : Int} {ov : Opd} {r : Nat} 
   · simp at h
 
 /-- **Registers only go up.** -/
+theorem numCode_mono {lo hi : Int} {W L i : Nat} {oe : Opd} {r : Nat} :
+    r ≤ (numCode lo hi W L i oe r).2.2 := by
+  unfold numCode
+  rcases hc : cvt (Ar.wid lo hi) W (decide (lo < 0)) oe r with ⟨c1, o1, r2⟩
+  have := cvt_mono (Ar.wid lo hi) W (decide (lo < 0)) oe r
+  rw [hc] at this
+  simp only at this ⊢
+  omega
+
+mutual
+
 theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : GTy} (e : Expr D Γ Λ τ) (r : Nat) (c : LR),
       lowerE lay cenv e r = some c → r ≤ c.2.2
@@ -498,8 +509,11 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
         simp only at m1 ⊢
         omega
       · simp at h
-  | _, _, _, .case .., r, c, h => by
-      simp [lowerE] at h
+  | _, _, _, .case cs i nutz, r, c, h => by
+      simp only [lowerE] at h
+      split at h
+      · exact lowerNutz_mono lay cenv _ _ _ nutz r c h
+      · simp at h
   | _, _, _, .why .., r, c, h => by
       simp only [lowerE] at h
       split at h
@@ -511,6 +525,30 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp [lowerE] at h
   | _, _, _, .reaches .., r, c, h => by
       simp [lowerE] at h
+
+theorem lowerNutz_mono (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+      (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (r : Nat) (c0 : LR),
+      lowerNutz lay cenv W L i nutz r = some c0 → r ≤ c0.2.2
+  | _, _, _, .empty, r, c0, h => by
+      simp only [lowerNutz, Option.some.injEq] at h
+      subst h
+      exact Nat.le_refl _
+  | _, _, _, .num (lo := lo) (hi := hi) e, r, c0, h => by
+      simp only [lowerNutz] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp [he] at h
+      have m1 := lowerE_mono lay cenv e r _ he
+      simp only [he] at h
+      rcases hn : numCode lo hi W L i oe r1 with ⟨cn, on, r2⟩
+      have m2 := numCode_mono (lo := lo) (hi := hi) (W := W) (L := L) (i := i) (oe := oe) (r := r1)
+      rw [hn] at m2 h
+      simp only [Option.some.injEq] at h
+      subst h
+      simp only at m1 m2 ⊢
+      omega
+
+end
 
 theorem lowerArgs_mono (lay : Layout D) (cenv : List Reg) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List GTy} (args : Args D Γ Λ τs) (r : Nat)

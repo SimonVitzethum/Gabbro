@@ -151,6 +151,17 @@ def slotAddr (lay : Layout D) (t : D.Tab) (f : D.Feld t) (base : Opd) (iτ : GTy
     | none => none
   else none
 
+/-- The word of a tagged value of case `i` whose payload is a number in `lo .. hi`, from the operand `oe`
+    that holds the payload (`Lower/Sum.lean`): the payload moved to the width `W` of the word, minus
+    `lo`, times the number of cases `L`, plus `i`; all modulo `2^W`, and the word is below that. -/
+def numCode (lo hi : Int) (W L i : Nat) (oe : Opd) (r : Nat) : LR :=
+  match cvt (Ar.wid lo hi) W (decide (lo < 0)) oe r with
+  | (c1, o1, r2) =>
+      (c1 ++ [.bin r2 .sub W o1 (.int W lo), .bin (r2 + 1) .mul W (.reg r2) (.int W (L : Int)),
+        .bin (r2 + 2) .add W (.reg (r2 + 1)) (.int W (i : Int))], .reg (r2 + 2), r2 + 3)
+
+mutual
+
 /-- **The lowering of expressions.** -/
 def lowerE (lay : Layout D) (cenv : List Reg) :
     {Γ : Ctx} → {Λ : List (Gabbro.Grammatik.Res D)} → {τ : GTy} → Expr D Γ Λ τ → Nat → Option LR
@@ -307,7 +318,24 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
   | _, _, _, .why n i, r =>
       if Ar.Fits 0 ((n : Int) - 1) 128 then some ([], .int (Ar.wid 0 ((n : Int) - 1)) (i.val : Int), r)
       else none
+  | _, _, _, .case cs i nutz, r =>
+      if Ar.Fits 0 (sumTop cs) 128 then lowerNutz lay cenv (Ar.wid 0 (sumTop cs)) cs.length i.val nutz r
+      else none
   | _, _, _, _, _ => none
+
+/-- The payload of a `case` expression, packed into the word of the value (`i` is the case number). -/
+def lowerNutz (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
+    {Γ : Ctx} → {Λ : List (Gabbro.Grammatik.Res D)} → {c : Option (Int × Int)} →
+      Gabbro.Grammatik.NutzlastExpr D Γ Λ c → Nat → Option LR
+  | _, _, _, .empty, r => some ([], .int W (i : Int), r)
+  | _, _, _, .num (lo := lo) (hi := hi) e, r =>
+      match lowerE lay cenv e r with
+      | some (ce, oe, r1) =>
+          match numCode lo hi W L i oe r1 with
+          | (cn, on, r2) => some (ce ++ cn, on, r2)
+      | none => none
+
+end
 
 /-- The lowering of the arguments of a call: the code, the operands that hold the values (their
     register images, in order), and the next free register. -/
