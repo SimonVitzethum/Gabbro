@@ -1,10 +1,10 @@
--- erwartet: N451
--- **1146 -- a caller `let` read in `grow … else` on the child path (fix lane F3, review G11 F3).**
---
--- The spill rule read the emission walker (`benutzte_namen`), which skips
--- `grow` whole: the gate answer `v` read in the failure continuation escaped
--- `N451`. The exhaustive `kindzugriff` walk reads it. (`N457` falls beside it:
--- the child commits slots of an arena the path writes, unguarded.)
+// erwartet: N451
+// **1146 -- a caller `let` read in `grow … else` on the child path (fix lane F3, review G11 F3).**
+//
+// The spill rule read the emission walker (`benutzte_namen`), which skips
+// `grow` whole: the gate answer `v` read in the failure continuation escaped
+// `N451`. The exhaustive `kindzugriff` walk reads it. (`N457` falls beside it:
+// the child commits slots of an arena the path writes, unguarded.)
 
 module gift1146 {
 

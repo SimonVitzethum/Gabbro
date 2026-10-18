@@ -1,21 +1,21 @@
--- erwartet: N481
--- 1201 -- **a spinlock over a relaxed word (OFFEN O26, Opus lane O25).**
---
--- `TOR_nimm` swaps 1 into `HALTER` with an atomic exchange (a test-and-set),
--- `TOR_gib` checks the holder entry and stores 0. Both bodies meet `N323`'s
--- three legs (they read and write a declared atomic, store no program memory,
--- call nothing) -- and the
--- lock orders NOTHING: `HALTER` is `relaxed`, so the emitter lowers the swap
--- and the store with `memory_order_relaxed`, and the next holder may see the
--- previous holder's `konto` write late or not at all (`mp_rlx_erlaubt`,
--- `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean`). The weak-memory leg of
--- the goal theorem reads every lock as a mutex (assumption (3) of
--- `Zielsatz/Spec.lean`).
---
--- `N481` refuses the take (no acquire), `N482` the give (no release); `N042`
--- refuses the C name beside `lock TOR`, as for every own primitive. The same
--- shape over an `acquire` word passes both order legs (`namen.rs` snippet
--- test `geordneter_spinlock_besteht`).
+// erwartet: N481
+// 1201 -- **a spinlock over a relaxed word (OFFEN O26, Opus lane O25).**
+//
+// `TOR_nimm` swaps 1 into `HALTER` with an atomic exchange (a test-and-set),
+// `TOR_gib` checks the holder entry and stores 0. Both bodies meet `N323`'s
+// three legs (they read and write a declared atomic, store no program memory,
+// call nothing) -- and the
+// lock orders NOTHING: `HALTER` is `relaxed`, so the emitter lowers the swap
+// and the store with `memory_order_relaxed`, and the next holder may see the
+// previous holder's `konto` write late or not at all (`mp_rlx_erlaubt`,
+// `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean`). The weak-memory leg of
+// the goal theorem reads every lock as a mutex (assumption (3) of
+// `Zielsatz/Spec.lean`).
+//
+// `N481` refuses the take (no acquire), `N482` the give (no release); `N042`
+// refuses the C name beside `lock TOR`, as for every own primitive. The same
+// shape over an `acquire` word passes both order legs (`namen.rs` snippet
+// test `geordneter_spinlock_besteht`).
 
 module gift::entspannter_spinlock {
 

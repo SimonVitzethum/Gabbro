@@ -1,9 +1,9 @@
--- erwartet: Hinweis M114
--- **`maintains` an einer Funktion, die nichts schreibt.**
---
--- Was nichts schreibt, erhaelt jede Invariante -- vom Rahmen geschenkt. Die Zusage ist damit
--- leer, und sie steht trotzdem im Zeugnis und in der ABI. Ein HINWEIS und kein Fehler: das
--- Programm ist richtig, die Zeile ist bloss unbezahlt.
+// erwartet: Hinweis M114
+// **`maintains` an einer Funktion, die nichts schreibt.**
+//
+// Was nichts schreibt, erhaelt jede Invariante -- vom Rahmen geschenkt. Die Zusage ist damit
+// leer, und sie steht trotzdem im Zeugnis und in der ABI. Ein HINWEIS und kein Fehler: das
+// Programm ist richtig, die Zeile ist bloss unbezahlt.
 module gift::maintains_ohne_schreiben {
 
 table T count 16 {

@@ -1,8 +1,8 @@
--- erwartet: O001
--- **Gift 72 -- ein `advances` auf eine Stufe, die die Marke nicht hat.**
---
--- Ein Tippfehler in einer Stufe waere sonst eine stille Zusage ueber nichts: der Pass wuesste
--- nicht, worauf er pruefen soll, und liesse durch.
+// erwartet: O001
+// **Gift 72 -- ein `advances` auf eine Stufe, die die Marke nicht hat.**
+//
+// Ein Tippfehler in einer Stufe waere sonst eine stille Zusage ueber nichts: der Pass wuesste
+// nicht, worauf er pruefen soll, und liesse durch.
 
 module gift72 {
 

@@ -1,8 +1,8 @@
--- 05 -- Nebenlaeufigkeit: die Nutzlast steht am Store, nicht im Kommentar.
---
--- **`publishes` ist Pflicht an jedem Atomic.** Ordering wird nicht deklariert, sondern
--- GEPAART: `publishes` am Schreiber, `awaits` am Leser. Ein Zaehler ohne Nutzlast schreibt
--- `publishes nothing` -- und das ist ein Wort, kein leeres Listenloch.
+// 05 -- Nebenlaeufigkeit: die Nutzlast steht am Store, nicht im Kommentar.
+//
+// **`publishes` ist Pflicht an jedem Atomic.** Ordering wird nicht deklariert, sondern
+// GEPAART: `publishes` am Schreiber, `awaits` am Leser. Ein Zaehler ohne Nutzlast schreibt
+// `publishes nothing` -- und das ist ein Wort, kein leeres Listenloch.
 
 module beispiel::nebenlaeufigkeit {
 
@@ -11,32 +11,32 @@ const NKERNE : u32 = 64;
 type KernIdx  = u32 in 0 ..< NKERNE;
 type FadenIdx = u32 in 0 .. 1023;
 
--- `rank` gibt die Sperrordnung: Nehmen verlangt echt kleineren Rang, und daraus faellt
--- Deadlockfreiheit. `held` ist die deklarierte Haltezeit -- ohne sie ist die Sperre in
--- einer Dienstschleife nicht nehmbar.
+// `rank` gibt die Sperrordnung: Nehmen verlangt echt kleineren Rang, und daraus faellt
+// Deadlockfreiheit. `held` ist die deklarierte Haltezeit -- ohne sie ist die Sperre in
+// einer Dienstschleife nicht nehmbar.
 lock KAPPEN  protects { eintraege }        rank 0 held <= 400 ops masks irqs;
 lock SPEICHER protects { freiliste }       rank 1 held <= 200 ops;
--- **`lock BERICHT protects { farbbericht }` stand hier bis zum 2026-08-17 -- und wurde
--- nirgends genommen.** `farbbericht` ist ueber die Paarung synchronisiert
--- (`publishes { farbbericht }` am Release-Speichern, `awaits { farbbericht }` am
--- Acquire-Laden), nicht ueber eine Sperre. **Zwei Mechanismen fuer denselben Platz, und
--- einer davon war Zierde.**
---
--- Gefunden hat es `H007` bei seinem ERSTEN Korpuslauf, `H008` bestaetigt es von der anderen
--- Seite. *Eine `protects`-Klausel, die niemand einhaelt, ist schlimmer als keine: sie sieht
--- aus wie eine Zusage und ist eine Behauptung.*
+// **`lock BERICHT protects { farbbericht }` stand hier bis zum 2026-08-17 -- und wurde
+// nirgends genommen.** `farbbericht` ist ueber die Paarung synchronisiert
+// (`publishes { farbbericht }` am Release-Speichern, `awaits { farbbericht }` am
+// Acquire-Laden), nicht ueber eine Sperre. **Zwei Mechanismen fuer denselben Platz, und
+// einer davon war Zierde.**
+//
+// Gefunden hat es `H007` bei seinem ERSTEN Korpuslauf, `H008` bestaetigt es von der anderen
+// Seite. *Eine `protects`-Klausel, die niemand einhaelt, ist schlimmer als keine: sie sieht
+// aus wie eine Zusage und ist eine Behauptung.*
 
 atomic FARBE_FERTIG : bool release;
 atomic TIEFE_MAX    : u64 relaxed;
 atomic BESITZER     : u32 acquire;
 
--- Sammelwerte ohne CAS-Schleife: je Kern eine Zelle, Zusammenfuehrung beim Lesen ueber
--- die NCORES-beschraenkte Schleife. Kein CAS, keine unbegrenzte Schleife.
--- **`per cpu NKERNE` fehlte hier, und `NKERNE` steht seit jeher sechsundzwanzig Zeilen
--- weiter oben** (2026-08-20). Die Absenkung ist eine Zelle je Kern; wie viele Kerne es gibt,
--- stand in der Deklaration nicht -- also gab es keine. `beispiele/23`, die Datei ueber
--- `accumulates`, schreibt die Klausel; diese hier, die das Konstrukt nur BENUTZT, vergass
--- sie. *Der Erzeuger hat den Unterschied gefunden, kein Leser.*
+// Sammelwerte ohne CAS-Schleife: je Kern eine Zelle, Zusammenfuehrung beim Lesen ueber
+// die NCORES-beschraenkte Schleife. Kein CAS, keine unbegrenzte Schleife.
+// **`per cpu NKERNE` fehlte hier, und `NKERNE` steht seit jeher sechsundzwanzig Zeilen
+// weiter oben** (2026-08-20). Die Absenkung ist eine Zelle je Kern; wie viele Kerne es gibt,
+// stand in der Deklaration nicht -- also gab es keine. `beispiele/23`, die Datei ueber
+// `accumulates`, schreibt die Klausel; diese hier, die das Konstrukt nur BENUTZT, vergass
+// sie. *Der Erzeuger hat den Unterschied gefunden, kein Leser.*
 accumulates hoechststand : u64 merge max per cpu NKERNE;
 accumulates fehlerzahl   : u32 merge add per cpu NKERNE;
 
@@ -48,7 +48,7 @@ impl fn bericht_veroeffentlichen(wert : u64)
     costs   <= 8 ops
 {
     farbbericht = wert;
-    -- Die Nutzlast wird dort genannt, wo sie entsteht, mit den dort sichtbaren Indizes.
+    // Die Nutzlast wird dort genannt, wo sie entsteht, mit den dort sichtbaren Indizes.
     FARBE_FERTIG = true publishes { farbbericht };
 }
 
@@ -56,7 +56,7 @@ impl fn bericht_lesen() -> u64
     effects { reads FARBE_FERTIG, reads farbbericht }
     costs   <= 8 ops
 {
-    -- Die Gegenseite der Paarung: `awaits` nennt, was mit dem Laden sichtbar wird.
+    // Die Gegenseite der Paarung: `awaits` nennt, was mit dem Laden sichtbar wird.
     let fertig = FARBE_FERTIG awaits { farbbericht };
     if fertig {
         return farbbericht;
@@ -64,7 +64,7 @@ impl fn bericht_lesen() -> u64
     return 0;
 }
 
--- Reine Zaehler haben keine Nutzlast, und das steht als Wort da.
+// Reine Zaehler haben keine Nutzlast, und das steht als Wort da.
 impl fn tiefe_melden(t : u64)
     effects { writes TIEFE_MAX }
     costs   <= 4 ops
@@ -72,27 +72,27 @@ impl fn tiefe_melden(t : u64)
     TIEFE_MAX = t publishes nothing;
 }
 
--- **Ein Zaehler braucht eine Obergrenze -- und dann eine Pruefung vor dem Erhoehen.**
--- `u64` allein heisst „bis 2^64-1"; `+ 1` verlaesst das dann, und M1 sagt es an der Zeile
--- statt im Betrieb. Mit `in 0 .. GRENZE` ist der Bereich da, aber `wert + 1` reicht bis
--- `GRENZE + 1` -- also fehlt immer noch die Pruefung. **Genau das ist der Mechanismus:**
--- M1 zwingt die Schranke IN die Deklaration und die Pruefung VOR die Rechnung.
+// **Ein Zaehler braucht eine Obergrenze -- und dann eine Pruefung vor dem Erhoehen.**
+// `u64` allein heisst „bis 2^64-1"; `+ 1` verlaesst das dann, und M1 sagt es an der Zeile
+// statt im Betrieb. Mit `in 0 .. GRENZE` ist der Bereich da, aber `wert + 1` reicht bis
+// `GRENZE + 1` -- also fehlt immer noch die Pruefung. **Genau das ist der Mechanismus:**
+// M1 zwingt die Schranke IN die Deklaration und die Pruefung VOR die Rechnung.
 const GRENZE : u64 = 0xFFFF_FFFF_FFFE;
 
 type Zaehlerwert = u64 in 0 .. GRENZE;
 
--- RMW ist die dritte Form der Paarung. `update` rechnet alt -> neu und ist rein.
---
--- **Zwei Befunde standen hier bis zum 2026-08-20, und beide kamen aus dem Erzeuger.**
---
--- 1. *Der Platz war gar kein `atomic`.* Es stand `z.wert` da -- ein Feld eines gewoehnlichen
---    Verbundes hinter einem Zeiger. Ein Lese-Aendere-Schreib-Zug auf gewoehnlichem Speicher
---    ist keine Paarung, sondern ein Wettlauf; **in der Datei ueber Nebenlaeufigkeit.** Ohne
---    Deklaration gibt es keine Ordnung, und eine zu waehlen hiesse, sie zu erfinden.
--- 2. *Die Schleife hatte keine Schranke.* `SPRACHE.md` sagt die Absenkung seit jeher -- die
---    **beschraenkte** CAS-Schleife -- und liess offen, woher `NCORES` und der Ausgang kommen.
---    Jetzt stehen beide da, in **denselben Woertern wie an einem `retry`**: es IST ein
---    `retry`, nur mit einem CAS als Rumpf.
+// RMW ist die dritte Form der Paarung. `update` rechnet alt -> neu und ist rein.
+//
+// **Zwei Befunde standen hier bis zum 2026-08-20, und beide kamen aus dem Erzeuger.**
+//
+// 1. *Der Platz war gar kein `atomic`.* Es stand `z.wert` da -- ein Feld eines gewoehnlichen
+//    Verbundes hinter einem Zeiger. Ein Lese-Aendere-Schreib-Zug auf gewoehnlichem Speicher
+//    ist keine Paarung, sondern ein Wettlauf; **in der Datei ueber Nebenlaeufigkeit.** Ohne
+//    Deklaration gibt es keine Ordnung, und eine zu waehlen hiesse, sie zu erfinden.
+// 2. *Die Schleife hatte keine Schranke.* `SPRACHE.md` sagt die Absenkung seit jeher -- die
+//    **beschraenkte** CAS-Schleife -- und liess offen, woher `NCORES` und der Ausgang kommen.
+//    Jetzt stehen beide da, in **denselben Woertern wie an einem `retry`**: es IST ein
+//    `retry`, nur mit einem CAS als Rumpf.
 atomic ZAEHLER : Zaehlerwert relaxed;
 
 extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
@@ -105,8 +105,8 @@ impl fn zaehler_erhoehen() -> Zaehlerwert
         bounded NKERNE * 4 ops
         on_exceeded zu_viel_streit
     {
-        -- V1: die Pruefung verengt `v` im Zweig danach auf `0 .. GRENZE-1`,
-        -- und damit passt `v + 1` in `0 .. GRENZE`.
+        // V1: die Pruefung verengt `v` im Zweig danach auf `0 .. GRENZE-1`,
+        // und damit passt `v + 1` in `0 .. GRENZE`.
         if v < GRENZE {
             return v + 1;
         }
@@ -115,15 +115,15 @@ impl fn zaehler_erhoehen() -> Zaehlerwert
     return alt;
 }
 
--- compare-exchange: der neue Wert gilt, WENN die Bedingung ueber dem alten haelt.
---
--- **Hier stand bis zum 2026-08-19 `publishes { farbbericht }`, und es war falsch.** Die
--- Paarung schluesselte damals nur nach der NUTZLAST: weil `bericht_lesen` irgendwo
--- `awaits { farbbericht }` sagte, galt diese Zeile als beantwortet -- **von einem anderen
--- Atomic.** Ueber `BESITZER` erwartet niemand etwas.
---
--- *Und sachlich ist `nothing` das Richtige:* dieser Tausch uebertraegt den BESITZ, nicht den
--- Farbbericht. Die Nutzlast war abgeschrieben, nicht gemeint.
+// compare-exchange: der neue Wert gilt, WENN die Bedingung ueber dem alten haelt.
+//
+// **Hier stand bis zum 2026-08-19 `publishes { farbbericht }`, und es war falsch.** Die
+// Paarung schluesselte damals nur nach der NUTZLAST: weil `bericht_lesen` irgendwo
+// `awaits { farbbericht }` sagte, galt diese Zeile als beantwortet -- **von einem anderen
+// Atomic.** Ueber `BESITZER` erwartet niemand etwas.
+//
+// *Und sachlich ist `nothing` das Richtige:* dieser Tausch uebertraegt den BESITZ, nicht den
+// Farbbericht. Die Nutzlast war abgeschrieben, nicht gemeint.
 impl fn besitz_nehmen(f : FadenIdx) -> bool
     effects { writes BESITZER, publishes BESITZER }
     costs   <= 16 ops
@@ -133,8 +133,8 @@ impl fn besitz_nehmen(f : FadenIdx) -> bool
     return genommen;
 }
 
--- Ein `locks`-Block gibt am Ende frei. Wer kopieren-und-freigeben will, tut es INNERHALB
--- und nimmt danach neu -- die Form macht das sichtbar.
+// Ein `locks`-Block gibt am Ende frei. Wer kopieren-und-freigeben will, tut es INNERHALB
+// und nimmt danach neu -- die Form macht das sichtbar.
 impl fn unter_zwei_sperren(c : ptr<normal, rw> Zelle)
     effects { writes c, locks KAPPEN, locks SPEICHER }
     costs   <= 100 ops

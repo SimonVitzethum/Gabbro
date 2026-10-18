@@ -1,9 +1,9 @@
--- erwartet: N426
--- Fix lane F2 (review G08 F1): two routines, each committing `8` into the
--- same arena. Each alone fits `max 16` over the floor `8`; both together do
--- not, and commit is a whole-run quantity (`reset` gives no page back).
--- Both roots of the call graph count, so both commits are refused -- the
--- file expects the code, and both sites carry it. Nothing else is wrong.
+// erwartet: N426
+// Fix lane F2 (review G08 F1): two routines, each committing `8` into the
+// same arena. Each alone fits `max 16` over the floor `8`; both together do
+// not, and commit is a whole-run quantity (`reset` gives no page back).
+// Both roots of the call graph count, so both commits are refused -- the
+// file expects the code, and both sites carry it. Nothing else is wrong.
 module gift::arena_grow_zwei_funktionen {
 arena A capacity 2 .. 8 max 16 of u16;
 impl fn f() -> u32 effects { writes A } costs <= 64 ops {

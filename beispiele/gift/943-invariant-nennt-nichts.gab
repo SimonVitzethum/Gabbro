@@ -1,9 +1,9 @@
--- erwartet: N277
--- **A lock invariant naming what is neither a carrier nor a constant falls.**
---
--- `NIX` is neither a protected carrier nor a named constant -- and a lock
--- declaration binds no parameters, so a body name would dangle here too.
--- N277 ALONE.
+// erwartet: N277
+// **A lock invariant naming what is neither a carrier nor a constant falls.**
+//
+// `NIX` is neither a protected carrier nor a named constant -- and a lock
+// declaration binds no parameters, so a body name would dangle here too.
+// N277 ALONE.
 module gift::invariant_nennt_nichts {
 
 const NSLOTS : u32 = 2;

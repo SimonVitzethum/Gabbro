@@ -1,15 +1,15 @@
--- erwartet: D016
--- **Eine Kette bleibt in der Tabelle, in der sie gelaufen wird.**
---
--- `nachbar : option index into Nachbarraum` ist ein tadelloses Feld und ein tadelloser
--- Optionsindex -- also faellt weder `D014` noch `D015`. Es zeigt nur HINAUS: `chain(nachbar,
--- nachbar) in c.slots[p]` laeuft in `Kappraum` und tritt beim ersten Schritt heraus.
---
--- **`D016` ist `D008` Wort fuer Wort:** eine Kante in eine fremde Tabelle ist ein
--- Fremdschluessel, und `chain(a, b) in` sagt darueber nichts. *Der Index waere dort sogar
--- typkorrekt -- er zaehlt Plaetze, nur die der falschen Tabelle.*
---
--- Gemessen in `dokumente/PRUEFER.md`.
+// erwartet: D016
+// **Eine Kette bleibt in der Tabelle, in der sie gelaufen wird.**
+//
+// `nachbar : option index into Nachbarraum` ist ein tadelloses Feld und ein tadelloser
+// Optionsindex -- also faellt weder `D014` noch `D015`. Es zeigt nur HINAUS: `chain(nachbar,
+// nachbar) in c.slots[p]` laeuft in `Kappraum` und tritt beim ersten Schritt heraus.
+//
+// **`D016` ist `D008` Wort fuer Wort:** eine Kante in eine fremde Tabelle ist ein
+// Fremdschluessel, und `chain(a, b) in` sagt darueber nichts. *Der Index waere dort sogar
+// typkorrekt -- er zaehlt Plaetze, nur die der falschen Tabelle.*
+//
+// Gemessen in `dokumente/PRUEFER.md`.
 
 module gift {
 

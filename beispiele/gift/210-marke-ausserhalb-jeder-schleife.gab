@@ -1,15 +1,15 @@
--- erwartet: S001
--- **`leave` und `next` ohne umschliessende Schleife -- an den beiden Stellen, an denen es
--- gar keine geben KANN.**
---
--- `gift/10` faengt den Fall, in dem eine Schleife da ist und die Marke die falsche nennt.
--- Hier ist ueberhaupt keine da: auf der obersten Ebene eines Funktionsrumpfes und auf der
--- obersten Ebene eines `can_fail`-Blocks steht per Konstruktion keine Marke im
--- Geltungsbereich -- **also sind das die einzigen zwei Stellungen dieser Formen, die im
--- sauberen Korpus niemals vorkommen duerfen.**
---
--- Gefunden ueber `gabbro blindstellen`, Tafel C: `leave` und `next` in den Stellungen
--- `fn body` und `can_fail` waren in beiden Korpora leer.
+// erwartet: S001
+// **`leave` und `next` ohne umschliessende Schleife -- an den beiden Stellen, an denen es
+// gar keine geben KANN.**
+//
+// `gift/10` faengt den Fall, in dem eine Schleife da ist und die Marke die falsche nennt.
+// Hier ist ueberhaupt keine da: auf der obersten Ebene eines Funktionsrumpfes und auf der
+// obersten Ebene eines `can_fail`-Blocks steht per Konstruktion keine Marke im
+// Geltungsbereich -- **also sind das die einzigen zwei Stellungen dieser Formen, die im
+// sauberen Korpus niemals vorkommen duerfen.**
+//
+// Gefunden ueber `gabbro blindstellen`, Tafel C: `leave` und `next` in den Stellungen
+// `fn body` und `can_fail` waren in beiden Korpora leer.
 module gift {
 
 static mut stand : u32 = 0;

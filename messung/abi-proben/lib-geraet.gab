@@ -1,9 +1,9 @@
--- Bibliothek B -- das Geraet. Ihr Sperrrang ist ebenfalls FUER SICH vergeben,
--- und sie hat nie von `speicher` gehoert.
--- **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
--- Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
--- exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
--- sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
+// Bibliothek B -- das Geraet. Ihr Sperrrang ist ebenfalls FUER SICH vergeben,
+// und sie hat nie von `speicher` gehoert.
+// **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
+// Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
+// exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
+// sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
 module geraet {
 
 pub const NREGISTER : u32 = 16;

@@ -360,6 +360,7 @@ def befundeElab (ms : List SItemTief) : List Befund :=
 def zeigeLexFehler : LexFehler → String
   | .unbekannt s => "unbekannt " ++ s
   | .offeneZeichenkette => "offeneZeichenkette"
+  | .offenerKommentar => "offenerKommentar"
   | .zahlOhneZiffern => "zahlOhneZiffern"
 
 /-- Findings of one source text: lex, then whole-parse, then collect

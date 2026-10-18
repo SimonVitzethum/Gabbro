@@ -1,9 +1,9 @@
--- erwartet: N066
--- **Gift 809 -- a binding outside the general registers has no ABI slot.**
---
--- `xmm0` is a floating-point register; no Linux syscall argument travels in
--- one. The binding names one of the sixteen general registers or nothing --
--- so the register falls, by name.
+// erwartet: N066
+// **Gift 809 -- a binding outside the general registers has no ABI slot.**
+//
+// `xmm0` is a floating-point register; no Linux syscall argument travels in
+// one. The binding names one of the sixteen general registers or nothing --
+// so the register falls, by name.
 
 module gift::syscall_fremdregister {
 

@@ -1,32 +1,32 @@
--- erwartet: H012
--- 250 -- **Der Sperrring ueber ZWEI Bibliotheken, und keine von beiden kann ihn sehen.**
---
--- Diese Datei ist die VEREINIGUNG, so wie `gabbro pruefe --with a.gabi --with b.gabi c.gab`
--- sie dem Pruefer vorlegt: zuerst die beiden Schnittstellen, dann die Einheit, die beide
--- benutzt. **Woertlich das, was `gabbro abi` schreibt** -- die zwei `module`-Bloecke oben
--- sind aus `messung/abi-proben/lib-speicher.gab` und `.../lib-geraet.gab` erzeugt, nicht
--- von Hand gesetzt. Die Zweidateienfassung steht daneben und laeuft als eigener Test
--- (`ring_ueber_zwei_bibliotheken`, `crates/gabbro-check/tests/beispiele.rs`).
---
--- `speicher` vergibt `rank 0`. `geraet` vergibt `rank 0`. **Beide fuer sich, und beide
--- richtig** -- jede Bibliothek geht allein mit null Fehlern durch. Erst der Mischer nimmt
--- `SPEICHER` aussen und `GERAET` innen, und an anderer Stelle umgekehrt: ein Ring, also
--- eine Verklemmung.
---
--- **Bis zum 2026-08-21 lief genau das mit `0 Fehler, 0 Hinweise` durch** (`dokumente/SPRACHE.md`).
--- Nicht, weil die Regel zu schwach war -- `H012` ist seit dem 2026-08-19 gebaut --, sondern
--- weil `gabbro abi` die `lock`-Zeile gar nicht mitschrieb. Die Schnittstelle trug
--- `effects { locks SPEICHER }` hinaus und die Deklaration nicht; `H012` schlug den Rang in
--- einer Tabelle nach, in der der Name fehlte, und sprang mit einem stillen `continue`
--- darueber hinweg.
---
--- > *Eine Bruecke, die Zusagen ungeprueft weiterreicht, ist keine Bruecke mit Maut,
--- > sondern eine mit offenem Schlagbaum.*
---
--- Gleicher Rang faellt hier, und das ist die richtige Antwort und nicht die bequeme: zwei
--- Sperren desselben Rangs haben KEINE Ordnung, also koennen zwei Halter sie in zwei
--- Richtungen nehmen. Dass beide Bibliotheken `0` gewaehlt haben, ist kein Zufall, sondern
--- der Normalfall -- **absolute Zahlen komponieren nicht** (siehe «ABI2» in `TODO.md`).
+// erwartet: H012
+// 250 -- **Der Sperrring ueber ZWEI Bibliotheken, und keine von beiden kann ihn sehen.**
+//
+// Diese Datei ist die VEREINIGUNG, so wie `gabbro pruefe --with a.gabi --with b.gabi c.gab`
+// sie dem Pruefer vorlegt: zuerst die beiden Schnittstellen, dann die Einheit, die beide
+// benutzt. **Woertlich das, was `gabbro abi` schreibt** -- die zwei `module`-Bloecke oben
+// sind aus `messung/abi-proben/lib-speicher.gab` und `.../lib-geraet.gab` erzeugt, nicht
+// von Hand gesetzt. Die Zweidateienfassung steht daneben und laeuft als eigener Test
+// (`ring_ueber_zwei_bibliotheken`, `crates/gabbro-check/tests/beispiele.rs`).
+//
+// `speicher` vergibt `rank 0`. `geraet` vergibt `rank 0`. **Beide fuer sich, und beide
+// richtig** -- jede Bibliothek geht allein mit null Fehlern durch. Erst der Mischer nimmt
+// `SPEICHER` aussen und `GERAET` innen, und an anderer Stelle umgekehrt: ein Ring, also
+// eine Verklemmung.
+//
+// **Bis zum 2026-08-21 lief genau das mit `0 Fehler, 0 Hinweise` durch** (`dokumente/SPRACHE.md`).
+// Nicht, weil die Regel zu schwach war -- `H012` ist seit dem 2026-08-19 gebaut --, sondern
+// weil `gabbro abi` die `lock`-Zeile gar nicht mitschrieb. Die Schnittstelle trug
+// `effects { locks SPEICHER }` hinaus und die Deklaration nicht; `H012` schlug den Rang in
+// einer Tabelle nach, in der der Name fehlte, und sprang mit einem stillen `continue`
+// darueber hinweg.
+//
+// > *Eine Bruecke, die Zusagen ungeprueft weiterreicht, ist keine Bruecke mit Maut,
+// > sondern eine mit offenem Schlagbaum.*
+//
+// Gleicher Rang faellt hier, und das ist die richtige Antwort und nicht die bequeme: zwei
+// Sperren desselben Rangs haben KEINE Ordnung, also koennen zwei Halter sie in zwei
+// Richtungen nehmen. Dass beide Bibliotheken `0` gewaehlt haben, ist kein Zufall, sondern
+// der Normalfall -- **absolute Zahlen komponieren nicht** (siehe «ABI2» in `TODO.md`).
 
 module speicher {
 pub const NEINTRAEGE : u32 = 64;
@@ -57,7 +57,7 @@ use speicher::Eintraege;
 use geraet::geraet_setze;
 use geraet::Register;
 
--- Richtung 1: SPEICHER aussen, GERAET innen.
+// Richtung 1: SPEICHER aussen, GERAET innen.
 pub impl fn eintragen(i : index into Eintraege, r : index into Register) -> bool
     effects { writes Eintraege.slots, writes Register.slots, locks SPEICHER, locks GERAET }
     costs   <= 80 ops
@@ -68,7 +68,7 @@ pub impl fn eintragen(i : index into Eintraege, r : index into Register) -> bool
     return true;
 }
 
--- Richtung 2: GERAET aussen, SPEICHER innen. **Zusammen mit Richtung 1 ein Ring.**
+// Richtung 2: GERAET aussen, SPEICHER innen. **Zusammen mit Richtung 1 ein Ring.**
 pub impl fn austragen(i : index into Eintraege, r : index into Register) -> bool
     effects { writes Eintraege.slots, writes Register.slots, locks SPEICHER, locks GERAET }
     costs   <= 80 ops

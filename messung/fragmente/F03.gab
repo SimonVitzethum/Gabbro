@@ -1,71 +1,71 @@
--- =======================================================================================
--- F3 -- der IPC-Fastpath, VERVOLLSTAENDIGT
---
--- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:554-704, byteidentisch, plus genau die
--- Zeilen, die ihn zu einem PROGRAMM machen.**
---
--- **ERGAENZT, und nichts sonst:**
---   * vier Konstanten -- `SYSNO_RESULT`, `EP_BADGE`, `KEIN_SERVER`, `KEIN_FRAME`;
---   * `reason EpVoll` und `-> u32 or EpVoll` an `enqueue`. Der Ausschnitt schreibt
---     `enqueue(…) else (fehler) { … }` und nannte den Ausgang nur im Kommentar.
---
--- **15 Fehler auf 5. Die fuenf sind GABBROS**, und drei davon sind ein einziger Befund:
---
--- > **`A::B` parst und wird nie aufgeloest.** `path = ident { "::" ident }` steht in der
--- > Grammatik; der Namenspass liest die ERSTE Silbe und schlaegt sie als Wert nach.
--- > `IpcResult::Ok` faellt damit als `M119`, gleichgueltig ob `IpcResult` ein `module`, ein
--- > `reason` oder ein Variantentyp ist -- alle drei geprueft am 2026-08-20.
---
--- Gemessen: **null Korpusstellen benutzen einen qualifizierten Namen als WERT** -- die
--- `::`-Treffer im Korpus sind samt und sonders `module a::b`-Koepfe. *Die Form ist
--- schreibbar und hat keinen Leser* -- dieselbe Gestalt wie `ensures` am rumpflosen
--- `extern fn` und wie `RegDecl::requires`.
---
--- Die zwei uebrigen, ebenfalls Gabbros: `M101` -- `Some(caller)` in einen Slot, dessen
--- Sonderwert der Erzeuger kennt und M1 nicht; `H011` -- `call` erklaert `locks SCHEDS` und
--- nimmt die Sperre nie. *Der zweite ist ein echter Befund AM AUSSCHNITT und bleibt darum
--- stehen: die Wirkungsklausel verspricht mehr, als der Rumpf tut.*
---
--- **NACHGEMESSEN 2026-08-25: es sind 10, nicht 5 -- und die Bewegung geht in beide
--- Richtungen.**
---
---   * **Drei sind gewandert, nicht verschwunden.** `IpcResult::Ok` faellt nicht mehr als
---     `M119` (*„der Name ist nirgends deklariert"*), sondern als **`M124`** (*„a reason value
---     cannot stand here"*). Seit Stufe 7 (2026-08-21) darf ein Grundwert an GENAU DREI
---     Stellungen stehen -- `return R::F;`, der Gegenstand eines `match`, und `==`/`!=`. Ein
---     ARGUMENT ist keine davon. *Der Befund von damals -- „kein Erzeuger" -- ist ueberholt;
---     was heute fehlt, ist die Zahlprojektion eines Grundes.*
---   * **Fuenf sind DAZUGEKOMMEN, und «B9» darunter ist ueberholt.** `N035` (2026-08-21)
---     verlangt `effects` UND `costs` an jedem `fn(…)`-Typ -- der Kommentar bei `type SchedOps`
---     sagt noch, `fnptr` trage KEINEN Vertrag. Er traegt seit dem 21. genau zwei Drittel
---     davon; `requires`/`ensures` sind mit einer GEMESSENEN Begruendung abgewiesen (`N037`:
---     null der vier indirekten Rufstellen in `caprock-messbasis` nimmt eine Sperre). *Die
---     fuenf Zeilen von `type SchedOps` stehen im Ausschnitt und sind hier NICHT ergaenzt
---     worden: der Vertrag muss VOR das Komma, also in die Zeile selbst -- das waere ein
---     Umschreiben und keine Ergaenzung, und `M124`/`M101`/`H011` blieben ohnehin stehen.*
---   * **Einer ist geschlossen:** `H016`, siehe die `lock SCHEDS`-Zeile unten.
--- =======================================================================================
+// =======================================================================================
+// F3 -- der IPC-Fastpath, VERVOLLSTAENDIGT
+//
+// **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:554-704, byteidentisch, plus genau die
+// Zeilen, die ihn zu einem PROGRAMM machen.**
+//
+// **ERGAENZT, und nichts sonst:**
+//   * vier Konstanten -- `SYSNO_RESULT`, `EP_BADGE`, `KEIN_SERVER`, `KEIN_FRAME`;
+//   * `reason EpVoll` und `-> u32 or EpVoll` an `enqueue`. Der Ausschnitt schreibt
+//     `enqueue(…) else (fehler) { … }` und nannte den Ausgang nur im Kommentar.
+//
+// **15 Fehler auf 5. Die fuenf sind GABBROS**, und drei davon sind ein einziger Befund:
+//
+// > **`A::B` parst und wird nie aufgeloest.** `path = ident { "::" ident }` steht in der
+// > Grammatik; der Namenspass liest die ERSTE Silbe und schlaegt sie als Wert nach.
+// > `IpcResult::Ok` faellt damit als `M119`, gleichgueltig ob `IpcResult` ein `module`, ein
+// > `reason` oder ein Variantentyp ist -- alle drei geprueft am 2026-08-20.
+//
+// Gemessen: **null Korpusstellen benutzen einen qualifizierten Namen als WERT** -- die
+// `::`-Treffer im Korpus sind samt und sonders `module a::b`-Koepfe. *Die Form ist
+// schreibbar und hat keinen Leser* -- dieselbe Gestalt wie `ensures` am rumpflosen
+// `extern fn` und wie `RegDecl::requires`.
+//
+// Die zwei uebrigen, ebenfalls Gabbros: `M101` -- `Some(caller)` in einen Slot, dessen
+// Sonderwert der Erzeuger kennt und M1 nicht; `H011` -- `call` erklaert `locks SCHEDS` und
+// nimmt die Sperre nie. *Der zweite ist ein echter Befund AM AUSSCHNITT und bleibt darum
+// stehen: die Wirkungsklausel verspricht mehr, als der Rumpf tut.*
+//
+// **NACHGEMESSEN 2026-08-25: es sind 10, nicht 5 -- und die Bewegung geht in beide
+// Richtungen.**
+//
+//   * **Drei sind gewandert, nicht verschwunden.** `IpcResult::Ok` faellt nicht mehr als
+//     `M119` (*„der Name ist nirgends deklariert"*), sondern als **`M124`** (*„a reason value
+//     cannot stand here"*). Seit Stufe 7 (2026-08-21) darf ein Grundwert an GENAU DREI
+//     Stellungen stehen -- `return R::F;`, der Gegenstand eines `match`, und `==`/`!=`. Ein
+//     ARGUMENT ist keine davon. *Der Befund von damals -- „kein Erzeuger" -- ist ueberholt;
+//     was heute fehlt, ist die Zahlprojektion eines Grundes.*
+//   * **Fuenf sind DAZUGEKOMMEN, und «B9» darunter ist ueberholt.** `N035` (2026-08-21)
+//     verlangt `effects` UND `costs` an jedem `fn(…)`-Typ -- der Kommentar bei `type SchedOps`
+//     sagt noch, `fnptr` trage KEINEN Vertrag. Er traegt seit dem 21. genau zwei Drittel
+//     davon; `requires`/`ensures` sind mit einer GEMESSENEN Begruendung abgewiesen (`N037`:
+//     null der vier indirekten Rufstellen in `caprock-messbasis` nimmt eine Sperre). *Die
+//     fuenf Zeilen von `type SchedOps` stehen im Ausschnitt und sind hier NICHT ergaenzt
+//     worden: der Vertrag muss VOR das Komma, also in die Zeile selbst -- das waere ein
+//     Umschreiben und keine Ergaenzung, und `M124`/`M101`/`H011` blieben ohnehin stehen.*
+//   * **Einer ist geschlossen:** `H016`, siehe die `lock SCHEDS`-Zeile unten.
+// =======================================================================================
 
 module caprock::ipc {
 
 const QUEUE_CAP : u32 = 32;
-const NCORES    : u32 = 64;   -- nachgetragen 2026-08-15
+const NCORES    : u32 = 64;   // nachgetragen 2026-08-15
 const MSG_WORDS : u32 = 6;
 
--- ERGAENZT: vier Namen, die der Ausschnitt ruft und nirgends deklariert.
--- `SYSNO_RESULT`/`EP_BADGE` sind Registernummern des Rahmens, `KEIN_SERVER`/`KEIN_FRAME`
--- die Sonderwerte, gegen die der Fastpath vergleicht.
+// ERGAENZT: vier Namen, die der Ausschnitt ruft und nirgends deklariert.
+// `SYSNO_RESULT`/`EP_BADGE` sind Registernummern des Rahmens, `KEIN_SERVER`/`KEIN_FRAME`
+// die Sonderwerte, gegen die der Fastpath vergleicht.
 const SYSNO_RESULT : u32 = 0;
 const EP_BADGE     : u32 = 1;
 const KEIN_SERVER  : u32 = 0xffff_ffff;
 const KEIN_FRAME   : u32 = 0xffff_ffff;
 
--- ERGAENZT (2026-09-03): `Frame` and `RegNr` -- the last two names the excerpt CALLS and
--- never declares. They carry `N040` nine times over six signatures (:130 x2, :150 x2, :208
--- x2, :217, :220, :225). Nothing about them is chosen: `msg` is the only field the excerpt
--- ever reads (`msg_kopiert`, :132, over `elems of dst.msg`), its width is the excerpt's own
--- `MSG_WORDS`, and `RegNr` is the slot `set_reg` takes `SYSNO_RESULT`/`EP_BADGE` in -- both
--- declared `u32` above.
+// ERGAENZT (2026-09-03): `Frame` and `RegNr` -- the last two names the excerpt CALLS and
+// never declares. They carry `N040` nine times over six signatures (:130 x2, :150 x2, :208
+// x2, :217, :220, :225). Nothing about them is chosen: `msg` is the only field the excerpt
+// ever reads (`msg_kopiert`, :132, over `elems of dst.msg`), its width is the excerpt's own
+// `MSG_WORDS`, and `RegNr` is the slot `set_reg` takes `SYSNO_RESULT`/`EP_BADGE` in -- both
+// declared `u32` above.
 type Frame = {
     msg : [u64; MSG_WORDS],
 };
@@ -79,26 +79,26 @@ reason IpcResult {
     exhaustive
 }
 
--- ERGAENZT (2026-08-25): `SCHEDS` wird in der Wirkungsliste von `call` (:124) genannt und
--- nirgends erklaert -- `H016`. **Ohne Deklaration gibt es keinen `rank`, und ohne `rank`
--- rechnen die Ordnungsregeln nichts**; die Absage sagt es woertlich.
---
--- **Die Zahlen sind ZITIERT, nicht gewaehlt.** Dieselbe Sperre steht im eingefrorenen
--- Korpus selbst, in F8 (`FRAGMENTE.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
--- Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/DESIGN.md`:31 zitiert
--- den Kernel: *CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM*.
---
--- Was NICHT zitiert ist: `protects { sched }`. F8 schuetzt `{ belegt, kern, prio }` -- Orte
--- seiner eigenen Tabelle, die es hier nicht gibt. `sched` ist der Name, den DIESER
--- Ausschnitt fuer denselben Gegenstand fuehrt (`touches … reads sched`, :140).
---
--- **`H011` bleibt danach stehen, und das ist der Ertrag:** die Wirkungsliste verspricht
--- `locks SCHEDS`, der Rumpf nimmt die Sperre nie. *Solange die Sperre unerklaert war,
--- verdeckte ein Korpusmangel einen echten Befund am Ausschnitt.*
+// ERGAENZT (2026-08-25): `SCHEDS` wird in der Wirkungsliste von `call` (:124) genannt und
+// nirgends erklaert -- `H016`. **Ohne Deklaration gibt es keinen `rank`, und ohne `rank`
+// rechnen die Ordnungsregeln nichts**; die Absage sagt es woertlich.
+//
+// **Die Zahlen sind ZITIERT, nicht gewaehlt.** Dieselbe Sperre steht im eingefrorenen
+// Korpus selbst, in F8 (`FRAGMENTE.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
+// Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/DESIGN.md`:31 zitiert
+// den Kernel: *CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM*.
+//
+// Was NICHT zitiert ist: `protects { sched }`. F8 schuetzt `{ belegt, kern, prio }` -- Orte
+// seiner eigenen Tabelle, die es hier nicht gibt. `sched` ist der Name, den DIESER
+// Ausschnitt fuer denselben Gegenstand fuehrt (`touches … reads sched`, :140).
+//
+// **`H011` bleibt danach stehen, und das ist der Ertrag:** die Wirkungsliste verspricht
+// `locks SCHEDS`, der Rumpf nimmt die Sperre nie. *Solange die Sperre unerklaert war,
+// verdeckte ein Korpusmangel einen echten Befund am Ausschnitt.*
 lock SCHEDS protects { sched } rank 2 held <= 300 ops;
 
--- «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
--- (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
+// «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
+// (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
 type TidQueue = {
     buf   : [u32; 32],
     head  : u32 in 0 ..< 32,
@@ -121,32 +121,32 @@ table Endpoint count NCORES {
             (Self.slots[e].caller == None) == (Self.slots[e].reply_owner == None);
 }
 
--- «B17» HIER BRICHT DAS FRAGMENT. `transition` (:434) schreibt GENAU EIN `place`:
---     transition = "transition" ident "{" place ":" expr "->" expr "}" …
--- Die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` NIE HALB
--- gesetzt werden — zwei Orte in EINEM Zug. In Caprock steht das als Kommentar
--- ("stets gemeinsam gesetzt/geloescht"); Gabbro sollte es zur Ableitung machen und kann es
--- nicht. Zweitens nennt `state` (:414) den Typ nicht, ueber dem es steht.
--- Drittens bindet `Some(cl)` im Zielausdruck einen frischen Namen — dafuer gibt es keine
--- Produktion. Die drei Zeilen unten sind AUSKOMMENTIERT, weil sie nicht schreibbar sind:
---     state Rendezvous over Endpoint {
---         transition open  { caller : None -> Some(cl), reply_owner : None -> Some(sv) }
---         transition close { caller : Some(c) -> None,  reply_owner : Some(s) -> None }
---     }
+// «B17» HIER BRICHT DAS FRAGMENT. `transition` (:434) schreibt GENAU EIN `place`:
+//     transition = "transition" ident "{" place ":" expr "->" expr "}" …
+// Die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` NIE HALB
+// gesetzt werden — zwei Orte in EINEM Zug. In Caprock steht das als Kommentar
+// ("stets gemeinsam gesetzt/geloescht"); Gabbro sollte es zur Ableitung machen und kann es
+// nicht. Zweitens nennt `state` (:414) den Typ nicht, ueber dem es steht.
+// Drittens bindet `Some(cl)` im Zielausdruck einen frischen Namen — dafuer gibt es keine
+// Produktion. Die drei Zeilen unten sind AUSKOMMENTIERT, weil sie nicht schreibbar sind:
+//     state Rendezvous over Endpoint {
+//         transition open  { caller : None -> Some(cl), reply_owner : None -> Some(sv) }
+//         transition close { caller : Some(c) -> None,  reply_owner : Some(s) -> None }
+//     }
 
--- «B12» `forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen (:238-244)
--- enthalten keinen Zahlenbereich. Ersatz ueber `elems of` — und damit steht die zweite
--- Frage im Raum: bindet `elems of` ein ELEMENT und `slots of` einen INDEX? SYNTAX.md
--- benutzt beide Lesarten und legt keine fest.
+// «B12» `forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen (:238-244)
+// enthalten keinen Zahlenbereich. Ersatz ueber `elems of` — und damit steht die zweite
+// Frage im Raum: bindet `elems of` ein ELEMENT und `slots of` einen INDEX? SYNTAX.md
+// benutzt beide Lesarten und legt keine fest.
 spec fn msg_kopiert(dst : ptr<normal, r> Frame, src : ptr<normal, r> Frame) -> bool
     effects { pure }
     = forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i]);
 
--- «B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` (:148) traegt KEINEN Vertrag —
--- kein `requires`, kein `ensures`, kein `effects`. Genau dafuer war der Verbund gedacht
--- ("der Vertrag des Rueckrufs muss am Zeigertyp stehen"). Er traegt nur noch die Signatur.
--- «B8» Und gerufen werden kann durch ihn ueberhaupt nicht: `call = path "(" … ")"` (:202);
--- `ops.current_id(core)` ist kein `call`, weil `ops.current_id` ein `place` ist.
+// «B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` (:148) traegt KEINEN Vertrag —
+// kein `requires`, kein `ensures`, kein `effects`. Genau dafuer war der Verbund gedacht
+// ("der Vertrag des Rueckrufs muss am Zeigertyp stehen"). Er traegt nur noch die Signatur.
+// «B8» Und gerufen werden kann durch ihn ueberhaupt nicht: `call = path "(" … ")"` (:202);
+// `ops.current_id(core)` ist kein `call`, weil `ops.current_id` ein `place` ist.
 type SchedOps = {
     current_id    : fn(u32) -> u32,
     frame_of      : fn(u32) -> u64,
@@ -159,14 +159,14 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
              dienste : ptr<normal, r> SchedOps,
              core : index into Endpoint,
              f    : ptr<normal, rw+own> Frame) -> ptr<normal, rw+own> Frame
-    -- «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
-    -- bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
+    // «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
+    // bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
     requires  Held(EPS), e.slots[core].used
     maintains antwortpflicht_paarig
-    -- `reads dienste` steht hier, weil `current_id`/`frame_of` es nennen: seit 2026-08-15
-    -- schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
-    -- unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
-    -- erst kompositional macht.
+    // `reads dienste` steht hier, weil `current_id`/`frame_of` es nennen: seit 2026-08-15
+    // schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
+    // unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
+    // erst kompositional macht.
     effects   { writes e.slots, locks SCHEDS, writes frames, consumes e.slots,
                 reads dienste }
     costs     <= 2000 ops
@@ -177,10 +177,10 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     }
     let caller = current_id(dienste, core);
 
-    -- «B10» Der Fastpath sucht den ERSTEN lebenden Empfaenger und hoert dann auf. `traverse`
-    -- liefert keinen Wert und kennt kein `break` — mit `by consuming` wird deshalb die
-    -- GANZE Warteschlange geleert, auch die Empfaenger hinter dem gefundenen. Das ist keine
-    -- Wortreichheit, sondern ein anderes Programm: aus einem Rendezvous wird ein Aderlass.
+    // «B10» Der Fastpath sucht den ERSTEN lebenden Empfaenger und hoert dann auf. `traverse`
+    // liefert keinen Wert und kennt kein `break` — mit `by consuming` wird deshalb die
+    // GANZE Warteschlange geleert, auch die Empfaenger hinter dem gefundenen. Das ist keine
+    // Wortreichheit, sondern ein anderes Programm: aus einem Rendezvous wird ein Aderlass.
     let mut picked : u32 = KEIN_SERVER;
     traverse cand over queue e.slots[core].receivers by consuming
         touches consumes e.slots, reads sched
@@ -192,8 +192,8 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
 
     if picked == KEIN_SERVER {
         let q = enqueue(e.slots[core].senders, caller) else (fehler) {
-            -- D11 woertlich: der Ueberlaeufer wird NICHT blockiert, sondern benannt
-            -- abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
+            // D11 woertlich: der Ueberlaeufer wird NICHT blockiert, sondern benannt
+            // abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
             set_reg(f, SYSNO_RESULT, IpcResult::ErrEpFull);
             return f;
         }
@@ -203,8 +203,8 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     transfer(f, frame_of(dienste, picked));
     set_reg(frame_of(dienste, picked), SYSNO_RESULT, IpcResult::Ok);
     set_reg(frame_of(dienste, picked), EP_BADGE, 0);
-    -- «B17» hier stuende `open(e, caller, picked);` — der Uebergang, der beide Orte in
-    -- EINEM Zug schreibt. Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen nicht.
+    // «B17» hier stuende `open(e, caller, picked);` — der Uebergang, der beide Orte in
+    // EINEM Zug schreibt. Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen nicht.
     e.slots[core].caller      = Some(caller);
     e.slots[core].reply_owner = Some(picked);
     if owner_core(picked) == core {
@@ -215,12 +215,12 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
 }
 
 
--- Nachgetragen 2026-08-15: `set_reg` wurde zweimal gerufen und nie erklaert.
+// Nachgetragen 2026-08-15: `set_reg` wurde zweimal gerufen und nie erklaert.
 extern fn set_reg(f : ptr<normal, rw> Frame, r : RegNr, w : u64) effects { writes f } costs <= 2 ops;
--- ERGAENZT: `or EpVoll`. Der Ausschnitt schreibt `enqueue(…) else (fehler) { … }`, und ein
--- `let … else` verlangt einen Fehlerkanal am Gerufenen (`N028`) -- sonst koennte der Zweig
--- nie genommen werden. Die Vorlage nannte den Ausgang im Kommentar („benannt abgewiesen")
--- und nicht in der Signatur.
+// ERGAENZT: `or EpVoll`. Der Ausschnitt schreibt `enqueue(…) else (fehler) { … }`, und ein
+// `let … else` verlangt einen Fehlerkanal am Gerufenen (`N028`) -- sonst koennte der Zweig
+// nie genommen werden. Die Vorlage nannte den Ausgang im Kommentar („benannt abgewiesen")
+// und nicht in der Signatur.
 reason EpVoll { Voll = 1 "die Warteschlange des Endpunkts ist voll" exhaustive }
 extern fn enqueue(q : ptr<normal, rw> TidQueue, t : u32) -> u32 or EpVoll
     effects { writes q } costs <= 4 ops;

@@ -1,16 +1,16 @@
--- erwartet: D015
--- **Eine Kette muss ENDEN koennen, und ein `bool` kann es nicht.**
---
--- `chain(belegt, belegt)` benennt ein Feld, das es gibt -- also faellt `D014` hier nicht.
--- Es ist nur keine Kante: ein `bool` zeigt nirgendwohin. Dieselbe Datei mit `elter` statt
--- `belegt` ist gruen, und das ist die Gegenprobe.
---
--- **`D015` ist `D007` Wort fuer Wort**, und der Sonderwert dahinter ist derselbe: `count`
--- selbst (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). Damit faellt hier auch
--- ein `index into Kappraum` OHNE `option` -- es hat kein Ende, und eine Kette ohne Ende
--- laeuft, solange die Tabelle Plaetze hat.
---
--- Gemessen in `dokumente/PRUEFER.md`.
+// erwartet: D015
+// **Eine Kette muss ENDEN koennen, und ein `bool` kann es nicht.**
+//
+// `chain(belegt, belegt)` benennt ein Feld, das es gibt -- also faellt `D014` hier nicht.
+// Es ist nur keine Kante: ein `bool` zeigt nirgendwohin. Dieselbe Datei mit `elter` statt
+// `belegt` ist gruen, und das ist die Gegenprobe.
+//
+// **`D015` ist `D007` Wort fuer Wort**, und der Sonderwert dahinter ist derselbe: `count`
+// selbst (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). Damit faellt hier auch
+// ein `index into Kappraum` OHNE `option` -- es hat kein Ende, und eine Kette ohne Ende
+// laeuft, solange die Tabelle Plaetze hat.
+//
+// Gemessen in `dokumente/PRUEFER.md`.
 
 module gift {
 

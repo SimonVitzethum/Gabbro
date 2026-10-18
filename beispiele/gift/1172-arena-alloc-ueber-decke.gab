@@ -1,14 +1,14 @@
--- erwartet: N466
--- Lane 259 (the `R-max` half, subsumed): a count that may reach the ceiling
--- falls at `N466` first. `Speicher` commits `4` slots (`hi`) under a ceiling
--- of `8`; one `grow` commits the remaining `4`, so all eight slots are
--- usable and the eight allocations stand. The ninth names slot `8` -- past
--- `max`, and past the committed prefix on every path (the prefix never
--- exceeds the ceiling), so it is refused with its `else` beside it. Past
--- the ceiling there is no commit, only the stop; a second `grow` would fall
--- at `N426` before this `alloc` is even reached. Nothing else is wrong with
--- this unit: the `grow` is constant and below the ceiling, every reservation
--- `else` stands, the effects and the budget are clean.
+// erwartet: N466
+// Lane 259 (the `R-max` half, subsumed): a count that may reach the ceiling
+// falls at `N466` first. `Speicher` commits `4` slots (`hi`) under a ceiling
+// of `8`; one `grow` commits the remaining `4`, so all eight slots are
+// usable and the eight allocations stand. The ninth names slot `8` -- past
+// `max`, and past the committed prefix on every path (the prefix never
+// exceeds the ceiling), so it is refused with its `else` beside it. Past
+// the ceiling there is no commit, only the stop; a second `grow` would fall
+// at `N426` before this `alloc` is even reached. Nothing else is wrong with
+// this unit: the `grow` is constant and below the ceiling, every reservation
+// `else` stands, the effects and the budget are clean.
 module gift1172 {
 arena Speicher capacity 2 .. 4 max 8 of u16;
 

@@ -158,6 +158,7 @@ import Grammatik.Korrespondenz.Allgemein.ReferenzAR
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt3
 import Grammatik.Parser.Lex.Lexer
 import Grammatik.Parser.Lex.LexerVertrauen
+import Grammatik.Parser.Lex.LexerDoku
 import Grammatik.Parser.Expr.Ausdruck
 import Grammatik.Parser.Stmt.Anweisung
 import Grammatik.Parser.Stmt.AnweisungProben

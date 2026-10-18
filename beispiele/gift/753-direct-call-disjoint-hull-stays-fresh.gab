@@ -1,12 +1,12 @@
--- erwartet: M147
--- **V4 freshness across a DIRECT call, the disjoint boundary: a hull naming another carrier expires nothing.**
---
--- `intakt` reads `alt` from `ZUSTAND` and calls `fremd`, whose hull writes only
--- `ANDERE` -- so `alt` stays fresh and deciding on it stays silent. `faellig`
--- is the control: the same read, but `schreiber`'s hull names `ZUSTAND`, so the
--- decision falls as `M147`. A run over this file must report `M147` at the
--- control only -- the silent arm is the pin this file owes: carrier granularity
--- at the call edge, no path overlap, syntax only.
+// erwartet: M147
+// **V4 freshness across a DIRECT call, the disjoint boundary: a hull naming another carrier expires nothing.**
+//
+// `intakt` reads `alt` from `ZUSTAND` and calls `fremd`, whose hull writes only
+// `ANDERE` -- so `alt` stays fresh and deciding on it stays silent. `faellig`
+// is the control: the same read, but `schreiber`'s hull names `ZUSTAND`, so the
+// decision falls as `M147`. A run over this file must report `M147` at the
+// control only -- the silent arm is the pin this file owes: carrier granularity
+// at the call edge, no path overlap, syntax only.
 module gift753 {
 
 static mut ZUSTAND : u32 = 0;

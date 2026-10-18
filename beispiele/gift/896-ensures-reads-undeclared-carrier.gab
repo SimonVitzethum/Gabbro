@@ -1,15 +1,15 @@
--- erwartet: E221
--- **An `ensures` that reads a written carrier without cover falls.**
---
--- The `ensures` leg of the same frame promise: `ungedeckt` reads `zaehler`
--- (next to `result`, which is no read) while `zaehler` is written below and
--- uncovered. `gedeckt` covers it with `writes` -- reads OR writes close the
--- rule -- and stays silent.
+// erwartet: E221
+// **An `ensures` that reads a written carrier without cover falls.**
+//
+// The `ensures` leg of the same frame promise: `ungedeckt` reads `zaehler`
+// (next to `result`, which is no read) while `zaehler` is written below and
+// uncovered. `gedeckt` covers it with `writes` -- reads OR writes close the
+// rule -- and stays silent.
 module gift::vertrag_fuss_ensures {
 
 static mut zaehler : u32 = 0;
 
--- Must fall: the `ensures` reads a carrier the effects do not cover.
+// Must fall: the `ensures` reads a carrier the effects do not cover.
 impl fn ungedeckt() -> u32
     ensures result == zaehler
     effects { pure }
@@ -18,8 +18,8 @@ impl fn ungedeckt() -> u32
     return 0;
 }
 
--- Must pass: the same read covered by `reads` beside `writes` (the body reads
--- `zaehler` back, and reads need their own cover -- E010, not this rule).
+// Must pass: the same read covered by `reads` beside `writes` (the body reads
+// `zaehler` back, and reads need their own cover -- E010, not this rule).
 impl fn gedeckt() -> u32
     ensures result == zaehler
     effects { reads zaehler, writes zaehler }
@@ -29,7 +29,7 @@ impl fn gedeckt() -> u32
     return zaehler;
 }
 
--- The writer that makes `zaehler` non-read-only.
+// The writer that makes `zaehler` non-read-only.
 impl fn schreibt() effects { writes zaehler } costs <= 8 ops
 {
     zaehler = 1;

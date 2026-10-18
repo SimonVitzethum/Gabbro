@@ -1,7 +1,7 @@
--- **Positive twin of `gift/1444`** (2026-10-17, `dokumente/A1-OWN-PAPER.md`, slice 1).
---
--- Two views of one header may be passed together when NEITHER parameter is writable, and a
--- writable parameter may sit beside a pointer of another root. Both shapes pass `R014`.
+// **Positive twin of `gift/1444`** (2026-10-17, `dokumente/A1-OWN-PAPER.md`, slice 1).
+//
+// Two views of one header may be passed together when NEITHER parameter is writable, and a
+// writable parameter may sit beside a pointer of another root. Both shapes pass `R014`.
 module beispiel1163 {
 
 type Kopf = { x : u32, y : u32, };

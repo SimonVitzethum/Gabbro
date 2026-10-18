@@ -1,10 +1,10 @@
--- erwartet: M108
--- **Im Adressraum, aber nicht im Speicher.**
---
--- `count 1048576` sagt, wie viele Plaetze der Typ kennt; `backed hinterlegt` nennt den Wert,
--- bis zu dem sie hinterlegt sind. *Ein Zugriff auf einen nicht hinterlegten Platz ist
--- typkorrekt und trotzdem ein Fehlzugriff* -- und in einem Kernel ist das besonders scharf,
--- weil er selbst die Instanz ist, die Seiten hinterlegt.
+// erwartet: M108
+// **Im Adressraum, aber nicht im Speicher.**
+//
+// `count 1048576` sagt, wie viele Plaetze der Typ kennt; `backed hinterlegt` nennt den Wert,
+// bis zu dem sie hinterlegt sind. *Ein Zugriff auf einen nicht hinterlegten Platz ist
+// typkorrekt und trotzdem ein Fehlzugriff* -- und in einem Kernel ist das besonders scharf,
+// weil er selbst die Instanz ist, die Seiten hinterlegt.
 module gift::hinterlegung {
 
 static mut hinterlegt : u32 in 0 .. 1048576 = 0;

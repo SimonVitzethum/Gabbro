@@ -1,10 +1,10 @@
--- erwartet: E008
--- **1153 -- a `pure` starter starts a root that writes (fix lane F4, review G12 F2.1).**
---
--- Until this lane the call graph dropped `start` into a `_ => {}` arm: the roots
--- vanished from the starter's hull, and `effects { pure }` passed over a statement
--- that runs a writing, locking routine to completion before the starter proceeds.
--- The roots are call-graph edges now, so their effects reach the starter.
+// erwartet: E008
+// **1153 -- a `pure` starter starts a root that writes (fix lane F4, review G12 F2.1).**
+//
+// Until this lane the call graph dropped `start` into a `_ => {}` arm: the roots
+// vanished from the starter's hull, and `effects { pure }` passed over a statement
+// that runs a writing, locking routine to completion before the starter proceeds.
+// The roots are call-graph edges now, so their effects reach the starter.
 
 module gift1153 {
 

@@ -1,9 +1,9 @@
--- erwartet: N521
--- **1273 -- the concurrent `reset` hides one call down (lane 264).**
---
--- Like `1272`, but the reset stands in the setter's callee: the thread
--- closure follows calls, so the generation consumption is still seen.
--- Measured `["N521"]` -- no beside-code.
+// erwartet: N521
+// **1273 -- the concurrent `reset` hides one call down (lane 264).**
+//
+// Like `1272`, but the reset stands in the setter's callee: the thread
+// closure follows calls, so the generation consumption is still seen.
+// Measured `["N521"]` -- no beside-code.
 module gift1273 {
 
 arena A capacity 2 .. 8 of u16;

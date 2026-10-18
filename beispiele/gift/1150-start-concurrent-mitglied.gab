@@ -1,10 +1,10 @@
--- erwartet: N460
--- **1150 -- a `start` root that is a `concurrent` member (fix lane F4, review G12 F3).**
---
--- Boot starts every `concurrent` member (the generated driver, `lean_g::check_starts`).
--- A member that a `start` names as well would run twice: once from the declaration,
--- once from the statement -- the duplicate start `Akzeptiert` refuses (`einzelnB`).
--- A thread has exactly one owner, so the combination falls.
+// erwartet: N460
+// **1150 -- a `start` root that is a `concurrent` member (fix lane F4, review G12 F3).**
+//
+// Boot starts every `concurrent` member (the generated driver, `lean_g::check_starts`).
+// A member that a `start` names as well would run twice: once from the declaration,
+// once from the statement -- the duplicate start `Akzeptiert` refuses (`einzelnB`).
+// A thread has exactly one owner, so the combination falls.
 
 module gift1150 {
 

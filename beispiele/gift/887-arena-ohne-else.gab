@@ -1,8 +1,8 @@
--- erwartet: N212
--- Lane E4: the missing `else` -- the second allocation since the last reset
--- stands past the reservation of one, so the full-arena continuation is
--- owed. Both indices are of the current generation, the arena is
--- well-formed, and the effect and budget lines are clean.
+// erwartet: N212
+// Lane E4: the missing `else` -- the second allocation since the last reset
+// stands past the reservation of one, so the full-arena continuation is
+// owed. Both indices are of the current generation, the arena is
+// well-formed, and the effect and budget lines are clean.
 module beispiel::arena_eng {
 arena Eng capacity 1 .. 4 of u16;
 

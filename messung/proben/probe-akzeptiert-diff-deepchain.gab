@@ -1,21 +1,21 @@
--- Positive agreement probe for `instrumente/pruefe-akzeptiert-diff.py`
--- (lane 208): a three-deep call chain (`start_a` -> `mittel` -> `tief`)
--- with the lock taken at the top and held by signature below (the shape
--- of `beispiele/124`), plus a second lock on a second table.
---
--- Both checkers accept: the call-graph closure (`abg`) spans the longer
--- chain, the transitive floors (`stufen`) hold, and the race rule sees
--- only guarded writes. Stays clean on purpose: the day either side
--- refuses, the closure, the floor construction, or the guard
--- construction has drifted.
---
--- GEMESSEN (lane 208, round 2)
--- ---------------------------
---
---     $ gabbro pruefe messung/proben/probe-akzeptiert-diff-deepchain.gab
---     …: 0 errors
---     $ python3 instrumente/pruefe-akzeptiert-diff.py  # walks this file
---     …: rust=accept lean=accept agree
+// Positive agreement probe for `instrumente/pruefe-akzeptiert-diff.py`
+// (lane 208): a three-deep call chain (`start_a` -> `mittel` -> `tief`)
+// with the lock taken at the top and held by signature below (the shape
+// of `beispiele/124`), plus a second lock on a second table.
+//
+// Both checkers accept: the call-graph closure (`abg`) spans the longer
+// chain, the transitive floors (`stufen`) hold, and the race rule sees
+// only guarded writes. Stays clean on purpose: the day either side
+// refuses, the closure, the floor construction, or the guard
+// construction has drifted.
+//
+// GEMESSEN (lane 208, round 2)
+// ---------------------------
+//
+//     $ gabbro pruefe messung/proben/probe-akzeptiert-diff-deepchain.gab
+//     …: 0 errors
+//     $ python3 instrumente/pruefe-akzeptiert-diff.py  # walks this file
+//     …: rust=accept lean=accept agree
 module probe::akzeptiertdiffdeepchain {
 
 table T count 2 {

@@ -1,10 +1,10 @@
--- 188 -- a whole-array copy: `B = A;` and a row copy `M[i] = M[j];`.
---
--- C has no array assignment, and until SPRACHE-EFFIZIENZ #16 the checker refused the
--- form (`N287`) so a state snapshot was an element-by-element loop. The copy is admitted
--- when both sides are arrays of the SAME length at every depth and every source element
--- range lies inside the target's (`N579` otherwise); it cannot fail, so it needs no
--- reason channel. The emitter writes one overlap-safe `memmove`.
+// 188 -- a whole-array copy: `B = A;` and a row copy `M[i] = M[j];`.
+//
+// C has no array assignment, and until SPRACHE-EFFIZIENZ #16 the checker refused the
+// form (`N287`) so a state snapshot was an element-by-element loop. The copy is admitted
+// when both sides are arrays of the SAME length at every depth and every source element
+// range lies inside the target's (`N579` otherwise); it cannot fail, so it needs no
+// reason channel. The emitter writes one overlap-safe `memmove`.
 module beispiel188 {
 
 static mut ALT : [u32 in 0 .. 255; 4] = 0;

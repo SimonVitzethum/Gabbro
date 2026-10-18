@@ -1,12 +1,12 @@
--- erwartet: M121
--- **Gift 233 -- der `reason` steht da, der FALL nicht.**
---
--- Getrennt von `M126`, und das ist Absicht: *eine gemeinsame Meldung haette den Tippfehler
--- im Fallnamen wie eine fehlende Deklaration aussehen lassen.* Hier ist die Deklaration da
--- und vollstaendig; was fehlt, ist die eine Zeile, die der Rumpf nennt.
---
--- **Die Absage zaehlt die vorhandenen Faelle mit auf** -- eine Absage, die den Vorrat nennt,
--- kostet nichts und erspart das Nachschlagen.
+// erwartet: M121
+// **Gift 233 -- der `reason` steht da, der FALL nicht.**
+//
+// Getrennt von `M126`, und das ist Absicht: *eine gemeinsame Meldung haette den Tippfehler
+// im Fallnamen wie eine fehlende Deklaration aussehen lassen.* Hier ist die Deklaration da
+// und vollstaendig; was fehlt, ist die eine Zeile, die der Rumpf nennt.
+//
+// **Die Absage zaehlt die vorhandenen Faelle mit auf** -- eine Absage, die den Vorrat nennt,
+// kostet nichts und erspart das Nachschlagen.
 
 module gift::grundfall_erfunden {
 

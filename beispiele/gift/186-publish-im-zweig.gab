@@ -1,13 +1,13 @@
--- erwartet: V006
--- **Ein `if` machte `V006` stumm.**
---
--- Steht das release-Speichern in einem ZWEIG, ist `b.anweisungen[i + 1..]` innerhalb des
--- Zweiges leer -- und was danach im UMGEBENDEN Block geschrieben wird, sah niemand.
---
--- > Die Sichtbarkeitsordnung endet nicht an einer Klammer. Der Leser sieht `n` nach dem
--- > release-Speichern genauso wenig, wenn das Speichern in einem Zweig stand.
---
--- Der Fall lag einen syntaktischen Schritt neben `gift/147`.
+// erwartet: V006
+// **Ein `if` machte `V006` stumm.**
+//
+// Steht das release-Speichern in einem ZWEIG, ist `b.anweisungen[i + 1..]` innerhalb des
+// Zweiges leer -- und was danach im UMGEBENDEN Block geschrieben wird, sah niemand.
+//
+// > Die Sichtbarkeitsordnung endet nicht an einer Klammer. Der Leser sieht `n` nach dem
+// > release-Speichern genauso wenig, wenn das Speichern in einem Zweig stand.
+//
+// Der Fall lag einen syntaktischen Schritt neben `gift/147`.
 
 module gift::nutzlast_im_zweig {
 

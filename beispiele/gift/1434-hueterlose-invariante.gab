@@ -1,12 +1,12 @@
--- erwartet: N583
--- 1434 -- **an online invariant nobody maintains has no keeper (O11).**
---
--- The table carries an `online` invariant (`runs online`: it must hold at run
--- time, not at audit time), no function names it in `maintains`, and the table
--- has no generated `ops` to keep it instead. The checker books the invariant
--- to nothing, so it refuses it with `N583`. (An `offline` invariant needs no
--- keeper; a table with `ops` is kept by the generated operations, whose
--- preservation is proved.)
+// erwartet: N583
+// 1434 -- **an online invariant nobody maintains has no keeper (O11).**
+//
+// The table carries an `online` invariant (`runs online`: it must hold at run
+// time, not at audit time), no function names it in `maintains`, and the table
+// has no generated `ops` to keep it instead. The checker books the invariant
+// to nothing, so it refuses it with `N583`. (An `offline` invariant needs no
+// keeper; a table with `ops` is kept by the generated operations, whose
+// preservation is proved.)
 module gift1434 {
 
 table Zaehler count 4 {

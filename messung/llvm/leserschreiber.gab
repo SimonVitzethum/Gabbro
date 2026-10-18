@@ -1,11 +1,11 @@
--- leserschreiber -- a reader/writer lock with two readers and one writer (LLVM backend).
---
--- `RW` is a lock with a `shared held` side. The writer raises the pair (`a`, `b`) by one each
--- round under the EXCLUSIVE lock, with the pair visibly torn between the two stores; both
--- readers take the lock SHARED and check `a == b`. If a reader ever overlaps a writer it sees
--- the torn pair and counts a failure; if two writers overlapped, an update would be lost and
--- the end state would differ from N. Exit code 42 = no failure and `a == b == N`, else 13.
--- Deterministic on every schedule, on both targets.
+// leserschreiber -- a reader/writer lock with two readers and one writer (LLVM backend).
+//
+// `RW` is a lock with a `shared held` side. The writer raises the pair (`a`, `b`) by one each
+// round under the EXCLUSIVE lock, with the pair visibly torn between the two stores; both
+// readers take the lock SHARED and check `a == b`. If a reader ever overlaps a writer it sees
+// the torn pair and counts a failure; if two writers overlapped, an update would be lost and
+// the end state would differ from N. Exit code 42 = no failure and `a == b == N`, else 13.
+// Deterministic on every schedule, on both targets.
 module messung::leserschreiber {
 
 pub const N : u32 = 200000;

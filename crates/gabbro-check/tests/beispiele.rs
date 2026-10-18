@@ -4,7 +4,7 @@
 //! sobald eine Regel enger wird, als die Sprache es sagt.
 //!
 //! `beispiele/gift/*.gab` muss **fallen**, und zwar mit dem Code, der in der ersten Zeile der
-//! Datei steht (`-- erwartet: M104`). Das ist die andere Richtung, und sie faellt, sobald eine
+//! Datei steht (`// erwartet: M104`). Das ist die andere Richtung, und sie faellt, sobald eine
 //! Regel weiter wird oder eine Absage heimlich ihre Bedeutung wechselt.
 //!
 //! Ein Pruefer, der nicht fehlschlagen kann, ist kein Pruefer -- und ein Korpus, der nur aus
@@ -53,11 +53,11 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
     // by construction (no target word in any `Y` sentence).
     //
     // **A refusal that is about ONE target says so in the file** (2026-10-17): a line
-    // `-- ziel: aarch64` runs the generator for that target instead (`gift/1470`: the port
+    // `// ziel: aarch64` runs the generator for that target instead (`gift/1470`: the port
     // space has no aarch64 lowering because the machine has no port space, while on `x86_64`
     // the same device lowers to `in`/`out`).
-    if quelle.starts_with("-- erwartet: Y") {
-        let ziel = if quelle.lines().any(|z| z.trim() == "-- ziel: aarch64") {
+    if quelle.starts_with("// erwartet: Y") {
+        let ziel = if quelle.lines().any(|z| z.trim() == "// ziel: aarch64") {
             &gabbro_check::llvm::ZIEL_AARCH64
         } else {
             &gabbro_check::llvm::ZIEL_X86_64
@@ -96,7 +96,7 @@ fn jedes_beispiel_geht_sauber_durch() {
 /// **Lane 191: four omissions the derivation settles — and the test pins the
 /// silence, not the old code.**
 ///
-/// `04`, `580`, `700` and `701` carry `-- erwartet: E001` in their frozen first
+/// `04`, `580`, `700` and `701` carry `// erwartet: E001` in their frozen first
 /// line: the verdict before this lane. Their bodies derive since lane 191, so
 /// the checker stays silent over them now (the omission that stays a refusal
 /// is pinned at `740` with `E001` and at `968` with `N305`). Asserting the
@@ -135,10 +135,10 @@ fn jedes_gift_faellt_mit_seinem_code() {
         let erwartet = quelle
             .lines()
             .next()
-            .and_then(|z| z.strip_prefix("-- erwartet: "))
+            .and_then(|z| z.strip_prefix("// erwartet: "))
             .unwrap_or_else(|| {
                 panic!(
-                    "{}: die erste Zeile muss `-- erwartet: CODE` sein",
+                    "{}: die erste Zeile muss `// erwartet: CODE` sein",
                     pfad.display()
                 )
             })
@@ -148,7 +148,7 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // Giftkorpus nur Fehler an, und damit hatte keine einzige Hinweis-Kennung eine
         // Probe -- auch `E009` nicht, obwohl der Unterschied zwischen *„unentscheidbar"*
         // und *„in Ordnung"* genau die Stelle ist, an der der falsche Zyklus ein falsches
-        // `pure` durchliess. `-- erwartet: Hinweis S007` verlangt die Stufe mit.
+        // `pure` durchliess. `// erwartet: Hinweis S007` verlangt die Stufe mit.
         // **And a FOURTH state, measured 2026-08-31: a poison whose defect is at `cc`.**
         //
         // `413` names a `format` field `gueltig`, and the emitter writes `{Format}_gueltig`
@@ -158,13 +158,13 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // while these two are both formed by the EMITTER.*
         //
         // Until today the poison corpus took it for granted that every poison falls at the
-        // checker. **`-- erwartet: cc` says the opposite in both halves**, and that makes it
+        // checker. **`// erwartet: cc` says the opposite in both halves**, and that makes it
         // a stronger probe than the code form: the checker has to STAY silent, and `cc` has
         // to refuse. A one-sided version would pass over a checker that started refusing for
         // some unrelated reason.
         // **A FIFTH state, and it is the MIRROR of `cc`** (2026-08-31).
         //
-        // `-- erwartet: cc` carries a defect the checker does not see and `cc` does. There is
+        // `// erwartet: cc` carries a defect the checker does not see and `cc` does. There is
         // a family where **neither** sees it: two Gabbro declarations become one C symbol,
         // the types agree, at most one side defines, and C11 calls that a legal repetition.
         // `lock TOR` beside `extern fn TOR_nimm()`; `boot b` beside
@@ -172,19 +172,19 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // RUN in `dokumente/PRUEFER.md`: taking the lock executes the writer's body,
         // and the writer's own archive member is never linked.
         //
-        // For those, `-- erwartet: N042` alone would be one-sided. It says the checker
+        // For those, `// erwartet: N042` alone would be one-sided. It says the checker
         // speaks; it does not say **that the checker is the only thing that speaks**, and
         // that is the whole claim. A rule with a backstop and a rule without one look
         // identical from a one-sided probe.
         //
-        // **`-- erwartet: CODE allein` says both halves:**
+        // **`// erwartet: CODE allein` says both halves:**
         //
         // 1. the checker MUST refuse with `CODE`, and
         // 2. the emitted C must be **ACCEPTED** by `cc -Werror`.
         //
         // Half 2 is the one that carries it, and it falls in the useful direction: the day
         // `cc` (or the emitter) starts catching this form, the probe goes red and asks to be
-        // re-classified to `-- erwartet: cc` -- *because then the rule is no longer the only
+        // re-classified to `// erwartet: cc` -- *because then the rule is no longer the only
         // line, and a file that says it is would be lying.*
         //
         // > The emitter runs on the PARSED tree and never consults the passes, so half 2
@@ -200,7 +200,7 @@ fn jedes_gift_faellt_mit_seinem_code() {
                 .collect();
             assert!(
                 gefallen.contains(&code),
-                "{name} traegt `-- erwartet: {code} allein`, also muss der Pruefer mit \
+                "{name} traegt `// erwartet: {code} allein`, also muss der Pruefer mit \
                  {code} fallen -- gefallen ist {gefallen:?}:\n{bericht}"
             );
             continue;

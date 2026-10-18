@@ -1,7 +1,7 @@
--- erwartet: N581
--- **A string cell used in place (SPRACHE-EFFIZIENZ #13).** `lenof(t.slots[i].name)` would put
--- a length fact on memory another write can change between the check and the use. The cell is
--- read whole into a local first (`beispiele/191`).
+// erwartet: N581
+// **A string cell used in place (SPRACHE-EFFIZIENZ #13).** `lenof(t.slots[i].name)` would put
+// a length fact on memory another write can change between the check and the use. The cell is
+// read whole into a local first (`beispiele/191`).
 module gift::zelle_an_ort_und_stelle {
 
 const N : u32 = 4;

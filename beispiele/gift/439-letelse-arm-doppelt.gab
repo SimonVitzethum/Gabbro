@@ -1,14 +1,14 @@
--- erwartet: L104
--- **Dieselbe Absicherung fuer den zweiten einarmigen Zweig.**
---
--- `let … else` bekam am 2026-08-31 dieselbe Behandlung wie `narrow … else`, und dazu die
--- Divergenzkenntnis: `S002` verlangt, dass sein Arm zurueckkehrt oder divergiert, und M2
--- konnte bis dahin nur die erste Haelfte dieser Regel sehen. Ein Arm, der auf `abbruch();`
--- endet -- die Form, in der ein Kern seine Fehlerbehandlung schreibt --, galt als
--- durchfallend.
---
--- **Wer die Divergenz zu weit fasst, ueberspringt den Arm.** Diese Probe verbraucht zweimal
--- IN ihm; ein Pass, der ihn fuer unerreichbar haelt, sagt nichts.
+// erwartet: L104
+// **Dieselbe Absicherung fuer den zweiten einarmigen Zweig.**
+//
+// `let … else` bekam am 2026-08-31 dieselbe Behandlung wie `narrow … else`, und dazu die
+// Divergenzkenntnis: `S002` verlangt, dass sein Arm zurueckkehrt oder divergiert, und M2
+// konnte bis dahin nur die erste Haelfte dieser Regel sehen. Ein Arm, der auf `abbruch();`
+// endet -- die Form, in der ein Kern seine Fehlerbehandlung schreibt --, galt als
+// durchfallend.
+//
+// **Wer die Divergenz zu weit fasst, ueberspringt den Arm.** Diese Probe verbraucht zweimal
+// IN ihm; ein Pass, der ihn fuer unerreichbar haelt, sagt nichts.
 
 module gift {
 

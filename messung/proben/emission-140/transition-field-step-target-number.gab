@@ -1,13 +1,13 @@
--- ARM 1 twin, must LOWER: transition field steps with digit targets (lane-140).
---
--- `0 -> 1` sets the bit, `1 -> 0` clears it -- the two digit spellings the corpus
--- writes, and the only two the step lowering reads. Both lower as before; the arm
--- beside them fires only where no digit stands.
---
--- Measured verdicts (recorded after the run, not before):
---   pruefe: 0 errors, 0 hints
---   emit:   exit 0; the C sets TE in `an` and clears it in `aus`
---   cc:     takes the unit (-std=c11, -O0 and -O2, -Wall -Wextra -Werror, -c)
+// ARM 1 twin, must LOWER: transition field steps with digit targets (lane-140).
+//
+// `0 -> 1` sets the bit, `1 -> 0` clears it -- the two digit spellings the corpus
+// writes, and the only two the step lowering reads. Both lower as before; the arm
+// beside them fires only where no digit stands.
+//
+// Measured verdicts (recorded after the run, not before):
+//   pruefe: 0 errors, 0 hints
+//   emit:   exit 0; the C sets TE in `an` and clears it in `aus`
+//   cc:     takes the unit (-std=c11, -O0 and -O2, -Wall -Wextra -Werror, -c)
 
 module probe::emission140_transition_field_step_target_number {
 

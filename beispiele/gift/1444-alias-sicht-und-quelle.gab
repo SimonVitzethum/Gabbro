@@ -1,11 +1,11 @@
--- erwartet: R014
--- **The other half of the alias question** (2026-10-17, `dokumente/A1-OWN-PAPER.md`, slice 1).
---
--- `sicht(r)` is a re-view: it takes a pointer and answers a pointer, and the answer BORROWS --
--- it has the root of its argument. `k` and `w` are therefore two names for one object, and
--- `aendern` writes through the one and reads through the other. `R007` does not bite (two
--- different names), `R004` does not either (no `own`). *This is the shape of
--- `messung/netz/udp-echo.gab::echo_beantworten`, which read a stale checksum with 0 errors.*
+// erwartet: R014
+// **The other half of the alias question** (2026-10-17, `dokumente/A1-OWN-PAPER.md`, slice 1).
+//
+// `sicht(r)` is a re-view: it takes a pointer and answers a pointer, and the answer BORROWS --
+// it has the root of its argument. `k` and `w` are therefore two names for one object, and
+// `aendern` writes through the one and reads through the other. `R007` does not bite (two
+// different names), `R004` does not either (no `own`). *This is the shape of
+// `messung/netz/udp-echo.gab::echo_beantworten`, which read a stale checksum with 0 errors.*
 module gift::alias_sicht_und_quelle {
 
 type Kopf = { x : u32, y : u32, };

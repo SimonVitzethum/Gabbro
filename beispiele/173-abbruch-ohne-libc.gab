@@ -1,13 +1,13 @@
--- uebersetzt: freistehend
--- 173 -- The end of a process is a Gabbro function: a `-> never` gate over `exit_group`.
---
--- A watchdog (`on_exceeded`) names a function that does not come back. Until the C-free lane
--- that function was a foreign body -- `abort()` behind an `extern fn` -- and a program with one
--- carried a C file and a libc import for it. Here the watchdog is written in Gabbro:
--- `exit_group` is a `syscall` gate declared `-> never` (its contract says the process ends, so
--- it has no answer to decode), and a `-> never` function that ends in it ends in a call to a
--- diverging name, which is all `S009` asks. There is no C file in the unit, and `nm -u` on the
--- binary is empty (`instrumente/zaehle-c.py`); the manifest next door says `nolibc`.
+// uebersetzt: freistehend
+// 173 -- The end of a process is a Gabbro function: a `-> never` gate over `exit_group`.
+//
+// A watchdog (`on_exceeded`) names a function that does not come back. Until the C-free lane
+// that function was a foreign body -- `abort()` behind an `extern fn` -- and a program with one
+// carried a C file and a libc import for it. Here the watchdog is written in Gabbro:
+// `exit_group` is a `syscall` gate declared `-> never` (its contract says the process ends, so
+// it has no answer to decode), and a `-> never` function that ends in it ends in a call to a
+// diverging name, which is all `S009` asks. There is no C file in the unit, and `nm -u` on the
+// binary is empty (`instrumente/zaehle-c.py`); the manifest next door says `nolibc`.
 module beispiel::abbruch_ohne_libc {
 
 assume linux_exit_group
@@ -24,8 +24,8 @@ syscall exit_group(code : u64) -> never
     costs <= 8 ops
     assume linux_exit_group falsifier sonde_exit_group;
 
--- The watchdog: status 134 is what `abort()` leaves behind, so a caller that tells the two
--- apart by status sees no difference.
+// The watchdog: status 134 is what `abort()` leaves behind, so a caller that tells the two
+// apart by status sees no difference.
 fn haengt() -> never
     effects { diverges }
     costs <= 10 ops

@@ -1,41 +1,41 @@
--- **Der Netzwerkstack in Gabbro -- Stufe 4, und die Vorlage kommt von AUSSEN.**
---
--- Gegenstand: Ethernet -> ARP -> IPv4 -> UDP, ein Echodienst. Geschrieben gegen
--- **RFC 791** (IPv4), **RFC 826** (ARP), **RFC 768** (UDP) und **RFC 1071** (Pruefsumme),
--- und geprueft gegen **veroeffentlichte Testvektoren**, nicht gegen eigene Pakete:
---
---     45 00 00 73 00 00 40 00 40 11 [b8 61] c0 a8 00 01 c0 a8 00 c7
---     der klassische IPv4-Kopf; die Pruefsumme ist b861 und steht so in der Norm
---
---     00 01 f2 03 f4 f5 f6 f7   ->  Summe dd f2      (RFC 1071, Abschnitt 3)
---
--- **Warum das dabeisteht:** ein Stack, den derselbe Autor gegen seine eigenen Testpakete
--- schreibt, misst wieder, wie gut Gabbro zu Gabbro passt (Regel B). Die Vektoren hier hat
--- niemand fuer Gabbro ausgesucht -- sie standen vorher da.
---
--- **Was diese Datei misst, ist nicht der Stack, sondern die Sprache.** Jede Zeile, die hier
--- nicht steht, steht als Befund daneben.
+// **Der Netzwerkstack in Gabbro -- Stufe 4, und die Vorlage kommt von AUSSEN.**
+//
+// Gegenstand: Ethernet -> ARP -> IPv4 -> UDP, ein Echodienst. Geschrieben gegen
+// **RFC 791** (IPv4), **RFC 826** (ARP), **RFC 768** (UDP) und **RFC 1071** (Pruefsumme),
+// und geprueft gegen **veroeffentlichte Testvektoren**, nicht gegen eigene Pakete:
+//
+//     45 00 00 73 00 00 40 00 40 11 [b8 61] c0 a8 00 01 c0 a8 00 c7
+//     der klassische IPv4-Kopf; die Pruefsumme ist b861 und steht so in der Norm
+//
+//     00 01 f2 03 f4 f5 f6 f7   ->  Summe dd f2      (RFC 1071, Abschnitt 3)
+//
+// **Warum das dabeisteht:** ein Stack, den derselbe Autor gegen seine eigenen Testpakete
+// schreibt, misst wieder, wie gut Gabbro zu Gabbro passt (Regel B). Die Vektoren hier hat
+// niemand fuer Gabbro ausgesucht -- sie standen vorher da.
+//
+// **Was diese Datei misst, ist nicht der Stack, sondern die Sprache.** Jede Zeile, die hier
+// nicht steht, steht als Befund daneben.
 
 module netz::udp_echo {
 
--- ---------------------------------------------------------------------------------------
--- Die Zahlen. Alle aus den Normen, keine aus einer Schaetzung.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Die Zahlen. Alle aus den Normen, keine aus einer Schaetzung.
+// ---------------------------------------------------------------------------------------
 
-const ET_IPV4    : u16 = 2048;      -- 0x0800, RFC 894
-const ET_ARP     : u16 = 2054;      -- 0x0806, RFC 826
-const IPPROTO_UDP: u8  = 17;        -- RFC 790
+const ET_IPV4    : u16 = 2048;      // 0x0800, RFC 894
+const ET_ARP     : u16 = 2054;      // 0x0806, RFC 826
+const IPPROTO_UDP: u8  = 17;        // RFC 790
 const ARP_ANFRAGE: u16 = 1;
 const ARP_ANTWORT: u16 = 2;
 
-const KOPFWORTE  : u32 = 10;        -- 20 Byte IPv4-Mindestkopf, in 16-Bit-Worten
+const KOPFWORTE  : u32 = 10;        // 20 Byte IPv4-Mindestkopf, in 16-Bit-Worten
 const ARP_PLAETZE: u32 = 16;
 const MTU        : u16 = 1500;
 
--- ---------------------------------------------------------------------------------------
--- Die Koepfe. **`endian big` steht an jedem** -- Netzreihenfolge ist eine Aussage der Norm,
--- kein Byteschwenk von Hand.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Die Koepfe. **`endian big` steht an jedem** -- Netzreihenfolge ist eine Aussage der Norm,
+// kein Byteschwenk von Hand.
+// ---------------------------------------------------------------------------------------
 
 format EthKopf endian big {
     ziel_hi   : u32,
@@ -45,8 +45,8 @@ format EthKopf endian big {
     ethertyp  : u16,
 }
 
--- RFC 791. Byte 0 und Byte 1 kacheln jeweils GENAU -- das ist die Wortgrenze selbst,
--- nicht eine Buchhaltung darueber («B24», `beispiele/24`).
+// RFC 791. Byte 0 und Byte 1 kacheln jeweils GENAU -- das ist die Wortgrenze selbst,
+// nicht eine Buchhaltung darueber («B24», `beispiele/24`).
 format IpKopf endian big {
     version      : u8  @[7:4],
     ihl          : u8  @[3:0],
@@ -70,33 +70,33 @@ format UdpKopf endian big {
     summe     : u16,
 }
 
--- Der Kopf als WORTFOLGE -- das ist die Sicht, in der RFC 1071 rechnet.
+// Der Kopf als WORTFOLGE -- das ist die Sicht, in der RFC 1071 rechnet.
 type Kopfworte = {
     wort : [u16; 10],
 };
 
--- ---------------------------------------------------------------------------------------
--- Die Pruefsumme nach RFC 1071. **Erst seit Stufe 3 schreibbar:** `elems of` bindet einen
--- INDEX, und ohne den kann eine Summe ueber ein Feld ihre Stelle nicht nennen.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Die Pruefsumme nach RFC 1071. **Erst seit Stufe 3 schreibbar:** `elems of` bindet einen
+// INDEX, und ohne den kann eine Summe ueber ein Feld ihre Stelle nicht nennen.
+// ---------------------------------------------------------------------------------------
 
 impl fn summe_1071(k : ptr<normal, r> Kopfworte) -> u32
     ensures result <= 4294967295
     effects { reads k }
-    -- **92 since 2026-09-13 (lane 139, F1 + F6): ten words x 9 ops.** The `+=` loads and
-    -- computes and the invariant `s <= 65535 * passes` runs on every pass.
+    // **92 since 2026-09-13 (lane 139, F1 + F6): ten words x 9 ops.** The `+=` loads and
+    // computes and the invariant `s <= 65535 * passes` runs on every pass.
     costs   <= 92 ops
 {
     let mut s : u32 = 0;
     traverse i over elems of k.wort by unvisited
         touches reads k
-        -- **Die Aussage, die die Nachbedingung braucht, steht jetzt auch ueber der
-        -- Schleife.** `s` bleibt im Bereich seines Typs -- das ist genau `ensures result <=
-        -- 4294967295`, eine Zeile weiter oben, und ohne die Invariante haette der Beweiser
-        -- ueber der Schleife gar nichts.
-        -- Each word is a `u16`, so the sum after `passes` passes is at most
-        -- `65535 * passes` -- and with ten words that is far below the type's bound,
-        -- which is what `ensures result <= 4294967295` needs.
+        // **Die Aussage, die die Nachbedingung braucht, steht jetzt auch ueber der
+        // Schleife.** `s` bleibt im Bereich seines Typs -- das ist genau `ensures result <=
+        // 4294967295`, eine Zeile weiter oben, und ohne die Invariante haette der Beweiser
+        // ueber der Schleife gar nichts.
+        // Each word is a `u16`, so the sum after `passes` passes is at most
+        // `65535 * passes` -- and with ten words that is far below the type's bound,
+        // which is what `ensures result <= 4294967295` needs.
         invariant s <= 65535 * passes
     {
         s += k.wort[i];
@@ -104,9 +104,9 @@ impl fn summe_1071(k : ptr<normal, r> Kopfworte) -> u32
     return s;
 }
 
--- Das Falten und Komplementieren, getrennt: die Summe ist die Rechnung, die Faltung die
--- Norm. **RFC 1071 faltet zweimal** -- einmal reicht nicht, weil der Uebertrag der ersten
--- Faltung selbst ueberlaufen kann.
+// Das Falten und Komplementieren, getrennt: die Summe ist die Rechnung, die Faltung die
+// Norm. **RFC 1071 faltet zweimal** -- einmal reicht nicht, weil der Uebertrag der ersten
+// Faltung selbst ueberlaufen kann.
 impl fn falte(s : u32) -> u16
     effects { pure }
     costs   <= 16 ops
@@ -118,18 +118,18 @@ impl fn falte(s : u32) -> u16
 
 impl fn kopfsumme(k : ptr<normal, r> Kopfworte) -> u16
     effects { reads k }
-    -- **109 since 2026-09-13 (lane 139): knock-on.** A call counts the callee's DECLARED
-    -- costs, and `summe_1071` was re-measured 64 -> 92 the same day: 16 (`falte`) + 92 +
-    -- 1 (`k`).
+    // **109 since 2026-09-13 (lane 139): knock-on.** A call counts the callee's DECLARED
+    // costs, and `summe_1071` was re-measured 64 -> 92 the same day: 16 (`falte`) + 92 +
+    // 1 (`k`).
     costs   <= 109 ops
 {
     return falte(summe_1071(k));
 }
 
--- ---------------------------------------------------------------------------------------
--- Der ARP-Zwischenspeicher. Eine Tabelle mit einer Invariante, die RFC 826 nur als Satz
--- fuehrt: **ein belegter Platz hat eine Adresse ungleich null.**
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Der ARP-Zwischenspeicher. Eine Tabelle mit einer Invariante, die RFC 826 nur als Satz
+// fuehrt: **ein belegter Platz hat eine Adresse ungleich null.**
+// ---------------------------------------------------------------------------------------
 
 table ArpTabelle count ARP_PLAETZE {
     slot {
@@ -144,9 +144,9 @@ table ArpTabelle count ARP_PLAETZE {
         forall s in slots of Self : !Self.slots[s].belegt || Self.slots[s].ip != 0;
 }
 
--- ---------------------------------------------------------------------------------------
--- Der Empfangsweg.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Der Empfangsweg.
+// ---------------------------------------------------------------------------------------
 
 reason Verwurf {
     ZuKurz      = 1 "der Rahmen ist kuerzer als sein eigener Kopf"
@@ -170,24 +170,24 @@ impl fn kopf_gueltig(k : ptr<normal, r> IpKopf, w : ptr<normal, r> Kopfworte) ->
     return true;
 }
 
--- **Der Zwischenspeicher wird durchsucht, nicht gehasht.** Sechzehn Plaetze, und die
--- Schranke faellt aus der Tabellendeklaration statt aus einer Zaehlung im Rumpf.
---
--- **Berichtigt am 2026-09-03: diese Funktion lieferte den LETZTEN Treffer.** Hier stand ein
--- Sonderwert-Sammler (`let mut treffer = 0;`, im Rumpf ueberschrieben), und ohne Ausstieg
--- gewinnt der hoechste Platzindex -- nicht der erste Treffer und nicht der frischeste
--- (`alter` sieht die Schleife gar nicht). Gemessen und nicht gelesen: uebersetzt, gegen eine
--- Tabelle mit ZWEI Eintraegen derselben IP (Platz 3 und Platz 9) gefahren, `0xBBBB2222`
--- statt `0xAAAA1111`. **Der Pruefer sagte dazu nichts -- 25 items, 0 errors, 0 hints**, und
--- keine Annotation dieser Sprache faengt es.
---
--- **Die Behebung braucht kein Konstrukt.** `return` im Schleifenrumpf ist die Form, die
--- `beispiele/39-auftragsdienst.gab`:76 (`erster_dringender`) und `beispiele/18-vorfahren`:52
--- schon benutzen, und sie ist kuerzer als der Sammler, der hier stand. **«B10» hat die
--- falsche Form nur PLAUSIBEL gemacht, nicht erzwungen** -- der richtige Weg lag daneben und
--- wurde viermal im selben Korpus gegangen. *Die Kostenzusage bleibt bei 256: der
--- schlechteste Fall einer Schleife, die frueh aussteigen darf, ist die Schleife, die es
--- nicht tut.*
+// **Der Zwischenspeicher wird durchsucht, nicht gehasht.** Sechzehn Plaetze, und die
+// Schranke faellt aus der Tabellendeklaration statt aus einer Zaehlung im Rumpf.
+//
+// **Berichtigt am 2026-09-03: diese Funktion lieferte den LETZTEN Treffer.** Hier stand ein
+// Sonderwert-Sammler (`let mut treffer = 0;`, im Rumpf ueberschrieben), und ohne Ausstieg
+// gewinnt der hoechste Platzindex -- nicht der erste Treffer und nicht der frischeste
+// (`alter` sieht die Schleife gar nicht). Gemessen und nicht gelesen: uebersetzt, gegen eine
+// Tabelle mit ZWEI Eintraegen derselben IP (Platz 3 und Platz 9) gefahren, `0xBBBB2222`
+// statt `0xAAAA1111`. **Der Pruefer sagte dazu nichts -- 25 items, 0 errors, 0 hints**, und
+// keine Annotation dieser Sprache faengt es.
+//
+// **Die Behebung braucht kein Konstrukt.** `return` im Schleifenrumpf ist die Form, die
+// `beispiele/39-auftragsdienst.gab`:76 (`erster_dringender`) und `beispiele/18-vorfahren`:52
+// schon benutzen, und sie ist kuerzer als der Sammler, der hier stand. **«B10» hat die
+// falsche Form nur PLAUSIBEL gemacht, nicht erzwungen** -- der richtige Weg lag daneben und
+// wurde viermal im selben Korpus gegangen. *Die Kostenzusage bleibt bei 256: der
+// schlechteste Fall einer Schleife, die frueh aussteigen darf, ist die Schleife, die es
+// nicht tut.*
 impl fn arp_suchen(a : ptr<normal, r> ArpTabelle, ip : u32) -> u32
     effects  { reads a }
     costs    <= 256 ops
@@ -202,9 +202,9 @@ impl fn arp_suchen(a : ptr<normal, r> ArpTabelle, ip : u32) -> u32
     return 0;
 }
 
--- **RFC 826, der Lernschritt:** wer eine ARP-Nachricht sieht, traegt den Absender ein --
--- gleichgueltig ob Anfrage oder Antwort. Die Invariante der Tabelle haelt dabei, und das
--- steht als `maintains` da statt als Kommentar.
+// **RFC 826, der Lernschritt:** wer eine ARP-Nachricht sieht, traegt den Absender ein --
+// gleichgueltig ob Anfrage oder Antwort. Die Invariante der Tabelle haelt dabei, und das
+// steht als `maintains` da statt als Kommentar.
 impl fn arp_lernen(a : ptr<normal, rw> ArpTabelle,
                    platz : index into ArpTabelle,
                    ip : u32, hi : u32, lo : u16)
@@ -220,10 +220,10 @@ impl fn arp_lernen(a : ptr<normal, rw> ArpTabelle,
     a.slots[platz].alter  = 0;
 }
 
--- ---------------------------------------------------------------------------------------
--- Der Echodienst. **Der Fehlerkanal steht in der Signatur**, und jeder Abweispfad traegt
--- einen Namen -- D11 woertlich: benannt statt still.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Der Echodienst. **Der Fehlerkanal steht in der Signatur**, und jeder Abweispfad traegt
+// einen Namen -- D11 woertlich: benannt statt still.
+// ---------------------------------------------------------------------------------------
 
 extern fn udpkopf_von(k : ptr<normal, r> IpKopf) -> ptr<normal, rw> UdpKopf
     effects { reads k }
@@ -252,7 +252,7 @@ impl fn echo_beantworten(e : ptr<normal, r> EthKopf,
     if k.protokoll != IPPROTO_UDP {
         return Verwurf::FremderTyp;
     }
-    -- Quelle und Ziel tauschen; der Kopf wird zur Antwort.
+    // Quelle und Ziel tauschen; der Kopf wird zur Antwort.
     let alt_quelle : u32 = k.quelle;
     k.quelle = k.ziel;
     k.ziel   = alt_quelle;

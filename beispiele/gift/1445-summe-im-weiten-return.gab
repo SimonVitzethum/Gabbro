@@ -1,9 +1,9 @@
--- erwartet: M104
--- return of `u32 + u32` at a `u64` result.
---
--- A wider declared target does not widen the OPERANDS: the sum wraps at 32 bits before it
--- reaches the target, so the checker refuses it. The form taught in `TUTORIAL.md` binds each
--- operand into the wide type first (example 1164).
+// erwartet: M104
+// return of `u32 + u32` at a `u64` result.
+//
+// A wider declared target does not widen the OPERANDS: the sum wraps at 32 bits before it
+// reaches the target, so the checker refuses it. The form taught in `TUTORIAL.md` binds each
+// operand into the wide type first (example 1164).
 module gift1445 {
 
 pub fn sum(a : u32, b : u32) -> u64

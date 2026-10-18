@@ -111,7 +111,7 @@ Each was a paid-for mistake in a real system; each now follows from the mechanis
 
 ## 2. Lexis and vocabulary
 
-Identifiers, numbers with `_`, `--` comments, floating-point literals (§3.5), strings only in
+Identifiers, numbers with `_`, comments (`//`, nesting `/* */`, doc `///`), floating-point literals (§3.5), strings only in
 `claim`, `reason`, `assume`, `section`, `unfalsifiable`.
 
 **The vocabulary is a closed table** (`SYNTAX.md`, the terminal and reserved-word tables are held by `cargo test`, run by `instrumente/pruefe-pruefer.py`; the retired `pruefe-wortschatz` also compared EBNF
@@ -136,7 +136,7 @@ type SlotIdx  = u32 in 0 ..< NSLOTS;
 type Refcount = u32 in 0 .. 1000;
 opaque type Pa = u64;
 
--- an underflow is not typable: the V1 fact carries `c >= 1` into the branch
+// an underflow is not typable: the V1 fact carries `c >= 1` into the branch
 impl fn runter(c : Refcount) -> Refcount
     effects { pure }
     costs   <= 4 ops
@@ -147,7 +147,7 @@ impl fn runter(c : Refcount) -> Refcount
     return c;
 }
 
--- what no flow rule carries needs `narrow` with a named exit
+// what no flow rule carries needs `narrow` with a named exit
 impl fn schmal(x : u32) -> SlotIdx
     effects { pure }
     costs   <= 4 ops
@@ -223,7 +223,7 @@ module sprache::bits {
 
 type Refcount = u32 in 0 .. 1000;
 
--- exact `uN` ranges wrap; a clamp is defined on every range
+// exact `uN` ranges wrap; a clamp is defined on every range
 impl fn umlauf(a : u13, b : u13) -> u13
     effects { pure }
     costs   <= 4 ops
@@ -295,9 +295,9 @@ correctly rounded implementation in Gabbro or a named assumption.
 ```gabbro
 module sprache::linear {
 
-linear type Parked;                  -- a real resource: bytes in the product
-linear ghost type Zeuge;             -- a token: erased before code generation
-linear ghost type Phase order { roh, bereit };   -- a token with stages
+linear type Parked;                  // a real resource: bytes in the product
+linear ghost type Zeuge;             // a token: erased before code generation
+linear ghost type Phase order { roh, bereit };   // a token with stages
 
 }
 ```
@@ -341,7 +341,7 @@ module sprache::zeiger {
 type Kopf  = { x : u32, y : u32, };
 type Worte = { w0 : u32, w1 : u32, };
 
--- a re-view: the answer has the root of its argument
+// a re-view: the answer has the root of its argument
 extern fn sicht(r : ptr<normal, r> Kopf) -> ptr<normal, r> Worte effects { reads r } costs <= 4 ops;
 
 impl fn lesen(k : ptr<normal, r> Kopf, w : ptr<normal, r> Worte) -> u32
@@ -351,7 +351,7 @@ impl fn lesen(k : ptr<normal, r> Kopf, w : ptr<normal, r> Worte) -> u32
     return k.x;
 }
 
--- two views of one root, both read-only: fine
+// two views of one root, both read-only: fine
 impl fn nur_lesend(k : ptr<normal, r> Kopf) -> u32
     effects { reads k }
     costs   <= 32 ops
@@ -633,7 +633,7 @@ reason Fehler {
 
 extern fn hol() -> u32 or Fehler effects { pure } costs <= 1 ops;
 
--- the consumer: `let … else`, and `e` is a value of the reason
+// the consumer: `let … else`, and `e` is a value of the reason
 impl fn nutze() -> u32
     effects { pure }
     costs   <= 8 ops
@@ -647,7 +647,7 @@ impl fn nutze() -> u32
     return x;
 }
 
--- the producer: `return R::F;` is the failure exit
+// the producer: `return R::F;` is the failure exit
 impl fn erzeuge(f : bool) -> u32 or Fehler
     effects { pure }
     costs   <= 4 ops
@@ -846,8 +846,8 @@ table Kappenraum count NSLOTS {
     }
 }
 
--- `rank`: a lock may only be taken under strictly smaller ranks;
--- `held`: the hold time, in ops, that every `locks` body is held against
+// `rank`: a lock may only be taken under strictly smaller ranks;
+// `held`: the hold time, in ops, that every `locks` body is held against
 lock KAPPEN protects { belegt, rechte } rank 0
     held <= 3 ops
     shared held <= 4 ops;
@@ -1199,7 +1199,7 @@ assume linux_write_contract
     "Write keeps its contract on this machine."
     falsifier sonde_write;
 
--- the gate: ABI, register map, total errno decoding, contract, named assumption
+// the gate: ABI, register map, total errno decoding, contract, named assumption
 syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
     abi linux arch x86_64 number 1
     regs in  { rdi = fd, rsi = buf, rdx = len }
@@ -1277,7 +1277,7 @@ slot (`free`), no fragmentation, allocation fails only beyond the upper bound.
 ```gabbro
 module sprache::halde {
 
--- a bounded arena: reservation 0, hard bound 4, never unbounded
+// a bounded arena: reservation 0, hard bound 4, never unbounded
 pub arena Vorrat capacity 0 .. 4 of u64;
 
 pub fn main() -> u64 effects { reads Vorrat, writes Vorrat } costs <= 128 ops {

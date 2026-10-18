@@ -202,7 +202,7 @@ fn the_source_template_sends_the_files_bytes_to_lean_and_prints_its_answer() {
         "if [ \"$1\" = build ]; then exit 0; fi\nfor a in \"$@\"; do last=\"$a\"; done\ncat \"$last\"",
     );
     let echt = std::fs::read_to_string(Path::new(WURZEL).join(DATEI)).unwrap();
-    let quelle = format!("-- \"q\" \\ back\tTab \u{fc}\n{echt}");
+    let quelle = format!("// \"q\" \\ back\tTab \u{fc}\n{echt}");
     let datei = modell.parent().unwrap().join("probe.gab");
     std::fs::write(&datei, &quelle).unwrap();
     let out = Command::new(gabbro())
@@ -216,7 +216,7 @@ fn the_source_template_sends_the_files_bytes_to_lean_and_prints_its_answer() {
     let text = String::from_utf8_lossy(&out.stdout).to_string();
     assert_eq!(out.status.code(), Some(0), "{text}{}", String::from_utf8_lossy(&out.stderr));
     assert!(text.starts_with("import Bruecke.Vorlage\n#eval IO.println (Gabbro.Bruecke.vorlage \""), "{text}");
-    assert!(text.contains("-- \\\"q\\\" \\\\ back\\tTab \u{fc}\\n"), "the escapes do not decode to the file's first line:\n{text}");
+    assert!(text.contains("// \\\"q\\\" \\\\ back\\tTab \u{fc}\\n"), "the escapes do not decode to the file's first line:\n{text}");
     // a decoded literal is the file: undo the escapes and compare byte for byte
     let lit = text.split_once(" \"").and_then(|(_, r)| r.split_once("\" \"")).map(|(_, r)| r).unwrap();
     let lit = lit.strip_suffix("\")\n").unwrap();

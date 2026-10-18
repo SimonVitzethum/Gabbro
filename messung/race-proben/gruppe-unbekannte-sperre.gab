@@ -1,4 +1,4 @@
--- Eine `group` ueber zwei Sperren, von denen eine niemand deklariert.
+// Eine `group` ueber zwei Sperren, von denen eine niemand deklariert.
 module grp {
 
 const N : u32 = 4;

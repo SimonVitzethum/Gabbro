@@ -1,9 +1,9 @@
--- 03 -- `format`: Drahtformate mit ausgesprochener Bytereihenfolge.
---
--- Der Leser prueft **einmal am Eintritt** die Pufferlaenge; alles Weitere sind bewiesene
--- Zugriffe ohne Laufzeitpruefung. `offset_into Self` bindet einen Versatz an die
--- Pufferlaenge -- die `where`-Klausel ist die einzige Zusatzangabe und senkt sich auf
--- genau eine Bereichspruefung ab.
+// 03 -- `format`: Drahtformate mit ausgesprochener Bytereihenfolge.
+//
+// Der Leser prueft **einmal am Eintritt** die Pufferlaenge; alles Weitere sind bewiesene
+// Zugriffe ohne Laufzeitpruefung. `offset_into Self` bindet einen Versatz an die
+// Pufferlaenge -- die `where`-Klausel ist die einzige Zusatzangabe und senkt sich auf
+// genau eine Bereichspruefung ab.
 
 module beispiel::format {
 
@@ -17,9 +17,9 @@ format Elf64Kopf endian little {
     e_eintritt    : u64,
     e_phoff       : u64 offset_into Self
                     where e_phoff + e_phentsize * e_phnum <= lenof(Self),
-    -- **Nachgezogen 2026-08-19 mit `N012`.** Hier stand `offset_into Self` OHNE
-    -- Schranke -- eine Zusage, die niemand haelt: der Wert kommt aus dem Draht, und ein
-    -- feindlicher ELF-Kopf setzt ihn, wohin er will.
+    // **Nachgezogen 2026-08-19 mit `N012`.** Hier stand `offset_into Self` OHNE
+    // Schranke -- eine Zusage, die niemand haelt: der Wert kommt aus dem Draht, und ein
+    // feindlicher ELF-Kopf setzt ihn, wohin er will.
     e_shoff       : u64 offset_into Self where e_shoff <= lenof(Self),
     e_flags       : u32 reserved,
     e_ehsize      : u16 in 64 .. 64,
@@ -27,22 +27,22 @@ format Elf64Kopf endian little {
     e_phnum       : u16 in 0 .. 65535,
 }
 
--- Ein Eintrag der Programmkopftabelle. `p_flags` ist ein vollstaendiges Layout: jedes Bit
--- ist benannt, es gibt keinen Auffangzweig und keine „uebrigen Bits".
---
--- **Und bis zum 2026-08-20 stimmte dieser Satz nicht.** Es stand hier `p_flags : u32 @[2:0]`
--- und sonst nichts -- **drei benannte Bits von zweiunddreissig**, unter einem Kommentar, der
--- Vollstaendigkeit behauptete. Gefunden hat es der Erzeuger beim Absenken (*„the bit
--- positions of this word leave a gap"*), nicht der Leser: eine Behauptung im Fliesstext hat
--- keinen Pruefer. Die ELF-Norm nennt die uebrigen Bits `PF_MASKOS` (27:20) und `PF_MASKPROC`
--- (31:28); der Rest ist frei. *Jetzt sagt die Deklaration, was der Kommentar behauptet.*
+// Ein Eintrag der Programmkopftabelle. `p_flags` ist ein vollstaendiges Layout: jedes Bit
+// ist benannt, es gibt keinen Auffangzweig und keine „uebrigen Bits".
+//
+// **Und bis zum 2026-08-20 stimmte dieser Satz nicht.** Es stand hier `p_flags : u32 @[2:0]`
+// und sonst nichts -- **drei benannte Bits von zweiunddreissig**, unter einem Kommentar, der
+// Vollstaendigkeit behauptete. Gefunden hat es der Erzeuger beim Absenken (*„the bit
+// positions of this word leave a gap"*), nicht der Leser: eine Behauptung im Fliesstext hat
+// keinen Pruefer. Die ELF-Norm nennt die uebrigen Bits `PF_MASKOS` (27:20) und `PF_MASKPROC`
+// (31:28); der Rest ist frei. *Jetzt sagt die Deklaration, was der Kommentar behauptet.*
 format Elf64Ph endian little {
     p_typ    : u32 in 0 .. 7,
     p_flags  : u32 @[2:0],
     p_pf_frei : u32 @[19:3]  reserved,
     p_pf_os   : u32 @[27:20] reserved,
     p_pf_proc : u32 @[31:28] reserved,
-    -- Ebenso nachgezogen: `N012` verlangt, dass die Klausel das Feld SELBST und `lenof` nennt.
+    // Ebenso nachgezogen: `N012` verlangt, dass die Klausel das Feld SELBST und `lenof` nennt.
     p_offset : u64 offset_into Self where p_offset <= lenof(Self),
     p_vaddr  : u64,
     p_paddr  : u64,
@@ -51,12 +51,12 @@ format Elf64Ph endian little {
     p_align  : u64,
 }
 
--- Ein eingebetteter Zeiger IST ein Bitfeld: `embeds` nennt die Bits, `scale` den Faktor,
--- mit dem der Rohwert zur Adresse wird. Das Wurzelproblem der Seitentabellen, als Feld.
--- **Dieselbe Luecke, und hier war sie sechsundzwanzig Bits gross** (2026-08-20). Der
--- Eintrag ist ein Achtbytewort; benannt waren sechs Stellen davon. Die Namen unten stehen so
--- in der Architektur, und **`reserved` ist keine Fuellmasse, sondern eine Aussage**: diese
--- Bits existieren, und dieses Format liest sie nicht.
+// Ein eingebetteter Zeiger IST ein Bitfeld: `embeds` nennt die Bits, `scale` den Faktor,
+// mit dem der Rohwert zur Adresse wird. Das Wurzelproblem der Seitentabellen, als Feld.
+// **Dieselbe Luecke, und hier war sie sechsundzwanzig Bits gross** (2026-08-20). Der
+// Eintrag ist ein Achtbytewort; benannt waren sechs Stellen davon. Die Namen unten stehen so
+// in der Architektur, und **`reserved` ist keine Fuellmasse, sondern eine Aussage**: diese
+// Bits existieren, und dieses Format liest sie nicht.
 format Pte endian little {
     praesent   : bool @0,
     schreibbar : bool @1,

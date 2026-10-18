@@ -1,11 +1,11 @@
--- Two exception-vector entries for aarch64 (EL1): slot 4 (`sync`, current EL with SPx,
--- the `svc` of the harness) and slot 0 (`sync`, current EL with SP0). The generated stub saves
--- x0-x30, ELR/SPSR_EL1, FPSR/FPCR and q0-q31, calls the dispatch with `nr` from x0, writes the
--- answer back into x0's frame slot and ends with `eret`.
---
--- What this file claims: the LOWERING of the two declarations (table slots, frame, `eret`).
--- What it does not: VBAR_EL1 is written by the harness (`instrumente/teile/eintritt-a64-qemu.sh`,
--- hand-written assembly, test apparatus only), not by the generated code.
+// Two exception-vector entries for aarch64 (EL1): slot 4 (`sync`, current EL with SPx,
+// the `svc` of the harness) and slot 0 (`sync`, current EL with SP0). The generated stub saves
+// x0-x30, ELR/SPSR_EL1, FPSR/FPCR and q0-q31, calls the dispatch with `nr` from x0, writes the
+// answer back into x0's frame slot and ends with `eret`.
+//
+// What this file claims: the LOWERING of the two declarations (table slots, frame, `eret`).
+// What it does not: VBAR_EL1 is written by the harness (`instrumente/teile/eintritt-a64-qemu.sh`,
+// hand-written assembly, test apparatus only), not by the generated code.
 module eintritt_a64 {
 
 entry ruf_vier vector 4 via sync arch aarch64 {

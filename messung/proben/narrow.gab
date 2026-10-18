@@ -1,7 +1,7 @@
--- **Die Klasse, in der Gabbro plausibel VERLIERT:** eine geprüfte Schranke.
---
--- `narrow` ist genau ein Vergleich mit benanntem Ausgang -- und die Handschrift schreibt
--- ihn nicht hin. *Was das kostet, gehoert gemessen und nicht behauptet.*
+// **Die Klasse, in der Gabbro plausibel VERLIERT:** eine geprüfte Schranke.
+//
+// `narrow` ist genau ein Vergleich mit benanntem Ausgang -- und die Handschrift schreibt
+// ihn nicht hin. *Was das kostet, gehoert gemessen und nicht behauptet.*
 module messung::narrow {
 
 const K : u32 = 4096;

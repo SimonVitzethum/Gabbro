@@ -1,14 +1,14 @@
--- erwartet: H013
--- **Footprints from effects under a common lock hull (`Geteilt.Bau` probe 2/3).**
---
--- Both entries write the unshared `static mut z` DIRECTLY -- no call hop, so the
--- footprint the Bau carries (`schreibtFn`, read off the declared `writes` lines
--- as `fussAus` reads `D.schreibt`) is the whole story. Both hulls also carry
--- `locks L`, taken around each write: the pair level is lock-shared, so the
--- interference rules stay silent -- but `H013` does not read locks, and the W5
--- answer beside it does not either. Both refuse the same carrier for the same
--- reason: written through entries, declared shared nowhere. The twin `ruhig`
--- writes the lock's own table under its guard and stands in no entry.
+// erwartet: H013
+// **Footprints from effects under a common lock hull (`Geteilt.Bau` probe 2/3).**
+//
+// Both entries write the unshared `static mut z` DIRECTLY -- no call hop, so the
+// footprint the Bau carries (`schreibtFn`, read off the declared `writes` lines
+// as `fussAus` reads `D.schreibt`) is the whole story. Both hulls also carry
+// `locks L`, taken around each write: the pair level is lock-shared, so the
+// interference rules stay silent -- but `H013` does not read locks, and the W5
+// answer beside it does not either. Both refuse the same carrier for the same
+// reason: written through entries, declared shared nowhere. The twin `ruhig`
+// writes the lock's own table under its guard and stands in no entry.
 module gift::bau_common_lock_hull {
 
 static mut z : u32 = 0;
@@ -43,7 +43,7 @@ entry syscall_b vector 0x81 arch x86_64 {
     dispatch gift::bau_common_lock_hull::rechts;
 }
 
--- Must pass: every write under the guard the line names, and no entry reaches it.
+// Must pass: every write under the guard the line names, and no entry reaches it.
 impl fn ruhig(j : index into T, m : index into T)
     effects { writes T.slots, locks L }
     costs   <= 16 ops

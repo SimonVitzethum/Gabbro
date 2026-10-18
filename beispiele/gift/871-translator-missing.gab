@@ -1,7 +1,7 @@
--- erwartet: N200
--- Lane E3: the library function declares a payload type but no translator
--- serves it -- refused, although everything else about the declaration is
--- clean. Without a translator no region can ever become a payload.
+// erwartet: N200
+// Lane E3: the library function declares a payload type but no translator
+// serves it -- refused, although everything else about the declaration is
+// clean. Without a translator no region can ever become a payload.
 module m {
 table P count 1 {
     slot {

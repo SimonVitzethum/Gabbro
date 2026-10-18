@@ -497,6 +497,7 @@ theorem stopOder : ∀ (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhig] at h
       have hf := nichtWahr_falsch _ h
@@ -517,6 +518,7 @@ theorem stopUnd : ∀ (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhig] at h
       have hf := nichtWahr_falsch _ h
@@ -537,6 +539,7 @@ theorem stopVgl : ∀ (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhig] at h
       have hf := nichtWahr_falsch _ h
@@ -590,6 +593,7 @@ theorem stopBit : ∀ (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhig] at h
       have hf := nichtWahr_falsch _ h
@@ -643,6 +647,7 @@ theorem stopAdd : ∀ (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhig] at h
       have hf := nichtWahr_falsch _ h
@@ -691,6 +696,7 @@ theorem stopMul : ∀ (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhig] at h
       have hf := nichtWahr_falsch _ h
@@ -738,6 +744,7 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
@@ -1635,6 +1642,7 @@ theorem sammleSeg_stop : ∀ (segs : List String) (t : List Token),
     | num n => rfl
     | float s => rfl
     | text s => rfl
+    | doku s => rfl
     | zeichen s =>
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
@@ -1658,6 +1666,7 @@ theorem ruhigSuff_nopar : ∀ (t : List Token), ruhigSuff t = true →
     | num n => simp at hcon
     | float s => simp at hcon
     | text s => simp at hcon
+    | doku s => simp at hcon
     | zeichen s =>
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
@@ -2284,6 +2293,7 @@ theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
     | num n => rfl
     | float g => rfl
     | text t => rfl
+    | doku t => rfl
     | zeichen z => rfl
     | ende => rfl
 theorem prim_wahr : ∀ (rest : List Token) (F : Nat),

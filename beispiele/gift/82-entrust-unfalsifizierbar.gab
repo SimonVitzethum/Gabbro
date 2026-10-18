@@ -1,6 +1,6 @@
--- erwartet: N005
--- **Eine Annahme ueber fremden Code, der keine Sonde je widersprechen kann, ist keine
--- Isolation, sondern ein Wunsch.** Die Gegenrichtung zu «81»: hier IST sie erklaert.
+// erwartet: N005
+// **Eine Annahme ueber fremden Code, der keine Sonde je widersprechen kann, ist keine
+// Isolation, sondern ein Wunsch.** Die Gegenrichtung zu «81»: hier IST sie erklaert.
 module gift {
 
 type Gastbild = { eintritt : u64, };

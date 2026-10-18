@@ -1,12 +1,12 @@
--- erwartet: M147
--- **V4 freshness across a DIRECT call, the refresh/store boundary.**
---
--- Arm 1 re-reads AFTER the overlapping call -- the re-read IS the refresh, so
--- deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
--- the call -- store/move positions never decide, so no refusal. Arm 3 decides
--- on the stale name itself, and only that decision falls, as `M147`. The
--- direct-call mirror of gift/717, which pins the same boundary across an
--- indirect call. A run over this file must report exactly one `M147`, at arm 3.
+// erwartet: M147
+// **V4 freshness across a DIRECT call, the refresh/store boundary.**
+//
+// Arm 1 re-reads AFTER the overlapping call -- the re-read IS the refresh, so
+// deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
+// the call -- store/move positions never decide, so no refusal. Arm 3 decides
+// on the stale name itself, and only that decision falls, as `M147`. The
+// direct-call mirror of gift/717, which pins the same boundary across an
+// indirect call. A run over this file must report exactly one `M147`, at arm 3.
 module gift754 {
 
 static mut ZUSTAND : u32 = 0;

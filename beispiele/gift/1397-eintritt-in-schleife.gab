@@ -1,9 +1,9 @@
--- erwartet: N577
--- **An `entry fn` is not handed on inside a loop.**
---
--- One mention of the parameter, so a count of mentions alone would pass it -- but the loop
--- runs the hand-over up to four times, and with it the root on up to four threads at once.
--- The rule holds the hand-over outside every loop (C-free lane, C2 slice 3).
+// erwartet: N577
+// **An `entry fn` is not handed on inside a loop.**
+//
+// One mention of the parameter, so a count of mentions alone would pass it -- but the loop
+// runs the hand-over up to four times, and with it the root on up to four threads at once.
+// The rule holds the hand-over outside every loop (C-free lane, C2 slice 3).
 module gift::eintritt_in_schleife {
 
 assume start_vertrag

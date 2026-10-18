@@ -1,20 +1,20 @@
--- erwartet: M103
--- **Gift 213 -- eine Registerstelle, die sich verengen liess.**
---
--- Bis zum 2026-08-20 ging das mit **0 Fehlern** durch: `if d.ST.IDX < 8` gab V1 eine
--- Schranke, und `T.slots[d.ST.IDX]` galt damit als gedeckt.
---
--- **Es sind ZWEI Lesungen.** Ein Register senkt zu `*(volatile uint32_t *)(basis + 0)` ab,
--- und `volatile` ist genau die Aussage *„das darf sich zwischen zwei Lesungen aendern."*
--- Das erzeugte C indizierte ein Feld mit acht Plaetzen mit einem Wert, den die Hardware
--- zwischen den beiden Zeilen frei setzt.
---
--- **Der Ordner beschrieb die richtige Regel und der Pruefer tat das Gegenteil:**
--- `PFLICHTEN.txt` fuehrte «B33» als *„die V-Regeln verengen eine Registerstelle nicht"*.
--- *Eine Zusage, die kein Pass einloest, ist die stille Richtung.*
---
--- Die ehrliche Form steht in `beispiele/44-register-einmal-lesen.gab`: einmal in eine
--- lokale Bindung lesen, dann die Bindung verengen.
+// erwartet: M103
+// **Gift 213 -- eine Registerstelle, die sich verengen liess.**
+//
+// Bis zum 2026-08-20 ging das mit **0 Fehlern** durch: `if d.ST.IDX < 8` gab V1 eine
+// Schranke, und `T.slots[d.ST.IDX]` galt damit als gedeckt.
+//
+// **Es sind ZWEI Lesungen.** Ein Register senkt zu `*(volatile uint32_t *)(basis + 0)` ab,
+// und `volatile` ist genau die Aussage *„das darf sich zwischen zwei Lesungen aendern."*
+// Das erzeugte C indizierte ein Feld mit acht Plaetzen mit einem Wert, den die Hardware
+// zwischen den beiden Zeilen frei setzt.
+//
+// **Der Ordner beschrieb die richtige Regel und der Pruefer tat das Gegenteil:**
+// `PFLICHTEN.txt` fuehrte «B33» als *„die V-Regeln verengen eine Registerstelle nicht"*.
+// *Eine Zusage, die kein Pass einloest, ist die stille Richtung.*
+//
+// Die ehrliche Form steht in `beispiele/44-register-einmal-lesen.gab`: einmal in eine
+// lokale Bindung lesen, dann die Bindung verengen.
 
 module gift213 {
 

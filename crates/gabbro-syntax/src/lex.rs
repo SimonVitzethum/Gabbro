@@ -1,6 +1,7 @@
 //! The lexer -- `SYNTAX.md`, section "Lexik".
 //!
-//! No floating point, `--` to end of line as a comment, numbers with `_`, umlauts in
+//! No floating point, comments as in most languages (`//` to end of line, `/* ... */`
+//! nesting by depth, `///` a doc comment kept as trivia), numbers with `_`, umlauts in
 //! identifiers. Strings know **no escaping**: `char = any character except quote and newline`.
 //! That is not an omission but the grammar -- an escape would be a new word.
 
@@ -140,6 +141,10 @@ pub enum Art {
     /// A string, without the quotes.
     Text,
     Zeichen(Z),
+    /// **Trivia:** a `///` doc comment (not `////`), its span the whole comment up to the
+    /// end of the line. Only [`zerlege_mit_doku`] produces it; [`zerlege`], the stream
+    /// the parser reads, drops it, so a doc comment never changes what a program means.
+    Doku,
     Ende,
 }
 
@@ -154,6 +159,7 @@ impl Token {
     pub fn text<'a>(&self, quelle: &'a str) -> &'a str {
         let (von, bis) = match self.art {
             Art::Text => (self.span.von as usize + 1, self.span.bis as usize - 1),
+            Art::Doku => (self.span.von as usize + 3, self.span.bis as usize),
             _ => (self.span.von as usize, self.span.bis as usize),
         };
         quelle.get(von..bis).unwrap_or("")
@@ -167,6 +173,7 @@ impl Token {
             Art::Zahl(_) => format!("number `{}`", self.text(quelle)),
             Art::Gleitkomma(..) => format!("floating point number `{}`", self.text(quelle)),
             Art::Text => "string".to_string(),
+            Art::Doku => "doc comment".to_string(),
             Art::Zeichen(z) => format!("`{}`", z.text()),
             Art::Ende => "end of file".to_string(),
         }
@@ -270,7 +277,7 @@ fn ist_laufzeichen(c: char) -> bool {
 
 /// The source-trust gate itself: (1) bidi and invisible characters over the RAW source,
 /// comments and strings included; (2) identifier-like runs over code only (strings and
-/// `--` comments skipped, exactly as the main loop skips them), refused as `P061`
+/// comments skipped, exactly as the main loop skips them), refused as `P061`
 /// (outside the allowed set) or `P062` (two scripts in one run).
 ///
 /// A run that directly adjoins a digit (`0䀀`, `123abc`) is left to the number rules
@@ -327,10 +334,30 @@ fn quelltext_pruefe(quelle: &str, absagen: &mut Absagen) {
             vorher_ziffer = false;
             continue;
         }
-        if c == '-' && it.peek().is_some_and(|(_, d)| *d == '-') {
+        if c == '/' && it.peek().is_some_and(|(_, d)| *d == '/') {
             while let Some((_, d)) = it.next() {
                 if d == '\n' {
                     break;
+                }
+            }
+            vorher_ziffer = false;
+            continue;
+        }
+        if c == '/' && it.peek().is_some_and(|(_, d)| *d == '*') {
+            it.next();
+            let mut tiefe = 1usize;
+            while tiefe > 0 {
+                match it.next() {
+                    Some((_, '/')) if it.peek().is_some_and(|(_, d)| *d == '*') => {
+                        it.next();
+                        tiefe += 1;
+                    }
+                    Some((_, '*')) if it.peek().is_some_and(|(_, d)| *d == '/') => {
+                        it.next();
+                        tiefe -= 1;
+                    }
+                    Some(_) => {}
+                    None => break,
                 }
             }
             vorher_ziffer = false;
@@ -404,9 +431,18 @@ fn zeichen_bei(quelle: &str, i: usize) -> Option<char> {
     quelle.get(i..).and_then(|r| r.chars().next())
 }
 
-/// Splits the source. Refusals accumulate; the stream does not abort, so that one run shows
-/// more than a single finding.
+/// Splits the source into the stream the parser reads: comments, doc comments included,
+/// are gone.
 pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
+    let mut tokens = zerlege_mit_doku(quelle, absagen);
+    tokens.retain(|t| t.art != Art::Doku);
+    tokens
+}
+
+/// Splits the source and keeps the `///` doc comments as [`Art::Doku`] trivia in source
+/// position (for tools). Refusals accumulate; the stream does not abort, so that one run
+/// shows more than a single finding.
+pub fn zerlege_mit_doku(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
     // Lane 182 first: the source-trust gate (bidi, invisible, homoglyph identifiers).
     // It only adds refusals; the stream below is unchanged.
     quelltext_pruefe(quelle, absagen);
@@ -434,10 +470,46 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
             continue;
         }
 
-        // Comment `--` to end of line. Comes BEFORE any interpretation of `-`.
-        if c == b'-' && i + 1 < b.len() && b[i + 1] == b'-' {
+        // Comments. They come BEFORE any interpretation of `/`.
+        // `////` and more slashes: an ordinary line comment. `///`: a doc comment (trivia).
+        if c == b'/' && b[i..].starts_with(b"//") {
+            let von = i;
             while i < b.len() && b[i] != b'\n' {
                 i += 1;
+            }
+            if b[von..].starts_with(b"///") && !b[von..].starts_with(b"////") {
+                schiebe(&mut out, Art::Doku, von, i);
+            }
+            continue;
+        }
+        // A block comment; `/*` inside opens one more level, and it ends when the depth
+        // is back to zero. Running into the end of the file is a lexical error.
+        if c == b'/' && b[i..].starts_with(b"/*") {
+            let von = i;
+            i += 2;
+            let mut tiefe = 1usize;
+            while i < b.len() && tiefe > 0 {
+                if b[i..].starts_with(b"/*") {
+                    tiefe += 1;
+                    i += 2;
+                } else if b[i..].starts_with(b"*/") {
+                    tiefe -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            if tiefe > 0 {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "L008",
+                        Span::neu(von as u32, i as u32),
+                        format!("block comment with no closing `*/` ({tiefe} level(s) still open)"),
+                    )
+                    .mit_notiz(
+                        "block comments nest: every `/*` needs its own `*/`",
+                    ),
+                );
             }
             continue;
         }

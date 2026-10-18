@@ -1,15 +1,15 @@
--- erwartet: M123
--- **Gift 235 -- ein `match` ueber einem Grund laesst einen Fall aus.**
---
--- Dieselbe Regel, die `D005` ueber einem `tagged type` haelt, und woertlich dieselbe
--- Begruendung: **ein `reason` ist eine ABGESCHLOSSENE Aufzaehlung, und die Sprache kennt
--- keinen Sammelzweig.** Ohne diese Absage waere die Abgeschlossenheit eine Zusage der
--- Grammatik, die kein Pass einloest -- und im erzeugten C faellt ein `switch` ohne den
--- fehlenden Fall durch und tut NICHTS.
---
--- *Diese Regel schliesst ein Loch, das der Erzeuger von `e` selbst aufgemacht hat.* Vor
--- Stufe 7 fiel `match e { … }` mit `M119`, weil `e` ungebunden war; mit dem Typ wurde die
--- Frage nach den Zweigen ueberhaupt erst faellig, und sie stand einen Lauf lang offen.
+// erwartet: M123
+// **Gift 235 -- ein `match` ueber einem Grund laesst einen Fall aus.**
+//
+// Dieselbe Regel, die `D005` ueber einem `tagged type` haelt, und woertlich dieselbe
+// Begruendung: **ein `reason` ist eine ABGESCHLOSSENE Aufzaehlung, und die Sprache kennt
+// keinen Sammelzweig.** Ohne diese Absage waere die Abgeschlossenheit eine Zusage der
+// Grammatik, die kein Pass einloest -- und im erzeugten C faellt ein `switch` ohne den
+// fehlenden Fall durch und tut NICHTS.
+//
+// *Diese Regel schliesst ein Loch, das der Erzeuger von `e` selbst aufgemacht hat.* Vor
+// Stufe 7 fiel `match e { … }` mit `M119`, weil `e` ungebunden war; mit dem Typ wurde die
+// Frage nach den Zweigen ueberhaupt erst faellig, und sie stand einen Lauf lang offen.
 
 module gift::match_ueber_grund_unvollstaendig {
 

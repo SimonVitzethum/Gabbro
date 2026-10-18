@@ -1,10 +1,10 @@
--- erwartet: N066
--- **Gift 1400 -- an `aarch64` syscall that names an x86_64 register.**
---
--- `aarch64` is an open architecture since 2026-10-07 (`A006` is silent here), and its
--- register table is `x0`-`x30`. `rdi`, `rax` and `rcx` belong to the other machine: the
--- register file is held against the ARCHITECTURE the declaration names, not against the
--- one table the checker had before. The positive twin is `bibliothek/linux/linux-aarch64.gab`.
+// erwartet: N066
+// **Gift 1400 -- an `aarch64` syscall that names an x86_64 register.**
+//
+// `aarch64` is an open architecture since 2026-10-07 (`A006` is silent here), and its
+// register table is `x0`-`x30`. `rdi`, `rax` and `rcx` belong to the other machine: the
+// register file is held against the ARCHITECTURE the declaration names, not against the
+// one table the checker had before. The positive twin is `bibliothek/linux/linux-aarch64.gab`.
 
 module gift::syscall_aarch64_x86_register {
 

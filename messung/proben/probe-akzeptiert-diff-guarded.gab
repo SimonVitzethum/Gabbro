@@ -1,19 +1,19 @@
--- Positive agreement probe for `instrumente/pruefe-akzeptiert-diff.py`
--- (lane 208): two starts writing one GUARDED table under the lock.
---
--- Both checkers accept: the Rust race rule stays silent (the carrier has
--- a guard lock -- the `rennB` exemption), and the Lean Bool holds with
--- `sperrOrte` non-trivially true (one lock, one protected carrier).
--- Stays clean on purpose: the day either side refuses, the guard
--- exemption or the one-source guard construction has drifted.
---
--- GEMESSEN (lane 208, round 2)
--- ---------------------------
---
---     $ gabbro pruefe messung/proben/probe-akzeptiert-diff-guarded.gab
---     …: 0 errors
---     $ python3 instrumente/pruefe-akzeptiert-diff.py  # walks this file
---     …: rust=accept lean=accept agree
+// Positive agreement probe for `instrumente/pruefe-akzeptiert-diff.py`
+// (lane 208): two starts writing one GUARDED table under the lock.
+//
+// Both checkers accept: the Rust race rule stays silent (the carrier has
+// a guard lock -- the `rennB` exemption), and the Lean Bool holds with
+// `sperrOrte` non-trivially true (one lock, one protected carrier).
+// Stays clean on purpose: the day either side refuses, the guard
+// exemption or the one-source guard construction has drifted.
+//
+// GEMESSEN (lane 208, round 2)
+// ---------------------------
+//
+//     $ gabbro pruefe messung/proben/probe-akzeptiert-diff-guarded.gab
+//     …: 0 errors
+//     $ python3 instrumente/pruefe-akzeptiert-diff.py  # walks this file
+//     …: rust=accept lean=accept agree
 module probe::akzeptiertdiffguarded {
 
 table T count 2 {

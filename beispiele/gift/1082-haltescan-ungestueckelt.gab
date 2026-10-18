@@ -1,19 +1,19 @@
--- erwartet: N421 allein
--- **1082 -- the unchunked scan under a held lock names its remedy.**
---
--- A full `traverse` (64 slots x 2 ops) inside one `locks TOR` acquisition
--- against `held <= 32 ops`. K002 refuses the overflow -- the latency statement
--- of every other core hangs on it -- and N421 refuses the SHAPE beside it:
--- one acquisition pays the whole table at once, so the scan, not the bound,
--- is what moves. The bound stays: raising `held` to fit is latency for all
--- cores, not a fix.
---
--- WHAT TO WRITE INSTEAD is the windowed shape of
--- `beispiele/147-ftp-alg-control.gab`: one bounded window per `locks`
--- acquisition, each window fitting `held`, each window re-establishing the
--- lock invariant at its own release. The positive half stands beside this
--- probe in `paesse.rs` (`haltezeit_fenster_*`): the same table swept in
--- windows of 16 falls with nothing.
+// erwartet: N421 allein
+// **1082 -- the unchunked scan under a held lock names its remedy.**
+//
+// A full `traverse` (64 slots x 2 ops) inside one `locks TOR` acquisition
+// against `held <= 32 ops`. K002 refuses the overflow -- the latency statement
+// of every other core hangs on it -- and N421 refuses the SHAPE beside it:
+// one acquisition pays the whole table at once, so the scan, not the bound,
+// is what moves. The bound stays: raising `held` to fit is latency for all
+// cores, not a fix.
+//
+// WHAT TO WRITE INSTEAD is the windowed shape of
+// `beispiele/147-ftp-alg-control.gab`: one bounded window per `locks`
+// acquisition, each window fitting `held`, each window re-establishing the
+// lock invariant at its own release. The positive half stands beside this
+// probe in `paesse.rs` (`haltezeit_fenster_*`): the same table swept in
+// windows of 16 falls with nothing.
 
 module gift::halte_fenster_vollscan {
 

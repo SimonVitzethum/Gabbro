@@ -1,10 +1,10 @@
--- 1160 -- **the unbounded heap with sampling (user threshold 1 MiB).**
---
--- No `max`: the ceiling is the counter room, the reservation is address space
--- without RAM, and before every 1 MiB commit the generator asks `frei` for
--- free bytes. Below `blw 1048576` the `else` runs (the OOM path); on a
--- freestanding target `frei` is the program's own measurement, no OS call in
--- the generator. The fast path (`bereit >= bedarf`) asks nothing.
+// 1160 -- **the unbounded heap with sampling (user threshold 1 MiB).**
+//
+// No `max`: the ceiling is the counter room, the reservation is address space
+// without RAM, and before every 1 MiB commit the generator asks `frei` for
+// free bytes. Below `blw 1048576` the `else` runs (the OOM path); on a
+// freestanding target `frei` is the program's own measurement, no OS call in
+// the generator. The fast path (`bereit >= bedarf`) asks nothing.
 module beispiel::halde_mit_abtastung {
 pub arena Vorrat capacity 0 .. 2 of u64 pb frei blw 1048576;
 

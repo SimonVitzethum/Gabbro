@@ -1,10 +1,10 @@
--- erwartet: N496
--- **Opus agent D (OFFEN O11) -- a `consumes` moves the carrier like a write.**
---
--- `beispiele/09`'s `einsammeln` shape: the function retires the slots below `s` by a
--- consuming walk, and its line says `consumes Kappenraum.slots`, not `writes`. A rule that
--- read only `writes` would let the retiring function owe nothing. `blatt_loeschen`
--- maintains the invariant; `einsammeln` does not name it.
+// erwartet: N496
+// **Opus agent D (OFFEN O11) -- a `consumes` moves the carrier like a write.**
+//
+// `beispiele/09`'s `einsammeln` shape: the function retires the slots below `s` by a
+// consuming walk, and its line says `consumes Kappenraum.slots`, not `writes`. A rule that
+// read only `writes` would let the retiring function owe nothing. `blatt_loeschen`
+// maintains the invariant; `einsammeln` does not name it.
 module gift::verbrauch_ohne_maintains {
 
 const NSLOTS : u32 = 64;

@@ -1,8 +1,8 @@
--- erwartet: N580
--- **`leave` over a `by consuming` walk (SPRACHE-EFFIZIENZ #19).** The binder of a
--- `traverse` is its label for `leave`/`next`, but only a `by unvisited` walk takes the exit:
--- a consuming walk removes every slot it visits, and stopping half way leaves a removal the
--- walk's statement does not describe.
+// erwartet: N580
+// **`leave` over a `by consuming` walk (SPRACHE-EFFIZIENZ #19).** The binder of a
+// `traverse` is its label for `leave`/`next`, but only a `by unvisited` walk takes the exit:
+// a consuming walk removes every slot it visits, and stopping half way leaves a removal the
+// walk's statement does not describe.
 module gift::verlassen_verbrauchend {
 
 const NSLOTS : u32 = 64;

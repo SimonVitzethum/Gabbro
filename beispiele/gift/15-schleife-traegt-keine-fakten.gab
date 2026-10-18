@@ -1,7 +1,7 @@
--- erwartet: M104
--- **Schleifen tragen keine Fakten hinein.** Was vor der Schleife geprueft wurde, gilt in
--- ihrem Rumpf nicht -- das traegt die Invariante der Traversierung, und die gehoert dem
--- Beweiser, nicht M1.
+// erwartet: M104
+// **Schleifen tragen keine Fakten hinein.** Was vor der Schleife geprueft wurde, gilt in
+// ihrem Rumpf nicht -- das traegt die Invariante der Traversierung, und die gehoert dem
+// Beweiser, nicht M1.
 module gift {
 
 const GRENZE : u32 = 65535;

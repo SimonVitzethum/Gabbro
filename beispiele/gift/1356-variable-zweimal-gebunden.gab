@@ -1,6 +1,6 @@
--- erwartet: N564
--- Gift 1356 -- **One variable bound twice in one target.** Two bindings would give one gate two numbers,
--- and the fill would take the first without saying so (OFFEN O31).
+// erwartet: N564
+// Gift 1356 -- **One variable bound twice in one target.** Two bindings would give one gate two numbers,
+// and the fill would take the first without saying so (OFFEN O31).
 
 module gift::variable_zweimal_gebunden {
 

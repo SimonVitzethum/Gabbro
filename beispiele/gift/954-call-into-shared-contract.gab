@@ -1,10 +1,10 @@
--- erwartet: N292
--- **A call into a contract over a carrier a third thread writes.**
---
--- `aufrufer` calls `geber`, whose contract reads `G`; `schreiber` writes `G`
--- on a third thread. The caller holds no guard, no invariant protects `G`,
--- and `G` is not thread-local -- so the callee leg falls with N292 at the
--- call site (the old E248 hint fires beside it).
+// erwartet: N292
+// **A call into a contract over a carrier a third thread writes.**
+//
+// `aufrufer` calls `geber`, whose contract reads `G`; `schreiber` writes `G`
+// on a third thread. The caller holds no guard, no invariant protects `G`,
+// and `G` is not thread-local -- so the callee leg falls with N292 at the
+// call site (the old E248 hint fires beside it).
 module gift::fuss2_shared_callee {
 
 table G count 2 {

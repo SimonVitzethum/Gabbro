@@ -1,5 +1,5 @@
--- erwartet: N287
--- **A whole-array copy between arrays of different length stays refused** (`N287`).
+// erwartet: N287
+// **A whole-array copy between arrays of different length stays refused** (`N287`).
 module gift::feldkopie_laenge {
 
 static mut KURZ : [u32; 3] = 0;

@@ -1,8 +1,8 @@
--- erwartet: N067
--- **Gift 804 -- an errno mapped to a reason the channel never declares.**
---
--- `QuotenFehler` is no case of `IoError`. The generated decoding would carry a
--- dead arm -- a target that never arrives -- so the arm falls, by name.
+// erwartet: N067
+// **Gift 804 -- an errno mapped to a reason the channel never declares.**
+//
+// `QuotenFehler` is no case of `IoError`. The generated decoding would carry a
+// dead arm -- a target that never arrives -- so the arm falls, by name.
 
 module gift::syscall_fremder_grund {
 

@@ -1,6 +1,6 @@
--- erwartet: N586
--- Only a bound name can die: a literal freed here would stay readable there,
--- and no name would carry the death. Nothing else is wrong with this unit.
+// erwartet: N586
+// Only a bound name can die: a literal freed here would stay readable there,
+// and no name would carry the death. Nothing else is wrong with this unit.
 module gift::freigabe_berechneter_platz {
 arena Vorrat capacity 0 .. 4 of u64;
 

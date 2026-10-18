@@ -1,61 +1,61 @@
--- 47 -- **`ops` schreibt seine drei Wörter zum ersten Mal.**
---
--- «NL.1» hat die Wortmenge am 2026-08-19 entschieden und in die EBNF geschrieben:
---
---     opname = "insert" | "remove" | "relabel" ;
---
--- **Bis zum 2026-08-20 war die Zeile in BEIDE Richtungen falsch**, und `opdecl` hatte null
--- Korpusstellen, also hat es niemand bemerkt:
---
---     ops erfundenes_wort;   ->  0 Fehler     -- jedes Wort ging durch
---     ops insert;            ->  P002         -- die drei GUELTIGEN gingen NICHT
---
--- Die drei stehen im Lexer als reservierte Wörter, also konnte die `identlist` des Parsers
--- sie gar nicht lesen. *Die Grammatik sagte das eine, der Lexer das zweite, der Parser das
--- dritte.*
---
--- **Warum die Menge geschlossen ist:** aus einem NAMEN fällt keine Wirkung. Ein Erzeuger kann
--- `insert` emittieren, weil festliegt, was `insert` tut -- für ein erfundenes Wort gibt es
--- nichts zu emittieren, und die Schablone `table.ops.erhaltung` ist damit in dem einzigen
--- Sinn unbeweisbar, auf den es ankommt.
---
--- > ~~**Und diese Datei ist noch keine Auslieferung.**~~ **AUSGELIEFERT am 2026-08-28.**
--- > `gabbro emit` schreibt `Verzeichnis_insert` und `Verzeichnis_remove`, und der Beweis
--- > schreibt sie: `einfuegen_erhaelt` gibt die zwei Voraussetzungen, `blatt_loeschen_erhaelt`
--- > die eine. ~~*Und `umhaengen_faellt` sorgt dafuer, dass `relabel` NICHT emittiert wird.*~~
--- > **Bis zum Abend desselben Tages -- siehe unten.**
--- >
--- > **Und `remove` setzt den ganzen Slot zurueck, nicht nur die Belegung.** Genau daran
--- > haengt die Invariante unten: `marke_null_wenn_frei` bricht, wenn `marke` das Entfernen
--- > ueberlebt. *Das ist der Posten, den eine Handmutation vergisst.*
---
--- > **UND SEIT DEM 2026-08-28 NACHMITTAG WIRD GERUFEN** (`messung/OPS-RUFFORM.md`).
--- > Am Vormittag trugen die erzeugten Funktionen `__attribute__((unused))`: in ihrer
--- > Uebersetzungseinheit rief sie niemand, **weil die Sprache keine Form dafuer hatte.**
--- > *Ein Verbot (`D001`) mit einem Ersatz, den niemand erreicht.*
--- >
--- > Die Form kostet **kein Wort und keine Produktion**: `Verzeichnis::insert(v, i)` parste
--- > schon, weil `pfad` ein Wortschatzwort als Segment zulaesst. Gefehlt hat nicht die
--- > Rufform, sondern der GERUFENE -- gemessen als `K003`/`E009`, bevor entschieden wurde.
--- >
--- > **Und die Voraussetzungen des Beweises sind hier Pflichten**: `D012` haelt sie gegen
--- > die Aufrufstelle. Was unten an `requires` steht, steht dort nicht zur Zierde.
---
--- > **UND SEIT DEM 2026-08-28 ABENDS SIND ES DREI WOERTER.** `relabel` erzeugte bis dahin
--- > nichts -- ein Wort einer GESCHLOSSENEN Menge, das niemand rufen konnte, bei 127
--- > gemessenen Korpusstellen. Der Beweis kam zuerst (K100s zweites Tor, Praezedenzfall
--- > `verbund.konstruktor`): `umhaengen_erhaelt` (U-3) nennt die Bedingung, `umhaengen_faellt`
--- > bleibt als Beleg stehen, dass sie noetig ist. `messung/OPS-RELABEL.md`.
---
--- Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`; die Gegenproben zur
--- Rufform in `beispiele/gift/321`-`324` und `331`-`334`.
+// 47 -- **`ops` schreibt seine drei Wörter zum ersten Mal.**
+//
+// «NL.1» hat die Wortmenge am 2026-08-19 entschieden und in die EBNF geschrieben:
+//
+//     opname = "insert" | "remove" | "relabel" ;
+//
+// **Bis zum 2026-08-20 war die Zeile in BEIDE Richtungen falsch**, und `opdecl` hatte null
+// Korpusstellen, also hat es niemand bemerkt:
+//
+//     ops erfundenes_wort;   ->  0 Fehler     -- jedes Wort ging durch
+//     ops insert;            ->  P002         -- die drei GUELTIGEN gingen NICHT
+//
+// Die drei stehen im Lexer als reservierte Wörter, also konnte die `identlist` des Parsers
+// sie gar nicht lesen. *Die Grammatik sagte das eine, der Lexer das zweite, der Parser das
+// dritte.*
+//
+// **Warum die Menge geschlossen ist:** aus einem NAMEN fällt keine Wirkung. Ein Erzeuger kann
+// `insert` emittieren, weil festliegt, was `insert` tut -- für ein erfundenes Wort gibt es
+// nichts zu emittieren, und die Schablone `table.ops.erhaltung` ist damit in dem einzigen
+// Sinn unbeweisbar, auf den es ankommt.
+//
+// > ~~**Und diese Datei ist noch keine Auslieferung.**~~ **AUSGELIEFERT am 2026-08-28.**
+// > `gabbro emit` schreibt `Verzeichnis_insert` und `Verzeichnis_remove`, und der Beweis
+// > schreibt sie: `einfuegen_erhaelt` gibt die zwei Voraussetzungen, `blatt_loeschen_erhaelt`
+// > die eine. ~~*Und `umhaengen_faellt` sorgt dafuer, dass `relabel` NICHT emittiert wird.*~~
+// > **Bis zum Abend desselben Tages -- siehe unten.**
+// >
+// > **Und `remove` setzt den ganzen Slot zurueck, nicht nur die Belegung.** Genau daran
+// > haengt die Invariante unten: `marke_null_wenn_frei` bricht, wenn `marke` das Entfernen
+// > ueberlebt. *Das ist der Posten, den eine Handmutation vergisst.*
+//
+// > **UND SEIT DEM 2026-08-28 NACHMITTAG WIRD GERUFEN** (`messung/OPS-RUFFORM.md`).
+// > Am Vormittag trugen die erzeugten Funktionen `__attribute__((unused))`: in ihrer
+// > Uebersetzungseinheit rief sie niemand, **weil die Sprache keine Form dafuer hatte.**
+// > *Ein Verbot (`D001`) mit einem Ersatz, den niemand erreicht.*
+// >
+// > Die Form kostet **kein Wort und keine Produktion**: `Verzeichnis::insert(v, i)` parste
+// > schon, weil `pfad` ein Wortschatzwort als Segment zulaesst. Gefehlt hat nicht die
+// > Rufform, sondern der GERUFENE -- gemessen als `K003`/`E009`, bevor entschieden wurde.
+// >
+// > **Und die Voraussetzungen des Beweises sind hier Pflichten**: `D012` haelt sie gegen
+// > die Aufrufstelle. Was unten an `requires` steht, steht dort nicht zur Zierde.
+//
+// > **UND SEIT DEM 2026-08-28 ABENDS SIND ES DREI WOERTER.** `relabel` erzeugte bis dahin
+// > nichts -- ein Wort einer GESCHLOSSENEN Menge, das niemand rufen konnte, bei 127
+// > gemessenen Korpusstellen. Der Beweis kam zuerst (K100s zweites Tor, Praezedenzfall
+// > `verbund.konstruktor`): `umhaengen_erhaelt` (U-3) nennt die Bedingung, `umhaengen_faellt`
+// > bleibt als Beleg stehen, dass sie noetig ist. `messung/OPS-RELABEL.md`.
+//
+// Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`; die Gegenproben zur
+// Rufform in `beispiele/gift/321`-`324` und `331`-`334`.
 
 module beispiel::opswortmenge {
 
 const N : u32 = 16;
 
--- **`D001`: mit `ops` ist jede Handmutation an dieser Tabelle ein Fehler.** Genau darum
--- steht unten kein Schreibzugriff -- die Tabelle gehört ab hier den erzeugten Operationen.
+// **`D001`: mit `ops` ist jede Handmutation an dieser Tabelle ein Fehler.** Genau darum
+// steht unten kein Schreibzugriff -- die Tabelle gehört ab hier den erzeugten Operationen.
 table Verzeichnis count N {
     slot {
         benutzt : bool,
@@ -64,17 +64,17 @@ table Verzeichnis count N {
 
     ops insert, remove;
 
-    -- **`occupied` sagt, WELCHES Feld die Belegung traegt** (2026-08-28, Zuschnitt (c)).
-    -- Ohne es hat `sigma n = None` aus `Table_Ops_Erhaltung.thy` kein Subjekt, und `D011`
-    -- weist die Tabelle ab. *Der Korpus nennt dieses Feld unter elf Namen -- eine
-    -- Namensheuristik ist widerlegt, nicht bezweifelt (`messung/OPS-ERZEUGER.md`).*
+    // **`occupied` sagt, WELCHES Feld die Belegung traegt** (2026-08-28, Zuschnitt (c)).
+    // Ohne es hat `sigma n = None` aus `Table_Ops_Erhaltung.thy` kein Subjekt, und `D011`
+    // weist die Tabelle ab. *Der Korpus nennt dieses Feld unter elf Namen -- eine
+    // Namensheuristik ist widerlegt, nicht bezweifelt (`messung/OPS-ERZEUGER.md`).*
     occupied benutzt;
 
     invariant marke_null_wenn_frei cost O(1) runs online :
         forall s in slots of Self : Self.slots[s].benutzt || Self.slots[s].marke == 0;
 }
 
--- Lesen bleibt erlaubt: `ops` schliesst die SCHREIBSEITE ab, nicht die Lesesseite.
+// Lesen bleibt erlaubt: `ops` schliesst die SCHREIBSEITE ab, nicht die Lesesseite.
 impl fn ist_belegt(v : ptr<normal, r> Verzeichnis, i : index into Verzeichnis) -> bool
     effects { reads v.slots }
     costs   <= 2 ops
@@ -89,14 +89,14 @@ impl fn marke_von(v : ptr<normal, r> Verzeichnis, i : index into Verzeichnis) ->
     return v.slots[i].marke;
 }
 
--- ==========================================================================================
--- **Die Rufform** (2026-08-28). Ab hier steht im erzeugten C ein `Verzeichnis_insert(v, i);`
--- statt eines Prototyps, den nie jemand ruft.
--- ==========================================================================================
+// ==========================================================================================
+// **Die Rufform** (2026-08-28). Ab hier steht im erzeugten C ein `Verzeichnis_insert(v, i);`
+// statt eines Prototyps, den nie jemand ruft.
+// ==========================================================================================
 
--- **Die Voraussetzung steht im `requires` und wird von `D012` gehalten.** Sie ist woertlich
--- `sigma n = None` aus `einfuegen_erhaelt` -- und `occupied benutzt` ist der Grund, warum
--- der Pruefer weiss, WELCHES Feld sie meint.
+// **Die Voraussetzung steht im `requires` und wird von `D012` gehalten.** Sie ist woertlich
+// `sigma n = None` aus `einfuegen_erhaelt` -- und `occupied benutzt` ist der Grund, warum
+// der Pruefer weiss, WELCHES Feld sie meint.
 impl fn belegen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
     requires !v.slots[i].benutzt
     effects  { writes v.slots }
@@ -105,9 +105,9 @@ impl fn belegen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
     Verzeichnis::insert(v, i);
 }
 
--- Dieselbe Pflicht, an der zweiten der drei Stellen, an denen eine Tatsache ueber einem Ruf
--- stehen kann: die Bedingung des umgebenden `if`. *Wer sie nicht hat, bekommt sie nicht
--- geschenkt* -- `beispiele/gift/321` schreibt genau diesen Rumpf ohne die Wache.
+// Dieselbe Pflicht, an der zweiten der drei Stellen, an denen eine Tatsache ueber einem Ruf
+// stehen kann: die Bedingung des umgebenden `if`. *Wer sie nicht hat, bekommt sie nicht
+// geschenkt* -- `beispiele/gift/321` schreibt genau diesen Rumpf ohne die Wache.
 impl fn belegen_wenn_frei(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
     effects { writes v.slots, reads v.slots }
     costs   <= 6 ops
@@ -117,10 +117,10 @@ impl fn belegen_wenn_frei(v : ptr<normal, rw> Verzeichnis, i : index into Verzei
     }
 }
 
--- **`remove` schuldet hier NICHTS, und das ist eine Aussage.** `blatt sigma s` heisst
--- *„niemand nennt `s` als Elter"*; diese Tabelle hat keine `tree`-Kante, also kann kein Feld
--- einen Elter nennen, und die Voraussetzung gilt fuer jedes `s`. Eine erfundene Pflicht haette
--- strenger ausgesehen und weniger bedeutet. Der Fall MIT Kante steht unten an `Ordner`.
+// **`remove` schuldet hier NICHTS, und das ist eine Aussage.** `blatt sigma s` heisst
+// *„niemand nennt `s` als Elter"*; diese Tabelle hat keine `tree`-Kante, also kann kein Feld
+// einen Elter nennen, und die Voraussetzung gilt fuer jedes `s`. Eine erfundene Pflicht haette
+// strenger ausgesehen und weniger bedeutet. Der Fall MIT Kante steht unten an `Ordner`.
 impl fn raeumen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
     effects { writes v.slots }
     costs   <= 4 ops
@@ -128,18 +128,18 @@ impl fn raeumen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
     Verzeichnis::remove(v, i);
 }
 
--- ==========================================================================================
--- **Die zweite Tabelle traegt eine Baumkante -- und damit BEIDE uebrigen Voraussetzungen.**
---
--- `einfuegen_erhaelt` verlangt neben `sigma n = None` auch `erreicht sigma p`, und
--- `blatt_loeschen_erhaelt` verlangt `blatt sigma s`. Ohne `tree { parent … }` ist die erste
--- gegenstandslos (es gibt keinen Elter) und die zweite trivial. Mit ihr sind es Pflichten.
---
--- **Die WURZEL waehlt der Rufer, nicht die Deklaration.** `erreicht` im Beweis ist die
--- Erreichbarkeit *einer* Wurzel; welcher Platz sie spielt, steht in der Erreichbarkeits-
--- invariante der Tabelle und nicht in der `tree`-Zeile. Eine bestimmte Wurzel hier zu
--- verlangen waere eine Behauptung, die der Satz nicht macht.
--- ==========================================================================================
+// ==========================================================================================
+// **Die zweite Tabelle traegt eine Baumkante -- und damit BEIDE uebrigen Voraussetzungen.**
+//
+// `einfuegen_erhaelt` verlangt neben `sigma n = None` auch `erreicht sigma p`, und
+// `blatt_loeschen_erhaelt` verlangt `blatt sigma s`. Ohne `tree { parent … }` ist die erste
+// gegenstandslos (es gibt keinen Elter) und die zweite trivial. Mit ihr sind es Pflichten.
+//
+// **Die WURZEL waehlt der Rufer, nicht die Deklaration.** `erreicht` im Beweis ist die
+// Erreichbarkeit *einer* Wurzel; welcher Platz sie spielt, steht in der Erreichbarkeits-
+// invariante der Tabelle und nicht in der `tree`-Zeile. Eine bestimmte Wurzel hier zu
+// verlangen waere eine Behauptung, die der Satz nicht macht.
+// ==========================================================================================
 
 table Ordner count N {
     const WURZEL : u32 = 0;
@@ -151,10 +151,10 @@ table Ordner count N {
         elter   : option index into Ordner,
     }
 
-    -- **Drei Woerter, und seit dem 2026-08-28 abends sind es wirklich drei.** `relabel`
-    -- stand bis dahin im Wortschatz und erzeugte nichts: der Erzeuger sagte es ab und nannte
-    -- `umhaengen_faellt`. Das war nicht falsch, sondern unvollstaendig -- es sagte, DASS das
-    -- Umhaengen faellt, und nicht, WORAN. `umhaengen_erhaelt` (U-3) sagt es jetzt.
+    // **Drei Woerter, und seit dem 2026-08-28 abends sind es wirklich drei.** `relabel`
+    // stand bis dahin im Wortschatz und erzeugte nichts: der Erzeuger sagte es ab und nannte
+    // `umhaengen_faellt`. Das war nicht falsch, sondern unvollstaendig -- es sagte, DASS das
+    // Umhaengen faellt, und nicht, WORAN. `umhaengen_erhaelt` (U-3) sagt es jetzt.
     ops insert, remove, relabel;
 
     occupied benutzt;
@@ -173,10 +173,10 @@ impl fn einhaengen(o : ptr<normal, rw> Ordner,
     Ordner::insert(o, n, p);
 }
 
--- **`blatt sigma s`, woertlich.** Nicht `o.slots[s].erstes_kind == None` -- das schreibt
--- `beispiele/01` von Hand und es ist SCHWAECHER: es gilt auch von einem Platz, dessen
--- Kindliste von den Elternzeigern abgewandert ist. Eine schwaechere Voraussetzung als die des
--- Satzes ist genau dort fail-open, wo der Satz der ganze Ertrag ist.
+// **`blatt sigma s`, woertlich.** Nicht `o.slots[s].erstes_kind == None` -- das schreibt
+// `beispiele/01` von Hand und es ist SCHWAECHER: es gilt auch von einem Platz, dessen
+// Kindliste von den Elternzeigern abgewandert ist. Eine schwaechere Voraussetzung als die des
+// Satzes ist genau dort fail-open, wo der Satz der ganze Ertrag ist.
 impl fn aushaengen(o : ptr<normal, rw> Ordner, s : index into Ordner)
     requires forall x in slots of o : o.slots[x].elter != Some(s)
     effects  { writes o.slots }
@@ -185,16 +185,16 @@ impl fn aushaengen(o : ptr<normal, rw> Ordner, s : index into Ordner)
     Ordner::remove(o, s);
 }
 
--- **`relabel`, und die zweite Voraussetzung ist die, die es sieben Wochen gekostet hat.**
---
--- `umhaengen_erhaelt` verlangt zweierlei: der NEUE Elter erreicht eine Wurzel (dieselbe
--- Zeile wie bei `einhaengen`), und `s` liegt NICHT auf `p`s Elternkette -- **`p` selbst
--- eingeschlossen.** Ohne das Zweite entsteht der Zyklus, den `umhaengen_faellt` vorfuehrt.
---
--- Und genau darum steht hier `!(… reaches …)` und nicht `forall a in ancestors of … : a != s`:
--- `ancestors of` ist STRIKT (*„a node is not its own ancestor"*), liesse also `relabel(o, s, s)`
--- durch -- die Schlinge, und die bricht die Invariante wie der Zweislotzyklus.
--- `messung/OPS-RELABEL.md` §3 waegt beide Seiten beider Formen.
+// **`relabel`, und die zweite Voraussetzung ist die, die es sieben Wochen gekostet hat.**
+//
+// `umhaengen_erhaelt` verlangt zweierlei: der NEUE Elter erreicht eine Wurzel (dieselbe
+// Zeile wie bei `einhaengen`), und `s` liegt NICHT auf `p`s Elternkette -- **`p` selbst
+// eingeschlossen.** Ohne das Zweite entsteht der Zyklus, den `umhaengen_faellt` vorfuehrt.
+//
+// Und genau darum steht hier `!(… reaches …)` und nicht `forall a in ancestors of … : a != s`:
+// `ancestors of` ist STRIKT (*„a node is not its own ancestor"*), liesse also `relabel(o, s, s)`
+// durch -- die Schlinge, und die bricht die Invariante wie der Zweislotzyklus.
+// `messung/OPS-RELABEL.md` §3 waegt beide Seiten beider Formen.
 impl fn umhaengen(o : ptr<normal, rw> Ordner,
                   s : index into Ordner,
                   p : index into Ordner)

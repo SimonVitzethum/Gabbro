@@ -158,7 +158,7 @@ exporter refusals, certificate refusals).
    rule, which that guardian counted as a violation (see §15).
 2. **Every new refusal ships its sentence** in `saetze.rs` in the same commit (`gabbro paesse` lists
    the sentences; stage 2 of `instrumente/pruefe-pruefer.py`, `teile/saetze.py`, holds the ratchet "codes without a sentence") **and a poison probe** — a program in `beispiele/gift/`
-   whose first line is `-- erwartet: CODE`. A code with a sentence and no probe is a promise
+   whose first line is `// erwartet: CODE`. A code with a sentence and no probe is a promise
    nothing measures.
 3. **A refusal is never turned into a warning, and never widened to fit a corpus file.** A check
    that fires on a legitimate program is repaired by making the program's intent expressible, not
@@ -622,7 +622,7 @@ a bound. (This is the old "Simon's rule" of `dokumente/PRUEFER.md` §3; the form
 ### 4.15 The library boundary: `.gabi`, export hull, linking
 
 * `gabbro abi` writes a `.gabi`: the `pub` declarations without bodies. **It is valid Gabbro
-  source** (head `-- @gabi 1  lib bib`): the same parser reads it, the same passes check it, and
+  source** (head `// @gabi 1  lib bib`): the same parser reads it, the same passes check it, and
   there is no second format that can drift. `abi --compare` compares the computed effect hull with
   the written one. Without a bridge a cost promise across a file boundary fell *loudly*
   (`E009`, `K003`), so the bridge has a toll: what a `.gabi` carries and what it deliberately does not is a decision (next bullets).
@@ -1329,7 +1329,7 @@ count is unguarded: the guardian `pruefe-ausnahmen` named in the old text never 
 | Evidence | Where | What it says |
 |---|---|---|
 | **clean corpus** | `beispiele/*.gab` (170 programs, numbered; real, checked, most also emitted and run) | each must pass the checker with 0 errors (`jedes_beispiel_geht_sauber_durch`) |
-| **poison corpus** | `beispiele/gift/*.gab` (898 files) — the first line is `-- erwartet: CODE` | each must fall **with that code** (`jedes_gift_faellt_mit_seinem_code`). The test asks `contains`, not `==`: a probe is green once its code stands *anywhere* in the list. the retired `zaehle-gifttreffer` asked the stricter question — does the expected code fall **alone** (not guarded today) |
+| **poison corpus** | `beispiele/gift/*.gab` (898 files) — the first line is `// erwartet: CODE` | each must fall **with that code** (`jedes_gift_faellt_mit_seinem_code`). The test asks `contains`, not `==`: a probe is green once its code stands *anywhere* in the list. the retired `zaehle-gifttreffer` asked the stricter question — does the expected code fall **alone** (not guarded today) |
 | **both directions** | `der_korpus_hat_beide_richtungen`; `keine_zwei_korpusdateien_teilen_eine_nummer` | a rule has a positive and a poison side; example/gift numbers are unique |
 | **frozen excerpts and probes** | `messung/fragmente/F01`–`F10`, `messung/k3-fragmente/`, `messung/proben/`, `messung/einheit-proben/`, `messung/*-proben/` (265 `.gab` under `messung/`) | the kernel fragments the language was designed against; the K3 foreign fragments; one-purpose probes cited by sentences |
 | **unit tests** | `crates/gabbro-check/tests/*.rs` (about 60 files; with `gabbro-cli/tests` ~1,250 `#[test]`), `crates/gabbro-cli/tests/*.rs`, in-source tests (~260) | `rechenwerk.rs` (arithmetic and range cases), `paesse.rs` (per-pass cases), `beispiele.rs`, `seam.rs`, `noalias.rs`, `wurzeln.rs`, … (`grep -c '#\[test\]'`, 2026-10-17) |

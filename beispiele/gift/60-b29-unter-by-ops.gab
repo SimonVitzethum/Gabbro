@@ -1,14 +1,14 @@
--- erwartet: D002
--- **Die Sprechprobe, die «E2» als PFLICHT nennt** — als Gift-Fragment im Test, nicht als
--- Satz im Text.
---
--- `refcount -= 1` mit der Null-Pruefung DANACH ist «B29». Der Schnitt steht seit dem
--- Ursprungscommit im echten Baum und hat FUENF Umbauten genau dieser Region ueberlebt,
--- darunter zwei, die die Freigabesemantik umschrieben. Er ist kein Ausrutscher, sondern ein
--- Attraktor -- und unter `by ops` schlicht nicht schreibbar.
---
--- Der Unterschied zu Gift 37: dort nennt die TABELLE `ops`, hier nur das FELD. Die Tabelle
--- duldet Handmutation an `benutzt`; `zaehler` gehoert den Operationen.
+// erwartet: D002
+// **Die Sprechprobe, die «E2» als PFLICHT nennt** — als Gift-Fragment im Test, nicht als
+// Satz im Text.
+//
+// `refcount -= 1` mit der Null-Pruefung DANACH ist «B29». Der Schnitt steht seit dem
+// Ursprungscommit im echten Baum und hat FUENF Umbauten genau dieser Region ueberlebt,
+// darunter zwei, die die Freigabesemantik umschrieben. Er ist kein Ausrutscher, sondern ein
+// Attraktor -- und unter `by ops` schlicht nicht schreibbar.
+//
+// Der Unterschied zu Gift 37: dort nennt die TABELLE `ops`, hier nur das FELD. Die Tabelle
+// duldet Handmutation an `benutzt`; `zaehler` gehoert den Operationen.
 module gift {
 const N : u32 = 8;
 type Zaehler = u32 in 0 .. 65535;
@@ -18,7 +18,7 @@ table Objekte count N {
         benutzt : bool,
         zaehler : Zaehler by ops,
     }
-    -- Nachgezogen 2026-08-20: die Wortmenge von `ops` ist geschlossen («NL.1»).
+    // Nachgezogen 2026-08-20: die Wortmenge von `ops` ist geschlossen («NL.1»).
     ops insert, remove;
     occupied benutzt;
 }

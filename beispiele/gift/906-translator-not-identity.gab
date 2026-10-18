@@ -1,8 +1,8 @@
--- erwartet: N231
--- Lane E5: the translator body is not the runnable shape. The ordinary
--- checker accepts it -- a pure `let` and the region back -- but the
--- first cut runs only `return <region>;`, so the stage refuses it by
--- name instead of guessing what the extra line means.
+// erwartet: N231
+// Lane E5: the translator body is not the runnable shape. The ordinary
+// checker accepts it -- a pure `let` and the region back -- but the
+// first cut runs only `return <region>;`, so the stage refuses it by
+// name instead of guessing what the extra line means.
 module m {
 table SumTab count 4 {
     slot {

@@ -1,7 +1,7 @@
--- erwartet: N061
--- Lane E2: a direct call to a `library fn` -- without a region there is no
--- payload, so the call would silently bypass the mechanism. The function
--- is called through `@lib#f` with a region.
+// erwartet: N061
+// Lane E2: a direct call to a `library fn` -- without a region there is no
+// payload, so the call would silently bypass the mechanism. The function
+// is called through `@lib#f` with a region.
 module gpu::spirv {
 table KernelTab count 1 {
     slot {

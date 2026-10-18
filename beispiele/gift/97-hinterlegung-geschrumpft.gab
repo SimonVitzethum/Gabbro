@@ -1,9 +1,9 @@
--- erwartet: M108
--- **Die Gefahr ist nicht das Wachsen, sondern das SCHRUMPFEN.**
---
--- Die Tatsache `i < hinterlegt` wird gewonnen -- und dann faellt die Hinterlegung. Danach
--- gilt sie nicht mehr, und es braucht dafuer KEINE Monotonieregel: ein Schreiben loescht
--- jede Tatsache, die auf ihm ruht, wie fuer jeden anderen Fakt auch.
+// erwartet: M108
+// **Die Gefahr ist nicht das Wachsen, sondern das SCHRUMPFEN.**
+//
+// Die Tatsache `i < hinterlegt` wird gewonnen -- und dann faellt die Hinterlegung. Danach
+// gilt sie nicht mehr, und es braucht dafuer KEINE Monotonieregel: ein Schreiben loescht
+// jede Tatsache, die auf ihm ruht, wie fuer jeden anderen Fakt auch.
 module gift::schrumpf {
 
 static mut hinterlegt : u32 in 0 .. 1024 = 0;

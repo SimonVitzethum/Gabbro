@@ -1,23 +1,23 @@
--- erwartet: M101
--- **Zwei Regeln an einer Datei, und nur eine davon soll greifen.**
---
--- Die Funktion schreibt `i` -- einen LOKALEN Namen. Bis 2026-08-15 verlangte `E005` dafuer
--- einen Eintrag in der Wirkungsliste: eine Funktion, die nur zaehlt, konnte nicht `pure`
--- sein. `effects` beschreibt, was eine Funktion mit der WELT tut, nicht mit ihrem Stapel.
--- Gefunden am Fragmentlauf, nicht am Reissbrett.
---
--- Was BLEIBEN muss, ist die Zaehlerregel (SPRACHE.md §1): `in 0 .. GRENZE` allein reicht
--- nicht, denn `+ 1` reicht bis GRENZE + 1. Diese Datei faellt deshalb genau einmal.
---
--- **BERICHTIGT 2026-08-19, und der Grund ist ein Fund ueber die Probe selbst.** Hier stand
--- `let mut i : u64 in 0 .. MAXI = 0; i += 1;` -- und seit «H2.1» eine Bindung mit konstantem
--- Wert ihre Tatsache hinterlaesst, geht das durch. **Zu Recht:** `i` ist null, `i + 1` ist
--- eins, und das liegt im Bereich. *Das Programm war die ganze Zeit korrekt; die Probe hat
--- M1s BLINDHEIT gemessen und nicht einen Fehler.*
---
--- > Eine Giftprobe, die aufhoert zu beissen, weil der Pruefer schaerfer wurde, ist kein
--- > Rueckschritt -- sie war die falsche Probe. Der Anfangswert kommt jetzt von aussen, und
--- > damit misst sie, was ihr Text behauptet.
+// erwartet: M101
+// **Zwei Regeln an einer Datei, und nur eine davon soll greifen.**
+//
+// Die Funktion schreibt `i` -- einen LOKALEN Namen. Bis 2026-08-15 verlangte `E005` dafuer
+// einen Eintrag in der Wirkungsliste: eine Funktion, die nur zaehlt, konnte nicht `pure`
+// sein. `effects` beschreibt, was eine Funktion mit der WELT tut, nicht mit ihrem Stapel.
+// Gefunden am Fragmentlauf, nicht am Reissbrett.
+//
+// Was BLEIBEN muss, ist die Zaehlerregel (SPRACHE.md §1): `in 0 .. GRENZE` allein reicht
+// nicht, denn `+ 1` reicht bis GRENZE + 1. Diese Datei faellt deshalb genau einmal.
+//
+// **BERICHTIGT 2026-08-19, und der Grund ist ein Fund ueber die Probe selbst.** Hier stand
+// `let mut i : u64 in 0 .. MAXI = 0; i += 1;` -- und seit «H2.1» eine Bindung mit konstantem
+// Wert ihre Tatsache hinterlaesst, geht das durch. **Zu Recht:** `i` ist null, `i + 1` ist
+// eins, und das liegt im Bereich. *Das Programm war die ganze Zeit korrekt; die Probe hat
+// M1s BLINDHEIT gemessen und nicht einen Fehler.*
+//
+// > Eine Giftprobe, die aufhoert zu beissen, weil der Pruefer schaerfer wurde, ist kein
+// > Rueckschritt -- sie war die falsche Probe. Der Anfangswert kommt jetzt von aussen, und
+// > damit misst sie, was ihr Text behauptet.
 module gift {
 const MAXI : u64 = 100;
 impl fn zaehlt(start : u64 in 0 .. MAXI) -> u64

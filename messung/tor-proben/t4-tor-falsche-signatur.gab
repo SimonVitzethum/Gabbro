@@ -1,4 +1,4 @@
--- W24-Vorlauf: das Tor hat eine Signatur, die keine Pflicht verbrauchen kann.
+// W24-Vorlauf: das Tor hat eine Signatur, die keine Pflicht verbrauchen kann.
 module w24::t4 {
 
 static mut k : u32 = 0;

@@ -1,12 +1,12 @@
--- erwartet: N578 allein
--- **The handed stack is a number, never a pointer.**
---
--- The argument at a gate's `stack` parameter is the one value that travels into the `child`
--- region, and the parent runs on beside the child. Here it is a REGION bound from a gate
--- answer, whose extent clause (`ensures len <= lenof(result)`) held on both paths: the child
--- writes `seite[5]`, the parent writes `seite[5]` -- two threads, one byte, no order, and no
--- declared carrier the race rule (`N457`) could guard. Before `N578` (C-free lane,
--- 2026-10-05) this file checked with 0 errors.
+// erwartet: N578 allein
+// **The handed stack is a number, never a pointer.**
+//
+// The argument at a gate's `stack` parameter is the one value that travels into the `child`
+// region, and the parent runs on beside the child. Here it is a REGION bound from a gate
+// answer, whose extent clause (`ensures len <= lenof(result)`) held on both paths: the child
+// writes `seite[5]`, the parent writes `seite[5]` -- two threads, one byte, no order, and no
+// declared carrier the race rule (`N457`) could guard. Before `N578` (C-free lane,
+// 2026-10-05) this file checked with 0 errors.
 module gift::region_als_stapel {
 
 reason HolFehler {

@@ -1,19 +1,19 @@
--- S06 -- `atomic_fetch_add`: THE PRIMITIVE THE DOCUMENT PROMISES.
---
--- `SPRACHE.md` says of a primitive `exchange update` body that it lowers to an
--- `atomic_fetch_*`. `CTicket.lean`'s `zieht` is exactly that: ONE step,
--- `my = atomic_fetch_add_explicit(&L.next, 1u, relaxed)`, which never fails.
--- Lane 201 met the emitter's refusal from the other side (`C001` for a missing
--- `bounded`) and wrote the bound to get past it. This probe isolates the
--- question: is the shortest possible update body -- one increment, nothing else
--- -- lowered to a fetch-add?
---
--- ANSWER: no. This file is ACCEPTED (0 errors) and the emitted C is a bounded
--- compare-exchange loop. `atomic_fetch_add` occurs nowhere in the C, and the
--- string occurs in `crates/gabbro-check/src/emit.rs` only inside a comment.
---
--- The difference is not cosmetic: the C primitive is wait-free and always
--- succeeds, the emitted loop stops the thread after 64 lost races.
+// S06 -- `atomic_fetch_add`: THE PRIMITIVE THE DOCUMENT PROMISES.
+//
+// `SPRACHE.md` says of a primitive `exchange update` body that it lowers to an
+// `atomic_fetch_*`. `CTicket.lean`'s `zieht` is exactly that: ONE step,
+// `my = atomic_fetch_add_explicit(&L.next, 1u, relaxed)`, which never fails.
+// Lane 201 met the emitter's refusal from the other side (`C001` for a missing
+// `bounded`) and wrote the bound to get past it. This probe isolates the
+// question: is the shortest possible update body -- one increment, nothing else
+// -- lowered to a fetch-add?
+//
+// ANSWER: no. This file is ACCEPTED (0 errors) and the emitted C is a bounded
+// compare-exchange loop. `atomic_fetch_add` occurs nowhere in the C, and the
+// string occurs in `crates/gabbro-check/src/emit.rs` only inside a comment.
+//
+// The difference is not cosmetic: the C primitive is wait-free and always
+// succeeds, the emitted loop stops the thread after 64 lost races.
 
 module schreibprobe::fetch_add {
 

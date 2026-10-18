@@ -1,10 +1,10 @@
--- 90 -- the error path of a system call: the kernel says no.
---
--- The same `write` shape as `beispiele/74`, called on a descriptor that is
--- never open. The kernel answers `EBADF`, the generated decoding delivers
--- `BadFd` through the `or IoError` channel, and the wrapper names it. The
--- emission check runs this file beside 74: 74 measures the value path (a
--- `write(1, "ok\n", 3)` returns 3), this one the reason path.
+// 90 -- the error path of a system call: the kernel says no.
+//
+// The same `write` shape as `beispiele/74`, called on a descriptor that is
+// never open. The kernel answers `EBADF`, the generated decoding delivers
+// `BadFd` through the `or IoError` channel, and the wrapper names it. The
+// emission check runs this file beside 74: 74 measures the value path (a
+// `write(1, "ok\n", 3)` returns 3), this one the reason path.
 
 module beispiel::syscall_errno {
 
@@ -32,8 +32,8 @@ syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
     effects { pure }
     costs <= 8 ops;
 
--- Descriptor 9999 is never open in a test process (and out of range where the
--- table is smaller) -- either way the kernel answers `EBADF`, deterministically.
+// Descriptor 9999 is never open in a test process (and out of range where the
+// table is smaller) -- either way the kernel answers `EBADF`, deterministically.
 impl fn schreibe_ungueltig(buf : u64, len : u64) -> u64
     effects { pure }
 {
@@ -47,12 +47,12 @@ impl fn schreibe_ungueltig(buf : u64, len : u64) -> u64
     return n;
 }
 
--- **The targets (OFFEN O31).** The gate above names
--- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
--- carried until Opus agent L, unchanged; `metal` is the same number and register map
--- through `int $0x80` into the image's kernel entry, which destroys no register, under
--- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
--- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+// **The targets (OFFEN O31).** The gate above names
+// no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+// carried until Opus agent L, unchanged; `metal` is the same number and register map
+// through `int $0x80` into the image's kernel entry, which destroys no register, under
+// its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+// hosted stub unchanged; `gabbro emit --target metal` builds the other.
 target linux_x86_64 abi linux arch x86_64 {
     sys_write = number 1
         regs in { rdi = fd, rsi = buf, rdx = len }

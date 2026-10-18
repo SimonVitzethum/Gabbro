@@ -1,12 +1,12 @@
--- erwartet: N466
--- Lane 259 (`R-commit`): an `alloc` with its `else` past the committed
--- prefix and no `grow` covering it. `Speicher` commits `4` slots (`hi`)
--- under a ceiling of `16`; the fifth allocation names slot `4`, which no
--- path committed -- refused, branch or no branch. The `else` beside it
--- runs when the arena is FULL, and here the slot was never committed, so
--- it answers nothing: the missing `grow` stands before the `alloc`, not
--- beside it. Nothing else is wrong with this unit: the arena is declared,
--- the reservation `else`s stand, the effects and the budget are clean.
+// erwartet: N466
+// Lane 259 (`R-commit`): an `alloc` with its `else` past the committed
+// prefix and no `grow` covering it. `Speicher` commits `4` slots (`hi`)
+// under a ceiling of `16`; the fifth allocation names slot `4`, which no
+// path committed -- refused, branch or no branch. The `else` beside it
+// runs when the arena is FULL, and here the slot was never committed, so
+// it answers nothing: the missing `grow` stands before the `alloc`, not
+// beside it. Nothing else is wrong with this unit: the arena is declared,
+// the reservation `else`s stand, the effects and the budget are clean.
 module gift1171 {
 arena Speicher capacity 2 .. 4 max 16 of u16;
 

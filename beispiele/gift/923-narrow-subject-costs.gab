@@ -1,15 +1,15 @@
--- erwartet: K001
--- **Lane 139 (F5): `narrow` reads its subject.**
---
--- The range check is one operation, and the checked place is read like any load: one load
--- plus its indices -- what `kostenExpr` (KostenG.lean) counts over the subject. `kosten.rs`
--- booked the check and the `else` arm only:
---
---     narrow t.slots[teuer()].x to 0 .. 10 else { return 0; }   ->  K001, costs 102
---     (check 1 + load 1 + teuer() 100 + else 0; plus `return 1` at 0)
---
--- Before lane 139 the body cost 1 and `costs <= 101 ops` went through with 0 errors. The
--- bare-name case (`narrow x to …`, `beispiele/26`) moves by one for the same reason.
+// erwartet: K001
+// **Lane 139 (F5): `narrow` reads its subject.**
+//
+// The range check is one operation, and the checked place is read like any load: one load
+// plus its indices -- what `kostenExpr` (KostenG.lean) counts over the subject. `kosten.rs`
+// booked the check and the `else` arm only:
+//
+//     narrow t.slots[teuer()].x to 0 .. 10 else { return 0; }   ->  K001, costs 102
+//     (check 1 + load 1 + teuer() 100 + else 0; plus `return 1` at 0)
+//
+// Before lane 139 the body cost 1 and `costs <= 101 ops` went through with 0 errors. The
+// bare-name case (`narrow x to …`, `beispiele/26`) moves by one for the same reason.
 module gift::narrow_subject_costs {
 table T count 4 { slot { x : u32, } }
 impl fn teuer() -> u32 in 0 .. 3 effects { pure } costs <= 100 ops { return 1; }

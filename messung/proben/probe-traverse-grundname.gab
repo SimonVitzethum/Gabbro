@@ -1,78 +1,78 @@
--- **Traegt der Grundname eines `traverse` einen Leser -- und was kostet einer?**
---
--- `dokumente/PRUEFER.md` §7 fuehrt die Stelle als *„ungeprueft von `D017`"* mit dem
--- Grund **Geltungsbereich, nicht Reichweite**: *„Eine Domaene im Rumpf kann ueber eine
--- `let`-Bindung laufen, und dieser Pass traegt keinen Blockgeltungsbereich -- er wuerde den
--- Namen abweisen, den die Zeile darueber einfuehrt."*
---
--- **Das war aus dem Quelltext gelesen.** Diese Datei ist die Gegenprobe, die vor den Bau
--- gehoert -- und sie hat die Vermutung bestaetigt.
---
--- (a) `traverse` ueber einer `let`-Bindung -- die Form, die eine Regel ohne
---     Geltungsbereich ABWEISEN wuerde, obwohl sie richtig ist.
--- (b) `traverse` ueber einem Namen, den nichts erklaert -- die Form, gegen die eine Regel
---     stuende.
---
--- 1. GEGEN DEN UNVERAENDERTEN PRUEFER, 2026-08-31
--- ------------------------------------------------
---
---     $ gabbro pruefe messung/proben/probe-traverse-grundname.gab
---     error: [K003] …:87:5: `ueber_ein_let` promises costs, but the domain `slots of` of
---            the traversal has no bound from a declaration -- a table gets it from
---            `count`, a `queue` from the single field array of its record, and a `walk`
---            from `levels` and its node length
---     error: [K003] …:103:5: `ueber_ein_nichts` promises costs, but the domain `slots of`
---            of the traversal has no bound from a declaration -- …
---     …: 5 items, 2 errors, 0 hints
---
--- **ZWEI, und das ist ein eigener Fund.** Ueber den NAMEN sagt niemand etwas -- beide
--- Absagen sind `K003` und reden von der fehlenden SCHRANKE. Aber (a) ist ein richtiges
--- Programm: `tafel` ist ein `let`-Aliasname des Parameters `w`, und `slots of tafel` ist
--- dieselbe Schranke wie `slots of w`. **`kosten.rs` traegt denselben fehlenden
--- Blockgeltungsbereich wie `domaene.rs`** -- und weist deshalb heute schon ab, was in
--- Ordnung ist. *Der Vorbehalt in `dokumente/PRUEFER.md` §7 nennt die Luecke an `D017`;
--- gemessen ist sie an `K003`, und dort kostet sie bereits eine Falschabsage.*
---
--- 2. MIT `D017` PROBEHALBER AM `traverse`
--- ----------------------------------------
--- Die drei Zeilen `if st == Stellung::Durchlauf { return; }` aus `grundname_pruefen`
--- entfernt, gebaut, dieselbe Datei:
---
---     error: [D017] …:87:30: `tafel` in a `traverse` is not declared here
---     error: [D017] …:103:30: `zzznix` in a `traverse` is not declared here
---
--- **Beide.** Die Regel faengt (b) -- und weist (a) mit ab, ein richtiges Programm ueber
--- einen Namen, den die Zeile darueber einfuehrt. *Der Vorbehalt ist keine Vermutung mehr.*
---
--- 3. UND DER GANZE KORPUS, mit demselben Binaerprogramm
--- -----------------------------------------------------
--- 476 Dateien durch beide Fassungen, die Kennungslisten verglichen: **NULL neue `D017`.**
--- Keine der 41 `traverse`-Stellen des Korpus laeuft ueber einen Namen, den nur ein `let`
--- traegt -- und keine ueber einen, den gar nichts traegt.
---
--- WAS DARAUS FOLGT: BENANNT, NICHT GEBAUT
--- ----------------------------------------
--- Die Regel haette im Korpus **nichts gefangen** (null Maengel) und traegt eine gemessene
--- Falschabsage (a). *Regel A in beide Richtungen.* Der Blockgeltungsbereich, den sie
--- braeuchte, waere ein Bau ohne Gegenstand -- und (b) faellt ohne sie schon an `K003`,
--- sobald eine Kostenzusage dasteht. **Ohne Kostenzusage bleibt (b) stumm, und DAS ist die
--- Luecke** -- sie haengt an einer Zusage und nicht am Namen, genau wie die vier Zellen in
--- `probe-vier-zellen.gab`. Die Aenderung wurde zurueckgenommen; was bleibt, ist diese Datei
--- und die Zahl.
---
--- **NACHGETRAGEN 2026-08-31, `a713863`: die `K003`-Absage an (a) IST WEG.** Der
--- Blockgeltungsbereich in `kosten.rs` und `domaene.rs` hat sie geschlossen -- (a) rechnet
--- jetzt `28` gegen die zugesagten `64` und faellt nicht mehr. Nachgemessen mit
--- `gabbro kosten` ueber alle 481 Korpusdateien, zwei Binaerprogramme:
---
---     ueber_ein_let   OFFEN  ->  28        (die Falschabsage)
---     3570 Berichtszeilen, vier geaenderte Stellen, alle drei die erwarteten
---
--- **Die zweite Absage bleibt und soll bleiben:** (b) nennt `zzznix`, und dazu gibt es
--- keine Deklaration. *Der Geltungsbereich heilt die Verwechslung, nicht die Unkenntnis.*
---
--- Die schaerfere Haelfte desselben Mangels -- eine Kostenzusage, die das ausgelieferte
--- Programm verletzt -- steht in `messung/proben/probe-domaenenschatten.gab`.
+// **Traegt der Grundname eines `traverse` einen Leser -- und was kostet einer?**
+//
+// `dokumente/PRUEFER.md` §7 fuehrt die Stelle als *„ungeprueft von `D017`"* mit dem
+// Grund **Geltungsbereich, nicht Reichweite**: *„Eine Domaene im Rumpf kann ueber eine
+// `let`-Bindung laufen, und dieser Pass traegt keinen Blockgeltungsbereich -- er wuerde den
+// Namen abweisen, den die Zeile darueber einfuehrt."*
+//
+// **Das war aus dem Quelltext gelesen.** Diese Datei ist die Gegenprobe, die vor den Bau
+// gehoert -- und sie hat die Vermutung bestaetigt.
+//
+// (a) `traverse` ueber einer `let`-Bindung -- die Form, die eine Regel ohne
+//     Geltungsbereich ABWEISEN wuerde, obwohl sie richtig ist.
+// (b) `traverse` ueber einem Namen, den nichts erklaert -- die Form, gegen die eine Regel
+//     stuende.
+//
+// 1. GEGEN DEN UNVERAENDERTEN PRUEFER, 2026-08-31
+// ------------------------------------------------
+//
+//     $ gabbro pruefe messung/proben/probe-traverse-grundname.gab
+//     error: [K003] …:87:5: `ueber_ein_let` promises costs, but the domain `slots of` of
+//            the traversal has no bound from a declaration -- a table gets it from
+//            `count`, a `queue` from the single field array of its record, and a `walk`
+//            from `levels` and its node length
+//     error: [K003] …:103:5: `ueber_ein_nichts` promises costs, but the domain `slots of`
+//            of the traversal has no bound from a declaration -- …
+//     …: 5 items, 2 errors, 0 hints
+//
+// **ZWEI, und das ist ein eigener Fund.** Ueber den NAMEN sagt niemand etwas -- beide
+// Absagen sind `K003` und reden von der fehlenden SCHRANKE. Aber (a) ist ein richtiges
+// Programm: `tafel` ist ein `let`-Aliasname des Parameters `w`, und `slots of tafel` ist
+// dieselbe Schranke wie `slots of w`. **`kosten.rs` traegt denselben fehlenden
+// Blockgeltungsbereich wie `domaene.rs`** -- und weist deshalb heute schon ab, was in
+// Ordnung ist. *Der Vorbehalt in `dokumente/PRUEFER.md` §7 nennt die Luecke an `D017`;
+// gemessen ist sie an `K003`, und dort kostet sie bereits eine Falschabsage.*
+//
+// 2. MIT `D017` PROBEHALBER AM `traverse`
+// ----------------------------------------
+// Die drei Zeilen `if st == Stellung::Durchlauf { return; }` aus `grundname_pruefen`
+// entfernt, gebaut, dieselbe Datei:
+//
+//     error: [D017] …:87:30: `tafel` in a `traverse` is not declared here
+//     error: [D017] …:103:30: `zzznix` in a `traverse` is not declared here
+//
+// **Beide.** Die Regel faengt (b) -- und weist (a) mit ab, ein richtiges Programm ueber
+// einen Namen, den die Zeile darueber einfuehrt. *Der Vorbehalt ist keine Vermutung mehr.*
+//
+// 3. UND DER GANZE KORPUS, mit demselben Binaerprogramm
+// -----------------------------------------------------
+// 476 Dateien durch beide Fassungen, die Kennungslisten verglichen: **NULL neue `D017`.**
+// Keine der 41 `traverse`-Stellen des Korpus laeuft ueber einen Namen, den nur ein `let`
+// traegt -- und keine ueber einen, den gar nichts traegt.
+//
+// WAS DARAUS FOLGT: BENANNT, NICHT GEBAUT
+// ----------------------------------------
+// Die Regel haette im Korpus **nichts gefangen** (null Maengel) und traegt eine gemessene
+// Falschabsage (a). *Regel A in beide Richtungen.* Der Blockgeltungsbereich, den sie
+// braeuchte, waere ein Bau ohne Gegenstand -- und (b) faellt ohne sie schon an `K003`,
+// sobald eine Kostenzusage dasteht. **Ohne Kostenzusage bleibt (b) stumm, und DAS ist die
+// Luecke** -- sie haengt an einer Zusage und nicht am Namen, genau wie die vier Zellen in
+// `probe-vier-zellen.gab`. Die Aenderung wurde zurueckgenommen; was bleibt, ist diese Datei
+// und die Zahl.
+//
+// **NACHGETRAGEN 2026-08-31, `a713863`: die `K003`-Absage an (a) IST WEG.** Der
+// Blockgeltungsbereich in `kosten.rs` und `domaene.rs` hat sie geschlossen -- (a) rechnet
+// jetzt `28` gegen die zugesagten `64` und faellt nicht mehr. Nachgemessen mit
+// `gabbro kosten` ueber alle 481 Korpusdateien, zwei Binaerprogramme:
+//
+//     ueber_ein_let   OFFEN  ->  28        (die Falschabsage)
+//     3570 Berichtszeilen, vier geaenderte Stellen, alle drei die erwarteten
+//
+// **Die zweite Absage bleibt und soll bleiben:** (b) nennt `zzznix`, und dazu gibt es
+// keine Deklaration. *Der Geltungsbereich heilt die Verwechslung, nicht die Unkenntnis.*
+//
+// Die schaerfere Haelfte desselben Mangels -- eine Kostenzusage, die das ausgelieferte
+// Programm verletzt -- steht in `messung/proben/probe-domaenenschatten.gab`.
 
 module probe::traversegrundname {
 
@@ -84,8 +84,8 @@ table Werte count NSLOTS {
     }
 }
 
--- (a) **Der Grundname kommt aus einem `let`** -- kein Parameter, keine Deklaration, nichts,
--- was ein Pass ohne Blockgeltungsbereich sehen koennte.
+// (a) **Der Grundname kommt aus einem `let`** -- kein Parameter, keine Deklaration, nichts,
+// was ein Pass ohne Blockgeltungsbereich sehen koennte.
 impl fn ueber_ein_let(w : ptr<normal, r> Werte) -> u32
     effects { reads w.slots }
     costs   <= 64 ops
@@ -102,7 +102,7 @@ impl fn ueber_ein_let(w : ptr<normal, r> Werte) -> u32
     return summe;
 }
 
--- (b) **Der Grundname steht nirgends** -- die Form, gegen die eine Regel stuende.
+// (b) **Der Grundname steht nirgends** -- die Form, gegen die eine Regel stuende.
 impl fn ueber_ein_nichts() -> u32
     effects { pure }
     costs   <= 64 ops

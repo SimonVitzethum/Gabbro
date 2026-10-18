@@ -1,10 +1,10 @@
--- erwartet: N257
--- **A `depends` entry naming a declared non-carrier falls.**
---
--- `Sperre` is declared -- a lock -- and no lock holds device state. Only
--- tables and globals are carriers in the model (`Tab ⊕ Glob`); the guard
--- relation runs the other way (the lock guards the carrier, never the
--- reverse). The reader holds `Sperre`, so nothing else speaks: N257 ALONE.
+// erwartet: N257
+// **A `depends` entry naming a declared non-carrier falls.**
+//
+// `Sperre` is declared -- a lock -- and no lock holds device state. Only
+// tables and globals are carriers in the model (`Tab ⊕ Glob`); the guard
+// relation runs the other way (the lock guards the carrier, never the
+// reverse). The reader holds `Sperre`, so nothing else speaks: N257 ALONE.
 module gift::depends_nennt_sperre {
 
 table Zustand count 4 {

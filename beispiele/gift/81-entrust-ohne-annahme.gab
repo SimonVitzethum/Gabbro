@@ -1,8 +1,8 @@
--- erwartet: N004
--- **Der Gast bekommt Register, einen Stapel und einen `code`-Raum -- und niemand hat
--- aufgeschrieben, warum er sich daran haelt.** Genau dieselbe Regel wie `S003` bei
--- `progress`, an einem anderen Konstrukt: eine Annahme, die nicht erklaert ist, steht in
--- keinem Manifest und kommt in kein Zeugnis.
+// erwartet: N004
+// **Der Gast bekommt Register, einen Stapel und einen `code`-Raum -- und niemand hat
+// aufgeschrieben, warum er sich daran haelt.** Genau dieselbe Regel wie `S003` bei
+// `progress`, an einem anderen Konstrukt: eine Annahme, die nicht erklaert ist, steht in
+// keinem Manifest und kommt in kein Zeugnis.
 module gift {
 
 type Gastbild = { eintritt : u64, };

@@ -1,11 +1,11 @@
--- 156 -- The child path through a branch: every arm ends in the exit gate.
---
--- The twin of 155 for the branched tail: `endet_immer` reads through `if`
--- with `else` (both arms end in the never-returning `ausgang`), so `N449`
--- stays silent beside `N448` and `N450`. Same shape gate (not the raw
--- clone, `1000` not an OS number), same guarantee: 0 errors, 0 hints at the
--- checker; the emitter lowers gate and region like 155 (lane 260, inline
--- trap with the child entered by jump).
+// 156 -- The child path through a branch: every arm ends in the exit gate.
+//
+// The twin of 155 for the branched tail: `endet_immer` reads through `if`
+// with `else` (both arms end in the never-returning `ausgang`), so `N449`
+// stays silent beside `N448` and `N450`. Same shape gate (not the raw
+// clone, `1000` not an OS number), same guarantee: 0 errors, 0 hints at the
+// checker; the emitter lowers gate and region like 155 (lane 260, inline
+// trap with the child entered by jump).
 
 module beispiel::kind_uebergabe_verzweigt {
 
@@ -51,12 +51,12 @@ impl fn starter(art : u64, stapel : u64) -> u64
     return v;
 }
 
--- **The targets (OFFEN O31).** The gate above names
--- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
--- carried until Opus agent L, unchanged; `metal` is the same number and register map
--- through `int $0x80` into the image's kernel entry, which destroys no register, under
--- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
--- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+// **The targets (OFFEN O31).** The gate above names
+// no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+// carried until Opus agent L, unchanged; `metal` is the same number and register map
+// through `int $0x80` into the image's kernel entry, which destroys no register, under
+// its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+// hosted stub unchanged; `gabbro emit --target metal` builds the other.
 target linux_x86_64 abi linux arch x86_64 {
     sys_roher_start = number 1000
         regs in { rdi = art, rsi = stapel }

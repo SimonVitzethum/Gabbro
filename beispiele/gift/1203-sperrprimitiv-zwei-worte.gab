@@ -1,20 +1,20 @@
--- erwartet: N483
--- 1203 -- **a take and a give that release and acquire on two different words
--- (OFFEN O26, Opus lane O25).**
---
--- Both words are ordered: the take swaps on `HALTER` (`acquire`), the give
--- stores `ZURUECK` (`release`). Each primitive alone passes `N481`/`N482` --
--- and the pair still does not synchronise: a release synchronises only with
--- an acquire of the SAME location (`schrittW_erwerb`, `hb_uebergabe` in
--- `grammatik/Grammatik/Speichermodell/`). The give's release is read by no
--- take, the take's acquire reads nothing a give released, and the critical
--- sections stay unordered in C11.
---
--- `N483` refuses the pair (at the take); `N481`, `N482` stay silent. `N042`
--- refuses the C names, as for every own primitive. The shape that passes is
--- the ticket lock of `laufzeit/sperre.gab`: the give advances `NOW` with a
--- release, the take spins on `NOW` with an acquire (`namen.rs` snippet test
--- `ticket_sperre_besteht`).
+// erwartet: N483
+// 1203 -- **a take and a give that release and acquire on two different words
+// (OFFEN O26, Opus lane O25).**
+//
+// Both words are ordered: the take swaps on `HALTER` (`acquire`), the give
+// stores `ZURUECK` (`release`). Each primitive alone passes `N481`/`N482` --
+// and the pair still does not synchronise: a release synchronises only with
+// an acquire of the SAME location (`schrittW_erwerb`, `hb_uebergabe` in
+// `grammatik/Grammatik/Speichermodell/`). The give's release is read by no
+// take, the take's acquire reads nothing a give released, and the critical
+// sections stay unordered in C11.
+//
+// `N483` refuses the pair (at the take); `N481`, `N482` stay silent. `N042`
+// refuses the C names, as for every own primitive. The shape that passes is
+// the ticket lock of `laufzeit/sperre.gab`: the give advances `NOW` with a
+// release, the take spins on `NOW` with an acquire (`namen.rs` snippet test
+// `ticket_sperre_besteht`).
 
 module gift::zwei_worte {
 

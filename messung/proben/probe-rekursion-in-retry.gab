@@ -1,36 +1,36 @@
--- **A recursive call inside a `retry` loop** -- the third of the shapes
--- `contract_of_duty_rec_loop_in` refused (`programmlogik/PLAN.md` §9.3).
---
--- The refusal read *"the recursive call stands inside a `retry`/`forever` loop, which has no
--- index range to induct over; a `traverse` has one"*, and **the ground was wrong**: the
--- induction is over the `decreases`, never over the loop index. What a range buys is
--- `lo <= k < hi` inside the pass -- an assumption the pass RECEIVES, not a premise of the
--- composition -- and `looprule_of_body` builds the rule of a rangeless loop without one. So
--- the model needed one more theorem (`contract_of_duty_rec_loop`) that differs from the
--- ranged one in exactly which loop-rule builder stands inside the induction.
---
--- The `until` is a plain condition over a global, not a device register: the point of the
--- probe is the loop's SHAPE, and a device promise would add an assumption that has nothing
--- to do with it.
---
--- **And there is no `progress` here, for the same reason and one more** (2026-09-08). The
--- clause is optional, and what ends this loop is its own body: `stand = 1` is the first
--- statement of the pass, so `until stand >= 1` holds after one pass and nobody outside the
--- program has to promise anything.
---
--- The first version of this file did carry one -- `progress jemand_zaehlt_hoch`, with an
--- `assume` behind it and `falsifier sonde_jemand_zaehlt_hoch` behind that. **There is no
--- program of that name**, and a `falsifier` naming a probe that does not exist is an
--- unfalsifiable assumption wearing a falsifiable one's clothes (`dokumente/UNFALSIFIZIERBAR.txt`).
--- `instrumente/pruefe-sondendeckung.py` said so at once and in the right way: the name pushed
--- its `aussen` count from 13 to 14, its own speech test then failed, and the run ABORTED
--- before printing the six numbers `pruefe-zahlen.py` reads -- so `pruefe-zahlen.py` went from
--- 5 findings to 11, and **all six of the new ones** read *"der Befehl druckt die Zahl nicht
--- mehr ... der Suchweg ist ab"*. The instrument's header describes the same accident from an
--- earlier day, one word of a comment wide.
---
--- *The way out was not a probe program and not a raised mark.* An assumption this file does
--- not need is an assumption this file does not state.
+// **A recursive call inside a `retry` loop** -- the third of the shapes
+// `contract_of_duty_rec_loop_in` refused (`programmlogik/PLAN.md` §9.3).
+//
+// The refusal read *"the recursive call stands inside a `retry`/`forever` loop, which has no
+// index range to induct over; a `traverse` has one"*, and **the ground was wrong**: the
+// induction is over the `decreases`, never over the loop index. What a range buys is
+// `lo <= k < hi` inside the pass -- an assumption the pass RECEIVES, not a premise of the
+// composition -- and `looprule_of_body` builds the rule of a rangeless loop without one. So
+// the model needed one more theorem (`contract_of_duty_rec_loop`) that differs from the
+// ranged one in exactly which loop-rule builder stands inside the induction.
+//
+// The `until` is a plain condition over a global, not a device register: the point of the
+// probe is the loop's SHAPE, and a device promise would add an assumption that has nothing
+// to do with it.
+//
+// **And there is no `progress` here, for the same reason and one more** (2026-09-08). The
+// clause is optional, and what ends this loop is its own body: `stand = 1` is the first
+// statement of the pass, so `until stand >= 1` holds after one pass and nobody outside the
+// program has to promise anything.
+//
+// The first version of this file did carry one -- `progress jemand_zaehlt_hoch`, with an
+// `assume` behind it and `falsifier sonde_jemand_zaehlt_hoch` behind that. **There is no
+// program of that name**, and a `falsifier` naming a probe that does not exist is an
+// unfalsifiable assumption wearing a falsifiable one's clothes (`dokumente/UNFALSIFIZIERBAR.txt`).
+// `instrumente/pruefe-sondendeckung.py` said so at once and in the right way: the name pushed
+// its `aussen` count from 13 to 14, its own speech test then failed, and the run ABORTED
+// before printing the six numbers `pruefe-zahlen.py` reads -- so `pruefe-zahlen.py` went from
+// 5 findings to 11, and **all six of the new ones** read *"der Befehl druckt die Zahl nicht
+// mehr ... der Suchweg ist ab"*. The instrument's header describes the same accident from an
+// earlier day, one word of a comment wide.
+//
+// *The way out was not a probe program and not a raised mark.* An assumption this file does
+// not need is an assumption this file does not state.
 
 module probe::rekursion_in_retry {
 

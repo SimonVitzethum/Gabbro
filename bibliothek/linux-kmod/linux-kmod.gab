@@ -1,103 +1,103 @@
--- **`bibliothek/linux-kmod` -- the Linux kernel primitives a Gabbro module
--- binds, as ordinary user code** (server lane, TODO section 0e K7, 2026-09-28).
---
--- WHAT THIS IS, AND WHAT IT IS DELIBERATELY NOT. Simon's binding constraint
--- (2026-09-27) is *"API calls are always user-made"*: a Gabbro program reaches
--- an operating system only through items IT declares, with their ABI, their
--- effects, their costs and the assumption their bodies keep. Nothing about
--- Linux is baked into the checker, the emitter or the runtime.
---
--- Until 2026-09-28 the module RUNTIME was the one exception, and it was
--- measured rather than argued away (`dokumente/OFFEN.md` O35): `kmodul.c`
--- called `kthread_run`, `wait_for_completion`, `complete` and `pr_err`,
--- `arena.c` called `vzalloc`, `vfree` and `module_param`, and `sperre.h`
--- expanded to `raw_spin_lock`, `raw_spin_lock_irqsave` and `smp_processor_id`
--- -- twelve kernel names no program had ever declared. **This file is where
--- those twelve now stand**, and it is a FILE OF A PROGRAM: a manifest names it
--- beside the program's own sources, and the checker reads it like any other unit.
--- **Since the C-free lane's C2 (2026-09-30 / 2026-10-01) there is no C next to
--- it**: every body is Gabbro, and the kernel's exported functions are `extern fn`
--- declarations here, linked against the kernel itself. *It is a library in the sense a header file
--- is one -- something you copy into your build and may edit -- and not in the
--- sense a compiler built-in is one.*
---
--- **A different kernel gets a different file, not a different Gabbro.** That is
--- the whole point of the arrangement, and it is why the twelve names below are
--- the interface the generated module driver calls and the kernel's own
--- names appear only in this file. A port to a BSD, to a different Linux
--- version whose exported surface differs, or to a kernel that has no
--- `vmalloc`, is a new file here and nothing else.
---
--- WHAT A PROGRAM DOES WITH IT. One line in the manifest of a `module` unit:
---
---     unit driver module laden entladen
---       my-driver.gab
---       bibliothek/linux-kmod/linux-kmod.gab -- this binding
---
--- and `gabbro build` REFUSES a `module` unit that uses a lock, an arena, an
--- atomic or a concurrent root without them, naming the missing declaration and
--- the file that supplies it (`crates/gabbro-cli/src/bau.rs`, `modulregel`).
--- *Never a silent default* -- which is the half of K7 that a measurement alone
--- could not have given: a runtime that quietly kept calling `vzalloc` would
--- have read as bound.
---
--- **WHY THERE IS NO `use` LINE.** Nothing in a program CALLS these items; the
--- runtime does. A `use linux::kmod::gabbro_kern_melden;` in the driver would
--- name an item the driver never mentions again -- ceremony that documents a
--- dependency the manifest already carries, and the kind of decoration this
--- folder rejects work for. What makes the declarations load-bearing instead is
--- the pair of checks around them: `gabbro build` refuses a module that lacks
--- them, and the C compiler holds each one against the generated driver's prototypes inside the
--- runtime's own translation unit (the emitted prototypes and the runtime's
--- declarations meet in `gabbro_kmodul.c`, so a wrong type is a build error and
--- not a wrong call).
---
--- ADDRESSES. A lock's storage crosses as a REGION (`ptr<normal, rw> u8` under a
--- constant clause `256 <= lenof(s)`: the generated driver's blob) since the
--- C-free lane's C2; a root's code crosses as an `entry fn` -- the designator of
--- the wrapper the driver wrote, handed on once to the kernel's thread start
--- (`N575`-`N577`, C2 slice 3). No number becomes an address or code here.
---
--- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
--- primitive's OWN work -- the instructions between entry and return once it
--- runs. **Waiting is not in it**, and that is not a hole in these numbers but
--- the language's standing position: waiting bounds are NOT CLAIMED
--- (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, the header's list), and a `lock`
--- declares the time it is HELD (`held <= N ops`) rather than the time it is
--- waited for. A binding whose acquire spun for a millisecond would break no
--- number below and no theorem above it; it would break the `held` clause of
--- whoever held it, and that is where the checker looks.
+// **`bibliothek/linux-kmod` -- the Linux kernel primitives a Gabbro module
+// binds, as ordinary user code** (server lane, TODO section 0e K7, 2026-09-28).
+//
+// WHAT THIS IS, AND WHAT IT IS DELIBERATELY NOT. Simon's binding constraint
+// (2026-09-27) is *"API calls are always user-made"*: a Gabbro program reaches
+// an operating system only through items IT declares, with their ABI, their
+// effects, their costs and the assumption their bodies keep. Nothing about
+// Linux is baked into the checker, the emitter or the runtime.
+//
+// Until 2026-09-28 the module RUNTIME was the one exception, and it was
+// measured rather than argued away (`dokumente/OFFEN.md` O35): `kmodul.c`
+// called `kthread_run`, `wait_for_completion`, `complete` and `pr_err`,
+// `arena.c` called `vzalloc`, `vfree` and `module_param`, and `sperre.h`
+// expanded to `raw_spin_lock`, `raw_spin_lock_irqsave` and `smp_processor_id`
+// -- twelve kernel names no program had ever declared. **This file is where
+// those twelve now stand**, and it is a FILE OF A PROGRAM: a manifest names it
+// beside the program's own sources, and the checker reads it like any other unit.
+// **Since the C-free lane's C2 (2026-09-30 / 2026-10-01) there is no C next to
+// it**: every body is Gabbro, and the kernel's exported functions are `extern fn`
+// declarations here, linked against the kernel itself. *It is a library in the sense a header file
+// is one -- something you copy into your build and may edit -- and not in the
+// sense a compiler built-in is one.*
+//
+// **A different kernel gets a different file, not a different Gabbro.** That is
+// the whole point of the arrangement, and it is why the twelve names below are
+// the interface the generated module driver calls and the kernel's own
+// names appear only in this file. A port to a BSD, to a different Linux
+// version whose exported surface differs, or to a kernel that has no
+// `vmalloc`, is a new file here and nothing else.
+//
+// WHAT A PROGRAM DOES WITH IT. One line in the manifest of a `module` unit:
+//
+//     unit driver module laden entladen
+//       my-driver.gab
+//       bibliothek/linux-kmod/linux-kmod.gab -- this binding
+//
+// and `gabbro build` REFUSES a `module` unit that uses a lock, an arena, an
+// atomic or a concurrent root without them, naming the missing declaration and
+// the file that supplies it (`crates/gabbro-cli/src/bau.rs`, `modulregel`).
+// *Never a silent default* -- which is the half of K7 that a measurement alone
+// could not have given: a runtime that quietly kept calling `vzalloc` would
+// have read as bound.
+//
+// **WHY THERE IS NO `use` LINE.** Nothing in a program CALLS these items; the
+// runtime does. A `use linux::kmod::gabbro_kern_melden;` in the driver would
+// name an item the driver never mentions again -- ceremony that documents a
+// dependency the manifest already carries, and the kind of decoration this
+// folder rejects work for. What makes the declarations load-bearing instead is
+// the pair of checks around them: `gabbro build` refuses a module that lacks
+// them, and the C compiler holds each one against the generated driver's prototypes inside the
+// runtime's own translation unit (the emitted prototypes and the runtime's
+// declarations meet in `gabbro_kmodul.c`, so a wrong type is a build error and
+// not a wrong call).
+//
+// ADDRESSES. A lock's storage crosses as a REGION (`ptr<normal, rw> u8` under a
+// constant clause `256 <= lenof(s)`: the generated driver's blob) since the
+// C-free lane's C2; a root's code crosses as an `entry fn` -- the designator of
+// the wrapper the driver wrote, handed on once to the kernel's thread start
+// (`N575`-`N577`, C2 slice 3). No number becomes an address or code here.
+//
+// WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
+// primitive's OWN work -- the instructions between entry and return once it
+// runs. **Waiting is not in it**, and that is not a hole in these numbers but
+// the language's standing position: waiting bounds are NOT CLAIMED
+// (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, the header's list), and a `lock`
+// declares the time it is HELD (`held <= N ops`) rather than the time it is
+// waited for. A binding whose acquire spun for a millisecond would break no
+// number below and no theorem above it; it would break the `held` clause of
+// whoever held it, and that is where the checker looks.
 module linux::kmod {
 
--- **The ABI and the behaviour of the kernel's functions, as one named assumption.**
--- One and not one per function, because it is one fact about one kernel: the
--- `extern fn`s below are the exported functions of the kernel whose build tree is
--- in the manifest's `kmod` line, and the module links against exactly that one.
+// **The ABI and the behaviour of the kernel's functions, as one named assumption.**
+// One and not one per function, because it is one fact about one kernel: the
+// `extern fn`s below are the exported functions of the kernel whose build tree is
+// in the manifest's `kmod` line, and the module links against exactly that one.
 assume kern_bindung_abi
     "Every kernel function this file declares keeps the x86_64 SysV convention of its declaration here, and neither sleeps nor faults in a context the module runtime calls it from (`msleep` only from a thread or from the loader, never with a lock held or interrupts masked)."
     falsifier sonde_kern_bindung;
 
--- **The masking promise, named apart -- because a leg of the goal theorem rests
--- on it.** `masks irqs` at a `lock` declaration is a statement about the
--- environment: while the lock is held, no interrupt handler runs on this core.
--- `KernHaltE` (no same-core interrupt deadlock, `Zielsatz/Spec.lean`) is proved
--- over a model in which that holds, and the C side of it is exactly the pair of
--- bodies below. *So a binding whose `maskiert` pair did not mask would leave a
--- proved theorem standing over a program it is not about* -- which is why this
--- is its own assumption with its own name, and why the QEMU probe `takt`
--- measures it (`instrumente/pruefe-kernelmodul.sh`: a hardirq timer taking the
--- same lock, `landed=0` over a counted number of opportunities).
+// **The masking promise, named apart -- because a leg of the goal theorem rests
+// on it.** `masks irqs` at a `lock` declaration is a statement about the
+// environment: while the lock is held, no interrupt handler runs on this core.
+// `KernHaltE` (no same-core interrupt deadlock, `Zielsatz/Spec.lean`) is proved
+// over a model in which that holds, and the C side of it is exactly the pair of
+// bodies below. *So a binding whose `maskiert` pair did not mask would leave a
+// proved theorem standing over a program it is not about* -- which is why this
+// is its own assumption with its own name, and why the QEMU probe `takt`
+// measures it (`instrumente/pruefe-kernelmodul.sh`: a hardirq timer taking the
+// same lock, `landed=0` over a counted number of opportunities).
 assume kern_bindung_maskiert
     "`gabbro_kern_sperre_nimm_maskiert` leaves no interrupt enabled on the calling core that could take the same lock, until the matching `gabbro_kern_sperre_gib_maskiert` restored what it masked."
     falsifier sonde_kern_maskiert;
 
--- -- the kernel's own functions this binding calls ----------------------------
---
--- Declared here, bodies in the kernel (C-free lane, C2 slice 2). `_printk` is
--- VARIADIC: its format travels as the fixed parameter and the two numbers
--- through `...` (`N573`), cast to `u64` at every call. The format is always one
--- of this file's 96-byte tables below: text, then zeros to the end, and exactly
--- two `%llu` conversions -- the named assumption `kern_printk_format`.
+// -- the kernel's own functions this binding calls ----------------------------
+//
+// Declared here, bodies in the kernel (C-free lane, C2 slice 2). `_printk` is
+// VARIADIC: its format travels as the fixed parameter and the two numbers
+// through `...` (`N573`), cast to `u64` at every call. The format is always one
+// of this file's 96-byte tables below: text, then zeros to the end, and exactly
+// two `%llu` conversions -- the named assumption `kern_printk_format`.
 assume kern_printk_format
     "`_printk` reads its format only up to the first zero byte, every format this binding passes holds that zero inside its 96 bytes, and each asks for at most the two 64-bit numbers passed behind it."
     falsifier sonde_kern_printk;
@@ -106,15 +106,15 @@ extern fn _printk(fmt : ptr<normal, r> u8, ..., a : u64, b : u64) -> i32
     requires 96 <= lenof(fmt)
     effects { reads fmt } costs <= 4096 ops;
 
--- The kernel's stop: `panic` never returns (it halts or reboots the machine).
+// The kernel's stop: `panic` never returns (it halts or reboots the machine).
 extern fn panic(fmt : ptr<normal, r> u8, ..., a : u64) -> never
     requires 96 <= lenof(fmt)
     effects { diverges } costs <= 4096 ops;
 
--- **A program's own words, through the same call** -- the report channel a probe
--- or a driver uses for ITS sentences: a 96-byte table of its own (text, zeros to
--- the end, at most two `%llu`), the two numbers, and the kernel's log. The same
--- assumption as the runtime's sentences (`kern_printk_format`).
+// **A program's own words, through the same call** -- the report channel a probe
+// or a driver uses for ITS sentences: a 96-byte table of its own (text, zeros to
+// the end, at most two `%llu`), the two numbers, and the kernel's log. The same
+// assumption as the runtime's sentences (`kern_printk_format`).
 pub fn gabbro_kern_zeige(text : ptr<normal, r> u8, a : u64, b : u64)
     requires 96 <= lenof(text)
     effects { reads text }
@@ -123,7 +123,7 @@ pub fn gabbro_kern_zeige(text : ptr<normal, r> u8, a : u64, b : u64)
     _printk(text, a, b);
 }
 
--- And its stop: the sentence (at most one `%llu`, `a`), then the kernel halts.
+// And its stop: the sentence (at most one `%llu`, `a`), then the kernel halts.
 pub fn gabbro_kern_halt(text : ptr<normal, r> u8, a : u64) -> never
     requires 96 <= lenof(text)
     effects { reads text, diverges }
@@ -132,10 +132,10 @@ pub fn gabbro_kern_halt(text : ptr<normal, r> u8, a : u64) -> never
     panic(text, a);
 }
 
--- The lock primitives of this kernel's configuration: a `raw_spinlock_t` of
--- 4 bytes whose unlocked value is 0 (no `CONFIG_DEBUG_SPINLOCK`, measured on the
--- 6.8 build tree the manifest names -- `kern_sperre_form`), taken and given by
--- the kernel's exported out-of-line functions.
+// The lock primitives of this kernel's configuration: a `raw_spinlock_t` of
+// 4 bytes whose unlocked value is 0 (no `CONFIG_DEBUG_SPINLOCK`, measured on the
+// 6.8 build tree the manifest names -- `kern_sperre_form`), taken and given by
+// the kernel's exported out-of-line functions.
 assume kern_sperre_form
     "On the kernel this module is built for, a `raw_spinlock_t` is 4 bytes, 4 zero bytes are an unlocked one, and `_raw_spin_lock`/`_raw_spin_unlock`, `_raw_spin_lock_irqsave`/`_raw_spin_unlock_irqrestore` take and give it; the irqsave form masks this core's interrupts until the restore."
     falsifier sonde_kern_sperre_form;
@@ -153,13 +153,13 @@ extern fn _raw_spin_unlock_irqrestore(l : ptr<normal, rw> u8, flaggen : u64)
     requires 4 <= lenof(l)
     effects { writes l } costs <= 512 ops;
 
--- -- the report channel ------------------------------------------------------
---
--- The runtime has no words of its own inside a kernel module, because printing
--- is a kernel call. A refusal travels as a CODE and two numbers
--- (`crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`) and this binding
--- carries one sentence per code, `KERN_ERR` first (bytes 1, 51).
--- gabbro: arena refused: bad descriptor (max=%llu, floor=%llu)
+// -- the report channel ------------------------------------------------------
+//
+// The runtime has no words of its own inside a kernel module, because printing
+// is a kernel call. A refusal travels as a CODE and two numbers
+// (`crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`) and this binding
+// carries one sentence per code, `KERN_ERR` first (bytes 1, 51).
+// gabbro: arena refused: bad descriptor (max=%llu, floor=%llu)
 pub const KERN_T_DESKRIPTOR : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32,
     114, 101, 102, 117, 115, 101, 100, 58, 32, 98, 97, 100, 32, 100, 101, 115,
@@ -169,7 +169,7 @@ pub const KERN_T_DESKRIPTOR : [u8; 96] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- gabbro: arena refused: the floor (%llu slots) exceeds the provision (%llu bytes)
+// gabbro: arena refused: the floor (%llu slots) exceeds the provision (%llu bytes)
 pub const KERN_T_BODEN : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32,
     114, 101, 102, 117, 115, 101, 100, 58, 32, 116, 104, 101, 32, 102, 108, 111,
@@ -179,7 +179,7 @@ pub const KERN_T_BODEN : [u8; 96] = [
     115, 41, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- gabbro: arena grow past max (%llu > %llu) -- fail-stop
+// gabbro: arena grow past max (%llu > %llu) -- fail-stop
 pub const KERN_T_UEBER_MAX : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32,
     103, 114, 111, 119, 32, 112, 97, 115, 116, 32, 109, 97, 120, 32, 40, 37,
@@ -189,7 +189,7 @@ pub const KERN_T_UEBER_MAX : [u8; 96] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- gabbro: load refused -- the unit answered %llu (%llu)
+// gabbro: load refused -- the unit answered %llu (%llu)
 pub const KERN_T_ANTWORT : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 108, 111, 97, 100, 32, 114,
     101, 102, 117, 115, 101, 100, 32, 45, 45, 32, 116, 104, 101, 32, 117, 110,
@@ -199,7 +199,7 @@ pub const KERN_T_ANTWORT : [u8; 96] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- gabbro: load refused -- a fail-stop fired during init (%llu, %llu)
+// gabbro: load refused -- a fail-stop fired during init (%llu, %llu)
 pub const KERN_T_STOPP : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 108, 111, 97, 100, 32, 114,
     101, 102, 117, 115, 101, 100, 32, 45, 45, 32, 97, 32, 102, 97, 105, 108,
@@ -209,7 +209,7 @@ pub const KERN_T_STOPP : [u8; 96] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- gabbro: load refused -- a declared root did not start (%llu, %llu)
+// gabbro: load refused -- a declared root did not start (%llu, %llu)
 pub const KERN_T_FADEN : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 108, 111, 97, 100, 32, 114,
     101, 102, 117, 115, 101, 100, 32, 45, 45, 32, 97, 32, 100, 101, 99, 108,
@@ -219,7 +219,7 @@ pub const KERN_T_FADEN : [u8; 96] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- gabbro: runtime report %llu (%llu) -- this binding has no sentence for it
+// gabbro: runtime report %llu (%llu) -- this binding has no sentence for it
 pub const KERN_T_SONST : [u8; 96] = [
     1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 114, 117, 110, 116, 105, 109,
     101, 32, 114, 101, 112, 111, 114, 116, 32, 37, 108, 108, 117, 32, 40, 37,
@@ -260,12 +260,12 @@ pub fn gabbro_kern_melden(code : u32, a : u64, b : u64)
     _printk(KERN_T_SONST, u64(code), a);
 }
 
--- -- the load verdict ------------------------------------------------------
---
--- The generated module driver refuses a load with the code of what went wrong;
--- the loader is answered a negative errno of THIS kernel: a floor the provision
--- cannot hold is a lack of memory (-ENOMEM), everything else an invalid module
--- state (-EINVAL).
+// -- the load verdict ------------------------------------------------------
+//
+// The generated module driver refuses a load with the code of what went wrong;
+// the loader is answered a negative errno of THIS kernel: a floor the provision
+// cannot hold is a lack of memory (-ENOMEM), everything else an invalid module
+// state (-EINVAL).
 pub fn gabbro_kern_verweigert(code : u32) -> i32 in -22 .. -12
     effects { pure }
     costs <= 8 ops
@@ -277,15 +277,15 @@ pub fn gabbro_kern_verweigert(code : u32) -> i32 in -22 .. -12
     return null - 22;
 }
 
--- -- the locks ---------------------------------------------------------------
---
--- The generated driver owns the STORAGE (a zeroed 256-byte blob per `lock`) and
--- these are the OPERATIONS over it, over the kernel's `raw_spinlock_t` in its
--- first 4 bytes. The masked pair hands the saved interrupt state OUT and takes it
--- back IN: the driver keeps it beside the lock, written and read by the holder
--- only. The masked pair is a separate pair of NAMES and not a flag, so that a
--- program can bind a different primitive for the promise `masks irqs` makes --
--- and so that `kern_bindung_maskiert` above has something to be about.
+// -- the locks ---------------------------------------------------------------
+//
+// The generated driver owns the STORAGE (a zeroed 256-byte blob per `lock`) and
+// these are the OPERATIONS over it, over the kernel's `raw_spinlock_t` in its
+// first 4 bytes. The masked pair hands the saved interrupt state OUT and takes it
+// back IN: the driver keeps it beside the lock, written and read by the holder
+// only. The masked pair is a separate pair of NAMES and not a flag, so that a
+// program can bind a different primitive for the promise `masks irqs` makes --
+// and so that `kern_bindung_maskiert` above has something to be about.
 pub fn gabbro_kern_sperre_init(s : ptr<normal, rw> u8)
     requires 256 <= lenof(s)
     effects { writes s }
@@ -330,22 +330,22 @@ pub fn gabbro_kern_sperre_gib_maskiert(s : ptr<normal, rw> u8, flaggen : u64)
     _raw_spin_unlock_irqrestore(s, flaggen);
 }
 
--- -- the roots as kernel threads --------------------------------------------
---
--- One thread per member of the unit's `concurrent` set, started and joined by the
--- generated driver (template `faden.modul`) -- and since the C-free lane's C2
--- slice 3 the start is THIS Gabbro, not C. The driver hands the designator of a
--- wrapper it wrote around the root as an `entry fn` (`N575`-`N577`): the one shape
--- in which code reaches a foreign body. The wrapper runs the root and then stores
--- 0 into the root's join word; the driver waits on that word, sleeping through
--- `gabbro_kern_schlafe` in between. So no kernel type is in the driver's storage
--- (no `struct completion`), and no number becomes code anywhere.
---
--- The answer of `kthread_create_on_node` is a task OR an `ERR_PTR` in one word:
--- the top 4095 values of the word are `-errno`. It is decoded here, in Gabbro, and
--- the task travels on only to `wake_up_process` -- both foreign items are PRIVATE
--- to this module, so no other Gabbro code can hand the kernel a number it would
--- read as a task.
+// -- the roots as kernel threads --------------------------------------------
+//
+// One thread per member of the unit's `concurrent` set, started and joined by the
+// generated driver (template `faden.modul`) -- and since the C-free lane's C2
+// slice 3 the start is THIS Gabbro, not C. The driver hands the designator of a
+// wrapper it wrote around the root as an `entry fn` (`N575`-`N577`): the one shape
+// in which code reaches a foreign body. The wrapper runs the root and then stores
+// 0 into the root's join word; the driver waits on that word, sleeping through
+// `gabbro_kern_schlafe` in between. So no kernel type is in the driver's storage
+// (no `struct completion`), and no number becomes code anywhere.
+//
+// The answer of `kthread_create_on_node` is a task OR an `ERR_PTR` in one word:
+// the top 4095 values of the word are `-errno`. It is decoded here, in Gabbro, and
+// the task travels on only to `wake_up_process` -- both foreign items are PRIVATE
+// to this module, so no other Gabbro code can hand the kernel a number it would
+// read as a task.
 assume kern_faden_vertrag
     "`kthread_create_on_node(threadfn, data, node, namefmt, n)` creates one stopped kernel thread that, once woken by `wake_up_process`, calls `threadfn(data)` exactly once and then ends, or answers a word at or above 2^64 - 4095 (`-errno`) and creates none; it reads `namefmt` only up to its first zero byte, which lies inside its 96 bytes. `msleep(ms)` sleeps at least `ms` milliseconds and changes no memory the module can see."
     falsifier sonde_kern_faden;
@@ -360,7 +360,7 @@ extern fn wake_up_process(aufgabe : u64) -> i32
 extern fn msleep(ms : u32)
     effects { pure } costs <= 4096 ops;
 
--- gabbro/%llu -- the thread's name, the root's number behind it
+// gabbro/%llu -- the thread's name, the root's number behind it
 pub const KERN_T_FADENNAME : [u8; 96] = [
     103, 97, 98, 98, 114, 111, 47, 37, 108, 108, 117, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -370,8 +370,8 @@ pub const KERN_T_FADENNAME : [u8; 96] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
--- Start one root's thread: 0, or the positive errno of a start that did not
--- happen (then nothing runs, and the driver stores the join word itself).
+// Start one root's thread: 0, or the positive errno of a start that did not
+// happen (then nothing runs, and the driver stores the join word itself).
 pub fn gabbro_kern_faden_start(lauf : entry fn(ptr<normal, rw> u8) -> i32, nummer : u32) -> u32
     effects { reads KERN_T_FADENNAME }
     costs <= 110000 ops
@@ -389,7 +389,7 @@ pub fn gabbro_kern_faden_start(lauf : entry fn(ptr<normal, rw> u8) -> i32, numme
     return 0;
 }
 
--- One wait step of the driver's join loop: the word is re-read by the driver.
+// One wait step of the driver's join loop: the word is re-read by the driver.
 pub fn gabbro_kern_schlafe()
     effects { pure }
     costs <= 4100 ops

@@ -1,8 +1,8 @@
--- erwartet: M147
--- **Aliased write through a callee (Task 5d).** `schreibe` writes through
--- its own handle; the coarse call rule kills every taint, so the decision
--- on `v` (read through `t`, same table) falls -- before and after the
--- table-key change (regression pin for the coarse path).
+// erwartet: M147
+// **Aliased write through a callee (Task 5d).** `schreibe` writes through
+// its own handle; the coarse call rule kills every taint, so the decision
+// on `v` (read through `t`, same table) falls -- before and after the
+// table-key change (regression pin for the coarse path).
 module gift::schreiben_durch_zweiten_griff {
 
 table T count 4 {

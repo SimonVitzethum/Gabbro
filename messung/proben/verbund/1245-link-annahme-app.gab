@@ -1,10 +1,10 @@
--- link-erwartet: N505
--- **Link probe 1245 (Opus agent E): the app states the library's hardware assumption
--- DIFFERENTLY.** The same app as `tabelle-app.gab`, but its `takt_stabil` names another
--- falsifier and claims more (a bounded drift). Alone it checks clean against the library's
--- interface; linked with `tabelle-bib.gab` the program would run under two statements of one
--- assumption, and `gabbro link` refuses: linking is claimed under the SAME hardware
--- assumptions (`E₂.Q = E₁.Q` in `GabbroZielVerbund`).
+// link-erwartet: N505
+// **Link probe 1245 (Opus agent E): the app states the library's hardware assumption
+// DIFFERENTLY.** The same app as `tabelle-app.gab`, but its `takt_stabil` names another
+// falsifier and claims more (a bounded drift). Alone it checks clean against the library's
+// interface; linked with `tabelle-bib.gab` the program would run under two statements of one
+// assumption, and `gabbro link` refuses: linking is claimed under the SAME hardware
+// assumptions (`E₂.Q = E₁.Q` in `GabbroZielVerbund`).
 module app {
 
 use bib::setze;

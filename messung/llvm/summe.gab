@@ -1,9 +1,9 @@
--- Kopie plus XOR-Prüfsumme (LLVM-Benchmark 1, ohne C): füllen, mit +1 kopieren,
--- Prüfsumme falten, `OK` über das eigene `write`-Tor melden, Prüfsumme durch 251
--- als Rückgabe (der Eintritt reicht sie an `exit_group` durch). Alle Operanden
--- bereichsexakt (`+%` und `^` verlassen die Breite nie). Keine libc, kein C:
--- nur Tore mit Gabbro-Registersyntax. Das Skript vergleicht x86-64 gegen AArch64
--- (gleicher Rückgabewert = gleiche Semantik auf beiden Zielen).
+// Kopie plus XOR-Prüfsumme (LLVM-Benchmark 1, ohne C): füllen, mit +1 kopieren,
+// Prüfsumme falten, `OK` über das eigene `write`-Tor melden, Prüfsumme durch 251
+// als Rückgabe (der Eintritt reicht sie an `exit_group` durch). Alle Operanden
+// bereichsexakt (`+%` und `^` verlassen die Breite nie). Keine libc, kein C:
+// nur Tore mit Gabbro-Registersyntax. Das Skript vergleicht x86-64 gegen AArch64
+// (gleicher Rückgabewert = gleiche Semantik auf beiden Zielen).
 module summe {
 assume linux_schreibe
     "Der Kern schreibt hoechstens len Bytes von buf und antwortet die Anzahl."

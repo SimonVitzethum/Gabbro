@@ -1,11 +1,11 @@
--- erwartet: N463
--- **1156 -- 1024 bytes into a 64-byte bucket (fix lane F5, review G04 F3).**
---
--- The review's measurement, now refused: `beispiele/150`'s wrapper called with the
--- whole ceiling over its 64-byte `EIMER`. The gate and the wrapper both say
--- `len <= lenof(buf)`; where `EIMER` decays to the pointer its length is still known
--- (64), the argument's range is `1024 .. 1024`, and `N463` refuses the call. Before
--- F5 this checked clean and the kernel wrote 960 bytes past the static.
+// erwartet: N463
+// **1156 -- 1024 bytes into a 64-byte bucket (fix lane F5, review G04 F3).**
+//
+// The review's measurement, now refused: `beispiele/150`'s wrapper called with the
+// whole ceiling over its 64-byte `EIMER`. The gate and the wrapper both say
+// `len <= lenof(buf)`; where `EIMER` decays to the pointer its length is still known
+// (64), the argument's range is `1024 .. 1024`, and `N463` refuses the call. Before
+// F5 this checked clean and the kernel wrote 960 bytes past the static.
 
 module gift1156 {
 

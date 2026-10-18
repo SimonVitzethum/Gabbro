@@ -156,8 +156,8 @@ Four things about that block are worth more than the rest of this section:
 ```gabbro
 module tutorial::effects {
 
--- `pure` means: reads nothing outside its parameters, writes nothing, takes no lock.
--- (It is called `twice` and not `double`, and section 9 says why.)
+// `pure` means: reads nothing outside its parameters, writes nothing, takes no lock.
+// (It is called `twice` and not `double`, and section 9 says why.)
 pub fn twice(x : u32 in 0 .. 100) -> u32 in 0 .. 200
     effects { pure }
     costs   <= 4 ops
@@ -207,8 +207,8 @@ parameter, or a plain name for a sink that is not memory of this unit at all:
 ```gabbro
 module tutorial::sink {
 
--- `output` is not declared anywhere. It names what lies behind the foreign function -- the
--- effect system is about WHAT IS TOUCHED, and the terminal is touched.
+// `output` is not declared anywhere. It names what lies behind the foreign function -- the
+// effect system is about WHAT IS TOUCHED, and the terminal is touched.
 extern fn putchar(c : i32) -> i32 effects { writes output } costs <= 8 ops;
 
 pub fn shout() -> i32 in 0 .. 1
@@ -370,8 +370,8 @@ module tutorial::limits {
 
 const HALF : u32 = 2147483647;
 
--- `lo` and `hi` are unrestricted -- they come from outside. `narrow` buys the range that
--- makes `lo + hi` fit, and `HALF + HALF` is 4 294 967 294, one under `u32::max`.
+// `lo` and `hi` are unrestricted -- they come from outside. `narrow` buys the range that
+// makes `lo + hi` fit, and `HALF + HALF` is 4 294 967 294, one under `u32::max`.
 pub fn midpoint(lo : u32, hi : u32) -> u32
     effects { pure }
     costs   <= 8 ops

@@ -1,14 +1,14 @@
--- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- zweiter Teil.
---
--- Drei Woerter, die `SYNTAX.md` fuehrt und die kein Programm des Baumes je geschrieben hat:
---
---     port   ein Adressraum (`ptr < space , rights >`, SYNTAX.md:463)
---     rc     eine Registerklasse -- read to clear (SYNTAX.md:1288)
---     seq    eine Speicherordnung an einem `atomic` (SYNTAX.md:1375)
---
--- *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.* Die drei standen in der
--- Grammatik, im Wortschatz und in keinem Programm -- also hat auch nie jemand gesehen, was
--- der Erzeuger aus ihnen macht.
+// **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- zweiter Teil.
+//
+// Drei Woerter, die `SYNTAX.md` fuehrt und die kein Programm des Baumes je geschrieben hat:
+//
+//     port   ein Adressraum (`ptr < space , rights >`, SYNTAX.md:463)
+//     rc     eine Registerklasse -- read to clear (SYNTAX.md:1288)
+//     seq    eine Speicherordnung an einem `atomic` (SYNTAX.md:1375)
+//
+// *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.* Die drei standen in der
+// Grammatik, im Wortschatz und in keinem Programm -- also hat auch nie jemand gesehen, was
+// der Erzeuger aus ihnen macht.
 
 module grammatik::geraeteworte {
 
@@ -21,8 +21,8 @@ static mut lage : Stand = Stand(bereit: false);
 atomic SCHRANKE : bool publishes { lage } seq;
 
 device Uart(basis : Pa) at mmio {
-    -- `class rc`: das Lesen LOESCHT. Ein zweites Lesen gibt etwas anderes -- genau die
-    -- Klasse, wegen der «B33» ueberhaupt eine Regel ist.
+    // `class rc`: das Lesen LOESCHT. Ein zweites Lesen gibt etwas anderes -- genau die
+    // Klasse, wegen der «B33» ueberhaupt eine Regel ist.
     reg IIR  : u32 @0x08 class rc fields { GRUND @[3:0], }
     reg DATA : u32 @0x00 class rw
 }
@@ -43,8 +43,8 @@ impl fn warten() -> bool
     return fertig;
 }
 
--- Ein Lesen an `class rc`: es LOESCHT. Was der Erzeuger daraus macht, hat vor dieser
--- Datei niemand gesehen.
+// Ein Lesen an `class rc`: es LOESCHT. Was der Erzeuger daraus macht, hat vor dieser
+// Datei niemand gesehen.
 impl fn grund_lesen(g : ptr<mmio, r> Uart) -> u32
     effects { reads g.IIR }
     costs   <= 2 ops
@@ -52,14 +52,14 @@ impl fn grund_lesen(g : ptr<mmio, r> Uart) -> u32
     return g.IIR.GRUND;
 }
 
--- **Der Rumpf ist seit dem 2026-08-31 ein FREMDER, und das ist kein Ausweichen.**
--- Ein `ptr<port, …>` im eigenen Rumpf wird vom Erzeuger abgewiesen (`C001`): das erzeugte C
--- war ein gewoehnlicher Ladebefehl, und der Portraum wird auf x86_64 mit `in`/`out`
--- erreicht und mit nichts sonst. *Was hier stand, prueft mit 0 Fehlern und tat etwas
--- anderes als die Zeile sagt* -- `messung/ADRESSRAEUME.md`.
---
--- Das WORT `port` bleibt gedeckt: es steht am Typ, und der Typ steht hier. Was nicht mehr
--- hier steht, ist eine Absenkung, die es nicht gibt.
+// **Der Rumpf ist seit dem 2026-08-31 ein FREMDER, und das ist kein Ausweichen.**
+// Ein `ptr<port, …>` im eigenen Rumpf wird vom Erzeuger abgewiesen (`C001`): das erzeugte C
+// war ein gewoehnlicher Ladebefehl, und der Portraum wird auf x86_64 mit `in`/`out`
+// erreicht und mit nichts sonst. *Was hier stand, prueft mit 0 Fehlern und tat etwas
+// anderes als die Zeile sagt* -- `messung/ADRESSRAEUME.md`.
+//
+// Das WORT `port` bleibt gedeckt: es steht am Typ, und der Typ steht hier. Was nicht mehr
+// hier steht, ist eine Absenkung, die es nicht gibt.
 extern fn tor_lesen(p : ptr<port, r> Stand) -> bool
     effects { reads p }
     costs   <= 2 ops;

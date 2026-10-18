@@ -1,10 +1,10 @@
--- 107 -- **Two translated calls, both positions, clean.** The same
--- sum library as `beispiele/106`, called once in statement position and
--- once in binding position with a different payload each: every call
--- site gets its own `static const` table (`&sum__nutzlast_*` twice, named
--- by call span, so the two never share). The emission check runs the
--- binding call: `hole_zwanzig` answers 20. The statement call answers
--- nothing -- it exercises the lowering arm, not the value.
+// 107 -- **Two translated calls, both positions, clean.** The same
+// sum library as `beispiele/106`, called once in statement position and
+// once in binding position with a different payload each: every call
+// site gets its own `static const` table (`&sum__nutzlast_*` twice, named
+// by call span, so the two never share). The emission check runs the
+// binding call: `hole_zwanzig` answers 20. The statement call answers
+// nothing -- it exercises the lowering arm, not the value.
 module summe2 {
 table SumTab count 4 {
     slot {

@@ -1,9 +1,9 @@
--- @gabi 1
--- link-erwartet: N502
--- **Link probe 1242 (Opus agent E): the exported contract is TOO WEAK for the importer.**
--- The head promises one conjunct more than `setze` ensures (`konto.slots[1].stand == x`
--- stated separately, as an importer that relies on it would write it): the app checks clean
--- against this head, the link refuses -- the linked program has ONE contract per function.
+// @gabi 1
+// link-erwartet: N502
+// **Link probe 1242 (Opus agent E): the exported contract is TOO WEAK for the importer.**
+// The head promises one conjunct more than `setze` ensures (`konto.slots[1].stand == x`
+// stated separately, as an importer that relies on it would write it): the app checks clean
+// against this head, the link refuses -- the linked program has ONE contract per function.
 
 module bib {
 pub const NSLOTS : u32 = 2;

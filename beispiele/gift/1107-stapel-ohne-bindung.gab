@@ -1,18 +1,18 @@
--- erwartet: N446 allein
--- **1107 -- a `stack` clause naming a register bound in no `regs in`.**
---
--- The handed stack arrives in a register the declaration fills (`regs
--- in`); `rdx` is a general register but bound nowhere here, so no handed
--- stack ever arrives. The clause itself is well-placed (between `regs out`
--- and `clobbers`) and single, so `N447` stays silent; the machine is
--- implemented (`A006` silent), the map answers its errno (`N067` silent)
--- and the promise is countable (`N322` silent). Without this rule NOTHING
--- falls -- the emitted stub is valid C and `cc -Werror` takes it.
---
--- The gate is deliberately NOT the raw clone: the rule is gate-agnostic
--- (the number lives in the user declaration, never in the tree), and the
--- probe measures the shape, not the call. `1000` is not an OS number; `abi linux` names the
--- template the stub is written against (986 precedent), not a kernel table.
+// erwartet: N446 allein
+// **1107 -- a `stack` clause naming a register bound in no `regs in`.**
+//
+// The handed stack arrives in a register the declaration fills (`regs
+// in`); `rdx` is a general register but bound nowhere here, so no handed
+// stack ever arrives. The clause itself is well-placed (between `regs out`
+// and `clobbers`) and single, so `N447` stays silent; the machine is
+// implemented (`A006` silent), the map answers its errno (`N067` silent)
+// and the promise is countable (`N322` silent). Without this rule NOTHING
+// falls -- the emitted stub is valid C and `cc -Werror` takes it.
+//
+// The gate is deliberately NOT the raw clone: the rule is gate-agnostic
+// (the number lives in the user declaration, never in the tree), and the
+// probe measures the shape, not the call. `1000` is not an OS number; `abi linux` names the
+// template the stub is written against (986 precedent), not a kernel table.
 
 module gift1107 {
 

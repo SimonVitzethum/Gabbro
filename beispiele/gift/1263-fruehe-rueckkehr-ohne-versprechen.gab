@@ -1,11 +1,11 @@
--- erwartet: N511
--- **Lane 263 (OFFEN O12) -- an early return inside the locked section.**
---
--- The section re-breaks the promised cells (`konto.slots[1].stand = 5`) and
--- `return`s before restoring them: at that exit nothing shows
--- `konto.slots[0].stand == konto.slots[1].stand`. An exit is a release, so
--- the refusal names the `return` exit (the final `release` holds again after
--- the restoring write, and stays silent).
+// erwartet: N511
+// **Lane 263 (OFFEN O12) -- an early return inside the locked section.**
+//
+// The section re-breaks the promised cells (`konto.slots[1].stand = 5`) and
+// `return`s before restoring them: at that exit nothing shows
+// `konto.slots[0].stand == konto.slots[1].stand`. An exit is a release, so
+// the refusal names the `return` exit (the final `release` holds again after
+// the restoring write, and stays silent).
 module gift::fruehe_rueckkehr_ohne_versprechen {
 
 type Stand = u32 in 0 .. 100;

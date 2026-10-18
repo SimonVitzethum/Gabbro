@@ -1,15 +1,15 @@
--- erwartet: L104
--- **Ein Double-Free mit gruenem Haken.**
---
--- Beide Rufe auf oberster Ebene gaben `L104`. Einer davon GESCHACHTELT: stumm. Der
--- Ausdruckslaeufer in `m2.rs` stieg nicht in die Argumente eines Rufes ab und hatte
--- ausserdem `_ => {}`.
---
--- > M2 ist der Pass, den der eigene Modulkopf „das einzige Mittel in diesem Ordner, fuer
--- > das es keinen Ersatz gibt" nennt.
---
--- *Und es trifft nicht nur `ghost`* -- hier steht ein `linear type`, die Form aus
--- `beispiele/09`, ein echtes Laufzeit-Betriebsmittel.
+// erwartet: L104
+// **Ein Double-Free mit gruenem Haken.**
+//
+// Beide Rufe auf oberster Ebene gaben `L104`. Einer davon GESCHACHTELT: stumm. Der
+// Ausdruckslaeufer in `m2.rs` stieg nicht in die Argumente eines Rufes ab und hatte
+// ausserdem `_ => {}`.
+//
+// > M2 ist der Pass, den der eigene Modulkopf „das einzige Mittel in diesem Ordner, fuer
+// > das es keinen Ersatz gibt" nennt.
+//
+// *Und es trifft nicht nur `ghost`* -- hier steht ein `linear type`, die Form aus
+// `beispiele/09`, ein echtes Laufzeit-Betriebsmittel.
 
 module gift {
 

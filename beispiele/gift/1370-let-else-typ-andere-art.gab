@@ -1,9 +1,9 @@
--- erwartet: M135
--- **An annotation on `let … else` of another KIND than the callee's answer** -- `bool` over a number.
---
--- The twin of `gift/1369` and the example wall 5's own entry in `docs/WAENDE-M1.md` gives: `g` answers a `u64`, the binding
--- says `bool`, and the checker used to say nothing -- *a promise nobody keeps*, which is the class `P041` was written for.
--- It says `M135` now (a `bool` says HELD or FALLEN, and a number says how many).
+// erwartet: M135
+// **An annotation on `let … else` of another KIND than the callee's answer** -- `bool` over a number.
+//
+// The twin of `gift/1369` and the example wall 5's own entry in `docs/WAENDE-M1.md` gives: `g` answers a `u64`, the binding
+// says `bool`, and the checker used to say nothing -- *a promise nobody keeps*, which is the class `P041` was written for.
+// It says `M135` now (a `bool` says HELD or FALLEN, and a number says how many).
 
 module gift {
 

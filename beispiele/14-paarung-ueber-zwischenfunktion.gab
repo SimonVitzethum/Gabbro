@@ -1,39 +1,39 @@
--- 14 -- **Die W8-Probe fuer den Paarungspass: eine Paarung ueber eine Zwischenfunktion.**
---
--- Die naheliegende Probe waere: eine Funktion publiziert, eine andere erwartet, es passt.
--- **Die misst nichts** -- sie ist schon gruen, wenn der Pass nur die erste Ebene sieht.
---
--- Diese Datei stellt eine Zwischenfunktion dazwischen, die **weder publiziert noch
--- erwartet**. Sie trennt die beiden Haelften genau dann, wenn der Pass die transitive
--- Menge nicht bildet -- und dann faellt hier `V001` und `V002` zugleich.
+// 14 -- **Die W8-Probe fuer den Paarungspass: eine Paarung ueber eine Zwischenfunktion.**
+//
+// Die naheliegende Probe waere: eine Funktion publiziert, eine andere erwartet, es passt.
+// **Die misst nichts** -- sie ist schon gruen, wenn der Pass nur die erste Ebene sieht.
+//
+// Diese Datei stellt eine Zwischenfunktion dazwischen, die **weder publiziert noch
+// erwartet**. Sie trennt die beiden Haelften genau dann, wenn der Pass die transitive
+// Menge nicht bildet -- und dann faellt hier `V001` und `V002` zugleich.
 
 module beispiel::paarung {
 
--- **Ohne erklaerte Obermenge, und das ist seit dem 2026-08-19 eine Aussage.**
---
--- Hier stand `publishes { farbbericht }` -- ein Name, den diese Datei gar nicht kennt, waehrend
--- der Speicher unten `{ b.daten }` veroeffentlicht. Solange die Obermenge keinen Leser hatte,
--- fiel das niemandem auf; `V008` hat es beim ersten Lauf gemeldet.
---
--- **Und die Berichtigung zeigt eine Grenze der Notation:** die Nutzlast heisst hier
--- `b.daten`, also RELATIV ZU EINEM PARAMETER -- an der Deklaration des Atomics gibt es
--- kein `b`. *Eine Obermenge ueber eine parameterrelative Nutzlast ist nicht schreibbar*,
--- und weil sie freiwillig ist, steht hier keine.
+// **Ohne erklaerte Obermenge, und das ist seit dem 2026-08-19 eine Aussage.**
+//
+// Hier stand `publishes { farbbericht }` -- ein Name, den diese Datei gar nicht kennt, waehrend
+// der Speicher unten `{ b.daten }` veroeffentlicht. Solange die Obermenge keinen Leser hatte,
+// fiel das niemandem auf; `V008` hat es beim ersten Lauf gemeldet.
+//
+// **Und die Berichtigung zeigt eine Grenze der Notation:** die Nutzlast heisst hier
+// `b.daten`, also RELATIV ZU EINEM PARAMETER -- an der Deklaration des Atomics gibt es
+// kein `b`. *Eine Obermenge ueber eine parameterrelative Nutzlast ist nicht schreibbar*,
+// und weil sie freiwillig ist, steht hier keine.
 atomic FERTIG : bool release;
 
--- **ERGAENZT 2026-08-25: `Bericht` war ein Zeigerziel OHNE Deklaration** -- gefunden von
--- `N040`, und der Fund ist schaerfer als er aussieht: **diese Datei ist DURCHGESTOCHEN.**
--- `lauf "beispiel14"` erzeugt, uebersetzt unter `-Werror` bei `-O0` und `-O2`, fuehrt aus
--- und vergleicht `0 1` -- und lief die ganze Zeit, weil der C-TREIBER
--- `struct Bericht { unsigned daten; };` selbst hinschrieb.
---
--- > *Das Testprogramm lieferte nach, was das Gabbro-Programm nicht erklaerte.* Der Erzeuger
--- > schrieb eine Vorwaertsdeklaration, der Uebersetzer war zufrieden, und die Zahl stimmte.
--- > **Ein Durchstich misst, was er sieht** -- und er sah einen Typ, den er nicht bekommen
--- > hatte. Derselbe Zug wie bei den drei Zeugen in `04-schleifen.gab`, nur eine Ebene tiefer.
+// **ERGAENZT 2026-08-25: `Bericht` war ein Zeigerziel OHNE Deklaration** -- gefunden von
+// `N040`, und der Fund ist schaerfer als er aussieht: **diese Datei ist DURCHGESTOCHEN.**
+// `lauf "beispiel14"` erzeugt, uebersetzt unter `-Werror` bei `-O0` und `-O2`, fuehrt aus
+// und vergleicht `0 1` -- und lief die ganze Zeit, weil der C-TREIBER
+// `struct Bericht { unsigned daten; };` selbst hinschrieb.
+//
+// > *Das Testprogramm lieferte nach, was das Gabbro-Programm nicht erklaerte.* Der Erzeuger
+// > schrieb eine Vorwaertsdeklaration, der Uebersetzer war zufrieden, und die Zahl stimmte.
+// > **Ein Durchstich misst, was er sieht** -- und er sah einen Typ, den er nicht bekommen
+// > hatte. Derselbe Zug wie bei den drei Zeugen in `04-schleifen.gab`, nur eine Ebene tiefer.
 type Bericht = { daten : u32, };
 
--- Die veroeffentlichende Haelfte.
+// Die veroeffentlichende Haelfte.
 impl fn melden(b : ptr<normal, rw> Bericht)
     effects { writes b, writes FERTIG }
     costs   <= 4 ops
@@ -41,7 +41,7 @@ impl fn melden(b : ptr<normal, rw> Bericht)
     FERTIG = true publishes { b.daten };
 }
 
--- **Die Zwischenfunktion.** Sie publiziert nichts und erwartet nichts -- sie ruft nur.
+// **Die Zwischenfunktion.** Sie publiziert nichts und erwartet nichts -- sie ruft nur.
 impl fn anstossen(b : ptr<normal, rw> Bericht)
     effects { writes b, writes FERTIG }
     costs   <= 8 ops
@@ -49,7 +49,7 @@ impl fn anstossen(b : ptr<normal, rw> Bericht)
     melden(b);
 }
 
--- Die erwartende Haelfte.
+// Die erwartende Haelfte.
 impl fn abholen(b : ptr<normal, r> Bericht) -> bool
     effects { reads b, reads FERTIG }
     costs   <= 4 ops

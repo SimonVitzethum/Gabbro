@@ -189,8 +189,8 @@ reason CapError {
     exhaustive
 }
 
--- «B15» `variants` (SYNTAX.md:147) nimmt je Variante GENAU EINEN typeexpr. Wo Rust eine
--- Felderliste inline schreibt, braucht Gabbro einen benannten Verbund. Fuenf davon.
+// «B15» `variants` (SYNTAX.md:147) nimmt je Variante GENAU EINEN typeexpr. Wo Rust eine
+// Felderliste inline schreibt, braucht Gabbro einen benannten Verbund. Fuenf davon.
 type SchedParams = { budget : u32, period : u32, };
 type ReplyRef    = { ep : EpId, caller : ThreadId, };
 type MmioRange   = { phys : Pa, len : ByteLen, };
@@ -202,15 +202,15 @@ tagged type ObjectKind = { Memory(Region), Endpoint(EpId), Notification(EpId),
                            PdControl(PdId), Loader(u32), Mmio(MmioRange), Irq(u32),
                            Dma(DmaRef), SyscallHandler(HandlerRef), FaultHandler(HandlerRef) };
 
--- «B2» `lockdecl` (SYNTAX.md:471) ist von `program` aus NICHT ERREICHBAR: `item` (:111-112)
--- fuehrt es nicht auf. Dieselben zwei Zeilen stehen als Beispiel in §11 der Datei, die sie
--- ausschliesst. Betroffen: jede Sperre in allen sechs Fragmenten.
+// «B2» `lockdecl` (SYNTAX.md:471) ist von `program` aus NICHT ERREICHBAR: `item` (:111-112)
+// fuehrt es nicht auf. Dieselben zwei Zeilen stehen als Beispiel in §11 der Datei, die sie
+// ausschliesst. Betroffen: jede Sperre in allen sechs Fragmenten.
 lock CAPS protects { plaetze, cdt } rank 0 masks irqs;
 lock MEM  protects { freelist }   rank 9;
 
--- «B16» Zwei Tabellen, weil `table` genau EIN `slot`-Wort kennt (:385-386). Der Cap-Space hat
--- Slots UND Objekte; `index into CapObjects` traegt die Verbindung, aber keine Invariante
--- kann sie noch aussprechen, s. B13 weiter unten.
+// «B16» Zwei Tabellen, weil `table` genau EIN `slot`-Wort kennt (:385-386). Der Cap-Space hat
+// Slots UND Objekte; `index into CapObjects` traegt die Verbindung, aber keine Invariante
+// kann sie noch aussprechen, s. B13 weiter unten.
 table CapObjects count NOBJECTS {
     slot {
         used     : bool,
@@ -233,26 +233,26 @@ table CapSpace count NSLOTS {
         prev_sibling : option index into CapSpace,
     }
 
-    -- «B16» Das `pred` einer `invariant` braucht ein `place` fuer die Tabelle
-    -- (`slots of place`, :239) — die Grammatik bindet aber im `table`-Rumpf keinen Namen.
-    -- `Self` ist hier GERATEN; §2 fuehrt `Self` nur als eingebautes Wort ohne Bindungsregel.
+    // «B16» Das `pred` einer `invariant` braucht ein `place` fuer die Tabelle
+    // (`slots of place`, :239) — die Grammatik bindet aber im `table`-Rumpf keinen Namen.
+    // `Self` ist hier GERATEN; §2 fuehrt `Self` nur als eingebautes Wort ohne Bindungsregel.
     invariant wurzel_ohne_vorgaenger cost O(n) runs offline :
         forall s in slots of Self :
             Self.slots[s].parent == None => Self.slots[s].prev_sibling == None;
 
-    -- «B14» Die beiden Gegenseitigkeits-Invarianten brauchen die AUFLOESUNG eines
-    -- `option index into` im Praedikat (`slots[s.next_sibling].prev_sibling == s`).
-    -- `match` loest das in einer Anweisung auf, im Praedikat gibt es dafuer nichts.
-    -- «B13» `refcount_matches` braucht eine Zaehlung ueber eine ZWEITE Tabelle
-    -- (`o.refcount == count(s in slots: s.object == o)`). `pred` (:230-247) kennt keine
-    -- Aggregation und keine tabellenuebergreifende Domaene. Der Kern der Buchfuehrung des
-    -- Faehigkeitssystems ist damit nicht formulierbar — das ist der teuerste Befund an F1.
+    // «B14» Die beiden Gegenseitigkeits-Invarianten brauchen die AUFLOESUNG eines
+    // `option index into` im Praedikat (`slots[s.next_sibling].prev_sibling == s`).
+    // `match` loest das in einer Anweisung auf, im Praedikat gibt es dafuer nichts.
+    // «B13» `refcount_matches` braucht eine Zaehlung ueber eine ZWEITE Tabelle
+    // (`o.refcount == count(s in slots: s.object == o)`). `pred` (:230-247) kennt keine
+    // Aggregation und keine tabellenuebergreifende Domaene. Der Kern der Buchfuehrung des
+    // Faehigkeitssystems ist damit nicht formulierbar — das ist der teuerste Befund an F1.
 }
 
--- «B1» Diese Form — `spec fn … = pred;` — benutzt SYNTAX.md:287 selbst. `fndecl` (:266-274)
--- laesst als Rumpf nur `block | ";"`. Ueber einen `block` ist ein Quantor NICHT erreichbar:
--- `return` nimmt `expr`, und `pred` haengt nirgends unter `expr`. Ohne diese Produktion ist
--- in allen sechs Fragmenten keine einzige `spec fn` schreibbar.
+// «B1» Diese Form — `spec fn … = pred;` — benutzt SYNTAX.md:287 selbst. `fndecl` (:266-274)
+// laesst als Rumpf nur `block | ";"`. Ueber einen `block` ist ein Quantor NICHT erreichbar:
+// `return` nimmt `expr`, und `pred` haengt nirgends unter `expr`. Ohne diese Produktion ist
+// in allen sechs Fragmenten keine einzige `spec fn` schreibbar.
 spec fn ist_blatt(c : ptr<normal, r> CapSpace, s : SlotIdx) -> bool
     effects { pure }
     = c.slots[s].used && c.slots[s].first_child == None;
@@ -306,12 +306,12 @@ impl fn delete_leaf(c  : ptr<normal, rw> CapSpace,
                     rf : ptr<normal, rw+own> Finalized,
                     s  : SlotIdx)
     requires  Held(CAPS), Held(MEM), c.slots[s].used, ist_blatt(c, s)
-    -- «B31» Die zweite Zeile ist NICHT ABLEITBAR, und zwar keine Fassung von ihr. `oldexpr`
-    -- haengt unter `atompred` (:235-236), nicht unter `primary` (:200): `old(x)` kann als
-    -- Praedikat FUER SICH stehen, aber nirgends in einem Ausdruck vorkommen — also auch
-    -- nicht links oder rechts von `==`. Damit ist keine Differenzaussage schreibbar, und
-    -- SYNTAX.md:292 gibt selbst eine an. Das trifft jede Nachbedingung, die „nachher gegen
-    -- vorher" sagt — die haeufigste Form, die es gibt.
+    // «B31» Die zweite Zeile ist NICHT ABLEITBAR, und zwar keine Fassung von ihr. `oldexpr`
+    // haengt unter `atompred` (:235-236), nicht unter `primary` (:200): `old(x)` kann als
+    // Praedikat FUER SICH stehen, aber nirgends in einem Ausdruck vorkommen — also auch
+    // nicht links oder rechts von `==`. Damit ist keine Differenzaussage schreibbar, und
+    // SYNTAX.md:292 gibt selbst eine an. Das trifft jede Nachbedingung, die „nachher gegen
+    // vorher" sagt — die haeufigste Form, die es gibt.
     ensures   !c.slots[s].used,
               o.slots[old(c.slots[s].object)].refcount + 1
                   == old(o.slots[c.slots[s].object].refcount)
@@ -323,28 +323,28 @@ impl fn delete_leaf(c  : ptr<normal, rw> CapSpace,
     unlink(c, s);
     release_slot(c, s);
 
-    -- «B29» -- UND SO SIEHT DIE AUFLOESUNG AUS (nachgezogen 2026-08-15).
-    --
-    -- Die Vorlage schrieb `refcount -= 1;` und prueefte DANACH auf Null. M1 verlangt den
-    -- Nachweis VOR der Rechnung, und die Zaehlerregel (SPRACHE.md §1) sagt warum: ein
-    -- Bereich am Typ sagt nichts darueber, ob die RECHNUNG darin bleibt.
-    --
-    -- Das Argument der Vorlage war: `refcount > 0` faellt aus der Buchfuehrungs-Invariante,
-    -- und die ist nach «B13» nicht aufschreibbar. **Beides stimmt und beides hilft hier
-    -- nicht** -- denn `narrow … else` verlangt keine Invariante, sondern eine PRUEFUNG. Der
-    -- `else`-Zweig ist der Ort, an dem die Verletzung sichtbar wird, statt still zu wrappen.
-    --
-    -- Genau das ist der Unterschied zwischen EINEM Netz und ZWEIEN: die Invariante bleibt
-    -- der Grund, warum der Zweig nie genommen wird; der Typ bleibt der Grund, warum er
-    -- existieren muss.
+    // «B29» -- UND SO SIEHT DIE AUFLOESUNG AUS (nachgezogen 2026-08-15).
+    //
+    // Die Vorlage schrieb `refcount -= 1;` und prueefte DANACH auf Null. M1 verlangt den
+    // Nachweis VOR der Rechnung, und die Zaehlerregel (SPRACHE.md §1) sagt warum: ein
+    // Bereich am Typ sagt nichts darueber, ob die RECHNUNG darin bleibt.
+    //
+    // Das Argument der Vorlage war: `refcount > 0` faellt aus der Buchfuehrungs-Invariante,
+    // und die ist nach «B13» nicht aufschreibbar. **Beides stimmt und beides hilft hier
+    // nicht** -- denn `narrow … else` verlangt keine Invariante, sondern eine PRUEFUNG. Der
+    // `else`-Zweig ist der Ort, an dem die Verletzung sichtbar wird, statt still zu wrappen.
+    //
+    // Genau das ist der Unterschied zwischen EINEM Netz und ZWEIEN: die Invariante bleibt
+    // der Grund, warum der Zweig nie genommen wird; der Typ bleibt der Grund, warum er
+    // existieren muss.
     narrow o.slots[obj].refcount to 1 .. 80255 else {
         return Fehler::Buchfuehrung;
     }
     o.slots[obj].refcount -= 1;
 
     if o.slots[obj].refcount == 0 {
-        -- «B28» Kein Platzhalterbinder: zehn Varianten ohne Nutzlastgebrauch brauchen zehn
-        -- tote Namen. `_ =>` ist mit Absicht verboten, `_` als BINDER ist nicht vorgesehen.
+        // «B28» Kein Platzhalterbinder: zehn Varianten ohne Nutzlastgebrauch brauchen zehn
+        // tote Namen. `_ =>` ist mit Absicht verboten, `_` als BINDER ist nicht vorgesehen.
         match o.slots[obj].kind {
             Memory(m)          => { free_region(a, m); }
             Dma(d)             => { push_dma(rf, d); }
@@ -373,36 +373,36 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
     requires  Held(CAPS), Held(MEM), cdt_wohlgeformt(c)
     maintains cdt_wohlgeformt
     effects   { consumes c.slots, writes o.slots, writes rf, allocs a, locks CAPS }
-    -- **«B34» -- DER GROESSTE EINZELBEFUND DIESES FRAGMENTS, und er kam vom Kostenpass.**
-    --
-    -- Die Vorlage sagte `<= 200 ops` zu. Sobald `CapSpace` seine Slotzahl nennt (`count
-    -- NSLOTS`, nachgetragen 2026-08-15) und die Domaenenschranke damit steht, rechnet der
-    -- Pass nach: **16 452 480 ops.** Fuenf Groessenordnungen.
-    --
-    -- Die 200 waren kein Tippfehler, sondern der TYPISCHE Fall -- ein `revoke` mit wenigen
-    -- Nachfahren. `costs` ist aber eine SCHRANKE, und die Schranke eines `revoke` ueber
-    -- einer 80 256-Slot-Tabelle ist die Tabelle. **Genau diese Verwechslung -- typischer
-    -- Fall statt oberer Schranke -- ist der Grund, warum die Zahl nachgerechnet und nicht
-    -- geglaubt wird**, und sie ist hier zum zweiten Mal aufgeschlagen (zuerst bei A4:
-    -- 4 096 zugesagt, 831 488 gerechnet).
-    --
-    -- **BERICHTIGT 2026-08-15.** Hier stand: „Caprock begrenzt `revoke` ueber die
-    -- CDT-Tiefe, und diese Schranke ist in Gabbro nicht ausdrueckbar." **Das war aus dem
-    -- Gedaechtnis geschrieben und ist falsch.** `cdt_step_limit()` liefert
-    -- `self.slots.len()` (`caprock-cap/src/space.rs:932-933`) -- **dieselbe Schranke, die
-    -- Gabbro rechnet.**
-    --
-    -- Und der Kernel nimmt sie ZWEIMAL, innen und aussen (`:635`, `:648`); seine eigene
-    -- obere Schranke ist `slots.len()^2`, also rund 390-mal groesser als diese Zahl.
-    -- **Gabbros Schranke ist die schaerfere.** Es fehlt kein Konstrukt -- die 200 waren
-    -- schlicht der typische Fall statt der Schranke, und genau dagegen ist der Kostenpass
-    -- gebaut (`memos/M-kostenmass.md`).
+    // **«B34» -- DER GROESSTE EINZELBEFUND DIESES FRAGMENTS, und er kam vom Kostenpass.**
+    //
+    // Die Vorlage sagte `<= 200 ops` zu. Sobald `CapSpace` seine Slotzahl nennt (`count
+    // NSLOTS`, nachgetragen 2026-08-15) und die Domaenenschranke damit steht, rechnet der
+    // Pass nach: **16 452 480 ops.** Fuenf Groessenordnungen.
+    //
+    // Die 200 waren kein Tippfehler, sondern der TYPISCHE Fall -- ein `revoke` mit wenigen
+    // Nachfahren. `costs` ist aber eine SCHRANKE, und die Schranke eines `revoke` ueber
+    // einer 80 256-Slot-Tabelle ist die Tabelle. **Genau diese Verwechslung -- typischer
+    // Fall statt oberer Schranke -- ist der Grund, warum die Zahl nachgerechnet und nicht
+    // geglaubt wird**, und sie ist hier zum zweiten Mal aufgeschlagen (zuerst bei A4:
+    // 4 096 zugesagt, 831 488 gerechnet).
+    //
+    // **BERICHTIGT 2026-08-15.** Hier stand: „Caprock begrenzt `revoke` ueber die
+    // CDT-Tiefe, und diese Schranke ist in Gabbro nicht ausdrueckbar." **Das war aus dem
+    // Gedaechtnis geschrieben und ist falsch.** `cdt_step_limit()` liefert
+    // `self.slots.len()` (`caprock-cap/src/space.rs:932-933`) -- **dieselbe Schranke, die
+    // Gabbro rechnet.**
+    //
+    // Und der Kernel nimmt sie ZWEIMAL, innen und aussen (`:635`, `:648`); seine eigene
+    // obere Schranke ist `slots.len()^2`, also rund 390-mal groesser als diese Zahl.
+    // **Gabbros Schranke ist die schaerfere.** Es fehlt kein Konstrukt -- die 200 waren
+    // schlicht der typische Fall statt der Schranke, und genau dagegen ist der Kostenpass
+    // gebaut (`memos/M-kostenmass.md`).
     costs     <= 16452480 ops
 {
-    -- «B10» `traverse` liefert KEINEN Wert (:337-341) und es gibt kein `break`. Der
-    -- Hoechststand `peak_revoke_ops` — im Rust-Original der Beleg dafuer, dass die Schranke
-    -- nie gegriffen hat — ist damit nicht erhebbar. Die SCHRANKE faellt durch `by consuming`
-    -- weg, die MESSUNG der Schranke ebenfalls, und nur die erste war beabsichtigt.
+    // «B10» `traverse` liefert KEINEN Wert (:337-341) und es gibt kein `break`. Der
+    // Hoechststand `peak_revoke_ops` — im Rust-Original der Beleg dafuer, dass die Schranke
+    // nie gegriffen hat — ist damit nicht erhebbar. Die SCHRANKE faellt durch `by consuming`
+    // weg, die MESSUNG der Schranke ebenfalls, und nur die erste war beabsichtigt.
     traverse victim over descendants of c.slots[s] by consuming
         touches consumes c.slots, writes o.slots, writes rf
     {
@@ -410,9 +410,9 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
     }
 }
 
--- Nachgetragen 2026-08-15: drei Gerufene wurden benutzt und nie erklaert. Ohne `costs` am
--- Gerufenen kann der Kostenpass die Zusage des Rufers nicht nachrechnen -- und er SAGT das
--- (`K003`), statt stillschweigend zu schaetzen. Genau dafuer ist die Absage da.
+// Nachgetragen 2026-08-15: drei Gerufene wurden benutzt und nie erklaert. Ohne `costs` am
+// Gerufenen kann der Kostenpass die Zusage des Rufers nicht nachrechnen -- und er SAGT das
+// (`K003`), statt stillschweigend zu schaetzen. Genau dafuer ist die Absage da.
 extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) effects { writes a } costs <= 32 ops;
 extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) effects { writes rf } costs <= 8 ops;
 extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { writes rf } costs <= 8 ops;
@@ -454,8 +454,8 @@ grammar helped most: four of the draft's seven gaps closed (multi-bit fields `@[
 
 ```gabbro
 device Vtd(base : Pa) at mmio {
-    -- Falle 4, x86-Fassung: GCMD ist KEIN Read-Modify-Write. Genau eine Zeile, einmal je
-    -- Geraet. Sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand in vtd.rs:42-52.
+    // Falle 4, x86-Fassung: GCMD ist KEIN Read-Modify-Write. Genau eine Zeile, einmal je
+    // Geraet. Sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand in vtd.rs:42-52.
     mirrors GCMD from GSTS;
 
     reg VER  : u32 @0x000 class r  fields { MIN @[3:0], MAX @[7:4], }
@@ -477,10 +477,10 @@ device Vtd(base : Pa) at mmio {
         fields { DID @[15:0], SID @[31:16], FM @[33:32], CAIG @[60:59], CIRG @[62:61],
                  ICC @63, }
 
-    -- «B23» FSTS ist GEMISCHT: 7:0 sind RW1C, 15:8 (FRI, der Index des ersten besetzten
-    -- Fault-Registers) sind r. `regdecl` (:430) traegt EINE Klassenangabe je Register.
-    -- `class w1c` macht das Lesen von FRI untypisierbar — und FRI ist die Groesse, mit der
-    -- der Treiber die Aufzeichnung ueberhaupt findet (vtd.rs:503).
+    // «B23» FSTS ist GEMISCHT: 7:0 sind RW1C, 15:8 (FRI, der Index des ersten besetzten
+    // Fault-Registers) sind r. `regdecl` (:430) traegt EINE Klassenangabe je Register.
+    // `class w1c` macht das Lesen von FRI untypisierbar — und FRI ist die Groesse, mit der
+    // der Treiber die Aufzeichnung ueberhaupt findet (vtd.rs:503).
     reg FSTS : u32 @0x034 class w1c
         fields { PFO @0, PPF @1, AFO @2, APF @3, IQE @4, ICE @5, ITE @6, PRO @7, FRI @[15:8], }
 
@@ -490,13 +490,13 @@ device Vtd(base : Pa) at mmio {
     reg ICS  : u32 @0x09c class w1c fields { IWC @0, }
     reg IRTA : u64 @0x0b8 class rw  fields { EIME @11, }
 
-    -- Geschlossen: Registerlage aus einem GELESENEN Feld. Der Index ist ueber `count`
-    -- M1-beschraenkt; `frr_off` (vtd.rs:442) rechnet dieselbe Adresse von Hand aus.
+    // Geschlossen: Registerlage aus einem GELESENEN Feld. Der Index ist ueber `count`
+    // M1-beschraenkt; `frr_off` (vtd.rs:442) rechnet dieselbe Adresse von Hand aus.
     bank FRR at CAP.FRO * 16 stride 16 count 256 {
         reg FR_LO : u64 @0x0 class r
-        -- «B24» Das F-Bit ist Bit 63 des OBEREN Wortes, `grund` liegt in 39:32 desselben.
-        -- `bitpos` (:146) sagt nichts darueber, worauf sich eine Bitlage jenseits von 64
-        -- bezieht und wie sie mit `endian` zusammenwirkt. Hier bezogen auf FR_HI.
+        // «B24» Das F-Bit ist Bit 63 des OBEREN Wortes, `grund` liegt in 39:32 desselben.
+        // `bitpos` (:146) sagt nichts darueber, worauf sich eine Bitlage jenseits von 64
+        // bezieht und wie sie mit `endian` zusammenwirkt. Hier bezogen auf FR_HI.
         reg FR_HI : u64 @0x8 class w1c
             fields { SID @[15:0], TYPE @[29:28], GRUND @[39:32], AT @[61:60], F @63, }
     }
@@ -506,10 +506,10 @@ device Vtd(base : Pa) at mmio {
             fields { DID @[47:32], DR @49, DW @50, IAIG @[58:57], IIRG @[60:59], IVT @63, }
     }
 
-    -- «B26» Der Vorzustand steht an einem NICHT LESBAREN Ort. `mirrors` sagt, WOHER die
-    -- mitgefuehrten Bits kommen; ob es damit auch den Vorzustand einer `transition` an
-    -- `GCMD.TE` aus `GSTS.TES` bezieht, sagt SYNTAX.md (:428, :434) nicht. Die Vorlage hat
-    -- diesen Widerspruch als unaufloesbar gefuehrt; er ist jetzt halb aufgeloest.
+    // «B26» Der Vorzustand steht an einem NICHT LESBAREN Ort. `mirrors` sagt, WOHER die
+    // mitgefuehrten Bits kommen; ob es damit auch den Vorzustand einer `transition` an
+    // `GCMD.TE` aus `GSTS.TES` bezieht, sagt SYNTAX.md (:428, :434) nicht. Die Vorlage hat
+    // diesen Widerspruch als unaufloesbar gefuehrt; er ist jetzt halb aufgeloest.
     transition setze_rtp { GCMD.SRTP: 0 -> 1 }
         requires GSTS.TES == 0 || GSTS.RTPS == 1
         effects  { writes GCMD }
@@ -540,18 +540,18 @@ reason VtdFehler {
     exhaustive
 }
 
--- «B25» `grund` soll genau die zwoelf Werte von FaultGrund tragen. `intty` traegt ein
--- INTERVALL (:139), keine Wertemenge. Hier geht es nur, weil 0x01..0x0c zufaellig
--- zusammenhaengend ist; bei einem geloecherten Code waere das Feld nicht bindbar.
--- «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern -- **und seit dem 2026-08-18
--- steht das im Traegertyp statt im Kommentar.** Der urspruengliche Text las: *„Die Bitlagen
--- unten sind auf das jeweilige Wort bezogen, weil `format` keine Wortbreite kennt."* Sie
--- kennt sie: die Wortbreite IST der Feldtyp, und eine Lage jenseits davon bedeutet nichts.
---
--- **Nachgezogen am 2026-08-19, als `N007` in den Pruefer kam.** Sieben Stellen fielen, und
--- eine davon war ein Widerspruch INNERHALB dieser Datei: `typ` stand hier als `@[13:12]`,
--- das Register `FR_HI` derselben Einheit fuehrt `TYPE @[29:28]`. *Die zweite Zahl ist die
--- gemessene; die erste haette mit `sid @[15:0]` ueberlappt.*
+// «B25» `grund` soll genau die zwoelf Werte von FaultGrund tragen. `intty` traegt ein
+// INTERVALL (:139), keine Wertemenge. Hier geht es nur, weil 0x01..0x0c zufaellig
+// zusammenhaengend ist; bei einem geloecherten Code waere das Feld nicht bindbar.
+// «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern -- **und seit dem 2026-08-18
+// steht das im Traegertyp statt im Kommentar.** Der urspruengliche Text las: *„Die Bitlagen
+// unten sind auf das jeweilige Wort bezogen, weil `format` keine Wortbreite kennt."* Sie
+// kennt sie: die Wortbreite IST der Feldtyp, und eine Lage jenseits davon bedeutet nichts.
+//
+// **Nachgezogen am 2026-08-19, als `N007` in den Pruefer kam.** Sieben Stellen fielen, und
+// eine davon war ein Widerspruch INNERHALB dieser Datei: `typ` stand hier als `@[13:12]`,
+// das Register `FR_HI` derselben Einheit fuehrt `TYPE @[29:28]`. *Die zweite Zahl ist die
+// gemessene; die erste haette mit `sid @[15:0]` ueberlappt.*
 format FaultRecordLo @version 1 endian little {
     input_addr : u64 @[63:12] where (input_addr & 0xfff) == 0,
 }
@@ -563,10 +563,10 @@ format FaultRecordHi @version 1 endian little {
     at     : u64 @[61:60],
     f_bit  : u64 in 1 .. 1 @63,
 }
--- «B22-nah, eigener Fall» `where f_bit == 1` WEIST ein leeres Register AB, statt „leer" zu
--- MELDEN. Das ist der Unterschied zwischen Absage und Abwesenheit, und `format` kennt nur
--- die Absage. Im Rust-Original ist genau das der Unterschied zwischen „kein Fault" und
--- „Aufzeichnung nicht lesbar" (vtd.rs:451).
+// «B22-nah, eigener Fall» `where f_bit == 1` WEIST ein leeres Register AB, statt „leer" zu
+// MELDEN. Das ist der Unterschied zwischen Absage und Abwesenheit, und `format` kennt nur
+// die Absage. Im Rust-Original ist genau das der Unterschied zwischen „kein Fault" und
+// „Aufzeichnung nicht lesbar" (vtd.rs:451).
 
 format Slpte @version 1 endian little {
     R    : u64 @0,
@@ -575,10 +575,10 @@ format Slpte @version 1 endian little {
     ADDR : u64 @[63:12],
 }
 
--- «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
--- ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
--- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.txt`:* zwei Woerter,
--- und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
+// «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
+// ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
+// `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.txt`:* zwei Woerter,
+// und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
 format ContextEntryLo @version 1 endian little {
     P        : u64 @0,
     FPD      : u64 @1,
@@ -625,7 +625,7 @@ branch of the sender queue). **Caught up:** `state X`, `Some(x) => { }`, `costs 
 module caprock::ipc {
 
 const QUEUE_CAP : u32 = 32;
-const NCORES    : u32 = 64;   -- nachgetragen 2026-08-15
+const NCORES    : u32 = 64;   // nachgetragen 2026-08-15
 const MSG_WORDS : u32 = 6;
 
 reason IpcResult {
@@ -636,8 +636,8 @@ reason IpcResult {
     exhaustive
 }
 
--- «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
--- (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
+// «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
+// (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
 type TidQueue = {
     buf   : [u32; 32],
     head  : u32 in 0 ..< 32,
@@ -660,32 +660,32 @@ table Endpoint count NCORES {
             (Self.slots[e].caller == None) == (Self.slots[e].reply_owner == None);
 }
 
--- «B17» HIER BRICHT DAS FRAGMENT. `transition` (:434) schreibt GENAU EIN `place`:
---     transition = "transition" ident "{" place ":" expr "->" expr "}" …
--- Die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` NIE HALB
--- gesetzt werden — zwei Orte in EINEM Zug. In Caprock steht das als Kommentar
--- ("stets gemeinsam gesetzt/geloescht"); Gabbro sollte es zur Ableitung machen und kann es
--- nicht. Zweitens nennt `state` (:414) den Typ nicht, ueber dem es steht.
--- Drittens bindet `Some(cl)` im Zielausdruck einen frischen Namen — dafuer gibt es keine
--- Produktion. Die drei Zeilen unten sind AUSKOMMENTIERT, weil sie nicht schreibbar sind:
---     state Rendezvous over Endpoint {
---         transition open  { caller : None -> Some(cl), reply_owner : None -> Some(sv) }
---         transition close { caller : Some(c) -> None,  reply_owner : Some(s) -> None }
---     }
+// «B17» HIER BRICHT DAS FRAGMENT. `transition` (:434) schreibt GENAU EIN `place`:
+//     transition = "transition" ident "{" place ":" expr "->" expr "}" …
+// Die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` NIE HALB
+// gesetzt werden — zwei Orte in EINEM Zug. In Caprock steht das als Kommentar
+// ("stets gemeinsam gesetzt/geloescht"); Gabbro sollte es zur Ableitung machen und kann es
+// nicht. Zweitens nennt `state` (:414) den Typ nicht, ueber dem es steht.
+// Drittens bindet `Some(cl)` im Zielausdruck einen frischen Namen — dafuer gibt es keine
+// Produktion. Die drei Zeilen unten sind AUSKOMMENTIERT, weil sie nicht schreibbar sind:
+//     state Rendezvous over Endpoint {
+//         transition open  { caller : None -> Some(cl), reply_owner : None -> Some(sv) }
+//         transition close { caller : Some(c) -> None,  reply_owner : Some(s) -> None }
+//     }
 
--- «B12» `forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen (:238-244)
--- enthalten keinen Zahlenbereich. Ersatz ueber `elems of` — und damit steht die zweite
--- Frage im Raum: bindet `elems of` ein ELEMENT und `slots of` einen INDEX? SYNTAX.md
--- benutzt beide Lesarten und legt keine fest.
+// «B12» `forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen (:238-244)
+// enthalten keinen Zahlenbereich. Ersatz ueber `elems of` — und damit steht die zweite
+// Frage im Raum: bindet `elems of` ein ELEMENT und `slots of` einen INDEX? SYNTAX.md
+// benutzt beide Lesarten und legt keine fest.
 spec fn msg_kopiert(dst : ptr<normal, r> Frame, src : ptr<normal, r> Frame) -> bool
     effects { pure }
     = forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i]);
 
--- «B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` (:148) traegt KEINEN Vertrag —
--- kein `requires`, kein `ensures`, kein `effects`. Genau dafuer war der Verbund gedacht
--- ("der Vertrag des Rueckrufs muss am Zeigertyp stehen"). Er traegt nur noch die Signatur.
--- «B8» Und gerufen werden kann durch ihn ueberhaupt nicht: `call = path "(" … ")"` (:202);
--- `ops.current_id(core)` ist kein `call`, weil `ops.current_id` ein `place` ist.
+// «B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` (:148) traegt KEINEN Vertrag —
+// kein `requires`, kein `ensures`, kein `effects`. Genau dafuer war der Verbund gedacht
+// ("der Vertrag des Rueckrufs muss am Zeigertyp stehen"). Er traegt nur noch die Signatur.
+// «B8» Und gerufen werden kann durch ihn ueberhaupt nicht: `call = path "(" … ")"` (:202);
+// `ops.current_id(core)` ist kein `call`, weil `ops.current_id` ein `place` ist.
 type SchedOps = {
     current_id    : fn(u32) -> u32,
     frame_of      : fn(u32) -> u64,
@@ -698,14 +698,14 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
              dienste : ptr<normal, r> SchedOps,
              core : index into Endpoint,
              f    : ptr<normal, rw+own> Frame) -> ptr<normal, rw+own> Frame
-    -- «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
-    -- bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
+    // «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
+    // bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
     requires  Held(EPS), e.slots[core].used
     maintains antwortpflicht_paarig
-    -- `reads dienste` steht hier, weil `current_id`/`frame_of` es nennen: seit 2026-08-15
-    -- schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
-    -- unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
-    -- erst kompositional macht.
+    // `reads dienste` steht hier, weil `current_id`/`frame_of` es nennen: seit 2026-08-15
+    // schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
+    // unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
+    // erst kompositional macht.
     effects   { writes e.slots, locks SCHEDS, writes frames, consumes e.slots,
                 reads dienste }
     costs     <= 2000 ops
@@ -716,10 +716,10 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     }
     let caller = current_id(dienste, core);
 
-    -- «B10» Der Fastpath sucht den ERSTEN lebenden Empfaenger und hoert dann auf. `traverse`
-    -- liefert keinen Wert und kennt kein `break` — mit `by consuming` wird deshalb die
-    -- GANZE Warteschlange geleert, auch die Empfaenger hinter dem gefundenen. Das ist keine
-    -- Wortreichheit, sondern ein anderes Programm: aus einem Rendezvous wird ein Aderlass.
+    // «B10» Der Fastpath sucht den ERSTEN lebenden Empfaenger und hoert dann auf. `traverse`
+    // liefert keinen Wert und kennt kein `break` — mit `by consuming` wird deshalb die
+    // GANZE Warteschlange geleert, auch die Empfaenger hinter dem gefundenen. Das ist keine
+    // Wortreichheit, sondern ein anderes Programm: aus einem Rendezvous wird ein Aderlass.
     let mut picked : u32 = KEIN_SERVER;
     traverse cand over queue e.slots[core].receivers by consuming
         touches consumes e.slots, reads sched
@@ -731,8 +731,8 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
 
     if picked == KEIN_SERVER {
         let q = enqueue(e.slots[core].senders, caller) else (fehler) {
-            -- D11 woertlich: der Ueberlaeufer wird NICHT blockiert, sondern benannt
-            -- abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
+            // D11 woertlich: der Ueberlaeufer wird NICHT blockiert, sondern benannt
+            // abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
             set_reg(f, SYSNO_RESULT, IpcResult::ErrEpFull);
             return f;
         }
@@ -742,8 +742,8 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     transfer(f, frame_of(dienste, picked));
     set_reg(frame_of(dienste, picked), SYSNO_RESULT, IpcResult::Ok);
     set_reg(frame_of(dienste, picked), EP_BADGE, 0);
-    -- «B17» hier stuende `open(e, caller, picked);` — der Uebergang, der beide Orte in
-    -- EINEM Zug schreibt. Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen nicht.
+    // «B17» hier stuende `open(e, caller, picked);` — der Uebergang, der beide Orte in
+    // EINEM Zug schreibt. Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen nicht.
     e.slots[core].caller      = Some(caller);
     e.slots[core].reply_owner = Some(picked);
     if owner_core(picked) == core {
@@ -754,7 +754,7 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
 }
 
 
--- Nachgetragen 2026-08-15: `set_reg` wurde zweimal gerufen und nie erklaert.
+// Nachgetragen 2026-08-15: `set_reg` wurde zweimal gerufen und nie erklaert.
 extern fn set_reg(f : ptr<normal, rw> Frame, r : RegNr, w : u64) effects { writes f } costs <= 2 ops;
 extern fn enqueue(q : ptr<normal, rw> TidQueue, t : u32) effects { writes q } costs <= 4 ops;
 extern fn block_current(d : ptr<normal, r> SchedOps, core : index into Endpoint,
@@ -814,9 +814,9 @@ device VirtioPci(base : Pa) at mmio {
     reg DEVICE_STATUS      : u8  @0x14 class rw
         fields { ACK @0, DRIVER @1, DRIVER_OK @2, FEATURES_OK @3, }
     reg QUEUE_SELECT       : u16 @0x16 class w
-    -- «B26» `QUEUE_SIZE` ist eine FREMDE Zahl (lib.rs:494). `regdecl` traegt ein
-    -- `requires`, aber keinen benannten Ausgang: aus „zu gross" wird kein `reason`-Wert.
-    -- Die Vorlage schrieb `else QueueTooBig`; das gibt es nicht.
+    // «B26» `QUEUE_SIZE` ist eine FREMDE Zahl (lib.rs:494). `regdecl` traegt ein
+    // `requires`, aber keinen benannten Ausgang: aus „zu gross" wird kein `reason`-Wert.
+    // Die Vorlage schrieb `else QueueTooBig`; das gibt es nicht.
     reg QUEUE_SIZE         : u16 @0x18 class rw requires QUEUE_SIZE <= QMAX
     reg QUEUE_ENABLE       : u16 @0x1c class w
     reg QUEUE_NOTIFY_OFF   : u16 @0x1e class r
@@ -824,8 +824,8 @@ device VirtioPci(base : Pa) at mmio {
     reg QUEUE_DRIVER       : u64 @0x28 class w
     reg QUEUE_DEVICE       : u64 @0x30 class w
 
-    -- Das traegt, und es ist der Gewinn dieses Fragments: `transition` nennt das GANZE
-    -- geschriebene Wort. lib.rs:533 setzt es an vier Stellen von Hand zusammen.
+    // Das traegt, und es ist der Gewinn dieses Fragments: `transition` nennt das GANZE
+    // geschriebene Wort. lib.rs:533 setzt es an vier Stellen von Hand zusammen.
     transition ack    { DEVICE_STATUS: 0 -> ACK } effects { writes DEVICE_STATUS }
     transition drv    { DEVICE_STATUS: ACK -> ACK | DRIVER } effects { writes DEVICE_STATUS }
     transition featok { DEVICE_STATUS: ACK | DRIVER -> ACK | DRIVER | FEATURES_OK }
@@ -833,37 +833,37 @@ device VirtioPci(base : Pa) at mmio {
     transition drvok  { DEVICE_STATUS: ACK | DRIVER | FEATURES_OK
                                     -> ACK | DRIVER | FEATURES_OK | DRIVER_OK }
         effects { writes DEVICE_STATUS }
-    -- «B26» `transition reset { DEVICE_STATUS: any -> 0 }` ist nicht schreibbar: es gibt
-    -- keinen Platzhalter fuer den Vorzustand. Ein Reset gilt aus JEDEM Zustand — genau die
-    -- Aussage, die eine Uebergangstabelle braucht, damit sie vollstaendig ist.
+    // «B26» `transition reset { DEVICE_STATUS: any -> 0 }` ist nicht schreibbar: es gibt
+    // keinen Platzhalter fuer den Vorzustand. Ein Reset gilt aus JEDEM Zustand — genau die
+    // Aussage, die eine Uebergangstabelle braucht, damit sie vollstaendig ist.
 }
 
--- «B18» HIER BRICHT DIE HAELFTE VON F4. Die Vorlage schrieb den Ring als `device` mit
--- Phasen und einer Registerklasse JE PHASE:
---     phases { Setup, Live }
---     reg USED_IDX : u16 wrapping @0x202 class rw in Setup, r in Live
--- `device` (:426-435) kennt keine Phasen, und `regdecl` (:430) traegt eine Klasse.
--- Damit ist „`used` gehoert dem Geraet" wieder ein Kommentar. Dieselbe Stelle traegt eine
--- BEZAHLTE Falle: bei einer wiederverwendeten Region steht im `used`-Ring der Endstand der
--- vorigen Treiberfassung, und die Vorlage machte daraus die `requires`-Klausel von `enable`.
--- «B20» Dazu: `wrapping` gehoert an `slottype` (:388), nicht an `intty` (:139). Der
--- avail-Index ist ein REGISTER und laeuft laut virtio-Spezifikation bei 65536 um; als
--- `u16 in 0 ..< n` waere er falsch, als `u16 wrapping` nicht schreibbar.
--- «B19» Und die Barrieren: `AVAIL_IDX … publishes { DESC, AVAIL_RING } release` ist die
--- Form, aus der der Uebersetzer die fuenf `fence()`-Aufrufe des echten Treibers ableiten
--- sollte. `publishes` sitzt an `atomicdecl` (:468) — das nach «B2» nicht einmal erreichbar
--- ist — und nicht an einem Geraeteregister. SYNTAX.md fuehrt genau das als offenen Punkt
--- (:598): die sicherheitskritischste Veroeffentlichung im Baum ist gar kein Atomic.
+// «B18» HIER BRICHT DIE HAELFTE VON F4. Die Vorlage schrieb den Ring als `device` mit
+// Phasen und einer Registerklasse JE PHASE:
+//     phases { Setup, Live }
+//     reg USED_IDX : u16 wrapping @0x202 class rw in Setup, r in Live
+// `device` (:426-435) kennt keine Phasen, und `regdecl` (:430) traegt eine Klasse.
+// Damit ist „`used` gehoert dem Geraet" wieder ein Kommentar. Dieselbe Stelle traegt eine
+// BEZAHLTE Falle: bei einer wiederverwendeten Region steht im `used`-Ring der Endstand der
+// vorigen Treiberfassung, und die Vorlage machte daraus die `requires`-Klausel von `enable`.
+// «B20» Dazu: `wrapping` gehoert an `slottype` (:388), nicht an `intty` (:139). Der
+// avail-Index ist ein REGISTER und laeuft laut virtio-Spezifikation bei 65536 um; als
+// `u16 in 0 ..< n` waere er falsch, als `u16 wrapping` nicht schreibbar.
+// «B19» Und die Barrieren: `AVAIL_IDX … publishes { DESC, AVAIL_RING } release` ist die
+// Form, aus der der Uebersetzer die fuenf `fence()`-Aufrufe des echten Treibers ableiten
+// sollte. `publishes` sitzt an `atomicdecl` (:468) — das nach «B2» nicht einmal erreichbar
+// ist — und nicht an einem Geraeteregister. SYNTAX.md fuehrt genau das als offenen Punkt
+// (:598): die sicherheitskritischste Veroeffentlichung im Baum ist gar kein Atomic.
 
--- **`N049`, 2026-09-01: dieser Block war in sich WIDERSPRUECHLICH, und die Regel hat es im
--- ersten Lauf gefunden.** Er fuehrte dreimal `count 256`, waehrend seine Versaetze die einer
--- Warteschlange der Groesse **16** sind. Bei 256 deckt `DESC` allein `0x000..0x1000` -- und
--- damit liegt **jedes andere Register und jede andere Bank dieses Geraets INNERHALB von
--- `DESC`**. `DESC[16].addr` und `AVAIL_FLAGS` waeren dieselben Bytes.
---
--- Bei 16 geht die Rechnung genau auf, und es ist die klassische geteilte virtio-Schlange:
--- `DESC` 16x16 = `0x100`, `avail` bei `0x100` mit Ring `0x104..0x124`, `used` bei `0x200`
--- mit Ring `0x204..0x284`. *Die Versaetze waren richtig; die Anzahl war es nicht.*
+// **`N049`, 2026-09-01: dieser Block war in sich WIDERSPRUECHLICH, und die Regel hat es im
+// ersten Lauf gefunden.** Er fuehrte dreimal `count 256`, waehrend seine Versaetze die einer
+// Warteschlange der Groesse **16** sind. Bei 256 deckt `DESC` allein `0x000..0x1000` -- und
+// damit liegt **jedes andere Register und jede andere Bank dieses Geraets INNERHALB von
+// `DESC`**. `DESC[16].addr` und `AVAIL_FLAGS` waeren dieselben Bytes.
+//
+// Bei 16 geht die Rechnung genau auf, und es ist die klassische geteilte virtio-Schlange:
+// `DESC` 16x16 = `0x100`, `avail` bei `0x100` mit Ring `0x104..0x124`, `used` bei `0x200`
+// mit Ring `0x204..0x284`. *Die Versaetze waren richtig; die Anzahl war es nicht.*
 device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
     bank DESC at 0x000 stride 16 count 16 {
         reg addr  : u64 @0x0 class w
@@ -882,14 +882,14 @@ device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
     }
 }
 
--- Der Ersatz fuer die Phasen ohne neuen Mechanismus: die Phase ist ein linearer
--- Geisterwert, woertlich `BootPhase` eine Ebene tiefer. Nach `queue_arm` gibt es keinen Weg
--- mehr, `USED_IDX` zu schreiben — nicht weil ein Waechter es verbietet, sondern weil die
--- Marke verbraucht ist.
--- «B3» `linear ghost type QueueSetup(Virtq);` schreibt eine TYPliste in die Klammern.
--- `typedecl` (:135-136) verlangt dort `params`, also `ident ":" typeexpr`. SYNTAX.md
--- macht denselben Fehler in seinen eigenen vier Beispielen (:162-167), `Held(Lock)`
--- eingeschlossen — und `Held` steht in jedem `requires` dieser Datei.
+// Der Ersatz fuer die Phasen ohne neuen Mechanismus: die Phase ist ein linearer
+// Geisterwert, woertlich `BootPhase` eine Ebene tiefer. Nach `queue_arm` gibt es keinen Weg
+// mehr, `USED_IDX` zu schreiben — nicht weil ein Waechter es verbietet, sondern weil die
+// Marke verbraucht ist.
+// «B3» `linear ghost type QueueSetup(Virtq);` schreibt eine TYPliste in die Klammern.
+// `typedecl` (:135-136) verlangt dort `params`, also `ident ":" typeexpr`. SYNTAX.md
+// macht denselben Fehler in seinen eigenen vier Beispielen (:162-167), `Held(Lock)`
+// eingeschlossen — und `Held` steht in jedem `requires` dieser Datei.
 linear ghost type QueueSetup(Virtq);
 
 fn queue_reset(q : ptr<dma, rw> Virtq) -> QueueSetup
@@ -907,48 +907,48 @@ reason UnprovenReason {
 
 impl fn publish(q : ptr<dma, rw> Virtq, head : u16 in 0 ..< 256)
     effects { writes q }
-    -- Nachgezogen 2026-08-15: die Vorlage sagte `<= 4 ops` zu, der Rumpf kostet 9. Die Zahl
-    -- ist mit `gabbro kosten` abgelesen, nicht geschaetzt (WERKZEUGKASTEN.md W2).
-    -- **Nachgezogen 2026-09-13 (Lane 139, F1): der Rumpf kostet 10.** Die Schreibung zaehlt
-    -- ihren Zielindex `platz` (`+1`), und `+=` laedt und rechnet (`+2`).
+    // Nachgezogen 2026-08-15: die Vorlage sagte `<= 4 ops` zu, der Rumpf kostet 9. Die Zahl
+    // ist mit `gabbro kosten` abgelesen, nicht geschaetzt (WERKZEUGKASTEN.md W2).
+    // **Nachgezogen 2026-09-13 (Lane 139, F1): der Rumpf kostet 10.** Die Schreibung zaehlt
+    // ihren Zielindex `platz` (`+1`), und `+=` laedt und rechnet (`+2`).
     costs   <= 10 ops
 {
-    -- Der Nenner schliesst die Null aus, weil `n : u16 in 1 .. QMAX` es tut (:216).
+    // Der Nenner schliesst die Null aus, weil `n : u16 in 1 .. QMAX` es tut (:216).
     let platz = q.AVAIL_IDX % q.n;
     q.AVAIL_RING[platz].e = head;
-    -- Nachgezogen 2026-08-15: der Ringzaehler LAEUFT UEBER, und zwar mit Absicht --
-    -- virtio zaehlt modulo 2^16 und nimmt den Rest gegen `q.n`. Die Vorlage schrieb
-    -- `+= 1` auf einem blanken `u16`; damit stand die Absicht nirgends, und die
-    -- Zaehlerregel (SPRACHE.md §1) faellt zu Recht.
-    --
-    -- **«B32» -- UND HIER FAELLT EIN NEUER BEFUND.** Die Sprache laesst den Umlauf an der
-    -- DEKLARATION aussprechen, nicht an der Rechnung: `slottype = intty "wrapping"`
-    -- (SYNTAX.md:500). Das ist die staerkere Form -- der Umlauf gilt dann fuer jede Rechnung
-    -- auf dem Feld, nicht nur fuer die eine, an die jemand gedacht hat.
-    --
-    -- **Aber `AVAIL_IDX` ist kein Slot, sondern ein REGISTER**, und `regdecl` (:545-548)
-    -- kennt `wrapping` nicht. Ein Hardwarezaehler, der per Entwurf umlaeuft -- der
-    -- haeufigste Fall ueberhaupt in einem Geraetetreiber -- kann seine Absicht nicht
-    -- aussprechen. Bis das geschlossen ist, steht hier die Pruefung davor; sie ist an
-    -- dieser Stelle NICHT die ehrliche Form, sondern der Ersatz dafuer.
-    -- **«B32» ist geschlossen (2026-08-15), und der Ersatz faellt weg.** Bis dahin stand
-    -- hier ein `narrow` mit einem `else`-Zweig, der die Absicht NICHT ausdrueckte, sondern
-    -- umging. Jetzt sagt die Deklaration `reg AVAIL_IDX : u16 wrapping`, was virtio meint,
-    -- und die Rechnung darf schlicht dastehen.
-    --
-    -- «B33» bleibt daneben offen: die V-Regeln verengen den Typ eines REGISTERORTES nach
-    -- `if … == N { return; }` nicht -- nur `narrow` traegt die Tatsache. Ob das Absicht ist
-    -- (ein Register kann sich zwischen Pruefung und Rechnung aendern!) oder eine Luecke,
-    -- entscheidet der Ordner. **Wenn es Absicht ist, gehoert die Begruendung
-    -- aufgeschrieben** -- sie waere ein starkes Argument.
+    // Nachgezogen 2026-08-15: der Ringzaehler LAEUFT UEBER, und zwar mit Absicht --
+    // virtio zaehlt modulo 2^16 und nimmt den Rest gegen `q.n`. Die Vorlage schrieb
+    // `+= 1` auf einem blanken `u16`; damit stand die Absicht nirgends, und die
+    // Zaehlerregel (SPRACHE.md §1) faellt zu Recht.
+    //
+    // **«B32» -- UND HIER FAELLT EIN NEUER BEFUND.** Die Sprache laesst den Umlauf an der
+    // DEKLARATION aussprechen, nicht an der Rechnung: `slottype = intty "wrapping"`
+    // (SYNTAX.md:500). Das ist die staerkere Form -- der Umlauf gilt dann fuer jede Rechnung
+    // auf dem Feld, nicht nur fuer die eine, an die jemand gedacht hat.
+    //
+    // **Aber `AVAIL_IDX` ist kein Slot, sondern ein REGISTER**, und `regdecl` (:545-548)
+    // kennt `wrapping` nicht. Ein Hardwarezaehler, der per Entwurf umlaeuft -- der
+    // haeufigste Fall ueberhaupt in einem Geraetetreiber -- kann seine Absicht nicht
+    // aussprechen. Bis das geschlossen ist, steht hier die Pruefung davor; sie ist an
+    // dieser Stelle NICHT die ehrliche Form, sondern der Ersatz dafuer.
+    // **«B32» ist geschlossen (2026-08-15), und der Ersatz faellt weg.** Bis dahin stand
+    // hier ein `narrow` mit einem `else`-Zweig, der die Absicht NICHT ausdrueckte, sondern
+    // umging. Jetzt sagt die Deklaration `reg AVAIL_IDX : u16 wrapping`, was virtio meint,
+    // und die Rechnung darf schlicht dastehen.
+    //
+    // «B33» bleibt daneben offen: die V-Regeln verengen den Typ eines REGISTERORTES nach
+    // `if … == N { return; }` nicht -- nur `narrow` traegt die Tatsache. Ob das Absicht ist
+    // (ein Register kann sich zwischen Pruefung und Rechnung aendern!) oder eine Luecke,
+    // entscheidet der Ordner. **Wenn es Absicht ist, gehoert die Begruendung
+    // aufgeschrieben** -- sie waere ein starkes Argument.
     q.AVAIL_IDX += 1;
 }
 
 impl fn poll_used(q : ptr<dma, r> Virtq, von : u16) -> u32
     effects { reads q }
 {
-    -- Das traegt unveraendert, und die Reihenfolge stimmt mit der Produktion (:343-348):
-    -- bounded, progress, on_exceeded, effects. Der Ueberlauf ist BENANNT.
+    // Das traegt unveraendert, und die Reihenfolge stimmt mit der Produktion (:343-348):
+    // bounded, progress, on_exceeded, effects. Der Ueberlauf ist BENANNT.
     retry warten until q.USED_IDX != von
         bounded     MAX_POLL ops
         progress    device_completes_or_faults
@@ -956,9 +956,9 @@ impl fn poll_used(q : ptr<dma, r> Virtq, von : u16) -> u32
         effects     { reads q }
     { }
     let s = von % q.n;
-    -- «B7» `return Completion { id: …, len: … };` ist nicht schreibbar: `primary` (:200)
-    -- kennt keinen Verbund- und keinen Feldliteral. Eine Funktion kann einen `structty`
-    -- also nicht HERSTELLEN. Deshalb hier ein Skalar statt des Verbunds.
+    // «B7» `return Completion { id: …, len: … };` ist nicht schreibbar: `primary` (:200)
+    // kennt keinen Verbund- und keinen Feldliteral. Eine Funktion kann einen `structty`
+    // also nicht HERSTELLEN. Deshalb hier ein Skalar statt des Verbunds.
     return q.USED_RING[s].id;
 }
 ```
@@ -997,11 +997,11 @@ reason ServiceExit {
 
 tagged type Op = { Info, Read, Write, Flush, Scan, Stop };
 
--- «B27» Der Syscall-Einstieg: `arch ident` gibt es (:273), die REGISTERBELEGUNG nicht.
--- Die Vorlage schrieb dafuer einen `abi { in rax = nr, …, trap 0x80 }`-Block; `fndecl`
--- kennt ihn nicht. Damit hat der einzige Ort, an dem 168 gemessene `asm!`-Stellen
--- zusammenlaufen sollten, in der Grammatik keinen Traeger — die vertrauenswuerdige Flaeche
--- schrumpft nicht, sie wandert in eine `prim`-Deklaration ohne Inhalt.
+// «B27» Der Syscall-Einstieg: `arch ident` gibt es (:273), die REGISTERBELEGUNG nicht.
+// Die Vorlage schrieb dafuer einen `abi { in rax = nr, …, trap 0x80 }`-Block; `fndecl`
+// kennt ihn nicht. Damit hat der einzige Ort, an dem 168 gemessene `asm!`-Stellen
+// zusammenlaufen sollten, in der Grammatik keinen Traeger — die vertrauenswuerdige Flaeche
+// schrumpft nicht, sie wandert in eine `prim`-Deklaration ohne Inhalt.
 prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag : u64) -> u64
     effects { writes machine_regs }
     arch x86_64;
@@ -1023,19 +1023,19 @@ divergent fn run(startwert : u64) -> never
 
     signal(NTFN, 0);
 
-    -- «B14» `let mut capacity : option Sectors = none;` ist nicht schreibbar: `option` steht
-    -- nur in `slottype` (:387), nicht in `typeexpr` (:137). Der Fall „noch nie gelesen" wird
-    -- damit wieder eine 0 — genau die Deutung, gegen die das Fragment geschrieben war.
+    // «B14» `let mut capacity : option Sectors = none;` ist nicht schreibbar: `option` steht
+    // nur in `slottype` (:387), nicht in `typeexpr` (:137). Der Fall „noch nie gelesen" wird
+    // damit wieder eine 0 — genau die Deutung, gegen die das Fragment geschrieben war.
     let mut capacity : u32 = 0;
 
-    -- «B11» HIER BRICHT F5. `forever` (:350-354) hat KEINEN AUSGANG. Die Vorlage schrieb
-    --     awaits recv(EP)   leaves ServiceExit   …   { … leave EndpointGone; }
-    -- und begruendete es mit D0: der echte Code hat an dieser Stelle
-    -- `if m.result != OK { break; }`, und dass dieser Austritt keinen Namen trug, hat zehn
-    -- Tage gekostet. In der Grammatik von heute gibt es weder `leave` noch `break` noch
-    -- `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
-    -- versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
-    -- „die Dienstschleife ist nicht schreibbar".
+    // «B11» HIER BRICHT F5. `forever` (:350-354) hat KEINEN AUSGANG. Die Vorlage schrieb
+    //     awaits recv(EP)   leaves ServiceExit   …   { … leave EndpointGone; }
+    // und begruendete es mit D0: der echte Code hat an dieser Stelle
+    // `if m.result != OK { break; }`, und dass dieser Austritt keinen Namen trug, hat zehn
+    // Tage gekostet. In der Grammatik von heute gibt es weder `leave` noch `break` noch
+    // `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
+    // versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
+    // „die Dienstschleife ist nicht schreibbar".
     forever dienst
         per_pass bounded MAX_POLL ops
         on_exceeded watchdog_schlug_an
@@ -1047,8 +1047,8 @@ divergent fn run(startwert : u64) -> never
             Info => {
                 let r = request_flush(transport, pool);
                 capacity = r;
-                -- «B7» `reply(EP, [Ok, r, MAX_SECTORS, SECTOR]);` ist nicht schreibbar:
-                -- `primary` (:200) kennt kein Feldliteral. Vier Argumente statt eines Feldes.
+                // «B7» `reply(EP, [Ok, r, MAX_SECTORS, SECTOR]);` ist nicht schreibbar:
+                // `primary` (:200) kennt kein Feldliteral. Vier Argumente statt eines Feldes.
                 reply4(EP, Status::Ok, r, MAX_SECTORS, SECTOR);
             }
             Read  => { serve_rw(EP, transport, pool, teilfenster, m, capacity); }
@@ -1060,19 +1060,19 @@ divergent fn run(startwert : u64) -> never
             Scan  => { serve_scan(EP, transport, pool); }
             Stop  => {
                 reply4(EP, Status::Ok, 0, 0, 0);
-                -- «B11» hier stuende `leave Stopped;`. Ohne Ausgang bleibt nur `exit()` —
-                -- also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
-                -- Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
-                -- bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.
+                // «B11» hier stuende `leave Stopped;`. Ohne Ausgang bleibt nur `exit()` —
+                // also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
+                // Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
+                // bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.
                 exit();
             }
         }
     }
 }
 
--- Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
--- Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
--- durchfallen -- sechs `S002` kamen allein daher.
+// Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
+// Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
+// durchfallen -- sechs `S002` kamen allein daher.
 extern fn exit() -> never effects { diverges };
 extern fn signal(n : u64, w : u64) effects { writes NTFN };
 extern fn watchdog_schlug_an() -> never effects { diverges };
@@ -1111,35 +1111,35 @@ reason Stackart {
     exhaustive
 }
 
-const STACK_MAX : u64 = 65536;   -- nachgetragen 2026-08-15: benutzt, nie erklaert
+const STACK_MAX : u64 = 65536;   // nachgetragen 2026-08-15: benutzt, nie erklaert
 type Bytes = u64 in 0 .. STACK_MAX;
 
--- **Nachgetragen 2026-08-19, wie `STACK_MAX` am 2026-08-15: benutzt, nie erklaert.**
--- Der Rumpf unten liest `s.worte`, `s.len` und rechnet `i * 8` -- ein Wort ist acht Bytes,
--- also traegt ein Stack von `STACK_MAX` Bytes `STACK_MAX / 8` Worte. **Die Zahl ist
--- ABGELEITET und nicht erfunden**; sie steht dreimal im Rumpf und stand nirgends.
---
--- *Ohne diese Zeile hat `elems of s.worte` keine Schranke, und «H2.1» kann nicht greifen --
--- nicht weil die Regel zu schwach waere, sondern weil der Ausschnitt seinen Traeger nicht
--- nennt.* Der Befund gehoert zum Ausschnitt, nicht zu Gabbro.
+// **Nachgetragen 2026-08-19, wie `STACK_MAX` am 2026-08-15: benutzt, nie erklaert.**
+// Der Rumpf unten liest `s.worte`, `s.len` und rechnet `i * 8` -- ein Wort ist acht Bytes,
+// also traegt ein Stack von `STACK_MAX` Bytes `STACK_MAX / 8` Worte. **Die Zahl ist
+// ABGELEITET und nicht erfunden**; sie steht dreimal im Rumpf und stand nirgends.
+//
+// *Ohne diese Zeile hat `elems of s.worte` keine Schranke, und «H2.1» kann nicht greifen --
+// nicht weil die Regel zu schwach waere, sondern weil der Ausschnitt seinen Traeger nicht
+// nennt.* Der Befund gehoert zum Ausschnitt, nicht zu Gabbro.
 const STACK_WORTE : u64 = 8192;
 type Stack = { worte : [u64; STACK_WORTE], len : Bytes, };
 
 const MIND_RESERVE_NENNER : u32 in 1 .. 64 = 8;
 const MIND_MESSUNGEN      : u32 = 2;
 
--- «B2» Alle zehn Zeilen unten sind `atomicdecl` (:468) — von `program` aus NICHT
--- ERREICHBAR, weil `item` (:111-112) sie nicht auffuehrt. Sie stehen hier trotzdem, weil
--- sie sonst nirgends stehen koennten; ein Modul, das sie enthaelt, ist heute nicht
--- ableitbar. Betrifft baumweit 594 Atomic-Deklarationen.
--- «B21» `accumulates max` / `accumulates min` / `accumulates +` gibt es nicht. Genau sie
--- SIND die Wasserstandsmarke (`TIEFE_MAX.fetch_max`, kstackmark.rs:199-203); ohne sie ist
--- die Messgroesse dieses Fragments nicht schreibbar. Baumweit 213 Lese-Aendere-Schreib-
--- Zugriffe, davon 19 `fetch_max`/`fetch_min`. SYNTAX.md fuehrt den Punkt selbst (:600) und
--- nennt ihn den ersten Kandidaten fuer „zwei geforderte Eigenschaften widersprechen einander".
--- «B14» `frei_min : option Bytes` ist nicht schreibbar (`option` nur als `slottype`). Der
--- echte Code rechnet spaeter `groesse.saturating_sub(frei_min)` und macht damit aus
--- „nie gemessen" eine 0 — die Deutung, die eine Nullmessung unsichtbar macht.
+// «B2» Alle zehn Zeilen unten sind `atomicdecl` (:468) — von `program` aus NICHT
+// ERREICHBAR, weil `item` (:111-112) sie nicht auffuehrt. Sie stehen hier trotzdem, weil
+// sie sonst nirgends stehen koennten; ein Modul, das sie enthaelt, ist heute nicht
+// ableitbar. Betrifft baumweit 594 Atomic-Deklarationen.
+// «B21» `accumulates max` / `accumulates min` / `accumulates +` gibt es nicht. Genau sie
+// SIND die Wasserstandsmarke (`TIEFE_MAX.fetch_max`, kstackmark.rs:199-203); ohne sie ist
+// die Messgroesse dieses Fragments nicht schreibbar. Baumweit 213 Lese-Aendere-Schreib-
+// Zugriffe, davon 19 `fetch_max`/`fetch_min`. SYNTAX.md fuehrt den Punkt selbst (:600) und
+// nennt ihn den ersten Kandidaten fuer „zwei geforderte Eigenschaften widersprechen einander".
+// «B14» `frei_min : option Bytes` ist nicht schreibbar (`option` nur als `slottype`). Der
+// echte Code rechnet spaeter `groesse.saturating_sub(frei_min)` und macht damit aus
+// „nie gemessen" eine 0 — die Deutung, die eine Nullmessung unsichtbar macht.
 atomic gefuellt     : u32 publishes nothing relaxed;
 atomic gemessen     : u32 publishes nothing relaxed;
 atomic gemessen_tod : u32 publishes nothing relaxed;
@@ -1152,60 +1152,60 @@ atomic groesse      : u64 publishes nothing relaxed;
 atomic tiefster     : u32 publishes nothing relaxed;
 
 impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
-    -- **Berichtigt 2026-08-18, gefunden von `M109`.** Hier stand `unberuehrt <= s.len` --
-    -- der FUNKTIONSNAME an der Stelle, an der `result` hingehoert. Gabbro hat das Wort;
-    -- die Vorlage kam aus einer Sprache, in der der Name das Ergebnis bezeichnet.
-    -- *Die Zeile stand seit dem Schnitt da und ist niemandem aufgefallen, weil `ensures`
-    -- von keinem Pass gelesen wurde.*
+    // **Berichtigt 2026-08-18, gefunden von `M109`.** Hier stand `unberuehrt <= s.len` --
+    // der FUNKTIONSNAME an der Stelle, an der `result` hingehoert. Gabbro hat das Wort;
+    // die Vorlage kam aus einer Sprache, in der der Name das Ergebnis bezeichnet.
+    // *Die Zeile stand seit dem Schnitt da und ist niemandem aufgefallen, weil `ensures`
+    // von keinem Pass gelesen wurde.*
     ensures  result <= s.len
     effects  { reads s }
 {
     let mut i : u64 in 0 .. STACK_MAX = 0;
-    -- «B30» `touches` nimmt eine `efflist` OHNE Klammern (:340), waehrend `effects`
-    -- ueberall sonst geklammert ist. Die Vorlage schrieb `touches { reads s }`.
+    // «B30» `touches` nimmt eine `efflist` OHNE Klammern (:340), waehrend `effects`
+    // ueberall sonst geklammert ist. Die Vorlage schrieb `touches { reads s }`.
     traverse w of s over elems of s.worte by unvisited decreases (lenof(s.worte) - i)
         touches reads s
     {
         if w != MUSTER { return i * 8; }
-        -- ~~Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die
-        -- Traversierung laeuft ueber `s.worte`), **aber M1 sieht das nicht** -- der
-        -- Zaehler ist eine gewoehnliche lokale Variable. Der `else`-Zweig kann nicht
-        -- genommen werden und muss trotzdem dastehen.~~ *(2026-08-15)*
-        --
-        -- **Entfallen am 2026-08-19 mit «H2.1».** M1 sieht es jetzt: ein Zaehler, der in
-        -- einer beschraenkten Traversierung hoechstens einmal je Durchgang waechst, erbt
-        -- die Schranke seiner Domaene -- an der Zuwachsstelle `i <= c + (B-1)*k`.
-        -- *Die Regel ist die einzige Ausnahme von `SPRACHE.md`:657 („Loops carry no facts
-        -- inward"), und der Unterschied zwischen Ausnahme und Loch liegt in der Richtung:
-        -- die Tatsache kommt nicht von aussen, sondern aus der Schleifenform selbst.*
+        // ~~Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die
+        // Traversierung laeuft ueber `s.worte`), **aber M1 sieht das nicht** -- der
+        // Zaehler ist eine gewoehnliche lokale Variable. Der `else`-Zweig kann nicht
+        // genommen werden und muss trotzdem dastehen.~~ *(2026-08-15)*
+        //
+        // **Entfallen am 2026-08-19 mit «H2.1».** M1 sieht es jetzt: ein Zaehler, der in
+        // einer beschraenkten Traversierung hoechstens einmal je Durchgang waechst, erbt
+        // die Schranke seiner Domaene -- an der Zuwachsstelle `i <= c + (B-1)*k`.
+        // *Die Regel ist die einzige Ausnahme von `SPRACHE.md`:657 („Loops carry no facts
+        // inward"), und der Unterschied zwischen Ausnahme und Loch liegt in der Richtung:
+        // die Tatsache kommt nicht von aussen, sondern aus der Schleifenform selbst.*
         i += 1;
     }
     return i * 8;
 }
 
--- «B7» Das Original gibt ein PAAR zurueck (`-> (benutzt, frei)`). `typeexpr` (:137) kennt
--- kein Tupel; der Ausweg waere ein `structty` — und den kann eine Funktion nach «B7» nicht
--- HERSTELLEN, weil es kein Verbundliteral gibt. Zwei Befunde, die einander blockieren:
--- deshalb hier zwei Funktionen und eine doppelte Traversierung.
--- «B6» `ensures benutzt + frei == s.len` benennt Rueckgabefelder. Es gibt keine Bindung
--- fuer den Rueckgabewert; oben behilft sich die Zeile mit dem Funktionsnamen, und das ist
--- geraten, nicht geschrieben.
+// «B7» Das Original gibt ein PAAR zurueck (`-> (benutzt, frei)`). `typeexpr` (:137) kennt
+// kein Tupel; der Ausweg waere ein `structty` — und den kann eine Funktion nach «B7» nicht
+// HERSTELLEN, weil es kein Verbundliteral gibt. Zwei Befunde, die einander blockieren:
+// deshalb hier zwei Funktionen und eine doppelte Traversierung.
+// «B6» `ensures benutzt + frei == s.len` benennt Rueckgabefelder. Es gibt keine Bindung
+// fuer den Rueckgabewert; oben behilft sich die Zeile mit dem Funktionsnamen, und das ist
+// geraten, nicht geschrieben.
 impl fn messen_benutzt(s : ptr<normal, r+own> Stack, art : Stackart) -> u64
     requires  s.len >= 8
     effects   { reads s, writes tiefe_max, writes gemessen }
 {
     let frei = unberuehrt(s);
-    -- Das kommt durch, weil das `ensures` von `unberuehrt` `<= s.len` sagt: aus dem VERTRAG
-    -- der gerufenen Funktion, nicht aus einer Flussregel. Kostet eine Zeile Nachbedingung,
-    -- keinen Beweis.
+    // Das kommt durch, weil das `ensures` von `unberuehrt` `<= s.len` sagt: aus dem VERTRAG
+    // der gerufenen Funktion, nicht aus einer Flussregel. Kostet eine Zeile Nachbedingung,
+    // keinen Beweis.
     let benutzt = s.len - frei;
-    -- «B21» hier stuenden `accumulate tiefe_max by benutzt;` und `accumulate frei_min by frei;`
+    // «B21» hier stuenden `accumulate tiefe_max by benutzt;` und `accumulate frei_min by frei;`
     return benutzt;
 }
 
--- «B22» `claim` nimmt eine Zeichenkette, und `char` (:95) schliesst `newline` aus. Alle drei
--- echten Behauptungen sind mehrzeilig; hier zusammengezogen. Eine Behauptung, die in eine
--- Zeile passen muss, wird kuerzer geschrieben, nicht genauer.
+// «B22» `claim` nimmt eine Zeichenkette, und `char` (:95) schliesst `newline` aus. Alle drei
+// echten Behauptungen sind mehrzeilig; hier zusammengezogen. Eine Behauptung, die in eine
+// Zeile passen muss, wird kuerzer geschrieben, nicht genauer.
 check kstack_eichung {
     claim    "Das Messgeraet meldet an einem Feld bekannter Tiefe genau diese Tiefe, an einem gefuellten unberuehrten Feld die volle Laenge, und an einem ungefuellten Feld null."
     measures eich.leer, eich.voll, eich.tiefe, eich.gelaufen
@@ -1228,27 +1228,27 @@ check kstack {
              irq.tiefe_max, irq.n
     gates    all_done
     can_fail {
-        -- «B14» `let g = groesse else (e) { return false; };` ist nicht schreibbar: die
-        -- `let … else`-Form (:316) verlangt RECHTS einen `call`. Ein `option`-wertiges
-        -- `place` laesst sich damit nicht auspacken — und ein Atomic ist ein `place`.
+        // «B14» `let g = groesse else (e) { return false; };` ist nicht schreibbar: die
+        // `let … else`-Form (:316) verlangt RECHTS einen `call`. Ein `option`-wertiges
+        // `place` laesst sich damit nicht auspacken — und ein Atomic ist ein `place`.
         let g = groesse_gemessen() else (e1) { return false; }
         let f = frei_min_gemessen() else (e2) { return false; }
         if f < g / MIND_RESERVE_NENNER { return false; }
-        -- **Zweite Fassung, 2026-08-19 («H2.2»).** Hier stand:
-        --
-        --     return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
-        --
-        -- `PFLICHTEN.txt` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
-        -- Begruendung *„`f < g / N` gibt `f < g` nur ueber die Division; die V-Regeln rechnen
-        -- nicht."* **Nachgerechnet: die Begruendung beschreibt den falschen Zweig.** Der
-        -- Vergleich steht in einem `if`, das ZURUECKKEHRT -- auf dem Weg hierher gilt
-        -- `f >= g / N`, eine UNTERE Schranke, und `g - f` braucht eine obere. Keine
-        -- schaerfere V-Regel schliesst das.
-        --
-        -- Die Aussage ohne Subtraktion ist unter `f <= g` aequivalent und hat keine
-        -- Unterlaufpflicht. **Die Pflicht war ein Artefakt der Schreibweise, nicht der
-        -- Sprache** -- dieselbe Klasse wie `revoke` (200 zugesagt, 16 452 480 gerechnet):
-        -- *ein Mensch hat den typischen Fall geschrieben statt die Schranke.*
+        // **Zweite Fassung, 2026-08-19 («H2.2»).** Hier stand:
+        //
+        //     return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
+        //
+        // `PFLICHTEN.txt` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
+        // Begruendung *„`f < g / N` gibt `f < g` nur ueber die Division; die V-Regeln rechnen
+        // nicht."* **Nachgerechnet: die Begruendung beschreibt den falschen Zweig.** Der
+        // Vergleich steht in einem `if`, das ZURUECKKEHRT -- auf dem Weg hierher gilt
+        // `f >= g / N`, eine UNTERE Schranke, und `g - f` braucht eine obere. Keine
+        // schaerfere V-Regel schliesst das.
+        //
+        // Die Aussage ohne Subtraktion ist unter `f <= g` aequivalent und hat keine
+        // Unterlaufpflicht. **Die Pflicht war ein Artefakt der Schreibweise, nicht der
+        // Sprache** -- dieselbe Klasse wie `revoke` (200 zugesagt, 16 452 480 gerechnet):
+        // *ein Mensch hat den typischen Fall geschrieben statt die Schranke.*
         return irq.tiefe_max + g / MIND_RESERVE_NENNER <= f;
     }
     floor    gemessen_tod >= MIND_MESSUNGEN, groesse >= 1, irq.n >= 1
@@ -1282,24 +1282,24 @@ one architecture and was absent in the other, and no tool could say so.
 ```gabbro
 module caprock::bringup {
 
--- Die Marke ist LINEAR: sie entsteht einmal, wandert durch die Strecke und wird am Ende
--- verbraucht. Ein Weg, der sie fallenlaesst, ist ein Bootpfad, der nie fertig wird; einer,
--- der sie verdoppelt, sind zwei Kerne, die beide glauben, sie booten allein.
+// Die Marke ist LINEAR: sie entsteht einmal, wandert durch die Strecke und wird am Ende
+// verbraucht. Ein Weg, der sie fallenlaesst, ist ein Bootpfad, der nie fertig wird; einer,
+// der sie verdoppelt, sind zwei Kerne, die beide glauben, sie booten allein.
 linear ghost type BootPhase;
 
--- `roh` heisst: vor der MMU. Atomics sind hier nicht wohldefiniert, also ist die Konsole
--- sperrfrei -- und das ist eine EIGENSCHAFT DER PHASE, nicht des Geraets.
+// `roh` heisst: vor der MMU. Atomics sind hier nicht wohldefiniert, also ist die Konsole
+// sperrfrei -- und das ist eine EIGENSCHAFT DER PHASE, nicht des Geraets.
 extern fn melde_roh(text : ptr<code, r> Text) -> u32
     requires  Held(PHASE_ROH)
     effects   { reads text } costs <= 64 ops;
 
--- «B37» -- DER BEFUND DES FRAGMENTS. Die Marke traegt die Reihenfolge, aber sie traegt sie
--- als LINEARITAET, nicht als ORDNUNG: `mmu_an` verbraucht die rohe Phase und gibt die
--- gewoehnliche zurueck. Damit ist „vor der MMU" und „nach der MMU" unterscheidbar --
--- **aber „Cap-Tabellen vor dem ersten Cap" ist es nicht**, denn beide liegen in derselben
--- Phase. Fuer die vier Reihenfolgezwaenge INNERHALB einer Phase braucht es entweder je
--- eine eigene Marke (dann waechst der Wortschatz mit jedem Bootschritt) oder eine
--- Ordnung auf Marken -- und die gibt es nicht.
+// «B37» -- DER BEFUND DES FRAGMENTS. Die Marke traegt die Reihenfolge, aber sie traegt sie
+// als LINEARITAET, nicht als ORDNUNG: `mmu_an` verbraucht die rohe Phase und gibt die
+// gewoehnliche zurueck. Damit ist „vor der MMU" und „nach der MMU" unterscheidbar --
+// **aber „Cap-Tabellen vor dem ersten Cap" ist es nicht**, denn beide liegen in derselben
+// Phase. Fuer die vier Reihenfolgezwaenge INNERHALB einer Phase braucht es entweder je
+// eine eigene Marke (dann waechst der Wortschatz mit jedem Bootschritt) oder eine
+// Ordnung auf Marken -- und die gibt es nicht.
 extern fn mmu_an(p : BootPhase) -> BootPhase
     effects { consumes p, writes mmu } costs <= 4096 ops;
 
@@ -1315,8 +1315,8 @@ extern fn autoritaet_melden(p : BootPhase) -> BootPhase
 extern fn verifizierer_starten(p : BootPhase) -> BootPhase
     effects { consumes p, writes faeden } costs <= 4096 ops;
 
--- Der Root-Task VERBRAUCHT die Marke endgueltig: danach ist der Bootzustand vorbei, und
--- kein Pfad kann noch etwas tun, das nur waehrend des Boots erlaubt war.
+// Der Root-Task VERBRAUCHT die Marke endgueltig: danach ist der Bootzustand vorbei, und
+// kein Pfad kann noch etwas tun, das nur waehrend des Boots erlaubt war.
 extern fn root_task_starten(p : BootPhase)
     effects { consumes p, writes faeden } costs <= 8192 ops;
 
@@ -1380,8 +1380,8 @@ lock SCHEDS protects { belegt, kern, prio } rank 2
     held <= 300 ops
     shared held <= 32 ops;
 
--- Der Fall, der TRAEGT: der Wert ueberquert die Grenze, und die Fortsetzung prueft neu.
--- `resolve` ist genau die Neuvalidierung; ohne sie waere `toeten` ein Rennen.
+// Der Fall, der TRAEGT: der Wert ueberquert die Grenze, und die Fortsetzung prueft neu.
+// `resolve` ist genau die Neuvalidierung; ohne sie waere `toeten` ein Rennen.
 extern fn aufloesen(l : ptr<normal, r> Laufliste, t : FadenId)
     -> option index into Laufliste
     requires Held(SCHEDS, shared)
@@ -1392,8 +1392,8 @@ impl fn toeten(l : ptr<normal, rw> Laufliste, t : FadenId, k : index into Laufli
     costs   <= 340 ops
 {
     locks SCHEDS {
-        -- **Die Neuvalidierung.** Der Faden kann zwischen Auswahl und Tat verschwunden
-        -- sein; `aufloesen` sagt es, und der `match` zwingt beide Ausgaenge.
+        // **Die Neuvalidierung.** Der Faden kann zwischen Auswahl und Tat verschwunden
+        // sein; `aufloesen` sagt es, und der `match` zwingt beide Ausgaenge.
         match aufloesen(l, t) {
             Some(i) => { l.slots[i].belegt = false; return true; }
             None    => { return false; }
@@ -1402,11 +1402,11 @@ impl fn toeten(l : ptr<normal, rw> Laufliste, t : FadenId, k : index into Laufli
     return false;
 }
 
--- «B38» -- DER FALL, DEN DIE ZWANGSFASSUNG UNSCHREIBBAR MACHT.
--- Der Wert ueberquert dieselbe Grenze und braucht KEINE Neuvalidierung, weil eine andere
--- Zusage ihn traegt: die Interruptmaskierung. `masks IRQ` ist in Gabbro bereits eine
--- Wirkung -- die Begruendung steht also schon in der Sprache, sie ist nur nicht mit der
--- Sperrgrenze verknuepft.
+// «B38» -- DER FALL, DEN DIE ZWANGSFASSUNG UNSCHREIBBAR MACHT.
+// Der Wert ueberquert dieselbe Grenze und braucht KEINE Neuvalidierung, weil eine andere
+// Zusage ihn traegt: die Interruptmaskierung. `masks IRQ` ist in Gabbro bereits eine
+// Wirkung -- die Begruendung steht also schon in der Sprache, sie ist nur nicht mit der
+// Sperrgrenze verknuepft.
 impl fn beenden(l : ptr<normal, rw> Laufliste, k : index into Laufliste) -> bool
     requires Held(SCHEDS)
     effects  { reads l.slots, writes l.slots, masks IRQ }
@@ -1451,30 +1451,30 @@ opaque type Pa = u64;
 type Idx   = u32 in 0 ..< EINTRAEGE;
 type Ebene = u32 in 0 ..< EBENEN;
 
--- **Der Eintrag ist EIN Wort mit zwei Lesarten**, und `embeds` sagt welche. Ohne die
--- Zeile stünde die Adresse als blanke Zahl da, und `& MASK` wäre Konvention.
+// **Der Eintrag ist EIN Wort mit zwei Lesarten**, und `embeds` sagt welche. Ohne die
+// Zeile stünde die Adresse als blanke Zahl da, und `& MASK` wäre Konvention.
 format Pte @version 1 endian little {
-    roh : u64 embeds [51:12] scale 4096,   -- der Rahmen: Bits 51..12, mal 4096
+    roh : u64 embeds [51:12] scale 4096,   // der Rahmen: Bits 51..12, mal 4096
 }
 
--- Die neun Bits, einzeln benannt. `A` und `D` schreibt die Hardware -- sie stehen als
--- `reserved`, weil ein Schreiben von uns ein Fehler wäre.
+// Die neun Bits, einzeln benannt. `A` und `D` schreibt die Hardware -- sie stehen als
+// `reserved`, weil ein Schreiben von uns ein Fehler wäre.
 device Seitentabelle(basis : Pa) at normal {
     reg EINTRAG : u64 @0x0 class rw fields {
         P @0, RW @1, US @2, PWT @3, PCD @4, A @5, D @6, PS @7, NX @63,
     }
 }
 
--- `walk` erzeugt die Domäne `mappings of`: je Abbildung stehen `va`, `level` und
--- `index[level]` bereit. **Die vierstufige Kette wird damit EINE Traversierung**, und ihre
--- Schranke fällt aus der Deklaration statt aus einer Zählung im Rumpf.
+// `walk` erzeugt die Domäne `mappings of`: je Abbildung stehen `va`, `level` und
+// `index[level]` bereit. **Die vierstufige Kette wird damit EINE Traversierung**, und ihre
+// Schranke fällt aus der Deklaration statt aus einer Zählung im Rumpf.
 walk Seitenabstieg levels EBENEN {
     node : [Pte; EINTRAEGE],
     down : roh when EINTRAG.PS == 0,
     leaf : EINTRAG.PS == 1,
 }
 
--- Die Schranke faellt aus `levels` mal `node`-Laenge: 4 Ebenen zu 512 Eintraegen.
+// Die Schranke faellt aus `levels` mal `node`-Laenge: 4 Ebenen zu 512 Eintraegen.
 impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
     effects { reads w }
     costs   <= 4096 ops
@@ -1547,9 +1547,9 @@ module caprock::dtb {
 
 const MAGIE : u32 = 0xd00dfeed;
 
--- Der Kopf ist ein FORMAT: feste Breiten, ausgesprochene Bytereihenfolge, und die
--- `where`-Klausel bindet jeden Versatz an die Pufferlaenge. **Danach braucht kein
--- einziger Zugriff mehr eine Laengenpruefung.**
+// Der Kopf ist ein FORMAT: feste Breiten, ausgesprochene Bytereihenfolge, und die
+// `where`-Klausel bindet jeden Versatz an die Pufferlaenge. **Danach braucht kein
+// einziger Zugriff mehr eine Laengenpruefung.**
 format DtbKopf @version 17 endian big {
     magie       : u32 where magie == MAGIE,
     gesamtlaenge: u32,
@@ -1557,9 +1557,9 @@ format DtbKopf @version 17 endian big {
     off_strings : u32 offset_into Self where off_strings + 4 <= lenof(Self),
 }
 
--- Die Tiefe ist ein Zaehler, und die Zaehlerregel gilt: Schranke in der Deklaration UND
--- Pruefung vor der Rechnung. Ein DTB mit 2^32 verschachtelten Knoten ist kein Baum mehr,
--- sondern ein Angriff -- und die Schranke sagt das, statt es zu hoffen.
+// Die Tiefe ist ein Zaehler, und die Zaehlerregel gilt: Schranke in der Deklaration UND
+// Pruefung vor der Rechnung. Ein DTB mit 2^32 verschachtelten Knoten ist kein Baum mehr,
+// sondern ein Angriff -- und die Schranke sagt das, statt es zu hoffen.
 const MAXTIEFE : u32 = 64;
 type Tiefe = u32 in 0 .. MAXTIEFE;
 
@@ -1587,8 +1587,8 @@ impl fn kerne_zaehlen(k : ptr<normal, r> DtbKopf) -> u32
 
 extern fn baum_unlesbar() -> never effects { diverges } costs <= 0 ops;
 
--- **Der Zeuge, und bis 2026-08-18 stand er nicht da.** `progress` nennt eine Annahme mit
--- Falsifikator; ohne `assume` steht der Name in keinem Manifest. `S003` hat es gefunden.
+// **Der Zeuge, und bis 2026-08-18 stand er nicht da.** `progress` nennt eine Annahme mit
+// Falsifikator; ohne `assume` steht der Name in keinem Manifest. `S003` hat es gefunden.
 assume token_verbraucht
     "Jeder Durchgang verbraucht mindestens ein Token, und ein DTB hat endlich viele."
     falsifier sonde_dtb_endlich;
@@ -1770,7 +1770,7 @@ impl fn holen(k : ptr<normal, rw> Konten, i : index into Konten) -> u32
         effects { locks NSLOCK, reads k.slots, writes k.slots }
     {
         locks NSLOCK {
-            -- **Die Schranke, die das Original nicht hat.**
+            // **Die Schranke, die das Original nicht hat.**
             if k.slots[i].zaehler > 0 && k.slots[i].zaehler < 65535 {
                 k.slots[i].zaehler += 1;
             }

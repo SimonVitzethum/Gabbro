@@ -1,15 +1,15 @@
--- ARM 1 twin, must LOWER: ordered publish-side exchange (lane-149).
---
--- `F` is `release`, so the compare-exchange succeeds with `memory_order_release` and
--- the `{ n }` payload is a promise with a mechanism. The emitter lowers it and names
--- the half in the C in the same words the `Publish` arm uses. The payload is written
--- in the same function (`V010` publishes the writes of its own thread), and `r`
--- awaits it, so the checker stays silent.
---
--- Measured verdicts (recorded after the run, not before):
---   pruefe: 0 errors, 0 hints
---   emit:   exit 0; C carries `publishes { n } -- paired at compile time`
---   cc:     takes the unit
+// ARM 1 twin, must LOWER: ordered publish-side exchange (lane-149).
+//
+// `F` is `release`, so the compare-exchange succeeds with `memory_order_release` and
+// the `{ n }` payload is a promise with a mechanism. The emitter lowers it and names
+// the half in the C in the same words the `Publish` arm uses. The payload is written
+// in the same function (`V010` publishes the writes of its own thread), and `r`
+// awaits it, so the checker stays silent.
+//
+// Measured verdicts (recorded after the run, not before):
+//   pruefe: 0 errors, 0 hints
+//   emit:   exit 0; C carries `publishes { n } -- paired at compile time`
+//   cc:     takes the unit
 
 module probe::austausch_geordnet_mit_last {
 

@@ -1,13 +1,13 @@
--- erwartet: V006
--- **Ein release-Speichern veroeffentlicht, was VOR ihm geschah.**
---
--- Die Paarung prueft `(Atomic, Nutzlast)` ueber das ganze Programm -- und prueft nicht die
--- Stelle, an der die Ordnung ueberhaupt entsteht. Hier steht die Nutzlast DANACH, und der
--- Leser sieht sie nie.
---
--- *A10 sagt, DASS release/acquire die Sichtbarkeit herstellen. Diese Regel sagt, dass das
--- Programm die Form hat, fuer die das Axiom ueberhaupt gilt -- das Axiom trug eine
--- Voraussetzung, und niemand pruefte sie.*
+// erwartet: V006
+// **Ein release-Speichern veroeffentlicht, was VOR ihm geschah.**
+//
+// Die Paarung prueft `(Atomic, Nutzlast)` ueber das ganze Programm -- und prueft nicht die
+// Stelle, an der die Ordnung ueberhaupt entsteht. Hier steht die Nutzlast DANACH, und der
+// Leser sieht sie nie.
+//
+// *A10 sagt, DASS release/acquire die Sichtbarkeit herstellen. Diese Regel sagt, dass das
+// Programm die Form hat, fuer die das Axiom ueberhaupt gilt -- das Axiom trug eine
+// Voraussetzung, und niemand pruefte sie.*
 module gift::nutzlast_danach {
 
 static mut n : u32 = 0;

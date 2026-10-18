@@ -1,11 +1,11 @@
--- erwartet: N532
--- **Opus agent G (OFFEN O1, L34) -- a function that `maintains I`, called while `I` rests.**
---
--- SPRACHE.md §8.3: *"Inside the block the invariant is not available as a premise:
--- functions with `requires I` or `maintains I` are not callable."* Until 2026-09-26 no pass
--- read it. `treffen_oeffnen` sets `anrufer` and then, still inside
--- `breaking antwortpflicht_paarig`, calls `paar_setzen`, which `maintains` the same
--- invariant -- it is entered in the one state its own clause excludes: `N532`.
+// erwartet: N532
+// **Opus agent G (OFFEN O1, L34) -- a function that `maintains I`, called while `I` rests.**
+//
+// SPRACHE.md §8.3: *"Inside the block the invariant is not available as a premise:
+// functions with `requires I` or `maintains I` are not callable."* Until 2026-09-26 no pass
+// read it. `treffen_oeffnen` sets `anrufer` and then, still inside
+// `breaking antwortpflicht_paarig`, calls `paar_setzen`, which `maintains` the same
+// invariant -- it is entered in the one state its own clause excludes: `N532`.
 module gift::breaking_ruft_pflegende {
 
 const NKERNE  : u32 = 4;

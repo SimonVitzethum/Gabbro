@@ -1,4 +1,4 @@
--- Eine `group` ueber einen Traeger, den niemand deklariert. Faellt das?
+// Eine `group` ueber einen Traeger, den niemand deklariert. Faellt das?
 module grp {
 
 const N : u32 = 4;

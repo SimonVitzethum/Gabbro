@@ -1,21 +1,21 @@
--- uebersetzt: freistehend
--- 183 -- **Memory from outside comes as a REGION, never from a number** (C-free lane,
--- 2026-09-30; Simon's decision 1).
---
--- The gate `seiten_holen` answers `ptr<normal, rw> u8 or MapFehler`: a region of bytes the kernel
--- hands over, or a reason. Its contract says how far the region reaches
--- (`ensures len <= lenof(result)`) -- user logic, like the sentence of its assumption that
--- the bytes are fresh and shared with nothing else. The binding `let seite = seiten_holen(…) else`
--- carries that extent: every `seite[i]` is held against `4096` (`N571`), and handing the
--- region to `write` holds the length against it too (`N463`).
---
--- What the emitter writes is the proved template `tor.region`
--- (`grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §4): the sign leg of every fallible gate,
--- then the word zero as the hardware stop, then the address. No expression of the language
--- turns a number into a pointer (`M140`, `beispiele/gift/1386`).
---
--- Built with `beispiele/183-region-vom-tor.bau` (`nolibc`): the process prints `OK` and
--- imports nothing.
+// uebersetzt: freistehend
+// 183 -- **Memory from outside comes as a REGION, never from a number** (C-free lane,
+// 2026-09-30; Simon's decision 1).
+//
+// The gate `seiten_holen` answers `ptr<normal, rw> u8 or MapFehler`: a region of bytes the kernel
+// hands over, or a reason. Its contract says how far the region reaches
+// (`ensures len <= lenof(result)`) -- user logic, like the sentence of its assumption that
+// the bytes are fresh and shared with nothing else. The binding `let seite = seiten_holen(…) else`
+// carries that extent: every `seite[i]` is held against `4096` (`N571`), and handing the
+// region to `write` holds the length against it too (`N463`).
+//
+// What the emitter writes is the proved template `tor.region`
+// (`grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §4): the sign leg of every fallible gate,
+// then the word zero as the hardware stop, then the address. No expression of the language
+// turns a number into a pointer (`M140`, `beispiele/gift/1386`).
+//
+// Built with `beispiele/183-region-vom-tor.bau` (`nolibc`): the process prints `OK` and
+// imports nothing.
 module beispiel::region_vom_tor {
 
 pub reason MapFehler {
@@ -85,10 +85,10 @@ pub fn main() -> never
     let seite = seiten_holen(0, SEITE, LESEN_SCHREIBEN, PRIVAT_ANONYM, KEINE_DATEI, 0) else (e) {
         exit_group(2);
     }
-    seite[0] = 79;       -- O
-    seite[1] = 75;       -- K
-    seite[2] = 10;       -- newline
-    seite[4095] = 1;     -- the last byte the extent covers
+    seite[0] = 79;       // O
+    seite[1] = 75;       // K
+    seite[2] = 10;       // newline
+    seite[4095] = 1;     // the last byte the extent covers
     let n = write(1, seite, 3) else (f) { exit_group(3); }
     exit_group(0);
 }

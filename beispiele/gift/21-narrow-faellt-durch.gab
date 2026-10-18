@@ -1,12 +1,12 @@
--- erwartet: M105
---
--- Der `else`-Zweig eines `narrow` muss verlassen. Ein leeres `else { }` haette sonst
--- denselben Bereich installiert wie ein `else { return … }`.
---
--- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
--- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// erwartet: M105
+//
+// Der `else`-Zweig eines `narrow` muss verlassen. Ein leeres `else { }` haette sonst
+// denselben Bereich installiert wie ein `else { return … }`.
+//
+// Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
--- MUSS fallen: der else-Zweig faellt durch, also gilt der Bereich danach NICHT.
+// MUSS fallen: der else-Zweig faellt durch, also gilt der Bereich danach NICHT.
 module gift {
 
 type Anzahl = u32 in 0 .. 1000;

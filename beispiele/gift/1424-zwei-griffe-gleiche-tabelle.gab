@@ -1,8 +1,8 @@
--- erwartet: M147
--- **Aliased handles (Task 5d).** `t` and `u` are two `rw` handles of one
--- table; they may name the same table at run time, so a write through `u`
--- expires a value read through `t`. Carriers key by table since task 5d
--- (same-handle staleness already fell: `gift/702`).
+// erwartet: M147
+// **Aliased handles (Task 5d).** `t` and `u` are two `rw` handles of one
+// table; they may name the same table at run time, so a write through `u`
+// expires a value read through `t`. Carriers key by table since task 5d
+// (same-handle staleness already fell: `gift/702`).
 module gift::zwei_griffe_gleiche_tabelle {
 
 table T count 4 {

@@ -192,7 +192,16 @@ string     = quote { char } quote { quote { char } quote } ;   (* «B22» *)
 char       = ? any character except quote and newline ? ;
 quote      = ? the character U+0022 ? ;
 newline    = ? end of line ? ;
-comment    = "--" { char } newline ;
+comment    = linecomment | doccomment | blockcomment ;           (* comments vanish in the lexer *)
+linecomment  = "//" { any } newline ;                            (* not exactly `///`; `////` and more are ordinary *)
+doccomment   = "///" { any } newline ;                           (* exactly three slashes: kept as trivia *)
+blockcomment = "/*" { any | blockcomment } "*/" ;                (* NESTS: `/* a /* b */ still comment */` *)
+any        = ? any character ? ;
+(* Comment markers inside a string are text, not comments. A `/*` with no closing `*/` before the
+   end of the file is refused (`L008`); a stray `*/` is no comment end (it lexes as `*` and `/`).
+   A doc comment (`///`) is a distinct trivia kind (`Token.doku` in `lexDoku`, `Art::Doku` in
+   `zerlege_mit_doku`) that tools may attach to the following item; the stream the parser reads
+   has none, so it never changes what a program means. *)
 path       = pathseg { "::" pathseg } ;                        (* G5 *)
 pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
            | uint | int | opname ;
@@ -470,7 +479,7 @@ linear type Uninstalled(ObjectId);
 linear ghost type Held(Lock);
 linear ghost type BootPhase order { roh, mmu, geraete };
 linear ghost type MayWrite(ThreadId, Pa);
-linear ghost type Duty(farbtest);   -- the parameter is the NAME of a `check` declaration
+linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` declaration
 ```
 
 **Attributes and Lean.**
@@ -1699,7 +1708,7 @@ device Vtd(base: Pa) at mmio {
 
     bank FRR at CAP.FRO * 16 stride 16 count 256 { reg FR : u64 @0x8 class rw }
 
-    mirrors GCMD from GSTS;          -- ONCE: all state bits come from GSTS
+    mirrors GCMD from GSTS;          // ONCE: all state bits come from GSTS
 
     transition arm_te { GCMD.TE: 0 -> 1 }
         requires GSTS.RTPS == 1
@@ -1759,9 +1768,9 @@ device Geraet(basis : u64) at mmio {
     reg ST : u32 @0x00 class r depends { Zustand }
 }
 
--- The reader holds the guard BY SIGNATURE: `Sperre` protects `Zustand`, and
--- `Zustand` is written below, so the read of `ST` needs `requires Held(Sperre)`.
--- A lock taken only in a `locks` block does not count (`N256`).
+// The reader holds the guard BY SIGNATURE: `Sperre` protects `Zustand`, and
+// `Zustand` is written below, so the read of `ST` needs `requires Held(Sperre)`.
+// A lock taken only in a `locks` block does not count (`N256`).
 impl fn lesen(d : Geraet) -> u32
     requires Held(Sperre)
     effects { reads d }
@@ -2223,10 +2232,10 @@ Since this section, a gate can name a **variable** instead, and ONE statement el
 binds it for a kernel:
 
 ```gabbro
-syscall sys_write;                                   -- the variable
+syscall sys_write;                                   // the variable
 
 syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
-    via sys_write                                    -- no number, no registers here
+    via sys_write                                    // no number, no registers here
     requires len <= 1024
     ensures result <= len
     effects { pure }
@@ -2241,7 +2250,7 @@ target linux_x86_64 abi linux arch x86_64 {
         assume linux_write_contract falsifier sonde_write;
 }
 
-target metal abi metal arch x86_64 {                 -- the bare-metal image's kernel entry
+target metal abi metal arch x86_64 {                 // the bare-metal image's kernel entry
     sys_write = number 1
         regs in { rdi = fd, rsi = buf, rdx = len }
         regs out { rax }
@@ -2250,7 +2259,7 @@ target metal abi metal arch x86_64 {                 -- the bare-metal image's k
         assume metal_kernel_contract falsifier sonde_metall_systemruf;
 }
 
-target linux_x86_64;                                 -- the active one
+target linux_x86_64;                                 // the active one
 …
 ```
 

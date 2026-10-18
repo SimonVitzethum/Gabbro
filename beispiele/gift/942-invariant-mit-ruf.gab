@@ -1,8 +1,8 @@
--- erwartet: N276
--- **A lock invariant calling a function falls -- it is not pure.**
---
--- Every `Ruf` runs code, and a predicate over a memory snapshot runs none:
--- conversions and `Some`/`None` included, each of them is a call. N276 ALONE.
+// erwartet: N276
+// **A lock invariant calling a function falls -- it is not pure.**
+//
+// Every `Ruf` runs code, and a predicate over a memory snapshot runs none:
+// conversions and `Some`/`None` included, each of them is a call. N276 ALONE.
 module gift::invariant_mit_ruf {
 
 const NSLOTS : u32 = 2;

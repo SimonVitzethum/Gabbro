@@ -1,40 +1,40 @@
--- 26 -- «F»: f32/f64, und das Herzstueck ist die BEDINGTE Negation.
---
--- **Was hier NICHT versprochen wird: numerische Genauigkeit.** Der Pruefer macht Klempnerei,
--- nicht Numerik. Was er traegt, ist die Ganzzahltatsache plus ZWEI BITS -- ein Intervall
--- ueber den reellen Zahlen, dazu `kann_nan` und `kann_unendlich`.
---
--- ~~**Und der Erzeuger weigert sich benannt** (`C001`): erklaert und geprueft, nicht
--- abgesenkt.~~ **WIDERLEGT am 2026-08-31, von der Datei selbst.** Sie emittiert mit NULL
--- Absagen, und ihr C uebersetzt unter `cc -Werror` bei `-O0` und `-O2` (Stufe 9 von
--- `pruefe-emission.sh`; sie steht in dessen Nenner). *Ein Satz ueber den Erzeuger, den
--- der Erzeuger widerlegt, ist die teuerste Sorte Kommentar -- er liest sich wie eine
--- gebuchte Grenze.* Gefunden beim Bau der Grammatiktafel, weil `f64` als `gesenkt`
--- gemessen wurde und der Kopf das Gegenteil behauptete.
---
--- **Was WEITER gilt**: `f32` stand bis zu diesem Tag in keinem Programm des Baumes, und
--- ein Gleitkommaliteral wird im C ein `double` -- siehe `messung/GRAMMATIKTAFEL.md` §3.
+// 26 -- «F»: f32/f64, und das Herzstueck ist die BEDINGTE Negation.
+//
+// **Was hier NICHT versprochen wird: numerische Genauigkeit.** Der Pruefer macht Klempnerei,
+// nicht Numerik. Was er traegt, ist die Ganzzahltatsache plus ZWEI BITS -- ein Intervall
+// ueber den reellen Zahlen, dazu `kann_nan` und `kann_unendlich`.
+//
+// ~~**Und der Erzeuger weigert sich benannt** (`C001`): erklaert und geprueft, nicht
+// abgesenkt.~~ **WIDERLEGT am 2026-08-31, von der Datei selbst.** Sie emittiert mit NULL
+// Absagen, und ihr C uebersetzt unter `cc -Werror` bei `-O0` und `-O2` (Stufe 9 von
+// `pruefe-emission.sh`; sie steht in dessen Nenner). *Ein Satz ueber den Erzeuger, den
+// der Erzeuger widerlegt, ist die teuerste Sorte Kommentar -- er liest sich wie eine
+// gebuchte Grenze.* Gefunden beim Bau der Grammatiktafel, weil `f64` als `gesenkt`
+// gemessen wurde und der Kopf das Gegenteil behauptete.
+//
+// **Was WEITER gilt**: `f32` stand bis zu diesem Tag in keinem Programm des Baumes, und
+// ein Gleitkommaliteral wird im C ein `double` -- siehe `messung/GRAMMATIKTAFEL.md` §3.
 
 module beispiel::gleitkomma {
 
--- Ein GENANNTER Bereich schliesst NaN aus: NaN liegt in keinem Intervall, weil jeder
--- Vergleich mit ihm falsch ist.
+// Ein GENANNTER Bereich schliesst NaN aus: NaN liegt in keinem Intervall, weil jeder
+// Vergleich mit ihm falsch ist.
 type Anteil = f64 in 0.0 .. 1.0;
 
--- **`rounded` kam aus dem Korpus, nicht aus dem Entwurf** («F0»/FF4): an 340 Literalen eines
--- echten Renderers waeren ohne das Wort 53 abgelehnt worden, darunter ln 2 und 2 pi. Eine
--- transzendente Konstante ist in KEINER binaeren Breite exakt.
---
--- *Verboten ist nicht das Inexakte, sondern das STILLSCHWEIGEND Inexakte -- genau der Satz,
--- den `wrapping` ueber den Ueberlauf sagt.*
+// **`rounded` kam aus dem Korpus, nicht aus dem Entwurf** («F0»/FF4): an 340 Literalen eines
+// echten Renderers waeren ohne das Wort 53 abgelehnt worden, darunter ln 2 und 2 pi. Eine
+// transzendente Konstante ist in KEINER binaeren Breite exakt.
+//
+// *Verboten ist nicht das Inexakte, sondern das STILLSCHWEIGEND Inexakte -- genau der Satz,
+// den `wrapping` ueber den Ueberlauf sagt.*
 const TAU  : f64 = 6.283185307179586 rounded;
 const HALB : f64 = 0.5;
 
--- **Die Verengung IST die Pruefung, und ihr `else`-Zweig ist der NaN-Weg.**
---
--- Der Korpus schreibt dieselbe Bewegung von Hand («F0»/FF1): dort steht
--- `isnan(de.x) || isinf(de.x) || …` neben dem Vergleich, weil der Vergleich allein den Fall
--- nicht abdeckt. In Gabbro ist es eine Anweisung, und danach rechnet man gewoehnlich.
+// **Die Verengung IST die Pruefung, und ihr `else`-Zweig ist der NaN-Weg.**
+//
+// Der Korpus schreibt dieselbe Bewegung von Hand («F0»/FF1): dort steht
+// `isnan(de.x) || isinf(de.x) || …` neben dem Vergleich, weil der Vergleich allein den Fall
+// nicht abdeckt. In Gabbro ist es eine Anweisung, und danach rechnet man gewoehnlich.
 impl fn klemmen(x : f64) -> Anteil
     effects { pure }
     costs   <= 8 ops
@@ -43,13 +43,13 @@ impl fn klemmen(x : f64) -> Anteil
     return x;
 }
 
--- **Und dasselbe ohne `narrow`, weil der VERGLEICH die Schranke traegt.**
---
--- Zwei Vergleiche geben zwei halboffene Fakten; erst ihr Schnitt ist endlich -- und ein
--- endliches Intervall schliesst NaN und Unendlich mit aus. *NaN liegt in keinem Intervall,
--- weil jeder Vergleich mit ihm falsch ist.*
---
--- Eine Schranke allein reicht dafuer nicht: `x >= 0.0` laesst `inf` zu.
+// **Und dasselbe ohne `narrow`, weil der VERGLEICH die Schranke traegt.**
+//
+// Zwei Vergleiche geben zwei halboffene Fakten; erst ihr Schnitt ist endlich -- und ein
+// endliches Intervall schliesst NaN und Unendlich mit aus. *NaN liegt in keinem Intervall,
+// weil jeder Vergleich mit ihm falsch ist.*
+//
+// Eine Schranke allein reicht dafuer nicht: `x >= 0.0` laesst `inf` zu.
 impl fn klemmen_ohne_narrow(x : f64) -> Anteil
     effects { pure }
     costs   <= 6 ops
@@ -58,23 +58,23 @@ impl fn klemmen_ohne_narrow(x : f64) -> Anteil
     return HALB;
 }
 
--- **Und `finite` ALLEIN reicht nicht, sobald der Zieltyp einen Bereich nennt.**
---
--- 2.5 ist endlich und liegt trotzdem nicht in `0.0 .. 1.0`. Die erste Fassung dieses
--- Beispiels tat genau das und ging durch -- *ein Beispiel, das den Gewinn zeigt und zugleich
--- die Luecke belegt.* Schweigen ist unvollstaendig; eine ungeprueft gebliebene Zusage ist
--- falsch.
+// **Und `finite` ALLEIN reicht nicht, sobald der Zieltyp einen Bereich nennt.**
+//
+// 2.5 ist endlich und liegt trotzdem nicht in `0.0 .. 1.0`. Die erste Fassung dieses
+// Beispiels tat genau das und ging durch -- *ein Beispiel, das den Gewinn zeigt und zugleich
+// die Luecke belegt.* Schweigen ist unvollstaendig; eine ungeprueft gebliebene Zusage ist
+// falsch.
 impl fn nur_endlich(x : f64) -> f64
     effects { pure }
-    -- **4 seit dem 2026-09-13 (Lane 139, F5): `narrow` liest seinen Gegenstand.** Die
-    -- Bereichspruefung ist eine Operation, das gelesene `x` eine weitere.
+    // **4 seit dem 2026-09-13 (Lane 139, F5): `narrow` liest seinen Gegenstand.** Die
+    // Bereichspruefung ist eine Operation, das gelesene `x` eine weitere.
     costs   <= 4 ops
 {
     narrow x to finite else { return HALB; }
     return x;
 }
 
--- Ein Literal ist bekannt endlich -- deshalb braucht DIESE Zeile keine Verengung.
+// Ein Literal ist bekannt endlich -- deshalb braucht DIESE Zeile keine Verengung.
 impl fn voll() -> Anteil effects { pure } costs <= 1 ops {
     return 1.0;
 }

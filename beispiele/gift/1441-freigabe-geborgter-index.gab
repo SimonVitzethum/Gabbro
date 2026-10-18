@@ -1,6 +1,6 @@
--- erwartet: N586
--- A callee never frees what it is handed: the index is borrowed, and the
--- owner frees. Nothing else is wrong with this unit.
+// erwartet: N586
+// A callee never frees what it is handed: the index is borrowed, and the
+// owner frees. Nothing else is wrong with this unit.
 module gift::freigabe_geborgten_index {
 arena Vorrat capacity 0 .. 4 of u64;
 

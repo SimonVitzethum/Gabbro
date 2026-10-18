@@ -1,10 +1,10 @@
--- erwartet: D027
--- **D027 -- a quantifier over a shared carrier is a restatement, not a reference.**
---
--- No call names a declared invariant here: `forall s in slots of k : …`
--- runs over the shared carrier and states its own predicate. The reference
--- form (`raum_ok(k)`) is the writable shape; spelling the traversal out is
--- refused even though every name in it resolves.
+// erwartet: D027
+// **D027 -- a quantifier over a shared carrier is a restatement, not a reference.**
+//
+// No call names a declared invariant here: `forall s in slots of k : …`
+// runs over the shared carrier and states its own predicate. The reference
+// form (`raum_ok(k)`) is the writable shape; spelling the traversal out is
+// refused even though every name in it resolves.
 module gift794 {
 
 const N : u32 = 64;

@@ -1,8 +1,8 @@
--- erwartet: N566
--- Gift 1361 -- **A `progress` clause over a target's assumption.** The loop names
--- `linux_write_contract`, which `target linux_x86_64` binds `sys_write` under: under
--- `target metal` the loop would still rest on the Linux kernel. `progress sys_write` names
--- the variable and follows the binding (OFFEN O31).
+// erwartet: N566
+// Gift 1361 -- **A `progress` clause over a target's assumption.** The loop names
+// `linux_write_contract`, which `target linux_x86_64` binds `sys_write` under: under
+// `target metal` the loop would still rest on the Linux kernel. `progress sys_write` names
+// the variable and follows the binding (OFFEN O31).
 
 module gift::fortschritt_auf_zielannahme {
 

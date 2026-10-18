@@ -1,22 +1,22 @@
--- erwartet: A005
--- **Eine Annahme, die hier nie in Kraft sein kann -- und trotzdem im Zeugnis steht.**
---
--- Diese Einheit erklaert genau einen Eintritt, und der laeuft auf `x86_64`. Die Annahme
--- daneben ist fuer `aarch64` gestellt. Sie kann auf keinem Weg dieser Einheit gelten --
--- und `manifest::sammle` traegt sie trotzdem in den Annahmensatz, den das Artefakt als
--- *„bewiesen unter A1…An"* mitfuehrt.
---
--- > **Ein Leser des Artefakts liest daraus eine Reichweite, die es nicht gibt.** Genau die
--- > Bewegung, gegen die die ganze Annahmenschicht gebaut ist: eine Annahme, die nicht lief,
--- > darf nie aussehen wie eine, die hielt.
---
--- **`arch` an `assume` gibt es seit dem 2026-08-31** («B40»), und der Anlass war
--- `dma_kohaerent`: eine Annahme, die ZWEI Behauptungen unter einem Namen und einem
--- Falsifikator trug, deren zweite auf AArch64 falsch ist -- und deren Falsifikator auf x86
--- laeuft und durchgeht.
---
--- Die Abhilfe steht in `beispiele/02-geraet.gab`: `arch` weglassen, wo die Annahme ueberall
--- gilt, und die Maschine nennen, wo sie es nicht tut.
+// erwartet: A005
+// **Eine Annahme, die hier nie in Kraft sein kann -- und trotzdem im Zeugnis steht.**
+//
+// Diese Einheit erklaert genau einen Eintritt, und der laeuft auf `x86_64`. Die Annahme
+// daneben ist fuer `aarch64` gestellt. Sie kann auf keinem Weg dieser Einheit gelten --
+// und `manifest::sammle` traegt sie trotzdem in den Annahmensatz, den das Artefakt als
+// *„bewiesen unter A1…An"* mitfuehrt.
+//
+// > **Ein Leser des Artefakts liest daraus eine Reichweite, die es nicht gibt.** Genau die
+// > Bewegung, gegen die die ganze Annahmenschicht gebaut ist: eine Annahme, die nicht lief,
+// > darf nie aussehen wie eine, die hielt.
+//
+// **`arch` an `assume` gibt es seit dem 2026-08-31** («B40»), und der Anlass war
+// `dma_kohaerent`: eine Annahme, die ZWEI Behauptungen unter einem Namen und einem
+// Falsifikator trug, deren zweite auf AArch64 falsch ist -- und deren Falsifikator auf x86
+// laeuft und durchgeht.
+//
+// Die Abhilfe steht in `beispiele/02-geraet.gab`: `arch` weglassen, wo die Annahme ueberall
+// gilt, und die Maschine nennen, wo sie es nicht tut.
 
 module gift {
 

@@ -1,7 +1,7 @@
--- erwartet: N562
--- Gift 1352 -- **A gate through a variable nobody declared.** `via sys_write` with no `syscall sys_write;`:
--- the binding below binds the name, but a variable is declared once and bound per target --
--- an undeclared name has no binding anyone could check (OFFEN O31).
+// erwartet: N562
+// Gift 1352 -- **A gate through a variable nobody declared.** `via sys_write` with no `syscall sys_write;`:
+// the binding below binds the name, but a variable is declared once and bound per target --
+// an undeclared name has no binding anyone could check (OFFEN O31).
 
 module gift::tor_ueber_unerklaerte_variable {
 

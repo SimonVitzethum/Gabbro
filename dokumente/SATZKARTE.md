@@ -5303,3 +5303,19 @@ NOT proved: the `Spec.lean` restatement (a PROPOSAL, `PLAN-DYNAMISCH.md` 8a.4: m
 | witness **`rw_witness`** (two readers and a writer on the lowered blocks: a winning take, a LOSING take, both readers hold, the writer's take fails, both release, the writer takes alone; `RwRel` after every step); fixture `cD`/`cLay` | `RwLockWitness` | none |
 
 NOT proved: the `Spec.lean` change (a PROPOSAL, `PLAN-DYNAMISCH.md` 8a.5: the mode in G, recommended; or a layer statement) and the syntax (`lock L rank N rw`, `reads L { ... }`, the signature clause `reads L`: proposals); the legs of `Ziel` that are proved by induction over `RufErreichbarG` and have no layer twin (`schwach`, `vertrag`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `folge`, `fortschritt`, `zeit`, `keinKernHalt`: a layer-reachable machine is not G-reachable); the checker rule that DERIVES `LeserLos` (a PREMISE here); one mode per (thread, lock) in the layer; fairness (a stream of readers can starve a writer; a writer-preference bit is not modelled); the composition of the `Code` steps with ALL interleavings (the steps are per-thread, as the ticket lock's); a Rust/LLVM emitter (Lean first).
+
+## 83. Comments: `//`, nesting `/* */`, `///` doc trivia (Simon's decision, 2026-10-18; lexical syntax, `SYNTAX.md` `comment`)
+
+*Files: `grammatik/Grammatik/Parser/Lex/{Lexer,LexerVertrauen,LexerDoku}.lean`, `crates/gabbro-syntax/src/lex.rs`. Model only for the lexer; `gabbro_ziel` is untouched (the statement does not mention comments).*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `nimmZeile`, `ueberBlock` (depth counter: `/*` opens one level, `*/` closes one, depth 0 ends the comment; `none` = the text ended inside), `ueberBlock_schliesst`, `ueberBlock_oeffnet`, `ueberBlock_null`; `scan` handles `//`, `////`+, `///` and `/*` before any other mark, so a marker inside a string is text (the `"` arm reads the whole string first) | `Lexer` | none |
+| witnesses: `lex_kommentar`, `lex_block`, **`lex_block_verschachtelt`** (`/* x /* y */ still comment */`), `lex_block_tief` (depth three), `lex_block_leer`, `lex_marker_im_text`, `lex_text_im_kommentar`, `lex_block_streuende_ende` (a stray `*/` is `*` `/`), **`lex_alter_strich_kein_kommentar`** (`--` is two minus marks) | `Lexer` | none |
+| refusals: **`lex_block_offen`**, `lex_block_offen_verschachtelt` (`.offenerKommentar`, Rust `L008`) | `Lexer` | none |
+| doc trivia: `lexDoku` keeps `///` as `Token.doku` (text after the three slashes), `lex_doku`, `lexDoku_doku`, `lexDoku_vier_striche` (`////` is ordinary), `lexDoku_zwei_striche`, `lexDoku_doku_im_block`, `lexDoku_doku_am_ende` | `Lexer` | none |
+| **`lex_ohne_doku`** (for EVERY source text, `lex` never holds a `Token.doku`: a doc comment cannot change what the parser reads), `scan_ohne_doku`, witness `lex_ohne_doku_zeuge` (a source whose `lexDoku` differs from `lex`), `lex_ohne_doku_beispiel` | `LexerDoku` | none |
+| planted defect: `ueberBlock_verschachtelt_flach` (the flat variant stops at the inner closer and differs from `ueberBlock`: the nesting witness is not vacuous), `ueberBlock_verschachtelt` | `Lexer` | none |
+| the trust gate (`codeZeichen`) skips both comment forms the way `scan` does: `quelle_kommentar_sauber`, `quelle_blockkommentar_sauber`, `quelle_bidi` (a bidi character is refused inside a comment too) | `LexerVertrauen` | none |
+
+NOT proved: that `lex_ohne_doku` is the only way a comment is invisible to the parser (the parser reads `lex`, so it holds by construction); the Rust lexer's agreement with `scan` beyond the probes (`gift/1471`, the Rust unit tests, the corpus rewritten to `//`). A tool that attaches doc comments to items does not exist yet.

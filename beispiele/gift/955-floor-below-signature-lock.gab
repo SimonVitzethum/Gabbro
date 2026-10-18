@@ -1,10 +1,10 @@
--- erwartet: N294
--- **A take below a signature-held lock: the floor violation neither rank rule sees.**
---
--- `haltend` holds `HOCH` (rank 5) by signature and takes `TIEF` (rank 1) in
--- its body. `H006` starts its chain empty -- a signature-held outer is
--- invisible to it -- and with no enclosing block `H012` has nothing to compare
--- either. Only the floor leg (`StufenM`, the residue form of `StufenOk`) refuses.
+// erwartet: N294
+// **A take below a signature-held lock: the floor violation neither rank rule sees.**
+//
+// `haltend` holds `HOCH` (rank 5) by signature and takes `TIEF` (rank 1) in
+// its body. `H006` starts its chain empty -- a signature-held outer is
+// invisible to it -- and with no enclosing block `H012` has nothing to compare
+// either. Only the floor leg (`StufenM`, the residue form of `StufenOk`) refuses.
 module gift::fuss2_broken_floor {
 
 static mut z : u32 = 0;

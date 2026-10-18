@@ -1,108 +1,108 @@
--- 57 -- `threads`: die Domaene OHNE Ort -- und der Fund ist, dass sie keinen hat.
---
--- **Der Gegenstand ist das Anhalten der Welt.** Ein IPI trifft jeden Kern, der Verteiler
--- nimmt die Fadensperre und setzt jeden laufenden Faden auf `BEREIT`. Die Zusage, die man
--- danach braucht, lautet *„kein Faden ist mehr im Zustand `LAEUFT`"* -- ohne sie darf der
--- Rufer nicht anfangen umzuhaengen.
---
--- WAS DIE SPRACHE HEUTE UEBER NEBENLAEUFIGKEIT SAGT -- ZUERST GEMESSEN
--- --------------------------------------------------------------------
--- `gabbro kontexte` ueber genau dieser Datei (2026-08-31):
---
---     contexts: 1
---     halt_ipi   beispiel::faedenhalt::halt_verteiler   writes 1   nested-never
---         Faden.slots
---     places touched: 1 · context roots with no visible body: 0 of 1
---
--- Das ist die eine Ausfuehrungsumgebung, die diese Einheit erklaert: **ein Eintritt, sein
--- Verteiler, was er anfasst, und dass er nicht verschachtelt.** Daneben stehen `lock … rank
--- … held … masks irqs` (Sperrordnung und Haltezeit), `atomic … publishes/awaits` (die
--- Paarung statt einer Ordnungsdeklaration) und `accumulates … per cpu N` (je Kern eine
--- Zelle). **Die Sprache spricht ueber KONTEXTE, ORTE und SPERREN -- nirgends ueber eine
--- Menge von Faeden.**
---
--- WAS `forall t in threads : …` DEM HINZUFUEGT -- GEMESSEN, UND ES IST NICHTS
--- ----------------------------------------------------------------------------
--- Vier Verfaelschungen an genau dieser Datei, je 0 Prueferfehler und 0 `C001`:
---
---     `threads` durch `slots of Faden` ersetzt          unveraendert gruen
---     `Faden.slots[t]` durch `Faden.slots[0]` ersetzt   unveraendert gruen -- `t` ist
---                                                       gebunden und wird nicht gebraucht
---     der Quantor ganz weggelassen                      unveraendert gruen
---     der Rumpf schreibt `.kern` statt `.zustand`       unveraendert gruen
---
--- **NACHGETRAGEN 2026-09-08: die erste Zeile stimmt noch, die zweite nicht mehr, und die
--- Zusage dieser Datei ist deshalb umgeschrieben.** `D022` liest seit heute den Binder gegen
--- seine Domaene, und `forall t in threads : Faden.slots[t]. …` faellt:
---
---     error: [D022] 57-faedenhalt.gab:88: `Faden.slots[…].zustand` indexes the slots of
---            `Faden` with a thread id -- `threads` names no table, and nothing joins the two
---
--- *Der Befund unten steht damit nicht mehr als Befund, sondern als Regel* -- und die
--- Zusage sagt jetzt, was der Pruefer von ihr liest. `Faden.slots[0]` faellt nicht, aber
--- `D023` sagt daneben, dass der Quantor seinen Binder nie nennt: **die zweite Zeile der
--- Tafel ist von `unveraendert gruen` auf `gruen mit einem Hinweis` gewandert.**
---
--- Und das ist keine Nachlaessigkeit eines Passes, sondern steht dreimal wortgleich im
--- Prueferquelltext: `wirkungen.rs`, `m1.rs` und `gruppe.rs` fuehren alle den Zweig
--- `Domaene::Threads => {}`. **Eine Domaene ohne Ort hat keinen Ort, den ein Pass lesen
--- koennte** -- keine Wirkung, keinen Namen, keine Schranke.
---
--- Was FAELLT, faellt aus einem anderen Grund: schreibt man `Anderes.slots[t]` ueber einer
--- zweiten Tabelle, kommt `M111` (*„cannot establish this postcondition"*) -- weil das
--- `ensures` einen Ort nennt, den die Funktion laut `effects` nicht schreibt. **Der Leser
--- prueft den GRUNDNAMEN, nicht die Bindung von `t`.**
---
--- DER FUND
--- --------
--- > **`t` bekommt seine Bedeutung erst dadurch, dass der Leser sie hineinliest.** Die
--- > Domaene sagt „Faeden"; die Sprache kennt keine Fadenmenge; also indiziert `t` diejenige
--- > Tabelle, auf die man es zeigen laesst -- und zwei einander widersprechende Lesarten in
--- > derselben Datei kommen beide durch, solange beide Tabellen geschrieben werden.
---
--- Der Erzeuger sagt genau das, und er sagt es praeziser als jede Absicht:
---
---     `threads` -- the thread set is not declared in a translation unit
---
--- **Was fehlte, ist dieselbe Sorte Deklaration, die jede andere Domaene hat:** `slots of`
--- haengt an `count N`, `descendants of` an `tree { … }` (seit «B41b» an der `table` und
--- nicht am Durchlauf), `mappings of` an `walk … levels`, `queue` an dem einen Feldarray des
--- Verbunds. **`threads` haengt an nichts.** Ein `threads over Faden` -- oder eine Marke an
--- der Tabelle, die sagt *„das hier ist die Fadenmenge"* -- waere die fehlende Haelfte; sie
--- steht hier als BEFUND und nicht als Bauauftrag, denn den Bedarf misst diese eine Datei
--- noch nicht (Regel A).
---
--- *Bis dahin ist `forall t in threads : Faden.slots[t]. …` eine ehrliche Absichtserklaerung
--- und keine gepruefte Aussage -- und `forall t in slots of Faden : …` sagt dem Pruefer
--- exakt dasselbe, nur ohne die Behauptung.* **Seit `D022` ist die erste Form nicht mehr
--- schreibbar und die zweite steht unten.**
---
--- NACHGETRAGEN 2026-09-08 (zweites Mal am selben Tag): DER BAUAUFTRAG IST GEMESSEN
--- ---------------------------------------------------------------------------------
--- Der Kopf nennt oben die fehlende Haelfte: *„Ein `threads over Faden` -- oder eine Marke an
--- der Tabelle, die sagt ‚das hier ist die Fadenmenge'".* **Genau diese Haelfte ist jetzt
--- entworfen und nachgemessen, und sie waere ein Synonym** (`PLAN.md` §15):
---
---     $ gabbro pflichten --lean beispiele/57-faedenhalt.gab | grep forallSlots
---         … (.forallSlots "t" 128 (.bin .ne (.place "Faden" (.name "t") "zustand") …))
---
--- `slots of Faden` wird zu `.forallSlots "t" 128 …`, und die `128` ist `count NFAEDEN`.
--- `Body.lean` schreibt den Konstruktor als `forallSlots (v) (count : Int) (body)` -- **eine
--- Quantorendomaene ist in diesem Modell eine ganze Zahl.** Ein `threads over Faden` haette
--- nichts anderes hineinzulegen als dieselbe `128`: derselbe Term, dieselbe Aussage, dasselbe
--- C. *Sechs Registerpflichten mit einem Wort zu kaufen, das keinen Term aendert, kauft sie
--- mit demselben Schweigen, das die Domaene schon hatte.*
---
--- **Was diese Datei wirklich sagen will, ist eine ANDERE Aussage.** `forall t in threads :
--- Faden.slots[t].zustand != LAEUFT` soll ueber die Faeden laufen, die es GIBT -- nicht ueber
--- 128 Plaetze, von denen die meisten frei sind. Dafuer braucht es eine Deklaration, welche
--- Plaetze leben, und die hat Gabbro nicht. **Das ist eine Entscheidung des Eigentuemers und
--- keine, die ein Lauf erfindet** -- die Absage bleibt stehen, jetzt mit gemessenem Grund.
---
--- *Und `gabbro kontexte` ueber dem ganzen Korpus zaehlt SIEBEN Kontexte in fuenf Dateien.*
--- Ein Kontext ist ein `entry`, also ein statischer Eintrittspunkt; ein Faden ist ein Objekt
--- zur Laufzeit. **Die Zeile ganz oben -- „das ist heute die ganze Auskunft der Sprache ueber
--- ‚wer laeuft hier'" -- ist damit nicht mehr Eindruck, sondern Zahl.**
+// 57 -- `threads`: die Domaene OHNE Ort -- und der Fund ist, dass sie keinen hat.
+//
+// **Der Gegenstand ist das Anhalten der Welt.** Ein IPI trifft jeden Kern, der Verteiler
+// nimmt die Fadensperre und setzt jeden laufenden Faden auf `BEREIT`. Die Zusage, die man
+// danach braucht, lautet *„kein Faden ist mehr im Zustand `LAEUFT`"* -- ohne sie darf der
+// Rufer nicht anfangen umzuhaengen.
+//
+// WAS DIE SPRACHE HEUTE UEBER NEBENLAEUFIGKEIT SAGT -- ZUERST GEMESSEN
+// --------------------------------------------------------------------
+// `gabbro kontexte` ueber genau dieser Datei (2026-08-31):
+//
+//     contexts: 1
+//     halt_ipi   beispiel::faedenhalt::halt_verteiler   writes 1   nested-never
+//         Faden.slots
+//     places touched: 1 · context roots with no visible body: 0 of 1
+//
+// Das ist die eine Ausfuehrungsumgebung, die diese Einheit erklaert: **ein Eintritt, sein
+// Verteiler, was er anfasst, und dass er nicht verschachtelt.** Daneben stehen `lock … rank
+// … held … masks irqs` (Sperrordnung und Haltezeit), `atomic … publishes/awaits` (die
+// Paarung statt einer Ordnungsdeklaration) und `accumulates … per cpu N` (je Kern eine
+// Zelle). **Die Sprache spricht ueber KONTEXTE, ORTE und SPERREN -- nirgends ueber eine
+// Menge von Faeden.**
+//
+// WAS `forall t in threads : …` DEM HINZUFUEGT -- GEMESSEN, UND ES IST NICHTS
+// ----------------------------------------------------------------------------
+// Vier Verfaelschungen an genau dieser Datei, je 0 Prueferfehler und 0 `C001`:
+//
+//     `threads` durch `slots of Faden` ersetzt          unveraendert gruen
+//     `Faden.slots[t]` durch `Faden.slots[0]` ersetzt   unveraendert gruen -- `t` ist
+//                                                       gebunden und wird nicht gebraucht
+//     der Quantor ganz weggelassen                      unveraendert gruen
+//     der Rumpf schreibt `.kern` statt `.zustand`       unveraendert gruen
+//
+// **NACHGETRAGEN 2026-09-08: die erste Zeile stimmt noch, die zweite nicht mehr, und die
+// Zusage dieser Datei ist deshalb umgeschrieben.** `D022` liest seit heute den Binder gegen
+// seine Domaene, und `forall t in threads : Faden.slots[t]. …` faellt:
+//
+//     error: [D022] 57-faedenhalt.gab:88: `Faden.slots[…].zustand` indexes the slots of
+//            `Faden` with a thread id -- `threads` names no table, and nothing joins the two
+//
+// *Der Befund unten steht damit nicht mehr als Befund, sondern als Regel* -- und die
+// Zusage sagt jetzt, was der Pruefer von ihr liest. `Faden.slots[0]` faellt nicht, aber
+// `D023` sagt daneben, dass der Quantor seinen Binder nie nennt: **die zweite Zeile der
+// Tafel ist von `unveraendert gruen` auf `gruen mit einem Hinweis` gewandert.**
+//
+// Und das ist keine Nachlaessigkeit eines Passes, sondern steht dreimal wortgleich im
+// Prueferquelltext: `wirkungen.rs`, `m1.rs` und `gruppe.rs` fuehren alle den Zweig
+// `Domaene::Threads => {}`. **Eine Domaene ohne Ort hat keinen Ort, den ein Pass lesen
+// koennte** -- keine Wirkung, keinen Namen, keine Schranke.
+//
+// Was FAELLT, faellt aus einem anderen Grund: schreibt man `Anderes.slots[t]` ueber einer
+// zweiten Tabelle, kommt `M111` (*„cannot establish this postcondition"*) -- weil das
+// `ensures` einen Ort nennt, den die Funktion laut `effects` nicht schreibt. **Der Leser
+// prueft den GRUNDNAMEN, nicht die Bindung von `t`.**
+//
+// DER FUND
+// --------
+// > **`t` bekommt seine Bedeutung erst dadurch, dass der Leser sie hineinliest.** Die
+// > Domaene sagt „Faeden"; die Sprache kennt keine Fadenmenge; also indiziert `t` diejenige
+// > Tabelle, auf die man es zeigen laesst -- und zwei einander widersprechende Lesarten in
+// > derselben Datei kommen beide durch, solange beide Tabellen geschrieben werden.
+//
+// Der Erzeuger sagt genau das, und er sagt es praeziser als jede Absicht:
+//
+//     `threads` -- the thread set is not declared in a translation unit
+//
+// **Was fehlte, ist dieselbe Sorte Deklaration, die jede andere Domaene hat:** `slots of`
+// haengt an `count N`, `descendants of` an `tree { … }` (seit «B41b» an der `table` und
+// nicht am Durchlauf), `mappings of` an `walk … levels`, `queue` an dem einen Feldarray des
+// Verbunds. **`threads` haengt an nichts.** Ein `threads over Faden` -- oder eine Marke an
+// der Tabelle, die sagt *„das hier ist die Fadenmenge"* -- waere die fehlende Haelfte; sie
+// steht hier als BEFUND und nicht als Bauauftrag, denn den Bedarf misst diese eine Datei
+// noch nicht (Regel A).
+//
+// *Bis dahin ist `forall t in threads : Faden.slots[t]. …` eine ehrliche Absichtserklaerung
+// und keine gepruefte Aussage -- und `forall t in slots of Faden : …` sagt dem Pruefer
+// exakt dasselbe, nur ohne die Behauptung.* **Seit `D022` ist die erste Form nicht mehr
+// schreibbar und die zweite steht unten.**
+//
+// NACHGETRAGEN 2026-09-08 (zweites Mal am selben Tag): DER BAUAUFTRAG IST GEMESSEN
+// ---------------------------------------------------------------------------------
+// Der Kopf nennt oben die fehlende Haelfte: *„Ein `threads over Faden` -- oder eine Marke an
+// der Tabelle, die sagt ‚das hier ist die Fadenmenge'".* **Genau diese Haelfte ist jetzt
+// entworfen und nachgemessen, und sie waere ein Synonym** (`PLAN.md` §15):
+//
+//     $ gabbro pflichten --lean beispiele/57-faedenhalt.gab | grep forallSlots
+//         … (.forallSlots "t" 128 (.bin .ne (.place "Faden" (.name "t") "zustand") …))
+//
+// `slots of Faden` wird zu `.forallSlots "t" 128 …`, und die `128` ist `count NFAEDEN`.
+// `Body.lean` schreibt den Konstruktor als `forallSlots (v) (count : Int) (body)` -- **eine
+// Quantorendomaene ist in diesem Modell eine ganze Zahl.** Ein `threads over Faden` haette
+// nichts anderes hineinzulegen als dieselbe `128`: derselbe Term, dieselbe Aussage, dasselbe
+// C. *Sechs Registerpflichten mit einem Wort zu kaufen, das keinen Term aendert, kauft sie
+// mit demselben Schweigen, das die Domaene schon hatte.*
+//
+// **Was diese Datei wirklich sagen will, ist eine ANDERE Aussage.** `forall t in threads :
+// Faden.slots[t].zustand != LAEUFT` soll ueber die Faeden laufen, die es GIBT -- nicht ueber
+// 128 Plaetze, von denen die meisten frei sind. Dafuer braucht es eine Deklaration, welche
+// Plaetze leben, und die hat Gabbro nicht. **Das ist eine Entscheidung des Eigentuemers und
+// keine, die ein Lauf erfindet** -- die Absage bleibt stehen, jetzt mit gemessenem Grund.
+//
+// *Und `gabbro kontexte` ueber dem ganzen Korpus zaehlt SIEBEN Kontexte in fuenf Dateien.*
+// Ein Kontext ist ein `entry`, also ein statischer Eintrittspunkt; ein Faden ist ein Objekt
+// zur Laufzeit. **Die Zeile ganz oben -- „das ist heute die ganze Auskunft der Sprache ueber
+// ‚wer laeuft hier'" -- ist damit nicht mehr Eindruck, sondern Zahl.**
 
 module beispiel::faedenhalt {
 
@@ -122,21 +122,21 @@ lock FAEDEN protects { Faden } rank 0 held <= 800 ops masks irqs;
 
 impl fn alle_anhalten()
     requires Held(FAEDEN)
-    -- **Die Zusage, um die es geht** -- und der Kopf dieser Datei sagt, wieviel der Pruefer
-    -- von ihr liest. `M111` verlangt immerhin, dass sie einen Ort nennt, den diese Funktion
-    -- schreibt; ueber `t` verlangt niemand etwas.
-    -- **Seit dem 2026-09-08 `slots of Faden` und nicht `threads`** -- genau der Tausch,
-    -- den der Kopf dieser Datei als *„sagt dem Pruefer exakt dasselbe, nur ohne die
-    -- Behauptung"* beschreibt. `D022` erzwingt ihn jetzt, statt ihn zu empfehlen.
+    // **Die Zusage, um die es geht** -- und der Kopf dieser Datei sagt, wieviel der Pruefer
+    // von ihr liest. `M111` verlangt immerhin, dass sie einen Ort nennt, den diese Funktion
+    // schreibt; ueber `t` verlangt niemand etwas.
+    // **Seit dem 2026-09-08 `slots of Faden` und nicht `threads`** -- genau der Tausch,
+    // den der Kopf dieser Datei als *„sagt dem Pruefer exakt dasselbe, nur ohne die
+    // Behauptung"* beschreibt. `D022` erzwingt ihn jetzt, statt ihn zu empfehlen.
     ensures  forall t in slots of Faden : Faden.slots[t].zustand != LAEUFT
     effects  { reads Faden, reads Faden.slots, writes Faden.slots, locks FAEDEN }
-    -- **640 seit dem 2026-09-13 (Lane 139, F1): 128 Slots x (4 + 1) ops.** Der Zielindex
-    -- `t` der Schreibung kostet, was er kostet -- ein op je Durchgang mehr.
+    // **640 seit dem 2026-09-13 (Lane 139, F1): 128 Slots x (4 + 1) ops.** Der Zielindex
+    // `t` der Schreibung kostet, was er kostet -- ein op je Durchgang mehr.
     costs    <= 640 ops
 {
-    -- **Die Laufform nennt ihre Menge, die Zusicherung nicht.** Hier steht `slots of Faden`,
-    -- weil eine Traversierung eine Schranke braucht -- und `traverse … over threads` sagt
-    -- der Erzeuger namentlich ab (`C001`, `messung/proben/probe-vier-zellen.gab`).
+    // **Die Laufform nennt ihre Menge, die Zusicherung nicht.** Hier steht `slots of Faden`,
+    // weil eine Traversierung eine Schranke braucht -- und `traverse … over threads` sagt
+    // der Erzeuger namentlich ab (`C001`, `messung/proben/probe-vier-zellen.gab`).
     traverse t over slots of Faden by unvisited
         touches writes Faden.slots
     {
@@ -155,8 +155,8 @@ impl fn halt_verteiler()
     }
 }
 
--- Der Eintritt, der die eine Ausfuehrungsumgebung dieser Einheit aufmacht. `gabbro kontexte`
--- zaehlt ihn -- **und das ist heute die ganze Auskunft der Sprache ueber „wer laeuft hier".**
+// Der Eintritt, der die eine Ausfuehrungsumgebung dieser Einheit aufmacht. `gabbro kontexte`
+// zaehlt ihn -- **und das ist heute die ganze Auskunft der Sprache ueber „wer laeuft hier".**
 entry halt_ipi vector 0xF0 arch x86_64 {
     regs in  { }
     regs out { }

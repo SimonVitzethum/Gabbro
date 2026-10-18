@@ -1,9 +1,9 @@
--- erwartet: M111
--- **Eine Zusage, die weder `result` nennt noch einen geschriebenen Ort, kann die Funktion
--- nicht HERSTELLEN.** Sie ist dann ein `requires` oder ein `maintains` am falschen Platz.
---
--- Das ist die schaerfste der drei Regeln und die einzige, die nicht bloss Buchhaltung ist:
--- sie haelt die Nachbedingung gegen `effects`, also gegen eine Klausel, die GELESEN wird.
+// erwartet: M111
+// **Eine Zusage, die weder `result` nennt noch einen geschriebenen Ort, kann die Funktion
+// nicht HERSTELLEN.** Sie ist dann ein `requires` oder ein `maintains` am falschen Platz.
+//
+// Das ist die schaerfste der drei Regeln und die einzige, die nicht bloss Buchhaltung ist:
+// sie haelt die Nachbedingung gegen `effects`, also gegen eine Klausel, die GELESEN wird.
 module gift::herstellung {
 
 static mut ZAEHLER : u32 in 0 .. 100 = 0;

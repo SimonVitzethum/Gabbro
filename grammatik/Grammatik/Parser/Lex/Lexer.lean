@@ -10,7 +10,10 @@
 namespace Gabbro.Grammatik.Parser
 
 /-- A surface token. Keywords carry their spelling (`wort "module"`);
-    punctuation carries its spelling (`zeichen "<<%"`). -/
+    punctuation carries its spelling (`zeichen "<<%"`). `doku` is the
+    trivia kind of a `///` doc comment (its text after the three slashes,
+    to the end of the line): only `lexDoku` produces it, `lex` drops it, so
+    a doc comment can never change what a program means. -/
 inductive Token
   | ident : String → Token
   | wort : String → Token
@@ -18,6 +21,7 @@ inductive Token
   | float : String → Token
   | text : String → Token
   | zeichen : String → Token
+  | doku : String → Token
   | ende : Token
   deriving DecidableEq, Repr
 
@@ -25,6 +29,7 @@ inductive Token
 inductive LexFehler
   | unbekannt : String → LexFehler
   | offeneZeichenkette : LexFehler
+  | offenerKommentar : LexFehler
   | zahlOhneZiffern : LexFehler
   deriving DecidableEq, Repr
 
@@ -259,11 +264,31 @@ def nimmText : List Char → Option (List Char × List Char)
     | some (h, t) => some (c :: h, t)
     | none => none
 
-/-- Skip a `--` comment up to (not including) the newline. -/
-def ueberKommentar : List Char → List Char
-  | [] => []
-  | '\n' :: cs => '\n' :: cs
-  | _ :: cs => ueberKommentar cs
+/-- Cut a line comment body: the text up to (not including) the newline,
+    and the rest starting at the newline (or empty). -/
+def nimmZeile : List Char → List Char × List Char
+  | [] => ([], [])
+  | '\n' :: cs => ([], '\n' :: cs)
+  | c :: cs => let (h, t) := nimmZeile cs; (c :: h, t)
+
+/-- Skip a block comment body after its opening `/*`. The first argument is
+    the nesting depth still open (the depth counter): `/*` opens one more,
+    `*/` closes one, and the comment ends when the depth reaches 0. `none`
+    means the text ended inside the comment. Every step consumes a
+    character, so the recursion is structural. -/
+def ueberBlock : Nat → List Char → Option (List Char)
+  | 0, rest => some rest
+  | _ + 1, [] => none
+  | d + 1, '/' :: '*' :: cs => ueberBlock (d + 2) cs
+  | d + 1, '*' :: '/' :: cs => ueberBlock d cs
+  | d + 1, _ :: cs => ueberBlock (d + 1) cs
+
+/-- The non-nesting variant, kept ONLY as the planted defect of
+    `ueberBlock_verschachtelt_flach`: it ends at the first `*/`. -/
+def ueberBlockFlach : List Char → Option (List Char)
+  | [] => none
+  | '*' :: '/' :: cs => some cs
+  | _ :: cs => ueberBlockFlach cs
 
 /-- Cut one punctuation mark, longest match first (`..<` before `..`
     before `.`; `<<%` before `<<`; `+|`, `+%`, `+=` before `+`). -/
@@ -334,27 +359,37 @@ def scanZahlKopf : List Char → Except LexFehler (Token × List Char)
     reports the first error or consumes at least one character, so
     fuel `length + 1` always suffices; the fuel error is unreachable
     from `lex`. -/
-def scan : List Char → Nat → Except LexFehler (List Token)
+def scan (mitDoku : Bool) : List Char → Nat → Except LexFehler (List Token)
   | [], _ => .ok [Token.ende]
-  | '-' :: '-' :: rest, n + 1 => scan (ueberKommentar rest) n
+  | '/' :: '/' :: '/' :: '/' :: rest, n + 1 => scan mitDoku (nimmZeile rest).2 n
+  | '/' :: '/' :: '/' :: rest, n + 1 =>
+    let (text, rest') := nimmZeile rest
+    if mitDoku then
+      Except.map (Token.doku (String.ofList text) :: ·) (scan mitDoku rest' n)
+    else scan mitDoku rest' n
+  | '/' :: '/' :: rest, n + 1 => scan mitDoku (nimmZeile rest).2 n
+  | '/' :: '*' :: rest, n + 1 =>
+    match ueberBlock 1 rest with
+    | some rest' => scan mitDoku rest' n
+    | none => .error .offenerKommentar
   | '"' :: rest, n + 1 =>
     match nimmText rest with
     | some (inhalt, rest') =>
-      Except.map (Token.text (String.ofList inhalt) :: ·) (scan rest' n)
+      Except.map (Token.text (String.ofList inhalt) :: ·) (scan mitDoku rest' n)
     | none => .error .offeneZeichenkette
   | c :: cs, n + 1 =>
-    if istLeer c then scan cs n
+    if istLeer c then scan mitDoku cs n
     else if istZiffer c then match scanZahlKopf (c :: cs) with
-      | .ok (t, rest) => Except.map (t :: ·) (scan rest n)
+      | .ok (t, rest) => Except.map (t :: ·) (scan mitDoku rest n)
       | .error e => .error e
     else if istAnfang c then
       let (h, t) := nimmFolge cs
       let s := String.ofList (c :: h)
       let tok := if istSchluessel s then Token.wort s else Token.ident s
-      Except.map (tok :: ·) (scan t n)
+      Except.map (tok :: ·) (scan mitDoku t n)
     else match nimmZeichen (c :: cs) with
       | some (s, rest) =>
-        Except.map (Token.zeichen s :: ·) (scan rest n)
+        Except.map (Token.zeichen s :: ·) (scan mitDoku rest n)
       | none => .error (.unbekannt (String.ofList [c]))
   | _ :: _, 0 => .error (.unbekannt "out of fuel")
 
@@ -364,13 +399,19 @@ def scan : List Char → Nat → Except LexFehler (List Token)
     a certificate starts from source text that lexes cleanly, so the
     partial stream has no reader here. -/
 def lex (s : String) : Except LexFehler (List Token) :=
-  scan s.toList (s.length + 1)
+  scan false s.toList (s.length + 1)
+
+/-- The same scan with the doc comments kept as `Token.doku` trivia, in
+    source position. Tools (documentation, the formatter) read this; the
+    parser reads `lex`, which is this stream without the `doku` tokens. -/
+def lexDoku (s : String) : Except LexFehler (List Token) :=
+  scan true s.toList (s.length + 1)
 
 /-- **The same lexer, over the CHARACTERS**: `scan` is what `lex` runs;
     the only difference is who converts. It exists for the kernel, not
     for the reader -- see `lex_ofList` and the cost note in the CUTS. -/
 def lexL (cs : List Char) : Except LexFehler (List Token) :=
-  scan cs (cs.length + 1)
+  scan false cs (cs.length + 1)
 
 /-- **`lex` OF A SOURCE PINNED AS CHARACTERS IS `lexL` OF THEM** -- the
     one step that keeps the chain files inside ordinary memory (O13).
@@ -475,10 +516,137 @@ theorem lex_at_hash :
       Token.ende] := by
   decide
 
-/-- Comments run to the end of the line and vanish. -/
+/-- A `//` comment runs to the end of the line and vanishes. -/
 theorem lex_kommentar :
-    lex "a -- rest\nb" = .ok [Token.ident "a", Token.ident "b",
+    lex "a // rest\nb" = .ok [Token.ident "a", Token.ident "b",
       Token.ende] := by
+  decide
+
+/-- The old `--` is no comment any more: it lexes as two minus marks. -/
+theorem lex_alter_strich_kein_kommentar :
+    lex "a -- b" = .ok [Token.ident "a", Token.zeichen "-",
+      Token.zeichen "-", Token.ident "b", Token.ende] := by
+  decide
+
+/-- A block comment vanishes and may span lines. -/
+theorem lex_block :
+    lex "a /* x\ny */ b" = .ok [Token.ident "a", Token.ident "b",
+      Token.ende] := by
+  decide
+
+/-- Block comments NEST: the first `*/` closes only the inner one. -/
+theorem lex_block_verschachtelt :
+    lex "a /* x /* y */ still comment */ b" = .ok [Token.ident "a",
+      Token.ident "b", Token.ende] := by
+  decide
+
+/-- Witness of the depth counter at depth three: three openers need three
+    closers, and what follows the last one is code again. -/
+theorem lex_block_tief :
+    lex "/* /* /* */ */ */ c" = .ok [Token.ident "c", Token.ende] := by
+  decide
+
+/-- `/**/` is an empty ordinary block comment. -/
+theorem lex_block_leer :
+    lex "a /**/ b" = .ok [Token.ident "a", Token.ident "b", Token.ende] := by
+  decide
+
+/-- An unterminated block comment is a lexical error ... -/
+theorem lex_block_offen :
+    lex "a /* never closed" = .error .offenerKommentar := by
+  decide
+
+/-- ... and so is one whose nesting is not closed all the way. -/
+theorem lex_block_offen_verschachtelt :
+    lex "a /* x /* y */ z" = .error .offenerKommentar := by
+  decide
+
+/-- A stray `*/` is no comment end: it lexes as `*` and `/`. -/
+theorem lex_block_streuende_ende :
+    lex "a */ b" = .ok [Token.ident "a", Token.zeichen "*",
+      Token.zeichen "/", Token.ident "b", Token.ende] := by
+  decide
+
+/-- Comment markers inside a string literal are text, not comments. -/
+theorem lex_marker_im_text :
+    lex "\"a // b /* c\" y" = .ok [Token.text "a // b /* c",
+      Token.ident "y", Token.ende] := by
+  decide
+
+/-- A string opener inside a comment is nothing either. -/
+theorem lex_text_im_kommentar :
+    lex "/* \" */ a // \"\nb" = .ok [Token.ident "a", Token.ident "b",
+      Token.ende] := by
+  decide
+
+/-- `///` is a doc comment: `lex` drops it, `lexDoku` keeps it as trivia
+    with its text after the three slashes. -/
+theorem lex_doku :
+    lex "/// the item\nfn" = .ok [Token.wort "fn", Token.ende] := by
+  decide
+
+theorem lexDoku_doku :
+    lexDoku "/// the item\nfn" = .ok [Token.doku " the item",
+      Token.wort "fn", Token.ende] := by
+  decide
+
+/-- `////` and more slashes are an ordinary comment, as in Rust. -/
+theorem lexDoku_vier_striche :
+    lexDoku "//// not doc\n///// nor this\nfn" =
+      .ok [Token.wort "fn", Token.ende] := by
+  decide
+
+/-- Plain `//` is no doc comment. -/
+theorem lexDoku_zwei_striche :
+    lexDoku "// plain\nfn" = .ok [Token.wort "fn", Token.ende] := by
+  decide
+
+/-- A `///` inside a block comment is block text. -/
+theorem lexDoku_doku_im_block :
+    lexDoku "/* /// x */ fn" = .ok [Token.wort "fn", Token.ende] := by
+  decide
+
+/-- A doc comment as the last line, without a newline. -/
+theorem lexDoku_doku_am_ende :
+    lexDoku "fn ///" = .ok [Token.wort "fn", Token.doku "", Token.ende] := by
+  decide
+
+/-- Doc comments change no program: on these sources `lex` is `lexDoku`
+    without its `doku` tokens. -/
+theorem lex_ohne_doku_beispiel :
+    lexDoku "/// a\nfn f /* /// b */ () /// c" =
+      .ok [Token.doku " a", Token.wort "fn", Token.ident "f",
+        Token.zeichen "(", Token.zeichen ")", Token.doku " c", Token.ende] ∧
+    lex "/// a\nfn f /* /// b */ () /// c" =
+      .ok [Token.wort "fn", Token.ident "f", Token.zeichen "(",
+        Token.zeichen ")", Token.ende] := by
+  decide
+
+/-- The block closer step: `*/` at depth `d + 1` leaves depth `d`. -/
+theorem ueberBlock_schliesst (d : Nat) (cs : List Char) :
+    ueberBlock (d + 1) ('*' :: '/' :: cs) = ueberBlock d cs := rfl
+
+/-- The block opener step: `/*` at depth `d + 1` goes to depth `d + 2`. -/
+theorem ueberBlock_oeffnet (d : Nat) (cs : List Char) :
+    ueberBlock (d + 1) ('/' :: '*' :: cs) = ueberBlock (d + 2) cs := rfl
+
+/-- Depth zero consumes nothing: the comment is over. -/
+theorem ueberBlock_null (cs : List Char) : ueberBlock 0 cs = some cs := by
+  cases cs <;> rfl
+
+/-- WITNESS of the nesting rule on a nested comment: `ueberBlock` reaches the
+    text after the OUTER closer. -/
+theorem ueberBlock_verschachtelt :
+    ueberBlock 1 " a /* b */ c */ d".toList = some " d".toList := by
+  decide
+
+/-- PLANTED DEFECT: the flat variant (no depth counter) stops at the inner
+    closer, so it differs from `ueberBlock` on the same text -- the nesting
+    witness above is not vacuous. -/
+theorem ueberBlock_verschachtelt_flach :
+    ueberBlockFlach " a /* b */ c */ d".toList = some " c */ d".toList ∧
+    ueberBlockFlach " a /* b */ c */ d".toList ≠
+      ueberBlock 1 " a /* b */ c */ d".toList := by
   decide
 
 /-- A string literal carries its content without the quotes. -/
@@ -627,7 +795,7 @@ end Gabbro.Grammatik.Parser
   * `lex` returns the FIRST error where `lex.rs` accumulates refusals
     and still emits a partial stream. A certificate starts from source
     that lexes cleanly, so the partial stream has no reader; the
-    refusal CODES (`L001`-`L007`) are not modelled either.
+    refusal CODES (`L001`-`L008`) are not modelled either.
   * Integer values are unbounded `Nat`: the `u128` overflow refusal
     (`L005`) has no counterpart -- a certificate value past `2^128`
     would need its own refusal at the typing layer.

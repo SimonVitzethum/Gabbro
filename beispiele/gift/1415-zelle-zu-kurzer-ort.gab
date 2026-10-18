@@ -1,8 +1,8 @@
--- erwartet: N455
--- **Copy-in into a smaller local, and copy-out of a longer string (SPRACHE-EFFIZIENZ #13).**
--- A cell of max 8 does not fit a local of max 4 (the loaded string may hold 8 characters), and
--- a string of max 16 does not fit the cell: both fall under the copy rule `N455`, exactly as
--- they do between two locals.
+// erwartet: N455
+// **Copy-in into a smaller local, and copy-out of a longer string (SPRACHE-EFFIZIENZ #13).**
+// A cell of max 8 does not fit a local of max 4 (the loaded string may hold 8 characters), and
+// a string of max 16 does not fit the cell: both fall under the copy rule `N455`, exactly as
+// they do between two locals.
 module gift::zelle_zu_kurz {
 
 const N : u32 = 4;

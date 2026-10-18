@@ -1,16 +1,16 @@
--- erwartet: M103
--- **An `awaits` load whose index runs past the end of the array -- the other
--- half of the hole `beispiele/gift/1042` closes.**
---
--- The receiving side of a pairing was as unchecked as the read-modify-write:
--- `M1::index_pruefen` ran at an assignment and at a `publishes` and at neither
--- atomic LOAD. Measured 2026-09-16 through the unchanged checker on this shape:
--- `0 errors`.
---
--- It reads rather than writes, so the fault is one step milder than 1042's --
--- and only one step. The load is what the acquire hangs on, so an
--- out-of-range one acquires visibility from an object outside the array and
--- then reads `bericht` under it.
+// erwartet: M103
+// **An `awaits` load whose index runs past the end of the array -- the other
+// half of the hole `beispiele/gift/1042` closes.**
+//
+// The receiving side of a pairing was as unchecked as the read-modify-write:
+// `M1::index_pruefen` ran at an assignment and at a `publishes` and at neither
+// atomic LOAD. Measured 2026-09-16 through the unchanged checker on this shape:
+// `0 errors`.
+//
+// It reads rather than writes, so the fault is one step milder than 1042's --
+// and only one step. The load is what the acquire hangs on, so an
+// out-of-range one acquires visibility from an object outside the array and
+// then reads `bericht` under it.
 module gift::atomic_array_awaits_out_of_range {
 
 static mut bericht : u64 = 0;

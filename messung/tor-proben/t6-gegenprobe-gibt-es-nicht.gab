@@ -1,4 +1,4 @@
--- W24-Vorlauf: `counterprobe … expects` nennt eine Sonde, die nirgends steht.
+// W24-Vorlauf: `counterprobe … expects` nennt eine Sonde, die nirgends steht.
 module w24::t6 {
 
 static mut k : u32 = 0;

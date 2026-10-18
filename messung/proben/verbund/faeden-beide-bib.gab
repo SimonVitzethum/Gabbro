@@ -1,7 +1,7 @@
--- **Link probe, positive twin of 1247 (Opus agent F): threads in BOTH units, no race.** The
--- library runs a worker pool over its own lock-guarded counter and exports a pure `norm`.
--- The app is `faeden-beide-app.gab`; the pair links -- before Opus F it fell with a blanket
--- `N503`.
+// **Link probe, positive twin of 1247 (Opus agent F): threads in BOTH units, no race.** The
+// library runs a worker pool over its own lock-guarded counter and exports a pure `norm`.
+// The app is `faeden-beide-app.gab`; the pair links -- before Opus F it fell with a blanket
+// `N503`.
 module bib {
 
 pub type Wert = u32 in 0 .. 100;

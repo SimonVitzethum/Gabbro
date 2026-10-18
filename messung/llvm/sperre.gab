@@ -1,14 +1,14 @@
--- Sperren an jedem Ausgang (LLVM-Erzeuger): Gegenprobe zu einem gemessenen Fehler.
---
--- `g` kehrt in einem `if` unter der Sperre zurück und läuft sonst bis zum Blockende. Bis
--- zum 2026-10-17 leerte das `return` den Sperrenstapel des Erzeugers, und der Pfad OHNE
--- `return` behielt die Sperre für immer: der zweite Ruf hing. Hier ruft `main` den
--- Fall-through-Pfad dreimal und liest danach unter der Sperre (`return Z` liest VOR der
--- Freigabe): erwartet 3, auf beiden Zielen.
---
--- `M` ist eine maskierende Sperre, nur DEKLARIERT und in einer nie gerufenen Funktion
--- genommen: sie schreibt ihre Befehle (`cli` / `msr daifset`), und das Programm läuft im
--- Benutzermodus trotzdem, weil keine davon ausgeführt wird.
+// Sperren an jedem Ausgang (LLVM-Erzeuger): Gegenprobe zu einem gemessenen Fehler.
+//
+// `g` kehrt in einem `if` unter der Sperre zurück und läuft sonst bis zum Blockende. Bis
+// zum 2026-10-17 leerte das `return` den Sperrenstapel des Erzeugers, und der Pfad OHNE
+// `return` behielt die Sperre für immer: der zweite Ruf hing. Hier ruft `main` den
+// Fall-through-Pfad dreimal und liest danach unter der Sperre (`return Z` liest VOR der
+// Freigabe): erwartet 3, auf beiden Zielen.
+//
+// `M` ist eine maskierende Sperre, nur DEKLARIERT und in einer nie gerufenen Funktion
+// genommen: sie schreibt ihre Befehle (`cli` / `msr daifset`), und das Programm läuft im
+// Benutzermodus trotzdem, weil keine davon ausgeführt wird.
 module sperre {
 pub static mut Z : u32 = 0;
 pub static mut W : u32 = 0;

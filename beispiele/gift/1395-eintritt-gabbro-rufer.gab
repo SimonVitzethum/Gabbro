@@ -1,12 +1,12 @@
--- erwartet: N576
--- **A function that takes an `entry fn` is named by no Gabbro source.**
---
--- `starte` hands its `entry fn` on to the foreign start, as the rule asks. But `weiter` CALLS it
--- -- and a Gabbro caller has no code of its own to hand: the only values of the type are the
--- designators a generated driver writes around declared roots (C-free lane, C2 slice 3). Here
--- the caller forwards its own parameter, so even this call is code from nowhere: `weiter` has
--- no caller either, and every chain of such forwards ends at a Gabbro call site or at the
--- driver. Only the driver may stand at its head.
+// erwartet: N576
+// **A function that takes an `entry fn` is named by no Gabbro source.**
+//
+// `starte` hands its `entry fn` on to the foreign start, as the rule asks. But `weiter` CALLS it
+// -- and a Gabbro caller has no code of its own to hand: the only values of the type are the
+// designators a generated driver writes around declared roots (C-free lane, C2 slice 3). Here
+// the caller forwards its own parameter, so even this call is code from nowhere: `weiter` has
+// no caller either, and every chain of such forwards ends at a Gabbro call site or at the
+// driver. Only the driver may stand at its head.
 module gift::eintritt_gabbro_rufer {
 
 assume start_vertrag

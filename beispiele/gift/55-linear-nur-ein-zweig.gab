@@ -1,6 +1,6 @@
--- erwartet: L103
--- **Nur ein Zweig.** Ein Wert, der nur in einem Zweig verbraucht wird, ist auf dem anderen
--- Weg ein Leck. Genau hier trennt sich LINEAR von AFFIN: affin erlaubt das, linear nicht.
+// erwartet: L103
+// **Nur ein Zweig.** Ein Wert, der nur in einem Zweig verbraucht wird, ist auf dem anderen
+// Weg ein Leck. Genau hier trennt sich LINEAR von AFFIN: affin erlaubt das, linear nicht.
 module gift {
 linear ghost type BootPhase;
 extern fn abschliessen(b : BootPhase) effects { consumes b } costs <= 2 ops;

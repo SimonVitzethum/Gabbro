@@ -1,11 +1,11 @@
--- nachricht -- message passing with a payload across two real threads (LLVM backend).
---
--- `erzeuger` writes two payload words and publishes the flag `BEREIT` (release store);
--- `verbraucher` polls the flag with `awaits` (acquire load) and, on the confirming branch,
--- reads both payload words. The sum is 42 on every schedule: a reader that saw the flag but
--- not the payload would return 40, 2 or 0. If the producer never publishes inside the polling
--- bound the watchdog `abbruch` leaves with exit code 99 (loud, never 42).
--- Expected exit code: 42 on both targets.
+// nachricht -- message passing with a payload across two real threads (LLVM backend).
+//
+// `erzeuger` writes two payload words and publishes the flag `BEREIT` (release store);
+// `verbraucher` polls the flag with `awaits` (acquire load) and, on the confirming branch,
+// reads both payload words. The sum is 42 on every schedule: a reader that saw the flag but
+// not the payload would return 40, 2 or 0. If the producer never publishes inside the polling
+// bound the watchdog `abbruch` leaves with exit code 99 (loud, never 42).
+// Expected exit code: 42 on both targets.
 module messung::nachricht {
 
 pub static mut nutzlast_a : u32 in 0 .. 1000 = 0;
@@ -14,9 +14,9 @@ pub static mut ergebnis   : u32 in 0 .. 2000 = 0;
 
 pub atomic BEREIT : bool release;
 
--- The checker's payload rule (N291, OFFEN O25) still wants every cross-thread payload guarded by a
--- lock; the flag round trip stays the object of the test (the release store and the acquire
--- load carry the payload IR), the lock guards the payload words as the rule demands.
+// The checker's payload rule (N291, OFFEN O25) still wants every cross-thread payload guarded by a
+// lock; the flag round trip stays the object of the test (the release store and the acquire
+// load carry the payload IR), the lock guards the payload words as the rule demands.
 pub lock NL protects { nutzlast_a, nutzlast_b, ergebnis } rank 0 held <= 16 ops;
 
 assume erzeuger_laeuft

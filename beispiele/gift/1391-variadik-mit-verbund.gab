@@ -1,11 +1,11 @@
--- erwartet: N573
--- **A record passed through `...` has no declared layout on the other side.**
---
--- Behind the marker C converts nothing and checks nothing: an integer is promoted to at least
--- `int` and keeps its value, a pointer passes as it is -- but a record travels by the variadic
--- part's own classification of its bytes, which the foreign function's reader is not
--- declared against. Only integers and pointers may stand behind `...` (C-free lane, C2,
--- 2026-09-30).
+// erwartet: N573
+// **A record passed through `...` has no declared layout on the other side.**
+//
+// Behind the marker C converts nothing and checks nothing: an integer is promoted to at least
+// `int` and keeps its value, a pointer passes as it is -- but a record travels by the variadic
+// part's own classification of its bytes, which the foreign function's reader is not
+// declared against. Only integers and pointers may stand behind `...` (C-free lane, C2,
+// 2026-09-30).
 module gift::variadik_mit_verbund {
 
 type Paar = { a : u64, b : u64, };

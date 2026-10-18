@@ -1,7 +1,7 @@
--- erwartet: N562
--- Gift 1353 -- **Two gates on one system-call variable.** A binding's register map names ONE gate's
--- parameters; a second gate on the same variable would read a map written for the first
--- (OFFEN O31).
+// erwartet: N562
+// Gift 1353 -- **Two gates on one system-call variable.** A binding's register map names ONE gate's
+// parameters; a second gate on the same variable would read a map written for the first
+// (OFFEN O31).
 
 module gift::zwei_tore_eine_variable {
 

@@ -1,4 +1,4 @@
--- W24-Vorlauf: das Tor SCHREIBT die gemessene Groesse.
+// W24-Vorlauf: das Tor SCHREIBT die gemessene Groesse.
 module w24::t1 {
 
 static mut k : u32 = 0;

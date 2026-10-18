@@ -1,10 +1,10 @@
--- erwartet: N464
--- **1158 -- a buffer of words, and the kernel counts bytes (fix lane F5, review G04 F3).**
---
--- `lenof(buf)` counts the pointee's ELEMENTS; the kernel's `len` counts BYTES. Over
--- `u32` elements a `len <= lenof(buf)` lets the kernel write four times the object.
--- `N464` demands a byte pointee (`u8`/`i8`) at a `syscall` buffer, so the one clause
--- means one number.
+// erwartet: N464
+// **1158 -- a buffer of words, and the kernel counts bytes (fix lane F5, review G04 F3).**
+//
+// `lenof(buf)` counts the pointee's ELEMENTS; the kernel's `len` counts BYTES. Over
+// `u32` elements a `len <= lenof(buf)` lets the kernel write four times the object.
+// `N464` demands a byte pointee (`u8`/`i8`) at a `syscall` buffer, so the one clause
+// means one number.
 
 module gift1158 {
 

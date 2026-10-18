@@ -217,7 +217,7 @@ its width (`inb/inw/inl`, `outb/outw/outl`, 8/16/32 bits, port number in `dx`), 
 `u16` handle plus the offset in 16 bits, every access `asm sideeffect` with `~{memory}`. A `+=` at a
 port register, any address use of one, a 64-bit register and banks/mirrors are refused by name
 (`Y102`/`Y103`); the device is refused on `aarch64` (no port space, `gift/1470`, target-selected by
-its `-- ziel: aarch64` line). **Verified:** IR tests and `objdump -d` (`inb %dx,%al`, `outb %al,%dx`);
+its `// ziel: aarch64` line). **Verified:** IR tests and `objdump -d` (`inb %dx,%al`, `outb %al,%dx`);
 not executed (a `#GP` in user space).
 
 **`boot` and `entrust` stay refused by name** on both targets, and the reason is the model's: the

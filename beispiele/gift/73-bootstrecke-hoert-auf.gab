@@ -1,9 +1,9 @@
--- erwartet: O004
--- **Gift 73 -- eine Strecke, die unterwegs aufhoert.**
---
--- `hochlauf` sagt `roh -> caps` zu und macht nur den ersten Schritt. Die Zusage steht ueber
--- dem Rumpf, und die Schritte darin muessen sich zu ihr zusammensetzen -- sonst ist die
--- Zeile darueber eine Behauptung.
+// erwartet: O004
+// **Gift 73 -- eine Strecke, die unterwegs aufhoert.**
+//
+// `hochlauf` sagt `roh -> caps` zu und macht nur den ersten Schritt. Die Zusage steht ueber
+// dem Rumpf, und die Schritte darin muessen sich zu ihr zusammensetzen -- sonst ist die
+// Zeile darueber eine Behauptung.
 
 module gift73 {
 

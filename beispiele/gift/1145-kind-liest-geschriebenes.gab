@@ -1,9 +1,9 @@
--- erwartet: N457
--- **1145 -- the child READS a carrier the parent writes (fix lane F3).**
---
--- Write-read is a race too: the child reads `g` while the parent writes it
--- after the region, and no lock orders the two. A carrier nobody writes would
--- be read-only and stay legal; this one is written.
+// erwartet: N457
+// **1145 -- the child READS a carrier the parent writes (fix lane F3).**
+//
+// Write-read is a race too: the child reads `g` while the parent writes it
+// after the region, and no lock orders the two. A carrier nobody writes would
+// be read-only and stay legal; this one is written.
 
 module gift1145 {
 

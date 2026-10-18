@@ -1,8 +1,8 @@
--- erwartet: V007
--- **Die Spiegelseite: gelesen VOR der Erwerbung.**
---
--- Ein acquire-Laden macht die Nutzlast von dort an sichtbar. Ein Lesen davor sieht den alten
--- Wert -- und die `awaits`-Zeile behauptet das Gegenteil.
+// erwartet: V007
+// **Die Spiegelseite: gelesen VOR der Erwerbung.**
+//
+// Ein acquire-Laden macht die Nutzlast von dort an sichtbar. Ein Lesen davor sieht den alten
+// Wert -- und die `awaits`-Zeile behauptet das Gegenteil.
 module gift::nutzlast_vorher {
 
 static mut n : u32 = 0;

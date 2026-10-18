@@ -1,6 +1,6 @@
--- erwartet: N565
--- Gift 1357 -- **Two targets and no selection.** Which kernel a gate calls is ONE fact of the unit: with
--- two blocks and no `target T;` it is not said (OFFEN O31).
+// erwartet: N565
+// Gift 1357 -- **Two targets and no selection.** Which kernel a gate calls is ONE fact of the unit: with
+// two blocks and no `target T;` it is not said (OFFEN O31).
 
 module gift::zwei_ziele_keine_wahl {
 

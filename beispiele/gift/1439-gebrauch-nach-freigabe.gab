@@ -1,6 +1,6 @@
--- erwartet: N586
--- A freed name stays dead: the slot may hold another value (or the link
--- word) now, so no read may name it. Nothing else is wrong with this unit.
+// erwartet: N586
+// A freed name stays dead: the slot may hold another value (or the link
+// word) now, so no read may name it. Nothing else is wrong with this unit.
 module gift::gebrauch_nach_freigabe {
 arena Vorrat capacity 0 .. 4 of u64;
 

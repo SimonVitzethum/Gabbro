@@ -1,13 +1,13 @@
--- erwartet: M147
--- **V4 freshness across an indirect call, the boundary: refresh and store stay
--- silent, the `narrow` subject falls.**
---
--- Arm 1 re-reads AFTER the indirect call -- the re-read IS the refresh, so
--- deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
--- the call -- store/move positions never decide, so no refusal. Arm 3 narrows
--- the stale name itself: a `narrow` subject is a decision position, and only
--- that decision falls, as `M147`. A run over this file must report exactly
--- one `M147`, at arm 3.
+// erwartet: M147
+// **V4 freshness across an indirect call, the boundary: refresh and store stay
+// silent, the `narrow` subject falls.**
+//
+// Arm 1 re-reads AFTER the indirect call -- the re-read IS the refresh, so
+// deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
+// the call -- store/move positions never decide, so no refusal. Arm 3 narrows
+// the stale name itself: a `narrow` subject is a decision position, and only
+// that decision falls, as `M147`. A run over this file must report exactly
+// one `M147`, at arm 3.
 module gift717 {
 
 static mut ZUSTAND : u32 = 0;

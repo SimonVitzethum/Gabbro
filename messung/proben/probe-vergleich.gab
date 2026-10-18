@@ -1,12 +1,12 @@
--- W24-Vorlauf: **sagt der PRUEFER etwas zu einem Vergleich, den sein eigener Bereich
--- konstant macht?**
---
--- `F06` faellt bei `cc -Werror=type-limits`, weil `w != MUSTER` immer wahr ist: `w` ist
--- ein Index bis 8191, `MUSTER` ist `0xdead_beef_dead_beef`. Die Frage dieser Datei ist,
--- ob Gabbro das seinerseits sieht -- ohne die Traversierung, an einer gewoehnlichen
--- lokalen Variablen mit BEREICHSTYP.
---
--- Diese Datei ist eine MESSUNG und kein Beispiel.
+// W24-Vorlauf: **sagt der PRUEFER etwas zu einem Vergleich, den sein eigener Bereich
+// konstant macht?**
+//
+// `F06` faellt bei `cc -Werror=type-limits`, weil `w != MUSTER` immer wahr ist: `w` ist
+// ein Index bis 8191, `MUSTER` ist `0xdead_beef_dead_beef`. Die Frage dieser Datei ist,
+// ob Gabbro das seinerseits sieht -- ohne die Traversierung, an einer gewoehnlichen
+// lokalen Variablen mit BEREICHSTYP.
+//
+// Diese Datei ist eine MESSUNG und kein Beispiel.
 
 module probe::vergleich {
 

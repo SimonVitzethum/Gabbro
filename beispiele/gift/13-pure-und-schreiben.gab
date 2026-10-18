@@ -1,6 +1,6 @@
--- erwartet: E002
--- `pure` heisst „fasst nichts an". Eine zweite Wirkung daneben ist ein Widerspruch,
--- kein Zusatz.
+// erwartet: E002
+// `pure` heisst „fasst nichts an". Eine zweite Wirkung daneben ist ein Widerspruch,
+// kein Zusatz.
 module gift {
 
 type T = { x : u32 in 0 .. 10, };

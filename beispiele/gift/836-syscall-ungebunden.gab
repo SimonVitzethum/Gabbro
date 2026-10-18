@@ -1,8 +1,8 @@
--- erwartet: N065
--- **Gift 808 -- an unbound parameter has no register on entry.**
---
--- `len` is declared and never bound. The stub would read a value nobody put
--- there -- so the parameter falls, by name.
+// erwartet: N065
+// **Gift 808 -- an unbound parameter has no register on entry.**
+//
+// `len` is declared and never bound. The stub would read a value nobody put
+// there -- so the parameter falls, by name.
 
 module gift::syscall_ungebunden {
 

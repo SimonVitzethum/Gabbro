@@ -62,7 +62,7 @@ fn zwei_gleiche_programme_geben_gleiche_zeugnisse() {
     let q = lies("messung/proben/probe-zeugnis-injektiv-a.gab");
     assert_eq!(zeugnis(&q), zeugnis(&q.clone()));
     // And a copy with different comment text is the same PROGRAM.
-    let mit_kommentar = format!("-- a different comment, the same program\n{q}");
+    let mit_kommentar = format!("// a different comment, the same program\n{q}");
     assert_eq!(
         zeugnis(&q),
         zeugnis(&mit_kommentar),

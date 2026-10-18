@@ -1,14 +1,14 @@
--- erwartet: M147
--- **V4 freshness across a TRANSITIVE call chain, the disjoint boundary: a chain naming another carrier expires nothing.**
---
--- `intakt` reads `alt` from `ZUSTAND` and calls `mitte_fremd`, whose chain writes
--- only `ANDERE` (`fremd` declares `effects { writes ANDERE }`, `mitte_fremd`
--- declares the same covering it) -- so `alt` stays fresh and deciding on it stays
--- silent. `faellig` is the control: the same read, but `mitte`'s chain names
--- `ZUSTAND`, so the decision falls as `M147`. A run over this file must report
--- `M147` at the control only -- the silent arm is the pin this file owes:
--- carrier granularity at the call edge, one hop further out, no path overlap,
--- syntax only. The one-hop shape of this boundary is pinned by gift/753.
+// erwartet: M147
+// **V4 freshness across a TRANSITIVE call chain, the disjoint boundary: a chain naming another carrier expires nothing.**
+//
+// `intakt` reads `alt` from `ZUSTAND` and calls `mitte_fremd`, whose chain writes
+// only `ANDERE` (`fremd` declares `effects { writes ANDERE }`, `mitte_fremd`
+// declares the same covering it) -- so `alt` stays fresh and deciding on it stays
+// silent. `faellig` is the control: the same read, but `mitte`'s chain names
+// `ZUSTAND`, so the decision falls as `M147`. A run over this file must report
+// `M147` at the control only -- the silent arm is the pin this file owes:
+// carrier granularity at the call edge, one hop further out, no path overlap,
+// syntax only. The one-hop shape of this boundary is pinned by gift/753.
 module gift770 {
 
 static mut ZUSTAND : u32 = 0;

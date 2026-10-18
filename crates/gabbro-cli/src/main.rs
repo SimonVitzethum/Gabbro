@@ -447,7 +447,7 @@ fn main() -> std::process::ExitCode {
                     eprintln!("gabbro: {datei} not readable");
                     return std::process::ExitCode::from(1);
                 };
-                ganz.push_str(&format!("-- >>> {datei}\n"));
+                ganz.push_str(&format!("// >>> {datei}\n"));
                 ganz.push_str(&quelle);
                 ganz.push('\n');
                 quellen.push(datei.to_string());

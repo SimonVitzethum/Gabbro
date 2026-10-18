@@ -1,15 +1,15 @@
--- 118 -- A lock invariant on the lock declaration (lane 156).
---
--- One lock `K` protects two carriers `A` and `B`, and the clause
--- `invariant A.slots[0].x + B.slots[0].y == SUMME` states the conserved sum:
--- what holds whenever `K` is free. The checker holds the clause's SHAPE --
--- both carriers stand in the `protects` set (`N275`), the predicate is pure
--- (`N276`), every name resolves (`N277`) -- and records its TRUTH at every
--- release as obligation `L`, like an `ensures`. Both functions hold `K` by
--- signature (`requires Held(K)`, the `beispiele/01` idiom), so their bodies
--- touch the guarded slots directly; each writes both carriers and keeps the
--- sum. Not declared `concurrent`: both share the signature lock `K`, and the
--- start rule N240 forbids two threads starting under one such lock.
+// 118 -- A lock invariant on the lock declaration (lane 156).
+//
+// One lock `K` protects two carriers `A` and `B`, and the clause
+// `invariant A.slots[0].x + B.slots[0].y == SUMME` states the conserved sum:
+// what holds whenever `K` is free. The checker holds the clause's SHAPE --
+// both carriers stand in the `protects` set (`N275`), the predicate is pure
+// (`N276`), every name resolves (`N277`) -- and records its TRUTH at every
+// release as obligation `L`, like an `ensures`. Both functions hold `K` by
+// signature (`requires Held(K)`, the `beispiele/01` idiom), so their bodies
+// touch the guarded slots directly; each writes both carriers and keeps the
+// sum. Not declared `concurrent`: both share the signature lock `K`, and the
+// start rule N240 forbids two threads starting under one such lock.
 module beispiel::sperrinvariante_erhaltung {
 
 const NSLOTS : u32 = 2;

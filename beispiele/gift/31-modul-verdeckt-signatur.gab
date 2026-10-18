@@ -1,15 +1,15 @@
--- erwartet: M101
---
--- Zwei Module mit gleichnamigem `fn`. Der Aufruf nennt das ENGE ausdruecklich --
--- `eins::eng(200)` -- und 200 passt nicht in `0 .. 10`.
---
--- Bis zum 2026-08-14 loeste M1 Signaturen nach dem BLANKEN Namen auf: das gleichnamige
--- `fn` im anderen Modul gewann, und die Bereichspruefung des Arguments verschwand still.
--- Die Aufloesung geht jetzt vom eigenen Modul nach aussen.
---
--- Aus der Gegenpruefung vom 2026-08-14 (U11/U12).
+// erwartet: M101
+//
+// Zwei Module mit gleichnamigem `fn`. Der Aufruf nennt das ENGE ausdruecklich --
+// `eins::eng(200)` -- und 200 passt nicht in `0 .. 10`.
+//
+// Bis zum 2026-08-14 loeste M1 Signaturen nach dem BLANKEN Namen auf: das gleichnamige
+// `fn` im anderen Modul gewann, und die Bereichspruefung des Arguments verschwand still.
+// Die Aufloesung geht jetzt vom eigenen Modul nach aussen.
+//
+// Aus der Gegenpruefung vom 2026-08-14 (U11/U12).
 
--- Zwei Module, beide mit `fn eng`. Der Aufruf uebergibt 200 an das ENGE (0..10).
+// Zwei Module, beide mit `fn eng`. Der Aufruf uebergibt 200 an das ENGE (0..10).
 module eins {
     pub type Eng = u32 in 0 .. 10;
     pub impl fn eng(x : Eng) -> u32 effects { pure } { return x; }

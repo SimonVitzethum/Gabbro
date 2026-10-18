@@ -1,13 +1,13 @@
--- erwartet: O006
--- **Ein `locks { }` machte `O006` stumm.**
---
--- `enthaelt_schritt` sah nur die OBERSTE Ebene des Schleifenrumpfs, und von den Anweisungen
--- dort nur `Ruf` und ein `Let` mit direktem Ruf. Ein `locks { }` um denselben Schritt
--- genuegte.
---
--- > Eine Regel, die an der Einrueckung endet, ist keine Regel ueber den Fluss.
---
--- Der Fall lag einen syntaktischen Schritt neben der kanonischen Form.
+// erwartet: O006
+// **Ein `locks { }` machte `O006` stumm.**
+//
+// `enthaelt_schritt` sah nur die OBERSTE Ebene des Schleifenrumpfs, und von den Anweisungen
+// dort nur `Ruf` und ein `Let` mit direktem Ruf. Ein `locks { }` um denselben Schritt
+// genuegte.
+//
+// > Eine Regel, die an der Einrueckung endet, ist keine Regel ueber den Fluss.
+//
+// Der Fall lag einen syntaktischen Schritt neben der kanonischen Form.
 
 module gift {
 

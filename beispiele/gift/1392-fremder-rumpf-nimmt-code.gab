@@ -1,11 +1,11 @@
--- erwartet: N574
--- **A foreign body takes no Gabbro code.**
---
--- `arbeit` writes a `static mut`; `starte` is declared `effects { pure }` and takes a pointer to
--- it. What the foreign code does with that pointer is outside every rule: it may call it here
--- (the write happens inside a callee whose `effects` do not name it) or on a new thread (a race
--- the concurrency rules never see). Until 2026-09-30 this checked clean with one hint; refused
--- by name since (C-free lane, C2, OFFEN O39).
+// erwartet: N574
+// **A foreign body takes no Gabbro code.**
+//
+// `arbeit` writes a `static mut`; `starte` is declared `effects { pure }` and takes a pointer to
+// it. What the foreign code does with that pointer is outside every rule: it may call it here
+// (the write happens inside a callee whose `effects` do not name it) or on a new thread (a race
+// the concurrency rules never see). Until 2026-09-30 this checked clean with one hint; refused
+// by name since (C-free lane, C2, OFFEN O39).
 module gift::fremder_rumpf_nimmt_code {
 
 static mut ZAEHLER : u64 in 0 .. 100 = 0;

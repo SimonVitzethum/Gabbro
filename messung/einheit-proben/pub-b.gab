@@ -1,4 +1,4 @@
--- Modul B nennt BEIDE Namen aus A. `Geheim` ist dort nicht `pub` -- das muss fallen.
+// Modul B nennt BEIDE Namen aus A. `Geheim` ist dort nicht `pub` -- das muss fallen.
 module b {
 
 use a::Offen;

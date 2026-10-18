@@ -1,16 +1,16 @@
--- 160 -- A checked clone handoff that reads the handed stack (lane 260).
---
--- The clean twin of `beispiele/gift/1181`: the same gate, but the region
--- stands behind the `if v == 0` guard holding nothing but it, so the gate
--- lowers to the inline trap (lane 260) and the child enters the region by
--- jump at its label. The region reads `stapel` -- exactly what the gate
--- call handed over (`roher_start(art, stapel)`) -- so the spill rules stay
--- silent (`N451`/`N452`), and the path is well-formed beside it
--- (`N448`/`N449`, `N450`, `N456`/`N457` silent). 0 errors, 0 hints at the
--- checker; the emitter lowers gate and region, and the C compiles.
---
--- Same shape gate as 155/156 (not the raw clone, `1000` not an OS number;
--- the real-number counterpart lives outside the tree).
+// 160 -- A checked clone handoff that reads the handed stack (lane 260).
+//
+// The clean twin of `beispiele/gift/1181`: the same gate, but the region
+// stands behind the `if v == 0` guard holding nothing but it, so the gate
+// lowers to the inline trap (lane 260) and the child enters the region by
+// jump at its label. The region reads `stapel` -- exactly what the gate
+// call handed over (`roher_start(art, stapel)`) -- so the spill rules stay
+// silent (`N451`/`N452`), and the path is well-formed beside it
+// (`N448`/`N449`, `N450`, `N456`/`N457` silent). 0 errors, 0 hints at the
+// checker; the emitter lowers gate and region, and the C compiles.
+//
+// Same shape gate as 155/156 (not the raw clone, `1000` not an OS number;
+// the real-number counterpart lives outside the tree).
 
 module beispiel::kind_liest_stapel {
 
@@ -53,12 +53,12 @@ impl fn starter(art : u64, stapel : u64) -> u64
     return v;
 }
 
--- **The targets (OFFEN O31).** The gate above names
--- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
--- carried until Opus agent L, unchanged; `metal` is the same number and register map
--- through `int $0x80` into the image's kernel entry, which destroys no register, under
--- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
--- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+// **The targets (OFFEN O31).** The gate above names
+// no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+// carried until Opus agent L, unchanged; `metal` is the same number and register map
+// through `int $0x80` into the image's kernel entry, which destroys no register, under
+// its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+// hosted stub unchanged; `gabbro emit --target metal` builds the other.
 target linux_x86_64 abi linux arch x86_64 {
     sys_roher_start = number 1000
         regs in { rdi = art, rsi = stapel }

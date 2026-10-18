@@ -1,26 +1,26 @@
--- erwartet: N449 allein
--- **1110 -- a `child` path that can fall through.**
---
--- No `return` stands inside (so `N448` stays silent: the return is not the
--- fault here), the gate is valid and present (`N446`/`N447`/`N450`
--- silent) -- but the block ends in a `let`, and past the block stands the
--- caller frame. The fall-through IS the return `N448` forbids, one
--- statement later: every path through the block must end in a call that
--- never returns (a `-> never` gate, as in 1111's twin) or in a loop that
--- never exits.
---
--- Lane 249 narrowed this probe to its subject: the trailing `let` once
--- read the caller parameter (`let s = stapel`), an incidental spill read
--- the new `N452` owns. The literal keeps the shape -- a block ending in
--- a `let`, falling past its end -- with nothing else to say.
---
--- Without this rule NOTHING falls -- the emitted C is a braced block that
--- falls out of itself, and `cc -Werror` takes it. Same shape gate as
--- 1107-1109 (not the raw clone, `1000` not an OS number).
---
--- Fix lane F3 (2026-09-21): `N450` is per region now -- a gate call must
--- dominate the `child` block. The probe calls the gate before the region
--- (the 155 shape) so `N450` stays silent and the probe keeps its one code.
+// erwartet: N449 allein
+// **1110 -- a `child` path that can fall through.**
+//
+// No `return` stands inside (so `N448` stays silent: the return is not the
+// fault here), the gate is valid and present (`N446`/`N447`/`N450`
+// silent) -- but the block ends in a `let`, and past the block stands the
+// caller frame. The fall-through IS the return `N448` forbids, one
+// statement later: every path through the block must end in a call that
+// never returns (a `-> never` gate, as in 1111's twin) or in a loop that
+// never exits.
+//
+// Lane 249 narrowed this probe to its subject: the trailing `let` once
+// read the caller parameter (`let s = stapel`), an incidental spill read
+// the new `N452` owns. The literal keeps the shape -- a block ending in
+// a `let`, falling past its end -- with nothing else to say.
+//
+// Without this rule NOTHING falls -- the emitted C is a braced block that
+// falls out of itself, and `cc -Werror` takes it. Same shape gate as
+// 1107-1109 (not the raw clone, `1000` not an OS number).
+//
+// Fix lane F3 (2026-09-21): `N450` is per region now -- a gate call must
+// dominate the `child` block. The probe calls the gate before the region
+// (the 155 shape) so `N450` stays silent and the probe keeps its one code.
 
 module gift1110 {
 

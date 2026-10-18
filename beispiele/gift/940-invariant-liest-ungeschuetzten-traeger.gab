@@ -1,10 +1,10 @@
--- erwartet: N275
--- **A lock invariant reading a carrier the lock does not protect falls.**
---
--- `K` protects `A` and `B`, but the invariant also reads `C`. An invariant
--- over carriers the lock does not guard is not a resource invariant
--- (`SperrInvOk`): the acquiring thread's environment move may change exactly
--- the protected carriers, so anything wider is stale at the first acquire.
+// erwartet: N275
+// **A lock invariant reading a carrier the lock does not protect falls.**
+//
+// `K` protects `A` and `B`, but the invariant also reads `C`. An invariant
+// over carriers the lock does not guard is not a resource invariant
+// (`SperrInvOk`): the acquiring thread's environment move may change exactly
+// the protected carriers, so anything wider is stale at the first acquire.
 module gift::invariant_liest_ungeschuetzten_traeger {
 
 const NSLOTS : u32 = 2;

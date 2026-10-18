@@ -1,23 +1,23 @@
--- 158 -- **Growth below a ceiling, committed at run time.**
---
--- A dynamic arena declares a ceiling `max M` (address reserved at load) and
--- a committed prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`).
--- `Vorrat` reserves `8` slots and starts `4` committed (`capacity 2 .. 4
--- max 8`); one `grow ... by 4` commits the rest, so the eight allocations
--- below name slots the runtime made usable -- every one past the old `hi`
--- reads back what was stored. The second phase (`reset`, then allocate
--- again) is the phase discipline the monotone commit relies on: `reset`
--- starts a fresh generation and leaves the committed prefix alone.
---
--- Fully clean, and it emits: a `gabbro_arena_desc` beside two
--- `_Static_assert` pins (no `buf[8]` storage -- address reserved, storage
--- not touched), `alloc` against the committed word, `grow` as the runtime's
--- call. The slots are 16-bit (the reads widen to 32 bits on load, the `99`
--- shape), so the eight-way sum fits `u32` by construction. The driver
--- (`instrumente/pruefe-emission.sh`, `beispiel158`) reserves at load and
--- runs the main path; the `else` path runs under a refusing stub
--- (`beispiel158-else`). Executed results: 118 on the main path, 1 on the
--- refusal path (see the report).
+// 158 -- **Growth below a ceiling, committed at run time.**
+//
+// A dynamic arena declares a ceiling `max M` (address reserved at load) and
+// a committed prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`).
+// `Vorrat` reserves `8` slots and starts `4` committed (`capacity 2 .. 4
+// max 8`); one `grow ... by 4` commits the rest, so the eight allocations
+// below name slots the runtime made usable -- every one past the old `hi`
+// reads back what was stored. The second phase (`reset`, then allocate
+// again) is the phase discipline the monotone commit relies on: `reset`
+// starts a fresh generation and leaves the committed prefix alone.
+//
+// Fully clean, and it emits: a `gabbro_arena_desc` beside two
+// `_Static_assert` pins (no `buf[8]` storage -- address reserved, storage
+// not touched), `alloc` against the committed word, `grow` as the runtime's
+// call. The slots are 16-bit (the reads widen to 32 bits on load, the `99`
+// shape), so the eight-way sum fits `u32` by construction. The driver
+// (`instrumente/pruefe-emission.sh`, `beispiel158`) reserves at load and
+// runs the main path; the `else` path runs under a refusing stub
+// (`beispiel158-else`). Executed results: 118 on the main path, 1 on the
+// refusal path (see the report).
 module beispiel::arena_commit {
 arena Vorrat capacity 2 .. 4 max 8 of u16;
 

@@ -1,12 +1,12 @@
--- erwartet: N451
--- **1147 -- a caller `let` as a lock index on the child path (fix lane F3, review G11 F3).**
---
--- The emission walker reads the BODY of a `locks` block, never the lock
--- place: `locks S[w]` evaluates `w`, a caller temporary that died at the
--- gate. The exhaustive `kindzugriff` walk reads the lock place's indices.
--- The language declares no lock arrays, so an indexed lock place is refused
--- on its own today (`H016`, `E006` beside it); the probe pins that the spill
--- rule no longer leans on that -- the day a lock family lands, `N451` stands.
+// erwartet: N451
+// **1147 -- a caller `let` as a lock index on the child path (fix lane F3, review G11 F3).**
+//
+// The emission walker reads the BODY of a `locks` block, never the lock
+// place: `locks S[w]` evaluates `w`, a caller temporary that died at the
+// gate. The exhaustive `kindzugriff` walk reads the lock place's indices.
+// The language declares no lock arrays, so an indexed lock place is refused
+// on its own today (`H016`, `E006` beside it); the probe pins that the spill
+// rule no longer leans on that -- the day a lock family lands, `N451` stands.
 
 module gift1147 {
 

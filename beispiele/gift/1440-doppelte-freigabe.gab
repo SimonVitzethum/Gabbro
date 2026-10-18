@@ -1,6 +1,6 @@
--- erwartet: N586
--- A second `free` would link the same slot twice, and the free list would
--- eat a live slot. Nothing else is wrong with this unit.
+// erwartet: N586
+// A second `free` would link the same slot twice, and the free list would
+// eat a live slot. Nothing else is wrong with this unit.
 module gift::doppelte_freigabe {
 arena Vorrat capacity 0 .. 4 of u64;
 

@@ -1,5 +1,5 @@
--- erwartet: V004
--- `relaxed` ordnet nichts. Eine Nutzlast daran ist eine Zusage, die die Ordnung nicht haelt.
+// erwartet: V004
+// `relaxed` ordnet nichts. Eine Nutzlast daran ist eine Zusage, die die Ordnung nicht haelt.
 module gift {
 type Bericht = { daten : u32, };
 atomic ZAEHLER : u32 publishes nothing relaxed;

@@ -1,15 +1,15 @@
--- erwartet: R006
--- **Gift 218 -- «B23»: das Feld traegt seine eigene Klasse, und sie ist die engere.**
---
--- `FSTS` ist `class rw` -- das ganze Wort darf gelesen und geschrieben werden. **`FRI` ist
--- es nicht:** 15:8 sind der Index, an dem der Treiber den Fehlereintrag findet, und den
--- setzt die Hardware.
---
--- Bis zum 2026-08-20 trug `regdecl` EINE Klasse fuer das ganze Wort. Damit war FRI
--- untypisierbar -- und FRI ist die Stelle, an der der Treiber ueberhaupt anfaengt.
---
--- *Eine Probe, die nur das Register trifft, misst nicht die Mischung.* Die saubere Seite
--- steht in `beispiele/45`.
+// erwartet: R006
+// **Gift 218 -- «B23»: das Feld traegt seine eigene Klasse, und sie ist die engere.**
+//
+// `FSTS` ist `class rw` -- das ganze Wort darf gelesen und geschrieben werden. **`FRI` ist
+// es nicht:** 15:8 sind der Index, an dem der Treiber den Fehlereintrag findet, und den
+// setzt die Hardware.
+//
+// Bis zum 2026-08-20 trug `regdecl` EINE Klasse fuer das ganze Wort. Damit war FRI
+// untypisierbar -- und FRI ist die Stelle, an der der Treiber ueberhaupt anfaengt.
+//
+// *Eine Probe, die nur das Register trifft, misst nicht die Mischung.* Die saubere Seite
+// steht in `beispiele/45`.
 
 module gift218 {
 

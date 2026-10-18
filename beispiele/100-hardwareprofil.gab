@@ -1,13 +1,13 @@
--- 100 -- **The hardware profile, with a library requiring a subset of it.**
---
--- Lane E6 (`dokumente/PRUEFER.md` §0c, `SYNTAX.md` §12.2): the program declares
--- ONE hardware profile -- keyed mode entries plus a reference to the
--- declared assumption, never a copy of its text. The library module
--- requires a subset of it by reference: the key with the value, the
--- assumption with the name. Every rule of the lane reads this file and
--- stays silent -- the refusals live in the poison corpus
--- (`beispiele/gift/890`-`894`), not here. A CALL (`@gpu#kernel`) would
--- carry the translation refusal (`N069`), so calls live there too.
+// 100 -- **The hardware profile, with a library requiring a subset of it.**
+//
+// Lane E6 (`dokumente/PRUEFER.md` §0c, `SYNTAX.md` §12.2): the program declares
+// ONE hardware profile -- keyed mode entries plus a reference to the
+// declared assumption, never a copy of its text. The library module
+// requires a subset of it by reference: the key with the value, the
+// assumption with the name. Every rule of the lane reads this file and
+// stays silent -- the refusals live in the poison corpus
+// (`beispiele/gift/890`-`894`), not here. A CALL (`@gpu#kernel`) would
+// carry the translation refusal (`N069`), so calls live there too.
 
 module beispiel::profil {
 

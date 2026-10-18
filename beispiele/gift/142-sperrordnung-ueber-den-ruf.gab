@@ -1,9 +1,9 @@
--- erwartet: H012
--- **Die Rangordnung endete an der Aufrufgrenze.**
---
--- `H006` rechnete sie im eigenen Rumpf nach und sah einen Ring ueber ZWEI Funktionen nicht.
--- `locks L2 { … nimmt_l1(); }` mit `L1` auf Rang 1 und `L2` auf Rang 2 ging mit null Fehlern
--- durch -- *und das ist ein Deadlock, kein Stilfehler.*
+// erwartet: H012
+// **Die Rangordnung endete an der Aufrufgrenze.**
+//
+// `H006` rechnete sie im eigenen Rumpf nach und sah einen Ring ueber ZWEI Funktionen nicht.
+// `locks L2 { … nimmt_l1(); }` mit `L1` auf Rang 1 und `L2` auf Rang 2 ging mit null Fehlern
+// durch -- *und das ist ein Deadlock, kein Stilfehler.*
 module gift::sperrordnung_ruf {
 
 static mut a : u32 = 0;

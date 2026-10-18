@@ -1,8 +1,8 @@
--- erwartet: L107
--- **M2 verfolgte nur lineare PARAMETER.**
---
--- Ein Wert, der im Rumpf entsteht, war unsichtbar -- *genau-einmal war damit eine Aussage
--- ueber Argumente und nicht ueber Werte.* Hier bleibt `x` liegen und niemand merkte es.
+// erwartet: L107
+// **M2 verfolgte nur lineare PARAMETER.**
+//
+// Ein Wert, der im Rumpf entsteht, war unsichtbar -- *genau-einmal war damit eine Aussage
+// ueber Argumente und nicht ueber Werte.* Hier bleibt `x` liegen und niemand merkte es.
 module gift::linear_im_rumpf {
 
 linear ghost type P;

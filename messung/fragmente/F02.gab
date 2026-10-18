@@ -1,26 +1,26 @@
--- =======================================================================================
--- F2 -- die VT-d-Einheit, VERVOLLSTAENDIGT
---
--- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:397-530, byteidentisch, plus genau die
--- Zeilen, die ihn zu einem PROGRAMM machen.**
---
--- **ERGAENZT, und nichts sonst:** fuenf `reserved`-Felder in den `format`-Bloecken --
--- `FaultRecordLo` (11:0), `FaultRecordHi` (27:16, 31:30, 59:40, 62), `Slpte` (10:2),
--- `ContextEntryLo` (11:2), `ContextEntryHi` (7:3, 63:24).
---
--- **Warum das keine Nachlaessigkeit der Vorlage war:** ein `format` sagt, welche Bits
--- EXISTIEREN, und der Erzeuger zaehlt nicht mit. Ein Ausschnitt nennt die Bits, um die es
--- geht; ein Programm muss auch die nennen, um die es NICHT geht. *Genau darin unterscheidet
--- sich ein Bericht von einem Programm, und darum steht dieser Korpus neben dem eingefrorenen
--- und nicht an seiner Stelle.*
---
--- Nach der Ergaenzung: **0 Fehler, senkt ab, uebersetzt unter `-Wall -Wextra -Werror -O2`.**
--- Vorher war F2 ausschliesslich an diesen fuenf Luecken blockiert -- keine Gabbro-Absage.
--- =======================================================================================
+// =======================================================================================
+// F2 -- die VT-d-Einheit, VERVOLLSTAENDIGT
+//
+// **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:397-530, byteidentisch, plus genau die
+// Zeilen, die ihn zu einem PROGRAMM machen.**
+//
+// **ERGAENZT, und nichts sonst:** fuenf `reserved`-Felder in den `format`-Bloecken --
+// `FaultRecordLo` (11:0), `FaultRecordHi` (27:16, 31:30, 59:40, 62), `Slpte` (10:2),
+// `ContextEntryLo` (11:2), `ContextEntryHi` (7:3, 63:24).
+//
+// **Warum das keine Nachlaessigkeit der Vorlage war:** ein `format` sagt, welche Bits
+// EXISTIEREN, und der Erzeuger zaehlt nicht mit. Ein Ausschnitt nennt die Bits, um die es
+// geht; ein Programm muss auch die nennen, um die es NICHT geht. *Genau darin unterscheidet
+// sich ein Bericht von einem Programm, und darum steht dieser Korpus neben dem eingefrorenen
+// und nicht an seiner Stelle.*
+//
+// Nach der Ergaenzung: **0 Fehler, senkt ab, uebersetzt unter `-Wall -Wextra -Werror -O2`.**
+// Vorher war F2 ausschliesslich an diesen fuenf Luecken blockiert -- keine Gabbro-Absage.
+// =======================================================================================
 
 device Vtd(base : Pa) at mmio {
-    -- Falle 4, x86-Fassung: GCMD ist KEIN Read-Modify-Write. Genau eine Zeile, einmal je
-    -- Geraet. Sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand in vtd.rs:42-52.
+    // Falle 4, x86-Fassung: GCMD ist KEIN Read-Modify-Write. Genau eine Zeile, einmal je
+    // Geraet. Sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand in vtd.rs:42-52.
     mirrors GCMD from GSTS;
 
     reg VER  : u32 @0x000 class r  fields { MIN @[3:0], MAX @[7:4], }
@@ -42,10 +42,10 @@ device Vtd(base : Pa) at mmio {
         fields { DID @[15:0], SID @[31:16], FM @[33:32], CAIG @[60:59], CIRG @[62:61],
                  ICC @63, }
 
-    -- «B23» FSTS ist GEMISCHT: 7:0 sind RW1C, 15:8 (FRI, der Index des ersten besetzten
-    -- Fault-Registers) sind r. `regdecl` (:430) traegt EINE Klassenangabe je Register.
-    -- `class w1c` macht das Lesen von FRI untypisierbar — und FRI ist die Groesse, mit der
-    -- der Treiber die Aufzeichnung ueberhaupt findet (vtd.rs:503).
+    // «B23» FSTS ist GEMISCHT: 7:0 sind RW1C, 15:8 (FRI, der Index des ersten besetzten
+    // Fault-Registers) sind r. `regdecl` (:430) traegt EINE Klassenangabe je Register.
+    // `class w1c` macht das Lesen von FRI untypisierbar — und FRI ist die Groesse, mit der
+    // der Treiber die Aufzeichnung ueberhaupt findet (vtd.rs:503).
     reg FSTS : u32 @0x034 class w1c
         fields { PFO @0, PPF @1, AFO @2, APF @3, IQE @4, ICE @5, ITE @6, PRO @7, FRI @[15:8], }
 
@@ -55,13 +55,13 @@ device Vtd(base : Pa) at mmio {
     reg ICS  : u32 @0x09c class w1c fields { IWC @0, }
     reg IRTA : u64 @0x0b8 class rw  fields { EIME @11, }
 
-    -- Geschlossen: Registerlage aus einem GELESENEN Feld. Der Index ist ueber `count`
-    -- M1-beschraenkt; `frr_off` (vtd.rs:442) rechnet dieselbe Adresse von Hand aus.
+    // Geschlossen: Registerlage aus einem GELESENEN Feld. Der Index ist ueber `count`
+    // M1-beschraenkt; `frr_off` (vtd.rs:442) rechnet dieselbe Adresse von Hand aus.
     bank FRR at CAP.FRO * 16 stride 16 count 256 {
         reg FR_LO : u64 @0x0 class r
-        -- «B24» Das F-Bit ist Bit 63 des OBEREN Wortes, `grund` liegt in 39:32 desselben.
-        -- `bitpos` (:146) sagt nichts darueber, worauf sich eine Bitlage jenseits von 64
-        -- bezieht und wie sie mit `endian` zusammenwirkt. Hier bezogen auf FR_HI.
+        // «B24» Das F-Bit ist Bit 63 des OBEREN Wortes, `grund` liegt in 39:32 desselben.
+        // `bitpos` (:146) sagt nichts darueber, worauf sich eine Bitlage jenseits von 64
+        // bezieht und wie sie mit `endian` zusammenwirkt. Hier bezogen auf FR_HI.
         reg FR_HI : u64 @0x8 class w1c
             fields { SID @[15:0], TYPE @[29:28], GRUND @[39:32], AT @[61:60], F @63, }
     }
@@ -71,10 +71,10 @@ device Vtd(base : Pa) at mmio {
             fields { DID @[47:32], DR @49, DW @50, IAIG @[58:57], IIRG @[60:59], IVT @63, }
     }
 
-    -- «B26» Der Vorzustand steht an einem NICHT LESBAREN Ort. `mirrors` sagt, WOHER die
-    -- mitgefuehrten Bits kommen; ob es damit auch den Vorzustand einer `transition` an
-    -- `GCMD.TE` aus `GSTS.TES` bezieht, sagt SYNTAX.md (:428, :434) nicht. Die Vorlage hat
-    -- diesen Widerspruch als unaufloesbar gefuehrt; er ist jetzt halb aufgeloest.
+    // «B26» Der Vorzustand steht an einem NICHT LESBAREN Ort. `mirrors` sagt, WOHER die
+    // mitgefuehrten Bits kommen; ob es damit auch den Vorzustand einer `transition` an
+    // `GCMD.TE` aus `GSTS.TES` bezieht, sagt SYNTAX.md (:428, :434) nicht. Die Vorlage hat
+    // diesen Widerspruch als unaufloesbar gefuehrt; er ist jetzt halb aufgeloest.
     transition setze_rtp { GCMD.SRTP: 0 -> 1 }
         requires GSTS.TES == 0 || GSTS.RTPS == 1
         effects  { writes GCMD }
@@ -105,18 +105,18 @@ reason VtdFehler {
     exhaustive
 }
 
--- «B25» `grund` soll genau die zwoelf Werte von FaultGrund tragen. `intty` traegt ein
--- INTERVALL (:139), keine Wertemenge. Hier geht es nur, weil 0x01..0x0c zufaellig
--- zusammenhaengend ist; bei einem geloecherten Code waere das Feld nicht bindbar.
--- «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern -- **und seit dem 2026-08-18
--- steht das im Traegertyp statt im Kommentar.** Der urspruengliche Text las: *„Die Bitlagen
--- unten sind auf das jeweilige Wort bezogen, weil `format` keine Wortbreite kennt."* Sie
--- kennt sie: die Wortbreite IST der Feldtyp, und eine Lage jenseits davon bedeutet nichts.
---
--- **Nachgezogen am 2026-08-19, als `N007` in den Pruefer kam.** Sieben Stellen fielen, und
--- eine davon war ein Widerspruch INNERHALB dieser Datei: `typ` stand hier als `@[13:12]`,
--- das Register `FR_HI` derselben Einheit fuehrt `TYPE @[29:28]`. *Die zweite Zahl ist die
--- gemessene; die erste haette mit `sid @[15:0]` ueberlappt.*
+// «B25» `grund` soll genau die zwoelf Werte von FaultGrund tragen. `intty` traegt ein
+// INTERVALL (:139), keine Wertemenge. Hier geht es nur, weil 0x01..0x0c zufaellig
+// zusammenhaengend ist; bei einem geloecherten Code waere das Feld nicht bindbar.
+// «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern -- **und seit dem 2026-08-18
+// steht das im Traegertyp statt im Kommentar.** Der urspruengliche Text las: *„Die Bitlagen
+// unten sind auf das jeweilige Wort bezogen, weil `format` keine Wortbreite kennt."* Sie
+// kennt sie: die Wortbreite IST der Feldtyp, und eine Lage jenseits davon bedeutet nichts.
+//
+// **Nachgezogen am 2026-08-19, als `N007` in den Pruefer kam.** Sieben Stellen fielen, und
+// eine davon war ein Widerspruch INNERHALB dieser Datei: `typ` stand hier als `@[13:12]`,
+// das Register `FR_HI` derselben Einheit fuehrt `TYPE @[29:28]`. *Die zweite Zahl ist die
+// gemessene; die erste haette mit `sid @[15:0]` ueberlappt.*
 format FaultRecordLo @version 1 endian little {
     reserved_0 : u64 @[11:0] reserved,
     input_addr : u64 @[63:12] where (input_addr & 0xfff) == 0,
@@ -133,10 +133,10 @@ format FaultRecordHi @version 1 endian little {
     res_d  : u64 @62 reserved,
     f_bit  : u64 in 1 .. 1 @63,
 }
--- «B22-nah, eigener Fall» `where f_bit == 1` WEIST ein leeres Register AB, statt „leer" zu
--- MELDEN. Das ist der Unterschied zwischen Absage und Abwesenheit, und `format` kennt nur
--- die Absage. Im Rust-Original ist genau das der Unterschied zwischen „kein Fault" und
--- „Aufzeichnung nicht lesbar" (vtd.rs:451).
+// «B22-nah, eigener Fall» `where f_bit == 1` WEIST ein leeres Register AB, statt „leer" zu
+// MELDEN. Das ist der Unterschied zwischen Absage und Abwesenheit, und `format` kennt nur
+// die Absage. Im Rust-Original ist genau das der Unterschied zwischen „kein Fault" und
+// „Aufzeichnung nicht lesbar" (vtd.rs:451).
 
 format Slpte @version 1 endian little {
     R    : u64 @0,
@@ -146,10 +146,10 @@ format Slpte @version 1 endian little {
     ADDR : u64 @[63:12],
 }
 
--- «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
--- ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
--- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.txt`:* zwei Woerter,
--- und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
+// «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
+// ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
+// `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.txt`:* zwei Woerter,
+// und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
 format ContextEntryLo @version 1 endian little {
     P        : u64 @0,
     FPD      : u64 @1,

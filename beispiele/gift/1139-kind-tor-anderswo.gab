@@ -1,12 +1,12 @@
--- erwartet: N450
--- **1139 -- the gate call stands in ANOTHER function (fix lane F3, review G11 F4).**
---
--- Until fix lane F3 `N450` counted stack gates across the whole unit: one
--- gate call anywhere (here in `vorbereiten`) let a `child` block in any
--- function pass, though nothing hands a stack to THIS region. Now a gate
--- call must dominate the region -- stand before it on every path of the
--- same body -- and `starter` has none. The path itself is well-formed
--- (no `return`, ends in `ausgang`), and it reads no caller name.
+// erwartet: N450
+// **1139 -- the gate call stands in ANOTHER function (fix lane F3, review G11 F4).**
+//
+// Until fix lane F3 `N450` counted stack gates across the whole unit: one
+// gate call anywhere (here in `vorbereiten`) let a `child` block in any
+// function pass, though nothing hands a stack to THIS region. Now a gate
+// call must dominate the region -- stand before it on every path of the
+// same body -- and `starter` has none. The path itself is well-formed
+// (no `return`, ends in `ausgang`), and it reads no caller name.
 
 module gift1139 {
 

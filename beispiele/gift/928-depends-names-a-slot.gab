@@ -1,11 +1,11 @@
--- erwartet: N258
--- **A `depends` entry below carrier granularity falls.**
---
--- `Zustand.bereit` names a slot, and the model has no slots: `GleichAuf`
--- and the footprint are carrier-granular. The checker names the carrier it
--- should have been instead of silently widening the entry -- a widening no
--- theorem would read. The reader holds its guard, so nothing else speaks:
--- N258 ALONE.
+// erwartet: N258
+// **A `depends` entry below carrier granularity falls.**
+//
+// `Zustand.bereit` names a slot, and the model has no slots: `GleichAuf`
+// and the footprint are carrier-granular. The checker names the carrier it
+// should have been instead of silently widening the entry -- a widening no
+// theorem would read. The reader holds its guard, so nothing else speaks:
+// N258 ALONE.
 module gift::depends_nennt_feld {
 
 table Zustand count 4 {

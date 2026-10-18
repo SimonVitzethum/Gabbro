@@ -1,4 +1,4 @@
--- W24-Vorlauf: `floor` nennt eine Groesse, die es nicht gibt.
+// W24-Vorlauf: `floor` nennt eine Groesse, die es nicht gibt.
 module w24::t7 {
 
 static mut k : u32 = 0;

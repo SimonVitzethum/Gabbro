@@ -1,20 +1,20 @@
--- 33 -- **`decreases`: die Rekursion bekommt ein Mass** («K5.4», 2026-08-19).
---
--- Bis dahin stand im ganzen Korpus **keine einzige rekursive Funktion**, und der Grund war
--- kein Stilentscheid: `K001` fiel an jeder. Ein Aufruf zaehlt die DEKLARIERTEN `costs` des
--- Gerufenen (`SPRACHE.md` §7), bei einem Zyklus also die eigenen -- und damit lag der Rumpf
--- immer ueber seiner eigenen Zusage. *Die Sprache erlaubte eine Form, die der Pruefer
--- unweigerlich ablehnte.*
---
--- Mit einem `decreases` aendert sich die Lesart: **`costs` ist die Zusage EINES Durchgangs**,
--- und die Tiefe steht im Mass.
---
---     K008   eine Funktion, die sich selbst erreicht, traegt ein `decreases`
---     K009   das Mass nennt eine Groesse, die der rekursive Ruf AENDERT
---
--- **DASS es faellt, bleibt Beweisersache** -- dieselbe Trennung wie bei `S005` am
--- Abstiegsmass einer Traversierung, und sie ist die Zielform: die Notation traegt, der
--- Beweis bleibt beim Nutzer.
+// 33 -- **`decreases`: die Rekursion bekommt ein Mass** («K5.4», 2026-08-19).
+//
+// Bis dahin stand im ganzen Korpus **keine einzige rekursive Funktion**, und der Grund war
+// kein Stilentscheid: `K001` fiel an jeder. Ein Aufruf zaehlt die DEKLARIERTEN `costs` des
+// Gerufenen (`SPRACHE.md` §7), bei einem Zyklus also die eigenen -- und damit lag der Rumpf
+// immer ueber seiner eigenen Zusage. *Die Sprache erlaubte eine Form, die der Pruefer
+// unweigerlich ablehnte.*
+//
+// Mit einem `decreases` aendert sich die Lesart: **`costs` ist die Zusage EINES Durchgangs**,
+// und die Tiefe steht im Mass.
+//
+//     K008   eine Funktion, die sich selbst erreicht, traegt ein `decreases`
+//     K009   das Mass nennt eine Groesse, die der rekursive Ruf AENDERT
+//
+// **DASS es faellt, bleibt Beweisersache** -- dieselbe Trennung wie bei `S005` am
+// Abstiegsmass einer Traversierung, und sie ist die Zielform: die Notation traegt, der
+// Beweis bleibt beim Nutzer.
 
 module beispiel::rekursion {
 
@@ -26,12 +26,12 @@ table Knoten count 1024 {
 
 static mut summe : u32 = 0;
 
--- Der Zaehler faellt, und `decreases` sagt WELCHE Groesse es ist.
---
--- **Der Wachtposten steht hier in seiner natuerlichen Form** -- `if n == 0 { return 0; }`,
--- und danach `n - 1`. Bis zum 2026-08-19 ging das NICHT: eine Ungleichheit verengte den
--- Bereich nicht, `n` blieb `0 .. TIEFE`, und `n - 1` fiel an `M104`. Diese Datei stand
--- deshalb mit `if n >= 1 { … }` da -- *die Umschreibung war die Spur der Luecke.*
+// Der Zaehler faellt, und `decreases` sagt WELCHE Groesse es ist.
+//
+// **Der Wachtposten steht hier in seiner natuerlichen Form** -- `if n == 0 { return 0; }`,
+// und danach `n - 1`. Bis zum 2026-08-19 ging das NICHT: eine Ungleichheit verengte den
+// Bereich nicht, `n` blieb `0 .. TIEFE`, und `n - 1` fiel an `M104`. Diese Datei stand
+// deshalb mit `if n >= 1 { … }` da -- *die Umschreibung war die Spur der Luecke.*
 impl fn absteigen(n : u32 in 0 .. TIEFE) -> u32
     effects { writes summe }
     costs   <= 64 ops
@@ -42,8 +42,8 @@ impl fn absteigen(n : u32 in 0 .. TIEFE) -> u32
     return absteigen(n - 1);
 }
 
--- **Wechselseitige Rekursion traegt es genauso** -- der Zyklus geht ueber zwei Namen, und
--- beide brauchen ihr Mass.
+// **Wechselseitige Rekursion traegt es genauso** -- der Zyklus geht ueber zwei Namen, und
+// beide brauchen ihr Mass.
 impl fn gerade(n : u32 in 0 .. TIEFE) -> u32
     effects { writes summe }
     costs   <= 64 ops

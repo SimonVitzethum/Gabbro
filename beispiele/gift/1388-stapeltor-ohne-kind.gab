@@ -1,10 +1,10 @@
--- erwartet: N572
--- **A stack-gate call with no `child` region falls.**
---
--- A gate that claims a stack (`stack rsi`) starts a second thread at the call, on the handed
--- stack. `N450` held every `child` region to a call that dominates it; nothing held every call
--- to a region, and this body checked clean -- its stub was the plain one, whose `ret` the child
--- then takes on the handed stack, into a frame that is not its own (C-free lane, 2026-09-30).
+// erwartet: N572
+// **A stack-gate call with no `child` region falls.**
+//
+// A gate that claims a stack (`stack rsi`) starts a second thread at the call, on the handed
+// stack. `N450` held every `child` region to a call that dominates it; nothing held every call
+// to a region, and this body checked clean -- its stub was the plain one, whose `ret` the child
+// then takes on the handed stack, into a frame that is not its own (C-free lane, 2026-09-30).
 module gift::stapeltor_ohne_kind {
 reason UebergabeFehler {
     KeinStapel = 1 "no stack was handed"

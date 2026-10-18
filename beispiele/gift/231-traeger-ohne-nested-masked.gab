@@ -1,17 +1,17 @@
--- erwartet: H101
--- **«B38» -- ein `masks IRQ` in der Wirkungsliste ist kein Zustand.**
---
--- `FRAGMENTE.md` F8: von fuenf Werten, die im Planer eine Sperrgrenze ueberqueren, tragen
--- zwei NICHT das Muster „die Fortsetzung prueft neu", sondern die Interruptmaskierung. Die
--- ehrliche Form ist darum *„prueft neu ODER nennt, was sie stattdessen traegt"* -- und dazu
--- gehoert die Nebenbedingung, sonst ist der Traeger ein Schlupfloch.
---
--- **Gemessen am 2026-08-21, vor `H101`:** dieselbe Datei ergab **0 Fehler**. Das `masks IRQ`
--- kaufte sogar die Ausnahme von `H013` -- ein Wort in der Wirkungsliste, und der Pruefer
--- schwieg ueber einem ungeschuetzten Weltzustand. *Genau die Zusicherung aus R15.*
---
--- Der Eintritt traegt `nested never`. Das sagt, dass der Vektor sich nicht selbst wieder
--- betritt -- **nicht, dass er maskiert laeuft.** Ueber eine Sperrgrenze traegt der Zustand.
+// erwartet: H101
+// **«B38» -- ein `masks IRQ` in der Wirkungsliste ist kein Zustand.**
+//
+// `FRAGMENTE.md` F8: von fuenf Werten, die im Planer eine Sperrgrenze ueberqueren, tragen
+// zwei NICHT das Muster „die Fortsetzung prueft neu", sondern die Interruptmaskierung. Die
+// ehrliche Form ist darum *„prueft neu ODER nennt, was sie stattdessen traegt"* -- und dazu
+// gehoert die Nebenbedingung, sonst ist der Traeger ein Schlupfloch.
+//
+// **Gemessen am 2026-08-21, vor `H101`:** dieselbe Datei ergab **0 Fehler**. Das `masks IRQ`
+// kaufte sogar die Ausnahme von `H013` -- ein Wort in der Wirkungsliste, und der Pruefer
+// schwieg ueber einem ungeschuetzten Weltzustand. *Genau die Zusicherung aus R15.*
+//
+// Der Eintritt traegt `nested never`. Das sagt, dass der Vektor sich nicht selbst wieder
+// betritt -- **nicht, dass er maskiert laeuft.** Ueber eine Sperrgrenze traegt der Zustand.
 module gift::traeger_ohne_nested_masked {
 
 assume ein_kern "This kernel runs on exactly one processor."

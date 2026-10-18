@@ -1,12 +1,12 @@
--- erwartet: M103
---
--- M4 gilt auf BEIDEN Seiten. Ein Schreiben ausserhalb der Schranken ist die
--- gefaehrlichere Richtung, und sie lief lange am Index vorbei.
---
--- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
--- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// erwartet: M103
+//
+// M4 gilt auf BEIDEN Seiten. Ein Schreiben ausserhalb der Schranken ist die
+// gefaehrlichere Richtung, und sie lief lange am Index vorbei.
+//
+// Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
--- MUSS fallen (M103): identisch zu gift/03-index.gab, nur SCHREIBEND statt lesend.
+// MUSS fallen (M103): identisch zu gift/03-index.gab, nur SCHREIBEND statt lesend.
 module gift {
 
 static mut last : [u32; 64] = 0;

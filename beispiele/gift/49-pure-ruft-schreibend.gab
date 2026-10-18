@@ -1,7 +1,7 @@
--- erwartet: E008
--- **`effects` endete bis zum 2026-08-15 an der ersten Aufrufgrenze.** `zaehlt` erklaert
--- `pure` und ruft etwas, das schreibt -- zwei Ebenen tiefer. Die Rahmenaussage „nur die
--- eingetragene Logik ist aktiv" war damit eine halbe Aussage.
+// erwartet: E008
+// **`effects` endete bis zum 2026-08-15 an der ersten Aufrufgrenze.** `zaehlt` erklaert
+// `pure` und ruft etwas, das schreibt -- zwei Ebenen tiefer. Die Rahmenaussage „nur die
+// eingetragene Logik ist aktiv" war damit eine halbe Aussage.
 module gift {
 table T count 8 { slot { x : u32 in 0 .. 10, } }
 extern fn schreibt(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 1 ops;

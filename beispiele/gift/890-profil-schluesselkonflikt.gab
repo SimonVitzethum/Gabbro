@@ -1,8 +1,8 @@
--- erwartet: N215
--- Lane E6: two keyed entries with one key and different values are refused
--- at the profile itself. The unit declares no machine, so the `arch` leg of
--- `N218` stays silent; the single `assume` reference resolves, so `N216`
--- and `N219` stay silent too. Exactly one `N215` falls.
+// erwartet: N215
+// Lane E6: two keyed entries with one key and different values are refused
+// at the profile itself. The unit declares no machine, so the `arch` leg of
+// `N218` stays silent; the single `assume` reference resolves, so `N216`
+// and `N219` stay silent too. Exactly one `N215` falls.
 
 module gift::profil_schluesselkonflikt {
 

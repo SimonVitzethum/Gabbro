@@ -1,8 +1,8 @@
--- erwartet: N063
--- **Gift 802 -- two parameters in one register have no reading.**
---
--- `rdi` is bound twice in `regs in`. The stub writes the register once, and one
--- of the two values never arrives -- so the second binding falls, by name.
+// erwartet: N063
+// **Gift 802 -- two parameters in one register have no reading.**
+//
+// `rdi` is bound twice in `regs in`. The stub writes the register once, and one
+// of the two values never arrives -- so the second binding falls, by name.
 
 module gift::syscall_doppelregister {
 

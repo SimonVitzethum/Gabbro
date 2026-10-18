@@ -1,18 +1,18 @@
--- 157 -- **A symmetric worker pool: one routine started twice (fix lane F10).**
---
--- `arbeiter` is declared twice in `concurrent`, so the runtime runs it on two
--- threads. It is POOL-SAFE: it holds no lock by signature, declares no reason,
--- and the only carrier its call graph may write, `konto`, is guarded by `L`
--- (`lock L protects { konto }`), with the non-trivial invariant
--- `konto[0] == konto[1]` that `setze` re-establishes at every release.
---
--- The Rust checker admits it (`N304` stays silent: pool-safe), and since fix lane
--- F10 so does the goal theorem's checker Bool: `einzeln` is `EinzelnPool`, and
--- `gabbro_ziel` covers two threads running one routine (`Zielsatz/PoolZeuge.lean`,
--- `pool_ziel_zeuge`, is the same shape on probe B's program). The exporter prints
--- both occurrences into `starts`, and `pruefe-akzeptiert-diff.py` compares the two
--- verdicts on this file. The pool-UNSAFE twin -- a routine that writes an unguarded
--- table, declared twice -- falls with `N304` (gifts 1097, 1098).
+// 157 -- **A symmetric worker pool: one routine started twice (fix lane F10).**
+//
+// `arbeiter` is declared twice in `concurrent`, so the runtime runs it on two
+// threads. It is POOL-SAFE: it holds no lock by signature, declares no reason,
+// and the only carrier its call graph may write, `konto`, is guarded by `L`
+// (`lock L protects { konto }`), with the non-trivial invariant
+// `konto[0] == konto[1]` that `setze` re-establishes at every release.
+//
+// The Rust checker admits it (`N304` stays silent: pool-safe), and since fix lane
+// F10 so does the goal theorem's checker Bool: `einzeln` is `EinzelnPool`, and
+// `gabbro_ziel` covers two threads running one routine (`Zielsatz/PoolZeuge.lean`,
+// `pool_ziel_zeuge`, is the same shape on probe B's program). The exporter prints
+// both occurrences into `starts`, and `pruefe-akzeptiert-diff.py` compares the two
+// verdicts on this file. The pool-UNSAFE twin -- a routine that writes an unguarded
+// table, declared twice -- falls with `N304` (gifts 1097, 1098).
 module beispiel::worker_pool {
 
 const NSLOTS : u32 = 2;

@@ -1,9 +1,9 @@
--- erwartet: N064
--- **Gift 803 -- what is carried out is not destroyed.**
---
--- `rax` carries the answer out and stands under `clobbers` at once. The contract
--- would promise the answer in a register the declaration hands to the kernel as
--- scratch -- so the clobber line falls, by name.
+// erwartet: N064
+// **Gift 803 -- what is carried out is not destroyed.**
+//
+// `rax` carries the answer out and stands under `clobbers` at once. The contract
+// would promise the answer in a register the declaration hands to the kernel as
+// scratch -- so the clobber line falls, by name.
 
 module gift::syscall_ausgabe_zerstoert {
 

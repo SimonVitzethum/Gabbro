@@ -1,13 +1,13 @@
--- erwartet: Y102
--- 1428 -- **a lock that masks something other than interrupts has no LLVM lowering.**
---
--- `masks irqs` lowers since 2026-10-17 (`llvm/masken.rs`: save the core's interrupt
--- state, mask, restore on every path out -- `pushfq; cli ... popfq` on x86_64,
--- `mrs daif; msr daifset, #3 ... msr daif` on aarch64). The checker admits any word after
--- `masks`; the one the backend knows is `irqs`, so a lock masking `nmi` (or anything else)
--- is refused with `Y102` naming the word instead of being lowered as a plain ticket lock
--- that masks nothing. (History: this probe stood on `masks irqs` until that lowering; the
--- unit is otherwise byte for byte the same, so its Lean certificate did not move.)
+// erwartet: Y102
+// 1428 -- **a lock that masks something other than interrupts has no LLVM lowering.**
+//
+// `masks irqs` lowers since 2026-10-17 (`llvm/masken.rs`: save the core's interrupt
+// state, mask, restore on every path out -- `pushfq; cli ... popfq` on x86_64,
+// `mrs daif; msr daifset, #3 ... msr daif` on aarch64). The checker admits any word after
+// `masks`; the one the backend knows is `irqs`, so a lock masking `nmi` (or anything else)
+// is refused with `Y102` naming the word instead of being lowered as a plain ticket lock
+// that masks nothing. (History: this probe stood on `masks irqs` until that lowering; the
+// unit is otherwise byte for byte the same, so its Lean certificate did not move.)
 module gift1428 {
 static mut x : u32 = 0;
 lock TOR protects { x } rank 0 held <= 2 ops masks nmi;

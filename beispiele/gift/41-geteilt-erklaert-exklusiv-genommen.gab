@@ -1,7 +1,7 @@
--- erwartet: E007
--- **Die gefaehrliche Richtung.** Der Rumpf nimmt exklusiv, die Signatur sagt geteilt: wer
--- sie liest, rechnet mit Nebenlaeufigkeit, die es nicht gibt, und legt seine Latenzrechnung
--- darauf an. Umgekehrt waere es zulaessig -- exklusiv erklaeren deckt die geteilte Nahme.
+// erwartet: E007
+// **Die gefaehrliche Richtung.** Der Rumpf nimmt exklusiv, die Signatur sagt geteilt: wer
+// sie liest, rechnet mit Nebenlaeufigkeit, die es nicht gibt, und legt seine Latenzrechnung
+// darauf an. Umgekehrt waere es zulaessig -- exklusiv erklaeren deckt die geteilte Nahme.
 
 module gift {
 

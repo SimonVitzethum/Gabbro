@@ -1,16 +1,16 @@
--- erwartet: D012
---
--- **Die ZWEITE Voraussetzung von `einfuegen_erhaelt` fehlt: `erreicht sigma p`.**
---
--- Der Platz ist frisch -- das steht da. Der Elter ist erreichbar -- das steht nicht da, und
--- ohne es faellt der Satz: `einfuegen_erhaelt` haengt `n` unter `p`, und wenn `p` selbst keine
--- Wurzel erreicht, erreicht `n` sie auch nicht. **Die Invariante `jeder_erreicht_die_wurzel`
--- unten ist dann gebrochen, und zwar durch eine ERZEUGTE Operation** -- also genau dort, wo
--- Zuschnitt (c) verspricht, dass so etwas nicht passieren kann.
---
--- *Eine halbe Voraussetzung ist die gefaehrlichste Sorte:* die Datei sieht sorgfaeltig aus.
---
--- Die saubere Seite steht in `beispiele/47` an `einhaengen`.
+// erwartet: D012
+//
+// **Die ZWEITE Voraussetzung von `einfuegen_erhaelt` fehlt: `erreicht sigma p`.**
+//
+// Der Platz ist frisch -- das steht da. Der Elter ist erreichbar -- das steht nicht da, und
+// ohne es faellt der Satz: `einfuegen_erhaelt` haengt `n` unter `p`, und wenn `p` selbst keine
+// Wurzel erreicht, erreicht `n` sie auch nicht. **Die Invariante `jeder_erreicht_die_wurzel`
+// unten ist dann gebrochen, und zwar durch eine ERZEUGTE Operation** -- also genau dort, wo
+// Zuschnitt (c) verspricht, dass so etwas nicht passieren kann.
+//
+// *Eine halbe Voraussetzung ist die gefaehrlichste Sorte:* die Datei sieht sorgfaeltig aus.
+//
+// Die saubere Seite steht in `beispiele/47` an `einhaengen`.
 
 module gift::ohneerreichbarenelter {
 

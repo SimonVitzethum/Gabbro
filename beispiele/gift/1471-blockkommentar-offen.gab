@@ -1,0 +1,13 @@
+// erwartet: L008
+// 1471: **a block comment still open at the end of the text is refused (L008).**
+//
+// Block comments nest, so the first `*/` below closes only the inner comment and the outer one
+// is left open: without the refusal it would swallow the rest of the file in silence. The
+// program before it is complete, so `L008` is the only finding.
+module gift1471 {
+
+const A : u32 = 1;
+
+}
+
+/* the outer comment /* an inner one */ and no closer for the outer one

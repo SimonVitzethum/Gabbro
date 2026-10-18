@@ -1,10 +1,10 @@
--- erwartet: V011
--- **Stale awaited load used after a publish to the same carrier falls.**
---
--- `f` is awaited from `F`, then `F` is published, then `f` decides. The publish
--- expires the load; deciding on `f` afterwards reads the old value and falls as
--- `V011`. Linear shape, same carrier, no revalidation. The `G`/`m` pair beside it
--- keeps the file's pairing complete, so only the stale use carries the verdict.
+// erwartet: V011
+// **Stale awaited load used after a publish to the same carrier falls.**
+//
+// `f` is awaited from `F`, then `F` is published, then `f` decides. The publish
+// expires the load; deciding on `f` afterwards reads the old value and falls as
+// `V011`. Linear shape, same carrier, no revalidation. The `G`/`m` pair beside it
+// keeps the file's pairing complete, so only the stale use carries the verdict.
 module gift755 {
 
 static mut n : u32 = 0;
@@ -15,7 +15,7 @@ atomic G : bool release;
 impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
 { n = v; F = true publishes { n }; }
 
--- Must fall: `f` is expired by the publish two lines above, then decides.
+// Must fall: `f` is expired by the publish two lines above, then decides.
 impl fn r() -> u32 effects { reads F, reads n, writes n, publishes F } costs <= 16 ops
 {
     let f = F awaits { n };
@@ -25,7 +25,7 @@ impl fn r() -> u32 effects { reads F, reads n, writes n, publishes F } costs <= 
     return 0;
 }
 
--- Counterpart pair so the pairing is complete and stays silent.
+// Counterpart pair so the pairing is complete and stays silent.
 impl fn wg(v : u32) effects { writes m, publishes G } costs <= 8 ops
 { m = v; G = true publishes { m }; }
 

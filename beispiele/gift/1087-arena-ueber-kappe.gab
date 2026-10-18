@@ -1,10 +1,10 @@
--- erwartet: N212
--- Lane 240: over-cap growth without a branch -- the third `alloc` out of
--- `Winzig capacity 1 .. 2` stands at the ceiling (`hi`) with no `else`.
--- The first `alloc` is inside the reservation, the second carries its
--- branch; only the third names storage nobody committed with no failure
--- path written down. Nothing else is wrong with this unit: the indices are
--- of the current generation, the effects and the budget are clean.
+// erwartet: N212
+// Lane 240: over-cap growth without a branch -- the third `alloc` out of
+// `Winzig capacity 1 .. 2` stands at the ceiling (`hi`) with no `else`.
+// The first `alloc` is inside the reservation, the second carries its
+// branch; only the third names storage nobody committed with no failure
+// path written down. Nothing else is wrong with this unit: the indices are
+// of the current generation, the effects and the budget are clean.
 module beispiel::arena_kappe {
 arena Winzig capacity 1 .. 2 of u16;
 

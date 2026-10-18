@@ -1,12 +1,12 @@
--- erwartet: N296
--- **Poison 248 -- an indirect call with the wrong arity.**
---
--- Until lane 177 this file fell at `N037`: an `ensures` at the pointer type was refused
--- outright. The clause is carried now -- it narrows the answer the way a direct callee's
--- does -- so the file keeps its `ensures` and falls at the COUNT instead: two arguments
--- where the slot declares one. The comparison runs on the overlap (the one argument still
--- gets its shape check); the count is held by neither side without this line, the same
--- shape `M143` closed for direct calls.
+// erwartet: N296
+// **Poison 248 -- an indirect call with the wrong arity.**
+//
+// Until lane 177 this file fell at `N037`: an `ensures` at the pointer type was refused
+// outright. The clause is carried now -- it narrows the answer the way a direct callee's
+// does -- so the file keeps its `ensures` and falls at the COUNT instead: two arguments
+// where the slot declares one. The comparison runs on the overlap (the one argument still
+// gets its shape check); the count is held by neither side without this line, the same
+// shape `M143` closed for direct calls.
 
 module gift::fnzeiger_mit_ensures {
 

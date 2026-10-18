@@ -1,24 +1,24 @@
--- 175 -- **A range of a static buffer given back reads as zero; the rest does not move.**
---
--- `reset X at i count n;` (server lane, M-ALLTAG C) is how a big fixed buffer
--- stops being resident once its owner is done with it: the `n` elements from
--- `i` read as zero afterwards -- exactly as if `n` stores of zero had run --
--- and where the range spans whole operating-system pages they go back to the
--- system through the program's own binding (`gabbro_os_leeren`). A ring
--- buffer per connection is the case it was written for: the slot's ring is
--- given back when the connection ends, so the high-water mark of a busy hour
--- does not stay resident all night.
---
--- The buffer is `aligned 4096`: a range whose ends sit on page boundaries can be returned whole,
--- where an unaligned neighbour would share its first and last page and keep them resident.
---
--- A range INSIDE one page (`reset RING at 200 count 100;`) holds no whole page: the helper clears it
--- byte by byte and hands nothing over. (The first version of the helper wrapped `uint64_t` there and
--- zeroed far past the buffer, found 2026-10-07; template `region.leeren`, `leeren_in_einer_seite`.)
---
--- Here: two bytes are stored, the upper half of the buffer is given back, the
--- byte below survives and the byte inside reads zero. Executed result: 7
--- (the driver `beispiel175` in `instrumente/pruefe-emission.sh`).
+// 175 -- **A range of a static buffer given back reads as zero; the rest does not move.**
+//
+// `reset X at i count n;` (server lane, M-ALLTAG C) is how a big fixed buffer
+// stops being resident once its owner is done with it: the `n` elements from
+// `i` read as zero afterwards -- exactly as if `n` stores of zero had run --
+// and where the range spans whole operating-system pages they go back to the
+// system through the program's own binding (`gabbro_os_leeren`). A ring
+// buffer per connection is the case it was written for: the slot's ring is
+// given back when the connection ends, so the high-water mark of a busy hour
+// does not stay resident all night.
+//
+// The buffer is `aligned 4096`: a range whose ends sit on page boundaries can be returned whole,
+// where an unaligned neighbour would share its first and last page and keep them resident.
+//
+// A range INSIDE one page (`reset RING at 200 count 100;`) holds no whole page: the helper clears it
+// byte by byte and hands nothing over. (The first version of the helper wrapped `uint64_t` there and
+// zeroed far past the buffer, found 2026-10-07; template `region.leeren`, `leeren_in_einer_seite`.)
+//
+// Here: two bytes are stored, the upper half of the buffer is given back, the
+// byte below survives and the byte inside reads zero. Executed result: 7
+// (the driver `beispiel175` in `instrumente/pruefe-emission.sh`).
 module beispiel::puffer_zurueck {
 static mut RING : [u8; 8192] = 0 aligned 4096;
 

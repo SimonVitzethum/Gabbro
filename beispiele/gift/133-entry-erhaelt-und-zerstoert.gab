@@ -1,7 +1,7 @@
--- erwartet: N017
--- **Was erhalten bleibt, wird nicht zerstoert.**
--- Ein Register in `preserves` UND `clobbers` waere ein Eintrittsvertrag, der beides zugleich
--- verspricht. Bis zum 2026-08-19 pruefte es niemand -- `entry` hatte ueberhaupt keine Probe.
+// erwartet: N017
+// **Was erhalten bleibt, wird nicht zerstoert.**
+// Ein Register in `preserves` UND `clobbers` waere ein Eintrittsvertrag, der beides zugleich
+// verspricht. Bis zum 2026-08-19 pruefte es niemand -- `entry` hatte ueberhaupt keine Probe.
 module gift::entry_beides {
 
 entry e vector 1 arch x86_64 {
@@ -13,8 +13,8 @@ entry e vector 1 arch x86_64 {
     dispatch gift::entry_beides::ziel;
 }
 
--- (Opus agent L, 2026-09-26: the entry's registers now match its dispatch's
--- signature -- `N561` -- so this probe falls for its own reason alone.)
+// (Opus agent L, 2026-09-26: the entry's registers now match its dispatch's
+// signature -- `N561` -- so this probe falls for its own reason alone.)
 extern fn ziel(a : u64) -> never effects { diverges } costs <= 1 ops;
 
 }

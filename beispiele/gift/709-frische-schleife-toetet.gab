@@ -1,10 +1,10 @@
--- erwartet: M147
--- **V4 freshness: a loop boundary expires every taint (§2c).**
---
--- `alt` is read from the carrier, then a `traverse` runs -- and loops carry
--- no taints inward, so `alt` expires even though no visible write names it
--- between read and use. Deciding on `alt` afterwards falls as `M147`. A value
--- needed across iterations is re-read inside; the re-read IS the refresh.
+// erwartet: M147
+// **V4 freshness: a loop boundary expires every taint (§2c).**
+//
+// `alt` is read from the carrier, then a `traverse` runs -- and loops carry
+// no taints inward, so `alt` expires even though no visible write names it
+// between read and use. Deciding on `alt` afterwards falls as `M147`. A value
+// needed across iterations is re-read inside; the re-read IS the refresh.
 module gift709 {
 
 table T count 8 {

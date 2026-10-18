@@ -1,8 +1,8 @@
--- erwartet: M147
--- **Selector refinement, MUST-FAIL half (SPRACHE-EFFIZIENZ #17).** `a` is read from `RING[e]`
--- and the selector carrier `ENDE` is written afterwards: silent (the first decision, on `a`).
--- `c` is read from `RING[e]` and `RING` ITSELF is written afterwards: the CONTENT carrier
--- still taints, so the decision on `c` falls -- once.
+// erwartet: M147
+// **Selector refinement, MUST-FAIL half (SPRACHE-EFFIZIENZ #17).** `a` is read from `RING[e]`
+// and the selector carrier `ENDE` is written afterwards: silent (the first decision, on `a`).
+// `c` is read from `RING[e]` and `RING` ITSELF is written afterwards: the CONTENT carrier
+// still taints, so the decision on `c` falls -- once.
 module gift::inhalt_nach_schreiben {
 
 static mut RING : [u8; 256] = 0;

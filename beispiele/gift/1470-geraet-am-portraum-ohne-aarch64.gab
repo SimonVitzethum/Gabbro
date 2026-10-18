@@ -1,13 +1,13 @@
--- erwartet: Y102
--- ziel: aarch64
--- 1470 -- **a `device ... at port` has no aarch64 lowering (Y102).**
---
--- The checker accepts the device (port-space handles are legal, `beispiele/65`).
--- On `x86_64` the LLVM backend lowers its registers to `in`/`out` (`llvm/portraum.rs`);
--- it used to refuse them, because lowering them as `load volatile` at base+offset is
--- plain memory at the PORT NUMBER -- the generated code read RAM (the defect `gift/416`
--- pinned for the C emitter). On `aarch64` there is no port space at all, so the device
--- is refused by name for THAT target only (the `-- ziel:` line above selects it).
+// erwartet: Y102
+// ziel: aarch64
+// 1470 -- **a `device ... at port` has no aarch64 lowering (Y102).**
+//
+// The checker accepts the device (port-space handles are legal, `beispiele/65`).
+// On `x86_64` the LLVM backend lowers its registers to `in`/`out` (`llvm/portraum.rs`);
+// it used to refuse them, because lowering them as `load volatile` at base+offset is
+// plain memory at the PORT NUMBER -- the generated code read RAM (the defect `gift/416`
+// pinned for the C emitter). On `aarch64` there is no port space at all, so the device
+// is refused by name for THAT target only (the `// ziel:` line above selects it).
 module gift1470 {
 assume portraum_ist_x86 arch x86_64
     "The port space is reached by `in`/`out`, and those instructions exist on x86 only."

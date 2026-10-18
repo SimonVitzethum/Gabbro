@@ -44,7 +44,7 @@ RULES = [
     ("char", "lex", "S", ".", ".", ".", None, ""),
     ("quote", "lex", "S", ".", ".", ".", None, ""),
     ("newline", "lex", "S", ".", ".", ".", None, ""),
-    ("comment", "lex", "S", ".", ".", ".", None, ""),
+    ("comment", "lex", "S", ".", ".", ".", None, "`//`, nesting `/* */` (depth counter), `///` doc trivia (`lexDoku`); `lex_ohne_doku`"),
     ("path", "lex", "S", ".", ".", ".", None, "`nimmPfad`"),
     ("pathseg", "lex", "S", ".", ".", ".", None, ""),
     ("identlist", "lex", "S", ".", ".", ".", None, ""),
@@ -234,11 +234,33 @@ RULES = [
 
 
 def strip(src):
+    """The code of a source text: strings kept, `//` and nesting `/* */` comments dropped
+    (the lexer's rule, `Parser/Lex/Lexer.lean`)."""
     out = []
-    for line in src.split("\n"):
-        i = line.find("--")
-        out.append(line if i < 0 else line[:i])
-    return "\n".join(out)
+    i, n = 0, len(src)
+    while i < n:
+        if src[i] == '"':
+            j = i + 1
+            while j < n and src[j] not in '"\n':
+                j += 1
+            out.append(src[i:j + 1])
+            i = j + 1
+        elif src.startswith("//", i):
+            while i < n and src[i] != "\n":
+                i += 1
+        elif src.startswith("/*", i):
+            tiefe, i = 1, i + 2
+            while i < n and tiefe:
+                if src.startswith("/*", i):
+                    tiefe, i = tiefe + 1, i + 2
+                elif src.startswith("*/", i):
+                    tiefe, i = tiefe - 1, i + 2
+                else:
+                    i += 1
+        else:
+            out.append(src[i])
+            i += 1
+    return "".join(out)
 
 
 def corpus_text():

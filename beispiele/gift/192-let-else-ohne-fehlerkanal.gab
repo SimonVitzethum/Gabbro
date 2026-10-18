@@ -1,12 +1,12 @@
--- erwartet: N028
--- **«C3a»: ein `else`-Zweig ueber einer Funktion, die nicht scheitern kann.**
---
--- `hol` erklaert kein `or <reason>`. Damit koennte der Zweig nie laufen, und `e` benennt
--- nichts -- dieselbe Klasse wie `gates` ohne Torfunktion (`N020`) und `on_exceeded` ohne
--- Namen (`S007`): eine Klausel, deren Gegenstand nirgends steht.
---
--- > Die Gegenprobe ist `beispiele/11a`: dort steht `-> u32 or HolFehler`, und dieselbe Form
--- > geht durch.
+// erwartet: N028
+// **«C3a»: ein `else`-Zweig ueber einer Funktion, die nicht scheitern kann.**
+//
+// `hol` erklaert kein `or <reason>`. Damit koennte der Zweig nie laufen, und `e` benennt
+// nichts -- dieselbe Klasse wie `gates` ohne Torfunktion (`N020`) und `on_exceeded` ohne
+// Namen (`S007`): eine Klausel, deren Gegenstand nirgends steht.
+//
+// > Die Gegenprobe ist `beispiele/11a`: dort steht `-> u32 or HolFehler`, und dieselbe Form
+// > geht durch.
 
 module gift {
 

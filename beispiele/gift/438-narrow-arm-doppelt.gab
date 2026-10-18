@@ -1,15 +1,15 @@
--- erwartet: L104
--- **Der Arm eines `narrow … else` wird noch GELESEN.**
---
--- Am 2026-08-31 wurde `narrow … else` in M2 vom geradlinigen Rumpf zum ZWEIG. Der
--- naheliegende falsche Weg dorthin ist, den Arm einfach zu ueberspringen: der Zustand
--- danach stimmt dann auch, und `L104` an der Fortsetzung verschwindet.
---
--- **Diese Probe steht gegen genau diesen Weg.** Beide Rufe stehen IM Arm; wer ihn nicht
--- laeuft, sieht kein einziges davon.
---
--- > Die Gegenprobe ist `beispiele/58-freiliste-zwei-formen.gab`: dieselbe Form, sauber,
--- > weil dort nur einmal verbraucht wird.
+// erwartet: L104
+// **Der Arm eines `narrow … else` wird noch GELESEN.**
+//
+// Am 2026-08-31 wurde `narrow … else` in M2 vom geradlinigen Rumpf zum ZWEIG. Der
+// naheliegende falsche Weg dorthin ist, den Arm einfach zu ueberspringen: der Zustand
+// danach stimmt dann auch, und `L104` an der Fortsetzung verschwindet.
+//
+// **Diese Probe steht gegen genau diesen Weg.** Beide Rufe stehen IM Arm; wer ihn nicht
+// laeuft, sieht kein einziges davon.
+//
+// > Die Gegenprobe ist `beispiele/58-freiliste-zwei-formen.gab`: dieselbe Form, sauber,
+// > weil dort nur einmal verbraucht wird.
 
 module gift {
 

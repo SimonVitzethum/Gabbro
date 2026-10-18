@@ -1,12 +1,12 @@
--- erwartet: K001
--- **Poison 246 -- an indirect call costs what its type promises, and `K001` counts it.**
---
--- The second half of why the contract sits at the type. Without a `costs` clause there an
--- indirect call would cost **zero**, and a body full of them would come in under any bound at
--- all. `nutze` promises 4 ops and makes two calls of 6 each.
---
--- *`N035` forbids a `fn(…)` without `costs`, so the zero case cannot arise* -- this probe
--- checks the other direction: that the number, once promised, is actually added.
+// erwartet: K001
+// **Poison 246 -- an indirect call costs what its type promises, and `K001` counts it.**
+//
+// The second half of why the contract sits at the type. Without a `costs` clause there an
+// indirect call would cost **zero**, and a body full of them would come in under any bound at
+// all. `nutze` promises 4 ops and makes two calls of 6 each.
+//
+// *`N035` forbids a `fn(…)` without `costs`, so the zero case cannot arise* -- this probe
+// checks the other direction: that the number, once promised, is actually added.
 
 module gift::indirekter_ruf_sprengt_kosten {
 
