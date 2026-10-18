@@ -144,6 +144,7 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .ret e _, lb, k, s => lowerErg lay cenv e lb s
   | _, _, _, _, .leave _, lb, _, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, _, .next _, lb, _, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
+  | _, _, _, _, .forever _ _ body, lb, k, s => lowerB lay cenv (k, lb) body lb lb s
   | _, _, _, _, _, _, _, _ => none
 
 def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
@@ -164,6 +165,27 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           | some (cb, a, r2) =>
               match lowerB lay (a :: cenv) lv rest s.l k ⟨r2, s.l + 1⟩ with
               | some (b2, s2) => some (⟨lb, [], ce ++ cb, .jmp s.l⟩ :: b2, s2)
+              | none => none
+          | none => none
+      | none => none
+  | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, s =>
+      match lowerE lay cenv (Expr.and (Expr.le (Expr.lit lo') e) (Expr.le e (Expr.lit hi'))) s.r with
+      | some (cc, oc, r1) =>
+          match lowerE lay cenv e r1 with
+          | some (ce, oe, r2) =>
+              match cvtG (.int lo hi) (.int lo' hi') oe r2 with
+              | some (cv, ov, r3) =>
+                  match bindCode (.int lo' hi') ov r3 with
+                  | some (cb, a, r4) =>
+                      match lowerEnd lay cenv lv sonst s.l ⟨r4, s.l + 3⟩ with
+                      | some (be, s1) =>
+                          match lowerB lay (a :: cenv) lv rest (s.l + 2) k s1 with
+                          | some (br, s2) =>
+                              some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ ::
+                                ⟨s.l + 1, [], ce ++ cv ++ cb, .jmp (s.l + 2)⟩ :: (be ++ br), s2)
+                          | none => none
+                      | none => none
+                  | none => none
               | none => none
           | none => none
       | none => none

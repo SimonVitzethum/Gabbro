@@ -1,4 +1,5 @@
 import Grammatik.Code.Refine.Stmt
+import Grammatik.Code.Refine.Loop
 
 /-
   File:      Grammatik/Code/Refine/StmtOk.lean
@@ -393,8 +394,13 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp [lowerS] at h
   | _, _, _, _, .retry .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
-  | _, _, _, _, .forever .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+  | _, _, _, _, .forever (Λ := Λ) a inv body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks,
+      dst, hR, hE, hW, hc => by
+      simp only [lowerS] at h
+      have hKl := kok_of_shape (lowerB_shape lay cenv (k, lb) body lb lb st st' blks h) hM
+      simp only [execStmt]
+      exact forever_ok a inv body (fun σ ρ m rs hR hE hW hc => lowerB_ok lay hL cenv (k, lb) O passes R body lb lb
+        st st' blks h M S fn hM hKl ⟨hk, hKl⟩ σ ρ m rs ks dst hR hE hW hc) passes σ ρ m rs hR hE hW hc
   | _, _, _, _, .axiomCall .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerS] at h
   | _, _, _, _, .regWrite .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -596,8 +602,131 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp [lowerB] at h
   | _, _, _, _, .exchange .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerB] at h
-  | _, _, _, _, .narrow .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) (Λ := Λ) e lo' hi' sonst rest, lb, k, st,
+      st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerB] at h
+      rcases hcd : lowerE lay cenv (Gabbro.Grammatik.Expr.and (Gabbro.Grammatik.Expr.le
+          (Gabbro.Grammatik.Expr.lit lo') e) (Gabbro.Grammatik.Expr.le e (Gabbro.Grammatik.Expr.lit hi')))
+          st.r with _ | ⟨cc, oc, r1⟩
+      · simp [hcd] at h
+      simp only [hcd] at h
+      rcases he : lowerE lay cenv e r1 with _ | ⟨ce, oe, r2⟩
+      · simp [he] at h
+      simp only [he] at h
+      rcases hv : cvtG (.int lo hi) (.int lo' hi') oe r2 with _ | ⟨cv, ov, r3⟩
+      · simp [hv] at h
+      simp only [hv] at h
+      rcases hb : bindCode (.int lo' hi') ov r3 with _ | ⟨cb, a, r4⟩
+      · simp [hb] at h
+      simp only [hb] at h
+      rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ with _ | ⟨be, s1⟩
+      · simp [hb1] at h
+      simp only [hb1] at h
+      rcases hb2 : lowerB lay (a :: cenv) lv rest (st.l + 2) k s1 with _ | ⟨br, s2⟩
+      · simp [hb2] at h
+      simp only [hb2] at h
+      have h' := Option.some.inj h
+      simp only [Prod.mk.injEq] at h'
+      obtain ⟨rfl, rfl⟩ := h'
+      have m1 := lowerE_mono lay cenv _ st.r _ hcd
+      have m2 := lowerE_mono lay cenv e r1 _ he
+      have m3 := cvtG_mono hv
+      have m4 := bindCode_mono hb
+      have S1 := lowerEnd_shape lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ s1 be hb1
+      have S2 := lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k s1 s2 br hb2
+      have hb0 := hM _ (List.mem_cons_self ..)
+      have hbb := hM _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
+      have hMe : InM M fn be := fun b hb' =>
+        hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_left _ hb')))
+      have hMr : InM M fn br := fun b hb' =>
+        hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_append_right _ hb')))
+      have hKe := kok_of_shape S1 hMe
+      have hKr := kok_of_shape S2 hMr
+      have hle14 : r1 ≤ r4 := by
+        have a2 := m2
+        have a3 := m3
+        have a4 := m4
+        simp only at a2 a3 a4
+        omega
+      have hRl : Rep lay (σ.lese Λ e.orte) m := hR
+      simp only [execBlock]
+      -- the test
+      obtain ⟨Fc, _⟩ := lowerE_ok lay hL _ cenv st.r (cc, oc, r1) hcd (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs hRl hE hc
+      obtain ⟨rs1, hs1, hr1, hag1, hlt1, hev1⟩ := Fc
+      have hs1' : seqI cc m rs = some (m, rs1) := hs1
+      have hE1 := envRep_regs cenv ρ (fun x hx => hag1 x (hc x hx)) hE
+      have hc1 : ∀ x ∈ cenv, x < r1 := fun x hx => Nat.lt_of_lt_of_le (hc x hx) hr1
+      have hcond : (eval (σ.lese Λ e.orte) (Gabbro.Grammatik.Expr.and (Gabbro.Grammatik.Expr.le
+          (Gabbro.Grammatik.Expr.lit lo') e) (Gabbro.Grammatik.Expr.le e (Gabbro.Grammatik.Expr.lit hi'))) (σ.lese Λ e.orte) ρ : Bool)
+          = (decide (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) && decide ((eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) := by
+        first | rfl | simp [eval, Gabbro.Grammatik.wahr?]
+      by_cases hn : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
+      · rw [dif_pos hn]
+        -- the test succeeds: run the bind block
+        have hT : (eval (σ.lese Λ e.orte) (Gabbro.Grammatik.Expr.and (Gabbro.Grammatik.Expr.le
+            (Gabbro.Grammatik.Expr.lit lo') e) (Gabbro.Grammatik.Expr.le e (Gabbro.Grammatik.Expr.lit hi'))) (σ.lese Λ e.orte) ρ : Bool)
+            = true := by
+          rw [hcond, decide_eq_true hn.1, decide_eq_true hn.2]; rfl
+        have hev : oc.ev rs1 = some (.int 1 (1 : BitVec 1)) := by
+          rw [hT] at hev1; exact hev1
+        obtain ⟨bkb, hbkb, hkpb⟩ : ∃ bk, M.blk fn (st.l + 1) = some bk ∧ bk.phis = [] := ⟨_, hbb, rfl⟩
+        have hbr0 := reach_block_br (S := S) (ks := ks) (dst := dst) (x := (1 : BitVec 1)) hb0 rfl hs1' hev
+          (by simpa using hbkb) hkpb
+        have hbr : Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m ⟨fn, st.l + 1, 0, rs1, dst⟩ ks) := by
+          simpa using hbr0
+        -- the value, moved to the new type
+        obtain ⟨Fe, hfe⟩ := lowerE_ok lay hL e cenv r1 (ce, oe, r2) he (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ m rs1 hRl hE1 hc1
+        obtain ⟨rs2, hs2, hr2, hag2, hlt2, hev2⟩ := Fe
+        have hs2' : seqI ce m rs1 = some (m, rs2) := hs2
+        have hE2 := envRep_regs cenv ρ (fun x hx => hag2 x (hc1 x hx)) hE1
+        have hc2 : ∀ x ∈ cenv, x < r2 := fun x hx => Nat.lt_of_lt_of_le (hc1 x hx) hr2
+        obtain ⟨cV, hcV, FV⟩ := cvtG_frag (lb := lo') (hb := hi') (m := m) (rs := rs2) (z := (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n)
+          (hfe lo hi rfl) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).lo_le (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).le_hi hev2 hlt2
+        rw [hv] at hcV
+        have hcV' := Option.some.inj hcV
+        subst hcV'
+        obtain ⟨rs3, hs3, hr3, hag3, hlt3, hev3⟩ := FV
+        have hs3' : seqI cv m rs2 = some (m, rs3) := hs3
+        have hE3 := envRep_regs cenv ρ (fun x hx => hag3 x (hc2 x hx)) hE2
+        have hc3 : ∀ x ∈ cenv, x < r3 := fun x hx => Nat.lt_of_lt_of_le (hc2 x hx) hr3
+        obtain ⟨m1, rs4, hs4, hRn, hEnew, hWn, hra, hr4e, hag4⟩ :=
+          bindCode_run lay (τ := .int lo' hi') (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hn.1, hn.2⟩ : Zahl lo' hi') ov r3 m rs3 hRl hE3 hW
+            hev3 hlt3 hc3 hb
+        subst hr4e
+        have hseq1 : seqI (ce ++ cv) m rs1 = some (m, rs3) := by
+          rw [seqI_append, hs2', Option.bind_some]; exact hs3'
+        have hseq : seqI (ce ++ cv ++ cb) m rs1 = some (m1, rs4) := by
+          rw [seqI_append, hseq1, Option.bind_some]; exact hs4
+        obtain ⟨bkr, hbkr, hkpr⟩ := hKr
+        have hreach2 := reach_block_jmp (S := S) (ks := ks) (dst := dst) hbb rfl hbkr hkpr hseq
+        have hS1r : a + 1 ≤ s1.r := S1.2.2
+        have hbound : ∀ x ∈ a :: cenv, x < s1.r := fun x hx => by
+          rcases List.mem_cons.mp hx with rfl | hx'
+          · exact Nat.lt_of_lt_of_le (Nat.lt_succ_self _) hS1r
+          · exact Nat.lt_of_lt_of_le (Nat.lt_succ_of_lt (Nat.lt_of_lt_of_le (hc3 x hx') hra)) hS1r
+        have IHr := lowerB_ok lay hL (a :: cenv) lv O passes R rest (st.l + 2) k s1 s2 br hb2
+          M S fn hMr hk hlv (σ.lese Λ e.orte) (Env.cons ⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hn.1, hn.2⟩ ρ) m1 rs4 ks dst hRn hEnew hWn hbound
+        exact outok_schrumpf _ (outok_lift (Reach.trans hbr hreach2) _ IHr)
+      · rw [dif_neg hn]
+        have hF : (eval (σ.lese Λ e.orte) (Gabbro.Grammatik.Expr.and (Gabbro.Grammatik.Expr.le
+            (Gabbro.Grammatik.Expr.lit lo') e) (Gabbro.Grammatik.Expr.le e (Gabbro.Grammatik.Expr.lit hi'))) (σ.lese Λ e.orte) ρ : Bool)
+            = false := by
+          rw [hcond]
+          by_cases h1 : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n
+          · have h2 : ¬ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' := fun h2 => hn ⟨h1, h2⟩
+            rw [decide_eq_false h2]; exact Bool.and_false _
+          · rw [decide_eq_false h1]; rfl
+        have hev : oc.ev rs1 = some (.int 1 (0 : BitVec 1)) := by
+          rw [hF] at hev1; exact hev1
+        obtain ⟨bke, hbke, hkpe⟩ := hKe
+        have h01 : ¬ ((0 : BitVec 1) = 1) := by decide
+        have hbr0 := reach_block_br (S := S) (ks := ks) (dst := dst) (x := (0 : BitVec 1)) hb0 rfl hs1' hev
+          (by simpa [h01] using hbke) hkpe
+        have hbr : Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m ⟨fn, st.l, 0, rs1, dst⟩ ks) := by
+          simpa [h01] using hbr0
+        exact outok_mono S2.2.2 _ (outok_lift hbr _ (outok_of_endok _
+          (lowerEnd_ok lay hL cenv lv O passes R sonst st.l ⟨r4, st.l + 3⟩ s1 be hb1 M S fn hMe hlv (σ.lese Λ e.orte) ρ m rs1
+            ks dst hRl hE1 hW (fun x hx => Nat.lt_of_lt_of_le (hc1 x hx) hle14))))
   | _, _, _, _, .float .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerB] at h
   | _, _, _, _, .floatLit .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by

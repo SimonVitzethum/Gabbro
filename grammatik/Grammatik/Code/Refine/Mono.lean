@@ -598,8 +598,9 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerS] at h
   | _, _, _, _, .retry .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
-  | _, _, _, _, .forever .., lb, k, st, st', blks, h => by
-      simp [lowerS] at h
+  | _, _, _, _, .forever _ _ body, lb, k, st, st', blks, h => by
+      simp only [lowerS] at h
+      exact lowerB_shape lay cenv (k, lb) body lb lb st st' blks h
   | _, _, _, _, .axiomCall .., lb, k, st, st', blks, h => by
       simp [lowerS] at h
   | _, _, _, _, .regWrite .., lb, k, st, st', blks, h => by
@@ -727,8 +728,49 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp [lowerB] at h
   | _, _, _, _, .exchange .., lb, k, st, st', blks, h => by
       simp [lowerB] at h
-  | _, _, _, _, .narrow .., lb, k, st, st', blks, h => by
-      simp [lowerB] at h
+  | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, st, st', blks,
+      h => by
+      simp only [lowerB] at h
+      rcases hc : lowerE lay cenv (Expr.and (Expr.le (Expr.lit lo') e) (Expr.le e (Expr.lit hi'))) st.r with
+        _ | ⟨cc, oc, r1⟩
+      · simp [hc] at h
+      have m1 := lowerE_mono lay cenv _ st.r _ hc
+      simp only [hc] at h
+      rcases he : lowerE lay cenv e r1 with _ | ⟨ce, oe, r2⟩
+      · simp [he] at h
+      have m2 := lowerE_mono lay cenv e r1 _ he
+      simp only [he] at h
+      rcases hv : cvtG (.int lo hi) (.int lo' hi') oe r2 with _ | ⟨cv, ov, r3⟩
+      · simp [hv] at h
+      have m3 := cvtG_mono hv
+      simp only [hv] at h
+      rcases hb : bindCode (.int lo' hi') ov r3 with _ | ⟨cb, a, r4⟩
+      · simp [hb] at h
+      have m4 := bindCode_mono hb
+      simp only [hb] at h
+      rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ with _ | ⟨be, s1⟩
+      · simp [hb1] at h
+      have S1 := lowerEnd_shape lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ s1 be hb1
+      simp only [hb1] at h
+      rcases hb2 : lowerB lay (a :: cenv) lv rest (st.l + 2) k s1 with _ | ⟨br, s2⟩
+      · simp [hb2] at h
+      have S2 := lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k s1 s2 br hb2
+      simp only [hb2] at h
+      have := Option.some.inj h
+      simp only [Prod.mk.injEq] at this
+      obtain ⟨rfl, rfl⟩ := this
+      refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
+      · intro b hb
+        simp only [List.mem_cons, List.mem_append] at hb
+        rcases hb with rfl | rfl | hb | hb
+        · rfl
+        · rfl
+        · exact S1.2.1 b hb
+        · exact S2.2.1 b hb
+      · have a1 := S1.2.2
+        have a2 := S2.2.2
+        simp only at m1 m2 m3 m4 a1 a2 ⊢
+        omega
   | _, _, _, _, .float .., lb, k, st, st', blks, h => by
       simp [lowerB] at h
   | _, _, _, _, .floatLit .., lb, k, st, st', blks, h => by
