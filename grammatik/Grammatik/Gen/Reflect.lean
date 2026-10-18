@@ -32,12 +32,20 @@ def rollen : List (String × List String) :=
   , ("SAnw.set.1", ["=", "=", "=", "+=", "-="])
   , ("SExpr.variable.0", ["x", "y", "z", "i", "j", "A", "B", "F", "L", "T"])
   , ("SExpr.field.1", ["v", "w", "b", "n", "slots"])
-  , ("SExpr.call.0", ["h"])
+  , ("SExpr.call.0", ["h", "Some", "None"])
   , ("SExpr.built.0", ["sizeof", "lenof"])
   , ("SAnw.call.0", ["h"])
   , ("SAnw.bind.1", ["x", "y", "z", "a", "c", "p", "q", "r", "s", "t", "u", "w"])
   , ("SAnw.each.0", ["i", "j", "k"])
-  , ("SAnw.arm.0", ["0", "1", "2", "3"])
+  , ("SAnw.arm.0", ["Some", "None"])
+  , ("SAnw.arm.1", ["k", "j"])
+  , ("SAnw.reset.0", ["R"])
+  , ("SAnw.alloc.1", ["a", "b"])
+  , ("SAnw.alloc.3", ["R"])
+  , ("SAnw.start.0", ["w", "z"])
+  , ("SAnw.trim.1", ["0 .. 5 ", "0 ..< 4 ", "u8 "])
+  , ("SAnw.retry.0", ["warten until true bounded 8 ops progress ok_ on_exceeded zeit effects { pure } "])
+  , ("SAnw.loop.0", ["dienst per_pass bounded 64 ops on_exceeded zeit effects { pure } progress ok_ "])
   , ("SAnw.each.2", ["slots"])
   , ("SAnw.each.4", ["unvisited"])
   , ("SAnw.each.5", [""])
@@ -50,7 +58,9 @@ def rollen : List (String × List String) :=
 /-- Constructor weights (default 1). A weight of 0 would opt a constructor out; none is. -/
 def gewichte : List (String × Nat) :=
   [("SAnw.bind", 4), ("SAnw.set", 4), ("SAnw.cond", 3), ("SAnw.locks", 2), ("SAnw.each", 2),
-   ("SExpr.lit", 3), ("SExpr.variable", 3), ("SExpr.bin", 3)]
+   ("SAnw.alloc", 4), ("SAnw.trim", 4), ("SAnw.cases", 4), ("SAnw.reset", 3), ("SAnw.start", 2),
+   ("SAnw.retry", 2), ("SAnw.loop", 2), ("SAnw.call", 3), ("SAnw.ret", 2),
+   ("SExpr.lit", 3), ("SExpr.variable", 3), ("SExpr.bin", 3), ("SExpr.un", 2)]
 
 /-- Shapes the reader builds at one place: a field that holds a block, an `else if`, a match arm. The
     printer prints any tree, the parser reads back only these; without this table 60 % of the candidates
@@ -71,10 +81,11 @@ def binderRollen : List String := ["SAnw.bind.1"]
 def saatProzent : Nat := 75
 
 /-- Seed roles of expression fields: key `Type.ctor.fieldIndex` to the role (0 integer value, 1 truth
-    value, 2 assignable place, 3 lock name, 4 table name). The seeds themselves are computed from the frame. -/
+    value, 2 assignable place, 3 lock name, 4 table name, 5 option place). The seeds themselves are computed from the frame. -/
 def saatRollen : List (String × Nat) :=
   [("SAnw.bind.3", 0), ("SAnw.set.2", 0), ("SAnw.set.0", 2), ("SAnw.cond.0", 1), ("SAnw.elsif.0", 1),
-   ("SAnw.locks.1", 3), ("SAnw.ret.0", 0), ("SEnde.ret.0", 0), ("SAnw.call.1", 0), ("SAnw.cases.0", 0),
+   ("SAnw.locks.1", 3), ("SAnw.ret.0", 0), ("SEnde.ret.0", 0), ("SAnw.call.1", 0), ("SAnw.cases.0", 5), ("SAnw.alloc.4", 0),
+   ("SAnw.trim.0", 0),
    ("SAnw.each.6", 1), ("SAnw.each.3", 4), ("SExpr.bin.1", 0), ("SExpr.bin.2", 0), ("SExpr.un.1", 0), ("SExpr.index.1", 0)]
 
 /-- The last two components of a name: `Gabbro.Grammatik.Parser.SAnw.bind` to `SAnw.bind`. -/

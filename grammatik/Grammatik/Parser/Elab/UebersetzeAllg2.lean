@@ -102,12 +102,18 @@ theorem vBoden_eq (u : UProg) (c : Fin u.fns.length) :
   rw [sigAt_get u c]
   rfl
 
-/-- No error channel anywhere. -/
-theorem sigGruende_zero (u : UProg) (i : Fin u.fns.length) :
-    (declOf u).gruende i = 0 := by
+/-- The number of reasons of a signature is the recorded one. -/
+theorem sigGruende_eq (u : UProg) (i : Fin u.fns.length) :
+    (declOf u).gruende i = (fnAt u i).gruende := by
   show (sigAt u i.val).gruende = _
   rw [sigAt_get u i]
   rfl
+
+/-- A unit whose functions have no reason channel has none on any signature. -/
+theorem sigGruende_null (u : UProg) (h : ∀ g ∈ u.fns, g.gruende = 0) (i : Fin u.fns.length) :
+    (declOf u).gruende i = 0 := by
+  rw [sigGruende_eq]
+  exact h _ (List.get_mem u.fns i)
 
 /-- The contract result is the recorded type (`bool`, a range, or none). -/
 theorem vErg_eq (u : UProg) (c : Fin u.fns.length) :
@@ -827,8 +833,9 @@ def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   match lowRufKopf u caller Γ fn Λ cname args with
   | .error e => .error e
   | .ok k =>
-    .ok (castNachStmtL u caller k.callee Γ Λ
-      (Stmt.call (D := declOf u) k.callee k.args k.hp (sigGruende_zero u k.callee)))
+    if hr : (declOf u).gruende k.callee = 0 then
+      .ok (castNachStmtL u caller k.callee Γ Λ (Stmt.call (D := declOf u) k.callee k.args k.hp hr))
+    else .error "call of a function with a reason channel needs `let .. else`"
 
 /-- A write of a static (`Stmt.assignGlob`): only where the function declares `writes X`. -/
 def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1002,7 +1009,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

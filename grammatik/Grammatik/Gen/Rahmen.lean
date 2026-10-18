@@ -68,7 +68,22 @@ def rahmenC : Rahmen where
     " table T count 3 { slot { v : u8 in 0 .. 40, w : i16, b : bool, } }"
   effs := "reads A, writes A, reads B, writes B, reads S, writes S, reads T.slots, writes T.slots, reads T"
 
-def rahmen : List Rahmen := [rahmenA, rahmenB, rahmenC]
+/-- Option places, an arena, foreign bodies, an assumption and routines to start and call: the frame the
+    newer forms of the elaboration (`match`, `alloc`/`reset`, `retry`/`forever`, `start`, calls) are reached in. -/
+def rahmenD : Rahmen where
+  name := "D"
+  kopf := "module gen { pub static mut A : u8 = 0; pub static mut F : bool = false;" ++
+    " table N count 4 { slot { v : u8, n : option index into N, } }" ++
+    " arena R capacity 2 .. 4 of u8;" ++
+    " extern fn zeit() -> never effects { diverges } costs <= 1 ops;" ++
+    " extern fn tick() effects { pure } costs <= 1 ops;" ++
+    " assume ok_ \"the cell changes\" falsifier sonde_ok;" ++
+    " impl fn h(a : u8, b : u8) -> u8 costs <= 10 ops { return b; }" ++
+    " impl fn w() costs <= 10 ops { }" ++
+    " impl fn z() costs <= 10 ops { }"
+  effs := "reads A, writes A, reads F, writes F, reads N.slots, writes N.slots, reads N, reads R, writes R"
+
+def rahmen : List Rahmen := [rahmenA, rahmenB, rahmenC, rahmenD]
 
 /-- The seeds of a frame as expression texts, by role. -/
 structure Saat where
@@ -77,13 +92,17 @@ structure Saat where
   plaetze : List String := []
   sperren : List String := []
   tabellen : List String := []
+  /-- option places `T.slots[k].f` of the option fields of the tables. -/
+  optionen : List String := []
   /-- the numeric places read together: the digest the program returns (`a ^ b ^ ...`). -/
   digest : String := "0"
 
-/-- Places `T.slots[k].f` of the first slots of a table, split into numeric and truth-valued. -/
+/-- Places `T.slots[k].f` of the first slots of a table, split into numeric and truth-valued (option fields and the
+    elements of an arena, which is read as `A[i]`, are no numeric places). -/
 def tabPlaetze (t : UTab) : List String × List String :=
+  if t.arena then ([], []) else
   let ks := List.range (min t.count.toNat 3)
-  let num := t.cols.filter (fun c => !t.bools.contains c.1)
+  let num := t.cols.filter (fun c => !t.bools.contains c.1 && !t.opts.any (fun p => p.1 == c.1))
   ( num.flatMap (fun c => ks.map fun k => s!"{t.name}.slots[{k}].{c.1}"),
     t.bools.flatMap (fun f => ks.map fun k => s!"{t.name}.slots[{k}].{f}") )
 
@@ -101,6 +120,7 @@ def saatVon (u : UProg) : Saat :=
     plaetze := (gi ++ gb).filter (·.var) |>.map (·.name) |> (· ++ tp.flatMap (fun p => p.1 ++ p.2))
     sperren := u.locks.map (·.name)
     tabellen := u.tabs.map (·.name)
+    optionen := u.tabs.flatMap fun t => t.opts.flatMap fun p => (List.range (min t.count.toNat 3)).map fun k => s!"{t.name}.slots[{k}].{p.1}"
     digest := " ^ ".intercalate (pn.take 24) }
 
 /-- The seeds of each frame. -/

@@ -257,7 +257,7 @@ theorem nutzer4 : NutzerPflicht E4 where
   logik := ⟨fun passes f => ⟨koerperGutS_alle fsA.2 ohneEwig4 koerperS4 passes f, invGutS_leer rfl f,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ r _ => by
         have h := r.isLt
-        have h0 : D4.gruende f = 0 := sigGruende_zero uExp104 f
+        have h0 : D4.gruende f = 0 := sigGruende_null uExp104 (by decide) f
         omega⟩,
     fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
   start := ⟨fun _ => rfl, fun _ h => absurd h List.not_mem_nil⟩

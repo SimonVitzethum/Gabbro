@@ -174,6 +174,7 @@ import Grammatik.Parser.Elab.Proben.UebersetzeProben20
 import Grammatik.Parser.Elab.Proben.UebersetzeProben21
 import Grammatik.Parser.Elab.Proben.UebersetzeProben22
 import Grammatik.Parser.Elab.Proben.UebersetzeProben23
+import Grammatik.Parser.Elab.Proben.UebersetzeProben24
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
@@ -441,6 +442,7 @@ import Grammatik.Parser.Round.RundlaufAnw2
 import Grammatik.Parser.Round.RundlaufAnw3
 import Grammatik.Parser.Cover.Census
 import Grammatik.Parser.Cover.Differenz
+import Grammatik.Parser.Cover.Mitglieder
 import Grammatik.Parser.Cover.Proben
 import Grammatik.GabbroV.GvAtomKoerper
 import Grammatik.Zielsatz.Atomar.BeweisAtomar

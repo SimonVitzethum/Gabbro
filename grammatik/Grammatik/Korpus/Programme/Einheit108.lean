@@ -146,7 +146,7 @@ theorem nutzer8 : NutzerPflicht E8 where
   logik := ⟨fun passes f => ⟨koerperGutS_alle fsA.2 ohneEwig8 koerperS8 passes f, invGutS_leer rfl f,
       fun _ _ _ _ _ _ _ _ _ _ _ _ _ r _ => by
         have h := r.isLt
-        have h0 : D8.gruende f = 0 := sigGruende_zero uExp108 f
+        have h0 : D8.gruende f = 0 := sigGruende_null uExp108 (by decide) f
         omega⟩,
     fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
   start := ⟨fun L => (kein_lock L).elim, fun _ _ => rfl⟩

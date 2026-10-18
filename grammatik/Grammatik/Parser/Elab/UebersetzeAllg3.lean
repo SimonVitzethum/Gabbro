@@ -53,6 +53,7 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
         .ok eW
     | some _ => .error "number returned for a non-number result"
     | none => .error "return with value without result"
+  | .why _ => .error "reason as a value without G form"
   | .opt o =>
     match hE : (fnAt u caller).ergTy with
     | some (.opt n) =>
@@ -93,6 +94,11 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
 /-- The trailing return. -/
 def lowEnd (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) (r : URet) :
     Except String (Endblock (declOf u) (verOf u caller) false Γ (resOf u caller)) :=
+  match r with
+  | .why i =>
+    if h : i < (verOf u caller).gruende then .ok (Endblock.retWhy (D := declOf u) ⟨i, h⟩ (endPerm_ok u caller))
+    else .error "reason case outside the channel"
+  | _ =>
   match lowErg u caller Γ fn r with
   | .error e => .error e
   | .ok e => .ok (Endblock.ret e (endPerm_ok u caller))
@@ -109,6 +115,12 @@ def lowRetStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn
   match pe with
   | none => .error "lower: return under locks has no G form"
   | some ⟨h⟩ =>
+    match r with
+    | .why i =>
+      if hi : i < (verOf u caller).gruende then
+        .ok (by subst h; exact Stmt.retWhy (D := declOf u) ⟨i, hi⟩ (endPerm_ok u caller))
+      else .error "reason case outside the channel"
+    | _ =>
     match lowErg u caller Γ fn r with
     | .error e => .error e
     | .ok erg =>
@@ -265,11 +277,12 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
         | .error e => .error e
         | .ok (b, r) =>
-          have hr : (declOf u).gruende k.callee = 0 := sigGruende_zero u k.callee
-          have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) Λ := by
-            rw [nach_eq u k.callee Λ]
-            exact b
-          .ok (Block.bindCall (D := declOf u) k.callee k.args hE k.hp hr b', r)
+          if hr : (declOf u).gruende k.callee = 0 then
+            have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) Λ := by
+              rw [nach_eq u k.callee Λ]
+              exact b
+            .ok (Block.bindCall (D := declOf u) k.callee k.args hE k.hp hr b', r)
+          else .error "call of a function with a reason channel needs `let .. else`"
   | Γ, fn, n + 1, Λ, pe, .axCall c args :: rest =>
     match lowAxKopf u caller Γ fn Λ c args with
     | .error e => .error e
@@ -303,6 +316,36 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
+  | Γ, fn, n + 1, Λ, pe, .matchWhyBeg e :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.matchWhyBeg e) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindElse y c args e :: rest =>
+    match lowRufKopf u caller Γ fn Λ c args with
+    | .error err => .error err
+    | .ok k =>
+      if hr : 0 < (declOf u).gruende k.callee then
+        withErg u k.callee fun τ hE =>
+          match lowEndL (l := l) u caller (Ty.why ((declOf u).gruende k.callee) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).gruende k.callee)) n Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: rest') =>
+            match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) n Λ pe rest' with
+            | .error err => .error err
+            | .ok (b, r) =>
+              have errb' : Endblock (declOf u) (verOf u caller) l (Ty.why ((declOf u).gruende k.callee) :: Γ)
+                  (nach (declOf u) k.callee Λ) := by
+                rw [nach_eq u k.callee Λ]
+                exact errb
+              have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) Λ := by
+                rw [nach_eq u k.callee Λ]
+                exact b
+              .ok (Block.bindCallElse (D := declOf u) k.callee k.args hE k.hp hr errb' b', r)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: let else of a call without a reason channel"
   | Γ, fn, n + 1, Λ, pe, .allocBeg x an v :: rest =>
     match tabIdx u.tabs an with
     | .error e => .error e
@@ -425,6 +468,20 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .ok (ueb, .blkEnd :: rest2) => .ok (Stmt.retry cnt bv body ueb, rest2)
         | .ok (_, _) => .error "lower: a retry is not closed"
       | .ok (_, _) => .error "lower: a retry has no overflow part"
+  | Γ, fn, n + 1, Λ, pe, .matchWhyBeg e, rest =>
+    match paramPos fn.params e with
+    | .error err => .error err
+    | .ok j =>
+      match fn.params[j]? with
+      | some (_, .why cnt) =>
+        match lowVar Γ j (.why cnt) with
+        | .error err => .error err
+        | .ok v =>
+          match lowGArmsL (l := l) u caller Γ fn n Λ pe cnt rest with
+          | .error err => .error err
+          | .ok (arms, .blkEnd :: rest') => .ok (Stmt.onWhy (D := declOf u) (Expr.var v) arms, rest')
+          | .ok (_, _) => .error "lower: a match is not closed"
+      | _ => .error "lower: match of a non-reason"
   | Γ, fn, n + 1, Λ, pe, .matchBeg num o k, rest =>
     if hnum : num < u.tabs.length then
       match lowOpt u Γ Λ fn 0 num hnum o with
@@ -449,6 +506,27 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     else .error "lower: assumption unknown"
   | _, _, _ + 1, _, _, _, _ => .error "lower: not a structured statement"
 
+/-- The arms of a reason match: `m` blocks, one per reason, separated by `ifElse`; the marker that closes the
+    match is left to the caller. -/
+def lowGArmsL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
+    (Γ : Ctx) → UFn → Nat → (Λ : List (Res (declOf u))) → AtTop u caller Λ → (m : Nat) → List UStmt →
+    Except String (GrundArms (declOf u) (verOf u caller) l Γ Λ Λ m × List UStmt)
+  | _, _, 0, _, _, _, _ => .error "lower: blocks nested too deep"
+  | _, _, _ + 1, _, _, 0, rest => .ok (GrundArms.nil, rest)
+  | Γ, fn, n + 1, Λ, pe, m + 1, rest =>
+    match lowSeqL (l := l) u caller Γ fn n Λ pe rest with
+    | .error e => .error e
+    | .ok (b, r) =>
+      match m with
+      | 0 => .ok (GrundArms.cons b GrundArms.nil, r)
+      | m' + 1 =>
+        match r with
+        | .ifElse :: r' =>
+          match lowGArmsL (l := l) u caller Γ fn n Λ pe (m' + 1) r' with
+          | .error e => .error e
+          | .ok (arms, r2) => .ok (GrundArms.cons b arms, r2)
+        | _ => .error "lower: a match has fewer arms than reasons"
+
 /-- The `else` branch of a narrowing as an end block: its statements and the ender (`return`, `leave`, `next`),
     which must not fall through; the marker `blkEnd` that closes the branch is left to the caller. -/
 def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
@@ -462,6 +540,12 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     match pe with
     | none => .error "lower: return under locks has no G form"
     | some ⟨h⟩ =>
+      match v with
+      | .why i =>
+        if hi : i < (verOf u caller).gruende then
+          .ok (by subst h; exact Endblock.retWhy (D := declOf u) ⟨i, hi⟩ (endPerm_ok u caller), rest)
+        else .error "reason case outside the channel"
+      | _ =>
       match lowErg u caller Γ fn v with
       | .error e => .error e
       | .ok erg => .ok (by subst h; exact Endblock.ret erg (endPerm_ok u caller), rest)
@@ -500,6 +584,15 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
   | _, _, _ + 1, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | _, _, _ + 1, _, _, .bindElse .. :: _ =>
+    .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, Λ, pe, .matchWhyBeg e :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.matchWhyBeg e) rest with
+    | .error err => .error err
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error err => .error err
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowEndL (l := l) u caller Γ fn n Λ pe rest
   | Γ, fn, n + 1, Λ, pe, .lockBeg g :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.lockBeg g) rest with
@@ -619,6 +712,15 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
+  | _, _, _ + 1, .bindElse .. :: _, _ =>
+    .error "lower: a let else at the top level of a body has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, (.matchWhyBeg e) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.matchWhyBeg e) rest with
+    | .error err => .error err
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error err => .error err
+      | .ok ee => .ok (Endblock.cons st ee)
   | Γ, fn, n + 1, .startS :: rest, r => lowBodyF u caller Γ fn n rest r
   | Γ, fn, n + 1, .bindB x v :: rest, r =>
     match lowEns u Γ (resOf u caller) fn none v with

@@ -205,7 +205,7 @@ def mkSig (u : UProg) (f : UFn) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
   params := f.params.map (·.2)
   erg := f.ergTy
-  gruende := 0
+  gruende := f.gruende
   haelt := heldAt u f
   schreibt := writesAt u f
   gschreibt := writesGAt u f

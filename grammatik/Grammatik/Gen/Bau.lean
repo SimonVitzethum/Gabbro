@@ -21,6 +21,7 @@ def Saat.rolle (s : Saat) : Nat → List String
   | 1 => s.bools
   | 2 => s.plaetze
   | 3 => s.sperren
+  | 5 => s.optionen
   | _ => s.tabellen
 
 /-- Seed `code` = frame * 10000 + role * 1000 + index, parsed by the reader. -/
