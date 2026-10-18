@@ -7,10 +7,9 @@
   (`emit_start`, audit item A5). The proposal: the PROGRAM declares the process entry and the gate
   that ends the process,
 
-      proc main exit G;          // `main : fn() -> i32` (or `-> u8`), `G` a gate declared `ends`
+      proc main exit G;          // `main : fn() -> i32` (or `-> u8`), `G` a gate declared `-> never`
 
-  where a gate declared `ends` is an ordinary gate whose contract says the call never returns (the
-  process, with every thread, is over). Machine G is untouched: the `StartEndeG` leg of the goal
+  where a gate declared `-> never` is an ordinary gate that does not return (the language has `Ty.never` and the stop kind `nieZurueck`: the process, with every thread, is over). Machine G is untouched: the `StartEndeG` leg of the goal
   already says every declared start RETURNS; what happens after the return is the runtime's, and the
   new form names it as one gate call whose contract is the program's named assumption.
 
@@ -24,7 +23,7 @@
   Second part (L4): the thread-start/join ORDER. The spawn gate's contract (a named assumption, the
   proved shape of `SchablonenFaden.lean`'s `faden_warte_korrekt`) is: the environment clears the join
   word AFTER the child's last step; the parent's `await` returns only after the clear; the stack is
-  released (pool `drop`) only after the `await`. `join_gut` derives from those orders that no child
+  released (pool `drop`) only after the `await`. `JoinGut` derives from those orders that no child
   step follows the stack release (`kein_kind_nach_gib`).
 
   No `sorry`, no `native_decide`, no new axiom.

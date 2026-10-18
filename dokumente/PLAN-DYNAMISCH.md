@@ -914,6 +914,20 @@ Two ways, and the layer decides between them:
   `SperrInvG`/`SperrWechselG`/`SperrSichtG` (which read `offen`): `SperrInvG` becomes the `SperrInvRw` form ("every lock whose holders are all shared holders has its invariant").
 * The Rust side is untouched: the exporter, the checker (`U003`, `H`-rules) and the LLVM backend know no mode (Lean first; the checker and the compiler follow after both verdicts, CLAUDE.md).
 
+### 8a.6 The hardware forms (pool, trap clause, process exit, task, targets) and the combined diff (2026-10-18; Lean layers proved, nothing applied)
+
+`PLAN-HARDWARE.md` §16 designs the changes that take every system call, register and memory source out of the
+compiler (`LLVM-BACKEND.md` §11, L1-L8) and proves their Lean layers (`Hardware/`, `Code/Gate/`, SATZKARTE §84).
+Relation to the combined diff of 8a.3: **it needs no `Spec.lean` change** (the new forms are lowering data or named
+assumptions; `gabbro_ziel_zusatz`/`gabbro_ziel_leer` prove that extra named assumptions never break the statement and
+that `True` gives `GabbroZiel`). The OPTIONAL sharper statement (a `PoolAnn` conjunct of `HardwareAnnahmen`, role data
+in `Deklaration`) is compatible with `Deklaration extends DeklBasis`: its fields (`rolle : Ax → Option (Nat × Rolle)`,
+`seite : Nat → Nat`, both with defaults, so the ~84 fixtures stay unchanged) are NOT basis fields, and the arena
+structures parameterised by `DeklBasis` are untouched. If both diffs are applied, `HardwareAnnahmen` gets ONE conjunct
+list (`GutO ∧ RegLokal ∧ AxVertragO ∧ PoolAnn`); review them together. The arena's storage (8a.3 decision 1) reads from
+a pool as `Hardware/Anbieter/Arena.lean` (`ArenaGut`, `arena_grow_geht`): the commit ranges are the existing template
+arithmetic, so the `Dekl` of decision 1 and the pool do not interact.
+
 ## 9. Re-measuring
 
 ```

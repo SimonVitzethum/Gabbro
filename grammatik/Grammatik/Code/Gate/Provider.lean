@@ -9,8 +9,8 @@ import Grammatik.Code.Gate.Gate
 
     * `holeSpec`   -- `get(n)`: answers `ptr b 0` for the fresh block `b` of `n` bytes, nothing written
                       (an `alloc` without zero fill: reading an unwritten cell is stuck);
-    * `fuellSpec`  -- `fill(p, n)`: the range `[o, o+n)` of block `b` becomes ZERO where it was never
-                      written (what a fresh anonymous page reads as); answer `0`. The contract also
+    * `fuellSpec`  -- `fill(p, n)`: the range `[o, o+n)` of block `b` gets SOME content where it was never
+                      written (zero on Linux, but the contract does not say so: no program may rely on it); answer `0`. The contract also
                       allows a REFUSED commit (answer `1`, memory unchanged): out of memory below the
                       ceiling is real and reaches the program's `else`;
     * `gibSpec`    -- `drop(p)`: the block ceases to exist; every later access to it is stuck.
@@ -35,9 +35,10 @@ def holeSpec : GateSpec where
   post m vs m' ans := ∃ n : Nat, vs = [Val.ofInt Conf.wbits n] ∧
     m' = (m.alloc n false).1 ∧ ans = some (Val.ptr (m.alloc n false).2 0)
 
-/-- Zero the never-written cells of `[o, o+n)` in a block. -/
-def Blk.fuellen (blk : Blk) (o n : Nat) : Blk :=
-  { blk with cells := fun k => if o ≤ k ∧ k < o + n ∧ blk.cells k = none then some (.byte 0)
+/-- Give the never-written cells of `[o, o+n)` in a block SOME content `c k` (the contract does not say
+    which: a fresh page reads as zero on Linux, but no program may rely on it). -/
+def Blk.fuellen (blk : Blk) (o n : Nat) (c : Nat → Nat) : Blk :=
+  { blk with cells := fun k => if o ≤ k ∧ k < o + n ∧ blk.cells k = none then some (.byte (c k))
       else blk.cells k }
 
 /-- **commit**: arguments `(ptr b o, n)`; inside the block it succeeds (answer `0`) and fills the
@@ -48,7 +49,7 @@ def fuellSpec : GateSpec where
   post m vs m' ans := ∃ (b o n : Nat) (blk : Blk),
     vs = [Val.ptr b (o : Int), Val.ofInt Conf.wbits (n : Int)] ∧
     m.blks b = some blk ∧ o + n ≤ blk.size ∧
-    ((m' = m.setBlk b (blk.fuellen o n) ∧ ans = some (Val.ofInt Conf.wbits 0)) ∨
+    ((∃ c, m' = m.setBlk b (blk.fuellen o n c) ∧ ans = some (Val.ofInt Conf.wbits 0)) ∨
      (m' = m ∧ ans = some (Val.ofInt Conf.wbits 1)))
 
 /-- Remove a block. -/
@@ -99,12 +100,12 @@ theorem fuell_lokal {m m' : Mem} {vs : List Val} {ans : Option Val}
   obtain ⟨b, o, n, blk, -, hb, hon, hc⟩ := h
   refine ⟨b, o, n, blk, hb, hon, ?_, ?_, ?_⟩
   · intro b' hne
-    rcases hc with ⟨rfl, -⟩ | ⟨rfl, -⟩
+    rcases hc with ⟨c, rfl, -⟩ | ⟨rfl, -⟩
     · exact setBlk_other _ _ _ _ hne
     · rfl
-  · rcases hc with ⟨rfl, -⟩ | ⟨rfl, -⟩ <;> rfl
-  · rcases hc with ⟨rfl, -⟩ | ⟨rfl, -⟩
-    · refine Or.inr ⟨blk.fuellen o n, setBlk_same _ _ _, rfl, ?_, ?_⟩
+  · rcases hc with ⟨c, rfl, -⟩ | ⟨rfl, -⟩ <;> rfl
+  · rcases hc with ⟨c, rfl, -⟩ | ⟨rfl, -⟩
+    · refine Or.inr ⟨blk.fuellen o n c, setBlk_same _ _ _, rfl, ?_, ?_⟩
       · intro k hk
         simp only [Blk.fuellen]
         have : ¬ (o ≤ k ∧ k < o + n ∧ blk.cells k = none) := by omega
@@ -113,7 +114,7 @@ theorem fuell_lokal {m m' : Mem} {vs : List Val} {ans : Option Val}
         simp only [Blk.fuellen]
         cases hck : blk.cells k with
         | none => simp [h1, h2]
-        | some c => simp
+        | some c' => simp
     · exact Or.inl rfl
 
 /-! ## 3. release -/

@@ -518,3 +518,486 @@ gabbro derived <file>; gabbro effects <fn>        # §9
 Absorbed and now safe to delete: `dokumente/PLAN-HARDWARE.md` … `dokumente/PLAN-HARDWARE.md` (summarised in
 §2.3; their `CUTS` sections are the "honest limit" column). `messung/netz/README.txt` was retired on 2026-10-17;
 `messung/netz/udp-echo.gab` is still cited by tests.
+
+---
+
+## 16. The hardware-neutral compiler: every system call, register, trap and memory source is the user's (design 2026-10-18)
+
+**Rule (Simon, 2026-10-18, final):** the compiler contains no system call, no register name and no trap
+instruction, not even in one small per-target table. `LLVM-BACKEND.md` §11 measured where `llvm.rs` still
+breaks that rule (A1-A12) and proposed eight language changes (L1-L8). This section is the DESIGN of those
+changes, made in the Lean model first (CLAUDE.md order); the surface spellings are PROPOSALS for `SYNTAX.md`.
+**Nothing here changed the Rust parser, checker or compiler**, and `Zielsatz/Kern/Spec.lean` is untouched.
+
+**Status in one table** (state of the tree at the commit that carries this section):
+
+| Item | Design (this section) | Lean model | Statement touched? |
+|---|---|---|---|
+| L1 region provider (`pool`) | 16.2 | `Hardware/Anbieter/Region.lean`, `Arena.lean` proved, witnessed, planted defects | no |
+| L2 trap clause | 16.3 | `Hardware/Tor/Abi.lean` proved, witnessed for 3 ISAs + a made-up one | no |
+| L3 process exit | 16.4 | `Hardware/Tor/Ende.lean` §1 proved (`-> never` already exists) | no |
+| L4 thread start, join, stack | 16.5 | `Ende.lean` §2 (join order), `Arena.lean` §3 (stack + guard) | no (text of premise (d)) |
+| `Code` side of L1/L2 | 16.6 | `Code/Gate/{Gate,Provider,Bruecke,Zeuge}.lean` | no (`Code` is not in the statement) |
+| L5 entry stubs | 16.7 | design only | no |
+| L6 mask, ports | 16.7 | `Code/Gate/Maske.lean` (the mask IS a gate), design for ports | no |
+| L7 register classes | 16.8 | `Abi.lean` (`RegName`) | no |
+| L8 targets as data | 16.9 | `Abi.lean` (`ZielDaten`); the `Profil` entries are design only | no |
+| neutrality | 16.10 | `Hardware/Neutral.lean`: `gabbro_ziel_zusatz`, `gabbro_ziel_leer` | no |
+
+`gabbro_ziel` is still on exactly `propext`, `Classical.choice`, `Quot.sound` (`#print axioms` on the new
+theorems: subsets of the three). No new module imports into an old one; every new theorem is in a NEW file.
+
+### 16.1 The one idea
+
+A gate is already "an axiom with a contract" (`D.Ax`, `AxVertragO`, `GutO`): the semantics does not know what
+a `syscall` is. What the compiler still knew was how to REACH the environment: which instruction traps, which
+register carries the number, where memory comes from, how the process ends, how a thread starts. All of that is
+DATA about the environment, and the environment is the user's: so it moves into the program, next to the
+contract it belongs to, and the hardware assumption that was implicit in a compiler table becomes a NAMED
+assumption of a user item (`assume … falsifier …`), as every other hardware fact already is.
+
+**Three consequences that decide the shape of everything below:**
+
+1. *A new form is either pure lowering data or a named assumption, never new machine-G semantics.* Where a form
+   needs semantics (the exit gate does not return, a thread's stack is released after its end), the existing
+   vocabulary has it (`-> never` and the stop kind `nieZurueck`; the thread machine's spawn and join).
+2. *No default.* A gate without a trap clause, a program with `at port` and no declared port space, an arena
+   without a pool are REFUSED. A default would be a table in the compiler under another name (no legacy rule).
+3. *Strongest variant for safety and power:* where a design question had two answers, the one that assumes
+   LESS of the environment and lets the user express MORE was chosen (the reasons stand at each decision, `D1`…).
+
+### 16.2 L1 — the region provider: `pool`
+
+**Surface (proposal for `SYNTAX.md`):**
+
+```ebnf
+pooldecl = [ "pub" ] "pool" ident "{"
+             "get"  path ";"                 (* reserve:  fn(bytes) -> ptr<normal, rw> u8 [or R] *)
+             "fill" path ";"                 (* commit:   fn(r, bytes) -> u32                    *)
+             [ "back" path ";" ]             (* page return, region stays: fn(r, bytes) -> u32  *)
+             [ "drop" path ";" ]             (* end of the region:         fn(r, bytes)         *)
+             "page" constexpr ";"            (* the commit granule in bytes                      *)
+             "assume" ident ( "falsifier" ident | "unfalsifiable" string ) ";"
+           "}" ;
+arena      = … [ "from" ident ] ";" ;        (* the arena's storage is a reservation of pool `ident` *)
+```
+
+`path` names ordinary Gabbro functions (the binding library's `gabbro_os_reserve`, `gabbro_os_commit`,
+`gabbro_os_seiten_zurueck` are exactly this trio; a fourth, `drop`, is new in the binding). Words: `pool`,
+`get`, `fill`, `back`, `drop`, `page` (≤5 letters each), `from` exists. A freestanding program binds the same
+roles to its own page allocator; no role names an OS.
+
+**Machine-G semantics.** None new. The three roles are ordinary gates (`D.Ax`) whose answers machine G takes
+from the oracle. G models an arena as a TABLE of `max` slots (`ArenaDyn`, `DynForm`); where the bytes come from
+is below G, exactly as before (premise (d), `Laufzeit.reserve`/`.commit`). The provider contract is the HARDWARE
+ASSUMPTION about the gates' joint behaviour: `Hardware/Anbieter/Region.lean` is its model.
+
+**The model (`Region.lean`).** State: the live reservations (address ranges) and, per address, "holds resident
+memory". Events with the contract as the premise of each step:
+`hole n b` (reserve: the answer `[b, b+n)` is page aligned and DISJOINT from every live reservation),
+`fuell lo hi` (commit: a page-aligned range inside one live reservation becomes resident),
+`zurueck lo hi` (page return: the range stops being resident, the reservation stays),
+`gib r` (end: the reservation ends, nothing of it stays resident, its addresses may be handed out again).
+Proved: the invariant `Gut` (non-empty, pairwise disjoint reservations; resident ⊆ reserved) survives every step
+(`gut_nach`, `lauf_gut`); **no RAM before use**: a reserve changes nothing resident (`hole_ram_gleich`) and the
+new range holds no resident byte (`hole_neu_aus`, `hole_neu_null` — this NEEDS freshness and the invariant,
+which is why freshness is part of the contract); **no RAM without a commit**: on every run from nothing a
+resident address lies in the range of some commit of the run (`ram_gefuellt`, `kein_zugriff_ohne_fuell`);
+distinct live reservations never share an address (`lebend_getrennt`). Planted defects: an overlapping answer,
+a commit outside every reservation, a reserve that makes pages resident (`ueberlapp_verweigert`,
+`fuell_draussen_verweigert`, `hole_mit_ram_sichtbar`).
+
+**Arenas through the provider (`Arena.lean`).** `ArenaGut`: the arena's reservation `[b, b + spanne)` is live,
+every committed slot byte is resident, and resident memory inside the reservation reaches no further than the
+PAGE-ROUNDED committed prefix. The arithmetic is the existing proved template arithmetic (`ArenaLaufzeit`:
+`spanne`, `commitStart`, `commitEnde`, `arena_commit_bereich`); the prefix is the existing `DynArena`
+(`dynGrow`, ceiling `M`). `arena_start` (after the reserve the invariant holds with an empty prefix),
+`arena_grow_geht` (`dynGrow A n = some B` is realised by ONE commit of exactly the template's range, that step
+is legal under the contract, the invariant holds for `B`), `slot_resident` (every slot below the prefix is
+readable and writable), `arena_exklusiv` (the arena's bytes lie in no other live reservation),
+`gib_nichts_resident`, and the witness `arena_zeuge` (six 8-byte slots on 16-byte pages: after two grows the
+slots are resident and an address past the rounded prefix is not). Planted defect: a grow past the ceiling asks
+for a commit outside the reservation and the contract refuses it (`grow_ueber_decke_verweigert`).
+**This is the 2b property of the guardian (`pruefe-llvm.py`: RAM stays untouched until used) as a THEOREM about
+any pool, where it was a measured property of `mmap(PROT_NONE)` + `mprotect`.**
+
+**Thread stacks (`Arena.lean` §3).** A stack is a reservation whose lowest `gd` bytes (the GUARD) are never
+committed; it grows by `fill` above the guard (`stapel_waechst`). An overflow into the guard is an access to a
+non-resident address — a hardware stop, never a silent write (`stapel_wache_kein_zugriff`) — and the guard
+belongs to no other reservation (`stapel_wache_exklusiv`). A commit that starts inside the guard is the planted
+defect (`fuell_in_wache_bricht`). A frame larger than the guard can skip it: that is the NOT CLAIMED stack depth
+of the goal statement, unchanged, now with the named reason.
+
+**What the goal gets.** The named hardware assumption `<pool>_ok` (the pool's `assume`): "the four gates,
+in sequence, behave as the provider machine under granule `page`". Nothing OS-specific enters the statement.
+The two places the premise could live and the decision are in 16.11.
+
+**What changes where.**
+
+| Place | Change |
+|---|---|
+| `Deklaration` | nothing required for the goal; for the exporter a `pool`-role marker is lowering data kept beside the unit (16.11) |
+| `Stmt`, `Res`, `Block` | nothing: `alloc`/`grow`/`reset`/`free` keep their forms |
+| `Akzeptiert` / the checker | the pool shape check (the three gates exist with the role signatures; `from P` names a declared pool; `page > 0`; the assumption is present and falsifiable); region extents are held by the EXISTING `N571`/`N463`. These checks protect the LOWERING, not G-safety |
+| lowering | `arena_bereit` and the commit/release paths call the pool's gates; no `mmap`, no `mprotect`, no number |
+
+**Decisions.**
+
+* **D1 — four roles, not three.** `get`, `fill` mandatory; `back` and `drop` optional. The audit named
+  reserve/commit/release; the model has TWO releases because they differ in effect: returning pages keeps the
+  reservation (the arena `reset … at i count n` page return), ending it makes the addresses reusable (thread
+  stack, whole arena). One gate for both would need a mode argument and would hide the difference in the
+  contract. A pool without `drop` never frees: arenas live to the end of the process, which is the hosted
+  behaviour today.
+* **D2 — "no RAM before use" is a CONTRACT of `get` and `fill`, stated as frames and ranges.** Not a property
+  of an OS. `get` writes no resident-state carrier (the model: `hole_ram_gleich`); `fill` makes resident exactly
+  the commit range. The existing frame premise `GutO` (answers stay inside the declared write frame) already
+  carries the first half once the resident state is a ghost carrier outside `get`'s `writes`.
+* **D3 — the commit makes memory readable and writable, with NO claim about its contents.** On Linux a fresh
+  page reads as zero, but the language reads no cell before it stores (an `alloc` stores its value first;
+  `reset` clears through `region.leeren`). A weaker assumption is a stronger theorem: `Code/Gate/Provider.lean`
+  lets the commit give the cells ANY content.
+* **D4 — a commit may be refused.** Out of memory below the ceiling is real: the contract allows answer `1`
+  with memory unchanged, and the program's `else` runs (`fuellSpec`).
+* **D5 — `page` is a constant the program chooses, not a number the kernel reports.** A granule that is a
+  multiple of every real page of the target is always accepted (`64 KiB` is safe on 4K/16K/64K systems); the
+  contract "`fill` accepts ranges aligned to `page`" is part of the named assumption and has a falsifier. The
+  alternative (a runtime page query gate) keeps working for the proofs (`arena_spanne_passt` takes the page as
+  a parameter) and is a compatible extension, not needed now.
+* **D6 — extents are held by the EXISTING region machinery.** `get`'s `-> ptr … or R` with `ensures bytes <=
+  lenof(result)`; `fill`/`back`/`drop` with `requires bytes <= lenof(r)` (`N571`, `N463`, `N464`). No second
+  extent mechanism.
+
+**Open (not claimed).** (i) The bridge "ghost-carrier contract ⇒ `PStep`" (16.11, O-H1). (ii) Machine G has no
+byte pointers (`LG002`): a program with a region answer stays outside the certified register exactly as before
+(OFFEN O37); the `Code`-side bridge is 16.6.
+
+### 16.3 L2 — the trap clause (and A6, A7)
+
+**Surface:**
+
+```ebnf
+sysbind = "number" constexpr "in" reg "trap" string          (* NEW: the register and the instruction *)
+          "regs" "in" "{" … "}" "regs" "out" "{" … "}" { "stack" ident }
+          "clobbers" "{" [ identlist ] "}" "errors" "{" … "}" ;
+```
+
+`syscall write(…) abi linux arch aarch64 number 64 in x8 trap "svc #0" regs in { x0 = fd, x1 = buf, x2 = len }
+regs out { x0 } clobbers { } …`. `trap` takes a string: the instruction text in the target's assembler, handed
+to LLVM inline assembly UNREAD; `in x8` names the register the number is loaded into. The same two words stand
+in `target T … { V = sysbind … }` bindings (12.3). **Not optional** (decision 2 of 16.1).
+
+**Machine-G semantics: none.** The meaning of a gate call is its contract (`Ax`: parameters, answer, frame,
+`ensures`). The clause is LOWERING data: `Tor.mitFalle_bed` (replacing the clause changes no meaning),
+`loese_text_unabh` (the register assignment before the trap does not read the text).
+
+**The model (`Abi.lean`).** `RegName` (a register is an opaque name — the generalisation of the x86-only
+`SysReg` enumeration of `Syscall.lean`), `Falle` (text + number register), `TorAbi` (number, clause, input map,
+answer register, clobbers) with `TorAbi.gut`: input registers distinct, no parameter bound twice, the answer
+register not clobbered (the old `N063`-`N065`), PLUS the number register is neither an input nor a clobber (it
+may equal the answer register: x86_64 `rax`). `belegung` is the register assignment before the trap;
+`belegung_nodup` (one value per register: arguments and the number never collide), `belegung_nummer`,
+`belegung_param`. `sysabi_zu_tor`: the existing x86_64 `SysAbi` is an instance. Witnesses: Linux `write` on
+x86_64 (`rax`, `syscall`) and aarch64 (`x8`, `svc #0`) and a MADE-UP third architecture (`a7`, `ecall`)
+(`schreib_gut`, `schreib_deckt`, `belegung_zeuge`) — the third needs no compiler change, which is the point.
+Planted defects: a clobbered answer register, a doubled input register, a number register that is also an
+input (`defekt_aus_zerstoert`, `defekt_ein_doppelt`, `defekt_nummer_ist_eingabe`).
+
+**What the CPU model must supply (`Need`).** `Code/Gate/Gate.lean` (16.6): the trap sequence runs, and every way
+it ends is an outcome the gate's contract allows — which IS the gate's named assumption, nothing more. The text
+is not interpreted by any Lean or Rust component; whether it does what the user says is the assumption's
+falsifier.
+
+**Lowering (A6, A7 become pure lowering).** `call asm sideeffect "<trap text>", "<constraints>"(args)` where the
+constraints come from the declared registers: input `{reg}`, output `={reg}`, clobbers `~{reg}`, plus
+`~{memory}` whenever the gate's `effects` are not `pure`. The instruction sequence AFTER the gate that
+`llvm/stapeltor.rs` writes per target (the `test`/`jnz`, `cbnz`, realignment, frame-pointer clear) is the USER's:
+the child path of a `stack` gate (`child { … }`) is ordinary Gabbro code (`N446`-`N452` already check its shape);
+what the stub needs per ISA (clear the frame pointer, align the stack) is either written in the child block with
+`asm { … }` or is not needed (LLVM aligns calls itself).
+
+**Decisions.**
+
+* **D7 — the number register is named in the clause, not inferred from `regs in`.** The number is a value the
+  program supplies at a fixed register, but it is not a Gabbro parameter; keeping it out of the parameter map
+  keeps `N065` ("every parameter exactly once") unchanged.
+* **D8 — no default instruction per `arch`.** A default is the table the rule forbids. The cost is one more
+  clause per gate (or per binding variable, 12.3, where it is written ONCE per target).
+* **D9 — text in the target's DEFAULT assembler dialect.** LLVM inline assembly uses the target's default
+  (AT&T on x86). A program that wants Intel syntax says so once, in the profile (16.9: `asm intel;`). No
+  per-gate dialect.
+* **D10 — the clobber list is honest by assumption.** A trap that destroys a register it does not list is a
+  falsification of the gate's assumption, not a checker case; the checker cannot read the text.
+
+### 16.4 L3 — the process-exit gate
+
+**Surface:** `proc _start run main exit sys_exit;` — an item. `_start` is the SYMBOL of the generated entry
+function (user data: the linker's entry name differs per platform); `main : fn() -> i32` (or `u8`) is the
+declared start; `sys_exit` is an ordinary gate declared `-> never` (the language has `Ty.never`, and the stop
+kind `nieZurueck` for "the call does not return"): `fn(code : i32) -> never`. Words: `proc`, `run`, `exit` (≤5).
+
+**Semantics: none new.** `main` is a declared start (`E.starts`, `concurrentdecl`) with no parameters; the
+`StartEndeG` leg of the goal already says every declared start RETURNS; what happens after the return is the
+generated entry's one gate call. `Hardware/Tor/Ende.lean` §1 models exactly that: `startSpur`: a returning `main`
+gives its steps, then ONE end event with `main`'s own result as the code (`start_code`), nothing after
+(`start_ende_gut`); a `main` that never returns makes no end event — the stub never invents an exit
+(`start_ohne_rueckkehr`). Planted defects: a stub that falls off the end and one that keeps going after the gate
+returns (`ohne_exit_kein_ende`, `nachlauf_nicht_ende_gut`). Witness `start_zeuge`.
+
+**Lowering (A5 becomes pure lowering).** An LLVM function with the declared symbol, calling `main`, then the
+exit gate with the result, then `unreachable`. The kernel enters a process with a stack pointer that is 16-aligned
+on x86_64 while a normal function expects the return-address slot: the function carries LLVM's generic
+`"stackrealign"` attribute (accepted on every target, a no-op where the entry convention equals the call
+convention). No `naked` function, no per-architecture asm.
+
+**Decisions.**
+
+* **D11 — `-> never` is the exit marker; no new `ends` clause.** The audit proposed a gate marked "process
+  exit"; the language already distinguishes a gate that does not return. Exiting a THREAD (16.5) is the same
+  form. A second marker would duplicate it.
+* **D12 — no `argc`/`argv`.** A program that wants the initial stack's contents reads it through a gate of its
+  own; the entry passes nothing. (Compatible extension: `proc … args G` later.)
+
+### 16.5 L4 — thread start, join, stack: `task`
+
+**Surface:**
+
+```ebnf
+taskdecl  = "task" ident "{" "pool" ident ";" "spawn" path ";" "end" path ";" "join" path ";"
+                             "stack" constexpr ";" "guard" constexpr ";" "}" ;
+startstmt = "start" "{" path { "," path } "}" [ "on" ident ] ";" ;      (* `on T` is new *)
+```
+
+`spawn` is a user gate with a `stack r` clause (12.1: the clone handoff, `N446`-`N452`) — its number, registers,
+trap clause and flags (the Linux `clone` flags are DATA IN THE USER'S GATE, not in the compiler); `end` is a
+`-> never` gate that ends the calling THREAD; `join` is an `atomic` carrier whose contract is: the spawn gate
+stores a non-zero id BEFORE the child runs and the environment clears it AFTER the child's last step.
+`stack`/`guard` are byte constants; the stack comes from pool `P` (16.2).
+
+**Semantics.** None new in G: the thread machine already has spawn and join; the generated runtime template is
+a sequence of existing forms: `get(stack + guard)`, `fill` the top part, the spawn gate with the stack top in its
+`stack` register, in the child `f(args)` then `end`, in the parent the id; the wait is `await join == 0`; after
+it, `drop` the stack. The ORDER the template relies on is `Hardware/Tor/Ende.lean` §2:
+`JoinGut` (stack released only after the `await` returned, which returned only after the clear, which came after
+the child's end; the child takes no step after its end) gives `kein_kind_nach_gib` (no child step follows the
+stack release); defect `join_defekt` (a wait that returned before the clear), witness `join_zeuge`. The
+mechanics of the Linux instance (trampoline, join word) are the already proved `SchablonenFaden.lean`
+(`trampolin_kind`, `faden_warte_korrekt`); the generic order theorem is its user-gate form.
+
+**What the goal gets.** The named assumption `<task>_join_ok` (clear after end; the child starts on the handed
+stack) is part of premise (d)'s runtime assumption `Laufzeit.start`/`.einmal` read as gate contracts instead of
+compiler behaviour; stack depth stays NOT CLAIMED (guard = hardware stop, 16.2).
+
+**Lowering (A3, A4 become pure lowering).** `senke_start`, `KLON_FLAGGEN`, `FADEN_REGION` and the continuation
+stacks of `stackless.rs` use the pool and the spawn/end gates; the hand-written per-ISA trampolines disappear:
+the child path is Gabbro code behind the existing `child` region.
+
+**Decisions.**
+
+* **D13 — the join is a user carrier with a contract, not a futex.** What waits efficiently (a `futex`) is a
+  second user gate the `await` may call (`await W == 0 via wait_gate`); correctness never depends on it.
+* **D14 — the stack is dropped only after the join.** The child still runs its exit gate on that stack after the
+  last user step; releasing earlier is a use-after-release. `kein_kind_nach_gib` is the proof, `join_defekt` the
+  reason the clear must come from the ENVIRONMENT (the kernel's `CLONE_CHILD_CLEARTID`), not from the child.
+* **D15 — a spawn gate whose environment cannot clear the word** gets no `drop` role in its pool (stack leak, no
+  safety loss): `drop` is optional (D1).
+
+### 16.6 The `Code` side (L1/L2)
+
+`Code` is ISA-neutral: no instruction, register or number. A user gate lowers to a CALL of a function number
+past the module's own, with a contract. (`Code/Gate/`)
+
+* `Gate.lean`: `GateSpec` (precondition = the gate's `requires`; post-relation over memory/arguments/answer),
+  `GateStep`, `StepG := Step ∨ GateStep`, `ReachG`. `step_stuck_am_tor`: the plain step is STUCK at a gate call,
+  so the extension is conservative; **`stepG_gdw_step`, `reachG_gdw_reach`: on a module without gate calls
+  (`GateFrei`) `StepG` is `Step` and `ReachG` is `Reach` — programs that do not use gates keep their meaning.**
+* `GateNeed` — **what a CPU model must provide for user-declared traps**, in the style of `Model/Need.lean` and
+  `Conc/MaskNeed.lean`: a CPU state type, `Rel`, and per gate a relation `Trap k d vs x y` ("the CPU runs the
+  user's trap sequence of gate `k`, answer to local `d`"). Two obligations, exactly the gate's named assumption:
+  `ausfuehrbar` (the sequence runs) and `erlaubt` (every way it ends is an outcome the contract allows,
+  delivered as declared). Nothing names an instruction, a register class, a number or the trap text.
+  **`gate_verfeinert`: a CPU run of the trap corresponds to a `GateStep`, and the result state holds the result
+  configuration.** (`WohlAnruf`: a call that wants a result is a call of a gate that answers.)
+* `Provider.lean`: the roles over `Code` memory: `holeSpec` (a fresh BLOCK, nothing written), `fuellSpec` (the
+  range gets some content, or the commit is refused with memory unchanged), `gibSpec` (the block ceases to exist;
+  every later access is stuck, `gib_haengt`). Facts: `hole_frisch`, `hole_andere`, `fuell_lokal`, `gib_weg`.
+* `Bruecke.lean`: the provider's ADDRESS-level contract and `Code`'s BLOCK-level memory describe one world:
+  `Entspricht s m rho` (every live block sits at a live reservation, non-empty, injective). `entspricht_hole`,
+  `entspricht_gib`, `entspricht_ram` (commit/page-return keep it), and **`entspricht_getrennt`: two distinct live
+  `Code` blocks have disjoint address ranges — the block structure's "allocations never alias" is, for memory
+  that comes from a provider, a CONSEQUENCE of the provider's freshness contract, not an extra assumption about
+  the machine.** Witness `bruecke_zeuge` (two reserves, disjoint), planted defect `aliasing_verweigert`.
+* `Zeuge.lean`: a reference CPU meets `GateNeed` (`ref_need`; the contracts of the three roles are inhabited for
+  every precondition, `erfuellbar`); a CPU whose `get` trap returns an existing block violates it
+  (`schlecht_verletzt`); `tor_zeuge` runs `gate_verfeinert` on a module that calls the `get` gate, all premises
+  jointly.
+
+### 16.7 L5 entry stubs, L6 masks and ports
+
+**L5 — entry stubs.** Today the compiler writes complete per-ISA stubs as `module asm`
+(`llvm/eintritte.rs`: x86_64 IDT stubs with `fxsave`/`iretq`, aarch64 `VBAR_EL1` table with `eret`/`q0-q31`).
+Two user-supplied routes, both named assumptions, no ISA text in the compiler:
+
+```ebnf
+entryextra = … ( "conv" string | "stub" string string ) ;
+```
+
+* `conv "x86_intrcc"` — the entry function is emitted with the LLVM calling convention the USER names (LLVM
+  generates the register save and the return instruction itself). The convention name is data; the trust base is
+  LLVM's, named in the manifest (`llvm_cc_<name>`).
+* `stub "<save text>" "<restore text>"` — the user's prologue and epilogue text around the generated call of the
+  `dispatch` function (a naked wrapper in module assembly).
+
+Exactly one of the two. The register convention the entry already declares (`regs in/out`, `preserves`,
+`clobbers`, `stack`) is held by the checker as before; **that a user text honours it is the entry's named
+assumption** (`assume` — already compulsory at `entrust`; for `entry` the form `entry … assume stub_ok …` is the
+spelling). Machine G is unchanged (`Programm.unterbricht`, `via idt`, the `KernZ` mask layer, 8a.4). What the
+proved `SchablonenMetallIdt` template gave (the generated stub is right) becomes an assumption of the user's
+text; the checker keeps the shape rules (`H102` and the entry shape checks).
+**Decision D16:** both routes, because each is the strongest where the other is not available: LLVM has no
+interrupt convention for aarch64 (text route), and for x86/RISC-V the convention route assumes less than
+hand-written text.
+
+**L6 — masks.** The interrupt mask is ALREADY an abstract instruction of `Code` (`Instr.imsk`, `Conc/Mask*.lean`,
+8a.4) with the named hardware assumption `MaskHw`; the compiler lowered it with a table (x86 `pushfq; cli; popq`,
+aarch64 `mrs daif; msr daifset`). Proposal: `mask via xmask;` — an item naming an `asm` function
+`xmask(w : u64) -> u64` whose contract is the EXCHANGE (returns the old mask word, installs `w`). `lock … masks irqs`
+lowers to `xmask(1)` before the ticket take and `xmask(saved)` after the release (`maskOn`/`maskOff`).
+**`Code/Gate/Maske.lean` proves that this gate IS `imsk`:** `maskSpec` has exactly one outcome
+(`maskSpec_eindeutig`) and it is the one `stepI` of `imsk` computes (`maskSpec_ist_imsk`, `imsk_ist_maskSpec`), so
+`imsk` needs no instruction of its own and `MaskHw` (H1 the cell IS the register, H2 an interrupt only on an
+unmasked core, H3 a masked core does not switch threads) stays the gate's named assumption.
+
+**L6 — port space and other non-memory spaces.** `ptr<port, …>` and `device … at port` lowered to x86 `in`/`out`
+(`llvm/portraum.rs`; refused on aarch64). Proposal: the SPACE is declared with its accessors, by width:
+
+```ebnf
+spacedecl = "space" ident "{" { ( "rd" | "wr" ) typeexpr path ";" } "}" ;
+```
+
+`space pio { rd u8 inb; wr u8 outb; rd u16 inw; … }` where `inb : fn(addr : u16) -> u8` and
+`outb : fn(addr : u16, v : u8)` are ordinary `asm` functions (named, counted, with effects and their own
+`assume`). A register read/write of a device `at pio` lowers to a call of the accessor of its width; a width
+without accessor is refused. The words `port`, `mmio`, … remain space NAMES; only `normal`/`mmio`/`dma`/… that
+lower to plain load/store need no declaration. **No built-in port space:** a program with `at port` and no
+`space port { … }` is refused. Machine G is unchanged: a register access keeps `Block.regRead` and `rzusage`; only
+the lowering changes. A CPU without such a space (aarch64) simply declares none.
+
+### 16.8 L7 — register classes
+
+`asm { "…" in { rdi = x } out { rax = r } clobbers { rcx } }` already names registers; what the compiler still
+held was the one-letter shorthand (`a b c d S D` → `{rax}`…) and the aarch64 `x`-names. Proposal: **register
+names are opaque identifiers** (`RegName`, `Abi.lean`) validated against the `regs { … }` list of the profile
+(16.9), emitted as LLVM `{name}`; the one-letter shorthands are REMOVED (no legacy). Operands that need no fixed
+register use the pseudo-name `any` (LLVM's generic `r` class, valid on every target). Pure lowering plus a
+checker rule (the name occurs in the profile's list: `TorAbi.passtZu`). `defekt_fremdes_register` is the planted
+defect (an aarch64 gate on an x86 target).
+
+### 16.9 L8 — targets as data
+
+**Surface:** keyed `profile` entries (12.2 already holds the one hardware profile and `arch x86_64;`):
+
+```ebnf
+profileentry = … | "llvm" string ";" | "data" string ";" | "word" constexpr ";"
+               | "order" ( "little" | "big" ) ";" | "regs" "{" identlist "}" ";" | "asm" ( "att" | "intel" ) ";" ;
+```
+
+`profile { arch aarch64; llvm "aarch64-unknown-none"; data "e-m:e-i8:8:32-…-S128"; word 64; order little;
+regs { x0, x1, …, x30, sp, nzcv }; }`. `llvm` is the triple and `data` the datalayout, handed to LLVM unread;
+`word`/`order` are what `Code.Conf` is parameterised by; `regs` is the register alphabet of 16.8. A new
+architecture is a Gabbro file.
+
+**Model (`Abi.lean`).** `ZielDaten` (triple, layout, word, order, registers) with `gut` (a word `Code` can be
+parameterised by: 32 or 64; distinct register names), `conf` (the `Code.Conf` it determines: nothing about it is
+fixed to one ISA; `conf_folgt` checks a big-endian 32-bit and a little-endian 64-bit target), witnesses for
+x86_64, aarch64 and a 32-bit big-endian target (`ziele_gut`, `schreib_passt`). Planted defect: a 48-bit word is
+no target (`defekt_wort_48`). **The consistency of the layout string with `word`/`order` is a CHECKER rule**
+(both are user data): a mismatch is refused by name. Lean does not parse the layout; the pointer width and byte
+order the checker reads out of it must equal the declared ones.
+
+**Where it goes in the Lean model.** `Kern/Syntax/Profil.lean` keys are `ProfilSchluessel` with `Nat` values;
+the textual and list entries need two new entry constructors (`text (key) (val : String)`,
+`liste (key) (vals : List String)`) beside `modus`/`frei`. That is a change to `Profil.lean` and its
+`bindung_fuegt_nichts_hinzu`-style theorems (every `match` on `AnnahmeEintrag`), not to the statement (`Profil`
+is not in `Spec.lean`); it was NOT made in this task: `ZielDaten` is the stand-alone model of the data, and the
+`Profil` extension is the first step of the follow-up (16.12).
+
+**Decision D17 — `data` is required, not computed.** LLVM can derive a datalayout from a triple, but an
+`opt` run on a module without one assumes the default (64-bit pointers), which is wrong on 32-bit targets; the
+program says it, the checker compares it with `word`/`order`.
+
+### 16.10 Neutrality: what the goal theorem gets
+
+`Hardware/Neutral.lean` states and proves that the new forms add NAMED ASSUMPTIONS and nothing else:
+
+* `GabbroZielZ Z` — `GabbroZiel` with one more premise `Z D O` on the oracle (the extra named assumptions); the
+  conclusion is word for word `GabbroZiel`'s.
+* **`gabbro_ziel_zusatz`: for EVERY family `Z` the statement holds** (more named assumptions never break the
+  theorem).
+* **`gabbro_ziel_leer`: `GabbroZielZ (fun _ _ => True) ↔ GabbroZiel`** — a program that uses none of the new
+  forms has exactly the statement of before.
+* `AnbieterAnnahme` — the pool's contract as a premise over the provider log; vacuous for the empty log
+  (`anbieter_leer`), closed under prefixes (`anbieter_praefix`), falsifiable by a finite trace
+  (`anbieter_verletzt`: two overlapping answers) — which is what a pool's `assume … falsifier …` names.
+
+`gabbro_ziel` stays on `propext`, `Classical.choice`, `Quot.sound`. In the header's list of named hardware
+assumptions the compiler's implicit knowledge of Linux disappears and `<pool>_ok`, `<task>_join_ok`, each gate's
+assumption, each stub/mask/space assumption appear: all in the user's source, all with falsifiers. Nothing in the
+statement is OS-specific.
+
+### 16.11 What would touch the statement: PROPOSAL only (nothing applied)
+
+**Result of the design: no item REQUIRES a `Spec.lean` change.** Reasons, item by item:
+
+* L2, L3, L7, L8: lowering data, resp. existing vocabulary (`-> never`, `nieZurueck`).
+* L4: the thread machine already has spawn and join; premise (d)'s text (`Laufzeit.start`/`.einmal`) names the gate
+  contracts instead of compiler behaviour — a documentation change in the header of `Spec.lean`, not a type change.
+* L5, L6: named assumptions (`Hardware.annahme`), the mask layer's `Spec` diff is the existing proposal 8a.4.
+* L1: the pool contract can live in the EXISTING premise (c). The oracle is `Orakel.wirkt : ∀ a, World → Env → World × Int`:
+  a function of the WORLD, so a history-based premise (`AnbieterAnnahme` over a log) is not directly a premise on
+  the oracle. The language's own way to carry state across calls is a GHOST carrier (`ghost table`, like
+  `os.fds`): the pool's live ranges and its resident map are ghost tables declared in the pool's binding, the
+  gates' `effects { writes … }` frames separate `get` (writes the ranges, NOT the resident map) from `fill`
+  (writes the resident map), `GutO` carries the frame half of the contract ("no RAM before use": `get` writes no
+  resident state), and a post-state `ensures` carries the invariant half (`Gut`: reservations pairwise disjoint,
+  resident ⊆ reserved) through `AxVertragO`/`AxVertragOP` (precondition = the `requires`). Old-state relations
+  ("the live set grows only by the new range") are not expressible in a post-state `ensures`
+  (`AxEns : World → result → Bool`) — they hold as the frame plus the invariant.
+
+**If a sharper statement is wanted** (optional, to be reviewed as a diff together with the combined diff of
+`PLAN-DYNAMISCH.md` 8a.3):
+
+1. `Deklaration` gets role data with defaults, so the ~84 `Deklaration … where` fixtures stay unchanged (the
+   `agruende := fun _ => 0` precedent): `rolle : Ax → Option (Nat × Rolle)` (pool number and role) and
+   `seite : Nat → Nat := fun _ => 1`. They are NOT `DeklBasis` fields (the basis holds only table/global data):
+   compatible with `Deklaration extends DeklBasis`, and the arena structures parameterised by `DeklBasis` are
+   untouched.
+2. `HardwareAnnahmen O Q` gets a conjunct `PoolAnn`: along every run the pool's role calls (their answers are the
+   oracle's) form a legal provider run, i.e. `AnbieterAnnahme` of `Hardware/Neutral.lean` over the projection of
+   the run's gate answers. `gabbro_ziel_zusatz` is the proof that this is a pure strengthening of the premises:
+   the old statement follows from the new for every `Z`. A run-level projection needs the answer in the call log
+   (`FolgeG` is about the ORDER of calls; whether the call log carries the answers is to be checked): that is the work item.
+3. Premise (d) loses `Laufzeit.reserve`/`.commit` as free-standing runtime facts: they are the pool contract.
+
+**Open obligations (named, not hidden).** O-H1: the bridge "ghost-carrier contract ⇒ `PStep`" (declare the
+canonical ghost tables as a `Deklaration` fixture and prove each pool-gate transition under frame + invariant is a
+`PStep`). O-H2: the run-level projection of 2. O-H3: `Profil.lean` text/list entries (16.9).
+
+### 16.12 Order of the follow-up work, and what stays open
+
+1. **Checker (after the Lean verdicts, CLAUDE.md order):** the new items and clauses in the parser and checker
+   (`pool`, `trap`, `proc`, `task`, `space`, `mask`, `conv`/`stub`, profile entries), each with its sentence in
+   `saetze.rs`, a poison probe and a positive probe; remove the one-letter register classes and every default.
+2. **Compiler:** replace `laufzeit_tor`/`laufzeit_ruf`/`runtime_args`, `arena_bereit`, the `stackless.rs` helpers,
+   `senke_start`, `emit_start`, `senke_tor_ruf`/`sammle_tor`, `stapeltor.rs`, `eintritte.rs`, `masken.rs`,
+   `portraum.rs`, `assembler.rs` register tables and `ZIEL_X86_64`/`ZIEL_AARCH64` by the user data; port the
+   Linux profile into `bibliothek/linux/` (+ a freestanding aarch64 sample) so the four guardian programs still run
+   on x86_64 and aarch64 with the same result. Guardian `pruefe-llvm.py` stage 2b then measures the USER's
+   gates against the `<pool>_ok` assumption.
+3. **Lean:** O-H1, O-H2, O-H3; the user-gate form of `SchablonenFaden`'s join theorem is stated at the level of
+   events (`JoinGut`); its derivation from the spawn gate's contract as `GateNeed` over the thread machine is
+   open. The `Code`-side bridge for FILL/BACK (the block structure has no resident bit) is the stated limit of
+   `Bruecke.lean`: it covers reserve and release, and shows commit/page-return keep the correspondence.
+4. **NOT claimed here:** that any user text does what its gate says (the falsifiers do that); stack frames larger
+   than the guard; a pool whose `get` answers extents larger than asked beyond what `lenof` declares; the
+   layout/word consistency (checker rule, not Lean).

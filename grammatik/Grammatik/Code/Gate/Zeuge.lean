@@ -41,7 +41,7 @@ theorem erfuellbar {k : Nat} {gs : GateSpec} {m : Mem} {vs : List Val}
   | 1, hk =>
       cases (Option.some.inj hk)
       obtain ⟨b, o, n, blk, rfl, hb, hon⟩ := hp
-      exact ⟨_, _, b, o, n, blk, rfl, hb, hon, Or.inl ⟨rfl, rfl⟩⟩
+      exact ⟨_, _, b, o, n, blk, rfl, hb, hon, Or.inl ⟨fun _ => 0, rfl, rfl⟩⟩
   | 2, hk =>
       cases (Option.some.inj hk)
       obtain ⟨b, blk, rfl, hb⟩ := hp

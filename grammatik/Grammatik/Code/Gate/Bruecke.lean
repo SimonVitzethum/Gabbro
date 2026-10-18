@@ -166,9 +166,9 @@ theorem fuell_groessen {m m' : Mem} {vs : List Val} {ans : Option Val}
   obtain ⟨b0, o, n, blk0, hb0, hon, hc⟩ := (by
     obtain ⟨b, o, n, blk, -, hb, hon, hc⟩ := h
     exact ⟨b, o, n, blk, hb, hon, hc⟩ : ∃ (b o n : Nat) (blk : Blk), m.blks b = some blk ∧
-      o + n ≤ blk.size ∧ ((m' = m.setBlk b (blk.fuellen o n) ∧ ans = some (Val.ofInt Conf.wbits 0)) ∨
+      o + n ≤ blk.size ∧ ((∃ c, m' = m.setBlk b (blk.fuellen o n c) ∧ ans = some (Val.ofInt Conf.wbits 0)) ∨
         (m' = m ∧ ans = some (Val.ofInt Conf.wbits 1))))
-  rcases hc with ⟨rfl, -⟩ | ⟨rfl, -⟩
+  rcases hc with ⟨c, rfl, -⟩ | ⟨rfl, -⟩
   · constructor
     · intro b blk' h'
       by_cases e : b = b0
