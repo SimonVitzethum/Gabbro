@@ -9422,10 +9422,11 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     k.beendet = false;
     // The side metadata has its own anonymous reservation. Only free links
     // and live-count words are touched; its size does not preallocate RAM.
-    // MAP_NORESERVE (0x4000) keeps the kernel's overcommit check from counting
-    // the reservation against RAM: a reservation larger than RAM must still map.
+    // Like the payload, it is reserved PROT_NONE (address space, no RAM, no
+    // overcommit charge) and committed page by page together with the payload
+    // chunks; only the small count words are made accessible here.
     let meta_bytes = memory::metadata_size(&ai)?;
-    let args = runtime_args(k.s.ziel, &["0".into(), meta_bytes.to_string(), "3".into(), "16418".into(), "-1".into(), "0".into()]);
+    let args = runtime_args(k.s.ziel, &["0".into(), meta_bytes.to_string(), "0".into(), "34".into(), "-1".into(), "0".into()]);
     let meta = laufzeit_ruf(k, "mmap", &args, span)?;
     let bad_meta = ruf_fehlschlag(k, &meta);
     let meta_ok = k.block("arena_metadata"); let meta_fail = k.block("arena_metadata_failed");
@@ -9436,6 +9437,24 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
     runtime_success(k, &unmapped);
     k.zeile(&format!("br label %{voll}")); k.beendet = true;
     let _ = writeln!(k.text, "{meta_ok}:"); k.beendet = false;
+    let counts_from = (ai.max * 8) & !4095;
+    let counts_to = meta_bytes.div_ceil(4096) * 4096;
+    let counts_at = k.tmp();
+    k.zeile(&format!("{counts_at} = add i64 {meta}, {counts_from}"));
+    let args = runtime_args(k.s.ziel, &[counts_at, (counts_to - counts_from).to_string(), "3".into()]);
+    let counts = laufzeit_ruf(k, "mprotect", &args, span)?;
+    let bad_counts = ruf_fehlschlag(k, &counts);
+    let counts_ok = k.block("arena_counts"); let counts_fail = k.block("arena_counts_failed");
+    k.zeile(&format!("br i1 {bad_counts}, label %{counts_fail}, label %{counts_ok}")); k.beendet = true;
+    let _ = writeln!(k.text, "{counts_fail}:"); k.beendet = false;
+    let args = runtime_args(k.s.ziel, &[meta.clone(), meta_bytes.to_string()]);
+    let unmapped = laufzeit_ruf(k, "munmap", &args, span)?;
+    runtime_success(k, &unmapped);
+    let args = runtime_args(k.s.ziel, &[roh.clone(), gesamt.to_string()]);
+    let unmapped = laufzeit_ruf(k, "munmap", &args, span)?;
+    runtime_success(k, &unmapped);
+    k.zeile(&format!("br label %{voll}")); k.beendet = true;
+    let _ = writeln!(k.text, "{counts_ok}:"); k.beendet = false;
     k.zeile(&format!("store i64 {meta}, ptr {}, align 8", gteil(tisch, "meta")));
     k.zeile(&format!("store i64 {roh}, ptr {basis}, align 8"));
     k.zeile(&format!("br label %{hat_arm}"));
@@ -9520,6 +9539,38 @@ fn arena_bereit(k: &mut Koerper, tisch: &str, bedarf: &str, voll: &str, span: Sp
         let _ = writeln!(k.text, "{genug}:");
         k.beendet = false;
     }
+    // The free-link words of the slots this chunk covers become accessible
+    // first (page-rounded outward; committing a page twice is idempotent).
+    let bedeckt_m = k.tmp();
+    k.zeile(&format!("{bedeckt_m} = add i64 {von}, {lang}"));
+    let slots_lo = k.tmp();
+    k.zeile(&format!("{slots_lo} = udiv i64 {von}, {breite}"));
+    let slots_hi = k.tmp();
+    k.zeile(&format!("{slots_hi} = udiv i64 {bedeckt_m}, {breite}"));
+    let lo8 = k.tmp();
+    k.zeile(&format!("{lo8} = mul i64 {slots_lo}, 8"));
+    let lo_page = k.tmp();
+    k.zeile(&format!("{lo_page} = and i64 {lo8}, -4096"));
+    let hi8 = k.tmp();
+    k.zeile(&format!("{hi8} = mul i64 {slots_hi}, 8"));
+    let hi_up = k.tmp();
+    k.zeile(&format!("{hi_up} = add i64 {hi8}, 4095"));
+    let hi_page = k.tmp();
+    k.zeile(&format!("{hi_page} = and i64 {hi_up}, -4096"));
+    let meta_len = k.tmp();
+    k.zeile(&format!("{meta_len} = sub i64 {hi_page}, {lo_page}"));
+    let meta_raw = k.tmp();
+    k.zeile(&format!("{meta_raw} = load i64, ptr {}, align 8", gteil(tisch, "meta")));
+    let meta_adr = k.tmp();
+    k.zeile(&format!("{meta_adr} = add i64 {meta_raw}, {lo_page}"));
+    let margs = runtime_args(k.s.ziel, &[meta_adr, meta_len, "3".into()]);
+    let mrc = laufzeit_ruf(k, "mprotect", &margs, span)?;
+    let mbad = ruf_fehlschlag(k, &mrc);
+    let mok = k.block("arena_meta_ok");
+    k.zeile(&format!("br i1 {mbad}, label %{voll}, label %{mok}"));
+    k.beendet = true;
+    let _ = writeln!(k.text, "{mok}:");
+    k.beendet = false;
     let regs2 = if k.s.ziel.name == "x86_64" {
         vec![
             ("rdi".to_string(), adr.clone()),

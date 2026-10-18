@@ -75,6 +75,21 @@ def stufe_ende_zu_ende():
         if not ok: print(f"     {datei}: erwartet rc={soll}, erhalten {rcs}\n{p.stdout[-600:]}")
     ok = gut == len(PROGRAMME)
     print(f"  2 binaer:  {'ok' if ok else 'ROT'} ({gut} von {len(PROGRAMME)} Programmen, x86_64 und aarch64 gleich)")
+    return ok and stufe_halde_frei(tls)
+
+
+def stufe_halde_frei(tls):
+    """A heap is free unless used: the unbounded-heap binary must never map more than 1 GiB read/write at once
+    (reservations are PROT_NONE; payload and metadata become accessible chunk by chunk)."""
+    if not shutil.which("strace"):
+        print("  2b halde:  NICHT GEMESSEN (strace fehlt)")
+        return None
+    exe = tls / "1160-halde-mit-abtastung-x86_64"
+    p = subprocess.run(["strace", "-f", "-e", "trace=mmap", str(exe)], capture_output=True, text=True, timeout=120)
+    gross = [m for m in re.findall(r"mmap\(NULL, (\d+), ([A-Z_|]+),", p.stderr)
+             if "PROT_WRITE" in m[1] and int(m[0]) > 2**30]
+    ok = not gross
+    print(f"  2b halde:  {'ok' if ok else 'ROT'} (keine Lese/Schreib-Abbildung über 1 GiB{'' if ok else ': ' + str(gross)})")
     return ok
 
 

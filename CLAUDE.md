@@ -32,7 +32,7 @@ wenn sie ihren Vorgänger entfernt hat.
 | Wächter | Gegenstand | Was er prüft |
 |---|---|---|
 | `instrumente/pruefe-lean.py` | das Lean-Modell (`grammatik/`) | `lake build`, `gabbro_ziel` nur auf `propext`/`Classical.choice`/`Quot.sound`, kein `sorry`/`admit`/`native_decide`/`axiom`, höchstens 20 Einträge je Ordner |
-| `instrumente/pruefe-llvm.py` | der LLVM-Compiler | `cargo test --test llvm`, vier Programme als Binärdatei auf x86_64 und aarch64 (qemu) mit gleichem Ergebnis |
+| `instrumente/pruefe-llvm.py` | der LLVM-Compiler | `cargo test --test llvm`, neun Programme als Binärdatei auf x86_64 und aarch64 (qemu) mit gleichem Ergebnis, die Halde bleibt bis zur Belegung frei (keine Lese/Schreib-Abbildung über 1 GiB) |
 | `instrumente/pruefe-pruefer.py` | der Prüfer (Rust) | `cargo test --workspace --no-fail-fast`, Satzregister, Kennungen nur einmal vergeben |
 | `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build`, Beweise ohne `sorry`, `gabbro prove` GREEN, kein GREEN ohne Lean |
 
