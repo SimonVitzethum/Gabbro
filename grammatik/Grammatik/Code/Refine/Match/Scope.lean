@@ -1,5 +1,5 @@
-import Grammatik.Code.Refine.Traverse
-import Grammatik.Code.Refine.CallDef
+import Grammatik.Code.Refine.Loops.Traverse
+import Grammatik.Code.Refine.Calls.CallDef
 import Grammatik.Code.Refine.Match.Opt
 
 /-

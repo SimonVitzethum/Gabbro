@@ -1,5 +1,5 @@
-import Grammatik.Code.Refine.Mono
-import Grammatik.Code.Refine.LblWf
+import Grammatik.Code.Refine.Struct.Mono
+import Grammatik.Code.Refine.Struct.LblWf
 
 /-
   File:      Grammatik/Code/Refine/Labels.lean

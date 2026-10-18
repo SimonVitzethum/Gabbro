@@ -1,5 +1,5 @@
 import Grammatik.Code.Refine.Match.Scope
-import Grammatik.Code.Refine.Labels
+import Grammatik.Code.Refine.Struct.Labels
 
 /-
   File:      Grammatik/Code/Refine/Match/Why.lean

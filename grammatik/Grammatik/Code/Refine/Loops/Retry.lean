@@ -1,4 +1,4 @@
-import Grammatik.Code.Refine.Traverse
+import Grammatik.Code.Refine.Loops.Traverse
 
 /-
   File:      Grammatik/Code/Refine/Retry.lean

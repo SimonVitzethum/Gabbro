@@ -1,7 +1,7 @@
-import Grammatik.Code.Refine.CallRun
+import Grammatik.Code.Refine.Calls.CallRun
 import Grammatik.Code.Refine.Match.PayCode
 import Grammatik.Code.Refine.Match.Scope
-import Grammatik.Code.Refine.Labels
+import Grammatik.Code.Refine.Struct.Labels
 
 /-
   File:      Grammatik/Code/Refine/Match/Else.lean

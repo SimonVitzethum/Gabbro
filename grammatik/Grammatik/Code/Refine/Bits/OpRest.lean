@@ -1,5 +1,5 @@
 import Grammatik.Code.Refine.Bits.Ops
-import Grammatik.Code.Refine.Mono
+import Grammatik.Code.Refine.Struct.Mono
 
 /-
   File:      Grammatik/Code/Refine/Bits/OpRest.lean

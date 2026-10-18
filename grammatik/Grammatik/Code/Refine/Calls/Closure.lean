@@ -1,4 +1,4 @@
-import Grammatik.Code.Refine.Func
+import Grammatik.Code.Refine.Calls.Func
 
 /-
   File:      Grammatik/Code/Refine/Closure.lean

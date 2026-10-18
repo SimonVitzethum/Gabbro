@@ -1,8 +1,8 @@
 import Grammatik.Code.Refine.Stmt
-import Grammatik.Code.Refine.Loop
-import Grammatik.Code.Refine.Traverse
-import Grammatik.Code.Refine.Retry
-import Grammatik.Code.Refine.CallRun
+import Grammatik.Code.Refine.Loops.Loop
+import Grammatik.Code.Refine.Loops.Traverse
+import Grammatik.Code.Refine.Loops.Retry
+import Grammatik.Code.Refine.Calls.CallRun
 import Grammatik.Code.Refine.Match.OnOption
 import Grammatik.Code.Refine.Match.Why
 import Grammatik.Code.Refine.Match.Tag

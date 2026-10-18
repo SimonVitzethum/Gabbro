@@ -1,4 +1,4 @@
-import Grammatik.Code.Refine.Mono
+import Grammatik.Code.Refine.Struct.Mono
 import Grammatik.Code.Refine.Block
 
 /-

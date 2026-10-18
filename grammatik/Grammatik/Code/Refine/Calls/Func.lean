@@ -1,6 +1,6 @@
 import Grammatik.Code.Refine.StmtOk
-import Grammatik.Code.Refine.Labels
-import Grammatik.Code.Refine.CallDef
+import Grammatik.Code.Refine.Struct.Labels
+import Grammatik.Code.Refine.Calls.CallDef
 import Grammatik.Code.Lower.Func
 
 /-

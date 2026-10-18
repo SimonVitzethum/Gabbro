@@ -1,5 +1,5 @@
 import Grammatik.Code.Refine.Post
-import Grammatik.Code.Refine.Shape
+import Grammatik.Code.Refine.Struct.Shape
 
 /-
   File:      Grammatik/Code/Refine/Stmt.lean
