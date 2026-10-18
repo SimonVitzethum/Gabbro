@@ -307,16 +307,16 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "Measured before the build: `pruefe` reports 0 errors over a `-> never` \
                       `asm` body with `out { result }` (`S009` returns early on non-`Block` \
                       bodies); after the build it falls with `N321` \
-                      (`beispiele/gift/984`, `-- erwartet: N321`). Emitter half: \
-                      `beispiele/gift/985` (`-- erwartet: C001`). Deliberately NOT \
-                      `-- erwartet: N321 allein`: without the checker rule the emitter still \
+                      (`beispiele/gift/984`, `// erwartet: N321`). Emitter half: \
+                      `beispiele/gift/985` (`// erwartet: C001`). Deliberately NOT \
+                      `// erwartet: N321 allein`: without the checker rule the emitter still \
                       refuses (a `static` prototype with no definition, which `cc` rejects \
                       for that other reason), so `nothing else catches it' would be false. \
                       Counter-direction: `beispiele/36-asm.gab` (`schreiben -> u64` with \
                       `out { result }`, and `ausgeben` with neither) stays green. \
                       **Lane 225** adds the acceptance pins beside it: `gift/1065` \
-                      (`-- erwartet: A003`, the declaration the accepted shape still owes) \
-                      and `gift/1066` (`-- erwartet: C001`, checker silent). Lane 235 \
+                      (`// erwartet: A003`, the declaration the accepted shape still owes) \
+                      and `gift/1066` (`// erwartet: C001`, checker silent). Lane 235 \
                       consumed the handoff: the accepted shape now lowers, and `1066` \
                       pins a never-`asm` body with a NON-`result` `out`, which the \
                       emitter refuses by name.",
@@ -354,8 +354,8 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "Positive side pinned inline (`never_ruempfe_werden_angenommen_225` \
                       in `crates/gabbro-check/tests/paesse.rs`: halting `asm` under \
                       `-> never` with declared clauses falls with nothing). Refusal side: \
-                      `beispiele/gift/1065` (`-- erwartet: A003`) and `gift/1066` \
-                      (`-- erwartet: C001`, checker silent; since lane 235 a non-`result` \
+                      `beispiele/gift/1065` (`// erwartet: A003`) and `gift/1066` \
+                      (`// erwartet: C001`, checker silent; since lane 235 a non-`result` \
                       `out`). N321's own probes (`984`, `985`) stay green and unmoved. \
                       Lowering side: `crates/gabbro-check/tests/never_lowering.rs`.",
         fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`, the `N321` arm); \
@@ -402,8 +402,8 @@ pub const NAMEN: &[Satz] = &[
                       `never_kosten_sind_ein_satz_f5` pins the cost reading: a tail-call \
                       bound below its callee's cost is `K001`, a bounded caller of a \
                       `forever` routine is `K003`). Refusal side: \
-                      `beispiele/gift/1062` (`-- erwartet: K003`), `/1063` \
-                      (`-- erwartet: S006`), `/1064` (`-- erwartet: S009`).",
+                      `beispiele/gift/1062` (`// erwartet: K003`), `/1063` \
+                      (`// erwartet: S006`), `/1064` (`// erwartet: S009`).",
         fundstelle: "crates/gabbro-check/src/schleifen.rs (`nie_rueckkehr`, \
                      `ausgang_pruefen`); crates/gabbro-check/src/kosten.rs \
                      (`ohne_summe`, lane 191); beispiele/gift/1062-1064",
@@ -430,7 +430,7 @@ pub const NAMEN: &[Satz] = &[
                     attribute for a function, this rule goes. The clause at a `static` \
                     is untouched and keeps `D6` (`gift/646`, `/663`-`/665`).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/980` (`-- erwartet: N320 allein`: the checker falls \
+        gemessen_an: "`beispiele/gift/980` (`// erwartet: N320 allein`: the checker falls \
                       with `N320`, and WITHOUT the rule `cc -Werror` accepts the emitted \
                       C -- nothing else catches it). Counter-direction: two corpus \
                       `section` sites, both on a `static`, stay green \
@@ -992,7 +992,7 @@ pub const NAMEN: &[Satz] = &[
                     syscall-costs rule the same week); this rule carries the next free \
                     number.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/983 (`-- erwartet: N323 allein`: a bodied `TOR_nimm` \
+        gemessen_an: "beispiele/gift/983 (`// erwartet: N323 allein`: a bodied `TOR_nimm` \
                       storing program state with no atomic touch -- the checker falls with \
                       `N323` beside `N042`, and `cc -Werror` accepts the emitted C); /988 \
                       (the foreign shape: `extern fn TOR_gib` -- `N042` alone, `N323` \
@@ -1033,7 +1033,7 @@ pub const NAMEN: &[Satz] = &[
                     such a primitive today; these three legs are the order half of the \
                     contract for the day that name opens (OFFEN O26).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1201 (`-- erwartet: N481`: a test-and-set spinlock over \
+        gemessen_an: "beispiele/gift/1201 (`// erwartet: N481`: a test-and-set spinlock over \
                       a `relaxed` word -- `N481` at the take and `N482` at the give, `N323` \
                       silent), /1202 (`N482`: an acquiring take, a give through a relaxed \
                       second word), /1203 (`N483`: take acquires `HALTER`, give releases \
@@ -1498,7 +1498,7 @@ pub const D1D2: &[Satz] = &[
                     coarseness `D021`'s exemption of `Held`/`Has` already carries, and \
                     coarse in the quiet direction (a refusal, never a pass).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/1050` (`-- erwartet: N390`): the guard the striped \
+        gemessen_an: "`beispiele/gift/1050` (`// erwartet: N390`): the guard the striped \
                       firewall table wants. WITHOUT the rule the same file reports `0 \
                       errors, 0 hints` -- measured 2026-09-15, and that counterfactual is \
                       the whole point: no other pass catches it. Second poison direction, \
@@ -2928,7 +2928,7 @@ pub const M1: &[Satz] = &[
                     NUL termination is the lowering's decision, made there: \
                     the layout carries no terminator.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1118` \
+        gemessen_an: "beispiele/gift, plain `// erwartet:` form: `1118` \
                       (`N453`: 5+5 \
                       into 8), `1119` (`N454`: literal 8 at max 8), `1120` \
                       (`N454`: computed index, narrowed yet unguarded), `1125` \
@@ -2964,7 +2964,7 @@ pub const M1: &[Satz] = &[
                     its block, and a shadowing `let` the pass cannot type binds \
                     a non-string.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1121` \
+        gemessen_an: "beispiele/gift, plain `// erwartet:` form: `1121` \
                       (`N455`: `0` at a string slot), `1122` (`N455`: `s + 1` \
                       mixed), `1164` (`N455`: a `requires` copies 8 into 2), \
                       `1165` (`N455`: a `let … else` source copies 8 into 2), \
@@ -3002,7 +3002,7 @@ pub const M1: &[Satz] = &[
                     `ops` condition). Names are compared unqualified, per unit, like \
                     `maintains` itself.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1231` (a table writer \
+        gemessen_an: "beispiele/gift, plain `// erwartet:` form: `1231` (a table writer \
                       without `maintains`), `1232` (a group carrier), `1233` (a \
                       `consumes`), `1234` (a caller writing through its callee). Corpus \
                       diff measured 2026-09-26 over every `.gab` under `beispiele/` and \
@@ -3095,7 +3095,7 @@ pub const M1: &[Satz] = &[
                     and `let`s (beispiele/1123, 1124, 1126, 1127, 1159); the \
                     refusal costs none of them (measured: they emit).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1160` (a struct \
+        gemessen_an: "beispiele/gift, plain `// erwartet:` form: `1160` (a struct \
                       field), `1161` (a `const`), `1162` (a `static`), `1163` (a \
                       table slot field) -- all four checker-clean before fix lane \
                       F6. The clean side is every parameter/result/`let` string \
@@ -3119,7 +3119,7 @@ pub const M1: &[Satz] = &[
                     layout (`gabbro_string_N`: `uint32_t len` plus `uint8_t \
                     data[N]`, no NUL terminator) is booked beside the emitter.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1211` (a max \
+        gemessen_an: "beispiele/gift, plain `// erwartet:` form: `1211` (a max \
                       past the bound), `1212` (a max of zero). The clean side \
                       is beispiele/161 (literals, copy, concat, index, `lenof` \
                       at small maxes, compiled and run in `pruefe-emission.sh`).",
@@ -3186,7 +3186,7 @@ pub const M1: &[Satz] = &[
                     interval sweep instead of `erschoepfendB`'s enumeration; that the \
                     Rust sweep computes it is read, not proved.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/1128` (`-- erwartet: N411 allein`: `0 .. 254` over \
+        gemessen_an: "`beispiele/gift/1128` (`// erwartet: N411 allein`: `0 .. 254` over \
                       a `u8`, and `cc -Werror` accepts the emitted `switch` -- N411 is \
                       the only line), `1129` (`N412`, overlap), `1130` (`N413`, `-1` \
                       over `u8`), `1131` (`N414`, `bool`); gifts 1072-1076 now fall at \
@@ -3998,7 +3998,7 @@ pub const WIRKUNGEN: &[Satz] = &[
                     its own thread writes, read elsewhere, falls too (`GetrenntR` pairs \
                     reader and writer threads, not values).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1204 (`-- erwartet: N484`: `setzer` ensures \
+        gemessen_an: "beispiele/gift/1204 (`// erwartet: N484`: `setzer` ensures \
                       `FLAGGE == 1`, `loescher` stores 0 on another thread, `leser` reads \
                       it -- before this leg 0 errors, `messung/proben/o25b-vertrag-atomar.gab`); \
                       snippet tests in `tests/fusswache2.rs` (a contract over a thread-local \
@@ -4268,7 +4268,7 @@ pub const KOSTEN: &[Satz] = &[
                     is the author's logic, like `costs` itself -- the pass checks each \
                     window fits, never that they tile.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/1082` (`-- erwartet: N421 allein`: the unchunked \
+        gemessen_an: "`beispiele/gift/1082` (`// erwartet: N421 allein`: the unchunked \
                       full scan falls with K002 beside it, and `cc -Werror` accepts \
                       the emitted C -- without the rule nothing names the remedy). \
                       Counter-direction in `paesse.rs` (`haltezeit_fenster_*`): an \
@@ -4491,9 +4491,9 @@ pub const PHASEN: &[Satz] = &[
                     plus dispatch, because only there the clause is new and no bound \
                     was ever written against the old silence.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/986 (`-- erwartet: N322 allein`: a costless syscall \
+        gemessen_an: "beispiele/gift/986 (`// erwartet: N322 allein`: a costless syscall \
                       falls once, and without the rule nothing falls -- the emitted C \
-                      is valid `cc -Werror` input) and /987 (`-- erwartet: K001`: a \
+                      is valid `cc -Werror` input) and /987 (`// erwartet: K001`: a \
                       caller bound at `fa` over a `1 + fa` call -- without the dispatch \
                       step it would pass); beispiele/74, /90 and /96 carry \
                       `costs <= 8 ops` on `write` and check clean.",
@@ -4800,7 +4800,7 @@ pub const PHASEN: &[Satz] = &[
                     out best-effort beside the refusal, so the refusal changes \
                     no `cc` verdict.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: `1388` (`N572`: a stack-gate call with no region), `1107` (`-- erwartet: N446 allein`: an unbound \
+        gemessen_an: "beispiele/gift: `1388` (`N572`: a stack-gate call with no region), `1107` (`// erwartet: N446 allein`: an unbound \
                       handed register), `1108` (`N447 allein`: stack-ness twice), \
                       `1109` (`N448 allein`: a `return` out of the path), `1110` \
                       (`N449 allein`: a falling path), `1111` (`N450 allein`: a path \
@@ -4810,7 +4810,7 @@ pub const PHASEN: &[Satz] = &[
                       function) and `1140` (`N450` twice: a second region behind \
                       one call, and a call only in a sibling branch), both silent \
                       before fix lane F3 made the rule per region; `1181` \
-                      (`-- erwartet: C185`, lane 260: the unguarded region, \
+                      (`// erwartet: C185`, lane 260: the unguarded region, \
                       checker-clean, refused by exactly its code). `1112` \
                       measured the guarded refusal until lane 260 lowered the \
                       triple -- the file is untouched, its verdict moved with \
@@ -4853,20 +4853,20 @@ pub const PHASEN: &[Satz] = &[
                     as a mention -- a write to a dead slot is the same fault \
                     from the other side.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: `1113` (`-- erwartet: N451 allein`: the \
+        gemessen_an: "beispiele/gift: `1113` (`// erwartet: N451 allein`: the \
                       child reads the gate answer `v`, extended in round 2 \
                       with the shadow -- both orders refuse under the one \
-                      code), `1115` (`-- erwartet: N452 allein`: the child \
-                      reads the unhanded parameter `art`), `1116` (`-- erwartet: \
+                      code), `1115` (`// erwartet: N452 allein`: the child \
+                      reads the unhanded parameter `art`), `1116` (`// erwartet: \
                       N452 allein`: same value, different slot -- the gate took \
-                      `s2`, the child reads `stapel`), `1117` (`-- erwartet: \
+                      `s2`, the child reads `stapel`), `1117` (`// erwartet: \
                       N452`: the handoff call after the region hands nothing; \
                       `N450` falls beside it since fix lane F3), `1146` (`N451`: \
                       the gate answer read in `grow … else`), `1147` (`N451`: a \
                       caller `let` as a lock index) -- the first three fall once, \
                       and without their rule the emitted C is valid `cc -Werror` \
                       input; \
-                      `1114` (`-- erwartet: C185`: the worker-call shape, \
+                      `1114` (`// erwartet: C185`: the worker-call shape, \
                       checker-clean -- the preceding handed read stays legal). \
                       The narrowing side is `1109`/`1110`: their incidental caller \
                       reads became the new rule's subject and were replaced \
@@ -4897,7 +4897,7 @@ pub const PHASEN: &[Satz] = &[
                     nothing about which integer is a good stack; that stays the \
                     gate's assumption and the runtime's template (`tor.trampolin`).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1399 (`-- erwartet: N578 allein`: the region \
+        gemessen_an: "beispiele/gift/1399 (`// erwartet: N578 allein`: the region \
                       handed as the stack, indexed on both paths -- 0 errors before \
                       the rule). The clean side is every stack gate in the tree, all \
                       of them `u64`: beispiele/155, /156, /160 and \
@@ -4937,7 +4937,7 @@ pub const PHASEN: &[Satz] = &[
                     exporter does not build -- so that correspondence is stated, not \
                     measured.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: `1141` (`-- erwartet: N456`: the review's \
+        gemessen_an: "beispiele/gift: `1141` (`// erwartet: N456`: the review's \
                       `locks L { g = 1; child { g = 2; … } }`, with `H007` beside it \
                       since the child's held set starts empty), `1142` (`N456`: a \
                       child under `requires Held(L)`), `1143` (`N457`: the child \
@@ -5071,6 +5071,26 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/lex.rs::quelltext_pruefe; \
                      instrumente/pruefe-kennungen.py::quellvertrauen",
     },
+    // --- 2026-10-18: comments as in most languages ------------------------------------
+    //
+    // `//` runs to the end of the line, `/* ... */` nests by a depth counter, `///` is a doc
+    // comment kept as trivia (`////` and more are ordinary). A block comment still open at
+    // the end of the file is the one new lexical refusal.
+    Satz {
+        name: "quelle.blockkommentar",
+        kennungen: &["L008"],
+        aussage: "Every `/*` is closed by its own `*/` before the end of the file: block \
+                  comments nest, and a comment still open when the text ends is refused \
+                  (`L008`) instead of swallowing the rest of the program in silence.",
+        vorbehalt: "A shape rule of the reader. Nothing is said about what a comment \
+                    contains, and a `///` doc comment is trivia the parser never sees.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 1471 (`L008`, a nested block comment with one \
+                      closer too few); Lean: `lex_block_offen` and \
+                      `lex_block_offen_verschachtelt` in `Parser/Lex/Lexer.lean`.",
+        fundstelle: "crates/gabbro-syntax/src/lex.rs::zerlege_mit_doku; \
+                     grammatik/Grammatik/Parser/Lex/Lexer.lean::scan",
+    },
     // --- lane E4, 2026-09-12: the monotone arena, checker half -------------------------
     //
     // **The structure lane of dokumente/PRUEFER.md §3.** A heap is allowed but never
@@ -5169,7 +5189,7 @@ pub const PHASEN: &[Satz] = &[
                      clause on tables is reserved future syntax (§1 scope \
                      reading), not parsed, not refused, not built.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/gift/1087` (`-- erwartet: N212`: over-cap \
+        gemessen_an: "`beispiele/gift/1087` (`// erwartet: N212`: over-cap \
                       growth without a branch, nothing else falls); \
                       `paesse.rs` (`arena_kappe_ohne_else_n212` with its \
                       clean twin, `arena_wachstum_in_sperre_k002` with its \
@@ -5248,7 +5268,7 @@ pub const PHASEN: &[Satz] = &[
                     static shape the dynamic form preserves; the dynamic \
                     demo waits for the emitter arm and is NOT taken here.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1088 (`-- erwartet: N426`: a `grow` \
+        gemessen_an: "beispiele/gift/1088 (`// erwartet: N426`: a `grow` \
                       reaching past the ceiling with the branch declared); \
                       gifts 1132-1135 (fix lane F2: `grow` in `forever`, \
                       after a branch that grew, in two roots, in a callee \
@@ -5256,7 +5276,7 @@ pub const PHASEN: &[Satz] = &[
                       ceiling in                       `paesse.rs` (`arena_grow_obere_schranke_n426`, \
                       `arena_grow_ohne_schranke_n426`, \
                       `arena_grow_else_vom_alten_stand`); \
-                      beispiele/gift/1279 (`-- erwartet: N426`: the pool \
+                      beispiele/gift/1279 (`// erwartet: N426`: the pool \
                       commits twice -- `N522` beside it) and `1280` (a \
                       looped `start` multiplies the root's commit, `N426` \
                       alone); `paesse.rs` (`arena_commit_pool_zweimal_n426`, \
@@ -5310,9 +5330,9 @@ pub const PHASEN: &[Satz] = &[
                     `grow` falls, including the first pass: the loop may run \
                     zero times, so the joined path guarantees only the floor.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1171 (`-- erwartet: N466`: an `alloc` \
+        gemessen_an: "beispiele/gift/1171 (`// erwartet: N466`: an `alloc` \
                       with its `else` past the committed prefix and no `grow` \
-                      covering it); beispiele/gift/1172 (`-- erwartet: N466`: \
+                      covering it); beispiele/gift/1172 (`// erwartet: N466`: \
                       the past-`M` shape -- a count that may reach the ceiling \
                       falls here first, the `R-max` half); `paesse.rs` \
                       (`arena_alloc_braucht_commit_n466`: the poison with its \
@@ -5342,8 +5362,8 @@ pub const PHASEN: &[Satz] = &[
                     not covered: an arena slot is write-once, so a give-back has \
                     nothing to say there.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1371 (`-- erwartet: N569`: a table named as the \
-                      carrier); beispiele/gift/1372 (`-- erwartet: M103`: a range \
+        gemessen_an: "beispiele/gift/1371 (`// erwartet: N569`: a table named as the \
+                      carrier); beispiele/gift/1372 (`// erwartet: M103`: a range \
                       that reaches past the array); beispiele/gift/1373 (`-- \
                       erwartet: E005`: the store without `writes X`); \
                       beispiele/175 (clean, emits; the driver `beispiel175` runs it); \
@@ -5365,7 +5385,7 @@ pub const PHASEN: &[Satz] = &[
                     static that carries one (`LG001`), and the model has no address to \
                     align.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1374 (`-- erwartet: N570`: `aligned 3000`); \
+        gemessen_an: "beispiele/gift/1374 (`// erwartet: N570`: `aligned 3000`); \
                       beispiele/175 (`aligned 4096`, clean, emits, runs).",
         fundstelle: "crates/gabbro-check/src/m1.rs (the static-declaration walk); \
                      crates/gabbro-check/src/emit.rs (`abschnitt_attribut`)",
@@ -5409,7 +5429,7 @@ pub const PHASEN: &[Satz] = &[
                     `beispiele/154` (reset beside reuse, one thread) stays \
                     clean and emitting.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1272 (`-- erwartet: N521`: reset beside \
+        gemessen_an: "beispiele/gift/1272 (`// erwartet: N521`: reset beside \
                       a parameter-index read, no write-write overlap); \
                       `1273` (the reset one call down); `1274` (a member's \
                       reset beside a started root's use); `1275` (a guarded \
@@ -5451,7 +5471,7 @@ pub const PHASEN: &[Satz] = &[
                     because no `H007` arm reads them. Atomic and per-core \
                     arenas do not exist, so no exemption names them.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1276 (`-- erwartet: N522`: the pool \
+        gemessen_an: "beispiele/gift/1276 (`// erwartet: N522`: the pool \
                       self-pair, one routine twice); `1277` (entry against \
                       member -- `H013` and the self-pair beside it); `1278` \
                       (a common lock nobody takes -- `W001` beside it); \
@@ -6220,7 +6240,7 @@ pub const SPERREN: &[Satz] = &[
                     DEFINES -- `pruefe_{c}`; the writer's own archive member was never \
                     linked. (C) internal `static` names, silent whenever the generated \
                     declaration stands first. *Their probes carry the mirror contract \
-                    `-- erwartet: N042 allein`: the checker must refuse AND `cc` must \
+                    `// erwartet: N042 allein`: the checker must refuse AND `cc` must \
                     ACCEPT -- the day a second guard appears, the probe goes red and asks to \
                     be re-classified.*\n\
                     **And a second shape since 2026-10-05 (C-free lane, OFFEN O40): two \
@@ -6238,7 +6258,7 @@ pub const SPERREN: &[Satz] = &[
                     BY NAME and that set lives in the generator's `Namen`, not in the tree -- \
                     a listed name the generator never writes would be a refusal without a \
                     defect. The price is measured and stands as a probe of its own \
-                    (`beispiele/gift/414`, contract `-- erwartet: cc`). Also left out: block \
+                    (`beispiele/gift/414`, contract `// erwartet: cc`). Also left out: block \
                     labels (`{marke}_wachhund`) and everything inside a body, where a local \
                     shadowing a file-scope name is legal C.\n\
                     **And THREE names it lists only under a condition, each after a measured \
@@ -6263,8 +6283,8 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/413 (both forms: a `format` field spelled like the \
                       validity predicate, and one spelled like another field's writer; the \
-                      contract moved from `-- erwartet: cc` to `-- erwartet: N042`); one probe \
-                      per SILENT sort, each on the mirror contract `-- erwartet: N042 allein` \
+                      contract moved from `// erwartet: cc` to `// erwartet: N042`); one probe \
+                      per SILENT sort, each on the mirror contract `// erwartet: N042 allein` \
                       -- 417 (`lock` beside `extern fn {L}_nimm`, sort A), 418 (`check` beside \
                       `extern fn pruefe_{c}`, sort B), 419 (`accumulates` beside `extern fn \
                       {n}_lies`, sort C, in the silent line order), 420 (`boot` beside `extern \

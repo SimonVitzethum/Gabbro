@@ -1,11 +1,11 @@
--- erwartet: M152
--- **M152 must-pass twins beside the falling site: the rule reads facts, not
--- declarations.**
---
--- `eng` narrows the denominator away from `-1`, so nothing can trap. `klein`
--- narrows the dividend away from the smallest value, so `-1` divides
--- everything left. `offen` carries neither fact and falls. One file, both
--- directions.
+// erwartet: M152
+// **M152 must-pass twins beside the falling site: the rule reads facts, not
+// declarations.**
+//
+// `eng` narrows the denominator away from `-1`, so nothing can trap. `klein`
+// narrows the dividend away from the smallest value, so `-1` divides
+// everything left. `offen` carries neither fact and falls. One file, both
+// directions.
 module gift765 {
 
 impl fn eng(x : i32, y : i32 in 1 .. 100) -> i32 effects { pure } {

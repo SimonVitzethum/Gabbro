@@ -1,11 +1,11 @@
--- erwartet: R006
--- **«B18», die Zeile aus dem Fragment:** *„nach `queue_arm` kann kein Pfad `USED_IDX`
--- schreiben"* (`FRAGMENTE.md`:833-834).
---
--- Hier haelt die Funktion die Marke, macht den Schritt und schreibt **danach** weiter. Das
--- erste Nullen steht VOR dem Schritt und ist richtig -- *`class r` allein waere hier falsch
--- gewesen, es verboete genau das Nullen, das die bezahlte Falle einer wiederbenutzten
--- Region entschaerft.* Was faellt, ist die zweite Zuweisung, und nur sie.
+// erwartet: R006
+// **«B18», die Zeile aus dem Fragment:** *„nach `queue_arm` kann kein Pfad `USED_IDX`
+// schreiben"* (`FRAGMENTE.md`:833-834).
+//
+// Hier haelt die Funktion die Marke, macht den Schritt und schreibt **danach** weiter. Das
+// erste Nullen steht VOR dem Schritt und ist richtig -- *`class r` allein waere hier falsch
+// gewesen, es verboete genau das Nullen, das die bezahlte Falle einer wiederbenutzten
+// Region entschaerft.* Was faellt, ist die zweite Zuweisung, und nur sie.
 
 module gift::registerklasse_nach_dem_schritt {
 

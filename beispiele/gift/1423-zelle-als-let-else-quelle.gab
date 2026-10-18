@@ -1,7 +1,7 @@
--- erwartet: N581
--- **A string cell as the source of a `let … else` (found by the 5c adversarial review).** The
--- cell is read whole only by `let x : string max M = cell;`; a `let … else` over it bound the
--- cell past the copy rule (`N455`) with no refusal at all.
+// erwartet: N581
+// **A string cell as the source of a `let … else` (found by the 5c adversarial review).** The
+// cell is read whole only by `let x : string max M = cell;`; a `let … else` over it bound the
+// cell past the copy rule (`N455`) with no refusal at all.
 module gift::zelle_als_let_else_quelle {
 
 static mut NAMEN : [string max 8; 4] = 0;

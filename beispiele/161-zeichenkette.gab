@@ -1,12 +1,12 @@
--- 161 -- bounded strings lower to C (lane 261).
---
--- Builds a string from a literal, copies it into a wider slot,
--- concatenates two strings, and reads length, bytes and comparisons back.
--- The layout is one length word plus `max` bytes per value, with no NUL
--- terminator (`gabbro_string_N`); every copy fits by construction (`N455`
--- refuses a copy into a shorter max) and every index is proven below the
--- length (`N454`). Compiled and run in `pruefe-emission.sh`
--- (`lauf "beispiel161"`).
+// 161 -- bounded strings lower to C (lane 261).
+//
+// Builds a string from a literal, copies it into a wider slot,
+// concatenates two strings, and reads length, bytes and comparisons back.
+// The layout is one length word plus `max` bytes per value, with no NUL
+// terminator (`gabbro_string_N`); every copy fits by construction (`N455`
+// refuses a copy into a shorter max) and every index is proven below the
+// length (`N454`). Compiled and run in `pruefe-emission.sh`
+// (`lauf "beispiel161"`).
 
 module beispiel161 {
 impl fn baue() -> string max 8

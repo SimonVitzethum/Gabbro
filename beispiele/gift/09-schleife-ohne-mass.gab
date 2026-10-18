@@ -1,6 +1,6 @@
--- erwartet: P001
--- Jede Traversierung nennt ihre Laufform. `by unvisited | consuming` ist Pflicht; das
--- Abstiegsmass `decreases e` ist die Klausel dahinter und darf fehlen.
+// erwartet: P001
+// Jede Traversierung nennt ihre Laufform. `by unvisited | consuming` ist Pflicht; das
+// Abstiegsmass `decreases e` ist die Klausel dahinter und darf fehlen.
 module gift {
 
 table T count 8 { slot { x : u32 in 0 .. 10, } }

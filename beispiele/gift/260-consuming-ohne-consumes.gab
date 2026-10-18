@@ -1,16 +1,16 @@
--- erwartet: S008
--- **`by consuming` ohne ein `consumes`** (2026-08-24). Das Passregister buchte am
--- 2026-08-21: *„`by unvisited`/`by consuming`: keine Abstiegspruefung. Fuer diese zwei
--- Formen sagt Pass 6 ueber Terminierung NICHTS."* Aufgeschrieben, nicht gehandelt --
--- und `abstieg_pruefen` sagte es in seiner ersten Zeile selbst: sie kehrte fuer alles
--- zurueck, was nicht `Fallend` ist.
---
--- **`by consuming` sagt: die Domaene SCHRUMPFT.** Terminierung und die blattzuerst-Ordnung
--- ruhen beide darauf. Nennt `touches` kein `consumes`, hat die Zusage keinen Traeger.
---
--- Geprueft ist die NOTWENDIGE Bedingung, nicht die hinreichende -- genau wie bei `S005`.
--- *`by unvisited` braucht hier nichts: es besucht jedes Element einer ENDLICHEN Domaene
--- hoechstens einmal und terminiert damit von selbst.*
+// erwartet: S008
+// **`by consuming` ohne ein `consumes`** (2026-08-24). Das Passregister buchte am
+// 2026-08-21: *„`by unvisited`/`by consuming`: keine Abstiegspruefung. Fuer diese zwei
+// Formen sagt Pass 6 ueber Terminierung NICHTS."* Aufgeschrieben, nicht gehandelt --
+// und `abstieg_pruefen` sagte es in seiner ersten Zeile selbst: sie kehrte fuer alles
+// zurueck, was nicht `Fallend` ist.
+//
+// **`by consuming` sagt: die Domaene SCHRUMPFT.** Terminierung und die blattzuerst-Ordnung
+// ruhen beide darauf. Nennt `touches` kein `consumes`, hat die Zusage keinen Traeger.
+//
+// Geprueft ist die NOTWENDIGE Bedingung, nicht die hinreichende -- genau wie bei `S005`.
+// *`by unvisited` braucht hier nichts: es besucht jedes Element einer ENDLICHEN Domaene
+// hoechstens einmal und terminiert damit von selbst.*
 module gift::consuming_ohne_consumes {
 
 table Kappen count 64 {

@@ -1,10 +1,10 @@
--- erwartet: K001
---
--- Eine Traversierung zaehlt Rumpfkosten x Domaenenschranke. 1024 Slots mal die 200 ops,
--- die der Rumpf zusagt, sind 200 000 -- und nicht die 500, die dastehen.
---
--- Bis Pass 9 stand, war diese Zahl eine Behauptung: `retry … bounded N ops` BEHAUPTETE
--- Terminierung, es prueft sie nicht.
+// erwartet: K001
+//
+// Eine Traversierung zaehlt Rumpfkosten x Domaenenschranke. 1024 Slots mal die 200 ops,
+// die der Rumpf zusagt, sind 200 000 -- und nicht die 500, die dastehen.
+//
+// Bis Pass 9 stand, war diese Zahl eine Behauptung: `retry … bounded N ops` BEHAUPTETE
+// Terminierung, es prueft sie nicht.
 
 module gift {
 

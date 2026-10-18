@@ -13,7 +13,7 @@ check kontostand {
     counterprobe "setze stand auf 7" expects sonde_stand_sieben
 }
 
--- Der Nutzer meint eine EIGENE fremde Funktion, die zufaellig so heisst.
+// Der Nutzer meint eine EIGENE fremde Funktion, die zufaellig so heisst.
 extern fn pruefe_kontostand() -> bool effects { pure } costs <= 1 ops;
 
 pub impl fn frage() -> bool

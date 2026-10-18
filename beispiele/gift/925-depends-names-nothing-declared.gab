@@ -1,10 +1,10 @@
--- erwartet: N255
--- **A `depends` entry naming nothing this unit declares falls.**
---
--- `ST` claims its answer rests on `gibt_es_nicht`, and no table, global,
--- or import of this unit carries that name. A premise over a place that
--- does not exist is a premise nothing can establish -- the N053 cut one
--- clause up. The reader holds its guard, so nothing else speaks: N255 ALONE.
+// erwartet: N255
+// **A `depends` entry naming nothing this unit declares falls.**
+//
+// `ST` claims its answer rests on `gibt_es_nicht`, and no table, global,
+// or import of this unit carries that name. A premise over a place that
+// does not exist is a premise nothing can establish -- the N053 cut one
+// clause up. The reader holds its guard, so nothing else speaks: N255 ALONE.
 module gift::depends_unbekannt {
 
 table Zustand count 4 {

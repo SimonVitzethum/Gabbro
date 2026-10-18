@@ -1,15 +1,15 @@
--- **Regel A, Datei 2 von 2: der RUFER.**
---
--- Er bringt eine EIGENE Sperre mit, `rank 0`, und nimmt sie AUSSEN. Der Ruf in die
--- Bibliothek nimmt `ZAEHLER` auf `rank 1` -- also aufsteigend, also erlaubt.
---
--- **Das ist die Aussage, um die es geht:** die Ordnung `AUFTRAG < ZAEHLER` steht in keiner
--- der beiden Dateien. Sie entsteht erst bei der VEREINIGUNG, und `H012` rechnet sie dort
--- nach. Vertauscht man die Raenge, faellt genau dieser Ruf -- siehe `beispiele/gift/250`.
--- **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
--- Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
--- exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
--- sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
+// **Regel A, Datei 2 von 2: der RUFER.**
+//
+// Er bringt eine EIGENE Sperre mit, `rank 0`, und nimmt sie AUSSEN. Der Ruf in die
+// Bibliothek nimmt `ZAEHLER` auf `rank 1` -- also aufsteigend, also erlaubt.
+//
+// **Das ist die Aussage, um die es geht:** die Ordnung `AUFTRAG < ZAEHLER` steht in keiner
+// der beiden Dateien. Sie entsteht erst bei der VEREINIGUNG, und `H012` rechnet sie dort
+// nach. Vertauscht man die Raenge, faellt genau dieser Ruf -- siehe `beispiele/gift/250`.
+// **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
+// Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
+// exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
+// sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
 module dienst {
 
 use zaehlwerk::setze_stand;

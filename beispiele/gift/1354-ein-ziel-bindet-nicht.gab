@@ -1,7 +1,7 @@
--- erwartet: N563
--- Gift 1354 -- **A target that does not bind a variable a gate uses.** `metal` binds nothing for
--- `sys_write`: switching to it would meet a gate with no number, no registers and no named
--- assumption. Every target binds every variable a gate uses, whichever is active (OFFEN O31).
+// erwartet: N563
+// Gift 1354 -- **A target that does not bind a variable a gate uses.** `metal` binds nothing for
+// `sys_write`: switching to it would meet a gate with no number, no registers and no named
+// assumption. Every target binds every variable a gate uses, whichever is active (OFFEN O31).
 
 module gift::ein_ziel_bindet_nicht {
 

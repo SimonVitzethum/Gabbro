@@ -1,9 +1,9 @@
--- erwartet: E008
--- **Ein Ruf in einem `observes`-Block war für den Rahmenpass unsichtbar.**
---
--- `aufrufgraph::sammle_rufe` zählte seine Anweisungsarten selbst auf und schloss mit
--- `_ => {}`; `observes` fehlte. Gemessen am 2026-08-19: derselbe Ruf eine Zeile HÖHER fiel
--- mit zwei `E008`, hier drin mit keinem. *Der RCU-Leseblock war ein Versteck.*
+// erwartet: E008
+// **Ein Ruf in einem `observes`-Block war für den Rahmenpass unsichtbar.**
+//
+// `aufrufgraph::sammle_rufe` zählte seine Anweisungsarten selbst auf und schloss mit
+// `_ => {}`; `observes` fehlte. Gemessen am 2026-08-19: derselbe Ruf eine Zeile HÖHER fiel
+// mit zwei `E008`, hier drin mit keinem. *Der RCU-Leseblock war ein Versteck.*
 module gift::ruf_im_observes {
 
 table Konten count 8 { slot { zaehler : u32, } }

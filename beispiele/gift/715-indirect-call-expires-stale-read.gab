@@ -1,12 +1,12 @@
--- erwartet: M147
--- **V4 freshness across an indirect call, MUST-FAIL: a stale decision after `t->ruf()`.**
---
--- `alt` is read from carrier `ZUSTAND`, then an indirect statement-call runs.
--- No path names the callee, so M1 cannot read a writes-hull -- and the coarse
--- rule that already kills every non-local V1 fact here must expire every V4
--- taint with it. Deciding on `alt` afterwards falls as `M147`. A direct call
--- with a readable hull expires only what the callee can touch; an indirect
--- call can touch anything, so it expires everything.
+// erwartet: M147
+// **V4 freshness across an indirect call, MUST-FAIL: a stale decision after `t->ruf()`.**
+//
+// `alt` is read from carrier `ZUSTAND`, then an indirect statement-call runs.
+// No path names the callee, so M1 cannot read a writes-hull -- and the coarse
+// rule that already kills every non-local V1 fact here must expire every V4
+// taint with it. Deciding on `alt` afterwards falls as `M147`. A direct call
+// with a readable hull expires only what the callee can touch; an indirect
+// call can touch anything, so it expires everything.
 module gift715 {
 
 static mut ZUSTAND : u32 = 0;

@@ -1,11 +1,11 @@
--- erwartet: M104
---
--- Dasselbe fuer den Schleifenrumpf: was die Schleife schreibt, toetet den Fakt davor.
---
--- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
--- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// erwartet: M104
+//
+// Dasselbe fuer den Schleifenrumpf: was die Schleife schreibt, toetet den Fakt davor.
+//
+// Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
--- MUSS fallen (M104): die Schleife setzt z.wert auf 0, danach unterlaeuft `-= 1`.
+// MUSS fallen (M104): die Schleife setzt z.wert auf 0, danach unterlaeuft `-= 1`.
 module gift {
 
 const GRENZE : u32 = 65535;

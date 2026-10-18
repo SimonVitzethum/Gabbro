@@ -1,5 +1,5 @@
--- W24-Vorlauf: der `can_fail`-Block nennt eine Groesse, die es nicht gibt.
--- *Die Gegenprobe zu t5/t7: liest ueberhaupt jemand Namen in diesem Konstrukt?*
+// W24-Vorlauf: der `can_fail`-Block nennt eine Groesse, die es nicht gibt.
+// *Die Gegenprobe zu t5/t7: liest ueberhaupt jemand Namen in diesem Konstrukt?*
 module w24::t8 {
 
 static mut k : u32 = 0;

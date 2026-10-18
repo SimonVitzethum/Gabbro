@@ -1,12 +1,12 @@
--- erwartet: N507
--- **1253 -- a path buffer with no proved terminator (lane 262, OFFEN O23).**
---
--- The gate is owed `path_nul_terminated(path, pathlen)`: the kernel finds the end of
--- the path in the data, not in the length. `PFAD` is built right here -- a zeroed
--- buffer, filled with `65`, and the byte the gate reads (index 4 at length 5) is no
--- NUL. No store carries a proved terminator to that index, so `N507` refuses the call.
--- The named obligation stays (`gabbro obligations` still counts the `V` row); what is
--- new is that the built-here shape is decided, not merely counted.
+// erwartet: N507
+// **1253 -- a path buffer with no proved terminator (lane 262, OFFEN O23).**
+//
+// The gate is owed `path_nul_terminated(path, pathlen)`: the kernel finds the end of
+// the path in the data, not in the length. `PFAD` is built right here -- a zeroed
+// buffer, filled with `65`, and the byte the gate reads (index 4 at length 5) is no
+// NUL. No store carries a proved terminator to that index, so `N507` refuses the call.
+// The named obligation stays (`gabbro obligations` still counts the `V` row); what is
+// new is that the built-here shape is decided, not merely counted.
 
 module gift1253 {
 

@@ -1,9 +1,9 @@
--- @gabi 1
--- link-erwartet: N501
--- **Link probe 1241 (Opus agent E): a STALE interface -- the parameter range changed.**
--- What `gabbro abi` wrote for `tabelle-bib.gab` before `setze` took a `Stand`: the app checks
--- clean against it (`setze(30)` fits `0 .. 50`), the link refuses -- the head's signature is not
--- the body's. Kept by hand ON PURPOSE: a probe of a stale `.gabi` is a stale `.gabi`.
+// @gabi 1
+// link-erwartet: N501
+// **Link probe 1241 (Opus agent E): a STALE interface -- the parameter range changed.**
+// What `gabbro abi` wrote for `tabelle-bib.gab` before `setze` took a `Stand`: the app checks
+// clean against it (`setze(30)` fits `0 .. 50`), the link refuses -- the head's signature is not
+// the body's. Kept by hand ON PURPOSE: a probe of a stale `.gabi` is a stale `.gabi`.
 
 module bib {
 pub const NSLOTS : u32 = 2;

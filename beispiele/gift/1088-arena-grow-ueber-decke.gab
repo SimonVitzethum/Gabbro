@@ -1,10 +1,10 @@
--- erwartet: N426
--- Lane 257: a `grow` the checker sees reaching past the ceiling -- the
--- second commit (`8` over `8` committed under `max 16`) stands past `M`
--- with the `else` branch declared, and is still refused: past the ceiling
--- there is no commit, only the stop. Nothing else is wrong with this unit:
--- the arena is declared, both amounts are constant, the effects and the
--- budget are clean.
+// erwartet: N426
+// Lane 257: a `grow` the checker sees reaching past the ceiling -- the
+// second commit (`8` over `8` committed under `max 16`) stands past `M`
+// with the `else` branch declared, and is still refused: past the ceiling
+// there is no commit, only the stop. Nothing else is wrong with this unit:
+// the arena is declared, both amounts are constant, the effects and the
+// budget are clean.
 module beispiel::arena_commit_kappe {
 arena Speicher capacity 2 .. 8 max 16 of u16;
 

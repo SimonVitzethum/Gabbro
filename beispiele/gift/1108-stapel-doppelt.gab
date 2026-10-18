@@ -1,15 +1,15 @@
--- erwartet: N447 allein
--- **1108 -- stack-ness claimed twice.**
---
--- One clause names the handed stack (`rsi`, bound, kept, answered --
--- `N446` stays silent); the second has no reading, so it falls by name.
--- The stub hands one register to the child, and two names would split it.
--- Everything else about the gate is valid on purpose (same silences as
--- 1107), so without this rule NOTHING falls here either.
---
--- Like 1107 this probe measures the shape, not the call: the gate is not
--- the raw clone, and `1000` is not an OS number; `abi linux` names the
--- template the stub is written against (986 precedent), not a kernel table.
+// erwartet: N447 allein
+// **1108 -- stack-ness claimed twice.**
+//
+// One clause names the handed stack (`rsi`, bound, kept, answered --
+// `N446` stays silent); the second has no reading, so it falls by name.
+// The stub hands one register to the child, and two names would split it.
+// Everything else about the gate is valid on purpose (same silences as
+// 1107), so without this rule NOTHING falls here either.
+//
+// Like 1107 this probe measures the shape, not the call: the gate is not
+// the raw clone, and `1000` is not an OS number; `abi linux` names the
+// template the stub is written against (986 precedent), not a kernel table.
 
 module gift1108 {
 

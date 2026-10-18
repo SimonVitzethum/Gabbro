@@ -1,7 +1,7 @@
--- erwartet: N063
--- Gift 1362 -- **An inactive target's binding is checked like the active one.** `target metal` binds
--- `rdi` twice; `linux_x86_64` is active, and the metal binding still falls: every binding
--- is held to the gate's shape, not only the one the build happens to use (OFFEN O31).
+// erwartet: N063
+// Gift 1362 -- **An inactive target's binding is checked like the active one.** `target metal` binds
+// `rdi` twice; `linux_x86_64` is active, and the metal binding still falls: every binding
+// is held to the gate's shape, not only the one the build happens to use (OFFEN O31).
 
 module gift::inaktives_ziel_doppelregister {
 

@@ -1,6 +1,6 @@
--- erwartet: H003
--- Hochstufung: exklusiv nehmen, waehrend dieselbe Sperre geteilt gehalten wird. Auf einer
--- Drehsperre wartet das auf die eigene Lesernahme -- ein Deadlock, kein Stilfehler.
+// erwartet: H003
+// Hochstufung: exklusiv nehmen, waehrend dieselbe Sperre geteilt gehalten wird. Auf einer
+// Drehsperre wartet das auf die eigene Lesernahme -- ein Deadlock, kein Stilfehler.
 
 module gift {
 

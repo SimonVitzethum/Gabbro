@@ -1,18 +1,18 @@
--- emission-141: direct byte WRITES with the run bound (lane-141).
---
--- The write half of the `leseBytes` arm's twin: `t.bytes[i] = v` lowers through
--- the `schreibBytes` arm in `emit.rs`. A constant index writes plain; a dynamic
--- index writes through a scoped block that binds the index once and traps past
--- the carrier's declared length. Only `=` takes this path -- a compound
--- assignment on a byte element stays with the generic tail (the checker refuses
--- the `u8` overflow as `M104`). The `narrow` guard below is untouched: it is
--- the check the user wrote, the block is the emitter's second opinion.
---
--- Measured verdicts (recorded after the run, not before):
---   pruefe: 0 errors, 0 hints
---   emit:   exit 0; `PUFFER[3] = v` stays plain, both dynamic writes carry a
---           `_gabbro_i < 16u` block with `__builtin_trap`
---   cc:     `-std=c11 -Wall -Wextra -Werror -O0` and `-O2` clean; runs exit 0
+// emission-141: direct byte WRITES with the run bound (lane-141).
+//
+// The write half of the `leseBytes` arm's twin: `t.bytes[i] = v` lowers through
+// the `schreibBytes` arm in `emit.rs`. A constant index writes plain; a dynamic
+// index writes through a scoped block that binds the index once and traps past
+// the carrier's declared length. Only `=` takes this path -- a compound
+// assignment on a byte element stays with the generic tail (the checker refuses
+// the `u8` overflow as `M104`). The `narrow` guard below is untouched: it is
+// the check the user wrote, the block is the emitter's second opinion.
+//
+// Measured verdicts (recorded after the run, not before):
+//   pruefe: 0 errors, 0 hints
+//   emit:   exit 0; `PUFFER[3] = v` stays plain, both dynamic writes carry a
+//           `_gabbro_i < 16u` block with `__builtin_trap`
+//   cc:     `-std=c11 -Wall -Wextra -Werror -O0` and `-O2` clean; runs exit 0
 
 module emission141::schreiben {
 
@@ -22,7 +22,7 @@ pub static mut PUFFER : [u8; KAP] = 0;
 
 pub type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
 
--- Constant index: plain write, exactly as before.
+// Constant index: plain write, exactly as before.
 impl fn schreib_konstant(v : u8) -> u8
     effects { reads PUFFER, writes PUFFER } costs <= 4 ops
 {
@@ -30,9 +30,9 @@ impl fn schreib_konstant(v : u8) -> u8
     return PUFFER[3];
 }
 
--- Dynamic index over a static carrier: checked block against `KAP`.
--- **5 since 2026-09-13 (lane 139, F1): the store counts its target index.** (Re-measured
--- by lane 139; the emission verdicts below are unchanged.)
+// Dynamic index over a static carrier: checked block against `KAP`.
+// **5 since 2026-09-13 (lane 139, F1): the store counts its target index.** (Re-measured
+// by lane 139; the emission verdicts below are unchanged.)
 impl fn schreib_dynamisch(i : u32 in 0 ..< KAP, v : u8) -> u8
     effects { reads PUFFER, writes PUFFER } costs <= 5 ops
 {
@@ -40,8 +40,8 @@ impl fn schreib_dynamisch(i : u32 in 0 ..< KAP, v : u8) -> u8
     return PUFFER[i];
 }
 
--- The `beispiele/32` idiom on a local value: `narrow` guards, the checked
--- block writes, the range carries the length.
+// The `beispiele/32` idiom on a local value: `narrow` guards, the checked
+// block writes, the range carries the length.
 impl fn anhaengen_lokal(s : Text, b : u8) -> Text
     effects { pure } costs <= 16 ops
 {

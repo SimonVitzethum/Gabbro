@@ -1,8 +1,8 @@
--- erwartet: N496
--- **Opus agent D (OFFEN O11) -- a group carrier written by a function that owes nothing.**
---
--- `beispiele/17` without its `maintains` line. The group invariant connects `Endpunkte`
--- and `Faeden`; `einreihen` writes both and names neither the invariant nor any duty.
+// erwartet: N496
+// **Opus agent D (OFFEN O11) -- a group carrier written by a function that owes nothing.**
+//
+// `beispiele/17` without its `maintains` line. The group invariant connects `Endpunkte`
+// and `Faeden`; `einreihen` writes both and names neither the invariant nor any duty.
 module gift::gruppentraeger_ohne_maintains {
 
 const NFAEDEN : u32 = 256;

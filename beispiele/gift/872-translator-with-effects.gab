@@ -1,8 +1,8 @@
--- erwartet: N202
--- Lane E3: the translator carries effects -- refused, although the linkage
--- (one translator, `decreases`, fitting result) is clean. A translator is
--- a total, effect-free map; anything but `pure` would run effects at
--- translation time.
+// erwartet: N202
+// Lane E3: the translator carries effects -- refused, although the linkage
+// (one translator, `decreases`, fitting result) is clean. A translator is
+// a total, effect-free map; anything but `pure` would run effects at
+// translation time.
 module m {
 table P count 1 {
     slot {

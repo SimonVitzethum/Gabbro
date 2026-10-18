@@ -1,8 +1,8 @@
--- erwartet: N276
--- **A lock invariant naming `old` falls -- it is not pure.**
---
--- A lock invariant is a predicate over a memory snapshot (`SperrInv.inv`):
--- there is no entry world here, so `old(...)` denotes nothing. N276 ALONE.
+// erwartet: N276
+// **A lock invariant naming `old` falls -- it is not pure.**
+//
+// A lock invariant is a predicate over a memory snapshot (`SperrInv.inv`):
+// there is no entry world here, so `old(...)` denotes nothing. N276 ALONE.
 module gift::invariant_mit_old {
 
 const NSLOTS : u32 = 2;

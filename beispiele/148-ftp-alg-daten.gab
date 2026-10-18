@@ -1,33 +1,33 @@
--- 148 -- FTP ALG data plane: the per-packet verdict, running.
---
--- The twin of `beispiele/147`: where 147 stages rules, retires them and
--- gates commands, this unit answers one question per packet -- ACCEPT or
--- miss -- against the same fixed 1024-entry table under the same windowed
--- expiry. It is a SECOND unit, not a second half: units are self-contained
--- (cross-unit table access does not exist), so the table, the lock, the
--- hash and the sweep stand here again, with IDENTICAL parameters (1024
--- buckets, window 64, 16 rounds, age limit 63) -- no layout experiments.
---
--- The verdict discipline, one bucket per packet, constant cost:
---
---   * hash the control 5-tuple in-program (word-wise FNV-1a-style plus the
---     `h ^ (h >> 22)` fold, the `147` shape: the fold lets every bit of every
---     word move the bucket -- without it the bucket depended on the low 10
---     bits of each word only; the xor is a function because the emitter reads
---     wrapping sites off declarations, and the prime travels as an argument
---     because the checker refuses a singleton next to a wrap);
---   * empty bucket or foreign tuple -> MISS (the packet goes to the rules;
---     a miss is an answer, not a failure);
---   * aged-out bucket -> expire it NOW (lazy expiry: exact for every bucket
---     the packet actually visits) and answer ABGELAUFEN;
---   * live bucket whose data tuple is NOT the expected one -> MISS;
---   * live bucket with the expected data tuple -> refresh the age to zero
---     (deadline care on the hit) and answer AKZEPTIERT.
---
--- Fail-closed both ways, as in 147: expiry comes late (the sweep visits
--- each bucket once per 16 ticks, the lazy check only fires on visit), never
--- early (ages grow monotonically between refreshes, and a refresh writes
--- zero, never a smaller age).
+// 148 -- FTP ALG data plane: the per-packet verdict, running.
+//
+// The twin of `beispiele/147`: where 147 stages rules, retires them and
+// gates commands, this unit answers one question per packet -- ACCEPT or
+// miss -- against the same fixed 1024-entry table under the same windowed
+// expiry. It is a SECOND unit, not a second half: units are self-contained
+// (cross-unit table access does not exist), so the table, the lock, the
+// hash and the sweep stand here again, with IDENTICAL parameters (1024
+// buckets, window 64, 16 rounds, age limit 63) -- no layout experiments.
+//
+// The verdict discipline, one bucket per packet, constant cost:
+//
+//   * hash the control 5-tuple in-program (word-wise FNV-1a-style plus the
+//     `h ^ (h >> 22)` fold, the `147` shape: the fold lets every bit of every
+//     word move the bucket -- without it the bucket depended on the low 10
+//     bits of each word only; the xor is a function because the emitter reads
+//     wrapping sites off declarations, and the prime travels as an argument
+//     because the checker refuses a singleton next to a wrap);
+//   * empty bucket or foreign tuple -> MISS (the packet goes to the rules;
+//     a miss is an answer, not a failure);
+//   * aged-out bucket -> expire it NOW (lazy expiry: exact for every bucket
+//     the packet actually visits) and answer ABGELAUFEN;
+//   * live bucket whose data tuple is NOT the expected one -> MISS;
+//   * live bucket with the expected data tuple -> refresh the age to zero
+//     (deadline care on the hit) and answer AKZEPTIERT.
+//
+// Fail-closed both ways, as in 147: expiry comes late (the sweep visits
+// each bucket once per 16 ticks, the lazy check only fires on visit), never
+// early (ages grow monotonically between refreshes, and a refresh writes
+// zero, never a smaller age).
 module beispiel::ftp_alg_daten {
 
 const EINTRAG_ZAHL : u32 = 1024;
@@ -68,11 +68,11 @@ static mut runde : u32 in 0 .. LETZTE_RUNDE = 0;
 
 lock FD protects { stroeme, runde } rank 0 held <= 16384 ops;
 
--- The FNV-1a steps, `beispiele/147`'s shape word for word: `xor_worte` is a
--- function because the emitter accepts a call result (never a `^`) as a
--- wrapping side, and the prime is an argument because the checker refuses a
--- singleton next to a `*%`. Bare `u32` throughout: a named exact range
--- checks but does not lower.
+// The FNV-1a steps, `beispiele/147`'s shape word for word: `xor_worte` is a
+// function because the emitter accepts a call result (never a `^`) as a
+// wrapping side, and the prime is an argument because the checker refuses a
+// singleton next to a `*%`. Bare `u32` throughout: a named exact range
+// checks but does not lower.
 impl fn xor_worte(a : u32, b : u32) -> u32
     effects { pure }
     costs <= 4 ops
@@ -88,8 +88,8 @@ impl fn fnv_schritt(h : u32, w : u32, p : u32) -> u32
 }
 
 impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
-    -- 95 before the fold; the fold adds one shift and one `xor_worte` call
-    -- (fix lane F7): 101, read off the checker, not estimated.
+    // 95 before the fold; the fold adds one shift and one `xor_worte` call
+    // (fix lane F7): 101, read off the checker, not estimated.
     costs <= 101 ops
 {
     let h0 : u32 = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
@@ -97,16 +97,16 @@ impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
     let h2 : u32 = fnv_schritt(h1, sp, FNV_PRIM);
     let h3 : u32 = fnv_schritt(h2, dp, FNV_PRIM);
     let h4 : u32 = fnv_schritt(h3, pr, FNV_PRIM);
-    -- The fold (review G05 F1, fix lane F7): `% 1024` keeps bits 0..9, and
-    -- bit k of an input word reaches only bits k..31 of `h4`. Folding the
-    -- top ten bits (22..31, reached by every input bit) onto the low ten
-    -- makes every bit of every word count toward the bucket.
+    // The fold (review G05 F1, fix lane F7): `% 1024` keeps bits 0..9, and
+    // bit k of an input word reaches only bits k..31 of `h4`. Folding the
+    // top ten bits (22..31, reached by every input bit) onto the low ten
+    // makes every bit of every word count toward the bucket.
     return xor_worte(h4, h4 >> 22);
 }
 
--- Release a slot back to pristine (`beispiele/147`'s rule: a stale match
--- field would accept a packet the rules no longer cover). Naked access
--- under the caller's duty (`requires Held(FD)`).
+// Release a slot back to pristine (`beispiele/147`'s rule: a stale match
+// field would accept a packet the rules no longer cover). Naked access
+// under the caller's duty (`requires Held(FD)`).
 impl fn freigeben(i : index into stroeme)
     requires Held(FD)
     effects  { writes stroeme.slots, locks FD }
@@ -123,10 +123,10 @@ impl fn freigeben(i : index into stroeme)
     stroeme.slots[i].alter = 0;
 }
 
--- Stage one expectation: the same take-it-or-refuse as 147's `ablege`
--- (direct-mapped, VOLL on a live occupant, inline reclaim of an aged-out
--- bucket). The unit stages its own rules because it answers its own
--- packets.
+// Stage one expectation: the same take-it-or-refuse as 147's `ablege`
+// (direct-mapped, VOLL on a live occupant, inline reclaim of an aged-out
+// bucket). The unit stages its own rules because it answers its own
+// packets.
 impl fn erwarte_innen(r : index into stroeme,
                       sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
                       xsip : u32, xdp : Port) -> Code
@@ -166,13 +166,13 @@ impl fn erwarte(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
     }
 }
 
--- The verdict, one bucket per packet. Five gates in order: occupancy,
--- control-tuple match, age, data-tuple match, then ACCEPT with the age
--- refreshed to zero (deadline care on the hit: the next 63 sweep visits,
--- about 1008 ticks, are paid for by this packet). The match is one flat
--- `&&` chain: same six reads in the same order, same read set, less nesting
--- (parser depth budget; TIEFE_MAX stands 4x over the corpus and the chain
--- kept its margin).
+// The verdict, one bucket per packet. Five gates in order: occupancy,
+// control-tuple match, age, data-tuple match, then ACCEPT with the age
+// refreshed to zero (deadline care on the hit: the next 63 sweep visits,
+// about 1008 ticks, are paid for by this packet). The match is one flat
+// `&&` chain: same six reads in the same order, same read set, less nesting
+// (parser depth budget; TIEFE_MAX stands 4x over the corpus and the chain
+// kept its margin).
 impl fn urteil_innen(r : index into stroeme,
                      sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
                      dsip : u32, ddp : Port) -> Code
@@ -213,10 +213,10 @@ impl fn daten_paket(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
     }
 }
 
--- The windowed sweep, 147's parameters to the number (64 buckets per tick,
--- 16 rounds, subtraction-free): an entry's death is found at most 15 ticks
--- after its age limit. No full scan under the held lock -- the unrolled
--- window is the bound, constant cost per tick.
+// The windowed sweep, 147's parameters to the number (64 buckets per tick,
+// 16 rounds, subtraction-free): an entry's death is found at most 15 ticks
+// after its age limit. No full scan under the held lock -- the unrolled
+// window is the bound, constant cost per tick.
 impl fn alter_eintrag(i : index into stroeme)
     requires Held(FD)
     effects  { reads stroeme.slots, writes stroeme.slots, locks FD }

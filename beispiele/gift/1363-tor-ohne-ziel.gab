@@ -1,6 +1,6 @@
--- erwartet: N563
--- Gift 1363 -- **A gate through a variable in a unit that binds no target.** `via sys_write` and no
--- `target` block: the gate calls no kernel at all (OFFEN O31).
+// erwartet: N563
+// Gift 1363 -- **A gate through a variable in a unit that binds no target.** `via sys_write` and no
+// `target` block: the gate calls no kernel at all (OFFEN O31).
 
 module gift::tor_ohne_ziel {
 

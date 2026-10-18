@@ -1,11 +1,11 @@
--- erwartet: M101
--- **Die Gegenrichtung zur Ausnahme von 2026-08-19.**
--- Ein Schreiben durch einen Zeiger toetet jede nichtlokale Tatsache -- ausser sie steht in
--- einem ANDEREN Feld DESSELBEN Objekts. Hier schreibt ein ZWEITER Zeiger, und `u` koennte
--- auf dasselbe `Text` zeigen wie `s`: die Basis ist ein anderer Name, also greift die
--- Ausnahme nicht und die grobe Regel bleibt.
---
--- *Ohne diese Probe waere nicht gemessen, ob die Ausnahme die Aliasfrage umgeht.*
+// erwartet: M101
+// **Die Gegenrichtung zur Ausnahme von 2026-08-19.**
+// Ein Schreiben durch einen Zeiger toetet jede nichtlokale Tatsache -- ausser sie steht in
+// einem ANDEREN Feld DESSELBEN Objekts. Hier schreibt ein ZWEITER Zeiger, und `u` koennte
+// auf dasselbe `Text` zeigen wie `s`: die Basis ist ein anderer Name, also greift die
+// Ausnahme nicht und die grobe Regel bleibt.
+//
+// *Ohne diese Probe waere nicht gemessen, ob die Ausnahme die Aliasfrage umgeht.*
 module gift::fremder_zeiger {
 
 const KAP : u32 = 64;

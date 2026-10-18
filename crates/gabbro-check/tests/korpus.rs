@@ -748,7 +748,7 @@ fn eine_uebersetzungseinheit_faengt_mit_einem_item_an() {
     // Und der Fall, der die erste Fassung dieser Regel aufgeflogen hat: `…` im KOMMENTAR
     // ist erlaubt (der Lexer trennt Code von Kommentar), `…` im CODE nicht.
     assert!(
-        ist_uebersetzungseinheit("-- hier waere noch mehr …\nconst A : u32 = 1;"),
+        ist_uebersetzungseinheit("// hier waere noch mehr …\nconst A : u32 = 1;"),
         "`…` im Kommentar macht aus einem Programm keine Skizze (W9, gemessene Richtung)"
     );
     assert!(
@@ -908,8 +908,8 @@ fn user_rights_fall_exactly_once_772_773() {
             .join(datei);
         let quelle = std::fs::read_to_string(&pfad).expect("gift readable");
         assert!(
-            quelle.lines().next().is_some_and(|z| z.trim() == format!("-- erwartet: {erwartet}")),
-            "{datei}: first line must pin `-- erwartet: {erwartet}`"
+            quelle.lines().next().is_some_and(|z| z.trim() == format!("// erwartet: {erwartet}")),
+            "{datei}: first line must pin `// erwartet: {erwartet}`"
         );
         let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
         let _ = gabbro_check::pruefe(&baum, &mut absagen);

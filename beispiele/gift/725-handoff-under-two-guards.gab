@@ -1,11 +1,11 @@
--- erwartet: H018
--- **The handoff under TWO different guards falls -- one guard per window, not two.**
---
--- This is the second shape of `H018` (`Geraet.lean` C1: every window of a chain runs
--- under the SAME guard). `uebergabe_zwei_wachen` holds a guard at each half -- but a
--- different one: the buffer write stands under `WACHE_A`, the doorbell under `WACHE_B`.
--- Two guards beside a window are not one guard across it, so the doorbell falls once
--- with `H018`. The twin holds `WACHE_A` across both halves and stays silent.
+// erwartet: H018
+// **The handoff under TWO different guards falls -- one guard per window, not two.**
+//
+// This is the second shape of `H018` (`Geraet.lean` C1: every window of a chain runs
+// under the SAME guard). `uebergabe_zwei_wachen` holds a guard at each half -- but a
+// different one: the buffer write stands under `WACHE_A`, the doorbell under `WACHE_B`.
+// Two guards beside a window are not one guard across it, so the doorbell falls once
+// with `H018`. The twin holds `WACHE_A` across both halves and stays silent.
 module gift::handoff_under_two_guards {
 
 opaque type Pa = u64;
@@ -28,7 +28,7 @@ static mut zaehler_a : u32 = 0;
 
 static mut zaehler_b : u32 = 0;
 
--- Must fall: each half guarded, but by a different guard -- no ONE guard across both.
+// Must fall: each half guarded, but by a different guard -- no ONE guard across both.
 impl fn uebergabe_zwei_wachen(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j : index into Ring)
     effects { writes r.slots, writes k.KLINGEL, writes zaehler_a, writes zaehler_b }
     costs   <= 16 ops
@@ -43,7 +43,7 @@ impl fn uebergabe_zwei_wachen(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j 
     }
 }
 
--- Must pass: both halves under the same guard.
+// Must pass: both halves under the same guard.
 impl fn uebergabe_eine_wache(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring, j : index into Ring)
     effects { writes r.slots, writes k.KLINGEL, writes zaehler_a }
     costs   <= 8 ops

@@ -1,15 +1,15 @@
--- 74 -- the user side of a system call, declared and called.
---
--- A `syscall` declaration after lane S5: the ABI binding (`abi`/`arch`/`number`),
--- the register map, the total errno decoding over the `or IoError` channel, the
--- contract, and the named per-call assumption with its falsifier. The call site
--- below reads it exactly like an `extern fn` -- argument count and types, the
--- `let … else` the `or` channel demands, the declared effects in the caller's
--- hull, and no lock owed because the declaration touches none.
---
--- The stub template is lane S6's: this file checks clean and now EMITS the stub
--- (inline `syscall`, register binding, clobbers, generated errno decoding) --
--- `beispiele/90` carries the error path, the emission check runs this one.
+// 74 -- the user side of a system call, declared and called.
+//
+// A `syscall` declaration after lane S5: the ABI binding (`abi`/`arch`/`number`),
+// the register map, the total errno decoding over the `or IoError` channel, the
+// contract, and the named per-call assumption with its falsifier. The call site
+// below reads it exactly like an `extern fn` -- argument count and types, the
+// `let … else` the `or` channel demands, the declared effects in the caller's
+// hull, and no lock owed because the declaration touches none.
+//
+// The stub template is lane S6's: this file checks clean and now EMITS the stub
+// (inline `syscall`, register binding, clobbers, generated errno decoding) --
+// `beispiele/90` carries the error path, the emission check runs this one.
 
 module beispiel::syscall_schreiben {
 
@@ -37,7 +37,7 @@ syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
     effects { pure }
     costs <= 8 ops;
 
--- The call: `let … else` because the callee can fail, and nothing else owed.
+// The call: `let … else` because the callee can fail, and nothing else owed.
 impl fn schreibe(fd : u64, buf : u64, len : u64) -> u64
     effects { pure }
 {
@@ -51,12 +51,12 @@ impl fn schreibe(fd : u64, buf : u64, len : u64) -> u64
     return n;
 }
 
--- **The targets (OFFEN O31).** The gate above names
--- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
--- carried until Opus agent L, unchanged; `metal` is the same number and register map
--- through `int $0x80` into the image's kernel entry, which destroys no register, under
--- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
--- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+// **The targets (OFFEN O31).** The gate above names
+// no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+// carried until Opus agent L, unchanged; `metal` is the same number and register map
+// through `int $0x80` into the image's kernel entry, which destroys no register, under
+// its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+// hosted stub unchanged; `gabbro emit --target metal` builds the other.
 target linux_x86_64 abi linux arch x86_64 {
     sys_write = number 1
         regs in { rdi = fd, rsi = buf, rdx = len }

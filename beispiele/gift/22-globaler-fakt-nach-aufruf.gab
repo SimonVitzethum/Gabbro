@@ -1,10 +1,10 @@
--- erwartet: M104
---
--- Ein Fakt ueber eine GLOBALE Groesse stirbt beim Aufruf. Ein blosser Name ohne Punkt
--- und ohne Index sah lange lokal aus -- `static mut` erfuellt das.
---
--- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
--- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// erwartet: M104
+//
+// Ein Fakt ueber eine GLOBALE Groesse stirbt beim Aufruf. Ein blosser Name ohne Punkt
+// und ohne Index sah lange lokal aus -- `static mut` erfuellt das.
+//
+// Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 module gift {
 

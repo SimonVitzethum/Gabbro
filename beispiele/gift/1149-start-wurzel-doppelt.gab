@@ -1,10 +1,10 @@
--- erwartet: N459
--- **1149 -- one root twice in one `start` (fix lane F4, review G12 F2.3).**
---
--- The review's `start { h, h }`: two threads running one routine. The statement has
--- no pool form -- the symmetric pool is the `concurrent` declaration's
--- (`PoolSicher`, open item O18) -- so a root named twice falls, even where the
--- routine would be pool-safe (as `arbeiterA` is: its one write is guarded).
+// erwartet: N459
+// **1149 -- one root twice in one `start` (fix lane F4, review G12 F2.3).**
+//
+// The review's `start { h, h }`: two threads running one routine. The statement has
+// no pool form -- the symmetric pool is the `concurrent` declaration's
+// (`PoolSicher`, open item O18) -- so a root named twice falls, even where the
+// routine would be pool-safe (as `arbeiterA` is: its one write is guarded).
 
 module gift1149 {
 

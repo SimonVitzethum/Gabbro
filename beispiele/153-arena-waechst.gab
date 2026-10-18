@@ -1,20 +1,20 @@
--- 153 -- **Growth under a ceiling, spelled with today's tools.**
---
--- A dynamic arena declares a ceiling `max M` (address reserved) and a committed
--- prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`). That syntax
--- is not in the tree yet (no parser lane owns `max`/`grow`), so this file is the
--- static shape the dynamic form must preserve byte for byte: `capacity 2 .. 8`
--- with `M = hi = 8`. Every allocation past the reservation `lo = 2` carries its
--- `else` -- the growth points are enumerable by grep, each with its branch, the
--- way an explicit `grow` will be. The second phase (`reset`, then allocate
--- again) is the phase discipline the monotone commit relies on: `reset` starts
--- a fresh generation and leaves the committed prefix alone.
---
--- Fully clean, and it emits: a static array of eight elements beside its `used`
--- counter, no heap allocation in the C. The slots are 16-bit (the reads widen
--- to 32 bits on load, the `99` shape), so the eight-way sum fits `u32` by
--- construction, and the re-allocation after `reset` stores one 16-bit read --
--- no narrowing owed anywhere. Executed result: 370 (see the report).
+// 153 -- **Growth under a ceiling, spelled with today's tools.**
+//
+// A dynamic arena declares a ceiling `max M` (address reserved) and a committed
+// prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`). That syntax
+// is not in the tree yet (no parser lane owns `max`/`grow`), so this file is the
+// static shape the dynamic form must preserve byte for byte: `capacity 2 .. 8`
+// with `M = hi = 8`. Every allocation past the reservation `lo = 2` carries its
+// `else` -- the growth points are enumerable by grep, each with its branch, the
+// way an explicit `grow` will be. The second phase (`reset`, then allocate
+// again) is the phase discipline the monotone commit relies on: `reset` starts
+// a fresh generation and leaves the committed prefix alone.
+//
+// Fully clean, and it emits: a static array of eight elements beside its `used`
+// counter, no heap allocation in the C. The slots are 16-bit (the reads widen
+// to 32 bits on load, the `99` shape), so the eight-way sum fits `u32` by
+// construction, and the re-allocation after `reset` stores one 16-bit read --
+// no narrowing owed anywhere. Executed result: 370 (see the report).
 module beispiel::arena_waechst {
 arena Wachstum capacity 2 .. 8 of u16;
 

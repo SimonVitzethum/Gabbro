@@ -1,11 +1,11 @@
--- erwartet: N458
--- **1148 -- a `start` root that takes a parameter (fix lane F4, review G12 F2.3).**
---
--- A started thread is passed nothing: `start { f, g };` names roots, never arguments.
--- Lane 253 parsed the statement and resolved its names, and the checker accepted a
--- root with a parameter -- the call the thread would make cannot happen. `N458`
--- refuses every root that is not an `impl fn` with a body, no parameters, no result
--- and no signature-held lock.
+// erwartet: N458
+// **1148 -- a `start` root that takes a parameter (fix lane F4, review G12 F2.3).**
+//
+// A started thread is passed nothing: `start { f, g };` names roots, never arguments.
+// Lane 253 parsed the statement and resolved its names, and the checker accepted a
+// root with a parameter -- the call the thread would make cannot happen. `N458`
+// refuses every root that is not an `impl fn` with a body, no parameters, no result
+// and no signature-held lock.
 
 module gift1148 {
 

@@ -1,10 +1,10 @@
--- erwartet: D027
--- **D027 -- a reference beside a restatement still restates.**
---
--- The first conjunct names the invariant (`raum_ok(k)` -- silent on its own),
--- the second states its own predicate over the same shared carrier. Naming in
--- one place does not licence restating in the next: the clause is read for
--- what it states, and what it states beside the reference is refused.
+// erwartet: D027
+// **D027 -- a reference beside a restatement still restates.**
+//
+// The first conjunct names the invariant (`raum_ok(k)` -- silent on its own),
+// the second states its own predicate over the same shared carrier. Naming in
+// one place does not licence restating in the next: the clause is read for
+// what it states, and what it states beside the reference is refused.
 module gift795 {
 
 const N : u32 = 64;

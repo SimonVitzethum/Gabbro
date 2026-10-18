@@ -1,18 +1,18 @@
--- erwartet: D012
---
--- **Die ZWEITE Voraussetzung von `umhaengen_erhaelt` fehlt: `¬ ueber σ p s`.**
---
--- Der neue Elter ist erreichbar -- das steht da, und es ist wortgleich die Zeile, die
--- `einhaengen` in `beispiele/47` traegt. Dass `s` nicht auf `p`s Elternkette liegt, steht
--- NICHT da, und ohne es faellt der Satz: `beweise/Table_Ops_Erhaltung.thy` fuehrt mit
--- `umhaengen_faellt` das Gegenbeispiel vor -- zwei Plaetze, einer unter den anderen gehaengt,
--- und **keiner der beiden** erreicht danach noch eine Wurzel.
---
--- *`G-1` sagt sogar genau, dass dieses Gegenbeispiel die HIER fehlende Voraussetzung ist und
--- keine andere:* `wohlgeformt zwei` und `erreicht zwei 1` gelten dort beide.
---
--- **Eine halbe Voraussetzung ist die gefaehrlichste Sorte** -- dieselbe Bauart wie Gift 323,
--- eine Operation weiter. Die saubere Seite steht in `beispiele/47` an `umhaengen`.
+// erwartet: D012
+//
+// **Die ZWEITE Voraussetzung von `umhaengen_erhaelt` fehlt: `¬ ueber σ p s`.**
+//
+// Der neue Elter ist erreichbar -- das steht da, und es ist wortgleich die Zeile, die
+// `einhaengen` in `beispiele/47` traegt. Dass `s` nicht auf `p`s Elternkette liegt, steht
+// NICHT da, und ohne es faellt der Satz: `beweise/Table_Ops_Erhaltung.thy` fuehrt mit
+// `umhaengen_faellt` das Gegenbeispiel vor -- zwei Plaetze, einer unter den anderen gehaengt,
+// und **keiner der beiden** erreicht danach noch eine Wurzel.
+//
+// *`G-1` sagt sogar genau, dass dieses Gegenbeispiel die HIER fehlende Voraussetzung ist und
+// keine andere:* `wohlgeformt zwei` und `erreicht zwei 1` gelten dort beide.
+//
+// **Eine halbe Voraussetzung ist die gefaehrlichste Sorte** -- dieselbe Bauart wie Gift 323,
+// eine Operation weiter. Die saubere Seite steht in `beispiele/47` an `umhaengen`.
 
 module gift::ohnekettenbedingung {
 

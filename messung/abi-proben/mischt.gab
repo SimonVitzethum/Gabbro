@@ -1,6 +1,6 @@
--- Der Mischer: er benutzt BEIDE Bibliotheken, und er verschachtelt sie in BEIDE
--- Richtungen. Das ist der Zyklus, den weder `speicher` noch `geraet` allein sehen kann --
--- jede hat ihren Rang fuer sich vergeben, und beide haben `rank 0` gewaehlt.
+// Der Mischer: er benutzt BEIDE Bibliotheken, und er verschachtelt sie in BEIDE
+// Richtungen. Das ist der Zyklus, den weder `speicher` noch `geraet` allein sehen kann --
+// jede hat ihren Rang fuer sich vergeben, und beide haben `rank 0` gewaehlt.
 module mischt {
 
 use speicher::speicher_setze;
@@ -8,7 +8,7 @@ use speicher::Eintraege;
 use geraet::geraet_setze;
 use geraet::Register;
 
--- Richtung 1: SPEICHER aussen, GERAET innen.
+// Richtung 1: SPEICHER aussen, GERAET innen.
 pub impl fn eintragen(i : index into Eintraege, r : index into Register) -> bool
     effects { writes Eintraege.slots, writes Register.slots, locks SPEICHER, locks GERAET }
     costs   <= 80 ops
@@ -19,7 +19,7 @@ pub impl fn eintragen(i : index into Eintraege, r : index into Register) -> bool
     return true;
 }
 
--- Richtung 2: GERAET aussen, SPEICHER innen. **Zusammen mit Richtung 1 ein Ring.**
+// Richtung 2: GERAET aussen, SPEICHER innen. **Zusammen mit Richtung 1 ein Ring.**
 pub impl fn austragen(i : index into Eintraege, r : index into Register) -> bool
     effects { writes Eintraege.slots, writes Register.slots, locks SPEICHER, locks GERAET }
     costs   <= 80 ops

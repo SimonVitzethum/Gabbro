@@ -1,7 +1,7 @@
--- erwartet: N069
--- Lane E3: library function WITH its translator -- the call is refused
--- ONLY because the translator does not RUN yet (lane E5). The N069 names
--- the translator that WOULD run the region (`m::b`).
+// erwartet: N069
+// Lane E3: library function WITH its translator -- the call is refused
+// ONLY because the translator does not RUN yet (lane E5). The N069 names
+// the translator that WOULD run the region (`m::b`).
 module m {
 table P count 1 {
     slot {

@@ -207,7 +207,7 @@ fn uebergang_mit_pfeil_und_ortssuffix() {
 
 #[test]
 fn lexik() {
-    faellt_nicht("const A : u32 = 0xFF_FF; -- ein Kommentar\nconst B : u32 = 0b1010_1010;");
+    faellt_nicht("const A : u32 = 0xFF_FF; // ein Kommentar\nconst B : u32 = 0b1010_1010;");
     faellt_mit("const A : u32 = 0X10;", "L004");
     faellt_mit("const A : u32 = 0b12;", "L003");
     faellt_mit("assume a \"unbeendet\n falsifier s;", "L001");
@@ -228,7 +228,7 @@ fn quelle_bidi_faellt_ueberall() {
     // In code, in a string, and in a comment: the reordering happens in the editor.
     faellt_mit("const A : u32 = 1\u{202e};", "P060");
     faellt_mit("assume a \"x\u{202e}y\";", "P060");
-    faellt_mit("-- ein Kommentar \u{202e}\nconst A : u32 = 1;", "P060");
+    faellt_mit("// ein Kommentar \u{202e}\nconst A : u32 = 1;", "P060");
     faellt_mit("const A : u32 = 1\u{2066};", "P060");
     faellt_mit("const A : u32 = 1\u{200f};", "P060");
 }
@@ -255,7 +255,7 @@ fn quelle_umlaut_kommentar_und_zahlumgebung_bleiben_sauber() {
     // The documented set (ASCII + ä ö ü ß Ä Ö Ü) still lexes; foreign letters in
     // comments are prose, not names; a letter glued to a number belongs to `L003`/`L006`.
     faellt_nicht("const Gr\u{f6}\u{df}e : u32 = 1;");
-    faellt_nicht("-- Gr\u{f6}\u{df}e \u{3c3} \u{2192}\nconst A : u32 = 1;");
+    faellt_nicht("// Gr\u{f6}\u{df}e \u{3c3} \u{2192}\nconst A : u32 = 1;");
     let (_, absagen) = gabbro_syntax::lies("<probe>", "const A : u32 = 0\u{4000};");
     let codes: Vec<&str> = absagen
         .absagen
@@ -822,4 +822,27 @@ fn lane222_depth_stands_fourfold_over_corpus() {
         "deepest corpus file nests {tiefst} -- TIEFE_MAX {} no longer stands 4x over it",
         gabbro_syntax::parse::TIEFE_MAX
     );
+}
+
+// -- Kommentare: `//`, verschachtelnde `/* */`, `///` als Trivia ----------------------------
+
+#[test]
+fn kommentare_in_beide_richtungen() {
+    use gabbro_syntax::lex::{zerlege, zerlege_mit_doku, Art};
+    faellt_nicht("const A : u32 = 1; // Zeile\n/* a /* b */ noch Kommentar */ const B : u32 = 2;");
+    faellt_nicht("/// Doku\nconst A : u32 = 1;\n//// gewoehnlich\n///// auch");
+    // Marker in einem Text sind keine Kommentare.
+    faellt_nicht("assume a \"x // y /* z\" unfalsifiable \"r\";");
+    // Der alte `--`-Kommentar ist keiner mehr; ein offener Blockkommentar ist ein Lexfehler.
+    faellt_mit("const A : u32 = 1; -- Kommentar\n", "P006");
+    faellt_mit("const A : u32 = 1;\n/* offen /* innen */ aussen offen", "L008");
+    // Die Doku-Trivia: nur `///` (nicht `////`), und der Parser-Strom hat keine.
+    let quelle = "/// eins\n//// zwei\n// drei\nconst A : u32 = 1; /// vier";
+    let mut a = gabbro_syntax::diag::Absagen::neu("<probe>");
+    let mit = zerlege_mit_doku(quelle, &mut a);
+    let docs: Vec<&str> = mit.iter().filter(|t| t.art == Art::Doku).map(|t| t.text(quelle)).collect();
+    assert_eq!(docs, vec![" eins", " vier"]);
+    let ohne = zerlege(quelle, &mut a);
+    assert!(ohne.iter().all(|t| t.art != Art::Doku));
+    assert_eq!(ohne.len(), mit.len() - 2);
 }

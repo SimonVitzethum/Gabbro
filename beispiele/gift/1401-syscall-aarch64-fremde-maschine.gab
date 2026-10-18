@@ -1,9 +1,9 @@
--- erwartet: A005
--- **Gift 1401 -- an `aarch64` syscall in a unit that declares only `x86_64`.**
---
--- The twin of gift 805 for the newly opened machine: the unit says `arch x86_64` at its
--- foreign body and `arch aarch64` at the syscall, which can never be in force here. The
--- register map is valid for `aarch64` (`N066` silent), `A006` is silent, `A005` speaks.
+// erwartet: A005
+// **Gift 1401 -- an `aarch64` syscall in a unit that declares only `x86_64`.**
+//
+// The twin of gift 805 for the newly opened machine: the unit says `arch x86_64` at its
+// foreign body and `arch aarch64` at the syscall, which can never be in force here. The
+// register map is valid for `aarch64` (`N066` silent), `A006` is silent, `A005` speaks.
 
 module gift::syscall_aarch64_fremde_maschine {
 

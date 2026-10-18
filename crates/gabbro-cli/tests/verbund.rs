@@ -17,9 +17,9 @@
 //! What every refusal probe holds, both halves:
 //! * the library checks clean alone; the importer checks CLEAN against its view (`gabbro check
 //!   … --with …`, exit 0) -- the refusal is the link's and nobody else's -- UNLESS the probe
-//!   says `-- allein-erwartet: …`: 1246 is the F1 false accept, which now falls per unit
+//!   says `// allein-erwartet: …`: 1246 is the F1 false accept, which now falls per unit
 //!   already, with the codes the one-file program gets;
-//! * `gabbro link` falls with exactly the probe's codes (`-- link-erwartet: …`), exit 1.
+//! * `gabbro link` falls with exactly the probe's codes (`// link-erwartet: …`), exit 1.
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -101,7 +101,7 @@ struct Probe {
     app: String,
     /// The interface the importer is checked with.
     gabi: Gabi,
-    /// The file carrying the `-- link-erwartet:` line.
+    /// The file carrying the `// link-erwartet:` line.
     erwartung: String,
 }
 
@@ -197,10 +197,10 @@ fn jede_linkprobe_faellt_mit_ihrem_code_und_nur_am_link() {
     for p in proben {
         let name = &p.name;
         let text = std::fs::read_to_string(wurzel().join(&p.erwartung)).expect("probe readable");
-        let erwartet = zeile(&text, "-- link-erwartet: ");
-        assert!(!erwartet.is_empty(), "{name}: no `-- link-erwartet:` line");
+        let erwartet = zeile(&text, "// link-erwartet: ");
+        assert!(!erwartet.is_empty(), "{name}: no `// link-erwartet:` line");
         let app_text = std::fs::read_to_string(wurzel().join(&p.app)).expect("app readable");
-        let allein = zeile(&app_text, "-- allein-erwartet: ");
+        let allein = zeile(&app_text, "// allein-erwartet: ");
         let mit: Vec<String> = match &p.gabi {
             Gabi::Datei(g) => vec!["--with".into(), g.clone()],
             Gabi::Frisch => vec!["--with".into(), schnittstelle_von(&p.bib, &name[..4])],

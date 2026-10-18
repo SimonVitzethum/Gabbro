@@ -1,6 +1,6 @@
--- erwartet: M104
--- **Ein Fakt stirbt bei jedem Schreiben auf eine beteiligte Stelle.** Die Pruefung oben
--- traegt bis zur Zuweisung -- und keinen Schritt weiter.
+// erwartet: M104
+// **Ein Fakt stirbt bei jedem Schreiben auf eine beteiligte Stelle.** Die Pruefung oben
+// traegt bis zur Zuweisung -- und keinen Schritt weiter.
 module gift {
 
 const GRENZE : u32 = 65535;

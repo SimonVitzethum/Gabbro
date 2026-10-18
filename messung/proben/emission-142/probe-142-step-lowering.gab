@@ -1,9 +1,9 @@
--- Lane 142, CForm schrittStmt, lowered. The traverse header binds an index
--- word, and the generator steps it with `+= 1` (compound assignment, admitted
--- class) instead of `++`. Expected header shape:
--- `for (uint32_t i = 0; i < (uint32_t)(sizeof(...) / sizeof(...[0])); i += 1) {`.
--- The `exchange` CAS loop keeps its `++` (sibling-owned arm, out of scope).
--- Shape modelled on beispiele/19 (read side dropped, write side kept).
+// Lane 142, CForm schrittStmt, lowered. The traverse header binds an index
+// word, and the generator steps it with `+= 1` (compound assignment, admitted
+// class) instead of `++`. Expected header shape:
+// `for (uint32_t i = 0; i < (uint32_t)(sizeof(...) / sizeof(...[0])); i += 1) {`.
+// The `exchange` CAS loop keeps its `++` (sibling-owned arm, out of scope).
+// Shape modelled on beispiele/19 (read side dropped, write side kept).
 module probe::schritt142 {
 const NSLOTS : u32 = 8;
 table Werte count NSLOTS {

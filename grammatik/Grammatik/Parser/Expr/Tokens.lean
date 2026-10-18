@@ -76,6 +76,7 @@ def zeigeTok : Token → String
   | .float s => s
   | .text s => "\"" ++ s ++ "\""
   | .zeichen s => s
+  | .doku s => "///" ++ s
   | .ende => "<ende>"
 
 /-- Collect raw words until the stop word at depth zero (braces

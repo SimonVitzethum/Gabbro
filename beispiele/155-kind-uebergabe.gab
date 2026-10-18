@@ -1,27 +1,27 @@
--- 155 -- A checked clone handoff: the child starts on the handed stack
--- and never returns into the caller's frame.
---
--- The gate declares the SHAPE, never the call: `stack rsi` names the
--- handed-stack register AS a stack (bound in `regs in`, kept out of
--- `clobbers` and `regs out`), and the number, the registers and the error
--- map live in this user declaration -- no OS data enters the tree. The
--- `child` block is the child path: it runs the worker on the handed stack
--- and ends in the never-returning `ausgang` gate, so it neither returns
--- (`N448`) nor falls through (`N449`) into the caller frame. A gate stands
--- behind the path (`N450` silent).
---
--- The parent tells the two apart the way K-1's probe did: the gate answers
--- zero in the child. What the machine does with the handed register -- the
--- stack switch itself -- is the stub's business and the runtime's
--- assumption (d2, `CloneAssume` -- branch `opus/clone-handoff` only); what the program can break is checked
--- here, and this file breaks nothing at the checker: 0 errors, 0 hints. The emitter
--- lowers gate and region since lane 260 (the inline trap: the gate call is an
--- inline `syscall` jumping straight to the region in the child); the wide shape
--- still refuses (`C185`, gift 1181).
---
--- The real-number counterpart of this shape lives outside the tree (the
--- firewall's `gab/systemrufe.gab` declares the raw clone with its Linux
--- number); this file keeps `1000`, which is not an OS number.
+// 155 -- A checked clone handoff: the child starts on the handed stack
+// and never returns into the caller's frame.
+//
+// The gate declares the SHAPE, never the call: `stack rsi` names the
+// handed-stack register AS a stack (bound in `regs in`, kept out of
+// `clobbers` and `regs out`), and the number, the registers and the error
+// map live in this user declaration -- no OS data enters the tree. The
+// `child` block is the child path: it runs the worker on the handed stack
+// and ends in the never-returning `ausgang` gate, so it neither returns
+// (`N448`) nor falls through (`N449`) into the caller frame. A gate stands
+// behind the path (`N450` silent).
+//
+// The parent tells the two apart the way K-1's probe did: the gate answers
+// zero in the child. What the machine does with the handed register -- the
+// stack switch itself -- is the stub's business and the runtime's
+// assumption (d2, `CloneAssume` -- branch `opus/clone-handoff` only); what the program can break is checked
+// here, and this file breaks nothing at the checker: 0 errors, 0 hints. The emitter
+// lowers gate and region since lane 260 (the inline trap: the gate call is an
+// inline `syscall` jumping straight to the region in the child); the wide shape
+// still refuses (`C185`, gift 1181).
+//
+// The real-number counterpart of this shape lives outside the tree (the
+// firewall's `gab/systemrufe.gab` declares the raw clone with its Linux
+// number); this file keeps `1000`, which is not an OS number.
 
 module beispiel::kind_uebergabe {
 
@@ -70,12 +70,12 @@ impl fn starter(art : u64, stapel : u64) -> u64
     return v;
 }
 
--- **The targets (OFFEN O31).** The gate above names
--- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
--- carried until Opus agent L, unchanged; `metal` is the same number and register map
--- through `int $0x80` into the image's kernel entry, which destroys no register, under
--- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
--- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+// **The targets (OFFEN O31).** The gate above names
+// no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+// carried until Opus agent L, unchanged; `metal` is the same number and register map
+// through `int $0x80` into the image's kernel entry, which destroys no register, under
+// its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+// hosted stub unchanged; `gabbro emit --target metal` builds the other.
 target linux_x86_64 abi linux arch x86_64 {
     sys_roher_start = number 1000
         regs in { rdi = art, rsi = stapel }

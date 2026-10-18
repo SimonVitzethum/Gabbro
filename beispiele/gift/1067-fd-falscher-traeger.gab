@@ -1,19 +1,19 @@
--- erwartet: D004
--- **Gift 1067 -- a count where a descriptor is owed, at a user-made gate.**
---
--- The open/read gates of `beispiele/149` + `/150` traffic in `Fd`, an
--- opaque carrier: no arithmetic (`D003`, `beispiele/gift/1068`) and no
--- implicit conversion past the module wall. This probe is the wall, at the
--- gate itself: a bare `u32` count crosses into another module's `Fd`
--- parameter, and the call falls. The gate is deliberately user-made down
--- to the invented constants (`myabi`, number `100`): the refusal
--- keys on the carrier crossing, on no OS table.
---
--- The per-call assumption is the read pair of `beispiele/150` (`N024`
--- neutral: same name, same text, same probe, no new obligation). Until lane
--- 262 the gate borrowed `linux_write_contract`, whose probe only ever wrote
--- into a pipe; the gate takes a descriptor and a count, so it names the read
--- assumption (fix lane F5, review G04 F4).
+// erwartet: D004
+// **Gift 1067 -- a count where a descriptor is owed, at a user-made gate.**
+//
+// The open/read gates of `beispiele/149` + `/150` traffic in `Fd`, an
+// opaque carrier: no arithmetic (`D003`, `beispiele/gift/1068`) and no
+// implicit conversion past the module wall. This probe is the wall, at the
+// gate itself: a bare `u32` count crosses into another module's `Fd`
+// parameter, and the call falls. The gate is deliberately user-made down
+// to the invented constants (`myabi`, number `100`): the refusal
+// keys on the carrier crossing, on no OS table.
+//
+// The per-call assumption is the read pair of `beispiele/150` (`N024`
+// neutral: same name, same text, same probe, no new obligation). Until lane
+// 262 the gate borrowed `linux_write_contract`, whose probe only ever wrote
+// into a pipe; the gate takes a descriptor and a count, so it names the read
+// assumption (fix lane F5, review G04 F4).
 
 module gift::fd_falscher_traeger {
 

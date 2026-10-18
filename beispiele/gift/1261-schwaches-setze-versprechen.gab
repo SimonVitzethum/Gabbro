@@ -1,12 +1,12 @@
--- erwartet: N511
--- **Lane 263 (OFFEN O12) -- the old weak `setze` shape of `beispiele/124`.**
---
--- `setze` promises only `konto.slots[0].stand == x` and says nothing about
--- `konto.slots[1].stand`, so the locked section calling it cannot re-establish
--- the lock invariant `konto.slots[0].stand == konto.slots[1].stand` at release
--- from the callee's promise. The body writes both slots, which is exactly why
--- the finding is about the contract, not the code: the refusal names the
--- invariant, the lock `L`, the `release` exit and the undetermined cell.
+// erwartet: N511
+// **Lane 263 (OFFEN O12) -- the old weak `setze` shape of `beispiele/124`.**
+//
+// `setze` promises only `konto.slots[0].stand == x` and says nothing about
+// `konto.slots[1].stand`, so the locked section calling it cannot re-establish
+// the lock invariant `konto.slots[0].stand == konto.slots[1].stand` at release
+// from the callee's promise. The body writes both slots, which is exactly why
+// the finding is about the contract, not the code: the refusal names the
+// invariant, the lock `L`, the `release` exit and the undetermined cell.
 module gift::schwaches_setze_versprechen {
 
 type Stand = u32 in 0 .. 100;

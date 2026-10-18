@@ -1,10 +1,10 @@
--- erwartet: V009
--- Gift 1271 (Simon 2026-09-26; drafted by fix lane F1): poison (audit of the passes that branch over `match` arms): a
--- payload-free atomic gates a FOREIGN read through a `match` whose arm ends the
--- flow. `return granulat;` runs only when `stufe != 0` -- exactly the gate of
--- `gift/301` (`if versiegelt { return granulat; }`), spelled as a match. Before
--- the fix `paarung.rs` looked only inside the arms, and an arm that returned
--- hid the gate from `V009`.
+// erwartet: V009
+// Gift 1271 (Simon 2026-09-26; drafted by fix lane F1): poison (audit of the passes that branch over `match` arms): a
+// payload-free atomic gates a FOREIGN read through a `match` whose arm ends the
+// flow. `return granulat;` runs only when `stufe != 0` -- exactly the gate of
+// `gift/301` (`if versiegelt { return granulat; }`), spelled as a match. Before
+// the fix `paarung.rs` looked only inside the arms, and an arm that returned
+// hid the gate from `V009`.
 module gift::match_arm_ends_gate {
 
 const ARCH_MAX : u64 = 128;

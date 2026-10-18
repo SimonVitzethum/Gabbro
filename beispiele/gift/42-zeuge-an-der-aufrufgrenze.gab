@@ -1,9 +1,9 @@
--- erwartet: H005
--- **S001 durch die Hintertuer.** Der geteilte Block schreibt selbst nichts -- er RUFT nur.
--- Der Gerufene verlangt `Held(KAPPEN)` und schreibt exklusiv-berechtigt; der Rufer haelt
--- geteilt. Ohne diese Zwischenregel waere das durchlaessig: der Zeuge existiert, seine
--- Staerke wird nicht geprueft, und die tragende Regel des Konstrukts haette ausgerechnet an
--- der Aufrufgrenze eine stille Ausnahme.
+// erwartet: H005
+// **S001 durch die Hintertuer.** Der geteilte Block schreibt selbst nichts -- er RUFT nur.
+// Der Gerufene verlangt `Held(KAPPEN)` und schreibt exklusiv-berechtigt; der Rufer haelt
+// geteilt. Ohne diese Zwischenregel waere das durchlaessig: der Zeuge existiert, seine
+// Staerke wird nicht geprueft, und die tragende Regel des Konstrukts haette ausgerechnet an
+// der Aufrufgrenze eine stille Ausnahme.
 
 module gift {
 

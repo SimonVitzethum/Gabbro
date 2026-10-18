@@ -1,8 +1,8 @@
--- @gabi 1
--- link-erwartet: N504
--- **Link probe 1244 (Opus agent E): the head promises a cheaper `setze` than the body.**
--- The app's own cost bound was computed with `32`; the library declares `64`. The app checks
--- clean against this head, the link refuses.
+// @gabi 1
+// link-erwartet: N504
+// **Link probe 1244 (Opus agent E): the head promises a cheaper `setze` than the body.**
+// The app's own cost bound was computed with `32`; the library declares `64`. The app checks
+// clean against this head, the link refuses.
 
 module bib {
 pub const NSLOTS : u32 = 2;

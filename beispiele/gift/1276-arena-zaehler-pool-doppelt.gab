@@ -1,11 +1,11 @@
--- erwartet: N522
--- **1276 -- two pool instances, one cursor (lane 264, OFFEN O20 row 3).**
---
--- `concurrent { f, f }` runs `f` on two threads; both instances bump the
--- plain `used` word. `W001`/`W002` never pair a routine with itself, so the
--- pool shape is this rule's alone. Measured `["N522"]`. The admitted twins:
--- one lock protecting `A` taken inside both routines, or one arena per
--- routine (`paesse.rs`: `arena_zaehler_bewacht_sauber`).
+// erwartet: N522
+// **1276 -- two pool instances, one cursor (lane 264, OFFEN O20 row 3).**
+//
+// `concurrent { f, f }` runs `f` on two threads; both instances bump the
+// plain `used` word. `W001`/`W002` never pair a routine with itself, so the
+// pool shape is this rule's alone. Measured `["N522"]`. The admitted twins:
+// one lock protecting `A` taken inside both routines, or one arena per
+// routine (`paesse.rs`: `arena_zaehler_bewacht_sauber`).
 module gift1276 {
 
 arena A capacity 2 .. 8 of u16;

@@ -1,5 +1,5 @@
--- W24-Vorlauf: `floor` nennt die Groesse UND einen Namen, den es nicht gibt.
--- *`N022` ist damit befriedigt -- bleibt der unbekannte Name.*
+// W24-Vorlauf: `floor` nennt die Groesse UND einen Namen, den es nicht gibt.
+// *`N022` ist damit befriedigt -- bleibt der unbekannte Name.*
 module w24::t12 {
 
 static mut k : u32 = 0;

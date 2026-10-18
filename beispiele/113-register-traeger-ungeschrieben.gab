@@ -1,11 +1,11 @@
--- 113 -- **Carriers nobody writes need no guard; a register may name several.**
---
--- `KENNUNG` rests on two carriers at once -- the table `Zustand` and the
--- global `melder` -- and no function of this unit writes either of them, so
--- `lesen` owes no `Held` (`N256` takes the unwritten disjunct of `fussOrtGB`).
--- `FREI` names no carriers at all: its manifest line says so, because
--- `RegLokal` over empty carriers still claims the answer moves with nothing,
--- and an unwritten line would read as no claim.
+// 113 -- **Carriers nobody writes need no guard; a register may name several.**
+//
+// `KENNUNG` rests on two carriers at once -- the table `Zustand` and the
+// global `melder` -- and no function of this unit writes either of them, so
+// `lesen` owes no `Held` (`N256` takes the unwritten disjunct of `fussOrtGB`).
+// `FREI` names no carriers at all: its manifest line says so, because
+// `RegLokal` over empty carriers still claims the answer moves with nothing,
+// and an unwritten line would read as no claim.
 module beispiel113 {
 
 table Zustand count 4 {

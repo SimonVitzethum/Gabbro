@@ -1,11 +1,11 @@
--- erwartet: N507
--- **1254 -- a wrapper that forwards the path and drops the NUL obligation (lane 262, OFFEN O23).**
---
--- `oeffnen` forwards its parameters `path`/`pathlen` into the gate but does not carry
--- `path_nul_terminated(path, pathlen)` itself: the NUL the gate is owed travels with
--- the clause, or it travels with nobody. `N507` refuses the forwarding call (the twin
--- of `N463`'s `beispiele/gift/1157`). With the clause, the wrapper is `beispiele/149`'s
--- `oeffnen` and checks clean.
+// erwartet: N507
+// **1254 -- a wrapper that forwards the path and drops the NUL obligation (lane 262, OFFEN O23).**
+//
+// `oeffnen` forwards its parameters `path`/`pathlen` into the gate but does not carry
+// `path_nul_terminated(path, pathlen)` itself: the NUL the gate is owed travels with
+// the clause, or it travels with nobody. `N507` refuses the forwarding call (the twin
+// of `N463`'s `beispiele/gift/1157`). With the clause, the wrapper is `beispiele/149`'s
+// `oeffnen` and checks clean.
 
 module gift1254 {
 

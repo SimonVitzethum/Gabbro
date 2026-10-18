@@ -1,10 +1,10 @@
--- 120 -- **Constructing a `tagged` value in one function, matching it in another.**
---
--- `baue` builds a `Nachricht` with the call form (`Kurz(x)`) and the bare form
--- (`Leer`); `nimm` matches it exhaustively -- every arm answers, so the closed
--- distinction carries both directions. The emitted C is the compound literal
--- `(Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = x }` beside the
--- `switch (m.marke)` the match already lowered to; `cc` and `clang` accept both.
+// 120 -- **Constructing a `tagged` value in one function, matching it in another.**
+//
+// `baue` builds a `Nachricht` with the call form (`Kurz(x)`) and the bare form
+// (`Leer`); `nimm` matches it exhaustively -- every arm answers, so the closed
+// distinction carries both directions. The emitted C is the compound literal
+// `(Nachricht){ .marke = Nachricht_Kurz, .last.Kurz = x }` beside the
+// `switch (m.marke)` the match already lowered to; `cc` and `clang` accept both.
 module beispiel120 {
 
 tagged type Nachricht = { Leer, Kurz(u32 in 0 .. 100), Lang(u64) };

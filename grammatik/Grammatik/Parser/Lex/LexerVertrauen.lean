@@ -133,7 +133,9 @@ def ueberText : List Char → List Char
   | _ :: cs => ueberText cs
 
 /-- The code characters: each string becomes one blank (so no run spans one),
-    each comment is dropped up to its newline -- exactly as `lex.rs` skips them,
+    each line comment is dropped up to its newline and each block comment
+    (nested, by the depth counter) up to its end; an unterminated block
+    comment drops the rest (the lexer refuses it) -- exactly as `lex.rs` skips them,
     except that the blank also breaks digit adjacency the way a skipped string
     does there (a run starts behind code, never behind a quote).
     Fuel like `scan`: every step shortens the list, so `length + 1` always
@@ -142,7 +144,11 @@ def ueberText : List Char → List Char
 def codeZeichen : List Char → Nat → List Char
   | [], _ => []
   | '"' :: cs, n + 1 => ' ' :: codeZeichen (ueberText cs) n
-  | '-' :: '-' :: cs, n + 1 => codeZeichen (ueberKommentar cs) n
+  | '/' :: '/' :: cs, n + 1 => codeZeichen (nimmZeile cs).2 n
+  | '/' :: '*' :: cs, n + 1 =>
+    match ueberBlock 1 cs with
+    | some rest => codeZeichen rest n
+    | none => []
   | c :: cs, n + 1 => c :: codeZeichen cs n
   | cs, 0 => cs
 
@@ -238,7 +244,7 @@ theorem vertrauen_codes :
 
 /-- A bidi override is refused, even in a comment. -/
 theorem quelle_bidi :
-    pruefeQuelle (String.ofList ['-', '-', ' ', Char.ofNat 0x202E]) =
+    pruefeQuelle (String.ofList ['/', '/', ' ', Char.ofNat 0x202E]) =
       .error .bidi := by
   decide
 
@@ -267,7 +273,12 @@ theorem quelle_umlaut_sauber :
 
 /-- Foreign letters in a comment are prose, not names. -/
 theorem quelle_kommentar_sauber :
-    pruefeQuelle "-- Größe σ →\nconst A : u32 = 1;" = .ok () := by
+    pruefeQuelle "// Größe σ →\nconst A : u32 = 1;" = .ok () := by
+  decide
+
+/-- Foreign letters in a block comment, nested or not, and in a doc comment. -/
+theorem quelle_blockkommentar_sauber :
+    pruefeQuelle "/* Größe /* σ */ → */ /// ж\nconst A : u32 = 1;" = .ok () := by
   decide
 
 /-- A foreign letter glued to a number belongs to `L003`/`L006`, not here. -/

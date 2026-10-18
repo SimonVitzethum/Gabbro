@@ -408,7 +408,7 @@ opus/…:opus/…` first.
 | Kind | Next free |
 |---|---|
 | Diagnostic codes | **N587** (slot release took N586). The alias rules took **R014**/**R015**: next `R016` |
-| Gift (poison-probe) numbers | **1471** (`beispiele/gift/1470-geraet-am-portraum-ohne-llvm.gab` is the last; 1448-1469 stay unused) |
+| Gift (poison-probe) numbers | **1472** (`beispiele/gift/1471-blockkommentar-offen.gab` is the last; 1448-1469 stay unused) |
 | Example numbers | **1165** (`beispiele/1164-operanden-zuerst-weiten.gab` is the last) |
 | Lane numbers | **1403**: allocate unique IDs from the live coordinator registry |
 

@@ -1,10 +1,10 @@
--- erwartet: M140
--- **No number becomes a pointer.**
---
--- Simon's decision 1 (2026-09-30): memory from outside comes as a region, never from a
--- number, and no int->ptr conversion enters the language. A binding of a pointer type to an
--- integer falls at `M140`; the only place a word becomes an address is the proved stub of a
--- region gate (`tor.region`).
+// erwartet: M140
+// **No number becomes a pointer.**
+//
+// Simon's decision 1 (2026-09-30): memory from outside comes as a region, never from a
+// number, and no int->ptr conversion enters the language. A binding of a pointer type to an
+// integer falls at `M140`; the only place a word becomes an address is the proved stub of a
+// region gate (`tor.region`).
 module gift::zahl_als_zeiger {
 
 pub reason MapFehler {
@@ -75,9 +75,9 @@ pub fn main() -> never
         exit_group(2);
     }
     let falsch : ptr<normal, rw> u8 = 4096;
-    seite[1] = 75;       -- K
-    seite[2] = 10;       -- newline
-    seite[4095] = 1;     -- the last byte the extent covers
+    seite[1] = 75;       // K
+    seite[2] = 10;       // newline
+    seite[4095] = 1;     // the last byte the extent covers
     let n = write(1, seite, 3) else (f) { exit_group(3); }
     exit_group(0);
 }

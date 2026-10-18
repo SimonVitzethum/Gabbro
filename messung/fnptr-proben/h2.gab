@@ -1,6 +1,6 @@
--- The second decisive probe: does `M128` hold the producer to the slot's promise?
--- `schreibt` writes; the slot only allows reading. If this gives 0 errors, the contract
--- at the type is a decoration.
+// The second decisive probe: does `M128` hold the producer to the slot's promise?
+// `schreibt` writes; the slot only allows reading. If this gives 0 errors, the contract
+// at the type is a decoration.
 
 module probe::erzeuger {
 

@@ -1,10 +1,10 @@
--- erwartet: N456
--- **1142 -- a `child` in a function that holds a lock by signature (fix lane F3).**
---
--- `requires Held(L)` says the CALLER holds `L` for this body -- the parent
--- thread. The child started here holds nothing, so the signature-held lock
--- is no cover on its path. `N456` refuses the child in such a function; take
--- `L` inside the child instead (`child { locks L { … } … }`).
+// erwartet: N456
+// **1142 -- a `child` in a function that holds a lock by signature (fix lane F3).**
+//
+// `requires Held(L)` says the CALLER holds `L` for this body -- the parent
+// thread. The child started here holds nothing, so the signature-held lock
+// is no cover on its path. `N456` refuses the child in such a function; take
+// `L` inside the child instead (`child { locks L { … } … }`).
 
 module gift1142 {
 

@@ -1,10 +1,10 @@
--- erwartet: M101
---
--- V3: der `match`-Binder traegt die Nutzlast SEINER Variante. `k` ist hier `u64` und passt
--- damit nicht in den Rueckgabetyp -- nur wenn V3 lebt. Ohne V3 waere `k` unbekannt, und
--- unbekannt heisst ungeprueft: die Regel koennte ausfallen, ohne dass etwas faellt.
---
--- Gefunden von der Mutationsprobe (`./instrumente/mutiere-pruefer.py`).
+// erwartet: M101
+//
+// V3: der `match`-Binder traegt die Nutzlast SEINER Variante. `k` ist hier `u64` und passt
+// damit nicht in den Rueckgabetyp -- nur wenn V3 lebt. Ohne V3 waere `k` unbekannt, und
+// unbekannt heisst ungeprueft: die Regel koennte ausfallen, ohne dass etwas faellt.
+//
+// Gefunden von der Mutationsprobe (`./instrumente/mutiere-pruefer.py`).
 module gift {
 
 const G : u32 = 65535;

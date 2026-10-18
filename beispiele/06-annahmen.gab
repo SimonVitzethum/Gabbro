@@ -1,11 +1,11 @@
--- 06 -- Hardware-Annahmen, Axiome und die lineare Pruefpflicht.
---
--- **Drei Klassen, und die dritte gibt es syntaktisch nicht:** *falsifiziert* (Sonde lief),
--- *nicht falsifizierbar* (mit Grund als Zeichenkette), *nicht gefahren* -- und das ist die
--- Abwesenheit beider Angaben und ein Uebersetzungsfehler. Eine nicht gefahrene Annahme darf
--- nie wie eine falsifizierte aussehen.
---
--- `gabbro annahmen 06-annahmen.gab` gibt daraus die Menge, unter der alles Weitere gilt.
+// 06 -- Hardware-Annahmen, Axiome und die lineare Pruefpflicht.
+//
+// **Drei Klassen, und die dritte gibt es syntaktisch nicht:** *falsifiziert* (Sonde lief),
+// *nicht falsifizierbar* (mit Grund als Zeichenkette), *nicht gefahren* -- und das ist die
+// Abwesenheit beider Angaben und ein Uebersetzungsfehler. Eine nicht gefahrene Annahme darf
+// nie wie eine falsifizierte aussehen.
+//
+// `gabbro annahmen 06-annahmen.gab` gibt daraus die Menge, unter der alles Weitere gilt.
 
 module beispiel::annahmen {
 
@@ -20,49 +20,49 @@ assume tlb_ist_nach_cr3_leer
     "Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege."
     falsifier sonde_tlb_nach_cr3;
 
--- **Die dritte TLB-Annahme, und sie stand bis zum 2026-09-01 in einem FREMDEN Kommentar.**
---
--- `../caprock-messbasis`, `crates/caprock-hal/src/x86_64/mmu.rs`:379, woertlich:
---
---   *„Zusaetzlich gilt: die Eintraege waren vorher NICHT PRAESENT, und nicht praesente
---   Eintraege legt x86 nicht in den Paging-Structure-Caches ab -- ein hinzugefuegter Eintrag
---   muss also gar nichts verdraengen."*
---
--- **Das ist keine Bequemlichkeit, sondern der Satz, an dem eine ganze Klasse von
--- Schreibvorgaengen haengt.** Gemessen ueber Caprocks x86_64-MMU am 2026-09-01: von den
--- Funktionen, die einen Seiteneintrag schreiben, invalidieren **alle fuenf**, die einen
--- LEBENDEN Eintrag aendern oder wegnehmen -- und von den neun, die einen Eintrag HINZUFUEGEN,
--- tun es zwei im eigenen Rumpf, drei ueber ihren Rufer und **vier gar nicht**.
---
--- > **Der Klasse fehlt keine Invalidierung, ihr fehlt eine Entscheidung.** Vier gegen fuenf
--- > ist keine Nachlaessigkeit, sondern eine Annahme, die niemand hingeschrieben hat -- und
--- > solange sie nirgends steht, sieht ein vergessener Flush genauso aus wie ein bewusst
--- > weggelassener.
---
--- `arch x86_64` steht dran, weil die Antwort architekturabhaengig ist: Intels SDM ERLAUBT
--- Implementierungen, nicht praesente Eintraege in den Paging-Structure-Caches zu halten, und
--- fuer AArch64 ist die sichere Antwort eine andere. **Eine Absenkung, die das entscheidet,
--- entscheidet es fuer beide Architekturen zugleich und fuer eine davon falsch.**
+// **Die dritte TLB-Annahme, und sie stand bis zum 2026-09-01 in einem FREMDEN Kommentar.**
+//
+// `../caprock-messbasis`, `crates/caprock-hal/src/x86_64/mmu.rs`:379, woertlich:
+//
+//   *„Zusaetzlich gilt: die Eintraege waren vorher NICHT PRAESENT, und nicht praesente
+//   Eintraege legt x86 nicht in den Paging-Structure-Caches ab -- ein hinzugefuegter Eintrag
+//   muss also gar nichts verdraengen."*
+//
+// **Das ist keine Bequemlichkeit, sondern der Satz, an dem eine ganze Klasse von
+// Schreibvorgaengen haengt.** Gemessen ueber Caprocks x86_64-MMU am 2026-09-01: von den
+// Funktionen, die einen Seiteneintrag schreiben, invalidieren **alle fuenf**, die einen
+// LEBENDEN Eintrag aendern oder wegnehmen -- und von den neun, die einen Eintrag HINZUFUEGEN,
+// tun es zwei im eigenen Rumpf, drei ueber ihren Rufer und **vier gar nicht**.
+//
+// > **Der Klasse fehlt keine Invalidierung, ihr fehlt eine Entscheidung.** Vier gegen fuenf
+// > ist keine Nachlaessigkeit, sondern eine Annahme, die niemand hingeschrieben hat -- und
+// > solange sie nirgends steht, sieht ein vergessener Flush genauso aus wie ein bewusst
+// > weggelassener.
+//
+// `arch x86_64` steht dran, weil die Antwort architekturabhaengig ist: Intels SDM ERLAUBT
+// Implementierungen, nicht praesente Eintraege in den Paging-Structure-Caches zu halten, und
+// fuer AArch64 ist die sichere Antwort eine andere. **Eine Absenkung, die das entscheidet,
+// entscheidet es fuer beide Architekturen zugleich und fuer eine davon falsch.**
 assume neuer_eintrag_verdraengt_nichts arch x86_64
     "Ein Eintrag, der von nicht-praesent auf praesent wechselt, verdraengt keinen zwischengespeicherten Uebersetzungsschritt."
     falsifier sonde_praesent_ohne_invalidierung;
 
--- **Der seL4-Schnitt, und er stand bisher NIRGENDS -- auch nicht als Kommentar.**
---
--- Der Kern veraendert die Abbildung, unter der sein eigener Code laeuft. seL4 zieht den
--- Schnitt und beweist funktionale Korrektheit UNTER der Annahme, dass der Kern abgebildet
--- bleibt. **Gemessen am 2026-09-01 ueber `../caprock-messbasis` (139 `.rs`, 75 294 Zeilen):
--- keine Stelle, kein Kommentar, kein Dokument schreibt hin, welcher Bereich unter jeder
--- Aenderung unveraendert bleiben muss.** Der Satz hier ist damit der erste seiner Art im
--- Umkreis -- und genau deshalb ist er UNGEPRUEFT: es gibt keine Fassung, gegen die man ihn
--- halten koennte.
---
--- **Er steht als `assume` und nicht als `invariant`, und der Grund ist die zweite Haelfte
--- des Satzes.** „Bleibt abgebildet" waere ueber `mappings of` formulierbar; *„waehrend jeder
--- Zwischenzustand einer Aenderung"* ist es nicht -- eine Nachbedingung redet ueber den
--- Zustand NACH einem Rumpf, und zwischen zwei Eintragsschreibvorgaengen kann ein Interrupt
--- ankommen. Das ist eine Aussage ueber einen LAUF, und dafuer hat diese Sprache keine Form
--- (`PLAN-HARDWARE.md` §51 S2, dieselbe Wand wie bei Rahmenbedingungen).
+// **Der seL4-Schnitt, und er stand bisher NIRGENDS -- auch nicht als Kommentar.**
+//
+// Der Kern veraendert die Abbildung, unter der sein eigener Code laeuft. seL4 zieht den
+// Schnitt und beweist funktionale Korrektheit UNTER der Annahme, dass der Kern abgebildet
+// bleibt. **Gemessen am 2026-09-01 ueber `../caprock-messbasis` (139 `.rs`, 75 294 Zeilen):
+// keine Stelle, kein Kommentar, kein Dokument schreibt hin, welcher Bereich unter jeder
+// Aenderung unveraendert bleiben muss.** Der Satz hier ist damit der erste seiner Art im
+// Umkreis -- und genau deshalb ist er UNGEPRUEFT: es gibt keine Fassung, gegen die man ihn
+// halten koennte.
+//
+// **Er steht als `assume` und nicht als `invariant`, und der Grund ist die zweite Haelfte
+// des Satzes.** „Bleibt abgebildet" waere ueber `mappings of` formulierbar; *„waehrend jeder
+// Zwischenzustand einer Aenderung"* ist es nicht -- eine Nachbedingung redet ueber den
+// Zustand NACH einem Rumpf, und zwischen zwei Eintragsschreibvorgaengen kann ein Interrupt
+// ankommen. Das ist eine Aussage ueber einen LAUF, und dafuer hat diese Sprache keine Form
+// (`PLAN-HARDWARE.md` §51 S2, dieselbe Wand wie bei Rahmenbedingungen).
 assume kern_bleibt_unter_jeder_aenderung_abgebildet
     "Die Rahmen des Kerntexts bleiben waehrend jedes Zwischenzustands jeder Tabellenaenderung abgebildet und ausfuehrbar."
     falsifier sonde_kern_entmappt;
@@ -75,25 +75,25 @@ assume ipi_kommt_an
     "Ein gesendetes IPI erreicht den Zielkern in endlicher Zeit."
     unfalsifiable "Lebendigkeit faellt unter keinen Mechanismus dieser Sprache";
 
--- Je privilegiertem Befehl ein erklaerter Effekt. Das ist die groesste unbewiesene
--- Flaeche der Sprache -- groesser als der Uebersetzer -- und deshalb zaehlbar.
+// Je privilegiertem Befehl ein erklaerter Effekt. Das ist die groesste unbewiesene
+// Flaeche der Sprache -- groesser als der Uebersetzer -- und deshalb zaehlbar.
 axiom write_cr3(p : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
 axiom invlpg(v : u64)   effects { writes tlb }                       falsifier sonde_invlpg;
 axiom rdtsc()           effects { reads zeitzaehler }                falsifier sonde_tsc;
 axiom wbinvd()          effects { writes cache }
     unfalsifiable "die Wirkung ist auf dieser Maschine nicht beobachtbar";
 
--- `check` erzeugt eine `linear ghost Duty(name)`: eine Pflicht, die verbraucht werden MUSS.
--- Vier Uebersetzungsfehler fallen dabei aus M1/M2/M3 statt aus Sonderregeln: `gates` fehlt
--- -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
--- `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
--- `floor` -> die Groesse hat keinen Bereich.
--- **Die beiden Torfunktionen -- bis zum 2026-08-19 standen sie NIRGENDS.**
---
--- `gates abnahme, freigabe` nannte zwei Namen, hinter denen nichts stand, und damit konnte
--- die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
--- Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
--- heute, hat ihn im eigenen Beispiel gefunden.
+// `check` erzeugt eine `linear ghost Duty(name)`: eine Pflicht, die verbraucht werden MUSS.
+// Vier Uebersetzungsfehler fallen dabei aus M1/M2/M3 statt aus Sonderregeln: `gates` fehlt
+// -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
+// `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
+// `floor` -> die Groesse hat keinen Bereich.
+// **Die beiden Torfunktionen -- bis zum 2026-08-19 standen sie NIRGENDS.**
+//
+// `gates abnahme, freigabe` nannte zwei Namen, hinter denen nichts stand, und damit konnte
+// die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
+// Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
+// heute, hat ihn im eigenen Beispiel gefunden.
 impl fn abnahme()
     effects { reads kerne_gemessen }
     costs   <= 4 ops
@@ -106,17 +106,17 @@ impl fn freigabe()
     deadline <= 40 ops arch x86_64 falsifier sonde_freigabe
 { return; }
 
--- **Die drei gemessenen Groessen -- und bis zum 2026-08-20 stand keine von ihnen
--- irgendwo** (`measures tiefe_max, tiefe_lebend, kerne_gemessen`, `floor kerne_gemessen >= 2`,
--- `effects { reads tiefe_max }`). Vier Klauseln nannten sie, und der `can_fail`-Rumpf rechnete
--- mit ihnen. **Gesehen hat es niemand, weil M1 in einen `can_fail`-Rumpf gar nicht
--- hineinsieht** -- `gabbro pruefe` meldet ueber diese Datei bis heute *„M1 saw no expression
--- -- this file has no function body"*. Der Erzeuger sah hinein, und dort standen drei
--- unbekannte Typnamen. *Ein Rumpf, den kein Typpass liest, ist ein Rumpf ohne Leser.*
--- **Und die Groessen brauchen SCHRANKEN** (2026-08-20, wenige Stunden spaeter). Als M1 den
--- `can_fail`-Rumpf zum ersten Mal las, fiel sofort `M104`: `tiefe_max * 4` ueber einem vollen
--- `u64` verlaesst die Breite. *Ein Stapel ist keine 2^64 Byte tief -- die Schranke stand nur
--- nirgends, weil kein Pass die Zeile las.*
+// **Die drei gemessenen Groessen -- und bis zum 2026-08-20 stand keine von ihnen
+// irgendwo** (`measures tiefe_max, tiefe_lebend, kerne_gemessen`, `floor kerne_gemessen >= 2`,
+// `effects { reads tiefe_max }`). Vier Klauseln nannten sie, und der `can_fail`-Rumpf rechnete
+// mit ihnen. **Gesehen hat es niemand, weil M1 in einen `can_fail`-Rumpf gar nicht
+// hineinsieht** -- `gabbro pruefe` meldet ueber diese Datei bis heute *„M1 saw no expression
+// -- this file has no function body"*. Der Erzeuger sah hinein, und dort standen drei
+// unbekannte Typnamen. *Ein Rumpf, den kein Typpass liest, ist ein Rumpf ohne Leser.*
+// **Und die Groessen brauchen SCHRANKEN** (2026-08-20, wenige Stunden spaeter). Als M1 den
+// `can_fail`-Rumpf zum ersten Mal las, fiel sofort `M104`: `tiefe_max * 4` ueber einem vollen
+// `u64` verlaesst die Breite. *Ein Stapel ist keine 2^64 Byte tief -- die Schranke stand nur
+// nirgends, weil kein Pass die Zeile las.*
 type Tiefe        = u64 in 0 .. 1048576;
 type Stapelgroesse = u64 in 1 .. 1048576;
 
@@ -128,10 +128,10 @@ check stapel_wasserstand {
     claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
     measures     tiefe_max, tiefe_lebend, kerne_gemessen
     gates        abnahme, freigabe
-    -- **Und der Rumpf gab keinen Wert zurueck.** `can_fail` ist eine PROBE: sie faellt oder
-    -- sie haelt, und `return;` sagt weder das eine noch das andere. Im Erzeugnis stand
-    -- daraufhin ein `return;` in einer `bool`-Funktion -- *derselbe Rumpf, denselben Tag
-    -- gefunden, aus demselben Grund: es las ihn niemand.*
+    // **Und der Rumpf gab keinen Wert zurueck.** `can_fail` ist eine PROBE: sie faellt oder
+    // sie haelt, und `return;` sagt weder das eine noch das andere. Im Erzeugnis stand
+    // daraufhin ein `return;` in einer `bool`-Funktion -- *derselbe Rumpf, denselben Tag
+    // gefunden, aus demselben Grund: es las ihn niemand.*
     can_fail {
         let g = groesse_gemessen() else (e1) { return false; }
         if tiefe_max * 4 >= g * 3 {
@@ -144,16 +144,16 @@ check stapel_wasserstand {
         expects sonde_tiefer_stapel
 }
 
--- **Die Pflicht des fremden Rumpfes, ausgesprochen** (Punkt 4, 2026-08-19). Eine gemessene
--- Stapelgroesse ist positiv; ohne die Zeile weiss der Rufer es nicht, und seit heute traegt
--- sie: `m1::aus_ensures` verengt das Ergebnis am Rufort.
---
--- *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
--- `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
--- **«C3a» geschlossen 2026-08-20.** Die Zeile stand hier ohne `or` -- und der `can_fail`
--- Rumpf oben schrieb `else (e1) { return; }`. Damit war der `else`-Zweig unerreichbar und
--- `e1` ein Name ohne Gegenstand, und keine Zeile sagte es. Eine Messung, die nicht
--- zustandekommt, IST ein Grund; jetzt heisst er `MessFehler` und steht in der Signatur.
+// **Die Pflicht des fremden Rumpfes, ausgesprochen** (Punkt 4, 2026-08-19). Eine gemessene
+// Stapelgroesse ist positiv; ohne die Zeile weiss der Rufer es nicht, und seit heute traegt
+// sie: `m1::aus_ensures` verengt das Ergebnis am Rufort.
+//
+// *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
+// `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
+// **«C3a» geschlossen 2026-08-20.** Die Zeile stand hier ohne `or` -- und der `can_fail`
+// Rumpf oben schrieb `else (e1) { return; }`. Damit war der `else`-Zweig unerreichbar und
+// `e1` ein Name ohne Gegenstand, und keine Zeile sagte es. Eine Messung, die nicht
+// zustandekommt, IST ein Grund; jetzt heisst er `MessFehler` und steht in der Signatur.
 reason MessFehler {
     KeinKern  = 1 "kein Kern hat gemeldet"
     ZuFrueh   = 2 "die Messung lief vor dem ersten Kontextwechsel"
@@ -164,20 +164,20 @@ extern fn groesse_gemessen() -> Stapelgroesse or MessFehler
     ensures result >= 1
     effects { reads stapel };
 
--- ==========================================================================================
--- K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
---
--- **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
--- Klempnereipflichten in `PFLICHTEN.txt` -- Stellen, an denen der Mensch etwas von Hand zu
--- zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
--- den richtigen Ort.
---
--- > *Sie hier zu fuehren heisst, sie beim Namen mit einer Sonde zu tragen -- nicht, sie
--- > erledigt zu haben.* Genau diese Vertrauensform ist gemeint, wenn jemand sagt „im
--- > Vertrauen auf Gabbro und seine Hardwareannahmen": das Vertrauen bekommt eine Liste.
---
--- **Und der Preis steht dabei:** die Vertrauensbasis waechst um fuenf Saetze, zwei davon
--- ohne Sonde. Wer die Klempnereizahl liest, muss diese Zeile mitlesen.
+// ==========================================================================================
+// K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
+//
+// **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
+// Klempnereipflichten in `PFLICHTEN.txt` -- Stellen, an denen der Mensch etwas von Hand zu
+// zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
+// den richtigen Ort.
+//
+// > *Sie hier zu fuehren heisst, sie beim Namen mit einer Sonde zu tragen -- nicht, sie
+// > erledigt zu haben.* Genau diese Vertrauensform ist gemeint, wenn jemand sagt „im
+// > Vertrauen auf Gabbro und seine Hardwareannahmen": das Vertrauen bekommt eine Liste.
+//
+// **Und der Preis steht dabei:** die Vertrauensbasis waechst um fuenf Saetze, zwei davon
+// ohne Sonde. Wer die Klempnereizahl liest, muss diese Zeile mitlesen.
 
 assume dma_veroeffentlichung_braucht_barriere
     "Ein Speichern in eine DMA-Region wird fuer das Geraet erst nach der Barriere des Raumes sichtbar; ohne sie liest das Geraet den alten Wert."

@@ -1,6 +1,6 @@
--- Lowering lexer run, shared scaffold. Primitive: Match.
--- The scaffold (module, declarations, signature, effects) is identical in all
--- seventeen units of this directory; only the body below differs.
+// Lowering lexer run, shared scaffold. Primitive: Match.
+// The scaffold (module, declarations, signature, effects) is identical in all
+// seventeen units of this directory; only the body below differs.
 
 module absenkung::probe {
 

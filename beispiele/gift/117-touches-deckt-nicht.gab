@@ -1,12 +1,12 @@
--- erwartet: E011
--- **«NL.2.2» -- `touches` war deklariert und nie gegen den Rumpf gehalten.**
---
--- Warum die Zeile ueberhaupt dasteht, wenn `effects` den Rumpf schon deckt: `touches` ist die
--- ENGERE, oertliche Zusage -- *diese Traversierung fasst genau DAS an.* Sie traegt die
--- Kostenrechnung und die Sperrargumente.
---
--- *Eine engere Zusage, die niemand haelt, ist schlimmer als keine: wer sie liest, rechnet mit
--- weniger Beruehrung, als der Rumpf hat.*
+// erwartet: E011
+// **«NL.2.2» -- `touches` war deklariert und nie gegen den Rumpf gehalten.**
+//
+// Warum die Zeile ueberhaupt dasteht, wenn `effects` den Rumpf schon deckt: `touches` ist die
+// ENGERE, oertliche Zusage -- *diese Traversierung fasst genau DAS an.* Sie traegt die
+// Kostenrechnung und die Sperrargumente.
+//
+// *Eine engere Zusage, die niemand haelt, ist schlimmer als keine: wer sie liest, rechnet mit
+// weniger Beruehrung, als der Rumpf hat.*
 module gift::touches_deckt_nicht {
 
 const N : u32 = 8;

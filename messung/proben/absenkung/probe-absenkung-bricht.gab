@@ -1,8 +1,8 @@
--- Lowering lexer run, shared scaffold. Primitive: Bricht.
--- The scaffold (module, declarations, signature, effects) is identical in all
--- seventeen units of this directory; only the body below differs -- and, in this unit alone,
--- `writes b.slots`: since `N531` (Opus agent G, 2026-09-26) a `breaking` block must write a
--- carrier of the invariant it names, so the empty block of the first version was refused.
+// Lowering lexer run, shared scaffold. Primitive: Bricht.
+// The scaffold (module, declarations, signature, effects) is identical in all
+// seventeen units of this directory; only the body below differs -- and, in this unit alone,
+// `writes b.slots`: since `N531` (Opus agent G, 2026-09-26) a `breaking` block must write a
+// carrier of the invariant it names, so the empty block of the first version was refused.
 
 module absenkung::probe {
 

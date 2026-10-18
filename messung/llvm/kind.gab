@@ -1,14 +1,14 @@
--- `child` hinter einem rohen Klon-Tor mit übergebenem Stapel (LLVM-Erzeuger, ohne C).
---
--- Der Vater legt sich per `mmap` einen Stapel an, klont über das Tor `kind_start`
--- (`stack rsi` / `stack x1`: das Register, das der Kern als `sp` des Kindes setzt) und
--- wartet auf den Austritt des Kindes. Das Kind läuft in `child { … }` AUF DEM
--- ÜBERGEBENEN STAPEL, ruft eine Funktion (Rahmen auf dem neuen Stapel), prüft, dass es
--- den Stapelwert bekam (Seitenausrichtung, `% 4096 == 0`), und beendet den ganzen
--- Prozess mit 42. Der Vater kehrt nur mit 3 zurück, wenn kein Kind lief.
---
--- Die Nummern (clone 56 / 220, mmap 9 / 222, exit_group 231 / 94, sched_yield 24 /
--- 124) stehen als Daten des Programms in seinen Toren; der Erzeuger kennt keine.
+// `child` hinter einem rohen Klon-Tor mit übergebenem Stapel (LLVM-Erzeuger, ohne C).
+//
+// Der Vater legt sich per `mmap` einen Stapel an, klont über das Tor `kind_start`
+// (`stack rsi` / `stack x1`: das Register, das der Kern als `sp` des Kindes setzt) und
+// wartet auf den Austritt des Kindes. Das Kind läuft in `child { … }` AUF DEM
+// ÜBERGEBENEN STAPEL, ruft eine Funktion (Rahmen auf dem neuen Stapel), prüft, dass es
+// den Stapelwert bekam (Seitenausrichtung, `% 4096 == 0`), und beendet den ganzen
+// Prozess mit 42. Der Vater kehrt nur mit 3 zurück, wenn kein Kind lief.
+//
+// Die Nummern (clone 56 / 220, mmap 9 / 222, exit_group 231 / 94, sched_yield 24 /
+// 124) stehen als Daten des Programms in seinen Toren; der Erzeuger kennt keine.
 module kind {
 assume linux_kern
     "Der Kern startet den Faden mit sp aus dem Stapelregister, antwortet im Kind null und achtet die Nummern seiner Architektur."

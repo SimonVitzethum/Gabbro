@@ -1,13 +1,13 @@
--- erwartet: L108
--- **Ein Schleifenrumpf laeuft OFT, gezaehlt wurde er einmal.**
---
--- `wecken(p)` im Rumpf verbraucht `p` bei JEDEM Durchlauf; M2 lief den Rumpf einmal als
--- geradlinigen Code und buchte eine Verbrauchung.
---
--- > *Genau einmal* ist eine Aussage ueber die AUSFUEHRUNG, nicht ueber den Quelltext.
---
--- Was ausdruecklich NICHT faellt: ein Wert, der IM Rumpf entsteht und dort verbraucht wird
--- -- der lebt und stirbt je Durchlauf.
+// erwartet: L108
+// **Ein Schleifenrumpf laeuft OFT, gezaehlt wurde er einmal.**
+//
+// `wecken(p)` im Rumpf verbraucht `p` bei JEDEM Durchlauf; M2 lief den Rumpf einmal als
+// geradlinigen Code und buchte eine Verbrauchung.
+//
+// > *Genau einmal* ist eine Aussage ueber die AUSFUEHRUNG, nicht ueber den Quelltext.
+//
+// Was ausdruecklich NICHT faellt: ein Wert, der IM Rumpf entsteht und dort verbraucht wird
+// -- der lebt und stirbt je Durchlauf.
 
 module gift {
 

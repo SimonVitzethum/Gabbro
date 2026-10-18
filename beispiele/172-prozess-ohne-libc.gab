@@ -1,16 +1,16 @@
--- uebersetzt: freistehend
--- 172 -- A Linux process WITHOUT a C library: the program's own `write`.
---
--- `beispiele/64` binds libc's `write`; this file binds the KERNEL's. The call is a
--- `syscall` gate the program declares -- number, register map, errors, the assumption
--- the kernel keeps -- and the manifest next door (`172-prozess-ohne-libc.bau`) says
--- `nolibc`: the build links `-nostdlib -static` and enters `main` from a generated `_start`
--- that knows no system call -- `main` is `-> never` and ends the process through `exit_group`.
--- There is no C file in it, and `nm -u` on the binary is empty (`instrumente/zaehle-c.py`).
---
--- The gate for `write` carries the buffer clause of every byte-moving call (`N464`):
--- `requires len <= lenof(buf)`, decided at the call below (`N463`) -- the same duty
--- `beispiele/64` states for libc's, now held on the kernel's.
+// uebersetzt: freistehend
+// 172 -- A Linux process WITHOUT a C library: the program's own `write`.
+//
+// `beispiele/64` binds libc's `write`; this file binds the KERNEL's. The call is a
+// `syscall` gate the program declares -- number, register map, errors, the assumption
+// the kernel keeps -- and the manifest next door (`172-prozess-ohne-libc.bau`) says
+// `nolibc`: the build links `-nostdlib -static` and enters `main` from a generated `_start`
+// that knows no system call -- `main` is `-> never` and ends the process through `exit_group`.
+// There is no C file in it, and `nm -u` on the binary is empty (`instrumente/zaehle-c.py`).
+//
+// The gate for `write` carries the buffer clause of every byte-moving call (`N464`):
+// `requires len <= lenof(buf)`, decided at the call below (`N463`) -- the same duty
+// `beispiele/64` states for libc's, now held on the kernel's.
 module beispiel::prozess_ohne_libc {
 
 reason SchreibFehler {
@@ -55,12 +55,12 @@ pub fn main() -> never
     effects { reads PUFFER, writes PUFFER, diverges }
     costs   <= 200 ops
 {
-    PUFFER[0] = 72;    -- H
-    PUFFER[1] = 97;    -- a
-    PUFFER[2] = 108;   -- l
-    PUFFER[3] = 108;   -- l
-    PUFFER[4] = 111;   -- o
-    PUFFER[5] = 10;    -- newline
+    PUFFER[0] = 72;    // H
+    PUFFER[1] = 97;    // a
+    PUFFER[2] = 108;   // l
+    PUFFER[3] = 108;   // l
+    PUFFER[4] = 111;   // o
+    PUFFER[5] = 10;    // newline
     let n = write(1, PUFFER, 6) else (e) { exit_group(1); }
     exit_group(0);
 }

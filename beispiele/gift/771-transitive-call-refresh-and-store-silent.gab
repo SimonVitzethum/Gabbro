@@ -1,13 +1,13 @@
--- erwartet: M147
--- **V4 freshness across a TRANSITIVE call chain, the refresh/store boundary.**
---
--- Arm 1 re-reads AFTER the overlapping chain -- the re-read IS the refresh, so
--- deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
--- the chain -- store/move positions never decide, so no refusal. Arm 3 decides
--- on the stale name itself, and only that decision falls, as `M147`. The
--- transitive mirror of gift/754, which pins the same boundary across a direct
--- call (and that file mirrors gift/717 across an indirect call). A run over
--- this file must report exactly one `M147`, at arm 3.
+// erwartet: M147
+// **V4 freshness across a TRANSITIVE call chain, the refresh/store boundary.**
+//
+// Arm 1 re-reads AFTER the overlapping chain -- the re-read IS the refresh, so
+// deciding on `frisch` stays silent. Arm 2 only STORES the stale name after
+// the chain -- store/move positions never decide, so no refusal. Arm 3 decides
+// on the stale name itself, and only that decision falls, as `M147`. The
+// transitive mirror of gift/754, which pins the same boundary across a direct
+// call (and that file mirrors gift/717 across an indirect call). A run over
+// this file must report exactly one `M147`, at arm 3.
 module gift771 {
 
 static mut ZUSTAND : u32 = 0;

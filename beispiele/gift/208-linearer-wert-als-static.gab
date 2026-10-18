@@ -1,9 +1,9 @@
--- erwartet: N011
--- **Dieselbe Regel, der andere Speicherplatz.**
---
--- Ein linearer Wert hat Bytes (`SPRACHE.md`:721), aber keinen PFAD in einem `static`: er
--- entsteht dort beim Start und wird nie verbraucht. *Ein `static`, der eine Ressource haelt,
--- haelt sie fuer immer.*
+// erwartet: N011
+// **Dieselbe Regel, der andere Speicherplatz.**
+//
+// Ein linearer Wert hat Bytes (`SPRACHE.md`:721), aber keinen PFAD in einem `static`: er
+// entsteht dort beim Start und wird nie verbraucht. *Ein `static`, der eine Ressource haelt,
+// haelt sie fuer immer.*
 
 module gift {
 

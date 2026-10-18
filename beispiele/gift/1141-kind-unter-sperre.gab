@@ -1,13 +1,13 @@
--- erwartet: N456
--- **1141 -- a `child` started inside `locks L` (fix lane F3, review G11 F2).**
---
--- The review's scenario, verbatim: `locks L { g = 1; child { g = 2; ausgang(0); } }`.
--- Until fix lane F3 every held-set walker carried the parent's `locks L` into the
--- child, so `g = 2` counted as guarded -- but the child runs BESIDE the parent and
--- holds nothing: once lowered, it writes an `L`-guarded carrier without `L` while
--- the parent keeps writing it. Two lines fall now: `N456` (a child inside a
--- holding context) and `H007` (`g` is protected by `L`, and the child path does
--- not hold it -- the `H007` walk starts the child with an empty held set).
+// erwartet: N456
+// **1141 -- a `child` started inside `locks L` (fix lane F3, review G11 F2).**
+//
+// The review's scenario, verbatim: `locks L { g = 1; child { g = 2; ausgang(0); } }`.
+// Until fix lane F3 every held-set walker carried the parent's `locks L` into the
+// child, so `g = 2` counted as guarded -- but the child runs BESIDE the parent and
+// holds nothing: once lowered, it writes an `L`-guarded carrier without `L` while
+// the parent keeps writing it. Two lines fall now: `N456` (a child inside a
+// holding context) and `H007` (`g` is protected by `L`, and the child path does
+// not hold it -- the `H007` walk starts the child with an empty held set).
 
 module gift1141 {
 

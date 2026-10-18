@@ -1,11 +1,11 @@
--- erwartet: Y104
--- 1430 -- **an `aligned` probe has no LLVM lowering (LLVM-0).**
---
--- The checker accepts the alignment probe (a pure question about an address);
--- the LLVM backend lowers no `aligned` form yet (addresses are opaque `ptr`,
--- and the answer would need the allocation behind them) — so the *expression*
--- is refused with `Y104`. (A function value stood here; `&f` lowers since
--- LLVM-1, and the healed probe moved to the next unlowered expression.)
+// erwartet: Y104
+// 1430 -- **an `aligned` probe has no LLVM lowering (LLVM-0).**
+//
+// The checker accepts the alignment probe (a pure question about an address);
+// the LLVM backend lowers no `aligned` form yet (addresses are opaque `ptr`,
+// and the answer would need the allocation behind them) — so the *expression*
+// is refused with `Y104`. (A function value stood here; `&f` lowers since
+// LLVM-1, and the healed probe moved to the next unlowered expression.)
 module gift1430 {
 impl fn f(a : u64) -> u64
     effects { pure }

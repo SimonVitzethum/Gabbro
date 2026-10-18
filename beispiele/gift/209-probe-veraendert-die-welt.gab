@@ -1,13 +1,13 @@
--- erwartet: N027
--- **Ein `can_fail`-Block ist eine PROBE, kein Programm.**
---
--- Ein `check` traegt keine `effects`-Liste, keine `costs`-Zusage und keine `locks`-
--- Deklaration -- es ist kein Vertrag. Zehn der zwoelf Paesse laufen ueber
--- `ItemArt::Funktion` und sehen diesen Rumpf nie; was hier steht, ist ungeprueft.
---
--- `gift/167` faengt die Zuweisung. **Die drei anderen Formen der Regel hatte bis heute
--- keine Probe** -- gefunden ueber `gabbro blindstellen`, Tafel C: `locks`, `publishes` und
--- `exchange` in der Stellung `can_fail` waren leer, im sauberen wie im Giftkorpus.
+// erwartet: N027
+// **Ein `can_fail`-Block ist eine PROBE, kein Programm.**
+//
+// Ein `check` traegt keine `effects`-Liste, keine `costs`-Zusage und keine `locks`-
+// Deklaration -- es ist kein Vertrag. Zehn der zwoelf Paesse laufen ueber
+// `ItemArt::Funktion` und sehen diesen Rumpf nie; was hier steht, ist ungeprueft.
+//
+// `gift/167` faengt die Zuweisung. **Die drei anderen Formen der Regel hatte bis heute
+// keine Probe** -- gefunden ueber `gabbro blindstellen`, Tafel C: `locks`, `publishes` und
+// `exchange` in der Stellung `can_fail` waren leer, im sauberen wie im Giftkorpus.
 module gift {
 
 type Zaehlerwert = u32 in 0 .. 65534;
@@ -22,8 +22,8 @@ static mut stand : Zaehlerwert = 0;
 extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
 extern fn zaehlwerk_null() effects { writes zaehlwerk } costs <= 8 ops;
 
--- Die Sperre wird auch RICHTIG genommen -- sonst faellt `H008` daneben, und eine Giftdatei
--- mit einem zweiten Befund prueft zwei Dinge auf einmal.
+// Die Sperre wird auch RICHTIG genommen -- sonst faellt `H008` daneben, und eine Giftdatei
+// mit einem zweiten Befund prueft zwei Dinge auf einmal.
 impl fn zaehlwerk_ruecksetzen()
     effects { locks ZAEHLER, writes zaehlwerk }
     costs   <= 24 ops
@@ -52,14 +52,14 @@ check standprobe {
     measures stand
     gates    abnahme, freigabe
     can_fail {
-        -- 1. Eine Sperre -- und niemand prueft ihren Rang, ihre Haltezeit oder ob sie
-        --    ueberhaupt eingeloest wird.
+        // 1. Eine Sperre -- und niemand prueft ihren Rang, ihre Haltezeit oder ob sie
+        //    ueberhaupt eingeloest wird.
         locks ZAEHLER {
             return false;
         }
-        -- 2. Eine Veroeffentlichung -- die Schreibhaelfte einer Paarung in einer Messung.
+        // 2. Eine Veroeffentlichung -- die Schreibhaelfte einer Paarung in einer Messung.
         TOR = true publishes { stand };
-        -- 3. Und ein Tausch: eine Probe, die ihren eigenen Gegenstand hochzaehlt.
+        // 3. Und ein Tausch: eine Probe, die ihren eigenen Gegenstand hochzaehlt.
         let alt = ANFRAGEN exchange update(v)
             bounded 64 ops
             on_exceeded zu_viel_streit

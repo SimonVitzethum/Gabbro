@@ -1,10 +1,10 @@
--- erwartet: V008
--- **Die erklaerte Obermenge der Nutzlast** (`SPRACHE.md` §11.3) -- bis 2026-08-19 eine Zeile
--- ohne Leser: *„eine Enthaltensaussage, die niemand nachrechnet."*
---
--- Sie ist freiwillig; steht sie da, ist sie eine Zusage ueber das GANZE Programm. Ein Leser
--- darf sich darauf verlassen, ohne jede Schreibstelle zu kennen -- **und darum ist eine
--- Zeile, die niemand nachrechnet, hier gefaehrlicher als keine.**
+// erwartet: V008
+// **Die erklaerte Obermenge der Nutzlast** (`SPRACHE.md` §11.3) -- bis 2026-08-19 eine Zeile
+// ohne Leser: *„eine Enthaltensaussage, die niemand nachrechnet."*
+//
+// Sie ist freiwillig; steht sie da, ist sie eine Zusage ueber das GANZE Programm. Ein Leser
+// darf sich darauf verlassen, ohne jede Schreibstelle zu kennen -- **und darum ist eine
+// Zeile, die niemand nachrechnet, hier gefaehrlicher als keine.**
 module gift::obermenge {
 
 static mut n : u32 = 0;

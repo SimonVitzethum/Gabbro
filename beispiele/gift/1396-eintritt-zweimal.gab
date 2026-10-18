@@ -1,11 +1,11 @@
--- erwartet: N577
--- **An `entry fn` is handed on ONCE.**
---
--- The generated driver hands one wrapper per declared root, once (template `faden.modul`). A
--- binding that handed it to the foreign start twice would run that root on two threads at once
--- -- a start declared ONCE running on several threads, which the goal theorem does NOT claim
--- (`Zielsatz/Spec.lean`, the NOT CLAIMED list). Refused at the second hand-over and at the
--- parameter (C-free lane, C2 slice 3).
+// erwartet: N577
+// **An `entry fn` is handed on ONCE.**
+//
+// The generated driver hands one wrapper per declared root, once (template `faden.modul`). A
+// binding that handed it to the foreign start twice would run that root on two threads at once
+// -- a start declared ONCE running on several threads, which the goal theorem does NOT claim
+// (`Zielsatz/Spec.lean`, the NOT CLAIMED list). Refused at the second hand-over and at the
+// parameter (C-free lane, C2 slice 3).
 module gift::eintritt_zweimal {
 
 assume start_vertrag

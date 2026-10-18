@@ -1,6 +1,6 @@
--- erwartet: E001
--- `effects` ist Pflicht und nicht fail-open. Wer nichts anfasst, schreibt `effects { pure }`
--- -- die Auslassung war zugleich die staerkste Zusage und die kuerzeste Spezifikation.
+// erwartet: E001
+// `effects` ist Pflicht und nicht fail-open. Wer nichts anfasst, schreibt `effects { pure }`
+// -- die Auslassung war zugleich die staerkste Zusage und die kuerzeste Spezifikation.
 module gift {
 
 type T = { x : u32 in 0 .. 10, };

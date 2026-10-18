@@ -1,24 +1,24 @@
--- 164 -- on bare metal the program IS the kernel: a gate and the entry that serves it
--- (OFFEN O31 + O32, Opus agent L).
---
--- `beispiele/163` binds `sys_write` for Linux and for the bare-metal image's kernel entry.
--- This unit has ONE target, `metal`, and brings the kernel along: `entry systemruf vector
--- 0x80` is the other side of the gate's `int $0x80`. The metal runtime installs it at the
--- runtime's own kernel-service slot (`metall_idt_setze`), so the gate call runs this
--- unit's `verteiler`, with the registers the gate's binding loads -- the number in `rax`,
--- `fd`/`buf`/`len` in `rdi`/`rsi`/`rdx` -- as its parameters (`N561` holds the entry's
--- `regs in` against the dispatch's signature), and its answer back in `rax`.
---
--- The service is small on purpose: number 1 answers the length for descriptor 1 and
--- `-EBADF` for every other descriptor; every other number answers `-ENOSYS`, which the
--- gate's `errors` map does not admit -- the hardware outcome under
--- `metal_kernel_contract`, so no caller of this unit issues one. The negative answers are
--- written as the unsigned words the register carries (2^64 - 9, 2^64 - 38).
---
--- Stage 11 boots it (`instrumente/pruefe-metall.sh`, image `metall164`): `schreibe(1, 3)`
--- answers 3 and `schreibe(7, 3)` answers the `BadFd` arm -- through a real `int $0x80`
--- into this unit's own entry, no C kernel in the image. Stage 12 links it freestanding
--- and does NOT list it hosted-only: nothing outside the image stands behind the gate.
+// 164 -- on bare metal the program IS the kernel: a gate and the entry that serves it
+// (OFFEN O31 + O32, Opus agent L).
+//
+// `beispiele/163` binds `sys_write` for Linux and for the bare-metal image's kernel entry.
+// This unit has ONE target, `metal`, and brings the kernel along: `entry systemruf vector
+// 0x80` is the other side of the gate's `int $0x80`. The metal runtime installs it at the
+// runtime's own kernel-service slot (`metall_idt_setze`), so the gate call runs this
+// unit's `verteiler`, with the registers the gate's binding loads -- the number in `rax`,
+// `fd`/`buf`/`len` in `rdi`/`rsi`/`rdx` -- as its parameters (`N561` holds the entry's
+// `regs in` against the dispatch's signature), and its answer back in `rax`.
+//
+// The service is small on purpose: number 1 answers the length for descriptor 1 and
+// `-EBADF` for every other descriptor; every other number answers `-ENOSYS`, which the
+// gate's `errors` map does not admit -- the hardware outcome under
+// `metal_kernel_contract`, so no caller of this unit issues one. The negative answers are
+// written as the unsigned words the register carries (2^64 - 9, 2^64 - 38).
+//
+// Stage 11 boots it (`instrumente/pruefe-metall.sh`, image `metall164`): `schreibe(1, 3)`
+// answers 3 and `schreibe(7, 3)` answers the `BadFd` arm -- through a real `int $0x80`
+// into this unit's own entry, no C kernel in the image. Stage 12 links it freestanding
+// and does NOT list it hosted-only: nothing outside the image stands behind the gate.
 
 module beispiel::eigener_kern {
 
@@ -43,7 +43,7 @@ syscall write(fd : u64, buf : u64, len : u64) -> u64 or IoError
     effects { pure }
     costs <= 8 ops;
 
--- The user side: 3 bytes to descriptor `fd`; the `BadFd` arm answers 900.
+// The user side: 3 bytes to descriptor `fd`; the `BadFd` arm answers 900.
 impl fn schreibe(fd : u64, len : u64) -> u64
     requires len <= 1024
     effects { pure }
@@ -56,7 +56,7 @@ impl fn schreibe(fd : u64, len : u64) -> u64
     return n;
 }
 
--- The kernel side: the entry the gate's `int $0x80` lands in.
+// The kernel side: the entry the gate's `int $0x80` lands in.
 entry systemruf vector 0x80 arch x86_64 {
     regs in  { nr : rax, a0 : rdi, a1 : rsi, a2 : rdx }
     regs out { ret : rax }

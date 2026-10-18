@@ -1,11 +1,11 @@
--- erwartet: W003
--- **A `concurrent` pair over an incomplete hull refuses -- fail-closed.**
---
--- `h_a` writes `T`, `h_b` writes `U`: disjoint on the visible hull. But
--- `h_b` recurses, so its hull is a lower bound (`cycle over …`, booked
--- beside as Hinweis `E009`) -- and a lower bound that looks disjoint is the
--- shape of a missed race. The declaration falls as `W003`, never passes
--- silently. The companion half is `706` (unresolvable member).
+// erwartet: W003
+// **A `concurrent` pair over an incomplete hull refuses -- fail-closed.**
+//
+// `h_a` writes `T`, `h_b` writes `U`: disjoint on the visible hull. But
+// `h_b` recurses, so its hull is a lower bound (`cycle over …`, booked
+// beside as Hinweis `E009`) -- and a lower bound that looks disjoint is the
+// shape of a missed race. The declaration falls as `W003`, never passes
+// silently. The companion half is `706` (unresolvable member).
 module gift707 {
 
 const TIEFE : u32 = 512;

@@ -1,11 +1,11 @@
--- erwartet: O007
--- **Das Konstrukt, das fuer die Bootreihenfolge da ist, prueft seine eigene Reihenfolge
--- nicht** -- bis zum 2026-08-20.
---
--- «B37» hat die Ordnung auf linearen Marken gebaut, weil *ein linearer Wert eine Kette
--- erzwingt, aber nicht WELCHE* -- und genau diese Frage blieb an der Stelle offen, an der sie
--- herkam. Die Schritte tragen keine Marke; ihre Funktionen tragen `advances`, und die Kette
--- muss schliessen.
+// erwartet: O007
+// **Das Konstrukt, das fuer die Bootreihenfolge da ist, prueft seine eigene Reihenfolge
+// nicht** -- bis zum 2026-08-20.
+//
+// «B37» hat die Ordnung auf linearen Marken gebaut, weil *ein linearer Wert eine Kette
+// erzwingt, aber nicht WELCHE* -- und genau diese Frage blieb an der Stelle offen, an der sie
+// herkam. Die Schritte tragen keine Marke; ihre Funktionen tragen `advances`, und die Kette
+// muss schliessen.
 
 module gift {
 

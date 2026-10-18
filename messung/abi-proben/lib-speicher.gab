@@ -1,8 +1,8 @@
--- Bibliothek A -- der Zwischenspeicher. Ihr Sperrrang ist FUER SICH vergeben.
--- **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
--- Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
--- exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
--- sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
+// Bibliothek A -- der Zwischenspeicher. Ihr Sperrrang ist FUER SICH vergeben.
+// **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
+// Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
+// exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
+// sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
 module speicher {
 
 pub const NEINTRAEGE : u32 = 64;

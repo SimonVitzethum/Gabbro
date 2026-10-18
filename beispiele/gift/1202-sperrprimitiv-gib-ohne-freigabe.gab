@@ -1,16 +1,16 @@
--- erwartet: N482
--- 1202 -- **a give without a release (OFFEN O26, Opus lane O25).**
---
--- The take acquires: it swaps on `HALTER`, declared `acquire`, so the emitter
--- lowers the swap `memory_order_acq_rel`. But the give frees the lock through
--- a SECOND word, `FREI`, declared `relaxed` -- a store that carries no view.
--- The next holder's acquire then reads nothing the previous holder released:
--- the critical sections are unordered in C11 although the take is fine.
---
--- `N482` refuses the give; `N481` stays silent (the take reads an ordered
--- atomic) and so does `N483` (the give releases on no ordered word at all --
--- that is `N482`'s finding, not a pairing one). `N042` refuses the C names,
--- as for every own primitive.
+// erwartet: N482
+// 1202 -- **a give without a release (OFFEN O26, Opus lane O25).**
+//
+// The take acquires: it swaps on `HALTER`, declared `acquire`, so the emitter
+// lowers the swap `memory_order_acq_rel`. But the give frees the lock through
+// a SECOND word, `FREI`, declared `relaxed` -- a store that carries no view.
+// The next holder's acquire then reads nothing the previous holder released:
+// the critical sections are unordered in C11 although the take is fine.
+//
+// `N482` refuses the give; `N481` stays silent (the take reads an ordered
+// atomic) and so does `N483` (the give releases on no ordered word at all --
+// that is `N482`'s finding, not a pairing one). `N042` refuses the C names,
+// as for every own primitive.
 
 module gift::gib_ohne_freigabe {
 

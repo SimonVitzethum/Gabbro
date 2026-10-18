@@ -1,25 +1,25 @@
--- 29 -- **Die Wand und die Tuer.** D1: ein undurchsichtiger Neutyp hat keine implizite
--- Umwandlung -- sonst ist er ein `typedef`, und genau das ist das Loch, gegen das er steht.
---
--- Bis 2026-08-18 biss `opaque` an der RECHNUNG (`D003`) und liess die Umwandlung in BEIDE
--- Richtungen still durch. *Es fehlte nicht die Tuer, sondern die Wand -- und eine Tuer in
--- einer Wand, die es nicht gibt, ist keine.*
---
--- **Die Tuer steht da, wo die Dokumente sie hinstellen:** „opaque, one generator" mit
--- Modulgrenze. Im erklaerenden Modul ist die Darstellung bekannt; ausserhalb ist sie es
--- nicht. Damit bekommt die Modulgrenze ihre erste Bedeutung in diesem Pruefer.
+// 29 -- **Die Wand und die Tuer.** D1: ein undurchsichtiger Neutyp hat keine implizite
+// Umwandlung -- sonst ist er ein `typedef`, und genau das ist das Loch, gegen das er steht.
+//
+// Bis 2026-08-18 biss `opaque` an der RECHNUNG (`D003`) und liess die Umwandlung in BEIDE
+// Richtungen still durch. *Es fehlte nicht die Tuer, sondern die Wand -- und eine Tuer in
+// einer Wand, die es nicht gibt, ist keine.*
+//
+// **Die Tuer steht da, wo die Dokumente sie hinstellen:** „opaque, one generator" mit
+// Modulgrenze. Im erklaerenden Modul ist die Darstellung bekannt; ausserhalb ist sie es
+// nicht. Damit bekommt die Modulgrenze ihre erste Bedeutung in diesem Pruefer.
 
 module beispiel::adressen {
 
--- **`pub` stand hier nicht** und musste stehen (2026-08-19): dieses Beispiel LEBT von der
--- Modulgrenze, und `beispiel::nutzer` fuehrt `use beispiel::adressen::Pa;`. Bis `N025`
--- gebaut war, las das Wort niemand -- sieben Deklarationsarten tragen `oeffentlich`, und
--- keine einzige Stelle sah es an. *Die Wand, mit der sich `D004` begruendet, stand auf einem
--- Wort ohne Leser.*
+// **`pub` stand hier nicht** und musste stehen (2026-08-19): dieses Beispiel LEBT von der
+// Modulgrenze, und `beispiel::nutzer` fuehrt `use beispiel::adressen::Pa;`. Bis `N025`
+// gebaut war, las das Wort niemand -- sieben Deklarationsarten tragen `oeffentlich`, und
+// keine einzige Stelle sah es an. *Die Wand, mit der sich `D004` begruendet, stand auf einem
+// Wort ohne Leser.*
 pub opaque type Pa = u64;
 
--- **Der eine Erzeuger.** Hier ist die Darstellung bekannt, also ist die Umwandlung erlaubt --
--- und sie steht an EINER Stelle statt an jeder Rufstelle.
+// **Der eine Erzeuger.** Hier ist die Darstellung bekannt, also ist die Umwandlung erlaubt --
+// und sie steht an EINER Stelle statt an jeder Rufstelle.
 pub impl fn pa_aus_zahl(z : u64) -> Pa
     effects { pure }
     costs   <= 2 ops
@@ -27,7 +27,7 @@ pub impl fn pa_aus_zahl(z : u64) -> Pa
     return z;
 }
 
--- Und der eine Weg hinaus, fuer den, der die Zahl wirklich braucht.
+// Und der eine Weg hinaus, fuer den, der die Zahl wirklich braucht.
 pub impl fn pa_als_zahl(p : Pa) -> u64
     effects { pure }
     costs   <= 2 ops
@@ -41,8 +41,8 @@ module beispiel::nutzer {
 
 use beispiel::adressen::Pa;
 
--- **Hier faellt die Umwandlung** -- der Nutzer geht durch die Tuer oder gar nicht.
--- Was er NICHT kann: `return z;` mit einem `u64`. Das ist `D004`, und die Giftprobe zeigt es.
+// **Hier faellt die Umwandlung** -- der Nutzer geht durch die Tuer oder gar nicht.
+// Was er NICHT kann: `return z;` mit einem `u64`. Das ist `D004`, und die Giftprobe zeigt es.
 extern fn pa_aus_zahl(z : u64) -> Pa effects { pure } costs <= 2 ops;
 
 pub impl fn erste_seite() -> Pa

@@ -1,8 +1,8 @@
--- erwartet: K003
---
--- Eine Kostenzusage ueber einem Aufruf, der selbst keine nennt. Die Zahl waere dann eine
--- Zahl ueber Unbekanntem -- entweder der Gerufene bekommt `costs`, oder der Rufer gibt
--- seine Zusage auf. Ein drittes gibt es nicht.
+// erwartet: K003
+//
+// Eine Kostenzusage ueber einem Aufruf, der selbst keine nennt. Die Zahl waere dann eine
+// Zahl ueber Unbekanntem -- entweder der Gerufene bekommt `costs`, oder der Rufer gibt
+// seine Zusage auf. Ein drittes gibt es nicht.
 
 module gift {
 

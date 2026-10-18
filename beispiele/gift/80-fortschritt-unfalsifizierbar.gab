@@ -1,9 +1,9 @@
--- erwartet: S004
--- **Eine Annahme, der keine Sonde je widersprechen kann, beendet die Schleife nur auf dem
--- Papier.** `SYNTAX.md` §8.3 sagt es genau andersherum: *„der Watchdog IST der
--- Falsifikator"*. Nimmt man ihm seinen Gegenstand, bleibt von `progress` ein Wunsch.
---
--- *Die Gegenrichtung zu «79»: hier IST der Zeuge erklaert -- nur eben unwiderlegbar.*
+// erwartet: S004
+// **Eine Annahme, der keine Sonde je widersprechen kann, beendet die Schleife nur auf dem
+// Papier.** `SYNTAX.md` §8.3 sagt es genau andersherum: *„der Watchdog IST der
+// Falsifikator"*. Nimmt man ihm seinen Gegenstand, bleibt von `progress` ein Wunsch.
+//
+// *Die Gegenrichtung zu «79»: hier IST der Zeuge erklaert -- nur eben unwiderlegbar.*
 module gift {
 
 type Zustand = { fertig : u32, };

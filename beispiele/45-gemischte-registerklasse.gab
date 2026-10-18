@@ -1,37 +1,37 @@
--- 45 -- **Ein Register mit GEMISCHTER Zugriffsklasse** («B23»), und die Klasse beisst jetzt.
---
--- Zwei Befunde vom 2026-08-20, und der erste ist der groessere:
---
--- 1. **`class` an einem Register war eine Zusage, die kein Pass eingeloest hat.**
---    `PFLICHTEN.txt` buchte *„a `class r` register is never written, a `class w` never read"*
---    als erledigt **durch `R002`/`R003`** -- und die beiden pruefen ZEIGERRECHTE. Die Notiz
---    an `R003` sagte den Satz sogar (*„`class w` on a register means the same"*), und der
---    Code tat ihn nicht. Gemessen: `return d.NUR_W.A;` gab null Fehler.
---    *Eine Buchung, die auf eine Regel zeigt, die anderswohin sieht, ist schlimmer als eine
---    offene Zeile -- sie sieht geschlossen aus.*
---
--- 2. **«B23»: `regdecl` trug EINE Klasse fuer das ganze Wort.** VT-ds `FSTS` ist gemischt:
---    7:0 sind RW1C (Fehlerbits, die man mit einer Eins loescht), 15:8 sind `FRI` -- der
---    Index, an dem der Treiber den Fehlereintrag ueberhaupt FINDET, und der nur lesbar ist.
---    Ohne die Klasse je Feld war FRI untypisierbar.
---
--- Kein neues Terminal: `class` steht seit jeher in der Grammatik. Ein Feld ohne eigenes
--- Wort erbt die Klasse seines Registers.
+// 45 -- **Ein Register mit GEMISCHTER Zugriffsklasse** («B23»), und die Klasse beisst jetzt.
+//
+// Zwei Befunde vom 2026-08-20, und der erste ist der groessere:
+//
+// 1. **`class` an einem Register war eine Zusage, die kein Pass eingeloest hat.**
+//    `PFLICHTEN.txt` buchte *„a `class r` register is never written, a `class w` never read"*
+//    als erledigt **durch `R002`/`R003`** -- und die beiden pruefen ZEIGERRECHTE. Die Notiz
+//    an `R003` sagte den Satz sogar (*„`class w` on a register means the same"*), und der
+//    Code tat ihn nicht. Gemessen: `return d.NUR_W.A;` gab null Fehler.
+//    *Eine Buchung, die auf eine Regel zeigt, die anderswohin sieht, ist schlimmer als eine
+//    offene Zeile -- sie sieht geschlossen aus.*
+//
+// 2. **«B23»: `regdecl` trug EINE Klasse fuer das ganze Wort.** VT-ds `FSTS` ist gemischt:
+//    7:0 sind RW1C (Fehlerbits, die man mit einer Eins loescht), 15:8 sind `FRI` -- der
+//    Index, an dem der Treiber den Fehlereintrag ueberhaupt FINDET, und der nur lesbar ist.
+//    Ohne die Klasse je Feld war FRI untypisierbar.
+//
+// Kein neues Terminal: `class` steht seit jeher in der Grammatik. Ein Feld ohne eigenes
+// Wort erbt die Klasse seines Registers.
 
 module beispiel45 {
 
 const FRR_ANZAHL : u32 = 256;
 
 device Vtd(basis : u64) at mmio {
-    -- Gemischt: die zwei Fehlerbits loescht man durch Schreiben einer Eins, den Index liest
-    -- man nur. Beide stehen im selben Wort, und beide tragen ihre eigene Wahrheit.
+    // Gemischt: die zwei Fehlerbits loescht man durch Schreiben einer Eins, den Index liest
+    // man nur. Beide stehen im selben Wort, und beide tragen ihre eigene Wahrheit.
     reg FSTS : u32 @0x34 class rw fields {
         PFO @0  class w1c,
         PPF @1  class w1c,
         FRI @[15:8] class r,
     }
 
-    -- Und die reinen Faelle daneben, damit die Regel an beiden Enden gemessen ist.
+    // Und die reinen Faelle daneben, damit die Regel an beiden Enden gemessen ist.
     reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, }
     reg GSTS : u32 @0x1c class r  fields { TES @31, RTPS @30, }
 
@@ -42,7 +42,7 @@ device Vtd(basis : u64) at mmio {
         effects  { writes GCMD }
 }
 
--- **Der Index wird gelesen** -- `class r` an einem `class rw`-Register.
+// **Der Index wird gelesen** -- `class r` an einem `class rw`-Register.
 impl fn fehlerindex(v : ptr<mmio, rw> Vtd) -> u32
     effects { reads v.FSTS }
     costs    <= 4 ops
@@ -50,28 +50,28 @@ impl fn fehlerindex(v : ptr<mmio, rw> Vtd) -> u32
     return v.FSTS.FRI;
 }
 
--- **Und die Fehlerbits werden geloescht** -- `w1c` ist schreibbar UND lesbar; eine Eins
--- loescht. Genau darum ist es keine eigene Verbotsklasse, sondern eine Nebenwirkung.
---
--- > **3. BEFUND, 2026-09-01, und er stand hier AUSGELIEFERT.** Bis heute stand an dieser
--- > Stelle `v.FSTS.PFO = 1;`, und der Erzeuger baute daraus einen Lese-Aendere-Schreib-Zug:
--- >
--- > ```c
--- > uint32_t _v = (*(volatile uint32_t *)(v->basis + 52));
--- > (*(volatile uint32_t *)(v->basis + 52)) =
--- >     (uint32_t)((_v & (uint32_t)~(uint32_t)1u) | ((uint32_t)(1) << 0u & (uint32_t)1u));
--- > ```
--- >
--- > **Auf einem W1C-Wort quittiert das jedes Bit, das gerade stand.** Das Lesen holt `PPF`
--- > mit, das Zurueckschreiben setzt die Eins wieder -- und eine Eins LOESCHT. Ein Treiber,
--- > der `PFO` quittiert, verliert lautlos den Fehler, den `PPF` gemeldet hat.
--- >
--- > Der Erzeuger sah nur die Klasse des REGISTERS (`class rw`), nie die des Feldes. *Null
--- > Fehler in jedem Pass, uebersetzt unter `-Werror`, und falsch.* `R012` sagt es jetzt.
---
--- **Die richtige Form ist der Schreibzug auf das ganze Wort**: eine Eins an Bit 0, Nullen
--- ueberall sonst. Kein Lesen, also nichts, was versehentlich mitquittiert wird -- das C ist
--- ein einziger `volatile`-Speicherzug.
+// **Und die Fehlerbits werden geloescht** -- `w1c` ist schreibbar UND lesbar; eine Eins
+// loescht. Genau darum ist es keine eigene Verbotsklasse, sondern eine Nebenwirkung.
+//
+// > **3. BEFUND, 2026-09-01, und er stand hier AUSGELIEFERT.** Bis heute stand an dieser
+// > Stelle `v.FSTS.PFO = 1;`, und der Erzeuger baute daraus einen Lese-Aendere-Schreib-Zug:
+// >
+// > ```c
+// > uint32_t _v = (*(volatile uint32_t *)(v->basis + 52));
+// > (*(volatile uint32_t *)(v->basis + 52)) =
+// >     (uint32_t)((_v & (uint32_t)~(uint32_t)1u) | ((uint32_t)(1) << 0u & (uint32_t)1u));
+// > ```
+// >
+// > **Auf einem W1C-Wort quittiert das jedes Bit, das gerade stand.** Das Lesen holt `PPF`
+// > mit, das Zurueckschreiben setzt die Eins wieder -- und eine Eins LOESCHT. Ein Treiber,
+// > der `PFO` quittiert, verliert lautlos den Fehler, den `PPF` gemeldet hat.
+// >
+// > Der Erzeuger sah nur die Klasse des REGISTERS (`class rw`), nie die des Feldes. *Null
+// > Fehler in jedem Pass, uebersetzt unter `-Werror`, und falsch.* `R012` sagt es jetzt.
+//
+// **Die richtige Form ist der Schreibzug auf das ganze Wort**: eine Eins an Bit 0, Nullen
+// ueberall sonst. Kein Lesen, also nichts, was versehentlich mitquittiert wird -- das C ist
+// ein einziger `volatile`-Speicherzug.
 impl fn fehler_quittieren(v : ptr<mmio, rw> Vtd)
     effects { writes v.FSTS }
     costs    <= 4 ops
@@ -79,8 +79,8 @@ impl fn fehler_quittieren(v : ptr<mmio, rw> Vtd)
     v.FSTS = 1;
 }
 
--- Ein `class r`-Register wird gelesen, ein `class w` geschrieben -- die zwei Faelle, die
--- immer schon gelten sollten und bis heute niemand geprueft hat.
+// Ein `class r`-Register wird gelesen, ein `class w` geschrieben -- die zwei Faelle, die
+// immer schon gelten sollten und bis heute niemand geprueft hat.
 impl fn uebersetzung_steht(v : ptr<mmio, rw> Vtd) -> bool
     effects { reads v.GSTS }
     costs    <= 4 ops

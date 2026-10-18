@@ -1,25 +1,25 @@
--- erwartet: N448 allein
--- **1109 -- a `return` out of the `child` path.**
---
--- The gate is valid on purpose (`stack rsi`: bound, kept, answered --
--- `N446`/`N447` silent, and a gate stands behind the path, so `N450`
--- stays silent too). The child path returns out of the caller's frame,
--- into a frame that is no longer there. The tail
--- after the block (`return 0`) is the parent's, and it is fine; the fault
--- is the leaving statement inside, and only it falls.
---
--- Lane 249 narrowed this probe to its subject: it once read the caller
--- parameter (`let s = stapel; return s;`), an incidental spill read the
--- new `N452` owns. The bare `return` keeps the shape -- a `return` out
--- of the path -- with nothing else for any rule to say.
---
--- Without this rule NOTHING falls -- the emitted C is a braced block with
--- a `return`, and `cc -Werror` takes it. The gate is the shape probe of
--- 1107/1108 (not the raw clone, `1000` not an OS number).
---
--- Fix lane F3 (2026-09-21): `N450` is per region now -- a gate call must
--- dominate the `child` block. The probe calls the gate before the region
--- (the 155 shape) so `N450` stays silent and the probe keeps its one code.
+// erwartet: N448 allein
+// **1109 -- a `return` out of the `child` path.**
+//
+// The gate is valid on purpose (`stack rsi`: bound, kept, answered --
+// `N446`/`N447` silent, and a gate stands behind the path, so `N450`
+// stays silent too). The child path returns out of the caller's frame,
+// into a frame that is no longer there. The tail
+// after the block (`return 0`) is the parent's, and it is fine; the fault
+// is the leaving statement inside, and only it falls.
+//
+// Lane 249 narrowed this probe to its subject: it once read the caller
+// parameter (`let s = stapel; return s;`), an incidental spill read the
+// new `N452` owns. The bare `return` keeps the shape -- a `return` out
+// of the path -- with nothing else for any rule to say.
+//
+// Without this rule NOTHING falls -- the emitted C is a braced block with
+// a `return`, and `cc -Werror` takes it. The gate is the shape probe of
+// 1107/1108 (not the raw clone, `1000` not an OS number).
+//
+// Fix lane F3 (2026-09-21): `N450` is per region now -- a gate call must
+// dominate the `child` block. The probe calls the gate before the region
+// (the 155 shape) so `N450` stays silent and the probe keeps its one code.
 
 module gift1109 {
 

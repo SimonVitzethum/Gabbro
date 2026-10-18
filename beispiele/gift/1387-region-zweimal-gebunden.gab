@@ -1,10 +1,10 @@
--- erwartet: N571
--- **A name bound twice carries no region's extent.**
---
--- Both branches bind `seite` to a region of 4096 bytes, and each clause would be true of its
--- own binding. But the extent rides on the NAME (`N571` reads the index through `seite`
--- without knowing which binding reached it), so a name bound more than once in the body
--- carries no clause at all -- fail-closed, never "probably the right one".
+// erwartet: N571
+// **A name bound twice carries no region's extent.**
+//
+// Both branches bind `seite` to a region of 4096 bytes, and each clause would be true of its
+// own binding. But the extent rides on the NAME (`N571` reads the index through `seite`
+// without knowing which binding reached it), so a name bound more than once in the body
+// carries no clause at all -- fail-closed, never "probably the right one".
 module gift::region_zweimal_gebunden {
 
 pub reason MapFehler {

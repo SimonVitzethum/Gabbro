@@ -1,11 +1,11 @@
--- erwartet: H014
--- **Ein Rang, den niemand ausrechnen kann, ist keine Ordnung.**
---
--- `H006` und `H012` uebersprangen beide eine Sperre mit unbekanntem Rang, jeder mit einem
--- stillen `continue`. Verschachtelung in der falschen Richtung darunter: null Fehler.
---
--- *Dieselbe Klasse wie `bounded` ohne Zahl -- eine Klausel, die die Grammatik verlangt und
--- die niemand lesen kann.*
+// erwartet: H014
+// **Ein Rang, den niemand ausrechnen kann, ist keine Ordnung.**
+//
+// `H006` und `H012` uebersprangen beide eine Sperre mit unbekanntem Rang, jeder mit einem
+// stillen `continue`. Verschachtelung in der falschen Richtung darunter: null Fehler.
+//
+// *Dieselbe Klasse wie `bounded` ohne Zahl -- eine Klausel, die die Grammatik verlangt und
+// die niemand lesen kann.*
 module gift::rang_ohne_wert {
 
 static mut a : u32 = 0;

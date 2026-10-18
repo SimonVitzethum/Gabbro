@@ -1,11 +1,11 @@
--- erwartet: R001
--- **Die Platzierungsregel.** Die K-Bedingung verlangt, dass ALLE Schreibstellen des
--- Traegers erzeugt sind -- ein Geraet schreibt an jeder Grammatik vorbei. Ein `by ops`-
--- Traeger liegt deshalb in keinem `dma`-erreichbaren Bereich, wie die GDT.
+// erwartet: R001
+// **Die Platzierungsregel.** Die K-Bedingung verlangt, dass ALLE Schreibstellen des
+// Traegers erzeugt sind -- ein Geraet schreibt an jeder Grammatik vorbei. Ein `by ops`-
+// Traeger liegt deshalb in keinem `dma`-erreichbaren Bereich, wie die GDT.
 module gift {
 table Ring count 8 {
     slot { belegt : bool, }
-    -- Nachgezogen 2026-08-20: die Wortmenge von `ops` ist geschlossen («NL.1»).
+    // Nachgezogen 2026-08-20: die Wortmenge von `ops` ist geschlossen («NL.1»).
     ops insert, remove;
     occupied belegt;
 }

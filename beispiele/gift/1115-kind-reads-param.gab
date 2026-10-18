@@ -1,21 +1,21 @@
--- erwartet: N452
--- (Not `allein` since 2026-09-30, C-free lane, OFFEN O38: the region is a function of its own
--- now, so the C compiler refuses the read of a caller value too -- a second wall, as it should be.)
--- **1115 -- the `child` path reads an unhanded parameter (lane 249).**
---
--- The gate is valid on purpose (`stack rsi`: bound, kept, answered --
--- `N446`/`N447` silent, and a gate stands behind the path, so `N450`
--- stays silent too). The path is well-formed beside it: no `return`
--- inside (`N448` silent) and every path ends in the never-returning
--- `ausgang` (`N449` silent). What falls is the spill read: `art` is a
--- caller parameter the gate never handed -- the call handed `stapel`
--- (the bare-place argument at the stack parameter), and `rdi` does not
--- travel to the handed stack. On the child path `art` is a dead slot.
---
--- Without this rule NOTHING falls -- the emitted C is a braced block
--- passing `art` on, and `cc -Werror` takes it. Same shape gate as
--- 1107-1114 (not the raw clone, `1000` not an OS number; `abi linux`
--- names the template the stub is written against, not a kernel table).
+// erwartet: N452
+// (Not `allein` since 2026-09-30, C-free lane, OFFEN O38: the region is a function of its own
+// now, so the C compiler refuses the read of a caller value too -- a second wall, as it should be.)
+// **1115 -- the `child` path reads an unhanded parameter (lane 249).**
+//
+// The gate is valid on purpose (`stack rsi`: bound, kept, answered --
+// `N446`/`N447` silent, and a gate stands behind the path, so `N450`
+// stays silent too). The path is well-formed beside it: no `return`
+// inside (`N448` silent) and every path ends in the never-returning
+// `ausgang` (`N449` silent). What falls is the spill read: `art` is a
+// caller parameter the gate never handed -- the call handed `stapel`
+// (the bare-place argument at the stack parameter), and `rdi` does not
+// travel to the handed stack. On the child path `art` is a dead slot.
+//
+// Without this rule NOTHING falls -- the emitted C is a braced block
+// passing `art` on, and `cc -Werror` takes it. Same shape gate as
+// 1107-1114 (not the raw clone, `1000` not an OS number; `abi linux`
+// names the template the stub is written against, not a kernel table).
 
 module gift1115 {
 

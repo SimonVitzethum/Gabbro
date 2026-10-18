@@ -1,30 +1,30 @@
--- 25 -- `entrust`: der Raum, dessen INHALT Gabbro nicht kennt.
---
--- **Gabbro sagt ueber den Gast nichts.** Keine Kosten, keine Wirkungen, keine Terminierung,
--- keine Blattheit. Fuer den JIT-*Uebersetzer* gilt die Zusage vollstaendig -- Byteemission,
--- Tabellen, beschraenkte Schleifen. Fuer den GAST gilt Isolation statt Beweis.
---
--- *Das ist keine Luecke, sondern der Zweck eines Mikrokernels.* Was Gabbro sagt, ist der
--- Vertrag am EINTRITT, und die Annahme, unter der er gilt.
+// 25 -- `entrust`: der Raum, dessen INHALT Gabbro nicht kennt.
+//
+// **Gabbro sagt ueber den Gast nichts.** Keine Kosten, keine Wirkungen, keine Terminierung,
+// keine Blattheit. Fuer den JIT-*Uebersetzer* gilt die Zusage vollstaendig -- Byteemission,
+// Tabellen, beschraenkte Schleifen. Fuer den GAST gilt Isolation statt Beweis.
+//
+// *Das ist keine Luecke, sondern der Zweck eines Mikrokernels.* Was Gabbro sagt, ist der
+// Vertrag am EINTRITT, und die Annahme, unter der er gilt.
 
--- **Und der Erzeuger weigert sich BENANNT** (`C001`): `entrust` ist erklaert, geprueft und
--- bezeugt -- abgesenkt ist es nicht. Die Uebergabe an den Gast ist ein Registervertrag und
--- ein Sprung, also dieselbe Baustelle wie `entry`, und die steht offen. *Ein Erzeuger, der
--- hier raet, macht jeden Pass davor zunichte.*
+// **Und der Erzeuger weigert sich BENANNT** (`C001`): `entrust` ist erklaert, geprueft und
+// bezeugt -- abgesenkt ist es nicht. Die Uebergabe an den Gast ist ein Registervertrag und
+// ein Sprung, also dieselbe Baustelle wie `entry`, und die steht offen. *Ein Erzeuger, der
+// hier raet, macht jeden Pass davor zunichte.*
 
 module beispiel::gast {
 
--- Der `code`-Raum als deklariertes Ding. `at` nimmt einen NAMEN: ein `entrust` auf einen
--- gerechneten Wert waere ein Sprung an eine ausgerechnete Adresse.
+// Der `code`-Raum als deklariertes Ding. `at` nimmt einen NAMEN: ein `entrust` auf einen
+// gerechneten Wert waere ein Sprung an eine ausgerechnete Adresse.
 type Gastbild = {
     eintritt : u64,
     laenge   : u32,
 };
 
--- **Die Annahme ist Pflicht und nicht schmueckend.** Dass der Gast in seinem Raum bleibt,
--- ist eine Aussage ueber die Umgebung -- hier ueber die Seitentabellen, die ihn einsperren.
--- Der Falsifikator ist die Sonde, die einen Ausbruch bemerkt: **eine Annahme, der keine
--- Sonde je widersprechen kann, ist keine Isolation, sondern ein Wunsch.**
+// **Die Annahme ist Pflicht und nicht schmueckend.** Dass der Gast in seinem Raum bleibt,
+// ist eine Aussage ueber die Umgebung -- hier ueber die Seitentabellen, die ihn einsperren.
+// Der Falsifikator ist die Sonde, die einen Ausbruch bemerkt: **eine Annahme, der keine
+// Sonde je widersprechen kann, ist keine Isolation, sondern ein Wunsch.**
 assume gast_bleibt_in_seinem_raum
     "Der Gast springt nur an seine Eintrittsadresse und bleibt in seinem Raum -- die Seitentabellen erzwingen es."
     falsifier sonde_gastausbruch;
@@ -35,8 +35,8 @@ entrust jitpuffer at Gastbild arch x86_64 {
     assume gast_bleibt_in_seinem_raum;
 }
 
--- Der ERZEUGER des Gastcodes ist gewoehnliches Gabbro -- er schreibt Bytes in eine Tabelle,
--- und jede dieser Zeilen traegt ihre Klempnerei wie jede andere.
+// Der ERZEUGER des Gastcodes ist gewoehnliches Gabbro -- er schreibt Bytes in eine Tabelle,
+// und jede dieser Zeilen traegt ihre Klempnerei wie jede andere.
 const NBYTES : u32 = 4096;
 type Bytelage = u32 in 0 ..< NBYTES;
 
@@ -46,7 +46,7 @@ table Puffer count 4096 {
 
 impl fn byte_legen(p : ptr<normal, rw> Puffer, wo : Bytelage, was : u8)
     effects { writes p.slots }
-    -- **3 seit dem 2026-09-13 (Lane 139, F1)** -- der Zielindex `wo` wird ausgewertet.
+    // **3 seit dem 2026-09-13 (Lane 139, F1)** -- der Zielindex `wo` wird ausgewertet.
     costs   <= 3 ops
     deadline <= 20 ops arch x86_64 falsifier sonde_byte_legen
 {

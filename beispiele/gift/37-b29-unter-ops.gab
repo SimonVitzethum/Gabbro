@@ -1,17 +1,17 @@
--- erwartet: D001
---
--- **Die Sprechprobe, die der Papiertest vom 2026-08-14 verlangt.** Der historische Fall
--- «B29» ist `space.rs:1067` -- `refcount -= 1`, und die Null-Pruefung steht DANACH:
---
---     self.objects[obj].refcount -= 1;
---     if self.objects[obj].refcount == 0 { … }
---
--- Genau diese Zeile machte «B13» toedlich: der Unterlauf faellt nur ueber die
--- Buchfuehrungs-Invariante, und die war als Aussage nicht formulierbar.
---
--- Unter `ops` ist sie **nicht schreibbar**, und damit ist die Invariante keine Aussage mehr,
--- sondern eine Eigenschaft der erzeugten Operation. Das ist der dritte Ausgang, an der
--- Stelle, an der er zuerst gebraucht wurde.
+// erwartet: D001
+//
+// **Die Sprechprobe, die der Papiertest vom 2026-08-14 verlangt.** Der historische Fall
+// «B29» ist `space.rs:1067` -- `refcount -= 1`, und die Null-Pruefung steht DANACH:
+//
+//     self.objects[obj].refcount -= 1;
+//     if self.objects[obj].refcount == 0 { … }
+//
+// Genau diese Zeile machte «B13» toedlich: der Unterlauf faellt nur ueber die
+// Buchfuehrungs-Invariante, und die war als Aussage nicht formulierbar.
+//
+// Unter `ops` ist sie **nicht schreibbar**, und damit ist die Invariante keine Aussage mehr,
+// sondern eine Eigenschaft der erzeugten Operation. Das ist der dritte Ausgang, an der
+// Stelle, an der er zuerst gebraucht wurde.
 
 module gift {
 
@@ -24,11 +24,11 @@ table Objekte count NOBJEKTE {
         zaehler : Zaehler,
     }
 
-    -- **Nachgezogen 2026-08-20 (Stufe 5).** Hier stand `ops einfuegen, entfernen,
-    -- zaehler_senken;` -- drei erfundene deutsche Woerter. Die Wortmenge ist seit dem
-    -- 2026-08-19 GESCHLOSSEN (`opname = "insert" | "remove" | "relabel"`), und der Parser
-    -- hielt sie bis heute nicht. *Dass ausgerechnet die Giftprobe erfundene Woerter trug,
-    -- ist der Grund, aus dem die Luecke nicht auffiel.*
+    // **Nachgezogen 2026-08-20 (Stufe 5).** Hier stand `ops einfuegen, entfernen,
+    // zaehler_senken;` -- drei erfundene deutsche Woerter. Die Wortmenge ist seit dem
+    // 2026-08-19 GESCHLOSSEN (`opname = "insert" | "remove" | "relabel"`), und der Parser
+    // hielt sie bis heute nicht. *Dass ausgerechnet die Giftprobe erfundene Woerter trug,
+    // ist der Grund, aus dem die Luecke nicht auffiel.*
     ops insert, remove;
     occupied benutzt;
 }

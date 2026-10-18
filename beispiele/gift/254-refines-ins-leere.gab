@@ -1,7 +1,7 @@
--- erwartet: M131
--- `refines` nennt eine Spezifikation, die es nicht gibt. Das ist teurer als gar keine
--- Pflicht: der Beweiser nimmt die genannte Aussage an, und angenommen wird damit etwas,
--- das nirgends steht.
+// erwartet: M131
+// `refines` nennt eine Spezifikation, die es nicht gibt. Das ist teurer als gar keine
+// Pflicht: der Beweiser nimmt die genannte Aussage an, und angenommen wird damit etwas,
+// das nirgends steht.
 module gift::refines_ins_leere {
 
 lock BUCH protects { Buch } rank 0 held <= 100 ops;

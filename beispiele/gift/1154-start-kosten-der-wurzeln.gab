@@ -1,10 +1,10 @@
--- erwartet: K001
--- **1154 -- the starter's `costs` must pay for its roots (fix lane F4, review G12 F2.2).**
---
--- Lane 253 billed `start` as ONE primitive although the starter waits for every root.
--- The bill is the sum of the roots' declared costs plus two primitives per root (create
--- and join): here 2 x (20 + 2) = 44, which the promised 30 does not cover. Under the
--- old bill (1 op) this program passed.
+// erwartet: K001
+// **1154 -- the starter's `costs` must pay for its roots (fix lane F4, review G12 F2.2).**
+//
+// Lane 253 billed `start` as ONE primitive although the starter waits for every root.
+// The bill is the sum of the roots' declared costs plus two primitives per root (create
+// and join): here 2 x (20 + 2) = 44, which the promised 30 does not cover. Under the
+// old bill (1 op) this program passed.
 
 module gift1154 {
 

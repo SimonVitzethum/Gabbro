@@ -1,16 +1,16 @@
--- 02 -- `device`: Register als Typen, Uebergaenge statt Schreibvorgaenge.
---
--- Die Falle, gegen die das geschrieben ist, heisst nicht „GCMD lesen", sondern **„beim
--- Schreiben die Zustandsbits nicht mitschreiben"**. `mirrors` nennt EINMAL je Geraet, woher
--- die mitzufuehrenden Bits kommen; ein `store`, der sie fallenlaesst, ist damit nicht
--- schreibbar. `class w` allein tat das nicht.
+// 02 -- `device`: Register als Typen, Uebergaenge statt Schreibvorgaenge.
+//
+// Die Falle, gegen die das geschrieben ist, heisst nicht „GCMD lesen", sondern **„beim
+// Schreiben die Zustandsbits nicht mitschreiben"**. `mirrors` nennt EINMAL je Geraet, woher
+// die mitzufuehrenden Bits kommen; ein `store`, der sie fallenlaesst, ist damit nicht
+// schreibbar. `class w` allein tat das nicht.
 
 module beispiel::geraet {
 
 opaque type Pa = u64;
 
--- Die Registerlagen stehen einmal; jedes Bit ist benannt, und zwei Felder duerfen sich
--- nicht ueberschneiden (D2 -- der Namenspass faellt sonst mit N003).
+// Die Registerlagen stehen einmal; jedes Bit ist benannt, und zwei Felder duerfen sich
+// nicht ueberschneiden (D2 -- der Namenspass faellt sonst mit N003).
 device Vtd(basis : Pa) at mmio {
     reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, IRE @25, }
     reg GSTS : u32 @0x1c class r  fields { TES @31, RTPS @30, IRES @25, }
@@ -18,7 +18,7 @@ device Vtd(basis : Pa) at mmio {
     reg RTA  : u64 @0x20 class rw
     reg FSTS : u32 @0x34 class w1c fields { PPF @1, PFO @0, }
 
-    -- Register an laufzeitberechneter Basis: der Index ist durch `count` M1-beschraenkt.
+    // Register an laufzeitberechneter Basis: der Index ist durch `count` M1-beschraenkt.
     bank FRR at CAP.FRO * 16 stride 16 count 256 {
         reg FR_LO : u64 @0x0 class rw
         reg FR_HI : u64 @0x8 class rw
@@ -26,7 +26,7 @@ device Vtd(basis : Pa) at mmio {
 
     mirrors GCMD from GSTS;
 
-    -- Ein Uebergang nennt das GANZE geschriebene Wort, nicht das gesetzte Bit.
+    // Ein Uebergang nennt das GANZE geschriebene Wort, nicht das gesetzte Bit.
     transition wurzel_setzen { GCMD.SRTP: 0 -> 1 }
         effects { writes GCMD }
 
@@ -38,7 +38,7 @@ device Vtd(basis : Pa) at mmio {
         requires GSTS.TES == 1
         effects  { writes GCMD }
 
-    -- MEHRERE Orte in EINEM Zug: `caller` und `reply_owner` sind nie halb gesetzt.
+    // MEHRERE Orte in EINEM Zug: `caller` und `reply_owner` sind nie halb gesetzt.
     transition irq_umlenken { GCMD.IRE: 0 -> 1, GCMD.SRTP: 1 -> 1 }
         requires GSTS.RTPS == 1
         effects  { writes GCMD }
@@ -56,8 +56,8 @@ impl fn scharfschalten(v : ptr<mmio, rw> Vtd, wurzel : Pa)
     requires  aligned(wurzel, 4096)
     ensures   v.GSTS.TES == 1
     effects   { writes v.RTA, writes v.GCMD, reads v.GSTS }
-    -- Der `retry` allein sagt 1024 ops zu; eine Funktion, die ihn enthaelt, kann nicht
-    -- weniger zusagen. Die Zahl faellt aus dem Rumpf, nicht aus dem Wunsch.
+    // Der `retry` allein sagt 1024 ops zu; eine Funktion, die ihn enthaelt, kann nicht
+    // weniger zusagen. Die Zahl faellt aus dem Rumpf, nicht aus dem Wunsch.
     costs     <= 1032 ops
 {
     v.RTA = wurzel;
@@ -73,41 +73,41 @@ impl fn scharfschalten(v : ptr<mmio, rw> Vtd, wurzel : Pa)
 
 extern fn geraet_haengt() -> never effects { diverges };
 
--- ## «B18», 2026-08-28: die Registerklasse JE PHASE
---
--- Dieselbe Datei, ein zweites Geraet -- und die Klasse, die sich mit der Phase aendert. Bis
--- heute trug `regdecl` EINE Klasse fuer alle Zeit, und `F4` schrieb die gewuenschte Form als
--- **Kommentar** hin, weil sie nicht schreibbar war:
---
---     reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
---
--- **`class r` allein waere hier falsch gewesen** -- es verboete genau das Nullen, mit dem der
--- Treiber die bezahlte Falle einer wiederbenutzten Region entschaerft: in einem
--- weiterverwendeten Bereich haelt der `used`-Ring den Endstand des VORIGEN Treibers.
---
--- Der Traeger der Phase ist die Ordnung, die es seit «B37» gibt (`phasen.rs`, `O001`-`O012`)
--- -- **kein zweiter Mechanismus.** Und die Haelfte, die die Fundstelle schliesst, ist die
--- schwaechere: *wo die Stufe nicht bestimmt ist, gilt, was JEDE Stufe erlaubt.* Eine lineare
--- Marke bleibt damit eine Erlaubnis, die niemand halten muss -- gesagt ist nur, was ohne sie
--- folgt. Die Entscheidung mit beiden abgelehnten Formen steht in `messung/PHASENKLASSE.md`.
+// ## «B18», 2026-08-28: die Registerklasse JE PHASE
+//
+// Dieselbe Datei, ein zweites Geraet -- und die Klasse, die sich mit der Phase aendert. Bis
+// heute trug `regdecl` EINE Klasse fuer alle Zeit, und `F4` schrieb die gewuenschte Form als
+// **Kommentar** hin, weil sie nicht schreibbar war:
+//
+//     reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+//
+// **`class r` allein waere hier falsch gewesen** -- es verboete genau das Nullen, mit dem der
+// Treiber die bezahlte Falle einer wiederbenutzten Region entschaerft: in einem
+// weiterverwendeten Bereich haelt der `used`-Ring den Endstand des VORIGEN Treibers.
+//
+// Der Traeger der Phase ist die Ordnung, die es seit «B37» gibt (`phasen.rs`, `O001`-`O012`)
+// -- **kein zweiter Mechanismus.** Und die Haelfte, die die Fundstelle schliesst, ist die
+// schwaechere: *wo die Stufe nicht bestimmt ist, gilt, was JEDE Stufe erlaubt.* Eine lineare
+// Marke bleibt damit eine Erlaubnis, die niemand halten muss -- gesagt ist nur, was ohne sie
+// folgt. Die Entscheidung mit beiden abgelehnten Formen steht in `messung/PHASENKLASSE.md`.
 
--- Ein `device … at dma` senkt nur ab, wenn die Kohaerenz AUSGESPROCHEN ist: welche Barriere
--- ein DMA-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und der Erzeuger baut
--- sie nicht -- er traegt sie unter ihrem Namen (`C001`). *Die Sonde ist auf einem nicht
--- kohaerenten Traeger der Befund und nicht die Ausrede.*
--- **Bis zum 2026-08-31 stand hier EINE Annahme mit ZWEI Behauptungen und EINEM Falsifikator.**
--- Die Ordnung folgt nicht aus der Kohaerenz, und beide sind architekturabhaengig: auf AArch64
--- gilt die Ordnungsaussage fuer Device-nGnRnE, aber C11-`volatile` erzeugt dort keine Barriere
--- gegenueber normalem Speicher -- ein Deskriptorschreiben in kohaerentem RAM und ein
--- anschliessendes Doorbell-Schreiben ins Geraet koennen ohne `DSB` in falscher Reihenfolge
--- sichtbar werden. *Und der eine Falsifikator lief auf x86 und ging durch.*
+// Ein `device … at dma` senkt nur ab, wenn die Kohaerenz AUSGESPROCHEN ist: welche Barriere
+// ein DMA-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und der Erzeuger baut
+// sie nicht -- er traegt sie unter ihrem Namen (`C001`). *Die Sonde ist auf einem nicht
+// kohaerenten Traeger der Befund und nicht die Ausrede.*
+// **Bis zum 2026-08-31 stand hier EINE Annahme mit ZWEI Behauptungen und EINEM Falsifikator.**
+// Die Ordnung folgt nicht aus der Kohaerenz, und beide sind architekturabhaengig: auf AArch64
+// gilt die Ordnungsaussage fuer Device-nGnRnE, aber C11-`volatile` erzeugt dort keine Barriere
+// gegenueber normalem Speicher -- ein Deskriptorschreiben in kohaerentem RAM und ein
+// anschliessendes Doorbell-Schreiben ins Geraet koennen ohne `DSB` in falscher Reihenfolge
+// sichtbar werden. *Und der eine Falsifikator lief auf x86 und ging durch.*
 assume dma_kohaerent arch x86_64
     "Ein Traeger im dma-Raum ist kohaerent: Geraet und Kern sehen dieselben Zellen ohne Cache-Pflege."
     falsifier sonde_dma_kohaerenz;
 
--- Die ZWEITE Haelfte, mit eigenem Namen und eigener Sonde. `N024` haelt einen Falsifikator
--- an genau einer Pflicht: *zwei Pflichten auf einer Sonde heisst, ein gruener Lauf entlastet
--- beide, und eine davon hat nie jemand geprueft.*
+// Die ZWEITE Haelfte, mit eigenem Namen und eigener Sonde. `N024` haelt einen Falsifikator
+// an genau einer Pflicht: *zwei Pflichten auf einer Sonde heisst, ein gruener Lauf entlastet
+// beide, und eine davon hat nie jemand geprueft.*
 assume dma_sichtbarkeit_in_reihenfolge arch x86_64
     "Zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
     falsifier sonde_dma_reihenfolge;
@@ -115,8 +115,8 @@ assume dma_sichtbarkeit_in_reihenfolge arch x86_64
 linear ghost type QueuePhase order { setup, live };
 
 device Virtq(kopf : Pa) at dma {
-    -- Der Zaehler laeuft modulo 2^16 um («B32»), und seine Klasse haengt an der Phase: in
-    -- `setup` gehoert er dem Treiber, in `live` dem Geraet.
+    // Der Zaehler laeuft modulo 2^16 um («B32»), und seine Klasse haengt an der Phase: in
+    // `setup` gehoert er dem Treiber, in `live` dem Geraet.
     reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
     reg AVAIL_IDX : u16 wrapping @0x102 class rw
 }
@@ -130,20 +130,20 @@ extern fn queue_arm(p : QueuePhase) -> QueuePhase
     effects  { consumes p }
     costs    <= 8 ops;
 
--- Das Nullen steht VOR dem Schritt und ist erlaubt; nach `queue_arm` steht die Marke auf
--- `live`, und dieselbe Zuweisung waere dort ein `R006`. Die Gegenprobe dazu ist
--- `beispiele/gift/402-registerklasse-nach-dem-schritt.gab`.
---
--- **Und hier steht ein BEFUND daneben, der nicht «B18» gehoert** (2026-08-28): die Marke
--- geht durch `return queue_arm(p);` und nicht durch `let nach = queue_arm(p); return nach;`.
--- Die zweite Form uebersetzt nicht -- der Erzeuger loescht den Geist, laesst aber das
--- `return nach;` stehen, und `cc` meldet `'nach' undeclared`. `emit.rs::geist_wert` erkennt
--- einen blanken Namen nur als PARAMETER (Zeile 6897, gebaut 2026-08-20); eine
--- `let`-Bindung sieht es nicht. *Genau die Klasse, die der Kommentar dort selbst benennt --
--- „eine Loeschung, die den Wert nur an seiner Herkunft erkennt, uebersieht ihn ueberall
--- dort, wo er schon gebunden ist" -- und die vierte Stelle war bis heute unausgeloest, weil
--- keine `impl fn` im Korpus einen Geist zurueckgab.* Nicht hier repariert: das ist der
--- Erzeuger und nicht die Phasenklasse.
+// Das Nullen steht VOR dem Schritt und ist erlaubt; nach `queue_arm` steht die Marke auf
+// `live`, und dieselbe Zuweisung waere dort ein `R006`. Die Gegenprobe dazu ist
+// `beispiele/gift/402-registerklasse-nach-dem-schritt.gab`.
+//
+// **Und hier steht ein BEFUND daneben, der nicht «B18» gehoert** (2026-08-28): die Marke
+// geht durch `return queue_arm(p);` und nicht durch `let nach = queue_arm(p); return nach;`.
+// Die zweite Form uebersetzt nicht -- der Erzeuger loescht den Geist, laesst aber das
+// `return nach;` stehen, und `cc` meldet `'nach' undeclared`. `emit.rs::geist_wert` erkennt
+// einen blanken Namen nur als PARAMETER (Zeile 6897, gebaut 2026-08-20); eine
+// `let`-Bindung sieht es nicht. *Genau die Klasse, die der Kommentar dort selbst benennt --
+// „eine Loeschung, die den Wert nur an seiner Herkunft erkennt, uebersieht ihn ueberall
+// dort, wo er schon gebunden ist" -- und die vierte Stelle war bis heute unausgeloest, weil
+// keine `impl fn` im Korpus einen Geist zurueckgab.* Nicht hier repariert: das ist der
+// Erzeuger und nicht die Phasenklasse.
 impl fn warteschlange_scharf(q : ptr<dma, rw> Virtq, p : QueuePhase) -> QueuePhase
     advances setup -> live
     effects  { writes q, consumes p }
@@ -154,8 +154,8 @@ impl fn warteschlange_scharf(q : ptr<dma, rw> Virtq, p : QueuePhase) -> QueuePha
     return queue_arm(p);
 }
 
--- Und die Gegenrichtung: LESEN geht in beiden Stufen, auch ohne jede Marke. Der Schnitt
--- ueber `setup` und `live` ist `r`, und `r` traegt diese Funktion.
+// Und die Gegenrichtung: LESEN geht in beiden Stufen, auch ohne jede Marke. Der Schnitt
+// ueber `setup` und `live` ist `r`, und `r` traegt diese Funktion.
 impl fn used_lesen(q : ptr<dma, r> Virtq) -> u16
     effects { reads q }
     costs   <= 4 ops

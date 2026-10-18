@@ -1,9 +1,9 @@
--- erwartet: N233
--- Lane E5: an integer region with nowhere to go. The library function
--- carries no payload parameter -- the region fills the last parameter,
--- a pointer at the payload table, and here it names none -- so the
--- translation has no argument to become, and dropping it would be
--- fail-open.
+// erwartet: N233
+// Lane E5: an integer region with nowhere to go. The library function
+// carries no payload parameter -- the region fills the last parameter,
+// a pointer at the payload table, and here it names none -- so the
+// translation has no argument to become, and dropping it would be
+// fail-open.
 module m {
 table P count 1 {
     slot {

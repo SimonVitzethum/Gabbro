@@ -1,10 +1,10 @@
--- erwartet: N521
--- **1274 -- a member's `reset` beside a started root's use (lane 264).**
---
--- The started root `leser` allocates and reads while the concurrent member
--- `setzer` resets. `N462` resolves no arena `writes` (its carriers are
--- tables), so the sharing start root is this rule's alone; the setter
--- resets only, so `N522` stays silent beside it. Measured `["N521"]`.
+// erwartet: N521
+// **1274 -- a member's `reset` beside a started root's use (lane 264).**
+//
+// The started root `leser` allocates and reads while the concurrent member
+// `setzer` resets. `N462` resolves no arena `writes` (its carriers are
+// tables), so the sharing start root is this rule's alone; the setter
+// resets only, so `N522` stays silent beside it. Measured `["N521"]`.
 module gift1274 {
 
 arena A capacity 2 .. 8 of u16;

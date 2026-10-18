@@ -1,6 +1,6 @@
--- The decisive probe: does the effect hull survive an INDIRECT call?
--- `ausgeben` promises `pure`, and it calls something that writes through a pointer.
--- If this gives 0 errors, the whole item failed.
+// The decisive probe: does the effect hull survive an INDIRECT call?
+// `ausgeben` promises `pure`, and it calls something that writes through a pointer.
+// If this gives 0 errors, the whole item failed.
 
 module probe::huelle {
 

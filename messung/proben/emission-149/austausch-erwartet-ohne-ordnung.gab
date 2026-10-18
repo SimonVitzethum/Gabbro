@@ -1,16 +1,16 @@
--- ARM 2, must FALL at emit: exchange-`erwartet` without an ordering word (lane-149).
---
--- `S` carries no ordering word at all, which the emitter lowers to
--- `memory_order_relaxed` on BOTH sides. The exchange below awaits `{ n }` through a
--- load without acquire -- the await-side mirror of the same broken promise, and the
--- same answer: a named `C001` refusal. `w` and `r` fall at the lane-45 baseline
--- (`V004`/`V005`); the exchange line is this lane.
---
--- Measured verdicts (recorded after the run, not before):
---   pruefe: V005 x2 (w, r -- the lane-45 baseline), V002 x1 (x: the single-sided
---           `publishes` beside it went to `relaxed_mit_last`, so the awaited payload
---           has no counterpart left)
---   emit:   C001 x1 on the exchange line, no C for this unit
+// ARM 2, must FALL at emit: exchange-`erwartet` without an ordering word (lane-149).
+//
+// `S` carries no ordering word at all, which the emitter lowers to
+// `memory_order_relaxed` on BOTH sides. The exchange below awaits `{ n }` through a
+// load without acquire -- the await-side mirror of the same broken promise, and the
+// same answer: a named `C001` refusal. `w` and `r` fall at the lane-45 baseline
+// (`V004`/`V005`); the exchange line is this lane.
+//
+// Measured verdicts (recorded after the run, not before):
+//   pruefe: V005 x2 (w, r -- the lane-45 baseline), V002 x1 (x: the single-sided
+//           `publishes` beside it went to `relaxed_mit_last`, so the awaited payload
+//           has no counterpart left)
+//   emit:   C001 x1 on the exchange line, no C for this unit
 
 module probe::austausch_erwartet_ohne_ordnung {
 

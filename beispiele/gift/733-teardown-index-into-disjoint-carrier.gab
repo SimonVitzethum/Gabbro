@@ -1,20 +1,20 @@
--- erwartet: M147
--- **V4 index-vs-content precision, MUST-FAIL control beside a MUST-PASS twin.**
---
--- The twin (`loese`) is F01's teardown idiom in miniature: `obj` is read from
--- carrier `p.slots`, the read carrier is written twice, and `obj` is then used
--- ONLY as an index into the disjoint carrier `o.slots` (`narrow` subject place,
--- store, branch condition). Every one of those uses stays silent: an index value is a copied snapshot, writes to
--- the read carrier cannot change the copy, and `obj` is never re-compared
--- against `p.slots` -- it only selects a cell of `o.slots`. Re-reading
--- `p.slots[s].object` after the writes would read a FREED slot, so the refused
--- remedy would be wrong here, not just strict.
---
--- The control (`kontrolle`) is the same shape against ONE carrier: `idx` is
--- read from `k.slots`, `k.slots` is written, and `idx` then selects a cell of
--- `k.slots` itself -- and only that use falls, as `M147`. A run over this file
--- must report exactly one `M147`, at the control: that count is what proves
--- the twin silent.
+// erwartet: M147
+// **V4 index-vs-content precision, MUST-FAIL control beside a MUST-PASS twin.**
+//
+// The twin (`loese`) is F01's teardown idiom in miniature: `obj` is read from
+// carrier `p.slots`, the read carrier is written twice, and `obj` is then used
+// ONLY as an index into the disjoint carrier `o.slots` (`narrow` subject place,
+// store, branch condition). Every one of those uses stays silent: an index value is a copied snapshot, writes to
+// the read carrier cannot change the copy, and `obj` is never re-compared
+// against `p.slots` -- it only selects a cell of `o.slots`. Re-reading
+// `p.slots[s].object` after the writes would read a FREED slot, so the refused
+// remedy would be wrong here, not just strict.
+//
+// The control (`kontrolle`) is the same shape against ONE carrier: `idx` is
+// read from `k.slots`, `k.slots` is written, and `idx` then selects a cell of
+// `k.slots` itself -- and only that use falls, as `M147`. A run over this file
+// must report exactly one `M147`, at the control: that count is what proves
+// the twin silent.
 module gift733 {
 
 table Objekte count 8 {

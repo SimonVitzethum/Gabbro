@@ -1,6 +1,6 @@
--- erwartet: N455
--- **Copy-out of a string longer than the cell's max (SPRACHE-EFFIZIENZ #13).** A `string max 16`
--- does not fit a cell of max 8 (`N455`, the copy rule).
+// erwartet: N455
+// **Copy-out of a string longer than the cell's max (SPRACHE-EFFIZIENZ #13).** A `string max 16`
+// does not fit a cell of max 8 (`N455`, the copy rule).
 module gift::zelle_zu_lang_schreiben {
 
 const N : u32 = 4;

@@ -1,9 +1,9 @@
--- erwartet: N234
--- Lane E5: the contract names the payload parameter. No source value
--- ever stands for the payload at the call, so a precondition over it
--- is uncheckable -- the stage refuses it by name instead of checking
--- around it. Everything else about this call is clean: the region
--- fills the rows, the translator is the identity, the values fit.
+// erwartet: N234
+// Lane E5: the contract names the payload parameter. No source value
+// ever stands for the payload at the call, so a precondition over it
+// is uncheckable -- the stage refuses it by name instead of checking
+// around it. Everything else about this call is clean: the region
+// fills the rows, the translator is the identity, the values fit.
 module m {
 table SumTab count 4 {
     slot {

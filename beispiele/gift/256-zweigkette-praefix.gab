@@ -1,10 +1,10 @@
--- erwartet: K001
--- **Die `else if`-Kette zaehlt die VORANGEHENDEN Bedingungen mit** (2026-08-24,
--- `messung/K001.md`). `WennStmt::zweige` ist flach: wer Zweig i nimmt, hat die Bedingungen
--- 0..i ausgewertet, und wer `sonst` erreicht, alle. Bis zur Korrektur zaehlte der Pass je
--- Zweig nur die eigene Bedingung -- und dieselbe Bedeutung, sequentiell geschrieben, rechnete
--- 6 statt 2. **Eine Unterzaehlung, und das ist bei einer oberen Schranke die einzige
--- Fehlerrichtung, die zaehlt.**
+// erwartet: K001
+// **Die `else if`-Kette zaehlt die VORANGEHENDEN Bedingungen mit** (2026-08-24,
+// `messung/K001.md`). `WennStmt::zweige` ist flach: wer Zweig i nimmt, hat die Bedingungen
+// 0..i ausgewertet, und wer `sonst` erreicht, alle. Bis zur Korrektur zaehlte der Pass je
+// Zweig nur die eigene Bedingung -- und dieselbe Bedeutung, sequentiell geschrieben, rechnete
+// 6 statt 2. **Eine Unterzaehlung, und das ist bei einer oberen Schranke die einzige
+// Fehlerrichtung, die zaehlt.**
 module gift::zweigkette_praefix {
 
 impl fn kette(a : u32 in 0 .. 10, b : u32 in 0 .. 10, c : u32 in 0 .. 10) -> u32

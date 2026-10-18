@@ -1,7 +1,7 @@
--- erwartet: N585
--- The threshold stands only at run time (`n` is a parameter), so no emitted
--- comparison could hold the commit: the threshold is a translation-time
--- number or it is no threshold. Nothing else is wrong with this unit.
+// erwartet: N585
+// The threshold stands only at run time (`n` is a parameter), so no emitted
+// comparison could hold the commit: the threshold is a translation-time
+// number or it is no threshold. Nothing else is wrong with this unit.
 module beispiel::halde_schwelle_erst_zur_laufzeit {
 arena Vorrat capacity 0 .. 2 of u64 pb frei blw grenze;
 

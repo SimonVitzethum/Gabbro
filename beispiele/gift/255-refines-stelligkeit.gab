@@ -1,6 +1,6 @@
--- erwartet: M132
--- Beide Seiten muessen dieselbe Stelligkeit tragen. Eine Verfeinerung zwischen Funktionen
--- verschiedener Stellenzahl ist keine -- die erzeugte Pflicht truege ungebundene Variablen.
+// erwartet: M132
+// Beide Seiten muessen dieselbe Stelligkeit tragen. Eine Verfeinerung zwischen Funktionen
+// verschiedener Stellenzahl ist keine -- die erzeugte Pflicht truege ungebundene Variablen.
 module gift::refines_stelligkeit {
 
 lock BUCH protects { Buch } rank 0 held <= 100 ops;

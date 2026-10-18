@@ -1,10 +1,10 @@
--- `asm` bodies, one per machine, lowered to `call asm sideeffect` (llvm/assembler.rs).
---
--- Two declarations of one function with different `arch` are the per-machine pair: each target
--- lowers the one that names it (the other is skipped), and the program runs on both. Operands
--- come from the declaration (`in { x : "r" }`, `out { result : "=r" }`), `%[name]` is the
--- operand, `memory` is the clobber default. Gabbro does not read the text -- the same exit code
--- on x86_64 (native) and aarch64 (qemu-user) is what is measured, not a proof of the text.
+// `asm` bodies, one per machine, lowered to `call asm sideeffect` (llvm/assembler.rs).
+//
+// Two declarations of one function with different `arch` are the per-machine pair: each target
+// lowers the one that names it (the other is skipped), and the program runs on both. Operands
+// come from the declaration (`in { x : "r" }`, `out { result : "=r" }`), `%[name]` is the
+// operand, `memory` is the clobber default. Gabbro does not read the text -- the same exit code
+// on x86_64 (native) and aarch64 (qemu-user) is what is measured, not a proof of the text.
 module assembler {
 
 pub static mut ZELLE : u32 = 0;
@@ -53,7 +53,7 @@ impl fn summe(a : u64, b : u64) -> u64
         clobbers { memory }
     };
 
--- A body with no operands and no answer: a barrier, written per machine.
+// A body with no operands and no answer: a barrier, written per machine.
 impl fn schranke()
     effects { writes ZELLE }
     costs   <= 1 ops

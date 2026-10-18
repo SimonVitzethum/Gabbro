@@ -1,8 +1,8 @@
--- erwartet: N566
--- Gift 1359 -- **Two targets, one named assumption.** `metal` binds `sys_write` under
--- `linux_write_contract`: a gate's assumption is a statement about ONE kernel, and another
--- kernel keeps its contract under its own name, never silently under the first one's
--- (OFFEN O31).
+// erwartet: N566
+// Gift 1359 -- **Two targets, one named assumption.** `metal` binds `sys_write` under
+// `linux_write_contract`: a gate's assumption is a statement about ONE kernel, and another
+// kernel keeps its contract under its own name, never silently under the first one's
+// (OFFEN O31).
 
 module gift::zwei_ziele_eine_annahme {
 

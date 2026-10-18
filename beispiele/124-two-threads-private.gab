@@ -1,15 +1,15 @@
--- 124 -- **Two active threads with private tables and one shared lock (lane 175).**
---
--- The witness shape of `grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/MehrfadenZeuge.lean` in surface
--- syntax: thread 0 (`hauptA`) writes its private table `privA` unguarded, thread 1
--- (`hauptB`) its private table `privB` unguarded, and both update the shared table
--- `konto` under the lock `L` with the non-trivial invariant
--- `konto[0] == konto[1]`. Both earlier footprint checks refuse this program
--- (`mP_fussG_falsch`, `mP_fussS_falsch`); the new one admits it (`mP_fussMehr`):
--- the private carriers are thread-local, the shared carrier is invariant-protected.
--- Every rule stays silent: N290-N293 (locality + invariant), N294 (no signature
--- lock, hence no floor), N240 (empty held sets at both starts), W001 (both hulls
--- carry `locks L`).
+// 124 -- **Two active threads with private tables and one shared lock (lane 175).**
+//
+// The witness shape of `grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/MehrfadenZeuge.lean` in surface
+// syntax: thread 0 (`hauptA`) writes its private table `privA` unguarded, thread 1
+// (`hauptB`) its private table `privB` unguarded, and both update the shared table
+// `konto` under the lock `L` with the non-trivial invariant
+// `konto[0] == konto[1]`. Both earlier footprint checks refuse this program
+// (`mP_fussG_falsch`, `mP_fussS_falsch`); the new one admits it (`mP_fussMehr`):
+// the private carriers are thread-local, the shared carrier is invariant-protected.
+// Every rule stays silent: N290-N293 (locality + invariant), N294 (no signature
+// lock, hence no floor), N240 (empty held sets at both starts), W001 (both hulls
+// carry `locks L`).
 module beispiel::two_threads_private {
 
 const NSLOTS : u32 = 2;
@@ -39,10 +39,10 @@ lock L protects { konto } rank 0 held <= 100 ops
 
 impl fn setze(x : Stand)
     requires Held(L), konto.slots[0].stand == konto.slots[1].stand
-    -- O12: the `ensures` speaks about BOTH slots. Promising only
-    -- `konto.slots[0].stand == x` leaves `konto[1]` free, so a locked
-    -- section calling `setze` cannot re-establish the lock invariant
-    -- `konto[0] == konto[1]` at release from the callee's promise.
+    // O12: the `ensures` speaks about BOTH slots. Promising only
+    // `konto.slots[0].stand == x` leaves `konto[1]` free, so a locked
+    // section calling `setze` cannot re-establish the lock invariant
+    // `konto[0] == konto[1]` at release from the callee's promise.
     ensures  konto.slots[0].stand == konto.slots[1].stand && konto.slots[0].stand == x
     effects  { reads konto.slots, writes konto.slots, locks L }
     costs    <= 64 ops

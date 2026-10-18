@@ -1,12 +1,12 @@
--- erwartet: N450
--- **1140 -- two regions behind ONE gate call, and a call in a sibling branch (fix lane F3).**
---
--- One stack-gate call hands one stack to one region: under the "child entered
--- by jump" lowering the call has one target. The first region takes the call;
--- the parent runs past it (the child never falls through, `N449`) and reaches
--- the second region with no handoff of its own. The third region stands after
--- an `if` whose THEN-branch calls the gate -- on the other path no call stands
--- before it. Both fall under `N450`; the first region is legal.
+// erwartet: N450
+// **1140 -- two regions behind ONE gate call, and a call in a sibling branch (fix lane F3).**
+//
+// One stack-gate call hands one stack to one region: under the "child entered
+// by jump" lowering the call has one target. The first region takes the call;
+// the parent runs past it (the child never falls through, `N449`) and reaches
+// the second region with no handoff of its own. The third region stands after
+// an `if` whose THEN-branch calls the gate -- on the other path no call stands
+// before it. Both fall under `N450`; the first region is legal.
 
 module gift1140 {
 

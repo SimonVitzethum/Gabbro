@@ -1,26 +1,26 @@
--- erwartet: O013
--- **The boot space is retired -- and the sentence that carries the retirement is one no
--- probe can ever end.** Measured against the unchanged checker on 2026-09-04: swapping
--- `falsifier sonde_boot_unerreichbar` for `unfalsifiable "…"` in `beispiele/07` checked
--- with `41 items, 0 errors, 0 hints`, exit=0, and `gabbro annahmen` printed the generated
--- entry `stilllegung_boot_ende_ist_unerreichbar` as `nicht-falsifizierbar`.
---
--- **This file does everything the other three rules ask.** The clause names a parameter of
--- a `linear ghost type` and the `effects` consume the SAME token (`O011`); a postcondition
--- over `mappings of` says, negatively, what is gone (`O012`); the token a `raw fn` demands
--- is retired by somebody (`O010`). *Only the tail is a wish.*
---
--- **Why the same tail is admissible at `assume` and refused here.** An `assume` line may
--- stand alone -- 33 of the corpus's 44 assumptions do, and they carry nothing, which is
--- precisely why `unfalsifiable` exists as a class at all. A `retires` never stands alone:
--- `O010` demands that a token a `raw fn` requires be retired by SOMEBODY, so the clause is
--- load-bearing by construction, and `manifest.rs::stilllegungsannahmen` books the machine
--- half of layer S3 -- *an address without a mapping is no longer reachable* -- out of this
--- very clause. With `unfalsifiable` there, layer S3 has a name and no falsifier.
---
--- *The fourth site of one latch:* `S004` at `progress`, `N005` at `entrust`, `N031` at
--- `observed by`, `O013` here. **A construct that makes a promise may not rest on a
--- sentence nothing can refute.**
+// erwartet: O013
+// **The boot space is retired -- and the sentence that carries the retirement is one no
+// probe can ever end.** Measured against the unchanged checker on 2026-09-04: swapping
+// `falsifier sonde_boot_unerreichbar` for `unfalsifiable "…"` in `beispiele/07` checked
+// with `41 items, 0 errors, 0 hints`, exit=0, and `gabbro annahmen` printed the generated
+// entry `stilllegung_boot_ende_ist_unerreichbar` as `nicht-falsifizierbar`.
+//
+// **This file does everything the other three rules ask.** The clause names a parameter of
+// a `linear ghost type` and the `effects` consume the SAME token (`O011`); a postcondition
+// over `mappings of` says, negatively, what is gone (`O012`); the token a `raw fn` demands
+// is retired by somebody (`O010`). *Only the tail is a wish.*
+//
+// **Why the same tail is admissible at `assume` and refused here.** An `assume` line may
+// stand alone -- 33 of the corpus's 44 assumptions do, and they carry nothing, which is
+// precisely why `unfalsifiable` exists as a class at all. A `retires` never stands alone:
+// `O010` demands that a token a `raw fn` requires be retired by SOMEBODY, so the clause is
+// load-bearing by construction, and `manifest.rs::stilllegungsannahmen` books the machine
+// half of layer S3 -- *an address without a mapping is no longer reachable* -- out of this
+// very clause. With `unfalsifiable` there, layer S3 has a name and no falsifier.
+//
+// *The fourth site of one latch:* `S004` at `progress`, `N005` at `entrust`, `N031` at
+// `observed by`, `O013` here. **A construct that makes a promise may not rest on a
+// sentence nothing can refute.**
 module gift::stilllegung_ohne_falsifikator {
 
 type Pa = u64;

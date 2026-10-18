@@ -32,6 +32,7 @@ Strictly in this order; each step is Lean-first (model, then exporter/checker/co
  4. Termination, waiting bounds and fairness, stack depth, floats beyond the IEEE kernel.
  5. Benchmark against GCC `-O3`: only after the compiler lowers much more and strong optimisation is in (Simon).
  6. Housekeeping: C remnants (C templates in `schablonen.rs`, Lean folder `CBackend`, 13 compiler warnings), file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`), the old Isabelle `.thy` set.
+ 7. DONE 2026-10-18 (Simon's decision): comments as in most languages. `//` to end of line, nesting `/* */` (depth counter), `///` doc comment as trivia (`Token.doku`, `lexDoku`; `////` is ordinary); the `--` comment is removed everywhere; an open `/* ` is `L008`. Lean first (`Parser/Lex/Lexer.lean`, `LexerDoku.lean`: `lex_ohne_doku`), then `lex.rs`, then ~1270 `.gab`/`.gabi` files and the doc blocks rewritten (SATZKARTE 83). Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
 
 ---
 

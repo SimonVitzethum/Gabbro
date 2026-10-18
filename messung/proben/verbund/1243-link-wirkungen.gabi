@@ -1,9 +1,9 @@
--- @gabi 1
--- link-erwartet: N503
--- **Link probe 1243 (Opus agent E): the head hides a read -- the footprints do not compose.**
--- The head says `setze` only WRITES `konto`; the body also reads it. The importer's race and
--- footprint checks read exactly this summary, so the app checks clean against it; the link
--- refuses.
+// @gabi 1
+// link-erwartet: N503
+// **Link probe 1243 (Opus agent E): the head hides a read -- the footprints do not compose.**
+// The head says `setze` only WRITES `konto`; the body also reads it. The importer's race and
+// footprint checks read exactly this summary, so the app checks clean against it; the link
+// refuses.
 
 module bib {
 pub const NSLOTS : u32 = 2;

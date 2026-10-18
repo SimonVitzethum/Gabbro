@@ -1,9 +1,9 @@
--- 99 -- **The arena boundary.** A reservation that meets the hard bound
--- (`capacity 2 .. 2`): the first two allocations owe no `else`, the third
--- one does. An empty reservation (`capacity 0 .. 4`) owes it from the first
--- allocation on. Two arenas side by side; the stored values are indices of
--- the other arena -- plain numbers, and only the index positions are typed
--- by their arena. Fully clean, and it emits.
+// 99 -- **The arena boundary.** A reservation that meets the hard bound
+// (`capacity 2 .. 2`): the first two allocations owe no `else`, the third
+// one does. An empty reservation (`capacity 0 .. 4`) owes it from the first
+// allocation on. Two arenas side by side; the stored values are indices of
+// the other arena -- plain numbers, and only the index positions are typed
+// by their arena. Fully clean, and it emits.
 module beispiel::arena_grenze {
 arena Klein capacity 2 .. 2 of u16;
 arena Weit capacity 0 .. 4 of u16;

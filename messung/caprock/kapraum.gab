@@ -1,17 +1,17 @@
--- **Caprocks Kapabilitaetsraum in Gabbro** -- gemessen gegen
--- `../caprock-messbasis/crates/caprock-cap/src/space.rs` (1188 Zeilen) und die zwei
--- Verus-Beweise `verus/cap_cdt_tree.rs` und `verus/cap_cdt_acyclic.rs`.
---
--- **Der Gegenstand ist `revoke`, und er ist mit Absicht gewaehlt.** Im Bestand sind das
--- ZWEI geschachtelte begrenzte Schleifen, ein handgeschriebener Abstieg zum Blatt
--- (`descend_to_leaf`), ein Schrittzaehler, ein Ueberlaufzaehler und ein Kommentar, der
--- erklaert, warum beide Schranken noetig sind:
---
---     **Beide** Schleifen sind begrenzt (B-5.5), und zwar aus verschiedenen Gruenden: der
---     Abstieg endet bei einer zyklischen `first_child`-Kette nie, und die aeussere Schleife
---     endet nie, wenn `delete_leaf` den Baum nicht kleiner macht.
---
--- In Gabbro ist es EINE Zeile, und beide Schranken fallen aus der Deklaration.
+// **Caprocks Kapabilitaetsraum in Gabbro** -- gemessen gegen
+// `../caprock-messbasis/crates/caprock-cap/src/space.rs` (1188 Zeilen) und die zwei
+// Verus-Beweise `verus/cap_cdt_tree.rs` und `verus/cap_cdt_acyclic.rs`.
+//
+// **Der Gegenstand ist `revoke`, und er ist mit Absicht gewaehlt.** Im Bestand sind das
+// ZWEI geschachtelte begrenzte Schleifen, ein handgeschriebener Abstieg zum Blatt
+// (`descend_to_leaf`), ein Schrittzaehler, ein Ueberlaufzaehler und ein Kommentar, der
+// erklaert, warum beide Schranken noetig sind:
+//
+//     **Beide** Schleifen sind begrenzt (B-5.5), und zwar aus verschiedenen Gruenden: der
+//     Abstieg endet bei einer zyklischen `first_child`-Kette nie, und die aeussere Schleife
+//     endet nie, wenn `delete_leaf` den Baum nicht kleiner macht.
+//
+// In Gabbro ist es EINE Zeile, und beide Schranken fallen aus der Deklaration.
 
 module caprock::kapraum {
 
@@ -42,15 +42,15 @@ table Objekte count NOBJEKTE {
     }
 }
 
--- **Die Kante steht an der Tabelle** («B41b»). Caprocks `Mdb` fuehrt vier Felder --
--- `parent`, `first_child`, `next_sibling`, `prev_sibling` -- und `space.rs` sagt an keiner
--- Stelle, welches davon `descend_to_leaf` laeuft; das steht im Rumpf. Hier steht es einmal,
--- und `D006`-`D008` halten es gegen den Slot.
---
--- *`prev_sibling` fehlt in der `tree`-Klausel mit Absicht:* der Abstieg braucht es nicht,
--- und die Rueckwaertskette ist der Gegenstand eines EIGENEN Beweises
--- (`verus/cap_cdt_tree.rs`, Sibling-Konsistenz Code 5). Was `tree` nennt, ist die Kante,
--- an der die Domaene laeuft -- nicht alles, was die Struktur verknuepft.
+// **Die Kante steht an der Tabelle** («B41b»). Caprocks `Mdb` fuehrt vier Felder --
+// `parent`, `first_child`, `next_sibling`, `prev_sibling` -- und `space.rs` sagt an keiner
+// Stelle, welches davon `descend_to_leaf` laeuft; das steht im Rumpf. Hier steht es einmal,
+// und `D006`-`D008` halten es gegen den Slot.
+//
+// *`prev_sibling` fehlt in der `tree`-Klausel mit Absicht:* der Abstieg braucht es nicht,
+// und die Rueckwaertskette ist der Gegenstand eines EIGENEN Beweises
+// (`verus/cap_cdt_tree.rs`, Sibling-Konsistenz Code 5). Was `tree` nennt, ist die Kante,
+// an der die Domaene laeuft -- nicht alles, was die Struktur verknuepft.
 table Kapslots count NSLOTS {
     tree { parent elter, child erstes_kind, sibling naechstes }
 
@@ -66,23 +66,23 @@ table Kapslots count NSLOTS {
         vorheriges  : option index into Kapslots,
     }
 
-    -- Code 7 aus `cap_audit_cdt`: die Azyklizitaet der Elternkette. Der Verus-Beweis fuehrt
-    -- sie als "braucht ein Wohlfundiertheitsmass" und laesst sie offen; hier ist sie eine
-    -- Invariante der Tabelle, und `descendants of` ruht darauf.
+    // Code 7 aus `cap_audit_cdt`: die Azyklizitaet der Elternkette. Der Verus-Beweis fuehrt
+    // sie als "braucht ein Wohlfundiertheitsmass" und laesst sie offen; hier ist sie eine
+    // Invariante der Tabelle, und `descendants of` ruht darauf.
     invariant elternkette_azyklisch cost O(n) runs offline :
         forall s in slots of Kapslots : Kapslots.slots[s].generation >= 0;
 
-    -- Code 5: die Geschwisterkette ist gegenseitig invers.
+    // Code 5: die Geschwisterkette ist gegenseitig invers.
     invariant geschwister_invers cost O(n) runs offline :
         forall s in slots of Kapslots : Kapslots.slots[s].vorheriges == None
             => Kapslots.slots[s].elter == None
             || Kapslots.slots[s].belegt;
 }
 
--- ---------------------------------------------------------------------------------------
--- Ein Blatt loeschen. **`requires ist_blatt` ist keine Zierde** -- im Bestand ist es eine
--- Zusicherung, die `descend_to_leaf` herstellt und die niemand nachrechnet.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Ein Blatt loeschen. **`requires ist_blatt` ist keine Zierde** -- im Bestand ist es eine
+// Zusicherung, die `descend_to_leaf` herstellt und die niemand nachrechnet.
+// ---------------------------------------------------------------------------------------
 
 spec fn ist_blatt(c : ptr<normal, r> Kapslots, s : index into Kapslots) -> bool
     effects { pure }
@@ -113,22 +113,22 @@ impl fn blatt_loeschen(c : ptr<normal, rw> Kapslots,
     c.slots[s].vorheriges  = None;
 }
 
--- ---------------------------------------------------------------------------------------
--- **`revoke`. Eine Zeile.**
---
--- Was im Bestand daneben steht und hier NICHT steht:
---
---   * `let limit = self.cdt_step_limit();`      -- die Schranke faellt aus `count`
---   * `let mut ops = 0usize;`                    -- der Kostenpass zaehlt
---   * `while let Some(child) = …first_child`     -- die Domaene
---   * `descend_to_leaf(…, limit)`                -- die Laufform von `by consuming`
---   * `Err(()) => { self.note_overrun(); break; }` -- die Wohlfundiertheit ist Invariante
---   * `if ops > limit { self.note_overrun(); break; }`
---   * `if ops > self.peak_revoke_ops { … }`      -- eine Messung, keine Regel
---
--- **Die Zahl kommt aus dem Kostenpass, nicht aus einer Schaetzung**: NSLOTS mal die 200 ops
--- von `blatt_loeschen`, plus die Ladevorgaenge. Wer sie kleiner will, aendert den Rumpf.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// **`revoke`. Eine Zeile.**
+//
+// Was im Bestand daneben steht und hier NICHT steht:
+//
+//   * `let limit = self.cdt_step_limit();`      -- die Schranke faellt aus `count`
+//   * `let mut ops = 0usize;`                    -- der Kostenpass zaehlt
+//   * `while let Some(child) = …first_child`     -- die Domaene
+//   * `descend_to_leaf(…, limit)`                -- die Laufform von `by consuming`
+//   * `Err(()) => { self.note_overrun(); break; }` -- die Wohlfundiertheit ist Invariante
+//   * `if ops > limit { self.note_overrun(); break; }`
+//   * `if ops > self.peak_revoke_ops { … }`      -- eine Messung, keine Regel
+//
+// **Die Zahl kommt aus dem Kostenpass, nicht aus einer Schaetzung**: NSLOTS mal die 200 ops
+// von `blatt_loeschen`, plus die Ladevorgaenge. Wer sie kleiner will, aendert den Rumpf.
+// ---------------------------------------------------------------------------------------
 
 impl fn einsammeln(c : ptr<normal, rw> Kapslots,
                    o : ptr<normal, rw> Objekte,

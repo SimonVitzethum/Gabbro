@@ -1,12 +1,12 @@
--- erwartet: N067
--- **Gift 880 -- an `errors` map whose channel declares nothing.**
---
--- `or GibtEsNicht` names no `reason` of this unit. The arm names a target,
--- but with no declared channel no arm has cases to hit -- so the channel
--- itself falls, once, by name. Same rule as gifts 804/811/812 (`N067`): one
--- rule, and each probe pins one of its directions. This is the fourth
--- direction -- a channel that resolves nowhere -- beside the undeclared
--- target (832), the doubled errno (839) and the missing channel (840).
+// erwartet: N067
+// **Gift 880 -- an `errors` map whose channel declares nothing.**
+//
+// `or GibtEsNicht` names no `reason` of this unit. The arm names a target,
+// but with no declared channel no arm has cases to hit -- so the channel
+// itself falls, once, by name. Same rule as gifts 804/811/812 (`N067`): one
+// rule, and each probe pins one of its directions. This is the fourth
+// direction -- a channel that resolves nowhere -- beside the undeclared
+// target (832), the doubled errno (839) and the missing channel (840).
 
 module gift::syscall_undeclared_channel {
 

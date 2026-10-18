@@ -1,12 +1,12 @@
--- erwartet: O009
---
--- **Ein Funktionszeiger auf Bootcode UEBERLEBT die Marke.**
---
--- Schicht S1 des Bootsatzes faengt die statische Aufrufkette: nach `boot_end` typprueft der
--- Ruf nicht mehr. **Den Sprung faengt sie nicht.** Ein `&phys_schreiben`, das in einer
--- Verteiltabelle liegt, ist nach dem Verbrauch der Marke immer noch eine Adresse in `.boot`
--- -- und genau darum gibt `SPRACHE.md` §12 der Erreichbarkeit ueber Zeiger eine EIGENE
--- Schicht und keine Fussnote.
+// erwartet: O009
+//
+// **Ein Funktionszeiger auf Bootcode UEBERLEBT die Marke.**
+//
+// Schicht S1 des Bootsatzes faengt die statische Aufrufkette: nach `boot_end` typprueft der
+// Ruf nicht mehr. **Den Sprung faengt sie nicht.** Ein `&phys_schreiben`, das in einer
+// Verteiltabelle liegt, ist nach dem Verbrauch der Marke immer noch eine Adresse in `.boot`
+// -- und genau darum gibt `SPRACHE.md` §12 der Erreichbarkeit ueber Zeiger eine EIGENE
+// Schicht und keine Fussnote.
 
 module gift::zeigeraufraw {
 

@@ -1,11 +1,11 @@
--- erwartet: M147
--- **V4 freshness: the fresh and re-read arms stay silent, the stale control fires.**
---
--- Arm 1 decides on a fresh read with no intervening write (no taint lives here).
--- Arm 2 re-reads AFTER the write -- the re-read IS the refresh, so deciding on
--- `neu` stays silent. Arm 3 is the stale control: `alt` is read, then expired by
--- the write naming its carrier, then decided upon -- and only that decision falls,
--- as `M147`. A run over this file must report exactly one `M147`, at arm 3.
+// erwartet: M147
+// **V4 freshness: the fresh and re-read arms stay silent, the stale control fires.**
+//
+// Arm 1 decides on a fresh read with no intervening write (no taint lives here).
+// Arm 2 re-reads AFTER the write -- the re-read IS the refresh, so deciding on
+// `neu` stays silent. Arm 3 is the stale control: `alt` is read, then expired by
+// the write naming its carrier, then decided upon -- and only that decision falls,
+// as `M147`. A run over this file must report exactly one `M147`, at arm 3.
 module gift::frische_frisch {
 
 table Paket count 8 { slot { quelle : u32, ziel : u32, } }

@@ -1,8 +1,8 @@
--- erwartet: N022
--- **Eine einseitige Schwelle ohne `floor`.**
---
--- Die Groesse hat nach unten keinen Bereich, und `0 >= 0` besteht jede Pruefung. *Der vierte
--- der vier versprochenen Fehler.*
+// erwartet: N022
+// **Eine einseitige Schwelle ohne `floor`.**
+//
+// Die Groesse hat nach unten keinen Bereich, und `0 >= 0` besteht jede Pruefung. *Der vierte
+// der vier versprochenen Fehler.*
 module gift::schwelle_ohne_boden {
 
 static mut k : u32 = 0;

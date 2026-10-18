@@ -2848,9 +2848,9 @@ pub library fn kernel(n : u32) -> u32 payload KernelTab
 {
     return n;
 }
--- **Lane E3:** the serving translator -- identity, the region already in
--- payload form. Without it every fixture below would carry `N200` beside
--- the code it pins.
+// **Lane E3:** the serving translator -- identity, the region already in
+// payload form. Without it every fixture below would carry `N200` beside
+// the code it pins.
 translator build for kernel(region : KernelTab) -> KernelTab
     effects { pure }
     costs <= 8 ops

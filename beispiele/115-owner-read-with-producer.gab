@@ -1,14 +1,14 @@
--- 115 -- **`owner` with a producer, read path: the mark guards reads too.**
---
--- The write path stands in `beispiele/114`. This is the read half: `lies`
--- takes the mark and reads the table through it, `runde` mints exactly once
--- and moves the mark on. The single mint executes once -- one static site,
--- outside every loop, in a root nothing calls and no start names twice
--- (`D268` silent) -- and every access, read or write, holds the mark
--- (`D267` silent). Holding is by parameter: `lies` consumes the mark before
--- the read -- the entry holdings, not the use order, are what the guard reads.
---
--- Measured: 7 items, 0 errors, 0 hints; emits, and `cc` accepts the C.
+// 115 -- **`owner` with a producer, read path: the mark guards reads too.**
+//
+// The write path stands in `beispiele/114`. This is the read half: `lies`
+// takes the mark and reads the table through it, `runde` mints exactly once
+// and moves the mark on. The single mint executes once -- one static site,
+// outside every loop, in a root nothing calls and no start names twice
+// (`D268` silent) -- and every access, read or write, holds the mark
+// (`D267` silent). Holding is by parameter: `lies` consumes the mark before
+// the read -- the entry holdings, not the use order, are what the guard reads.
+//
+// Measured: 7 items, 0 errors, 0 hints; emits, and `cc` accepts the C.
 
 module beispiel::eigner_lesen_mit_erzeuger {
 

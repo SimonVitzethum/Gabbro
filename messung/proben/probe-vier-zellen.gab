@@ -1,22 +1,22 @@
--- W24-Vorlauf: **nimmt der Pruefer die vier `UNGEDECKT`-Formen wirklich an?**
---
--- `pruefe-grammatiktafel.py` liest die Prueferfehlertexte und schliesst aus ihrem
--- Schweigen, dass der Pruefer `chain`, `queue`, `state` und `threads` annimmt. **Ein
--- Schluss aus einem Text ist keine Messung** (W16) -- diese Datei fragt den Pruefer.
---
--- GEMESSEN am 2026-08-31, und der Waechter hatte zur Haelfte unrecht:
---
---     mit Kostenzusage    `K003` faellt -- „die Domaene `queue` der Traversierung hat
---                         keine Schranke aus der Deklaration"
---     ohne Kostenzusage   0 Fehler, und erst der Erzeuger sagt ab
---
--- **Dieselbe Wurzel wie `U10`/`U11`** (`messung/ABSAGEFORMEN.md`): ein `divergent fn`
--- traegt keine Kostenzusage, an der `K003` haengen koennte. Der Waechter las die
--- Prueferfehlertexte und fand `queue` dort nicht -- die Meldung baut den Domaenennamen mit
--- `format!` aus einer Variablen. *Eine Textlesung ueber einem `format!` ist eine untere
--- Schranke, und sie geht in die sichere Richtung: sie meldet zu viel, nicht zu wenig.*
---
--- Diese Datei zeigt die Form OHNE Kostenzusage -- die, in der der Pruefer schweigt.
+// W24-Vorlauf: **nimmt der Pruefer die vier `UNGEDECKT`-Formen wirklich an?**
+//
+// `pruefe-grammatiktafel.py` liest die Prueferfehlertexte und schliesst aus ihrem
+// Schweigen, dass der Pruefer `chain`, `queue`, `state` und `threads` annimmt. **Ein
+// Schluss aus einem Text ist keine Messung** (W16) -- diese Datei fragt den Pruefer.
+//
+// GEMESSEN am 2026-08-31, und der Waechter hatte zur Haelfte unrecht:
+//
+//     mit Kostenzusage    `K003` faellt -- „die Domaene `queue` der Traversierung hat
+//                         keine Schranke aus der Deklaration"
+//     ohne Kostenzusage   0 Fehler, und erst der Erzeuger sagt ab
+//
+// **Dieselbe Wurzel wie `U10`/`U11`** (`messung/ABSAGEFORMEN.md`): ein `divergent fn`
+// traegt keine Kostenzusage, an der `K003` haengen koennte. Der Waechter las die
+// Prueferfehlertexte und fand `queue` dort nicht -- die Meldung baut den Domaenennamen mit
+// `format!` aus einer Variablen. *Eine Textlesung ueber einem `format!` ist eine untere
+// Schranke, und sie geht in die sichere Richtung: sie meldet zu viel, nicht zu wenig.*
+//
+// Diese Datei zeigt die Form OHNE Kostenzusage -- die, in der der Pruefer schweigt.
 
 module probe::vierzellen {
 
@@ -29,21 +29,21 @@ table Warteschlange count N {
     tree { sibling naechst }
 }
 
--- `state` -- ein Beweismittel ueber einem Traeger, der anderswo steht. Der Pruefer nimmt
--- es an; der Erzeuger sagt `C001`.
+// `state` -- ein Beweismittel ueber einem Traeger, der anderswo steht. Der Pruefer nimmt
+// es an; der Erzeuger sagt `C001`.
 state Stufe {
     transition an { s : 0 -> 1 }
 }
 
--- **Der Traeger einer `queue` ist ein VERBUND mit genau EINEM Feldarray, keine `table`** --
--- und bis zum 2026-08-31 stand hier `queue q` ueber einem Tabellenzeiger. Der Pruefer
--- schwieg dazu (`D018` gab es nicht), und mit einer Kostenzusage sagte `K003` „die Domaene
--- hat keine Schranke aus der Deklaration" -- **eine Aussage ueber die Deklaration, wo die
--- Wahrheit war, dass dieser Ort keine Warteschlange ist.** Dieselbe W16-Gestalt wie an
--- `walkschranken`: ein Messgeraet, das etwas anderes misst als seinen Gegenstand.
---
--- *Die Zelle, um die es dieser Datei geht, bleibt dieselbe:* der Erzeuger sagt die
--- Traversierungsdomaene `queue` weiter namentlich mit `C001` ab.
+// **Der Traeger einer `queue` ist ein VERBUND mit genau EINEM Feldarray, keine `table`** --
+// und bis zum 2026-08-31 stand hier `queue q` ueber einem Tabellenzeiger. Der Pruefer
+// schwieg dazu (`D018` gab es nicht), und mit einer Kostenzusage sagte `K003` „die Domaene
+// hat keine Schranke aus der Deklaration" -- **eine Aussage ueber die Deklaration, wo die
+// Wahrheit war, dass dieser Ort keine Warteschlange ist.** Dieselbe W16-Gestalt wie an
+// `walkschranken`: ein Messgeraet, das etwas anderes misst als seinen Gegenstand.
+//
+// *Die Zelle, um die es dieser Datei geht, bleibt dieselbe:* der Erzeuger sagt die
+// Traversierungsdomaene `queue` weiter namentlich mit `C001` ab.
 type Ring = { plaetze : [u32; 8], kopf : u32, };
 
 divergent fn schlange_leeren(r : ptr<normal, rw> Ring) -> never

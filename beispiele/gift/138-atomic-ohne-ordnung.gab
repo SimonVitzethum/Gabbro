@@ -1,10 +1,10 @@
--- erwartet: V005
--- **Ein `atomic` ohne Ordnungswort wird still `relaxed` -- auf BEIDEN Seiten.**
---
--- `V004` prueft das geschriebene `relaxed` und liess das ungeschriebene durch. Gemessen am
--- 2026-08-19: diese Datei ging mit null Fehlern durch, und im Erzeugnis standen
--- `memory_order_relaxed` am Speichern UND am Laden. *Die Paarung versprach eine
--- Sichtbarkeit, die die Maschine nicht herstellt.*
+// erwartet: V005
+// **Ein `atomic` ohne Ordnungswort wird still `relaxed` -- auf BEIDEN Seiten.**
+//
+// `V004` prueft das geschriebene `relaxed` und liess das ungeschriebene durch. Gemessen am
+// 2026-08-19: diese Datei ging mit null Fehlern durch, und im Erzeugnis standen
+// `memory_order_relaxed` am Speichern UND am Laden. *Die Paarung versprach eine
+// Sichtbarkeit, die die Maschine nicht herstellt.*
 module gift::atomic_ohne_ordnung {
 
 static mut nutzlast : u32 = 0;

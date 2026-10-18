@@ -1,9 +1,9 @@
--- 1164 -- widen the OPERANDS, then compute (TUTORIAL.md, "Widen the operands, not the result").
---
--- A wider declared target does not widen the operands of `+ - *`: `a + b` over two `u32`
--- values wraps at 32 bits before it reaches a `u64`, so the checker refuses it (`gift/1445`,
--- `1446`, `1447`, all `M104`). Each operand is bound into the wide type first; the sum and the
--- product then have room, and the result is the true one.
+// 1164 -- widen the OPERANDS, then compute (TUTORIAL.md, "Widen the operands, not the result").
+//
+// A wider declared target does not widen the operands of `+ - *`: `a + b` over two `u32`
+// values wraps at 32 bits before it reaches a `u64`, so the checker refuses it (`gift/1445`,
+// `1446`, `1447`, all `M104`). Each operand is bound into the wide type first; the sum and the
+// product then have room, and the result is the true one.
 module beispiel1164 {
 
 impl fn summe(a : u32, b : u32) -> u64

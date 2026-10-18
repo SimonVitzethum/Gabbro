@@ -1,8 +1,8 @@
--- **Der Nutzer: EINE Einheit, ZWEI Bibliotheken.**
---
--- Er sieht von `fach` genau die drei Namen, die deren `.gabi` erklaert, und von `mischen`
--- genau einen. `begrenze` und `verdopple` stehen in keiner der beiden Schnittstellen --
--- **und ein Ruf darauf faellt hier an `E009`/`K003`, nicht erst beim Binder.**
+// **Der Nutzer: EINE Einheit, ZWEI Bibliotheken.**
+//
+// Er sieht von `fach` genau die drei Namen, die deren `.gabi` erklaert, und von `mischen`
+// genau einen. `begrenze` und `verdopple` stehen in keiner der beiden Schnittstellen --
+// **und ein Ruf darauf faellt hier an `E009`/`K003`, nicht erst beim Binder.**
 module nutzer {
 
 use fach::lege_ab;

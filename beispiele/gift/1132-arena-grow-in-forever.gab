@@ -1,10 +1,10 @@
--- erwartet: N426
--- Fix lane F2 (review G08 F1): a `grow` inside a `forever` loop. The loop
--- has no constant pass bound, so the commit repeats without bound, and the
--- runtime never gives a committed page back -- the ninth pass would ask
--- past `max 16`. Before the fix the ceiling was held against the committed
--- LOWER bound, which a loop keeps at its entry value, and this unit was
--- accepted. Nothing else is wrong with it.
+// erwartet: N426
+// Fix lane F2 (review G08 F1): a `grow` inside a `forever` loop. The loop
+// has no constant pass bound, so the commit repeats without bound, and the
+// runtime never gives a committed page back -- the ninth pass would ask
+// past `max 16`. Before the fix the ceiling was held against the committed
+// LOWER bound, which a loop keeps at its entry value, and this unit was
+// accepted. Nothing else is wrong with it.
 module gift::arena_grow_in_forever {
 arena A capacity 2 .. 8 max 16 of u16;
 extern fn w() -> never effects { diverges };

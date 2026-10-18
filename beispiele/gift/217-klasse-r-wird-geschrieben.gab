@@ -1,10 +1,10 @@
--- erwartet: R006
--- **Gift 217 -- ein `class r`-Register wird geschrieben.**
---
--- Die Gegenrichtung zu Gift 216, und eine Probe, die nur eine der beiden trifft, ist eine
--- Regel ueber eine Richtung. `GSTS` ist das Statusregister der Uebersetzungseinheit; ein
--- Schreiben darauf ist kein Programmierfehler, den die Hardware meldet -- **es passiert
--- einfach nichts**, und genau darum kann nur der Uebersetzer es sagen.
+// erwartet: R006
+// **Gift 217 -- ein `class r`-Register wird geschrieben.**
+//
+// Die Gegenrichtung zu Gift 216, und eine Probe, die nur eine der beiden trifft, ist eine
+// Regel ueber eine Richtung. `GSTS` ist das Statusregister der Uebersetzungseinheit; ein
+// Schreiben darauf ist kein Programmierfehler, den die Hardware meldet -- **es passiert
+// einfach nichts**, und genau darum kann nur der Uebersetzer es sagen.
 
 module gift217 {
 

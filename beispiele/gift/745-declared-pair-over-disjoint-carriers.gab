@@ -1,18 +1,18 @@
--- erwartet: H013
--- **Declared pair over disjoint carriers (`Geteilt.Bau` probe 3/3).**
---
--- `concurrent { h_a, h_b };` declares the pair, and the two entries dispatch to
--- its members -- the shape the Bau's pair list (`neben`, built as `nebenAus`
--- builds it from the declaration) must carry. The members write DISJOINT
--- unshared carriers (`za`, `zb`), so the pair level stays silent on its own:
--- what falls is `H013`, once per carrier, and the W5 answer beside it names the
--- same two. The declaration changes nothing about the verdict -- a pair list is
--- the second half of `BauLauf` (`nurPaareLaufen`), not of `pruefeUngeteilt`.
--- Note the double listing: each member also backs an entry, so each writing
--- routine starts twice -- since lane 183 (`N304`: twice-started means idle)
--- that draws `N304` beside `H013`.
--- The twin `ruhig` writes a lock-guarded table under its guard and stands in no
--- entry.
+// erwartet: H013
+// **Declared pair over disjoint carriers (`Geteilt.Bau` probe 3/3).**
+//
+// `concurrent { h_a, h_b };` declares the pair, and the two entries dispatch to
+// its members -- the shape the Bau's pair list (`neben`, built as `nebenAus`
+// builds it from the declaration) must carry. The members write DISJOINT
+// unshared carriers (`za`, `zb`), so the pair level stays silent on its own:
+// what falls is `H013`, once per carrier, and the W5 answer beside it names the
+// same two. The declaration changes nothing about the verdict -- a pair list is
+// the second half of `BauLauf` (`nurPaareLaufen`), not of `pruefeUngeteilt`.
+// Note the double listing: each member also backs an entry, so each writing
+// routine starts twice -- since lane 183 (`N304`: twice-started means idle)
+// that draws `N304` beside `H013`.
+// The twin `ruhig` writes a lock-guarded table under its guard and stands in no
+// entry.
 module gift::bau_declared_pair {
 
 static mut za : u32 = 0;
@@ -50,7 +50,7 @@ table T count 8 {
 
 lock L protects { T } rank 0 held <= 100 ops;
 
--- Must pass: every write under the guard the line names, and no entry reaches it.
+// Must pass: every write under the guard the line names, and no entry reaches it.
 impl fn ruhig(j : index into T, m : index into T)
     effects { writes T.slots, locks L }
     costs   <= 16 ops

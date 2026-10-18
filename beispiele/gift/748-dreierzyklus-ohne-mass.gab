@@ -1,10 +1,10 @@
--- erwartet: H022
--- **The boundary of the cycle premise: a THREE-member cycle without `decreases`
--- (must fall on every member).**
---
--- `f` calls `g` calls `h` calls `f`, none with a measure. The premise does not stop at
--- two: composition induction over a cycle needs every member to carry its own descent,
--- and `K008` fires per member, not per cycle. The two-member shape is `gift/746`.
+// erwartet: H022
+// **The boundary of the cycle premise: a THREE-member cycle without `decreases`
+// (must fall on every member).**
+//
+// `f` calls `g` calls `h` calls `f`, none with a measure. The premise does not stop at
+// two: composition induction over a cycle needs every member to carry its own descent,
+// and `K008` fires per member, not per cycle. The two-member shape is `gift/746`.
 module gift::dreierzyklus_ohne_mass {
 
 static mut a : u32 = 0;

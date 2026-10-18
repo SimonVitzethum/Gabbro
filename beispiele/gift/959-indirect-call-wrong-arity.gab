@@ -1,11 +1,11 @@
--- erwartet: N296
--- **Poison 959 -- an indirect call with the wrong arity, minimal spelling.**
---
--- The slot declares no parameters; the call passes one. The twin of `gift/248` without
--- the `ensures` flavour: this file pins the count rule alone (`N296`), the way `248`
--- pins it beside the narrowing. A surplus argument is a value nobody reads, and the
--- per-position comparison stops at the shorter list -- without the count, neither side
--- holds it.
+// erwartet: N296
+// **Poison 959 -- an indirect call with the wrong arity, minimal spelling.**
+//
+// The slot declares no parameters; the call passes one. The twin of `gift/248` without
+// the `ensures` flavour: this file pins the count rule alone (`N296`), the way `248`
+// pins it beside the narrowing. A surplus argument is a value nobody reads, and the
+// per-position comparison stops at the shorter list -- without the count, neither side
+// holds it.
 
 module gift::indirect_call_wrong_arity {
 

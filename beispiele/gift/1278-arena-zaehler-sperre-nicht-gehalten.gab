@@ -1,10 +1,10 @@
--- erwartet: N522
--- **1278 -- a common lock nobody takes guards nothing (lane 264).**
---
--- `f` allocates under `L`, `g` allocates bare. The hulls share nothing, so
--- `W001` fires beside this rule; the holding half is this rule's:
--- `protects` without taking is a declaration, not exclusion. Measured
--- `["N522", "W001"]`.
+// erwartet: N522
+// **1278 -- a common lock nobody takes guards nothing (lane 264).**
+//
+// `f` allocates under `L`, `g` allocates bare. The hulls share nothing, so
+// `W001` fires beside this rule; the holding half is this rule's:
+// `protects` without taking is a declaration, not exclusion. Measured
+// `["N522", "W001"]`.
 module gift1278 {
 
 arena A capacity 2 .. 8 of u16;

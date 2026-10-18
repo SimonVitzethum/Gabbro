@@ -1,10 +1,10 @@
--- erwartet: D010
---
--- **`occupied` nennt ein Feld, das es gibt -- aber es ist kein `bool`.**
---
--- Die Belegung ist zweiwertig: `Some sl` oder `None` in `Table_Ops_Erhaltung.thy`. Ein Feld
--- mit mehr Werten liesse den erzeugten `remove` etwas sagen, was der Beweis nicht sagt --
--- und `insert` schriebe eine `1` in eine Zahl, die etwas anderes bedeutet.
+// erwartet: D010
+//
+// **`occupied` nennt ein Feld, das es gibt -- aber es ist kein `bool`.**
+//
+// Die Belegung ist zweiwertig: `Some sl` oder `None` in `Table_Ops_Erhaltung.thy`. Ein Feld
+// mit mehr Werten liesse den erzeugten `remove` etwas sagen, was der Beweis nicht sagt --
+// und `insert` schriebe eine `1` in eine Zahl, die etwas anderes bedeutet.
 
 module gift::occupiedkeinbool {
 

@@ -1,9 +1,9 @@
--- erwartet: U002
--- **Ein Traeger der Gruppe steht unter keiner Sperre.**
---
--- Eine Verbindungs-Invariante ueber einem ungeschuetzten Traeger sagt auf einer
--- Mehrkernmaschine nichts: waehrend sie geprueft wird, darf ein anderer Kern schreiben.
--- `B` traegt hier keine `protects`-Zeile, und genau das faellt.
+// erwartet: U002
+// **Ein Traeger der Gruppe steht unter keiner Sperre.**
+//
+// Eine Verbindungs-Invariante ueber einem ungeschuetzten Traeger sagt auf einer
+// Mehrkernmaschine nichts: waehrend sie geprueft wird, darf ein anderer Kern schreiben.
+// `B` traegt hier keine `protects`-Zeile, und genau das faellt.
 module gift::gruppentraeger_ohne_sperre {
 
 table A count 16 { slot { x : u32, } }

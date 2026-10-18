@@ -13,7 +13,7 @@
 //! Ordner sonst „zwei Register über derselben Sache" nennt.
 //!
 //! ```text
-//! -- @gabi 1  lib bib
+//! // @gabi 1  lib bib
 //! module bib {
 //! static mut z : u32 = 0;
 //! extern fn tu() effects { writes z } costs <= 1 ops;
@@ -54,7 +54,7 @@
 use gabbro_syntax::ast::*;
 
 /// Die Kopfzeile, an der ein `.gabi` erkennbar ist.
-pub const MARKE: &str = "-- @gabi 1";
+pub const MARKE: &str = "// @gabi 1";
 
 /// **Schreibt die Schnittstelle einer Einheit.** Nur `pub`-Items, nur Deklarationen.
 ///
@@ -78,9 +78,9 @@ pub fn schreibe_ab(baum: &Programm, quelle: &str, ab: usize) -> String {
     let mut aus = String::new();
     let mut nach_modul: std::collections::BTreeMap<String, Vec<String>> = Default::default();
     aus.push_str(MARKE);
-    aus.push_str("\n-- Written by `gabbro abi`. Do not edit: the source is the `.gab`, and a\n");
-    aus.push_str("-- second register over the same thing is the very class this folder is\n");
-    aus.push_str("-- written against.\n");
+    aus.push_str("\n// Written by `gabbro abi`. Do not edit: the source is the `.gab`, and a\n");
+    aus.push_str("// second register over the same thing is the very class this folder is\n");
+    aus.push_str("// written against.\n");
     // **The interface is a WRITTEN set, not a fixpoint** (2026-08-25).
     //
     // Until that day a loop stood here that collected to a standstill: `T` came along
@@ -403,7 +403,7 @@ pub fn schreibe_berechnet(baum: &Programm, quelle: &str) -> String {
         let (menge, offen) = berechne(f, modul, &g, &konstanten, &weltnamen);
         let text = match offen {
             Some(grund) => format!(
-                "effects {{ {} }} -- HULL INCOMPLETE, written line kept: {grund}",
+                "effects {{ {} }} // HULL INCOMPLETE, written line kept: {grund}",
                 w.liste.iter().map(|e| e.art.text()).collect::<Vec<_>>().join(", ")
             ),
             None if menge.is_empty() => "effects { pure }".to_string(),

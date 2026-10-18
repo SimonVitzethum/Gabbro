@@ -1,38 +1,38 @@
--- 147 -- FTP ALG control plane: the Obergrenze discipline, running.
---
--- An FTP application-level gateway keeps a FIXED 1024-entry table from the
--- control 5-tuple to the expected data tuple plus a packet-tick deadline.
--- Everything about this file is a BOUND, and every bound is checked:
---
---   * the table has `count 1024` -- no growth, no eviction: VOLL refuses;
---   * the hash is in-program (an FNV-1a-style xor-multiply over the five
---     tuple WORDS, `^` + `*%`, five updates, then one xor-shift fold,
---     constant cost) -- there is no L3 library hash yet and no `extern`
---     shortcut for it (extern is the OS border; this file has none). It is
---     WORD-wise, not the byte-wise FNV-1a of the spec. Since `^` and `*%`
---     only carry upward, the unfolded `h % 1024` depended on the low 10 bits
---     of each word alone (review G05: 10.0.0.5 and 11.0.0.5 shared bucket
---     54). The fold `h ^ (h >> 22)` brings the top ten bits -- the ones every
---     input bit reaches -- into the bucket, so every bit of every word now
---     moves it (measured on a Python model of this exact code, fix lane F7).
---     Fail closed either way: a collision answers VOLL/MISS, never a wrong
---     ACCEPT;
---   * the index arithmetic is subtraction-free (`%`, `*`, guarded `+`);
---   * expiry is a windowed tick (`tick` sweeps 64 of 1024 slots per call,
---     round-robin over 16 rounds) -- never a full scan under the held lock;
---   * deadlines are packet ticks, not wall clock. `alter` counts SWEEP
---     VISITS (one per 16 ticks), so the limit 63 is about 1008 ticks: an
---     entry lives 1007..1023 `tick()` calls. Expiry comes LATE (up to 15
---     ticks after the age limit on an unswept window), never early --
---     fail closed both ways;
---   * the command buffer holds 512 bytes; a longer input is REFUSED
---     (`ZU_LANG`), not truncated.
---
--- The control table lives under the lock `FW` the way `beispiele/124` keeps
--- `konto` under `L`: every access runs inside `locks FW`, helpers carry
--- `requires Held(FW)`. There is deliberately NO lock invariant: the slots of
--- a direct-mapped table are independent (unlike 124's mirrored pair), so a
--- clause over fixed indices would be decoration, and decoration is refused.
+// 147 -- FTP ALG control plane: the Obergrenze discipline, running.
+//
+// An FTP application-level gateway keeps a FIXED 1024-entry table from the
+// control 5-tuple to the expected data tuple plus a packet-tick deadline.
+// Everything about this file is a BOUND, and every bound is checked:
+//
+//   * the table has `count 1024` -- no growth, no eviction: VOLL refuses;
+//   * the hash is in-program (an FNV-1a-style xor-multiply over the five
+//     tuple WORDS, `^` + `*%`, five updates, then one xor-shift fold,
+//     constant cost) -- there is no L3 library hash yet and no `extern`
+//     shortcut for it (extern is the OS border; this file has none). It is
+//     WORD-wise, not the byte-wise FNV-1a of the spec. Since `^` and `*%`
+//     only carry upward, the unfolded `h % 1024` depended on the low 10 bits
+//     of each word alone (review G05: 10.0.0.5 and 11.0.0.5 shared bucket
+//     54). The fold `h ^ (h >> 22)` brings the top ten bits -- the ones every
+//     input bit reaches -- into the bucket, so every bit of every word now
+//     moves it (measured on a Python model of this exact code, fix lane F7).
+//     Fail closed either way: a collision answers VOLL/MISS, never a wrong
+//     ACCEPT;
+//   * the index arithmetic is subtraction-free (`%`, `*`, guarded `+`);
+//   * expiry is a windowed tick (`tick` sweeps 64 of 1024 slots per call,
+//     round-robin over 16 rounds) -- never a full scan under the held lock;
+//   * deadlines are packet ticks, not wall clock. `alter` counts SWEEP
+//     VISITS (one per 16 ticks), so the limit 63 is about 1008 ticks: an
+//     entry lives 1007..1023 `tick()` calls. Expiry comes LATE (up to 15
+//     ticks after the age limit on an unswept window), never early --
+//     fail closed both ways;
+//   * the command buffer holds 512 bytes; a longer input is REFUSED
+//     (`ZU_LANG`), not truncated.
+//
+// The control table lives under the lock `FW` the way `beispiele/124` keeps
+// `konto` under `L`: every access runs inside `locks FW`, helpers carry
+// `requires Held(FW)`. There is deliberately NO lock invariant: the slots of
+// a direct-mapped table are independent (unlike 124's mirrored pair), so a
+// clause over fixed indices would be decoration, and decoration is refused.
 module beispiel::ftp_alg_control {
 
 const EINTRAG_ZAHL : u32 = 1024;
@@ -83,21 +83,21 @@ static mut haben : u32 in 0 .. PUFFER = 0;
 
 lock FW protects { regeln, befehl, runde, haben } rank 0 held <= 16384 ops;
 
--- Word-wise FNV-1a-style hash over the five control words (see the header
--- for what that means for `% 1024`): five xor-multiply steps, no branch,
--- no memory. Cost is constant by construction. The SHAPE (named steps, not
--- one expression) is forced from both sides at once:
---
---   * the CHECKER (M153) refuses a singleton next to a wrap: the FNV prime
---     as a bare const poisons the `*%`, so it travels as an ARGUMENT into a
---     `u32` parameter (a singleton argument is contained in `u32`);
---   * the EMITTER re-derives every wrapping site from declarations
---     (`emit.rs`: `wrap_form`) and reads an exact range off a bare storage
---     word -- but NOT off a named range type (`Wort` checked and refused to
---     lower), and never a `^`. So the xor is a FUNCTION whose call result is
---     a side: `xor_worte(h, w) *% p` is a call times a parameter, while
---     `(h ^ w) *% p` is unlowerable (C001). On unsigned storage the emitted
---     `*` wraps for free, which is exactly FNV's arithmetic.
+// Word-wise FNV-1a-style hash over the five control words (see the header
+// for what that means for `% 1024`): five xor-multiply steps, no branch,
+// no memory. Cost is constant by construction. The SHAPE (named steps, not
+// one expression) is forced from both sides at once:
+//
+//   * the CHECKER (M153) refuses a singleton next to a wrap: the FNV prime
+//     as a bare const poisons the `*%`, so it travels as an ARGUMENT into a
+//     `u32` parameter (a singleton argument is contained in `u32`);
+//   * the EMITTER re-derives every wrapping site from declarations
+//     (`emit.rs`: `wrap_form`) and reads an exact range off a bare storage
+//     word -- but NOT off a named range type (`Wort` checked and refused to
+//     lower), and never a `^`. So the xor is a FUNCTION whose call result is
+//     a side: `xor_worte(h, w) *% p` is a call times a parameter, while
+//     `(h ^ w) *% p` is unlowerable (C001). On unsigned storage the emitted
+//     `*` wraps for free, which is exactly FNV's arithmetic.
 impl fn xor_worte(a : u32, b : u32) -> u32
     effects { pure }
     costs <= 4 ops
@@ -113,8 +113,8 @@ impl fn fnv_schritt(h : u32, w : u32, p : u32) -> u32
 }
 
 impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
-    -- 95 before the fold; the fold adds one shift and one `xor_worte` call
-    -- (fix lane F7): 101, read off the checker, not estimated.
+    // 95 before the fold; the fold adds one shift and one `xor_worte` call
+    // (fix lane F7): 101, read off the checker, not estimated.
     costs <= 101 ops
 {
     let h0 : u32 = fnv_schritt(FNV_OFFSET, sip, FNV_PRIM);
@@ -122,18 +122,18 @@ impl fn fnv(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto) -> u32
     let h2 : u32 = fnv_schritt(h1, sp, FNV_PRIM);
     let h3 : u32 = fnv_schritt(h2, dp, FNV_PRIM);
     let h4 : u32 = fnv_schritt(h3, pr, FNV_PRIM);
-    -- The fold (review G05 F1, fix lane F7): `% 1024` keeps bits 0..9, and
-    -- bit k of an input word reaches only bits k..31 of `h4`. Folding the
-    -- top ten bits (22..31, reached by every input bit) onto the low ten
-    -- makes every bit of every word count toward the bucket.
+    // The fold (review G05 F1, fix lane F7): `% 1024` keeps bits 0..9, and
+    // bit k of an input word reaches only bits k..31 of `h4`. Folding the
+    // top ten bits (22..31, reached by every input bit) onto the low ten
+    // makes every bit of every word count toward the bucket.
     return xor_worte(h4, h4 >> 22);
 }
 
--- Release a slot back to pristine: no stale tuple may survive (a stale
--- match field would accept a packet the rules no longer cover -- fail
--- closed means zeroing, not just clearing `belegt`). The `beispiele/01`
--- idiom: naked access, the caller's duty (`requires Held(FW)`), so the
--- three callers below share one zeroing instead of three copies.
+// Release a slot back to pristine: no stale tuple may survive (a stale
+// match field would accept a packet the rules no longer cover -- fail
+// closed means zeroing, not just clearing `belegt`). The `beispiele/01`
+// idiom: naked access, the caller's duty (`requires Held(FW)`), so the
+// three callers below share one zeroing instead of three copies.
 impl fn freigeben(i : index into regeln)
     requires Held(FW)
     effects  { writes regeln.slots, locks FW }
@@ -150,17 +150,17 @@ impl fn freigeben(i : index into regeln)
     regeln.slots[i].alter = 0;
 }
 
--- Insert a control rule: hash the 5-tuple, fold to one bucket, take it or
--- refuse. There is no probing and no eviction: an occupied live bucket
--- answers VOLL (like bm3), and the sender retries after the next tick. A
--- bucket past its age is reclaimed INLINE (the windowed sweep has not
--- visited it yet -- expiry comes late, never early, and never leaks the
--- slot). The `%` keeps the value in range; the `narrow` turns the range
--- into the evidence the slot access needs (`beispiele/146`).
---
--- The SPLIT (thin `ablege` outside the lock, `ablege_innen` under
--- `requires Held(FW)`) is `beispiele/146`'s: a body that touches a guarded
--- carrier carries the guard in its signature, so E247 stays silent.
+// Insert a control rule: hash the 5-tuple, fold to one bucket, take it or
+// refuse. There is no probing and no eviction: an occupied live bucket
+// answers VOLL (like bm3), and the sender retries after the next tick. A
+// bucket past its age is reclaimed INLINE (the windowed sweep has not
+// visited it yet -- expiry comes late, never early, and never leaks the
+// slot). The `%` keeps the value in range; the `narrow` turns the range
+// into the evidence the slot access needs (`beispiele/146`).
+//
+// The SPLIT (thin `ablege` outside the lock, `ablege_innen` under
+// `requires Held(FW)`) is `beispiele/146`'s: a body that touches a guarded
+// carrier carries the guard in its signature, so E247 stays silent.
 impl fn ablege_innen(r : index into regeln,
                      sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
                      xsip : u32, xdp : Port) -> Code
@@ -200,11 +200,11 @@ impl fn ablege(sip : u32, dip : u32, sp : Port, dp : Port, pr : Proto,
     }
 }
 
--- Age one bucket by one tick: empty stays empty, an aged-out entry is
--- cleared EAGERLY (its match fields must not survive it), anything else
--- grows one tick older. The `+= 1` stands behind the `< ALTER_MAX` guard --
--- the counter rule (`beispiele/01`): the check belongs BEFORE the
--- arithmetic, and `>= ALTER_MAX` above is the same cut from the other side.
+// Age one bucket by one tick: empty stays empty, an aged-out entry is
+// cleared EAGERLY (its match fields must not survive it), anything else
+// grows one tick older. The `+= 1` stands behind the `< ALTER_MAX` guard --
+// the counter rule (`beispiele/01`): the check belongs BEFORE the
+// arithmetic, and `>= ALTER_MAX` above is the same cut from the other side.
 impl fn alter_eintrag(i : index into regeln)
     requires Held(FW)
     effects  { reads regeln.slots, writes regeln.slots, locks FW }
@@ -219,10 +219,10 @@ impl fn alter_eintrag(i : index into regeln)
     }
 }
 
--- One step of the window: bucket `basis + k`. Both operands are bounded
--- (`0 .. 960` and `0 .. 63`), so the sum never leaves the table --
--- subtraction-free by construction, and the `narrow` is the evidence the
--- call needs, not a confession of doubt.
+// One step of the window: bucket `basis + k`. Both operands are bounded
+// (`0 .. 960` and `0 .. 63`), so the sum never leaves the table --
+// subtraction-free by construction, and the `narrow` is the evidence the
+// call needs, not a confession of doubt.
 impl fn fenster_schritt(basis : u32 in 0 .. RASTER_MAX, k : u32 in 0 .. LETZTER_SCHRITT)
     requires Held(FW)
     effects  { reads regeln.slots, writes regeln.slots, locks FW }
@@ -233,17 +233,17 @@ impl fn fenster_schritt(basis : u32 in 0 .. RASTER_MAX, k : u32 in 0 .. LETZTER_
     alter_eintrag(r);
 }
 
--- The expiry tick: age ONE window of 64 buckets, then move the round
--- forward. A full cycle is 16 ticks; a bucket's death is discovered at
--- most 15 ticks after its age limit -- late, never early. The 64 calls
--- are spelled out because there is no indexed loop in the language
--- (`traverse` always covers ALL slots, and a full scan under the held
--- lock is exactly what H-1/H-3 forbid): the unrolled window IS the bound,
--- constant cost per tick under flood and at idle.
---
--- The SPLIT is `beispiele/146`'s again: `tick` only takes the lock,
--- `tick_runde` carries `requires Held(FW)` and touches `runde` -- a bare
--- carrier read, even inside a `locks` block, owes the guard (E247).
+// The expiry tick: age ONE window of 64 buckets, then move the round
+// forward. A full cycle is 16 ticks; a bucket's death is discovered at
+// most 15 ticks after its age limit -- late, never early. The 64 calls
+// are spelled out because there is no indexed loop in the language
+// (`traverse` always covers ALL slots, and a full scan under the held
+// lock is exactly what H-1/H-3 forbid): the unrolled window IS the bound,
+// constant cost per tick under flood and at idle.
+//
+// The SPLIT is `beispiele/146`'s again: `tick` only takes the lock,
+// `tick_runde` carries `requires Held(FW)` and touches `runde` -- a bare
+// carrier read, even inside a `locks` block, owes the guard (E247).
 impl fn tick_runde() -> Code
     requires Held(FW)
     effects { reads regeln.slots, writes regeln.slots,
@@ -333,9 +333,9 @@ impl fn tick() -> Code
     }
 }
 
--- Teardown by tuple: only the rule the 5-tuple names may fall. A bucket
--- held by somebody else's tuple answers MISS -- deleting it would open a
--- hole the data plane still trusts.
+// Teardown by tuple: only the rule the 5-tuple names may fall. A bucket
+// held by somebody else's tuple answers MISS -- deleting it would open a
+// hole the data plane still trusts.
 impl fn entferne_innen(r : index into regeln,
                        sip : u32, dip : u32, sp : Port, dp : Port,
                        pr : Proto) -> Code
@@ -368,9 +368,9 @@ impl fn entferne(sip : u32, dip : u32, sp : Port, dp : Port,
     }
 }
 
--- The 512-byte command buffer: one byte per slot, the length beside it.
--- A longer input is REFUSED (`ZU_LANG`), never truncated -- truncation
--- would silently reframe the command that follows.
+// The 512-byte command buffer: one byte per slot, the length beside it.
+// A longer input is REFUSED (`ZU_LANG`), never truncated -- truncation
+// would silently reframe the command that follows.
 impl fn befehl_schreibe(i : index into befehl, v : u8)
     requires Held(FW)
     effects { writes befehl.slots, locks FW }

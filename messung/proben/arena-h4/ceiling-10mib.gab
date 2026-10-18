@@ -1,11 +1,11 @@
--- **H4 twin A -- the SMALL ceiling.** `max 1310720` slots of `u64` = 10 MiB.
---
--- The twin of `ceiling-32gib.gab`: the two files differ in the `max` number
--- and in this comment, in nothing else (`diff` them). They are the
--- measurement of `AUFTRAG-1` H4: compile time, emitted C size and binary
--- size must NOT grow with the ceiling -- no static array of `M` slots, no
--- `memset` of the reservation, no per-element unrolling. The instrument is
--- `instrumente/miss-arena-decke.sh`.
+// **H4 twin A -- the SMALL ceiling.** `max 1310720` slots of `u64` = 10 MiB.
+//
+// The twin of `ceiling-32gib.gab`: the two files differ in the `max` number
+// and in this comment, in nothing else (`diff` them). They are the
+// measurement of `AUFTRAG-1` H4: compile time, emitted C size and binary
+// size must NOT grow with the ceiling -- no static array of `M` slots, no
+// `memset` of the reservation, no per-element unrolling. The instrument is
+// `instrumente/miss-arena-decke.sh`.
 module probe::decke_klein {
 type Zahl = u64 in 0 .. 1000;
 

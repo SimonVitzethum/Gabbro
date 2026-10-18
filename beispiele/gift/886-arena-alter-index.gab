@@ -1,8 +1,8 @@
--- erwartet: N211
--- Lane E4: a stale index -- `i` is bound before the `reset` and read after
--- it, in another generation of the same slots. The allocation itself is
--- inside the reservation (no `else` owed), the arena is well-formed, and
--- the effect and budget lines are clean.
+// erwartet: N211
+// Lane E4: a stale index -- `i` is bound before the `reset` and read after
+// it, in another generation of the same slots. The allocation itself is
+// inside the reservation (no `else` owed), the arena is well-formed, and
+// the effect and budget lines are clean.
 module beispiel::arena_kasse {
 arena Kasse capacity 4 .. 8 of u32;
 

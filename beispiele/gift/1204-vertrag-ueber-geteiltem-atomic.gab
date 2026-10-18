@@ -1,13 +1,13 @@
--- erwartet: N484
--- 1204 -- **a contract over a shared atomic (Opus lane O25b, 2026-09-26, OFFEN O25).**
--- `setzer` stores 1 into the atomic `FLAGGE` and promises `FLAGGE == 1` at its return;
--- `loescher` stores 0 into it on another thread; `leser` reads it with no lock. The promise is
--- a claim about a value another thread may change at any moment: `loescher` can run between
--- `setzer`'s store and its return. `AkzeptiertX` (the Lean checker with the atomic rely,
--- `grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean`) refuses exactly this at `fussWXB`
--- (`vertragsFreiB`, witness `vertrag_atomar_abgelehnt`); the Rust checker refuses it at `N484`
--- (`fusswache2.rs::vertrag_atomar`). Before `N484` it passed with 0 errors: the footprint legs
--- `N290`-`N294` never counted atomics as carriers.
+// erwartet: N484
+// 1204 -- **a contract over a shared atomic (Opus lane O25b, 2026-09-26, OFFEN O25).**
+// `setzer` stores 1 into the atomic `FLAGGE` and promises `FLAGGE == 1` at its return;
+// `loescher` stores 0 into it on another thread; `leser` reads it with no lock. The promise is
+// a claim about a value another thread may change at any moment: `loescher` can run between
+// `setzer`'s store and its return. `AkzeptiertX` (the Lean checker with the atomic rely,
+// `grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean`) refuses exactly this at `fussWXB`
+// (`vertragsFreiB`, witness `vertrag_atomar_abgelehnt`); the Rust checker refuses it at `N484`
+// (`fusswache2.rs::vertrag_atomar`). Before `N484` it passed with 0 errors: the footprint legs
+// `N290`-`N294` never counted atomics as carriers.
 
 module gift::vertrag_atomar {
 

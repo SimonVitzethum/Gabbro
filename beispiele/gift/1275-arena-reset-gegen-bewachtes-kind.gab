@@ -1,11 +1,11 @@
--- erwartet: N521
--- **1275 -- a guarded `child` read beside a guarded `reset` (lane 264).**
---
--- Both sides take the lock that protects `A`, so every rule that a guard
--- can admit stays silent -- except this one: mutual exclusion cannot revive
--- a consumed generation. `N457` still fires beside it (its guard disjunct
--- is vacuous for arenas: `sperrdaten` resolves no arena `protects`).
--- Measured `["N457", "N521"]`.
+// erwartet: N521
+// **1275 -- a guarded `child` read beside a guarded `reset` (lane 264).**
+//
+// Both sides take the lock that protects `A`, so every rule that a guard
+// can admit stays silent -- except this one: mutual exclusion cannot revive
+// a consumed generation. `N457` still fires beside it (its guard disjunct
+// is vacuous for arenas: `sperrdaten` resolves no arena `protects`).
+// Measured `["N457", "N521"]`.
 module gift1275 {
 
 reason UebergabeFehler {

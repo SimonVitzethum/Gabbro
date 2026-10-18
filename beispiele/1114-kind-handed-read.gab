@@ -1,20 +1,20 @@
--- **1114 -- the legal handed read: the spill rule stays silent (lane 249).**
---
--- The positive pin beside 1113/1115/1116. The gate is valid (`stack rsi`:
--- bound, kept, answered -- `N446`/`N447` silent), the path is well-formed
--- (no `return` inside, every path ends in the never-returning `ausgang`
--- -- `N448`/`N449` silent) and a gate stands behind it (`N450` silent).
--- The child reads `stapel` -- and `stapel` is exactly what the gate call
--- handed: the bare-place argument at the stack parameter
--- (`roher_start(art, stapel)`). The spill rule (`N451`/`N452`) has
--- nothing to say here: the handed slot travels by construction. `r` is
--- the region's own `let` and never a caller slot.
---
--- What falls is the EMITTER, like 1112: the stub template has no lowering
--- for the `child` block (`C185`), with the block written out best-effort
--- beside the refusal. Same shape gate as 1107-1113 (not the raw clone,
--- `1000` not an OS number; `abi linux` names the template the stub is
--- written against, not a kernel table).
+// **1114 -- the legal handed read: the spill rule stays silent (lane 249).**
+//
+// The positive pin beside 1113/1115/1116. The gate is valid (`stack rsi`:
+// bound, kept, answered -- `N446`/`N447` silent), the path is well-formed
+// (no `return` inside, every path ends in the never-returning `ausgang`
+// -- `N448`/`N449` silent) and a gate stands behind it (`N450` silent).
+// The child reads `stapel` -- and `stapel` is exactly what the gate call
+// handed: the bare-place argument at the stack parameter
+// (`roher_start(art, stapel)`). The spill rule (`N451`/`N452`) has
+// nothing to say here: the handed slot travels by construction. `r` is
+// the region's own `let` and never a caller slot.
+//
+// What falls is the EMITTER, like 1112: the stub template has no lowering
+// for the `child` block (`C185`), with the block written out best-effort
+// beside the refusal. Same shape gate as 1107-1113 (not the raw clone,
+// `1000` not an OS number; `abi linux` names the template the stub is
+// written against, not a kernel table).
 
 module gift1114 {
 
@@ -63,12 +63,12 @@ impl fn starter(art : u64, stapel : u64) -> u64
     return v;
 }
 
--- **The targets (OFFEN O31).** The gate above names
--- no kernel; the binding below does. `linux_x86_64` is the literal half this gate
--- carried until Opus agent L, unchanged; `metal` is the same number and register map
--- through `int $0x80` into the image's kernel entry, which destroys no register, under
--- its own assumption -- never silently the Linux one (`N566`). The selection keeps the
--- hosted stub unchanged; `gabbro emit --target metal` builds the other.
+// **The targets (OFFEN O31).** The gate above names
+// no kernel; the binding below does. `linux_x86_64` is the literal half this gate
+// carried until Opus agent L, unchanged; `metal` is the same number and register map
+// through `int $0x80` into the image's kernel entry, which destroys no register, under
+// its own assumption -- never silently the Linux one (`N566`). The selection keeps the
+// hosted stub unchanged; `gabbro emit --target metal` builds the other.
 target linux_x86_64 abi linux arch x86_64 {
     sys_roher_start = number 1000
         regs in { rdi = art, rsi = stapel }

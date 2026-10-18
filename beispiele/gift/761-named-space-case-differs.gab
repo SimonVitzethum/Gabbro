@@ -1,10 +1,10 @@
--- erwartet: R008
--- **The repaired equality narrows `Raum::Benannt` to the NAME -- and only to the name.**
--- `beispiele/68-named-space-matches-itself.gab` is the pass side (`user` to `user`);
--- `beispiele/gift/681` is the mismatch side (`user` to `kernel`). This is the boundary
--- between them: `User` and `user` differ by one bit of case, and a name comparison that
--- folded case -- or compared anything but the exact text -- would let this call through.
--- Measured 2026-09-11 against the unchanged checker: falls with `R008`.
+// erwartet: R008
+// **The repaired equality narrows `Raum::Benannt` to the NAME -- and only to the name.**
+// `beispiele/68-named-space-matches-itself.gab` is the pass side (`user` to `user`);
+// `beispiele/gift/681` is the mismatch side (`user` to `kernel`). This is the boundary
+// between them: `User` and `user` differ by one bit of case, and a name comparison that
+// folded case -- or compared anything but the exact text -- would let this call through.
+// Measured 2026-09-11 against the unchanged checker: falls with `R008`.
 
 module gift::named_space_case_differs {
 

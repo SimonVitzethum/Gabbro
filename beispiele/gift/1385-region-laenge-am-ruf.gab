@@ -1,9 +1,9 @@
--- erwartet: N463
--- **A length past the region's extent falls at the call.**
---
--- `write` reads `len` bytes from `buf` (`requires len <= lenof(buf)`), and the region reaches
--- 4096: a length of 4097 is one byte the kernel would read from memory the contract never
--- handed over. The region's clause covers the name at every call, and here it does not cover.
+// erwartet: N463
+// **A length past the region's extent falls at the call.**
+//
+// `write` reads `len` bytes from `buf` (`requires len <= lenof(buf)`), and the region reaches
+// 4096: a length of 4097 is one byte the kernel would read from memory the contract never
+// handed over. The region's clause covers the name at every call, and here it does not cover.
 module gift::region_laenge_am_ruf {
 
 pub reason MapFehler {
@@ -73,10 +73,10 @@ pub fn main() -> never
     let seite = seiten_holen(0, SEITE, LESEN_SCHREIBEN, PRIVAT_ANONYM, KEINE_DATEI, 0) else (e) {
         exit_group(2);
     }
-    seite[0] = 79;       -- O
-    seite[1] = 75;       -- K
-    seite[2] = 10;       -- newline
-    seite[4095] = 1;     -- the last byte the extent covers
+    seite[0] = 79;       // O
+    seite[1] = 75;       // K
+    seite[2] = 10;       // newline
+    seite[4095] = 1;     // the last byte the extent covers
     let n = write(1, seite, 4097) else (f) { exit_group(3); }
     exit_group(0);
 }

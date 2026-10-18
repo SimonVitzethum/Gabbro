@@ -1,6 +1,6 @@
--- erwartet: M104
--- Der gemessene Fall: `refcount -= 1` ohne Vorpruefung. Er steht in `FRAGMENTE.md` als
--- Befund «B29» und ist der Grund, warum M1 ueberhaupt gebaut wurde.
+// erwartet: M104
+// Der gemessene Fall: `refcount -= 1` ohne Vorpruefung. Er steht in `FRAGMENTE.md` als
+// Befund «B29» und ist der Grund, warum M1 ueberhaupt gebaut wurde.
 module gift {
 
 const GRENZE : u32 = 65535;

@@ -1,6 +1,6 @@
--- Ein `entry`, dessen `dispatch` auf einen Namen zeigt, den niemand erklaert.
--- `H013` schlaegt den Verteiler im Aufrufgraphen nach und `continue`t still, wenn er
--- nicht aufloest. Faellt das? (Handprobe fuer messung/RACE.md.)
+// Ein `entry`, dessen `dispatch` auf einen Namen zeigt, den niemand erklaert.
+// `H013` schlaegt den Verteiler im Aufrufgraphen nach und `continue`t still, wenn er
+// nicht aufloest. Faellt das? (Handprobe fuer messung/RACE.md.)
 module eintr {
 
 static mut zaehler : u32 = 0;

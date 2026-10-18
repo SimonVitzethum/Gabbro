@@ -1,8 +1,8 @@
--- erwartet: N021
--- **Der gemessene Pfad schreibt seine eigene Messung.**
---
--- Dann beschreibt die Berichtszeile einen Zustand, den der Lauf selbst hergestellt hat.
--- *Der dritte der vier in SYNTAX.md §13 versprochenen Fehler.*
+// erwartet: N021
+// **Der gemessene Pfad schreibt seine eigene Messung.**
+//
+// Dann beschreibt die Berichtszeile einen Zustand, den der Lauf selbst hergestellt hat.
+// *Der dritte der vier in SYNTAX.md §13 versprochenen Fehler.*
 module gift::messung_schreibt {
 
 static mut k : u32 = 0;

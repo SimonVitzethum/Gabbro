@@ -1,5 +1,5 @@
--- Die Gegenprobe: derselbe Eintritt, aber der Verteiler EXISTIERT und schreibt einen
--- ungeschuetzten `static mut`. Das ist die Form, fuer die `H013` gebaut wurde.
+// Die Gegenprobe: derselbe Eintritt, aber der Verteiler EXISTIERT und schreibt einen
+// ungeschuetzten `static mut`. Das ist die Form, fuer die `H013` gebaut wurde.
 module eintr2 {
 
 static mut zaehler : u32 = 0;

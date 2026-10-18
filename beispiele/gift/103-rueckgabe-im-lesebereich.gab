@@ -1,6 +1,6 @@
--- erwartet: H011
--- **Wer zurueckgibt, ist nicht Leser.** Eine Rueckgabe im eigenen Lesebereich gibt einen
--- Platz frei, den man selbst noch haelt.
+// erwartet: H011
+// **Wer zurueckgibt, ist nicht Leser.** Eine Rueckgabe im eigenen Lesebereich gibt einen
+// Platz frei, den man selbst noch haelt.
 module gift::rueckgabe {
 
 table Konten count 256 { slot { zaehler : u32 in 0 .. 100, } }

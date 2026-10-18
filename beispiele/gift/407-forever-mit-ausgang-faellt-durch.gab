@@ -1,13 +1,13 @@
--- erwartet: L103
--- **Die Gegenrichtung zu `beispiele/54-divergenz-leckt-nicht.gab`** (2026-08-30).
---
--- Byteweise dieselbe Schleife -- **plus `leave dienst`**. Damit faellt sie durch, `m` lebt
--- auf diesem Weg weiter, und der andere Zweig verbraucht ihn: das ist ein Leck auf einem
--- Weg, und `L103` gehoert hierher.
---
--- *Ohne diese Datei koennte `m2::endet` jeden `forever` fuer divergent halten und die
--- Verfeinerung haette eine echte Absage mitgenommen* -- R11: eine Regel, die niemand hat
--- fallen sehen, ist eine Verzierung.
+// erwartet: L103
+// **Die Gegenrichtung zu `beispiele/54-divergenz-leckt-nicht.gab`** (2026-08-30).
+//
+// Byteweise dieselbe Schleife -- **plus `leave dienst`**. Damit faellt sie durch, `m` lebt
+// auf diesem Weg weiter, und der andere Zweig verbraucht ihn: das ist ein Leck auf einem
+// Weg, und `L103` gehoert hierher.
+//
+// *Ohne diese Datei koennte `m2::endet` jeden `forever` fuer divergent halten und die
+// Verfeinerung haette eine echte Absage mitgenommen* -- R11: eine Regel, die niemand hat
+// fallen sehen, ist eine Verzierung.
 module gift {
 
 linear type Marke;

@@ -1,7 +1,7 @@
--- erwartet: N455
--- **Copy-in of a static array cell into a smaller local (Task 5b).** A cell of
--- max 8 does not fit a local of max 4 (the loaded string may hold 8
--- characters): the copy rule `N455`, exactly as at a slot cell.
+// erwartet: N455
+// **Copy-in of a static array cell into a smaller local (Task 5b).** A cell of
+// max 8 does not fit a local of max 4 (the loaded string may hold 8
+// characters): the copy rule `N455`, exactly as at a slot cell.
 module gift::namenfeld_zu_kurz {
 
 static mut NAMEN : [string max 8; 4] = 0;

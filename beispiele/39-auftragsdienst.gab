@@ -1,14 +1,14 @@
--- 39 -- Der Auftragsdienst. **Diese Datei ist von einem Programm nach innen geschrieben.**
---
--- Der uebrige Korpus ist von der Sprache nach aussen geschrieben -- eine Datei je Konstrukt,
--- jedes Konstrukt einmal. Die Befunde des 2026-08-20 sassen aber nicht an den Konstrukten,
--- sondern an ihren **Kombinationen**: ein `return` in einer Traversierung, ein `match` unter
--- einer Sperre, ein `next`, das aus zwei Schleifen heraus die aeussere meint. *Eine Form, die
--- nur an einer Stelle steht, wird nur an einer Stelle geprueft.*
---
--- Der Dienst hier nimmt eine Warteschlange entgegen, sucht den dringendsten Auftrag, traegt
--- ihn aus und meldet die Runde weiter. **Er tut etwas** -- die Verschachtelung faellt dabei
--- an, statt hingestellt zu werden.
+// 39 -- Der Auftragsdienst. **Diese Datei ist von einem Programm nach innen geschrieben.**
+//
+// Der uebrige Korpus ist von der Sprache nach aussen geschrieben -- eine Datei je Konstrukt,
+// jedes Konstrukt einmal. Die Befunde des 2026-08-20 sassen aber nicht an den Konstrukten,
+// sondern an ihren **Kombinationen**: ein `return` in einer Traversierung, ein `match` unter
+// einer Sperre, ein `next`, das aus zwei Schleifen heraus die aeussere meint. *Eine Form, die
+// nur an einer Stelle steht, wird nur an einer Stelle geprueft.*
+//
+// Der Dienst hier nimmt eine Warteschlange entgegen, sucht den dringendsten Auftrag, traegt
+// ihn aus und meldet die Runde weiter. **Er tut etwas** -- die Verschachtelung faellt dabei
+// an, statt hingestellt zu werden.
 
 module beispiel::auftragsdienst {
 
@@ -22,9 +22,9 @@ type Zahl = u32 in 0 .. 65535;
 tagged type Art = { Lesen(Rest), Schreiben(Rest), Ruhe };
 
 table Auftraege count NAUFTRAEGE {
-    -- Ein Auftrag kann zu einem Buendel gehoeren, und das Buendel ist sein Elter. **Nur
-    -- `parent`, und die Teilmenge ist eine Aussage:** dieser Dienst steigt nie ab, also ist
-    -- `descendants of Auftraege` danach eine benannte Weigerung und kein fehlendes Stueck.
+    // Ein Auftrag kann zu einem Buendel gehoeren, und das Buendel ist sein Elter. **Nur
+    // `parent`, und die Teilmenge ist eine Aussage:** dieser Dienst steigt nie ab, also ist
+    // `descendants of Auftraege` danach eine benannte Weigerung und kein fehlendes Stueck.
     tree { parent buendel }
 
     slot {
@@ -41,7 +41,7 @@ table Auftraege count NAUFTRAEGE {
 
 lock WARTESCHLANGE protects { auftragsliste } rank 0 held <= 20000 ops;
 
--- Die Rundenmeldung: `bericht` ist die Nutzlast, `RUNDE_FERTIG` das Tor davor.
+// Die Rundenmeldung: `bericht` ist die Nutzlast, `RUNDE_FERTIG` das Tor davor.
 atomic RUNDE_FERTIG : bool release;
 
 static mut bericht  : Zahl = 0;
@@ -55,10 +55,10 @@ assume zeitgeber_tickt
     "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
     falsifier sonde_zeitgeber_tickt;
 
--- ---------------------------------------------------------------------------------------
--- 1. Die Suche. **`let` und `match` liegen IM Schleifenrumpf**, nicht darueber -- und bis
---    heute band keine Traversierung des Korpus in ihrem Rumpf einen Namen.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// 1. Die Suche. **`let` und `match` liegen IM Schleifenrumpf**, nicht darueber -- und bis
+//    heute band keine Traversierung des Korpus in ihrem Rumpf einen Namen.
+// ---------------------------------------------------------------------------------------
 
 impl fn erster_dringender(q : ptr<normal, r> Auftraege, schwelle : Prio)
     -> option index into Auftraege
@@ -70,8 +70,8 @@ impl fn erster_dringender(q : ptr<normal, r> Auftraege, schwelle : Prio)
         touches reads q.slots
     {
         let p = q.slots[i].prio;
-        -- Ein `tagged type` ist die eine Form, in der die Sprache eine GESCHLOSSENE
-        -- Fallunterscheidung sagt; `Ruhe` ist kein Auftrag und faellt deshalb durch.
+        // Ein `tagged type` ist die eine Form, in der die Sprache eine GESCHLOSSENE
+        // Fallunterscheidung sagt; `Ruhe` ist kein Auftrag und faellt deshalb durch.
         match q.slots[i].art {
             Lesen(n)     => { if p >= schwelle { return Some(i); } }
             Schreiben(n) => { if p >= schwelle { return Some(i); } }
@@ -81,10 +81,10 @@ impl fn erster_dringender(q : ptr<normal, r> Auftraege, schwelle : Prio)
     return None;
 }
 
--- **Der erste Zeuge der Vorfahrenkette IST der Elter** -- ein Knoten ist kein Vorfahr von
--- sich, also faengt die Kette beim Elter an. Genau darum steht das `return` hier im
--- Schleifenrumpf und nicht in einem Zweig: der Rumpf entscheidet beim ersten Durchgang, und
--- ist die Kette leer, faellt die Schleife durch auf das `None` darunter.
+// **Der erste Zeuge der Vorfahrenkette IST der Elter** -- ein Knoten ist kein Vorfahr von
+// sich, also faengt die Kette beim Elter an. Genau darum steht das `return` hier im
+// Schleifenrumpf und nicht in einem Zweig: der Rumpf entscheidet beim ersten Durchgang, und
+// ist die Kette leer, faellt die Schleife durch auf das `None` darunter.
 impl fn buendel_von(q : ptr<normal, r> Auftraege, i : index into Auftraege)
     -> option index into Auftraege
     requires Held(WARTESCHLANGE)
@@ -97,14 +97,14 @@ impl fn buendel_von(q : ptr<normal, r> Auftraege, i : index into Auftraege)
     return None;
 }
 
--- ---------------------------------------------------------------------------------------
--- 2. Ein Durchgang, der endet, wenn nichts mehr offen ist.
---
--- **Der Ausweg eines `let … else` steht auf der Hoehe des `let`**, nicht eine Stufe tiefer --
--- deshalb ist `return erledigt;` hier eine Anweisung des Schleifenrumpfes und nicht eines
--- Zweiges. Dieselbe Regel traegt den `narrow`-Ausweg darunter: `next runde;` meint die
--- Schleife, in der das `narrow` steht.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// 2. Ein Durchgang, der endet, wenn nichts mehr offen ist.
+//
+// **Der Ausweg eines `let … else` steht auf der Hoehe des `let`**, nicht eine Stufe tiefer --
+// deshalb ist `return erledigt;` hier eine Anweisung des Schleifenrumpfes und nicht eines
+// Zweiges. Dieselbe Regel traegt den `narrow`-Ausweg darunter: `next runde;` meint die
+// Schleife, in der das `narrow` steht.
+// ---------------------------------------------------------------------------------------
 
 reason Leerlauf {
     Nichts = 1 "keine offene Arbeit"
@@ -125,8 +125,8 @@ impl fn abarbeiten() -> Zahl
         progress zeitgeber_tickt
     {
         let menge = naechste_menge() else (e) { return erledigt; }
-        -- Ist weniger als ein Block offen, lohnt der Weg zum Geraet nicht -- dann faengt
-        -- die naechste Runde an, ohne dass etwas uebertragen wird.
+        // Ist weniger als ein Block offen, lohnt der Weg zum Geraet nicht -- dann faengt
+        // die naechste Runde an, ohne dass etwas uebertragen wird.
         narrow menge to BLOCK .. 4096 else { next runde; }
         let geschafft = block_uebertragen(menge);
         if geschafft >= 1 {
@@ -136,10 +136,10 @@ impl fn abarbeiten() -> Zahl
     return erledigt;
 }
 
--- ---------------------------------------------------------------------------------------
--- 3. Die Dienstschleife. **Die Sperre liegt IM Durchgang**, und unter ihr steht die ganze
---    Arbeit an der Warteschlange: erst suchen, dann entscheiden, dann austragen.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// 3. Die Dienstschleife. **Die Sperre liegt IM Durchgang**, und unter ihr steht die ganze
+//    Arbeit an der Warteschlange: erst suchen, dann entscheiden, dann austragen.
+// ---------------------------------------------------------------------------------------
 
 linear type Angemeldet;
 
@@ -159,16 +159,16 @@ divergent fn dienst(q : ptr<normal, rw> Auftraege, marke : Angemeldet)
             match erster_dringender(q, 7) {
                 None    => { }
                 Some(i) => {
-                    -- Der Auftrag wird ausgetragen; sein Buendel bleibt stehen, denn ein
-                    -- Buendel ist erst leer, wenn sein letztes Kind fort ist.
+                    // Der Auftrag wird ausgetragen; sein Buendel bleibt stehen, denn ein
+                    // Buendel ist erst leer, wenn sein letztes Kind fort ist.
                     q.slots[i].belegt = false;
                     q.slots[i].rest   = 0;
                     bericht = 1;
                 }
             }
         }
-        -- Die Nutzlast steht an der Stelle, an der sie entsteht, mit den dort sichtbaren
-        -- Namen.
+        // Die Nutzlast steht an der Stelle, an der sie entsteht, mit den dort sichtbaren
+        // Namen.
         RUNDE_FERTIG = true publishes { bericht };
         if abschaltung_angefordert() {
             leave runde;
@@ -176,7 +176,7 @@ divergent fn dienst(q : ptr<normal, rw> Auftraege, marke : Angemeldet)
     }
 }
 
--- Die Gegenseite der Paarung: wer den Bericht liest, erwartet ihn ueber demselben Tor.
+// Die Gegenseite der Paarung: wer den Bericht liest, erwartet ihn ueber demselben Tor.
 impl fn bericht_lesen() -> Zahl
     effects { reads RUNDE_FERTIG, reads bericht }
     costs   <= 8 ops

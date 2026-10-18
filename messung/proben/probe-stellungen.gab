@@ -1,18 +1,18 @@
--- Die neun Quantorendomaenen in den STELLUNGEN, die `M109` nicht liest.
---
--- `messung/proben/probe-neun-domaenen.gab` traegt alle neun in `ensures` -- der einzigen
--- Stellung, die `M109` liest. **Diese Datei ist ihr Gegenstueck**: dieselben neun Domaenen
--- in `requires`, in einer `invariant` und im Rumpf einer `spec fn`.
---
--- Der Zweck ist die Messung und nicht das Programm. Je Zelle wird der GRUNDNAME des Orts
--- durch `zzznix` ersetzt und je Zelle der TYP des Orts vertauscht; gemessen wird, was der
--- Pruefer dazu sagt. Die Tafel steht in `dokumente/PRUEFER.md`.
---
--- **Drei Zellen fehlen, und sie fehlen aus einem Sprachgrund**: `queue`, `elems of` und
--- `fields of` in einer `table`-`invariant` braeuchten einen Verbund bzw. ein Format, an das
--- die Tabelle herankommt -- eine `invariant` spricht ueber `Self` und ueber andere
--- Traeger, nicht ueber Parameter, die es dort nicht gibt. *Die Zelle ist nicht ungemessen,
--- sondern unformulierbar; sie steht so in der Tafel.*
+// Die neun Quantorendomaenen in den STELLUNGEN, die `M109` nicht liest.
+//
+// `messung/proben/probe-neun-domaenen.gab` traegt alle neun in `ensures` -- der einzigen
+// Stellung, die `M109` liest. **Diese Datei ist ihr Gegenstueck**: dieselben neun Domaenen
+// in `requires`, in einer `invariant` und im Rumpf einer `spec fn`.
+//
+// Der Zweck ist die Messung und nicht das Programm. Je Zelle wird der GRUNDNAME des Orts
+// durch `zzznix` ersetzt und je Zelle der TYP des Orts vertauscht; gemessen wird, was der
+// Pruefer dazu sagt. Die Tafel steht in `dokumente/PRUEFER.md`.
+//
+// **Drei Zellen fehlen, und sie fehlen aus einem Sprachgrund**: `queue`, `elems of` und
+// `fields of` in einer `table`-`invariant` braeuchten einen Verbund bzw. ein Format, an das
+// die Tabelle herankommt -- eine `invariant` spricht ueber `Self` und ueber andere
+// Traeger, nicht ueber Parameter, die es dort nicht gibt. *Die Zelle ist nicht ungemessen,
+// sondern unformulierbar; sie steht so in der Tafel.*
 
 module messung::stellungen {
 
@@ -33,27 +33,27 @@ table Knoten count NKNOTEN {
         naechstes_geschwister : option index into Knoten,
     }
 
-    -- 1 -- `slots of` in einer `invariant`
+    // 1 -- `slots of` in einer `invariant`
     invariant s1_slots cost O(n) runs offline :
         forall s in slots of Self : Self.slots[s].marke == 0;
 
-    -- 2 -- `chain(a, b) in` in einer `invariant`
+    // 2 -- `chain(a, b) in` in einer `invariant`
     invariant s2_chain cost O(n) runs offline :
         forall s in slots of Self :
             forall x in chain(erstes_kind, naechstes_geschwister) in Self.slots[s] :
                 Self.slots[x].belegt;
 
-    -- 3 -- `descendants of` in einer `invariant`
+    // 3 -- `descendants of` in einer `invariant`
     invariant s3_descendants cost O(n) runs offline :
         forall s in slots of Self :
             !exists x in descendants of Self.slots[s] : !Self.slots[x].belegt;
 
-    -- 4 -- `ancestors of` in einer `invariant`
+    // 4 -- `ancestors of` in einer `invariant`
     invariant s4_ancestors cost O(n) runs offline :
         forall s in slots of Self :
             forall x in ancestors of Self.slots[s] : Self.slots[x].belegt;
 
-    -- 8 -- `threads` in einer `invariant`
+    // 8 -- `threads` in einer `invariant`
     invariant s8_threads cost O(n) runs online :
         forall t in threads : Self.slots[0].belegt;
 }
@@ -77,14 +77,14 @@ walk Baum levels 2 {
     down : rahmen when it.gueltigkeit && !it.schreibbar,
     leaf : it.gueltigkeit && it.schreibbar,
 
-    -- 9 -- `mappings of` in einer `invariant`
+    // 9 -- `mappings of` in einer `invariant`
     invariant s9_mappings cost O(n) runs offline :
         forall m in mappings of Self : m.gueltigkeit;
 }
 
--- ============================================================================
--- Stellung `requires` -- alle neun
--- ============================================================================
+// ============================================================================
+// Stellung `requires` -- alle neun
+// ============================================================================
 
 impl fn r1_slots(k : ptr<normal, rw> Knoten)
     requires forall s in slots of k : k.slots[s].marke == 0
@@ -150,9 +150,9 @@ impl fn r9_mappings(w : ptr<normal, rw> Baum)
 {
 }
 
--- ============================================================================
--- Stellung `spec fn =` -- alle neun
--- ============================================================================
+// ============================================================================
+// Stellung `spec fn =` -- alle neun
+// ============================================================================
 
 spec fn p1_slots(k : ptr<normal, r> Knoten) -> bool
     effects { pure }

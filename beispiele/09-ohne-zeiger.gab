@@ -1,11 +1,11 @@
--- 09 -- **Der Ursprung, aufgeloest: Kernzustand braucht keinen Zeiger.**
---
--- Caprock hat EINE CapSpace-Instanz (`CAPS.write().cspace`), hinter einer Sperre. Das
--- `&mut CapSpace` in Rust ist die Leihform der Sperre, nicht die Struktur der Sache.
--- In Gabbro ist die Tabelle der Speicher, ihr Name der Ort, und `Held(KAPPEN)` der Beleg.
---
--- Damit gibt es KEINE zwei Zeiger, also kein Alias -- und der Ursprung der Eigentumskette
--- ist gar nicht noetig, weil es keine Kette gibt.
+// 09 -- **Der Ursprung, aufgeloest: Kernzustand braucht keinen Zeiger.**
+//
+// Caprock hat EINE CapSpace-Instanz (`CAPS.write().cspace`), hinter einer Sperre. Das
+// `&mut CapSpace` in Rust ist die Leihform der Sperre, nicht die Struktur der Sache.
+// In Gabbro ist die Tabelle der Speicher, ihr Name der Ort, und `Held(KAPPEN)` der Beleg.
+//
+// Damit gibt es KEINE zwei Zeiger, also kein Alias -- und der Ursprung der Eigentumskette
+// ist gar nicht noetig, weil es keine Kette gibt.
 
 module beispiel::ohne_zeiger {
 
@@ -24,11 +24,11 @@ table Objekte count NOBJEKTE {
 }
 
 table Kappenraum count NSLOTS {
-    -- **«B41b»: die Kante -- und diese Datei traversierte ABWAERTS ueber einer Struktur,
-    -- die nur AUFWAERTS zeigte** (2026-08-20). `descendants of Kappenraum.slots[s]` stand
-    -- unten seit jeher; im Slot stand `elter` und sonst nichts. Solange die Domaene ihre
-    -- Kante nicht nannte, konnte es niemandem auffallen -- *ein Durchlauf ohne benannte
-    -- Kante ist mit jeder Struktur vertraeglich, auch mit einer, die ihn nicht traegt.*
+    // **«B41b»: die Kante -- und diese Datei traversierte ABWAERTS ueber einer Struktur,
+    // die nur AUFWAERTS zeigte** (2026-08-20). `descendants of Kappenraum.slots[s]` stand
+    // unten seit jeher; im Slot stand `elter` und sonst nichts. Solange die Domaene ihre
+    // Kante nicht nannte, konnte es niemandem auffallen -- *ein Durchlauf ohne benannte
+    // Kante ist mit jeder Struktur vertraeglich, auch mit einer, die ihn nicht traegt.*
     tree { parent elter, child erstes_kind, sibling naechstes }
 
     slot {
@@ -39,12 +39,12 @@ table Kappenraum count NSLOTS {
         naechstes   : option index into Kappenraum,
     }
 
-    -- **Opus agent D (2026-09-26, OFFEN O11, `N496`): the predicate here was FALSE.** It
-    -- read `forall s : Kappenraum.slots[s].benutzt` -- every slot in use -- which the zeroed
-    -- table breaks at the start and `blatt_loeschen` below breaks on purpose (its own
-    -- `ensures` says `!benutzt`). Nobody owed it, so nothing noticed. Since `N496` every
-    -- writer of the table must `maintain` it, so the statement had to become one the
-    -- writers keep: a FREE slot has no parent (`blatt_loeschen` clears both together).
+    // **Opus agent D (2026-09-26, OFFEN O11, `N496`): the predicate here was FALSE.** It
+    // read `forall s : Kappenraum.slots[s].benutzt` -- every slot in use -- which the zeroed
+    // table breaks at the start and `blatt_loeschen` below breaks on purpose (its own
+    // `ensures` says `!benutzt`). Nobody owed it, so nothing noticed. Since `N496` every
+    // writer of the table must `maintain` it, so the statement had to become one the
+    // writers keep: a FREE slot has no parent (`blatt_loeschen` clears both together).
     invariant frei_ohne_elter cost O(n) runs offline :
         forall s in slots of Kappenraum :
             !Kappenraum.slots[s].benutzt => Kappenraum.slots[s].elter == None;
@@ -65,9 +65,9 @@ impl fn blatt_loeschen(s : index into Kappenraum)
     Kappenraum.slots[s].benutzt = false;
     Kappenraum.slots[s].elter   = None;
 
-    -- Die Lesung steht NACH den Schreibungen (V4): beide nennen den Traeger
-    -- `Kappenraum`, ein frueheres `obj` waere danach veraltet. `.objekt` hat
-    -- keine davon angeruehrt -- derselbe Wert, frischer Name.
+    // Die Lesung steht NACH den Schreibungen (V4): beide nennen den Traeger
+    // `Kappenraum`, ein frueheres `obj` waere danach veraltet. `.objekt` hat
+    // keine davon angeruehrt -- derselbe Wert, frischer Name.
     let obj = Kappenraum.slots[s].objekt;
 
     if Objekte.slots[obj].zaehler >= 1 {
@@ -84,20 +84,20 @@ impl fn blatt_loeschen(s : index into Kappenraum)
 
 impl fn einsammeln(s : index into Kappenraum)
     requires Held(KAPPEN)
-    -- **`reads Objekte.slots` stand hier nicht** und musste stehen (2026-08-19): der
-    -- Rumpf ruft `blatt_loeschen`, und das liest `Objekte.slots[obj].zaehler`. Bis der
-    -- Rahmen die Aufrufgrenze ueberquerte, deckte ein `reads Kappenraum.slots` jedes
-    -- fremde Lesen mit -- verglichen wurde nur die ART, nicht der ORT.
+    // **`reads Objekte.slots` stand hier nicht** und musste stehen (2026-08-19): der
+    // Rumpf ruft `blatt_loeschen`, und das liest `Objekte.slots[obj].zaehler`. Bis der
+    // Rahmen die Aufrufgrenze ueberquerte, deckte ein `reads Kappenraum.slots` jedes
+    // fremde Lesen mit -- verglichen wurde nur die ART, nicht der ORT.
     maintains frei_ohne_elter
     effects  { reads Kappenraum.slots, reads Objekte.slots,
                consumes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 16371840 ops
 {
     traverse opfer over descendants of Kappenraum.slots[s] by consuming
-        -- **`reads Kappenraum.slots` stands here since fix lane F7** (2026-09-22):
-        -- `blatt_loeschen` reads the slot it clears (`.objekt`), and `E011` holds the
-        -- callee's effects against this line since then. The function line above
-        -- names the same read beside its `consumes` for the same reason.
+        // **`reads Kappenraum.slots` stands here since fix lane F7** (2026-09-22):
+        // `blatt_loeschen` reads the slot it clears (`.objekt`), and `E011` holds the
+        // callee's effects against this line since then. The function line above
+        // names the same read beside its `consumes` for the same reason.
         touches reads Kappenraum.slots, consumes Kappenraum.slots, writes Objekte.slots
     {
         blatt_loeschen(opfer);
@@ -106,11 +106,11 @@ impl fn einsammeln(s : index into Kappenraum)
 
 extern fn speicher_freigeben(p : Pa) effects { writes halde } costs <= 64 ops;
 
--- ---------------------------------------------------------------------------------------
--- Die ZWEITE Klasse von Zustand: ein Geraet. Auch hier kein Zeiger -- **die Parameterliste
--- der Deklaration IST der Konstruktor.** `device Vtd(basis : Pa)` sagt: aus einer `Pa` wird
--- ein Vtd, und die Pa kommt aus der ACPI-DMAR-Tabelle, also aus Daten.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// Die ZWEITE Klasse von Zustand: ein Geraet. Auch hier kein Zeiger -- **die Parameterliste
+// der Deklaration IST der Konstruktor.** `device Vtd(basis : Pa)` sagt: aus einer `Pa` wird
+// ein Vtd, und die Pa kommt aus der ACPI-DMAR-Tabelle, also aus Daten.
+// ---------------------------------------------------------------------------------------
 
 device Vtd(basis : Pa) at mmio {
     reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, }
@@ -144,18 +144,18 @@ impl fn scharfschalten(basis : Pa, wurzel : Pa)
 
 extern fn geraet_haengt() -> never effects { diverges } costs <= 1 ops;
 
--- **Der Zeuge, der hier fehlte.** Dieselbe Wartestelle wie in `02-geraet.gab`, und dieselbe
--- Luecke: `progress` nannte einen Namen, den keine Annahme trug. *Ein Zeuge ohne Erklaerung
--- steht in keinem Manifest -- und `gabbro annahmen` haette ihn nie aufgezaehlt.*
+// **Der Zeuge, der hier fehlte.** Dieselbe Wartestelle wie in `02-geraet.gab`, und dieselbe
+// Luecke: `progress` nannte einen Namen, den keine Annahme trug. *Ein Zeuge ohne Erklaerung
+// steht in keinem Manifest -- und `gabbro annahmen` haette ihn nie aufgezaehlt.*
 assume geraet_quittiert
     "Nach SRTP=1 steht RTPS=1, bevor TE gesetzt werden darf."
     falsifier sonde_vtd_srtp;
 
--- ---------------------------------------------------------------------------------------
--- **Was danach an Zeigern uebrigbleibt** -- und nur dort ist Trennung ueberhaupt eine Frage:
--- DMA-Puffer, belegte Regionen, fremder Speicher. Dort ist der Ursprung eine Funktion, die
--- Besitz HERGIBT, und `own` macht ihn linear. Beides ist ausdrueckbar, ohne neues Wort.
--- ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
+// **Was danach an Zeigern uebrigbleibt** -- und nur dort ist Trennung ueberhaupt eine Frage:
+// DMA-Puffer, belegte Regionen, fremder Speicher. Dort ist der Ursprung eine Funktion, die
+// Besitz HERGIBT, und `own` macht ihn linear. Beides ist ausdrueckbar, ohne neues Wort.
+// ---------------------------------------------------------------------------------------
 
 linear type Region;
 

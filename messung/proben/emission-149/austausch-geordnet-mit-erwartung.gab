@@ -1,15 +1,15 @@
--- ARM 2 twin, must LOWER: ordered exchange-`erwartet` (lane-149).
---
--- `G` is `release`, so the compare-exchange fails with `memory_order_acquire` and the
--- awaited `{ m }` is acquired on the failure path -- the load side carries the
--- ordering the promise needs. The emitter lowers it and names the half in the C in
--- the same words the `AwaitLoad` arm uses. Fully paired (`mw` publishes, `mr`
--- awaits), so the checker stays silent.
---
--- Measured verdicts (recorded after the run, not before):
---   pruefe: 0 errors, 0 hints
---   emit:   exit 0; C carries `awaits { m } -- paired at compile time`
---   cc:     takes the unit
+// ARM 2 twin, must LOWER: ordered exchange-`erwartet` (lane-149).
+//
+// `G` is `release`, so the compare-exchange fails with `memory_order_acquire` and the
+// awaited `{ m }` is acquired on the failure path -- the load side carries the
+// ordering the promise needs. The emitter lowers it and names the half in the C in
+// the same words the `AwaitLoad` arm uses. Fully paired (`mw` publishes, `mr`
+// awaits), so the checker stays silent.
+//
+// Measured verdicts (recorded after the run, not before):
+//   pruefe: 0 errors, 0 hints
+//   emit:   exit 0; C carries `awaits { m } -- paired at compile time`
+//   cc:     takes the unit
 
 module probe::austausch_geordnet_mit_erwartung {
 

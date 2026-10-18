@@ -1,4 +1,4 @@
--- W24-Vorlauf: das Tor nennt einen Traeger, der KEINE Funktion und KEIN check ist.
+// W24-Vorlauf: das Tor nennt einen Traeger, der KEINE Funktion und KEIN check ist.
 module w24::t3 {
 
 static mut k : u32 = 0;

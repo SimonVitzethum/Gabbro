@@ -1,18 +1,18 @@
--- 17 -- **Die Traegergruppe, und warum sie zwei Sperren nimmt.**
---
--- Gemessen (`dokumente/MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten, 2026-08-16): im
--- Bestand liegen vier Invarianten zwischen je zwei Traegern. Drei unter EINER Sperre --
--- die deckt `lock … protects { A, B }` bereits. **Die vierte nicht:**
---
---   ein Faden steht in der Empfaengerliste eines Endpunkts  <=>  sein Grund ist gesetzt
---
--- Zwei Traeger, zwei Sperren, eine Ordnung. Diese Datei ist die richtige Fassung; die
--- falsche steht als `beispiele/gift/63-gruppe-halb-gesperrt.gab` daneben und faellt mit
--- `U003`.
---
--- **Die Ordnung wird hier NICHT deklariert.** Sie steht in `rank 1` und `rank 2` -- eine
--- zweite Deklaration an der Gruppe waere eine zweite Wahrheit ueber dieselbe Sache. `U005`
--- faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen: dann gibt es keine Ordnung.
+// 17 -- **Die Traegergruppe, und warum sie zwei Sperren nimmt.**
+//
+// Gemessen (`dokumente/MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten, 2026-08-16): im
+// Bestand liegen vier Invarianten zwischen je zwei Traegern. Drei unter EINER Sperre --
+// die deckt `lock … protects { A, B }` bereits. **Die vierte nicht:**
+//
+//   ein Faden steht in der Empfaengerliste eines Endpunkts  <=>  sein Grund ist gesetzt
+//
+// Zwei Traeger, zwei Sperren, eine Ordnung. Diese Datei ist die richtige Fassung; die
+// falsche steht als `beispiele/gift/63-gruppe-halb-gesperrt.gab` daneben und faellt mit
+// `U003`.
+//
+// **Die Ordnung wird hier NICHT deklariert.** Sie steht in `rank 1` und `rank 2` -- eine
+// zweite Deklaration an der Gruppe waere eine zweite Wahrheit ueber dieselbe Sache. `U005`
+// faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen: dann gibt es keine Ordnung.
 
 
 
@@ -38,21 +38,21 @@ table Endpunkte count NPUNKTE {
 lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
 lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
 
--- Die Verbindungs-Invariante lebt zwischen den beiden Traegern, nicht in einem.
+// Die Verbindungs-Invariante lebt zwischen den beiden Traegern, nicht in einem.
 group Zustellung over { Endpunkte, Faeden } {
-    -- **Die Aussage, die es ohne Gruppe nicht gibt.** Sie quantifiziert ueber Endpunkte und
-    -- liest Faeden -- keine `table … invariant` kann das sagen, weil sie nur ueber ihrem
-    -- eigenen Traeger quantifiziert. `U007` faellt, wenn eine Gruppen-Invariante nur EINEN
-    -- Traeger nennt: dann gehoert sie an die Tabelle, und die Gruppe waere bloss bequemer.
+    // **Die Aussage, die es ohne Gruppe nicht gibt.** Sie quantifiziert ueber Endpunkte und
+    // liest Faeden -- keine `table … invariant` kann das sagen, weil sie nur ueber ihrem
+    // eigenen Traeger quantifiziert. `U007` faellt, wenn eine Gruppen-Invariante nur EINEN
+    // Traeger nennt: dann gehoert sie an die Tabelle, und die Gruppe waere bloss bequemer.
     invariant wartende_haben_grund cost O(n) runs offline :
         forall e in slots of Endpunkte :
             Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
 }
 
--- **Der Fehler.** Beide Traeger geschrieben, nur `PUNKTE` gehalten.
+// **Der Fehler.** Beide Traeger geschrieben, nur `PUNKTE` gehalten.
 impl fn einreihen(e : index into Endpunkte, t : index into Faeden)
-    -- Opus agent D (2026-09-26, `N496`): a writer of a group carrier owes the group's
-    -- invariant. This one keeps it: the endpoint it points at `t` gets `gruende = 1`.
+    // Opus agent D (2026-09-26, `N496`): a writer of a group carrier owes the group's
+    // invariant. This one keeps it: the endpoint it points at `t` gets `gruende = 1`.
     maintains wartende_haben_grund
     effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
               locks PUNKTE, locks PLAN }

@@ -1,11 +1,11 @@
--- erwartet: N496
--- **Opus agent D (OFFEN O11) -- a writer of a table invariant's carrier that owes it nowhere.**
---
--- `leeren` writes `W` and says nothing about `klein`. Until `N496` the invariant was booked
--- as `W` (owed by no function) and the file checked clean: the model owes `klein` at every
--- return of every function that writes `W` (`schuldet`), the source asked nobody. The
--- write below keeps the invariant, which is exactly why the missing line is the finding:
--- the duty was not wrong, it was unbooked.
+// erwartet: N496
+// **Opus agent D (OFFEN O11) -- a writer of a table invariant's carrier that owes it nowhere.**
+//
+// `leeren` writes `W` and says nothing about `klein`. Until `N496` the invariant was booked
+// as `W` (owed by no function) and the file checked clean: the model owes `klein` at every
+// return of every function that writes `W` (`schuldet`), the source asked nobody. The
+// write below keeps the invariant, which is exactly why the missing line is the finding:
+// the duty was not wrong, it was unbooked.
 module gift::invariante_ohne_maintains {
 
 table W count 8 {

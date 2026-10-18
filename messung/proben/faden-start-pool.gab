@@ -1,12 +1,12 @@
--- faden-start-pool -- **A hosted `start` of two pool-safe roots, exported into the
--- goal theorem (Opus agent A, 2026-09-26, OFFEN O22).**
---
--- `chef` (the one declared start) starts `arbeiterA` and `arbeiterB` at run time and
--- waits for both (the join). Each root holds no lock by signature and writes `konto`
--- only inside `locks L` -- pool-safe, so `N462` stays silent -- and `chef` holds nothing
--- at the statement (`N461`). The exporter carries both roots as `gE.gestartet`; the
--- goal theorem's checker Bool judges each of them as a pool routine (it stands twice
--- in `Einheit.ws`), and `pruefe-akzeptiert-diff.py` compares the two verdicts here.
+// faden-start-pool -- **A hosted `start` of two pool-safe roots, exported into the
+// goal theorem (Opus agent A, 2026-09-26, OFFEN O22).**
+//
+// `chef` (the one declared start) starts `arbeiterA` and `arbeiterB` at run time and
+// waits for both (the join). Each root holds no lock by signature and writes `konto`
+// only inside `locks L` -- pool-safe, so `N462` stays silent -- and `chef` holds nothing
+// at the statement (`N461`). The exporter carries both roots as `gE.gestartet`; the
+// goal theorem's checker Bool judges each of them as a pool routine (it stands twice
+// in `Einheit.ws`), and `pruefe-akzeptiert-diff.py` compares the two verdicts here.
 module probe::faden_start_pool {
 
 const NSLOTS : u32 = 2;

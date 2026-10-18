@@ -72,28 +72,28 @@ fn name_ist_brauchbar(name: &str) -> Result<(), String> {
 fn quelle(name: &str) -> String {
     format!(
         "\
--- `{name}` -- written by `gabbro new`. **It checks, builds and runs as it stands:**
---
---     gabbro check {name}.gab     -- 0 errors
---     gabbro costs {name}.gab     -- what the body COSTS, beside what the line PROMISES
---     gabbro build {name}.bau     -- LLVM: checker, IR, `opt`, `llc`, `ld.lld`
---     ./target/{name}/{name}      -- prints `Hi`
---
--- There is no C library and no C compiler in this build. **The program asks the kernel
--- itself:** the `syscall` item below is the raw Linux `write` (x86-64, number 1), with the
--- registers named, and it is the whole of the program's operating-system interface.
--- `dokumente/TUTORIAL.md` is the reason each clause is there. This file is the shape.
+// `{name}` -- written by `gabbro new`. **It checks, builds and runs as it stands:**
+//
+//     gabbro check {name}.gab     -- 0 errors
+//     gabbro costs {name}.gab     -- what the body COSTS, beside what the line PROMISES
+//     gabbro build {name}.bau     -- LLVM: checker, IR, `opt`, `llc`, `ld.lld`
+//     ./target/{name}/{name}      -- prints `Hi`
+//
+// There is no C library and no C compiler in this build. **The program asks the kernel
+// itself:** the `syscall` item below is the raw Linux `write` (x86-64, number 1), with the
+// registers named, and it is the whole of the program's operating-system interface.
+// `dokumente/TUTORIAL.md` is the reason each clause is there. This file is the shape.
 module {name} {{
 
--- **(1) `assume` names what the kernel is trusted to do, and `falsifier` names the probe that
--- would catch it lying.** The system call is user logic, not a language rule.
+// **(1) `assume` names what the kernel is trusted to do, and `falsifier` names the probe that
+// would catch it lying.** The system call is user logic, not a language rule.
 assume linux_schreibe
     \"The kernel writes at most len bytes from buf and answers the count.\"
     falsifier sonde_schreibe;
 
--- **(2) The gate.** Registers in, registers out, what the instruction destroys (`rcx`,
--- `r11`), and the contract: never more bytes than the buffer holds. `effects` is obligatory on
--- EVERY function and gate; `writes ausgabe` names the sink.
+// **(2) The gate.** Registers in, registers out, what the instruction destroys (`rcx`,
+// `r11`), and the contract: never more bytes than the buffer holds. `effects` is obligatory on
+// EVERY function and gate; `writes ausgabe` names the sink.
 syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
     abi linux arch x86_64 number 1
     regs in {{ rdi = fd, rsi = puffer, rdx = laenge }}
@@ -105,25 +105,25 @@ syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
     costs <= 8 ops
     assume linux_schreibe falsifier sonde_schreibe;
 
--- **(3) The buffer is a `static`: the LLVM lowering hands a gate a global, not a local.** `check`
--- says one `E247` hint about it (no lock guards a carrier the program writes) -- a hint, not a
--- refusal; a one-thread program needs no lock.
+// **(3) The buffer is a `static`: the LLVM lowering hands a gate a global, not a local.** `check`
+// says one `E247` hint about it (no lock guards a carrier the program writes) -- a hint, not a
+// refusal; a one-thread program needs no lock.
 pub static mut TEXT : [u8; 3] = 0;
 
--- **(4) `pub fn main` is the entry.** The generator writes `_start` around it and hands the
--- answer to `exit_group`; a `unit … program` names exactly one such function.
---
--- **`costs <= 40 ops` is NOT irreducible** -- delete it and the file still checks. It stands
--- here for the one habit worth having from the first day: **`gabbro costs {name}.gab` prints
--- the number the body actually costs, beside the number this line promises.** Read it; never
--- guess it. A promise that is too small is `K001`, and it is arithmetic, not opinion.
+// **(4) `pub fn main` is the entry.** The generator writes `_start` around it and hands the
+// answer to `exit_group`; a `unit … program` names exactly one such function.
+//
+// **`costs <= 40 ops` is NOT irreducible** -- delete it and the file still checks. It stands
+// here for the one habit worth having from the first day: **`gabbro costs {name}.gab` prints
+// the number the body actually costs, beside the number this line promises.** Read it; never
+// guess it. A promise that is too small is `K001`, and it is arithmetic, not opinion.
 pub fn main() -> u64
     effects {{ reads TEXT, writes TEXT, writes ausgabe }}
     costs   <= 40 ops
 {{
-    TEXT[0] = 72;   -- H
-    TEXT[1] = 105;  -- i
-    TEXT[2] = 10;   -- newline
+    TEXT[0] = 72;   // H
+    TEXT[1] = 105;  // i
+    TEXT[2] = 10;   // newline
     schreibe(1, TEXT, 3);
     return 0;
 }}

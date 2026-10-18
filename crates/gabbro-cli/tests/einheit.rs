@@ -218,7 +218,7 @@ fn abi_als_einheit_schreibt_eine_schnittstelle() {
 
     let (aus, fehler, code) = lauf(&["abi", "--unit", LAGER, BETRIEB]);
     assert_eq!(code, 0, "as a unit it has one:\n{fehler}");
-    assert!(aus.starts_with("-- @gabi 1"), "with the marker:\n{aus}");
+    assert!(aus.starts_with("// @gabi 1"), "with the marker:\n{aus}");
     assert!(
         aus.contains("pub table Faecher") && aus.contains("pub extern fn raeumen("),
         "and both files' exports in it:\n{aus}"

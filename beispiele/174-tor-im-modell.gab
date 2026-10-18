@@ -1,24 +1,24 @@
--- 174 -- **A system-call gate in the model: the first certified program that calls
--- the kernel.**
---
--- A `syscall` gate is a foreign body, and machine G has had the form for it from
--- the start: `D.Ax` with its parameters and its answer, called by `Stmt.axiomCall`
--- or `Block.bindAxiom`, answered by the oracle (`axiomAntwort`), and what the answer
--- may be is premise (c) of the goal theorem. Until 2026-09-30 the exporter wrote
--- `Ax := Empty` and refused every unit with a gate (LG001); now a gate travels, and
--- this unit is CERTIFIED (`grammatik/Grammatik/Zertifikat/`, `gP_gabbro`).
---
--- The two gates are the two shapes that travel:
--- * `getpid` answers a VALUE, bound in a block (`Block.bindAxiom`, under the lock);
--- * `exit_group` answers `never`: in G the call is the named stop `nieZurueck`, and
---   nothing behind it runs -- the emitter writes `_Noreturn` on the same promise.
---
--- What does NOT travel yet, each refused by name (`crates/gabbro-check/src/lean_g.rs`,
--- `read_gate`): a fallible gate (`or R`, LG007 -- `D.Ax` has no reason channel), a
--- gate `requires`/`ensures` (LG003), a gate that writes (LG001), and a gate with an
--- answer called at the TOP level of a body or in an `else` that must not fall off
--- (LG004 -- `Endblock` has no `bindAxiom`). That is why `exit_group` stands inside an
--- `if` here, and why `beispiele/172`/`173` are still UNCERTIFIED.
+// 174 -- **A system-call gate in the model: the first certified program that calls
+// the kernel.**
+//
+// A `syscall` gate is a foreign body, and machine G has had the form for it from
+// the start: `D.Ax` with its parameters and its answer, called by `Stmt.axiomCall`
+// or `Block.bindAxiom`, answered by the oracle (`axiomAntwort`), and what the answer
+// may be is premise (c) of the goal theorem. Until 2026-09-30 the exporter wrote
+// `Ax := Empty` and refused every unit with a gate (LG001); now a gate travels, and
+// this unit is CERTIFIED (`grammatik/Grammatik/Zertifikat/`, `gP_gabbro`).
+//
+// The two gates are the two shapes that travel:
+// * `getpid` answers a VALUE, bound in a block (`Block.bindAxiom`, under the lock);
+// * `exit_group` answers `never`: in G the call is the named stop `nieZurueck`, and
+//   nothing behind it runs -- the emitter writes `_Noreturn` on the same promise.
+//
+// What does NOT travel yet, each refused by name (`crates/gabbro-check/src/lean_g.rs`,
+// `read_gate`): a fallible gate (`or R`, LG007 -- `D.Ax` has no reason channel), a
+// gate `requires`/`ensures` (LG003), a gate that writes (LG001), and a gate with an
+// answer called at the TOP level of a body or in an `else` that must not fall off
+// (LG004 -- `Endblock` has no `bindAxiom`). That is why `exit_group` stands inside an
+// `if` here, and why `beispiele/172`/`173` are still UNCERTIFIED.
 module beispiel::tor_im_modell {
 
 assume linux_getpid

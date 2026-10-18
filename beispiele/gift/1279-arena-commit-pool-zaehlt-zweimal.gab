@@ -1,11 +1,11 @@
--- erwartet: N426
--- **1279 -- the commit ceiling counts every pool instance (lane 264, OFFEN
--- O20 row 2).**
---
--- `concurrent { f, f }` runs the grower twice: the whole-run upper bound
--- stands at `8 + 2 * 6 = 20` past the ceiling `max 10`, so `N426` refuses
--- the request. The pool self-pair shares the cursor without a guard, so
--- `N522` fires beside it. Measured `["N426", "N522"]`.
+// erwartet: N426
+// **1279 -- the commit ceiling counts every pool instance (lane 264, OFFEN
+// O20 row 2).**
+//
+// `concurrent { f, f }` runs the grower twice: the whole-run upper bound
+// stands at `8 + 2 * 6 = 20` past the ceiling `max 10`, so `N426` refuses
+// the request. The pool self-pair shares the cursor without a guard, so
+// `N522` fires beside it. Measured `["N426", "N522"]`.
 module gift1279 {
 
 arena A capacity 2 .. 8 max 10 of u16;

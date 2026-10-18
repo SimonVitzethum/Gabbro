@@ -1,6 +1,6 @@
--- erwartet: N584
--- The sampling names nothing: `gibt_es_nicht` is no gate and no function, so
--- the commit-time probe would call into the void. Nothing else is wrong.
+// erwartet: N584
+// The sampling names nothing: `gibt_es_nicht` is no gate and no function, so
+// the commit-time probe would call into the void. Nothing else is wrong.
 module beispiel::halde_frage_ins_leere {
 arena Vorrat capacity 0 .. 2 of u64 pb gibt_es_nicht blw 1048576;
 

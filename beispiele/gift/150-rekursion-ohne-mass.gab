@@ -1,9 +1,9 @@
--- erwartet: K008
--- **Eine Funktion, die sich selbst erreicht, ohne Abstiegsmass.**
---
--- `SPRACHE.md` §7: *„ein Aufruf zaehlt die DEKLARIERTEN `costs` des Gerufenen."* Bei einem
--- Zyklus zaehlt damit jede Kante einmal, und die Zusage ist eine **Annahme**, kein Ergebnis.
--- `K001` und `E009` benannten das ehrlich -- *ehrlich ist nicht vollstaendig.*
+// erwartet: K008
+// **Eine Funktion, die sich selbst erreicht, ohne Abstiegsmass.**
+//
+// `SPRACHE.md` §7: *„ein Aufruf zaehlt die DEKLARIERTEN `costs` des Gerufenen."* Bei einem
+// Zyklus zaehlt damit jede Kante einmal, und die Zusage ist eine **Annahme**, kein Ergebnis.
+// `K001` und `E009` benannten das ehrlich -- *ehrlich ist nicht vollstaendig.*
 module gift::rekursion_ohne_mass {
 
 static mut a : u32 = 0;

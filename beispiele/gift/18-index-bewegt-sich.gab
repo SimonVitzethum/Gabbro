@@ -1,13 +1,13 @@
--- erwartet: M102
---
--- Der Fakt ueber `buf[i]` stirbt, wenn `i` geschrieben wird. Sonst bleibt der Ort
--- derselbe, waehrend sein Index sich darunter wegbewegt -- und die Pruefung verengt
--- danach einen ganz anderen Platz.
---
--- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
--- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// erwartet: M102
+//
+// Der Fakt ueber `buf[i]` stirbt, wenn `i` geschrieben wird. Sonst bleibt der Ort
+// derselbe, waehrend sein Index sich darunter wegbewegt -- und die Pruefung verengt
+// danach einen ganz anderen Platz.
+//
+// Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
--- MUSS fallen (M102): nach `i = 0` meint `buf[i]` ein ANDERES Element als bei der Pruefung.
+// MUSS fallen (M102): nach `i = 0` meint `buf[i]` ein ANDERES Element als bei der Pruefung.
 module gift {
 
 static mut buf : [u32; 64] = 0;

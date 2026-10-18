@@ -1,7 +1,7 @@
--- erwartet: N203
--- Lane E3: the translator carries no `decreases` clause -- refused,
--- although the linkage (one translator, `pure`, fitting result) is clean.
--- A translator is total; the witness is the signature, not a convention.
+// erwartet: N203
+// Lane E3: the translator carries no `decreases` clause -- refused,
+// although the linkage (one translator, `pure`, fitting result) is clean.
+// A translator is total; the witness is the signature, not a convention.
 module m {
 table P count 1 {
     slot {

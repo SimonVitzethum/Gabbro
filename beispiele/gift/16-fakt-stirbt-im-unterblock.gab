@@ -1,14 +1,14 @@
--- erwartet: M104
---
--- Ein Schreiben IM Unterblock toetet den Fakt des UMGEBENDEN Blocks. Ohne diese Regel
--- ueberlebt ein Fakt jedes `if`, `match`, `locks` und jeden Schleifenrumpf -- und
--- SPRACHE.md 3.2 („stirbt bei jedem Schreiben auf eine beteiligte Stelle“) waere
--- an dieser Stelle falsch.
---
--- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
--- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// erwartet: M104
+//
+// Ein Schreiben IM Unterblock toetet den Fakt des UMGEBENDEN Blocks. Ohne diese Regel
+// ueberlebt ein Fakt jedes `if`, `match`, `locks` und jeden Schleifenrumpf -- und
+// SPRACHE.md 3.2 („stirbt bei jedem Schreiben auf eine beteiligte Stelle“) waere
+// an dieser Stelle falsch.
+//
+// Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
--- MUSS fallen (M104): auf dem Weg durch `if c` ist z.wert == 0, dann unterlaeuft `-= 1`.
+// MUSS fallen (M104): auf dem Weg durch `if c` ist z.wert == 0, dann unterlaeuft `-= 1`.
 module gift {
 
 const GRENZE : u32 = 65535;

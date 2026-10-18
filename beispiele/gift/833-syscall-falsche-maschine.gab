@@ -1,10 +1,10 @@
--- erwartet: A005
--- **Gift 805 -- a syscall for a machine this unit never declares.**
---
--- The unit says `arch aarch64` at its foreign body and `arch x86_64` at the
--- syscall. The syscall can never be in force here -- so it falls at the same
--- rule an `assume` for an undeclared machine falls at (`A005`). The sealed
--- architecture itself is `A006` (gift 810); what falls here is the mismatch.
+// erwartet: A005
+// **Gift 805 -- a syscall for a machine this unit never declares.**
+//
+// The unit says `arch aarch64` at its foreign body and `arch x86_64` at the
+// syscall. The syscall can never be in force here -- so it falls at the same
+// rule an `assume` for an undeclared machine falls at (`A005`). The sealed
+// architecture itself is `A006` (gift 810); what falls here is the mismatch.
 
 module gift::syscall_falsche_maschine {
 

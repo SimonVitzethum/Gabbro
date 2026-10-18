@@ -1,15 +1,15 @@
--- erwartet: N027
--- **Ein `can_fail`-Block ist eine PROBE, kein Programm.**
---
--- Ein `check`-Item traegt keine `effects`-Liste, keine `costs`-Zusage und keine
--- `locks`-Deklaration -- es ist kein Vertrag. **Zehn der zwoelf Paesse laufen ueber
--- `ItemArt::Funktion` und sahen diesen Block darum nie**: `a = 1; schreibt();` darin kam
--- ohne `H007`, `E005` und `E008` durch.
---
--- > Ein Rumpf ohne Vertrag darf nichts tun, wofuer es einen Vertrag braucht.
---
--- Die Alternative waere, dem `check` eine Wirkungsliste zu geben -- eine Sprachaenderung.
--- *Aus der strengen Lesart kann man lockern, nie umgekehrt.*
+// erwartet: N027
+// **Ein `can_fail`-Block ist eine PROBE, kein Programm.**
+//
+// Ein `check`-Item traegt keine `effects`-Liste, keine `costs`-Zusage und keine
+// `locks`-Deklaration -- es ist kein Vertrag. **Zehn der zwoelf Paesse laufen ueber
+// `ItemArt::Funktion` und sahen diesen Block darum nie**: `a = 1; schreibt();` darin kam
+// ohne `H007`, `E005` und `E008` durch.
+//
+// > Ein Rumpf ohne Vertrag darf nichts tun, wofuer es einen Vertrag braucht.
+//
+// Die Alternative waere, dem `check` eine Wirkungsliste zu geben -- eine Sprachaenderung.
+// *Aus der strengen Lesart kann man lockern, nie umgekehrt.*
 
 module gift::probe_schreibt {
 
@@ -32,30 +32,30 @@ assume ipi_kommt_an
     "Ein gesendetes IPI erreicht den Zielkern in endlicher Zeit."
     unfalsifiable "Lebendigkeit faellt unter keinen Mechanismus dieser Sprache";
 
--- Je privilegiertem Befehl ein erklaerter Effekt. Das ist die groesste unbewiesene
--- Flaeche der Sprache -- groesser als der Uebersetzer -- und deshalb zaehlbar.
+// Je privilegiertem Befehl ein erklaerter Effekt. Das ist die groesste unbewiesene
+// Flaeche der Sprache -- groesser als der Uebersetzer -- und deshalb zaehlbar.
 axiom write_cr3(p : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
 axiom invlpg(v : u64)   effects { writes tlb }                       falsifier sonde_invlpg;
 axiom rdtsc()           effects { reads zeitzaehler }                falsifier sonde_tsc;
 axiom wbinvd()          effects { writes cache }
     unfalsifiable "die Wirkung ist auf dieser Maschine nicht beobachtbar";
 
--- `check` erzeugt eine `linear ghost Duty(name)`: eine Pflicht, die verbraucht werden MUSS.
--- Vier Uebersetzungsfehler fallen dabei aus M1/M2/M3 statt aus Sonderregeln: `gates` fehlt
--- -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
--- `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
--- `floor` -> die Groesse hat keinen Bereich.
--- **Die beiden Torfunktionen -- bis zum 2026-08-19 standen sie NIRGENDS.**
---
--- `gates abnahme, freigabe` nannte zwei Namen, hinter denen nichts stand, und damit konnte
--- die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
--- Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
--- heute, hat ihn im eigenen Beispiel gefunden.
+// `check` erzeugt eine `linear ghost Duty(name)`: eine Pflicht, die verbraucht werden MUSS.
+// Vier Uebersetzungsfehler fallen dabei aus M1/M2/M3 statt aus Sonderregeln: `gates` fehlt
+// -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
+// `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
+// `floor` -> die Groesse hat keinen Bereich.
+// **Die beiden Torfunktionen -- bis zum 2026-08-19 standen sie NIRGENDS.**
+//
+// `gates abnahme, freigabe` nannte zwei Namen, hinter denen nichts stand, und damit konnte
+// die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
+// Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
+// heute, hat ihn im eigenen Beispiel gefunden.
 static mut tiefe_max : u64 in 0 .. 1000 = 0;
--- **Die zwei Kollegen sind am 2026-08-31 nachgetragen worden, und `N043` hat sie gefunden.**
--- Beim Kuerzen aus `beispiele/06` fielen sie weg, `measures` und `floor` nannten sie weiter --
--- *und `N022` schwieg darum ueber `kerne_gemessen >= 2`, ohne dass jemand es merkte.* Eine
--- Giftprobe mit einem zweiten, ungewollten Mangel misst nicht den, wegen dem sie da ist.
+// **Die zwei Kollegen sind am 2026-08-31 nachgetragen worden, und `N043` hat sie gefunden.**
+// Beim Kuerzen aus `beispiele/06` fielen sie weg, `measures` und `floor` nannten sie weiter --
+// *und `N022` schwieg darum ueber `kerne_gemessen >= 2`, ohne dass jemand es merkte.* Eine
+// Giftprobe mit einem zweiten, ungewollten Mangel misst nicht den, wegen dem sie da ist.
 static mut tiefe_lebend   : u64 in 0 .. 1000 = 0;
 static mut kerne_gemessen : u32 in 0 .. 1000 = 0;
 
@@ -86,12 +86,12 @@ check stapel_wasserstand {
         expects sonde_tiefer_stapel
 }
 
--- **Die Pflicht des fremden Rumpfes, ausgesprochen** (Punkt 4, 2026-08-19). Eine gemessene
--- Stapelgroesse ist positiv; ohne die Zeile weiss der Rufer es nicht, und seit heute traegt
--- sie: `m1::aus_ensures` verengt das Ergebnis am Rufort.
---
--- *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
--- `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
+// **Die Pflicht des fremden Rumpfes, ausgesprochen** (Punkt 4, 2026-08-19). Eine gemessene
+// Stapelgroesse ist positiv; ohne die Zeile weiss der Rufer es nicht, und seit heute traegt
+// sie: `m1::aus_ensures` verengt das Ergebnis am Rufort.
+//
+// *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
+// `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
 reason MessFehler {
     KeinKern = 1 "kein Kern hat gemeldet"
     exhaustive
@@ -100,20 +100,20 @@ extern fn groesse_gemessen() -> u64 in 1 .. 1000000 or MessFehler
     ensures result >= 1
     effects { reads stapel };
 
--- ==========================================================================================
--- K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
---
--- **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
--- Klempnereipflichten in `PFLICHTEN.txt` -- Stellen, an denen der Mensch etwas von Hand zu
--- zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
--- den richtigen Ort.
---
--- > *Sie hier zu fuehren heisst, sie beim Namen mit einer Sonde zu tragen -- nicht, sie
--- > erledigt zu haben.* Genau diese Vertrauensform ist gemeint, wenn jemand sagt „im
--- > Vertrauen auf Gabbro und seine Hardwareannahmen": das Vertrauen bekommt eine Liste.
---
--- **Und der Preis steht dabei:** die Vertrauensbasis waechst um fuenf Saetze, zwei davon
--- ohne Sonde. Wer die Klempnereizahl liest, muss diese Zeile mitlesen.
+// ==========================================================================================
+// K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
+//
+// **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
+// Klempnereipflichten in `PFLICHTEN.txt` -- Stellen, an denen der Mensch etwas von Hand zu
+// zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
+// den richtigen Ort.
+//
+// > *Sie hier zu fuehren heisst, sie beim Namen mit einer Sonde zu tragen -- nicht, sie
+// > erledigt zu haben.* Genau diese Vertrauensform ist gemeint, wenn jemand sagt „im
+// > Vertrauen auf Gabbro und seine Hardwareannahmen": das Vertrauen bekommt eine Liste.
+//
+// **Und der Preis steht dabei:** die Vertrauensbasis waechst um fuenf Saetze, zwei davon
+// ohne Sonde. Wer die Klempnereizahl liest, muss diese Zeile mitlesen.
 
 assume dma_veroeffentlichung_braucht_barriere
     "Ein Speichern in eine DMA-Region wird fuer das Geraet erst nach der Barriere des Raumes sichtbar; ohne sie liest das Geraet den alten Wert."

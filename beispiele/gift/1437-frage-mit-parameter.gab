@@ -1,6 +1,6 @@
--- erwartet: N585
--- The probe takes an argument, so a nullary commit-time call cannot ask it.
--- Nothing else is wrong with this unit.
+// erwartet: N585
+// The probe takes an argument, so a nullary commit-time call cannot ask it.
+// Nothing else is wrong with this unit.
 module beispiel::halde_frage_mit_parameter {
 arena Vorrat capacity 0 .. 2 of u64 pb zaehlt blw 1048576;
 

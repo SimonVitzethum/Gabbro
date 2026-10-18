@@ -1,19 +1,19 @@
--- erwartet: D012
---
--- **Die Kettenbedingung steht da -- ueber einem ANDEREN Platz.**
---
--- `!(o.slots[p] reaches o.slots[q] via elter)` sagt: `q` liegt nicht auf `p`s Elternkette.
--- Umgehaengt wird aber `s`, und ueber `s` sagt diese Zeile nichts. **Der Ruf haengt `s` unter
--- `p`, und ob `s` ueber `p` steht, weiss niemand** -- genau der Zyklus, den
--- `umhaengen_faellt` vorfuehrt.
---
--- *Dieselbe Bauart wie Gift 322, eine Voraussetzung weiter:* dort war es der falsche Platz in
--- der Frischheit, hier der falsche im ZIEL des `reaches`. **Und dieses Ziel ist der ganze
--- Unterschied zur ersten Voraussetzung:** bei `erreicht sigma p` waehlt der Rufer die Wurzel,
--- weil der Satz *eine* Wurzel meint; bei `¬ ueber σ p s` ist das Ziel genau `s` und sonst
--- nichts. Ein Vergleich, der es lose liest, macht aus der Voraussetzung eine andere Aussage.
---
--- Die saubere Seite steht in `beispiele/47` an `umhaengen`.
+// erwartet: D012
+//
+// **Die Kettenbedingung steht da -- ueber einem ANDEREN Platz.**
+//
+// `!(o.slots[p] reaches o.slots[q] via elter)` sagt: `q` liegt nicht auf `p`s Elternkette.
+// Umgehaengt wird aber `s`, und ueber `s` sagt diese Zeile nichts. **Der Ruf haengt `s` unter
+// `p`, und ob `s` ueber `p` steht, weiss niemand** -- genau der Zyklus, den
+// `umhaengen_faellt` vorfuehrt.
+//
+// *Dieselbe Bauart wie Gift 322, eine Voraussetzung weiter:* dort war es der falsche Platz in
+// der Frischheit, hier der falsche im ZIEL des `reaches`. **Und dieses Ziel ist der ganze
+// Unterschied zur ersten Voraussetzung:** bei `erreicht sigma p` waehlt der Rufer die Wurzel,
+// weil der Satz *eine* Wurzel meint; bei `¬ ueber σ p s` ist das Ziel genau `s` und sonst
+// nichts. Ein Vergleich, der es lose liest, macht aus der Voraussetzung eine andere Aussage.
+//
+// Die saubere Seite steht in `beispiele/47` an `umhaengen`.
 
 module gift::ketteanderplatz {
 

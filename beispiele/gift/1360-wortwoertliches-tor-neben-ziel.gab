@@ -1,7 +1,7 @@
--- erwartet: N567
--- Gift 1360 -- **A literal gate beside a target.** `read` writes `abi linux … number 0` at the gate in a
--- unit that binds system calls per target: the target would change every other gate and
--- silently not this one (OFFEN O31).
+// erwartet: N567
+// Gift 1360 -- **A literal gate beside a target.** `read` writes `abi linux … number 0` at the gate in a
+// unit that binds system calls per target: the target would change every other gate and
+// silently not this one (OFFEN O31).
 
 module gift::wortwoertliches_tor_neben_ziel {
 

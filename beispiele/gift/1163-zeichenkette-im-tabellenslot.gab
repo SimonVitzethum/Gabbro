@@ -1,10 +1,10 @@
--- erwartet: N465
--- **1163 -- a bounded string as a RECORD field (fix lane F6; re-aimed 2026-10-08).**
---
--- This probe used to pin a string as a table slot field. Since SPRACHE-EFFIZIENZ #13 a slot field
--- may be a string CELL (copy-in / copy-out only, `N581`, `beispiele/191`); the record field of
--- a struct is still refused: a write `r.n = s` would pass no slot check. The declaration is
--- refused (`N465`).
+// erwartet: N465
+// **1163 -- a bounded string as a RECORD field (fix lane F6; re-aimed 2026-10-08).**
+//
+// This probe used to pin a string as a table slot field. Since SPRACHE-EFFIZIENZ #13 a slot field
+// may be a string CELL (copy-in / copy-out only, `N581`, `beispiele/191`); the record field of
+// a struct is still refused: a write `r.n = s` would pass no slot check. The declaration is
+// refused (`N465`).
 
 module gift1163 {
 type Eintrag = { n : string max 8, };

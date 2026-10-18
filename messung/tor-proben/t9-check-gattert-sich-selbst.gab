@@ -1,4 +1,4 @@
--- W24-Vorlauf: das Tor ist der `check` SELBST.
+// W24-Vorlauf: das Tor ist der `check` SELBST.
 module w24::t9 {
 
 static mut k : u32 = 0;

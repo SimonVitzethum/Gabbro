@@ -1,9 +1,9 @@
--- **Die Gabbro-Seite der Vergleichsmessung.** Sie entspricht `hand-tabelle.c` Feld fuer
--- Feld: dieselbe Platzzahl, dieselben zwei Felder, dieselben zwei Funktionen.
---
--- *Was hier NICHT steht, ist eine Schrankenpruefung* -- und sie steht auch im Erzeugnis
--- nicht. Nicht weil sie wegoptimiert waere, sondern weil `M103` sie zur Uebersetzungszeit
--- gefuehrt hat: `i : index into Objekte` ist per Typ kleiner als `count`.
+// **Die Gabbro-Seite der Vergleichsmessung.** Sie entspricht `hand-tabelle.c` Feld fuer
+// Feld: dieselbe Platzzahl, dieselben zwei Felder, dieselben zwei Funktionen.
+//
+// *Was hier NICHT steht, ist eine Schrankenpruefung* -- und sie steht auch im Erzeugnis
+// nicht. Nicht weil sie wegoptimiert waere, sondern weil `M103` sie zur Uebersetzungszeit
+// gefuehrt hat: `i : index into Objekte` ist per Typ kleiner als `count`.
 module messung::tabelle {
 
 const N : u32 = 4096;

@@ -1,15 +1,15 @@
--- erwartet: M124
--- **Gift 239 -- ein Grund wird gegen eine ZAHL verglichen.**
---
--- Die Stellung ist erlaubt -- ein Vergleich ist eine der drei Tueren --, **die Typen sind es
--- nicht.** Zwei `reason`-Deklarationen duerfen dieselbe Zahl fuer verschiedene Dinge
--- vergeben; `beispiele/11a` gibt `Leer = 1`, `beispiele/48` gibt `Unbelegt = 1`. Ein
--- Vergleich gegen die blanke `1` waere damit an jeder zweiten Stelle etwas anderes.
---
--- *Deshalb steht die Regel zweimal:* die STELLUNG entscheidet, wo ein Grund stehen darf
--- (`grundstellung`), die TYPEN entscheiden, wogegen er dort gehalten wird. Wer nur eine der
--- beiden Haelften baut, hat eine Regel mit einem Loch in der Mitte -- und diese Probe ist
--- die Gegenprobe zu Gift 236, das die andere Haelfte trifft.
+// erwartet: M124
+// **Gift 239 -- ein Grund wird gegen eine ZAHL verglichen.**
+//
+// Die Stellung ist erlaubt -- ein Vergleich ist eine der drei Tueren --, **die Typen sind es
+// nicht.** Zwei `reason`-Deklarationen duerfen dieselbe Zahl fuer verschiedene Dinge
+// vergeben; `beispiele/11a` gibt `Leer = 1`, `beispiele/48` gibt `Unbelegt = 1`. Ein
+// Vergleich gegen die blanke `1` waere damit an jeder zweiten Stelle etwas anderes.
+//
+// *Deshalb steht die Regel zweimal:* die STELLUNG entscheidet, wo ein Grund stehen darf
+// (`grundstellung`), die TYPEN entscheiden, wogegen er dort gehalten wird. Wer nur eine der
+// beiden Haelften baut, hat eine Regel mit einem Loch in der Mitte -- und diese Probe ist
+// die Gegenprobe zu Gift 236, das die andere Haelfte trifft.
 
 module gift::grund_gegen_zahl_verglichen {
 

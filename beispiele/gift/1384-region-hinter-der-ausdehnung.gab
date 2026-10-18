@@ -1,9 +1,9 @@
--- erwartet: N571
--- **An index past the region's extent falls.**
---
--- The gate promises `len <= lenof(result)` and is asked for 4096 bytes: `seite[4096]` is the
--- first byte the contract does not cover. The binding carries the extent (C-free lane, the
--- region gate), and `N571` holds every index through it against that extent.
+// erwartet: N571
+// **An index past the region's extent falls.**
+//
+// The gate promises `len <= lenof(result)` and is asked for 4096 bytes: `seite[4096]` is the
+// first byte the contract does not cover. The binding carries the extent (C-free lane, the
+// region gate), and `N571` holds every index through it against that extent.
 module gift::region_hinter_der_ausdehnung {
 
 pub reason MapFehler {
@@ -73,9 +73,9 @@ pub fn main() -> never
     let seite = seiten_holen(0, SEITE, LESEN_SCHREIBEN, PRIVAT_ANONYM, KEINE_DATEI, 0) else (e) {
         exit_group(2);
     }
-    seite[0] = 79;       -- O
-    seite[1] = 75;       -- K
-    seite[2] = 10;       -- newline
+    seite[0] = 79;       // O
+    seite[1] = 75;       // K
+    seite[2] = 10;       // newline
     seite[4096] = 1;
     let n = write(1, seite, 3) else (f) { exit_group(3); }
     exit_group(0);

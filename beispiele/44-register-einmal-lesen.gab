@@ -1,20 +1,20 @@
--- 44 -- **Ein Register wird EINMAL gelesen, und die Bindung traegt die Schranke.**
---
--- Zwei Befunde vom 2026-08-20 stehen hier als ein Programm, weil sie eine Ursache haben:
--- **eine Registerstelle ist fluechtig, und der Erzeuger wusste bis dahin nicht, dass ein
--- `device` auch als WERT durch eine Signatur reisen kann.**
---
--- 1. «B33». `if d.ST.IDX < 8 { … d.ST.IDX … }` sind ZWEI volatile Lesungen. V1 gab bis
---    dahin eine Schranke aus der ersten und deckte damit die zweite. `beispiele/gift/213`
---    und `/214` fallen seither, in beiden Schreibrichtungen.
---
--- 2. `device` in Stellung `parameter` war eine BLINDE ZELLE (`gabbro blindstellen`), und die
---    Zelle hatte recht: der Erzeuger schrieb `d->ST.IDX` -- einen Feldzugriff auf
---    `typedef struct { volatile uint8_t *basis; }`. **`cc` brach ab, `gabbro emit` gab 0
---    zurueck, und `C001` schwieg.** *Eine stille falsche Absenkung ist schlechter als eine
---    Absage: eine Absage steht im Zeugnis.*
---
--- Die ehrliche Form kostet eine Zeile und ist die, die jeder Treiber ohnehin schreibt.
+// 44 -- **Ein Register wird EINMAL gelesen, und die Bindung traegt die Schranke.**
+//
+// Zwei Befunde vom 2026-08-20 stehen hier als ein Programm, weil sie eine Ursache haben:
+// **eine Registerstelle ist fluechtig, und der Erzeuger wusste bis dahin nicht, dass ein
+// `device` auch als WERT durch eine Signatur reisen kann.**
+//
+// 1. «B33». `if d.ST.IDX < 8 { … d.ST.IDX … }` sind ZWEI volatile Lesungen. V1 gab bis
+//    dahin eine Schranke aus der ersten und deckte damit die zweite. `beispiele/gift/213`
+//    und `/214` fallen seither, in beiden Schreibrichtungen.
+//
+// 2. `device` in Stellung `parameter` war eine BLINDE ZELLE (`gabbro blindstellen`), und die
+//    Zelle hatte recht: der Erzeuger schrieb `d->ST.IDX` -- einen Feldzugriff auf
+//    `typedef struct { volatile uint8_t *basis; }`. **`cc` brach ab, `gabbro emit` gab 0
+//    zurueck, und `C001` schwieg.** *Eine stille falsche Absenkung ist schlechter als eine
+//    Absage: eine Absage steht im Zeugnis.*
+//
+// Die ehrliche Form kostet eine Zeile und ist die, die jeder Treiber ohnehin schreibt.
 
 module beispiel44 {
 
@@ -29,9 +29,9 @@ table Auftrag count 8 {
     slot { gewicht : u32, }
 }
 
--- **Der Kern: `let stand = d.ST.IDX;` liest EINMAL.** Danach ist `stand` eine gewoehnliche
--- lokale Bindung, und V1 verengt sie wie jede andere. Das erzeugte C traegt genau eine
--- volatile Lesung, und der Index steht auf ihrem Ergebnis.
+// **Der Kern: `let stand = d.ST.IDX;` liest EINMAL.** Danach ist `stand` eine gewoehnliche
+// lokale Bindung, und V1 verengt sie wie jede andere. Das erzeugte C traegt genau eine
+// volatile Lesung, und der Index steht auf ihrem Ergebnis.
 impl fn gewicht_des_stands(d : Statusgeraet) -> u32
     effects { reads Statusgeraet, reads Auftrag }
     costs    <= 12 ops
@@ -43,11 +43,11 @@ impl fn gewicht_des_stands(d : Statusgeraet) -> u32
     return 0;
 }
 
--- Und die Gegenrichtung: ein Geraet als Wertparameter, dessen BITFELD geschrieben wird.
--- `class rw` ist hier kein Zufall: ein Bitfeld zu setzen heisst, das Wort zu lesen, zu
--- aendern und zurueckzuschreiben. Ein `class w` gibt keine Lesung her -- das ist Falle 4,
--- und ihre Form heisst `transition` mit `mirrors` (beispiele/20). Der Erzeuger sagt seit
--- dem 2026-08-20 genau das ab, statt den LESER links vom `=` auszugeben.
+// Und die Gegenrichtung: ein Geraet als Wertparameter, dessen BITFELD geschrieben wird.
+// `class rw` ist hier kein Zufall: ein Bitfeld zu setzen heisst, das Wort zu lesen, zu
+// aendern und zurueckzuschreiben. Ein `class w` gibt keine Lesung her -- das ist Falle 4,
+// und ihre Form heisst `transition` mit `mirrors` (beispiele/20). Der Erzeuger sagt seit
+// dem 2026-08-20 genau das ab, statt den LESER links vom `=` auszugeben.
 impl fn quittieren(d : Statusgeraet)
     effects { writes d.QUIT }
     costs    <= 4 ops
@@ -55,8 +55,8 @@ impl fn quittieren(d : Statusgeraet)
     d.QUIT.ACK = 1;
 }
 
--- Eine gewoehnliche Verengung auf einem gewoehnlichen Wert -- damit die Probe zeigt, dass
--- die Regel NUR die fluechtige Stelle trifft und nicht die Verengung ueberhaupt.
+// Eine gewoehnliche Verengung auf einem gewoehnlichen Wert -- damit die Probe zeigt, dass
+// die Regel NUR die fluechtige Stelle trifft und nicht die Verengung ueberhaupt.
 impl fn gewicht_bei(n : Platznummer) -> u32
     effects { reads Auftrag }
     costs    <= 4 ops
@@ -64,22 +64,22 @@ impl fn gewicht_bei(n : Platznummer) -> u32
     return Auftrag.slots[n].gewicht;
 }
 
--- ## «B26», 2026-08-28: das Geraeteversprechen, das ABSENKT
---
--- «B33» sagt: *eine Registerstelle ist fluechtig, ein Vergleich darauf gibt keine Tatsache.*
--- «B26» ist seine Schwester und stellt die Frage von der anderen Seite: **das Geraet SAGT
--- etwas ueber sein Register zu -- was ist diese Zusage wert?**
---
--- Seit dem 2026-08-24 wurde `requires` am Register GEZAEHLT (`gabbro pflichten` fuehrt es
--- als `D`) und sonst nichts. **Aus der Zusage eine Tatsache zu machen waere der
--- «B33»-Fehler noch einmal:** das Register ist fluechtig, und ein feindliches Geraet darf
--- alles melden. Also macht `else` die LESUNG fehlbar, statt dem Pruefer etwas zu schenken:
---
---     reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
---
--- Wer sie dann blank liest, faellt an `R011`; wer sie in ein `let … else` stellt, bekommt
--- **genau eine** volatile Lesung, und die Bedingung wird auf der BINDUNG geprueft -- nicht
--- auf einer zweiten Lesung, die etwas anderes ergeben koennte.
+// ## «B26», 2026-08-28: das Geraeteversprechen, das ABSENKT
+//
+// «B33» sagt: *eine Registerstelle ist fluechtig, ein Vergleich darauf gibt keine Tatsache.*
+// «B26» ist seine Schwester und stellt die Frage von der anderen Seite: **das Geraet SAGT
+// etwas ueber sein Register zu -- was ist diese Zusage wert?**
+//
+// Seit dem 2026-08-24 wurde `requires` am Register GEZAEHLT (`gabbro pflichten` fuehrt es
+// als `D`) und sonst nichts. **Aus der Zusage eine Tatsache zu machen waere der
+// «B33»-Fehler noch einmal:** das Register ist fluechtig, und ein feindliches Geraet darf
+// alles melden. Also macht `else` die LESUNG fehlbar, statt dem Pruefer etwas zu schenken:
+//
+//     reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
+//
+// Wer sie dann blank liest, faellt an `R011`; wer sie in ein `let … else` stellt, bekommt
+// **genau eine** volatile Lesung, und die Bedingung wird auf der BINDUNG geprueft -- nicht
+// auf einer zweiten Lesung, die etwas anderes ergeben koennte.
 reason Geraetelug {
     ZuTief = 1 "das Geraet meldet eine Tiefe ueber der Tabellenlaenge"
     exhaustive
@@ -89,13 +89,13 @@ device Tiefengeraet(basis : u64) at mmio {
     reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
 }
 
--- Das erzeugte C dieser Funktion ist die ganze Aussage von «B26»:
---
---     uint32_t t;
---     { t = (*(volatile uint32_t *)(d->basis + 8));
---       if (!(t <= 8)) { *_grund = Geraetelug_ZuTief; return false; } }
---
--- **Eine Lesung, eine Pruefung, ein benannter Ausgang.**
+// Das erzeugte C dieser Funktion ist die ganze Aussage von «B26»:
+//
+//     uint32_t t;
+//     { t = (*(volatile uint32_t *)(d->basis + 8));
+//       if (!(t <= 8)) { *_grund = Geraetelug_ZuTief; return false; } }
+//
+// **Eine Lesung, eine Pruefung, ein benannter Ausgang.**
 impl fn tiefe_lesen(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
     effects { reads d }
     costs   <= 8 ops

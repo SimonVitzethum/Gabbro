@@ -1,10 +1,10 @@
--- 112 -- **A register naming its device-state carriers, read under their guard.**
---
--- `ST` answers from `Zustand`, `Zustand` is written by `schreiben`, and both
--- functions hold `Sperre` BY SIGNATURE (`requires Held(Sperre)`): the reader
--- side of the widened footprint check (`fussOrtGB`, `N256`). The manifest
--- carries the hardware half beside the named assumptions:
--- `reglokal.Geraet.ST` over `Zustand` (`hardware (reglokal ST)`).
+// 112 -- **A register naming its device-state carriers, read under their guard.**
+//
+// `ST` answers from `Zustand`, `Zustand` is written by `schreiben`, and both
+// functions hold `Sperre` BY SIGNATURE (`requires Held(Sperre)`): the reader
+// side of the widened footprint check (`fussOrtGB`, `N256`). The manifest
+// carries the hardware half beside the named assumptions:
+// `reglokal.Geraet.ST` over `Zustand` (`hardware (reglokal ST)`).
 module beispiel112 {
 
 table Zustand count 4 {

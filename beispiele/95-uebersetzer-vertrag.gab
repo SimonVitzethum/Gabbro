@@ -1,7 +1,7 @@
--- 95 -- **The translator with a contract, clean.** The same linkage as
--- `beispiele/94`, with a `requires` clause the ordinary checker holds
--- against the region value: a translator IS an ordinary function for
--- every declaration-side check. No call stands here, so nothing falls.
+// 95 -- **The translator with a contract, clean.** The same linkage as
+// `beispiele/94`, with a `requires` clause the ordinary checker holds
+// against the region value: a translator IS an ordinary function for
+// every declaration-side check. No call stands here, so nothing falls.
 module beispiel::uebersetzervertrag {
 table Nutzlast count 4 {
     slot {

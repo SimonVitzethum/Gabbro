@@ -8,7 +8,7 @@ unbekannte Aufrufkosten, `schleifen.rs` fuehrt `S001`/`S002` seit Pass 6 fuer di
 Schleifenmarke und den durchfallenden `else`-Zweig.
 
 **Warum das mehr ist als Kosmetik:** die Giftproben pruefen auf **Kennungen**
-(`-- erwartet: CODE`). Eine doppelt vergebene Kennung macht jede solche Probe mehrdeutig --
+(`// erwartet: CODE`). Eine doppelt vergebene Kennung macht jede solche Probe mehrdeutig --
 sie faellt gruen, waehrend die gemeinte Regel ausgefallen ist. *Genau die Bewegung, gegen die
 der ganze Ordner gebaut ist.*
 
@@ -41,7 +41,7 @@ KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 # What is scanned: every `.gab` (except the poison corpus `beispiele/gift/`, which
 # carries poison ON PURPOSE -- the same exclusion `korpus.py` makes), every `.lean`
 # and every `.rs`, minus the build and worktree directories. Identifier runs are
-# checked on `.gab` code only (strings and `--` comments skipped, as the lexer
+# checked on `.gab` code only (strings and comments skipped, as the lexer
 # skips them); bidi and invisible characters are refused ANYWHERE, comments and
 # strings included. `.rs`/`.lean` legitimately carry Greek and math symbols in
 # comments and strings, so only the bidi/invisible classes apply to them.
@@ -108,7 +108,7 @@ def _laufzeichen(c):
 
 
 def _laeufe(code):
-    """Identifier-like runs of code (strings and `--` comments skipped).
+    """Identifier-like runs of code (strings and comments skipped, block comments nested).
 
     Yields `(run, attached_to_digit, line)`; a run starting right behind a digit
     belongs to the number neighbourhood (`L003`/`L006` own it) and is marked,
@@ -125,9 +125,20 @@ def _laeufe(code):
             i = (j + 1) if j != -1 and (k == -1 or j < k) else (k if k != -1 else n)
             vorher_ziffer = False
             continue
-        if c == "-" and i + 1 < n and code[i + 1] == "-":
+        if c == "/" and i + 1 < n and code[i + 1] == "/":
             k = code.find("\n", i)
             i = n if k == -1 else k
+            vorher_ziffer = False
+            continue
+        if c == "/" and i + 1 < n and code[i + 1] == "*":
+            tiefe, i = 1, i + 2
+            while i < n and tiefe > 0:
+                if code.startswith("/*", i):
+                    tiefe, i = tiefe + 1, i + 2
+                elif code.startswith("*/", i):
+                    tiefe, i = tiefe - 1, i + 2
+                else:
+                    i += 1
             vorher_ziffer = False
             continue
         if c.isalpha() or c == "_":
@@ -194,14 +205,15 @@ def quellvertrauen(wurzel=None):
 def sprechprobe_quellvertrauen():
     """Both directions: poison of every class is seen, clean text passes."""
     gift = (
-        "-- \u202e\n"
+        "// \u202e\n"
         + "const p\u0430ss : u32 = 1;\n"
         + "const \u0430 : u32 = 1;\n"
         + "const\u200bA : u32 = 1;\n"
     )
     sauber = (
         "module m {\n"
-        "const Gr\u00f6\u00dfe : u32 = 1; -- Gr\u00f6\u00dfe \u03c3 \u2192\n"
+        "const Gr\u00f6\u00dfe : u32 = 1; // Gr\u00f6\u00dfe \u03c3 \u2192\n"
+        "/* \u03c3 /* \u0430 */ \u2192 */\n"
         'assume a "x";\n'
         "}\n"
     )
@@ -344,7 +356,7 @@ def main():
         for k, dateien in b:
             print(f"  !! {k} wird in {len(dateien)} Dateien vergeben: {', '.join(dateien)}")
         print(f"\n== KENNUNGEN: {len(b)} DOPPELBELEGUNGEN ==")
-        print("  Eine Giftprobe mit `-- erwartet: <Kennung>` ist damit mehrdeutig: sie faellt")
+        print("  Eine Giftprobe mit `// erwartet: <Kennung>` ist damit mehrdeutig: sie faellt")
         print("  gruen, waehrend die gemeinte Regel ausgefallen sein kann.")
     if not qv:
         print("== QUELLENVERTRAUEN: ALL PASS -- kein Bidi, kein unsichtbares Zeichen, "

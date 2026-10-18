@@ -1,108 +1,108 @@
--- =======================================================================================
--- F5 -- die Dienstschleife von `virtio-blk`, VERVOLLSTAENDIGT
---
--- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:919-1018, byteidentisch, plus genau die
--- Zeilen, die ihn zu einem PROGRAMM machen.**
---
--- **ERGAENZT, und nichts sonst:** neun Konstanten (`CFG`, `BAR`, `DMA`, `SHARED`, `EP`,
--- `NTFN`, `MAX_POLL`, `MAX_SECTORS`, `SECTOR`) · `reason Aufbau` und fuenf `extern fn` mit
--- Fehlerkanal (`map_window`, `pool_new`, `probe_ecam`, `recv`, `reply4`) · `assume
--- client_calls_or_endpoint_revoked` mit Sonde.
---
--- **32 Fehler auf 3.** Der Ausschnitt war der unvollstaendigste von allen -- 24 unbekannte
--- Namen -- und genau darum der beste Beleg fuer diesen Ordner: *nach der Vervollstaendigung
--- steht da, was GABBRO fehlt.*
---
--- Die drei uebrigen sind EIN Befund, und es ist derselbe wie in F1 und F3:
---
--- > **`Status::Ok` parst und wird nie aufgeloest.** `Status` ist hier als `reason`
--- > deklariert, drei Zeilen weiter oben. Der Namenspass liest die erste Silbe eines Pfades
--- > und schlaegt sie als Wert nach. **Ein `reason`-Wert hat keinen Erzeuger** -- und jede
--- > `or R`-Signatur im Korpus steht an einem `extern fn`, also an einem Rumpf, den Gabbro
--- > nie sieht. *Der Fehlerkanal existiert an der Deklaration und hat keine Schreibform.*
---
--- **NACHGEMESSEN 2026-08-25: der Befund ist UEBERHOLT, die drei Fehler sind es nicht.**
---
--- ~~`Status::Ok` faellt als **`M124`**~~ -- **GEFALLEN am 2026-08-25, und der letzte Satz
--- dieses Absatzes war der Befund.** Er lautete: *„`reply4` ist eine ERGAENZTE Zeile -- an ihr
--- liegt es nicht: `M124` ist strukturell und fragt den Parametertyp gar nicht."*
---
--- **Beide Haelften waren wahr und die Folgerung falsch.** `M124` fragte den Parametertyp
--- nicht -- und genau das war die falsche Ablehnung (W22): der Ruf `reply4(EP, Status::Ok, …)`
--- ist typrichtig, wenn der Parameter dieser `reason` IST. Die Regel hat seit dem 2026-08-25
--- eine VIERTE Tuer, und sie ist strukturell geblieben: sie schlaegt die Signatur des
--- Gerufenen nach, statt dem Typpruefer zu vertrauen.
---
--- > **Und darunter lag der eigentliche Grund, dass sie es nicht konnte:** `reason` war keine
--- > Traegerart. `st : Status` loeste zu `Typ::Unbekannt` auf, und *jede* Regel, die auf den
--- > Typ eines solchen Parameters sieht, schwieg -- nicht aus Absicht, sondern weil ihr die
--- > Flaeche entzogen war. Sechste Blindstellenklasse, dritte Instanz.
---
--- Geaendert wurde hier EINE ergaenzte Zeile: `st : u64` -> `st : Status`. Die Deklaration von
--- `reply4` steht nicht im eingefrorenen Ausschnitt (nur ihre drei Rufstellen,
--- `FRAGMENTE.md`:1004/1010/1014), und `Status` ist die TREUERE Ergaenzung -- der Ausschnitt
--- uebergibt dort einen `Status`. *`u64` war die Vermutung.*
---
--- > **Was das NICHT heisst:** die ZAHLPROJEKTION eines Grundes gibt es weiter nicht. Das
--- > Rust-Original legt den Statuscode als Zahl in die Antwort; `Status` traegt seine Zahlen
--- > in der Deklaration und hat keine Form, sie zu lesen. Hier faellt sie nicht auf, weil
--- > `reply4` ein `extern fn` ist -- der Uebergang zur Zahl liegt jenseits der Grenze.
--- ***DURCHGESTOCHEN 2026-09-03, UND DER KOPF DARUEBER WAR AN DREI STELLEN FALSCH.***
---
--- 1. **„ERGAENZT, und nichts sonst" stimmte nicht.** Fuenf Namen, die der eingefrorene
---    Dienstrumpf RUFT, standen nirgends: `decode_op`, `request_flush`, `serve_rw`,
---    `serve_scan`, `bump_served`. Der Erzeuger sagte es an EINER der fuenf Stellen -- an
---    `match decode_op(m.op)`, weil dort ein Typ gebraucht wird. **Die anderen vier ruft der
---    Rumpf ins Leere, und kein Pass sagt etwas dazu**; `E009` meldet nur, dass die
---    Wirkungshuelle von `run` dadurch eine UNTERE Schranke ist. *Vier Pruefersaetze waren
---    nie die ganze Fehlerflaeche dieser Datei.*
---
--- 2. **`32 Fehler auf 3` war seit Wochen ueberholt** -- es waren vier, und keiner davon der
---    beschriebene `Status::Ok`/`M124`-Befund. Der ganze Absatz darunter beschreibt eine
---    Absage, die es nicht mehr gibt.
---
--- 3. **DREI NAMEN GEHOEREN C, und alle drei stehen im eingefrorenen Ausschnitt.**
---
---        exit    C sagt `void(int)`; hier steht `exit() -> never`, und alle acht Rufstellen
---                geben KEIN Argument. Der Ausschnitt meint „diese Funktion kehrt nie
---                zurueck", nicht „beende den Prozess mit diesem Status".
---        signal  C sagt `__sighandler_t(int, __sighandler_t)` -- ein Typ, den Gabbro nicht
---                schreiben kann. Der Ausschnitt meint eine Kapazitaetsbenachrichtigung.
---        recv    C sagt `ssize_t(int, void *, size_t, int)`. Der Ausschnitt meint einen
---                seL4-artigen Empfang am Endpunkt.
---
---    Keiner der drei ist an `cc` zu bemerken: **die erzeugte Einheit bindet keinen dieser
---    Koepfe ein**, also hat der fremde Uebersetzer keinen Konflikt zu melden, und der Binder
---    findet das echte Symbol hinter dem, was diese Einheit deklariert hat. *Die Absage, die
---    vom fremden Uebersetzer kommen sollte, kann von ihm gar nicht kommen* -- genau darum
---    haelt der Pruefer sie.
---
---    **Die Absagen haben also recht, und der Ausschnitt ist falsch.** Umbenannt sind
---    `exit` -> `dienst_abbruch`, `signal` -> `benachrichtige`, `recv` -> `empfange`, und die
---    Absage von `N046` sagt genau das: *„rename it, and reach the C function through one
---    that CAN be written."* Zwoelf eingefrorene Zeilen bewegen sich dafuer, und jede steht
---    in `pruefe-emission.sh` gebucht.
---
--- 4. **`m.op` folgt daraus.** `recv` war als `-> u64` ergaenzt, der Ausschnitt liest `m.op`,
---    und `M134` sagte es: *„`.op` reads a field on something that has none."* `empfange`
---    liefert jetzt einen Verbund `Nachricht`, und der traegt GENAU EIN Feld -- der Ausschnitt
---    liest eines und reicht `m` sonst nur weiter.
---
--- > **UND DER ERTRAG IST EIN PRUEFERBEFUND, KEINE KORPUSARBEIT.** `N046` vergleicht die
--- > Absenkung der Signatur mit der Tafel und las dafuer `ergebnis` und `parameter` -- **nie
--- > `fehler`**. Ein `or R` aendert aber die C-Signatur: die Funktion wird `bool`, das
--- > Ergebnis geht durch `*_wert`, der Grund durch `*_grund`. Nachgemessen am unveraenderten
--- > Pruefer an einer Datei mit vier Items:
--- >
--- >     extern fn abs(a : i32) -> i32 or R effects { pure } costs <= 1 ops;
--- >     gabbro pruefe  ->  0 errors, 0 hints        (denn `int32_t(int32_t)` IST die Zeile
--- >     gabbro emit    ->  Ruecklauf 0                der Tafel fuer `abs`)
--- >
--- > und die erzeugte Einheit traegt `int32_t abs(int32_t a);` neben `abs(x, &w, &e)` --
--- > **einen Prototyp mit einem Parameter, gerufen mit dreien.** `cc` faengt DIESEN; die
--- > Regel steht aber genau dafuer da, dass er es nicht muss. *Geheilt am 2026-09-03, und die
--- > Notiz an `recv` sagt seither die Wahrheit statt einer Absenkung, die niemand schreibt.*
--- =======================================================================================
+// =======================================================================================
+// F5 -- die Dienstschleife von `virtio-blk`, VERVOLLSTAENDIGT
+//
+// **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:919-1018, byteidentisch, plus genau die
+// Zeilen, die ihn zu einem PROGRAMM machen.**
+//
+// **ERGAENZT, und nichts sonst:** neun Konstanten (`CFG`, `BAR`, `DMA`, `SHARED`, `EP`,
+// `NTFN`, `MAX_POLL`, `MAX_SECTORS`, `SECTOR`) · `reason Aufbau` und fuenf `extern fn` mit
+// Fehlerkanal (`map_window`, `pool_new`, `probe_ecam`, `recv`, `reply4`) · `assume
+// client_calls_or_endpoint_revoked` mit Sonde.
+//
+// **32 Fehler auf 3.** Der Ausschnitt war der unvollstaendigste von allen -- 24 unbekannte
+// Namen -- und genau darum der beste Beleg fuer diesen Ordner: *nach der Vervollstaendigung
+// steht da, was GABBRO fehlt.*
+//
+// Die drei uebrigen sind EIN Befund, und es ist derselbe wie in F1 und F3:
+//
+// > **`Status::Ok` parst und wird nie aufgeloest.** `Status` ist hier als `reason`
+// > deklariert, drei Zeilen weiter oben. Der Namenspass liest die erste Silbe eines Pfades
+// > und schlaegt sie als Wert nach. **Ein `reason`-Wert hat keinen Erzeuger** -- und jede
+// > `or R`-Signatur im Korpus steht an einem `extern fn`, also an einem Rumpf, den Gabbro
+// > nie sieht. *Der Fehlerkanal existiert an der Deklaration und hat keine Schreibform.*
+//
+// **NACHGEMESSEN 2026-08-25: der Befund ist UEBERHOLT, die drei Fehler sind es nicht.**
+//
+// ~~`Status::Ok` faellt als **`M124`**~~ -- **GEFALLEN am 2026-08-25, und der letzte Satz
+// dieses Absatzes war der Befund.** Er lautete: *„`reply4` ist eine ERGAENZTE Zeile -- an ihr
+// liegt es nicht: `M124` ist strukturell und fragt den Parametertyp gar nicht."*
+//
+// **Beide Haelften waren wahr und die Folgerung falsch.** `M124` fragte den Parametertyp
+// nicht -- und genau das war die falsche Ablehnung (W22): der Ruf `reply4(EP, Status::Ok, …)`
+// ist typrichtig, wenn der Parameter dieser `reason` IST. Die Regel hat seit dem 2026-08-25
+// eine VIERTE Tuer, und sie ist strukturell geblieben: sie schlaegt die Signatur des
+// Gerufenen nach, statt dem Typpruefer zu vertrauen.
+//
+// > **Und darunter lag der eigentliche Grund, dass sie es nicht konnte:** `reason` war keine
+// > Traegerart. `st : Status` loeste zu `Typ::Unbekannt` auf, und *jede* Regel, die auf den
+// > Typ eines solchen Parameters sieht, schwieg -- nicht aus Absicht, sondern weil ihr die
+// > Flaeche entzogen war. Sechste Blindstellenklasse, dritte Instanz.
+//
+// Geaendert wurde hier EINE ergaenzte Zeile: `st : u64` -> `st : Status`. Die Deklaration von
+// `reply4` steht nicht im eingefrorenen Ausschnitt (nur ihre drei Rufstellen,
+// `FRAGMENTE.md`:1004/1010/1014), und `Status` ist die TREUERE Ergaenzung -- der Ausschnitt
+// uebergibt dort einen `Status`. *`u64` war die Vermutung.*
+//
+// > **Was das NICHT heisst:** die ZAHLPROJEKTION eines Grundes gibt es weiter nicht. Das
+// > Rust-Original legt den Statuscode als Zahl in die Antwort; `Status` traegt seine Zahlen
+// > in der Deklaration und hat keine Form, sie zu lesen. Hier faellt sie nicht auf, weil
+// > `reply4` ein `extern fn` ist -- der Uebergang zur Zahl liegt jenseits der Grenze.
+// ***DURCHGESTOCHEN 2026-09-03, UND DER KOPF DARUEBER WAR AN DREI STELLEN FALSCH.***
+//
+// 1. **„ERGAENZT, und nichts sonst" stimmte nicht.** Fuenf Namen, die der eingefrorene
+//    Dienstrumpf RUFT, standen nirgends: `decode_op`, `request_flush`, `serve_rw`,
+//    `serve_scan`, `bump_served`. Der Erzeuger sagte es an EINER der fuenf Stellen -- an
+//    `match decode_op(m.op)`, weil dort ein Typ gebraucht wird. **Die anderen vier ruft der
+//    Rumpf ins Leere, und kein Pass sagt etwas dazu**; `E009` meldet nur, dass die
+//    Wirkungshuelle von `run` dadurch eine UNTERE Schranke ist. *Vier Pruefersaetze waren
+//    nie die ganze Fehlerflaeche dieser Datei.*
+//
+// 2. **`32 Fehler auf 3` war seit Wochen ueberholt** -- es waren vier, und keiner davon der
+//    beschriebene `Status::Ok`/`M124`-Befund. Der ganze Absatz darunter beschreibt eine
+//    Absage, die es nicht mehr gibt.
+//
+// 3. **DREI NAMEN GEHOEREN C, und alle drei stehen im eingefrorenen Ausschnitt.**
+//
+//        exit    C sagt `void(int)`; hier steht `exit() -> never`, und alle acht Rufstellen
+//                geben KEIN Argument. Der Ausschnitt meint „diese Funktion kehrt nie
+//                zurueck", nicht „beende den Prozess mit diesem Status".
+//        signal  C sagt `__sighandler_t(int, __sighandler_t)` -- ein Typ, den Gabbro nicht
+//                schreiben kann. Der Ausschnitt meint eine Kapazitaetsbenachrichtigung.
+//        recv    C sagt `ssize_t(int, void *, size_t, int)`. Der Ausschnitt meint einen
+//                seL4-artigen Empfang am Endpunkt.
+//
+//    Keiner der drei ist an `cc` zu bemerken: **die erzeugte Einheit bindet keinen dieser
+//    Koepfe ein**, also hat der fremde Uebersetzer keinen Konflikt zu melden, und der Binder
+//    findet das echte Symbol hinter dem, was diese Einheit deklariert hat. *Die Absage, die
+//    vom fremden Uebersetzer kommen sollte, kann von ihm gar nicht kommen* -- genau darum
+//    haelt der Pruefer sie.
+//
+//    **Die Absagen haben also recht, und der Ausschnitt ist falsch.** Umbenannt sind
+//    `exit` -> `dienst_abbruch`, `signal` -> `benachrichtige`, `recv` -> `empfange`, und die
+//    Absage von `N046` sagt genau das: *„rename it, and reach the C function through one
+//    that CAN be written."* Zwoelf eingefrorene Zeilen bewegen sich dafuer, und jede steht
+//    in `pruefe-emission.sh` gebucht.
+//
+// 4. **`m.op` folgt daraus.** `recv` war als `-> u64` ergaenzt, der Ausschnitt liest `m.op`,
+//    und `M134` sagte es: *„`.op` reads a field on something that has none."* `empfange`
+//    liefert jetzt einen Verbund `Nachricht`, und der traegt GENAU EIN Feld -- der Ausschnitt
+//    liest eines und reicht `m` sonst nur weiter.
+//
+// > **UND DER ERTRAG IST EIN PRUEFERBEFUND, KEINE KORPUSARBEIT.** `N046` vergleicht die
+// > Absenkung der Signatur mit der Tafel und las dafuer `ergebnis` und `parameter` -- **nie
+// > `fehler`**. Ein `or R` aendert aber die C-Signatur: die Funktion wird `bool`, das
+// > Ergebnis geht durch `*_wert`, der Grund durch `*_grund`. Nachgemessen am unveraenderten
+// > Pruefer an einer Datei mit vier Items:
+// >
+// >     extern fn abs(a : i32) -> i32 or R effects { pure } costs <= 1 ops;
+// >     gabbro pruefe  ->  0 errors, 0 hints        (denn `int32_t(int32_t)` IST die Zeile
+// >     gabbro emit    ->  Ruecklauf 0                der Tafel fuer `abs`)
+// >
+// > und die erzeugte Einheit traegt `int32_t abs(int32_t a);` neben `abs(x, &w, &e)` --
+// > **einen Prototyp mit einem Parameter, gerufen mit dreien.** `cc` faengt DIESEN; die
+// > Regel steht aber genau dafuer da, dass er es nicht muss. *Geheilt am 2026-09-03, und die
+// > Notiz an `recv` sagt seither die Wahrheit statt einer Absenkung, die niemand schreibt.*
+// =======================================================================================
 
 module programs::virtio_blk {
 
@@ -123,8 +123,8 @@ reason ServiceExit {
 
 tagged type Op = { Info, Read, Write, Flush, Scan, Stop };
 
--- ERGAENZT: die Kapazitaeten und Kennzahlen, die der Ausschnitt ruft und nirgends nennt.
--- Ein Ausschnitt aus einem Dienst nennt die Griffe, nicht ihre Herkunft; ein Programm muss.
+// ERGAENZT: die Kapazitaeten und Kennzahlen, die der Ausschnitt ruft und nirgends nennt.
+// Ein Ausschnitt aus einem Dienst nennt die Griffe, nicht ihre Herkunft; ein Programm muss.
 const CFG    : u64 = 1;
 const BAR    : u64 = 2;
 const DMA    : u64 = 3;
@@ -135,15 +135,15 @@ const MAX_POLL    : u32 = 4096;
 const MAX_SECTORS : u64 = 262144;
 const SECTOR      : u64 = 512;
 
--- ERGAENZT: die sieben Ruempfe, die der Ausschnitt mit `else` ruft. Ein `let … else`
--- verlangt einen Fehlerkanal am Gerufenen (`N028`), und keiner davon war deklariert.
+// ERGAENZT: die sieben Ruempfe, die der Ausschnitt mit `else` ruft. Ein `let … else`
+// verlangt einen Fehlerkanal am Gerufenen (`N028`), und keiner davon war deklariert.
 reason Aufbau { Fehlt = 1 "das Fenster oder der Pool liess sich nicht herstellen" exhaustive }
 
 assume client_calls_or_endpoint_revoked
     "Ein Dienst am Endpunkt bekommt in endlicher Zeit einen Ruf, oder der Endpunkt wird entzogen."
     falsifier sonde_endpunkt_meldet_sich;
--- ERGAENZT 2026-09-03: der Verbund, den `m.op` liest. Der Ausschnitt liest GENAU EIN Feld
--- an `m` und reicht `m` sonst nur weiter; mehr steht hier deshalb nicht.
+// ERGAENZT 2026-09-03: der Verbund, den `m.op` liest. Der Ausschnitt liest GENAU EIN Feld
+// an `m` und reicht `m` sonst nur weiter; mehr steht hier deshalb nicht.
 type Nachricht = { op : u64, };
 
 extern fn map_window(cap : u64) -> u64 or Aufbau effects { reads cap } costs <= 64 ops;
@@ -153,13 +153,13 @@ extern fn empfange(ep : u64) -> Nachricht or Aufbau effects { reads ep } costs <
 extern fn reply4(ep : u64, st : Status, a : u64, b : u64, c : u64)
     effects { writes ep } costs <= 8 ops;
 
--- **ERGAENZT 2026-09-03: die fuenf Ruempfe, die der eingefrorene Dienstrumpf ruft und nicht
--- nennt.** Der Kopf dieser Datei behauptete seit dem 2026-08-20, die Vervollstaendigung sei
--- fertig; sie war es nicht, und der Erzeuger sagte es an EINER der fuenf Stellen -- an
--- `match decode_op(m.op)`, weil dort ein Typ gebraucht wird. *Die anderen vier ruft der Rumpf
--- ins Leere, und kein Pass sagt etwas dazu:* `E009` meldet nur, dass die Wirkungshuelle von
--- `run` damit eine UNTERE Schranke ist. **Vier undeklarierte Gerufene, null Absagen** -- die
--- vier Pruefersaetze dieser Datei waren nie ihre ganze Fehlerflaeche.
+// **ERGAENZT 2026-09-03: die fuenf Ruempfe, die der eingefrorene Dienstrumpf ruft und nicht
+// nennt.** Der Kopf dieser Datei behauptete seit dem 2026-08-20, die Vervollstaendigung sei
+// fertig; sie war es nicht, und der Erzeuger sagte es an EINER der fuenf Stellen -- an
+// `match decode_op(m.op)`, weil dort ein Typ gebraucht wird. *Die anderen vier ruft der Rumpf
+// ins Leere, und kein Pass sagt etwas dazu:* `E009` meldet nur, dass die Wirkungshuelle von
+// `run` damit eine UNTERE Schranke ist. **Vier undeklarierte Gerufene, null Absagen** -- die
+// vier Pruefersaetze dieser Datei waren nie ihre ganze Fehlerflaeche.
 extern fn decode_op(w : u64) -> Op effects { pure } costs <= 8 ops;
 extern fn request_flush(t : u64, pool : u64) -> u32
     effects { reads t, writes pool } costs <= 64 ops;
@@ -169,21 +169,21 @@ extern fn serve_scan(ep : u64, t : u64, pool : u64)
     effects { reads t, writes pool, writes ep } costs <= 256 ops;
 extern fn bump_served(pool : u64) -> u64 effects { writes pool } costs <= 8 ops;
 
--- «B27» Der Syscall-Einstieg: `arch ident` gibt es (:273), die REGISTERBELEGUNG nicht.
--- Die Vorlage schrieb dafuer einen `abi { in rax = nr, …, trap 0x80 }`-Block; `fndecl`
--- kennt ihn nicht. Damit hat der einzige Ort, an dem 168 gemessene `asm!`-Stellen
--- zusammenlaufen sollten, in der Grammatik keinen Traeger — die vertrauenswuerdige Flaeche
--- schrumpft nicht, sie wandert in eine `prim`-Deklaration ohne Inhalt.
---
--- ENTSCHIEDEN am 2026-08-30 (messung/EINTRITTSBELEGUNG.md): kein `abi`-Block, keine
--- Registertabelle je `arch`. Diese Zeile hier ist die EINZIGE `prim fn`-Stelle mit `arch`
--- und ohne Belegung im ganzen sauberen Korpus — null gemessener Bedarf, und Regel A sagt:
--- kein Konstrukt ohne den. Die Belegung geht an `cc`, in C-Zwangsbuchstaben und ungeprueft.
--- Das steht seit heute im Zeugnis, Abschnitt E, neben den `ASSEMBLY`-Zeilen:
--- `REGISTER ALLOCATION -- delegated to cc, NOT checked here («B27»)`.
--- Eine benannte Delegation ist die ehrliche Buchung; eine stillschweigende ist keine.
--- Und sie schrumpft die Flaeche NICHT: der obige Satz bleibt wahr, er hat jetzt nur eine
--- Adresse statt eines Mangels.
+// «B27» Der Syscall-Einstieg: `arch ident` gibt es (:273), die REGISTERBELEGUNG nicht.
+// Die Vorlage schrieb dafuer einen `abi { in rax = nr, …, trap 0x80 }`-Block; `fndecl`
+// kennt ihn nicht. Damit hat der einzige Ort, an dem 168 gemessene `asm!`-Stellen
+// zusammenlaufen sollten, in der Grammatik keinen Traeger — die vertrauenswuerdige Flaeche
+// schrumpft nicht, sie wandert in eine `prim`-Deklaration ohne Inhalt.
+//
+// ENTSCHIEDEN am 2026-08-30 (messung/EINTRITTSBELEGUNG.md): kein `abi`-Block, keine
+// Registertabelle je `arch`. Diese Zeile hier ist die EINZIGE `prim fn`-Stelle mit `arch`
+// und ohne Belegung im ganzen sauberen Korpus — null gemessener Bedarf, und Regel A sagt:
+// kein Konstrukt ohne den. Die Belegung geht an `cc`, in C-Zwangsbuchstaben und ungeprueft.
+// Das steht seit heute im Zeugnis, Abschnitt E, neben den `ASSEMBLY`-Zeilen:
+// `REGISTER ALLOCATION -- delegated to cc, NOT checked here («B27»)`.
+// Eine benannte Delegation ist die ehrliche Buchung; eine stillschweigende ist keine.
+// Und sie schrumpft die Flaeche NICHT: der obige Satz bleibt wahr, er hat jetzt nur eine
+// Adresse statt eines Mangels.
 prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag : u64) -> u64
     effects { writes machine_regs }
     arch x86_64;
@@ -205,39 +205,39 @@ divergent fn run(startwert : u64) -> never
 
     benachrichtige(NTFN, 0);
 
-    -- «B14» `let mut capacity : option Sectors = none;` ist nicht schreibbar: `option` steht
-    -- nur in `slottype` (:387), nicht in `typeexpr` (:137). Der Fall „noch nie gelesen" wird
-    -- damit wieder eine 0 — genau die Deutung, gegen die das Fragment geschrieben war.
+    // «B14» `let mut capacity : option Sectors = none;` ist nicht schreibbar: `option` steht
+    // nur in `slottype` (:387), nicht in `typeexpr` (:137). Der Fall „noch nie gelesen" wird
+    // damit wieder eine 0 — genau die Deutung, gegen die das Fragment geschrieben war.
     let mut capacity : u32 = 0;
 
-    -- «B11» HIER BRICHT F5. `forever` (:350-354) hat KEINEN AUSGANG. Die Vorlage schrieb
-    --     awaits recv(EP)   leaves ServiceExit   …   { … leave EndpointGone; }
-    -- und begruendete es mit D0: der echte Code hat an dieser Stelle
-    -- `if m.result != OK { break; }`, und dass dieser Austritt keinen Namen trug, hat zehn
-    -- Tage gekostet. In der Grammatik von heute gibt es weder `leave` noch `break` noch
-    -- `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
-    -- versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
-    -- „die Dienstschleife ist nicht schreibbar".
-    --
-    -- **KORREKTUR 2026-08-20 (Stufe 2) -- der Absatz darueber ist der WORTLAUT DES
-    -- AUSSCHNITTS vom 2026-08-14 und steht deshalb unangetastet da. Er stimmt nicht mehr:**
-    --
-    --   `leave <marke>` GIBT es. `SYNTAX.md`:658 fuehrt `leavestmt`, der Parser liest es,
-    --   `gabbro pruefe` gibt darueber **0 Fehler**, und der Erzeuger senkt es zu
-    --   `goto <marke>_ende;` mit gesetzter Marke ab -- nachgerechnet an einer Handprobe.
-    --
-    -- **«B11» schrumpft damit von „die Dienstschleife ist nicht schreibbar" auf „ihr
-    -- Austritt ist unbenannt".** Was fehlt, ist nicht der Ausgang, sondern ein Ausgang, der
-    -- einen GRUND traegt: die Vorlage schrieb `leaves ServiceExit` / `leave EndpointGone`,
-    -- und `leaves` heisst in Gabbro etwas anderes -- die LINEAREN WERTE, die den Bereich
-    -- verlassen (`SPRACHE.md`:730), nicht die Ausgaenge.
-    --
-    -- **Und der eigentliche Befund ist, WIE der veraltete Satz hierher kam:** `TODO.md`
-    -- fuehrte schon am 2026-08-20, der zweite Grund der alten Weigerung sei *„zu dem
-    -- Zeitpunkt laengst nicht mehr wahr"*. Diese Datei entstand am selben Tag -- und trug
-    -- den Wortlaut des eingefrorenen Berichts vom 2026-08-14 mit. *Ein Korpus, der einen
-    -- Bericht NACHBILDET, erbt dessen Alter mit; ohne einen Blick auf den Gegenstand
-    -- vervielfaeltigt er ihn.*
+    // «B11» HIER BRICHT F5. `forever` (:350-354) hat KEINEN AUSGANG. Die Vorlage schrieb
+    //     awaits recv(EP)   leaves ServiceExit   …   { … leave EndpointGone; }
+    // und begruendete es mit D0: der echte Code hat an dieser Stelle
+    // `if m.result != OK { break; }`, und dass dieser Austritt keinen Namen trug, hat zehn
+    // Tage gekostet. In der Grammatik von heute gibt es weder `leave` noch `break` noch
+    // `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
+    // versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
+    // „die Dienstschleife ist nicht schreibbar".
+    //
+    // **KORREKTUR 2026-08-20 (Stufe 2) -- der Absatz darueber ist der WORTLAUT DES
+    // AUSSCHNITTS vom 2026-08-14 und steht deshalb unangetastet da. Er stimmt nicht mehr:**
+    //
+    //   `leave <marke>` GIBT es. `SYNTAX.md`:658 fuehrt `leavestmt`, der Parser liest es,
+    //   `gabbro pruefe` gibt darueber **0 Fehler**, und der Erzeuger senkt es zu
+    //   `goto <marke>_ende;` mit gesetzter Marke ab -- nachgerechnet an einer Handprobe.
+    //
+    // **«B11» schrumpft damit von „die Dienstschleife ist nicht schreibbar" auf „ihr
+    // Austritt ist unbenannt".** Was fehlt, ist nicht der Ausgang, sondern ein Ausgang, der
+    // einen GRUND traegt: die Vorlage schrieb `leaves ServiceExit` / `leave EndpointGone`,
+    // und `leaves` heisst in Gabbro etwas anderes -- die LINEAREN WERTE, die den Bereich
+    // verlassen (`SPRACHE.md`:730), nicht die Ausgaenge.
+    //
+    // **Und der eigentliche Befund ist, WIE der veraltete Satz hierher kam:** `TODO.md`
+    // fuehrte schon am 2026-08-20, der zweite Grund der alten Weigerung sei *„zu dem
+    // Zeitpunkt laengst nicht mehr wahr"*. Diese Datei entstand am selben Tag -- und trug
+    // den Wortlaut des eingefrorenen Berichts vom 2026-08-14 mit. *Ein Korpus, der einen
+    // Bericht NACHBILDET, erbt dessen Alter mit; ohne einen Blick auf den Gegenstand
+    // vervielfaeltigt er ihn.*
     forever dienst
         per_pass bounded MAX_POLL ops
         on_exceeded watchdog_schlug_an
@@ -249,8 +249,8 @@ divergent fn run(startwert : u64) -> never
             Info => {
                 let r = request_flush(transport, pool);
                 capacity = r;
-                -- «B7» `reply(EP, [Ok, r, MAX_SECTORS, SECTOR]);` ist nicht schreibbar:
-                -- `primary` (:200) kennt kein Feldliteral. Vier Argumente statt eines Feldes.
+                // «B7» `reply(EP, [Ok, r, MAX_SECTORS, SECTOR]);` ist nicht schreibbar:
+                // `primary` (:200) kennt kein Feldliteral. Vier Argumente statt eines Feldes.
                 reply4(EP, Status::Ok, r, MAX_SECTORS, SECTOR);
             }
             Read  => { serve_rw(EP, transport, pool, teilfenster, m, capacity); }
@@ -262,21 +262,21 @@ divergent fn run(startwert : u64) -> never
             Scan  => { serve_scan(EP, transport, pool); }
             Stop  => {
                 reply4(EP, Status::Ok, 0, 0, 0);
-                -- «B11» hier stuende `leave Stopped;`. **Den Ausgang selbst gibt es**
-                -- (`leave dienst;`, siehe die Korrektur oben); was fehlt, ist der
-                -- GRUND an ihm. Ohne einen bleibt hier `exit()` —
-                -- also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
-                -- Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
-                -- bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.
+                // «B11» hier stuende `leave Stopped;`. **Den Ausgang selbst gibt es**
+                // (`leave dienst;`, siehe die Korrektur oben); was fehlt, ist der
+                // GRUND an ihm. Ohne einen bleibt hier `exit()` —
+                // also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
+                // Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
+                // bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.
                 dienst_abbruch();
             }
         }
     }
 }
 
--- Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
--- Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
--- durchfallen -- sechs `S002` kamen allein daher.
+// Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
+// Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
+// durchfallen -- sechs `S002` kamen allein daher.
 extern fn dienst_abbruch() -> never effects { diverges };
 extern fn benachrichtige(n : u64, w : u64) effects { writes NTFN };
 extern fn watchdog_schlug_an() -> never effects { diverges };

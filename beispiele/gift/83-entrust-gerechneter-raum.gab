@@ -1,7 +1,7 @@
--- erwartet: N006
--- **Ein `entrust` auf einen Namen, den diese Einheit nicht kennt.** `at` nimmt einen NAMEN
--- und keinen Ausdruck: der Raum ist ein deklariertes Ding. Wer hier einen unbekannten Namen
--- schreibt, springt an eine Adresse, die in dieser Uebersetzungseinheit nirgends steht.
+// erwartet: N006
+// **Ein `entrust` auf einen Namen, den diese Einheit nicht kennt.** `at` nimmt einen NAMEN
+// und keinen Ausdruck: der Raum ist ein deklariertes Ding. Wer hier einen unbekannten Namen
+// schreibt, springt an eine Adresse, die in dieser Uebersetzungseinheit nirgends steht.
 module gift {
 
 assume gast_bleibt_drin

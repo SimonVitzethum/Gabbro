@@ -1,6 +1,6 @@
--- erwartet: N564
--- Gift 1355 -- **A binding of an undeclared variable.** `sys_wirte` is misspelt: the binding binds
--- nothing, and the variable it meant stays unbound (OFFEN O31).
+// erwartet: N564
+// Gift 1355 -- **A binding of an undeclared variable.** `sys_wirte` is misspelt: the binding binds
+// nothing, and the variable it meant stays unbound (OFFEN O31).
 
 module gift::bindung_ohne_variable {
 

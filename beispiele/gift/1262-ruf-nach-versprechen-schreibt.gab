@@ -1,10 +1,10 @@
--- erwartet: N511
--- **Lane 263 (OFFEN O12) -- a callee overwriting a promised cell after the promise.**
---
--- `setze` promises both slots, but `stoere` writes `konto.slots` afterwards and
--- promises nothing. Order matters: the same two calls in the other order would
--- hold. The refusal names the `release` exit and both cells, whose promised
--- values the later write killed.
+// erwartet: N511
+// **Lane 263 (OFFEN O12) -- a callee overwriting a promised cell after the promise.**
+//
+// `setze` promises both slots, but `stoere` writes `konto.slots` afterwards and
+// promises nothing. Order matters: the same two calls in the other order would
+// hold. The refusal names the `release` exit and both cells, whose promised
+// values the later write killed.
 module gift::ruf_nach_versprechen_schreibt {
 
 type Stand = u32 in 0 .. 100;
