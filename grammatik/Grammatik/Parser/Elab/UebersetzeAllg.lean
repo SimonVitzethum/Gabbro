@@ -79,14 +79,27 @@ def boolFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : 
   | some q => (tabAt u t).bools.contains q.1
   | none => false
 
-/-- The field type: `bool` for a bool field, else the recorded range, or `.int 0 0` off the table
-    (unreachable through `fieldRangeO`, kept for totality). -/
+/-- The number of the table an option field points at (`none` for a field that is no option). -/
+def optNumAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Nat :=
+  match (tabAt u t).cols[f.val]? with
+  | some q => ((tabAt u t).opts.find? (fun p => p.1 == q.1)).map (·.2)
+  | none => none
+
+/-- The count of the table an option field points at: the `n` of its type `Ty.opt n`. -/
+def optFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Int :=
+  (optNumAt u t f).bind fun num => (u.tabs[num]?).map (·.count)
+
+/-- The field type: `bool` for a bool field, `opt` for an option field, else the recorded range, or `.int 0 0`
+    off the table (unreachable through `fieldRangeO`, kept for totality). -/
 def typAt (u : UProg) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : Ty :=
   if boolFeldAt u t f then .bool else
-  match fieldRangeO u t f with
-  | some w => .int w.1 w.2
-  | none => .int 0 0
+  match optFeldAt u t f with
+  | some n => .opt n
+  | none =>
+    match fieldRangeO u t f with
+    | some w => .int w.1 w.2
+    | none => .int 0 0
 
 /-- The guards of a table: the locks whose `schutz` names it. -/
 def needsAt (u : UProg) (t : Fin u.tabs.length) :
@@ -341,13 +354,23 @@ theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
   rw [List.getElem?_eq_getElem hlt]
   exact ⟨_, rfl⟩
 
-/-- The type of a NON-bool field is the recorded range. -/
+/-- The type of a field that is neither a bool nor an option is the recorded range. -/
 theorem typAt_of (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) (w : Int × Int)
-    (h : fieldRangeO u t fld = some w) (hb : boolFeldAt u t fld = false) :
+    (h : fieldRangeO u t fld = some w) (hb : boolFeldAt u t fld = false)
+    (ho : optFeldAt u t fld = none) :
     typAt u t fld = .int w.1 w.2 := by
   unfold typAt
-  rw [hb, h]
+  rw [hb, ho, h]
+  rfl
+
+/-- The type of an option field is `opt` of the count of its table. -/
+theorem typAt_opt (u : UProg) (t : Fin u.tabs.length)
+    (fld : Fin (fieldCount u t)) (n : Int) (hb : boolFeldAt u t fld = false)
+    (ho : optFeldAt u t fld = some n) :
+    typAt u t fld = .opt n := by
+  unfold typAt
+  rw [hb, ho]
   rfl
 
 /-- The type of a bool field is `bool`. -/
@@ -451,9 +474,43 @@ def fieldHit (u : UProg) (t : Fin u.tabs.length) (fname : String) :
     have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t :=
       fieldPos_lt _ _ _ h
     if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = false then
-      .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
-        typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb⟩
+      if ho : optFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = none then
+        .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
+          typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb ho⟩
+      else .error "option field as a number"
     else .error "bool field as a number"
+
+/-- An option field hit: the index, the count `n` of its table and the fact that its type is `opt n`. -/
+structure OptHit (u : UProg) (t : Fin u.tabs.length) where
+  idx : Fin (fieldCount u t)
+  n : Int
+  hopt : typAt u t idx = .opt n
+  /-- The table the option indexes, and that its count is `n`. -/
+  tnum : Nat
+  hlt : tnum < u.tabs.length
+  hcnt : (declOf u).count ⟨tnum, hlt⟩ = n
+
+/-- Find an OPTION field of a table by name. -/
+def fieldHitO (u : UProg) (t : Fin u.tabs.length) (fname : String) :
+    Except String (OptHit u t) :=
+  match h : fieldAtPos (tabAt u t).cols fname with
+  | none => .error "field unknown"
+  | some _ =>
+    have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t :=
+      fieldPos_lt _ _ _ h
+    if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = false then
+      match ho : optFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ with
+      | some n =>
+        match optNumAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ with
+        | none => .error "option table unknown"
+        | some tnum =>
+          if hl : tnum < u.tabs.length then
+            if hc : (declOf u).count ⟨tnum, hl⟩ = n then
+              .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, n, typAt_opt u t _ n hb ho, tnum, hl, hc⟩
+            else .error "option table count foreign"
+          else .error "option table unknown"
+      | none => .error "number field as an option"
+    else .error "bool field as an option"
 
 /-- Find a BOOL field of a table by name. -/
 def fieldHitB (u : UProg) (t : Fin u.tabs.length) (fname : String) :

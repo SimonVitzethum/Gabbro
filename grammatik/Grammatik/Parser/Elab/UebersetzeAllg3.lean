@@ -52,6 +52,28 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
         .ok eW
     | some _ => .error "number returned for a non-number result"
     | none => .error "return with value without result"
+  | .opt o =>
+    match hE : (fnAt u caller).ergTy with
+    | some (.opt n) =>
+      match (fnAt u caller).resOpt with
+      | some (num, _) =>
+        if hnum : num < u.tabs.length then
+          if hn : (declOf u).count ⟨num, hnum⟩ = n then
+            match lowOpt u Γ (resOf u caller) fn 0 num hnum o with
+            | .error e => .error e
+            | .ok v =>
+              have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+                rw [show (verOf u caller).erg =
+                  (vertragVon (declOf u) caller).erg from rfl,
+                  vErg_eq u caller, hE]
+                show ErgExpr (declOf u) Γ (resOf u caller) (Option.some (.opt n))
+                exact ErgExpr.val (by rw [← hn]; exact v)
+              .ok eW
+          else .error "option result table foreign"
+        else .error "option table unknown"
+      | none => .error "option result without table"
+    | some _ => .error "option returned for a non-option result"
+    | none => .error "return with value without result"
   | .bool b =>
     match hE : (fnAt u caller).ergTy with
     | some .bool =>
@@ -153,6 +175,23 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .matchBeg num o k :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.matchBeg num o k) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindOpt x num o :: rest =>
+    if hnum : num < u.tabs.length then
+      match lowOpt u Γ Λ fn 0 num hnum o with
+      | .error e => .error e
+      | .ok ev =>
+        match lowSeqL (l := l) u caller (.opt ((declOf u).count ⟨num, hnum⟩) :: Γ)
+            (fn.mitOpt x num ((declOf u).count ⟨num, hnum⟩)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r) => .ok (Block.bind ev b, r)
+    else .error "option table unknown"
   | Γ, fn, n + 1, Λ, pe, .foreverBeg k :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.foreverBeg k) rest with
     | .error e => .error e
@@ -324,6 +363,21 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .ok (ueb, .blkEnd :: rest2) => .ok (Stmt.retry cnt bv body ueb, rest2)
         | .ok (_, _) => .error "lower: a retry is not closed"
       | .ok (_, _) => .error "lower: a retry has no overflow part"
+  | Γ, fn, n + 1, Λ, pe, .matchBeg num o k, rest =>
+    if hnum : num < u.tabs.length then
+      match lowOpt u Γ Λ fn 0 num hnum o with
+      | .error e => .error e
+      | .ok ov =>
+        match lowSeqL (l := l) u caller (Ty.index ((declOf u).count ⟨num, hnum⟩) :: Γ)
+            (fn.mitIndex k num ((declOf u).count ⟨num, hnum⟩)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (sb, .ifElse :: rest1) =>
+          match lowSeqL (l := l) u caller Γ fn n Λ pe rest1 with
+          | .error e => .error e
+          | .ok (nb, .blkEnd :: rest2) => .ok (Stmt.onOption (D := declOf u) ov sb nb, rest2)
+          | .ok (_, _) => .error "lower: a match is not closed"
+        | .ok (_, _) => .error "lower: a match has no None arm"
+    else .error "option table unknown"
   | Γ, fn, n + 1, Λ, pe, .foreverBeg k, rest =>
     if hk : k < u.annahmen.length then
       match lowSeqL (l := true) u caller Γ fn n Λ pe rest with
@@ -410,6 +464,23 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .matchBeg num o k :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.matchBeg num o k) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindOpt x num o :: rest =>
+    if hnum : num < u.tabs.length then
+      match lowOpt u Γ Λ fn 0 num hnum o with
+      | .error e => .error e
+      | .ok ev =>
+        match lowEndL (l := l) u caller (.opt ((declOf u).count ⟨num, hnum⟩) :: Γ)
+            (fn.mitOpt x num ((declOf u).count ⟨num, hnum⟩)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r) => .ok (Endblock.bind ev b, r)
+    else .error "option table unknown"
   | Γ, fn, n + 1, Λ, pe, .foreverBeg k :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.foreverBeg k) rest with
     | .error e => .error e
@@ -523,6 +594,23 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller Γ fn n rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, (.matchBeg num o k) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.matchBeg num o k) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, .bindOpt x num o :: rest, r =>
+    if hnum : num < u.tabs.length then
+      match lowOpt u Γ (resOf u caller) fn 0 num hnum o with
+      | .error e => .error e
+      | .ok ev =>
+        match lowBodyF u caller (.opt ((declOf u).count ⟨num, hnum⟩) :: Γ)
+            (fn.mitOpt x num ((declOf u).count ⟨num, hnum⟩)) n rest r with
+        | .error e => .error e
+        | .ok e => .ok (Endblock.bind ev e)
+    else .error "option table unknown"
   | Γ, fn, n + 1, (.foreverBeg k) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.foreverBeg k) rest with
     | .error e => .error e

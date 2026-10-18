@@ -16,7 +16,7 @@
   with `G104_referenz.gD`), the real-text lexer pin for 104, and one
   theorem chaining all stages for 104.
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg
+import Grammatik.Parser.Elab.UebersetzeOpt
 import Grammatik.Korpus.Programme.Export108
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
@@ -319,6 +319,93 @@ def lowAssignTabL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
             else .error "write without right"
           else .error "access without held guard"
 
+/-- An option write through a pointer into an option field, at the field's type `opt n`. -/
+def assignDurchStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length) (oh : OptHit u t)
+    (p : Expr (declOf u) Γ Λ (.ptr t.val true)) (ht : (declOf u).tabNr t.val = some t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t))) (e : Expr (declOf u) Γ Λ (.opt oh.n))
+    (hw : V.schreibt t = true) (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t oh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t oh.idx)
+    rw [oh.hopt]
+    exact e
+  exact Stmt.assignThru (D := declOf u) p t ht oh.idx i e2 hw hL
+
+/-- An option write at a table into an option field. -/
+def assignSlotStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length) (oh : OptHit u t)
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t))) (e : Expr (declOf u) Γ Λ (.opt oh.n))
+    (hw : V.schreibt t = true) (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t oh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t oh.idx)
+    rw [oh.hopt]
+    exact e
+  exact Stmt.assignSlot (D := declOf u) t oh.idx i e2 hw hL
+
+/-- An option value written through a pointer parameter into an option field. -/
+def lowAssignDurchOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : UOpt) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params b with
+  | .error e => .error e
+  | .ok j =>
+    match fn.kinds[j]? with
+    | some (.ptr num true) =>
+      if h : num < u.tabs.length then
+        match fieldHitO u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok oh =>
+          match lowVar Γ j (.ptr num true) with
+          | .error e => .error e
+          | .ok pv =>
+            match lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix with
+            | .error e => .error e
+            | .ok i =>
+              match lowOpt u Γ Λ fn 0 oh.tnum oh.hlt v with
+              | .error e => .error e
+              | .ok e0 =>
+                have e : Expr (declOf u) Γ Λ (.opt oh.n) := by rw [← oh.hcnt]; exact e0
+                if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ then
+                  if hw : writesAt u (fnAt u caller) ⟨num, h⟩ = true then
+                    have hwV : (verOf u caller).schreibt ⟨num, h⟩ = true := by
+                      show (vertragVon (declOf u) caller).schreibt ⟨num, h⟩ = true
+                      rw [vSchreibt_eq u caller ⟨num, h⟩]
+                      exact hw
+                    .ok (assignDurchStmtO u Γ Λ (verOf u caller) ⟨num, h⟩ oh (Expr.var pv) (tabNr_some u num h) i e hwV hL)
+                  else .error "write without right"
+                else .error "access without held guard"
+      else .error "pointer table unknown"
+    | _ => .error "place without G form"
+
+/-- An option value written at a table into an option field. -/
+def lowAssignTabOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : UOpt) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match tabIdx u.tabs b with
+  | .error e => .error e
+  | .ok t =>
+    match fieldHitO u t fname with
+    | .error e => .error e
+    | .ok oh =>
+      match lowIdx u Γ Λ fn 0 t ix with
+      | .error e => .error e
+      | .ok i =>
+        match lowOpt u Γ Λ fn 0 oh.tnum oh.hlt v with
+        | .error e => .error e
+        | .ok e0 =>
+          have e : Expr (declOf u) Γ Λ (.opt oh.n) := by rw [← oh.hcnt]; exact e0
+          if hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+            if hw : writesAt u (fnAt u caller) t = true then
+              have hwV : (verOf u caller).schreibt t = true := by
+                show (vertragVon (declOf u) caller).schreibt t = true
+                rw [vSchreibt_eq u caller t]
+                exact hw
+              .ok (assignSlotStmtO u Γ Λ (verOf u caller) t oh i e hwV hL)
+            else .error "write without right"
+          else .error "access without held guard"
+
 /-- A truth value written through a pointer parameter into a bool field. -/
 def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
@@ -469,7 +556,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             else .error "argument right without G form"
           else .error "argument type without G form"
         else .error "argument type without G form"
-      | .val _ | .bval _ => .error "value for pointer without G form"
+      | .val _ | .bval _ | .oval _ => .error "value for pointer without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
@@ -506,6 +593,17 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     | .bool, .bool =>
       match a with
       | .bval b => lowEns u Γ Λ fn none b
+      | _ => .error "argument without G form"
+    | .opt num, .opt n =>
+      match a with
+      | .oval o =>
+        if hnum : num < u.tabs.length then
+          if hn : (declOf u).count ⟨num, hnum⟩ = n then
+            match lowOpt u Γ Λ fn 0 num hnum o with
+            | .error e => .error e
+            | .ok e => .ok (by rw [← hn]; exact e)
+          else .error "argument type without G form"
+        else .error "option table unknown"
       | _ => .error "argument without G form"
     | _, _ => .error "argument type without G form"
 
@@ -893,6 +991,8 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignTab b f ix v => lowAssignTabL u caller Γ fn Λ b f ix v
   | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
   | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
+  | .assignOpt b f ix v => lowAssignDurchOL u caller Γ fn Λ b f ix v
+  | .assignTabOpt b f ix v => lowAssignTabOL u caller Γ fn Λ b f ix v
   | .assignGlob n v => lowAssignGlobL u caller Γ fn Λ n v
   | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
   | .storeAtom n v => lowStoreAtomL u caller Γ fn Λ n v
@@ -902,7 +1002,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

@@ -211,14 +211,14 @@ def werte {α : Type} : List (String × Except String α) → List α
 
 /-- Collect per-table outcomes. -/
 def sammleTabellen (consts : List (String × Int))
-    (alias : List (String × (Int × Int))) :
+    (alias : List (String × (Int × Int))) (tnames : List String) :
     List SItemTief → List (String × Except String UTab)
   | [] => []
   | it :: rest =>
     match it with
     | .tableT n _ _ _ _ _ =>
-      (n, uTabelle consts alias it) :: sammleTabellen consts alias rest
-    | _ => sammleTabellen consts alias rest
+      (n, uTabelle consts alias tnames it) :: sammleTabellen consts alias tnames rest
+    | _ => sammleTabellen consts alias tnames rest
 
 /-- Collect per-lock outcomes (against the clean tables). -/
 def sammleSperren (globs : List UGlob) (tabs : List UTab) :
@@ -321,7 +321,7 @@ def befundeFn (consts : List (String × Int))
 def befundeElab (ms : List SItemTief) : List Befund :=
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase ms
-  let tabs := sammleTabellen consts alias ms
+  let tabs := sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ => some n | _ => none)) ms
   let tabOk := werte tabs
   let globR := uGlobs consts alias ms
   let globOk := match globR with | .ok gs => gs | .error _ => []

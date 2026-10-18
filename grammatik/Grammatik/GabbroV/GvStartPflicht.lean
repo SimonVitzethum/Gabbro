@@ -126,26 +126,35 @@ def sp0FeldWert (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
         rw [ht]
         exact false
     | false =>
-      match hd : decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2) with
-      | true => by
-          have hbd := of_decide_eq_true hd
-          have ht : (declOf u).typ t f = .int q.2.1 q.2.2 := by
-            show typAt u t f = .int q.2.1 q.2.2
-            have hfr : fieldRangeO u t f = some q.2 := by unfold fieldRangeO; rw [hq]; rfl
-            have hbf : boolFeldAt u t f = false := by unfold boolFeldAt; rw [hq]; exact hb
-            exact typAt_of u t f q.2 hfr hbf
+      match hO : optFeldAt u t f with
+      | some n => by
+          have hbf : boolFeldAt u t f = false := by unfold boolFeldAt; rw [hq]; exact hb
+          have ht : (declOf u).typ t f = .opt n := by
+            show typAt u t f = .opt n
+            exact typAt_opt u t f n hbf hO
           rw [ht]
-          exact ⟨0, hbd.1, hbd.2⟩
-      | false => by
-          have hcon : sp0FeldOkB u t f = false := by
-            unfold sp0FeldOkB
-            rw [hq]
-            change ((tabAt u t).bools.contains q.1 ||
-              decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2)) = false
-            rw [hb, hd]
-            rfl
-          rw [hcon] at h
-          exact nomatch h
+          exact (none : Option (Zahl 0 (n - 1)))
+      | none =>
+        match hd : decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2) with
+        | true => by
+            have hbd := of_decide_eq_true hd
+            have ht : (declOf u).typ t f = .int q.2.1 q.2.2 := by
+              show typAt u t f = .int q.2.1 q.2.2
+              have hfr : fieldRangeO u t f = some q.2 := by unfold fieldRangeO; rw [hq]; rfl
+              have hbf : boolFeldAt u t f = false := by unfold boolFeldAt; rw [hq]; exact hb
+              exact typAt_of u t f q.2 hfr hbf hO
+            rw [ht]
+            exact ⟨0, hbd.1, hbd.2⟩
+        | false => by
+            have hcon : sp0FeldOkB u t f = false := by
+              unfold sp0FeldOkB
+              rw [hq]
+              change ((tabAt u t).bools.contains q.1 ||
+                decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2)) = false
+              rw [hb, hd]
+              rfl
+            rw [hcon] at h
+            exact nomatch h
   | none => by
       have hcon : sp0FeldOkB u t f = false := by unfold sp0FeldOkB; rw [hq]
       rw [hcon] at h
