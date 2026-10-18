@@ -1,4 +1,5 @@
 import Grammatik.Code.Refine.Post
+import Grammatik.Code.Refine.Shape
 
 /-
   File:      Grammatik/Code/Refine/Stmt.lean
