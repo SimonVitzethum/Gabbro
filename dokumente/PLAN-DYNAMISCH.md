@@ -486,3 +486,183 @@ artefact, never inside it. **Status: the writer's hook (`kostenledger::ablegen`)
 (`instrumente/nachpruefer.py`) is not in the tree; only the module and its unit tests exist
 (`rustc --test crates/gabbro-check/src/kostenledger.rs`). The design stays as the answer to "a number that lives
 only in the checking run is a number the artefact cannot defend".
+
+## 11. Message passing with a plain payload (Phase B item 1, 2026-10-18): the model is proved; the `Spec.lean` diff and the `N291` replacement are PROPOSED, not applied
+
+*Why this file:* it already holds the other `Spec.lean` proposal (8a.3), and the lock-free structures of Phase B item 5 (SPSC/MPSC ring, Treiber
+stack) are dynamic data structures whose payload reads this item makes possible. Lean side: `grammatik/Grammatik/Speichermodell/Payload/`
+(`PayloadHb`, `PayloadLitmus`, `PayloadLB`); `SATZKARTE.md` §80. Nothing in `Zielsatz/Kern/Spec.lean`, the Rust checker or the exporter changed;
+`gabbro_ziel` is untouched (`Grammatik.lean` imports the new modules, nothing imports them).
+
+### 11.1 What is proved (memory model only, every program, no footprint premise)
+
+The pattern: `payload store (t); flag = v publishes {payload} (t, order freigabe) ... branch on awaits flag (u, order freigabe); payload load (u)`.
+
+| Statement | What it says |
+|---|---|
+| `HbSeen W u c m`, `HbRace W u c m` | the write message `m` of `c` happens before `u`'s next access to `c` (`m` is in the history and `u`'s view of `c` reached `m.ts`); the complement, where a read of `u` may legally return something older than `m`. View-based happens-before of RC11, read off machine W, no second relation |
+| `payload_mp` | **message passing**: along the run (`MpAblauf`: payload write, run, release write of the flag, run, acquire read of the message that write added) the payload write happens before the reader's state after the await, and on every later state (`hbSeen_laufW`); the message carries the memory the writer produced. Built on `hb_uebergabe` |
+| `payload_mp_lesen` | every read of the payload after the await returns a message at or above the written one |
+| `payload_kein_rennen` | after the await there is no `HbRace` on the payload |
+| `payload_mp_wert` | with two memory facts (the publisher had seen the whole payload history; nothing adds a message at the payload after its write) the reader's presented memory at the payload IS the memory the writer wrote |
+| `gesehen_einzelschreiber`, `still_of_kein_schreiben` | those two facts from thread-level facts: only `t` ever writes `c`; no step after the write writes `c` |
+| `erwartet_bestaetigt` | the **branch fact** of SPRACHE 11.5 rule 2: if no message of the flag before the publish confirms (the initial value does not), nobody writes the flag between publish and await, and the reader branched on a confirming value, then the message it read is the one the publish added (the `erwartet` premise of `MpAblauf`) |
+
+Litmus facts on the view machine of `Sicht.lean` (the same `beitrag`/`nachricht`/`Lesbar`/`Frisch` that `SchrittW` uses), with a run checker
+(`lauf`, `gehe_schritt`, `erlaubt_of`: a list of choices is a reachable state; allowed outcomes by `decide`, forbidden ones by invariants):
+
+| Fact | Verdict | Where |
+|---|---|---|
+| MP release/acquire, flag seen payload not | FORBIDDEN | `mp_ra_verboten` (Sicht) |
+| MP, payload AND flag seen (non-degenerate) / the stale read is refused there | witness / `isNone` | `mp_zeuge`, `mp_alt_abgelehnt` |
+| payload read BEFORE the await | ALLOWED (counter-model) | `mp_vor_erwartung_erlaubt` |
+| flag read relaxed / flag written relaxed / both relaxed | ALLOWED (counter-models) | `mp_flagge_lesen_entspannt_erlaubt`, `mp_flagge_schreiben_entspannt_erlaubt`, `mp_rlx_erlaubt` |
+| payload rewritten after the publish: reader sees the flag and the NEWER value | ALLOWED (the value claim fails, the `>=` claim holds) | `mp_umgeschrieben_erlaubt` |
+| SB (release/acquire both 0) / SB on SC | ALLOWED / FORBIDDEN | `sb_erlaubt`, `sb_sc_verboten` |
+| IRIW release/acquire, readers disagree | ALLOWED (also for `seq`: the model gives `seq_cst` no total order) | `iriw_erlaubt` |
+| LB, both reads return 1 | FORBIDDEN (no promises) | `lb_verboten` |
+| CoRR | FORBIDDEN | `corr_verboten` (Sicht) |
+
+**Not built (honest):** a concrete two-thread run of machine W/GX over a program with this shape. The generic theorems apply to any W run with the
+pattern, and `mp_zeuge` shows the pattern has runs on the view machine, but no `Programm D` with a plain payload and a payload flag exists among the
+Lean fixtures (the nearest, the noninterference fixture, has `kern` write the flag only). Building one means a declaration, two bodies and about five
+G steps (the scale of `w_nicht_sc`, a few hundred lines); it should be the first witness of the applied diff, not a separate item.
+
+### 11.2 What the theorem needs from the program, premise by premise
+
+| Premise of the theorem | Provided by | Status |
+|---|---|---|
+| `ordVon ord f = freigabe` (flag) | the language DERIVES release for a payload-carrying atomic (SPRACHE 11.1, `V004`/`V005`, `holordnung` in the emitters); in the model `ord` is free | the model needs a premise on `ord` (D1); the counter-models show the relaxed flag fails |
+| `c ≠ f` | trivial | - |
+| payload write by `t` before the publish step by `t` | program order of the publisher; `V006` (Rust) refuses a payload written AFTER the publish in the same body | a fact of the run, no extra premise |
+| `hgesehen` (publisher saw every payload message) | only `t` writes `c` (`gesehen_einzelschreiber`) | proved from the single-writer fact; statically `SchreibGetrennt`/`V010` |
+| `hstill` (nothing writes the payload after it) | static rule: no write of `c` reachable after a `publishes f` on any path (loops included) until a handshake (item 5) | NOT a global checker rule today: `V006` is intra-body; needs the interprocedural form (R1) |
+| the reader's flag message is the published one | `erwartet_bestaetigt`: confirming branch, flag initial value non-confirming, flag written once | the branch fact is in the language (SPRACHE 11.5 rule 2); the checker needs the dominance rule R3 to use it |
+| the reader's payload read happens after the confirmed await | the static dominance rule | R3; its dynamic form is a frame invariant (D5) |
+
+### 11.3 Proposed `Spec.lean` diff (NOT applied; review as a diff of `Spec.lean` before anything moves)
+
+**Design.** The result is the existing atomic rely, extended by ONE kind of carrier. A *published payload carrier* is read by another thread
+without a lock, so the user's sequential proof cannot assume its value (the rely: havoc at its reads, as for a shared atomic), but the weak
+memory gives that read the writer's value (`payload_mp_wert`), so the machine statement stays exact (`schwach`: payload carriers are NOT in the
+presented-memory set `Tg`). The race leg moves from "lock-ordered" to "view-ordered" for these carriers. `PaarungAusgenommen`
+(`Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein/T1.lean`, defined and unused today) is the starting point:
+`∃ a p, c = .inr p ∧ p ∈ D.nutzlast a ∧ D.atomar a = true`.
+
+**D1. The order premise: changes the QUANTIFIER of `schwach` (a narrowing; the one real decision, 11.5).** Today `SchwachX` and `ZielX.schwach`
+quantify `∀ ord : D.Glob → Ordnung`. The theorem needs `ord f = freigabe` for the flag of every racy payload. New, in the atomic-rely definitions
+block of `Spec.lean`:
+```
+/-- Flags of racy published payloads. -/
+def PubFlagge (P : Programm D) (fs ws : List D.Fn) (g : D.Glob) : Prop :=
+  D.atomar g = true ∧ ∃ c, c ∈ D.nutzlast g ∧ PubLesbar P fs ws c   -- over carriers once `nutzlast` is widened (D6)
+
+def SchwachX ... :=
+  ∀ ord, (∀ g, PubFlagge P fs ws g → ord g = .freigabe) →          -- NEW premise, vacuous without a racy payload
+    ∀ W W' u σ M'' wahl neu, ...                                   -- as today
+```
+With no racy payload the premise is vacuous and `SchwachX` is word for word the one of today, so `gabbro_ziel_sc_aus` (the statement of before as a
+corollary, through `zielF_of_X`) and the earlier embeddings keep their proofs. Assumption (2) of the reading (the emitters lower atomics with the
+orders the declaration derives) is already named; D1 makes it load-bearing for this one case. Counter-models if the premise is dropped:
+`mp_flagge_*_erlaubt`.
+
+**D2. The static component.** `AkzeptiertSpecX` gains ONE field `pub : PubRegel P fs ws` (decided by a new component `pubB` of `AkzeptiertX`), and
+two fields change for payload carriers only:
+* `PubLesbar P fs ws c` (the carriers the rule admits): plain (`¬ AtomarAusgenommen c`), unguarded, in `D.nutzlast f` of one flag `f`,
+  `VertragsFrei P c` (no contract, owed invariant or lock invariant mentions it: the demand `GeteiltV` makes too), written by ONE declared start
+  `w₀` that is not `Mehrfach`.
+* `fuss`: `FussSX P S lok (GeteiltV P ws)` keeps the atomics; `PubLesbar` becomes one more admitted disjunct at footprint carriers READ, so a
+  payload read is no longer refused at `fuss`.
+* `renn` (`SchreibGetrennt`) exempts `PubLesbar` carriers; the race leg of D4 takes its place.
+* `PubRegel` itself is the Lean twin of R0-R4 (11.4): single writer; every write of `c` in `w₀`'s call graph is followed on every path by the unique
+  `publishes f` and by NO later write of `c` (`hstill`); `f` is written by that one publish only, with a value the initial value of `f` does not
+  carry (`hnicht`); every read of `c` in another start's graph is dominated by a confirming `awaits f` branch on every path.
+
+**D3. The rely set of (b).** `NutzerPflichtA E` becomes `LogikPflichtA E.P E.S E.Q (GeteiltA E.P E.ws ∪ PubLesbar E.P fs E.ws)` (the set `T` is
+already a parameter of `LogikPflichtA`, `KoerperGutSA`, `HavocA`). A reader proves its body for EVERY value of the payload at its confirmed read.
+This is the weakest sound rely; the stronger one (the reader assumes what the publisher established: a *flag invariant* in the role of a lock
+invariant) belongs to item 5 and needs `S`-like data in the unit. `GeteiltV` is unchanged, so machine GX (`FadenErreichbarX`, `ZielFX`) still presents
+arbitrary values only at shared ATOMICS. Open: whether the replay residue lemmas (`ziel_ort_atomar_voll`, `AtomarReplay/T1-T3`) use `GeteiltV`-specific
+facts beyond membership of `T`. If they only need `T c → VertragsFrei c ∧ unguarded c`, D3 is a re-instantiation; otherwise it is the largest single cost
+of the item.
+
+**D4. The race leg.** `RennfreiBisGA` today demands, for every unguarded non-atomic carrier, a guard lock ordering two accesses of different
+threads. It exempts `PubLesbar` carriers, and `ZielX`/`ZielFX` gain one leg:
+```
+def PubSicht (P O passes M0 M) (fs ws) : Prop :=
+  ∀ ord, (∀ g, PubFlagge P fs ws g → ord g = .freigabe) → ∀ W W' u σ M'' wahl neu,
+    RufErreichbarW P O passes ord (RufStartW M0) W → W.g = M → SchrittW P O passes ord W u W' σ M'' wahl neu →
+    ∀ c, PubLesbar P fs ws c → (LiestG (mitSpeicher W.g σ) M'' u c ∨ SchreibG (mitSpeicher W.g σ) M'' u c) →
+      ∀ m ∈ W.hist c, m.ts ≤ W.sicht u c   -- the accessor's view contains the whole history: no `HbRace`
+```
+This is view-level race freedom for payload carriers and the third disjunct of the existing view invariant `SichtInvA` (an unguarded read carrier is
+seen newest by its one reader; a guarded one by the lock holder; **a payload carrier by the publisher, and by every thread after its confirmed
+await**). A read then returns the newest message (`Lesbar` plus distinct timestamps), so the presented memory is G's: `SchwachX`'s second conjunct
+holds at payload carriers without putting them into `Tg`. This is where `payload_mp_wert` is used.
+
+**D5. Proof obligations the diff creates (none built):** (i) a frame invariant `Merkmal.erwartet` in the style of `MerkInvG`: at a program point
+inside the confirming branch of `awaits f` the thread's trace contains the confirming read of `f`, and nobody wrote `f` since (from `PubRegel`'s
+dominance, by induction on the call stack, as `abg`/`reachB` do for call graphs); (ii) the extension of `schritt_sichtInvA` with the payload
+disjunct, using `payload_mp`, `payload_schreib`, `gesehen_einzelschreiber`, `still_of_kein_schreiben`, `erwartet_bestaetigt`; (iii) D3's replay
+instantiation; (iv) `gabbro_ziel_sc_aus` re-proved (the new premise is vacuous there); (v) the concrete witness of 11.1 as the first `PubLesbar`
+fixture; (vi) `gesehen_einzelschreiber`'s `hnur` discharged from `PubLesbar`'s single writer.
+
+**D6. The syntax model.** `D.nutzlast : D.Glob → List D.Glob` names only GLOBALS; the language's payloads are places (`FP_STATES[tid]`, a table
+cell). Widening it to `List (D.Tab ⊕ D.Glob)` changes `Deklaration` (Syntax.lean), `Stmt.publish` and `Block.awaits` (the equations
+`payload = D.nutzlast g`) and the Rust exporter (it must name table carriers); it comes before D1-D5 apply to anything but plain globals.
+`PaarungAusgenommen` is restated over carriers.
+
+**Header text of `Spec.lean` that changes** (the places O25c edited): the atomic-rely block's "WHAT STAYS NAMED: the publish/await hand-off of a PLAIN
+payload read without a lock" (line ~187) and the verdict-P3 remarks (lines ~854-861); the NOT CLAIMED entry "the publish/await hand-off of an
+unguarded PLAIN payload (refused by the checker, see P3; the part of OFFEN O25 that remains after lane O25c)" (line ~1379); assumption (2) of the
+reading (add: the orders of payload flags are release/acquire, now load-bearing); the schwach-leg paragraph (the new premise).
+**Leaves NOT CLAIMED:** the one-shot publish/await of a plain payload read after a confirming await.
+**Stays NOT CLAIMED:** re-publication and reuse of the payload cell (rings, Treiber stack, seqlock, RCU: item 5, needs a reverse flag); a flag written
+more than once or an `exchange ... publishes/awaits` (RMW pairing); table cells as payload until D6; a device/DMA payload; a payload across a link
+(O28); a flag invariant (the reader assuming content); the `seq_cst` total order (item 4); `consume`; fences.
+
+**Effect on `gabbro_ziel`.** The statement gains one premise in `schwach` (vacuous without a racy payload), one conjunct `pubSicht`, one component in (a)
+(`pub`) and a larger rely set in (b). It covers strictly more units (those with a one-shot plain payload read racily), and by D1's vacuity every
+unit and run covered before is covered with the same legs. `#print axioms gabbro_ziel` stays `propext`, `Classical.choice`, `Quot.sound`: the new
+Lean modules use exactly those (checked for `PayloadHb`, `PayloadLitmus`, `PayloadLB`).
+
+### 11.4 Checker-rule sketch: the replacement of `N291` for payload carriers (NOT implemented)
+
+Today `N291` refuses a body read of a carrier that no held lock guards and no lock invariant protects (`fusswache2.rs`, `begehe`); `N301` refuses a
+write-read race across starts and `N300` a write-write race. A payload read after `awaits` is refused by `N291` and `N301`, which is why 11 corpus
+examples wait. The pairing pass (`paarung.rs`) already checks the LOCAL half: `V001`-`V005` pairing and strength, `V006` payload written after its
+`publishes` in the same body, `V007` payload read before its `awaits`, `V010` payload writer outside the publisher's hull, `V011` expiry. The
+replacement is a global footprint exemption built from those facts, not a weakening of `N291`:
+
+* **R0 (carrier).** `c` is a payload place `p` of `atomic f ... publishes { p ... }` (name equality up to index substitution, as `paarung::form`),
+  plain, unguarded, and no `requires`/`ensures`/invariant mentions it (a payload has no contract; the reader's logic is the rely).
+* **R1 (single writer, single epoch).** Exactly one declared start `w₀` has `c` in its write hull (`N300`'s relation, kept). In `w₀`'s call graph every
+  path from a write of `c` reaches the `publishes f` and then no write of `c`: an interprocedural `V006` (a write after the publish on ANY path,
+  through callees and loops, is the new refusal, proposed `N587`). A loop writing `c` around a `publishes f` stays refused until a reverse-flag
+  handshake exists (item 5).
+* **R2 (one-shot flag).** `f` has ONE `publishes` site in the unit and its published value differs from its initial value (`hnicht`); a second
+  site, an `exchange` on `f`, or a payload-free store to `f` is refused (proposed `N588`).
+* **R3 (dominance).** Every read of `c` in a function reached from a start other than `w₀` is dominated by a confirming `awaits f` branch: on every
+  CFG path from function entry to the read there is an `awaits f` whose bound value is compared to the published value in an enclosing `if`/`match`
+  arm, or the function is called only from such a branch (a per-function summary `needs_await(f)` closed by the same fixpoint as `reachB`). A read
+  not dominated is the NEW refusal `N589`, replacing `N291` at that site and naming the flag. A read of `c` in `w₀`'s own graph needs nothing
+  (the writer sees its own writes) but may not follow a `publishes f` (R1).
+* **R4 (order).** `f` is declared release/acquire (derived: `V004`/`V005` already); a `relaxed` flag with a payload stays refused where it is.
+* **Exemptions.** `N291`/`N301` skip a carrier exactly when R0-R4 hold for it; `N300` stays (a second writer is a write-write race). Each new code
+  needs its sentence in `saetze.rs`, a poison probe and a positive probe. Next free numbers: code `N587`, gift 1471, example 1165, alias rule `R016`.
+  The positive set is the 11 waiting corpus examples; the planted defects are the counter-models of 11.1 (rewrite after publish, read before await,
+  relaxed flag, two writers, two publish sites).
+* **Lean first.** Nothing above is implemented before D1-D6 are applied in Lean; the Rust rule must decide `PubRegel` (the Lean Bool `pubB`), not
+  approximate it; a form the rule cannot decide stays refused by name.
+
+### 11.5 Decisions needed from Simon
+
+1. **D1, the quantifier over `ord`.** Narrow it for racy-payload flags (above), or give `Deklaration` a derived order per atomic (`D.ordnung`) and
+   quantify only over the hardware lowering of THAT. The second is cleaner (orders become part of the unit instead of a premise on a free function) but
+   touches `Deklaration` and the exporter. Recommended: do it together with D6, since both change `Deklaration`.
+2. **D3, the rely strength.** Havoc at payload reads (cheap; the reader proves for every value), or flag invariants now (the reader assumes the
+   publisher's post-state; needs a carrier-invariant mechanism beside `S`). Recommended: havoc first, invariants with item 5, where rings need them.
+3. **D6, widen `D.nutzlast` to carriers (tables)** first, or accept plain-global payloads only for the first round. Recommended: widen; the language's
+   own examples (`FP_STATES[tid]`) publish table cells (not measured on the 11 waiting corpus examples).
+4. **One-shot only?** The rule as written covers a payload published once per run (an initialisation hand-off); reuse is item 5. Confirm that one-shot
+   is the intended first cut.

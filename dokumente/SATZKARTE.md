@@ -5222,3 +5222,23 @@ slot of a revoked subtree (only the cut and the release of one orphan are proved
 (`SibOk`/`HashOk` have executed forms and witnesses only: the recognizer's `haengen` does not track the parent store); `leave`/`next` in loop
 bodies; a copy of an owned index (alias) and any other store into a link field have no derivation; concurrency (design note 8a.2). These
 modules are not imported by `Zielsatz/`; `Spec.lean` unchanged; `gabbro_ziel` untouched.
+
+## 80. Message passing with a plain payload: happens-before over a payload, the counter-models and the litmus tests (Phase B item 1, 2026-10-18, `PLAN-DYNAMISCH.md` §11)
+
+*Files: `grammatik/Grammatik/Speichermodell/Payload/{PayloadHb,PayloadLitmus,PayloadLB}.lean`. Model only: `Spec.lean`, the Rust checker and the exporter are unchanged, `gabbro_ziel` is untouched (nothing imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` (the litmus file needs only `propext`, `Quot.sound`).*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `HbSeen W u c m` (the write `m` of `c` is in the history and `m.ts ≤ W.sicht u c`), `HbRace` (its complement), `hbSeen_not_race`, `hbSeen_or_race`, `hbSeen_laufW` (monotone along W runs), `hbSeen_lesen` (a read of a seen write returns a message at or above it) | `PayloadHb` | none |
+| `payload_schreib`: the writer sees its own write; the message is at the head of the history, carries the memory after the step, lies above every message the writer had seen | `PayloadHb` | a W step that writes `c` |
+| `MpAblauf` (the run of the pattern), `MpAblauf.lauf`; **`payload_mp`**: the payload write happens before the reader after the await and on every later state; `payload_mp_lesen` (a read after the await is at or above the write); `payload_kein_rennen` (no `HbRace` after the await) | `PayloadHb` | the run `MpAblauf`; flag of order `freigabe`; built on `hb_uebergabe` |
+| **`payload_mp_wert`**: the reader's presented memory at the payload is the memory the writer wrote; `hist_gleich_lauf`; `gesehen_einzelschreiber` (only `t` writes `c` implies `t` has seen every message of `c`), `still_of_kein_schreiben` (no later write step implies no later message) | `PayloadHb` | single writer, nothing writes `c` after the write |
+| **`erwartet_bestaetigt`**: a reader that branched on a value no earlier flag message carries read the message the publish added (SPRACHE 11.5 rule 2, "visibility is a branch fact") | `PayloadHb` | confirming predicate on the flag; flag untouched between publish and await |
+| run checker `lauf`, `gehe_schritt` (a checked step is an `LSchritt`), `erlaubt_of` (a computed outcome is reachable) | `PayloadLitmus` | none |
+| witness `mp_zeuge` (flag and payload seen), `mp_alt_abgelehnt` (the stale payload read is refused there) | `PayloadLitmus` | none |
+| COUNTER-MODELS (kernel-checked reachable outcomes where the conclusion fails): `mp_vor_erwartung_erlaubt` (payload read before the await), `mp_flagge_lesen_entspannt_erlaubt`, `mp_flagge_schreiben_entspannt_erlaubt` (relaxed flag read / written; both relaxed is `mp_rlx_erlaubt`, `Sicht`), `mp_umgeschrieben_erlaubt` (payload rewritten after the publish: reader sees the newer value) | `PayloadLitmus` | none |
+| `iriw_erlaubt` (IRIW release/acquire: allowed; also for `seq`, the model has no `seq_cst` order); `lb_verboten` (LB: both reads 1 is unreachable, invariant `LBInv`) | `PayloadLitmus`, `PayloadLB` | none |
+
+Existing litmus facts used as the yardstick (`Speichermodell/Maschine/Sicht.lean`): `mp_ra_verboten`, `mp_rlx_erlaubt`, `sb_erlaubt`, `sb_sc_verboten`, `corr_verboten`.
+
+NOT proved: a concrete two-thread run of machine W/GX over a program with a plain payload and a payload flag (no such `Programm D` exists in the fixtures; the generic theorems apply to any W run with the pattern, and `mp_zeuge` is the witness on the view machine whose primitives W shares); the `Spec.lean` legs (`pubSicht`, the premise on `ord`, the rely over payload carriers, the component `pub`) and everything the proposal D1-D6 in `PLAN-DYNAMISCH.md` §11.3 lists as obligations (the frame invariant `Merkmal.erwartet`, the `SichtInvA` extension, the replay instantiation); the static dominance and single-epoch rules in Lean (`PubRegel`) and in the checker (§11.4); re-publication of the payload cell (item 5); a flag written more than once; table cells as payload (`D.nutzlast` names globals only); `seq_cst` total order.
