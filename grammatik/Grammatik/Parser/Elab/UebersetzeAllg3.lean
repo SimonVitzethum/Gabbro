@@ -146,6 +146,20 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n Λ pe rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.bind s.term b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindB x v :: rest =>
+    match lowEns u Γ Λ fn none v with
+    | .error e => .error e
+    | .ok ev =>
+      match lowSeqL u caller (.bool :: Γ) (fn.mitBindungB x) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.bind ev b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindMut x lo hi v :: rest =>
+    match lowWertAt u Γ Λ fn lo hi v with
+    | .error e => .error e
+    | .ok ev =>
+      match lowSeqL u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.bind ev b, r)
   | Γ, fn, n + 1, Λ, pe, .ret v :: rest =>
     match lowRetStmt u caller Γ fn Λ pe v with
     | .error e => .error e
@@ -237,6 +251,20 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind s.term e)
+  | Γ, fn, n + 1, .bindB x v :: rest, r =>
+    match lowEns u Γ (resOf u caller) fn none v with
+    | .error e => .error e
+    | .ok ev =>
+      match lowBodyF u caller (.bool :: Γ) (fn.mitBindungB x) n rest r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.bind ev e)
+  | Γ, fn, n + 1, .bindMut x lo hi v :: rest, r =>
+    match lowWertAt u Γ (resOf u caller) fn lo hi v with
+    | .error e => .error e
+    | .ok ev =>
+      match lowBodyF u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n rest r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.bind ev e)
   | Γ, fn, n + 1, (.lockBeg g) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.lockBeg g) rest with
     | .error e => .error e

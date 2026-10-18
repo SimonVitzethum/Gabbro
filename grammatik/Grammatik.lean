@@ -165,6 +165,8 @@ import Grammatik.Parser.Elab.UebersetzeProben11
 import Grammatik.Parser.Elab.UebersetzeProben12
 import Grammatik.Parser.Elab.UebersetzeProben13
 import Grammatik.Parser.Elab.UebersetzeProben14
+import Grammatik.Parser.Elab.UebersetzeProben15
+import Grammatik.Parser.Elab.UebersetzeProben16
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss

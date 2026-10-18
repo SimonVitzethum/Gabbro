@@ -70,6 +70,13 @@ inductive USide
   | band : USide → USide → USide
   | bor : USide → USide → USide
   | bxor : USide → USide → USide
+  /-- `/`, `%` (`Expr.div`/`rem`, or the signed `sdiv`/`srem` when a range is negative), `<<`, `>>`
+      (`Expr.shl`/`shr`) and the unary minus (`Expr.neg`). The lowering reads the ranges (M102, M137). -/
+  | div : USide → USide → USide
+  | rem : USide → USide → USide
+  | shl : USide → USide → USide
+  | shr : USide → USide → USide
+  | neg : USide → USide
   deriving DecidableEq, Repr
 
 /-- One `ensures` predicate: a comparison, truth values, or a
@@ -87,6 +94,8 @@ inductive UEns
   | tabB : String → String → UIdx → UEns
   /-- A `bool` static read as a truth value. -/
   | globB : String → UEns
+  /-- A `bool` parameter or local read as a truth value (`Expr.var`). -/
+  | var : String → UEns
   deriving DecidableEq, Repr
 
 /-- A call argument: a pointer variable passed through
@@ -98,6 +107,8 @@ inductive UArg
   | var : String → UArg
   | freshPtr : String → Bool → UArg
   | val : USide → UArg
+  /-- A truth value for a `bool` parameter. -/
+  | bval : UEns → UArg
   deriving DecidableEq, Repr
 
 /-- The trailing return: nothing, or a value (a literal, a
@@ -134,6 +145,14 @@ inductive UStmt
       markers). `T`'s range is the annotation the value must fit; the type the binding carries is the
       COMPUTED range of `v`, which the lowering reads (`Block.bind`). -/
   | bind : String → Option (Int × Int) → USide → UStmt
+  /-- `let x : bool = v;` (or an untyped truth value): binds a truth value (`Block.bind` at `Ty.bool`). -/
+  | bindB : String → UEns → UStmt
+  /-- `let mut x : T = v;`: the binding carries the DECLARED range `lo .. hi` (the value is widened to it),
+      so a later `x = w;` may store any value of that range. -/
+  | bindMut : String → Int → Int → USide → UStmt
+  /-- `x = v;` at a `let mut` local (`Stmt.assignVar`), a number or a truth value. -/
+  | setVar : String → USide → UStmt
+  | setVarB : String → UEns → UStmt
   /-- `if c { … } else { … }` is flat too: `wennAuf c`, the then-statements, `sonst`, the else-statements,
       `zu` (an `else if` is an `if` in the else part; an absent `else` is an empty one). -/
   | ifBeg : UEns → UStmt
@@ -200,6 +219,8 @@ inductive UParamArt
   | ptr : Nat → Bool → UParamArt
   | index : Nat → UParamArt
   | int : UParamArt
+  /-- A truth value: a `bool` parameter or a `let` of a truth value (`Ty.bool` in the context). -/
+  | bool : UParamArt
   deriving DecidableEq, Repr
 
 /-- The elaboration context of one function body or contract:
@@ -227,6 +248,8 @@ structure UCtx where
   loops : List String := []
   /-- The unit's statics. -/
   globs : List UGlob := []
+  /-- The names of the `let mut` locals in scope (a later binding of the same name takes it out). -/
+  muts : List String := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -252,6 +275,10 @@ structure UFn where
     shadows a parameter), `Block.bind` puts its type first in the context. -/
 def UFn.mitBindung (f : UFn) (x : String) (w : Int × Int) : UFn :=
   { f with params := (x, .int w.1 w.2) :: f.params, kinds := .int :: f.kinds }
+
+/-- The scope after a `let x` of a truth value. -/
+def UFn.mitBindungB (f : UFn) (x : String) : UFn :=
+  { f with params := (x, Ty.bool) :: f.params, kinds := .bool :: f.kinds }
 
 /-- The scope inside `traverse b over slots of T`: `b` is an index into table number `num` of `cnt` slots. -/
 def UFn.mitIndex (f : UFn) (b : String) (num : Nat) (cnt : Int) : UFn :=
@@ -290,6 +317,12 @@ def uFlach : Nat → List SItemTief → List SItemTief
     visited; a unit past it keeps its module wrapper and is then refused loudly by `uRestFehler`. -/
 def uMembers (ms : List SItemTief) : List SItemTief := uFlach 100000 ms
 
+/-- A bound of a range type: a numeral or a negated numeral (`in -40 .. 40`). -/
+def uSchranke : SExpr → Option Int
+  | .lit n => some (Int.ofNat n)
+  | .un "-" (.lit n) => some (-(Int.ofNat n))
+  | _ => none
+
 /-- The constant scope: `const N : u32 = v;` travels as
     (`N`, `v`); any other `const` form has no G form
     (`LG005`: a count must be a numeral). -/
@@ -304,8 +337,10 @@ def uConsts : List SItemTief → List (String × Int)
     (`LG002`: a range where G needs a `Ty`). -/
 def uAliase : List SItemTief → List (String × (Int × Int))
   | [] => []
-  | .typeT _ n _ _ (.some (.range _ (.lit lo) (.lit hi) false)) :: rest =>
-    (n, (Int.ofNat lo, Int.ofNat hi)) :: uAliase rest
+  | .typeT _ n _ _ (.some (.range _ lo hi false)) :: rest =>
+    match uSchranke lo, uSchranke hi with
+    | some a, some b => (n, (a, b)) :: uAliase rest
+    | _, _ => uAliase rest
   | _ :: rest => uAliase rest
 
 /-- Lookup in an association list, with an explicit error. -/
@@ -405,7 +440,10 @@ structure UKonstFn where
 /-- The range of a declared parameter/result type of a `const fn`: a builtin word or a literal range. -/
 def uKonstBereich : STyp → Option (Int × Int)
   | .atom a => (uTypName [] a).toOption
-  | .range _ (.lit lo) (.lit hi) false => some (Int.ofNat lo, Int.ofNat hi)
+  | .range _ lo hi false =>
+    match uSchranke lo, uSchranke hi with
+    | some a, some b => some (a, b)
+    | _, _ => none
   | _ => none
 
 /-- The `const fn`s of a unit that the evaluator can run. -/
@@ -515,8 +553,10 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     match uTypName alias a with
     | .ok (lo, hi) => .ok (.int lo hi)
     | .error e => .error e
-  | .range _ (.lit lo) (.lit hi) false =>
-    .ok (.int (Int.ofNat lo) (Int.ofNat hi))
+  | .range _ lo hi false =>
+    match uSchranke lo, uSchranke hi with
+    | some a, some b => .ok (.int a b)
+    | _, _ => .error "type without G form"
   | .index false t =>
     match uTabNr tabs t with
     | .ok (_, c) => .ok (.index c)
@@ -539,8 +579,10 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     errors). -/
 def uFeldTyp (alias : List (String × (Int × Int))) : STyp → Except String (Int × Int)
   | .atom a => uTypName alias a
-  | .range _ (.lit lo) (.lit hi) false =>
-    .ok (Int.ofNat lo, Int.ofNat hi)
+  | .range _ lo hi false =>
+    match uSchranke lo, uSchranke hi with
+    | some a, some b => .ok (a, b)
+    | _, _ => .error "field type without G form"
   | _ => .error "field type without G form"
 
 /-- A count: a literal or a named constant (the `numeral` of
@@ -751,7 +793,8 @@ def uGrenzwort (ctx : UCtx) : SExpr → Option Int
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. -/
 def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Except String USide
   | .bin op a b =>
-    if strEq op "+" || strEq op "-" || strEq op "*" || strEq op "&" || strEq op "|" || strEq op "^" then
+    if strEq op "+" || strEq op "-" || strEq op "*" || strEq op "&" || strEq op "|" || strEq op "^"
+        || strEq op "/" || strEq op "%" || strEq op "<<" || strEq op ">>" then
       match uRechne ctx blatt a with
       | .error e => .error e
       | .ok x =>
@@ -763,8 +806,16 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
           else if strEq op "*" then .ok (.mul x y)
           else if strEq op "&" then .ok (.band x y)
           else if strEq op "|" then .ok (.bor x y)
-          else .ok (.bxor x y)
+          else if strEq op "^" then .ok (.bxor x y)
+          else if strEq op "/" then .ok (.div x y)
+          else if strEq op "%" then .ok (.rem x y)
+          else if strEq op "<<" then .ok (.shl x y)
+          else .ok (.shr x y)
     else blatt (.bin op a b)
+  | .un "-" a =>
+    match uRechne ctx blatt a with
+    | .error e => .error e
+    | .ok x => .ok (.neg x)
   | .un "~" (.variable p) =>
     -- `~p` is `p ^ (2^w - 1)` over the parameter's declared STORAGE width `w` (what the checker reads);
     -- for any other operand the width is not known here, so the form is refused.
@@ -809,6 +860,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer in a compare without G form"
+      | .ok .bool => .error "truth value as a number"
       | .ok _ => .ok (.param p)
       | .error e => .error e
   | .res =>
@@ -877,6 +929,15 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
   | .tru => .ok .tru
   | .fls => .ok .fls
   | .variable g =>
+    match (match uParamNr ctx g with
+        | .ok j =>
+          match uArtBei ctx.kinds j with
+          | .ok .bool => some true
+          | _ => some false
+        | .error _ => none : Option Bool) with
+    | some true => .ok (.var g)
+    | some false => .error "number as a truth value"
+    | none =>
     match ctx.globs.find? (fun x => strEq x.name g) with
     | .some gl =>
       match gl.ty with
@@ -894,8 +955,9 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
 /-- `old(..)` or `result` inside a side. -/
 def seiteAltErg : USide → Bool
   | .old .. | .erg => true
-  | .add a b | .sub a b | .mul a b | .band a b | .bor a b | .bxor a b => seiteAltErg a || seiteAltErg b
-  | .conv _ _ a => seiteAltErg a
+  | .add a b | .sub a b | .mul a b | .band a b | .bor a b | .bxor a b | .div a b | .rem a b | .shl a b | .shr a b =>
+    seiteAltErg a || seiteAltErg b
+  | .conv _ _ a | .neg a => seiteAltErg a
   | _ => false
 
 /-- `old(..)` or `result` inside a predicate. -/
@@ -925,6 +987,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer as value without G form"
+      | .ok .bool => .error "truth value as a number"
       | .ok _ => .ok (.param p)
       | .error e => .error e
   | e =>
@@ -994,6 +1057,7 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) :
     match uTabNr tabs t with
     | .error e => .error e
     | .ok (num, c) => .ok (n, .index c, .index num)
+  | (n, .atom "bool") => .ok (n, .bool, .bool)
   | (n, t) =>
     match uTyp alias tabs t with
     | .error e => .error e
@@ -1004,8 +1068,10 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) :
 def uErgBereich (alias : List (String × (Int × Int))) : STyp →
     Except String (Int × Int)
   | .atom a => uTypName alias a
-  | .range _ (.lit lo) (.lit hi) false =>
-    .ok (Int.ofNat lo, Int.ofNat hi)
+  | .range _ lo hi false =>
+    match uSchranke lo, uSchranke hi with
+    | some a, some b => .ok (a, b)
+    | _, _ => .error "result without G form"
   | _ => .error "result without G form"
 
 /-- `requires Held(L)`: exactly the signature-held locks (the
@@ -1230,6 +1296,10 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
     match uWertBody ctx a with
     | .error e => .error e
     | .ok s => .ok (.val s)
+  | .bool, a =>
+    match uBool ctx a with
+    | .error e => .error e
+    | .ok b => .ok (.bval b)
   | _, _ => .error "argument without G form"
 
 def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
@@ -1286,38 +1356,73 @@ def uAtomSchreib (ctx : UCtx) (ziel wert : SExpr) (p : String) : Except String U
           | .ok v => .ok (.storeAtom g v)
   | _ => .error "publishes without an atomic without G form"
 
+/-- `place = v;` at a slot or a static (the place reader decides which). -/
+def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
+  match uZugriff ctx ziel with
+  | .error e => uGlobSchreib ctx ziel wert e
+  | .ok (.thru b, tb, f, ix) =>
+    match uStelle ctx.names b with
+    | .error e => .error e
+    | .ok j =>
+      match uArtBei ctx.kinds j with
+      | .ok (.ptr _ true) =>
+        if uBoolFeld ctx tb f then
+          match uBool ctx wert with
+          | .error e => .error e
+          | .ok v => .ok (.assignB b f ix v)
+        else
+          match uWertBody ctx wert with
+          | .error e => .error e
+          | .ok v => .ok (.assign b f ix v)
+      | _ => .error "write through a read pointer"
+  | .ok (.tabelle b, tb, f, ix) =>
+    if uBoolFeld ctx tb f then
+      match uBool ctx wert with
+      | .error e => .error e
+      | .ok v => .ok (.assignTabB b f ix v)
+    else
+      match uWertBody ctx wert with
+      | .error e => .error e
+      | .ok v => .ok (.assignTab b f ix v)
+
+/-- `x = v;` at a `let mut` local. -/
+def uSetzeLokal (ctx : UCtx) (x : String) (wert : SExpr) : Except String UStmt :=
+  match uParamNr ctx x with
+  | .error e => .error e
+  | .ok j =>
+    match uArtBei ctx.kinds j with
+    | .ok .int =>
+      match uWertBody ctx wert with
+      | .error e => .error e
+      | .ok v => .ok (.setVar x v)
+    | .ok .bool =>
+      match uBool ctx wert with
+      | .error e => .error e
+      | .ok v => .ok (.setVarB x v)
+    | _ => .error "assignment to a pointer or an index"
+
+/-- The binary operator of a compound assignment `x op= v` (the surface has `+= -= &= |=`). -/
+def uOpBasis : String → Option String
+  | "+=" => some "+"
+  | "-=" => some "-"
+  | "&=" => some "&"
+  | "|=" => some "|"
+  | _ => none
+
+/-- An assignment, plain or compound (`p op= v` is `p = p op v`): a `let mut` local, a slot or a static. -/
+def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except String UStmt :=
+  match (if strEq op "=" then some wert else (uOpBasis op).map fun b => SExpr.bin b ziel wert) with
+  | none => .error "stmt without G form"
+  | some w =>
+    match ziel with
+    | .variable x => if ctx.muts.any (strEq · x) then uSetzeLokal ctx x w else uSetzePlatz ctx ziel w
+    | _ => uSetzePlatz ctx ziel w
+
 /-- One body statement: an assignment or a direct call (the
-    `tr_stmt` of `lean_g.rs`; compound assignment, mid-body
-    `return` and every other statement are explicit errors). -/
+    `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/
 def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     SAnw → Except String UStmt
-  | .set ziel "=" wert =>
-    match uZugriff ctx ziel with
-    | .error e => uGlobSchreib ctx ziel wert e
-    | .ok (.thru b, tb, f, ix) =>
-      match uStelle ctx.names b with
-      | .error e => .error e
-      | .ok j =>
-        match uArtBei ctx.kinds j with
-        | .ok (.ptr _ true) =>
-          if uBoolFeld ctx tb f then
-            match uBool ctx wert with
-            | .error e => .error e
-            | .ok v => .ok (.assignB b f ix v)
-          else
-            match uWertBody ctx wert with
-            | .error e => .error e
-            | .ok v => .ok (.assign b f ix v)
-        | _ => .error "write through a read pointer"
-    | .ok (.tabelle b, tb, f, ix) =>
-      if uBoolFeld ctx tb f then
-        match uBool ctx wert with
-        | .error e => .error e
-        | .ok v => .ok (.assignTabB b f ix v)
-      else
-        match uWertBody ctx wert with
-        | .error e => .error e
-        | .ok v => .ok (.assignTab b f ix v)
+  | .set ziel op wert => uSetze ctx ziel op wert
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .call c args =>
     match koepfe.find? (fun k => strEq k.name c) with
@@ -1347,6 +1452,43 @@ def uBindKopf (ctx : UCtx) (x : String) : Option STyp → Except String (Option 
       .ok (.some (lo, hi), { ctx with names := x :: ctx.names, kinds := .int :: ctx.kinds,
                                       types := .int lo hi :: ctx.types,
                                       bits := uParamBreite ty :: ctx.bits })
+
+/-- `let [mut] x [: T] = v;`: a number (the binding carries the computed range of `v`, or with `mut` the
+    declared one) or a truth value; the statement and the context for the rest of the block. -/
+def uBindWert (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : SExpr) :
+    Except String (UStmt × UCtx) :=
+  let muts : List String := if mu then x :: ctx.muts else ctx.muts.filter (fun m => !strEq m x)
+  let boolCtx : UCtx := { ctx with names := x :: ctx.names, kinds := UParamArt.bool :: ctx.kinds,
+                                   types := Ty.bool :: ctx.types, bits := 0 :: ctx.bits, muts := muts }
+  match t with
+  | .some (.atom "bool") =>
+    match uBool ctx e with
+    | .error err => .error err
+    | .ok b => .ok (.bindB x b, boolCtx)
+  | .none =>
+    match uWertBody ctx e with
+    | .ok sd =>
+      if mu then .error "let mut without a type"
+      else
+        match uBindKopf ctx x .none with
+        | .error err => .error err
+        | .ok (d, ctx') => .ok (.bind x d sd, { ctx' with muts := muts })
+    | .error err =>
+      match uBool ctx e with
+      | .ok b => .ok (.bindB x b, boolCtx)
+      | .error _ => .error err
+  | .some ty =>
+    match uWertBody ctx e with
+    | .error err => .error err
+    | .ok sd =>
+      match uBindKopf ctx x (.some ty) with
+      | .error err => .error err
+      | .ok (d, ctx') =>
+        if mu then
+          match d with
+          | .some (lo, hi) => .ok (.bindMut x lo hi sd, { ctx' with muts := muts })
+          | .none => .error "let mut without a type"
+        else .ok (.bind x d sd, { ctx' with muts := muts })
 
 /-- The trailing return (the `check_body`/`tr_body` of
     `lean_g.rs`): a result falls off nowhere, and a missing
@@ -1434,16 +1576,13 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
-  | f + 1, ctx, .bind false x t e :: rest =>
-    match uWertBody ctx e with
+  | f + 1, ctx, .bind mu x t e :: rest =>
+    match uBindWert ctx mu x t e with
     | .error err => .error err
-    | .ok s =>
-      match uBindKopf ctx x t with
+    | .ok (st, ctx') =>
+      match uAnwReihe tabs koepfe f ctx' rest with
       | .error err => .error err
-      | .ok (d, ctx') =>
-        match uAnwReihe tabs koepfe f ctx' rest with
-        | .error err => .error err
-        | .ok (xs, cE) => .ok (UStmt.bind x d s :: xs, cE)
+      | .ok (xs, cE) => .ok (st :: xs, cE)
   | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
     if g then .error "shared lock without G form"
     else
@@ -1577,6 +1716,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             | .ok (lo, hi) =>
               match (match v with
                   | .one (.lit k) => .ok (Int.ofNat k)
+                  | .one (.un "-" (.lit k)) => .ok (-(Int.ofNat k))
                   | .one (.variable c) => uSuch "const" consts c
                   | _ => .error "static initialiser without G form" : Except String Int) with
               | .error e => .error e
@@ -1825,7 +1965,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result in a body"
-  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. =>
+  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. | .div .. | .rem .. | .shl .. | .shr .. | .neg .. =>
     .error "arithmetic without G form in the 104 lowering"
 /-- One comparison in `einzahlen` (the `tr_cmp` of `lean_g.rs`;
     G folds all but `lt`/`le`/`eq`). -/
@@ -1850,7 +1990,7 @@ def lowerVglEin (tabs : List UTab) (names : List String)
 /-- One `ensures` predicate in `einzahlen`. -/
 def lowerSichertEin (tabs : List UTab) (names : List String)
     (types : List Ty) : UEns → Except String UEnsEin
-  | .globB _ => .error "static without G form in the 104 lowering"
+  | .globB _ | .var _ => .error "static without G form in the 104 lowering"
   | .cmp op a b => lowerVglEin tabs names types op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -2009,7 +2149,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       match lowerNachLies tabs names types rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -2046,7 +2186,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
@@ -2220,7 +2360,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     match res with
     | .some (0, 100) => .ok { range := (0, 100), term := Expr.var Var.here }
     | _ => .error "result range foreign"
-  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. =>
+  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. | .div .. | .rem .. | .shl .. | .shr .. | .neg .. =>
     .error "arithmetic without G form in the 104 lowering"
 where
   lowerIdxEnsLies : UIdx →
@@ -2258,7 +2398,7 @@ def lowerVglLies (tabs : List UTab) (names : List String)
 def lowerSichertLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     UEns → Except String UEnsLies
-  | .globB _ => .error "static without G form in the 104 lowering"
+  | .globB _ | .var _ => .error "static without G form in the 104 lowering"
   | .cmp op a b => lowerVglLies tabs names types res op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -2674,8 +2814,10 @@ def beqUSide : USide → USide → Bool
   | .erg, .erg => true
   | .glob a, .glob b => strEq a b
   | .add a b, .add c d | .sub a b, .sub c d | .mul a b, .mul c d
-  | .band a b, .band c d | .bor a b, .bor c d | .bxor a b, .bxor c d =>
+  | .band a b, .band c d | .bor a b, .bor c d | .bxor a b, .bxor c d
+  | .div a b, .div c d | .rem a b, .rem c d | .shl a b, .shl c d | .shr a b, .shr c d =>
     beqUSide a c && beqUSide b d
+  | .neg a, .neg b => beqUSide a b
   | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
   | _, _ => false
 

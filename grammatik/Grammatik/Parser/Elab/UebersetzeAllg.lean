@@ -528,6 +528,77 @@ def LowSide.xoder {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : Low
     else .error "bit operation over a negative range"
   else .error "bit operation over a negative range"
 
+/-- `a / b` (M102): `Expr.div` for a non-negative numerator over a denominator from `1`, else the signed
+    `Expr.sdiv` when the denominator excludes zero; a denominator that may be zero has no term. -/
+def LowSide.durch {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.range.1 then
+    if h1 : 1 ≤ y.range.1 then
+      .ok { range := (0, x.range.2), term := Expr.div h0 h1 x.term y.term }
+    else
+      if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+        .ok { range := (-(betragMax x.range.1 x.range.2), betragMax x.range.1 x.range.2),
+              term := Expr.sdiv hb x.term y.term }
+      else .error "division by a denominator that may be zero"
+  else
+    if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+      .ok { range := (-(betragMax x.range.1 x.range.2), betragMax x.range.1 x.range.2),
+            term := Expr.sdiv hb x.term y.term }
+    else .error "division by a denominator that may be zero"
+
+/-- `a % b`: `Expr.rem`, or the signed `Expr.srem`, under the same conditions as `/`. -/
+def LowSide.rest {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.range.1 then
+    if h1 : 1 ≤ y.range.1 then
+      .ok { range := (0, y.range.2 - 1), term := Expr.rem h0 h1 x.term y.term }
+    else
+      if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+        .ok { range := (-(betragMax y.range.1 y.range.2 - 1), betragMax y.range.1 y.range.2 - 1),
+              term := Expr.srem hb x.term y.term }
+      else .error "division by a denominator that may be zero"
+  else
+    if hb : 1 ≤ y.range.1 ∨ y.range.2 ≤ -1 then
+      .ok { range := (-(betragMax y.range.1 y.range.2 - 1), betragMax y.range.1 y.range.2 - 1),
+            term := Expr.srem hb x.term y.term }
+    else .error "division by a denominator that may be zero"
+
+/-- The width a shift of `x` by `y` names: the smallest that holds the operand and exceeds the amount. -/
+def schiebeBreite (x y : Int × Int) : Nat := max (bitsFuer x.2) (y.2.toNat + 1)
+
+/-- `a << b` over non-negative ranges (M137): `Expr.shl` at the width `schiebeBreite`. -/
+def LowSide.links {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      if hw1 : x.range.2 < (2 : Int) ^ schiebeBreite x.range y.range then
+        if hw2 : y.range.2 < ((schiebeBreite x.range y.range : Nat) : Int) then
+          .ok { range := (0, x.range.2 * 2 ^ y.range.2.toNat),
+                term := Expr.shl (schiebeBreite x.range y.range) hw1 hw2 h0 h0' x.term y.term }
+        else .error "shift outside its width"
+      else .error "shift outside its width"
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- `a >> b`: `Expr.shr`, range `0 .. hi(a)`. -/
+def LowSide.rechts {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.range.1 then
+    if h0' : 0 ≤ y.range.1 then
+      if hw1 : x.range.2 < (2 : Int) ^ schiebeBreite x.range y.range then
+        if hw2 : y.range.2 < ((schiebeBreite x.range y.range : Nat) : Int) then
+          .ok { range := (0, x.range.2),
+                term := Expr.shr (schiebeBreite x.range y.range) hw1 hw2 h0 h0' x.term y.term }
+        else .error "shift outside its width"
+      else .error "shift outside its width"
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- `-a`: `Expr.neg`. -/
+def LowSide.minusEins {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x : LowSide u Γ Λ) :
+    LowSide u Γ Λ :=
+  { range := (-x.range.2, -x.range.1), term := Expr.neg x.term }
+
 /-- Two lowered operands into one lowered result (the first error wins). -/
 def lowZwei {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (f : LowSide u Γ Λ → LowSide u Γ Λ → Except String (LowSide u Γ Λ))
@@ -708,45 +779,6 @@ def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
     | .int _ _ => .error "number static as a truth value"
     else .error "access without held guard"
 
-/-- A value side in a body: a literal, a numeric parameter or a
-    slot read (`result` and `old` have no G form here). -/
-def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) : USide → Except String (LowSide u Γ Λ)
-  | .lit n => .ok { range := (n, n), term := Expr.lit n }
-  | .param p => lowParamSide u Γ Λ fn 0 p
-  | .glob p => lowGlobSide u Γ Λ p
-  | .slot b f ix => lowDurch u Γ Λ fn 0 b f ix
-  | .tab b f ix => lowTabRead u Γ Λ fn 0 b f ix
-  | .add a b =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideVal u Γ Λ fn b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.plus x y)
-  | .sub a b =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideVal u Γ Λ fn b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.minus x y)
-  | .mul a b =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideVal u Γ Λ fn b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.times x y)
-  | .conv lo hi a =>
-    match lowSideVal u Γ Λ fn a with
-    | .error e => .error e
-    | .ok x => LowSide.conv lo hi x
-  | .band a b => lowZwei LowSide.and (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | .bor a b => lowZwei LowSide.or (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | .bxor a b => lowZwei LowSide.xoder (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
-  | _ => .error "side in body without G form"
-
 /-- A `bool` slot read through a pointer parameter (positions shift by `sh`): the place's truth value. -/
 def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
@@ -839,6 +871,14 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .band a b => lowZwei LowSide.and (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .bor a b => lowZwei LowSide.or (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .bxor a b => lowZwei LowSide.xoder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .div a b => lowZwei LowSide.durch (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .rem a b => lowZwei LowSide.rest (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .shl a b => lowZwei LowSide.links (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .shr a b => lowZwei LowSide.rechts (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .neg a =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x => .ok (LowSide.minusEins x)
   | .erg =>
     match er with
     | some (a, b) =>
@@ -846,6 +886,12 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .error e => .error e
       | .ok v => .ok { range := (a, b), term := Expr.var v }
     | none => .error "result without result"
+
+/-- A value side in a body: the sides of an `ensures` without `old` and `result` (a body reads neither). -/
+def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (s : USide) : Except String (LowSide u Γ Λ) :=
+  if seiteAltErg s then .error "side in body without G form"
+  else lowSideEns u Γ Λ fn none s
 
 /-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
 def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -893,6 +939,13 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .globB p => lowGlobBool u Γ Λ p
+  | .var p =>
+    match paramPos fn.params p with
+    | .error e => .error e
+    | .ok j =>
+      match lowVar Γ ((if er.isSome then 1 else 0) + j) .bool with
+      | .error e => .error e
+      | .ok v => .ok (Expr.var v)
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
 

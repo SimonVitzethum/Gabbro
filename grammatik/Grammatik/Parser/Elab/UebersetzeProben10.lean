@@ -54,7 +54,7 @@ theorem zahl_wahr_refused : stufe zahl_wahr = "elab: value without G form" := by
     result is a number. -/
 def bool_res_zahl : String :=
   "module m { impl fn f(x : u32 in 0 .. 9) -> bool { return x; } }"
-theorem bool_res_zahl_refused : stufe bool_res_zahl = "elab: ensures clause without G form" := by decide +kernel
+theorem bool_res_zahl_refused : stufe bool_res_zahl = "elab: number as a truth value" := by decide +kernel
 
 def zahl_res_bool : String :=
   "module m { impl fn f(x : u32 in 0 .. 9) -> u32 { return x <= 5; } }"

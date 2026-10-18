@@ -196,6 +196,8 @@ const PUR_VERLETZT: &[&str] = &[
     "write through a read pointer",
     "conversion outside target range",
     "index outside count",
+    "division by a denominator that may be zero",
+    "bit operation over a negative range",
 ];
 
 /// Run the pure-Lean path over the given sources (written as `<n>.gab` under `dir`); the verdict of

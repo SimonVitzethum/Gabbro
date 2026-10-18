@@ -69,10 +69,10 @@ def mul1 : String :=
   "module m { impl fn f(a : u32 in 0 .. 5, b : u32 in 0 .. 5) -> u8 in 0 .. 20 { return 3 * a + b; } }"
 theorem mul1_ok : stufe mul1 = "OK" := by decide +kernel
 
-/-- PLANTED DEFECT: division is not in the fragment; it must stop where it stopped before. -/
+/-- WITNESS (was a planted defect until division got its G form): `Expr.div` over a denominator from `1`. -/
 def div1 : String :=
   "module m { impl fn f(a : u32 in 0 .. 5, b : u32 in 1 .. 5) -> u8 in 0 .. 5 { return a / b; } }"
-theorem div1_refused : stufe div1 = "elab: value without G form" := by decide +kernel
+theorem div1_ok : stufe div1 = "OK" := by decide +kernel
 
 /-! ## Wall 1b: an omitted `effects` is read as the empty set -/
 

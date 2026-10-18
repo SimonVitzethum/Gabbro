@@ -469,7 +469,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             else .error "argument right without G form"
           else .error "argument type without G form"
         else .error "argument type without G form"
-      | .val _ => .error "value for pointer without G form"
+      | .val _ | .bval _ => .error "value for pointer without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
@@ -502,6 +502,10 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             fn lo hi s with
         | .error e => .error e
         | .ok e => .ok e
+      | _ => .error "argument without G form"
+    | .bool, .bool =>
+      match a with
+      | .bval b => lowEns u Γ Λ fn none b
       | _ => .error "argument without G form"
     | _, _ => .error "argument type without G form"
 
@@ -773,6 +777,37 @@ def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
         else .error "write without right"
     | .int _ _ => .error "number for a bool atomic"
 
+/-- `x = v;` at a `let mut` number: `Stmt.assignVar`, the value fitted into the variable's range. -/
+def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (x : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params x with
+  | .error e => .error e
+  | .ok j =>
+    match fn.params[j]? with
+    | some (_, .int lo hi) =>
+      match lowVar Γ j (.int lo hi) with
+      | .error e => .error e
+      | .ok var =>
+        match lowWertAt u Γ Λ fn lo hi v with
+        | .error e => .error e
+        | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
+    | _ => .error "assignment to a non-number variable"
+
+/-- The same for a truth value. -/
+def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (x : String) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params x with
+  | .error e => .error e
+  | .ok j =>
+    match lowVar Γ j .bool with
+    | .error e => .error e
+    | .ok var =>
+      match lowEns u Γ Λ fn none v with
+      | .error e => .error e
+      | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
+
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -786,10 +821,12 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
   | .storeAtom n v => lowStoreAtomL u caller Γ fn Λ n v
   | .storeAtomB n v => lowStoreAtomBL u caller Γ fn Λ n v
+  | .setVar x v => lowSetVarL u caller Γ fn Λ x v
+  | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .ifBeg _ | .ifElse | .loopBeg .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"
