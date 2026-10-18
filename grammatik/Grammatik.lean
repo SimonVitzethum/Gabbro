@@ -376,6 +376,8 @@ import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashZeuge
 import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibForm
 import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibZug
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeSib
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
+import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeEnde
 import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
 import Grammatik.Bausteine.Arena.Struktur.ArenaHash
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
