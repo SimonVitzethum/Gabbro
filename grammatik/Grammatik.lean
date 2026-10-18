@@ -515,3 +515,5 @@ import Grammatik.Speichermodell.Payload.PayloadHb
 import Grammatik.Speichermodell.Payload.PayloadLB
 import Grammatik.Hardware.Anbieter.Region
 import Grammatik.Hardware.Anbieter.Arena
+import Grammatik.Hardware.Tor.Abi
+import Grammatik.Hardware.Tor.Ende
