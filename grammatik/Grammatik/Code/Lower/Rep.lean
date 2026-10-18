@@ -15,6 +15,8 @@ import Grammatik.Code.Lower.Sum
   of slot `k` sits at the offset `gep [count x R], 0, k, fidx f` computes, and the bytes there
   decode to the encoding of `σ.slots t k f`; a global `g` is the cell of block `ggblk g`.
   Locals live in `alloc` blocks, one per variable of the context (`EnvRep`).
+  THE SHARED ATOMICS (`Layout.shared`, machine GX's `Tg`): the cell of a shared global exists but holds any value, so a
+  weakly answered load of it is a refinement of G's read on the presented world (`Conc/Present.lean`).
 
   THE CORRESPONDENCE ASSUMPTIONS, as hypotheses and not axioms (the structure `LayoutOk`):
     * the global of a table has type `[count x R]`, and every SUPPORTED field of `R` (an integer
@@ -68,6 +70,13 @@ structure Layout (D : Deklaration) where
   rty : D.Tab → Ty
   fidx : (t : D.Tab) → D.Feld t → Nat
   ggblk : D.Glob → Nat
+  /-- The ticket lock of lock `L` (`Conc/Lock.lean`): the block of its next-ticket word and the block of its
+      serving-ticket word. -/
+  lblk : D.Lock → Nat
+  lsrv : D.Lock → Nat
+  /-- The SHARED atomics: globals other threads write, whose cell the weak memory answers (machine GX's `Tg`).
+      The representation leaves their cells free. -/
+  shared : D.Glob → Bool
   /-- The number of the IR function that is function `f` of the program. -/
   fno : D.Fn → Nat
 
@@ -81,6 +90,13 @@ structure LayoutOk {D : Deklaration} (lay : Layout D) : Prop where
   tinj : ∀ t u, lay.gblk t = lay.gblk u → t = u
   gdis : ∀ t g, lay.gblk t ≠ lay.ggblk g
   ginj : ∀ g h, lay.ggblk g = lay.ggblk h → g = h
+  lkT : ∀ L t, lay.lblk L ≠ lay.gblk t ∧ lay.lsrv L ≠ lay.gblk t
+  lkG : ∀ L g, lay.lblk L ≠ lay.ggblk g ∧ lay.lsrv L ≠ lay.ggblk g
+  lkX : ∀ L L', lay.lblk L ≠ lay.lsrv L'
+  lkN : ∀ L L', lay.lblk L = lay.lblk L' → L = L'
+  lkS : ∀ L L', lay.lsrv L = lay.lsrv L' → L = L'
+  /-- a shared global is an atomic -/
+  shAtomic : ∀ g, lay.shared g = true → D.atomar g = true
   /-- field positions stay far below the signed word range -/
   fsm : ∀ t f, lay.fidx t f < 2 ^ (Conf.wbits - 2)
 
@@ -151,13 +167,16 @@ theorem dec_enc_encM (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = 
 
 /-! ## The world in memory -/
 
-/-- Table slots and globals of `σ` are in the memory `m`. -/
+/-- Table slots and globals of `σ` are in the memory `m`, EXCEPT the cells of the shared atomics: those cells exist
+    (a word of the right type) but hold any value (machine GX: the presented memory agrees with G's outside `Tg`). -/
 def Rep (lay : Layout D) (σ : World D) (m : Mem) : Prop :=
   (∀ t (k : Int) (f : D.Feld t), supp (D.typ t f) = true → 0 ≤ k → k < D.count t →
       m.load (lay.gblk t) (lay.off t k f) (memTy (D.typ t f))
         = some (encM lay (D.typ t f) (σ.slots t k f))) ∧
   (∀ g, supp (D.gtyp g) = true →
-      m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some (encM lay (D.gtyp g) (σ.globs g)))
+      (∃ x, m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some x) ∧
+      (lay.shared g = false →
+        m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some (encM lay (D.gtyp g) (σ.globs g))))
 
 theorem load_blk_lt {m : Mem} (hw : m.Wf) {b : Nat} {o : Int} {t : Ty} {v : Val}
     (h : m.load b o t = some v) : b < m.next := by
@@ -229,10 +248,10 @@ theorem rep_alloc {lay : Layout D} {σ : World D} {m : Mem} (hw : m.Wf) (hR : Re
     have hlt := load_blk_lt hw this
     rw [alloc_load m n z _ (by omega)]
     exact this
-  · have := hR.2 g hs
-    have hlt := load_blk_lt hw this
+  · obtain ⟨⟨x, hx⟩, hc⟩ := hR.2 g hs
+    have hlt := load_blk_lt hw hx
     rw [alloc_load m n z _ (by omega)]
-    exact this
+    exact ⟨⟨x, hx⟩, hc⟩
 
 /-- A slot store keeps the image: the world after `storeSlot`, the memory after the store. -/
 theorem rep_store_slot {lay : Layout D} (hL : LayoutOk lay) {σ : World D} {m m' : Mem}
@@ -285,7 +304,8 @@ theorem rep_store_glob {lay : Layout D} (hL : LayoutOk lay) {σ : World D} {m m'
     · subst hg
       have e : (σ.storeGlob g' v).globs g' = v := by simp [World.storeGlob]
       rw [e]
-      exact load_store_of h (dec_enc_encM lay v hs)
+      have hl := load_store_of h (dec_enc_encM lay v hs)
+      exact ⟨⟨_, hl⟩, fun _ => hl⟩
     · have e : (σ.storeGlob g v).globs g' = σ.globs g' := by simp [World.storeGlob, hg]
       rw [e,
         load_store_other h (Or.inl (fun e => hg (hL.ginj _ _ e)))]

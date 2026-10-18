@@ -291,6 +291,9 @@ def wLay : Layout wD where
   rty := fun _ => .fld (.int 8) .unit
   fidx := fun _ _ => 0
   ggblk := fun e => nomatch e
+  lblk := fun _ => 100
+  lsrv := fun _ => 101
+  shared := fun e => nomatch e
   fno := fun | .get => 0 | .put => 1 | .wipe => 2 | .main => 3 | .mt => 4 | .bits => 5 | .fail => 6 | .callf => 7
 
 def wO : Orakel wD where
@@ -339,6 +342,12 @@ theorem wLayOk : LayoutOk wLay where
   tinj := fun _ _ _ => rfl
   gdis := fun _ g => nomatch g
   ginj := fun g => nomatch g
+  lkT := fun _ _ => ⟨by show (100 : Nat) ≠ 0; decide, by show (101 : Nat) ≠ 0; decide⟩
+  lkG := fun _ g => nomatch g
+  lkX := fun _ _ => by show (100 : Nat) ≠ 101; decide
+  lkN := fun _ _ _ => rfl
+  lkS := fun _ _ _ => rfl
+  shAtomic := fun g => nomatch g
   fsm := fun _ _ => Nat.two_pow_pos _
 
 /-- The IR functions of the four functions, in order (a function whose lowering fails is left out). -/

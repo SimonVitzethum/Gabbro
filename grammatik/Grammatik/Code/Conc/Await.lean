@@ -12,14 +12,12 @@ import Grammatik.Code.Conc.Publish
 
   `await_ok` is stated for ONE world `σ` -- the world the thread reads, the presented world of GX -- and the
   value `S` answers: **if `S` allows the image of `σ`'s value of `g` at the cell, and the memory represents
-  `σ`, the lowered code refines G's `await` run on `σ`**, for every continuation that refines (`BOk`).
-  For `S = Sees.sc` the hypothesis on `S` is `Rep` itself (`await_ok_sc`): the exact refinement of G.
-
-  WHAT IS NOT HERE (open, and why): a weakly answered load whose answer differs from the cell the memory holds.
-  Then the memory does not represent the presented world at the atomic's cell, so `Rep` has to be relaxed there
-  (`RepX`: the cells of the shared atomics `Tg` are free, as machine GX's "agrees outside `Tg`"), and every
-  proof of `Refine/` that carries `Rep` has to carry `RepX`. The thread machine over `Code` (views, spawn, join)
-  and the simulation of `RufSchrittGX` steps by IR steps are the rest of L3.
+  `σ`, the lowered code refines G's `await` run on `σ`**; the continuation's refinement is `lowerB_ok`, so there is no
+  hypothesis about it (a continuation `lowerB` refuses, one that itself awaits, has no lowering).
+  For `S = Sees.sc` and a global that is not shared the hypothesis on `S` is `Rep` itself (`await_ok_sc`): the exact
+  refinement of G. A SHARED atomic (`lay.shared`) has its cell free in `Rep`, so a weakly answered load whose answer
+  differs from the cell is covered with no further relaxation: `await_ok_gx` for the presented world, and
+  `Conc/Shared.lean` (`await_ok_shared`) against the GX interface for every presented value.
 -/
 
 namespace Gabbro.Code.Lower
@@ -70,7 +68,6 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
-    (IH : ∀ a, BOk lay (a :: cenv) lv O passes R rest)
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
     (M : Modl) (S : Sees) (fn : Nat) (hM : InM M fn blks) (hk : KOk M fn k) (hlv : LvOk M fn lv)
@@ -108,7 +105,7 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     have hnb := atomicG_nonbool hat
     -- the load
     have hgl : (Opd.glob (lay.ggblk g)).ev rs = some (.ptr (lay.ggblk g) 0) := rfl
-    obtain ⟨x0, hx0⟩ : ∃ x0, m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some x0 := ⟨_, hR.2 g hs⟩
+    obtain ⟨x0, hx0⟩ : ∃ x0, m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some x0 := (hR.2 g hs).1
     have hty : (encM lay (D.gtyp g) (σ.globs g)).ty = memTy (D.gtyp g) := encM_ty lay _ hs
     have hstep := step_aload (M := M) (S := S) (f := ⟨fn, lb, 0, rs, dst⟩) (blk := _) (d := st.r) (ks := ks)
       (p := .glob (lay.ggblk g)) (ord := .acq) (m := m) (b := lay.ggblk g) (o := 0) (hb := hb0) (hi := rfl)
@@ -136,7 +133,7 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
       rcases List.mem_cons.mp hx with rfl | hx'
       · exact Nat.lt_succ_self _
       · exact Nat.lt_succ_of_lt (Nat.lt_of_lt_of_le (hc x hx') (Nat.le_trans (Nat.le_succ _) hra))
-    have IHr := IH a st.l k ⟨a + 1, st.l + 1⟩ s1 bo hb1 M S fn hMo hk hlv hFn hCall (σ.lese Λ [.inr g])
+    have IHr := lowerB_ok lay hL (a :: cenv) lv O passes R rest st.l k ⟨a + 1, st.l + 1⟩ s1 bo hb1 M S fn hMo hk hlv hFn hCall (σ.lese Λ [.inr g])
       (Env.cons (σ.globs g) ρ) m1 rs4 ks dst hRn hEnew hWn hbound
     have hFs : Fr lay cenv st.r m rs m (rs.set st.r (encM lay (D.gtyp g) (σ.globs g))) :=
       fr_regs (fun x hx => regs_set_ne rs st.r x _ (Nat.ne_of_lt hx))
@@ -170,17 +167,17 @@ theorem await_ok_sc (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
-    (IH : ∀ a, BOk lay (a :: cenv) lv O passes R rest)
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
     (M : Modl) (fn : Nat) (hM : InM M fn blks) (hk : KOk M fn k) (hlv : LvOk M fn lv)
     (hFn : FnOk lay M) (hCall : CallRef lay M Sees.sc R)
     (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg)
+    (hsh : lay.shared g = false)
     (hR : Rep lay σ m) (hE : EnvRep lay rs m cenv ρ) (hW : WfL lay m) (hc : ∀ x ∈ cenv, x < st.r) :
     OutOk lay cenv lv M Sees.sc fn lb k st.r st'.r m rs ks dst
       (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) σ ρ) :=
-  await_ok lay hL cenv lv O passes R g payload hp hgd rest IH lb k st st' blks h M Sees.sc fn hM hk hlv hFn hCall
-    σ ρ m rs ks dst hR hE hW hc (hR.2 g (atomicG_supp (lowerAwait_atomic h)))
+  await_ok lay hL cenv lv O passes R g payload hp hgd rest lb k st st' blks h M Sees.sc fn hM hk hlv hFn hCall
+    σ ρ m rs ks dst hR hE hW hc ((hR.2 g (atomicG_supp (lowerAwait_atomic h))).2 hsh)
 
 /-- A presented world of machine GX at one shared atomic: the same slots, the same globals but `g`, whose value is
     the one read. (Machine GX allows a presented memory to differ from the actual one exactly at the shared
@@ -202,7 +199,6 @@ theorem await_ok_gx (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
-    (IH : ∀ a, BOk lay (a :: cenv) lv O passes R rest)
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
     (M : Modl) (S : Sees) (fn : Nat) (hM : InM M fn blks) (hk : KOk M fn k) (hlv : LvOk M fn lv)
@@ -214,7 +210,7 @@ theorem await_ok_gx (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
     OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst
       (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) (σ.storeGlob g xg) ρ) :=
   ⟨presentedAt_storeGlob σ g xg,
-    await_ok lay hL cenv lv O passes R g payload hp hgd rest IH lb k st st' blks h M S fn hM hk hlv hFn hCall
+    await_ok lay hL cenv lv O passes R g payload hp hgd rest lb k st st' blks h M S fn hM hk hlv hFn hCall
       (σ.storeGlob g xg) ρ m rs ks dst hRp hE hW hc (by rw [storeGlob_globs_self]; exact hS)⟩
 
 end Gabbro.Code.Lower

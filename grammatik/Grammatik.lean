@@ -470,5 +470,14 @@ import Grammatik.Code.Model.Witness
 import Grammatik.Code.Refine.Expr
 import Grammatik.Code.Refine.Calls.Func
 import Grammatik.Code.Refine.Witness
+import Grammatik.Code.Conc.Present
+import Grammatik.Code.Conc.Thread
+import Grammatik.Code.Conc.GXStep
+import Grammatik.Code.Conc.Lock
+import Grammatik.Code.Conc.LockRel
+import Grammatik.Code.Conc.LockWitness
+import Grammatik.Code.Conc.Shared
+import Grammatik.Code.Conc.SharedWitness
+import Grammatik.Code.Conc.GXWitness
 import Grammatik.Code.Conc.Witness
 import Grammatik.Code.Model.Need

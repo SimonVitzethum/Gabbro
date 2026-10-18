@@ -66,7 +66,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       have hs1' : seqI ce m rs = some (m, rs1) := hs1
       obtain ⟨m', rs2, hs2, hst2, hr2, hag2⟩ := storeTo_run lay (D.gtyp g) (eval σl e σl ρ) hs oe r1
         (.glob (lay.ggblk g)) (lay.ggblk g) 0 m rs1 hev1 hlt1 rfl (fun x hx => nomatch hx)
-        ⟨_, hR.2 g hs⟩ cs r2 hst
+        (hR.2 g hs).1 cs r2 hst
       have hseq : seqI (ce ++ cs) m rs = some (m', rs2) := by
         rw [seqI_append, hs1']; exact hs2
       have hFr : Fr lay cenv st.r m rs m' rs2 := fr_store hst2 (Or.inl (not_fresh_glob g)) (fun x hx => by
@@ -317,7 +317,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       have hFr : Fr lay cenv st.r m rs m' rs2 := fr_store hst2 (Or.inr ⟨a, hamem, hrb⟩) (fun x hx => by
         rw [hag2 x (Nat.lt_of_lt_of_le hx hr1), hag1 x hx])
       refine ⟨m', rs2, reach_block_jmp hb rfl hbk hkp hseq, ?_, hFr⟩
-      have hRn : Rep lay σl m' := rep_store_other hRl hst2 hfr
+      have hRn : Rep lay σl m' := rep_store_other hRl hst2 ⟨hfr.1, hfr.2.1⟩
       have hag : ∀ r ∈ cenv, rs2 r = rs r := fun r hr => by
         have l1 : r < r1 := Nat.lt_of_lt_of_le (hc r hr) hr1
         rw [hag2 r l1, hag1 r (hc r hr)]

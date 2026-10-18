@@ -84,7 +84,7 @@ theorem publish_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : 
   obtain ⟨rs1, hs1, hr1, hag1, hlt1, hev1⟩ := Fe
   have hs1' : seqI ce m rs = some (m, rs1) := hs1
   have hnb := atomicG_nonbool hat
-  obtain ⟨x, hx⟩ : ∃ x, m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some x := ⟨_, hR.2 g hs⟩
+  obtain ⟨x, hx⟩ : ∃ x, m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some x := (hR.2 g hs).1
   have hty : (encM lay (D.gtyp g) (eval σl e σl ρ)).ty = memTy (D.gtyp g) := encM_ty lay _ hs
   obtain ⟨m', hm'⟩ := store_of_load hx hty
   have hev1' : oe.ev rs1 = some (encM lay (D.gtyp g) (eval σl e σl ρ)) := by

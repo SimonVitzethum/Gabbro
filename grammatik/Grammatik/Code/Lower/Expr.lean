@@ -216,7 +216,7 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
       match cenv[varIdx x]? with
       | some a => if supp τ then loadG τ (.reg a) r else none
       | none => none
-  | _, _, _, .glob g _, r => if supp (D.gtyp g) then loadG (D.gtyp g) (.glob (lay.ggblk g)) r else none
+  | _, _, _, .glob g _, r => if supp (D.gtyp g) && !lay.shared g then loadG (D.gtyp g) (.glob (lay.ggblk g)) r else none
   | _, _, _, .slot t f i _, r =>
       match lowerE lay cenv i r with
       | some (ci, oi, r1) =>

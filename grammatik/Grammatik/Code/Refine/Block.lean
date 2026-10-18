@@ -185,7 +185,7 @@ theorem bind_run (lay : Layout D) {τ : GTy} (v : Wert D τ) (hs : supp τ = tru
     exact store_wf hm1 (alloc_wf hw _ _)
   · intro σ hW hR
     exact rep_store_other (rep_alloc hW.1 hR _ _) hm1
-      ⟨fun t => Nat.ne_of_gt (hW.2.1 t), fun g => Nat.ne_of_gt (hW.2.2 g)⟩
+      ⟨fun t => Nat.ne_of_gt (hW.2.1 t), fun g => Nat.ne_of_gt (hW.2.2.1 g)⟩
   · intro hW
     exact wfL_store hm1 (wfL_alloc hW _ _)
   · intro b hb o t w hl
@@ -236,7 +236,8 @@ theorem bindCode_run (lay : Layout D) {τ : GTy} {σ : World D} {Γ : Ctx} {cenv
   have hE3' : EnvRep lay rs3 m1 cenv ρ :=
     envRep_load cenv ρ (fun r hr' b hb' hf o t w hl => hmem b (hblt r hr' b hb') o t w hl) hE3
   refine ⟨m1, rs3, hseq, hrep1 σ hW hR, ⟨⟨hs, m.next, hra,
-    ⟨fun t => Nat.ne_of_gt (hW.2.1 t), fun g => Nat.ne_of_gt (hW.2.2 g)⟩, hld1,
+    ⟨fun t => Nat.ne_of_gt (hW.2.1 t), fun g => Nat.ne_of_gt (hW.2.2.1 g), fun L => ⟨Nat.ne_of_gt (hW.2.2.2 L).1, Nat.ne_of_gt (hW.2.2.2 L).2⟩⟩,
+    hld1,
     fun r' hr' b' hb' => Nat.ne_of_lt (hblt r' hr' b' hb')⟩, hE3'⟩, hwl1 hW, hr1', rfl, ?_, ?_, ?_⟩
   · intro x hx
     have l3 : x < r3 := Nat.lt_of_lt_of_le hx hr1'

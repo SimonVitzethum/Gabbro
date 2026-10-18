@@ -675,18 +675,43 @@ LLVM backend stays as the running reference compiler. Estimate for the half: 25 
    `lowerFn_callref`). Arenas, `grow`, `free`/free list (`ArenaFrei.lean`) are SUGAR in the Lean model (assignments over
    the arena's carriers, no new `Stmt` constructor), so they need no lowering of their own: they lower, with the proved
    refinement, once the elaboration expands them (Track P). Still open: sampling, the page return.
-4. **L3 concurrency (STARTED 2026-10-18, `Grammatik/Code/Conc/`, separate from `lowerS`).** Built and proved: the lowering of
-   `publish` (a release store into the atomic global's word cell) and `await` (an acquire load, the word a new
-   local), refused unless the cell is word-sized (`atomicG`); `publish_ok` for EVERY memory-model interface
-   (a store does not consult it), `await_ok` (if the interface allows the image of the world's value, the lowered code
-   refines G's `await` on that world), `await_ok_sc` (the exact SC refinement) and `await_ok_gx` (the same on a
-   PRESENTED world of machine GX, `PresentedAt`: the same slots and globals but the shared atomic); a witness at both
-   targets. **Open, with the reason:** a weakly answered load whose answer differs from the cell the memory holds -- the
-   memory then does not represent the presented world at the atomic, so `Rep` must be relaxed to a `RepX` that leaves
-   the cells of the shared atomics free (machine GX: "agrees outside `Tg`"), and every refinement proof of `Refine/`
-   carries it; the thread machine over `Code` (views, `child`, `join`, handed stacks) and the simulation of a
-   `RufSchrittGX` step by IR steps; the ticket lock, the reader/writer lock and masked acquisition (their cells are
-   not in `Rep` either: the lock state needs the same relaxation of the representation). ~8 000-12 000 lines remain.
+4. **L3 concurrency (`Grammatik/Code/Conc/`, separate from `lowerS`; session 3 of Track L, 2026-10-18).** Built and proved:
+   * `publish` (a release store) and `await` (an acquire load) lowered, refused unless the cell is word-sized (`atomicG`);
+     `publish_ok` for every interface, `await_ok` (the continuation's refinement is `lowerB_ok`, so there is no premise
+     about it; a continuation `lowerB` refuses has no lowering), `await_ok_sc`, `await_ok_gx`.
+   * **(1) the shared atomics.** `Layout.shared` is machine GX's `Tg`; `Rep` is relaxed IN PLACE: the cell of a shared
+     global must exist but holds any value (no second `RepX`, no copy of the strong form; every refinement proof carries
+     the one relation). `lowerE` refuses a plain read of a shared global. `rep_agree`, `rep_presented`, `rep_successor`,
+     `rep_gx` are the memory half of the GX simulation; `Sees.shared` is the GX interface; `await_ok_shared` refines G's
+     `await` on `σ[g := xg]` for every `xg`.
+   * **(2) the thread machine** (`Th`, `TM`, `TStep`, `TReach`, `treach_solo`) and **`stmt_gx`**: a GX step of a statement
+     that ends normally is matched by thread-machine steps (the thread at the continuation, the shared memory representing
+     the successor memory, the other threads untouched, the frame `Fr`). Views, `child` and `join` are not needed: G's
+     threads are all declared starts, and GX presents an arbitrary memory at the shared atomics.
+   * **(3) the ticket lock** on two word cells per lock (`Layout.lblk`/`lsrv`): `lockTake`/`lockSpin`/`lockRel`, the
+     thread runs, the invariant `LockRel` over all threads (ghost ticket queue; G's held locks counted in `offen`),
+     `take_step`, `spin_wait_step`, `spin_enter_step` (`RufFreiG` derived, the relation after the `nimmt`),
+     `release_step` (after the `gibt`), `lockRel_exclusive`, `lock_store_post`. ONE named assumption: fewer than
+     `2^wbits` tickets outstanding on a lock at once.
+   * **(4) instantiated**: `await_shared_zeuge`, `stmt_gx_zeuge`, `lock_witness` (kernel-built witnesses; two threads
+     contend, take/take/enter/wait/release/enter).
+
+   **Open, with the reason** (the forward direction throughout: every GX step is MATCHED by IR steps):
+   * the STRUCTURAL half of the simulation: the steps that unfold a compound or call (`ite`, `match`, loops, `locks`,
+     call/return) move G's residue, not memory; relating a `GRest` to an IR position needs the lowering stated on
+     continuations (`dann`/`schrumpf`/`frei` residues), not only on whole statements. The converse direction (every IR
+     interleaving is a GX run) needs a reduction argument.
+   * `publish`/`await`/`locks` are not yet inside `lowerS`/`lowerB`; the integrated theorem needs one hypothesis on the
+     interface (`S` answers what `Rep` says at an atomic cell), threaded through every refinement theorem and `CallRef`.
+     No decision from Simon is needed, it is a mechanical refactor (~40-60 call sites).
+   * the structured `locks L { .. }` statement (acquire, body, release on `ok`/`leave`/`next`/`return`): the thread-local
+     premises of the lock steps (ticket register, not queued) are what its theorem supplies.
+   * **decisions for Simon**: (a) the **reader/writer lock**: machine G has none (`Lock` carries `rang` and `maskiert`
+     only), so by the rule "the Lean model first" it is a language extension (a `Stmt`, its G semantics, the checker rule)
+     before any lowering; (b) **masked acquisition** (`masks irqs`): G records it only as `D.maskiert` (no interrupt-mask
+     state in the machine), so the lowering needs an interrupt-mask instruction in `Code`, a hardware form with a named
+     assumption (L4), not an invented semantics.
+   ~5 000-8 000 lines remain for L3.
 5. **L4 hardware forms.** `entry` (x86_64 IDT stubs, aarch64 vectors), `asm` bodies, port space, `device`
    registers, system-call gates: each with its named hardware assumption, no invented semantics.
    ~4 000–6 000. `boot` and `entrust` stay refused until the language gives them a semantics in the model.
