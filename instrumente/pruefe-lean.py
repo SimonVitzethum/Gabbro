@@ -14,6 +14,10 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      certificate per exported corpus program to `target/zertifikate/`; each is elaborated with
      `lake env lean` against the built model, so the Lean Bool `Akzeptiert` deciding the exported
      unit and `gabbro_ziel` instantiated on it are checked for every certified program.
+  6. Coverage of the register by the program generator (`Gen/Abdeckung/`): `lake build gen-abdeckung`, then the
+     native driver generates every program of the family up to the reference bounds and fails (exit 1) on a
+     register member that no valid and no single-fault program contains and that is not a declared known gap
+     (`bekannteLuecken`), or on a declared gap that is covered (the list is exact).
 
 Exit 0 green, 1 red, 2 nothing measured. `--ohne-bau` skips stage 1 (the other stages read
 the existing build state)."""
@@ -108,10 +112,27 @@ def stufe_zertifikate():
     return ok
 
 
+ABDECKUNG_GRENZEN = ["7", "7", "5", "7:6:6:4"]   # bodies/skeletons up to 7, one change up to 5; member 7 (registers only): 6/6/4
+
+
+def stufe_abdeckung():
+    rc, out = lauf(["lake", "build", "gen-abdeckung"], G, 3600)
+    exe = G / ".lake/build/bin/gen-abdeckung"
+    if rc != 0 or not exe.exists():
+        print("  6 abdeckung: ROT (the driver does not build)\n", out[-600:])
+        return False
+    rc, out = lauf([str(exe), str(W / "dokumente/llvm-modelldeckung.tsv"), *ABDECKUNG_GRENZEN], G, 3600)
+    zeilen = [z for z in out.splitlines() if z.startswith(("register members", "valid programs", "cells"))]
+    print(f"  6 abdeckung: {'ok' if rc == 0 else 'ROT'} ({'; '.join(zeilen)})")
+    if rc != 0:
+        for z in out.splitlines()[-3:]: print("     ", z[:400])
+    return rc == 0
+
+
 def main():
     if not G.is_dir(): print("ABBRUCH: grammatik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 1: Lean-Modell ==")
-    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_zertifikate]
+    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_zertifikate, stufe_abdeckung]
     erg = [s() for s in stufen]
     print("== LEAN:", "GRUEN" if all(erg) else "ROT", "==")
     return 0 if all(erg) else 1

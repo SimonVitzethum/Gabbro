@@ -1,168 +1,165 @@
 /-
   File:      Grammatik/Gen/Erzeuger/Anweisung.lean
-  Subject:   The clauses of the STATEMENT generator, one per constructor of `Stmt`. A clause takes the fuel `m`
-             (the expressions are `genExpr m`), the recursion record `R` (the statements, blocks and end blocks
-             of the fuel below) and the context, and returns the statements it builds with the resources held
-             after them. Every proof argument is DECIDED (`if h : P then ... else []`), so a generated
-             statement carries the rule's own premise as a proof.
+  Subject:   The CLAUSES of the statement generator, one per constructor of `Stmt`. A clause is a `Sz` (the statements
+             of exact size `k`, each with the resources held after it): it reads the expressions of the sizes below
+             `k` from `E`, the blocks of the context at hand from `Bs`, and the blocks of other contexts from the
+             oracle `O`. Every proof argument of a rule is DECIDED (`Sz.wenn`), so a generated statement carries
+             the rule's own premise as a proof.
 -/
 import Grammatik.Gen.Erzeuger.Hilfen
 
 namespace Gabbro.Grammatik.Gen
 
+set_option linter.unusedSectionVars false
+
 open Gabbro.Grammatik
 
-variable {D : Deklaration} [Aufz D] {V : Vertrag D}
+variable {D : Deklaration} [Aufz D] [Zahlen] {V : Vertrag D}
 
 section Klauseln
 
-variable (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D))
+variable (O : Orakel V) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ Λ))
 
-def sAssignSlot : List (SS D V l Γ Λ) :=
-  Aufz.tab.flatMap fun t => (Aufz.feld t).flatMap fun f =>
-    (ofTy (genExpr m Γ Λ) (.index (D.count t))).flatMap fun i =>
-      (ofTy (genExpr m Γ Λ) (D.typ t f)).flatMap fun e =>
-        if hw : V.schreibt t = true then if hL : darf D t Λ then [⟨Λ, .assignSlot t f i e hw hL⟩] else [] else []
+def sAssignSlot : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.tab) fun t => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
+    Sz.bind (tyS E (.index (D.count t))) fun i => Sz.bind (tyS E (D.typ t f)) fun e =>
+      Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
+        Sz.pure ⟨Λ, .assignSlot t f i e hw hL⟩)
 
-def sAssignThru : List (SS D V l Γ Λ) :=
-  mitPtrT (genExpr m Γ Λ) fun {n} q => Aufz.tab.flatMap fun t => if ht : D.tabNr n = some t then
-    (Aufz.feld t).flatMap fun f => (ofTy (genExpr m Γ Λ) (.index (D.count t))).flatMap fun i =>
-      (ofTy (genExpr m Γ Λ) (D.typ t f)).flatMap fun e =>
-        if hw : V.schreibt t = true then if hL : darf D t Λ then
-          [⟨Λ, .assignThru q t ht f i e hw hL⟩] else [] else []
-    else []
+def sAssignThru : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (ptrTS E) fun ⟨n, q⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
+    Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
+      Sz.bind (tyS E (.index (D.count t))) fun i => Sz.bind (tyS E (D.typ t f)) fun e =>
+        Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
+          Sz.pure ⟨Λ, .assignThru q t ht f i e hw hL⟩)
 
-def sAssignGlob : List (SS D V l Γ Λ) :=
-  Aufz.glob.flatMap fun g => (ofTy (genExpr m Γ Λ) (D.gtyp g)).flatMap fun e =>
-    if hw : V.gschreibt g = true then if hL : gdarf D g Λ then [⟨Λ, .assignGlob g e hw hL⟩] else [] else []
+def sAssignGlob : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g => Sz.bind (tyS E (D.gtyp g)) fun e =>
+    Sz.wenn (V.gschreibt g = true) fun hw => Sz.wenn (gdarf D g Λ) fun hL => Sz.pure ⟨Λ, .assignGlob g e hw hL⟩)
 
-def sPutBytes : List (SS D V l Γ Λ) :=
-  Aufz.tab.flatMap fun t => (Aufz.feld t).flatMap fun f =>
-    if hf : D.typ t f = .int 0 255 then (List.range (m + 1)).flatMap fun (n : Nat) =>
-      mitIntR (genExpr m Γ Λ) fun {lo hi} i => if hlo : 0 ≤ lo then if hhi : hi + (n : Int) ≤ D.count t then
-        (ofTy (genExpr m Γ Λ) (.int 0 (256 ^ n - 1))).flatMap fun e =>
-          if hw : V.schreibt t = true then if hL : darf D t Λ then
-            [⟨Λ, .putBytes t f hf n i hlo hhi e hw hL⟩] else [] else []
-        else [] else []
-    else []
+def sPutBytes : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.tab) fun t => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
+    Sz.wenn (D.typ t f = .int 0 255) fun hf => Sz.bind nS fun n =>
+      Sz.bind (intS E) fun ⟨lo, hi, i⟩ => Sz.wenn (0 ≤ lo) fun hlo => Sz.wenn (hi + (n : Int) ≤ D.count t) fun hhi =>
+        Sz.bind (tyS E (.int 0 (256 ^ n - 1))) fun e =>
+          Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
+            Sz.pure ⟨Λ, .putBytes t f hf n i hlo hhi e hw hL⟩)
 
-def sAssignVar : List (SS D V l Γ Λ) :=
-  (genVar Γ).flatMap fun p => (ofTy (genExpr m Γ Λ) p.1).map fun e => ⟨Λ, .assignVar p.2 e⟩
+def sAssignVar : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (varS Γ) fun p => Sz.bind (tyS E p.1) fun e => Sz.pure ⟨Λ, .assignVar p.2 e⟩)
 
-def sShift : List (SS D V l Γ Λ) :=
-  Aufz.tab.flatMap fun t => (Aufz.feld t).flatMap fun f =>
-    mitTypInt (D.typ t f) fun {lo hi} hτ =>
-      (ofTy (genExpr m Γ Λ) (.index (D.count t))).flatMap fun i =>
-        (ints m).flatMap fun von => (ints m).flatMap fun nach =>
-          if hn : lo ≤ nach ∧ nach ≤ hi then if he : D.erlaubt t f von nach = true then
-            if hw : V.schreibt t = true then if hL : darf D t Λ then
-              [⟨Λ, .shift t f hτ i von nach hn he hw hL⟩] else [] else [] else [] else []
+def sShift : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.tab) fun t => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
+    mitTypInt (D.typ t f) fun {lo hi} hτ => Sz.bind (tyS E (.index (D.count t))) fun i =>
+      Sz.bind zS fun von => Sz.bind zS fun nach =>
+        Sz.wenn (lo ≤ nach ∧ nach ≤ hi) fun hn => Sz.wenn (D.erlaubt t f von nach = true) fun he =>
+          Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
+            Sz.pure ⟨Λ, .shift t f hτ i von nach hn he hw hL⟩)
 
-def sIte : List (SS D V l Γ Λ) :=
-  (ofTy (genExpr m Γ Λ) .bool).flatMap fun c => (R.bl l Γ Λ).flatMap fun p =>
-    (ofTy (R.bl l Γ Λ) p.1).map fun e => ⟨p.1, .ite c p.2 e⟩
+def sIte : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (tyS E .bool) fun c => Sz.bind Bs fun p =>
+    Sz.bind (fun j => ofTy (Bs j) p.1) fun e => Sz.pure ⟨p.1, .ite c p.2 e⟩)
 
-def sOnOption : List (SS D V l Γ Λ) :=
-  mitOptR (genExpr m Γ Λ) fun {n} o => (R.bl l (.index n :: Γ) Λ).flatMap fun p =>
-    (ofTy (R.bl l Γ Λ) p.1).map fun a => ⟨p.1, .onOption o p.2 a⟩
+def sOnOption : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS (fun i => (optS E i).filter fun p => Zahlen.bindOk (Ty.index p.1))
+    (fun n m => O.bl l (.index n :: Γ) Λ m) fun _ o p =>
+    Sz.bind (fun j => ofTy (Bs j) p.1) fun a => Sz.pure ⟨p.1, .onOption o p.2 a⟩)
 
-def sOnTag : List (SS D V l Γ Λ) :=
-  mitSumR (genExpr m Γ Λ) fun {cs} v => (genArms R l Γ Λ cs).map fun p => ⟨p.1, .onTag v p.2⟩
+def sOnTag : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS (sumS E) (fun cs _ => armsS O l Γ Λ cs) fun _ v arms => Sz.pure ⟨arms.1, .onTag v arms.2⟩)
 
-def sOnWhy : List (SS D V l Γ Λ) :=
-  mitWhyR (genExpr m Γ Λ) fun {n} r => (genGrundArms R l Γ Λ n).map fun p => ⟨p.1, .onWhy r p.2⟩
+def sOnWhy : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS (whyS E) (fun n _ => grundArmsS O l Γ Λ n) fun _ r arms => Sz.pure ⟨arms.1, .onWhy r arms.2⟩)
 
-def sCall : List (SS D V l Γ Λ) :=
-  Aufz.fn.flatMap fun f => (genArgs (genExpr m Γ Λ) (D.params f)).flatMap fun args =>
-    if hp : RufPasst D V (D.signatur f) Λ then if hr : D.gruende f = 0 then
-      [⟨nach D f Λ, .call f args hp hr⟩] else [] else []
+def sCall : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f =>
+    Sz.wenn (RufPasst D V (D.signatur f) Λ) fun hp => Sz.wenn (D.gruende f = 0) fun hr =>
+      Sz.bind (argsS E (D.params f)) fun args => Sz.pure ⟨nach D f Λ, .call f args hp hr⟩)
 
-def sCallInd : List (SS D V l Γ Λ) :=
-  mitFnptrR (genExpr m Γ Λ) fun {n} p => (genArgs (genExpr m Γ Λ) (D.sigNr n).params).flatMap fun args =>
-    if hp : RufPasst D V (D.sigNr n) Λ then if hr : (D.sigNr n).gruende = 0 then
-      [⟨nachSig D (D.sigNr n) Λ, .callInd p args hp hr⟩] else [] else []
+def sCallInd : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ =>
+    Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn ((D.sigNr n).gruende = 0) fun hr =>
+      Sz.bind (argsS E (D.sigNr n).params) fun args => Sz.pure ⟨nachSig D (D.sigNr n) Λ, .callInd p args hp hr⟩)
 
-def sLocks : List (SS D V l Γ Λ) :=
-  Aufz.lock.flatMap fun L =>
-    if hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L then
-      (ofTy (R.bl l Γ (.held L :: Λ)) (.held L :: Λ)).map fun body => ⟨Λ, .locks L hr body⟩
-    else []
+def sLocks : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.lock) fun L =>
+    Sz.wenn (∀ M, Res.held M ∈ Λ → D.rang M < D.rang L) fun hr =>
+      Sz.bindR (Sz.pure ()) (fun m j => ofTy (O.bl l Γ (.held L :: Λ) m j) (.held L :: Λ)) fun _ body =>
+        Sz.pure ⟨Λ, .locks L hr body⟩)
 
-def sBreaking : List (SS D V l Γ Λ) :=
-  Aufz.inv.flatMap fun i => (R.bl l Γ Λ).map fun p => ⟨p.1, .breaking i p.2⟩
+def sBreaking : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.inv) fun i => Sz.bind Bs fun p => Sz.pure ⟨p.1, .breaking i p.2⟩)
 
-def sTraverse : List (SS D V l Γ Λ) :=
-  Aufz.tab.flatMap fun t => (ofTy (genExpr m Γ Λ) .bool).flatMap fun inv =>
-    (ofTy (R.bl true (.index (D.count t) :: Γ) Λ) Λ).map fun body => ⟨Λ, .traverse t inv body⟩
+def sTraverse : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.tab) fun t =>
+    Sz.bindR (tyS E .bool) (fun m j => ofTy (O.bl true (.index (D.count t) :: Γ) Λ m j) Λ) fun inv body =>
+      Sz.pure ⟨Λ, .traverse t inv body⟩)
 
-def sRetry : List (SS D V l Γ Λ) :=
-  (List.range (m + 1)).flatMap fun (n : Nat) => (ofTy (genExpr m Γ Λ) .bool).flatMap fun bis =>
-    (ofTy (R.bl true Γ Λ) Λ).flatMap fun body => (ofTy (R.bl l Γ Λ) Λ).map fun ueb =>
-      ⟨Λ, .retry n bis body ueb⟩
+def sRetry : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind nS fun n =>
+    Sz.bindR (tyS E .bool) (fun m j => ofTy (O.bl true Γ Λ m j) Λ) fun bis body =>
+      Sz.bind (fun j => ofTy (Bs j) Λ) fun ueb => Sz.pure ⟨Λ, .retry n bis body ueb⟩)
 
-def sForever : List (SS D V l Γ Λ) :=
-  Aufz.annahme.flatMap fun a => (ofTy (genExpr m Γ Λ) .bool).flatMap fun inv =>
-    (ofTy (R.bl true Γ Λ) Λ).map fun body => ⟨Λ, .forever a inv body⟩
+def sForever : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.annahme) fun a =>
+    Sz.bindR (tyS E .bool) (fun m j => ofTy (O.bl true Γ Λ m j) Λ) fun inv body =>
+      Sz.pure ⟨Λ, .forever a inv body⟩)
 
-def sAxiomCall : List (SS D V l Γ Λ) :=
-  Aufz.ax.flatMap fun a => (genArgs (genExpr m Γ Λ) (D.aparams a)).flatMap fun args =>
-    if h : D.aerg a = none then
-      if hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true then
-      if hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true then
-      if hd : ∀ t, D.aschreibt a t = true → darf D t Λ then
-      if hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ then
-        [⟨Λ, .axiomCall a args h hw hg hd hgd⟩] else [] else [] else [] else []
-    else []
+def sAxiomCall : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a =>
+    Sz.wenn (D.aerg a = none) fun h =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → V.schreibt t = true) fun hw =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → V.gschreibt g = true) fun hg =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → darf D t Λ) fun hd =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → gdarf D g Λ) fun hgd =>
+      Sz.bind (argsS E (D.aparams a)) fun args => Sz.pure ⟨Λ, .axiomCall a args h hw hg hd hgd⟩)
 
-def sRegWrite : List (SS D V l Γ Λ) :=
-  Aufz.reg.flatMap fun r => (ofTy (genExpr m Γ Λ) (D.rtyp r)).flatMap fun e =>
-    if hk : (D.rklasse r).schreibbar = true then [⟨Λ, .regWrite r hk e⟩] else []
+def sRegWrite : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r =>
+    Sz.wenn ((D.rklasse r).schreibbar = true) fun hk =>
+      Sz.bind (tyS E (D.rtyp r)) fun e => Sz.pure ⟨Λ, .regWrite r hk e⟩)
 
-def sTransition : List (SS D V l Γ Λ) :=
-  Aufz.reg.flatMap fun r => Aufz.reg.flatMap fun m' =>
-    if hk : (D.rklasse r).schreibbar = true then if hm : D.spiegel r = some m' then
-      if hl : (D.rklasse m').lesbar = true then
-        (ints m).flatMap fun maske => (ints m).map fun bits =>
-          ⟨Λ, .transition r hk m' hm hl maske bits⟩
-      else [] else [] else []
+def sTransition : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r => Sz.bind (Sz.wahl Aufz.reg) fun m' =>
+    Sz.wenn ((D.rklasse r).schreibbar = true) fun hk => Sz.wenn (D.spiegel r = some m') fun hm =>
+      Sz.wenn ((D.rklasse m').lesbar = true) fun hl => Sz.bind zW fun maske => Sz.bind zW fun bits =>
+        Sz.pure ⟨Λ, .transition r hk m' hm hl maske bits⟩)
 
-def sPublish : List (SS D V l Γ Λ) :=
-  Aufz.glob.flatMap fun g => (ofTy (genExpr m Γ Λ) (D.gtyp g)).flatMap fun e =>
-    if hw : V.gschreibt g = true then if hL : gdarf D g Λ then
-      [⟨Λ, .publish g e (D.nutzlast g) rfl hw hL⟩] else [] else []
+def sPublish : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g =>
+    Sz.wenn (V.gschreibt g = true) fun hw => Sz.wenn (gdarf D g Λ) fun hL =>
+      Sz.bind (tyS E (D.gtyp g)) fun e => Sz.pure ⟨Λ, .publish g e (D.nutzlast g) rfl hw hL⟩)
 
-def sAdvances : List (SS D V l Γ Λ) :=
-  Λ.flatMap fun r => match r with
+def sAdvances : Sz (SS D V l Γ Λ) :=
+  Sz.blatt (Λ.flatMap fun r => match r with
     | .marke mk a => if h : Res.marke mk a ∈ Λ then if hs : a + 1 < D.stufen mk then
         [⟨Λ.erase (.marke mk a) ++ [.marke mk (a + 1)], .advances mk a h hs⟩] else [] else []
-    | .held _ => []
+    | .held _ => [])
 
-def sRetires : List (SS D V l Γ Λ) :=
-  Λ.flatMap fun r => match r with
+def sRetires : Sz (SS D V l Γ Λ) :=
+  Sz.blatt (Λ.flatMap fun r => match r with
     | .marke mk s => if h : Res.marke mk s ∈ Λ then
         Aufz.annahme.map fun a => ⟨Λ.erase (.marke mk s), .retires mk s h a⟩ else []
-    | .held _ => []
+    | .held _ => [])
 
-def sRet : List (SS D V l Γ Λ) :=
-  (genErg (genExpr m Γ Λ) V.erg).flatMap fun e =>
-    if hΛ : Λ.Perm V.ende then [⟨Λ, .ret e hΛ⟩] else []
+def sRet : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (ergS E V.erg) fun e => Sz.wenn (Λ.Perm V.ende) fun hΛ => Sz.pure ⟨Λ, .ret e hΛ⟩)
 
-def sRetWhy : List (SS D V l Γ Λ) :=
-  (List.finRange V.gruende).flatMap fun r => if hΛ : Λ.Perm V.ende then [⟨Λ, .retWhy r hΛ⟩] else []
+def sRetWhy : Sz (SS D V l Γ Λ) :=
+  Sz.blatt ((List.finRange V.gruende).flatMap fun r => if hΛ : Λ.Perm V.ende then [⟨Λ, .retWhy r hΛ⟩] else [])
 
-def sLeave : List (SS D V l Γ Λ) := if h : l = true then [⟨Λ, .leave h⟩] else []
+def sLeave : Sz (SS D V l Γ Λ) := Sz.blatt (if h : l = true then [⟨Λ, .leave h⟩] else [])
 
-def sNext : List (SS D V l Γ Λ) := if h : l = true then [⟨Λ, .next h⟩] else []
-
-/-- The statements of fuel `m + 1`. -/
-def stmtS : List (SS D V l Γ Λ) :=
-  sAssignSlot m l Γ Λ ++ sAssignThru m l Γ Λ ++ sAssignGlob m l Γ Λ ++ sPutBytes m l Γ Λ ++ sAssignVar m l Γ Λ ++
-  sShift m l Γ Λ ++ sIte m R l Γ Λ ++ sOnOption m R l Γ Λ ++ sOnTag m R l Γ Λ ++ sOnWhy m R l Γ Λ ++
-  sCall m l Γ Λ ++ sCallInd m l Γ Λ ++ sLocks R l Γ Λ ++ sBreaking R l Γ Λ ++ sTraverse m R l Γ Λ ++
-  sRetry m R l Γ Λ ++ sForever m R l Γ Λ ++ sAxiomCall m l Γ Λ ++ sRegWrite m l Γ Λ ++ sTransition m l Γ Λ ++
-  sPublish m l Γ Λ ++ sAdvances l Γ Λ ++ sRetires l Γ Λ ++ sRet m l Γ Λ ++ sRetWhy l Γ Λ ++ sLeave l Γ Λ ++
-  sNext l Γ Λ
+def sNext : Sz (SS D V l Γ Λ) := Sz.blatt (if h : l = true then [⟨Λ, .next h⟩] else [])
 
 end Klauseln
+
+/-- **The statements of exact size `k`**. -/
+def stmtS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ Λ)) :
+    Sz (SS D V l Γ Λ) :=
+  Sz.alle [sAssignSlot E, sAssignThru E, sAssignGlob E, sPutBytes E, sAssignVar E, sShift E, sIte E Bs,
+    sOnOption O E Bs, sOnTag O E, sOnWhy O E, sCall E, sCallInd E, sLocks O, sBreaking Bs, sTraverse O E,
+    sRetry O E Bs, sForever O E, sAxiomCall E, sRegWrite E, sTransition, sPublish E, sAdvances, sRetires, sRet E,
+    sRetWhy, sLeave, sNext]
 
 end Gabbro.Grammatik.Gen

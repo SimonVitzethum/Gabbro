@@ -19,3 +19,9 @@ rev = "0df444a360eaa60ab8c11dca51a86af692955474"
 
 [[lean_lib]]
 name = "Grammatik"
+
+# The coverage driver of the program generator (`Gen/Abdeckung/Lauf.lean`): a native executable, so that the generator
+# reaches sizes the interpreter cannot (`instrumente/pruefe-lean.py`, stage 6, and the measurement in PRUEFER.md section 11).
+[[lean_exe]]
+name = "gen-abdeckung"
+root = "Grammatik.Gen.Abdeckung.Lauf"

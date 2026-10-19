@@ -1,185 +1,187 @@
 /-
   File:      Grammatik/Gen/Erzeuger/Block.lean
-  Subject:   The clauses of the BLOCK and END-BLOCK generators, one per constructor of `Block` and `Endblock`.
-             Same frame as `Anweisung.lean`: every clause takes the fuel, the recursion record and the context.
+  Subject:   The CLAUSES of the block and end-block generators, one per constructor of `Block` and `Endblock`. Same
+             frame as `Anweisung.lean`: a clause is a `Sz` (the items of exact size `k`); the rest of a block after
+             a `let` lives in a context of its own, drawn from the oracle with the budget the first part leaves
+             (`Sz.bindR`, `Sz.bindS`: built once per size of the first part and key, shared by every first part).
 -/
 import Grammatik.Gen.Erzeuger.Anweisung
 
 namespace Gabbro.Grammatik.Gen
 
+set_option linter.unusedSectionVars false
+
 open Gabbro.Grammatik
 
-variable {D : Deklaration} [Aufz D] {V : Vertrag D}
-
-/-- The pairs of integers `-m .. m` squared. -/
-def paare (m : Nat) : List (Int × Int) := (ints m).flatMap fun a => (ints m).map fun b => (a, b)
-
-theorem mem_paare {m : Nat} {p : Int × Int} (h1 : p.1.natAbs ≤ m) (h2 : p.2.natAbs ≤ m) : p ∈ paare m := by
-  unfold paare
-  exact List.mem_flatMap.2 ⟨p.1, mem_ints h1, List.mem_map.2 ⟨p.2, mem_ints h2, rfl⟩⟩
+variable {D : Deklaration} [Aufz D] [Zahlen] {V : Vertrag D}
 
 /-- The four float operations. -/
 def gleitOps : List GleitOp := [.add, .sub, .mul, .div]
 
 theorem mem_gleitOps (op : GleitOp) : op ∈ gleitOps := by cases op <;> simp [gleitOps]
 
-def bNil (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) := [⟨Λ, .nil⟩]
+section Klauseln
 
-def bCons (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  (R.st l Γ Λ).flatMap fun s => (R.bl l Γ s.1).map fun r => ⟨r.1, .cons s.2 r.2⟩
+variable (O : Orakel V) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
+  (Bs : Sz (SB D V l Γ Λ)) (Ns : Sz (Endblock D V l Γ Λ))
 
-def bBind (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  (genExpr m Γ Λ).flatMap fun p => (R.bl l (p.1 :: Γ) Λ).map fun r => ⟨r.1, .bind p.2 r.2⟩
+def bNil : Sz (SB D V l Γ Λ) := Sz.blatt [⟨Λ, .nil⟩]
 
-def bBindCall (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.fn.flatMap fun f => (genArgs (genExpr m Γ Λ) (D.params f)).flatMap fun args =>
-    mitSome (D.erg f) fun {τ} he =>
-      if hp : RufPasst D V (D.signatur f) Λ then if hr : D.gruende f = 0 then
-        (R.bl l (τ :: Γ) (nach D f Λ)).map fun r => ⟨r.1, .bindCall f args he hp hr r.2⟩
-      else [] else []
+def bCons : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS Ss (fun Λ' m => O.bl l Γ Λ' m) fun _ s r => Sz.pure ⟨r.1, .cons s r.2⟩)
 
-def bBindCallInd (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  mitFnptrR (genExpr m Γ Λ) fun {n} p => (genArgs (genExpr m Γ Λ) (D.sigNr n).params).flatMap fun args =>
-    mitSome (D.sigNr n).erg fun {τ} he =>
-      if hp : RufPasst D V (D.sigNr n) Λ then if hr : (D.sigNr n).gruende = 0 then
-        (R.bl l (τ :: Γ) (nachSig D (D.sigNr n) Λ)).map fun r => ⟨r.1, .bindCallInd p args he hp hr r.2⟩
-      else [] else []
+def bBind : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS (fun i => (E i).filter fun p => Zahlen.bindOk p.1) (fun τ m => O.bl l (τ :: Γ) Λ m)
+    fun _ e r => Sz.pure ⟨r.1, .bind e r.2⟩)
 
-def bBindCallElse (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.fn.flatMap fun f => (genArgs (genExpr m Γ Λ) (D.params f)).flatMap fun args =>
-    mitSome (D.erg f) fun {τ} he =>
-      if hp : RufPasst D V (D.signatur f) Λ then if hr : 0 < D.gruende f then
-        (R.en l (.why (D.gruende f) :: Γ) (nach D f Λ)).flatMap fun err =>
-          (R.bl l (τ :: Γ) (nach D f Λ)).map fun r => ⟨r.1, .bindCallElse f args he hp hr err r.2⟩
-      else [] else []
+def bBindCall : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f => mitSome (D.erg f) fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.signatur f) Λ) fun hp => Sz.wenn (D.gruende f = 0) fun hr =>
+      Sz.bindR (argsS E (D.params f)) (fun m => O.bl l (τ :: Γ) (nach D f Λ) m) fun args r =>
+        Sz.pure ⟨r.1, .bindCall f args he hp hr r.2⟩)
 
-def bBindAxiom (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.ax.flatMap fun a => (genArgs (genExpr m Γ Λ) (D.aparams a)).flatMap fun args =>
-    mitSome (D.aerg a) fun {τ} he =>
-      if hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true then
-      if hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true then
-      if hd : ∀ t, D.aschreibt a t = true → darf D t Λ then
-      if hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ then
-        (R.bl l (τ :: Γ) Λ).map fun r => ⟨r.1, .bindAxiom a args he hw hg hd hgd r.2⟩
-      else [] else [] else [] else []
+def bBindCallInd : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ => mitSome (D.sigNr n).erg fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn ((D.sigNr n).gruende = 0) fun hr =>
+      Sz.bindR (argsS E (D.sigNr n).params) (fun m => O.bl l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args r =>
+        Sz.pure ⟨r.1, .bindCallInd p args he hp hr r.2⟩)
 
-def bBindAxiomElse (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.ax.flatMap fun a => (genArgs (genExpr m Γ Λ) (D.aparams a)).flatMap fun args =>
-    mitSome (D.aerg a) fun {τ} he =>
-      if hr : 0 < D.agruende a then
-      if hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true then
-      if hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true then
-      if hd : ∀ t, D.aschreibt a t = true → darf D t Λ then
-      if hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ then
-        (R.en l (.why (D.agruende a) :: Γ) Λ).flatMap fun err =>
-          (R.bl l (τ :: Γ) Λ).map fun r => ⟨r.1, .bindAxiomElse a args he hr hw hg hd hgd err r.2⟩
-      else [] else [] else [] else [] else []
+def bBindCallElse : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f => mitSome (D.erg f) fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.signatur f) Λ) fun hp => Sz.wenn (0 < D.gruende f) fun hr =>
+      Sz.bindR (argsS E (D.params f)) (fun m => O.en l (.why (D.gruende f) :: Γ) (nach D f Λ) m) fun args err =>
+        Sz.bindR (Sz.pure ()) (fun m => O.bl l (τ :: Γ) (nach D f Λ) m) fun _ r =>
+          Sz.pure ⟨r.1, .bindCallElse f args he hp hr err r.2⟩)
 
-def bRegRead (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.reg.flatMap fun r => if hk : (D.rklasse r).lesbar = true then
-    (R.bl l (D.rtyp r :: Γ) Λ).map fun x => ⟨x.1, .regRead r hk x.2⟩ else []
+def bBindAxiom : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a => mitSome (D.aerg a) fun {τ} he =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → V.schreibt t = true) fun hw =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → V.gschreibt g = true) fun hg =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → darf D t Λ) fun hd =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → gdarf D g Λ) fun hgd =>
+      Sz.bindR (argsS E (D.aparams a)) (fun m => O.bl l (τ :: Γ) Λ m) fun args r =>
+        Sz.pure ⟨r.1, .bindAxiom a args he hw hg hd hgd r.2⟩)
 
-def bRegReadElse (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.reg.flatMap fun r => if hk : (D.rklasse r).lesbar = true then
-    (ofTy (genExpr m (D.rtyp r :: Γ) Λ) .bool).flatMap fun z => (R.en l Γ Λ).flatMap fun sonst =>
-      (R.bl l (D.rtyp r :: Γ) Λ).map fun x => ⟨x.1, .regReadElse r hk z sonst x.2⟩
-  else []
+def bBindAxiomElse : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a => mitSome (D.aerg a) fun {τ} he =>
+    Sz.wenn (0 < D.agruende a) fun hr =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → V.schreibt t = true) fun hw =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → V.gschreibt g = true) fun hg =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → darf D t Λ) fun hd =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → gdarf D g Λ) fun hgd =>
+      Sz.bindR (argsS E (D.aparams a)) (fun m => O.en l (.why (D.agruende a) :: Γ) Λ m) fun args err =>
+        Sz.bindR (Sz.pure ()) (fun m => O.bl l (τ :: Γ) Λ m) fun _ r =>
+          Sz.pure ⟨r.1, .bindAxiomElse a args he hr hw hg hd hgd err r.2⟩)
 
-def bAwaits (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.glob.flatMap fun g => if hL : gdarf D g Λ then
-    (R.bl l (D.gtyp g :: Γ) Λ).map fun x => ⟨x.1, .awaits g (D.nutzlast g) rfl hL x.2⟩ else []
+def bRegRead : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r => Sz.wenn ((D.rklasse r).lesbar = true) fun hk =>
+    Sz.bindR (Sz.pure ()) (fun m => O.bl l (D.rtyp r :: Γ) Λ m) fun _ x => Sz.pure ⟨x.1, .regRead r hk x.2⟩)
 
-def bExchange (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  Aufz.glob.flatMap fun g => (ofTy (genExpr m (D.gtyp g :: Γ) Λ) (D.gtyp g)).flatMap fun neu =>
-    if hw : V.gschreibt g = true then if hL : gdarf D g Λ then
-      (R.bl l (D.gtyp g :: Γ) Λ).map fun x => ⟨x.1, .exchange g neu hw hL x.2⟩ else [] else []
+def bRegReadElse : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r => Sz.wenn ((D.rklasse r).lesbar = true) fun hk =>
+    Sz.bindR (Sz.pure ()) (fun m => tyS (O.ex (D.rtyp r :: Γ) Λ m) .bool) fun _ z =>
+      Sz.bind Ns fun sonst =>
+        Sz.bindR (Sz.pure ()) (fun m => O.bl l (D.rtyp r :: Γ) Λ m) fun _ x =>
+          Sz.pure ⟨x.1, .regReadElse r hk z sonst x.2⟩)
 
-def bNarrow (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  mitIntR (genExpr m Γ Λ) fun {_ _} e => (ints m).flatMap fun lo' => (ints m).flatMap fun hi' =>
-    (R.en l Γ Λ).flatMap fun sonst =>
-      (R.bl l (.int lo' hi' :: Γ) Λ).map fun x => ⟨x.1, .narrow e lo' hi' sonst x.2⟩
+def bAwaits : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g => Sz.wenn (gdarf D g Λ) fun hL =>
+    Sz.bindR (Sz.pure ()) (fun m => O.bl l (D.gtyp g :: Γ) Λ m) fun _ x =>
+      Sz.pure ⟨x.1, .awaits g (D.nutzlast g) rfl hL x.2⟩)
 
-def bCheck (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  (ofTy (genExpr m Γ Λ) .bool).flatMap fun c => (R.en l Γ Λ).flatMap fun sonst =>
-    (R.bl l Γ Λ).map fun x => ⟨x.1, .check c sonst x.2⟩
+def bExchange : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g =>
+    Sz.wenn (V.gschreibt g = true) fun hw => Sz.wenn (gdarf D g Λ) fun hL =>
+      Sz.bindR (Sz.pure ()) (fun m => tyS (O.ex (D.gtyp g :: Γ) Λ m) (D.gtyp g)) fun _ neu =>
+        Sz.bindR (Sz.pure ()) (fun m => O.bl l (D.gtyp g :: Γ) Λ m) fun _ x =>
+          Sz.pure ⟨x.1, .exchange g neu hw hL x.2⟩)
 
-def bFloat (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  gleitOps.flatMap fun op => mitFl2R (genExpr m Γ Λ) fun {_ _ _ _} a b =>
-    (paare m).flatMap fun lo => (paare m).flatMap fun hi =>
-      (R.bl l (.fl lo hi :: Γ) Λ).map fun x => ⟨x.1, .float op a b lo hi x.2⟩
+def bNarrow : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (intS E) fun ⟨_, _, e⟩ => Sz.bind zS fun lo' => Sz.bind zS fun hi' =>
+    Sz.wenn (Zahlen.bindOk (.int lo' hi') = true) fun _ => Sz.bind Ns fun sonst =>
+      Sz.bindR (Sz.pure ()) (fun m => O.bl l (.int lo' hi' :: Γ) Λ m) fun _ x =>
+        Sz.pure ⟨x.1, .narrow e lo' hi' sonst x.2⟩)
 
-def bFloatLit (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  (paare m).flatMap fun q => (paare m).flatMap fun lo => (paare m).flatMap fun hi =>
-    (R.bl l (.fl lo hi :: Γ) Λ).map fun x => ⟨x.1, .floatLit q lo hi x.2⟩
+def bCheck : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (tyS E .bool) fun c => Sz.bind Ns fun sonst => Sz.bind Bs fun x =>
+    Sz.pure ⟨x.1, .check c sonst x.2⟩)
 
-def bFloatOf (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  mitIntR (genExpr m Γ Λ) fun {_ _} e => (paare m).flatMap fun lo => (paare m).flatMap fun hi =>
-    (R.bl l (.fl lo hi :: Γ) Λ).map fun x => ⟨x.1, .floatOf e lo hi x.2⟩
+def bFloat : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl gleitOps) fun op => Sz.bind (flS E) fun ⟨_, _, a⟩ =>
+    Sz.bind (flS E) fun ⟨_, _, b⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+      Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
+      Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
+        Sz.pure ⟨x.1, .float op a b lo hi x.2⟩)
 
-def bFloatNarrow (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  mitFlR (genExpr m Γ Λ) fun {_ _} e => (paare m).flatMap fun lo => (paare m).flatMap fun hi =>
-    (R.en l Γ Λ).flatMap fun sonst =>
-      (R.bl l (.fl lo hi :: Γ) Λ).map fun x => ⟨x.1, .floatNarrow e lo hi sonst x.2⟩
+def bFloatLit : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind paarS fun q => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
+    Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
+      Sz.pure ⟨x.1, .floatLit q lo hi x.2⟩)
 
-/-- The blocks of fuel `m + 1`. -/
-def blockS (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (SB D V l Γ Λ) :=
-  bNil l Γ Λ ++ bCons R l Γ Λ ++ bBind m R l Γ Λ ++ bBindCall m R l Γ Λ ++ bBindCallInd m R l Γ Λ ++
-  bBindCallElse m R l Γ Λ ++ bBindAxiom m R l Γ Λ ++ bBindAxiomElse m R l Γ Λ ++ bRegRead R l Γ Λ ++
-  bRegReadElse m R l Γ Λ ++ bAwaits R l Γ Λ ++ bExchange m R l Γ Λ ++ bNarrow m R l Γ Λ ++ bCheck m R l Γ Λ ++
-  bFloat m R l Γ Λ ++ bFloatLit m R l Γ Λ ++ bFloatOf m R l Γ Λ ++ bFloatNarrow m R l Γ Λ
+def bFloatOf : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (intS E) fun ⟨_, _, e⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ =>
+    Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
+      Sz.pure ⟨x.1, .floatOf e lo hi x.2⟩)
+
+def bFloatNarrow : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (flS E) fun ⟨_, _, e⟩ => Sz.bind paarS fun lo => Sz.bind paarS fun hi =>
+    Sz.wenn (Zahlen.bindOk (.fl lo hi) = true) fun _ => Sz.bind Ns fun sonst =>
+      Sz.bindR (Sz.pure ()) (fun m => O.bl l (.fl lo hi :: Γ) Λ m) fun _ x =>
+        Sz.pure ⟨x.1, .floatNarrow e lo hi sonst x.2⟩)
 
 /-! ## End blocks -/
 
-def eRet (m : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  (genErg (genExpr m Γ Λ) V.erg).flatMap fun e => if hΛ : Λ.Perm V.ende then [.ret e hΛ] else []
+def eRet : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (ergS E V.erg) fun e => Sz.wenn (Λ.Perm V.ende) fun hΛ => Sz.pure (.ret e hΛ))
 
-def eRetWhy (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  (List.finRange V.gruende).flatMap fun r => if hΛ : Λ.Perm V.ende then [.retWhy r hΛ] else []
+def eRetWhy : Sz (Endblock D V l Γ Λ) :=
+  Sz.blatt ((List.finRange V.gruende).flatMap fun r => if hΛ : Λ.Perm V.ende then [.retWhy r hΛ] else [])
 
-def eLeave (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  if h : l = true then [.leave h] else []
+def eLeave : Sz (Endblock D V l Γ Λ) := Sz.blatt (if h : l = true then [.leave h] else [])
 
-def eNext (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  if h : l = true then [.next h] else []
+def eNext : Sz (Endblock D V l Γ Λ) := Sz.blatt (if h : l = true then [.next h] else [])
 
-def eCons (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  (R.st l Γ Λ).flatMap fun s => (R.en l Γ s.1).map fun r => .cons s.2 r
+def eCons : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS Ss (fun Λ' m => O.en l Γ Λ' m) fun _ s r => Sz.pure (.cons s r))
 
-def eBind (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  (genExpr m Γ Λ).flatMap fun p => (R.en l (p.1 :: Γ) Λ).map fun r => .bind p.2 r
+def eBind : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bindS (fun i => (E i).filter fun p => Zahlen.bindOk p.1) (fun τ m => O.en l (τ :: Γ) Λ m)
+    fun _ e r => Sz.pure (.bind e r))
 
-def eBindAxiom (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  Aufz.ax.flatMap fun a => (genArgs (genExpr m Γ Λ) (D.aparams a)).flatMap fun args =>
-    mitSome (D.aerg a) fun {τ} he =>
-      if hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true then
-      if hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true then
-      if hd : ∀ t, D.aschreibt a t = true → darf D t Λ then
-      if hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ then
-        (R.en l (τ :: Γ) Λ).map fun r => .bindAxiom a args he hw hg hd hgd r
-      else [] else [] else [] else []
+def eBindAxiom : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a => mitSome (D.aerg a) fun {τ} he =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → V.schreibt t = true) fun hw =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → V.gschreibt g = true) fun hg =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → darf D t Λ) fun hd =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → gdarf D g Λ) fun hgd =>
+      Sz.bindR (argsS E (D.aparams a)) (fun m => O.en l (τ :: Γ) Λ m) fun args r =>
+        Sz.pure (.bindAxiom a args he hw hg hd hgd r))
 
-def eBindAxiomElse (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  Aufz.ax.flatMap fun a => (genArgs (genExpr m Γ Λ) (D.aparams a)).flatMap fun args =>
-    mitSome (D.aerg a) fun {τ} he =>
-      if hr : 0 < D.agruende a then
-      if hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true then
-      if hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true then
-      if hd : ∀ t, D.aschreibt a t = true → darf D t Λ then
-      if hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ then
-        (R.en l (.why (D.agruende a) :: Γ) Λ).flatMap fun err =>
-          (R.en l (τ :: Γ) Λ).map fun r => .bindAxiomElse a args he hr hw hg hd hgd err r
-      else [] else [] else [] else [] else []
+def eBindAxiomElse : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a => mitSome (D.aerg a) fun {τ} he =>
+    Sz.wenn (0 < D.agruende a) fun hr =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → V.schreibt t = true) fun hw =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → V.gschreibt g = true) fun hg =>
+    Sz.wenn (∀ t, D.aschreibt a t = true → darf D t Λ) fun hd =>
+    Sz.wenn (∀ g, D.agschreibt a g = true → gdarf D g Λ) fun hgd =>
+      Sz.bindR (argsS E (D.aparams a)) (fun m => O.en l (.why (D.agruende a) :: Γ) Λ m) fun args err =>
+        Sz.bindR (Sz.pure ()) (fun m => O.en l (τ :: Γ) Λ m) fun _ r =>
+          Sz.pure (.bindAxiomElse a args he hr hw hg hd hgd err r))
 
-/-- The end blocks of fuel `m + 1`. -/
-def endS (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
-  eRet m l Γ Λ ++ eRetWhy l Γ Λ ++ eLeave l Γ Λ ++ eNext l Γ Λ ++ eCons R l Γ Λ ++ eBind m R l Γ Λ ++
-  eBindAxiom m R l Γ Λ ++ eBindAxiomElse m R l Γ Λ
+end Klauseln
 
-/-- The generated statements, blocks and end blocks of every fuel. -/
-def genRek (V : Vertrag D) : Nat → Rek V
-  | 0 => ⟨fun _ _ _ => [], fun _ _ _ => [], fun _ _ _ => []⟩
-  | m + 1 =>
-    ⟨fun l Γ Λ => stmtS m (genRek V m) l Γ Λ, fun l Γ Λ => blockS m (genRek V m) l Γ Λ,
-     fun l Γ Λ => endS m (genRek V m) l Γ Λ⟩
+/-- **The blocks of exact size `k`**. -/
+def blockS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
+    (Bs : Sz (SB D V l Γ Λ)) (Ns : Sz (Endblock D V l Γ Λ)) : Sz (SB D V l Γ Λ) :=
+  Sz.alle [bNil, bCons O Ss, bBind O E, bBindCall O E, bBindCallInd O E, bBindCallElse O E, bBindAxiom O E,
+    bBindAxiomElse O E, bRegRead O, bRegReadElse O Ns, bAwaits O, bExchange O, bNarrow O E Ns, bCheck E Bs Ns,
+    bFloat O E, bFloatLit O, bFloatOf O E, bFloatNarrow O E Ns]
+
+/-- **The end blocks of exact size `k`**. -/
+def endS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) :
+    Sz (Endblock D V l Γ Λ) :=
+  Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindAxiom O E, eBindAxiomElse O E]
 
 end Gabbro.Grammatik.Gen
