@@ -1754,6 +1754,233 @@ documentation). Each is checkable by the command given.
 
 ---
 
+## 16. Adequacy of a test set: the least set of programs that proves a neutral checker and compiler right (2026-10-19)
+
+*TODO Phase C item 8. Lean: `grammatik/Grammatik/Adaequanz/` (theorems over an arbitrary ranked signature, every
+one kernel-checked on `propext`/`Classical.choice`/`Quot.sound`; witnesses on a concrete signature in `Zeugen.lean`;
+the Gabbro counts in `Adaequanz/Gabbro/`). SATZKARTE §85 lists the statements.*
+
+**The question (Simon).** What is the SMALLEST set `M` of programs such that every PROGRAM-NEUTRAL checker or
+compiler that handles every program of `M` correctly (verdict = the model's `AkzeptiertX`; for a valid program a
+result equal to the Lean semantics) is correct on ALL valid programs?
+
+**The answer in one paragraph.** There is no such finite `M` for "program-neutral" alone: an implementation that
+counts the height of the program, and goes wrong above the largest test, is as neutral as any and passes every
+finite set (`kein_endlicher_test`). A finite `M` exists exactly when a BOUND is put on the implementation, and the
+size depends on which bound. (1) For tree automata with at most `m` states (Chow's W-method lifted to trees,
+Vasilevskii's bound): `|M| ≤ |W| · N(m − n + 1)` with `N(0) = n`, `N(d+1) = N(d) + Σ_c N(d)^ar(c)`, where `n` is the
+number of states of the model's verdict (its Myhill–Nerode index) and `W` its distinguishing contexts; every
+sufficient set has at least `Σ_c n^ar(c)` programs once `m ≥ n + 1` (one per CELL, rooted there, no sharing
+possible), and covers every cell once `m ≥ 2n`. (2) For checkers whose verdict is a CONJUNCTION over cells (local
+typing rules and whole-program patterns: the class TODO item 8 describes), the answer is exact: one SINGLE-FAULT
+program per isolable refusal cell, plus valid programs that together contain every accepted cell; at least
+(number of isolable refusal cells) + 1. (3) For a compiler whose correctness splits per cell (`lowerS_ok`) and whose
+errors are never masked, a set is sufficient iff it covers every realizable cell. For Gabbro, class (1) gives
+numbers that are astronomically large and exponential in the number of functions (the program root alone needs
+1 650 tests for the smallest declaration z0 and 657 922 500 for z1); class (2) gives a count linear in the
+model's constructors, premises and pattern atoms; the generator covers today 4 of 459 coarse cells and none of
+the local refusal cells, which no G term can contain.
+
+### 16.1 Program-neutral, formalised
+
+An implementation is a DETERMINISTIC BOTTOM-UP TREE AUTOMATON over the abstract signature (`Adaequanz/Baum.lean`,
+`Automat`): a state type `Q'`, a transition `δ c (q₁ … q_k)` per constructor `c` of arity `k`, an output per state
+(the verdict, or the observed behaviour). This is "syntax-directed": the result on a term is a function of the
+constructor and of the results on its immediate subterms. A FINITE top-down context is included: with inherited
+values from a finite set `I` and synthesized values from `Y`, the state of a subtree is the function `I → Y`, so a
+finite attribute grammar is a tree automaton with at most `|Y|^|I|` states. The model's own verdict is such an
+automaton over the same signature (`S`), with `n` states after minimisation.
+
+The hypotheses that make an implementation "program-neutral", each explicit:
+
+| | Hypothesis | What it excludes | How it is checked (not proved) |
+|---|---|---|---|
+| H1 | **syntax-directed with finite state**: an `Automat` with at most `m` states | a dependence on program size, a counter, a cache across nodes | audit; the bound `m` is a claim about the code |
+| H2 | **names abstracted** (renaming invariance): a variable is its type, a declared entity its kind | a branch on a name, a de Bruijn index, a name-capture bug (`H007` of §12.6) | metamorphic test RENAME: same verdict, same binary up to symbols |
+| H3 | **data uniform**: numbers enter the control only through finitely many classes; range arithmetic is a trusted function | a branch on one 64-bit constant (that constant is its own cell: infinitely many cells otherwise) | metamorphic test SCALE (shift every constant within its class); the arithmetic is tested or proved separately |
+| H4 | **reordering invariance** of independent declarations and functions | a dependence on the order of items | metamorphic test REORDER |
+| H5 | **determinism**: the result is a function of the program | a counter that wraps after N runs, state kept across runs | rerun every test; compare across processes |
+| H6 | **bounded multiplicity** of held mark stages (`b`) | an unbounded resource multiset (the only infinite context dimension besides names and numbers) | the model's loops keep `Λ` fixed; straight-line repetition is bounded by `b` |
+| H7 | **whole-program conditions are patterns** (for the exact count of 16.4): the root verdict is a conjunction over tuples of at most 5 functions, 1 carrier, 1 lock | a whole-program rule that reads the whole call graph at once (e.g. a depth-limited call walk) | metamorphic test WRAP (put a program into a larger one with an unrelated function: same verdict) |
+| H8 | (compiler) **LLVM's passes are correct**; the observation compares the complete behaviour (no masking) | an optimiser bug; a wrong result that one run does not show | outside: translation validation (Phase C item 9) |
+
+The Lean model is the reference on both sides; H1–H8 are ASSUMPTIONS about the Rust code, not theorems.
+
+### 16.2 Theorem 1 (sufficiency): the constructed set
+
+`Adaequanz/Schichten.lean`, `Hinlaenglich.lean`. Given the spec `S` with `n` states, an ACCESS tree `acc q` for
+every state (`S.lauf (acc q) = q`) and a list `W` of one-hole contexts that separates the states and contains the
+hole (`Spezifiziert`):
+
+* layer 0 = the access trees; layer `d+1` = layer `d` plus every constructor over children from layer `d`
+  (layer 1 = the access trees and every CELL, a constructor over a tuple of states, realised over access trees);
+* `testmenge W d` = every tree of layer `d` in every context of `W`.
+
+**`hinlaenglich`:** every implementation with at most `m` states that agrees with `S` on `testmenge W (m − n + 1)`
+agrees with `S` on every tree. Proof (four steps, in the file): (1) two test-layer trees with one implementation
+state have one spec state (`W` separates); (2) the access trees reach `n` distinct implementation states, the set of
+states reached grows with the layer and is closed as soon as it stops growing, so by layer `m − n`
+(`erreicht_stopp`); (3) every tree has the state of a layer-`(m − n)` tree with its spec state (`vertreter_spez`,
+induction through the cells of layer `m − n + 1`); (4) the hole gives the output.
+
+**The formula** (`testmenge_laenge`, `anzahl`): `|M_m| = |W| · N(m − n + 1)`, `N(0) = n`,
+`N(d+1) = N(d) + Σ_c N(d)^ar(c)`. For `m = n` (an implementation with no more states than the model):
+`|M_n| = |W| · (n + Σ_c n^ar(c))`, the access trees and the cells, each in each context (`anzahl_eins`). With an
+unknown `m`, the set is chosen for an assumed `m`; a larger `m` adds one layer per extra state, and `N` grows
+doubly exponentially in the layers for constructors of arity ≥ 2. `|W| ≤ n − 1` (Moore's partition refinement:
+each new context splits a block; paper argument). The largest witness has height at most
+`(n − 1) + (m − n + 1) + (n − 1) = m + n − 1` (access tree, layers, context).
+
+### 16.3 Theorem 2 (minimality): one planted implementation per cell
+
+`Adaequanz/Minimal.lean`. A CELL is a constructor with a tuple of spec states of its children (`Zelle`). For every
+cell `z` two planted implementations, both tree automata (so neutral), both equal to the spec except at `z`:
+
+* **`wurzelMutant`** (`n + 1` states: one fresh state for "my cell is `z`", behaving like `z`'s state except in the
+  output): wrong EXACTLY on the trees whose ROOT cell is `z` (`wurzelMutant_sem`), passes every set without such a
+  tree (`wurzelMutant_besteht`), fails on the witness of `z` (`wurzelMutant_falsch`).
+  **`wurzel_noetig`**: every set sufficient for `m ≥ n + 1` contains, for every cell, a program ROOTED at it;
+  **`wurzel_schranke`**: `|M| ≥ Σ_c n^ar(c)`. No program has two roots, so nothing is shared.
+* **`flaggenMutant`** (`2n` states: the spec state and a bit "`z` occurs below"): wrong EXACTLY on the trees that
+  CONTAIN `z` (`flaggenMutant_sem`). **`flagge_noetig`**: for `m ≥ 2n` every cell occurs in some test.
+
+The lower bound needs only reachable states (`acc`), not separation: it holds for any reachable presentation of the
+model with `n` states, against implementations with `n + 1`. So the constructed `M_{n+1}` is optimal up to the
+factor `|W| · N(2) / Σ_c n^ar(c)`. For `m = n` no implementation with a fresh state exists in the class and the
+exact minimum is not determined here (it is the checking-sequence problem for trees; open in general). With the
+many sorts of Gabbro, "root" means the PROGRAM root: the root lower bound counts program-root cells; the flag bound
+counts all cells.
+
+### 16.4 Theorems 3 and 4: the cell-local classes (exact)
+
+**Theorem 4, conjunctive checkers** (`Muster.lean`). The verdict is a conjunction over the cells a program
+contains: a local typing rule at a node (the premises of a constructor of `Syntax.lean`) or a whole-program
+pattern (a tuple of functions, carriers and locks with the relations the ten components read). An implementation is a
+table `φ : Z → Bool`; it accepts iff every cell of the program is admitted. Two refused cells in one program MASK
+each other. Then:
+
+* `muster_hinlaenglich`: if every cell `z` has a CANONICAL program `A z` whose cells occur in every program that
+  contains `z` (the program class is closed under isolating a cell), the canonical programs are sufficient;
+* `schlecht_noetig`: a refusal cell that is the ONLY refusal cell of some program must be the only refusal
+  cell of a test, and two such cells never share a test (`schlecht_getrennt`);
+* `gut_noetig`: an accepted cell that occurs in a valid program must occur in a VALID test;
+* `muster_schranke`: `|M| ≥ (isolable refusal cells) + 1`.
+
+So the least set is: one SINGLE-FAULT program per isolable refusal cell, plus a minimum set of valid programs that
+together contain every accepted cell (often one). This is the exact answer for TODO item 8's class, and it is the
+shape the generator already has (valid programs, `NurAn` single-fault refusals).
+
+**Theorem 3, the compiler** (`Ueberdeckung.lean`). The lowering is correct cell by cell (`lowerS_ok`): a table
+`ok : Z → Prop`, a program correct iff all its cells are. Under H8 (no masking): `deckung_iff` — sufficient iff
+every realizable cell occurs in a test; `deckung_schranke` — cells that never share a program each need their own;
+`deckung_konstruktion` — one witness per cell. Without masking one large valid program may cover every cell; that
+is why the compiler's count is a COVER number and the checker's is not.
+
+### 16.5 Why each hypothesis is needed: the counter-models
+
+`Gegenmodell.lean`, all neutral in the sense of H1 except the last:
+
+* **dependence on program size**: `zaehlerModell` counts the height up to `h + 1` and flips the verdict above `h`:
+  `kein_endlicher_test` (passes any finite list, wrong on a tower), `zaehler_ueber_m` (against a set sufficient for
+  `m` it has more than `m` states: the bound `m` cannot be dropped).
+* **a program-specific branch**: `sonderfall_nicht_neutral` — special-casing one program outside a sufficient set
+  is no automaton with at most `m` states.
+* **a value-dependent branch on a 64-bit constant**: over the concrete signature every constant is a nullary
+  constructor and so its own cell (`wurzel_noetig`): `2^64` tests, or H3.
+* **a counter that wraps after N runs**: not a function of the program; excluded by H5 (the theory has no runs).
+* **a dependence on names**: excluded by H2; a renamed program is another tree of the concrete signature.
+
+### 16.6 Gabbro: the numbers
+
+**The signature, mechanically** (`Adaequanz/Gabbro/Signatur.lean`: a meta check reads the constructors of the model's
+families from the environment and fails the build when the table drifts):
+
+| Family | Constructors | arity 0 / 1 / 2 / 3 | premises (`Prop` arguments) | child positions | data arguments |
+|---|---|---|---|---|---|
+| `Expr` | 42 | 10 / 11 / 21 / 0 | 42 | 53 | 31 |
+| `NutzlastExpr`, `Args`, `ErgExpr` | 2 + 2 + 2 | 3 / 2 / 1 / 0 | 0 | 4 | 0 |
+| `Stmt` | 27 | 6 / 10 / 7 / 4 | 41 | 36 | 33 |
+| `Block` | 18 | 1 / 3 / 6 / 8 | 26 | 39 | 21 |
+| `Endblock` | 8 | 3 / 1 / 3 / 1 | 15 | 10 | 3 |
+| `Arms`, `GrundArms` | 2 + 2 | 2 / 0 / 2 / 0 | 0 | 4 | 0 |
+| **all** | **105** (`anzahl_konstruktoren`) | **25 / 27 / 40 / 13** (`stelligkeiten`) | **124** | **146** (`praemissen_und_kinder`) | 88 |
+
+The largest arity is 3; the data arguments (declared names, numbers, types) form each constructor's label, so the
+abstract signature of one declaration has `Σ_c λ_c` constructors with `λ_c` the product of the label domains
+(H2/H3 make them finite). Variables are labels (`var` with its type, H2), not a sort.
+
+**The context dimensions of the checker** (`Adaequanz/Gabbro/Zaehlung.lean`; per declaration with `T` tables, `G`
+statics, `L` locks, `F` functions, `S` signatures, `A` foreign bodies, `R` registers, `I` invariants, `K` mark
+stages):
+
+| Dimension | Values | Read by (Lean) |
+|---|---|---|
+| loop flag `l` (inherited) | 2 | `Stmt l`, `Block true` under `traverse`/`retry`/`forever`; `leave`/`next` premise `l = true` |
+| held set `Λ` (inherited, and `Λ'` synthesized) | `2^L · (b+1)^K` | `Res.held`/`Res.marke`, `darf`/`gdarf`, `Stmt.locks` rank premise (`H006`), `RufPasst`, `advances`/`retires`, `ret` (`Λ.Perm V.ende`) |
+| contract `V` (inherited) | `F` | `Vertrag`, `vertragVon`: write rights, result, reasons |
+| type `τ` (synthesized, expressions) | the types over the alphabet | the index of `Expr Γ Λ τ`; every premise on ranges (`div`, `shl`, `getBytes`, `widen`) |
+| direct callees, indirect signatures | `2^F · 2^S` | `mE` (`ruf`, `ind`): `reachB`, `abgB`, `kandB` (components 0, 1, 2, 6, 7, 9) |
+| locks taken | `2^L` | `mE` (`sperre`): `bodenM` (3), `NurMaskiert` (9) |
+| carriers read | `2^(T+G)` | `endblockOrteP`, `fussOrte` (2), `poolSicherWB`/`schreibGetrenntW` read write rights from the declaration |
+| registers read | `2^R` | `regs`, `fussOrteG` (2) |
+| answer sites | `2^(A+R)` | `ants`, `antwortenB` (8) |
+| fragment flag | 2 | `gOk`, `programmImFragmentG` (0) |
+
+The compiler's lowering (`Code/Lower/*.lean`) reads far less: the loop labels `lv` (= `l`), the register map and
+counters (names, H2), and the type CLASS of the node and its operands: `Ar.wid` ∈ {8, 16, 32, 64, 128} × sign
+(`tsgn`) or "does not fit 128" for integers, the width class of `opt`/`why`/`sum` words, `supp`.
+
+**(i) Checker, class of Theorem 2 (bounded automata).** The program-root cells alone (per function `requires`,
+`ensures`, body; per invariant; the handler flags), each needing its own program for `m ≥ n + 1`:
+`2^F · ((2^(T+G)+1)^2 · (Σ+1))^F · (2^(T+G)+1)^I` with the body summary
+`Σ = 2^F · 2^S · 2^L · 2^(T+G) · 2^R · 2^(A+R) · 2`. Computed in Lean: **z0: 1 650** (`wurzel_z0`), **z1:
+657 922 500** (`wurzel_z1`); the sixteen members z0..z15 (`wurzelFamilie`, evaluated): 1 650; 657 922 500; 594;
+10 530; 98 995 826 376; 7 270 419 678 763 536; 51 250; 294 930; 825 612 500; 306; 41 602 500; 306; 306; 10 530;
+6 906 607 236; 1 368 900. A real program (Caprock: hundreds of functions) is
+beyond any count: the root cells grow like `Σ^F`. The inner cells add `Σ_c λ_c · Π_i n_{s_i}` with presentation
+states `n_Stmt ≤ (|Λ|·Σ + 1)^(2·|Λ|·F)`. These are UPPER bounds on the Myhill–Nerode index (the model may identify
+presentation states); the root lower bound holds for the presentation (16.3), against implementations with one
+state more than it.
+
+**(ii) Checker, class of Theorem 4 (conjunctive, H7).** Refusal cells: per constructor one per premise (a
+Prop-typed argument of the constructor) and one per child position whose index does not fit (wrong type, wrong
+held set, loop-only statement outside a loop); accepted cells: per constructor and context class (`l`, `Λ` empty or
+not). Plus the pattern cells of the ten components: the assignments to the atoms each component's quantifier-free
+kernel reads (`Gabbro/Zaehlung.lean`). The single-fault programs number at least the isolable refusal cells; with the counts of the
+signature table: **124 premise cells + 146 child-position cells = 270 local refusal cells** (one per premise and per
+child position, under H2/H3; that each is isolable, i.e. violated alone in some program, is argued per rule, not proved),
+and at most **4 540 pattern cells** of the ten components (`musterZellen_wert`; atoms per component 4, 3, 12, 2, 2, 2, 7,
+8, 3, 4), of which the refusing ones each need their own single-fault program. So in class (ii)
+`271 ≤ |M| ≤ 270 + 4 540 + κ_valid` single-fault and valid programs, with `κ_valid` valid programs covering the
+accepted cells (the coarse ones are the generator's 459). This count does not grow with the program.
+
+**(iii) Compiler** (Theorem 3, H8). Cells = constructor × type class of the node and its operands × `l` over the
+lowered forms; covered by one valid program per declaration in principle (`deckung_konstruktion`); the lower bound
+by exclusive cells is 1 per declaration shape (the cells of different declarations never share a program).
+
+**(iv) Both together.** A valid program serves the checker's accepted cells and the compiler's cells at once; the
+single-fault refusals serve the checker only. So `|M| ≥ max(checker bound, compiler bound)` and
+`|M| ≤` checker set + compiler cover; in class (ii)/(iii) the valid part is shared and the count is the
+single-fault count plus the valid cover.
+
+**Against the generator** (§11, 2026-10-18): register members 160 of 235 covered by valid programs, cells 4 of 459
+(the 459 are the coarse context cells of class (ii): constructor × {`@loop`, `@held`} and the direct nesting pairs),
+single-fault refusals only at the COMPONENT level (`[0,0,0,0,8,16,326,96,142,8]`, components 0–3 none), 53 known
+gaps. The LOCAL refusal cells of (ii) cannot be generated at all: a G term carries its premises as proofs, so a
+program violating one has no term; they need the G-to-source printer (Track P) and a source mutation per premise.
+So the generated set is far from `M` in every class: 455 of 459 coarse cells, every local refusal cell, and
+(for class (i)) all but a vanishing fraction of the root cells are missing.
+
+### 16.7 What is proved in Lean, and what is derived on paper
+
+| Lean (kernel-checked, standard axioms) | Paper (this section) |
+|---|---|
+| Theorems 1–4 over an ARBITRARY ranked signature: `hinlaenglich`, `testmenge_laenge`, `wurzel_noetig`, `wurzel_schranke`, `flagge_noetig`, `deckung_iff`, `deckung_schranke`, `muster_hinlaenglich`, `schlecht_noetig`, `gut_noetig`, `muster_schranke`; the counter-models `kein_endlicher_test`, `zaehler_ueber_m`, `sonderfall_nicht_neutral` | that the Rust checker and compiler satisfy H1–H8 (an assumption about the code; metamorphic tests and audit) |
+| witnesses on a concrete 3-constructor lock checker: 32 tests for `m = n = 3`, a planted wrong checker fails one, the mutant and the counter model pass (`Zeugen.lean`) | `|W| ≤ n − 1`; the witness height `m + n − 1`; the exact minimum for `m = n` (open) |
+| the Gabbro constructor table checked against the model (`Signatur.lean`); the root-cell counts per family member (`Zaehlung.lean`) | the dimension table (read from `Akzeptiert.lean` and the components); that every presentation combination is reachable; the Myhill–Nerode index of `AkzeptiertX` (not computed: only the presentation upper bound) |
+
+---
+
 ## Appendix A — where the old section ids went
 
 *A temporary table for rewriting the comments that cite the files this one replaces; delete it
