@@ -115,6 +115,8 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .next _ => true
   | .cons s rest => mS A s && mE A rest
   | .bind _ rest => mE A rest
+  | .bindCall g _ _ _ _ rest => A.ruf g && mE A rest
+  | .bindCallElse g _ _ _ _ err rest => A.ruf g && mE A err && mE A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mE A rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mE A rest
 end
@@ -138,6 +140,7 @@ def GRest.mR (A : Merkmal D) {V : Vertrag D} :
   | _, _, _, .wartetSonst _ err b k => mE A err = true ∧ mB A b = true ∧ k.mR A
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.mR A
+  | _, _, _, .leer => True
 
 /-- The callee `g` is admitted: directly, or through its signature. -/
 def RufZiel (A : Merkmal D) (g : D.Fn) : Prop := A.ruf g = true ∨ A.ind (D.sig g) = true
@@ -158,7 +161,11 @@ theorem mB_alsBlock (A : Merkmal D) :
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindCall _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
@@ -381,6 +388,11 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       neu hneu hΛ =>
     kopfM
     exact ⟨hok.1.1, abbruch_iff err rest, hok.2⟩
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    kopfM
+    first
+    | exact ⟨hok, fun L => (e.alsBlock.2.held_iff L).symm⟩
+    | exact ⟨hok, fun L => (e.alsBlock.2.held_iff L).symm, trivial⟩
   | _ =>
     kopfM
     all_goals simp_all

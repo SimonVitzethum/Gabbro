@@ -170,11 +170,16 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
 
 def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
     Endblock D V l Γ Λ → Bool
+  | .ret .. => true
+  | .retWhy .. => true
+  | .leave .. => true
+  | .next .. => true
   | .cons s rest => s.ueberBoden c && rest.ueberBoden c
   | .bind _ rest => rest.ueberBoden c
+  | .bindCall _ _ _ _ _ rest => rest.ueberBoden c
+  | .bindCallElse _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
-  | _ => true
 
 def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     (c : Int) : Arms D V l Γ Λ Λ' cs → Bool

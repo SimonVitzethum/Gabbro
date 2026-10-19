@@ -299,6 +299,7 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeForm _ _ _ _ _ _ _ hhead => kopfweg
   | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
   | dannLeer _ _ _ _ _ hhead => kopfweg
   | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg

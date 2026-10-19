@@ -1,0 +1,35 @@
+// erwartet: H007
+// **The `until` predicate of a `retry` reads at the held set of the loop (`H007`).**
+//
+// `T` is guarded by `L`. The predicate `T.slots[i].v == 1` is evaluated on every pass, so it is a
+// read of `T` like any other (the model's `Stmt.retry` carries a `bis` whose `Expr.slot` demands the
+// guard). Until 2026-10-18 the walk entered the loop body only and this function passed with no
+// guard at all (Track P finding of the differential harness). It falls once, at the predicate.
+module gift::retry_until_without_guard {
+
+table T count 4 {
+    slot {
+        v : u32 in 0 .. 100,
+    }
+}
+
+lock L protects { T } rank 0 held <= 100 ops;
+
+assume ok_ "the cell changes" falsifier sonde_ok;
+
+extern fn zeit() -> never effects { diverges } costs <= 1 ops;
+
+// Must fall exactly once: the predicate reads the guarded table and nothing holds `L`.
+impl fn waits_unguarded(i : index into T)
+    effects { reads T.slots }
+    costs   <= 64 ops
+{
+    retry warten until T.slots[i].v == 1
+        bounded 8 ops
+        progress ok_
+        on_exceeded zeit
+        effects { reads T.slots }
+    { }
+}
+
+}

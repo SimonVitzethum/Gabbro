@@ -101,6 +101,9 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .next _ => []
   | .cons s rest => stmtAtome tabs globs s ++ endblockAtome tabs globs rest
   | .bind _ rest => endblockAtome tabs globs rest
+  | .bindCall _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .bindCallElse _ _ _ _ _ err rest =>
+      endblockAtome tabs globs err ++ endblockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockAtome tabs globs rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ endblockAtome tabs globs rest
 

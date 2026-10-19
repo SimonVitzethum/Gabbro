@@ -150,6 +150,19 @@ def eBind : Sz (Endblock D V l Γ Λ) :=
   Sz.knoten (Sz.bindS (fun i => (E i).filter fun p => Zahlen.bindOk p.1) (fun τ m => O.en l (τ :: Γ) Λ m)
     fun _ e r => Sz.pure (.bind e r))
 
+def eBindCall : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f => mitSome (D.erg f) fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.signatur f) Λ) fun hp => Sz.wenn (D.gruende f = 0) fun hr =>
+      Sz.bindR (argsS E (D.params f)) (fun m => O.en l (τ :: Γ) (nach D f Λ) m) fun args r =>
+        Sz.pure (.bindCall f args he hp hr r))
+
+def eBindCallElse : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f => mitSome (D.erg f) fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.signatur f) Λ) fun hp => Sz.wenn (0 < D.gruende f) fun hr =>
+      Sz.bindR (argsS E (D.params f)) (fun m => O.en l (.why (D.gruende f) :: Γ) (nach D f Λ) m) fun args err =>
+        Sz.bindR (Sz.pure ()) (fun m => O.en l (τ :: Γ) (nach D f Λ) m) fun _ r =>
+          Sz.pure (.bindCallElse f args he hp hr err r))
+
 def eBindAxiom : Sz (Endblock D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.ax) fun a => mitSome (D.aerg a) fun {τ} he =>
     Sz.wenn (∀ t, D.aschreibt a t = true → V.schreibt t = true) fun hw =>
@@ -182,6 +195,6 @@ def blockS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE 
 /-- **The end blocks of exact size `k`**. -/
 def endS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) :
     Sz (Endblock D V l Γ Λ) :=
-  Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindAxiom O E, eBindAxiomElse O E]
+  Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindCall O E, eBindCallElse O E, eBindAxiom O E, eBindAxiomElse O E]
 
 end Gabbro.Grammatik.Gen

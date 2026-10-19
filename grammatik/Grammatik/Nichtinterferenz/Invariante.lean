@@ -32,7 +32,11 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindCall a args he _ _ rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bindAxiom a args he hw hg hd hgd rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindCallElse a args he _ hr err rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
@@ -374,6 +378,16 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       simp only [nE, Bool.and_eq_true] at he
       try simp only [kEnde]
       exact KErgOk.lokal hst _ _ _ (by first | exact he.2 | (simp only [GRest.nR]; exact he.2)) _ _
+  | bindCall g args he' hp hr rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
+  | bindCallElse g args he' hp hr err rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
   | bindAxiom a args he' hw hg hd hgd rest =>
       simp only [nE, Bool.and_eq_true] at he
       try simp only [kEnde]
@@ -543,6 +557,7 @@ theorem kr_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | wartet b k => exact KErgOk.none
   | wartetSonst n err b k => exact KErgOk.none
   | abbruch k => exact KErgOk.none
+  | leer => exact KErgOk.none
 
 end Ok
 

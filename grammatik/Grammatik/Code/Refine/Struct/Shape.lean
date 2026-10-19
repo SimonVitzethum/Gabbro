@@ -755,6 +755,8 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨⟨_, _, rfl, rfl⟩, by simp, Nat.le_refl _⟩
+  | _, _, _, .bindCall .., lb, st, st', blks, h => by
+      simp [lowerEnd] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, h => by
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h => by

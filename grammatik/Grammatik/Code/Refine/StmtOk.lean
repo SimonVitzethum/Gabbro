@@ -27,6 +27,7 @@ open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang
 
 variable {D : Deklaration} {V : Vertrag D}
 
+set_option maxHeartbeats 1000000 in
 mutual
 
 theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
@@ -1132,6 +1133,8 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       obtain ⟨f', hr, hf1, hf2, hret, hFr⟩ := lowerWhy_ok lay cenv V.gruende V.erg r.val lb st st' blks h M S fn hM
         m rs ks dst
       exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
+  | _, _, _, .bindCall .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp [lowerEnd] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp [lowerEnd] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by

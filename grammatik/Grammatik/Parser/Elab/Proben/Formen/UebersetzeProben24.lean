@@ -37,10 +37,15 @@ def bare_refused : String :=
   "module m { reason G { Weg = 1 \"weg\" exhaustive } impl fn hr(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } { if x == 0 { return G::Weg; } return x; } impl fn f(c : bool) -> u32 in 0 .. 9 { if c { let y = hr(4); return y; } return 0; } }"
 theorem bare_refused_stufe : stufe bare_refused = "elab: call of a function with a reason channel needs `let .. else`" := by decide +kernel
 
-/-- At the top level of a body the model has no former (`Endblock.bindCallElse`): recorded. -/
-def else_top_refused : String :=
+/-- At the top level of a body: `Endblock.bindCallElse` (Track P, 2026-10-18; was a model gap). -/
+def else_top_ok : String :=
   "module m { reason G { Weg = 1 \"weg\" exhaustive } impl fn hr(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } { if x == 0 { return G::Weg; } return x; } impl fn f() -> u32 in 0 .. 9 { let y = hr(4) else (e) { match e { Weg => { return 0; } } return 0; } return y; } }"
-theorem else_top_refused_stufe : stufe else_top_refused = "lower: lower: a let else at the top level of a body has no G form (Endblock lacks bindCallElse)" := by decide +kernel
+theorem else_top_ok_stufe : stufe else_top_ok = "OK" := by decide +kernel
+
+/-- Planted defect: the `else` branch falls off the end (it must not), so the unit is refused. -/
+def else_top_refused : String :=
+  "module m { reason G { Weg = 1 \"weg\" exhaustive } impl fn hr(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } { if x == 0 { return G::Weg; } return x; } impl fn f() -> u32 in 0 .. 9 { let y = hr(4) else (e) { } return y; } }"
+theorem else_top_refused_stufe : (stufe else_top_refused != "OK") = true := by decide +kernel
 
 /-- A reason that may be extended has no `Ty.why n`. -/
 def open_refused : String :=

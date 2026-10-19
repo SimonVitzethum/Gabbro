@@ -1305,6 +1305,16 @@ fn h020_block(
                     orte_in(bed, &mut |o| pruefe(o, absagen));
                 }
             }
+            // The `until` predicate of a `retry` is a read at the held set of the loop (see `schutz`).
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Retry(r) = sch.as_ref() {
+                    if let Some(bis) = &r.bis {
+                        for x in crate::ausdruecke_im_praedikat(bis) {
+                            orte_in(x, &mut |o| pruefe(o, absagen));
+                        }
+                    }
+                }
+            }
             _ => {}
         }
         // `locks` and `observes` walked above already -- they carry the changed state
@@ -1554,6 +1564,25 @@ fn schutz(
                     rufe_in(bed, &mut rufe);
                     for r in rufe {
                         ruf_h007(rh, r, da, beobachtet, absagen);
+                    }
+                }
+            }
+            // **The `until` predicate of a `retry` READS at the held set of the loop** (the model's
+            // `Stmt.retry` carries `bis : Expr D Γ Λ .bool`, whose `Expr.slot`/`Expr.thru` demand
+            // the guard like any other read). Until 2026-10-18 the walk entered only the body: a
+            // `retry … until T.slots[i].v == 1` outside the lock of `T` passed (Track P finding of
+            // the differential harness).
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Retry(r) = sch.as_ref() {
+                    if let Some(bis) = &r.bis {
+                        for x in crate::ausdruecke_im_praedikat(bis) {
+                            orte_in(x, &mut |o| pruefe(o, absagen));
+                            let mut rufe = Vec::new();
+                            rufe_in(x, &mut rufe);
+                            for r in rufe {
+                                ruf_h007(rh, r, da, beobachtet, absagen);
+                            }
+                        }
                     }
                 }
             }

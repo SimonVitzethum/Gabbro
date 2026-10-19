@@ -311,6 +311,8 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .next _ => True
   | .cons s rest => oS s ∧ oE rest
   | .bind _ rest => oE rest
+  | .bindCall f args _ _ _ rest => ObjRufOk objs ps f args ∧ oE rest
+  | .bindCallElse f args _ _ _ err rest => ObjRufOk objs ps f args ∧ oE err ∧ oE rest
   | .bindAxiom a _ _ _ _ _ _ rest => KeinTabAx a ∧ oE rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oE rest
 

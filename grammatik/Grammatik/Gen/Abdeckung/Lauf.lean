@@ -79,6 +79,8 @@ def bekannteLuecken : List (String × String) :=
    ("Block.bindCall", G_GROESSE),
    ("Block.bindCallInd", G_GROESSE),
    ("Block.bindCallElse", G_GROESSE),
+   ("Endblock.bindCall", G_GROESSE),
+   ("Endblock.bindCallElse", G_GROESSE),
    ("Block.bindAxiom", G_GROESSE),
    ("Block.bindAxiomElse", G_GROESSE),
    ("Block.regRead", G_GROESSE),

@@ -58,6 +58,12 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
     refine ⟨rfl, hg, ⟨by simp [Block.gOk, hks], ?_, hrest⟩,
       fun R O' U A => ZErgG.folgt_of_eq (semHA_endeEntf S O' U A passes R s rest σ ρ)⟩
     simpa [blockOrteP] using hss
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenSA_lokal hF hhead ρ (.dann e.alsBlock.2 (.abbruch (Λk := Λ) .leer)) (M.faeden u).spur
+      (fun σ hg hok => ?_), hL⟩
+    exact ⟨rfl, hg, okS_alsBlock e .leer (fun L => Iff.rfl) hok.1 hok.2 trivial,
+      fun R O' U A => ZErgG.folgt_of_eq (semHA_endeForm S O' U A passes R e σ ρ)⟩
   | dannLeer l Γ Λ k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenSA_lokal hF hhead ρ k (M.faeden u).spur (fun σ hg hok => ?_), hL⟩

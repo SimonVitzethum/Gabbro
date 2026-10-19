@@ -157,6 +157,9 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => []
   | .cons s rest => stmtKanten s ++ endblockKanten rest
   | .bind _ rest => endblockKanten rest
+  | .bindCall f _ _ _ _ rest => f :: endblockKanten rest
+  | .bindCallElse f _ _ _ _ err rest =>
+      f :: endblockKanten err ++ endblockKanten rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockKanten rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ endblockKanten rest
 

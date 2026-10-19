@@ -449,6 +449,9 @@ theorem ende_ret_kein_schritt {M M' : RufMaschineG D} {t : Faden}
   cases hs with
   | rueck caller rest hpop => rw [hst] at hpop; cases hpop
   | rueckBind caller rest hpop => rw [hst] at hpop; cases hpop
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+      rw [hhead] at hk
+      cases e <;> simp_all [GRest.istEndeRet, EndEntfaltbar]
   | _ =>
       rw [‹(M.faeden t).kopf.rest = _›] at hk
       simp [GRest.istEndeRet] at hk

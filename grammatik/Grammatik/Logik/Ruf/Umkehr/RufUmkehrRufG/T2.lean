@@ -18,6 +18,7 @@ def SGBK {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ
     AusSG (execBlock O passes R b σ ρ) (execBlock O passes R b σ' ρ)
 
 set_option linter.unusedSectionVars false in
+set_option maxHeartbeats 800000 in
 mutual
 
 theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -397,6 +398,7 @@ theorem semK_SG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l
   | _, _, _, .wartet .., hr => by cases hr
   | _, _, _, .wartetSonst .., hr => by cases hr
   | _, _, _, .abbruch _, _ => fun _ _ _ _ => REnde.gleich_refl _
+  | _, _, _, .leer, _ => fun _ _ _ _ => REnde.gleich_refl _
 
 end SpurK
 /-- **The body-running handler does not see the trace** on the callees the

@@ -196,6 +196,20 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
       List.mem_filter.2 ⟨hE _ x (by omega), hok⟩
     have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
     blk (eBind O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bindS hx hr <| Sz.mem_pure _) (by omega)
+  | bindCall f args he hp hr rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBindCall O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.fn_mem f)) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
+  | bindCallElse f args he hp hr err rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have herr := hO.en (groesseEnd err + (0 + (groesseEnd rest + 0))) _ _ _ err (by omega) (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBindCallElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.fn_mem f)) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | bindAxiom a args he hw hg hd hgd rest =>
     simp only [groesseEnd] at hu hE hS hO ⊢
     have hr := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)

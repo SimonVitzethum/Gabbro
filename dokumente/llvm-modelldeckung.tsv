@@ -194,6 +194,8 @@ Endblock.leave	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/
 Endblock.next	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.cons	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.bind	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
+Endblock.bindCall	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
+Endblock.bindCallElse	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
 Endblock.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
 Arms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
@@ -222,6 +224,7 @@ DynForm.hzwei	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	S
 FreiZustand.belegt	LOWERED	crates/gabbro-check/src/llvm/memory.rs::live_change	High-water mark and LIFO free indices preserved; external links survive empty-chunk discard and support one-byte slots.
 FreiZustand.frei	LOWERED	crates/gabbro-check/src/llvm/memory.rs::live_change	High-water mark and LIFO free indices preserved; external links survive empty-chunk discard and support one-byte slots.
 FreiZustand.hfrei	ERASED	crates/gabbro-check/src/llvm/memory.rs::live_change	High-water mark and LIFO free indices preserved; external links survive empty-chunk discard and support one-byte slots.
+GRest.leer	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuation state, locals, pending calls/returns stored in explicit frames for cyclic components; LLVM/G simulation is an obligation, not a proved compiler theorem.
 GRest.ende	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuation state, locals, pending calls/returns stored in explicit frames for cyclic components; LLVM/G simulation is an obligation, not a proved compiler theorem.
 GRest.dann	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuation state, locals, pending calls/returns stored in explicit frames for cyclic components; LLVM/G simulation is an obligation, not a proved compiler theorem.
 GRest.schrumpf	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuation state, locals, pending calls/returns stored in explicit frames for cyclic components; LLVM/G simulation is an obligation, not a proved compiler theorem.

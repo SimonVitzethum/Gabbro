@@ -45,6 +45,10 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, Λ, .next h => ⟨Λ, .cons (.next h) .nil⟩
   | _, _, .cons s rest => ⟨rest.alsBlock.1, .cons s rest.alsBlock.2⟩
   | _, _, .bind e rest => ⟨rest.alsBlock.1, .bind e rest.alsBlock.2⟩
+  | _, _, .bindCall f args he hp hr rest =>
+      ⟨rest.alsBlock.1, .bindCall f args he hp hr rest.alsBlock.2⟩
+  | _, _, .bindCallElse f args he hp hr err rest =>
+      ⟨rest.alsBlock.1, .bindCallElse f args he hp hr err rest.alsBlock.2⟩
   | _, _, .bindAxiom a args he hw hg hd hgd rest =>
       ⟨rest.alsBlock.1, .bindAxiom a args he hw hg hd hgd rest.alsBlock.2⟩
   | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest =>
@@ -105,6 +109,11 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       return pops the frame. Its holdings index is free. -/
   | abbruch {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} :
       GRest D V l Γ Λk → GRest D V l Γ Λ
+  /-- Nothing is left to run: the base of the continuation behind an end block that was unfolded
+      into block position (`endeForm`: `.dann e.alsBlock.2 (.abbruch .leer)`). No step rule has
+      it at the head and the block in front never falls off, so it is never reached and carries
+      no obligation (Track P, 2026-10-18). -/
+  | leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ
 
 /-- **An end block run as a block means what it meant**: its outcome is
     the end block's, as an `Ausgang` (it never ends normally). -/
@@ -125,6 +134,23 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       simp only [Endblock.alsBlock, execBlock, execEnd]
       rw [Endblock.execBlock_alsBlock O passes R rest]
       cases execEnd O passes R rest _ _ <;> rfl
+  | _, _, .bindCall f args he hp hr rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · rename_i r _
+        exact (Fin.cast hr r).elim0
+      · rfl
+      · rfl
+  | _, _, .bindCallElse f args he hp hr err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · cases execEnd O passes R err _ _ <;> rfl
+      · rfl
+      · rfl
   | _, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [Endblock.alsBlock, execBlock, execEnd]
       split
@@ -215,6 +241,24 @@ def GEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry .. => true
   | .forever .. => true
   | _ => false
+
+/-- The end-block formers that the machine unfolds into block position (`endeForm`): the
+    residue `.ende e` becomes `.dann e.alsBlock.2 (.abbruch .leer)`, and the BLOCK steps run it
+    (the fall-through is never reached: an end block does not fall off). The formers
+    with a step of their own (`cons`, `bind`, `bindAxiom`, `bindAxiomElse`, the returns) are not
+    listed. Written without a wildcard, so a new `Endblock` former must be placed here. -/
+def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    Endblock D V l Γ Λ → Bool
+  | .ret .. => false
+  | .retWhy .. => false
+  | .leave .. => false
+  | .next .. => false
+  | .cons .. => false
+  | .bind .. => false
+  | .bindCall .. => true
+  | .bindCallElse .. => true
+  | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
 
 /-- Arm selection for `onTag`: the VALUE's index chooses the arm and the
     VALUE's payload feeds it (like `execArms`, but returning the chosen arm

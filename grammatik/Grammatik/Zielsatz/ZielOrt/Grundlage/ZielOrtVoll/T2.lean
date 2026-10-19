@@ -304,6 +304,9 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bind _ rest, h, σ, ρ => by
       simp only [Endblock.kOk] at h
       simp only [execEnd, Endblock.orakel_kOk rest h]
+  | .bindCall _ _ _ _ _ rest, h, σ, ρ => by
+      simp only [Endblock.kOk] at h
+      simp only [execEnd, Endblock.orakel_kOk rest h]
   | .bindAxiom .., h, _, _ => by simp [Endblock.kOk] at h
   | .bindAxiomElse .., h, _, _ => by simp [Endblock.kOk] at h
 

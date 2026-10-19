@@ -87,6 +87,11 @@ def weiterZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       match o with
       | .ok _ _ => .sonst
       | o => weiterZ k o
+  | _, _, _, .leer, o =>
+      match o with
+      | .zurueck σ v => .zurueck σ v
+      | .logik e => .logik e
+      | _ => .sonst
 
 /-- The frame semantics of a residue: run it from `σ`, `ρ`. -/
 def semV {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) (σ : World D)
@@ -134,6 +139,7 @@ theorem weiterZ_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .wartet _ k, e => weiterZ_logik k e
   | _, _, _, .wartetSonst _ _ _ k, e => weiterZ_logik k e
   | _, _, _, .abbruch k, e => weiterZ_logik k e
+  | _, _, _, .leer, _ => rfl
 
 theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (r : Fin V.gruende), weiterZ O passes R k (.why σ r) = .sonst
@@ -150,6 +156,7 @@ theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .wartet _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .wartetSonst _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .abbruch k, σ, r => weiterZ_grund k σ r
+  | _, _, _, .leer, _, _ => rfl
 
 theorem weiterZ_hardware : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (e : Hardware D), weiterZ O passes R k (.hardware e) = .sonst
@@ -166,6 +173,7 @@ theorem weiterZ_hardware : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GR
   | _, _, _, .wartet _ k, e => weiterZ_hardware k e
   | _, _, _, .wartetSonst _ _ _ k, e => weiterZ_hardware k e
   | _, _, _, .abbruch k, e => weiterZ_hardware k e
+  | _, _, _, .leer, _ => rfl
 
 theorem sg_gibt (σ : World D) (L : D.Lock) : SG (σ.gibt L) σ := ⟨rfl, rfl⟩
 
@@ -186,6 +194,7 @@ theorem weiterZ_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .wartet _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .wartetSonst _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .abbruch k, σ, v => weiterZ_zurueck k σ v
+  | _, _, _, .leer, _, _ => ZErg.gleich_refl _
 
 /-- **An end block replacing a residue.** Where G replaces the whole residue
     by an end block (the `else` block of `narrow`/`pruefung`/float
@@ -213,6 +222,18 @@ theorem semV_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : GR
     semV O passes R (.dann e.alsBlock.2 (.abbruch k)) σ ρ =
       weiterZ O passes R k (execEnd O passes R e σ ρ).zuAusgang := by
   rw [semV_dann, Endblock.execBlock_alsBlock, weiterZ_abbruch_zu]
+
+/-- The base of the `endeForm` continuation passes an end outcome on as it is. -/
+theorem weiterZ_leer_zu {Λ : List (Res D)} (eo : EndAusgang V l Γ) :
+    weiterZ O passes R (.leer (Λ := Λ)) eo.zuAusgang = zErg eo := by
+  cases eo <;> rfl
+
+/-- **An end block unfolded into block position** (`endeForm`) means the end block. -/
+theorem semV_endeForm {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
+    semV O passes R (.ende e) σ ρ =
+      semV O passes R (.dann e.alsBlock.2 (.abbruch (Λk := Λ) .leer)) σ ρ := by
+  rw [semV_alsBlock, weiterZ_leer_zu]
+  rfl
 
 end Weiter
 /-! ## 4. The residues the replay follows -/
@@ -247,6 +268,7 @@ def GRest.okV (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
         blockOrteP P b ⊆ S ∧ k.okV P S
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okV P S
+  | _, _, _, .leer => True
 
 section OkV
 

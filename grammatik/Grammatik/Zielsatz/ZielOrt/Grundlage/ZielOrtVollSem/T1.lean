@@ -96,6 +96,8 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .next .. => true
   | .cons s rest => s.vOk K && rest.vOk K
   | .bind _ rest => rest.vOk K
+  | .bindCall _ _ _ _ _ rest => rest.vOk K
+  | .bindCallElse _ _ _ _ _ err rest => err.vOk K && rest.vOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk K
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.vOk K && rest.vOk K
 
@@ -120,7 +122,11 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bindCall _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
@@ -319,6 +325,12 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bind _ rest, h => by
       simp only [Endblock.vOk] at h ⊢
       exact Endblock.vOk_mono rest h
+  | .bindCall _ _ _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+  | .bindCallElse _ _ _ _ _ err rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono err h.1, Endblock.vOk_mono rest h.2⟩
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk] at h ⊢
       exact Endblock.vOk_mono rest h
@@ -452,6 +464,9 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Stmt.vOk_of_kOk s h.1, Endblock.vOk_of_kOk rest h.2⟩
   | .bind _ rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk] at h ⊢
+      exact Endblock.vOk_of_kOk rest h
+  | .bindCall _ _ _ _ _ rest, h => by
       simp only [Endblock.kOk, Endblock.vOk] at h ⊢
       exact Endblock.vOk_of_kOk rest h
   | .bindAxiom .., h => by simp [Endblock.kOk] at h

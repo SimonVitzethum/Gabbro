@@ -82,6 +82,8 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next .. => []
   | .cons s rest => s.ants ++ rest.ants
   | .bind _ rest => rest.ants
+  | .bindCall _ _ _ _ _ rest => rest.ants
+  | .bindCallElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
 
@@ -125,7 +127,11 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .bindCall _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiom a _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .bindCallElse a _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
@@ -150,6 +156,7 @@ def GRest.aR (C : D.Ax ⊕ D.Reg → Bool) {V : Vertrag D} :
   | _, _, _, .wartet b k => b.ants.all C = true ∧ k.aR C
   | _, _, _, .wartetSonst _ err b k => err.ants.all C = true ∧ b.ants.all C = true ∧ k.aR C
   | _, _, _, .abbruch k => k.aR C
+  | _, _, _, .leer => True
 
 section Wahl
 

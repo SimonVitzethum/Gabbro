@@ -227,6 +227,15 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_orteP P s) (ruEnd_orteP P rest)
   | _, _, _, .bind e rest => kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P rest)
+  | _, _, _, .bindCall g args _ _ _ rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args)
+        (kongr₂ (· ++ ·) (requires_mitRuhe_orte P g) (ensures_mitRuhe_orte P g)))
+        ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
+  | _, _, _, .bindCallElse g args _ _ _ err rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args)
+        (kongr₂ (· ++ ·) (requires_mitRuhe_orte P g) (ensures_mitRuhe_orte P g)))
+        ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
+        ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest =>
       kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P rest)
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
@@ -315,6 +324,10 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_regs s) (ruEnd_regs rest)
   | _, _, _, .bind _ rest => ruEnd_regs rest
+  | _, _, _, .bindCall _ _ _ _ _ rest => (regs_umΛ _ _).trans (ruEnd_regs rest)
+  | _, _, _, .bindCallElse _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) ((regs_umΛ _ _).trans (ruEnd_regs err))
+        ((regs_umΛ _ _).trans (ruEnd_regs rest))
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_regs rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kongr₂ (· ++ ·) (ruEnd_regs err) (ruEnd_regs rest)
 
@@ -408,6 +421,10 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_gOk K Rg s) (ruEnd_gOk K Rg rest)
   | _, _, _, .bind _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .bindCall _ _ _ _ _ rest => (gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest)
+  | _, _, _, .bindCallElse _ _ _ _ _ err rest =>
+      kongr₂ (· && ·) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+        ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruEnd_gOk K Rg rest)

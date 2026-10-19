@@ -466,6 +466,7 @@ def GRest.sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .wartet _ _ => false
   | .wartetSonst _ _ _ _ => false
   | .abbruch k => k.sauber
+  | .leer => true
 
 /-- A stacked residue: clean, or waiting over a clean continuation. -/
 def GRest.stapelSauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :

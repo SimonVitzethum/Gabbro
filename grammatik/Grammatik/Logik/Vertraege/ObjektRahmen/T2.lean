@@ -414,6 +414,26 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEnd]
       exact ObjE.vor (slotRahmen_gleich rfl)
         (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+  | .bindCall f args he hp hr rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · rename_i σ1 v hR1
+        exact ObjE.vor (ruf_rahmen_in hR hok.1 hinv σ σ1 (by rw [hR1]; rfl))
+          (end_obj rest hok.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · rename_i σ1 r _; exact keinGrund hr r
+      · trivial
+      · trivial
+  | .bindCallElse f args he hp _ err rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · rename_i σ1 v hR1
+        exact ObjE.vor (ruf_rahmen_in hR hok.1 hinv σ σ1 (by rw [hR1]; rfl))
+          (end_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · rename_i σ1 r hR1
+        exact ObjE.vor (ruf_rahmen_in hR hok.1 hinv σ σ1 (by rw [hR1]; rfl))
+          (end_obj err hok.2.1 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+      · trivial
   | .bindAxiom a args he hw hg hd hgd rest, hok, σ, ρ, hlen, hinv => by
       simp only [execEnd]
       split

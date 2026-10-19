@@ -183,6 +183,7 @@ theorem g_schritt_0 {M' : RufMaschineG nD} (h : RufSchrittG nP nO 0 (r1M1 sp0) 0
   case ruf => exact Bool.noConfusion (congrArg kopfBlatt hk)
   case rufCallInd => exact Bool.noConfusion (congrArg kopfBlatt hk)
   case endeEntf => cases hk; cases (by assumption : GEntfaltbar sA = true)
+  case endeForm => cases hk; exact absurd (by assumption : EndEntfaltbar (Endblock.cons sA (.ret .empty List.Perm.nil)) = true) (by simp [EndEntfaltbar])
   case blatt =>
     cases hk
     rename_i σ' _ _ _ ρ' _ _ hstep _

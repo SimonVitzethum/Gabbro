@@ -160,6 +160,13 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bind _ rest, h => by
       simp only [mE]
       exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .bindCall g _ _ _ _ rest, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨hr g, mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
+  | .bindCallElse g _ _ _ _ err rest, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨⟨hr g, mE_boden err fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩,
+        mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [mE]
       exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]

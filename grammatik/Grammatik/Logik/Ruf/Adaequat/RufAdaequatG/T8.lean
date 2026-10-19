@@ -44,6 +44,7 @@ def semR : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .wartet .., _, _ => .sonst
   | _, _, _, .wartetSonst .., _, _ => .sonst
   | _, _, _, .abbruch .., _, _ => .sonst
+  | _, _, _, .leer, _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)
@@ -204,6 +205,7 @@ theorem semR_SG (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Pr
   | _, _, _, .wartet .., hr => by cases hr
   | _, _, _, .wartetSonst .., hr => by cases hr
   | _, _, _, .abbruch _, _ => fun _ _ _ _ => REnde.gleich_refl _
+  | _, _, _, .leer, _ => fun _ _ _ _ => REnde.gleich_refl _
 
 theorem REnde.gleich_of_eq {V : Vertrag D} {r r' : REnde V} (h : r = r') : r.gleich r' := by
   rw [h]

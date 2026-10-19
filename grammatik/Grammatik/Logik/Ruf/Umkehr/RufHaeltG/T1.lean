@@ -54,6 +54,7 @@ def GRest.kette {V : Vertrag D} (A : List D.Lock) :
   | _, _, Λ, .wartetSonst _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L ∈ A, Res.held L ∈ Λ) ∧ (∀ L, Res.held L ∈ Λk → Res.held L ∈ Λ) ∧ k.kette A
+  | _, _, Λ, .leer => ∀ L ∈ A, Res.held L ∈ Λ
 
 /-- The top node of a chain names `A`. -/
 theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
@@ -72,6 +73,7 @@ theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
   | _, _, _, .wartet _ _, h => h.1
   | _, _, _, .wartetSonst _ _ _ _, h => h.1
   | _, _, _, .abbruch _, h => h.1
+  | _, _, _, .leer, h => h
 
 /-- Naming `A` carries along a block (`Block.held_iff`). -/
 theorem nennt_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -127,6 +129,7 @@ def GRest.freis {V : Vertrag D} :
   | _, _, _, .wartet _ k => k.freis
   | _, _, _, .wartetSonst _ _ _ k => k.freis
   | _, _, _, .abbruch k => k.freis
+  | _, _, _, .leer => []
 
 /-- The chain behind an `else` branch run in block position: the branch
     keeps the held locks of its start, and so does the block its

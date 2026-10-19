@@ -272,6 +272,28 @@ theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : Lis
       simp only [Endblock.logikFrei] at h
       simp only [execEnd] at he
       exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
+  | .bindCall g args he' hp hr rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
+      · rename_i r _
+        exact (Fin.cast hr r).elim0
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+      · cases he
+  | .bindCallElse g args he' hp hr err rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _
+          (EndAusgang.schrumpf_logik he)
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+      · cases he
   | .bindAxiom a args he' hw hg hd hgd rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei] at h
       simp only [execEnd, axiomAntwort] at he

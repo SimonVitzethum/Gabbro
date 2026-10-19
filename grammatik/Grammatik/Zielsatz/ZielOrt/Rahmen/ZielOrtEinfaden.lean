@@ -60,6 +60,9 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
   | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
     rw [hhead] at hRet
     simp [GRest.istRetEnde, Endblock.istRet] at hRet
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    rw [hhead] at hRet
+    cases e <;> simp_all [GRest.istRetEnde, Endblock.istRet, EndEntfaltbar]
   | dannLeer l Γ Λ k ρ hhead =>
     rw [hhead] at hRet
     simp [GRest.istRetEnde, Endblock.istRet] at hRet

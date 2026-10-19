@@ -308,6 +308,9 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => []
   | .cons s rest => stmtOrte s ++ endblockOrte rest
   | .bind e rest => e.orte ++ endblockOrte rest
+  | .bindCall _ args _ _ _ rest => args.orte ++ endblockOrte rest
+  | .bindCallElse _ args _ _ _ err rest =>
+      args.orte ++ endblockOrte err ++ endblockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
 

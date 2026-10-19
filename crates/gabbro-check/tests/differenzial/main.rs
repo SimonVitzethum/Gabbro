@@ -342,16 +342,6 @@ pub const ERWARTET_A: &[(&str, &str)] = &[
 /// `H011`/`E006` is a rule beyond `Akzeptiert`, class (a)).
 const EXPORT_ENGER: &[&str] = &["LG001"];
 
-/// **Findings against the CHECKER** that the pure-Lean route (the model) makes and the checker has not yet
-/// repaired (atom, the model's message, what is wrong). Each is a program the checker accepts and the model
-/// refuses for a premise it holds: class (b), a checker bug, found by a form the Lean elaboration gained after
-/// the harness was written. The Rust checker is not touched here (Track P); the test falls on any NEW pair.
-const PRUEFER_BEFUNDE: &[(&str, &str, &str)] = &[
-    ("l.retry", "access without held guard",
-     "the `until` predicate of a `retry` reads a table its lock guards without holding the lock (`H020` does not look \
-      into the loop header): a data race the model refuses (`Expr.thru`/`Expr.slot` carry `darf`)"),
-];
-
 /// Check the classification of a measured set against what the harness stands for. Returns one line per
 /// violation: a class (b) program, a class (a) group that is not in [`ERWARTET_A`], a disagreement of the
 /// pure-Lean path with the checker or with the exporter route.
@@ -373,8 +363,6 @@ pub fn verstoesse(ms: &[Messung]) -> Vec<String> {
         // the pure-Lean path decides the same as the checker and the exporter route
         let rust_ja = m.rust == RustV::Accept;
         match (&m.pur, rust_ja) {
-            // A known finding against the checker (recorded in `PRUEFER_BEFUNDE`), not a new violation.
-            (PurV::Verletzt(t), true) if PRUEFER_BEFUNDE.iter().any(|(a, teil, _)| m.atoms.contains(a) && t.contains(teil)) => {}
             (PurV::Reject | PurV::Verletzt(_), true) => out.push(format!("pure-Lean refuses what the checker accepts: {}", zeile(m))),
             _ => {}
         }
@@ -528,4 +516,34 @@ fn schnitt_gegen_das_modell() {
         let v = verstoesse(&ms);
         assert!(v.is_empty(), "{} violation(s) of the differential classification:\n{}", v.len(), v.join("\n"));
     }
+}
+
+/// **Pinned class-(b) regression (Track P finding, fixed 2026-10-18):** the `until` predicate of a `retry`
+/// reads at the held set of the loop. The checker used to walk only the loop body, so a `retry … until
+/// T.slots[i].v == 1` on a lock-guarded table passed without the lock (`H007`) or with only the `locks L`
+/// effect line (`H020`) while the Lean model refused it (`Expr.slot` carries `darf`). Both forms stay refused;
+/// the loop inside `locks L` stays accepted.
+#[test]
+fn retry_until_liest_unter_der_sperre() {
+    let kopf = "module r { table T count 4 { slot { v : u32 in 0 .. 100, } } lock L protects { T } rank 0 held <= 100 ops;\n\
+                assume ok_ \"the cell changes\" falsifier sonde_ok;\n\
+                extern fn zeit() -> never effects { diverges } costs <= 1 ops;\n";
+    let schleife = "retry warten until T.slots[i].v == 1 bounded 8 ops progress ok_ on_exceeded zeit \
+                    effects { reads T.slots } { }";
+    let nackt = format!("{kopf}impl fn f(i : index into T) effects {{ reads T.slots }} costs <= 64 ops {{ {schleife} }} }}");
+    let zeile = format!(
+        "{kopf}impl fn f(i : index into T) effects {{ reads T.slots, writes T.slots, locks L }} costs <= 64 ops \
+         {{ locks L {{ T.slots[i].v = 0; }} {schleife} }} }}"
+    );
+    let gut = format!(
+        "{kopf}impl fn f(i : index into T) effects {{ reads T.slots, locks L }} costs <= 64 ops {{ locks L {{ {schleife} }} }} }}"
+    );
+    let codes = |src: &str| match lauf::rust_verdict("r.gab", src).0 {
+        lauf::RustV::Refuse(c) => c,
+        lauf::RustV::Accept => Vec::new(),
+        v => panic!("unexpected verdict {v:?}"),
+    };
+    assert_eq!(codes(&nackt), ["H007"], "no guard at all");
+    assert_eq!(codes(&zeile), ["H020"], "only the effect line covers the predicate");
+    assert!(codes(&gut).is_empty(), "the loop under its guard stays accepted");
 }

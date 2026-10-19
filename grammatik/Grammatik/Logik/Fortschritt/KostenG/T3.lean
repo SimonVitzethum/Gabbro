@@ -183,6 +183,8 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => true
   | .cons s rest => spiegelS s && spiegelE rest
   | .bind _ rest => spiegelE rest
+  | .bindCall _ _ _ _ _ rest => spiegelE rest
+  | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelE rest
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
 end
@@ -276,6 +278,9 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .next _ => 0
   | .cons s rest => kostenKS c s + kostenKE c rest
   | .bind e rest => 1 + kostenExpr e + kostenKE c rest
+  | .bindCall g args _ _ _ rest => 1 + kostenArgs args + c g + kostenKE c rest
+  | .bindCallElse g args _ _ _ err rest =>
+      1 + kostenArgs args + c g + kostenKE c err + kostenKE c rest
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKE c rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
 end
@@ -352,6 +357,8 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => 1
   | .cons s rest => entfZ s + zusatzS s + zusatzE rest
   | .bind _ rest => zusatzE rest
+  | .bindCall _ _ _ _ _ rest => 4 + zusatzSonst rest
+  | .bindCallElse _ _ _ _ _ err rest => 6 + zusatzSonst err + zusatzSonst rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
 
@@ -364,6 +371,8 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => 2
   | .cons s rest => zusatzS s + zusatzSonst rest
   | .bind _ rest => 1 + zusatzSonst rest
+  | .bindCall _ _ _ _ _ rest => 1 + zusatzSonst rest
+  | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzSonst rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
 end

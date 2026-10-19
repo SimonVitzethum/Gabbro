@@ -603,6 +603,14 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
   | _, _, _, .next h => .next h
   | _, _, _, .cons s rest => .cons (ruS s) (ruEnd rest)
   | _, _, _, .bind e rest => .bind (ruE e) (ruEnd rest)
+  | _, _, Λ, .bindCall f args he hp hr rest =>
+      .bindCall (V := vertragR V) (some f) (ruA args)
+        (by show Option.map tyR (D.erg f) = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nach_map f Λ) (ruEnd rest))
+  | _, _, Λ, .bindCallElse f args he hp hr err rest =>
+      .bindCallElse (V := vertragR V) (some f) (ruA args)
+        (by show Option.map tyR (D.erg f) = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nach_map f Λ) (ruEnd err)) (Endblock.umΛ (nach_map f Λ) (ruEnd rest))
   | _, _, _, .bindAxiom a args he hw hg hd hgd rest =>
       .bindAxiom (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hw hg

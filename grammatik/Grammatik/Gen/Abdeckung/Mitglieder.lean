@@ -202,6 +202,8 @@ def blockStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
 def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ → List String
   | _, _, _, .cons s rest => stmtName s :: endStmts rest
   | _, _, _, .bind _ rest => endStmts rest
+  | _, _, _, .bindCall _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .bindCallElse _ _ _ _ _ err rest => endStmts rest
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => endStmts rest
   | _, _, _, .ret .. => []
@@ -282,6 +284,9 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
   | _, _, _, .next _ => ["Endblock.next"]
   | _, _, _, .cons s rest => "Endblock.cons" :: stmtM s ++ endM rest
   | _, _, _, .bind e rest => "Endblock.bind" :: exprM e ++ endM rest
+  | _, _, _, .bindCall _ args _ _ _ rest => "Endblock.bindCall" :: argsM args ++ endM rest
+  | _, _, _, .bindCallElse _ args _ _ _ err rest =>
+    "Endblock.bindCallElse" :: "Deklaration.gruende" :: argsM args ++ endM err ++ endM rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => "Endblock.bindAxiom" :: argsM args ++ endM rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
     "Endblock.bindAxiomElse" :: argsM args ++ endM err ++ endM rest

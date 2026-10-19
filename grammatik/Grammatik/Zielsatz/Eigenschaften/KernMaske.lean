@@ -68,7 +68,11 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (hF : FertigG M f) : False := by
   obtain ⟨hst, hr⟩ := hF
-  cases hs <;>
+  cases hs with
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    rw [hhead] at hr
+    cases e <;> simp_all [GRest.anRueck, Endblock.istRueck, EndEntfaltbar]
+  | _ =>
     first
     | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp))
     | (rw [‹(M.faeden f).kopf.rest = _›] at hr

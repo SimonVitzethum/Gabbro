@@ -305,6 +305,7 @@ def GRest.okS (P : Programm D) (S S' : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} 
         b.gOk (kandP P S) (regP S') = true ∧ blockOrteP P b ⊆ S ∧ k.okS P S S'
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okS P S S'
+  | _, _, _, .leer => True
 
 section OkS
 

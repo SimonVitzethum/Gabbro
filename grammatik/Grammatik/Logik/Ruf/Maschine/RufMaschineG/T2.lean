@@ -116,6 +116,23 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, Γ, Λ, ρ, .dann (.cons s .nil) (.ende rest)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
          M.lauf, M.start⟩
+  /-- An end-block former that is not a statement (`EndEntfaltbar`) is unfolded into BLOCK
+      position, as the `else` branches are (Track P, 2026-10-18): the block steps then run it. -/
+  | endeForm (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D))
+      (e : Endblock D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
+      (ρ : Env D Γ)
+      (hl : l = false)
+      (hent : EndEntfaltbar e = true)
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, .ende e⟩) :
+      RufSchrittG P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨l, Γ, Λ, ρ, .dann e.alsBlock.2 (.abbruch (Λk := Λ) .leer)⟩⟩,
+            (M.faeden f).spur, (M.faeden f).log⟩,
+         M.lauf, M.start⟩
   | dannBlatt (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (s : Stmt D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ')
