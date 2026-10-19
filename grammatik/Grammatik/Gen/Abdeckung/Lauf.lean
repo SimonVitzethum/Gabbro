@@ -25,9 +25,80 @@ def registerMitglieder (inhalt : String) : List String :=
   (inhalt.splitOn "\n").filterMap fun zeile =>
     if zeile.startsWith "#" || zeile.trimAscii.isEmpty then none else (zeile.splitOn "\t").head?
 
+/-- Reasons of the known gaps. Each is a statement about the bounds and the family, not a claim about the model. -/
+def G_MARKE : String :=
+  "needs a declaration member with marks (typestate), ghost state or result/why contracts that is not in the family; " ++
+  "no member exercises it within the bounds"
+def G_INV : String :=
+  "`Programm.invariante` is the predicate of an invariant; the generator takes it as true (the contracts-true workhorse), " ++
+  "so no generated program carries a non-trivial one"
+def G_ZAHL : String :=
+  "the type of the bound value (a float range, a narrowed or checked integer) is outside the member's finite " ++
+  "alphabet (`bindOk`), so the form is not generated within the bounds"
+def G_ZUSTAND : String :=
+  "needs a program with marks, a `why` type or a continuation/arena state that no member of the family declares"
+def G_GROESSE : String :=
+  "not reached within the bounds: the form needs a larger body or program (calls, axiom calls, register reads, " ++
+  "exchanges, several functions), or a typed context the family lacks"
+
 /-- **The known gaps**: members of the register that no generated program contains within the bounds, each with the
     reason. The list is exact: a gap that is closed is removed, a new gap is a failure. -/
-def bekannteLuecken : List (String × String) := []
+def bekannteLuecken : List (String × String) :=
+  [
+   ("Signatur.erg", G_MARKE),
+   ("Signatur.gruende", G_MARKE),
+   ("Signatur.konsumiert", G_MARKE),
+   ("Signatur.produziert", G_MARKE),
+   ("Deklaration.Marke", G_MARKE),
+   ("Deklaration.stufen", G_MARKE),
+   ("Deklaration.eigner", G_MARKE),
+   ("Deklaration.eigner_nie_erzeugt", G_MARKE),
+   ("Deklaration.geist", G_MARKE),
+   ("Deklaration.ggeist", G_MARKE),
+   ("Res.marke", G_MARKE),
+   ("Vertrag.erg", G_MARKE),
+   ("Vertrag.gruende", G_MARKE),
+   ("Vertrag.produziert", G_MARKE),
+   ("RufPasst.hk", G_MARKE),
+   ("RufPasst.hx", G_MARKE),
+   ("Expr.reaches", G_GROESSE),
+   ("ErgExpr.val", G_GROESSE),
+   ("GleitOp.add", G_ZAHL),
+   ("GleitOp.sub", G_ZAHL),
+   ("GleitOp.mul", G_ZAHL),
+   ("GleitOp.div", G_ZAHL),
+   ("Stmt.assignThru", G_GROESSE),
+   ("Stmt.onTag", G_ZUSTAND),
+   ("Stmt.onWhy", G_ZUSTAND),
+   ("Stmt.advances", G_ZUSTAND),
+   ("Stmt.retires", G_ZUSTAND),
+   ("Stmt.retWhy", G_ZUSTAND),
+   ("Stmt.leave", G_ZUSTAND),
+   ("Stmt.next", G_ZUSTAND),
+   ("Block.cons", G_GROESSE),
+   ("Block.bindCall", G_GROESSE),
+   ("Block.bindCallInd", G_GROESSE),
+   ("Block.bindCallElse", G_GROESSE),
+   ("Block.bindAxiom", G_GROESSE),
+   ("Block.bindAxiomElse", G_GROESSE),
+   ("Block.regRead", G_GROESSE),
+   ("Block.regReadElse", G_GROESSE),
+   ("Block.exchange", G_GROESSE),
+   ("Block.narrow", G_ZAHL),
+   ("Block.check", G_ZAHL),
+   ("Block.float", G_ZAHL),
+   ("Block.floatOf", G_ZAHL),
+   ("Block.floatNarrow", G_ZAHL),
+   ("Endblock.retWhy", G_ZUSTAND),
+   ("Endblock.leave", G_ZUSTAND),
+   ("Endblock.next", G_ZUSTAND),
+   ("Endblock.bindAxiomElse", G_GROESSE),
+   ("Arms.nil", G_GROESSE),
+   ("Arms.cons", G_GROESSE),
+   ("GrundArms.nil", G_GROESSE),
+   ("GrundArms.cons", G_GROESSE),
+   ("Programm.invariante", G_INV),
+  ]
 
 /-- The members that are execution residues of the replay machine G: not terms of a program. -/
 def istRest (m : String) : Bool := m.startsWith "GRest."
@@ -97,30 +168,36 @@ def main (args : List String) : IO UInt32 := do
       if !gewaehlt then continue
       let gr := ((ueber.find? (·.1 == i)).map (·.2)).getD standard
       sag s!"declaration {i}: {z.tabs.length} tables {z.globs.length} statics {z.locks.length} locks {z.fns.length} functions  (bodies <= {gr.nb}, skeletons <= {gr.kmax}, one-change <= {gr.kmut})"
-      let ws : List z.deklaration.Fn := z.wurzeln
+      -- the declared starts the question is asked for: the first root alone, and every root
+      let wsA : List z.deklaration.Fn := z.wurzeln.take 1
+      let wsB : List z.deklaration.Fn := z.wurzeln
+      let wsListe : List (List z.deklaration.Fn) := if wsA == wsB then [wsA] else [wsA, wsB]
+      let ws := wsA
       let t0 := z.tabellen gr.nb false false
       let t1 := z.filtere true true t0
       let t2 := z.filtere false true t0
       let t3 := z.filtere true false t0
       let mut dG := 0
       let mut dB := 0
-      for k in List.range (gr.kmax + 1) do
-        if k ≥ 1 then
-          let kl ← messeGroesse z t1 t2 t3 k ws
-          G := G.plus kl.gueltig
-          dG := dG + kl.gueltig.n
-          for c in List.range 10 do
-            Bc := Bc.set! c ((Bc.getD c {}).plus (kl.nur.getD c {}))
-            dB := dB + (kl.nur.getD c {}).n
-      for k in List.range (gr.kmut + 1) do
-        if k ≥ 1 then
-          let (v, kl) := z.mutanten t1 k ws
-          let n := (List.range 10).foldl (fun a c => a + (kl.nur.getD c {}).n) 0
-          if v > 0 then
-            sag s!"    one change, size {k}: {v} valid programs changed, refused by exactly one component {(List.range 10).map fun c => (kl.nur.getD c {}).n}"
-          for c in List.range 10 do
-            Bc := Bc.set! c ((Bc.getD c {}).plus (kl.nur.getD c {}))
-          dB := dB + n
+      for w in wsListe do
+        sag s!"  starts {w.length} of {z.wurzeln.length} roots"
+        for k in List.range (gr.kmax + 1) do
+          if k ≥ 1 then
+            let kl ← messeGroesse z t1 t2 t3 k w
+            G := G.plus kl.gueltig
+            dG := dG + kl.gueltig.n
+            for c in List.range 10 do
+              Bc := Bc.set! c ((Bc.getD c {}).plus (kl.nur.getD c {}))
+              dB := dB + (kl.nur.getD c {}).n
+        for k in List.range (gr.kmut + 1) do
+          if k ≥ 1 then
+            let (v, kl) := z.mutanten t1 k w
+            let n := (List.range 10).foldl (fun a c => a + (kl.nur.getD c {}).n) 0
+            if v > 0 then
+              sag s!"    one change, size {k}: {v} valid programs changed, refused by exactly one component {(List.range 10).map fun c => (kl.nur.getD c {}).n}"
+            for c in List.range 10 do
+              Bc := Bc.set! c ((Bc.getD c {}).plus (kl.nur.getD c {}))
+            dB := dB + n
       -- programs with every contract, at small bounds (the unreduced statement)
       if i < 3 then
         for k in List.range (gr.kmut + 4) do

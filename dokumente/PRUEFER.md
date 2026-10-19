@@ -1203,51 +1203,82 @@ closed or named:
 ### Completeness against the model: the generator of valid programs, proved complete (2026-10-18)
 
 A corpus count cannot answer completeness (above), so the denominator is the model itself, and the generator
-of programs is a Lean definition with its own proof: `grammatik/Grammatik/Gen/Erzeuger/`. No syntax is written
-by hand; the generator is read off the model's intrinsically typed families.
+of programs is a Lean definition with its own proof: `grammatik/Grammatik/Gen/`. No syntax is written
+by hand; the generator is read off the model's intrinsically typed families. Four parts.
 
-* **What it generates**: every `Programm D` (per invariant its predicate, per function `requires`, `ensures`,
-  a body that does not fall off, the handler flag) over a declaration `D` with complete enumerations
-  (`Aufz D`: tables, fields, statics, locks, marks, functions, invariants, axioms, registers, assumptions).
-  Terms are intrinsically typed, so every generated term is WELL TYPED; every proof argument of a rule
-  (`darf`, `gdarf`, `RufPasst`, `Perm`, the lock-rank premise, the write rights) is DECIDED by the generator
-  (`if h : P then ... else []`), so a generated term carries the rule's own premise as a proof.
-* **How**: lists of dependent pairs `(type, term)` by fuel; one clause per constructor (`Expr` 44,
-  `Stmt` 27, `Block` 18, `Endblock` 8, `Arms`/`GrundArms`/`Args`/`ErgExpr`/`NutzlastExpr`/`Var`); the size of a
-  term counts every node and the magnitude of every free number (literal, bound, width, count, retry budget).
-* **Theorems** (kernel-checked, `propext`/`Classical.choice`/`Quot.sound` only):
-  `genExpr_vollst`, `genRek_vollst` (statements, blocks, end blocks), `genProg_vollst`: a term or program of size
-  at most `m` is generated. `Gueltig.lean`: with `valid P := AkzeptiertX P S fs ls cs ws = true`
-  **(S)** `gueltig_korrekt` (a generated valid program is accepted), **(C)** `gueltig_vollst`
-  (`valid P ∧ groesseProg P ≤ m → P ∈ genGueltig .. m`), `gueltig_alle` (the union over `m` is EVERY valid
-  program). The same for the ten components of `AkzeptiertX` (`komp c`: fragment, closedness, footprint, lock
-  ranks, lock sites, roots, single pool, race freedom, answers, masks): `NurAn c P` = component `c` false and
-  the other nine true; `bad_korrekt`, `bad_vollst`, `bad_alle`: the single-fault refusals of every component are
-  generated, bounded by size, and only those.
-* **Witnesses and a planted defect** (`Probe.lean`, a concrete declaration `probeD`): the generator produces
-  literals, negations, table slots; `-0` (size 2) is in `genExpr 2` by the theorem; a generator WITHOUT the
-  clause of `neg` does not contain it, decided by the kernel (`defekt_luecke`); the empty program is accepted by
-  `AkzeptiertX` (decided) and generated at its size (`probeP_erzeugt`); the same program with one root declared
-  twice is refused by exactly component 6 (decided) and generated under that label (`probeP_bad_erzeugt`).
-* **Named limits of the statement** (exact, nothing weakened):
-  (1) the quantifier is `∀ D` with an `Aufz D`, not a generator OF declarations: a `Deklaration` is a structure
-  of types and functions with proofs, so the register members of the declaration side (`Deklaration` 51,
-  `Signatur` 9, `Vertrag` 7, `Ty` 9, `Regklasse` 5, `Res` 2, `RufPasst` 6, and the arena/dyn/free-list/
-  continuation families, 30; 119 of 235) are parameters, not generated; a generator of small concrete
-  declarations is a separate piece of work. The 116 register members of the term level are covered (`Expr` 42,
-  `Stmt` 27, `Block` 18, `Endblock` 8, `Arms` 2, `GrundArms` 2, `Args` 2, `ErgExpr` 2, `NutzlastExpr` 2,
-  `Var` 2, `Programm` 5, `GleitOp` 4; the proof cases on each constructor, so a new one stops the build).
-  (2) acceptance is a property of the WHOLE program (race freedom, footprint, single pool are over all
-  functions), not prefix-closed, so the program-level generators are generate-then-decide over the complete
-  typed enumeration: valid by definition, not by yield; growing a program with acceptance as an invariant
-  exists only for the surface fragment the elaborator lowers.
-  (3) there is no G -> source text printer: the model has no surface syntax, and the elaborator
-  (`elabU`/`lowerAllg`) maps source into a small fragment (statics, tables, locks, `let`, `if`, `traverse`
-  over slots, statement calls, `return`) whose image is a tiny part of the generated set; an inverse is the
-  elaborator's inverse and belongs to Track P. So a generated program is a G term; the round trip
-  print, parse, elaborate holds only where a source form exists.
-  (4) the enumeration is exhaustive and therefore exponential in the size bound: it is the statement's
-  witness, not a sampler; the bounded `decide` instances are kept at size 2 on a one-table probe.
+**1. Programs by exact size** (`Erzeuger/`). A stream `Sz` gives the items of EXACT size `k` (`Nat -> List a`); the
+combinators (`bind` adds sizes, `knoten` +1, `wahl` free finite choice, `wenn` a decided guard, `bindR`/`bindS` rest
+stream built once per first-part size or per key) come with membership lemmas, and every constructor clause
+(`Expr` 44, `Stmt` 27, `Block` 18, `Endblock` 8, `Arms`/`GrundArms`/`Args`/`ErgExpr`/`NutzlastExpr`/`Var`) is proved
+complete by a chain of them. Terms are intrinsically typed, so every generated term is WELL TYPED and every proof
+argument of a rule (`darf`, `gdarf`, `RufPasst`, `Perm`, the lock-rank premise, the write rights) is DECIDED by the
+generator. The table by size (`genE`, `genT`) shares sub-results by (type, context, held locks); the child tables of
+a node are built once, lazily; a node of bound `n+1` reads expressions up to size `n` only. This replaces the
+exhaustive enumeration by fuel (per-component product: 9 / 142 / ~10^5 / killed at sizes 1 / 2 / 3 / 4; programs of
+size 2: 46 464, none valid).
+
+**2. Reduction, and what it costs.** The free numbers (literals, bounds, widths, case lists, float ranges, the types
+a `let` may bind) are a FINITE ALPHABET per declaration, a class `Zahlen` whose members cost zero (`Zahlen.kanon`);
+`Zahlen.exakt M` is the original statement (cost = magnitude). The theorems quantify over every `Zahlen`
+instance and hold for sizes below `unendlich`: so a theorem about a size bound is about the programs whose numbers
+and bound types the alphabet names. That is the stated reduction; it is NOT proved to preserve equivalence classes
+of programs (that every program is equivalent to one over the alphabet is not claimed). Sharing, lazy child tables
+and the size cut are not reductions of the set. Program level (`Programm.lean`, `Gueltig.lean`): a skeleton is the
+bodies and handler flags per function (`Haut`), contracts `true` (the workhorse; `progS`/`progS_vollst` generate
+all programs including contracts, and contracts enter the measurement per size); pruning by prefix-closed
+components: components 3 (lock ranks) and 8 (answers) are conjunctions over the functions, so each body is pruned
+alone; 4 (lock sites) and 5 (roots) depend only on the start list and parameters; 0, 1, 2, 6, 7, 9 (fragment,
+closedness, footprint, single pool, race freedom, masks) are decided on the whole program at the end. The
+contracts-true reduction is NOT proved valid-preserving: footprint reads the carriers of the contracts.
+
+**3. Theorems** (kernel-checked, `propext`/`Classical.choice`/`Quot.sound` only): `genE_vollst`, `genT_vollst`
+(by induction on fuel, then size), `hautS_vollst`, `progS_vollst`; with `valid P := AkzeptiertX P S fs ls cs ws = true`
+**(S)** `gueltig_korrekt`, **(C)** `gueltig_vollst` (a valid program of size at most `m` over the alphabet is
+generated), `gueltig_alle`; the ten components of `AkzeptiertX` (`komp c`); `NurAn c P` = component `c` false and the
+nine others true; `bad_korrekt`, `bad_vollst`, `bad_alle`. Over the family (`Familie/`): `fam_gueltig_vollst`,
+`fam_bad_vollst` for EVERY member. `Probe.lean`: a concrete declaration, a planted defect (a generator without the
+clause of `neg` lacks `-0`, decided by the kernel), a valid program generated, a program refused by exactly component
+6 generated under that label.
+
+**4. A family of declarations and the coverage measured** (`Familie/`, `Abdeckung/`).
+`Spez` is plain data (tables with fields and transitions, statics with guard and payload, locks with ranks and masks,
+marks, signatures, functions, invariants, foreign bodies, registers of every class); `Spez.deklaration` reads every
+`Deklaration` field off it, and the four proof fields hold BY CONSTRUCTION for every specification (the produced marks
+are filtered, the shared flag is conjoined with the guard, a function that writes an invariant's carrier holds the
+invariant's locks). `Aufz` is an instance. Sixteen members `z0 .. z15` exercise the fields: plain tables, statics,
+several functions, locks and invariants, every register class, an empty-range axiom, two writers of one table. The
+alphabets are derived from the specification (`Spez.ganze/werte/naturen/paare/summen/bindTypen/zahlen`).
+`Abdeckung/Mitglieder.lean` names the register members a term contains by TOTAL matches (a new constructor stops the
+build), plus 459 cells (a constructor under `@loop`/`@held`, a statement directly inside a container);
+`Messung.lean` classifies every skeleton of an exact size into valid / refused by exactly one component / several, and
+counts per member with the least size; the driver `Lauf.lean` prints the member table and exits 1 on a register
+member covered by nothing and not listed in `bekannteLuecken` (each with its reason), or listed and covered. Refusals
+come from the enumeration (single-fault classes) and from valid programs by ONE change (a start added, a handler flag
+set, a lock family that protects a carrier its lock does not guard). The guardian `pruefe-lean.py` stage 6 builds the
+native driver and runs it. Counts of programs are over the alphabet and the family, not over the language.
+
+**Measured (2026-10-18, native, `ABDECKUNG_GRENZEN`).** Bodies up to 7 nodes, skeletons up to 7, one change up to 5
+(member 7, a register-only declaration: 6/6/4; its generation at size 7 did not finish in 10 minutes, compute-bound at
+about 100 MB: 95 s at size 6): 52,500 valid programs and 596 single-fault refusals over 16 declarations in 1,446 s,
+peak 650 MB. Refusals by component `[0..9]`: `[0, 0, 0, 0, 8, 16, 326, 96, 142, 8]`. Register members: 235; covered by
+a valid program 160 (68 %), by a single-fault refusal 111 (47 %), by either 160; 9 states (enumerated, `Zustaende`)
+and 13 execution residues of machine G (`GRest`, not terms) are reported separately; 53 members are known gaps with
+reasons (marks/typestate/ghost/result contracts: no member declares them; the contract predicate of an invariant is
+taken `true`; float ranges, narrowed/checked integers and the calls/register reads that need larger bodies). Cells:
+4 of 459 covered by valid programs, 1 by a refusal: a constructor in a loop or lock body needs size at least 5 with an
+empty body, so the cells are the weakest part of the measurement. Components 0, 1, 2, 3 of the checker have NO
+single-fault refusal in the family within the bounds. Maximum for the leanest declaration (one table, one function):
+size 8, 56,906 valid skeletons at size 8, 255 s, 2.3 GB (the table of expressions grows about x10 per size; size 9
+is outside the 16 GB cap by this growth). Per size for that declaration: 2 / 0 / 8 / 56 / 532 / 5,170 / 56,906
+skeletons of sizes 2, 3, 4, 5, 6, 7, 8.
+
+* **Named limits.** (1) The theorems quantify over a declaration with its `Aufz`; the family is a hand-written set of
+  sixteen, not a generator of every declaration. (2) Acceptance is a property of the WHOLE program and not
+  prefix-closed; the program level is generate-and-decide over the pruned skeletons: valid by definition, not by yield.
+  (3) There is no G -> source text printer (the model has no surface syntax; the elaborator `elabU`/`lowerAllg` maps
+  into a small fragment, its inverse belongs to Track P), so a generated program is a G term; the checker and the
+  compiler are NOT measured here. (4) The alphabet reduction and the contracts-true reduction above. (5) The
+  enumeration is exponential in the size bound.
 
 Findings of the FIRST generator (random surface trees, deleted with this change; the programs are regenerable
 from the repository history before it): the checker refused 46 of 90 programs the model accepted, in five classes:

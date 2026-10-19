@@ -52,9 +52,11 @@ def Spez.ganze (z : Spez) : List Int :=
   ([0, 1] ++ z.tabs.flatMap (fun (t : TabZ) => [t.count, t.count - 1] ++ t.felder.flatMap fun (f : FeldZ) =>
       f.erlaubt.flatMap fun (p : Int × Int) => [p.1, p.2]) ++ z.typen.flatMap tyInts).eraseDups
 
-/-- The alphabet of naturals: 0, 1, the table numbers, the widths of a byte and a word, every number a type names. -/
+/-- The alphabet of naturals: 0, 1, the table numbers, every number a type names, the reasons of a signature; the
+    widths and byte counts 2 and 8 only where the declaration has a byte. -/
 def Spez.naturen (z : Spez) : List Nat :=
-  ([0, 1, 2, 8] ++ (List.range z.tabs.length) ++ z.typen.flatMap tyNats ++ z.sigs.map (fun (s : SigZ) => s.gruende) ++
+  ([0, 1] ++ (if z.typen.any (fun τ => match τ with | .int _ 255 => true | _ => false) then [2, 8] else []) ++
+    (List.range z.tabs.length) ++ z.typen.flatMap tyNats ++ z.sigs.map (fun (s : SigZ) => s.gruende) ++
     z.axs.map (fun (a : AxZ) => a.gruende)).eraseDups
 
 /-- The alphabet of float ranges. -/
@@ -158,7 +160,7 @@ def z6 : Spez where
   tabs := [{ count := 2, felder := [{ typ := i3 }] }]
   globs := [{ typ := b1 }]
   axs := [{ params := [i3], erg := some i3 }, { schreibt := [0], gschreibt := [0] }, { erg := some .never },
-          { params := [b1], erg := some i3, gruende := 2 }]
+          { params := [b1], erg := some i3, gruende := 2 }, { erg := some (.int 1 0) }]
   sigs := [{ schreibt := [0], gschreibt := [0] }]
 
 /-- 7 -- device registers of every class, a mirror, a register without a promise. -/
@@ -214,8 +216,14 @@ def z14 : Spez where
   sigs := [{ schreibt := [0], gschreibt := [0] }, { schreibt := [1], haelt := [0] }]
   fns := [0, 1]
 
+/-- 15 -- two functions that write the same unguarded table (a second start races with the first). -/
+def z15 : Spez where
+  tabs := [{ count := 2, felder := [{ typ := b1 }] }]
+  sigs := [{ schreibt := [0] }, { schreibt := [0] }]
+  fns := [0, 1]
+
 /-- **The family**. -/
-def familie : List Spez := [z0, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12, z13, z14]
+def familie : List Spez := [z0, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12, z13, z14, z15]
 
 /-- The members of the family. -/
 abbrev Fam := Fin familie.length
