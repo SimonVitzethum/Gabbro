@@ -512,3 +512,13 @@ import Grammatik.Gen.Abdeckung.Mitglieder
 import Grammatik.Gen.Abdeckung.Erklaerung
 import Grammatik.Gen.Abdeckung.Zustaende
 import Grammatik.Gen.Abdeckung.Messung
+import Grammatik.Adaequanz.Baum
+import Grammatik.Adaequanz.Schichten
+import Grammatik.Adaequanz.Hinlaenglich
+import Grammatik.Adaequanz.Minimal
+import Grammatik.Adaequanz.Gegenmodell
+import Grammatik.Adaequanz.Ueberdeckung
+import Grammatik.Adaequanz.Muster
+import Grammatik.Adaequanz.Zeugen
+import Grammatik.Adaequanz.Gabbro.Signatur
+import Grammatik.Adaequanz.Gabbro.Zaehlung
