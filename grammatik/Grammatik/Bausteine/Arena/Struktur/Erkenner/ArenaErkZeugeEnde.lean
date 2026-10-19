@@ -8,6 +8,9 @@
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
 
+-- v4.35: this linter exceeds its heartbeat budget on the long executed-block proofs below.
+set_option linter.constructorNameAsVariable false
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik.ArenaDyn Gabbro.Grammatik.ArenaKette
@@ -33,6 +36,7 @@ def kombiEndeOk : Bool :=
 
 theorem kombiEndeOk_wahr : kombiEndeOk = true := by decide +kernel
 
+set_option maxHeartbeats 1000000 in
 /-- **Run on the real world:** the function body returns, in a world where the arena invariant holds, with the slot `1` hung
     as the left child of the root `0` -- as the recognizer promised. -/
 theorem kombiEnde_zeuge : ∃ σ' : World FD2, execEnd (V := FV2) oF2 0 rF2 kombiEnde wk .nil = .zurueck σ' () ∧

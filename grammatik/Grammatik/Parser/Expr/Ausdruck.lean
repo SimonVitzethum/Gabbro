@@ -690,7 +690,7 @@ theorem pp_wahr : beqTop (parsePrint (.tru)) (.ok (.tru)) = true := by
   decide
 theorem pp_falsch : beqTop (parsePrint (.fls))
     (.ok (.fls)) = true := by
-  decide
+  decide +kernel
 theorem pp_not : beqTop (parsePrint (.un "!" (.variable "y")))
     (.ok (.un "!" (.variable "y"))) = true := by
   decide

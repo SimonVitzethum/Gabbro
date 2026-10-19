@@ -76,7 +76,7 @@ lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence na
 ```
 
 `elan`/`lake` come from [leanprover/elan](https://github.com/leanprover/elan); Lean
-4.33.1 pins itself from `grammatik/lean-toolchain`. The only dependency is
+4.35.0 pins itself from `grammatik/lean-toolchain`. The only dependency is
 [Mathlib](https://github.com/leanprover-community/mathlib4), pinned to the tag for the same
 toolchain in `grammatik/lakefile.toml`; the first build fetches it (about 7.5 GB with precompiled
 oleans via `lake exe cache get`). The goal theorem itself does not import it, and

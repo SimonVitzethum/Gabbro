@@ -7,7 +7,7 @@ defaultTargets = ["Grammatik"]
 weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true"]
 
 # Mathlib ALLOWED EVERYWHERE since 2026-10-08 (Simon: "mathlib darf ueberall genutzt werden").
-# Pinned to the tag whose toolchain equals this project's (v4.33.1); precompiled oleans via
+# Pinned to the tag whose toolchain equals this project's (v4.35.0); precompiled oleans via
 # `lake exe cache get` -- a source build is not part of any lane. NO import of `programmlogik`
 # or `passlogik`: this project is about the GRAMMAR alone. Nothing here reads the checker,
 # the emitter, or `Body.lean`.
@@ -15,7 +15,7 @@ weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true"]
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "0df444a360eaa60ab8c11dca51a86af692955474"
+rev = "56a005855ea17e0b0958f73ec801ae140b0a1679"
 
 [[lean_lib]]
 name = "Grammatik"

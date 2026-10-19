@@ -85,10 +85,8 @@ def klasse (F : Format) (g : GBits F) : Klasse :=
 def wf (F : Format) (g : GBits F) : Prop :=
   g.bexp ≤ F.bexpMax ∧ g.frac < 2 ^ F.fracBits
 
-instance (F : Format) (g : GBits F) : Decidable (wf F g) :=
-  Nat.decLe _ _ |>.casesOn (fun h => isFalse (fun w => h w.1))
-    (fun h1 => (Nat.decLt _ _).casesOn (fun h => isFalse (fun w => h w.2))
-      (fun h2 => isTrue ⟨h1, h2⟩))
+instance (F : Format) (g : GBits F) : Decidable (wf F g) := by
+  unfold wf; infer_instance
 
 /-- Bit pattern as a `Nat` (sign high, then exponent, then significand). -/
 def zuBits (F : Format) (g : GBits F) : Nat :=

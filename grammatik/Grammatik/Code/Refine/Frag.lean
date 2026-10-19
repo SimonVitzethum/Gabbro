@@ -291,7 +291,7 @@ theorem slotAddr_frag (lay : Layout D) (hL : LayoutOk lay) (t : D.Tab) (f : D.Fe
     have hw8 := Ar.wid_pos 0 (D.count t - 1)
     have hcvf := cvt_frag (twid (.int 0 (D.count t - 1))) (twid (.int 0 (2 ^ Conf.wbits - 1)))
       (tsgn (.int 0 (D.count t - 1))) oi r m rs k hoi
-      (fitS_of_fits hfit (by omega) hk0 (by omega)) hil
+      (fitS_of_fits hfit (Nat.lt_of_lt_of_le (by decide : 0 < 8) hw8) hk0 (Int.le_sub_one_of_lt hk1)) hil
     rw [hcv] at hcvf
     obtain ⟨rs1, hs1, hr1, hag1, hlt1, hev1⟩ := hcvf
     have e64 : twid (.int 0 (2 ^ Conf.wbits - 1)) = Conf.wbits := wid_word

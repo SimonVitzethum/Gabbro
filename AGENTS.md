@@ -484,7 +484,7 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 - **ELAN_TOOLCHAIN leak rebuilds everything under the wrong Lean** (measured
   2026-10-04: desktop session exported `v4.34.1`, agents inherited it, full
   incompatible rebuild burned RAM/swap for garbage while the repo pins
-  v4.33.1). `lean-bau`/`lean-probe` start lake with `env -u ELAN_TOOLCHAIN`;
+  v4.35.0). `lean-bau`/`lean-probe` start lake with `env -u ELAN_TOOLCHAIN`;
   every clone copy carries the same line (copies are local-only, re-apply
   after re-cloning). After a toolchain incident replace poisoned
   worktree `.lake` caches with the warm master cache, never resume them.
@@ -544,11 +544,11 @@ names, invented lemma names, uncommitted work, ended turns. The HARD-RULES
 preamble (`lanes/VORSPANN.md` rules 15–16) now carries the toolchain truth; this
 section is the coordinator-side record.*
 
-- **Toolchain truth, not training memory.** `grammatik/` pins Lean v4.33.1 with
+- **Toolchain truth, not training memory.** `grammatik/` pins Lean v4.35.0 with
   NO mathlib: `split` (never `split_ifs`), `omega`/`decide`/`simp` available,
   `norm_num`/`ring_nf` absent. **Mathlib is allowed EVERYWHERE since 2026-10-08** (Simon: "mathlib darf
   ueberall genutzt werden"); `grammatik/` requires it pinned to the tag with the
-  same toolchain (v4.33.1, `grammatik/lakefile.toml`; precompiled via `lake exe
+  same toolchain (v4.35.0, `grammatik/lakefile.toml`; precompiled via `lake exe
   cache get`, ~7.5 GB under `.lake/packages`, fetched by the coordinator because
   lanes have no network). It is still not a fix for tactic-name errors: read the
   names, do not guess. `gabbro_ziel` must stay on exactly `propext`,

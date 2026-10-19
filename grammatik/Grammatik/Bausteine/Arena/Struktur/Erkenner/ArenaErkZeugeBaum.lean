@@ -20,6 +20,9 @@
 -/
 import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
 
+-- v4.35: this linter exceeds its heartbeat budget on the long executed-block proofs below.
+set_option linter.constructorNameAsVariable false
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik.ArenaDyn Gabbro.Grammatik.ArenaKette
@@ -102,12 +105,13 @@ theorem erk_baumHang : ∃ a' : Abs, Erk KB Abs.leer baumHang a' :=
         (.there .here : Var G2' _) rfl fdarf vollG2 .nil (by simp [Abs.ext, Var.pos])
         (by simp [Abs.ext, Var.pos]) rein_vollG2 (Erk.nil _)))⟩
 
+set_option maxHeartbeats 1000000 in
 /-- **Run on the real world:** the tree `2 (left 0)` gets the right child `1` (the slot that came off the free list),
     the free list is empty, and the invariant holds -- as the recognizer promised. -/
 theorem baumHang_zeuge : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF baumHang w0 .nil = .ok σ' .nil ∧
     KB.Ok σ' ∧ RR.wert σ' 2 = 1 ∧ LL.wert σ' 2 = 0 ∧ FA.kopfSt σ' = 4 := by
   obtain ⟨σ', hrun, hf⟩ : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF baumHang w0 .nil = .ok σ' .nil ∧
-      (RR.wert σ' 2 = 1 ∧ LL.wert σ' 2 = 0 ∧ FA.kopfSt σ' = 4) := ⟨_, rfl, by decide⟩
+      (RR.wert σ' 2 = 1 ∧ LL.wert σ' 2 = 0 ∧ FA.kopfSt σ' = 4) := ⟨_, rfl, by decide +kernel⟩
   obtain ⟨a', h⟩ := erk_baumHang
   have hpost := erk_koerper oF 0 rF KB h w0 .nil ok_w0B
   rw [hrun] at hpost

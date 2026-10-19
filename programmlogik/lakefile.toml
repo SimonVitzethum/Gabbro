@@ -9,13 +9,13 @@ weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true"]
 # Scope is NARROW on purpose: only `Gabbro/Sicherheit/*` may import Mathlib;
 # `Body.lean`, the grammar and `passlogik` stay dependency-free, so no generated
 # obligation and no other project inherits the dependency.
-# Pinned to the tag whose toolchain is v4.33.1 (Mathlib allowed everywhere since 2026-10-08, same pin as grammatik), with precompiled
+# Pinned to the tag whose toolchain is v4.35.0 (Mathlib allowed everywhere since 2026-10-08, same pin as grammatik), with precompiled
 # oleans via `lake exe cache get` -- a source build is not part of any lane.
 
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "0df444a360eaa60ab8c11dca51a86af692955474"
+rev = "56a005855ea17e0b0958f73ec801ae140b0a1679"
 
 [[lean_lib]]
 name = "Gabbro"

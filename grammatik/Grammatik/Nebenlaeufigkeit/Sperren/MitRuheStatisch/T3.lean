@@ -21,7 +21,6 @@ theorem ruftB_mitRuhe (f g : D.Fn) : ruftB P.mitRuhe (some f) (some g) = ruftB P
   · funext n
     show (!decide (n + 1 = D.sig g + 1)) = !decide (n = D.sig g)
     congr 1
-    exact decide_eq_decide.mpr ⟨fun e => Nat.succ.inj e, fun e => e ▸ rfl⟩
   · rfl
 
 theorem ruftB_mitRuhe_ruhe_ziel (hT : ∀ f, mE (mVoll D) (P.rumpf f) = true) (f : D.Fn) :
