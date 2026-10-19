@@ -162,6 +162,8 @@ def tabelle : List Konstr := [
   ⟨"Endblock", "next", [], 1, 0⟩,
   ⟨"Endblock", "cons", ["Stmt", "Endblock"], 0, 0⟩,
   ⟨"Endblock", "bind", ["Expr", "Endblock"], 0, 0⟩,
+  ⟨"Endblock", "bindCall", ["Args", "Endblock"], 3, 1⟩,
+  ⟨"Endblock", "bindCallElse", ["Args", "Endblock", "Endblock"], 3, 1⟩,
   ⟨"Endblock", "bindAxiom", ["Args", "Endblock"], 5, 1⟩,
   ⟨"Endblock", "bindAxiomElse", ["Args", "Endblock", "Endblock"], 6, 1⟩,
   ⟨"Arms", "nil", [], 0, 0⟩,
@@ -181,19 +183,19 @@ run_meta pruefeTabelle
 /-- The rows of a family. -/
 def zeilen (f : String) : List Konstr := tabelle.filter (·.familie == f)
 
-/-- 105 constructors: `Expr` 42, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 27, `Block` 18, `Endblock` 8,
+/-- 107 constructors: `Expr` 42, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 27, `Block` 18, `Endblock` 10,
     `Arms` 2, `GrundArms` 2. -/
-theorem anzahl_konstruktoren : tabelle.length = 105 ∧
+theorem anzahl_konstruktoren : tabelle.length = 107 ∧
     ["Expr", "NutzlastExpr", "Args", "ErgExpr", "Stmt", "Block", "Endblock", "Arms", "GrundArms"].map
-      (fun f => (zeilen f).length) = [42, 2, 2, 2, 27, 18, 8, 2, 2] := by decide
+      (fun f => (zeilen f).length) = [42, 2, 2, 2, 27, 18, 10, 2, 2] := by decide
 
 /-- The arity histogram: how many constructors have 0, 1, 2, 3 children. -/
-theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [25, 27, 40, 13] := by
+theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [25, 27, 41, 14] := by
   decide
 
 /-- The premises (each one local refusal cell of Theorem 4) and the child positions (each one "child of the wrong
     sort or index" refusal cell). -/
-theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 124 ∧
-    (tabelle.map (·.kinder.length)).sum = 146 := by decide
+theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 130 ∧
+    (tabelle.map (·.kinder.length)).sum = 151 := by decide
 
 end Gabbro.Grammatik.Adaequanz.GabbroSig

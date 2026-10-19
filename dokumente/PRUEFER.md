@@ -1903,9 +1903,9 @@ families from the environment and fails the build when the table drifts):
 | `NutzlastExpr`, `Args`, `ErgExpr` | 2 + 2 + 2 | 3 / 2 / 1 / 0 | 0 | 4 | 0 |
 | `Stmt` | 27 | 6 / 10 / 7 / 4 | 41 | 36 | 33 |
 | `Block` | 18 | 1 / 3 / 6 / 8 | 26 | 39 | 21 |
-| `Endblock` | 8 | 3 / 1 / 3 / 1 | 15 | 10 | 3 |
+| `Endblock` | 10 | 3 / 1 / 4 / 2 | 21 | 15 | 5 |
 | `Arms`, `GrundArms` | 2 + 2 | 2 / 0 / 2 / 0 | 0 | 4 | 0 |
-| **all** | **105** (`anzahl_konstruktoren`) | **25 / 27 / 40 / 13** (`stelligkeiten`) | **124** | **146** (`praemissen_und_kinder`) | 88 |
+| **all** | **107** (`anzahl_konstruktoren`) | **25 / 27 / 41 / 14** (`stelligkeiten`) | **130** | **151** (`praemissen_und_kinder`) | 90 |
 
 The largest arity is 3; the data arguments (declared names, numbers, types) form each constructor's label, so the
 abstract signature of one declaration has `Σ_c λ_c` constructors with `λ_c` the product of the label domains
@@ -1949,11 +1949,11 @@ Prop-typed argument of the constructor) and one per child position whose index d
 held set, loop-only statement outside a loop); accepted cells: per constructor and context class (`l`, `Λ` empty or
 not). Plus the pattern cells of the ten components: the assignments to the atoms each component's quantifier-free
 kernel reads (`Gabbro/Zaehlung.lean`). The single-fault programs number at least the isolable refusal cells; with the counts of the
-signature table: **124 premise cells + 146 child-position cells = 270 local refusal cells** (one per premise and per
+signature table: **130 premise cells + 151 child-position cells = 281 local refusal cells** (one per premise and per
 child position, under H2/H3; that each is isolable, i.e. violated alone in some program, is argued per rule, not proved),
 and at most **4 540 pattern cells** of the ten components (`musterZellen_wert`; atoms per component 4, 3, 12, 2, 2, 2, 7,
 8, 3, 4), of which the refusing ones each need their own single-fault program. So in class (ii)
-`271 ≤ |M| ≤ 270 + 4 540 + κ_valid` single-fault and valid programs, with `κ_valid` valid programs covering the
+`282 ≤ |M| ≤ 281 + 4 540 + κ_valid` single-fault and valid programs, with `κ_valid` valid programs covering the
 accepted cells (the coarse ones are the generator's 459). This count does not grow with the program.
 
 **(iii) Compiler** (Theorem 3, H8). Cells = constructor × type class of the node and its operands × `l` over the
