@@ -113,6 +113,9 @@ theorem fE_mono {l : Bool} :
       · cases s <;> simp_all [fNach]
   | _, _, e, .bind _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
+  | _, _, e, .bindCall g _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
+      exact ⟨h.1.imp id hw, h.2⟩
   | _, _, e, .bindAxiom _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
@@ -135,6 +138,7 @@ theorem fR_mono (e : Bool) :
   | _, _, _, .wartet b k, w, w', hw, h => ⟨fB_mono Φ e b w w' hw h.1, h.2⟩
   | _, _, _, .wartetSonst _ err b k, w, w', hw, h => ⟨h.1, fB_mono Φ e b w w' hw h.2.1, h.2.2⟩
   | _, _, _, .abbruch _, _, _, _, h => h
+  | _, _, _, .leer, _, _, _, h => h
 
 theorem fR_von_false (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (k : GRest D V l Γ Λ) (w : Bool) (h : k.fR Φ e false) : k.fR Φ e w :=
@@ -155,6 +159,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .cons s rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bind _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindCall _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
@@ -462,6 +468,13 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
     simp only [GRest.fR, fE, fB, Bool.and_eq_true] at hk ⊢
     rw [fNach_entf Φ w s hent] at hk
     exact ⟨⟨hk.1, trivial⟩, hk.2⟩
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    dsimp only; rw [rufUpdateG_self]
+    refine ⟨?_, hst, hlog⟩
+    dsimp only; rw [hw]
+    rw [hhead] at hk
+    simp only [GRest.fR, fB_alsBlock] at hk ⊢
+    exact ⟨hk, trivial⟩
   | dannNarrowElse =>
     kopfF
     exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩

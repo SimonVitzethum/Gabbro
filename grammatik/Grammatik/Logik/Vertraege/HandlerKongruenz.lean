@@ -529,6 +529,19 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
   | .bind e rest, σ, ρ => by
       simp only [execEnd]
       exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .bindCall g args he hp hr rest, σ, ρ => by
+      simp only [execEnd]
+      rcases hR g (σ.lese Λ args.orte)
+          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+        h | ⟨m, h1, hE⟩
+      · rw [h]
+        cases hx : R₂ g (σ.lese Λ args.orte)
+            (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+        | ok σ' v => exact (Endblock.kongruent hR rest σ' _).schrumpf
+        | why σ' r => exact Or.inl rfl
+        | logik e => exact Or.inl rfl
+        | hardware e => exact Or.inl rfl
+      · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .bindAxiom a args he hp hw hL hg rest, σ, ρ => by
       simp only [execEnd]
       cases hx : axiomAntwort O a (σ.lese Λ args.orte)

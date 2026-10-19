@@ -62,6 +62,11 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     refine Or.inl ⟨_, _, _, _, .dann (.cons s .nil) (.ende rest), _, rufUpdateG_self _ _ _, RestK.dann _ _ (BlockR.cons s .nil hs BlockR.nil) (by simp [Block.kOk, ho.1]) (RestK.ende rest hr ho.2), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (semK_endeEntf O passes R s rest _ _)
+  | endeForm l2 Γ2 Λ2 e ρ2 hl hent hhead =>
+    rw [hR] at hhead
+    cases hhead
+    obtain ⟨he, ho⟩ := hcov.ende_inv
+    cases he <;> simp [EndEntfaltbar] at hent
   | dannBlatt l2 Γ2 Λ2 Λ2' Λ2'' s rest k ρ2 hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     rw [hR] at hhead
     cases hhead

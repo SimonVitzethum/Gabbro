@@ -35,10 +35,16 @@ def bindcall_ok : String :=
   "module m { impl fn h(a : u32 in 0 .. 9) -> u32 in 0 .. 9 { return a; } impl fn f(c : bool) -> u32 in 0 .. 9 { if c { let y = h(4); return y; } return 0; } }"
 theorem bindcall_ok_stufe : stufe bindcall_ok = "OK" := by decide +kernel
 
-/-- At the top level of a body the model has no former (`Endblock.bindCall`): recorded, not worked around. -/
-def bindcall_top_refused : String :=
+/-- At the top level of a body: `Endblock.bindCall` (Track P, 2026-10-18; was a model gap). -/
+def bindcall_top_ok : String :=
   "module m { impl fn h(a : u32 in 0 .. 9) -> u32 in 0 .. 9 { return a; } impl fn f() -> u32 in 0 .. 9 { let y = h(4); return y; } }"
-theorem bindcall_top_refused_stufe : stufe bindcall_top_refused = "lower: lower: a value call at the top level of a body has no G form (Endblock lacks bindCall)" := by
+theorem bindcall_top_ok_stufe : stufe bindcall_top_ok = "OK" := by decide +kernel
+
+/-- Planted defect at the top level: the argument lies outside the callee's parameter range, so the
+    call is not admissible (the same refusal as in a nested block). -/
+def bindcall_top_refused : String :=
+  "module m { impl fn h(a : u32 in 0 .. 9) -> u32 in 0 .. 9 { return a; } impl fn f() -> u32 in 0 .. 9 { let y = h(40); return y; } }"
+theorem bindcall_top_refused_stufe : (stufe bindcall_top_refused != "OK") = true := by
   decide +kernel
 
 /-- A callee whose result range does not fit the annotation. -/

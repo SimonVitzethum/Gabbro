@@ -161,6 +161,9 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
         Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .bindCall _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
   | _, _, .bindAxiom .. => rfl
   | _, _, .bindAxiomElse .. => rfl
 

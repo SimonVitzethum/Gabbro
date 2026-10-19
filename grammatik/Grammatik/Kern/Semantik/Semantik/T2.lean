@@ -354,6 +354,13 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
   | .bind e rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       (execEnd rest σ (.cons (eval σ e σ ρ) ρ)).schrumpf
+  | .bindCall f args he _ hr rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match R f σ (evalArgs σ args σ ρ) with
+      | .ok σ' v => (execEnd rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | .why _ r => keinGrund hr r
+      | .logik e => .logik e
+      | .hardware e => .hardware e
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with

@@ -68,6 +68,7 @@ def GRest.oR (P : Programm D) (C : D.Tab ⊕ D.Glob → Bool) {V : Vertrag D} :
   | _, _, _, .wartetSonst _ err b k =>
       (endblockOrteP P err).all C = true ∧ (blockOrteP P b).all C = true ∧ k.oR P C
   | _, _, _, .abbruch k => k.oR P C
+  | _, _, _, .leer => True
 
 section Wahl
 

@@ -84,6 +84,7 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .next _ => true
   | .cons s rest => nS S Ax s && nE S Ax rest
   | .bind e rest => e.orte.all S && nE S Ax rest
+  | .bindCall _ args _ _ _ rest => args.orte.all S && nE S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nE S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nE S Ax rest
 
@@ -119,6 +120,7 @@ def GRest.nR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D
   | _, _, _, .wartet b k => nB S Ax b = true ∧ k.nR S Ax
   | _, _, _, .wartetSonst _ err b k => nE S Ax err = true ∧ nB S Ax b = true ∧ k.nR S Ax
   | _, _, _, .abbruch k => k.nR S Ax
+  | _, _, _, .leer => true
 
 /-- The flow check on every frame of a ghost-free thread state. -/
 def KNR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) (k : KFaden D) : Prop :=

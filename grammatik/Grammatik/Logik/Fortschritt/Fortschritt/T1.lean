@@ -103,6 +103,8 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest, Bool.or_true]
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .bindCall _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => by
@@ -123,6 +125,7 @@ def GRest.absorb {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ �
 /-- The residue is an `else` continuation (`abbruch`, under bindings). -/
 def GRest.blockiert {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ → Bool
   | .abbruch _ => true
+  | .leer => true
   | .schrumpf k => k.blockiert
   | _ => false
 
@@ -148,6 +151,7 @@ def GRest.fOk : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V 
   | _, _, _, .wartet rest k => k.fOk && k.nimmtAb && (!k.blockiert || rest.terminal)
   | _, _, _, .wartetSonst _ _ rest k => k.fOk && k.nimmtAb && (!k.blockiert || rest.terminal)
   | _, _, _, .abbruch k => k.fOk
+  | _, _, _, .leer => true
 
 end Formen
 /-! ## 2. The caller's shape -/

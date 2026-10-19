@@ -470,11 +470,15 @@ def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
 
 def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
+  | .ret .. => true
+  | .retWhy .. => true
+  | .leave .. => true
+  | .next .. => true
   | .cons s rest => s.ohneOrakel && rest.ohneOrakel
   | .bind _ rest => rest.ohneOrakel
+  | .bindCall _ _ _ _ _ rest => rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
-  | _ => true
 
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool

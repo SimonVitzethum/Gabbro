@@ -117,6 +117,7 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next .. => true
   | .cons s rest => s.hardwareFrei && rest.hardwareFrei
   | .bind _ rest => rest.hardwareFrei
+  | .bindCall _ _ _ _ _ rest => rest.hardwareFrei
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
 
@@ -426,6 +427,17 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       simp only [Endblock.hardwareFrei] at h
       simp only [execEnd] at he
       exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+  | .bindCall g args he' hp hr rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+      · rename_i r _
+        exact (Fin.cast hr r).elim0
+      · cases he
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
   | .bindAxiom .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
   | .bindAxiomElse .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
 

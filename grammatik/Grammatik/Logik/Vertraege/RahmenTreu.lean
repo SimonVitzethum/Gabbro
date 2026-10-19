@@ -617,6 +617,17 @@ theorem end_treu :
   | .bind e rest, σ, ρ, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
+  | .bindCall f args he hp hr rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      split at h
+      · rename_i σ1 v hR1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
+          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
+        exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+      · rename_i σ1 r _; exact keinGrund hr r
+      · simp [EndAusgang.welt] at h
+      · simp [EndAusgang.welt] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte

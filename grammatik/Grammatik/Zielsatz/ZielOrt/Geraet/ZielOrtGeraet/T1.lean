@@ -71,6 +71,12 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     refine ⟨σ, Nat.le_refl _, hg, ⟨by simp [Block.gOk, hks], ?_, hrest⟩,
       fun R O' => ZErg.folgt_of_eq (semV_endeEntf O' passes R s rest σ ρ)⟩
     simpa [blockOrteP] using hss
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenG_lokal hF hhead ρ (.dann e.alsBlock.2 (.abbruch (Λk := Λ) .leer)) (M.faeden u).spur
+      (fun σ hg hok => ?_), hL⟩
+    exact ⟨σ, Nat.le_refl _, hg, okG_alsBlock e .leer (fun L => Iff.rfl) hok.1 hok.2 trivial,
+      fun R O' => ZErg.folgt_of_eq (semV_endeForm O' passes R e σ ρ)⟩
   | dannLeer l Γ Λ k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenG_lokal hF hhead ρ k (M.faeden u).spur (fun σ hg hok => ?_), hL⟩

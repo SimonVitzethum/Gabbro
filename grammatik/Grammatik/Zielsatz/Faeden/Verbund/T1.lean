@@ -115,6 +115,8 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
   | _, _, _, .cons s rest => by
       simp only [endblockOrteP, stmtOrteP_mitRumpf s, endblockOrteP_mitRumpf rest]
   | _, _, _, .bind _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .bindCall _ _ _ _ _ rest => by
+      simp only [endblockOrteP, endblockOrteP_mitRumpf rest]; rfl
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf err, endblockOrteP_mitRumpf rest]

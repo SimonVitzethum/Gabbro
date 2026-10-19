@@ -164,6 +164,9 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
   | .bind _ rest, h => by
       have h1 := spiegel_end c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .bindCall _ _ _ _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .bindAxiom .., h => by simp [spiegelE] at h
   | .bindAxiomElse .., h => by simp [spiegelE] at h
 
@@ -181,6 +184,9 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h2 := spiegel_sonst c pa rest h.2
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bind _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .bindCall _ _ _ _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bindAxiom .., h => by simp [spiegelE] at h
@@ -426,6 +432,7 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .next _ => 0
   | .cons s rest => fremdStmt fa pa s + fremdEnd fa pa rest
   | .bind _ rest => fremdEnd fa pa rest
+  | .bindCall _ _ _ _ _ rest => fremdEnd fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdEnd fa pa rest
 end

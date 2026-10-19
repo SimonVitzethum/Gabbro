@@ -825,8 +825,21 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
               (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
               (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) e))
-  | _, _, _ + 1, .bindCall .. :: _, _ =>
-    .error "lower: a value call at the top level of a body has no G form (Endblock lacks bindCall)"
+  | Γ, fn, n + 1, .bindCall x cname args :: rest, r =>
+    match lowRufKopf u caller Γ fn (resOf u caller) cname args with
+    | .error e => .error e
+    | .ok k =>
+      withErg u k.callee fun τ hE =>
+        match lowBodyF u caller (τ :: Γ) (fn.mitTy x τ) n rest r with
+        | .error e => .error e
+        | .ok e =>
+          if hr : (declOf u).gruende k.callee = 0 then
+            have e' : Endblock (declOf u) (verOf u caller) false (τ :: Γ)
+                (nach (declOf u) k.callee (resOf u caller)) := by
+              rw [nach_eq u k.callee (resOf u caller)]
+              exact e
+            .ok (Endblock.bindCall (D := declOf u) k.callee k.args hE k.hp hr e')
+          else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>

@@ -155,6 +155,7 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .next _ => true
   | _, _, _, .cons s rest => g001Stmt s && g001End rest
   | _, _, _, .bind e rest => orteOk (D := D) e.orte && g001End rest
+  | _, _, _, .bindCall _ args _ _ _ rest => orteOk (D := D) args.orte && g001End rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001End rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001End rest
@@ -714,6 +715,16 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have ho' : o ∈ e.orte ∨ o ∈ Extraktion.endblockOrte rest := by
         simpa [Extraktion.endblockOrte] using ho
       have h1 : ((orteOk (D := D) e.orte) = true) ∧ ((g001End rest) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      rcases ho' with ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+      · exact g001End_korrekt rest h1.2 o ho'
+  | .bindCall a args he _ _ rest =>
+      intro h ho
+      have h0 : (orteOk (D := D) args.orte && g001End rest) = true := h
+      have ho' : o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte rest := by
+        simpa [Extraktion.endblockOrte] using ho
+      have h1 : ((orteOk (D := D) args.orte) = true) ∧ ((g001End rest) = true) :=
         Bool.and_eq_true_iff.mp h0
       rcases ho' with ho' | ho'
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')

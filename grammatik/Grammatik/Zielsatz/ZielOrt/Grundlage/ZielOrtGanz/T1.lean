@@ -308,6 +308,7 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .next .. => true
   | .cons s rest => s.logikFrei && rest.logikFrei
   | .bind _ rest => rest.logikFrei
+  | .bindCall _ _ _ _ _ rest => rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
 

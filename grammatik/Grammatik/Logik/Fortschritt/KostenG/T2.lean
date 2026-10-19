@@ -40,6 +40,13 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     kopfA
     · simp_all
     · rw [entfZ_wahr hent]; omega
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    kopfA
+    · cases e <;> try (simp [EndEntfaltbar] at hent; done)
+      simp_all [rufeB_alsBlock, rufeR]
+    · cases e <;> try (simp [EndEntfaltbar] at hent; done)
+      simp only [potRest, kostenBlock_alsBlock, kostenEnd, kostenSonst]
+      omega
   | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
     kopfA
     · have h := rufeB_armWahlG Z arms (eval σ₁ v σ₁ ρ) hok.1.1

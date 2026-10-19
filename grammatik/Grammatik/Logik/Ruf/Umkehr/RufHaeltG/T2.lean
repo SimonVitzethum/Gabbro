@@ -37,6 +37,12 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
     exact haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨hk, nennt_stmt s hk⟩ hh
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    exact haeltInvG_kopf h (by ho_tac) (by fr_tac)
+      (kette_abbruch _ hk (GRest.leer (Λ := Λ)) hk (fun L hL => hL)) hh
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0

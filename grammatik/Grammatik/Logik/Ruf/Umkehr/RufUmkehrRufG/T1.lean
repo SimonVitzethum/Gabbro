@@ -81,6 +81,7 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next .. => false
   | .cons s rest => s.kOk && rest.kOk
   | .bind _ rest => rest.kOk
+  | .bindCall _ _ _ _ _ rest => rest.kOk
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
 
@@ -252,6 +253,7 @@ def semK : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .wartet .., _, _ => .sonst
   | _, _, _, .wartetSonst .., _, _ => .sonst
   | _, _, _, .abbruch .., _, _ => .sonst
+  | _, _, _, .leer, _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachK {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)

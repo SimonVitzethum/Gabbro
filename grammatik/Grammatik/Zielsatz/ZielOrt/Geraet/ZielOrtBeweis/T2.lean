@@ -138,6 +138,14 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
     refine ⟨σ, Nat.le_refl _, hg, ⟨by simp [Block.kOk, hks], ?_, hrest⟩,
       fun R => ZErg.gleich_of_eq (semZ_endeEntf O passes R s rest σ ρ)⟩
     simpa [blockOrteP] using hss
+  | endeForm l Γ Λ e ρ hl hent hhead =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    refine ⟨fadenOk_lokal hF hhead ρ (.dann e.alsBlock.2 (.abbruch (Λk := Λ) .leer)) (M.faeden u).spur
+      (fun σ hg hok => ?_), hL⟩
+    obtain ⟨hk, hs⟩ := hok
+    exact ⟨σ, Nat.le_refl _, hg, ⟨by rw [Endblock.kOk_alsBlock]; exact hk,
+      by rw [blockOrteP_alsBlock]; exact hs, trivial⟩,
+      fun R => ZErg.gleich_of_eq (semZ_alsBlock O passes R e .leer σ ρ)⟩
   | dannLeer l Γ Λ k ρ hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenOk_lokal hF hhead ρ k (M.faeden u).spur (fun σ hg hok => ?_), hL⟩

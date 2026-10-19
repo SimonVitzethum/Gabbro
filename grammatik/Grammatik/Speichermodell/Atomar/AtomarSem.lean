@@ -292,6 +292,13 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bind e rest, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       (execEndHA rest σ (.cons (eval σ e σ ρ) ρ)).schrumpf
+  | .bindCall f args he _ hr rest, σ, ρ =>
+      let σ := leseA A σ Λ args.orte
+      match R f σ (evalArgs σ args σ ρ) with
+      | .ok σ' v => (execEndHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | .why _ r => keinGrund hr r
+      | .logik e => .logik e
+      | .hardware e => .hardware e
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
       let σ := leseA A σ Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
@@ -538,6 +545,10 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndHA, execEndH, Stmt.execHA_frei s h1, Endblock.execHA_frei rest h2] <;> (try rfl)
   | .bind e rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
+  | .bindCall f args he _ hr rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
   | .bindAxiom a args he _ _ _ _ rest, hT, σ, ρ => by

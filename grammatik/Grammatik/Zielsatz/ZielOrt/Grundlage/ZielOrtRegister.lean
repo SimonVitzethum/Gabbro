@@ -84,6 +84,7 @@ def Endblock.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .next .. => true
   | .cons s rest => s.rOk K && rest.rOk K
   | .bind _ rest => rest.rOk K
+  | .bindCall _ _ _ _ _ rest => rest.rOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.rOk K
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.rOk K && rest.rOk K
 

@@ -96,6 +96,12 @@ def weiterHA : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l
       match o with
       | .ok _ _ => .sonst
       | o => weiterHA k o
+  | _, _, _, .leer, o =>
+      match o with
+      | .zurueck σ v => .zurueck σ v
+      | .why σ r => .why σ r
+      | .logik e => .logik e
+      | _ => .sonst
 
 /-- The frame semantics of a residue with lock invariants: run it from `σ`,
     `ρ`. -/
@@ -139,6 +145,7 @@ theorem weiterHA_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRes
   | _, _, _, .wartet _ k, e => weiterHA_logik k e
   | _, _, _, .wartetSonst _ _ _ k, e => weiterHA_logik k e
   | _, _, _, .abbruch k, e => weiterHA_logik k e
+  | _, _, _, .leer, _ => rfl
 
 theorem weiterHA_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
     (σ : World D) (v : ErgVal D V.erg),
@@ -157,6 +164,7 @@ theorem weiterHA_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GR
   | _, _, _, .wartet _ k, σ, v => weiterHA_zurueck k σ v
   | _, _, _, .wartetSonst _ _ _ k, σ, v => weiterHA_zurueck k σ v
   | _, _, _, .abbruch k, σ, v => weiterHA_zurueck k σ v
+  | _, _, _, .leer, _, _ => ZErgG.gleich_refl _
 
 /-- A reason exit passes every residue unchanged up to the trace (the twin
     of `weiterHA_zurueck`, 2026-09-14). -/
@@ -177,6 +185,7 @@ theorem weiterHA_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRes
   | _, _, _, .wartet _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .wartetSonst _ _ _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .abbruch k, σ, r => weiterHA_grund k σ r
+  | _, _, _, .leer, _, _ => ZErgG.gleich_refl _
 
 /-- **An end block replacing a residue** (as `weiterZ_ende_folgt`). -/
 theorem weiterHA_ende_folgt {Λ : List (Res D)} (k : GRest D V l Γ Λ) (eo : EndAusgang V l Γ) :
@@ -205,6 +214,15 @@ theorem Endblock.execBlockHA_alsBlock :
       simp only [Endblock.alsBlock, execBlockHA, execEndHA]
       rw [Endblock.execBlockHA_alsBlock rest]
       cases execEndHA S O U A passes R rest _ _ <;> rfl
+  | _, _, .bindCall f args he hp hr rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · rename_i r _
+        exact (Fin.cast hr r).elim0
+      · rfl
+      · rfl
   | _, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [Endblock.alsBlock, execBlockHA, execEndHA]
       split
@@ -233,6 +251,18 @@ theorem semHA_alsBlock {Λ Λk : List (Res D)} (e : Endblock D V l Γ Λ) (k : G
     semHA S O U A passes R (.dann e.alsBlock.2 (.abbruch k)) σ ρ =
       weiterHA S O U A passes R k (execEndHA S O U A passes R e σ ρ).zuAusgang := by
   rw [semHA_dann, Endblock.execBlockHA_alsBlock, weiterHA_abbruch_zu]
+
+/-- The base of the `endeForm` continuation passes an end outcome on as it is. -/
+theorem weiterHA_leer_zu {Λ : List (Res D)} (eo : EndAusgang V l Γ) :
+    weiterHA S O U A passes R (.leer (Λ := Λ)) eo.zuAusgang = zErgG eo := by
+  cases eo <;> rfl
+
+/-- **An end block unfolded into block position** (`endeForm`) means the end block. -/
+theorem semHA_endeForm {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
+    semHA S O U A passes R (.ende e) σ ρ =
+      semHA S O U A passes R (.dann e.alsBlock.2 (.abbruch (Λk := Λ) .leer)) σ ρ := by
+  rw [semHA_alsBlock, weiterHA_leer_zu]
+  rfl
 
 /-- `execArmsHA` runs the arm `armWahlG` selects. -/
 theorem execArmsHA_wahl {Λ Λ' : List (Res D)} :

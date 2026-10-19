@@ -397,6 +397,7 @@ theorem semK_SG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l
   | _, _, _, .wartet .., hr => by cases hr
   | _, _, _, .wartetSonst .., hr => by cases hr
   | _, _, _, .abbruch _, _ => fun _ _ _ _ => REnde.gleich_refl _
+  | _, _, _, .leer, _ => fun _ _ _ _ => REnde.gleich_refl _
 
 end SpurK
 /-- **The body-running handler does not see the trace** on the callees the

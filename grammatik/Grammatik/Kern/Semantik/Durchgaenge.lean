@@ -85,11 +85,15 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .floatNarrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
 
 def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
+  | .ret .. => true
+  | .retWhy .. => true
+  | .leave .. => true
+  | .next .. => true
   | .cons s rest => s.ohneEwig && rest.ohneEwig
   | .bind _ rest => rest.ohneEwig
+  | .bindCall _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
-  | _ => true
 
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Bool
@@ -235,6 +239,9 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
       simp only [execEndH, Stmt.execH_passes s h.1, Endblock.execH_passes rest h.2]
   | .bind e rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .bindCall f args he hp hr rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by

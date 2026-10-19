@@ -112,6 +112,7 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_ants s) (ruEnd_ants rest)
   | _, _, _, .bind _ rest => ruEnd_ants rest
+  | _, _, _, .bindCall _ _ _ _ _ rest => (ants_umΛ _ _).trans (ruEnd_ants rest)
   | _, _, _, .bindAxiom a _ _ _ _ _ _ rest => congrArg (Sum.inl a :: ·) (ruEnd_ants rest)
   | _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest =>
       congrArg (Sum.inl a :: ·) (kongr₂ (· ++ ·) (ruEnd_ants err) (ruEnd_ants rest))

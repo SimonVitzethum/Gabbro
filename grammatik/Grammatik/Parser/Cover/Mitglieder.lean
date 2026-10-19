@@ -153,6 +153,7 @@ def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .next _ => ["Endblock.next"]
   | .cons s rest => "Endblock.cons" :: (cS s ++ cE rest)
   | .bind e rest => "Endblock.bind" :: (eE e ++ cE rest)
+  | .bindCall (args := args) (rest := rest) .. => "Endblock.bindCall" :: (eA args ++ cE rest)
   | .bindAxiom (args := args) (rest := rest) .. => "Endblock.bindAxiom" :: (eA args ++ cE rest)
   | .bindAxiomElse (args := args) (err := err) (rest := rest) .. => "Endblock.bindAxiomElse" :: (eA args ++ cE err ++ cE rest)
 

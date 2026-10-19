@@ -142,6 +142,8 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
   | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | bind e rest => exact fort_schritt (w_endeBind rfl e rest ρ hx hΛ)
+  | bindCall g args he hp hr rest =>
+      exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | bindAxiom a args he hw hg hd hgd rest =>
       rcases hax : axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
@@ -499,6 +501,7 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   | wartet rest k => simp [GRest.wartend] at hnw'
   | wartetSonst n err rest k => simp [GRest.wartend] at hnw'
   | abbruch k => simp [GRest.blockiert] at hb
+  | leer => simp [GRest.blockiert] at hb
 
 end Fort
 /-! ## 6. The float range checks pass (verdict F1) -/

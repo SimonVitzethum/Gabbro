@@ -225,6 +225,7 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .next _ => 1
   | .cons s rest => entfZ s + kostenStmt c pa s + kostenEnd c pa rest
   | .bind e rest => 1 + kostenExpr e + kostenEnd c pa rest
+  | .bindCall g args _ _ _ rest => 5 + kostenArgs args + c g + kostenSonst c pa rest
   | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
@@ -242,6 +243,7 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .next _ => 2
   | .cons s rest => kostenStmt c pa s + kostenSonst c pa rest
   | .bind e rest => 2 + kostenExpr e + kostenSonst c pa rest
+  | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenSonst c pa rest
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
@@ -323,6 +325,7 @@ def rufeE (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .next _ => true
   | .cons s rest => rufeS Z s && rufeE Z rest
   | .bind _ rest => rufeE Z rest
+  | .bindCall g _ _ _ _ rest => Z g && rufeE Z rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeE Z rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeE Z rest
 end
@@ -343,6 +346,7 @@ def rufeR (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
   | .wartet rest k => rufeB Z rest && rufeR Z k
   | .wartetSonst _ err rest k => rufeE Z err && rufeB Z rest && rufeR Z k
   | .abbruch k => rufeR Z k
+  | .leer => true
 
 /-! ## 3. The potential: `kosten` read as a function of the residue -/
 
@@ -375,6 +379,7 @@ def potRest (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .wartetSonst _ err rest k =>
       max (kostenSonst c pa err + 2 + potRest c pa k) (kostenBlock c pa rest + 1 + potRest c pa k)
   | .abbruch k => 1 + potRest c pa k
+  | .leer => 1
 
 section Positiv
 
@@ -416,6 +421,8 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .bindCall g args _ _ _ rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindAxiom _ args _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => by
@@ -432,6 +439,8 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) :
   | _, _, .cons s rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
   | _, _, .bind e rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+  | _, _, .bindCall _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]

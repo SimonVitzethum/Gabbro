@@ -200,6 +200,14 @@ theorem end_schritt {m : Nat} (ih : Vollst V m) :
       List.mem_flatMap.2 ⟨⟨_, e⟩, hx_aus m e (by omega),
         List.mem_map.2 ⟨rest, ihE _ _ _ rest (by omega), rfl⟩⟩
     end_fin hc
+  | bindCall f args he hp hr rest =>
+    simp only [groesseEnd] at h
+    have hc : (Endblock.bindCall f args he hp hr rest : Endblock D V l Γ Λ) ∈ eBindCall m (genRek V m) l Γ Λ :=
+      List.mem_flatMap.2 ⟨f, Aufz.fn_mem f, List.mem_flatMap.2 ⟨args, hexa _ args (by omega),
+        mem_mitSome he (by
+          rw [dif_pos hp, dif_pos hr]
+          exact List.mem_map.2 ⟨rest, ihE _ _ _ rest (by omega), rfl⟩)⟩⟩
+    end_fin hc
   | bindAxiom a args he hw hg hd hgd rest =>
     simp only [groesseEnd] at h
     have hc : (Endblock.bindAxiom a args he hw hg hd hgd rest : Endblock D V l Γ Λ) ∈
