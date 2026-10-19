@@ -90,6 +90,7 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .cons s rest => 1 + groesseStmt s + groesseEnd rest
   | _, _, _, .bind e rest => 1 + groesseExpr e + groesseEnd rest
   | _, _, _, .bindCall _ args _ _ _ rest => 1 + groesseArgs args + groesseEnd rest
+  | _, _, _, .bindCallElse _ args _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => 1 + groesseArgs args + groesseEnd rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
 

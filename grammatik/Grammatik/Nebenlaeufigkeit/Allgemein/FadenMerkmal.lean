@@ -116,6 +116,7 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .cons s rest => mS A s && mE A rest
   | .bind _ rest => mE A rest
   | .bindCall g _ _ _ _ rest => A.ruf g && mE A rest
+  | .bindCallElse g _ _ _ _ err rest => A.ruf g && mE A err && mE A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mE A rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mE A rest
 end
@@ -163,6 +164,8 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .bindCall _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]

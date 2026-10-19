@@ -92,6 +92,7 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .cons s rest => s.ohneEwig && rest.ohneEwig
   | .bind _ rest => rest.ohneEwig
   | .bindCall _ _ _ _ _ rest => rest.ohneEwig
+  | .bindCallElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
 
@@ -244,6 +245,9 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCall f args he hp hr rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
+  | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes err h.1]
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]

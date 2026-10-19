@@ -191,6 +191,7 @@ def SGB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ'
   ∀ (σ σ' : World D) (ρ : Env D Γ), SG σ σ' →
     AusSG (execBlock O passes keinRuf b σ ρ) (execBlock O passes keinRuf b σ' ρ)
 
+set_option maxHeartbeats 800000 in
 mutual
 
 theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

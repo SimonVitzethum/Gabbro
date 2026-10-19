@@ -154,6 +154,8 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   | .cons s rest => fS e w s && fE e (fNach Φ w s) rest
   | .bind _ rest => fE e w rest
   | .bindCall g _ _ _ _ rest => (!Φ.ruf g || w) && fE e (Φ.vor g) rest
+  | .bindCallElse g _ _ _ _ err rest =>
+      (!Φ.ruf g || w) && fE e false err && fE e (Φ.vor g) rest
   | .bindAxiom _ _ _ _ _ _ _ rest => fE e w rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => fE e false err && fE e w rest
 

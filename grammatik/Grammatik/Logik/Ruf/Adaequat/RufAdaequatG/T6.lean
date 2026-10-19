@@ -477,6 +477,7 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .cons s rest => s.ohneOrakel && rest.ohneOrakel
   | .bind _ rest => rest.ohneOrakel
   | .bindCall _ _ _ _ _ rest => rest.ohneOrakel
+  | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
 

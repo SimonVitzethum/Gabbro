@@ -356,6 +356,22 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 r _; exact keinGrund hr r
       · simp [EndAusgang.welt] at h
       · simp [EndAusgang.welt] at h
+  | .bindCallElse f args he hp _ err rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
+      split at h
+      · rename_i σ1 v hR1
+        have g1 := hl.trans (Gut.weiter hp.hw hp.hg
+          (hR f (σ.lese Λ args.orte) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
+        exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac)
+          (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+      · rename_i σ1 r hR1
+        have g1 := hl.trans (Gut.weiter hp.hw hp.hg
+          (hR f (σ.lese Λ args.orte) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
+        exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac)
+          (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+      · simp [EndAusgang.welt] at h
+      · simp [EndAusgang.welt] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn

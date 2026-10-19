@@ -83,6 +83,7 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.ants ++ rest.ants
   | .bind _ rest => rest.ants
   | .bindCall _ _ _ _ _ rest => rest.ants
+  | .bindCallElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
 
@@ -129,6 +130,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindCall _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiom a _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .bindCallElse a _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]

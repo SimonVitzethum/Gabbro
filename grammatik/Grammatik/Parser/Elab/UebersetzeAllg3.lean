@@ -851,8 +851,30 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller Γ fn n rest r with
       | .error e => .error e
       | .ok ee => .ok (Endblock.cons st ee)
-  | _, _, _ + 1, .bindElse .. :: _, _ =>
-    .error "lower: a let else at the top level of a body has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, .bindElse y c args e :: rest, r =>
+    match lowRufKopf u caller Γ fn (resOf u caller) c args with
+    | .error err => .error err
+    | .ok k =>
+      if hr : 0 < (declOf u).gruende k.callee then
+        withErg u k.callee fun τ hE =>
+          match lowEndL (l := false) u caller (Ty.why ((declOf u).gruende k.callee) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).gruende k.callee)) blockFuel (resOf u caller) (some ⟨rfl⟩) rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: rest') =>
+            match lowBodyF u caller (τ :: Γ) (fn.mitTy y τ) n rest' r with
+            | .error err => .error err
+            | .ok ee =>
+              have errb' : Endblock (declOf u) (verOf u caller) false
+                  (Ty.why ((declOf u).gruende k.callee) :: Γ) (nach (declOf u) k.callee (resOf u caller)) := by
+                rw [nach_eq u k.callee (resOf u caller)]
+                exact errb
+              have ee' : Endblock (declOf u) (verOf u caller) false (τ :: Γ)
+                  (nach (declOf u) k.callee (resOf u caller)) := by
+                rw [nach_eq u k.callee (resOf u caller)]
+                exact ee
+              .ok (Endblock.bindCallElse (D := declOf u) k.callee k.args hE k.hp hr errb' ee')
+          | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: let else of a call without a reason channel"
   | Γ, fn, n + 1, .bindAxElse y c args e :: rest, r =>
     match lowAxKopf u caller Γ fn (resOf u caller) c args with
     | .error err => .error err

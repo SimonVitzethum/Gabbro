@@ -18,6 +18,7 @@ def SGBK {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ
     AusSG (execBlock O passes R b σ ρ) (execBlock O passes R b σ' ρ)
 
 set_option linter.unusedSectionVars false in
+set_option maxHeartbeats 800000 in
 mutual
 
 theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

@@ -155,6 +155,14 @@ def eBindCall (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : 
         (R.en l (τ :: Γ) (nach D f Λ)).map fun r => .bindCall f args he hp hr r
       else [] else []
 
+def eBindCallElse (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
+  Aufz.fn.flatMap fun f => (genArgs (genExpr m Γ Λ) (D.params f)).flatMap fun args =>
+    mitSome (D.erg f) fun {τ} he =>
+      if hp : RufPasst D V (D.signatur f) Λ then if hr : 0 < D.gruende f then
+        (R.en l (.why (D.gruende f) :: Γ) (nach D f Λ)).flatMap fun err =>
+          (R.en l (τ :: Γ) (nach D f Λ)).map fun r => .bindCallElse f args he hp hr err r
+      else [] else []
+
 def eBindAxiom (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
   Aufz.ax.flatMap fun a => (genArgs (genExpr m Γ Λ) (D.aparams a)).flatMap fun args =>
     mitSome (D.aerg a) fun {τ} he =>
@@ -180,7 +188,7 @@ def eBindAxiomElse (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D
 /-- The end blocks of fuel `m + 1`. -/
 def endS (m : Nat) (R : Rek V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) : List (Endblock D V l Γ Λ) :=
   eRet m l Γ Λ ++ eRetWhy l Γ Λ ++ eLeave l Γ Λ ++ eNext l Γ Λ ++ eCons R l Γ Λ ++ eBind m R l Γ Λ ++
-  eBindCall m R l Γ Λ ++ eBindAxiom m R l Γ Λ ++ eBindAxiomElse m R l Γ Λ
+  eBindCall m R l Γ Λ ++ eBindCallElse m R l Γ Λ ++ eBindAxiom m R l Γ Λ ++ eBindAxiomElse m R l Γ Λ
 
 /-- The generated statements, blocks and end blocks of every fuel. -/
 def genRek (V : Vertrag D) : Nat → Rek V

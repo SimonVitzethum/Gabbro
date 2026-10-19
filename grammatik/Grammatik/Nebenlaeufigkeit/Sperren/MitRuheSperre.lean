@@ -811,6 +811,28 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
         | hardware e => (try erw [hx]); exact Or.inl rfl
       · erw [h1, h2]
         exact Or.inr ⟨e', e, rfl, rfl, ht⟩
+  | _, _, Λ, .bindCallElse g args he hp hr err rest, σ, ρ => by
+      simp only [ruEnd, execEndH]
+      erw [ruA_orte, lese_worldR, evalArgs_ru]
+      rcases hR g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+        with hx' | ⟨e', e, h1, h2, ht⟩
+      · erw [hx']
+        cases hx : R g (σ.lese Λ args.orte)
+            (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+        | ok σ' v =>
+            try erw [hx]
+            simp only [rufR]
+            erw [execEndH_umΛ, ergWert_ru he]
+            exact EndRel.schrumpf (execEndH_ru rest σ' (Env.cons (ergWert he v) ρ))
+        | why σ' r =>
+            try erw [hx]
+            simp only [rufR]
+            erw [execEndH_umΛ]
+            exact EndRel.schrumpf (execEndH_ru err σ' (Env.cons r ρ))
+        | logik e => (try erw [hx]); exact Or.inl rfl
+        | hardware e => (try erw [hx]); exact Or.inl rfl
+      · erw [h1, h2]
+        exact Or.inr ⟨e', e, rfl, rfl, ht⟩
   | _, _, Λ, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [ruEnd, execEndH]
       erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ruG hO]

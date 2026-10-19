@@ -223,6 +223,14 @@ theorem Endblock.execBlockHA_alsBlock :
         exact (Fin.cast hr r).elim0
       · rfl
       · rfl
+  | _, _, .bindCallElse f args he hp hr err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · cases execEndHA S O U A passes R err _ _ <;> rfl
+      · rfl
+      · rfl
   | _, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [Endblock.alsBlock, execBlockHA, execEndHA]
       split

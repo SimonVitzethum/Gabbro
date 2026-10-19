@@ -75,6 +75,9 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .bind _ rest => ruEnd_mE A rest
   | _, _, _, .bindCall g _ _ _ _ rest =>
       congrArg (A.ruf (some g) && ·) ((mE_umΛ _ _ _).trans (ruEnd_mE A rest))
+  | _, _, _, .bindCallElse g _ _ _ _ err rest =>
+      kongr₂ (fun x y => A.ruf (some g) && x && y) ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
+        ((mE_umΛ _ _ _).trans (ruEnd_mE A rest))
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_mE A rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_mE A err) (ruEnd_mE A rest)
@@ -184,6 +187,9 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, .bind _ rest, h => mE_mono hle rest h
   | _, _, _, .bindCall g _ _ _ _ rest, h => by
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨hle.1 g h.1, mE_mono hle rest h.2⟩
+  | _, _, _, .bindCallElse g _ _ _ _ err rest, h => by
+      simp only [mE, Bool.and_eq_true] at h ⊢
+      exact ⟨⟨hle.1 g h.1.1, mE_mono hle err h.1.2⟩, mE_mono hle rest h.2⟩
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h => mE_mono hle rest h
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [mE, Bool.and_eq_true] at h ⊢
@@ -311,6 +317,9 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | _, _, _, .bindCall g _ _ _ _ rest, h, h' => by
       simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨h.1, h'.1⟩, mE_und rest h.2 h'.2⟩
+  | _, _, _, .bindCallElse g _ _ _ _ err rest, h, h' => by
+      simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mE_und rest h.2 h'.2⟩
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mE_und rest h h'
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, h' => by
       simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢

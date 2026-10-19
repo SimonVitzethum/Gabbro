@@ -414,6 +414,24 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       | why σ' r => exact (Fin.cast hr r).elim0
       | logik e => (try erw [hx]); rfl
       | hardware e => (try erw [hx]); rfl
+  | _, _, Λ, .bindCallElse g args he hp hr err rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, hR]
+      cases hx : R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | ok σ' v =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execEnd_umΛ, ergWert_ru he]
+          exact (congrArg EndAusgang.schrumpf (execEnd_ru rest σ' (Env.cons (ergWert he v) ρ))).trans
+            (endR_schrumpf _)
+      | why σ' r =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execEnd_umΛ]
+          exact (congrArg EndAusgang.schrumpf (execEnd_ru err σ' (Env.cons r ρ))).trans
+            (endR_schrumpf _)
+      | logik e => (try erw [hx]); rfl
+      | hardware e => (try erw [hx]); rfl
   | _, _, Λ, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [ruEnd, execEnd]
       erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]

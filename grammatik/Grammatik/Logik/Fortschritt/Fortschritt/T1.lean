@@ -107,6 +107,8 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .bindCallElse _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
 

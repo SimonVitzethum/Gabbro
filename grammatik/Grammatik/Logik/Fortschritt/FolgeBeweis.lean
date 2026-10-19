@@ -116,6 +116,9 @@ theorem fE_mono {l : Bool} :
   | _, _, e, .bindCall g _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
       exact ⟨h.1.imp id hw, h.2⟩
+  | _, _, e, .bindCallElse g _ _ _ _ err rest, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
+      exact ⟨⟨h.1.1.imp id hw, h.1.2⟩, h.2⟩
   | _, _, e, .bindAxiom _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
@@ -163,6 +166,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .bindCall _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindCallElse _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]

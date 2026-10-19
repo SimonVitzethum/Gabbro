@@ -158,6 +158,10 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
   | _, _, _, e, w, .bindCall g _ _ _ _ rest => by
       show ((!Φ.ruf g || w) && fE Φ.mitRuhe e (Φ.vor g) (Endblock.umΛ _ (ruEnd rest))) = _
       rw [fE_umΛ, ruEnd_fE Φ e _ rest]; rfl
+  | _, _, _, e, w, .bindCallElse g _ _ _ _ err rest => by
+      show ((!Φ.ruf g || w) && fE Φ.mitRuhe e false (Endblock.umΛ _ (ruEnd err)) &&
+        fE Φ.mitRuhe e (Φ.vor g) (Endblock.umΛ _ (ruEnd rest))) = _
+      rw [fE_umΛ, fE_umΛ, ruEnd_fE Φ e _ err, ruEnd_fE Φ e _ rest]; rfl
   | _, _, _, e, w, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_fE Φ e w rest
   | _, _, _, e, w, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       show (fE Φ.mitRuhe e false (ruEnd err) && fE Φ.mitRuhe e w (ruEnd rest)) = _

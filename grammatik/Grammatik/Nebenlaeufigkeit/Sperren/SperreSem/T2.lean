@@ -121,6 +121,8 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindCall f args he hp hr rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .bindCallElse f args he hp hr err rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
@@ -199,6 +201,7 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .cons s rest => s.ohneLocks && rest.ohneLocks
   | .bind _ rest => rest.ohneLocks
   | .bindCall _ _ _ _ _ rest => rest.ohneLocks
+  | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
 
@@ -356,6 +359,9 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCall f args he hp hr rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl

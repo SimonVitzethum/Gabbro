@@ -204,6 +204,9 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bind e rest => e.orte ++ endblockOrteP P rest
   | .bindCall g args _ _ _ rest =>
       args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte) ++ endblockOrteP P rest
+  | .bindCallElse g args _ _ _ err rest =>
+      args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte) ++ endblockOrteP P err ++
+        endblockOrteP P rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrteP P rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       args.orte ++ endblockOrteP P err ++ endblockOrteP P rest
@@ -236,6 +239,8 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .bindCall _ args _ _ _ rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindAxiom _ args _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bindCallElse _ args _ _ _ err rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]

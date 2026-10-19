@@ -177,6 +177,7 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .cons s rest => s.ueberBoden c && rest.ueberBoden c
   | .bind _ rest => rest.ueberBoden c
   | .bindCall _ _ _ _ _ rest => rest.ueberBoden c
+  | .bindCallElse _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
 

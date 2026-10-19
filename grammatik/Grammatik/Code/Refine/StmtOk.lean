@@ -27,6 +27,7 @@ open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang
 
 variable {D : Deklaration} {V : Vertrag D}
 
+set_option maxHeartbeats 1000000 in
 mutual
 
 theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)

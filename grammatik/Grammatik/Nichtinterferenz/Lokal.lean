@@ -85,6 +85,7 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .cons s rest => nS S Ax s && nE S Ax rest
   | .bind e rest => e.orte.all S && nE S Ax rest
   | .bindCall _ args _ _ _ rest => args.orte.all S && nE S Ax rest
+  | .bindCallElse _ args _ _ _ err rest => args.orte.all S && nE S Ax err && nE S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nE S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nE S Ax rest
 

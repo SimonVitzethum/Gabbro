@@ -612,6 +612,12 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | bindCall (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
       (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0)
       (rest : Endblock l (τ :: Γ) (nach D f Λ)) : Endblock l Γ Λ
+  /-- `let x = f(…) else (e) { … }` at the top level of a body: `Block.bindCallElse` with an
+      end-block rest (Track P, 2026-10-18); the `else` branch is an end block over the reason. -/
+  | bindCallElse (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
+      (hp : RufPasst D V (D.signatur f) Λ) (hr : 0 < D.gruende f)
+      (err : Endblock l (.why (D.gruende f) :: Γ) (nach D f Λ))
+      (rest : Endblock l (τ :: Γ) (nach D f Λ)) : Endblock l Γ Λ
   /-- `let x = g(…);` of a FOREIGN body at the top level of a body (or in an `else` that
       must not fall off): `Block.bindAxiom` with an end-block rest (C-free lane,
       2026-09-30). The same premises; the rest is where the body ends. -/

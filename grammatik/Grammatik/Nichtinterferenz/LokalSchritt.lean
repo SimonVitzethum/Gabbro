@@ -362,6 +362,11 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       split
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.none_l _
+  | bindCallElse g args he' hp hr err rest =>
+      simp only [kEnde]
+      split
+      · exact KRel.lokal _ _ _ _ _ rfl hsp
+      · exact KRel.none_l _
   | bindAxiom a args he' hw hg hd hgd rest =>
       simp only [nE, Bool.and_eq_true] at he
       have h1 := hW.lese Λ args.orte

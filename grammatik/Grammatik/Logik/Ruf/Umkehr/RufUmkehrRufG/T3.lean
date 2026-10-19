@@ -162,6 +162,7 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .bindCall _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .bindCallElse .. => rfl
   | _, _, .bindAxiom .. => rfl
   | _, _, .bindAxiomElse .. => rfl
 
