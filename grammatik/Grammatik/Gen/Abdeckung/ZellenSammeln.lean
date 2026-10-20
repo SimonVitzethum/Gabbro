@@ -31,7 +31,7 @@ structure Summe where
   fremd : List String := []
   /-- Lean witness files: of valid programs (stem, cells, printed) and of isolated bad cells (stem, cell, printed) -/
   leanG : List (String × List Zelle × Bool) := []
-  leanB : List (String × Zelle × Bool) := []
+  leanB : List (String × Zelle × List Zelle × Bool) := []
 
 /-- One record line. -/
 def Summe.zeile (s : Summe) (l : String) : Summe :=
@@ -52,8 +52,10 @@ def Summe.zeile (s : Summe) (l : String) : Summe :=
   | ["LG", st, key, r] =>
     let zs := (if key.isEmpty then [] else key.splitOn ";").filterMap zelleAus
     { s with leanG := s.leanG ++ [(st, zs, r == "ok")] }
-  | ["LB", st, t, r] => match zelleAus t with
-    | some x => { s with leanB := s.leanB ++ [(st, x, r == "ok")] }
+  | ["LB", st, t, key, r] => match zelleAus t with
+    | some x =>
+      let zs := (if key.isEmpty then [] else key.splitOn ";").filterMap zelleAus
+      { s with leanB := s.leanB ++ [(st, x, zs, r == "ok")] }
     | none => { s with fremd := s.fremd ++ [t] }
   | ["R", m, n] => { s with grund := s.grund.insert m (s.grund.getD m 0 + n.toNat!) }
   | ["F", m, n] => { s with formen := s.formen.insert m (s.formen.getD m 0 + n.toNat!) }
@@ -133,12 +135,23 @@ def main (args : List String) : IO UInt32 := do
         wahl := wahl ++ [st]
         let zs := ((lg.find? (·.1 == st)).map (·.2.1)).getD []
         offen := offen.filter (!zs.contains ·)
-    let nWahl := (schAlle.filterMap fun x => (s.leanB.find? fun (_, y, ok) => ok && y == x).map (·.1))
     IO.FS.createDirAll s!"{dir}/zeugen"
+    let gutL := gutAlle.filter fun x => lg.any (·.2.1.contains x)
+    -- per isolated bad cell the first printed witness whose good cells M covers (`nGen … erreicht`)
+    let nWahl := schAlle.filterMap fun x => (s.leanB.find? fun (_, y, zs, ok) =>
+      ok && y == x && zs.all fun w => w.schlecht || gutL.contains w).map (·.1)
+    let mut ohneText : List String := []
     for st in wahl ++ nWahl do
       IO.FS.writeFile s!"{dir}/zeugen/{st}.lean" (← IO.FS.readFile s!"{dir}/lean/{st}.lean")
-    let gutL := gutAlle.filter fun x => lg.any (·.2.1.contains x)
-    let schL := schAlle.filter fun x => s.leanB.any fun (_, y, ok) => ok && y == x
+      -- the Gabbro source of the same program: valid candidates in kand/, single-fault programs beside the records
+      let quelle := if st.startsWith "M" then s!"{dir}/kand/{st}.gab" else s!"{dir}/{st}.gab"
+      if ← System.FilePath.pathExists quelle then
+        IO.FS.writeFile s!"{dir}/zeugen/{st}.gab" (← IO.FS.readFile quelle)
+      else ohneText := ohneText ++ [st]
+    IO.println s!"GABBRO SOURCES of the witnesses: {(wahl ++ nWahl).length - ohneText.length} of {(wahl ++ nWahl).length}; without source: {ohneText}"
+    -- the good cells the chosen witnesses cover: the list N may draw its good cells from (`nGen … er`)
+    IO.FS.writeFile s!"{dir}/zeugen/Erreicht.lean" (s!"/-\n  File:      Grammatik/Gen/Zeugen/Erreicht.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`): the good cells the M witnesses cover; N keeps only programs whose\n             good cells are among them (`nGen … erreicht`). Do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.Raum\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik.Gen\n\ndef erreicht : List Zelle := [\n  " ++ String.intercalate ",\n  " (gutL.map Zelle.lean) ++ "]\n\nend Gabbro.Grammatik.Gen.Zeugen\n")
+    let schL := schAlle.filter fun x => s.leanB.any fun (st, y, _, _) => y == x && nWahl.contains st
     IO.println s!"LEAN WITNESSES: good cells {gutL.length} of {gutAlle.length} by {wahl.length} programs; isolated bad cells {schL.length} of {schAlle.length}; files in {dir}/zeugen"
     for x in gutAlle.filter (fun x => s.gut.contains x && !gutL.contains x) do IO.println s!"{x.text}\tvalid program found, no Lean print"
     if ← System.FilePath.pathExists s!"{dir}/kand" then IO.FS.removeDirAll s!"{dir}/kand"

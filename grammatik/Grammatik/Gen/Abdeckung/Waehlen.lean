@@ -64,6 +64,7 @@ def Spez.bodenOk (z : Spez) (P : Programm z.deklaration) : Bool :=
 structure Gutes (z : Spez) where
   prog : Programm z.deklaration
   ws : List z.deklaration.Fn
+  ohneAx : z.axs = []
   boden : z.bodenOk prog = true
   gueltig : z.gutB prog z.sperreMax (z.wurzelnVon prog ws) = true
 
@@ -71,6 +72,7 @@ structure Gutes (z : Spez) where
 structure Schlechtes (z : Spez) (c : Fin 10) where
   prog : Programm z.deklaration
   ws : List z.deklaration.Fn
+  ohneAx : z.axs = []
   boden : z.bodenOk prog = true
   nurAn : z.nurB c prog z.sperreMax (z.wurzelnVon prog ws) = true
 
@@ -105,18 +107,20 @@ def Spez.parameter (z : Spez) : List (List z.deklaration.Fn) :=
     the Lean model's Bool; the value cannot be built without the proof. -/
 def Spez.erzeugeAus (z : Spez) (h : Programm z.deklaration) (ws : List z.deklaration.Fn) : Option (Erzeugt z) :=
   letI : Zahlen := z.zahlen
-  match hb : z.bodenOk h with
-  | false => none
-  | true =>
-    match hv : z.gutB h z.sperreMax (z.wurzelnVon h ws) with
-    | true => some (.gut ⟨h, ws, hb, hv⟩)
-    | false =>
-      match (List.finRange 10).filter (fun c => z.nurB c h z.sperreMax (z.wurzelnVon h ws)) with
-      | [c] =>
-        match hn : z.nurB c h z.sperreMax (z.wurzelnVon h ws) with
-        | true => some (.schlecht c ⟨h, ws, hb, hn⟩)
-        | false => none
-      | _ => none
+  if hax : z.axs = [] then
+    match hb : z.bodenOk h with
+    | false => none
+    | true =>
+      match hv : z.gutB h z.sperreMax (z.wurzelnVon h ws) with
+      | true => some (.gut ⟨h, ws, hax, hb, hv⟩)
+      | false =>
+        match (List.finRange 10).filter (fun c => z.nurB c h z.sperreMax (z.wurzelnVon h ws)) with
+        | [c] =>
+          match hn : z.nurB c h z.sperreMax (z.wurzelnVon h ws) with
+          | true => some (.schlecht c ⟨h, ws, hax, hb, hn⟩)
+          | false => none
+        | _ => none
+  else none
 
 /-- **Programs with contracts**: the skeleton's program (every contract `true`) and, for every function, the programs
     whose `requires` or whose `ensures` is one expression of size at most `nc` from the generator's expression stream,

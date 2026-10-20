@@ -24,12 +24,20 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen.Druck
 /-- The bound of every `costs` and `held` clause: large, so that it is never the reason a unit is refused. -/
 def kostenGrenze : String := "100000"
 
-/-- A type as source text; `none` for a type the printer does not know. -/
-def Spez.druckTy : Ty → Except String String
+/-- A type as source text; an error names a type the printer does not know. `option index into T` names a table of
+    the member with the count of the option; a reason type names the reason item of its number of cases. -/
+def Spez.druckTy (z : Spez) : Ty → Except String String
   | .int lo hi => .ok (if lo ≥ 0 then s!"u64 in {lo} .. {hi}" else s!"i64 in {lo} .. {hi}")
   | .bool => .ok "bool"
   | .never => .ok "never"
-  | _ => .error "unsupported type"
+  | .opt n => match (List.range z.tabs.length).find? (fun k => (z.tabs[k]?.map (·.count)) == some n) with
+    | some k => .ok s!"option index into T{k}"
+    | none => .error "unsupported type: option of a count no table has"
+  | .why n => .ok (grundTyp n)
+  | .sum _ => .error "unsupported type: tagged"
+  | .fl .. => .error "unsupported type: float"
+  | .fnptr _ => .error "unsupported type: function pointer"
+  | .ptr .. => .error "unsupported type: pointer"
 
 /-- The names of the entities of a member. -/
 def Spez.namen (z : Spez) : Namen z.deklaration where
@@ -115,10 +123,10 @@ def Spez.druckFn (z : Spez) [Zahlen] (h : Programm z.deklaration) (eff : List St
   if !s.konsumiert.isEmpty || !s.produziert.isEmpty then throw "unsupported feature: marks"
   let np := s.params.length
   let ps ← (s.params.zipIdx.map fun (t, j) => do
-    pure s!"v{np - 1 - j} : {← Spez.druckTy t}").mapM id
+    pure s!"v{np - 1 - j} : {← z.druckTy t}").mapM id
   let erg ← match s.erg with
     | none => pure ""
-    | some t => do pure s!" -> {← Spez.druckTy t}{if s.gruende != 0 then " or " ++ grundTyp s.gruende else ""}"
+    | some t => do pure s!" -> {← z.druckTy t}{if s.gruende != 0 then " or " ++ grundTyp s.gruende else ""}"
   let nm := z.namen
   let vor ← if istWahr (h.requires f) then pure [] else do pure [← Druck.druckE nm none (h.requires f)]
   let requires := ((z.haelt n).map fun L => s!"Held({nm.lock L})") ++ vor
@@ -132,14 +140,14 @@ def Spez.druckFn (z : Spez) [Zahlen] (h : Programm z.deklaration) (eff : List St
 /-- One foreign body as source text. -/
 def Spez.druckAx (z : Spez) (a : z.deklaration.Ax) : Except String String := do
   let x := z.axs.get a
-  if x.gruende != 0 then throw "unsupported feature: foreign body with reasons"
+  if x.gruende != 0 && x.erg.isNone then throw "unsupported feature: foreign body with reasons and no result"
   let nm := z.namen
   let np := x.params.length
   let ps ← (x.params.zipIdx.map fun (t, j) => do
-    pure s!"p{np - 1 - j} : {← Spez.druckTy t}").mapM id
+    pure s!"p{np - 1 - j} : {← z.druckTy t}").mapM id
   let erg ← match x.erg with
     | none => pure ""
-    | some t => do pure s!" -> {← Spez.druckTy t}"
+    | some t => do pure s!" -> {← z.druckTy t}{if x.gruende != 0 then " or " ++ grundTyp x.gruende else ""}"
   let eff :=
     ((List.finRange z.tabs.length).filter fun t => x.schreibt.contains t.val).map (fun t => s!"writes {nm.tab t}.slots") ++
     ((List.finRange z.globs.length).filter fun g => x.gschreibt.contains g.val).map (fun g => s!"writes {nm.glob g}")
@@ -155,11 +163,11 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (ws : Lis
   if !z.regs.isEmpty then throw "unsupported feature: registers"
   let tabs ← (List.finRange z.tabs.length).mapM fun t => do
     let tz := z.tabs.get t
-    let fs ← (tz.felder.zipIdx.map fun (fz, j) => do pure s!"        f{j} : {← Spez.druckTy fz.typ},").mapM id
+    let fs ← (tz.felder.zipIdx.map fun (fz, j) => do pure s!"        f{j} : {← z.druckTy fz.typ},").mapM id
     pure s!"table {nm.tab t} count {tz.count} \{\n    slot \{\n{String.intercalate "\n" fs}\n    }\n}\n"
   let globs ← (List.finRange z.globs.length).mapM fun g => do
     let gz := z.globs.get g
-    let ty ← Spez.druckTy gz.typ
+    let ty ← z.druckTy gz.typ
     if gz.atomar then
       pure s!"atomic {nm.glob g} : {ty} {if gz.nutzlast.isEmpty then "relaxed" else "release"};\n"
     else
@@ -173,7 +181,9 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (ws : Lis
     if schuetzt.isEmpty then throw "unsupported feature: lock protecting nothing (`protects` needs a place)"
     pure s!"lock {nm.lock L} protects \{ {kommas schuetzt} } rank {lz.rang} held <= {kostenVon (ebenen.foldl Nat.max 0)} ops{if lz.maskiert then " masks irqs" else ""};\n"
   let axs ← (List.finRange z.axs.length).mapM (z.druckAx)
-  let gruende := (z.fnListe.map fun f => (z.sigRoh (z.fns.get f)).gruende).filter (· > 0) |>.eraseDups
+  let gruende := ((z.fnListe.map fun f => (z.sigRoh (z.fns.get f)).gruende) ++
+    z.axs.map (·.gruende) ++
+    z.typen.filterMap (fun τ => match τ with | .why n => some n | _ => none)).filter (· > 0) |>.eraseDups
   let grundItems := gruende.map fun n =>
     s!"reason {grundTyp n} \{\n" ++ String.join ((List.range n).map fun j => s!"    C{j} = {j + 1} \"fall {j}\"\n") ++ "    exhaustive\n}\n"
   let eff := z.effekte h

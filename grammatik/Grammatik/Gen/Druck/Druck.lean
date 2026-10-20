@@ -136,6 +136,10 @@ def druckB (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       let fehler ← druckEnd nm (ein ++ "    ") err
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++
         (← druckB nm ein rest))
+  | .bindAxiomElse a args _ _ _ _ _ _ err rest => do
+      let fehler ← druckEnd nm (ein ++ "    ") err
+      .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++
+        (← druckB nm ein rest))
   | b => (nichtDruckbar "block" (cB b)).map id
 
 /-- A block that does not fall off, as source text. -/
@@ -153,6 +157,10 @@ def druckEnd (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ : List (Res
   | .bindCallElse f args _ _ _ err rest => do
       let fehler ← druckEnd nm (ein ++ "    ") err
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++
+        (← druckEnd nm ein rest))
+  | .bindAxiomElse a args _ _ _ _ _ _ err rest => do
+      let fehler ← druckEnd nm (ein ++ "    ") err
+      .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++
         (← druckEnd nm ein rest))
   | e => (nichtDruckbar "end block" (cE e)).map id
 

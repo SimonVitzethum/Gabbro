@@ -526,6 +526,7 @@ import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtListe
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
+import Grammatik.Gen.Abdeckung.Satz.Neutral
 import Grammatik.Gen.Erzeuger.Entdoppelt
 import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
 import Grammatik.Gen.Abdeckung.Satz.Schluessel

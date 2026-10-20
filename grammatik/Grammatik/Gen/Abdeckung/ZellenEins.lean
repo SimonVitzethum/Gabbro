@@ -33,7 +33,8 @@ def Befund.zeilen (b : Befund) : List String :=
   b.formen.toList.map (fun (m, n) => s!"F\t{m}\t{n}") ++
   b.lean.toList.map (fun (st, zs, r) =>
     s!"LG\t{st}\t{String.intercalate ";" (zs.map Zelle.text)}\t{match r with | .ok _ => "ok" | .error m => m}") ++
-  b.leanN.toList.map (fun (x, st, r) => s!"LB\t{st}\t{x.text}\t{match r with | .ok _ => "ok" | .error m => m}")
+  b.leanN.toList.flatMap (fun (x, alt) => alt.map fun (st, zs, r) =>
+    s!"LB\t{st}\t{x.text}\t{String.intercalate ";" (zs.map Zelle.text)}\t{match r with | .ok _ => "ok" | .error m => m}")
 
 end Gabbro.Grammatik.Gen
 
@@ -45,6 +46,12 @@ def main (args : List String) : IO UInt32 := do
   | [i, dir] =>
     let i := i.toNat!
     let z := mitglieder.getD i {}
+    if !z.axs.isEmpty then
+      -- a member with foreign bodies: no program of it is emitted (`extern fn` is outside the test sets)
+      IO.FS.createDirAll dir
+      IO.FS.writeFile (dir ++ s!"/m{i}.txt") "Z\t0\t0\t0\n"
+      IO.println s!"member {i}: skipped (extern fn)"
+      return 0
     let (nb, kmax) := grenzenVon i
     let nc : Nat := ((← IO.getEnv "LAUF_VERTRAG").bind String.toNat?).getD 0
     let tbls := z.tabellenD nb
@@ -65,10 +72,11 @@ def main (args : List String) : IO UInt32 := do
           match r with
           | .ok text => IO.FS.writeFile (dir ++ "/lean/" ++ st ++ ".lean") text
           | .error _ => pure ()
-        for (_, st, r) in b.leanN.toList do
-          match r with
-          | .ok text => IO.FS.writeFile (dir ++ "/lean/" ++ st ++ ".lean") text
-          | .error _ => pure ()
+        for (_, alt) in b.leanN.toList do
+          for (st, _, r) in alt do
+            match r with
+            | .ok text => IO.FS.writeFile (dir ++ "/lean/" ++ st ++ ".lean") text
+            | .error _ => pure ()
         IO.FS.writeFile (dir ++ s!"/m{i}.txt") (String.intercalate "\n" (b.zeilen ++ [s!"K-size\t{k}"]) ++ "\n")
     IO.println s!"member {i} ({nb}:{kmax}, contracts {nc}): valid {b.gutProgramme}, single-fault {b.schlechtProgramme}, good cells {b.gut.size}, isolated bad cells {b.schlecht.size}, errors {b.falsch} ({(← IO.monoMsNow) - t} ms)"
     return (if b.falsch == 0 then 0 else 1)

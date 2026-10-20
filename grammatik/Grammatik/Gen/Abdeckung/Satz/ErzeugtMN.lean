@@ -22,8 +22,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Adaequanz
 
 /-- A program of a member that derives its floors, under the source lock family and starts `ws`, as a program of the
     source. -/
-def Spez.einsatz (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn) (hb : z.bodenOk P = true) :
-    Einsatz where
+def Spez.einsatz (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn) (hax : z.axs = [])
+    (hb : z.bodenOk P = true) : Einsatz where
   D := z.deklaration
   aufz := z.aufz
   zahlen := z.zahlen
@@ -47,9 +47,12 @@ def Spez.einsatz (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaratio
   hBoden f := by
     have := (List.all_eq_true.1 hb) f (List.mem_finRange f)
     simpa using this
+  keinAx a := by
+    have := (show Fin z.axs.length from a).isLt
+    simp [hax] at this
 
 theorem Spez.einsatz_gueltig (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn)
-    (hb : z.bodenOk P = true) : (z.einsatz P ws hb).gueltig = z.gutB P z.sperreMax (z.wurzelnVon P ws) := rfl
+    (hax : z.axs = []) (hb : z.bodenOk P = true) : (z.einsatz P ws hax hb).gueltig = z.gutB P z.sperreMax (z.wurzelnVon P ws) := rfl
 
 /-- The only bad cell of a list of cells, if it has exactly one. -/
 def einzigSchlecht (zs : List Zelle) : Option Zelle :=
@@ -86,7 +89,7 @@ theorem einzigSchlecht_nur {e : Einsatz} {x : Zelle} (h : einzigSchlecht e.zelle
 /-- The valid programs a member emits up to size `kmax`. -/
 def Spez.mVon (z : Spez) (nb kmax nc : Nat) : List Einsatz :=
   (List.range (kmax + 1)).flatMap fun k => (z.erzeugtL (z.tabellenD nb) nc k).filterMap fun
-    | .gut g => some (z.einsatz g.prog g.ws g.boden)
+    | .gut g => some (z.einsatz g.prog g.ws g.ohneAx g.boden)
     | .schlecht _ _ => none
 
 /-- Every good cell of the list is in `er` (the good cells M witnesses). -/
@@ -98,7 +101,7 @@ def Spez.nVon (z : Spez) (nb kmax nc : Nat) (er : List Zelle) : List Einsatz :=
   (List.range (kmax + 1)).flatMap fun k => (z.erzeugtL (z.tabellenD nb) nc k).filterMap fun
     | .gut _ => none
     | .schlecht _ s =>
-      let e := z.einsatz s.prog s.ws s.boden
+      let e := z.einsatz s.prog s.ws s.ohneAx s.boden
       if (einzigSchlecht e.zellen).isSome && nurErreicht er e.zellen then some e else none
 
 /-- **M**: every valid program the generator emits, over all members. -/

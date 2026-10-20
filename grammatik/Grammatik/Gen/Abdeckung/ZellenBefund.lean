@@ -50,7 +50,8 @@ structure Befund where
   /-- the Lean witness files: of every valid candidate (stem, cells, text or reason) and of the first program in which
       a bad cell is the only one (stem, cell, text or reason) -/
   lean : Array (String × List Zelle × Except String String) := #[]
-  leanN : Std.HashMap Zelle (String × Except String String) := {}
+  leanN : Std.HashMap Zelle (List (String × List Zelle × Except String String)) := {}
+  nN : Nat := 0
   gutProgramme : Nat := 0
   schlechtProgramme : Nat := 0
   falsch : Nat := 0
@@ -112,15 +113,16 @@ def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befu
           if b.schlecht.contains x then b else { b with schlecht := b.schlecht.insert x (i, nb, k) }
         else { b with maskiert := b.maskiert.insert x (b.maskiert.getD x 0 + 1) }
       else b) b
-    let b := if schlechte == 1 then
+    -- the first program in which a bad cell is the only one: its Lean witness and its source, under one stem
+    if schlechte != 1 then b else
       (zs.filter fun x => x.schlecht && x.komp == c.val).foldl (fun b x =>
-        if b.leanN.contains x then b else
-          let st := s!"N{i}_{b.leanN.size}"
-          { b with leanN := b.leanN.insert x (st, z.leanZeuge i nc st h ws [x] (some c)) }) b
-      else b
-    let neu := if schlechte == 1 then zs.filter fun x => x.schlecht && x.komp == c.val && !b.schlGedruckt.contains x else []
-    if neu.isEmpty then b else
-      b.druck z h ws s!"schlecht{c.val}_{i}_{k}_{b.quellen.size}.gab" s!"refused-only-by-{c.val}" neu false
+        let alt := b.leanN.getD x []
+        if alt.length ≥ 20 then b else
+          let st := s!"N{i}_{b.nN}"
+          let zsD := zs.foldl (fun a y => if a.contains y then a else a ++ [y]) []
+          let b := { b with leanN := b.leanN.insert x (alt ++ [(st, zsD, z.leanZeuge i nc st h ws [x] (some c))]),
+                            nN := b.nN + 1 }
+          b.druck z h ws s!"{st}.gab" s!"refused-only-by-{c.val}" [x] false) b
 
 /-- The sweep of one member at one size: the generator hands over one program at a time. -/
 def Spez.sammle (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))))

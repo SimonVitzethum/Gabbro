@@ -47,9 +47,10 @@ theorem mem_erzeugtL {z : Spez} {tbls : List (Σ f : z.deklaration.Fn, List (Lis
 
 /-- A valid program is emitted as a `Gutes`. -/
 theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {ws : List z.deklaration.Fn}
-    (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true) :
-    z.erzeugeAus P ws = some (.gut ⟨P, ws, hb, hv⟩) := by
+    (hax : z.axs = []) (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true) :
+    z.erzeugeAus P ws = some (.gut ⟨P, ws, hax, hb, hv⟩) := by
   unfold Spez.erzeugeAus
+  rw [dif_pos hax]
   split
   · rename_i h; rw [hb] at h; cases h
   · split
@@ -86,8 +87,9 @@ theorem filter_einzig {c : Fin 10} {p : Fin 10 → Bool} (hc : p c = true) (h : 
 
 /-- A program refused by exactly component `c` is emitted as a `Schlechtes c`. -/
 theorem erzeugeAus_schlecht {z : Spez} {c : Fin 10} {P : Programm z.deklaration}
-    {ws : List z.deklaration.Fn} (hb : z.bodenOk P = true) (hn : z.nurB c P z.sperreMax (z.wurzelnVon P ws) = true) :
-    z.erzeugeAus P ws = some (.schlecht c ⟨P, ws, hb, hn⟩) := by
+    {ws : List z.deklaration.Fn} (hax : z.axs = []) (hb : z.bodenOk P = true)
+    (hn : z.nurB c P z.sperreMax (z.wurzelnVon P ws) = true) :
+    z.erzeugeAus P ws = some (.schlecht c ⟨P, ws, hax, hb, hn⟩) := by
   have hg : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false := by
     have a := (@nurAnB_iff z.deklaration z.aufz z.zahlen c P _ z.fnListe z.lockListe z.traegerListe _).1 hn
     cases hv : z.gutB P z.sperreMax (z.wurzelnVon P ws)
@@ -98,6 +100,7 @@ theorem erzeugeAus_schlecht {z : Spez} {c : Fin 10} {P : Programm z.deklaration}
   have hf := filter_einzig (p := fun c' => z.nurB c' P z.sperreMax (z.wurzelnVon P ws)) hn
     (fun c' h' => nurB_einzig hn h')
   unfold Spez.erzeugeAus
+  rw [dif_pos hax]
   split
   · rename_i h; rw [hb] at h; cases h
   · split

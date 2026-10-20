@@ -15,8 +15,8 @@ open Gabbro.Grammatik
 
 /-- A proof argument: the kernel decides it. -/
 def bew : String :=
-  "(by first | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | " ++
-    "exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _ _) rfl)"
+  "(by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | " ++
+    "exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)"
 
 /-- An element of a finite type of the declaration, ascribed to its type in the witness file (`z` is the member there). -/
 def fin (k : Nat) (art : String) : String := s!"(⟨{k}, by decide⟩ : Fin {art})"

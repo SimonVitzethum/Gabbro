@@ -150,8 +150,9 @@ theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.dek
     (hu : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) < unendlich)
     (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
     {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
-    (hws : ws ∈ z.parameter) (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true)
-    (hx : (z.einsatz P ws hb).Hat x) : RaumGutIn z nb kmax nc x := by
+    (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true)
+    (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true)
+    (hx : (z.einsatz P ws hax hb).Hat x) : RaumGutIn z nb kmax nc x := by
   letI : Zahlen := z.zahlen
   have haus : ∀ f, (Rumpf.bodenAbgeleitet (h0.rumpf f) != (z.deklaration.signatur f).boden) = false := fun f => by
     rw [← vertragsL_rumpf hP]; exact boden_aus hb f
@@ -160,9 +161,9 @@ theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.dek
   have hb' : z.bodenOk (P.mitRumpf r) = true := by rw [gs_bodenOk z P r hgP]; exact hb
   have hvoll : ∀ g : z.deklaration.Fn, g ∈ z.fnListe := List.mem_finRange
   have hls : ∀ L : z.deklaration.Lock, L ∈ z.lockListe := List.mem_finRange
-  have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hb).hcs
+  have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hax hb).hcs
   refine ⟨((Aufz.fn (D := z.deklaration)).map c).sum, ?_, ⟨r, h0.unterbricht⟩, hautT_mem _ ⟨r, h0.unterbricht⟩ c hr,
-    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hb', ?_, ?_⟩
+    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hax, hb', ?_, ?_⟩
   · exact Nat.le_trans (summe_le hc) hk
   · rw [← hv]
     exact gs_akzeptiertX P r hgP _ _ _ _ _ hvoll hls hcs
@@ -174,10 +175,10 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut 
     (hu : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) < unendlich)
     (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
     {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
-    (hws : ws ∈ z.parameter) (hb : z.bodenOk P = true) (c0 : Fin 10)
+    (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true) (c0 : Fin 10)
     (hv : z.nurB c0 P z.sperreMax (z.wurzelnVon P ws) = true)
-    (hx : einzigSchlecht (z.einsatz P ws hb).zellen = some x) {er : List Zelle}
-    (hE : nurErreicht er (z.einsatz P ws hb).zellen = true) : RaumSchlechtIn z nb kmax nc er x := by
+    (hx : einzigSchlecht (z.einsatz P ws hax hb).zellen = some x) {er : List Zelle}
+    (hE : nurErreicht er (z.einsatz P ws hax hb).zellen = true) : RaumSchlechtIn z nb kmax nc er x := by
   letI : Zahlen := z.zahlen
   have haus : ∀ f, (Rumpf.bodenAbgeleitet (h0.rumpf f) != (z.deklaration.signatur f).boden) = false := fun f => by
     rw [← vertragsL_rumpf hP]; exact boden_aus hb f
@@ -186,9 +187,9 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut 
   have hb' : z.bodenOk (P.mitRumpf r) = true := by rw [gs_bodenOk z P r hgP]; exact hb
   have hvoll : ∀ g : z.deklaration.Fn, g ∈ z.fnListe := List.mem_finRange
   have hls : ∀ L : z.deklaration.Lock, L ∈ z.lockListe := List.mem_finRange
-  have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hb).hcs
+  have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hax hb).hcs
   refine ⟨((Aufz.fn (D := z.deklaration)).map c).sum, ?_, ⟨r, h0.unterbricht⟩, hautT_mem _ ⟨r, h0.unterbricht⟩ c hr,
-    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hb', c0, ?_, ?_, ?_⟩
+    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hax, hb', c0, ?_, ?_, ?_⟩
   · exact Nat.le_trans (summe_le hc) hk
   · rw [← hv]
     simp only [Spez.nurB, nurAnB, gs_komp P r hgP _ _ _ _ _ hvoll hls hcs]

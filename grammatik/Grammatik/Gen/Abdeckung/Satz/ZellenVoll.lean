@@ -68,7 +68,7 @@ end
 
 /-- **A program of the source**, under any declaration: the program, the lock family the source gives it, member lists
     that hold every function, lock and carrier, and the declared starts; every body derives its declared floor. These
-    are the programs a Gabbro text elaborates to (`Parser.Cover.Differenz.sperrFamilie`, `Druck/Einheit.lean`). -/
+    are the programs without `extern fn` a Gabbro text elaborates to (`Parser.Cover.Differenz.sperrFamilie`, `Druck/Einheit.lean`). -/
 structure Einsatz where
   D : Deklaration
   aufz : Aufz D
@@ -86,6 +86,8 @@ structure Einsatz where
   hS : ∀ L c, c ∈ S.orte L ↔ L ∈ waechterVon c
   /-- every body derives its declared floor: the language writes no floor, it is the least rank the body takes -/
   hBoden : ∀ f, @Rumpf.bodenAbgeleitet D aufz f (P.rumpf f) = (D.signatur f).boden
+  /-- no foreign body (`extern fn` is outside the test sets, Simon 2026-10-20) -/
+  keinAx : D.Ax → False
 
 /-- The cells of a program. -/
 def Einsatz.zellen (e : Einsatz) : List Zelle :=
