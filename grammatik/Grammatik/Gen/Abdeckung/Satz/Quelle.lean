@@ -13,9 +13,22 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
 /-- A cell no program of the model has. -/
 theorem nie_hat {x : Zelle}
-    (h : ∀ (D : Deklaration) (_ : Aufz D) (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-      (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn), x ∉ alleZellen P S fs ls cs ws) (e : Einsatz) : ¬ e.Hat x :=
-  h e.D e.aufz e.P e.S e.fs e.ls e.cs e.ws
+    (h : ∀ (D : Deklaration) (_ : Aufz D) (_ : Zahlen) (P : Programm D) (S : SperrInv D) (fs : List D.Fn)
+      (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn), x ∉ alleZellen P S fs ls cs ws)
+    (e : Einsatz) : ¬ e.Hat x :=
+  h e.D e.aufz e.zahlen e.P e.S e.fs e.ls e.cs e.ws
+
+/-- A cell no program of the source has needs no test. -/
+theorem nie_gut {x : Zelle} (h : ∀ e : Einsatz, ¬ e.Hat x) : ∀ e : Einsatz, e.Hat x → e.gueltig = false :=
+  fun e he => absurd he (h e)
+
+/-- A good cell no VALID program of the source has needs no valid test. -/
+theorem nie_gueltig {x : Zelle} (h : ∀ e : Einsatz, e.gueltig = true → ¬ e.Hat x) :
+    ∀ e : Einsatz, e.Hat x → e.gueltig = false := by
+  intro e he
+  cases hv : e.gueltig
+  · rfl
+  · exact absurd he (h e hv)
 
 /-- **Lock places**: the lock family of the source protects exactly the guarded carriers, so the two atoms agree. -/
 theorem einsatz_4 (e : Einsatz) {a b : Bool} (h : e.Hat ⟨4, 0, true, [a, b]⟩) : a = b := by

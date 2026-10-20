@@ -528,6 +528,7 @@ import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
 import Grammatik.Gen.Abdeckung.Satz.Neutral
 import Grammatik.Gen.Abdeckung.Satz.Quelle
+import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
 import Grammatik.Gen.Erzeuger.Entdoppelt
 import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
 import Grammatik.Gen.Abdeckung.Satz.Schluessel
