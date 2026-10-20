@@ -8,6 +8,7 @@
 -/
 import Grammatik.Gen.Familie.Spez
 import Grammatik.Kern.Syntax.Syntax
+import Grammatik.Parser.Cover.Mitglieder
 
 namespace Gabbro.Grammatik.Gen.LeanTerm
 
@@ -55,7 +56,9 @@ def expr {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → Exce
   | _, .or a b => do .ok s!"(.or {← expr a} {← expr b})"
   | _, .not a => do .ok s!"(.not {← expr a})"
   | _, .why n r => .ok s!"(.why {n} {fin r.val "_"})"
-  | _, _ => .error "Lean print: expression form without a clause"
+  | _, .forallSlots t body _ => do .ok s!"(.forallSlots {fin (tab t) "z.tabs.length"} {← expr body} {bew})"
+  | _, .existsSlots t body _ => do .ok s!"(.existsSlots {fin (tab t) "z.tabs.length"} {← expr body} {bew})"
+  | _, e => .error s!"Lean print: no clause for {(Parser.Cover.Mitglieder.eE e).headD "?"}"
 
 /-- The arguments of a call. -/
 def args {Γ : Ctx} {Λ : List (Res D)} : {τs : List Ty} → Args D Γ Λ τs → Except String String

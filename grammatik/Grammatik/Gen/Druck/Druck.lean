@@ -73,6 +73,8 @@ def druckE (nm : Namen D) (kopf : Option String) {Γ : Ctx} {Λ : List (Res D)} 
   | .and a b => do .ok s!"({← druckE nm kopf a} && {← druckE nm kopf b})"
   | .or a b => do .ok s!"({← druckE nm kopf a} || {← druckE nm kopf b})"
   | .not a => do .ok s!"(!{← druckE nm kopf a})"
+  | .forallSlots t body _ => do .ok s!"(forall v{Γ.length} in slots of {nm.tab t} : {← druckE nm kopf body})"
+  | .existsSlots t body _ => do .ok s!"(exists v{Γ.length} in slots of {nm.tab t} : {← druckE nm kopf body})"
   | e => nichtDruckbar "expression" (eE e)
 
 /-- The arguments of a call. -/

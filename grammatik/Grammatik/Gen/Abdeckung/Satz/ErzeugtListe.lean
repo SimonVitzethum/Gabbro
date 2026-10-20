@@ -21,6 +21,30 @@ def Spez.vertragsL (z : Spez) (nc : Nat) (h : Haut z.deklaration) : List (Progra
     (List.range (nc + 1)).flatMap (fun n => (ensS f nc n).map fun e =>
       { P with ensures := fun g => if hg : g = f then hg ▸ e else Expr.tru })
 
+/-- A program with one `requires` of size at most `nc` is one of the contract variants. -/
+theorem vertragsL_req (z : Spez) (nc : Nat) (h : Haut z.deklaration) (f : z.deklaration.Fn)
+    (e : Expr z.deklaration (z.deklaration.params f) (Signatur.anfang z.deklaration (z.deklaration.signatur f)) .bool)
+    (hs : @groesseExpr z.deklaration z.zahlen _ _ _ e ≤ nc) (hu : @groesseExpr z.deklaration z.zahlen _ _ _ e < unendlich) :
+    ({ h.programm with requires := fun g => if hg : g = f then hg ▸ e else Expr.tru } : Programm z.deklaration) ∈
+      z.vertragsL nc h := by
+  letI : Zahlen := z.zahlen
+  unfold Spez.vertragsL
+  refine List.mem_cons_of_mem _ (List.mem_flatMap.2 ⟨f, List.mem_finRange f, List.mem_append_left _ ?_⟩)
+  refine List.mem_flatMap.2 ⟨groesseExpr e, List.mem_range.2 (by omega), List.mem_map.2 ⟨e, ?_, rfl⟩⟩
+  exact mem_tyS (genE_vollst nc nc _ _ _ e hs hs hu)
+
+/-- A program with one `ensures` of size at most `nc` is one of the contract variants. -/
+theorem vertragsL_ens (z : Spez) (nc : Nat) (h : Haut z.deklaration) (f : z.deklaration.Fn)
+    (e : Expr z.deklaration (ErgCtx (z.deklaration.params f) (z.deklaration.erg f)) (vertragVon z.deklaration f).ende .bool)
+    (hs : @groesseExpr z.deklaration z.zahlen _ _ _ e ≤ nc) (hu : @groesseExpr z.deklaration z.zahlen _ _ _ e < unendlich) :
+    ({ h.programm with ensures := fun g => if hg : g = f then hg ▸ e else Expr.tru } : Programm z.deklaration) ∈
+      z.vertragsL nc h := by
+  letI : Zahlen := z.zahlen
+  unfold Spez.vertragsL
+  refine List.mem_cons_of_mem _ (List.mem_flatMap.2 ⟨f, List.mem_finRange f, List.mem_append_right _ ?_⟩)
+  refine List.mem_flatMap.2 ⟨groesseExpr e, List.mem_range.2 (by omega), List.mem_map.2 ⟨e, ?_, rfl⟩⟩
+  exact mem_tyS (genE_vollst nc nc _ _ _ e hs hs hu)
+
 theorem vertragsF_eq {β : Type} (z : Spez) (nc : Nat) (h : Haut z.deklaration) (b : β)
     (s : β → Programm z.deklaration → β) : z.vertragsF nc h b s = (z.vertragsL nc h).foldl s b := by
   simp only [Spez.vertragsF, Spez.vertragsL, List.foldl_cons, Strom.foldl_flatMap, List.foldl_append, List.foldl_map]

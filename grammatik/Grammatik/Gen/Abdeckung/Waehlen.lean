@@ -151,4 +151,8 @@ def grenzenVon (i : Nat) : Nat × Nat :=
   if i = 16 then (6, 14) else if 17 ≤ i ∧ i ≤ 19 then (6, 12) else if i = 20 then (7, 12)
   else if i ≥ familie.length + zellFamilie.length then (5, 9) else (5, 6)
 
+/-- The contract size the test sets are stated for (`mGen ncZiel`): a witness without a contract holds for every
+    size, a witness with one needs its contract of size at most this. -/
+def ncZiel : Nat := 2
+
 end Gabbro.Grammatik.Gen
