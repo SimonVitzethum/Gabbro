@@ -58,25 +58,34 @@ structure Zelle where
   atome : List Bool
   deriving BEq, Hashable, Repr
 
-/-- **The test of a cell**, from its atom vector alone. A vector of the wrong length passes (never refuses). -/
-def Zelle.kern (z : Zelle) : Bool :=
+/-- **The test of a cell**, from its atom vector alone; `none` for a (component, kind, length) that no clause knows. An
+    unknown shape is NEVER a pass: `Zelle.kern` below is only read where `definiert` holds, and the table
+    `zellTafel` is proved to be inside the clauses (`zellAlle_definiert`). -/
+def Zelle.kern? (z : Zelle) : Option Bool :=
   match z.komp, z.art, z.atome with
-  | 0, 0, [a, b, c] => a && !(b && c)
-  | 1, 0, [a, b, c] => !a || !b || c
-  | 2, 0, [a, b, c, d] => a || b || c || d
-  | 2, 1, [a, b] => a || b
-  | 2, 2, [a, b, c] => a || !b || !c
-  | 2, 3, [a, b, c] => a && b && c
-  | 3, 0, [a, b] => !a || b
-  | 4, 0, [a, b] => !a || b
-  | 5, 0, [a, b] => !a && !b
-  | 6, 0, [a, b, c] => !a || (!b && !c)
-  | 6, 1, [a, b, c, d] => !a || !b || !c || d
-  | 7, 0, [a, b] => a || b
-  | 7, 1, [a, b, c] => a || !b || !c
-  | 8, 0, [a, b, c] => !a || b || c
-  | 9, 0, [a, b, c, d] => !a || !b || !c || d
-  | _, _, _ => true
+  | 0, 0, [a, b, c] => some (a && !(b && c))
+  | 1, 0, [a, b, c] => some (!a || !b || c)
+  | 2, 0, [a, b, c, d] => some (a || b || c || d)
+  | 2, 1, [a, b] => some (a || b)
+  | 2, 2, [a, b, c] => some (a || !b || !c)
+  | 2, 3, [a, b, c] => some (a && b && c)
+  | 3, 0, [a, b] => some (!a || b)
+  | 4, 0, [a, b] => some (!a || b)
+  | 5, 0, [a, b] => some (!a && !b)
+  | 6, 0, [a, b, c] => some (!a || (!b && !c))
+  | 6, 1, [a, b, c, d] => some (!a || !b || !c || d)
+  | 7, 0, [a, b] => some (a || b)
+  | 7, 1, [a, b, c] => some (a || !b || !c)
+  | 8, 0, [a, b, c] => some (!a || b || c)
+  | 9, 0, [a, b, c, d] => some (!a || !b || !c || d)
+  | _, _, _ => none
+
+/-- The test as a Bool, where a clause knows the shape; an unknown shape reads as `false`, so it can never hide a bad
+    cell behind a pass. -/
+def Zelle.kern (z : Zelle) : Bool := z.kern?.getD false
+
+/-- A cell whose shape a clause knows. -/
+def Zelle.definiert (z : Zelle) : Bool := z.kern?.isSome
 
 /-- The cell is BAD: a test that refuses the component fails. -/
 def Zelle.schlecht (z : Zelle) : Bool := z.urteil && !z.kern
@@ -158,6 +167,7 @@ def urteilAusZellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : Lis
     cells, and the derived atoms equal their own cells. -/
 def zellenStimmen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
+  (List.finRange 10).all (fun c => (zellen P S fs ls cs ws c).all Zelle.definiert) &&
   (List.finRange 10).all (fun c => urteilAusZellen P S fs ls cs ws c == komp P S fs ls cs ws c) &&
   cs.all (fun c =>
     (getrenntW P fs ws c == (getrenntZellen P fs ws c).all Zelle.kern) &&
@@ -200,5 +210,36 @@ def Rumpf.schluessel {D : Deklaration} [Aufz D] [Zahlen] {f : D.Fn} (b : Rumpf D
   (((Aufz.tab (D := D)).map Sum.inl ++ (Aufz.glob (D := D)).map Sum.inr).map fun c => istIn (Extraktion.endblockOrte b) c)
 
 end Atome
+
+/-! ## The universe of cells: ONE table, with its proofs -/
+
+/-- **The table of the kinds of cells**: (component, kind, whether a false test refuses the component, number of
+    atoms). It is the ONLY place the arities are written; `zellAlle` and every count below are computed from it, and
+    `zellAlle_definiert` stops the build when a row has no clause in `Zelle.kern?`. -/
+def zellTafel : List (Nat × Nat × Bool × Nat) :=
+  [(0, 0, true, 3), (1, 0, true, 3), (2, 0, true, 4), (2, 1, true, 2), (2, 2, false, 3), (2, 3, false, 3),
+   (3, 0, true, 2), (4, 0, true, 2), (5, 0, true, 2), (6, 0, true, 3), (6, 1, true, 4), (7, 0, true, 2),
+   (7, 1, false, 3), (8, 0, true, 3), (9, 0, true, 4)]
+
+/-- All assignments of `n` atoms. -/
+def belegungen : Nat → List (List Bool)
+  | 0 => [[]]
+  | n + 1 => (belegungen n).flatMap fun r => [false :: r, true :: r]
+
+/-- **The universe**: every assignment of every kind. -/
+def zellAlle : List Zelle :=
+  zellTafel.flatMap fun (c, a, u, n) => (belegungen n).map fun v => ⟨c, a, u, v⟩
+
+/-- Every cell of the universe has a clause: no shape of the table is unknown to `Zelle.kern?`. -/
+theorem zellAlle_definiert : zellAlle.all Zelle.definiert = true := by decide
+
+/-- The universe has 124 cells ... -/
+theorem zellAlle_laenge : zellAlle.length = 124 := by decide
+
+/-- ... of which 20 are bad (a verdict test fails): the number of single-fault programs of the global patterns. -/
+theorem zellAlle_schlecht : (zellAlle.filter Zelle.schlecht).length = 20 := by decide
+
+/-- The components of the table are exactly the ten of `AkzeptiertX`. -/
+theorem zellTafel_komponenten : (zellTafel.map (·.1)).eraseDups = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] := by decide
 
 end Gabbro.Grammatik.Gen

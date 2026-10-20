@@ -104,21 +104,6 @@ def Spez.sammle (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Ru
       | some e => b.nimm i nb k z e
       | none => b) b) b
 
-/-- Every kind of cell with its atom count: the universe of cells (all assignments of every kind). -/
-def zellArten : List (Nat × Nat × Bool × Nat) :=
-  [(0, 0, true, 3), (1, 0, true, 3), (2, 0, true, 4), (2, 1, true, 2), (2, 2, false, 3), (2, 3, false, 3),
-   (3, 0, true, 2), (4, 0, true, 2), (5, 0, true, 2), (6, 0, true, 3), (6, 1, true, 4), (7, 0, true, 2),
-   (7, 1, false, 3), (8, 0, true, 3), (9, 0, true, 4)]
-
-/-- All assignments of `n` atoms. -/
-def belegungen : Nat → List (List Bool)
-  | 0 => [[]]
-  | n + 1 => (belegungen n).flatMap fun r => [false :: r, true :: r]
-
-/-- The universe: every assignment of every kind. -/
-def zellAlle : List Zelle :=
-  zellArten.flatMap fun (c, a, u, n) => (belegungen n).map fun v => ⟨c, a, u, v⟩
-
 /-- A cell as text. -/
 def Zelle.text (z : Zelle) : String :=
   s!"{z.komp}.{z.art}" ++ " " ++ String.intercalate "" (z.atome.map fun a => if a then "1" else "0")
