@@ -73,6 +73,9 @@ def druckE (nm : Namen D) (kopf : Option String) {Γ : Ctx} {Λ : List (Res D)} 
   | .and a b => do .ok s!"({← druckE nm kopf a} && {← druckE nm kopf b})"
   | .or a b => do .ok s!"({← druckE nm kopf a} || {← druckE nm kopf b})"
   | .not a => do .ok s!"(!{← druckE nm kopf a})"
+  | .none _ => .ok "None"
+  | .some e => do .ok s!"Some({← druckE nm kopf e})"
+  | .istSome (.var x) => .ok s!"v{Γ.length - 1 - varTiefe x}.is_some()"
   | .forallSlots t body _ => do .ok s!"(forall v{Γ.length} in slots of {nm.tab t} : {← druckE nm kopf body})"
   | .existsSlots t body _ => do .ok s!"(exists v{Γ.length} in slots of {nm.tab t} : {← druckE nm kopf body})"
   | e => nichtDruckbar "expression" (eE e)
@@ -112,6 +115,10 @@ def druckS (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       let e' ← druckB nm (ein ++ "    ") e
       .ok s!"{ein}if {c'} \{\n{t'}{ein}} else \{\n{e'}{ein}}\n"
   | .call f args _ _ => do .ok s!"{ein}{nm.fn f}({liste (← druckA nm args)});\n"
+  | .callInd p args _ _ => do .ok s!"{ein}{← druckE nm none p}({liste (← druckA nm args)});\n"
+  | .traverse t inv body => do
+      let invS := match inv with | .tru => .ok "" | i => do .ok s!" invariant {← druckE nm none i}"
+      .ok s!"{ein}traverse v{Γ.length} over slots of {nm.tab t} by unvisited{← invS} \{\n{← druckB nm (ein ++ "    ") body}{ein}}\n"
   | .locks L _ body => do
       .ok s!"{ein}locks {nm.lock L} \{\n{← druckB nm (ein ++ "    ") body}{ein}}\n"
   | .axiomCall a args _ _ _ _ _ => do .ok s!"{ein}{nm.ax a}({liste (← druckA nm args)});\n"

@@ -522,6 +522,7 @@ import Grammatik.Gen.Abdeckung.Satz.ZellenSatz
 import Grammatik.Gen.Abdeckung.ZellenBefund
 import Grammatik.Gen.Druck.LeanTerm
 import Grammatik.Gen.Druck.LeanZeuge
+import Grammatik.Gen.Abdeckung.ZellenSchluss
 import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtListe
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN

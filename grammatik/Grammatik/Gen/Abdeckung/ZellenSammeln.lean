@@ -11,6 +11,7 @@
              A cell text that names no cell of `zellAlle` stops the run (exit 1): the records belong to another model.
 -/
 import Grammatik.Gen.Abdeckung.ZellenBefund
+import Grammatik.Gen.Abdeckung.ZellenSchluss
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
@@ -96,7 +97,10 @@ def main (args : List String) : IO UInt32 := do
     let mut kand : List (String × List Zelle × Except String String × Nat) := []
     for (st, zs, r) in s.kand do
       match r with
-      | .ok () => kand := kand ++ [(st, zs, .ok (← IO.FS.readFile s!"{dir}/kand/{st}.gab"), 0)]
+      | .ok () =>
+        let f := s!"{dir}/kand/{st}.gab"
+        if ← System.FilePath.pathExists f then kand := kand ++ [(st, zs, .ok (← IO.FS.readFile f), 0)]
+        else kand := kand ++ [(st, zs, .error "source file missing", 0)]
       | .error m => kand := kand ++ [(st, zs, .error m, 0)]
     let u := ueberdeckung kand
     IO.println s!"COVER: good cells reachable {u.erreichbar.length} of {gutAlle.length}; printable {u.druckbar.length}; chosen {u.gewaehlt.length} programs; lower bound {u.schranke}"
@@ -142,7 +146,8 @@ def main (args : List String) : IO UInt32 := do
       ok && y == x && zs.all fun w => w.schlecht || gutL.contains w).map (·.1)
     let mut ohneText : List String := []
     for st in wahl ++ nWahl do
-      IO.FS.writeFile s!"{dir}/zeugen/{st}.lean" (← IO.FS.readFile s!"{dir}/lean/{st}.lean")
+      if ← System.FilePath.pathExists s!"{dir}/lean/{st}.lean" then
+        IO.FS.writeFile s!"{dir}/zeugen/{st}.lean" (← IO.FS.readFile s!"{dir}/lean/{st}.lean")
       -- the Gabbro source of the same program: valid candidates in kand/, single-fault programs beside the records
       let quelle := if st.startsWith "M" then s!"{dir}/kand/{st}.gab" else s!"{dir}/{st}.gab"
       if ← System.FilePath.pathExists quelle then
@@ -152,6 +157,17 @@ def main (args : List String) : IO UInt32 := do
     -- the good cells the chosen witnesses cover: the list N may draw its good cells from (`nGen … er`)
     IO.FS.writeFile s!"{dir}/zeugen/Erreicht.lean" (s!"/-\n  File:      Grammatik/Gen/Zeugen/Erreicht.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`): the good cells the M witnesses cover; N keeps only programs whose\n             good cells are among them (`nGen … erreicht`). Do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.Raum\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik.Gen\n\ndef erreicht : List Zelle := [\n  " ++ String.intercalate ",\n  " (gutL.map Zelle.lean) ++ "]\n\nend Gabbro.Grammatik.Gen.Zeugen\n")
     let schL := schAlle.filter fun x => s.leanB.any fun (st, y, _, _) => y == x && nWahl.contains st
+    -- the closing file: every cell with its reason, or the open cells
+    let gutW := fun (x : Zelle) => wahl.find? fun st => ((lg.find? (·.1 == st)).map (·.2.1.contains x)).getD false
+    let schlW := fun (x : Zelle) => (s.leanB.find? fun (st, y, _, _) => y == x && nWahl.contains st).map (·.1)
+    let mods := "Grammatik.Gen.Zeugen.Erreicht" :: (wahl.map (s!"Grammatik.Gen.Zeugen.M.{·}")) ++ nWahl.map (s!"Grammatik.Gen.Zeugen.N.{·}")
+    match schlussText gutW schlW mods with
+    | .ok text =>
+      IO.FS.writeFile s!"{dir}/zeugen/Schluss.lean" text
+      IO.println "CLOSING FILE written: every cell has its reason"
+    | .error ohne =>
+      IO.println s!"OPEN CELLS (no witness, no theorem): {ohne.length}"
+      for x in ohne do IO.println s!"{x.text}\t{if x.schlecht then "B" else "G"}\topen"
     IO.println s!"LEAN WITNESSES: good cells {gutL.length} of {gutAlle.length} by {wahl.length} programs; isolated bad cells {schL.length} of {schAlle.length}; files in {dir}/zeugen"
     for x in gutAlle.filter (fun x => s.gut.contains x && !gutL.contains x) do IO.println s!"{x.text}\tvalid program found, no Lean print"
     if ← System.FilePath.pathExists s!"{dir}/kand" then IO.FS.removeDirAll s!"{dir}/kand"

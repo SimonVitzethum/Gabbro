@@ -33,7 +33,7 @@ def var : {Γ : Ctx} → {τ : Ty} → Var Γ τ → String
   | _, _, .there v => s!"(.there {var v})"
 
 variable (tab : D.Tab → Nat) (glob : D.Glob → Nat) (fn : D.Fn → Nat) (lock : D.Lock → Nat) (ax : D.Ax → Nat)
-  (feld : (t : D.Tab) → D.Feld t → Nat)
+  (feld : (t : D.Tab) → D.Feld t → Nat) (reg : D.Reg → Nat)
 
 /-- An expression. -/
 def expr {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → Except String String
@@ -56,6 +56,9 @@ def expr {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → Exce
   | _, .or a b => do .ok s!"(.or {← expr a} {← expr b})"
   | _, .not a => do .ok s!"(.not {← expr a})"
   | _, .why n r => .ok s!"(.why {n} {fin r.val "_"})"
+  | _, .none n => .ok s!"(.none {zahl n})"
+  | _, .some e => do .ok s!"(.some {← expr e})"
+  | _, .istSome e => do .ok s!"(.istSome {← expr e})"
   | _, .forallSlots t body _ => do .ok s!"(.forallSlots {fin (tab t) "z.tabs.length"} {← expr body} {bew})"
   | _, .existsSlots t body _ => do .ok s!"(.existsSlots {fin (tab t) "z.tabs.length"} {← expr body} {bew})"
   | _, e => .error s!"Lean print: no clause for {(Parser.Cover.Mitglieder.eE e).headD "?"}"
@@ -82,10 +85,14 @@ def stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D 
   | .ite c t e => do .ok s!"(.ite {← expr tab glob fn feld c} {← block t} {← block e})"
   | .call g a _ _ => do .ok s!"(.call {fin (fn g) "z.fns.length"} {← args tab glob fn feld a} {bew} {bew})"
   | .locks L _ body => do .ok s!"(.locks {fin (lock L) "z.locks.length"} {bew} {← block body})"
+  | .regWrite r _ e => do .ok s!"(.regWrite {fin (reg r) "z.regs.length"} {bew} {← expr tab glob fn feld e})"
+  | .callInd p a _ _ => do .ok s!"(.callInd {← expr tab glob fn feld p} {← args tab glob fn feld a} {bew} {bew})"
+  | .traverse t inv body => do
+      .ok s!"(.traverse {fin (tab t) "z.tabs.length"} {← expr tab glob fn feld inv} {← block body})"
   | .axiomCall a xs _ _ _ _ _ => do .ok s!"(.axiomCall {fin (ax a) "z.axs.length"} {← args tab glob fn feld xs} {bew} {bew} {bew} {bew} {bew})"
   | .ret e _ => do .ok s!"(.ret {← erg tab glob fn feld e} {bew})"
   | .retWhy r _ => .ok s!"(.retWhy {fin r.val "_"} {bew})"
-  | _ => .error "Lean print: statement form without a clause"
+  | s => .error s!"Lean print: no clause for {(Parser.Cover.Mitglieder.cS s).headD "?"}"
 
 /-- A block. -/
 def block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Except String String
@@ -98,8 +105,13 @@ def block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block 
       .ok s!"(.bindCallElse {fin (fn g) "z.fns.length"} {← args tab glob fn feld a} {bew} {bew} {bew} {← endblock err} {← block rest})"
   | .bindAxiom a xs _ _ _ _ _ rest => do
       .ok s!"(.bindAxiom {fin (ax a) "z.axs.length"} {← args tab glob fn feld xs} {bew} {bew} {bew} {bew} {bew} {← block rest})"
+  | .regRead r _ rest => do .ok s!"(.regRead {fin (reg r) "z.regs.length"} {bew} {← block rest})"
+  | .regReadElse r _ zu sonst rest => do
+      .ok s!"(.regReadElse {fin (reg r) "z.regs.length"} {bew} {← expr tab glob fn feld zu} {← endblock sonst} {← block rest})"
+  | .bindCallInd p a _ _ _ rest => do
+      .ok s!"(.bindCallInd {← expr tab glob fn feld p} {← args tab glob fn feld a} {bew} {bew} {bew} {← block rest})"
   | .awaits g _ _ _ rest => do .ok s!"(.awaits {fin (glob g) "z.globs.length"} _ rfl {bew} {← block rest})"
-  | _ => .error "Lean print: block form without a clause"
+  | b => .error s!"Lean print: no clause for {(Parser.Cover.Mitglieder.cB b).headD "?"}"
 
 /-- An end block. -/
 def endblock {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Except String String
@@ -115,7 +127,7 @@ def endblock {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endbloc
       .ok s!"(.bindAxiom {fin (ax a) "z.axs.length"} {← args tab glob fn feld xs} {bew} {bew} {bew} {bew} {bew} {← endblock rest})"
   | .bindAxiomElse a xs _ _ _ _ _ _ err rest => do
       .ok s!"(.bindAxiomElse {fin (ax a) "z.axs.length"} {← args tab glob fn feld xs} {bew} {bew} {bew} {bew} {bew} {bew} {← endblock err} {← endblock rest})"
-  | _ => .error "Lean print: end-block form without a clause"
+  | e => .error s!"Lean print: no clause for {(Parser.Cover.Mitglieder.cE e).headD "?"}"
 
 end
 

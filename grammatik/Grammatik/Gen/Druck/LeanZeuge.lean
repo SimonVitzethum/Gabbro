@@ -61,8 +61,9 @@ def Spez.leanRuempfe (z : Spez) (P : Programm z.deklaration) : Except String Str
   let lock := fun (L : z.deklaration.Lock) => (show Fin z.locks.length from L).val
   let ax := fun (a : z.deklaration.Ax) => (show Fin z.axs.length from a).val
   let feld := fun (t : z.deklaration.Tab) (f : z.deklaration.Feld t) => (show Fin _ from f).val
+  let reg := fun (r : z.deklaration.Reg) => (show Fin z.regs.length from r).val
   let defs ← z.fnListe.mapM fun f => do
-    let b ← LeanTerm.endblock tab glob fn lock ax feld (P.rumpf f)
+    let b ← LeanTerm.endblock tab glob fn lock ax feld reg (P.rumpf f)
     pure s!"def b{fn f} : Rumpf z.deklaration ⟨{fn f}, by decide⟩ :=\n  {b}\n\n"
   let klauseln := z.fnListe.map fun f => s!"  | ⟨{fn f}, _⟩ => b{fn f}\n"
   pure (String.join defs ++ "def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f\n" ++ String.join klauseln ++
