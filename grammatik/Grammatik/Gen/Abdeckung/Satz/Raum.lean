@@ -85,36 +85,6 @@ theorem vertragsL_mitRumpf {z : Spez} {nc : Nat} {h : Haut z.deklaration} {P : P
   · exact Or.inr ⟨f, hf, Or.inl ⟨n, hn, e, he, rfl⟩⟩
   · exact Or.inr ⟨f, hf, Or.inr ⟨n, hn, e, he, rfl⟩⟩
 
-theorem einzigSchlecht_iff (l : List Zelle) (x : Zelle) :
-    einzigSchlecht l = some x ↔ x ∈ l ∧ x.schlecht = true ∧ ∀ y ∈ l, y.schlecht = true → y = x := by
-  unfold einzigSchlecht
-  generalize hf : l.filter (·.schlecht) = m
-  have hm : ∀ y, y ∈ m ↔ y ∈ l ∧ y.schlecht = true := fun y => by rw [← hf, List.mem_filter]
-  match m, hm with
-  | [], hm =>
-    simp only [reduceCtorEq, false_iff, not_and]
-    intro hx hs _
-    exact absurd ((hm x).2 ⟨hx, hs⟩) List.not_mem_nil
-  | y :: r, hm =>
-    simp only
-    constructor
-    · intro h
-      by_cases hr : (r.all (· == y)) = true
-      · have h' : some y = some x := by simpa [hr] using h
-        cases h'
-        refine ⟨((hm x).1 List.mem_cons_self).1, ((hm x).1 List.mem_cons_self).2, fun z hz hzs => ?_⟩
-        rcases List.mem_cons.1 ((hm z).2 ⟨hz, hzs⟩) with h1 | h1
-        · exact h1
-        · simpa using (List.all_eq_true.1 hr) z h1
-      · simp [hr] at h
-    · rintro ⟨hx, hxs, hall⟩
-      have hy : y = x := hall y ((hm y).1 List.mem_cons_self).1 ((hm y).1 List.mem_cons_self).2
-      subst hy
-      have hr : (r.all (· == y)) = true := List.all_eq_true.2 fun z hz => by
-        have := hall z ((hm z).1 (List.mem_cons_of_mem _ hz)).1 ((hm z).1 (List.mem_cons_of_mem _ hz)).2
-        simp [this]
-      rw [if_pos hr]
-
 /-- The bodies a program's bodies are replaced by: one representative per function from the tables. -/
 theorem vertreter (z : Spez) (nb : Nat) (h0 : Haut z.deklaration)
     (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
@@ -169,16 +139,15 @@ theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.dek
     exact gs_akzeptiertX P r hgP _ _ _ _ _ hvoll hls hcs
   · exact (gs_alleZellen P r hgP _ _ _ _ _ x).2 hx
 
-/-- **A single-fault program within the bounds with one bad cell puts that cell into the space.** -/
-theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.deklaration)
+/-- **A refused program within the bounds puts itself into the space**: each of its cells in `B` or a good one of `er`. -/
+theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (h0 : Haut z.deklaration)
     (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
     (hu : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) < unendlich)
     (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
     {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
-    (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true) (c0 : Fin 10)
-    (hv : z.nurB c0 P z.sperreMax (z.wurzelnVon P ws) = true)
-    (hx : einzigSchlecht (z.einsatz P ws hax hb).zellen = some x) {er : List Zelle}
-    (hE : nurErreicht er (z.einsatz P ws hax hb).zellen = true) : RaumSchlechtIn z nb kmax nc er x := by
+    (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true)
+    (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false) {er B : List Zelle}
+    (hE : gedeckt er B (z.einsatz P ws hax hb).zellen = true) : RaumSchlechtIn z nb kmax nc er B := by
   letI : Zahlen := z.zahlen
   have haus : ∀ f, (Rumpf.bodenAbgeleitet (h0.rumpf f) != (z.deklaration.signatur f).boden) = false := fun f => by
     rw [← vertragsL_rumpf hP]; exact boden_aus hb f
@@ -189,15 +158,10 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut 
   have hls : ∀ L : z.deklaration.Lock, L ∈ z.lockListe := List.mem_finRange
   have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hax hb).hcs
   refine ⟨((Aufz.fn (D := z.deklaration)).map c).sum, ?_, ⟨r, h0.unterbricht⟩, hautT_mem _ ⟨r, h0.unterbricht⟩ c hr,
-    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hax, hb', c0, ?_, ?_, ?_⟩
+    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hax, hb', ?_, ?_⟩
   · exact Nat.le_trans (summe_le hc) hk
   · rw [← hv]
-    simp only [Spez.nurB, nurAnB, gs_komp P r hgP _ _ _ _ _ hvoll hls hcs]
-    rfl
-  · rw [einzigSchlecht_iff] at hx ⊢
-    obtain ⟨h1, h2, h3⟩ := hx
-    refine ⟨(gs_alleZellen P r hgP _ _ _ _ _ x).2 h1, h2, fun y hy hys => h3 y ?_ hys⟩
-    exact (gs_alleZellen P r hgP _ _ _ _ _ y).1 hy
+    exact gs_akzeptiertX P r hgP _ _ _ _ _ hvoll hls hcs
   · rw [← hE]
     exact all_mem_gleich _ (gs_alleZellen P r hgP _ _ _ _ _)
 

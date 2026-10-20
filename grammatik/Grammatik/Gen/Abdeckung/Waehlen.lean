@@ -68,13 +68,13 @@ structure Gutes (z : Spez) where
   boden : z.bodenOk prog = true
   gueltig : z.gutB prog z.sperreMax (z.wurzelnVon prog ws) = true
 
-/-- A program of the source refused by exactly component `c`, with its proof. -/
-structure Schlechtes (z : Spez) (c : Fin 10) where
+/-- A program of the source the model refuses, with its proof. -/
+structure Abgelehntes (z : Spez) where
   prog : Programm z.deklaration
   ws : List z.deklaration.Fn
   ohneAx : z.axs = []
   boden : z.bodenOk prog = true
-  nurAn : z.nurB c prog z.sperreMax (z.wurzelnVon prog ws) = true
+  abgelehnt : z.gutB prog z.sperreMax (z.wurzelnVon prog ws) = false
 
 /-- The proof of a `Gutes` is the statement of the goal theorem's checker: the Lean model accepts the program. -/
 theorem Gutes.akzeptiert {z : Spez} (g : Gutes z) :
@@ -82,16 +82,10 @@ theorem Gutes.akzeptiert {z : Spez} (g : Gutes z) :
       (z.wurzelnVon g.prog g.ws) = true :=
   g.gueltig
 
-/-- The proof of a `Schlechtes` is `NurAn`: component `c` refuses, the other nine accept. -/
-theorem Schlechtes.istNurAn {z : Spez} {c : Fin 10} (s : Schlechtes z c) :
-    @NurAn z.deklaration z.aufz c s.prog z.sperreMax z.fnListe z.lockListe z.traegerListe (z.wurzelnVon s.prog s.ws) :=
-  (@nurAnB_iff z.deklaration z.aufz z.zahlen c s.prog z.sperreMax z.fnListe z.lockListe z.traegerListe
-    (z.wurzelnVon s.prog s.ws)).1 s.nurAn
-
-/-- What the generator emits: a valid program or a single-fault program, each with its proof. -/
+/-- What the generator emits: a valid program or a refused one, each with its proof. -/
 inductive Erzeugt (z : Spez)
   | gut (g : Gutes z)
-  | schlecht (c : Fin 10) (s : Schlechtes z c)
+  | abgelehnt (a : Abgelehntes z)
 
 /-- The starts the sweep asks the question for: the declared starts (the first root alone, every root), one more
     start, a single start, a doubled start. A PARAMETER of the generator, as in `genGueltig`/`genBad`. -/
@@ -102,8 +96,8 @@ def Spez.parameter (z : Spez) : List (List z.deklaration.Fn) :=
   (if wsA == wsB then [wsA] else [wsA, wsB]).flatMap (fun ws => [ws] ++ fns.map (fun w => ws ++ [w]))
     ++ fns.map (fun w => [w]) ++ fns.map (fun w => [w, w])
 
-/-- **The generator, one program**: the program under the lock family `S` and the starts `ws`, emitted with the proof of
-    its class when it is valid or refused by exactly one component, else nothing. The class is decided here, once, by
+/-- **The generator, one program**: the program under the starts `ws`, emitted with the proof of its class (valid or
+    refused) when it is a program of the source, else nothing. The class is decided here, once, by
     the Lean model's Bool; the value cannot be built without the proof. -/
 def Spez.erzeugeAus (z : Spez) (h : Programm z.deklaration) (ws : List z.deklaration.Fn) : Option (Erzeugt z) :=
   letI : Zahlen := z.zahlen
@@ -113,13 +107,7 @@ def Spez.erzeugeAus (z : Spez) (h : Programm z.deklaration) (ws : List z.deklara
     | true =>
       match hv : z.gutB h z.sperreMax (z.wurzelnVon h ws) with
       | true => some (.gut ⟨h, ws, hax, hb, hv⟩)
-      | false =>
-        match (List.finRange 10).filter (fun c => z.nurB c h z.sperreMax (z.wurzelnVon h ws)) with
-        | [c] =>
-          match hn : z.nurB c h z.sperreMax (z.wurzelnVon h ws) with
-          | true => some (.schlecht c ⟨h, ws, hax, hb, hn⟩)
-          | false => none
-        | _ => none
+      | false => some (.abgelehnt ⟨h, ws, hax, hb, hv⟩)
   else none
 
 /-- **Programs with contracts**: the skeleton's program (every contract `true`) and, for every function, the programs

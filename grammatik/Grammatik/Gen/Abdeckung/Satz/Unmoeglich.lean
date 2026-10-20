@@ -51,4 +51,16 @@ theorem m_6_0 (m hh gg : Bool) (hbad : (hh || gg) = true) (e : Einsatz) (h : e.H
   letI := e.zahlen
   exact zelle_6_0_braucht_5 e.P e.S e.fs e.ls e.cs e.ws m hh gg hbad h
 
+/-- `5.0 h g` comes with the pool cell `6.0 m h g` of the same start, `m` saying whether it is declared twice. -/
+theorem m_5_0 (hh gg : Bool) (e : Einsatz) (h : e.Hat ⟨5, 0, true, [hh, gg]⟩) :
+    ∃ m : Bool, e.Hat ⟨6, 0, true, [m, hh, gg]⟩ := by
+  letI := e.aufz
+  letI := e.zahlen
+  have h0 := mem_alleZellen_k (5 : Fin 10) rfl h
+  simp only [zellen, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
+  obtain ⟨w, hw, -, -, -, h1, h2, -⟩ := h0
+  refine ⟨mehrfachB e.ws w, mem_alleZellen.2 ⟨6, ?_⟩⟩
+  simp only [zellen, List.mem_append, List.mem_map]
+  exact Or.inl ⟨w, hw, by rw [h1, h2]⟩
+
 end Gabbro.Grammatik.Gen

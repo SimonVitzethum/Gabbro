@@ -1,19 +1,18 @@
 /-
   File:      Grammatik/Adaequanz/Vollstaendig.lean
-  Subject:   WHEN M AND N ARE COMPLETE (step 5 of PLAN-TEST-SET, stated and proved first): the condition on a set M of
-             valid tests and a set N of refused tests under which EVERY conjunctive checker that agrees with the model
-             on M and N agrees with it on ALL programs. Unlike `muster_hinlaenglich` (Muster.lean) it needs no canonical
-             program per cell and no closure of the program class; it needs four facts about M and N:
+  Subject:   WHEN M AND N ARE COMPLETE: the condition on a set M of valid tests and a set N of refused tests under which
+             EVERY conjunctive checker that agrees with the model on M and N agrees with it on ALL programs. It needs no
+             canonical program per cell and no closure of the program class; it needs four facts:
 
-    * `gut_m`    every program of M is valid;
-    * `gut`      every cell that occurs in SOME valid program occurs in a program of M;
-    * `schlecht` every refused program contains a bad cell that some program of N has as its ONLY bad cell;
-    * `gut_in_n` every good cell of a program of N occurs in a program of M (otherwise an implementation could refuse
-                 that program of N at a good cell and still agree on it).
+    * `gut_m`      every program of M is valid;
+    * `gut`        every cell that occurs in SOME valid program occurs in a program of M;
+    * `n_schlecht` every program of N is refused;
+    * `schlecht`   every refused program `p` has a test `n` in N each of whose cells occurs in `p` or in a program of M.
 
-  The four are what steps 1-4 deliver for Gabbro: `gut` and `schlecht` quantify over ALL programs, so a cell without a
-  witness needs a proof that no valid program has it (for `gut`) or that every program having it also has an isolated
-  bad cell (for `schlecht`). The theorem is over an arbitrary program type, cell type and occurrence relation.
+  So a checker that refuses `n` refuses it at a cell of `p` (a cell of a program of M it must admit). The last condition
+  allows several bad cells in a test and bad cells that never come alone (masking): `n` needs no single bad cell, only
+  no cell outside `p` that the tests leave free. The theorem is over an arbitrary program type, cell type and
+  occurrence relation.
 -/
 import Grammatik.Adaequanz.Muster
 
@@ -27,8 +26,8 @@ variable {P : Type u} {Z : Type} (T : P → Z → Prop)
 structure Vollstaendig (φS : Z → Bool) (M N : List P) : Prop where
   gut_m : ∀ m ∈ M, akzeptiert T φS m
   gut : ∀ p z, T p z → akzeptiert T φS p → ∃ m ∈ M, T m z
-  schlecht : ∀ p, ¬ akzeptiert T φS p → ∃ z, T p z ∧ ∃ n ∈ N, NurSchlecht T φS n z
-  gut_in_n : ∀ n ∈ N, ∀ w, T n w → φS w = true → ∃ m ∈ M, T m w
+  n_schlecht : ∀ n ∈ N, ¬ akzeptiert T φS n
+  schlecht : ∀ p, ¬ akzeptiert T φS p → ∃ n ∈ N, ∀ w, T n w → T p w ∨ ∃ m ∈ M, T m w
 
 /-- **Theorem 5 (complete test sets suffice).** A conjunctive checker that agrees with the model on every program of M
     and of N agrees with it on every program. -/
@@ -42,21 +41,14 @@ theorem vollstaendig_hinreichend {φS : Z → Bool} {M N : List P} (h : Vollstae
   constructor
   · intro hφ
     by_contra hS
-    obtain ⟨z, hz, n, hn, hns⟩ := h.schlecht p hS
+    obtain ⟨n, hn, hdeck⟩ := h.schlecht p hS
     -- `n` is refused by the model, so by `φ`: some cell of `n` is refused by `φ`
-    have hnS : ¬ akzeptiert T φS n := fun ha => by
-      have := ha z hns.1
-      rw [hns.2.1] at this
-      exact Bool.false_ne_true this
-    have hnφ : ¬ akzeptiert T φ n := fun ha => hnS ((hN n hn).mp ha)
+    have hnφ : ¬ akzeptiert T φ n := fun ha => h.n_schlecht n hn ((hN n hn).mp ha)
     simp only [akzeptiert, not_forall] at hnφ
     obtain ⟨w, hw, hwf⟩ := hnφ
-    by_cases hwz : w = z
-    · subst hwz
-      exact hwf (hφ w hz)
-    · -- `w` is a good cell of `n`, so it occurs in M and `φ` admits it
-      obtain ⟨m, hm, hmw⟩ := h.gut_in_n n hn w hw (hns.2.2 w hw hwz)
-      exact hwf (imM m hm w hmw)
+    rcases hdeck w hw with hpw | ⟨m, hm, hmw⟩
+    · exact hwf (hφ w hpw)
+    · exact hwf (imM m hm w hmw)
   · intro hS z hz
     obtain ⟨m, hm, hmz⟩ := h.gut p z hz hS
     exact imM m hm z hmz
@@ -86,22 +78,20 @@ theorem zeuge_vollstaendig : Vollstaendig zeugeT zeugeS [true] [false] where
       have := hacc z (Or.inr ⟨hp, h⟩)
       subst h
       exact absurd this (by decide)
+  n_schlecht := by
+    intro n hn ha
+    simp only [List.mem_singleton] at hn
+    subst hn
+    exact absurd (ha false (Or.inr ⟨rfl, rfl⟩)) (by decide)
   schlecht := by
     intro p hp
-    refine ⟨false, ?_, false, List.mem_singleton.2 rfl, ?_⟩
-    · cases p
-      · exact Or.inr ⟨rfl, rfl⟩
-      · exact absurd (fun z hz => by
-          rcases hz with h | ⟨h, _⟩
-          · subst h; rfl
-          · cases h) hp
-    · refine ⟨Or.inr ⟨rfl, rfl⟩, rfl, fun z hz hne => ?_⟩
-      rcases hz with h | ⟨_, h⟩
-      · subst h; rfl
-      · exact absurd h hne
-  gut_in_n := by
-    intro n _ w _ hw
-    exact ⟨true, List.mem_singleton.2 rfl, Or.inl (by cases w <;> simp_all [zeugeS])⟩
+    refine ⟨false, List.mem_singleton.2 rfl, fun w hw => ?_⟩
+    cases p
+    · exact Or.inl hw
+    · exact absurd (fun z hz => by
+        rcases hz with h | ⟨h, _⟩
+        · subst h; rfl
+        · cases h) hp
 
 /-- **Non-degenerate**: a checker that admits every cell agrees on `true` but not on `false`, so the theorem's agreement
     premise on M and N is what excludes it. -/

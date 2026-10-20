@@ -127,13 +127,12 @@ structure Tafel (M N : List Einsatz) : Prop where
   /-- a good cell: a valid test in M has it, or no valid program has it -/
   gut : ∀ z ∈ zellAlle, z.schlecht = false →
     (∃ m ∈ M, m.Hat z) ∨ (∀ e : Einsatz, e.Hat z → e.gueltig = false)
-  /-- a bad cell: a test in N has it as its only bad cell, or every program that has it has another bad cell that
-      has such a test -/
-  schlecht : ∀ z ∈ zellAlle, z.schlecht = true →
-    (∃ n ∈ N, NurSchlecht Einsatz.Hat gutTafel n z) ∨
-    (∀ e : Einsatz, e.Hat z → ∃ z', e.Hat z' ∧ z'.schlecht = true ∧ ∃ n ∈ N, NurSchlecht Einsatz.Hat gutTafel n z')
-  /-- every good cell of a test of N has a valid test in M -/
-  gut_in_n : ∀ n ∈ N, ∀ w, n.Hat w → w.schlecht = false → ∃ m ∈ M, m.Hat w
+  /-- every test of N is refused -/
+  n_schlecht : ∀ n ∈ N, n.gueltig = false
+  /-- a bad cell: every program that has it has a test in N each of whose cells is a cell of the program or a cell
+      of a test of M -/
+  schlecht : ∀ z ∈ zellAlle, z.schlecht = true → ∀ e : Einsatz, e.Hat z →
+    ∃ n ∈ N, ∀ w, n.Hat w → e.Hat w ∨ ∃ m ∈ M, m.Hat w
 
 /-- **The table gives Theorem 5's condition** over every program of the model. -/
 theorem vollstaendig_aus_tafel {M N : List Einsatz} (t : Tafel M N) : Vollstaendig Einsatz.Hat gutTafel M N where
@@ -147,17 +146,17 @@ theorem vollstaendig_aus_tafel {M N : List Einsatz} (t : Tafel M N) : Vollstaend
     · have := h p hz
       rw [(einsatz_akzeptiert p).1 hp] at this
       exact absurd this (by decide)
+  n_schlecht n hn ha := by
+    have := (einsatz_akzeptiert n).1 ha
+    rw [t.n_schlecht n hn] at this
+    cases this
   schlecht p hp := by
     have : ∃ z, p.Hat z ∧ z.schlecht = true := by
       simp only [akzeptiert, not_forall] at hp
       obtain ⟨z, hz, hf⟩ := hp
       exact ⟨z, hz, by simpa [gutTafel] using hf⟩
     obtain ⟨z, hz, hzs⟩ := this
-    rcases t.schlecht z (p.im_universum hz) hzs with h | h
-    · exact ⟨z, hz, h⟩
-    · obtain ⟨z', hz', _, h'⟩ := h p hz
-      exact ⟨z', hz', h'⟩
-  gut_in_n n hn w hw hg := t.gut_in_n n hn w hw (by simpa [gutTafel] using hg)
+    exact t.schlecht z (p.im_universum hz) hzs p hz
 
 /-- **Theorem 5 for the whole model.** When the table holds for M and N, every conjunctive checker over the cells
     that agrees with the model on M and on N agrees with the model's `AkzeptiertX` on EVERY program of the model. -/

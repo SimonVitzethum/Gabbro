@@ -25,12 +25,9 @@ def Neutral (C : Einsatz → Bool) : Prop := ∃ φ : Zelle → Bool, ∀ e, C e
 /-- **Theorem 5 for a checker.** A neutral checker that answers like the model on M and N answers like the model on
     every program of the source. -/
 theorem pruefer_hinreichend (nc : Nat) (er : List Zelle)
-    (hG : ∀ x ∈ zellAlle, x.schlecht = false → RaumGut nc x ∨ ∀ e : Einsatz, e.Hat x → e.gueltig = false)
-    (hB : ∀ x ∈ zellAlle, x.schlecht = true → RaumSchlecht nc er x ∨
-      ∀ e : Einsatz, e.Hat x → ∃ x', e.Hat x' ∧ x'.schlecht = true ∧ RaumSchlecht nc er x')
-    (hE : ∀ w ∈ er, RaumGut nc w)
+    (hG : GutGedeckt nc) (hB : SchlechtGedeckt nc er) (hE : ∀ w ∈ er, RaumGut nc w)
     (C : Einsatz → Bool) (hC : Neutral C)
-    (hM : ∀ m ∈ mGen nc, C m = m.gueltig) (hN : ∀ n ∈ nGen nc er, C n = n.gueltig) (e : Einsatz) :
+    (hM : ∀ m ∈ mGen nc, C m = m.gueltig) (hN : ∀ n ∈ nGen nc, C n = n.gueltig) (e : Einsatz) :
     C e = e.gueltig := by
   obtain ⟨φ, hφ⟩ := hC
   have h := erzeugt_hinreichend nc er hG hB hE φ
@@ -44,10 +41,7 @@ def NeutralKorrekt (K : Einsatz → Prop) : Prop := ∃ ψ : Zelle → Prop, ∀
 /-- **The compiler theorem.** A neutral compiler correct on every program of M is correct on every valid program of the
     source: every cell of a valid program has a witness in M (`gut` of the table). -/
 theorem compiler_hinreichend (nc : Nat) (er : List Zelle)
-    (hG : ∀ x ∈ zellAlle, x.schlecht = false → RaumGut nc x ∨ ∀ e : Einsatz, e.Hat x → e.gueltig = false)
-    (hB : ∀ x ∈ zellAlle, x.schlecht = true → RaumSchlecht nc er x ∨
-      ∀ e : Einsatz, e.Hat x → ∃ x', e.Hat x' ∧ x'.schlecht = true ∧ RaumSchlecht nc er x')
-    (hE : ∀ w ∈ er, RaumGut nc w)
+    (hG : GutGedeckt nc) (hB : SchlechtGedeckt nc er) (hE : ∀ w ∈ er, RaumGut nc w)
     (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : ∀ m ∈ mGen nc, K m) (e : Einsatz)
     (hv : e.gueltig = true) : K e := by
   obtain ⟨ψ, hψ⟩ := hK

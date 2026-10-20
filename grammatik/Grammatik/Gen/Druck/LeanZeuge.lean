@@ -69,26 +69,28 @@ def Spez.leanRuempfe (z : Spez) (P : Programm z.deklaration) : Except String Str
   pure (String.join defs ++ "def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f\n" ++ String.join klauseln ++
     s!"  | ⟨n + {n}, h⟩ => absurd h (by have : z.fns.length = {n} := (by decide); omega)\n")
 
-/-- **The witness file** of a program: member `i`, starts `ws`, the cells it witnesses. For a valid
-    program (`c0 = none`) the theorem is `RaumGut`; for a single-fault program refused by `c0` it is `RaumSchlecht` of
-    its one bad cell. -/
+/-- **The witness file** of a program: member `i`, starts `ws`. For a valid program the theorem is `RaumGut` of the
+    good cells `zellen`; for a refused one (`abgelehnt`, `zellen` all its cells) it is `RaumSchlecht` of `bnoetig`, the
+    cells of the program that are not good cells M witnesses (`erreicht`): a program that has these has the test. -/
 def Spez.leanZeuge (z : Spez) (i _nc : Nat) (stamm : String) (P : Programm z.deklaration)
-    (ws : List z.deklaration.Fn) (zellen : List Zelle) (c0 : Option (Fin 10)) : Except String String := do
+    (ws : List z.deklaration.Fn) (zellen : List Zelle) (abgelehnt : Bool) : Except String String := do
   let r ← z.leanRuempfe P
   let (vdefs, hP) ← z.leanVertrag P
   let fn := fun (f : z.deklaration.Fn) => (show Fin z.fns.length from f).val
   let flags := z.fnListe.map fun f => toString (P.unterbricht f)
   let wsT := String.intercalate ", " (ws.map fun w => s!"(⟨{fn w}, by decide⟩ : Fin z.fns.length)")
   let zs := String.intercalate ", " (zellen.map Zelle.lean)
-  let kopf := s!"/-\n  File:      Grammatik/Gen/Zeugen/{stamm}.lean\n  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member {i}, the cells below lie in the generator's\n             space. Checked by the kernel; do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.Raum\nimport Grammatik.Gen.Erzeuger.Entscheidung\nimport Grammatik.Korpus.Zeugnis.Zeugnis.T1\n" ++ (if c0.isSome then "import Grammatik.Gen.Zeugen.Erreicht\n" else "") ++ s!"\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.{stamm}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := mitglieder.getD {i} " ++ "{}" ++ s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs
+  let kopf := s!"/-\n  File:      Grammatik/Gen/Zeugen/{stamm}.lean\n  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member {i}, the cells below lie in the generator's\n             space. Checked by the kernel; do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.Raum\nimport Grammatik.Gen.Erzeuger.Entscheidung\nimport Grammatik.Korpus.Zeugnis.Zeugnis.T1\n" ++ (if abgelehnt then "import Grammatik.Gen.Zeugen.Erreicht\n" else "") ++ s!"\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.{stamm}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := mitglieder.getD {i} " ++ "{}" ++ s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs
   let allF := fun (was : String) => s!"(fun f => (by decide : ∀ f : Fin z.fns.length, {was}) f)"
   let gr := "@groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f)"
   -- hn hu hk hP hws hax hb: the bounds, the size, the contract variant (none), the starts, no foreign body, the floors
   let seite := s!"{allF (gr ++ " ≤ (grenzenVon " ++ toString i ++ ").1")} {allF (gr ++ " < unendlich")}\n    (by decide) {hP} (ws := ws) (by decide) (by decide) (by decide)"
   let mitglied := s!"⟨{i}, by rw [mitglieder_laenge]; decide,"
-  let satz := match c0 with
-    | none => s!"theorem zellen : ∀ x ∈ ([{zs}] : List Zelle), RaumGut ncZiel x := by\n  intro x hx\n  refine {mitglied} raumGutIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) ?_⟩\n  revert x; decide\n"
-    | some c => s!"theorem zellen : ∀ x ∈ ([{zs}] : List Zelle), RaumSchlecht ncZiel erreicht x := by\n  intro x hx\n  simp only [List.mem_singleton] at hx\n  subst hx\n  exact {mitglied} raumSchlechtIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} {c.val} (by decide) (by decide) (by decide)⟩\n"
+  let satz := if !abgelehnt then
+      s!"theorem zellen : ∀ x ∈ ([{zs}] : List Zelle), RaumGut ncZiel x := by\n  intro x hx\n  refine {mitglied} raumGutIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) ?_⟩\n  revert x; decide\n"
+    else
+      s!"def alle : List Zelle := [{zs}]\n\ndef bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w\n\n" ++
+      s!"theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=\n  {mitglied} raumSchlechtIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) (by decide)⟩\n"
   pure (kopf ++ satz ++ s!"\nend Gabbro.Grammatik.Gen.Zeugen.{stamm}\n")
 
 end Gabbro.Grammatik.Gen

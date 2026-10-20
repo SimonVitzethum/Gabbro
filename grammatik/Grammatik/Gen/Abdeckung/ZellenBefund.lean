@@ -50,7 +50,7 @@ structure Befund where
   /-- the Lean witness files: of every valid candidate (stem, cells, text or reason) and of the first program in which
       a bad cell is the only one (stem, cell, text or reason) -/
   lean : Array (String × List Zelle × Except String String) := #[]
-  leanN : Std.HashMap Zelle (List (String × List Zelle × Except String String)) := {}
+  leanN : Std.HashMap String (List (String × List Zelle × Except String String)) := {}
   nN : Nat := 0
   gutProgramme : Nat := 0
   schlechtProgramme : Nat := 0
@@ -80,16 +80,16 @@ def Befund.druck (b : Befund) (z : Spez) (h : Programm z.deklaration) (ws : List
 
 /-- Take one emitted program. -/
 def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befund :=
-  let (h, ws, art) : Programm z.deklaration × List z.deklaration.Fn × Option (Fin 10) :=
+  let (h, ws, abgelehnt) : Programm z.deklaration × List z.deklaration.Fn × Bool :=
     match e with
-    | .gut g => (g.prog, g.ws, none)
-    | .schlecht c s => (s.prog, s.ws, some c)
+    | .gut g => (g.prog, g.ws, false)
+    | .abgelehnt a => (a.prog, a.ws, true)
   let S := z.sperreMax
   let zs := z.zellenVon h S ws
   let b := if z.stimmt h S ws then b else
     { b with falsch := b.falsch + 1, beispiel := b.beispiel.orElse fun _ => some s!"member {i} size {k}" }
-  match art with
-  | none =>
+  match abgelehnt with
+  | false =>
     let b := (dedupStr (hautM h.haut)).foldl (fun b m => { b with formen := b.formen.insert m (b.formen.getD m 0 + 1) }) b
     let b := zs.foldl (fun b x => if b.gut.contains x then b else { b with gut := b.gut.insert x (i, nb, k) })
       { b with gutProgramme := b.gutProgramme + 1 }
@@ -102,27 +102,26 @@ def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befu
         | .ok _ => b
       let zsD := zs.foldl (fun a x => if a.contains x then a else a ++ [x]) []
       { b with kand := b.kand.insert key (stamm, zs, r, i),
-               lean := b.lean.push (stamm, zsD, z.leanZeuge i nc stamm h ws (zsD.filter (!·.schlecht)) none) }
-  | some c =>
+               lean := b.lean.push (stamm, zsD, z.leanZeuge i nc stamm h ws (zsD.filter (!·.schlecht)) false) }
+  | true =>
     -- a bad cell is ISOLATED in a program when it is the only bad cell of the whole program (`schlecht_noetig`)
-    let schlechte := (dedupStr (zs.filter (·.schlecht) |>.map Zelle.text)).length
+    let schlechte := dedupStr (zs.filter (·.schlecht) |>.map Zelle.text)
     let b := { b with schlechtProgramme := b.schlechtProgramme + 1 }
     let b := zs.foldl (fun b x =>
-      if x.schlecht && x.komp == c.val then
-        if schlechte == 1 then
+      if x.schlecht then
+        if schlechte.length == 1 then
           if b.schlecht.contains x then b else { b with schlecht := b.schlecht.insert x (i, nb, k) }
         else { b with maskiert := b.maskiert.insert x (b.maskiert.getD x 0 + 1) }
       else b) b
-    -- the first program in which a bad cell is the only one: its Lean witness and its source, under one stem
-    if schlechte != 1 then b else
-      (zs.filter fun x => x.schlecht && x.komp == c.val).foldl (fun b x =>
-        let alt := b.leanN.getD x []
-        if alt.length ≥ 20 then b else
-          let st := s!"N{i}_{b.nN}"
-          let zsD := zs.foldl (fun a y => if a.contains y then a else a ++ [y]) []
-          let b := { b with leanN := b.leanN.insert x (alt ++ [(st, zsD, z.leanZeuge i nc st h ws [x] (some c))]),
-                            nN := b.nN + 1 }
-          b.druck z h ws s!"{st}.gab" s!"refused-only-by-{c.val}" [x] false) b
+    -- per set of bad cells the first few refused programs: their Lean witnesses and sources, under one stem
+    let key := String.intercalate ";" schlechte
+    let alt := b.leanN.getD key []
+    if alt.length ≥ 5 then b else
+      let st := s!"N{i}_{b.nN}"
+      let zsD := zs.foldl (fun a y => if a.contains y then a else a ++ [y]) []
+      let b := { b with leanN := b.leanN.insert key (alt ++ [(st, zsD, z.leanZeuge i nc st h ws zsD true)]),
+                        nN := b.nN + 1 }
+      b.druck z h ws s!"{st}.gab" "refused" (zsD.filter (·.schlecht)) false
 
 /-- The sweep of one member at one size: the generator hands over one program at a time. -/
 def Spez.sammle (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))))

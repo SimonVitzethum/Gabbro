@@ -33,8 +33,8 @@ def Befund.zeilen (b : Befund) : List String :=
   b.formen.toList.map (fun (m, n) => s!"F\t{m}\t{n}") ++
   b.lean.toList.map (fun (st, zs, r) =>
     s!"LG\t{st}\t{String.intercalate ";" (zs.map Zelle.text)}\t{match r with | .ok _ => "ok" | .error m => m}") ++
-  b.leanN.toList.flatMap (fun (x, alt) => alt.map fun (st, zs, r) =>
-    s!"LB\t{st}\t{x.text}\t{String.intercalate ";" (zs.map Zelle.text)}\t{match r with | .ok _ => "ok" | .error m => m}")
+  b.leanN.toList.flatMap (fun (key, alt) => alt.map fun (st, zs, r) =>
+    s!"LB\t{st}\t{key}\t{String.intercalate ";" (zs.map Zelle.text)}\t{match r with | .ok _ => "ok" | .error m => m}")
 
 end Gabbro.Grammatik.Gen
 

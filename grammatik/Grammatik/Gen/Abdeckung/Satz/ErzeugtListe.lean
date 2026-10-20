@@ -2,8 +2,8 @@
   File:      Grammatik/Gen/Abdeckung/Satz/ErzeugtListe.lean
   Subject:   WHAT THE GENERATOR EMITS, as a list that is only a specification (never built at run time): the stream
              `Spez.erzeugeF` hands its consumer exactly the elements of `Spez.erzeugtL`, in order (`erzeugeF_eq`), and
-             `erzeugeAus` emits every valid program as a `Gutes` and every program refused by exactly one component as
-             a `Schlechtes` (`erzeugeAus_gut`, `erzeugeAus_schlecht`). Nothing here runs the generator.
+             `erzeugeAus` emits every valid program as a `Gutes` and every refused program as
+             an `Abgelehntes` (`erzeugeAus_gut`, `erzeugeAus_abgelehnt`). Nothing here runs the generator.
 -/
 import Grammatik.Gen.Abdeckung.Waehlen
 
@@ -81,57 +81,16 @@ theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {ws : List z.dekl
     · rfl
     · rename_i h; rw [hv] at h; cases h
 
-/-- Exactly one component refusing: no other component refuses alone. -/
-theorem nurB_einzig {z : Spez} {c c' : Fin 10} {P : Programm z.deklaration} {S : SperrInv z.deklaration}
-    {ws : List z.deklaration.Fn} (hn : z.nurB c P S ws = true) (h' : z.nurB c' P S ws = true) : c' = c := by
-  have a := (@nurAnB_iff z.deklaration z.aufz z.zahlen c P S z.fnListe z.lockListe z.traegerListe ws).1 hn
-  have b := (@nurAnB_iff z.deklaration z.aufz z.zahlen c' P S z.fnListe z.lockListe z.traegerListe ws).1 h'
-  by_cases hne : c' = c
-  · exact hne
-  · have := a.2 c' hne
-    rw [b.1] at this
-    cases this
-
-theorem filter_beq : ∀ c : Fin 10, (List.finRange 10).filter (· == c) = [c] := by decide
-
-theorem filter_einzig {c : Fin 10} {p : Fin 10 → Bool} (hc : p c = true) (h : ∀ c', p c' = true → c' = c) :
-    (List.finRange 10).filter p = [c] := by
-  have : (List.finRange 10).filter p = (List.finRange 10).filter (· == c) := by
-    apply List.filter_congr
-    intro x _
-    by_cases hx : x = c
-    · subst hx; simp [hc]
-    · have : p x = false := by
-        cases hp : p x
-        · rfl
-        · exact absurd (h x hp) hx
-      simp [this, hx]
-  rw [this]
-  exact filter_beq c
-
-/-- A program refused by exactly component `c` is emitted as a `Schlechtes c`. -/
-theorem erzeugeAus_schlecht {z : Spez} {c : Fin 10} {P : Programm z.deklaration}
-    {ws : List z.deklaration.Fn} (hax : z.axs = []) (hb : z.bodenOk P = true)
-    (hn : z.nurB c P z.sperreMax (z.wurzelnVon P ws) = true) :
-    z.erzeugeAus P ws = some (.schlecht c ⟨P, ws, hax, hb, hn⟩) := by
-  have hg : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false := by
-    have a := (@nurAnB_iff z.deklaration z.aufz z.zahlen c P _ z.fnListe z.lockListe z.traegerListe _).1 hn
-    cases hv : z.gutB P z.sperreMax (z.wurzelnVon P ws)
-    · rfl
-    · have := ((@akzeptiertX_iff z.deklaration z.aufz z.zahlen P _ z.fnListe z.lockListe z.traegerListe _).1 hv) c
-      rw [a.1] at this
-      cases this
-  have hf := filter_einzig (p := fun c' => z.nurB c' P z.sperreMax (z.wurzelnVon P ws)) hn
-    (fun c' h' => nurB_einzig hn h')
+/-- A refused program is emitted as an `Abgelehntes`. -/
+theorem erzeugeAus_abgelehnt {z : Spez} {P : Programm z.deklaration} {ws : List z.deklaration.Fn}
+    (hax : z.axs = []) (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false) :
+    z.erzeugeAus P ws = some (.abgelehnt ⟨P, ws, hax, hb, hv⟩) := by
   unfold Spez.erzeugeAus
   rw [dif_pos hax]
   split
   · rename_i h; rw [hb] at h; cases h
   · split
-    · rename_i h; rw [hg] at h; cases h
-    · simp only [hf]
-      split
-      · rfl
-      · rename_i h; rw [hn] at h; cases h
+    · rename_i h; rw [hv] at h; cases h
+    · rfl
 
 end Gabbro.Grammatik.Gen
