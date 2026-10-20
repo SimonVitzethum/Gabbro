@@ -515,6 +515,7 @@ import Grammatik.Gen.Abdeckung.Zustaende
 import Grammatik.Gen.Abdeckung.Messung
 import Grammatik.Gen.Abdeckung.Zellen
 import Grammatik.Gen.Abdeckung.ZellenPruefung
+import Grammatik.Gen.Abdeckung.ZellenSatz
 import Grammatik.Gen.Abdeckung.Waehlen
 import Grammatik.Gen.Druck.Druck
 import Grammatik.Gen.Druck.Einheit
