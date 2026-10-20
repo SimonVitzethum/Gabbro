@@ -126,6 +126,10 @@ def druckB (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
   | .bindAxiom a args _ _ _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
+  | .awaits g payload _ _ rest => do
+      let ns := payload.map nm.glob
+      .ok (s!"{ein}let v{Γ.length} = {nm.glob g} awaits {if ns.isEmpty then "{ }" else "{ " ++ liste ns ++ " }"};\n" ++
+        (← druckB nm ein rest))
   | .bindCallElse f args _ _ _ err rest => do
       let fehler ← druckEnd nm (ein ++ "    ") err
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++

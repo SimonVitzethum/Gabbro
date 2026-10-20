@@ -79,4 +79,48 @@ def zC : Spez where
 /-- **The members the cell driver adds** to `familie`. -/
 def zellFamilie : List Spez := [zA, zB, zC, zD, zE]
 
+/-! ## Members from RULES
+
+  The members above are written by hand. These are generated: one fixed set of carriers and locks (an unguarded and a
+  guarded table, an atomic, a plain static, an atomic guarded by the plain lock, a static guarded by the masking lock; a
+  plain lock of rank 1 and a masking lock of rank 2, each protecting something) and a MENU of signatures; a member is a
+  list of one to three functions, each one signature of the menu (repetitions allowed: two functions of one signature
+  make a pool), in non-decreasing order so that no permutation is counted twice. Nothing about syntax is written: a
+  member is plain `Spez` data, the bodies come from the generator, the text from the printer. -/
+
+/-- The carriers and locks every rule member shares. -/
+def regelBasis : Spez where
+  tabs := [{ count := 2, felder := [{ typ := zi3 }] },
+           { count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true }]
+  globs := [{ typ := zb1, atomar := true, geteilt := true }, { typ := zb1 },
+            { typ := zb1, atomar := true, sperre := some 0, geteilt := true },
+            { typ := zb1, sperre := some 1, geteilt := true }]
+  locks := [{ rang := 1 }, { rang := 2, maskiert := true }]
+
+/-- **The menu of signatures** (index = position). A declared floor is the rank of the lock the function is meant to
+    take, which is what the language derives from such a body. -/
+def regelSigs : List SigZ :=
+  [{},                                                       -- 0 nothing
+   { schreibt := [0], gschreibt := [1] },                    -- 1 unguarded table and plain static
+   { gschreibt := [0] },                                     -- 2 the atomic
+   { boden := some 1, schreibt := [1] },                     -- 3 guarded table, takes the plain lock
+   { haelt := [0], schreibt := [1] },                        -- 4 guarded table, holds the plain lock
+   { boden := some 2, gschreibt := [3] },                    -- 5 static of the masking lock, takes it
+   { boden := some 1, gschreibt := [2] },                    -- 6 atomic guarded by the plain lock, takes it
+   { schreibt := [0], gschreibt := [0] },                    -- 7 unguarded table and the atomic
+   { haelt := [1], gschreibt := [3] },                       -- 8 static of the masking lock, holds it
+   { gruende := 2, erg := some zi3 },                        -- 9 a reason channel
+   { boden := some 1, schreibt := [0, 1] }]                  -- 10 both tables, takes the plain lock
+
+/-- The multisets of `k` indices below `n`, as non-decreasing lists. -/
+def multimengen : Nat → Nat → List (List Nat)
+  | 0, _ => [[]]
+  | k + 1, n => (List.range n).flatMap fun a => (multimengen k n).filterMap fun r =>
+      if r.all (a ≤ ·) then some (a :: r) else none
+
+/-- **The rule members**: every list of one to three functions over the menu. -/
+def regelMitglieder : List Spez :=
+  ((List.range 3).flatMap fun k => multimengen (k + 1) regelSigs.length).map fun fns =>
+    { regelBasis with sigs := regelSigs, fns := fns }
+
 end Gabbro.Grammatik.Gen

@@ -37,8 +37,8 @@ def Spez.tabellenD (z : Spez) (nb : Nat) (treu : Bool := false) :
             if a.2.contains k || (treu && b.bodenAbgeleitet != soll) then a else (a.1 ++ [b], a.2 ++ [k])) ([], acc.2)
         (acc.1 ++ [r.1], r.2)) ([], [])).1⟩
 
-/-- **The members** the cell driver ranges over: the sixteen of the family and the cell members. -/
-def mitglieder : List Spez := familie ++ zellFamilie
+/-- **The members** the cell driver ranges over: the sixteen of the family, the hand-written cell members and the rule members. -/
+def mitglieder : List Spez := familie ++ zellFamilie ++ regelMitglieder
 
 /-! ## The generator with the proof IN its output
 

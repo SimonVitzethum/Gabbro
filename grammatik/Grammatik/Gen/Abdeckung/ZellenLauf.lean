@@ -194,7 +194,12 @@ def main (args : List String) : IO UInt32 := do
       let z := mitglieder.getD i {}
       let gewaehlt := match nur with | some l => l.contains i | none => true
       if !gewaehlt then continue
-      let (nbI, kmaxI) := match ueber.find? (·.1 == i) with | some (_, a, c) => (a, c) | none => (nb.toNat!, kmax.toNat!)
+      -- the rule members (from index 21) have their own bounds: LAUF_REGEL=NB:KMAX
+      let regel := ((← IO.getEnv "LAUF_REGEL").map fun v => match v.splitOn ":" with
+        | [a, c] => (a.toNat!, c.toNat!) | _ => (5, 10)).getD (5, 10)
+      let (nbI, kmaxI) := match ueber.find? (·.1 == i) with
+        | some (_, a, c) => (a, c)
+        | none => if i ≥ familie.length + zellFamilie.length then regel else (nb.toNat!, kmax.toNat!)
       let tbls := z.tabellenD nbI (treu := (← IO.getEnv "LAUF_MODELL").isNone)
       for k in List.range (kmaxI + 1) do
         if k ≥ 1 then

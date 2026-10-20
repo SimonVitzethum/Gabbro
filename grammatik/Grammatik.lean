@@ -524,6 +524,7 @@ import Grammatik.Adaequanz.Hinlaenglich
 import Grammatik.Adaequanz.Minimal
 import Grammatik.Adaequanz.Gegenmodell
 import Grammatik.Adaequanz.Ueberdeckung
+import Grammatik.Adaequanz.Vollstaendig
 import Grammatik.Adaequanz.Muster
 import Grammatik.Adaequanz.Zeugen
 import Grammatik.Adaequanz.Gabbro.Signatur
