@@ -191,6 +191,14 @@ def zellenAbweichung (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : Li
       (if schreibGetrenntW P fs ws c == (schreibGetrenntZellen P fs ws c).all Zelle.kern then [] else [200 + i]) ++
       (if geteiltVB P fs c == (geteiltZelle P fs c).kern then [] else [300 + i]))
 
+/-- The floor the language derives from a body: the least rank of the locks the body itself takes (`none` if it takes none).
+    The language does not write a floor; the model's signature carries one, so a unit can be printed faithfully only
+    when the declared floor is this one. -/
+def Rumpf.bodenAbgeleitet {f : D.Fn} (b : Rumpf D f) : Option Int :=
+  ((Aufz.lock (D := D)).filter fun L =>
+    !(mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b)).map D.rang
+    |>.foldl (fun a r => match a with | none => some r | some m => some (if m < r then m else r)) none
+
 end Atome
 
 /-! ## The universe of cells: ONE table, with its proofs -/

@@ -68,9 +68,9 @@ def Spez.stimmt (z : Spez) (h : Programm z.deklaration) (S : SperrInv z.deklarat
   zellenStimmen h S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon h ws)
 
 /-- Print a program once, record it under `datei` and mark the `neu` cells as printed. -/
-def Befund.druck (b : Befund) (z : Spez) (h : Programm z.deklaration) (art : Sperrart) (ws : List z.deklaration.Fn)
+def Befund.druck (b : Befund) (z : Spez) (h : Programm z.deklaration) (ws : List z.deklaration.Fn)
     (datei klasse : String) (neu : List Zelle) (gut : Bool) : Befund :=
-  match z.quelltext h art ws (String.ofList (datei.toList.take (datei.length - 4))) with
+  match z.quelltext h ws (String.ofList (datei.toList.take (datei.length - 4))) with
   | .ok text =>
     let b := { b with quellen := b.quellen.push (datei, klasse, text) }
     if gut then neu.foldl (fun b x => { b with gutGedruckt := b.gutGedruckt.insert x datei }) b
@@ -79,11 +79,11 @@ def Befund.druck (b : Befund) (z : Spez) (h : Programm z.deklaration) (art : Spe
 
 /-- Take one emitted program. -/
 def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befund :=
-  let (h, sa, ws, art) : Programm z.deklaration × Sperrart × List z.deklaration.Fn × Option (Fin 10) :=
+  let (h, ws, art) : Programm z.deklaration × List z.deklaration.Fn × Option (Fin 10) :=
     match e with
-    | .gut g => (g.prog, g.art, g.ws, none)
-    | .schlecht c s => (s.prog, s.art, s.ws, some c)
-  let S := z.familie sa
+    | .gut g => (g.prog, g.ws, none)
+    | .schlecht c s => (s.prog, s.ws, some c)
+  let S := z.sperreMax
   let zs := z.zellenVon h S ws
   let b := if z.stimmt h S ws then b else
     { b with falsch := b.falsch + 1, beispiel := b.beispiel.orElse fun _ => some s!"member {i} size {k}" }
@@ -95,13 +95,13 @@ def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befu
     let key := zellSchluessel zs
     if b.kand.contains key then b else
       let stamm := s!"M{i}_{b.kand.size}"
-      let r := z.quelltext h sa ws stamm
+      let r := z.quelltext h ws stamm
       let b := match r with
         | .error m => { b with grund := b.grund.insert m (b.grund.getD m 0 + 1) }
         | .ok _ => b
       let zsD := zs.foldl (fun a x => if a.contains x then a else a ++ [x]) []
       { b with kand := b.kand.insert key (stamm, zs, r, i),
-               lean := b.lean.push (stamm, zsD, z.leanZeuge i nc stamm h sa ws (zsD.filter (!·.schlecht)) none) }
+               lean := b.lean.push (stamm, zsD, z.leanZeuge i nc stamm h ws (zsD.filter (!·.schlecht)) none) }
   | some c =>
     -- a bad cell is ISOLATED in a program when it is the only bad cell of the whole program (`schlecht_noetig`)
     let schlechte := (dedupStr (zs.filter (·.schlecht) |>.map Zelle.text)).length
@@ -116,11 +116,11 @@ def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befu
       (zs.filter fun x => x.schlecht && x.komp == c.val).foldl (fun b x =>
         if b.leanN.contains x then b else
           let st := s!"N{i}_{b.leanN.size}"
-          { b with leanN := b.leanN.insert x (st, z.leanZeuge i nc st h sa ws [x] (some c)) }) b
+          { b with leanN := b.leanN.insert x (st, z.leanZeuge i nc st h ws [x] (some c)) }) b
       else b
     let neu := if schlechte == 1 then zs.filter fun x => x.schlecht && x.komp == c.val && !b.schlGedruckt.contains x else []
     if neu.isEmpty then b else
-      b.druck z h sa ws s!"schlecht{c.val}_{i}_{k}_{b.quellen.size}.gab" s!"refused-only-by-{c.val}" neu false
+      b.druck z h ws s!"schlecht{c.val}_{i}_{k}_{b.quellen.size}.gab" s!"refused-only-by-{c.val}" neu false
 
 /-- The sweep of one member at one size: the generator hands over one program at a time. -/
 def Spez.sammle (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))))

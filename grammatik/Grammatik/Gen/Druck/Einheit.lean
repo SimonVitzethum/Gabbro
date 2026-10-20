@@ -147,10 +147,9 @@ def Spez.druckAx (z : Spez) (a : z.deklaration.Ax) : Except String String := do
   pure s!"extern fn {nm.ax a}({kommas ps}){erg} effects \{ {if eff.isEmpty then "pure" else kommas eff} } costs <= {kostenVon 0} ops;\n"
 
 /-- The unit, under the numeric scheme of the member (the instance is an argument so that the `do` block stays one). -/
-def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (art : Sperrart) (ws : List z.deklaration.Fn)
+def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (ws : List z.deklaration.Fn)
     (name : String) : Except String String := do
   let nm := z.namen
-  if art != .quelle then throw "unsupported feature: a lock family other than the guards (no source syntax)"
   if !z.marken.isEmpty then throw "unsupported feature: marks"
   if !z.invs.isEmpty then throw "unsupported feature: invariants"
   if !z.regs.isEmpty then throw "unsupported feature: registers"
@@ -190,8 +189,8 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (art : Sp
   pure s!"module zellen::{name} \{\n\n{String.intercalate "\n" tabs}{String.join globs}{String.join locks}{String.join grundItems}{String.join axs}\n{String.intercalate "\n" fns}\n{start}{String.join eintritte}\n}\n"
 
 /-- **The unit** of a member and a skeleton under the declared starts `ws`, as one `module`. -/
-def Spez.quelltext (z : Spez) (h : Programm z.deklaration) (art : Sperrart) (ws : List z.deklaration.Fn)
+def Spez.quelltext (z : Spez) (h : Programm z.deklaration) (ws : List z.deklaration.Fn)
     (name : String) : Except String String :=
-  @Spez.quelltextMit z z.zahlen h art ws name
+  @Spez.quelltextMit z z.zahlen h ws name
 
 end Gabbro.Grammatik.Gen

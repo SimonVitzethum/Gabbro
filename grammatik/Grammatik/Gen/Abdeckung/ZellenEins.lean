@@ -6,7 +6,7 @@
                gen-zelle I DIR           -- sweeps member I and writes DIR/m<I>.txt
 
              The bounds of a member are `grenzenVon` (here, not on the command line); `LAUF_VERTRAG=NC` sets the size of
-             the contract variants (default 0), `LAUF_MODELL=1` the model-wide body tables. The members are run one
+             the contract variants (default 0). The members are run one
              after the other by a loop around this program; `gen-zellen-sammeln DIR` (`ZellenSammeln.lean`) reads the
              records. Printed sources go to DIR (single-fault programs) and DIR/kand (valid candidates).
 
@@ -47,7 +47,7 @@ def main (args : List String) : IO UInt32 := do
     let z := mitglieder.getD i {}
     let (nb, kmax) := grenzenVon i
     let nc : Nat := ((← IO.getEnv "LAUF_VERTRAG").bind String.toNat?).getD 0
-    let tbls := z.tabellenD nb (treu := (← IO.getEnv "LAUF_MODELL").isNone)
+    let tbls := z.tabellenD nb
     let mut b : Befund := {}
     let t := ← IO.monoMsNow
     IO.FS.createDirAll (dir ++ "/kand")

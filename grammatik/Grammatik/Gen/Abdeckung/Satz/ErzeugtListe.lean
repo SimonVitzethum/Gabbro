@@ -30,7 +30,7 @@ def Spez.erzeugtL (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (
     List (Erzeugt z) :=
   letI : Zahlen := z.zahlen
   (hautT tbls k).flatMap fun h => (z.vertragsL nc h).flatMap fun P =>
-    z.parameter.filterMap fun p => z.erzeugeAus P p.1 p.2
+    z.parameter.filterMap fun ws => z.erzeugeAus P ws
 
 /-- **The stream walks exactly the list**, one program after the other. -/
 theorem erzeugeF_eq {β : Type} (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))))
@@ -41,17 +41,20 @@ theorem erzeugeF_eq {β : Type} (z : Spez) (tbls : List (Σ f : z.deklaration.Fn
 
 theorem mem_erzeugtL {z : Spez} {tbls : List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f)))}
     {nc k : Nat} {e : Erzeugt z} :
-    e ∈ z.erzeugtL tbls nc k ↔ ∃ h ∈ hautT tbls k, ∃ P ∈ z.vertragsL nc h, ∃ p ∈ z.parameter,
-      z.erzeugeAus P p.1 p.2 = some e := by
+    e ∈ z.erzeugtL tbls nc k ↔ ∃ h ∈ hautT tbls k, ∃ P ∈ z.vertragsL nc h, ∃ ws ∈ z.parameter,
+      z.erzeugeAus P ws = some e := by
   simp [Spez.erzeugtL, List.mem_flatMap, List.mem_filterMap]
 
 /-- A valid program is emitted as a `Gutes`. -/
-theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {S : Sperrart} {ws : List z.deklaration.Fn}
-    (hv : z.gutB P (z.familie S) (z.wurzelnVon P ws) = true) : z.erzeugeAus P S ws = some (.gut ⟨P, S, ws, hv⟩) := by
+theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {ws : List z.deklaration.Fn}
+    (hb : z.bodenOk P = true) (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true) :
+    z.erzeugeAus P ws = some (.gut ⟨P, ws, hb, hv⟩) := by
   unfold Spez.erzeugeAus
   split
-  · rfl
-  · rename_i h; rw [hv] at h; cases h
+  · rename_i h; rw [hb] at h; cases h
+  · split
+    · rfl
+    · rename_i h; rw [hv] at h; cases h
 
 /-- Exactly one component refusing: no other component refuses alone. -/
 theorem nurB_einzig {z : Spez} {c c' : Fin 10} {P : Programm z.deklaration} {S : SperrInv z.deklaration}
@@ -82,24 +85,26 @@ theorem filter_einzig {c : Fin 10} {p : Fin 10 → Bool} (hc : p c = true) (h : 
   exact filter_beq c
 
 /-- A program refused by exactly component `c` is emitted as a `Schlechtes c`. -/
-theorem erzeugeAus_schlecht {z : Spez} {c : Fin 10} {P : Programm z.deklaration} {S : Sperrart}
-    {ws : List z.deklaration.Fn} (hn : z.nurB c P (z.familie S) (z.wurzelnVon P ws) = true) :
-    z.erzeugeAus P S ws = some (.schlecht c ⟨P, S, ws, hn⟩) := by
-  have hg : z.gutB P (z.familie S) (z.wurzelnVon P ws) = false := by
+theorem erzeugeAus_schlecht {z : Spez} {c : Fin 10} {P : Programm z.deklaration}
+    {ws : List z.deklaration.Fn} (hb : z.bodenOk P = true) (hn : z.nurB c P z.sperreMax (z.wurzelnVon P ws) = true) :
+    z.erzeugeAus P ws = some (.schlecht c ⟨P, ws, hb, hn⟩) := by
+  have hg : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false := by
     have a := (@nurAnB_iff z.deklaration z.aufz z.zahlen c P _ z.fnListe z.lockListe z.traegerListe _).1 hn
-    cases hv : z.gutB P (z.familie S) (z.wurzelnVon P ws)
+    cases hv : z.gutB P z.sperreMax (z.wurzelnVon P ws)
     · rfl
     · have := ((@akzeptiertX_iff z.deklaration z.aufz z.zahlen P _ z.fnListe z.lockListe z.traegerListe _).1 hv) c
       rw [a.1] at this
       cases this
-  have hf := filter_einzig (p := fun c' => z.nurB c' P (z.familie S) (z.wurzelnVon P ws)) hn
+  have hf := filter_einzig (p := fun c' => z.nurB c' P z.sperreMax (z.wurzelnVon P ws)) hn
     (fun c' h' => nurB_einzig hn h')
   unfold Spez.erzeugeAus
   split
-  · rename_i h; rw [hg] at h; cases h
-  · simp only [hf]
-    split
-    · rfl
-    · rename_i h; rw [hn] at h; cases h
+  · rename_i h; rw [hb] at h; cases h
+  · split
+    · rename_i h; rw [hg] at h; cases h
+    · simp only [hf]
+      split
+      · rfl
+      · rename_i h; rw [hn] at h; cases h
 
 end Gabbro.Grammatik.Gen

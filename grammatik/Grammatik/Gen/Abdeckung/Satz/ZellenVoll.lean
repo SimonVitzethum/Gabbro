@@ -66,8 +66,9 @@ end
 
 /-! ## A program of the model -/
 
-/-- **A program of the model**, under any declaration: the program, its lock family, member lists that hold every
-    function, lock and carrier, and the declared starts. -/
+/-- **A program of the source**, under any declaration: the program, the lock family the source gives it, member lists
+    that hold every function, lock and carrier, and the declared starts; every body derives its declared floor. These
+    are the programs a Gabbro text elaborates to (`Parser.Cover.Differenz.sperrFamilie`, `Druck/Einheit.lean`). -/
 structure Einsatz where
   D : Deklaration
   aufz : Aufz D
@@ -81,6 +82,10 @@ structure Einsatz where
   hvoll : ∀ g : D.Fn, g ∈ fs
   hls : ∀ L : D.Lock, L ∈ ls
   hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs
+  /-- the lock family is the one of the source: each lock protects exactly the carriers it guards (`protects`) -/
+  hS : ∀ L c, c ∈ S.orte L ↔ L ∈ waechterVon c
+  /-- every body derives its declared floor: the language writes no floor, it is the least rank the body takes -/
+  hBoden : ∀ f, @Rumpf.bodenAbgeleitet D aufz f (P.rumpf f) = (D.signatur f).boden
 
 /-- The cells of a program. -/
 def Einsatz.zellen (e : Einsatz) : List Zelle :=
