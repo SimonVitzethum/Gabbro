@@ -3,7 +3,7 @@
 #
 # Gabbro fragment class: device register access lowering to
 #   *(volatile uint8_t *)(basis + off)
-# (census: dokumente/BEWEIS.md line 807, `d->basis + 8`, 491 sites;
+# (census: dokumente/PROOF.md line 807, `d->basis + 8`, 491 sites;
 # contradicts the old inventory row 2 claim of no pointer arithmetic).
 # Expected C (the forbidden form under test): `basis + 2`, `basis + 4`
 # and the pointer difference `(basis + 8) - basis`.

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreAbdeckung.lean
-  Subject:   A LOOP-FREE RECOGNIZED BODY IS COVERED BY THE MACHINE'S FRAGMENT (PLAN-DYNAMISCH.md section 8a.3, premise 2,
+  Subject:   A LOOP-FREE RECOGNIZED BODY IS COVERED BY THE MACHINE'S FRAGMENT (PLAN-DYNAMIC.md section 8a.3, premise 2,
              finding 6 of 8a.2): `ErkE K a e` without a loop is `EndR A C e` -- the coverage the machine bridge
              `erkE_maschine` took as a SECOND premise now follows from the certificate.
 

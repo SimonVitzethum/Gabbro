@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaAllocForm.lean
-  Subject:   THE ALLOCATOR MOVES FOR ANY CONTINUATION (PLAN-DYNAMISCH.md section 8a.1, step (3), forms half).
+  Subject:   THE ALLOCATOR MOVES FOR ANY CONTINUATION (PLAN-DYNAMIC.md section 8a.1, step (3), forms half).
 
   `ArenaFrei.lean` proves what `free`, `alloc` from the free list and `alloc` from the counter leave, but with the
   empty continuation and, for `free`, only for the NEWEST bound index. The recognizer (`ArenaErkenner.lean`) runs

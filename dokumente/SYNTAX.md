@@ -1,8 +1,8 @@
 # Gabbro — the syntax
 
 **The source for the surface, and since 2026-09-09 the source for the proof.**
-[`SPRACHE.md`](SPRACHE.md) says which mechanisms there are and why (and does not repeat this
-file); [`PRUEFER.md`](PRUEFER.md) is the checker that enforces them; [`BEWEIS.md`](BEWEIS.md),
+[`LANGUAGE.md`](LANGUAGE.md) says which mechanisms there are and why (and does not repeat this
+file); [`CHECKER.md`](CHECKER.md) is the checker that enforces them; [`PROOF.md`](PROOF.md),
 what they are there for; here stands how one writes them down — **and what every spelling
 has to carry so that it may be written at all.** What does not stand here is not writable.
 
@@ -66,7 +66,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 | **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, no catch-all branch, no default value | each of the four classes has a paid-for trap. The single exception is the widening of a range («SG-1»), and it is written as an attribute, not as a conversion |
 | **E4** | **Contracts stand BEFORE the body, in a fixed order** | a tool that has to sort cannot say "`effects` is missing here" |
 | **E5** | **Every declaration is complete at exactly one place** | no preprocessor, no forward declaration |
-| **E6** | **Every attribute is part of the production** — NEW «SG-0» | a rule that a pass checks after the fact can be forgotten by the pass; a rule that is the shape of the derivation cannot. the retired `dokumente/PRUEFER.md` §1.4 (in the history) found an obligation that vanished on a rename; under E6 it has no place to vanish from |
+| **E6** | **Every attribute is part of the production** — NEW «SG-0» | a rule that a pass checks after the fact can be forgotten by the pass; a rule that is the shape of the derivation cannot. the retired `dokumente/CHECKER.md` §1.4 (in the history) found an obligation that vanished on a rename; under E6 it has no place to vanish from |
 
 > **`obligation` is NOT a source word.** It stands in the **obligation manifest**, i.e. in the
 > **artefact**. The vocabulary here is that of the **source**.
@@ -114,7 +114,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 **Everything else is an identifier.** A new word is a language change and needs an entry here.
 **`owner` is the one new word of the third version** («SG-9», §9): it names the linear mark
 that guards a table. The alternative — `protects` with a mark instead of a lock — would make
-one word mean two things, the trap class `HISTORIE.md` books under `reserved`.
+one word mean two things, the trap class `HISTORY.md` books under `reserved`.
 
 ### And a word of the table is a keyword only where the grammar EXPECTS one
 
@@ -398,7 +398,7 @@ nonzero    = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" |
 (* CHANGED «SG-1»: in the core EVERY integer type carries its range. `u32` without `in` is
    SUGAR for `u32 in 0 .. u32::max`, `i32` for `i32 in i32::min .. i32::max`; a `wrapping`
    field (§9) is the one place where the width and not the range is the type.
-   `uN`/`iN` (SPRACHE.md §3.4): SUGAR for the next standard storage width plus the exact
+   `uN`/`iN` (LANGUAGE.md §3.4): SUGAR for the next standard storage width plus the exact
    range — `u13` is `u16 in 0 .. 8191`, `i37` is `i64 in -2^36 .. 2^36 - 1`;
    `u0`, `u65`, `i0` and wider are refused (`P008`). The eight standard words keep
    their full-width meaning exactly. The emitted C uses the storage width, never
@@ -523,7 +523,7 @@ version answers the question at the type instead of at an alias analysis:
 | **what a pointer points at** | a `ptr<space, right> T` is a value of type *"the carrier `T`, number `n`, with right `rw`"*. Its only producer is the name of a **declared** carrier (`&T`, §4); there is no address of an expression and no arithmetic on a pointer | `Ty.ptr n rw`; `Expr.ptrOf t n (ht : D.tabNr n = some t) rw` |
 | **an access through a pointer** | `p->f`, `p[i].f` is **the same access as `T.slots[i].f`**, with the same guards: `Held(L)` for a `protects`-guarded carrier, the owner mark for an `owner`-guarded one (§9), and the index of the carrier's index type. A pointer is not a way past the guards | `Expr.thru p t ht f i hL` with `hL : darf D t Λ`; theorem `zeiger_hat_waechter` |
 | **a write through a pointer** | needs the type `ptr<…, rw>` **and** the write right of the enclosing contract on `T` (`R002`/`R003` as shape) | `Stmt.assignThru (p : Expr … (.ptr n true)) … (hw : V.schreibt t = true)`; theorem `zeiger_schreibt_mit_recht` |
-| **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value. **At a CALL it is not harmless any more (2026-10-17):** two pointer arguments of one root, one of the two parameters writable or `own`, are refused (`R014`; an untraceable pointer is unknown and equals every root), and an exported function that assumes two pointer parameters distinct says so (`R015`, a hint) — `SPRACHE.md` §5, `A1-OWN-PAPER.md` | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias; at the call boundary `ParamGetrennt` / `ObjGetrennt` and `r014_objGetrennt` (SATZKARTE §74, §75) |
+| **two pointers to one carrier** | are two names for the same slots, and that is **harmless**: there is one world, an access reads the world, a write writes it — the stale-answer case of `udp-echo.gab` is a *value* stored in a variable, not a *view*. **A value copied out of a carrier is a copy**; the grammar has no reference to a value. **At a CALL it is not harmless any more (2026-10-17):** two pointer arguments of one root, one of the two parameters writable or `own`, are refused (`R014`; an untraceable pointer is unknown and equals every root), and an exported function that assumes two pointer parameters distinct says so (`R015`, a hint) — `LANGUAGE.md` §5, `A1-OWN-PAPER.md` | no alias question arises in `World D`: theorem `exec_rahmen` holds for every alias; at the call boundary `ParamGetrennt` / `ObjGetrennt` and `r014_objGetrennt` (THEOREM-MAP §74, §75) |
 | **`own`** | the owner **mark** of §9 (`table … owner m`): a parameter `ptr<…, own> T` is SUGAR for *"`T` is `owner m` and the callee `consumes m` … `allocs m`"* — the mark is borrowed for the call and comes back. Two `own` parameters of one carrier are then not derivable (`R004`): the mark is one («SG-9»). An `own` parameter also lets the LLVM backend emit `noalias` | `D.eigner`, `eigner_nie_erzeugt` |
 | **`space`** | the barrier follows from the space; the space of a carrier is a declaration fact and the emitter's concern | none — a declaration attribute; `retires … from space` (§6) names it |
 | **`x`** | code space; a pointer with `x` is a `fnptr` (§2) or an `entrust` target (§1) | `Ty.fnptr` |
@@ -604,7 +604,7 @@ cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
 bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" | "<<%" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" | "+%" | "-%" | "+|" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" | "*%" ) unary } ;
-(* SPRACHE.md section 3.4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
+(* LANGUAGE.md section 3.4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
    each rides at the precedence of its base operator. *)
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
 (* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
@@ -992,7 +992,7 @@ startstmt  = ident "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §1
    `child = 1;` stays an assignment, like at
    `reset` above. The inline trap has landed (lane 260, the proved template `tor.kind`); the C11 emitter
    refuses by name (`C185`) only a `child` outside the lowered gate+guard+region triple; the model side is the thread machine of the goal theorem (a `child` is a
-   `kind` step; witness `spawn_kind_ziel`, SATZKARTE §49; the standalone clone machine of SATZKARTE §39 was removed with the C backend). No new word: `child` is the
+   `kind` step; witness `spawn_kind_ziel`, THEOREM-MAP §49; the standalone clone machine of THEOREM-MAP §39 was removed with the C backend). No new word: `child` is the
    `tree` word (§9, `kante`). *)
 ```
 
@@ -1066,7 +1066,7 @@ enclosing `locks` blocks and the statements before the position:
 | `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | **SUGAR since 2026-09-15**: `Block.arenaAlloc` (`grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`) = `Block.narrow` on the `used` counter + `Stmt.assignSlot` + `Stmt.assignGlob`; theorems `arenaAlloc_unter_schranke`/`_an_schranke`, bridge `arenaAlloc_gdw_modell` to `Arena.alloc`. *The generation stays checker state (`N211`); the exporter does not build the form yet — `TODO.md` O14* |
 | `reset A;` | `A` is a declared arena; `writes A` | — | **SUGAR since 2026-09-15**: `Stmt.arenaReset` = `Stmt.assignGlob zaehl 0`; theorem `arenaReset_stand`. The model function `Arena.reset` keeps the generation half: every older index is stale by typing |
 | `narrow x to finite` / a float range | | — | `Block.floatNarrow` |
-| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `dokumente/BEWEIS.md` F1) | `Block.float`, `gleitLit`, `gleitVon` («SG-17») |
+| `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `dokumente/PROOF.md` F1) | `Block.float`, `gleitLit`, `gleitVon` («SG-17») |
 | `f(…);` | see §6 | `logik (vorbedingung f)` … from the callee | `Stmt.call`, `Stmt.callInd` |
 | `axiom(…);` | | `hardware (annahme a)` | `Stmt.axiomCall` |
 | `R = e;` (register) | `R` has a writable class (§10) | — (the device is outside the world) | `Stmt.regWrite`; theorem `register_schreibbar` |
@@ -1117,7 +1117,7 @@ lane's work.
 ### Library calls — `@library#function ( args ) { region }` (lane E1)
 
 A library call is a **run-time call** of `function` in `library`
-(`PRUEFER.md` §0b, §1, §6). It stands in statement position and in
+(`CHECKER.md` §0b, §1, §6). It stands in statement position and in
 binding position:
 
 ```ebnf
@@ -1129,7 +1129,7 @@ libregion  = ? brace-balanced token tree, captured without interpreting ? ;
 is the ordinary argument list. The region is a brace-balanced token tree the
 reader captures WITHOUT interpreting: the opening `{`, nested `{ … }` pairs,
 the closing `}`. What the region MEANS — compiled at translation time into a
-payload the call carries (`PRUEFER.md` §0b) — runs since lane E5 as a
+payload the call carries (`CHECKER.md` §0b) — runs since lane E5 as a
 first cut (§7.3): an exact-length row of integer literals through the
 identity translator. A call that resolves `lib` to a used module and
 `function` to a declared `library fn` in it (§7.1) is checked like an
@@ -1196,7 +1196,7 @@ plus the four things only a library declaration can fail:
   the call shape (what the translator fills), not the contract.
 * **body** — a Gabbro block, nothing else (`P044`: no `;`, no `= pred ;`,
   no `= asm`). The transitive call hull holds no `extern`, `raw`, `prim`
-  or `asm` (`N059`, `PRUEFER.md` §0c) — structure, never prose
+  or `asm` (`N059`, `CHECKER.md` §0c) — structure, never prose
   comparison.
 * **call** — `@lib#f` resolves `lib` like any name (own module, enclosing,
   root, `use` lines) and `f` to a `library fn` in it; arguments, effects
@@ -1221,9 +1221,9 @@ reached two-step run that moves memory
 **Specified, the words lexed, the declaration checked («E3»).** A library
 declares, for each of its run-time functions, the *translator*: a total,
 effect-free Gabbro function from the call region's AST (a tree table type,
-`PRUEFER.md` §2) to the function's payload type. Running it needs
+`CHECKER.md` §2) to the function's payload type. Running it needs
 the compile-time evaluator — **only the declaration and the typing are
-built now** (`PRUEFER.md` §6, lane E3). The region still is not
+built now** (`CHECKER.md` §6, lane E3). The region still is not
 translated: a resolved call is still refused with `N069`, which now names
 the translator that WOULD run.
 
@@ -1278,7 +1278,7 @@ RUNS.
 **The checks** — the body is an ordinary function body: types, contracts,
 effects and costs are checked by the ordinary checker, and the transitive
 call hull holds no `extern`, `raw`, `prim` or `asm` (`N059`,
-`PRUEFER.md` §0c). Five new refusals hold the five things only the
+`CHECKER.md` §0c). Five new refusals hold the five things only the
 linkage can fail:
 
 * **one translator** — every `library fn` with a payload type has exactly
@@ -1401,7 +1401,7 @@ forever    = "forever" [ ident ]
              [ "leaves"    identlist ]
              [ "invariant" pred ]
              block ;
-(* `progress` names WHO ends the loop -- an assumption with a falsifier. `PRUEFER.md`
+(* `progress` names WHO ends the loop -- an assumption with a falsifier. `CHECKER.md`
    row 4 measured a wait loop with no `progress` as "writable, and no latch can ever close
    it" (`beispiele/66`:66). In the core a `forever` ends by `leave` or by the environment, and
    the environment's contribution IS the named assumption: outcome `hardware (fortschritt a)`.
@@ -1567,7 +1567,7 @@ private one, `N038`).
 
 ### 9.1 Arenas — a heap that is never unbounded («E4»)
 
-**Specified, the words lexed, the declaration checked.** `PRUEFER.md` §3 fixes the
+**Specified, the words lexed, the declaration checked.** `CHECKER.md` §3 fixes the
 owner's rule — *a heap is allowed but never unbounded: every region has an upper and a
 lower bound* — and the arena is the monotone form: release only as a whole (`reset`),
 no fragmentation, allocation fails only beyond the upper bound. The pool form (fixed
@@ -2023,7 +2023,7 @@ footnote: *memory-safe under A1…An*.
 ### 12.1 `syscall` — the user side of a system call (checked since lane S5)
 
 **Specified since «SS-1», checked since lane S5.** What
-follows is the surface of `SPRACHE.md` §16, written as grammar, named checks
+follows is the surface of `LANGUAGE.md` §16, written as grammar, named checks
 and one example, so that the checker lane (S5), the emitter lane (S6) and the
 corpus lane (S7) have a text to build against. Every `syscall`
 item is held against its own shape -- register map, errno decoding, machine and
@@ -2108,11 +2108,11 @@ they point at stands in §1 beside `entrydecl`.
   twin, `gift/1107`-`1113`, `1115`-`1117` and `1139`-`1147` the refusals (`1114` moved to `beispiele/1114-kind-handed-read.gab`: its only expected line was `C185`, and the legal handed read is now a positive).
   **The checker's reading assumes the lowering enters the child by jump at the
   region** (the statements between the gate call and the region are parent code;
-  SATZKARTE §39) -- a lowering that changes `C185` keeps that or re-checks the gap.
+  THEOREM-MAP §39) -- a lowering that changes `C185` keeps that or re-checks the gap.
 
 **Two places where the written example fixes the production's letter** (measured
 at the build, lane S5): the §1 production line says `regbind` (`ident ":"
-ident`, entry order) for both maps, but every written example — `SPRACHE.md`
+ident`, entry order) for both maps, but every written example — `LANGUAGE.md`
 §16, the block below, the probes — writes `regs in { rdi = fd }` (register
 first, `=`) and `regs out { rax }` (bare registers). What parses is what the
 examples write, with `:` accepted beside `=` at `regs in`; a `regs out` pair
@@ -2142,7 +2142,7 @@ semantics treats like any carrier and the emitter omits.
 
 ### 12.2 `profile` — the one hardware profile, and what libraries require (lane E6)
 
-**Specified and checked («E6», the checker half of `PRUEFER.md`
+**Specified and checked («E6», the checker half of `CHECKER.md`
 §0c).** The main program declares the profile: the one set of hardware
 assumptions the whole program runs under. A library does not assert
 assumptions; it requires profile entries, by reference to the declared
@@ -2202,7 +2202,7 @@ things only a profile can fail:
   declaration with the same name and content.
 * **platform** — `fp_contract` other than `off` contradicts the float
   prelude, which binds `-ffp-contract=off` for every compiler
-  (`SPRACHE.md` §3.4); an `arch` the unit never declares contradicts the
+  (`LANGUAGE.md` §3.4); an `arch` the unit never declares contradicts the
   declared machines (`N218`). Without declared machines nothing is
   refused — a unit with no machine named constrains no machine.
 
@@ -2417,7 +2417,7 @@ cannot be written. `Satz.lean` §4 shows one (`x / x`: `.div` demands `1 ≤ 0`)
 ## 16. What the theorem says — and what it does NOT cover even with this syntax
 
 > **Restated 2026-09-13 over the repaired call machine G.** The goal is proved,
-> and the binding premise map is `dokumente/SATZKARTE.md` §11. What follows is
+> and the binding premise map is `dokumente/THEOREM-MAP.md` §11. What follows is
 > the same content in the language of this file: the theorems as they stand now,
 > in words and as the Lean names (§16.1); the premise classes, with the surface
 > construct or checker rule behind each decidable premise (§16.2); and what the
@@ -2506,7 +2506,7 @@ an outcome, because none of these has a term or a run.**
 
 Classes: USER (the user's own logic), HARDWARE (a named assumption), DECIDABLE (a
 Bool the checker computes, with its soundness theorem), START (a fact about the start
-configuration), DATA (an object, not an obligation). Full map: `dokumente/SATZKARTE.md`
+configuration), DATA (an object, not an obligation). Full map: `dokumente/THEOREM-MAP.md`
 §11.2.
 
 | premise | class | established by |
@@ -2524,7 +2524,7 @@ configuration), DATA (an object, not an obligation). Full map: `dokumente/SATZKA
 
 ### 16.3 What the three theorems do NOT cover
 
-Every item is a CUTS of the cited file; the map is `dokumente/SATZKARTE.md` §11.3.
+Every item is a CUTS of the cited file; the map is `dokumente/THEOREM-MAP.md` §11.3.
 
 - **Fragment edge.** `ziel_ort` covers `kOk` bodies only; `ziel_ort_voll` adds loops, exits, reasons, axioms and indirect calls but no `regLies`, `regLiesElse` or `awaits`. The flagship admits those under `RegLokal` and `fussOrtGB`. Indirect calls stay restricted to `KandOk`. The unrepaired widening is provably false (`ziel_ort_register_falsch`); no analogous refutation is built for `awaits`.
 - **Carrier-less declarations.** With no table, global or lock every world has the empty trace and the replay would need an unproved determinism lemma — out of all three (`e0`).
@@ -2672,14 +2672,14 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
       and retired `pruefe-grammatiktafel` need a Rust toolchain and abort without one — a
       pre-existing environment limit, not a finding about the grammar.
 - [ ] **The parser from this grammar into `Syntax.lean`** — open as translation validation
-      T3 (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`): the token-to-tree map with a
+      T3 (`dokumente/PLAN-TRANSLATION-VALIDATION.md`): the token-to-tree map with a
       certificate, so Rust leaves the trusted base. Production-to-constructor table
       161 mapped-or-named in the retired `messung/SYNTAX-PARSER-ENTWURF.md` (in the history). This is what turns 16.4
       (8) into a corpus measurement.
 - [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09; race freedom now
       proved over machine G as `rennfrei_g` (lane 130).
 - [x] **A byte-addressed place** — `leseBytes`/`schreibBytes`, evening of 2026-09-09.
-- [x] **The implementation in checker and emitter** — `PLAN-UEBERSETZUNGSVALIDIERUNG.md`
+- [x] **The implementation in checker and emitter** — `PLAN-TRANSLATION-VALIDATION.md`
   (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
   (`K011`/`K012`, `N056` for the probe, `frist_` manifest entry) and `count`
   checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
@@ -2700,7 +2700,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 - [x] **retired `pruefe-syntax` prose branch flagged `logik uebergang` (×3) — renamed.**
   The word was the Lean outcome constructor (`Logik.uebergang`), not the
   abolished keyword, but the guardian cannot see the difference and it is right
-  not to try. The outcome is now `Logik.vorzustand` (the pre-state, PRUEFER.md
+  not to try. The outcome is now `Logik.vorzustand` (the pre-state, CHECKER.md
   «B26» — a word that was never a keyword): `Semantik.lean` ctor plus its two
   uses, three prose cells here. `Stmt.shift` and `uebergang_erklaert` stand
   — the guardian does not read dotted names, and the statement is not the
@@ -2722,7 +2722,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
       device has no mechanised model (16.4 (3)); the `iasm` entry path has no downstream prover
       (16.4 (7)); liveness and progress fall under no mechanism except the named assumption
       (`hardware (fortschritt a)`); the ghost-theory templates belong in Isabelle once.
-      The full list is §16.3, with the premise map in `dokumente/SATZKARTE.md` §11.3.
+      The full list is §16.3, with the premise map in `dokumente/THEOREM-MAP.md` §11.3.
 
 ---
 
@@ -2804,7 +2804,7 @@ later proof, not the proof. The five later sentences are named
 `satz_korrespondenz`, `satz_alias`, `satz_kosten`, `satz_tafel`, and
 their conjunction `satz_erzeugervertrag`.
 
-### 21.1 Correspondence — one certificate per run (`BEWEIS.md` §4)
+### 21.1 Correspondence — one certificate per run (`PROOF.md` §4)
 
 Each compilation run produces a coverage certificate: one row per
 evaluation site, `CorrSite = gabbroSite × cSite × form`, collected in
@@ -2945,4 +2945,4 @@ witness in its contract) that reads a table carrier must call a declared
 invariant -- or a `spec fn` stating one -- by name, and a restated predicate
 is refused. Outside contract position -- loop invariants, `spec fn` bodies,
 functions without a shared side -- non-invariant shapes stay own-logic debt
-(remainder in `BEWEIS.md`).
+(remainder in `PROOF.md`).

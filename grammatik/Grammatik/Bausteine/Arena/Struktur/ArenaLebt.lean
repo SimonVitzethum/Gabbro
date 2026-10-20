@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/ArenaLebt.lean
   Subject:   LIVE SLOTS of an arena with slot release, and what `alloc` and `free` leave of the places
-             that are not theirs (PLAN-DYNAMISCH.md section 8a, phase 2, world half).
+             that are not theirs (PLAN-DYNAMIC.md section 8a, phase 2, world half).
 
   A slot is LIVE when it is below the used counter and not on the free list. `alloc` (from the list or
   from the counter) turns one slot live, `free` turns one dead; every other slot keeps its state.

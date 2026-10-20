@@ -20,7 +20,7 @@
   WAS MODELLIERT WIRD
     Ein PRUEFER als Algorithmus, nicht als Relation: `schluss` rechnet zu einem Ausdruck
     die Gestalt (`Shape`) aus, die er tragen wird -- oder `none`, und `none` ist die
-    ABSAGE des Pruefers. Er rechnet so, wie `SPRACHE.md` §3 M1 es sagt: Bereiche werden
+    ABSAGE des Pruefers. Er rechnet so, wie `LANGUAGE.md` §3 M1 es sagt: Bereiche werden
     durch die Arithmetik getragen (`M104`), ein Nenner muss die Null ausschliessen
     (`M102`), ein Index muss in `0 ..< count` liegen (`M103`), ein `match` findet nur
     Faelle, die der Typ erklaert (`D005`).
@@ -31,7 +31,7 @@
     negativen Zahl, keine Gestaltverwechslung, kein Index ausserhalb.
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:677   -- "Every operation must stay inside the range of its
+    dokumente/LANGUAGE.md:677   -- "Every operation must stay inside the range of its
                                   result type; […] compile error, not a runtime check.
                                   Division and remainder demand a denominator whose range
                                   excludes zero."

@@ -31,7 +31,7 @@
 //!
 //! ## «B38» — die Nebenbedingung am benannten Traeger (`H101`, 2026-08-21)
 //!
-//! `FRAGMENTE.md` F8 misst fuenf Werte, die im Planer eine Sperrgrenze ueberqueren. **Drei
+//! `FRAGMENTS.md` F8 misst fuenf Werte, die im Planer eine Sperrgrenze ueberqueren. **Drei
 //! tragen das Muster „die Fortsetzung prueft neu"; zwei nicht** — sie ruhen auf der
 //! Interruptmaskierung, und das ist der heisseste Pfad (`exit_current`, die IPC-Uebergabe).
 //! Die ehrliche Form heisst darum nicht *„jede Fortsetzung prueft neu"*, sondern

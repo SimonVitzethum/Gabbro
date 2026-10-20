@@ -3,7 +3,7 @@
 //! > *„Jede Operation muss im Bereich ihres Ergebnistyps bleiben; passt `a + b` nicht ins
 //! > Ziel, ist das ein **Uebersetzungsfehler, keine Laufzeitpruefung**. Division und Rest
 //! > verlangen einen Nenner, dessen Bereich die Null ausschliesst."*
-//! > ([`SPRACHE.md`](SPRACHE.md) §3)
+//! > ([`LANGUAGE.md`](LANGUAGE.md) §3)
 //!
 //! Und die Gegenmessung -- 255 Subtraktionen, 102 flusssensitiv -- hat gezeigt, dass *eine*
 //! Regel nicht reicht und `narrow` allein zum Ritual wuerde. Es gibt genau **drei**:
@@ -176,7 +176,7 @@ enum Fakt {
     /// Intervall. NaN liegt in KEINEM Intervall, und dieselbe Aussage ist trotzdem nicht
     /// „der Bereich ist enger". Zwei Bits, die unabhaengig geloescht werden koennen.
     ///
-    /// *Der Bedarfsbeleg ist eine Disjunktion* (`FRAGMENTE.md`, «F0»/FF1): der Fluchttest
+    /// *Der Bedarfsbeleg ist eine Disjunktion* (`FRAGMENTS.md`, «F0»/FF1): der Fluchttest
     /// eines echten Renderers lautet `Zz2 < ER2 || isnan(de.x) || isinf(de.x) || …`, und im
     /// Nein-Zweig fallen beide Bits gleichzeitig.
     Endlich {
@@ -282,7 +282,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
     // call hangs here because the environment already stands here -- a second
     // `Umgebung::sammle` would be a second reader of one thing.
     //
-    // *And it walks EVERY position, not just `ensures`*: `dokumente/PRUEFER.md`
+    // *And it walks EVERY position, not just `ensures`*: `dokumente/CHECKER.md`
     // falsified each of the 53 corpus sites outside `ensures` one by one and got 51 silent
     // runs, so the position is where the gap was, not the domain.
     crate::domaene::domaenen(baum, &umgebung, absagen);
@@ -826,7 +826,7 @@ fn leere_boot_antwort(
 ///
 /// *Erster Anlauf am 2026-08-19 sammelte nur `spec fn` und meldete an
 /// `maintains antwortpflicht_paarig` einen Fehler.* Der Name ist eine **Tabelleninvariante**
-/// (`FRAGMENTE.md`:602), und das ist die legitimere der beiden Formen: sie steht am Traeger,
+/// (`FRAGMENTS.md`:602), und das ist die legitimere der beiden Formen: sie steht am Traeger,
 /// nicht daneben. **Eine Regel, die eine gueltige Form des Korpus faellt, ist ein Fehlalarm
 /// und kein Fund** -- und dieser hier wurde beim Messen gefangen, nicht beim Ausliefern.
 ///
@@ -1371,7 +1371,7 @@ impl<'a> Pruefer<'a> {
     /// **U1.** Ein Unterblock bekommt eine Kopie der Lage -- seine Schreibzugriffe muessen
     /// die Fakten des UMGEBENDEN Blocks trotzdem toeten. Sonst ueberlebt ein Fakt jedes
     /// Schreiben, das in einem `if`/`match`/Schleifen-/`locks`-Rumpf steht, und
-    /// `SPRACHE.md` §3.2 -- *„stirbt bei jedem Schreiben auf eine beteiligte Stelle"* --
+    /// `LANGUAGE.md` §3.2 -- *„stirbt bei jedem Schreiben auf eine beteiligte Stelle"* --
     /// ist an dieser Stelle falsch.
     fn unterblock(&mut self, b: &Block, aussen: &mut Lage, ergebnis: Option<&Typ>) {
         let mut innen = aussen.clone();
@@ -1617,7 +1617,7 @@ impl<'a> Pruefer<'a> {
                 // **Punkt 4, zweite Haelfte: die RELATIONALE Nachbedingung (2026-08-19).**
                 //
                 // `aus_ensures` verengt aus `result <op> <Zahl>`. Die haeufigere Form nennt
-                // einen ORT: `ensures result <= s.len`. `FRAGMENTE.md`:1152 sagt es selbst --
+                // einen ORT: `ensures result <= s.len`. `FRAGMENTS.md`:1152 sagt es selbst --
                 // *„Das kommt durch, weil das `ensures` von `unberuehrt` `<= s.len` sagt: aus
                 // dem VERTRAG der gerufenen Funktion, nicht aus einer Flussregel."*
                 //
@@ -1761,7 +1761,7 @@ impl<'a> Pruefer<'a> {
                 // > nichts.
                 //
                 // Der Typ kommt aus dem `or R` des GERUFENEN, nicht aus der Umgebung des
-                // Rufers: wer scheitern kann, sagt woran (`SPRACHE.md` 8.1). Steht dort
+                // Rufers: wer scheitern kann, sagt woran (`LANGUAGE.md` 8.1). Steht dort
                 // keiner, faellt schon `N028` -- hier bleibt der Name dann ungebunden, und
                 // `M119` sagt es ein zweites Mal, statt einen Typ zu erfinden.
                 //
@@ -1947,13 +1947,13 @@ impl<'a> Pruefer<'a> {
                 // die gefaehrlichere Richtung, und sie lief hier am Index vorbei.
                 self.index_pruefen(&z.ziel, lage);
                 // **`N270` (lane 152) -- a bare store to an `atomic` is not a
-                // `publishstmt`, and `SPRACHE.md` §11.3 says every store to an
+                // `publishstmt`, and `LANGUAGE.md` §11.3 says every store to an
                 // atomic IS one.**
                 //
                 // Measured: `AT = w;` on `atomic AT : u32 relaxed` checks clean
                 // and emits `AT = w;` over `_Atomic uint32_t AT` -- a plain
                 // access, which C treats as `seq_cst` while the declaration
-                // said `relaxed`, and which the C model (`C-SPEICHERMODELL.md`
+                // said `relaxed`, and which the C model (`C-MEMORY-MODEL.md`
                 // §1c) makes stuck. Lowering the bare store to an explicit
                 // `atomic_store_explicit` is no fix: the store is where the
                 // payload promise stands (`publishes { … }` / `publishes
@@ -1984,7 +1984,7 @@ impl<'a> Pruefer<'a> {
                         .mit_notiz(
                             "the emitter would write a plain store to an `_Atomic` \
                              object -- C's default (`seq_cst`) instead of the declared \
-                             order, and stuck in the C model (`C-SPEICHERMODELL.md` §1c)",
+                             order, and stuck in the C model (`C-MEMORY-MODEL.md` §1c)",
                         )
                         .mit_notiz(
                             "write `A = <value> publishes { … }` (`publishes nothing` \
@@ -2204,7 +2204,7 @@ impl<'a> Pruefer<'a> {
                 if let Typ::Grund(g) = &gegenstand {
                     // **`M125` -- ein `match` ueber einem Grund OHNE `exhaustive`.**
                     //
-                    // `SPRACHE.md`:531 sagt, was das Wort heisst: *„der erzeugte
+                    // `LANGUAGE.md`:531 sagt, was das Wort heisst: *„der erzeugte
                     // C-`switch` hat KEIN `default`, und ein neuer Wert bricht die
                     // Uebersetzung"*. Fehlt es, ist die Aufzaehlung offen -- und dann kann
                     // eine Fallunterscheidung darueber nicht vollstaendig sein, waehrend
@@ -2228,7 +2228,7 @@ impl<'a> Pruefer<'a> {
                             .mit_notiz(
                                 "`exhaustive` means the generated `switch` has no \
                                  `default` and a new value breaks compilation \
-                                 (SPRACHE.md) -- without it the enumeration is open",
+                                 (LANGUAGE.md) -- without it the enumeration is open",
                             )
                             .mit_notiz(
                                 "and there is no catch-all branch in this language, so no \
@@ -2956,7 +2956,7 @@ impl<'a> Pruefer<'a> {
                 //
                 // Die geplante Fassung hiess „exakt darstellbar, sonst Absage". An 340
                 // Literalen eines echten Renderers gemessen waeren damit 53 gefallen,
-                // darunter ln 2 und 2 pi (`FRAGMENTE.md`, «F0»/FF4). Eine transzendente
+                // darunter ln 2 und 2 pi (`FRAGMENTS.md`, «F0»/FF4). Eine transzendente
                 // Konstante ist in KEINER binaeren Breite exakt; ihre Dezimalform ist schon
                 // eine Naeherung.
                 //
@@ -3541,7 +3541,7 @@ impl<'a> Pruefer<'a> {
     /// `(a & b) << c` here and `a & (b << c)` there -- **the same characters, two programs.**
     ///
     /// Measured on 2026-08-31, compiled and run over all 25 pairs
-    /// (`dokumente/SPRACHE.md`): nine of them compute a different value, and
+    /// (`dokumente/LANGUAGE.md`): nine of them compute a different value, and
     /// two of the four comparison forms as well. The emitter now writes the parenthesis
     /// (`emit.rs::geklammert`), so **the shipped program computes what the checker proved.**
     ///
@@ -3869,7 +3869,7 @@ impl<'a> Pruefer<'a> {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §3: division and remainder require a denominator \
+                            "LANGUAGE.md §3: division and remainder require a denominator \
                                 whose range excludes zero",
                         )
                         .mit_notiz(
@@ -3898,7 +3898,7 @@ impl<'a> Pruefer<'a> {
                     // `return x % y;` straight into the C.
                     //
                     // The check mirrors `M150`: it fires at the operation, with
-                    // the `SPRACHE.md §3` note (compile error, not a trap) and
+                    // the `LANGUAGE.md §3` note (compile error, not a trap) and
                     // the V1 remedy note. The ranges are read WITH their V1/V2
                     // facts, so a divisor narrowed away from `-1` and a
                     // dividend narrowed away from the smallest value stay
@@ -3923,7 +3923,7 @@ impl<'a> Pruefer<'a> {
                                     ),
                                 )
                                 .mit_notiz(
-                                    "SPRACHE.md §3: if the result range does not fit, it is a compile error \
+                                    "LANGUAGE.md §3: if the result range does not fit, it is a compile error \
                                      and not a wrap-around -- `INT_MIN % -1` traps in the C this lowers to, \
                                      because C defines `%` through `/`",
                                 )
@@ -3983,7 +3983,7 @@ impl<'a> Pruefer<'a> {
         // repair lets `u64(a)` reach here as an ordinary `Ruf` over the one-segment path
         // `u64`, and this is where it is typed rather than looked up as a function.
         //
-        // Found by «K3» (`dokumente/PRUEFER.md` §4.1): `test_func`'s two most ordinary lines
+        // Found by «K3» (`dokumente/CHECKER.md` §4.1): `test_func`'s two most ordinary lines
         // -- `(u64) ktime_us_delta(...)`, `(u64) test_repeat_count` -- have no Gabbro form,
         // and `grep` over the whole corpus at the time found zero sites that would have
         // exercised the gap.
@@ -4685,7 +4685,7 @@ impl<'a> Pruefer<'a> {
     ///
     /// The surface spells them per width until generics exist; the width here is
     /// the operand's OWN `breite`, so no width is named twice and none can
-    /// disagree with the declaration. Ranges follow `dokumente/SPRACHE.md` §3: the
+    /// disagree with the declaration. Ranges follow `dokumente/LANGUAGE.md` §3: the
     /// nonzero group (`clz`, `ctz`, `log2_floor`) needs `1 ..` (`M157`, with the
     /// `narrow` remedy the task asks for); every operand must be an unsigned
     /// standard width (`M158`/`M159`/`M160`); rotation needs the EXACT full
@@ -4752,7 +4752,7 @@ impl<'a> Pruefer<'a> {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §3: like a divisor, the argument must exclude \
+                            "LANGUAGE.md §3: like a divisor, the argument must exclude \
                              zero -- the lowering reaches `__builtin_clz/ctz`, whose \
                              zero case is undefined",
                         )
@@ -5664,7 +5664,7 @@ impl<'a> Pruefer<'a> {
     ///
     /// Heute traegt jeder Typ dieser Sprache eine totale Ordnung (`IntBereich`, `bool`), also
     /// gilt die Vorbedingung. **Sie steht hier, damit ein kuenftiger Traeger sie BRICHT statt
-    /// sie stillschweigend zu unterlaufen** -- `SPRACHE.md` §3.2 fuehrt sie ausgeschrieben.
+    /// sie stillschweigend zu unterlaufen** -- `LANGUAGE.md` §3.2 fuehrt sie ausgeschrieben.
     fn fakten_aus(&mut self, bedingung: &Expr, negiert: bool, lage: &mut Lage) {
         match &bedingung.art {
             ExprArt::Klammer(i) => self.fakten_aus(i, negiert, lage),
@@ -6896,7 +6896,7 @@ impl<'a> Pruefer<'a> {
     /// reads as reassurance.
     ///
     /// **The wording is deliberately NOT changed.** Ten transcripts quote the line verbatim
-    /// -- `dokumente/SPRACHE.md`, `ERZEUGER.md`, `OPS-RELABEL.md`, `dokumente/C-SPEICHERMODELL.md`,
+    /// -- `dokumente/LANGUAGE.md`, `ERZEUGER.md`, `OPS-RELABEL.md`, `dokumente/C-MEMORY-MODEL.md`,
     /// `UEBERSETZUNGSREICHWEITE.md`, `TUTORIAL.md`, two probe headers under
     /// `messung/proben/` and two poison probes -- and each of them is a MEASUREMENT of a
     /// past run. *Renaming the field would falsify a record instead of correcting a
@@ -7758,13 +7758,13 @@ impl<'a> Pruefer<'a> {
             absage = absage.mit_notiz(
                 "wrapping is unsigned-only: signed overflow is undefined in C, \
                  and the conversion back from unsigned is implementation-defined \
-                 (dokumente/SPRACHE.md section 5b)",
+                 (dokumente/LANGUAGE.md section 5b)",
             );
         } else {
             absage = absage.mit_notiz(
                 "on a range like `0 .. 5` wrapping is ambiguous (mod 6 costs a \
                  division per operation), so it is not derivable there \
-                 (dokumente/SPRACHE.md section 4)",
+                 (dokumente/LANGUAGE.md section 4)",
             );
         }
         absage = absage.mit_notiz(
@@ -8350,7 +8350,7 @@ impl<'a> Pruefer<'a> {
     ///
     /// ## `elems of` -- the fourth traversal domain, closed 2026-09-08
     ///
-    /// `dokumente/PRUEFER.md` §2.4 booked the binder without a type
+    /// `dokumente/CHECKER.md` §2.4 booked the binder without a type
     /// at four domains; 2026-09-07 closed three of them through `binder_tabelle`, and
     /// **`elems of` stayed open because `binder_tabelle` returns `None` for it** -- it
     /// resolves a TABLE, and an array field is not one.
@@ -8419,7 +8419,7 @@ impl<'a> Pruefer<'a> {
     /// **Die `B - 1` ist die schaerfere und die richtige:** vor dem k-ten Zuwachs sind
     /// hoechstens k-1 geschehen. Genau sie macht die `narrow`-Zeile ueberfluessig.
     ///
-    /// ## Und es ist die einzige Ausnahme von `SPRACHE.md`:657
+    /// ## Und es ist die einzige Ausnahme von `LANGUAGE.md`:657
     ///
     /// > *„Loops carry no facts inward."*
     ///
@@ -9806,7 +9806,7 @@ fn wege_aus_der_breite(a: &IntBereich, b: &IntBereich) -> String {
 ///
 /// The third row is the finding: the person wrote a bound, the checker kept none, and the
 /// proof channel is handed `Shape.intIn 0 4294967295` -- a shape whose meaning nobody
-/// stated (`PLAN.md` §3.1, `dokumente/PRUEFER.md` §1.2).
+/// stated (`PLAN.md` §3.1, `dokumente/CHECKER.md` §1.2).
 ///
 /// ## Where it looks, and it is NINETEEN positions and not one
 ///

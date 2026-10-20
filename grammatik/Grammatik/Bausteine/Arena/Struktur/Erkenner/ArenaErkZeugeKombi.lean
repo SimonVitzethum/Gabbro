@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkZeugeKombi.lean
-  Subject:   THE RECOGNIZER ON A REAL ARENA THAT CARRIES A LIST AND A TREE (PLAN-DYNAMISCH.md section 8a.1, third pass).
+  Subject:   THE RECOGNIZER ON A REAL ARENA THAT CARRIES A LIST AND A TREE (PLAN-DYNAMIC.md section 8a.1, third pass).
 
   The arena of `ArenaDynZeuge.lean` shares its link field and its head word between the list and the tree, so it cannot
   carry both. This file declares a second concrete arena with five fields (payload, free link, LIST link, LEFT child,

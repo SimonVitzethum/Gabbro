@@ -1,7 +1,7 @@
 // 158 -- **Growth below a ceiling, committed at run time.**
 //
 // A dynamic arena declares a ceiling `max M` (address reserved at load) and
-// a committed prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`).
+// a committed prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMIC.md`).
 // `Vorrat` reserves `8` slots and starts `4` committed (`capacity 2 .. 4
 // max 8`); one `grow ... by 4` commits the rest, so the eight allocations
 // below name slots the runtime made usable -- every one past the old `hi`

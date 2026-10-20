@@ -1,6 +1,6 @@
 // S14 -- «B27»: THE SYSCALL ENTRY, AND THE 168 `asm!` SITES.
 //
-// `FRAGMENTE.md` «B27» (F5, userspace/service loop): *"`prim fn` has no `abi`
+// `FRAGMENTS.md` «B27» (F5, userspace/service loop): *"`prim fn` has no `abi`
 // block: `arch` exists, the register assignment does not. The place at which
 // 168 `asm!` sites were meant to converge has no content."*
 //

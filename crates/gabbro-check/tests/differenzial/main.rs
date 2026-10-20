@@ -322,7 +322,7 @@ fn gesamtraum_rust_und_export() {
 /// model accepts and the checker refuses. A group outside this list is NEW incompleteness (the test
 /// falls and the group must be fixed in the checker or entered here with its reason); a group that no
 /// longer occurs is a fix and needs no edit. None of these may be fixed by weakening the checker
-/// (CLAUDE.md): each is a rule the language keeps beyond what `Akzeptiert` decides, and `PRUEFER.md`
+/// (CLAUDE.md): each is a rule the language keeps beyond what `Akzeptiert` decides, and `CHECKER.md`
 /// 12.6 names the Lean change that would carry it.
 pub const ERWARTET_A: &[(&str, &str)] = &[
     ("K001", "costs: a declared op bound the body exceeds -- the model carries no budgets (`Akzeptiert` has no cost component)"),

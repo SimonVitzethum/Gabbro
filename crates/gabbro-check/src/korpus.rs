@@ -56,7 +56,7 @@ pub fn schneide(md: &str) -> Vec<Block> {
 ///
 /// **Diese Unterscheidung entscheidet, was die Messung ueberhaupt bedeutet.** Die Fragmente
 /// sind vollstaendige Uebersetzungseinheiten und zaehlen gegen Tor P2. Die Beispiele in
-/// `SPRACHE.md` sind ueberwiegend **Ausschnitte** -- eine Anweisung, eine Klausel, ein Typ --
+/// `LANGUAGE.md` sind ueberwiegend **Ausschnitte** -- eine Anweisung, eine Klausel, ein Typ --
 /// und ein Parser, der sie als Programm liest, meldet einen Fehler, den es nicht gibt.
 /// Sie zusammenzuzaehlen waere derselbe Fehler wie eine Kennzahl ohne Nenner.
 pub fn ist_uebersetzungseinheit(text: &str) -> bool {

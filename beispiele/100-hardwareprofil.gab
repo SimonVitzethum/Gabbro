@@ -1,6 +1,6 @@
 // 100 -- **The hardware profile, with a library requiring a subset of it.**
 //
-// Lane E6 (`dokumente/PRUEFER.md` §0c, `SYNTAX.md` §12.2): the program declares
+// Lane E6 (`dokumente/CHECKER.md` §0c, `SYNTAX.md` §12.2): the program declares
 // ONE hardware profile -- keyed mode entries plus a reference to the
 // declared assumption, never a copy of its text. The library module
 // requires a subset of it by reference: the key with the value, the

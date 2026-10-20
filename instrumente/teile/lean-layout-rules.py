@@ -148,7 +148,7 @@ rules('grammatik/Grammatik/Logik/Ruf', [
     (r'^RufOhneHardware\w*$', 'Ohne'),
 ])
 
-# The arena family: the dynamic structures over live slots (list, tree, recognizer; PLAN-DYNAMISCH 8a) live in `Struktur`
+# The arena family: the dynamic structures over live slots (list, tree, recognizer; PLAN-DYNAMIC 8a) live in `Struktur`
 # (room for the 20-entry limit, 2026-10-18).
 rules('grammatik/Grammatik/Bausteine/Arena', [
     (r'^Arena(Kette|Baum|BaumWelt|Liste|Lebt|Fremd|Frei|DynZeuge|Auf|AllocForm|LinkForm|BaumForm|FormZeuge|Wachs|Hash|Sibling|Erkenner\w*|Sperre\w*)$', 'Struktur'),

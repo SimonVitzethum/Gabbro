@@ -2,7 +2,7 @@
   File:      Grammatik/ArenaReset.lean
   Subject:   Arena-reset reuse safety: a reset wholesales every slot.
 
-  Lane 243 (TODO wave D). PLAN-DYNAMISCH.md section 6 DECIDED arena-reset
+  Lane 243 (TODO wave D). PLAN-DYNAMIC.md section 6 DECIDED arena-reset
   as the free discipline (linear free-list rejected, section 6): freeing is
   `reset A;` only -- counter to zero, generation consumed, commit kept.
   This file is the reuse-safety half of that decision, over the sugar of
@@ -155,7 +155,7 @@ end Gabbro.Grammatik
     safety holds either way (a stale index stays below the committed
     count); the gap is a logical dangling reference.
   * **Commit is untouched.** `reset` keeps the committed prefix (monotone
-    commit, PLAN-DYNAMISCH.md section 3): the counter store moves `stand`
+    commit, PLAN-DYNAMIC.md section 3): the counter store moves `stand`
     and nothing else (`stand_schreibGlob` for the counter global only;
     `DynArena.dynGrow_monoton` is lane 241's model half). No cost arm is
     built here: `reset` stays `Kosten::Zahl(1)` (`kosten.rs`, untouched --

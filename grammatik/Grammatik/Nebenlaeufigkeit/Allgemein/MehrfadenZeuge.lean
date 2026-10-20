@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/MehrfadenZeuge.lean
   Subject:   THE WITNESS for the three concurrency repairs of 2026-09-14
-             (SATZKARTE §16): two ACTIVE threads, each writing its OWN
+             (THEOREM-MAP §16): two ACTIVE threads, each writing its OWN
              private table unguarded, both updating one shared table under a
              lock with a non-trivial lock invariant.
 

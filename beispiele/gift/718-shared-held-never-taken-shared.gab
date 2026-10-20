@@ -2,7 +2,7 @@
 // **A `shared held` number with no shared site.**
 //
 // `L` declares `shared held <= 8 ops` but is only ever taken exclusively. The latency
-// statement of SPRACHE.md §9.3 has no branch for a lock nobody takes shared, so the
+// statement of LANGUAGE.md §9.3 has no branch for a lock nobody takes shared, so the
 // number is a claim with no site at which it could fail -- the same shape as the dead
 // `locks ordered` candidate the construct grew out of.
 //

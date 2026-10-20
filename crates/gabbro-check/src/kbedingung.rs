@@ -1,7 +1,7 @@
 //! **Die K-Bedingung, mechanisch — und der Prüfer arbeitet damit für die Messung, die vor
 //! ihm stehen sollte.**
 //!
-//! Das Messprotokoll für Messung 2 ([`MESSUNGEN.md`](MESSUNGEN.md)) sagt:
+//! Das Messprotokoll für Messung 2 ([`MEASUREMENTS.md`](MEASUREMENTS.md)) sagt:
 //!
 //! > *„«Der Erzeuger zeigt es einmal» gilt nur, wenn **ALLE** Mutationen des Traegers erzeugte
 //! > Operationen sind. Eine einzige Handmutation — ein `breaking`-Block, ein Schreibpfad
@@ -18,7 +18,7 @@
 //!
 //! ## Und die Regel dahinter ist ohnehin eine
 //!
-//! `SPRACHE.md` §10.2: *„Handgeschriebene Mutation an einer `table` mit `ops` ist ein
+//! `LANGUAGE.md` §10.2: *„Handgeschriebene Mutation an einer `table` mit `ops` ist ein
 //! **Uebersetzungsfehler**."* Der Bericht unten ist die Messform derselben Sache; die Absage
 //! `D001` ist die Sprachform.
 
@@ -197,7 +197,7 @@ fn zeigt_auf_tabelle(t: &TypExpr, tabellen: &[String]) -> Option<String> {
 
 /// **`D013` -- `breaking I { … }` where `I` names nothing.**
 ///
-/// `SPRACHE.md` §8.3 hangs three promises on that name: inside the block `I` is not
+/// `LANGUAGE.md` §8.3 hangs three promises on that name: inside the block `I` is not
 /// available as a premise, functions with `requires I`/`maintains I` are not callable, and
 /// at the end `I` is restored or booked. **All three are promises about a name that was
 /// never looked up.** Measured through the unchanged checker (W24), 2026-08-28:
@@ -240,7 +240,7 @@ fn breaking_nennt_eine_invariante(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §8.3 hangs three promises on this name -- the invariant is \
+                    "LANGUAGE.md §8.3 hangs three promises on this name -- the invariant is \
                      blocked as a premise, `requires I`/`maintains I` are not callable, and \
                      at the end it is restored or booked",
                 )
@@ -261,7 +261,7 @@ fn breaking_nennt_eine_invariante(baum: &Programm, absagen: &mut Absagen) {
 /// **`N531` -- `breaking I { … }` over a block that touches no carrier of `I`.**
 ///
 /// `D013` makes sure the name resolves; it says in its own sentence what it does not buy:
-/// *"a `breaking` on the wrong-but-existing invariant still passes"* (`SPRACHE.md` §8.3.1,
+/// *"a `breaking` on the wrong-but-existing invariant still passes"* (`LANGUAGE.md` §8.3.1,
 /// `GABBROV.md` §3 -- the site OFFEN O1's `L34` is about). This rule closes the part of that
 /// gap a syntactic check can close: a block that writes NONE of the carriers of `I` -- no
 /// assignment, no `publish`, no `exchange`, no transition on a table `I` stands over, and no
@@ -349,7 +349,7 @@ fn breaking_rests_here(baum: &Programm, absagen: &mut Absagen) {
                          carriers -- this one is named for the wrong invariant",
                     )
                     .mit_notiz(
-                        "SPRACHE.md §8.3.1: `D013` checks that the name resolves; a `breaking` \
+                        "LANGUAGE.md §8.3.1: `D013` checks that the name resolves; a `breaking` \
                          on the wrong-but-existing invariant passed it",
                     ),
                 );
@@ -360,7 +360,7 @@ fn breaking_rests_here(baum: &Programm, absagen: &mut Absagen) {
 
 /// **`N532` -- inside `breaking I { … }`, a call of a function that `maintains I`.**
 ///
-/// `SPRACHE.md` §8.3: *"Inside the block the invariant is not available as a premise:
+/// `LANGUAGE.md` §8.3: *"Inside the block the invariant is not available as a premise:
 /// functions with `requires I` or `maintains I` are not callable."* Until 2026-09-26 no pass
 /// read it (`D013`'s sentence: "NONE of them is checked"). A function that `maintains I` owes
 /// `I` at its return and is written against a state in which `I` holds; called while `I`
@@ -410,7 +410,7 @@ fn breaking_blocks_maintainers(baum: &Programm, absagen: &mut Absagen) {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §8.3: inside the block the invariant is not available \
+                            "LANGUAGE.md §8.3: inside the block the invariant is not available \
                              as a premise -- functions with `maintains I` are not callable",
                         )
                         .mit_notiz("call it after the block, once the invariant is restored"),
@@ -543,7 +543,7 @@ fn nur_ops_felder(baum: &Programm) -> Vec<(String, String)> {
     aus
 }
 
-/// **Die Sprachform:** eine `table` mit `ops` duldet keine Handmutation (`SPRACHE.md` §10.2).
+/// **Die Sprachform:** eine `table` mit `ops` duldet keine Handmutation (`LANGUAGE.md` §10.2).
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     erschoepfendes_match(baum, absagen);
     baumkanten(baum, absagen);
@@ -652,7 +652,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §10.2: a hand-written mutation on a `table` with `ops` is \
+                    "LANGUAGE.md §10.2: a hand-written mutation on a `table` with `ops` is \
                         a compile error",
                 )
                 .mit_notiz(

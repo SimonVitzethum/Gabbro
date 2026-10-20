@@ -3,7 +3,7 @@
 //
 // `VERSIEGELT` ist als Fall OHNE NUTZLAST hingeschrieben: nichts veroeffentlicht darauf,
 // nichts erwartet es. Und hinter seinem Tor wird `granulat` gelesen -- ein Platz, den ein
-// ANDERER Kern schreibt. Die drei Regeln von `SPRACHE.md` Teil II §1 pruefen eine
+// ANDERER Kern schreibt. Die drei Regeln von `LANGUAGE.md` Teil II §1 pruefen eine
 // hingeschriebene Paarung; diese hier fehlt, und bis `V009` sagte niemand etwas dazu.
 module gift {
 

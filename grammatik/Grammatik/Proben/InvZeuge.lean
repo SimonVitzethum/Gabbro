@@ -1,7 +1,7 @@
 /-
   Gabbro/Grammatik/InvZeuge.lean
 
-  **Witnesses for `ziel_ort_sperre_inv`** (table invariants, SATZKARTE
+  **Witnesses for `ziel_ort_sperre_inv`** (table invariants, THEOREM-MAP
   §15.4).
 
       lock L protects konto (two slots, 0 .. 10) rank 0

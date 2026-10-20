@@ -84,7 +84,7 @@ pub struct Pflicht {
 /// **What each kind of obligation offers a prover -- exhaustively, no catch-all.**
 ///
 /// A new obligation kind is a compile error at every site that turns one into a goal, not a
-/// silent omission. *An output that forgets one kind looks complete* (`dokumente/SPRACHE.md`, the
+/// silent omission. *An output that forgets one kind looks complete* (`dokumente/LANGUAGE.md`, the
 /// `lock` line that was missing from the ABI for a day).
 #[derive(Clone)]
 pub enum Material {
@@ -214,7 +214,7 @@ pub enum Art {
     /// `traverse … invariant P { … }` says: *P holds across the passes.* Until today the
     /// clause did not exist, and the body channel refused 23 routines with `loop` for the
     /// reason that the measure was carried and the STATEMENT was not
-    /// (`dokumente/PRUEFER.md`).
+    /// (`dokumente/CHECKER.md`).
     ///
     /// *It stands beside `E` and not inside it:* a table invariant is declared once at the
     /// table and quantified over its slots; a loop invariant is declared at ONE loop and
@@ -1210,7 +1210,7 @@ fn lauf(
 ///
 /// `CLAUDE.md` holds what happens when a document moves ahead of its readers: seven read
 /// along and four go silently blind. A manifest has the same shape and a worse consequence
-/// -- `SPRACHE.md` §15 calls it the artefact by which Gabbro carries its promise OUTWARD,
+/// -- `LANGUAGE.md` §15 calls it the artefact by which Gabbro carries its promise OUTWARD,
 /// and `GABBROV.md` §2 rests a whole tool on it: *"GabbroV does not read the Gabbro program.
 /// It reads the manifest."*
 ///
@@ -1226,7 +1226,7 @@ fn lauf(
 /// **Fassung 2 -- the line carries what §15 promised it would** (2026-09-03).
 ///
 /// `AUFTRAG-GABBROV.md` §4 names the target per line: **name · obligation text · anchor
-/// (`file:line`) · class · state**, and `SPRACHE.md` §15 sketched exactly that shape:
+/// (`file:line`) · class · state**, and `LANGUAGE.md` §15 sketched exactly that shape:
 ///
 /// ```text
 /// obligation revoke.functional  "ensures !exists k in descendants of s: k.used"  offen
@@ -1427,7 +1427,7 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> (String, bool) {
     //
     // The loop above prints by KIND, out of a fixed list of eight. A ninth kind added to
     // `Art` and forgotten there would be counted by the header line and printed nowhere --
-    // **the silent loss `SPRACHE.md` §15 promises against, inside the artefact that carries
+    // **the silent loss `LANGUAGE.md` §15 promises against, inside the artefact that carries
     // the promise.** The `debug_assert` above catches an unbalanced header; it does not catch
     // a balanced header over a short body, and that is a different hole.
     //

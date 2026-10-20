@@ -13,7 +13,7 @@
 //     ...
 //     (t.senden)(b'\r');
 //
-// Counted with the commands in `dokumente/SPRACHE.md`: **11 `fn(…)` type sites, 4 producers,
+// Counted with the commands in `dokumente/LANGUAGE.md`: **11 `fn(…)` type sites, 4 producers,
 // 4 calls through** -- and the two producers above are two of the four.
 //
 // ## Why all four halves stand in ONE file

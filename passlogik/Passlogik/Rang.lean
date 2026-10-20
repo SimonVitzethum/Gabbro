@@ -10,9 +10,9 @@
     §2 -- und daneben stehen die vier Raender aus §5 als eigene Saetze.
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:1272 -- `lockdecl = "lock" ident "protects" "{" placelist "}"
+    dokumente/LANGUAGE.md:1272 -- `lockdecl = "lock" ident "protects" "{" placelist "}"
                                  "rank" constexpr [ "held" "<=" constexpr "ops" ] …`
-    dokumente/SPRACHE.md:1278 -- "`rank`: taking demands a strictly smaller rank."
+    dokumente/LANGUAGE.md:1278 -- "`rank`: taking demands a strictly smaller rank."
     messung/H006.md §1        -- "Endlich viele Sperren `L`, jede mit einem Rang
                                  `r(L) ∈ ℤ`. Ein Zustand ist eine Menge von Faeden, jeder
                                  haelt eine Menge von Sperren und wartet auf hoechstens
@@ -290,7 +290,7 @@ theorem rangregel_ist_nicht_notwendig :
 #print axioms Passlogik.Rang.rangregel_ist_nicht_notwendig
 /-! ## 6. Die Naht zu `Kosten.lean`: die gehaltene Kette ist WIEDERHOLUNGSFREI
 
-    `SPRACHE.md`:1176 Punkt 4 rechnet die Wartezeit als SUMME der `held` ueber die
+    `LANGUAGE.md`:1176 Punkt 4 rechnet die Wartezeit als SUMME der `held` ueber die
     hoeherrangigen Halter. Diese Summe ist nur dann eine Zahl, wenn keine Sperre zweimal
     in der Kette steht -- und genau das liefert der echt steigende Rang.
 -/

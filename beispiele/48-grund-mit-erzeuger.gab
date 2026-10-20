@@ -7,7 +7,7 @@
 // existierte an der Deklaration und hatte keine Schreibform; der Erzeuger schrieb
 // `(void)_grund;` und den Befund als Kommentar daneben.
 //
-// **Die Vorlage steht ausserhalb** (Regel B): `FRAGMENTE.md`:269 -- die Freigabe eines
+// **Die Vorlage steht ausserhalb** (Regel B): `FRAGMENTS.md`:269 -- die Freigabe eines
 // Capability-Blattes -- schreibt `return Fehler::Buchfuehrung;` mitten im `else`-Zweig
 // eines `narrow`. Der Ausschnitt kommt aus echtem Code, er meldet einen Buchfuehrungsfehler
 // an seinen Rufer zurueck, und er schreibt dafuer genau die Form, die die Sprache nicht
@@ -50,7 +50,7 @@ extern fn buchfuehrung_kaputt() -> never effects { diverges } costs <= 1 ops;
 // ---------------------------------------------------------------------------------------
 
 // **`narrow … else` verlangt keine Invariante, sondern eine PRUEFUNG** -- das ist der Satz,
-// den `FRAGMENTE.md`:262 an derselben Stelle schreibt. Der `else`-Zweig ist der Ort, an dem
+// den `FRAGMENTS.md`:262 an derselben Stelle schreibt. Der `else`-Zweig ist der Ort, an dem
 // die Verletzung sichtbar wird, statt still umzulaufen; **bis heute konnte er dort nur
 // zurueckkehren oder divergieren.** Jetzt kann er sagen, warum.
 impl fn platz_freigeben(g : ptr<normal, rw> Griffe, s : Platznr) -> Zaehler or Buchfehler

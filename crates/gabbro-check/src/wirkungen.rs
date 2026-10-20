@@ -1,6 +1,6 @@
 //! **Pass 8 -- `effects`, und der Grund, warum dieser Pass ueberhaupt existiert.**
 //!
-//! `SPRACHE.md` §7 und `SYNTAX.md` §6:
+//! `LANGUAGE.md` §7 und `SYNTAX.md` §6:
 //!
 //! > **`effects` ist NICHT fail-open.** Eine Funktion **ohne** `effects` ist ein
 //! > Uebersetzungsfehler; wer nichts anfasst, schreibt `effects { pure }`. Die frueher
@@ -211,7 +211,7 @@ fn sammle_rufe_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
 /// `effects` beschreibt, was eine Funktion mit der WELT tut, nicht mit ihrem eigenen Stapel.
 /// Bis 2026-08-15 verlangte `E005` fuer `let mut i = 0; i += 1;` einen Eintrag in der
 /// Wirkungsliste -- eine Funktion, die nur zaehlt, konnte nicht `pure` sein. Gefunden am
-/// Fragmentlauf (`FRAGMENTE.md`, kstackmark), wo genau das aufschlug.
+/// Fragmentlauf (`FRAGMENTS.md`, kstackmark), wo genau das aufschlug.
 pub(crate) fn lokale(b: &Block, aus: &mut Vec<String>) {
     for s in &b.anweisungen {
         match &s.art {
@@ -495,7 +495,7 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
 /// wichtigsten Haelfte leer: sie erzwang eine Liste, nicht ihre Wahrheit.
 ///
 /// **Was hier geprueft wird und was nicht:** jedes **Schreiben** und jedes **`locks`** muss
-/// von einer erklaerten Wirkung gedeckt sein. **Lesen wird nicht geprueft** — `FRAGMENTE.md`
+/// von einer erklaerten Wirkung gedeckt sein. **Lesen wird nicht geprueft** — `FRAGMENTS.md`
 /// liest in jeder Funktion Stellen, die keine `reads`-Zeile nennt, und ob das ein Befund ist
 /// oder die gemeinte Bedeutung, entscheidet nicht dieser Pass. **Aufrufwirkungen ebenso
 /// nicht:** dazu muessten die Wirkungen des Gerufenen auf die Argumente des Aufrufers
@@ -927,7 +927,7 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §7: `effects` is obligatory and not fail-open -- a \
+                    "LANGUAGE.md §7: `effects` is obligatory and not fail-open -- a \
                         missing clause is a missing promise, not an empty one",
                 )
                 .mit_notiz(format!(
@@ -947,7 +947,7 @@ fn rumpf_gegen_wirkungen(
     // **Die Lesehaelfte -- Lesart A, seit 2026-08-16.**
     //
     // Bis hierher prueft der Pass Schreiben und `locks`. Das Lesen blieb offen, weil
-    // `FRAGMENTE.md` ueberall ohne `reads`-Zeile liest und die Frage war, ob das ein Befund
+    // `FRAGMENTS.md` ueberall ohne `reads`-Zeile liest und die Frage war, ob das ein Befund
     // ist oder die gemeinte Bedeutung. **Sie ist ein Befund.** Der Grund steht im `TODO.md`
     // und hat zwei Teile: E3-Konsistenz (nichts ist implizit, auch kein Lesen), und
     // Meldbarkeit -- diese Absage nennt Funktion UND Ort, die gruebere Lesart koennte nur
@@ -1135,7 +1135,7 @@ fn funktion(
                             format!("`{}` has no `effects` clause", f.name.text),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §7: `effects` is obligatory and not fail-open",
+                            "LANGUAGE.md §7: `effects` is obligatory and not fail-open",
                         )
                         .mit_notiz(
                             "the omission was at once the strongest promise and the cheapest \

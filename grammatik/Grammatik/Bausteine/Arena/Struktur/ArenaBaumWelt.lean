@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/ArenaBaumWelt.lean
   Subject:   `InvDyn` FOR A BINARY TREE OVER LIVE ARENA SLOTS (the shape of the capability derivation tree, O4-O6),
-             preserved by `alloc` (both branches) and `free` (PLAN-DYNAMISCH.md section 8a, phase 2).
+             preserved by `alloc` (both branches) and `free` (PLAN-DYNAMIC.md section 8a, phase 2).
 
   The tree lives in two link fields `lft`, `rgt` of the arena's table (type `int 0 count`, `count` = no child) and a
   root global. `BaumOk` is `ArenaBaum.BaumOkF` over the world's links with `Lebt` as the live predicate:
@@ -16,7 +16,7 @@
   worlds they leave: `baum_einfuegen_links/rechts` (a live unlinked slot becomes the child of a member whose child
   place is empty), `baum_blatt_aus_links/rechts` (a leaf is cut off a member) and `baum_frei_nach_blatt` (the leaf is
   then released). The `sibling-consistency demand` of O6 is a further predicate over the same functions; it is the
-  next piece (PLAN-DYNAMISCH 8a).
+  next piece (PLAN-DYNAMIC 8a).
 -/
 import Grammatik.Bausteine.Arena.Struktur.ArenaListe
 import Grammatik.Bausteine.Arena.Struktur.ArenaBaum

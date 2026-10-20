@@ -4,7 +4,7 @@ import Grammatik.Bausteine.Gleitkomma.Gleitkomma
   File:      Grammatik/Code/Model/Types.lean
   Subject:   TRACK L -- `Code`: THE TARGET-INDEPENDENT LOW-LEVEL LANGUAGE, types and values.
              `Code` is the language machine G is lowered to before any CPU model enters
-             (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a). It is NOT LLVM: no metadata, no
+             (`dokumente/PLAN-TRANSLATION-VALIDATION.md` section 9a). It is NOT LLVM: no metadata, no
              attributes, no inline assembly. It keeps what every CPU has -- word-sized locals,
              byte memory, wraparound arithmetic at an explicit width, compare-and-branch,
              call/return, atomics with orderings -- and nothing the ISAs disagree on
@@ -24,7 +24,7 @@ import Grammatik.Bausteine.Gleitkomma.Gleitkomma
                  BLOCK and a byte offset (block-structured memory, `Memory.lean`), so two
                  distinct allocations never alias by construction.
 
-  NAMED CUTS (also in `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a)
+  NAMED CUTS (also in `PLAN-TRANSLATION-VALIDATION.md` 9a)
     * no first-class aggregate values: aggregates live in memory and are reached by `gep`;
     * no integer to pointer conversion (device bases and region answers are L4);
     * every block is aligned to twice the word, so an alignment check is a check on the offset.

@@ -3472,7 +3472,7 @@ fn senke_zuweisung(k: &mut Koerper, z: &Zuweisung, span: Span) {
     };
     if p.port && !matches!(z.op, ZuwOp::Setzt) {
         // `in` und `out` sind zwei Befehle ohne etwas dazwischen, das ein Ort sein könnte
-        // (SPRACHE.md; `gift/654` im Prüfer): die Verbundzuweisung hat hier keine Form.
+        // (LANGUAGE.md; `gift/654` im Prüfer): die Verbundzuweisung hat hier keine Form.
         weigere(k.s, "Y103", span, "compound assignment at a port register: `in` and `out` are two instructions".to_string());
         return;
     }

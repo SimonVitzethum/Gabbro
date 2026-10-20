@@ -5,7 +5,7 @@
              and the number of PROGRAM-ROOT cells that Theorem 2a (`wurzel_schranke`) demands as separate test
              programs from every set sufficient for implementations with one state more than the presentation.
 
-  THE DIMENSIONS (sources in brackets; written out in PRUEFER.md section 16):
+  THE DIMENSIONS (sources in brackets; written out in CHECKER.md section 16):
     inherited  l      loop flag                          2                 [`Stmt l`, `Block true` in loops]
                Λ      held locks x held mark stages      2^L * (b+1)^K     [`Res.held`, `Res.marke`, `Stmt.locks`]
                V      the enclosing contract             F                 [`Vertrag`, `vertragVon`]

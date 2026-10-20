@@ -515,7 +515,7 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "at run time the region IS its statements, entered by jump at \
                 the region label the gate trap targets (`emit.rs`); the \
                 statements between gate call and region run parent-side only, \
-                which is what the checker judges (SATZKARTE §39)",
+                which is what the checker judges (THEOREM-MAP §39)",
     },
     Posten {
         konstrukt: "entrust",

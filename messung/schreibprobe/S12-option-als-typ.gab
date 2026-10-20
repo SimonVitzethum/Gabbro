@@ -1,6 +1,6 @@
 // S12 -- «B14»: `option` AS A TYPE, NOT ONLY AS A SLOT FIELD.
 //
-// `FRAGMENTE.md` «B14»: *"`option` exists only as a `slottype`, not as a
+// `FRAGMENTS.md` «B14»: *"`option` exists only as a `slottype`, not as a
 // `typeexpr`; and `let … else` demands a `call` on the right, so it does not
 // unpack a `place`."* It is cited in F1, F5 and F6, and `OFFEN.md` O5 asks
 // whether it is a FOURTH demand on the specification fragment, because

@@ -1,7 +1,7 @@
 //! **The flagship's decidable footprint premise as a checker rule (lane 175).**
 //!
 //! The goal theorem is now `ziel_ort_mehrfaden` (`grammatik/Grammatik/Zielsatz/ZielOrt/Rahmen/ZielOrtMehrfaden.lean`,
-//! SATZKARTE §16.1), and its footprint premise is no longer the old `fussOrtGB` --
+//! THEOREM-MAP §16.1), and its footprint premise is no longer the old `fussOrtGB` --
 //! `E245`-`E249` in `wirkungen.rs` compute that older, stricter check and stay hints.
 //! Today the premise is `FussS P S (lokK P K)`:
 //!
@@ -88,7 +88,7 @@
 //!   else every function of the unit) -- the surface form of `AbgK` over indirect calls
 //!   by signature. The fixpoint is closed by construction over direct edges.
 //! * "May write" is DECLARED write permission (`writes`, plus `publishes` and `allocs`
-//!   resolved to carriers), exactly what SATZKARTE §16.6 says `GetrenntK` judges -- not
+//!   resolved to carriers), exactly what THEOREM-MAP §16.6 says `GetrenntK` judges -- not
 //!   the writes a body performs. "Written by none" reuses the old writer set direction
 //!   (declared or performed -- a body write without a declared effect is `E005`'s).
 //! * Guards reuse lane 156's lock data (`sperrinv::sperrdaten`: `lock L protects`

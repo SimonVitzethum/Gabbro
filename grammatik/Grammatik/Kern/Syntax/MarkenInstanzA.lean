@@ -6,7 +6,7 @@
   longer excludes. Instance marks become sound only together with per-thread carrier
   instances (thread-local data). Until those exist, do NOT replace `hMSep`/`PCMarkSep` in a
   goal theorem by `PCMarkSepInstanz`. What this file contributes now: `pcMarkSep_scheitert_gleich_fn`
-  (flag B8 of dokumente/SATZKARTE.md as a theorem) and the instance notions as groundwork.
+  (flag B8 of dokumente/THEOREM-MAP.md as a theorem) and the instance notions as groundwork.
 -/
 /-
   File:      Grammatik/MarkenInstanzA.lean

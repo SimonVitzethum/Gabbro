@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreWachsZeuge.lean
-  Subject:   WITNESSES FOR `grow` AS A LOCKED COMMIT (PLAN-DYNAMISCH.md section 8a.2) on the shared arena of
+  Subject:   WITNESSES FOR `grow` AS A LOCKED COMMIT (PLAN-DYNAMIC.md section 8a.2) on the shared arena of
              `ArenaSperreWelt.lean`, with the committed word moved below the ceiling (`komm = 2`, ceiling `4`):
 
     * `grow_zeuge_L`        -- a commit by `1` moves the committed word `2 -> 3`, the arena invariant holds before and

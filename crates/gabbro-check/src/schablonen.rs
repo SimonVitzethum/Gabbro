@@ -8,7 +8,7 @@
 //!
 //! > **Jede dieser Rettungen faellt „einmal in der Schablone".** Die Schablone ist die
 //! > **vertrauenskritischste, unbewiesene Flaeche**, geprueft vom unverifizierten Kern
-//! > ([`BEWEIS.md`](BEWEIS.md)). Ohne Zaehlung waechst sie **monoton und unbeziffert** — genau
+//! > ([`PROOF.md`](PROOF.md)). Ohne Zaehlung waechst sie **monoton und unbeziffert** — genau
 //! > wie die Axiomschicht vor ihrer Auszaehlung.
 //!
 //! Damit hoert der eine Isabelle-Posten auf, **ein Posten** zu sein, und wird **eine Liste mit
@@ -335,7 +335,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                      (`ARENA_LAUFZEIT`); bibliothek/linux/linux.gab; instrumente/pruefe-os-bindung.sh",
     },
     // **Entered 2026-09-30 by the C-free lane (hosted locks without pthread), PROVED**: the
-    // hosted driver writes the ticket lock `CTicket.lean` has proved since SATZKARTE §32 (and
+    // hosted driver writes the ticket lock `CTicket.lean` has proved since THEOREM-MAP §32 (and
     // the bare-metal image has run since Opus agent I) in place of the binding's mutex.
     Schablone {
         name: "sperre.ticket",
@@ -822,9 +822,9 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "H1 -- the frame is COMPLETE: every access of the body has a root from the declared set", durch: Some("`E008` (compositional over the hull, since 2026-08-19 over the PLACE and not the KIND) and `E010` for reading"), braeuchte: None },
             Voraussetzung { was: "H2a -- no second pointer parameter of the same carrier type", durch: Some("`emit::darf_restrict`, syntactically over the signature; mutation `restrict-auch-bei-zwei-zeigern`"), braeuchte: None },
             Voraussetzung { was: "H2b -- no global carrier of the same type is reachable", durch: Some("the LANGUAGE: no `cast` (G9), no address operator -- a pointer to a global table cannot be formed; `darf_restrict` checks the effect list on top of that"), braeuchte: None },
-            Voraussetzung { was: "TWO `own` pointers of the same type point at different things -- that would be the case worth 2.85", durch: None, braeuchte: Some("a PROGRAM with two owning pointers to the same carrier. *The DECISION fell on 2026-08-20 -- `own` is the release operation (SPRACHE.md §5); two `own` pointers of the same type could therefore both carry `restrict`.* It is NOT built, and the reason is measured: the whole corpus has ONE function with two pointers to the same carrier (`beispiele/07::wechseln`), and it carries no `own`. **Rule A** -- no construct without a program that needed it") },
+            Voraussetzung { was: "TWO `own` pointers of the same type point at different things -- that would be the case worth 2.85", durch: None, braeuchte: Some("a PROGRAM with two owning pointers to the same carrier. *The DECISION fell on 2026-08-20 -- `own` is the release operation (LANGUAGE.md §5); two `own` pointers of the same type could therefore both carry `restrict`.* It is NOT built, and the reason is measured: the whole corpus has ONE function with two pointers to the same carrier (`beispiele/07::wechseln`), and it carries no `own`. **Rule A** -- no construct without a program that needed it") },
         ],
-        fundstelle: "grammatik/Beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2.85 against \
+        fundstelle: "grammatik/Beweise/Restrict_Alleinzugriff.thy; MEASUREMENTS.md «OPT1» (2.85 against \
                      1.00); PLAN.md «OPT»",
     },
     Schablone {
@@ -836,7 +836,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Absenkung zu blankem `uint32_t` haette das `None` still geloescht.
         // **Nachgezogen 2026-08-17 nach der Formalisierung** (`grammatik/Beweise/Option_Sonderwert.thy`).
         // Die Praemisse `N < 2^w` stand in keiner der drei Fassungen des Satzes -- weder hier
-        // noch in `SPRACHE.md` noch im Erzeuger. Sie kam aus dem Beweis und steht jetzt als
+        // noch in `LANGUAGE.md` noch im Erzeuger. Sie kam aus dem Beweis und steht jetzt als
         // Pruefung im Erzeuger.
         // **Der Widerruf, 2026-08-19 («C1»).** Die zweite Haelfte stand hier als OFFEN, mit
         // der Begruendung *„heute weigert sich der Erzeuger fuer `None` als Ausdruck, und
@@ -859,7 +859,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   set.",
         stand: Stand::Getragen,
         voraussetzungen: &[],
-        fundstelle: "FRAGMENTE.md F1 (four CDT fields), F8 (`aufloesen`); MESSUNGEN.md B3, \
+        fundstelle: "FRAGMENTS.md F1 (four CDT fields), F8 (`aufloesen`); MEASUREMENTS.md B3, \
                      `while i != NIL`; grammatik/Beweise/Option_Sonderwert.thy",
     },
     Schablone {
@@ -886,7 +886,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the generated mutation is a REMOVAL and not a re-hanging", durch: None, braeuchte: Some("a generator for `by consuming` -- today there is none; `umhaengen_faellt` (Table_Ops_Erhaltung) shows the counterexample") },
             Voraussetzung { was: "the choice of witness is MINIMAL (`waehlt_minimal`)", durch: None, braeuchte: Some("a GENERATOR of the witness order -- minimality hangs on it, and there is none. *Corrected 2026-08-20: this said `abstieg is a PROMISE with no reader`, and that had been wrong since 2026-08-19 -- `S005` reads it. But S005 checks that the MEASURE can move, not that the CHOICE is minimal; two different statements*") },
         ],
-        fundstelle: "SPRACHE.md §9.2",
+        fundstelle: "LANGUAGE.md §9.2",
     },
     Schablone {
         name: "consuming.umhaengen",
@@ -912,7 +912,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   refuted**, not open.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), finding K-2; B3, mark Nb2",
+        fundstelle: "MEASUREMENTS.md, ERGEBNIS III (2026-08-16), finding K-2; B3, mark Nb2",
     },
     Schablone {
         name: "consuming.leermenge",
@@ -935,7 +935,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         voraussetzungen: &[
             Voraussetzung { was: "the state at which emptiness is claimed is NAMED -- empty WHEN?", durch: None, braeuchte: Some("a grammar line: `by consuming` names no point in time. First the form, then the pass") },
         ],
-        fundstelle: "SPRACHE.md §9.2",
+        fundstelle: "LANGUAGE.md §9.2",
     },
     Schablone {
         name: "table.ops.erhaltung",
@@ -1041,7 +1041,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "on removal the slot is a LEAF", durch: Some("`D012` demands the theorem's own `blatt sigma s` -- `forall x in slots of t : t.slots[x].<parent> != Some(s)` -- and deliberately NOT the weaker `ist_blatt(c, s)` of beispiele/01, which holds of a slot whose child list has drifted from its parent pointers"), braeuchte: None },
             Voraussetzung { was: "on re-hanging the NEW parent is reachable and the re-hung slot does NOT lie on its parent chain", durch: Some("`D012` (2026-08-28, abends): both premises of `umhaengen_erhaelt` stand at the emitted head and are held against every call site -- `t.slots[p] reaches <root> via <parent>` and `!(t.slots[p] reaches t.slots[s] via <parent>)`. **The second is read in the theorem's REFLEXIVE-transitive shape and in no other**: `ancestors of` is strict, says nothing about `p == s`, and would let the self-loop through (beispiele/gift/332). **And the TARGET of that `reaches` is read strictly**, unlike the root of the first premise: gift/334 writes it about a different slot and falls. A table without a `parent` edge has no `relabel` at all -- `C001`, and gift/333 measures it"), braeuchte: None },
         ],
-        fundstelle: "SPRACHE.md §10.2",
+        fundstelle: "LANGUAGE.md §10.2",
     },
     Schablone {
         name: "table.induktion",
@@ -1083,7 +1083,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the carrier set is finite: the chaining fields stay inside the table", durch: Some("M103, via `table.indexschranke`"), braeuchte: None },
             Voraussetzung { was: "one edge premise per chaining field -- the generator writes TWO, not one", durch: None, braeuchte: Some("a generator for the induction scheme; failing that, a rule that holds `chain(a,b)` against the number of edge premises") },
         ],
-        fundstelle: "SYNTAX.md §5, SPRACHE.md Teil V",
+        fundstelle: "SYNTAX.md §5, LANGUAGE.md Teil V",
     },
     Schablone {
         name: "transition.transset",
@@ -1130,7 +1130,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   assumption of the axiom layer** -- it stands there and not here.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "SPRACHE.md Teil III §1",
+        fundstelle: "LANGUAGE.md Teil III §1",
     },
     Schablone {
         name: "accumulates.monoid",
@@ -1170,7 +1170,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "one cell per core, laid out with the right unit", durch: Some("mutation probe `min-akkumulator-ohne-umkehr`, unit `beispiel23`"), braeuchte: None },
             Voraussetzung { was: "the QUIESCENT POINT -- no core writes any more while the fold runs", durch: None, braeuchte: Some("the EXECUTION CONTEXTS (K11.2.2) -- without them Gabbro does not say who runs concurrently, and no rule can establish the quiescent point") },
         ],
-        fundstelle: "SPRACHE.md §11.4; grammatik/Beweise/Accumulates_Monoid.thy",
+        fundstelle: "LANGUAGE.md §11.4; grammatik/Beweise/Accumulates_Monoid.thy",
     },
     Schablone {
         name: "walk.mappings",
@@ -1186,7 +1186,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   it today is unchecked.*",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "SPRACHE.md §5.4, §6",
+        fundstelle: "LANGUAGE.md §5.4, §6",
     },
     Schablone {
         name: "format.roundtrip",
@@ -1214,7 +1214,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the written value fits into the declared width", durch: Some("M101 (m1.rs)"), braeuchte: None },
             Voraussetzung { was: "the fields lie SEPARATE (`trennt f g`)", durch: Some("the layout itself, `bitlage::lies` -- one word per field without a bit layout, one per bit group, and the offset grows monotonically. Two fields can only collide WITHIN a group, and there `N008` holds"), braeuchte: None },
         ],
-        fundstelle: "SPRACHE.md §10.1; grammatik/Beweise/Format_Roundtrip.thy",
+        fundstelle: "LANGUAGE.md §10.1; grammatik/Beweise/Format_Roundtrip.thy",
     },
     Schablone {
         name: "entry.abdruck",
@@ -1231,7 +1231,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   disappear.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "SPRACHE.md Teil II §2",
+        fundstelle: "LANGUAGE.md Teil II §2",
     },
     Schablone {
         name: "device.konstruktor",
@@ -1263,7 +1263,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "`stride` is not zero -- otherwise every bank cell is empty", durch: Some("N010, since 2026-08-19 -- `stride 0` falls at the pass instead of in a comment"), braeuchte: None },
             Voraussetzung { was: "the declared layouts are the device's", durch: Some("axiom layer: `assume` with a falsifier, `gabbro annahmen`"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, The origin, 2026-08-14; grammatik/Beweise/Device_Konstruktor.thy",
+        fundstelle: "MEASUREMENTS.md, The origin, 2026-08-14; grammatik/Beweise/Device_Konstruktor.thy",
     },
     Schablone {
         name: "table.indexschranke",
@@ -1292,7 +1292,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         voraussetzungen: &[
             Voraussetzung { was: "every generated write site stays within the type (`schreibstellen_im_typ`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, A3, 2026-08-14",
+        fundstelle: "MEASUREMENTS.md, A3, 2026-08-14",
     },
     Schablone {
         name: "table.absenkung",
@@ -1332,7 +1332,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every index lies in the type (`i : indextyp N`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
             Voraussetzung { was: "`count N` is written there -- otherwise the array would have no size", durch: Some("C001, emit.rs:938"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), finding M-3; \
+        fundstelle: "MEASUREMENTS.md, ERGEBNIS III (2026-08-16), finding M-3; \
                      grammatik/Beweise/Table_Absenkung.thy",
     },
     // ---- Kandidaten aus der Nachpruefung vom 2026-08-14. Noch kein Konstrukt, aber die
@@ -1350,7 +1350,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   top** -- it does not fall out of the domain.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
+        fundstelle: "MEASUREMENTS.md, B13-Nachpruefung",
     },
     Schablone {
         name: "state.reset",
@@ -1366,7 +1366,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   not this template.*",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
+        fundstelle: "MEASUREMENTS.md, B13-Nachpruefung",
     },
     Schablone {
         name: "verbund.konstruktor",
@@ -1399,7 +1399,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         voraussetzungen: &[
             Voraussetzung { was: "`deckt`: the assignment has exactly the field list as its key sequence", durch: Some("M106/M107"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, B13-Nachpruefung; grammatik/Beweise/Verbund_Konstruktor.thy; \
+        fundstelle: "MEASUREMENTS.md, B13-Nachpruefung; grammatik/Beweise/Verbund_Konstruktor.thy; \
                      m1.rs::marken_pruefen; emit.rs::verbund",
     },
     Schablone {
@@ -1455,7 +1455,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             // nennt sie beim Namen, und sie steht in der Annahmenmenge des Erzeugnisses.
             Voraussetzung { was: "a held footprint really does keep a foreign core out", durch: Some("the AXIOM LAYER: `sperrabdruck_haelt_fremde_kerne_fern`, not falsifiable with a reason (manifest.rs)"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
+        fundstelle: "MEASUREMENTS.md, Papiertest CapSpace/CDT, 2026-08-14",
     },
     Schablone {
         name: "gruppe.sperrabdruck",
@@ -1503,8 +1503,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         // zwischen den beiden Nahmen NICHT, und dann laesst sich das Locale nicht erfuellen
         // -- nicht weil der Beweis schwerer waere, sondern weil die Voraussetzung falsch ist.
         //
-        // **CORRECTED 2026-09-04** (K100 audit, `dokumente/FRAGMENTE.md` §2,
-        // `dokumente/FRAGMENTE.md` §2.2). The previous line's reason for staying
+        // **CORRECTED 2026-09-04** (K100 audit, `dokumente/FRAGMENTS.md` §2,
+        // `dokumente/FRAGMENTS.md` §2.2). The previous line's reason for staying
         // at the "designed" state was copied from the neighbouring `gruppe.ops` entry, whose
         // reason genuinely applies there (no `group`-with-`ops` construct exists) but not
         // here: this entry's construct is the `locks` STATEMENT inside an ordinary function,
@@ -1521,7 +1521,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every participant takes in ascending `rank` order -- otherwise the wait graph is not in `less_than`", durch: Some("U003/U005 in the group pass, and H006 at the lock order"), braeuchte: None },
             Voraussetzung { was: "no intermediate exit leaves the move in the intermediate state", durch: Some("U006 -- the move has no intermediate exit"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten, 2026-08-16 (V4)",
+        fundstelle: "MEASUREMENTS.md, SWEEP der Verbindungs-Invarianten, 2026-08-16 (V4)",
     },
 ];
 
@@ -1691,7 +1691,7 @@ pub fn lebend_ungedeckt() -> usize {
 /// 2026-08-17, and nothing evaluated it: the only check was
 /// `assert_eq!(lebend_ungedeckt(), 2)`, an equality pinned to that day's value, not a bound
 /// -- a hand edit to the literal `2` would have passed any number through unexamined. An
-/// audit (`dokumente/FRAGMENTE.md` §2.3) found that `L` reached 4 for a single
+/// audit (`dokumente/FRAGMENTS.md` §2.3) found that `L` reached 4 for a single
 /// 5.5-hour window on 2026-08-17, the window in which the bound was written, and has been 1
 /// or 2 in the 42 commits that touch this register since -- the ceiling was written AT the
 /// number it was meant to guard, and a decorative bound that a `grep` for `<= 4` never finds

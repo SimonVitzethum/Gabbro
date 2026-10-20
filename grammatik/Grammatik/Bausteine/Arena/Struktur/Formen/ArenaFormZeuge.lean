@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaFormZeuge.lean
-  Subject:   WITNESSES for the EXECUTED link forms and `grow` (PLAN-DYNAMISCH.md section 8a.1, steps 1-2), on the
+  Subject:   WITNESSES for the EXECUTED link forms and `grow` (PLAN-DYNAMIC.md section 8a.1, steps 1-2), on the
              concrete arena of `ArenaDynZeuge.lean` (four slots, slot `1` on the free list, list `2 -> 0`, tree
              `2 (left 0)`): the hypotheses of every `*_zug` theorem hold on a real world, the forms are RUN, and the
              conclusion speaks about a non-empty structure.

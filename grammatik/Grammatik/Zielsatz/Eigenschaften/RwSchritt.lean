@@ -10,7 +10,7 @@
   way: a layer that lives over the existing types, with its own step relation, proved to embed
   machine G. The reader/writer lock lives in the same place. The proposal for the final form (the
   mode inside `Stmt.locks`/`Res.held`, the spelling, the `Spec.lean` diff) is in
-  dokumente/PLAN-DYNAMISCH.md, section 8a.5; nothing in `Zielsatz/Kern/` changes here.
+  dokumente/PLAN-DYNAMIC.md, section 8a.5; nothing in `Zielsatz/Kern/` changes here.
 
   THE DESIGN (the smallest sound one).
   * `lese : Faden → D.Lock → Prop` -- the layer parameter: thread `t` takes lock `L` SHARED (as a

@@ -1,6 +1,6 @@
 # Floating point: a kernel-computable IEEE-754 model, its assumptions, and why floats are different
 
-*Rewritten 2026-10-17; absorbs the old `dokumente/GLEITKOMMA.md`. English throughout. Status: **floats are in
+*Rewritten 2026-10-17; absorbs the old `dokumente/FLOATING-POINT.md`. English throughout. Status: **floats are in
 scope and built**: `f32`/`f64` are in the language, the Lean semantics computes with a kernel-computable
 IEEE-754 binary model, the legacy C backend has float forms with correspondence lemmas under one named
 assumption, and the LLVM backend lowers floats directly. The first memo (2026-08-18) concluded "do not build:
@@ -21,7 +21,7 @@ scope), and its landmines section is what survived.*
   `Block.float`/`gleitLit`/`gleitVon`.
 * A result that leaves its declared range or is not finite is **`logik bereich`**: the program's own logic under
   the kernel IEEE model, which the user proves never happens. (Until 2026-09-15 it was a hardware stop,
-  `hardware ieee`; verdict F1 of `dokumente/BEWEIS.md` moved it, since the model decides it from
+  `hardware ieee`; verdict F1 of `dokumente/PROOF.md` moved it, since the model decides it from
   the program's values. `gleitkomma_ieee` stays the machine-side assumption.)
 * Floats in `accumulates` are refused: `F004` (the fold has no order; section 6).
 * Manifest/profile: `fp_contract off` and `rounding nearest` are profile entries (`SYNTAX.md` section 12.2); a
@@ -104,7 +104,7 @@ suffix rule keeps `f32` literals single-rounded: `(float)0.1 == 0.1f`).
 
 ## 5. The backends
 
-**Legacy C11 backend** (removed 2026-10-17, `C-SPEICHERMODELL.md`): `f32 -> float`, `f64 -> double`, with a
+**Legacy C11 backend** (removed 2026-10-17, `C-MEMORY-MODEL.md`): `f32 -> float`, `f64 -> double`, with a
 per-unit prelude that forbade `-ffast-math` and fixed `-ffp-contract=off`. Its Lean side (the C float forms
 `CX.fbin/fcmp/fvon/fin`, the correspondence lemmas `gsem_gleit*`, `ecorr_fl*`, the witness `klemmen_corr`, and the
 named assumption `gleitkomma_ieee` over a `FloatUnit`, satisfiable by `annexF`) was deleted on 2026-10-18 with the C

@@ -1,7 +1,7 @@
 // erwartet: D021
 // **The assumption tier is where the relative claim rests, and its premise had no reader.**
 //
-// `SPRACHE.md` says what an axiom is for: *"proved under A1…An"*, and an axiom's `requires`
+// `LANGUAGE.md` says what an axiom is for: *"proved under A1…An"*, and an axiom's `requires`
 // is the `An`. Measured 2026-09-02, position by position: at an `axiom … requires` **all
 // twenty name kinds were accepted** -- a bare name, an unknown carrier, `old(x)`, `sizeof`,
 // `lenof`, `aligned`, a quantifier variable nothing binds. Twenty of twenty, silent.

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaBaumWurzel.lean
-  Subject:   THE ROOT MOVES OF THE BINARY TREE, abstractly (PLAN-DYNAMISCH.md section 8a.1, third pass): the first node
+  Subject:   THE ROOT MOVES OF THE BINARY TREE, abstractly (PLAN-DYNAMIC.md section 8a.1, third pass): the first node
              goes in (`wurzel_ein_ok`: the tree was empty, the root is a fresh leaf) and the last one goes out
              (`wurzel_aus_ok`: the tree becomes empty). Without them no body could ever build a tree from nothing: a
              leaf in (`einfuegen_ok`) needs a member to hang below.

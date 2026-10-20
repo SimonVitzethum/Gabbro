@@ -1,6 +1,6 @@
 // 18 -- **`ancestors of`: dieselbe Kante, andere Richtung.**
 //
-// Der Bedarf ist gemessen, nicht entworfen. B3 (`dokumente/MESSUNGEN.md`, 2026-08-16) fand
+// Der Bedarf ist gemessen, nicht entworfen. B3 (`dokumente/MEASUREMENTS.md`, 2026-08-16) fand
 // **584 nicht traversierbare Zeilen im Kernel, und 226 davon (38,7 %) in DMAR/PCIe** --
 // einem Bereich, den niemand verdaechtigt hatte. Vier Ruempfe dort laufen die
 // Geraetetopologie **aufwaerts**:

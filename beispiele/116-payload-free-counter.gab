@@ -5,10 +5,10 @@
 // out as `uint32_t n = ZAEHLER;` over `_Atomic uint32_t ZAEHLER` -- a plain
 // access, which C treats as `seq_cst` while the declaration says `relaxed`.
 // Now it lowers to `atomic_load_explicit(&ZAEHLER, memory_order_relaxed)`:
-// the declared order, through the explicit call `C-SPEICHERMODELL.md` §1c
+// the declared order, through the explicit call `C-MEMORY-MODEL.md` §1c
 // demands for every atomic access. The store keeps its word
 // (`publishes nothing`, held by V001-V004); the read names no payload because
-// there is none -- the payload-free class (`SPRACHE.md` §1.1), not a missing
+// there is none -- the payload-free class (`LANGUAGE.md` §1.1), not a missing
 // pairing (`V009` stays silent: no branch over this value reads a foreign
 // place).
 module beispiel116 {

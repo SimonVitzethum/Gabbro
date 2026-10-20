@@ -4,7 +4,7 @@
              `ziel_ort_mehrfaden`, the flagship (`ziel_ort_sperre_inv`) with a
              footprint condition that demands a guard only for carriers that
              one started thread reaches and a DIFFERENT started thread
-             writes (SATZKARTE §14.6, §16.1).
+             writes (THEOREM-MAP §14.6, §16.1).
 
   Until now a carrier touched by only one thread still needed a signature
   lock or a lock invariant, unless every other thread was idle

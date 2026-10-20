@@ -1,6 +1,6 @@
 //! **`gabbro build` -- the build out of a manifest.**
 //!
-//! The reckoning stands in `dokumente/BAUSYSTEM.md` and was written before `bau.rs`. What is
+//! The reckoning stands in `dokumente/BUILD-SYSTEM.md` and was written before `bau.rs`. What is
 //! held here is the part that can be run:
 //!
 //! * the graph is COMPUTED out of `module` and `use`, never read out of the manifest,

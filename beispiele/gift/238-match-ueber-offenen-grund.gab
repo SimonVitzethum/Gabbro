@@ -1,7 +1,7 @@
 // erwartet: M125
 // **Gift 238 -- ein `match` ueber einem Grund, der `exhaustive` nicht sagt.**
 //
-// `SPRACHE.md`:531 sagt seit langem, was das Wort heisst: *„der erzeugte C-`switch` hat
+// `LANGUAGE.md`:531 sagt seit langem, was das Wort heisst: *„der erzeugte C-`switch` hat
 // KEIN `default`, und ein neuer Wert bricht die Uebersetzung."* **Und keine Zeile tat es** --
 // `pruefe-klauseln.py` fuehrte `erschoepfend` als TOT: das Wort stand da, der Leser fehlte.
 //

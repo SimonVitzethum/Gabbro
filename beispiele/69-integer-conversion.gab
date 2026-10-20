@@ -5,7 +5,7 @@
 // "a call whose path names a type IS the conversion -- the distinction is a name resolution,
 // not a syntax question." Until 2026-09-04 the reader refused the token before that rule
 // could ever apply (`P002`, reproduced against the unchanged checker in
-// `dokumente/PRUEFER.md` §4.1); no corpus site had ever needed one, which is exactly why a
+// `dokumente/CHECKER.md` §4.1); no corpus site had ever needed one, which is exactly why a
 // form that was documented and unreachable could stand this long.
 //
 // «K3»'s `test_func` needed two, on its two most ordinary lines: `(u64) ktime_us_delta(...)`

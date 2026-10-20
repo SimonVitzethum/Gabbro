@@ -1,4 +1,4 @@
-//! Machine-applicable repairs (lane 187, lever 4 of `dokumente/PRUEFER.md`).
+//! Machine-applicable repairs (lane 187, lever 4 of `dokumente/CHECKER.md`).
 //!
 //! A diagnostic may carry a `Fix` (`gabbro_syntax::diag::Fix`): a span in the checked
 //! source plus its replacement text, rendered as a `fix:` line with the span and the

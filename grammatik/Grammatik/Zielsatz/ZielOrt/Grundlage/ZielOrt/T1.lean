@@ -247,7 +247,7 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
 
 /-- The carriers of the table and group invariants `f` owes at its return
     (`schuldet`: `f` writes one of their carriers; `rufAt` checks exactly
-    these, SATZKARTE §15.4). -/
+    these, THEOREM-MAP §15.4). -/
 def invOrteP (P : Programm D) (f : D.Fn) : List (D.Tab ⊕ D.Glob) :=
   (D.invs.filter (schuldet f)).flatMap fun i => (P.invariante i).orte
 

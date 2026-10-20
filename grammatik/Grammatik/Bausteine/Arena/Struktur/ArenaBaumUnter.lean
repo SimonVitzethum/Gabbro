@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaBaumUnter.lean
-  Subject:   CUTTING A WHOLE SUBTREE OFF THE BINARY TREE (`revoke` of the capability tree, PLAN-DYNAMISCH.md section 8a.1,
+  Subject:   CUTTING A WHOLE SUBTREE OFF THE BINARY TREE (`revoke` of the capability tree, PLAN-DYNAMIC.md section 8a.1,
              third pass), abstractly. `blatt_aus_ok` (`ArenaBaum.lean`) cuts a LEAF; here the child `i` of the member `p` may
              be the root of a whole subtree, and the store is the same one (`l p = nil`).
 

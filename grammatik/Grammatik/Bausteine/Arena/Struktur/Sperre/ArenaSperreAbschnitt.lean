@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreAbschnitt.lean
-  Subject:   THE SECTION THEOREM FOR A SHARED ARENA (PLAN-DYNAMISCH.md section 8a.2, phase 3, step 1): a critical
+  Subject:   THE SECTION THEOREM FOR A SHARED ARENA (PLAN-DYNAMIC.md section 8a.2, phase 3, step 1): a critical
              section `locks L { .. }` over a recognized body starts from the arena invariant and leaves it, and the
              release check `freiH` of the lock invariant never fires.
 

@@ -395,7 +395,7 @@ abbrev gleitWortGrenze : Int := 18446744073709551616
     (sign, exponent, significand; `Gleitkomma.ausBits`, the inverse of `zuBits` on
     well-formed triples), held against the declared range like a computed float
     (`gleitPasst`: finite and inside). `Ty.fl` carries no width and the model computes in
-    binary64 (GLEITKOMMA.md section 7), so an `f32` register's answer is read as its binary64
+    binary64 (FLOATING-POINT.md section 7), so an `f32` register's answer is read as its binary64
     value -- the same named cut. -/
 def gleitWortPasst (lo hi : Int × Int) (n : Int) : Option (Gleit lo hi) :=
   if 0 ≤ n ∧ n < gleitWortGrenze then

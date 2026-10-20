@@ -1,6 +1,6 @@
 //! **Pass 5 — M2, echte Linearität. Der Mechanismus, den kein vorhandenes Werkzeug liefert.**
 //!
-//! Gemessen (`MESSUNGEN.md`): Verus' `tracked` ist **affin**, Rust ist affin, SPARKs
+//! Gemessen (`MEASUREMENTS.md`): Verus' `tracked` ist **affin**, Rust ist affin, SPARKs
 //! Leckprüfung hängt an einer **Allokation**. Affin heisst: *höchstens einmal verbraucht* —
 //! ein Wert darf fallengelassen werden. **Linear heisst: genau einmal**, und der Unterschied
 //! ist die ganze Zusage:
@@ -23,7 +23,7 @@
 //! * eine Rückgabe.
 //!
 //! **`leaves` verbraucht nicht** — die Klausel nennt die Werte, die den Ausgang *verlassen*
-//! (`SPRACHE.md`:858), also die Schleife **überleben**.
+//! (`LANGUAGE.md`:858), also die Schleife **überleben**.
 //!
 //! **Er prüft nicht** die Aliasfrage — dafür steht M3 — und **nicht** die Ghost-Löschung: ein
 //! `ghost`-Wert existiert zur Laufzeit nicht, seine Linearität ist eine Aussage über den
@@ -430,7 +430,7 @@ fn gehe(
                 abgleich(&ergebnisse, s.span, zust, absagen);
             }
             StmtArt::Schleife(_) => {
-                // **`leaves` verbraucht NICHT.** `SPRACHE.md`:858: *„die `leaves`-Klausel
+                // **`leaves` verbraucht NICHT.** `LANGUAGE.md`:858: *„die `leaves`-Klausel
                 // nennt die linearen Werte, die den Ausgang VERLASSEN"* -- sie ueberleben die
                 // Schleife, sie enden nicht in ihr.
                 //
@@ -756,7 +756,7 @@ fn ausdruck(
 /// `pruefe-klauseln.py` fuehrte `verlaesst` als ZUSAGE: *„`leaves` an `forever` -- welche Wege
 /// die Schleife verlassen darf; ungelesen."*
 ///
-/// **Der Satz der Klausel war falsch, und das ist der eigentliche Fund.** `SPRACHE.md`:730
+/// **Der Satz der Klausel war falsch, und das ist der eigentliche Fund.** `LANGUAGE.md`:730
 /// sagt es: *„`leave`/`return` from a scope holding linear values demands that they be named
 /// (`leaves`)."* **`leaves` nennt die linearen WERTE, die den Geltungsbereich verlassen** --
 /// nicht die Ausgaenge. Die Ausgaenge nennt `leave <schleife>`, und das ist eine
@@ -800,7 +800,7 @@ fn leaves_pruefen(
                     },
                 )
                 .mit_notiz(
-                    "SPRACHE.md:730: leaving a scope that holds LINEAR values demands that \
+                    "LANGUAGE.md:730: leaving a scope that holds LINEAR values demands that \
                      they be named -- `leaves` names the values, not the exits",
                 )
                 .mit_notiz(

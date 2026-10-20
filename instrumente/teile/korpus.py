@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**Is this file one `git` knows about?** -- the one check a dozen walks were missing.
 
-`dokumente/FRAGMENTE.md` and `dokumente/FRAGMENTE.md` found the
+`dokumente/FRAGMENTS.md` and `dokumente/FRAGMENTS.md` found the
 instance: `pruefe-sondendeckung.py`'s `korpus_dateien()` walked the working tree with
 `pathlib.Path.rglob("*.gab")` and a hand-typed directory-name blacklist (`gift`, `.claude`,
 `target`) that did not include `arbeitsprotokoll` -- so two UNTRACKED scratch files there

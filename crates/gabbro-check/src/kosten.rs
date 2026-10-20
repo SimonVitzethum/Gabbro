@@ -5,7 +5,7 @@
 //! > zaehlt die deklarierten `costs` des Gerufenen; eine Traversierung zaehlt Rumpfkosten ×
 //! > Domaenenschranke; Zweige zaehlen das Maximum). Das ist eine **Eigenschaft des
 //! > Programms**, statisch ausgerechnet, keine Zeitmessung."*
-//! > ([`SPRACHE.md`](SPRACHE.md) §7)
+//! > ([`LANGUAGE.md`](LANGUAGE.md) §7)
 //!
 //! **Bis dieser Pass stand, waren `costs`, `held`, `per_pass` und `bounded` Deklarationen,
 //! die niemand nachrechnete.** Damit galt: `retry … bounded N ops` **behauptete**
@@ -700,7 +700,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §7: 1 op = one Gabbro primitive; a call counts \
+                            "LANGUAGE.md §7: 1 op = one Gabbro primitive; a call counts \
                                 the declared costs of the callee",
                         )
                         .mit_notiz(
@@ -805,7 +805,7 @@ struct Rechner<'a> {
     mit_mass: Option<(&'a crate::aufrufgraph::Graph, String)>,
     deklariert: &'a HashMap<String, i128>,
     haltezeiten: &'a HashMap<String, i128>,
-    /// **Der eigene Zweig der geteilten Seite** (MESSUNGEN.md, Nebenbefund N3): `held` ist
+    /// **Der eigene Zweig der geteilten Seite** (MEASUREMENTS.md, Nebenbefund N3): `held` ist
     /// fuer exklusive Halter gedacht, und der Kostenpass rechnete bis dahin nur den.
     geteilte_haltezeiten: &'a HashMap<String, i128>,
     /// **The foreign costs (`fa`): every `syscall` with a countable `costs`
@@ -1143,7 +1143,7 @@ impl<'a> Rechner<'a> {
             },
             // **Lane 257:** the commit request is one primitive plus the
             // amount plus the failure continuation -- the `Alloc`-shaped
-            // arm (`PLAN-DYNAMISCH.md` §4 handoff): the amount expression
+            // arm (`PLAN-DYNAMIC.md` §4 handoff): the amount expression
             // is evaluated, the `else` counts like any branch. The
             // per-slot commit latency is the runtime's declared cost, not
             // a second term here.
@@ -1483,7 +1483,7 @@ impl<'a> Rechner<'a> {
         // cost is fixed the same way `Some`'s three lines up is.** There is no declaration
         // to carry a `costs` clause, so without this branch every `u64(a)` fell into
         // `K003`: *"`u64` is not declared here"* -- true and unhelpful, since `u64` is a
-        // vocabulary word and will never BE declared. One primitive op, `SPRACHE.md` §7's
+        // vocabulary word and will never BE declared. One primitive op, `LANGUAGE.md` §7's
         // unit -- the emitted form is a single C cast (`emit.rs::ruf`).
         //
         // PLAN-BITS §1: the sugar spelling converts at its storage word's cost.
@@ -1501,7 +1501,7 @@ impl<'a> Rechner<'a> {
         // declaration to carry a `costs` clause, so without this branch every
         // `clz(x)` fell into `K003` -- true and unhelpful, since no declaration
         // will ever name it (`namen.rs` refuses one as `N058`). One primitive
-        // op, `SPRACHE.md` §7's unit -- the emitted form is a single
+        // op, `LANGUAGE.md` §7's unit -- the emitted form is a single
         // `__builtin_*` expression or one `gabbro_rot*` helper call
         // (`emit.rs::ruf`), plus the cost of the arguments themselves.
         if crate::ist_bitintrinsik(&name) {
@@ -1623,7 +1623,7 @@ impl<'a> Rechner<'a> {
         for s in &b.anweisungen {
             if let StmtArt::Schleife(sch) = &s.art {
                 // **Lane 139 (F2): EIN Durchgang ist Rumpf PLUS Bedingung PLUS Invariante.**
-                // Die `until`-Bedingung wird bei jedem Durchgang ausgewertet (`FRAGMENTE.md` F4
+                // Die `until`-Bedingung wird bei jedem Durchgang ausgewertet (`FRAGMENTS.md` F4
                 // pollt mit leerem Rumpf), und die Invariante steht an jeder Durchgangsgrenze --
                 // was `durchgangskosten` (fuer den Erzeuger) seit jeher zaehlt, zaehlt diese
                 // Pruefung jetzt auch. *Vorher massen die zwei Stellen verschiedene Durchgaenge:*
@@ -1742,7 +1742,7 @@ impl<'a> Rechner<'a> {
     }
 
     /// **K002.** Ein `locks`-Block, dessen Rumpfkosten die `held`-Zusage der Sperre
-    /// uebersteigen, ist ein Uebersetzungsfehler (`SPRACHE.md` §9.3, Punkt 1). Daran haengt
+    /// uebersteigen, ist ein Uebersetzungsfehler (`LANGUAGE.md` §9.3, Punkt 1). Daran haengt
     /// die Latenzaussage je Wartestelle -- ohne diese Pruefung ist sie eine Behauptung.
     fn sperrbloecke(&self, b: &Block, aussen: &Bindungen, absagen: &mut Absagen) {
         let mut lokal = aussen.clone();
@@ -1776,7 +1776,7 @@ impl<'a> Rechner<'a> {
                                     ),
                                 )
                                 .mit_notiz(
-                                    "SPRACHE.md §9.3: the latency statement of every \
+                                    "LANGUAGE.md §9.3: the latency statement of every \
                                         other core hangs on this number",
                                 ),
                             );
@@ -1810,7 +1810,7 @@ impl<'a> Rechner<'a> {
                                         ),
                                     )
                                     .mit_notiz(
-                                        "SPRACHE.md §7: a traverse costs body x domain bound \
+                                        "LANGUAGE.md §7: a traverse costs body x domain bound \
                                          -- a full scan under one acquisition pays the whole \
                                          table at once",
                                     )
@@ -2092,7 +2092,7 @@ pub fn durchgangskosten(
         griffe: crate::m3::griffe_von(f, &geraete),
     };
     // **Ein Durchgang ist Rumpf PLUS Bedingung PLUS Invariante.** Die `until`-Bedingung wird bei jedem
-    // Durchgang ausgewertet und kann teurer sein als der Rumpf -- `FRAGMENTE.md` F4 pollt
+    // Durchgang ausgewertet und kann teurer sein als der Rumpf -- `FRAGMENTS.md` F4 pollt
     // mit leerem Rumpf. *Nur den Rumpf zu zaehlen hiesse, den teuersten Teil zu uebersehen.*
     // Die Invariante steht an jeder Durchgangsgrenze (F6-Familie, Lane 139): ein Durchgang, der
     // sie nicht traegt, unterschaetzt jeden Lauf um sie.
@@ -2191,7 +2191,7 @@ fn faellt_syntaktisch(arg: Option<&Expr>, mass: &str) -> bool {
 
 /// **«K5.4» — die Rekursion bekommt ein Mass** (`K008`/`K009`).
 ///
-/// `SPRACHE.md` §7: *„ein Aufruf zählt die **deklarierten** `costs` des Gerufenen."* Bei einem
+/// `LANGUAGE.md` §7: *„ein Aufruf zählt die **deklarierten** `costs` des Gerufenen."* Bei einem
 /// Zyklus zählt damit jede Kante **einmal**, und die Zusage einer rekursiven Funktion ist eine
 /// **Annahme**, kein Ergebnis. `K001` und `E009` benannten das ehrlich — *und ehrlich ist
 /// nicht vollständig.*

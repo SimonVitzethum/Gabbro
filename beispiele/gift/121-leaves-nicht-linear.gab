@@ -2,7 +2,7 @@
 // **«NL.2.6» -- und der eigentliche Fund ist der Satz der Klausel selbst.**
 //
 // `pruefe-klauseln.py` fuehrte `verlaesst` mit: *„`leaves` an `forever` -- welche Wege die
-// Schleife verlassen darf; ungelesen."* **Das ist falsch.** `SPRACHE.md`:730 sagt:
+// Schleife verlassen darf; ungelesen."* **Das ist falsch.** `LANGUAGE.md`:730 sagt:
 // *„`leave`/`return` from a scope holding linear values demands that they be named
 // (`leaves`)."* `leaves` nennt die linearen WERTE; die Ausgaenge nennt `leave <schleife>`,
 // und das ist eine Schleifenmarke.

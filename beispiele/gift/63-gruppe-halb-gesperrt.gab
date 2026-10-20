@@ -1,7 +1,7 @@
 // erwartet: U003
 // **Gift 63 -- V4 in Gabbro geschrieben, und genau so, wie der Bestand es traegt.**
 //
-// Der Sweep vom 2026-08-16 (`MESSUNGEN.md`) fand vier Verbindungs-Invarianten im Kernel.
+// Der Sweep vom 2026-08-16 (`MEASUREMENTS.md`) fand vier Verbindungs-Invarianten im Kernel.
 // Drei liegen unter EINER Sperre. Die vierte nicht:
 //
 //   `t` steht in der Empfaengerliste eines Endpoints  <=>  `IPC` steht in seinen Gruenden.

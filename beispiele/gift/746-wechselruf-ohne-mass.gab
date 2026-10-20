@@ -2,7 +2,7 @@
 // **A mutual call cycle without a descent measure (must fall).**
 //
 // `ping` calls `pong` calls `ping`, and neither declares `decreases`. On a cycle every
-// edge counts the DECLARED `costs` of the callee once (`SPRACHE.md` §7), so each promise
+// edge counts the DECLARED `costs` of the callee once (`LANGUAGE.md` §7), so each promise
 // is an assumption, not a result -- and without a measure nothing turns it into one.
 // `K008` refuses each bare member; the self-recursive shape stands in `gift/150`.
 //

@@ -8,7 +8,7 @@
 //! after itself (acquire). LLVM keeps ordinary accesses on the right side of a release store and
 //! an acquire load, on x86_64 (plain `mov`, TSO) and on aarch64 (`stlr` / `ldar`).
 //!
-//! **Source of the ordering.** SPRACHE.md §11.1/§11.5: `publishes` forces AT LEAST release,
+//! **Source of the ordering.** LANGUAGE.md §11.1/§11.5: `publishes` forces AT LEAST release,
 //! `awaits` AT LEAST acquire; `seq` is the stronger declaration and stays. The C emitter
 //! (`emit.rs`, `atomics.insert`) maps the declaration the same way (release/acquire -> release
 //! store + acquire load, `seq` -> `seq_cst` on both). The Lean model: machine G reads the

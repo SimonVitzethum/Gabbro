@@ -440,7 +440,7 @@ that do the same.**
 ### The R-rules that these entries cite
 The measurement protocols of the folder cite rules `R1`–`R18`; the wording was never collected in
 one place, and what follows is *reconstructed from use* in the entries above and the
-measurements (`MESSUNGEN.md`), not quoted: **R1** the protocol is committed before the first
+measurements (`MEASUREMENTS.md`), not quoted: **R1** the protocol is committed before the first
 counted site · **R2** a gate is not moved after the run (a population may be corrected only for a
 reason independent of the result — and the correction that moves *against* the flattering
 reading is never a reinterpretation) · **R7** the template entry stands before the grammar ·
@@ -471,7 +471,7 @@ constructors/fields the LLVM lowering must cover, with `dokumente/llvm-modelldec
 
 **Corpora:** `beispiele/` (clean examples: each must check clean) · `beispiele/gift/` (poison probes:
 each must fall with exactly its booked code) · `messung/proben/` (the smallest programs that decide a
-question) · `messung/fragmente/` (the ten completed fragments of `dokumente/FRAGMENTE.md`) ·
+question) · `messung/fragmente/` (the ten completed fragments of `dokumente/FRAGMENTS.md`) ·
 `messung/netz/` (the network stack against published vectors) · `messung/llvm/` (LLVM end-to-end programs).
 
 ## 4. The language switch to English — the order is the whole rule

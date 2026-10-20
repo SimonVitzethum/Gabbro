@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coverage matrix of the Lean parser (Track P, `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a).
+"""Coverage matrix of the Lean parser (Track P, `dokumente/PLAN-TRANSLATION-VALIDATION.md` section 9a).
 
 One row per EBNF rule of `dokumente/SYNTAX.md` (190 defined rules), four columns, one measured column.
 

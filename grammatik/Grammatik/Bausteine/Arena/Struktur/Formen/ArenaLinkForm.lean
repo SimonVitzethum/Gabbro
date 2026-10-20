@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaLinkForm.lean
-  Subject:   THE EXECUTED FORMS OF THE LIST LINK STORES (PLAN-DYNAMISCH.md section 8a.1, step (1)): `push`, `pop`
+  Subject:   THE EXECUTED FORMS OF THE LIST LINK STORES (PLAN-DYNAMIC.md section 8a.1, step (1)): `push`, `pop`
              and `unlink` as `Block`s over the existing statements `assignSlot`/`assignGlob`/`narrow` (no new
              constructor), with the proof that each executed form leaves exactly the store facts that
              `liste_push`, `liste_pop` and `liste_unlink` (`ArenaListe.lean`) take as hypotheses -- so those

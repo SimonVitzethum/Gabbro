@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkenner.lean
-  Subject:   THE RECOGNIZER (PLAN-DYNAMISCH.md section 8a.1): which BODIES keep the invariant of an arena that carries a
+  Subject:   THE RECOGNIZER (PLAN-DYNAMIC.md section 8a.1): which BODIES keep the invariant of an arena that carries a
              list, a tree, both or neither, decided from their syntax and the static facts of the checker (`N586`: single
              release, no use after release, a pushed or hung slot is a bound, owned name).
 

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreInv.lean
-  Subject:   THE WRITER OBLIGATION OF AN ARENA INVARIANT (PLAN-DYNAMISCH.md section 8a.3, D2 and D3), proved against the
+  Subject:   THE WRITER OBLIGATION OF AN ARENA INVARIANT (PLAN-DYNAMIC.md section 8a.3, D2 and D3), proved against the
              PROPOSED meaning of an invariant name -- `Spec.lean` is not touched.
 
   D2 proposes that a declared arena is one more invariant NAME whose meaning is `Dekl.Ok` instead of the evaluation of an

@@ -47,7 +47,7 @@
 // =======================================================================================
 // F3 -- der IPC-Fastpath, VERVOLLSTAENDIGT
 //
-// **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:554-704, byteidentisch, plus genau die
+// **Der Ausschnitt aus `dokumente/FRAGMENTS.md`:554-704, byteidentisch, plus genau die
 // Zeilen, die ihn zu einem PROGRAMM machen.**
 //
 // **ERGAENZT, und nichts sonst:**
@@ -135,7 +135,7 @@ reason IpcResult {
 
 // ERGAENZT (2026-09-03, H=0-Durchstich): `Frame` und `RegNr` nannte der Ausschnitt,
 // deklarierte er nirgends -- `N040` an neun Stellen. Der Widerspruch liegt IM Ausschnitt:
-// `FRAGMENTE.md` fuehrt `tagged type ObjectKind` mit `Dma(DmaRef)` und traegt am Dateiende
+// `FRAGMENTS.md` fuehrt `tagged type ObjectKind` mit `Dma(DmaRef)` und traegt am Dateiende
 // `extern fn` mit `MemObj`/`DmaObj`/`ReplyObj`/`Allok` nach, vier Namen ohne Deklaration.
 // `Frame` ist der Trapframe (Nachricht + Register), `RegNr` sein Index. `msg` traegt die
 // sechs Datenwoerter (`MSG_WORDS`), `regs` die acht Register (darunter `SYSNO_RESULT`
@@ -156,7 +156,7 @@ type RegNr = u32;
 // rechnen die Ordnungsregeln nichts**; die Absage sagt es woertlich.
 //
 // **Die Zahlen sind ZITIERT, nicht gewaehlt.** Dieselbe Sperre steht im eingefrorenen
-// Korpus selbst, in F8 (`FRAGMENTE.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
+// Korpus selbst, in F8 (`FRAGMENTS.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
 // Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/DESIGN.md`:31 zitiert
 // den Kernel: *CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM*.
 //

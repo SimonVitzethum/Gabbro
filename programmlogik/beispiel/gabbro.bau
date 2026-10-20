@@ -11,7 +11,7 @@
 --   * die Architektur: `arch x86_64` steht an `entry`/`boot`/`entrust`, in der Quelle.
 --   * das Baugatter: `when TESTBUILD` ist ein Sprachkonstrukt, keine Uebersetzerfahne.
 --
--- Die Rechnung dazu: `dokumente/BAUSYSTEM.md`.
+-- Die Rechnung dazu: `dokumente/BUILD-SYSTEM.md`.
 
 out      target/bau-beispiel
 

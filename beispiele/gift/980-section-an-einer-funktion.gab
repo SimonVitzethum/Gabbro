@@ -18,7 +18,7 @@
 // not in the NO-FORM list the exporter writes into its own header. *A clause that changes
 // neither the artefact nor an obligation is a promise nobody keeps, and it looks kept.*
 //
-// > **`SPRACHE.md` §S2 asks for exactly this placement** -- `raw fn` lies forcibly in
+// > **`LANGUAGE.md` §S2 asks for exactly this placement** -- `raw fn` lies forcibly in
 // > `section ".boot"` -- **and says in the same row that it is NOT enforced**;
 // > `messung/BOOT-S3.md` item 4 books it as open. The refusal is the honest interim
 // > state, not a verdict against the form: it makes the gap loud, and it goes the day the

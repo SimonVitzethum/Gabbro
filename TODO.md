@@ -1,207 +1,200 @@
-# Offen — was dem Projekt noch fehlt
+# Open work
 
-*Updated 2026-10-17 for memory, stack, `own`/alias separation and model-based LLVM coverage. Enthält NUR Offenes aus fünf Gebieten:
-LLVM-Backend, Lean-Modell, Prüfer, Übersetzungsvalidierung, Heap. IDs (`Oxx`) sind
-stabil — Kommentare im Baum, die `OFFEN Oxx` nennen, meinen diese Abschnitte
-(Historie in Git). Geschlossenes und
-Entferntes steht im Anhang, je mit einer Zeile Grund.*
+*Updated 2026-10-20. Only what is OPEN, in five areas: heap, Lean model, checker, LLVM backend, translation validation.
+IDs (`Oxx`) are stable: comments in the tree that say `OFFEN Oxx` or `TODO.md Oxx` mean these entries. Closed and removed items are in the
+appendix, one line each. History is in git.*
+
+**How to read this file.** Each entry gives the state in a sentence or two, then `Open:` with what is missing. Designs and long
+reasoning live in the linked plans, never here. Keep an entry to one short paragraph; if it needs more, write it in a plan and link it.
+
+## Right now
+
+- **Phase A step 4 (the combined `Spec.lean` diff "M8": arena plus payload) is PAUSED** (Simon, 2026-10-19). Nothing is merged or pushed.
+  The arena foundation (M3) is green on Lean/Mathlib 4.35.0 (820 jobs); the full library is not (7 modules, one a real heartbeat
+  timeout in `ArenaErkZeugeBaum.lean`); the payload half still lacks its global history induction (O21 in the plan). The work sits in an
+  uncommitted worktree under `.claude/muse-arbeit/kratz/spec-arena-recovery/`.
+  Exact state, outstanding obligations and resume order: `dokumente/PLAN-DYNAMIC.md` §8a, part H.
 
 ## 0. Order of work (Simon, 2026-10-17)
 
-Strictly in this order; each step is Lean-first (model, then exporter/checker/compiler), no legacy, no German words in syntax.
+Strictly in this order. Every step is Lean-first (model, then exporter, checker, compiler), no legacy, no German words in syntax.
 
-**Phase A: dynamic data structures and their invariants** (plan: `dokumente/PLAN-DYNAMISCH.md` section 8a; covers O4-O6, O11, O14, O20, O29).
- 1. `free`/`grow` as G blocks over the arena sugar; free-list invariant (`ArenaFrei.lean` is built, phase 1 part one).
- 2. Invariants over live slots: links in range, acyclic along a walk, tree shape (capability tree), freelist disjoint from live slots; preservation theorems with witnesses and counter-models. DONE in Lean (2026-10-18, third pass, `PLAN-DYNAMISCH.md` 8a.1, SATZKARTE 79): list, tree and BOTH on one arena as ONE recognizer `Erk K` (guarded tree forms, disjointness of the two structures, loops `forever`/`traverse`/`retry`, function bodies `ErkE`), executed forms for the parent store, `revoke` of a subtree and bucket heads in a table field (`BaumOk`/`SibOk`/`HashOk` kept on executed blocks), witnesses run on real worlds and planted defects. Open: wiring the recognizer into `Akzeptiert` (8a.3, revised proposal: an arena as an invariant name, the `ErkE` derivation a certificate in the unit), the exporter for these forms, calls inside writers, the release of a whole revoked subtree, recognizers for hash chains and the sibling demand.
- 3. Concurrency of arenas (O20): `grow` as a locked commit. DONE in Lean (2026-10-18, `PLAN-DYNAMISCH.md` 8a.2, SATZKARTE 79 step 3): a shared arena IS the lock invariant (`Dekl.sperr`), the section theorem (`abschnitt_erk` inline, `abschnitt_rufe` call form, `rufAt_erk`), `grow_atomar`/`grow_gesperrt`/`komm_nur_halter`, the machine bridge `erkE_maschine`/`erkE_maschine_erk` (loop-free writers, coverage derived from the certificate by `erkE_endR`), `invGutSD2_arena` (D3 against the proposed meaning D2), `ok_gleich_wort` (`dekl_ok_traeger`), `erkE_execEndH`; witnesses, planted defects. Open: the ABA ownership predicate, the commit bound (no `dynFrisch` form, frames do not name `zaehl`/`komm`; `Erk.wachs` now demands `0 ≤ n`), the footprint of a pure `pop` (`schuldet` counts tables only: a DECISION for step 4), the arena at writer entry, loops in the machine bridge, the migration D1 (needs `Syntax.lean` split and a full rebuild).
- 4. `Spec.lean` diff (dynamic structures and table/group invariants leave NOT CLAIMED; `invRuhe`/`invSicht` non-vacuous), `gabbro_ziel` re-proved, two independent verdicts.
- 5. Exporter/elaboration, then checker (O11), then the three examples (list, tree, hash chain) with certificates and poison probes.
- Open decisions: first structures (recommended list and tree), links as indices in one arena (recommended), `free` across function boundaries (follows the `own` boundary rule).
+### Phase A: dynamic data structures and their invariants
 
-**Phase B: weak memory, items 1-5** (state: GX/W model carries atomics with the rely; release/acquire enforced).
- 1. Message passing with a plain payload under release/acquire without a lock (O25, `N291`): model first (happens-before over the payload), then the checker rule; 11 corpus examples wait for it. **State 2026-10-18:** the memory-model half is PROVED (`Speichermodell/Payload/`, SATZKARTE §80: message passing, no race after the await, the value, counter-models, litmus tests); the `Spec.lean` diff D1-D6 and the checker rule R0-R4 are proposed in `PLAN-DYNAMISCH.md` §11 (not applied; four decisions for Simon in §11.5); no concrete W/GX fixture yet.
- 2. Weak memory beyond DRF-SC: name and prove what is claimed (standard patterns), shrink the NOT CLAIMED line.
- 3. Hardware bridge: x86-TSO, ARMv8 and RISC-V (RVWMO) refine W/GX, access by access, through the ISA-neutral `Need` list of Track L (needs the CPU models, built by Simon).
- 4. Orderings and primitives: `consume`, `seq_cst` total order, stand-alone fences, mixed-size access, atomics over floats; litmus tests as the yardstick (MP, SB, LB, IRIW: allowed or forbidden as the model says).
- 5. Shared atomics across link boundaries and the merge discipline of per-core cells (O17); lock-free structures (SPSC/MPSC ring, Treiber stack, seqlock, RCU) with happens-before over the payload; device and DMA ordering.
+Plan: `dokumente/PLAN-DYNAMIC.md` §8a. Covers O4-O6, O11, O14, O20, O29.
 
-**Phase C: the rest** (in this order).
- 1. Track P (complete Lean parser: coverage matrix, then elaboration replaces `lean_g.rs`) and Track L (refinement down to the binary: ISA-neutral `Code`, no CPU model; `PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a/9b). Both run now, in parallel with phase A.
- 2. `boot` and `entrust` semantics in the model; aarch64 `vector`/`via` meaning; port space and `asm` in the model (the LLVM lowerings exist without a model).
- 3. Interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37).
- 4. Termination, waiting bounds and fairness, stack depth, floats beyond the IEEE kernel.
- 5. Benchmark against GCC `-O3`: only after the compiler lowers much more and strong optimisation is in (Simon).
- 6. Housekeeping: C remnants (C templates in `schablonen.rs`; the Lean folder `CBackend` and the C correspondence chain were deleted 2026-10-18), 13 compiler warnings, file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`), the old Isabelle `.thy` set.
- 7. DONE 2026-10-18 (Simon's decision): comments as in most languages. `//` to end of line, nesting `/* */` (depth counter), `///` doc comment as trivia (`Token.doku`, `lexDoku`; `////` is ordinary); the `--` comment is removed everywhere; an open `/* ` is `L008`. Lean first (`Parser/Lex/Lexer.lean`, `LexerDoku.lean`: `lex_ohne_doku`), then `lex.rs`, then ~1270 `.gab`/`.gabi` files and the doc blocks rewritten (SATZKARTE 83). Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
- 8. **Adequacy of the generated test set** (Simon, 2026-10-18, end state): if a PROGRAM-NEUTRAL checker/compiler handles every generated test program, it does so correctly for ALL valid Gabbro programs. Make it a Lean theorem over a stated class: an implementation is program-neutral when it is syntax-directed with a finite context state (result of a term = function of the results of its parts and a finite context: lock/ownership/range state), its correctness statement splits per constructor (as `lowerS_ok`/`lowerFn_callref` of Track L do), and the checker's whole-program conditions (call graph, lock order, recursion) are explicit patterns in the test set; the generator (`Gen/Erzeuger`, completeness proved) supplies the cells (constructor x context x variation x nesting). The theorem is about the abstract class; that the Rust checker and compiler lie in it stays an ASSUMPTION about the code, measured by metamorphic tests (rename, reorder, wrap, scale: same verdict and same binary result) and an audit for program-specific branches. Blocked until the G-to-source printer exists (Track P), because the checker/compiler can only be fed source text. RESULT 2026-10-19 (Lean `grammatik/Grammatik/Adaequanz/`, `PRUEFER.md` §16, SATZKARTE §85): program-neutral alone admits NO finite test set (the height counter `zaehlerModell` passes every finite set, `kein_endlicher_test`). With a state bound `m` (tree automata, spec with `n` Myhill-Nerode states, distinguishing contexts `W`): the W-method set of depth `m - n + 1` is sufficient (`hinlaenglich`), `|M| = |W| * N(m - n + 1)`, `N(0) = n`, `N(d+1) = N(d) + Σ_c N(d)^ar(c)`; every sufficient set has a test ROOTED at every cell once `m ≥ n + 1` (`wurzel_schranke`: `|M| ≥ Σ_c n^ar(c)`) and covers every cell once `m ≥ 2n` (`flagge_noetig`). For Gabbro this is astronomical and exponential in the number of functions (program-root cells alone: z0 1 650, z1 657 922 500). For the class this item names (verdict = conjunction over local premises and whole-program patterns) the answer is exact (`Muster.lean`): one single-fault program per isolable refusal cell plus valid programs covering the accepted cells; for Gabbro 124 premise cells + 146 child-position cells (107 constructors, checked against the model) and at most 4 540 pattern cells of the ten components, independent of program size. Compiler (cell-local, no masking): sufficient iff every realizable cell is covered (`deckung_iff`). Open: the local refusal cells need source mutants (no G term violates a premise), so the printer of Track P; the coarse accepted cells (4 of 459 covered); the metamorphic tests for hypotheses H1-H8; the exact minimum for `m = n`.
- 9. **Refinement down to the binary: EETV-R, version 3** (the ONLY refinement item; Simon's design of 2026-10-18; earlier versions in git history). Own core as meaning, LLVM as an UNTRUSTED producer: check an LLVM `-O3` binary B against the certificate without a presupposed CPU model, without LLVM-IR semantics, with the real CPU as the only hardware oracle, for millions of lines. LLVM (frontend, passes, backend), its IR semantics, the hint plugin and the bridge builder are all OUTSIDE the trust base; the LLVM IR only serves as a source of hints. Chain: Gabbro spec, proofs per function (as now), then the CORE K (small SSA language in Lean, no UB, no poison/undef, objects with ownership, memory events with ordering annotations, MMIO as observable events), then bridge steps K to K'1 .. K'n (vectorisation, loops, inlining, hoisting; no hardware; justified by Gabbro facts), K' = K + the machine primitives D supplies (word widths, vectors, lanes, shuffles, byte-level address arithmetic; bit-vector semantics in Lean, the same ground as the laws A), then K'n to B through D terms (hardware only via V1). MAPPING TO WHAT EXISTS: K is essentially the existing `Grammatik/Code/` (Track L: UB-free, ISA-neutral, stuck on op preconditions, atomics with orderings, block memory) and the lowering Gabbro-to-K is Track L's verified G-to-`Code` refinement (`lowerS_ok`, `lowerFn_callref`, ...), with Track P (source to G in Lean) in front of it; to add to `Code`: vectors/lanes/shuffles (K'), ownership objects and lifetimes as facts, MMIO events, the open Track L forms (arenas, concurrency refinement). The Rust compiler's own lowering (`llvm.rs`) becomes an untrusted hint producer: the reference is the Lean-computed K_f = lower(C, f). Trade-off against version 2: no LLVM-IR semantics (poison, undef, provenance, version changes), small K/K' semantics, validation granularity chosen by the validator through the number of bridge steps; price: without pass-by-pass validation the fallback rate tends to be higher (mitigation: finer bridge steps, Gabbro facts for UB-based optimisations). UB exploitation by LLVM is replaced by facts: `nsw`/`nuw` = value range of the operation, `inbounds` = ownership and object bounds, no access to freed memory = lifetime from ownership, loop terminates/has effects = variant or event structure; no matching fact means the validation fails and the function falls back (never unsoundness). The facts the compiler emits today (`nuw`/`nsw`, `inbounds`, `!range`, `noalias`, `llvm.assume`, `dereferenceable`, `align`, TBAA; counted as `; gabbro-fact KIND N` in the IR) are exactly the catalogue of assumptions to justify. Bridge builder (untrusted): reads the hints (IR after relevant passes: loop structure, vectorisation factor, inlining; register map; loop correspondence; function map; access-to-object map) and produces K' intermediate states at any granularity; each single step is validated by a local equivalence proof in Lean semantics, loops by simulation relations. Backend validation K'n to B: lift B through the footprints to dataflow graphs of D terms, prove equality with the naive mapping by equality saturation (e-graphs) modulo the laws A, which are PROVED in Lean (commutativity, associativity, distributivity, strength reductions, division by a magic constant per constant occurring in B, vector lane = scalar op, addressing = spelled-out arithmetic): no clause V2. D (per CPU stepping and microcode, pure data, only the patterns LLVM emits for the target; any byte sequence in B outside D is refused) holds length, footprint, the full term over K' primitives for ALL outputs (flags too) and the control-flow class. Probe (semantics-free): load/read memory, read/set state as an unnamed bit vector, step, run to exit addresses, reset, irq off. D is semantics, learned from the CPU and chip-tested instead of copied from a manual. CONTROL FLOW learned from bits: the PC is the bit group that moves by small positive amounts on single steps and shifts by the difference when the same instruction is loaded elsewhere; classes by experiment: no jump, relative jump (offset function `scale*sext(field)+c`, exhaustive for fields up to ~24 bits), indirect jump (source from the footprint), conditional jump (condition as a term over state bits), call (where the return address goes), return; jump tables (never-written region, entries point to the K switch blocks, range check or range fact, relocations resolved), indirect calls (target set from the certificate), return-address integrity follows from source-level memory safety and is mandatory in every certificate. OPEN SPOT: the access-to-object map that carries Gabbro facts to accesses must itself be validated, otherwise a correct fact justifies a reordering at the wrong access. Fallback: finer bridge steps, else recompile that function with fewer passes. Coverage: unwinding tables, constant pools, relocations, linker output, init code, signal and interrupt entries. Concurrency and interrupts: events of B equal the K events up to the reorderings the memory model allows; fences and atomics are D entries with ordering annotations in K'; the goal is proved on the spec level; V3 is DERIVED from the Gabbro proof (only the finite set of ordering axioms the proof uses, targeted litmus stress on all cores under load; where a prohibition carries the proof use the strongest barrier, cost: speed there); devices: MMIO events exactly in K's order and values, device behaviour and IOMMU enforcement are contract clauses. HARDWARE CONTRACT: V1 each D pattern means its K' term, footprint and control-flow class complete (includes hidden state H2 and 64-bit correctness: unprovable from finite observations, the black-box bound; tested exhaustively over small windows, structurally over full width, randomly, on several chips), V3 the ordering axioms the proof uses, V4 the IOMMU enforces its configuration. Guarantee: if the validators accept and V1, V3, V4 hold for the calibrated CPU, B meets the certificate's specification including the concurrent goal and MMIO event fidelity: LLVM made no translation error, checked between our own Lean semantics, relative to a learned chip-tested semantics of the used patterns and the ordering axioms the proof needs. Trust base: the spec, the Lean kernel, the semantics of K and K', the lowering Gabbro-to-K (verified in Lean), the validators and the lifting through footprints, the learning pipeline and probe adapter. Not covered: physics and operation, firmware/SMM/hypervisor/boot chain, devices, timing/WCET/side channels/progress, uncertified foreign code. The performance claim (>= 80 % of `-O3`) is CONDITIONAL on a small fallback rate and unproven. RESEARCH RISKS: bridge builder (reconstructing K' intermediate states from hints without pass granularity), UB justification (every exploited assumption needs a fact), validating `-O3` loop optimisations, transport of the facts, the fallback rate, term synthesis for complex patterns (shuffles, multi-output, flags, floating point), variable encodings. TRUST DECISION (taken by the coordinator under Simon's rule 'strongest variant'): `bv_decide` (SAT proof checked natively, rests on `Lean.ofReduceBool`) MAY be used for the laws A and magic constants in the validator, in modules OUTSIDE the import closure of `gabbro_ziel`; the Lean guardian keeps checking that `gabbro_ziel` stays on propext/Classical.choice/Quot.sound. FIRST STEPS in this order: (1) K and K' in Lean = extend `Code` (vectors, lanes, shuffles, ownership objects, MMIO events) and close the open Track L forms; (2) measure the fallback rate: a bridge-builder prototype for vectorisation and LICM on real `-O3` functions (the generated programs of `Gen/Erzeuger`), with and without Gabbro facts; (3) the UB-fact catalogue (map each assumption LLVM may use, starting from the facts the compiler emits, to a Gabbro fact); (4) learning pipeline for D on one CPU (this machine is x86-64; aarch64 and RISC-V need real hardware, `qemu` is a model); (5) laws A in Lean; (6) backend validator: lifting through footprints, e-graphs modulo A, jump tables; (7) LLVM hint plugin including the access-to-object map; (8) derive V3 from the Gabbro proof; (9) coverage: unwinding, init, relocations, stack bounds.
- 10. **One-off corpus of ALL generated programs** (Simon, 2026-10-18): generate ONCE every valid program and every single-fault refusal up to the largest size bound that fits, over the 16 declarations of the family, store them zstd-compressed in a git SUBMODULE, at most 30 GiB on disk, generated one after another with low RAM, reused until the next language change. Facts: the set of all valid programs is infinite, so 'all' means all up to a size bound; skeletons grow ~10x per size (sizes 2..8: 2/0/8/56/532/5170/56906; 52 500 valid programs at bounds 7/7/5 measured), the bound reaching 30 GiB is estimated at size ~10 (guess: ~50-200 bytes per program as a compact G-term encoding, ~30-60 bytes with a trained zstd dictionary; unmeasured). Low RAM: replace the memoised child tables (size 8 needs 2.3 GB, size 9 does not fit in 16 GB) by COUNTING AND UNRANKING (functional enumeration of algebraic types, FEAT): a small table counts the terms per (type, context, size); `unrank n` returns the n-th term of a size without storing anything; index ranges are generated independently (parallel, resumable, deterministic, constant memory); completeness stays the proved theorem (every term has an index). Speed: the current run does ~36 programs/s; 10^8-10^9 programs need 10^4-10^5/s, so a native parallel run (20 threads). Storage: shards of ~64 MB per (declaration, size, range) with checksums and a manifest; the submodule remote CANNOT be plain GitHub (100 MB file limit, ~5 GB advice): use an own server, a local bare repository, or git-annex/LFS with own storage; keep the submodule WITHOUT history (every language version a fresh repository, the main repo holds only its id), otherwise every regeneration adds another 30 GiB to history. The manifest carries the hash of the Lean model (`Kern/Syntax` and `Akzeptiert`): a changed language makes the guardian report the corpus stale. Stored are G terms, not source text, until the G-to-source printer exists (the Rust checker and compiler need source text: still the blocker for measuring them). This leaves Simon's older rule 'no regenerable generated files in the repo' on purpose, because generating is expensive; the submodule lives outside the main repo. NOT started: Simon asked for no new agents for now.
- 11. **`async fn` and `.await` in the Lean model** (Simon asked 2026-10-18; decided by the coordinator under 'strongest variant'). No async exists today: `awaits` is the acquire side of `publishes` (message passing on an atomic flag), not a suspension; `stackless` only removes recursion; 'async device step' is out of scope (SYNTAX 16.3). Design A, not B: sugar, a VERIFIED transformation of `async fn` into a state machine (a record with a state field and the locals that live across a `.await`, plus a `poll` function with `match` over the state) built only from existing forms (sums, `match`, tables, atomics); machine G and the text of `Spec.lean` stay untouched (layer approach as for the mask and the reader/writer lock). Option B (a suspension step in machine G; a saved `GRest` is not a finite data value in memory, so a future would have to encode it, which is the transformation of A) changes the goal and is NOT chosen. To prove in Lean: (1) a direct-style small-step semantics of `async fn` with suspension and resumption as the specification; (2) the transformation and its refinement (simulation); (3) safety rules the checker must enforce at every `.await`: values living across it are fields of the state record (explicit save, no pointer into a stack: no Pin problem), NO lock held across a `.await` (or only with a rank rule: deadlock hazard), unique ownership across the suspension point, bounded cost and budget per `poll`; (4) drop/cancellation of a future and what happens to its resources (open decision). Goal statement: progress is NOT claimed (wait bounds and fairness are NOT CLAIMED); an `.await` on a future that is never woken is a wait stop like a flag stop, not an error. Prerequisites for a usable runtime: the ring buffers and lock-free structures of Phase B item 5 (task queue, wakers). Order: (a) an executor library in Gabbro with hand-written state machines from the existing forms (shows where the forms fall short); (b) `async fn` in the Lean model (estimate 4 000-8 000 lines, two to four agent runs, a guess); (c) parser, checker rules and the transformation as a lowering. NOT started: Simon asked for no new agents for now.
- 12. **Self-hosted Gabbro compiler** (Simon's idea 2026-10-18: a compiler written in Gabbro, bootstrapped like Lean, TypeScript or Go). DECISION OF SIMON (2026-10-18): the compiler stays Rust + LLVM (more flexible and faster); no own backend and no Lean compiler (they would need a CPU model for their refinement; the CPU itself is the model, item 9). A self-hosted compiler therefore keeps LLVM as its back end: only the language of the FRONT END changes, never the back end. Stage 0 is EITHER the existing Rust compiler (it compiles everything already) OR the Lean pipeline compiled natively (parser, elaboration, `Akzeptiert`, G to `Code`; its small runtime is C/C++ and counts as trust base only as the start, never inside a shipped binary); stage 1 is the Gabbro-written compiler built by stage 0; stage 2 is stage 1 compiling itself, and stage 1 == stage 2 is the fixpoint test; also diverse double compilation (stage 0 and a second path compile the same source, results compared) against the trusting-trust problem. The compiler source is written in a SMALL SUBSET that stage 0 handles (today the Lean pipeline elaborates 22 of 72 surface constructors, 73.6 % of the slice), stage 1 handles the whole language and extends itself, as bootstrap compilers do: Track P need not be finished first. The Gabbro-written compiler is an UNTRUSTED producer, the Lean side validates each result (checker verdict against `Akzeptiert`, generated IR against `Code` per function, the generated-program set and the adequacy theorem as the differential test); it is memory-safe and race-free by the language itself and the best test of Gabbro's power. Missing today: strings (only bounded strings exist), dynamic containers as libraries (lists, trees, hash chains are proved in the model, not yet libraries), file IO through declared gates (possible), no generics and no closures (every container copied per type), loops need static bounds (fixed limits on program size). Order: (1) Track P as far as the compiler source needs; (2) libraries in Gabbro (strings, arena containers, file IO); (3) lexer and parser in Gabbro with a differential test against the Lean lexer/parser over the generated programs; (4) the checker as Gabbro functions (the ten components, per function) validated against `Akzeptiert`; (5) lowering and IR emission validated per function, then the fixpoint. Estimate (a guess): compiler 40 000-100 000 lines of Gabbro, libraries 10 000-20 000, extra Lean 2 000-6 000 (drivers, fixpoint, per-function validator) plus Track P 5 000-15 000 for the subset used. NOT started: Simon asked for no new agents for now.
+| Step | What | State |
+|---|---|---|
+| 1 | `free`/`grow` as G blocks over the arena sugar; free-list invariant | Built (`ArenaFrei.lean`) |
+| 2 | Invariants over live slots: links in range, acyclic along a walk, tree shape (capability tree), free list disjoint from live slots | **Done in Lean** (2026-10-18, §8a.1, THEOREM-MAP 79): one recognizer `Erk K` for list, tree and both on one arena, loops, function bodies `ErkE`, executed forms, `revoke` of a subtree, witnesses and planted defects. |
+| 3 | Concurrency of arenas (O20): `grow` as a locked commit | **Done in Lean** (2026-10-18, §8a.2, THEOREM-MAP 79): a shared arena IS the lock invariant (`Dekl.sperr`), section theorems, `grow_atomar`, machine bridge `erkE_maschine`. |
+| 4 | `Spec.lean` diff: dynamic structures and table/group invariants leave NOT CLAIMED, `invRuhe`/`invSicht` non-vacuous; `gabbro_ziel` re-proved; two independent verdicts | **Paused**, see "Right now". |
+| 5 | Exporter/elaboration, then checker (O11), then three examples (list, tree, hash chain) with certificates and poison probes | Not started |
+
+- **Open in step 2:** wiring the recognizer into `Akzeptiert` (§8a.3: an arena as an invariant name, the `ErkE` derivation a certificate in
+  the unit); the exporter for these forms; calls inside writers; releasing a whole revoked subtree; recognizers for hash chains and the
+  sibling demand.
+- **Open in step 3:** the ABA ownership predicate; the commit bound (no `dynFrisch` form, frames do not name `zaehl`/`komm`); the footprint
+  of a pure `pop` (`schuldet` counts tables only: a DECISION for step 4); the arena at writer entry; loops in the machine bridge; the
+  migration D1 (needs a `Syntax.lean` split and a full rebuild).
+- **Open decisions:** first structures (recommended: list and tree); links as indices in one arena (recommended); `free` across function
+  boundaries (follows the `own` boundary rule).
+
+### Phase B: weak memory
+
+State: GX/W model carries atomics with the rely; release/acquire is enforced.
+
+1. **Message passing with a plain payload under release/acquire, no lock** (O25, `N291`). The memory-model half is PROVED
+   (`Speichermodell/Payload/`, THEOREM-MAP 80: no race after the await, the value, counter-models, litmus tests). Open: the `Spec.lean` diff
+   D1-D6 and the checker rule R0-R4 (proposed in `PLAN-DYNAMIC.md` §11, four decisions for Simon in §11.5); no concrete W/GX fixture
+   yet; 11 corpus examples wait for it. The Lean integration is the payload half of the paused M8.
+2. **Weak memory beyond DRF-SC:** name and prove what is claimed (standard patterns); shrink the NOT CLAIMED line.
+3. **Hardware bridge:** x86-TSO, ARMv8 and RISC-V (RVWMO) refine W/GX access by access through the ISA-neutral `Need` list of Track L.
+   Needs the CPU models (built by Simon).
+4. **Orderings and primitives:** `consume`, `seq_cst` total order, stand-alone fences, mixed-size access, atomics over floats; litmus tests
+   (MP, SB, LB, IRIW) as the yardstick.
+5. **Shared atomics across link boundaries** and the merge discipline of per-core cells (O17); lock-free structures (SPSC/MPSC ring, Treiber
+   stack, seqlock, RCU) with happens-before over the payload; device and DMA ordering.
+
+### Phase C: the rest, in this order
+
+1. **Track P and Track L**, both running now in parallel with Phase A.
+   Track P: complete Lean parser (coverage matrix, then elaboration replaces `lean_g.rs`). Track L: refinement down to the binary with an
+   ISA-neutral `Code` and no CPU model. Plans: `PLAN-TRANSLATION-VALIDATION.md` §9a/§9b.
+2. **Model gaps behind existing lowerings:** `boot` and `entrust` semantics; aarch64 `vector`/`via` meaning; port space and `asm` (LLVM
+   lowerings exist without a model).
+3. **Remaining O-items:** interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate
+   preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37). See §2.
+4. **Termination, waiting bounds, fairness, stack depth,** floats beyond the IEEE kernel.
+5. **Benchmark against GCC `-O3`:** only after the compiler lowers much more and strong optimisation is in (Simon).
+6. **Housekeeping:** see §3 (legacy cleanup); file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`); the frozen
+   Isabelle `.thy` set.
+7. *Done 2026-10-18 (Simon's decision):* comments as in most languages: `//`, nesting `/* */`, `///` doc comment as trivia
+   (`Token.doku`); the `--` comment is removed everywhere. Lean first, then `lex.rs`, then ~1270 files (THEOREM-MAP 83).
+   Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
+8. **Adequacy of the generated test set** (Simon, 2026-10-18). Goal: if a program-neutral checker/compiler handles every generated test
+   program, it handles all valid programs correctly. Result in Lean (`grammatik/Grammatik/Adaequanz/`, `CHECKER.md` §16, THEOREM-MAP 85):
+   program-neutral alone admits NO finite test set (`kein_endlicher_test`). With a state bound the W-method set is sufficient and
+   astronomically large for Gabbro. For the class "verdict = conjunction of local premises and whole-program patterns" the answer is exact
+   and small: one single-fault program per isolable refusal cell plus valid programs covering the accepted cells (124 premise cells, 146
+   child-position cells, at most 4 540 pattern cells, independent of program size). Open: the local refusal cells need source mutants,
+   so the G-to-source printer of Track P; the coarse accepted cells (4 of 459 covered); the metamorphic tests for hypotheses H1-H8.
+9. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
+   producer; Lean checks the binary against the certificate through a small UB-free core K, bridge steps justified by Gabbro facts, and a
+   backend validator over chip-learned instruction semantics. Nothing built; the first steps start with extending `Code`. Full design,
+   hardware contract and research risks: `PLAN-TRANSLATION-VALIDATION.md` §9c.
+10. **One-off corpus of ALL generated programs** in a git submodule (at most 30 GiB, counting-and-unranking generation). Not started.
+    `dokumente/PLAN-LONG-RANGE.md` §1.
+11. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
+    `dokumente/PLAN-LONG-RANGE.md` §2.
+12. **Self-hosted compiler** (front end in Gabbro, LLVM stays the back end, Simon's decision 2026-10-18). Not started; needs strings,
+    containers and Track P first. `dokumente/PLAN-LONG-RANGE.md` §3.
+
+*Items 10-12: Simon asked for no new agents for now.*
 
 ---
 
-## 1. Heap and stack (updated 2026-10-17)
+## 1. Heap and stack
 
-- **Built:** pressure-sampled unbounded arenas, slot release, external free-list
-  links supporting small elements, per-chunk live counts and physical return of
-  empty anonymous payload pages. Whole-arena reset clears counts and returns
-  used payload pages. Virtual reservations/access rights and the committed
-  prefix stay intact; best-effort page discard requires no decommit bitmap.
-- **Built:** all direct/compatible indirect recursive cycles use a loop
-  dispatcher and explicit growable continuation storage. Pure tail cycles keep
-  their jump-only path. Continuation chunks are released on unwind; allocation
-  failure is an explicit trap. This avoids recursion-dependent native stack
-  growth, not the need for RAM to store non-tail continuations.
-- **Built:** checked static range zeroing and optional whole-page return through
-  declared program bindings; guarded per-invocation thread stacks, group spawn
-  before join, kernel-exit completion and stack unmapping after join.
-- **Still open:** `free` across function boundaries, aliases outside the tracked
-  ownership discipline, complete `ArenaForm`/`DynForm` export and the G form of
-  the newer memory statements. No checker refusal or source obligation was
-  relaxed. CPU/final-byte refinement remains section 5 work.
-- **Evidence:** `dokumente/LLVM-BACKEND.md`. Coverage is the actual Lean
-  constructor/field register, checked by
-  `python3 instrumente/pruefe-llvm-modelldeckung.py`; examples never define it.
+- **Built:** pressure-sampled unbounded arenas, slot release, external free-list links for small elements, per-chunk live counts, physical
+  return of empty anonymous payload pages; whole-arena reset. All direct and compatible indirect recursive cycles use a loop dispatcher
+  with explicit growable continuation storage (allocation failure is an explicit trap); checked static range zeroing; guarded
+  per-invocation thread stacks, group spawn before join, stack unmapping after join.
+- **Open:** `free` across function boundaries; aliases outside the tracked ownership discipline; complete `ArenaForm`/`DynForm` export and
+  the G form of the newer memory statements. No checker refusal or source obligation was relaxed. CPU/final-byte refinement is §5.
+- **Evidence:** `dokumente/LLVM-BACKEND.md`; coverage is the Lean constructor/field register, checked by
+  `python3 instrumente/pruefe-llvm-modelldeckung.py` (examples never define it).
 
-## 2. Lean-Modell
+## 2. Lean model
 
-- **O1-Rest (Pflichten jenseits der Maschine).** L50/L52 trägt das Bein `folge`,
-  L24 die Invarianten-Beine, L34 steht als Existenz mit Zeuge. Offen: der Name
-  von `breaking` im G-Rest (Markenschicht + Re-Beweis aller satzweisen Sätze),
-  die Block-Wiederherstellungspflicht in (b), Axiom-/Register-Ereignisse im
-  Ruf-Log, pfadsensitives `ende` (je Rückgabestelle), ein Ordnungsfeld in
-  `Einheit` vom Exporteur gefüllt.
-- **O4 (`cdt_wohlgeformt` bei freiem Slot).** Wartet auf O5 (Geschwister-Konsistenz);
-  `delete_leaf` gilt nur bedingt, `revoke` erbt die Bedingung.
-- **O5 (Geschwister-Konsistenz als Tabellen-Invarianten-Demand).** Indexieren
-  DURCH die Option (`slots[s.next_sibling]`) blockiert; `requires` je Rufstelle
-  ist Ersatz, kein Supply-once.
-- **O6 (DEMAND 3 als schrankenloser Rangzeuge).** Geht für die Widerlegung;
-  die Beweis-Richtung (`unsat`) über der Rangform plus vier ungezogene
-  Erreichbarkeits-Zeilen bleiben bei der Demand.
-- **Dynamische Datenstrukturen + Tabellen-/Gruppeninvarianten im Ziel (Plan 2026-10-17).** Lean zuerst, dann Exporteur,
-  Prüfer, Compiler: `dokumente/PLAN-DYNAMISCH.md` §8a (sieben Stufen, drei Entscheidungen offen). Umfasst O4–O6, O11, O14, O20, O29.
-- **O14 (Arena-Ketten: zwei Statement-Formen ohne Form).** Spezifikation und
-  Exporteur haben die Form; zwei Statement-Gestalten schließen keine Kette.
-- **O19-Rest (handlers and cores).** Since 2026-10-18 (Lean): G has a per-core mask state over the layer `KernZ` (`KernMaske.lean`), the core
-  schedule is DERIVED from the machine (`kernPlan_aus_lauf`, `kernHaltM_aus`, `kernHaltE_iff_M`: the same statement), and `Code` has `Instr.imsk` with the
-  named hardware assumption `MaskHw` and the refinement (`MaskRel.lean`, `irq_guard`); `PLAN-DYNAMISCH.md` 8a.4, SATZKARTE 81. Open: the `Spec.lean`
-  proposal (8a.4, not applied) and its GA twin; the composition of the `Code` steps with the interleaving of all threads of a core (H3); re-entry and
+- **O1-Rest (duties beyond the machine).** L50/L52 carry the leg `folge`, L24 the invariant legs, L34 stands as an existence with witness.
+  Open: the name of `breaking` in the G rest (brand layer plus re-proof of all per-statement theorems); the block-restoration duty in (b);
+  axiom/register events in the call log; path-sensitive `ende` (per return site); an ordering field in `Einheit` filled by the exporter.
+- **O4 (`cdt_wohlgeformt` at a free slot).** Waits for O5; `delete_leaf` holds only conditionally, `revoke` inherits the condition.
+- **O5 (sibling consistency as a table-invariant demand).** Indexing THROUGH the option (`slots[s.next_sibling]`) is blocked; a `requires`
+  at each call site is a substitute, not supply-once.
+- **O6 (DEMAND 3 as an unbounded rank witness).** Works for the refutation; the proof direction (`unsat`) over the rank form plus four
+  undrawn reachability rows stays with the demand.
+- **O14 (arena chains: two statement shapes without a form).** Specification and exporter have the form; two statement shapes close no chain.
+- **O19-Rest (handlers and cores).** Since 2026-10-18 (Lean): G has a per-core interrupt-mask state over the layer `KernZ`
+  (`KernMaske.lean`); the core schedule is DERIVED from the machine (`kernPlan_aus_lauf`, `kernHaltE_iff_M`); `Code` has `Instr.imsk` with the
+  named assumption `MaskHw` and the refinement `MaskRel.lean` (`PLAN-DYNAMIC.md` §8a.4, THEOREM-MAP 81). Open: the `Spec.lean` proposal
+  (not applied) and its GA twin; composing the `Code` steps with the interleaving of all threads of a core (H3); re-entry and
   handler-on-handler preemption; `Einheit` names no handler; `H102` fires only on `via idt`; no Rust/LLVM emitter for `imsk`.
-- **Reader/writer lock (decision 2026-10-18).** In Lean as the layer `RwSchritt` over machine G (`RwSchritt/RwRang/RwOrdnung/RwInv.lean`): exclusion
-  (many readers XOR one writer), rank order and no wait cycle, no write-write/write-read race (premise `LeserLos`), the lock invariant visible to readers and
-  owed by writers only; witnesses (two readers + a writer, kernel-checked) and planted defects (`RwZeuge`, `RwZeugeLeser`); `Code` lowering on one state word with
-  `cas`/`aload`/`armw` and the refinement `RwRel` (`RwLock*.lean`); `PLAN-DYNAMISCH.md` 8a.5, SATZKARTE 82. Open: the `Spec.lean` diff (mode in G recommended) and the
-  syntax (`lock L rank N rw`, `reads L { }`, signature `reads L`: proposals), the legs of `Ziel` with no layer twin, the checker rule deriving `LeserLos`, fairness; no Rust/LLVM.
-- **O20 (Arenen unter Nebenläufigkeit).** Generationen und Commit-Decke nehmen
-  einen Kontrollfaden und einmal betretene Wurzeln an. Seit 2026-10-18 (Lean, Phase A Schritt 3) ist eine
-  geteilte Arena die Sperrinvariante (`Dekl.sperr`), der Abschnittssatz steht (`abschnitt_erk`/`abschnitt_rufe`),
-  `grow` ist ein gesperrter, unsichtbarer Commit (`grow_atomar`); offen: ABA-Besitzprädikat, Commit-Schranke,
-  Fußabdruck von `pop` (`schuldet`), Eintrittsfakt eines Schreibers.
-- **O21 (`child` ohne Modell).** Der Kind-Faden existiert im Prüfer; sein Code
-  zwischen Torruf und Region ist für das Kind ungeprüft.
-- **O23 (Tor-Vorbedingungen nicht im Ziel).** NUL-Pfad und Rahmenlänge sind
-  benannt, nicht modelliert.
-- **O24 (Strings geprüft, nicht dargestellt).** NUL, `max`-Decke, Aggregate.
-- **O27 (source forms without complete G export).** The source-to-G exporter
-  remains partial, notably float, byte-pointer/string and dynamic-arena forms.
-  A working LLVM lowering is not a Lean judgment. Track the constructor/field
-  boundaries in `dokumente/llvm-modelldeckung.tsv`, not counts of examples.
-- **O28-Rest (Verbund).** Spec-Diff ohne unabhängige Review-Runde; keine
-  semantische Äquivalenz/Verfeinerung bei Verträgen (Normalform-Bäume);
-  kein Zertifikat für verlinkte Programme; C-Linkschritt ist Sache der
-  Validierung (§5).
-- **O37 (Regionen in G).** Keine Byte-Zeiger im Modell (`Ty.ptr` ist
-  Träger-Fähigkeit); nichts gibt eine Region frei (kein Eigentums-Schluss
-  am Tor-Parameter); Gabbro-Rümpfe reichen keine Ausdehnung weiter
-  (nur fremde `ensures … <= lenof(result)` trägt).
+- **Reader/writer lock (decision 2026-10-18).** In Lean as the layer `RwSchritt` over machine G: exclusion, rank order, no wait cycle, no
+  write-write/write-read race (premise `LeserLos`), a `Code` lowering on one state word with refinement `RwRel`, witnesses and planted
+  defects (`PLAN-DYNAMIC.md` §8a.5, THEOREM-MAP 82). Open: the `Spec.lean` diff (mode in G recommended); the syntax (`lock L rank N rw`,
+  `reads L { }`: proposals); the `Ziel` legs with no layer twin; the checker rule deriving `LeserLos`; fairness; no Rust/LLVM.
+- **O20 (arenas under concurrency).** Generations and the commit ceiling assume one thread of control and roots entered once. Lean (Phase A
+  step 3) covers the locked commit. Open: ABA ownership predicate, commit bound, footprint of `pop` (`schuldet`), entry fact of a writer.
+- **O21 (`child` without a model).** The child thread exists in the checker; its code between gate call and region is unchecked for the child.
+- **O23 (gate preconditions not in the goal).** NUL path and frame length are named, not modelled.
+- **O24 (strings checked, not represented).** NUL, `max` ceiling, aggregates.
+- **O27 (source forms without a complete G export).** The exporter stays partial, notably float, byte-pointer/string and dynamic-arena
+  forms. A working LLVM lowering is not a Lean judgment; track the boundaries in `dokumente/llvm-modelldeckung.tsv`, not counts of examples.
+- **O28-Rest (linking).** The `Spec.lean` diff had no independent review round; no semantic equivalence/refinement for contracts (normal-form
+  trees); no certificate for linked programs.
+- **O37 (regions in G).** No byte pointers in the model (`Ty.ptr` is a carrier capability); nothing frees a region (no ownership closure at
+  the gate parameter); Gabbro bodies pass on no extent (only a foreign `ensures … <= lenof(result)` carries).
 
-## 3. Prüfer
+## 3. Checker
 
-- **Legacy-Bereinigung, Stand 2026-10-17 abends:** `cnamen.rs`, `N041`/`N046`/`N052` mit Sätzen und 17 Gift-Proben und 42 tote
-  Funktionen/Konstanten in Quelltext und Tests sind entfernt. Offen: 13 Compiler-Warnungen in `llvm.rs`/`nulpfad.rs`/
-  `certstmt.rs` (zwei unerreichbare Muster, darunter der Verbund-Init für Konstanten, nie gelesene Felder), die
-  C-Schablonen in `schablonen.rs`, der Lean-Ordner `CBackend` (gelöscht 2026-10-18, mit der C-Korrespondenzkette; Tag `archiv/c-emitter-2026-10-17`),
-  Kommentare mit `emit.rs`/C11. (Ursprüngliche Liste:
-- **Legacy-Bereinigung (feste Regel 2026-10-17: kein Legacy in Compiler, Prüfer, Parser).** Gemessen in `crates/`:
-  C11 in 79 Zeilen (23 Dateien), `emit.rs`/`gabbro emit` in 172 Zeilen (38 Dateien, meist Kommentare),
-  C-Namensregeln (`cnamen.rs`, `erzeugernamen.rs`, `N041`-Familie), C-Schablonen in `schablonen.rs`,
-  `certstmt.rs`, `E247`-Hinweis auf C-Gründe, `retired`-Codes (16 Zeilen). Alles entfernen, nicht
-  umbenennen. Entschieden (Simon, 2026-10-18): `grammatik/Grammatik/CBackend` (22 233 Zeilen, archivierte C-Kette) ist Legacy des Modells und wurde gelöscht.
+- **Legacy cleanup** (fixed rule 2026-10-17: no legacy in compiler, checker, parser). Done: `cnamen.rs`, `N041`/`N046`/`N052` with sentences and
+  17 poison probes, 42 dead functions and constants, the Lean folder `CBackend` (22 233 lines, deleted 2026-10-18; tag
+  `archiv/c-emitter-2026-10-17`). Open: 13 compiler warnings in `llvm.rs`/`nulpfad.rs`/`certstmt.rs` (two unreachable patterns, the
+  link-unit init for constants, never-read fields); the C templates in `schablonen.rs`; comments naming `emit.rs`/C11. Remove, do not rename.
+- **Differential harness** (`CHECKER.md` §12.6). Class (b) is empty over 62 000 generated programs. The groups of class (a) left
+  (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components; the model gaps (`return` under
+  `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change. Open rulings: `M104`, `N001`,
+  `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
+- **Guardian remnants** (four guardians since 2026-10-17). `bruecke/` is not measured (its `lake build` fails on the missing `mathlib`
+  entry); the tree-wide `gabbro prove` run and the E1 comparison (duties manifest) hang in no guardian; the mutation run over the checker
+  is dropped without replacement; 8 600 German comment lines in the checker are unguarded. Details: `dokumente/TOOLBOX.md`.
+- **O11 (guardless invariant).** A `table`/`group` invariant that no function `maintains` is booked by NOTHING (`N275`-`N277` check only
+  anchored ones).
+- **Alias / `own`** (built 2026-10-17). `R014` (error) and `R015` (hint) separate pointer roots at call boundaries; Lean has `ParamGetrennt`
+  and `ObjGetrennt` with a bridge to `R014`; LLVM sets `noalias` on internal writable pointer parameters. Paper: `dokumente/A1-OWN-PAPER.md`.
+  Open: records over byte buffers (range objects in the model, `LG005`/`LG001`); the four bridge hypotheses (`ParamVerschieden`,
+  `RechteOk`, `HerkunftTreu`, `FrischNeu` only for the model allocator) and the checker's `let` run in Lean; `R004`/`R007` as special cases
+  of `R014`; `noalias` is no Lean judgment (O27).
+- **O26-Rest (foreign lock primitives).** Own primitives are checked (`N481`-`N483`); foreign ones stay assumed (weak memory assumes
+  acquire/release).
 
-- **Differential harness (2026-10-18, `PRUEFER.md` 12.6).** Class (b) is empty over 62 000 generated programs; the groups of class (a) left
-  (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components, and the model gaps
-  (`return` under `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change.
-  Open rulings: `M104`, `N001`, `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
+## 4. LLVM backend
 
-- **Wächter-Reste (vier Wächter seit 2026-10-17).** `bruecke/` wird nicht gemessen (sein `lake build`
-  scheitert am fehlenden `mathlib`-Eintrag); der baumweite `gabbro prove`-Lauf und der E1-Vergleich
-  (Pflichten-Manifest) hängen in keinem Wächter; der Mutationslauf über den Prüfer ist ersatzlos
-  gestrichen; 8 600 deutsche Kommentarzeilen im Prüfer sind nicht bewacht. Details:
-  `dokumente/WERKZEUGKASTEN.md`.
+Full table: `dokumente/LLVM-BACKEND.md` §5.
 
-- **O11 (hüterlose Invariante).** Eine `table`/`group`-Invariante, die keine
-  Funktion `maintains`, wird von NICHTS gebucht (`N275`–`N277` prüfen nur
-  verankerte).
-- **Alias / `own` (gebaut 2026-10-17, Reste offen).** `R014` (Fehler) und `R015`
-  (Hinweis) trennen Zeigerwurzeln an Rufgrenzen; Lean hat `ParamGetrennt` und
-  `ObjGetrennt` (Objekte unterhalb einer Tabelle) samt Brücke zu `R014`; LLVM setzt
-  `noalias` an interne schreibbare Zeigerparameter. Papier: `dokumente/A1-OWN-PAPER.md`.
-  Offen: Records über Byte-Puffern (Bereichsobjekte im Modell, `LG005`/`LG001`);
-  die vier Brücken-Hypothesen (`ParamVerschieden`, `RechteOk`, `HerkunftTreu`,
-  `FrischNeu` nur für den Modell-Allokator) und der `let`-Lauf des Prüfers in Lean;
-  `R004`/`R007` als Sonderfälle von `R014`; Mutationslauf (gestrichen mit den 80 Wächtern, kein Ersatz);
-  `noalias` ist kein Lean-Urteil (O27).
-- **O26-Rest (fremde Sperrprimitive).** Eigene Primitive geprüft (`N481`–`N483`);
-  fremde bleiben angenommen (schwaches Gedächtnis nimmt acquire/release an).
+- **Lowerings without a Lean model** (2026-10-17; rule: language follows the Lean model). Built, evidenced only by text/qemu: aarch64
+  `entry` (the meaning of `vector`/`via` on aarch64 is the lowerer's reading; `LANGUAGE.md` and the model are silent), `masks irqs`, the
+  x86_64 port space, assembler bodies. REFUSED because lowering would invent semantics: `boot` and `entrust`. To do: put the aarch64
+  meaning of `vector`/`via` into the model, then fix `boot`/`entrust` in the model.
+- **O22 (group execution and stack lifecycle; built 2026-10-17).** Every invocation owns a guarded mapping and completion word; all roots start
+  before any join; kernel `clear_child_tid` ends the join after actual exit. Open: runtime syscall numbers still belong to the Linux profile;
+  OS-neutral bindings/profiles and the target-to-GX proof.
+- **`entries` (12 sites).** Hardware dispatch without a model; refused by name.
+- **Stack gates and `child` (12).** The `clone` trampoline is missing.
+- **`publish` with a payload (11).** Not covered by the goal theorem: Phase B item 1.
+- **Shared locks (3), library calls (3).** Own primitive / payload model missing.
+- **O40-Rest (emitter names).** Checker half built (`N042`); module-qualified names are missing (LLVM mangles `m_` only on a collision).
 
-## 4. LLVM-Backend
+## 5. Translation validation (MUCH later)
 
-- **LLVM-Absenkungen ohne Lean-Modell (2026-10-17, Regel: Sprache folgt dem Lean-Modell).** Gebaut und nur als
-  Text/qemu belegt: aarch64-`entry` (die Bedeutung von `vector`/`via` auf aarch64 ist eine Lesart des
-  Absenkers, `SPRACHE.md` und das Modell sagen dazu nichts), `masks irqs`, x86_64-Port-Raum, Assembler-Körper.
-  Verweigert, weil jede Absenkung Semantik erfände: `boot` und `entrust` (Quellform ohne Anweisung, Lean zuerst).
-  Zu tun: die aarch64-Bedeutung von `vector`/`via` ins Modell, dann `boot`/`entrust` im Modell festlegen.
+Prerequisite chain, in this order; none of it is O27 work:
 
-Volltabelle in `dokumente/LLVM-BACKEND.md` §5. Kurzform:
+1. **A complete Lean model of a CPU.** Without it no refinement: the long pole (`ARM-PLAN.md`: Sail Arm plus multicore model).
+2. **And more:** per-access bridge (goal to W/GX simulation), gate and entry lemmas per target (raw instruction, `_start` with stack, state,
+   exit/`never`), O28 link closure, O26 foreign orderings.
+3. **Automatic for all programs.** No per-program step by hand. That makes the chain more expensive than O27, not cheaper: O27 widens the set
+   of judged programs one program at a time, while validation must run for ALL of them without help afterwards.
 
-- **O22 — group execution and stack lifecycle built 2026-10-17.** Every
-  invocation owns a guarded mapping and completion word. All roots start before
-  any join; kernel `clear_child_tid` ends the join after actual exit, then the
-  mapping is released. Trampoline assembly is confined to the stack switch.
-  Runtime syscall numbers still belong to the Linux profile; OS-neutral
-  bindings/profiles and the target-to-GX proof remain open.
-- **`entries` (12 Stellen).** Hardware-Dispatch ohne Modell — benannt verweigert.
-- **Stapel-Tore + `child` (12).** `clone`-Trampolin fehlt.
-- **`publish` mit Nutzlast (11).** OFFEN O25 — vom Zielsatz nicht gedeckt.
-- **Geteilte Sperren (3), Bibliotheksrufe (3).** Eigenes Primitiv / Nutzlast-Modell fehlt.
-- **O40-Rest (Emitter-Namen).** Prüfer-Hälfte gebaut (`N042`); modulqualifizierte
-  Namen fehlen beiden Emittern (LLVM mangelt `m_` nur bei Kollision).
+Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md` §§0-5 and §9c.
 
-## 5. Übersetzungsvalidierung — kommt VIEL später
+## Appendix: closed or removed (ID → reason)
 
-Voraussetzungskette, in dieser Reihenfolge; nichts davon ist O27-Arbeit:
-
-- **Vollständiges Lean-Modell einer CPU.** Ohne es keine Verfeinerung —
-  das ist der lange Pol (ARM-PLAN: Sail-Arm plus Mehrkern-Modell), nicht O27.
-- **Und mehr:** Brücke je Zugriff (Ziel → W/GX-Simulation pro Zugriff),
-  Tor- + Eintritts-Lemmata je Ziel (rohe Anweisung, `_start` mit Stapel,
-  Zustand, Austritt/`never`), O28-Linkschluss, O26-fremde Ordnungen.
-- **Automatisch für alle Programme.** Kein Schritt je Programm von Hand —
-  deshalb ist die Kette teurer als O27, nicht billiger: O27 erweitert die
-  Urteil-Menge Programm für Programm, die Validierung muss danach für ALLE
-  ohne Zutun laufen.
-
-## Anhang — geschlossen oder entfernt (ID → Grund)
-
-O2 zurückgezogen (Falsifikatoren ohne Schwelle); O3 gebaut; O7 gebaut;
-O8 gebaut (Lane 167); O9 gebaut; O12 Einzelprogramm, kein Modellfall;
-O13 gebaut; O15/O16 bepreist und ABGELEHNT (null Korpusnutzen);
-O18 gebaut (F10); O25 geschlossen (Rely IST das Ziel, `gabbro_ziel`);
-O10 Messschicht, kein Gebietsgegenstand; O29 außerhalb des Umfangs (Simon);
-O30 überholt (Rust-Backend + Lean-Validator statt Selbsthosting);
-O31 gebaut (Reste: Build/Hardware, nicht Gebietsgegenstand);
-O32 Hardware/Laufzeit, kein Gebietsgegenstand; O33 Prozessbuchhaltung;
-O34/O35/O36/O38 gebaut; O39 Kernelmodul-Welt (Zählung: `N574`–`N577` gebaut,
-Unload-Fenster Hardware).
+- **Built:** O3, O7, O8 (lane 167), O9, O13, O18 (F10), O31 (rest: build/hardware), O34, O35, O36, O38.
+- **O25:** the atomic rely IS the goal (`gabbro_ziel`), closed; the payload half is Phase B item 1.
+- **Withdrawn or declined:** O2 (falsifiers without threshold); O15/O16 (priced and REJECTED, zero corpus benefit); O30 (superseded:
+  Rust backend plus Lean validator instead of self-hosting; for a front-end-only self-hosted compiler see Phase C item 12).
+- **Not a topic of this list:** O10 (measurement layer); O12 (single program, no model case); O32 (hardware/runtime); O33 (process
+  bookkeeping); O39 (kernel-module world; count: `N574`-`N577` built, unload window is hardware).
+- **Out of scope:** O29 (Simon).

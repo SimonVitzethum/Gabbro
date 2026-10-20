@@ -182,7 +182,7 @@ def L10 (s s' : State) (obj : Int) : Prop :=
 /-  **L11, L12, L13 -- EXTENSION. One finding, one price, three rows.**
 
     `tagged type ObjectKind = { Memory(Region), … Reply(ReplyRef), … Dma(DmaRef), … }`
-    (`FRAGMENTE.md`@708beed:128). All three obligations speak about the PAYLOAD:
+    (`FRAGMENTS.md`@708beed:128). All three obligations speak about the PAYLOAD:
 
       L11  `Memory` -- **the region** goes back to the RAM allocator
       L12  `Dma`    -- released only after proof
@@ -259,7 +259,7 @@ def antwortpflichtPaarig (w : World) (d : Domain) : Prop :=
 
 /-  **L24 -- NOT. The first of the ordering class, and the sharpest of the four.**
 
-    *"The two places are written in ONE step."* `FRAGMENTE.md`@708beed:594 says what the
+    *"The two places are written in ONE step."* `FRAGMENTS.md`@708beed:594 says what the
     fragment means: **`caller` and `reply_owner` are NEVER HALF SET.**
 
     Every means of §7 is a predicate over A STATE or over a pre/post PAIR. "In one step" is a
@@ -330,7 +330,7 @@ def L33 (s s' : State) (picked : Int) (idx : Domain) : Prop :=
 
 /-  **L34 -- NOT. The ordering class, and this row states the intermediate state OUTRIGHT.**
 
-    *"The invariant does not hold BETWEEN the two assignments."* `FRAGMENTE.md`@708beed:675 in
+    *"The invariant does not hold BETWEEN the two assignments."* `FRAGMENTS.md`@708beed:675 in
     the fragment's own words: *"Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen
     nicht."*
 
@@ -341,7 +341,7 @@ def L33 (s s' : State) (picked : Int) (idx : Domain) : Prop :=
     The language has since NAMED the region -- `breaking antwortpflicht_paarig { … }`
     (`SYNTAX.md`:882) -- and `Body.lean` carries the constructor `breaking (invariants) (body)`.
     But read what the model does with it: *"A suspension changes no state."* The names travel
-    as DATA; no line of the semantics says the invariant is suspended, and `SPRACHE.md` §8.3.1
+    as DATA; no line of the semantics says the invariant is suspended, and `LANGUAGE.md` §8.3.1
     records that `D013` does not check it either. *The construct exists at both ends and the
     statement exists at neither* -- and `GABBROV.md` §3 picks exactly this out as the place
     where GabbroV would create value beyond convenience. **The measurement says it cannot, not
@@ -422,7 +422,7 @@ def L41 (w : World) (d : Domain) : Prop :=
     `forever` form: ***"`progress` names WHO ends it -- an assumption about the environment,
     with a falsifier. The watchdog IS the falsifier."***
 
-    The ten fragments carry **exactly three** `progress` clauses -- `FRAGMENTE.md`@708beed:887
+    The ten fragments carry **exactly three** `progress` clauses -- `FRAGMENTS.md`@708beed:887
     (this row), :981 (L46) and :1656 (L66) -- and `PFLICHTEN.md` books **all three as logic
     obligations `L`.** So the misfiling is wider than the two rows that fail to be sayable:
     *the construct that produces all three is documented as an assumption, and the manifest

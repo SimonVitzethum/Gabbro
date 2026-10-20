@@ -1,6 +1,6 @@
 // erwartet: N059
 // Lane E2: the library body calls an `extern fn` -- a foreign body in the
-// hull, refused by structure (dokumente/PRUEFER.md §0c). The call itself still
+// hull, refused by structure (dokumente/CHECKER.md §0c). The call itself still
 // resolves, so the translation refusal fires beside it.
 module gpu::spirv {
 table KernelTab count 1 {

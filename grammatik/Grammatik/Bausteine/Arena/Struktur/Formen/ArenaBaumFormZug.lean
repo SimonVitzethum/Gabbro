@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaBaumFormZug.lean
-  Subject:   THE GUARDED TREE FORMS ON EXECUTED BLOCKS (PLAN-DYNAMISCH.md section 8a.1, third pass): what the executed
+  Subject:   THE GUARDED TREE FORMS ON EXECUTED BLOCKS (PLAN-DYNAMIC.md section 8a.1, third pass): what the executed
              `abschneiden`, `wurzelSetze` and `wurzelAus` of `ArenaBaumFormG.lean` leave, and that they keep `BaumOk`.
 
   The guard of a form (`check`, `narrow`) is taken apart by the recognizer's soundness proof (`execBlock_check_wahr`),

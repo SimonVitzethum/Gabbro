@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Parser/Ausdruck.lean
-  Subject:   T3 PART 1 (PLAN-UEBERSETZUNGSVALIDIERUNG.md section 1): the
+  Subject:   T3 PART 1 (PLAN-TRANSLATION-VALIDATION.md section 1): the
              Gabbro expression parser (SYNTAX.md section 4, `expr`) over
              the Lean lexer, step 1.
 

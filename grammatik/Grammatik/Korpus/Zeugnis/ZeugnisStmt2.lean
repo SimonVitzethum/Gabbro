@@ -1,7 +1,7 @@
 /-
   File:     Grammatik/ZeugnisStmt2.lean
   Subject:  Certificate soundness for the REMAINING statement/block
-            constructors (T1 of PLAN-UEBERSETZUNGSVALIDIERUNG.md, part 2).
+            constructors (T1 of PLAN-TRANSLATION-VALIDATION.md, part 2).
 
   Extends `ZeugnisStmt.lean` (38 of 50 constructors) with the shapes that
   fit the current certificate data (`CertExpr` for the int fragment,

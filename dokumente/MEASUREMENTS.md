@@ -20,7 +20,7 @@ measured**, and a figure without a command is marked as a dated record.
 4. **Gates are set in advance and not moved after the run** (R2); the verdicts below are
    *passed*, *missed* or *invalid*, and *invalid* means the measurement itself broke, not that the
    result was unfavourable. The rules `R1`–`R18` and `W1`–`W29` are in
-   [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md).
+   [`TOOLBOX.md`](TOOLBOX.md).
 5. **Foreign corpora are read-only**: `../caprock-messbasis` (Caprock at `a1bf707`, x86-64 only),
    the Linux tree (`kernel/`, `mm/`), seL4's `l4v`, an external renderer. Nothing is copied into
    this repository, and a figure measured there has no command *here* (§6, "foreign corpora").
@@ -41,7 +41,7 @@ the language.* Each row is a measurement that tested it. "Result" is the lasting
 | M7 | Does the convergence bet hold (new constructs per area fragment fall)? (2026-08-16) | F7–F10: **0 new constructs**, but 3 changed meanings and 1 finding against the thesis | **holds in column 1** (vocabulary), **the trust surface grows** (column 2: «B37»–«B39») |
 | M8 | How many closure uses need a construct? (2026-08-16) | the claimed 89 had no search path; reproducible population 64 (+ 441 closure literals, 270 in iterator adapters); the stored-handler class is **empty** | **gate void**; the item split into "callback with one implementation" (answered) and genericity |
 | M9 | Where does the proof effort of seL4 sit? (l4v `f4940273`, ARM only, 2026-08-14) | 239 458 lines of functional correctness: invariants 32.1 %, abstract → executable 40.1 %, executable → C 27.8 %; plus 56 323 (+23.5 %) for security theorems | the "19.5 : 1" becomes checkable: ~40 % falls away structurally, ~28 % shifts into trust, ~32 % stays as invariant work (§3.5) |
-| M10 | Does a second corpus agree? (K2: Linux `kernel/`+`mm/`, 2026-08-18) | `BUG_ON`/`WARN_ON` 2 034, `goto` 2 669, RCU 578 sites; 4 of 5 reconstructed fragments carry with no remainder | **found a class the first corpus never showed (RCU)**; independence disputed afterwards (`FRAGMENTE.md`) |
+| M10 | Does a second corpus agree? (K2: Linux `kernel/`+`mm/`, 2026-08-18) | `BUG_ON`/`WARN_ON` 2 034, `goto` 2 669, RCU 578 sites; 4 of 5 reconstructed fragments carry with no remainder | **found a class the first corpus never showed (RCU)**; independence disputed afterwards (`FRAGMENTS.md`) |
 | M11 | Does the generated code lose to handwritten C? (C back end, 2026-08-20) | four loads, none over 25 %: format reader 1.244, `narrow … else` 1.062, `accumulates min` 1.02, table access 0.99 (Gabbro / hand) | **passes, narrowly**; two of my own set-ups were strawmen in my favour; legacy C back end — not a claim about the LLVM back end (§3.7) |
 | M12 | How long does the Lean guardian take? (2026-09-01) | 457–482 s for 121 units (3.78–3.99 s per unit); the deadline of 600 s has 20 % room | **not a time reserve but a corpus reserve** (§3.8) |
 
@@ -57,7 +57,7 @@ and is **not guarded today**.
 | Quantity | Command | Last value (date) |
 |---|---|---|
 | Poison probes / clean examples | `ls beispiele/gift/*.gab \| wc -l`; `ls beispiele/*.gab \| wc -l` | 898 / 170 (2026-10-17, measured while writing this) |
-| Fragments clean / lowering / pierced | retired `zaehle-fragmente` | 9 / 9 / 9 of 10; F3 is the exception (`FRAGMENTE.md` §3) (historical) |
+| Fragments clean / lowering / pierced | retired `zaehle-fragmente` | 9 / 9 / 9 of 10; F3 is the exception (`FRAGMENTS.md` §3) (historical) |
 | Mutation anchors that bite | retired `mutiere-pruefer` | **388 of 422** (2026-10-17: 34 anchors measure nothing because the checker moved under them; the full run of 2026-09-03 caught 388 of 388 valid mutations, 375 of 376 under `cargo test` alone) (historical) |
 | Mutation run over the whole checker | retired `mutiere-pruefer` | 13 min 20 s measured on 377 mutations (historical; not re-measured for the later catalogue) |
 | Checking passes, pass sentences | `gabbro paesse` | 12 passes; **216 sentences: 208 measured, 2 argued, 6 conjectured, 0 proved** (2026-10-17) |
@@ -375,7 +375,7 @@ unproved 16 → 15 (two entries split because half provable and half over a noth
 The counting rule for the bookkeeping invariant was broken by the first assignment (the aggregation
 `refcount == count(s in slots : s.object == o)` and the sibling-chain mutuality were *logic*
 obligations that the language could not even let the human write); `count x in <domain> : pred`
-is in the grammar today (§2 of `FRAGMENTE.md`), the cross-table half never carried (a foreign table
+is in the grammar today (§2 of `FRAGMENTS.md`), the cross-table half never carried (a foreign table
 name is a place).
 
 ### «B37» — linearity is not an order (F7, 2026-08-16/17)
@@ -397,7 +397,7 @@ It stays (proved, covered, free at run time, and the machinery the `own` decisio
 ### Other cited anchors
 * **«B13»–«B41»** and `GP1`–`GP3` (the counter-check findings of the P0.4 probe were renamed from
   `G1`–`G3` on 2026-08-16 because they collided with the grammar findings of the same name): their
-  status register is §2 of [`FRAGMENTE.md`](FRAGMENTE.md).
+  status register is §2 of [`FRAGMENTS.md`](FRAGMENTS.md).
 * **The anti-catalogue touchstone** (P0.4): of the 14 gaps in the `vtd` block a designer's grammar
   needed 3 additional words (RMW state bits, register bank at a run-time base, conditional
   compilation — 335 `cfg(feature)` sites), *not twelve* — passed, with the caveat that four of the
@@ -421,7 +421,7 @@ was unfavourable.
 | The 89 closures | no search path; reproducible 64 (and the gate void) |
 | Plumbing classes, first fresh count `N_neu = 5` → 4 → 3 | refined by reassessment of *Race and Publication* and *Frame*; population gate missed |
 | The weight formula / second metric | retracted 2026-08-19 (§3.5) |
-| `H = 0` as a coverage claim | an adversarial audit and an independent re-judgement (2026-09-04) refuted the split criterion that bought it (`FRAGMENTE.md`) |
+| `H = 0` as a coverage claim | an adversarial audit and an independent re-judgement (2026-09-04) refuted the split criterion that bought it (`FRAGMENTS.md`) |
 | `Unbekannt` as "no finding" for a literal wider than `i128` | an acquittal that read like caution (`M139`) |
 | "The comparison of two counts of 'before and after'" in the guardian register | a Vorher/Nachher row is an event, not a state |
 
@@ -475,7 +475,7 @@ that day:
 
 | Clause guard, class counts of 2026-08-18 | | |
 |---|---|---|
-| ZUSAGE | **17** | eine Aussage über Verhalten, die kein Pass hält |
+| ZUSAGE | **17** | a statement about behaviour that no pass holds |
 
 | What the sample run drew (2026-08-15, 40 of 377 sites) | |
 |---|---|
@@ -494,7 +494,7 @@ that day:
 
 | Number | stood | is | where | command |
 |---|---:|---:|---|---|
-| Prämissen ohne Pass | 7 | **9** | `PLAN.md`, «NL» | `gabbro schablonen` |
+| Premises without a pass | 7 | **9** | `PLAN.md`, «NL» | `gabbro schablonen` |
 | **ZUSAGE ohne Leser** | 13 | **0** | `PLAN.md`, «NL» | retired `pruefe-klauseln` (not guarded today) |
 
 | | Reassignment | Lane B | merged |

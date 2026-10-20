@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenFaden.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md): hosted threads without a C
+             dokumente/PLAN-TRANSLATION-VALIDATION.md): hosted threads without a C
              library (C-free lane, 2026-09-30).
 
   Rows of `crates/gabbro-check/src/schablonen.rs`:

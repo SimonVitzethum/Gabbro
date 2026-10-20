@@ -11,7 +11,7 @@
 //
 // ## Zwei Entscheidungen, die die Sprache vorher nicht traf
 //
-// `SPRACHE.md` §11.4 sagte seit jeher *„one cell per core"* und nannte die Zahl **nirgends**.
+// `LANGUAGE.md` §11.4 sagte seit jeher *„one cell per core"* und nannte die Zahl **nirgends**.
 // Der Erzeuger haette `NCORES` raten muessen -- genau das Raten, gegen das `C001` steht.
 // Seit dem 2026-08-18 steht sie da: `per cpu NKERNE`. Die Woerter gab es schon.
 //

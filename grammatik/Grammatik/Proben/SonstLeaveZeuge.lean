@@ -1,7 +1,7 @@
 /-
   Gabbro/Grammatik/SonstLeaveZeuge.lean
 
-  **Witness: a `leave` in an `else` branch reaches the loop** (SATZKARTE
+  **Witness: a `leave` in an `else` branch reaches the loop** (THEOREM-MAP
   §13.5 item 4, closed in §15.3).
 
   Before 2026-09-13, machine G replaced the whole residue by the `else`

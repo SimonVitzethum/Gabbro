@@ -1,6 +1,6 @@
 // 134 -- **The three `exchange update` bodies that are ONE instruction.**
 //
-// `SPRACHE.md` Part III §1 promises `atomic_fetch_*` where an `update` body
+// `LANGUAGE.md` Part III §1 promises `atomic_fetch_*` where an `update` body
 // corresponds to a primitive, and the bounded CAS loop otherwise. Until
 // 2026-09-15 the emitter had only the loop -- lane 201 measured it on the
 // runtime's own ticket lock. This file is the other half: `t | m`, `t & m`

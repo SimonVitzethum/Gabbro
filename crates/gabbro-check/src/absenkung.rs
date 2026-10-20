@@ -13,7 +13,7 @@
 //!
 //! The bound `18` is the measured maximum `17` (`Schleife`, subform
 //! `traverse over descendants of`, `emit.rs:8523-8560`) plus one headroom
-//! (`dokumente/PRUEFER.md`, decision
+//! (`dokumente/CHECKER.md`, decision
 //! `messung/ABSENKUNG-SCHRANKEN-ENTSCHEID.md`). This module ENFORCES that
 //! bound on the emitter side: it counts the C statements the emitter
 //! produces for exactly one primitive and refuses the primitive — by name,
@@ -73,7 +73,7 @@
 //! ## Counting rules (the same lexer as the measurement)
 //!
 //! One `;` in emitted C text is one statement, with three exclusions taken
-//! from `dokumente/PRUEFER.md` section 1, plus a fourth the
+//! from `dokumente/CHECKER.md` section 1, plus a fourth the
 //! measurement never needed but the enforcement cannot do without:
 //!
 //! 1. `for (...; ...; ...)` header separators are not statements.

@@ -1,94 +1,93 @@
-# Gabbro — Arbeitsanweisungen
+# Gabbro — working instructions
 
-**Betriebshandbuch: [`AGENTS.md`](AGENTS.md)** — Stand, Ziel, Abläufe (Bahnen, Merge, Push),
-Nummernkreise und die teuren Fallen. Die Arbeitsliste ist `TODO.md`. Das Handbuch wird hier mitgeladen:
+**Operating manual: [`AGENTS.md`](AGENTS.md)** — state, goal, procedures (lanes, merge, push),
+number ranges and the expensive pitfalls. The work list is `TODO.md`. The manual is loaded here:
 
 @AGENTS.md
 
-*Gekürzt am 2026-10-17: die Wächter-Anekdoten (Mutationslauf, Zahlenwächter, Abbruch-Regeln) gehören zu
-den 80 Wächtern, die es nicht mehr gibt. Sie stehen in Git (`git log -p CLAUDE.md`); was davon als
-Regel gilt, steht unten.*
+*Shortened on 2026-10-17: the guardian anecdotes (mutation run, number guardians, abort rules) belong to
+the 80 guardians that no longer exist. They are in git (`git log -p CLAUDE.md`); what still counts as a
+rule is stated below.*
 
-## Sprache und Syntax folgen dem Lean-Modell (Simon, 2026-10-17)
+## Language and syntax follow the Lean model (Simon, 2026-10-17)
 
-**Das Lean-Modell (`grammatik/`) ist die einzige Quelle für Sprache und Syntax.** Wenn irgendetwas an der
-Sprache oder ihrer Syntax geändert wird (ein Konstrukt, eine Klausel, eine Typregel, eine Regel, die eine
-Form annimmt oder ablehnt), steht es ZUERST im Lean-Modell (Maschine G, `Akzeptiert`, `gabbro_ziel` bleibt
-auf `propext`/`Classical.choice`/`Quot.sound`, ein geprüfter `Spec.lean`-Diff, wenn die Aussage wandert).
-Danach folgen Prüfer, Compiler und `SYNTAX.md`/`SPRACHE.md` — nie umgekehrt. Nimmt der Prüfer etwas an, das
-das Modell nicht kennt, dann irrt der Prüfer. Eine reine Absenkung einer vorhandenen Form (LLVM) ändert
-die Sprache nicht und fällt nicht darunter.
+**The Lean model (`grammatik/`) is the single source for language and syntax.** Whenever anything about the
+language or its syntax changes (a construct, a clause, a type rule, a rule that accepts or rejects a
+form), it goes FIRST into the Lean model (machine G, `Akzeptiert`, `gabbro_ziel` stays on
+`propext`/`Classical.choice`/`Quot.sound`, a reviewed `Spec.lean` diff when the statement moves).
+Only then follow the checker, the compiler and `SYNTAX.md`/`LANGUAGE.md` — never the other way round. If the
+checker accepts something the model does not know, the checker is wrong. A pure lowering of an existing form
+(LLVM) does not change the language and is not covered by this rule.
 
-## Kein Legacy in Compiler, Prüfer und Parser (Simon, 2026-10-17, feste Regel)
+## No legacy in the compiler, the checker and the parser (Simon, 2026-10-17, fixed rule)
 
-**Compiler, Prüfer und Parser tragen kein Legacy: nur der neueste Stand.** Wird etwas ersetzt, wird das Alte
-gelöscht (die Historie steht in Git), nicht daneben gehalten: keine Kompatibilitäts-Schichten, keine
-deprecated-Pfade, keine alten Namen oder Flag-Aliase, keine Absagecodes für Dinge, die es nicht mehr gibt,
-keine Reste des C-Emitters (C-Namensregeln, C-Schablonen, `emit.rs`-Verweise). Eine Änderung ist erst fertig,
-wenn sie ihren Vorgänger entfernt hat.
+**The compiler, the checker and the parser carry no legacy: only the newest state.** What is replaced is
+deleted (the history is in git), not kept beside the new: no compatibility layers, no deprecated paths,
+no old names or flag aliases, no refusal codes for things that no longer exist, no remnants of the C emitter
+(C naming rules, C templates, `emit.rs` references). A change is finished only when it has removed its
+predecessor.
 
-## Es gibt genau vier Wächter
+## There are exactly four guardians
 
-| Wächter | Gegenstand | Was er prüft |
+| Guardian | Subject | What it checks |
 |---|---|---|
-| `instrumente/pruefe-lean.py` | das Lean-Modell (`grammatik/`) | `lake build`, `gabbro_ziel` nur auf `propext`/`Classical.choice`/`Quot.sound`, kein `sorry`/`admit`/`native_decide`/`axiom`, höchstens 20 Einträge je Ordner |
-| `instrumente/pruefe-llvm.py` | der LLVM-Compiler | `cargo test --test llvm`, neun Programme als Binärdatei auf x86_64 und aarch64 (qemu) mit gleichem Ergebnis, die Halde bleibt bis zur Belegung frei (keine Lese/Schreib-Abbildung über 1 GiB) |
-| `instrumente/pruefe-pruefer.py` | der Prüfer (Rust) | `cargo test --workspace --no-fail-fast`, Satzregister, Kennungen nur einmal vergeben |
-| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build`, Beweise ohne `sorry`, `gabbro prove` GREEN, kein GREEN ohne Lean |
+| `instrumente/pruefe-lean.py` | the Lean model (`grammatik/`) | `lake build`, `gabbro_ziel` only on `propext`/`Classical.choice`/`Quot.sound`, no `sorry`/`admit`/`native_decide`/`axiom`, at most 20 entries per folder |
+| `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm`, nine programs as a binary on x86_64 and aarch64 (qemu) with the same result, the heap stays free until used (no read/write mapping above 1 GiB) |
+| `instrumente/pruefe-pruefer.py` | the checker (Rust) | `cargo test --workspace --no-fail-fast`, sentence register, identifiers assigned only once |
+| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build`, proofs without `sorry`, `gabbro prove` GREEN, no GREEN without Lean |
 
-`./instrumente/abnahme.py` fährt alle vier nacheinander (`--lean`, `--llvm`, `--pruefer`, `--gabbrov`
-je einzeln). Ausgang: `0` gemessen und grün, `1` gemessen und rot, `2` **nichts oder nicht alles gemessen** —
-das ist kein Grün. Hilfsteile (Satzregister, Layout-Werkzeug, Modelldeckung, `baue-llvm.sh`) liegen in
-`instrumente/teile/` und laufen nur über die vier. **Ein fünfter Wächter wird nicht gebaut**: was neu geprüft
-werden soll, wird ein Test in `cargo test`, ein Lean-Satz oder eine Stufe in einem der vier.
+`./instrumente/abnahme.py` runs all four one after the other (`--lean`, `--llvm`, `--pruefer`, `--gabbrov`
+each alone). Exit code: `0` measured and green, `1` measured and red, `2` **nothing or not everything
+measured** — that is not a green. Helper parts (sentence register, layout tool, model coverage, `baue-llvm.sh`)
+live in `instrumente/teile/` and run only through the four. **A fifth guardian is not built**: whatever is
+to be checked anew becomes a test in `cargo test`, a Lean theorem or a stage in one of the four.
 
-## Alles läuft lokal, mit Blick auf den Speicher
+## Everything runs locally, with an eye on memory
 
-Alles, was rechnet, läuft in diesem Checkout: jeder Lean-Bau, jeder `cargo`-Lauf, jede Abnahme. Es gibt
-keine zweite Maschine mehr (seit 2026-09-27); Rezepte für Server oder SSH in alten Notizen sind Historie.
-`git push` geht über `~/.ssh/id_ed25519_github`.
+Everything that computes runs in this checkout: every Lean build, every `cargo` run, every acceptance run.
+There is no second machine any more (since 2026-09-27); recipes for servers or SSH in old notes are history.
+`git push` goes through `~/.ssh/id_ed25519_github`.
 
-* **Ein schwerer Lauf zur Zeit, `free -g` daneben.** Schwer sind `cargo build`, `cargo test`, `lake build`
-  und die Abnahme. *Ein Abbruch aus Speichermangel ist kein Befund.*
-* **`cargo test` und ein Lean-Lauf dürfen nicht gleichzeitig in EINEM Baum laufen:** `cargo test` ruft
-  `gabbro prove`, das baut mit `lake` neu und ersetzt die `.olean`, die laufende `lean`-Prozesse lesen
-  (gemessen: 52 Phantomfehler `Body.olean … does not exist`).
-* **`cargo test` immer mit `--no-fail-fast`**, sonst meldet es nur die erste gefallene Probe. Wer zählen
-  will, darf nicht beim ersten Treffer abbrechen (gilt für jede Messung, auch `set -e` in Skripten).
-* **`-rlpgoD` und nicht `-a`, wenn ein von `cargo` gebauter Baum kopiert wird:** `cargo` entscheidet
-  Aktualität nach Zeitstempel; ohne das `t` baut es aus einer Mischung.
-* **Nicht mit `pgrep -f`/`pkill -f` warten:** das Muster findet die eigene Kommandozeile. Auf einen Lauf
-  wartet man mit einer Datei, deren letzte Zeile man liest, oder mit `ps -C`.
-* `rustc`/`cargo` liegen in `~/.cargo/bin`; Lean über `elan` (`ELAN_TOOLCHAIN` darf nicht gesetzt sein,
-  `lean-bau`/`lean-probe` entfernen es).
+* **One heavy run at a time, `free -g` beside it.** Heavy are `cargo build`, `cargo test`, `lake build`
+  and the acceptance run. *An abort for lack of memory is not a finding.*
+* **`cargo test` and a Lean run must not run at the same time in ONE tree:** `cargo test` calls
+  `gabbro prove`, which rebuilds with `lake` and replaces the `.olean` files that running `lean` processes
+  read (measured: 52 phantom errors `Body.olean … does not exist`).
+* **Always `cargo test` with `--no-fail-fast`**, otherwise it reports only the first failed probe. Whoever
+  wants to count must not stop at the first hit (applies to every measurement, also `set -e` in scripts).
+* **`-rlpgoD` and not `-a` when a tree built by `cargo` is copied:** `cargo` decides freshness by
+  timestamp; without the `t` it builds from a mixture.
+* **Do not wait with `pgrep -f`/`pkill -f`:** the pattern finds its own command line. Wait for a run with a
+  file whose last line you read, or with `ps -C`.
+* `rustc`/`cargo` live in `~/.cargo/bin`; Lean through `elan` (`ELAN_TOOLCHAIN` must not be set,
+  `lean-bau`/`lean-probe` remove it).
 
-## Agenten
+## Agents
 
-* **Jeder Agent bekommt sein EIGENES Verzeichnis** (eigener Worktree neben dem Checkout, nie dieser
-  Checkout) und sein eigenes Kratzverzeichnis. Zwei Läufe in einem Baum messen eine Mischung.
-* **Der Arbeitsbaum eines Agenten steht vor Laufbeginn auf `master`** (`--ff-only`-Vorlauf kostet nichts).
-* **Beide Bäume in ein Agentenverzeichnis:** `crates/` und `grammatik/`; `programmlogik/` braucht seinen
-  warmen `.lake` (Mathlib), sonst hängt `cargo test` (`gabbro prove` geht klonen). Ein veralteter
-  `.lake` ist schlimmer als keiner.
-* Höchstens zwei Opus-Agenten gleichzeitig (AGENTS.md §6).
+* **Every agent gets its OWN directory** (its own worktree beside the checkout, never this checkout) and
+  its own scratch directory. Two runs in one tree measure a mixture.
+* **An agent's working tree is on `master` before the run starts** (a `--ff-only` catch-up costs nothing).
+* **Both trees into an agent directory:** `crates/` and `grammatik/`; `programmlogik/` needs its warm
+  `.lake` (Mathlib), otherwise `cargo test` hangs (`gabbro prove` goes cloning). A stale `.lake` is worse
+  than none.
+* At most two Opus agents at a time (AGENTS.md §6).
 
-## Was sonst gilt
+## What else applies
 
-* **Arbeitssprache ist ENGLISCH, alles außer dem Gespräch:** Quelltext-Kommentare, alle `.md`,
-  Commit-Nachrichten, Diagnostik, `gabbro hilfe`. Deutsch bleibt nur das Gespräch mit dem Ordner.
-  Die Commit-Historie wird nicht umgeschrieben.
-* **Höchstens 30 `.md`-Dateien im Repo** (Stand 2026-10-17: 27). Neue Dokumente nur, wenn ein bestehendes
-  keinen Platz hat; Berichte, Urteile und Zwischenstände gehören in Git, nicht in den Baum.
-* **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19; committet nur
-  gestagte Änderungen).
-* **Caprock liegt schreibgeschützt in `../caprock-messbasis`: nie hineincommitten.** Korrekturvorschläge
-  stehen im Protokoll, nicht im fremden Baum.
-* **`aarch64` bleibt versiegelt** („blockiert — Abstammung"), kein dritter Anlauf — für die alte
-  C-Emitter-Linie. Der LLVM-Weg trägt beide Ziele (`x86_64`, `aarch64`); der Lean-Teil der Hardware läuft
-  über `ARM-PLAN.md`.
-* **Der Isabelle-Teil ist nach Lean übertragen, die `.thy`-Menge ist eingefroren** (15 Theorien in
-  `grammatik/Beweise/` gegen 15 Lean-Dateien in `grammatik/Grammatik/Isabelle/`). Ein neuer Beweis gehört
-  nach Lean. Isabelle2025-2 liegt unter `~/Isabelle2025-2` (ohne `sudo`, eigenes JDK, kein AFP).
-* **Ein Wächter, der abbricht, liest sich wie einer, der durchging.** Wer einen Lauf rot oder abgebrochen
-  findet, sucht die Ursache zuerst in dem, was NICHT mehr gedruckt wurde, und misst die Basis in einem
-  Wegwerf-Worktree vor dem Merge nach, statt zu schätzen.
+* **The working language is ENGLISH, everything except the conversation:** source comments, all `.md`
+  files **and their file names**, commit messages, diagnostics, `gabbro hilfe`. German remains only for the
+  conversation with Simon in this checkout. The commit history is not rewritten.
+* **At most 30 `.md` files in the repo** (state 2026-10-20: 28). New documents only if no existing one has
+  room; reports, verdicts and interim states belong in git, not in the tree.
+* **Commit messages only through `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19; commits only staged
+  changes).
+* **Caprock lies read-only in `../caprock-messbasis`: never commit into it.** Correction proposals go in
+  the log, not in the foreign tree.
+* **`aarch64` stays sealed** ("blocked — lineage"), no third attempt — for the old C-emitter line. The LLVM
+  path carries both targets (`x86_64`, `aarch64`); the Lean part of the hardware runs through `ARM-PLAN.md`.
+* **The Isabelle part has been transferred to Lean, the `.thy` set is frozen** (15 theories in
+  `grammatik/Beweise/` against 15 Lean files in `grammatik/Grammatik/Isabelle/`). A new proof belongs in
+  Lean. Isabelle2025-2 lives under `~/Isabelle2025-2` (without `sudo`, own JDK, no AFP).
+* **A guardian that aborts reads like one that passed.** Whoever finds a run red or aborted looks for the
+  cause first in what was NOT printed any more, and measures the base in a throwaway worktree before the
+  merge instead of guessing.

@@ -8,17 +8,17 @@ kernels, drivers and ordinary programs.
 |---|---|
 | the notation (EBNF, closed vocabulary, one Lean constructor per production) | [`SYNTAX.md`](SYNTAX.md) — machine-read by guardians; **this file does not repeat it** |
 | a first program | [`TUTORIAL.md`](TUTORIAL.md) |
-| what is proved, and the goal theorem | [`BEWEIS.md`](BEWEIS.md) |
-| the checker: every pass, rule and diagnostic code | [`PRUEFER.md`](PRUEFER.md) |
+| what is proved, and the goal theorem | [`PROOF.md`](PROOF.md) |
+| the checker: every pass, rule and diagnostic code | [`CHECKER.md`](CHECKER.md) |
 | why the design is the way it is | [`DESIGN.md`](DESIGN.md) |
-| code generation | [`LLVM-BACKEND.md`](LLVM-BACKEND.md) (current), [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md) (the C backend, removed 2026-10-17) |
-| floats, heap, hardware | [`GLEITKOMMA.md`](GLEITKOMMA.md), [`PLAN-DYNAMISCH.md`](PLAN-DYNAMISCH.md), [`PLAN-HARDWARE.md`](PLAN-HARDWARE.md) |
+| code generation | [`LLVM-BACKEND.md`](LLVM-BACKEND.md) (current), [`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md) (the C backend, removed 2026-10-17) |
+| floats, heap, hardware | [`FLOATING-POINT.md`](FLOATING-POINT.md), [`PLAN-DYNAMIC.md`](PLAN-DYNAMIC.md), [`PLAN-HARDWARE.md`](PLAN-HARDWARE.md) |
 
 **Standing words.** *Checked* means a pass of the Rust checker refuses the opposite, by a
 diagnostic code. *Modelled* means the construct has semantics in the Lean model. *Not built* is
 said where a construct is only decided. Where a code is cited it exists in `crates/`; a claim
 beyond that is marked. The checker is unverified; what is proved, over which statement, is
-[`BEWEIS.md`](BEWEIS.md)'s subject.
+[`PROOF.md`](PROOF.md)'s subject.
 
 ---
 
@@ -39,7 +39,7 @@ does and does not carry.
 
 **What may be said:** the goal theorem is proved over the Lean model, with a witness. **What may
 not:** "Gabbro is verified" — the checker inside the statement is the Lean checker, and the
-bridge to the Rust checker and the emitted binary is open ([`BEWEIS.md`](BEWEIS.md)).
+bridge to the Rust checker and the emitted binary is open ([`PROOF.md`](PROOF.md)).
 
 ---
 
@@ -282,7 +282,7 @@ the NaN path; two comparisons whose intersection is finite carry the same fact. 
 tracks an interval plus "can be NaN / infinite"; it does **not** promise numerical accuracy.
 
 The semantics is a concrete kernel-computable IEEE-754 model with correspondence lemmas for the
-C forms ([`GLEITKOMMA.md`](GLEITKOMMA.md)). Contraction (fused multiply-add) changes results, so
+C forms ([`FLOATING-POINT.md`](FLOATING-POINT.md)). Contraction (fused multiply-add) changes results, so
 the program's hardware `profile` (§12.2) pins `fp_contract off`; a profile with another value
 contradicts the float rules. The legacy C backend pins `-std=c11 -ffp-contract=off` and asserts
 `FLT_EVAL_METHOD == 0`. `libm` functions are **not** in the language: each would be a shipped
@@ -1136,9 +1136,9 @@ is refused **by name**, not guessed (`Y101`–`Y106` for LLVM; the removed C emi
   linked runtime** — locks, threads and arenas are generated IR over raw kernel gates.
   [`LLVM-BACKEND.md`](LLVM-BACKEND.md).
 * **C11 emitter — removed 2026-10-17** (tag `archiv/c-emitter-2026-10-17`).
-  [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md).
+  [`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md).
 * **Native machine code with translation validation** is the long-term path and needs a Lean
-  model of the CPU first ([`PLAN-UEBERSETZUNGSVALIDIERUNG.md`](PLAN-UEBERSETZUNGSVALIDIERUNG.md)).
+  model of the CPU first ([`PLAN-TRANSLATION-VALIDATION.md`](PLAN-TRANSLATION-VALIDATION.md)).
 
 **What is proved is not checked at run time.** Ranges, indices, leafness, phases, tokens —
 all M1/M2 material is **absent** from the output, not switched off. Runtime checks exist at
@@ -1321,7 +1321,7 @@ Lean: the generation is a type index (a stale index does not typecheck); `alloc`
 below the bound, the first `lo` allocations after a reset never fail, indices are contiguous;
 `FreiZustand` adds the free list with proved reuse and no double free. The G exporter refuses
 the newer statements by name (`LG005`) — *open*: `free` across function boundaries, aliases
-outside the tracked discipline, the full export. See [`PLAN-DYNAMISCH.md`](PLAN-DYNAMISCH.md).
+outside the tracked discipline, the full export. See [`PLAN-DYNAMIC.md`](PLAN-DYNAMIC.md).
 
 ---
 
@@ -1362,8 +1362,8 @@ not at all. `gabbro paesse` prints each pass with the sentence it owes.
 Every pass has a speech test in both directions (poison falls, clean passes) **plus a mutation
 probe on its emission**. Three of the twelve are fully built, nine *carried* — what a pass can say
 it says, and where the rest lies stands beside it with an address (axiom layer, template, or
-decision). Where each pass stops is [`PRUEFER.md`](PRUEFER.md)'s subject. The checker never
-verifies itself; the goal theorem names what it does and does not say ([`BEWEIS.md`](BEWEIS.md)).
+decision). Where each pass stops is [`CHECKER.md`](CHECKER.md)'s subject. The checker never
+verifies itself; the goal theorem names what it does and does not say ([`PROOF.md`](PROOF.md)).
 
 ---
 
@@ -1410,4 +1410,4 @@ kept. Older spellings resolve as:
 | Part IV (`port`, `Has`, catalogue, `boot`) | §10.3, §12.2–§12.4 |
 | Part V (induction), Part VI (step promises) | §20 |
 | "§9: `rank`, `held`, `protects`" (lock discipline) | §11.2 |
-| `SPRACHE.md` § *the sixth address space* | §10.3 |
+| `LANGUAGE.md` § *the sixth address space* | §10.3 |

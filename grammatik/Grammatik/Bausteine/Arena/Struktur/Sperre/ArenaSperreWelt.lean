@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreWelt.lean
-  Subject:   THE WITNESS DECLARATION OF A SHARED ARENA (PLAN-DYNAMISCH.md section 8a.2): the four-slot arena of
+  Subject:   THE WITNESS DECLARATION OF A SHARED ARENA (PLAN-DYNAMIC.md section 8a.2): the four-slot arena of
              `ArenaDynZeuge.lean` again, now SHARED -- one lock `()` guards the table and all four words
              (`braucht`/`gbraucht` name `Held(())`), so every access needs the lock in the hand and the arena
              is the invariant of that lock.

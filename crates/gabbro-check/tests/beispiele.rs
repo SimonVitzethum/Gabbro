@@ -169,7 +169,7 @@ fn jedes_gift_faellt_mit_seinem_code() {
         // the types agree, at most one side defines, and C11 calls that a legal repetition.
         // `lock TOR` beside `extern fn TOR_nimm()`; `boot b` beside
         // `extern fn gabbro_boot_b()`; `check c` beside `extern fn pruefe_c()`. Measured and
-        // RUN in `dokumente/PRUEFER.md`: taking the lock executes the writer's body,
+        // RUN in `dokumente/CHECKER.md`: taking the lock executes the writer's body,
         // and the writer's own archive member is never linked.
         //
         // For those, `// erwartet: N042` alone would be one-sided. It says the checker

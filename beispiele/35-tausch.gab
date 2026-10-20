@@ -11,7 +11,7 @@
 // nicht auf der sicheren Seite: er erzeugt ein Programm, das die Quelle nicht sagt.
 //
 // **Was hier NICHT steht, ist die andere Form.** `exchange update(v) { … }` bleibt `C001`,
-// und der Grund steht in `SPRACHE.md` selbst: die Absenkung ist `atomic_fetch_*` fuer eine
+// und der Grund steht in `LANGUAGE.md` selbst: die Absenkung ist `atomic_fetch_*` fuer eine
 // Grundform (`t+1`, `t-1`, `t|m`, `t&m`) und *sonst die **beschraenkte** CAS-Schleife,
 // „emittiert als `retry bounded NCORES * K ops on_exceeded contention`"*. `NCORES` ist
 // dieselbe unentschiedene Groesse wie bei `accumulates` ohne `per cpu N`, und den Ausgang

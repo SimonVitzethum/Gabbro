@@ -1,6 +1,6 @@
 # Gabbro in one sitting
 
-**This is not a language reference.** [`dokumente/SPRACHE.md`](SPRACHE.md) is the
+**This is not a language reference.** [`dokumente/LANGUAGE.md`](LANGUAGE.md) is the
 language and [`dokumente/SYNTAX.md`](SYNTAX.md) is the grammar; both are complete
 and neither will teach you what to type first.
 
@@ -45,7 +45,7 @@ irreducible are marked. *Open that file beside this one.*
 > **And the skeleton `gabbro new` writes calls no C function.** Gabbro has no standard library
 > and no libc of its own: an OS call is the program's own `syscall` item (an explicit number,
 > registers in and out, an `abi`), and anything larger -- HTTP, TLS -- is written in Gabbro,
-> neither built in nor forbidden ([`SPRACHE.md`](SPRACHE.md) §16). The `extern fn putchar`
+> neither built in nor forbidden ([`LANGUAGE.md`](LANGUAGE.md) §16). The `extern fn putchar`
 > examples below are checked, not linked: an `extern fn` names a symbol some other object has to
 > provide.
 
@@ -94,7 +94,7 @@ line**, and the count will stay at zero on its own.
 
 A `.gab` file is source. A `.bau` file is a **manifest** — which sources form a unit, whether
 that unit is a `program` or an `object`, which C compiler builds it (the legacy C path; see
-section 1), where the artefacts go ([`BAUSYSTEM.md`](BAUSYSTEM.md)).
+section 1), where the artefacts go ([`BUILD-SYSTEM.md`](BUILD-SYSTEM.md)).
 `gabbro check` takes `.gab` paths; `gabbro build` takes the `.bau`.
 
 ---
@@ -531,7 +531,7 @@ error: [N041] `double` is a name C has already taken
 *This paragraph was written because `double` was the first name this tutorial reached for in
 section 4.* The measured table of names — C keywords, the standard library, and what
 `cc -std=c11 -Wall -Wextra -Werror` reserves — is in
-[`dokumente/C-SPEICHERMODELL.md`](../dokumente/C-SPEICHERMODELL.md).
+[`dokumente/C-MEMORY-MODEL.md`](../dokumente/C-MEMORY-MODEL.md).
 
 ---
 
@@ -539,12 +539,12 @@ section 4.* The measured table of names — C keywords, the standard library, an
 
 | you want | read |
 |---|---|
-| the language, clause by clause | [`dokumente/SPRACHE.md`](SPRACHE.md) |
+| the language, clause by clause | [`dokumente/LANGUAGE.md`](LANGUAGE.md) |
 | the grammar, as a grammar | [`dokumente/SYNTAX.md`](SYNTAX.md) |
 | what the checker checks, and what it does not | `gabbro passes --je-satz` |
-| what a build looked at and what it skipped | [`dokumente/BAUSYSTEM.md`](BAUSYSTEM.md) |
-| the one rule about pointers (below) | [`dokumente/SPRACHE.md`](SPRACHE.md) §5 and [`A1-OWN-PAPER.md`](A1-OWN-PAPER.md) |
-| code generation: LLVM (current), C11 (deprecated) | [`dokumente/LLVM-BACKEND.md`](LLVM-BACKEND.md), [`dokumente/C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md) |
+| what a build looked at and what it skipped | [`dokumente/BUILD-SYSTEM.md`](BUILD-SYSTEM.md) |
+| the one rule about pointers (below) | [`dokumente/LANGUAGE.md`](LANGUAGE.md) §5 and [`A1-OWN-PAPER.md`](A1-OWN-PAPER.md) |
+| code generation: LLVM (current), C11 (deprecated) | [`dokumente/LLVM-BACKEND.md`](LLVM-BACKEND.md), [`dokumente/C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md) |
 | 170 worked programs | `beispiele/` — and `beispiele/gift/` is 898 programs that must FAIL |
 | what a translation rests on | `gabbro certificate <file.gab>` |
 | what a human still owes | `gabbro obligations <file.gab>` |
@@ -555,7 +555,7 @@ parameters is writable (`R014`): the root of a pointer is the parameter it came 
 the checker cannot trace is *unknown and equals every root*, and two read-only views are free.
 A function that assumes two of its pointer parameters distinct and is exported says so as a
 named assumption (`R015`, a hint). `own` is a *loan* of ownership for the length of a call, not
-a note on the signature ([`SPRACHE.md`](SPRACHE.md) §5, design record
+a note on the signature ([`LANGUAGE.md`](LANGUAGE.md) §5, design record
 [`A1-OWN-PAPER.md`](A1-OWN-PAPER.md)).
 
 **And the last two rows of the table above are the point of the language.** Gabbro is a systems language whose

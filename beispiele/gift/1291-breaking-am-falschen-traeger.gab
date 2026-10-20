@@ -4,7 +4,7 @@
 // `beispiele/53-zwei-orte.gab` with one word changed: the block writes the two places of
 // `Endpunkt` and names `faden_frei`, an invariant of `Faden`. `D013` is satisfied -- the
 // name resolves -- and until 2026-09-26 the file passed with zero errors: *"a `breaking`
-// on the wrong-but-existing invariant still passes"* (SPRACHE.md §8.3.1). The block writes
+// on the wrong-but-existing invariant still passes"* (LANGUAGE.md §8.3.1). The block writes
 // no carrier of `faden_frei` and calls nothing, so it cannot let it rest: `N531`.
 module gift::breaking_am_falschen_traeger {
 

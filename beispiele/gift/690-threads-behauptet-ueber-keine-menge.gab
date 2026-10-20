@@ -22,7 +22,7 @@
 // > that shape is worth.
 //
 // **What `D024` does NOT do.** It does not give `threads` a domain.
-// `dokumente/PRUEFER.md` §2.3 and `PLAN.md` §9.1 book that as a
+// `dokumente/CHECKER.md` §2.3 and `PLAN.md` §9.1 book that as a
 // language change, and `PLAN.md` §15 measures why the obvious surface -- `threads over T`,
 // or a mark at the table -- would be a SYNONYM of `slots of T`: the same index set, the
 // same proposition, byte-identical C, and therefore the very decoration this rule closes.

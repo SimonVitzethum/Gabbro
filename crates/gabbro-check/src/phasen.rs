@@ -1,6 +1,6 @@
 //! **«B37» — die ORDNUNG auf einer linearen Geistmarke.**
 //!
-//! Das Bootfragment schreibt seinen eigenen Mangel hin (`FRAGMENTE.md`:1293–1299):
+//! Das Bootfragment schreibt seinen eigenen Mangel hin (`FRAGMENTS.md`:1293–1299):
 //!
 //! > *„Die Marke traegt die Reihenfolge, aber sie traegt sie als **LINEARITAET**, nicht als
 //! > **ORDNUNG**: `mmu_an` verbraucht die rohe Phase und gibt die gewoehnliche zurueck. Damit
@@ -712,7 +712,7 @@ fn enthaelt_schritt(
 
 /// **The boot theorem, layer S1 and half of S2 -- and `raw fn` had NO reader at all.**
 ///
-/// `SPRACHE.md` §12 states the theorem in three layers: *"after `boot_end` no `raw` code is
+/// `LANGUAGE.md` §12 states the theorem in three layers: *"after `boot_end` no `raw` code is
 /// reachable."* Measured on 2026-08-28: `FnKlasse::Raw` is matched by **zero** passes. `raw fn`
 /// parsed, was stored, and no rule attached to it -- **the same class as `@version` and as
 /// `obermenge`/`gates`/`mirrors` before «K5».** A word that promises a discipline and is read by
@@ -725,10 +725,10 @@ fn enthaelt_schritt(
 /// * **`O009` (layer S2, references)** -- `&f` on a `raw fn` is refused. A function pointer to
 ///   boot code survives the token: the call would no longer type, but the JUMP would still
 ///   stand. **S1 alone catches the static call chain and not the dynamic one** -- that is why
-///   `SPRACHE.md` gives it its own layer, and why it costs a second rule and not a note.
+///   `LANGUAGE.md` gives it its own layer, and why it costs a second rule and not a note.
 ///
 /// * **`O010`–`O012` (layer S3, hardware)** -- the `retires` clause, built 2026-08-28. It is
-///   ONE clause with three parts, and that is the whole point: `SPRACHE.md` §12 demands that
+///   ONE clause with three parts, and that is the whole point: `LANGUAGE.md` §12 demands that
 ///   `boot_end` consume the token **and** remove the mapping of `.boot` as **one event**, and
 ///   *two promises one can keep separately are not one*. So the clause names the token, the
 ///   address space and the falsifier together, `O011` holds it against the `effects` block, and
@@ -779,7 +779,7 @@ pub fn bootsatz(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "the boot theorem (SPRACHE.md §12, layer S1) rests on it: the token is \
+                    "the boot theorem (LANGUAGE.md §12, layer S1) rests on it: the token is \
                      linear, so it cannot be copied and cannot be restored, and whoever \
                      consumes it ends the boot phase. Without `requires <token>` this \
                      function stays callable forever -- write `requires BootPhase` or \
@@ -804,7 +804,7 @@ pub fn bootsatz(baum: &Programm, absagen: &mut Absagen) {
 
 /// **Layer S3 -- the `retires` clause, and why it is ONE clause and not three.**
 ///
-/// `SPRACHE.md` §12 states the demand in five words: `boot_end` consumes the token **and**
+/// `LANGUAGE.md` §12 states the demand in five words: `boot_end` consumes the token **and**
 /// removes the mapping of `.boot`, **one event**. The tempting build is two clauses --
 /// `effects { consumes t }` plus something that says "and unmap". **That build is wrong, and
 /// the reason is mechanical rather than aesthetic:** each of the two is satisfiable alone, so
@@ -950,7 +950,7 @@ fn schicht_s3(baum: &Programm, marken: &BTreeSet<String>, absagen: &mut Absagen)
                     ),
                 )
                 .mit_notiz(
-                    "consuming the token and unmapping the space are ONE event (SPRACHE.md \
+                    "consuming the token and unmapping the space are ONE event (LANGUAGE.md \
                      §12, layer S3) -- two promises one can keep separately are not one",
                 )
                 .mit_notiz(format!(
@@ -972,7 +972,7 @@ fn schicht_s3(baum: &Programm, marken: &BTreeSet<String>, absagen: &mut Absagen)
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §12 gives the shape: `ensures !exists m in mappings of \
+                    "LANGUAGE.md §12 gives the shape: `ensures !exists m in mappings of \
                      <root> : <m lies in the retired space>` -- a `walk` fact, and the one \
                      half of layer S3 that is FORMULABLE at all",
                 )
@@ -1003,7 +1003,7 @@ fn schicht_s3(baum: &Programm, marken: &BTreeSet<String>, absagen: &mut Absagen)
             )
             .mit_notiz(
                 "a token that is consumed somewhere and retires nothing leaves `.boot` \
-                 mapped -- and the theorem of SPRACHE.md §12 then talks about the call graph \
+                 mapped -- and the theorem of LANGUAGE.md §12 then talks about the call graph \
                  and not about the machine",
             ),
         );
@@ -1048,7 +1048,7 @@ fn sammle_marken(p: &Pred, marken: &BTreeSet<String>, aus: &mut impl FnMut(Strin
 
 /// **A NEGATIVE statement over `mappings of`** -- and the negation is half the rule.
 ///
-/// `SPRACHE.md` §12 writes the postcondition as `!exists m in mappings of kernel_root :
+/// `LANGUAGE.md` §12 writes the postcondition as `!exists m in mappings of kernel_root :
 /// m.section == boot`. Both usual spellings count -- `!exists … : p` and `forall … : ¬p` are
 /// the same thing, and a rule that admits only one of them refuses a correct form (W22).
 ///

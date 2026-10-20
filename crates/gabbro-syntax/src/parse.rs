@@ -1,4 +1,4 @@
-//! The parser. **Hand-written, no generator** (`SPRACHE.md` part III, §6) and laid rule by
+//! The parser. **Hand-written, no generator** (`LANGUAGE.md` part III, §6) and laid rule by
 //! rule against `SYNTAX.md`: every EBNF rule has a function carrying its name.
 //!
 //! **The parser does not interpret.** Where the grammar demands a clause, it demands it; where
@@ -65,7 +65,7 @@ pub struct Parser<'a> {
     /// `placesuffix = "->" ident` and `placeshift = place ":" expr "->" expr` meet in
     /// `transition ack { REG: A -> B }`: `A -> B` is at once a place with field access and a
     /// transition. Inside the two expressions of a `placeshift`, `->` is therefore **not** a
-    /// place suffix -- the place before it may carry one. Without this rule `FRAGMENTE.md`'s
+    /// place suffix -- the place before it may carry one. Without this rule `FRAGMENTS.md`'s
     /// `transition drv { DEVICE_STATUS: ACK -> ACK | DRIVER }` is unreadable.
     pfeil_ist_suffix: bool,
     /// **Inside a contract clause -- the region in which `old` and `result` are words.**
@@ -2320,7 +2320,7 @@ impl<'a> Parser<'a> {
             // added to the grammar. What was missing is this one guard: before today it
             // fired only when the token after the type word was `::` (so `u64::max` parsed
             // but `u64(a)` fell through to `erwarte_ident` and died at `P002`, reproduced by
-            // `dokumente/PRUEFER.md` §4.1 against the unchanged checker). `ruf_ab` below
+            // `dokumente/CHECKER.md` §4.1 against the unchanged checker). `ruf_ab` below
             // already builds the call when it sees `(` -- that arm was dead code for a
             // single-segment integer path until this line let it be reached.
             //
@@ -3149,7 +3149,7 @@ impl<'a> Parser<'a> {
                     )
                     .mit_notiz(
                         "the payload is the value the translator fills at translation \
-                         time (dokumente/PRUEFER.md §0b); a library function without one \
+                         time (dokumente/CHECKER.md §0b); a library function without one \
                          has no call shape for `@lib#f` to check against",
                     ),
                 );
@@ -3303,7 +3303,7 @@ impl<'a> Parser<'a> {
                     "a `library fn` carries a Gabbro body -- `{ … }`, not `;`",
                 )
                 .mit_notiz(
-                    "dokumente/PRUEFER.md §0c: a function reachable through `@lib#f` \
+                    "dokumente/CHECKER.md §0c: a function reachable through `@lib#f` \
                      is safe Gabbro checked by the same checker -- a bodyless \
                      declaration would be a foreign promise, exactly what the \
                      library mechanism stands against",
@@ -3415,7 +3415,7 @@ impl<'a> Parser<'a> {
                     "a `translator` carries a Gabbro body -- `{ … }`, not `;`",
                 )
                 .mit_notiz(
-                    "dokumente/PRUEFER.md §0c: what a translator fills is checked \
+                    "dokumente/CHECKER.md §0c: what a translator fills is checked \
                      like any Gabbro body -- a bodyless declaration would be \
                      a foreign promise, exactly what the library mechanism \
                      stands against",
@@ -4425,7 +4425,7 @@ impl<'a> Parser<'a> {
     /// **`invariant P` at a loop -- one clause, three forms.**
     ///
     /// It stands at all three immediately before the block, and that is a decision
-    /// (`dokumente/PRUEFER.md` §3): one fixed position across three forms is
+    /// (`dokumente/CHECKER.md` §3): one fixed position across three forms is
     /// cheaper than three positions, and it is the last thing a reader needs before the
     /// body.
     ///
@@ -5339,7 +5339,7 @@ impl<'a> Parser<'a> {
         // **G1 closed (2026-08-15).** Until then the parser accepted the clause and reported
         // `P031`, because `atomicdecl` did not carry it. The EBNF carries it now -- in the
         // order of the CORPUS (`publishes` before the ordering, as in SYNTAX.md:603 and four
-        // times in FRAGMENTE.md F6), not in the one I had written down first.
+        // times in FRAGMENTS.md F6), not in the one I had written down first.
         let obermenge = if self.friss_kw(Kw::Publishes) {
             Some(self.nutzlast()?)
         } else {
@@ -5422,7 +5422,7 @@ impl<'a> Parser<'a> {
     ///
     /// Keyed mode entries (`arch x86_64;`) from the fixed key set plus
     /// references to declared `assume` items (`assume <name>;`), never a
-    /// copy of their text (`dokumente/PRUEFER.md` §0c). At most one block per
+    /// copy of their text (`dokumente/CHECKER.md` §0c). At most one block per
     /// unit -- the second one is the checker's (`N219`), not the reader's.
     fn profildecl(&mut self) -> Erg<ProfilBlock> {
         let anfang = self.erwarte_kw(Kw::Profile)?;
@@ -5982,7 +5982,7 @@ impl<'a> Parser<'a> {
     ///
     /// **Two places where the written examples fix the production's letter.** The §1
     /// production line says `regbind` (`ident ":" ident`, entry order) for both maps,
-    /// but every written example -- dokumente/SPRACHE.md §1, SYNTAX.md §12.1, the gift probe
+    /// but every written example -- dokumente/LANGUAGE.md §1, SYNTAX.md §12.1, the gift probe
     /// and the speech test -- writes `regs in { rdi = fd }` (register first, `=`) and
     /// `regs out { rax }` (bare registers). The examples agree with each other and the
     /// production agrees with `entrydecl`; what is built here is what the examples

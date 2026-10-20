@@ -3,7 +3,7 @@
 // Eine neue Bindung verdeckt die alte -- und erbt NICHT ihre Verengung.
 //
 // Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
-// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// durch (MEASUREMENTS.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 // MUSS fallen (M102): das `let` verdeckt `x`; der Fakt `x >= 1` gilt fuer die ALTE Bindung.
 module gift {

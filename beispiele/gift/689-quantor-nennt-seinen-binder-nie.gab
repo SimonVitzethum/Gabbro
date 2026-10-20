@@ -9,7 +9,7 @@
 // inconsistent. And after `D022` neither `fields of` nor `threads` can say anything about a
 // declared carrier at all, so the vacuous body is the last writable form of two domains of
 // the nine: refusing it would be a grammar change wearing a rule's clothes, and that
-// grammar change is booked elsewhere (`dokumente/PRUEFER.md` §2.3,
+// grammar change is booked elsewhere (`dokumente/CHECKER.md` §2.3,
 // `PLAN.md` §9.1: *"a language change, not a model change"*).
 module gift::binder_nie_genannt {
 

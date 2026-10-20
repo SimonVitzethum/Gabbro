@@ -12,7 +12,7 @@
 //! no startup file: the entry `_start` comes out of the generator, and every operating-system
 //! call is a `syscall` gate of the program itself.
 //!
-//! The two sentences the manifest still turns on (`dokumente/BAUSYSTEM.md`):
+//! The two sentences the manifest still turns on (`dokumente/BUILD-SYSTEM.md`):
 //!
 //! * **The manifest names FILES per unit and nothing else.** A module name is unique only
 //!   INSIDE a unit.

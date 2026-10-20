@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenT5Sem.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md), the
+             dokumente/PLAN-TRANSLATION-VALIDATION.md), the
              SEMANTICS-TIED half.
 
   What this file is: soundness lemmas for the most-used templates of

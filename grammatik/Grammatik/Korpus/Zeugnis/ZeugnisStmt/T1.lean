@@ -1,6 +1,6 @@
 /-
   File:     Grammatik/ZeugnisStmt.lean
-  Subject:  Certificate soundness for STATEMENTS (T1 of PLAN-UEBERSETZUNGSVALIDIERUNG.md).
+  Subject:  Certificate soundness for STATEMENTS (T1 of PLAN-TRANSLATION-VALIDATION.md).
 
   Extends `Zeugnis.lean` (expressions) to statements: `CertCond`/`CertStmt`/
   `CertSeq`/`CertEnd` are plain-data certificates, the `*Gueltig` predicates

@@ -158,7 +158,7 @@ extern fn list_move(item : ptr<normal, rw> ListHead, head : ptr<normal, rw> List
 // [FORM 1] `BUG_ON(e->refcnt)` becomes `requires e->refcnt == 0`.
 //   That is this project's own precedent: «K2»'s F5 rendered `BUG_ON(addr >= end)` the same
 //   way and said so -- *"die Zusicherung wird nicht geprueft, sie wird VERLANGT"*
-//   (`dokumente/FRAGMENTE.md`:2034). It is not a free move: the C traps at run time and
+//   (`dokumente/FRAGMENTS.md`:2034). It is not a free move: the C traps at run time and
 //   this does not; the obligation moves to every call site instead.
 // [FORM 2] `BUG_ON(i >= lc_->nr_elements)` and `BUG_ON(!lc->nr_elements)` are discharged
 //   by the field's own range type `u32 in 1 .. LC_MAX_ACTIVE` above, plus the index rule.

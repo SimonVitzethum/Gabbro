@@ -1,12 +1,12 @@
 //! **Pass 7 — die Paarung. Zwei hängende Klassen warten auf ihn.**
 //!
-//! Die Neuerhebung der Klempnerei-Klassen (`MESSUNGEN.md`, `N_neu = 5`) buchte **Rennen**
+//! Die Neuerhebung der Klempnerei-Klassen (`MEASUREMENTS.md`, `N_neu = 5`) buchte **Rennen**
 //! (2 276 Atomzugriffe) und **Publikation** (824 Stores an Geteiltes) als hängend — mit
 //! demselben Grund: *der Paarungspass ist nicht gebaut.* Zwei Klassen, eine Lücke.
 //!
 //! ## Was gepaart wird
 //!
-//! `SPRACHE.md` Teil II §1: **Ordering wird gepaart, nicht deklariert.** Ein `release`-Store
+//! `LANGUAGE.md` Teil II §1: **Ordering wird gepaart, nicht deklariert.** Ein `release`-Store
 //! nennt seine Nutzlast (`publishes { … }`), ein `acquire`-Load nennt, was er erwartet
 //! (`awaits { … }`). Die Frage, die kein Mensch von Hand beantwortet:
 //!
@@ -93,7 +93,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let mut ordnungen: Vec<(String, Option<Ordnung>)> = Vec::new();
-    // **Die erklärte Obermenge der Nutzlast** (`SPRACHE.md` §11.3) — bis 2026-08-19 eine
+    // **Die erklärte Obermenge der Nutzlast** (`LANGUAGE.md` §11.3) — bis 2026-08-19 eine
     // Zeile ohne Leser. Sie stand als ZUSAGE in `pruefe-klauseln.py`: *„eine
     // Enthaltensaussage, die niemand nachrechnet."*
     let mut obermengen: Vec<(String, Vec<String>)> = Vec::new();
@@ -246,7 +246,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // **`V009`: which atomics are declared PAYLOAD-FREE over the whole program?**
     //
     // Not "which say `publishes nothing` here" -- that is a statement about one store. The
-    // question is the categorial one from `SPRACHE.md` part II §1: an atomic on which
+    // question is the categorial one from `LANGUAGE.md` part II §1: an atomic on which
     // nothing publishes, which nothing awaits, which declares no superset and whose
     // counterpart is not in silicon (`observed by`) is the "payload-free" case of the three.
     let mut lastfrei: BTreeSet<String> = BTreeSet::new();
@@ -445,7 +445,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                          establishes nothing here",
                     )
                     .mit_notiz(
-                        "SPRACHE.md part II §1: ordering is PAIRED, not declared -- a \
+                        "LANGUAGE.md part II §1: ordering is PAIRED, not declared -- a \
                             publication without a counterpart orders nothing",
                     )
                     .mit_notiz("`publishes nothing` says expressly that there is none"),
@@ -1002,7 +1002,7 @@ fn tore_im_rumpf(
 
 /// **`V009` -- the gate whose pairing nobody wrote.**
 ///
-/// `SPRACHE.md` part II §1 has three type rules, and all three CHECK a pairing that somebody
+/// `LANGUAGE.md` part II §1 has three type rules, and all three CHECK a pairing that somebody
 /// wrote down. None of them notices that one is MISSING -- `ORDNUNGSSTICHPROBE-BEFUND.md`
 /// §5.1 states it as the gap:
 ///
@@ -1060,7 +1060,7 @@ fn tore(
                 )
                 .mit_notiz(format!(
                     "nothing publishes on `{at}` and nothing awaits it -- so it is the \
-                     payload-free case of SPRACHE.md part II §1, and `{platz}` says it is not"
+                     payload-free case of LANGUAGE.md part II §1, and `{platz}` says it is not"
                 ))
                 .mit_notiz(
                     "a value that decides whether a foreign place may be read IS a payload \

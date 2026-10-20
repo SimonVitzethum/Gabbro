@@ -1,6 +1,6 @@
 // emission-15x-c23/void-silence: the deliberate-silence cast.
 //
-// Census slot C2 `voidTyp`, 930 sites (`dokumente/BEWEIS.md` Subject 2 section
+// Census slot C2 `voidTyp`, 930 sites (`dokumente/PROOF.md` Subject 2 section
 // 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.voidTyp`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, the unread-binding arm (a `let` binding
 // with no reader lowers to `(void)name;`, the same runner that stills unread

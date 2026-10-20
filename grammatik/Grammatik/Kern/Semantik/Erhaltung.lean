@@ -125,7 +125,7 @@ namespace Gabbro.Grammatik
 /-! ## 1. Correspondence: exec-to-C, as data plus four Prop shapes -/
 
 /-- One evaluation site on each side, joined by its form: the row of the
-    per-run coverage certificate (`BEWEIS.md` §4). Sites are `Nat` ids;
+    per-run coverage certificate (`PROOF.md` §4). Sites are `Nat` ids;
     binding them to source spans is the recomputer's job (cut C1). -/
 structure CorrSite where
   gabbroSite : Nat
@@ -157,7 +157,7 @@ def corrNoExtra (gabbroSites : List Nat) (cert : CorrCert) : Prop :=
 
 /-! ## 2. Alias: no address arithmetic in the image, sites named -/
 
-/-- The census number this obligation answers (`BEWEIS.md` C1, §2 row 2):
+/-- The census number this obligation answers (`PROOF.md` C1, §2 row 2):
     491 `d->basis + 8` / `v->bytes + 4` sites against a row that promised
     none. Kept as data so the draft §19 can quote it, not as prose. -/
 def ptrArithCensus : Nat := 491
@@ -184,7 +184,7 @@ def aliasKept (o : AliasObligation) : Prop :=
 
 /-- Who carries the ops count from C to Asm. The distinction is DATA, not
     prose: only the `cerCo` carrier may be CLAIMED to preserve; the
-    production compiler's count is MEASURED by witness pairs (`BEWEIS.md`
+    production compiler's count is MEASURED by witness pairs (`PROOF.md`
     §1b pattern), never proved here. -/
 inductive CostCarrier where
   | cerCo
@@ -225,7 +225,7 @@ inductive RulingStatus where
   | ausErzeuger (ersatz : String)
   deriving DecidableEq, Repr
 
-/-- The 30 census slots (`BEWEIS.md` §1a: C1 = 7, C2 = 19, C3 = 4),
+/-- The 30 census slots (`PROOF.md` §1a: C1 = 7, C2 = 19, C3 = 4),
     plus the syscall boundary slot below the census (lane S6,
     PLAN-SYSCALL.md item 1: generated, not found).
     Each doc line carries its site count, so the table quotes the census
@@ -253,7 +253,7 @@ inductive OffeneForm where
   | schleifeStmt       -- C2: 11 sites (`while`)
   | typOfErw           -- C2: 9 sites (`__typeof__`)
   | floatTyp           -- C2: 8 sites; no float row at all
-  | unerreichbarBuiltin-- C2: 5 sites; RULED once, kept at one site (`BEWEIS.md` §1b)
+  | unerreichbarBuiltin-- C2: 5 sites; RULED once, kept at one site (`PROOF.md` §1b)
   | wennGnuC           -- C2: 5 sites; `#if defined(__GNUC__)` changes the program per compiler
   | fortStmt           -- C2: 3 sites (`continue`)
    | statikAssert       -- C2: 1 site (`_Static_assert`)
@@ -285,7 +285,7 @@ inductive EntscheidZiel where
   deriving DecidableEq, Repr
 
 /-- Price of `beschraenkt` (`restrict`): a proof export into C's UB rules
-    (`BEWEIS.md` row 11) -- priced option, never default (cut C3). -/
+    (`PROOF.md` row 11) -- priced option, never default (cut C3). -/
 def beschraenktPreis : String :=
   "exports the effects-promise into C UB rules; only where the benchmark buys it"
 
@@ -317,7 +317,7 @@ def tafel : List EntscheidZiel :=
    .benannt .fluechtig (.aufListe fluechtigPreis),
    .benannt .noreturn (.aufListe "proven non-return; the fall-through export needs D005 plus the tag invariant"),
    .benannt .asmEins (.aufListe "exactly one emission site; no downstream prover (16.2 (7))"),
-   .luecke .zeigerArithmetik (.aufListe "no computed address outside place[expr]; unproven bound refused"),  -- ruled: SPRACHE.md 5.2 + lane 142, re-decided over the scoped emitter map (withdrawn same-day on the unscoped one)
+   .luecke .zeigerArithmetik (.aufListe "no computed address outside place[expr]; unproven bound refused"),  -- ruled: LANGUAGE.md 5.2 + lane 142, re-decided over the scoped emitter map (withdrawn same-day on the unscoped one)
    .luecke .zeigerIndex (.aufListe "Adressrechnung; Pflicht je Stelle, in den Grenzen zu bleiben; UB-Zeile fuer den Aussenfall"),  -- ruled: messung/CFORM-REGEL-ZEIGERINDEX.md
     .luecke .cInclude (.aufListe "fixed four-header preamble; trust pinned by compile check, never proved"),  -- ruled: cut C3 (priced trust, carried never proved); preamble is emit.rs KOPF, byte-identical, cc -c -O0/-O2/-Os green
     .luecke .cTypedef (.aufListe "alias only; layout fixed once; unique names"),  -- ruled: messung/CFORM-REGEL-TYPEDEF.md
@@ -715,7 +715,7 @@ instance aliasKeptDec (o : AliasObligation) : Decidable (aliasKept o) :=
 /-- Discharge: the empty site list keeps the obligation, by `rfl`. -/
 theorem alias_leer : aliasKept { arithSites := [] } := rfl
 
-/-- The census stands as data: 491 named sites (`BEWEIS.md` C1, §2 row 2). -/
+/-- The census stands as data: 491 named sites (`PROOF.md` C1, §2 row 2). -/
 theorem census_steht : ptrArithCensus = 491 := rfl
 
 /-- Accept: no address-arithmetic site in this image. -/

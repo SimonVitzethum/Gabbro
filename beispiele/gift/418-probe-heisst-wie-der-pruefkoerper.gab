@@ -11,7 +11,7 @@
 // Erzeuger hat ihn schon geliefert. **Prototyp plus Definition ist in C voellig normal**, es
 // faellt also nichts.
 //
-// Gemessen und AUSGEFUEHRT am 2026-08-31 (`dokumente/PRUEFER.md` §4c): der eigene
+// Gemessen und AUSGEFUEHRT am 2026-08-31 (`dokumente/CHECKER.md` §4c): der eigene
 // Rumpf des Schreibers lag in `libmein.a`, sein Aufruf gab **`true`** zurueck -- die Antwort
 // des Pruefkoerpers -- wo seine Bibliothek `false` sagt. *Der Binder findet das Symbol
 // schon definiert und holt das Archivglied gar nicht erst.* Pruefer still, `cc -Werror`

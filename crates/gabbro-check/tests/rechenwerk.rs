@@ -152,7 +152,7 @@ impl fn f(t : ptr<normal, r> T) -> bool
 ///
 /// Der Befund lautete: *„`let … else` verlangt RECHTS einen `call`. Ein `option`-wertiges
 /// `place` laesst sich damit nicht auspacken — und ein Atomic IST ein `place`."* Genau daran
-/// zerbrach die Messstelle in `FRAGMENTE.md` F6.
+/// zerbrach die Messstelle in `FRAGMENTS.md` F6.
 ///
 /// **Die Paesse, die nur Rufe interessieren, fragen ueber `als_ruf()`** — statt dass jeder von
 /// ihnen die neue Form kennen muss. *Ein Ort ruft nichts: der Aufrufgraph sieht keine Kante,
@@ -1577,7 +1577,7 @@ fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
 
 /// **«B38» — `H101`, die Nebenbedingung am benannten Traeger, in BEIDE Richtungen.**
 ///
-/// `FRAGMENTE.md` F8 misst fuenf Werte, die im Planer eine Sperrgrenze ueberqueren; zwei
+/// `FRAGMENTS.md` F8 misst fuenf Werte, die im Planer eine Sperrgrenze ueberqueren; zwei
 /// ruhen nicht auf Neuvalidierung, sondern auf der Interruptmaskierung. Die ehrliche Form
 /// ist *„prueft neu ODER nennt, was sie stattdessen traegt"* — **und ein Traeger
 /// `masks IRQ` zaehlt nur, wenn der Eintrittskontext `nested masked` traegt.**
@@ -1929,7 +1929,7 @@ transition an { GCMD.TE: 0 -> 1 } requires GSTS.RTPS == 1 effects { writes GCMD 
 
 /// **The balance adds up, and it adds up over THE SAME register `gabbro pflichten` counts.**
 ///
-/// *An output that forgets one kind looks complete* (`dokumente/SPRACHE.md`, the `lock` line that
+/// *An output that forgets one kind looks complete* (`dokumente/LANGUAGE.md`, the `lock` line that
 /// was missing for a day). Against exactly that: `goals + refused == total`, and `total` is
 /// the length of the register -- not a second number from a second walk.
 #[test]
@@ -2387,7 +2387,7 @@ impl fn reicht_durch(p : index into B) -> bool
 /// **A loop is an anonymous routine, and its `invariant` is DATA.**
 ///
 /// The measure was carried by the language from the start; the statement had no word until
-/// 2026-08-28 (`dokumente/PRUEFER.md`). A loop WITHOUT one is still refused --
+/// 2026-08-28 (`dokumente/CHECKER.md`). A loop WITHOUT one is still refused --
 /// that is the point of the word, not a gap in it.
 #[test]
 fn lean_schleife_traegt_ihre_invariante() {
@@ -2557,7 +2557,7 @@ fn lean_absagegruende_sind_vollzaehlig() {
     // `ALL`. *A test over a register cannot take that register as its population.*
     //
     // Rust has no way to walk the variants of an enum, so the population comes from the
-    // SOURCE -- the same move `wortschatz.rs` makes with `SPRACHE.md`.
+    // SOURCE -- the same move `wortschatz.rs` makes with `LANGUAGE.md`.
     let quelle = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lean.rs"))
         .expect("`src/lean.rs` stands beside this test");
     let rumpf = quelle
@@ -2764,7 +2764,7 @@ fn lean_programm_autoimplicit_bleibt_aus() {
 //
 // Seventeen refusals of the program channel stood under one word, and **not one of them was
 // a call over a contract**: six generated operations, six constructors, four `transition`s,
-// and one `return Some(i);` the model could carry all along. `dokumente/SPRACHE.md` measures
+// and one `return Some(i);` the model could carry all along. `dokumente/LANGUAGE.md` measures
 // it and decides the split; the probes below are what keeps the four apart.
 //
 // *A refusal filed under the wrong reason names a missing gate where a missing value form
@@ -2874,7 +2874,7 @@ fn lean_optionswert_ist_kein_ruf() {
 /// SURVIVE. The reason is exact: the probe above reads `return Some(i);`, which is the
 /// `Return` arm, while the mutation damages the `Let` arm. *Two arms, one rule, one probe --
 /// and a rule that can fall at one arm while every test stays green.* The mutation carries
-/// its name in `dokumente/PRUEFER.md`, where the German side of this run is booked.
+/// its name in `dokumente/CHECKER.md`, where the German side of this run is booked.
 #[test]
 fn lean_optionswert_im_let_ist_kein_ruf() {
     let t = lean_programm(
@@ -2949,7 +2949,7 @@ impl fn ruf(p : index into B, w : Zahl)
 // `breaking I { … }` stood in one arm with `leave` and `next` under the sentence *"a
 // non-local exit out of a named loop"*. It is neither non-local nor an exit: what it changes
 // is which DUTY holds inside the block, not which statements run. **All four obligations
-// behind `non-local-exit` were `breaking`** -- `dokumente/PRUEFER.md` measures
+// behind `non-local-exit` were `breaking`** -- `dokumente/CHECKER.md` measures
 // it, and the four go through Lean since the split.
 // ===========================================================================================
 
@@ -3077,7 +3077,7 @@ impl fn dienst(b : ptr<normal, rw> B, i : index into B)
 // `result` stood in `primary` and in eight corpus sites; what was missing was never the
 // spelling but the BINDING -- a postcondition is evaluated over a `State`, and a result is
 // not part of one. The goal binds it, and no arm of the model changed for it: `finalValue`
-// has carried it since day one (`dokumente/PRUEFER.md`).
+// has carried it since day one (`dokumente/CHECKER.md`).
 // ===========================================================================================
 
 const LEAN_ERGEBNIS: &str = "module t {

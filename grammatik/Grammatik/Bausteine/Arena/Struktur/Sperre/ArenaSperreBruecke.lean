@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreBruecke.lean
-  Subject:   THE BRIDGE FROM MACHINE G TO THE RECOGNIZER (PLAN-DYNAMISCH.md section 8a.3, premise 2): a writer's frame, run
+  Subject:   THE BRIDGE FROM MACHINE G TO THE RECOGNIZER (PLAN-DYNAMIC.md section 8a.3, premise 2): a writer's frame, run
              by the small steps of one thread of the call machine, returns an arena-consistent memory.
 
   `rufG_adaequat_ruf` (RufAdaequatRufG/T8) says: a body in the covered fragment (`EndR`), started at a thread's world,

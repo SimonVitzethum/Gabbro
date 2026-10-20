@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkZeugeBaum.lean
-  Subject:   THE RECOGNIZER ON A REAL ARENA, TREE HALF (PLAN-DYNAMISCH.md section 8a.1, third pass): tree bodies it
+  Subject:   THE RECOGNIZER ON A REAL ARENA, TREE HALF (PLAN-DYNAMIC.md section 8a.1, third pass): tree bodies it
              ACCEPTS and RUNS, and planted defects it REJECTS, on the concrete four-slot arena of `ArenaDynZeuge.lean`
              (slot `1` on the free list), declared as an arena with a tree and no list (`KB`: left child = field `2`,
              right child = field `3`, root = word `3`).

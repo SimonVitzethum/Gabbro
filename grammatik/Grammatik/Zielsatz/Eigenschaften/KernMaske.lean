@@ -37,7 +37,7 @@
   masked locks and handlers keep exactly the runs they had.
 
   NOT CLAIMED: that `Spec.lean`'s `KernHaltE` itself is replaced (it still carries `KernPlan`;
-  the proposal is in dokumente/PLAN-DYNAMISCH.md section 8a.4); the lowering of the mask
+  the proposal is in dokumente/PLAN-DYNAMIC.md section 8a.4); the lowering of the mask
   (Code/Conc/KernMaske.lean); handler re-entry and handler-on-handler preemption (a handler runs
   once, and no other thread of its core steps meanwhile, exactly as in `KernPlan`).
 -/

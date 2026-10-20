@@ -1,6 +1,6 @@
 // emission-15x-c23/attribut-unused: the truthful unused statement.
 //
-// Census slot C2 `cAttribut`, 766 sites (`dokumente/BEWEIS.md` Subject 2
+// Census slot C2 `cAttribut`, 766 sites (`dokumente/PROOF.md` Subject 2
 // section 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.cAttribut`).
 // Emitter site: `crates/gabbro-check/src/emit.rs`, the `unused` families
 // (static cells, inline accessors, conditional `leise` emission where this

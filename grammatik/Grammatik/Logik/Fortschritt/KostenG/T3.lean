@@ -7,7 +7,7 @@ variable {D : Deklaration}
 
 /-- **`K001` as a Bool.** Every function of `fs` has a body whose cost --
     each call counting the callee's DECLARED cost `decl`, as `kosten.rs`
-    counts it (SPRACHE.md §7) -- fits under its own declaration, and names
+    counts it (LANGUAGE.md §7) -- fits under its own declaration, and names
     only callees of `fs`, directly (no indirect call). -/
 def kostenPasst [DecidableEq D.Fn] (P : Programm D) (passes : Nat) (decl : D.Fn → Nat)
     (fs : List D.Fn) : Bool :=
@@ -48,7 +48,7 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
 
 /-! ## 11. TARGET 3: the checker's number
 
-    `kosten.rs` counts OPERATIONS (SPRACHE.md §7: `1 op` = one assignment,
+    `kosten.rs` counts OPERATIONS (LANGUAGE.md §7: `1 op` = one assignment,
     arithmetic operation, load or store; a call counts the callee's
     declared `costs`; branches the maximum; `traverse` the body times the
     domain bound). The bound above counts STEPS of machine G. The two are

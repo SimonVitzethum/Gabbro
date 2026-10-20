@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaDynZeuge.lean
-  Subject:   WITNESSES AND PLANTED DEFECTS for `InvDyn` (PLAN-DYNAMISCH.md section 8a, phase 2): a concrete
+  Subject:   WITNESSES AND PLANTED DEFECTS for `InvDyn` (PLAN-DYNAMIC.md section 8a, phase 2): a concrete
              arena with slot release in which a list and a tree of live slots exist, a slot is on the free
              list, and the mutators of `ArenaListe.lean` / `ArenaBaumWelt.lean` are applied to real worlds.
 

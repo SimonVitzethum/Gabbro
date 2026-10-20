@@ -23,7 +23,7 @@
 //    `Com1_THR_out(c, b)` -- because `in` and `out` are two instructions with nothing between
 //    them that a C lvalue could be. So `+=` no longer carries itself and is refused
 //    (`gift/654`), while every other access form below lowers.
-// 4. **The instruction is x86 and nothing else.** `SPRACHE.md` makes a port device
+// 4. **The instruction is x86 and nothing else.** `LANGUAGE.md` makes a port device
 //    *"declarable only under `arch x86_64`"*, and the emitter demands the word instead of
 //    guessing it: the unit must NAME the machine, at an `entry`, a `boot`, an `entrust`, a
 //    function or -- as here -- an `assume`.

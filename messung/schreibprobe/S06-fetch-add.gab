@@ -1,6 +1,6 @@
 // S06 -- `atomic_fetch_add`: THE PRIMITIVE THE DOCUMENT PROMISES.
 //
-// `SPRACHE.md` says of a primitive `exchange update` body that it lowers to an
+// `LANGUAGE.md` says of a primitive `exchange update` body that it lowers to an
 // `atomic_fetch_*`. `CTicket.lean`'s `zieht` is exactly that: ONE step,
 // `my = atomic_fetch_add_explicit(&L.next, 1u, relaxed)`, which never fails.
 // Lane 201 met the emitter's refusal from the other side (`C001` for a missing

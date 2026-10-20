@@ -83,7 +83,7 @@ divergent fn dienstschleife(q : ptr<normal, rw> Warteschlange, marke : Angemelde
         // **Die Sperre liegt IM Durchgang, nicht um die Traversierung.** Ein `locks`-Block
         // ueber einer vollen Tabelle haelt `PLANER` fuer NFAEDEN x 3 ops -- die Sperre sagt
         // 300 zu, und der Kostenpass rechnet das nach. Das ist keine Stilfrage: an dieser
-        // Zahl haengt die Latenzaussage jeder Wartestelle (SPRACHE.md 9.3).
+        // Zahl haengt die Latenzaussage jeder Wartestelle (LANGUAGE.md 9.3).
         traverse e over slots of q by unvisited touches writes q.slots {
             locks PLANER {
                 if q.slots[e].aktiv {

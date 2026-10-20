@@ -1,6 +1,6 @@
 // emission-144/staticassert: `_Static_assert` is the lowering of the space check.
 //
-// Census slot C2 `statikAssert`, 1 site (`dokumente/BEWEIS.md` Subject 2;
+// Census slot C2 `statikAssert`, 1 site (`dokumente/PROOF.md` Subject 2;
 // `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.statikAssert`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, `anvertrauen`, which writes
 // `_Static_assert(sizeof(raum) > 0, ...)` when the `entrust` space names a type

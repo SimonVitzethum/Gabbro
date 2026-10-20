@@ -89,7 +89,7 @@ type Zaehlerwert = u64 in 0 .. GRENZE;
 //    Verbundes hinter einem Zeiger. Ein Lese-Aendere-Schreib-Zug auf gewoehnlichem Speicher
 //    ist keine Paarung, sondern ein Wettlauf; **in der Datei ueber Nebenlaeufigkeit.** Ohne
 //    Deklaration gibt es keine Ordnung, und eine zu waehlen hiesse, sie zu erfinden.
-// 2. *Die Schleife hatte keine Schranke.* `SPRACHE.md` sagt die Absenkung seit jeher -- die
+// 2. *Die Schleife hatte keine Schranke.* `LANGUAGE.md` sagt die Absenkung seit jeher -- die
 //    **beschraenkte** CAS-Schleife -- und liess offen, woher `NCORES` und der Ausgang kommen.
 //    Jetzt stehen beide da, in **denselben Woertern wie an einem `retry`**: es IST ein
 //    `retry`, nur mit einem CAS als Rumpf.

@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenMetallIdt.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md): the GENERATED interrupt descriptor
+             dokumente/PLAN-TRANSLATION-VALIDATION.md): the GENERATED interrupt descriptor
              table of the bare-metal image (C-free lane, C3 slice 3, 2026-10-05).
 
   Row of `crates/gabbro-check/src/schablonen.rs`: `idt.metall` -- the IDT text the build writes

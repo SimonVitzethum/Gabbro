@@ -1,6 +1,6 @@
 // emission-144/double: `double` is the lowering of `f64`, not a choice.
 //
-// Census slot C2 `doubleTyp`, 18 sites (`dokumente/BEWEIS.md` Subject 2;
+// Census slot C2 `doubleTyp`, 18 sites (`dokumente/PROOF.md` Subject 2;
 // `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.doubleTyp`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, `ctyp_primitiv` (F64 -> "double") and
 // `primitivwort` ("f64" -> "double"). The lowering is fail-closed: a third float

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaWachs.lean
-  Subject:   `grow` COMPOSES WITH THE LINK MOVES (PLAN-DYNAMISCH.md section 8a.1, step (2)).
+  Subject:   `grow` COMPOSES WITH THE LINK MOVES (PLAN-DYNAMIC.md section 8a.1, step (2)).
 
   `grow A by n` (`Block.dynGrowB`) writes ONLY the committed word `komm` (`dynGrow_commit`). The structure invariants
   read the used counter, the free list and the link fields, never `komm`; with `LinkKopf` excluding `komm`

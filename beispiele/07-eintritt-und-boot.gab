@@ -117,7 +117,7 @@ raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys 
 
 // **Bis zum 2026-08-28 stand hier `effects { consumes t, writes code_abbildung }`** --
 // ein WIRKUNGSNAME neben der Verbrauchszeile, von keinem Pass gelesen und von allem
-// erfuellbar. `SPRACHE.md` §12 verlangt an dieser Stelle EIN Ereignis, und zwei Zusagen,
+// erfuellbar. `LANGUAGE.md` §12 verlangt an dieser Stelle EIN Ereignis, und zwei Zusagen,
 // die man einzeln erfuellen kann, sind keine eine: wer nur die erste haelt, hat eine
 // Funktion geschrieben, die die Bootphase fuer den TYPPRUEFER beendet und die Bytes
 // abgebildet stehen laesst.

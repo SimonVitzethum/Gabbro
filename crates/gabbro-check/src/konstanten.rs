@@ -1,4 +1,4 @@
-//! Lane 111 -- compile-time constants, first cut (dokumente/SPRACHE.md section 6).
+//! Lane 111 -- compile-time constants, first cut (dokumente/LANGUAGE.md section 6).
 //!
 //! The checker evaluates total, effect-free `const` initializers and const
 //! tables element-wise and prints the values as a Lean certificate (encoding
@@ -335,7 +335,7 @@ fn k190(span: Span, name: &str) -> Absage {
              indirect calls and block-bodied calls do not fold"
         ),
     )
-    .mit_notiz("dokumente/SPRACHE.md section 6: the checker evaluates the total, effect-free fragment")
+    .mit_notiz("dokumente/LANGUAGE.md section 6: the checker evaluates the total, effect-free fragment")
 }
 
 /// Hold one scalar `const` against the fragment. Silent unless the initializer

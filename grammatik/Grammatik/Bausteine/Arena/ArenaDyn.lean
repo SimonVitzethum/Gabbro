@@ -2,7 +2,7 @@
   File:      Grammatik/ArenaDyn.lean
   Subject:   Dynamic arenas: virtual reservation, committed prefix, and the
              past-ceiling stop over a run's commit sequence
-             (PLAN-DYNAMISCH.md section 9, lane 241; reworked by fix lane F2
+             (PLAN-DYNAMIC.md section 9, lane 241; reworked by fix lane F2
              after review G08 F4, 2026-09-21; the section-9 FORM -- `DynForm`,
              the four Block-form theorems and the simulation -- added by the
              server lane 2026-09-28, section `Form` at the end).
@@ -232,7 +232,7 @@ theorem dynGrowListe_zwilling :
     (dynGrowListe Az24 [8, 8]).isSome = true ∧ dynGrowListe Az16 [8, 8] = none :=
   ⟨rfl, rfl⟩
 
-/-! ### The dynamic arena AS A FORM (PLAN-DYNAMISCH section 9, server lane 2026-09-28)
+/-! ### The dynamic arena AS A FORM (PLAN-DYNAMIC section 9, server lane 2026-09-28)
 
   Everything above is arithmetic on a `Nat` record: it says what a commit
   sequence does, and it says it about numbers. This section puts the same
@@ -489,7 +489,7 @@ theorem dynAlloc_ueber_commit (A : DynForm D)
       omega
   · rfl
 
-/-- **THE SIMULATION** (the shape PLAN-DYNAMISCH section 9 fixes): a dynamic
+/-- **THE SIMULATION** (the shape PLAN-DYNAMIC section 9 fixes): a dynamic
     allocation whose index stays under its path's committed prefix runs the
     STATIC-max form -- the very same `Block.arenaAlloc` over the very same
     `ArenaForm`, on a world that differs from the dynamic one only in the
@@ -771,7 +771,7 @@ end Gabbro.Grammatik.ArenaDyn
 /-! CUTS -- what this file does NOT claim.
 
   * No checker rule is built here: R-max / R-commit / R-grow-else /
-    R-grow-const / R-grow-form (PLAN-DYNAMISCH section 4) are lane 240/241
+    R-grow-const / R-grow-form (PLAN-DYNAMIC section 4) are lane 240/241
     Rust work; this file is the Lean model half (section 9) only.
   * No emitter or runtime is built: the descriptor (`base`, `committed`),
     `gabbro_arena_reserve` / `gabbro_arena_grow`, and the OS-token guardian

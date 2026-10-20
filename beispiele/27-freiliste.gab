@@ -6,7 +6,7 @@
 // keine Freiliste, keine CDT, kein Objektgraph.
 //
 // *Es war die Reihenfolge, nicht die Bezueglichkeit: ein Vorwaertsverweis fiel genauso.*
-// Genau diese Form steht im Korpus (`FRAGMENTE.md`) und ist die Struktur, ueber die
+// Genau diese Form steht im Korpus (`FRAGMENTS.md`) und ist die Struktur, ueber die
 // `Table_Induktion.thy` seine Saetze fuehrt -- **der Beweis handelte von einer Form, die der
 // Pruefer nicht typisieren konnte.**
 

@@ -5,7 +5,7 @@
 // danach einen ganz anderen Platz.
 //
 // Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
-// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// durch (MEASUREMENTS.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 // MUSS fallen (M102): nach `i = 0` meint `buf[i]` ein ANDERES Element als bei der Pruefung.
 module gift {

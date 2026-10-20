@@ -3,7 +3,7 @@
 //
 // `AT = w;` on `atomic AT : u32 relaxed` used to check clean and emit `AT = w;`
 // over `_Atomic uint32_t AT` -- a plain store, which C treats as `seq_cst` while
-// the declaration said `relaxed`, and which the C model (`C-SPEICHERMODELL.md`
+// the declaration said `relaxed`, and which the C model (`C-MEMORY-MODEL.md`
 // §1c) makes stuck. Lowering the bare store to an explicit
 // `atomic_store_explicit` is no fix either: the store is where the payload
 // promise stands (`publishes { … }` / `publishes nothing`, held by V001-V004),

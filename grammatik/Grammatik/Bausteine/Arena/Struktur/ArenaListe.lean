@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/ArenaListe.lean
   Subject:   `InvDyn` FOR A SINGLY LINKED LIST OVER LIVE ARENA SLOTS, preserved by `alloc` (both branches) and
-             `free` (PLAN-DYNAMISCH.md section 8a, phase 2).
+             `free` (PLAN-DYNAMIC.md section 8a, phase 2).
 
   The list lives in a link field `lnk` of the arena's table (a field of type `int 0 count`; `count` is the nil
   marker) and a head global (same type). Both are separate from everything the allocator owns, so the allocator

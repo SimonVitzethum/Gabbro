@@ -1,6 +1,6 @@
 // emission-144/typeof: `__typeof__` is the lowering of the checked reference.
 //
-// Census slot C2 `typOfErw`, 9 sites (`dokumente/BEWEIS.md` Subject 2;
+// Census slot C2 `typOfErw`, 9 sites (`dokumente/PROOF.md` Subject 2;
 // `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.typOfErw`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, `bezugnahme`, which writes
 // `static __typeof__(ziel) *const marke __attribute__((unused)) = ziel;`.

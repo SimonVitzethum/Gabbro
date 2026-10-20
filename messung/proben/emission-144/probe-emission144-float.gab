@@ -1,6 +1,6 @@
 // emission-144/float: `float` is the lowering of `f32`, not a choice.
 //
-// Census slot C2 `floatTyp`, 8 sites (`dokumente/BEWEIS.md` Subject 2;
+// Census slot C2 `floatTyp`, 8 sites (`dokumente/PROOF.md` Subject 2;
 // `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.floatTyp`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, `ctyp_primitiv` (F32 -> "float") and
 // `primitivwort` ("f32" -> "float"); `gleitkommatext` suffixes literals with `f`

@@ -173,7 +173,7 @@ pub const NAMEN: &[Satz] = &[
                       and `N009`-`N010`, probe `668` on `N055` (a `state` transition over \
                       nothing). Counter-direction 2026-08-31: 480 `.gab` files, \
                       118 error-free before and 118 after.",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md part III E5",
+        fundstelle: "crates/gabbro-check/src/namen.rs; LANGUAGE.md part III E5",
     },
     Satz {
         name: "namen.bitlage",
@@ -208,7 +208,7 @@ pub const NAMEN: &[Satz] = &[
                     fields, `format` fields, register types or `axiom` parameters.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 4 probes on `N011`; probes on `N019` and `F006`.",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md §4",
+        fundstelle: "crates/gabbro-check/src/namen.rs; LANGUAGE.md §4",
     },
     Satz {
         name: "namen.modulgrenze",
@@ -229,7 +229,7 @@ pub const NAMEN: &[Satz] = &[
                       `reason` could not BE private). None of the three holes above has a \
                       probe -- they were found by READING, and that is the point of writing \
                       the sentence down.",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md §14",
+        fundstelle: "crates/gabbro-check/src/namen.rs; LANGUAGE.md §14",
     },
     Satz {
         name: "namen.klauselbindung",
@@ -260,7 +260,7 @@ pub const NAMEN: &[Satz] = &[
                       and written), 2 each on `N027` and `N031`, `813` on a `syscall` \
                       naming an undeclared assumption (`N004`), and single probes on 12 \
                       further codes of this group.",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md, SPRACHE.md §15",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md, LANGUAGE.md §15",
     },
     Satz {
         name: "namen.asm",
@@ -424,7 +424,7 @@ pub const NAMEN: &[Satz] = &[
                   (byte-identical without it), nor an obligation, nor the G program \
                   term.",
         vorbehalt: "This is an INTERIM refusal, not a verdict against the form. \
-                    `SPRACHE.md` §S2 wants `raw fn` placed in `section \".boot\"` and \
+                    `LANGUAGE.md` §S2 wants `raw fn` placed in `section \".boot\"` and \
                     says in the same row that the placement is not enforced \
                     (`messung/BOOT-S3.md` item 4). The day the emitter writes the \
                     attribute for a function, this rule goes. The clause at a `static` \
@@ -436,7 +436,7 @@ pub const NAMEN: &[Satz] = &[
                       `section` sites, both on a `static`, stay green \
                       (`beispiele/05-nebenlaeufigkeit.gab`, `/40-werte-und-griffe.gab`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §6 (`fndecl`); \
-                     dokumente/SPRACHE.md §S2",
+                     dokumente/LANGUAGE.md §S2",
     },
     // --- 2026-09-04: a falsifier that resolves must be able to go red ---------------------
     //
@@ -513,11 +513,11 @@ pub const NAMEN: &[Satz] = &[
                       `beispiele/gift/821` (unknown library), `/822` (unknown \
                       function); counter-direction in `paesse.rs` \
                       (`library_call_*`, `bibliothek_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; dokumente/PRUEFER.md §6",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7; dokumente/CHECKER.md §6",
     },
     // --- lane E2, 2026-09-12: the checked library call --------------------------------
     //
-    // **The structure lane of dokumente/PRUEFER.md §6.** A library module declares
+    // **The structure lane of dokumente/CHECKER.md §6.** A library module declares
     // a run-time function with a contract and a payload type (`library fn`
     // with `payload <table>`, SYNTAX.md §7.1); the call `@lib#f` resolves
     // like any name and is checked like any call -- arguments (`M143` and
@@ -558,7 +558,7 @@ pub const NAMEN: &[Satz] = &[
                       `translator_declared_call_names_it_n069`, \
                       `library_n069_points_*`, \
                       `translation_non_integer_region_stays_n069`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; dokumente/PRUEFER.md §6",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; dokumente/CHECKER.md §6",
     },
     Satz {
         name: "namen.bibliothek_huelle",
@@ -566,14 +566,14 @@ pub const NAMEN: &[Satz] = &[
         aussage: "No `library fn` reaches a foreign body: the transitive call \
                   hull of every declared library function holds no `extern`, \
                   `raw`, `prim` or `asm` -- including itself.",
-        vorbehalt: "Structure, not prose comparison (dokumente/PRUEFER.md §0c): \
+        vorbehalt: "Structure, not prose comparison (dokumente/CHECKER.md §0c): \
                     contradictory hardware assumptions would make every proof \
                     over the combined program vacuous. Calls through a place \
                     have no static callee and stay guarded by `E009` instead.",
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/824` (library body calling an `extern fn`); \
                       counter-direction in `paesse.rs` (`bibliothek_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/PRUEFER.md §0c",
+        fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/CHECKER.md §0c",
     },
     Satz {
         name: "namen.bibliothek_nutzlast",
@@ -588,7 +588,7 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "`beispiele/gift/825` (payload naming no table); \
                       `beispiele/gift/826` (missing clause, `P043`); \
                       counter-direction in `paesse.rs` (`bibliothek_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; dokumente/PRUEFER.md §0b",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.1; dokumente/CHECKER.md §0b",
     },
     Satz {
         name: "namen.bibliothek_direktruf",
@@ -607,7 +607,7 @@ pub const NAMEN: &[Satz] = &[
     },
     // --- lane E5, 2026-09-13: the translation stage, first cut ------------------------
     //
-    // **The structure lane of dokumente/PRUEFER.md §6 that runs translators.**
+    // **The structure lane of dokumente/CHECKER.md §6 that runs translators.**
     // An exact-length integer region fills the payload table row by row
     // through the identity translator; the call passes one argument short,
     // the region filling the payload pointer, and the emitter hands the
@@ -651,11 +651,11 @@ pub const NAMEN: &[Satz] = &[
                       payload parameter); counter-direction in `paesse.rs` \
                       (`translation_*`) and `tests/uebersetzung.rs` \
                       (acceptance, lowering, certificate mirror).",
-        fundstelle: "crates/gabbro-check/src/uebersetzung.rs; SYNTAX.md §7.3; dokumente/PRUEFER.md §6",
+        fundstelle: "crates/gabbro-check/src/uebersetzung.rs; SYNTAX.md §7.3; dokumente/CHECKER.md §6",
     },
     // --- lane E6, 2026-09-12: the hardware profile and library requirements ------------
     //
-    // **The checker half of `dokumente/PRUEFER.md` §0c.** The main program
+    // **The checker half of `dokumente/CHECKER.md` §0c.** The main program
     // declares ONE hardware profile (`profile { … }`, SYNTAX.md §12.2); a
     // library REQUIRES profile entries by reference (`requires profile
     // { … }`). Five refusals hold the five things no ordinary check can:
@@ -681,7 +681,7 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/890` (conflicting keyed entries); \
                       counter-direction in `paesse.rs` (`profil_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/PRUEFER.md §0c",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/CHECKER.md §0c",
     },
     Satz {
         name: "namen.profil_namensgleichheit",
@@ -697,7 +697,7 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/891` (same name, different statements); \
                       counter-direction in `paesse.rs` (`profil_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/PRUEFER.md §0c",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/CHECKER.md §0c",
     },
     Satz {
         name: "namen.profil_bindung",
@@ -715,14 +715,14 @@ pub const NAMEN: &[Satz] = &[
                       the positive direction in `beispiele/100` (library \
                       requiring a subset, clean) and in `paesse.rs` \
                       (`profil_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/PRUEFER.md §0c",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/CHECKER.md §0c",
     },
     Satz {
         name: "namen.profil_plattform",
         kennungen: &["N218"],
         aussage: "The profile is held against the platform: `fp_contract` \
                   other than `off` contradicts the float prelude, which binds \
-                  `-ffp-contract=off` for every compiler (`dokumente/SPRACHE.md` §5); \
+                  `-ffp-contract=off` for every compiler (`dokumente/LANGUAGE.md` §5); \
                   an `arch` the unit never declares contradicts the declared \
                   machines. Without declared machines nothing is refused.",
         vorbehalt: "The `arch` leg mirrors the `R16` shape of `annahme_arch`: \
@@ -732,7 +732,7 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/893` (`fp_contract fast` against the \
                       prelude); counter-direction in `paesse.rs` (`profil_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/SPRACHE.md §5",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/LANGUAGE.md §5",
     },
     Satz {
         name: "namen.profil_gestalt",
@@ -747,11 +747,11 @@ pub const NAMEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "`beispiele/gift/894` (second profile block); \
                       counter-direction in `paesse.rs` (`profil_*`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/PRUEFER.md §0c",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §12.2; dokumente/CHECKER.md §0c",
     },
     // --- lane E3, 2026-09-12: the translator declaration ---------------------------------
     //
-    // **The DECLARATION side of translators (dokumente/PRUEFER.md §6, lane E3).**
+    // **The DECLARATION side of translators (dokumente/CHECKER.md §6, lane E3).**
     // A library declares, per run-time function, the translator from the
     // region AST to the payload (`translator … for …`, SYNTAX.md §7.2) --
     // a total, effect-free Gabbro function whose body every pass checks
@@ -772,7 +772,7 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "`beispiele/gift/871` (missing, `N200`); counter-direction \
                       in `paesse.rs` (`translator_missing_n200`, \
                       `translator_second_n201`, `translator_dangling_n201`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; dokumente/PRUEFER.md §6",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; dokumente/CHECKER.md §6",
     },
     Satz {
         name: "namen.uebersetzer_signatur",
@@ -793,7 +793,7 @@ pub const NAMEN: &[Satz] = &[
                       `translator_result_mismatch_n204`, \
                       `translator_foreign_hull_n059`, \
                       `translator_without_body_p044`).",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; dokumente/PRUEFER.md §6",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §7.2; dokumente/CHECKER.md §6",
     },
     // --- «B40», 2026-08-31: `arch` at an assumption --------------------------------------
     //
@@ -847,7 +847,7 @@ pub const NAMEN: &[Satz] = &[
                     checked where it is declared, not where it runs.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: one probe on `O007`.",
-        fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md §13",
+        fundstelle: "crates/gabbro-check/src/namen.rs; LANGUAGE.md §13",
     },
     Satz {
         name: "namen.fnzeigervertrag",
@@ -1023,7 +1023,7 @@ pub const NAMEN: &[Satz] = &[
                   own primitives instead of assumed.",
         vorbehalt: "**Order by declaration, not by flow.** The legs read the ORDERING WORD \
                     of the atomics a body touches, as the emitter lowers them \
-                    (`C-SPEICHERMODELL.md` §1c); that the acquiring read is the one that \
+                    (`C-MEMORY-MODEL.md` §1c); that the acquiring read is the one that \
                     sees the give's release (a spin on the right word, not a stray load) \
                     is the shape `N323` holds, not a flow fact. A take or give that touches \
                     no atomic at all is `N323`'s (its order and hold legs). Bodiless \
@@ -1133,7 +1133,7 @@ pub const D1D2: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `D002`, probes on `D001`. **The `breaking` \
                       half is measured by nothing, because it refuses nothing.**",
-        fundstelle: "crates/gabbro-check/src/kbedingung.rs; SPRACHE.md §10.2",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs; LANGUAGE.md §10.2",
     },
     Satz {
         name: "d.erschoepfend",
@@ -1150,7 +1150,7 @@ pub const D1D2: &[Satz] = &[
                     naming a variant that does not exist, or naming one twice, does not fall.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probe on `D005`.",
-        fundstelle: "crates/gabbro-check/src/kbedingung.rs; SPRACHE.md §3",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs; LANGUAGE.md §3",
     },
     Satz {
         name: "d.belegtfeld",
@@ -1210,7 +1210,7 @@ pub const D1D2: &[Satz] = &[
                     `D007` deliberately.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `D006`, `D007`, `D008`.",
-        fundstelle: "crates/gabbro-check/src/kbedingung.rs; SPRACHE.md §10",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs; LANGUAGE.md §10",
     },
     Satz {
         name: "d.kettenkante",
@@ -1230,7 +1230,7 @@ pub const D1D2: &[Satz] = &[
                     Refusing them needs a statement about what the author MEANT. **And when \
                     the place does not resolve to a table the pass is SILENT** -- the type \
                     of a domain's place is checked by nobody, for all nine domains, and that \
-                    gap is named and measured in dokumente/PRUEFER.md, not closed here.",
+                    gap is named and measured in dokumente/CHECKER.md, not closed here.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 422 (`D014`, the field does not exist), 423 (`D015`, a \
                       `bool` -- no edge, no end), 424 (`D016`, an edge into another table). \
@@ -1238,7 +1238,7 @@ pub const D1D2: &[Satz] = &[
                       messung/proben/probe-neun-domaenen.gab; the counter-direction (the \
                       reversed pair, `chain(parent, parent)`, `chain(child, child)`) is \
                       measured green at each of them.",
-        fundstelle: "crates/gabbro-check/src/domaene.rs; dokumente/PRUEFER.md; \
+        fundstelle: "crates/gabbro-check/src/domaene.rs; dokumente/CHECKER.md; \
                      SYNTAX.md:1060",
     },
     Satz {
@@ -1307,7 +1307,7 @@ pub const D1D2: &[Satz] = &[
                       poison is beispiele/gift/428 (`N044`) and 429 (`N045`). \
                       **beispiele/06-annahmen.gab has carried the finding as a COMMENT \
                       since 2026-08-20 with no rule behind it** -- and six files walked \
-                      back into it. dokumente/PRUEFER.md. **The loop half was measured \
+                      back into it. dokumente/CHECKER.md. **The loop half was measured \
                       2026-08-31** at messung/proben/probe-probenurteil-schleife.gab: \
                       `N045` fell there and should not have. Over all 475 corpus files the \
                       repair changes exactly that one file -- no other rule fell silent, \
@@ -1335,14 +1335,14 @@ pub const D1D2: &[Satz] = &[
                       falsified to `elems of r.gibtsnichtfeld` in `ensures`, in `requires` \
                       and in the body of a `spec fn` gave `8 items, 0 errors, 0 hints` -- \
                       **not one of them**, and `ensures` among them, so `M109` does not read \
-                      a field name either and the dokumente/PRUEFER.md §7 cell was too kind \
+                      a field name either and the dokumente/CHECKER.md §7 cell was too kind \
                       to the checker. The control in the same run: the same place with a \
                       falsified BASE name (`elems of zzznix.plaetze`) does fall, at `M109` \
                       -- *the base is read and the field is not.* Poison is \
                       beispiele/gift/431. Over all 478 corpus files the rule falls in ZERO.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; \
                      messung/proben/probe-elems-feldname.gab; \
-                     dokumente/PRUEFER.md §7",
+                     dokumente/CHECKER.md §7",
     },
     Satz {
         name: "d.abbildungsfeld",
@@ -1351,7 +1351,7 @@ pub const D1D2: &[Satz] = &[
                   quantifier and the first about the VARIABLE: `D017` reads the base name, \
                   `D018` its kind, `D019` the field names of its suffix -- and all three stop \
                   at the PLACE. **`mappings of` is the one domain that binds a record** \
-                  (`SPRACHE.md` §6), so it is the one where `m.field` means anything, and it \
+                  (`LANGUAGE.md` §6), so it is the one where `m.field` means anything, and it \
                   was the one nobody read. A mapping carries the fields of the node `format` \
                   plus three the domain synthesises from the POSITION -- `va`, `level`, \
                   `index`.",
@@ -1417,14 +1417,14 @@ pub const D1D2: &[Satz] = &[
                       of` over a record), 427 (`D018`, `queue` over a table -- the shape \
                       the corpus itself carried). The counter-direction is the whole \
                       corpus: 462 files, and the only place either code falls is the one \
-                      the measurement found. dokumente/PRUEFER.md. **The `member` \
+                      the measurement found. dokumente/CHECKER.md. **The `member` \
                       half was measured 2026-09-02**: `requires i in slots of GIBTSNICHT` \
                       gave `0 errors` while the same words under a `forall` fell at \
                       `D017`. Poison is beispiele/gift/638; on this corpus the widening \
                       has ZERO bite -- no `member` predicate in it names a place that does \
                       not resolve, and no file changed.",
-        fundstelle: "crates/gabbro-check/src/domaene.rs; dokumente/PRUEFER.md; \
-                     dokumente/PRUEFER.md",
+        fundstelle: "crates/gabbro-check/src/domaene.rs; dokumente/CHECKER.md; \
+                     dokumente/CHECKER.md",
     },
     Satz {
         name: "d.praedikatsname",
@@ -1461,7 +1461,7 @@ pub const D1D2: &[Satz] = &[
                       clause cannot count as a reader: **266 of 380 cells silent**, and \
                       three positions of nineteen resolved a name at all. After the build \
                       125 are silent and the remainder is named per kind. \
-                      dokumente/PRUEFER.md. It found one in the tree it was written \
+                      dokumente/CHECKER.md. It found one in the tree it was written \
                       against: messung/fragmente/F01.gab:189 wrote `c.slots[s] reaches \
                       WURZEL via parent` -- byte for byte the excerpt's own line -- and no \
                       unit of that file declared `WURZEL`. Poison: beispiele/gift/647 \
@@ -1469,7 +1469,7 @@ pub const D1D2: &[Satz] = &[
                       (the `when` of an exchange, the one position that RUNS). The \
                       counter-direction is the whole corpus: 108 clean files and 415 poison \
                       probes, and after the F01 line the rule falls in ZERO of them.",
-        fundstelle: "crates/gabbro-check/src/domaene.rs; dokumente/PRUEFER.md; \
+        fundstelle: "crates/gabbro-check/src/domaene.rs; dokumente/CHECKER.md; \
                      messung/fragmente/F01.gab",
     },
     Satz {
@@ -1553,7 +1553,7 @@ pub const D1D2: &[Satz] = &[
                       exactly the same to the checker, only without the claim\"*) -- the \
                       file now writes what it described.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; \
-                     dokumente/PRUEFER.md §1.1; \
+                     dokumente/CHECKER.md §1.1; \
                      messung/proben/probe-neun-domaenen.gab",
     },
     Satz {
@@ -1603,7 +1603,7 @@ pub const D1D2: &[Satz] = &[
                   is the shape this rule refuses.",
         vorbehalt: "**It does not give `threads` a domain**, and the surface that would is \
                     booked elsewhere as a language change \
-                    (dokumente/PRUEFER.md §2.3, `PLAN.md` §9.1 and \
+                    (dokumente/CHECKER.md §2.3, `PLAN.md` §9.1 and \
                     §15). It is silent where `D022` has already refused the same quantifier \
                     -- two refusals for one fault is worse than one, the sentence `D022` \
                     writes about `D017` and `D023` about `D022`. **And it leaves `D023`'s \
@@ -1626,7 +1626,7 @@ pub const D1D2: &[Satz] = &[
                       form nobody had probed** -- the 2026-09-07 census's own sentence \
                       about Trap 80.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; \
-                     dokumente/PRUEFER.md §2.3; \
+                     dokumente/CHECKER.md §2.3; \
                      programmlogik/PLAN.md §15; beispiele/gift/690",
     },
     Satz {
@@ -1817,7 +1817,7 @@ pub const D1D2: &[Satz] = &[
                   place, and `Has(RDTSCP, XSAVE)` reads as a demand for two features and is \
                   one for the first -- every reader of the form takes `argumente.first()`.",
         vorbehalt: "**It does NOT decide whether the name is a feature of the machine, and \
-                    that half is not decidable in this tree.** `SPRACHE.md` puts the only \
+                    that half is not decidable in this tree.** `LANGUAGE.md` puts the only \
                     generator of `Has(F)` at the CPUID probe (A14); that probe does not \
                     exist, no `mints Has(F)` form exists, and nothing in the language \
                     declares a feature name. A resolver would need a declared list, and who \
@@ -1838,8 +1838,8 @@ pub const D1D2: &[Satz] = &[
                       it is the larger half -- four bare names go through, whatever they \
                       are, because that is the question a declared list would answer. Over \
                       108 clean files and 415 poison probes the rule falls in ZERO.",
-        fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/PRUEFER.md §5; \
-                     dokumente/SPRACHE.md (x86_64 assumption catalogue, A14)",
+        fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/CHECKER.md §5; \
+                     dokumente/LANGUAGE.md (x86_64 assumption catalogue, A14)",
     },
     Satz {
         name: "d.undurchsichtig",
@@ -1857,7 +1857,7 @@ pub const D1D2: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `D003` and `D004`. NO corpus site exercises \
                       it.",
-        fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3 (D1)",
+        fundstelle: "crates/gabbro-check/src/m1.rs; LANGUAGE.md §3 (D1)",
     },
 ];
 
@@ -1907,7 +1907,7 @@ pub const M1: &[Satz] = &[
                       their positive side), 8 on `M103`, 3 on \
                       `M102`, single probes on 9 further codes, one on `M139` \
                       (`gift/601`). **`M106`, `M107`, `M110` and `M114` have NO probe.**",
-        fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
+        fundstelle: "crates/gabbro-check/src/m1.rs; LANGUAGE.md §3.2",
     },
     Satz {
         name: "m1.atomic_array_bound",
@@ -2021,7 +2021,7 @@ pub const M1: &[Satz] = &[
                       stay silent in the same run. Over all corpus files the rule falls in \
                       ZERO.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; crates/gabbro-check/src/lean.rs; \
-                     dokumente/PRUEFER.md (die sechste Klasse)",
+                     dokumente/CHECKER.md (die sechste Klasse)",
     },
     Satz {
         name: "m1.vorrang",
@@ -2041,13 +2041,13 @@ pub const M1: &[Satz] = &[
                     said. gcc's `-Wparentheses` is wider there and SILENT at six of the nine \
                     that matter -- it is not a second reader for this claim.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`dokumente/SPRACHE.md`: all 25 operator pairs and 4 \
+        gemessen_an: "`dokumente/LANGUAGE.md`: all 25 operator pairs and 4 \
                       comparison forms compiled and RUN, 9 + 2 of them computing a different \
                       value. `beispiele/gift`: 2 probes (`436`, `437`), both `M136` alone. \
                       `crates/gabbro-check/tests/vorrang.rs` pins the reach in both \
                       directions -- 11 forms, each with the verdict it owes.",
         fundstelle: "crates/gabbro-check/src/m1.rs (vorrangfalle); \
-                     dokumente/SPRACHE.md",
+                     dokumente/LANGUAGE.md",
     },
     Satz {
         name: "m1.komplement",
@@ -2209,7 +2209,7 @@ pub const M1: &[Satz] = &[
                       `M153`/`M154`/`M104` refusals by code, emitted mask and \
                       helper-call shapes, compiled-and-run values.",
         fundstelle: "crates/gabbro-check/src/m1.rs (`umlauf_oder_saettigung`); \
-                     dokumente/SPRACHE.md section 4",
+                     dokumente/LANGUAGE.md section 4",
     },
     Satz {
         name: "m1.vorzeichenwechsel",
@@ -2309,7 +2309,7 @@ pub const M1: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `M108`, 2 on `M109`; the «B33» half is \
                       measured by `gift/213` and `gift/214`.",
-        fundstelle: "crates/gabbro-check/src/m1.rs (`fakten_aus`); SPRACHE.md §3.2, V1",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`fakten_aus`); LANGUAGE.md §3.2, V1",
     },
     Satz {
         name: "v2.relationale-verengung",
@@ -2341,8 +2341,8 @@ pub const M1: &[Satz] = &[
                       but §4d, the alias rule that carries the whole sentence, is now \
                       explicitly UNVERIFIED. *A sentence that looked unmeasured is now \
                       measured as unmeasurable-by-today's-harness, and that is a step.*",
-        fundstelle: "crates/gabbro-check/src/m1.rs (`beziehung`, line 1766); SPRACHE.md \
-                     §3.2, V2; MESSUNGEN.md:370 (54 of 102)",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`beziehung`, line 1766); LANGUAGE.md \
+                     §3.2, V2; MEASUREMENTS.md:370 (54 of 102)",
     },
     Satz {
         name: "v3.variantenverengung",
@@ -2356,7 +2356,7 @@ pub const M1: &[Satz] = &[
         stand: Satzstand::Vermutet,
         gemessen_an: "No direct probe. The exhaustiveness half is measured (`D005`), the \
                       narrowing half is not.",
-        fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2, V3",
+        fundstelle: "crates/gabbro-check/src/m1.rs; LANGUAGE.md §3.2, V3",
     },
     Satz {
         name: "m1.fnzeiger",
@@ -2461,7 +2461,7 @@ pub const M1: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 3 probes on `F002`, 2 on `F001`, probes on `F004` and \
                       `F005`.",
-        fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md «F»",
+        fundstelle: "crates/gabbro-check/src/m1.rs; LANGUAGE.md «F»",
     },
     Satz {
         name: "m1.bereichsgrenzen",
@@ -2503,7 +2503,7 @@ pub const M1: &[Satz] = &[
                       0.0 .. 1.0` at an `f64` parameter, which is the CORRECT spelling. *The \
                       corpus sweep found the over-reach, the design did not.*",
         fundstelle: "crates/gabbro-check/src/m1.rs; \
-                     dokumente/PRUEFER.md §1.2; \
+                     dokumente/CHECKER.md §1.2; \
                      crates/gabbro-check/src/umgebung.rs::intbereich",
     },
     Satz {
@@ -2554,11 +2554,11 @@ pub const M1: &[Satz] = &[
     Satz {
         name: "m1.bare_atomic_place",
         kennungen: &["N270", "N271"],
-        aussage: "A bare store to an `atomic` is refused (`N270`). `SPRACHE.md` §11.3 says \
+        aussage: "A bare store to an `atomic` is refused (`N270`). `LANGUAGE.md` §11.3 says \
                   every store to an atomic IS a `publishstmt`, so `AT = w` has no form -- and \
                   the bare store checked clean while emitting a plain store to an \
                   `_Atomic` object, which C treats as `seq_cst` against the declared \
-                  order and which the C model (`C-SPEICHERMODELL.md` §1c) makes stuck. \
+                  order and which the C model (`C-MEMORY-MODEL.md` §1c) makes stuck. \
                   Lowering the bare store to an explicit `atomic_store_explicit` is no \
                   fix: the store is where the payload promise stands (`publishes { … }` \
                   / `publishes nothing`, held by V001-V004), and an explicit store \
@@ -2773,8 +2773,8 @@ pub const M1: &[Satz] = &[
                       files: zero diffs.",
         fundstelle: "crates/gabbro-check/src/m1.rs (`antwort_leer`, `pruefe_axiom_ruf`, \
                      `leere_register_lesung`, `leere_boot_antwort`); \
-                     dokumente/BEWEIS.md §3 (W1), \
-                     dokumente/BEWEIS.md §2 Table B",
+                     dokumente/PROOF.md §3 (W1), \
+                     dokumente/PROOF.md §2 Table B",
     },
     Satz {
         name: "m1.signaturgenaue_antwort",
@@ -3251,7 +3251,7 @@ pub const M3: &[Satz] = &[
                     `{ text, span }` (`ast.rs`), so two DECLARATIONS of `ptr<user, r> u8` -- \
                     necessarily two different spans -- compared unequal, and `R008` refused a \
                     call with the same word on both sides of its own message. Found by «K3» \
-                    (`dokumente/PRUEFER.md` §4.2), a corpus this project never wrote and never \
+                    (`dokumente/CHECKER.md` §4.2), a corpus this project never wrote and never \
                     looked at while the checker stood: none of the 448 poison probes and none \
                     of the 67 clean examples ever passed a NAMED space to a call, so nothing \
                     here had ever exercised the comparison this rule's own claim rests on. \
@@ -3292,7 +3292,7 @@ pub const M3: &[Satz] = &[
                     value or a global carries no declared right this pass can read. *Carrying \
                     the rights in the semantic type is the same bigger fix `R008` names, and \
                     it is still not built.* `x` has one site in the whole corpus and that one \
-                    is prose in `SPRACHE.md`, so the execute atom is written and unexercised.",
+                    is prose in `LANGUAGE.md`, so the execute atom is written and unexercised.",
         stand: Satzstand::Gemessen,
         gemessen_an: "**Reproduced 2026-09-02 against the UNCHANGED checker before a line was \
                       written**, at all three stages: `beispiele/gift/607` gave `4 items, 0 \
@@ -3473,7 +3473,7 @@ pub const M2: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `L104`, probes on `L101`, `L102`, `L103`, \
                       `L107`, `L108`, `L109`.",
-        fundstelle: "crates/gabbro-check/src/m2.rs; SPRACHE.md §4",
+        fundstelle: "crates/gabbro-check/src/m2.rs; LANGUAGE.md §4",
     },
     Satz {
         name: "m2.leaves",
@@ -3485,7 +3485,7 @@ pub const M2: &[Satz] = &[
                     `leaves` is reported as naming no binding.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probe on `L106`.",
-        fundstelle: "crates/gabbro-check/src/m2.rs; SPRACHE.md:858",
+        fundstelle: "crates/gabbro-check/src/m2.rs; LANGUAGE.md:858",
     },
     Satz {
         name: "m2.geisterloeschung",
@@ -3500,7 +3500,7 @@ pub const M2: &[Satz] = &[
         stand: Satzstand::Vermutet,
         gemessen_an: "No probe measures the pair. The emitter half was built and demonstrated \
                       once; nothing holds it against the checker half.",
-        fundstelle: "crates/gabbro-check/src/m2.rs (header), emit.rs; SPRACHE.md §4",
+        fundstelle: "crates/gabbro-check/src/m2.rs (header), emit.rs; LANGUAGE.md §4",
     },
 ];
 
@@ -3595,7 +3595,7 @@ pub const SCHLEIFEN: &[Satz] = &[
                       function does return*. Poison: beispiele/gift/691. Over all 686 `.gab` \
                       files of the tree it falls in ZERO.",
         fundstelle: "crates/gabbro-check/src/schleifen.rs; \
-                     dokumente/PRUEFER.md §1.3; \
+                     dokumente/CHECKER.md §1.3; \
                      programmlogik/PLAN.md §3.1",
     },
 ];
@@ -3629,7 +3629,7 @@ pub const PAARUNG: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: one probe each on `V001` and `V002`. `V003` is a hint \
                       and has none.",
-        fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
+        fundstelle: "crates/gabbro-check/src/paarung.rs; LANGUAGE.md part II §1",
     },
     Satz {
         name: "paarung.ordnung",
@@ -3650,7 +3650,7 @@ pub const PAARUNG: &[Satz] = &[
                     superset is voluntary: no clause, no check.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: one probe each on `V004`, `V005`, `V008`.",
-        fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
+        fundstelle: "crates/gabbro-check/src/paarung.rs; LANGUAGE.md part II §1",
     },
     Satz {
         name: "paarung.reihenfolge",
@@ -3672,7 +3672,7 @@ pub const PAARUNG: &[Satz] = &[
                     name already in the written set.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `V006`, one on `V007`.",
-        fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
+        fundstelle: "crates/gabbro-check/src/paarung.rs; LANGUAGE.md part II §1",
     },
     Satz {
         name: "paarung.neuvalidierung",
@@ -3781,7 +3781,7 @@ pub const WIRKUNGEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `E001` and `E002`, probe `968` on `N305`. \
                       `E003` is a hint; `E004` has no probe.",
-        fundstelle: "crates/gabbro-check/src/wirkungen.rs; SPRACHE.md §7",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs; LANGUAGE.md §7",
     },
     Satz {
         name: "wirkungen.rahmen",
@@ -3827,7 +3827,7 @@ pub const WIRKUNGEN: &[Satz] = &[
                       `1169` (`E011`, a CALL in the body writing a global `touches` does \
                       not name) and `1170` (`E011` under a derived clause); silence and \
                       bite rows in `crates/gabbro-check/tests/traverse_object.rs`.",
-        fundstelle: "crates/gabbro-check/src/wirkungen.rs; SPRACHE.md §7",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs; LANGUAGE.md §7",
     },
     Satz {
         name: "wirkungen.abschluss",
@@ -3874,7 +3874,7 @@ pub const WIRKUNGEN: &[Satz] = &[
                       2026-08-24** -- the case the sentence used to exclude, and it gave zero \
                       errors before. Anchor: \
                       `rahmen-faellt-unter-unvollstaendiger-huelle-aus`.",
-        fundstelle: "crates/gabbro-check/src/wirkungen.rs, aufrufgraph.rs; SPRACHE.md §7; R16",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs, aufrufgraph.rs; LANGUAGE.md §7; R16",
     },
     Satz {
         name: "wirkungen.probenrumpf",
@@ -4139,7 +4139,7 @@ pub const KOSTEN: &[Satz] = &[
                       twice in the corpus itself: F1 `revoke` promised 200 ops and cost 16 \
                       452 480, A4 promised 4 096 and cost 831 488 -- both times a HUMAN wrote \
                       the typical case instead of the bound, and this pass caught it.",
-        fundstelle: "crates/gabbro-check/src/kosten.rs (`block`, line 463); SPRACHE.md §7",
+        fundstelle: "crates/gabbro-check/src/kosten.rs (`block`, line 463); LANGUAGE.md §7",
     },
     Satz {
         name: "kosten.domaenenschranke",
@@ -4193,9 +4193,9 @@ pub const KOSTEN: &[Satz] = &[
                       that path is covered by `count-schranke-um-eins-daneben`, which it \
                       shares. What is measured is the \
                       IMPLEMENTATION against tested cases, not the rule. See \
-                      `dokumente/PRUEFER.md`.",
+                      `dokumente/CHECKER.md`.",
         fundstelle: "crates/gabbro-check/src/domaene.rs (line 82), umgebung.rs \
-                     (`walkschranken`); MESSUNGEN.md:6307; SPRACHE.md:906",
+                     (`walkschranken`); MEASUREMENTS.md:6307; LANGUAGE.md:906",
     },
     Satz {
         name: "kosten.fristzahl",
@@ -4253,7 +4253,7 @@ pub const KOSTEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes each on `K007` and `K009`, probes on `K002`, \
                       `K006`, `K008`.",
-        fundstelle: "crates/gabbro-check/src/kosten.rs; SPRACHE.md §7, §9.3",
+        fundstelle: "crates/gabbro-check/src/kosten.rs; LANGUAGE.md §7, §9.3",
     },
     Satz {
         name: "kosten.haltezeit_fenster",
@@ -4323,7 +4323,7 @@ pub const GRUPPE: &[Satz] = &[
                       probe cannot: that a correct program passes. Anchor \
                       `gruppenrang-aus-der-wurzel`. **`U001`, `U002` and `U004` still have NO \
                       probe at all.**",
-        fundstelle: "crates/gabbro-check/src/gruppe.rs; MESSUNGEN.md, SWEEP der \
+        fundstelle: "crates/gabbro-check/src/gruppe.rs; MEASUREMENTS.md, SWEEP der \
                      Verbindungs-Invarianten (2026-08-16), V4",
     },
     Satz {
@@ -4379,7 +4379,7 @@ pub const PHASEN: &[Satz] = &[
                     stands at. `invariant x == x` names `x` and passes.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probe on `M133`.",
-        fundstelle: "crates/gabbro-check/src/m1.rs; dokumente/PRUEFER.md §4",
+        fundstelle: "crates/gabbro-check/src/m1.rs; dokumente/CHECKER.md §4",
     },
     Satz {
         name: "m1.feld_traegt_der_traeger",
@@ -5035,7 +5035,7 @@ pub const PHASEN: &[Satz] = &[
                   only the `endblock` arm for it (`SYNTAX.md` §6, «E2»). A \
                   bodyless declaration would be a foreign promise -- exactly \
                   what the library mechanism stands against \
-                  (`dokumente/PRUEFER.md` §0c) -- and a spec or sealed body leaves \
+                  (`dokumente/CHECKER.md` §0c) -- and a spec or sealed body leaves \
                   the hull check (`N059`) nothing to walk.",
         vorbehalt: "A shape rule of the parser, and nothing else. What the body \
                     must NOT call is a statement about the program and belongs \
@@ -5071,8 +5071,8 @@ pub const PHASEN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes 960 (`P060`), 961 (`P061`), 962 \
                       (`P062`) and 963 (`P063`); measured clean over 988 `.gab` \
-                      files and every `gabbro` block of FRAGMENTE.md, SYNTAX.md, \
-                      SPRACHE.md, README.md, dokumente/GLEITKOMMA.md and TUTORIAL.md.",
+                      files and every `gabbro` block of FRAGMENTS.md, SYNTAX.md, \
+                      LANGUAGE.md, README.md, dokumente/FLOATING-POINT.md and TUTORIAL.md.",
         fundstelle: "crates/gabbro-syntax/src/lex.rs::quelltext_pruefe; \
                      instrumente/pruefe-kennungen.py::quellvertrauen",
     },
@@ -5098,7 +5098,7 @@ pub const PHASEN: &[Satz] = &[
     },
     // --- lane E4, 2026-09-12: the monotone arena, checker half -------------------------
     //
-    // **The structure lane of dokumente/PRUEFER.md §3.** A heap is allowed but never
+    // **The structure lane of dokumente/CHECKER.md §3.** A heap is allowed but never
     // unbounded: `arena A capacity lo .. hi of T` declares the reservation and the
     // hard bound, `let i = alloc A (v) else { … }` stores into the next free slot,
     // `A[i]` reads, and `reset A` starts a fresh generation. Five refusals hold the
@@ -5154,12 +5154,12 @@ pub const PHASEN: &[Satz] = &[
                       boundary; counter-direction in `paesse.rs` (`arena_*`).",
         fundstelle: "crates/gabbro-check/src/arena.rs (`N210`-`N213`); \
                      crates/gabbro-check/src/m1.rs (`N214`); \
-                     dokumente/SYNTAX.md §9.1; dokumente/PRUEFER.md §3",
+                     dokumente/SYNTAX.md §9.1; dokumente/CHECKER.md §3",
     },
     // --- lane 240, 2026-09-17: the cap and the visible growth points (wave D) ------------
     //
     // **No new refusal code, and that is measured, not omitted.** With no
-    // `max` syntax the ceiling is `hi` (`PLAN-DYNAMISCH.md` §2 has the
+    // `max` syntax the ceiling is `hi` (`PLAN-DYNAMIC.md` §2 has the
     // clause, no lane of TODO wave D owns the parser to build it): the
     // over-cap shape without an `else` is the `N212` shape past `hi`, and
     // the shape WITH an `else` is load-bearing corpus behavior
@@ -5184,7 +5184,7 @@ pub const PHASEN: &[Satz] = &[
                   failure branch is refused (`N212`, past `hi` like past \
                   `lo`); growth with the branch declared is accepted. The \
                   pass tracks `(count, committed)` per path with the \
-                  `PLAN-DYNAMISCH.md` §4 join directions.",
+                  `PLAN-DYNAMIC.md` §4 join directions.",
         vorbehalt: "**This sentence has no diagnostic code of its own**: it \
                      pins an accounting, not a refusal. The count is per \
                      function body (like `costs`); `R-max`/`R-grow-else`/\
@@ -5207,7 +5207,7 @@ pub const PHASEN: &[Satz] = &[
                      committed)` flow, `N212` unchanged); \
                      crates/gabbro-check/src/kosten.rs (the `Alloc`/`ResetArena` \
                      arms and `sperrbloecke`, read-only for this lane); \
-                     dokumente/PLAN-DYNAMISCH.md §§2–4",
+                     dokumente/PLAN-DYNAMIC.md §§2–4",
     },
     // --- lane 257, 2026-09-19: the commit request (wave D, syntax + minimal) ------------
     //
@@ -5298,7 +5298,7 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/arena.rs (`N426`, the `Grow` \
                      walk, `decke`); crates/gabbro-check/src/umgebung.rs \
                      (`ArenaSig::max`); dokumente/SYNTAX.md §9.1; \
-                     PLAN-DYNAMISCH.md §4",
+                     PLAN-DYNAMIC.md §4",
     },
     // --- lane 259, 2026-09-26: the commit cover (wave D, emitter arm) ------------
     //
@@ -5344,7 +5344,7 @@ pub const PHASEN: &[Satz] = &[
                       `else`, the past-`M` poison, and the grow-covered clean \
                       twin); `beispiele/98` and `/99` stay clean and emitting.",
         fundstelle: "crates/gabbro-check/src/arena.rs (`N466`, the `Alloc` \
-                     walk, `dynamisch`); dokumente/PLAN-DYNAMISCH.md §4",
+                     walk, `dynamisch`); dokumente/PLAN-DYNAMIC.md §4",
     },
     // --- server lane, 2026-09-30: M-ALLTAG C, the range give-back -----------------
     Satz {
@@ -5504,7 +5504,7 @@ pub const PHASEN: &[Satz] = &[
                     these two codes says anything about it.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `O008` and `O009`.",
-        fundstelle: "crates/gabbro-check/src/phasen.rs; SPRACHE.md §12",
+        fundstelle: "crates/gabbro-check/src/phasen.rs; LANGUAGE.md §12",
     },
     Satz {
         name: "bootsatz.stilllegung",
@@ -5540,7 +5540,7 @@ pub const PHASEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: probes on `O010`, `O011`, `O012` and `O013`; \
                       messung/BOOT-S3.md.",
         fundstelle: "crates/gabbro-check/src/phasen.rs; crates/gabbro-check/src/manifest.rs; \
-                     SPRACHE.md §12",
+                     LANGUAGE.md §12",
     },
     Satz {
         name: "phasen.ordnung",
@@ -5553,7 +5553,7 @@ pub const PHASEN: &[Satz] = &[
                     broken the whole rest of the pass stays silent.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `O001` and `O002`.",
-        fundstelle: "crates/gabbro-check/src/phasen.rs; MESSUNGEN.md «B37»",
+        fundstelle: "crates/gabbro-check/src/phasen.rs; MEASUREMENTS.md «B37»",
     },
     Satz {
         name: "phasen.fluss",
@@ -5590,7 +5590,7 @@ pub const PHASEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: probes on `O003`, `O004`, `O006`, and since \
                       2026-08-24 probe 258 for the step in a `return` -- the shape that gave \
                       zero errors until then. Anchor: `phasenschritt-im-return-unsichtbar`.",
-        fundstelle: "crates/gabbro-check/src/phasen.rs; MESSUNGEN.md «B37»; K11.1",
+        fundstelle: "crates/gabbro-check/src/phasen.rs; MEASUREMENTS.md «B37»; K11.1",
     },
 ];
 
@@ -5645,8 +5645,8 @@ pub const SPERREN: &[Satz] = &[
                       another today. Interprocedural continuation measured at `H012`; poison \
                       probes on `H006`, `H012`, `H014`, `H016`.",
         fundstelle: "crates/gabbro-check/src/geteilt.rs (`rangprobe`, `unerklaerte_sperren`); \
-                     crates/gabbro-check/src/abi.rs (`ItemArt::Lock`); SPRACHE.md §9; \
-                     dokumente/SPRACHE.md",
+                     crates/gabbro-check/src/abi.rs (`ItemArt::Lock`); LANGUAGE.md §9; \
+                     dokumente/LANGUAGE.md",
     },
     Satz {
         name: "sperren.haltefolge",
@@ -5690,7 +5690,7 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `H001`, `H002`, `H003`, `H005`. **`H004` has \
                       NO probe.**",
-        fundstelle: "crates/gabbro-check/src/geteilt.rs; MESSUNGEN.md, Papiertest \
+        fundstelle: "crates/gabbro-check/src/geteilt.rs; MEASUREMENTS.md, Papiertest \
                      CapSpace/CDT (2026-08-14)",
     },
     Satz {
@@ -6084,7 +6084,7 @@ pub const SPERREN: &[Satz] = &[
         gemessen_an: "beispiele/48-grund-mit-erzeuger.gab through `pruefe`/`emit`/`cc \
                       -Werror` at -O0 and -O2 and under UBSan; beispiele/gift/232-239; \
                       10 mutations, all caught. The template comes from outside (Regel B): \
-                      `FRAGMENTE.md`:269 writes `return Fehler::Buchfuehrung;`.",
+                      `FRAGMENTS.md`:269 writes `return Fehler::Buchfuehrung;`.",
         fundstelle: "crates/gabbro-check/src/m1.rs; SYNTAX.md (`reasonval`)",
     },
     Satz {
@@ -6257,7 +6257,7 @@ pub const SPERREN: &[Satz] = &[
                     next to `extern fn Eintrag_a`. All nine check with 0 errors, emit without \
                     a `C001`, and are refused by `cc`.\n\
                     **And the reason `cc` speaks at all is measured, and it is not the \
-                    collision** (2026-08-31, `dokumente/PRUEFER.md`). `cc` refuses \
+                    collision** (2026-08-31, `dokumente/CHECKER.md`). `cc` refuses \
                     only where the two C types disagree, or where both sides define, or where \
                     the INTERNAL declaration comes second -- C11 6.2.2p4 lets a non-static \
                     declaration after a static one inherit the internal linkage, and the \
@@ -6337,7 +6337,7 @@ pub const SPERREN: &[Satz] = &[
                       messung/stille-proben/ -- and NOWHERE else.",
         fundstelle: "crates/gabbro-check/src/namen.rs::erzeugter_name_zweimal; \
                      crates/gabbro-check/src/erzeugernamen.rs; messung/ERZEUGERNAMEN.md; \
-                     dokumente/PRUEFER.md",
+                     dokumente/CHECKER.md",
     },
     Satz {
         name: "namen.kanal_ohne_einloeser",
@@ -6386,7 +6386,7 @@ pub const SPERREN: &[Satz] = &[
                       declare. *The same place `N040` found its first case* \
                       (`messung/fragmente/F01.gab`). Zero hits over the clean corpus.",
         fundstelle: "crates/gabbro-check/src/namen.rs (`check_traegt_seine_pflicht`); \
-                     dokumente/PRUEFER.md; SYNTAX.md §13",
+                     dokumente/CHECKER.md; SYNTAX.md §13",
     },
     // --- The K condition, enforced at last (2026-08-21) --------------------------------
     Satz {
@@ -6421,7 +6421,7 @@ pub const SPERREN: &[Satz] = &[
         aussage: "`breaking I { … }` names an invariant this unit really declares -- an \
                   invariant of a `table`, of a `group`, of a `walk`, or a `spec fn`, which \
                   are exactly the four `maintains` accepts. On a name that stands nowhere \
-                  the three promises of SPRACHE.md §8.3 have no subject, and the statement \
+                  the three promises of LANGUAGE.md §8.3 have no subject, and the statement \
                   is refused.",
         vorbehalt: "**The rule checks the NAME, not the region.** That the invariant really \
                     rests here, that the block restores it, and that a function with \
@@ -6434,7 +6434,7 @@ pub const SPERREN: &[Satz] = &[
                     **And the deeper gap stays open and is not this rule's:** no pass looks \
                     at an `invariant … runs online` at a statement boundary at all. Measured \
                     through the unchanged checker (W24, 2026-08-28): the two assignments of \
-                    `FRAGMENTE.md`:690-691 pass with ZERO errors, with `breaking` and \
+                    `FRAGMENTS.md`:690-691 pass with ZERO errors, with `breaking` and \
                     without it. So nothing forces the region to be named -- what this rule \
                     buys is that a named region names something. \
                     **The measured base is thin and it says so** (W10/W23): before this run \
@@ -6472,7 +6472,7 @@ pub const SPERREN: &[Satz] = &[
                       sides are beispiele/53-zwei-orte.gab and beispiele/55-kindkette.gab, \
                       and crates/gabbro-check/tests/breaking_region.rs pins both directions.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs (`breaking_rests_here`); \
-                     messung/OPUS-G-O1.md; SPRACHE.md §8.3.1",
+                     messung/OPUS-G-O1.md; LANGUAGE.md §8.3.1",
     },
     Satz {
         name: "kbedingung.invariant-hat-hueter",
@@ -6514,7 +6514,7 @@ pub const SPERREN: &[Satz] = &[
         name: "kbedingung.breaking-blocks-maintainers",
         kennungen: &["N532"],
         aussage: "Inside `breaking I { … }` no function whose `maintains` names `I` is \
-                  called directly -- SPRACHE.md §8.3's promise that the resting invariant \
+                  called directly -- LANGUAGE.md §8.3's promise that the resting invariant \
                   is not available as a premise, where it is a name the checker can read.",
         vorbehalt: "`requires I` as a predicate word (a `spec fn` in a `requires` clause) is \
                     not resolved, and an indirect call is not resolved either; both are the \
@@ -6527,7 +6527,7 @@ pub const SPERREN: &[Satz] = &[
                       same call after the block) is pinned in \
                       crates/gabbro-check/tests/breaking_region.rs.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs (`breaking_blocks_maintainers`); \
-                     SPRACHE.md §8.3",
+                     LANGUAGE.md §8.3",
     },
     // --- «B18»: die Registerklasse je Phase (2026-08-28, Bahn A) ----------------------
     Satz {

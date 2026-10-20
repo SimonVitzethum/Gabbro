@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreRuf.lean
-  Subject:   A RECOGNIZED FUNCTION CALLED THROUGH THE PROGRAM SEMANTICS (PLAN-DYNAMISCH.md section 8a.3, premises 2 and
+  Subject:   A RECOGNIZED FUNCTION CALLED THROUGH THE PROGRAM SEMANTICS (PLAN-DYNAMIC.md section 8a.3, premises 2 and
              3): `rufAt` -- the sequential meaning of a call, which checks `requires`, runs the body (`execEnd`), checks
              `ensures` and the owed invariants, and answers -- answers in an arena-consistent world when the body is
              `ErkE` and the world it was called in was.

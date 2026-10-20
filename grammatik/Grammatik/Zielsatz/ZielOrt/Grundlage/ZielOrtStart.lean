@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ZielOrtStart.lean
-  Subject:   WHAT A START FUNCTION OWES AT ITS END (SATZKARTE §15.6, §16.2).
+  Subject:   WHAT A START FUNCTION OWES AT ITS END (THEOREM-MAP §15.6, §16.2).
 
   Machine G logs a return only when a frame POPS (`rueck g rho v s0 s1`),
   and a thread's start frame has no caller: it never pops. So `InvAmOrtG`
@@ -36,7 +36,7 @@
   `ziel_ort_mehrfaden_ende` (thread-local carriers): the flagship's
   conclusion AND `StartEndeG`.
 
-  Since 2026-09-14 (second round, SATZKARTE §18): the goal statements of
+  Since 2026-09-14 (second round, THEOREM-MAP §18): the goal statements of
   §4 demand the obligations at EVERY `forever` budget and conclude on the
   machines of every budget (probe D, `Durchgaenge.lean`, `ProbeD.lean`;
   the per-budget statements are the lemmas `*_bei` of §3), and start

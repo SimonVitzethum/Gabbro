@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkennerBeweis.lean
-  Subject:   THE RECOGNIZER IS SOUND (PLAN-DYNAMISCH.md section 8a.1): every body `Erk` accepts keeps the arena
+  Subject:   THE RECOGNIZER IS SOUND (PLAN-DYNAMIC.md section 8a.1): every body `Erk` accepts keeps the arena
              invariant at EVERY exit, a body that falls off meets the abstract state it ends in, and no recognized body
              ends in a `leave` or a `next`.
 

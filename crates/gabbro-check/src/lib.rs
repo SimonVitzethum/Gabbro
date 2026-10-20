@@ -1,6 +1,6 @@
 //! **Die Pruefpaesse, in fester Reihenfolge.**
 //!
-//! `SPRACHE.md` Teil III §6 legt die Architektur fest:
+//! `LANGUAGE.md` Teil III §6 legt die Architektur fest:
 //!
 //! > Lexer → Parser (aus der vereinigten EBNF, handgeschrieben, kein Generator) → ein Kernbaum
 //! > → **Pruefpaesse in fester Reihenfolge** (Namen, D1/D2, M1+V1–V3, M3, M2, M4/Schleifen,
@@ -74,10 +74,10 @@ pub mod abi;
 /// agent E, `N501`-`N505`; the Lean side is `GabbroZielVerbund`).
 pub mod verbund;
 /// **Lane 191 -- the derived contract as a view** (lever 1 of
-/// `dokumente/PRUEFER.md`). Owns no refusal, only the register of what the
+/// `dokumente/CHECKER.md`). Owns no refusal, only the register of what the
 /// checker derives per function: `gabbro abgeleitet` reads it.
 pub mod abgeleitet;
-/// **The `syscall` declaration (dokumente/SPRACHE.md, lane S5).** The register map,
+/// **The `syscall` declaration (dokumente/LANGUAGE.md, lane S5).** The register map,
 /// the errno decoding and the machine/counterpart questions -- the call
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and
 /// `H007`, so this module holds only the declaration itself.
@@ -90,7 +90,7 @@ pub mod zielbindung;
 /// (`N450`). Declaration-level beside `syscall.rs`, whose file this module
 /// never touches: the register file is read here, not shared.
 pub mod clone;
-/// **The monotone `arena` («E4», `dokumente/PRUEFER.md` §3, checker half).**
+/// **The monotone `arena` («E4», `dokumente/CHECKER.md` §3, checker half).**
 /// The declaration against its own shape (`N210`) and the per-function flow
 /// -- generations, the static count since the last reset, the owed `else`
 /// (`N211`-`N213`). The place shape and index belonging live where every
@@ -154,7 +154,7 @@ pub use m1::fremdverengungen;
 // register is untouched by construction.
 pub mod fix;
 // **Lane 197 -- explicitness as a view** (lever 3 of
-// `dokumente/PRUEFER.md`). `gabbro fmt --explicit` writes every settled
+// `dokumente/CHECKER.md`). `gabbro fmt --explicit` writes every settled
 // derived clause out, `gabbro fmt --elide` removes every clause equal to what
 // would be derived. Both read the checker's own derivation and own no refusal,
 // so the pass register is untouched by construction.
@@ -200,10 +200,10 @@ pub mod konst_lean;
 pub mod beweis;
 pub mod refinement;
 pub mod schablonen;
-/// **The region span map (dokumente/PRUEFER.md §6, lane E7).** No pass of its
+/// **The region span map (dokumente/CHECKER.md §6, lane E7).** No pass of its
 /// own: `namen.rs` reads it and reports region diagnostics through it.
 pub mod regionkarte;
-/// **The translation stage, first cut (dokumente/PRUEFER.md §6, lane E5).**
+/// **The translation stage, first cut (dokumente/CHECKER.md §6, lane E5).**
 /// No pass of its own either: the verdicts fire through the name pass,
 /// where the call side already stands, and the emitter reads the accepted
 /// call sites. The translator runs here, at translation time; the Lean
@@ -295,7 +295,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 2,
             name: "D1/D2",
-            quelle: "SPRACHE.md §3: undurchsichtige Neutypen, vollstaendige Layouts, \
+            quelle: "LANGUAGE.md §3: undurchsichtige Neutypen, vollstaendige Layouts, \
                      erschoepfende Aufzaehlung",
             zustand: Zustand::Getragen(
                 "the K condition is built (`D001`: no hand mutation on a `table` with \
@@ -319,7 +319,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 3,
             name: "M1 + V1–V3",
-            quelle: "SPRACHE.md §3.2: range types and the three flow rules",
+            quelle: "LANGUAGE.md §3.2: range types and the three flow rules",
             zustand: Zustand::Gebaut,
             saetze: saetze::M1,
         },
@@ -345,7 +345,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 5,
             name: "M2",
-            quelle: "SPRACHE.md §4: Linear and ghost values",
+            quelle: "LANGUAGE.md §4: Linear and ghost values",
             zustand: Zustand::Getragen(
                 "built: exactly-once per path, branch matching, `consumes` against \
                     borrowed (`L101`-`L105`). **And since K5 a value that arises in the BODY** (`L107`); the ghost erasure itself is built and sits in the EMITTER, verified 2026-08-19. The rest has an address -- a `ghost` \
@@ -358,7 +358,7 @@ pub fn passliste() -> Vec<Pass> {
         // **«B37» -- der elfte Pass, und er ist die zweite Haelfte von M2.**
         //
         // Die Nummer haengt hinten, weil die Reihenfolge der Liste die Reihenfolge der Fahrt
-        // ist und `phasen` direkt hinter M2 laeuft; die Zaehlung der SPRACHE.md-Liste bleibt
+        // ist und `phasen` direkt hinter M2 laeuft; die Zaehlung der LANGUAGE.md-Liste bleibt
         // damit unangetastet. *Ein Pass, der sich in die Numerierung einer Spezifikation
         // draengt, verschiebt jede Fundstelle, die auf sie zeigt.*
         // **Der zwoelfte -- und er stand die ganze Zeit da, ohne gefuehrt zu werden.**
@@ -373,7 +373,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 12,
             name: "Sperren",
-            quelle: "SPRACHE.md §9: `rank`, `held`, `protects` -- die Sperrdisziplin",
+            quelle: "LANGUAGE.md §9: `rank`, `held`, `protects` -- die Sperrdisziplin",
             zustand: Zustand::Getragen(
                 "built: shared against exclusive (`H001`-`H004`), the intermediate rule \
                     at the call boundary (`H005`), the recomputed rank order (`H006`) -- and \
@@ -409,7 +409,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 11,
             name: "Phasen",
-            quelle: "MESSUNGEN.md, «B37»: linearity is not an order",
+            quelle: "MEASUREMENTS.md, «B37»: linearity is not an order",
             zustand: Zustand::Getragen(
                 "built: the stages of an `order` exist and `advances` goes FORWARD \
                     (`O001`/`O002`), the mark stands at its source stage at the call \
@@ -433,7 +433,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 7,
             name: "Paarung",
-            quelle: "SPRACHE.md part II §1: ordering is PAIRED, not declared",
+            quelle: "LANGUAGE.md part II §1: ordering is PAIRED, not declared",
             zustand: Zustand::Getragen(
                 "built: `publishes`/`awaits`/`exchange` over the united set, name \
                     equality after index substitution (`V001`-`V004`). **The rest has a NAME -- A10: the \
@@ -446,7 +446,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 8,
             name: "effects",
-            quelle: "SPRACHE.md §7: `effects` is mandatory and not fail-open",
+            quelle: "LANGUAGE.md §7: `effects` is mandatory and not fail-open",
             zustand: Zustand::Getragen(
                 "writes, `locks` **and since 2026-08-16 reads** (reading A, `E010`) are \
                     held against the list. **What is missing is the reach of `E010`:** it \
@@ -460,17 +460,17 @@ pub fn passliste() -> Vec<Pass> {
         },
         // **Pass 10 ist neu, und das ist eine Aenderung an der Spezifikation.**
         //
-        // `SPRACHE.md` Teil III §6 legt neun Paesse fest und sagt: *„die Spezifikation IST die
+        // `LANGUAGE.md` Teil III §6 legt neun Paesse fest und sagt: *„die Spezifikation IST die
         // Passliste"*. Ein zehnter Pass heisst also nicht „ein Modul mehr", sondern **die
         // Liste ist gewachsen** -- und das gehoert gebucht, nicht eingeschoben. Der Grund ist
-        // gemessen (`MESSUNGEN.md`, SWEEP, V4) und nicht entworfen: eine Invariante ZWISCHEN
+        // gemessen (`MEASUREMENTS.md`, SWEEP, V4) und nicht entworfen: eine Invariante ZWISCHEN
         // Traegern hat in den neun Paessen keine Stelle. Pass 2 prueft Deklarationen, Pass 8
         // die Wirkungsliste einer Funktion gegen ihren Rumpf -- keiner von beiden kennt einen
         // Verbund.
         Pass {
             nummer: 10,
             name: "Gruppe",
-            quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
+            quelle: "MEASUREMENTS.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
             zustand: Zustand::Getragen(
                 "built: the LOCK FOOTPRINT (`U001`-`U005`), the MOVE (`U006`) and the \
                     CONNECTING STATEMENT as a form (`U007`: a group invariant names at least \
@@ -484,7 +484,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 9,
             name: "costs",
-            quelle: "SPRACHE.md §7: 1 op = one Gabbro primitive, computed statically",
+            quelle: "LANGUAGE.md §7: 1 op = one Gabbro primitive, computed statically",
             zustand: Zustand::Getragen(
                 "bodies, `locks` blocks against `held` and calls over the DECLARED costs \
                     of the callee are computed -- **recursion therefore carries an \
@@ -1107,7 +1107,7 @@ pub fn ist_praedikatswort(r: &Ruf) -> bool {
 /// of it walks a BODY. **A predicate does not need a body**: eighteen of the nineteen places
 /// the grammar puts one are contract or declaration positions, and until 2026-09-02 no
 /// walker reached them together. Measured that day, position by position, against the
-/// unchanged checker (`dokumente/PRUEFER.md`): a name that nothing declares was
+/// unchanged checker (`dokumente/CHECKER.md`): a name that nothing declares was
 /// accepted in **266 of 380** position x name-kind cells.
 ///
 /// The order is the order of `ItemArt`, and the arms that carry nothing are written out

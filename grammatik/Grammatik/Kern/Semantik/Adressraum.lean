@@ -200,7 +200,7 @@ def GepruefteKopie.bereich (g : GepruefteKopie) : Nat × Nat :=
 
 /-! ### Pointer-arithmetic discharge: the validated range covers every step -/
 
-/- `SPRACHE.md` §5.2 gives computed addresses exactly one form: `place[expr]`
+/- `LANGUAGE.md` §5.2 gives computed addresses exactly one form: `place[expr]`
    with a bounded index, otherwise none. This is the Adressraum side of that
    shape, at the validation: a validated range discharges every one-byte step
    inside it -- `p + i` for `i < len` is itself a validated single read. What

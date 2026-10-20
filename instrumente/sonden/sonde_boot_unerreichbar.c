@@ -8,7 +8,7 @@
  *    (`O012`); dass eine Adresse ohne Abbildung nicht mehr erreichbar ist, ist eine Aussage
  *    ueber MMU und TLB und faellt unter keinen Pass."
  *
- * SPRACHE.md §12 names the probe in one line: *"access to a `.boot` address after
+ * LANGUAGE.md §12 names the probe in one line: *"access to a `.boot` address after
  * `boot_end` must fault."* This program is that line, driven.
  *
  * WHAT IT REALLY MEASURES, AND WHAT IT DOES NOT
@@ -19,7 +19,7 @@
  * is the whole reason this probe is more than an `munmap` demo: *the dangerous shape is not
  * a stale page table, it is a stale TLB on a core that never asked again.*
  *
- * It does NOT measure misspeculation, and `SPRACHE.md` §12 excepts it in the same words at
+ * It does NOT measure misspeculation, and `LANGUAGE.md` §12 excepts it in the same words at
  * the layer itself. A transient read behind a mispredicted branch leaves no architectural
  * trace for a signal handler to see; a probe that claimed otherwise would be worse than none.
  *
@@ -105,7 +105,7 @@ static void *gehilfe(void *arg) {
 
 int main(int argc, char **argv) {
     printf("sonde boot_unerreichbar :: nach der Stilllegung ist keine Adresse des Raumes "
-           "erreichbar (SPRACHE.md §12, Schicht S3)\n");
+           "erreichbar (LANGUAGE.md §12, Schicht S3)\n");
 
     /* **Die Rundenzahl wird GEDECKELT, und die Deckelung steht in der Ausgabe.** Der Laeufer
      * reicht 2 000 000 durch -- das ist die Zahl der Datenrennen-Sonde, und dort kostet eine
@@ -273,6 +273,6 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("      nicht widerlegt -- und das ist ALLES, was es heisst. Fehlspekulation "
-           "sieht diese Sonde nicht, und SPRACHE.md §12 nimmt sie an der Schicht aus.\n");
+           "sieht diese Sonde nicht, und LANGUAGE.md §12 nimmt sie an der Schicht aus.\n");
     return 0;
 }

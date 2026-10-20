@@ -15,7 +15,7 @@
 
     Diese Theorie holt es aus dem Korpus statt es zu erfinden: `beispiele/01-tabelle.gab`
     schreibt `blatt_loeschen` mit `maintains baum_wohlgeformt`, und `aushaengen` daneben.
-    Das sind zwei der vier Operationen, die `SPRACHE.md` 10.2 als Beispiel nennt
+    Das sind zwei der vier Operationen, die `LANGUAGE.md` 10.2 als Beispiel nennt
     (`insert, remove, relabel, delete_leaf`).
 
     DREI TEILE, und der mittlere ist der einzige mit Inhalt:
@@ -558,7 +558,7 @@ text \<open>
     Auslieferung* -- dieselbe Luecke, die \<open>Table_Absenkung.thy\<close> mit eigenen Worten nennt.
     (Bis zum 2026-08-28 stand hier *"es gibt keinen Erzeuger fuer \<open>ops\<close>"*; seit dem
     Vormittag gibt es einen, und seit dem Nachmittag ruft ihn \<open>D012\<close> zur Rechenschaft.)
-  \<^item> **Keine Kostenaussage.** \<open>SPRACHE.md\<close> 10.2 verlangt, dass eine \<open>online\<close>-Invariante in
+  \<^item> **Keine Kostenaussage.** \<open>LANGUAGE.md\<close> 10.2 verlangt, dass eine \<open>online\<close>-Invariante in
     die \<open>costs\<close> der Mutation passt. Das ist eine Pruefervorschrift, kein Satz ueber
     Zustaende.
   \<^item> **Kein \<open>offline\<close>.** Teil I quantifiziert ueber \<open>online\<close>. Ueber \<open>offline\<close> folgt

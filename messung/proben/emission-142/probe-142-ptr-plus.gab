@@ -1,6 +1,6 @@
 // erwartet: C001
 // Lane 142, CForm zeigerArithmetik, binary arm, CORRECTED 2026-09-11. Gabbro
-// gives pointer arithmetic exactly one form (SPRACHE.md 5.2: `place[expr]`
+// gives pointer arithmetic exactly one form (LANGUAGE.md 5.2: `place[expr]`
 // with an M1-bounded index). `p + 1` is none of them: M1 answers the sum with
 // `Unbekannt` (no range for a pointer), and the emitter refuses it by name at
 // the Binaer arm instead of writing `p + 1` into the C. The refusal reads the

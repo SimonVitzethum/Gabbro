@@ -270,7 +270,7 @@
     - L34 is an EXISTENCE statement about one program (the region is not empty), not a
       guarantee; `tabelle_gebrochen` (Zielsatz/InvariantenZeuge.lean) is its shape: two writes
       of `privA`, the invariant false at a reached machine between them, and open there.
-    - What stays NOT CLAIMED (below): the promises SPRACHE.md §8.3 hangs on the NAME in
+    - What stays NOT CLAIMED (below): the promises LANGUAGE.md §8.3 hangs on the NAME in
       `breaking I` -- the region is where `I` rests, the block restores `I` at its end. G drops
       the name when it unfolds the block (`dannBreaking`), so no leg can speak of "inside the
       region"; restoration is claimed at every RETURN of a writer (`invRueck`, `invGrund`).
@@ -897,7 +897,7 @@
     `E.sp0` (initialized data and zeroed storage of the emitted C). A toolchain/loader fact;
     that `E.sp0` meets the lock invariants and start `requires` is the USER's `StartPflicht`.
   * (d) `Laufzeit.reserve` -- THE RESERVATION OF A DYNAMIC ARENA (server lane, 2026-09-28;
-    the wording is PLAN-DYNAMISCH section 9's; reworded by the C-free lane 2026-09-30, header
+    the wording is PLAN-DYNAMIC section 9's; reworded by the C-free lane 2026-09-30, header
     block "arena runtime"): the virtual range for every dynamic arena's ceiling `M` is reserved
     BEFORE any start runs; a failed reservation refuses the LOAD, it never starts a program with
     a smaller range. **No new premise and no new field**: an arena is, in this statement, a table
@@ -914,7 +914,7 @@
     `arena.modul`, arithmetic proved in SchablonenModul.lean). What is NOT claimed: that the reservation succeeds --
     refuse-on-load is a refusal, not a leg.
   * (d) `Laufzeit.commit` -- THE COMMIT SERVICE (server lane, 2026-09-28; wording from
-    PLAN-DYNAMISCH section 9; reworded by the C-free lane 2026-09-30): every `grow` the checker
+    PLAN-DYNAMIC section 9; reworded by the C-free lane 2026-09-30): every `grow` the checker
     admits either COMMITS its slots before the next statement runs or takes its `else` branch; a
     commit that reports success names readable and writable storage; commit latency is bounded
     by the runtime's DECLARED per-slot cost (`ArenaDyn.growKosten` reads that number as DATA from
@@ -1000,7 +1000,7 @@
       the runs that END reachable on the metal: a cooperative build (`-DMETALL_KOOPERATIV`)
       hangs a spin on a same-core thread forever (measured, `pruefe-metall.sh` gift `staffel`)
       -- an infinite run G also admits, so nothing claimed becomes false, but nothing finishes.
-    - (M5) THE LOCK: `L_nimm`/`L_gib` are the ticket lock of CTicket.lean (SATZKARTE §32; the
+    - (M5) THE LOCK: `L_nimm`/`L_gib` are the ticket lock of CTicket.lean (THEOREM-MAP §32; the
       refinement `ticketLP_sperrAbstrakt` discharges `sperre` of `LaufzeitC` for that shape).
       The spin YIELDS its core every 64 passes: a stutter of a thread whose ticket is not
       served (`spinnt_nur`), no step of the lock. The runtime's own locks (run queues, thread
@@ -1137,7 +1137,7 @@
     not "every wait ends"; the waiting bound (Lebendigkeit.lean) assumes no such stop inside
     a critical section (`HardwareImAbschnitt`), and is not in `Ziel`.
   * Not premises, but assumptions of the reading: machine G is the meaning of the C at G's
-    step granularity (translation validation, PLAN-UEBERSETZUNGSVALIDIERUNG). Until
+    step granularity (translation validation, PLAN-TRANSLATION-VALIDATION). Until
     2026-09-26 a second clause read "the hardware is DRF-SC"; it is WITHDRAWN for accepted
     programs -- sequential consistency of what a step reads is now the leg `schwach`, proved
     (weak-memory hunk, Opus agent B; repaired after the Spec-diff verdict of 2026-09-26, F1,
@@ -1377,7 +1377,7 @@
   `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not
   races; `schwach` covers their values); the publish/await hand-off of an unguarded PLAIN
   payload (refused by the checker, see P3; the part of OFFEN O25 that remains after lane
-  O25c); floats only as the kernel IEEE model of GLEITKOMMA §7 (no float assumption on G's
+  O25c); floats only as the kernel IEEE model of FLOATING-POINT §7 (no float assumption on G's
   side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
   hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; (Opus agent D,
   2026-09-26: the line "invariants at entry or while locks are held (claimed at returns only)"

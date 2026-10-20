@@ -1,5 +1,5 @@
 //! **`arena` -- the monotone region with two bounds** («E4»,
-//! `dokumente/PRUEFER.md` §3, checker half).
+//! `dokumente/CHECKER.md` §3, checker half).
 //!
 //! The Lean model (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`, lane E4 model half)
 //! proves the mathematics: allocation within the reservation never fails
@@ -26,7 +26,7 @@
 //!
 //! ## Growth accounting (wave D, lane 240)
 //!
-//! `PLAN-DYNAMISCH.md` §4 tracks, per function body and per path, a pair
+//! `PLAN-DYNAMIC.md` §4 tracks, per function body and per path, a pair
 //! `(count, committed)` per arena: `count` is the static allocation count
 //! since the last reset (this file's `zaehlung`), `committed` is the storage
 //! actually usable on the path. The growth points of a program are then
@@ -71,7 +71,7 @@
 //! (`K002`), and an uncountable alloc value stays unknown (`K003`).
 //! Lane 232 owns `kosten.rs`; this file only reads its contract.
 //!
-//! What is NOT built, and why (finding, measured): `PLAN-DYNAMISCH.md` §4
+//! What is NOT built, and why (finding, measured): `PLAN-DYNAMIC.md` §4
 //! `R-max` as its own code — refuse the `alloc` whose static count may reach
 //! `M` even with an `else` beside it. Wired with `M = hi` it fires on
 //! `beispiele/99-arena-grenze.gab`'s third `alloc` (`Klein capacity 2 .. 2`,
@@ -159,7 +159,7 @@ const UNENDLICH: u64 = u64::MAX;
 struct Stand {
     generation: HashMap<String, u64>,
     zaehlung: HashMap<String, u64>,
-    /// Committed prefix per arena on this path (`PLAN-DYNAMISCH.md` §4).
+    /// Committed prefix per arena on this path (`PLAN-DYNAMIC.md` §4).
     /// Absent means the floor: `verpflichtung` falls back to `boden`.
     verpflichtet: HashMap<String, u64>,
     /// Local name -> (arena, generation). Only `alloc` binds these.
@@ -208,7 +208,7 @@ impl Stand {
 
     /// A fresh generation for `arena`: the reset consumes the old one.
     /// The committed count returns to the floor: commit never shrinks
-    /// (`PLAN-DYNAMISCH.md` §3, monotone commit). `boden` is `None` exactly
+    /// (`PLAN-DYNAMIC.md` §3, monotone commit). `boden` is `None` exactly
     /// when the declaration never resolved to usable bounds (then `N210`
     /// already fell, and no count question is asked anywhere).
     fn reset(&mut self, arena: &str, frisch: &mut u64, boden: Option<u64>) {
@@ -237,7 +237,7 @@ impl Stand {
     /// older index MAY be stale on the joined path.
     ///
     /// The committed count joins with the minimum — the sound direction:
-    /// what both paths guarantee (`PLAN-DYNAMISCH.md` §4). A side that never
+    /// what both paths guarantee (`PLAN-DYNAMIC.md` §4). A side that never
     /// touched the arena stands at the floor, so `boden` (the floor per
     /// arena, `None` where the declaration is unusable) fills absent
     /// entries. The result never exceeds either side and never the ceiling.
@@ -950,7 +950,7 @@ impl<'a> Laeufer<'a> {
         }
     }
 
-    /// The ceiling of `arena` (`M` in `PLAN-DYNAMISCH.md` §4): the `max`
+    /// The ceiling of `arena` (`M` in `PLAN-DYNAMIC.md` §4): the `max`
     /// clause where it stands and is usable, else the floor (`hi`).
     /// `None` where the declaration is unusable.
     fn obergrenze(&self, arena: &str) -> Option<u64> {
@@ -1548,7 +1548,7 @@ impl<'a> Laeufer<'a> {
     /// that bound may carry past `M` is refused (`N426`): past the ceiling
     /// there is no commit, only the stop, with or without the branch. The
     /// lower bound (`verpflichtet`) grows by `n` on the main path, capped by
-    /// `M` (`PLAN-DYNAMISCH.md` §4).
+    /// `M` (`PLAN-DYNAMIC.md` §4).
     ///
     /// The `else` runs when the commit FAILED: it walks from the state
     /// before the request, with nothing committed (PLAN §4), and its state
@@ -1807,7 +1807,7 @@ impl<'a> Laeufer<'a> {
         };
         self.erhebung.resets.insert(q.clone());
         // A reset restores the commit floor beside the fresh generation:
-        // commit never shrinks (`PLAN-DYNAMISCH.md` §3). The UPPER bound
+        // commit never shrinks (`PLAN-DYNAMIC.md` §3). The UPPER bound
         // stays where it is: the runtime keeps every committed page.
         let boden = self.boden.get(&q).copied();
         self.stand.reset(&q, &mut self.frisch, boden);
@@ -2275,7 +2275,7 @@ mod wachstumstests {
         assert_eq!(bodenwert(&sig(None, Some(8))), None);
         assert_eq!(bodenwert(&sig(Some(2), None)), None);
     }
-    /// The `R-max` shape (`PLAN-DYNAMISCH.md` §4) as a predicate, NOT wired
+    /// The `R-max` shape (`PLAN-DYNAMIC.md` §4) as a predicate, NOT wired
     /// into the pass as its own code: with `M = hi` it fires on
     /// `beispiele/99`'s third `alloc` (`Klein capacity 2 .. 2`, count 2,
     /// `else` present), so wiring it would redden load-bearing corpus

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkZeugeEnde.lean
-  Subject:   THE RECOGNIZER ON A FUNCTION BODY, RUN (PLAN-DYNAMISCH.md section 8a.3): `ErkE` accepts an END block, the shape of
+  Subject:   THE RECOGNIZER ON A FUNCTION BODY, RUN (PLAN-DYNAMIC.md section 8a.3): `ErkE` accepts an END block, the shape of
              `Programm.rumpf`. `kombiEnde` is `if true { kombiHang }; return`: the block form of `ArenaErkZeugeKombi.lean` enters the
              function body through a branch (`ErkE.ite`), the body ends in `return`. Run on the real world `wk` it returns in a world
              that meets the arena invariant, with the slot hung into the tree.

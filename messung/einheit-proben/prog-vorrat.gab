@@ -17,7 +17,7 @@ module vorrat {
 // keine Ersetzung, sondern eine Beweispflicht («ABI4»). Solange die Pflicht nicht gezaehlt
 // wird, traegt die Schnittstelle sie gar nicht erst hinueber.
 //
-// **Die Folge ist gemessen und steht in `dokumente/BAUSYSTEM.md`:** die `.gabi` dieser
+// **Die Folge ist gemessen und steht in `dokumente/BUILD-SYSTEM.md`:** die `.gabi` dieser
 // Einheit nennt das Wort `assume` nicht, `gabbro annahmen` findet in der anderen Einheit
 // NULL Annahmen, und das gebundene Programm hat damit ein Zeugnis, das je Einheit ein
 // anderes ist. *Das ist kein Schweigen der Sprache, sondern eine Entscheidung -- nur sagt

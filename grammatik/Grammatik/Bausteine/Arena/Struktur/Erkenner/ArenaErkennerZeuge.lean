@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkennerZeuge.lean
-  Subject:   THE RECOGNIZER ON A REAL ARENA, LIST HALF (PLAN-DYNAMISCH.md section 8a.1): bodies it ACCEPTS and RUNS, and
+  Subject:   THE RECOGNIZER ON A REAL ARENA, LIST HALF (PLAN-DYNAMIC.md section 8a.1): bodies it ACCEPTS and RUNS, and
              planted defects it REJECTS, on the concrete four-slot arena of `ArenaDynZeuge.lean` (slot `1` on the free
              list, list `2 -> 0`), declared as an arena with a list and no tree (`KL`).
 

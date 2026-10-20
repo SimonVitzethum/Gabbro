@@ -1,7 +1,7 @@
 // 153 -- **Growth under a ceiling, spelled with today's tools.**
 //
 // A dynamic arena declares a ceiling `max M` (address reserved) and a committed
-// prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMISCH.md`). That syntax
+// prefix grown explicitly by `grow` (`dokumente/PLAN-DYNAMIC.md`). That syntax
 // is not in the tree yet (no parser lane owns `max`/`grow`), so this file is the
 // static shape the dynamic form must preserve byte for byte: `capacity 2 .. 8`
 // with `M = hi = 8`. Every allocation past the reservation `lo = 2` carries its

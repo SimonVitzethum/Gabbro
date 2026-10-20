@@ -12,7 +12,7 @@
  * ---------------------------------------------------------------
  *   * `L_nimm` / `L_gib` -- the lock the unit names. A test-only spinlock: the
  *     emitter writes the two prototypes and no body, because the primitive is a
- *     trust base and not a product (MESSUNGEN.md section 2). Beside the lock the
+ *     trust base and not a product (MEASUREMENTS.md section 2). Beside the lock the
  *     driver counts two things:
  *       - `genommen`: how often the lock was taken. That number is part of the
  *         compared line, so the lock DISCIPLINE is compared, not only the answer.

@@ -9,7 +9,7 @@
   (every declared root holds nothing, `Akzeptiert.wurzeln`). So replacing the leg `KernHaltE`
   of `Ziel` by the leg over guarded runs is not a weakening: it quantifies over exactly the same
   runs, and the schedule becomes a property of the machine instead of a premise
-  (`kernHaltE_iff_M`). The proposal for `Spec.lean` is dokumente/PLAN-DYNAMISCH.md section 8a.4.
+  (`kernHaltE_iff_M`). The proposal for `Spec.lean` is dokumente/PLAN-DYNAMIC.md section 8a.4.
 -/
 import Grammatik.Zielsatz.Eigenschaften.KernMaske
 

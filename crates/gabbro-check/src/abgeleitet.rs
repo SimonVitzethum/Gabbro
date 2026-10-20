@@ -1,6 +1,6 @@
 //! **Lane 191: the derived contract, readable in one place.**
 //!
-//! Lever 1 of `dokumente/PRUEFER.md`: an omitted `effects` clause is derived
+//! Lever 1 of `dokumente/CHECKER.md`: an omitted `effects` clause is derived
 //! from the body (the hull the checker computes) and an omitted `costs` from
 //! `kosten.rs` — and both are treated exactly like a written clause by every
 //! pass. A written clause stays the enforced bound: the body must stay inside

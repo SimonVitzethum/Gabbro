@@ -78,7 +78,7 @@ def Nutzlast : Option (Int × Int) → Type
     kernel-computable model; until the switch of 2026-09-14 this was Lean's opaque
     `Float`). `Ty.fl` carries no width, and the old `Float` was binary64 too, so the
     model computes every `Ty.fl` in binary64 -- an `f32` program's model value is its
-    binary64 value (a named cut, `dokumente/GLEITKOMMA.md` section 7). -/
+    binary64 value (a named cut, `dokumente/FLOATING-POINT.md` section 7). -/
 abbrev GFloat : Type := Gleitkomma.GBits Gleitkomma.f64
 
 /-- A rational `num / den` (the literal and the range bounds) as a float: the exact
@@ -315,7 +315,7 @@ def Zahl.bxor {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     in Bits (`hw1`, wie bei `bor`/`bxor`); die Weite des Betrags liegt darunter
     (`hw2 : h2 < w` -- die Rust-Pruefung `b.max >= a.breite` in `typen.rs`
     `schiebe_links` als Lean-Voraussetzung). Ohne `hw2` waere `0 << 40`
-    ableitbar und in C undefiniert (BEWEIS.md §2, Zeile 4). -/
+    ableitbar und in C undefiniert (PROOF.md §2, Zeile 4). -/
 def Zahl.shl {l1 h1 l2 h2 : Int} (w : Nat) (_hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int))
     (h0 : 0 ≤ l1) (_h0' : 0 ≤ l2) (a : Zahl l1 h1) (b : Zahl l2 h2) :
     Zahl 0 (h1 * 2 ^ h2.toNat) :=

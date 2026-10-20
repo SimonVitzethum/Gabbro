@@ -2,7 +2,7 @@
   Gabbro/Grammatik/ZielOrtInvGrundZeuge.lean
 
   **Witnesses for `ziel_ort_sperre_invGrund`** (invariants at REASON
-  returns, SATZKARTE §19.1).
+  returns, THEOREM-MAP §19.1).
 
       lock L protects konto (two slots, 0 .. 10) rank 0
       invariant gleich: konto[0] == konto[1]        -- carriers: konto

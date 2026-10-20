@@ -8,7 +8,7 @@ carries its date and the words "not re-measured". Old section numbers are mapped
 and where does it end in a named assumption instead of a proof; (2) which hardware *model*
 exists in Lean, which was dropped, and which is being built. The goal statement itself lives
 in `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (header = the one list of named assumptions
-and of what is NOT CLAIMED); the proof status lives in `BEWEIS.md`. This file does not
+and of what is NOT CLAIMED); the proof status lives in `PROOF.md`. This file does not
 restate either.
 
 ---
@@ -32,7 +32,7 @@ Two readings, and only one is reachable.
 The honest sentence is therefore: *no construct disables a check; the lowering must also not
 guess.* The second half is the generator question of §6, and since the C emitter is deprecated
 and the LLVM backend untrusted (§6), the end of that road is the final-byte validator
-(`PLAN-UEBERSETZUNGSVALIDIERUNG.md`).
+(`PLAN-TRANSLATION-VALIDATION.md`).
 
 ---
 
@@ -82,7 +82,7 @@ a sentence about an oracle, not a statement derived from an instruction set.
 `DIRECT-COMPILER*.md` and `crates/gabbro-check/src/x86/` to the git branch `archive`. What the
 archive holds is a 14-form pilot decoder/executor, byte-addressed memory, a per-access x86-TSO
 store-buffer model, image/relocation/stack fragments and the optimiser rule library specified in
-`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §8. It never became a complete byte-connected machine: encoder
+`PLAN-TRANSLATION-VALIDATION.md` §8. It never became a complete byte-connected machine: encoder
 round-trip is not hardware correspondence, and the TSO-to-W/GX bridge was never proved. Seven
 GabbroV files in the `X86` namespace stayed on master (`GvTreeParent`, `GvLuecken`,
 `GvStartPflicht`, `GvAtomRely`, `GvBaum`, `GvVerkettung`, `GvAtomKoerper`): they have no x86
@@ -136,7 +136,7 @@ and the thread machine are in `Speichermodell/Maschine/{MaschineW,GXMaschine,Sic
 `Speichermodell/Atomar/`. The statement `SchwachX` (the weak machine adds no behaviour beyond GX
 steps) is part of `gabbro_ziel`. **W abstracts `seq_cst` as release/acquire; that is not a proved
 total SC order.** Nothing here is a model of x86 or Arm; the target bridge is the open item of
-`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3.
+`PLAN-TRANSLATION-VALIDATION.md` §3.
 
 ---
 
@@ -188,7 +188,7 @@ Open:
 - That a device touches a buffer only in the agreed window is a statement about foreign hardware:
   `consumes` plus phase is the right encoding of the intent and will never be a proof.
 - Shared user memory between capabilities is outside the language (same cut as seL4); it belongs
-  as one line in `BEWEIS.md`.
+  as one line in `PROOF.md`.
 
 ### 3.3 Interrupts — contract complete, body not in the language
 
@@ -269,7 +269,7 @@ deliberately kept (a `_` that yields a plausible *value* is the silent byte; one
 nothing hands the decision to the caller). *The earlier booking was itself wrong twice*: the count
 was a mix of four commands running the same pass, and the root line was recorded as "silent" where
 it fired 146 times — **a counter that aborts at the first hit measures the wrong question**
-(`panic!` → `eprintln!`; see `HISTORIE.md`).
+(`panic!` → `eprintln!`; see `HISTORY.md`).
 
 Pattern behind it (the "build profile", six instances in two days): *parts arise singly and
 correctly, the wiring arises never — it belongs to no construct and therefore to no lane.*
@@ -291,7 +291,7 @@ label, so two different programs got the same MD5. Repaired in `e5e555d` (nine r
 labels; `tests/zeugnis_injektiv.rs` measures both directions). *Open: injective for the traversal
 domains, not in general.* The generated runtime pieces (locks, thread runtime, arena runtime,
 interrupt descriptor table, metal entry) are proved templates; the register is
-`gabbro templates` (`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §5).
+`gabbro templates` (`PLAN-TRANSLATION-VALIDATION.md` §5).
 
 ---
 
@@ -510,10 +510,10 @@ gabbro derived <file>; gabbro effects <fn>        # §9
 | §11 (vocabulary ratchet) | §8 | `kw.rs:9`, the retired `zaehle-wortschatz` |
 | §21 (705/188 mark) | §9 | `messung/proben/460-…gab` |
 | §24, §25 (effects lattice; derived set retrievable) | §9 | `ableitung.rs:32`, `crates/gabbro-cli/src/main.rs:214`, `main.rs:3450` |
-| §42 (`phase`) | §11 | `SPRACHE.md:110` |
+| §42 (`phase`) | §11 | `LANGUAGE.md:110` |
 | §48 (fifth mark, ownership transfer) | §11 | `beispiele/66` |
-| §49 B3 (newcomer path), B6 (`H = 0`) | §12 | `tests/sprechprobe.rs:296`, `gift/620`–`624`, `dokumente/FRAGMENTE.md` |
-| §51 S2 (`spec fn` cannot state a frame condition) | §9 / `BEWEIS.md` | `beispiele/06-annahmen.gab:65` |
+| §49 B3 (newcomer path), B6 (`H = 0`) | §12 | `tests/sprechprobe.rs:296`, `gift/620`–`624`, `dokumente/FRAGMENTS.md` |
+| §51 S2 (`spec fn` cannot state a frame condition) | §9 / `PROOF.md` | `beispiele/06-annahmen.gab:65` |
 
 Absorbed and now safe to delete: `dokumente/PLAN-HARDWARE.md` … `dokumente/PLAN-HARDWARE.md` (summarised in
 §2.3; their `CUTS` sections are the "honest limit" column). `messung/netz/README.txt` was retired on 2026-10-17;
@@ -965,7 +965,7 @@ statement is OS-specific.
   (`AxEns : World → result → Bool`) — they hold as the frame plus the invariant.
 
 **If a sharper statement is wanted** (optional, to be reviewed as a diff together with the combined diff of
-`PLAN-DYNAMISCH.md` 8a.3):
+`PLAN-DYNAMIC.md` 8a.3):
 
 1. `Deklaration` gets role data with defaults, so the ~84 `Deklaration … where` fixtures stay unchanged (the
    `agruende := fun _ => 0` precedent): `rolle : Ax → Option (Nat × Rolle)` (pool number and role) and

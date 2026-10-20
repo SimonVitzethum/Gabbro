@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Parser/Anweisung.lean
-  Subject:   T3 PART 2 (PLAN-UEBERSETZUNGSVALIDIERUNG.md section 1): Gabbro
+  Subject:   T3 PART 2 (PLAN-TRANSLATION-VALIDATION.md section 1): Gabbro
               statements and blocks (SYNTAX.md section 7) over the Lean
               lexer and expression parser.
 

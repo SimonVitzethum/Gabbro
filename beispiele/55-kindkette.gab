@@ -18,7 +18,7 @@
 //       in c.slots[p]
 //
 // *Die Domaene ist hier keine bequemere Schreibweise, sondern die einzige Menge, ueber der
-// der Satz stimmt.* Er steht seit jeher im Entwurf (`SPRACHE.md`:383, `kind_zeigt_zurueck`)
+// der Satz stimmt.* Er steht seit jeher im Entwurf (`LANGUAGE.md`:383, `kind_zeigt_zurueck`)
 // -- **geschrieben hatte ihn niemand.**
 //
 // WAS DIE ZUSICHERUNG TUT, GEMESSEN (2026-08-31)
@@ -66,7 +66,7 @@ table Kappraum count NKAPPEN {
         naechstes_geschwister : option index into Kappraum,
     }
 
-    // **Der Satz aus `SPRACHE.md`:383, zum ersten Mal geschrieben.** Zwei Ebenen
+    // **Der Satz aus `LANGUAGE.md`:383, zum ersten Mal geschrieben.** Zwei Ebenen
     // Schachtelung -- die aeussere zaehlt die Elter, die innere ihre direkten Kinder. Mehr
     // als zwei erlaubt die Sprache nicht, und mehr braucht der Satz auch nicht.
     invariant kind_zeigt_zurueck cost O(n * kette) runs offline :

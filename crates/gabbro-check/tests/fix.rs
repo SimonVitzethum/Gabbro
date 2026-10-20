@@ -1,4 +1,4 @@
-//! Machine-applicable repairs (lane 187, lever 4 of `dokumente/PRUEFER.md`).
+//! Machine-applicable repairs (lane 187, lever 4 of `dokumente/CHECKER.md`).
 //!
 //! Every diagnostic that carries a fix is applied to its gift probe (or, where no gift
 //! probe fires the code, to a minimal inline source), and the result is re-checked: the

@@ -4,7 +4,7 @@
 // which `gabbro pruefe` has always accepted with `0 errors, 0 hints`:
 //
 //   1. **The CALL had no lowering.** `let … else` is the one form of error propagation this
-//      language has (`SPRACHE.md` §8.1), and it pushed `&<binding>` for every callee that
+//      language has (`LANGUAGE.md` §8.1), and it pushed `&<binding>` for every callee that
 //      does not return a GHOST -- then asked for the type of a result the declaration does
 //      not have, and refused: *"`let … else` whose call has no resolvable type"*. The
 //      declaration side had always known better: an `or R` function is `bool` in C and gets

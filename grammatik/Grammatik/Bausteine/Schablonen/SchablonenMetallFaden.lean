@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenMetallFaden.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md): the GENERATED thread runtime of the
+             dokumente/PLAN-TRANSLATION-VALIDATION.md): the GENERATED thread runtime of the
              bare-metal image (C-free lane, C3 slice 4, 2026-10-05).
 
   Row of `crates/gabbro-check/src/schablonen.rs`: `faden.metall` -- the scheduler the build

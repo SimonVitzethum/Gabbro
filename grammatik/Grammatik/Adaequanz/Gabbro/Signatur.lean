@@ -9,7 +9,7 @@
 
   The table `tabelle` is written here and COMPARED with the environment when this file is elaborated
   (`pruefeTabelle`): a new constructor, a new child or a new premise in the model stops the build here until
-  the table and `PRUEFER.md` §16.6 are updated (the register moves with the model, as `Gen/Abdeckung/Mitglieder`).
+  the table and `CHECKER.md` §16.6 are updated (the register moves with the model, as `Gen/Abdeckung/Mitglieder`).
 -/
 import Lean
 import Grammatik.Kern.Syntax.Syntax

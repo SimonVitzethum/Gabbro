@@ -1,7 +1,7 @@
 # Translation validation: from source to the final binary
 
-*Rewritten 2026-10-17. It absorbs `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` (the derivation plan, now §9) and
-`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` (the optimiser specification, now §8), and held the dated
+*Rewritten 2026-10-17. It absorbs `dokumente/PLAN-TRANSLATION-VALIDATION.md` (the derivation plan, now §9) and
+`dokumente/PLAN-TRANSLATION-VALIDATION.md` (the optimiser specification, now §8), and held the dated
 C-backend proof record in §§6–7, which was removed on 2026-10-18 with the C line (tag
 `archiv/c-emitter-2026-10-17`). Section numbers 0–7 stay as they were; see §10 for the renames.*
 
@@ -194,7 +194,7 @@ See the note above; no content.
 
 ---
 
-## 8. Optimiser specification (absorbed from `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`)
+## 8. Optimiser specification (absorbed from `dokumente/PLAN-TRANSLATION-VALIDATION.md`)
 
 **Status: SPECIFICATION only.** Written 2026-10-01 (lane 331) for the direct x86-64 compiler, first
 friend delivery 2026-10-02. **Every Lean file it names lived under `grammatik/Grammatik/X86/`
@@ -328,7 +328,7 @@ analysis is mandatory, not optional.
 
 ---
 
-## 9. The path from the grammar to the checker and emitter (absorbed from `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`)
+## 9. The path from the grammar to the checker and emitter (absorbed from `dokumente/PLAN-TRANSLATION-VALIDATION.md`)
 
 *Written 2026-09-09; status check 2026-10-17.* **Principle:** `grammatik/Grammatik/Kern/Syntax/Syntax.lean`
 is the specification of the checker and `Kern/Semantik/Semantik.lean` of the emitter: a program is
@@ -440,7 +440,7 @@ LLVM backend stays as the running reference compiler. Estimate for the half: 25 
    the witness), the small-step semantics with an oracle at the atomic load only (linked to the weak-memory
    interface and `Speichermodell.Ordnung`), SC determinism, a kernel-computed witness, and `Need`, the
    list of obligations a CPU model must provide for `Code -> bytes` (the same for x86-64, AArch64, RISC-V).
-2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`, 2026-10-18, `SATZKARTE.md` section 78): expressions
+2. **L1 core lowering.** Built and proved (`Lower/`, `Refine/`, 2026-10-18, `THEOREM-MAP.md` section 78): expressions
    (`lowerE_ok`), statements, blocks, end blocks (`lowerS_ok`, `lowerB_ok`, `lowerEnd_ok`: the four assignments, `if`,
    `let`, `check`, `narrow`, `return`, `leave`/`next`, the loops `forever`/`traverse`/`retry`, the calls `call` and
    `let x = f(..)`), the function prologue and the **closing function theorem** (`lowerFn_run`: a body that returns `v`
@@ -520,7 +520,7 @@ is the measure, not a count of examples. Elaboration replaces the Rust exporter 
 then deleted). ~20 000–35 000 lines. Order by corpus weight: control flow, matches, atomics, arenas, then the
 hardware items.
 
-**Shared prerequisite.** The model changes first (CLAUDE.md): new G forms come from `PLAN-DYNAMISCH.md` 8a
+**Shared prerequisite.** The model changes first (CLAUDE.md): new G forms come from `PLAN-DYNAMIC.md` 8a
 (free list, invariants over live slots) and from the missing hardware-form semantics.
 
 **Benchmark against GCC `-O3`: after Track L reaches L3 and the optimisation phase below.** Not before; today a
@@ -820,16 +820,114 @@ corpus: 170 files; lex ok 170; whole-file parse ok 170; elab ok 17; lower ok 17
 
 ---
 
+## 9c. EETV-R version 3: refinement down to the binary (Simon's design, 2026-10-18; moved from `TODO.md` Phase C item 9)
+
+*The ONLY refinement item; earlier versions are in git history. Nothing of it is built.*
+
+**Idea.** Own core as meaning, LLVM as an UNTRUSTED producer: check an LLVM `-O3` binary B against the certificate without a
+presupposed CPU model, without LLVM-IR semantics, with the real CPU as the only hardware oracle, for millions of lines. LLVM
+(frontend, passes, backend), its IR semantics, the hint plugin and the bridge builder are all OUTSIDE the trust base; the LLVM IR only
+serves as a source of hints.
+
+**Chain.**
+1. Gabbro spec, proofs per function (as now).
+2. The CORE K: a small SSA language in Lean, no UB, no poison/undef, objects with ownership, memory events with ordering
+   annotations, MMIO as observable events.
+3. Bridge steps K to K'1 .. K'n (vectorisation, loops, inlining, hoisting; no hardware; justified by Gabbro facts). K' = K + the
+   machine primitives D supplies (word widths, vectors, lanes, shuffles, byte-level address arithmetic; bit-vector semantics in
+   Lean, the same ground as the laws A).
+4. K'n to B through D terms (hardware only via V1).
+
+**Mapping to what exists.** K is essentially the existing `Grammatik/Code/` (Track L: UB-free, ISA-neutral, stuck on op preconditions,
+atomics with orderings, block memory). The lowering Gabbro-to-K is Track L's verified G-to-`Code` refinement (`lowerS_ok`,
+`lowerFn_callref`, ...), with Track P (source to G in Lean) in front of it. To add to `Code`: vectors/lanes/shuffles (K'), ownership
+objects and lifetimes as facts, MMIO events, the open Track L forms (arenas, concurrency refinement). The Rust compiler's own
+lowering (`llvm.rs`) becomes an untrusted hint producer: the reference is the Lean-computed K_f = lower(C, f).
+
+**Trade-off against version 2.** No LLVM-IR semantics (poison, undef, provenance, version changes), small K/K' semantics, validation
+granularity chosen by the validator through the number of bridge steps. Price: without pass-by-pass validation the fallback rate
+tends to be higher (mitigation: finer bridge steps, Gabbro facts for UB-based optimisations).
+
+**UB exploitation replaced by facts.** `nsw`/`nuw` = value range of the operation; `inbounds` = ownership and object bounds; no access
+to freed memory = lifetime from ownership; loop terminates/has effects = variant or event structure. No matching fact means the
+validation fails and the function falls back (never unsoundness). The facts the compiler emits today (`nuw`/`nsw`, `inbounds`,
+`!range`, `noalias`, `llvm.assume`, `dereferenceable`, `align`, TBAA; counted as `; gabbro-fact KIND N` in the IR) are exactly the
+catalogue of assumptions to justify.
+
+**Bridge builder (untrusted).** Reads the hints (IR after relevant passes: loop structure, vectorisation factor, inlining; register
+map; loop correspondence; function map; access-to-object map) and produces K' intermediate states at any granularity; each single
+step is validated by a local equivalence proof in Lean semantics, loops by simulation relations. OPEN SPOT: the access-to-object map
+that carries Gabbro facts to accesses must itself be validated, otherwise a correct fact justifies a reordering at the wrong access.
+Fallback: finer bridge steps, else recompile that function with fewer passes.
+
+**Backend validation K'n to B.** Lift B through the footprints to dataflow graphs of D terms, prove equality with the naive mapping by
+equality saturation (e-graphs) modulo the laws A, which are PROVED in Lean (commutativity, associativity, distributivity, strength
+reductions, division by a magic constant per constant occurring in B, vector lane = scalar op, addressing = spelled-out arithmetic):
+no clause V2. D (per CPU stepping and microcode, pure data, only the patterns LLVM emits for the target; any byte sequence in B
+outside D is refused) holds length, footprint, the full term over K' primitives for ALL outputs (flags too) and the control-flow
+class. Probe (semantics-free): load/read memory, read/set state as an unnamed bit vector, step, run to exit addresses, reset, irq
+off. D is semantics learned from the CPU and chip-tested instead of copied from a manual.
+
+**Control flow learned from bits.** The PC is the bit group that moves by small positive amounts on single steps and shifts by the
+difference when the same instruction is loaded elsewhere. Classes by experiment: no jump; relative jump (offset function
+`scale*sext(field)+c`, exhaustive for fields up to ~24 bits); indirect jump (source from the footprint); conditional jump (condition
+as a term over state bits); call (where the return address goes); return. Jump tables (never-written region, entries point to the K
+switch blocks, range check or range fact, relocations resolved); indirect calls (target set from the certificate); return-address
+integrity follows from source-level memory safety and is mandatory in every certificate.
+
+**Coverage.** Unwinding tables, constant pools, relocations, linker output, init code, signal and interrupt entries.
+
+**Concurrency, interrupts, devices.** Events of B equal the K events up to the reorderings the memory model allows; fences and atomics
+are D entries with ordering annotations in K'; the goal is proved on the spec level. V3 is DERIVED from the Gabbro proof (only the
+finite set of ordering axioms the proof uses, targeted litmus stress on all cores under load; where a prohibition carries the proof
+use the strongest barrier, cost: speed there). Devices: MMIO events exactly in K's order and values; device behaviour and IOMMU
+enforcement are contract clauses.
+
+**Hardware contract.** V1: each D pattern means its K' term, footprint and control-flow class complete (includes hidden state H2 and
+64-bit correctness: unprovable from finite observations, the black-box bound; tested exhaustively over small windows, structurally
+over full width, randomly, on several chips). V3: the ordering axioms the proof uses. V4: the IOMMU enforces its configuration.
+
+**Guarantee.** If the validators accept and V1, V3, V4 hold for the calibrated CPU, B meets the certificate's specification including
+the concurrent goal and MMIO event fidelity: LLVM made no translation error, checked between our own Lean semantics, relative to a
+learned chip-tested semantics of the used patterns and the ordering axioms the proof needs.
+- *Trust base:* the spec, the Lean kernel, the semantics of K and K', the lowering Gabbro-to-K (verified in Lean), the validators and
+  the lifting through footprints, the learning pipeline and probe adapter.
+- *Not covered:* physics and operation, firmware/SMM/hypervisor/boot chain, devices, timing/WCET/side channels/progress, uncertified
+  foreign code.
+- The performance claim (>= 80 % of `-O3`) is CONDITIONAL on a small fallback rate and unproven.
+
+**Research risks.** Bridge builder (reconstructing K' intermediate states from hints without pass granularity); UB justification
+(every exploited assumption needs a fact); validating `-O3` loop optimisations; transport of the facts; the fallback rate; term
+synthesis for complex patterns (shuffles, multi-output, flags, floating point); variable encodings.
+
+**Trust decision** (taken by the coordinator under Simon's rule "strongest variant"): `bv_decide` (SAT proof checked natively, rests on
+`Lean.ofReduceBool`) MAY be used for the laws A and magic constants in the validator, in modules OUTSIDE the import closure of
+`gabbro_ziel`; the Lean guardian keeps checking that `gabbro_ziel` stays on `propext`/`Classical.choice`/`Quot.sound`.
+
+**First steps, in this order.**
+1. K and K' in Lean = extend `Code` (vectors, lanes, shuffles, ownership objects, MMIO events) and close the open Track L forms.
+2. Measure the fallback rate: a bridge-builder prototype for vectorisation and LICM on real `-O3` functions (the generated programs
+   of `Gen/Erzeuger`), with and without Gabbro facts.
+3. The UB-fact catalogue (map each assumption LLVM may use, starting from the facts the compiler emits, to a Gabbro fact).
+4. Learning pipeline for D on one CPU (this machine is x86-64; aarch64 and RISC-V need real hardware, `qemu` is a model).
+5. Laws A in Lean.
+6. Backend validator: lifting through footprints, e-graphs modulo A, jump tables.
+7. LLVM hint plugin including the access-to-object map.
+8. Derive V3 from the Gabbro proof.
+9. Coverage: unwinding, init, relocations, stack bounds.
+
+---
+
 ## 10. Cited section numbers
 
 | Old reference in code | Now | Where it is cited |
 |---|---|---|
-| `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3 item 2 / "stage (a)", §3 item 4 and §7 / "stage (b)", §6.x, §7.x | §6, §7 | removed (C backend, tag `archiv/c-emitter-2026-10-17`); Lean files that cited them were deleted |
+| `PLAN-TRANSLATION-VALIDATION.md` §3 item 2 / "stage (a)", §3 item 4 and §7 / "stage (b)", §6.x, §7.x | §6, §7 | removed (C backend, tag `archiv/c-emitter-2026-10-17`); Lean files that cited them were deleted |
 | §1 / "section 1" (T3) | §1 | `Parser/{Lexer,Ausdruck,Anweisung}.lean`, `Korpus/Zeugnis/ZeugnisStmt*.lean` |
 | *(no section named)* | | `Bausteine/Schablonen/Schablonen*.lean:4`, `Zielsatz/Kern/Spec.lean:1140` |
-| `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §1.3, §2.1 | §9 | `Korpus/Zeugnis/Zeugnis.lean:6,31`, `crates/gabbro-check/src/emit.rs:9582` |
-| `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` | §8 | no reader found by `grep` in `crates/ instrumente/ grammatik/` |
+| `dokumente/PLAN-TRANSLATION-VALIDATION.md` §1.3, §2.1 | §9 | `Korpus/Zeugnis/Zeugnis.lean:6,31`, `crates/gabbro-check/src/emit.rs:9582` |
+| `dokumente/PLAN-TRANSLATION-VALIDATION.md` | §8 | no reader found by `grep` in `crates/ instrumente/ grammatik/` |
 
-Absorbed and safe to delete once the references above are rewritten: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`,
-`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`. The Lean headers that cite `PLAN-UEBERSETZUNGSVALIDIERUNG.md` with no
+Absorbed and safe to delete once the references above are rewritten: `dokumente/PLAN-TRANSLATION-VALIDATION.md`,
+`dokumente/PLAN-TRANSLATION-VALIDATION.md`. The Lean headers that cite `PLAN-TRANSLATION-VALIDATION.md` with no
 section keep working because the file stays.

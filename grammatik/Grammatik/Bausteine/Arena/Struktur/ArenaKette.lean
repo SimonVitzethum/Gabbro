@@ -2,7 +2,7 @@
   File:      Grammatik/ArenaKette.lean
   Subject:   LINKED LISTS OVER INDICES, abstractly: the chain as an inductive predicate over the link
              function, with the mutations that matter (link in, unlink the head, unlink after a
-             predecessor) proved to keep it well formed (PLAN-DYNAMISCH.md section 8a, phase 2,
+             predecessor) proved to keep it well formed (PLAN-DYNAMIC.md section 8a, phase 2,
              abstract half; the binary tree is `ArenaBaum.lean`).
 
   A link is an INDEX into one arena table; the value `c` (the table's `count`) is the nil marker. A

@@ -2,7 +2,7 @@
 //
 // Ein `locks`-Block ueber einer vollen Tabelle. Die Sperre sagt `held <= 100 ops` zu, der
 // Block haelt sie fuer 1024 x 2. An dieser Zahl haengt die Latenzaussage JEDER Wartestelle
-// (SPRACHE.md 9.3) -- ohne die Pruefung ist sie eine Behauptung.
+// (LANGUAGE.md 9.3) -- ohne die Pruefung ist sie eine Behauptung.
 
 module gift {
 

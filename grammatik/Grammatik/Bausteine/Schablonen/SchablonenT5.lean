@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenT5.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md).
+             dokumente/PLAN-TRANSLATION-VALIDATION.md).
 
   What this file is: ABSTRACT cores for the templates of
   `crates/gabbro-check/src/schablonen.rs` -- abstract cores, NOT tied

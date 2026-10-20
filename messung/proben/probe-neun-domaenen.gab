@@ -1,7 +1,7 @@
 // Die NEUN Quantorendomaenen in EINER Einheit -- und zwar in `ensures`.
 //
 // **Der Zweck ist die Messung und nicht das Programm.** Die Tafel in
-// `dokumente/PRUEFER.md` fragt je Domaene: welche Namen nennt sie, und faellt eine
+// `dokumente/CHECKER.md` fragt je Domaene: welche Namen nennt sie, und faellt eine
 // erfundene Angabe? Diese Datei ist der Traeger, an dem die Verfaelschungen gesetzt werden.
 //
 // Warum `ensures` und nicht `invariant`: **`M109` liest heute NUR `ensures`** (`m1.rs`:3100,

@@ -130,7 +130,7 @@ impl fn schalte(d : ptr<mmio, rw> D) effects { writes d.G } costs <= 4 ops { an(
 // die Aufrufe, die niemand versteckt hat.
 //
 // *Genau diese Form steht im Korpus:* `delete_leaf` ruft `free_region`, `push_dma` und
-// `push_reply` in drei `match`-Zweigen (`FRAGMENTE.md`:277-279).
+// `push_reply` in drei `match`-Zweigen (`FRAGMENTS.md`:277-279).
 
 #[test]
 fn ein_ruf_im_match_zweig_kommt_in_der_huelle_an() {

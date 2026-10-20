@@ -1,4 +1,4 @@
-//! **`syscall` -- the user side of a system call** (dokumente/SPRACHE.md, lane S5).
+//! **`syscall` -- the user side of a system call** (dokumente/LANGUAGE.md, lane S5).
 //!
 //! The parser reads the `syscalldecl` production (SYNTAX.md §12.1) into
 //! `SyscallDecl`; this pass holds the declaration against its own shape. The

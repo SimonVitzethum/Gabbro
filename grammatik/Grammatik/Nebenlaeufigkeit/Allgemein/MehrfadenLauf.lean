@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/MehrfadenLauf.lean
   Subject:   THE RUNS of the two-writer witness with private tables
-             (`MehrfadenZeuge.lean`, SATZKARTE §16): the conclusions of the
+             (`MehrfadenZeuge.lean`, THEOREM-MAP §16): the conclusions of the
              new theorems on reached machines, not only their premises.
 
   * `ziel_ort_mehrfaden_zeuge` (items 1 and 2): thread 0 writes its

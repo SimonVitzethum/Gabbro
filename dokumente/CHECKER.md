@@ -8,8 +8,8 @@ Rule and diagnostic codes, `OFFEN Oxx` ids and example/gift numbers are stable a
 
 **What this document is:** the reference for `crates/gabbro-check` (the Rust checker, the passes
 and their rules), for the places where its verdict is mirrored in Lean, and for the apparatus that
-measures it. **What it is not:** the language (`SPRACHE.md`, `SYNTAX.md`), the goal theorem
-(`BEWEIS.md`), the backends (`LLVM-BACKEND.md`, `C-SPEICHERMODELL.md`).
+measures it. **What it is not:** the language (`LANGUAGE.md`, `SYNTAX.md`), the goal theorem
+(`PROOF.md`), the backends (`LLVM-BACKEND.md`, `C-MEMORY-MODEL.md`).
 
 ---
 
@@ -37,7 +37,7 @@ measures it. **What it is not:** the language (`SPRACHE.md`, `SYNTAX.md`), the g
   what a language can take away was measured on 100 recorded traps: 72 % (language 36 %,
   measurement discipline 36 %), the other 28 % (tooling, wrong meaning) no language removes —
   the classification is `messung/fallen-klassifikation.tsv`, derived by the retired `zaehle-fallen` (2026-10-17, see git history);
-  `BEWEIS.md` carries the argument.
+  `PROOF.md` carries the argument.
 
 Counts that move (examples, gifts, codes, sentences) are given with the command that re-measures
 them (§13). Figures marked *booked* are historical results of the retired counters and the retired
@@ -51,13 +51,13 @@ them (§13). Figures marked *booked* are historical results of the retired count
 |---|---|
 | `crates/gabbro-syntax` | lexer (`lex.rs`: `L001`–`L004`, `P060`–`P063` source-trust rules), parser (`parse.rs`, hand-written, no generator, `P0xx`), the AST (`ast.rs`), the diagnostics type (`diag.rs`: `Absage`, `Absagen`, `Stufe`, `Fix`), the keyword table (`kw.rs`) |
 | `crates/gabbro-check` | the passes (`lib.rs::pruefe`), the pass register (`saetze.rs`), the shared maps (`umgebung.rs`, `aufrufgraph.rs`), the exporters and certificates (`lean.rs`, `lean_g.rs`, `corrlean.rs`, `certstmt.rs`, `zeugnis.rs`), the C emitter (`emit.rs`, deprecated) and the LLVM emitter (`llvm.rs`, current) — emitters run **after** the checker and are untrusted |
-| `crates/gabbro-cli` | the `gabbro` binary (`main.rs`), the build system (`bau.rs`, `BAUSYSTEM.md`), the generated drivers (`treiber.rs`) |
+| `crates/gabbro-cli` | the `gabbro` binary (`main.rs`), the build system (`bau.rs`, `BUILD-SYSTEM.md`), the generated drivers (`treiber.rs`) |
 
 The checker is about 136,000 lines in `crates/gabbro-check/src/*.rs`; the large files are
 `emit.rs` (19.6k), `m1.rs` (11.0k), `llvm.rs` (9.3k), `namen.rs` (7.4k), `saetze.rs` (7.0k).
 Each pass is a module with a `pass(baum, absagen)` entry; passes read the tree and the shared
 maps and do not consume each other's refusals — a rule is one pass or a named part of one (the register is
-the specification: `SPRACHE.md` part III §6, `lib.rs` head).
+the specification: `LANGUAGE.md` part III §6, `lib.rs` head).
 
 **Shared maps.** `Umgebung::sammle(baum)` builds the name maps (keyed *qualified*: `a::b::f`; a
 bare-name lookup inside a `module` block returns `None` every time and looks like a rule that
@@ -69,7 +69,7 @@ sound over an incomplete hull, checks that need completeness refuse or say "unde
 still takes only `(baum, absagen)` and rebuilds what it needs. The old measurement (2026-08-19,
 synthetic 120k-line unit, 899 ms, 610 ms of it the rebuild of those two structures) is not
 re-measured; `GABBRO_ZEIT=1` prints per-pass times. A per-unit result cache («Z1») is not built;
-the build system is incremental by content (`BAUSYSTEM.md`).
+the build system is incremental by content (`BUILD-SYSTEM.md`).
 
 ---
 
@@ -162,7 +162,7 @@ exporter refusals, certificate refusals).
    nothing measures.
 3. **A refusal is never turned into a warning, and never widened to fit a corpus file.** A check
    that fires on a legitimate program is repaired by making the program's intent expressible, not
-   by weakening the rule (`dokumente/PRUEFER.md` §2, now §10).
+   by weakening the rule (`dokumente/CHECKER.md` §2, now §10).
 4. **A refusal that names a rule must say why** (measured by the retired `pruefe-gruende`: a rule built for the
    obvious reason does not cover the load-bearing one — `N011` caught ghosts in memory because
    they have no size, not because they cannot be stored). Diagnostic text is English.
@@ -396,7 +396,7 @@ neither carries, the pass refuses instead of assuming.*
   built by the program carry their terminator: `N507`.
 * **Floats.** The float prelude binds `-ffp-contract=off`; a finiteness fact is required
   where an operation needs one (`F001`, `F002`, `F004`, `F005`; fact from a declaration,
-  `narrow … to finite`, or a literal). `GLEITKOMMA.md` carries the IEEE model; the old plan's
+  `narrow … to finite`, or a literal). `FLOATING-POINT.md` carries the IEEE model; the old plan's
   stages F0–F8 are built through the checker/model parts named there.
 
 ### 4.5 Pass 4 — M3: pointers, address spaces, device registers
@@ -596,7 +596,7 @@ count the maximum plus their condition; what follows an `if` that always leaves 
 ### 4.14 Memory: arenas, release, regions
 
 A heap is allowed, **but never one that grows without bound**: every allocation region carries
-a bound. (This is the old "Simon's rule" of `dokumente/PRUEFER.md` §3; the forms, §6.5.) Built:
+a bound. (This is the old "Simon's rule" of `dokumente/CHECKER.md` §3; the forms, §6.5.) Built:
 
 * **`arena A capacity lo .. hi`** (`N210`–`N214`, `arena.rs`): both bounds are translation-time
   constants; every `alloc` past the reservation owes its `else` (`N212`, counted like `costs`);
@@ -681,7 +681,7 @@ the Lean slice 2b proved that reading unsound (`ObjektWurzel.rust_lesart_luecke`
 was closed on 2026-10-17 (an untraceable pointer equals every root).
 
 **Lean (slices 2 and 2b, `grammatik/Grammatik/Logik/Vertraege/Getrennt.lean`, `Objekte.lean`,
-`ObjektRahmen.lean`, `ObjektWurzel.lean`, `*Zeuge.lean`; SATZKARTE §74, §75).** `ParamGetrennt`
+`ObjektRahmen.lean`, `ObjektWurzel.lean`, `*Zeuge.lean`; THEOREM-MAP §74, §75).** `ParamGetrennt`
 (at the granularity of a carrier/table), `ObjGetrennt` (finer: an object is one slot — the pair
 of the capability `ptr n rw` and an index); `objGetrennt_ein_obj_iff` (with one object per
 carrier it *is* `ParamGetrennt`), `rufAt_obj`/`obj_ruf_rahmen` (under `ObjGetrennt` every run
@@ -704,7 +704,7 @@ the built slices have overtaken in part; (4) `free` across function boundaries (
 
 ## 6. Library syntax, the translation stage, hardware profiles, bounded memory
 
-*(Formerly `dokumente/PRUEFER.md`. Its section numbers are cited from code comments; §6.1–§6.7
+*(Formerly `dokumente/CHECKER.md`. Its section numbers are cited from code comments; §6.1–§6.7
 below carry them: old §0 → 6.1, §0b → 6.2, §0c → 6.3, §1/§2 → 6.4, §3 → 6.5, §4 → 6.6,
 §5/§6 → 6.7.)*
 
@@ -1008,7 +1008,7 @@ Reservations in the sentences that are worth reading *before* trusting a green r
   emitter's `match` cascade, and a form the emitter lowers that no classification knows is
   `UNZUGEORDNET` ("the emitter grew and told nobody"). *A certificate for this translation is not
   a statement about all inputs: it says what the translation rests on, not that it holds.* The
-  active target is now direct machine bytes (`PLAN-UEBERSETZUNGSVALIDIERUNG.md`); the C
+  active target is now direct machine bytes (`PLAN-TRANSLATION-VALIDATION.md`); the C
   certificate chain is legacy evidence.
 * **`comptime`: the line.** `const fn` computes *values* — it costs no template; comptime that
   *generates code* would cost a template that must be proved. A `const fn` is in the total,
@@ -1023,7 +1023,7 @@ Reservations in the sentences that are worth reading *before* trusting a green r
 * **Floating-point interval propagation must round outward** (`m1.rs`, F3 of the float plan):
   `[a,b] + [c,d]` is `[RD(a+c), RU(b+d)]`; computing the bounds with host doubles in round-to-nearest
   would make them up to one ulp too *tight* — unsound in the direction that reports nothing.
-  Floats lower with `-ffp-contract=off`; `GLEITKOMMA.md` carries the IEEE model.
+  Floats lower with `-ffp-contract=off`; `FLOATING-POINT.md` carries the IEEE model.
 
 ---
 
@@ -1057,7 +1057,7 @@ reasoning per obligation.* A `maintains` is matched against an invariant by name
 no invariant is refused (`M112`), while a rename onto another declared invariant legitimately
 changes the books.
 
-**The criterion that decides plumbing versus logic** (`BEWEIS.md`): an obligation that *mentions
+**The criterion that decides plumbing versus logic** (`PROOF.md`): an obligation that *mentions
 only the machine* is **plumbing (K)** and must fall in a pass; one that *mentions the subject* is
 **logic (L)** and is the person's. A gap in a K row is a breach of the thesis at that site. The
 criterion was applied by hand to the ten frozen fragments of the kernel code Gabbro was designed
@@ -1091,7 +1091,7 @@ Rows from the fragment tables that rules cite:
 
 ## 10. Simplicity without losing a guarantee
 
-*(Formerly `dokumente/PRUEFER.md`; its measure is §0 there.)* **Measure:** a simplification is
+*(Formerly `dokumente/CHECKER.md`; its measure is §0 there.)* **Measure:** a simplification is
 accepted when **the ceremony count goes down** (`gabbro zeremonie`: the burden per rule with its
 reason; calibration in `--table`) **and the pass register stays constant** (§8: every guarantee,
 with the code that enforces it). Both numbers are booked before and after each step; a step that
@@ -1116,7 +1116,7 @@ corpus-dependent and every lane re-books it "measured, not added up" (measured b
 
 ## 11. Completeness, blind spots, and what a foreign corpus showed
 
-*(Formerly `dokumente/PRUEFER.md` and the `messung/` reports `GRAMMATIK-VOLLSTAENDIG`,
+*(Formerly `dokumente/CHECKER.md` and the `messung/` reports `GRAMMATIK-VOLLSTAENDIG`,
 `K3-BEFUND`, `RUMPFKANAL-LUECKEN`, `AUSSETZUNG`, `VIER-LUECKEN`, `EINHEITENSICHT`,
 `TORREICHWEITE`.)*
 
@@ -1158,7 +1158,7 @@ project chose. *The ten were measuring our selection.* What it found, and what b
 | a user-defined address space was unequal to itself (`ptr<user, r>` gave `R008`) | `Raum::Benannt(Ident)` derives `PartialEq` over `{text, span}` | fixed; re-measured: the probe checks clean |
 | 0 of 8 for foreign C | measures *portability*, not fitness: intrusive lists, `void *`, `container_of` are refused on purpose | recorded; a corpus written for Gabbro is the other question |
 
-**Language gaps found by real code** are carried in `FRAGMENTE.md`. What the completeness work
+**Language gaps found by real code** are carried in `FRAGMENTS.md`. What the completeness work
 closed or named:
 
 * **Forms that mean nothing** (`GRAMMATIK-VOLLSTAENDIG`): the quantifier domain was decoration
@@ -1311,7 +1311,7 @@ The checker's verdict is mirrored in Lean in four places that are easy to confus
 Seven files (`Bereich`, `Kosten`, `Linear`, `Phasen`, `Rang`, `Terminierung`, `Wirkung`), about
 3,000 lines, **137 theorems, 0 own `axiom`**, 65 with `#print axioms` in place and 54 "does not
 prove" notes (counts from the folder's README; the theorem count re-adds to 137 by `grep`).
-**Written from `SPRACHE.md`, not from `crates/`** — the whole value is that the model can
+**Written from `LANGUAGE.md`, not from `crates/`** — the whole value is that the model can
 *contradict* the Rust; copying it destroys that. Two reservations: (1) the seam between the model
 and `gabbro-check` is checked by nobody; (2) the **statement descent** (what a body does,
 statement by statement) stands in none of the seven files and is booked as an assumption in four.
@@ -1381,7 +1381,7 @@ component Bools of the goal theorem's checker are in
 `AkzeptiertSpecX` (the footprint rule admits a shared atomic in no contract: `N484`). **The goal
 statement is `theorem gabbro_ziel`** (`Zielsatz/BeweisAtomar.lean`; `Zielsatz/Kern/Beweis.lean`
 proves `gabbro_ziel_sc`); `#print axioms` must be exactly `propext`, `Classical.choice`,
-`Quot.sound`. What the goal theorem claims is documented in `BEWEIS.md` and `SATZKARTE.md`; this
+`Quot.sound`. What the goal theorem claims is documented in `PROOF.md` and `THEOREM-MAP.md`; this
 document owns only the rule ↔ Bool correspondence above.
 
 ### 12.4 The seam: witness pairs, not a proof
@@ -1530,7 +1530,7 @@ lacks that `Block` has: `bindCall`, `bindCallElse`, `narrow`, `check`, `awaits`,
 two returning arms has no term (the exporter says "no G form at the top level of a body"); each is the
 `Block` former with an `Endblock` rest, as `bindAxiom` already is. (3) `Block.arenaAlloc` is a `Block` former
 only (sugar over `Block.narrow`): `Endblock.arenaAlloc`. Statement-level (a Spec proposal, already written
-down): the payload hand-off without a lock (`PLAN-DYNAMISCH.md` 8a.3 and 11: the `N291` replacement and the
+down): the payload hand-off without a lock (`PLAN-DYNAMIC.md` 8a.3 and 11: the `N291` replacement and the
 `AkzeptiertX` component); the dynamic structures (the recognizer `Erk` is not a component of
 `Akzeptiert`, 8a.3); the reader/writer lock (`Lock` carries `rang` and `maskiert` only, 8a.5); declared
 costs (`K001`: the model has per-pass budgets and no bound per function; a `kostenB P fs` component over the
@@ -1656,7 +1656,7 @@ is stated in their own docstrings.
 | `unfalsifiable` clauses | 8, 1 admitted (measured 2026-10-17 by the retired `pruefe-unfalsifizierbar`; not guarded today) | `grep -rn unfalsifiable beispiele` |
 | hanging plumbing duties `H` | 1 (`F3` lowering without a differential test; measured by the retired `zaehle-pflichten`, 2026-10-17; not guarded today) | — |
 | obligations over the ten fragments | 239 = 173 K + 66 L (historical: retired `zaehle-pflichten`, booked 2026-09) | `gabbro pflichten <file.gab>` per file |
-| the goal theorem | proved over the model; `#print axioms` = `propext`, `Classical.choice`, `Quot.sound` (booked, not re-run here: no Lean build was run for this document) | `BEWEIS.md`, `SATZKARTE.md` |
+| the goal theorem | proved over the model; `#print axioms` = `propext`, `Classical.choice`, `Quot.sound` (booked, not re-run here: no Lean build was run for this document) | `PROOF.md`, `THEOREM-MAP.md` |
 | the checker as a *proved* artefact | not: the Rust checker is related to the Lean Bool by witnesses (§12.4), not by theorem | — |
 
 ### 14.2 Open items of the checker and its mirror
@@ -1750,7 +1750,7 @@ documentation). Each is checkable by the command given.
 12. **Not carried over from the old files because it could not be verified today:** the
     synthetic-unit timing table of «Z» (899 ms, 610 ms rebuild), the `.gabi` details beyond the
     sentences (representations of one type across libraries, template proof-state merging), the
-    float plan's per-stage status F0–F8 beyond `GLEITKOMMA.md`, the 175/24 occupied/poison-only
+    float plan's per-stage status F0–F8 beyond `FLOATING-POINT.md`, the 175/24 occupied/poison-only
     cells of the grammar table (struck in retired `KENNZAHLEN` register on 2026-09-27), the ceremony count after
     2026-09-13, and the K001 off-by-one mutation table of five domains.
 
@@ -1760,7 +1760,7 @@ documentation). Each is checkable by the command given.
 
 *TODO Phase C item 8. Lean: `grammatik/Grammatik/Adaequanz/` (theorems over an arbitrary ranked signature, every
 one kernel-checked on `propext`/`Classical.choice`/`Quot.sound`; witnesses on a concrete signature in `Zeugen.lean`;
-the Gabbro counts in `Adaequanz/Gabbro/`). SATZKARTE §85 lists the statements.*
+the Gabbro counts in `Adaequanz/Gabbro/`). THEOREM-MAP §85 lists the statements.*
 
 **The question (Simon).** What is the SMALLEST set `M` of programs such that every PROGRAM-NEUTRAL checker or
 compiler that handles every program of `M` correctly (verdict = the model's `AkzeptiertX`; for a valid program a
@@ -2003,17 +2003,17 @@ different file (the Lean model's plan) and is **not** covered here.
 | `PLAN.md` "wertgetragene Schranke" (`kosten.rs`) | §4.12 (parametric promises) |
 | `PLAN.md` table cell `L <= 4` (`schablonen.rs`) | §8.2 (ratchet on `L`) |
 | `PLAN.md` "Tor" for `gabbro kontexte` (`kontexte.rs`) | §8.2 (an empty run looks like a pass) |
-| `dokumente/PRUEFER.md` §0b / §0c (+ points 2, 3, 5) / §2 / §3 / §6 | §6.2 / §6.3 / §6.4 / §6.5 / §6.7 |
-| `dokumente/PRUEFER.md` §2, levers 1, 3, 4 | §10 ("What cannot be made lighter", levers 1, 3, 4) |
-| `dokumente/PRUEFER.md` §4 (S4 seam witnesses) | §12.4 |
-| `dokumente/PRUEFER.md` §2 | §11 ("Why a corpus count does not answer V") |
+| `dokumente/CHECKER.md` §0b / §0c (+ points 2, 3, 5) / §2 / §3 / §6 | §6.2 / §6.3 / §6.4 / §6.5 / §6.7 |
+| `dokumente/CHECKER.md` §2, levers 1, 3, 4 | §10 ("What cannot be made lighter", levers 1, 3, 4) |
+| `dokumente/CHECKER.md` §4 (S4 seam witnesses) | §12.4 |
+| `dokumente/CHECKER.md` §2 | §11 ("Why a corpus count does not answer V") |
 | retired `PFLICHTEN` register F10, F1 rows | §9 (rows that rules cite) |
 | `PFLICHTEN-KORRESPONDENZ.md`, `PFLICHTEN-ORDNUNG.md` (cited from `pflichten.rs`) | not covered: those files are not in the consolidated set; §9 is the overview |
 | retired `UNFALSIFIZIERBAR` register (`saetze.rs`) | §7.2 |
-| retired `SONDENDECKUNG` register, `dokumente/PRUEFER.md` (guardians) | §7.3, §12.5 — and §13.4: the guardians read the old files |
-| `dokumente/PRUEFER.md` §5, `dokumente/PRUEFER.md` §2c, `dokumente/PRUEFER.md` §7 | §4.3 (the three bullets under "What the measurements found") |
-| `dokumente/PRUEFER.md` §3, §4.1, §4.2 | §11 (the K3 table) |
-| `dokumente/PRUEFER.md` §1.1–§1.3, §2.3, §2.4 | §11 ("Forms that mean nothing"), §4.3 (`D017`–`D025`) |
-| `dokumente/PRUEFER.md` §3, §4 | §4.7, §11 |
-| `dokumente/PRUEFER.md` §3–§5 | §4.2 (`N041`/`N042`) |
-| `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, retired `FREMDVERENGUNG` register, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md`, `dokumente/PRUEFER.md` | §11; §4.3 (K001); §4.13 (`absenkung.rs` bound 18; the measured maximum was 17, the bound 18 = 17 + 1); `ERSTNAMEN` (English first names of the CLI sub-commands and flags, guarded by `crates/gabbro-cli/tests/fahnen.rs`) is a CLI fact, not covered |
+| retired `SONDENDECKUNG` register, `dokumente/CHECKER.md` (guardians) | §7.3, §12.5 — and §13.4: the guardians read the old files |
+| `dokumente/CHECKER.md` §5, `dokumente/CHECKER.md` §2c, `dokumente/CHECKER.md` §7 | §4.3 (the three bullets under "What the measurements found") |
+| `dokumente/CHECKER.md` §3, §4.1, §4.2 | §11 (the K3 table) |
+| `dokumente/CHECKER.md` §1.1–§1.3, §2.3, §2.4 | §11 ("Forms that mean nothing"), §4.3 (`D017`–`D025`) |
+| `dokumente/CHECKER.md` §3, §4 | §4.7, §11 |
+| `dokumente/CHECKER.md` §3–§5 | §4.2 (`N041`/`N042`) |
+| `dokumente/CHECKER.md`, `dokumente/CHECKER.md`, `dokumente/CHECKER.md`, retired `FREMDVERENGUNG` register, `dokumente/CHECKER.md`, `dokumente/CHECKER.md`, `dokumente/CHECKER.md`, `dokumente/CHECKER.md`, `dokumente/CHECKER.md` | §11; §4.3 (K001); §4.13 (`absenkung.rs` bound 18; the measured maximum was 17, the bound 18 = 17 + 1); `ERSTNAMEN` (English first names of the CLI sub-commands and flags, guarded by `crates/gabbro-cli/tests/fahnen.rs`) is a CLI fact, not covered |

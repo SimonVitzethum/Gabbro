@@ -1,6 +1,6 @@
 [package]
 name = "gabbro-syntax"
-description = "Lexer, Wortschatz und Parser fuer Gabbro -- P2 aus SPRACHE.md Teil III, 6"
+description = "Lexer, Wortschatz und Parser fuer Gabbro -- P2 aus LANGUAGE.md Teil III, 6"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

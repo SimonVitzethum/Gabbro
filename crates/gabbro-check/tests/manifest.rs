@@ -120,7 +120,7 @@ fn derselbe_name_mit_anderem_inhalt_ist_ein_widerspruch() {
 /// `assume c11_release_acquire arch x86_64` and `… arch aarch64` say different things about
 /// different processors, and an estate carrying both architectures needs both lines.
 /// **Before `Eintrag::arch`, `vereinige` called that a contradiction** -- and the pattern
-/// `SPRACHE.md` §6 writes out would have become unwritable the day `arch` became sayable.
+/// `LANGUAGE.md` §6 writes out would have become unwritable the day `arch` became sayable.
 ///
 /// *The other direction stands and is checked here too:* the same name with the SAME machine
 /// and different content is still a dispute.

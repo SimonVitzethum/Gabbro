@@ -7,7 +7,7 @@
 //
 // **Vorher war das nicht schreibbar, und der Grund war eine Zeile im Erzeuger.** Wer
 // `f_bit : u64 in 1 .. 1` schreibt, WEIST das leere Register ab, statt „leer" zu melden --
-// so steht es im eingefrorenen Ausschnitt (`FRAGMENTE.md`:505) und so hat es der Mensch
+// so steht es im eingefrorenen Ausschnitt (`FRAGMENTS.md`:505) und so hat es der Mensch
 // geschrieben, dem die Sprache nichts anderes anbot. *Absage und Abwesenheit fielen
 // zusammen.*
 //

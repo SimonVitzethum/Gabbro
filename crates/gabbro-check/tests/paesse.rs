@@ -45,7 +45,7 @@ fn doppelte_deklaration_faellt() {
 
 #[test]
 fn zwei_architekturen_sind_keine_doppelung() {
-    // FRAGMENTE.md F5 deklariert `invoke` zweimal -- einmal je Architektur. Wer das als
+    // FRAGMENTS.md F5 deklariert `invoke` zweimal -- einmal je Architektur. Wer das als
     // Doppelung meldet, verbietet die bedingte Uebersetzung, die `arch`/`when` tragen.
     faellt_nicht(
         "prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch x86_64;\n \
@@ -272,10 +272,10 @@ fn praedikatsrumpf_nur_fuer_spec() {
 #[test]
 fn die_passliste_sagt_was_sie_nicht_prueft() {
     let liste = passliste();
-    // **Zehn aus `SPRACHE.md` Teil III §6, plus einer, der nicht daher stammt.**
+    // **Zehn aus `LANGUAGE.md` Teil III §6, plus einer, der nicht daher stammt.**
     // `Phasen` («B37», 2026-08-17) hat keine Nummer in der Spezifikationsliste -- er haengt
     // hinten an, damit die zehn Fundstellen, die auf sie zeigen, stehenbleiben.
-    assert_eq!(liste.len(), 12, "die ersten zehn stehen in SPRACHE.md Teil III §6");
+    assert_eq!(liste.len(), 12, "die ersten zehn stehen in LANGUAGE.md Teil III §6");
     assert_eq!(
         liste.iter().filter(|p| p.nummer <= 10).count(),
         10,
@@ -368,14 +368,14 @@ fn jede_schablone_nennt_ihre_pflicht() {
     // **Die Zahl ist angenagelt, und das ist der Zweck.** Sie war bis zum 2026-08-16
     // `SCHABLONEN.len()` -- keine einzige bewiesen. Jetzt ist eine bewiesen
     // (`table.induktion`, Isabelle2025-2, `grammatik/Beweise/`), und dieser Test hat die Buchfuehrung
-    // dazu erzwungen: er faellt, bis die Zahl HIER und in `BEWEIS.md` nachgezogen ist.
+    // dazu erzwungen: er faellt, bis die Zahl HIER und in `PROOF.md` nachgezogen ist.
     //
     // *Wer die naechste beweist, faellt wieder hier -- so soll es sein. Eine Zahl, die sich
     // still mitbewegt, ist keine Ratsche.*
     assert_eq!(
         ungedeckt(),
         11,
-        "wenn eine Schablone nach Isabelle gebracht wurde, gehoert das hierher UND in BEWEIS.md"
+        "wenn eine Schablone nach Isabelle gebracht wurde, gehoert das hierher UND in PROOF.md"
     );
 }
 
@@ -432,14 +432,14 @@ fn probe(name: &'static str, fundstelle: &'static str, stand: Stand) -> Schablon
 #[test]
 fn der_erste_zahn_spricht() {
     use gabbro_check::schablonen::ohne_fundstelle_in;
-    let gesund = [probe("a", "MESSUNGEN.md", Stand::Entworfen)];
+    let gesund = [probe("a", "MEASUREMENTS.md", Stand::Entworfen)];
     assert!(
         ohne_fundstelle_in(&gesund).is_empty(),
         "ein Eintrag MIT Fundstelle darf nicht anschlagen"
     );
 
     let krank = [
-        probe("a", "MESSUNGEN.md", Stand::Entworfen),
+        probe("a", "MEASUREMENTS.md", Stand::Entworfen),
         probe("ohne", "   ", Stand::Entworfen),
     ];
     assert_eq!(
@@ -455,13 +455,13 @@ fn der_zweite_zahn_spricht() {
     use gabbro_check::schablonen::{marke_gerissen_in, MARKE_OHNE_BEWEIS};
     // Grundmarke voll, nichts bewiesen: haelt.
     let voll: Vec<_> = (0..MARKE_OHNE_BEWEIS)
-        .map(|_| probe("x", "MESSUNGEN.md", Stand::Entworfen))
+        .map(|_| probe("x", "MEASUREMENTS.md", Stand::Entworfen))
         .collect();
     assert!(!marke_gerissen_in(&voll), "die Grundmarke selbst darf halten");
 
     // Einer mehr, nichts bewiesen: reisst.
     let mut zuviel = voll.clone();
-    zuviel.push(probe("neunzehnter", "MESSUNGEN.md", Stand::Entworfen));
+    zuviel.push(probe("neunzehnter", "MEASUREMENTS.md", Stand::Entworfen));
     assert!(
         marke_gerissen_in(&zuviel),
         "**der zweite Zahn greift nicht.** Genau das war der Fehler bis zum 2026-08-17: \
@@ -471,7 +471,7 @@ fn der_zweite_zahn_spricht() {
 
     // Einer mehr, aber einer bewiesen: haelt wieder -- der Beweis KAUFT den Platz.
     let mut gekauft = zuviel.clone();
-    gekauft[0] = probe("x", "MESSUNGEN.md", Stand::Bewiesen);
+    gekauft[0] = probe("x", "MEASUREMENTS.md", Stand::Bewiesen);
     assert!(
         !marke_gerissen_in(&gekauft),
         "ein Beweis muss einen Platz kaufen -- sonst ist die Ratsche ein Anschlag"
@@ -479,7 +479,7 @@ fn der_zweite_zahn_spricht() {
 
     // Und zwar GENAU einen: zwei ueber der Marke, ein Beweis -> reisst wieder.
     let mut zweiter = gekauft.clone();
-    zweiter.push(probe("zwanzigster", "MESSUNGEN.md", Stand::Entworfen));
+    zweiter.push(probe("zwanzigster", "MEASUREMENTS.md", Stand::Entworfen));
     assert!(
         marke_gerissen_in(&zweiter),
         "ein Beweis kauft EINEN Platz, nicht die Marke ab"
@@ -528,13 +528,13 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // `gruppe.sperrabdruck` was booked `Entworfen` with a comment copied from the neighbouring
     // `gruppe.ops` entry; the code it actually names (`emit.rs`'s `Sperrt` handler, checked by
     // `geteilt.rs::H006`) has been generated all along, and `zeugnis.rs` has said so since
-    // long before this fix. See `dokumente/FRAGMENTE.md` §2 and `schablonen.rs`
+    // long before this fix. See `dokumente/FRAGMENTS.md` §2 and `schablonen.rs`
     // at the entry.
     assert_eq!(
         lebend_ungedeckt(),
         3,
         "getragen und unbewiesen: wer eine Schablone in den Erzeuger einbaut, vergroessert \
-         die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in BEWEIS.md"
+         die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in PROOF.md"
     );
     assert_eq!(ungedeckt(), 11);
     // **10 seit dem 2026-08-20** -- `restrict.alleinzugriff` ist in Isabelle und baut.
@@ -592,7 +592,7 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
 ///
 /// Until 2026-09-04 the only check on `L` was the equality above: a pin on today's value,
 /// which passes ANY number through unexamined the moment somebody edits the literal. An
-/// audit (`dokumente/FRAGMENTE.md`, `dokumente/FRAGMENTE.md`) found
+/// audit (`dokumente/FRAGMENTS.md`, `dokumente/FRAGMENTS.md`) found
 /// that no `<= 4` existed anywhere the tree could evaluate. This test is the bound itself.
 #[test]
 fn das_zweite_tor_haelt_l_unter_seiner_schranke() {
@@ -617,13 +617,13 @@ fn das_zweite_tor_spricht() {
     // Exactly at the ceiling: holds. Names repeat -- `l_gerissen_in` counts by `stand`,
     // not by name, and uniqueness is a different test's job (`schablonen_abhaengigkeiten_…`).
     let am_rand: Vec<_> = (0..L_GRENZE)
-        .map(|_| probe("x", "MESSUNGEN.md", Stand::Getragen))
+        .map(|_| probe("x", "MEASUREMENTS.md", Stand::Getragen))
         .collect();
     assert!(!l_gerissen_in(&am_rand), "die Schranke selbst darf halten");
 
     // One more carried-and-unproved entry: falls.
     let mut zu_viel = am_rand.clone();
-    zu_viel.push(probe("einer-zuviel", "MESSUNGEN.md", Stand::Getragen));
+    zu_viel.push(probe("einer-zuviel", "MEASUREMENTS.md", Stand::Getragen));
     assert!(
         l_gerissen_in(&zu_viel),
         "**das zweite Tor greift nicht.** L ist ueber der Schranke, und nichts hat es \
@@ -632,7 +632,7 @@ fn das_zweite_tor_spricht() {
 
     // Proved entries never count toward L, however many stack up beside it.
     let mut viel_bewiesen = zu_viel.clone();
-    viel_bewiesen.push(probe("bewiesen-daneben", "MESSUNGEN.md", Stand::Bewiesen));
+    viel_bewiesen.push(probe("bewiesen-daneben", "MEASUREMENTS.md", Stand::Bewiesen));
     assert!(
         l_gerissen_in(&viel_bewiesen),
         "ein BEWIESENER Eintrag kauft hier keinen Platz -- das ist die dritte Ratsche \
@@ -642,7 +642,7 @@ fn das_zweite_tor_spricht() {
     // And a proof of the offending entry buys the room back, same as tooth 2.
     let mut bewiesen_statt = zu_viel.clone();
     let letzter = bewiesen_statt.len() - 1;
-    bewiesen_statt[letzter] = probe("einer-zuviel", "MESSUNGEN.md", Stand::Bewiesen);
+    bewiesen_statt[letzter] = probe("einer-zuviel", "MEASUREMENTS.md", Stand::Bewiesen);
     assert!(
         !l_gerissen_in(&bewiesen_statt),
         "ein Beweis muss den Platz zurueckkaufen -- sonst waere das Tor ein Anschlag"
@@ -666,13 +666,13 @@ fn jede_bewiesene_schablone_bindet_ihre_praemissen() {
 fn der_dritte_zahn_spricht() {
     use gabbro_check::schablonen::{in_der_luft_in, ohne_rueckrichtung_in, Voraussetzung};
     // Gesund: bewiesen UND gebunden.
-    let mut gesund = probe("a", "MESSUNGEN.md", Stand::Bewiesen);
+    let mut gesund = probe("a", "MEASUREMENTS.md", Stand::Bewiesen);
     gesund.voraussetzungen = &[Voraussetzung { was: "x", durch: Some("M103 (m1.rs)"), braeuchte: None }];
     assert!(ohne_rueckrichtung_in(&[gesund.clone()]).is_empty());
     assert!(in_der_luft_in(&[gesund]).is_empty());
 
     // Krank I: bewiesen, aber gar keine Praemisse genannt.
-    let krank = probe("stumm", "MESSUNGEN.md", Stand::Bewiesen);
+    let krank = probe("stumm", "MEASUREMENTS.md", Stand::Bewiesen);
     assert_eq!(
         ohne_rueckrichtung_in(&[krank]),
         vec!["stumm"],
@@ -681,7 +681,7 @@ fn der_dritte_zahn_spricht() {
     );
 
     // Krank II: die Praemisse steht da, und NIEMAND stellt sie her.
-    let mut luftig = probe("luftig", "MESSUNGEN.md", Stand::Bewiesen);
+    let mut luftig = probe("luftig", "MEASUREMENTS.md", Stand::Bewiesen);
     luftig.voraussetzungen = &[Voraussetzung { was: "getrennt r s", durch: None, braeuchte: Some("N009") }];
     assert_eq!(
         in_der_luft_in(&[luftig]),
@@ -690,7 +690,7 @@ fn der_dritte_zahn_spricht() {
     );
 
     // Und ein ENTWORFENER Eintrag darf schweigen -- sein Satz ist nicht gefuehrt.
-    let entworfen = probe("entwurf", "MESSUNGEN.md", Stand::Entworfen);
+    let entworfen = probe("entwurf", "MEASUREMENTS.md", Stand::Entworfen);
     assert!(ohne_rueckrichtung_in(&[entworfen]).is_empty());
 }
 
@@ -1269,7 +1269,7 @@ fn kosten_zaehlt_was_die_lean_schranke_zaehlt() {
 
 /// **Lane 139 (F2): one pass is the body PLUS the `until`.**
 ///
-/// The `until` predicate runs on every pass (`FRAGMENTE.md` F4 polls with an empty body),
+/// The `until` predicate runs on every pass (`FRAGMENTS.md` F4 polls with an empty body),
 /// and the emitter divides the budget by body + condition (`durchgangskosten`) -- but
 /// `K006` held only the body against the promise. A costly `until` fit the emitter's
 /// arithmetic and never met the check.
@@ -1687,7 +1687,7 @@ fn ein_member_traegt_dieselbe_domaenenfrage() {
 /// `M109` asked this of an `ensures` and of nothing else, `N053` of a device promise, `N032`
 /// of a `format … where`. Measured before the rule was written, 19 positions x 20 name kinds
 /// with the phantom name BESIDE a legitimate conjunct: **266 of 380 cells silent**
-/// (`dokumente/PRUEFER.md`).
+/// (`dokumente/CHECKER.md`).
 ///
 /// The severity is the reason the rule is an error and not a hint:
 ///
@@ -1870,10 +1870,10 @@ fn ein_praedikat_darf_nennen_was_ein_rumpf_nicht_kann() {
 ///
 /// The measurement first, because the rule is a decision about where a line runs: eleven
 /// written forms across six predicate positions, **64 of 66 accepted**
-/// (`dokumente/PRUEFER.md` §5).
+/// (`dokumente/CHECKER.md` §5).
 ///
 /// **What stays undecided, deliberately:** whether the name IS a feature of the machine.
-/// `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID probe (A14); that probe
+/// `LANGUAGE.md` puts the only generator of `Has(F)` at the CPUID probe (A14); that probe
 /// does not exist, no `mints Has(F)` form exists, and nothing in the language declares a
 /// feature name. *A resolver would need a declared list, and there is none to hold it
 /// against* -- so the five bare-name forms below stay silent on purpose, and the test says
@@ -2331,7 +2331,7 @@ fn ein_quantor_der_seinen_binder_nie_nennt() {
 /// **`M146` -- a fractional bound on an integer type, at every position a range can stand**
 /// (2026-09-08).
 ///
-/// `dokumente/PRUEFER.md` §1.2 wrote the finding at ONE position
+/// `dokumente/CHECKER.md` §1.2 wrote the finding at ONE position
 /// (a `type` alias) and said nothing about the rest. The sweep of the same day wrote one
 /// probe per position and got **`0 errors, 0 hints` in nineteen of nineteen** -- so there
 /// is one arm per position here, and not one arm for the head of the census. *A test that

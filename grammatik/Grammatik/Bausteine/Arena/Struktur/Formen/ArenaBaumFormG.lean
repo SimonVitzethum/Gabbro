@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaBaumFormG.lean
-  Subject:   THE GUARDED TREE FORMS (PLAN-DYNAMISCH.md section 8a.1, third pass): the tree moves of `ArenaBaumForm.lean`
+  Subject:   THE GUARDED TREE FORMS (PLAN-DYNAMIC.md section 8a.1, third pass): the tree moves of `ArenaBaumForm.lean`
              need facts about the world that a recognizer cannot read off the names of the variables: that a child
              place is EMPTY (leaf in), that a child is a LEAF (leaf out), that the tree is empty (the first node goes in).
              Here the guard is part of the form, a `check` whose `else` branch the recognizer demands to be store-free

@@ -153,7 +153,7 @@ fn vertragswoerter_sind_im_rumpf_namen() {
 
 #[test]
 fn feldname_nach_punkt_darf_ein_wort_sein() {
-    // `c.slots[s]` steht so in FRAGMENTE.md -- nach `.` kann kein Schluesselwort stehen,
+    // `c.slots[s]` steht so in FRAGMENTS.md -- nach `.` kann kein Schluesselwort stehen,
     // also kann dort auch keins verwechselt werden.
     faellt_nicht("impl fn f(c : ptr<normal, rw> T) effects { writes c } { c.slots[0].used = true; }");
 }

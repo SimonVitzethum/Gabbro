@@ -1,6 +1,6 @@
 //! **Pass 6 -- M4/Schleifen, der Teil, der ohne Typen faellt.**
 //!
-//! `SPRACHE.md` §8.2: *„Beide zielen auf eine **benannte** Schleifenform. `break`/`continue`
+//! `LANGUAGE.md` §8.2: *„Beide zielen auf eine **benannte** Schleifenform. `break`/`continue`
 //! ohne Namen gibt es nicht -- bei geschachtelten Schleifen ist das Ziel sonst Konvention statt
 //! Syntax."* Der Parser nimmt `leave x;` an, weil `x` ein Bezeichner ist; **ob es eine Marke
 //! gibt, kann nur dieser Pass sagen.**
@@ -271,7 +271,7 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         ),
     )
     .mit_notiz(
-        "SPRACHE.md §8.2: there is no unnamed `break`/`continue` -- with nested loops the \
+        "LANGUAGE.md §8.2: there is no unnamed `break`/`continue` -- with nested loops the \
             target would be convention",
     );
     if marken.is_empty() {
@@ -483,7 +483,7 @@ fn namen_im_ausdruck(e: &Expr, aus: &mut Vec<String>) {
         }
         ExprArt::Eingebaut(b) => match b.as_ref() {
             // **`lenof(s.worte)` nennt einen Ort, und der zaehlt.** Ohne diesen Zweig
-            // saehe das Mass aus `FRAGMENTE.md`:1110 wie eine Konstante aus.
+            // saehe das Mass aus `FRAGMENTS.md`:1110 wie eine Konstante aus.
             Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
                 aus.push(o.basis.text.clone())
             }

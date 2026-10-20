@@ -1,10 +1,10 @@
 # The LLVM backend: checked Gabbro to a static binary, no C anywhere
 
 *Rewritten 2026-10-17. This is the ONLY backend: the C11 emitter was removed on 2026-10-17
-(repository tag `archiv/c-emitter-2026-10-17`, see [`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md)).
+(repository tag `archiv/c-emitter-2026-10-17`, see [`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md)).
 The compiler is UNTRUSTED: the checker runs first, and nothing here is a verified
 translation. Final-byte refinement (source -> model -> machine bytes, in Lean) is
-planned work, see [`PLAN-UEBERSETZUNGSVALIDIERUNG.md`](PLAN-UEBERSETZUNGSVALIDIERUNG.md).*
+planned work, see [`PLAN-TRANSLATION-VALIDATION.md`](PLAN-TRANSLATION-VALIDATION.md).*
 
 ## 1. What it is
 
@@ -27,7 +27,7 @@ stage 4). Targets: `x86_64` and `aarch64`, both LP64 little endian, as data
 | `instrumente/teile/baue-llvm.sh [f.gab…]` (run by `instrumente/pruefe-llvm.py`) | end to end for both targets: check, IR, `opt`+`llc`, `ld.lld`, no-libc check, run (aarch64 under `qemu-aarch64`), compare |
 | `crates/gabbro-check/tests/llvm.rs` | IR tests without the LLVM toolchain; `tests/noalias.rs` the `noalias` rule; `tests/beispiele.rs` runs the emitter over the `Y` gift probes |
 
-`gabbro build` (the manifest build, [`BAUSYSTEM.md`](BAUSYSTEM.md)) drives this backend for
+`gabbro build` (the manifest build, [`BUILD-SYSTEM.md`](BUILD-SYSTEM.md)) drives this backend for
 `program` and `object` units (checker, IR, `opt -O3`, `llc -O3`, `ld.lld`); kernel-module,
 bare-metal and hosted-libc products, and a unit that uses another unit, are refused by name.
 
@@ -255,7 +255,7 @@ fails 9 runs in 10).
 `let f = X awaits { payload };` ONE `load atomic ... acquire` (`llvm/publizieren.rs`): the
 payload writes precede the flag store and the payload reads follow the flag load in program
 order, and release/acquire keep them on their side on x86_64 (TSO) and aarch64 (`stlr`/`ldar`).
-SPRACHE.md §11.1/§11.5: `publishes` forces at least release, `awaits` at least acquire; the
+LANGUAGE.md §11.1/§11.5: `publishes` forces at least release, `awaits` at least acquire; the
 declared ordering is only ever strengthened (`seq` and the default stay `seq_cst`), never
 weakened, and a payload on `relaxed` or an undeclared atomic is the checker's `V005`. The
 checker's payload rule (N291) still demands the payload carriers be guarded by a lock in a
@@ -282,7 +282,7 @@ resource obligations over the actual G frames and proves lossless frame storage 
 reservation; it does not certify the Rust lowering.
 
 **Arenas (the heap).** Language semantics, checker rules and the Lean model are in
-[`PLAN-DYNAMISCH.md`](PLAN-DYNAMISCH.md). The generated representation:
+[`PLAN-DYNAMIC.md`](PLAN-DYNAMIC.md). The generated representation:
 
 * five fixed words per arena (40 bytes): `basis`, `belegt`, `bereit`, `frei`, `meta`; BSS does
   not grow with the ceiling (1 GiB ceiling measured at 24 bytes in the first three-word
@@ -393,7 +393,7 @@ cargo test -p gabbro-check --test noalias --no-fail-fast
 
 Generated programs (2026-10-18): there is no generated-program stage in `pruefe-llvm.py` (three programs prove
 nothing; removed). The generator of valid programs is the Lean definition `grammatik/Grammatik/Gen/Erzeuger/`
-with its completeness proof (`PRUEFER.md` section 11): it produces G terms (`Programm D`), not source text, and
+with its completeness proof (`CHECKER.md` section 11): it produces G terms (`Programm D`), not source text, and
 there is no G to source printer yet (the elaborator covers a small fragment), so the compiler cannot be fed from
 it today. Measuring the compiler against the generated set (Y1xx per construct, binaries against the Lean result
 on both targets) needs that printer or a G-level lowering entry; it is the next step after the theorem.
@@ -454,7 +454,7 @@ ours; this file never grants it.
 
 ## 10. What validating this path would cost
 
-The planned validator (`PLAN-UEBERSETZUNGSVALIDIERUNG.md`) checks the loaded final bytes
+The planned validator (`PLAN-TRANSLATION-VALIDATION.md`) checks the loaded final bytes
 against the source-derived model, with the middle end untrusted, reusing W/GX for concurrency
 plus a per-access target bridge. An LLVM middle end is one more untrusted byte producer: it adds
 no proof architecture, only (a) the raw gate instruction (`syscall`/`svc`) and the entry as two

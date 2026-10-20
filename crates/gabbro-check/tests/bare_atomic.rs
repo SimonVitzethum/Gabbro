@@ -6,14 +6,14 @@
 //! * a bare read of an `atomic` global (`let x = AT;`) checked clean and came
 //!   out as the plain name -- over `_Atomic` C treats that as a `seq_cst`
 //!   access while the declaration said `relaxed`, and the C model
-//!   (`C-SPEICHERMODELL.md` §1c) makes a plain access to an atomic stuck.
+//!   (`C-MEMORY-MODEL.md` §1c) makes a plain access to an atomic stuck.
 //!   The fix is the emitter's: a bare read lowers to
 //!   `atomic_load_explicit` in the DECLARED load order, through the one place
 //!   every runtime read funnels through (`ort()` -- expressions, `retry …
 //!   until` conditions via `pred_c`, narrow bounds, indices). Refusing the
 //!   read instead would make payload-free atomics (`publishes nothing`,
-//!   `SPRACHE.md` §1.1) unreadable and the `retry`-spin inexpressible.
-//! * a bare store (`AT = w;`) is refused with `N270`: `SPRACHE.md` §11.3 says
+//!   `LANGUAGE.md` §1.1) unreadable and the `retry`-spin inexpressible.
+//! * a bare store (`AT = w;`) is refused with `N270`: `LANGUAGE.md` §11.3 says
 //!   every store to an atomic IS a `publishstmt`, so the bare store has no
 //!   form. Lowering it to an explicit store is no fix -- the store is where
 //!   the payload promise stands (V001-V004), and an explicit store without
@@ -39,7 +39,7 @@
 //!   declaration -- a `release` declaration loads `acquire`);
 //! * a `retry … until` spin over an atomic lowers explicitly, in the declared
 //!   order -- the shape `messung/proben/probe-transport-poll-used.gab`
-//!   expresses, and the one `C-SPEICHERMODELL.md` §1c counts;
+//!   expresses, and the one `C-MEMORY-MODEL.md` §1c counts;
 //! * the legal stores stay silent: `publishes { … }`, `publishes nothing`,
 //!   and the `awaits` load;
 //! * a variant constructor in a body fell with `H021` (the call graph owned

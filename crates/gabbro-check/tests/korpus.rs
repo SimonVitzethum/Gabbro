@@ -5,7 +5,7 @@
 //! hat. Ein neuer, unbenannter Code ist ein Befund ueber den Uebersetzer, kein Rauschen --
 //! und genau so faellt der Test.
 //!
-//! Die gemessenen Zahlen stehen in `MESSUNGEN.md`, mit Datum. Sie hier zu wiederholen hiesse,
+//! Die gemessenen Zahlen stehen in `MEASUREMENTS.md`, mit Datum. Sie hier zu wiederholen hiesse,
 //! eine Zahl an zwei Stellen zu fuehren.
 
 use gabbro_check::korpus;
@@ -78,12 +78,12 @@ const BENANNT: &[&str] = &[
     "N280", "N281", "N282", "N283", "N284",
     "S001", "S002", // Schleifen und Kontrollfluss
     // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
-    // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein
+    // Korpus (`FRAGMENTS.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein
     // Fragment traegt keine Annahmenschicht, also nennt sein `progress` einen Zeugen, den
     // niemand erklaert. *In einem ganzen Programm waere genau das der Fehler.*
     "S003", "S004",
     // «F»: f32/f64. `F002` trifft das stillschweigend inexakte Literal -- die Regel kam aus
-    // dem Korpus (FRAGMENTE.md, «F0»/FF4), nicht aus dem Entwurf.
+    // dem Korpus (FRAGMENTS.md, «F0»/FF4), nicht aus dem Entwurf.
     "F001", "F002", "F004", "F005", "F006",
     "K001", "K002", "K003", // Kosten
     // Lane 191: `N305` the omitted `effects` nothing settles. Named here
@@ -109,7 +109,7 @@ const BENANNT: &[&str] = &[
     // «K2»: RCU ist keine Sperre -- H009 Leseseite benannt, H010 Schreiber braucht eine.
     "H009", "H010", "H011", "H012",
     // **«ABI», 2026-08-21: `H016` -- a lock name that no declaration explains.** Two sites
-    // in the corpus -- `locks SCHEDS` at `FRAGMENTE.md`:652 and `locks CAPS` at
+    // in the corpus -- `locks SCHEDS` at `FRAGMENTS.md`:652 and `locks CAPS` at
     // `SYNTAX.md`:764 -- and **neither is a mismeasurement**: a fragment is an EXCERPT, and
     // both name locks declared outside the cut. *The same class as `S003` eight lines above
     // -- and in a whole program it would be the error.*
@@ -121,7 +121,7 @@ const BENANNT: &[&str] = &[
     // > The build came from the other side: at a LIBRARY BOUNDARY a lock name from elsewhere
     // > is the normal case, and until this rule it was invisible. The rank rules in the
     // > checker looked the rank up, found nothing and stayed silent -- a ring across two
-    // > libraries passed with zero errors (`dokumente/SPRACHE.md`).
+    // > libraries passed with zero errors (`dokumente/LANGUAGE.md`).
     "H016",
     // 2026-09-10, driver handoff rule (`sperren.fenster`, lane-55): a function
     // writing a `ptr<dma,…>`-rooted place AND ringing the `ptr<mmio,…>` doorbell
@@ -179,15 +179,15 @@ const BENANNT: &[&str] = &[
     // `D008` seine Tabelle.
     "D006", "D007", "D008",
     // 2026-08-31: the same three questions at the CHAIN edge, which `chain(a, b) in`
-    // names at the walk instead of at the declaration. `dokumente/PRUEFER.md`.
+    // names at the walk instead of at the declaration. `dokumente/CHECKER.md`.
     "D014", "D015", "D016",
     // **2026-08-31: a probe yields a VERDICT, and on every path.** `N044` a `return` with
     // no value in a `can_fail` block, `N045` a path that reaches the closing brace. Six of
     // the twelve files in `messung/tor-proben/` emitted C that `cc` refused, and no stage
-    // before `cc` said a word. `dokumente/PRUEFER.md`.
+    // before `cc` said a word. `dokumente/CHECKER.md`.
     "N044", "N045",
     // 2026-08-31, one measurement later: the PLACE of a quantifier domain. `D017` its base
-    // name -- `dokumente/PRUEFER.md` falsified each of the 53 corpus sites outside
+    // name -- `dokumente/CHECKER.md` falsified each of the 53 corpus sites outside
     // `ensures` one by one and 51 stayed silent -- and `D018` its KIND: `slots of` needs a
     // table, `queue` a record, `elems of` an array field, `mappings of` a `walk`.
     "D017", "D018",
@@ -248,7 +248,7 @@ const BENANNT: &[&str] = &[
     // (`M106`)** -- the commonest call in the language had the check the three rarer ones
     // carry.
     //
-    // > **Its corpus site is F3, and it is a frozen excerpt line.** `FRAGMENTE.md`:692
+    // > **Its corpus site is F3, and it is a frozen excerpt line.** `FRAGMENTS.md`:692
     // > writes `owner_core(picked)` against `extern fn owner_core(d : ptr<normal, r>
     // > SchedOps, t : u32)` -- one argument, two parameters. Until today it surfaced as an
     // > `M140` about parameter `d`, a statement about the wrong thing: had both parameters
@@ -261,7 +261,7 @@ const BENANNT: &[&str] = &[
     // argument, return, narrow subject, index); store/move stays allowed.
     // Named late: the code existed since 7cbae3e without this entry, and the
     // korpus test stayed green only while no doc snippet fired it -- lane-43's
-    // indirect-call kill (715-717) widened the firing onto FRAGMENTE.md:268.
+    // indirect-call kill (715-717) widened the firing onto FRAGMENTS.md:268.
     // Gifts 702/703/709/715/716/717; ceremony priced on 01/09/42 (re-read).
     "M147",
     // 2026-09-11, unary-minus overflow at the operation (lane-134): negating
@@ -288,7 +288,7 @@ const BENANNT: &[&str] = &[
     // kann — und druckte dafür „100 % coverage".*
     //
     // Auf einem FRAGMENT ist die Absage richtig und trotzdem kein Befund über den Code: ein
-    // Auszug deklariert seine Namen nicht. `FRAGMENTE.md`:269 nennt `obj`, gebunden in einer
+    // Auszug deklariert seine Namen nicht. `FRAGMENTS.md`:269 nennt `obj`, gebunden in einer
     // Zeile, die nicht im Ausschnitt steht. **Deshalb steht `M119` hier — als benannte
     // Absage auf einer unvollständigen Hülle, dieselbe Klasse wie `E009` und `K003`.**
     "M117", "M118", "M119",
@@ -305,23 +305,23 @@ const BENANNT: &[&str] = &[
     //   der zwoelf Paesse laufen ueber `ItemArt::Funktion` und sahen ihn nie.
     "L108", "L109", "N027",
     // **`S006`, 2026-08-19: `on_exceeded` muss divergieren.** Die Fundstelle in
-    // `FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent` -- eine `reason`-VARIANTE, nicht
+    // `FRAGMENTS.md`:902 schreibt `on_exceeded DeviceSilent` -- eine `reason`-VARIANTE, nicht
     // eine Funktion. *Der Erzeuger sagt seit jeher, warum das nicht geht:* „a `reason` value
     // would need an error-return convention, and that is not decided". **Das Fragment hat den
     // Bedarf vorweggenommen, und die Sprache hat ihn nicht.** Gebucht in `TODO.md`.
     "S006",
     // **`S007` -- der Wachhundname, den dieser Ausschnitt nicht deklariert.**
-    // `FRAGMENTE.md`:902 nennt `on_exceeded DeviceSilent`, und `MESSUNGEN.md` fuehrte diese
+    // `FRAGMENTS.md`:902 nennt `on_exceeded DeviceSilent`, und `MEASUREMENTS.md` fuehrte diese
     // Stelle bis 2026-08-19 als das, worueber `S006` SCHWEIGT. Sie schweigt nicht mehr:
     // weder abgesagt noch bestaetigt, aber sichtbar -- der dritte Zustand.
     "S007",
     // **`N016`-`N018`, 2026-08-19: die Axiomschicht und der Eintritt.** Ausgeloest von
     // `pruefe-konstrukte.py`, das sieben Konstrukte ohne Giftprobe meldete. `N018` faellt in
-    // `SPRACHE.md`:1382 an einem AUSSCHNITT, dessen `dispatch`-Ziel er nicht deklariert --
+    // `LANGUAGE.md`:1382 an einem AUSSCHNITT, dessen `dispatch`-Ziel er nicht deklariert --
     // *dieselbe Lage wie bei jedem Ausschnitt: der Name loest auf, nur nicht hier.*
     "N016", "N017", "N018",
     // **`N020` -- `gates` nennt niemanden**, und am Ausschnitt ist das dieselbe Lage wie oben:
-    // `FRAGMENTE.md`:1184 gattert auf `all_done`, und der Name steht in diesem Ausschnitt
+    // `FRAGMENTS.md`:1184 gattert auf `all_done`, und der Name steht in diesem Ausschnitt
     // genau EINMAL, naemlich dort. *In der vollen Uebersetzungseinheit loest er auf; hier
     // nicht, und der Waechter sagt es statt es zu raten.*
     "N020",
@@ -354,7 +354,7 @@ const BENANNT: &[&str] = &[
     "A001", "A002", "A003", "A004", "N026",
     "U001", "U002", "U003", "U004", "U005", "U006", "U007", // Traegergruppe: Sperrabdruck, Zug und Verbindungsaussage
     // --- Stufe 7 ---
-    // **`M126` -- `FRAGMENTE.md`:269 schreibt `return Fehler::Buchfuehrung;`.**
+    // **`M126` -- `FRAGMENTS.md`:269 schreibt `return Fehler::Buchfuehrung;`.**
     //
     // *Das ist der Bedarfsbeleg fuer den Grunderzeuger, und er stand die ganze Zeit im
     // Ordner.* Der Ausschnitt kommt aus echtem Code, er meldet einen Fehler an seinen Rufer
@@ -366,7 +366,7 @@ const BENANNT: &[&str] = &[
     // Ausschnitt nicht deklariert. *Dieselbe Lage wie bei `N018` und `N020` -- in der vollen
     // Uebersetzungseinheit loest der Name auf, im Ausschnitt nicht.*
     "M126",
-    // **`M124` -- `FRAGMENTE.md`:657 schreibt `set_reg(f, SYSNO_RESULT,
+    // **`M124` -- `FRAGMENTS.md`:657 schreibt `set_reg(f, SYSNO_RESULT,
     // IpcResult::ErrQuiescing);`.**
     //
     // Ein Grundwert als ARGUMENT, und das ist eine der Stellungen, die `M124` absagt: ein
@@ -383,7 +383,7 @@ const BENANNT: &[&str] = &[
     // > Sprache hat ihn nicht.** Ihn hier stillschweigend zuzulassen hiesse, die
     // > Stellungsregel fuer den einen Fall aufzugeben, fuer den sie am wenigsten gilt.
     "M124",
-    // **`N035` -- `FRAGMENTE.md`:633-637 declares five function pointers and NO contract.**
+    // **`N035` -- `FRAGMENTS.md`:633-637 declares five function pointers and NO contract.**
     //
     // ```gabbro
     // type SchedOps = {
@@ -422,12 +422,12 @@ const BENANNT: &[&str] = &[
     "N041",
     // **`N046` -- and over the frozen excerpt it is the finding, not a side effect.**
     //
-    // `FRAGMENTE.md`:1028 writes `extern fn exit() -> never effects { diverges };`, and the
+    // `FRAGMENTS.md`:1028 writes `extern fn exit() -> never effects { diverges };`, and the
     // body above it calls `exit()` at eight sites. **C owns that name, and here that is the
     // POINT** -- an `extern fn` exists to bind it. What is wrong is the SIGNATURE: the
     // generator writes `_Noreturn void exit(void);` and `cc` answers *conflicting types for
     // built-in function 'exit'; expected 'void(int)'*. The parameter is missing, not the
-    // right to the name. Measured 2026-08-31 (`dokumente/C-SPEICHERMODELL.md`), re-diagnosed 2026-09-01.
+    // right to the name. Measured 2026-08-31 (`dokumente/C-MEMORY-MODEL.md`), re-diagnosed 2026-09-01.
     //
     // > **The line was ADDED to the excerpt on 2026-08-15**, with the note above it saying
     // > `exit` and `signal` had been called and never declared -- and it thereby became part
@@ -445,7 +445,7 @@ const BENANNT: &[&str] = &[
     // **`N043` -- the report line of `check kstack_eichung`, and it names a carrier that is
     // in no excerpt.**
     //
-    // `FRAGMENTE.md`:1166 writes `measures eich.leer, eich.voll, eich.tiefe, eich.gelaufen`
+    // `FRAGMENTS.md`:1166 writes `measures eich.leer, eich.voll, eich.tiefe, eich.gelaufen`
     // and `floor eich.gelaufen == 1`. **There is no `eich` anywhere in the file** -- the
     // calibration reports four fields of something that was never brought over. Same shape
     // as `N040` above and found at the same place (`messung/fragmente/F06.gab`), one week
@@ -520,7 +520,7 @@ const BENANNT: &[&str] = &[
     //
     // `M109` asked this of an `ensures` and of nothing else, `N053` of a device promise,
     // `N032` of a `format ... where`. Measured position by position against the unchanged
-    // checker (`dokumente/PRUEFER.md`): a name nothing declares was accepted in **266
+    // checker (`dokumente/CHECKER.md`): a name nothing declares was accepted in **266
     // of 380** position x name-kind cells, and the sixteen positions without a reader
     // include every `requires`, every `invariant` and the body of every `spec fn`.
     //
@@ -546,12 +546,12 @@ const BENANNT: &[&str] = &[
     // first.
     //
     // > Whether the NAME is a feature of the machine stays undecided here and says so in
-    // > its own second note: `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID
+    // > its own second note: `LANGUAGE.md` puts the only generator of `Has(F)` at the CPUID
     // > probe, that probe does not exist, and no list of feature names exists in the
     // > language.
     "N054",
     // 2026-09-11, pointer-arithmetic discharge (p04, exec side; rule p03):
-    // computed addresses outside `place[expr]` (`SPRACHE.md` §5.2) are refused
+    // computed addresses outside `place[expr]` (`LANGUAGE.md` §5.2) are refused
     // at the emission site, and `C001` is that refusal channel. Gifts 764/765
     // pin the two spellings (`p + 1`, `p += 1`); the Lean discharge behind the
     // admitted index form is `validiert_entlaedt_schritt` (`Adressraum.lean`).
@@ -565,7 +565,7 @@ const BENANNT: &[&str] = &[
     // resolve, in the excerpt they do not.
     "N004", "N067",
     // 2026-09-30, C-free lane (C2, OFFEN O39): `N574` -- a foreign body takes no function
-    // pointer. `dokumente/FRAGMENTE.md`'s excerpt of Caprock's IPC fast path hands the
+    // pointer. `dokumente/FRAGMENTS.md`'s excerpt of Caprock's IPC fast path hands the
     // scheduler vtable `SchedOps` to `extern fn block_current`/`switch_to`/`unblock`: foreign
     // code holding Gabbro code, the very shape the rule refuses. CORRECT here.
     "N574",
@@ -573,9 +573,9 @@ const BENANNT: &[&str] = &[
 
 #[test]
 fn der_korpus_bringt_nur_benannte_absagen() {
-    for datei in ["dokumente/FRAGMENTE.md", "dokumente/SYNTAX.md", "dokumente/SPRACHE.md", "README.md",
+    for datei in ["dokumente/FRAGMENTS.md", "dokumente/SYNTAX.md", "dokumente/LANGUAGE.md", "README.md",
                   // Der Memo BEHAUPTET „heute schreibbar" -- dann wird sein Block auch gemessen.
-                  "dokumente/GLEITKOMMA.md"] {
+                  "dokumente/FLOATING-POINT.md"] {
         let md = lies(datei);
         for b in korpus::messe(datei, &md) {
             for (code, zeile) in b.fehler.iter().chain(b.hinweise.iter()) {
@@ -593,8 +593,8 @@ fn der_korpus_bringt_nur_benannte_absagen() {
 fn f2_das_geraetefragment_bleibt_sauber() {
     // F2 (VT-d als `device`) ist das eine Fragment, das gegen die heutige Grammatik
     // vollstaendig durchgeht. Faellt es, ist eine Regel zurueckgegangen.
-    let md = lies("dokumente/FRAGMENTE.md");
-    let befunde = korpus::messe("dokumente/FRAGMENTE.md", &md);
+    let md = lies("dokumente/FRAGMENTS.md");
+    let befunde = korpus::messe("dokumente/FRAGMENTS.md", &md);
     // **Am INHALT verankert, nicht an der Zeilennummer.** Bis 2026-08-15 stand hier
     // `erste_zeile > 330 && < 350`; jede Aenderung weiter oben in der Datei brach den Test,
     // ohne dass an F2 etwas falsch war. Eine Probe, die an einer Zeilennummer haengt, ist
@@ -620,7 +620,7 @@ fn f2_das_geraetefragment_bleibt_sauber() {
 
 #[test]
 fn jeder_block_wird_gefunden() {
-    let md = lies("dokumente/FRAGMENTE.md");
+    let md = lies("dokumente/FRAGMENTS.md");
     let bloecke = korpus::schneide(&md);
     assert_eq!(
         bloecke.len(),
@@ -729,7 +729,7 @@ fn eine_uebersetzungseinheit_faengt_mit_einem_item_an() {
         "ein Item auf oberster Ebene auch"
     );
 
-    // **Ausschnitte, und genau sie sind der Grund fuer die Unterscheidung.** SPRACHE.md und
+    // **Ausschnitte, und genau sie sind der Grund fuer die Unterscheidung.** LANGUAGE.md und
     // SYNTAX.md zeigen ueberwiegend einzelne Anweisungen; wer sie als Programm liest, meldet
     // Fehler, die es nicht gibt — und wer sie MITZAEHLT, rechnet die Quote von Tor P2 schoen.
     for ausschnitt in [

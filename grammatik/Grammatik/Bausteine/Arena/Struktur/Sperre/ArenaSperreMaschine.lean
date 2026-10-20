@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreMaschine.lean
-  Subject:   WHAT THE GOAL STATEMENT GIVES FOR A SHARED ARENA (PLAN-DYNAMISCH.md section 8a.2): `Ziel P S O passes M0 M`
+  Subject:   WHAT THE GOAL STATEMENT GIVES FOR A SHARED ARENA (PLAN-DYNAMIC.md section 8a.2): `Ziel P S O passes M0 M`
              quantifies over the lock family `S`. For `S := K.sperr L` -- the lock whose invariant is the arena's structure
              invariant -- the existing legs say, without any change of `Spec.lean`:
 

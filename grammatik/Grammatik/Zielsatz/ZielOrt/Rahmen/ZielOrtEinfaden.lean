@@ -11,7 +11,7 @@
   carrier only one thread touches needs no guard. The general exemption
   ("only carriers reachable from two started threads need a guard") needs
   the call graph of every thread, which no invariant of G carries (see
-  SATZKARTE §14.6). The case that matters for sequential programs does not:
+  THEOREM-MAP §14.6). The case that matters for sequential programs does not:
   when every other thread is idle, only thread 0 ever steps
   (`kein_schritt_ruhig`: a root frame at a bare `return` has no rule), so
   NO carrier moves under thread 0 except by its own steps, and every
@@ -423,7 +423,7 @@ theorem ziel_ort_einfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q : Ax
 
   What is NOT covered: several ACTIVE threads with thread-local carriers
   (a carrier read and written by one active thread only, while others run
-  too) -- that needs the call graph per thread (SATZKARTE §14.6). Thread
+  too) -- that needs the call graph per thread (THEOREM-MAP §14.6). Thread
   `0` is the active one by convention; any other numbering is a renaming
   not done here.
 -/

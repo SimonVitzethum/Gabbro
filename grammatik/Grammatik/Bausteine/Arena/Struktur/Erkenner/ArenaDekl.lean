@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaDekl.lean
-  Subject:   WHAT THE RECOGNIZER GUARDS (PLAN-DYNAMISCH.md section 8a.1, third pass): the structures one arena carries and
+  Subject:   WHAT THE RECOGNIZER GUARDS (PLAN-DYNAMIC.md section 8a.1, third pass): the structures one arena carries and
              the invariant of all of them together.
 
   An arena may carry ONE singly linked list (`ListDekl`: a link field and a head global), ONE binary tree (`BaumDekl`:

@@ -69,7 +69,7 @@ consumer.*
   specification still linked to `Grammatik/X86/*.lean`, files no longer on master, until this
   consolidation. *A decision that reverses must reach every document that
   states the old one.* The optimiser specification and the hardware plan were rewritten as
-  target-neutral with the archive named (`PLAN-UEBERSETZUNGSVALIDIERUNG.md` §8,
+  target-neutral with the archive named (`PLAN-TRANSLATION-VALIDATION.md` §8,
   `PLAN-HARDWARE.md` §2.3).
 - **`gabbro llvm-cert` prints Lean that does not elaborate.** `LLVM-BACKEND.md` said the file
   "elaborates with plain `lean`". Run through `lean`, every definition fails (`unexpected token
@@ -175,7 +175,7 @@ Every one was a sentence the folder had already written down and that no reader 
 
 | what was written | who did not read it |
 |---|---|
-| `SPRACHE.md`:355 — *„Generates: reader, **writer**"* | the emitter built only the reader |
+| `LANGUAGE.md`:355 — *„Generates: reader, **writer**"* | the emitter built only the reader |
 | the ghost erasure, specified in three places | the fourth, `return`, was never built |
 | *„**M2**: the waker consumes **exactly its** reason"* | no pass compared the names |
 | `PFLICHTEN.txt` F10 — the `where` clause carries the length promise | no pass read the clause |
@@ -270,7 +270,7 @@ were never barred; the compiler was.
 |---|---|
 | **What it was** | a **breach**, not a change. The rule stands unchanged |
 | **How** | on explicit announcement, not silently |
-| **Where it is recorded** | `MESSUNGEN.md` P2, first paragraph; and from now on here |
+| **Where it is recorded** | `MEASUREMENTS.md` P2, first paragraph; and from now on here |
 | **What it cost** | **P2 and P3 can no longer kill the thesis *before* the compiler is built.** The order was built so that each stage consumes the result of the previous one — that chain is severed at one point |
 | **What it earned** | the measurements from P2 on: 1 of 6 fragments, eleven grammar findings, the vocabulary collision, 16 unsoundness holes found, the cost figures |
 
@@ -279,7 +279,7 @@ recorded as measured. **The lesson is where it was booked:** it stood as a parag
 the measurement that profited from it*, and nowhere else. A broken rule belongs where you look
 for it when you distrust the folder — and that is this file.
 
-> **And the form in which it nearly disappeared:** `BEWEIS.md` still said *"Gabbro has no line
+> **And the form in which it nearly disappeared:** `PROOF.md` still said *"Gabbro has no line
 > of compiler"*. That sentence became false, and **pulling it up to the new state** would have
 > been the convenient move — smoothing the claim instead of surveying the tree. That is
 > literally the class from commit `5904cae` ("the previous commit message described three
@@ -386,25 +386,25 @@ at `4bb5e944`, the base of this consolidation; read one with `git show <commit>:
 | Files | What they recorded | Last present | Facts now in |
 |---|---|---|---|
 | `messung/muse/MUSE-REPORT-NNN.md` (975 files, lanes 02 to 1398) | one report per Muse contributor lane: what was built, `CUTS`, build results, findings for the reviewer | `7c693cb7` | `git log`; `AGENTS.md` §5 for the process |
-| `messung/muse/OPUS-BERICHT-*.md` (25) | the 2026-09-15 Opus lane reports: `STUFE-A`/`-B` (closing theorem stages), `KORROK`, `BLOCK`, `STAERKER`, `KONGRUENZ`, `RAHMEN`, `GERAET`, `AGGREGAT`, `CPARSER`, `TICKET`, `EXPORT`, `LINEAR`, `PFLICHT`, `O13` … | `7c693cb7` | `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§6–7 |
+| `messung/muse/OPUS-BERICHT-*.md` (25) | the 2026-09-15 Opus lane reports: `STUFE-A`/`-B` (closing theorem stages), `KORROK`, `BLOCK`, `STAERKER`, `KONGRUENZ`, `RAHMEN`, `GERAET`, `AGGREGAT`, `CPARSER`, `TICKET`, `EXPORT`, `LINEAR`, `PFLICHT`, `O13` … | `7c693cb7` | `PLAN-TRANSLATION-VALIDATION.md` §§6–7 |
 | `messung/muse-audit/` (58 Lean files) | audit probes of the Muse waves | `7c693cb7` | — |
-| `messung/URTEIL-{MUSE,OPUS}-2026-09-13…15d.md` (12) | six rounds of two independent verdicts "is the goal reached": rounds 1 and 2 (2026-09-13/14): Muse "reached for the Lean model, not yet for the implementation", Opus **"not reached"** (two defects of substance); round 3 Opus "not the goal yet" (`P1` unsatisfiable lock invariant, `P2` free parameters, `P3` payload races); round 4 "the goal with named gaps", but `F1` (out-of-range float stop) was not named yet, and `F2` (global deadlock leg) and `F3` (stop classes) were repaired; round 5 unnamed gap `G1` (an axiom answer or register read whose declared type `einpassen` cannot hold); round 6 **both: the goal with named gaps — no unnamed gap found** (`W1` closed) | `4bb5e944` | `BEWEIS.md`, `AGENTS.md` §2 |
-| `messung/URTEIL-SPECDIFF-*.md` (8) | independent adversarial reviews of each `Spec.lean` diff: fix lanes F9–F11 (2026-09-23), Opus agents A (runtime threads), B (weak memory `schwach`), D (invariants), E (linking `N501`–`N505`), G (`folge`), H (`KernHaltE`), O25c (atomic rely) | `4bb5e944` | `BEWEIS.md`, header of `Spec.lean` |
-| `messung/review-2026-09-21/G01…G13, FIX-F1…F11, dokumente/BEWEIS.md` (25) | the static review of 2026-09-21 over the Muse lanes while the second machine was unreachable (13 groups), and the eleven fix lanes that repaired it: integer `match` coverage (`N411`–`N414`), dynamic arenas, the `child` block as a thread, thread starts, fd carrier and gates, bounded strings, smaller Rust findings, Lean witnesses "no claim bigger than its proof", the clone hand-off, worker pools in the goal, same-core interrupt preemption | `4bb5e944` | `AGENTS.md` §7 ledger, `BEWEIS.md` |
-| `messung/OPUS-{A…L,O25,O25B,O25C}-*.md` (14) | the 2026-09-26 Opus agent reports: runtime threads, weak memory beyond DRF-SC, **how far a green `lake build` reaches** (the reach audit behind `REGISTER.txt`), invariants, linking, link races, `OFFEN O1` order leg, handlers and cores, bare metal, freestanding, target-bound gates, the atomic rely | `7c693cb7` (`dokumente/BEWEIS.md`: `4bb5e944`) | `BEWEIS.md`, header of `Spec.lean` |
-| `messung/GABBROV-*.md`, `GABBROV-V1/V2`, `SPRACHLUECKEN*`, `PARSER-LANE-REPORT`, `SERVER-0E-*` | GabbroV: the 56 of 66 measurement and its audit, the bridge report, the proof-lines-per-user-line ratio, the server and parser lane reports; the language-gap reports and the server lane's phase-1 measurements | `7c693cb7` | `GABBROV.md`, `FRAGMENTE.md`, `PLAN-DYNAMISCH.md` |
+| `messung/URTEIL-{MUSE,OPUS}-2026-09-13…15d.md` (12) | six rounds of two independent verdicts "is the goal reached": rounds 1 and 2 (2026-09-13/14): Muse "reached for the Lean model, not yet for the implementation", Opus **"not reached"** (two defects of substance); round 3 Opus "not the goal yet" (`P1` unsatisfiable lock invariant, `P2` free parameters, `P3` payload races); round 4 "the goal with named gaps", but `F1` (out-of-range float stop) was not named yet, and `F2` (global deadlock leg) and `F3` (stop classes) were repaired; round 5 unnamed gap `G1` (an axiom answer or register read whose declared type `einpassen` cannot hold); round 6 **both: the goal with named gaps — no unnamed gap found** (`W1` closed) | `4bb5e944` | `PROOF.md`, `AGENTS.md` §2 |
+| `messung/URTEIL-SPECDIFF-*.md` (8) | independent adversarial reviews of each `Spec.lean` diff: fix lanes F9–F11 (2026-09-23), Opus agents A (runtime threads), B (weak memory `schwach`), D (invariants), E (linking `N501`–`N505`), G (`folge`), H (`KernHaltE`), O25c (atomic rely) | `4bb5e944` | `PROOF.md`, header of `Spec.lean` |
+| `messung/review-2026-09-21/G01…G13, FIX-F1…F11, dokumente/PROOF.md` (25) | the static review of 2026-09-21 over the Muse lanes while the second machine was unreachable (13 groups), and the eleven fix lanes that repaired it: integer `match` coverage (`N411`–`N414`), dynamic arenas, the `child` block as a thread, thread starts, fd carrier and gates, bounded strings, smaller Rust findings, Lean witnesses "no claim bigger than its proof", the clone hand-off, worker pools in the goal, same-core interrupt preemption | `4bb5e944` | `AGENTS.md` §7 ledger, `PROOF.md` |
+| `messung/OPUS-{A…L,O25,O25B,O25C}-*.md` (14) | the 2026-09-26 Opus agent reports: runtime threads, weak memory beyond DRF-SC, **how far a green `lake build` reaches** (the reach audit behind `REGISTER.txt`), invariants, linking, link races, `OFFEN O1` order leg, handlers and cores, bare metal, freestanding, target-bound gates, the atomic rely | `7c693cb7` (`dokumente/PROOF.md`: `4bb5e944`) | `PROOF.md`, header of `Spec.lean` |
+| `messung/GABBROV-*.md`, `GABBROV-V1/V2`, `SPRACHLUECKEN*`, `PARSER-LANE-REPORT`, `SERVER-0E-*` | GabbroV: the 56 of 66 measurement and its audit, the bridge report, the proof-lines-per-user-line ratio, the server and parser lane reports; the language-gap reports and the server lane's phase-1 measurements | `7c693cb7` | `GABBROV.md`, `FRAGMENTS.md`, `PLAN-DYNAMIC.md` |
 | `messung/ARM-KOMPATIBILITAET-A…G.md`, `ARM-NATIV-ABI.md` | AArch64 readiness of the C emitter, the language model, the checker and the Lean ABI model; what the native compiler needs from Lean | `7c693cb7` | `ARM-PLAN.md`, `PLAN-HARDWARE.md` §2.3 |
 | `messung/arm/REPORT-06…12.md` | the AArch64 hardware-model agents: executions, the axiomatic model, litmus bench, atomics, barriers, sequential integer ISA, loads/stores | `4bb5e944` | `PLAN-HARDWARE.md` §2.3 |
-| `messung/CFORM-REGEL-*.md` (22), `CFORM-ABARBEITUNG.md` | one ruling per emitted C form (`&`, `->`, `sizeof`, `~`, `inline`, …): which are admitted as lemma or assumption | `7c693cb7` | `C-SPEICHERMODELL.md`, `pruefe-cformen.py` |
-| `messung/ABSENKUNG*.md`, `ABSAGEFORMEN`, `EMISSIONSZWEIGE`, `WILDCARD-ZWEIGE`, `ERZEUGER*`, `DREI-ERZEUGERFEHLER`, `STILLE-KOLLISIONEN`, `C-NAMEN`, `ERZEUGERSWEEP` | the C emitter under measurement: per-primitive statement budgets, 139 refusal sites in 130 forms, the twelve wildcards, six emitter defects repaired one by one, names C had already taken, a sweep that broke the promise 342 times in 5 889 cases | `7c693cb7` | `C-SPEICHERMODELL.md`, `PLAN-HARDWARE.md` §5 |
-| `messung/TEARING-*.md`, `TOCTOU-*.md`, `RACE.md`, `ADRESSRAEUME`, `ADRESSRAUM-REGELN`, `DEVICE-DMA-NOTIZ`, `CPU-DEVICE-NAHT` | tearing inventory and ruling, TOCTOU as a class (check, window, use), the race classes by form, the six address spaces and which the emitter reads, DMA memory-model note | `7c693cb7` | `C-SPEICHERMODELL.md`, `PLAN-HARDWARE.md` §3 |
-| `messung/AUDIT-*.md`, `K100-*.md`, `K3-*.md`, `GEGENPROBE-F03`, `KLASSEN-F03`, `BERICHT-H0`, `BERICHT-B10/SUCHE/O3-RATSCHE/ERZEUGERHALT/UEBERSETZERFAMILIE`, `W24-FRAGMENTE` | the 2026-09-01..05 audits, the four `K100` gates, the three readings of `K3` ("0 of 8"), the standing adversary of `F03`, the fragment break-throughs (`H = 0`) | `7c693cb7` (`AUDIT-2026-09-02`, `AUDIT-K100`, `BERICHT-H0`, `GEGENPROBE-F03`, `K3-BEFUND`, `KLASSEN-F03`: `4bb5e944`) | `FRAGMENTE.md`, `PRUEFER.md`, this file |
-| `messung/DOMAENEN*`, `PREDICATE-NAMES`, `EINHEITENSICHT`, `ERSTNAMEN`, `K001*`, `K003-TOR`, `SCHLEIFEN*`, `TORREICHWEITE`, `UNTERE-GRENZE`, `AUSSETZUNG`, `RUMPFKANAL-*`, `ZEREMONIE`, `VIER-LUECKEN` | the checker's rule studies: quantifier domains, names a predicate may write, the unit view, the English first names, the `K001` bound, the loop invariant, the lower bound `2 of 94`, `leave`/`breaking`, the body channel's 66 refusals | `4bb5e944` for those still in the tree on 2026-10-17 | `PRUEFER.md` |
-| `messung/{ABNAHME-*,VOLLER-LAUF-GELESEN,AUFRAEUMEN-2026-09-12,VORRICHTUNGEN,TODO-TREUE-2026-09-04,KETTE-2026-09-13,WARTESCHRANKEN-2026-09-15}.md` | the full acceptance runs read line by line (49 guardians, "100 % over a guardian that stood after 2.8 seconds"), the guardian fixtures, the TODO staleness rate, the chain count of 2026-09-13, the waiting-bound census | `7c693cb7` | `WERKZEUGKASTEN.md`, `MESSUNGEN.md` |
+| `messung/CFORM-REGEL-*.md` (22), `CFORM-ABARBEITUNG.md` | one ruling per emitted C form (`&`, `->`, `sizeof`, `~`, `inline`, …): which are admitted as lemma or assumption | `7c693cb7` | `C-MEMORY-MODEL.md`, `pruefe-cformen.py` |
+| `messung/ABSENKUNG*.md`, `ABSAGEFORMEN`, `EMISSIONSZWEIGE`, `WILDCARD-ZWEIGE`, `ERZEUGER*`, `DREI-ERZEUGERFEHLER`, `STILLE-KOLLISIONEN`, `C-NAMEN`, `ERZEUGERSWEEP` | the C emitter under measurement: per-primitive statement budgets, 139 refusal sites in 130 forms, the twelve wildcards, six emitter defects repaired one by one, names C had already taken, a sweep that broke the promise 342 times in 5 889 cases | `7c693cb7` | `C-MEMORY-MODEL.md`, `PLAN-HARDWARE.md` §5 |
+| `messung/TEARING-*.md`, `TOCTOU-*.md`, `RACE.md`, `ADRESSRAEUME`, `ADRESSRAUM-REGELN`, `DEVICE-DMA-NOTIZ`, `CPU-DEVICE-NAHT` | tearing inventory and ruling, TOCTOU as a class (check, window, use), the race classes by form, the six address spaces and which the emitter reads, DMA memory-model note | `7c693cb7` | `C-MEMORY-MODEL.md`, `PLAN-HARDWARE.md` §3 |
+| `messung/AUDIT-*.md`, `K100-*.md`, `K3-*.md`, `GEGENPROBE-F03`, `KLASSEN-F03`, `BERICHT-H0`, `BERICHT-B10/SUCHE/O3-RATSCHE/ERZEUGERHALT/UEBERSETZERFAMILIE`, `W24-FRAGMENTE` | the 2026-09-01..05 audits, the four `K100` gates, the three readings of `K3` ("0 of 8"), the standing adversary of `F03`, the fragment break-throughs (`H = 0`) | `7c693cb7` (`AUDIT-2026-09-02`, `AUDIT-K100`, `BERICHT-H0`, `GEGENPROBE-F03`, `K3-BEFUND`, `KLASSEN-F03`: `4bb5e944`) | `FRAGMENTS.md`, `CHECKER.md`, this file |
+| `messung/DOMAENEN*`, `PREDICATE-NAMES`, `EINHEITENSICHT`, `ERSTNAMEN`, `K001*`, `K003-TOR`, `SCHLEIFEN*`, `TORREICHWEITE`, `UNTERE-GRENZE`, `AUSSETZUNG`, `RUMPFKANAL-*`, `ZEREMONIE`, `VIER-LUECKEN` | the checker's rule studies: quantifier domains, names a predicate may write, the unit view, the English first names, the `K001` bound, the loop invariant, the lower bound `2 of 94`, `leave`/`breaking`, the body channel's 66 refusals | `4bb5e944` for those still in the tree on 2026-10-17 | `CHECKER.md` |
+| `messung/{ABNAHME-*,VOLLER-LAUF-GELESEN,AUFRAEUMEN-2026-09-12,VORRICHTUNGEN,TODO-TREUE-2026-09-04,KETTE-2026-09-13,WARTESCHRANKEN-2026-09-15}.md` | the full acceptance runs read line by line (49 guardians, "100 % over a guardian that stood after 2.8 seconds"), the guardian fixtures, the TODO staleness rate, the chain count of 2026-09-13, the waiting-bound census | `7c693cb7` | `TOOLBOX.md`, `MEASUREMENTS.md` |
 | `dokumente/{DONE,PROJECT-STATUS,STAND-2026-09-03}.md` | the finished list, the provenance behind the README snapshot, the handover of 2026-09-03 | `7c693cb7` | this file, `README.md` |
-| `dokumente/AUFTRAG-*.md` (3), `dokumente/GLEITKOMMA.md` | the GabbroV, GabbroV-verification and translation-validation assignments; the float memo ("the price is a second fact logic, and the demand is zero") | `7c693cb7` | `GABBROV.md`, `GLEITKOMMA.md` |
+| `dokumente/AUFTRAG-*.md` (3), `dokumente/FLOATING-POINT.md` | the GabbroV, GabbroV-verification and translation-validation assignments; the float memo ("the price is a second fact logic, and the demand is zero") | `7c693cb7` | `GABBROV.md`, `FLOATING-POINT.md` |
 | `lanes/*.md` (83 task files) | finished lane assignments; the templates stay | `7c693cb7` | `git log` |
-| `dokumente/x86/` (48), `Grammatik/X86/` (357 Lean files), `DIRECT-COMPILER*.md`, `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` | the x86-64 hardware model, its optimiser rule library, the direct-compiler record and design | branch `archive` | `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §8, `PLAN-HARDWARE.md` §2.3 |
+| `dokumente/x86/` (48), `Grammatik/X86/` (357 Lean files), `DIRECT-COMPILER*.md`, `dokumente/PLAN-TRANSLATION-VALIDATION.md` | the x86-64 hardware model, its optimiser rule library, the direct-compiler record and design | branch `archive` | `PLAN-TRANSLATION-VALIDATION.md` §8, `PLAN-HARDWARE.md` §2.3 |
 
 ---
 
@@ -429,7 +429,7 @@ compiler exists. The three cheap gates before it were named through three rebuil
 run**, while about 2000 lines of design text appeared in a single day. **The correction loop ran
 faster than the measurement loop** — "measure before building", inverted at the meta level.
 
-**Countermeasure, since 2026-08-13:** P0.1 has been run (`MESSUNGEN.md`) and immediately found
+**Countermeasure, since 2026-08-13:** P0.1 has been run (`MEASUREMENTS.md`) and immediately found
 an error in the counting rule that three rebuilds of proofreading had not. **No further design
 text before P0.2 and P0.3.**
 
@@ -446,7 +446,7 @@ its scope were not silently widened.** `format` → everything; parameter bounda
 one measurement of the mechanism → its transfer; Silver → Gold.
 
 That is not carelessness but what a design text does by itself as long as nobody **writes the
-scope down**. Which is why every claim in the `README` and in `SPRACHE.md` now carries one —
+scope down**. Which is why every claim in the `README` and in `LANGUAGE.md` now carries one —
 and where none stands, that is a finding. The 2026-10 entries add two shapes of the same move:
 *a claim about an artifact that nobody ran through its consumer* (the certificate that does not
 elaborate), and *a decision that reversed without reaching the documents that stated it* (x86-64).

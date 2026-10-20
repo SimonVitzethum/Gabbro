@@ -2,7 +2,7 @@
 //
 // Bis dahin stand im ganzen Korpus **keine einzige rekursive Funktion**, und der Grund war
 // kein Stilentscheid: `K001` fiel an jeder. Ein Aufruf zaehlt die DEKLARIERTEN `costs` des
-// Gerufenen (`SPRACHE.md` §7), bei einem Zyklus also die eigenen -- und damit lag der Rumpf
+// Gerufenen (`LANGUAGE.md` §7), bei einem Zyklus also die eigenen -- und damit lag der Rumpf
 // immer ueber seiner eigenen Zusage. *Die Sprache erlaubte eine Form, die der Pruefer
 // unweigerlich ablehnte.*
 //

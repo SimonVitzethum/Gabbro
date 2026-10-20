@@ -1,7 +1,7 @@
 //! **Blindstellen: eine Form, die der Korpus nicht ausloest.**
 //!
 //! Am 2026-08-20 fand der erste Treiber, der nicht aus dem Entwurf kam, fuenf Fehler an einem
-//! Nachmittag. Drei davon waren **ungebaute Haelften**: `SPRACHE.md`:355 sagte einen
+//! Nachmittag. Drei davon waren **ungebaute Haelften**: `LANGUAGE.md`:355 sagte einen
 //! `format`-Schreiber zu und es gab nur den Leser; die Geistloeschung liess `return m;`
 //! stehen; die nominale Gleichheit wurde am Ruf nicht gehalten.
 //!

@@ -128,7 +128,7 @@ pub struct Umgebung {
     /// Groessenordnungen zu klein** -- 2 048 statt 68 719 476 736 bei vier Ebenen zu 512
     /// Eintraegen. *Der Pass zaehlte EINEN Abstiegspfad und nannte es die Domaene.*
     ///
-    /// Stufe 3 hat die Lesart entschieden: `SPRACHE.md`:786 sagt *„quantifiziert ueber ALLE
+    /// Stufe 3 hat die Lesart entschieden: `LANGUAGE.md`:786 sagt *„quantifiziert ueber ALLE
     /// erreichbaren Blaetter"*, und dafuer gibt es einen Grund, der aelter ist als der Pass --
     /// die Domaene wurde gebaut, damit **W^X ueber die ganze Tabelle** formulierbar wird.
     /// *W^X ist eine Aussage ueber die MENGE; ueber einen Pfad ist sie sinnlos.*
@@ -156,13 +156,13 @@ pub struct Umgebung {
     ///
     /// The third question about a `walk`, next to its name and its leaf count -- and the one
     /// that says what a BOUND MAPPING carries. `mappings of` is the only domain that binds a
-    /// record instead of an index (`SPRACHE.md` §6), and until 2026-09-01 nothing anywhere
+    /// record instead of an index (`LANGUAGE.md` §6), and until 2026-09-01 nothing anywhere
     /// could answer *which fields that record has*: `forall m in mappings of Self :
     /// !m.gibtsnicht` passed with `0 errors, 0 hints` over an unchanged checker.
     ///
     /// **Two field families, and only one of them comes from here.** The node `format` gives
     /// the ENTRY's fields; `va`, `level` and `index` are SYNTHESISED from the position
-    /// (`SPRACHE.md`:930, *"including virtual address and level"*). `D020` holds both.
+    /// (`LANGUAGE.md`:930, *"including virtual address and level"*). `D020` holds both.
     ///
     /// **The value is the RAW node-type name, not a qualified one** (2026-09-03). Until then
     /// it was `qualifiziere(pfad, letztes)` -- qualified against the `walk`'s OWN module,
@@ -209,7 +209,7 @@ pub struct Umgebung {
     ///
     /// The declaration's TYPE stands in `globale` beside every `static`, so a
     /// reader that only asks for types cannot tell an atomic store from a
-    /// plain one -- and `SPRACHE.md` §11.3 says every store to an atomic is a
+    /// plain one -- and `LANGUAGE.md` §11.3 says every store to an atomic is a
     /// `publishstmt`. This set answers the other question -- is the NAME an
     /// atomic -- module-aware through `nennt_atomic`, the same candidate
     /// order every other qualified card uses.
@@ -242,7 +242,7 @@ pub struct Umgebung {
     /// Wortes ueberhaupt.
     ///
     /// `pruefe-klauseln.py` fuehrte `erschoepfend` als **TOT**: *„`exhaustive` an einem
-    /// `reason`; ungelesen."* `SPRACHE.md`:531 sagt seit langem, was es heisst -- *„der
+    /// `reason`; ungelesen."* `LANGUAGE.md`:531 sagt seit langem, was es heisst -- *„der
     /// erzeugte C-`switch` hat KEIN `default`, und ein neuer Wert bricht die
     /// Uebersetzung"* -- und keine Zeile tat es.
     ///
@@ -442,7 +442,7 @@ impl Umgebung {
         // fiel auf blankes `u32` zurueck, und der naechste Zugriff wurde abgelehnt.
         //
         // **Damit war jede verkettete Struktur unschreibbar**: keine Freiliste, keine CDT,
-        // kein Objektgraph -- genau die Form, die im Korpus steht (`FRAGMENTE.md`:158-161)
+        // kein Objektgraph -- genau die Form, die im Korpus steht (`FRAGMENTS.md`:158-161)
         // und ueber die `Table_Induktion.thy` seine Saetze fuehrt. *Der Beweis handelte von
         // einer Form, die der Pruefer nicht typisieren konnte.*
         //
@@ -606,7 +606,7 @@ impl Umgebung {
     /// A declaration name is no value, so it is not in `globale` and `typ_von_ort` answers
     /// `Unbekannt` for it -- and `forall s in slots of Kappenraum` names the table itself.
     /// **Seventeen of the 53 corpus quantifier places are of that shape**
-    /// (`dokumente/PRUEFER.md`).
+    /// (`dokumente/CHECKER.md`).
     ///
     /// *It resolves through `kandidaten` and not through a direct lookup on a qualified
     /// key*: that is the shape of the `M103` hole in `m1.rs` of 2026-08-17, and

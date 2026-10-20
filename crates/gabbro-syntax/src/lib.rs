@@ -1,6 +1,6 @@
 //! **Gabbro -- lexis, vocabulary, grammar.**
 //!
-//! Stage **P2** of the checker plan (`SPRACHE.md`, part III §6): *lexer + parser over all
+//! Stage **P2** of the checker plan (`LANGUAGE.md`, part III §6): *lexer + parser over all
 //! fragments of the folder.* This crate reads source text and yields a core tree; it checks
 //! **nothing** but form. Every promise of the language -- M1 to M4, D1/D2, pairing, effects,
 //! costs -- lives in `gabbro-check`, in a fixed pass order.

@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenMetall.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md): the GENERATED pieces of the
+             dokumente/PLAN-TRANSLATION-VALIDATION.md): the GENERATED pieces of the
              bare-metal image (C-free lane, C3 slice 1, 2026-10-05).
 
   Rows of `crates/gabbro-check/src/schablonen.rs`:

@@ -11,7 +11,7 @@
 
   Run (from `grammatik/`, after `lake build Grammatik.Parser.Cover.Census`):
     `lake env lean --run Grammatik/Parser/Cover/Census.lean ../beispiele`
-  The numbers in `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9a come from this run.
+  The numbers in `dokumente/PLAN-TRANSLATION-VALIDATION.md` section 9a come from this run.
 -/
 import Grammatik.GabbroV.GvZensus
 import Grammatik.Parser.Elab.UebersetzeAllg3

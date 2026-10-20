@@ -1,6 +1,6 @@
 // emission-15x-c23/void-nullary: the empty parameter list as a type.
 //
-// Census slot C2 `voidTyp`, 930 sites (`dokumente/BEWEIS.md` Subject 2 section
+// Census slot C2 `voidTyp`, 930 sites (`dokumente/PROOF.md` Subject 2 section
 // 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.voidTyp`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, `fnzeiger_deklarator` (result `None`
 // becomes `void`, empty parameter list becomes `(void)`). The `(void)`

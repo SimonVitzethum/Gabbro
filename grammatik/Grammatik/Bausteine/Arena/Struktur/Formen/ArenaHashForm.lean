@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaHashForm.lean
-  Subject:   THE EXECUTED FORMS OF A HASH TABLE WITH CHAINING, BUCKET HEADS IN A TABLE FIELD (PLAN-DYNAMISCH.md section
+  Subject:   THE EXECUTED FORMS OF A HASH TABLE WITH CHAINING, BUCKET HEADS IN A TABLE FIELD (PLAN-DYNAMIC.md section
              8a.1, third pass). `ArenaHash.lean` proves the abstract moves over an abstract head function `hd`; here the
              head function is the field `hf` of a SECOND table `bt` (one slot per bucket, a field of type
              `int 0 count` where `count` is the arena's), and the moves are `Block`s over the existing statements.

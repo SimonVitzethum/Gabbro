@@ -1,7 +1,7 @@
 // erwartet: C001
 // emission-15x-c23/sizeof-refused: the layout-less path stays refused.
 //
-// Census slot C2 `cSizeof`, 27 sites (`dokumente/BEWEIS.md` Subject 2 section
+// Census slot C2 `cSizeof`, 27 sites (`dokumente/PROOF.md` Subject 2 section
 // 1a; `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.cSizeof`). `sizeof`
 // outside a `format` predicate has no object to measure: `sizeof(T)` would
 // have to agree with the layout the checker computed, and that agreement is

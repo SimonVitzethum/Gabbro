@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSibZug.lean
-  Subject:   SIBLING CONSISTENCY AND `revoke` ON EXECUTED BLOCKS (PLAN-DYNAMISCH.md section 8a.1, third pass): the abstract
+  Subject:   SIBLING CONSISTENCY AND `revoke` ON EXECUTED BLOCKS (PLAN-DYNAMIC.md section 8a.1, third pass): the abstract
              theorems of `ArenaSibling.lean` and `ArenaBaumUnter.lean` take the store facts as hypotheses; here the executed
              blocks of `ArenaSibForm.lean` / `ArenaBaumForm.lean` / `ArenaBaumFormG.lean` discharge them.
 

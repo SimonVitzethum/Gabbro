@@ -9,7 +9,7 @@
 //! proof in the whole tree. *Rust says nothing about it, Verus says nothing about it, Loom
 //! says nothing about it.*
 //!
-//! Gabbro said nothing about it either. `SPRACHE.md` booked `check … when TESTBUILD` twice
+//! Gabbro said nothing about it either. `LANGUAGE.md` booked `check … when TESTBUILD` twice
 //! as the answer, and on 2026-08-28 the string `TESTBUILD` stood in **zero** lines of
 //! `crates/`. **`when` was worse than absent: it was PARSED.** `Item::when` and
 //! `FnDecl::when` have existed since the grammar did, `SYNTAX.md` said *"it lowers to
@@ -53,7 +53,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// grammar that is deliberately **not a word of the vocabulary**, exactly like `O` in a
 /// `costexpr` and `Held` in a `heldpred`. It stands as an identifier in a fixed position.
 ///
-/// *Why not a keyword.* `dokumente/PRUEFER.md` §3: a second word for an existing
+/// *Why not a keyword.* `dokumente/CHECKER.md` §3: a second word for an existing
 /// concept is dearer than a second site for an existing word. "Compile this only in build
 /// X" is the concept `when` was put into the grammar for -- `SYNTAX.md` §1 says so in those
 /// words. What was missing was not a word but a READER.

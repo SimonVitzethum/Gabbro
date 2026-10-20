@@ -1,6 +1,6 @@
 // 70 -- **The names Linux wrote, spelled in Gabbro.** The pass test for the «K3» §3 repair.
 //
-// `dokumente/PRUEFER.md` §3 measured the one thing an unseen corpus was there to measure and
+// `dokumente/CHECKER.md` §3 measured the one thing an unseen corpus was there to measure and
 // nobody had predicted: **`P002` fired in six of the eight excerpts, every time on an
 // identifier the kernel itself wrote.** Seven distinct words --
 //

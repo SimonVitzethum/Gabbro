@@ -1,7 +1,7 @@
 // erwartet: K001
 // **Lane 139 (F1): a compound assignment loads and computes.**
 //
-// `m += 1` lowers to read, compute, write -- three Gabbro primitives (`SPRACHE.md` §7:
+// `m += 1` lowers to read, compute, write -- three Gabbro primitives (`LANGUAGE.md` §7:
 // an assignment, an arithmetic operation, a load), not one. `kosten::anweisung` counted
 // every `ZuwOp` as a bare store:
 //

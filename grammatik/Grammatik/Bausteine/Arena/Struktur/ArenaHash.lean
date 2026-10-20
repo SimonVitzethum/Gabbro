@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaHash.lean
-  Subject:   HASH CHAINS (PLAN-DYNAMISCH.md section 8a.1, step (4)), abstractly, over the chains of `ArenaKette.lean`.
+  Subject:   HASH CHAINS (PLAN-DYNAMIC.md section 8a.1, step (4)), abstractly, over the chains of `ArenaKette.lean`.
 
   A hash table with chaining is an array of list heads `hd : bucket -> slot` over ONE arena table (one link function `nx`).
   The invariant:

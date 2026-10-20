@@ -4,14 +4,14 @@
              classic litmus shapes as Lean facts about it.
 
   WHICH MODEL, AND WHY THIS ONE. The emitter lowers every access to an `atomic` through an
-  explicit `atomic_*_explicit` call (`emit.rs`, lane 152; `C-SPEICHERMODELL.md` §1c) with
+  explicit `atomic_*_explicit` call (`emit.rs`, lane 152; `C-MEMORY-MODEL.md` §1c) with
   exactly these orders:
   * a declaration `release` or `acquire`: stores `memory_order_release`, loads
     `memory_order_acquire`, a fetch RMW `memory_order_acq_rel` (`holordnung`), a CAS loop
     release on success and acquire on the load;
   * a declaration `seq`: `memory_order_seq_cst` on both sides;
   * a declaration `relaxed` or NO ordering word: `memory_order_relaxed` on both sides.
-  No `atomic_thread_fence`, no `consume` (measured in `C-SPEICHERMODELL.md` §1c). Plain carriers
+  No `atomic_thread_fence`, no `consume` (measured in `C-MEMORY-MODEL.md` §1c). Plain carriers
   are ordinary C objects; the lock primitive `L_nimm`/`L_gib` is a `pthread_mutex`
   (`treiber.rs`), i.e. an acquire at the lock and a release at the unlock.
 

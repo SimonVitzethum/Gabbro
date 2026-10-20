@@ -25,7 +25,7 @@ is still what `korpus.rs` and `gabbro fragmente` read.
 | Reader | What it needs from this file |
 |---|---|
 | `crates/gabbro-check/tests/korpus.rs` | cuts every ```gabbro block (`korpus::schneide`) and asserts that each refusal is a *named* code (the `BENANNT` list); the VT-d block (the one containing `device Vtd`) must stay completely clean (`f2_das_geraetefragment_bleibt_sauber`); `jeder_block_wird_gefunden` compares the cutter with the raw block count |
-| `gabbro fragmente dokumente/FRAGMENTE.md` | the gate-P2 reader; reports per block `unit` (whole module) or `excerpt` (starts mid-form) |
+| `gabbro fragmente dokumente/FRAGMENTS.md` | the gate-P2 reader; reports per block `unit` (whole module) or `excerpt` (starts mid-form) |
 | retired `zaehle-pflichten` | (retired) aborted unless there are **exactly 10** ```gabbro blocks before the heading that starts with `# «F0»`; blocks after it are the second corpus and are counted separately |
 | retired `zaehle-bereichspflichten` | (retired) removed every `narrow` statement from this file's text, re-ran the checker and counted `M101`/`M104`; the corpus for the `narrow` count |
 | retired `pruefe-emission` | (retired) cut blocks by a header string (`module caprock::bringup`, `module caprock::sched`, `module caprock::dtb`, `device Vtd`, `device Virtq`, `module kernel::kstackmark`, `module caprock::mmu`, `module caprock::cap::space`, `module programs::virtio_blk`) and checked that completed copies lose no frozen line |
@@ -33,7 +33,7 @@ is still what `korpus.rs` and `gabbro fragmente` read.
 | retired `pruefe-syntax` | (retired) the block text had not to contain the forbidden forms of `SYNTAX.md`, and the prose not to quote a retired German keyword |
 | retired `pruefe-widerruf` | (retired) this file was exempt from the retraction scan (it quotes retracted sentences on purpose) |
 
-Line numbers into this file that old comments quote (`FRAGMENTE.md:269`, `:692`, `:902`, …)
+Line numbers into this file that old comments quote (`FRAGMENTS.md:269`, `:692`, `:902`, …)
 point at the layout of before the consolidation of 2026-10-17 and are stale; the content they
 name is unchanged inside the blocks (the last section gives the shift per block).
 
@@ -136,7 +136,7 @@ sauber`, `N von 10 senken ab` and the list of pierced fragments, and the retired
 --haengend` read the piercing ledger (not guarded today; `gabbro pruefe` over each `F0N.gab` re-measures the first).
 
 **The frozen excerpts in this file are not the clean ones, and that is by design.**
-`gabbro fragmente dokumente/FRAGMENTE.md` reports today *6 of 13 translation units with no
+`gabbro fragmente dokumente/FRAGMENTS.md` reports today *6 of 13 translation units with no
 errors (46 %)* over this file (the F-blocks, the floating-point block and the K2 blocks) and
 two `excerpt` blocks that start mid-form. The old header sentence "10 of 10 without error —
 that is gate P2" is no longer true of this file; gate P2 was reached on 2026-08-15 over the
@@ -1602,7 +1602,7 @@ writes Gabbro:** the rule exists, it just stands at every access instead of once
 language nor a tool; a parser that fulfils its range obligations individually anyway gains
 *brevity* from `format`, not *safety* — a real gain, and not the one the thesis promises
 (base rate behind `format`: 5 formats in the whole tree, 0 occurred errors of that class, one
-documented near miss; see `MESSUNGEN.md`). Pierced (`1 0 0 0 0 65`).
+documented near miss; see `MEASUREMENTS.md`). Pierced (`1 0 0 0 0 65`).
 
 ---
 

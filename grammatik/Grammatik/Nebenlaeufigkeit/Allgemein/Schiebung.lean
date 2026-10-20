@@ -7,7 +7,7 @@
       a premise of the constructor, exactly like `Expr.div`'s `1 <= l2`.
     crates/gabbro-check/src/typen.rs `schiebe_links`/`schiebe_rechts` -- the Rust
       checker refuses a width outside the range: `b.min < 0 || b.max >= a.breite`.
-    dokumente/BEWEIS.md section 2 row 4 -- "shift by >= width" dies through
+    dokumente/PROOF.md section 2 row 4 -- "shift by >= width" dies through
       "M1 bounds the shift amount".
 
   WHAT STANDS HERE
@@ -70,7 +70,7 @@ theorem shl_rust_lean_gleich (h1 h2 : Int) (w : Nat) :
 def schiebeWeiteOk (h2 : Int) (w : Nat) : Prop := h2 < (w : Int)
 
 /-- Every shift derivable in the grammar has amount < width: the C UB row
-    "shift by >= width" (`BEWEIS.md` section 2) is unreachable. The proof
+    "shift by >= width" (`PROOF.md` section 2) is unreachable. The proof
     matches the expression and returns the constructor's own `hw2`
     premise; the operand-width premise `hw1` and the nonnegativity proofs
     travel as the match binders. -/

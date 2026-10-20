@@ -3,24 +3,24 @@
   Gegenstand: Die KOSTENRECHNUNG -- `Ĉ` ist eine OBERE Schranke jedes Durchlaufs.
 
   MODELLIERT WIRD
-    Eine Ausdrucks- und Anweisungssprache mit den vier Primitiven aus `SPRACHE.md` §7,
+    Eine Ausdrucks- und Anweisungssprache mit den vier Primitiven aus `LANGUAGE.md` §7,
     die statisch gerechnete Zahl `Ĉ` und eine LAUFRELATION `laeuft s n` ("ein Durchlauf
     durch `s` fuehrt `n` Primitiven aus"). Bewiesen wird L1 aus `messung/K001.md`:
     `Ĉ(b) >= K(b, r)` fuer JEDEN Durchlauf `r`. Dazu L2 (Vergleich bei der kleinsten
     Belegung), die Schleifenmultiplikation und die Komposition von `held`.
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:940  -- "`costs` counts operations, and the unit is defined:
+    dokumente/LANGUAGE.md:940  -- "`costs` counts operations, and the unit is defined:
                                  1 op = one Gabbro primitive (assignment, arithmetic
                                  operation, load, store; a call counts the declared `costs`
                                  of the callee; a traversal counts body costs x domain
                                  bound; branches count the maximum)."
-    dokumente/SPRACHE.md:949  -- "The four primitives are conclusive. An `if`, a `match`,
+    dokumente/LANGUAGE.md:949  -- "The four primitives are conclusive. An `if`, a `match`,
                                  a `return`, a `leave` cost NOTHING [...] And what is fixed
                                  at compile time costs nothing at run time."
-    dokumente/SPRACHE.md:953  -- "What stands after a branch that ALWAYS leaves lies on the
+    dokumente/LANGUAGE.md:953  -- "What stands after a branch that ALWAYS leaves lies on the
                                  other path."
-    dokumente/SPRACHE.md:1176 -- §9.3, Punkt 1/4: "Every lock declares `held <= K ops`. A
+    dokumente/LANGUAGE.md:1176 -- §9.3, Punkt 1/4: "Every lock declares `held <= K ops`. A
                                  `locks` block whose body costs exceed K is a compile
                                  error. [...] Die Latenzaussage je Wartestelle ist damit
                                  ableitbar (hoeherrangige Halter halten <= die Summe ihrer
@@ -66,7 +66,7 @@ inductive Ausdr (F : Type u) where
   /-- ein Ruf -- die **deklarierten** Kosten des Gerufenen -/
   | ruf    : F → Ausdr F
 
-/-- Eine Sperre mit Rang und Haltezeit (`SPRACHE.md`:1272, `lockdecl`). -/
+/-- Eine Sperre mit Rang und Haltezeit (`LANGUAGE.md`:1272, `lockdecl`). -/
 structure Sperre where
   rang : Int
   held : Nat
@@ -89,7 +89,7 @@ inductive Anw (F : Type u) where
   | retry    : Nat → Anw F → Anw F
   /-- `locks L { … }` -- der Block selbst ist keine Primitive -/
   | sperrt   : Sperre → Anw F → Anw F
-  /-- `return`, `leave`, `next` -- **kosten nichts** (`SPRACHE.md`:949) -/
+  /-- `return`, `leave`, `next` -- **kosten nichts** (`LANGUAGE.md`:949) -/
   | sprung   : Anw F
 
 /-- Die Zweigkette eines `if`. **Flach**, und genau daran hing der Fehler. -/
@@ -464,7 +464,7 @@ theorem alte_regel_zaehlt_zu_wenig :
 #print axioms Passlogik.Kosten.alte_regel_zaehlt_zu_wenig
 /-! ## 7. `held` -- die Haltezeit komponiert
 
-    `SPRACHE.md`:1176, §9.3:
+    `LANGUAGE.md`:1176, §9.3:
     1. "Every lock declares `held <= K ops`. A `locks` block whose body costs exceed K is
        a compile error." -- das ist `K002`.
     4. "Die Latenzaussage je Wartestelle ist damit ableitbar (hoeherrangige Halter halten
@@ -497,7 +497,7 @@ where
     `locks`-Bloecke, der Schleifen und der Rufe, weil `Ĉ` sie alle mitzaehlt. -/
 -- BEWEIST NICHT: dass die Sperre in dieser Zeit auch wirklich gehalten wird. Das ist
 -- eine Aussage ueber die Absenkung. Und BEWEIST NICHT: irgendetwas ueber einen
--- SYMBOLISCHEN `held` -- `K010` verlangt `constexpr`, und `SPRACHE.md`:1282 sagt warum:
+-- SYMBOLISCHEN `held` -- `K010` verlangt `constexpr`, und `LANGUAGE.md`:1282 sagt warum:
 -- "Latenz lebt bei der GROESSTEN Belegung, und ein Symbol hat keine."
 theorem held_bindet_darunter {P : KProgramm F}
     (hK : ∀ g, kostenS P.dekl (P.rumpf g) ≤ P.dekl g)
@@ -536,7 +536,7 @@ theorem wartezeit_ist_summe (Ls : List Sperre) (kosten : Sperre → Nat)
 #print axioms Passlogik.Kosten.wartezeit_ist_summe
 /-! ## 8. Die Schleifenschranke multipliziert
 
-    `SPRACHE.md`:940: "a traversal counts body costs x domain bound". Der Satz steckt
+    `LANGUAGE.md`:940: "a traversal counts body costs x domain bound". Der Satz steckt
     schon in `deckt_S`; hier steht er allein, weil er die Stelle ist, an der der
     `mappings of`-Fehler lebte.
 -/

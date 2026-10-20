@@ -8,7 +8,7 @@ it does not consume" is recorded here; reverse it here, not in code.*
 **Summary.** Two pointer arguments of one call must not point at one object when one of the two
 callee parameters is writable or `own`. The checker decides it from provenance roots (`R014`,
 `m3.rs`); the Lean model proves what separation buys (`Logik/Vertraege/Getrennt*.lean`,
-`Objekt*.lean`, SATZKARTE §74-§76); the LLVM backend uses it for `noalias` where the checker holds
+`Objekt*.lean`, THEOREM-MAP §74-§76); the LLVM backend uses it for `noalias` where the checker holds
 the whole call. What is not proved is listed in §7.
 
 ## 1. Measurement (`gabbro alias`, source text only, release binary of 2026-09-30)
@@ -202,8 +202,8 @@ checker rule, **not a Lean judgment**; the model side is `Logik/Vertraege/Objekt
 
 | What | Where |
 |---|---|
-| the rule, in the language | `SPRACHE.md` §5 (aliasing is decided at calls), `SYNTAX.md` §3 (pointer rows) |
+| the rule, in the language | `LANGUAGE.md` §5 (aliasing is decided at calls), `SYNTAX.md` §3 (pointer rows) |
 | the checker | `crates/gabbro-check/src/m3.rs` (`R004`, `R007`, `R014`, `R015`), sentences `m3.zeiger_wurzel`, `m3.zeiger_wurzel_grenze`, rows `tests/wurzeln.rs` |
-| the model | `grammatik/Grammatik/Logik/Vertraege/{Getrennt,GetrenntZeuge,Objekte,ObjektRahmen,ObjektWurzel,ObjektZeuge}.lean`, SATZKARTE §74-§76 |
+| the model | `grammatik/Grammatik/Logik/Vertraege/{Getrennt,GetrenntZeuge,Objekte,ObjektRahmen,ObjektWurzel,ObjektZeuge}.lean`, THEOREM-MAP §74-§76 |
 | the backend | `crates/gabbro-check/src/llvm.rs`, `tests/noalias.rs`, `dokumente/LLVM-BACKEND.md` |
 | probes | `beispiele/gift/257`, `beispiele/gift/1444-alias-sicht-und-quelle.gab`, `beispiele/1163-sicht-neben-eigener-quelle.gab` |

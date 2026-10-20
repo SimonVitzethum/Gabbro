@@ -8,7 +8,7 @@ meaning. The generated representation and the stack/recursion side are in
 
 ## 0. The rule and what exists
 
-> A heap is allowed but never unbounded (`dokumente/PRUEFER.md` section 3): every region has a
+> A heap is allowed but never unbounded (`dokumente/CHECKER.md` section 3): every region has a
 > declared ceiling and refuses on full. The one opt-in beside it is an explicitly sampled form
 > without a static ceiling (section 5.3), in which every allocation may fail and must be handled.
 
@@ -218,7 +218,7 @@ a table of `count = hi` plus a `used` global; `arenaAlloc_unter_schranke`), `Are
 * The G exporter: the complete `ArenaForm`/`DynForm` export and the G form of `grow`, `free` and the range reset
   (`LG005`, OFFEN O14).
 * The binary-level proof that the generated runtime and the kernel do what the model assumes (`LLVM-BACKEND.md`
-  section 8; `PLAN-UEBERSETZUNGSVALIDIERUNG.md`).
+  section 8; `PLAN-TRANSLATION-VALIDATION.md`).
 * The commit cost: the runtime's per-slot commit cost is a declared number (`K003`), not measured here.
 
 ## 8a. Plan: dynamic data structures and their invariants inside the goal (2026-10-17, Simon's order)
@@ -269,7 +269,7 @@ and its slot is live (`N586` makes use-after-free a static error).
    accepts and the model lacks is a checker bug (a refusal, never a warning).
 7. **Compiler.** No new lowering is needed: the LLVM backend already lowers arenas, `grow`, sampling and slot
    release; the certificate's `llvmArenen` rows are checked against the model (the Lean consumer of `llvm-cert`
-   is the open item of PLAN-UEBERSETZUNGSVALIDIERUNG).
+   is the open item of PLAN-TRANSLATION-VALIDATION).
 
 **Evidence for done:** three new examples (a singly linked list over a dynamic arena, a binary tree with a
 sibling-consistency invariant, a hash chain) that are CERTIFIED with a non-vacuous invariant, each with a
@@ -505,7 +505,7 @@ earlier proposals, T2 and T6 are costs the earlier text did not carry. Simon sho
   just cannot satisfy the premise and is outside the statement; it is never unsoundly inside), usability is: a program with nested writers
   cannot instantiate the theorem until O14/O15 exist. Named in the header and in the NOT CLAIMED list.
 * **T8. Decision 3's order premise narrows a universal; the choice of how far is open.** `SchwachX` quantifies `∀ ord`. Restricting
-  `ord` at ALL flags with a payload (derived order) is the simplest and matches the language (`publishes` forces release, SPRACHE 11.1);
+  `ord` at ALL flags with a payload (derived order) is the simplest and matches the language (`publishes` forces release, LANGUAGE 11.1);
   it removes from the statement the (absurd) lowerings of an unraced payload flag as relaxed, and `GabbroZielSC` can then no longer
   be derived from the order-restricted `SchwachX` for such units, only from the direct proof `Beweis.lean` already contains
   (`gabbro_ziel_sc` [V: header, Beweis.lean]). Restricting only at `PubFlagge` (flags of a RACY payload, vacuous elsewhere) loses
@@ -597,7 +597,7 @@ over the structures edited below.)
   ```
   `SchwachX`/`ZielX` get the parameter `ws` (the declared starts; today they get `Tg := GeteiltV P ws`, from which `ws` is not recoverable).
   `Deklaration.ordnung g := if (D.nutzlast g).isEmpty then .entspannt else .freigabe` is a DEFINITION in `Speichermodell/Maschine/MaschineW.lean`
-  next to `ordVon` (not a field: the language derives release for every flag with a payload, SPRACHE 11.1/11.5). `PubFlagge P ws g :=
+  next to `ordVon` (not a field: the language derives release for every flag with a payload, LANGUAGE 11.1/11.5). `PubFlagge P ws g :=
   D.atomar g = true ∧ ∃ c, c ∈ D.nutzlast g ∧ PubLesbar P ws c`.
 * **C6 `AkzeptiertSpecX`** (2109): one new field and two changed ones, for payload carriers only (this is `PubRegel`, §11.4 R0-R4):
   ```
@@ -728,7 +728,7 @@ tree while `lake` runs.
 | M7 | Payload Lean modules without `Spec.lean`: O19-O23 as lemmas over a copy of the legs, O25 payload witness | new files | additive |
 | M8 | **THE `Spec.lean` COMMIT:** C1-C12, A.3, A.5, header text, the NOT CLAIMED edits, `gabbro_ziel`/`gabbro_ziel_sc_aus`/`Beweis` re-proved with the M5-M7 lemmas, `SpecProben` witnesses (O25 both) | Spec closure and dependents (~197 + ~120 [U]) | it applies lemmas that are already green; if O10 or O23 is not ready the commit takes the fallback stage named in B (arena: certificate premise with `ErkE` leaves only; payload: stage P1 havoc, named in the header as "the reader assumes nothing") and ships honestly |
 | M9 | O18 `ErkB` (target stage of the certificate): `arena` moves from (b) to (a) (a SECOND `Spec.lean` diff, small, reviewed again) | partial | additive then a diff |
-| M10 | Documents: `SATZKARTE`, `TODO`, this file, `SPRACHE` 11.5 rule text, `OFFEN` lists | none | texts |
+| M10 | Documents: `THEOREM-MAP`, `TODO`, this file, `SPRACHE` 11.5 rule text, `OFFEN` lists | none | texts |
 
 `gabbro_ziel` keeps its three axioms because every new module is reviewed with `#print axioms` and the guardian prints it; nothing in this
 plan adds an `axiom` or `Classical` beyond `propext`/`Classical.choice`/`Quot.sound` (the existing `Dekl.sperr` already uses `Classical.decide` [V]).
@@ -738,7 +738,7 @@ plan adds an `axiom` or `Classical` beyond `propext`/`Classical.choice`/`Quot.so
 * Size [V]: 712 `.lean` files under `grammatik/Grammatik/`, 275,543 lines; `import Grammatik` pulls 714 modules; `Syntax.lean`'s own closure is 6, so
   an edit there rebuilds all of them; `Spec.lean`'s closure is 197 modules; `Dekl.Ok`'s is 68.
 * Time [U]: the only whole-library figure in the records is 5 min 20 s at 6.86 GB peak for 247 jobs on `ki-pc-fisch-101` (2026-09-15,
-  SATZKARTE §29) and 19 min 44 s for 226 jobs earlier (SATZKARTE lines 2646 and 2808). The tree has ~2.9 times the jobs; this
+  THEOREM-MAP §29) and 19 min 44 s for 226 jobs earlier (THEOREM-MAP lines 2646 and 2808). The tree has ~2.9 times the jobs; this
   machine has 20 cores and 31 GB (`free -g`: 20 GB cache). A linear guess is 15-40 minutes per cold full build. M0 replaces the guess.
 * Number of full rebuilds the plan forces: **three** (M1 spike, M2, M3) plus the `Spec.lean` partial (M8) and its small sequel (M9). Splitting
   rule: (1) every `Syntax.lean`-level change goes into M2, reviewed as a diff BEFORE it lands, because a later correction costs another
@@ -942,7 +942,7 @@ instead of resting on a hardware schedule premise, and the mask enters `Code` as
 ### 8a.5 The reader/writer lock (Lean 2026-10-18; the `Spec.lean` diff and the syntax are PROPOSALS, nothing in `Zielsatz/Kern/` changed)
 
 **Decision (Simon, 2026-10-18):** the strongest variant for safety and power, effort irrelevant: the language gets a reader/writer lock, and it
-goes into the Lean model FIRST (CLAUDE.md order: model, then checker, compiler, `SYNTAX.md`/`SPRACHE.md`; this round is the model only).
+goes into the Lean model FIRST (CLAUDE.md order: model, then checker, compiler, `SYNTAX.md`/`LANGUAGE.md`; this round is the model only).
 Status, measured by `lake build` of the new modules and `#print axioms` (every theorem: `propext`, `Classical.choice`, `Quot.sound` at most; no
 `sorry`; `gabbro_ziel` and `Spec.lean` untouched, no existing module imports the new ones, `Grammatik.lean` does):
 
@@ -1008,7 +1008,7 @@ Two ways, and the layer decides between them:
 ### 8a.6 The hardware forms (pool, trap clause, process exit, task, targets) and the combined diff (2026-10-18; Lean layers proved, nothing applied)
 
 `PLAN-HARDWARE.md` §16 designs the changes that take every system call, register and memory source out of the
-compiler (`LLVM-BACKEND.md` §11, L1-L8) and proves their Lean layers (`Hardware/`, `Code/Gate/`, SATZKARTE §84).
+compiler (`LLVM-BACKEND.md` §11, L1-L8) and proves their Lean layers (`Hardware/`, `Code/Gate/`, THEOREM-MAP §84).
 Relation to the combined diff of 8a.3: **it needs no `Spec.lean` change** (the new forms are lowering data or named
 assumptions; `gabbro_ziel_zusatz`/`gabbro_ziel_leer` prove that extra named assumptions never break the statement and
 that `True` gives `GabbroZiel`). The OPTIONAL sharper statement (a `PoolAnn` conjunct of `HardwareAnnahmen`, role data
@@ -1051,7 +1051,7 @@ only in the checking run is a number the artefact cannot defend".
 
 *Why this file:* it already holds the other `Spec.lean` proposal (8a.3), and the lock-free structures of Phase B item 5 (SPSC/MPSC ring, Treiber
 stack) are dynamic data structures whose payload reads this item makes possible. Lean side: `grammatik/Grammatik/Speichermodell/Payload/`
-(`PayloadHb`, `PayloadLitmus`, `PayloadLB`); `SATZKARTE.md` §80. Nothing in `Zielsatz/Kern/Spec.lean`, the Rust checker or the exporter changed;
+(`PayloadHb`, `PayloadLitmus`, `PayloadLB`); `THEOREM-MAP.md` §80. Nothing in `Zielsatz/Kern/Spec.lean`, the Rust checker or the exporter changed;
 `gabbro_ziel` is untouched (`Grammatik.lean` imports the new modules, nothing imports them).
 
 ### 11.1 What is proved (memory model only, every program, no footprint premise)
@@ -1066,7 +1066,7 @@ The pattern: `payload store (t); flag = v publishes {payload} (t, order freigabe
 | `payload_kein_rennen` | after the await there is no `HbRace` on the payload |
 | `payload_mp_wert` | with two memory facts (the publisher had seen the whole payload history; nothing adds a message at the payload after its write) the reader's presented memory at the payload IS the memory the writer wrote |
 | `gesehen_einzelschreiber`, `still_of_kein_schreiben` | those two facts from thread-level facts: only `t` ever writes `c`; no step after the write writes `c` |
-| `erwartet_bestaetigt` | the **branch fact** of SPRACHE 11.5 rule 2: if no message of the flag before the publish confirms (the initial value does not), nobody writes the flag between publish and await, and the reader branched on a confirming value, then the message it read is the one the publish added (the `erwartet` premise of `MpAblauf`) |
+| `erwartet_bestaetigt` | the **branch fact** of LANGUAGE 11.5 rule 2: if no message of the flag before the publish confirms (the initial value does not), nobody writes the flag between publish and await, and the reader branched on a confirming value, then the message it read is the one the publish added (the `erwartet` premise of `MpAblauf`) |
 
 Litmus facts on the view machine of `Sicht.lean` (the same `beitrag`/`nachricht`/`Lesbar`/`Frisch` that `SchrittW` uses), with a run checker
 (`lauf`, `gehe_schritt`, `erlaubt_of`: a list of choices is a reachable state; allowed outcomes by `decide`, forbidden ones by invariants):
@@ -1092,12 +1092,12 @@ G steps (the scale of `w_nicht_sc`, a few hundred lines); it should be the first
 
 | Premise of the theorem | Provided by | Status |
 |---|---|---|
-| `ordVon ord f = freigabe` (flag) | the language DERIVES release for a payload-carrying atomic (SPRACHE 11.1, `V004`/`V005`, `holordnung` in the emitters); in the model `ord` is free | the model needs a premise on `ord` (D1); the counter-models show the relaxed flag fails |
+| `ordVon ord f = freigabe` (flag) | the language DERIVES release for a payload-carrying atomic (LANGUAGE 11.1, `V004`/`V005`, `holordnung` in the emitters); in the model `ord` is free | the model needs a premise on `ord` (D1); the counter-models show the relaxed flag fails |
 | `c ≠ f` | trivial | - |
 | payload write by `t` before the publish step by `t` | program order of the publisher; `V006` (Rust) refuses a payload written AFTER the publish in the same body | a fact of the run, no extra premise |
 | `hgesehen` (publisher saw every payload message) | only `t` writes `c` (`gesehen_einzelschreiber`) | proved from the single-writer fact; statically `SchreibGetrennt`/`V010` |
 | `hstill` (nothing writes the payload after it) | static rule: no write of `c` reachable after a `publishes f` on any path (loops included) until a handshake (item 5) | NOT a global checker rule today: `V006` is intra-body; needs the interprocedural form (R1) |
-| the reader's flag message is the published one | `erwartet_bestaetigt`: confirming branch, flag initial value non-confirming, flag written once | the branch fact is in the language (SPRACHE 11.5 rule 2); the checker needs the dominance rule R3 to use it |
+| the reader's flag message is the published one | `erwartet_bestaetigt`: confirming branch, flag initial value non-confirming, flag written once | the branch fact is in the language (LANGUAGE 11.5 rule 2); the checker needs the dominance rule R3 to use it |
 | the reader's payload read happens after the confirmed await | the static dominance rule | R3; its dynamic form is a frame invariant (D5) |
 
 ### 11.3 The `Spec.lean` diff for the payload: SUPERSEDED by §8a.3 (2026-10-18, decisions 1-3)

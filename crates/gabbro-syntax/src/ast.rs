@@ -4,7 +4,7 @@
 //! knows no default. What is optional in `SYNTAX.md` is `Option` here; what is mandatory there
 //! is a field without `Option` here. A pass that checks an obligation therefore checks the
 //! **content**, never the presence -- except for `effects`, where the presence IS the
-//! obligation (`SPRACHE.md` §7: not fail-open).
+//! obligation (`LANGUAGE.md` §7: not fail-open).
 
 use crate::kw::Kw;
 use crate::span::Span;
@@ -108,7 +108,7 @@ pub enum ItemArt {
     /// **`profile { … }` -- the ONE hardware profile of the program** («E6»).
     ///
     /// The one set of hardware assumptions the whole program runs under
-    /// (`dokumente/PRUEFER.md` §0c): keyed mode entries plus references to
+    /// (`dokumente/CHECKER.md` §0c): keyed mode entries plus references to
     /// declared `assume` items. At most one block per unit (`N219`).
     Profil(ProfilBlock),
     /// **`requires profile { … }` -- what a library asks of the profile** («E6»).
@@ -118,7 +118,7 @@ pub enum ItemArt {
     /// does not carry (`N217`).
     ProfilBedarf(ProfilBlock),
     /// **`arena` -- a monotone region with a lower and an upper bound**
-    /// («E4», SYNTAX.md §9.1, `dokumente/PRUEFER.md` §3).
+    /// («E4», SYNTAX.md §9.1, `dokumente/CHECKER.md` §3).
     ///
     /// The declaration holds the reservation `lo` and the hard bound `hi`
     /// (`capacity lo .. hi`) plus the element type. Allocation is monotone
@@ -399,7 +399,7 @@ pub enum Raum {
 }
 
 /// **A named space is equal to itself by NAME, not by the span of the token that spelled
-/// it** -- found by «K3» (`dokumente/PRUEFER.md` §4.2) and reproduced independently before
+/// it** -- found by «K3» (`dokumente/CHECKER.md` §4.2) and reproduced independently before
 /// this fix: `Ident` derives `PartialEq` over `{ text, span }`, so a `#[derive(PartialEq)]`
 /// here compared two occurrences of `Benannt(Ident)` at their SITES, and two declaration
 /// sites never share a span. `ptr<user, r> u8` passed to a parameter declared the identical
@@ -585,7 +585,7 @@ pub enum ExprArt {
     /// **«F»: ein Gleitkommaliteral.** Bits einer `f64`, ob der Dezimalbruch dyadisch ist,
     /// und ob `rounded` dahinterstand.
     ///
-    /// **`rounded` kam aus dem Korpus, nicht aus dem Entwurf** (`FRAGMENTE.md`, «F0»): an
+    /// **`rounded` kam aus dem Korpus, nicht aus dem Entwurf** (`FRAGMENTS.md`, «F0»): an
     /// 340 Literalen eines echten Renderers waeren ohne dieses Wort 53 abgelehnt worden,
     /// darunter ln 2 und 2 pi. *Verboten ist nicht das Inexakte, sondern das
     /// STILLSCHWEIGEND Inexakte.*
@@ -910,7 +910,7 @@ impl Ruf {
 /// One struct for both positions (statement and binding) so that no pass can
 /// read one and miss the other. The reader captures the region as a
 /// brace-balanced token tree WITHOUT interpreting it; translating the region
-/// into a payload (`dokumente/PRUEFER.md` §0b) is not implemented yet, so the
+/// into a payload (`dokumente/CHECKER.md` §0b) is not implemented yet, so the
 /// checker refuses every such call with `N057`.
 #[derive(Debug, Clone)]
 pub struct LibraryCall {
@@ -1056,7 +1056,7 @@ pub struct FnDecl {
     /// **`payload <path>` -- the payload type of a `library fn` (lane E2).**
     ///
     /// Names the table (a tree table is a table) the translator fills at
-    /// translation time (`dokumente/PRUEFER.md` §0b); `None` on every other
+    /// translation time (`dokumente/CHECKER.md` §0b); `None` on every other
     /// function. The parser demands the clause on a `library fn`
     /// (`P043`); the checker holds the name against the declared tables
     /// (`N060`). A path and not a bare name, so the table may stand in
@@ -1138,7 +1138,7 @@ pub struct FnDecl {
     pub advances: Option<(Ident, Ident)>,
     /// **Layer S3 of the boot theorem: `retires t from boot falsifier <probe>`.**
     ///
-    /// `SPRACHE.md` §12 demands that `boot_end` consume the token **and** remove the mapping
+    /// `LANGUAGE.md` §12 demands that `boot_end` consume the token **and** remove the mapping
     /// of `.boot` as **ONE event**. Two clauses standing next to each other are not one --
     /// each of them is satisfiable alone, and whoever writes only the first has written a
     /// function that ends the boot phase for the TYPE CHECKER and leaves the bytes mapped.
@@ -1451,7 +1451,7 @@ pub struct LetSonst {
     ///
     /// Der Befund lautete: *„`let … else` verlangt RECHTS einen `call`. Ein `option`-wertiges
     /// `place` laesst sich damit nicht auspacken -- und ein Atomic IST ein `place`."*
-    /// Genau daran zerbrach die Messstelle in `FRAGMENTE.md` F6.
+    /// Genau daran zerbrach die Messstelle in `FRAGMENTS.md` F6.
     pub quelle: LetQuelle,
     pub fehlername: Ident,
     pub sonst: Block,
@@ -1598,7 +1598,7 @@ pub struct NarrowStmt {
 ///
 /// **Und es gibt kein `isnan` in der Sprache.** `narrow … to finite else { … }` IST die
 /// Prüfung, und ihr `else`-Zweig ist der NaN-Weg -- genau die Gestalt, die der Korpus von
-/// Hand schreibt (`FRAGMENTE.md`, «F0»/FF1).
+/// Hand schreibt (`FRAGMENTS.md`, «F0»/FF1).
 #[derive(Debug, Clone)]
 pub enum NarrowZiel {
     Bereich(Bereich),
@@ -1640,7 +1640,7 @@ pub struct ObserviertStmt {
 pub struct SperrtStmt {
     pub sperre: Ort,
     /// `locks shared N { … }` -- shared acquisition. **The hot path of a kernel takes it
-    /// this way**: capability resolution only reads (MESSUNGEN.md, paper test: 33 against 44).
+    /// this way**: capability resolution only reads (MEASUREMENTS.md, paper test: 33 against 44).
     pub geteilt: bool,
     pub rumpf: Block,
 }
@@ -1679,7 +1679,7 @@ pub struct ExchangeStmt {
 pub enum XForm {
     /// **`update(v) bounded N ops on_exceeded f { … }`** -- der Rumpf rechnet alt -> neu.
     ///
-    /// `SPRACHE.md` (RMW, die dritte Form der Paarung) hat die Absenkung immer schon gesagt:
+    /// `LANGUAGE.md` (RMW, die dritte Form der Paarung) hat die Absenkung immer schon gesagt:
     /// `atomic_fetch_*`, wo der Rumpf einer Grundform entspricht, *sonst die **beschraenkte**
     /// CAS-Schleife, „emittiert als `retry bounded NCORES * K ops on_exceeded contention`"*.
     ///
@@ -1737,7 +1737,7 @@ pub struct Traverse {
     pub mass: Option<Expr>,
     pub touches: Option<Wirkungen>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
-    /// language already; this is the statement (`dokumente/PRUEFER.md`).
+    /// language already; this is the statement (`dokumente/CHECKER.md`).
     pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
@@ -1762,7 +1762,7 @@ pub struct Retry {
     pub bei_ueberschreitung: Ident,
     pub effects: Option<Wirkungen>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
-    /// language already; this is the statement (`dokumente/PRUEFER.md`).
+    /// language already; this is the statement (`dokumente/CHECKER.md`).
     pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
@@ -1777,7 +1777,7 @@ pub struct Forever {
     pub fortschritt: Option<Ident>,
     pub verlaesst: Vec<Ident>,
     /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
-    /// language already; this is the statement (`dokumente/PRUEFER.md`).
+    /// language already; this is the statement (`dokumente/CHECKER.md`).
     pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
@@ -2136,7 +2136,7 @@ pub struct AtomicDecl {
     pub oeffentlich: bool,
     pub name: Ident,
     pub typ: TypExpr,
-    /// The **superset** of the payload at the declaration (SPRACHE.md §11.3). The obligation
+    /// The **superset** of the payload at the declaration (LANGUAGE.md §11.3). The obligation
     /// sits at the store; this entry is voluntary and is checked against every store payload.
     /// It is **not** in the EBNF today -- see refusal `P031`.
     pub obermenge: Option<Nutzlast>,
@@ -2160,7 +2160,7 @@ pub enum Ordnung {
 
 /// **`group N over { A, B };` -- the carrier group.**
 ///
-/// The measured need is in the SWEEP der Verbindungs-Invarianten (`MESSUNGEN.md`,
+/// The measured need is in the SWEEP der Verbindungs-Invarianten (`MEASUREMENTS.md`,
 /// 2026-08-16): four invariants between two carriers each, and **one of them (V4) runs across
 /// two crates with two locks.** What a single table cannot express: *"the counter in A equals
 /// the number of references in B"* -- no `table` invariant can say it, because it quantifies
@@ -2220,7 +2220,7 @@ pub struct LockDecl {
     /// `shared held <= constexpr ops` -- **the separate branch for reader-writer locks.**
     /// `held` is meant for EXCLUSIVE holders; on the shared side the quantity computed is a
     /// different one, and without this number the latency statement of §9.3 has no branch for
-    /// a lock taken shared (MESSUNGEN.md, side finding N3).
+    /// a lock taken shared (MEASUREMENTS.md, side finding N3).
     pub geteilte_haltezeit: Option<Expr>,
     pub maskiert: Option<Ident>,
     /// `invariant <pred>` -- the lock invariant over the protected carriers
@@ -2238,7 +2238,7 @@ pub struct AccDecl {
     pub merge: MergeOp,
     /// **`per cpu <constexpr>` -- wie viele Zellen** (2026-08-18).
     ///
-    /// `SPRACHE.md` §11.4 sagt seit jeher *„one cell per core, merged over the
+    /// `LANGUAGE.md` §11.4 sagt seit jeher *„one cell per core, merged over the
     /// NCORES-bounded loop"* -- **und nannte die Zahl nirgends.** Der Erzeuger haette
     /// `NCORES` raten oder einen Namen suchen muessen; genau das Raten, gegen das `C001`
     /// steht.
@@ -2539,7 +2539,7 @@ pub enum SyscallPaarung {
 /// **The fixed key set of the hardware profile (lane E6, «E6»).**
 ///
 /// Mirrors `ProfilSchluessel` in `grammatik/Grammatik/Kern/Syntax/Profil.lean`
-/// (`dokumente/PRUEFER.md` §0c, point 3): an assumption fixing a mode or a
+/// (`dokumente/CHECKER.md` §0c, point 3): an assumption fixing a mode or a
 /// resource names its key and value. `arch` reuses the existing word; the
 /// other four are words of their own so a typo falls at the reader, not in
 /// a string comparison nobody reads.
@@ -2567,7 +2567,7 @@ impl ProfilSchluessel {
 
 /// One entry of a `profile` or `requires profile` block: a keyed mode
 /// assumption (`arch x86_64;`) or a reference to a declared `assume` item
-/// (`assume <name>;`), never a copy of its text (`dokumente/PRUEFER.md` §0c,
+/// (`assume <name>;`), never a copy of its text (`dokumente/CHECKER.md` §0c,
 /// point 2).
 #[derive(Debug, Clone)]
 pub enum ProfilEintrag {

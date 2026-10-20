@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaHashZug.lean
-  Subject:   THE HASH-CHAIN INVARIANT ON EXECUTED BLOCKS (PLAN-DYNAMISCH.md section 8a.1, third pass): `hash_push`,
+  Subject:   THE HASH-CHAIN INVARIANT ON EXECUTED BLOCKS (PLAN-DYNAMIC.md section 8a.1, third pass): `hash_push`,
              `hash_pop` and `hash_unlink` (`ArenaHash.lean`) take the store facts as hypotheses; here they are discharged by
              the executed forms of `ArenaHashForm.lean` (and `Block.linkUnlink` for the unlink inside one chain), for every
              continuation, with the bucket heads read out of the TABLE FIELD.

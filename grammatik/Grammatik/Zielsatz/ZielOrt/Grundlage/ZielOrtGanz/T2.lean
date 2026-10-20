@@ -440,7 +440,7 @@ end Halt
   the one side condition every reading rule of G carries, `HeldGenau` of
   the head's static holdings (a lock-bookkeeping fact, not a `logik` check;
   `rufG_haelt_statisch` proves its `⊆` half on every reachable machine, the
-  `⊇` half is not proved -- `SATZKARTE.md` §13.5). -/
+  `⊇` half is not proved -- `THEOREM-MAP.md` §13.5). -/
 
 /-- **Thread `t` of `M` stands at a `logik` check of G**: a `traverse`
     boundary, a `forever` boundary with budget left, a `leave` out of a

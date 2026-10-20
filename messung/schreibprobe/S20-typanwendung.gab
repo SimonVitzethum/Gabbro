@@ -1,6 +1,6 @@
 // S20 -- «B15»: A QUEUE THAT IS WRITTEN ONCE.
 //
-// `FRAGMENTE.md` «B15»: *"No type application: `Outcome(T,E)`, `Queue(T,N)`
+// `FRAGMENTS.md` «B15»: *"No type application: `Outcome(T,E)`, `Queue(T,N)`
 // unwritable; `variants` takes exactly one `typeexpr` per variant, multi-field
 // payloads need helper structs."* Cited at F1 and F3. F3 wrote its ring buffer
 // MONOMORPHISED for that reason.

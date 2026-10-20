@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaHashZeuge.lean
-  Subject:   WITNESSES AND A PLANTED DEFECT FOR THE EXECUTED HASH FORMS (PLAN-DYNAMISCH.md section 8a.1, third pass), on a
+  Subject:   WITNESSES AND A PLANTED DEFECT FOR THE EXECUTED HASH FORMS (PLAN-DYNAMIC.md section 8a.1, third pass), on a
              concrete declaration with TWO tables: the arena (four slots, payload `0`, free link `1`, chain link `2`) and a
              bucket table (two slots, one field `0`: the head of the chain). Words: counter, committed word, free head.
 

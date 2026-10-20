@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaBaum.lean
-  Subject:   THE BINARY TREE OVER INDICES, abstractly (PLAN-DYNAMISCH.md section 8a, phase 2, abstract half;
+  Subject:   THE BINARY TREE OVER INDICES, abstractly (PLAN-DYNAMIC.md section 8a, phase 2, abstract half;
              the capability derivation tree of O4-O6 has this shape).
 
     * `BaumF c l r k S`   -- the tree rooted at `k` has exactly the slots `S` (preorder); `c` is the nil marker.

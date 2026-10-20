@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaRahmen.lean
-  Subject:   THE FRAME OF A LINK STORE (PLAN-DYNAMISCH.md section 8a.1, third pass): which link fields and which link
+  Subject:   THE FRAME OF A LINK STORE (PLAN-DYNAMIC.md section 8a.1, third pass): which link fields and which link
              heads a run can have moved. A body that holds a list AND a tree on one arena needs, for every move of the
              one, the fact that the other did not see it. `LinkRahmen A fs gs σ σ'` says: every link field that is not
              in `fs` reads the same in `σ'` as in `σ`, and every link head that is not in `gs` reads the same.

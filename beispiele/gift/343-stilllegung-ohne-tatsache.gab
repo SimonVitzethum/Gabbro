@@ -7,7 +7,7 @@
 // ohne eine einzige pruefbare Aussage darueber zu hinterlassen. Man koennte sie an eine
 // Funktion schreiben, die gar nichts tut.
 //
-// Die eine Haelfte von S3 ist formulierbar, und `SPRACHE.md` §12 schreibt sie hin:
+// Die eine Haelfte von S3 ist formulierbar, und `LANGUAGE.md` §12 schreibt sie hin:
 //
 //     ensures !exists m in mappings of <wurzel> : <m liegt im stillgelegten Raum>
 //

@@ -1,7 +1,7 @@
 //! **The `atomic_fetch_*` arm of `exchange update`, and the boundary around it**
 //! (2026-09-15).
 //!
-//! `SPRACHE.md` Part III §1 has promised since it was written that an `exchange
+//! `LANGUAGE.md` Part III §1 has promised since it was written that an `exchange
 //! update` body which "corresponds to a primitive" lowers to `atomic_fetch_*`,
 //! and everything else to the bounded CAS loop. Lane 201
 //! (`messung/muse/MUSE-REPORT-201.md`) measured that only the second half

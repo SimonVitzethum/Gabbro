@@ -84,7 +84,7 @@ end Schritt
     * progress at the checks: a thread standing at a `logik` check
       (`AnPruefungG`) whose head's static holdings are exactly its held locks
       (`HeldGenau`, the lock side condition of every reading rule) CAN STEP.
-      What else can stop a thread is named in `SATZKARTE.md` §13.5.
+      What else can stop a thread is named in `THEOREM-MAP.md` §13.5.
 
     Premises, by class: (a) user logic `KoerperGutZ` (per function, over the
     SEQUENTIAL semantics), `StartGut`; (b) hardware `GutO`, `RegLokal`,
@@ -161,7 +161,7 @@ theorem ziel_ort_rahmen_aus_ganz (P : Programm D) (O : Orakel D) (passes : Nat) 
     and whose head's static holdings are exactly its held locks can step.
     No reachable machine is stuck at a loop invariant, a `forever`
     boundary with budget left, a `leave` out of a `traverse`, or a `state`
-    transition. What else can stop a thread: `SATZKARTE.md` §13.5. -/
+    transition. What else can stop a thread: `THEOREM-MAP.md` §13.5. -/
 theorem ziel_ort_ganz_fortschritt (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (fs : List D.Fn) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (e0 : Ereignis D) (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)

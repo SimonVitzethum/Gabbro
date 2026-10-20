@@ -1,6 +1,6 @@
 // S15 -- F5'S LETHAL FINDING «B11», RE-MEASURED: THE SERVICE LOOP WITH AN EXIT.
 //
-// `FRAGMENTE.md` F5 (userspace service loop) is the second of the two
+// `FRAGMENTS.md` F5 (userspace service loop) is the second of the two
 // fragments that "does NOT fit", and «B11» is the whole reason:
 //
 //   > `forever` has no exit; `leave`/`break`/`continue` do not exist. The D0

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Verklemmung.lean
-  Subject:   DEADLOCK FREEDOM FROM LOCK RANKS on machine G (SATZKARTE §13.5
+  Subject:   DEADLOCK FREEDOM FROM LOCK RANKS on machine G (THEOREM-MAP §13.5
              progress item 1, §16.3).
 
   The checker enforces the rank order (`H006`: a `locks L` ranks above every

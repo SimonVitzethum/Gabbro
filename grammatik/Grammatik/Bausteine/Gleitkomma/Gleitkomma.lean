@@ -7,7 +7,7 @@
   nothing about float values can be proved and no witness computed without
   `native_decide` (forbidden). This file is the replacement; since
   2026-09-14 the semantics computes with it (`Typen.lean` `GFloat`,
-  `Semantik.lean` `gleitRechne`, dokumente/GLEITKOMMA.md section 7).
+  `Semantik.lean` `gleitRechne`, dokumente/FLOATING-POINT.md section 7).
 
   Design: formats as data (`Format`: precision `p`, maximal exponent `emax`);
   values as bit triples (sign, biased exponent, significand as `Nat`) with

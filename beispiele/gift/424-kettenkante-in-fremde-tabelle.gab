@@ -9,7 +9,7 @@
 // Fremdschluessel, und `chain(a, b) in` sagt darueber nichts. *Der Index waere dort sogar
 // typkorrekt -- er zaehlt Plaetze, nur die der falschen Tabelle.*
 //
-// Gemessen in `dokumente/PRUEFER.md`.
+// Gemessen in `dokumente/CHECKER.md`.
 
 module gift {
 

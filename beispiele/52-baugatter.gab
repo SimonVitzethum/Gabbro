@@ -90,7 +90,7 @@ impl fn freigabe()
     costs   <= 4 ops
 { return; }
 
-// Und die Pflicht selbst. `SPRACHE.md` buchte `check … when TESTBUILD` zweimal als Plan;
+// Und die Pflicht selbst. `LANGUAGE.md` buchte `check … when TESTBUILD` zweimal als Plan;
 // **hier steht sie zum ersten Mal.**
 when TESTBUILD
 check puffer_haelt {

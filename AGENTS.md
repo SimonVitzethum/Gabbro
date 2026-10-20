@@ -2,7 +2,7 @@
 
 *Written 2026-09-15 by the Claude session that ran the project from the laptop until the move to
 the server; since 2026-09-27 all work runs locally again and no second machine is used.
-`CLAUDE.md` stays the Simon's work instructions (German); this file is the operating manual
+`CLAUDE.md` holds Simon's work instructions (English, like every `.md`); this file is the operating manual
 beside it. Execution is local-only (Simon, 2026-09-27); where older notes elsewhere still name
 a remote build machine, this file wins for execution.*
 
@@ -87,7 +87,7 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   `Zielsatz/Beweis.lean` proves `gabbro_ziel_sc` directly.
 - **Axioms:** `#print axioms gabbro_ziel` must be exactly `propext`, `Classical.choice`,
   `Quot.sound`. Every merge that touches `grammatik/` keeps it so.
-- **The review rounds and what each repaired** (SATZKARTE §22–§25):
+- **The review rounds and what each repaired** (THEOREM-MAP §22–§25):
 
   | Round | Found and repaired |
   |---|---|
@@ -114,7 +114,7 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   layers, deprecated paths, old names or flag aliases, retired-but-kept codes, or C-emitter remnants.
 - **Language and syntax follow the Lean model, in that order** (Simon, 2026-10-17): the Lean model is the
   single source; any change to the language or its syntax is made in the Lean model FIRST, then in the checker,
-  the compiler and `SYNTAX.md`/`SPRACHE.md`. A form the checker accepts and the model lacks is a checker bug.
+  the compiler and `SYNTAX.md`/`LANGUAGE.md`. A form the checker accepts and the model lacks is a checker bug.
   Pure lowering of an existing form does not change the language.
 - **The C emitter is REMOVED** (Simon, 2026-10-17, final). LLVM (`llvm.rs`, `llvm/`) is the
   only backend; `gabbro build` drives it (checker, IR, `opt`, `llc`, `ld.lld`) and refuses
@@ -163,7 +163,7 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   AMD manuals are missing from the clones.
 
 - **Direct compiler progress record** (Simon, 2026-10-01):
-  [`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) is the central
+  [`dokumente/PLAN-TRANSLATION-VALIDATION.md`](dokumente/PLAN-TRANSLATION-VALIDATION.md) is the central
   record for the direct x86-64 compiler, `-O3`-like/invariant optimisation, Lean-first
   modelling, later Rust implementation and full source-to-final-byte validation.
   Update it with every substantive reviewed integration, finding, scope change and
@@ -190,19 +190,19 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 - **Proposed friend optimiser ownership:** `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean`
   and `OptimizationWitnesses.lean` are reserved for the friend handoff. Muse lanes
   do not edit these paths; reuse the one accepted IR and wait for its frozen interface.
-  The complete planned optimiser specification belongs in `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`.
+  The complete planned optimiser specification belongs in `dokumente/PLAN-TRANSLATION-VALIDATION.md`.
 - **Continuous Muse utilisation (Simon, 2026-10-01):** keep up to 15 useful models active permanently. Dispatch independently of serial integration/build/publication. Count actual live model PIDs separately from queues, completed lanes and Python/build wrappers. Preserve all safety gates and record genuine dependency/provider/resource bottlenecks. The coordinator manages only its own lanes.
 - **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
   Muse lanes: as many as useful.
 - **Commit messages** go through `arbeitsprotokoll/.commitmsg` + `./commit.sh`. It commits STAGED
   changes only, so `git add` first.
-- **Language:** documents, comments, commit messages, diagnostics and `TODO.md` are in English.
-  The conversation with Simon is in German. Muster (guardian patterns) become bilingual
-  BEFORE a document changes language.
+- **Language:** documents (every `.md`, and its file name too), comments, commit messages, diagnostics
+  and `TODO.md` are in English. The conversation with Simon is in German. Guardian patterns become
+  bilingual BEFORE a document changes language.
 - **Work in real folders, not `/tmp`.** `/tmp` is RAM on this machine. Scratch files go to
   `.claude/muse-arbeit/kratz/`.
 - **Every Lean build and every `cargo` run happens locally.** No exceptions for "just a small one".
-- **Simplicity is a goal, but no guarantee is given up for it** (dokumente/PRUEFER.md). The measure
+- **Simplicity is a goal, but no guarantee is given up for it** (dokumente/CHECKER.md). The measure
   is: ceremony count down AND pass register constant. Never derive `ensures`, and never turn a
   refusal into a warning.
 - **Safety is never traded for features** (Simon, 2026-09-17). No lane weakens a guarantee —
@@ -396,7 +396,7 @@ opus/…:opus/…` first.
   - build with `lake build` in the agent's own directory, never in this checkout while
     something else builds there.
 - **The prompt names:** the standards (no `sorry`, `native_decide` or new `axiom`; standard
-  axioms; witnesses), the plan and SATZKARTE updates expected, "commit on your branch, do not
+  axioms; witnesses), the plan and THEOREM-MAP updates expected, "commit on your branch, do not
   merge", and the report they finish with.
 - **Use them for** the hard single pieces (model repairs, closing theorems, verdicts).
 - **Session limits:** when an Opus agent stops on a session or weekly limit, its worktree keeps
@@ -432,12 +432,12 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 |---|---|
 | The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (review target), `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean` |
 | Model | `RufMaschineG.lean` (machine G), `Semantik.lean` (`execEnd`, `rufAt`), `SperreBeweis.lean`, `Lebendigkeit.lean`, `Gleitkomma*.lean`, `EinpassenVoll.lean`, `AntwortOrte.lean`, `Nichtinterferenz/` |
-| Translation validation | Active target: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 (source → final x86 bytes, W / GX reuse). The C proof record (C correspondence chain) was deleted on 2026-10-18 (tag `archiv/c-emitter-2026-10-17`); present: `Parser/` (T3), `Parser/Elab/UebersetzePipeline.lean`, `Korpus/` (reference fixtures, corpus units `Einheit104/108`, model certificates `Zeugnis/`) |
-| Plans | `dokumente/BEWEIS.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 removed, C backend), `dokumente/PRUEFER.md`, `dokumente/BEWEIS.md`, `GLEITKOMMA.md` |
-| Theorem map | `dokumente/SATZKARTE.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
+| Translation validation | Active target: `dokumente/PLAN-TRANSLATION-VALIDATION.md` §§0–5 (source → final x86 bytes, W / GX reuse). The C proof record (C correspondence chain) was deleted on 2026-10-18 (tag `archiv/c-emitter-2026-10-17`); present: `Parser/` (T3), `Parser/Elab/UebersetzePipeline.lean`, `Korpus/` (reference fixtures, corpus units `Einheit104/108`, model certificates `Zeugnis/`) |
+| Plans | `dokumente/PROOF.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-TRANSLATION-VALIDATION.md` (§§0–5 active x86 target, §§6–7 removed, C backend), `dokumente/CHECKER.md`, `dokumente/PROOF.md`, `FLOATING-POINT.md` |
+| Theorem map | `dokumente/THEOREM-MAP.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
 | Known absences | `TODO.md` (O1–O14) |
-| Verdicts | `dokumente/BEWEIS.md` part C (one table); the old reports are in Git |
-| Guardians | `instrumente/abnahme.py` runs the four: `pruefe-lean.py`, `pruefe-llvm.py`, `pruefe-pruefer.py`, `pruefe-gabbrov.py` (`dokumente/WERKZEUGKASTEN.md`) |
+| Verdicts | `dokumente/PROOF.md` part C (one table); the old reports are in Git |
+| Guardians | `instrumente/abnahme.py` runs the four: `pruefe-lean.py`, `pruefe-llvm.py`, `pruefe-pruefer.py`, `pruefe-gabbrov.py` (`dokumente/TOOLBOX.md`) |
 | Rust tools | `gabbro lean-g` (exporter), `gabbro obligations --g`, `gabbro counterexample`, `gabbro certificate`, `gabbro pruefe --fix`, `gabbro abgeleitet`, `gabbro zeremonie`, `gabbro paesse` |
 
 ## 9. Pitfalls that cost real time (each happened)
@@ -466,7 +466,7 @@ A ledger of reservations drifts; the highest number in the tree does not.*
 
 - **Merge conflicts that recur:**
   - `Grammatik.lean` imports: take the union;
-  - duplicate SATZKARTE § numbers: renumber;
+  - duplicate THEOREM-MAP § numbers: renumber;
   - two lanes defining the same Lean name: rename one;
   - duplicate `Satz` insertions in `saetze.rs`: keep both;
   - `fahnen.rs`: take the union;
@@ -535,7 +535,7 @@ hardware, ISA, semantics and compiler settings on full validated direct binaries
 execution, unvalidated output, golden agreement or emulation are not direct-backend evidence.
 Compile latency includes checking, optimisation, production, validation and Lean kernel checking
 (cold, warm, incremental, memory). Targets are OPEN until measured; no universal speed claim.
-Central record: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md`.
+Central record: `dokumente/PLAN-TRANSLATION-VALIDATION.md`.
 
 ## 12. Model onboarding: behavior rules that make entry easier (Simon, 2026-10-04)
 

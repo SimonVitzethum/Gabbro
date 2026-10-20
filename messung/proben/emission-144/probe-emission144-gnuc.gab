@@ -1,6 +1,6 @@
 // emission-144/gnuc: `#if defined(__GNUC__)` guards the handed-down verdict.
 //
-// Census slot C2 `wennGnuC`, 5 sites (`dokumente/BEWEIS.md` Subject 2;
+// Census slot C2 `wennGnuC`, 5 sites (`dokumente/PROOF.md` Subject 2;
 // `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.wennGnuC`). Emitter sites:
 // `crates/gabbro-check/src/emit.rs`, `match_markiert` and `match_grund`, which
 // write the guard around `__builtin_unreachable()` exactly when every arm ends

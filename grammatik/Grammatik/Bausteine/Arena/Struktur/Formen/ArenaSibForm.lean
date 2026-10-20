@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSibForm.lean
-  Subject:   THE PARENT STORE OF THE CAPABILITY TREE AND `revoke`, ON EXECUTED BLOCKS (PLAN-DYNAMISCH.md section 8a.1, third
+  Subject:   THE PARENT STORE OF THE CAPABILITY TREE AND `revoke`, ON EXECUTED BLOCKS (PLAN-DYNAMIC.md section 8a.1, third
              pass). The capability tree is a first-child / next-sibling tree: the left link is the first child, the right
              link is the next sibling, and a third field `par` names the parent (`ArenaSibling.lean`: `SibF`). A leaf in is
              then TWO things: the two child stores of `blattEin` and the parent store.

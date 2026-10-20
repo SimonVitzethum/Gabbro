@@ -1,6 +1,6 @@
 //! **Lane 197: `fmt --explicit` / `--elide` are pure views.**
 //!
-//! Lever 3 of `dokumente/PRUEFER.md`: explicitness as a view, not a
+//! Lever 3 of `dokumente/CHECKER.md`: explicitness as a view, not a
 //! storage format. For every corpus file the checker accepts, `pruefe(F)`,
 //! `pruefe(explicit(F))` and `pruefe(elide(F))` give the same diagnostics
 //! (codes, levels and texts — spans excluded, the views move bytes), the same

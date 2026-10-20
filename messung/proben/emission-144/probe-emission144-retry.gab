@@ -1,6 +1,6 @@
 // emission-144/while: `while` is the lowering of `retry`, and only of `retry`.
 //
-// Census slot C2 `schleifeStmt`, 11 sites (`dokumente/BEWEIS.md` Subject 2;
+// Census slot C2 `schleifeStmt`, 11 sites (`dokumente/PROOF.md` Subject 2;
 // `grammatik/Grammatik/Erhaltung.lean`, `OffeneForm.schleifeStmt`). Emitter site:
 // `crates/gabbro-check/src/emit.rs`, `emit.rs::retry`, which writes
 // `while (!(condition))` around a counter-guarded body (`if (z >= gaenge) exit`).

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreTraeger.lean
-  Subject:   A SHARED ARENA IS A LOCK INVARIANT (PLAN-DYNAMISCH.md section 8a.2, phase 3, step 1): the carriers the
+  Subject:   A SHARED ARENA IS A LOCK INVARIANT (PLAN-DYNAMIC.md section 8a.2, phase 3, step 1): the carriers the
              arena invariant `Dekl.Ok` reads, the proof that it reads nothing else, and the lock family `K.sperr L0`
              whose invariant of `L0` IS `Dekl.Ok` (and whose protected carriers are exactly those words).
 

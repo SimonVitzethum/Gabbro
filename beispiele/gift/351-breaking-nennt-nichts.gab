@@ -1,7 +1,7 @@
 // erwartet: D013
 // **Gift 351 -- `breaking` laesst etwas ruhen, das es nicht gibt.**
 //
-// `SPRACHE.md` §8.3 haengt DREI Zusagen an diesen Namen: im Block ist die Invariante als
+// `LANGUAGE.md` §8.3 haengt DREI Zusagen an diesen Namen: im Block ist die Invariante als
 // Praemisse gesperrt, Funktionen mit `requires I`/`maintains I` sind nicht rufbar, und am
 // Ende ist sie wiederhergestellt oder als `obligation` gebucht. **Alle drei sind Zusagen
 // ueber einen Namen, den bis zum 2026-08-28 niemand nachgeschlagen hat.**

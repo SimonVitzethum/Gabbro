@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenModul.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md): the runtime of a `module` unit
+             dokumente/PLAN-TRANSLATION-VALIDATION.md): the runtime of a `module` unit
              (a loadable kernel module) as GENERATED text (C-free lane, C2, 2026-09-30).
 
   Rows of `crates/gabbro-check/src/schablonen.rs`:

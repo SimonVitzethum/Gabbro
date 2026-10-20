@@ -1,7 +1,7 @@
 /-
   Gabbro/Grammatik/ZielOrtInvGrund.lean
 
-  **Owed invariants at REASON returns** (SATZKARTE §18.5, §19.1).
+  **Owed invariants at REASON returns** (THEOREM-MAP §18.5, §19.1).
 
   SYNTAX.md: a function owes its invariants "at every `return`". `InvGutS`
   and `InvAmOrtG` (`ZielOrtInv.lean`) check VALUE returns only, so a

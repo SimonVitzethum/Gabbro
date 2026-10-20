@@ -7,7 +7,7 @@
 //!    Funktion mit `requires Held(…)`. Punkt."*) war absichtlich zu streng und hat die
 //!    ersetzende Prüfung in ihrer eigenen Absage angekündigt. Hier ist sie.
 //! 2. **Pass 8, Aufrufwirkungen** — ohne sie deckt eine `effects`-Liste nur die **erste
-//!    Ebene**, und die Klempnerei-Klasse *Rahmen* hängt genau daran (`MESSUNGEN.md`,
+//!    Ebene**, und die Klempnerei-Klasse *Rahmen* hängt genau daran (`MEASUREMENTS.md`,
 //!    Neuerhebung: `N_neu = 5`).
 //! 3. **Die Klasse *Phase*** — nur ein Aufrufgraph trennt „selten **ist**" von „selten
 //!    **sichtbar**" (R18).
@@ -360,7 +360,7 @@ pub fn erhebe_mit_roh(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             ruft: BTreeSet::new(),
             verlangt: Vec::new(),
             hat_effects: true,
-            // Lane E2: a syscall is no foreign body -- dokumente/PRUEFER.md
+            // Lane E2: a syscall is no foreign body -- dokumente/CHECKER.md
             // §0c names it as a construct a library may reach hardware
             // through. Its assumptions are named, not smuggled.
             fremd: false,
@@ -396,7 +396,7 @@ pub fn erhebe_mit_roh(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     // here, `u64(a)` inside a `pure` function made that function's OWN effect hull
     // undecidable -- the diagnostic three comments up, *"the call effects of `f` are
     // undecidable: `u64` is unknown to the graph"* -- a hole in the GRAPH, not in the
-    // program (`dokumente/PRUEFER.md` §4.1 asked for the conversion; this is what wiring
+    // program (`dokumente/CHECKER.md` §4.1 asked for the conversion; this is what wiring
     // it in without this node broke).
     //
     // A conversion reads its one argument and writes nothing -- `pure` is not a guess,

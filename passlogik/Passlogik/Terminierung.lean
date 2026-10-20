@@ -20,7 +20,7 @@
                                  (Stufe 3, 2026-08-20)
     dokumente/SYNTAX.md:902  -- "`retry` | yes, through `bounded` | termination as a NUMBER"
     dokumente/SYNTAX.md:903  -- "`forever` | **no -- and that is permitted**"
-    dokumente/SPRACHE.md:1121 -- §9.2 `by consuming`, die wohlfundierte Ordnung der Domaene
+    dokumente/LANGUAGE.md:1121 -- §9.2 `by consuming`, die wohlfundierte Ordnung der Domaene
     gabbro paesse --je-satz  -- Satz `schleifen.fortschritt`:
         BUT NOT: "**Necessary, not sufficient, and the pass says so: it is NOT checked that
         the measure FALLS.** [...] `by unvisited` needs nothing here and that is not an
@@ -34,7 +34,7 @@
          Groesse NENNT, die der Rumpf schreibt -- eine notwendige Bedingung. §3 und §4
          machen die Luecke als Satz sichtbar.
     (T3) Die wohlfundierte Ordnung, in der eine Domaene ihre Zeugen bei `by consuming`
-         liefert (`SPRACHE.md`:1121), ist hier NICHT modelliert. Modelliert ist nur, dass
+         liefert (`LANGUAGE.md`:1121), ist hier NICHT modelliert. Modelliert ist nur, dass
          die Zeugenmenge schrumpft.
 -/
 
@@ -254,7 +254,7 @@ theorem retry_endet {k : Nat} (hk : 0 < k) (lauf : Nat → RZustand)
 
     **Die Spezifikation stellt nirgends fest, dass ein `retry`-Durchgang mindestens eine
     Operation kostet.** `K006` haelt die Schranke gegen den Rumpf (`Ĉ(rumpf) <= N`) --
-    das ist die OBERE Seite. Eine untere gibt es nicht, und `SPRACHE.md`:949 sagt
+    das ist die OBERE Seite. Eine untere gibt es nicht, und `LANGUAGE.md`:949 sagt
     ausdruecklich, dass `if`, `match`, `return` und `leave` **nichts** kosten. -/
 -- BEWEIST NICHT: dass ein solcher Rumpf schreibbar ist. Ob die Grammatik einen Rumpf
 -- zulaesst, dessen `Ĉ` null ist -- und ob der Pruefer die `until`-Bedingung ins Budget

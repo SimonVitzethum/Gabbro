@@ -24,8 +24,8 @@
     Anweisung dieselbe Praemisse hat.
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:615   -- "Gabbro proves everything except logic."
-    dokumente/BEWEIS.md:18     -- "Whoever proves a Gabbro program proves the LOGIC of their
+    dokumente/LANGUAGE.md:615   -- "Gabbro proves everything except logic."
+    dokumente/PROOF.md:18     -- "Whoever proves a Gabbro program proves the LOGIC of their
                                   program -- and nothing else. Everything else falls out by
                                   construction."
     dokumente/SYNTAX.md:1027   -- "`match` is exhaustive"; `let … else` "the `else` branch

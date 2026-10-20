@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreOhne.lean
-  Subject:   A RECOGNIZED BODY CONTAINS NO `locks` (PLAN-DYNAMISCH.md section 8a.3, premise 3): the lemma
+  Subject:   A RECOGNIZED BODY CONTAINS NO `locks` (PLAN-DYNAMIC.md section 8a.3, premise 3): the lemma
              `execEndH_eq_execEnd` for the recognized fragment.
 
   `Erk K a b a'` and `ErkE K a e` are built from the proved moves, payload stores, branches and loops, and from

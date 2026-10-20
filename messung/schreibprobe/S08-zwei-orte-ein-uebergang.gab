@@ -1,6 +1,6 @@
 // S08 -- F3'S LETHAL FINDING «B17», RE-MEASURED -- AND THE STATEMENT IS GONE.
 //
-// `dokumente/FRAGMENTE.md` F3 (IPC fastpath) is one of the two fragments that
+// `dokumente/FRAGMENTS.md` F3 (IPC fastpath) is one of the two fragments that
 // "does NOT fit", and «B17» is why:
 //
 //   > A `transition` writes EXACTLY ONE `place`; `state` does not name the type

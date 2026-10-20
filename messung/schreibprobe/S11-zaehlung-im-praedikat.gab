@@ -1,6 +1,6 @@
 // S11 -- «B13»: THE COUNT THAT SAYS WHY THE REFCOUNT IS RIGHT.
 //
-// `FRAGMENTE.md` «B13»: *"No aggregation (`count`) and no cross-table domain in
+// `FRAGMENTS.md` «B13»: *"No aggregation (`count`) and no cross-table domain in
 // `pred`. `refcount_matches` -- the bookkeeping of the capability system -- is
 // not formulable."* F1's verdict hangs on it, and `beispiele/19`:67 and
 // `beispiele/46`:51 both carry the sentence as a comment beside a hand-counted

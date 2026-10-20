@@ -13,7 +13,7 @@
 // second half is silently dropped is the shape this folder pays for over and over.*
 //
 // **What this rule deliberately does NOT decide: whether `RDTSCP` is a feature at all.**
-// `SPRACHE.md` puts the only generator of `Has(F)` at the CPUID probe (A14), that probe does
+// `LANGUAGE.md` puts the only generator of `Has(F)` at the CPUID probe (A14), that probe does
 // not exist, and nothing in the language declares a feature name. Checking the NAME needs a
 // declared list, and who declares it is an owner's decision -- a house table under `arch`,
 // the way `cnamen.rs::SIGNATUR` carries what C has taken, or a language form that mints the

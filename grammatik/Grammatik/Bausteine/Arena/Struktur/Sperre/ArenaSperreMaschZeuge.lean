@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreMaschZeuge.lean
-  Subject:   WITNESS FOR THE MACHINE BRIDGE `erkE_maschine` (PLAN-DYNAMISCH.md section 8a.3, premise 2): the writer
+  Subject:   WITNESS FOR THE MACHINE BRIDGE `erkE_maschine` (PLAN-DYNAMIC.md section 8a.3, premise 2): the writer
              `if true { let i = alloc A (7) else return; lnk[i] = head; head = i; }; return` of the shared arena of
              `ArenaSperreWelt.lean` is run by the SMALL STEPS of a thread of the call machine (a thread that holds the lock
              `()` -- its trace says `nimmt ()` -- over the scenario memory `w0L`). Both premises are instantiated: the

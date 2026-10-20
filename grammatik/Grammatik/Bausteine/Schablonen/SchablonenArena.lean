@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/SchablonenArena.lean
   Part of:   Gabbro -- the generator-template library (T5 of
-             dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md): the runtime of a dynamic
+             dokumente/PLAN-TRANSLATION-VALIDATION.md): the runtime of a dynamic
              arena as a GENERATED template (C-free lane, 2026-09-30).
 
   Row `arena.dyn` of `crates/gabbro-check/src/schablonen.rs`.

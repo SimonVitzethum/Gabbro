@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreWachs.lean
-  Subject:   `grow` AS A LOCKED COMMIT (PLAN-DYNAMISCH.md section 8a.2): the commit is ONE store, to the committed word
+  Subject:   `grow` AS A LOCKED COMMIT (PLAN-DYNAMIC.md section 8a.2): the commit is ONE store, to the committed word
              `komm`, and the arena invariant does not read `komm` -- so the commit never exposes a broken arena, with or
              without the lock; what the lock adds is that the commit cannot interleave with the multi-store moves of
              another thread (alloc, link, free), whose intermediate states DO break the invariant.

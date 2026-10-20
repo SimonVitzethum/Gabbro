@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkZeugeSib.lean
-  Subject:   WITNESSES AND PLANTED DEFECTS FOR THE PARENT STORE AND `revoke` ON EXECUTED BLOCKS (PLAN-DYNAMISCH.md section
+  Subject:   WITNESSES AND PLANTED DEFECTS FOR THE PARENT STORE AND `revoke` ON EXECUTED BLOCKS (PLAN-DYNAMIC.md section
              8a.1, third pass), on the five-field arena of `ArenaErkZeugeKombi.lean` (field `2`, the list link there, serves
              as the PARENT field `par`; field `3` is the first child, field `4` the next sibling, word `4` the root).
 

@@ -6,7 +6,7 @@
 // sein. `effects` beschreibt, was eine Funktion mit der WELT tut, nicht mit ihrem Stapel.
 // Gefunden am Fragmentlauf, nicht am Reissbrett.
 //
-// Was BLEIBEN muss, ist die Zaehlerregel (SPRACHE.md §1): `in 0 .. GRENZE` allein reicht
+// Was BLEIBEN muss, ist die Zaehlerregel (LANGUAGE.md §1): `in 0 .. GRENZE` allein reicht
 // nicht, denn `+ 1` reicht bis GRENZE + 1. Diese Datei faellt deshalb genau einmal.
 //
 // **BERICHTIGT 2026-08-19, und der Grund ist ein Fund ueber die Probe selbst.** Hier stand

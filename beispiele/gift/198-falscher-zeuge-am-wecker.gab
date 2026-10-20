@@ -6,7 +6,7 @@
 // Grund sein eigenes Bit braucht -- *„In der Menge ist genau das **unformulierbar**: `resume`
 // entfernt `PAUSE`, `unpark` entfernt `PARK`."*
 //
-// `SPRACHE.md` fuehrt denselben Fall als Musterbeispiel: *„Lost wakeup | Z24 | **M2**: der
+// `LANGUAGE.md` fuehrt denselben Fall als Musterbeispiel: *„Lost wakeup | Z24 | **M2**: der
 // Wecker verbraucht **genau seinen** Grund."* Sechs Geistzeugen sagen das -- **wenn jemand
 // die Namen vergleicht.** M1 haelt am Ruf den BEREICH und nicht den NAMEN, und zwei
 // Geistmarken haben ueberhaupt keinen Bereich.

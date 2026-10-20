@@ -24,7 +24,7 @@
 //
 // **Beide Male dieselben zwei Deklarationen, byteidentisch, nur auf anderen Zeilen** --
 // gemessen am 2026-08-31 an einer einzigen Datei in zwei Fassungen
-// (`dokumente/PRUEFER.md` §4, `m7-akk` gegen `m7b-akk`). *Das ist der staerkste
+// (`dokumente/CHECKER.md` §4, `m7-akk` gegen `m7b-akk`). *Das ist der staerkste
 // Grund dafuer, dass diese Regel dem PRUEFER gehoert, und er ist nicht, dass `cc` sie
 // manchmal nicht findet -- sondern dass `cc` sie je nach Quelltextreihenfolge findet oder
 // nicht.*

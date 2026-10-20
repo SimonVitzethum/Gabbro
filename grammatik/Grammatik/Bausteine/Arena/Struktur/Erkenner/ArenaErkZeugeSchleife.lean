@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkZeugeSchleife.lean
-  Subject:   THE RECOGNIZER'S LOOP RULES ON A REAL ARENA (PLAN-DYNAMISCH.md section 8a.1, third pass): loop bodies it
+  Subject:   THE RECOGNIZER'S LOOP RULES ON A REAL ARENA (PLAN-DYNAMIC.md section 8a.1, third pass): loop bodies it
              ACCEPTS and RUNS, and a planted defect it REJECTS, on the concrete four-slot arena of `ArenaDynZeuge.lean`
              (slot `1` on the free list, list `2 -> 0`), declared as an arena with a list (`KL`).
 

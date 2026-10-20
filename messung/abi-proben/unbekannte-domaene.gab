@@ -1,5 +1,5 @@
 // Die Gegenprobe zu `unbekannte-sperre.gab`, EINE Ebene weiter: eine RCU-Domaene, die
-// keine Deklaration erklaert. Faellt das? (Gemessen 2026-08-21 fuer `dokumente/SPRACHE.md`.)
+// keine Deklaration erklaert. Faellt das? (Gemessen 2026-08-21 fuer `dokumente/LANGUAGE.md`.)
 // **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
 // Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
 // exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet

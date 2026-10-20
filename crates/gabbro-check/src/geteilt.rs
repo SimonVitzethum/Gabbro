@@ -1,7 +1,7 @@
 //! **Pass — `locks shared`, die geteilte Sperrnahme.**
 //!
 //! Das Konstrukt kam nicht aus einem Entwurf, sondern aus einer **Messung**
-//! ([`MESSUNGEN.md`](MESSUNGEN.md), Papiertest CapSpace/CDT vom 2026-08-14). Dort starb der
+//! ([`MEASUREMENTS.md`](MEASUREMENTS.md), Papiertest CapSpace/CDT vom 2026-08-14). Dort starb der
 //! Kandidat `locks ordered` an null Prüffällen — und derselbe Test fand die Lücke, die auf
 //! keiner Liste stand:
 //!
@@ -1024,7 +1024,7 @@ fn undeclared_locks(baum: &Programm, sperren: &BTreeMap<String, Sperre>, absagen
         // The first version did check it, and `instrumente/pruefe-emission.sh` went red on
         // fragment F7: `extern fn melde_roh(…) requires Held(PHASE_ROH)`. `PHASE_ROH` is no
         // lock at all -- it is a BOOT PHASE, the witness of a `linear ghost type BootPhase`,
-        // and the comment two lines above it in `dokumente/FRAGMENTE.md` says so: *"`roh`
+        // and the comment two lines above it in `dokumente/FRAGMENTS.md` says so: *"`roh`
         // means: before the MMU … and that is a PROPERTY OF THE PHASE, not of the device."*
         //
         // > **`Held(…)` carries two readings in this corpus, and nothing distinguishes
@@ -1329,7 +1329,7 @@ fn h020_block(
 
 /// **`H017` -- an `observes` domain that no `rcu` declaration explains.** The RCU instance
 /// of the shape `H016` closed for locks, and it was named as open on the same day
-/// (`dokumente/SPRACHE.md` §6.1: *"Dieselbe Stille steht noch bei der RCU-Domaene"*).
+/// (`dokumente/LANGUAGE.md` §6.1: *"Dieselbe Stille steht noch bei der RCU-Domaene"*).
 ///
 /// **Measured 2026-08-21 on `messung/abi-proben/unbekannte-domaene.gab`**, unchanged since
 /// it was written for the ABI report:
@@ -1358,7 +1358,7 @@ fn h020_block(
 /// Naming `NIEDADOM` at six places is one mistake.
 ///
 /// *On the library boundary the rule costs nothing today and cannot: `abi.rs` carries no
-/// `rcu` item into a `.gabi` at all (`dokumente/SPRACHE.md` §5 lists `rcu` among the 14 unmeasured
+/// `rcu` item into a `.gabi` at all (`dokumente/LANGUAGE.md` §5 lists `rcu` among the 14 unmeasured
 /// item kinds). There is no way to import a domain, so there is no import to exempt.* **When
 /// `rcu` does cross the boundary, this rule is where the exemption has to be written, and
 /// `H016` shows the shape.**
@@ -2100,7 +2100,7 @@ fn block(
                                  how long one reader holds",
                             )
                             .mit_notiz(
-                                "without that number the latency statement of SPRACHE.md §9.3 has no \
+                                "without that number the latency statement of LANGUAGE.md §9.3 has no \
                                  branch for this lock",
                             ),
                         ),

@@ -288,7 +288,7 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
     // lowers every load of such an atomic with `memory_order_acquire` (or `seq_cst`), every
     // store with `memory_order_release` (or `seq_cst`), every RMW with `acq_rel` (or
     // `seq_cst`); a `relaxed` atomic or one with no ordering word is `memory_order_relaxed`
-    // on both sides (`C-SPEICHERMODELL.md` §1c).
+    // on both sides (`C-MEMORY-MODEL.md` §1c).
     let mut geordnet: HashSet<String> = HashSet::new();
     // **The pure functions of this unit, by short name** -- the only calls that
     // do not cross the atomicity leg. `effects { pure }` and nothing else.
@@ -477,7 +477,7 @@ struct PrimOrdnung {
 ///
 /// Three legs, each over the ORDERED atomics of the unit (declared `acquire`, `release` or
 /// `seq`; the emitter lowers their loads acquire, their stores release, their RMWs acq_rel,
-/// `C-SPEICHERMODELL.md` §1c):
+/// `C-MEMORY-MODEL.md` §1c):
 ///
 /// * **`N481`** -- a take (`L_nimm`, `L_nimm_geteilt`) that reads atomics reads NO ordered one:
 ///   it cannot acquire.
@@ -1250,7 +1250,7 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
 /// **`N054` -- `Has(…)` names ONE machine feature, and a feature is a bare NAME.**
 ///
 /// The other direction of the device tier, and it was measured before it was decided
-/// (`dokumente/PRUEFER.md` §5): **eleven written forms x six predicate positions, 64
+/// (`dokumente/CHECKER.md` §5): **eleven written forms x six predicate positions, 64
 /// of 66 accepted.** `Has()` with no argument, `Has(7)`, `Has(GRENZE + 1)`,
 /// `Has(Platten.slots)` and `Has(RDTSCP, XSAVE)` all gave `0 errors, 0 hints`. The two that
 /// fell did so at `N053` and about the SECOND argument, not about the form.
@@ -1258,7 +1258,7 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
 /// ## What is decidable here, and what is not -- the line, with the reason on both sides
 ///
 /// **Whether `RDTSCP` is a feature of the machine is NOT decidable in this tree.**
-/// `SPRACHE.md` §2 of the x86_64 catalogue says where the answer would come from: *"the
+/// `LANGUAGE.md` §2 of the x86_64 catalogue says where the answer would come from: *"the
 /// CPUID probe is the only generator of `ghost Has(Feature)`"* (A14). That probe does not
 /// exist, no `mints Has(F)` form exists, and **nothing in the language declares a feature
 /// name.** Checking the NAME therefore needs a declared list, and who declares it is an
@@ -1314,7 +1314,7 @@ fn merkmalsname_ist_ein_name(baum: &Programm, absagen: &mut Absagen) {
                         )
                         .mit_notiz(
                             "whether the name IS a feature of the machine is a different \
-                             question and this compiler cannot answer it -- `SPRACHE.md` \
+                             question and this compiler cannot answer it -- `LANGUAGE.md` \
                              puts the only generator of `Has(F)` at the CPUID probe, and no \
                              list of feature names exists in the language",
                         ),
@@ -1657,7 +1657,7 @@ fn binder_im_praedikat(p: &Pred, aus: &mut HashSet<String>) {
 ///   must be guarded by a lock the reader holds BY SIGNATURE (`requires
 ///   Held(L)` with the carrier in `L`'s `protects`). A lock taken only in a
 ///   `locks` block does not count -- the repaired machine has no bare lock
-///   steps (`SATZKARTE.md` §11.3) -- and neither does a callee's hull: the
+///   steps (`THEOREM-MAP.md` §11.3) -- and neither does a callee's hull: the
 ///   check is per function over its own body, mirroring `fussOrteG`.
 ///
 /// `N259` stays reserved for the writer side (the `hWatch` half, D6 territory):
@@ -2185,7 +2185,7 @@ fn geister_haben_keinen_speicher(baum: &Programm, absagen: &mut Absagen) {
     // Slot ging mit null Fehlern durch. Die Geisthaelfte fiel seit jeher.
     //
     // **Der Grund ist ein anderer als beim Geist, und er ist der schaerfere.** Ein Geist hat
-    // keinen SPEICHER; ein linearer Wert hat welchen (`SPRACHE.md`:721 -- *echte Ressource:
+    // keinen SPEICHER; ein linearer Wert hat welchen (`LANGUAGE.md`:721 -- *echte Ressource:
     // Bytes im Erzeugnis*). Was ihm fehlt, ist der PFAD: *„genau einmal verbraucht" ist eine
     // Aussage ueber einen Kontrollflusspfad, nicht ueber ein Feld.* Wer ihn in einen von
     // NSLOTS Plaetzen legt, hat ihn aus der Buchfuehrung genommen -- und M2 sagt darueber
@@ -2296,7 +2296,7 @@ fn pruefe_speicher(items: &[Item], geister: &[String], absagen: &mut Absagen) {
 /// dass es eine ENTSCHEIDUNG war. *Die Weigerung ist die Antwort, und sie muss ihren Grund
 /// mitbringen.*
 ///
-/// Und der Grund kommt aus dem Korpus, nicht aus einer Vorliebe (`FRAGMENTE.md`, «F0»/FF2):
+/// Und der Grund kommt aus dem Korpus, nicht aus einer Vorliebe (`FRAGMENTS.md`, «F0»/FF2):
 /// in der Domaene, die Extragenauigkeit wirklich braucht, ist `long double` **eine Sprosse
 /// von sieben** -- darueber `floatexp`, `doubleexp`, `softfloat`, `float128`, alles
 /// Softwaretypen des Programms. **Wer mehr als `f64` braucht, will keinen
@@ -2314,7 +2314,7 @@ fn verweigerte_zahltypen(baum: &Programm, absagen: &mut Absagen) {
                 "that is not a type but a platform lottery: 80 bit x87 on x86-Linux, \
                  128 bit elsewhere, equal to `double` on others again -- and the x87 rounds \
                  TWICE. Whoever needs more than `f64` names a precision; the corpus builds \
-                 a ladder of software types for it (FRAGMENTE.md, «F0»/FF2)",
+                 a ladder of software types for it (FRAGMENTS.md, «F0»/FF2)",
             ),
             _ => None,
         }
@@ -2594,7 +2594,7 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
         if let Some(name) = item.art.name() {
             // `arch` und `when` waehlen aus: zwei Deklarationen desselben Namens fuer
             // **verschiedene** Architekturen sind eine Deklaration je Ziel, keine Doppelung.
-            // `FRAGMENTE.md` F5 schreibt `prim fn invoke … arch x86_64;` und dieselbe Zeile
+            // `FRAGMENTS.md` F5 schreibt `prim fn invoke … arch x86_64;` und dieselbe Zeile
             // mit `arch aarch64;` -- wer das als Fehler meldet, verbietet die bedingte
             // Uebersetzung, die `when` (SYNTAX.md §1) ausdruecklich traegt.
             match auswahl(item) {
@@ -3852,7 +3852,7 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
 /// name there that exists nowhere and the match matches nothing, so **both rules fall
 /// silent** -- and the file looks no different from one that had nothing to report.
 ///
-/// *Measured 2026-08-31, `dokumente/PRUEFER.md`:* `messung/tor-proben/t11` is
+/// *Measured 2026-08-31, `dokumente/CHECKER.md`:* `messung/tor-proben/t11` is
 /// `beispiele/gift/155-messung-schreibt-sich-selbst.gab` byte for byte with `measures kk`
 /// instead of `measures k`. The original reports `N027` **and `N021`**, the copy only
 /// `N027`. *One letter, and the rule is gone.* `measures` is „the report line" by
@@ -3869,7 +3869,7 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
 fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
     // **Ein `gates`-Name ist eine Funktion ODER ein anderer `check`** -- und das hat der
     // Korpus berichtigt, nicht ich. Der erste Anlauf verlangte eine Funktion und meldete
-    // `FRAGMENTE.md`:1167: `check kstack_eichung { … gates kstack }` gattert die EICHUNG des
+    // `FRAGMENTS.md`:1167: `check kstack_eichung { … gates kstack }` gattert die EICHUNG des
     // Messgeraets vor die Messung. *Eine Pflicht kann von einer anderen Pflicht verbraucht
     // werden -- und genau so liest sich die Zeile: erst eichen, dann messen.*
     let mut traeger: Vec<String> = Vec::new();
@@ -4093,7 +4093,7 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
                     )
                     .mit_notiz(
                         "a `check` may gate another one: `gates kstack` at the calibration \
-                         says CALIBRATE FIRST, THEN MEASURE (`FRAGMENTE.md`:1167)",
+                         says CALIBRATE FIRST, THEN MEASURE (`FRAGMENTS.md`:1167)",
                     ),
                 );
             }
@@ -4201,7 +4201,7 @@ fn namen_flach(e: &Expr, aus: &mut Vec<String>) {
 /// ## `mirrors` — die x86-Fassung von Falle 4
 ///
 /// `mirrors GCMD from GSTS;` sagt: *der Zustand dieses Registers steht in jenem.* Der Grund
-/// steht in `MESSUNGEN.md`: **ein Schreiben auf ein einzelnes Bit ist ein Lese-Ändere-Schreib-
+/// steht in `MEASUREMENTS.md`: **ein Schreiben auf ein einzelnes Bit ist ein Lese-Ändere-Schreib-
 /// Zug auf dem GANZEN Register** — und bei `class w` ist das unmöglich, weil sich das
 /// Register nicht lesen lässt.
 ///
@@ -4632,7 +4632,7 @@ fn pruefe_uebersetzer_signatur(
 /// * the declaration side is held here too: the payload must name a
 ///   declared table (`N060`), and the library function's transitive hull
 ///   must hold no `extern`/`raw`/`prim`/`asm` (`N059`,
-///   `dokumente/PRUEFER.md` §0c);
+///   `dokumente/CHECKER.md` §0c);
 /// * a DIRECT call to a library function is refused with `N061`: without
 ///   a region there is no payload, so the call would silently bypass the
 ///   mechanism the declaration stands for.
@@ -4662,7 +4662,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         ),
                     )
                     .mit_notiz(
-                        "the payload is a table or tree type (dokumente/PRUEFER.md §0b/§2): \
+                        "the payload is a table or tree type (dokumente/CHECKER.md §0b/§2): \
                          a tree table is a table, anything else is not a payload",
                     ),
                 );
@@ -4683,7 +4683,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "dokumente/PRUEFER.md §0c: a function reachable through `@lib#f` \
+                    "dokumente/CHECKER.md §0c: a function reachable through `@lib#f` \
                      is safe Gabbro -- `extern`, `raw`, `prim` and `asm` are \
                      refused anywhere in its call hull, including itself",
                 ),
@@ -4786,7 +4786,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     format!("`translator {}` reaches the foreign body `{fremd}`", t.qual),
                 )
                 .mit_notiz(
-                    "dokumente/PRUEFER.md §0c: what the translation stage would \
+                    "dokumente/CHECKER.md §0c: what the translation stage would \
                      run is safe Gabbro -- `extern`, `raw`, `prim` and `asm` \
                      are refused anywhere in a translator's call hull, \
                      including itself",
@@ -4894,7 +4894,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         t.qual
                     ),
                     "the region is compiled at translation time into a payload \
-                     (dokumente/PRUEFER.md §0b); the translator is declared and \
+                     (dokumente/CHECKER.md §0b); the translator is declared and \
                      typed (SYNTAX.md §7.2), but running it needs the \
                      compile-time evaluator (lane E5) -- until then every \
                      resolved call is refused here: never silently accepted, \
@@ -4903,7 +4903,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 None => (
                     "library call checked -- no translator declared yet".to_string(),
                     "the region is compiled at translation time into a payload \
-                     (dokumente/PRUEFER.md §0b); until a translator is declared \
+                     (dokumente/CHECKER.md §0b); until a translator is declared \
                      (SYNTAX.md §7.2, `N200` beside the function) every \
                      resolved call is refused here: never silently accepted, \
                      never crashed on",
@@ -4929,7 +4929,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 absage = absage.mit_notiz(format!(
                     "the refusal names the region's first token `{erster}`: \
                      the span above is its site, carried back through the \
-                     region span map (dokumente/PRUEFER.md §6, lane E7)",
+                     region span map (dokumente/CHECKER.md §6, lane E7)",
                 ));
             }
             absagen.schiebe(absage.mit_notiz(hinweis));
@@ -5011,7 +5011,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
                 )
                 .mit_notiz(
                     "the region compiles at translation time into the payload \
-                     the call carries (dokumente/PRUEFER.md §0b); a direct call \
+                     the call carries (dokumente/CHECKER.md §0b); a direct call \
                      has no region, so it would run the body with no payload",
                 ),
             );
@@ -5026,7 +5026,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
 ///
 /// The main program declares ONE hardware profile (`profile { … }`); a
 /// library REQUIRES profile entries by reference (`requires profile { … }`),
-/// never by a copy of their text (`dokumente/PRUEFER.md` §0c). Consistency is a
+/// never by a copy of their text (`dokumente/CHECKER.md` §0c). Consistency is a
 /// subset check against the one set -- decidable and cheap -- plus the two
 /// halves of `Profil.gut` (`grammatik/Grammatik/Kern/Syntax/Profil.lean`): key agreement
 /// (`einigung`, `N215`) and same-name content agreement
@@ -5074,7 +5074,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
             .find_map(|k| annahmen.get(&k))
     }
     // `N219`: the second `profile` block -- one hardware profile per
-    // program (`dokumente/PRUEFER.md` §0c, point 2). The first block stands;
+    // program (`dokumente/CHECKER.md` §0c, point 2). The first block stands;
     // every further one falls here, never silently merged.
     for (_, b) in profile.iter().skip(1) {
         absagen.schiebe(
@@ -5085,7 +5085,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
             )
             .mit_notiz(
                 "consistency is a subset check against ONE set \
-                 (dokumente/PRUEFER.md §0c): two profiles are two sets, and \
+                 (dokumente/CHECKER.md §0c): two profiles are two sets, and \
                  merging them silently would hide exactly the conflict \
                  `N215` exists to refuse; the single set is the promise \
                  linking relies on",
@@ -5122,7 +5122,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         .mit_notiz(format!(
                             "in {} -- contradictory modes make every proof over \
                              the combined program vacuous, and every caller \
-                             relies on one mode (dokumente/PRUEFER.md §0c)",
+                             relies on one mode (dokumente/CHECKER.md §0c)",
                             if modul.is_empty() {
                                 "this unit".to_string()
                             } else {
@@ -5155,7 +5155,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                     )
                     .mit_notiz(
                         "a profile entry references the declared assumption, \
-                         never a copy of its text (dokumente/PRUEFER.md §0c) -- \
+                         never a copy of its text (dokumente/CHECKER.md §0c) -- \
                          and there is no declaration here to reference; \
                          a reference with no declaration promises nothing",
                     ),
@@ -5191,7 +5191,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         "the profile holds the NAME, so two statements under \
                          it are two assumptions wearing one name -- linking \
                          relies on the name meaning one statement \
-                         (dokumente/PRUEFER.md §0c)",
+                         (dokumente/CHECKER.md §0c)",
                     ),
                 );
             }
@@ -5237,7 +5237,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                                  not in the profile -- the main program must add \
                                  them to its profile, where they meet everything \
                                  else; every call into the library relies on them \
-                                 (dokumente/PRUEFER.md §0c)",
+                                 (dokumente/CHECKER.md §0c)",
                             ),
                         );
                     }
@@ -5280,7 +5280,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                                  not in the profile -- the main program must add \
                                  them to its profile, where they meet everything \
                                  else; every call into the library relies on them \
-                                 (dokumente/PRUEFER.md §0c)",
+                                 (dokumente/CHECKER.md §0c)",
                             ),
                         );
                     }
@@ -5290,7 +5290,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
     }
     // `N218`: the profile against the platform. `fp_contract` other than
     // `off` contradicts the float prelude, which binds
-    // `-ffp-contract=off` for every compiler (`dokumente/SPRACHE.md` §5); an
+    // `-ffp-contract=off` for every compiler (`dokumente/LANGUAGE.md` §5); an
     // `arch` the unit never declares contradicts the declared machines.
     // Without `arch` declarations nothing is refused (R16): a unit with no
     // machine named constrains no machine.
@@ -5315,7 +5315,7 @@ fn profil_pruefen(baum: &Programm, absagen: &mut Absagen) {
                         .mit_notiz(
                             "the prelude carries no pragma and the manifest \
                              carries the flag for every compiler \
-                             (dokumente/SPRACHE.md §5) -- a profile promising \
+                             (dokumente/LANGUAGE.md §5) -- a profile promising \
                              contraction re-opens what the prelude closed, \
                              and every bound the checker computed relies on \
                              the flag staying off",
@@ -5692,7 +5692,7 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
         }
         absagen.schiebe(a);
     });
-    // **A `syscall` names its machine the same way (lane 86, dokumente/SPRACHE.md §1).**
+    // **A `syscall` names its machine the same way (lane 86, dokumente/LANGUAGE.md §1).**
     //
     // The rule is the same rule, asked of the declaration instead of the
     // assumption: a syscall for a machine no `arch` declares can never be in
@@ -5745,7 +5745,7 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
 /// the exporter writes into its own header. *A clause that changes neither the artefact
 /// nor an obligation is a promise nobody keeps, and it looks kept.*
 ///
-/// **`SPRACHE.md` §S2 asks for exactly this placement** (`raw fn` lies forcibly in
+/// **`LANGUAGE.md` §S2 asks for exactly this placement** (`raw fn` lies forcibly in
 /// `section ".boot"`) **and says in the same row that it is NOT enforced**;
 /// `messung/BOOT-S3.md` item 4 books it as open. Until the emitter carries the attribute
 /// for a function, the refusal is the honest state: the gap is loud instead of silent,
@@ -5777,7 +5777,7 @@ fn section_an_funktion(baum: &Programm, absagen: &mut Absagen) {
                  term, and nothing refuses it either",
             )
             .mit_notiz(
-                "`SPRACHE.md` §S2 asks for `raw fn` in `section \".boot\"` and says in the \
+                "`LANGUAGE.md` §S2 asks for `raw fn` in `section \".boot\"` and says in the \
                  same row that the placement is not enforced -- drop the clause until the \
                  emitter carries it, and this refusal goes with it",
             ),
@@ -5941,7 +5941,7 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
 /// * **`N029`** -- ein Ruf auf ein `f` MIT `or R`, das nicht in einem `let … else` steht.
 ///   Der Fehler faellt dort auf den Boden. Der Rufer bekommt ihn nicht einmal zu sehen --
 ///   *und das ist genau das versteckte Kontrollflussloch, gegen das die Grammatik
-///   `let … else` als EINZIGE Fehlerweitergabe fuehrt* (`SPRACHE.md` §8.1).
+///   `let … else` als EINZIGE Fehlerweitergabe fuehrt* (`LANGUAGE.md` §8.1).
 ///
 /// > **Ohne `N029` waere `or R` eine Zusage mit einem Schlupfloch daneben.** Der Erzeuger
 /// > faenge den Fall an der Stelligkeit -- aber erst beim Absenken, und das ist die Lehre
@@ -6014,7 +6014,7 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
                         )
                         .mit_notiz(
                             "`let … else` is the ONE form of error propagation in this \
-                             language (SPRACHE.md 8.1) -- anywhere else the reason falls on \
+                             language (LANGUAGE.md 8.1) -- anywhere else the reason falls on \
                              the floor, unseen",
                         ),
                     );
@@ -6128,7 +6128,7 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
 
 /// **`N030` -- am Ruf wird der BEREICH gehalten und der NAME nicht** (2026-08-20).
 ///
-/// Gefunden beim Schreiben von Caprocks Blockiergruenden. `SPRACHE.md` fuehrt den Fall als
+/// Gefunden beim Schreiben von Caprocks Blockiergruenden. `LANGUAGE.md` fuehrt den Fall als
 /// Musterbeispiel:
 ///
 /// > | **Lost wakeup** | **Z24** (ein Bit fuer vier Gruende) | **M2**: der Wecker verbraucht
@@ -6632,7 +6632,7 @@ fn bootschritte(baum: &Programm, absagen: &mut Absagen) {
             //
             // `beispiele/07` schreibt `step write_cr3(BOOT_IDENTITAET);` -- und `write_cr3`
             // ist ein `axiom` mit Falsifikator, kein `fn`. *Ein privilegierter Befehl ist
-            // genau das, was eine Bootstrecke tut*, und `SPRACHE.md` fuehrt ihn als die
+            // genau das, was eine Bootstrecke tut*, und `LANGUAGE.md` fuehrt ihn als die
             // groesste unbewiesene Flaeche der Sprache, deshalb zaehlbar.
             //
             // > Die erste Fassung dieser Regel meldete darauf zwei Fehler im eigenen

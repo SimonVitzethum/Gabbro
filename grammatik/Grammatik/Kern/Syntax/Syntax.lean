@@ -65,7 +65,7 @@
 
   QUELLSAETZE
     dokumente/SYNTAX.md (die neue Fassung, 2026-09-09) -- jede Produktion nennt ihren
-    Konstruktor hier; SPRACHE.md:788 "Linear means linear, not affine".
+    Konstruktor hier; LANGUAGE.md:788 "Linear means linear, not affine".
 -/
 import Grammatik.Kern.Syntax.Typen
 

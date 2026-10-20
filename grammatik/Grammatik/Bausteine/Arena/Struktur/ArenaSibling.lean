@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSibling.lean
-  Subject:   SIBLING CONSISTENCY OF THE CAPABILITY TREE (PLAN-DYNAMISCH.md section 8a.1, step (4); the demand of TODO O4/O5/O6),
+  Subject:   SIBLING CONSISTENCY OF THE CAPABILITY TREE (PLAN-DYNAMIC.md section 8a.1, step (4); the demand of TODO O4/O5/O6),
              abstractly, over the binary tree of `ArenaBaum.lean`.
 
   The capability derivation tree is stored as a first-child / next-sibling tree: the LEFT link `l` is the first child, the

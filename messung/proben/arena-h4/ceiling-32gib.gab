@@ -1,6 +1,6 @@
 // **H4 twin B -- the LARGEST expressible ceiling.** `max 4294967295` slots
 // of `u64` = 32 GiB. (40 GiB is not expressible: the slot counters are
-// `uint32_t`, so `M <= u32::MAX` -- `PLAN-DYNAMISCH.md` section 2. 32 GiB is
+// `uint32_t`, so `M <= u32::MAX` -- `PLAN-DYNAMIC.md` section 2. 32 GiB is
 // the ceiling at the type system's own maximum, which is the stronger twin.)
 //
 // The twin of `ceiling-10mib.gab`: the two files differ in the `max` number

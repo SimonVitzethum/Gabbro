@@ -27,7 +27,7 @@
 //     <unistd.h> 47   <sys/socket.h> 17   <fcntl.h> 3   <signal.h> 2   =  69 Zeilen
 //
 // Die vier sind nicht gewaehlt, sondern GEMESSEN: es sind die Koepfe, nach denen der Korpus
-// greift. Ueber alle 266 `extern fn` in `beispiele/`, `messung/` und `dokumente/FRAGMENTE.md`
+// greift. Ueber alle 266 `extern fn` in `beispiele/`, `messung/` und `dokumente/FRAGMENTS.md`
 // nannten **genau drei** einen Namen, den ein Systemkopf deklariert und `libc` ausliefert --
 // `open`, `signal`, `recv`. *Drei Namen sind kein Mechanismus wert; sie sind drei Zeilen in
 // einer Messung wert.*

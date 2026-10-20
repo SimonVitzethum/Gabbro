@@ -124,7 +124,7 @@ qed
 
 text \<open>
   > **Die Praemisse stand nirgends.** Weder im Registereintrag noch im Erzeuger noch in
-  > \<open>SPRACHE.md\<close>. Sie ist in der Praxis erfuellt -- \<open>count 80256\<close> gegen \<open>2^32\<close> -- aber
+  > \<open>LANGUAGE.md\<close>. Sie ist in der Praxis erfuellt -- \<open>count 80256\<close> gegen \<open>2^32\<close> -- aber
   > *erfuellt* und *geprueft* sind zwei verschiedene Zustaende, und der Ordner hat fuer den
   > Unterschied schon bezahlt.
 \<close>

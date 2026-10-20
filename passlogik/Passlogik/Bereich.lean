@@ -9,24 +9,24 @@
     Verengungsregeln V1 (Bereichsbedingung) und V2 (Relation zwischen zwei Stellen).
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:641  -- `intty = ( "u8"|...|"i64" ) [ "in" range ]`,
+    dokumente/LANGUAGE.md:641  -- `intty = ( "u8"|...|"i64" ) [ "in" range ]`,
                                  `range = expr ".." expr | expr "..<" expr`
-    dokumente/SPRACHE.md:647  -- "Every operation must stay inside the range of its result
+    dokumente/LANGUAGE.md:647  -- "Every operation must stay inside the range of its result
                                  type; if `a + b` does not fit the target, that is a
                                  compile error, not a runtime check. Division and remainder
                                  demand a denominator whose range excludes zero."
-    dokumente/SPRACHE.md:651  -- 3.2 "The three flow rules -- closed, local, predictable":
+    dokumente/LANGUAGE.md:651  -- 3.2 "The three flow rules -- closed, local, predictable":
                                  "syntax-directed, without fixpoint, without solver: the
                                  checker keeps a fact set per block that grows only at the
                                  three named places and dies on every write to a
                                  participating place."
-    dokumente/SPRACHE.md:684  -- Tafel V1 / V2 / V3
-    dokumente/SPRACHE.md:685  -- V2: "under the fact `a >= b`, `a - b` has type
+    dokumente/LANGUAGE.md:684  -- Tafel V1 / V2 / V3
+    dokumente/LANGUAGE.md:685  -- V2: "under the fact `a >= b`, `a - b` has type
                                  `0 .. a.max - b.min`, under `a > b` type
                                  `1 .. a.max - b.min`"
-    dokumente/SPRACHE.md:688  -- ZWEITE VORBEDINGUNG (2026-08-20): eine Stelle durch ein
+    dokumente/LANGUAGE.md:688  -- ZWEITE VORBEDINGUNG (2026-08-20): eine Stelle durch ein
                                  `device`-Register traegt KEINEN Fakt.
-    dokumente/SPRACHE.md:717  -- VORBEDINGUNG (2026-08-18): der `else`-Zweig setzt
+    dokumente/LANGUAGE.md:717  -- VORBEDINGUNG (2026-08-18): der `else`-Zweig setzt
                                  TRICHOTOMIE voraus.
     gabbro paesse --je-satz   -- Satz `m1.bereich`, `v1.bereichsverengung`,
                                  `v2.relationale-verengung`
@@ -111,7 +111,7 @@ end Iv
 
 /-! ## 2. Die abstrakten Operationen, und ihre Korrektheit gegen die konkrete Semantik
 
-    `SPRACHE.md`:647 -- jede Operation muss im Bereich ihres Ergebnistyps bleiben. Der
+    `LANGUAGE.md`:647 -- jede Operation muss im Bereich ihres Ergebnistyps bleiben. Der
     Pass rechnet dafuer ein Intervall aus. Was hier bewiesen wird, ist die eine Richtung,
     auf die sich alles stuetzt: **das gerechnete Intervall UEBERDECKT die wahre Menge**.
 -/
@@ -314,7 +314,7 @@ theorem schnitt_monoton {a a' b b' : Iv}
 
 /-! ## 4. Terminierung der Verengung
 
-    `SPRACHE.md`:651 sagt: **"syntax-directed, without fixpoint, without solver"**. Die
+    `LANGUAGE.md`:651 sagt: **"syntax-directed, without fixpoint, without solver"**. Die
     Terminierung ist damit nicht die eines Fixpunkts, sondern die einer ABSTEIGENDEN
     KETTE: ein Fakt verengt, ein Schreiben loescht. Was zu zeigen ist: eine Kette echt
     verengender Schritte ist ENDLICH -- sonst koennte ein Block den Pass haengen lassen.
@@ -369,12 +369,12 @@ theorem keine_unendliche_verengung
 #print axioms Passlogik.Bereich.keine_unendliche_verengung
 /-! ## 5. Das Ueberlauf-Kriterium -- `M104`
 
-    `SPRACHE.md`:647: "if `a + b` does not fit the target, that is a **compile error, not
+    `LANGUAGE.md`:647: "if `a + b` does not fit the target, that is a **compile error, not
     a runtime check**." Der Pass prueft also eine Aussage ueber INTERVALLE und laesst
     daraus eine Aussage ueber WERTE folgen. Genau dieser Schluss steht hier.
 -/
 
-/-- Der erklaerte Bereich eines Ziels. `SPRACHE.md`:641 -- `u32 in 1..7` etc. -/
+/-- Der erklaerte Bereich eines Ziels. `LANGUAGE.md`:641 -- `u32 in 1..7` etc. -/
 abbrev Ziel := Iv
 
 /-- Was der Pass entscheidet: passt das gerechnete Intervall in den Zielbereich?
@@ -388,7 +388,7 @@ def passt (i : Iv) (z : Ziel) : Bool :=
 -- BEWEIST NICHT: die Umkehrung. `passt` ist HINREICHEND, nicht notwendig: ein Programm,
 -- dessen Werte alle im Ziel liegen, dessen gerechnetes Intervall aber ueberschiesst,
 -- wird abgesagt. Das ist die gewollte Richtung -- der Pass irrt laut, nicht still --
--- und es ist der Grund, warum `narrow` als Ausweg existiert (`SPRACHE.md`:735).
+-- und es ist der Grund, warum `narrow` als Ausweg existiert (`LANGUAGE.md`:735).
 theorem passt_dann_kein_ueberlauf {i : Iv} {z : Ziel} {x : Int}
     (hp : passt i z = true) (hx : i.haelt x) : z.haelt x := by
   unfold passt at hp
@@ -412,7 +412,7 @@ theorem produkt_passt_dann_kein_ueberlauf {a b : Iv} {z : Ziel} {x y : Int}
 
 /-! ### 5.1 Die Division -- die eine Operation mit einer eigenen Vorbedingung
 
-    `SPRACHE.md`:647: "Division and remainder demand a denominator whose range excludes
+    `LANGUAGE.md`:647: "Division and remainder demand a denominator whose range excludes
     zero." Der Pass prueft das am INTERVALL des Nenners.
 -/
 
@@ -435,13 +435,13 @@ theorem nenner_ok_dann_nicht_null {b : Iv} {y : Int}
 #print axioms Passlogik.Bereich.nenner_ok_dann_nicht_null
 /-! ## 6. V1 -- die Bereichsverengung
 
-    `SPRACHE.md`:684: "a checked **range condition** narrows the range of the checked
+    `LANGUAGE.md`:684: "a checked **range condition** narrows the range of the checked
     place in the branch after it".
 
     **Und die zwei Vorbedingungen stehen im Modell, nicht in einer Fussnote:**
     * `stabil` -- eine Stelle durch ein `device`-Register bleibt zwischen Pruefung und
-      Verwendung nicht dieselbe (`SPRACHE.md`:688, «B33»).
-    * Trichotomie -- der `else`-Zweig setzt sie voraus (`SPRACHE.md`:717). Ueber `Int`
+      Verwendung nicht dieselbe (`LANGUAGE.md`:688, «B33»).
+    * Trichotomie -- der `else`-Zweig setzt sie voraus (`LANGUAGE.md`:717). Ueber `Int`
       gilt sie; §7 zeigt, wo sie bricht.
 -/
 
@@ -452,7 +452,7 @@ deriving DecidableEq, Repr
 
 /-- `stabil o` heisst: der Wert von `o` aendert sich zwischen zwei Lesungen nicht von
     selbst. Der Pass liest das aus der Deklaration ab -- eine `device`-Registerstelle
-    ist NICHT stabil (`SPRACHE.md`:688). -/
+    ist NICHT stabil (`LANGUAGE.md`:688). -/
 abbrev Stabil := Ort → Prop
 
 /-- Die Verengung nach oben: `if x >= k` -/
@@ -502,7 +502,7 @@ theorem v1_verengt {i : Iv} {k : Int} : Iv.kleiner (verenge_ge i k) i := by
 /-- **Die Vorbedingung, formuliert.** Ein Fakt traegt von der Pruefstelle zur
     Verwendungsstelle nur, wenn die Stelle DIESELBE bleibt.
 
-    `SPRACHE.md`:688 -- und bis zum 2026-08-20 tat der Pruefer das Gegenteil: das
+    `LANGUAGE.md`:688 -- und bis zum 2026-08-20 tat der Pruefer das Gegenteil: das
     erzeugte C indizierte ein Feld mit acht Plaetzen mit einem Wert, den die Hardware
     zwischen den beiden Zeilen frei setzen darf. -/
 -- BEWEIST NICHT: dass `stabil` fuer irgendeine konkrete Stelle GILT. Das ist eine
@@ -524,7 +524,7 @@ theorem v1_traegt_nur_stabil
 #print axioms Passlogik.Bereich.v1_traegt_nur_stabil
 /-! ## 7. Wo V1 BRICHT -- der `else`-Zweig ohne Trichotomie
 
-    `SPRACHE.md`:717: "Die Verengung im `else`-Zweig setzt voraus, dass die Negation
+    `LANGUAGE.md`:717: "Die Verengung im `else`-Zweig setzt voraus, dass die Negation
     einer Vergleichsbedingung selbst eine Vergleichsbedingung ist -- also eine
     **totale Ordnung ohne unvergleichbare Elemente**. [...] Ist ein Operand NaN, sind
     *alle* Vergleiche falsch, und der `else`-Zweig gibt **nichts**. Vier Ausgaenge statt
@@ -554,7 +554,7 @@ theorem trichotomie_ueber_int (a b : Int) : a ≤ b ∨ b ≤ a := by omega
     Ein Pass, der ihn dort setzte, waere unsound. -/
 -- BEWEIST NICHT: dass Gabbros Gleitkommazweig HEUTE falsch rechnet. Der Pass verengt
 -- ueber `f64` gar nicht in dieser Form -- `m1.endlichkeit` traegt nur den
--- Endlichkeitsfakt. Was hier steht, ist die Praezisierung dessen, was `SPRACHE.md`:717
+-- Endlichkeitsfakt. Was hier steht, ist die Praezisierung dessen, was `LANGUAGE.md`:717
 -- als Bedingung nennt: die Regel ist an EINEM Punkt falsifizierbar, und der Punkt ist
 -- konstruiert.
 theorem trichotomie_bricht : ∃ x k : PWert, ple x k = false ∧ ple k x = false :=
@@ -570,7 +570,7 @@ theorem vier_ausgaenge : ∃ x k : PWert, ¬ (ple x k = true ∨ ple k x = true)
 
 /-! ## 8. V2 -- die relationale Verengung
 
-    `SPRACHE.md`:685: "under the fact `a >= b`, `a - b` has type `0 .. a.max - b.min`,
+    `LANGUAGE.md`:685: "under the fact `a >= b`, `a - b` has type `0 .. a.max - b.min`,
     under `a > b` type `1 .. a.max - b.min`."
 
     **Das ist der Satz des Passregisters mit der groessten Last und der geringsten
@@ -610,14 +610,14 @@ theorem v2_gt {a b : Iv} {x y : Int}
     die gewoehnliche Intervallsubtraktion eine untere Schranke, die NEGATIV sein kann --
     und ueber einem vorzeichenlosen Ziel ist das die Absage `M104`. Mit dem Fakt ist die
     untere Schranke `0`. *Das ist "die Regel, die `narrow` davor bewahrt, ein Ritual zu
-    werden" (`SPRACHE.md`:685), praezise gemacht.* -/
+    werden" (`LANGUAGE.md`:685), praezise gemacht.* -/
 theorem v2_kauft_etwas :
     ∃ a b : Iv, (sub a b).lo < 0 ∧ (sub_unter_ge a b).lo = 0 := by
   refine ⟨⟨0, 10⟩, ⟨0, 10⟩, ?_, ?_⟩ <;> decide
 
 /-! ### 8.1 FUND: "hat den Typ" oder "wird geschnitten mit"? -- eine Mehrdeutigkeit
 
-    `SPRACHE.md`:685 schreibt: *unter dem Fakt `a >= b` **hat** `a - b` den Typ
+    `LANGUAGE.md`:685 schreibt: *unter dem Fakt `a >= b` **hat** `a - b` den Typ
     `0 .. a.max - b.min`*. Woertlich gelesen ERSETZT die Regel das gewoehnlich gerechnete
     Intervall. Das ist sound (§8 oben), aber es ist NICHT immer eine Verengung:
 -/
@@ -666,7 +666,7 @@ theorem sub_v2_kauft_etwas :
 
 /-! ## 9. V3 -- die Variantenverengung
 
-    `SPRACHE.md`:686: "a `match` on a `tagged` type narrows in the branch to the variant
+    `LANGUAGE.md`:686: "a `match` on a `tagged` type narrows in the branch to the variant
     including its payload -- exhaustive, no catch-all branch".
 
     V3 traegt NUR, weil `D005` den `match` erschoepfend macht. Das ist die Abhaengigkeit,
@@ -703,7 +703,7 @@ theorem v3_braucht_erschoepfung
 #print axioms Passlogik.Bereich.v3_braucht_erschoepfung
 /-! ## 10. Der Fakt STIRBT beim Schreiben
 
-    `SPRACHE.md`:651: "the checker keeps a fact set per block that grows only at the
+    `LANGUAGE.md`:651: "the checker keeps a fact set per block that grows only at the
     three named places and **dies on every write to a participating place**. Loops carry
     no facts inward."
 

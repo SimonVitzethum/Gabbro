@@ -1,4 +1,4 @@
-//! **S4 -- the seam witnesses** (`dokumente/PRUEFER.md` §4).
+//! **S4 -- the seam witnesses** (`dokumente/CHECKER.md` §4).
 //!
 //! `gabbro_check::lean::witness` writes one `checker_agrees` theorem per carried routine,
 //! holding the duty datum against `pruefe`. These tests pin the EMISSION (fast, no Lean

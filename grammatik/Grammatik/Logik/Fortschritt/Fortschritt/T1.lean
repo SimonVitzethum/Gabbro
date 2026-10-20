@@ -1,7 +1,7 @@
 /-
   Gabbro/Grammatik/Fortschritt.lean
 
-  **Progress up to named stops** (`Zielsatz.FortschrittG`, SATZKARTE §19.2).
+  **Progress up to named stops** (`Zielsatz.FortschrittG`, THEOREM-MAP §19.2).
 
   On every reachable machine of G, every thread is finished, waits for a
   lock another thread holds, stands at a named stop of one of three kinds
@@ -16,7 +16,7 @@
   Three shapes had no rule and no stop, and are excluded by an invariant of
   every run (`FortInvG`, carried through every rule like `schrittMerk`):
 
-  1. **The caller's shape at a pop** (SATZKARTE §13.5 item 6). A pop needs
+  1. **The caller's shape at a pop** (THEOREM-MAP §13.5 item 6). A pop needs
      a caller that can receive the answer: a value return into a caller
      that does not wait (`rueck`) or waits for a value of the callee's
      result type (`rueckBind`); a reason into a caller waiting in

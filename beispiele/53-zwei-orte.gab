@@ -1,6 +1,6 @@
 // 53 -- **Zwei Orte, ein Zustand: der Bereich, in dem die Invariante NICHT gilt.**
 //
-// Die Stelle ist «B17» aus `FRAGMENTE.md` F3 (:676-691): `anrufer` und `antwortende` bilden
+// Die Stelle ist «B17» aus `FRAGMENTS.md` F3 (:676-691): `anrufer` und `antwortende` bilden
 // zusammen EINEN Zustand, und die Invariante darueber sagt, dass beide gemeinsam gesetzt
 // oder gemeinsam leer sind. Zwischen den zwei Zuweisungen gilt sie nicht -- das ist keine
 // Nachlaessigkeit, sondern die Aussage der Stelle.
@@ -12,7 +12,7 @@
 // benutzt die Form. *Es fehlte nie die Mehrfachform.*
 //
 // **Was wirklich fehlte, war das Wort fuer den BEREICH** -- und auch das gibt es seit jeher:
-// `breaking I { … }` (`SPRACHE.md` §8.3). Bis zum 2026-08-28 hatte es NULL saubere
+// `breaking I { … }` (`LANGUAGE.md` §8.3). Bis zum 2026-08-28 hatte es NULL saubere
 // Korpusstellen; die einzige Stelle im Ordner war eine Giftprobe. Diese Datei ist die erste.
 //
 // **Warum `breaking` und nicht ein atomarer `transition`:** die Zusage „kein Zwischenzustand

@@ -10,7 +10,7 @@
     rechnet -- also genau einmal, wo der Pass eins rechnet.
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:758  -- "**Linear means linear, not affine:** a linear value is
+    dokumente/LANGUAGE.md:758  -- "**Linear means linear, not affine:** a linear value is
                                  consumed exactly once. Dropping it is a compile error;
                                  `leave`/`return` from a scope holding linear values
                                  demands that they be named (`leaves`). There is no
@@ -146,7 +146,7 @@ theorem genau_einmal {s : Anw V} {f : V → Nat}
 #print axioms Passlogik.Linear.genau_einmal
 /-! ## 4. Linear ist NICHT affin -- und der Unterschied ist der ganze Punkt
 
-    `SPRACHE.md`:758 und das Passregister: *"Verus' `tracked` ist AFFIN, Rust ist affin,
+    `LANGUAGE.md`:758 und das Passregister: *"Verus' `tracked` ist AFFIN, Rust ist affin,
     und affin verbietet nur den zweiten Gebrauch, nie den fehlenden."*
 -/
 
@@ -164,7 +164,7 @@ theorem linear_dann_affin {s : Anw V} (h : linear s) : affin s := by
     er gebraucht nichts zweimal -- und laesst den linearen Wert fallen. *Das ist der
     Fehler, den kein affines System sieht.* -/
 -- BEWEIST NICHT: dass Verus oder Rust ihn wirklich nicht sehen. Das ist eine Aussage
--- ueber fremde Werkzeuge und steht in `MESSUNGEN.md`, nicht hier. Was hier steht, ist
+-- ueber fremde Werkzeuge und steht in `MEASUREMENTS.md`, nicht hier. Was hier steht, ist
 -- der Unterschied der beiden BEDINGUNGEN.
 theorem affin_sieht_das_leck_nicht :
     ∃ s : Anw Nat, affin s ∧ ¬ linear s ∧ laeuft s (fun _ => 0) := by
@@ -260,7 +260,7 @@ theorem basisname_verwischt :
 #print axioms Passlogik.Linear.basisname_verwischt
 /-! ## 8. `leaves` -- was den Ausgang ueberlebt
 
-    `SPRACHE.md`:758: *"`leave`/`return` aus einem Bereich, der lineare Werte haelt,
+    `LANGUAGE.md`:758: *"`leave`/`return` aus einem Bereich, der lineare Werte haelt,
     verlangt, dass sie GENANNT werden (`leaves`)."*
 
     Der Pass prueft (`L106`), dass jeder Name in `leaves` ein PARAMETER ist und sein Typ

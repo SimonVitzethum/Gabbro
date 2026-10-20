@@ -64,7 +64,7 @@ pub impl fn lies_regel(r : u32 in 0 .. 255) -> u32
 }
 
 // The reset: a store into one element is a `publishstmt` like every other
-// store to an atomic (`SPRACHE.md` §11.3), and it carries no payload.
+// store to an atomic (`LANGUAGE.md` §11.3), and it carries no payload.
 pub impl fn loesche_regel(r : u32 in 0 .. 255)
     effects { writes REGEL }
     costs   <= 4 ops

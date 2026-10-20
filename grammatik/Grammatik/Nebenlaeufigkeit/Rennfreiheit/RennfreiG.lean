@@ -207,7 +207,7 @@ theorem rennfrei_g_zeuge : ∃ (M M' : RufMaschineG zD) (f : Faden)
   payloads (`PaarungAusgenommen`) are allowed races by design and excluded
   from `SchreibRasse` explicitly. Unshared carriers (`D.geteilt = false`,
   one thread's own state) are NOT covered here: their separation is the
-  checker text-check duty (`PCUnsharedSep`, SATZKARTE D2) and the `W5`
+  checker text-check duty (`PCUnsharedSep`, THEOREM-MAP D2) and the `W5`
   leg of `Gesittet`, not a lock argument.
 
   What is NOT proved: the actor-side characterization of `zugriffe` per

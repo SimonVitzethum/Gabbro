@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaAuf.lean
-  Subject:   WHO IS ON THE CHAIN AFTER A MOVE (PLAN-DYNAMISCH.md section 8a.1, step (3), abstract half).
+  Subject:   WHO IS ON THE CHAIN AFTER A MOVE (PLAN-DYNAMIC.md section 8a.1, step (3), abstract half).
 
   `ArenaKette.lean` proves that `push`, `pop` and `unlink` keep a chain well formed. A body that runs SEVERAL moves
   needs more: what it knew about the OTHER slots before a move must still hold after it. Three facts, each for one

@@ -2,8 +2,8 @@
 
 **The architecture of Gabbro, GabbroV and the CaprockOS plans: decisions, and the reasons they
 still stand.** This is neither a work list ([`TODO.md`](../TODO.md)) nor a record of what was
-measured ([`MESSUNGEN.md`](MESSUNGEN.md)); what the language *is* lives in
-[`SPRACHE.md`](SPRACHE.md), what is *proved* in [`BEWEIS.md`](BEWEIS.md).
+measured ([`MEASUREMENTS.md`](MEASUREMENTS.md)); what the language *is* lives in
+[`LANGUAGE.md`](LANGUAGE.md), what is *proved* in [`PROOF.md`](PROOF.md).
 
 Every statement carries its standing, because a design document that mixes the three is worth
 less than a shorter honest one:
@@ -81,8 +81,8 @@ never reaches a producer; every unlowered form is refused *by name*, not guessed
 | Backend | Standing |
 |---|---|
 | **LLVM** (`gabbro llvm`, x86-64 and AArch64) — Gabbro to IR with **no C, no libc, no linked runtime** | current ([`LLVM-BACKEND.md`](LLVM-BACKEND.md)) |
-| **C11 emitter** | **deprecated**; keeps building where it builds, its refusals (`C001` and kin) stand, no new construct is shaped for it ([`C-SPEICHERMODELL.md`](C-SPEICHERMODELL.md)) |
-| **Native machine code with validation of the final bytes** | the long-term path; needs a **Lean model of the CPU** first (AArch64 on the Sail Arm specification with the multicore memory model added in Lean, [`ARM-PLAN.md`](../ARM-PLAN.md); x86-64 work has stopped), then a per-access bridge to the existing concurrency model. [`PLAN-UEBERSETZUNGSVALIDIERUNG.md`](PLAN-UEBERSETZUNGSVALIDIERUNG.md) |
+| **C11 emitter** | **deprecated**; keeps building where it builds, its refusals (`C001` and kin) stand, no new construct is shaped for it ([`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md)) |
+| **Native machine code with validation of the final bytes** | the long-term path; needs a **Lean model of the CPU** first (AArch64 on the Sail Arm specification with the multicore memory model added in Lean, [`ARM-PLAN.md`](../ARM-PLAN.md); x86-64 work has stopped), then a per-access bridge to the existing concurrency model. [`PLAN-TRANSLATION-VALIDATION.md`](PLAN-TRANSLATION-VALIDATION.md) |
 
 ### 3.1 Translation validation
 
@@ -114,7 +114,7 @@ already carries.
 ### 3.2 Standing decisions of the language
 
 * **Refuse by name, never interpret.** One code per reason, a sentence per code
-  ([`PRUEFER.md`](PRUEFER.md)); an unknown version or a crooked length is a named refusal, never
+  ([`CHECKER.md`](CHECKER.md)); an unknown version or a crooked length is a named refusal, never
   a guess.
 * **The operating system is user logic, never an assumption in the compiler.** A system call is
   a generic gate whose contract the program or its binding library declares *in Gabbro*; the
@@ -122,7 +122,7 @@ already carries.
   handwritten C in a finished binary as far as possible**: runtimes and bindings are Gabbro,
   OS access goes through `syscall` items, and handwritten C or assembly stays only where Gabbro
   cannot express the thing, each piece with its written reason. Code moved from C into Gabbro is
-  checked like user code, with no relaxed mode. (`SPRACHE.md` §16.)
+  checked like user code, with no relaxed mode. (`LANGUAGE.md` §16.)
 * **Memory from outside comes as a region, never from a number.** No int-to-pointer
   conversion; an external allocation is a region of declared extent whose contract (user logic)
   says it is fresh and disjoint.
@@ -131,7 +131,7 @@ already carries.
   explicitly declared region *without* a ceiling as an opt-in beside the default (every
   allocation may fail and must be handled; the static memory bound is lost for such a program).
   *The heap's ceiling is a limit, not a standing reservation:* memory is taken when needed and
-  given back when not. (`SPRACHE.md` §17.)
+  given back when not. (`LANGUAGE.md` §17.)
 * **Floats are in scope** (a concrete IEEE model); probabilistic statements are out of scope.
 * **Rule A: no construct without a measured need.** If the measurement shows the need is absent,
   the *named refusal* is the result, and a good one.

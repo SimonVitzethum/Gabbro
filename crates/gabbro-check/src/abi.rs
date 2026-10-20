@@ -33,7 +33,7 @@
 //! is right and the conclusion was wrong: leaving the ranks out did not avoid the collision,
 //! it made the whole lock order unenforceable at the boundary. *Measured: a ring across two
 //! libraries -- `SPEICHER` under `GERAET` and `GERAET` under `SPEICHER` -- passed with 0
-//! errors and 0 hints* (`dokumente/SPRACHE.md`).
+//! errors and 0 hints* (`dokumente/LANGUAGE.md`).
 //!
 //! > What remains true is the narrower statement: **absolute numbers do not COMPOSE.** The
 //! > union is ordered by whichever integers the two authors happened to pick, so a

@@ -1,7 +1,7 @@
 /-
   Gabbro/Grammatik/ZielOrtInv.lean
 
-  **Table and group invariants on machine G** (SATZKARTE §13.5 first item,
+  **Table and group invariants on machine G** (THEOREM-MAP §13.5 first item,
   carried in §15.4).
 
   The sequential program semantics checks, at every return of `f` in

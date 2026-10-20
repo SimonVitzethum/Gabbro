@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/ArenaFrei.lean
   Subject:   `free A[i];` AND THE FREE LIST AS A FORM OF MACHINE G, with the invariant of the list
-             preserved by `free` and by `alloc` from the list (PLAN-DYNAMISCH.md section 8a, phase 1).
+             preserved by `free` and by `alloc` from the list (PLAN-DYNAMIC.md section 8a, phase 1).
 
   THE SHAPE (sugar, as `ArenaZucker.lean` and `ArenaDyn.lean`: no new `Stmt` constructor, `World`
   does not grow). A dynamic arena with slot release is, in the specification, the dynamic arena

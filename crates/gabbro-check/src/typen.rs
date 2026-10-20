@@ -2,7 +2,7 @@
 //!
 //! *„Ganzzahlen tragen ihren **Wertebereich**, und jede Operation muss darin bleiben. Das ist
 //! Adas Trick, und **genau er** hat S1a/S1b gefunden -- nicht ‚Ada ist sicherer'."*
-//! ([`SPRACHE.md`](SPRACHE.md) §M1)
+//! ([`LANGUAGE.md`](LANGUAGE.md) §M1)
 //!
 //! Deshalb rechnet dieses Modul in `i128`: jeder Bereich der Sprache -- bis `u64` hinauf --
 //! passt hinein, samt der Zwischenergebnisse, die ihn verlassen. **Genau diese

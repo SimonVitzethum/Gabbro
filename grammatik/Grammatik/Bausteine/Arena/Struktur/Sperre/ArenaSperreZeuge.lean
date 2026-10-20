@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaSperreZeuge.lean
-  Subject:   WITNESS AND PLANTED DEFECTS FOR THE SECTION THEOREM (PLAN-DYNAMISCH.md section 8a.2): a locked section over
+  Subject:   WITNESS AND PLANTED DEFECTS FOR THE SECTION THEOREM (PLAN-DYNAMIC.md section 8a.2): a locked section over
              the shared four-slot arena of `ArenaSperreWelt.lean`, RUN, and a section that stores a link outside what the
              recognizer allows, whose release check FIRES.
 

@@ -1,7 +1,7 @@
 /-
   Gabbro/Grammatik/FortschrittZeuge.lean
 
-  **The witness for `fortschrittG_aus`** (SATZKARTE §19.2) on the
+  **The witness for `fortschrittG_aus`** (THEOREM-MAP §19.2) on the
   two-writer fixture of `MehrfadenZeuge.lean` (`mP`: thread 0 runs
   `hauptA`, thread 1 `hauptB`, both take the one lock around a call of
   `setze`; every other thread runs `ruhe`).

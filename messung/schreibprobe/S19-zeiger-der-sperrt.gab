@@ -1,6 +1,6 @@
 // S19 -- F3'S `&mut dyn SchedOps`: A FUNCTION POINTER THAT TAKES A LOCK.
 //
-// `FRAGMENTE.md` «B8»/«B9»: *"No call through a `place`"* and *"`fnptr`
+// `FRAGMENTS.md` «B8»/«B9»: *"No call through a `place`"* and *"`fnptr`
 // carries no contract -- the substitute for `&mut dyn SchedOps` loses exactly
 // what it was there for"*. **Both CLOSED on 2026-08-21**, and `beispiele/49`
 // is the four-part proof: the producer `&f`, the call `t->senden(b)`, the

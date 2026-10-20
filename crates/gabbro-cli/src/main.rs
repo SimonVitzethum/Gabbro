@@ -172,7 +172,7 @@ fn main() -> std::process::ExitCode {
         // importer relied on, held against the bodies they stand for (`N501`-`N505`).
         "link" | "verbinde" => befehl_link(rest),
         // **`gabbro build` -- the build out of a manifest** (German second name `bau`). The
-        // reckoning that decided its shape stands in `dokumente/BAUSYSTEM.md`, and it was
+        // reckoning that decided its shape stands in `dokumente/BUILD-SYSTEM.md`, and it was
         // written before the first line of `bau.rs`.
         "build" | "bau" => bau::befehl(rest),
         // **«B3»: the on-ramp.** English first name and no second one -- the working
@@ -237,13 +237,13 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
-        // **Lane 191: the derived contract (lever 1 of dokumente/PRUEFER.md).**
+        // **Lane 191: the derived contract (lever 1 of dokumente/CHECKER.md).**
         // An omitted `effects`/`costs` is derived, not demanded — this prints
         // every derived clause beside the written bounds. Like `effects`
         // above it refuses a unit with errors: the derivation over a tree the
         // passes rejected speaks about a program that does not compile.
         "derived" | "abgeleitet" => befehl_abgeleitet(rest),
-        // **Lane 197: explicitness as a VIEW (lever 3 of dokumente/PRUEFER.md).**
+        // **Lane 197: explicitness as a VIEW (lever 3 of dokumente/CHECKER.md).**
         // `--explicit` writes every settled derived clause out, `--elide`
         // removes every clause equal to what would be derived. English-only
         // flags, like `--fix` and `--with`: new spellings ship no German
@@ -520,7 +520,7 @@ fn main() -> std::process::ExitCode {
         // command line 2 is the unknown-command exit and a known command never says it.
         "prove" | "beweise" => befehl_beweise(rest),
         // **`gabbro counterexample` -- the model-search half for handed-over
-        // obligations (dokumente/BEWEIS.md §9).** Searches inputs that satisfy
+        // obligations (dokumente/PROOF.md §9).** Searches inputs that satisfy
         // `requires` but violate `ensures` (exhaustive while small, sampled
         // otherwise) and prints a Lean file running every candidate through
         // the exported program's semantics with a kernel-checked
@@ -899,7 +899,7 @@ fn hilfe() {
                                     two or more units must LINK (`gabbro link`). With
                                     `<a.gab> <b.gab>…` instead of a manifest: the link
                                     check only, nothing compiled.
-                                    The reckoning: `dokumente/BAUSYSTEM.md`
+                                    The reckoning: `dokumente/BUILD-SYSTEM.md`
   gabbro obligations|pflichten [--isabelle | --lean | --g] <file.gab>…
                                     what a HUMAN still owes -- counted, not discharged.
                                     `--isabelle` writes the SAME register as an Isabelle
@@ -982,7 +982,7 @@ Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
 }
 
 fn befehl_paesse() {
-    println!("The checking passes in fixed order (SPRACHE.md part III, §6):\n");
+    println!("The checking passes in fixed order (LANGUAGE.md part III, §6):\n");
     for p in passliste() {
         let (marke, note) = match p.zustand {
             Zustand::Gebaut => ("built ", String::new()),
@@ -1782,7 +1782,7 @@ pub(crate) fn zeige_je_stueck(
 /// that appears twice in two unrelated files an `N039`. **What files form a unit is a
 /// manifest line, not a shell glob.**
 ///
-/// What it buys is measured in `dokumente/PRUEFER.md`: over five units of the corpus
+/// What it buys is measured in `dokumente/CHECKER.md`: over five units of the corpus
 /// eleven refusals fall away *because the names resolve*, and two appear that no per-file run
 /// can see -- a lock ring across library boundaries (`H012`). *Silence is not the only thing
 /// joining buys; it also buys a finding.*
@@ -2105,7 +2105,7 @@ fn befehl_pruefe(getippt: &str, argumente: &[String]) -> std::process::ExitCode 
     // `pruefe_als_einheit` for what changes and what the flag costs.
     let einheit = argumente.iter().any(|a| a == "--unit" || a == "--einheit");
     // **Lane 187: `--fix` applies the machine-applicable repairs the diagnostics carry**
-    // (`fix: …` lines, lever 4 of `dokumente/PRUEFER.md`) and re-checks, up to
+    // (`fix: …` lines, lever 4 of `dokumente/CHECKER.md`) and re-checks, up to
     // ten rounds. English-only flag, like `--with` and `--testbuild`: a new spelling
     // ships no German second name («B3»).
     let fix = argumente.iter().any(|a| a == "--fix");
@@ -2808,7 +2808,7 @@ fn zaehle_items(baum: &gabbro_syntax::ast::Programm) -> usize {    fn geh(items:
 /// Five shapes. **The sentence that stood here until 2026-09-01 -- *"the flags stay German
 /// like `abi`'s"* -- is REVOKED**: since today every flag carries an English first name too,
 /// on the same additive path the sub-commands took, and the German spelling keeps working.
-/// `dokumente/PRUEFER.md` §5 named the gap; it is closed, and the doc comment that repeated the old
+/// `dokumente/CHECKER.md` §5 named the gap; it is closed, and the doc comment that repeated the old
 /// state would have outlived it by exactly the class `pruefe-widerruf.py` guards.
 ///
 /// | | |
@@ -2954,7 +2954,7 @@ fn befehl_abgeleitet(rest: &[String]) -> std::process::ExitCode {
     }
 }
 
-/// **Lane 197 (`fmt`): explicitness as a VIEW (lever 3 of dokumente/PRUEFER.md).**
+/// **Lane 197 (`fmt`): explicitness as a VIEW (lever 3 of dokumente/CHECKER.md).**
 ///
 /// `--explicit` writes every settled derived clause out, `--elide` removes
 /// every clause equal to what would be derived. Both are pure views over the

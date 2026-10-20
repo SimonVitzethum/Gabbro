@@ -6,8 +6,8 @@
 // die Frage ist der TYP, und die stellt `D018`.
 //
 // **Achtunddreissig Typverfaelschungen, null Absagen** -- gemessen am 2026-08-31 in fuenf
-// Stellungen (`dokumente/PRUEFER.md` §2b: zehn in `ensures`;
-// `dokumente/PRUEFER.md` §2a: elf in `requires`, elf in einer `spec fn`, drei an
+// Stellungen (`dokumente/CHECKER.md` §2b: zehn in `ensures`;
+// `dokumente/CHECKER.md` §2a: elf in `requires`, elf in einer `spec fn`, drei an
 // einer `table`-`invariant`, drei an einer `walk`-`invariant`). Die Kontrolle daneben:
 // verschwindet der Parametertyp ganz, faellt `N040` -- **der Typ wird also aufgeloest, nur
 // fragte niemand, ob die Domaene zu ihm passt.**

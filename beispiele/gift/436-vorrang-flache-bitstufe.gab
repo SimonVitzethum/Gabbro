@@ -6,7 +6,7 @@
 // `(a & b) << c` und C dasselbe als `a & (b << c)`.
 //
 // Gemessen, uebersetzt und GELAUFEN am 2026-08-31 ueber alle 25 Paare
-// (`dokumente/SPRACHE.md`): **neun rechnen verschieden**, und mit `a=3 b=5
+// (`dokumente/LANGUAGE.md`): **neun rechnen verschieden**, und mit `a=3 b=5
 // c=2` steht diese Zeile bei 4 gegen 0.
 //
 // **Und das Netz hat sein Loch genau hier.** gccs `-Wparentheses` faengt drei der neun und

@@ -9,7 +9,7 @@
 //     In der Menge ist genau das **unformulierbar**: `resume` entfernt `PAUSE`, `unpark`
 //     entfernt `PARK`, `unblock` entfernt `IPC` -- keiner von ihnen entfernt `HANDLER`.
 //
-// **„Unformulierbar" ist dort eine Konvention und hier ein Typfehler.** `SPRACHE.md` sagt
+// **„Unformulierbar" ist dort eine Konvention und hier ein Typfehler.** `LANGUAGE.md` sagt
 // es fuer diesen Fall woertlich: *„Lost wakeup | Z24 (ein Bit fuer vier Gruende) | **M2**:
 // der Wecker verbraucht **genau seinen** Grund."*
 

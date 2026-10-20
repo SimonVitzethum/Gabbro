@@ -1,7 +1,7 @@
 // erwartet: H101
 // **«B38» -- ein `masks IRQ` in der Wirkungsliste ist kein Zustand.**
 //
-// `FRAGMENTE.md` F8: von fuenf Werten, die im Planer eine Sperrgrenze ueberqueren, tragen
+// `FRAGMENTS.md` F8: von fuenf Werten, die im Planer eine Sperrgrenze ueberqueren, tragen
 // zwei NICHT das Muster „die Fortsetzung prueft neu", sondern die Interruptmaskierung. Die
 // ehrliche Form ist darum *„prueft neu ODER nennt, was sie stattdessen traegt"* -- und dazu
 // gehoert die Nebenbedingung, sonst ist der Traeger ein Schlupfloch.

@@ -8,7 +8,7 @@
 // **Und die Absage hat einen zweiten Gegenstand, der schwerer wiegt als der erste.**
 // `N021` und `N022` finden ihre Groesse ueber einen Namensvergleich gegen `measures`. Steht
 // dort ein Name, den es nicht gibt, vergleicht sich der Vergleich mit nichts, und *beide
-// Regeln schweigen.* Gemessen am 2026-08-31 (`dokumente/PRUEFER.md`):
+// Regeln schweigen.* Gemessen am 2026-08-31 (`dokumente/CHECKER.md`):
 // `messung/tor-proben/t11` ist byteweise `gift/155-messung-schreibt-sich-selbst.gab` mit
 // `measures kk` statt `measures k` -- die Vorlage meldet `N027` UND `N021`, die Kopie nur
 // `N027`. **Ein Buchstabe, und die Regel ist weg.**

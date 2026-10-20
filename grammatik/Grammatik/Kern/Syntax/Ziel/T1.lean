@@ -67,7 +67,7 @@ variable {D : Deklaration} {V : Vertrag D}
 
 /-- Die Zielformen, ueber die der Absenkungsvertrag spricht -- 19 benannte
     Gestalten, KEINE geschlossene Liste. Dass der Erzeuger nur diese schreibt,
-    ist unbewiesen: `dokumente/BEWEIS.md`, Gegenstand 2, misst 64 Formen im
+    ist unbewiesen: `dokumente/PROOF.md`, Gegenstand 2, misst 64 Formen im
     Erzeugnis, davon 30 ohne Entscheid (u.a. Zeigerarithmetik an 491 Stellen).
     Wer die Liste schliesst, entscheidet die 19 (`?:` als Muster) oder nimmt
     sie aus dem Erzeuger. -/
@@ -395,7 +395,7 @@ theorem ziel_nutzer_last (o : Ausgang V l Γ)
 
 /-! ## 6. Discharge record (w06 proof architect, 2026-09-11)
 
-    Verdict: CONDITIONAL -- see `messung/ZIEL-BEWEIS.md` §5 for the exact open
+    Verdict: CONDITIONAL -- see `messung/ZIEL-PROOF.md` §5 for the exact open
     list.     This section binds each PASSED wave result at Ziel level (theorem, or
     `def` for the witness itself, no `sorry`) and keeps each FAILED premise an explicit hypothesis: nothing
     is papered over, and nothing is duplicated across an import cycle.

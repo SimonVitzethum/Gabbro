@@ -1,4 +1,4 @@
-//! Lane 111 -- compile-time constants, first cut (dokumente/SPRACHE.md section 6).
+//! Lane 111 -- compile-time constants, first cut (dokumente/LANGUAGE.md section 6).
 //!
 //! The checker evaluates total, effect-free `const` initializers and const
 //! tables element-wise (`K190`-`K194` in `konstanten.rs`); the emitter lowers

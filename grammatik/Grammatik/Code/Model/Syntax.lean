@@ -4,7 +4,7 @@ import Grammatik.Code.Model.Types
   File:      Grammatik/Code/Model/Syntax.lean
   Subject:   TRACK L -- `Code`: operands, instructions, terminators, blocks, functions, modules.
 
-  `Code` is ISA-neutral by construction (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` 9a):
+  `Code` is ISA-neutral by construction (`dokumente/PLAN-TRANSLATION-VALIDATION.md` 9a):
     * LOCALS are numbered registers with no bound and no class; allocating them to machine
       registers is the later backend's problem. There are NO condition flags and no status
       register: a comparison produces a word (`icmp`, 0 or 1), a branch (`br`) tests a word

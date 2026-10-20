@@ -1,7 +1,7 @@
 // S18 -- «B7»: A FUNCTION THAT RETURNS A RECORD -- WRITABLE, AND IT DOES NOT
 //        REACH THE PROOF.
 //
-// `FRAGMENTE.md` «B7»: *"No struct and no array literal in `expr`. A function
+// `FRAGMENTS.md` «B7»: *"No struct and no array literal in `expr`. A function
 // therefore cannot produce a `structty`; tuple return and `reply(EP, [ … ])`
 // fall with it."* Cited at F4, F5 and F6.
 //

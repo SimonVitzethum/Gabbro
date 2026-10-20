@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaFremd.lean
-  Subject:   WHAT THE ALLOCATOR TOUCHES (PLAN-DYNAMISCH.md section 8a, phase 2): the three executed forms of
+  Subject:   WHAT THE ALLOCATOR TOUCHES (PLAN-DYNAMIC.md section 8a, phase 2): the three executed forms of
              `ArenaFrei.lean` -- `free` (`freiRumpf`), `alloc` from the list (`freiNimm`), `alloc` from the counter
              (`arenaRumpf`) -- write only the counter, the head of the free list, the payload and the free-list
              link of the arena. Every other global and every other field of the table stays word for word.

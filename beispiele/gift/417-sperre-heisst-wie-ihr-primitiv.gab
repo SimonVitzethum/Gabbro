@@ -18,7 +18,7 @@
 // `extern fn TOR_nimm()` daneben senkt zu **derselben Zeile** ab, und zwei gleiche
 // Prototypen sind in C eine zulaessige Wiederholung. **Ein Symbol, zwei Absichten.**
 //
-// Gemessen und AUSGEFUEHRT am 2026-08-31 (`dokumente/PRUEFER.md` §4):
+// Gemessen und AUSGEFUEHRT am 2026-08-31 (`dokumente/CHECKER.md` §4):
 //
 //   * mit `pub impl fn TOR_nimm()` daneben faehrt die Nahme der Sperre den Rumpf des
 //     Nutzers: `spur` geht von 0 auf 7, `nutz` wird geschrieben, **und keine Sperre ist

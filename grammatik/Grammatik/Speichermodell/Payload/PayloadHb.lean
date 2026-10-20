@@ -33,7 +33,7 @@ import Grammatik.Speichermodell.Atomar.Atomar
   * `gesehen_einzelschreiber`, `still_of_kein_schreiben` -- the two memory facts of
     `payload_mp_wert` from thread-level facts: only `t` writes `c`; no step after the write
     writes `c`.
-  * `erwartet_bestaetigt` -- the BRANCH FACT (SPRACHE §11.5 rule 2): a reader that branched on
+  * `erwartet_bestaetigt` -- the BRANCH FACT (LANGUAGE §11.5 rule 2): a reader that branched on
     a value no earlier message of the flag carries read the message the publish added.
 
   The release/acquire hand-off these build on is `hb_uebergabe` (Atomar.lean); this file adds
@@ -283,7 +283,7 @@ theorem still_of_kein_schreiben {Wb : RufMaschineW D} {c : D.Tab ⊕ D.Glob}
 
 /-! ## 5. The branch fact: a confirmed awaited value identifies the publish -/
 
-/-- **A confirming value identifies the published message** (the Lean side of SPRACHE §11.5 rule 2,
+/-- **A confirming value identifies the published message** (the Lean side of LANGUAGE §11.5 rule 2,
     "visibility is a branch fact"). `p` is the confirming predicate on the memory (it reads only
     the flag `f`: `hpcongr`). If no message of `f` before the publish confirms (`hnicht`: the
     initial value and every earlier write are non-confirming), nobody writes `f` between the

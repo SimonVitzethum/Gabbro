@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaErkEnde.lean
-  Subject:   THE RECOGNIZER ON FUNCTION BODIES (PLAN-DYNAMISCH.md section 8a.3): a function body is an `Endblock` (it ends in
+  Subject:   THE RECOGNIZER ON FUNCTION BODIES (PLAN-DYNAMIC.md section 8a.3): a function body is an `Endblock` (it ends in
              a `return`, it never falls off), while `Erk` recognizes `Block`s. `ErkE K a e` says the end block `e` is a run of
              recognized statements ending in `return` / `return why`:
 

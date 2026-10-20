@@ -2,7 +2,7 @@
 //!
 //! ## Woher der Bedarf kommt, und er ist gemessen
 //!
-//! `MESSUNGEN.md`, *SWEEP der Verbindungs-Invarianten* (2026-08-16): vier Invarianten
+//! `MEASUREMENTS.md`, *SWEEP der Verbindungs-Invarianten* (2026-08-16): vier Invarianten
 //! zwischen je zwei Traegern im Bestand. **Drei liegen unter EINER Sperre** (`refcount`,
 //! Spendenkanten, `queued` gegen Bereitliste). **Die vierte nicht:**
 //!
@@ -358,7 +358,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                          intermediate state visible to another core",
                     )
                     .mit_notiz(
-                        "measured at V4 (`MESSUNGEN.md`, SWEEP): in the existing tree this \
+                        "measured at V4 (`MEASUREMENTS.md`, SWEEP): in the existing tree this \
                          very case is carried by a COMMENT, not by a promise",
                     ),
                 );

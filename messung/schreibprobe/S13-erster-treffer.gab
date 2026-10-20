@@ -1,6 +1,6 @@
 // S13 -- «B10»: THE SEARCH FOR THE FIRST LIVE RECEIVER.
 //
-// `FRAGMENTE.md` «B10»: *"`traverse` yields no value, there is no `break`. The
+// `FRAGMENTS.md` «B10»: *"`traverse` yields no value, there is no `break`. The
 // search for the FIRST hit becomes the emptying of the whole set; an operation
 // counter cannot be raised."* Cited at F1 (`peak_revoke_ops`) and F3 (the IPC
 // fastpath, whose whole point is to stop at the first live receiver).

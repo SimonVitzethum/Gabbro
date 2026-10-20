@@ -4,10 +4,10 @@
 // zweite Form Fakten: ein Zeichen Unterschied entschied ueber die Zusage.
 //
 // Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
-// durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+// durch (MEASUREMENTS.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 // MUSS fallen: `nuller(z)` setzt z.wert auf 0. Der Fakt ueber `z.wert` (FELDzugriff!) muss
-// laut MESSUNGEN.md bei JEDEM Aufruf sterben.
+// laut MEASUREMENTS.md bei JEDEM Aufruf sterben.
 module gift {
 
 const GRENZE : u32 = 65535;

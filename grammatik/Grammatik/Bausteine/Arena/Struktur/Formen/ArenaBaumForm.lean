@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/ArenaBaumForm.lean
-  Subject:   THE EXECUTED FORMS OF THE TREE LINK STORES (PLAN-DYNAMISCH.md section 8a.1, step (1), tree half):
+  Subject:   THE EXECUTED FORMS OF THE TREE LINK STORES (PLAN-DYNAMIC.md section 8a.1, step (1), tree half):
              `leaf in` and `leaf out`, at the left or the right child place, as `Block`s over the existing
              statements, with the proof that each executed form leaves exactly the store facts that
              `baum_einfuegen_links/rechts` and `baum_blatt_aus_links/rechts` (`ArenaBaumWelt.lean`) take as

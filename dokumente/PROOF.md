@@ -1,9 +1,9 @@
 # Gabbro — the proof architecture
 
-*Consolidated 2026-10-17. It replaces the former `BEWEIS.md` (1 712 lines of August
-measurements), `dokumente/BEWEIS.md`, `dokumente/BEWEIS.md`, `dokumente/BEWEIS.md`,
-`dokumente/BEWEIS.md`, the verdict files `messung/URTEIL-*`, the review of 2026-09-21,
-`dokumente/BEWEIS.md` and the retired `TRAEGER-UND-HARDWARE` register. History is in git. Every
+*Consolidated 2026-10-17. It replaces the former `PROOF.md` (1 712 lines of August
+measurements), `dokumente/PROOF.md`, `dokumente/PROOF.md`, `dokumente/PROOF.md`,
+`dokumente/PROOF.md`, the verdict files `messung/URTEIL-*`, the review of 2026-09-21,
+`dokumente/PROOF.md` and the retired `TRAEGER-UND-HARDWARE` register. History is in git. Every
 number below names the command that re-measures it (Part E, last section), or is marked historical (the retired counters are not guarded today); a claim that could
 not be checked in this consolidation is listed at the end of that section.*
 
@@ -19,7 +19,7 @@ CLAIMED list, the review package with file and line for every definition). This 
 map of it. Where the two ever differ, `Spec.lean` wins and this file is wrong.
 
 **Section ids.** Parts A–E carry their own ids (A1, B3, …). The sections of "Item 2 — which C"
-keep the numbers §1–§5 of the former document, because code comments cite `BEWEIS.md §1`,
+keep the numbers §1–§5 of the former document, because code comments cite `PROOF.md §1`,
 `§2` row 7 and `§3` for the legacy C lowering. Appendix: old → new ids.
 
 ---
@@ -502,7 +502,7 @@ invariant hangs on a template.
 *Backend truth (2026-10-17).* The LLVM backend is current (`gabbro llvm`, `gabbro llvm-cert`,
 see `LLVM-BACKEND.md`); the C11 emitter was removed (2026-10-17, final). The target-level proof — source → model → machine code of AArch64 or x86-64 — needs a
 complete Lean model of the CPU and the per-access bridge from the target's memory model to W/GX
-(`PLAN-UEBERSETZUNGSVALIDIERUNG.md`, `TODO.md` §5); it is not started and nothing here claims
+(`PLAN-TRANSLATION-VALIDATION.md`, `TODO.md` §5); it is not started and nothing here claims
 it. The C-level proofs (`CBackend/`, the chain instances for 104 and 108, `LaufzeitC`) were deleted
 on 2026-10-18 with the C backend; they live in the tag `archiv/c-emitter-2026-10-17`. The retired `zaehle-kette`
 counted closed chains and the retired `pruefe-cformen` classified every emitted C form as lemma /
@@ -511,7 +511,7 @@ assumption / uncovered (at the 2026-09-26 audit: 51 / 4 / 27); both measured the
 ## Item 2 — which C (legacy C lowering)
 
 seL4 formalises C; Gabbro emits so little C that its semantics is a *finite table*. The sections
-below keep the former numbering (§1–§5); code comments cite them as `BEWEIS.md §N`.
+below keep the former numbering (§1–§5); code comments cite them as `PROOF.md §N`.
 
 ### §1. The target language is a closed list of forms
 
@@ -644,16 +644,16 @@ marks beyond what the instrument's source records.
 
 | Cited as | Now |
 |---|---|
-| `BEWEIS.md §1`, `§1a`, `§2` (row 7 = implicit conversion, row 9 = null pointer), `§3`, "Item 2" | unchanged, under "Item 2 — which C" |
-| `BEWEIS.md` "cut C1", the recomputer | Item 2 §4 |
-| `BEWEIS.md` "B40" | E3 |
-| `BEWEIS.md` "own-logic debt", the `hFree` remainder | D4 |
-| `BEWEIS.md` line numbers (`:107`, `:1078`) | dead; they pointed into the former text |
-| `dokumente/BEWEIS.md` §2 (the statement), §4 (anti-vacuity), §5 (review package, the four questions), §6 (not claimed) | B1, B7, C1 and the `Spec.lean` header, B5 |
-| `dokumente/BEWEIS.md` §8 (extension rules, liveness) | D1 |
-| `dokumente/BEWEIS.md` §9, §10 (further gaps; linking; `counterexample`) | D2 and B3 |
-| `dokumente/BEWEIS.md` §3, §7.4, §8, §9, §10 (the runtime list `LaufzeitC`) | D3 |
-| `dokumente/BEWEIS.md` §2.3, §3 | D4 (independence of the path) and `GABBROV.md` |
-| `dokumente/BEWEIS.md` | D4 (the proposal) |
-| `dokumente/BEWEIS.md` | B6 |
+| `PROOF.md §1`, `§1a`, `§2` (row 7 = implicit conversion, row 9 = null pointer), `§3`, "Item 2" | unchanged, under "Item 2 — which C" |
+| `PROOF.md` "cut C1", the recomputer | Item 2 §4 |
+| `PROOF.md` "B40" | E3 |
+| `PROOF.md` "own-logic debt", the `hFree` remainder | D4 |
+| `PROOF.md` line numbers (`:107`, `:1078`) | dead; they pointed into the former text |
+| `dokumente/PROOF.md` §2 (the statement), §4 (anti-vacuity), §5 (review package, the four questions), §6 (not claimed) | B1, B7, C1 and the `Spec.lean` header, B5 |
+| `dokumente/PROOF.md` §8 (extension rules, liveness) | D1 |
+| `dokumente/PROOF.md` §9, §10 (further gaps; linking; `counterexample`) | D2 and B3 |
+| `dokumente/PROOF.md` §3, §7.4, §8, §9, §10 (the runtime list `LaufzeitC`) | D3 |
+| `dokumente/PROOF.md` §2.3, §3 | D4 (independence of the path) and `GABBROV.md` |
+| `dokumente/PROOF.md` | D4 (the proposal) |
+| `dokumente/PROOF.md` | B6 |
 | the retired `TRAEGER-UND-HARDWARE` register | the A7 / `hardware A, D;` decision in B4; its `H101` half belongs to the checker document |

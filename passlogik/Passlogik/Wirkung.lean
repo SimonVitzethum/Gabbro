@@ -9,8 +9,8 @@
     Aussage -- ohne Fixpunktrechnung.
 
   QUELLSAETZE
-    dokumente/SPRACHE.md:930  -- `effects` in `fndecl`, PFLICHT ausser bei `spec fn`
-    dokumente/SPRACHE.md:937  -- "`effects` is obligatory and not fail-open; whoever
+    dokumente/LANGUAGE.md:930  -- `effects` in `fndecl`, PFLICHT ausser bei `spec fn`
+    dokumente/LANGUAGE.md:937  -- "`effects` is obligatory and not fail-open; whoever
                                  touches nothing writes `effects { pure }`, and that is
                                  checked."
     dokumente/SYNTAX.md:743   -- `efflist = eff { "," eff }`,
@@ -96,7 +96,7 @@ inductive Wkg where
   | diverges   : Wkg
 deriving DecidableEq, Repr
 
-/-- `effects { pure }` heisst: die Menge ist leer. `SPRACHE.md`:937 -- "whoever touches
+/-- `effects { pure }` heisst: die Menge ist leer. `LANGUAGE.md`:937 -- "whoever touches
     nothing writes `effects { pure }`". -/
 def pure_menge : Menge Wkg := leere
 
@@ -327,7 +327,7 @@ theorem alte_pruefung_laesst_durch :
 #print axioms Passlogik.Wirkung.alte_pruefung_laesst_durch
 /-! ## 7. `effects` ist NICHT fail-open -- und was passierte, wenn es das waere
 
-    `SPRACHE.md`:937: *"`effects` is obligatory and not fail-open [...] a tool that reads a
+    `LANGUAGE.md`:937: *"`effects` is obligatory and not fail-open [...] a tool that reads a
     missing clause as 'no effects' rewards leaving it out."*
 
     Die Gefahr ist NICHT bei einer Funktion mit sichtbarem Rumpf -- dort faellt die

@@ -1,6 +1,6 @@
 // 17 -- **Die Traegergruppe, und warum sie zwei Sperren nimmt.**
 //
-// Gemessen (`dokumente/MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten, 2026-08-16): im
+// Gemessen (`dokumente/MEASUREMENTS.md`, SWEEP der Verbindungs-Invarianten, 2026-08-16): im
 // Bestand liegen vier Invarianten zwischen je zwei Traegern. Drei unter EINER Sperre --
 // die deckt `lock … protects { A, B }` bereits. **Die vierte nicht:**
 //

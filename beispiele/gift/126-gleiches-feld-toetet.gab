@@ -2,7 +2,7 @@
 // **Die zweite Gegenrichtung: dasselbe Feld.**
 // Die Ausnahme gilt fuer VERSCHIEDENE Felder desselben Objekts. Wird das Feld selbst
 // ueberschrieben, stirbt seine Tatsache -- das ist die aelteste Regel der Faktenmenge
-// (`SPRACHE.md` 3.2: ein Fakt stirbt bei jedem Schreiben auf seinen Platz).
+// (`LANGUAGE.md` 3.2: ein Fakt stirbt bei jedem Schreiben auf seinen Platz).
 module gift::gleiches_feld {
 
 const KAP : u32 = 64;

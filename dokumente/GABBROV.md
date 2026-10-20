@@ -13,8 +13,8 @@ measured today by `instrumente/pruefe-gabbrov.py`.*
 > say — the logic obligations of their program — states it as Lean, checks it against a model of
 > the program computed from the **source text** by generic theorems, and names what stays open.
 > It proves nothing about machine code; its proofs do not establish final-byte correspondence
-> (that is the translation-validation route, `PLAN-UEBERSETZUNGSVALIDIERUNG.md`). Where it meets
-> the goal theorem is the bridge of §14: it *derives* premise (b) of `BEWEIS.md` B1 for the
+> (that is the translation-validation route, `PLAN-TRANSLATION-VALIDATION.md`). Where it meets
+> the goal theorem is the bridge of §14: it *derives* premise (b) of `PROOF.md` B1 for the
 > programs the Lean front end elaborates.
 
 **Section ids.** §1–§12 keep the numbering of the former `GabbroV` document (code comments cite
@@ -25,12 +25,12 @@ map at the end lists which `PLAN.md` section lives where.
 
 ## 1. What Gabbro already does, and the cut
 
-`SPRACHE.md` §0: *Gabbro proves everything except logic.* Plumbing — index, overflow, alias,
+`LANGUAGE.md` §0: *Gabbro proves everything except logic.* Plumbing — index, overflow, alias,
 frame, lock, race, termination, phase, leafness, publication — is the checker's (M1–M4,
 generated schemata, no SMT, no solver). **Logic** — *this function does the right thing* — is the
 programmer's, and Gabbro **emits** every open logic obligation. Plumbing that rests on logic
-(`SPRACHE.md` §8.3) falls constructively but is booked as logic. So the cut is narrow: **logic
-and assumptions only**. Over the ten fragments of `FRAGMENTE.md`, the retired `PFLICHTEN` register
+(`LANGUAGE.md` §8.3) falls constructively but is booked as logic. So the cut is narrow: **logic
+and assumptions only**. Over the ten fragments of `FRAGMENTS.md`, the retired `PFLICHTEN` register
 (counted by the retired `zaehle-pflichten`, booked 2026-09) books `239 = 173 K + 66 L`: about a quarter
 of the obligations reach GabbroV.
 
@@ -51,7 +51,7 @@ of the obligations reach GabbroV.
 
 ## 2. The interface: the manifest
 
-`SPRACHE.md` §15 describes the obligation manifest the compiler emits per translation unit and
+`LANGUAGE.md` §15 describes the obligation manifest the compiler emits per translation unit and
 names its addressee as *"the programmer or an external tool"*.
 
 **GabbroV does not read the Gabbro program. It reads the manifest.** (This is the sentence that
@@ -126,7 +126,7 @@ invariant really rests here, that the block restores it, or that `requires I` / 
 are barred inside it. The statement this site needs — *the invariant does not hold between the
 two assignments* (`L34`) — cannot be said in the fragment of §7: `Body.lean`'s `exec` is big-step
 and has no intermediate state to name. The goal theorem's machine G is small-step and carries the
-order leg `folge` and the lock legs instead (`BEWEIS.md` B2; OFFEN O1-Rest).
+order leg `folge` and the lock legs instead (`PROOF.md` B2; OFFEN O1-Rest).
 
 ## 4. Three outcomes, never two
 
@@ -261,7 +261,7 @@ ever been stated by two provers.
 
 ## 9. Trust base
 
-GabbroV *adds* to the list of `BEWEIS.md` E1: (4) M1–M4 as carriers of the plumbing (without
+GabbroV *adds* to the list of `PROOF.md` E1: (4) M1–M4 as carriers of the plumbing (without
 them GabbroV is silently unsound), (5) the meaning of the obligation texts (small, reviewable,
 unprovable), (6) the translation Lean fragment → SMT (keep small; reject, do not approximate),
 (7) the Lean kernel, (8) the assumption set. **Z3 is not on it** (§6, route C). Written down
@@ -285,7 +285,7 @@ text so that a wrong Rust print is a failed per-unit check and not a wrong theor
 
 | ID | Condition | Consequence |
 |---|---|---|
-| G1 | a noteworthy part of the L obligations is not sayable | **withdrawn, 2026-09-03**: "noteworthy" is no threshold, so the row can be evaluated in neither direction, and a threshold chosen after 56 of 66 would be chosen to clear it. Replaced by `E1` and `E2` of the mandate, which were written down before the runs they judge: E1 compares two line counts and admits no exception; E2 counts decided against undecided against a **named** exception list (`dokumente/PRUEFER.md`) |
+| G1 | a noteworthy part of the L obligations is not sayable | **withdrawn, 2026-09-03**: "noteworthy" is no threshold, so the row can be evaluated in neither direction, and a threshold chosen after 56 of 66 would be chosen to clear it. Replaced by `E1` and `E2` of the mandate, which were written down before the runs they judge: E1 compares two line counts and admits no exception; E2 counts decided against undecided against a **named** exception list (`dokumente/CHECKER.md`) |
 | G2 | certificate coverage stays low | the choice between Z3 in the base and weak automation |
 | G3 | the share of *undecided* stays high | not a push-button tool but a pre-sorter |
 | G4 | a passed obligation turns out false | soundness broken: texts, translation or M1–M4 |
@@ -556,7 +556,7 @@ bodies of slot writes, direct calls, a trailing return. Everything else is an ex
 `.error` (no new diagnostic codes).
 
 **Coverage of the Lean parser, measured 2026-10-17** (`Parser/Cover/Census.lean`, matrix in
-`PLAN-UEBERSETZUNGSVALIDIERUNG.md` section 9b): the parser now lives in `Parser/{Lex,Expr,Stmt,Item,Round,Elab,Cover}`;
+`PLAN-TRANSLATION-VALIDATION.md` section 9b): the parser now lives in `Parser/{Lex,Expr,Stmt,Item,Round,Elab,Cover}`;
 all 170 `beispiele/` files parse as a whole (116 before), 9 elaborate. New readers: current `syscall`
 grammar (`via`, `costs`, numbered `errors`, `stack`), `syscall V;`, `target`, lock `invariant`, `arena max/pb/blw`,
 `static aligned` and initialiser lists, nested const arrays, `string max N`, `entry fn(..)`, typed `let`,
@@ -633,7 +633,7 @@ is derived, not kept. It is the formal basis of the passes' sentence register an
 "has type" and not "is intersected with" — read literally it is sound but not always a narrowing;
 `E008` compares the *kind*, so `huelle_deckt` holds over kinds; **no text says a `retry` pass costs
 at least one operation**, so "ends through `bounded`" does not follow without it (a decision for
-`SPRACHE.md`/`SYNTAX.md`); "every program terminates" is false (`forever`), and there are five
+`LANGUAGE.md`/`SYNTAX.md`); "every program terminates" is false (`forever`), and there are five
 loop forms with or without a measure; recursion is a second source of non-termination
 (`K008`/`K009` with `decreases`, necessary and not sufficient). **Explicitly not proved:** the seam
 to the Rust, the instruction-level descent, the emitter (`K1`: `Ĉ(constant expression) = 0` is a

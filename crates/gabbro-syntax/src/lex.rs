@@ -197,8 +197,8 @@ fn ist_folgezeichen(c: char) -> bool {
 ///
 /// The gate runs BEFORE the main loop and only ADDS refusals (`P060`-`P063`); it never
 /// removes one. Measured over the corpus on 2026-09-14: 988 `.gab` files (3796 distinct
-/// code identifiers, all ASCII) plus every `gabbro` block of `FRAGMENTE.md`, `SYNTAX.md`,
-/// `SPRACHE.md`, `README.md`, `dokumente/GLEITKOMMA.md` and `TUTORIAL.md` -- zero new
+/// code identifiers, all ASCII) plus every `gabbro` block of `FRAGMENTS.md`, `SYNTAX.md`,
+/// `LANGUAGE.md`, `README.md`, `dokumente/FLOATING-POINT.md` and `TUTORIAL.md` -- zero new
 /// refusals. The allowed identifier set stays what it was (ASCII letters, digits, `_`,
 /// plus `ä ö ü ß Ä Ö Ü`): the corpus uses no non-ASCII identifier in code position at
 /// all, so ASCII-only would also pass, but dropping the documented umlauts would narrow
