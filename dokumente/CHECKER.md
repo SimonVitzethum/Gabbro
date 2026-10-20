@@ -1973,6 +1973,55 @@ program violating one has no term; they need the G-to-source printer (Track P) a
 So the generated set is far from `M` in every class: 455 of 459 coarse cells, every local refusal cell, and
 (for class (i)) all but a vanishing fraction of the root cells are missing.
 
+### 16.6a The exact cells of the ten components (measured 2026-10-20)
+
+The `atome` table of 16.6 counts the leaf atoms of every nesting as one flat tuple, so its 4 540 is an upper bound that
+no program set needs. Read exactly, each component is a conjunction over tuples of a test on few atoms, with three
+DERIVED atoms (`getrennt`, `schreibGetrennt`, `geteilt`) that have cells of their own. The cells are computable
+(`Gen/Abdeckung/Zellen.lean`: `Zelle`, `zellen`, `Zelle.kern`; the kinds and their tests are listed in its header):
+
+| Component | kinds (tuple) | cells | bad |
+|---|---|---:|---:|
+| 0 fragment | (f, g) | 8 | 5 (4 of them need `gOk` false, which `gOk` with both tests true never gives) |
+| 1 closedness | (w, f, g) | 8 | 1 (unrealizable: `reach` is closed) |
+| 2 footprint | (f, c), registers (f, c), derived: getrennt (c, w1, w2), geteilt (c) | 16 + 4 + 8 + 8 | 1 + 1 |
+| 3 lock ranks | (f, L) | 4 | 1 |
+| 4 lock sites | (L, c) | 4 | 1 |
+| 5 roots | (w) | 4 | 3 |
+| 6 pool | (w), (w, f, c) | 8 + 16 | 3 + 1 |
+| 7 race | (c), derived: schreibGetrennt (c, w1, w2) | 4 + 8 | 1 |
+| 8 answers | (f, x) | 8 | 1 |
+| 9 masks | (w, f, L), w over ALL functions | 16 | 1 |
+| **all** | | **124** | **20** |
+
+So the global-pattern part of the test set is of the order of 100 cells and at most 20 single-fault programs, not 4 540.
+The 281 LOCAL refusal cells (one per premise and child position, 16.6 (ii)) are a different class and unchanged: they
+need source mutants.
+
+**The only oracle is the Lean model's own Bool** (`komp c` = component `c` of `AkzeptiertX`); the Rust checker is not
+consulted anywhere, since it may be wrong and is the subject of the differential harness (12.6). The transcription is
+checked against `komp` by evaluation (`zellenStimmen`; `zellenAbweichung` names the disagreeing component). The first
+version of the cells disagreed with `komp` on 96 programs (components 1 and 9 range over ALL functions, not the starts);
+the self-check found it. It says nothing about forms no checked program contains.
+
+**The generator carries the proof in its output.** The cells are measured on the programs of `Spez.erzeuge`
+(`Gen/Abdeckung/Waehlen.lean`). It emits a program only together with the proof of its class, decided inside the generator
+by the Lean model's Bool: a `Gutes` holds the program, the lock family, the starts and the proof `AkzeptiertX … = true`
+(`Gutes.akzeptiert`); a `Schlechtes c` holds the proof that component `c` refuses it and the other nine accept it
+(`Schlechtes.istNurAn : NurAn c …`). The value cannot be built without the proof, so validity is established at generation
+and nothing is checked afterwards. (The decision is evaluated by compiled Lean code, as in any native run; the type
+guarantees that a program without it is never emitted.) The lock family `S` and the starts `ws` are parameters of the
+generator (`Spez.parameter`), as in `genGueltig`/`genBad`; the bodies of a member are deduplicated by their cell-relevant
+summary (`Rumpf.schluessel`).
+
+**Reached** (native driver `gen-zellen`, `Gen/Abdeckung/ZellenLauf.lean`; the sixteen members of `familie` plus those of
+`Gen/Familie/ZellFamilie.lean`), counted STRICTLY: a good cell needs a valid program that has it, a bad cell a program
+refused by exactly its component. 11 832 valid and 20 772 single-fault programs in 98 s under a 6 GB cap: **75 of 104 good
+cells and 9 of 20 bad cells**, 0 transcription errors. Not witnessed: the cells that need an indirect call (0.0 110/101),
+register reads (2.1), footprints with a contract carrier (2.0, 2.3), a pool with reasons or a held lock at a start (6.0),
+a few of 4.0, 7 and 8; `0.0` with `gOk` false and `1.0 110` are unrealizable. The bad cells of components 0, 2.1 and 6.0
+still need members that the family does not have.
+
 ### 16.7 What is proved in Lean, and what is derived on paper
 
 | Lean (kernel-checked, standard axioms) | Paper (this section) |

@@ -508,10 +508,15 @@ import Grammatik.Gen.Erzeuger.Gueltig
 import Grammatik.Gen.Erzeuger.Probe
 import Grammatik.Gen.Familie.Spez
 import Grammatik.Gen.Familie.Familie
+import Grammatik.Gen.Familie.ZellFamilie
 import Grammatik.Gen.Abdeckung.Mitglieder
 import Grammatik.Gen.Abdeckung.Erklaerung
 import Grammatik.Gen.Abdeckung.Zustaende
 import Grammatik.Gen.Abdeckung.Messung
+import Grammatik.Gen.Abdeckung.Zellen
+import Grammatik.Gen.Abdeckung.Waehlen
+import Grammatik.Gen.Druck.Druck
+import Grammatik.Gen.Druck.Einheit
 import Grammatik.Adaequanz.Baum
 import Grammatik.Adaequanz.Schichten
 import Grammatik.Adaequanz.Hinlaenglich

@@ -25,3 +25,8 @@ name = "Grammatik"
 [[lean_exe]]
 name = "gen-abdeckung"
 root = "Grammatik.Gen.Abdeckung.Lauf"
+
+# The cell driver (`Gen/Abdeckung/ZellenLauf.lean`): which cells of the ten checker components the generated programs reach.
+[[lean_exe]]
+name = "gen-zellen"
+root = "Grammatik.Gen.Abdeckung.ZellenLauf"

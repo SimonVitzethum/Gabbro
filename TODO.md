@@ -77,7 +77,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
    program-neutral alone admits NO finite test set (`kein_endlicher_test`). With a state bound the W-method set is sufficient and
    astronomically large for Gabbro. For the class "verdict = conjunction of local premises and whole-program patterns" the answer is exact
    and small: one single-fault program per isolable refusal cell plus valid programs covering the accepted cells (124 premise cells, 146
-   child-position cells, at most 4 540 pattern cells, independent of program size). Open: the local refusal cells need source mutants,
+   child-position cells, at most 4 540 pattern cells, independent of program size). EXACT CELLS (2026-10-20, `CHECKER.md` §16.6a): the global patterns are 124 cells with 20 bad, not 4 540; `gen-zellen` witnesses 75 of 104 good and 9 of 20 bad cells strictly (valid program / single-fault program), from a generator that emits each program with its proof (`Gutes`, `Schlechtes`), against the Lean model only (the Rust checker is never an oracle). Open: the local refusal cells need source mutants,
    so the G-to-source printer of Track P; the coarse accepted cells (4 of 459 covered); the metamorphic tests for hypotheses H1-H8.
 9. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
    producer; Lean checks the binary against the certificate through a small UB-free core K, bridge steps justified by Gabbro facts, and a
