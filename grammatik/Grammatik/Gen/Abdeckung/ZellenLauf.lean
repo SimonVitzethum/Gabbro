@@ -25,6 +25,14 @@ namespace Gabbro.Grammatik.Gen
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
+/-- A cell as text. -/
+def Zelle.text (z : Zelle) : String :=
+  s!"{z.komp}.{z.art}" ++ " " ++ String.intercalate "" (z.atome.map fun a => if a then "1" else "0")
+
+/-- The set of cells as a key: the sorted, distinct texts. -/
+def zellSchluessel (zs : List Zelle) : String :=
+  String.intercalate ";" ((dedupStr (zs.map Zelle.text)))
+
 /-- What the sweep has seen. A witness is (member, bodies bound, size). -/
 structure Befund where
   /-- good cell -> a VALID program (`Gutes`) that has it -/
@@ -40,6 +48,11 @@ structure Befund where
   quellen : Array (String × String × String) := #[]
   /-- why a program could not be printed, with the number of programs -/
   grund : Std.HashMap String Nat := {}
+  /-- the valid programs by their SET of cells (one per distinct set): cells, the printed source or the reason it
+      could not be printed, member -/
+  kand : Std.HashMap String (String × List Zelle × Except String String × Nat) := {}
+  /-- bad cells seen only in programs that have another bad cell (never alone), with the number of programs -/
+  maskiert : Std.HashMap Zelle Nat := {}
   gutProgramme : Nat := 0
   schlechtProgramme : Nat := 0
   falsch : Nat := 0
@@ -80,15 +93,25 @@ def Befund.nimm (b : Befund) (i nb k : Nat) (z : Spez) (e : Erzeugt z) : Befund 
     let b := (dedupStr (hautM h)).foldl (fun b m => { b with formen := b.formen.insert m (b.formen.getD m 0 + 1) }) b
     let b := zs.foldl (fun b x => if b.gut.contains x then b else { b with gut := b.gut.insert x (i, nb, k) })
       { b with gutProgramme := b.gutProgramme + 1 }
-    let neu := zs.filter fun x => !b.gutGedruckt.contains x
-    if neu.isEmpty then b else
-      b.druck z h ws s!"gut_{i}_{k}_{b.quellen.size}.gab" "valid" neu true
+    let key := zellSchluessel zs
+    if b.kand.contains key then b else
+      let stamm := s!"M{b.kand.size}"
+      let r := z.quelltext h ws stamm
+      let b := match r with
+        | .error m => { b with grund := b.grund.insert m (b.grund.getD m 0 + 1) }
+        | .ok _ => b
+      { b with kand := b.kand.insert key (stamm, zs, r, i) }
   | some c =>
+    -- a bad cell is ISOLATED in a program when it is the only bad cell of the whole program (`schlecht_noetig`)
+    let schlechte := (dedupStr (zs.filter (·.schlecht) |>.map Zelle.text)).length
+    let b := { b with schlechtProgramme := b.schlechtProgramme + 1 }
     let b := zs.foldl (fun b x =>
-      if x.schlecht && x.komp == c.val && !b.schlecht.contains x then
-        { b with schlecht := b.schlecht.insert x (i, nb, k) } else b)
-      { b with schlechtProgramme := b.schlechtProgramme + 1 }
-    let neu := zs.filter fun x => x.schlecht && x.komp == c.val && !b.schlGedruckt.contains x
+      if x.schlecht && x.komp == c.val then
+        if schlechte == 1 then
+          if b.schlecht.contains x then b else { b with schlecht := b.schlecht.insert x (i, nb, k) }
+        else { b with maskiert := b.maskiert.insert x (b.maskiert.getD x 0 + 1) }
+      else b) b
+    let neu := if schlechte == 1 then zs.filter fun x => x.schlecht && x.komp == c.val && !b.schlGedruckt.contains x else []
     if neu.isEmpty then b else
       b.druck z h ws s!"schlecht{c.val}_{i}_{k}_{b.quellen.size}.gab" s!"refused-only-by-{c.val}" neu false
 
@@ -104,9 +127,51 @@ def Spez.sammle (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Ru
       | some e => b.nimm i nb k z e
       | none => b) b) b
 
-/-- A cell as text. -/
-def Zelle.text (z : Zelle) : String :=
-  s!"{z.komp}.{z.art}" ++ " " ++ String.intercalate "" (z.atome.map fun a => if a then "1" else "0")
+
+/-- The cover of the good cells by printable valid programs (Stage 1 of `dokumente/PLAN-TEST-SET.md`). -/
+structure Ueberdeckung where
+  /-- the good cells that occur in some valid program -/
+  erreichbar : List Zelle
+  /-- the good cells that occur in some PRINTABLE valid program -/
+  druckbar : List Zelle
+  /-- the chosen programs: stem, cells, source -/
+  gewaehlt : List (String × List Zelle × String)
+  /-- the size of a set of good cells that never occur together in one valid program: a lower bound for ANY cover by
+      valid programs (`deckung_schranke`) -/
+  schranke : Nat
+
+/-- A greedy cover of the printable-reachable good cells, then every program whose cells the others cover is dropped;
+    and the lower bound from a greedy set of cells that never co-occur. -/
+def ueberdeckung (kand : List (String × List Zelle × Except String String × Nat)) : Ueberdeckung := Id.run do
+  let gut := zellAlle.filter fun x => !x.schlecht
+  let alle := kand.map (·.2.1)
+  let erreichbar := gut.filter fun x => alle.any (·.contains x)
+  let druck : Array (String × List Zelle × String) := (kand.filterMap fun (st, zs, r, _) =>
+    match r with | .ok t => some (st, zs, t) | .error _ => none).toArray
+  let druckbar := gut.filter fun x => druck.any (·.2.1.contains x)
+  -- greedy
+  let mut unbed := druckbar
+  let mut gew : List Nat := []
+  for _ in List.range (druck.size + 1) do
+    if unbed.isEmpty then break
+    let mut best : Option (Nat × Nat) := none
+    for i in List.range druck.size do
+      let gewinn := (unbed.filter fun x => (druck[i]!.2.1).contains x).length
+      if gewinn > 0 && (best.map (·.2) |>.getD 0) < gewinn then best := some (i, gewinn)
+    match best with
+    | none => break
+    | some (i, _) =>
+      gew := gew ++ [i]
+      unbed := unbed.filter fun x => !(druck[i]!.2.1).contains x
+  -- drop the programs the others cover
+  for i in gew.reverse do
+    let rest := gew.filter (· != i)
+    if druckbar.all (fun x => rest.any fun j => (druck[j]!.2.1).contains x) then gew := rest
+  -- lower bound: cells that never occur together
+  let mut a : List Zelle := []
+  for x in erreichbar do
+    if a.all (fun y => !alle.any (fun zs => zs.contains x && zs.contains y)) then a := a ++ [x]
+  return { erreichbar, druckbar, gewaehlt := gew.map (fun i => druck[i]!), schranke := a.length }
 
 end Gabbro.Grammatik.Gen
 
@@ -152,7 +217,12 @@ def main (args : List String) : IO UInt32 := do
     for x in gutAlle.filter (fun x => !b.gut.contains x) do IO.println s!"{x.text}\tG"
     for x in schAlle.filter (fun x => !b.schlecht.contains x) do IO.println s!"{x.text}\tB"
     IO.println s!"valid programs: {b.gutProgramme}; single-fault programs: {b.schlechtProgramme}; transcription errors: {b.falsch}"
-    IO.println s!"PRINTED: {b.quellen.size} programs; good cells with a printed valid program {(gutAlle.filter fun x => b.gutGedruckt.contains x).length} of {gutAlle.length}; bad cells with a printed single-fault program {(schAlle.filter fun x => b.schlGedruckt.contains x).length} of {schAlle.length}"
+    let u := ueberdeckung (b.kand.toList.map (·.2))
+    let gutAlle' := zellAlle.filter fun x => !x.schlecht
+    IO.println s!"COVER (valid programs): good cells reachable by a valid program {u.erreichbar.length} of {gutAlle'.length}; by a printable one {u.druckbar.length}; chosen cover {u.gewaehlt.length} programs; lower bound {u.schranke} (cells that never occur together); distinct cell sets seen {b.kand.size}"
+    let nurMask := schAlle.filter fun x => !b.schlecht.contains x && b.maskiert.contains x
+    IO.println s!"ISOLATED bad cells (the only bad cell of a program refused by exactly its component): {(schAlle.filter fun x => b.schlecht.contains x).length} of {schAlle.length}; seen only masked by another bad cell: {nurMask.length} ({String.intercalate ", " (nurMask.map Zelle.text)})"
+    IO.println s!"PRINTED single-fault programs: {b.quellen.size}; bad cells with a printed single-fault program {(schAlle.filter fun x => b.schlGedruckt.contains x).length} of {schAlle.length}"
     IO.println "-- not printable (reason, programs)"
     for p in b.grund.toList.toArray.qsort (fun x y => x.2 > y.2) do IO.println s!"{p.1}\t{p.2}"
     IO.println "-- forms (register members) used by the valid programs: member, programs"
@@ -164,11 +234,18 @@ def main (args : List String) : IO UInt32 := do
     | some dir =>
       IO.FS.createDirAll dir
       let mut index := "file\tclass\n"
+      let mut manifest := "file\tclass\tcells\n"
+      for (stamm, zs, text) in u.gewaehlt do
+        IO.FS.writeFile (dir ++ "/" ++ stamm ++ ".gab") text
+        index := index ++ s!"{stamm}.gab\tvalid\n"
+        manifest := manifest ++ s!"{stamm}.gab\tvalid\t{String.intercalate ";" (dedupStr (zs.map Zelle.text))}\n"
       for (datei, klasse, text) in b.quellen do
         IO.FS.writeFile (dir ++ "/" ++ datei) text
         index := index ++ s!"{datei}\t{klasse}\n"
+        manifest := manifest ++ s!"{datei}\t{klasse}\t\n"
       IO.FS.writeFile (dir ++ "/index.tsv") index
-      IO.println s!"sources written: {b.quellen.size} files in {dir}"
+      IO.FS.writeFile (dir ++ "/manifest.tsv") manifest
+      IO.println s!"sources written: {u.gewaehlt.length + b.quellen.size} files in {dir}"
     | none => pure ()
     return (if b.falsch == 0 then 0 else 1)
   | _ =>

@@ -2043,6 +2043,27 @@ computed, not written), a mark, a register. Printed so far: expressions (14 of 4
 (6 of 18), end blocks (5 of 10). Not yet printed: the reason channel (`retWhy`, `bindCallElse`, `onWhy`), loops, options and
 tagged values, `narrow`/`check`, floats, pointers, arenas, registers, invariants, parameters other than ranges and `bool`.
 
+**Stages 1 and 2 of `PLAN-TEST-SET.md` (2026-10-20).** The driver now records every valid program by its SET of cells and
+computes a cover; a bad cell counts only when it is the only bad cell of a program refused by exactly its component
+(`schlecht_noetig`). Measured with members 0 to 20 (bodies deduplicated, 3 164 valid and 11 712 single-fault programs, 462
+distinct cell sets):
+
+| | Count |
+|---|---:|
+| good cells reachable by a valid program | 75 of 104 |
+| ... by a PRINTABLE valid program | 65 |
+| chosen cover (greedy, then redundant programs dropped) | 9 programs |
+| lower bound (good cells that never occur together) | 1 (weak: almost all cells co-occur) |
+| bad cells isolated in a program refused by exactly their component | 9 of 20 |
+| Rust accepts of the 9 cover programs | 8 (the refusal is `H013`, an entry writing an unshared place) |
+
+The 11 bad cells never isolated, with the reason as a CLAIM that still needs its Lean proof: `6.0 110/101/111` never
+occur alone, because a start that holds a lock or has reasons is also a bad cell of component 5 (`wurzelnB`); `0.0 000/010/
+001/011` need `gOk` false, which `gOk` with both of its tests true seems never to give; `1.0 110` needs a call graph that is
+not closed, but `reach` is the closure; `0.0 111` needs an indirect call and a contract carrier (the generator emits true
+contracts only); `2.0 0000` and `2.1 00` need a body that reads a guarded place without the lock and a register read, which
+the bodies of the bounds do not reach.
+
 ### 16.7 What is proved in Lean, and what is derived on paper
 
 | Lean (kernel-checked, standard axioms) | Paper (this section) |
