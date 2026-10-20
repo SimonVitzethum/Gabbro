@@ -801,6 +801,97 @@ fixtures with a non-empty `traeger`, the exporter lines 5541/5594, the header pl
 real file was edited, the real `Arena` files were not recompiled against `DeklBasis`, O5's completeness, O10's scale, the literal fallout of
 `SperrInv`/`StartPflicht`, all timings, the `autoParam` default, and whether T3's reading of `invarianten_gehalten` holds in the Rust U003.
 
+#### H. Implementation checkpoint (2026-10-19, PAUSED at Simon's request)
+
+**Status:** implementation is paused. No build or contributor is running. Nothing from this task has been merged or pushed.
+The main checkout remains at `490af39abc21319718539e85b568bfe3caf9eabb` (Lean/Mathlib 4.35.0), apart from this checkpoint document.
+The combined M8 claim change is **not applied**. Keep the current NOT CLAIMED text until the actual integration and both verdicts succeed.
+This dated checkpoint supersedes G's planning-time verification status; it does not change the decisions or the scope of the plan.
+
+**Location and recovery.** All paths below are relative to the repository root. The active, detached integration worktree is
+`.claude/muse-arbeit/kratz/spec-arena-recovery/work/`. It contains uncommitted M2/M3 code, including the single Rust exporter field rename.
+Do not remove this worktree or its recovery directory while the task is paused. Earlier scratch worktrees were externally deleted during a
+pending tool call; their sources were recovered, and the main checkout's independent 4.35 upgrade was preserved.
+
+The recovery directory contains:
+
+| Artifact | Meaning |
+| --- | --- |
+| `latest-source.zip`, `latest-source-manifest.json`, `checkpoint.py` | Current M2/M3 changed/new sources, 151 files at pause; independent of the worktree's survival |
+| `pause-snapshot.zip`, `pause-snapshot-manifest.json` | Pause snapshot of the current source checkpoint, contributor sources/patches, integration preparations and evidence logs |
+| `m3-integration-green-435.log` | Successful 820-job M3 target closure, including the real top goal and its axiom print |
+| `m3-full-address-limit-abort.log` | Complete failed full-build attempt; not a green result |
+| `entry-source/M8-entry-on-M3.patch` | Unelaborated entry/certificate/goal migration, 30 source files; applies against the current M3 worktree (`git apply --check` passed before pause) |
+| `entry-source/M8-fixtures-after-entry.patch` | Unelaborated migration of 26 fixture/internal-corollary files; apply after the entry patch |
+| `entry-source/O25-goal-witness-after-fixtures.patch` | Unelaborated concrete arena goal witness; apply after both M8 patches |
+| `entry-source/M8-STATUS.md`, `M8-FIXTURE-STATUS.md`, `O25-STATUS.md`, `O25-API-AUDIT.md` | Exact scope, known limitations, constructor audit and remaining elaboration risks |
+| `okb-source/`, `okb-source/SHA256-CURRENT.json`, `okb-source/FIRST-VALIDATION-TARGETS.md` | 29 contributor Lean sources and their inventory; payload source remains unelaborated on 4.35 |
+| `payload-source-transfer.txt` | The 21 active payload source paths selected for future transfer; excludes the contributor's baseline copies and arena files |
+| `payload-interface/payload-low-on-M8.patch`, `payload-race-core.patch`, `STATUS.txt` | Unapplied, unelaborated dependency extraction and fixed-carrier race-proof preparation |
+| `RECOVERY.md` | Detailed chronological recovery/build record |
+
+**What is actually checked.** The historical M1 full spike on Lean 4.33.1 was green. This is historical evidence, not a 4.35 full-build result.
+The recovered M2 target run on 4.35 was green (205 jobs). The final M3 target run on 4.35 was green (820 jobs):
+
+- `Deklaration extends DeklBasis`, arena metadata in the declaration, computed sum-carrier footprints, sum-carrier `schuldet`/U003 and widened payloads.
+- The executable `Dekl.okB` and its downstream `Dekl.okB_iff`, with genuine valid/defective structure witnesses.
+- Actual `invPruef`/`invOrte` dispatch in `rufAt`; a recognized head-only mutation passes, while a broken head is refused despite `invariante := tru`.
+- `Dekl.okB_mitRuhe` and `Dekl.ok_mitRuhe`; actual footprint locality/permissions and the migrated SC/atomic invariant consumers.
+- `gabbro_ziel` and its SC/GX/link corollaries compile on **exactly** `propext`, `Classical.choice`, `Quot.sound`.
+  This is the M3 statement, **before** the new entry-aware duties, start clause and payload leg.
+
+**The full library is not green.** The first complete run reached 1629 jobs and failed in seven modules.
+Six failures were thread-creation aborts (exit 134) under the author's unsuitable 12 GiB *virtual-address-space* limit, with physical memory
+still available: `UebersetzeProben`, `UebersetzeProben2`, `UebersetzeProben3` in `Parser/Elab/Proben/Fruehe`,
+`ArenaErkZeugeSchleife`, `ArenaSperreAbdeckung`, and `Code/Refine/Witness`.
+The seventh was a deterministic 1,000,000-heartbeat timeout at `ArenaErkZeugeBaum.lean:116`.
+These failures need a serial rerun with a physical-memory cgroup limit, and the tree witness needs a measured local proof/budget repair.
+No proof guarantee may be weakened. The full run had already ended before the subsequent stop request executed; no process was killed.
+The guard/negative-U003 witness did compile in this full attempt. The four guardians, final paired reviews and final publication have not run.
+The matching 4.35 `programmlogik/.lake` cache and manifest were copied into the worktree for future checker/GabbroV tests.
+
+**Proof obligations still outstanding.** “Draft” below means source exists but Lean has not accepted it; a textual import/API audit is not a proof.
+“Missing” means the required result is not yet supplied by the draft.
+
+| Plan obligation | Required theorem/result | Exact remaining work |
+| --- | --- | --- |
+| O9: automatic arena preservation | `invGutS_aus_arena`, `invGutGrund_aus_arena`, `invGutSA_aus_arena`, `invGutGrundA_aus_arena` (`ArenaKoerperZert`) | **Draft.** Elaborate all four variants. Their actual body duty takes the checked arena-entry fact; discharge the arena branch from `ErkE`, retaining the ordinary-expression duty. |
+| O10: actual frame entry | `ausgewaehlte_schluessel_sind_start`, its `GA` variant, `ausgewaehlter_rahmen_startSpeicher*`; `arenaEintritt_rahmen*`, `arenaEintrittLauf_zertifiziert`, `arenaEintrittLaufX_zertifiziert` | **Draft for the writer-root fallback only.** Derive entry at the actual saved `s0` from source certificates and initial consistency, including suspended frames; never add it as a semantic user assumption. The general joint induction supporting two writer calls in one run is **missing**. |
+| O10/O14/O15 boundary | General `arena_eintritt` together with return/ground preservation; call/section recognizer soundness | **Missing beyond fallback.** Current `ErkE` leaf certificates imply there are no calls to owing writers, since effects are transitive. Two fresh runtimes are not a witness for two calls in one runtime. Caller/section constructors and the joint induction are still needed for that broader claim. |
+| O11/O12 and idle root | `arenaStart_mitRuhe`, `arenaEintrittLauf_mitRuhe`, `arenaEintrittLaufX_mitRuhe`; start-duty propagation; `invRuheG_aus`/atomic counterpart with the new start clause | **Draft.** Add `StartPflicht.arena` for declared arena names, propagate it through runtime/idle/link bridges, and reprove both invariant legs with the conditional ordinary-invariant start hypothesis. The corresponding M3 lemmas are green only with the old hypotheses. |
+| O16/O17 certificate integration | `ArenaZeuge`/`ArenaZeugeF`, their body-discharge and owned-function/link packaging | **Draft, limited scope.** Validate all SC/atomic user-duty and fixture changes. Shared arenas remain lock invariants; no separate manual D2 meaning may remain. The draft also restricts shared-havoc reads in owing arena writers (`ArenaHavocFrei`); name this boundary explicitly. |
+| O19/O20 decidable payload rule | `PubDirekt.pruef_iff`, `pubZeugnisB_iff`, `pubB_iff`, `pubB_ohne_nutzlast`; `pubB_aus_akzeptiert` | **Draft.** Compile the actual finite source rule and all positive/negative witnesses. Check initial flag non-confirmation against the real `sp0`; it cannot be inferred from `P/fs/ws` alone. Preserve all formerly accepted programs and order assignments where no racy payload exists. |
+| O20 source-to-step soundness | `blatt_phase`, `blatt_phase_schreib`, `blatt_phasenwechsel`, `blatt_phasenwechsel_schreib`; `kopfOK_schritt`, `kopfOK_schrittW`; `Regel.rest_anfang`, `Regel.rest_erreichbarW` | **Draft.** Elaborate typed residual annotations and prove that actual step events **and changed memory** follow the source publication phase. `SchreibG` includes both. These lemmas are not a global no-later-write theorem yet. |
+| O21 global source-to-history preservation | A new reachability induction combining `PhaseW`, actual source phase bits, publication history, unique writer and saved `FlagLesungW` | **Missing; the principal payload gap.** Derive the unique real publication, no later payload/flag write, and an actual matching publish/read `Uebergabe` for every confirmed reader access. Do not assume these facts in the user's duty. |
+| O21 payload visibility/weak bridge | `wert_einzelschreiber`, `payload_sicht_uebergabe`, `payload_praesentiert`, `schritt_sichtInvX_payload`; then `PubRegel -> PubSicht` over every actual W run | Semantic helper sources were historically green on 4.33.1 and are **unvalidated on 4.35**. The final source-rule-to-`PubSicht` theorem is **missing**. Instantiate the semantic helpers from the global history induction, not from external hand-off premises. |
+| O22/O23 replay and reader rely | Monotone replay over `GeteiltA ∪ PubLesbar`, real checked footprint/race exemptions, order-filtered `SchwachX` and new `ZielX.pubSicht` | **Missing integration.** Keep the actual machine havoc set atomic-only (`GeteiltV`); derive equality of presented/current plain payload from the W hand-off proof. Broaden only the user/replay rely. P1 may assume every payload value; P2's `S.pub` publish hook and constrained reader rely remain unproved. |
+| O24 final goal preservation | `gabbro_ziel`, `gabbro_ziel_sc`, `gabbro_ziel_sc_aus`, `gabbro_ziel_gx`, linked variants after the M8 edits | **Draft for arena; payload integration missing.** Reprove all conclusions, old-unit embeddings, start/runtime/owned-function bridges and exactly-three-axiom checks after the actual combined statement changes. Existing M3 green does not discharge this. |
+| O25 applied arena witness | `ArenaGoalZeuge.geprueft`, `nutzer`, `ausfuehrung`, `arena_im_zielsatz` | **Draft.** One real accepted writer start, idle other slots, seven concrete G steps, finished writer/`InvZu`, and `gabbro_ziel_gx.invRuhe -> KL.Ok` in changed memory. Kernel Bool checks and dependent step/memory equalities are not elaborated. |
+| O25 applied payload witness | A concrete accepted publisher/reader unit and actual two-thread W execution whose goal has nonempty `pubSicht`, plus rejected defective programs | **Missing at goal level.** Source-rule fixtures alone do not replace this witness. Require rejection of write-after-publish, read-before-confirmation, wrong initial flag, multiple writers/sites and relaxed racy-flag order. |
+
+**Named fallback boundaries, not completed claims.** The arena draft covers recognized writer roots, not calls to writers; an ordinary call
+boundary cannot be manufactured by restarting the same live slot. The payload draft currently checks a direct, call/loop/lock-free one-shot
+fragment and overrestricts unrelated flag operations. The planned repair to enumerate all publication candidates and preserve unrelated
+`publish`/`awaits` operations has **not** been implemented. The reader's P1 arbitrary-value rely is only the plan's authorized intermediate
+stage; no flag-invariant P2 claim is proved. O18 (`ErkB`/`erkB_sound`, moving certificates into the checker) is M9, after a reviewed M8 fallback,
+not a completed part of the current work.
+
+**Resume order (do not execute while paused):**
+
+1. Recover from the worktree/source checkpoint, preserve 4.35, and finish the full M2/M3 library check with physical memory limits.
+   Repair the explicit tree-witness timeout; retain the current axiom print. Save a green foundation checkpoint before claim changes.
+2. Transfer only the selected payload sources, widen the direct fixture's `nutzlast` to `[.inr .zaehler]`, and obtain actual Lean feedback.
+   First targets: `PayloadSicht`, `PubDirektZeuge`, `PubDirektRestLauf`, `PubRegelZeuge`, `PubEinbettung`, `PubOrdnung`
+   in their documented `Speichermodell.Payload`/`Zielsatz.Payload` namespaces. Do not overwrite the parent-fixed arena files.
+3. Apply the entry, fixture and O25 patches in that order, preserving the parent's latest M3 fixes. Compile the new arena duties/providers,
+   then both goals and the concrete applied witness. The parent corrected O25's conditional start argument to `(fun _ => hstart)` in both
+   its source and patch; the earlier contributor ZIP predates that correction.
+4. Close the global payload history induction and actual applied payload goal witness. Apply/reconcile the prepared low-interface extraction
+   (to avoid `Spec` import cycles) and race-core refactor, then integrate the actual combined M8 statement and its embeddings.
+5. Only after proofs pass: rewrite the header/NOT CLAIMED scope honestly, update theorem-map/status documents, obtain independent Muse and Opus
+   verdicts on the exact candidate, run all four guardians, commit through `./commit.sh`, and publish checked master. No code commit or push
+   has yet been made for this task.
+
 ### 8a.4 The interrupt-mask state of machine G (O19 rest; Lean 2026-10-18; the `Spec.lean` diff is a PROPOSAL, nothing in `Zielsatz/Kern/` changed)
 
 **Decision (Simon, 2026-10-18):** the strongest variant. Machine G gets a per-core interrupt-mask state, `KernHaltE` is derived from the model
