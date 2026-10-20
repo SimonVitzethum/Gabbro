@@ -17,6 +17,8 @@ private def bs (x : Zelle) : List String := x.atome.map toString
 def unmoeglichGut (x : Zelle) : Option String :=
   match x.komp, x.art, x.atome with
   | 4, 0, [false, true] => some "Or.inr (nie_gut u_4_01)"
+  | 2, 0, [a, b, true, true] => some s!"Or.inr (nie_gut (u_2_0_11 {a} {b}))"
+  | 2, 0, [true, b, false, d] => some s!"Or.inr (nie_gut (u_2_0_sig {b} {d}))"
   | 8, 0, [a, true, c] => some s!"Or.inr (nie_gut (u_8_ax {a} {c}))"
   | 7, 1, [true, true, false] => some "Or.inr (nie_gut u_7_1_110)"
   | 6, 0, [m, h, g] => if h || g then some s!"Or.inr (nie_gueltig fun e hv => ug_6_0 {m} {h} {g} rfl e hv)" else none
@@ -28,6 +30,7 @@ def unmoeglichSchlecht (x : Zelle) : Option String :=
   | 0, 0, [false, b, c] => some s!"u_0_ohne {b} {c} e"
   | 1, 0, [true, true, false] => some "u_1_0_110 e"
   | 4, 0, [true, false] => some "u_4_10 e"
+  | 3, 0, [true, false] => some "u_3_0_10 e"
   | 8, 0, [a, true, c] => some s!"u_8_ax {a} {c} e"
   | _, _, _ => none
 

@@ -167,7 +167,7 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (h0 : Haut z.deklaratio
 
 set_option maxRecDepth 200000 in
 /-- The number of members, once (the witness files read it instead of deciding it). -/
-theorem mitglieder_laenge : mitglieder.length = 384 := by
+theorem mitglieder_laenge : mitglieder.length = 386 := by
   simp only [mitglieder, List.length_append]
   decide
 

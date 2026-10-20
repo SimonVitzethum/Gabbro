@@ -63,4 +63,94 @@ theorem m_5_0 (hh gg : Bool) (e : Einsatz) (h : e.Hat ⟨5, 0, true, [hh, gg]⟩
   simp only [zellen, List.mem_append, List.mem_map]
   exact Or.inl ⟨w, hw, by rw [h1, h2]⟩
 
+/-- The least of a list of ranks, folded as `Rumpf.bodenAbgeleitet` folds it, is at most each of them. -/
+theorem min_fold_le (rs : List Int) : ∀ (a : Option Int), (∀ c, a = some c → ∀ r ∈ rs, True) →
+    ∀ r ∈ rs, ∃ c, rs.foldl (fun a r => match a with | none => some r | some m => some (if m < r then m else r)) a
+      = some c ∧ c ≤ r := by
+  induction rs with
+  | nil => intro _ _ r hr; cases hr
+  | cons x xs ih =>
+    intro a _ r hr
+    simp only [List.foldl_cons]
+    -- the fold only decreases: the value after `x` is at most `x`, and every later step keeps it at most
+    have mono : ∀ (b : Option Int) (ys : List Int) (c0 : Int), b = some c0 →
+        ∃ c, ys.foldl (fun a r => match a with | none => some r | some m => some (if m < r then m else r)) b
+          = some c ∧ c ≤ c0 := by
+      intro b ys
+      induction ys generalizing b with
+      | nil => intro c0 hb; exact ⟨c0, hb, le_refl _⟩
+      | cons y ys ihy =>
+        intro c0 hb
+        subst hb
+        simp only [List.foldl_cons]
+        obtain ⟨c, hc, hle⟩ := ihy (some (if c0 < y then c0 else y)) (if c0 < y then c0 else y) rfl
+        refine ⟨c, hc, ?_⟩
+        split at hle <;> omega
+    rcases List.mem_cons.1 hr with rfl | hr
+    · have : ∃ c0, (match a with | none => some r | some m => some (if m < r then m else r)) = some c0 ∧ c0 ≤ r := by
+        cases a with
+        | none => exact ⟨r, rfl, le_refl _⟩
+        | some m => exact ⟨_, rfl, by split <;> omega⟩
+      obtain ⟨c0, h0, hle0⟩ := this
+      obtain ⟨c, hc, hle⟩ := mono _ xs c0 h0
+      exact ⟨c, hc, by omega⟩
+    · exact ih _ (fun _ _ _ _ => trivial) r hr
+
+/-- `3.0 10`: a program of the source takes no lock below its floor -- the floor is the least rank the body takes. -/
+theorem u_3_0_10 (e : Einsatz) : ¬ e.Hat ⟨3, 0, true, [true, false]⟩ := by
+  letI := e.aufz
+  letI := e.zahlen
+  intro h
+  have h0 := mem_alleZellen_k (3 : Fin 10) rfl h
+  simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
+  obtain ⟨f, _, L, _, -, -, -, hn, hb, -⟩ := h0
+  have hfl := e.hBoden f
+  simp only [Rumpf.bodenAbgeleitet] at hfl
+  have hL : L ∈ (Aufz.lock (D := e.D)).filter fun L' =>
+      !(mE ⟨fun _ => true, fun _ => true, fun L'' => !(decide (L'' = L'))⟩ (e.P.rumpf f)) :=
+    List.mem_filter.2 ⟨Aufz.lock_mem L, hn⟩
+  obtain ⟨c, hc, hle⟩ := min_fold_le _ none (fun _ h _ _ => by cases h) (e.D.rang L) (List.mem_map_of_mem hL)
+  have hcb : some c = (e.D.signatur f).boden := hc.symm.trans hfl
+  have : (bodenM f).sperre L = true := by
+    simp only [bodenM, bodenF, ← hcb, decide_eq_true_eq]
+    exact hle
+  rw [this] at hb
+  cases hb
+
+/-- `2.0 a b 1 1`: a carrier a lock guards is not an unguarded shared atomic. -/
+theorem u_2_0_11 (a b : Bool) (e : Einsatz) : ¬ e.Hat ⟨2, 0, true, [a, b, true, true]⟩ := by
+  letI := e.aufz
+  letI := e.zahlen
+  intro h
+  have h0 := mem_alleZellen_k (2 : Fin 10) rfl h
+  simp only [zellen, getrenntZellen, geteiltZelle, List.mem_append, List.mem_flatMap, List.mem_map,
+    List.mem_cons, List.not_mem_nil, or_false, Zelle.mk.injEq, List.cons.injEq] at h0
+  rcases h0 with ⟨_, _, c, _, (⟨-, -, -, -, -, h3, h4, -⟩ | h') | h'⟩ | ⟨_, _, _, _, h' | h'⟩
+  · have h4' : geteiltVB e.P e.fs c = true := h4.symm
+    have h3' : ((waechterVon c).any fun L => istIn (e.S.orte L) c) = true := h3.symm
+    unfold geteiltVB at h4'
+    have hl : (waechterVon c).isEmpty = true := by
+      revert h4'; cases atomarB c <;> cases (waechterVon c).isEmpty <;> simp
+    rw [List.isEmpty_iff] at hl
+    rw [hl] at h3'
+    cases h3'
+  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp at h'')
+
+/-- `2.0 1 b 0 d`: a carrier one of whose guards the signature holds is guarded, and in a program of the source the
+    lock family protects exactly the guarded carriers. -/
+theorem u_2_0_sig (b d : Bool) (e : Einsatz) : ¬ e.Hat ⟨2, 0, true, [true, b, false, d]⟩ := by
+  letI := e.aufz
+  letI := e.zahlen
+  intro h
+  have h0 := mem_alleZellen_k (2 : Fin 10) rfl h
+  simp only [zellen, getrenntZellen, geteiltZelle, List.mem_append, List.mem_flatMap, List.mem_map,
+    List.mem_cons, List.not_mem_nil, or_false, Zelle.mk.injEq, List.cons.injEq] at h0
+  rcases h0 with ⟨_, _, c, _, (⟨-, -, -, h1, -, h3, -, -⟩ | h') | h'⟩ | ⟨_, _, _, _, h' | h'⟩
+  · obtain ⟨L, hL, -⟩ := List.any_eq_true.1 (show sigB _ c = true from h1.symm)
+    have : ((waechterVon c).any fun L => istIn (e.S.orte L) c) = true :=
+      List.any_eq_true.2 ⟨L, hL, istIn_iff.2 ((e.hS L c).2 hL)⟩
+    rw [← h3] at this
+    cases this
+  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp at h'')
+
 end Gabbro.Grammatik.Gen

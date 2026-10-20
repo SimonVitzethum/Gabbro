@@ -76,8 +76,22 @@ def zC : Spez where
   sigs := [{ schreibt := [0], haelt := [0, 1] }, { schreibt := [1], haelt := [1] }]
   fns := [0, 1]
 
+/-- F -- a device register whose state lives in a GUARDED table, a function that holds the guard by signature and one
+    that does not: the register part of the footprint under a guard (cells `2.1 1x`). -/
+def zF : Spez where
+  tabs := [{ count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true }]
+  locks := [{ rang := 1 }]
+  regs := [{ typ := zi3, klasse := .rw, traeger := [0] }]
+  sigs := [{ haelt := [0], schreibt := [0], boden := some 1 }, { schreibt := [0] }]
+  fns := [0, 1]
+
+/-- G -- a readable register of an EMPTY type (`1 .. 0`): an answer site with no value (cells `8.0 x0x`). -/
+def zG : Spez where
+  regs := [{ typ := .int 1 0, klasse := .r }]
+  sigs := [{}]
+
 /-- **The members the cell driver adds** to `familie`. -/
-def zellFamilie : List Spez := [zA, zB, zC, zD, zE]
+def zellFamilie : List Spez := [zA, zB, zC, zD, zE, zF, zG]
 
 /-! ## Members from RULES
 
