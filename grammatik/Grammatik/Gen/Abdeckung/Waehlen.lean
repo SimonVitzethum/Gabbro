@@ -13,20 +13,29 @@ namespace Gabbro.Grammatik.Gen
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
+/-- The floor the language derives from a body: the least rank of the locks the body itself takes (`none` if it takes none).
+    The language does not write a floor; the model's signature carries one, so a unit can be printed faithfully only
+    when the declared floor is this one. -/
+def Rumpf.bodenAbgeleitet {D : Deklaration} [Aufz D] {f : D.Fn} (b : Rumpf D f) : Option Int :=
+  ((Aufz.lock (D := D)).filter fun L =>
+    !(mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b)).map D.rang
+    |>.foldl (fun a r => match a with | none => some r | some m => some (if m < r then m else r)) none
+
 /-- **The tables of the bodies, one body per cell-relevant summary** (`Rumpf.schluessel`): scanning the sizes upward, a
-    body is kept only if no smaller body of the same function has its summary. -/
-def Spez.tabellenD (z : Spez) (nb : Nat) :
+    body is kept only if no smaller body of the same function has its summary. With `treu`, only the bodies whose derived
+    floor is the declared one are kept: the SOURCE-FAITHFUL tables, whose programs the printer can write. -/
+def Spez.tabellenD (z : Spez) (nb : Nat) (treu : Bool := false) :
     List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))) :=
   letI : Zahlen := z.zahlen
   (z.tabellen nb false false).map fun t =>
+    let soll : Option Int := (z.sigRoh (z.fns.get (show Fin z.fns.length from t.1))).boden
     ⟨t.1, (t.2.foldl
       (fun (acc : List (List (Rumpf z.deklaration t.1)) × List (List Bool)) bucket =>
         let r := bucket.foldl
           (fun (a : List (Rumpf z.deklaration t.1) × List (List Bool)) b =>
             let k := b.schluessel
-            if a.2.contains k then a else (a.1 ++ [b], a.2 ++ [k])) ([], acc.2)
+            if a.2.contains k || (treu && b.bodenAbgeleitet != soll) then a else (a.1 ++ [b], a.2 ++ [k])) ([], acc.2)
         (acc.1 ++ [r.1], r.2)) ([], [])).1⟩
-
 
 /-- **The members** the cell driver ranges over: the sixteen of the family and the cell members. -/
 def mitglieder : List Spez := familie ++ zellFamilie

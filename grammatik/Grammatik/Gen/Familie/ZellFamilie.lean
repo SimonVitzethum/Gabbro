@@ -19,9 +19,11 @@ private def zu8 : Ty := .int 0 255
 private def zb1 : Ty := .int 0 1
 private def zi3 : Ty := .int 0 3
 
-/-- A -- three functions over a guarded and an unguarded table, an atomic and a plain static, a plain lock (rank 1) and a
-    masking lock (rank 2): a function that writes only unguarded carriers, one that holds the plain lock by signature
-    (so it is no root), one with a floor above the plain lock (taking the plain lock breaks the floor). -/
+/-- A -- three functions over a guarded and an unguarded table, an atomic, a plain and a guarded static, a plain lock
+    (rank 1) and a masking lock (rank 2): one that writes only unguarded carriers, one meant to take the plain lock, one
+    meant to take the masking lock. The declared floor is the rank of the lock the function is meant to take; the
+    language computes the floor from the body, so a body that takes another lock (or none) does not print and the
+    unit is skipped by name. -/
 def zA : Spez where
   tabs := [{ count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true },
            { count := 2, felder := [{ typ := zi3 }] }]
@@ -29,8 +31,8 @@ def zA : Spez where
             { typ := zb1, sperre := some 1, geteilt := true }]
   locks := [{ rang := 1 }, { rang := 2, maskiert := true }]
   sigs := [{ schreibt := [1], gschreibt := [1] },
-           { haelt := [0], schreibt := [0] },
-           { boden := some 2 }]
+           { boden := some 1, schreibt := [0] },
+           { boden := some 2, gschreibt := [2] }]
   fns := [0, 1, 2]
 
 /-- D -- a function with reasons (no root), one that holds a lock by signature AND has reasons, next to one that writes
@@ -40,7 +42,8 @@ def zD : Spez where
            { count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true }]
   globs := [{ typ := zb1, atomar := true, geteilt := true }]
   locks := [{ rang := 1 }]
-  sigs := [{ gruende := 2 }, { schreibt := [0], gschreibt := [0] }, { haelt := [0], gruende := 2 }]
+  sigs := [{ gruende := 2, erg := some zi3 }, { schreibt := [0], gschreibt := [0] },
+           { haelt := [0], gruende := 2, erg := some zi3 }]
   fns := [0, 1, 2]
 
 /-- E -- a device register whose state lives in an unguarded table (the register part of the footprint), two functions

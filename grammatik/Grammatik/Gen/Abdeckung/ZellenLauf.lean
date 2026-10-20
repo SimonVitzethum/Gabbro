@@ -195,7 +195,7 @@ def main (args : List String) : IO UInt32 := do
       let gewaehlt := match nur with | some l => l.contains i | none => true
       if !gewaehlt then continue
       let (nbI, kmaxI) := match ueber.find? (·.1 == i) with | some (_, a, c) => (a, c) | none => (nb.toNat!, kmax.toNat!)
-      let tbls := z.tabellenD nbI
+      let tbls := z.tabellenD nbI (treu := (← IO.getEnv "LAUF_MODELL").isNone)
       for k in List.range (kmaxI + 1) do
         if k ≥ 1 then
           let t := ← IO.monoMsNow
@@ -221,6 +221,13 @@ def main (args : List String) : IO UInt32 := do
     let gutAlle' := zellAlle.filter fun x => !x.schlecht
     IO.println s!"COVER (valid programs): good cells reachable by a valid program {u.erreichbar.length} of {gutAlle'.length}; by a printable one {u.druckbar.length}; chosen cover {u.gewaehlt.length} programs; lower bound {u.schranke} (cells that never occur together); distinct cell sets seen {b.kand.size}"
     let nurMask := schAlle.filter fun x => !b.schlecht.contains x && b.maskiert.contains x
+    -- Stage 4.1: which skipped form keeps which good cell from having a printed witness
+    let verloren := u.erreichbar.filter fun x => !u.druckbar.contains x
+    IO.println s!"-- good cells reachable only by programs the printer skips: {verloren.length}; per cell the reasons"
+    for x in verloren do
+      let gruende := dedupStr ((b.kand.toList.map (·.2)).filterMap fun (_, zs, r, _) =>
+        match r with | .error m => if zs.contains x then some m else none | .ok _ => none)
+      IO.println s!"{x.text}\t{String.intercalate " | " gruende}"
     IO.println s!"ISOLATED bad cells (the only bad cell of a program refused by exactly its component): {(schAlle.filter fun x => b.schlecht.contains x).length} of {schAlle.length}; seen only masked by another bad cell: {nurMask.length} ({String.intercalate ", " (nurMask.map Zelle.text)})"
     IO.println s!"PRINTED single-fault programs: {b.quellen.size}; bad cells with a printed single-fault program {(schAlle.filter fun x => b.schlGedruckt.contains x).length} of {schAlle.length}"
     IO.println "-- not printable (reason, programs)"

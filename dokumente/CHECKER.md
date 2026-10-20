@@ -2064,6 +2064,30 @@ not closed, but `reach` is the closure; `0.0 111` needs an indirect call and a c
 contracts only); `2.0 0000` and `2.1 00` need a body that reads a guarded place without the lock and a register read, which
 the bodies of the bounds do not reach.
 
+**Stage 4 so far: the reason channel, derived floors, source-faithful tables (2026-10-20).** The printer writes the reason
+channel (`reason R<n> { … }`, `-> T or R<n>`, `return R<n>::C<j>;`, `let x = f(..) else (e) { … }` with no `;` after the block).
+A declared lock floor is not written in the language (it is the least rank the body takes), so the generator has two
+modes: `gen-zellen` (default) draws bodies only from the SOURCE-FAITHFUL tables, whose derived floor is the declared one
+(`Spez.tabellenD … (treu := true)`), and `LAUF_MODELL=1` draws from all bodies, the model-wide sweep. Measured with members
+0 to 20:
+
+| | source-faithful | model-wide |
+|---|---:|---:|
+| valid programs / single-fault programs | 1 144 / 6 794 | 6 586 / 12 925 |
+| good cells reachable by a valid program | 53 of 104 | 75 of 104 |
+| ... by a printable valid program | 46 | 46 |
+| cover | 7 programs | 7 programs |
+| bad cells isolated | 7 of 20 | 9 of 20 |
+
+22 good cells (among them 2.2 000, 3.0 00/11, 9.0 0010/0011/0110/0111/1000-1111 and several 6.1, 7.1) are reached only by
+the model-wide sweep. That does NOT show that the language cannot express them: the source-faithful tables are smaller and
+the bounds are the same, so they may only be out of reach (the three-function member needs size 10 for a consistent
+combination). Whether a cell is model-only is decided by a program with a matching declared floor, or by an argument.
+
+Two more classes against the Rust checker, besides the call cycle without `decreases` (`H022`/`K008`):
+`N034` (valid for the model): a function that declares `or R` and never returns a reason: the language demands a redeemer,
+the model has no such rule; one printer error found and fixed on the way (`P033`: no `;` after a `let … else` block).
+
 ### 16.7 What is proved in Lean, and what is derived on paper
 
 | Lean (kernel-checked, standard axioms) | Paper (this section) |

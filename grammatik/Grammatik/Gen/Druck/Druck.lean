@@ -37,6 +37,9 @@ def varTiefe : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
   | _, _, .here => 0
   | _, _, .there v => varTiefe v + 1
 
+/-- The type of a reason channel with `n` cases, and its case number `j`. -/
+def grundTyp (n : Nat) : String := s!"R{n}"
+
 /-- A literal. -/
 def zahl (n : Int) : String := if n < 0 then s!"({n})" else toString n
 
@@ -109,6 +112,7 @@ def druckS (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       .ok s!"{ein}locks {nm.lock L} \{\n{← druckB nm (ein ++ "    ") body}{ein}}\n"
   | .axiomCall a args _ _ _ _ _ => do .ok s!"{ein}{nm.ax a}({liste (← druckA nm args)});\n"
   | .ret e _ => do .ok s!"{ein}{← druckR nm e}\n"
+  | .retWhy r _ => .ok s!"{ein}return {grundTyp V.gruende}::C{r.val};\n"
   | s => (nichtDruckbar "statement" (cS s)).map id
 
 /-- A block as source text. -/
@@ -122,6 +126,10 @@ def druckB (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
   | .bindAxiom a args _ _ _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
+  | .bindCallElse f args _ _ _ err rest => do
+      let fehler ← druckEnd nm (ein ++ "    ") err
+      .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++
+        (← druckB nm ein rest))
   | b => (nichtDruckbar "block" (cB b)).map id
 
 /-- A block that does not fall off, as source text. -/
@@ -135,6 +143,11 @@ def druckEnd (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ : List (Res
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)});\n" ++ (← druckEnd nm ein rest))
   | .bindAxiom a args _ _ _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckEnd nm ein rest))
+  | .retWhy r _ => .ok s!"{ein}return {grundTyp V.gruende}::C{r.val};\n"
+  | .bindCallElse f args _ _ _ err rest => do
+      let fehler ← druckEnd nm (ein ++ "    ") err
+      .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n" ++
+        (← druckEnd nm ein rest))
   | e => (nichtDruckbar "end block" (cE e)).map id
 
 end

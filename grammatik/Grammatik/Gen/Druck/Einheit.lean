@@ -90,16 +90,16 @@ def Spez.ebenen (z : Spez) (P : Programm z.deklaration) : List Nat :=
       Nat.max ax (if von.isEmpty then 0 else von.foldl Nat.max 0 + 1))
     (fns.map fun _ => 0)
 
-/-- The `costs` bound of a function of call depth `e`: each level multiplies by 10 000, so a body that calls the level
-    below any number of times below 10 000 stays inside it. -/
-def kostenVon (e : Nat) : String := toString (10000 ^ (e + 1))
+/-- The `costs` bound of a function of call depth `e`: each level multiplies by 1 000, so a body that calls the level
+    below any number of times below 1 000 stays inside it (depth 5 is 10^18, the last that fits 64 bits). -/
+def kostenVon (e : Nat) : String := toString (1000 ^ (e + 1))
 
 /-- One function as source text. -/
 def Spez.druckFn (z : Spez) [Zahlen] (h : Haut z.deklaration) (eff : List String) (kosten : String) (f : z.deklaration.Fn) :
     Except String String := do
   let n := z.fns.get f
   let s := z.sigRoh n
-  if s.gruende != 0 then throw "unsupported feature: function with reasons"
+  if s.gruende != 0 && s.erg.isNone then throw "unsupported feature: function with reasons and no result (it cannot be called)"
   -- The floor is not written in the language: it is the least rank the body itself takes in `locks` blocks. A declared
   -- floor is printable only when it is that one.
   let genommen := (List.finRange z.locks.length).filter fun L => nimmtB h.programm f L
@@ -112,7 +112,7 @@ def Spez.druckFn (z : Spez) [Zahlen] (h : Haut z.deklaration) (eff : List String
     pure s!"v{np - 1 - j} : {← Spez.druckTy t}").mapM id
   let erg ← match s.erg with
     | none => pure ""
-    | some t => do pure s!" -> {← Spez.druckTy t}"
+    | some t => do pure s!" -> {← Spez.druckTy t}{if s.gruende != 0 then " or " ++ grundTyp s.gruende else ""}"
   let nm := z.namen
   let requires := ((z.haelt n).map fun L => s!"Held({nm.lock L})")
   let reqS := if requires.isEmpty then "" else s!"\n    requires {kommas requires}"
@@ -164,8 +164,11 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Haut z.deklaration) (ws : List z.
     if schuetzt.isEmpty then throw "unsupported feature: lock protecting nothing (`protects` needs a place)"
     pure s!"lock {nm.lock L} protects \{ {kommas schuetzt} } rank {lz.rang} held <= {kostenVon (ebenen.foldl Nat.max 0)} ops{if lz.maskiert then " masks irqs" else ""};\n"
   let axs ← (List.finRange z.axs.length).mapM (z.druckAx)
+  let gruende := (z.fnListe.map fun f => (z.sigRoh (z.fns.get f)).gruende).filter (· > 0) |>.eraseDups
+  let grundItems := gruende.map fun n =>
+    s!"reason {grundTyp n} \{\n" ++ String.join ((List.range n).map fun j => s!"    C{j} = {j + 1} \"fall {j}\"\n") ++ "    exhaustive\n}\n"
   let eff := z.effekte h.programm
-  if ebenen.any (· ≥ 4) then throw "unsupported feature: call chain deeper than 3 (cost bound would not fit 64 bits)"
+  if ebenen.any (· ≥ 6) then throw "unsupported feature: call chain deeper than 5 (cost bound would not fit 64 bits)"
   let fns ← z.fnListe.mapM fun f => do
     let i := (z.fnListe.findIdx? (· == f)).getD 0
     z.druckFn h (eff.getD i []) (kostenVon (ebenen.getD i 0)) f
@@ -174,7 +177,7 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Haut z.deklaration) (ws : List z.
   let eintritte := (z.fnListe.filter fun f => h.unterbricht f).map fun f =>
     let i := (show Fin z.fns.length from f).val
     s!"entry ent{i} vector {32 + i} via idt arch x86_64 \{\n    regs in  \{ }\n    regs out \{ }\n    preserves \{ rbx, rbp, r12, r13, r14, r15 }\n    clobbers  \{ rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }\n    stack stk{i} per cpu nested never\n    dispatch zellen::{name}::{nm.fn f};\n}\n"
-  pure s!"module zellen::{name} \{\n\n{String.intercalate "\n" tabs}{String.join globs}{String.join locks}{String.join axs}\n{String.intercalate "\n" fns}\n{start}{String.join eintritte}\n}\n"
+  pure s!"module zellen::{name} \{\n\n{String.intercalate "\n" tabs}{String.join globs}{String.join locks}{String.join grundItems}{String.join axs}\n{String.intercalate "\n" fns}\n{start}{String.join eintritte}\n}\n"
 
 /-- **The unit** of a member and a skeleton under the declared starts `ws`, as one `module`. -/
 def Spez.quelltext (z : Spez) (h : Haut z.deklaration) (ws : List z.deklaration.Fn) (name : String) :
