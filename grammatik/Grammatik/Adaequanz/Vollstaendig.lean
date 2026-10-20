@@ -19,7 +19,9 @@ import Grammatik.Adaequanz.Muster
 
 namespace Gabbro.Grammatik.Adaequanz
 
-variable {P Z : Type} (T : P → Z → Prop)
+universe u
+
+variable {P : Type u} {Z : Type} (T : P → Z → Prop)
 
 /-- **The test sets M (valid) and N (refused) are complete** for the table `φS` of the model. -/
 structure Vollstaendig (φS : Z → Bool) (M N : List P) : Prop where

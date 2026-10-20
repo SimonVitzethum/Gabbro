@@ -7,7 +7,7 @@
   program has a cell when some tuple of it has that vector; the component refuses the program exactly when it has a
   cell with `urteil = true` and `kern = false` (a BAD cell). Theorem 4 (`Adaequanz/Muster.lean`) asks for one
   single-fault program per isolable bad cell and valid programs for the good ones; this file makes the cells
-  computable so that a set of programs can be MEASURED against them (`Gen/Abdeckung/ZellenLauf.lean`).
+  computable so that a set of programs can be MEASURED against them (`gen-zelle`, `Gen/Abdeckung/ZellenEins.lean`).
 
   The atoms are the ones the definitions of `Akzeptiert.lean` / `AtomarAkzeptiert.lean` use, with two kinds of
   derived atom where a definition nests a quantifier under a disjunction (`getrenntW`, `schreibGetrenntW`, `geteiltVB`
@@ -56,7 +56,7 @@ structure Zelle where
   art : Nat
   urteil : Bool
   atome : List Bool
-  deriving BEq, Hashable, Repr
+  deriving DecidableEq, Hashable, Repr
 
 /-- **The test of a cell**, from its atom vector alone; `none` for a (component, kind, length) that no clause knows. An
     unknown shape is NEVER a pass: `Zelle.kern` below is only read where `definiert` holds, and the table
@@ -190,24 +190,6 @@ def zellenAbweichung (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : Li
       (if getrenntW P fs ws c == (getrenntZellen P fs ws c).all Zelle.kern then [] else [100 + i]) ++
       (if schreibGetrenntW P fs ws c == (schreibGetrenntZellen P fs ws c).all Zelle.kern then [] else [200 + i]) ++
       (if geteiltVB P fs c == (geteiltZelle P fs c).kern then [] else [300 + i]))
-
-/-- **The cell-relevant summary of a body**: which functions it calls directly and through whose signature, which locks
-    it takes, whether it is in the fragment without its indirect-call test, which axioms and registers it answers from,
-    which registers it reads, and which carriers it reads. Two bodies with the same summary give a program the same
-    cells whatever the other bodies are, so a sweep that keeps one body per summary reaches the same cells as the full
-    sweep (the driver compares the two on the sixteen members of the family). -/
-def Rumpf.schluessel {D : Deklaration} [Aufz D] [Zahlen] {f : D.Fn} (b : Rumpf D f) : List Bool :=
-  ((Aufz.fn (D := D)).map fun g =>
-    !(mE ⟨fun h => !(decide (h = g)), fun _ => true, fun _ => true⟩ b)) ++
-  ((Aufz.fn (D := D)).map fun g =>
-    !(mE ⟨fun _ => true, fun n => !(decide (n = D.sig g)), fun _ => true⟩ b)) ++
-  ((Aufz.lock (D := D)).map fun L =>
-    !(mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b)) ++
-  [b.gOk (fun _ => true) (fun _ => true)] ++
-  ((Aufz.ax (D := D)).map fun a => decide (Sum.inl a ∈ b.ants)) ++
-  ((Aufz.reg (D := D)).map fun r => decide (Sum.inr r ∈ b.ants)) ++
-  ((Aufz.reg (D := D)).map fun r => decide (r ∈ b.regs)) ++
-  (((Aufz.tab (D := D)).map Sum.inl ++ (Aufz.glob (D := D)).map Sum.inr).map fun c => istIn (Extraktion.endblockOrte b) c)
 
 end Atome
 

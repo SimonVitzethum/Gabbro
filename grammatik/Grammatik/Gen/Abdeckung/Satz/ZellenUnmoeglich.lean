@@ -1,11 +1,11 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/ZellenUnmoeglich.lean
+  File:      Grammatik/Gen/Abdeckung/Satz/ZellenUnmoeglich.lean
   Subject:   THE CELLS NO PROGRAM HAS, and the bad cells that never come alone (steps 2 and 3 of making M and N complete,
              `Adaequanz/Vollstaendig.lean`). A cell that no program has needs no test; a good cell that no VALID program
              has needs no valid test; a bad cell that always comes with another bad cell needs no single-fault test of its
              own, as long as the other one has one. Each of these is a theorem over EVERY program, not a measurement.
 -/
-import Grammatik.Gen.Abdeckung.ZellenSatz
+import Grammatik.Gen.Abdeckung.Satz.ZellenSatz
 
 namespace Gabbro.Grammatik.Gen
 

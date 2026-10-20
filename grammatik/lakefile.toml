@@ -26,7 +26,12 @@ name = "Grammatik"
 name = "gen-abdeckung"
 root = "Grammatik.Gen.Abdeckung.Lauf"
 
-# The cell driver (`Gen/Abdeckung/ZellenLauf.lean`): which cells of the ten checker components the generated programs reach.
+# The cell drivers: one member per process (`Gen/Abdeckung/ZellenEins.lean`), then the union of the records
+# (`Gen/Abdeckung/ZellenSammeln.lean`).
 [[lean_exe]]
-name = "gen-zellen"
-root = "Grammatik.Gen.Abdeckung.ZellenLauf"
+name = "gen-zelle"
+root = "Grammatik.Gen.Abdeckung.ZellenEins"
+
+[[lean_exe]]
+name = "gen-zellen-sammeln"
+root = "Grammatik.Gen.Abdeckung.ZellenSammeln"

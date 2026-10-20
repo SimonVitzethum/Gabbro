@@ -134,6 +134,18 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   forms. A working LLVM lowering is not a Lean judgment; track the boundaries in `dokumente/llvm-modelldeckung.tsv`, not counts of examples.
 - **O28-Rest (linking).** The `Spec.lean` diff had no independent review round; no semantic equivalence/refinement for contracts (normal-form
   trees); no certificate for linked programs.
+- **O41 (registers as Lean, not as `.tsv`; Simon, 2026-10-20).** `dokumente/llvm-modelldeckung.tsv` is a hand-written list of the model's
+  members with an LLVM status per member; it proves nothing, its member column duplicates the total match of `Gen/Abdeckung/Mitglieder.lean`,
+  and `instrumente/teile/llvm-modelldeckung.py` checks it against the Lean sources by regex. `messung/fallen-klassifikation.tsv` has no reader.
+  Open: the LLVM status as a total Lean function over the constructors (a new constructor stops the build; the status stays a claim about
+  `llvm.rs` until translation validation); stage 6 of `pruefe-lean.py` (`gen-abdeckung`) takes its members from Lean, reading no file; delete
+  both `.tsv` files and the Python script; update `llvm.rs`, `CHECKER.md`, O27, `pruefe-lean.py`, `pruefe-llvm.py`.
+- **O42 (complete test sets M and N; `dokumente/PLAN-TEST-SET.md`).** Proved: Theorem 5 `vollstaendig_hinreichend` (a conjunctive checker
+  that agrees with the model on M and N agrees on every program), step 1 `akzeptiertX_zellen` (the model's Bool IS the conjunction over the
+  cells), unreachability of five cells (`ZellenUnmoeglich.lean`). The generator emits only proof-carrying `Gutes`/`Schlechtes`, one program
+  at a time (`Strom`), with contracts. Open: M and N as concrete values for the whole model with `Vollstaendig` proved (a witness or an
+  impossibility theorem per cell, `gut_in_n`); the remaining cells without witness; stage 3 (R, text level), stage 5 (model mutations), the
+  lowering cells from `lowerS_ok`.
 - **O37 (regions in G).** No byte pointers in the model (`Ty.ptr` is a carrier capability); nothing frees a region (no ownership closure at
   the gate parameter); Gabbro bodies pass on no extent (only a foreign `ensures … <= lenof(result)` carries).
 

@@ -54,9 +54,10 @@ def Spez.eigeneEffekte (z : Spez) (P : Programm z.deklaration) (f : z.deklaratio
   letI : Zahlen := z.zahlen
   let n := z.fns.get f
   let nm := z.namen
-  let lesen : List String := (Extraktion.endblockOrte (P.rumpf f)).map fun
+  -- a contract's reads are reads of the function too (the language asks them in `effects`, E220)
+  let lesen : List String := (Extraktion.endblockOrte (P.rumpf f) ++ vertragsOrte P f).map (fun
     | .inl t => s!"reads {nm.tab t}.slots"
-    | .inr g => s!"reads {nm.glob g}"
+    | .inr g => s!"reads {nm.glob g}") |>.eraseDups
   let schreiben : List String :=
     ((List.finRange z.tabs.length).filter fun t => z.schreibt n t).map (fun t => s!"writes {nm.tab t}.slots") ++
     ((List.finRange z.globs.length).filter fun g => (z.sigRoh n).gschreibt.contains g.val).map (fun g => s!"writes {nm.glob g}")
@@ -94,15 +95,20 @@ def Spez.ebenen (z : Spez) (P : Programm z.deklaration) : List Nat :=
     below any number of times below 1 000 stays inside it (depth 5 is 10^18, the last that fits 64 bits). -/
 def kostenVon (e : Nat) : String := toString (1000 ^ (e + 1))
 
+/-- The contract `true`, which the source leaves out. -/
+def istWahr {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Bool
+  | .tru => true
+  | _ => false
+
 /-- One function as source text. -/
-def Spez.druckFn (z : Spez) [Zahlen] (h : Haut z.deklaration) (eff : List String) (kosten : String) (f : z.deklaration.Fn) :
+def Spez.druckFn (z : Spez) [Zahlen] (h : Programm z.deklaration) (eff : List String) (kosten : String) (f : z.deklaration.Fn) :
     Except String String := do
   let n := z.fns.get f
   let s := z.sigRoh n
   if s.gruende != 0 && s.erg.isNone then throw "unsupported feature: function with reasons and no result (it cannot be called)"
   -- The floor is not written in the language: it is the least rank the body itself takes in `locks` blocks. A declared
   -- floor is printable only when it is that one.
-  let genommen := (List.finRange z.locks.length).filter fun L => nimmtB h.programm f L
+  let genommen := (List.finRange z.locks.length).filter fun L => nimmtB h f L
   let abgeleitet : Option Int := (genommen.map fun L => (z.locks.get L).rang).foldl
     (fun a r => match a with | none => some r | some m => some (if m < r then m else r)) none
   if abgeleitet != s.boden then throw "unsupported feature: the declared floor is not the one the body derives (the model is wider than the language here)"
@@ -114,11 +120,14 @@ def Spez.druckFn (z : Spez) [Zahlen] (h : Haut z.deklaration) (eff : List String
     | none => pure ""
     | some t => do pure s!" -> {← Spez.druckTy t}{if s.gruende != 0 then " or " ++ grundTyp s.gruende else ""}"
   let nm := z.namen
-  let requires := ((z.haelt n).map fun L => s!"Held({nm.lock L})")
+  let vor ← if istWahr (h.requires f) then pure [] else do pure [← Druck.druckE nm none (h.requires f)]
+  let requires := ((z.haelt n).map fun L => s!"Held({nm.lock L})") ++ vor
   let reqS := if requires.isEmpty then "" else s!"\n    requires {kommas requires}"
+  let ensS ← if istWahr (h.ensures f) then pure "" else do
+    pure s!"\n    ensures {← Druck.druckE nm (s.erg.map fun _ => "result") (h.ensures f)}"
   let effS := if eff.isEmpty then "pure" else kommas eff
   let koerper ← Druck.druckEnd (vertragVon z.deklaration f) nm "    " (h.rumpf f)
-  pure s!"impl fn {nm.fn f}({kommas ps}){erg}{reqS}\n    effects \{ {effS} }\n    costs   <= {kosten} ops\n\{\n{koerper}}\n"
+  pure s!"impl fn {nm.fn f}({kommas ps}){erg}{reqS}{ensS}\n    effects \{ {effS} }\n    costs   <= {kosten} ops\n\{\n{koerper}}\n"
 
 /-- One foreign body as source text. -/
 def Spez.druckAx (z : Spez) (a : z.deklaration.Ax) : Except String String := do
@@ -138,9 +147,10 @@ def Spez.druckAx (z : Spez) (a : z.deklaration.Ax) : Except String String := do
   pure s!"extern fn {nm.ax a}({kommas ps}){erg} effects \{ {if eff.isEmpty then "pure" else kommas eff} } costs <= {kostenVon 0} ops;\n"
 
 /-- The unit, under the numeric scheme of the member (the instance is an argument so that the `do` block stays one). -/
-def Spez.quelltextMit (z : Spez) [Zahlen] (h : Haut z.deklaration) (ws : List z.deklaration.Fn) (name : String) :
-    Except String String := do
+def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (art : Sperrart) (ws : List z.deklaration.Fn)
+    (name : String) : Except String String := do
   let nm := z.namen
+  if art != .quelle then throw "unsupported feature: a lock family other than the guards (no source syntax)"
   if !z.marken.isEmpty then throw "unsupported feature: marks"
   if !z.invs.isEmpty then throw "unsupported feature: invariants"
   if !z.regs.isEmpty then throw "unsupported feature: registers"
@@ -155,7 +165,7 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Haut z.deklaration) (ws : List z.
       pure s!"atomic {nm.glob g} : {ty} {if gz.nutzlast.isEmpty then "relaxed" else "release"};\n"
     else
       pure s!"static mut {nm.glob g} : {ty} = {Spez.anfang gz.typ};\n"
-  let ebenen := z.ebenen h.programm
+  let ebenen := z.ebenen h
   let locks ← (List.finRange z.locks.length).mapM fun L => do
     let lz := z.locks.get L
     let schuetzt :=
@@ -167,7 +177,7 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Haut z.deklaration) (ws : List z.
   let gruende := (z.fnListe.map fun f => (z.sigRoh (z.fns.get f)).gruende).filter (· > 0) |>.eraseDups
   let grundItems := gruende.map fun n =>
     s!"reason {grundTyp n} \{\n" ++ String.join ((List.range n).map fun j => s!"    C{j} = {j + 1} \"fall {j}\"\n") ++ "    exhaustive\n}\n"
-  let eff := z.effekte h.programm
+  let eff := z.effekte h
   if ebenen.any (· ≥ 6) then throw "unsupported feature: call chain deeper than 5 (cost bound would not fit 64 bits)"
   let fns ← z.fnListe.mapM fun f => do
     let i := (z.fnListe.findIdx? (· == f)).getD 0
@@ -180,8 +190,8 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Haut z.deklaration) (ws : List z.
   pure s!"module zellen::{name} \{\n\n{String.intercalate "\n" tabs}{String.join globs}{String.join locks}{String.join grundItems}{String.join axs}\n{String.intercalate "\n" fns}\n{start}{String.join eintritte}\n}\n"
 
 /-- **The unit** of a member and a skeleton under the declared starts `ws`, as one `module`. -/
-def Spez.quelltext (z : Spez) (h : Haut z.deklaration) (ws : List z.deklaration.Fn) (name : String) :
-    Except String String :=
-  @Spez.quelltextMit z z.zahlen h ws name
+def Spez.quelltext (z : Spez) (h : Programm z.deklaration) (art : Sperrart) (ws : List z.deklaration.Fn)
+    (name : String) : Except String String :=
+  @Spez.quelltextMit z z.zahlen h art ws name
 
 end Gabbro.Grammatik.Gen

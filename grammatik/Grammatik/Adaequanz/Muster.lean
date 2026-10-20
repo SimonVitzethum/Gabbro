@@ -24,7 +24,9 @@ import Grammatik.Adaequanz.Ueberdeckung
 
 namespace Gabbro.Grammatik.Adaequanz
 
-variable {P Z : Type} (T : P → Z → Prop)
+universe u
+
+variable {P : Type u} {Z : Type} (T : P → Z → Prop)
 
 /-- The verdict of the table `φ`: every cell of `p` is admitted. -/
 def akzeptiert (φ : Z → Bool) (p : P) : Prop := ∀ z, T p z → φ z = true
