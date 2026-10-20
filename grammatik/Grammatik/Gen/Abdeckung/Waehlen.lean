@@ -44,6 +44,11 @@ def Spez.fnListe (z : Spez) : List z.deklaration.Fn := List.finRange z.fns.lengt
 
 def Spez.lockListe (z : Spez) : List z.deklaration.Lock := List.finRange z.locks.length
 
+/-- **The roots of a program**: the declared starts and every function the hardware enters. An `entry` item is a root
+    of the unit (`UProg.hands` are roots too), so the model's Bool is asked over both. -/
+def Spez.wurzelnVon (z : Spez) (h : Haut z.deklaration) (ws : List z.deklaration.Fn) : List z.deklaration.Fn :=
+  ws ++ z.fnListe.filter fun f => h.unterbricht f
+
 /-- The Lean model's Bool `AkzeptiertX` on a skeleton of a member, with the instances named once. -/
 def Spez.gutB (z : Spez) (h : Haut z.deklaration) (S : SperrInv z.deklaration) (ws : List z.deklaration.Fn) : Bool :=
   @AkzeptiertX z.deklaration z.aufz.decFn h.programm S z.fnListe z.lockListe z.traegerListe ws
@@ -58,24 +63,24 @@ structure Gutes (z : Spez) where
   haut : Haut z.deklaration
   S : SperrInv z.deklaration
   ws : List z.deklaration.Fn
-  gueltig : z.gutB haut S ws = true
+  gueltig : z.gutB haut S (z.wurzelnVon haut ws) = true
 
 /-- A program refused by exactly component `c`, with its proof. -/
 structure Schlechtes (z : Spez) (c : Fin 10) where
   haut : Haut z.deklaration
   S : SperrInv z.deklaration
   ws : List z.deklaration.Fn
-  nurAn : z.nurB c haut S ws = true
+  nurAn : z.nurB c haut S (z.wurzelnVon haut ws) = true
 
 /-- The proof of a `Gutes` is the statement of the goal theorem's checker: the Lean model accepts the program. -/
 theorem Gutes.akzeptiert {z : Spez} (g : Gutes z) :
-    @AkzeptiertX z.deklaration z.aufz.decFn g.haut.programm g.S z.fnListe z.lockListe z.traegerListe g.ws = true :=
+    @AkzeptiertX z.deklaration z.aufz.decFn g.haut.programm g.S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon g.haut g.ws) = true :=
   g.gueltig
 
 /-- The proof of a `Schlechtes` is `NurAn`: component `c` refuses, the other nine accept. -/
 theorem Schlechtes.istNurAn {z : Spez} {c : Fin 10} (s : Schlechtes z c) :
-    @NurAn z.deklaration z.aufz c s.haut.programm s.S z.fnListe z.lockListe z.traegerListe s.ws :=
-  (@nurAnB_iff z.deklaration z.aufz z.zahlen c s.haut.programm s.S z.fnListe z.lockListe z.traegerListe s.ws).1 s.nurAn
+    @NurAn z.deklaration z.aufz c s.haut.programm s.S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon s.haut s.ws) :=
+  (@nurAnB_iff z.deklaration z.aufz z.zahlen c s.haut.programm s.S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon s.haut s.ws)).1 s.nurAn
 
 /-- What the generator emits: a valid program or a single-fault program, each with its proof. -/
 inductive Erzeugt (z : Spez)
@@ -102,12 +107,12 @@ def Spez.parameter (z : Spez) : List (SperrInv z.deklaration × List z.deklarati
 def Spez.erzeugeAus (z : Spez) (h : Haut z.deklaration) (S : SperrInv z.deklaration)
     (ws : List z.deklaration.Fn) : Option (Erzeugt z) :=
   letI : Zahlen := z.zahlen
-  match hv : z.gutB h S ws with
+  match hv : z.gutB h S (z.wurzelnVon h ws) with
   | true => some (.gut ⟨h, S, ws, hv⟩)
   | false =>
-    match (List.finRange 10).filter (fun c => z.nurB c h S ws) with
+    match (List.finRange 10).filter (fun c => z.nurB c h S (z.wurzelnVon h ws)) with
     | [c] =>
-      match hn : z.nurB c h S ws with
+      match hn : z.nurB c h S (z.wurzelnVon h ws) with
       | true => some (.schlecht c ⟨h, S, ws, hn⟩)
       | false => none
     | _ => none

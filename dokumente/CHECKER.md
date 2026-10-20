@@ -2022,6 +2022,27 @@ register reads (2.1), footprints with a contract carrier (2.0, 2.3), a pool with
 a few of 4.0, 7 and 8; `0.0` with `gOk` false and `1.0 110` are unrealizable. The bad cells of components 0, 2.1 and 6.0
 still need members that the family does not have.
 
+**The printer and the first differential (2026-10-20).** `Gen/Druck/` prints the programs of the generator as Gabbro
+source (`Druck.lean`: bodies; `Einheit.lean`: a whole `module` from a member's declaration, with the `effects` clause
+computed over the call closure, `costs` bounds staggered by call depth, `concurrent` for the declared starts and an `entry
+… via idt` item for every function the hardware enters, which is a ROOT of the unit and so counts in the model's Bool). It is
+partial: a form without a clause is named and the program skipped. `gen-zellen` with `LAUF_QUELLEN=dir` writes one file per
+first witness of a cell. Against the Rust checker (the Lean class decides, Rust is the subject, never the oracle): 26
+programs printed, 65 of 104 good cells and 4 of 20 bad cells have a printed witness; of 22 printed valid programs Rust
+accepts 20, of 4 single-fault programs it refuses 3. The disagreements, each a class and not a printer error:
+
+| Lean | Rust | Reading |
+|---|---|---|
+| valid | `H022`/`K008` | a function that calls itself: the language demands `decreases` (a termination and cost rule the model has no component for) |
+| valid | `H013` | an `entry` writes a place nothing declares shared: Rust assumes an entry runs on several cores, the model counts it as one root |
+| refused only by 4 | accepted | the lock family `S` (`SperrInv`) is the user's logic and has no source syntax |
+
+Where the model is WIDER than the language, the program cannot be printed and is skipped with the reason: a lock that
+protects nothing (`protects` needs a place), a declared lock floor that is not the least rank the body takes (the floor is
+computed, not written), a mark, a register. Printed so far: expressions (14 of 42 constructors), statements (8 of 27), blocks
+(6 of 18), end blocks (5 of 10). Not yet printed: the reason channel (`retWhy`, `bindCallElse`, `onWhy`), loops, options and
+tagged values, `narrow`/`check`, floats, pointers, arenas, registers, invariants, parameters other than ranges and `bool`.
+
 ### 16.7 What is proved in Lean, and what is derived on paper
 
 | Lean (kernel-checked, standard axioms) | Paper (this section) |

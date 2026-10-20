@@ -49,12 +49,12 @@ structure Befund where
 def Spez.zellenVon (z : Spez) (h : Haut z.deklaration) (S : SperrInv z.deklaration) (ws : List z.deklaration.Fn) :
     List Zelle :=
   letI : Zahlen := z.zahlen
-  (List.finRange 10).flatMap (zellen h.programm S z.fnListe z.lockListe z.traegerListe ws)
+  (List.finRange 10).flatMap (zellen h.programm S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon h ws))
 
 /-- The self-check of the transcription on one program. -/
 def Spez.stimmt (z : Spez) (h : Haut z.deklaration) (S : SperrInv z.deklaration) (ws : List z.deklaration.Fn) : Bool :=
   letI : Zahlen := z.zahlen
-  zellenStimmen h.programm S z.fnListe z.lockListe z.traegerListe ws
+  zellenStimmen h.programm S z.fnListe z.lockListe z.traegerListe (z.wurzelnVon h ws)
 
 /-- Print a program once, record it under `datei` and mark the `neu` cells as printed. -/
 def Befund.druck (b : Befund) (z : Spez) (h : Haut z.deklaration) (ws : List z.deklaration.Fn) (datei klasse : String)

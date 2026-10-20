@@ -25,7 +25,8 @@ private def zi3 : Ty := .int 0 3
 def zA : Spez where
   tabs := [{ count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true },
            { count := 2, felder := [{ typ := zi3 }] }]
-  globs := [{ typ := zb1, atomar := true, geteilt := true }, { typ := zb1 }]
+  globs := [{ typ := zb1, atomar := true, geteilt := true }, { typ := zb1 },
+            { typ := zb1, sperre := some 1, geteilt := true }]
   locks := [{ rang := 1 }, { rang := 2, maskiert := true }]
   sigs := [{ schreibt := [1], gschreibt := [1] },
            { haelt := [0], schreibt := [0] },
@@ -35,7 +36,8 @@ def zA : Spez where
 /-- D -- a function with reasons (no root), one that holds a lock by signature AND has reasons, next to one that writes
     an unguarded table and an atomic. -/
 def zD : Spez where
-  tabs := [{ count := 2, felder := [{ typ := zi3 }] }]
+  tabs := [{ count := 2, felder := [{ typ := zi3 }] },
+           { count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true }]
   globs := [{ typ := zb1, atomar := true, geteilt := true }]
   locks := [{ rang := 1 }]
   sigs := [{ gruende := 2 }, { schreibt := [0], gschreibt := [0] }, { haelt := [0], gruende := 2 }]
@@ -52,7 +54,8 @@ def zE : Spez where
 /-- B -- two functions of one signature that write the same unguarded table and the same atomic (a pool and a race),
     a lock of rank 1 that masks, a foreign body with `never`. -/
 def zB : Spez where
-  tabs := [{ count := 2, felder := [{ typ := zb1 }] }]
+  tabs := [{ count := 2, felder := [{ typ := zb1 }] },
+           { count := 2, felder := [{ typ := zb1 }], sperre := some 0, geteilt := true }]
   globs := [{ typ := zb1, atomar := true, geteilt := true }]
   locks := [{ rang := 1, maskiert := true }]
   axs := [{ erg := some .never }, { schreibt := [0], gschreibt := [0] }]
