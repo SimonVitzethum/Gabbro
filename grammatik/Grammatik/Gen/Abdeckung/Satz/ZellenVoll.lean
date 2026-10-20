@@ -90,6 +90,8 @@ def Einsatz.zellen (e : Einsatz) : List Zelle :=
 /-- The occurrence relation of Theorem 5: the cell occurs in the program. -/
 def Einsatz.Hat (e : Einsatz) (z : Zelle) : Prop := z ∈ e.zellen
 
+instance (e : Einsatz) (z : Zelle) : Decidable (e.Hat z) := inferInstanceAs (Decidable (z ∈ e.zellen))
+
 /-- The Lean model's Bool on a program. -/
 def Einsatz.gueltig (e : Einsatz) : Bool :=
   @AkzeptiertX e.D e.aufz.decFn e.P e.S e.fs e.ls e.cs e.ws

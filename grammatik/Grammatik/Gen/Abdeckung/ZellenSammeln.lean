@@ -29,6 +29,9 @@ structure Summe where
   grund : Std.HashMap String Nat := {}
   formen : Std.HashMap String Nat := {}
   fremd : List String := []
+  /-- Lean witness files: of valid programs (stem, cells, printed) and of isolated bad cells (stem, cell, printed) -/
+  leanG : List (String × List Zelle × Bool) := []
+  leanB : List (String × Zelle × Bool) := []
 
 /-- One record line. -/
 def Summe.zeile (s : Summe) (l : String) : Summe :=
@@ -46,6 +49,12 @@ def Summe.zeile (s : Summe) (l : String) : Summe :=
     let zs := ts.filterMap zelleAus
     let s := if zs.length == ts.length then s else { s with fremd := s.fremd ++ ts.filter (zelleAus · |>.isNone) }
     { s with kand := s.kand ++ [(st, zs, if r == "ok" then .ok () else .error r)] }
+  | ["LG", st, key, r] =>
+    let zs := (if key.isEmpty then [] else key.splitOn ";").filterMap zelleAus
+    { s with leanG := s.leanG ++ [(st, zs, r == "ok")] }
+  | ["LB", st, t, r] => match zelleAus t with
+    | some x => { s with leanB := s.leanB ++ [(st, x, r == "ok")] }
+    | none => { s with fremd := s.fremd ++ [t] }
   | ["R", m, n] => { s with grund := s.grund.insert m (s.grund.getD m 0 + n.toNat!) }
   | ["F", m, n] => { s with formen := s.formen.insert m (s.formen.getD m 0 + n.toNat!) }
   | _ => s
@@ -108,6 +117,30 @@ def main (args : List String) : IO UInt32 := do
       manifest := manifest ++ s!"{f}\t{k}\t\n"
     IO.FS.writeFile s!"{dir}/index.tsv" index
     IO.FS.writeFile s!"{dir}/manifest.tsv" manifest
+    -- the Lean witnesses: a greedy cover of the good cells by printed valid programs, one program per isolated bad cell
+    let gutAlle := zellAlle.filter fun x => !x.schlecht
+    let lg := s.leanG.filter (·.2.2)
+    let mut offen := gutAlle.filter fun x => lg.any (·.2.1.contains x)
+    let mut wahl : List String := []
+    for _ in List.range (lg.length + 1) do
+      if offen.isEmpty then break
+      let best := lg.foldl (fun (b : Option (String × Nat)) (st, zs, _) =>
+        let n := (offen.filter zs.contains).length
+        if n > 0 && (b.map (·.2) |>.getD 0) < n then some (st, n) else b) none
+      match best with
+      | none => break
+      | some (st, _) =>
+        wahl := wahl ++ [st]
+        let zs := ((lg.find? (·.1 == st)).map (·.2.1)).getD []
+        offen := offen.filter (!zs.contains ·)
+    let nWahl := (schAlle.filterMap fun x => (s.leanB.find? fun (_, y, ok) => ok && y == x).map (·.1))
+    IO.FS.createDirAll s!"{dir}/zeugen"
+    for st in wahl ++ nWahl do
+      IO.FS.writeFile s!"{dir}/zeugen/{st}.lean" (← IO.FS.readFile s!"{dir}/lean/{st}.lean")
+    let gutL := gutAlle.filter fun x => lg.any (·.2.1.contains x)
+    let schL := schAlle.filter fun x => s.leanB.any fun (_, y, ok) => ok && y == x
+    IO.println s!"LEAN WITNESSES: good cells {gutL.length} of {gutAlle.length} by {wahl.length} programs; isolated bad cells {schL.length} of {schAlle.length}; files in {dir}/zeugen"
+    for x in gutAlle.filter (fun x => s.gut.contains x && !gutL.contains x) do IO.println s!"{x.text}\tvalid program found, no Lean print"
     if ← System.FilePath.pathExists s!"{dir}/kand" then IO.FS.removeDirAll s!"{dir}/kand"
     IO.println s!"sources: {u.gewaehlt.length} valid + {s.quellen.length} single-fault in {dir}"
     return (if anzF == 0 then 0 else 1)

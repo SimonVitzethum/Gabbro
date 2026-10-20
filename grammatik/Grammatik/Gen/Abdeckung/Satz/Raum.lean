@@ -159,7 +159,8 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (treu : Bool) {x : Zell
     (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
     {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {p : Sperrart × List z.deklaration.Fn}
     (hp : p ∈ z.parameter) (c0 : Fin 10) (hv : z.nurB c0 P (z.familie p.1) (z.wurzelnVon P p.2) = true)
-    (hx : einzigSchlecht (z.einsatz P p.1 p.2).zellen = some x) : RaumSchlechtIn z nb kmax nc treu x := by
+    (hx : einzigSchlecht (z.einsatz P p.1 p.2).zellen = some x) {er : List Zelle}
+    (hE : nurErreicht er (z.einsatz P p.1 p.2).zellen = true) : RaumSchlechtIn z nb kmax nc treu er x := by
   letI : Zahlen := z.zahlen
   obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb treu h0 hn hu haus
   have hgP : ∀ f, GleicherSchluessel (r f) (P.rumpf f) := fun f => by rw [vertragsL_rumpf hP]; exact hg f
@@ -167,7 +168,7 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (treu : Bool) {x : Zell
   have hls : ∀ L : z.deklaration.Lock, L ∈ z.lockListe := List.mem_finRange
   have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P p.1 p.2).hcs
   refine ⟨((Aufz.fn (D := z.deklaration)).map c).sum, ?_, ⟨r, h0.unterbricht⟩, hautT_mem _ ⟨r, h0.unterbricht⟩ c hr,
-    P.mitRumpf r, vertragsL_mitRumpf r hP, p, hp, c0, ?_, ?_⟩
+    P.mitRumpf r, vertragsL_mitRumpf r hP, p, hp, c0, ?_, ?_, ?_⟩
   · exact Nat.le_trans (summe_le hc) hk
   · rw [← hv]
     simp only [Spez.nurB, nurAnB, gs_komp P r hgP _ _ _ _ _ hvoll hls hcs]
@@ -176,5 +177,13 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (treu : Bool) {x : Zell
     obtain ⟨h1, h2, h3⟩ := hx
     refine ⟨(gs_alleZellen P r hgP _ _ _ _ _ x).2 h1, h2, fun y hy hys => h3 y ?_ hys⟩
     exact (gs_alleZellen P r hgP _ _ _ _ _ y).1 hy
+  · rw [← hE]
+    exact all_mem_gleich _ (gs_alleZellen P r hgP _ _ _ _ _)
+
+set_option maxRecDepth 200000 in
+/-- The number of members, once (the witness files read it instead of deciding it). -/
+theorem mitglieder_laenge : mitglieder.length = 384 := by
+  simp only [mitglieder, List.length_append]
+  decide
 
 end Gabbro.Grammatik.Gen

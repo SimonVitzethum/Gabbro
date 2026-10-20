@@ -13,6 +13,7 @@
 import Std.Data.HashMap
 import Grammatik.Gen.Abdeckung.Waehlen
 import Grammatik.Gen.Druck.Einheit
+import Grammatik.Gen.Druck.LeanZeuge
 
 namespace Gabbro.Grammatik.Gen
 
@@ -46,6 +47,10 @@ structure Befund where
   kand : Std.HashMap String (String × List Zelle × Except String String × Nat) := {}
   /-- bad cells seen only in programs that have another bad cell (never alone), with the number of programs -/
   maskiert : Std.HashMap Zelle Nat := {}
+  /-- the Lean witness files: of every valid candidate (stem, cells, text or reason) and of the first program in which
+      a bad cell is the only one (stem, cell, text or reason) -/
+  lean : Array (String × List Zelle × Except String String) := #[]
+  leanN : Std.HashMap Zelle (String × Except String String) := {}
   gutProgramme : Nat := 0
   schlechtProgramme : Nat := 0
   falsch : Nat := 0
@@ -73,7 +78,7 @@ def Befund.druck (b : Befund) (z : Spez) (h : Programm z.deklaration) (art : Spe
   | .error m => { b with grund := b.grund.insert m (b.grund.getD m 0 + 1) }
 
 /-- Take one emitted program. -/
-def Befund.nimm (b : Befund) (i nb k : Nat) (z : Spez) (e : Erzeugt z) : Befund :=
+def Befund.nimm (b : Befund) (i nb k nc : Nat) (z : Spez) (e : Erzeugt z) : Befund :=
   let (h, sa, ws, art) : Programm z.deklaration × Sperrart × List z.deklaration.Fn × Option (Fin 10) :=
     match e with
     | .gut g => (g.prog, g.art, g.ws, none)
@@ -94,7 +99,9 @@ def Befund.nimm (b : Befund) (i nb k : Nat) (z : Spez) (e : Erzeugt z) : Befund 
       let b := match r with
         | .error m => { b with grund := b.grund.insert m (b.grund.getD m 0 + 1) }
         | .ok _ => b
-      { b with kand := b.kand.insert key (stamm, zs, r, i) }
+      let zsD := zs.foldl (fun a x => if a.contains x then a else a ++ [x]) []
+      { b with kand := b.kand.insert key (stamm, zs, r, i),
+               lean := b.lean.push (stamm, zsD, z.leanZeuge i nc stamm h sa ws (zsD.filter (!·.schlecht)) none) }
   | some c =>
     -- a bad cell is ISOLATED in a program when it is the only bad cell of the whole program (`schlecht_noetig`)
     let schlechte := (dedupStr (zs.filter (·.schlecht) |>.map Zelle.text)).length
@@ -105,6 +112,12 @@ def Befund.nimm (b : Befund) (i nb k : Nat) (z : Spez) (e : Erzeugt z) : Befund 
           if b.schlecht.contains x then b else { b with schlecht := b.schlecht.insert x (i, nb, k) }
         else { b with maskiert := b.maskiert.insert x (b.maskiert.getD x 0 + 1) }
       else b) b
+    let b := if schlechte == 1 then
+      (zs.filter fun x => x.schlecht && x.komp == c.val).foldl (fun b x =>
+        if b.leanN.contains x then b else
+          let st := s!"N{i}_{b.leanN.size}"
+          { b with leanN := b.leanN.insert x (st, z.leanZeuge i nc st h sa ws [x] (some c)) }) b
+      else b
     let neu := if schlechte == 1 then zs.filter fun x => x.schlecht && x.komp == c.val && !b.schlGedruckt.contains x else []
     if neu.isEmpty then b else
       b.druck z h sa ws s!"schlecht{c.val}_{i}_{k}_{b.quellen.size}.gab" s!"refused-only-by-{c.val}" neu false
@@ -112,7 +125,7 @@ def Befund.nimm (b : Befund) (i nb k : Nat) (z : Spez) (e : Erzeugt z) : Befund 
 /-- The sweep of one member at one size: the generator hands over one program at a time. -/
 def Spez.sammle (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))))
     (i nb k nc : Nat) (b : Befund) : Befund :=
-  z.erzeugeF tbls nc Befund k b fun b e => b.nimm i nb k z e
+  z.erzeugeF tbls nc Befund k b fun b e => b.nimm i nb k nc z e
 
 
 /-- The cover of the good cells by printable valid programs (Stage 1 of `dokumente/PLAN-TEST-SET.md`). -/

@@ -78,13 +78,17 @@ def Spez.mVon (z : Spez) (nb kmax nc : Nat) (treu : Bool) : List Einsatz :=
     | .gut g => some (z.einsatz g.prog g.art g.ws)
     | .schlecht _ _ => none
 
-/-- The single-fault programs a member emits up to size `kmax` that have exactly one bad cell. -/
-def Spez.nVon (z : Spez) (nb kmax nc : Nat) (treu : Bool) : List Einsatz :=
+/-- Every good cell of the list is in `er` (the good cells M witnesses). -/
+def nurErreicht (er zs : List Zelle) : Bool := zs.all fun w => w.schlecht || er.contains w
+
+/-- The single-fault programs a member emits up to size `kmax` that have exactly one bad cell and only good cells
+    of `er`. -/
+def Spez.nVon (z : Spez) (nb kmax nc : Nat) (treu : Bool) (er : List Zelle) : List Einsatz :=
   (List.range (kmax + 1)).flatMap fun k => (z.erzeugtL (z.tabellenD nb treu) nc k).filterMap fun
     | .gut _ => none
     | .schlecht _ s =>
       let e := z.einsatz s.prog s.art s.ws
-      if (einzigSchlecht e.zellen).isSome then some e else none
+      if (einzigSchlecht e.zellen).isSome && nurErreicht er e.zellen then some e else none
 
 /-- **M**: every valid program the generator emits, over all members. -/
 def mGen (nc : Nat) (treu : Bool) : List Einsatz :=
@@ -92,9 +96,9 @@ def mGen (nc : Nat) (treu : Bool) : List Einsatz :=
     (mitglieder.getD i {}).mVon (grenzenVon i).1 (grenzenVon i).2 nc treu
 
 /-- **N**: every emitted single-fault program with exactly one bad cell, over all members. -/
-def nGen (nc : Nat) (treu : Bool) : List Einsatz :=
+def nGen (nc : Nat) (treu : Bool) (er : List Zelle) : List Einsatz :=
   (List.range mitglieder.length).flatMap fun i =>
-    (mitglieder.getD i {}).nVon (grenzenVon i).1 (grenzenVon i).2 nc treu
+    (mitglieder.getD i {}).nVon (grenzenVon i).1 (grenzenVon i).2 nc treu er
 
 /-- **Every program of M is valid**: the proof is the field of the `Gutes` it came from. -/
 theorem mGen_gueltig (nc : Nat) (treu : Bool) : ∀ m ∈ mGen nc treu, m.gueltig = true := by
@@ -106,8 +110,8 @@ theorem mGen_gueltig (nc : Nat) (treu : Bool) : ∀ m ∈ mGen nc treu, m.guelti
   | schlecht _ _ => cases he
 
 /-- **Every program of N has exactly one bad cell.** -/
-theorem nGen_einzig (nc : Nat) (treu : Bool) :
-    ∀ n ∈ nGen nc treu, ∃ x, NurSchlecht Einsatz.Hat gutTafel n x := by
+theorem nGen_einzig (nc : Nat) (treu : Bool) (er : List Zelle) :
+    ∀ n ∈ nGen nc treu er, ∃ x, NurSchlecht Einsatz.Hat gutTafel n x := by
   intro n hn
   simp only [nGen, Spez.nVon, List.mem_flatMap, List.mem_filterMap] at hn
   obtain ⟨_, _, _, _, e, _, he⟩ := hn
@@ -118,8 +122,25 @@ theorem nGen_einzig (nc : Nat) (treu : Bool) :
     split at he
     · rename_i hs
       cases he
-      obtain ⟨x, hx⟩ := Option.isSome_iff_exists.1 hs
+      obtain ⟨x, hx⟩ := Option.isSome_iff_exists.1 (Bool.and_eq_true_iff.1 hs).1
       exact ⟨x, einzigSchlecht_nur hx⟩
+    · cases he
+
+/-- **Every good cell of a program of N is in `er`.** -/
+theorem nGen_erreicht (nc : Nat) (treu : Bool) (er : List Zelle) :
+    ∀ n ∈ nGen nc treu er, ∀ w, n.Hat w → w.schlecht = false → w ∈ er := by
+  intro n hn w hw hs
+  simp only [nGen, Spez.nVon, List.mem_flatMap, List.mem_filterMap] at hn
+  obtain ⟨_, _, _, _, e, _, he⟩ := hn
+  cases e with
+  | gut _ => cases he
+  | schlecht _ s =>
+    simp only at he
+    split at he
+    · rename_i hs'
+      cases he
+      have := (List.all_eq_true.1 (Bool.and_eq_true_iff.1 hs').2) w hw
+      simpa [hs] using this
     · cases he
 
 /-! ## The space of the generator, and its completeness -/
@@ -131,18 +152,19 @@ def RaumGutIn (z : Spez) (nb kmax nc : Nat) (treu : Bool) (x : Zelle) : Prop :=
       z.gutB P (z.familie p.1) (z.wurzelnVon P p.2) = true ∧ (z.einsatz P p.1 p.2).Hat x
 
 /-- The cell `x` is the only bad cell of a program of member `z`'s space that exactly one component refuses. -/
-def RaumSchlechtIn (z : Spez) (nb kmax nc : Nat) (treu : Bool) (x : Zelle) : Prop :=
+def RaumSchlechtIn (z : Spez) (nb kmax nc : Nat) (treu : Bool) (er : List Zelle) (x : Zelle) : Prop :=
   ∃ k ≤ kmax, ∃ h ∈ @hautT z.deklaration z.aufz (z.tabellenD nb treu) k,
     ∃ P ∈ z.vertragsL nc h, ∃ p ∈ z.parameter, ∃ c : Fin 10,
-      z.nurB c P (z.familie p.1) (z.wurzelnVon P p.2) = true ∧ einzigSchlecht (z.einsatz P p.1 p.2).zellen = some x
+      z.nurB c P (z.familie p.1) (z.wurzelnVon P p.2) = true ∧ einzigSchlecht (z.einsatz P p.1 p.2).zellen = some x ∧
+      nurErreicht er (z.einsatz P p.1 p.2).zellen = true
 
 /-- The cell `x` occurs in a VALID program of the generator's space (some member at its bounds). -/
 def RaumGut (nc : Nat) (treu : Bool) (x : Zelle) : Prop :=
   ∃ i < mitglieder.length, RaumGutIn (mitglieder.getD i {}) (grenzenVon i).1 (grenzenVon i).2 nc treu x
 
 /-- The cell `x` is the only bad cell of a single-fault program of the generator's space. -/
-def RaumSchlecht (nc : Nat) (treu : Bool) (x : Zelle) : Prop :=
-  ∃ i < mitglieder.length, RaumSchlechtIn (mitglieder.getD i {}) (grenzenVon i).1 (grenzenVon i).2 nc treu x
+def RaumSchlecht (nc : Nat) (treu : Bool) (er : List Zelle) (x : Zelle) : Prop :=
+  ∃ i < mitglieder.length, RaumSchlechtIn (mitglieder.getD i {}) (grenzenVon i).1 (grenzenVon i).2 nc treu er x
 
 /-- **Completeness for M**: a good cell of a valid program of the space has a witness in M. -/
 theorem raumGut_mGen {nc : Nat} {treu : Bool} {x : Zelle} (h : RaumGut nc treu x) : ∃ m ∈ mGen nc treu, m.Hat x := by
@@ -153,43 +175,43 @@ theorem raumGut_mGen {nc : Nat} {treu : Bool} {x : Zelle} (h : RaumGut nc treu x
   exact mem_erzeugtL.2 ⟨sk, hsk, P, hP, p, hp, erzeugeAus_gut hv⟩
 
 /-- **Completeness for N**: an isolated bad cell of the space has a witness in N. -/
-theorem raumSchlecht_nGen {nc : Nat} {treu : Bool} {x : Zelle} (h : RaumSchlecht nc treu x) :
-    ∃ n ∈ nGen nc treu, NurSchlecht Einsatz.Hat gutTafel n x := by
-  obtain ⟨i, hi, k, hk, sk, hsk, P, hP, p, hp, c, hn, hx⟩ := h
+theorem raumSchlecht_nGen {nc : Nat} {treu : Bool} {er : List Zelle} {x : Zelle} (h : RaumSchlecht nc treu er x) :
+    ∃ n ∈ nGen nc treu er, NurSchlecht Einsatz.Hat gutTafel n x := by
+  obtain ⟨i, hi, k, hk, sk, hsk, P, hP, p, hp, c, hn, hx, he⟩ := h
   refine ⟨_, ?_, einzigSchlecht_nur hx⟩
   simp only [nGen, Spez.nVon, List.mem_flatMap, List.mem_filterMap, List.mem_range]
   refine ⟨i, hi, k, by omega, .schlecht c ⟨P, p.1, p.2, hn⟩, ?_, ?_⟩
   · exact mem_erzeugtL.2 ⟨sk, hsk, P, hP, p, hp, erzeugeAus_schlecht hn⟩
-  · simp only [hx, Option.isSome_some, ite_true]
+  · simp only [hx, he, Option.isSome_some, Bool.and_self, ite_true]
 
 /-! ## The table, and Theorem 5 for the generated M and N -/
 
 /-- **The generated M and N are complete** when every cell of the universe occurs in the space or cannot be needed:
     a good cell occurs in a valid program of the space or in no valid program at all; a bad cell is isolated in the
-    space or always comes with another bad cell that is; a good cell of a program of N occurs in the space. -/
-theorem tafel_erzeugt (nc : Nat) (treu : Bool)
+    space or always comes with another bad cell that is; and every good cell N may contain (`er`) is in the space. -/
+theorem tafel_erzeugt (nc : Nat) (treu : Bool) (er : List Zelle)
     (hG : ∀ x ∈ zellAlle, x.schlecht = false → RaumGut nc treu x ∨ ∀ e : Einsatz, e.Hat x → e.gueltig = false)
-    (hB : ∀ x ∈ zellAlle, x.schlecht = true → RaumSchlecht nc treu x ∨
-      ∀ e : Einsatz, e.Hat x → ∃ x', e.Hat x' ∧ x'.schlecht = true ∧ RaumSchlecht nc treu x')
-    (hGN : ∀ n ∈ nGen nc treu, ∀ w, n.Hat w → w.schlecht = false → RaumGut nc treu w) :
-    Tafel (mGen nc treu) (nGen nc treu) where
+    (hB : ∀ x ∈ zellAlle, x.schlecht = true → RaumSchlecht nc treu er x ∨
+      ∀ e : Einsatz, e.Hat x → ∃ x', e.Hat x' ∧ x'.schlecht = true ∧ RaumSchlecht nc treu er x')
+    (hE : ∀ w ∈ er, RaumGut nc treu w) :
+    Tafel (mGen nc treu) (nGen nc treu er) where
   gut_m := mGen_gueltig nc treu
   gut x hx hs := (hG x hx hs).imp raumGut_mGen id
   schlecht x hx hs := (hB x hx hs).imp raumSchlecht_nGen fun h e he => by
     obtain ⟨x', h1, h2, h3⟩ := h e he
     obtain ⟨n, hn, hnx⟩ := raumSchlecht_nGen h3
     exact ⟨x', h1, h2, n, hn, hnx⟩
-  gut_in_n n hn w hw hs := raumGut_mGen (hGN n hn w hw hs)
+  gut_in_n n hn w hw hs := raumGut_mGen (hE w (nGen_erreicht nc treu er n hn w hw hs))
 
 /-- **Theorem 5 for the generated test sets, over every program of the model.** -/
-theorem erzeugt_hinreichend (nc : Nat) (treu : Bool)
+theorem erzeugt_hinreichend (nc : Nat) (treu : Bool) (er : List Zelle)
     (hG : ∀ x ∈ zellAlle, x.schlecht = false → RaumGut nc treu x ∨ ∀ e : Einsatz, e.Hat x → e.gueltig = false)
-    (hB : ∀ x ∈ zellAlle, x.schlecht = true → RaumSchlecht nc treu x ∨
-      ∀ e : Einsatz, e.Hat x → ∃ x', e.Hat x' ∧ x'.schlecht = true ∧ RaumSchlecht nc treu x')
-    (hGN : ∀ n ∈ nGen nc treu, ∀ w, n.Hat w → w.schlecht = false → RaumGut nc treu w)
+    (hB : ∀ x ∈ zellAlle, x.schlecht = true → RaumSchlecht nc treu er x ∨
+      ∀ e : Einsatz, e.Hat x → ∃ x', e.Hat x' ∧ x'.schlecht = true ∧ RaumSchlecht nc treu er x')
+    (hE : ∀ w ∈ er, RaumGut nc treu w)
     (φ : Zelle → Bool) (hM : ∀ m ∈ mGen nc treu, akzeptiert Einsatz.Hat φ m ↔ m.gueltig = true)
-    (hN : ∀ n ∈ nGen nc treu, akzeptiert Einsatz.Hat φ n ↔ n.gueltig = true) (e : Einsatz) :
+    (hN : ∀ n ∈ nGen nc treu er, akzeptiert Einsatz.Hat φ n ↔ n.gueltig = true) (e : Einsatz) :
     akzeptiert Einsatz.Hat φ e ↔ e.gueltig = true :=
-  einsatz_hinreichend (tafel_erzeugt nc treu hG hB hGN) φ hM hN e
+  einsatz_hinreichend (tafel_erzeugt nc treu er hG hB hE) φ hM hN e
 
 end Gabbro.Grammatik.Gen

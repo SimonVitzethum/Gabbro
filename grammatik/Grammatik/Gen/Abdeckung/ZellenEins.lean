@@ -30,7 +30,10 @@ def Befund.zeilen (b : Befund) : List String :=
   b.kand.toList.map (fun (key, st, _, r, _) =>
     s!"K\t{st}\t{key}\t{match r with | .ok _ => "ok" | .error m => m}") ++
   b.grund.toList.map (fun (m, n) => s!"R\t{m}\t{n}") ++
-  b.formen.toList.map (fun (m, n) => s!"F\t{m}\t{n}")
+  b.formen.toList.map (fun (m, n) => s!"F\t{m}\t{n}") ++
+  b.lean.toList.map (fun (st, zs, r) =>
+    s!"LG\t{st}\t{String.intercalate ";" (zs.map Zelle.text)}\t{match r with | .ok _ => "ok" | .error m => m}") ++
+  b.leanN.toList.map (fun (x, st, r) => s!"LB\t{st}\t{x.text}\t{match r with | .ok _ => "ok" | .error m => m}")
 
 end Gabbro.Grammatik.Gen
 
@@ -56,6 +59,15 @@ def main (args : List String) : IO UInt32 := do
         for (_, st, _, r, _) in b.kand.toList do
           match r with
           | .ok text => IO.FS.writeFile (dir ++ "/kand/" ++ st ++ ".gab") text
+          | .error _ => pure ()
+        IO.FS.createDirAll (dir ++ "/lean")
+        for (st, _, r) in b.lean do
+          match r with
+          | .ok text => IO.FS.writeFile (dir ++ "/lean/" ++ st ++ ".lean") text
+          | .error _ => pure ()
+        for (_, st, r) in b.leanN.toList do
+          match r with
+          | .ok text => IO.FS.writeFile (dir ++ "/lean/" ++ st ++ ".lean") text
           | .error _ => pure ()
         IO.FS.writeFile (dir ++ s!"/m{i}.txt") (String.intercalate "\n" (b.zeilen ++ [s!"K-size\t{k}"]) ++ "\n")
     IO.println s!"member {i} ({nb}:{kmax}, contracts {nc}): valid {b.gutProgramme}, single-fault {b.schlechtProgramme}, good cells {b.gut.size}, isolated bad cells {b.schlecht.size}, errors {b.falsch} ({(← IO.monoMsNow) - t} ms)"
