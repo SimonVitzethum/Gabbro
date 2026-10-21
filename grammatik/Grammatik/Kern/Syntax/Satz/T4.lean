@@ -397,6 +397,45 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
       · simp [EndAusgang.welt] at h
+  | .regRead r _ rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      split at h
+      · split at h
+        · exact (end_gutB bo hbV rest σ _ (by boden_tac) hh).schrumpf σ' h
+        · simp [EndAusgang.welt] at h
+      · simp [EndAusgang.welt] at h
+  | .regReadElse r _ zusage sonst rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      split at h
+      · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ zusage.orte_darf hh.heldIn
+        split at h
+        · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
+        · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))) σ' h
+      · simp [EndAusgang.welt] at h
+  | .awaits g _ _ hL rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      split at h
+      · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
+          (orte_cons (orte_glob hL) (by intro o ho; simp at ho)) hh.heldIn
+        exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
+      · simp [EndAusgang.welt] at h
+  | .bindCallInd p args he hp hr rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
+        (orte_append p.orte_darf args.orte_darf) hh.heldIn
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at h
+      obtain ⟨f, hf⟩ := pv
+      simp only at h
+      split at h
+      · rename_i σ1 v hR1
+        have g2 := end_gutB bo hbV rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) (by boden_tac)
+        subst hf
+        have g1 := hl.trans (Gut.weiter hp.hw hp.hg
+          (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
+        exact g1.trans ((g2 (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+      · rename_i σ1 r _; exact keinGrundSig hf hr r
+      · simp [EndAusgang.welt] at h
+      · simp [EndAusgang.welt] at h
 
 theorem arms_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

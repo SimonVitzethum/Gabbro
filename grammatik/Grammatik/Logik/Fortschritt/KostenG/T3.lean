@@ -187,6 +187,10 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelE rest
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .regRead _ _ rest => spiegelE rest
+  | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelE rest
+  | .awaits _ _ _ _ rest => spiegelE rest
+  | .bindCallInd .. => false
 end
 mutual
 /-- **The checker's number**, `kosten.rs::anweisung`/`block`/`ruf` read
@@ -283,6 +287,10 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       1 + kostenArgs args + c g + kostenKE c err + kostenKE c rest
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKE c rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
+  | .regRead _ _ rest => 2 + kostenKE c rest
+  | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKE c rest
+  | .awaits _ _ _ _ rest => 1 + kostenKE c rest
+  | .bindCallInd _ _ _ _ _ rest => kostenKE c rest
 end
 mutual
 /-- **The remainder**: G's dispatch steps plus what the checker does not
@@ -361,6 +369,10 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => 6 + zusatzSonst err + zusatzSonst rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
+  | .regRead _ _ rest => 3 + zusatzSonst rest
+  | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
+  | .awaits _ _ _ _ rest => 4 + zusatzSonst rest
+  | .bindCallInd .. => 0
 
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -375,5 +387,9 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzSonst rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
+  | .regRead _ _ rest => zusatzSonst rest
+  | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
+  | .awaits _ _ _ _ rest => 1 + zusatzSonst rest
+  | .bindCallInd .. => 0
 end
 

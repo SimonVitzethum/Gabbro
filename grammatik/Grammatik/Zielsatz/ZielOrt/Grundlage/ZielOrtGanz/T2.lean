@@ -307,6 +307,41 @@ theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : Lis
       · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
       · exact Endblock.logikFrei_ok hR err h.1 _ _ _ (EndAusgang.schrumpf_logik he)
       · cases he
+  | .regRead r hk rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · split at he
+        · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
+        · cases he
+      · cases he
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · split at he
+        · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
+        · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ he
+      · cases he
+  | .awaits g payload hp hL rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
+      · cases he
+  | .bindCallInd p args he' hp hr rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei] at h
+      simp only [execEnd] at he
+      split at he
+      rename_i f hf _
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
+      · rename_i r _
+        exact keinGrundSig hf hr r
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+      · cases he
 
 end
 

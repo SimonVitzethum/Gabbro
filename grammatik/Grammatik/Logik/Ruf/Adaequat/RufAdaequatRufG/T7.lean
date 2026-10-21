@@ -413,7 +413,7 @@ include hRuf
 
 -- `hRuf` is used at calls; the arm recursions reach it only through
 -- `blockRetR`, which the linter does not count as a use.
-set_option maxHeartbeats 800000 in
+set_option maxHeartbeats 3200000 in
 set_option linter.unusedSectionVars false in
 mutual
 

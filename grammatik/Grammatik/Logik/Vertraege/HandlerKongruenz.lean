@@ -176,6 +176,13 @@ theorem AusgangUnter.ite {c : Prop} [Decidable c] {a₁ a₂ b₁ b₂ : Ausgang
   · rw [if_pos h, if_pos h]; exact ha
   · rw [if_neg h, if_neg h]; exact hb
 
+theorem EndUnter.ite {c : Prop} [Decidable c] {a₁ a₂ b₁ b₂ : EndAusgang V l Γ}
+    (ha : EndUnter Er a₁ a₂) (hb : EndUnter Er b₁ b₂) :
+    EndUnter Er (if c then a₁ else b₁) (if c then a₂ else b₂) := by
+  by_cases h : c
+  · rw [if_pos h, if_pos h]; exact ha
+  · rw [if_neg h, if_neg h]; exact hb
+
 theorem AusgangUnter.dite {c : Prop} [Decidable c] {a₁ a₂ : c → Ausgang V l Γ}
     {b₁ b₂ : ¬c → Ausgang V l Γ} (ha : ∀ h, AusgangUnter Er (a₁ h) (a₂ h))
     (hb : ∀ h, AusgangUnter Er (b₁ h) (b₂ h)) :
@@ -573,6 +580,46 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
         · exact Or.inl rfl
         · exact (Endblock.kongruent hR rest _ _).schrumpf
         · exact (Endblock.kongruent hR err _ _).schrumpf
+  | .regRead r hr rest, σ, ρ => by
+      simp only [execEnd]
+      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | none => exact Or.inl rfl
+      | some v =>
+          exact EndUnter.ite ((Endblock.kongruent hR rest σ (.cons v ρ)).schrumpf)
+            (Or.inl rfl)
+  | .regReadElse r hr zusage sonst rest, σ, ρ => by
+      simp only [execEnd]
+      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | none => exact Or.inl rfl
+      | some v =>
+          exact EndUnter.ite
+            ((Endblock.kongruent hR rest _ (.cons v ρ)).schrumpf)
+            (Endblock.kongruent hR sonst _ ρ)
+  | .awaits g hg hw hL rest, σ, ρ => by
+      simp only [execEnd]
+      by_cases hs : O.sichtbar g σ = true
+      · rw [if_pos hs, if_pos hs]
+        exact (Endblock.kongruent hR rest _ _).schrumpf
+      · rw [if_neg hs, if_neg hs]; exact Or.inl rfl
+  | .bindCallInd p args he hp hr rest, σ, ρ => by
+      simp only [execEnd]
+      generalize (eval (σ.lese Λ (p.orte ++ args.orte)) p
+          (σ.lese Λ (p.orte ++ args.orte)) ρ) = w
+      obtain ⟨g, hg⟩ := w
+      · dsimp only
+        rcases hR g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases hx : R₂ g (σ.lese Λ (p.orte ++ args.orte))
+              (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+                (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          | ok σ' v => exact (Endblock.kongruent hR rest σ' _).schrumpf
+          | why σ' r => exact Or.inl rfl
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
 
 theorem Arms.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

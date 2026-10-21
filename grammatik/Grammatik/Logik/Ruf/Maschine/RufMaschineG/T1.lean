@@ -53,6 +53,10 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
       ⟨rest.alsBlock.1, .bindAxiom a args he hw hg hd hgd rest.alsBlock.2⟩
   | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest =>
       ⟨rest.alsBlock.1, .bindAxiomElse a args he hr hw hg hd hgd err rest.alsBlock.2⟩
+  | _, _, .regRead r hk rest => ⟨rest.alsBlock.1, .regRead r hk rest.alsBlock.2⟩
+  | _, _, .regReadElse r hk z sonst rest => ⟨rest.alsBlock.1, .regReadElse r hk z sonst rest.alsBlock.2⟩
+  | _, _, .awaits g pl hp hL rest => ⟨rest.alsBlock.1, .awaits g pl hp hL rest.alsBlock.2⟩
+  | _, _, .bindCallInd p args he hp hr rest => ⟨rest.alsBlock.1, .bindCallInd p args he hp hr rest.alsBlock.2⟩
 
 /-- The residue of a running frame: what is left to do. `ende` is a plain
     end block; `dann b k` runs the block `b` first, then `k`; `schrumpf`
@@ -164,6 +168,39 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
         cases execEnd O passes R rest _ _ <;> rfl
       · cases execEnd O passes R err _ _ <;> rfl
       · rfl
+  | _, _, .regRead r hk rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · split
+        · rw [Endblock.execBlock_alsBlock O passes R rest]
+          cases execEnd O passes R rest _ _ <;> rfl
+        · rfl
+      · rfl
+  | _, _, .regReadElse r hk z sonst rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · split
+        · rw [Endblock.execBlock_alsBlock O passes R rest]
+          cases execEnd O passes R rest _ _ <;> rfl
+        · rfl
+      · rfl
+  | _, _, .awaits g pl hp hL rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .bindCallInd p args he hp hr rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      rename_i f hf _
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · rename_i r _
+        exact keinGrundSig hf hr r
+      · rfl
+      · rfl
 
 /-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
     only a BINDING pop may resume it. -/
@@ -259,6 +296,10 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse .. => true
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .regRead .. => true
+  | .regReadElse .. => true
+  | .awaits .. => true
+  | .bindCallInd .. => true
 
 /-- Arm selection for `onTag`: the VALUE's index chooses the arm and the
     VALUE's payload feeds it (like `execArms`, but returning the chosen arm

@@ -152,6 +152,10 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .bindCallElse _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
+  | .regRead r _ rest => Rg r && rest.gOk K Rg
+  | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
+  | .awaits _ _ _ _ rest => rest.gOk K Rg
+  | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.gOk K Rg
 
 def Arms.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) (Rg : D.Reg → Bool) :
@@ -183,6 +187,14 @@ theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg 
   | _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .regRead r hk rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .regReadElse r hk z sonst rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .awaits g pl hp hL rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
 
 /-! ### The registers a body reads -/
@@ -236,6 +248,10 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
+  | .regRead r _ rest => r :: rest.regs
+  | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
+  | .awaits _ _ _ _ rest => rest.regs
+  | .bindCallInd _ _ _ _ _ rest => rest.regs
 
 def Arms.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List D.Reg
@@ -406,6 +422,21 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
         Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
+  | .regRead r _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_cons] at h hr ⊢
+      exact ⟨hr r (Or.inl rfl), Endblock.gOk_mono rest h.2 (fun r' h' => hr r' (Or.inr h'))⟩
+  | .regReadElse r _ _ sonst rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_cons, List.mem_append]
+        at h hr ⊢
+      exact ⟨hr r (Or.inl rfl),
+        Endblock.gOk_mono sonst h.2.1 (fun r' h' => hr r' (Or.inr (Or.inl h'))),
+        Endblock.gOk_mono rest h.2.2 (fun r' h' => hr r' (Or.inr (Or.inr h')))⟩
+  | .awaits _ _ _ _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
+      exact Endblock.gOk_mono rest h hr
+  | .bindCallInd _ _ _ _ _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true] at h hr ⊢
+      exact ⟨hKK _ h.1, Endblock.gOk_mono rest h.2 hr⟩
 
 theorem Arms.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -835,6 +866,13 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
       simp only [Endblock.gOk, Endblock.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
+  | .regRead .., h => by simp [Endblock.vOk] at h
+  | .regReadElse .., h => by simp [Endblock.vOk] at h
+  | .awaits .., h => by simp [Endblock.vOk] at h
+  | .bindCallInd _ _ _ _ _ rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
+      simp only [Endblock.gOk, Endblock.regs, h.1, hr.1, hr.2, Bool.and_self, and_self]
 
 theorem Arms.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

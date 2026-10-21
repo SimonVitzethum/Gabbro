@@ -562,6 +562,74 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
             exact EndRel.schrumpf (execEndHA_ru rest σ' (Env.cons (ergWert he v) ρ))
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
             exact EndRel.schrumpf (execEndHA_ru err σ' (Env.cons (τ := .why (D.agruende a)) r ρ))
+  | _, _, _, .regRead r hk rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | none => exact Or.inl rfl
+      | some v =>
+          simp only [Option.map]
+          erw [rzusage_mitRuhe]
+          cases D.rzusage r v with
+          | false => exact Or.inl rfl
+          | true =>
+              simp only [if_true]
+              exact EndRel.schrumpf (execEndHA_ru rest σ (Env.cons v ρ))
+  | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | none => exact Or.inl rfl
+      | some v =>
+          simp only [Option.map]
+          rw [ruE_orte, leseA_worldR hA]
+          have ez := eval_ru (leseA A σ Λ zusage.orte) (leseA A σ Λ zusage.orte) zusage (Env.cons v ρ)
+          change eval _ (ruE zusage) _ (Env.cons (valR _ v) (envR ρ)) = _ at ez
+          rw [ez]
+          cases h : (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (Env.cons v ρ) : Bool) with
+          | false =>
+              simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
+              exact execEndHA_ru sonst _ ρ
+          | true =>
+              simp only [wahr?, valR_bool, h, if_true]
+              exact EndRel.schrumpf (execEndHA_ru rest _ (Env.cons v ρ))
+  | _, _, Λ, .awaits g payload hp hL rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      rw [show ([Sum.inr g] : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) = [Sum.inr g] from rfl,
+        leseA_worldR hA, hO.sichtbar]
+      cases O.sichtbar g (leseA A σ Λ [Sum.inr g]) with
+      | false => exact Or.inl rfl
+      | true =>
+          simp only [if_true]
+          exact EndRel.schrumpf (execEndHA_ru rest (leseA A σ Λ [Sum.inr g])
+            (Env.cons ((leseA A σ Λ [Sum.inr g]).globs g) ρ))
+  | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+        kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+      erw [leseA_worldR hA, eval_ru, evalArgs_ru]
+      cases h : eval (leseA A σ Λ (p.orte ++ args.orte)) p (leseA A σ Λ (p.orte ++ args.orte)) ρ with
+      | mk g hg =>
+          rw [valR_fnptr]
+          dsimp only
+          erw [umsig_ru hg]
+          rcases hR g (leseA A σ Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
+              (leseA A σ Λ (p.orte ++ args.orte)) args (leseA A σ Λ (p.orte ++ args.orte)) ρ))
+            with hx' | ⟨e', e, h1, h2, ht⟩
+          · erw [hx']
+            cases hx : R g (leseA A σ Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
+                (leseA A σ Λ (p.orte ++ args.orte)) args (leseA A σ Λ (p.orte ++ args.orte)) ρ)) with
+            | ok σ' v =>
+                try erw [hx]
+                simp only [rufR]
+                erw [execEndHA_umΛ, ergWert_ru (ergSig hg he)]
+                exact EndRel.schrumpf
+                  (execEndHA_ru rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))
+            | why σ' r => exact keinGrundSig hg hr r
+            | logik e => (try erw [hx]); exact Or.inl rfl
+            | hardware e => (try erw [hx]); exact Or.inl rfl
+          · erw [h1, h2]
+            exact Or.inr ⟨e', e, rfl, rfl, ht⟩
 
 theorem execArmsHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

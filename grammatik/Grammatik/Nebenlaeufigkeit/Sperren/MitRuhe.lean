@@ -619,6 +619,14 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
       .bindAxiomElse (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hr hw hg
         (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd err) (ruEnd rest)
+  | _, _, _, .regRead r hk rest => .regRead r hk (ruEnd rest)
+  | _, _, _, .regReadElse r hk zusage sonst rest =>
+      .regReadElse r hk (ruE zusage) (ruEnd sonst) (ruEnd rest)
+  | _, _, _, .awaits g payload hp hL rest => .awaits g payload hp (gdarfR hL) (ruEnd rest)
+  | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest =>
+      .bindCallInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
+        (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd rest))
 
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →

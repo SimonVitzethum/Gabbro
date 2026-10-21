@@ -127,6 +127,12 @@ def endblock {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endbloc
       .ok s!"(.bindAxiom {fin (ax a) "z.axs.length"} {← args tab glob fn feld xs} {bew} {bew} {bew} {bew} {bew} {← endblock rest})"
   | .bindAxiomElse a xs _ _ _ _ _ _ err rest => do
       .ok s!"(.bindAxiomElse {fin (ax a) "z.axs.length"} {← args tab glob fn feld xs} {bew} {bew} {bew} {bew} {bew} {bew} {← endblock err} {← endblock rest})"
+  | .regRead r _ rest => do .ok s!"(.regRead {fin (reg r) "z.regs.length"} {bew} {← endblock rest})"
+  | .regReadElse r _ zu sonst rest => do
+      .ok s!"(.regReadElse {fin (reg r) "z.regs.length"} {bew} {← expr tab glob fn feld zu} {← endblock sonst} {← endblock rest})"
+  | .bindCallInd p a _ _ _ rest => do
+      .ok s!"(.bindCallInd {← expr tab glob fn feld p} {← args tab glob fn feld a} {bew} {bew} {bew} {← endblock rest})"
+  | .awaits g _ _ _ rest => do .ok s!"(.awaits {fin (glob g) "z.globs.length"} _ rfl {bew} {← endblock rest})"
   | e => .error s!"Lean print: no clause for {(Parser.Cover.Mitglieder.cE e).headD "?"}"
 
 end

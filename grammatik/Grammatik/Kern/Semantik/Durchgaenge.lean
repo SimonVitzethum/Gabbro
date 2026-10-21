@@ -95,6 +95,10 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .bindCallElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
+  | .regRead _ _ rest => rest.ohneEwig
+  | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
+  | .awaits _ _ _ _ rest => rest.ohneEwig
+  | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
 
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Bool
@@ -254,6 +258,18 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
       simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes err h.1]
+  | .regRead r hk rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
+  | .awaits g payload hp hL rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .bindCallInd p args he hp hr rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
 
 theorem Arms.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

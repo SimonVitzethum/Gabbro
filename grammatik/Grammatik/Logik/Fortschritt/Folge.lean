@@ -158,6 +158,10 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
       (!Φ.ruf g || w) && fE e false err && fE e (Φ.vor g) rest
   | .bindAxiom _ _ _ _ _ _ _ rest => fE e w rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => fE e false err && fE e w rest
+  | .regRead _ _ rest => fE e w rest
+  | .regReadElse _ _ _ sonst rest => fE e false sonst && fE e w rest
+  | .awaits _ _ _ _ rest => fE e w rest
+  | .bindCallInd (n := n) _ _ _ _ _ rest => (!Φ.ind n || w) && fE e false rest
 
 end
 

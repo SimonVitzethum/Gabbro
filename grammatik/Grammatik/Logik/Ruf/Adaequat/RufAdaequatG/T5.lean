@@ -107,7 +107,7 @@ theorem endeConsRet {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 -- `hnw` is used at the returns; `blockRet` and the arm recursions reach it
 -- only through `stmtRet`/`endRet`, which the linter does not count as a use.
-set_option maxHeartbeats 800000 in
+set_option maxHeartbeats 3200000 in
 set_option linter.unusedSectionVars false in
 mutual
 

@@ -315,6 +315,10 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .bindCallElse f args _ _ _ err rest => ObjRufOk objs ps f args ∧ oE err ∧ oE rest
   | .bindAxiom a _ _ _ _ _ _ rest => KeinTabAx a ∧ oE rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oE rest
+  | .regRead _ _ rest => oE rest
+  | .regReadElse _ _ _ sonst rest => oE sonst ∧ oE rest
+  | .awaits _ _ _ _ rest => oE rest
+  | .bindCallInd .. => False
 
 def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Prop

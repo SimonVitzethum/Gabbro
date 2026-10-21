@@ -210,6 +210,11 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrteP P rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       args.orte ++ endblockOrteP P err ++ endblockOrteP P rest
+  | .regRead _ _ rest => endblockOrteP P rest
+  | .regReadElse _ _ zusage sonst rest =>
+      zusage.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
+  | .awaits g _ _ _ rest => .inr g :: endblockOrteP P rest
+  | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrteP P rest
 
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -243,6 +248,14 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallElse _ args _ _ _ err rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .regRead r hk rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .regReadElse r hk z sonst rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .awaits g pl hp hL rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
 
 /-- The carriers of the table and group invariants `f` owes at its return

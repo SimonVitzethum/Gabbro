@@ -224,5 +224,33 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
       mem_mitSome he <| Sz.mem_wenn hr <| Sz.mem_wenn hw <| Sz.mem_wenn hg <| Sz.mem_wenn hd <|
       Sz.mem_wenn hgd <| Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
       Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | regRead r hk rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eRegRead O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem r)) <|
+      Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | regReadElse r hk z sonst rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hz := hO.ex (groesseExpr z + (0 + (groesseEnd sonst + (0 + (groesseEnd rest + 0))))) _ _ _ z
+      (by omega) (by omega)
+    have hso := hO.en (groesseEnd sonst + (0 + (groesseEnd rest + 0))) _ _ _ sonst (by omega) (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eRegReadElse O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem r)) <|
+      Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) (mem_tyS hz) <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hso <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | awaits g payload hp hL rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    subst hp
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
+      Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | bindCallInd p args he hp hr rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hpp := hE _ p (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBindCallInd O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
 
 end Gabbro.Grammatik.Gen

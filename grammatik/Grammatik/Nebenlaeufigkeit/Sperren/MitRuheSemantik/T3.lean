@@ -458,6 +458,69 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
             rw [← endR_schrumpf, ← execEnd_ru err σ' (Env.cons (τ := .why (D.agruende a)) r ρ)]
             rfl
+  | _, _, _, .regRead r hk rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | none => rfl
+      | some v =>
+          simp only [Option.map]
+          erw [rzusage_mitRuhe]
+          cases D.rzusage r v with
+          | false => rfl
+          | true =>
+              simp only [if_true]
+              rw [← endR_schrumpf, ← execEnd_ru rest σ (Env.cons v ρ)]
+              rfl
+  | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | none => rfl
+      | some v =>
+          simp only [Option.map]
+          rw [ruE_orte, lese_worldR]
+          have ez := eval_ru (σ.lese Λ zusage.orte) (σ.lese Λ zusage.orte) zusage (Env.cons v ρ)
+          change eval _ (ruE zusage) _ (Env.cons (valR _ v) (envR ρ)) = _ at ez
+          rw [ez]
+          cases h : (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (Env.cons v ρ) : Bool) with
+          | false =>
+              simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
+              exact execEnd_ru sonst _ ρ
+          | true =>
+              simp only [wahr?, valR_bool, h, if_true]
+              rw [← endR_schrumpf, ← execEnd_ru rest _ (Env.cons v ρ)]
+              rfl
+  | _, _, Λ, .awaits g payload hp hL rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      rw [sichtbar_mitRuhe]
+      cases O.sichtbar g σ with
+      | false => rfl
+      | true =>
+          simp only [if_true]
+          rw [show ([Sum.inr g] : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) = [Sum.inr g] from rfl,
+            lese_worldR, ← endR_schrumpf, ← execEnd_ru rest _ (Env.cons _ ρ)]
+          rfl
+  | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+        kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+      erw [lese_worldR, eval_ru, evalArgs_ru]
+      cases h : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ with
+      | mk g hg =>
+          rw [valR_fnptr]
+          dsimp only
+          erw [umsig_ru hg, hR]
+          cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          | ok σ' v =>
+              try erw [hx]
+              simp only [rufR]
+              erw [execEnd_umΛ, ergWert_ru (ergSig hg he)]
+              exact (congrArg EndAusgang.schrumpf
+                (execEnd_ru rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))).trans (endR_schrumpf _)
+          | why σ' r => exact keinGrundSig hg hr r
+          | logik e => (try erw [hx]); rfl
+          | hardware e => (try erw [hx]); rfl
 
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

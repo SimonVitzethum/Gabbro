@@ -410,6 +410,32 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | (σ', Option.some (Sum.inl v)) => (execEndH rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (σ', Option.some (Sum.inr r)) => (execEndH err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
+  | .regRead r _ rest, σ, ρ =>
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | Option.some v =>
+          if D.rzusage r v then (execEndH rest σ (.cons v ρ)).schrumpf
+          else .hardware (.geraet r)
+      | Option.none => .hardware (.register r)
+  | .regReadElse r _ zusage sonst rest, σ, ρ =>
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | Option.some v =>
+          let σ := σ.lese Λ zusage.orte
+          if wahr? (eval σ zusage σ (.cons v ρ)) then (execEndH rest σ (.cons v ρ)).schrumpf
+          else (execEndH sonst σ ρ)
+      | Option.none => .hardware (.register r)
+  | .awaits g _ _ _ rest, σ, ρ =>
+      if O.sichtbar g σ then
+        let σ := σ.lese Λ [.inr g]
+        (execEndH rest σ (.cons (σ.globs g) ρ)).schrumpf
+      else .hardware (.sichtbarkeit D.a10)
+  | .bindCallInd p args he _ hr rest, σ, ρ =>
+      let σ := σ.lese Λ (p.orte ++ args.orte)
+      let ⟨f, hf⟩ := eval σ p σ ρ
+      match R f σ (umsig hf (evalArgs σ args σ ρ)) with
+      | .ok σ' v => (execEndH rest σ' (.cons (ergWert (ergSig hf he) v) ρ)).schrumpf
+      | .why _ r => keinGrundSig hf hr r
+      | .logik e => .logik e
+      | .hardware e => .hardware e
 
 def execArmsH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ

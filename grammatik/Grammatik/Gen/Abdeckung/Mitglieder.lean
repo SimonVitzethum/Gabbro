@@ -206,6 +206,10 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .bindCallElse _ _ _ _ _ err rest => endStmts rest
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .regRead _ _ rest => endStmts rest
+  | _, _, _, .regReadElse _ _ _ _ rest => endStmts rest
+  | _, _, _, .awaits _ _ _ _ rest => endStmts rest
+  | _, _, _, .bindCallInd _ _ _ _ _ rest => endStmts rest
   | _, _, _, .ret .. => []
   | _, _, _, .retWhy .. => []
   | _, _, _, .leave .. => []
@@ -290,6 +294,11 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => "Endblock.bindAxiom" :: argsM args ++ endM rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
     "Endblock.bindAxiomElse" :: argsM args ++ endM err ++ endM rest
+  | _, _, _, .regRead r _ rest => "Endblock.regRead" :: klasseM (D.rklasse r) ++ endM rest
+  | _, _, _, .regReadElse r _ z sonst rest =>
+    "Endblock.regReadElse" :: "Deklaration.rzusage" :: klasseM (D.rklasse r) ++ exprM z ++ endM sonst ++ endM rest
+  | _, _, _, .awaits _ _ _ _ rest => "Endblock.awaits" :: endM rest
+  | _, _, _, .bindCallInd p args _ _ _ rest => "Endblock.bindCallInd" :: exprM p ++ argsM args ++ endM rest
 
 def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
     Arms D V l Γ Λ Λ' cs → List String

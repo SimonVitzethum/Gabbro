@@ -152,6 +152,10 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .bindCallElse _ args _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => 1 + groesseArgs args + groesseEnd rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
+  | _, _, _, .regRead _ _ rest => 1 + groesseEnd rest
+  | _, _, _, .regReadElse _ _ z sonst rest => 1 + groesseExpr z + groesseEnd sonst + groesseEnd rest
+  | _, _, _, .awaits _ _ _ _ rest => 1 + groesseEnd rest
+  | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
 
 def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
     Arms D V l Γ Λ Λ' cs → Nat

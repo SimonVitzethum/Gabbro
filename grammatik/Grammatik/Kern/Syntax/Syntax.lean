@@ -637,6 +637,24 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
       (err : Endblock l (.why (D.agruende a) :: Γ) Λ)
       (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
+  /-- `let x = R;` at the top level of a body (or in an `else` that must not fall off):
+      `Block.regRead` with an end-block rest (Track P, 2026-10-21). -/
+  | regRead (r : D.Reg) (hk : (D.rklasse r).lesbar = true) (rest : Endblock l (D.rtyp r :: Γ) Λ) :
+      Endblock l Γ Λ
+  /-- `let x = R else (e) { … }` at the top level of a body: `Block.regReadElse` with an
+      end-block rest (Track P, 2026-10-21). -/
+  | regReadElse (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
+      (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock l Γ Λ)
+      (rest : Endblock l (D.rtyp r :: Γ) Λ) : Endblock l Γ Λ
+  /-- `let x = A awaits { p, q };` at the top level of a body: `Block.awaits` with an end-block
+      rest (Track P, 2026-10-21). -/
+  | awaits (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g) (hL : gdarf D g Λ)
+      (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
+  /-- `let x = p(…);` through a function pointer at the top level of a body: `Block.bindCallInd`
+      with an end-block rest (Track P, 2026-10-21). -/
+  | bindCallInd (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
+      (rest : Endblock l (τ :: Γ) (nachSig D (D.sigNr n) Λ)) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []

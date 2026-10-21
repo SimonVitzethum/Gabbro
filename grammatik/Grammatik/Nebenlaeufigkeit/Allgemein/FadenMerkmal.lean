@@ -119,6 +119,10 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallElse g _ _ _ _ err rest => A.ruf g && mE A err && mE A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mE A rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mE A rest
+  | .regRead _ _ rest => mE A rest
+  | .regReadElse _ _ _ sonst rest => mE A sonst && mE A rest
+  | .awaits _ _ _ _ rest => mE A rest
+  | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mE A rest
 end
 
 /-- **The residue predicate**: every block, end block and loop body still to
@@ -168,6 +172,14 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .regRead r hk rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .regReadElse r hk z sonst rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .awaits g pl hp hL rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
 
 theorem mB_armWahlG (A : Merkmal D) {Γ : Ctx} {Λ Λ' : List (Res D)} :

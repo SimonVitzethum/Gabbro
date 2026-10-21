@@ -60,6 +60,7 @@ theorem blattG_ohneRuf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
     {s : Stmt D V l Γ Λ Λ'} (h : BlattG s) : StmtOhneRuf s := by
   cases h <;> constructor
 
+set_option maxHeartbeats 1600000 in
 mutual
 
 theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
@@ -480,6 +481,10 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .regRead .. => false
+  | .regReadElse .. => false
+  | .awaits .. => false
+  | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
 
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool

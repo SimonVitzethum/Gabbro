@@ -183,6 +183,28 @@ def eBindAxiomElse : Sz (Endblock D V l Γ Λ) :=
         Sz.bindR (Sz.pure ()) (fun m => O.en l (τ :: Γ) Λ m) fun _ r =>
           Sz.pure (.bindAxiomElse a args he hr hw hg hd hgd err r))
 
+def eRegRead : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r => Sz.wenn ((D.rklasse r).lesbar = true) fun hk =>
+    Sz.bindR (Sz.pure ()) (fun m => O.en l (D.rtyp r :: Γ) Λ m) fun _ x => Sz.pure (.regRead r hk x))
+
+def eRegReadElse : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.reg) fun r => Sz.wenn ((D.rklasse r).lesbar = true) fun hk =>
+    Sz.bindR (Sz.pure ()) (fun m => tyS (O.ex (D.rtyp r :: Γ) Λ m) .bool) fun _ z =>
+      Sz.bindR (Sz.pure ()) (fun m => O.en l Γ Λ m) fun _ sonst =>
+        Sz.bindR (Sz.pure ()) (fun m => O.en l (D.rtyp r :: Γ) Λ m) fun _ x =>
+          Sz.pure (.regReadElse r hk z sonst x))
+
+def eAwaits : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g => Sz.wenn (gdarf D g Λ) fun hL =>
+    Sz.bindR (Sz.pure ()) (fun m => O.en l (D.gtyp g :: Γ) Λ m) fun _ x =>
+      Sz.pure (.awaits g (D.nutzlast g) rfl hL x))
+
+def eBindCallInd : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ => mitSome (D.sigNr n).erg fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn ((D.sigNr n).gruende = 0) fun hr =>
+      Sz.bindR (argsS E (D.sigNr n).params) (fun m => O.en l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args r =>
+        Sz.pure (.bindCallInd p args he hp hr r))
+
 end Klauseln
 
 /-- **The blocks of exact size `k`**. -/
@@ -195,6 +217,7 @@ def blockS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE 
 /-- **The end blocks of exact size `k`**. -/
 def endS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) :
     Sz (Endblock D V l Γ Λ) :=
-  Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindCall O E, eBindCallElse O E, eBindAxiom O E, eBindAxiomElse O E]
+  Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindCall O E, eBindCallElse O E, eBindAxiom O E,
+    eBindAxiomElse O E, eRegRead O, eRegReadElse O, eAwaits O, eBindCallInd O E]
 
 end Gabbro.Grammatik.Gen
