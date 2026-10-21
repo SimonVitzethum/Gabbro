@@ -49,9 +49,20 @@ def floor_ind_refused : String :=
 theorem floor_ind_refused_stufe :
     stufe floor_ind_refused = "lower: call: a held lock does not rank below the callee's floor" := by decide +kernel
 
-/-- The function-pointer TYPE (`fn(..) .. effects { .. } costs ..`) is not read by the Lean parser. -/
+/-- The function-pointer TYPE (`fn(..) .. effects { .. } costs <= n ops`) is read by the parser (up to the `ops`
+    that ends its contract); its elaboration waits for the structural pointer types of the model. -/
 def typ_refused : String :=
   "module m { impl fn g() { } impl fn f(p : fn() effects { } costs <= 1 ops) { } }"
-theorem typ_refused_stufe : stufe typ_refused = "parse: wanted )" := by decide +kernel
+theorem typ_refused_stufe : stufe typ_refused = "elab: type without G form" := by decide +kernel
+
+/-- ... also in a list of parameters with a result, an `ensures` and a parameter behind it. -/
+def typ2_refused : String :=
+  "module m { impl fn f(p : fn(a : u32) -> bool ensures result effects { pure } costs <= 3 ops, q : u8) { } }"
+theorem typ2_refused_stufe : stufe typ2_refused = "elab: type without G form" := by decide +kernel
+
+/-- A pointer type without its contract does not parse (the contract is mandatory). -/
+def typ_ohne_refused : String :=
+  "module m { impl fn f(p : fn(), q : u8) { } }"
+theorem typ_ohne_refused_stufe : stufe typ_ohne_refused = "parse: fn type without costs" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben33

@@ -148,6 +148,27 @@ def nimmBisKopf : List Token → Except String (String × List Token)
     | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
     | .error e => .error e
 
+/-- The rest of a function-pointer type behind its parameters (`fnptr`, SYNTAX.md 2): `[-> T] [requires ..]
+    [ensures ..] effects { .. } costs <= e ops` -- every token up to and including the word `ops` that stands
+    outside every brace (the contract is mandatory and ends there), raw. -/
+def nimmBisOps : List Token → Nat → Except String (String × List Token)
+  | [], _ => .error "fn type without costs"
+  | (.wort s :: rest), d =>
+    if d == 0 && strEq s "ops" then .ok ("ops ", rest)
+    else match nimmBisOps rest d with
+      | .ok (h, r) => .ok (s ++ " " ++ h, r)
+      | .error e => .error e
+  | (.zeichen s :: rest), d =>
+    let d' := if strEq s "{" then d + 1 else if strEq s "}" then d - 1 else d
+    if d == 0 && strEq s ";" then .error "fn type without costs"
+    else match nimmBisOps rest d' with
+      | .ok (h, r) => .ok (s ++ " " ++ h, r)
+      | .error e => .error e
+  | (.ende :: _), _ => .error "fn type without costs"
+  | (t :: rest), d => match nimmBisOps rest d with
+    | .ok (h, r) => .ok (zeigeTok t ++ " " ++ h, r)
+    | .error e => .error e
+
 /-- `rights = right { "+" right }`, `right = r | w | rw | x | own [ "@" ident ]`, kept as one string
     (`rw+own`, `own@h`). -/
 def parseRechte : Nat → List Token → Except String (String × List Token)
@@ -215,7 +236,7 @@ def parseTyp (f : Nat) (toks : List Token) :
         | .ok r => match sammleAusgewogen r 1 0 0 with
           | .error e => .error e
           | .ok (h, r') =>
-            match nimmBisKopf r' with
+            match nimmBisOps r' 0 with
             | .error e => .error e
             | .ok (t, r'') => .ok (.raw ("fn ( " ++ h ++ t), r'')
       else match nimmPfad toks with
