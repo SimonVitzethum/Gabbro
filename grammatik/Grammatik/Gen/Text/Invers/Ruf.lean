@@ -174,6 +174,7 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
   sums := H.sums
   resOpt := H.resOpt
   resSum := H.resSum
+  resWhy := H.resWhy
   ergNone := H.ergNone
   ergBool := H.ergBool
   ergInt := H.ergInt
@@ -305,8 +306,7 @@ theorem reihe_bindElse (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx
     (num cnt : Nat) (a : UParamArt) (ty : Ty) (ebody : List UStmt) (ctxEB : UCtx) (endS ys : List UStmt) (cE : UCtx)
     (hR : uRuf ctx tabs koepfe c as = .ok (callee, xs)) (hk : callee.kanal = some (num, cnt))
     (hx : callee.ext = false)
-    (hv : (if callee.resBool then some (UParamArt.bool, Ty.bool)
-      else callee.res.map (fun r => (UParamArt.int, Ty.int r.1 r.2))) = some (a, ty))
+    (hv : uWertArt callee = some (a, ty))
     (h1 : uAnwReihe tabs koepfe f (uMitLokal ctx e (.why num) (Ty.why cnt) (ctx.muts.filter (fun m => !strEq m e))) ss =
       .ok (ebody, ctxEB))
     (h2 : uEndeStmt ctxEB en = .ok endS)

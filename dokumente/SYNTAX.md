@@ -492,7 +492,7 @@ linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` de
 | `boolty` | | `Ty.bool` |
 | `nevertype` | the type without a value: a body `-> never` can derive **no** `return` | `Ty.never`, `Wert D .never = Empty` («SG-18») |
 | `variants` (`tagged`) | a case index **and** its payload, no other shape | `Ty.sum cases`, value `Σ i, Nutzlast (cases.get i)` |
-| `reason` values (§9) | one of `n` declared grounds | `Ty.why n`, value `Fin n` |
+| `reason` values (§9) | one of `n` declared grounds; a parameter, a result, an argument, a bound call value | `Ty.why n`, value `Fin n` |
 | `fnptr` | the value is a function **of exactly this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.sig f = sig}` («SG-8») |
 | `ptrty` (§3) | a capability naming a declared carrier and a right | `Ty.ptr tab rw` |
 | `linear type m [order]` | a resource in the context Λ, with a stage | `D.Marke`, `D.stufen`, `Res.marke m stufe` («SG-14») |
@@ -628,8 +628,10 @@ countexpr  = "count" ident "in" domain ":" pred ;
    A cross-table count is a `group` invariant («SG-10»), not a wider domain:
    whoever hand-maintains a count instead of stating it leaks manual plumbing. *)
 reasonval  = ident "::" ident ;
-(* The producer of a `reason` value: `return R::F;` IS the error return (`M122`); a ground
-   compares only against a ground of the same declaration (`M124`). *)
+(* The producer of a `reason` value: in a function with the channel `or R`, `return R::F;` IS the error
+   return (`M122`); a reason is also a value type (`-> R`, `p : R`, `f(R::F)`, `let x = g();`), and in a
+   function of result type `R` (whose channel, if any, names another reason) `return R::F;` returns the
+   value. A ground compares only against a ground of the same declaration (`M124`). *)
 optionexpr = "Some" "(" expr ")" | "None" ;
 paren      = "(" expr ")" ;
 call       = ( path | place ) "(" [ arglist ] ")" ;

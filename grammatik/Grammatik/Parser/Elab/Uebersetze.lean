@@ -120,6 +120,12 @@ inductive USVal
   | var : String → USVal
   deriving DecidableEq, Repr
 
+/-- A value of a reason type `R`: a case `R::C` (its position) or a variable. -/
+inductive UGrund
+  | fall : Nat → UGrund
+  | var : String → UGrund
+  deriving DecidableEq, Repr
+
 /-- A call argument: a pointer variable passed through
     (`var`), a fresh `rw`-to-`r` pointer to a table with the
     callee's rights (`freshPtr`, the pass-a-fresh-pointer idiom
@@ -133,6 +139,8 @@ inductive UArg
   | bval : UEns → UArg
   /-- An option value for an `option index into T` parameter. -/
   | oval : UOpt → UArg
+  /-- A reason value for a parameter of a reason type. -/
+  | gval : UGrund → UArg
   deriving DecidableEq, Repr
 
 /-- The trailing return: nothing, or a value (a literal, a
@@ -148,6 +156,8 @@ inductive URet
   | why : Nat → URet
   /-- A tagged value as the result. -/
   | sum : USVal → URet
+  /-- A reason value as the result of a function of reason type (not its channel). -/
+  | grund : UGrund → URet
   deriving DecidableEq, Repr
 
 /-- One body statement: a slot write through a pointer (`assign`)
@@ -445,6 +455,8 @@ structure UCtx where
   sums : List USum := []
   /-- The result is a tagged type: its position and its specification. -/
   resSum : Option (Nat × List (Option (Int × Int))) := none
+  /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
+  resWhy : Option (Nat × Nat) := none
   /-- The unit's device registers. -/
   regs : List UReg := []
   /-- The unit's `state` items. -/
@@ -469,6 +481,8 @@ structure UFn where
   resOpt : Option (Nat × Int) := none
   /-- The result is a tagged type: its position and its specification (then `res` is `none`). -/
   resSum : Option (Nat × List (Option (Int × Int))) := none
+  /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
+  resWhy : Option (Nat × Nat) := none
   /-- The number of reasons of the channel `-> T or R` (`Signatur.gruende`), 0 without a channel. -/
   gruende : Nat := 0
   held : List String
@@ -497,6 +511,7 @@ def UFn.mitBindungB (f : UFn) (x : String) : UFn :=
 def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
   | .int lo hi => f.mitBindung x (lo, hi)
   | .bool => f.mitBindungB x
+  | .why n => { f with params := (x, Ty.why n) :: f.params, kinds := .why 0 :: f.kinds }
   | _ => f
 
 /-- The scope after `let x` of a tagged value of the type at `num` with the specification `cs`. -/
@@ -523,7 +538,10 @@ def UFn.ergTy (f : UFn) : Option Ty :=
   | none =>
     match f.resSum with
     | some (_, cs) => some (Ty.sum cs)
-    | none => f.res.map fun r => .int r.1 r.2
+    | none =>
+      match f.resWhy with
+      | some (_, n) => some (Ty.why n)
+      | none => f.res.map fun r => .int r.1 r.2
 
 /-- One foreign body (`extern fn`, `D.Ax`): its parameters and its answer (`none`, a number, a truth value or
     `never`); it writes nothing. -/
@@ -1377,6 +1395,8 @@ structure UFnKopf where
   kanal : Option (Nat × Nat) := none
   /-- The result is a tagged type: its position and its specification. -/
   resSum : Option (Nat × List (Option (Int × Int))) := none
+  /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
+  resWhy : Option (Nat × Nat) := none
   bits : List Nat := []
   held : List String
   /-- The statics it writes. -/
@@ -1388,6 +1408,14 @@ structure UFnKopf where
   /-- The device handles among the declared parameters: the position in the WRITTEN parameter list, the
       name and the device. They are erased from `names`/`kinds`/`types`; a call drops their arguments. -/
   griffe : List (Nat × String × String) := []
+
+/-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
+    reason. -/
+def uWertArt (k : UFnKopf) : Option (UParamArt × Ty) :=
+  if k.resBool then some (UParamArt.bool, Ty.bool)
+  else match k.res with
+    | some r => some (UParamArt.int, Ty.int r.1 r.2)
+    | none => k.resWhy.map (fun (k, n) => (UParamArt.why k, Ty.why n))
 
 /-- The answer type of a foreign body. -/
 def UFnKopf.axErg (k : UFnKopf) : Option Ty :=
@@ -1404,8 +1432,8 @@ def uParamBreite : STyp → Nat
   | _ => 0
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
-def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := []) :
-    String × STyp → Except String (String × Ty × UParamArt)
+def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])
+    (whys : List UWhy := []) : String × STyp → Except String (String × Ty × UParamArt)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
     else if strEq rechte "rw" || strEq rechte "own" then
@@ -1433,6 +1461,12 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
       | .some s => .ok (n, Ty.sum s.spec, UParamArt.sum k)
       | .none => .error ("type unknown: " ++ a)
     | .none =>
+      match whys.findIdx? (fun w => strEq w.name a) with
+      | .some k =>
+        match whys[k]? with
+        | .some w => .ok (n, Ty.why w.cases.length, UParamArt.why k)
+        | .none => .error ("reason unknown: " ++ a)
+      | .none =>
       match uTyp alias tabs (.atom a) with
       | .error e => .error e
       | .ok ty => .ok (n, ty, .int)
@@ -1647,7 +1681,7 @@ def elabKopf (_consts : List (String × Int))
       match uOhneKlauselForm klauseln with
       | .error e => .error e
       | .ok _ =>
-        match uSeq (params.map (uParam alias tabs sums)) with
+        match uSeq (params.map (uParam alias tabs sums whys)) with
         | .error e => .error e
         | .ok ps =>
           let names := ps.map (·.1)
@@ -1694,6 +1728,12 @@ def elabKopf (_consts : List (String × Int))
                   | .some s => .ok ({ kopf with resSum := some (k, s.spec) }, puts)
                   | .none => .error ("type unknown: " ++ a)
                 | .none =>
+                  match whys.findIdx? (fun w => strEq w.name a) with
+                  | .some k =>
+                    match whys[k]? with
+                    | .some w => .ok ({ kopf with resWhy := some (k, w.cases.length) }, puts)
+                    | .none => .error ("reason unknown: " ++ a)
+                  | .none =>
                   match uErgBereich alias (.atom a) with
                   | .error e => .error e
                   | .ok r => .ok ({ kopf with res := .some r }, puts)
@@ -1823,6 +1863,22 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
     match uOpt ctx num a with
     | .error e => .error e
     | .ok o => .ok (.oval o)
+  | .why k, .why r c =>
+    match ctx.whys[k]? with
+    | .some w =>
+      if !strEq w.name r then .error "argument of a foreign reason"
+      else
+        match w.cases.findIdx? (fun x => strEq x c) with
+        | .some i => .ok (.gval (.fall i))
+        | .none => .error ("reason case unknown: " ++ c)
+    | .none => .error "reason unknown"
+  | .why k, .variable p =>
+    match uParamNr ctx p with
+    | .error e => .error e
+    | .ok j =>
+      match uArtBei ctx.kinds j with
+      | .ok (.why k') => if k' == k then .ok (.gval (.var p)) else .error "argument of a foreign reason"
+      | _ => .error "argument without G form"
   | _, _ => .error "argument without G form"
 
 def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
@@ -2359,7 +2415,10 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
                 .ok (.bindCallInd x c callee.name xs, uMitLokal ctx x UParamArt.bool Ty.bool muts)
               else match callee.res with
                 | some (lo, hi) => .ok (.bindCallInd x c callee.name xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
-                | none => .error "call without a value")
+                | none =>
+                  match callee.resWhy with
+                  | some (k, n) => .ok (.bindCallInd x c callee.name xs, uMitLokal ctx x (UParamArt.why k) (Ty.why n) muts)
+                  | none => .error "call without a value")
       | _ => none : Option (Except String (UStmt × UCtx))) with
   | some r => r
   | none =>
@@ -2402,8 +2461,26 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
             | .ok false => .error "let: value outside the annotated range"
             | .ok true =>
               .ok (.bindCall x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
-          | false, .none => .error "call without a value"
+          | false, .none =>
+            match callee.resWhy, t with
+            | .some (k, n), .none => .ok (.bindCall x c xs, uMitLokal ctx x (UParamArt.why k) (Ty.why n) muts)
+            | _, _ => .error "call without a value"
   | _ => uBindWertAllg ctx mu x t e
+
+/-- `return R::C` through the reason channel. -/
+def uEndeKanal (ctx : UCtx) (r c : String) : Except String URet :=
+  match ctx.kanal, ctx.whys.findIdx? (fun w => strEq w.name r) with
+  | .some (k, _), .some j =>
+    if k != j then .error "return of a foreign reason"
+    else
+      match ctx.whys[j]? with
+      | .some w =>
+        match w.cases.findIdx? (fun x => strEq x c) with
+        | .some i => .ok (.why i)
+        | .none => .error ("reason case unknown: " ++ c)
+      | .none => .error ("reason unknown: " ++ r)
+  | .none, _ => .error "return of a reason without a reason channel"
+  | _, .none => .error ("reason unknown: " ++ r)
 
 /-- The trailing return (the `check_body`/`tr_body` of
     `lean_g.rs`): a result falls off nowhere, and a missing
@@ -2418,19 +2495,31 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
     | .some _ => .error "return without value with result"
     | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome then .error "return without value with result" else .ok .empty
   | .some (.ret (.some (.why r c))) =>
-    match ctx.kanal, ctx.whys.findIdx? (fun w => strEq w.name r) with
+    match ctx.resWhy, ctx.whys.findIdx? (fun w => strEq w.name r) with
     | .some (k, _), .some j =>
-      if k != j then .error "return of a foreign reason"
-      else
+      -- a function of reason type `R` returns the VALUE `R::C` (its channel, if any, names another reason)
+      if k == j && ctx.kanal.map (·.1) != some j then
         match ctx.whys[j]? with
         | .some w =>
           match w.cases.findIdx? (fun x => strEq x c) with
-          | .some i => .ok (.why i)
+          | .some i => .ok (.grund (.fall i))
           | .none => .error ("reason case unknown: " ++ c)
         | .none => .error ("reason unknown: " ++ r)
-    | .none, _ => .error "return of a reason without a reason channel"
-    | _, .none => .error ("reason unknown: " ++ r)
+      else uEndeKanal ctx r c
+    | _, _ => uEndeKanal ctx r c
   | .some (.ret (.some v)) =>
+    match ctx.resWhy with
+    | .some (k, _) =>
+      match v with
+      | .variable p =>
+        match uParamNr ctx p with
+        | .error e => .error e
+        | .ok j =>
+          match uArtBei ctx.kinds j with
+          | .ok (.why k') => if k' == k then .ok (.grund (.var p)) else .error "return of a foreign reason"
+          | _ => .error "return of a non-reason for a reason result"
+      | _ => .error "reason result without G form"
+    | .none =>
     match ctx.resSum with
     | .some (sidx, _) =>
       match uSVal ctx sidx v with
@@ -2694,8 +2783,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                   | .error err => .error err
                   | .ok (ys, cE) => .ok ([UStmt.bindAxElse y c xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
           else
-            match (if callee.resBool then some (UParamArt.bool, Ty.bool)
-                else callee.res.map (fun r => (UParamArt.int, Ty.int r.1 r.2))) with
+            match uWertArt callee with
             | .none => .error "let else of a call without a value"
             | .some (k, ty) =>
               match uAnwReihe tabs koepfe f (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
@@ -2881,7 +2969,7 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
-    resSum := kopf.resSum, regs, griffe := kopf.griffe.map (·.2), zustaende }
+    resSum := kopf.resSum, resWhy := kopf.resWhy, regs, griffe := kopf.griffe.map (·.2), zustaende }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -2902,6 +2990,7 @@ def elabUFunktion (consts : List (String × Int))
             params := kopf.names.zip kopf.types,
             kinds := kopf.kinds,
             res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
+            resWhy := kopf.resWhy,
             gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
             puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r }
 
@@ -3084,7 +3173,7 @@ def uAxKlauseln : List SKlausel → Except String Unit
 def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy)
     (name : String) (params : List (String × STyp)) (res : Option STyp) (fehler : Option String) :
     Except String UFnKopf :=
-  match uSeq (params.map (uParam alias tabs)) with
+  match uSeq (params.map (uParam alias tabs [] whys)) with
   | .error e => .error e
   | .ok ps =>
     match (match fehler with
@@ -3864,7 +3953,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
-  | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ => .error "truth value returned without result"
+  | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs names types b f ix v with
@@ -3895,7 +3984,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
-  | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ => .error "truth value returned without result"
+  | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs names types b f ix v with

@@ -496,6 +496,18 @@ def uIdxOfSide : USide → Except String UIdx
   | .param p => .ok (.param p)
   | _ => .error "argument without G form"
 
+/-- A reason value of `Ty.why n`: a case `R::C` or a variable of the scope. -/
+def lowGrund (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (n : Nat) :
+    UGrund → Except String (Expr (declOf u) Γ Λ (.why n))
+  | .fall i => if h : i < n then .ok (Expr.why n ⟨i, h⟩) else .error "reason case outside the type"
+  | .var p =>
+    match paramPos fn.params p with
+    | .error e => .error e
+    | .ok j =>
+      match lowVar Γ j (.why n) with
+      | .error e => .error e
+      | .ok v => .ok (Expr.var v)
+
 /-- One call argument against the callee parameter kind and the
     recorded parameter type (the `tr_arg` of `lean_g.rs`). -/
 def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -562,7 +574,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             else .error "argument right without G form"
           else .error "argument type without G form"
         else .error "argument type without G form"
-      | .val _ | .bval _ | .oval _ => .error "value for pointer without G form"
+      | .val _ | .bval _ | .oval _ | .gval _ => .error "value for pointer without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
@@ -610,6 +622,10 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             | .ok e => .ok (by rw [← hn]; exact e)
           else .error "argument type without G form"
         else .error "option table unknown"
+      | _ => .error "argument without G form"
+    | .why _, .why n =>
+      match a with
+      | .gval g => lowGrund u Γ Λ fn n g
       | _ => .error "argument without G form"
     | _, _ => .error "argument type without G form"
 

@@ -511,14 +511,13 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       have hR := ruf_ok H tabs fk k hfk hKP hp.hh args as xs ha hx
       have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
       have hgr : z.deklaration.gruende fk ≠ 0 := by omega
-      obtain ⟨ty, hv⟩ : ∃ ty, (if k.resBool then some (UParamArt.bool, Ty.bool)
-          else k.res.map (fun r => (UParamArt.int, Ty.int r.1 r.2))) = some (a, ty) := by
+      obtain ⟨ty, hv⟩ : ∃ ty, uWertArt k = some (a, ty) := by
         cases τ with
-        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [hKP.ergBool he]⟩
+        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [uWertArt, hKP.ergBool he]⟩
         | int lo hi =>
           simp only [artErg, Option.some.injEq] at hτ; subst hτ
           obtain ⟨h1, h2⟩ := hKP.ergInt lo hi he
-          exact ⟨.int lo hi, by simp [h1, h2]⟩
+          exact ⟨.int lo hi, by simp [uWertArt, h1, h2]⟩
         | _ => simp [artErg] at hτ
       have HE : SInv z V (ctxMit ctx (nVar Γ.length) (.why (gNr (z.deklaration.gruende fk)))
           (.why (z.deklaration.gruende fk)) 0 [] ctx.loops) (.why (z.deklaration.gruende fk) :: Γ)
@@ -742,14 +741,13 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       have hR := ruf_ok H tabs fk k hfk hKP hp.hh args as xs ha hx
       have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
       have hgr : z.deklaration.gruende fk ≠ 0 := by omega
-      obtain ⟨ty, hv⟩ : ∃ ty, (if k.resBool then some (UParamArt.bool, Ty.bool)
-          else k.res.map (fun r => (UParamArt.int, Ty.int r.1 r.2))) = some (a, ty) := by
+      obtain ⟨ty, hv⟩ : ∃ ty, uWertArt k = some (a, ty) := by
         cases τ with
-        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [hKP.ergBool he]⟩
+        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [uWertArt, hKP.ergBool he]⟩
         | int lo hi =>
           simp only [artErg, Option.some.injEq] at hτ; subst hτ
           obtain ⟨h1, h2⟩ := hKP.ergInt lo hi he
-          exact ⟨.int lo hi, by simp [h1, h2]⟩
+          exact ⟨.int lo hi, by simp [uWertArt, h1, h2]⟩
         | _ => simp [artErg] at hτ
       have HE : SInv z V (ctxMit ctx (nVar Γ.length) (.why (gNr (z.deklaration.gruende fk)))
           (.why (z.deklaration.gruende fk)) 0 [] ctx.loops) (.why (z.deklaration.gruende fk) :: Γ)

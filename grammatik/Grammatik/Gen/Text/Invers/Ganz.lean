@@ -96,6 +96,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
   sums := hs
   resOpt := rfl
   resSum := rfl
+  resWhy := rfl
   ergNone h := by
     simp only [vertragVon, Vertrag.vonSig, Deklaration.signatur] at h
     simp [uCtxVon, kopfVon, ergBereich, Deklaration.signatur, h]
@@ -111,7 +112,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
   griff r := by
     obtain ⟨hm, hd⟩ := hgriff r
     subst hm
-    obtain ⟨hf, _⟩ := parListe_ok _ als tabs sums devs hdevs _ 0 ps ks hps hks
+    obtain ⟨hf, _⟩ := parListe_ok _ als tabs sums whys devs hdevs _ 0 ps ks hps hks
     have hps_none : ∀ p ∈ ps, uGriffTyp devs p.2 = none := by
       intro p hp
       have := (List.filter_eq_self.1 hf) p hp

@@ -5,6 +5,8 @@
                count): accepted; of a table of another count: refused.
              * `result` of a `bool` function in its `ensures` (`Expr.var` of the head of `ErgCtx`): read as a truth
                value, and the parameters beside it shift by one; `result` of a number as a truth value: refused.
+             * reason types `R` as parameters and results (`Ty.why n`): a case `R::C` or a variable passed, returned,
+               bound from a call; a case of another reason: refused.
 -/
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
@@ -38,5 +40,20 @@ theorem erg_bool_param_stufe : stufe erg_bool_param = "OK" := by decide +kernel
 def erg_zahl_als_bool : String :=
   "module m { impl fn f(c : bool) -> u32 in 0 .. 3 ensures result { return 1; } }"
 theorem erg_zahl_als_bool_stufe : stufe erg_zahl_als_bool = "elab: ensures clause without G form" := by decide +kernel
+
+/-- A reason as parameter, result and bound value. -/
+def grund_typ : String :=
+  "module m { reason R { A = 1 \"a\", B = 2 \"b\" exhaustive } impl fn g(r : R) { } impl fn h() -> R { return R::B; } impl fn f() { g(R::A); let x = h(); g(x); } }"
+theorem grund_typ_stufe : stufe grund_typ = "OK" := by decide +kernel
+
+/-- A reason parameter returned. -/
+def grund_durch : String :=
+  "module m { reason R { A = 1 \"a\", B = 2 \"b\" exhaustive } impl fn h(r : R) -> R { return r; } }"
+theorem grund_durch_stufe : stufe grund_durch = "OK" := by decide +kernel
+
+/-- Negative twin: a case of another reason. -/
+def grund_fremd : String :=
+  "module m { reason R { A = 1 \"a\", B = 2 \"b\" exhaustive } reason S { X = 1 \"x\" exhaustive } impl fn g(r : R) { } impl fn f() { g(S::X); } }"
+theorem grund_fremd_stufe : stufe grund_fremd = "elab: argument of a foreign reason" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben36

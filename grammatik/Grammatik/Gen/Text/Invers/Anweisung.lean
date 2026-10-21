@@ -181,6 +181,7 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   sums : ctx.sums = []
   resOpt : ctx.resOpt = none
   resSum : ctx.resSum = none
+  resWhy : ctx.resWhy = none
   ergNone : V.erg = none → ctx.res = none ∧ ctx.resBool = false
   ergBool : V.erg = some .bool → ctx.res = none ∧ ctx.resBool = true
   ergInt : ∀ lo hi, V.erg = some (.int lo hi) → ctx.res.isSome ∧ ctx.resBool = false
@@ -370,6 +371,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   sums := H.sums
   resOpt := H.resOpt
   resSum := H.resSum
+  resWhy := H.resWhy
   ergNone := H.ergNone
   ergBool := H.ergBool
   ergInt := H.ergInt
@@ -400,6 +402,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   sums := H.sums
   resOpt := H.resOpt
   resSum := H.resSum
+  resWhy := H.resWhy
   ergNone := H.ergNone
   ergBool := H.ergBool
   ergInt := H.ergInt
@@ -661,7 +664,7 @@ theorem ende_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
     simp only [delabR, Except.ok.injEq] at hd; subst hd
     simp only [uOfR, Option.some.injEq] at hu; subst hu
     obtain ⟨h1, h2⟩ := H.ergNone ho.symm
-    simp [uEnde, h1, h2, H.resOpt, H.resSum]
+    simp [uEnde, h1, h2, H.resOpt, H.resSum, H.resWhy]
   | val e =>
     simp only [delabR] at hd
     cases hs : delabE z none e with
@@ -682,7 +685,7 @@ theorem ende_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
           have hw : ∀ a c, s ≠ .why a c := fun a c h => by subst h; simp [kopfOk] at hk
           cases s with
           | why a c => exact absurd rfl (hw a c)
-          | _ => simp [uEnde, h1, h2, H.resOpt, H.resSum, bool_ok H.einv e _ b hs hb]
+          | _ => simp [uEnde, h1, h2, H.resOpt, H.resSum, H.resWhy, bool_ok H.einv e _ b hs hb]
       | int lo hi =>
         simp only [uOfR] at hu
         cases hb : uOfS z art none e with
@@ -695,7 +698,7 @@ theorem ende_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
           obtain ⟨rg, hrg⟩ := Option.isSome_iff_exists.1 h1
           cases s with
           | why a c => exact absurd rfl (hw a c)
-          | _ => simp [uEnde, hrg, h2, H.resOpt, H.resSum, wert_ok H.einv e _ b hs hb]
+          | _ => simp [uEnde, hrg, h2, H.resOpt, H.resSum, H.resWhy, wert_ok H.einv e _ b hs hb]
       | _ => simp [uOfR] at hu
 
 /-- **`return R::C;`** -/
@@ -703,6 +706,6 @@ theorem ende_why {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : 
     (H : SInv z V ctx Γ Λ art) (r : Fin V.gruende) :
     uEnde ctx (some (.ret (some (.why (nGrund V.gruende) (nFall r.val))))) = .ok (.why r.val) := by
   obtain ⟨k, w, hk, hj, hw, hc⟩ := H.kanal (by have := r.isLt; omega)
-  simp [uEnde, hk, hj, hw, hc r.val r.isLt]
+  simp [uEnde, uEndeKanal, H.resWhy, hk, hj, hw, hc r.val r.isLt]
 
 end Gabbro.Grammatik.Gen.Text

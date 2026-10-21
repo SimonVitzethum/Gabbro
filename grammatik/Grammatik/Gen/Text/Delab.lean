@@ -208,6 +208,22 @@ def delabEnd {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
       let (rs, en) ← delabEnd rest
       .ok (.bindElse (nVar Γ.length) none (.call (nFn (show Fin z.fns.length from f).val) as) (nVar Γ.length)
         (.block es ee) :: rs, en)
+  | .regRead r _ rest => do
+      let (rs, en) ← delabEnd rest
+      .ok (.bind false (nVar Γ.length) none (regOrt z r) :: rs, en)
+  | .awaits g payload _ _ _ rest => do
+      let (rs, en) ← delabEnd rest
+      .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
+        rs, en)
+  | .bindCallInd p args _ _ _ rest => do
+      let as ← delabA z args
+      let (rs, en) ← delabEnd rest
+      match p with
+      | .fnref f _ _ =>
+        .ok (.bind false (nZeiger Γ.length) none (.fnref (nFn (show Fin z.fns.length from f).val)) ::
+          .bind false (nVar Γ.length) none (.call (nZeiger Γ.length) as) :: rs, en)
+      | .var x => .ok (.bind false (nVar Γ.length) none (.call (nVar (Γ.length - 1 - tiefe x)) as) :: rs, en)
+      | _ => .error "indirect call through an expression without a spelling"
   | e => .error ("end block without a spelling: " ++ String.intercalate " " (Gabbro.Grammatik.Parser.Cover.Mitglieder.cE e))
 
 end
@@ -245,6 +261,10 @@ def sperrenE {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
   | .bind _ rest => sperrenE rest
   | .bindCall _ _ _ _ _ rest => sperrenE rest
   | .bindCallElse _ _ _ _ _ err rest => sperrenE err ++ sperrenE rest
+  | .regRead _ _ rest => sperrenE rest
+  | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenE rest
+  | .awaits _ _ _ _ _ rest => sperrenE rest
+  | .bindCallInd _ _ _ _ _ rest => sperrenE rest
   | _ => []
 
 end
@@ -319,7 +339,11 @@ def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length
 
 /-- The reason types the unit names. -/
 def gruende : List Nat :=
-  ((List.finRange z.fns.length).map fun f => z.deklaration.gruende f).filter (· ≠ 0) |>.eraseDups
+  (((List.finRange z.fns.length).flatMap fun f =>
+    z.deklaration.gruende f :: (((z.deklaration.signatur f).params ++ (z.deklaration.signatur f).erg.toList).filterMap
+      fun t => match t with
+        | .why n => some n
+        | _ => none)).filter (· ≠ 0)).eraseDups
 
 def grundItem (n : Nat) : SItemTief :=
   .whyT (nGrund n) ((List.range n).map fun j => (nFall j, .lit (j + 1), s!"c{j}")) true
