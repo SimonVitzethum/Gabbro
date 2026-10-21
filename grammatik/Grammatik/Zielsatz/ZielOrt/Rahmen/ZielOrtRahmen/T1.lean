@@ -1165,7 +1165,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact semV_regLiesElseFalsch O' passes R r hk zusage sonst rest k σ ρ v
       (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hw'
-  | dannAwaits l Γ Λ Λ' g payload hp hLg rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+  | dannAwaits l Γ Λ Λ' g payload hp hLg hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenR_lokalQ hF hhead (.cons (σ₁.globs g) ρ) (.dann rest (.schrumpf k)) σ₁.spur
       (fun σ hg hok => ?_), hL⟩
@@ -1179,7 +1179,7 @@ theorem akteurR (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
     have hsv : O'.sichtbar g σ = true := by
       rw [sichtbar_gleich hRL hQ g hss.1 hg]
       exact hvis
-    have h1 := semV_awaits O' passes R g payload hp hLg rest k σ ρ hsv
+    have h1 := semV_awaits O' passes R g payload hp hLg hat rest k σ ρ hsv
     rw [hglob] at h1
     exact ZErg.folgt_of_eq h1
 

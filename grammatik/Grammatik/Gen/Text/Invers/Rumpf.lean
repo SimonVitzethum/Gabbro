@@ -556,33 +556,29 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       have H' := H.push (z.deklaration.rtyp r) a ty 0 [] ctx.loops rfl
       obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
       exact ⟨hΛ, cE, reihe_bind tabs koepfe f' ctx _ _ _ ss2 _ us2 cE hb hrest⟩
-    | awaits g payload hp hL rest =>
+    | awaits g payload hp hL hat rest =>
       subst hp
       simp only [delabB] at hd
       simp only [uOfBl] at hu
-      split at hu
-      · rename_i hat
-        simp only [hat, Bool.not_true, Bool.false_eq_true, ite_false] at hd
-        cases hr' : delabB z V rest with
-        | error _ => simp [hr', bind, Except.bind] at hd
-        | ok ss2 =>
-        simp only [hr', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
-        subst hd
-        cases hτ : artErg (z.deklaration.gtyp g) with
-        | none => simp [hτ] at hu
-        | some a =>
-        cases hur : uOfBl z V gNr (artAuf a art) rest with
-        | none => simp [hτ, hur] at hu
-        | some us2 =>
-        simp only [hτ, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
-        subst hu
-        obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-        simp at hn hf
-        obtain ⟨ty, hstep⟩ := reihe_await H tabs koepfe f' g hat (nVar Γ.length) a hτ ss2
-        have H' := H.push (z.deklaration.gtyp g) a ty 0 [] ctx.loops rfl
-        obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
-        exact ⟨hΛ, cE, hstep us2 cE hrest⟩
-      · simp at hu
+      cases hr' : delabB z V rest with
+      | error _ => simp [hr', bind, Except.bind] at hd
+      | ok ss2 =>
+      simp only [hr', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+      subst hd
+      cases hτ : artErg (z.deklaration.gtyp g) with
+      | none => simp [hτ] at hu
+      | some a =>
+      cases hur : uOfBl z V gNr (artAuf a art) rest with
+      | none => simp [hτ, hur] at hu
+      | some us2 =>
+      simp only [hτ, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
+      subst hu
+      obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
+      simp at hn hf
+      obtain ⟨ty, hstep⟩ := reihe_await H tabs koepfe f' g hat (nVar Γ.length) a hτ ss2
+      have H' := H.push (z.deklaration.gtyp g) a ty 0 [] ctx.loops rfl
+      obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
+      exact ⟨hΛ, cE, hstep us2 cE hrest⟩
     | _ => simp [uOfBl] at hu
   · intro l Γ Λ e ctx art f es en us r hn hf H hd hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩

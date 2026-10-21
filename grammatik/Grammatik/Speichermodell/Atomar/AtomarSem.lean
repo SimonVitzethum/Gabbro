@@ -235,7 +235,7 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execBlockHA rest σ (.cons v ρ)).schrumpf
           else (execEndHA sonst σ ρ).zuAusgang
       | Option.none => .hardware (.register r)
-  | .awaits g _ _ _ rest, σ, ρ =>
+  | .awaits g _ _ _ _ rest, σ, ρ =>
       let σ := leseA A σ Λ [.inr g]
       if O.sichtbar g σ then
         (execBlockHA rest σ (.cons (σ.globs g) ρ)).schrumpf
@@ -317,6 +317,32 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | (σ', Option.some (Sum.inl v)) => (execEndHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (σ', Option.some (Sum.inr r)) => (execEndHA err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
+  | .regRead r _ rest, σ, ρ =>
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | Option.some v =>
+          if D.rzusage r v then (execEndHA rest σ (.cons v ρ)).schrumpf
+          else .hardware (.geraet r)
+      | Option.none => .hardware (.register r)
+  | .regReadElse r _ zusage sonst rest, σ, ρ =>
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      | Option.some v =>
+          let σ := leseA A σ Λ zusage.orte
+          if wahr? (eval σ zusage σ (.cons v ρ)) then (execEndHA rest σ (.cons v ρ)).schrumpf
+          else (execEndHA sonst σ ρ)
+      | Option.none => .hardware (.register r)
+  | .awaits g _ _ _ _ rest, σ, ρ =>
+      let σ := leseA A σ Λ [.inr g]
+      if O.sichtbar g σ then
+        (execEndHA rest σ (.cons (σ.globs g) ρ)).schrumpf
+      else .hardware (.sichtbarkeit D.a10)
+  | .bindCallInd p args he _ hr rest, σ, ρ =>
+      let σ := leseA A σ Λ (p.orte ++ args.orte)
+      let ⟨f, hf⟩ := eval σ p σ ρ
+      match R f σ (umsig hf (evalArgs σ args σ ρ)) with
+      | .ok σ' v => (execEndHA rest σ' (.cons (ergWert (ergSig hf he) v) ρ)).schrumpf
+      | .why _ r => keinGrundSig hf hr r
+      | .logik e => .logik e
+      | .hardware e => .hardware e
 
 def execArmsHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
@@ -496,7 +522,7 @@ theorem Block.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
-  | .awaits g _ _ _ rest, hT, σ, ρ => by
+  | .awaits g _ _ _ _ rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ [Sum.inr g], ¬ T x := fun x h => hT x (by
         simp only [List.mem_singleton] at h; simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
@@ -574,6 +600,25 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
         Endblock.execHA_frei err h3] <;> (try rfl)
+  | .regRead r _ rest, hT, σ, ρ => by
+      simp only [execEndHA, execEndH, Endblock.execHA_frei rest hT] <;> (try rfl)
+  | .regReadElse r _ zusage sonst rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ zusage.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
+        Endblock.execHA_frei sonst h3] <;> (try rfl)
+  | .awaits g _ _ _ _ rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ [Sum.inr g], ¬ T x := fun x h => hT x (by
+        simp only [List.mem_singleton] at h; simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
+        sichtbar_lese hRL] <;> (try rfl)
+  | .bindCallInd p args he _ hr rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_append] at h; rcases h with h | h <;> simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
 
 theorem Arms.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

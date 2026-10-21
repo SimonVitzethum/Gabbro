@@ -166,6 +166,14 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindAxiom .. => rfl
   | _, _, .bindAxiomElse .. => rfl
 
+  | _, _, .regRead .. => rfl
+
+  | _, _, .regReadElse .. => rfl
+
+  | _, _, .awaits .. => rfl
+
+  | _, _, .bindCallInd .. => rfl
+
 /-- A covered end block run as a block is a covered block. -/
 theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ},

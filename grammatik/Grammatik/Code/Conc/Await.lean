@@ -66,7 +66,7 @@ theorem inside_of_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val} (h : m.l
 theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
+    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ) (hat : D.atomar g = true)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
@@ -76,7 +76,7 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     (hR : Rep lay σ m) (hE : EnvRep lay rs m cenv ρ) (hW : WfL lay m) (hc : ∀ x ∈ cenv, x < st.r)
     (hS : S m (lay.ggblk g) 0 (memTy (D.gtyp g)) .acq (encM lay (D.gtyp g) (σ.globs g))) :
     OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst
-      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) σ ρ) := by
+      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd hat rest) σ ρ) := by
   unfold lowerAwait at h
   have hat : atomicG (D.gtyp g) = true := by
     apply Classical.byContradiction
@@ -165,7 +165,7 @@ theorem lowerAwait_atomic {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {
 theorem await_ok_sc (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
+    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ) (hat : D.atomar g = true)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
@@ -175,8 +175,8 @@ theorem await_ok_sc (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
     (hsh : lay.shared g = false)
     (hR : Rep lay σ m) (hE : EnvRep lay rs m cenv ρ) (hW : WfL lay m) (hc : ∀ x ∈ cenv, x < st.r) :
     OutOk lay cenv lv M Sees.sc fn lb k st.r st'.r m rs ks dst
-      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) σ ρ) :=
-  await_ok lay hL cenv lv O passes R g payload hp hgd rest lb k st st' blks h M Sees.sc fn hM hk hlv hFn hCall
+      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd hat rest) σ ρ) :=
+  await_ok lay hL cenv lv O passes R g payload hp hgd hat rest lb k st st' blks h M Sees.sc fn hM hk hlv hFn hCall
     σ ρ m rs ks dst hR hE hW hc ((hR.2 g (atomicG_supp (lowerAwait_atomic h))).2 hsh)
 
 /-- A presented world of machine GX at one shared atomic: the same slots, the same globals but `g`, whose value is
@@ -197,7 +197,7 @@ theorem storeGlob_globs_self (σ : World D) (g : D.Glob) (xg : Wert D (D.gtyp g)
 theorem await_ok_gx (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
+    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ) (hat : D.atomar g = true)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
@@ -208,9 +208,9 @@ theorem await_ok_gx (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
     (hc : ∀ x ∈ cenv, x < st.r) (hS : S m (lay.ggblk g) 0 (memTy (D.gtyp g)) .acq (encM lay (D.gtyp g) xg)) :
     PresentedAt g σ (σ.storeGlob g xg) ∧
     OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst
-      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) (σ.storeGlob g xg) ρ) :=
+      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd hat rest) (σ.storeGlob g xg) ρ) :=
   ⟨presentedAt_storeGlob σ g xg,
-    await_ok lay hL cenv lv O passes R g payload hp hgd rest lb k st st' blks h M S fn hM hk hlv hFn hCall
+    await_ok lay hL cenv lv O passes R g payload hp hgd hat rest lb k st st' blks h M S fn hM hk hlv hFn hCall
       (σ.storeGlob g xg) ρ m rs ks dst hRp hE hW hc (by rw [storeGlob_globs_self]; exact hS)⟩
 
 end Gabbro.Code.Lower

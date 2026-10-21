@@ -18,8 +18,7 @@
   assignments, `publishes`, `awaits`, register reads and writes through `d`, `return`.
 
   Partial: a form without a spelling is an error naming it; the delaborator prints every form it accepts as
-  itself, never a substitute. `awaits` at a static that is no `atomic` is refused (the language waits only at an
-  atomic).
+  itself, never a substitute (`awaits` needs an atomic static in the model, as in the language).
 -/
 import Grammatik.Gen.Zeugen.Schluss
 import Grammatik.Parser.Round.RundlaufProgramm
@@ -182,9 +181,7 @@ def delabB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .regReadElse r _ _ sonst rest => do
       let (es, ende) ← delabEnd sonst
       .ok (.bindElse (nVar Γ.length) none (regOrt z r) (nVar Γ.length) (.block es ende) :: (← delabB rest))
-  | .awaits g payload _ _ rest => do
-      if !(z.deklaration.atomar g) then
-        throw "awaits at a static that is no atomic: no spelling (the language waits only at an atomic)"
+  | .awaits g payload _ _ _ rest => do
       .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
         (← delabB rest))
   | b => .error ("block without a spelling: " ++ String.intercalate " " (Gabbro.Grammatik.Parser.Cover.Mitglieder.cB b))
@@ -239,7 +236,7 @@ def sperrenB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .bindCallInd _ _ _ _ _ rest => sperrenB rest
   | .regRead _ _ rest => sperrenB rest
   | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenB rest
-  | .awaits _ _ _ _ rest => sperrenB rest
+  | .awaits _ _ _ _ _ rest => sperrenB rest
   | _ => []
 
 def sperrenE {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :

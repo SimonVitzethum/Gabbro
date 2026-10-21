@@ -288,7 +288,7 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
   | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
     simp [GRest.istRetEnde, Endblock.istRet] at hRet
-  | dannAwaits l Γ Λ Λ' g payload hp hLg rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+  | dannAwaits l Γ Λ Λ' g payload hp hLg hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     rw [hhead] at hRet
     simp [GRest.istRetEnde, Endblock.istRet] at hRet
 

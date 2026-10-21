@@ -140,7 +140,7 @@ def decSeqGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certSeqGueltig D V l (D.rtyp r :: Γ) Λ Λ' rest))
   | .awaits g payload lo hi rest =>
     haveI := decSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
-    inferInstanceAs (Decidable (payload = D.nutzlast g ∧ gdarf D g Λ ∧
+    inferInstanceAs (Decidable (payload = D.nutzlast g ∧ gdarf D g Λ ∧ D.atomar g = true ∧
       intVonTyp (D.gtyp g) = some (lo, hi) ∧
       certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest))
   | .exchange g lo hi neu rest =>
@@ -476,11 +476,11 @@ theorem seq_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
   | .awaits g payload lo hi rest =>
     intro h
     simp only [certSeqGueltig] at h
-    obtain ⟨hp, hL, htyp, hrest⟩ := h
+    obtain ⟨hp, hL, hat, htyp, hrest⟩ := h
     have hτ : D.gtyp g = .int lo hi := intVonTyp_eq htyp
     obtain ⟨r', _⟩ := seq_sound D V l (.int lo hi :: Γ) Λ Λ' rest hrest
     have r'' : Block D V l (D.gtyp g :: Γ) Λ Λ' := by rw [hτ]; exact r'
-    exact ⟨Block.awaits g payload hp hL r'', trivial⟩
+    exact ⟨Block.awaits g payload hp hL hat r'', trivial⟩
   | .exchange g lo hi neu rest =>
     intro h
     simp only [certSeqGueltig] at h

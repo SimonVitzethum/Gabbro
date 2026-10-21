@@ -95,7 +95,7 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa sonst h.1
       have h2 := spiegel_block c pa rest h.2
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .awaits _ _ _ _ rest, h => by
+  | .awaits _ _ _ _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
   | .exchange _ _ _ _ rest, h => by
@@ -174,6 +174,18 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .bindAxiom .., h => by simp [spiegelE] at h
   | .bindAxiomElse .., h => by simp [spiegelE] at h
+  | .regRead _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .regReadElse _ _ _ sonst rest, h => by
+      simp only [spiegelE, Bool.and_eq_true] at h
+      have h1 := spiegel_sonst c pa sonst h.1
+      have h2 := spiegel_sonst c pa rest h.2
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .awaits _ _ _ _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .bindCallInd .., h => by simp [spiegelE] at h
 
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} :
@@ -201,6 +213,18 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bindAxiom .., h => by simp [spiegelE] at h
   | .bindAxiomElse .., h => by simp [spiegelE] at h
+  | .regRead _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .regReadElse _ _ _ sonst rest, h => by
+      simp only [spiegelE, Bool.and_eq_true] at h
+      have h1 := spiegel_sonst c pa sonst h.1
+      have h2 := spiegel_sonst c pa rest h.2
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .awaits _ _ _ _ _ rest, h => by
+      have h1 := spiegel_sonst c pa rest h
+      simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .bindCallInd .., h => by simp [spiegelE] at h
 end
 /-- **TARGET 3 over a frame.** For a body in the mirrored forms, the own
     steps of its frame are at most the checker's number of the body plus
@@ -278,7 +302,7 @@ theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr
   | .regReadElse _ _ _ _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
       exact ⟨rufeE_of_EndR Z hZ hs, rufeB_of_BlockR Z hZ hr⟩
-  | .awaits _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
+  | .awaits _ _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
   | .exchange _ _ _ _ _ hr => by simp only [rufeB]; exact rufeB_of_BlockR Z hZ hr
   | .narrow _ _ _ _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
@@ -415,7 +439,7 @@ def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
   | .regRead _ _ rest => fremdBlock fa pa rest
   | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
-  | .awaits _ _ _ _ rest => fremdBlock fa pa rest
+  | .awaits _ _ _ _ _ rest => fremdBlock fa pa rest
   | .exchange _ _ _ _ rest => fremdBlock fa pa rest
   | .narrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
   | .check _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
@@ -446,6 +470,10 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdEnd fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdEnd fa pa rest
+  | .regRead _ _ rest => fremdEnd fa pa rest
+  | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
+  | .awaits _ _ _ _ _ rest => fremdEnd fa pa rest
+  | .bindCallInd _ _ _ _ _ rest => fremdEnd fa pa rest
 end
 /-- The §1 cost plus the declared foreign cost, per statement form. -/
 def kostenStmtF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}

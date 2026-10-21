@@ -180,8 +180,8 @@ theorem publish_paart {g : D.Glob} {e} {payload : List D.Glob} {hp : payload = D
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .publish g e payload hp hw hL) : payload = D.nutzlast g := hp
 
 /-- Ein `awaits` nimmt dieselbe Nutzlast entgegen. -/
-theorem awaits_paart {g : D.Glob} {payload : List D.Glob} {hp : payload = D.nutzlast g} {hL} {rest}
-    (_b : Block D V l Γ Λ Λ') (_h : _b = .awaits g payload hp hL rest) : payload = D.nutzlast g := hp
+theorem awaits_paart {g : D.Glob} {payload : List D.Glob} {hp : payload = D.nutzlast g} {hL} {hat} {rest}
+    (_b : Block D V l Γ Λ Λ') (_h : _b = .awaits g payload hp hL hat rest) : payload = D.nutzlast g := hp
 
 /-- `advances a -> b` («B37»): die Marke steht auf Stufe `a`, und `b` ist die naechste. -/
 theorem stufe_steigt {m : D.Marke} {a : Nat} {h : Res.marke m a ∈ Λ} {hs : a + 1 < D.stufen m}

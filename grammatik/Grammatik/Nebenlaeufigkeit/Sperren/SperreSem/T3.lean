@@ -243,6 +243,39 @@ theorem Endblock.execBlockH_alsBlock :
         cases execEndH S O U passes R rest _ _ <;> rfl
       · cases execEndH S O U passes R err _ _ <;> rfl
       · rfl
+  | _, _, .regRead r hk rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · split
+        · rw [Endblock.execBlockH_alsBlock rest]
+          cases execEndH S O U passes R rest _ _ <;> rfl
+        · rfl
+      · rfl
+  | _, _, .regReadElse r hk z sonst rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · split
+        · rw [Endblock.execBlockH_alsBlock rest]
+          cases execEndH S O U passes R rest _ _ <;> rfl
+        · rfl
+      · rfl
+  | _, _, .awaits g pl hp hL hat rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .bindCallInd p args he hp hr rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      rename_i f hf _
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rename_i r _
+        exact keinGrundSig hf hr r
+      · rfl
+      · rfl
 
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterH_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :

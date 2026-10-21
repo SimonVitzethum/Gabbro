@@ -100,6 +100,10 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .bindCallElse _ _ _ _ _ err rest => err.vOk K && rest.vOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk K
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.vOk K && rest.vOk K
+  | .regRead .. => false
+  | .regReadElse .. => false
+  | .awaits .. => false
+  | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.vOk K
 
 def Arms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
@@ -129,6 +133,14 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
   | _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .regRead r hk rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .regReadElse r hk z sonst rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .awaits g pl hp hL hat rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
 
 /-- The candidates of an indirect call through a pointer of signature `n`
@@ -337,6 +349,12 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono err h.1, Endblock.vOk_mono rest h.2⟩
+  | .regRead .., h => by simp [Endblock.vOk] at h
+  | .regReadElse .., h => by simp [Endblock.vOk] at h
+  | .awaits .., h => by simp [Endblock.vOk] at h
+  | .bindCallInd _ _ _ _ _ rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨hKK _ h.1, Endblock.vOk_mono rest h.2⟩
 
 theorem Arms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -471,6 +489,10 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       exact Endblock.vOk_of_kOk rest h
   | .bindAxiom .., h => by simp [Endblock.kOk] at h
   | .bindAxiomElse .., h => by simp [Endblock.kOk] at h
+  | .regRead .., h => by simp [Endblock.kOk] at h
+  | .regReadElse .., h => by simp [Endblock.kOk] at h
+  | .awaits .., h => by simp [Endblock.kOk] at h
+  | .bindCallInd .., h => by simp [Endblock.kOk] at h
 
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

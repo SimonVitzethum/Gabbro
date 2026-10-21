@@ -121,6 +121,10 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.hardwareFrei && rest.hardwareFrei
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .regRead .. => false
+  | .regReadElse .. => false
+  | .awaits .. => false
+  | .bindCallInd _ _ _ _ _ rest => rest.hardwareFrei
 
 def Arms.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -452,6 +456,22 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
         exact hR _ _ _ _ heq
   | .bindAxiom .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
   | .bindAxiomElse .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
+  | .regRead .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
+  | .regReadElse .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
+  | .awaits .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
+  | .bindCallInd p args he' hp hr rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      split at he
+      rename_i f hf _
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+      · rename_i r _
+        exact keinGrundSig hf hr r
+      · cases he
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
 
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

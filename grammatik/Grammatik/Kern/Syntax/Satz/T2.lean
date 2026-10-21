@@ -167,7 +167,7 @@ theorem Block.held_mono : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ 
   | .nil, L, h => h
   | .cons s rest, L, h => s.held_mono L (rest.held_mono L h)
   | .bind _ rest, L, h | .bindAxiom _ _ _ _ _ _ _ rest, L, h | .regRead _ _ rest, L, h
-  | .regReadElse _ _ _ _ rest, L, h | .awaits _ _ _ _ rest, L, h | .exchange _ _ _ _ rest, L, h
+  | .regReadElse _ _ _ _ rest, L, h | .awaits _ _ _ _ _ rest, L, h | .exchange _ _ _ _ rest, L, h
   | .narrow _ _ _ _ rest, L, h | .check _ _ rest, L, h | .float _ _ _ _ _ rest, L, h
   | .floatLit _ _ _ rest, L, h | .floatOf _ _ _ rest, L, h | .floatNarrow _ _ _ _ rest, L, h =>
       rest.held_mono L h
@@ -214,7 +214,7 @@ theorem Block.held_iff : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ �
   | .nil, _ => Iff.rfl
   | .cons s rest, L => (rest.held_iff L).trans (s.held_iff L)
   | .bind _ rest, L | .bindAxiom _ _ _ _ _ _ _ rest, L | .regRead _ _ rest, L
-  | .regReadElse _ _ _ _ rest, L | .awaits _ _ _ _ rest, L | .exchange _ _ _ _ rest, L
+  | .regReadElse _ _ _ _ rest, L | .awaits _ _ _ _ _ rest, L | .exchange _ _ _ _ rest, L
   | .narrow _ _ _ _ rest, L | .check _ _ rest, L | .float _ _ _ _ _ rest, L
   | .floatLit _ _ _ rest, L | .floatOf _ _ _ rest, L | .floatNarrow _ _ _ _ rest, L =>
       rest.held_iff L

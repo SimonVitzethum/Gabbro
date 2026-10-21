@@ -40,6 +40,14 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .regRead r hk rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .regReadElse r hk z sonst rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .awaits g pl hp hL hat rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindCallInd p args he hp hr rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
 
 theorem nB_armWahlG {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
@@ -388,6 +396,26 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       split
       · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
       · exact KErgOk.none
+  | regRead r hk rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
+  | regReadElse r hk z sonst rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
+  | awaits g pl hp hL hat rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
+  | bindCallInd p args he' hp hr rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
   | bindAxiom a args he' hw hg hd hgd rest =>
       simp only [nE, Bool.and_eq_true] at he
       try simp only [kEnde]
@@ -463,7 +491,7 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
       · exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _)
           (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact hb.1.2, hk⟩)) _ _)
       · exact KErgOk.none
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]
       exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _) (fun _ => KErgOk.none)

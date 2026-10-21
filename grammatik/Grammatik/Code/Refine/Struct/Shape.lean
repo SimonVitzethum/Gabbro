@@ -762,6 +762,18 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h => by
       simp [lowerEnd] at h
 
+  | _, _, _, .regRead .., lb, st, st', blks, h => by
+      simp [lowerEnd] at h
+
+  | _, _, _, .regReadElse .., lb, st, st', blks, h => by
+      simp [lowerEnd] at h
+
+  | _, _, _, .awaits .., lb, st, st', blks, h => by
+      simp [lowerEnd] at h
+
+  | _, _, _, .bindCallInd .., lb, st, st', blks, h => by
+      simp [lowerEnd] at h
+
 /-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
 theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
     (ov : Opd) :

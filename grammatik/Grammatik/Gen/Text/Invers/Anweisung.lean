@@ -101,11 +101,9 @@ def uOfBl (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
   | .regRead (Γ := Γ) r _ rest => do
       let a ← artErg (z.deklaration.rtyp r)
       some (.regRead (nVar Γ.length) "Dev" (nReg (rN z r)) :: (← uOfBl (artAuf a art) rest))
-  | .awaits (Γ := Γ) g _ _ _ rest =>
-      if z.deklaration.atomar g then do
-        let a ← artErg (z.deklaration.gtyp g)
-        some (.awaitBind (nVar Γ.length) (nGlob (gN z g)) :: (← uOfBl (artAuf a art) rest))
-      else none
+  | .awaits (Γ := Γ) g _ _ _ _ rest => do
+      let a ← artErg (z.deklaration.gtyp g)
+      some (.awaitBind (nVar Γ.length) (nGlob (gN z g)) :: (← uOfBl (artAuf a art) rest))
   | .bindCall (Γ := Γ) (τ := τ) f args _ _ _ rest => do
       let a ← artErg τ
       some (.bindCall (nVar Γ.length) (nFn (fN z f)) (← uOfArgs z art args) :: (← uOfBl (artAuf a art) rest))

@@ -425,8 +425,8 @@ inductive BlockG {V : Vertrag D} (A : D.Lock → Prop) :
       BlockG A true (.regReadElse r hk zusage sonst rest)
   | awaits {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
-      (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
-      (hr : BlockG A mr rest) : BlockG A mr (.awaits g payload hp hL rest)
+      (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
+      (hr : BlockG A mr rest) : BlockG A mr (.awaits g payload hp hL hat rest)
   | exchange {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       (g : D.Glob) (neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g))
       (hw : V.gschreibt g = true) (hL : gdarf D g Λ)
