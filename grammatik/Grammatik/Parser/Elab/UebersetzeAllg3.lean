@@ -1664,12 +1664,10 @@ end Gabbro.Grammatik.Parser.UebersetzeAllg2
 /-
   CUTS: what is not proved here.
 
-  1. `RufPasst` harvest is exactness in disguise: `hh` asks the
-     callee held set inside the caller resources, `hx` (with every
-     floor `none`) asks the reverse, so a call lowers only at an
-     exact held set -- the same refusal `uAnw` states over names.
-     A floor-bearing declaration would need the rank checks
-     computed, not harvested; `mkSig` never sets `boden`.
+  1. `RufPasst`: `hh` asks the callee held set inside the caller
+     resources; `hx` and `hb` are decided against the floors, which
+     are DATA of the elaborated functions (`UFn.boden`, filled by
+     `uMitBoden` with `floorOf`) and read by `mkSig`.
   2. `beq`-style soundness is proved for nothing new here; the
      `beqElabU`/`beqTopTief` pins are reused from `Uebersetze.lean`
      (same cut as there).

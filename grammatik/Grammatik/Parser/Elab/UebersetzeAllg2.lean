@@ -90,14 +90,14 @@ theorem sigProduziert_nil (u : UProg) (i : Fin u.fns.length) :
 
 /-- The lock floor of a signature is the computed floor of the function. -/
 theorem sigBoden_eq (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).boden = floorOf u (fnAt u i) := by
+    ((declOf u).signatur i).boden = (fnAt u i).boden := by
   show (sigAt u i.val).boden = _
   rw [sigAt_get u i]
   rfl
 
 /-- The same for a body contract. -/
 theorem vBoden_eq (u : UProg) (c : Fin u.fns.length) :
-    (vertragVon (declOf u) c).boden = floorOf u (fnAt u c) := by
+    (vertragVon (declOf u) c).boden = (fnAt u c).boden := by
   show (sigAt u c.val).boden = _
   rw [sigAt_get u c]
   rfl
@@ -645,7 +645,7 @@ theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
 
 /-- The caller's floor is at most the callee's (the Bool the lowering decides). -/
 def floorLeB (u : UProg) (caller callee : Fin u.fns.length) : Bool :=
-  match floorOf u (fnAt u caller), floorOf u (fnAt u callee) with
+  match (fnAt u caller).boden, (fnAt u callee).boden with
   | none, _ => true
   | some _, none => false
   | some c, some c' => decide (c ≤ c')
@@ -660,7 +660,7 @@ theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
   rw [sigBoden_eq u callee]
   unfold floorLeB at h
   rw [hc] at h
-  cases hb : floorOf u (fnAt u callee) with
+  cases hb : (fnAt u callee).boden with
   | none => rw [hb] at h; simp at h
   | some c' =>
     rw [hb] at h
@@ -668,7 +668,7 @@ theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
 
 /-- An extra held lock ranks below the callee's floor (the Bool the lowering decides). -/
 def floorUeberB (u : UProg) (callee : Fin u.fns.length) (L : (declOf u).Lock) : Bool :=
-  match floorOf u (fnAt u callee) with
+  match (fnAt u callee).boden with
   | some c => decide ((declOf u).rang L < c)
   | none => false
 
@@ -764,7 +764,7 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
                 · exact absurd h hn
                 · rw [sigBoden_eq u callee]
                   unfold floorUeberB at h
-                  cases hf : floorOf u (fnAt u callee) with
+                  cases hf : (fnAt u callee).boden with
                   | none => rw [hf] at h; simp at h
                   | some c =>
                     rw [hf] at h

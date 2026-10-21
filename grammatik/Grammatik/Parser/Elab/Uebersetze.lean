@@ -386,6 +386,8 @@ structure UFn where
   gives : List UEns
   body : List UStmt
   ret : URet
+  /-- The lock floor (`Signatur.boden`): filled after elaboration by `uMitBoden` with the rule `floorOf`. -/
+  boden : Option Int := none
   deriving DecidableEq, Repr
 
 /-- The scope after a `let x` of a number with the computed range `w`: `x` is the first name (it
@@ -2868,6 +2870,63 @@ def uWhys : List SItemTief → Except String (List UWhy)
       | .ok r => .ok ({ name := n, cases := cs.map (·.1) } :: r)
   | _ :: rest => uWhys rest
 
+/-! ## Lock floors (`Signatur.boden`)
+
+    The floor of a function is the lowest rank of any lock taken on a path from it (its own `locks L` blocks
+    and, through its calls, the callees'); a function that takes none has the floor `hoch`, above every rank
+    of the unit. A unit without locks has no floors.
+    The floor is DATA of the elaborated function (`UFn.boden`), filled by the post-pass `uMitBoden` after
+    elaboration; the declaration reads it (`mkSig`). This is the rule of the exporter (`resolve_floors`):
+    an extra lock held across a call ranks below the callee's floor (`RufPasst.hx`), so every lock the callee
+    takes ranks above everything held (`H006` across the call boundary). -/
+
+/-- The rank of a lock by name. -/
+def lockRank (u : UProg) (n : String) : Option Int :=
+  (u.locks.find? (fun l => l.name == n)).map (·.rank)
+
+def optMin : Option Int → Option Int → Option Int
+  | none, b => b
+  | a, none => a
+  | some a, some b => some (min a b)
+
+/-- The lowest rank a function takes directly (its `locks L { .. }` blocks). -/
+def directFloor (u : UProg) (f : UFn) : Option Int :=
+  f.body.foldl (fun acc st => match st with
+    | .lockBeg n => optMin acc (lockRank u n)
+    | _ => acc) none
+
+/-- The functions a function calls directly: a call statement, a call bound by `let`, and a call bound by
+    `let .. else (e) { .. }` (`bindElse`). -/
+def callNames (f : UFn) : List String :=
+  f.body.filterMap fun st => match st with
+    | .call c _ => some c
+    | .bindCall _ c _ => some c
+    | .bindElse _ c _ _ => some c
+    | _ => none
+
+/-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/
+def floorStep (u : UProg) (cur : List (String × Option Int)) : List (String × Option Int) :=
+  u.fns.map fun f =>
+    (f.name, (callNames f).foldl
+      (fun acc c => optMin acc ((cur.find? (fun p => p.1 == c)).bind (·.2))) (directFloor u f))
+
+/-- `n` rounds (a path through the call graph is at most as long as the number of functions). -/
+def floorsN (u : UProg) : Nat → List (String × Option Int)
+  | 0 => u.fns.map fun f => (f.name, directFloor u f)
+  | n + 1 => floorStep u (floorsN u n)
+
+/-- The floor of a function: `none` in a unit without locks, else the lowest rank on any path from it, or
+    one above the highest rank of the unit when the paths take no lock. -/
+def floorOf (u : UProg) (f : UFn) : Option Int :=
+  if u.locks.isEmpty then none
+  else some (match ((floorsN u u.fns.length).find? (fun p => p.1 == f.name)).bind (·.2) with
+    | some c => c
+    | none => (u.locks.map (·.rank)).foldl max 0 + 1)
+
+/-- The post-pass: every function carries its floor (`UFn.boden`). -/
+def uMitBoden (u : UProg) : UProg :=
+  { u with fns := u.fns.map fun f => { f with boden := floorOf u f } }
+
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
 def elabU : List SItemTief → Except String UProg
@@ -2927,10 +2986,13 @@ def elabU : List SItemTief → Except String UProg
         (fun d => uStart fns "start" d)) with
     | .error e => .error e
     | .ok gestartet =>
-      .ok { tabs := tabs, locks := locks, fns, roots, hands := uHandler ms, globs, gestartet,
-            axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
-                                            gruende := (k.kanal.map (·.2)).getD 0 }),
-            annahmen, whys, sums }
+      let u : UProg :=
+        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
+          gestartet := gestartet,
+          axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
+                                          gruende := (k.kanal.map (·.2)).getD 0 }),
+          annahmen := annahmen, whys := whys, sums := sums }
+      .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -3839,7 +3901,7 @@ def uExp104 : UProg :=
         body := [.assign "k" "stand" (.param "i") (.lit 100),
           .call "lies" [.freshPtr "Konto" false,
             .val (.param "i")]],
-        ret := .empty },
+        ret := .empty, boden := some 1 },
       { name := "lies",
         params := [("k", .ptr 0 false), ("i", .index 2)],
         kinds := [.ptr 0 false, .index 0],
@@ -3848,7 +3910,7 @@ def uExp104 : UProg :=
         gives := [.cmp "==" .erg
           (.slot "k" "stand" (.param "i"))],
         body := [],
-        ret := .val (.slot "k" "stand" (.param "i")) }] }
+        ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }] }
 
 /-! ## Shape equality on U (Bool pins, like `beqTopTief`) -/
 
@@ -4037,7 +4099,7 @@ def beqUFn : UFn → UFn → Bool
     beqOptWeite a.res b.res && a.resBool == b.resBool &&
     beqStrList a.held b.held && beqStrList a.puts b.puts && beqStrList a.gputs b.gputs &&
     beqUEnsList a.gives b.gives &&
-    beqUStmtList a.body b.body && beqURet a.ret b.ret
+    beqUStmtList a.body b.body && beqURet a.ret b.ret && a.boden == b.boden
 
 def beqUFnList : List UFn → List UFn → Bool
   | [], [] => true
