@@ -1064,10 +1064,17 @@ abbrev RumpTy (u : UProg) (f : Fin u.fns.length) :=
     ((declOf u).params f)
     (Signatur.anfang (declOf u) ((declOf u).signatur f))
 
+/-- The requires type of a lowered function. -/
+abbrev ReqTy (u : UProg) (f : Fin u.fns.length) :=
+  Expr (declOf u) ((declOf u).params f) (Signatur.anfang (declOf u) ((declOf u).signatur f)) .bool
+
 /-- One whole function: contracts and body through the
     declaration. -/
 def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
-    Except String (EnsTy u c × RumpTy u c) :=
+    Except String (EnsTy u c × RumpTy u c × ReqTy u c) :=
+  match lowEnsList u (ctxOf u c) (resOf u c) (fnAt u c) none (fnAt u c).needs with
+  | .error e => .error e
+  | .ok r0 =>
   match lowEnsList u (ErgCtx (ctxOf u c) ((verOf u c).erg))
       (resOf u c) (fnAt u c) (fnAt u c).res
       (fnAt u c).gives with
@@ -1088,7 +1095,11 @@ def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
           (Signatur.anfang (declOf u) ((declOf u).signatur c))
         rw [← ctxParams_eq u c, ← anfangRes_eq u c]
         exact b0
-      .ok (e1, b1)
+      have r1 : ReqTy u c := by
+        show Expr (declOf u) ((declOf u).params c) (Signatur.anfang (declOf u) ((declOf u).signatur c)) .bool
+        rw [← ctxParams_eq u c, ← anfangRes_eq u c]
+        exact r0
+      .ok (e1, b1, r1)
 
 /-- Every function lowers (the success check of `lowerAllg`;
     the values ride `lowerFnAt` directly). -/
@@ -1130,7 +1141,7 @@ theorem lowerEach_all_ok (u : UProg) (fs : List (Fin u.fns.length))
 /-- The lowered pair at an index known good. -/
 def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     (h : ∃ v, lowerFnAt u f = .ok v) :
-    EnsTy u f × RumpTy u f :=
+    EnsTy u f × RumpTy u f × ReqTy u f :=
   match hm : lowerFnAt u f with
   | .ok v => v
   | .error e => by
@@ -1139,13 +1150,23 @@ def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     rw [hv] at hm
     simp at hm
 
+/-- The requires of a function: `.tru` without a `requires` predicate (what the conjunction of none is),
+    else the lowered conjunction. -/
+def reqOf (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fin u.fns.length) : ReqTy u f :=
+  if (fnAt u f).needs = [] then Expr.tru else R f
+
+theorem reqOf_leer (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fin u.fns.length)
+    (h : (fnAt u f).needs = []) : reqOf u R f = Expr.tru := by
+  unfold reqOf
+  rw [if_pos h]
+
 /-- Assemble lowered functions to a program (no contract
     content in `requires`, per-function `ensures` and bodies). -/
 def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
-    (B : ∀ f : Fin u.fns.length, RumpTy u f) :
+    (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f) :
     Programm (declOf u) where
   invariante := fun i => nomatch i
-  requires := fun _ => Expr.tru
+  requires := fun f => reqOf u R f
   ensures := fun f => E f
   rumpf := fun f => B f
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
@@ -1162,7 +1183,7 @@ def lowerAllg (u : UProg) :
       lowerEach_all_ok u (List.finRange u.fns.length) f
         (List.mem_finRange f) h
     .ok (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
-      (fun f => (lowerAtPair u f (w f)).2),
+      (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2),
       List.finRange u.fns.length)
 
 /-! ## 104 pins on the generically lowered program -/

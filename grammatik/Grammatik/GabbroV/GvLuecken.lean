@@ -50,7 +50,7 @@ theorem gvLuecke_sp4_ist_sp0 (h : sp0OkB uExp104 = true) :
     by `rfl` (`E4.P := P4`, `E4.S := SperrInv.leer D4`) and L_a for `hsp0`. -/
 theorem gvLuecke_start104_of (h : sp0OkB uExp104 = true)
     (hsp0 : E4.sp0 = sp0Of uExp104 h) : StartPflicht E4 :=
-  gv_startPflicht uExp104 P4 fs4 low4 h E4 rfl rfl hsp0
+  gv_startPflicht uExp104 P4 fs4 low4 h E4 rfl rfl hsp0 (by decide)
 
 /-- **L_b applied: `StartPflicht` holds over 104's declared memory.** -/
 theorem gvLuecke_start104 : StartPflicht E4 :=

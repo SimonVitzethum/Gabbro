@@ -96,6 +96,10 @@ inductive UEns
   | globB : String → UEns
   /-- A `bool` parameter or local read as a truth value (`Expr.var`). -/
   | var : String → UEns
+  /-- `forall x in slots of T : p` / `exists x in slots of T : p` (`Expr.forallSlots`/`existsSlots`): the
+      table, the binder (an index into `T` inside `p`) and the body. -/
+  | alle : String → String → UEns → UEns
+  | einige : String → String → UEns → UEns
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -428,6 +432,8 @@ structure UFn where
   /-- The statics it writes (`effects { writes X }`). -/
   gputs : List String := []
   gives : List UEns
+  /-- The `requires` predicates beside `Held(..)` (`Programm.requires`, their conjunction). -/
+  needs : List UEns := []
   body : List UStmt
   ret : URet
   /-- The lock floor (`Signatur.boden`): filled after elaboration by `uMitBoden` with the rule `floorOf`. -/
@@ -1188,6 +1194,17 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     match uSichert ctx q with
     | .error e => .error e
     | .ok a => .ok (.not a)
+  | .ext k [x, dk] [.variable tn, body] =>
+    if !(k == XKind.all || k == XKind.any) then .error "ensures clause without G form"
+    else if !strEq dk "slots" then .error "quantifier domain without G form"
+    else
+      match uTabNr ctx.tabs tn with
+      | .error e => .error e
+      | .ok (num, c) =>
+        match uSichert { ctx with names := x :: ctx.names, kinds := .index num :: ctx.kinds,
+                                  types := Ty.index c :: ctx.types, bits := 0 :: ctx.bits } body with
+        | .error e => .error e
+        | .ok b => .ok (if k == XKind.all then .alle tn x b else .einige tn x b)
   | .tru => .ok .tru
   | .fls => .ok .fls
   | .variable g =>
@@ -1227,6 +1244,7 @@ def ensAltErg : UEns → Bool
   | .cmp _ a b => seiteAltErg a || seiteAltErg b
   | .and a b | .or a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
+  | .alle _ _ b | .einige _ _ b => ensAltErg b
   | _ => false
 
 /-- A truth value in a BODY (a returned or stored `bool`): the predicate forms of an `ensures`,
@@ -1394,7 +1412,7 @@ def uGehalten (locks : List ULock) : List SKlausel →
       match uGehalten locks rest with
       | .error e => .error e
       | .ok ms => .ok (ls ++ ms)
-  | .needs _ :: _ => .error "requires clause without G form"
+  | .needs _ :: rest => uGehalten locks rest
   | _ :: rest => uGehalten locks rest
 
 /-- A name position in a list (for `writes` through a
@@ -2690,12 +2708,18 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
 
 /-- Pass two: contracts and body of one function. -/
 def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
-    (koerper : SAnw) : Except String (List UEns × List UStmt × URet) :=
+    (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
   match uSeq ((klauseln.filterMap (fun
     | .gives e => some (uSichert ctx e)
     | _ => none))) with
   | .error e => .error e
   | .ok gives =>
+    match uSeq ((klauseln.filterMap (fun
+      | .needs (.call "Held" _) => none
+      | .needs e => some (uBool ctx e)
+      | _ => none))) with
+    | .error e => .error e
+    | .ok needs =>
     match koerper with
     | .block ss ende =>
       match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with
@@ -2703,7 +2727,7 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
       | .ok (body, ctxE) =>
         match uEnde ctxE ende with
         | .error e => .error e
-        | .ok r => .ok (gives, body, r)
+        | .ok r => .ok (gives, needs, body, r)
     | _ => .error "fn body without G form"
 
 /-- The context of a function from its head. -/
@@ -2731,13 +2755,13 @@ def elabUFunktion (consts : List (String × Int))
     let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
-    | .ok (gives, body, r) =>
+    | .ok (gives, needs, body, r) =>
       .ok { name := sig.name,
             params := kopf.names.zip kopf.types,
             kinds := kopf.kinds,
             res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
             gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
-            puts := schreibt, gputs := kopf.gputs, gives, body, ret := r }
+            puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r }
 
 /-- The payload of an `atomic` item: statics named bare (a table payload, `T.slots`, has no form: `D.nutzlast`
     lists statics). -/
@@ -3467,6 +3491,7 @@ def lowerVglEin (tabs : List UTab) (names : List String)
 def lowerSichertEin (tabs : List UTab) (names : List String)
     (types : List Ty) : UEns → Except String UEnsEin
   | .globB _ | .var _ => .error "static without G form in the 104 lowering"
+  | .alle .. | .einige .. => .error "quantifier without G form in the 104 lowering"
   | .cmp op a b => lowerVglEin tabs names types op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -3877,6 +3902,7 @@ def lowerSichertLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     UEns → Except String UEnsLies
   | .globB _ | .var _ => .error "static without G form in the 104 lowering"
+  | .alle .. | .einige .. => .error "quantifier without G form in the 104 lowering"
   | .cmp op a b => lowerVglLies tabs names types res op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -4310,6 +4336,7 @@ def beqUEns : UEns → UEns → Bool
   | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
     strEq a b && strEq f g && beqUIdx x y
   | .globB a, .globB b => strEq a b
+  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool
@@ -4436,7 +4463,8 @@ def beqUFn : UFn → UFn → Bool
     beqOptWeite a.res b.res && a.resBool == b.resBool &&
     beqStrList a.held b.held && beqStrList a.puts b.puts && beqStrList a.gputs b.gputs &&
     beqUEnsList a.gives b.gives &&
-    beqUStmtList a.body b.body && beqURet a.ret b.ret && a.boden == b.boden
+    beqUStmtList a.body b.body && beqURet a.ret b.ret && a.boden == b.boden &&
+    beqUEnsList a.needs b.needs
 
 def beqUFnList : List UFn → List UFn → Bool
   | [], [] => true

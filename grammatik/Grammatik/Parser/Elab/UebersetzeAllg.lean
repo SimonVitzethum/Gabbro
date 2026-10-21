@@ -1067,6 +1067,26 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .ok v => .ok (Expr.var v)
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+  | .alle tn x body =>
+    if er.isSome then .error "quantifier beside a result without G form" else
+    match tabIdx u.tabs tn with
+    | .error e => .error e
+    | .ok t =>
+      if hL : (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ) then
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fn.mitIndex x t.val ((declOf u).count t)) none body with
+        | .error e => .error e
+        | .ok b => .ok (Expr.forallSlots (D := declOf u) t b hL)
+      else .error "access without held guard"
+  | .einige tn x body =>
+    if er.isSome then .error "quantifier beside a result without G form" else
+    match tabIdx u.tabs tn with
+    | .error e => .error e
+    | .ok t =>
+      if hL : (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ) then
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fn.mitIndex x t.val ((declOf u).count t)) none body with
+        | .error e => .error e
+        | .ok b => .ok (Expr.existsSlots (D := declOf u) t b hL)
+      else .error "access without held guard"
 
 /-- The `ensures` conjunction (empty is `.tru`). -/
 def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
