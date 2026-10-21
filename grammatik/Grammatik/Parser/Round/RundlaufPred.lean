@@ -8,8 +8,8 @@
   predicate follow (`PredFolge`: benign for expressions, no `=>`, no `in`, no `reaches`). The
   printed tree goes through `parsePredNot` (a `!` prefix is taken there, the operand read by
   `parsePredAtom`) and `parsePredAtom` (the comparison level, `parseCmp`). Predicate-only forms
-  (`forall`, `exists`, `in`, `reaches`, `=>`: the `ext` trees) are outside `gut`; their printer is
-  `druckExtToks`, not proved here.
+  (`forall`, `exists`, `in`, `reaches`, `=>`: the `ext` trees) are outside `gut`; the quantifiers,
+  `=>` and `&&`/`||`/`!` over them read back in `RundlaufQuant` (`pred_voll`).
 
   `lex_pfad`: a `::` path of name-shaped words, written without spaces
   (`String.intercalate "::"`), lexes to its path tokens (`pfadToks`); so `rohToks` of a path text is

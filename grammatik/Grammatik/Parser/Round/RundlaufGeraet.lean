@@ -422,7 +422,7 @@ structure RegGut (r : SReg) : Prop where
   klasse : r.klasse = "" → r.stage = []
   stage : PhasenGut r.stage
   felder : ∀ fd ∈ r.felder, RegFeldGut fd
-  voraus : ∀ p, r.voraus = some p → gut p = true
+  voraus : ∀ p, r.voraus = some p → PredGut p
   sonst : r.voraus = none → r.elseF = none
   traeger : ∀ c ∈ r.abhaengt, TraegerGut c
 
@@ -474,7 +474,7 @@ theorem dep_rund (cs : List (List String)) (hcs : ∀ c ∈ cs, TraegerGut c) (n
       List.singleton_append]
     exact regRest_dep _ _ _ _ _ (traegerListe_rund _ (by simp) hcs R _ (by omega)) (regRest_ende _ _ R hR)
 
-theorem req_rund (v : Option SExpr) (e : Option (String × String)) (hv : ∀ p, v = some p → gut p = true)
+theorem req_rund (v : Option SExpr) (e : Option (String × String)) (hv : ∀ p, v = some p → PredGut p)
     (he : v = none → e = none) (cs : List (List String)) (hcs : ∀ c ∈ cs, TraegerGut c) (n : String)
     (t : STyp) (a : SExpr) (k : String) (st : List String) (fs : List SRegFeld) (R : List Token)
     (hR : RegEnde R) (F : Nat) (hF : 8 * (reqT v e ++ depT cs).length + 40 ≤ F) :
@@ -494,7 +494,7 @@ theorem req_rund (v : Option SExpr) (e : Option (String × String)) (hv : ∀ p,
       simp only [reqT, druckRegVoraus, List.length_append, List.length_cons, List.length_nil] at hF
       simp only [reqT, druckRegVoraus, List.cons_append, List.nil_append, List.append_assoc,
         List.singleton_append]
-      exact regRest_req _ _ p _ _ (pred_druck p hp _ hD.pred F' (by simp only [fb]; omega)) hD.sonst
+      exact regRest_req _ _ p _ _ (pred_voll p hp _ hD.pred F' (by simp only [bP]; omega)) hD.sonst
         (dep_rund cs hcs n t a k st fs (some p) none R hR F' (by omega))
     | some ab =>
       obtain ⟨x, y⟩ := ab
@@ -503,11 +503,11 @@ theorem req_rund (v : Option SExpr) (e : Option (String × String)) (hv : ∀ p,
         List.singleton_append]
       have hE : PredFolge (.wort "else" :: nameTok x :: .zeichen "::" :: nameTok y :: (depT cs ++ R)) :=
         ⟨rfl, rfl, by simp only [ruhigGleit]; decide, by simp, by simp, by simp⟩
-      exact regRest_reqElse _ _ p x y _ _ (pred_druck p hp _ hE F' (by simp only [fb]; omega)) hD.dd
+      exact regRest_reqElse _ _ p x y _ _ (pred_voll p hp _ hE F' (by simp only [bP]; omega)) hD.dd
         (dep_rund cs hcs n t a k st fs (some p) (some (x, y)) R hR F' (by omega))
 
 theorem fel_rund (fs : List SRegFeld) (hfs : ∀ fd ∈ fs, RegFeldGut fd) (v : Option SExpr)
-    (e : Option (String × String)) (hv : ∀ p, v = some p → gut p = true) (he : v = none → e = none)
+    (e : Option (String × String)) (hv : ∀ p, v = some p → PredGut p) (he : v = none → e = none)
     (cs : List (List String)) (hcs : ∀ c ∈ cs, TraegerGut c) (n : String) (t : STyp) (a : SExpr)
     (k : String) (st : List String) (R : List Token) (hR : RegEnde R) (F : Nat)
     (hF : 8 * (felderT fs ++ reqT v e ++ depT cs).length + 40 ≤ F) :
@@ -528,7 +528,7 @@ theorem fel_rund (fs : List SRegFeld) (hfs : ∀ fd ∈ fs, RegFeldGut fd) (v : 
 
 theorem kl_rund (k : String) (st : List String) (hk : k = "" → st = []) (hst : PhasenGut st)
     (fs : List SRegFeld) (hfs : ∀ fd ∈ fs, RegFeldGut fd) (v : Option SExpr)
-    (e : Option (String × String)) (hv : ∀ p, v = some p → gut p = true) (he : v = none → e = none)
+    (e : Option (String × String)) (hv : ∀ p, v = some p → PredGut p) (he : v = none → e = none)
     (cs : List (List String)) (hcs : ∀ c ∈ cs, TraegerGut c) (n : String) (t : STyp) (a : SExpr)
     (R : List Token) (hR : RegEnde R) (F : Nat)
     (hF : 8 * (klasseT k st ++ felderT fs ++ reqT v e ++ depT cs).length + 40 ≤ F) :

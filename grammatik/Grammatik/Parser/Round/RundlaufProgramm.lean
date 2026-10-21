@@ -151,7 +151,7 @@ theorem rundlauf_programm (its : List SItemTief) (h : ∀ it ∈ its, ItemGut it
 
 /-- A program with every covered item kind: `use`, `const` with an array value, `static mut ...
     shared`, a `lock` with `held`, an `atomic` with `publishes nothing` and an order, a `reason`, a
-    `module` holding a function with a contract (`requires`, `effects`, `costs`), a result type and
+    `module` holding a function with a contract (`requires` with `forall`, `&&` and `exists`, `effects`, `costs`), a result type and
     a body, `concurrent` over a two-segment path, and a `table` with a count, `shared`, a slot field
     with `where` and `by ops`, `ops`, `tree`, `occupied` and a group invariant, and an `entry` with
     every optional clause. The static `max`, the parameter `x` and the table field `x` are table
@@ -166,7 +166,9 @@ def zeugeProgramm : List SItemTief := [
   .modT ("::".intercalate ["kern"]) [
     .fnT { art := "", name := "erhoehe", params := [("x", .atom "u64")], res := some (.atom "u64"),
            fehler := none,
-           klauseln := [.needs (.bin "<" (.variable "x") (.lit 100)),
+           klauseln := [.needs (.ext .all ["i", "slots"] [.variable "Knoten",
+                          .bin "&&" (.bin "<" (.variable "x") (.lit 100))
+                            (.ext .any ["t", "threads"] [.bin "==" (.variable "t") (.lit 1)])]),
                         .effs [.writes (.variable "max")], .cost (.lit 5)] }
       (.block [.set (.variable "max") "+=" (.variable "x")] (some (.ret (some (.variable "x")))))],
   .concT [["kern", "erhoehe"]],
@@ -204,7 +206,9 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
     · intro p hp; simp at hp; subst hp; exact atom _ (by decide)
     · intro k hk; simp at hk
       rcases hk with rfl | rfl | rfl
-      · show gut _ = true; decide
+      · exact .quant .all "i" "slots" [] [.variable "Knoten"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
+          (.und _ _ (.expr _ (by decide))
+            (.quant .any "t" "threads" [] [] _ (Or.inr rfl) .threads (.expr _ (by decide))))
       · intro e he; simp at he; subst he; show gut _ = true; decide
       · show gut _ = true; decide
     · refine .block _ _ ?_ (by show gut _ = true; decide) (by intro h; cases h)
@@ -222,7 +226,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
     · show _ ≠ []; simp
     · exact ⟨by simp, by intro k hk; simp at hk; subst hk; exact Or.inl rfl⟩
     · trivial
-    · exact ⟨by decide, by decide, by simp⟩
+    · exact ⟨by decide, .expr _ (by decide), by simp⟩
   · refine .entryT _ ⟨?_, ?_, Or.inr (Or.inl rfl), by simp⟩
     · intro v hv; cases hv; decide
     · intro x hx; cases hx; decide
@@ -285,7 +289,7 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
           rcases hfd with rfl | rfl
           · exact Or.inl ⟨0, rfl⟩
           · exact Or.inr (by decide)
-        · intro p hp; cases hp; decide
+        · intro p hp; cases hp; exact .expr _ (by decide)
         · intro c hc; simp at hc
           rcases hc with rfl | rfl
           · exact Or.inl rfl

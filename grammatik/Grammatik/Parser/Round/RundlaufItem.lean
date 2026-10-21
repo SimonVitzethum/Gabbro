@@ -9,7 +9,7 @@
   The printability class `ItemGut`, the induction over it and the composition with the lexer are in
   `RundlaufProgramm`; devices are in `RundlaufGeraet`.
 -/
-import Grammatik.Parser.Round.RundlaufPred
+import Grammatik.Parser.Round.RundlaufQuant
 
 namespace Gabbro.Grammatik.Parser
 
@@ -396,8 +396,8 @@ theorem namen_rund : ∀ (ns : List String) (R : List Token) (F : Nat), ns ≠ [
 
 /-- The printable clauses (`by`, `retires`, `deadline` ride as reconstructed text: excluded). -/
 def KlauselGut : SKlausel → Prop
-  | .needs p => gut p = true
-  | .gives p => gut p = true
+  | .needs p => PredGut p
+  | .gives p => PredGut p
   | .keeps ns => ns ≠ []
   | .refs p => p ≠ []
   | .cost e => gut e = true
@@ -441,17 +441,19 @@ theorem klausel_rund (k : SKlausel) (hk : KlauselGut k) (R : List Token) (hR : K
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   cases k with
   | needs p =>
-    simp only [druckKlausel, List.length_append, List.length_singleton] at hF ⊢
-    have hL := predListe_rund [p] R F' (by simp) (by simpa [KlauselGut] using hk) hp hkomma
-      (by simp [druckPredListe]; omega)
-    simp only [druckPredListe] at hL
+    simp only [druckKlausel, druckPredListe, List.length_append, List.length_singleton] at hF ⊢
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+    have hP := pred_voll p hk R hp F'' (by simp only [bP]; omega)
+    have hL : parsePredListe (F'' + 1) (druckToks p ++ R) = .ok ([p], R) := by
+      simp only [parsePredListe, hP]
     simp only [List.singleton_append, List.cons_append]
     simp only [parseKlausel, (by decide : strEq "requires" "requires" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, hL, List.map]
   | gives p =>
-    simp only [druckKlausel, List.length_append, List.length_singleton] at hF ⊢
-    have hL := predListe_rund [p] R F' (by simp) (by simpa [KlauselGut] using hk) hp hkomma
-      (by simp [druckPredListe]; omega)
-    simp only [druckPredListe] at hL
+    simp only [druckKlausel, druckPredListe, List.length_append, List.length_singleton] at hF ⊢
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+    have hP := pred_voll p hk R hp F'' (by simp only [bP]; omega)
+    have hL : parsePredListe (F'' + 1) (druckToks p ++ R) = .ok ([p], R) := by
+      simp only [parsePredListe, hP]
     simp only [List.singleton_append, List.cons_append]
     simp only [parseKlausel, (by decide : strEq "ensures" "requires" = false), (by decide : strEq "ensures" "ensures" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, hL, List.map]
   | keeps ns =>
@@ -513,7 +515,7 @@ theorem klausel_rund (k : SKlausel) (hk : KlauselGut k) (R : List Token) (hR : K
 
 theorem klausel_kopf (k : SKlausel) (hk : KlauselGut k) :
     ∃ w ts, druckKlausel k = .wort w :: ts ∧ istKlauselKopf w = true := by
-  cases k <;> simp [KlauselGut] at hk <;> exact ⟨_, _, rfl, by decide⟩
+  cases k <;> (try simp [KlauselGut] at hk) <;> exact ⟨_, _, rfl, by decide⟩
 
 /-- The body behind a function head: a block or `;`. -/
 def KlauselEnde (R : List Token) : Prop := (∃ r, R = .zeichen "{" :: r) ∨ (∃ r, R = .zeichen ";" :: r)
@@ -1721,7 +1723,7 @@ theorem baum_rund (ks : List (String × String)) (hne : ks ≠ []) (hg : ∀ k �
 /-- A printable group invariant: printable cost and predicate, a raw proof text without `:` and
     braces. -/
 def InvGut (i : SGruppenInv) : Prop :=
-  gut i.kosten = true ∧ gut i.pred = true ∧
+  gut i.kosten = true ∧ PredGut i.pred ∧
     ∀ h, i.proof = some h → RohText (fun t => t = .zeichen ":" ∨ t = .zeichen "{" ∨ t = .zeichen "}") h
 
 theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : Nat)
@@ -1744,8 +1746,8 @@ theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : 
     have hK := ausdruck kosten hk (.zeichen ")" :: .wort "runs" ::
       .wort (if online then "online" else "offline") :: .zeichen ":" :: (druckToks pred ++ .zeichen ";" :: R))
       (F' + 1) rfl rfl rfl (by omega)
-    have hP := pred_druck pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
-      (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [fb]; omega)
+    have hP := pred_voll pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
+      (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [bP]; omega)
     simp only [druckGruppenInv, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
     simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nimmKostenO, fordereZeichen, hK, hm, hmo, hoff, parseInvRest, hP]
     all_goals exact hoff
@@ -1757,8 +1759,8 @@ theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : 
       .wort (if online then "online" else "offline") :: .wort "by" ::
         (ts ++ .zeichen ":" :: (druckToks pred ++ .zeichen ";" :: R)))
       (F' + 1) rfl rfl rfl (by omega)
-    have hP := pred_druck pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
-      (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [fb]; omega)
+    have hP := pred_voll pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
+      (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [bP]; omega)
     have hN := nimmBisZeichen_roh ":" ts (druckToks pred ++ .zeichen ";" :: R)
       (fun t ht => ⟨(hts t ht).1, fun e => (hts t ht).2 (Or.inr (Or.inl e)),
         fun e => (hts t ht).2 (Or.inr (Or.inr e)), fun e => (hts t ht).2 (Or.inl e)⟩)
