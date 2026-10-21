@@ -6,7 +6,9 @@
 
   The class `ItemGut` (stated in full below) covers: `module` (a `::` path of name-shaped non-table
   words, nested items), `use`, `const` (expression or nested array values), `static` (with
-  `aligned`, `section`, `shared`), `fn` with its whole head (modifier, parameters, result, `or`
+  `aligned`, `section`, `shared`), `table` (count/backed/owner/shared head; `const`, `slot` fields
+  with bit position, `offset_into`, `where`, `reserved`, `by ops`; group invariants; `ops`; `tree`;
+  `occupied`), `fn` with its whole head (modifier, parameters, result, `or`
   channel, the clauses `requires`, `ensures`, `maintains`, `refines`, `effects`, `costs`,
   `decreases`, `payload`, `section`, `arch`, `advances`) and a block body or `;`, `lock` (with
   `held`, `shared held`, `masks`, `invariant`), `atomic` (with `publishes`, an order, `observed
@@ -1417,6 +1419,594 @@ theorem item_lock (n : String) (ps : List SExpr) (rk : SExpr) (h sh : Option SEx
     simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
 
+/-! ### `table`: numbers as text, fields, edges, group invariants, parts -/
+
+theorem lex_zahl_allein (n : Nat) : lex (toString n) = .ok [.num n, .ende] := by
+  unfold lex
+  rw [show (toString n).toList = Nat.toDigits 10 n by rw [Nat.toString_eq_ofList_toDigits, String.toList_ofList]]
+  have hd := toDigits_ziffern n
+  have hne : Nat.toDigits 10 n ≠ [] := Nat.toDigits_ne_nil
+  obtain ⟨c, cs, hcs⟩ : ∃ c cs, Nat.toDigits 10 n = c :: cs := by
+    cases h : Nat.toDigits 10 n with
+    | nil => exact absurd h hne
+    | cons c cs => exact ⟨c, cs, rfl⟩
+  have hc : istZiffer c = true := by rw [hcs] at hd; simp at hd; exact hd.1
+  have hlen : (toString n).length = cs.length + 1 := by
+    rw [← String.length_toList, Nat.toString_eq_ofList_toDigits, String.toList_ofList, hcs]; rfl
+  rw [hlen, hcs, scan_ziffer_kopf false c cs _ hc]
+  have hk : scanZahlKopf (c :: cs) = zahlBasis 10 (c :: cs) := by
+    cases cs with
+    | nil => exact scanZahlKopf_eins c
+    | cons d ds =>
+      have : istZiffer d = true := by rw [hcs] at hd; simp at hd; exact hd.2.1
+      exact scanZahlKopf_dez c d ds (ziffer_kein_praefix this)
+  rw [hk]
+  have hz : nimmZiffern (c :: cs) 10 = (n, true, []) := by
+    unfold nimmZiffern
+    have := nimmZiffern_go (c :: cs) [] 0 false (by rw [← hcs]; exact hd)
+    simp only [List.append_nil] at this
+    rw [this, ← hcs, Nat.ofDigitChars_ten_toDigits]
+    simp [nimmZiffern.go]
+  simp [zahlBasis, hz, zahlWeiter, scan, Except.map]
+
+theorem rohToks_zahl (n : Nat) : rohToks (toString n) = [.num n] := by
+  unfold rohToks; rw [lex_zahl_allein]; rfl
+
+/-- A bit position as the printer writes it: one number or one name. -/
+def PosGut (s : String) : Prop := (∃ n : Nat, s = toString n) ∨ nameForm s = true
+
+theorem bitpos_rund (p : String) (h : PosGut p) (R : List Token) :
+    parseBitpos (rohToks p ++ R) = .ok (p, R) := by
+  rcases h with ⟨n, rfl⟩ | h
+  · rw [rohToks_zahl]; rfl
+  · rw [rohToks_name p h]
+    unfold nameTok
+    split <;> simp [parseBitpos, nameText, zeigeTok]
+
+/-- A printable field. -/
+def FeldGut (f : SFeld) : Prop :=
+  TypGut f.ftyp ∧ (∀ p, f.pos = some p → PosGut p) ∧ (∀ e, f.wo = some e → gut e = true)
+
+/-- The options of a field behind its type. -/
+def feldRestToks (f : SFeld) : List Token :=
+  (match f.pos with
+    | some p => [.zeichen "@"] ++ rohToks p
+    | none => []) ++
+  (match f.bezug with
+    | some n => [.wort "offset_into", .ident n]
+    | none => []) ++
+  (match f.wo with
+    | some p => [.wort "where"] ++ druckToks p
+    | none => []) ++
+  (if f.reserviert then [.wort "reserved"] else []) ++
+  (if f.byOps then [.wort "by", .wort "ops"] else [])
+
+theorem druckFeld_eq (f : SFeld) :
+    druckFeld f = [.ident f.fname, .zeichen ":"] ++ druckTyp f.ftyp ++ feldRestToks f := by
+  simp [druckFeld, feldRestToks]; rfl
+
+
+/-- What follows a field: `,` or `}`. -/
+def FeldEnde (R : List Token) : Prop := (∃ r, R = .zeichen "," :: r) ∨ (∃ r, R = .zeichen "}" :: r)
+
+theorem feldRest_ende (f : Nat) (R : List Token) (hR : FeldEnde R) :
+    parseFeldRest (f + 1) R = .ok ((none, none, none, false, false), R) := by
+  rcases hR with ⟨r, rfl⟩ | ⟨r, rfl⟩ <;> simp [parseFeldRest]
+
+theorem feldRest_by (f : Nat) (R X : List Token) (p b : Option String) (w : Option SExpr) (r y : Bool)
+    (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
+    parseFeldRest (f + 1) (.wort "by" :: .wort "ops" :: R) = .ok ((p, b, w, r, true), X) := by
+  simp [parseFeldRest, h, strEq_self, (by decide : strEq "by" "offset_into" = false),
+    (by decide : strEq "by" "where" = false), (by decide : strEq "by" "reserved" = false),
+    (by decide : strEq "ops" "ops" = true)]
+
+theorem feldRest_res (f : Nat) (R X : List Token) (p b : Option String) (w : Option SExpr) (r y : Bool)
+    (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
+    parseFeldRest (f + 1) (.wort "reserved" :: R) = .ok ((p, b, w, true, y), X) := by
+  simp [parseFeldRest, h, strEq_self, (by decide : strEq "reserved" "offset_into" = false),
+    (by decide : strEq "reserved" "where" = false)]
+
+theorem feldRest_wo (f : Nat) (e : SExpr) (R X : List Token) (p b : Option String) (w : Option SExpr)
+    (r y : Bool) (hP : parsePred f (druckToks e ++ R) = .ok (e, R))
+    (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
+    parseFeldRest (f + 1) (.wort "where" :: (druckToks e ++ R)) = .ok ((p, b, some e, r, y), X) := by
+  simp [parseFeldRest, h, hP, strEq_self, (by decide : strEq "where" "offset_into" = false)]
+
+theorem feldRest_bezug (f : Nat) (n : String) (R X : List Token) (p b : Option String) (w : Option SExpr)
+    (r y : Bool) (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
+    parseFeldRest (f + 1) (.wort "offset_into" :: .ident n :: R) = .ok ((p, some n, w, r, y), X) := by
+  by_cases hn : n = "Self"
+  · subst hn; simp [parseFeldRest, h, strEq_self, zeigeTok]
+  · have : strEq n "Self" = false := by
+      cases e : strEq n "Self"
+      · rfl
+      · exact absurd ((strEq_eq _ _).mp e) hn
+    simp [parseFeldRest, h, strEq_self, zeigeTok, this, nameText]
+
+theorem feldRest_pos (f : Nat) (q : String) (hq : PosGut q) (R X : List Token) (p b : Option String)
+    (w : Option SExpr) (r y : Bool) (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
+    parseFeldRest (f + 1) (.zeichen "@" :: (rohToks q ++ R)) = .ok ((some q, b, w, r, y), X) := by
+  simp [parseFeldRest, h, bitpos_rund q hq R]
+
+theorem feldRest_rund (fd : SFeld) (hfd : FeldGut fd) (R : List Token) (hR : FeldEnde R) (F : Nat)
+    (hF : 8 * (feldRestToks fd).length + 60 ≤ F) :
+    parseFeldRest F (feldRestToks fd ++ R) = .ok ((fd.pos, fd.bezug, fd.wo, fd.reserviert, fd.byOps), R) := by
+  obtain ⟨-, hpos, hwo⟩ := hfd
+  obtain ⟨name, typ, pos, bezug, wo, res, byo⟩ := fd
+  simp only at hpos hwo ⊢
+  have hPF : PredFolge R ∧ (∀ r, R ≠ .zeichen "," :: r → True) := by
+    refine ⟨?_, fun _ _ => trivial⟩
+    rcases hR with ⟨r, rfl⟩ | ⟨r, rfl⟩ <;>
+      exact ⟨rfl, rfl, rfl, (by intro x e; simp at e), (by intro x e; simp at e), (by intro x e; simp at e)⟩
+  -- layer by layer, from the end
+  have L5 : ∀ G, 2 ≤ G → parseFeldRest G ((if byo then [Token.wort "by", .wort "ops"] else []) ++ R) =
+      .ok ((none, none, none, false, byo), R) := by
+    intro G hG
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 2 := ⟨G - 2, by omega⟩
+    cases byo
+    · simpa using feldRest_ende (G' + 1) R hR
+    · simpa using feldRest_by (G' + 1) R R none none none false false (feldRest_ende G' R hR)
+  have L4 : ∀ G, 3 ≤ G → parseFeldRest G ((if res then [Token.wort "reserved"] else []) ++
+      ((if byo then [Token.wort "by", .wort "ops"] else []) ++ R)) = .ok ((none, none, none, res, byo), R) := by
+    intro G hG
+    cases res
+    · simpa using L5 G (by omega)
+    · obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+      simpa using feldRest_res G' _ R none none none false byo (L5 G' (by omega))
+  have hPF4 : PredFolge ((if res then [Token.wort "reserved"] else []) ++
+      ((if byo then [Token.wort "by", .wort "ops"] else []) ++ R)) := by
+    cases res <;> cases byo <;> simp only [ite_true, Bool.false_eq_true, ite_false, List.nil_append,
+      List.singleton_append, List.cons_append]
+    · exact hPF.1
+    all_goals exact ⟨rfl, rfl, rfl, (by intro x e; simp at e), (by intro x e; simp at e), (by intro x e; simp at e)⟩
+  have hlen45 : ((if res then [Token.wort "reserved"] else []) ++
+      ((if byo then [Token.wort "by", .wort "ops"] else []) ++ R)).length ≤ 3 + R.length := by
+    cases res <;> cases byo <;> simp <;> omega
+  rcases pos with _ | q <;> rcases bezug with _ | n <;> rcases wo with _ | e
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    have := L4 F (by omega)
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+    have he := hwo e rfl
+    have hPe := pred_druck e he _ hPF4 (G + 0) (by simp only [fb]; omega)
+    have := feldRest_wo (G + 0) e _ _ none none none res byo hPe (L4 G (by omega))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+    have := feldRest_bezug (G + 0) n _ _ none none none res byo (L4 G (by omega))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 2 := ⟨F - 2, by omega⟩
+    have he := hwo e rfl
+    have hPe := pred_druck e he _ hPF4 (G + 0) (by simp only [fb]; omega)
+    have := feldRest_bezug (G + 1) n _ _ none none (some e) res byo (feldRest_wo (G + 0) e _ _ none none none res byo hPe (L4 G (by omega)))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+    have := feldRest_pos (G + 0) q (hpos q rfl) _ _ none none none res byo (L4 G (by omega))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 2 := ⟨F - 2, by omega⟩
+    have he := hwo e rfl
+    have hPe := pred_druck e he _ hPF4 (G + 0) (by simp only [fb]; omega)
+    have := feldRest_pos (G + 1) q (hpos q rfl) _ _ none none (some e) res byo (feldRest_wo (G + 0) e _ _ none none none res byo hPe (L4 G (by omega)))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 2 := ⟨F - 2, by omega⟩
+    have := feldRest_pos (G + 1) q (hpos q rfl) _ _ none (some n) none res byo (feldRest_bezug (G + 0) n _ _ none none none res byo (L4 G (by omega)))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+  · simp only [feldRestToks, List.nil_append, List.singleton_append, List.cons_append, List.append_assoc,
+      List.length_append, List.length_cons, List.length_nil] at hF ⊢
+    obtain ⟨G, rfl⟩ : ∃ G, F = G + 3 := ⟨F - 3, by omega⟩
+    have he := hwo e rfl
+    have hPe := pred_druck e he _ hPF4 (G + 0) (by simp only [fb]; omega)
+    have := feldRest_pos (G + 2) q (hpos q rfl) _ _ none (some n) (some e) res byo (feldRest_bezug (G + 1) n _ _ none none (some e) res byo (feldRest_wo (G + 0) e _ _ none none none res byo hPe (L4 G (by omega))))
+    simpa only [List.cons_append, List.append_assoc, List.singleton_append, Nat.add_zero] using this
+
+
+theorem feldRest_typFolge (fd : SFeld) (R : List Token) (hR : FeldEnde R) :
+    TypFolge (feldRestToks fd ++ R) := by
+  have gen : ∀ (w : String) (X : List Token), w ≠ "in" → w ≠ "wrapping" → w ≠ "embeds" →
+      w ≠ "rounded" → TypFolge (.wort w :: X) := by
+    intro w X h1 h2 h3 h4
+    have : strEq w "rounded" = false := by
+      cases h : strEq w "rounded"
+      · rfl
+      · exact absurd ((strEq_eq _ _).mp h) h4
+    refine ⟨?_, ?_, ?_, ?_, rfl, rfl, by simp [ruhigGleit, this]⟩ <;> intro r e <;> simp at e <;> simp_all
+  obtain ⟨name, typ, pos, bezug, wo, res, byo⟩ := fd
+  rcases pos with _ | q
+  · rcases bezug with _ | n
+    · rcases wo with _ | e
+      · cases res
+        · cases byo
+          · simp only [feldRestToks, ite_false, Bool.false_eq_true, List.nil_append]
+            rcases hR with ⟨r, rfl⟩ | ⟨r, rfl⟩ <;>
+              exact ⟨(by intro x e; simp at e), (by intro x e; simp at e), (by intro x e; simp at e),
+                (by intro x e; simp at e), rfl, rfl, rfl⟩
+          · exact gen "by" _ (by decide) (by decide) (by decide) (by decide)
+        · exact gen "reserved" _ (by decide) (by decide) (by decide) (by decide)
+      · exact gen "where" _ (by decide) (by decide) (by decide) (by decide)
+    · exact gen "offset_into" _ (by decide) (by decide) (by decide) (by decide)
+  · exact ⟨(by intro x e; simp [feldRestToks] at e), (by intro x e; simp [feldRestToks] at e),
+      (by intro x e; simp [feldRestToks] at e), (by intro x e; simp [feldRestToks] at e), rfl, rfl, rfl⟩
+
+theorem feld_rund (fd : SFeld) (hfd : FeldGut fd) (R : List Token) (hR : FeldEnde R) (F : Nat)
+    (hF : 8 * (druckFeld fd).length + 61 ≤ F) : parseFeld F (druckFeld fd ++ R) = .ok (fd, R) := by
+  rw [druckFeld_eq] at hF ⊢
+  simp only [List.length_append, List.length_cons, List.length_nil] at hF
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hT := parse_druckTyp fd.ftyp hfd.1 (feldRestToks fd ++ R) F' (feldRest_typFolge fd R hR)
+    (by simp only [fbT]; omega)
+  have hRe := feldRest_rund fd hfd R hR F' (by omega)
+  simp only [List.cons_append, List.nil_append, List.append_assoc]
+  simp [parseFeld, nimmName, nameText, fordereZeichen, strEq_self, hT, hRe]
+
+theorem feldKopf (fd : SFeld) (X : List Token) : ∃ ts, druckFeld fd ++ X = .ident fd.fname :: ts := by
+  rw [druckFeld_eq]; exact ⟨_, rfl⟩
+
+theorem felder_rund : ∀ (fs : List SFeld) (R : List Token) (F : Nat), fs ≠ [] → (∀ fd ∈ fs, FeldGut fd) →
+    8 * (druckFelder fs).length + 62 ≤ F →
+    parseFeldFolge F (druckFelder fs ++ .zeichen "}" :: R) = .ok (fs, R) := by
+  intro fs
+  induction fs with
+  | nil => intro _ _ h; exact absurd rfl h
+  | cons fd fs ih =>
+    intro R F _ hg hF
+    have hfd := hg fd (by simp)
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    cases fs with
+    | nil =>
+      simp only [druckFelder] at hF ⊢
+      have hP := feld_rund fd hfd (.zeichen "}" :: R) (Or.inr ⟨R, rfl⟩) F' (by omega)
+      simp [parseFeldFolge, hP, fordereZeichen, strEq_self]
+    | cons fd2 fs2 =>
+      have hd : druckFelder (fd :: fd2 :: fs2) = druckFeld fd ++ .zeichen "," :: druckFelder (fd2 :: fs2) := by
+        simp [druckFelder]
+      rw [hd] at hF ⊢
+      simp only [List.length_append, List.length_cons] at hF
+      have hP := feld_rund fd hfd (.zeichen "," :: (druckFelder (fd2 :: fs2) ++ .zeichen "}" :: R))
+        (Or.inl ⟨_, rfl⟩) F' (by omega)
+      have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by omega)
+      obtain ⟨ts, hts⟩ : ∃ ts, druckFelder (fd2 :: fs2) ++ .zeichen "}" :: R = .ident fd2.fname :: ts := by
+        cases fs2 with
+        | nil => simpa [druckFelder] using feldKopf fd2 (.zeichen "}" :: R)
+        | cons x xs =>
+          obtain ⟨ts, h⟩ := feldKopf fd2 (.zeichen "," :: (druckFelder (x :: xs) ++ .zeichen "}" :: R))
+          exact ⟨ts, by simp [druckFelder] at h ⊢; exact h⟩
+      simp only [List.append_assoc, List.cons_append] at hP ⊢
+      rw [hts] at hP hR ⊢
+      unfold parseFeldFolge
+      simp only [hP, hR]
+
+theorem feldListe_rund (fs : List SFeld) (hg : ∀ fd ∈ fs, FeldGut fd) (R : List Token) (F : Nat)
+    (hF : 8 * (druckFelder fs).length + 63 ≤ F) :
+    parseFeldListe F (.zeichen "{" :: (druckFelder fs ++ .zeichen "}" :: R)) = .ok (fs, R) := by
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  cases fs with
+  | nil => simp [druckFelder, parseFeldListe, fordereZeichen, strEq_self]
+  | cons fd fs' =>
+    have hFF := felder_rund (fd :: fs') R F' (by simp) hg (by omega)
+    obtain ⟨ts, hts⟩ : ∃ ts, druckFelder (fd :: fs') ++ .zeichen "}" :: R = .ident fd.fname :: ts := by
+      cases fs' with
+      | nil => simpa [druckFelder] using feldKopf fd (.zeichen "}" :: R)
+      | cons x xs =>
+        obtain ⟨ts, h⟩ := feldKopf fd (.zeichen "," :: (druckFelder (x :: xs) ++ .zeichen "}" :: R))
+        exact ⟨ts, by simp [druckFelder] at h ⊢; exact h⟩
+    rw [hts] at hFF ⊢
+    simp [parseFeldListe, fordereZeichen, strEq_self, hFF]
+
+/-- An edge kind of a `tree`. -/
+def KanteGut (k : String × String) : Prop :=
+  k.1 = "parent" ∨ k.1 = "child" ∨ k.1 = "sibling"
+
+theorem kante_rund (a b : String) (h : KanteGut (a, b)) (R : List Token) :
+    parseKante (.wort a :: .ident b :: R) = .ok ((a, b), R) := by
+  rcases h with h | h | h <;> simp only at h <;> subst h <;> simp [parseKante, nimmName, nameText, strEq_self]
+
+theorem kanten_rund : ∀ (ks : List (String × String)) (R : List Token) (F : Nat), ks ≠ [] →
+    (∀ k ∈ ks, KanteGut k) → ks.length ≤ F →
+    parseKanten F (druckKanten ks ++ .zeichen "}" :: R) = .ok (ks, .zeichen "}" :: R) := by
+  intro ks
+  induction ks with
+  | nil => intro _ _ h; exact absurd rfl h
+  | cons k ks ih =>
+    intro R F _ hg hF
+    obtain ⟨a, b⟩ := k
+    have hk := kante_rund a b (hg (a, b) (by simp))
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp at hF; omega⟩
+    cases ks with
+    | nil => simp [druckKanten, parseKanten, hk]
+    | cons k2 ks2 =>
+      obtain ⟨a2, b2⟩ := k2
+      have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp at hF ⊢; omega)
+      obtain ⟨ts, hts⟩ : ∃ ts, druckKanten ((a2, b2) :: ks2) ++ .zeichen "}" :: R = .wort a2 :: ts := by
+        cases ks2 <;> exact ⟨_, by simp [druckKanten]; rfl⟩
+      have hd : druckKanten ((a, b) :: (a2, b2) :: ks2) = [.wort a, .ident b, .zeichen ","] ++
+          druckKanten ((a2, b2) :: ks2) := by simp [druckKanten]
+      rw [hd]
+      simp only [List.append_assoc, List.cons_append, List.nil_append]
+      rw [hts] at hR ⊢
+      unfold parseKanten
+      simp only [hk, hR]
+
+theorem baum_rund (ks : List (String × String)) (hne : ks ≠ []) (hg : ∀ k ∈ ks, KanteGut k)
+    (R : List Token) (F : Nat) (hF : ks.length + 1 ≤ F) :
+    parseBaum F (.zeichen "{" :: (druckKanten ks ++ .zeichen "}" :: R)) = .ok (ks, R) := by
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  have hK := kanten_rund ks R F' hne hg (by omega)
+  simp [parseBaum, fordereZeichen, strEq_self, hK]
+
+
+/-- A printable group invariant: printable cost and predicate, a raw proof text without `:` and
+    braces. -/
+def InvGut (i : SGruppenInv) : Prop :=
+  gut i.kosten = true ∧ gut i.pred = true ∧
+    ∀ h, i.proof = some h → RohText (fun t => t = .zeichen ":" ∨ t = .zeichen "{" ∨ t = .zeichen "}") h
+
+theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : Nat)
+    (hF : 8 * (druckGruppenInv i).length + 60 ≤ F) :
+    parseGruppenInv F (druckGruppenInv i ++ R) = .ok (i, R) := by
+  obtain ⟨hk, hp, hpr⟩ := hi
+  obtain ⟨name, kosten, online, proof, pred⟩ := i
+  simp only at hk hp hpr ⊢
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 2 := ⟨F - 2, by simp [druckGruppenInv] at hF; omega⟩
+  have hon : ∀ X, (Token.wort (if online then "online" else "offline") :: X) =
+      .wort (if online then "online" else "offline") :: X := fun _ => rfl
+  have hm : (strEq (if online then "online" else "offline") "online" ||
+      strEq (if online then "online" else "offline") "offline") = true := by cases online <;> decide
+  have hmo : strEq (if online then "online" else "offline") "online" = online := by cases online <;> decide
+  have hoff : online = false → strEq (if online then "online" else "offline") "offline" = true := by
+    intro h; subst h; decide
+  cases proof with
+  | none =>
+    simp only [druckGruppenInv, List.length_append, List.length_cons, List.length_nil] at hF
+    have hK := ausdruck kosten hk (.zeichen ")" :: .wort "runs" ::
+      .wort (if online then "online" else "offline") :: .zeichen ":" :: (druckToks pred ++ .zeichen ";" :: R))
+      (F' + 1) rfl rfl rfl (by omega)
+    have hP := pred_druck pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
+      (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [fb]; omega)
+    simp only [druckGruppenInv, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nameText, nimmKostenO, fordereZeichen, hK, hm,
+      hmo, hoff, parseInvRest, hP]
+    all_goals exact hoff
+  | some h =>
+    obtain ⟨ts, rfl, hts⟩ := hpr _ rfl
+    have hroh := rohToks_render ts (fun t ht => (hts t ht).1)
+    simp only [druckGruppenInv, hroh, List.length_append, List.length_cons, List.length_nil] at hF
+    have hK := ausdruck kosten hk (.zeichen ")" :: .wort "runs" ::
+      .wort (if online then "online" else "offline") :: .wort "by" ::
+        (ts ++ .zeichen ":" :: (druckToks pred ++ .zeichen ";" :: R)))
+      (F' + 1) rfl rfl rfl (by omega)
+    have hP := pred_druck pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
+      (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [fb]; omega)
+    have hN := nimmBisZeichen_roh ":" ts (druckToks pred ++ .zeichen ";" :: R)
+      (fun t ht => ⟨(hts t ht).1, fun e => (hts t ht).2 (Or.inr (Or.inl e)),
+        fun e => (hts t ht).2 (Or.inr (Or.inr e)), fun e => (hts t ht).2 (Or.inl e)⟩)
+    simp only [druckGruppenInv, hroh, List.cons_append, List.nil_append, List.append_assoc,
+      List.singleton_append]
+    simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nameText, nimmKostenO, fordereZeichen, hK, hm,
+      hmo, hoff, parseInvRest, hP, hN]
+    all_goals exact hoff
+
+/-- A printable part of a table. -/
+def TeilGut : STabTeil → Prop
+  | .tConst _ t v => TypGut t ∧ KonstGut v
+  | .tSlot fs => ∀ fd ∈ fs, FeldGut fd
+  | .tInv i => InvGut i
+  | .tOps ns => ns ≠ []
+  | .tTree ks => ks ≠ [] ∧ ∀ k ∈ ks, KanteGut k
+  | .tBusy _ => True
+
+theorem tabTeile_ende (f : Nat) (R : List Token) :
+    parseTabTeile (f + 1) (.zeichen "}" :: R) = .ok ([], .zeichen "}" :: R) := by
+  simp [parseTabTeile]
+
+theorem tabTeil_rund (t : STabTeil) (ht : TeilGut t) (R X : List Token) (ps : List STabTeil) (f : Nat)
+    (hR : parseTabTeile f R = .ok (ps, X)) (hf : 8 * (druckTabTeil t).length + 63 ≤ f) :
+    parseTabTeile (f + 1) (druckTabTeil t ++ R) = .ok (t :: ps, X) := by
+  cases t with
+  | tConst n ty v =>
+    obtain ⟨hty, hv⟩ := ht
+    simp only [druckTabTeil, List.length_append, List.length_cons, List.length_nil] at hf
+    obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
+    have hT := typ_gleich ty hty (druckKonstWert v ++ .zeichen ";" :: R) f' (by simp only [fbT]; omega)
+    have hV := konst_rund v hv (.zeichen ";" :: R) f' rfl rfl rfl (by simp only [fbK]; omega)
+    have hK : parseKonstNach (f' + 1) (.ident n :: .zeichen ":" :: (druckTyp ty ++ .zeichen "=" ::
+        (druckKonstWert v ++ .zeichen ";" :: R))) = .ok (.constT n ty v, R) := by
+      simp [parseKonstNach, nimmName, nameText, fordereZeichen, strEq_self, hT, hV]
+    simp only [druckTabTeil, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    unfold parseTabTeile
+    simp only [(by decide : strEq "const" "const" = true), ite_true, hK, hR]
+  | tSlot fs =>
+    simp only [druckTabTeil, List.length_append, List.length_cons, List.length_nil] at hf
+    have hL := feldListe_rund fs ht R f (by omega)
+    simp only [druckTabTeil, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    unfold parseTabTeile
+    simp only [(by decide : strEq "slot" "const" = false), (by decide : strEq "slot" "slot" = true),
+      Bool.false_eq_true, ite_false, ite_true, hL, hR]
+  | tInv i =>
+    simp only [druckTabTeil] at hf
+    have hI := gruppenInv_rund i ht R f (by omega)
+    obtain ⟨ts, hts⟩ : ∃ ts, druckGruppenInv i = .wort "invariant" :: ts := ⟨_, rfl⟩
+    simp only [druckTabTeil]
+    rw [hts] at hI ⊢
+    simp only [List.cons_append] at hI ⊢
+    unfold parseTabTeile
+    simp only [(by decide : strEq "invariant" "const" = false),
+      (by decide : strEq "invariant" "slot" = false), (by decide : strEq "invariant" "invariant" = true),
+      Bool.false_eq_true, ite_false, ite_true, hI, hR]
+  | tOps ns =>
+    have hlen : ns.length ≤ (druckNamen ns).length := by
+      clear hf ht hR
+      induction ns with
+      | nil => simp
+      | cons n ns ih => cases ns with
+        | nil => simp [druckNamen]
+        | cons m ms => simp [druckNamen] at ih ⊢; omega
+    simp only [druckTabTeil, List.length_append, List.length_cons, List.length_nil] at hf
+    have hN := namen_rund ns (.zeichen ";" :: R) f ht (by intro r e; simp at e) (by omega)
+    simp only [druckTabTeil, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    unfold parseTabTeile
+    simp only [(by decide : strEq "ops" "const" = false), (by decide : strEq "ops" "slot" = false),
+      (by decide : strEq "ops" "invariant" = false), (by decide : strEq "ops" "ops" = true),
+      Bool.false_eq_true, ite_false, ite_true, hN, fordereZeichen, strEq_self, hR]
+  | tTree ks =>
+    obtain ⟨hne, hg⟩ := ht
+    have hlen : ks.length ≤ (druckKanten ks).length := by
+      clear hf hne hg hR
+      induction ks with
+      | nil => simp
+      | cons k ks ih => cases ks with
+        | nil => simp [druckKanten]
+        | cons k2 ks2 => simp [druckKanten] at ih ⊢; omega
+    simp only [druckTabTeil, List.length_append, List.length_cons, List.length_nil] at hf
+    have hB := baum_rund ks hne hg R f (by omega)
+    simp only [druckTabTeil, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    unfold parseTabTeile
+    simp only [(by decide : strEq "tree" "const" = false), (by decide : strEq "tree" "slot" = false),
+      (by decide : strEq "tree" "invariant" = false), (by decide : strEq "tree" "ops" = false),
+      (by decide : strEq "tree" "tree" = true), Bool.false_eq_true, ite_false, ite_true, hB, hR]
+  | tBusy n =>
+    simp only [druckTabTeil, List.cons_append, List.nil_append]
+    unfold parseTabTeile
+    simp only [(by decide : strEq "occupied" "const" = false),
+      (by decide : strEq "occupied" "slot" = false), (by decide : strEq "occupied" "invariant" = false),
+      (by decide : strEq "occupied" "ops" = false), (by decide : strEq "occupied" "tree" = false),
+      (by decide : strEq "occupied" "occupied" = true), Bool.false_eq_true, ite_false, ite_true,
+      nimmName, nameText, fordereZeichen, strEq_self, hR]
+
+theorem tabTeile_rund : ∀ (ps : List STabTeil) (R : List Token) (F : Nat), (∀ t ∈ ps, TeilGut t) →
+    8 * (druckTabTeile ps).length + 64 ≤ F →
+    parseTabTeile F (druckTabTeile ps ++ .zeichen "}" :: R) = .ok (ps, .zeichen "}" :: R) := by
+  intro ps
+  induction ps with
+  | nil =>
+    intro R F _ hF
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    exact tabTeile_ende F' R
+  | cons t ps ih =>
+    intro R F hg hF
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [druckTabTeile, List.length_append] at hF ⊢
+    have h1 : 1 ≤ (druckTabTeil t).length := by cases t <;> simp [druckTabTeil, druckGruppenInv]
+    have hR := ih R F' (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by omega)
+    rw [List.append_assoc]
+    exact tabTeil_rund t (hg t (by simp)) _ _ ps F' hR (by omega)
+
+
+/-! ### The table head -/
+
+def cntToks : Option SExpr → List Token
+  | some e => [.wort "count"] ++ druckToks e
+  | none => []
+
+def nameOptToks (w : String) : Option String → List Token
+  | some b => [.wort w, .ident b]
+  | none => []
+
+def shToks (sh : Bool) : List Token := if sh then [.wort "shared"] else []
+
+theorem tabKopf_ende (f : Nat) (R : List Token) :
+    parseTabellenKopf (f + 1) (.zeichen "{" :: R) = .ok ((none, none, none, false), .zeichen "{" :: R) := by
+  simp [parseTabellenKopf]
+
+theorem tabKopf_shared (f : Nat) (R X : List Token) (c : Option SExpr) (b o : Option String) (g : Bool)
+    (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "shared" :: R) = .ok ((c, b, o, true), X) := by
+  simp [parseTabellenKopf, h, strEq_self, (by decide : strEq "shared" "count" = false),
+    (by decide : strEq "shared" "backed" = false), (by decide : strEq "shared" "owner" = false)]
+
+theorem tabKopf_owner (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (b o : Option String)
+    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "owner" :: .ident n :: R) = .ok ((c, b, some n, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, nameText, (by decide : strEq "owner" "count" = false),
+    (by decide : strEq "owner" "backed" = false)]
+
+theorem tabKopf_backed (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (b o : Option String)
+    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "backed" :: .ident n :: R) = .ok ((c, some n, o, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, nameText, (by decide : strEq "backed" "count" = false)]
+
+theorem tabKopf_count (f : Nat) (e : SExpr) (R X : List Token) (c : Option SExpr) (b o : Option String)
+    (g : Bool) (hO : parseOr f (druckToks e ++ R) = .ok (e, R))
+    (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "count" :: (druckToks e ++ R)) = .ok ((some e, b, o, g), X) := by
+  simp [parseTabellenKopf, h, hO, strEq_self]
+
+theorem tabKopf_rund (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
+    (hc : ∀ e, cnt = some e → gut e = true) (R : List Token) (F : Nat)
+    (hF : 8 * (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh).length + 40 ≤ F) :
+    parseTabellenKopf F (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh ++
+      .zeichen "{" :: R) = .ok ((cnt, backed, owner, sh), .zeichen "{" :: R) := by
+  have L1 : ∀ G, 2 ≤ G → parseTabellenKopf G (shToks sh ++ .zeichen "{" :: R) =
+      .ok ((none, none, none, sh), .zeichen "{" :: R) := by
+    intro G hG
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 2 := ⟨G - 2, by omega⟩
+    cases sh
+    · simpa [shToks] using tabKopf_ende (G' + 1) R
+    · simpa [shToks] using tabKopf_shared (G' + 1) _ _ none none none false (tabKopf_ende G' R)
+  have L2 : ∀ G, 3 ≤ G → parseTabellenKopf G (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R)) =
+      .ok ((none, none, owner, sh), .zeichen "{" :: R) := by
+    intro G hG
+    cases owner with
+    | none => simpa [nameOptToks] using L1 G (by omega)
+    | some o =>
+      obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+      simpa [nameOptToks] using tabKopf_owner G' o _ _ none none none sh (L1 G' (by omega))
+  have L3 : ∀ G, 4 ≤ G → parseTabellenKopf G (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++
+      (shToks sh ++ .zeichen "{" :: R))) = .ok ((none, backed, owner, sh), .zeichen "{" :: R) := by
+    intro G hG
+    cases backed with
+    | none => simpa [nameOptToks] using L2 G (by omega)
+    | some b =>
+      obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+      simpa [nameOptToks] using tabKopf_backed G' b _ _ none none owner sh (L2 G' (by omega))
+  simp only [List.append_assoc] at hF ⊢
+  cases cnt with
+  | none => simpa [cntToks] using L3 F (by simp [cntToks] at hF; omega)
+  | some e =>
+    have he := hc e rfl
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp [cntToks] at hF; omega⟩
+    have hrX : ruhig (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R))) = true ∧
+        ruhigSuff (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R))) = true ∧
+        ruhigGleit (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R))) = true := by
+      cases backed <;> cases owner <;> cases sh <;> exact ⟨rfl, rfl, rfl⟩
+    have hO := ausdruck e he _ F' hrX.1 hrX.2.1 hrX.2.2 (by simp [cntToks] at hF; omega)
+    have := tabKopf_count F' e _ _ none backed owner sh hO (L3 F' (by simp [cntToks] at hF; omega))
+    simpa [cntToks] using this
+
+theorem item_table (n : String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
+    (parts : List STabTeil) (hc : ∀ e, cnt = some e → gut e = true) (hp : ∀ t ∈ parts, TeilGut t) :
+    ItemBein (.tableT n cnt backed owner sh parts) := by
+  intro rest F hF
+  have hd : druckItem (.tableT n cnt backed owner sh parts) ++ rest = .wort "table" :: .ident n ::
+      (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh ++
+        .zeichen "{" :: (druckTabTeile parts ++ .zeichen "}" :: rest)) := by
+    cases cnt <;> cases backed <;> cases owner <;> cases sh <;>
+      simp [druckItem, cntToks, nameOptToks, shToks]
+  have hlen : (druckItem (.tableT n cnt backed owner sh parts)).length = 2 +
+      (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh).length + 1 +
+      (druckTabTeile parts).length + 1 := by
+    cases cnt <;> cases backed <;> cases owner <;> cases sh <;>
+      simp [druckItem, cntToks, nameOptToks, shToks] <;> omega
+  simp only [fbI, hlen] at hF
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 3 := ⟨F - 3, by omega⟩
+  have hK := tabKopf_rund cnt backed owner sh hc (druckTabTeile parts ++ .zeichen "}" :: rest) F' (by omega)
+  have hT := tabTeile_rund parts rest F' hp (by omega)
+  rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_table]
+  simp only [List.append_assoc] at hK
+  simp [parseTabellenTief, nimmWort, strEq_self, nimmName, nameText, hK, fordereZeichen, hT]
+
+
 /-! ### The printability class of items and the induction -/
 
 /-- **The printability class of items** (see the header). -/
@@ -1439,6 +2029,9 @@ inductive ItemGut : SItemTief → Prop
   | whyT (n : String) (cs : List (String × SExpr × String)) (ex : Bool) :
       (∀ c ∈ cs, FallGut c) → ItemGut (.whyT n cs ex)
   | concT (ps : List (List String)) : (∀ p ∈ ps, PfadGut p) → ItemGut (.concT ps)
+  | tableT (n : String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
+      (parts : List STabTeil) : (∀ e, cnt = some e → gut e = true) → (∀ t ∈ parts, TeilGut t) →
+      ItemGut (.tableT n cnt backed owner sh parts)
 
 theorem itemKopf_wort (it : SItemTief) (w : String) (h1 : w ≠ "when") (h2 : w ≠ "pub")
     (h : ∃ ts, druckItem it = .wort w :: ts) : ItemKopf it := by
@@ -1491,6 +2084,9 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
   | whyT n cs ex hg => exact ⟨item_why n cs ex hg, itemKopf_wort _ "reason" (by decide) (by decide) ⟨_, rfl⟩⟩
   | concT ps hps =>
     exact ⟨item_conc ps hps, itemKopf_wort _ "concurrent" (by decide) (by decide) ⟨_, rfl⟩⟩
+  | tableT n cnt backed owner sh parts hc hp =>
+    exact ⟨item_table n cnt backed owner sh parts hc hp,
+      itemKopf_wort _ "table" (by decide) (by decide) ⟨_, rfl⟩⟩
 
 /-- **L2c: printable items read back** through `parseItemsTief`, before `}`, the end marker or
     nothing. -/
@@ -1524,7 +2120,8 @@ theorem rundlauf_programm (its : List SItemTief) (h : ∀ it ∈ its, ItemGut it
 /-- A program with every covered item kind: `use`, `const` with an array value, `static mut ...
     shared`, a `lock` with `held`, an `atomic` with `publishes nothing` and an order, a `reason`, a
     `module` holding a function with a contract (`requires`, `effects`, `costs`), a result type and
-    a body, and `concurrent` over a two-segment path. -/
+    a body, `concurrent` over a two-segment path, and a `table` with a count, `shared`, a slot field
+    with `where` and `by ops`, `ops`, `tree`, `occupied` and a group invariant. -/
 def zeugeProgramm : List SItemTief := [
   .useT ["io", "konsole"],
   .constT "N" (.atom "u32") (.rows [.one (.lit 1), .one (.lit 2)]),
@@ -1538,14 +2135,22 @@ def zeugeProgramm : List SItemTief := [
            klauseln := [.needs (.bin "<" (.variable "wert") (.lit 100)),
                         .effs [.writes (.variable "zaehler")], .cost (.lit 5)] }
       (.block [.set (.variable "zaehler") "+=" (.variable "wert")] (some (.ret (some (.variable "wert")))))],
-  .concT [["kern", "erhoehe"]]]
+  .concT [["kern", "erhoehe"]],
+  .tableT "Knoten" (some (.lit 64)) none none true [
+    .tSlot [{ fname := "wert", ftyp := .atom "u32", pos := none, bezug := none,
+              wo := some (.bin "<" (.variable "wert") (.lit 10)), reserviert := false, byOps := true }],
+    .tOps ["einfuegen", "loeschen"],
+    .tTree [("parent", "eltern")],
+    .tBusy "belegt",
+    .tInv { name := "klein", kosten := .lit 1, online := true, proof := none,
+            pred := .bin "<" (.variable "n") (.lit 64) }]]
 
 theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   have atom : ∀ a, typKopf a = false → TypGut (.atom a) := fun a h => by
     have := TypGut.kette (.atom a) [] (.atom a h) (by simp [TsGut]); simpa [applyTS] using this
   intro it hit
   simp only [zeugeProgramm, List.mem_cons, List.not_mem_nil, or_false] at hit
-  rcases hit with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hit with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact .useT _ (by simp)
   · refine .constT _ _ _ (atom _ (by decide)) (.rows _ ?_)
     intro x hx; simp at hx; rcases hx with rfl | rfl <;> exact .one _ (by decide)
@@ -1570,6 +2175,16 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   · exact .concT _ (by
       intro p hp; simp at hp; subst hp
       exact ⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> exact ⟨by decide, by decide⟩⟩)
+  · refine .tableT _ _ _ _ _ _ (by intro e he; cases he; decide) ?_
+    intro t ht
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ht
+    rcases ht with rfl | rfl | rfl | rfl | rfl
+    · intro fd hfd; simp at hfd; subst hfd
+      exact ⟨atom _ (by decide), by simp, by intro e he; cases he; decide⟩
+    · show _ ≠ []; simp
+    · exact ⟨by simp, by intro k hk; simp at hk; subst hk; exact Or.inl rfl⟩
+    · trivial
+    · exact ⟨by decide, by decide, by simp⟩
 
 /-- The witness program reads back through the whole program reader. -/
 theorem zeugeProgramm_rund : parseTopTief (druckItems zeugeProgramm ++ [.ende]) = .ok zeugeProgramm :=
@@ -1594,10 +2209,10 @@ end Gabbro.Grammatik.Parser
 /-
   CUTS: what the item round trip does not cover yet, and why.
 
-  * Item kinds not in `ItemGut`: `type`, `format`, `table`, `arena`, `state`, `device`, `assume`,
+  * Item kinds not in `ItemGut`: `type`, `format`, `arena`, `state`, `device`, `assume`,
     `axiom`, `check`, `rcu`, `group`, `accumulates`, `walk`, `entry`, `entrust`, `boot`, `syscall`,
     `target`, `translator`, `profile`, the spec/asm function bodies (`= pred ;`, `= asm {..} ;`) and
-    the `when TESTBUILD` gate. Each is one more constructor of `ItemGut` with its reader lemma in
+    the `when TESTBUILD` gate; slot bit positions as a `[hi:lo]` group. Each is one more constructor of `ItemGut` with its reader lemma in
     the pattern of `item_lock`/`item_atom` (a named recursive tail reader is a step lemma per
     clause; a `do` block is a case split over its optional clauses). `device` and `entry` are the
     largest (register maps, banks, transitions).
