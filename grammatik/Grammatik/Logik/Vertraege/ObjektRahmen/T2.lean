@@ -339,7 +339,7 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
             (block_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
         · exact ObjA.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv).zuAusgang
       · trivial
-  | .awaits g _ _ hL rest, hok, σ, ρ, hlen, hinv => by
+  | .awaits g _ _ hL _ rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · exact ObjA.vor (slotRahmen_gleich rfl)
@@ -453,6 +453,28 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
             (by rw [← axiomAntwortSonst_fst, ha]))
           (end_obj err hok.2.1 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
+  | .regRead r _ rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · split
+        · exact (end_obj rest hok σ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+        · trivial
+      · trivial
+  | .regReadElse r _ zusage sonst rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · split
+        · exact ObjE.vor (slotRahmen_gleich rfl)
+            (end_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+        · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv)
+      · trivial
+  | .awaits g _ _ hL _ rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · exact ObjE.vor (slotRahmen_gleich rfl)
+          (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .bindCallInd .., hok, _, _, _, _ => hok.elim
 
 theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

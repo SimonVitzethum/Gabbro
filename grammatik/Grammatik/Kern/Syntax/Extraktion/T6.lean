@@ -78,7 +78,7 @@ def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .regRead _ _ rest => blockAtome tabs globs rest
   | .regReadElse _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
-  | .awaits _ _ _ _ rest => blockAtome tabs globs rest
+  | .awaits _ _ _ _ _ rest => blockAtome tabs globs rest
   | .exchange _ _ _ _ rest => blockAtome tabs globs rest
   | .narrow _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
@@ -106,6 +106,11 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
       endblockAtome tabs globs err ++ endblockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockAtome tabs globs rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ endblockAtome tabs globs rest
+  | .regRead _ _ rest => endblockAtome tabs globs rest
+  | .regReadElse _ _ _ sonst rest =>
+      endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
+  | .awaits _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .bindCallInd _ _ _ _ _ rest => endblockAtome tabs globs rest
 
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)

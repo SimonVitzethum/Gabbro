@@ -129,6 +129,7 @@ import Grammatik.Korpus.Zeugnis.ZeugnisStmt
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge
 import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsLauf
+import Grammatik.Nebenlaeufigkeit.Allgemein.TravLese
 import Grammatik.Logik.Vertraege.AxiomVertrag
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
@@ -588,6 +589,7 @@ import Grammatik.Gen.Zeugen.M.M16_13
 import Grammatik.Gen.Zeugen.M.M47_549
 import Grammatik.Gen.Zeugen.M.M49_50
 import Grammatik.Gen.Zeugen.M.M99_824
+import Grammatik.Gen.Zeugen.M.M99_825
 import Grammatik.Gen.Zeugen.N.N16_5
 import Grammatik.Gen.Zeugen.N.N18_0
 import Grammatik.Gen.Zeugen.N.N18_4

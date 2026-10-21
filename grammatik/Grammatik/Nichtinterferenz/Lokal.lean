@@ -67,7 +67,7 @@ def nB (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .regRead r _ rest => (D.rtraeger r).all S && nB S Ax rest
   | .regReadElse r _ zusage sonst rest =>
       (D.rtraeger r).all S && zusage.orte.all S && nE S Ax sonst && nB S Ax rest
-  | .awaits g _ _ _ rest => S (.inr g) && nB S Ax rest
+  | .awaits g _ _ _ _ rest => S (.inr g) && nB S Ax rest
   | .exchange g neu _ _ rest => S (.inr g) && neu.orte.all S && nB S Ax rest
   | .narrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nB S Ax rest
   | .check c sonst rest => c.orte.all S && nE S Ax sonst && nB S Ax rest
@@ -88,6 +88,11 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .bindCallElse _ args _ _ _ err rest => args.orte.all S && nE S Ax err && nE S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nE S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nE S Ax rest
+  | .regRead r _ rest => (D.rtraeger r).all S && nE S Ax rest
+  | .regReadElse r _ zusage sonst rest =>
+      (D.rtraeger r).all S && zusage.orte.all S && nE S Ax sonst && nE S Ax rest
+  | .awaits g _ _ _ _ rest => S (.inr g) && nE S Ax rest
+  | .bindCallInd p args _ _ _ rest => p.orte.all S && args.orte.all S && nE S Ax rest
 
 def nA (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool

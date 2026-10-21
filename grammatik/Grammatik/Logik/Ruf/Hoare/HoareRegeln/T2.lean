@@ -289,7 +289,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             next _ => simp only [hr']
             next _ => simp only [he']
 )
-    (fun g payload hp hL rest hr ihr σ ρ => by
+    (fun g payload hp hL _ rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
         by_cases hs : O.sichtbar g σ = true

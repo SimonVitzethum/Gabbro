@@ -61,7 +61,7 @@ theorem bGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [Block.gOk, mB, eGOk K err, bGOk K rest]
   | .regRead _ _ rest => by simp only [Block.gOk, mB, bGOk K rest, Bool.true_and]
   | .regReadElse _ _ _ sonst rest => by simp only [Block.gOk, mB, eGOk K sonst, bGOk K rest, Bool.true_and]
-  | .awaits _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
+  | .awaits _ _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .exchange _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .narrow _ _ _ sonst rest => by simp only [Block.gOk, mB, eGOk K sonst, bGOk K rest]
   | .check _ sonst rest => by simp only [Block.gOk, mB, eGOk K sonst, bGOk K rest]
@@ -92,6 +92,10 @@ theorem eGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
   | .bindCallElse _ _ _ _ _ err rest => by simp only [Endblock.gOk, mE, eGOk K err, eGOk K rest]; rfl
   | .bindAxiom _ _ _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [Endblock.gOk, mE, eGOk K err, eGOk K rest]
+  | .regRead _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest, Bool.true_and]
+  | .regReadElse _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest, Bool.true_and]
+  | .awaits _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
+  | .bindCallInd _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]; rfl
 
 end
 

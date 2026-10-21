@@ -86,6 +86,14 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
 
+  | .regRead .. => false
+
+  | .regReadElse .. => false
+
+  | .awaits .. => false
+
+  | .bindCallInd .. => false
+
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true

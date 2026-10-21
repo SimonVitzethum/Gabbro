@@ -55,7 +55,7 @@ theorem rep_storeGlob_shared {lay : Layout D} {σ : World D} {m : Mem} (g : D.Gl
 theorem await_ok_shared (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ)
+    (hp : payload = D.nutzlast g) (hgd : gdarf D g Λ) (hat : D.atomar g = true)
     (rest : Gabbro.Grammatik.Block D V l (D.gtyp g :: Γ) Λ Λ')
     (lb k : Lbl) (st st' : St) (blks : List Block)
     (h : lowerAwait lay cenv lv g rest lb k st = some (blks, st'))
@@ -67,8 +67,8 @@ theorem await_ok_shared (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
     (hc : ∀ x ∈ cenv, x < st.r) :
     PresentedAt g σ (σ.storeGlob g xg) ∧
     OutOk lay cenv lv M (Sees.shared lay) fn lb k st.r st'.r m rs ks dst
-      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd rest) (σ.storeGlob g xg) ρ) :=
-  await_ok_gx lay hL cenv lv O passes R g payload hp hgd rest lb k st st' blks h M (Sees.shared lay) fn hM hk hlv
+      (execBlock O passes R (Gabbro.Grammatik.Block.awaits g payload hp hgd hat rest) (σ.storeGlob g xg) ρ) :=
+  await_ok_gx lay hL cenv lv O passes R g payload hp hgd hat rest lb k st st' blks h M (Sees.shared lay) fn hM hk hlv
     hFn hCall σ xg ρ m rs ks dst (rep_storeGlob_shared g hg xg hR) hE hW hc
     (sees_shared_at lay m g hg .acq xg (atomicG_supp (lowerAwait_atomic h)))
 

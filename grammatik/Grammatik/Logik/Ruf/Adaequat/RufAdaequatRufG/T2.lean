@@ -83,11 +83,11 @@ theorem BlockR.regLies_inv {Λ Λ' : List (Res D)} {r : D.Reg}
   | regRead _ _ _ hr => exact hr
 
 theorem BlockR.awaits_inv {Λ Λ' : List (Res D)} {g : D.Glob} {payload : List D.Glob}
-    {hp : payload = D.nutzlast g} {hL : gdarf D g Λ}
+    {hp : payload = D.nutzlast g} {hL : gdarf D g Λ} {hat : D.atomar g = true}
     {rest : Block D V l (D.gtyp g :: Γ) Λ Λ'}
-    (h : BlockR A C mr (.awaits g payload hp hL rest)) : BlockR A C mr rest := by
+    (h : BlockR A C mr (.awaits g payload hp hL hat rest)) : BlockR A C mr rest := by
   cases h with
-  | awaits _ _ _ _ _ hr => exact hr
+  | awaits _ _ _ _ _ _ hr => exact hr
 
 theorem BlockR.exchange_inv {Λ Λ' : List (Res D)} {g : D.Glob}
     {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {hw : V.gschreibt g = true}

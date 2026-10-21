@@ -485,7 +485,7 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
       (kette_abbruch _ hk.1 k hk.2 (fun L hL => (Block.held_iff rest L).mp hL)) ?_
     rw [hs₁, offen_lese]; exact hh
-  | dannAwaits l Γ Λ Λ' g payload hp hL rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+  | dannAwaits l Γ Λ Λ' g payload hp hL _ rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0

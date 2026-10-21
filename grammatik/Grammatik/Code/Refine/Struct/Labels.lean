@@ -576,6 +576,18 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, hlt, h => by
       simp [lowerEnd] at h
 
+  | _, _, _, .regRead .., lb, st, st', blks, hlt, h => by
+      simp [lowerEnd] at h
+
+  | _, _, _, .regReadElse .., lb, st, st', blks, hlt, h => by
+      simp [lowerEnd] at h
+
+  | _, _, _, .awaits .., lb, st, st', blks, hlt, h => by
+      simp [lowerEnd] at h
+
+  | _, _, _, .bindCallInd .., lb, st, st', blks, hlt, h => by
+      simp [lowerEnd] at h
+
 /-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i` (below `st.l`), the counter
     hands out labels from `st.l`; all labels are distinct. -/
 theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)

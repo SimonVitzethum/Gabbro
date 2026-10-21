@@ -387,7 +387,7 @@ def certSeqGueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certEndGueltig D V l Γ Λ sonst ∧
       certSeqGueltig D V l (D.rtyp r :: Γ) Λ Λ' rest
   | .awaits g payload lo hi rest =>
-    payload = D.nutzlast g ∧ gdarf D g Λ ∧
+    payload = D.nutzlast g ∧ gdarf D g Λ ∧ D.atomar g = true ∧
       intVonTyp (D.gtyp g) = some (lo, hi) ∧
       certSeqGueltig D V l (.int lo hi :: Γ) Λ Λ' rest
   | .exchange g lo hi neu rest =>

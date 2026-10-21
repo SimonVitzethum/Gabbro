@@ -78,7 +78,7 @@ theorem mB_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .regRead _ _ rest => by simp only [mB, mB_und A B rest]
   | .regReadElse _ _ _ sonst rest => by
       simp only [mB, mE_und A B sonst, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
-  | .awaits _ _ _ _ rest => by simp only [mB, mB_und A B rest]
+  | .awaits _ _ _ _ _ rest => by simp only [mB, mB_und A B rest]
   | .exchange _ _ _ _ rest => by simp only [mB, mB_und A B rest]
   | .narrow _ _ _ sonst rest => by
       simp only [mB, mE_und A B sonst, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
@@ -118,6 +118,12 @@ theorem mE_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Lis
   | .bindAxiom _ _ _ _ _ _ _ rest => by simp only [mE, mE_und A B rest]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [mE, mE_und A B err, mE_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  | .regRead _ _ rest => by simp only [mE, mE_und A B rest]
+  | .regReadElse _ _ _ sonst rest => by
+      simp only [mE, mE_und A B sonst, mE_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  | .awaits _ _ _ _ _ rest => by simp only [mE, mE_und A B rest]
+  | .bindCallInd _ _ _ _ _ rest => by
+      simp only [mE, mE_und A B rest, Merkmal.und_ruf, Merkmal.und_ind, Merkmal.und_sperre, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 end
 
@@ -170,7 +176,7 @@ theorem mB_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [mB, mE_top err, mB_top rest, Bool.and_self]
   | .regRead _ _ rest => by simp only [mB, mB_top rest]
   | .regReadElse _ _ _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
-  | .awaits _ _ _ _ rest => by simp only [mB, mB_top rest]
+  | .awaits _ _ _ _ _ rest => by simp only [mB, mB_top rest]
   | .exchange _ _ _ _ rest => by simp only [mB, mB_top rest]
   | .narrow _ _ _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
   | .check _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
@@ -201,6 +207,10 @@ theorem mE_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => by simp only [mE, mE_top err, mE_top rest]; rfl
   | .bindAxiom _ _ _ _ _ _ _ rest => by simp only [mE, mE_top rest]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [mE, mE_top err, mE_top rest, Bool.and_self]
+  | .regRead _ _ rest => by simp only [mE, mE_top rest]
+  | .regReadElse _ _ _ sonst rest => by simp only [mE, mE_top sonst, mE_top rest, Bool.and_self]
+  | .awaits _ _ _ _ _ rest => by simp only [mE, mE_top rest]
+  | .bindCallInd _ _ _ _ _ rest => by simp only [mE, mE_top rest]; rfl
 
 end
 

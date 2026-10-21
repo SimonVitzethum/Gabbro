@@ -541,7 +541,7 @@ theorem block_treu :
         · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
         · exact (TreuEnd.vor hl (end_treu sonst _ ρ)).zuAusgang σ' h
       · simp [Ausgang.welt] at h
-  | .awaits g _ _ hL rest, σ, ρ, σ', h => by
+  | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
@@ -668,6 +668,43 @@ theorem end_treu :
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
+      · simp [EndAusgang.welt] at h
+  | .regRead r _ rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      split at h
+      · split at h
+        · exact (end_treu rest σ _).schrumpf σ' h
+        · simp [EndAusgang.welt] at h
+      · simp [EndAusgang.welt] at h
+  | .regReadElse r _ zusage sonst rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      split at h
+      · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
+        split at h
+        · exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
+        · exact (TreuEnd.vor hl (end_treu sonst _ ρ)) σ' h
+      · simp [EndAusgang.welt] at h
+  | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      split at h
+      · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
+        exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
+      · simp [EndAusgang.welt] at h
+  | .bindCallInd p args he hp hr rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at h
+      obtain ⟨f, hf⟩ := pv
+      simp only at h
+      split at h
+      · rename_i σ1 v hR1
+        have g2 := end_treu rest σ1 (.cons (ergWert (ergSig hf he) v) ρ)
+        subst hf
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
+          (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
+        exact g1.trans (g2.schrumpf σ' h)
+      · rename_i σ1 r _; exact keinGrundSig hf hr r
+      · simp [EndAusgang.welt] at h
       · simp [EndAusgang.welt] at h
 
 theorem arms_treu :

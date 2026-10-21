@@ -125,7 +125,7 @@ def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V 
     1 + groesseArgs args + groesseEnd err + groesseBlock rest
   | _, _, _, _, .regRead _ _ rest => 1 + groesseBlock rest
   | _, _, _, _, .regReadElse _ _ z sonst rest => 1 + groesseExpr z + groesseEnd sonst + groesseBlock rest
-  | _, _, _, _, .awaits _ _ _ _ rest => 1 + groesseBlock rest
+  | _, _, _, _, .awaits _ _ _ _ _ rest => 1 + groesseBlock rest
   | _, _, _, _, .exchange _ neu _ _ rest => 1 + groesseExpr neu + groesseBlock rest
   | _, _, _, _, .narrow e lo' hi' sonst rest =>
     1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' + Zahlen.kostT (.int lo' hi') + groesseEnd sonst +
@@ -152,6 +152,10 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .bindCallElse _ args _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => 1 + groesseArgs args + groesseEnd rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseEnd rest
+  | _, _, _, .regRead _ _ rest => 1 + groesseEnd rest
+  | _, _, _, .regReadElse _ _ z sonst rest => 1 + groesseExpr z + groesseEnd sonst + groesseEnd rest
+  | _, _, _, .awaits _ _ _ _ _ rest => 1 + groesseEnd rest
+  | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
 
 def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
     Arms D V l Γ Λ Λ' cs → Nat

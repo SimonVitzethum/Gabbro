@@ -75,11 +75,11 @@ theorem BlockG.regLies_inv {Λ Λ' : List (Res D)} {r : D.Reg}
   | regRead _ _ _ hr => exact hr
 
 theorem BlockG.awaits_inv {Λ Λ' : List (Res D)} {g : D.Glob} {payload : List D.Glob}
-    {hp : payload = D.nutzlast g} {hL : gdarf D g Λ}
+    {hp : payload = D.nutzlast g} {hL : gdarf D g Λ} {hat : D.atomar g = true}
     {rest : Block D V l (D.gtyp g :: Γ) Λ Λ'}
-    (h : BlockG A mr (.awaits g payload hp hL rest)) : BlockG A mr rest := by
+    (h : BlockG A mr (.awaits g payload hp hL hat rest)) : BlockG A mr rest := by
   cases h with
-  | awaits _ _ _ _ _ hr => exact hr
+  | awaits _ _ _ _ _ _ hr => exact hr
 
 theorem BlockG.exchange_inv {Λ Λ' : List (Res D)} {g : D.Glob}
     {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {hw : V.gschreibt g = true}
@@ -582,10 +582,10 @@ theorem w_regLiesElseFalsch {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
 theorem w_awaits {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
-    (hL : gdarf D g Λ)
+    (hL : gdarf D g Λ) (hat : D.atomar g = true)
     (rest : Block D (vertragVon D z.kopf.f) l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
-    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.awaits g payload hp hL rest) k⟩)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.awaits g payload hp hL hat rest) k⟩)
     (hvis : O.sichtbar g (M.weltVon f) = true)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
@@ -593,7 +593,7 @@ theorem w_awaits {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
         (.cons (((M.weltVon f).lese Λ [.inr g]).globs g) ρ)
         (.dann rest (.schrumpf k)) ((M.weltVon f).lese Λ [.inr g]) := by
   subst hz
-  exact ⟨_, RufSchrittG.dannAwaits M f l Γ Λ Λ' g payload hp hL rest k ρ hhead hvis _ rfl
+  exact ⟨_, RufSchrittG.dannAwaits M f l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis _ rfl
     _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_exchange {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}

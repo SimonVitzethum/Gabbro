@@ -83,7 +83,7 @@ def Block.terminal {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => rest.terminal
   | .regRead _ _ rest => rest.terminal
   | .regReadElse _ _ _ _ rest => rest.terminal
-  | .awaits _ _ _ _ rest => rest.terminal
+  | .awaits _ _ _ _ _ rest => rest.terminal
   | .exchange _ _ _ _ rest => rest.terminal
   | .narrow _ _ _ _ rest => rest.terminal
   | .check _ _ rest => rest.terminal
@@ -110,6 +110,14 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
   | _, _, .bindCallElse _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .regRead r hk rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .regReadElse r hk z sonst rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .awaits g pl hp hL hat rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
 
 /-- The residue takes an abrupt exit (`leave`/`next`): a loop shim behind

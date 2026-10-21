@@ -413,7 +413,7 @@ include hRuf
 
 -- `hRuf` is used at calls; the arm recursions reach it only through
 -- `blockRetR`, which the linter does not count as a use.
-set_option maxHeartbeats 800000 in
+set_option maxHeartbeats 3200000 in
 set_option linter.unusedSectionVars false in
 mutual
 
@@ -753,7 +753,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
       · simp [Ausgang.ende?] at hex
-  | _, _, _, _, .awaits g payload hp hL rest, hb => by
+  | _, _, _, _, .awaits g payload hp hL hat rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       have hr := hb.awaits_inv
       have hW := hZ.welt
@@ -762,7 +762,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · rename_i hvis
         rw [ende_schrumpf] at hex
         obtain ⟨M1, hs1, hZ1⟩ := w_awaits (P := P) (O := O) (passes := passes) hZ.1
-          g payload hp hL rest k ρ rfl (by rw [hW]; exact hvis)
+          g payload hp hL hat rest k ρ rfl (by rw [hW]; exact hvis)
         rw [hW] at hZ1
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
           (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)

@@ -1,11 +1,12 @@
 /-
   File:      Grammatik/TravAwaitsZeuge.lean
   Subject:   REACHED RUNS THAT FIRE `traverse` AND `awaits`, jointly with the
-             premises of `ziel_ort_geraet`, and the witness of the full race
-             theorem `rennfrei_g_voll` on the same run.
+             premises of `ziel_ort_geraet` (the witness of the full race
+             theorem `rennfrei_g_voll` runs on a copy with a plain read of a
+             non-atomic `flag`: `TravLese.lean`).
 
   The declaration `taD`: one table `tab` (2 slots, field `0 .. 1`) guarded by
-  the lock `l` (rank 0); one global `flag` (`0 .. 1`, shared, payload
+  the lock `l` (rank 0); one global `flag` (`0 .. 1`, shared, atomic, payload
   empty) guarded by the lock `k` (rank 1); five functions:
 
   * `haupt0` (thread 0's entry; holds `l` by signature; writes `tab`, `flag`):
@@ -116,7 +117,7 @@ def taD : Deklaration where
   decGlob := inferInstance
   gtyp := fun _ => .int 0 1
   nutzlast := fun _ => []
-  atomar := fun _ => false
+  atomar := fun _ => true
   geteilt := fun _ => true
   ggeteilt := fun _ => true
   Lock := TaLock
@@ -286,7 +287,7 @@ def taRumpfHaupt1 : Endblock taD (vertragVon taD taHaupt1) false [] [] :=
 
 /-- `let v = flag awaits {}` -/
 def taAwaitsBlock : Block taD (vertragVon taD taWarte) false [] taKL taKL :=
-  .awaits () [] rfl taGdarfK .nil
+  .awaits () [] rfl taGdarfK rfl .nil
 
 def taIteW : Stmt taD (vertragVon taD taWarte) false [] taKL taKL :=
   .ite .tru taAwaitsBlock .nil

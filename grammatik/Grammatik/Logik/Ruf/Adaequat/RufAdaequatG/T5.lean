@@ -107,7 +107,7 @@ theorem endeConsRet {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 -- `hnw` is used at the returns; `blockRet` and the arm recursions reach it
 -- only through `stmtRet`/`endRet`, which the linter does not count as a use.
-set_option maxHeartbeats 800000 in
+set_option maxHeartbeats 3200000 in
 set_option linter.unusedSectionVars false in
 mutual
 
@@ -327,7 +327,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (heldGenau_lese _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
       · cases hex
-  | _, _, _, _, .awaits g payload hp hL rest, hb => by
+  | _, _, _, _, .awaits g payload hp hL hat rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.awaits_inv
       have hW := hZ.welt
@@ -335,7 +335,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split at hex
       · rename_i hvis
         obtain ⟨M1, hs1, hZ1⟩ := w_awaits (P := P) (O := O) (passes := passes) hZ.1
-          g payload hp hL rest k ρ rfl (by rw [hW]; exact hvis)
+          g payload hp hL hat rest k ρ rfl (by rw [hW]; exact hvis)
         rw [hW] at hZ1
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
           (blockRet rest hr _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)

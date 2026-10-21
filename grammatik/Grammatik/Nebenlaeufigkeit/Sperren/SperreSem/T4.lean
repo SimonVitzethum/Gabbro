@@ -608,9 +608,9 @@ theorem semH_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
   exact ZErgG.folgt_refl _
 
 theorem semH_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
+    (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) (hvis : O.sichtbar g σ = true) :
-    semH S O U passes R (.dann (.awaits g payload hp hL rest) k) σ ρ =
+    semH S O U passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
       semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ [.inr g])
         (.cons ((σ.lese Λ [.inr g]).globs g) ρ) := by
   rw [semH_dann]

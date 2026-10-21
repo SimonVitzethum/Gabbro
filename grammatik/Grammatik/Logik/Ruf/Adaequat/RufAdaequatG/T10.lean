@@ -310,7 +310,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
   | dannRegLies _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | dannExchange l2 Γ2 Λ2 Λ2' g neuE hw hL rest k ρ2 hhead σ₁ hs₁ σ₂ hs₂ neu hneu =>
     rw [hR] at hhead
     cases hhead

@@ -94,7 +94,7 @@ theorem blockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' 
   | _, _, _, _, .regRead _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .regReadElse _ _ _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
-  | _, _, _, _, .awaits _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .awaits _ _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .exchange _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .narrow _ _ _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
@@ -122,6 +122,11 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf err, endblockOrteP_mitRumpf rest]
+  | _, _, _, .regRead _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .regReadElse _ _ _ sonst rest => by
+      simp only [endblockOrteP, endblockOrteP_mitRumpf sonst, endblockOrteP_mitRumpf rest]
+  | _, _, _, .awaits _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .bindCallInd _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
 
 theorem armsOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (a : Arms D V l Γ Λ Λ' cs),

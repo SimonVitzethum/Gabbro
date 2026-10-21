@@ -244,6 +244,39 @@ theorem Endblock.execBlockHA_alsBlock :
         cases execEndHA S O U A passes R rest _ _ <;> rfl
       · cases execEndHA S O U A passes R err _ _ <;> rfl
       · rfl
+  | _, _, .regRead r hk rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · split
+        · rw [Endblock.execBlockHA_alsBlock rest]
+          cases execEndHA S O U A passes R rest _ _ <;> rfl
+        · rfl
+      · rfl
+  | _, _, .regReadElse r hk z sonst rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · split
+        · rw [Endblock.execBlockHA_alsBlock rest]
+          cases execEndHA S O U A passes R rest _ _ <;> rfl
+        · rfl
+      · rfl
+  | _, _, .awaits g pl hp hL hat rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .bindCallInd p args he hp hr rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      rename_i f hf _
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · rename_i r _
+        exact keinGrundSig hf hr r
+      · rfl
+      · rfl
 
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterHA_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :
@@ -907,10 +940,10 @@ theorem semHA_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
   exact ZErgG.folgt_refl _
 
 theorem semHA_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
+    (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (hvis : O.sichtbar g (leseA A σ Λ [.inr g]) = true) :
-    semHA S O U A passes R (.dann (.awaits g payload hp hL rest) k) σ ρ =
+    semHA S O U A passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ [.inr g])
         (.cons ((leseA A σ Λ [.inr g]).globs g) ρ) := by
   rw [semHA_dann]

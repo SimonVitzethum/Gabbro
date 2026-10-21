@@ -454,7 +454,7 @@ theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only
       rw [if_neg (by rw [hw]; exact Bool.false_ne_true)]
       rfl
-  | dannAwaits l Γ Λ Λ' g payload hp hL rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+  | dannAwaits l Γ Λ Λ' g payload hp hL _ rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]

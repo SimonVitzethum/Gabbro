@@ -94,7 +94,7 @@ theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .regRead r _ rest => congrArg (Sum.inr r :: ·) (ruB_ants rest)
   | _, _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Sum.inr r :: ·) (kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest))
-  | _, _, _, _, .awaits _ _ _ _ rest => ruB_ants rest
+  | _, _, _, _, .awaits _ _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
   | _, _, _, _, .check _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
@@ -119,6 +119,11 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .bindAxiom a _ _ _ _ _ _ rest => congrArg (Sum.inl a :: ·) (ruEnd_ants rest)
   | _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest =>
       congrArg (Sum.inl a :: ·) (kongr₂ (· ++ ·) (ruEnd_ants err) (ruEnd_ants rest))
+  | _, _, _, .regRead r _ rest => congrArg (Sum.inr r :: ·) (ruEnd_ants rest)
+  | _, _, _, .regReadElse r _ _ sonst rest =>
+      congrArg (Sum.inr r :: ·) (kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest))
+  | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_ants rest
+  | _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_umΛ _ _).trans (ruEnd_ants rest)
 
 theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),

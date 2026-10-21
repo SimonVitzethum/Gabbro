@@ -140,7 +140,7 @@ theorem await_shared_zeuge :
     ∃ m' rs', Reach cMod (Sees.shared cLay) (.run mem0 ⟨0, 1, 0, fun _ => none, none⟩ [])
         (.run m' ⟨0, 2, 0, rs', none⟩ []) := by
   have h := (await_ok_shared cLay cLayOk [] (0, 0) cO 0 cR () [] rfl (fun w hw => absurd hw List.not_mem_nil)
-    awRest 1 2 ⟨0, 3⟩ cSt cBlks cLow_eq rfl cMod 0 cIn ⟨_, rfl, rfl⟩ ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩ cFn cCall
+    rfl awRest 1 2 ⟨0, 3⟩ cSt cBlks cLow_eq rfl cMod 0 cIn ⟨_, rfl, rfl⟩ ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩ cFn cCall
     wld5 ⟨7, by decide, by decide⟩ .nil mem0 (fun _ => none) [] none rep_free_witness trivial cMem_wf
     (fun x hx => absurd hx List.not_mem_nil)).2
   simp only [execBlock, cO, if_true] at h
