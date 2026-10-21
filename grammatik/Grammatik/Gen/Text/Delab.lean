@@ -61,15 +61,15 @@ variable (z : Spez)
 
 /-! ### Expressions -/
 
-/-- An expression; `kopf` is the name of the head variable when it is the result (an `ensures`). -/
-def delabE (kopf : Option String) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} :
+/-- An expression; `kopf` is the number of the result variable in an `ensures` (the head of `ErgCtx`, named
+    `result`), counted like every variable from the bottom of the context so that a binder below it does not
+    move it. -/
+def delabE (kopf : Option Nat) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} :
     Expr z.deklaration Γ Λ τ → Except String SExpr
   | .lit n => .ok (zahlE n)
   | .tru => .ok .tru
   | .fls => .ok .fls
-  | .var x => .ok (match kopf, tiefe x with
-    | some _, 0 => .res
-    | _, d => .variable (nVar (Γ.length - 1 - d)))
+  | .var x => .ok (if kopf = some (Γ.length - 1 - tiefe x) then .res else .variable (nVar (Γ.length - 1 - tiefe x)))
   | .glob g _ => .ok (.variable (nGlob (show Fin z.globs.length from g).val))
   | .slot t f i _ => do
       let i' ← delabE kopf i
@@ -252,7 +252,7 @@ def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length
     | e => do pure [SKlausel.needs (← delabE z none e)]
   let ens ← match P.ensures f with
     | .tru => pure []
-    | e => do pure [SKlausel.gives (← delabE z (s.erg.map fun _ => "result") e)]
+    | e => do pure [SKlausel.gives (← delabE z (s.erg.map fun _ => np) e)]
   let (ss, ende) ← delabEnd z (vertragVon z.deklaration f) (P.rumpf f)
   let koerper := SAnw.block ss ende
   let schreibt := ((List.finRange z.tabs.length).filter fun t => z.schreibt n t).map
