@@ -991,14 +991,14 @@ theorem suffM : ∀ (suff : List SuffFrag) (base : SExpr) (rest : List Token) (F
     | dot f =>
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append]
-      simp only [parseSuffixe]
+      simp only [parseSuffixe, nameText_nameTok]
       simp only [applySuff]
       simp only [suffToks, List.length_cons] at hF
       exact ih _ rest F' hs' hr (by omega)
     | arrow f =>
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append]
-      simp only [parseSuffixe]
+      simp only [parseSuffixe, nameText_nameTok]
       simp only [applySuff]
       simp only [suffToks, List.length_cons] at hF
       exact ih _ rest F' hs' hr (by omega)
@@ -1020,30 +1020,30 @@ theorem suffM : ∀ (suff : List SuffFrag) (base : SExpr) (rest : List Token) (F
 
 /-- Places through `parseOrt` at token fuel. -/
 theorem ortM (a : String) (suff : List SuffFrag) (rest : List Token) (F : Nat)
-    (hka : (!istKeinPlatz a) = true) (hs : SuffLegs suff) (hr : ruhigSuff rest = true)
+    (hka : (!istKopfWort a) = true) (hs : SuffLegs suff) (hr : ruhigSuff rest = true)
     (hF : 6 * (suffToks suff).length + 30 ≤ F) :
     parseOrt F (druckToks (applySuff (.variable a) suff) ++ rest) =
       .ok (applySuff (.variable a) suff, rest) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   rw [druckToks_applySuff]
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [parseOrt, druckToks, nameText, hkaf, List.cons_append, List.nil_append,
+  have hkaf : istKeinPlatz a = false := kopf_kp (nichtWahr_falsch _ hka)
+  simp only [parseOrt, druckToks, nameText_nameTok, hkaf, List.cons_append, List.nil_append,
     List.append_assoc]
   simp only [Bool.false_eq_true, ite_false]
   exact suffM suff (.variable a) rest F' hs hr (by omega)
 
 /-- Places through `parsePrimary` at token fuel (lane 161's `prim_platz`, restated). -/
 theorem prim_platzM (a : String) (suff : List SuffFrag) (rest : List Token) (F : Nat)
-    (hka : (!istKeinPlatz a) = true) (hs : SuffLegs suff) (hr : ruhigSuff rest = true)
+    (hka : (!istKopfWort a) = true) (hs : SuffLegs suff) (hr : ruhigSuff rest = true)
     (hF : 6 * (suffToks suff).length + 31 ≤ F) :
     parsePrimary F (druckToks (applySuff (.variable a) suff) ++ rest) =
       .ok (applySuff (.variable a) suff, rest) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   rw [druckToks_applySuff]
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [parsePrimary, druckToks, nameText, hkaf, List.cons_append,
-    parseKopf]
+  simp only [druckToks, List.cons_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hka)]
+  simp only [parseKopf, nameText_nameTok]
   simp only [List.nil_append]
   simp only [sammleSeg_suffToks, hr]
   have hmiss : ∀ (R : List Token), suffToks suff ++ rest ≠ .zeichen "(" :: R := by
@@ -1189,15 +1189,13 @@ theorem argsM : ∀ (xs : List SExpr) (rest : List Token) (F : Nat),
 
 /-- Calls through `parsePrimary` at token fuel (mirror of `prim_ruf_legs`). -/
 theorem prim_rufM (f : String) (xs : List SExpr) (rest : List Token) (F : Nat)
-    (hf : (!istKeinPlatz f) = true) (hxs : ∀ x ∈ xs, LegsB (fb x) x ∧ gut x = true)
+    (hf : (!istKopfWort f) = true) (hxs : ∀ x ∈ xs, LegsB (fb x) x ∧ gut x = true)
     (hF : 6 * (druckToksListe xs).length + 38 ≤ F) :
     parsePrimary F (druckToks (.call f xs) ++ rest) = .ok (.call f xs, rest) := by
-  have hkaf : istKeinPlatz f = false := nichtWahr_falsch _ hf
+  have hkaf' : istKopfWort f = false := nichtWahr_falsch _ hf
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, parsePrimary]
-  simp only [nameText, hkaf]
-  have hne : ¬(false = true) := by decide
-  simp only [if_neg hne]
+  simp only [druckToks, List.cons_append]
+  rw [parsePrimary_nameTok _ _ _ hkaf']
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   simp only [kopf_ruf_head]
   have hA := argsM xs rest F'' hxs (by omega)
@@ -1207,7 +1205,7 @@ theorem prim_rufM (f : String) (xs : List SExpr) (rest : List Token) (F : Nat)
 /-! ### `old`, `sizeof`, `lenof`, `aligned` -/
 
 theorem prim_altM (a : String) (suff : List SuffFrag) (rest : List Token) (F : Nat)
-    (hka : (!istKeinPlatz a) = true) (hs : SuffLegs suff) (hr : ruhigSuff rest = true)
+    (hka : (!istKopfWort a) = true) (hs : SuffLegs suff) (hr : ruhigSuff rest = true)
     (hF : 6 * (suffToks suff).length + 31 ≤ F) :
     parsePrimary F (druckToks (.old (applySuff (.variable a) suff)) ++ rest) =
       .ok (.old (applySuff (.variable a) suff), rest) := by
@@ -1218,7 +1216,7 @@ theorem prim_altM (a : String) (suff : List SuffFrag) (rest : List Token) (F : N
   simp only [hO, List.cons_append]
 
 theorem prim_emb1M (w : String) (a : String) (suff : List SuffFrag) (rest : List Token) (F : Nat)
-    (hw : w = "sizeof" ∨ w = "lenof") (hka : (!istKeinPlatz a) = true) (hs : SuffLegs suff)
+    (hw : w = "sizeof" ∨ w = "lenof") (hka : (!istKopfWort a) = true) (hs : SuffLegs suff)
     (hp : gutPlatz (applySuff (.variable a) suff) = true)
     (htw : (!istTypWortVar (applySuff (.variable a) suff)) = true)
     (hr : ruhigSuff rest = true) (hF : 6 * (suffToks suff).length + 32 ≤ F) :
@@ -1285,9 +1283,9 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         intro i hi
         obtain ⟨hgi, hi'⟩ := suff_idx_mem suff i hi hgs
         exact ih i (by omega) hi'
-      have hd : druckToks (applySuff (.variable a) suff) = [.ident a] ++ suffToks suff := by
+      have hd : druckToks (applySuff (.variable a) suff) = [nameTok a] ++ suffToks suff := by
         rw [druckToks_applySuff]; rfl
-      apply legsB_kopf _ (.ident a) _ (Or.inl ⟨a, rfl⟩) hd
+      apply legsB_kopf _ (nameTok a) _ (nameTok_form a) hd
       intro rest' G hrs _ hG
       apply prim_platzM a suff rest' G hka hsl hrs
       simp only [fb, hd, List.length_append, List.length_singleton] at hG
@@ -1333,10 +1331,10 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
           have := groesse_mem_le xs x hx
           simp only [groesse] at hs; omega
         exact ⟨ih x hsx hgx, hgx⟩
-      have hd : druckToks (.call f xs) = [.ident f] ++
+      have hd : druckToks (.call f xs) = [nameTok f] ++
           ([.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]) := by
         simp [druckToks]
-      apply legsB_kopf _ (.ident f) _ (Or.inl ⟨f, rfl⟩) hd
+      apply legsB_kopf _ (nameTok f) _ (nameTok_form f) hd
       intro rest' G _ _ hG
       apply prim_rufM f xs rest' G hg.1 hxs
       simp only [fb, hd, List.length_append, List.length_singleton] at hG

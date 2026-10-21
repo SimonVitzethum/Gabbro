@@ -39,6 +39,12 @@ import Grammatik.Parser.Round.RundlaufLex
 
 namespace Gabbro.Grammatik.Parser
 
+/-- The name token is an identifier or a word. -/
+theorem nameTok_form (a : String) : (∃ g, nameTok a = .ident g) ∨ (∃ w, nameTok a = .wort w) := by
+  unfold nameTok; split
+  · exact Or.inr ⟨a, rfl⟩
+  · exact Or.inl ⟨a, rfl⟩
+
 /-! ### `||` and `&&` over abstract operand legs -/
 
 /-- The `||` inner trace over abstract legs: the left operand climbs the `||`-follow up-tower to
@@ -325,7 +331,7 @@ theorem legs_gut_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
     have platz : gutPlatz e = true → Legs e := by
       intro hp
       obtain ⟨a, suff, rfl, _, _, _⟩ := zerlege (n + 1) e hs hp
-      have hd : druckToks (applySuff (.variable a) suff) = [.ident a] ++ suffToks suff := by
+      have hd : druckToks (applySuff (.variable a) suff) = [nameTok a] ++ suffToks suff := by
         rw [druckToks_applySuff]; rfl
       apply identTurm a _ hd
       intro rest' G hrs _ hG
@@ -349,7 +355,7 @@ theorem legs_gut_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
       have hr : groesse r ≤ n := by simp only [groesse] at hs; omega
       exact binLegs o l r hg.1.1 (ih l hl hg.1.2) (ih r hr hg.2)
     | call f xs =>
-      have hd : druckToks (.call f xs) = [.ident f] ++
+      have hd : druckToks (.call f xs) = [nameTok f] ++
           ([.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]) := by
         simp [druckToks]
       apply identTurm f _ hd

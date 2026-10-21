@@ -232,21 +232,28 @@ end
 def brennstoff (e : SExpr) : Nat :=
   12 * (groesse e + 1) + groesse e + 8
 
+/-- A name as the token the lexer reads for it: a table word is a `wort`, every other name an
+    `ident`. The readers take both through `nameText`; printing the lexer's token makes every printed
+    list the one its rendered text lexes to. -/
+def nameTok (s : String) : Token := if istSchluessel s then .wort s else .ident s
+
+@[simp] theorem nameText_nameTok (s : String) : nameText (nameTok s) = some s := by
+  unfold nameTok; split <;> rfl
+
 -- The token-level printer: fully parenthesised -- every binary
 -- operator rides inside its own parens, so no precedence level can
 -- misread the shape, and no associativity question arises. Names
--- print as `ident` tokens (never `wort`): the parser reads a call
--- head, a variable or a `Grund` segment through `nameText`, which
--- takes both -- so even `Some`, `None`, `old` or `result` as a
--- call head parse back as a call, where the string printer's
--- `None` would lex to a keyword and need its special case.
--- `sizeof`/`lenof`/`aligned`, `old`, `result`, `true`/`false`
--- print as `wort` (their parser arms match `wort` only).
+-- print as `nameTok` (the lexer's token for the name): the parser
+-- reads a call head, a variable or a `Grund` segment through
+-- `nameText`, which takes both. `sizeof`/`lenof`/`aligned`, `old`,
+-- `result`, `true`/`false` print as `wort` (their parser arms match
+-- `wort` only), so a name spelled like one of the primary words is
+-- outside `gut`.
 /-- A `::` path as name and separator tokens. -/
 def pfadToks : List String → List Token
   | [] => []
-  | [a] => [.ident a]
-  | a :: rest => [.ident a, .zeichen "::"] ++ pfadToks rest
+  | [a] => [nameTok a]
+  | a :: rest => [nameTok a, .zeichen "::"] ++ pfadToks rest
 
 /-- Printed operands, comma separated. -/
 def kommaToks : List (List Token) → List Token
@@ -262,7 +269,7 @@ def domToks (dk : String) (ds : List String) (ops : List (List Token)) : List To
   else if strEq dk "chain" then
     match ds, ops with
     | [x, y], [p] =>
-      [.wort "chain", .zeichen "(", .ident x, .zeichen ",", .ident y, .zeichen ")", .wort "in"] ++ p
+      [.wort "chain", .zeichen "(", nameTok x, .zeichen ",", nameTok y, .zeichen ")", .wort "in"] ++ p
     | _, _ => [.ende]
   else if strEq dk "queue" then [.wort "queue"] ++ ops.headD []
   else [.wort dk, .wort "of"] ++ ops.headD []
@@ -283,7 +290,7 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
     | [a, b] => [.zeichen "("] ++ a ++ [.zeichen "=>"] ++ b ++ [.zeichen ")"]
     | _ => [.ende]
   | .reach => match ns, ts with
-    | [f], [a, b] => [.zeichen "("] ++ a ++ [.wort "reaches"] ++ b ++ [.wort "via", .ident f, .zeichen ")"]
+    | [f], [a, b] => [.zeichen "("] ++ a ++ [.wort "reaches"] ++ b ++ [.wort "via", nameTok f, .zeichen ")"]
     | _, _ => [.ende]
   | .mem => match ns, ts with
     | dk :: ds, e :: ops => [.zeichen "("] ++ e ++ [.wort "in"] ++ domToks dk ds ops ++ [.zeichen ")"]
@@ -295,7 +302,7 @@ where
   druckQuant (w : String) (ns : List String) (ts : List (List Token)) : List Token :=
     match ns, ts.reverse with
     | x :: dk :: ds, body :: opsRev =>
-      [.zeichen "(", .wort w, .ident x, .wort "in"] ++ domToks dk ds opsRev.reverse ++
+      [.zeichen "(", .wort w, nameTok x, .wort "in"] ++ domToks dk ds opsRev.reverse ++
         [.zeichen ":"] ++ body ++ [.zeichen ")"]
     | _, _ => [.ende]
 
@@ -322,11 +329,11 @@ def druckToks : SExpr → List Token
   | .float s => [.float s]
   | .tru => [.wort "true"]
   | .fls => [.wort "false"]
-  | .variable s => [.ident s]
-  | .field x f => druckToks x ++ [.zeichen ".", .ident f]
+  | .variable s => [nameTok s]
+  | .field x f => druckToks x ++ [.zeichen ".", nameTok f]
   | .index x i =>
     druckToks x ++ [.zeichen "["] ++ druckToks i ++ [.zeichen "]"]
-  | .arrow x f => druckToks x ++ [.zeichen "->", .ident f]
+  | .arrow x f => druckToks x ++ [.zeichen "->", nameTok f]
   | .un o x =>
     [.zeichen o] ++
       if istAtom x then druckToks x
@@ -335,14 +342,14 @@ def druckToks : SExpr → List Token
     [.zeichen "("] ++ druckToks l ++ [.zeichen o] ++ druckToks r ++
       [.zeichen ")"]
   | .call f xs =>
-    [.ident f, .zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
-  | .fnref p => [.zeichen "&", .ident p]
+    [nameTok f, .zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
+  | .fnref p => [.zeichen "&", nameTok p]
   | .built f xs =>
     [.wort f, .zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
   | .old x =>
     [.wort "old", .zeichen "("] ++ druckToks x ++ [.zeichen ")"]
   | .res => [.wort "result"]
-  | .why g f => [.ident g, .zeichen "::", .ident f]
+  | .why g f => [nameTok g, .zeichen "::", nameTok f]
   | .ext k ns xs => druckExtToks k ns (druckToksViele xs)
 def druckToksViele : List SExpr → List (List Token)
   | [] => []
@@ -390,7 +397,21 @@ def gutOpBin (o : String) : Bool :=
 def istTypWortVar : SExpr → Bool
   | .variable s => istTypWort s
   | _ => false
--- heads under `istKeinPlatz` are refused; unknown operator
+/-- The words the primary reader takes by their own arm before it reads a name (`parsePrimary`):
+    a name spelled like one prints as that `wort` (`nameTok`) and would read as the arm's form;
+    `alloc`, which opens the allocation form after `let x =`; and `transition`, which the statement
+    reader opens before any place. -/
+def primWortTafel : List (List Char) :=
+  [['t','r','u','e'], ['f','a','l','s','e'], ['S','o','m','e'], ['N','o','n','e'],
+   ['r','e','s','u','l','t'], ['o','l','d'], ['c','o','u','n','t'], ['a','l','l','o','c'],
+   ['t','r','a','n','s','i','t','i','o','n']]
+
+/-- A word that cannot head a printed name: refused as a place (`istKeinPlatz`) or taken by a
+    primary arm (`primWortTafel`). -/
+def istKopfWort (s : String) : Bool :=
+  istKeinPlatz s || primWortTafel.contains s.toList
+
+-- heads under `istKopfWort` are refused; unknown operator
 -- spellings match no level; `sizeof`/`lenof` take a place through
 -- `parseOrt`, `old` takes a place, `aligned` takes two whole
 -- expressions and nothing else is an `built`; a `Grund` with
@@ -404,13 +425,13 @@ def gut : SExpr → Bool
   | .float _ => true
   | .tru => true
   | .fls => true
-  | .variable s => !istKeinPlatz s
+  | .variable s => !istKopfWort s
   | .field x _ => gutPlatz x
   | .index x i => gutPlatz x && gut i
   | .arrow x _ => gutPlatz x
   | .un o x => gutOpUn o && gut x
   | .bin o l r => gutOpBin o && gut l && gut r
-  | .call f xs => !istKeinPlatz f && gutListe xs
+  | .call f xs => !istKopfWort f && gutListe xs
   | .fnref _ => true
   | .built "sizeof" [x] => gutPlatz x && (!istTypWortVar x)
   | .built "lenof" [x] => gutPlatz x && (!istTypWortVar x)
@@ -419,11 +440,11 @@ def gut : SExpr → Bool
   | .old x => gutPlatz x
   | .res => true
   | .why g _ =>
-    !istKeinPlatz g && !istIntWort g && !istZuckerBreite g &&
+    !istKopfWort g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
   | .ext _ _ _ => false
 def gutPlatz : SExpr → Bool
-  | .variable s => !istKeinPlatz s
+  | .variable s => !istKopfWort s
   | .field x _ => gutPlatz x
   | .index x i => gutPlatz x && gut i
   | .arrow x _ => gutPlatz x
@@ -477,6 +498,48 @@ theorem strNe_of (s w : String) (h : strEq s w = false) : s ≠ w := by
 theorem nichtWahr_falsch : ∀ (b : Bool), (!b) = true → b = false := by
   intro b h
   cases hfs : b <;> simp_all
+
+/-- A head word gate: not a refused place word. -/
+theorem kopf_kp {s : String} (h : istKopfWort s = false) : istKeinPlatz s = false := by
+  simp only [istKopfWort, Bool.or_eq_false_iff] at h; exact h.1
+
+/-- A head word gate: none of the words with a primary arm. -/
+theorem kopf_ne {s : String} (h : istKopfWort s = false) :
+    s ≠ "count" ∧ s ≠ "true" ∧ s ≠ "false" ∧ s ≠ "Some" ∧ s ≠ "None" ∧ s ≠ "result" ∧
+      s ≠ "old" ∧ s ≠ "sizeof" ∧ s ≠ "lenof" ∧ s ≠ "aligned" := by
+  simp only [istKopfWort, Bool.or_eq_false_iff] at h
+  obtain ⟨h1, h2⟩ := h
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> (intro e; subst e) <;>
+    first | (revert h1; decide) | (revert h2; decide)
+
+/-- The name token is no mark, no literal and no end: the readers that look for those pass it by. -/
+@[simp] theorem nameTok_ne_zeichen (s z : String) : nameTok s ≠ .zeichen z := by
+  unfold nameTok; split <;> simp
+@[simp] theorem nameTok_ne_ende (s : String) : nameTok s ≠ .ende := by
+  unfold nameTok; split <;> simp
+@[simp] theorem nameTok_ne_num (s : String) (n : Nat) : nameTok s ≠ .num n := by
+  unfold nameTok; split <;> simp
+@[simp] theorem nameTok_ne_float (s z : String) : nameTok s ≠ .float z := by
+  unfold nameTok; split <;> simp
+@[simp] theorem nameTok_ne_text (s z : String) : nameTok s ≠ .text z := by
+  unfold nameTok; split <;> simp
+@[simp] theorem nameTok_ne_doku (s z : String) : nameTok s ≠ .doku z := by
+  unfold nameTok; split <;> simp
+
+/-- A printed name at a primary: read through `parseKopf`. -/
+theorem parsePrimary_nameTok (f : Nat) (s : String) (r : List Token) (h : istKopfWort s = false) :
+    parsePrimary (f + 1) (nameTok s :: r) = parseKopf f (nameTok s :: r) := by
+  have hk := kopf_kp h
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := kopf_ne h
+  unfold nameTok
+  split
+  · simp [parsePrimary, nameText, hk, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
+  · simp [parsePrimary, nameText, hk]
+
+/-- A printed name at a unary: no prefix mark, so the primary reader. -/
+theorem parseUnary_nameTok (f : Nat) (s : String) (r : List Token) :
+    parseUnary (f + 1) (nameTok s :: r) = parsePrimary f (nameTok s :: r) := by
+  unfold nameTok; split <;> simp [parseUnary]
 
 -- Every operator table misses a benign follow. Each proof cases
 -- on the token list: `[]` and non-`zeichen` heads miss by
@@ -1843,12 +1906,12 @@ theorem sammleSeg_paren : ∀ (f : String) (R : List Token),
   intro f R
   rfl
 theorem kopf_ruf_head : ∀ (F : Nat) (f : String) (R : List Token),
-    parseKopf (F + 1) (Token.ident f :: Token.zeichen "(" :: R) =
+    parseKopf (F + 1) (nameTok f :: Token.zeichen "(" :: R) =
       match parseArgs F R with
       | .ok (args, rest'') => .ok (.call f args, rest'')
       | .error e => .error e := by
   intro F f R
-  unfold parseKopf
+  simp only [parseKopf, nameText_nameTok]
   rfl
 theorem prim_ruf : ∀ (n : Nat) (Rn : R n)
     (f : String) (xs : List SExpr) (rest : List Token) (F : Nat),
@@ -1862,11 +1925,8 @@ theorem prim_ruf : ∀ (n : Nat) (Rn : R n)
   obtain ⟨hf, hxs⟩ := hg
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, parsePrimary] at ⊢
-  have hkaf : istKeinPlatz f = false := nichtWahr_falsch _ hf
-  simp only [nameText, hkaf] at ⊢
-  have hne : ¬(false = true) := by decide
-  simp only [if_neg hne] at ⊢
+  simp only [druckToks, List.cons_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hf)]
   have hF2 : 1 ≤ F' := by omega
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   simp only [List.cons_append, kopf_ruf_head] at ⊢
@@ -1890,8 +1950,8 @@ inductive SuffFrag
   | idx : SExpr → SuffFrag
 def suffToks : List SuffFrag → List Token
   | [] => []
-  | .dot f :: s => .zeichen "." :: .ident f :: suffToks s
-  | .arrow f :: s => .zeichen "->" :: .ident f :: suffToks s
+  | .dot f :: s => .zeichen "." :: nameTok f :: suffToks s
+  | .arrow f :: s => .zeichen "->" :: nameTok f :: suffToks s
   | .idx i :: s =>
     .zeichen "[" :: druckToks i ++ [.zeichen "]"] ++ suffToks s
 def applySuff : SExpr → List SuffFrag → SExpr
@@ -2008,7 +2068,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     gutPlatz p = true →
     ∃ (a : String) (suff : List SuffFrag),
       p = applySuff (.variable a) suff ∧
-      (!istKeinPlatz a) = true ∧
+      (!istKopfWort a) = true ∧
       suffGut suff = true ∧
       suffGroesse suff + 1 ≤ n := by
   intro n
@@ -2113,7 +2173,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       -- ⊢ : parseSuffixe F' (feld base f) (suffToks suff ++ rest) = ...
       simp only [applySuff] at ⊢
       have hs2 : suffGroesse suff + groesse (.field base f) ≤ n + 1 := by
@@ -2130,7 +2190,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       simp only [applySuff] at ⊢
       have hs2 : suffGroesse suff + groesse (.arrow base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
@@ -2147,7 +2207,7 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       -- ⊢ : parseOr F' (T(i) ++ ...) then `]` then recurse.
       have hii : groesse i ≤ n := by
         simp only [suffGroesse] at hs
@@ -2214,8 +2274,8 @@ theorem ort_platz_all : ∀ (n : Nat) (Rn : R n)
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   rw [druckToks_applySuff] at ⊢
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [parseOrt, druckToks, nameText, hkaf, List.cons_append] at ⊢
+  have hkaf : istKeinPlatz a = false := kopf_kp (nichtWahr_falsch _ hka)
+  simp only [parseOrt, druckToks, nameText_nameTok, hkaf, List.cons_append] at ⊢
   -- ⊢ : parseSuffixe F' (variable a) (suffToks suff ++ rest) = ...
   have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
     simp only [groesse] at ⊢
@@ -2240,9 +2300,9 @@ theorem prim_platz : ∀ (n : Nat) (Rn : R n)
   have hF2 : 1 ≤ F' := by omega
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   rw [druckToks_applySuff] at ⊢
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [parsePrimary, druckToks, nameText, hkaf, List.cons_append,
-    parseKopf] at ⊢
+  simp only [druckToks, List.cons_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hka)]
+  simp only [parseKopf, nameText_nameTok] at ⊢
   simp only [List.nil_append] at ⊢
   simp only [sammleSeg_suffToks, hr] at ⊢
   have hmiss : ∀ (R : List Token),
@@ -2318,7 +2378,7 @@ theorem prim_ergebnis : ∀ (rest : List Token) (F : Nat),
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
 theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
-    (!istKeinPlatz g) = true → (!istIntWort g) = true →
+    (!istKopfWort g) = true → (!istIntWort g) = true →
     (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
     ruhigSuff rest = true →
     12 * (groesse (.why g f) + 1) + groesse (.why g f) ≤ F + 7 →
@@ -2327,19 +2387,18 @@ theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
   intro g f rest F hkp hit hzuk hself hr hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary] at ⊢
-  -- ⊢ : name-text match, head gate, then `parseKopf`.
-  have hkaf : istKeinPlatz g = false := nichtWahr_falsch _ hkp
+  simp only [druckToks, List.cons_append, List.nil_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hkp)]
+  -- ⊢ : `parseKopf` on the head name.
   have hint : istIntWort g = false := nichtWahr_falsch _ hit
   have hzukf : istZuckerBreite g = false := nichtWahr_falsch _ hzuk
   have hselff : strEq g "Self" = false := nichtWahr_falsch _ hself
-  simp only [nameText, hkaf] at ⊢
   have hF2 : 1 ≤ F' := by omega
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
-  simp only [parseKopf, List.cons_append] at ⊢
-  -- ⊢ : `sammleSegmente` on `["::", ident f]`, then the `[g, f]` arm.
+  simp only [parseKopf, List.cons_append, nameText_nameTok] at ⊢
+  -- ⊢ : `sammleSegmente` on `["::", name f]`, then the `[g, f]` arm.
   -- The `::` step is concrete; the tail stops by `ruhigSuff`.
-  simp only [sammleSegmente, List.cons_append, nameText] at ⊢
+  simp only [sammleSegmente, List.cons_append, nameText_nameTok] at ⊢
   simp only [List.nil_append] at ⊢
   rw [sammleSeg_stop [g, f] rest hr] at ⊢
   have hmiss : ∀ (R : List Token), rest ≠ .zeichen "(" :: R :=

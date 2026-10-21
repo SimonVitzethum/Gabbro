@@ -4,8 +4,8 @@
              (`druckItem`, Print/Item.lean) return the items -- and the composition of all layers:
              `parseTopTief` of the lexed rendered text of printable items is `.ok items`.
 
-  The class `ItemGut` (stated in full below) covers: `module` (a `::` path of name-shaped non-table
-  words, nested items), `use`, `const` (expression or nested array values), `static` (with
+  The class `ItemGut` (stated in full below) covers: `module` (a `::` path of name-shaped words, nested
+  items), `use`, `const` (expression or nested array values), `static` (with
   `aligned`, `section`, `shared`), `table` (count/backed/owner/shared head; `const`, `slot` fields
   with bit position, `offset_into`, `where`, `reserved`, `by ops`; group invariants; `ops`; `tree`;
   `occupied`), `entry` (vector, `via`, `arch`, `ist`, `nested`, `per cpu`, saves, dispatch), `fn` with its whole head (modifier, parameters, result, `or`
@@ -25,6 +25,19 @@ import Grammatik.Parser.Round.RundlaufPred
 namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000
+
+/-! ### Name tokens -/
+
+/-- A printed name is its word or its identifier. -/
+theorem nameTok_cases (n : String) : nameTok n = .wort n ∨ nameTok n = .ident n := by
+  unfold nameTok; split
+  · exact Or.inl rfl
+  · exact Or.inr rfl
+
+theorem strEq_ne {a b : String} (h : a ≠ b) : strEq a b = false := by
+  cases e : strEq a b
+  · rfl
+  · exact absurd ((strEq_eq _ _).mp e) h
 
 /-! ### Dispatch -/
 
@@ -147,9 +160,9 @@ theorem parseItemKopf_constfn (f : Nat) (rest : List Token) :
     (by decide : strEq "const" "const" = true), (by decide : strEq "fn" "fn" = true)]
   rfl
 
-theorem parseItemKopf_const (f : Nat) (n : String) (rest : List Token) :
-    parseItemKopfTief (f + 1) (.wort "const" :: .ident n :: rest) =
-      parseKonstNach f (.ident n :: rest) := by
+theorem parseItemKopf_const (f : Nat) (n : String) (hn : n ≠ "fn") (rest : List Token) :
+    parseItemKopfTief (f + 1) (.wort "const" :: nameTok n :: rest) =
+      parseKonstNach f (nameTok n :: rest) := by
   have hm : istMod "const" = false := by decide
   simp only [parseItemKopfTief, sammleModifikatoren, hm, Bool.false_eq_true, ite_false, ite_true,
     (by decide : strEq "const" "module" = false), (by decide : strEq "const" "use" = false),
@@ -157,17 +170,18 @@ theorem parseItemKopf_const (f : Nat) (n : String) (rest : List Token) :
     (by decide : strEq "const" "profile" = false), (by decide : strEq "const" "requires" = false),
     (by decide : strEq "const" "concurrent" = false), (by decide : strEq "const" "type" = false),
     (by decide : strEq "const" "const" = true), nimmWort, strEq_self]
+  rcases nameTok_cases n with h | h <;> rw [h] <;> simp [strEq_ne hn]
 
 /-! ### Paths, constant values -/
 
 theorem nimmPfad_pfad (p : List String) (R : List Token) (hp : p ≠ []) (hR : ∀ r, R ≠ .zeichen "::" :: r) :
     nimmPfad (pfadToks p ++ R) = .ok (p, R) := by
   match p, hp with
-  | [a], _ => simp [pfadToks, nimmPfad, nameText, sammleSeg_stop2 [a] R hR]
+  | [a], _ => simp [pfadToks, nimmPfad, sammleSeg_stop2 [a] R hR]
   | a :: b :: cs, _ =>
     have := sammleSeg_pfad (b :: cs) [a] R (by simp) hR
     simp only [pfadToks, List.cons_append, List.nil_append, List.singleton_append] at this ⊢
-    simp [nimmPfad, nameText, this]
+    simp [nimmPfad, this]
 
 /-- A printable constant value: an expression, or an array literal of printable values. -/
 inductive KonstGut : SKonstWert → Prop
@@ -258,44 +272,11 @@ theorem konst_rund : ∀ (v : SKonstWert), KonstGut v → ∀ (R : List Token) (
 
 /-! ### Effects -/
 
-/-- The table words an expression print can start with. -/
-def exprWortKopf (w : String) : Bool :=
-  strEq w "true" || strEq w "false" || strEq w "sizeof" || strEq w "lenof" || strEq w "aligned" ||
-    strEq w "old" || strEq w "result"
-
-theorem druck_wortkopf (e : SExpr) (hg : gut e = true) (w : String) (ts : List Token)
-    (h : druckToks e = .wort w :: ts) : exprWortKopf w = true := by
-  have platz : ∀ p, gutPlatz p = true → druckToks p = .wort w :: ts → exprWortKopf w = true := by
-    intro p hp hd
-    obtain ⟨a, us, hu⟩ := platz_kopf p hp
-    rw [hu] at hd; cases hd
-  cases e with
-  | lit n => simp [druckToks] at h
-  | float s => simp [druckToks] at h
-  | tru => simp [druckToks] at h; obtain ⟨rfl, -⟩ := h; decide
-  | fls => simp [druckToks] at h; obtain ⟨rfl, -⟩ := h; decide
-  | «variable» s => simp [druckToks] at h
-  | field x f => exact platz (.field x f) (by simpa [gut, gutPlatz] using hg) h
-  | index x i => exact platz (.index x i) (by simpa [gut, gutPlatz] using hg) h
-  | arrow x f => exact platz (.arrow x f) (by simpa [gut, gutPlatz] using hg) h
-  | un o x => simp [druckToks] at h
-  | bin o l r => simp [druckToks] at h
-  | call f xs => simp [druckToks] at h
-  | fnref p => simp [druckToks] at h
-  | built f xs =>
-    rcases gut_built_faelle f xs hg with ⟨x, hw, rfl, -, -⟩ | ⟨a, b, rfl, rfl, -, -⟩
-    · simp [druckToks] at h; obtain ⟨rfl, -⟩ := h; rcases hw with rfl | rfl <;> decide
-    · simp [druckToks] at h; obtain ⟨rfl, -⟩ := h; decide
-  | old x => simp [druckToks] at h; obtain ⟨rfl, -⟩ := h; decide
-  | res => simp [druckToks] at h; obtain ⟨rfl, -⟩ := h; decide
-  | why g f => simp [druckToks] at h
-  | ext k ns xs => simp [gut] at hg
-
 /-- A printable effect arm. -/
 def EffGut : SEffekt → Prop
   | .reads p => gut p = true
   | .writes p => gut p = true
-  | .locks _ p => gut p = true
+  | .locks sh p => gut p = true ∧ (sh = false → ∀ ts, druckToks p ≠ .wort "shared" :: ts)
   | .takes p => gut p = true
   | .posts p => gut p = true
   | _ => True
@@ -324,6 +305,7 @@ theorem effekt_rund (e : SEffekt) (he : EffGut e) (R : List Token) (hR : EffFolg
     simp only [List.singleton_append, List.cons_append]
     simp only [parseEffekt, (by decide : strEq "writes" "reads" = false), (by decide : strEq "writes" "writes" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, hO]
   | locks sh p =>
+    obtain ⟨he, hsh⟩ := he
     have hO := ausdruck p he R F' h1 h2 h3 (by
       simp only [druckEffekt, List.length_append, List.length_singleton] at hF; split at hF <;> simp at hF <;> omega)
     obtain ⟨t, ts, hd, hk⟩ := druck_kopf p he
@@ -338,7 +320,7 @@ theorem effekt_rund (e : SEffekt) (he : EffGut e) (R : List Token) (hR : EffFolg
           cases h : strEq w "shared"
           · rfl
           · have := (strEq_eq _ _).mp h; subst this
-            exact absurd (druck_wortkopf p he _ _ hd) (by decide)
+            exact absurd hd (hsh rfl _)
         simp only [parseEffekt, (by decide : strEq "locks" "reads" = false), (by decide : strEq "locks" "writes" = false), (by decide : strEq "locks" "locks" = true), Bool.false_eq_true, ite_false, ite_true, hw, hO]
       | _ => simp only [parseEffekt, (by decide : strEq "locks" "reads" = false), (by decide : strEq "locks" "writes" = false), (by decide : strEq "locks" "locks" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, hO]
     · simp only [druckEffekt, ite_true, List.singleton_append, List.cons_append, List.append_assoc,
@@ -347,12 +329,10 @@ theorem effekt_rund (e : SEffekt) (he : EffGut e) (R : List Token) (hR : EffFolg
         (by decide : strEq "shared" "shared" = true), hO]
   | masks n =>
     simp only [druckEffekt, List.cons_append, List.nil_append]
-    simp only [parseEffekt, (by decide : strEq "masks" "reads" = false), (by decide : strEq "masks" "writes" = false), (by decide : strEq "masks" "locks" = false), (by decide : strEq "masks" "masks" = true), Bool.false_eq_true, ite_false, ite_true, nimmName,
-      nameText]
+    simp only [parseEffekt, (by decide : strEq "masks" "reads" = false), (by decide : strEq "masks" "writes" = false), (by decide : strEq "masks" "locks" = false), (by decide : strEq "masks" "masks" = true), Bool.false_eq_true, ite_false, ite_true, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende]
   | allocs n =>
     simp only [druckEffekt, List.cons_append, List.nil_append]
-    simp only [parseEffekt, (by decide : strEq "allocs" "reads" = false), (by decide : strEq "allocs" "writes" = false), (by decide : strEq "allocs" "locks" = false), (by decide : strEq "allocs" "masks" = false), (by decide : strEq "allocs" "allocs" = true), Bool.false_eq_true, ite_false, ite_true, nimmName,
-      nameText]
+    simp only [parseEffekt, (by decide : strEq "allocs" "reads" = false), (by decide : strEq "allocs" "writes" = false), (by decide : strEq "allocs" "locks" = false), (by decide : strEq "allocs" "masks" = false), (by decide : strEq "allocs" "allocs" = true), Bool.false_eq_true, ite_false, ite_true, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende]
   | takes p =>
     simp only [druckEffekt, List.length_append, List.length_singleton] at hF ⊢
     have hO := ausdruck p he R F' h1 h2 h3 (by omega)
@@ -410,17 +390,17 @@ theorem namen_rund : ∀ (ns : List String) (R : List Token) (F : Nat), ns ≠ [
     cases ns with
     | nil =>
       simp only [druckNamen, List.cons_append, List.nil_append]
-      simp only [parseNamenListe, nimmName, nameText, hR]
+      simp only [parseNamenListe, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende, hR]
     | cons m ms =>
       have hq := ih R F' (by simp) hR (by simp at hF ⊢; omega)
       have hlook : ∃ v, nimmName (druckNamen (m :: ms) ++ R) = .ok v := by
-        cases ms <;> simp [druckNamen, nimmName, nameText]
+        cases ms <;> simp [druckNamen, nimmName]
       obtain ⟨v, hv⟩ := hlook
-      have hd : druckNamen (n :: m :: ms) ++ R = .ident n :: .zeichen "," :: (druckNamen (m :: ms) ++ R) := by
+      have hd : druckNamen (n :: m :: ms) ++ R = nameTok n :: .zeichen "," :: (druckNamen (m :: ms) ++ R) := by
         simp [druckNamen]
       rw [hd]
-      have h0 : nimmName (.ident n :: .zeichen "," :: (druckNamen (m :: ms) ++ R)) =
-          .ok (n, .zeichen "," :: (druckNamen (m :: ms) ++ R)) := rfl
+      have h0 : nimmName (nameTok n :: .zeichen "," :: (druckNamen (m :: ms) ++ R)) =
+          .ok (n, .zeichen "," :: (druckNamen (m :: ms) ++ R)) := by simp [nimmName]
       simp only [parseNamenListe, h0, hv, hq]
 
 /-! ### Clauses -/
@@ -534,10 +514,10 @@ theorem klausel_rund (k : SKlausel) (hk : KlauselGut k) (R : List Token) (hR : K
     simp only [parseKlausel, (by decide : strEq "section" "requires" = false), (by decide : strEq "section" "ensures" = false), (by decide : strEq "section" "maintains" = false), (by decide : strEq "section" "refines" = false), (by decide : strEq "section" "effects" = false), (by decide : strEq "section" "costs" = false), (by decide : strEq "section" "deadline" = false), (by decide : strEq "section" "decreases" = false), (by decide : strEq "section" "by" = false), (by decide : strEq "section" "section" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, nimmTextTok]
   | arch n =>
     simp only [druckKlausel, List.cons_append, List.nil_append]
-    simp only [parseKlausel, (by decide : strEq "arch" "requires" = false), (by decide : strEq "arch" "ensures" = false), (by decide : strEq "arch" "maintains" = false), (by decide : strEq "arch" "refines" = false), (by decide : strEq "arch" "effects" = false), (by decide : strEq "arch" "costs" = false), (by decide : strEq "arch" "deadline" = false), (by decide : strEq "arch" "decreases" = false), (by decide : strEq "arch" "by" = false), (by decide : strEq "arch" "section" = false), (by decide : strEq "arch" "arch" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, nimmName, nameText]
+    simp only [parseKlausel, (by decide : strEq "arch" "requires" = false), (by decide : strEq "arch" "ensures" = false), (by decide : strEq "arch" "maintains" = false), (by decide : strEq "arch" "refines" = false), (by decide : strEq "arch" "effects" = false), (by decide : strEq "arch" "costs" = false), (by decide : strEq "arch" "deadline" = false), (by decide : strEq "arch" "decreases" = false), (by decide : strEq "arch" "by" = false), (by decide : strEq "arch" "section" = false), (by decide : strEq "arch" "arch" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende]
   | moves a b =>
     simp only [druckKlausel, List.cons_append, List.nil_append]
-    simp only [parseKlausel, (by decide : strEq "advances" "requires" = false), (by decide : strEq "advances" "ensures" = false), (by decide : strEq "advances" "maintains" = false), (by decide : strEq "advances" "refines" = false), (by decide : strEq "advances" "effects" = false), (by decide : strEq "advances" "costs" = false), (by decide : strEq "advances" "deadline" = false), (by decide : strEq "advances" "decreases" = false), (by decide : strEq "advances" "by" = false), (by decide : strEq "advances" "section" = false), (by decide : strEq "advances" "arch" = false), (by decide : strEq "advances" "payload" = false), (by decide : strEq "advances" "advances" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, nimmName, nameText, fordereZeichen, strEq_self]
+    simp only [parseKlausel, (by decide : strEq "advances" "requires" = false), (by decide : strEq "advances" "ensures" = false), (by decide : strEq "advances" "maintains" = false), (by decide : strEq "advances" "refines" = false), (by decide : strEq "advances" "effects" = false), (by decide : strEq "advances" "costs" = false), (by decide : strEq "advances" "deadline" = false), (by decide : strEq "advances" "decreases" = false), (by decide : strEq "advances" "by" = false), (by decide : strEq "advances" "section" = false), (by decide : strEq "advances" "arch" = false), (by decide : strEq "advances" "payload" = false), (by decide : strEq "advances" "advances" = true), Bool.false_eq_true, ite_false, ite_true, List.nil_append, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende, fordereZeichen, strEq_self]
   | induc h => simp [KlauselGut] at hk
   | quits s => simp [KlauselGut] at hk
   | limit s => simp [KlauselGut] at hk
@@ -601,13 +581,13 @@ theorem paramListe_rund : ∀ (ps : List (String × STyp)) (R : List Token) (F :
         ⟨(by intro x e; simp at e), (by intro x e; simp at e), (by intro x e; simp at e),
           (by intro x e; simp at e), rfl, rfl, rfl⟩ (by simp only [fbT]; omega)
       simp only [List.cons_append, List.nil_append, List.append_assoc]
-      simp [parseParamListe, nimmName, nameText, fordereZeichen, strEq_self, hT]
+      simp [parseParamListe, nimmName, fordereZeichen, strEq_self, hT]
     | cons q qs =>
       obtain ⟨m, u⟩ := q
-      obtain ⟨Z, hZ⟩ : ∃ Z, druckParams ((m, u) :: qs) = .ident m :: Z := by
+      obtain ⟨Z, hZ⟩ : ∃ Z, druckParams ((m, u) :: qs) = nameTok m :: Z := by
         cases qs <;> exact ⟨_, rfl⟩
-      have hd : druckParams ((n, t) :: (m, u) :: qs) ++ R = .ident n :: .zeichen ":" ::
-          (druckTyp t ++ .zeichen "," :: .ident m :: (Z ++ R)) := by
+      have hd : druckParams ((n, t) :: (m, u) :: qs) ++ R = nameTok n :: .zeichen ":" ::
+          (druckTyp t ++ .zeichen "," :: nameTok m :: (Z ++ R)) := by
         have : druckParams ((n, t) :: (m, u) :: qs) = druckParam (n, t) ++ [.zeichen ","] ++
             druckParams ((m, u) :: qs) := rfl
         rw [this, hZ]; simp [druckParam]
@@ -619,12 +599,12 @@ theorem paramListe_rund : ∀ (ps : List (String × STyp)) (R : List Token) (F :
       rw [hlen] at hF
       have hR' := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) hR (by omega)
       rw [hZ] at hR' hF
-      have hT := parse_druckTyp t ht (.zeichen "," :: .ident m :: (Z ++ R)) F'
+      have hT := parse_druckTyp t ht (.zeichen "," :: nameTok m :: (Z ++ R)) F'
         ⟨(by intro x e; simp at e), (by intro x e; simp at e), (by intro x e; simp at e),
           (by intro x e; simp at e), rfl, rfl, rfl⟩ (by simp only [fbT]; simp at hF; omega)
       rw [hd]
       simp only [List.cons_append] at hR'
-      simp [parseParamListe, nimmName, nameText, fordereZeichen, strEq_self, hT, hR']
+      simp [parseParamListe, nimmName, fordereZeichen, strEq_self, hT, hR']
 
 theorem params_rund (ps : List (String × STyp)) (hg : ∀ p ∈ ps, TypGut p.2) (R : List Token) (F : Nat)
     (hF : 8 * (druckParams ps).length + 32 ≤ F) :
@@ -634,7 +614,7 @@ theorem params_rund (ps : List (String × STyp)) (hg : ∀ p ∈ ps, TypGut p.2)
   | nil => simp [druckParams, parseParams, fordereZeichen, strEq_self]
   | cons p ps =>
     obtain ⟨n, t⟩ := p
-    obtain ⟨Z, hZ⟩ : ∃ Z, druckParams ((n, t) :: ps) = .ident n :: Z := by
+    obtain ⟨Z, hZ⟩ : ∃ Z, druckParams ((n, t) :: ps) = nameTok n :: Z := by
       cases ps <;> exact ⟨_, rfl⟩
     have hL := paramListe_rund ((n, t) :: ps) (.zeichen ")" :: R) F' (by simp) hg ⟨R, rfl⟩ (by omega)
     rw [hZ] at hL ⊢
@@ -648,12 +628,12 @@ def SigGut (s : FnSig) : Prop :=
 
 /-- The function head behind its modifier, up to the body. -/
 def sigToks (s : FnSig) : List Token :=
-  [.wort "fn", .ident s.name, .zeichen "("] ++ druckParams s.params ++ [.zeichen ")"] ++
+  [.wort "fn", nameTok s.name, .zeichen "("] ++ druckParams s.params ++ [.zeichen ")"] ++
     (match s.res with
       | some t => [.zeichen "->"] ++ druckTyp t
       | none => []) ++
     (match s.fehler with
-      | some n => [.wort "or", .ident n]
+      | some n => [.wort "or", nameTok n]
       | none => []) ++
     druckKlauseln s.klauseln
 
@@ -668,10 +648,10 @@ def resToks : Option STyp → List Token
 
 /-- The `or` channel tokens of a head. -/
 def fehlerToks : Option String → List Token
-  | some n => [.wort "or", .ident n]
+  | some n => [.wort "or", nameTok n]
   | none => []
 
-theorem sigToks_eq (s : FnSig) : sigToks s = [.wort "fn", .ident s.name, .zeichen "("] ++
+theorem sigToks_eq (s : FnSig) : sigToks s = [.wort "fn", nameTok s.name, .zeichen "("] ++
     druckParams s.params ++ [.zeichen ")"] ++ resToks s.res ++ fehlerToks s.fehler ++ druckKlauseln s.klauseln := by
   simp only [sigToks]
   cases s.res <;> cases s.fehler <;> rfl
@@ -718,7 +698,7 @@ theorem fnSig_rund (s : FnSig) (hs : SigGut s) (R : List Token) (hR : KlauselEnd
   have hFe : parseFehler (fehlerToks fehler ++ druckKlauseln klauseln ++ R) =
       .ok (fehler, druckKlauseln klauseln ++ R) := by
     cases fehler with
-    | some n => simp [fehlerToks, parseFehler, strEq_self, nimmName, nameText]
+    | some n => simp [fehlerToks, parseFehler, strEq_self, nimmName]
     | none =>
       simp only [fehlerToks, List.nil_append]
       cases klauseln with
@@ -759,7 +739,7 @@ theorem fnSig_rund (s : FnSig) (hs : SigGut s) (R : List Token) (hR : KlauselEnd
   have hP := params_rund params hp (resToks res ++ (fehlerToks fehler ++ druckKlauseln klauseln ++ R)) F'
     (by omega)
   simp only [List.append_assoc, List.cons_append, List.nil_append, List.singleton_append] at hP hErg hK ⊢
-  simp [parseFnSig, nimmWort, strEq_self, nimmName, nameText, hP, hErg, hK]
+  simp [parseFnSig, nimmWort, strEq_self, nimmName, hP, hErg, hK]
 
 /-! ### Items -/
 
@@ -816,18 +796,19 @@ theorem typ_gleich (t : STyp) (ht : TypGut t) (X : List Token) (F : Nat) (hF : f
   parse_druckTyp t ht _ F ⟨(by intro r e; simp at e), (by intro r e; simp at e),
     (by intro r e; simp at e), (by intro r e; simp at e), rfl, rfl, rfl⟩ hF
 
-theorem item_const (n : String) (t : STyp) (v : SKonstWert) (ht : TypGut t) (hv : KonstGut v) :
+theorem item_const (n : String) (hn : n ≠ "fn") (t : STyp) (v : SKonstWert) (ht : TypGut t)
+    (hv : KonstGut v) :
     ItemBein (.constT n t v) := by
   intro rest F hF
   simp only [fbI, druckItem, List.length_append, List.length_cons, List.length_nil] at hF
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 3 := ⟨F - 3, by omega⟩
-  have hd : druckItem (.constT n t v) ++ rest = .wort "const" :: .ident n :: .zeichen ":" ::
+  have hd : druckItem (.constT n t v) ++ rest = .wort "const" :: nameTok n :: .zeichen ":" ::
       (druckTyp t ++ .zeichen "=" :: (druckKonstWert v ++ .zeichen ";" :: rest)) := by
     simp [druckItem]
   have hT := typ_gleich t ht (druckKonstWert v ++ .zeichen ";" :: rest) F' (by simp only [fbT]; omega)
   have hV := konst_rund v hv (.zeichen ";" :: rest) F' rfl rfl rfl (by simp only [fbK]; omega)
-  rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_const]
-  simp [parseKonstNach, nimmName, nameText, fordereZeichen, strEq_self, hT, hV]
+  rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_const _ _ hn]
+  simp [parseKonstNach, nimmName, fordereZeichen, strEq_self, hT, hV]
 
 /-- The tail of a `static`: `[aligned e] [section "s"] [shared] ;`. -/
 def globTailToks (al : Option SExpr) (s : Option String) (sh : Bool) : List Token :=
@@ -882,12 +863,13 @@ theorem globTail_ruhig (al : Option SExpr) (s : Option String) (sh : Bool) (rest
       ruhigGleit (globTailToks al s sh ++ rest) = true := by
   cases al <;> cases s <;> cases sh <;> exact ⟨rfl, rfl, rfl⟩
 
-theorem item_static (m : Bool) (n : String) (t : STyp) (v : SKonstWert) (al : Option SExpr)
-    (s : Option String) (sh : Bool) (ht : TypGut t) (hv : KonstGut v) (hal : ∀ e, al = some e → gut e = true) :
+theorem item_static (m : Bool) (n : String) (hn : n ≠ "mut") (t : STyp) (v : SKonstWert)
+    (al : Option SExpr) (s : Option String) (sh : Bool) (ht : TypGut t) (hv : KonstGut v)
+    (hal : ∀ e, al = some e → gut e = true) :
     ItemBein (.globT m n t v al s sh) := by
   intro rest F hF
   have hd : druckItem (.globT m n t v al s sh) ++ rest = .wort "static" :: ((if m then [.wort "mut"] else []) ++
-      .ident n :: .zeichen ":" :: (druckTyp t ++ .zeichen "=" :: (druckKonstWert v ++
+      nameTok n :: .zeichen ":" :: (druckTyp t ++ .zeichen "=" :: (druckKonstWert v ++
         (globTailToks al s sh ++ rest)))) := by
     cases al <;> cases s <;> cases sh <;> simp [druckItem, globTailToks]
   have hlen : (druckItem (.globT m n t v al s sh)).length = 1 + (if m then 1 else 0) + 2 +
@@ -903,10 +885,10 @@ theorem item_static (m : Bool) (n : String) (t : STyp) (v : SKonstWert) (al : Op
   have hG := globTail_rund al s sh hal rest F' (by split at hF <;> omega)
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_static]
   cases m
-  · simp [parseGlobTief, nimmWort, strEq_self, parseGlobAfter, nimmName, nameText, fordereZeichen, hT,
-      hV, hG, bind, Except.bind, pure, Except.pure]
-  · simp [parseGlobTief, nimmWort, strEq_self, parseGlobAfter, nimmName, nameText, fordereZeichen, hT,
-      hV, hG, bind, Except.bind, pure, Except.pure]
+  · simp only [Bool.false_eq_true, ite_false, List.nil_append]
+    rcases nameTok_cases n with h | h <;> rw [h] <;>
+      simp [strEq_ne hn, parseGlobTief, nimmWort, strEq_self, parseGlobAfter, nimmName, fordereZeichen, hT, hV, hG, bind, Except.bind, pure, Except.pure]
+  · simp [parseGlobTief, nimmWort, strEq_self, parseGlobAfter, nimmName, fordereZeichen, hT, hV, hG, bind, Except.bind, pure, Except.pure]
 
 
 /-! ### Functions -/
@@ -985,7 +967,7 @@ theorem item_proto (sig : FnSig) (hs : SigGut sig) : ItemBein (.protoT sig) := b
 /-! ### `reason`, `concurrent`, `module` -/
 
 /-- A printable reason case: its number is printable. -/
-def FallGut (c : String × SExpr × String) : Prop := gut c.2.1 = true
+def FallGut (c : String × SExpr × String) : Prop := gut c.2.1 = true ∧ c.1 ≠ "exhaustive"
 
 theorem grundFaelle_rund : ∀ (cs : List (String × SExpr × String)) (ex : Bool) (R : List Token) (F : Nat),
     (∀ c ∈ cs, FallGut c) → 8 * (druckGrundFaelle cs).length + 42 ≤ F →
@@ -1000,7 +982,11 @@ theorem grundFaelle_rund : ∀ (cs : List (String × SExpr × String)) (ex : Boo
   | cons c cs ih =>
     intro ex R F hg hF
     obtain ⟨n, num, t⟩ := c
-    have hnum : gut num = true := hg (n, num, t) (by simp)
+    have hnum : gut num = true := (hg (n, num, t) (by simp)).1
+    have hx : strEq n "exhaustive" = false := by
+      cases h : strEq n "exhaustive"
+      · rfl
+      · exact absurd ((strEq_eq _ _).mp h) (hg (n, num, t) (by simp)).2
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     simp only [druckGrundFaelle, List.length_append, List.length_cons, List.length_nil] at hF
     have hR := ih ex R F' (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by omega)
@@ -1010,12 +996,13 @@ theorem grundFaelle_rund : ∀ (cs : List (String × SExpr × String)) (ex : Boo
     simp only [druckGrundFaelle, List.cons_append, List.nil_append, List.append_assoc,
       List.singleton_append]
     unfold parseGrundFaelle
-    simp [parseGrundFall, nimmName, nameText, fordereZeichen, strEq_self, hO, nimmTextTok, hR]
+    rcases nameTok_cases n with h | h <;> rw [h] <;>
+      simp [hx, parseGrundFall, nimmName, fordereZeichen, strEq_self, hO, nimmTextTok, hR]
 
 theorem item_why (n : String) (cs : List (String × SExpr × String)) (ex : Bool) (hg : ∀ c ∈ cs, FallGut c) :
     ItemBein (.whyT n cs ex) := by
   intro rest F hF
-  have hd : druckItem (.whyT n cs ex) ++ rest = .wort "reason" :: .ident n :: .zeichen "{" ::
+  have hd : druckItem (.whyT n cs ex) ++ rest = .wort "reason" :: nameTok n :: .zeichen "{" ::
       (druckGrundFaelle cs ++ ((if ex then [.wort "exhaustive"] else []) ++ .zeichen "}" :: rest)) := by
     cases ex <;> simp [druckItem]
   have hlen : (druckGrundFaelle cs).length + 3 ≤ (druckItem (.whyT n cs ex)).length := by
@@ -1024,11 +1011,11 @@ theorem item_why (n : String) (cs : List (String × SExpr × String)) (ex : Bool
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 3 := ⟨F - 3, by omega⟩
   have hG := grundFaelle_rund cs ex rest F' hg (by omega)
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_reason]
-  simp [parseGrundTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hG]
+  simp [parseGrundTief, nimmWort, strEq_self, nimmName, fordereZeichen, hG]
 
-/-- A path printed as text: segments name-shaped, no table words. -/
+/-- A path printed as text: segments name-shaped. -/
 def PfadGut (segs : List String) : Prop :=
-  segs ≠ [] ∧ ∀ a ∈ segs, nameForm a = true ∧ istSchluessel a = false
+  segs ≠ [] ∧ ∀ a ∈ segs, nameForm a = true
 
 theorem druckWurzeln_pfade : ∀ (ps : List (List String)), (∀ p ∈ ps, PfadGut p) →
     druckWurzeln (ps.map (fun p => "::".intercalate p)) =
@@ -1066,11 +1053,11 @@ theorem pfadFolge_rund : ∀ (ps : List (List String)) (R : List Token) (F : Nat
       have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp at hF ⊢; omega)
       have hP := nimmPfad_pfad p (.zeichen "," :: (kommaToks ((q :: qs).map pfadToks) ++ .zeichen "}" :: R))
         hp (by intro r e; simp at e)
-      obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks q = .ident a :: us := by
+      obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks q = nameTok a :: us := by
         match q, hq with
         | [a], _ => exact ⟨a, [], rfl⟩
         | a :: b :: cs, _ => exact ⟨a, _, rfl⟩
-      have hk : kommaToks ((q :: qs).map pfadToks) = .ident a :: (kommaToks ((q :: qs).map pfadToks)).tail := by
+      have hk : kommaToks ((q :: qs).map pfadToks) = nameTok a :: (kommaToks ((q :: qs).map pfadToks)).tail := by
         cases qs <;> simp [kommaToks, hq1]
       have hd : kommaToks ((p :: q :: qs).map pfadToks) = pfadToks p ++ .zeichen "," ::
           kommaToks ((q :: qs).map pfadToks) := by
@@ -1081,6 +1068,7 @@ theorem pfadFolge_rund : ∀ (ps : List (List String)) (R : List Token) (F : Nat
       simp only [List.cons_append] at hP hR ⊢
       unfold parsePfadFolge
       simp only [hP, hR]
+      rcases nameTok_cases a with h | h <;> rw [h] <;> rfl
 
 theorem item_conc (ps : List (List String)) (hps : ∀ p ∈ ps, PfadGut p) : ItemBein (.concT ps) := by
   intro rest F hF
@@ -1111,11 +1099,11 @@ theorem item_conc (ps : List (List String)) (hps : ∀ p ∈ ps, PfadGut p) : It
     have hp := hps p (by simp)
     have hF' := pfadFolge_rund (p :: ps') (.zeichen ";" :: rest) F' (by simp) (fun x hx => (hps x hx).1)
       (by omega)
-    obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks p = .ident a :: us := by
+    obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks p = nameTok a :: us := by
       match p, hp.1 with
       | [a], _ => exact ⟨a, [], rfl⟩
       | a :: b :: cs, _ => exact ⟨a, _, rfl⟩
-    have hk : kommaToks ((p :: ps').map pfadToks) = .ident a :: (kommaToks ((p :: ps').map pfadToks)).tail := by
+    have hk : kommaToks ((p :: ps').map pfadToks) = nameTok a :: (kommaToks ((p :: ps').map pfadToks)).tail := by
       cases ps' <;> simp [kommaToks, hq1]
     rw [hk] at hF' ⊢
     simp only [List.cons_append, List.map_cons] at hF' ⊢
@@ -1182,7 +1170,7 @@ def atomTail (pub : Option (List SExpr)) (ord : Option String) (obs : Option Str
     | some o => [.wort o]
     | none => []) ++
   (match obs with
-    | some o => [.wort "observed", .wort "by", .ident o]
+    | some o => [.wort "observed", .wort "by", nameTok o]
     | none => []) ++ [.zeichen ";"]
 
 theorem atomRest_ende (f : Nat) (acc : String × STyp × Option (List SExpr) × Option String × Option String)
@@ -1191,12 +1179,9 @@ theorem atomRest_ende (f : Nat) (acc : String × STyp × Option (List SExpr) × 
 
 theorem atomRest_obs (f : Nat) (a : String) (b : STyp) (c : Option (List SExpr)) (d : Option String)
     (e : Option String) (o : String) (R : List Token) :
-    parseAtomarRest (f + 1) (a, b, c, d, e) (.wort "observed" :: .wort "by" :: .ident o :: R) =
+    parseAtomarRest (f + 1) (a, b, c, d, e) (.wort "observed" :: .wort "by" :: nameTok o :: R) =
       parseAtomarRest f (a, b, c, d, some o) R := by
-  simp [parseAtomarRest, nimmWort, strEq_self, nimmName, nameText,
-    (by decide : strEq "observed" "publishes" = false), (by decide : strEq "observed" "acquire" = false),
-    (by decide : strEq "observed" "release" = false), (by decide : strEq "observed" "seq" = false),
-    (by decide : strEq "observed" "relaxed" = false)]
+  simp [parseAtomarRest, nimmWort, strEq_self, nimmName, (by decide : strEq "observed" "publishes" = false), (by decide : strEq "observed" "acquire" = false), (by decide : strEq "observed" "release" = false), (by decide : strEq "observed" "seq" = false), (by decide : strEq "observed" "relaxed" = false)]
 
 theorem atomRest_ord (f : Nat) (a : String) (b : STyp) (c : Option (List SExpr)) (d : Option String)
     (e : Option String) (o : String) (ho : istOrdnung o = true) (R : List Token) :
@@ -1230,7 +1215,7 @@ theorem item_atom (n : String) (t : STyp) (pub : Option (List SExpr)) (ord obs :
     (ht : TypGut t) (hg : AtomGut pub ord) : ItemBein (.atomT n t pub ord obs) := by
   intro rest F hF
   obtain ⟨hpub, hord⟩ := hg
-  have hd : druckItem (.atomT n t pub ord obs) ++ rest = .wort "atomic" :: .ident n :: .zeichen ":" ::
+  have hd : druckItem (.atomT n t pub ord obs) ++ rest = .wort "atomic" :: nameTok n :: .zeichen ":" ::
       (druckTyp t ++ (atomTail pub ord obs ++ rest)) := by
     simp only [druckItem, atomTail]
     rcases pub with _ | _ | ⟨p, ps⟩ <;> cases ord <;> cases obs <;> simp
@@ -1265,13 +1250,13 @@ theorem item_atom (n : String) (t : STyp) (pub : Option (List SExpr)) (ord obs :
   have hT := parse_druckTyp t ht _ F' hTF (by simp only [fbT]; omega)
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_atomic]
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
-  simp only [parseAtomarTief, nimmWort, strEq_self, ite_true, nimmName, nameText, fordereZeichen, hT]
+  simp only [parseAtomarTief, nimmWort, strEq_self, ite_true, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende, fordereZeichen, hT]
   have hR : parseAtomarRest (F'' + 1) (n, t, none, none, none) (atomTail pub ord obs ++ rest) =
       .ok ((n, t, pub, ord, obs), rest) := by
     have stepE : ∀ (G : Nat) acc, 1 ≤ G → parseAtomarRest G acc (.zeichen ";" :: rest) = .ok (acc, rest) := by
       intro G acc hG; obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩; exact atomRest_ende G' acc rest
     have stepO : ∀ (G : Nat) (c : Option (List SExpr)) (d : Option String) (o : String) (R : List Token),
-        1 ≤ G → parseAtomarRest G (n, t, c, d, none) (.wort "observed" :: .wort "by" :: .ident o :: R) =
+        1 ≤ G → parseAtomarRest G (n, t, c, d, none) (.wort "observed" :: .wort "by" :: nameTok o :: R) =
           parseAtomarRest (G - 1) (n, t, c, d, some o) R := by
       intro G c d o R hG; obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
       exact atomRest_obs G' n t c d none o R
@@ -1332,7 +1317,7 @@ def lockTail (h sh : Option SExpr) (m : Option String) (inv : Option SExpr) : Li
     | some e => [.wort "shared", .wort "held", .zeichen "<="] ++ druckToks e ++ [.wort "ops"]
     | none => []) ++
   (match m with
-    | some w => [.wort "masks", .ident w]
+    | some w => [.wort "masks", nameTok w]
     | none => []) ++
   (match inv with
     | some p => [.wort "invariant"] ++ druckToks p
@@ -1348,7 +1333,7 @@ theorem item_lock (n : String) (ps : List SExpr) (rk : SExpr) (h sh : Option SEx
     (hh : ∀ e, h = some e → gut e = true) (hs : ∀ e, sh = some e → gut e = true)
     (hi : ∀ e, inv = some e → gut e = true) : ItemBein (.lockT n ps rk h sh m inv) := by
   intro rest F hF
-  have hd : druckItem (.lockT n ps rk h sh m inv) ++ rest = .wort "lock" :: .ident n :: .wort "protects" ::
+  have hd : druckItem (.lockT n ps rk h sh m inv) ++ rest = .wort "lock" :: nameTok n :: .wort "protects" ::
       .zeichen "{" :: (druckPlaetze ps ++ .zeichen "}" :: .wort "rank" ::
         (druckToks rk ++ (lockTail h sh m inv ++ rest))) := by
     cases h <;> cases sh <;> cases m <;> cases inv <;> simp [druckItem, lockTail]
@@ -1371,52 +1356,50 @@ theorem item_lock (n : String) (ps : List SExpr) (rk : SExpr) (h sh : Option SEx
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_lock]
   rcases h with _ | eh <;> rcases sh with _ | es <;> rcases m with _ | w <;> rcases inv with _ | ip
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk,
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, bind, Except.bind, pure, Except.pure]
+  · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, bind, Except.bind, pure, Except.pure]
+  · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk,
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
   · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
-      bind, Except.bind, pure, Except.pure]
-  · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)),
-      bind, Except.bind, pure, Except.pure]
-  · simp only [lockTail, List.nil_append, List.cons_append, List.append_assoc, List.singleton_append] at hRk hPL ⊢
-    simp [parseSperreTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
+    simp [parseSperreTief, nimmWort, strEq_self, nimmName, fordereZeichen, hPL, hRk, (hE eh (hh eh rfl) (by simp [lockTail]; omega)), (hE es (hs es rfl) (by simp [lockTail]; omega)), (hI ip (hi ip rfl) (by simp [lockTail]; omega)),
       bind, Except.bind, pure, Except.pure]
 
 /-! ### `table`: numbers as text, fields, edges, group invariants, parts -/
@@ -1461,7 +1444,7 @@ theorem bitpos_rund (p : String) (h : PosGut p) (R : List Token) :
   · rw [rohToks_zahl]; rfl
   · rw [rohToks_name p h]
     unfold nameTok
-    split <;> simp [parseBitpos, nameText, zeigeTok]
+    split <;> simp [parseBitpos, zeigeTok]
 
 /-- A printable field. -/
 def FeldGut (f : SFeld) : Prop :=
@@ -1473,7 +1456,7 @@ def feldRestToks (f : SFeld) : List Token :=
     | some p => [.zeichen "@"] ++ rohToks p
     | none => []) ++
   (match f.bezug with
-    | some n => [.wort "offset_into", .ident n]
+    | some n => [.wort "offset_into", nameTok n]
     | none => []) ++
   (match f.wo with
     | some p => [.wort "where"] ++ druckToks p
@@ -1482,7 +1465,7 @@ def feldRestToks (f : SFeld) : List Token :=
   (if f.byOps then [.wort "by", .wort "ops"] else [])
 
 theorem druckFeld_eq (f : SFeld) :
-    druckFeld f = [.ident f.fname, .zeichen ":"] ++ druckTyp f.ftyp ++ feldRestToks f := by
+    druckFeld f = [nameTok f.fname, .zeichen ":"] ++ druckTyp f.ftyp ++ feldRestToks f := by
   simp [druckFeld, feldRestToks]; rfl
 
 
@@ -1514,14 +1497,13 @@ theorem feldRest_wo (f : Nat) (e : SExpr) (R X : List Token) (p b : Option Strin
 
 theorem feldRest_bezug (f : Nat) (n : String) (R X : List Token) (p b : Option String) (w : Option SExpr)
     (r y : Bool) (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
-    parseFeldRest (f + 1) (.wort "offset_into" :: .ident n :: R) = .ok ((p, some n, w, r, y), X) := by
+    parseFeldRest (f + 1) (.wort "offset_into" :: nameTok n :: R) = .ok ((p, some n, w, r, y), X) := by
   by_cases hn : n = "Self"
-  · subst hn; simp [parseFeldRest, h, strEq_self, zeigeTok]
-  · have : strEq n "Self" = false := by
-      cases e : strEq n "Self"
-      · rfl
-      · exact absurd ((strEq_eq _ _).mp e) hn
-    simp [parseFeldRest, h, strEq_self, zeigeTok, this, nameText]
+  · subst hn
+    have e : nameTok "Self" = .wort "Self" := by decide
+    rw [e]; simp [parseFeldRest, h, strEq_self, zeigeTok]
+  · have : strEq n "Self" = false := strEq_ne hn
+    rcases nameTok_cases n with hh | hh <;> rw [hh] <;> simp [parseFeldRest, h, strEq_self, zeigeTok, this]
 
 theorem feldRest_pos (f : Nat) (q : String) (hq : PosGut q) (R X : List Token) (p b : Option String)
     (w : Option SExpr) (r y : Bool) (h : parseFeldRest f R = .ok ((p, b, w, r, y), X)) :
@@ -1648,9 +1630,9 @@ theorem feld_rund (fd : SFeld) (hfd : FeldGut fd) (R : List Token) (hR : FeldEnd
     (by simp only [fbT]; omega)
   have hRe := feldRest_rund fd hfd R hR F' (by omega)
   simp only [List.cons_append, List.nil_append, List.append_assoc]
-  simp [parseFeld, nimmName, nameText, fordereZeichen, strEq_self, hT, hRe]
+  simp [parseFeld, nimmName, fordereZeichen, strEq_self, hT, hRe]
 
-theorem feldKopf (fd : SFeld) (X : List Token) : ∃ ts, druckFeld fd ++ X = .ident fd.fname :: ts := by
+theorem feldKopf (fd : SFeld) (X : List Token) : ∃ ts, druckFeld fd ++ X = nameTok fd.fname :: ts := by
   rw [druckFeld_eq]; exact ⟨_, rfl⟩
 
 theorem felder_rund : ∀ (fs : List SFeld) (R : List Token) (F : Nat), fs ≠ [] → (∀ fd ∈ fs, FeldGut fd) →
@@ -1676,7 +1658,7 @@ theorem felder_rund : ∀ (fs : List SFeld) (R : List Token) (F : Nat), fs ≠ [
       have hP := feld_rund fd hfd (.zeichen "," :: (druckFelder (fd2 :: fs2) ++ .zeichen "}" :: R))
         (Or.inl ⟨_, rfl⟩) F' (by omega)
       have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by omega)
-      obtain ⟨ts, hts⟩ : ∃ ts, druckFelder (fd2 :: fs2) ++ .zeichen "}" :: R = .ident fd2.fname :: ts := by
+      obtain ⟨ts, hts⟩ : ∃ ts, druckFelder (fd2 :: fs2) ++ .zeichen "}" :: R = nameTok fd2.fname :: ts := by
         cases fs2 with
         | nil => simpa [druckFelder] using feldKopf fd2 (.zeichen "}" :: R)
         | cons x xs =>
@@ -1686,6 +1668,7 @@ theorem felder_rund : ∀ (fs : List SFeld) (R : List Token) (F : Nat), fs ≠ [
       rw [hts] at hP hR ⊢
       unfold parseFeldFolge
       simp only [hP, hR]
+      rcases nameTok_cases fd2.fname with h | h <;> rw [h] <;> rfl
 
 theorem feldListe_rund (fs : List SFeld) (hg : ∀ fd ∈ fs, FeldGut fd) (R : List Token) (F : Nat)
     (hF : 8 * (druckFelder fs).length + 63 ≤ F) :
@@ -1695,7 +1678,7 @@ theorem feldListe_rund (fs : List SFeld) (hg : ∀ fd ∈ fs, FeldGut fd) (R : L
   | nil => simp [druckFelder, parseFeldListe, fordereZeichen, strEq_self]
   | cons fd fs' =>
     have hFF := felder_rund (fd :: fs') R F' (by simp) hg (by omega)
-    obtain ⟨ts, hts⟩ : ∃ ts, druckFelder (fd :: fs') ++ .zeichen "}" :: R = .ident fd.fname :: ts := by
+    obtain ⟨ts, hts⟩ : ∃ ts, druckFelder (fd :: fs') ++ .zeichen "}" :: R = nameTok fd.fname :: ts := by
       cases fs' with
       | nil => simpa [druckFelder] using feldKopf fd (.zeichen "}" :: R)
       | cons x xs =>
@@ -1709,8 +1692,8 @@ def KanteGut (k : String × String) : Prop :=
   k.1 = "parent" ∨ k.1 = "child" ∨ k.1 = "sibling"
 
 theorem kante_rund (a b : String) (h : KanteGut (a, b)) (R : List Token) :
-    parseKante (.wort a :: .ident b :: R) = .ok ((a, b), R) := by
-  rcases h with h | h | h <;> simp only at h <;> subst h <;> simp [parseKante, nimmName, nameText, strEq_self]
+    parseKante (.wort a :: nameTok b :: R) = .ok ((a, b), R) := by
+  rcases h with h | h | h <;> simp only at h <;> subst h <;> simp [parseKante, nimmName, strEq_self]
 
 theorem kanten_rund : ∀ (ks : List (String × String)) (R : List Token) (F : Nat), ks ≠ [] →
     (∀ k ∈ ks, KanteGut k) → ks.length ≤ F →
@@ -1730,7 +1713,7 @@ theorem kanten_rund : ∀ (ks : List (String × String)) (R : List Token) (F : N
       have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp at hF ⊢; omega)
       obtain ⟨ts, hts⟩ : ∃ ts, druckKanten ((a2, b2) :: ks2) ++ .zeichen "}" :: R = .wort a2 :: ts := by
         cases ks2 <;> exact ⟨_, by simp [druckKanten]; rfl⟩
-      have hd : druckKanten ((a, b) :: (a2, b2) :: ks2) = [.wort a, .ident b, .zeichen ","] ++
+      have hd : druckKanten ((a, b) :: (a2, b2) :: ks2) = [.wort a, nameTok b, .zeichen ","] ++
           druckKanten ((a2, b2) :: ks2) := by simp [druckKanten]
       rw [hd]
       simp only [List.append_assoc, List.cons_append, List.nil_append]
@@ -1775,8 +1758,7 @@ theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : 
     have hP := pred_druck pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp at e),
       (by intro r e; simp at e), (by intro r e; simp at e)⟩ F' (by simp only [fb]; omega)
     simp only [druckGruppenInv, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
-    simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nameText, nimmKostenO, fordereZeichen, hK, hm,
-      hmo, hoff, parseInvRest, hP]
+    simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nimmKostenO, fordereZeichen, hK, hm, hmo, hoff, parseInvRest, hP]
     all_goals exact hoff
   | some h =>
     obtain ⟨ts, rfl, hts⟩ := hpr _ rfl
@@ -1793,8 +1775,7 @@ theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : 
         fun e => (hts t ht).2 (Or.inr (Or.inr e)), fun e => (hts t ht).2 (Or.inl e)⟩)
     simp only [druckGruppenInv, hroh, List.cons_append, List.nil_append, List.append_assoc,
       List.singleton_append]
-    simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nameText, nimmKostenO, fordereZeichen, hK, hm,
-      hmo, hoff, parseInvRest, hP, hN]
+    simp [parseGruppenInv, nimmWort, strEq_self, nimmName, nimmKostenO, fordereZeichen, hK, hm, hmo, hoff, parseInvRest, hP, hN]
     all_goals exact hoff
 
 /-- A printable part of a table. -/
@@ -1820,9 +1801,9 @@ theorem tabTeil_rund (t : STabTeil) (ht : TeilGut t) (R X : List Token) (ps : Li
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
     have hT := typ_gleich ty hty (druckKonstWert v ++ .zeichen ";" :: R) f' (by simp only [fbT]; omega)
     have hV := konst_rund v hv (.zeichen ";" :: R) f' rfl rfl rfl (by simp only [fbK]; omega)
-    have hK : parseKonstNach (f' + 1) (.ident n :: .zeichen ":" :: (druckTyp ty ++ .zeichen "=" ::
+    have hK : parseKonstNach (f' + 1) (nameTok n :: .zeichen ":" :: (druckTyp ty ++ .zeichen "=" ::
         (druckKonstWert v ++ .zeichen ";" :: R))) = .ok (.constT n ty v, R) := by
-      simp [parseKonstNach, nimmName, nameText, fordereZeichen, strEq_self, hT, hV]
+      simp [parseKonstNach, nimmName, fordereZeichen, strEq_self, hT, hV]
     simp only [druckTabTeil, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
     unfold parseTabTeile
     simp only [(by decide : strEq "const" "const" = true), ite_true, hK, hR]
@@ -1878,11 +1859,7 @@ theorem tabTeil_rund (t : STabTeil) (ht : TeilGut t) (R X : List Token) (ps : Li
   | tBusy n =>
     simp only [druckTabTeil, List.cons_append, List.nil_append]
     unfold parseTabTeile
-    simp only [(by decide : strEq "occupied" "const" = false),
-      (by decide : strEq "occupied" "slot" = false), (by decide : strEq "occupied" "invariant" = false),
-      (by decide : strEq "occupied" "ops" = false), (by decide : strEq "occupied" "tree" = false),
-      (by decide : strEq "occupied" "occupied" = true), Bool.false_eq_true, ite_false, ite_true,
-      nimmName, nameText, fordereZeichen, strEq_self, hR]
+    simp only [(by decide : strEq "occupied" "const" = false), (by decide : strEq "occupied" "slot" = false), (by decide : strEq "occupied" "invariant" = false), (by decide : strEq "occupied" "ops" = false), (by decide : strEq "occupied" "tree" = false), (by decide : strEq "occupied" "occupied" = true), Bool.false_eq_true, ite_false, ite_true, nimmName, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende, fordereZeichen, strEq_self, hR]
 
 theorem tabTeile_rund : ∀ (ps : List STabTeil) (R : List Token) (F : Nat), (∀ t ∈ ps, TeilGut t) →
     8 * (druckTabTeile ps).length + 64 ≤ F →
@@ -1910,7 +1887,7 @@ def cntToks : Option SExpr → List Token
   | none => []
 
 def nameOptToks (w : String) : Option String → List Token
-  | some b => [.wort w, .ident b]
+  | some b => [.wort w, nameTok b]
   | none => []
 
 def shToks (sh : Bool) : List Token := if sh then [.wort "shared"] else []
@@ -1927,14 +1904,13 @@ theorem tabKopf_shared (f : Nat) (R X : List Token) (c : Option SExpr) (b o : Op
 
 theorem tabKopf_owner (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (b o : Option String)
     (g : Bool) (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
-    parseTabellenKopf (f + 1) (.wort "owner" :: .ident n :: R) = .ok ((c, b, some n, g), X) := by
-  simp [parseTabellenKopf, h, strEq_self, nimmName, nameText, (by decide : strEq "owner" "count" = false),
-    (by decide : strEq "owner" "backed" = false)]
+    parseTabellenKopf (f + 1) (.wort "owner" :: nameTok n :: R) = .ok ((c, b, some n, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "owner" "count" = false), (by decide : strEq "owner" "backed" = false)]
 
 theorem tabKopf_backed (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (b o : Option String)
     (g : Bool) (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
-    parseTabellenKopf (f + 1) (.wort "backed" :: .ident n :: R) = .ok ((c, some n, o, g), X) := by
-  simp [parseTabellenKopf, h, strEq_self, nimmName, nameText, (by decide : strEq "backed" "count" = false)]
+    parseTabellenKopf (f + 1) (.wort "backed" :: nameTok n :: R) = .ok ((c, some n, o, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "backed" "count" = false)]
 
 theorem tabKopf_count (f : Nat) (e : SExpr) (R X : List Token) (c : Option SExpr) (b o : Option String)
     (g : Bool) (hO : parseOr f (druckToks e ++ R) = .ok (e, R))
@@ -1988,7 +1964,7 @@ theorem item_table (n : String) (cnt : Option SExpr) (backed owner : Option Stri
     (parts : List STabTeil) (hc : ∀ e, cnt = some e → gut e = true) (hp : ∀ t ∈ parts, TeilGut t) :
     ItemBein (.tableT n cnt backed owner sh parts) := by
   intro rest F hF
-  have hd : druckItem (.tableT n cnt backed owner sh parts) ++ rest = .wort "table" :: .ident n ::
+  have hd : druckItem (.tableT n cnt backed owner sh parts) ++ rest = .wort "table" :: nameTok n ::
       (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh ++
         .zeichen "{" :: (druckTabTeile parts ++ .zeichen "}" :: rest)) := by
     cases cnt <;> cases backed <;> cases owner <;> cases sh <;>
@@ -2004,7 +1980,7 @@ theorem item_table (n : String) (cnt : Option SExpr) (backed owner : Option Stri
   have hT := tabTeile_rund parts rest F' hp (by omega)
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_table]
   simp only [List.append_assoc] at hK
-  simp [parseTabellenTief, nimmWort, strEq_self, nimmName, nameText, hK, fordereZeichen, hT]
+  simp [parseTabellenTief, nimmWort, strEq_self, nimmName, hK, fordereZeichen, hT]
 
 
 /-! ### `entry` -/
@@ -2017,10 +1993,8 @@ theorem regBind_rund (b : SRegBind) (R : List Token) (hR : BindEnde R) :
   cases b with
   | reg a =>
     rcases hR with ⟨r, rfl⟩ | ⟨r, rfl⟩ <;>
-      simp [druckRegBind, parseRegBind, nimmName, nameText, (by decide : strEq "," "=" = false),
-        (by decide : strEq "," ":" = false), (by decide : strEq "}" "=" = false),
-        (by decide : strEq "}" ":" = false)]
-  | binds a c => simp [druckRegBind, parseRegBind, nimmName, nameText, strEq_self]
+      simp [druckRegBind, parseRegBind, nimmName, (by decide : strEq "," "=" = false), (by decide : strEq "," ":" = false), (by decide : strEq "}" "=" = false), (by decide : strEq "}" ":" = false)]
+  | binds a c => simp [druckRegBind, parseRegBind, nimmName, strEq_self]
 
 theorem regBindFolge_rund : ∀ (bs : List SRegBind) (R : List Token) (F : Nat), bs ≠ [] → bs.length ≤ F →
     parseRegBindFolge F (druckRegBinds bs ++ .zeichen "}" :: R) = .ok (bs, R) := by
@@ -2041,13 +2015,18 @@ theorem regBindFolge_rund : ∀ (bs : List SRegBind) (R : List Token) (F : Nat),
         simp [druckRegBinds]
       rw [hd, List.append_assoc]
       have hB := regBind_rund b (.zeichen "," :: (druckRegBinds (c :: cs) ++ .zeichen "}" :: R)) (Or.inl ⟨_, rfl⟩)
-      obtain ⟨a, ts, hts⟩ : ∃ a ts, druckRegBinds (c :: cs) ++ .zeichen "}" :: R = .ident a :: ts := by
-        cases c <;> cases cs <;> simp [druckRegBinds, druckRegBind]
+      obtain ⟨a, ts, hts⟩ : ∃ a ts, druckRegBinds (c :: cs) ++ .zeichen "}" :: R = nameTok a :: ts := by
+        cases c with
+        | reg x => exact ⟨x, (druckRegBinds (.reg x :: cs) ++ .zeichen "}" :: R).tail,
+            by cases cs <;> simp [druckRegBinds, druckRegBind]⟩
+        | binds x y => exact ⟨x, (druckRegBinds (.binds x y :: cs) ++ .zeichen "}" :: R).tail,
+            by cases cs <;> simp [druckRegBinds, druckRegBind]⟩
       try simp only [List.cons_append] at hB
       simp only [List.append_assoc, List.cons_append]
       rw [hts] at hB hR ⊢
       unfold parseRegBindFolge
       simp only [hB, hR]
+      rcases nameTok_cases a with h | h <;> rw [h] <;> rfl
 
 theorem regBindListe_rund (bs : List SRegBind) (R : List Token) (F : Nat) (hF : bs.length + 2 ≤ F) :
     parseRegBindListe F (.zeichen "{" :: (druckRegBinds bs ++ .zeichen "}" :: R)) = .ok (bs, R) := by
@@ -2056,8 +2035,12 @@ theorem regBindListe_rund (bs : List SRegBind) (R : List Token) (F : Nat) (hF : 
   | nil => simp [druckRegBinds, parseRegBindListe, fordereZeichen, strEq_self]
   | cons b bs' =>
     have hR := regBindFolge_rund (b :: bs') R F' (by simp) (by omega)
-    obtain ⟨a, ts, hts⟩ : ∃ a ts, druckRegBinds (b :: bs') ++ .zeichen "}" :: R = .ident a :: ts := by
-      cases b <;> cases bs' <;> simp [druckRegBinds, druckRegBind]
+    obtain ⟨a, ts, hts⟩ : ∃ a ts, druckRegBinds (b :: bs') ++ .zeichen "}" :: R = nameTok a :: ts := by
+      cases b with
+      | reg x => exact ⟨x, (druckRegBinds (.reg x :: bs') ++ .zeichen "}" :: R).tail,
+          by cases bs' <;> simp [druckRegBinds, druckRegBind]⟩
+      | binds x y => exact ⟨x, (druckRegBinds (.binds x y :: bs') ++ .zeichen "}" :: R).tail,
+          by cases bs' <;> simp [druckRegBinds, druckRegBind]⟩
     rw [hts] at hR ⊢
     simp [parseRegBindListe, fordereZeichen, strEq_self, hR]
 
@@ -2068,7 +2051,7 @@ theorem namenKlammer_rund (ns : List String) (R : List Token) (F : Nat) (hF : ns
   | nil => simp [druckNamenKlammer, druckNamen, parseNamenEingeklammert, fordereZeichen, strEq_self]
   | cons n ns' =>
     have hN := namen_rund (n :: ns') (.zeichen "}" :: R) F' (by simp) (by intro r e; simp at e) (by omega)
-    obtain ⟨ts, hts⟩ : ∃ ts, druckNamen (n :: ns') ++ .zeichen "}" :: R = .ident n :: ts := by
+    obtain ⟨ts, hts⟩ : ∃ ts, druckNamen (n :: ns') ++ .zeichen "}" :: R = nameTok n :: ts := by
       cases ns' <;> exact ⟨_, by simp [druckNamen]; rfl⟩
     simp only [druckNamenKlammer, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
     rw [hts] at hN ⊢
@@ -2094,23 +2077,22 @@ def nestToks : Option String → List Token
 
 def cpuToks (b : Bool) : List Token := if b then [.wort "per", .wort "cpu"] else []
 
-theorem druckEingang_eq (e : SEingang) : druckEingang e = [.wort "entry", .ident e.name] ++ vekToks e.vektor ++
-    nameOptToks "via" e.via ++ [.wort "arch", .ident e.arch, .zeichen "{", .wort "regs", .wort "in", .zeichen "{"] ++
+theorem druckEingang_eq (e : SEingang) : druckEingang e = [.wort "entry", nameTok e.name] ++ vekToks e.vektor ++
+    nameOptToks "via" e.via ++ [.wort "arch", nameTok e.arch, .zeichen "{", .wort "regs", .wort "in", .zeichen "{"] ++
     druckRegBinds e.regIn ++ [.zeichen "}", .wort "regs", .wort "out", .zeichen "{"] ++ druckRegBinds e.regOut ++
     [.zeichen "}", .wort "preserves"] ++ druckNamenKlammer e.erhaelt ++ [.wort "clobbers"] ++
-    druckNamenKlammer e.kills ++ [.wort "stack", .ident e.stapel] ++ cpuToks e.perCpu ++ istToks e.ist ++
+    druckNamenKlammer e.kills ++ [.wort "stack", nameTok e.stapel] ++ cpuToks e.perCpu ++ istToks e.ist ++
     nestToks e.nest ++ [.wort "dispatch"] ++ pfadToks e.dispatch ++ [.zeichen ";", .zeichen "}"] := by
   simp [druckEingang, vekToks, nameOptToks, cpuToks, istToks, nestToks]; rfl
 
 theorem eingangKopf_arch (f : Nat) (a : String) (R : List Token) :
-    parseEingangKopf (f + 1) (.wort "arch" :: .ident a :: R) = .ok ((none, none, a), R) := by
-  simp [parseEingangKopf, nimmName, nameText, strEq_self, (by decide : strEq "arch" "vector" = false),
-    (by decide : strEq "arch" "via" = false)]
+    parseEingangKopf (f + 1) (.wort "arch" :: nameTok a :: R) = .ok ((none, none, a), R) := by
+  simp [parseEingangKopf, nimmName, strEq_self, (by decide : strEq "arch" "vector" = false), (by decide : strEq "arch" "via" = false)]
 
 theorem eingangKopf_via (f : Nat) (m : String) (X R : List Token) (v : Option SExpr) (w : Option String)
     (a : String) (h : parseEingangKopf f X = .ok ((v, w, a), R)) :
-    parseEingangKopf (f + 1) (.wort "via" :: .ident m :: X) = .ok ((v, some m, a), R) := by
-  simp [parseEingangKopf, nimmName, nameText, strEq_self, h, (by decide : strEq "via" "vector" = false)]
+    parseEingangKopf (f + 1) (.wort "via" :: nameTok m :: X) = .ok ((v, some m, a), R) := by
+  simp [parseEingangKopf, nimmName, strEq_self, h, (by decide : strEq "via" "vector" = false)]
 
 theorem eingangKopf_vector (f : Nat) (e : SExpr) (X R : List Token) (v : Option SExpr) (w : Option String)
     (a : String) (hO : parseOr f (druckToks e ++ X) = .ok (e, X)) (h : parseEingangKopf f X = .ok ((v, w, a), R)) :
@@ -2119,9 +2101,9 @@ theorem eingangKopf_vector (f : Nat) (e : SExpr) (X R : List Token) (v : Option 
 
 theorem eingangKopf_rund (vek : Option SExpr) (via : Option String) (a : String) (hv : ∀ v, vek = some v → gut v = true)
     (R : List Token) (F : Nat) (hF : 8 * (vekToks vek).length + 40 ≤ F) :
-    parseEingangKopf F (vekToks vek ++ (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R))) =
+    parseEingangKopf F (vekToks vek ++ (nameOptToks "via" via ++ (.wort "arch" :: nameTok a :: R))) =
       .ok ((vek, via, a), R) := by
-  have L1 : ∀ G, 2 ≤ G → parseEingangKopf G (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) =
+  have L1 : ∀ G, 2 ≤ G → parseEingangKopf G (nameOptToks "via" via ++ (.wort "arch" :: nameTok a :: R)) =
       .ok ((none, via, a), R) := by
     intro G hG
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 2 := ⟨G - 2, by omega⟩
@@ -2132,9 +2114,9 @@ theorem eingangKopf_rund (vek : Option SExpr) (via : Option String) (a : String)
   | none => simpa [vekToks] using L1 F (by simp [vekToks] at hF; omega)
   | some v =>
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp [vekToks] at hF; omega⟩
-    have hrX : ruhig (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) = true ∧
-        ruhigSuff (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) = true ∧
-        ruhigGleit (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) = true := by
+    have hrX : ruhig (nameOptToks "via" via ++ (.wort "arch" :: nameTok a :: R)) = true ∧
+        ruhigSuff (nameOptToks "via" via ++ (.wort "arch" :: nameTok a :: R)) = true ∧
+        ruhigGleit (nameOptToks "via" via ++ (.wort "arch" :: nameTok a :: R)) = true := by
       cases via <;> exact ⟨rfl, rfl, rfl⟩
     have hO := ausdruck v (hv v rfl) _ F' hrX.1 hrX.2.1 hrX.2.2 (by simp [vekToks] at hF; omega)
     simpa [vekToks] using eingangKopf_vector F' v _ R none via a hO (L1 F' (by simp [vekToks] at hF; omega))
@@ -2203,13 +2185,13 @@ theorem restNach_rund (f : Nat) (ist : Option SExpr) (hi : ∀ x, ist = some x �
 theorem rest_rund (f : Nat) (st : String) (cpu : Bool) (ist : Option SExpr) (hi : ∀ x, ist = some x → gut x = true)
     (nest : Option String) (hn : nest = none ∨ nest = some "never" ∨ nest = some "masked") (dp : List String)
     (hdp : dp ≠ []) (R : List Token) (hF : 8 * (istToks ist).length + 40 ≤ f) :
-    parseEingangRest (f + 4) (.wort "stack" :: .ident st :: (cpuToks cpu ++ (istToks ist ++ (nestToks nest ++
+    parseEingangRest (f + 4) (.wort "stack" :: nameTok st :: (cpuToks cpu ++ (istToks ist ++ (nestToks nest ++
       .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R))))) = .ok ((st, cpu, ist, nest, dp), R) := by
   have hRN := restNach_rund f ist hi nest hn dp hdp R hF
   cases cpu with
   | true =>
     simp only [cpuToks, ite_true, List.cons_append, List.nil_append]
-    simp [parseEingangRest, nimmWort, strEq_self, nimmName, nameText, hRN]
+    simp [parseEingangRest, nimmWort, strEq_self, nimmName, hRN]
   | false =>
     simp only [cpuToks, Bool.false_eq_true, ite_false, List.nil_append]
     have hkopf : ∃ w X, istToks ist ++ (nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) =
@@ -2227,7 +2209,7 @@ theorem rest_rund (f : Nat) (st : String) (cpu : Bool) (ist : Option SExpr) (hi 
       · rfl
       · exact absurd ((strEq_eq _ _).mp h) hne
     rw [hw] at hRN ⊢
-    simp [parseEingangRest, nimmWort, strEq_self, nimmName, nameText, this, hRN]
+    simp [parseEingangRest, nimmWort, strEq_self, nimmName, this, hRN]
 
 theorem druckRegBinds_len (bs : List SRegBind) : bs.length ≤ (druckRegBinds bs).length := by
   induction bs with
@@ -2259,39 +2241,39 @@ theorem item_entry (e : SEingang) (he : EingangGut e) : ItemBein (.entryT e) := 
   have hK := eingangKopf_rund e.vektor e.via e.arch hv (.zeichen "{" :: .wort "regs" :: .wort "in" :: .zeichen "{" ::
     (druckRegBinds e.regIn ++ .zeichen "}" :: .wort "regs" :: .wort "out" :: .zeichen "{" :: (druckRegBinds e.regOut ++
       .zeichen "}" :: .wort "preserves" :: (druckNamenKlammer e.erhaelt ++ .wort "clobbers" ::
-        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+        (druckNamenKlammer e.kills ++ .wort "stack" :: nameTok e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
           (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))))))
     (F' + 4) (by omega)
   have hRI := regBindListe_rund e.regIn (.wort "regs" :: .wort "out" :: .zeichen "{" :: (druckRegBinds e.regOut ++
       .zeichen "}" :: .wort "preserves" :: (druckNamenKlammer e.erhaelt ++ .wort "clobbers" ::
-        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+        (druckNamenKlammer e.kills ++ .wort "stack" :: nameTok e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
           (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest))))))))
     (F' + 4) (by omega)
   have hRO := regBindListe_rund e.regOut (.wort "preserves" :: (druckNamenKlammer e.erhaelt ++ .wort "clobbers" ::
-        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+        (druckNamenKlammer e.kills ++ .wort "stack" :: nameTok e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
           (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))))
     (F' + 4) (by omega)
   have hE := namenKlammer_rund e.erhaelt (.wort "clobbers" ::
-        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+        (druckNamenKlammer e.kills ++ .wort "stack" :: nameTok e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
           (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest))))))
     (F' + 4) (by omega)
-  have hKi := namenKlammer_rund e.kills (.wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+  have hKi := namenKlammer_rund e.kills (.wort "stack" :: nameTok e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
           (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))
     (F' + 4) (by omega)
   have hR := rest_rund F' e.stapel e.perCpu e.ist hi e.nest hn e.dispatch hdp (.zeichen "}" :: rest)
     (by omega)
-  have hd : druckItem (.entryT e) ++ rest = .wort "entry" :: .ident e.name :: (vekToks e.vektor ++
-      (nameOptToks "via" e.via ++ (.wort "arch" :: .ident e.arch :: (.zeichen "{" :: .wort "regs" :: .wort "in" ::
+  have hd : druckItem (.entryT e) ++ rest = .wort "entry" :: nameTok e.name :: (vekToks e.vektor ++
+      (nameOptToks "via" e.via ++ (.wort "arch" :: nameTok e.arch :: (.zeichen "{" :: .wort "regs" :: .wort "in" ::
         .zeichen "{" :: (druckRegBinds e.regIn ++ .zeichen "}" :: .wort "regs" :: .wort "out" :: .zeichen "{" ::
           (druckRegBinds e.regOut ++ .zeichen "}" :: .wort "preserves" :: (druckNamenKlammer e.erhaelt ++
-            .wort "clobbers" :: (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel ::
+            .wort "clobbers" :: (druckNamenKlammer e.kills ++ .wort "stack" :: nameTok e.stapel ::
               (cpuToks e.perCpu ++ (istToks e.ist ++ (nestToks e.nest ++ .wort "dispatch" ::
                 (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))))))))) := by
     simp [druckItem, druckEingang_eq]
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_entry]
   simp only [druckNamenKlammer, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
     at hRI hRO hE hKi hK ⊢
-  simp [parseEingangTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hK, hRI, hRO, hE, hKi, hR]
+  simp [parseEingangTief, nimmWort, strEq_self, nimmName, fordereZeichen, hK, hRI, hRO, hE, hKi, hR]
 
 
 /-! ### The printability class of items and the induction -/
@@ -2301,9 +2283,10 @@ inductive ItemGut : SItemTief → Prop
   | modT (segs : List String) (its : List SItemTief) :
       PfadGut segs → (∀ it ∈ its, ItemGut it) → ItemGut (.modT ("::".intercalate segs) its)
   | useT (p : List String) : p ≠ [] → ItemGut (.useT p)
-  | constT (n : String) (t : STyp) (v : SKonstWert) : TypGut t → KonstGut v → ItemGut (.constT n t v)
+  | constT (n : String) (t : STyp) (v : SKonstWert) : n ≠ "fn" → TypGut t → KonstGut v →
+      ItemGut (.constT n t v)
   | globT (m : Bool) (n : String) (t : STyp) (v : SKonstWert) (al : Option SExpr) (s : Option String)
-      (sh : Bool) : TypGut t → KonstGut v → (∀ e, al = some e → gut e = true) →
+      (sh : Bool) : n ≠ "mut" → TypGut t → KonstGut v → (∀ e, al = some e → gut e = true) →
       ItemGut (.globT m n t v al s sh)
   | fnT (sig : FnSig) (b : SAnw) : SigGut sig → AnwGut .block b → ItemGut (.fnT sig b)
   | protoT (sig : FnSig) : SigGut sig → ItemGut (.protoT sig)
@@ -2351,10 +2334,10 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
   | modT segs its hs _ ih =>
     exact ⟨item_mod segs its hs ih, itemKopf_wort _ "module" (by decide) (by decide) ⟨_, rfl⟩⟩
   | useT p hp => exact ⟨item_use p hp, itemKopf_wort _ "use" (by decide) (by decide) ⟨_, rfl⟩⟩
-  | constT n t v ht hv =>
-    exact ⟨item_const n t v ht hv, itemKopf_wort _ "const" (by decide) (by decide) ⟨_, rfl⟩⟩
-  | globT m n t v al s sh ht hv hal =>
-    exact ⟨item_static m n t v al s sh ht hv hal, itemKopf_wort _ "static" (by decide) (by decide) ⟨_, rfl⟩⟩
+  | constT n t v hn ht hv =>
+    exact ⟨item_const n hn t v ht hv, itemKopf_wort _ "const" (by decide) (by decide) ⟨_, rfl⟩⟩
+  | globT m n t v al s sh hn ht hv hal =>
+    exact ⟨item_static m n hn t v al s sh ht hv hal, itemKopf_wort _ "static" (by decide) (by decide) ⟨_, rfl⟩⟩
   | fnT sig b hs hb =>
     obtain ⟨hbb, hbk⟩ := bein_gut .block b hb
     refine ⟨item_fn sig b hs hbb hbk, ?_⟩
@@ -2413,24 +2396,25 @@ theorem rundlauf_programm (its : List SItemTief) (h : ∀ it ∈ its, ItemGut it
     `module` holding a function with a contract (`requires`, `effects`, `costs`), a result type and
     a body, `concurrent` over a two-segment path, and a `table` with a count, `shared`, a slot field
     with `where` and `by ops`, `ops`, `tree`, `occupied` and a group invariant, and an `entry` with
-    every optional clause. -/
+    every optional clause. The static `max`, the parameter `x` and the table field `x` are table
+    words: they print as `wort` and read back as names. -/
 def zeugeProgramm : List SItemTief := [
   .useT ["io", "konsole"],
   .constT "N" (.atom "u32") (.rows [.one (.lit 1), .one (.lit 2)]),
-  .globT true "zaehler" (.atom "u64") (.one (.lit 0)) none none true,
-  .lockT "L" [.variable "zaehler"] (.lit 1) (some (.lit 10)) none none none,
+  .globT true "max" (.atom "u64") (.one (.lit 0)) none none true,
+  .lockT "L" [.variable "max"] (.lit 1) (some (.lit 10)) none none none,
   .atomT "flag" (.atom "bool") (some []) (some "release") none,
   .whyT "Fehler" [("Voll", .lit 1, "voll")] true,
   .modT ("::".intercalate ["kern"]) [
-    .fnT { art := "", name := "erhoehe", params := [("wert", .atom "u64")], res := some (.atom "u64"),
+    .fnT { art := "", name := "erhoehe", params := [("x", .atom "u64")], res := some (.atom "u64"),
            fehler := none,
-           klauseln := [.needs (.bin "<" (.variable "wert") (.lit 100)),
-                        .effs [.writes (.variable "zaehler")], .cost (.lit 5)] }
-      (.block [.set (.variable "zaehler") "+=" (.variable "wert")] (some (.ret (some (.variable "wert")))))],
+           klauseln := [.needs (.bin "<" (.variable "x") (.lit 100)),
+                        .effs [.writes (.variable "max")], .cost (.lit 5)] }
+      (.block [.set (.variable "max") "+=" (.variable "x")] (some (.ret (some (.variable "x")))))],
   .concT [["kern", "erhoehe"]],
   .tableT "Knoten" (some (.lit 64)) none none true [
-    .tSlot [{ fname := "wert", ftyp := .atom "u32", pos := none, bezug := none,
-              wo := some (.bin "<" (.variable "wert") (.lit 10)), reserviert := false, byOps := true }],
+    .tSlot [{ fname := "x", ftyp := .atom "u32", pos := none, bezug := none,
+              wo := some (.bin "<" (.variable "x") (.lit 10)), reserviert := false, byOps := true }],
     .tOps ["einfuegen", "loeschen"],
     .tTree [("parent", "eltern")],
     .tBusy "belegt",
@@ -2448,15 +2432,15 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   simp only [zeugeProgramm, List.mem_cons, List.not_mem_nil, or_false] at hit
   rcases hit with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact .useT _ (by simp)
-  · refine .constT _ _ _ (atom _ (by decide)) (.rows _ ?_)
+  · refine .constT _ _ _ (by decide) (atom _ (by decide)) (.rows _ ?_)
     intro x hx; simp at hx; rcases hx with rfl | rfl <;> exact .one _ (by decide)
-  · exact .globT _ _ _ _ _ _ _ (atom _ (by decide)) (.one _ (by decide)) (by simp)
+  · exact .globT _ _ _ _ _ _ _ (by decide) (atom _ (by decide)) (.one _ (by decide)) (by simp)
   · refine .lockT _ _ _ _ _ _ _ (by simp; decide) (by decide) ?_ (by simp) (by simp)
     intro e he; cases he; decide
   · exact .atomT _ _ _ _ _ (atom _ (by decide)) ⟨by intro ps h p hp; cases h; simp at hp,
       by intro o h; cases h; decide⟩
-  · exact .whyT _ _ _ (by intro c hc; simp at hc; subst hc; show gut (.lit 1) = true; decide)
-  · refine .modT ["kern"] _ ⟨by simp, by intro a ha; simp at ha; subst ha; exact ⟨by decide, by decide⟩⟩ ?_
+  · exact .whyT _ _ _ (by intro c hc; simp at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
+  · refine .modT ["kern"] _ ⟨by simp, by intro a ha; simp at ha; subst ha; decide⟩ ?_
     intro it hit; simp at hit; subst hit
     refine .fnT _ _ ⟨Or.inl rfl, ?_, atom _ (by decide), ?_⟩ ?_
     · intro p hp; simp at hp; subst hp; exact atom _ (by decide)
@@ -2470,7 +2454,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
       exact .set _ _ _ (by decide) (by decide) (by decide)
   · exact .concT _ (by
       intro p hp; simp at hp; subst hp
-      exact ⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> exact ⟨by decide, by decide⟩⟩)
+      exact ⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> decide⟩)
   · refine .tableT _ _ _ _ _ _ (by intro e he; cases he; decide) ?_
     intro t ht
     simp only [List.mem_cons, List.not_mem_nil, or_false] at ht
@@ -2518,8 +2502,10 @@ end Gabbro.Grammatik.Parser
   * Clauses riding as reconstructed text (`by`, `retires`, `deadline`): the reader rebuilds a
     string from tokens (`druck e`, `nimmBisKopf`), the printer re-lexes it; excluded from
     `KlauselGut`.
-  * Paths printed as text (`module`, `concurrent`) need name-shaped non-table segments
-    (`PfadGut`): the printer re-lexes the joined text.
-  * As everywhere, the text-level theorem (`rundlauf_programm`) needs every identifier token of the
-    print to be a non-table word (`TokGut`); type atoms print as `nameTok` and are covered.
+  * Paths printed as text (`module`, `concurrent`) need name-shaped segments (`PfadGut`): the
+    printer re-lexes the joined text.
+  * Names print as `nameTok`, so the text-level theorem (`rundlauf_programm`) needs only
+    name-shaped names. Names spelled like the word that opens a form where they stand are
+    excluded: a `const` named `fn`, a `static` (without `mut`) named `mut`, a `reason` case named
+    `exhaustive`, an effect `locks` place headed `shared`.
 -/

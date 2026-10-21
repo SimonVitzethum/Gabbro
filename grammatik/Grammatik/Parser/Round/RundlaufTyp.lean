@@ -22,8 +22,8 @@
   types (`.raw`), `entry fn(..)` types, rights lists `rw+own`/`own@h`, suffix chains over a
   non-chain base (`[T; n] wrapping` reads `[T; n]` and leaves `wrapping`).
 
-  Printer change (language unchanged): `druckTyp` prints an atom and a `ptr` space as `nameTok`,
-  the token the lexer reads (`u32`, `bool`, `dma` are table words); the reader takes both.
+  Names print as `nameTok`, the token the lexer reads (`u32`, `bool`, `dma` are table words); the
+  reader takes both. A path type's head is no type-head word (`typKopf`), as an atom.
 -/
 import Grammatik.Parser.Round.RundlaufTok
 import Grammatik.Parser.Round.RundlaufAnw3
@@ -236,9 +236,6 @@ theorem rohToks_name (s : String) (h : nameForm s = true) : rohToks s = [nameTok
   rw [lex_name_allein s h]
   cases hk : istSchluessel s <;> simp [nameTok, hk]
 
-theorem nameText_nameTok (s : String) : nameText (nameTok s) = some s := by
-  unfold nameTok; split <;> rfl
-
 theorem nimmName_nameTok (s : String) (r : List Token) :
     nimmName (nameTok s :: r) = .ok (s, r) := by
   simp [nimmName, nameText_nameTok]
@@ -288,7 +285,8 @@ def TsGut (ss : List TSuff) : Prop :=
 /-- The root of a chain: an atom that opens no type form, or a path of two or more segments. -/
 inductive WurzelGut : STyp → Prop
   | atom (a : String) : typKopf a = false → WurzelGut (.atom a)
-  | path (segs : List String) : 2 ≤ segs.length → WurzelGut (.path segs)
+  | path (segs : List String) : 2 ≤ segs.length → typKopf (segs.headD "") = false →
+      WurzelGut (.path segs)
 
 /-- The printable types (see the header). -/
 inductive TypGut : STyp → Prop
@@ -401,8 +399,8 @@ theorem sammleSeg_stop2 (acc : List String) (rest : List Token)
     | _ => rfl
 
 theorem sammleSeg_schritt (a : String) (R : List Token) (acc : List String) :
-    sammleSegmente (.zeichen "::" :: .ident a :: R) acc = sammleSegmente R (acc ++ [a]) := by
-  simp [sammleSegmente, nameText]
+    sammleSegmente (.zeichen "::" :: nameTok a :: R) acc = sammleSegmente R (acc ++ [a]) := by
+  simp [sammleSegmente]
 
 /-- `sammleSegmente` reads a printed path tail and stops before a non-`::` follow. -/
 theorem sammleSeg_pfad : ∀ (segs : List String) (acc : List String) (rest : List Token),
@@ -415,11 +413,11 @@ theorem sammleSeg_pfad : ∀ (segs : List String) (acc : List String) (rest : Li
     intro acc rest _ hr
     cases segs with
     | nil =>
-      show sammleSegmente (.zeichen "::" :: .ident a :: rest) acc = (acc ++ [a], rest)
+      show sammleSegmente (.zeichen "::" :: nameTok a :: rest) acc = (acc ++ [a], rest)
       rw [sammleSeg_schritt]
       exact sammleSeg_stop2 _ rest hr
     | cons b segs' =>
-      show sammleSegmente (.zeichen "::" :: .ident a :: .zeichen "::" ::
+      show sammleSegmente (.zeichen "::" :: nameTok a :: .zeichen "::" ::
         (pfadToks (b :: segs') ++ rest)) acc = _
       rw [sammleSeg_schritt, ih (acc ++ [a]) rest (by simp) hr]
       simp
@@ -458,18 +456,23 @@ theorem parseTyp_wurzel (r : STyp) (hr : WurzelGut r) (rest : List Token) (F : N
     have hseg := sammleSeg_stop2 [a] rest hs
     simp only [druckTyp, nameTok, List.singleton_append]
     split
-    · simp [parseTyp, h1, h2, h3, h4, h5, nimmPfad, nameText, hseg]
+    · simp [parseTyp, h1, h2, h3, h4, h5, nimmPfad, hseg]
     · have hne : a ≠ "string" := fun e => by rw [e] at h6; exact absurd h6 (by decide)
       rw [parseTyp_ident F a rest (Or.inl hne)]
-      simp [nimmPfad, nameText, hseg]
-  | path segs h2 =>
-    match segs, h2 with
-    | a :: b :: cs, _ =>
+      simp [nimmPfad, hseg]
+  | path segs h2 hk =>
+    match segs, h2, hk with
+    | a :: b :: cs, _, hk =>
+      simp only [List.headD, typKopf, Bool.or_eq_false_iff] at hk
+      obtain ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := hk
       have hseg := sammleSeg_pfad (b :: cs) [a] rest (by simp) hs
-      show parseTyp (F + 1) (.ident a :: .zeichen "::" :: (pfadToks (b :: cs) ++ rest)) = _
-      rw [parseTyp_ident F a _ (Or.inr (by intro r' e; cases e))]
-      simp only [nimmPfad, nameText, hseg]
-      rfl
+      show parseTyp (F + 1) (nameTok a :: .zeichen "::" :: (pfadToks (b :: cs) ++ rest)) = _
+      unfold nameTok
+      split
+      · simp [parseTyp, h1, h2, h3, h4, h5, nimmPfad, hseg]
+      · rw [parseTyp_ident F a _ (Or.inr (by intro r' e; cases e))]
+        simp only [nimmPfad, nameText_ident, hseg]
+        rfl
 
 /-- A single right before `>`. -/
 theorem parseRechte_name (F : Nat) (w : String) (r : List Token) :
@@ -497,7 +500,7 @@ theorem parse_druckTyp : ∀ (t : STyp), TypGut t → ∀ (rest : List Token) (F
     have hl : 1 ≤ (druckTyp root).length := by
       cases hw with
       | atom a _ => simp [druckTyp]
-      | path segs h2 =>
+      | path segs h2 _ =>
         match segs, h2 with
         | a :: b :: cs, _ => simp [druckTyp, pfadToks]
     simp only [fbT, druckTyp_applyTS, List.length_append] at hF
@@ -522,9 +525,9 @@ theorem parse_druckTyp : ∀ (t : STyp), TypGut t → ∀ (rest : List Token) (F
     cases o
     · have e1 : strEq "index" "ptr" = false := by decide
       have e2 : strEq "index" "option" = false := by decide
-      simp [druckTyp, parseTyp, e1, e2, nimmWort, nimmName, nameText, strEq_self]
+      simp [druckTyp, parseTyp, e1, e2, nimmWort, nimmName, strEq_self]
     · have e1 : strEq "option" "ptr" = false := by decide
-      simp [druckTyp, parseTyp, e1, nimmWort, nimmName, nameText, strEq_self]
+      simp [druckTyp, parseTyp, e1, nimmWort, nimmName, strEq_self]
   | array t n ht hn ih =>
     intro rest F hr hF
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp only [fbT] at hF; omega⟩

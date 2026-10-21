@@ -3,8 +3,9 @@
   Subject:   Track P: the token printer of types, statements and blocks -- the inverse of `parseTyp`,
              `parseStmt`, `parseBlock` on the trees the reader builds.
 
-  Total on every constructor of `SAnw` and `STyp`. Names print as `ident` (the reader takes both through
-  `nameText`), keywords as `wort`, the raw words of a header (`retry`/`forever`, `decreases`/`touches`,
+  Total on every constructor of `SAnw` and `STyp`. Names print as `nameTok` -- the token the lexer
+  reads for them, `wort` for a table word, `ident` otherwise (the reader takes both through `nameText`) --,
+  keywords as `wort`, the raw words of a header (`retry`/`forever`, `decreases`/`touches`,
   payloads, `exchange` tails) are lexed back through `lex`. The expression parts use `druckToks`
   (`Round/Rundlauf`), whose `gut` shapes have the round-trip theorem; the statement level is measured, not
   proved: `Print/Proben` decides one witness per statement form and `Cover/Census` runs the round trip over
@@ -24,19 +25,13 @@ def rohToks (s : String) : List Token :=
   | .ok ts => ts.filter (fun t => match t with | .ende => false | _ => true)
   | .error _ => []
 
-/-- A name as the token the lexer reads for it: a table word is a `wort`, every other name an
-    `ident`. The type reader takes both through `nameText`; printing the lexer's token makes the
-    printed list the one the rendered text lexes to (`u32`, `bool`, the space `dma` are table
-    words). -/
-def nameTok (s : String) : Token := if istSchluessel s then .wort s else .ident s
-
 /-- A surface type as tokens (the inverse of `parseTyp`). -/
 def druckTyp : STyp → List Token
   | .atom a => [nameTok a]
   | .path segs => pfadToks segs
   | .ptr r w t =>
     [.wort "ptr", .zeichen "<", nameTok r, .zeichen ","] ++ rohToks w ++ [.zeichen ">"] ++ druckTyp t
-  | .index o t => (if o then [.wort "option"] else []) ++ [.wort "index", .wort "into", .ident t]
+  | .index o t => (if o then [.wort "option"] else []) ++ [.wort "index", .wort "into", nameTok t]
   | .range b lo hi x =>
     druckTyp b ++ [.wort "in"] ++ druckToks lo ++ [.zeichen (if x then "..<" else "..")] ++ druckToks hi
   | .array t n => [.zeichen "["] ++ druckTyp t ++ [.zeichen ";"] ++ druckToks n ++ [.zeichen "]"]
@@ -64,14 +59,14 @@ def druckEnde : Option SEnde → List Token
   | none => []
   | some (.ret none) => [.wort "return", .zeichen ";"]
   | some (.ret (some e)) => [.wort "return"] ++ druckToks e ++ [.zeichen ";"]
-  | some (.leave l) => [.wort "leave", .ident l, .zeichen ";"]
-  | some (.next l) => [.wort "next", .ident l, .zeichen ";"]
+  | some (.leave l) => [.wort "leave", nameTok l, .zeichen ";"]
+  | some (.next l) => [.wort "next", nameTok l, .zeichen ";"]
 
 /-- A path or a place text as tokens (a call name rides as the text of the place). -/
 def druckNamen : List String → List Token
   | [] => []
-  | [x] => [.ident x]
-  | x :: xs => [.ident x, .zeichen ","] ++ druckNamen xs
+  | [x] => [nameTok x]
+  | x :: xs => [nameTok x, .zeichen ","] ++ druckNamen xs
 
 /-- Root paths of a `start { … }`. -/
 def druckWurzeln : List String → List Token
@@ -83,21 +78,21 @@ mutual
 /-- A statement as tokens (the inverse of `parseStmt`). -/
 def druckAnw : SAnw → List Token
   | .bind m x ty e =>
-    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [.ident x] ++ druckTypOpt ty ++
+    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [nameTok x] ++ druckTypOpt ty ++
       [.zeichen "="] ++ druckToks e ++ [.zeichen ";"]
   | .bindElse x ty e f b =>
-    [.wort "let", .ident x] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks e ++
-      [.wort "else", .zeichen "(", .ident f, .zeichen ")"] ++ druckAnw b
+    [.wort "let", nameTok x] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks e ++
+      [.wort "else", .zeichen "(", nameTok f, .zeichen ")"] ++ druckAnw b
   | .bindLib m x ty l f =>
-    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [.ident x] ++ druckTypOpt ty ++
-      [.zeichen "=", .zeichen "@", .ident l, .zeichen "#", .ident f, .zeichen "(", .zeichen ")",
+    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [nameTok x] ++ druckTypOpt ty ++
+      [.zeichen "=", .zeichen "@", nameTok l, .zeichen "#", nameTok f, .zeichen "(", .zeichen ")",
        .zeichen "{", .zeichen "}", .zeichen ";"]
   | .set z o w => druckToks z ++ [.zeichen o] ++ druckToks w ++ [.zeichen ";"]
   | .shift z a b =>
-    [.wort "transition"] ++ druckToks z ++ [.zeichen ":", .ident a, .zeichen "->", .ident b, .zeichen ";"]
+    [.wort "transition"] ++ druckToks z ++ [.zeichen ":", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
   | .call f xs => rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .zeichen ";"]
   | .lcall l f n =>
-    [.zeichen "@", .ident l, .zeichen "#", .ident f, .zeichen "("] ++
+    [.zeichen "@", nameTok l, .zeichen "#", nameTok f, .zeichen "("] ++
       kommaToks (List.replicate n [.num 0]) ++ [.zeichen ")", .zeichen "{", .zeichen "}", .zeichen ";"]
   | .cond c t eis s =>
     [.wort "if"] ++ druckToks c ++ druckAnw t ++ druckAnwListe eis ++
@@ -107,17 +102,17 @@ def druckAnw : SAnw → List Token
   | .elsif c b => [.wort "else", .wort "if"] ++ druckToks c ++ druckAnw b
   | .cases g arms => [.wort "match"] ++ druckToks g ++ [.zeichen "{"] ++ druckAnwListe arms ++ [.zeichen "}"]
   | .arm v b t =>
-    [.ident v] ++
+    [nameTok v] ++
       (match b with
-        | some x => [.zeichen "(", .ident x, .zeichen ")"]
+        | some x => [.zeichen "(", nameTok x, .zeichen ")"]
         | none => []) ++
       [.zeichen "=>"] ++ druckAnw t
   | .each b o k s m r i body =>
-    [.wort "traverse", .ident b] ++
+    [.wort "traverse", nameTok b] ++
       (match o with
         | some e => [.wort "of"] ++ druckToks e
         | none => []) ++
-      [.wort "over", .ident k, .wort "of"] ++ druckToks s ++ [.wort "by", .ident m] ++ rohToks r ++
+      [.wort "over", nameTok k, .wort "of"] ++ druckToks s ++ [.wort "by", nameTok m] ++ rohToks r ++
       (match i with
         | some e => [.wort "invariant"] ++ druckToks e
         | none => []) ++
@@ -127,36 +122,36 @@ def druckAnw : SAnw → List Token
   | .waive ns b => [.wort "breaking"] ++ druckNamen ns ++ druckAnw b
   | .trim o t b => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "else"] ++ druckAnw b
   | .locks g o b => [.wort "locks"] ++ (if g then [.wort "shared"] else []) ++ druckToks o ++ druckAnw b
-  | .watch d b => [.wort "observes", .ident d] ++ druckAnw b
-  | .leave l => [.wort "leave", .ident l, .zeichen ";"]
-  | .next l => [.wort "next", .ident l, .zeichen ";"]
+  | .watch d b => [.wort "observes", nameTok d] ++ druckAnw b
+  | .leave l => [.wort "leave", nameTok l, .zeichen ";"]
+  | .next l => [.wort "next", nameTok l, .zeichen ";"]
   | .emit z w p =>
     druckToks z ++ [.zeichen "="] ++ druckToks w ++ [.wort "publishes"] ++
       (if strEq p "nothing" then [.wort "nothing"] else [.zeichen "{"] ++ rohToks p ++ [.zeichen "}"]) ++
       [.zeichen ";"]
   | .await n q e =>
-    [.wort "let", .ident n, .zeichen "="] ++ druckToks q ++ [.wort "awaits", .zeichen "{"] ++ rohToks e ++
+    [.wort "let", nameTok n, .zeichen "="] ++ druckToks q ++ [.wort "awaits", .zeichen "{"] ++ rohToks e ++
       [.zeichen "}", .zeichen ";"]
   | .swap n o k =>
-    [.wort "let", .ident n, .zeichen "="] ++ druckToks o ++ [.wort "exchange"] ++ rohToks k ++ [.zeichen ";"]
-  | .step a b => [.wort "advances", .ident a, .zeichen "->", .ident b, .zeichen ";"]
+    [.wort "let", nameTok n, .zeichen "="] ++ druckToks o ++ [.wort "exchange"] ++ rohToks k ++ [.zeichen ";"]
+  | .step a b => [.wort "advances", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
   | .ret none => [.wort "return", .zeichen ";"]
   | .ret (some e) => [.wort "return"] ++ druckToks e ++ [.zeichen ";"]
   | .alloc m n ty t w s =>
-    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [.ident n] ++ druckTypOpt ty ++
-      [.zeichen "=", .wort "alloc", .ident t, .zeichen "("] ++ druckToks w ++ [.zeichen ")"] ++
+    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [nameTok n] ++ druckTypOpt ty ++
+      [.zeichen "=", .wort "alloc", nameTok t, .zeichen "("] ++ druckToks w ++ [.zeichen ")"] ++
       (match s with
         | some b => [.wort "else"] ++ druckAnw b
         | none => []) ++
       [.zeichen ";"]
   | .reset a rg =>
-    [.wort "reset", .ident a] ++
+    [.wort "reset", nameTok a] ++
       (match rg with
         | some (i, n) => [.wort "at"] ++ druckToks i ++ [.wort "count"] ++ druckToks n
         | none => []) ++
       [.zeichen ";"]
   | .grow a e b =>
-    [.wort "grow", .ident a, .wort "by"] ++ druckToks e ++ [.wort "else"] ++ druckAnw b ++ [.zeichen ";"]
+    [.wort "grow", nameTok a, .wort "by"] ++ druckToks e ++ [.wort "else"] ++ druckAnw b ++ [.zeichen ";"]
   | .free a => [.wort "free"] ++ druckToks a ++ [.zeichen ";"]
   | .child a => [.wort "child"] ++ druckAnw a
   | .start ps => [.ident "start", .zeichen "{"] ++ druckWurzeln ps ++ [.zeichen "}", .zeichen ";"]

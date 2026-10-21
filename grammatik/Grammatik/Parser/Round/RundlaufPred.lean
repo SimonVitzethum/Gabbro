@@ -11,7 +11,7 @@
   (`forall`, `exists`, `in`, `reaches`, `=>`: the `ext` trees) are outside `gut`; their printer is
   `druckExtToks`, not proved here.
 
-  `lex_pfad`: a `::` path of name-shaped non-table words, written without spaces
+  `lex_pfad`: a `::` path of name-shaped words, written without spaces
   (`String.intercalate "::"`), lexes to its path tokens (`pfadToks`); so `rohToks` of a path text is
   the path, and the printers that re-lex a path (`module`, `concurrent`, `start`, call heads)
   print it.
@@ -79,18 +79,25 @@ theorem druck_kopf_pred (e : SExpr) (hg : gut e = true) :
     ∃ t ts, druckToks e = t :: ts ∧ KopfPred t ∧ (t = .zeichen "!" → ∃ x, e = .un "!" x) := by
   have kw : ∀ w, w ≠ "forall" → w ≠ "exists" → KopfPred (.wort w) := by
     intro w h1 h2; exact ⟨fun e => h1 (by injection e), fun e => h2 (by injection e)⟩
-  have ki : ∀ a, KopfPred (.ident a) := fun a => ⟨by simp, by simp⟩
+  have ki : ∀ a, istKopfWort a = false → KopfPred (nameTok a) := by
+    intro a h
+    obtain ⟨-, -, -, -, -, -, -, -, -, -⟩ := kopf_ne h
+    have hf : a ≠ "forall" := by intro e; subst e; revert h; decide
+    have he : a ≠ "exists" := by intro e; subst e; revert h; decide
+    unfold nameTok; split
+    · exact ⟨fun e => hf (by injection e), fun e => he (by injection e)⟩
+    · exact ⟨by simp, by simp⟩
   have platz : ∀ p, gutPlatz p = true → ∃ t ts, druckToks p = t :: ts ∧ KopfPred t ∧
       (t = .zeichen "!" → ∃ x, p = .un "!" x) := by
     intro p hp
-    obtain ⟨a, ts, h⟩ := platz_kopf p hp
-    exact ⟨_, ts, h, ki a, by simp⟩
+    obtain ⟨a, ts, h, ak⟩ := platz_kopf p hp
+    exact ⟨_, ts, h, ki a ak, by simp⟩
   cases e with
   | lit n => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
   | float s => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
   | tru => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
   | fls => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-  | «variable» s => exact ⟨_, _, rfl, ki s, by simp⟩
+  | «variable» s => exact ⟨_, _, rfl, ki s (by simpa [gut] using hg), by simp⟩
   | field x f => exact platz _ hg
   | index x i => exact platz _ hg
   | arrow x f => exact platz _ hg
@@ -98,7 +105,8 @@ theorem druck_kopf_pred (e : SExpr) (hg : gut e = true) :
     refine ⟨.zeichen o, _, rfl, ⟨by simp, by simp⟩, ?_⟩
     intro h; injection h with h; subst h; exact ⟨x, rfl⟩
   | bin o l r => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
-  | call f xs => exact ⟨_, _, rfl, ki f, by simp⟩
+  | call f xs =>
+    exact ⟨_, _, rfl, ki f (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1), by simp⟩
   | fnref p => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
   | built w xs =>
     rcases gut_built_faelle w xs hg with ⟨x, hw, rfl, -, -⟩ | ⟨a, b, rfl, rfl, -, -⟩
@@ -108,7 +116,8 @@ theorem druck_kopf_pred (e : SExpr) (hg : gut e = true) :
     · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
   | old x => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
   | res => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-  | why g f => exact ⟨_, _, rfl, ki g, by simp⟩
+  | why g f =>
+    exact ⟨_, _, rfl, ki g (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1.1.1), by simp⟩
   | ext k ns xs => simp [gut] at hg
 
 /-- After `parseCmp`, the atom's tail checks. -/
@@ -300,9 +309,9 @@ theorem scan_dd (b : Bool) (l : List Char) (m : Nat) (hl : ∀ r, l ≠ '%' :: r
     scan b (':' :: ':' :: l) (m + 1) = Except.map (Token.zeichen "::" :: ·) (scan b l m) := by
   simp [scan, nimmZeichen, istLeer, istZiffer, istAnfang]
 
-/-- A path text, segments name-shaped and non-table words, lexes to its path tokens. -/
+/-- A path text, segments name-shaped, lexes to its path tokens. -/
 theorem scan_pfad : ∀ (segs : List String) (n : Nat), segs ≠ [] →
-    (∀ a ∈ segs, nameForm a = true ∧ istSchluessel a = false) → 2 * segs.length ≤ n →
+    (∀ a ∈ segs, nameForm a = true) → 2 * segs.length ≤ n →
     scan false ([':', ':'].intercalate (segs.map String.toList)) n = .ok (pfadToks segs ++ [.ende]) := by
   intro segs
   induction segs with
@@ -314,8 +323,8 @@ theorem scan_pfad : ∀ (segs : List String) (n : Nat), segs ≠ [] →
     cases segs with
     | nil =>
       simp only [List.map_cons, List.map_nil, List.intercalate_singleton]
-      rw [scan_name_ende false a m ha.1]
-      simp [pfadToks, nameTok, ha.2]
+      rw [scan_name_ende false a m ha]
+      simp [pfadToks, nameTok]
     | cons b bs =>
       have hb := hg b (by simp)
       obtain ⟨k, rfl⟩ : ∃ k, m = k + 1 := ⟨m - 1, by simp at hn; omega⟩
@@ -330,14 +339,14 @@ theorem scan_pfad : ∀ (segs : List String) (n : Nat), segs ≠ [] →
         | cons c cs =>
           rw [hbl] at hb; simp only [Bool.and_eq_true] at hb
           cases bs with
-          | nil => exact ⟨c, cs, by simp [hbl], hb.1.1⟩
+          | nil => exact ⟨c, cs, by simp [hbl], hb.1⟩
           | cons x xs =>
             exact ⟨c, cs ++ ':' :: ':' :: [':', ':'].intercalate ((x :: xs).map String.toList),
-              by simp [List.intercalate_cons_cons, hbl], hb.1.1⟩
+              by simp [List.intercalate_cons_cons, hbl], hb.1⟩
       obtain ⟨c, cs, hc, hca⟩ := hbk
-      rw [hcons, scan_name_vor false a ':' _ _ ha.1 (by decide) (Or.inr trivial), scan_dd]
+      rw [hcons, scan_name_vor false a ':' _ _ ha (by decide) (Or.inr trivial), scan_dd]
       · rw [hi]
-        simp [pfadToks, nameTok, ha.2, Except.map]
+        simp [pfadToks, nameTok, Except.map]
       · rw [hc]; intro r e; injection e with e; subst e; simp [istAnfang] at hca
       · rw [hc]; intro r e; injection e with e; subst e; simp [istAnfang] at hca
 
@@ -366,15 +375,21 @@ theorem pfad_len : ∀ (segs : List String), segs ≠ [] → (∀ a ∈ segs, na
       omega
 
 theorem lex_pfad (segs : List String) (hne : segs ≠ [])
-    (hg : ∀ a ∈ segs, nameForm a = true ∧ istSchluessel a = false) :
+    (hg : ∀ a ∈ segs, nameForm a = true) :
     lex ("::".intercalate segs) = .ok (pfadToks segs ++ [.ende]) := by
   unfold lex
   rw [← String.length_toList, String.toList_intercalate]
   have : ("::" : String).toList = [':', ':'] := rfl
   rw [this]
-  exact scan_pfad segs _ hne hg (pfad_len segs hne (fun a h => (hg a h).1))
+  exact scan_pfad segs _ hne hg (pfad_len segs hne hg)
 
-theorem pfad_tokGut : ∀ (segs : List String), (∀ a ∈ segs, nameForm a = true ∧ istSchluessel a = false) →
+/-- A name-shaped name prints as a lexically clean token. -/
+theorem tokGut_nameTok {a : String} (h : nameForm a = true) : TokGut (nameTok a) := by
+  unfold nameTok; split
+  · exact ⟨h, by assumption⟩
+  · exact ⟨h, by simpa using (by assumption : ¬ istSchluessel a = true)⟩
+
+theorem pfad_tokGut : ∀ (segs : List String), (∀ a ∈ segs, nameForm a = true) →
     ∀ t ∈ pfadToks segs, TokGut t := by
   intro segs
   induction segs with
@@ -383,16 +398,16 @@ theorem pfad_tokGut : ∀ (segs : List String), (∀ a ∈ segs, nameForm a = tr
     intro hg t ht
     have ha := hg a (by simp)
     cases as with
-    | nil => simp [pfadToks] at ht; subst ht; exact ha
+    | nil => simp [pfadToks] at ht; subst ht; exact tokGut_nameTok ha
     | cons b bs =>
       simp only [pfadToks, List.cons_append, List.nil_append, List.mem_cons] at ht
       rcases ht with rfl | rfl | ht
-      · exact ha
+      · exact tokGut_nameTok ha
       · show [':', ':'] ∈ markTafel; decide
       · exact ih (fun x hx => hg x (List.mem_cons_of_mem _ hx)) t (by simpa [pfadToks] using ht)
 
 theorem rohToks_pfad (segs : List String) (hne : segs ≠ [])
-    (hg : ∀ a ∈ segs, nameForm a = true ∧ istSchluessel a = false) :
+    (hg : ∀ a ∈ segs, nameForm a = true) :
     rohToks ("::".intercalate segs) = pfadToks segs := by
   unfold rohToks
   rw [lex_pfad segs hne hg]
