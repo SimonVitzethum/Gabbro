@@ -90,14 +90,14 @@ theorem sigProduziert_nil (u : UProg) (i : Fin u.fns.length) :
 
 /-- The lock floor of a signature is the computed floor of the function. -/
 theorem sigBoden_eq (u : UProg) (i : Fin u.fns.length) :
-    ((declOf u).signatur i).boden = floorOf u (fnAt u i) := by
+    ((declOf u).signatur i).boden = (fnAt u i).boden := by
   show (sigAt u i.val).boden = _
   rw [sigAt_get u i]
   rfl
 
 /-- The same for a body contract. -/
 theorem vBoden_eq (u : UProg) (c : Fin u.fns.length) :
-    (vertragVon (declOf u) c).boden = floorOf u (fnAt u c) := by
+    (vertragVon (declOf u) c).boden = (fnAt u c).boden := by
   show (sigAt u c.val).boden = _
   rw [sigAt_get u c]
   rfl
@@ -645,7 +645,7 @@ theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
 
 /-- The caller's floor is at most the callee's (the Bool the lowering decides). -/
 def floorLeB (u : UProg) (caller callee : Fin u.fns.length) : Bool :=
-  match floorOf u (fnAt u caller), floorOf u (fnAt u callee) with
+  match (fnAt u caller).boden, (fnAt u callee).boden with
   | none, _ => true
   | some _, none => false
   | some c, some c' => decide (c ≤ c')
@@ -660,7 +660,7 @@ theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
   rw [sigBoden_eq u callee]
   unfold floorLeB at h
   rw [hc] at h
-  cases hb : floorOf u (fnAt u callee) with
+  cases hb : (fnAt u callee).boden with
   | none => rw [hb] at h; simp at h
   | some c' =>
     rw [hb] at h
@@ -668,7 +668,7 @@ theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
 
 /-- An extra held lock ranks below the callee's floor (the Bool the lowering decides). -/
 def floorUeberB (u : UProg) (callee : Fin u.fns.length) (L : (declOf u).Lock) : Bool :=
-  match floorOf u (fnAt u callee) with
+  match (fnAt u callee).boden with
   | some c => decide ((declOf u).rang L < c)
   | none => false
 
@@ -764,7 +764,7 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
                 · exact absurd h hn
                 · rw [sigBoden_eq u callee]
                   unfold floorUeberB at h
-                  cases hf : floorOf u (fnAt u callee) with
+                  cases hf : (fnAt u callee).boden with
                   | none => rw [hf] at h; simp at h
                   | some c =>
                     rw [hf] at h
@@ -923,7 +923,7 @@ def lowStoreAtomL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
             rw [hg]
             exact e
           if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
-            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+            .ok (Stmt.publish (D := declOf u) g e2 ((declOf u).nutzlast g) rfl hwV hd)
           else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number atomic"
@@ -953,7 +953,7 @@ def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
             rw [hg]
             exact e
           if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
-            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+            .ok (Stmt.publish (D := declOf u) g e2 ((declOf u).nutzlast g) rfl hwV hd)
           else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool atomic"
@@ -989,6 +989,44 @@ def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (f
       | .error e => .error e
       | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
 
+/-- `d.R = v;` (`Stmt.regWrite`): the value fitted into the register's range, the class writable. -/
+def lowRegWriteL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (d r : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match regIdx u.regs d r with
+  | .error e => .error e
+  | .ok g =>
+    match lowWertAt u Γ Λ fn (regAt u g).lo (regAt u g).hi v with
+    | .error e => .error e
+    | .ok e =>
+      if hk : ((declOf u).rklasse g).schreibbar = true then
+        .ok (Stmt.regWrite (D := declOf u) g hk e)
+      else .error "register written against its class"
+
+/-- The pointer of an indirect call: the local `p` of type `fnptr n`, where `n` is the number of the function
+    `k.callee` the call was elaborated against (one signature per function, `sig f = f`). -/
+def lowZeiger (u : UProg) (Γ : Ctx) (fn : UFn) (p : String) (callee : Fin u.fns.length) :
+    Except String (Var Γ (Ty.fnptr callee.val)) :=
+  match paramPos fn.params p with
+  | .error e => .error e
+  | .ok j => lowVar Γ j (Ty.fnptr callee.val)
+
+/-- `p(..);` through a function pointer (`Stmt.callInd`): the premises of a direct call of the function `p`
+    points at, against its signature `sigNr (sig f)`. -/
+def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (p cname : String) (args : List UArg) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match lowRufKopf u caller Γ fn Λ cname args with
+  | .error e => .error e
+  | .ok k =>
+    match lowZeiger u Γ fn p k.callee with
+    | .error e => .error e
+    | .ok v =>
+      if hr : (declOf u).gruende k.callee = 0 then
+        .ok (castNachStmtL u caller k.callee Γ Λ
+          (Stmt.callInd (D := declOf u) (n := k.callee.val) (Expr.var v) k.args k.hp hr))
+      else .error "call of a function with a reason channel needs `let .. else`"
+
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1007,9 +1045,11 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .setVar x v => lowSetVarL u caller Γ fn Λ x v
   | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
   | .call c args => lowCallL u caller Γ fn Λ c args
+  | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
+  | .callInd p f args => lowCallIndL u caller Γ fn Λ p f args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

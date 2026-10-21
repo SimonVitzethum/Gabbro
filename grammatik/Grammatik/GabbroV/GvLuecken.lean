@@ -50,7 +50,7 @@ theorem gvLuecke_sp4_ist_sp0 (h : sp0OkB uExp104 = true) :
     by `rfl` (`E4.P := P4`, `E4.S := SperrInv.leer D4`) and L_a for `hsp0`. -/
 theorem gvLuecke_start104_of (h : sp0OkB uExp104 = true)
     (hsp0 : E4.sp0 = sp0Of uExp104 h) : StartPflicht E4 :=
-  gv_startPflicht uExp104 P4 fs4 low4 h E4 rfl rfl hsp0
+  gv_startPflicht uExp104 P4 fs4 low4 h E4 rfl rfl hsp0 (by decide)
 
 /-- **L_b applied: `StartPflicht` holds over 104's declared memory.** -/
 theorem gvLuecke_start104 : StartPflicht E4 :=
@@ -91,23 +91,20 @@ theorem gvLuecke_fragment_ohne_atomar (u : UProg) (h : ∀ g ∈ u.globs, g.atom
     ∀ g : (declOf u).Glob, (declOf u).atomar g = false :=
   fun g => h _ (List.get_mem u.globs g)
 
-/-- **L_f: a static with no `Glob` form is refused loudly.** A placement (`aligned`, `section`) or a
-    `shared` word is a property of the storage, which a `Glob` does not carry: the static reader stops with
-    an error, it never drops the word. Parser territory; proved from the accepted definition. -/
+/-- **L_f: a static with no `Glob` form is refused loudly.** A placement (`aligned`, `section`) is a
+    property of the storage, which a `Glob` does not carry: the static reader stops with an error, it never
+    drops the word. (The `shared` word has a form since the front end reads it: `UGlob.shared`, `D.ggeteilt`.) Parser territory; proved from the accepted definition. -/
 theorem gvLuecke_statik_ohne_form
     (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr) (s : Option String)
-    (sh : Bool) (rest : List SItemTief) (h : al.isSome = true ∨ s.isSome = true ∨ sh = true) :
+    (sh : Bool) (rest : List SItemTief) (h : al.isSome = true ∨ s.isSome = true) :
     ∃ e, uGlobs consts alias (.globT m a t v al s sh :: rest) = .error e := by
   refine ⟨"static placement without G form", ?_⟩
   simp only [uGlobs]
-  have h' : (al.isSome || s.isSome || sh) = true := by
+  have h' : (al.isSome || s.isSome) = true := by
     cases h with
     | inl h1 => simp [h1]
-    | inr h2 =>
-      cases h2 with
-      | inl h3 => simp [h3]
-      | inr h4 => simp [h4]
+    | inr h2 => simp [h2]
   simp [h']
 
 /-

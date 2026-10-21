@@ -80,7 +80,7 @@ def bodyC8 : Endblock D8 (vertragVon D8 c8) false (D8.params c8) [] :=
 theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := rfl
 theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := rfl
 theorem ens8 (f : D8.Fn) : P8.ensures f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
-theorem req8 (f : D8.Fn) : P8.requires f = .tru := rfl
+theorem req8 (f : D8.Fn) : P8.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
 
 /-! ## 3. Enumerations, unit, checker -/
 
@@ -149,7 +149,11 @@ theorem nutzer8 : NutzerPflicht E8 where
         have h0 : D8.gruende f = 0 := sigGruende_null uExp108 (by decide) f
         omega⟩,
     fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
-  start := ⟨fun L => (kein_lock L).elim, fun _ _ => rfl⟩
+  start := ⟨fun L => (kein_lock L).elim, fun a _ => by
+    show ReqAmEintritt P8 a.1 _ a.2
+    unfold ReqAmEintritt
+    rw [req8]
+    rfl⟩
 
 /-! ## 5. Witness data: the oracle -/
 

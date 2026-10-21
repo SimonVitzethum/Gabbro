@@ -113,7 +113,7 @@ theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := rfl
 theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := rfl
 theorem ens_ein4 : P4.ensures ein4 = ensEin4 := rfl
 theorem ens_lies4 : P4.ensures lies4 = ensLies4 := rfl
-theorem req4 (f : D4.Fn) : P4.requires f = .tru := rfl
+theorem req4 (f : D4.Fn) : P4.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
 
 /-! ## 3. The enumerations of the declaration's members -/
 

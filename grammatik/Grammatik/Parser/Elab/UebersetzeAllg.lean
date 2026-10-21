@@ -143,6 +143,33 @@ def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.lengt
       | .error e => .error e
       | .ok j => .ok j.succ
 
+/-- The payload of an atomic (`D.nutzlast`): its declared statics, by name. -/
+def nutzAt (u : UProg) (g : Fin u.globs.length) : List (Fin u.globs.length) :=
+  (globAt u g).nutzlast.filterMap fun n => (globIdx u.globs n).toOption
+
+/-- The register at an index. -/
+def regAt (u : UProg) (r : Fin u.regs.length) : UReg := u.regs.get r
+
+/-- A register by device and name. -/
+def regIdx : (rs : List UReg) → (d n : String) → Except String (Fin rs.length)
+  | [], _, n => .error ("register unknown: " ++ n)
+  | g :: rest, d, n =>
+    if g.dev == d && g.name == n then .ok 0
+    else match regIdx rest d n with
+      | .error e => .error e
+      | .ok j => .ok j.succ
+
+/-- The mirror of a register (`mirrors R from M`): a register of the same device. -/
+def spiegelAt (u : UProg) (r : Fin u.regs.length) : Option (Fin u.regs.length) :=
+  (regAt u r).spiegel.bind fun m => (regIdx u.regs (regAt u r).dev m).toOption
+
+/-- The carriers a register's answer rests on (`depends { .. }`): tables first by name, else statics. -/
+def rtraegerAt (u : UProg) (r : Fin u.regs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
+  (regAt u r).traeger.filterMap fun n =>
+    match (tabIdx u.tabs n).toOption with
+    | some t => some (.inl t)
+    | none => (globIdx u.globs n).toOption.map .inr
+
 /-- The write flag of a function at a static. -/
 def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
   f.gputs.any (· == (globAt u g).name)
@@ -151,54 +178,27 @@ def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
 def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
   f.puts.any (· == (tabAt u t).name)
 
-/-! ## Lock floors (`Signatur.boden`)
+/-- The invariant at an index. -/
+def invAt (u : UProg) (i : Fin u.invs.length) : UInv := u.invs.get i
 
-    The floor of a function is the lowest rank of any lock taken on a path from it (its own `locks L` blocks
-    and, through its calls, the callees'); a function that takes none has the floor `hoch`, above every rank
-    of the unit. A unit without locks has no floors. This is the rule of the exporter (`resolve_floors`):
-    an extra lock held across a call ranks below the callee's floor (`RufPasst.hx`), so every lock the callee
-    takes ranks above everything held (`H006` across the call boundary). -/
+/-- The carrier tables of an invariant, by name. -/
+def invTraeger (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
+  (invAt u i).traeger.filterMap fun n => (tabIdx u.tabs n).toOption
 
-/-- The rank of a lock by name. -/
-def lockRank (u : UProg) (n : String) : Option Int :=
-  (u.locks.find? (fun l => l.name == n)).map (·.rank)
+/-- `U003` at an invariant, decided over the elaborated functions: a writer of a carrier holds every lock that
+    guards a carrier (the elaborator refuses a unit where it fails, `uU003`). -/
+def invOkB (u : UProg) (i : Fin u.invs.length) : Bool :=
+  (List.finRange u.fns.length).all fun f =>
+    !((invTraeger u i).any (writesAt u (fnAt u f))) ||
+    (invTraeger u i).all fun t => (needsAt u t).all fun w =>
+      match w with
+      | .inl L => decide (L ∈ heldAt u (fnAt u f))
+      | .inr _ => true
 
-def optMin : Option Int → Option Int → Option Int
-  | none, b => b
-  | a, none => a
-  | some a, some b => some (min a b)
-
-/-- The lowest rank a function takes directly (its `locks L { .. }` blocks). -/
-def directFloor (u : UProg) (f : UFn) : Option Int :=
-  f.body.foldl (fun acc st => match st with
-    | .lockBeg n => optMin acc (lockRank u n)
-    | _ => acc) none
-
-/-- The functions a function calls directly. -/
-def callNames (f : UFn) : List String :=
-  f.body.filterMap fun st => match st with
-    | .call c _ => some c
-    | .bindCall _ c _ => some c
-    | _ => none
-
-/-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/
-def floorStep (u : UProg) (cur : List (String × Option Int)) : List (String × Option Int) :=
-  u.fns.map fun f =>
-    (f.name, (callNames f).foldl
-      (fun acc c => optMin acc ((cur.find? (fun p => p.1 == c)).bind (·.2))) (directFloor u f))
-
-/-- `n` rounds (a path through the call graph is at most as long as the number of functions). -/
-def floorsN (u : UProg) : Nat → List (String × Option Int)
-  | 0 => u.fns.map fun f => (f.name, directFloor u f)
-  | n + 1 => floorStep u (floorsN u n)
-
-/-- The floor of a function: `none` in a unit without locks, else the lowest rank on any path from it, or
-    one above the highest rank of the unit when the paths take no lock. -/
-def floorOf (u : UProg) (f : UFn) : Option Int :=
-  if u.locks.isEmpty then none
-  else some (match ((floorsN u u.fns.length).find? (fun p => p.1 == f.name)).bind (·.2) with
-    | some c => c
-    | none => (u.locks.map (·.rank)).foldl max 0 + 1)
+/-- The carriers of an invariant in the declaration: its tables where `U003` holds (always, for an elaborated
+    unit), none otherwise -- so `invarianten_gehalten` holds for every `UProg`. -/
+def traegerD (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
+  if invOkB u i then invTraeger u i else []
 
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
@@ -211,7 +211,7 @@ def mkSig (u : UProg) (f : UFn) :
   gschreibt := writesGAt u f
   konsumiert := []
   produziert := []
-  boden := floorOf u f
+  boden := f.boden
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
@@ -231,6 +231,34 @@ def sigAt (u : UProg) (n : Nat) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty :=
   if h : n < u.fns.length then mkSig u (u.fns.get ⟨n, h⟩) else dummySig u
 
+/-- `invarianten_gehalten` for the declaration of every `UProg`. -/
+theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
+    (h : (traegerD u i).any (sigAt u n).schreibt = true) (t : Fin u.tabs.length) (ht : t ∈ traegerD u i)
+    (L : Fin u.locks.length) (hL : Sum.inl L ∈ needsAt u t) : L ∈ (sigAt u n).haelt := by
+  unfold traegerD at h ht
+  cases hok : invOkB u i with
+  | false => rw [hok] at ht; simp at ht
+  | true =>
+    rw [hok] at h ht
+    simp only [if_true] at h ht
+    by_cases hn : n < u.fns.length
+    · have hs : sigAt u n = mkSig u (u.fns.get ⟨n, hn⟩) := by unfold sigAt; rw [dif_pos hn]
+      rw [hs] at h ⊢
+      unfold invOkB at hok
+      have hf := List.all_eq_true.mp hok ⟨n, hn⟩ (List.mem_finRange _)
+      simp only [Bool.or_eq_true, Bool.not_eq_true'] at hf
+      rcases hf with hf | hf
+      · have h' : (invTraeger u i).any (writesAt u (u.fns.get ⟨n, hn⟩)) = true := h
+        simp only [fnAt] at hf
+        rw [hf] at h'
+        cases h'
+      · have ht' := List.all_eq_true.mp hf t ht
+        have hw := List.all_eq_true.mp ht' (Sum.inl L) hL
+        exact of_decide_eq_true hw
+    · have hs : sigAt u n = dummySig u := by unfold sigAt; rw [dif_neg hn]
+      rw [hs] at h
+      simp [dummySig] at h
+
 /-- A non-empty emptiness test means a non-empty list. -/
 theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
     l ≠ [] := by
@@ -239,8 +267,8 @@ theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
   | cons _ _ => simp
 
 /-- The declaration built from the elaborated program itself: index
-    carriers (`Fin`) for tables, locks, fields and functions; no
-    globals, marks, invariants, axioms, registers or assumptions. -/
+    carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
+    (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
 def declOf (u : UProg) : Deklaration where
   Tab := Fin u.tabs.length
   decTab := inferInstance
@@ -253,10 +281,10 @@ def declOf (u : UProg) : Deklaration where
   Glob := Fin u.globs.length
   decGlob := inferInstance
   gtyp := fun g => (globAt u g).ty.toTy
-  nutzlast := fun _ => []
+  nutzlast := nutzAt u
   atomar := fun g => (globAt u g).atomic
-  geteilt := fun t => (!((needsAt u t).isEmpty))
-  ggeteilt := fun g => (!((gneedsAt u g).isEmpty))
+  geteilt := fun t => (tabAt u t).shared && !((needsAt u t).isEmpty)
+  ggeteilt := fun g => (globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)
   Lock := Fin u.locks.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
@@ -272,27 +300,34 @@ def declOf (u : UProg) : Deklaration where
   sigNr := sigAt u
   eigner_nie_erzeugt :=
     fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
-  Inv := Empty
-  traeger := fun e => nomatch e
-  invs := []
+  Inv := Fin u.invs.length
+  traeger := traegerD u
+  invs := List.finRange u.invs.length
   Ax := Fin u.axs.length
   aparams := fun a => (uaxAt u a).params
   aerg := fun a => (uaxAt u a).res
   aschreibt := fun _ _ => false
   agschreibt := fun _ _ => false
   agruende := fun a => (uaxAt u a).gruende
-  Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  Reg := Fin u.regs.length
+  rtyp := fun r => .int (regAt u r).lo (regAt u r).hi
+  rklasse := fun r => (regAt u r).klasse
+  spiegel := spiegelAt u
+  rzusage := fun r (v : Zahl (regAt u r).lo (regAt u r).hi) => (regAt u r).zusageBei v.n
+  rtraeger := rtraegerAt u
   Annahme := Option (Fin u.annahmen.length)
   a10 := none
-  geteilt_bewacht :=
-    fun t h => notEmpty_ne_nil _ (show ((!((needsAt u t).isEmpty)) = true) from h)
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht :=
-    fun g h => Or.inl (notEmpty_ne_nil _ (show ((!((gneedsAt u g).isEmpty)) = true) from h))
+  geteilt_bewacht := fun t h => by
+    have h' : ((tabAt u t).shared && !((needsAt u t).isEmpty)) = true := h
+    simp only [Bool.and_eq_true] at h'
+    exact notEmpty_ne_nil _ h'.2
+  invarianten_gehalten := fun n i h t ht L hL => invGehalten u n i h t ht L hL
+  ggeteilt_bewacht := fun g h => by
+    have h' : ((globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)) = true := h
+    simp only [Bool.and_eq_true, Bool.or_eq_true] at h'
+    rcases h'.2 with h1 | h2
+    · exact Or.inl (notEmpty_ne_nil _ h1)
+    · exact Or.inr h2
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
 
@@ -1082,6 +1117,26 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | .ok v => .ok (Expr.var v)
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+  | .alle tn x body =>
+    if er.isSome then .error "quantifier beside a result without G form" else
+    match tabIdx u.tabs tn with
+    | .error e => .error e
+    | .ok t =>
+      if hL : (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ) then
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fn.mitIndex x t.val ((declOf u).count t)) none body with
+        | .error e => .error e
+        | .ok b => .ok (Expr.forallSlots (D := declOf u) t b hL)
+      else .error "access without held guard"
+  | .einige tn x body =>
+    if er.isSome then .error "quantifier beside a result without G form" else
+    match tabIdx u.tabs tn with
+    | .error e => .error e
+    | .ok t =>
+      if hL : (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ) then
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fn.mitIndex x t.val ((declOf u).count t)) none body with
+        | .error e => .error e
+        | .ok b => .ok (Expr.existsSlots (D := declOf u) t b hL)
+      else .error "access without held guard"
 
 /-- The `ensures` conjunction (empty is `.tru`). -/
 def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))

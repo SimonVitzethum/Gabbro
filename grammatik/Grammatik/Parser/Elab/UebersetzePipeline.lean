@@ -17,8 +17,7 @@ namespace Gabbro.Grammatik
 open Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.UebersetzeAllg2
 
 /-- **THE LEAN TRANSLATION PIPELINE**: lex, parse, preprocess (`pre108`:
-    `concurrent` items stripped -- they carry the declared starts, which the
-    `Einheit` holds --, bare `u32` as its full range), elaborate, lower
+    the module unwrapped, bare `u32` as its full range), elaborate, lower
     GENERICALLY onto the declaration built from the source. Every stage a
     Lean function; nothing Rust. -/
 def uebersetzeAllg (s : String) :
@@ -80,6 +79,56 @@ theorem except_ok_get {ε α : Type} {x : Except ε α} (h : x.toOption.isSome =
   cases x with
   | error e => simp [Except.toOption] at h
   | ok a => rfl
+
+/-- The declared starts of an elaborated unit, as functions of its declaration: the thread roots (the
+    `concurrent` members, then the dispatch roots of the `entry` items, `UProg.roots`), the functions entered
+    by hardware (`UProg.hands`, `Programm.unterbricht`) and the threads created by `start { .. };`
+    (`UProg.gestartet`). The elaborator admits only names of parameterless functions of the unit, so no name
+    is dropped (`starts_laenge` below). -/
+structure Starts (u : UProg) where
+  roots : List (declOf u).Fn
+  hands : List (declOf u).Fn
+  gestartet : List (declOf u).Fn
+
+/-- Names of functions of the unit as functions of the declaration. -/
+def fnsVon (u : UProg) (ns : List String) : List (declOf u).Fn :=
+  ns.filterMap fun n => (fnIdx u.fns n).toOption
+
+/-- The declared starts of a unit. -/
+def startsOf (u : UProg) : Starts u :=
+  ⟨fnsVon u u.roots, fnsVon u u.hands, fnsVon u u.gestartet⟩
+
+/-- **THE PIPELINE WITH THE DECLARED STARTS**: `uebersetzeAllg`, and the starts of the unit it built (what the
+    goal theorem's runtime premise reads: `Einheit.starts`, `Programm.unterbricht`, `Einheit.gestartet`). -/
+def uebersetzeMitStarts (s : String) :
+    Except String (Σ u : UProg, Programm (declOf u) × List (declOf u).Fn × Starts u) :=
+  match uebersetzeAllg s with
+  | .error e => .error e
+  | .ok ⟨u, P, fs⟩ => .ok ⟨u, P, fs, startsOf u⟩
+
+/-- The starts ride the pipeline unchanged: same unit, same program. -/
+theorem uebersetzeMitStarts_ok {s : String} {u : UProg} {P : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (h : uebersetzeAllg s = .ok ⟨u, P, fs⟩) :
+    uebersetzeMitStarts s = .ok ⟨u, P, fs, startsOf u⟩ := by
+  unfold uebersetzeMitStarts
+  rw [h]
+
+/-- A `filterMap` that drops nothing keeps the length. -/
+theorem filterMap_laenge {α β : Type} (f : α → Option β) (ns : List α) (h : ∀ n ∈ ns, (f n).isSome = true) :
+    (ns.filterMap f).length = ns.length := by
+  induction ns with
+  | nil => rfl
+  | cons n rest ih =>
+    have hr : ∀ m ∈ rest, (f m).isSome = true := fun m hm => h m (List.mem_cons_of_mem _ hm)
+    have hn := h n (List.mem_cons_self ..)
+    cases hx : f n with
+    | none => rw [hx] at hn; cases hn
+    | some b => simp [List.filterMap_cons, hx, ih hr]
+
+/-- A name the unit knows is kept: `fnsVon` drops exactly the unknown names. -/
+theorem fnsVon_laenge (u : UProg) (ns : List String) (h : ∀ n ∈ ns, (fnIdx u.fns n).toOption.isSome = true) :
+    (fnsVon u ns).length = ns.length :=
+  filterMap_laenge (β := Fin u.fns.length) (fun n => (fnIdx u.fns n).toOption) ns h
 
 /-- The functions of a generically lowered program are numbered. -/
 instance instDecEqDeclOfFn (u : UProg) : DecidableEq (declOf u).Fn :=

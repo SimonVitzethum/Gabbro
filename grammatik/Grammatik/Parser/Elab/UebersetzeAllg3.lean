@@ -428,6 +428,70 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
             | .ok (b, r) => .ok (Block.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
+  | Γ, fn, n + 1, Λ, pe, .bindFnref x f :: rest =>
+    match fnIdx u.fns f with
+    | .error e => .error e
+    | .ok g =>
+      match lowSeqL (l := l) u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r') => .ok (Block.bind (Expr.fnref (D := declOf u) g g.val rfl) b, r')
+  | Γ, fn, n + 1, Λ, pe, .bindCallInd x p cname args :: rest =>
+    match lowRufKopf u caller Γ fn Λ cname args with
+    | .error e => .error e
+    | .ok k =>
+      match lowZeiger u Γ fn p k.callee with
+      | .error e => .error e
+      | .ok v =>
+        withErg u k.callee fun τ hE =>
+          match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r') =>
+            if hr : (declOf u).gruende k.callee = 0 then
+              have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) Λ := by
+                rw [nach_eq u k.callee Λ]
+                exact b
+              .ok (Block.bindCallInd (D := declOf u) (n := k.callee.val) (Expr.var v) k.args hE k.hp hr b', r')
+            else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, n + 1, Λ, pe, .awaitBind x a :: rest =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        match lowSeqL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Block.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd b, r')
+      else .error "access without held guard"
+  | Γ, fn, n + 1, Λ, pe, .regRead x d r :: rest =>
+    match regIdx u.regs d r with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match lowSeqL (l := l) u caller (.int (regAt u g).lo (regAt u g).hi :: Γ)
+            (fn.mitBindung x ((regAt u g).lo, (regAt u g).hi)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Block.regRead (D := declOf u) g hk b, r')
+      else .error "lower: register read against its class"
+  | Γ, fn, n + 1, Λ, pe, .regReadElse x d r :: rest =>
+    match regIdx u.regs d r with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match (regAt u g).pruefung with
+        | none => .error "lower: register read without a check"
+        | some p =>
+          match lowEns u (.int (regAt u g).lo (regAt u g).hi :: Γ) Λ
+              (fn.mitBindung (regAt u g).name ((regAt u g).lo, (regAt u g).hi)) none p with
+          | .error e => .error e
+          | .ok zu =>
+            match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+            | .error e => .error e
+            | .ok (sonst, .blkEnd :: rest') =>
+              match lowSeqL (l := l) u caller (.int (regAt u g).lo (regAt u g).hi :: Γ)
+                  (fn.mitBindung x ((regAt u g).lo, (regAt u g).hi)) n Λ pe rest' with
+              | .error e => .error e
+              | .ok (b, r') => .ok (Block.regReadElse (D := declOf u) g hk zu sonst b, r')
+            | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: register read against its class"
   | Γ, fn, n + 1, Λ, pe, .ret v :: rest =>
     match lowRetStmt u caller Γ fn Λ pe v with
     | .error e => .error e
@@ -674,6 +738,21 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
+  | Γ, fn, n + 1, Λ, pe, .bindFnref x f :: rest =>
+    match fnIdx u.fns f with
+    | .error e => .error e
+    | .ok g =>
+      match lowEndL (l := l) u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val rfl) b, r')
+  | _, _, _ + 1, _, _, .bindCallInd .. :: _ =>
+    .error "lower: an indirect call bound in an else branch has no G form (Endblock lacks bindCallInd)"
+  | _, _, _ + 1, _, _, .awaitBind .. :: _ =>
+    .error "lower: an awaits in an else branch has no G form (Endblock lacks awaits)"
+  | _, _, _ + 1, _, _, .regRead .. :: _ =>
+    .error "lower: a register read in an else branch has no G form (Endblock lacks regRead)"
+  | _, _, _ + 1, _, _, .regReadElse .. :: _ =>
+    .error "lower: a register read in an else branch has no G form (Endblock lacks regReadElse)"
   | _, _, _ + 1, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
   | Γ, fn, n + 1, Λ, pe, .bindAxElse y c args e :: rest =>
@@ -842,6 +921,21 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
+  | Γ, fn, n + 1, .bindFnref x f :: rest, r =>
+    match fnIdx u.fns f with
+    | .error e => .error e
+    | .ok g =>
+      match lowBodyF u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n rest r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val rfl) e)
+  | _, _, _ + 1, .bindCallInd .. :: _, _ =>
+    .error "lower: an indirect call bound at the top level of a body has no G form (Endblock lacks bindCallInd)"
+  | _, _, _ + 1, .awaitBind .. :: _, _ =>
+    .error "lower: an awaits at the top level of a body has no G form (Endblock lacks awaits)"
+  | _, _, _ + 1, .regRead .. :: _, _ =>
+    .error "lower: a register read at the top level of a body has no G form (Endblock lacks regRead)"
+  | _, _, _ + 1, .regReadElse .. :: _, _ =>
+    .error "lower: a register read at the top level of a body has no G form (Endblock lacks regReadElse)"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
   | Γ, fn, n + 1, .ret v :: rest, r =>
@@ -1012,10 +1106,17 @@ abbrev RumpTy (u : UProg) (f : Fin u.fns.length) :=
     ((declOf u).params f)
     (Signatur.anfang (declOf u) ((declOf u).signatur f))
 
+/-- The requires type of a lowered function. -/
+abbrev ReqTy (u : UProg) (f : Fin u.fns.length) :=
+  Expr (declOf u) ((declOf u).params f) (Signatur.anfang (declOf u) ((declOf u).signatur f)) .bool
+
 /-- One whole function: contracts and body through the
     declaration. -/
 def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
-    Except String (EnsTy u c × RumpTy u c) :=
+    Except String (EnsTy u c × RumpTy u c × ReqTy u c) :=
+  match lowEnsList u (ctxOf u c) (resOf u c) (fnAt u c) none (fnAt u c).needs with
+  | .error e => .error e
+  | .ok r0 =>
   match lowEnsList u (ErgCtx (ctxOf u c) ((verOf u c).erg))
       (resOf u c) (fnAt u c) (fnAt u c).res
       (fnAt u c).gives with
@@ -1036,7 +1137,11 @@ def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
           (Signatur.anfang (declOf u) ((declOf u).signatur c))
         rw [← ctxParams_eq u c, ← anfangRes_eq u c]
         exact b0
-      .ok (e1, b1)
+      have r1 : ReqTy u c := by
+        show Expr (declOf u) ((declOf u).params c) (Signatur.anfang (declOf u) ((declOf u).signatur c)) .bool
+        rw [← ctxParams_eq u c, ← anfangRes_eq u c]
+        exact r0
+      .ok (e1, b1, r1)
 
 /-- Every function lowers (the success check of `lowerAllg`;
     the values ride `lowerFnAt` directly). -/
@@ -1078,7 +1183,7 @@ theorem lowerEach_all_ok (u : UProg) (fs : List (Fin u.fns.length))
 /-- The lowered pair at an index known good. -/
 def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     (h : ∃ v, lowerFnAt u f = .ok v) :
-    EnsTy u f × RumpTy u f :=
+    EnsTy u f × RumpTy u f × ReqTy u f :=
   match hm : lowerFnAt u f with
   | .ok v => v
   | .error e => by
@@ -1087,21 +1192,84 @@ def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     rw [hv] at hm
     simp at hm
 
+/-- The type of a lowered invariant: a predicate over no parameter, under the guards of its carriers. -/
+abbrev InvTy (u : UProg) (i : Fin u.invs.length) := Expr (declOf u) [] (invSicht (declOf u) i) .bool
+
+/-- The requires of a function: `.tru` without a `requires` predicate (what the conjunction of none is),
+    else the lowered conjunction. -/
+def reqOf (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fin u.fns.length) : ReqTy u f :=
+  if (fnAt u f).needs = [] then Expr.tru else R f
+
+theorem reqOf_leer (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fin u.fns.length)
+    (h : (fnAt u f).needs = []) : reqOf u R f = Expr.tru := by
+  unfold reqOf
+  rw [if_pos h]
+
 /-- Assemble lowered functions to a program (no contract
     content in `requires`, per-function `ensures` and bodies). -/
 def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
-    (B : ∀ f : Fin u.fns.length, RumpTy u f) :
+    (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f)
+    (I : ∀ i : Fin u.invs.length, InvTy u i) :
     Programm (declOf u) where
-  invariante := fun i => nomatch i
-  requires := fun _ => Expr.tru
+  invariante := I
+  requires := fun f => reqOf u R f
   ensures := fun f => E f
   rumpf := fun f => B f
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
+
+/-- The function of no parameter in whose scope an invariant is read. -/
+def leerFn : UFn :=
+  { name := "", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [],
+    ret := .empty }
+
+/-- One invariant, lowered. -/
+def lowerInvAt (u : UProg) (i : Fin u.invs.length) : Except String (InvTy u i) :=
+  lowEns u [] (invSicht (declOf u) i) leerFn none (u.invs.get i).pred
+
+/-- Every invariant lowers. -/
+def lowerInvs (u : UProg) : List (Fin u.invs.length) → Except String Unit
+  | [] => .ok ()
+  | i :: is =>
+    match lowerInvAt u i with
+    | .error e => .error e
+    | .ok _ => lowerInvs u is
+
+theorem lowerInvs_all_ok (u : UProg) (is : List (Fin u.invs.length)) (i : Fin u.invs.length) (hm : i ∈ is)
+    (h : lowerInvs u is = .ok ()) : ∃ v, lowerInvAt u i = .ok v := by
+  induction is with
+  | nil => simp at hm
+  | cons j js ih =>
+    simp only [List.mem_cons] at hm
+    cases hj : lowerInvAt u j with
+    | error e =>
+      have hE : lowerInvs u (j :: js) = .error e := by simp [lowerInvs, hj]
+      rw [hE] at h
+      simp at h
+    | ok v =>
+      have hO : lowerInvs u (j :: js) = lowerInvs u js := by simp [lowerInvs, hj]
+      cases hm with
+      | inl he => subst he; exact ⟨v, hj⟩
+      | inr hm' => rw [hO] at h; exact ih hm' h
+
+/-- The lowered invariant at an index known good. -/
+def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i = .ok v) : InvTy u i :=
+  match hm : lowerInvAt u i with
+  | .ok v => v
+  | .error _ => by
+    exfalso
+    obtain ⟨v, hv⟩ := h
+    rw [hv] at hm
+    simp at hm
 
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it. -/
 def lowerAllg (u : UProg) :
     Except String (Programm (declOf u) × List (declOf u).Fn) :=
+  match hI : lowerInvs u (List.finRange u.invs.length) with
+  | .error e => .error e
+  | .ok _ =>
+  have wI : ∀ i : Fin u.invs.length, ∃ v, lowerInvAt u i = .ok v := fun i =>
+    lowerInvs_all_ok u (List.finRange u.invs.length) i (List.mem_finRange i) hI
   match h : lowerEach u (List.finRange u.fns.length) with
   | .error e => .error e
   | .ok _ =>
@@ -1110,7 +1278,8 @@ def lowerAllg (u : UProg) :
       lowerEach_all_ok u (List.finRange u.fns.length) f
         (List.mem_finRange f) h
     .ok (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
-      (fun f => (lowerAtPair u f (w f)).2),
+      (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
+      (fun i => lowerInvGut u i (wI i)),
       List.finRange u.fns.length)
 
 /-! ## 104 pins on the generically lowered program -/
@@ -1664,12 +1833,10 @@ end Gabbro.Grammatik.Parser.UebersetzeAllg2
 /-
   CUTS: what is not proved here.
 
-  1. `RufPasst` harvest is exactness in disguise: `hh` asks the
-     callee held set inside the caller resources, `hx` (with every
-     floor `none`) asks the reverse, so a call lowers only at an
-     exact held set -- the same refusal `uAnw` states over names.
-     A floor-bearing declaration would need the rank checks
-     computed, not harvested; `mkSig` never sets `boden`.
+  1. `RufPasst`: `hh` asks the callee held set inside the caller
+     resources; `hx` and `hb` are decided against the floors, which
+     are DATA of the elaborated functions (`UFn.boden`, filled by
+     `uMitBoden` with `floorOf`) and read by `mkSig`.
   2. `beq`-style soundness is proved for nothing new here; the
      `beqElabU`/`beqTopTief` pins are reused from `Uebersetze.lean`
      (same cut as there).

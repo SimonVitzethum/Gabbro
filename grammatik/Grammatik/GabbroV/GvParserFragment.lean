@@ -56,7 +56,7 @@ theorem erstAblehnung_104_zeuge :
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
     `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
-    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`, `reason`, `syscall` gates and their bindings). -/
+    kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`, `reason`, `syscall` gates and their bindings, `device`). -/
 def istGegenstand : SItemTief → Bool
   | .constT .. => false
   | .typeT .. => false
@@ -74,6 +74,8 @@ def istGegenstand : SItemTief → Bool
   | .varT .. => false
   | .goalT .. => false
   | .concT .. => false
+  | .devT .. => false
+  | .groupT .. => false
   | _ => true
 
 /-- **One off-fragment item fails the item check.** By cases over all
@@ -99,13 +101,13 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
   | whyT _ _ _ => simp [istGegenstand] at he
   | stateT _ _ => rfl
-  | devT _ _ _ _ => rfl
+  | devT _ _ _ _ => simp [istGegenstand] at he
   | assumT _ _ _ _ => simp [istGegenstand] at he
   | axiomT _ _ _ _ _ _ => rfl
   | checkT _ => rfl
   | atomT _ _ _ _ _ => simp [istGegenstand] at he
   | rcuT _ _ _ => rfl
-  | groupT _ _ _ => rfl
+  | groupT _ _ _ => simp [istGegenstand] at he
   | concT _ => simp [istGegenstand] at he
   | accT _ _ _ _ => rfl
   | walkT _ => rfl
@@ -137,6 +139,8 @@ def istAngenommen : SItemTief → Bool
   | .varT .. => true
   | .goalT .. => true
   | .concT .. => true
+  | .devT .. => true
+  | .groupT .. => true
   | _ => false
 
 /-- **An accepted head steps past the item check.** The mirror of
@@ -162,13 +166,13 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | arenaT _ _ _ _ _ _ => rfl
   | whyT _ _ _ => rfl
   | stateT _ _ => simp [istAngenommen] at he
-  | devT _ _ _ _ => simp [istAngenommen] at he
+  | devT _ _ _ _ => rfl
   | assumT _ _ _ _ => rfl
   | axiomT _ _ _ _ _ _ => simp [istAngenommen] at he
   | checkT _ => simp [istAngenommen] at he
   | atomT _ _ _ _ _ => rfl
   | rcuT _ _ _ => simp [istAngenommen] at he
-  | groupT _ _ _ => simp [istAngenommen] at he
+  | groupT _ _ _ => rfl
   | concT _ => rfl
   | accT _ _ _ _ => simp [istAngenommen] at he
   | walkT _ => simp [istAngenommen] at he
@@ -184,7 +188,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
 /-- **A head that is neither accepted nor excused fails at once.** With
     no fragment excuse (`istGegenstand` false) and no accepted shape
     (`istAngenommen` false) the head is off the fragment
-    (a `use`, a device, ...), and `uRestFehler` refuses it without looking at the tail. -/
+    (a `use`, a `format`, ...), and `uRestFehler` refuses it without looking at the tail. -/
 theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = false) (ha : istAngenommen hd = false) :
     uRestFehler (hd :: tl) = .error "item without G form" := by
@@ -205,13 +209,13 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | arenaT _ _ _ _ _ _ => simp [istAngenommen] at ha
   | whyT _ _ _ => simp [istAngenommen] at ha
   | stateT _ _ => simp [istGegenstand] at he
-  | devT _ _ _ _ => simp [istGegenstand] at he
+  | devT _ _ _ _ => simp [istAngenommen] at ha
   | assumT _ _ _ _ => simp [istAngenommen] at ha
   | axiomT _ _ _ _ _ _ => simp [istGegenstand] at he
   | checkT _ => simp [istGegenstand] at he
   | atomT _ _ _ _ _ => simp [istAngenommen] at ha
   | rcuT _ _ _ => simp [istGegenstand] at he
-  | groupT _ _ _ => simp [istGegenstand] at he
+  | groupT _ _ _ => simp [istAngenommen] at ha
   | concT _ => simp [istAngenommen] at ha
   | accT _ _ _ _ => simp [istGegenstand] at he
   | walkT _ => simp [istGegenstand] at he

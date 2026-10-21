@@ -267,21 +267,24 @@ theorem sp0_glob_luecke (u : UProg) (g : Fin u.globs.length) (lo hi : Int)
 
 /-! ## The bridge: `StartPflicht` from lowering plus zero memory -/
 
-/-- **The parser's lowering writes no `requires`** (`gv_lowerAllg_requires`):
-    `progOfFn` sets `requires := fun _ => .tru` for every accepted program --
+/-- **Without `requires` predicates the parser's lowering writes no `requires`** (`gv_lowerAllg_requires`):
+    `progOfFn` sets `requires f := .tru` for every function whose `needs` is empty (`reqOf_leer`) --
     mirror of the accepted `bruecke` S4 lemma over the same definition (no
     interpreter duplicated). -/
 theorem gv_lowerAllg_requires (u : UProg) (P : Programm (declOf u))
-    (fs : List (declOf u).Fn) (h : lowerAllg u = .ok (P, fs)) :
+    (fs : List (declOf u).Fn) (h : lowerAllg u = .ok (P, fs)) (hn : ∀ g ∈ u.fns, g.needs = []) :
     ∀ f, P.requires f = .tru := by
   unfold lowerAllg at h
+  split at h
+  · cases h
   split at h
   · cases h
   · injection h with h1
     injection h1 with h2 h3
     subst h2
     intro f
-    rfl
+    dsimp only [progOfFn]
+    exact reqOf_leer u _ f (hn _ (List.get_mem u.fns f))
 
 /-- **The start duty without `Initially`** (`gv_startPflicht`): for every
     declaration of the parser fragment, lowering-ok plus the decided
@@ -293,7 +296,8 @@ theorem gv_lowerAllg_requires (u : UProg) (P : Programm (declOf u))
 theorem gv_startPflicht (u : UProg) (P : Programm (declOf u))
     (fs : List (declOf u).Fn) (hlow : lowerAllg u = .ok (P, fs))
     (hSp0 : sp0OkB u = true) (E : Einheit (declOf u))
-    (hP : E.P = P) (hS : E.S = SperrInv.leer _) (hsp0 : E.sp0 = sp0Of u hSp0) :
+    (hP : E.P = P) (hS : E.S = SperrInv.leer _) (hsp0 : E.sp0 = sp0Of u hSp0)
+    (hn : ∀ g ∈ u.fns, g.needs = []) :
     StartPflicht E := by
   constructor
   · intro L
@@ -301,7 +305,7 @@ theorem gv_startPflicht (u : UProg) (P : Programm (declOf u))
     rfl
   · intro a _
     unfold ReqAmEintritt
-    rw [hP, gv_lowerAllg_requires u P fs hlow]
+    rw [hP, gv_lowerAllg_requires u P fs hlow hn]
     rfl
 
 /-! ## The joint witness -/
