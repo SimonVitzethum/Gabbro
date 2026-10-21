@@ -291,7 +291,7 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .regRead _ _ rest => rest.logikFrei
   | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
-  | .awaits _ _ _ _ rest => rest.logikFrei
+  | .awaits _ _ _ _ _ rest => rest.logikFrei
   | .exchange _ _ _ _ rest => rest.logikFrei
   | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .check _ sonst rest => sonst.logikFrei && rest.logikFrei
@@ -314,7 +314,7 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .regRead _ _ rest => rest.logikFrei
   | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
-  | .awaits _ _ _ _ rest => rest.logikFrei
+  | .awaits _ _ _ _ _ rest => rest.logikFrei
   | .bindCallInd _ _ _ _ _ rest => rest.logikFrei
 
 end

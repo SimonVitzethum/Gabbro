@@ -88,7 +88,7 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mB A rest
   | .regRead _ _ rest => mB A rest
   | .regReadElse _ _ _ sonst rest => mE A sonst && mB A rest
-  | .awaits _ _ _ _ rest => mB A rest
+  | .awaits _ _ _ _ _ rest => mB A rest
   | .exchange _ _ _ _ rest => mB A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mB A rest
   | .check _ sonst rest => mE A sonst && mB A rest
@@ -121,7 +121,7 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mE A rest
   | .regRead _ _ rest => mE A rest
   | .regReadElse _ _ _ sonst rest => mE A sonst && mE A rest
-  | .awaits _ _ _ _ rest => mE A rest
+  | .awaits _ _ _ _ _ rest => mE A rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mE A rest
 end
 
@@ -177,7 +177,7 @@ theorem mB_alsBlock (A : Merkmal D) :
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .regReadElse r hk z sonst rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
-  | _, _, .awaits g pl hp hL rest => by
+  | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]

@@ -266,7 +266,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
         · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))).zuAusgang σ' h
       · simp [Ausgang.welt] at h
-  | .awaits g _ _ hL rest, σ, ρ, hbo, hh, σ', h => by
+  | .awaits g _ _ hL _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       split at h
       · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
@@ -412,7 +412,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
         · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))) σ' h
       · simp [EndAusgang.welt] at h
-  | .awaits g _ _ hL rest, σ, ρ, hbo, hh, σ', h => by
+  | .awaits g _ _ hL _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       split at h
       · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]

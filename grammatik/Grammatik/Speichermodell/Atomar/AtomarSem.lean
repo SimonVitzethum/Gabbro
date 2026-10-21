@@ -235,7 +235,7 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execBlockHA rest σ (.cons v ρ)).schrumpf
           else (execEndHA sonst σ ρ).zuAusgang
       | Option.none => .hardware (.register r)
-  | .awaits g _ _ _ rest, σ, ρ =>
+  | .awaits g _ _ _ _ rest, σ, ρ =>
       let σ := leseA A σ Λ [.inr g]
       if O.sichtbar g σ then
         (execBlockHA rest σ (.cons (σ.globs g) ρ)).schrumpf
@@ -330,7 +330,7 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execEndHA rest σ (.cons v ρ)).schrumpf
           else (execEndHA sonst σ ρ)
       | Option.none => .hardware (.register r)
-  | .awaits g _ _ _ rest, σ, ρ =>
+  | .awaits g _ _ _ _ rest, σ, ρ =>
       let σ := leseA A σ Λ [.inr g]
       if O.sichtbar g σ then
         (execEndHA rest σ (.cons (σ.globs g) ρ)).schrumpf
@@ -522,7 +522,7 @@ theorem Block.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
-  | .awaits g _ _ _ rest, hT, σ, ρ => by
+  | .awaits g _ _ _ _ rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ [Sum.inr g], ¬ T x := fun x h => hT x (by
         simp only [List.mem_singleton] at h; simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
@@ -608,7 +608,7 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
-  | .awaits g _ _ _ rest, hT, σ, ρ => by
+  | .awaits g _ _ _ _ rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ [Sum.inr g], ¬ T x := fun x h => hT x (by
         simp only [List.mem_singleton] at h; simp [endblockOrteP, h])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])

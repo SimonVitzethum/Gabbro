@@ -541,7 +541,7 @@ theorem block_treu :
         · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
         · exact (TreuEnd.vor hl (end_treu sonst _ ρ)).zuAusgang σ' h
       · simp [Ausgang.welt] at h
-  | .awaits g _ _ hL rest, σ, ρ, σ', h => by
+  | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
@@ -684,7 +684,7 @@ theorem end_treu :
         · exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
         · exact (TreuEnd.vor hl (end_treu sonst _ ρ)) σ' h
       · simp [EndAusgang.welt] at h
-  | .awaits g _ _ hL rest, σ, ρ, σ', h => by
+  | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]

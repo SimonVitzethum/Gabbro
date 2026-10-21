@@ -91,7 +91,7 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
-  | .awaits g payload hp hL rest, σ, ρ => by
+  | .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .exchange g neu hw hL rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
@@ -131,7 +131,7 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
-  | .awaits g payload hp hL rest, σ, ρ => by
+  | .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindCallInd p args he hp hr rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
@@ -192,7 +192,7 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .regRead _ _ rest => rest.ohneLocks
   | .regReadElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
-  | .awaits _ _ _ _ rest => rest.ohneLocks
+  | .awaits _ _ _ _ _ rest => rest.ohneLocks
   | .exchange _ _ _ _ rest => rest.ohneLocks
   | .narrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .check _ sonst rest => sonst.ohneLocks && rest.ohneLocks
@@ -214,7 +214,7 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .regRead _ _ rest => rest.ohneLocks
   | .regReadElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
-  | .awaits _ _ _ _ rest => rest.ohneLocks
+  | .awaits _ _ _ _ _ rest => rest.ohneLocks
   | .bindCallInd _ _ _ _ _ rest => rest.ohneLocks
 
 def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
@@ -327,7 +327,7 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
-  | .awaits g payload hp hL rest, h, σ, ρ => by
+  | .awaits g payload hp hL hat rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
   | .exchange g neu hw hL rest, h, σ, ρ => by
@@ -387,7 +387,7 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
-  | .awaits g payload hp hL rest, h, σ, ρ => by
+  | .awaits g payload hp hL hat rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by

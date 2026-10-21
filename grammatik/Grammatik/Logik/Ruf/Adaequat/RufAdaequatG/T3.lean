@@ -451,7 +451,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             by rw [ho2, (Erw.lese _ _ _).offen]⟩
         · exact absurd hex (zuAusgang_ne_ok _ _ _)
       · cases hex
-  | _, _, _, _, _, .awaits g payload hp hL rest, hb => by
+  | _, _, _, _, _, .awaits g payload hp hL hat rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.awaits_inv
       have hW := hZ.welt
@@ -460,7 +460,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · rename_i hvis
         obtain ⟨w, hw⟩ := schrumpf_ok hex
         obtain ⟨M1, hs1, hZ1⟩ := w_awaits (P := P) (O := O) (passes := passes) hZ.1
-          g payload hp hL rest k ρ rfl (by rw [hW]; exact hvis)
+          g payload hp hL hat rest k ρ rfl (by rw [hW]; exact hvis)
         rw [hW] at hZ1
         obtain ⟨M2, hr2, hZ2, ho2⟩ := blockOk rest hr _ _ _ _ hw M1 _ hZ1
           (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))

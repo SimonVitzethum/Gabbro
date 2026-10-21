@@ -414,7 +414,7 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       split
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.none_l _
-  | awaits g pl hp hL rest =>
+  | awaits g pl hp hL hat rest =>
       simp only [kEnde]
       split
       · exact KRel.lokal _ _ _ _ _ rfl hsp
@@ -527,7 +527,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
           rw [(hW.lese Λ zusage.orte).eval zusage (alle_von hST hb.1.1.2) (.cons v ρ)]
           exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp)
             (fun _ => KRel.lokal _ _ _ _ _ rfl hsp)
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [hRL.2 g _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp

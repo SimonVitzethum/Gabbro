@@ -105,7 +105,7 @@ theorem blockG_R {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
   | _, _, _, _, _, _, .regRead r hk rest hr => .regRead r hk rest (blockG_R hV hr)
   | _, _, _, _, _, _, .regReadElse r hk z sonst rest hs hr =>
       .regReadElse r hk z sonst rest (endG_R hV hs) (blockG_R hV hr)
-  | _, _, _, _, _, _, .awaits g payload hp hL rest hr => .awaits g payload hp hL rest (blockG_R hV hr)
+  | _, _, _, _, _, _, .awaits g payload hp hL hat rest hr => .awaits g payload hp hL hat rest (blockG_R hV hr)
   | _, _, _, _, _, _, .exchange g neu hw hL rest hr => .exchange g neu hw hL rest (blockG_R hV hr)
   | _, _, _, _, _, _, .narrow e lo hi sonst rest hs hr =>
       .narrow e lo hi sonst rest (endG_R hV hs) (blockG_R hV hr)

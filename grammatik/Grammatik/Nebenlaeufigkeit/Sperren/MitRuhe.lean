@@ -584,7 +584,7 @@ def ruB {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .regRead r hk rest => .regRead r hk (ruB rest)
   | _, _, _, _, .regReadElse r hk zusage sonst rest =>
       .regReadElse r hk (ruE zusage) (ruEnd sonst) (ruB rest)
-  | _, _, _, _, .awaits g payload hp hL rest => .awaits g payload hp (gdarfR hL) (ruB rest)
+  | _, _, _, _, .awaits g payload hp hL hat rest => .awaits g payload hp (gdarfR hL) hat (ruB rest)
   | _, _, _, _, .exchange g neu hw hL rest => .exchange g (ruE neu) hw (gdarfR hL) (ruB rest)
   | _, _, _, _, .narrow e lo' hi' sonst rest => .narrow (ruE e) lo' hi' (ruEnd sonst) (ruB rest)
   | _, _, _, _, .check c sonst rest => .check (ruE c) (ruEnd sonst) (ruB rest)
@@ -622,7 +622,7 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
   | _, _, _, .regRead r hk rest => .regRead r hk (ruEnd rest)
   | _, _, _, .regReadElse r hk zusage sonst rest =>
       .regReadElse r hk (ruE zusage) (ruEnd sonst) (ruEnd rest)
-  | _, _, _, .awaits g payload hp hL rest => .awaits g payload hp (gdarfR hL) (ruEnd rest)
+  | _, _, _, .awaits g payload hp hL hat rest => .awaits g payload hp (gdarfR hL) hat (ruEnd rest)
   | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest =>
       .bindCallInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
         (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr

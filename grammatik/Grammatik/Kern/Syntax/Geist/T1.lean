@@ -131,7 +131,7 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .regRead _ _ rest => g001 rest
   | .regReadElse _ _ zusage sonst rest =>
       orteOk (D := D) zusage.orte && g001End sonst && g001 rest
-  | .awaits g _ _ _ rest => orteOk (D := D) [.inr g] && g001 rest
+  | .awaits g _ _ _ _ rest => orteOk (D := D) [.inr g] && g001 rest
   | .exchange g neu _ _ rest =>
       orteOk (D := D) ([.inr g] ++ neu.orte) && g001 rest
   | .narrow e _ _ sonst rest =>
@@ -164,7 +164,7 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .regRead _ _ rest => g001End rest
   | _, _, _, .regReadElse _ _ zusage sonst rest =>
       orteOk (D := D) zusage.orte && g001End sonst && g001End rest
-  | _, _, _, .awaits g _ _ _ rest => orteOk (D := D) [.inr g] && g001End rest
+  | _, _, _, .awaits g _ _ _ _ rest => orteOk (D := D) [.inr g] && g001End rest
   | _, _, _, .bindCallInd p args _ _ _ rest =>
       orteOk (D := D) (p.orte ++ args.orte) && g001End rest
 
@@ -518,7 +518,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001End_korrekt sonst h2.2 o ho'
       · exact g001_korrekt rest h1.2 o ho'
-  | .awaits g payload hp hL rest =>
+  | .awaits g payload hp hL hat rest =>
       intro h ho
       have h0 : (orteOk (D := D) [Sum.inr g] && g001 rest) = true := h
       have ho' : o = Sum.inr g ∨ o ∈ ([] : List (D.Tab ⊕ D.Glob)) ∨ o ∈ Extraktion.blockOrte rest := by
@@ -792,7 +792,7 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
       · exact g001End_korrekt sonst h2.2 o ho'
       · exact g001End_korrekt rest h1.2 o ho'
-  | .awaits g payload hp hL rest =>
+  | .awaits g payload hp hL hat rest =>
       intro h ho
       have h0 : (orteOk (D := D) [Sum.inr g] && g001End rest) = true := h
       have ho' : o = Sum.inr g ∨ o ∈ ([] : List (D.Tab ⊕ D.Glob)) ∨ o ∈ Extraktion.endblockOrte rest := by

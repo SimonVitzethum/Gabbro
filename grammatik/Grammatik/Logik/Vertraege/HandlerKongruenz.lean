@@ -469,7 +469,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
           exact AusgangUnter.ite
             ((Block.kongruent hR rest _ (.cons v ρ)).schrumpf)
             ((Endblock.kongruent hR sonst _ ρ).zuAusgang)
-  | .awaits g hg hw hL rest, σ, ρ => by
+  | .awaits g hg hw hL hat rest, σ, ρ => by
       simp only [execBlock]
       by_cases hs : O.sichtbar g σ = true
       · rw [if_pos hs, if_pos hs]
@@ -595,7 +595,7 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
           exact EndUnter.ite
             ((Endblock.kongruent hR rest _ (.cons v ρ)).schrumpf)
             (Endblock.kongruent hR sonst _ ρ)
-  | .awaits g hg hw hL rest, σ, ρ => by
+  | .awaits g hg hw hL hat rest, σ, ρ => by
       simp only [execEnd]
       by_cases hs : O.sichtbar g σ = true
       · rw [if_pos hs, if_pos hs]

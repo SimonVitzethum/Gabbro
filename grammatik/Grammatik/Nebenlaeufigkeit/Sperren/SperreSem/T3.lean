@@ -259,7 +259,7 @@ theorem Endblock.execBlockH_alsBlock :
           cases execEndH S O U passes R rest _ _ <;> rfl
         · rfl
       · rfl
-  | _, _, .awaits g pl hp hL rest, σ, ρ => by
+  | _, _, .awaits g pl hp hL hat rest, σ, ρ => by
       simp only [Endblock.alsBlock, execBlockH, execEndH]
       split
       · rw [Endblock.execBlockH_alsBlock rest]

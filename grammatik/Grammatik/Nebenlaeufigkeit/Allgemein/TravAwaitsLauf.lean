@@ -410,7 +410,7 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
   have hsp5 : M5.speicher = M.speicher :=
     hZ5.2.trans (hZ4.2.trans (hZ3.2.trans (hZ2.2.trans hZ1.2)))
   -- 6: `awaits` fires: the publication is visible
-  obtain ⟨M6, s6, hZ6⟩ := w_awaits (P := taP) (O := taO) (passes := 0) e5 () [] rfl taGdarfK
+  obtain ⟨M6, s6, hZ6⟩ := w_awaits (P := taP) (O := taO) (passes := 0) e5 () [] rfl taGdarfK rfl
     .nil (.dann .nil (.ende taRetW)) .nil rfl
     (by show decide ((M5.speicher.globs ()).n = 1) = true
         rw [hsp5, hflag]; rfl)
@@ -526,39 +526,6 @@ theorem taLauf : ∃ (ms : Nat → RufMaschineG taD) (fs : Nat → Faden),
 
 /-! ## 5. The witnesses -/
 
-/-- **`rennfrei_g_voll_zeuge`.** Every premise of `rennfrei_g_voll` jointly,
-    on the run of `taP`, for a READ/WRITE pair at distance: thread 0 writes
-    the lock-guarded global `flag` at step 16 (the publish, a memory change
-    `0 -> 1`), thread 1 reads it at step 24 (the `awaits`, a recorded read
-    event); `flag` is guarded by `k`, neither atomic nor a published payload;
-    the conclusion orders the two through a release of `k` by thread 0 and
-    an acquire by thread 1 in between. -/
-theorem rennfrei_g_voll_zeuge : GutO taO ∧ StartExklusiv (D := taD) taInit ∧
-    ∃ (ms : Nat → RufMaschineG taD) (fs : Nat → Faden),
-      LaufG taP taO 0 (RufStartG taP taSp taInit) ms fs 29 ∧ fs 16 ≠ fs 24 ∧
-      SchreibG (ms 16) (ms 17) (fs 16) (Sum.inr ()) ∧
-      LiestG (ms 24) (ms 25) (fs 24) (Sum.inr ()) ∧
-      Bewacht (D := taD) (Sum.inr ()) TaLock.k ∧ ¬ AtomarAusgenommen (D := taD) (Sum.inr ()) ∧
-      ¬ PaarungAusgenommen (D := taD) (Sum.inr ()) ∧ GeordnetG ms fs TaLock.k 16 24 := by
-  obtain ⟨ms, fs, hl, _, _, hf16, hf24, _, _, _, _, _, _, _, hm16, hm17, _, _, hread, _, _⟩ :=
-    taLauf
-  have hw : ¬ TraegerGleich (ms 17).speicher (ms 16).speicher (Sum.inr ()) := by
-    intro h
-    have h' : (ms 17).speicher.globs () = (ms 16).speicher.globs () := h
-    have := congrArg Zahl.n h'
-    rw [hm16, hm17] at this
-    exact absurd this (by decide)
-  have hfg : fs 16 ≠ fs 24 := by rw [hf16, hf24]; decide
-  have hB : Bewacht (D := taD) (Sum.inr ()) TaLock.k := List.mem_singleton.mpr rfl
-  have hr' : LiestG (ms 24) (ms 25) (fs 24) (Sum.inr ()) := by rw [hf24]; exact hread
-  refine ⟨taO_gut, taInit_exklusiv, ms, fs, hl, hfg, Or.inr hw, hr', hB, ?_, ?_, ?_⟩
-  · rintro ⟨g, _, h⟩
-    cases h
-  · rintro ⟨a, p, _, h, _⟩
-    cases h
-  · exact rennfrei_g_voll taP taO 0 taSp taInit taO_gut taInit_exklusiv ms fs 29 hl 16 24
-      (by decide) (by decide) hfg (Sum.inr ()) TaLock.k hB (Or.inr hw) (Or.inl ⟨false, hr'⟩)
-
 /-- **`trav_awaits_zeuge`: reached runs that fire `traverse` and `awaits`,
     jointly with every premise of `ziel_ort_geraet`.** On the two-thread
     program `taP` -- `fuelle` (non-trivial `ensures`: every slot of `tab`
@@ -622,9 +589,10 @@ theorem trav_awaits_zeuge :
   `rufDann`, `dannIteWahr`, `dannAwaits`, `schrumpfVergiss` and two returns;
   every premise of `ziel_ort_geraet` jointly with the run and the
   conclusion on every machine of it (`trav_awaits_zeuge`), including the
-  logged return of `fuelle` with its non-trivial `ensures`; every premise
-  of `rennfrei_g_voll` jointly for a read/write pair at distance 8 through a
-  release/acquire of `k` (`rennfrei_g_voll_zeuge`).
+  logged return of `fuelle` with its non-trivial `ensures`. The witness of
+  `rennfrei_g_voll` (a read/write pair at distance 8 through a
+  release/acquire of `k`) needs a non-atomic carrier and lives on the copy
+  of this run with a plain read (`TravLese.lean`).
 
   What is NOT covered: `forever` (no reached run fires `dannForever`); the
   `leave`/`next` exits of a `traverse` (`dannLeaveTrav`, `dannNextTrav`);
@@ -634,8 +602,9 @@ theorem trav_awaits_zeuge :
   (.traverse …) …)` head to a `.trav` head is `dannTrav` by the shape of
   the rules. The publish/awaits pair runs under the lock `k` (the
   footprint check `fussOrtGB` puts the awaited global into `warte`'s
-  footprint, so its guard must be held by signature); the lock-free
-  discipline of `atomic` globals is not exercised.
+  footprint, so its guard must be held by signature); `flag` is atomic (an
+  `awaits` needs an atomic static) and guarded by `k` as well, so the run
+  does not exercise the lock-free discipline of an unguarded atomic.
 -/
 
 end Gabbro.Grammatik
@@ -643,5 +612,4 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.taLauf0
 #print axioms Gabbro.Grammatik.taLauf1
 #print axioms Gabbro.Grammatik.taLauf
-#print axioms Gabbro.Grammatik.rennfrei_g_voll_zeuge
 #print axioms Gabbro.Grammatik.trav_awaits_zeuge

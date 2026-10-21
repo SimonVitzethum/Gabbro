@@ -1410,7 +1410,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) (by rw [hσ0]; exact hw')
     rw [hσ0] at h1
     exact h1
-  | dannAwaits l Γ Λ Λ' g payload hp hLg rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+  | dannAwaits l Γ Λ Λ' g payload hp hLg hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     subst hs₁
     refine ⟨fadenSA_lese hF hhead _ (.dann rest (.schrumpf k)) _ Λ [.inr g]
@@ -1433,7 +1433,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       rw [hσ0, sichtbar_gleich hRL hQ g (List.mem_append_right _ List.mem_cons_self) hg,
         sichtbar_lese hRL.2]
       exact hvis
-    have h1 := semHA_awaits S O' U A passes R g payload hp hLg rest k σ0 ρ hsv
+    have h1 := semHA_awaits S O' U A passes R g payload hp hLg hat rest k σ0 ρ hsv
     rw [hσ0, hglob] at h1
     exact ZErgG.folgt_of_eq h1
 

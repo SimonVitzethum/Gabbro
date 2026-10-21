@@ -295,7 +295,7 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oB rest
   | .regRead _ _ rest => oB rest
   | .regReadElse _ _ _ sonst rest => oE sonst ∧ oB rest
-  | .awaits _ _ _ _ rest => oB rest
+  | .awaits _ _ _ _ _ rest => oB rest
   | .exchange _ _ _ _ rest => oB rest
   | .narrow _ _ _ sonst rest => oE sonst ∧ oB rest
   | .check _ sonst rest => oE sonst ∧ oB rest
@@ -317,7 +317,7 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oE rest
   | .regRead _ _ rest => oE rest
   | .regReadElse _ _ _ sonst rest => oE sonst ∧ oE rest
-  | .awaits _ _ _ _ rest => oE rest
+  | .awaits _ _ _ _ _ rest => oE rest
   | .bindCallInd .. => False
 
 def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

@@ -209,7 +209,7 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
         · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
         · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
       · cases he
-  | .awaits g payload hp hL rest, h, σ, ρ, e, he => by
+  | .awaits g payload hp hL hat rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei] at h
       simp only [execBlock] at he
       split at he
@@ -323,7 +323,7 @@ theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : Lis
         · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
         · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ he
       · cases he
-  | .awaits g payload hp hL rest, h, σ, ρ, e, he => by
+  | .awaits g payload hp hL hat rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei] at h
       simp only [execEnd] at he
       split at he

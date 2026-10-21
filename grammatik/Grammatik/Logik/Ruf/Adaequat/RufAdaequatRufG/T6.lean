@@ -154,7 +154,7 @@ theorem blockKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         · rfl
       · rfl
   | _, _, _, _, .regReadElse .., hb => absurd hb.regLiesElse_inv.1 (by decide)
-  | _, _, _, _, .awaits g payload hp hL rest, hb => by
+  | _, _, _, _, .awaits g payload hp hL hat rest, hb => by
       intro σ ρ
       have hr := hb.awaits_inv
       simp only [execBlock]

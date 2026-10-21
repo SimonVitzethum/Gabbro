@@ -86,8 +86,8 @@ def bRegReadElse : Sz (SB D V l Γ Λ) :=
 
 def bAwaits : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g => Sz.wenn (gdarf D g Λ) fun hL =>
-    Sz.bindR (Sz.pure ()) (fun m => O.bl l (D.gtyp g :: Γ) Λ m) fun _ x =>
-      Sz.pure ⟨x.1, .awaits g (D.nutzlast g) rfl hL x.2⟩)
+    Sz.wenn (D.atomar g = true) fun ha => Sz.bindR (Sz.pure ()) (fun m => O.bl l (D.gtyp g :: Γ) Λ m) fun _ x =>
+      Sz.pure ⟨x.1, .awaits g (D.nutzlast g) rfl hL ha x.2⟩)
 
 def bExchange : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g =>
@@ -196,8 +196,8 @@ def eRegReadElse : Sz (Endblock D V l Γ Λ) :=
 
 def eAwaits : Sz (Endblock D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g => Sz.wenn (gdarf D g Λ) fun hL =>
-    Sz.bindR (Sz.pure ()) (fun m => O.en l (D.gtyp g :: Γ) Λ m) fun _ x =>
-      Sz.pure (.awaits g (D.nutzlast g) rfl hL x))
+    Sz.wenn (D.atomar g = true) fun ha => Sz.bindR (Sz.pure ()) (fun m => O.en l (D.gtyp g :: Γ) Λ m) fun _ x =>
+      Sz.pure (.awaits g (D.nutzlast g) rfl hL ha x))
 
 def eBindCallInd : Sz (Endblock D V l Γ Λ) :=
   Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ => mitSome (D.sigNr n).erg fun {τ} he =>

@@ -266,9 +266,9 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.regReadElse r hk z sonst rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
       else none
-  | l, _, Λ, ρ, .awaits g pl hp hL rest =>
+  | l, _, Λ, ρ, .awaits g pl hp hL hat rest =>
       if l = false then
-        kLokal st f rho ρ (.dann (Endblock.awaits g pl hp hL rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
+        kLokal st f rho ρ (.dann (Endblock.awaits g pl hp hL hat rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
       else none
   | l, _, Λ, ρ, .bindCallInd p args he hp hr rest =>
       if l = false then
@@ -327,7 +327,7 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
             kLokal st f rho (.cons v ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
           else kLokal st f rho ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur sp
       | none => none
-  | _, _, Λ, _, ρ, .awaits g _ _ _ rest, k =>
+  | _, _, Λ, _, ρ, .awaits g _ _ _ _ rest, k =>
       if O.sichtbar g (sp.welt spur) = true then
         let σ₁ := (sp.welt spur).lese Λ [.inr g]
         kLokal st f rho (.cons (σ₁.globs g) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp

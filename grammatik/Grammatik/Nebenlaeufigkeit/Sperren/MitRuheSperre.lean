@@ -694,7 +694,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
           | true =>
               simp only [wahr?, valR_bool, h, if_true]
               exact AusRelRu.schrumpf (execBlockH_ru rest _ (Env.cons v ρ))
-  | _, _, Λ, _, .awaits g payload hp hL rest, σ, ρ => by
+  | _, _, Λ, _, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruB, execBlockH]
       rw [hO.sichtbar]
       cases O.sichtbar g σ with
@@ -889,7 +889,7 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
           | true =>
               simp only [wahr?, valR_bool, h, if_true]
               exact EndRel.schrumpf (execEndH_ru rest _ (Env.cons v ρ))
-  | _, _, Λ, .awaits g payload hp hL rest, σ, ρ => by
+  | _, _, Λ, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruEnd, execEndH]
       rw [hO.sichtbar]
       cases O.sichtbar g σ with

@@ -195,7 +195,7 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .regRead _ _ rest => 2 + kostenBlock c pa rest
   | .regReadElse _ _ zusage sonst rest =>
       2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
-  | .awaits _ _ _ _ rest => 2 + kostenBlock c pa rest
+  | .awaits _ _ _ _ _ rest => 2 + kostenBlock c pa rest
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenBlock c pa rest
   | .narrow e _ _ sonst rest =>
       2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
@@ -234,7 +234,7 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .regRead _ _ rest => 5 + kostenSonst c pa rest
   | .regReadElse _ _ zusage sonst rest =>
       5 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
-  | .awaits _ _ _ _ rest => 5 + kostenSonst c pa rest
+  | .awaits _ _ _ _ _ rest => 5 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 5 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
 
 /-- The steps of an `else` branch: the end block run in BLOCK position
@@ -259,7 +259,7 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .regRead _ _ rest => 2 + kostenSonst c pa rest
   | .regReadElse _ _ zusage sonst rest =>
       2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
-  | .awaits _ _ _ _ rest => 2 + kostenSonst c pa rest
+  | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
 end
 /-! ## 2. Which callees a body names -/
@@ -312,7 +312,7 @@ def rufeB (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeB Z rest
   | .regRead _ _ rest => rufeB Z rest
   | .regReadElse _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
-  | .awaits _ _ _ _ rest => rufeB Z rest
+  | .awaits _ _ _ _ _ rest => rufeB Z rest
   | .exchange _ _ _ _ rest => rufeB Z rest
   | .narrow _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
   | .check _ sonst rest => rufeE Z sonst && rufeB Z rest
@@ -345,7 +345,7 @@ def rufeE (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeE Z rest
   | .regRead _ _ rest => rufeE Z rest
   | .regReadElse _ _ _ sonst rest => rufeE Z sonst && rufeE Z rest
-  | .awaits _ _ _ _ rest => rufeE Z rest
+  | .awaits _ _ _ _ _ rest => rufeE Z rest
   | .bindCallInd _ _ _ _ _ _ => false
 end
 /-- The callees of a residue: those of every block, end block and loop body
@@ -452,7 +452,7 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .regReadElse r hk z sonst rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
-  | _, _, .awaits g pl hp hL rest => by
+  | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
@@ -481,7 +481,7 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) :
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
   | _, _, .regReadElse r hk z sonst rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
-  | _, _, .awaits g pl hp hL rest => by
+  | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]

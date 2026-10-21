@@ -81,7 +81,7 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
   | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
-  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
   | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg

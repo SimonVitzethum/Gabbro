@@ -156,7 +156,7 @@ def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiomElse .. => false
   | .regRead _ _ rest => spiegelB rest
   | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelB rest
-  | .awaits _ _ _ _ rest => spiegelB rest
+  | .awaits _ _ _ _ _ rest => spiegelB rest
   | .exchange _ _ _ _ rest => spiegelB rest
   | .narrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
   | .check _ sonst rest => spiegelE sonst && spiegelB rest
@@ -189,7 +189,7 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiomElse .. => false
   | .regRead _ _ rest => spiegelE rest
   | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelE rest
-  | .awaits _ _ _ _ rest => spiegelE rest
+  | .awaits _ _ _ _ _ rest => spiegelE rest
   | .bindCallInd .. => false
 end
 mutual
@@ -250,7 +250,7 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   -- `LetSonst` over a place: `1 + 1 + block(sonst)`; the predicate is not read (F4)
   | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKB c rest
   -- `AwaitLoad`: `1`
-  | .awaits _ _ _ _ rest => 1 + kostenKB c rest
+  | .awaits _ _ _ _ _ rest => 1 + kostenKB c rest
   -- `Exchange` update: `1 + block(rumpf)`
   | .exchange _ neu _ _ rest => 1 + kostenExpr neu + kostenKB c rest
   -- `Narrow`: `1 + max(0, sonst)`; the subject is not read (F5)
@@ -289,7 +289,7 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
   | .regRead _ _ rest => 2 + kostenKE c rest
   | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKE c rest
-  | .awaits _ _ _ _ rest => 1 + kostenKE c rest
+  | .awaits _ _ _ _ _ rest => 1 + kostenKE c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKE c rest
 end
 mutual
@@ -338,7 +338,7 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiomElse .. => 0
   | .regRead _ _ rest => zusatzB rest
   | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzB rest
-  | .awaits _ _ _ _ rest => 1 + zusatzB rest
+  | .awaits _ _ _ _ _ rest => 1 + zusatzB rest
   | .exchange _ _ _ _ rest => 1 + zusatzB rest
   | .narrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
   | .check _ sonst rest => 1 + max (zusatzSonst sonst + 1) (zusatzB rest)
@@ -371,7 +371,7 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiomElse .. => 0
   | .regRead _ _ rest => 3 + zusatzSonst rest
   | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
-  | .awaits _ _ _ _ rest => 4 + zusatzSonst rest
+  | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
   | .bindCallInd .. => 0
 
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
@@ -389,7 +389,7 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiomElse .. => 0
   | .regRead _ _ rest => zusatzSonst rest
   | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
-  | .awaits _ _ _ _ rest => 1 + zusatzSonst rest
+  | .awaits _ _ _ _ _ rest => 1 + zusatzSonst rest
   | .bindCallInd .. => 0
 end
 

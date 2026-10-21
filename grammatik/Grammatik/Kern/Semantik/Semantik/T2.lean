@@ -298,7 +298,7 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execBlock rest σ (.cons v ρ)).schrumpf
           else (execEnd sonst σ ρ).zuAusgang
       | Option.none => .hardware (.register r)
-  | .awaits g _ _ _ rest, σ, ρ =>
+  | .awaits g _ _ _ _ rest, σ, ρ =>
       if O.sichtbar g σ then
         let σ := σ.lese Λ [.inr g]
         (execBlock rest σ (.cons (σ.globs g) ρ)).schrumpf
@@ -392,7 +392,7 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
           if wahr? (eval σ zusage σ (.cons v ρ)) then (execEnd rest σ (.cons v ρ)).schrumpf
           else execEnd sonst σ ρ
       | Option.none => .hardware (.register r)
-  | .awaits g _ _ _ rest, σ, ρ =>
+  | .awaits g _ _ _ _ rest, σ, ρ =>
       if O.sichtbar g σ then
         let σ := σ.lese Λ [.inr g]
         (execEnd rest σ (.cons (σ.globs g) ρ)).schrumpf

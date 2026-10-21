@@ -79,7 +79,7 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .regReadElse _ _ _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
-  | _, _, e, .awaits _ _ _ _ rest, w, w', hw, h => by
+  | _, _, e, .awaits _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .exchange _ _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
@@ -127,7 +127,7 @@ theorem fE_mono {l : Bool} :
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .regReadElse _ _ _ sonst rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
-  | _, _, e, .awaits _ _ _ _ rest, w, w', hw, h => by
+  | _, _, e, .awaits _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .bindCallInd _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
@@ -184,7 +184,7 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .regReadElse r hk z sonst rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
-  | _, _, .awaits g pl hp hL rest, w => by
+  | _, _, .awaits g pl hp hL hat rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindCallInd p args he hp hr rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]

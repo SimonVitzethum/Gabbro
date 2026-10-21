@@ -131,7 +131,7 @@ def Block.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
   | .regRead r _ rest => Rg r && rest.gOk K Rg
   | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
-  | .awaits _ _ _ _ rest => rest.gOk K Rg
+  | .awaits _ _ _ _ _ rest => rest.gOk K Rg
   | .exchange _ _ _ _ rest => rest.gOk K Rg
   | .narrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
   | .check _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
@@ -154,7 +154,7 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .regRead r _ rest => Rg r && rest.gOk K Rg
   | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
-  | .awaits _ _ _ _ rest => rest.gOk K Rg
+  | .awaits _ _ _ _ _ rest => rest.gOk K Rg
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.gOk K Rg
 
 def Arms.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -192,7 +192,7 @@ theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg 
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .regReadElse r hk z sonst rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
-  | _, _, .awaits g pl hp hL rest => by
+  | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
@@ -227,7 +227,7 @@ def Block.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
   | .regRead r _ rest => r :: rest.regs
   | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
-  | .awaits _ _ _ _ rest => rest.regs
+  | .awaits _ _ _ _ _ rest => rest.regs
   | .exchange _ _ _ _ rest => rest.regs
   | .narrow _ _ _ sonst rest => sonst.regs ++ rest.regs
   | .check _ sonst rest => sonst.regs ++ rest.regs
@@ -250,7 +250,7 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .regRead r _ rest => r :: rest.regs
   | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
-  | .awaits _ _ _ _ rest => rest.regs
+  | .awaits _ _ _ _ _ rest => rest.regs
   | .bindCallInd _ _ _ _ _ rest => rest.regs
 
 def Arms.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -366,7 +366,7 @@ theorem Block.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       exact ⟨hr r (Or.inl rfl),
         Endblock.gOk_mono sonst h.2.1 (fun r' h' => hr r' (Or.inr (Or.inl h'))),
         Block.gOk_mono rest h.2.2 (fun r' h' => hr r' (Or.inr (Or.inr h')))⟩
-  | .awaits _ _ _ _ rest, h, hr => by
+  | .awaits _ _ _ _ _ rest, h, hr => by
       simp only [Block.gOk, Block.regs] at h hr ⊢
       exact Block.gOk_mono rest h hr
   | .exchange _ _ _ _ rest, h, hr => by
@@ -431,7 +431,7 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       exact ⟨hr r (Or.inl rfl),
         Endblock.gOk_mono sonst h.2.1 (fun r' h' => hr r' (Or.inr (Or.inl h'))),
         Endblock.gOk_mono rest h.2.2 (fun r' h' => hr r' (Or.inr (Or.inr h')))⟩
-  | .awaits _ _ _ _ rest, h, hr => by
+  | .awaits _ _ _ _ _ rest, h, hr => by
       simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
       exact Endblock.gOk_mono rest h hr
   | .bindCallInd _ _ _ _ _ rest, h, hr => by
@@ -687,9 +687,9 @@ theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rkla
   exact ZErg.folgt_refl _
 
 theorem semV_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
-    (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
+    (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) (hvis : O.sichtbar g σ = true) :
-    semV O passes R (.dann (.awaits g payload hp hL rest) k) σ ρ =
+    semV O passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ [.inr g])
         (.cons ((σ.lese Λ [.inr g]).globs g) ρ) := by
   rw [semV_dann]

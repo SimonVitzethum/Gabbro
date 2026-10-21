@@ -132,15 +132,15 @@ theorem blockS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ
         Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) (mem_tyS hz) <|
         Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
     · glfertig
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO
     obtain ⟨rest', hr'm, ⟨_, _, _, _, _, _⟩⟩ := hO.bl _ _ _ _ rest (by omega)
-    refine ⟨.awaits g payload hp hL rest', ?_, ?_⟩
+    refine ⟨.awaits g payload hp hL hat rest', ?_, ?_⟩
     · simp only [groesseBlock]
       have hr' := hr'm (groesseBlock rest' + 0) (by omega)
       subst hp
       blk (bAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
-        Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+        Sz.mem_wenn hL <| Sz.mem_wenn hat <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
     · glfertig
   | exchange g neu hw hL rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO
@@ -362,15 +362,15 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
         Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hso <|
         Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
     · glfertig
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
     simp only [groesseEnd] at hu hE hS hO
     obtain ⟨rest', hr'm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ rest (by omega)
-    refine ⟨.awaits g payload hp hL rest', ?_, ?_⟩
+    refine ⟨.awaits g payload hp hL hat rest', ?_, ?_⟩
     · simp only [groesseEnd]
       have hr' := hr'm (groesseEnd rest' + 0) (by omega)
       subst hp
       blk (eAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
-        Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+        Sz.mem_wenn hL <| Sz.mem_wenn hat <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
     · glfertig
   | bindCallInd p args he hp hr rest =>
     simp only [groesseEnd] at hu hE hS hO

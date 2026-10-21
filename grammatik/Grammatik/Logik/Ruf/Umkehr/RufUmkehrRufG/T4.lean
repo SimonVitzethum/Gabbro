@@ -376,7 +376,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannRegLies _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | dannExchange l2 Γ2 Λ2 Λ2' g neuE hw hL rest k ρ2 hhead σ₁ hs₁ σ₂ hs₂ neu hneu =>
     rw [hR] at hhead
     cases hhead

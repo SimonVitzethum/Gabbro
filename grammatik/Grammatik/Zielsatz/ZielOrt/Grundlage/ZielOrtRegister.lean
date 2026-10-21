@@ -67,7 +67,7 @@ def Block.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.rOk K
   | .regRead _ _ rest => rest.rOk K
   | .regReadElse _ _ _ sonst rest => sonst.rOk K && rest.rOk K
-  | .awaits _ _ _ _ rest => rest.rOk K
+  | .awaits _ _ _ _ _ rest => rest.rOk K
   | .exchange _ _ _ _ rest => rest.rOk K
   | .narrow _ _ _ sonst rest => sonst.rOk K && rest.rOk K
   | .check _ sonst rest => sonst.rOk K && rest.rOk K
@@ -90,7 +90,7 @@ def Endblock.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.rOk K && rest.rOk K
   | .regRead _ _ rest => rest.rOk K
   | .regReadElse _ _ _ sonst rest => sonst.rOk K && rest.rOk K
-  | .awaits _ _ _ _ rest => rest.rOk K
+  | .awaits _ _ _ _ _ rest => rest.rOk K
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.rOk K
 
 def Arms.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

@@ -303,7 +303,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               simp only [wahr?, valR_bool, h, if_true]
               rw [← ausR_schrumpf, ← execBlock_ru rest _ (Env.cons v ρ)]
               rfl
-  | _, _, Λ, _, .awaits g payload hp hL rest, σ, ρ => by
+  | _, _, Λ, _, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [sichtbar_mitRuhe]
       cases O.sichtbar g σ with
@@ -491,7 +491,7 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
               simp only [wahr?, valR_bool, h, if_true]
               rw [← endR_schrumpf, ← execEnd_ru rest _ (Env.cons v ρ)]
               rfl
-  | _, _, Λ, .awaits g payload hp hL rest, σ, ρ => by
+  | _, _, Λ, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruEnd, execEnd]
       rw [sichtbar_mitRuhe]
       cases O.sichtbar g σ with

@@ -89,12 +89,12 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     blk (bRegReadElse O Ns), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.reg_mem r)) <|
       Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) (mem_tyS hz) <|
       Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO ⊢
     subst hp
     have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
     blk (bAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
-      Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+      Sz.mem_wenn hL <| Sz.mem_wenn hat <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | exchange g neu hw hL rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO ⊢
     have hne := hO.ex (groesseExpr neu + (0 + (groesseBlock rest + 0))) _ _ _ neu (by omega) (by omega)
@@ -239,12 +239,12 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
       Sz.mem_wenn hk <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) (mem_tyS hz) <|
       Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hso <|
       Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
     simp only [groesseEnd] at hu hE hS hO ⊢
     subst hp
     have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
     blk (eAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
-      Sz.mem_wenn hL <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+      Sz.mem_wenn hL <| Sz.mem_wenn hat <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | bindCallInd p args he hp hr rest =>
     simp only [groesseEnd] at hu hE hS hO ⊢
     have hpp := hE _ p (by omega)

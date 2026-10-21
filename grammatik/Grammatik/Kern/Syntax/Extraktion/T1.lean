@@ -136,7 +136,7 @@ def blockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .regRead _ _ rest => blockKanten rest
   | .regReadElse _ _ _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
-  | .awaits _ _ _ _ rest => blockKanten rest
+  | .awaits _ _ _ _ _ rest => blockKanten rest
   | .exchange _ _ _ _ rest => blockKanten rest
   | .narrow _ _ _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
@@ -165,7 +165,7 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regRead _ _ rest => endblockKanten rest
   | .regReadElse _ _ _ sonst rest =>
       endblockKanten sonst ++ endblockKanten rest
-  | .awaits _ _ _ _ rest => endblockKanten rest
+  | .awaits _ _ _ _ _ rest => endblockKanten rest
   | .bindCallInd _ _ _ _ _ rest => endblockKanten rest
 
 /-- Die direkten Rufe der Fallunterscheidung. -/

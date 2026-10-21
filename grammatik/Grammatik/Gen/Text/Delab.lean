@@ -17,11 +17,10 @@
   `p = &f; p(..)` for an indirect call (the model's pointer expression is bound first), `locks`, `if`,
   assignments, `publishes`, `awaits`, register reads and writes through `d`, `return`.
 
-  Partial: a form without a spelling is an error naming it. Two model forms are wider than the language and are
-  printed as a form with the same cells (checked per witness, never assumed): `awaits` at a static that is no
-  `atomic` (the language waits only at an atomic) as the plain read `let x = g;`, and a quantifier over the slots of
-  a table as a `traverse` invariant (the language reads an expression there) as the read of the table's first field
-  in its first slot. A Bool register (`Ty.bool`; a register of the language is an integer range) prints as
+  Partial: a form without a spelling is an error naming it. One model form is wider than the language and is
+  printed as a form with the same cells (checked per witness, never assumed): a quantifier over the slots of a
+  table as a `traverse` invariant (the language reads an expression there) as the read of the table's first field
+  in its first slot. (`awaits` needs an atomic static in the model too since 2026-10-21.) A Bool register (`Ty.bool`; a register of the language is an integer range) prints as
   `u64 in 0 .. 1`.
 -/
 import Grammatik.Gen.Zeugen.Schluss
@@ -197,10 +196,7 @@ def delabB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .regReadElse r _ _ sonst rest => do
       let (es, ende) ← delabEnd sonst
       .ok (.bindElse (nVar Γ.length) none (regOrt z r) (nVar Γ.length) (.block es ende) :: (← delabB rest))
-  | .awaits g payload _ _ rest => do
-      if !(z.globs.get g).atomar then
-        return (.bind false (nVar Γ.length) none (.variable (nGlob (show Fin z.globs.length from g).val)) ::
-          (← delabB rest))
+  | .awaits g payload _ _ _ rest => do
       .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
         (← delabB rest))
   | b => .error ("block without a spelling: " ++ String.intercalate " " (Gabbro.Grammatik.Parser.Cover.Mitglieder.cB b))

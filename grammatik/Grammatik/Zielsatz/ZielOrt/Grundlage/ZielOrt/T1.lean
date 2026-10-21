@@ -182,7 +182,7 @@ def blockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .regRead _ _ rest => blockOrteP P rest
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
-  | .awaits g _ _ _ rest => .inr g :: blockOrteP P rest
+  | .awaits g _ _ _ _ rest => .inr g :: blockOrteP P rest
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ blockOrteP P rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
@@ -213,7 +213,7 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .regRead _ _ rest => endblockOrteP P rest
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
-  | .awaits g _ _ _ rest => .inr g :: endblockOrteP P rest
+  | .awaits g _ _ _ _ rest => .inr g :: endblockOrteP P rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrteP P rest
 
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -253,7 +253,7 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .regReadElse r hk z sonst rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
-  | _, _, .awaits g pl hp hL rest => by
+  | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]

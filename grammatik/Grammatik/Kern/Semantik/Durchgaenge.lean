@@ -75,7 +75,7 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .regRead _ _ rest => rest.ohneEwig
   | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
-  | .awaits _ _ _ _ rest => rest.ohneEwig
+  | .awaits _ _ _ _ _ rest => rest.ohneEwig
   | .exchange _ _ _ _ rest => rest.ohneEwig
   | .narrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .check _ sonst rest => sonst.ohneEwig && rest.ohneEwig
@@ -97,7 +97,7 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .regRead _ _ rest => rest.ohneEwig
   | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
-  | .awaits _ _ _ _ rest => rest.ohneEwig
+  | .awaits _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
 
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
@@ -208,7 +208,7 @@ theorem Block.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
-  | .awaits g payload hp hL rest, h, σ, ρ => by
+  | .awaits g payload hp hL hat rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
   | .exchange g neu hw hL rest, h, σ, ρ => by
@@ -264,7 +264,7 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
       simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
-  | .awaits g payload hp hL rest, h, σ, ρ => by
+  | .awaits g payload hp hL hat rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by

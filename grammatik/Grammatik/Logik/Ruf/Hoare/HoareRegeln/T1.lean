@@ -140,9 +140,9 @@ inductive BlockOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
       (he : EndOhneRuf sonst) (hr : BlockOhneRuf rest) :
       BlockOhneRuf (.regReadElse r hk zusage sonst rest)
   | awaits (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
-      (hL : gdarf D g Λ)
+      (hL : gdarf D g Λ) (hat : D.atomar g = true)
       (rest : Block D V l (D.gtyp g :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :
-      BlockOhneRuf (.awaits g payload hp hL rest)
+      BlockOhneRuf (.awaits g payload hp hL hat rest)
   | exchange (g : D.Glob) (neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g))
       (hw : V.gschreibt g = true) (hL : gdarf D g Λ)
       (rest : Block D V l (D.gtyp g :: Γ) Λ Λ') (hr : BlockOhneRuf rest) :

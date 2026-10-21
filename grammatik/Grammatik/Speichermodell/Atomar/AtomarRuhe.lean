@@ -399,7 +399,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
           | true =>
               simp only [wahr?, valR_bool, h, if_true]
               exact AusRelRu.schrumpf (execBlockHA_ru rest _ (Env.cons v ρ))
-  | _, _, Λ, _, .awaits g payload hp hL rest, σ, ρ => by
+  | _, _, Λ, _, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [show ([Sum.inr g] : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) = [Sum.inr g] from rfl,
         leseA_worldR hA, hO.sichtbar]
@@ -593,7 +593,7 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
           | true =>
               simp only [wahr?, valR_bool, h, if_true]
               exact EndRel.schrumpf (execEndHA_ru rest _ (Env.cons v ρ))
-  | _, _, Λ, .awaits g payload hp hL rest, σ, ρ => by
+  | _, _, Λ, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruEnd, execEndHA]
       rw [show ([Sum.inr g] : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) = [Sum.inr g] from rfl,
         leseA_worldR hA, hO.sichtbar]

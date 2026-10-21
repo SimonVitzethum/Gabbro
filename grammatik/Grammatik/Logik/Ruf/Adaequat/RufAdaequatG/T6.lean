@@ -117,8 +117,8 @@ theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .regReadElse _ _ _ sonst rest, hb =>
       .regReadElse _ _ _ _ _ (endG_ohneRuf sonst hb.regLiesElse_inv.2.2.1)
         (blockG_ohneRuf rest hb.regLiesElse_inv.2.1)
-  | _, _, _, _, _, .awaits _ _ _ _ rest, hb =>
-      .awaits _ _ _ _ _ (blockG_ohneRuf rest hb.awaits_inv)
+  | _, _, _, _, _, .awaits _ _ _ _ _ rest, hb =>
+      .awaits _ _ _ _ _ _ (blockG_ohneRuf rest hb.awaits_inv)
   | _, _, _, _, _, .exchange _ _ _ _ rest, hb =>
       .exchange _ _ _ _ _ (blockG_ohneRuf rest hb.exchange_inv)
   | _, _, _, _, _, .narrow _ _ _ sonst rest, hb =>

@@ -570,9 +570,10 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | regReadElse (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
       (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock l Γ Λ)
       (rest : Block l (D.rtyp r :: Γ) Λ Λ') : Block l Γ Λ Λ'
-  /-- `let x = A awaits { p, q };` -- dieselbe Nutzlast wie am `publishes`. -/
+  /-- `let x = A awaits { p, q };` -- the same payload as at the `publishes`; only at an atomic static
+      (an await at a plain static would be an unordered read, Simon 2026-10-21). -/
   | awaits (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g) (hL : gdarf D g Λ)
-      (rest : Block l (D.gtyp g :: Γ) Λ Λ') : Block l Γ Λ Λ'
+      (ha : D.atomar g = true) (rest : Block l (D.gtyp g :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- `let x = A exchange update(v) { … } …` -- Lesen, Rechnen, Schreiben: als EINE Anweisung
       (die Atomizitaet ist A10); `bounded`/`on_exceeded` sind die von `retry`. -/
   | exchange (g : D.Glob) (neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)) (hw : V.gschreibt g = true)
@@ -649,7 +650,7 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
   /-- `let x = A awaits { p, q };` at the top level of a body: `Block.awaits` with an end-block
       rest (Track P, 2026-10-21). -/
   | awaits (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g) (hL : gdarf D g Λ)
-      (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
+      (ha : D.atomar g = true) (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
   /-- `let x = p(…);` through a function pointer at the top level of a body: `Block.bindCallInd`
       with an end-block rest (Track P, 2026-10-21). -/
   | bindCallInd (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)

@@ -150,7 +150,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | regReadElse r hk z sonst rest =>
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
-  | awaits g pl hp hL rest =>
+  | awaits g pl hp hL hat rest =>
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | bindCallInd p args he hp hr rest =>
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
@@ -354,10 +354,10 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           | true => exact fort_schritt (w_regLiesElseWahr rfl r hk zusage sonst rest k ρ hx v hv hw hΛ)
           | false =>
               exact fort_schritt (w_regLiesElseFalsch rfl r hk zusage sonst rest k ρ hx v hv hw hΛ)
-  | awaits g payload hp hL rest =>
+  | awaits g payload hp hL hat rest =>
       cases hvis : O.sichtbar g (M.weltVon t) with
       | false => exact fort_flagge ⟨l, Γ, Λ, ρ, _, hx, hvis⟩
-      | true => exact fort_schritt (w_awaits rfl g payload hp hL rest k ρ hx hvis hΛ)
+      | true => exact fort_schritt (w_awaits rfl g payload hp hL hat rest k ρ hx hvis hΛ)
   | exchange g neuE hw hL rest => exact fort_schritt (w_exchange rfl g neuE hw hL rest k ρ hx hΛ)
   | narrow e lo' hi' sonst rest =>
       by_cases h : lo' ≤ (eval ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ).n ∧

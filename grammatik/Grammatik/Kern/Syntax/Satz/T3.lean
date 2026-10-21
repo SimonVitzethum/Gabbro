@@ -159,7 +159,7 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .regRead _ _ rest => rest.ueberBoden c
   | .regReadElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
-  | .awaits _ _ _ _ rest => rest.ueberBoden c
+  | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .check _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
@@ -182,7 +182,7 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .regRead _ _ rest => rest.ueberBoden c
   | .regReadElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
-  | .awaits _ _ _ _ rest => rest.ueberBoden c
+  | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .bindCallInd _ _ _ _ _ rest => rest.ueberBoden c
 
 def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}

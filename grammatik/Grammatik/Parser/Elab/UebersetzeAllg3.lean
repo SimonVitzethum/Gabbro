@@ -456,11 +456,13 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     match globIdx u.globs a with
     | .error e => .error e
     | .ok g =>
+      if ha : (declOf u).atomar g = true then
       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
         match lowSeqL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
         | .error e => .error e
-        | .ok (b, r') => .ok (Block.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd b, r')
+        | .ok (b, r') => .ok (Block.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd ha b, r')
       else .error "access without held guard"
+      else .error "awaits at a static that is not atomic"
   | Γ, fn, n + 1, Λ, pe, .regRead x d r :: rest =>
     match regIdx u.regs d r with
     | .error e => .error e

@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/Gen/Text/Satz.lean
   Subject:   THEOREM 5 AT THE TEXT LEVEL: a checker or a compiler that reads SOURCE TEXT and depends only on the cells of
-             the program the text is (`NeutralText`, `NeutralKorrektText`, over `ausText`) and answers right on the 7 + 13
+             the program the text is (`NeutralText`, `NeutralKorrektText`, over `ausText`) and answers right on the 8 + 13
              witness texts answers right on every text that is a program of the source.
 
   The witness texts are the printed delaborations of the witnesses of `Gen/Zeugen` (`textVon`); each reads back as a
@@ -49,7 +49,8 @@ def mText : List String :=
    textVon Zeugen.M16_13.z Zeugen.M16_13.P Zeugen.M16_13.ws,
    textVon Zeugen.M49_50.z Zeugen.M49_50.P Zeugen.M49_50.ws,
    textVon Zeugen.M103_803.z Zeugen.M103_803.P Zeugen.M103_803.ws,
-   textVon Zeugen.M103_131.z Zeugen.M103_131.P Zeugen.M103_131.ws]
+   textVon Zeugen.M103_131.z Zeugen.M103_131.P Zeugen.M103_131.ws,
+   textVon Zeugen.M99_825.z Zeugen.M99_825.P Zeugen.M99_825.ws]
 
 /-- The texts of the refused witnesses (the order of `Nw`). -/
 def nText : List String :=
@@ -71,7 +72,7 @@ def nText : List String :=
 theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
   intro m hm
   simp only [Zeugen.Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
-  rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp [mText], Zeugen.M99_824.text⟩
   · exact ⟨_, by simp [mText], Zeugen.M47_549.text⟩
   · exact ⟨_, by simp [mText], Zeugen.M169_350.text⟩
@@ -79,6 +80,7 @@ theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok 
   · exact ⟨_, by simp [mText], Zeugen.M49_50.text⟩
   · exact ⟨_, by simp [mText], Zeugen.M103_803.text⟩
   · exact ⟨_, by simp [mText], Zeugen.M103_131.text⟩
+  · exact ⟨_, by simp [mText], Zeugen.M99_825.text⟩
 
 theorem n_texte : ∀ n ∈ Zeugen.Nw, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
   intro n hn
@@ -104,7 +106,7 @@ theorem akzeptiert_zellen (φ : Zelle → Bool) (e e' : Einsatz) (h : e.zellen =
   unfold akzeptiert Einsatz.Hat
   rw [h]
 
-/-- **A cell-neutral checker on source text that answers like the model on the 7 + 13 witness texts answers like
+/-- **A cell-neutral checker on source text that answers like the model on the 8 + 13 witness texts answers like
     the model on every text that is a program of the source.** -/
 theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
     (hM : ∀ t ∈ mText, R t = true) (hN : ∀ t ∈ nText, R t = false) :
@@ -145,7 +147,7 @@ theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
     intro ha; have := (hφ s e hs).2 ha; rw [hr] at this; cases this
   · symm; simp only [C, decide_eq_true_eq]; exact (hφ s e hs).1 hr
 
-/-- **A cell-neutral compiler on source text correct on the 7 valid witness texts is correct on every text that is a
+/-- **A cell-neutral compiler on source text correct on the 8 valid witness texts is correct on every text that is a
     valid program of the source.** -/
 theorem compiler_text_korrekt (K : String → Prop) (hK : NeutralKorrektText K) (hM : ∀ t ∈ mText, K t) :
     ∀ s e, ausText s = .ok e → e.gueltig = true → K s := by

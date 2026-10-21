@@ -137,7 +137,7 @@ def druckB (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
   | .bindAxiom a args _ _ _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
-  | .awaits g payload _ _ rest => do
+  | .awaits g payload _ _ _ rest => do
       let ns := payload.map nm.glob
       .ok (s!"{ein}let v{Γ.length} = {nm.glob g} awaits {if ns.isEmpty then "{ }" else "{ " ++ liste ns ++ " }"};\n" ++
         (← druckB nm ein rest))
@@ -163,7 +163,7 @@ def druckEnd (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ : List (Res
   | .bindAxiom a args _ _ _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckEnd nm ein rest))
   | .retWhy r _ => .ok s!"{ein}return {grundTyp V.gruende}::C{r.val};\n"
-  | .awaits g payload _ _ rest => do
+  | .awaits g payload _ _ _ rest => do
       let ns := payload.map nm.glob
       .ok (s!"{ein}let v{Γ.length} = {nm.glob g} awaits {if ns.isEmpty then "{ }" else "{ " ++ liste ns ++ " }"};\n" ++
         (← druckEnd nm ein rest))

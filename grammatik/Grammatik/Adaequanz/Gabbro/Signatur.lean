@@ -148,7 +148,7 @@ def tabelle : List Konstr := [
   ⟨"Block", "bindAxiomElse", ["Args", "Endblock", "Block"], 6, 1⟩,
   ⟨"Block", "regRead", ["Block"], 1, 1⟩,
   ⟨"Block", "regReadElse", ["Expr", "Endblock", "Block"], 1, 1⟩,
-  ⟨"Block", "awaits", ["Block"], 2, 2⟩,
+  ⟨"Block", "awaits", ["Block"], 3, 2⟩,
   ⟨"Block", "exchange", ["Expr", "Block"], 2, 1⟩,
   ⟨"Block", "narrow", ["Expr", "Endblock", "Block"], 0, 2⟩,
   ⟨"Block", "check", ["Expr", "Endblock", "Block"], 0, 0⟩,
@@ -168,7 +168,7 @@ def tabelle : List Konstr := [
   ⟨"Endblock", "bindAxiomElse", ["Args", "Endblock", "Endblock"], 6, 1⟩,
   ⟨"Endblock", "regRead", ["Endblock"], 1, 1⟩,
   ⟨"Endblock", "regReadElse", ["Expr", "Endblock", "Endblock"], 1, 1⟩,
-  ⟨"Endblock", "awaits", ["Endblock"], 2, 2⟩,
+  ⟨"Endblock", "awaits", ["Endblock"], 3, 2⟩,
   ⟨"Endblock", "bindCallInd", ["Expr", "Args", "Endblock"], 3, 0⟩,
   ⟨"Arms", "nil", [], 0, 0⟩,
   ⟨"Arms", "cons", ["Block", "Arms"], 0, 0⟩,
@@ -199,7 +199,7 @@ theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.le
 
 /-- The premises (each one local refusal cell of Theorem 4) and the child positions (each one "child of the wrong
     sort or index" refusal cell). -/
-theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 137 ∧
+theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 139 ∧
     (tabelle.map (·.kinder.length)).sum = 159 := by decide
 
 end Gabbro.Grammatik.Adaequanz.GabbroSig
