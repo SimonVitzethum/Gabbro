@@ -144,10 +144,10 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
 
 /-- The candidates of an indirect call through a pointer of signature `n`
-    -- every function of that signature -- have their contract carriers in
+    -- every function that conforms to it -- have their contract carriers in
     the footprint `S`. -/
 def KandOk (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) (n : Nat) : Prop :=
-  ∀ g : D.Fn, D.sig g = n → (P.requires g).orte ++ (P.ensures g).orte ⊆ S
+  ∀ g : D.Fn, D.passt g n = true → (P.requires g).orte ++ (P.ensures g).orte ⊆ S
 
 /-- `KandOk` as the admissibility predicate of the fragment (for the replay). -/
 noncomputable def kandP (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) (n : Nat) : Bool :=
@@ -160,7 +160,7 @@ theorem kandP_ok {P : Programm D} {S : List (D.Tab ⊕ D.Glob)} {n : Nat}
 
 /-- `KandOk`, decided over a member list of the functions. -/
 def kandB (P : Programm D) (fs : List D.Fn) (S : List (D.Tab ⊕ D.Glob)) (n : Nat) : Bool :=
-  fs.all fun g => !(decide (D.sig g = n)) ||
+  fs.all fun g => !(D.passt g n) ||
     ((P.requires g).orte ++ (P.ensures g).orte).all fun o => S.any fun o' => decide (o' = o)
 
 /-- Soundness of `kandB` over a complete member list. -/
@@ -171,7 +171,7 @@ theorem kandB_kandP (P : Programm D) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g �
   have h1 := (List.all_eq_true.mp h) g (hvoll g)
   simp only [Bool.or_eq_true, Bool.not_eq_true', decide_eq_false_iff_not] at h1
   rcases h1 with h1 | h1
-  · exact absurd hg h1
+  · exact absurd hg (by rw [h1]; decide)
   · obtain ⟨o', ho', he⟩ := List.any_eq_true.mp ((List.all_eq_true.mp h1) o ho)
     rw [← of_decide_eq_true he]
     exact ho'

@@ -434,7 +434,7 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     | .ok g =>
       match lowSeqL (l := l) u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n Λ pe rest with
       | .error e => .error e
-      | .ok (b, r') => .ok (Block.bind (Expr.fnref (D := declOf u) g g.val rfl) b, r')
+      | .ok (b, r') => .ok (Block.bind (Expr.fnref (D := declOf u) g g.val (decide_eq_true rfl)) b, r')
   | Γ, fn, n + 1, Λ, pe, .bindCallInd x p cname args :: rest =>
     match lowRufKopf u caller Γ fn Λ cname args with
     | .error e => .error e
@@ -746,7 +746,7 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     | .ok g =>
       match lowEndL (l := l) u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n Λ pe rest with
       | .error e => .error e
-      | .ok (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val rfl) b, r')
+      | .ok (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val (decide_eq_true rfl)) b, r')
   | _, _, _ + 1, _, _, .bindCallInd .. :: _ =>
     .error "lower: an indirect call bound in an else branch has no G form (Endblock lacks bindCallInd)"
   | _, _, _ + 1, _, _, .awaitBind .. :: _ =>
@@ -929,7 +929,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     | .ok g =>
       match lowBodyF u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n rest r with
       | .error e => .error e
-      | .ok e => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val rfl) e)
+      | .ok e => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val (decide_eq_true rfl)) e)
   | _, _, _ + 1, .bindCallInd .. :: _, _ =>
     .error "lower: an indirect call bound at the top level of a body has no G form (Endblock lacks bindCallInd)"
   | _, _, _ + 1, .awaitBind .. :: _, _ =>

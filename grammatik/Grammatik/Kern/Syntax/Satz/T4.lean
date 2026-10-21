@@ -111,7 +111,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · rename_i σ1 v hR1
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        subst hf
+        replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         exact hl.trans (Gut.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
       · rename_i σ1 r _; exact keinGrundSig hf hr r
@@ -203,7 +203,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · rename_i σ1 v hR1
         have g2 := block_gutB bo hbV rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) (by boden_tac)
-        subst hf
+        replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((g2 (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
@@ -429,7 +429,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · rename_i σ1 v hR1
         have g2 := end_gutB bo hbV rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) (by boden_tac)
-        subst hf
+        replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((g2 (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)

@@ -22,7 +22,7 @@
   transcription error of this file. Which programs and which forms were exercised is reported by the driver.
 
   The kinds (`komp`, `art`; atoms in order; the test `kern`):
-    0,0  (f, g)      fragment    [gOk f without its indirect-call test, f calls through sig g, a contract carrier of g
+    0,0  (f, g)      fragment    [gOk f without its indirect-call test, f calls through a type g fits, a contract carrier of g
                                   is outside f's widened footprint]                    a ∧ ¬(b ∧ c)
     1,0  (w, f, g)   closedness  (w over ALL functions) [reach w f, f calls g, reach w g]                     ¬a ∨ ¬b ∨ c
     2,0  (f, c)      footprint   [sigB f c, getrennt c, a guard lock of c protects c, geteilt c]   a ∨ b ∨ c ∨ d
@@ -98,9 +98,9 @@ variable {D : Deklaration} [Aufz D] [Zahlen]
 def nimmtB (P : Programm D) (f : D.Fn) (L : D.Lock) : Bool :=
   !(mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ (P.rumpf f))
 
-/-- `f` calls indirectly through a pointer of signature `n`. -/
-def indB (P : Programm D) (f : D.Fn) (n : Nat) : Bool :=
-  !(mE ⟨fun _ => true, fun n' => !(decide (n' = n)), fun _ => true⟩ (P.rumpf f))
+/-- `f` calls indirectly through a pointer type `g` conforms to (`Deklaration.passt`). -/
+def indB (P : Programm D) (f g : D.Fn) : Bool :=
+  !(mE ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩ (P.rumpf f))
 
 /-- The contract carriers of `g`. -/
 def vertragsOrte (P : Programm D) (g : D.Fn) : List (D.Tab ⊕ D.Glob) :=
@@ -129,7 +129,7 @@ def schreibGetrenntZellen (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.
 def zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Fin 10 → List Zelle
   | 0 => fs.flatMap fun f => fs.map fun g =>
-      ⟨0, 0, true, [(P.rumpf f).gOk (fun _ => true) (fun _ => true), indB P f (D.sig g),
+      ⟨0, 0, true, [(P.rumpf f).gOk (fun _ => true) (fun _ => true), indB P f g,
         (vertragsOrte P g).any fun o => !(istIn (fussOrteG P f) o)]⟩
   | 1 => fs.flatMap fun w => fs.flatMap fun f => fs.map fun g =>
       ⟨1, 0, true, [reachB P fs w f, ruftB P f g, reachB P fs w g]⟩

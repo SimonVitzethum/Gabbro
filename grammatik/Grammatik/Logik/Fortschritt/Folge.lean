@@ -48,8 +48,8 @@ variable {D : Deklaration}
     * `vor` -- the predecessors: the function whose return must come directly before;
     * `ruf` -- every ENTRY of such a function must directly follow a return of a `vor`;
     * `ind` -- signatures whose indirect calls are treated as calls of a `ruf` function
-      (`FolgeOk` demands `ind (D.sig g)` for every `ruf g`, so no entry escapes through a
-      function pointer);
+      (`FolgeOk` demands `ind n` for every pointer type `n` a `ruf g` conforms to, so no entry
+      escapes through a function pointer);
     * `ende` -- every RETURN (value or reason) of such a function, and the end of a thread
       whose start function is one, must directly follow a return of a `vor`. -/
 structure Folge (D : Deklaration) where
@@ -191,10 +191,12 @@ def GRest.fR (e : Bool) :
 end Pruef
 
 /-- **The static premise of the order leg**: every body passes the check unarmed, and every
-    `ruf` function's signature is among the indirectly checked ones. Decidable for a concrete
+    pointer type a `ruf` function conforms to (`Deklaration.passt`) is among the indirectly
+    checked ones. Decidable for a concrete
     program (a finite `D.Fn`). -/
 def FolgeOk (P : Programm D) (Φ : Folge D) : Prop :=
-  (∀ f, fE Φ (Φ.ende f) false (P.rumpf f) = true) ∧ (∀ g, Φ.ruf g = true → Φ.ind (D.sig g) = true)
+  (∀ f, fE Φ (Φ.ende f) false (P.rumpf f) = true) ∧
+    (∀ g n, Φ.ruf g = true → D.passt g n = true → Φ.ind n = true)
 
 /-! ## 3. The order in the call log -/
 

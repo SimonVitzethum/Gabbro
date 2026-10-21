@@ -254,18 +254,16 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    subst hg
     refine haeltInvG_push h _ _ _ _ rfl ⟨nach_nennt hk.1, hk.2⟩ (by fr_push) (callee_kette P g rho s0) rfl
       (by rw [hs0, offen_lese]; rfl) (nach_held hh) ?_
-    rw [hs0, offen_lese]; exact callee_held hp hh
+    rw [hs0, offen_lese]; exact callee_held (RufPasst.vonPasst (D.passt_sig hg) hp) hh
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    subst hg
     refine haeltInvG_push h _ _ _ _ rfl (nach_nennt hk) (by fr_push) (callee_kette P g rho s0) rfl
       (by rw [hs0, offen_lese]; rfl) (nach_held hh) ?_
-    rw [hs0, offen_lese]; exact callee_held hp hh
+    rw [hs0, offen_lese]; exact callee_held (RufPasst.vonPasst (D.passt_sig hg) hp) hh
   | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
@@ -278,10 +276,9 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
-    subst hg
     refine haeltInvG_push h _ _ _ _ rfl ⟨nach_nennt hk.1, hk.2⟩ (by fr_push) (callee_kette P g rho s0) rfl
       (by rw [hs0, offen_lese]; rfl) (nach_held hh) ?_
-    rw [hs0, offen_lese]; exact callee_held hp hh
+    rw [hs0, offen_lese]; exact callee_held (RufPasst.vonPasst (D.passt_sig hg) hp) hh
   | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho hrho neu
       hneu =>
     simp only [rufUpdateG_self]

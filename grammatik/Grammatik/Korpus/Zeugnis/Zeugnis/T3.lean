@@ -342,7 +342,7 @@ inductive CertCut4 (D : Deklaration) where
     `durch` reads `D.typ t f` whatever it is, exactly as `Expr.durch` does. -/
 def certCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut4 D → Prop
   | .ptrOf t n _ => D.tabNr n = some t
-  | .fnref f n => D.sig f = n
+  | .fnref f n => D.passt f n = true
   | .thru t _f n i =>
     D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧ darf D t Λ
 
@@ -351,7 +351,7 @@ instance decCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut
     Decidable (certCut4Ok D Γ Λ c) :=
   match c with
   | .ptrOf t n _ => inferInstanceAs (Decidable (D.tabNr n = some t))
-  | .fnref f n => inferInstanceAs (Decidable (D.sig f = n))
+  | .fnref f n => inferInstanceAs (Decidable (D.passt f n = true))
   | .thru t _f n i =>
     inferInstanceAs
       (Decidable (D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧

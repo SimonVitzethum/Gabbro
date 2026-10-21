@@ -353,7 +353,7 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     obtain ⟨hk, _, hst, hkt⟩ := h
     rw [hhead] at hk
     simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, by subst hg; exact hr⟩, hkt⟩⟩
+    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, (D.passt_sig hg).gruende.trans hr⟩, hkt⟩⟩
     intro c hc
     rcases List.mem_cons.mp hc with rfl | hc
     · refine ⟨?_, rfl⟩
@@ -364,7 +364,7 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     obtain ⟨hk, _, hst, hkt⟩ := h
     rw [hhead] at hk
     simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, by subst hg; exact hr⟩, hkt⟩⟩
+    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, (D.passt_sig hg).gruende.trans hr⟩, hkt⟩⟩
     intro c hc
     rcases List.mem_cons.mp hc with rfl | hc
     · exact ⟨hk, rfl⟩
@@ -383,7 +383,7 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     rw [hhead] at hk
     simp only [rufUpdateG_self]
     refine ⟨rfl, rfl, ?_, ⟨Or.inr (Or.inl ⟨_, _, _, _, _, rest, k, ρ, rfl,
-      by subst hg; exact he, by subst hg; exact hr⟩), hkt⟩⟩
+      ergSig hg he, (D.passt_sig hg).gruende.trans hr⟩), hkt⟩⟩
     intro c hc
     rcases List.mem_cons.mp hc with rfl | hc
     · exact ⟨hk, rfl⟩

@@ -49,10 +49,10 @@ def Φ52 : Folge eD where
   ende := fun g => match (g : EFn) with | .haupt => true | _ => false
 
 theorem eP_folge50 : FolgeOk eP Φ50 :=
-  ⟨fun f => by cases f <;> rfl, fun _ _ => rfl⟩
+  ⟨fun f => by cases f <;> rfl, fun _ _ _ _ => rfl⟩
 
 theorem eP_folge52 : FolgeOk eP Φ52 :=
-  ⟨fun f => by cases f <;> rfl, fun _ _ => rfl⟩
+  ⟨fun f => by cases f <;> rfl, fun _ _ _ _ => rfl⟩
 
 /-! ## 2. The run of `eP`: the ordered events occur -/
 

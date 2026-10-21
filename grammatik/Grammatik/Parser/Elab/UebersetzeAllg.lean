@@ -277,7 +277,7 @@ theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
   | cons _ _ => simp
 
 /-- The device's promise at a read value: a truth value is read at `1`/`0`, a number at itself. -/
-def regZusage {F : Type} {sig : F → Nat} : (g : UReg) → Val F sig g.ty → Bool
+def regZusage {F : Type} {sig : F → Nat → Bool} : (g : UReg) → Val F sig g.ty → Bool
   | ⟨d, n, lo, hi, k, sp, tr, zu, pr, true⟩ => fun (b : Bool) =>
     UReg.zusageBei ⟨d, n, lo, hi, k, sp, tr, zu, pr, true⟩ (bif b then 1 else 0)
   | ⟨d, n, lo, hi, k, sp, tr, zu, pr, false⟩ => fun (v : Zahl lo hi) =>

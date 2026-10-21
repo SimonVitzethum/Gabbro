@@ -89,8 +89,28 @@ def sigNrM (D : Deklaration) : Nat → Signatur D.Tab D.Glob D.Lock D.Marke
   | 0 => sigRuheM _ _ _ _
   | n + 1 => sigR (D.sigNr n)
 
+/-- Conformance in `D.mitRuhe`: `some f` to `n + 1` as `f` to `n`; the root only to `0`. -/
+def passtM (D : Deklaration) : Option D.Fn → Nat → Bool
+  | some f, n + 1 => D.passt f n
+  | some _, 0 => false
+  | none, n => decide (n = 0)
+
+/-- Shifting the types keeps conformance. -/
+theorem SigPasst.sigR {Tab Glob Lock Marke : Type} {rang : Lock → Int} {S T : Signatur Tab Glob Lock Marke}
+    (h : SigPasst rang S T) : SigPasst rang (sigR S) (sigR T) :=
+  ⟨congrArg (List.map tyR) h.params, congrArg (Option.map tyR) h.erg, h.gruende, h.schreibt, h.gschreibt,
+    h.konsumiert, h.produziert, h.haelt, h.extra, h.boden⟩
+
+theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
+    SigPasst D.rang (sigNrM D (sigM D f)) (sigNrM D n)
+  | some f, n + 1, h => SigPasst.sigR (D.passt_ok f n h)
+  | some _, 0, h => by simp [passtM] at h
+  | none, n, h => by
+    have : n = 0 := of_decide_eq_true h
+    subst this; exact SigPasst.refl _ _
+
 /-- A value of `τ` as a value of the shifted `τ`. -/
-@[reducible] def valR : (τ : Ty) → Val D.Fn D.sig τ → Val (Option D.Fn) (sigM D) (tyR τ)
+@[reducible] def valR : (τ : Ty) → Val D.Fn D.passt τ → Val (Option D.Fn) (passtM D) (tyR τ)
   | .int _ _, v => v
   | .bool, v => v
   | .opt _, v => v
@@ -98,12 +118,12 @@ def sigNrM (D : Deklaration) : Nat → Signatur D.Tab D.Glob D.Lock D.Marke
   | .why _, v => v
   | .never, v => v
   | .fl _ _, v => v
-  | .fnptr _, v => ⟨some v.1, congrArg (· + 1) v.2⟩
+  | .fnptr _, v => ⟨some v.1, v.2⟩
   | .ptr _ _, v => v
 
 /-- A value of the shifted `τ` as a value of `τ` (the root has number `0`,
     which no shifted pointer type names). -/
-def valZ : (τ : Ty) → Val (Option D.Fn) (sigM D) (tyR τ) → Val D.Fn D.sig τ
+def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.passt τ
   | .int _ _, v => v
   | .bool, v => v
   | .opt _, v => v
@@ -112,11 +132,11 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (sigM D) (tyR τ) → Val D.Fn D.sig 
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr n, v => match v with
-    | ⟨some f, h⟩ => ⟨f, by simp only [sigM] at h; omega⟩
-    | ⟨none, h⟩ => absurd h (by simp [sigM])
+    | ⟨some f, h⟩ => ⟨f, h⟩
+    | ⟨none, h⟩ => absurd h (by simp [passtM])
   | .ptr _ _, v => v
 
-theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.sig τ), valZ τ (valR τ v) = v
+theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v) = v
   | .int _ _, _ => rfl
   | .bool, _ => rfl
   | .opt _, _ => rfl
@@ -127,7 +147,7 @@ theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.sig τ), valZ τ (valR τ v) =
   | .fnptr _, ⟨_, _⟩ => rfl
   | .ptr _ _, _ => rfl
 
-theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (sigM D) (tyR τ)), valR τ (valZ τ v) = v
+theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), valR τ (valZ τ v) = v
   | .int _ _, _ => rfl
   | .bool, _ => rfl
   | .opt _, _ => rfl
@@ -136,7 +156,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (sigM D) (tyR τ)), val
   | .never, _ => rfl
   | .fl _ _, _ => rfl
   | .fnptr n, ⟨some f, h⟩ => rfl
-  | .fnptr n, ⟨none, h⟩ => absurd h (by simp [sigM])
+  | .fnptr n, ⟨none, h⟩ => absurd h (by simp [passtM])
   | .ptr _ _, _ => rfl
 
 /-- **`D` plus the runtime's idle root.** Every carrier, lock, mark,
@@ -172,6 +192,8 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (sigM D) (tyR τ)), val
   Fn := Option D.Fn
   sig := sigM D
   sigNr := sigNrM D
+  passt := passtM D
+  passt_ok := passtM_ok D
   eigner_nie_erzeugt := fun n t m s hm => match n with
     | 0 => by simp [sigNrM, sigRuheM]
     | n + 1 => D.eigner_nie_erzeugt n t m s hm
@@ -446,7 +468,7 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .slot t f i hL => Expr.slot (D := D.mitRuhe) t f (ruE i) (darfR hL)
   | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ht rw
-  | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) (congrArg (· + 1) h)
+  | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) h
   | _, _, _, .oldG g hL => Expr.oldG (D := D.mitRuhe) g (gdarfR hL)
   | _, _, _, .oldS t f i hL => Expr.oldS (D := D.mitRuhe) t f (ruE i) (darfR hL)
   | _, _, _, .widen h1 h2 e => .widen h1 h2 (ruE e)

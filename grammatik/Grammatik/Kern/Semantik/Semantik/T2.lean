@@ -62,19 +62,19 @@ def evalErg (σ₀ : World D) : ErgExpr D Γ Λ e → World D → Env D Γ → E
   | .empty, _, _ => ()
   | .val e, σ, ρ => eval σ₀ e σ ρ
 
-/-- Die Argumente eines indirekten Rufs, in die Parameter der GERUFENEN Funktion: dieselbe
-    Signatur, per `sig f = n`. -/
-def umsig {f : D.Fn} {n : Nat} (hf : D.sig f = n) (ρ : Env D (D.sigNr n).params) :
+/-- The arguments of an indirect call, as the parameters of the CALLED function: a conforming
+    function has the pointer type's parameters (`SigPasst.params`). -/
+def umsig {f : D.Fn} {n : Nat} (hf : D.passt f n = true) (ρ : Env D (D.sigNr n).params) :
     Env D (D.params f) := by
-  unfold Deklaration.params Deklaration.signatur; rw [hf]; exact ρ
+  unfold Deklaration.params; rw [(D.passt_sig hf).params]; exact ρ
 
-def keinGrundSig {f : D.Fn} {n : Nat} (hf : D.sig f = n) (hr : (D.sigNr n).gruende = 0)
+def keinGrundSig {f : D.Fn} {n : Nat} (hf : D.passt f n = true) (hr : (D.sigNr n).gruende = 0)
     (r : Fin (D.gruende f)) : α := by
-  unfold Deklaration.gruende Deklaration.signatur at r; rw [hf, hr] at r; exact r.elim0
+  unfold Deklaration.gruende at r; rw [(D.passt_sig hf).gruende, hr] at r; exact r.elim0
 
-theorem ergSig {f : D.Fn} {n : Nat} {τ : Ty} (hf : D.sig f = n) (he : (D.sigNr n).erg = some τ) :
+theorem ergSig {f : D.Fn} {n : Nat} {τ : Ty} (hf : D.passt f n = true) (he : (D.sigNr n).erg = some τ) :
     D.erg f = some τ := by
-  unfold Deklaration.erg Deklaration.signatur; rw [hf]; exact he
+  unfold Deklaration.erg; rw [(D.passt_sig hf).erg]; exact he
 
 /-- A float as a raw integer for the machine (a register write): truncation toward zero,
     saturated to the `Int64` range -- the meaning of the `Float` model's

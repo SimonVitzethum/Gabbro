@@ -92,9 +92,9 @@ theorem kongr₃ {α β γ δ : Sort _} (f : α → β → γ → δ) {a a' : α
   subst ha; subst hb; subst hc; rfl
 
 theorem cast_byte_gen (τ : Ty) (h : τ = .int 0 255) (h' : tyR τ = .int 0 255)
-    (x : Val D.Fn D.sig τ) :
-    (cast (congrArg (Val (Option D.Fn) (sigM D)) h') (valR τ x) : Byte) =
-      (cast (congrArg (Val D.Fn D.sig) h) x : Byte) := by
+    (x : Val D.Fn D.passt τ) :
+    (cast (congrArg (Val (Option D.Fn) (passtM D)) h') (valR τ x) : Byte) =
+      (cast (congrArg (Val D.Fn D.passt) h) x : Byte) := by
   subst h; rfl
 
 theorem cast_byte_worldR (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
@@ -104,9 +104,9 @@ theorem cast_byte_worldR (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t
   cast_byte_gen (D.typ t f) hf hf' (σ.slots t k f)
 
 theorem opt_cast_gen (τ : Ty) (m : Int) (h : τ = .opt m) (h' : tyR τ = .opt m)
-    (x : Val D.Fn D.sig τ) :
-    @Eq (Option (Zahl 0 (m - 1))) (h' ▸ valR τ x : Val (Option D.Fn) (sigM D) (.opt m))
-      (h ▸ x : Val D.Fn D.sig (.opt m)) := by
+    (x : Val D.Fn D.passt τ) :
+    @Eq (Option (Zahl 0 (m - 1))) (h' ▸ valR τ x : Val (Option D.Fn) (passtM D) (.opt m))
+      (h ▸ x : Val D.Fn D.passt (.opt m)) := by
   subst h; rfl
 
 theorem bytesAb_worldR (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
@@ -381,8 +381,8 @@ theorem schreibGlob_worldR (σ : World D) (g : D.Glob) (Λ : List (Res D))
   rfl
 
 theorem cast_symm_gen (τ : Ty) (h : τ = .int 0 255) (h' : tyR τ = .int 0 255) (b : Byte) :
-    (cast (congrArg (Val (Option D.Fn) (sigM D)) h').symm b : Val (Option D.Fn) (sigM D) (tyR τ)) =
-      valR τ (cast (congrArg (Val D.Fn D.sig) h).symm b) := by
+    (cast (congrArg (Val (Option D.Fn) (passtM D)) h').symm b : Val (Option D.Fn) (passtM D) (tyR τ)) =
+      valR τ (cast (congrArg (Val D.Fn D.passt) h).symm b) := by
   subst h; rfl
 
 theorem schreibBytes_worldR (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
@@ -460,22 +460,18 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
           cases g with
           | none =>
               have hzn : z n = Option.none := by rw [← h, hz']; rfl
-              have hs : ¬ (D.mitRuhe).sig Option.none = m + 1 := by
-                show ¬ 0 = m + 1
-                omega
+              have hs : ¬ (D.mitRuhe).passt Option.none (m + 1) = true := by
+                show ¬ decide (m + 1 = 0) = true
+                simp
               simp only [zeigerPasst, hz', hzn, dif_neg hs]
               try rfl
           | some f =>
               have hzn : z n = some f := by rw [← h, hz']; rfl
-              by_cases h2 : D.sig f = m
-              · have h2' : (D.mitRuhe).sig (some f) = m + 1 := by
-                  show D.sig f + 1 = m + 1
-                  omega
+              by_cases h2 : D.passt f m = true
+              · have h2' : (D.mitRuhe).passt (some f) (m + 1) = true := h2
                 simp only [zeigerPasst, hz', hzn, dif_pos h2, dif_pos h2']
                 try rfl
-              · have h2' : ¬ (D.mitRuhe).sig (some f) = m + 1 := by
-                  show ¬ D.sig f + 1 = m + 1
-                  omega
+              · have h2' : ¬ (D.mitRuhe).passt (some f) (m + 1) = true := h2
                 simp only [zeigerPasst, hz', hzn, dif_neg h2, dif_neg h2']
                 try rfl
   | .ptr _ _, _ => rfl

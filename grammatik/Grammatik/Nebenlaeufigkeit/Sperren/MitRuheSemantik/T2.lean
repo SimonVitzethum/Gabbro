@@ -102,22 +102,26 @@ theorem map_valR_int (lo hi : Int) (l : List (Zahl lo hi)) :
   | nil => rfl
   | cons a l ih => exact congrArg (a :: ·) ih
 
-theorem umsig_ru {f : D.Fn} {n : Nat} (hf : D.sig f = n)
-    (hf' : (D.mitRuhe).sig (some f) = n + 1) (ρ : Env D (D.sigNr n).params) :
+theorem envR_mpr {a b : Ctx} (h : a = b) (H1 : Env D.mitRuhe (a.map tyR) = Env D.mitRuhe (b.map tyR))
+    (H2 : Env D a = Env D b) (ρ : Env D b) : Eq.mpr H1 (envR ρ) = envR (Eq.mpr H2 ρ) := by
+  subst h; rfl
+
+theorem umsig_ru {f : D.Fn} {n : Nat} (hf : D.passt f n = true)
+    (hf' : (D.mitRuhe).passt (some f) (n + 1) = true) (ρ : Env D (D.sigNr n).params) :
     umsig (D := D.mitRuhe) hf' (envR ρ) = envR (umsig hf ρ) := by
-  subst hf
-  rfl
+  unfold umsig
+  exact envR_mpr (D.passt_sig hf).params _ _ ρ
 
 theorem int_cast_gen (τ : Ty) (lo hi : Int) (h : τ = .int lo hi) (h' : tyR τ = .int lo hi)
-    (x : Val D.Fn D.sig τ) :
-    @Eq (Zahl lo hi) (h' ▸ valR τ x : Val (Option D.Fn) (sigM D) (.int lo hi))
-      (h ▸ x : Val D.Fn D.sig (.int lo hi)) := by
+    (x : Val D.Fn D.passt τ) :
+    @Eq (Zahl lo hi) (h' ▸ valR τ x : Val (Option D.Fn) (passtM D) (.int lo hi))
+      (h ▸ x : Val D.Fn D.passt (.int lo hi)) := by
   subst h; rfl
 
 theorem int_cast_gen' (τ : Ty) (lo hi : Int) (h : τ = .int lo hi) (h' : tyR τ = .int lo hi)
     (z : Zahl lo hi) :
-    (h' ▸ (z : Val (Option D.Fn) (sigM D) (.int lo hi)) : Val (Option D.Fn) (sigM D) (tyR τ)) =
-      valR τ (h ▸ (z : Val D.Fn D.sig (.int lo hi)) : Val D.Fn D.sig τ) := by
+    (h' ▸ (z : Val (Option D.Fn) (passtM D) (.int lo hi)) : Val (Option D.Fn) (passtM D) (tyR τ)) =
+      valR τ (h ▸ (z : Val D.Fn D.passt (.int lo hi)) : Val D.Fn D.passt τ) := by
   subst h; rfl
 
 theorem slotInt_cast_worldR {lo hi : Int} (σ : World D) (t : D.Tab) (f : D.Feld t)
@@ -233,8 +237,8 @@ theorem valR_bool (b : Bool) : valR (D := D) .bool b = b := rfl
 theorem valR_int {lo hi : Int} (z : Zahl lo hi) : valR (D := D) (.int lo hi) z = z := rfl
 theorem valR_opt {n : Int} (z : Option (Zahl 0 (n - 1))) : valR (D := D) (.opt n) z = z := rfl
 theorem valR_fl {lo hi : Int × Int} (z : Gleit lo hi) : valR (D := D) (.fl lo hi) z = z := rfl
-theorem valR_fnptr {n : Nat} (f : D.Fn) (h : D.sig f = n) :
-    valR (D := D) (.fnptr n) ⟨f, h⟩ = ⟨some f, congrArg (· + 1) h⟩ := rfl
+theorem valR_fnptr {n : Nat} (f : D.Fn) (h : D.passt f n = true) :
+    valR (D := D) (.fnptr n) ⟨f, h⟩ = ⟨some f, h⟩ := rfl
 
 theorem orte2 {Γ : Ctx} {Λ : List (Res D)} {τ₁ τ₂ : Ty} (a : Expr D Γ Λ τ₁) (b : Expr D Γ Λ τ₂) :
     (ruE a).orte ++ (ruE b).orte = a.orte ++ b.orte := kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)

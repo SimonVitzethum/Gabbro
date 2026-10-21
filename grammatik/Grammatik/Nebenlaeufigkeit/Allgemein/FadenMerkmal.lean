@@ -147,7 +147,8 @@ def GRest.mR (A : Merkmal D) {V : Vertrag D} :
   | _, _, _, .leer => True
 
 /-- The callee `g` is admitted: directly, or through its signature. -/
-def RufZiel (A : Merkmal D) (g : D.Fn) : Prop := A.ruf g = true ∨ A.ind (D.sig g) = true
+def RufZiel (A : Merkmal D) (g : D.Fn) : Prop :=
+  A.ruf g = true ∨ ∃ n, D.passt g n = true ∧ A.ind n = true
 
 /-! ## 2. Selection and `else` blocks keep the predicate -/
 
@@ -322,7 +323,7 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
     rw [hhead] at hok
     dsimp only at hok ⊢
     simp only [GRest.mR, mB, mS, Bool.and_eq_true] at hok ⊢
-    exact ⟨Or.inr (hg ▸ hok.1.1), hok.1.2, hok.2⟩
+    exact ⟨Or.inr ⟨_, hg, hok.1.1⟩, hok.1.2, hok.2⟩
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩, rho, s0,
@@ -331,7 +332,7 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
     rw [hhead] at hok
     dsimp only at hok ⊢
     simp only [GRest.mR, mE, mS, Bool.and_eq_true] at hok ⊢
-    exact ⟨Or.inr (hg ▸ hok.1), hok.2⟩
+    exact ⟨Or.inr ⟨_, hg, hok.1⟩, hok.2⟩
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩, rho, s0,
@@ -340,7 +341,7 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
     rw [hhead] at hok
     dsimp only at hok ⊢
     simp only [GRest.mR, mB, Bool.and_eq_true] at hok ⊢
-    exact ⟨Or.inr (hg ▸ hok.1.1), hok.1.2, hok.2⟩
+    exact ⟨Or.inr ⟨_, hg, hok.1.1⟩, hok.1.2, hok.2⟩
   | rueck caller rst hpop =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
       by dsimp only; rw [rufUpdateG_self], fun A => ?_⟩)

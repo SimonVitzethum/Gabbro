@@ -195,7 +195,7 @@ end
 /-- **The check survives the idle root.** -/
 theorem folgeOk_mitRuhe {P : Programm D} {Φ : Folge D} (h : FolgeOk P Φ) :
     FolgeOk P.mitRuhe Φ.mitRuhe := by
-  refine ⟨fun g => ?_, fun g hg => ?_⟩
+  refine ⟨fun g => ?_, fun g n hg hn => ?_⟩
   · cases g with
     | none => rfl
     | some f =>
@@ -203,7 +203,10 @@ theorem folgeOk_mitRuhe {P : Programm D} {Φ : Folge D} (h : FolgeOk P Φ) :
           (ruEnd (P.rumpf f))).trans ((ruEnd_fE Φ _ _ _).trans (h.1 f))
   · cases g with
     | none => exact absurd hg Bool.false_ne_true
-    | some f => exact h.2 f hg
+    | some f =>
+        cases n with
+        | zero => exact absurd hn Bool.false_ne_true
+        | succ n => exact h.2 f n hg hn
 
 namespace Zielsatz
 

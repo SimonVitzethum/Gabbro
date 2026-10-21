@@ -480,7 +480,7 @@ theorem w_rufCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {passes :
     (hp : RufPasst D (vertragVon D z.kopf.f) (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
     (rest : Endblock D (vertragVon D z.kopf.f) l Γ (nachSig D (D.sigNr n) Λ)) (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.cons (.callInd p args hp hr) rest)⟩)
-    (hΛ : HeldGenau Λ (offen z.spur)) (g : D.Fn) (hg : D.sig g = n)
+    (hΛ : HeldGenau Λ (offen z.spur)) (g : D.Fn) (hg : D.passt g n = true)
     (hv : eval ((M.weltVon f).lese Λ (p.orte ++ args.orte)) p
       ((M.weltVon f).lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩) :
     ∃ M', RufSchrittG P O passes M f M' ∧

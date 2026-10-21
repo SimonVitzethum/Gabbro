@@ -97,6 +97,39 @@ structure Signatur (Tab Glob Lock Marke : Type) where
       value is computed from the call graph, not written by the user. -/
   boden : Option Int := none
 
+/-- **A function conforms to a pointer type** (Simon, 2026-10-21: pointer types are STRUCTURAL):
+    the function's own signature `S` fits the signature `T` its pointer type names. Equal
+    parameters, result, reasons and marks (consumed and produced: the caller's held set after
+    the call is `nachSig T`, which must be the one the callee leaves); its writes are among
+    `T`'s; it requires only locks `T` requires; a lock `T` requires and `S` does not stays held
+    by the caller through the call and ranks below `S`'s floor; `T`'s floor is at most `S`'s.
+    So everything a call through the pointer establishes for `T` (`RufPasst`) holds for `S`
+    (`RufPasst.vonPasst`). The model has no contract on a signature: `requires`/`ensures` are
+    the program's, per function, and stay with the function actually called. -/
+structure SigPasst {Tab Glob Lock Marke : Type} (rang : Lock → Int)
+    (S T : Signatur Tab Glob Lock Marke) : Prop where
+  params : S.params = T.params
+  erg : S.erg = T.erg
+  gruende : S.gruende = T.gruende
+  schreibt : ∀ t, S.schreibt t = true → T.schreibt t = true
+  gschreibt : ∀ g, S.gschreibt g = true → T.gschreibt g = true
+  konsumiert : S.konsumiert = T.konsumiert
+  produziert : S.produziert = T.produziert
+  haelt : ∀ L, L ∈ S.haelt → L ∈ T.haelt
+  extra : ∀ L, L ∈ T.haelt → L ∉ S.haelt → ∃ c, S.boden = some c ∧ rang L < c
+  boden : ∀ c, T.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c'
+
+/-- A signature conforms to itself. -/
+theorem SigPasst.refl {Tab Glob Lock Marke : Type} (rang : Lock → Int) (S : Signatur Tab Glob Lock Marke) :
+    SigPasst rang S S :=
+  ⟨rfl, rfl, rfl, fun _ h => h, fun _ h => h, rfl, rfl, fun _ h => h, fun _ h hn => absurd h hn,
+    fun c h => ⟨c, h, Int.le_refl c⟩⟩
+
+/-- Exactly the signature number: the pointer types before 2026-10-21. -/
+theorem SigPasst.von_eq {Tab Glob Lock Marke F : Type} (rang : Lock → Int) (sig : F → Nat)
+    (sigNr : Nat → Signatur Tab Glob Lock Marke) {f : F} {n : Nat} (h : sig f = n) :
+    SigPasst rang (sigNr (sig f)) (sigNr n) := h ▸ SigPasst.refl rang _
+
 /-- Die Klasse eines Geraeteregisters (`class r | w | rw | w1c | rc`). -/
 inductive Regklasse where
   | r | w | rw | w1c | rc
@@ -156,6 +189,12 @@ structure Deklaration where
   /-- Die Signaturnummer -- `fnptr n` ist ein Zeiger auf eine Funktion mit Signatur `n`. -/
   sig : Fn → Nat
   sigNr : Nat → Signatur Tab Glob Lock Marke
+  /-- **Conformance of a function to a pointer type** (2026-10-21): `passt f n` -- `f` may be
+      the value of a `fnptr n`. Default: exactly the signature number (`sig f = n`). -/
+  passt : Fn → Nat → Bool := fun f n => decide (sig f = n)
+  /-- What conformance means: the function's own signature fits the pointer's (`SigPasst`). -/
+  passt_ok : ∀ f n, passt f n = true → SigPasst rang (sigNr (sig f)) (sigNr n) := by
+    intro f n h; have e := of_decide_eq_true h; subst e; exact SigPasst.refl _ _
   eigner_nie_erzeugt : ∀ n t m s, m ∈ eigner t → (m, s) ∉ (sigNr n).produziert
   /-- `table … { invariant I }` / `group … { invariant I }`. -/
   Inv : Type
@@ -183,7 +222,7 @@ structure Deklaration where
   /-- `reg R … requires p` OHNE `else`: die Zusage des Geraets ueber den gelesenen Wert. Sie
       wird an jeder Lesung gehalten, und ihr Bruch ist `Hardware.geraet r` -- die Annahme
       ueber das Geraet, benannt am Register. -/
-  rzusage : ∀ r : Reg, Val Fn sig (rtyp r) → Bool
+  rzusage : ∀ r : Reg, Val Fn passt (rtyp r) → Bool
   /-- The carriers that hold the state of `r`'s device: the tables and
       globals a read of `r` may depend on (`RegLokal`, `ZielOrtGeraet.lean`).
       A device whose state changes by itself changes these carriers, through
@@ -229,7 +268,7 @@ end Deklaration
 variable (D : Deklaration)
 
 /-- Der Wert eines Typs in dieser Deklaration. -/
-abbrev Wert : Ty → Type := Val D.Fn D.sig
+abbrev Wert : Ty → Type := Val D.Fn D.passt
 
 /-- Was ein Rumpf HAELT: Sperrzeugnisse (`Held(L)`) und lineare Marken auf ihrer Stufe. -/
 inductive Res where
@@ -256,6 +295,15 @@ def nachSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D)) : Lis
     ++ S.produziert.map (Res.vonMarke D)
 
 def nach (f : D.Fn) (Λ : List (Res D)) : List (Res D) := nachSig D (D.signatur f) Λ
+
+/-- A conforming callee leaves the caller the held set the pointer type promises. -/
+theorem nachSig_passt {S T : Signatur D.Tab D.Glob D.Lock D.Marke} (h : SigPasst D.rang S T)
+    (Λ : List (Res D)) : nachSig D S Λ = nachSig D T Λ := by
+  unfold nachSig; rw [h.konsumiert, h.produziert]
+
+/-- The signature of a function that conforms to `fnptr n` fits `n`. -/
+theorem Deklaration.passt_sig {f : D.Fn} {n : Nat} (h : D.passt f n = true) :
+    SigPasst D.rang (D.signatur f) (D.sigNr n) := D.passt_ok f n h
 
 /-- Der Vertrag der Funktion, in der eine Anweisung steht. -/
 structure Vertrag where
@@ -320,6 +368,25 @@ theorem RufPasst.hx_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Ma
     ∀ L, Res.held L ∈ Λ → L ∉ S.haelt → ∃ c, S.boden = some c ∧ D.rang L < c :=
   fun L hL hn => absurd ((h L).mp hL) hn
 
+/-- **A call through a pointer fits the callee** (2026-10-21): what the caller establishes for the
+    pointer's signature `T` holds for the signature `S` of every function that conforms to it. -/
+theorem RufPasst.vonPasst {D : Deklaration} {V : Vertrag D} {S T : Signatur D.Tab D.Glob D.Lock D.Marke}
+    {Λ : List (Res D)} (hs : SigPasst D.rang S T) (hp : RufPasst D V T Λ) : RufPasst D V S Λ where
+  hw t h := hp.hw t (hs.schreibt t h)
+  hg g h := hp.hg g (hs.gschreibt g h)
+  hk := by rw [hs.konsumiert]; exact hp.hk
+  hh L h := hp.hh L (hs.haelt L h)
+  hx L hL hn := by
+    by_cases hT : L ∈ T.haelt
+    · exact hs.extra L hT hn
+    · obtain ⟨c, hc, hr⟩ := hp.hx L hL hT
+      obtain ⟨c', hc', hle⟩ := hs.boden c hc
+      exact ⟨c', hc', Int.lt_of_lt_of_le hr hle⟩
+  hb c hc := by
+    obtain ⟨c', hc', hle⟩ := hp.hb c hc
+    obtain ⟨c'', hc'', hle'⟩ := hs.boden c' hc'
+    exact ⟨c'', hc'', Int.le_trans hle hle'⟩
+
 /-! ## 2. Sichtbereich und Variablen -/
 
 abbrev Ctx := List Ty
@@ -356,8 +423,9 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   /-- Der Zeiger auf einen Traeger -- die einzige Adresse, die es gibt: die eines DEKLARIERTEN
       Dings. Es gibt keine Adresse eines Ausdrucks (`SYNTAX.md` §4, `fnvalue`). -/
   | ptrOf (t : D.Tab) (n : Nat) (ht : D.tabNr n = some t) (rw : Bool) : Expr Γ Λ (.ptr n rw)
-  /-- `&f` -- der Funktionszeiger: eine Funktion GENAU dieser Signatur («B8»). -/
-  | fnref (f : D.Fn) (n : Nat) (h : D.sig f = n) : Expr Γ Λ (.fnptr n)
+  /-- `&f` -- the function pointer: a function that CONFORMS to the pointer type («B8»; structural
+      since 2026-10-21, `Deklaration.passt`). -/
+  | fnref (f : D.Fn) (n : Nat) (h : D.passt f n = true) : Expr Γ Λ (.fnptr n)
   /-- `old(g)`, `old(T.slots[i].f)` -- nur in `ensures`: der Wert beim Eintritt. -/
   | oldG (g : D.Glob) (hL : gdarf D g Λ) : Expr Γ Λ (D.gtyp g)
   | oldS (t : D.Tab) (f : D.Feld t) (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
