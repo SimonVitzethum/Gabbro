@@ -235,11 +235,16 @@ def genommen (s : SAnw) : List String := genommenF 1000 s
 /-- Does a body name the device handle? -/
 def nGlobs (gs : List Nat) : List String := gs.map nGlob
 
+/-- The parameters: the `j`-th of `np` is `v{np-1-j}` (the variable of depth `j` in the body). -/
+def parListe (np : Nat) : Nat → List Ty → Except String (List (String × STyp))
+  | _, [] => .ok []
+  | j, t :: ts => do .ok ((nVar (np - 1 - j), ← typS t) :: (← parListe np (j + 1) ts))
+
 /-- One function. -/
 def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length) : Except String SItemTief := do
   let s := z.deklaration.signatur f
   let np := s.params.length
-  let ps ← (s.params.zipIdx.map fun (t, j) => do pure (nVar (np - 1 - j), ← typS t)).mapM id
+  let ps ← parListe np 0 s.params
   let ps := ps ++ (if mitGriff then [("d", .atom "Dev")] else [])
   let res ← match s.erg with
     | none => pure none
