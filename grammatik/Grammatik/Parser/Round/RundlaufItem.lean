@@ -8,7 +8,7 @@
   words, nested items), `use`, `const` (expression or nested array values), `static` (with
   `aligned`, `section`, `shared`), `table` (count/backed/owner/shared head; `const`, `slot` fields
   with bit position, `offset_into`, `where`, `reserved`, `by ops`; group invariants; `ops`; `tree`;
-  `occupied`), `fn` with its whole head (modifier, parameters, result, `or`
+  `occupied`), `entry` (vector, `via`, `arch`, `ist`, `nested`, `per cpu`, saves, dispatch), `fn` with its whole head (modifier, parameters, result, `or`
   channel, the clauses `requires`, `ensures`, `maintains`, `refines`, `effects`, `costs`,
   `decreases`, `payload`, `section`, `arch`, `advances`) and a block body or `;`, `lock` (with
   `held`, `shared held`, `masks`, `invariant`), `atomic` (with `publishes`, an order, `observed
@@ -2007,6 +2007,293 @@ theorem item_table (n : String) (cnt : Option SExpr) (backed owner : Option Stri
   simp [parseTabellenTief, nimmWort, strEq_self, nimmName, nameText, hK, fordereZeichen, hT]
 
 
+/-! ### `entry` -/
+
+/-- What follows a register binding: `,` or `}`. -/
+def BindEnde (R : List Token) : Prop := (∃ r, R = .zeichen "," :: r) ∨ (∃ r, R = .zeichen "}" :: r)
+
+theorem regBind_rund (b : SRegBind) (R : List Token) (hR : BindEnde R) :
+    parseRegBind (druckRegBind b ++ R) = .ok (b, R) := by
+  cases b with
+  | reg a =>
+    rcases hR with ⟨r, rfl⟩ | ⟨r, rfl⟩ <;>
+      simp [druckRegBind, parseRegBind, nimmName, nameText, (by decide : strEq "," "=" = false),
+        (by decide : strEq "," ":" = false), (by decide : strEq "}" "=" = false),
+        (by decide : strEq "}" ":" = false)]
+  | binds a c => simp [druckRegBind, parseRegBind, nimmName, nameText, strEq_self]
+
+theorem regBindFolge_rund : ∀ (bs : List SRegBind) (R : List Token) (F : Nat), bs ≠ [] → bs.length ≤ F →
+    parseRegBindFolge F (druckRegBinds bs ++ .zeichen "}" :: R) = .ok (bs, R) := by
+  intro bs
+  induction bs with
+  | nil => intro _ _ h; exact absurd rfl h
+  | cons b bs ih =>
+    intro R F _ hF
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp at hF; omega⟩
+    cases bs with
+    | nil =>
+      have hB := regBind_rund b (.zeichen "}" :: R) (Or.inr ⟨R, rfl⟩)
+      simp only [druckRegBinds]
+      simp [parseRegBindFolge, hB, fordereZeichen, strEq_self]
+    | cons c cs =>
+      have hR := ih R F' (by simp) (by simp at hF ⊢; omega)
+      have hd : druckRegBinds (b :: c :: cs) = druckRegBind b ++ .zeichen "," :: druckRegBinds (c :: cs) := by
+        simp [druckRegBinds]
+      rw [hd, List.append_assoc]
+      have hB := regBind_rund b (.zeichen "," :: (druckRegBinds (c :: cs) ++ .zeichen "}" :: R)) (Or.inl ⟨_, rfl⟩)
+      obtain ⟨a, ts, hts⟩ : ∃ a ts, druckRegBinds (c :: cs) ++ .zeichen "}" :: R = .ident a :: ts := by
+        cases c <;> cases cs <;> simp [druckRegBinds, druckRegBind]
+      try simp only [List.cons_append] at hB
+      simp only [List.append_assoc, List.cons_append]
+      rw [hts] at hB hR ⊢
+      unfold parseRegBindFolge
+      simp only [hB, hR]
+
+theorem regBindListe_rund (bs : List SRegBind) (R : List Token) (F : Nat) (hF : bs.length + 2 ≤ F) :
+    parseRegBindListe F (.zeichen "{" :: (druckRegBinds bs ++ .zeichen "}" :: R)) = .ok (bs, R) := by
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  cases bs with
+  | nil => simp [druckRegBinds, parseRegBindListe, fordereZeichen, strEq_self]
+  | cons b bs' =>
+    have hR := regBindFolge_rund (b :: bs') R F' (by simp) (by omega)
+    obtain ⟨a, ts, hts⟩ : ∃ a ts, druckRegBinds (b :: bs') ++ .zeichen "}" :: R = .ident a :: ts := by
+      cases b <;> cases bs' <;> simp [druckRegBinds, druckRegBind]
+    rw [hts] at hR ⊢
+    simp [parseRegBindListe, fordereZeichen, strEq_self, hR]
+
+theorem namenKlammer_rund (ns : List String) (R : List Token) (F : Nat) (hF : ns.length + 2 ≤ F) :
+    parseNamenEingeklammert F (druckNamenKlammer ns ++ R) = .ok (ns, R) := by
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  cases ns with
+  | nil => simp [druckNamenKlammer, druckNamen, parseNamenEingeklammert, fordereZeichen, strEq_self]
+  | cons n ns' =>
+    have hN := namen_rund (n :: ns') (.zeichen "}" :: R) F' (by simp) (by intro r e; simp at e) (by omega)
+    obtain ⟨ts, hts⟩ : ∃ ts, druckNamen (n :: ns') ++ .zeichen "}" :: R = .ident n :: ts := by
+      cases ns' <;> exact ⟨_, by simp [druckNamen]; rfl⟩
+    simp only [druckNamenKlammer, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    rw [hts] at hN ⊢
+    simp [parseNamenEingeklammert, fordereZeichen, strEq_self, hN]
+
+/-- A printable entry: printable vector and stack-index expressions, a `nested` mode of one word,
+    a dispatch path. -/
+def EingangGut (e : SEingang) : Prop :=
+  (∀ v, e.vektor = some v → gut v = true) ∧ (∀ x, e.ist = some x → gut x = true) ∧
+    (e.nest = none ∨ e.nest = some "never" ∨ e.nest = some "masked") ∧ e.dispatch ≠ []
+
+def vekToks : Option SExpr → List Token
+  | some v => [.wort "vector"] ++ druckToks v
+  | none => []
+
+def istToks : Option SExpr → List Token
+  | some x => [.wort "ist"] ++ druckToks x
+  | none => []
+
+def nestToks : Option String → List Token
+  | some n => [.wort "nested"] ++ rohToks n
+  | none => []
+
+def cpuToks (b : Bool) : List Token := if b then [.wort "per", .wort "cpu"] else []
+
+theorem druckEingang_eq (e : SEingang) : druckEingang e = [.wort "entry", .ident e.name] ++ vekToks e.vektor ++
+    nameOptToks "via" e.via ++ [.wort "arch", .ident e.arch, .zeichen "{", .wort "regs", .wort "in", .zeichen "{"] ++
+    druckRegBinds e.regIn ++ [.zeichen "}", .wort "regs", .wort "out", .zeichen "{"] ++ druckRegBinds e.regOut ++
+    [.zeichen "}", .wort "preserves"] ++ druckNamenKlammer e.erhaelt ++ [.wort "clobbers"] ++
+    druckNamenKlammer e.kills ++ [.wort "stack", .ident e.stapel] ++ cpuToks e.perCpu ++ istToks e.ist ++
+    nestToks e.nest ++ [.wort "dispatch"] ++ pfadToks e.dispatch ++ [.zeichen ";", .zeichen "}"] := by
+  simp [druckEingang, vekToks, nameOptToks, cpuToks, istToks, nestToks]; rfl
+
+theorem eingangKopf_arch (f : Nat) (a : String) (R : List Token) :
+    parseEingangKopf (f + 1) (.wort "arch" :: .ident a :: R) = .ok ((none, none, a), R) := by
+  simp [parseEingangKopf, nimmName, nameText, strEq_self, (by decide : strEq "arch" "vector" = false),
+    (by decide : strEq "arch" "via" = false)]
+
+theorem eingangKopf_via (f : Nat) (m : String) (X R : List Token) (v : Option SExpr) (w : Option String)
+    (a : String) (h : parseEingangKopf f X = .ok ((v, w, a), R)) :
+    parseEingangKopf (f + 1) (.wort "via" :: .ident m :: X) = .ok ((v, some m, a), R) := by
+  simp [parseEingangKopf, nimmName, nameText, strEq_self, h, (by decide : strEq "via" "vector" = false)]
+
+theorem eingangKopf_vector (f : Nat) (e : SExpr) (X R : List Token) (v : Option SExpr) (w : Option String)
+    (a : String) (hO : parseOr f (druckToks e ++ X) = .ok (e, X)) (h : parseEingangKopf f X = .ok ((v, w, a), R)) :
+    parseEingangKopf (f + 1) (.wort "vector" :: (druckToks e ++ X)) = .ok ((some e, w, a), R) := by
+  simp [parseEingangKopf, strEq_self, hO, h]
+
+theorem eingangKopf_rund (vek : Option SExpr) (via : Option String) (a : String) (hv : ∀ v, vek = some v → gut v = true)
+    (R : List Token) (F : Nat) (hF : 8 * (vekToks vek).length + 40 ≤ F) :
+    parseEingangKopf F (vekToks vek ++ (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R))) =
+      .ok ((vek, via, a), R) := by
+  have L1 : ∀ G, 2 ≤ G → parseEingangKopf G (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) =
+      .ok ((none, via, a), R) := by
+    intro G hG
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 2 := ⟨G - 2, by omega⟩
+    cases via with
+    | none => simpa [nameOptToks] using eingangKopf_arch (G' + 1) a R
+    | some m => simpa [nameOptToks] using eingangKopf_via (G' + 1) m _ R none none a (eingangKopf_arch G' a R)
+  cases vek with
+  | none => simpa [vekToks] using L1 F (by simp [vekToks] at hF; omega)
+  | some v =>
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp [vekToks] at hF; omega⟩
+    have hrX : ruhig (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) = true ∧
+        ruhigSuff (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) = true ∧
+        ruhigGleit (nameOptToks "via" via ++ (.wort "arch" :: .ident a :: R)) = true := by
+      cases via <;> exact ⟨rfl, rfl, rfl⟩
+    have hO := ausdruck v (hv v rfl) _ F' hrX.1 hrX.2.1 hrX.2.2 (by simp [vekToks] at hF; omega)
+    simpa [vekToks] using eingangKopf_vector F' v _ R none via a hO (L1 F' (by simp [vekToks] at hF; omega))
+
+theorem dispatch_rund (f : Nat) (dp : List String) (hdp : dp ≠ []) (R : List Token) :
+    parseEingangDispatch (f + 1) (.wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) = .ok (dp, R) := by
+  have hP := nimmPfad_pfad dp (.zeichen ";" :: R) hdp (by intro r e; simp at e)
+  simp [parseEingangDispatch, nimmWort, strEq_self, hP, fordereZeichen]
+
+theorem rohToks_never : rohToks "never" = [.wort "never"] := by
+  rw [rohToks_name "never" (by decide)]; simp [nameTok]; decide
+
+theorem rohToks_masked : rohToks "masked" = [.wort "masked"] := by
+  rw [rohToks_name "masked" (by decide)]; simp [nameTok]; decide
+
+theorem nestOpt_rund (f : Nat) (nest : Option String) (hn : nest = none ∨ nest = some "never" ∨ nest = some "masked")
+    (X : List Token) :
+    parseEingangNestedOpt (f + 1) (nestToks nest ++ .wort "dispatch" :: X) = .ok (nest, .wort "dispatch" :: X) := by
+  rcases hn with rfl | rfl | rfl
+  · simp [nestToks, parseEingangNestedOpt, (by decide : strEq "dispatch" "nested" = false)]
+  · have : rohToks "never" = [.wort "never"] := by rw [rohToks_name "never" (by decide)]; simp [nameTok]; decide
+    simp [nestToks, this, parseEingangNestedOpt, strEq_self]
+  · have : rohToks "masked" = [.wort "masked"] := by rw [rohToks_name "masked" (by decide)]; simp [nameTok]; decide
+    simp [nestToks, this, parseEingangNestedOpt, strEq_self, (by decide : strEq "masked" "never" = false)]
+
+theorem nested_rund (f : Nat) (nest : Option String) (hn : nest = none ∨ nest = some "never" ∨ nest = some "masked")
+    (dp : List String) (hdp : dp ≠ []) (R : List Token) :
+    parseEingangNested (f + 2) (nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) =
+      .ok ((nest, dp), R) := by
+  simp [parseEingangNested, nestOpt_rund f nest hn, dispatch_rund f dp hdp R]
+
+theorem restNach_rund (f : Nat) (ist : Option SExpr) (hi : ∀ x, ist = some x → gut x = true) (nest : Option String)
+    (hn : nest = none ∨ nest = some "never" ∨ nest = some "masked") (dp : List String) (hdp : dp ≠ [])
+    (R : List Token) (hF : 8 * (istToks ist).length + 40 ≤ f) :
+    parseEingangRestNach (f + 3) (istToks ist ++ (nestToks nest ++ .wort "dispatch" ::
+      (pfadToks dp ++ .zeichen ";" :: R))) = .ok ((ist, nest, dp), R) := by
+  have hN := nested_rund f nest hn dp hdp R
+  have hN1 := nested_rund (f + 1) nest hn dp hdp R
+  have hkopf : ∃ w X, nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R) = .wort w :: X ∧
+      w ≠ "ist" := by
+    rcases hn with rfl | rfl | rfl
+    · exact ⟨"dispatch", _, rfl, by decide⟩
+    · exact ⟨"nested", _, by simp [nestToks, rohToks_never]; rfl, by decide⟩
+    · exact ⟨"nested", _, by simp [nestToks, rohToks_masked]; rfl, by decide⟩
+  cases ist with
+  | none =>
+    obtain ⟨w, X, hw, hne⟩ := hkopf
+    have : strEq w "ist" = false := by
+      cases h : strEq w "ist"
+      · rfl
+      · exact absurd ((strEq_eq _ _).mp h) hne
+    simp only [istToks, List.nil_append]
+    rw [hw] at hN ⊢
+    simp [parseEingangRestNach, this, hN]
+  | some x =>
+    have hx := hi x rfl
+    have hrX : ruhig (nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) = true ∧
+        ruhigSuff (nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) = true ∧
+        ruhigGleit (nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) = true := by
+      rcases hn with rfl | rfl | rfl <;> exact ⟨rfl, rfl, rfl⟩
+    have hO := ausdruck x hx _ (f + 2) hrX.1 hrX.2.1 hrX.2.2 (by simp [istToks] at hF; omega)
+    simp only [istToks, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    simp [parseEingangRestNach, strEq_self, hO, hN]
+
+
+theorem rest_rund (f : Nat) (st : String) (cpu : Bool) (ist : Option SExpr) (hi : ∀ x, ist = some x → gut x = true)
+    (nest : Option String) (hn : nest = none ∨ nest = some "never" ∨ nest = some "masked") (dp : List String)
+    (hdp : dp ≠ []) (R : List Token) (hF : 8 * (istToks ist).length + 40 ≤ f) :
+    parseEingangRest (f + 4) (.wort "stack" :: .ident st :: (cpuToks cpu ++ (istToks ist ++ (nestToks nest ++
+      .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R))))) = .ok ((st, cpu, ist, nest, dp), R) := by
+  have hRN := restNach_rund f ist hi nest hn dp hdp R hF
+  cases cpu with
+  | true =>
+    simp only [cpuToks, ite_true, List.cons_append, List.nil_append]
+    simp [parseEingangRest, nimmWort, strEq_self, nimmName, nameText, hRN]
+  | false =>
+    simp only [cpuToks, Bool.false_eq_true, ite_false, List.nil_append]
+    have hkopf : ∃ w X, istToks ist ++ (nestToks nest ++ .wort "dispatch" :: (pfadToks dp ++ .zeichen ";" :: R)) =
+        .wort w :: X ∧ w ≠ "per" := by
+      cases ist with
+      | some x => exact ⟨"ist", _, rfl, by decide⟩
+      | none =>
+        rcases hn with rfl | rfl | rfl
+        · exact ⟨"dispatch", _, rfl, by decide⟩
+        · exact ⟨"nested", _, by simp [istToks, nestToks, rohToks_never]; rfl, by decide⟩
+        · exact ⟨"nested", _, by simp [istToks, nestToks, rohToks_masked]; rfl, by decide⟩
+    obtain ⟨w, X, hw, hne⟩ := hkopf
+    have : strEq w "per" = false := by
+      cases h : strEq w "per"
+      · rfl
+      · exact absurd ((strEq_eq _ _).mp h) hne
+    rw [hw] at hRN ⊢
+    simp [parseEingangRest, nimmWort, strEq_self, nimmName, nameText, this, hRN]
+
+theorem druckRegBinds_len (bs : List SRegBind) : bs.length ≤ (druckRegBinds bs).length := by
+  induction bs with
+  | nil => simp
+  | cons b bs ih =>
+    cases bs with
+    | nil => cases b <;> simp [druckRegBinds, druckRegBind]
+    | cons c cs =>
+      simp only [druckRegBinds, List.length_append, List.length_cons] at ih ⊢
+      cases b <;> simp [druckRegBind] <;> omega
+
+theorem druckNamen_len (ns : List String) : ns.length ≤ (druckNamen ns).length := by
+  induction ns with
+  | nil => simp
+  | cons n ns ih => cases ns with
+    | nil => simp [druckNamen]
+    | cons m ms => simp [druckNamen] at ih ⊢; omega
+
+theorem item_entry (e : SEingang) (he : EingangGut e) : ItemBein (.entryT e) := by
+  intro rest F hF
+  obtain ⟨hv, hi, hn, hdp⟩ := he
+  have hlenRI := druckRegBinds_len e.regIn
+  have hlenRO := druckRegBinds_len e.regOut
+  have hlenE := druckNamen_len e.erhaelt
+  have hlenK := druckNamen_len e.kills
+  simp only [fbI, druckItem, druckEingang_eq, druckNamenKlammer, List.length_append, List.length_cons,
+    List.length_nil] at hF
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 7 := ⟨F - 7, by omega⟩
+  have hK := eingangKopf_rund e.vektor e.via e.arch hv (.zeichen "{" :: .wort "regs" :: .wort "in" :: .zeichen "{" ::
+    (druckRegBinds e.regIn ++ .zeichen "}" :: .wort "regs" :: .wort "out" :: .zeichen "{" :: (druckRegBinds e.regOut ++
+      .zeichen "}" :: .wort "preserves" :: (druckNamenKlammer e.erhaelt ++ .wort "clobbers" ::
+        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+          (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))))))
+    (F' + 4) (by omega)
+  have hRI := regBindListe_rund e.regIn (.wort "regs" :: .wort "out" :: .zeichen "{" :: (druckRegBinds e.regOut ++
+      .zeichen "}" :: .wort "preserves" :: (druckNamenKlammer e.erhaelt ++ .wort "clobbers" ::
+        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+          (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest))))))))
+    (F' + 4) (by omega)
+  have hRO := regBindListe_rund e.regOut (.wort "preserves" :: (druckNamenKlammer e.erhaelt ++ .wort "clobbers" ::
+        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+          (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))))
+    (F' + 4) (by omega)
+  have hE := namenKlammer_rund e.erhaelt (.wort "clobbers" ::
+        (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+          (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest))))))
+    (F' + 4) (by omega)
+  have hKi := namenKlammer_rund e.kills (.wort "stack" :: .ident e.stapel :: (cpuToks e.perCpu ++ (istToks e.ist ++
+          (nestToks e.nest ++ .wort "dispatch" :: (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))
+    (F' + 4) (by omega)
+  have hR := rest_rund F' e.stapel e.perCpu e.ist hi e.nest hn e.dispatch hdp (.zeichen "}" :: rest)
+    (by omega)
+  have hd : druckItem (.entryT e) ++ rest = .wort "entry" :: .ident e.name :: (vekToks e.vektor ++
+      (nameOptToks "via" e.via ++ (.wort "arch" :: .ident e.arch :: (.zeichen "{" :: .wort "regs" :: .wort "in" ::
+        .zeichen "{" :: (druckRegBinds e.regIn ++ .zeichen "}" :: .wort "regs" :: .wort "out" :: .zeichen "{" ::
+          (druckRegBinds e.regOut ++ .zeichen "}" :: .wort "preserves" :: (druckNamenKlammer e.erhaelt ++
+            .wort "clobbers" :: (druckNamenKlammer e.kills ++ .wort "stack" :: .ident e.stapel ::
+              (cpuToks e.perCpu ++ (istToks e.ist ++ (nestToks e.nest ++ .wort "dispatch" ::
+                (pfadToks e.dispatch ++ .zeichen ";" :: .zeichen "}" :: rest)))))))))))) := by
+    simp [druckItem, druckEingang_eq]
+  rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_entry]
+  simp only [druckNamenKlammer, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+    at hRI hRO hE hKi hK ⊢
+  simp [parseEingangTief, nimmWort, strEq_self, nimmName, nameText, fordereZeichen, hK, hRI, hRO, hE, hKi, hR]
+
+
 /-! ### The printability class of items and the induction -/
 
 /-- **The printability class of items** (see the header). -/
@@ -2032,6 +2319,7 @@ inductive ItemGut : SItemTief → Prop
   | tableT (n : String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
       (parts : List STabTeil) : (∀ e, cnt = some e → gut e = true) → (∀ t ∈ parts, TeilGut t) →
       ItemGut (.tableT n cnt backed owner sh parts)
+  | entryT (e : SEingang) : EingangGut e → ItemGut (.entryT e)
 
 theorem itemKopf_wort (it : SItemTief) (w : String) (h1 : w ≠ "when") (h2 : w ≠ "pub")
     (h : ∃ ts, druckItem it = .wort w :: ts) : ItemKopf it := by
@@ -2087,6 +2375,9 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
   | tableT n cnt backed owner sh parts hc hp =>
     exact ⟨item_table n cnt backed owner sh parts hc hp,
       itemKopf_wort _ "table" (by decide) (by decide) ⟨_, rfl⟩⟩
+  | entryT e he =>
+    refine ⟨item_entry e he, itemKopf_wort _ "entry" (by decide) (by decide) ?_⟩
+    simp [druckItem, druckEingang_eq]
 
 /-- **L2c: printable items read back** through `parseItemsTief`, before `}`, the end marker or
     nothing. -/
@@ -2121,7 +2412,8 @@ theorem rundlauf_programm (its : List SItemTief) (h : ∀ it ∈ its, ItemGut it
     shared`, a `lock` with `held`, an `atomic` with `publishes nothing` and an order, a `reason`, a
     `module` holding a function with a contract (`requires`, `effects`, `costs`), a result type and
     a body, `concurrent` over a two-segment path, and a `table` with a count, `shared`, a slot field
-    with `where` and `by ops`, `ops`, `tree`, `occupied` and a group invariant. -/
+    with `where` and `by ops`, `ops`, `tree`, `occupied` and a group invariant, and an `entry` with
+    every optional clause. -/
 def zeugeProgramm : List SItemTief := [
   .useT ["io", "konsole"],
   .constT "N" (.atom "u32") (.rows [.one (.lit 1), .one (.lit 2)]),
@@ -2143,14 +2435,18 @@ def zeugeProgramm : List SItemTief := [
     .tTree [("parent", "eltern")],
     .tBusy "belegt",
     .tInv { name := "klein", kosten := .lit 1, online := true, proof := none,
-            pred := .bin "<" (.variable "n") (.lit 64) }]]
+            pred := .bin "<" (.variable "n") (.lit 64) }],
+  .entryT { name := "tick", vektor := some (.lit 32), via := some "idt", arch := "x86_64",
+            regIn := [.binds "rdi" "arg", .reg "rsi"], regOut := [.reg "rax"],
+            erhaelt := ["rbx"], kills := ["rcx"], stapel := "kstack", perCpu := true,
+            ist := some (.lit 1), nest := some "never", dispatch := ["kern", "erhoehe"] }]
 
 theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   have atom : ∀ a, typKopf a = false → TypGut (.atom a) := fun a h => by
     have := TypGut.kette (.atom a) [] (.atom a h) (by simp [TsGut]); simpa [applyTS] using this
   intro it hit
   simp only [zeugeProgramm, List.mem_cons, List.not_mem_nil, or_false] at hit
-  rcases hit with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hit with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact .useT _ (by simp)
   · refine .constT _ _ _ (atom _ (by decide)) (.rows _ ?_)
     intro x hx; simp at hx; rcases hx with rfl | rfl <;> exact .one _ (by decide)
@@ -2185,6 +2481,9 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
     · exact ⟨by simp, by intro k hk; simp at hk; subst hk; exact Or.inl rfl⟩
     · trivial
     · exact ⟨by decide, by decide, by simp⟩
+  · refine .entryT _ ⟨?_, ?_, Or.inr (Or.inl rfl), by simp⟩
+    · intro v hv; cases hv; decide
+    · intro x hx; cases hx; decide
 
 /-- The witness program reads back through the whole program reader. -/
 theorem zeugeProgramm_rund : parseTopTief (druckItems zeugeProgramm ++ [.ende]) = .ok zeugeProgramm :=
@@ -2210,11 +2509,11 @@ end Gabbro.Grammatik.Parser
   CUTS: what the item round trip does not cover yet, and why.
 
   * Item kinds not in `ItemGut`: `type`, `format`, `arena`, `state`, `device`, `assume`,
-    `axiom`, `check`, `rcu`, `group`, `accumulates`, `walk`, `entry`, `entrust`, `boot`, `syscall`,
+    `axiom`, `check`, `rcu`, `group`, `accumulates`, `walk`, `entrust`, `boot`, `syscall`,
     `target`, `translator`, `profile`, the spec/asm function bodies (`= pred ;`, `= asm {..} ;`) and
     the `when TESTBUILD` gate; slot bit positions as a `[hi:lo]` group. Each is one more constructor of `ItemGut` with its reader lemma in
     the pattern of `item_lock`/`item_atom` (a named recursive tail reader is a step lemma per
-    clause; a `do` block is a case split over its optional clauses). `device` and `entry` are the
+    clause; a `do` block is a case split over its optional clauses). `device` is the
     largest (register maps, banks, transitions).
   * Clauses riding as reconstructed text (`by`, `retires`, `deadline`): the reader rebuilds a
     string from tokens (`druck e`, `nimmBisKopf`), the printer re-lexes it; excluded from
