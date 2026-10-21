@@ -428,6 +428,15 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
             | .ok (b, r) => .ok (Block.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
+  | Γ, fn, n + 1, Λ, pe, .awaitBind x a :: rest =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        match lowSeqL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Block.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd b, r')
+      else .error "access without held guard"
   | Γ, fn, n + 1, Λ, pe, .regRead x d r :: rest =>
     match regIdx u.regs d r with
     | .error e => .error e
@@ -705,6 +714,8 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
+  | _, _, _ + 1, _, _, .awaitBind .. :: _ =>
+    .error "lower: an awaits in an else branch has no G form (Endblock lacks awaits)"
   | _, _, _ + 1, _, _, .regRead .. :: _ =>
     .error "lower: a register read in an else branch has no G form (Endblock lacks regRead)"
   | _, _, _ + 1, _, _, .regReadElse .. :: _ =>
@@ -877,6 +888,8 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
+  | _, _, _ + 1, .awaitBind .. :: _, _ =>
+    .error "lower: an awaits at the top level of a body has no G form (Endblock lacks awaits)"
   | _, _, _ + 1, .regRead .. :: _, _ =>
     .error "lower: a register read at the top level of a body has no G form (Endblock lacks regRead)"
   | _, _, _ + 1, .regReadElse .. :: _, _ =>

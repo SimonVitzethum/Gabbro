@@ -243,6 +243,8 @@ inductive UStmt
   | regReadElse : String → String → String → UStmt
   /-- `d.R = v;` (`Stmt.regWrite`): device, register, value. -/
   | regWrite : String → String → USide → UStmt
+  /-- `let x = A awaits { p, q };` (`Block.awaits`): binder, atomic; the payload is the declared one. -/
+  | awaitBind : String → String → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -262,6 +264,9 @@ structure UTab where
       field an option field keeps its place in `cols` (placeholder range `0 .. 1`); its TYPE is `Ty.opt` of the
       count of `T`. -/
   opts : List (String × Nat) := []
+  /-- `table T .. shared`: the carrier is reachable from more than one thread (`D.geteilt`); a shared table
+      has a guard (the elaborator refuses one without). -/
+  shared : Bool := false
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -294,6 +299,12 @@ structure UGlob where
   var : Bool := false
   /-- An `atomic` item (`Deklaration.atomar`): read and stored without a lock, ordered by the machine. -/
   atomic : Bool := false
+  /-- Reachable from more than one thread (`D.ggeteilt`): `static .. shared;` (which then has a guard), and every
+      `atomic` (an atomic exists to be shared: its accesses are ordered by the machine, A10). -/
+  shared : Bool := false
+  /-- The payload of an atomic (`atomic A : T publishes { p, q }`, `D.nutzlast`): the names of statics, in the
+      written order. -/
+  nutzlast : List String := []
   deriving DecidableEq, Repr
 
 /-- A `reason` declaration: its name and the names of its cases in order (`Ty.why` of their number). -/
@@ -843,7 +854,7 @@ def uFelder : List (String × (Int × Int)) → List String → List SFeld →
     are explicit errors (the refused arms of `read_table`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n (.some cnt) .none .none false [.tSlot fds] =>
+  | .tableT n (.some cnt) .none .none sh [.tSlot fds] =>
     match uAnzahl consts cnt with
     | .error e => .error e
     | .ok c =>
@@ -852,7 +863,8 @@ def uTabelle (consts : List (String × Int))
       | .ok fs =>
         .ok { name := n, count := c, cols := fs.map (·.1),
               bools := (fs.filter (fun p => match p.2 with | .bool => true | _ => false)).map (·.1.1),
-              opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none) }
+              opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
+              shared := sh }
   | _ => .error "table without G form"
 
 /-- A `protects` carrier: a table name, a field of exactly one table (the guard loop of `read_lock`), or
@@ -1764,7 +1776,25 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
           | .ok v => .ok (.assignGlob g v)
   | _ => .error e
 
-/-- `A = v publishes nothing;`: the store of a payload-free atomic. -/
+/-- The words of a raw payload, as character lists (split at blanks and commas). -/
+def uWoerter : List Char → List Char → List (List Char)
+  | [], acc => if acc.isEmpty then [] else [acc.reverse]
+  | c :: cs, acc =>
+    if c == ' ' || c == ',' then (if acc.isEmpty then uWoerter cs [] else acc.reverse :: uWoerter cs [])
+    else uWoerter cs (c :: acc)
+
+/-- The names of a payload as the statement reader keeps it (raw words: `p , q `, or `nothing`). -/
+def uNutzNamen (p : String) : List (List Char) :=
+  if strEq p "nothing" then [] else uWoerter p.toList []
+
+/-- A payload as written names exactly the declared list. -/
+def uNamenGleich : List (List Char) → List String → Bool
+  | [], [] => true
+  | a :: as, b :: bs => a == b.toList && uNamenGleich as bs
+  | _, _ => false
+
+/-- `A = v publishes { p, q };` (or `nothing`): the store of an atomic with exactly its declared payload
+    (`Stmt.publish`, the payload `D.nutzlast A`). -/
 def uAtomSchreib (ctx : UCtx) (ziel wert : SExpr) (p : String) : Except String UStmt :=
   match ziel with
   | .variable g =>
@@ -1772,7 +1802,7 @@ def uAtomSchreib (ctx : UCtx) (ziel wert : SExpr) (p : String) : Except String U
     | .none => .error "publishes without an atomic without G form"
     | .some gl =>
       if !gl.atomic then .error "publishes without an atomic without G form"
-      else if !strEq p "nothing" then .error "publishes with a payload without G form"
+      else if !uNamenGleich (uNutzNamen p) gl.nutzlast then .error "publishes a payload other than the declared one"
       else
         match gl.ty with
         | .bool =>
@@ -2440,6 +2470,20 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 | .ok (ys, cE) =>
                   .ok ([UStmt.matchBeg num o k] ++ sbody ++ sEnd ++ [UStmt.ifElse] ++ nbody ++ nEnd ++ [UStmt.blkEnd] ++ ys, cE)
       | _, _ => .error "match arms without G form"
+  | f + 1, ctx, .await x (.variable a) pl :: rest =>
+    match ctx.globs.find? (fun g => strEq g.name a) with
+    | .none => .error "awaits without an atomic without G form"
+    | .some gl =>
+      if !gl.atomic then .error "awaits without an atomic without G form"
+      else if !uNamenGleich (uNutzNamen pl) gl.nutzlast then .error "awaits a payload other than the declared one"
+      else
+        let muts := ctx.muts.filter (fun m => !strEq m x)
+        let ctx' := match gl.ty with
+          | .bool => uMitLokal ctx x UParamArt.bool Ty.bool muts
+          | .int lo hi => uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts
+        match uAnwReihe tabs koepfe f ctx' rest with
+        | .error err => .error err
+        | .ok (xs, cE) => .ok (UStmt.awaitBind x a :: xs, cE)
   | f + 1, ctx, .ret v :: rest =>
     match uEnde ctx (some (.ret v)) with
     | .error err => .error err
@@ -2695,13 +2739,23 @@ def elabUFunktion (consts : List (String × Int))
             gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
             puts := schreibt, gputs := kopf.gputs, gives, body, ret := r }
 
+/-- The payload of an `atomic` item: statics named bare (a table payload, `T.slots`, has no form: `D.nutzlast`
+    lists statics). -/
+def uNutzItem : List SExpr → Except String (List String)
+  | [] => .ok []
+  | .variable g :: rest =>
+    match uNutzItem rest with
+    | .error e => .error e
+    | .ok gs => .ok (g :: gs)
+  | _ :: _ => .error "payload of a table without G form"
+
 /-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
     as the initial value; a placement, an alignment or a `shared` word has no `Glob` form. -/
 def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
     List SItemTief → Except String (List UGlob)
   | [] => .ok []
   | .globT m n t v al sec sh :: rest =>
-    if al.isSome || sec.isSome || sh then .error "static placement without G form"
+    if al.isSome || sec.isSome then .error "static placement without G form"
     else
       match (match t with
           | .atom "bool" =>
@@ -2726,13 +2780,13 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
       | .ok (ty, z) =>
         match uGlobs consts alias rest with
         | .error e => .error e
-        | .ok gs => .ok ({ name := n, ty, init := z, var := m } :: gs)
+        | .ok gs => .ok ({ name := n, ty, init := z, var := m, shared := sh } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
-      match pub with
-      | some (_ :: _) => .error "atomic with a payload without G form"
-      | _ =>
+      match uNutzItem (pub.getD []) with
+      | .error e => .error e
+      | .ok nl =>
         match (match t with
             | .atom "bool" => .ok GTy.bool
             | _ =>
@@ -2745,7 +2799,8 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         | .ok ty =>
           match uGlobs consts alias rest with
           | .error e => .error e
-          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true } :: gs)
+          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true,
+                             nutzlast := nl } :: gs)
   | _ :: rest => uGlobs consts alias rest
 
 /-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
@@ -3220,6 +3275,11 @@ def elabU : List SItemTief → Except String UProg
         | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
     | .error e => .error e
     | .ok locks =>
+    let bewacht : String → Bool := fun c => locks.any (fun l => l.guard.any (strEq · c))
+    if !tabs.all (fun t => !t.shared || bewacht t.name) then .error "shared table without a guard" else
+    if !globs.all (fun g => !g.shared || g.atomic || bewacht g.name) then .error "shared static without a guard" else
+    if !globs.all (fun g => g.nutzlast.all (fun n => globs.any (fun h => strEq h.name n))) then
+      .error "payload names no static" else
     let fnItems := ms.filterMap (fun
       | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
       | _ => none)
@@ -3567,7 +3627,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       | .ok t => .ok (.cons s t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
-    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ =>
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
 
@@ -3605,7 +3665,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
-    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ =>
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
 
@@ -4297,6 +4357,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>
     strEq a b && strEq d e && strEq r s
   | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && beqUSide v w
+  | .awaitBind a g, .awaitBind b h => strEq a b && strEq g h
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
@@ -4414,7 +4475,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

@@ -3,7 +3,7 @@
   Subject:   Track P: payload-free atomics (`UGlob.atomic`, `Deklaration.atomar`, `Stmt.publish` with the
              empty payload), from source text. Table-free sources (kernel memory). An atomic is read
              without a lock and stored by `A = v publishes nothing;` only where the function declares
-             `writes A`; a payload, an `observed by` word and a plain store have no G form.
+             `writes A`; a table payload, an `observed by` word and a plain store have no G form.
 -/
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 
@@ -37,10 +37,10 @@ def plain_refused : String :=
 theorem plain_refused_stufe : stufe plain_refused = "elab: plain write to an atomic: every store is a publish" := by
   decide +kernel
 
-/-- A payload is the publish/await hand-off, which the goal theorem does not cover. -/
+/-- A table payload has no form: `D.nutzlast` lists statics (a static payload: `UebersetzeProben29`). -/
 def payload_refused : String :=
   "module m { table T count 1 { slot { v : u32, } } atomic S : u32 publishes { T.slots }; impl fn w() { } }"
-theorem payload_refused_stufe : stufe payload_refused = "elab: atomic with a payload without G form" := by
+theorem payload_refused_stufe : stufe payload_refused = "elab: payload of a table without G form" := by
   decide +kernel
 
 /-- `publishes` at a plain static is refused. -/

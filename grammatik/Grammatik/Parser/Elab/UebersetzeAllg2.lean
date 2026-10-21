@@ -923,7 +923,7 @@ def lowStoreAtomL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
             rw [hg]
             exact e
           if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
-            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+            .ok (Stmt.publish (D := declOf u) g e2 ((declOf u).nutzlast g) rfl hwV hd)
           else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number atomic"
@@ -953,7 +953,7 @@ def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
             rw [hg]
             exact e
           if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
-            .ok (Stmt.publish (D := declOf u) g e2 [] rfl hwV hd)
+            .ok (Stmt.publish (D := declOf u) g e2 ((declOf u).nutzlast g) rfl hwV hd)
           else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool atomic"
@@ -1024,7 +1024,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

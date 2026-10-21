@@ -143,6 +143,10 @@ def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.lengt
       | .error e => .error e
       | .ok j => .ok j.succ
 
+/-- The payload of an atomic (`D.nutzlast`): its declared statics, by name. -/
+def nutzAt (u : UProg) (g : Fin u.globs.length) : List (Fin u.globs.length) :=
+  (globAt u g).nutzlast.filterMap fun n => (globIdx u.globs n).toOption
+
 /-- The register at an index. -/
 def regAt (u : UProg) (r : Fin u.regs.length) : UReg := u.regs.get r
 
@@ -227,10 +231,10 @@ def declOf (u : UProg) : Deklaration where
   Glob := Fin u.globs.length
   decGlob := inferInstance
   gtyp := fun g => (globAt u g).ty.toTy
-  nutzlast := fun _ => []
+  nutzlast := nutzAt u
   atomar := fun g => (globAt u g).atomic
-  geteilt := fun t => (!((needsAt u t).isEmpty))
-  ggeteilt := fun g => (!((gneedsAt u g).isEmpty))
+  geteilt := fun t => (tabAt u t).shared && !((needsAt u t).isEmpty)
+  ggeteilt := fun g => (globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)
   Lock := Fin u.locks.length
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
@@ -263,11 +267,17 @@ def declOf (u : UProg) : Deklaration where
   rtraeger := rtraegerAt u
   Annahme := Option (Fin u.annahmen.length)
   a10 := none
-  geteilt_bewacht :=
-    fun t h => notEmpty_ne_nil _ (show ((!((needsAt u t).isEmpty)) = true) from h)
+  geteilt_bewacht := fun t h => by
+    have h' : ((tabAt u t).shared && !((needsAt u t).isEmpty)) = true := h
+    simp only [Bool.and_eq_true] at h'
+    exact notEmpty_ne_nil _ h'.2
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht :=
-    fun g h => Or.inl (notEmpty_ne_nil _ (show ((!((gneedsAt u g).isEmpty)) = true) from h))
+  ggeteilt_bewacht := fun g h => by
+    have h' : ((globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)) = true := h
+    simp only [Bool.and_eq_true, Bool.or_eq_true] at h'
+    rcases h'.2 with h1 | h2
+    · exact Or.inl (notEmpty_ne_nil _ h1)
+    · exact Or.inr h2
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
 
