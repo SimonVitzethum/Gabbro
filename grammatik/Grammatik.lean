@@ -239,6 +239,8 @@ import Grammatik.Parser.Round.RundlaufTyp
 import Grammatik.Parser.Round.RundlaufAnwVoll
 import Grammatik.Parser.Round.RundlaufPred
 import Grammatik.Parser.Round.RundlaufItem
+import Grammatik.Parser.Round.RundlaufGeraet
+import Grammatik.Parser.Round.RundlaufProgramm
 import Grammatik.Parser.Elab.UebersetzeAllg
 import Grammatik.Parser.Elab.UebersetzeOpt
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal

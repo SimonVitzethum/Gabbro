@@ -287,25 +287,36 @@ def druckTraeger : List (List String) → List Token
       | [a, b] => [nameTok a, .zeichen ".", nameTok b]
       | cs' => druckNamen cs') ++ [.zeichen ","] ++ druckTraeger cs
 
+/-- The address of a register: `@ e`, or nothing for the reader's default `.variable ""`. -/
+def druckRegAdresse : SExpr → List Token
+  | .variable "" => []
+  | e => [.zeichen "@"] ++ druckToks e
+
+/-- The class of a register with its `in`-stage words, or nothing for the empty class. -/
+def druckRegKlasse (k : String) (st : List String) : List Token :=
+  if strEq k "" then [] else [.wort "class", nameTok k] ++ druckPhasen st
+
+/-- The bit fields of a register, or nothing. -/
+def druckRegFelderTeil : List SRegFeld → List Token
+  | [] => []
+  | fs => [.wort "fields", .zeichen "{"] ++ druckRegFelder fs ++ [.zeichen "}"]
+
+/-- The precondition of a register with its falsifier, or nothing. -/
+def druckRegVoraus : Option SExpr → Option (String × String) → List Token
+  | some p, some (a, b) => [.wort "requires"] ++ druckToks p ++ [.wort "else", nameTok a, .zeichen "::", nameTok b]
+  | some p, none => [.wort "requires"] ++ druckToks p
+  | none, _ => []
+
+/-- The carriers of a register, or nothing. -/
+def druckRegAbhaengt : List (List String) → List Token
+  | [] => []
+  | cs => [.wort "depends", .zeichen "{"] ++ druckTraeger cs ++ [.zeichen "}"]
+
 /-- `reg n : T [@ e] [class c phases] [fields {…}] [requires p [else A::B]] [depends {…}]` (no `;`). -/
 def druckReg (r : SReg) : List Token :=
-  [.wort "reg", nameTok r.name, .zeichen ":"] ++ druckTyp r.rtyp ++
-    (match r.addr with
-      | .variable "" => []
-      | e => [.zeichen "@"] ++ druckToks e) ++
-    (if strEq r.klasse "" then [] else [.wort "class", nameTok r.klasse] ++ druckPhasen r.stage) ++
-    (match r.felder with
-      | [] => []
-      | fs => [.wort "fields", .zeichen "{"] ++ druckRegFelder fs ++ [.zeichen "}"]) ++
-    (match r.voraus with
-      | some p => [.wort "requires"] ++ druckToks p ++
-        (match r.elseF with
-          | some (a, b) => [.wort "else", nameTok a, .zeichen "::", nameTok b]
-          | none => [])
-      | none => []) ++
-    (match r.abhaengt with
-      | [] => []
-      | cs => [.wort "depends", .zeichen "{"] ++ druckTraeger cs ++ [.zeichen "}"])
+  [.wort "reg", nameTok r.name, .zeichen ":"] ++ druckTyp r.rtyp ++ druckRegAdresse r.addr ++
+    druckRegKlasse r.klasse r.stage ++ druckRegFelderTeil r.felder ++ druckRegVoraus r.voraus r.elseF ++
+    druckRegAbhaengt r.abhaengt
 
 def druckGerTeil : SGerTeil → List Token
   | .copy a b => [.wort "mirrors"] ++ druckToks a ++ [.wort "from"] ++ druckToks b ++ [.zeichen ";"]
