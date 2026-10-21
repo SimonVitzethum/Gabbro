@@ -6,7 +6,8 @@
   The constructor table `kTab` is GENERATED from the model (the result type of every expression constructor, whether
   a constructor needs the loop context, whether it is a foreign body, and per child: its family, the type class an
   expression child must have, the loop context of a statement child). `Gen/Fein/Satz.lean` proves that every fine
-  cell of every program is allowed, so a wrong row cannot hide a cell: it stops that proof.
+  cell of every program is allowed, so a wrong row cannot hide a cell: it stops that proof. `Gen/Fein/Pruefung.lean` reads
+  the table off the model again at every build and stops the build when they differ.
 -/
 import Grammatik.Gen.Fein.Zellen
 
