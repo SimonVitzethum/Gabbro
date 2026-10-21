@@ -989,6 +989,18 @@ def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (f
       | .error e => .error e
       | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
 
+/-- A number as the value of a register: the register is an integer range. -/
+def alsRegZahl {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
+    (g : UReg) → Expr D Γ Λ (.int g.lo g.hi) → Except String (Expr D Γ Λ g.ty)
+  | ⟨_, _, _, _, _, _, _, _, _, false⟩, e => .ok e
+  | ⟨_, _, _, _, _, _, _, _, _, true⟩, _ => .error "a number written to a truth-valued register"
+
+/-- A truth value as the value of a register: the register is truth-valued. -/
+def alsRegBool {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
+    (g : UReg) → Expr D Γ Λ .bool → Except String (Expr D Γ Λ g.ty)
+  | ⟨_, _, _, _, _, _, _, _, _, true⟩, e => .ok e
+  | ⟨_, _, _, _, _, _, _, _, _, false⟩, _ => .error "a truth value written to a numeric register"
+
 /-- `d.R = v;` (`Stmt.regWrite`): the value fitted into the register's range, the class writable. -/
 def lowRegWriteL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (d r : String) (v : USide) :
@@ -999,9 +1011,29 @@ def lowRegWriteL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (
     match lowWertAt u Γ Λ fn (regAt u g).lo (regAt u g).hi v with
     | .error e => .error e
     | .ok e =>
-      if hk : ((declOf u).rklasse g).schreibbar = true then
-        .ok (Stmt.regWrite (D := declOf u) g hk e)
-      else .error "register written against its class"
+      match alsRegZahl (regAt u g) e with
+      | .error e => .error e
+      | .ok e =>
+        if hk : ((declOf u).rklasse g).schreibbar = true then
+          .ok (Stmt.regWrite (D := declOf u) g hk e)
+        else .error "register written against its class"
+
+/-- `d.R = p;` at a truth-valued register (`Stmt.regWrite`). -/
+def lowRegWriteBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (d r : String) (v : UEns) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match regIdx u.regs d r with
+  | .error e => .error e
+  | .ok g =>
+    match lowEns u Γ Λ fn none v with
+    | .error e => .error e
+    | .ok e =>
+      match alsRegBool (regAt u g) e with
+      | .error e => .error e
+      | .ok e =>
+        if hk : ((declOf u).rklasse g).schreibbar = true then
+          .ok (Stmt.regWrite (D := declOf u) g hk e)
+        else .error "register written against its class"
 
 /-- The pointer of an indirect call: the local `p` of type `fnptr n`, where `n` is the number of the function
     `k.callee` the call was elaborated against (one signature per function, `sig f = f`). -/
@@ -1074,6 +1106,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
+  | .regWriteB d r v => lowRegWriteBL u caller Γ fn Λ d r v
   | .callInd p f args => lowCallIndL u caller Γ fn Λ p f args
   | .shiftTab b f ix _ von nach => lowShiftL u caller Γ fn Λ b f ix von nach
   | .lockBeg _ => .error "lower: a locks block opens here"

@@ -276,6 +276,13 @@ theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
   | nil => simp at h
   | cons _ _ => simp
 
+/-- The device's promise at a read value: a truth value is read at `1`/`0`, a number at itself. -/
+def regZusage {F : Type} {sig : F → Nat} : (g : UReg) → Val F sig g.ty → Bool
+  | ⟨d, n, lo, hi, k, sp, tr, zu, pr, true⟩ => fun (b : Bool) =>
+    UReg.zusageBei ⟨d, n, lo, hi, k, sp, tr, zu, pr, true⟩ (bif b then 1 else 0)
+  | ⟨d, n, lo, hi, k, sp, tr, zu, pr, false⟩ => fun (v : Zahl lo hi) =>
+    UReg.zusageBei ⟨d, n, lo, hi, k, sp, tr, zu, pr, false⟩ v.n
+
 /-- The declaration built from the elaborated program itself: index
     carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
     (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
@@ -320,10 +327,10 @@ def declOf (u : UProg) : Deklaration where
   agschreibt := fun _ _ => false
   agruende := fun a => (uaxAt u a).gruende
   Reg := Fin u.regs.length
-  rtyp := fun r => .int (regAt u r).lo (regAt u r).hi
+  rtyp := fun r => (regAt u r).ty
   rklasse := fun r => (regAt u r).klasse
   spiegel := spiegelAt u
-  rzusage := fun r (v : Zahl (regAt u r).lo (regAt u r).hi) => (regAt u r).zusageBei v.n
+  rzusage := fun r => regZusage (regAt u r)
   rtraeger := rtraegerAt u
   Annahme := Option (Fin u.annahmen.length)
   a10 := none

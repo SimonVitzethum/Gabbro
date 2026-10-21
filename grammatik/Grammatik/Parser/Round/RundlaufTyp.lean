@@ -549,4 +549,48 @@ theorem parse_druckTyp : ∀ (t : STyp), TypGut t → ∀ (rest : List Token) (F
     have hE := parse_druck_tok e rest F' he hr1 hr2 hr3 (by simp only [fb]; omega)
     simp [druckTyp, parseTyp, hE]
 
+/-! ### Expressions and places by name (used by the predicate and statement readers) -/
+
+/-- The expression legs before a follow, by name. -/
+theorem ausdruck (e : SExpr) (hg : gut e = true) (rest : List Token) (F : Nat)
+    (h1 : ruhig rest = true) (h2 : ruhigSuff rest = true) (h3 : ruhigGleit rest = true)
+    (hF : 6 * (druckToks e).length + 34 ≤ F) : parseOr F (druckToks e ++ rest) = .ok (e, rest) :=
+  parse_druck_tok e rest F hg h1 h2 h3 (by simp only [fb]; omega)
+
+/-- The payload legs of a place's suffix chain, from printability. -/
+theorem suffLegs_gut (suff : List SuffFrag) (h : suffGut suff = true) : SuffLegs suff := by
+  intro i hi
+  exact legs_tok i (suff_idx_mem suff i hi h).2
+
+/-- Places through `parseOrt` from printability. -/
+theorem ortP (p : SExpr) (hp : gutPlatz p = true) (rest : List Token) (F : Nat)
+    (hr : ruhigSuff rest = true) (hF : 6 * (druckToks p).length + 30 ≤ F) :
+    parseOrt F (druckToks p ++ rest) = .ok (p, rest) := by
+  obtain ⟨a, suff, rfl, hka, hgs, _⟩ := zerlege (groesse p) p (Nat.le_refl _) hp
+  apply ortM a suff rest F hka (suffLegs_gut suff hgs) hr
+  rw [druckToks_applySuff] at hF
+  simp only [druckToks, List.length_append, List.length_singleton] at hF
+  omega
+
+/-- Places through `parseKopf` (the statement head of an assignment or a publication). -/
+theorem kopfP (p : SExpr) (hp : gutPlatz p = true) (rest : List Token) (F : Nat)
+    (hr : ruhigSuff rest = true) (hF : 6 * (druckToks p).length + 30 ≤ F) :
+    parseKopf F (druckToks p ++ rest) = .ok (p, rest) := by
+  obtain ⟨a, suff, rfl, hka, hgs, _⟩ := zerlege (groesse p) p (Nat.le_refl _) hp
+  rw [druckToks_applySuff] at hF ⊢
+  simp only [druckToks, List.length_append, List.length_singleton] at hF
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc, parseKopf, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende]
+  simp only [sammleSeg_suffToks, hr]
+  have hmiss : ∀ (R : List Token), suffToks suff ++ rest ≠ .zeichen "(" :: R := by
+    intro R hcon
+    exact suffToks_nopar suff rest R hr hcon
+  simp only [hmiss]
+  exact suffM suff (.variable a) rest F' (suffLegs_gut suff hgs) hr (by omega)
+
+/-- A place prints with an identifier head. -/
+theorem platz_kopf (p : SExpr) (hp : gutPlatz p = true) :
+    ∃ a ts, druckToks p = nameTok a :: ts ∧ istKopfWort a = false :=
+  platz_kopf_aux (groesse p) p (Nat.le_refl _) hp
+
 end Gabbro.Grammatik.Parser

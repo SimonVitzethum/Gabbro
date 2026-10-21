@@ -17,12 +17,9 @@
   `p = &f; p(..)` for an indirect call (the model's pointer expression is bound first), `locks`, `if`,
   assignments, `publishes`, `awaits`, register reads and writes through `d`, `return`.
 
-  Partial: a form without a spelling is an error naming it. Two model forms are wider than the language and are
-  printed as a form with the same cells (checked per witness, never assumed): `awaits` at a static that is no
-  `atomic` (the language waits only at an atomic) as the plain read `let x = g;`, and a quantifier over the slots of
-  a table as a `traverse` invariant (the language reads an expression there) as the read of the table's first field
-  in its first slot. A Bool register (`Ty.bool`; a register of the language is an integer range) prints as
-  `u64 in 0 .. 1`.
+  Partial: a form without a spelling is an error naming it; the delaborator prints every form it accepts as
+  itself, never a substitute. `awaits` at a static that is no `atomic` is refused (the language waits only at an
+  atomic).
 -/
 import Grammatik.Gen.Zeugen.Schluss
 import Grammatik.Parser.Round.RundlaufProgramm
@@ -120,16 +117,6 @@ def nutzTextA (gs : List z.deklaration.Glob) : String :=
 /-- The register `r` read or written through the device handle. -/
 def regOrt (r : z.deklaration.Reg) : SExpr := .field (.variable "d") (nReg (show Fin z.regs.length from r).val)
 
-/-- A quantifier over the slots of `t` where the language takes an expression only (a `traverse` invariant): the read
-    of the first field of the first slot, which takes the same carrier under the same guards. -/
-def lesErsatz (t : z.deklaration.Tab) : Option SExpr :=
-  let tz := z.tabs.get (show Fin z.tabs.length from t)
-  let ort := SExpr.field (.index (.field (.variable (nTab (show Fin z.tabs.length from t).val)) "slots") (.lit 0)) (nFeld 0)
-  match tz.felder.head? with
-  | some { typ := .bool, .. } => some ort
-  | some { typ := .int .., .. } => some (.bin "<=" ort ort)
-  | _ => none
-
 /-! ### Statements and blocks -/
 
 variable (V : Vertrag z.deklaration)
@@ -164,8 +151,6 @@ def delabS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .traverse t inv body => do
       let i' ← match inv with
         | .tru => pure none
-        | .forallSlots t _ _ => pure (lesErsatz z t)
-        | .existsSlots t _ _ => pure (lesErsatz z t)
         | i => do pure (some (← delabE z none i))
       .ok [.each (nVar Γ.length) none "slots" (.variable (nTab (show Fin z.tabs.length from t).val)) "unvisited" ""
         i' (.block (← delabB body) none)]
@@ -199,8 +184,7 @@ def delabB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
       .ok (.bindElse (nVar Γ.length) none (regOrt z r) (nVar Γ.length) (.block es ende) :: (← delabB rest))
   | .awaits g payload _ _ rest => do
       if !(z.globs.get g).atomar then
-        return (.bind false (nVar Γ.length) none (.variable (nGlob (show Fin z.globs.length from g).val)) ::
-          (← delabB rest))
+        throw "awaits at a static that is no atomic: no spelling (the language waits only at an atomic)"
       .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
         (← delabB rest))
   | b => .error ("block without a spelling: " ++ String.intercalate " " (Gabbro.Grammatik.Parser.Cover.Mitglieder.cB b))
@@ -330,7 +314,7 @@ def delabReg (r : Fin z.regs.length) : Except String SGerTeil := do
   let rz := z.regs.get r
   let ty ← match rz.typ with
     | .int lo hi => pure (STyp.range (.atom (if 0 ≤ lo then "u64" else "i64")) (zahlE lo) (zahlE hi) false)
-    | .bool => pure (STyp.range (.atom "u64") (.lit 0) (.lit 1) false)
+    | .bool => pure (STyp.atom "bool")
     | _ => throw "register of a type without a spelling"
   pure (.reg { name := nReg r.val, rtyp := ty, addr := .lit (4 * r.val),
                klasse := klasseWort rz.klasse,

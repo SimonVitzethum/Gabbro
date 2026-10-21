@@ -9,7 +9,7 @@
   The printability class `ItemGut`, the induction over it and the composition with the lexer are in
   `RundlaufProgramm`; devices are in `RundlaufGeraet`.
 -/
-import Grammatik.Parser.Round.RundlaufQuant
+import Grammatik.Parser.Round.RundlaufAnwVoll
 
 namespace Gabbro.Grammatik.Parser
 
