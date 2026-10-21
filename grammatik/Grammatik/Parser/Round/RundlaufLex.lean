@@ -532,6 +532,42 @@ theorem render_laenge : ∀ (ts : List Token), (∀ t ∈ ts, TokGut t) →
     simp only [render, List.length_append, List.length_cons, List.length_cons]
     omega
 
+/-- A decidable sufficient test for `TokGut` (floats excepted: the test refuses them, `GleitKanon`
+    is stated over the existential spelling). For witnesses over concrete token lists. -/
+def tokGutB : Token → Bool
+  | .ident s => nameForm s && !istSchluessel s
+  | .wort s => nameForm s && istSchluessel s
+  | .num _ => true
+  | .float _ => false
+  | .text s => s.toList.all (fun c => c != '"' && c != '\n')
+  | .zeichen s => markTafel.contains s.toList
+  | .doku _ => false
+  | .ende => false
+
+theorem tokGutB_gut : ∀ (t : Token), tokGutB t = true → TokGut t := by
+  intro t h
+  cases t with
+  | ident s =>
+    simp only [tokGutB, Bool.and_eq_true, Bool.not_eq_true'] at h
+    exact h
+  | wort s =>
+    simp only [tokGutB, Bool.and_eq_true] at h
+    exact h
+  | num n => trivial
+  | float s => simp [tokGutB] at h
+  | text s =>
+    simp only [tokGutB, List.all_eq_true, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
+    exact h
+  | zeichen s =>
+    simp only [tokGutB, List.contains_iff_mem] at h
+    exact h
+  | doku _ => simp [tokGutB] at h
+  | ende => simp [tokGutB] at h
+
+theorem tokGut_of_all : ∀ (ts : List Token), ts.all tokGutB = true → ∀ t ∈ ts, TokGut t := by
+  intro ts h t ht
+  exact tokGutB_gut t (List.all_eq_true.mp h t ht)
+
 /-- **L1: the lexer reads the rendered text back.** For every lexically clean token list, lexing
     the rendered text returns the list with the end marker. -/
 theorem lex_render (ts : List Token) (h : ∀ t ∈ ts, TokGut t) :
