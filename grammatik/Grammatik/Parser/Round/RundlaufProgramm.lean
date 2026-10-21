@@ -154,7 +154,7 @@ theorem rundlauf_programm (its : List SItemTief) (h : ∀ it ∈ its, ItemGut it
 /-! ### Witnesses -/
 
 /-- A program with every covered item kind: `use`, `const` with an array value, `static mut ...
-    shared`, a `lock` with `held`, an `atomic` with `publishes nothing` and an order, a `reason`, a
+    shared`, a `lock` with `held`, an `atomic` with `publishes { max }` and an order, a `reason`, a
     `module` holding a function with a contract (`requires` with `forall`, `&&` and `exists`, `effects`, `costs`), a result type and
     a body, `concurrent` over a two-segment path, and a `table` with a count, `shared`, a slot field
     with `where` and `by ops`, `ops`, `tree`, `occupied` and a group invariant, and an `entry` with
@@ -165,7 +165,7 @@ def zeugeProgramm : List SItemTief := [
   .constT "N" (.atom "u32") (.rows [.one (.lit 1), .one (.lit 2)]),
   .globT true "max" (.atom "u64") (.one (.lit 0)) none none true,
   .lockT "L" [.variable "max"] (.lit 1) (some (.lit 10)) none none none,
-  .atomT "flag" (.atom "bool") (some []) (some "release") none,
+  .atomT "flag" (.atom "bool") (some [.variable "max"]) (some "release") none,
   .whyT "Fehler" [("Voll", .lit 1, "voll")] true,
   .modT ("::".intercalate ["kern"]) [
     .fnT { art := "", name := "erhoehe", params := [("x", .atom "u64")], res := some (.atom "u64"),
@@ -201,7 +201,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   · exact .globT _ _ _ _ _ _ _ (by decide) (atom _ (by decide)) (.one _ (by decide)) (by simp)
   · refine .lockT _ _ _ _ _ _ _ (by simp; decide) (by decide) ?_ (by simp) (by simp)
     intro e he; cases he; decide
-  · exact .atomT _ _ _ _ _ (atom _ (by decide)) ⟨by intro ps h p hp; cases h; simp at hp,
+  · exact .atomT _ _ _ _ _ (atom _ (by decide)) ⟨by intro ps h p hp; cases h; simp at hp; subst hp; decide,
       by intro o h; cases h; decide⟩
   · exact .whyT _ _ _ (by intro c hc; simp at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
   · refine .modT ["kern"] _ ⟨by simp, by intro a ha; simp at ha; subst ha; decide⟩ ?_
@@ -250,7 +250,9 @@ theorem zeugeProgramm_text :
 /-- A device with a mirror and two registers -- a range type, an address, a class with its stages,
     bit fields, a precondition with its falsifier and carriers -- and a function over the device that
     reads a register (`let x = d.S;`), reads one with its falsifier (`let t = d.T else (e) { .. }`)
-    and writes one (`d.C = x;`); and a `group` over two names with an invariant under `forall`. -/
+    and writes one (`d.C = x;`), takes a function's address (`let p = &g;`) and calls through the
+    pointer (`p(p(1));`), waits for a publication (`let r = flag awaits { zaehler };`) and publishes
+    (`flag = true publishes { zaehler };`); and a `group` over two names with an invariant under `forall`. -/
 def zeugeGeraet : List SItemTief := [
   .whyT "G" [("Z", .lit 1, "z")] true,
   .devT "D" [("b", .atom "u64")] "mmio" [
@@ -267,7 +269,11 @@ def zeugeGeraet : List SItemTief := [
     (.block [
       .bind false "x" none (.field (.variable "d") "S"),
       .bindElse "t" none (.field (.variable "d") "T") "e" (.block [] (some (.ret (some (.why "G" "Z"))))),
-      .set (.field (.variable "d") "C") "=" (.variable "x")]
+      .set (.field (.variable "d") "C") "=" (.variable "x"),
+      .bind false "p" none (.fnref "g"),
+      .call "p" [.call "p" [.lit 1]],
+      .await "r" (.variable "flag") (renderText [.ident "zaehler"]),
+      .emit (.variable "flag") .tru (renderText [.ident "zaehler"])]
       (some (.ret (some (.variable "t"))))),
   .groupT "Gruppe" ["D", "Tab"] [
     { name := "J", kosten := .lit 1, online := true, proof := none,
@@ -308,10 +314,17 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
     · refine .block _ _ ?_ (show gut (.variable "t") = true by decide) (by intro h; cases h)
       intro s hs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
-      rcases hs with rfl | rfl | rfl
+      rcases hs with rfl | rfl | rfl | rfl | rfl | rfl | rfl
       · exact .bind _ _ _ _ (by decide) trivial (by decide)
       · exact .bindElse _ _ _ _ _ (by decide) trivial (by decide) leer
       · exact .set _ _ _ (by decide) (by decide) (by decide)
+      · exact .bind _ _ _ _ (by decide) trivial (by decide)
+      · exact .call _ _ (show nameForm _ = true by decide) (by decide) (by decide)
+      · exact .await _ _ _ (by decide) (by decide) ⟨[.ident "zaehler"], rfl,
+          by intro t ht; simp at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp⟩⟩
+      · exact .emit _ _ _ (by decide) (by decide)
+          (Or.inr ⟨⟨[.ident "zaehler"], rfl,
+            by intro t ht; simp at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp⟩⟩, by decide⟩)
   · refine .groupT _ _ _ (by simp) ?_
     intro i hi; simp at hi; subst hi
     exact ⟨by decide, .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
@@ -349,6 +362,11 @@ end Gabbro.Grammatik.Parser
     the pattern of `item_lock`/`item_atom` (a named recursive tail reader is a step lemma per
     clause; a `do` block is a case split over its optional clauses). Devices: see
     `RundlaufGeraet` (no `bank`, no `transition` members).
+  * Function pointers: `&f` and a call through a pointer held by a name (`p(x)`, which reads as a
+    call of the name `p`) are covered. A path address `&a::b` prints as one name token (`nameTok
+    "a::b"`) that is no name-shaped word, so it reads back at the token level only; a call through
+    a place (`s.f(x)`, `ext .call`) is outside `gut`, and the statement printer prints its callee as
+    text.
   * Clauses riding as reconstructed text (`by`, `retires`, `deadline`): the reader rebuilds a
     string from tokens (`druck e`, `nimmBisKopf`), the printer re-lexes it; excluded from
     `KlauselGut`.
