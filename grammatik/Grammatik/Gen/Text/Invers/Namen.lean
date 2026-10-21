@@ -109,4 +109,24 @@ theorem strEq_eq (a b : String) : strEq a b = decide (a = b) := by
     rw [beq_eq_false_iff_ne.2 this]
     simp [h]
 
+theorem nFn_toList (k : Nat) : (nFn k).toList = 'f' :: 'n' :: (toString k).toList := by
+  simp only [nFn, String.toList_append]; rfl
+
+@[simp] theorem strEq_nFn (a b : Nat) : strEq (nFn a) (nFn b) = (a == b) := by
+  unfold strEq
+  rw [nFn_toList, nFn_toList]
+  by_cases h : a = b
+  · subst h; simp
+  · have : ¬ ('f' :: 'n' :: (toString a).toList = 'f' :: 'n' :: (toString b).toList) := fun e =>
+      h (toString_nat_inj (List.cons.inj (List.cons.inj e).2).2)
+    rw [beq_eq_false_iff_ne.2 this, beq_eq_false_iff_ne.2 h]
+
+theorem strEq_rumpf_nFn {n : String} (h : RumpfName n) (b : Nat) : strEq n (nFn b) = false := by
+  rcases h with ⟨k, rfl⟩ | ⟨k, rfl⟩
+  · exact strEq_kopf (nVar_toList k) (nFn_toList b) (by decide)
+  · exact strEq_kopf (nZeiger_toList k) (nFn_toList b) (by decide)
+
+theorem strEq_nTab_nFn (a b : Nat) : strEq (nTab a) (nFn b) = false :=
+  strEq_kopf (nTab_toList a) (nFn_toList b) (by decide)
+
 end Gabbro.Grammatik.Gen.Text

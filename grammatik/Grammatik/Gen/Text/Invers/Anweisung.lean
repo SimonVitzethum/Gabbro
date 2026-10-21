@@ -29,7 +29,23 @@ def uOfR (art : Nat → UParamArt) {Γ : Ctx} {Λ : List (Res z.deklaration)} :
   | _, .val (τ := .int _ _) e => (uOfS z art none e).map .val
   | _, .val _ => none
 
-variable (V : Vertrag z.deklaration)
+abbrev fN (f : z.deklaration.Fn) : Nat := (show Fin z.fns.length from f).val
+
+/-- The kind of a value of type `τ` in a scope (a parameter or a binding): a number or a truth value. -/
+def artErg : Ty → Option UParamArt
+  | .bool => some .bool
+  | .int _ _ => some .int
+  | _ => none
+
+/-- The arguments the elaborator reads (`uArgs` against the callee's kinds). -/
+def uOfArgs (art : Nat → UParamArt) {Γ : Ctx} {Λ : List (Res z.deklaration)} :
+    {τs : List Ty} → Args z.deklaration Γ Λ τs → Option (List UArg)
+  | _, .nil => some []
+  | _, .cons (τ := .bool) e rest => do some (.bval (← uOfB z art none e) :: (← uOfArgs art rest))
+  | _, .cons (τ := .int _ _) e rest => do some (.val (← uOfS z art none e) :: (← uOfArgs art rest))
+  | _, .cons _ _ => none
+
+variable (V : Vertrag z.deklaration) (gNr : Nat → Nat)
 
 mutual
 
@@ -55,6 +71,12 @@ def uOfSt (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
         (← uOfBl (artAuf (.index (tN z t)) art) body) ++ [.blkEnd])
   | .ret e _ => (uOfR z art e).map fun r => [.ret r]
   | .retWhy r _ => some [.ret (.why r.val)]
+  | .call f args _ _ => (uOfArgs z art args).map fun xs => [.call (nFn (fN z f)) xs]
+  | .callInd (Γ := Γ) p args _ _ =>
+      match p with
+      | .fnref f _ _ => (uOfArgs z art args).map fun xs =>
+        [.bindFnref (nZeiger Γ.length) (nFn (fN z f)), .callInd (nZeiger Γ.length) (nFn (fN z f)) xs]
+      | _ => none
   | _ => none
 
 /-- The statements the elaborator builds for a block. -/
@@ -67,6 +89,24 @@ def uOfBl (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
         some (.bindB (nVar Γ.length) (← uOfB z art none e) :: (← uOfBl (artAuf .bool art) rest))
       else do
         some (.bind (nVar Γ.length) none (← uOfS z art none e) :: (← uOfBl (artAuf .int art) rest))
+  | .bindCall (Γ := Γ) (τ := τ) f args _ _ _ rest => do
+      let a ← artErg τ
+      some (.bindCall (nVar Γ.length) (nFn (fN z f)) (← uOfArgs z art args) :: (← uOfBl (artAuf a art) rest))
+  | .bindCallElse (Γ := Γ) (τ := τ) f args _ _ _ err rest => do
+      let a ← artErg τ
+      let xs ← uOfArgs z art args
+      let (es, er) ← uOfEnd (artAuf (.why (gNr (z.deklaration.gruende f))) art) err
+      some ([.bindElse (nVar Γ.length) (nFn (fN z f)) xs (nVar Γ.length)] ++ es ++ [.ret er, .blkEnd] ++
+        (← uOfBl (artAuf a art) rest))
+  | .bindCallInd (Γ := Γ) (τ := τ) p args _ _ _ rest => do
+      let a ← artErg τ
+      let xs ← uOfArgs z art args
+      let rs ← uOfBl (artAuf a art) rest
+      match p with
+      | .fnref f _ _ =>
+        some ([.bindFnref (nZeiger Γ.length) (nFn (fN z f)),
+          .bindCallInd (nVar Γ.length) (nZeiger Γ.length) (nFn (fN z f)) xs] ++ rs)
+      | _ => none
   | _ => none
 
 /-- The statements and the trailing return the elaborator builds for an end block. -/
@@ -87,6 +127,17 @@ def uOfEnd (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ : List (Res z.dek
         let u ← uOfS z art none e
         let (rs, r) ← uOfEnd (artAuf .int art) rest
         some (.bind (nVar Γ.length) none u :: rs, r)
+  | .bindCall (Γ := Γ) (τ := τ) f args _ _ _ rest => do
+      let a ← artErg τ
+      let xs ← uOfArgs z art args
+      let (rs, r) ← uOfEnd (artAuf a art) rest
+      some (.bindCall (nVar Γ.length) (nFn (fN z f)) xs :: rs, r)
+  | .bindCallElse (Γ := Γ) (τ := τ) f args _ _ _ err rest => do
+      let a ← artErg τ
+      let xs ← uOfArgs z art args
+      let (es, er) ← uOfEnd (artAuf (.why (gNr (z.deklaration.gruende f))) art) err
+      let (rs, r) ← uOfEnd (artAuf a art) rest
+      some ([.bindElse (nVar Γ.length) (nFn (fN z f)) xs (nVar Γ.length)] ++ es ++ [.ret er, .blkEnd] ++ rs, r)
   | _ => none
 
 end
@@ -106,6 +157,7 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
       tb.bools.any (fun g => strEq g (nFeld (show Fin _ from f).val)) = decide (z.deklaration.typ t f = .bool))
   tabNr : ∀ t : z.deklaration.Tab, uTabNrAux ctx.tabs 0 (nTab (tN z t)) = .ok (tN z t, z.deklaration.count t)
   tabIdx : ∀ t : z.deklaration.Tab, ctx.tabs.findIdx? (fun x => strEq x.name (nTab (tN z t))) = some (tN z t)
+  tabNamen : ∀ tb ∈ ctx.tabs, ∃ i, tb.name = nTab i
   lockFind : ∀ L : z.deklaration.Lock, ∃ lk, ctx.locks.find? (fun x => strEq x.name (nLock (lN z L))) = some lk
   lockGuard : ∀ lk ∈ ctx.locks, ∀ t : z.deklaration.Tab, lk.guard.any (strEq · (nTab (tN z t))) = true →
     ∃ L, lk.name = nLock (lN z L) ∧ Sum.inl L ∈ z.deklaration.braucht t
@@ -291,6 +343,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   tab := H.tab
   tabNr := H.tabNr
   tabIdx := H.tabIdx
+  tabNamen := H.tabNamen
   lockFind := H.lockFind
   lockGuard := H.lockGuard
   held := H.held
@@ -314,6 +367,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   tab := H.tab
   tabNr := H.tabNr
   tabIdx := H.tabIdx
+  tabNamen := H.tabNamen
   lockFind := H.lockFind
   lockGuard := H.lockGuard
   held M hM := by
