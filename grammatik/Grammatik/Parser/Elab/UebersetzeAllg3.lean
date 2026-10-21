@@ -1150,6 +1150,9 @@ def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     rw [hv] at hm
     simp at hm
 
+/-- The type of a lowered invariant: a predicate over no parameter, under the guards of its carriers. -/
+abbrev InvTy (u : UProg) (i : Fin u.invs.length) := Expr (declOf u) [] (invSicht (declOf u) i) .bool
+
 /-- The requires of a function: `.tru` without a `requires` predicate (what the conjunction of none is),
     else the lowered conjunction. -/
 def reqOf (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fin u.fns.length) : ReqTy u f :=
@@ -1163,18 +1166,68 @@ theorem reqOf_leer (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fi
 /-- Assemble lowered functions to a program (no contract
     content in `requires`, per-function `ensures` and bodies). -/
 def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
-    (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f) :
+    (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f)
+    (I : ∀ i : Fin u.invs.length, InvTy u i) :
     Programm (declOf u) where
-  invariante := fun i => nomatch i
+  invariante := I
   requires := fun f => reqOf u R f
   ensures := fun f => E f
   rumpf := fun f => B f
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
 
+/-- The function of no parameter in whose scope an invariant is read. -/
+def leerFn : UFn :=
+  { name := "", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [],
+    ret := .empty }
+
+/-- One invariant, lowered. -/
+def lowerInvAt (u : UProg) (i : Fin u.invs.length) : Except String (InvTy u i) :=
+  lowEns u [] (invSicht (declOf u) i) leerFn none (u.invs.get i).pred
+
+/-- Every invariant lowers. -/
+def lowerInvs (u : UProg) : List (Fin u.invs.length) → Except String Unit
+  | [] => .ok ()
+  | i :: is =>
+    match lowerInvAt u i with
+    | .error e => .error e
+    | .ok _ => lowerInvs u is
+
+theorem lowerInvs_all_ok (u : UProg) (is : List (Fin u.invs.length)) (i : Fin u.invs.length) (hm : i ∈ is)
+    (h : lowerInvs u is = .ok ()) : ∃ v, lowerInvAt u i = .ok v := by
+  induction is with
+  | nil => simp at hm
+  | cons j js ih =>
+    simp only [List.mem_cons] at hm
+    cases hj : lowerInvAt u j with
+    | error e =>
+      have hE : lowerInvs u (j :: js) = .error e := by simp [lowerInvs, hj]
+      rw [hE] at h
+      simp at h
+    | ok v =>
+      have hO : lowerInvs u (j :: js) = lowerInvs u js := by simp [lowerInvs, hj]
+      cases hm with
+      | inl he => subst he; exact ⟨v, hj⟩
+      | inr hm' => rw [hO] at h; exact ih hm' h
+
+/-- The lowered invariant at an index known good. -/
+def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i = .ok v) : InvTy u i :=
+  match hm : lowerInvAt u i with
+  | .ok v => v
+  | .error _ => by
+    exfalso
+    obtain ⟨v, hv⟩ := h
+    rw [hv] at hm
+    simp at hm
+
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it. -/
 def lowerAllg (u : UProg) :
     Except String (Programm (declOf u) × List (declOf u).Fn) :=
+  match hI : lowerInvs u (List.finRange u.invs.length) with
+  | .error e => .error e
+  | .ok _ =>
+  have wI : ∀ i : Fin u.invs.length, ∃ v, lowerInvAt u i = .ok v := fun i =>
+    lowerInvs_all_ok u (List.finRange u.invs.length) i (List.mem_finRange i) hI
   match h : lowerEach u (List.finRange u.fns.length) with
   | .error e => .error e
   | .ok _ =>
@@ -1183,7 +1236,8 @@ def lowerAllg (u : UProg) :
       lowerEach_all_ok u (List.finRange u.fns.length) f
         (List.mem_finRange f) h
     .ok (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
-      (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2),
+      (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
+      (fun i => lowerInvGut u i (wI i)),
       List.finRange u.fns.length)
 
 /-! ## 104 pins on the generically lowered program -/

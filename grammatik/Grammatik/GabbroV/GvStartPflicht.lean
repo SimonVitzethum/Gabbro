@@ -277,6 +277,8 @@ theorem gv_lowerAllg_requires (u : UProg) (P : Programm (declOf u))
   unfold lowerAllg at h
   split at h
   · cases h
+  split at h
+  · cases h
   · injection h with h1
     injection h1 with h2 h3
     subst h2

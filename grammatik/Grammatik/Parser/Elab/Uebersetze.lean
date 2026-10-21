@@ -327,6 +327,15 @@ structure USum where
 /-- The specification of a tagged type: the payload range of each case (`Ty.sum cs`). -/
 def USum.spec (s : USum) : List (Option (Int × Int)) := s.cases.map (·.2)
 
+/-- One invariant (`table T { .. invariant I cost .. runs .. : p; }` or `group G over { T, U } { invariant I .. }`,
+    `D.Inv`): its name, its carrier tables (`D.traeger`) and its predicate over no parameter (`Programm.invariante`,
+    read under the guards of its carriers, `invSicht`). -/
+structure UInv where
+  name : String
+  traeger : List String
+  pred : UEns
+  deriving DecidableEq, Repr
+
 /-- One device register (`device D .. { reg R : T @off class K .. }`, `D.Reg`): its device and name, the range
     of its type (`D.rtyp`, always an integer range: `regdecl` reads an `intty`), its class (`D.rklasse`), the
     register its writes carry the other bits from (`mirrors R from M` names `M` at `R`, `D.spiegel`), the
@@ -514,6 +523,8 @@ structure UProg where
   globs : List UGlob := []
   /-- The device registers (`Deklaration.Reg`), in declaration order. -/
   regs : List UReg := []
+  /-- The invariants (`Deklaration.Inv`): table invariants in table order, then group invariants. -/
+  invs : List UInv := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -860,7 +871,8 @@ def uFelder : List (String × (Int × Int)) → List String → List SFeld →
     are explicit errors (the refused arms of `read_table`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n (.some cnt) .none .none sh [.tSlot fds] =>
+  | .tableT n (.some cnt) .none .none sh (.tSlot fds :: invs) =>
+    if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uAnzahl consts cnt with
     | .error e => .error e
     | .ok c =>
@@ -2875,6 +2887,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
   | .devT .. :: rest => uRestFehler rest
+  | .groupT .. :: rest => uRestFehler rest
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
@@ -3090,6 +3103,41 @@ def uWhys : List SItemTief → Except String (List UWhy)
       | .error e => .error e
       | .ok r => .ok ({ name := n, cases := cs.map (·.1) } :: r)
   | _ :: rest => uWhys rest
+
+/-! ## Invariants -/
+
+/-- The predicate of an invariant over its carriers: no parameter, the guards of the carriers held. -/
+def uInv (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
+    (locks : List ULock) (globs : List UGlob) (traeger : List String) (g : SGruppenInv) : Except String UInv :=
+  if !traeger.all (fun c => tabs.any (fun t => strEq t.name c && !t.arena)) then .error "invariant carrier without G form"
+  else
+    let held := (locks.filter (fun l => l.guard.any (fun c => traeger.any (strEq · c)))).map (·.name)
+    let ctx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held, res := none, fname := g.name,
+                        alias, lits := consts, globs }
+    match uBool ctx g.pred with
+    | .error e => .error e
+    | .ok p => .ok { name := g.name, traeger, pred := p }
+
+/-- The invariants of the unit: those of each table, in table order, then those of each `group`. -/
+def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
+    (locks : List ULock) (globs : List UGlob) (ms : List SItemTief) : Except String (List UInv) :=
+  let ausTab := ms.flatMap fun it => match it with
+    | .tableT n _ _ _ _ parts => parts.filterMap fun p => match p with
+      | .tInv g => some (uInv consts alias tabs locks globs [n] g)
+      | _ => none
+    | _ => []
+  let ausGruppe := ms.flatMap fun it => match it with
+    | .groupT _ ts gs => gs.map (uInv consts alias tabs locks globs ts)
+    | _ => []
+  uSeq (ausTab ++ ausGruppe)
+
+/-- `U003`: a function that writes a carrier of an invariant holds (by `requires Held(..)`) every lock that
+    guards a carrier of it -- it owes the invariant at its `return` and reads all of them there. -/
+def uU003 (locks : List ULock) (fns : List UFn) (invs : List UInv) : Bool :=
+  invs.all fun i => fns.all fun f =>
+    !(f.puts.any (fun t => i.traeger.any (strEq · t))) ||
+    (locks.filter (fun l => l.guard.any (fun c => i.traeger.any (strEq · c)))).all
+      (fun l => f.held.any (strEq · l.name))
 
 /-! ## Device registers -/
 
@@ -3316,6 +3364,9 @@ def elabU : List SItemTief → Except String UProg
     match uRegs alias consts tabs globs ms with
     | .error e => .error e
     | .ok regs =>
+    match uInvs consts alias tabs locks globs ms with
+    | .error e => .error e
+    | .ok invs =>
     let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs)) with
     | .error e => .error e
@@ -3341,12 +3392,13 @@ def elabU : List SItemTief → Except String UProg
         (fun d => uStart fns "start" d)) with
     | .error e => .error e
     | .ok gestartet =>
+      if !uU003 locks fns invs then .error "a writer of an invariant's carrier does not hold all its locks" else
       let u : UProg :=
         { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
           gestartet := gestartet,
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0 }),
-          annahmen := annahmen, whys := whys, sums := sums, regs := regs }
+          annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
@@ -4042,7 +4094,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"

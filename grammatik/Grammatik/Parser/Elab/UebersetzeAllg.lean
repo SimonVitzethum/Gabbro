@@ -178,6 +178,28 @@ def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
 def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
   f.puts.any (· == (tabAt u t).name)
 
+/-- The invariant at an index. -/
+def invAt (u : UProg) (i : Fin u.invs.length) : UInv := u.invs.get i
+
+/-- The carrier tables of an invariant, by name. -/
+def invTraeger (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
+  (invAt u i).traeger.filterMap fun n => (tabIdx u.tabs n).toOption
+
+/-- `U003` at an invariant, decided over the elaborated functions: a writer of a carrier holds every lock that
+    guards a carrier (the elaborator refuses a unit where it fails, `uU003`). -/
+def invOkB (u : UProg) (i : Fin u.invs.length) : Bool :=
+  (List.finRange u.fns.length).all fun f =>
+    !((invTraeger u i).any (writesAt u (fnAt u f))) ||
+    (invTraeger u i).all fun t => (needsAt u t).all fun w =>
+      match w with
+      | .inl L => decide (L ∈ heldAt u (fnAt u f))
+      | .inr _ => true
+
+/-- The carriers of an invariant in the declaration: its tables where `U003` holds (always, for an elaborated
+    unit), none otherwise -- so `invarianten_gehalten` holds for every `UProg`. -/
+def traegerD (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
+  if invOkB u i then invTraeger u i else []
+
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
@@ -208,6 +230,34 @@ def dummySig (u : UProg) :
 def sigAt (u : UProg) (n : Nat) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty :=
   if h : n < u.fns.length then mkSig u (u.fns.get ⟨n, h⟩) else dummySig u
+
+/-- `invarianten_gehalten` for the declaration of every `UProg`. -/
+theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
+    (h : (traegerD u i).any (sigAt u n).schreibt = true) (t : Fin u.tabs.length) (ht : t ∈ traegerD u i)
+    (L : Fin u.locks.length) (hL : Sum.inl L ∈ needsAt u t) : L ∈ (sigAt u n).haelt := by
+  unfold traegerD at h ht
+  cases hok : invOkB u i with
+  | false => rw [hok] at ht; simp at ht
+  | true =>
+    rw [hok] at h ht
+    simp only [if_true] at h ht
+    by_cases hn : n < u.fns.length
+    · have hs : sigAt u n = mkSig u (u.fns.get ⟨n, hn⟩) := by unfold sigAt; rw [dif_pos hn]
+      rw [hs] at h ⊢
+      unfold invOkB at hok
+      have hf := List.all_eq_true.mp hok ⟨n, hn⟩ (List.mem_finRange _)
+      simp only [Bool.or_eq_true, Bool.not_eq_true'] at hf
+      rcases hf with hf | hf
+      · have h' : (invTraeger u i).any (writesAt u (u.fns.get ⟨n, hn⟩)) = true := h
+        simp only [fnAt] at hf
+        rw [hf] at h'
+        cases h'
+      · have ht' := List.all_eq_true.mp hf t ht
+        have hw := List.all_eq_true.mp ht' (Sum.inl L) hL
+        exact of_decide_eq_true hw
+    · have hs : sigAt u n = dummySig u := by unfold sigAt; rw [dif_neg hn]
+      rw [hs] at h
+      simp [dummySig] at h
 
 /-- A non-empty emptiness test means a non-empty list. -/
 theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
@@ -250,9 +300,9 @@ def declOf (u : UProg) : Deklaration where
   sigNr := sigAt u
   eigner_nie_erzeugt :=
     fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
-  Inv := Empty
-  traeger := fun e => nomatch e
-  invs := []
+  Inv := Fin u.invs.length
+  traeger := traegerD u
+  invs := List.finRange u.invs.length
   Ax := Fin u.axs.length
   aparams := fun a => (uaxAt u a).params
   aerg := fun a => (uaxAt u a).res
@@ -271,7 +321,7 @@ def declOf (u : UProg) : Deklaration where
     have h' : ((tabAt u t).shared && !((needsAt u t).isEmpty)) = true := h
     simp only [Bool.and_eq_true] at h'
     exact notEmpty_ne_nil _ h'.2
-  invarianten_gehalten := fun _ i => nomatch i
+  invarianten_gehalten := fun n i h t ht L hL => invGehalten u n i h t ht L hL
   ggeteilt_bewacht := fun g h => by
     have h' : ((globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)) = true := h
     simp only [Bool.and_eq_true, Bool.or_eq_true] at h'
