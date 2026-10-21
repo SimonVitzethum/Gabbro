@@ -24,12 +24,18 @@ def rohToks (s : String) : List Token :=
   | .ok ts => ts.filter (fun t => match t with | .ende => false | _ => true)
   | .error _ => []
 
+/-- A name as the token the lexer reads for it: a table word is a `wort`, every other name an
+    `ident`. The type reader takes both through `nameText`; printing the lexer's token makes the
+    printed list the one the rendered text lexes to (`u32`, `bool`, the space `dma` are table
+    words). -/
+def nameTok (s : String) : Token := if istSchluessel s then .wort s else .ident s
+
 /-- A surface type as tokens (the inverse of `parseTyp`). -/
 def druckTyp : STyp → List Token
-  | .atom a => [.ident a]
+  | .atom a => [nameTok a]
   | .path segs => pfadToks segs
   | .ptr r w t =>
-    [.wort "ptr", .zeichen "<", .ident r, .zeichen ","] ++ rohToks w ++ [.zeichen ">"] ++ druckTyp t
+    [.wort "ptr", .zeichen "<", nameTok r, .zeichen ","] ++ rohToks w ++ [.zeichen ">"] ++ druckTyp t
   | .index o t => (if o then [.wort "option"] else []) ++ [.wort "index", .wort "into", .ident t]
   | .range b lo hi x =>
     druckTyp b ++ [.wort "in"] ++ druckToks lo ++ [.zeichen (if x then "..<" else "..")] ++ druckToks hi
