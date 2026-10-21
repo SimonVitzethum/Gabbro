@@ -46,29 +46,25 @@ theorem summe_le {l : List D.Fn} {a b : D.Fn → Nat} (h : ∀ f, a f ≤ b f) :
 end
 
 /-- **The tables keep a representative of every body**: same summary, size not larger. -/
-theorem tabellenD_vollst (z : Spez) (nb : Nat) (f : z.deklaration.Fn) (e : Rumpf z.deklaration f)
-    (hn : @groesseEnd z.deklaration z.zahlen _ _ _ _ e ≤ nb) (hu : @groesseEnd z.deklaration z.zahlen _ _ _ _ e < unendlich)
+theorem tabellenD_vollst (z : Spez) (nb : Nat) (hnb : nb < unendlich) (f : z.deklaration.Fn) (e : Rumpf z.deklaration f)
+    (hn : @groesseEnd z.deklaration z.zahlen _ _ _ _ e ≤ nb)
     (haus : (e.bodenAbgeleitet != (z.deklaration.signatur f).boden) = false) :
     ∃ k ≤ @groesseEnd z.deklaration z.zahlen _ _ _ _ e, ∃ b ∈ @rumpfS z.deklaration z.aufz (z.tabellenD nb) f k,
       @GleicherSchluessel z.deklaration z.aufz z.zahlen f b e := by
   letI : Zahlen := z.zahlen
-  let ok : ∀ f : z.deklaration.Fn, Rumpf z.deklaration f → Bool := okFuer false false (List.finRange z.fns.length)
-  have hT : z.tabellenD nb = (Aufz.fn (D := z.deklaration)).map fun f =>
-      (⟨f, entdoppelt Rumpf.schluessel (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden) (rumpfT ok f nb)⟩ :
-        Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))) := by
-    simp only [Spez.tabellenD, Spez.tabellen, rumpfTab, List.map_map]
-    rfl
-  have he : e ∈ (rumpfT ok f nb).getD (groesseEnd e) [] := by
-    have := rumpfTab_mem ok nb f e hn hu (by simp [ok, okFuer])
-    unfold rumpfS rumpfTab at this
-    rwa [ofTy_rumpfTab (fun f => rumpfT ok f nb) f] at this
-  have hl : groesseEnd e < (rumpfT ok f nb).length := by simp [rumpfT]; omega
+  obtain ⟨e', he', g⟩ := rumpfTK_rep (fun _ _ => true) f nb hnb (fun _ => rfl) e hn
+  have hgs : GleicherSchluessel e' e := schluessel_of_glN g
+  have hboden : e'.bodenAbgeleitet = e.bodenAbgeleitet := by
+    simp only [Rumpf.bodenAbgeleitet, gs_sperre hgs]
+  have haus' : (e'.bodenAbgeleitet != (z.deklaration.signatur f).boden) = false := by rw [hboden]; exact haus
+  have hl : groesseEnd e' < (rumpfTK (fun _ _ => true) f nb).length := by
+    have := g.groesse; simp [rumpfTK]; omega
   obtain ⟨k, hk, b, hb, hkb⟩ :=
-    entdoppelt_vollst Rumpf.schluessel (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden) _ _ hl e he haus
-  refine ⟨k, hk, b, ?_, hkb⟩
-  unfold rumpfS
-  rw [hT, ofTy_rumpfTab (fun f => entdoppelt Rumpf.schluessel
-    (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden) (rumpfT ok f nb)) f]
+    entdoppelt_vollst Rumpf.schluessel (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden) _ _ hl e' he' haus'
+  refine ⟨k, by have := g.groesse; omega, b, ?_, hkb.trans hgs⟩
+  unfold rumpfS Spez.tabellenD
+  rw [ofTy_rumpfTab (fun f => entdoppelt Rumpf.schluessel
+    (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden) (rumpfTK (fun _ _ => true) f nb)) f]
   exact hb
 
 theorem vertragsL_rumpf {z : Spez} {nc : Nat} {h : Haut z.deklaration} {P : Programm z.deklaration}
@@ -88,13 +84,13 @@ theorem vertragsL_mitRumpf {z : Spez} {nc : Nat} {h : Haut z.deklaration} {P : P
 /-- The bodies a program's bodies are replaced by: one representative per function from the tables. -/
 theorem vertreter (z : Spez) (nb : Nat) (h0 : Haut z.deklaration)
     (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
-    (hu : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) < unendlich)
+    (hnb : nb < unendlich)
     (haus : ∀ f, (Rumpf.bodenAbgeleitet (h0.rumpf f) != (z.deklaration.signatur f).boden) = false) :
     ∃ (c : z.deklaration.Fn → Nat) (r : ∀ f, Rumpf z.deklaration f),
       (∀ f, c f ≤ @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f)) ∧
       (∀ f, r f ∈ @rumpfS z.deklaration z.aufz (z.tabellenD nb) f (c f)) ∧
       (∀ f, @GleicherSchluessel z.deklaration z.aufz z.zahlen f (r f) (h0.rumpf f)) := by
-  have hrep := fun f => tabellenD_vollst z nb f (h0.rumpf f) (hn f) (hu f) (haus f)
+  have hrep := fun f => tabellenD_vollst z nb hnb f (h0.rumpf f) (hn f) (haus f)
   refine ⟨fun f => Classical.choose (hrep f), fun f => Classical.choose (Classical.choose_spec (hrep f)).2,
     fun f => (Classical.choose_spec (hrep f)).1, fun f => (Classical.choose_spec (Classical.choose_spec (hrep f)).2).1,
     fun f => (Classical.choose_spec (Classical.choose_spec (hrep f)).2).2⟩
@@ -117,7 +113,7 @@ theorem boden_aus {z : Spez} {P : Programm z.deklaration} (hb : z.bodenOk P = tr
 /-- **A valid program within the bounds puts its cells into the space.** -/
 theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.deklaration)
     (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
-    (hu : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) < unendlich)
+    (hnb : nb < unendlich)
     (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
     {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
     (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true)
@@ -126,7 +122,7 @@ theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.dek
   letI : Zahlen := z.zahlen
   have haus : ∀ f, (Rumpf.bodenAbgeleitet (h0.rumpf f) != (z.deklaration.signatur f).boden) = false := fun f => by
     rw [← vertragsL_rumpf hP]; exact boden_aus hb f
-  obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb h0 hn hu haus
+  obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb h0 hn hnb haus
   have hgP : ∀ f, GleicherSchluessel (r f) (P.rumpf f) := fun f => by rw [vertragsL_rumpf hP]; exact hg f
   have hb' : z.bodenOk (P.mitRumpf r) = true := by rw [gs_bodenOk z P r hgP]; exact hb
   have hvoll : ∀ g : z.deklaration.Fn, g ∈ z.fnListe := List.mem_finRange
@@ -142,7 +138,7 @@ theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.dek
 /-- **A refused program within the bounds puts itself into the space**: each of its cells in `B` or a good one of `er`. -/
 theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (h0 : Haut z.deklaration)
     (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
-    (hu : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) < unendlich)
+    (hnb : nb < unendlich)
     (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
     {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
     (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true)
@@ -151,7 +147,7 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (h0 : Haut z.deklaratio
   letI : Zahlen := z.zahlen
   have haus : ∀ f, (Rumpf.bodenAbgeleitet (h0.rumpf f) != (z.deklaration.signatur f).boden) = false := fun f => by
     rw [← vertragsL_rumpf hP]; exact boden_aus hb f
-  obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb h0 hn hu haus
+  obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb h0 hn hnb haus
   have hgP : ∀ f, GleicherSchluessel (r f) (P.rumpf f) := fun f => by rw [vertragsL_rumpf hP]; exact hg f
   have hb' : z.bodenOk (P.mitRumpf r) = true := by rw [gs_bodenOk z P r hgP]; exact hb
   have hvoll : ∀ g : z.deklaration.Fn, g ∈ z.fnListe := List.mem_finRange
@@ -167,7 +163,7 @@ theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (h0 : Haut z.deklaratio
 
 set_option maxRecDepth 200000 in
 /-- The number of members, once (the witness files read it instead of deciding it). -/
-theorem mitglieder_laenge : mitglieder.length = 386 := by
+theorem mitglieder_laenge : mitglieder.length = 371 := by
   simp only [mitglieder, List.length_append]
   decide
 

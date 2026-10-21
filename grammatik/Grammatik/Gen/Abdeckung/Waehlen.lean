@@ -11,19 +11,21 @@ import Grammatik.Gen.Familie.ZellFamilie
 import Grammatik.Gen.Erzeuger.Strom
 import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
 import Grammatik.Gen.Erzeuger.Entdoppelt
+import Grammatik.Gen.Erzeuger.Kompakt.Merken
 
 namespace Gabbro.Grammatik.Gen
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
-/-- **The tables of the bodies, one body per cell-relevant summary** (`Rumpf.schluessel`): scanning the sizes upward, a
-    body is kept only if no smaller body of the same function has its summary and if its derived floor is the declared
-    one (a program of the source has no other floor). -/
+/-- **The tables of the bodies, one body per cell-relevant summary** (`Rumpf.schluessel`): the bodies of the generator
+    one per key (`rumpfTK`), scanned by size upward; a body is kept only if no smaller body of the same function has its
+    summary and if its derived floor is the declared one (a program of the source has no other floor). -/
 def Spez.tabellenD (z : Spez) (nb : Nat) :
     List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))) :=
   letI : Zahlen := z.zahlen
-  (z.tabellen nb false false).map fun t =>
-    ⟨t.1, entdoppelt Rumpf.schluessel (fun b => b.bodenAbgeleitet != (z.deklaration.signatur t.1).boden) t.2⟩
+  (Aufz.fn (D := z.deklaration)).map fun f =>
+    ⟨f, entdoppelt Rumpf.schluessel (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden)
+      (rumpfTK (fun _ _ => true) f nb)⟩
 
 /-- **The members** the cell driver ranges over: the sixteen of the family, the hand-written cell members and the rule members. -/
 def mitglieder : List Spez := familie ++ zellFamilie ++ regelMitglieder
@@ -134,10 +136,11 @@ def Spez.erzeugeF (z : Spez) (tbls : List (Σ f : z.deklaration.Fn, List (List (
     (z.parameter.filterMap fun ws => z.erzeugeAus P ws).foldl s b)
 
 /-- The bounds (bodies, skeleton size) of member `i`: the sixteen family members 5:6, the cell members 16-20 larger,
-    the rule members 5:9. -/
+    the rule members 8 per body (a lock taken around a call or a read needs 8). -/
 def grenzenVon (i : Nat) : Nat × Nat :=
   if i = 16 then (6, 14) else if 17 ≤ i ∧ i ≤ 19 then (6, 12) else if i = 20 then (7, 12)
-  else if i ≥ familie.length + zellFamilie.length then (5, 9) else (5, 6)
+  else if i ≥ familie.length + zellFamilie.length + regelSigs.length then (8, 16)
+  else if i ≥ familie.length + zellFamilie.length then (8, 8) else (5, 6)
 
 /-- The contract size the test sets are stated for (`mGen ncZiel`): a witness without a contract holds for every
     size, a witness with one needs its contract of size at most this. -/

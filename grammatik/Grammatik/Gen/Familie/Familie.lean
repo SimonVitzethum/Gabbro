@@ -59,8 +59,8 @@ def Spez.naturen (z : Spez) : List Nat :=
     (List.range z.tabs.length) ++ z.typen.flatMap tyNats ++ z.sigs.map (fun (s : SigZ) => s.gruende) ++
     z.axs.map (fun (a : AxZ) => a.gruende)).eraseDups
 
-/-- The alphabet of float ranges. -/
-def Spez.paare (z : Spez) : List (Int × Int) := ([(0, 1), (1, 1)] ++ z.typen.flatMap tyPaare).eraseDups
+/-- The alphabet of float ranges: the ranges of the float types the specification declares. -/
+def Spez.paare (z : Spez) : List (Int × Int) := (z.typen.flatMap tyPaare).eraseDups
 
 /-- The alphabet of BOUNDS: every bound a type names, the first and the last index of a table, the transition
     endpoints. -/

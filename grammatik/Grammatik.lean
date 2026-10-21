@@ -537,6 +537,15 @@ import Grammatik.Gen.Abdeckung.Satz.Schluessel
 import Grammatik.Gen.Abdeckung.Satz.SchluesselZellen
 import Grammatik.Gen.Abdeckung.Satz.Raum
 import Grammatik.Gen.Erzeuger.Strom
+import Grammatik.Gen.Erzeuger.Kompakt.Ausdruck
+import Grammatik.Gen.Erzeuger.Kompakt.AusdruckTab
+import Grammatik.Gen.Erzeuger.Kompakt.Gleich
+import Grammatik.Gen.Erzeuger.Kompakt.Teile
+import Grammatik.Gen.Erzeuger.Kompakt.Anweisung
+import Grammatik.Gen.Erzeuger.Kompakt.Block
+import Grammatik.Gen.Erzeuger.Kompakt.Tabelle
+import Grammatik.Gen.Erzeuger.Kompakt.MerkenAusdruck
+import Grammatik.Gen.Erzeuger.Kompakt.Merken
 import Grammatik.Gen.Abdeckung.Satz.ZellenUnmoeglich
 import Grammatik.Gen.Abdeckung.Waehlen
 import Grammatik.Gen.Druck.Druck

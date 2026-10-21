@@ -83,8 +83,8 @@ def Spez.leanZeuge (z : Spez) (i _nc : Nat) (stamm : String) (P : Programm z.dek
   let kopf := s!"/-\n  File:      Grammatik/Gen/Zeugen/{stamm}.lean\n  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member {i}, the cells below lie in the generator's\n             space. Checked by the kernel; do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.Raum\nimport Grammatik.Gen.Erzeuger.Entscheidung\nimport Grammatik.Korpus.Zeugnis.Zeugnis.T1\n" ++ (if abgelehnt then "import Grammatik.Gen.Zeugen.Erreicht\n" else "") ++ s!"\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.{stamm}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := mitglieder.getD {i} " ++ "{}" ++ s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs
   let allF := fun (was : String) => s!"(fun f => (by decide : ∀ f : Fin z.fns.length, {was}) f)"
   let gr := "@groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f)"
-  -- hn hu hk hP hws hax hb: the bounds, the size, the contract variant (none), the starts, no foreign body, the floors
-  let seite := s!"{allF (gr ++ " ≤ (grenzenVon " ++ toString i ++ ").1")} {allF (gr ++ " < unendlich")}\n    (by decide) {hP} (ws := ws) (by decide) (by decide) (by decide)"
+  -- hn hnb hk hP hws hax hb: the bounds, the table bound, the size, the contract variant, the starts, no foreign body, the floors
+  let seite := s!"{allF (gr ++ " ≤ (grenzenVon " ++ toString i ++ ").1")} (by decide)\n    (by decide) {hP} (ws := ws) (by decide) (by decide) (by decide)"
   let mitglied := s!"⟨{i}, by rw [mitglieder_laenge]; decide,"
   let satz := if !abgelehnt then
       s!"theorem zellen : ∀ x ∈ ([{zs}] : List Zelle), RaumGut ncZiel x := by\n  intro x hx\n  refine {mitglied} raumGutIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) ?_⟩\n  revert x; decide\n"

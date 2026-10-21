@@ -49,6 +49,27 @@ theorem eimer_spec (bucket : List α) (a : List α × List κ) :
         · exact h2 _ (by simp)
         · exact h4 b' hb' ha
 
+/-- A kept item was kept before or is an item of the bucket that is not dropped. -/
+theorem eimer_teil (bucket : List α) (a : List α × List κ) :
+    ∀ b ∈ (entdoppeltEimer key aus a bucket).1, b ∈ a.1 ∨ (b ∈ bucket ∧ aus b = false) := by
+  induction bucket generalizing a with
+  | nil => intro b hb; exact Or.inl hb
+  | cons x rest ih =>
+    intro b hb
+    simp only [entdoppeltEimer, List.foldl_cons] at hb
+    split at hb
+    · rcases ih a b hb with h | ⟨h, h'⟩
+      · exact Or.inl h
+      · exact Or.inr ⟨List.mem_cons_of_mem _ h, h'⟩
+    · rename_i hc
+      rcases ih (a.1 ++ [x], a.2 ++ [key x]) b hb with h | ⟨h, h'⟩
+      · rcases List.mem_append.1 h with h | h
+        · exact Or.inl h
+        · rw [List.mem_singleton.1 h]
+          simp only [Bool.or_eq_true, not_or, Bool.not_eq_true] at hc
+          exact Or.inr ⟨List.mem_cons_self .., hc.2⟩
+      · exact Or.inr ⟨List.mem_cons_of_mem _ h, h'⟩
+
 /-- The outer fold, from any state whose seen keys all have a representative. -/
 theorem aussen_spec (B : List (List α)) (acc : List (List α)) (seen : List κ)
     (hI : ∀ x ∈ seen, ∃ k < acc.length, ∃ b ∈ acc.getD k [], key b = x) :

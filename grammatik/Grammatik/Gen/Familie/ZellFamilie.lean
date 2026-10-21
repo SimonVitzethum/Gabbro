@@ -76,55 +76,51 @@ def zC : Spez where
   sigs := [{ schreibt := [0], haelt := [0, 1] }, { schreibt := [1], haelt := [1] }]
   fns := [0, 1]
 
-/-- F -- a device register whose state lives in a GUARDED table, a function that holds the guard by signature and one
-    that does not: the register part of the footprint under a guard (cells `2.1 1x`). -/
-def zF : Spez where
-  tabs := [{ count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true }]
-  locks := [{ rang := 1 }]
-  regs := [{ typ := zi3, klasse := .rw, traeger := [0] }]
-  sigs := [{ haelt := [0], schreibt := [0], boden := some 1 }, { schreibt := [0] }]
-  fns := [0, 1]
-
-/-- G -- a readable register of an EMPTY type (`1 .. 0`): an answer site with no value (cells `8.0 x0x`). -/
-def zG : Spez where
-  regs := [{ typ := .int 1 0, klasse := .r }]
-  sigs := [{}]
-
 /-- **The members the cell driver adds** to `familie`. -/
-def zellFamilie : List Spez := [zA, zB, zC, zD, zE, zF, zG]
+def zellFamilie : List Spez := [zA, zB, zC, zD, zE]
 
 /-! ## Members from RULES
 
-  The members above are written by hand. These are generated: one fixed set of carriers and locks (an unguarded and a
-  guarded table, an atomic, a plain static, an atomic guarded by the plain lock, a static guarded by the masking lock; a
-  plain lock of rank 1 and a masking lock of rank 2, each protecting something) and a MENU of signatures; a member is a
-  list of one to three functions, each one signature of the menu (repetitions allowed: two functions of one signature
-  make a pool), in non-decreasing order so that no permutation is counted twice. Nothing about syntax is written: a
+  The members above are written by hand. These are generated: one fixed basis of carriers, locks and registers, and
+  a MENU of signatures DERIVED from it (every held lock set times every write target, the floor the one the language
+  derives); a member is a list of one or two functions, each one signature of the menu (two of one signature make a
+  pool), in non-decreasing order so that no permutation is counted twice. Nothing about syntax is written: a
   member is plain `Spez` data, the bodies come from the generator, the text from the printer. -/
 
-/-- The carriers and locks every rule member shares. -/
+/-- The carriers and locks every rule member shares, all of type `bool` (the cells read no value): an unguarded and
+    a guarded table, an unguarded shared atomic, a plain static, an atomic guarded by the plain lock, a static guarded
+    by the masking lock; a plain lock of rank 1 and a masking lock of rank 2; a device register whose state lives in
+    the guarded table and a readable register of an EMPTY type. -/
 def regelBasis : Spez where
-  tabs := [{ count := 2, felder := [{ typ := zi3 }] },
-           { count := 2, felder := [{ typ := zi3 }], sperre := some 0, geteilt := true }]
-  globs := [{ typ := zb1, atomar := true, geteilt := true }, { typ := zb1 },
-            { typ := zb1, atomar := true, sperre := some 0, geteilt := true },
-            { typ := zb1, sperre := some 1, geteilt := true }]
+  tabs := [{ count := 2, felder := [{ typ := .bool }] },
+           { count := 2, felder := [{ typ := .bool }], sperre := some 0, geteilt := true }]
+  globs := [{ typ := .bool, atomar := true, geteilt := true }, { typ := .bool },
+            { typ := .bool, atomar := true, sperre := some 0, geteilt := true },
+            { typ := .bool, sperre := some 1, geteilt := true }]
   locks := [{ rang := 1 }, { rang := 2, maskiert := true }]
+  regs := [{ typ := .bool, klasse := .rw, traeger := [1] }, { typ := .int 1 0, klasse := .r }]
 
-/-- **The menu of signatures** (index = position). A declared floor is the rank of the lock the function is meant to
-    take, which is what the language derives from such a body. -/
+/-- What a signature may write: nothing, one carrier of the basis, or both tables (tables, statics). -/
+def regelZiele : List (List Nat × List Nat) :=
+  [([], []), ([0], []), ([1], []), ([], [0]), ([], [1]), ([], [2]), ([], [3]), ([0, 1], [])]
+
+/-- The locks that guard what a signature writes, read off the basis. -/
+def regelWaechter (z : List Nat × List Nat) : List Nat :=
+  (z.1.filterMap fun t => (regelBasis.tabs.getD t { count := 0, felder := [] }).sperre) ++
+  (z.2.filterMap fun g => (regelBasis.globs.getD g { typ := .bool }).sperre)
+
+/-- The floor a body writing `z` while holding `h` derives: the least rank of a guard it must take. -/
+def regelBoden (z : List Nat × List Nat) (h : List Nat) : Option Int :=
+  ((regelWaechter z).filter (!h.contains ·)).foldl (fun a L =>
+    let r := (regelBasis.locks.getD L { rang := 0 }).rang
+    match a with | none => some r | some m => some (min m r)) none
+
+/-- **The menu of signatures**, derived from the basis: every lock set a function may hold (none, either lock) times
+    every write target, the declared floor the one the language derives from such a body; and one reason channel. -/
 def regelSigs : List SigZ :=
-  [{},                                                       -- 0 nothing
-   { schreibt := [0], gschreibt := [1] },                    -- 1 unguarded table and plain static
-   { gschreibt := [0] },                                     -- 2 the atomic
-   { boden := some 1, schreibt := [1] },                     -- 3 guarded table, takes the plain lock
-   { haelt := [0], schreibt := [1] },                        -- 4 guarded table, holds the plain lock
-   { boden := some 2, gschreibt := [3] },                    -- 5 static of the masking lock, takes it
-   { boden := some 1, gschreibt := [2] },                    -- 6 atomic guarded by the plain lock, takes it
-   { schreibt := [0], gschreibt := [0] },                    -- 7 unguarded table and the atomic
-   { haelt := [1], gschreibt := [3] },                       -- 8 static of the masking lock, holds it
-   { gruende := 2, erg := some zi3 },                        -- 9 a reason channel
-   { boden := some 1, schreibt := [0, 1] }]                  -- 10 both tables, takes the plain lock
+  ([[], [0], [1]].flatMap fun h => regelZiele.map fun z =>
+    { haelt := h, schreibt := z.1, gschreibt := z.2, boden := regelBoden z h }) ++
+  [{ gruende := 2, erg := some .bool }]
 
 /-- The multisets of `k` indices below `n`, as non-decreasing lists. -/
 def multimengen : Nat → Nat → List (List Nat)
@@ -132,9 +128,9 @@ def multimengen : Nat → Nat → List (List Nat)
   | k + 1, n => (List.range n).flatMap fun a => (multimengen k n).filterMap fun r =>
       if r.all (a ≤ ·) then some (a :: r) else none
 
-/-- **The rule members**: every list of one to three functions over the menu. -/
+/-- **The rule members**: every list of one or two functions over the menu (two of one signature make a pool). -/
 def regelMitglieder : List Spez :=
-  ((List.range 3).flatMap fun k => multimengen (k + 1) regelSigs.length).map fun fns =>
+  ((List.range 2).flatMap fun k => multimengen (k + 1) regelSigs.length).map fun fns =>
     { regelBasis with sigs := regelSigs, fns := fns }
 
 end Gabbro.Grammatik.Gen
