@@ -147,6 +147,16 @@ def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.lengt
 def nutzAt (u : UProg) (g : Fin u.globs.length) : List (Fin u.globs.length) :=
   (globAt u g).nutzlast.filterMap fun n => (globIdx u.globs n).toOption
 
+/-- `D.erlaubt`: the field is governed by a state (a `transition` statement applies it there) whose
+    `transition` lines allow `von -> nach` (stage numbers). -/
+def erlaubtAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) (von nach : Int) : Bool :=
+  match (tabAt u t).cols[f.val]? with
+  | none => false
+  | some (fname, _) =>
+    u.regiert.any fun (tb, fld, s) => tb == (tabAt u t).name && fld == fname &&
+      (u.zustaende.find? (fun z => z.name == s)).any fun z =>
+        z.paare.any fun (a, c) => decide ((a : Int) = von) && decide ((c : Int) = nach)
+
 /-- The register at an index. -/
 def regAt (u : UProg) (r : Fin u.regs.length) : UReg := u.regs.get r
 
@@ -276,7 +286,7 @@ def declOf (u : UProg) : Deklaration where
   Feld := fun t => Fin (fieldCount u t)
   decFeld := fun _ => inferInstance
   typ := typAt u
-  erlaubt := fun _ _ _ _ => false
+  erlaubt := erlaubtAt u
   tabNr := fun n => if h : n < u.tabs.length then some ⟨n, h⟩ else none
   Glob := Fin u.globs.length
   decGlob := inferInstance
