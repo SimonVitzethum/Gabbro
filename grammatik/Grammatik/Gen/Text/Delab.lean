@@ -237,15 +237,14 @@ def nGlobs (gs : List Nat) : List String := gs.map nGlob
 
 /-- One function. -/
 def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length) : Except String SItemTief := do
-  let n := z.fns.get f
-  let s := z.sigRoh n
+  let s := z.deklaration.signatur f
   let np := s.params.length
   let ps ← (s.params.zipIdx.map fun (t, j) => do pure (nVar (np - 1 - j), ← typS t)).mapM id
   let ps := ps ++ (if mitGriff then [("d", .atom "Dev")] else [])
   let res ← match s.erg with
     | none => pure none
     | some t => do pure (some (← typS t))
-  let held := (z.haelt n).map fun L => SExpr.variable (nLock L.val)
+  let held := s.haelt.map fun L => SExpr.variable (nLock (show Fin z.locks.length from L).val)
   let heldK := if held.isEmpty then [] else [SKlausel.needs (.call "Held" held)]
   let req ← match P.requires f with
     | .tru => pure []
@@ -255,9 +254,9 @@ def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length
     | e => do pure [SKlausel.gives (← delabE z (s.erg.map fun _ => np) e)]
   let (ss, ende) ← delabEnd z (vertragVon z.deklaration f) (P.rumpf f)
   let koerper := SAnw.block ss ende
-  let schreibt := ((List.finRange z.tabs.length).filter fun t => z.schreibt n t).map
+  let schreibt := ((List.finRange z.tabs.length).filter fun t => s.schreibt t).map
     (fun t => SEffekt.writes (.field (.variable (nTab t.val)) "slots"))
-  let gschreibt := ((List.finRange z.globs.length).filter fun g => s.gschreibt.contains g.val).map
+  let gschreibt := ((List.finRange z.globs.length).filter fun g => s.gschreibt g).map
     (fun g => SEffekt.writes (.variable (nGlob g.val)))
   let sperren := (genommen koerper).eraseDups.map fun L => SEffekt.locks false (.variable L)
   let eff := schreibt ++ gschreibt ++ sperren
@@ -268,7 +267,7 @@ def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length
 
 /-- The reason types the unit names. -/
 def gruende : List Nat :=
-  ((List.finRange z.fns.length).map fun f => (z.sigRoh (z.fns.get f)).gruende).filter (· ≠ 0) |>.eraseDups
+  ((List.finRange z.fns.length).map fun f => z.deklaration.gruende f).filter (· ≠ 0) |>.eraseDups
 
 def grundItem (n : Nat) : SItemTief :=
   .whyT (nGrund n) ((List.range n).map fun j => (nFall j, .lit (j + 1), s!"c{j}")) true
@@ -279,7 +278,7 @@ def delabTab (t : Fin z.tabs.length) : Except String SItemTief := do
     pure ({ fname := nFeld j, ftyp := ← typS fz.typ, pos := none, bezug := none, wo := none,
             reserviert := false, byOps := false } : SFeld)).mapM id
   if tz.count < 0 then throw "table with a negative count"
-  pure (.tableT (nTab t.val) (some (.lit tz.count.toNat)) none none tz.geteilt [.tSlot fs])
+  pure (.tableT (nTab t.val) (some (.lit tz.count.toNat)) none none (z.deklaration.geteilt t) [.tSlot fs])
 
 def anfang : Ty → SKonstWert
   | .int lo hi => .one (zahlE (if lo > 0 then lo else if hi < 0 then hi else 0))
@@ -290,16 +289,24 @@ def delabGlob (g : Fin z.globs.length) : Except String SItemTief := do
   let gz := z.globs.get g
   let ty ← typS gz.typ
   if gz.atomar then
-    pure (.atomT (nGlob g.val) ty (if gz.nutzlast.isEmpty then none else some (gz.nutzlast.map fun k => .variable (nGlob k)))
-      none none)
+    let nl := z.deklaration.nutzlast g
+    pure (.atomT (nGlob g.val) ty (if nl.isEmpty then none else
+      some (nl.map fun h => .variable (nGlob (show Fin z.globs.length from h).val))) none none)
   else
-    pure (.globT true (nGlob g.val) ty (anfang gz.typ) none none gz.geteilt)
+    pure (.globT true (nGlob g.val) ty (anfang gz.typ) none none (z.deklaration.ggeteilt g))
+
+/-- A required resource is the lock `L`. -/
+def istLock (L : Fin z.locks.length) : z.deklaration.Lock ⊕ (z.deklaration.Marke × Nat) → Bool
+  | .inl M => (show Fin z.locks.length from M).val == L.val
+  | .inr _ => false
 
 def delabLock (L : Fin z.locks.length) : Except String SItemTief := do
   let lz := z.locks.get L
   let schuetzt :=
-    ((List.finRange z.tabs.length).filter fun t => (z.tabs.get t).sperre == some L.val).map (fun t => SExpr.variable (nTab t.val)) ++
-    ((List.finRange z.globs.length).filter fun g => (z.globs.get g).sperre == some L.val).map (fun g => SExpr.variable (nGlob g.val))
+    ((List.finRange z.tabs.length).filter fun t => (z.deklaration.braucht t).any (istLock z L)).map
+      (fun t => SExpr.variable (nTab t.val)) ++
+    ((List.finRange z.globs.length).filter fun g => (z.deklaration.gbraucht g).any (istLock z L)).map
+      (fun g => SExpr.variable (nGlob g.val))
   if lz.rang < 0 then throw "lock with a negative rank"
   pure (.lockT (nLock L.val) schuetzt (.lit lz.rang.toNat) none none (if lz.maskiert then some "irqs" else none) none)
 
