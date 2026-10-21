@@ -33,8 +33,8 @@ def druckEffekt : SEffekt → List Token
   | .reads p => [.wort "reads"] ++ druckToks p
   | .writes p => [.wort "writes"] ++ druckToks p
   | .locks sh p => [.wort "locks"] ++ (if sh then [.wort "shared"] else []) ++ druckToks p
-  | .masks n => [.wort "masks", .ident n]
-  | .allocs n => [.wort "allocs", .ident n]
+  | .masks n => [.wort "masks", nameTok n]
+  | .allocs n => [.wort "allocs", nameTok n]
   | .takes p => [.wort "consumes"] ++ druckToks p
   | .posts p => [.wort "publishes"] ++ druckToks p
   | .loops => [.wort "diverges"]
@@ -56,8 +56,8 @@ def druckKlausel : SKlausel → List Token
   | .induc h => [.wort "by"] ++ rohToks h
   | .load p => [.wort "payload"] ++ pfadToks p
   | .part s => [.wort "section", .text s]
-  | .arch n => [.wort "arch", .ident n]
-  | .moves a b => [.wort "advances", .ident a, .zeichen "->", .ident b]
+  | .arch n => [.wort "arch", nameTok n]
+  | .moves a b => [.wort "advances", nameTok a, .zeichen "->", nameTok b]
   | .quits s => [.wort "retires"] ++ rohToks s
   | .limit s => rohToks s
   | .effs es => [.wort "effects", .zeichen "{"] ++ druckEffekte es ++ [.zeichen "}"]
@@ -67,7 +67,7 @@ def druckKlauseln : List SKlausel → List Token
   | k :: ks => druckKlausel k ++ druckKlauseln ks
 
 def druckParam : String × STyp → List Token
-  | (n, t) => [.ident n, .zeichen ":"] ++ druckTyp t
+  | (n, t) => [nameTok n, .zeichen ":"] ++ druckTyp t
 
 def druckParams : List (String × STyp) → List Token
   | [] => []
@@ -76,13 +76,13 @@ def druckParams : List (String × STyp) → List Token
 
 /-- A function head: `[art] fn name (params) [-> T] [or R] clauses`. -/
 def druckFnSig (s : FnSig) : List Token :=
-  (if strEq s.art "" then [] else [.wort s.art]) ++ [.wort "fn", .ident s.name, .zeichen "("] ++
+  (if strEq s.art "" then [] else [.wort s.art]) ++ [.wort "fn", nameTok s.name, .zeichen "("] ++
     druckParams s.params ++ [.zeichen ")"] ++
     (match s.res with
       | some t => [.zeichen "->"] ++ druckTyp t
       | none => []) ++
     (match s.fehler with
-      | some n => [.wort "or", .ident n]
+      | some n => [.wort "or", nameTok n]
       | none => []) ++
     druckKlauseln s.klauseln
 
@@ -97,12 +97,12 @@ where
     | x :: xs => druckKonstWert x ++ [.zeichen ","] ++ druckKonstWerte xs
 
 def druckFeld (f : SFeld) : List Token :=
-  [.ident f.fname, .zeichen ":"] ++ druckTyp f.ftyp ++
+  [nameTok f.fname, .zeichen ":"] ++ druckTyp f.ftyp ++
     (match f.pos with
       | some p => [.zeichen "@"] ++ rohToks p
       | none => []) ++
     (match f.bezug with
-      | some n => [.wort "offset_into", .ident n]
+      | some n => [.wort "offset_into", nameTok n]
       | none => []) ++
     (match f.wo with
       | some p => [.wort "where"] ++ druckToks p
@@ -116,7 +116,7 @@ def druckFelder : List SFeld → List Token
   | f :: fs => druckFeld f ++ [.zeichen ","] ++ druckFelder fs
 
 def druckGruppenInv (i : SGruppenInv) : List Token :=
-  [.wort "invariant", .ident i.name, .wort "cost", .ident "O", .zeichen "("] ++ druckToks i.kosten ++
+  [.wort "invariant", nameTok i.name, .wort "cost", .ident "O", .zeichen "("] ++ druckToks i.kosten ++
     [.zeichen ")", .wort "runs", .wort (if i.online then "online" else "offline")] ++
     (match i.proof with
       | some h => [.wort "by"] ++ rohToks h
@@ -125,16 +125,16 @@ def druckGruppenInv (i : SGruppenInv) : List Token :=
 
 def druckKanten : List (String × String) → List Token
   | [] => []
-  | [(a, b)] => [.wort a, .ident b]
-  | (a, b) :: ks => [.wort a, .ident b, .zeichen ","] ++ druckKanten ks
+  | [(a, b)] => [.wort a, nameTok b]
+  | (a, b) :: ks => [.wort a, nameTok b, .zeichen ","] ++ druckKanten ks
 
 def druckTabTeil : STabTeil → List Token
-  | .tConst n t v => [.wort "const", .ident n, .zeichen ":"] ++ druckTyp t ++ [.zeichen "="] ++ druckKonstWert v ++ [.zeichen ";"]
+  | .tConst n t v => [.wort "const", nameTok n, .zeichen ":"] ++ druckTyp t ++ [.zeichen "="] ++ druckKonstWert v ++ [.zeichen ";"]
   | .tSlot fs => [.wort "slot", .zeichen "{"] ++ druckFelder fs ++ [.zeichen "}"]
   | .tInv i => druckGruppenInv i
   | .tOps ns => [.wort "ops"] ++ druckNamen ns ++ [.zeichen ";"]
   | .tTree ks => [.wort "tree", .zeichen "{"] ++ druckKanten ks ++ [.zeichen "}"]
-  | .tBusy n => [.wort "occupied", .ident n, .zeichen ";"]
+  | .tBusy n => [.wort "occupied", nameTok n, .zeichen ";"]
 
 def druckTabTeile : List STabTeil → List Token
   | [] => []
@@ -148,13 +148,13 @@ def druckPlaetze : List SExpr → List Token
 
 /-- The class of an assumption: `falsifier n` or `unfalsifiable "…"`. -/
 def druckKlasse : SAnKlasse → List Token
-  | .probe n => [.wort "falsifier", .ident n]
+  | .probe n => [.wort "falsifier", nameTok n]
   | .trust s => [.wort "unfalsifiable", .text s]
 
 /-- One register binding (the reader takes `=` or `:`; the printer writes `=`). -/
 def druckRegBind : SRegBind → List Token
-  | .reg a => [.ident a]
-  | .binds a b => [.ident a, .zeichen "=", .ident b]
+  | .reg a => [nameTok a]
+  | .binds a b => [nameTok a, .zeichen "=", nameTok b]
 
 def druckRegBinds : List SRegBind → List Token
   | [] => []
@@ -173,19 +173,19 @@ def druckPredListe : List SExpr → List Token
 def druckFehlerKarte : List (String × Option SExpr × String) → List Token
   | [] => []
   | [(a, n, b)] =>
-    [.ident a] ++ (match n with
+    [nameTok a] ++ (match n with
       | some e => [.zeichen "="] ++ druckToks e
-      | none => []) ++ [.zeichen "=>", .ident b]
+      | none => []) ++ [.zeichen "=>", nameTok b]
   | (a, n, b) :: xs =>
-    [.ident a] ++ (match n with
+    [nameTok a] ++ (match n with
       | some e => [.zeichen "="] ++ druckToks e
-      | none => []) ++ [.zeichen "=>", .ident b, .zeichen ","] ++ druckFehlerKarte xs
+      | none => []) ++ [.zeichen "=>", nameTok b, .zeichen ","] ++ druckFehlerKarte xs
 
 /-- `sysbind`: `number e regs in {…} regs out {…} {stack r} clobbers {…} errors {…}`. -/
 def druckBind (b : SBind) : List Token :=
   [.wort "number"] ++ druckToks b.id ++ [.wort "regs", .wort "in", .zeichen "{"] ++ druckRegBinds b.ins ++
     [.zeichen "}", .wort "regs", .wort "out", .zeichen "{"] ++ druckRegBinds b.outs ++ [.zeichen "}"] ++
-    (b.stack.flatMap fun s => [.wort "stack", .ident s]) ++
+    (b.stack.flatMap fun s => [.wort "stack", nameTok s]) ++
     [.wort "clobbers"] ++ druckNamenKlammer b.dirty ++
     [.wort "errors", .zeichen "{"] ++ druckFehlerKarte b.codes ++ [.zeichen "}"]
 
@@ -204,30 +204,30 @@ def druckGate (g : SGate) : List Token :=
 
 /-- `syspair`. -/
 def druckHerkunft : SHerkunft → List Token
-  | .assum a k => [.wort "assume", .ident a] ++ druckKlasse k ++ [.zeichen ";"]
+  | .assum a k => [.wort "assume", nameTok a] ++ druckKlasse k ++ [.zeichen ";"]
   | .core p => [.wort "kernel"] ++ pfadToks p ++ [.zeichen ";"]
 
 def druckGoalBinds : List (String × SBind × SHerkunft) → List Token
   | [] => []
-  | (v, b, h) :: rest => [.ident v, .zeichen "="] ++ druckBind b ++ druckHerkunft h ++ druckGoalBinds rest
+  | (v, b, h) :: rest => [nameTok v, .zeichen "="] ++ druckBind b ++ druckHerkunft h ++ druckGoalBinds rest
 
 def druckGrundFaelle : List (String × SExpr × String) → List Token
   | [] => []
-  | (c, n, s) :: rest => [.ident c, .zeichen "="] ++ druckToks n ++ [.text s, .zeichen ","] ++ druckGrundFaelle rest
+  | (c, n, s) :: rest => [nameTok c, .zeichen "="] ++ druckToks n ++ [.text s, .zeichen ","] ++ druckGrundFaelle rest
 
 /-- An entry (`entry n [vector e] [via m] arch a { regs … dispatch p ; }`). -/
 def druckEingang (e : SEingang) : List Token :=
-  [.wort "entry", .ident e.name] ++
+  [.wort "entry", nameTok e.name] ++
     (match e.vektor with
       | some v => [.wort "vector"] ++ druckToks v
       | none => []) ++
     (match e.via with
-      | some m => [.wort "via", .ident m]
+      | some m => [.wort "via", nameTok m]
       | none => []) ++
-    [.wort "arch", .ident e.arch, .zeichen "{", .wort "regs", .wort "in", .zeichen "{"] ++
+    [.wort "arch", nameTok e.arch, .zeichen "{", .wort "regs", .wort "in", .zeichen "{"] ++
     druckRegBinds e.regIn ++ [.zeichen "}", .wort "regs", .wort "out", .zeichen "{"] ++
     druckRegBinds e.regOut ++ [.zeichen "}", .wort "preserves"] ++ druckNamenKlammer e.erhaelt ++
-    [.wort "clobbers"] ++ druckNamenKlammer e.kills ++ [.wort "stack", .ident e.stapel] ++
+    [.wort "clobbers"] ++ druckNamenKlammer e.kills ++ [.wort "stack", nameTok e.stapel] ++
     (if e.perCpu then [.wort "per", .wort "cpu"] else []) ++
     (match e.ist with
       | some x => [.wort "ist"] ++ druckToks x
@@ -247,7 +247,7 @@ def druckSchritte : List (SExpr × SExpr × SExpr) → List Token
 
 /-- `transition n { steps } [requires p] [effects {…}]`. -/
 def druckTrans (tr : STrans) : List Token :=
-  [.wort "transition", .ident tr.tname, .zeichen "{"] ++ druckSchritte tr.schritte ++ [.zeichen "}"] ++
+  [.wort "transition", nameTok tr.tname, .zeichen "{"] ++ druckSchritte tr.schritte ++ [.zeichen "}"] ++
     (match tr.voraus with
       | some p => [.wort "requires"] ++ druckToks p
       | none => []) ++
@@ -263,13 +263,13 @@ def druckTransListe : List STrans → List Token
 def druckPhasen : List String → List Token
   | [] => []
   | w :: rest =>
-    (if strEq w "in" then [Token.wort "in"] else if strEq w "," then [Token.zeichen ","] else [Token.ident w]) ++
+    (if strEq w "in" then [Token.wort "in"] else if strEq w "," then [Token.zeichen ","] else [nameTok w]) ++
       druckPhasen rest
 
 def druckRegFeld (f : SRegFeld) : List Token :=
-  [.ident f.name, .zeichen "@"] ++ rohToks f.pos ++
+  [nameTok f.name, .zeichen "@"] ++ rohToks f.pos ++
     (match f.klasse with
-      | some c => [.wort "class", .ident c]
+      | some c => [.wort "class", nameTok c]
       | none => [])
 
 def druckRegFelder : List SRegFeld → List Token
@@ -280,32 +280,43 @@ def druckRegFelder : List SRegFeld → List Token
 def druckTraeger : List (List String) → List Token
   | [] => []
   | [c] => (match c with
-    | [a, b] => [.ident a, .zeichen ".", .ident b]
+    | [a, b] => [nameTok a, .zeichen ".", nameTok b]
     | cs => druckNamen cs)
   | c :: cs =>
     (match c with
-      | [a, b] => [.ident a, .zeichen ".", .ident b]
+      | [a, b] => [nameTok a, .zeichen ".", nameTok b]
       | cs' => druckNamen cs') ++ [.zeichen ","] ++ druckTraeger cs
+
+/-- The address of a register: `@ e`, or nothing for the reader's default `.variable ""`. -/
+def druckRegAdresse : SExpr → List Token
+  | .variable "" => []
+  | e => [.zeichen "@"] ++ druckToks e
+
+/-- The class of a register with its `in`-stage words, or nothing for the empty class. -/
+def druckRegKlasse (k : String) (st : List String) : List Token :=
+  if strEq k "" then [] else [.wort "class", nameTok k] ++ druckPhasen st
+
+/-- The bit fields of a register, or nothing. -/
+def druckRegFelderTeil : List SRegFeld → List Token
+  | [] => []
+  | fs => [.wort "fields", .zeichen "{"] ++ druckRegFelder fs ++ [.zeichen "}"]
+
+/-- The precondition of a register with its falsifier, or nothing. -/
+def druckRegVoraus : Option SExpr → Option (String × String) → List Token
+  | some p, some (a, b) => [.wort "requires"] ++ druckToks p ++ [.wort "else", nameTok a, .zeichen "::", nameTok b]
+  | some p, none => [.wort "requires"] ++ druckToks p
+  | none, _ => []
+
+/-- The carriers of a register, or nothing. -/
+def druckRegAbhaengt : List (List String) → List Token
+  | [] => []
+  | cs => [.wort "depends", .zeichen "{"] ++ druckTraeger cs ++ [.zeichen "}"]
 
 /-- `reg n : T [@ e] [class c phases] [fields {…}] [requires p [else A::B]] [depends {…}]` (no `;`). -/
 def druckReg (r : SReg) : List Token :=
-  [.wort "reg", .ident r.name, .zeichen ":"] ++ druckTyp r.rtyp ++
-    (match r.addr with
-      | .variable "" => []
-      | e => [.zeichen "@"] ++ druckToks e) ++
-    (if strEq r.klasse "" then [] else [.wort "class", .ident r.klasse] ++ druckPhasen r.stage) ++
-    (match r.felder with
-      | [] => []
-      | fs => [.wort "fields", .zeichen "{"] ++ druckRegFelder fs ++ [.zeichen "}"]) ++
-    (match r.voraus with
-      | some p => [.wort "requires"] ++ druckToks p ++
-        (match r.elseF with
-          | some (a, b) => [.wort "else", .ident a, .zeichen "::", .ident b]
-          | none => [])
-      | none => []) ++
-    (match r.abhaengt with
-      | [] => []
-      | cs => [.wort "depends", .zeichen "{"] ++ druckTraeger cs ++ [.zeichen "}"])
+  [.wort "reg", nameTok r.name, .zeichen ":"] ++ druckTyp r.rtyp ++ druckRegAdresse r.addr ++
+    druckRegKlasse r.klasse r.stage ++ druckRegFelderTeil r.felder ++ druckRegVoraus r.voraus r.elseF ++
+    druckRegAbhaengt r.abhaengt
 
 def druckGerTeil : SGerTeil → List Token
   | .copy a b => [.wort "mirrors"] ++ druckToks a ++ [.wort "from"] ++ druckToks b ++ [.zeichen ";"]
@@ -319,15 +330,15 @@ def druckGerTeile : List SGerTeil → List Token
 
 def druckBootSchritt : SBootSchritt → List Token
   | .call p args => [.wort "step"] ++ pfadToks p ++ [.zeichen "("] ++ druckPredListe args ++ [.zeichen ")", .zeichen ";"]
-  | .set n e => [.wort "step", .ident n, .zeichen "="] ++ druckToks e ++ [.zeichen ";"]
+  | .set n e => [.wort "step", nameTok n, .zeichen "="] ++ druckToks e ++ [.zeichen ";"]
 
 def druckBootSchritte : List SBootSchritt → List Token
   | [] => []
   | s :: rest => druckBootSchritt s ++ druckBootSchritte rest
 
 def druckProfEintrag : SProfEintrag → List Token
-  | .mode s v => [.wort s, .ident v, .zeichen ";"]
-  | .assum a => [.wort "assume", .ident a, .zeichen ";"]
+  | .mode s v => [.wort s, nameTok v, .zeichen ";"]
+  | .assum a => [.wort "assume", nameTok a, .zeichen ";"]
 
 def druckProfEintraege : List SProfEintrag → List Token
   | [] => []
@@ -339,7 +350,7 @@ def druckItem : SItemTief → List Token
   | .modT p its => [.wort "module"] ++ rohToks p ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
   | .useT p => ([.wort "use"] ++ pfadToks p ++ [.zeichen ";"])
   | .typeT fl n args ord t =>
-    (fl.map (fun w => Token.wort w) ++ [.wort "type", .ident n] ++
+    (fl.map (fun w => Token.wort w) ++ [.wort "type", nameTok n] ++
       (match args with
         | [] => []
         | _ => [.zeichen "("] ++ druckTypListe args ++ [.zeichen ")"]) ++
@@ -350,9 +361,9 @@ def druckItem : SItemTief → List Token
         | some ty => [.zeichen "="] ++ druckTyp ty
         | none => []) ++ [.zeichen ";"])
   | .constT n t v =>
-    ([.wort "const", .ident n, .zeichen ":"] ++ druckTyp t ++ [.zeichen "="] ++ druckKonstWert v ++ [.zeichen ";"])
+    ([.wort "const", nameTok n, .zeichen ":"] ++ druckTyp t ++ [.zeichen "="] ++ druckKonstWert v ++ [.zeichen ";"])
   | .globT m n t v al s sh =>
-    ([.wort "static"] ++ (if m then [.wort "mut"] else []) ++ [.ident n, .zeichen ":"] ++ druckTyp t ++
+    ([.wort "static"] ++ (if m then [.wort "mut"] else []) ++ [nameTok n, .zeichen ":"] ++ druckTyp t ++
       [.zeichen "="] ++ druckKonstWert v ++
       (match al with
         | some e => [.wort "aligned"] ++ druckToks e
@@ -366,19 +377,19 @@ def druckItem : SItemTief → List Token
   | .specT sig p => (druckFnSig sig ++ [.zeichen "="] ++ druckPred p ++ [.zeichen ";"])
   | .asmT sig h => (druckFnSig sig ++ [.zeichen "="] ++ rohToks h ++ [.zeichen ";"])
   | .tableT n cnt backed owner sh parts =>
-    ([.wort "table", .ident n] ++
+    ([.wort "table", nameTok n] ++
       (match cnt with
         | some e => [.wort "count"] ++ druckToks e
         | none => []) ++
       (match backed with
-        | some b => [.wort "backed", .ident b]
+        | some b => [.wort "backed", nameTok b]
         | none => []) ++
       (match owner with
-        | some o => [.wort "owner", .ident o]
+        | some o => [.wort "owner", nameTok o]
         | none => []) ++
       (if sh then [.wort "shared"] else []) ++ [.zeichen "{"] ++ druckTabTeile parts ++ [.zeichen "}"])
   | .lockT n ps rk h sh m inv =>
-    ([.wort "lock", .ident n, .wort "protects", .zeichen "{"] ++ druckPlaetze ps ++ [.zeichen "}", .wort "rank"] ++
+    ([.wort "lock", nameTok n, .wort "protects", .zeichen "{"] ++ druckPlaetze ps ++ [.zeichen "}", .wort "rank"] ++
       druckToks rk ++
       (match h with
         | some e => [.wort "held", .zeichen "<="] ++ druckToks e ++ [.wort "ops"]
@@ -387,7 +398,7 @@ def druckItem : SItemTief → List Token
         | some e => [.wort "shared", .wort "held", .zeichen "<="] ++ druckToks e ++ [.wort "ops"]
         | none => []) ++
       (match m with
-        | some w => [.wort "masks", .ident w]
+        | some w => [.wort "masks", nameTok w]
         | none => []) ++
       (match inv with
         | some p => [.wort "invariant"] ++ druckToks p
@@ -395,15 +406,15 @@ def druckItem : SItemTief → List Token
   | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckWurzeln (ps.map (fun p => "::".intercalate p)) ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
   | .assumT n a s k =>
-    ([.wort "assume", .ident n] ++
+    ([.wort "assume", nameTok n] ++
       (match a with
-        | some x => [.wort "arch", .ident x]
+        | some x => [.wort "arch", nameTok x]
         | none => []) ++ [.text s] ++ druckKlasse k ++ [.zeichen ";"])
   | .whyT n cs ex =>
-    ([.wort "reason", .ident n, .zeichen "{"] ++ druckGrundFaelle cs ++
+    ([.wort "reason", nameTok n, .zeichen "{"] ++ druckGrundFaelle cs ++
       (if ex then [.wort "exhaustive"] else []) ++ [.zeichen "}"])
   | .atomT n ty pub ord obs =>
-    ([.wort "atomic", .ident n, .zeichen ":"] ++ druckTyp ty ++
+    ([.wort "atomic", nameTok n, .zeichen ":"] ++ druckTyp ty ++
       (match pub with
         | some [] => [.wort "publishes", .wort "nothing"]
         | some ps => [.wort "publishes", .zeichen "{"] ++ druckPlaetze ps ++ [.zeichen "}"]
@@ -412,36 +423,36 @@ def druckItem : SItemTief → List Token
         | some o => [.wort o]
         | none => []) ++
       (match obs with
-        | some o => [.wort "observed", .wort "by", .ident o]
+        | some o => [.wort "observed", .wort "by", nameTok o]
         | none => []) ++ [.zeichen ";"])
-  | .varT n => [.wort "syscall", .ident n, .zeichen ";"]
+  | .varT n => [.wort "syscall", nameTok n, .zeichen ";"]
   | .callT c =>
-    ([.wort "syscall", .ident c.name, .zeichen "("] ++ druckParams c.params ++ [.zeichen ")"] ++
+    ([.wort "syscall", nameTok c.name, .zeichen "("] ++ druckParams c.params ++ [.zeichen ")"] ++
       (match c.res with
         | some ty => [.zeichen "->"] ++ druckTyp ty
         | none => []) ++
       (match c.fail with
-        | some n => [.wort "or", .ident n]
+        | some n => [.wort "or", nameTok n]
         | none => []) ++
       (match c.way with
-        | .via v => [.wort "via", .ident v] ++ druckGate c.gate ++ [.zeichen ";"]
+        | .via v => [.wort "via", nameTok v] ++ druckGate c.gate ++ [.zeichen ";"]
         | .lit abi arch bd hk =>
-          [.wort "abi", .ident abi, .wort "arch", .ident arch] ++ druckBind bd ++ druckGate c.gate ++
+          [.wort "abi", nameTok abi, .wort "arch", nameTok arch] ++ druckBind bd ++ druckGate c.gate ++
             druckHerkunft hk))
-  | .goalT n none => [.wort "target", .ident n, .zeichen ";"]
+  | .goalT n none => [.wort "target", nameTok n, .zeichen ";"]
   | .goalT n (some (abi, arch, bs)) =>
-    ([.wort "target", .ident n, .wort "abi", .ident abi, .wort "arch", .ident arch, .zeichen "{"] ++
+    ([.wort "target", nameTok n, .wort "abi", nameTok abi, .wort "arch", nameTok arch, .zeichen "{"] ++
       druckGoalBinds bs ++ [.zeichen "}"])
   | .entryT e => (druckEingang e)
-  | .stateT n ts => ([.wort "state", .ident n, .zeichen "{"] ++ druckTransListe ts ++ [.zeichen "}"])
+  | .stateT n ts => ([.wort "state", nameTok n, .zeichen "{"] ++ druckTransListe ts ++ [.zeichen "}"])
   | .devT n ps sp ms =>
-    ([.wort "device", .ident n] ++
+    ([.wort "device", nameTok n] ++
       (match ps with
         | [] => []
         | _ => [.zeichen "("] ++ druckParams ps ++ [.zeichen ")"]) ++
-      [.wort "at", .ident sp, .zeichen "{"] ++ druckGerTeile ms ++ [.zeichen "}"])
+      [.wort "at", nameTok sp, .zeichen "{"] ++ druckGerTeile ms ++ [.zeichen "}"])
   | .arenaT n lo hi mx ty pb =>
-    ([.wort "arena", .ident n, .wort "capacity"] ++ druckToks lo ++ [.zeichen ".."] ++ druckToks hi ++
+    ([.wort "arena", nameTok n, .wort "capacity"] ++ druckToks lo ++ [.zeichen ".."] ++ druckToks hi ++
       (match mx with
         | some m => [.wort "max"] ++ druckToks m
         | none => []) ++ [.wort "of"] ++ druckTyp ty ++
@@ -449,7 +460,7 @@ def druckItem : SItemTief → List Token
         | some (p, e) => [.ident "pb"] ++ pfadToks p ++ [.ident "blw"] ++ druckToks e
         | none => []) ++ [.zeichen ";"])
   | .formatT n ver en fs =>
-    ([.wort "format", .ident n] ++
+    ([.wort "format", nameTok n] ++
       (match ver with
         | some v => [.zeichen "@", .ident "version"] ++ druckToks v
         | none => []) ++
@@ -457,49 +468,49 @@ def druckItem : SItemTief → List Token
         | some m => [.wort "endian", .wort m]
         | none => []) ++ [.zeichen "{"] ++ druckFelder fs ++ [.zeichen "}"])
   | .transT g sig b =>
-    ([.wort "translator", .ident sig.name, .wort "for", .ident g, .zeichen "("] ++ druckParams sig.params ++
+    ([.wort "translator", nameTok sig.name, .wort "for", nameTok g, .zeichen "("] ++ druckParams sig.params ++
       [.zeichen ")"] ++
       (match sig.res with
         | some ty => [.zeichen "->"] ++ druckTyp ty
         | none => []) ++
       (match sig.fehler with
-        | some n => [.wort "or", .ident n]
+        | some n => [.wort "or", nameTok n]
         | none => []) ++ druckKlauseln sig.klauseln ++ druckAnw b)
   | .rcuT n ps rec =>
-    ([.wort "rcu", .ident n, .wort "protects", .zeichen "{"] ++ druckPlaetze ps ++ [.zeichen "}"] ++
+    ([.wort "rcu", nameTok n, .wort "protects", .zeichen "{"] ++ druckPlaetze ps ++ [.zeichen "}"] ++
       (match rec with
         | some p => [.wort "reclaims"] ++ druckToks p
         | none => []) ++ [.zeichen ";"])
   | .groupT n ms ivs =>
-    ([.wort "group", .ident n, .wort "over"] ++ druckNamenKlammer ms ++
+    ([.wort "group", nameTok n, .wort "over"] ++ druckNamenKlammer ms ++
       (match ivs with
         | [] => [.zeichen ";"]
         | _ => [.zeichen "{"] ++ druckGruppenInvs ivs ++ [.zeichen "}"]))
   | .accT n ty m p =>
-    ([.wort "accumulates", .ident n, .zeichen ":"] ++ druckTyp ty ++ [.wort "merge", .wort m] ++
+    ([.wort "accumulates", nameTok n, .zeichen ":"] ++ druckTyp ty ++ [.wort "merge", .wort m] ++
       (match p with
         | some e => [.wort "per", .wort "cpu"] ++ druckToks e
         | none => []) ++ [.zeichen ";"])
   | .walkT w =>
-    ([.wort "walk", .ident w.name, .wort "levels"] ++ druckToks w.stufen ++
+    ([.wort "walk", nameTok w.name, .wort "levels"] ++ druckToks w.stufen ++
       [.zeichen "{", .wort "node", .zeichen ":"] ++ druckTyp w.node ++
-      [.zeichen ",", .wort "down", .zeichen ":", .ident w.dname, .wort "when"] ++ druckToks w.dwhen ++
+      [.zeichen ",", .wort "down", .zeichen ":", nameTok w.dname, .wort "when"] ++ druckToks w.dwhen ++
       [.zeichen ",", .wort "leaf", .zeichen ":"] ++ druckToks w.blatt ++
       (match w.invarianten with
         | [] => []
         | ivs => [.zeichen ","] ++ druckGruppenInvs ivs) ++ [.zeichen "}"])
   | .bootT n a ss dp =>
-    ([.wort "boot", .ident n, .wort "arch", .ident a, .zeichen "{"] ++ druckBootSchritte ss ++
+    ([.wort "boot", nameTok n, .wort "arch", nameTok a, .zeichen "{"] ++ druckBootSchritte ss ++
       [.wort "dispatch"] ++ pfadToks dp ++ [.zeichen ";", .zeichen "}"])
   | .trustT n m a ri st g =>
-    ([.wort "entrust", .ident n, .wort "at", .ident m, .wort "arch", .ident a, .zeichen "{",
+    ([.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a, .zeichen "{",
       .wort "regs", .wort "in", .zeichen "{"] ++ druckRegBinds ri ++
-      [.zeichen "}", .wort "stack", .ident st, .wort "assume", .ident g, .zeichen ";", .zeichen "}"])
+      [.zeichen "}", .wort "stack", nameTok st, .wort "assume", nameTok g, .zeichen ";", .zeichen "}"])
   | .profT bedarf es =>
     ((if bedarf then [Token.wort "requires"] else []) ++ [.wort "profile", .zeichen "{"] ++
       druckProfEintraege es ++ [.zeichen "}", .zeichen ";"])
   | .axiomT n ps erg pre es k =>
-    ([.wort "axiom", .ident n, .zeichen "("] ++ druckParams ps ++ [.zeichen ")"] ++
+    ([.wort "axiom", nameTok n, .zeichen "("] ++ druckParams ps ++ [.zeichen ")"] ++
       (match erg with
         | some ty => [.zeichen "->"] ++ druckTyp ty
         | none => []) ++
@@ -508,14 +519,14 @@ def druckItem : SItemTief → List Token
         | none => []) ++ [.wort "effects", .zeichen "{"] ++ druckEffekte es ++ [.zeichen "}"] ++
       druckKlasse k ++ [.zeichen ";"])
   | .checkT c =>
-    ([.wort "check", .ident c.cname, .zeichen "{", .wort "claim", .text c.claim, .wort "measures"] ++
+    ([.wort "check", nameTok c.cname, .zeichen "{", .wort "claim", .text c.claim, .wort "measures"] ++
       druckPredListe c.misst ++ [.wort "gates"] ++ druckNamen c.gates ++ [.wort "can_fail"] ++
       druckAnw c.canFail ++
       (match c.boden with
         | [] => []
         | ps => [.wort "floor"] ++ druckPredListe ps) ++
       (match c.sonde with
-        | some (s, e) => [.wort "counterprobe", .text s, .wort "expects", .ident e]
+        | some (s, e) => [.wort "counterprobe", .text s, .wort "expects", nameTok e]
         | none => []) ++ [.zeichen "}"])
 /-- A list of items as tokens. -/
 def druckItems : List SItemTief → List Token

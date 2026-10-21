@@ -44,7 +44,7 @@ def fnwertNeu : SExpr → Bool
   | _ => false
 def grundNeu : SExpr → Bool
   | .why g _ =>
-    !istKeinPlatz g && !istIntWort g && !istZuckerBreite g &&
+    !istKopfWort g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
   | _ => false
 
@@ -90,8 +90,7 @@ theorem un_fnwert_legs : ∀ (p : String) (rest : List Token) (F : Nat),
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   simp only [druckToks, List.cons_append, List.nil_append,
-    parseUnary] at ⊢
-  simp only [nameText] at ⊢
+    parseUnary, nameText_nameTok] at ⊢
   rw [sammleSeg_stop [p] rest hrs] at ⊢
   simp
 
@@ -147,7 +146,7 @@ theorem wortTurm : ∀ (w : String) {S : List Token} (e : SExpr),
 -- `ruf` level inlines this shape (`rufLegs`); here it is shared
 -- by `grund`.
 theorem identTurm : ∀ (g : String) {S : List Token} (e : SExpr),
-    druckToks e = [.ident g] ++ S →
+    druckToks e = [nameTok g] ++ S →
     (∀ (rest' : List Token) (G : Nat), ruhigSuff rest' = true →
       ruhigGleit rest' = true →
       12 * (groesse e + 1) + groesse e + 1 ≤ G →
@@ -164,7 +163,7 @@ theorem identTurm : ∀ (g : String) {S : List Token} (e : SExpr),
     have hP' := hP rest' G' hrs hrg (by omega)
     simp only [hd, List.append_assoc] at hP' ⊢
     simp only [List.cons_append, List.nil_append] at hP' ⊢
-    simp only [parseUnary, hP'] at ⊢
+    rw [parseUnary_nameTok, hP']
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro rest' G hpf hrs hrg hG
     exact hP rest' G hrs hrg hG
@@ -245,12 +244,12 @@ theorem fnwertLegs : ∀ (p : String), Legs (.fnref p) := by
 
 -- `G::F` legs (primary leg by lane 161's `prim_grund`).
 theorem grundLegs : ∀ (g f : String),
-    (!istKeinPlatz g) = true → (!istIntWort g) = true →
+    (!istKopfWort g) = true → (!istIntWort g) = true →
     (!istZuckerBreite g) = true → (!(strEq g "Self")) = true →
     Legs (.why g f) := by
   intro g f hkp hit hzuk hself
-  have hd : druckToks (.why g f) = [.ident g] ++
-      [.zeichen "::", .ident f] := by
+  have hd : druckToks (.why g f) = [nameTok g] ++
+      [.zeichen "::", nameTok f] := by
     simp [druckToks]
   apply identTurm _ _ hd
   intro rest' G hrs hrg hG

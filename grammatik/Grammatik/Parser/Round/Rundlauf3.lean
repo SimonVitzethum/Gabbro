@@ -1618,19 +1618,17 @@ theorem args_legs : ∀ (xs : List SExpr) (rest : List Token) (F : Nat),
 -- `args_legs`).
 theorem prim_ruf_legs : ∀ (f : String) (xs : List SExpr)
     (rest : List Token) (F : Nat),
-    (!istKeinPlatz f) = true → gutListeAM xs = true →
+    (!istKopfWort f) = true → gutListeAM xs = true →
     ruhigSuff rest = true →
     12 * (groesse (.call f xs) + 1) + groesse (.call f xs) + 1 ≤ F →
     parsePrimary F (druckToks (.call f xs) ++ rest) =
       .ok (.call f xs, rest) := by
   intro f xs rest F hf hxs hrs hF
-  have hkaf : istKeinPlatz f = false := nichtWahr_falsch _ hf
+  have hkaf : istKeinPlatz f = false := kopf_kp (nichtWahr_falsch _ hf)
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, List.cons_append, parsePrimary] at ⊢
-  simp only [nameText, hkaf] at ⊢
-  have hne : ¬(false = true) := by decide
-  simp only [if_neg hne] at ⊢
+  simp only [druckToks, List.cons_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hf)]
   have hF2 : 1 ≤ F' := by omega
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   simp only [kopf_ruf_head] at ⊢
@@ -1646,7 +1644,7 @@ theorem prim_ruf_legs : ∀ (f : String) (xs : List SExpr)
 -- the `ident` head (no prefix arm fires), then `tower_up`.
 -- (`ruf` is an atom, so no parenthesised case.)
 theorem rufLegs : ∀ (f : String) (xs : List SExpr),
-    (!istKeinPlatz f) = true → gutListeAM xs = true →
+    (!istKopfWort f) = true → gutListeAM xs = true →
     Legs (.call f xs) := by
   intro f xs hf hxs
   have hsize : groesse (.call f xs) = groesseListe xs + 1 := rfl
@@ -1667,18 +1665,18 @@ theorem rufLegs : ∀ (f : String) (xs : List SExpr),
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     have hP' := hP rest' G' hrs hrg (by omega)
     have hd : druckToks (.call f xs) =
-        [.ident f] ++ (([.zeichen "("] ++ druckToksListe xs) ++
+        [nameTok f] ++ (([.zeichen "("] ++ druckToksListe xs) ++
           [.zeichen ")"]) := by
       simp [druckToks]
     simp only [hd, List.append_assoc] at hP' ⊢
-    -- The `ident` head fires no prefix arm: fall through to
+    -- The name head fires no prefix arm: fall through to
     -- `parsePrimary`.
-    have hU' : parseUnary (G' + 1) ([.ident f] ++
+    have hU' : parseUnary (G' + 1) ([nameTok f] ++
         (([.zeichen "("] ++ druckToksListe xs) ++
           ([.zeichen ")"] ++ rest'))) =
         .ok (.call f xs, rest') := by
       simp only [List.cons_append, List.nil_append] at hP' ⊢
-      simp only [parseUnary, hP'] at ⊢
+      rw [parseUnary_nameTok, hP']
     exact hU'
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro rest' G hpf hrs hrg hG
@@ -1706,7 +1704,7 @@ theorem rufLegs : ∀ (f : String) (xs : List SExpr),
 
 -- The new call layer: calls over level-3 argument lists.
 def rufNeu : SExpr → Bool
-  | .call f xs => !istKeinPlatz f && gutListeAM xs
+  | .call f xs => !istKopfWort f && gutListeAM xs
   | _ => false
 
 -- Level-4 predicate: level 3 plus one call layer.
@@ -1847,7 +1845,7 @@ theorem suff_legs : ∀ (suff : List SuffFrag) (base : SExpr)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       simp only [applySuff] at ⊢
       have hF2 : 12 * (suffGroesse suff + groesse (.field base f) + 1) +
           suffGroesse suff ≤ F' := by
@@ -1860,7 +1858,7 @@ theorem suff_legs : ∀ (suff : List SuffFrag) (base : SExpr)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       simp only [applySuff] at ⊢
       have hF2 : 12 * (suffGroesse suff + groesse (.arrow base f) + 1) +
           suffGroesse suff ≤ F' := by
@@ -1874,7 +1872,7 @@ theorem suff_legs : ∀ (suff : List SuffFrag) (base : SExpr)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       have hki : gutKern i = true := hi
       have hLi := legsKern i hki
       have hr1 : ruhig ([.zeichen "]"] ++ suffToks suff ++ rest) = true :=
@@ -1910,8 +1908,8 @@ theorem ort_legs_kern : ∀ (p : SExpr) (rest : List Token) (F : Nat),
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   rw [druckToks_applySuff] at ⊢
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [parseOrt, druckToks, nameText, hkaf, List.cons_append] at ⊢
+  have hkaf : istKeinPlatz a = false := kopf_kp (nichtWahr_falsch _ hka)
+  simp only [parseOrt, druckToks, nameText_nameTok, hkaf, List.cons_append] at ⊢
   have hF2 : 12 * (suffGroesse suff + groesse (.variable a) + 1) +
       suffGroesse suff ≤ F' := by
     simp only [groesse, groesse_applySuff] at hF ⊢

@@ -44,7 +44,7 @@ namespace Gabbro.Grammatik.Parser
 -- so they are defined mutually.
 mutual
 def gutKernPlatz : SExpr → Bool
-  | .variable s => !istKeinPlatz s
+  | .variable s => !istKopfWort s
   | .field x _ => gutKernPlatz x
   | .index x i => gutKernPlatz x && gutKern i
   | .arrow x _ => gutKernPlatz x
@@ -54,7 +54,7 @@ def gutKern : SExpr → Bool
   | .float _ => true
   | .tru => true
   | .fls => true
-  | .variable s => !istKeinPlatz s
+  | .variable s => !istKopfWort s
   | .un o x =>
     (strEq o "!" || strEq o "-" || strEq o "~") && gutKern x
   | .bin o l r =>
@@ -366,16 +366,16 @@ def BKern (n : Nat) : Prop :=
 -- stops, the suffix reader stops. Needs no induction hypothesis
 -- (the fragment list is empty), hence standalone.
 theorem kern_prim_var : ∀ (a : String) (rest : List Token) (F : Nat),
-    (!istKeinPlatz a) = true → ruhigSuff rest = true →
+    (!istKopfWort a) = true → ruhigSuff rest = true →
     12 * (groesse (.variable a) + 1) + groesse (.variable a) + 1 ≤ F →
     parsePrimary F (druckToks (.variable a) ++ rest) =
       .ok (.variable a, rest) := by
   intro a rest F hka hrs hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [druckToks, List.cons_append, List.nil_append, parsePrimary,
-    nameText, hkaf] at ⊢
+  simp only [druckToks, List.cons_append, List.nil_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hka)]
+  have hkaf : istKeinPlatz a = false := kopf_kp (nichtWahr_falsch _ hka)
   -- ⊢ : `parseKopf` on the head word. One more strip, the
   -- segment reader stops on the benign tail, the `([a], …)` arm
   -- runs the suffix reader, which stops too.
@@ -387,7 +387,7 @@ theorem kern_prim_var : ∀ (a : String) (rest : List Token) (F : Nat),
   -- by constructor discrimination.
   have hmiss : ∀ (R : List Token), rest ≠ .zeichen "(" :: R :=
     ruhigSuff_nopar rest hrs
-  simp only [parseKopf, nameText, hseg, hkaf, hmiss,
+  simp only [parseKopf, nameText_nameTok, hseg, hkaf, hmiss,
     Bool.false_ne_true] at ⊢
   have hF3 : 1 ≤ F'' := by omega
   obtain ⟨F''', rfl⟩ : ∃ F''', F'' = F''' + 1 := ⟨F'' - 1, by omega⟩
@@ -430,7 +430,7 @@ theorem turm_lit : ∀ (m : Nat) (rest : List Token),
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP G' (by omega)
   have hM : ∀ (G : Nat),
       12 * (groesse (.lit m) + 1) + groesse (.lit m) + 3 ≤ G →
@@ -775,7 +775,7 @@ theorem turm_gleit : ∀ (s : String) (rest : List Token),
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP G' (by omega)
   have hup := tower_up (.float s) rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
@@ -812,7 +812,7 @@ theorem turm_wahr : ∀ (rest : List Token),
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP G' (by omega)
   have hup := tower_up .tru rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
@@ -849,14 +849,14 @@ theorem turm_falsch : ∀ (rest : List Token),
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP G' (by omega)
   have hup := tower_up .fls rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
     hup.2.2.2.1, hup.2.2.2.2.1, hup.2.2.2.2.2⟩
 
 theorem turm_var : ∀ (a : String) (rest : List Token),
-    (!istKeinPlatz a) = true → ruhig rest = true →
+    (!istKopfWort a) = true → ruhig rest = true →
     ruhigSuff rest = true → ruhigGleit rest = true →
     (∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 1 ≤ G →
       parsePrimary G (druckToks (.variable a) ++ rest) =
@@ -897,7 +897,7 @@ theorem turm_var : ∀ (a : String) (rest : List Token),
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP G' (by omega)
   have hup := tower_up (.variable a) rest hr hU
   exact ⟨hP, hU, hup.1, hup.2.1, hup.2.2.1,
@@ -1991,7 +1991,7 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
     gutKernPlatz p = true →
     ∃ (a : String) (suff : List SuffFrag),
       p = applySuff (.variable a) suff ∧
-      (!istKeinPlatz a) = true ∧
+      (!istKopfWort a) = true ∧
       suffGutKern suff = true ∧
       suffGroesse suff + 1 ≤ n := by
   intro n
@@ -2097,7 +2097,7 @@ theorem kern_suff_rund : ∀ (n : Nat) (rkn : RKern n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       simp only [applySuff] at ⊢
       have hs2 : suffGroesse suff + groesse (.field base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
@@ -2113,7 +2113,7 @@ theorem kern_suff_rund : ∀ (n : Nat) (rkn : RKern n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       simp only [applySuff] at ⊢
       have hs2 : suffGroesse suff + groesse (.arrow base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢
@@ -2130,7 +2130,7 @@ theorem kern_suff_rund : ∀ (n : Nat) (rkn : RKern n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe] at ⊢
+      simp only [parseSuffixe, nameText_nameTok] at ⊢
       have hii : groesse i ≤ n := by
         simp only [suffGroesse] at hs
         omega
@@ -2173,9 +2173,9 @@ theorem kern_prim_platz : ∀ (n : Nat) (rkn : RKern n)
   have hF2 : 1 ≤ F' := by omega
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   rw [druckToks_applySuff] at ⊢
-  have hkaf : istKeinPlatz a = false := nichtWahr_falsch _ hka
-  simp only [parsePrimary, druckToks, nameText, hkaf, List.cons_append,
-    parseKopf] at ⊢
+  simp only [druckToks, List.cons_append]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hka)]
+  simp only [parseKopf, nameText_nameTok] at ⊢
   simp only [List.nil_append] at ⊢
   simp only [sammleSeg_suffToks, hr] at ⊢
   have hmiss : ∀ (R : List Token),
@@ -2225,7 +2225,7 @@ theorem turm_platz_PU : ∀ (n : Nat), RKern n →
     have hP' := hP G' (by omega)
     rw [druckToks_applySuff] at hP' ⊢
     simp only [druckToks, List.cons_append, List.nil_append] at hP' ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP'
   exact ⟨hP, hU⟩
 
@@ -2273,7 +2273,7 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
   | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
   | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact (turm_var a rest hka hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
@@ -2329,7 +2329,7 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
   | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact (turm_var a rest hka hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
@@ -2385,7 +2385,7 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
   | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.2.1 F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact (turm_var a rest hka hr hrs hrg).2.2.2.2.2.1 F (by omega)
@@ -2441,7 +2441,7 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.2.1 F (by omega)
   | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.2.1 F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact (turm_var a rest hka hr hrs hrg).2.2.2.2.1 F (by omega)
@@ -2595,7 +2595,7 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | tru => exact (turm_wahr rest hr hrs hrg).2.2.2.1 F (by omega)
   | fls => exact (turm_falsch rest hr hrs hrg).2.2.2.1 F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact (turm_var a rest hka hr hrs hrg).2.2.2.1 F (by omega)
@@ -2651,7 +2651,7 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
   | tru => exact (turm_wahr rest hr hrs hrg).2.2.1 F (by omega)
   | fls => exact (turm_falsch rest hr hrs hrg).2.2.1 F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact (turm_var a rest hka hr hrs hrg).2.2.1 F (by omega)
@@ -2716,7 +2716,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hG1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP F' (by omega)
   | float s =>
     have hP : ∀ (G : Nat), 12 * (groesse (.float s) + 1) + groesse (.float s) + 1 ≤ G →
@@ -2726,7 +2726,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hG1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP F' (by omega)
   | tru =>
     have hP : ∀ (G : Nat), 12 * (groesse .tru + 1) + groesse .tru + 1 ≤ G →
@@ -2736,7 +2736,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hG1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP F' (by omega)
   | fls =>
     have hP : ∀ (G : Nat), 12 * (groesse .fls + 1) + groesse .fls + 1 ≤ G →
@@ -2746,10 +2746,10 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hG1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP F' (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     have hP : ∀ (G : Nat), 12 * (groesse (.variable a) + 1) + groesse (.variable a) + 1 ≤ G →
@@ -2760,7 +2760,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hG1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     simp only [druckToks, List.cons_append, List.nil_append] at ⊢
-    simp only [parseUnary] at ⊢
+    first | rw [parseUnary_nameTok] | simp only [parseUnary] at ⊢
     exact hP F' (by omega)
   | un o x =>
     rw [gutKern_un] at hg
@@ -2913,7 +2913,7 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
   | tru => exact prim_wahr rest F (by omega)
   | fls => exact prim_falsch rest F (by omega)
   | «variable» a =>
-    have hka : (!istKeinPlatz a) = true := by
+    have hka : (!istKopfWort a) = true := by
       simp only [gutKern] at hg
       exact hg
     exact kern_prim_var a rest F hka hrs (by omega)

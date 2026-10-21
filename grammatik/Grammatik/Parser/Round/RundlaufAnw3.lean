@@ -82,10 +82,10 @@ theorem druckAnw_kopf (s : SAnw) (hs : Einfach s) :
   cases hs with
   | retLeer => exact ⟨"return", [.zeichen ";"], fun r => by simp [druckAnw]⟩
   | ret e hg => exact ⟨"return", druckToks e ++ [.zeichen ";"], fun r => by simp [druckAnw, List.append_assoc]⟩
-  | leave l => exact ⟨"leave", [.ident l, .zeichen ";"], fun r => by simp [druckAnw]⟩
-  | next l => exact ⟨"next", [.ident l, .zeichen ";"], fun r => by simp [druckAnw]⟩
-  | bind x e hg =>
-    exact ⟨"let", [.ident x, .zeichen "="] ++ druckToks e ++ [.zeichen ";"],
+  | leave l => exact ⟨"leave", [nameTok l, .zeichen ";"], fun r => by simp [druckAnw]⟩
+  | next l => exact ⟨"next", [nameTok l, .zeichen ";"], fun r => by simp [druckAnw]⟩
+  | bind x e _ hg =>
+    exact ⟨"let", [nameTok x, .zeichen "="] ++ druckToks e ++ [.zeichen ";"],
       fun r => by simp [druckAnw, druckTypOpt, List.append_assoc]⟩
 
 /-- **A statement list reads back** (up to the closing `}`). -/
@@ -168,7 +168,7 @@ theorem rundlauf_block_einfach_zeuge (r : List Token) :
       intro s hs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
       rcases hs with rfl | rfl
-      · exact Einfach.bind "x" (.lit 1) (by decide)
+      · exact Einfach.bind "x" (.lit 1) (by decide) (by decide)
       · exact Einfach.leave "i")
     (by simp only [EinfachEnde]; decide) (by intro h; simp at h) r 200 (by decide)
 

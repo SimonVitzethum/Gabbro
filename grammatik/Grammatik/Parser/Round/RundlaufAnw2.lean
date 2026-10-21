@@ -117,7 +117,7 @@ inductive Einfach : SAnw → Prop
   | ret (e : SExpr) : gutPrim e = true → Einfach (.ret (some e))
   | leave (l : String) : Einfach (.leave l)
   | next (l : String) : Einfach (.next l)
-  | bind (x : String) (e : SExpr) : gutPrim e = true → Einfach (.bind false x none e)
+  | bind (x : String) (e : SExpr) : x ≠ "mut" → gutPrim e = true → Einfach (.bind false x none e)
 
 /-- The fuel one statement needs. -/
 def fuelAnw : SAnw → Nat
@@ -132,11 +132,27 @@ theorem or_vor_semi (e : SExpr) (hg : gutPrim e = true) (r : List Token) (f : Na
   have hL := (legsPrim e hg).2.2.2.2.2.2.2
   exact hL (.zeichen ";" :: r) f rfl rfl rfl (by simp only [brennstoff] at hf; omega)
 
-theorem parseLet_nach (x : String) (nach : List Token) (f : Nat)
+/-- A `let` binder printed as its name token reads as the identifier: no `mut` (which the reader
+    takes as the modifier). -/
+theorem parseLet_nameTok (x : String) (hx : x ≠ "mut") (R : List Token) (f : Nat) :
+    parseLet (f + 1) (nameTok x :: R) = parseLet (f + 1) (.ident x :: R) := by
+  unfold nameTok; split
+  · unfold parseLet
+    split
+    rename_i heq
+    split at heq
+    · rename_i h2; simp at h2; exact absurd h2.1 hx
+    · simp only [Prod.mk.injEq] at heq
+      obtain ⟨rfl, rfl⟩ := heq
+      rfl
+  · rfl
+
+theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : Nat)
     (h1 : ∀ ts, nach ≠ .zeichen "@" :: ts)
     (h2 : ∀ s t ts, nach = .wort s :: t :: .zeichen "(" :: ts → strEq s "alloc" = false) :
-    parseLet (f + 1) (.ident x :: .zeichen "=" :: nach) = parseLetExpr f false x none nach := by
-  simp [parseLet, nimmName, nameText, fordereZeichen, bind, Except.bind, pure, Except.pure]
+    parseLet (f + 1) (nameTok x :: .zeichen "=" :: nach) = parseLetExpr f false x none nach := by
+  rw [parseLet_nameTok x hx]
+  simp [parseLet, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
   split
   · rename_i tl
     exact absurd rfl (h1 tl)
@@ -146,11 +162,12 @@ theorem parseLet_nach (x : String) (nach : List Token) (f : Nat)
   · rfl
 
 /-- `let x = e ;` reads as an expression `let`, whatever the head of `e` (`@` and `alloc` stay off it). -/
-theorem parseLet_ausdruck (x : String) (e : SExpr) (hg : gut e = true) (r : List Token) (f : Nat) :
-    parseLet (f + 1) (.ident x :: .zeichen "=" :: (druckToks e ++ .zeichen ";" :: r)) =
+theorem parseLet_ausdruck (x : String) (hx : x ≠ "mut") (e : SExpr) (hg : gut e = true) (r : List Token)
+    (f : Nat) :
+    parseLet (f + 1) (nameTok x :: .zeichen "=" :: (druckToks e ++ .zeichen ";" :: r)) =
       parseLetExpr f false x none (druckToks e ++ .zeichen ";" :: r) := by
   obtain ⟨t, ts, hk, hkg⟩ := druck_kopf e hg
-  apply parseLet_nach
+  apply parseLet_nach x hx
   · rw [hk]
     intro us hc
     injection hc with ht _
@@ -195,18 +212,18 @@ theorem parseStmt_einfach (s : SAnw) (hs : Einfach s) (r : List Token) (F : Nat)
     simp only [druckAnw, List.cons_append, List.nil_append]
     rw [parseStmt_leave_eq _ _ (by simp [istOrtsFort])]
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
-    simp [parseVerlasse, nimmName, nameText, fordereZeichen, bind, Except.bind, pure, Except.pure]
+    simp [parseVerlasse, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
   | next l =>
     simp only [druckAnw, List.cons_append, List.nil_append]
     rw [parseStmt_next_eq _ _ (by simp [istOrtsFort])]
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
-    simp [parseWeiter, nimmName, nameText, fordereZeichen, bind, Except.bind, pure, Except.pure]
-  | bind x e hg =>
+    simp [parseWeiter, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
+  | bind x e hx hg =>
     simp only [druckAnw, druckTypOpt, Bool.false_eq_true, if_false, List.cons_append, List.nil_append,
       List.append_assoc, List.singleton_append]
     rw [parseStmt_let_eq _ _ (by simp [istOrtsFort])]
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
-    rw [parseLet_ausdruck x e (gut_of_gutPrim e hg) r F'']
+    rw [parseLet_ausdruck x hx e (gut_of_gutPrim e hg) r F'']
     obtain ⟨F3, rfl⟩ : ∃ F3, F'' = F3 + 1 := ⟨F'' - 1, by simp [fuelAnw] at hF; omega⟩
     exact parseLetExpr_aus x e hg r F3 (by simp [fuelAnw] at hF; omega)
 
