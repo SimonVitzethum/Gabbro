@@ -231,13 +231,17 @@ end
 def kommaNamen (ns : List String) : List Token :=
   (ns.map fun n => [nameTok n]).intersperse [.zeichen ","] |>.flatten
 
-/-- The locks a body takes itself. -/
-partial def genommen : SAnw → List String
-  | .locks _ (.variable L) b => L :: genommen b
-  | .block ss _ => ss.flatMap genommen
-  | .cond _ t eis s => genommen t ++ eis.flatMap genommen ++ (s.map genommen).getD []
-  | .bindElse _ _ _ _ b => genommen b
-  | _ => []
+/-- The locks a body takes itself (fuel for the nesting). -/
+def genommenF : Nat → SAnw → List String
+  | 0, _ => []
+  | n + 1, .locks _ (.variable L) b => L :: genommenF n b
+  | n + 1, .block ss _ => ss.flatMap (genommenF n)
+  | n + 1, .cond _ t eis s => genommenF n t ++ eis.flatMap (genommenF n) ++ (s.map (genommenF n)).getD []
+  | n + 1, .bindElse _ _ _ _ b => genommenF n b
+  | n + 1, .each _ _ _ _ _ _ _ b => genommenF n b
+  | _, _ => []
+
+def genommen (s : SAnw) : List String := genommenF 1000 s
 
 /-- Does a body name the device handle? -/
 def nGlobs (gs : List Nat) : List String := gs.map nGlob
