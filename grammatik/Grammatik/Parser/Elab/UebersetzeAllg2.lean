@@ -1003,6 +1003,30 @@ def lowRegWriteL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (
         .ok (Stmt.regWrite (D := declOf u) g hk e)
       else .error "register written against its class"
 
+/-- The pointer of an indirect call: the local `p` of type `fnptr n`, where `n` is the number of the function
+    `k.callee` the call was elaborated against (one signature per function, `sig f = f`). -/
+def lowZeiger (u : UProg) (Γ : Ctx) (fn : UFn) (p : String) (callee : Fin u.fns.length) :
+    Except String (Var Γ (Ty.fnptr callee.val)) :=
+  match paramPos fn.params p with
+  | .error e => .error e
+  | .ok j => lowVar Γ j (Ty.fnptr callee.val)
+
+/-- `p(..);` through a function pointer (`Stmt.callInd`): the premises of a direct call of the function `p`
+    points at, against its signature `sigNr (sig f)`. -/
+def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (p cname : String) (args : List UArg) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match lowRufKopf u caller Γ fn Λ cname args with
+  | .error e => .error e
+  | .ok k =>
+    match lowZeiger u Γ fn p k.callee with
+    | .error e => .error e
+    | .ok v =>
+      if hr : (declOf u).gruende k.callee = 0 then
+        .ok (castNachStmtL u caller k.callee Γ Λ
+          (Stmt.callInd (D := declOf u) (n := k.callee.val) (Expr.var v) k.args k.hp hr))
+      else .error "call of a function with a reason channel needs `let .. else`"
+
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1022,9 +1046,10 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
+  | .callInd p f args => lowCallIndL u caller Γ fn Λ p f args
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

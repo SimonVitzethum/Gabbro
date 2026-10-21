@@ -247,6 +247,12 @@ inductive UStmt
   | regReadElse : String → String → String → UStmt
   /-- `d.R = v;` (`Stmt.regWrite`): device, register, value. -/
   | regWrite : String → String → USide → UStmt
+  /-- `let p = &f;` (`Block.bind` of `Expr.fnref`): binder, function. -/
+  | bindFnref : String → String → UStmt
+  /-- `p(..);` through a function pointer (`Stmt.callInd`): the pointer, the function it points at, the arguments. -/
+  | callInd : String → String → List UArg → UStmt
+  /-- `let y = p(..);` (`Block.bindCallInd`): binder, pointer, function, arguments. -/
+  | bindCallInd : String → String → String → List UArg → UStmt
   /-- `let x = A awaits { p, q };` (`Block.awaits`): binder, atomic; the payload is the declared one. -/
   | awaitBind : String → String → UStmt
   deriving DecidableEq, Repr
@@ -371,6 +377,9 @@ inductive UParamArt
   | why : Nat → UParamArt
   /-- A value of a tagged type (`Ty.sum`), `n` the position of its declaration. -/
   | sum : Nat → UParamArt
+  /-- A function pointer `fnptr n` (`Ty.fnptr n`): bound by `let p = &f;`, `n` the number of `f` (its signature
+      number: one signature per function, `sig f = f`). -/
+  | fnptr : Nat → UParamArt
   deriving DecidableEq, Repr
 
 /-- The elaboration context of one function body or contract:
@@ -475,6 +484,10 @@ def UFn.mitOpt (f : UFn) (x : String) (num : Nat) (cnt : Int) : UFn :=
 /-- The scope inside `traverse b over slots of T`: `b` is an index into table number `num` of `cnt` slots. -/
 def UFn.mitIndex (f : UFn) (b : String) (num : Nat) (cnt : Int) : UFn :=
   { f with params := (b, .index cnt) :: f.params, kinds := .index num :: f.kinds }
+
+/-- The scope after `let p = &f;`: `p` a pointer to function number `n`. -/
+def UFn.mitFnptr (f : UFn) (p : String) (n : Nat) : UFn :=
+  { f with params := (p, Ty.fnptr n) :: f.params, kinds := .fnptr n :: f.kinds }
 
 /-- The result type of an elaborated function: `bool`, an integer range, or none. -/
 def UFn.ergTy (f : UFn) : Option Ty :=
@@ -1979,6 +1992,19 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
     | .variable x => if ctx.muts.any (strEq · x) then uSetzeLokal ctx x w else uSetzePlatz ctx ziel w
     | _ => uSetzePlatz ctx ziel w
 
+/-- A call through a local function pointer `p` (bound by `let p = &f;`): `some` of the head of the function it
+    points at; `none` when `p` is no such local. -/
+def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except String UFnKopf) :=
+  match uParamNr ctx p with
+  | .error _ => none
+  | .ok j =>
+    match uArtBei ctx.kinds j with
+    | .ok (.fnptr n) =>
+      some (match koepfe[n]? with
+        | some k => .ok k
+        | none => .error "function pointer to no function")
+    | _ => none
+
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/
 def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
@@ -1998,6 +2024,15 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     if ctx.tabs.any (fun x => x.arena && strEq x.name a) then .ok (.assignGlob (a ++ "#used") (.lit 0))
     else .error ("arena unknown: " ++ a)
   | .call c args =>
+    match uFnZeiger ctx koepfe c with
+    | some (.error e) => .error e
+    | some (.ok ziel) =>
+      match uRuf ctx tabs koepfe ziel.name args with
+      | .error e => .error e
+      | .ok (callee, xs) =>
+        if callee.kanal.isSome then .error "call of a function with a reason channel needs `let .. else`"
+        else .ok (.callInd c callee.name xs)
+    | none =>
     match uRuf ctx tabs koepfe c args with
     | .error e => .error e
     | .ok (callee, xs) =>
@@ -2233,6 +2268,39 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
         | .ok sv =>
           .ok (.bindSum x k sv, uMitLokal ctx x (UParamArt.sum k) (Ty.sum sm.spec) (ctx.muts.filter (fun m => !strEq m x)))
   | .none =>
+  match (match e with
+      | .fnref f =>
+        if (uParamNr ctx f).toOption.isSome || ctx.tabs.any (fun tb => strEq tb.name f) then none
+        else
+          match koepfe.findIdx? (fun (k : UFnKopf) => strEq k.name f) with
+          | none => none
+          | some n =>
+            some (match koepfe[n]? with
+              | some k =>
+                if k.ext then .error "address of a foreign fn without G form"
+                else if mu || t.isSome then .error "let of a function pointer with a type without G form"
+                else .ok (.bindFnref x f, uMitLokal ctx x (UParamArt.fnptr n) (Ty.fnptr n)
+                  (ctx.muts.filter (fun m => !strEq m x)))
+              | none => .error ("function unknown: " ++ f))
+      | .call c args =>
+        match uFnZeiger ctx koepfe c with
+        | none => none
+        | some (.error err) => some (.error err)
+        | some (.ok ziel) =>
+          some (if mu || t.isSome then .error "let of an indirect call with a type without G form" else
+            match uRuf ctx tabs koepfe ziel.name args with
+            | .error err => .error err
+            | .ok (callee, xs) =>
+              let muts : List String := ctx.muts.filter (fun m => !strEq m x)
+              if callee.kanal.isSome then .error "call of a function with a reason channel needs `let .. else`"
+              else if callee.resBool then
+                .ok (.bindCallInd x c callee.name xs, uMitLokal ctx x UParamArt.bool Ty.bool muts)
+              else match callee.res with
+                | some (lo, hi) => .ok (.bindCallInd x c callee.name xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
+                | none => .error "call without a value")
+      | _ => none : Option (Except String (UStmt × UCtx))) with
+  | some r => r
+  | none =>
   match e with
   | .call c args =>
     match koepfe.find? (fun (k : UFnKopf) => strEq k.name c) with
@@ -3295,6 +3363,8 @@ def callNames (f : UFn) : List String :=
     | .call c _ => some c
     | .bindCall _ c _ => some c
     | .bindElse _ c _ _ => some c
+    | .callInd _ c _ => some c
+    | .bindCallInd _ _ c _ => some c
     | _ => none
 
 /-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/
@@ -3704,7 +3774,8 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       | .ok t => .ok (.cons s t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
-    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _ =>
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _
+    | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
 
@@ -3742,7 +3813,8 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
-    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _ =>
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _
+    | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
 
@@ -4437,6 +4509,9 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && strEq d e && strEq r s
   | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && beqUSide v w
   | .awaitBind a g, .awaitBind b h => strEq a b && strEq g h
+  | .bindFnref a g, .bindFnref b h => strEq a b && strEq g h
+  | .callInd p f xs, .callInd q g ys => strEq p q && strEq f g && beqUArgList xs ys
+  | .bindCallInd a p f xs, .bindCallInd b q g ys => strEq a b && strEq p q && strEq f g && beqUArgList xs ys
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
