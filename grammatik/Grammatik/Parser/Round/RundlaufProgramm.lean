@@ -14,7 +14,7 @@
   result, `or` channel, the clauses `requires`, `ensures`, `maintains`, `refines`, `effects`,
   `costs`, `decreases`, `payload`, `section`, `arch`, `advances`) and a block body or `;`, `lock`
   (with `held`, `shared held`, `masks`, `invariant`), `atomic` (with `publishes`, an order,
-  `observed by`), `reason`, `concurrent`. Every expression is `gut`, every type `TypGut`, every
+  `observed by`), `reason`, `concurrent`, `group` (members, invariants). Every expression is `gut`, every type `TypGut`, every
   body `AnwGut .block`, predicates (`requires`/`ensures`/`invariant`, place lists) ride
   `pred_druck`. The pieces are in `RundlaufItem` and `RundlaufGeraet`.
 
@@ -58,6 +58,8 @@ inductive ItemGut : SItemTief → Prop
   | entryT (e : SEingang) : EingangGut e → ItemGut (.entryT e)
   | devT (n : String) (ps : List (String × STyp)) (sp : String) (ms : List SGerTeil) :
       GeraetGut ps ms → ItemGut (.devT n ps sp ms)
+  | groupT (n : String) (ms : List String) (ivs : List SGruppenInv) :
+      ms ≠ [] → (∀ i ∈ ivs, InvGut i) → ItemGut (.groupT n ms ivs)
 
 theorem itemKopf_wort (it : SItemTief) (w : String) (h1 : w ≠ "when") (h2 : w ≠ "pub")
     (h : ∃ ts, druckItem it = .wort w :: ts) : ItemKopf it := by
@@ -119,6 +121,8 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
   | devT n ps sp ms h =>
     refine ⟨item_dev n ps sp ms h, itemKopf_wort _ "device" (by decide) (by decide) ?_⟩
     rw [druckDev_eq]; exact ⟨_, rfl⟩
+  | groupT n ms ivs hms hivs =>
+    exact ⟨item_group n ms ivs hms hivs, itemKopf_wort _ "group" (by decide) (by decide) ⟨_, rfl⟩⟩
 
 /-- **L2c: printable items read back** through `parseItemsTief`, before `}`, the end marker or
     nothing. -/
@@ -246,7 +250,7 @@ theorem zeugeProgramm_text :
 /-- A device with a mirror and two registers -- a range type, an address, a class with its stages,
     bit fields, a precondition with its falsifier and carriers -- and a function over the device that
     reads a register (`let x = d.S;`), reads one with its falsifier (`let t = d.T else (e) { .. }`)
-    and writes one (`d.C = x;`). -/
+    and writes one (`d.C = x;`); and a `group` over two names with an invariant under `forall`. -/
 def zeugeGeraet : List SItemTief := [
   .whyT "G" [("Z", .lit 1, "z")] true,
   .devT "D" [("b", .atom "u64")] "mmio" [
@@ -264,7 +268,10 @@ def zeugeGeraet : List SItemTief := [
       .bind false "x" none (.field (.variable "d") "S"),
       .bindElse "t" none (.field (.variable "d") "T") "e" (.block [] (some (.ret (some (.why "G" "Z"))))),
       .set (.field (.variable "d") "C") "=" (.variable "x")]
-      (some (.ret (some (.variable "t")))))]
+      (some (.ret (some (.variable "t"))))),
+  .groupT "Gruppe" ["D", "Tab"] [
+    { name := "J", kosten := .lit 1, online := true, proof := none,
+      pred := .ext .all ["s", "slots"] [.variable "Tab", .bin ">=" (.variable "s") (.lit 0)] }]]
 
 theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
   have atom : ∀ a, typKopf a = false → TypGut (.atom a) := fun a h => by
@@ -274,7 +281,7 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
       (by intro lo hi x h; simp at h; obtain ⟨rfl, rfl, -⟩ := h; exact ⟨by decide, by decide⟩)
   intro it hit
   simp only [zeugeGeraet, List.mem_cons, List.not_mem_nil, or_false] at hit
-  rcases hit with rfl | rfl | rfl
+  rcases hit with rfl | rfl | rfl | rfl
   · exact .whyT _ _ _ (by intro c hc; simp at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
   · refine .devT _ _ _ _ ⟨?_, ?_⟩
     · intro p hp; simp at hp; subst hp; exact atom _ (by decide)
@@ -305,6 +312,10 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
       · exact .bind _ _ _ _ (by decide) trivial (by decide)
       · exact .bindElse _ _ _ _ _ (by decide) trivial (by decide) leer
       · exact .set _ _ _ (by decide) (by decide) (by decide)
+  · refine .groupT _ _ _ (by simp) ?_
+    intro i hi; simp at hi; subst hi
+    exact ⟨by decide, .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
+      (.expr _ (by decide)), by simp⟩
 
 /-- The device witness reads back through the whole program reader. -/
 theorem zeugeGeraet_rund : parseTopTief (druckItems zeugeGeraet ++ [.ende]) = .ok zeugeGeraet :=
@@ -332,7 +343,7 @@ end Gabbro.Grammatik.Parser
   CUTS: what the item round trip does not cover yet, and why.
 
   * Item kinds not in `ItemGut`: `type`, `format`, `arena`, `state`, `assume`,
-    `axiom`, `check`, `rcu`, `group`, `accumulates`, `walk`, `entrust`, `boot`, `syscall`,
+    `axiom`, `check`, `rcu`, `accumulates`, `walk`, `entrust`, `boot`, `syscall`,
     `target`, `translator`, `profile`, the spec/asm function bodies (`= pred ;`, `= asm {..} ;`) and
     the `when TESTBUILD` gate; slot bit positions as a `[hi:lo]` group. Each is one more constructor of `ItemGut` with its reader lemma in
     the pattern of `item_lock`/`item_atom` (a named recursive tail reader is a step lemma per

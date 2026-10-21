@@ -108,6 +108,12 @@ theorem parseItemKopf_lock (f : Nat) (rest : List Token) :
   simp only [parseItemKopfTief, sammleModifikatoren, hm, Bool.false_eq_true, ite_false, ite_true,
     (by decide : strEq "lock" "module" = false), (by decide : strEq "lock" "use" = false), (by decide : strEq "lock" "fn" = false), (by decide : strEq "lock" "translator" = false), (by decide : strEq "lock" "profile" = false), (by decide : strEq "lock" "requires" = false), (by decide : strEq "lock" "concurrent" = false), (by decide : strEq "lock" "type" = false), (by decide : strEq "lock" "const" = false), (by decide : strEq "lock" "static" = false), (by decide : strEq "lock" "format" = false), (by decide : strEq "lock" "table" = false), (by decide : strEq "lock" "arena" = false), (by decide : strEq "lock" "reason" = false), (by decide : strEq "lock" "state" = false), (by decide : strEq "lock" "device" = false), (by decide : strEq "lock" "assume" = false), (by decide : strEq "lock" "axiom" = false), (by decide : strEq "lock" "check" = false), (by decide : strEq "lock" "atomic" = false), (by decide : strEq "lock" "lock" = true)]
 
+theorem parseItemKopf_group (f : Nat) (rest : List Token) :
+    parseItemKopfTief (f + 1) (.wort "group" :: rest) = parseGruppeTief f (.wort "group" :: rest) := by
+  have hm : istMod "group" = false := by decide
+  simp only [parseItemKopfTief, sammleModifikatoren, hm, Bool.false_eq_true, ite_false, ite_true,
+    (by decide : strEq "group" "module" = false), (by decide : strEq "group" "use" = false), (by decide : strEq "group" "fn" = false), (by decide : strEq "group" "translator" = false), (by decide : strEq "group" "profile" = false), (by decide : strEq "group" "requires" = false), (by decide : strEq "group" "concurrent" = false), (by decide : strEq "group" "type" = false), (by decide : strEq "group" "const" = false), (by decide : strEq "group" "static" = false), (by decide : strEq "group" "format" = false), (by decide : strEq "group" "table" = false), (by decide : strEq "group" "arena" = false), (by decide : strEq "group" "reason" = false), (by decide : strEq "group" "state" = false), (by decide : strEq "group" "device" = false), (by decide : strEq "group" "assume" = false), (by decide : strEq "group" "axiom" = false), (by decide : strEq "group" "check" = false), (by decide : strEq "group" "atomic" = false), (by decide : strEq "group" "lock" = false), (by decide : strEq "group" "rcu" = false), (by decide : strEq "group" "group" = true)]
+
 theorem parseItemKopf_entry (f : Nat) (rest : List Token) :
     parseItemKopfTief (f + 1) (.wort "entry" :: rest) = parseEingangTief f (.wort "entry" :: rest) := by
   have hm : istMod "entry" = false := by decide
@@ -2267,5 +2273,65 @@ theorem item_entry (e : SEingang) (he : EingangGut e) : ItemBein (.entryT e) := 
   simp [parseEingangTief, nimmWort, strEq_self, nimmName, fordereZeichen, hK, hRI, hRO, hE, hKi, hR]
 
 
+
+/-! ### `group` -/
+
+theorem gruppenInvs_rund : ∀ (ivs : List SGruppenInv), (∀ i ∈ ivs, InvGut i) → ∀ (R : List Token) (F : Nat),
+    8 * (druckGruppenInvs ivs).length + 61 ≤ F →
+    parseGruppenInvListe F (druckGruppenInvs ivs ++ .zeichen "}" :: R) = .ok (ivs, .zeichen "}" :: R) := by
+  intro ivs
+  induction ivs with
+  | nil =>
+    intro _ R F hF
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp [druckGruppenInvs, parseGruppenInvListe]
+  | cons i ivs ih =>
+    intro hg R F hF
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    simp only [druckGruppenInvs, List.length_append] at hF
+    have h1 : 1 ≤ (druckGruppenInv i).length := by simp [druckGruppenInv]
+    have hI := gruppenInv_rund i (hg i (by simp)) (druckGruppenInvs ivs ++ .zeichen "}" :: R) F' (by omega)
+    have hR := ih (fun x hx => hg x (List.mem_cons_of_mem _ hx)) R F' (by omega)
+    have hd : druckGruppenInv i = .wort "invariant" :: (druckGruppenInv i).tail := rfl
+    simp only [druckGruppenInvs, List.append_assoc]
+    rw [hd] at hI ⊢
+    simp only [List.cons_append] at hI ⊢
+    simp [parseGruppenInvListe, strEq_self, hI, hR]
+
+/-- The tail of a group: `;` without invariants, the invariants in braces otherwise. -/
+def gruppeRestToks : List SGruppenInv → List Token
+  | [] => [.zeichen ";"]
+  | ivs => [.zeichen "{"] ++ druckGruppenInvs ivs ++ [.zeichen "}"]
+
+theorem item_group (n : String) (ms : List String) (ivs : List SGruppenInv) (hms : ms ≠ [])
+    (hivs : ∀ i ∈ ivs, InvGut i) : ItemBein (.groupT n ms ivs) := by
+  intro rest F hF
+  have hd : druckItem (.groupT n ms ivs) ++ rest = .wort "group" :: nameTok n :: .wort "over" :: .zeichen "{" ::
+      (druckNamen ms ++ .zeichen "}" :: (gruppeRestToks ivs ++ rest)) := by
+    cases ivs <;> simp [druckItem, druckNamenKlammer, gruppeRestToks]
+  have hlen : (druckItem (.groupT n ms ivs)).length = 5 + (druckNamen ms).length + (gruppeRestToks ivs).length := by
+    cases ivs <;> simp [druckItem, druckNamenKlammer, gruppeRestToks] <;> omega
+  have hms' : ms.length ≤ (druckNamen ms).length := by
+    clear hF hd hlen hms
+    induction ms with
+    | nil => simp
+    | cons m ms ih => cases ms with
+      | nil => simp [druckNamen]
+      | cons a as => simp [druckNamen] at ih ⊢; omega
+  simp only [fbI, hlen] at hF
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 3 := ⟨F - 3, by omega⟩
+  have hN := namen_rund ms (.zeichen "}" :: (gruppeRestToks ivs ++ rest)) F' hms (by intro r e; simp at e)
+    (by omega)
+  have hRest : parseGruppeRest F' (gruppeRestToks ivs ++ rest) = .ok (ivs, rest) := by
+    obtain ⟨G, rfl⟩ : ∃ G, F' = G + 1 := ⟨F' - 1, by omega⟩
+    cases ivs with
+    | nil => simp [gruppeRestToks, parseGruppeRest]
+    | cons i is =>
+      simp only [gruppeRestToks, List.length_append, List.length_cons, List.length_nil] at hF
+      have hL := gruppenInvs_rund (i :: is) hivs rest G (by omega)
+      simp only [gruppeRestToks, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+      simp [parseGruppeRest, hL, fordereZeichen, strEq_self]
+  rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_group]
+  simp [parseGruppeTief, nimmWort, strEq_self, nimmName, fordereZeichen, hN, hRest]
 
 end Gabbro.Grammatik.Parser
