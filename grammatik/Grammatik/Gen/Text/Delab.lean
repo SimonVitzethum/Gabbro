@@ -183,7 +183,7 @@ def delabB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
       let (es, ende) ← delabEnd sonst
       .ok (.bindElse (nVar Γ.length) none (regOrt z r) (nVar Γ.length) (.block es ende) :: (← delabB rest))
   | .awaits g payload _ _ rest => do
-      if !(z.globs.get g).atomar then
+      if !(z.deklaration.atomar g) then
         throw "awaits at a static that is no atomic: no spelling (the language waits only at an atomic)"
       .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
         (← delabB rest))

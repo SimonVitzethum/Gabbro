@@ -20,6 +20,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 variable (z : Spez)
 
 abbrev lN (L : z.deklaration.Lock) : Nat := (show Fin z.locks.length from L).val
+abbrev rN (r : z.deklaration.Reg) : Nat := (show Fin z.regs.length from r).val
 
 /-- The return value the elaborator reads (`uEnde` on `return v`). -/
 def uOfR (art : Nat → UParamArt) {Γ : Ctx} {Λ : List (Res z.deklaration)} :
@@ -71,6 +72,14 @@ def uOfSt (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
         (← uOfBl (artAuf (.index (tN z t)) art) body) ++ [.blkEnd])
   | .ret e _ => (uOfR z art e).map fun r => [.ret r]
   | .retWhy r _ => some [.ret (.why r.val)]
+  | .regWrite r _ e =>
+      if z.deklaration.rtyp r = .bool then (uOfB z art none e).map fun b => [.regWriteB "Dev" (nReg (rN z r)) b]
+      else (uOfS z art none e).map fun u => [.regWrite "Dev" (nReg (rN z r)) u]
+  | .publish g e _ _ _ _ =>
+      if z.deklaration.atomar g then
+        if z.deklaration.gtyp g = .bool then (uOfB z art none e).map fun b => [.storeAtomB (nGlob (gN z g)) b]
+        else (uOfS z art none e).map fun u => [.storeAtom (nGlob (gN z g)) u]
+      else none
   | .call f args _ _ => (uOfArgs z art args).map fun xs => [.call (nFn (fN z f)) xs]
   | .callInd (Γ := Γ) p args _ _ =>
       match p with
@@ -89,6 +98,14 @@ def uOfBl (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
         some (.bindB (nVar Γ.length) (← uOfB z art none e) :: (← uOfBl (artAuf .bool art) rest))
       else do
         some (.bind (nVar Γ.length) none (← uOfS z art none e) :: (← uOfBl (artAuf .int art) rest))
+  | .regRead (Γ := Γ) r _ rest => do
+      let a ← artErg (z.deklaration.rtyp r)
+      some (.regRead (nVar Γ.length) "Dev" (nReg (rN z r)) :: (← uOfBl (artAuf a art) rest))
+  | .awaits (Γ := Γ) g _ _ _ rest =>
+      if z.deklaration.atomar g then do
+        let a ← artErg (z.deklaration.gtyp g)
+        some (.awaitBind (nVar Γ.length) (nGlob (gN z g)) :: (← uOfBl (artAuf a art) rest))
+      else none
   | .bindCall (Γ := Γ) (τ := τ) f args _ _ _ rest => do
       let a ← artErg τ
       some (.bindCall (nVar Γ.length) (nFn (fN z f)) (← uOfArgs z art args) :: (← uOfBl (artAuf a art) rest))
@@ -149,7 +166,7 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   lits : ctx.lits = []
   glob : ∀ g : z.deklaration.Glob, ∃ gl, ctx.globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool) ∧ gl.var = !z.deklaration.atomar g ∧
-    gl.atomic = z.deklaration.atomar g
+    gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = (z.deklaration.nutzlast g).map fun h => nGlob (gN z h)
   tab : ∀ t : z.deklaration.Tab, ∃ tb, ctx.tabs.find? (fun x => strEq x.name (nTab (tN z t))) = some tb ∧
     tb.name = nTab (tN z t) ∧ tb.arena = false ∧ tb.count = z.deklaration.count t ∧ tb.opts = [] ∧
     (∀ f : z.deklaration.Feld t, tb.cols.any (fun (g, _) => strEq g (nFeld (show Fin _ from f).val)) = true) ∧
@@ -170,6 +187,10 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   ergBool : V.erg = some .bool → ctx.res = none ∧ ctx.resBool = true
   ergInt : ∀ lo hi, V.erg = some (.int lo hi) → ctx.res.isSome ∧ ctx.resBool = false
   kanal0 : V.gruende = 0 → ctx.kanal = none
+  griff : ∀ r : z.deklaration.Reg, ctx.griffe.find? (fun p => strEq p.1 "d") = some ("d", "Dev")
+  reg : ∀ r : z.deklaration.Reg, ∃ g, ctx.regs.find? (fun g => strEq g.dev "Dev" && strEq g.name (nReg (rN z r))) = some g ∧
+    g.dev = "Dev" ∧ g.name = nReg (rN z r) ∧ g.pruefung = none ∧ some g.art = artErg (z.deklaration.rtyp r) ∧
+    (g.bool = true ↔ z.deklaration.rtyp r = .bool)
   kanal : V.gruende ≠ 0 → ∃ k w, ctx.kanal = some (k, V.gruende) ∧
     ctx.whys.findIdx? (fun x => strEq x.name (nGrund V.gruende)) = some k ∧ ctx.whys[k]? = some w ∧
     ∀ r, r < V.gruende → w.cases.findIdx? (strEq · (nFall r)) = some r
@@ -178,7 +199,7 @@ variable {z V}
 
 theorem SInv.einv {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) : EInv z ctx Γ Λ art where
-  var := H.var
+  var d hd _ := H.var d hd
   namen := H.namen
   lits := H.lits
   glob g := by
@@ -239,7 +260,7 @@ theorem anw1_glob {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       uAnw1 ctx tabs koepfe (.set (.variable (nGlob (gN z g))) "=" w) = .ok (.assignGlobB (nGlob (gN z g)) v)) ∧
     (z.deklaration.gtyp g ≠ .bool → ∀ v, uWertBody ctx w = .ok v →
       uAnw1 ctx tabs koepfe (.set (.variable (nGlob (gN z g))) "=" w) = .ok (.assignGlob (nGlob (gN z g)) v)) := by
-  obtain ⟨gl, hf, hb, hv, hat⟩ := H.glob g
+  obtain ⟨gl, hf, hb, hv, hat, _⟩ := H.glob g
   have hs : strEq "=" "=" = true := by decide
   refine ⟨fun hg v hw => ?_, fun hg v hw => ?_⟩
   · have : gl.ty = .bool := hb.2 hg
@@ -355,6 +376,8 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   ergBool := H.ergBool
   ergInt := H.ergInt
   kanal0 := H.kanal0
+  griff := H.griff
+  reg := H.reg
   kanal := H.kanal
 
 theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -383,6 +406,8 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   ergBool := H.ergBool
   ergInt := H.ergInt
   kanal0 := H.kanal0
+  griff := H.griff
+  reg := H.reg
   kanal := H.kanal
 
 /-! ### Values of a `let`: a truth value is never read as a number -/
@@ -417,7 +442,7 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
     split at hu
     · simp at hu
     · rename_i hk
-      obtain ⟨j, hj, ha⟩ := H.var (tiefe x) (tiefe_lt x)
+      obtain ⟨j, hj, ha⟩ := H.var (tiefe x) (tiefe_lt x) (by simp)
       split at hu
       · rename_i hb
         simp [hk, uWertBody, uRechne, uWertBlatt, hj, ha, hb]
@@ -445,7 +470,7 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
         cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i with
         | none => simp [hx] at hu
         | some ix =>
-          have hz := zugriff_slot H t f i' ix (idx_ok H none t (sizeOf i + 1) i (by omega) i' ix hi hx) hL
+          have hz := zugriff_slot H t f i' ix (idx_ok H t (sizeOf i + 1) i (by omega) i' ix hi hx) hL
           simp only [slotS] at hz
           simp [uWertBody, uRechne, uWertBlatt, uGrenzwort, hz, H.boolFeld t f, hb]
       · simp at hu

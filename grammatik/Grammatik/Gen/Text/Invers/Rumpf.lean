@@ -5,7 +5,7 @@
              (with fuel above the term's size) builds exactly the plain statements `uOf*` computes from the model
              term, and `uEnde` the trailing return; the fragment keeps the held resources (`Λ' = Λ`).
 -/
-import Grammatik.Gen.Text.Invers.Ruf
+import Grammatik.Gen.Text.Invers.Geraet
 
 namespace Gabbro.Grammatik.Gen.Text
 
@@ -54,7 +54,7 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i with
       | none => simp [hx] at hu
       | some ix =>
-      have hix := idx_ok H.einv none t (sizeOf i + 1) i (by omega) i' ix hi hx
+      have hix := idx_ok H.einv t (sizeOf i + 1) i (by omega) i' ix hi hx
       have ha := anw1_slot H tabs koepfe t fd i' se ix hix hL
       refine ⟨rfl, by simp, ctx, H, fun f tail xs cE hf ht => ?_⟩
       simp only [List.length_singleton, List.singleton_append]
@@ -273,6 +273,58 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
           (bindWert_fnref H tabs f k i hi hk hKP (nZeiger Γ.length)) h2
         simpa using h1
       · simp at hu
+    | regWrite r hk e =>
+      simp only [delabS] at hd
+      cases he : delabE z none e with
+      | error _ => simp [he, bind, Except.bind] at hd
+      | ok se =>
+      simp only [he, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+      subst hd
+      have ha := anw1_regWrite H tabs koepfe r se
+      refine ⟨rfl, by simp, ctx, H, fun f tail xs cE hf ht => ?_⟩
+      simp only [List.length_singleton, List.singleton_append]
+      simp only [uOfSt] at hu
+      split at hu
+      · rename_i hb
+        cases hv : uOfB z art none e with
+        | none => simp [hv] at hu
+        | some v =>
+        simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
+        exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht
+      · rename_i hb
+        cases hv : uOfS z art none e with
+        | none => simp [hv] at hu
+        | some v =>
+        simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
+        exact reihe_anw1 tabs koepfe f ctx _ se tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht
+    | publish g e payload hp hw hL =>
+      subst hp
+      simp only [delabS] at hd
+      cases he : delabE z none e with
+      | error _ => simp [he, bind, Except.bind] at hd
+      | ok se =>
+      simp only [he, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+      subst hd
+      simp only [uOfSt] at hu
+      split at hu
+      · rename_i hat
+        have ha := anw1_publish H tabs koepfe g hat se
+        refine ⟨rfl, by simp, ctx, H, fun f tail xs cE hf ht => ?_⟩
+        simp only [List.length_singleton, List.singleton_append]
+        split at hu
+        · rename_i hb
+          cases hv : uOfB z art none e with
+          | none => simp [hv] at hu
+          | some v =>
+          simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
+          exact reihe_emit tabs koepfe f ctx _ se _ tail _ xs cE (ha.1 hb v (bool_ok H.einv e se v he hv)) ht
+        · rename_i hb
+          cases hv : uOfS z art none e with
+          | none => simp [hv] at hu
+          | some v =>
+          simp only [hv, Option.map_some, Option.some.injEq] at hu; subst hu
+          exact reihe_emit tabs koepfe f ctx _ se _ tail _ xs cE (ha.2 hb v (wert_ok H.einv e se v he hv)) ht
+      · simp at hu
     | _ => simp [uOfSt] at hu
   · intro l Γ Λ Λ' b ctx art f ss us hn hf H hd hu
     cases b with
@@ -482,6 +534,55 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
         (hKP.kanal hgr) hKP.ext hv (by rw [mitLokal_eq ctx H.muts]; exact hEB) hes
         (by rw [mitLokal_eq ctx H.muts]; exact hrest)
       simpa using this
+    | regRead r hk rest =>
+      simp only [delabB] at hd
+      cases hr' : delabB z V rest with
+      | error _ => simp [hr', bind, Except.bind] at hd
+      | ok ss2 =>
+      simp only [hr', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+      subst hd
+      simp only [uOfBl] at hu
+      cases hτ : artErg (z.deklaration.rtyp r) with
+      | none => simp [hτ] at hu
+      | some a =>
+      cases hur : uOfBl z V gNr (artAuf a art) rest with
+      | none => simp [hτ, hur] at hu
+      | some us2 =>
+      simp only [hτ, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
+      subst hu
+      obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
+      simp at hn hf
+      obtain ⟨ty, hb⟩ := bindWert_regRead H tabs koepfe r (nVar Γ.length) a hτ
+      have H' := H.push (z.deklaration.rtyp r) a ty 0 [] ctx.loops rfl
+      obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
+      exact ⟨hΛ, cE, reihe_bind tabs koepfe f' ctx _ _ _ ss2 _ us2 cE hb hrest⟩
+    | awaits g payload hp hL rest =>
+      subst hp
+      simp only [delabB] at hd
+      simp only [uOfBl] at hu
+      split at hu
+      · rename_i hat
+        simp only [hat, Bool.not_true, Bool.false_eq_true, ite_false] at hd
+        cases hr' : delabB z V rest with
+        | error _ => simp [hr', bind, Except.bind] at hd
+        | ok ss2 =>
+        simp only [hr', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+        subst hd
+        cases hτ : artErg (z.deklaration.gtyp g) with
+        | none => simp [hτ] at hu
+        | some a =>
+        cases hur : uOfBl z V gNr (artAuf a art) rest with
+        | none => simp [hτ, hur] at hu
+        | some us2 =>
+        simp only [hτ, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
+        subst hu
+        obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
+        simp at hn hf
+        obtain ⟨ty, hstep⟩ := reihe_await H tabs koepfe f' g hat (nVar Γ.length) a hτ ss2
+        have H' := H.push (z.deklaration.gtyp g) a ty 0 [] ctx.loops rfl
+        obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
+        exact ⟨hΛ, cE, hstep us2 cE hrest⟩
+      · simp at hu
     | _ => simp [uOfBl] at hu
   · intro l Γ Λ e ctx art f es en us r hn hf H hd hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩

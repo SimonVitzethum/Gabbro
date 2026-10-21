@@ -178,6 +178,8 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
   ergBool := H.ergBool
   ergInt := H.ergInt
   kanal0 := H.kanal0
+  griff := H.griff
+  reg := H.reg
   kanal := H.kanal
 
 theorem SInv.fnFremd {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
