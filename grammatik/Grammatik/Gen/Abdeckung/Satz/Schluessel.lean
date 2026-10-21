@@ -36,8 +36,8 @@ theorem gs_ruf (g : D.Fn) : mE (rufNur g) b' = mE (rufNur g) b := by
   simpa using this
 
 theorem gs_ind (g : D.Fn) :
-    mE ⟨fun _ => true, fun n => !(decide (n = D.sig g)), fun _ => true⟩ b' =
-      mE ⟨fun _ => true, fun n => !(decide (n = D.sig g)), fun _ => true⟩ b := by
+    mE ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩ b' =
+      mE ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩ b := by
   have := map_gleich (congrArg (·.ind) h) Aufz.fn_mem g
   simpa using this
 
@@ -73,8 +73,8 @@ end Teile
 /-! ## The atoms of a program with other bodies of the same summary -/
 
 theorem ruf_zerlegt (g : D.Fn) :
-    (⟨fun h => !(decide (h = g)), fun n => !(decide (n = D.sig g)), fun _ => true⟩ : Merkmal D) =
-      (rufNur g).und ⟨fun _ => true, fun n => !(decide (n = D.sig g)), fun _ => true⟩ :=
+    (⟨fun h => !(decide (h = g)), fun n => !(D.passt g n), fun _ => true⟩ : Merkmal D) =
+      (rufNur g).und ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩ :=
   Merkmal.gleich (fun _ => by simp [rufNur]) (fun _ => by simp [rufNur]) (fun _ => by simp [rufNur])
 
 
@@ -87,7 +87,7 @@ theorem gs_nimmtB (f : D.Fn) (L : D.Lock) : nimmtB (P.mitRumpf r) f L = nimmtB P
   simp only [nimmtB, Programm.mitRumpf]
   rw [gs_sperre (h f)]
 
-theorem gs_indB (f g : D.Fn) : indB (P.mitRumpf r) f (D.sig g) = indB P f (D.sig g) := by
+theorem gs_indB (f g : D.Fn) : indB (P.mitRumpf r) f g = indB P f g := by
   simp only [indB, Programm.mitRumpf]
   rw [gs_ind (h f) g]
 

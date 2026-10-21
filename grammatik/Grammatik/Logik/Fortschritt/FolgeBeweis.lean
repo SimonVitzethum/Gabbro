@@ -328,7 +328,7 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
       Bool.not_eq_true'] at hk
     refine ⟨hΦ.1 g, ⟨⟨fB_von_false Φ _ rest _ hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
     rw [hw]
-    exact armiert_aus hk.1.1 (hg ▸ hΦ.2 g (by simpa [Pflichtig] using hp))
+    exact armiert_aus hk.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
     dsimp only; rw [rufUpdateG_self]
     rw [hhead] at hk
@@ -337,14 +337,14 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
     refine ⟨hΦ.1 g, ⟨fE_mono Φ _ rest false _ (fun h => absurd h Bool.false_ne_true) hk.2, hst⟩,
       fun _ hp => ?_, hlog⟩
     rw [hw]
-    exact armiert_aus hk.1 (hg ▸ hΦ.2 g (by simpa [Pflichtig] using hp))
+    exact armiert_aus hk.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
     dsimp only; rw [rufUpdateG_self]
     rw [hhead] at hk
     simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
     refine ⟨hΦ.1 g, ⟨⟨fB_von_false Φ _ rest _ hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
     rw [hw]
-    exact armiert_aus hk.1.1 (hg ▸ hΦ.2 g (by simpa [Pflichtig] using hp))
+    exact armiert_aus hk.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
   | rueck caller rst hpop Γ Λ e hperm ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
     subst hfg
     dsimp only; rw [rufUpdateG_self]

@@ -348,14 +348,14 @@ theorem kandB_mitRuhe (L : List (D.Tab ⊕ D.Glob)) :
   show kandB P.mitRuhe (fsRuhe fs) L (n + 1) = kandB P fs L n
   unfold kandB
   rw [all_fsRuhe]
-  have h0 : decide ((D.mitRuhe).sig none = n + 1) = false :=
-    decide_eq_false (fun e => Nat.succ_ne_zero n e.symm)
+  have h0 : (D.mitRuhe).passt none (n + 1) = false :=
+    decide_eq_false (Nat.succ_ne_zero n)
   rw [h0, Bool.not_false, Bool.true_or, Bool.true_and]
   congr 1
   funext g
-  show (!decide (D.sig g + 1 = n + 1) ||
+  show (!D.passt g n ||
     ((P.mitRuhe.requires (some g)).orte ++ (P.mitRuhe.ensures (some g)).orte).all _) = _
-  rw [decide_succ_eq, requires_mitRuhe_orte, ensures_mitRuhe_orte] <;> rfl
+  rw [requires_mitRuhe_orte, ensures_mitRuhe_orte]
 
 omit [DecidableEq D.Fn] in
 theorem frag_mitRuhe (h : programmImFragmentG P fs = true) :
@@ -383,16 +383,16 @@ theorem abg_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (r
         · funext h
           exact reachB_mitRuhe P hvoll hAbg w h
         · funext n
-          show (fsRuhe fs).all (fun g' => !(decide ((D.mitRuhe).sig g' = n + 1)) ||
+          show (fsRuhe fs).all (fun g' => !((D.mitRuhe).passt g' (n + 1)) ||
             reachB P.mitRuhe (fsRuhe fs) (some w) g') = _
           rw [all_fsRuhe]
-          have h0 : decide ((D.mitRuhe).sig none = n + 1) = false :=
-            decide_eq_false (fun e => Nat.succ_ne_zero n e.symm)
+          have h0 : (D.mitRuhe).passt none (n + 1) = false :=
+            decide_eq_false (Nat.succ_ne_zero n)
           rw [h0, Bool.not_false, Bool.true_or, Bool.true_and]
           congr 1
           funext g
-          show (!decide (D.sig g + 1 = n + 1) || reachB P.mitRuhe (fsRuhe fs) (some w) (some g)) = _
-          rw [decide_succ_eq, reachB_mitRuhe P hvoll hAbg] <;> rfl
+          show (!D.passt g n || reachB P.mitRuhe (fsRuhe fs) (some w) (some g)) = _
+          rw [reachB_mitRuhe P hvoll hAbg]
         · rfl
       rw [e]
       exact hAbg w f hf

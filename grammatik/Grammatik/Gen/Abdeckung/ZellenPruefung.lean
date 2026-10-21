@@ -62,18 +62,18 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
 
 /-- The pinned hashes (label, hash). Update them as described in the header after reading the component again. -/
 def erwartet : List (String × UInt64) :=
-  [("0 fragment", 8654583959421353333),
-   ("1 closedness", 12699608494913746389),
-   ("2 footprint", 14030996436783505825),
-   ("3 lock ranks", 3873989724843786561),
+  [("0 fragment", 11784597549757069307),
+   ("1 closedness", 6091677345767101339),
+   ("2 footprint", 13799771554190116575),
+   ("3 lock ranks", 2002890620753750340),
    ("4 lock sites", 9116693156525816439),
    ("5 roots", 17828337562962847522),
-   ("6 single pool", 16549356351520422014),
-   ("7 race freedom", 9873151054988180322),
-   ("8 answers", 16587936029701214941),
-   ("9 masks", 2683044600297016572),
-   ("komp", 17317432167155265118),
-   ("AkzeptiertX", 7300689410279173872)]
+   ("6 single pool", 18081660270244486284),
+   ("7 race freedom", 14236900846788978772),
+   ("8 answers", 3703081933841294477),
+   ("9 masks", 3076649874126331178),
+   ("komp", 7464404494927189518),
+   ("AkzeptiertX", 16393664962123678392)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

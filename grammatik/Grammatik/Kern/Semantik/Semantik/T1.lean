@@ -403,11 +403,11 @@ def gleitWortPasst (lo hi : Int × Int) (n : Int) : Option (Gleit lo hi) :=
   else Option.none
 
 /-- **A raw word as a function pointer** (G1 repair): the word is a code address; the loaded
-    image `z` (`Orakel.zeiger`) names the function at it, and its signature number is held
-    against the declared `fnptr n`. -/
-def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn // D.sig f = m} :=
+    image `z` (`Orakel.zeiger`) names the function at it, and its conformance to the declared
+    `fnptr n` is held (`Deklaration.passt`). -/
+def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn // D.passt f m = true} :=
   match z n with
-  | Option.some f => if h : D.sig f = m then some ⟨f, h⟩ else Option.none
+  | Option.some f => if h : D.passt f m = true then some ⟨f, h⟩ else Option.none
   | Option.none => Option.none
 
 /-- Ein rohes Ergebnis der Maschine, gegen einen Typ gehalten: passt es nicht, ist die

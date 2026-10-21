@@ -389,7 +389,7 @@ theorem stmt_treu :
       split at h
       · rename_i σ1 v hR1
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        subst hf
+        replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         exact hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
       · rename_i σ1 r _; exact keinGrundSig hf hr r
@@ -478,7 +478,7 @@ theorem block_treu :
       split at h
       · rename_i σ1 v hR1
         have g2 := block_treu rest σ1 (.cons (ergWert (ergSig hf he) v) ρ)
-        subst hf
+        replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans (g2.schrumpf σ' h)
@@ -699,7 +699,7 @@ theorem end_treu :
       split at h
       · rename_i σ1 v hR1
         have g2 := end_treu rest σ1 (.cons (ergWert (ergSig hf he) v) ρ)
-        subst hf
+        replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans (g2.schrumpf σ' h)

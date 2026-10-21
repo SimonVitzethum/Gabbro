@@ -19,8 +19,7 @@ theorem ruftB_mitRuhe (f g : D.Fn) : ruftB P.mitRuhe (some f) (some g) = ruftB P
     congr 1
     exact decide_eq_decide.mpr ⟨fun e => Option.some.inj e, fun e => e ▸ rfl⟩
   · funext n
-    show (!decide (n + 1 = D.sig g + 1)) = !decide (n = D.sig g)
-    congr 1
+    rfl
   · rfl
 
 theorem ruftB_mitRuhe_ruhe_ziel (hT : ∀ f, mE (mVoll D) (P.rumpf f) = true) (f : D.Fn) :
@@ -111,17 +110,17 @@ theorem abgK_ruft (hvoll : ∀ g : D.Fn, g ∈ fs) {Z : D.Fn → Bool} (hA : Abg
   · exfalso
     have hm := hA f hf
     have hle : MLe (rufM fs Z)
-        ⟨fun h => !(decide (h = g)), fun n => !(decide (n = D.sig g)), fun _ => true⟩ := by
+        ⟨fun h => !(decide (h = g)), fun n => !(D.passt g n), fun _ => true⟩ := by
       refine ⟨fun h hh => ?_, fun n hn => ?_, fun _ _ => rfl⟩
       · show (!decide (h = g)) = true
         have hh' : Z h = true := hh
         have : h ≠ g := fun e => by subst e; rw [hh'] at hg; cases hg
         simp [this]
-      · show (!decide (n = D.sig g)) = true
+      · show (!D.passt g n) = true
         have h1 := (List.all_eq_true.mp hn) g (hvoll g)
-        by_cases e : n = D.sig g
-        · subst e; simp [hg] at h1
-        · simp [e]
+        cases e : D.passt g n
+        · rfl
+        · simp [e, hg] at h1
     have := mE_mono hle _ hm
     unfold ruftB at hr
     rw [this] at hr

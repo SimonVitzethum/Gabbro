@@ -289,6 +289,8 @@ instance aufz : Aufz z.deklaration where
   reg_mem := fun r => List.mem_finRange r
   annahme := List.finRange (z.annahmen + 1)
   annahme_mem := fun a => List.mem_finRange a
+  sigs := (List.finRange z.fns.length).map z.deklaration.sig
+  sigs_mem := fun f n h => List.mem_map.2 ⟨f, List.mem_finRange f, of_decide_eq_true h⟩
   decFn := inferInstanceAs (DecidableEq (Fin z.fns.length))
   decInv := inferInstanceAs (DecidableEq (Fin z.invs.length))
   decAx := inferInstanceAs (DecidableEq (Fin z.axs.length))

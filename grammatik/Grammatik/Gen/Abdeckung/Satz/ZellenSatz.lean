@@ -184,12 +184,12 @@ theorem urteil_0 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D
   simp only [urteilAusZellen, zellen, komp, programmImFragmentG, List.all_flatMap, List.all_map, Function.comp_def,
     Zelle.schlecht, Zelle.kern, Zelle.kern?, Option.getD_some, Bool.true_and, Bool.not_not, gOk_ohne_test]
   apply congrArg (List.all fs); funext f
-  rw [show kandB P fs (fussOrteG P f) = fun n => fs.all fun g => !(decide (D.sig g = n)) ||
+  rw [show kandB P fs (fussOrteG P f) = fun n => fs.all fun g => !(D.passt g n) ||
       ((P.requires g).orte ++ (P.ensures g).orte).all fun o => (fussOrteG P f).any fun o' => decide (o' = o) from rfl,
     eGOk, kand_zerlegt]
   apply congrArg (List.all fs); funext g
   rw [indB_eq]
-  generalize mE (ohneInd (D.sig g)) (P.rumpf f) = x
+  generalize mE (ohneInd g) (P.rumpf f) = x
   have hc : ((vertragsOrte P g).any fun o => !(istIn (fussOrteG P f) o)) =
       !(((P.requires g).orte ++ (P.ensures g).orte).all fun o => (fussOrteG P f).any fun o' => decide (o' = o)) := by
     simp only [vertragsOrte, istIn]

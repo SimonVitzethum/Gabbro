@@ -75,9 +75,10 @@ theorem gleit_endlich (e : Expr D Γ Λ (.fl lo hi)) (σ₀ σ : World D) (ρ : 
       ∧ gleitLe (eval σ₀ e σ ρ).x (bruch hi) = true :=
   ⟨(eval σ₀ e σ ρ).endlich, (eval σ₀ e σ ρ).lo_le, (eval σ₀ e σ ρ).le_hi⟩
 
-/-- Ein Funktionszeiger zeigt auf eine Funktion GENAU seiner Signatur («B8»). -/
+/-- A function pointer points to a function that conforms to its type («B8», structural since
+    2026-10-21): its own signature fits the pointer's (`SigPasst`). -/
 theorem fnptr_passt (e : Expr D Γ Λ (.fnptr n)) (σ₀ σ : World D) (ρ : Env D Γ) :
-    D.sig (eval σ₀ e σ ρ).val = n :=
+    D.passt (eval σ₀ e σ ρ).val n = true :=
   (eval σ₀ e σ ρ).property
 
 /-- Es gibt keinen Wert vom Typ `never`: ein Rumpf `-> never` hat kein `return`. -/
