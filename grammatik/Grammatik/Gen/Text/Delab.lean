@@ -220,25 +220,89 @@ end
 def kommaNamen (ns : List String) : List Token :=
   (ns.map fun n => [nameTok n]).intersperse [.zeichen ","] |>.flatten
 
-/-- The locks a body takes itself (fuel for the nesting). -/
-def genommenF : Nat → SAnw → List String
-  | 0, _ => []
-  | n + 1, .locks _ (.variable L) b => L :: genommenF n b
-  | n + 1, .block ss _ => ss.flatMap (genommenF n)
-  | n + 1, .cond _ t eis s => genommenF n t ++ eis.flatMap (genommenF n) ++ (s.map (genommenF n)).getD []
-  | n + 1, .bindElse _ _ _ _ b => genommenF n b
-  | n + 1, .each _ _ _ _ _ _ _ b => genommenF n b
-  | _, _ => []
+/- The locks a body takes itself (`locks L { .. }`, in the order they are written), read off the model. -/
+mutual
 
-def genommen (s : SAnw) : List String := genommenF 1000 s
+def sperrenS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
+    Stmt z.deklaration V l Γ Λ Λ' → List z.deklaration.Lock
+  | .locks L _ body => L :: sperrenB body
+  | .ite _ t e => sperrenB t ++ sperrenB e
+  | .traverse _ _ body => sperrenB body
+  | _ => []
 
-/-- Does a body name the device handle? -/
-def nGlobs (gs : List Nat) : List String := gs.map nGlob
+def sperrenB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
+    Block z.deklaration V l Γ Λ Λ' → List z.deklaration.Lock
+  | .cons s rest => sperrenS s ++ sperrenB rest
+  | .bind _ rest => sperrenB rest
+  | .bindCall _ _ _ _ _ rest => sperrenB rest
+  | .bindCallElse _ _ _ _ _ err rest => sperrenE err ++ sperrenB rest
+  | .bindCallInd _ _ _ _ _ rest => sperrenB rest
+  | .regRead _ _ rest => sperrenB rest
+  | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenB rest
+  | .awaits _ _ _ _ rest => sperrenB rest
+  | _ => []
+
+def sperrenE {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
+    Endblock z.deklaration V l Γ Λ → List z.deklaration.Lock
+  | .cons s rest => sperrenS s ++ sperrenE rest
+  | .bind _ rest => sperrenE rest
+  | .bindCall _ _ _ _ _ rest => sperrenE rest
+  | .bindCallElse _ _ _ _ _ err rest => sperrenE err ++ sperrenE rest
+  | _ => []
+
+end
 
 /-- The parameters: the `j`-th of `np` is `v{np-1-j}` (the variable of depth `j` in the body). -/
 def parListe (np : Nat) : Nat → List Ty → Except String (List (String × STyp))
   | _, [] => .ok []
   | j, t :: ts => do .ok ((nVar (np - 1 - j), ← typS t) :: (← parListe np (j + 1) ts))
+
+/-- The result type of a function. -/
+def delabRes (f : Fin z.fns.length) : Except String (Option STyp) :=
+  match (z.deklaration.signatur f).erg with
+  | none => pure none
+  | some t => do pure (some (← typS t))
+
+/-- The `requires` clause (none for `true`). -/
+def delabReq (P : Programm z.deklaration) (f : Fin z.fns.length) : Except String (List SKlausel) :=
+  match P.requires f with
+  | .tru => pure []
+  | e => do pure [SKlausel.needs (← delabE z none e)]
+
+/-- The `ensures` clause (none for `true`); its result is named by its number. -/
+def delabEns (P : Programm z.deklaration) (f : Fin z.fns.length) : Except String (List SKlausel) :=
+  match P.ensures f with
+  | .tru => pure []
+  | e => do pure [SKlausel.gives (← delabE z ((z.deklaration.signatur f).erg.map fun _ =>
+      (z.deklaration.signatur f).params.length) e)]
+
+/-- The held locks, the written tables and statics, the locks the body takes: by name. -/
+def heldNamen (f : Fin z.fns.length) : List String :=
+  (z.deklaration.signatur f).haelt.map fun L => nLock (show Fin z.locks.length from L).val
+def tNamen (f : Fin z.fns.length) : List Nat :=
+  ((List.finRange z.tabs.length).filter fun t => (z.deklaration.signatur f).schreibt t).map (·.val)
+def gNamen (f : Fin z.fns.length) : List Nat :=
+  ((List.finRange z.globs.length).filter fun g => (z.deklaration.signatur f).gschreibt g).map (·.val)
+def lNamen (P : Programm z.deklaration) (f : Fin z.fns.length) : List String :=
+  ((sperrenE z (vertragVon z.deklaration f) (P.rumpf f)).map fun L => nLock (show Fin z.locks.length from L).val).eraseDups
+
+/-- The effects of a function. -/
+def effListe (P : Programm z.deklaration) (f : Fin z.fns.length) : List SEffekt :=
+  (tNamen z f).map (fun i => SEffekt.writes (.field (.variable (nTab i)) "slots")) ++
+    (gNamen z f).map (fun i => SEffekt.writes (.variable (nGlob i))) ++
+    (lNamen z P f).map (fun l => SEffekt.locks false (.variable l))
+
+/-- `requires Held(..)` for the held locks (none without). -/
+def heldKlausel (f : Fin z.fns.length) : List SKlausel :=
+  if (heldNamen z f).isEmpty then [] else [SKlausel.needs (.call "Held" ((heldNamen z f).map SExpr.variable))]
+
+/-- `effects { .. }` (none without). -/
+def effKlausel (P : Programm z.deklaration) (f : Fin z.fns.length) : List SKlausel :=
+  if (effListe z P f).isEmpty then [] else [SKlausel.effs (effListe z P f)]
+
+/-- The clauses of a function. -/
+def klauselnVon (P : Programm z.deklaration) (f : Fin z.fns.length) (req ens : List SKlausel) : List SKlausel :=
+  heldKlausel z f ++ req ++ ens ++ effKlausel z P f
 
 /-- One function. -/
 def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length) : Except String SItemTief := do
@@ -246,29 +310,13 @@ def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length
   let np := s.params.length
   let ps ← parListe np 0 s.params
   let ps := ps ++ (if mitGriff then [("d", .atom "Dev")] else [])
-  let res ← match s.erg with
-    | none => pure none
-    | some t => do pure (some (← typS t))
-  let held := s.haelt.map fun L => SExpr.variable (nLock (show Fin z.locks.length from L).val)
-  let heldK := if held.isEmpty then [] else [SKlausel.needs (.call "Held" held)]
-  let req ← match P.requires f with
-    | .tru => pure []
-    | e => do pure [SKlausel.needs (← delabE z none e)]
-  let ens ← match P.ensures f with
-    | .tru => pure []
-    | e => do pure [SKlausel.gives (← delabE z (s.erg.map fun _ => np) e)]
+  let res ← delabRes z f
+  let req ← delabReq z P f
+  let ens ← delabEns z P f
   let (ss, ende) ← delabEnd z (vertragVon z.deklaration f) (P.rumpf f)
-  let koerper := SAnw.block ss ende
-  let schreibt := ((List.finRange z.tabs.length).filter fun t => s.schreibt t).map
-    (fun t => SEffekt.writes (.field (.variable (nTab t.val)) "slots"))
-  let gschreibt := ((List.finRange z.globs.length).filter fun g => s.gschreibt g).map
-    (fun g => SEffekt.writes (.variable (nGlob g.val)))
-  let sperren := (genommen koerper).eraseDups.map fun L => SEffekt.locks false (.variable L)
-  let eff := schreibt ++ gschreibt ++ sperren
-  let effK := if eff.isEmpty then [] else [SKlausel.effs eff]
   pure (.fnT { art := "impl", name := nFn f.val, params := ps, res,
                fehler := if s.gruende = 0 then none else some (nGrund s.gruende),
-               klauseln := heldK ++ req ++ ens ++ effK } koerper)
+               klauseln := klauselnVon z P f req ens } (SAnw.block ss ende))
 
 /-- The reason types the unit names. -/
 def gruende : List Nat :=
