@@ -601,3 +601,4 @@ import Grammatik.Gen.Zeugen.N.N3_0
 import Grammatik.Gen.Zeugen.N.N47_20
 import Grammatik.Gen.Zeugen.N.N47_45
 import Grammatik.Gen.Zeugen.Schluss
+import Grammatik.Gen.Text.Satz
