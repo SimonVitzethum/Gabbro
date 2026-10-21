@@ -466,8 +466,8 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     | .error e => .error e
     | .ok g =>
       if hk : ((declOf u).rklasse g).lesbar = true then
-        match lowSeqL (l := l) u caller (.int (regAt u g).lo (regAt u g).hi :: Γ)
-            (fn.mitBindung x ((regAt u g).lo, (regAt u g).hi)) n Λ pe rest with
+        match lowSeqL (l := l) u caller ((regAt u g).ty :: Γ)
+            (fn.mitTy x (regAt u g).ty) n Λ pe rest with
         | .error e => .error e
         | .ok (b, r') => .ok (Block.regRead (D := declOf u) g hk b, r')
       else .error "lower: register read against its class"
@@ -479,15 +479,15 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         match (regAt u g).pruefung with
         | none => .error "lower: register read without a check"
         | some p =>
-          match lowEns u (.int (regAt u g).lo (regAt u g).hi :: Γ) Λ
-              (fn.mitBindung (regAt u g).name ((regAt u g).lo, (regAt u g).hi)) none p with
+          match lowEns u ((regAt u g).ty :: Γ) Λ
+              (fn.mitTy (regAt u g).name (regAt u g).ty) none p with
           | .error e => .error e
           | .ok zu =>
             match lowEndL (l := l) u caller Γ fn n Λ pe rest with
             | .error e => .error e
             | .ok (sonst, .blkEnd :: rest') =>
-              match lowSeqL (l := l) u caller (.int (regAt u g).lo (regAt u g).hi :: Γ)
-                  (fn.mitBindung x ((regAt u g).lo, (regAt u g).hi)) n Λ pe rest' with
+              match lowSeqL (l := l) u caller ((regAt u g).ty :: Γ)
+                  (fn.mitTy x (regAt u g).ty) n Λ pe rest' with
               | .error e => .error e
               | .ok (b, r') => .ok (Block.regReadElse (D := declOf u) g hk zu sonst b, r')
             | .ok (_, _) => .error "lower: a let else is not closed"

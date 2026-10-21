@@ -4,7 +4,8 @@
              the program the text is (`NeutralText`, `NeutralKorrektText`, over `ausText`) and answers right on the 7 + 13
              witness texts answers right on every text that is a program of the source.
 
-  The witness texts are the printed delaborations of the witnesses of `Gen/Zeugen` (`textVon`); each reads back as a
+  `M99_824` waits at a static that is no atomic, which the language does not say; its text is a premise (`Text99`)
+  until the witness is regenerated over the narrowed model. The witness texts are the printed delaborations of the witnesses of `Gen/Zeugen` (`textVon`); each reads back as a
   program with the witness's cells and verdict (`Zeugen/<w>.lean`). Only cells and verdicts need to agree: a
   cell-neutral checker cannot tell two programs with the same cells apart, so no equality of declarations is needed.
 -/
@@ -14,7 +15,6 @@ import Grammatik.Gen.Text.Zeugen.M16_13
 import Grammatik.Gen.Text.Zeugen.M169_350
 import Grammatik.Gen.Text.Zeugen.M47_549
 import Grammatik.Gen.Text.Zeugen.M49_50
-import Grammatik.Gen.Text.Zeugen.M99_824
 import Grammatik.Gen.Text.Zeugen.N16_5
 import Grammatik.Gen.Text.Zeugen.N18_0
 import Grammatik.Gen.Text.Zeugen.N18_4
@@ -41,9 +41,11 @@ def NeutralText (R : String → Bool) : Prop :=
 def NeutralKorrektText (K : String → Prop) : Prop :=
   ∃ ψ : Zelle → Prop, ∀ s e, ausText s = .ok e → (K s ↔ ∀ z, e.Hat z → ψ z)
 
-/-- The texts of the valid witnesses (the order of `Mw`). -/
-def mText : List String :=
-  [textVon Zeugen.M99_824.z Zeugen.M99_824.P Zeugen.M99_824.ws,
+/-- The texts of the valid witnesses (the order of `Mw`), the text `t99` of `M99_824` given: that witness waits at a
+    static that is no atomic, which the language does not say (the model is being narrowed so the generator no
+    longer emits it; the witness is regenerated after that change). -/
+def mText (t99 : String) : List String :=
+  [t99,
    textVon Zeugen.M47_549.z Zeugen.M47_549.P Zeugen.M47_549.ws,
    textVon Zeugen.M169_350.z Zeugen.M169_350.P Zeugen.M169_350.ws,
    textVon Zeugen.M16_13.z Zeugen.M16_13.P Zeugen.M16_13.ws,
@@ -67,12 +69,17 @@ def nText : List String :=
    textVon Zeugen.N47_20.z Zeugen.N47_20.P Zeugen.N47_20.ws,
    textVon Zeugen.N47_45.z Zeugen.N47_45.P Zeugen.N47_45.ws]
 
+/-- The text of `M99_824` reads back with its cells and verdict (a premise until the witness is regenerated). -/
+def Text99 (t99 : String) : Prop :=
+  ∃ e', ausText t99 = .ok e' ∧ e'.zellen = Gen.Zeugen.M99_824.e.zellen ∧ e'.gueltig = Gen.Zeugen.M99_824.e.gueltig
+
 /-- **Every witness has its text**: a text in the list that reads back with the witness's cells and verdict. -/
-theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
+theorem m_texte (t99 : String) (h99 : Text99 t99) :
+    ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText t99, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
   intro m hm
   simp only [Zeugen.Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact ⟨_, by simp [mText], Zeugen.M99_824.text⟩
+  · exact ⟨_, by simp [mText], h99⟩
   · exact ⟨_, by simp [mText], Zeugen.M47_549.text⟩
   · exact ⟨_, by simp [mText], Zeugen.M169_350.text⟩
   · exact ⟨_, by simp [mText], Zeugen.M16_13.text⟩
@@ -106,14 +113,14 @@ theorem akzeptiert_zellen (φ : Zelle → Bool) (e e' : Einsatz) (h : e.zellen =
 
 /-- **A cell-neutral checker on source text that answers like the model on the 7 + 13 witness texts answers like
     the model on every text that is a program of the source.** -/
-theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
-    (hM : ∀ t ∈ mText, R t = true) (hN : ∀ t ∈ nText, R t = false) :
+theorem pruefer_text_korrekt (t99 : String) (h99 : Text99 t99) (R : String → Bool) (hR : NeutralText R)
+    (hM : ∀ t ∈ mText t99, R t = true) (hN : ∀ t ∈ nText, R t = false) :
     ∀ s e, ausText s = .ok e → R s = e.gueltig := by
   obtain ⟨φ, hφ⟩ := hR
   classical
   let C : Einsatz → Bool := fun e => decide (akzeptiert Einsatz.Hat φ e)
   have hC : Neutral C := ⟨φ, fun e => by simp [C]⟩
-  have hCw : ∀ w t e', t ∈ mText ∨ t ∈ nText → ausText t = .ok e' → e'.zellen = w.zellen →
+  have hCw : ∀ w t e', t ∈ mText t99 ∨ t ∈ nText → ausText t = .ok e' → e'.zellen = w.zellen →
       C w = R t := by
     intro w t e' _ ht hz
     have h1 := hφ t e' ht
@@ -128,7 +135,7 @@ theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
       exact h1.1 hr
   have hMC : ∀ m ∈ Zeugen.Mw, C m = m.gueltig := by
     intro m hm
-    obtain ⟨t, htm, e', ht, hz, hg⟩ := m_texte m hm
+    obtain ⟨t, htm, e', ht, hz, hg⟩ := m_texte t99 h99 m hm
     rw [hCw m t e' (Or.inl htm) ht hz, hM t htm]
     have : m.gueltig = true := Zeugen.zeugen_tafel.gut_m m hm
     rw [this]
@@ -147,14 +154,15 @@ theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
 
 /-- **A cell-neutral compiler on source text correct on the 7 valid witness texts is correct on every text that is a
     valid program of the source.** -/
-theorem compiler_text_korrekt (K : String → Prop) (hK : NeutralKorrektText K) (hM : ∀ t ∈ mText, K t) :
+theorem compiler_text_korrekt (t99 : String) (h99 : Text99 t99) (K : String → Prop) (hK : NeutralKorrektText K)
+    (hM : ∀ t ∈ mText t99, K t) :
     ∀ s e, ausText s = .ok e → e.gueltig = true → K s := by
   obtain ⟨ψ, hψ⟩ := hK
   let K' : Einsatz → Prop := fun e => ∀ z, e.Hat z → ψ z
   have hK' : NeutralKorrekt K' := ⟨ψ, fun _ => Iff.rfl⟩
   have hMK : ∀ m ∈ Zeugen.Mw, K' m := by
     intro m hm
-    obtain ⟨t, htm, e', ht, hz, _⟩ := m_texte m hm
+    obtain ⟨t, htm, e', ht, hz, _⟩ := m_texte t99 h99 m hm
     have := (hψ t e' ht).1 (hM t htm)
     intro z hzm
     exact this z (by unfold Einsatz.Hat; rw [hz]; exact hzm)

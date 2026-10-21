@@ -134,7 +134,7 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | _ + 1, false, .emit z w p => gutPlatz z && gut w && pubGutB p
   | _ + 1, false, .await x q p => x != "mut" && gut q && rohZuB p
   | n + 1, false, .each _ none _ s _ r i body =>
-    gut s && r == "" && i.all gut && anwGutB n true body
+    gut s && r == "" && i.all (predGutB 50) && anwGutB n true body
   | _ + 1, false, .ret none => true
   | _ + 1, false, .ret (some e) => gut e
   | _ + 1, false, _ => false
@@ -192,7 +192,7 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
         simp only [anwGutB, Bool.and_eq_true, beq_iff_eq] at h
         obtain ⟨⟨⟨hs, rfl⟩, hi⟩, hb⟩ := h
         refine .each b none k s m "" i body (by simp) hs rohTrav_leer ?_ (by simpa using ih true body hb)
-        intro e he; subst he; simpa using hi
+        intro e he; subst he; exact predGutB_sound 50 e (by simpa using hi)
       | .ret none, _ => exact .retLeer
       | .ret (some e), h => exact .ret e (by simpa [anwGutB] using h)
 

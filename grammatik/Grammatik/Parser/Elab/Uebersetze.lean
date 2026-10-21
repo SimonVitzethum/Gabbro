@@ -247,6 +247,8 @@ inductive UStmt
   | regReadElse : String → String → String → UStmt
   /-- `d.R = v;` (`Stmt.regWrite`): device, register, value. -/
   | regWrite : String → String → USide → UStmt
+  /-- `d.R = p;` at a truth-valued register: device, register, predicate. -/
+  | regWriteB : String → String → UEns → UStmt
   /-- `transition T.slots[i].f : A -> B;` (`Stmt.shift`): table, field, index, the state, the stage numbers. -/
   | shiftTab : String → String → UIdx → String → Int → Int → UStmt
   /-- `let p = &f;` (`Block.bind` of `Expr.fnref`): binder, function. -/
@@ -370,7 +372,12 @@ structure UReg where
   traeger : List String := []
   zusage : Option UEns := none
   pruefung : Option UEns := none
+  /-- A truth-valued register (`reg R : bool`): `Ty.bool`, the promise read at `0`/`1`. -/
+  bool : Bool := false
   deriving DecidableEq, Repr
+
+/-- The type of a register: a truth value, or its integer range. -/
+def UReg.ty (g : UReg) : Ty := bif g.bool then .bool else .int g.lo g.hi
 
 /-- A parameter kind: a pointer to a table, an index into one,
     or a plain integer range (kept beside the `Ty` so an index
@@ -392,6 +399,10 @@ inductive UParamArt
       number: one signature per function, `sig f = f`). -/
   | fnptr : Nat → UParamArt
   deriving DecidableEq, Repr
+
+/-- The kind of a local bound to a register read. -/
+def UReg.art (g : UReg) : UParamArt := bif g.bool then .bool else .int
+
 
 /-- The elaboration context of one function body or contract:
     parameter names, kinds and types in order, the tables and
@@ -2042,6 +2053,10 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     | some (.error e) => .error e
     | some (.ok rg) =>
       if !strEq op "=" then .error "compound register write without G form"
+      else if rg.bool then
+        match uBool ctx wert with
+        | .error e => .error e
+        | .ok b => .ok (.regWriteB rg.dev rg.name b)
       else
         match uWertBody ctx wert with
         | .error e => .error e
@@ -2290,7 +2305,7 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
     if mu || t.isSome then .error "let of a register with a type without G form"
     else if rg.pruefung.isSome then .error "fallible register read needs `let .. else`"
     else .ok (.regRead x rg.dev rg.name,
-      uMitLokal ctx x UParamArt.int (Ty.int rg.lo rg.hi) (ctx.muts.filter (fun m => !strEq m x)))
+      uMitLokal ctx x rg.art rg.ty (ctx.muts.filter (fun m => !strEq m x)))
   | none =>
   match (match t with | .some (.atom a) => ctx.sums.findIdx? (fun (s : USum) => strEq s.name a) | _ => none : Option Nat) with
   | .some k =>
@@ -2639,7 +2654,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           match uEndeStmt ctxEB en with
           | .error err => .error err
           | .ok endS =>
-            match uAnwReihe tabs koepfe f (uMitLokal ctx y UParamArt.int (Ty.int rg.lo rg.hi)
+            match uAnwReihe tabs koepfe f (uMitLokal ctx y rg.art rg.ty
                 (ctx.muts.filter (fun m => !strEq m y))) rest with
             | .error err => .error err
             | .ok (ys, cE) => .ok ([UStmt.regReadElse y rg.dev rg.name] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
@@ -3336,9 +3351,11 @@ def uReg (alias : List (String × (Int × Int))) (lits : List (String × Int)) (
   if !rg.stage.isEmpty then .error "register class per stage without G form"
   else if !rg.felder.isEmpty then .error "register fields without G form"
   else
-    match uErgBereich alias rg.rtyp with
+    match (match rg.rtyp with
+        | .atom "bool" => .ok (0, 1, true)
+        | t => (uErgBereich alias t).map fun (lo, hi) => (lo, hi, false) : Except String (Int × Int × Bool)) with
     | .error e => .error e
-    | .ok (lo, hi) =>
+    | .ok (lo, hi, istB) =>
       match uRegKlasse rg.klasse with
       | .error e => .error e
       | .ok k =>
@@ -3359,8 +3376,8 @@ def uReg (alias : List (String × (Int × Int))) (lits : List (String × Int)) (
           | .error e => .error e
           | .ok pr =>
             match rg.elseF with
-            | some _ => .ok { dev, name := rg.name, lo, hi, klasse := k, traeger := ts, pruefung := pr }
-            | none => .ok { dev, name := rg.name, lo, hi, klasse := k, traeger := ts, zusage := pr }
+            | some _ => .ok { dev, name := rg.name, lo, hi, klasse := k, traeger := ts, pruefung := pr, bool := istB }
+            | none => .ok { dev, name := rg.name, lo, hi, klasse := k, traeger := ts, zusage := pr, bool := istB }
 
 /-- `mirrors W from M` of a device: `M` at `W`. -/
 def uSpiegelPaare : List SGerTeil → Except String (List (String × String))
@@ -3854,7 +3871,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       | .ok t => .ok (.cons s t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
-    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .regWriteB .. :: _, _ | .awaitBind .. :: _, _
     | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .shiftTab .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
@@ -3893,7 +3910,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
-    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .regWriteB .. :: _, _ | .awaitBind .. :: _, _
     | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .shiftTab .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
@@ -4588,6 +4605,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>
     strEq a b && strEq d e && strEq r s
   | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && beqUSide v w
+  | .regWriteB d r v, .regWriteB e s w => strEq d e && strEq r s && beqUEns v w
   | .shiftTab a f x s v w, .shiftTab b g y z v' w' =>
     strEq a b && strEq f g && beqUIdx x y && strEq s z && v == v' && w == w'
   | .awaitBind a g, .awaitBind b h => strEq a b && strEq g h

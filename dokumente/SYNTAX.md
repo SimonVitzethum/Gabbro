@@ -1382,6 +1382,8 @@ traverse   = "traverse" ident [ "of" expr ]
              [ "touches" efflist ]
              [ "invariant" pred ]
              block ;
+(* The `traverse` invariant is a `pred` like every contract: `forall/exists k in slots of T : p`
+   stands there as in a `requires` (`Stmt.traverse t inv body`, `inv : Expr .bool`). *)
 
 retry      = "retry" [ ident ] [ "until" pred ]
              "bounded"     expr "ops"
@@ -1676,7 +1678,7 @@ device  = [ "pub" ] "device" ident [ "(" params ")" ] "at" space
           "{" [ mirrors ] { regdecl | bank | transition } "}" ;
 mirrors = "mirrors" place "from" place ";" ;       (* ONCE per device, not per transition *)
 bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
-regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
+regdecl = "reg" ident ":" ( intty [ "wrapping" ] | "bool" ) "@" expr
           "class" regklasse [ regphasen ]
           [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
           [ "requires" pred [ "else" ident "::" ident ] ]
@@ -1725,7 +1727,7 @@ the write replaces; every other bit comes from the mirror.
 
 | spelling | attribute | outcome | Lean |
 |---|---|---|---|
-| `reg R : τ @off class K` | a register of type `τ` and class `K` — **outside the world**: a device is not a carrier | | `D.Reg`, `D.rtyp`, `D.rklasse`, `Regklasse` |
+| `reg R : τ @off class K` | a register of type `τ` and class `K` — **outside the world**: a device is not a carrier. `τ` is an integer range or `bool` (a truth-valued register: `D.rtyp R = Ty.bool`, its promise read at `0`/`1`; a write takes a truth value) | | `D.Reg`, `D.rtyp`, `D.rklasse`, `Regklasse` |
 | `let x = R;` | `K` is readable (`r`, `rw`, `w1c`, `rc`); the machine answers **raw**, the answer is held against `τ` | **`hardware (register r)`** if outside `τ` | `Block.regRead r hk rest`; `Orakel.regLies` |
 | `let x = R else (e) endblock;` | additionally `R`'s `requires p` is checked **on the binding**; the `else` does not fall off | — | `Block.regReadElse r hk zusage sonst rest` |
 | `R = e;` | `K` is writable (`w`, `rw`, `w1c`) | — (the world is unchanged: the device is not in it) | `Stmt.regWrite r hk e`; `Orakel.regSchreib` |

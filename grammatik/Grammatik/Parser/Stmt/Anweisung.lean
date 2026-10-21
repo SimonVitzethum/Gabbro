@@ -579,7 +579,7 @@ def parseTraverse (f : Nat) (toks : List Token) :
                     | .error e => .error e
                     | .ok (raw, r9) =>
                       match (match r9 with
-                          | .wort "invariant" :: r => match parseOr f r with
+                          | .wort "invariant" :: r => match parsePred f r with
                             | .error e => .error e
                             | .ok (i, r') => .ok (some i, r')
                           | _ => .ok (none, r9) : Except String (Option SExpr × List Token)) with
