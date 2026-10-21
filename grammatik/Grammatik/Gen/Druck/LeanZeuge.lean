@@ -86,11 +86,15 @@ def Spez.leanZeuge (z : Spez) (i _nc : Nat) (stamm : String) (P : Programm z.dek
   -- hn hnb hk hP hws hax hb: the bounds, the table bound, the size, the contract variant, the starts, no foreign body, the floors
   let seite := s!"{allF (gr ++ " ≤ (grenzenVon " ++ toString i ++ ").1")} (by decide)\n    (by decide) {hP} (ws := ws) (by decide) (by decide) (by decide)"
   let mitglied := s!"⟨{i}, by rw [mitglieder_laenge]; decide,"
+  let einsatz := "/-- The test as a program of the source. -/\ndef e : Einsatz := z.einsatz P ws (by decide) (by decide)\n\n" ++
+    s!"theorem e_gueltig : e.gueltig = {!abgelehnt} := by decide\n\n"
   let satz := if !abgelehnt then
-      s!"theorem zellen : ∀ x ∈ ([{zs}] : List Zelle), RaumGut ncZiel x := by\n  intro x hx\n  refine {mitglied} raumGutIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) ?_⟩\n  revert x; decide\n"
+      s!"theorem zellen : ∀ x ∈ ([{zs}] : List Zelle), RaumGut ncZiel x := by\n  intro x hx\n  refine {mitglied} raumGutIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) ?_⟩\n  revert x; decide\n\n" ++
+      einsatz ++ s!"theorem e_hat : ∀ x ∈ ([{zs}] : List Zelle), e.Hat x := by decide\n"
     else
       s!"def alle : List Zelle := [{zs}]\n\ndef bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w\n\n" ++
-      s!"theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=\n  {mitglied} raumSchlechtIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) (by decide)⟩\n"
+      s!"theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=\n  {mitglied} raumSchlechtIn_aus z (grenzenVon {i}).1 (grenzenVon {i}).2 ncZiel h0\n    {seite} (by decide) (by decide)⟩\n\n" ++
+      einsatz ++ "theorem e_gedeckt : gedeckt erreicht bnoetig e.zellen = true := by decide\n"
   pure (kopf ++ satz ++ s!"\nend Gabbro.Grammatik.Gen.Zeugen.{stamm}\n")
 
 end Gabbro.Grammatik.Gen

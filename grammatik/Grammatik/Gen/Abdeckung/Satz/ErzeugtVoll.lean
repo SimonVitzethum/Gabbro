@@ -56,6 +56,19 @@ theorem raumSchlecht_nGen {nc : Nat} {er B : List Zelle} (h : RaumSchlecht nc er
     simp only [Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', List.contains_iff_mem] at this
     exact this
 
+/-- **A test covered by needed cells**: if every cell of the test `n` is a needed cell (in `B`) or a good cell of `er`,
+    every needed cell is a cell of `e`, and every cell of `er` is a cell of a test of `M`, then every cell of `n` is a
+    cell of `e` or of a test of `M`. -/
+theorem n_deckt (M : List Einsatz) (er : List Zelle) (her : ∀ w ∈ er, ∃ m ∈ M, m.Hat w) (n e : Einsatz)
+    (B : List Zelle) (hg : gedeckt er B n.zellen = true) (hB : ∀ w ∈ B, e.Hat w) :
+    ∀ w, n.Hat w → e.Hat w ∨ ∃ m ∈ M, m.Hat w := by
+  intro w hw
+  have := (List.all_eq_true.1 hg) w hw
+  simp only [Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', List.contains_iff_mem] at this
+  rcases this with h | ⟨-, h⟩
+  · exact Or.inl (hB w h)
+  · exact Or.inr (her w h)
+
 /-! ## The table, and Theorem 5 for the generated M and N -/
 
 /-- Every good cell of the universe occurs in a valid program of the space, or in no valid program. -/
