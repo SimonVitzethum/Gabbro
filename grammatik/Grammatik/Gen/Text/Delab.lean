@@ -17,7 +17,12 @@
   `p = &f; p(..)` for an indirect call (the model's pointer expression is bound first), `locks`, `if`,
   assignments, `publishes`, `awaits`, register reads and writes through `d`, `return`.
 
-  Partial: a form without a spelling is an error naming it; the delaborator never prints a guess.
+  Partial: a form without a spelling is an error naming it. Two model forms are wider than the language and are
+  printed as a form with the same cells (checked per witness, never assumed): `awaits` at a static that is no
+  `atomic` (the language waits only at an atomic) as the plain read `let x = g;`, and a quantifier over the slots of
+  a table as a `traverse` invariant (the language reads an expression there) as the read of the table's first field
+  in its first slot. A Bool register (`Ty.bool`; a register of the language is an integer range) prints as
+  `u64 in 0 .. 1`.
 -/
 import Grammatik.Gen.Zeugen.Schluss
 import Grammatik.Parser.Round.RundlaufProgramm
