@@ -19,16 +19,27 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
 /-- **The tables of the bodies, one body per cell-relevant summary** (`Rumpf.schluessel`): the bodies of the generator
     one per key (`rumpfTK`), scanned by size upward; a body is kept only if no smaller body of the same function has its
-    summary and if its derived floor is the declared one (a program of the source has no other floor). -/
+    summary. (The floors are a property of the whole program, `Spez.bodenOk`.) -/
 def Spez.tabellenD (z : Spez) (nb : Nat) :
     List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))) :=
   letI : Zahlen := z.zahlen
   (Aufz.fn (D := z.deklaration)).map fun f =>
-    ⟨f, entdoppelt Rumpf.schluessel (fun b => b.bodenAbgeleitet != (z.deklaration.signatur f).boden)
-      (rumpfTK (fun _ _ => true) f nb)⟩
+    ⟨f, entdoppelt Rumpf.schluessel (fun _ => false) (rumpfTK (fun _ _ => true) f nb)⟩
 
-/-- **The members** the cell driver ranges over: the sixteen of the family, the hand-written cell members and the rule members. -/
-def mitglieder : List Spez := familie ++ zellFamilie ++ regelMitglieder
+/-- **A member in the language's form**: one signature per function (the language numbers a function's signature by
+    the function, `declOf` of the Lean front end), and a function of a unit with locks declares a floor (the language
+    derives one above every rank when no lock is taken on its paths, never none). -/
+def Spez.einzeln (z : Spez) : Spez :=
+  let hoch : Int := (z.locks.map (·.rang)).foldl max 0 + 1
+  { z with
+    sigs := z.fns.map fun i =>
+      let s := z.sigs.getD i {}
+      if !z.locks.isEmpty && s.boden.isNone then { s with boden := some hoch } else s
+    fns := List.range z.fns.length }
+
+/-- **The members** the cell driver ranges over: the sixteen of the family, the hand-written cell members and the rule
+    members, each in the language's form. -/
+def mitglieder : List Spez := (familie ++ zellFamilie ++ regelMitglieder).map Spez.einzeln
 
 /-! ## The generator with the proof IN its output
 
@@ -60,7 +71,7 @@ def Spez.nurB (z : Spez) (c : Fin 10) (P : Programm z.deklaration) (S : SperrInv
 /-- Every body derives the declared floor: the floor is not written in the language, it is the least rank the body
     takes (`Druck/Einheit.lean`), so only such programs are programs of the source. -/
 def Spez.bodenOk (z : Spez) (P : Programm z.deklaration) : Bool :=
-  z.fnListe.all fun f => Rumpf.bodenAbgeleitet (P.rumpf f) == (z.deklaration.signatur f).boden
+  z.fnListe.all fun f => Programm.bodenP P f == (z.deklaration.signatur f).boden
 
 /-- A valid program of the source with its proof: the lock family is the one the source has (`protects`). -/
 structure Gutes (z : Spez) where

@@ -6,14 +6,13 @@
 -/
 import Grammatik.Gen.Zeugen.Erreicht
 import Grammatik.Gen.Zeugen.M.M99_824
-import Grammatik.Gen.Zeugen.M.M49_651
-import Grammatik.Gen.Zeugen.M.M169_129
-import Grammatik.Gen.Zeugen.M.M20_5
-import Grammatik.Gen.Zeugen.M.M99_468
-import Grammatik.Gen.Zeugen.M.M47_1
-import Grammatik.Gen.Zeugen.M.M26_2
-import Grammatik.Gen.Zeugen.M.M103_129
-import Grammatik.Gen.Zeugen.M.M103_621
+import Grammatik.Gen.Zeugen.M.M47_549
+import Grammatik.Gen.Zeugen.M.M169_350
+import Grammatik.Gen.Zeugen.M.M16_13
+import Grammatik.Gen.Zeugen.M.M49_50
+import Grammatik.Gen.Zeugen.M.M103_803
+import Grammatik.Gen.Zeugen.M.M103_131
+import Grammatik.Gen.Zeugen.N.N16_5
 import Grammatik.Gen.Zeugen.N.N18_0
 import Grammatik.Gen.Zeugen.N.N18_4
 import Grammatik.Gen.Zeugen.N.N19_0
@@ -21,12 +20,11 @@ import Grammatik.Gen.Zeugen.N.N19_2
 import Grammatik.Gen.Zeugen.N.N19_5
 import Grammatik.Gen.Zeugen.N.N19_7
 import Grammatik.Gen.Zeugen.N.N20_1
-import Grammatik.Gen.Zeugen.N.N20_30
-import Grammatik.Gen.Zeugen.N.N23_0
 import Grammatik.Gen.Zeugen.N.N23_4
 import Grammatik.Gen.Zeugen.N.N24_0
 import Grammatik.Gen.Zeugen.N.N3_0
 import Grammatik.Gen.Zeugen.N.N47_20
+import Grammatik.Gen.Zeugen.N.N47_45
 import Grammatik.Gen.Abdeckung.Satz.Neutral
 import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
 
@@ -168,40 +166,37 @@ theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by
   simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw
   rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
-  · exact M169_129.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M169_350.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M20_5.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M169_129.zellen _ (by decide)
+  · exact M103_803.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M169_129.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M169_350.zellen _ (by decide)
+  · exact M49_50.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M103_621.zellen _ (by decide)
+  · exact M103_803.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M103_129.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M99_824.zellen _ (by decide)
-  · exact M169_129.zellen _ (by decide)
-  · exact M169_129.zellen _ (by decide)
-  · exact M20_5.zellen _ (by decide)
-  · exact M26_2.zellen _ (by decide)
+  · exact M103_131.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M169_350.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M169_350.zellen _ (by decide)
+  · exact M169_350.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
@@ -215,9 +210,12 @@ theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M20_5.zellen _ (by decide)
-  · exact M47_1.zellen _ (by decide)
-  · exact M20_5.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M99_824.zellen _ (by decide)
+  · exact M16_13.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
@@ -226,7 +224,7 @@ theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M49_50.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
@@ -234,26 +232,26 @@ theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M49_50.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M99_468.zellen _ (by decide)
+  · exact M16_13.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M49_651.zellen _ (by decide)
+  · exact M47_549.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M99_468.zellen _ (by decide)
+  · exact M16_13.zellen _ (by decide)
   · exact M99_824.zellen _ (by decide)
-  · exact M99_468.zellen _ (by decide)
+  · exact M16_13.zellen _ (by decide)
 
 theorem schluss_gut : GutGedeckt ncZiel := by
   intro x hx hs
@@ -263,28 +261,28 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact absurd hs (by decide)
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact absurd hs (by decide)
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact absurd hs (by decide)
-  · exact Or.inl (M169_129.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact absurd hs (by decide)
-  · exact absurd hs (by decide)
-  · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
   · exact absurd hs (by decide)
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M20_5.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M169_350.zellen _ (by decide))
+  · exact absurd hs (by decide)
+  · exact Or.inl (M99_824.zellen _ (by decide))
+  · exact Or.inl (M99_824.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact absurd hs (by decide)
   · exact Or.inr (nie_gut (u_2_0_sig false false))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inr (nie_gut (u_2_0_sig true false))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M169_129.zellen _ (by decide))
+  · exact Or.inl (M103_803.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M169_129.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M169_350.zellen _ (by decide))
+  · exact Or.inl (M49_50.zellen _ (by decide))
   · exact Or.inr (nie_gut (u_2_0_sig false true))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inr (nie_gut (u_2_0_sig true true))
@@ -293,21 +291,21 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact Or.inr (nie_gut (u_2_0_11 false true))
   · exact Or.inr (nie_gut (u_2_0_11 true true))
   · exact absurd hs (by decide)
-  · exact Or.inl (M103_621.zellen _ (by decide))
+  · exact Or.inl (M103_803.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M103_129.zellen _ (by decide))
-  · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M99_824.zellen _ (by decide))
+  · exact Or.inl (M103_131.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M169_129.zellen _ (by decide))
-  · exact Or.inl (M169_129.zellen _ (by decide))
-  · exact Or.inl (M20_5.zellen _ (by decide))
-  · exact Or.inl (M26_2.zellen _ (by decide))
+  · exact Or.inl (M169_350.zellen _ (by decide))
+  · exact Or.inl (M99_824.zellen _ (by decide))
+  · exact Or.inl (M99_824.zellen _ (by decide))
+  · exact Or.inl (M169_350.zellen _ (by decide))
+  · exact Or.inl (M169_350.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
@@ -336,9 +334,9 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M20_5.zellen _ (by decide))
-  · exact Or.inl (M47_1.zellen _ (by decide))
-  · exact Or.inl (M20_5.zellen _ (by decide))
+  · exact Or.inl (M16_13.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact absurd hs (by decide)
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
@@ -349,7 +347,7 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact absurd hs (by decide)
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M49_50.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
@@ -358,7 +356,7 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact Or.inr (nie_gut u_7_1_110)
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M49_50.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact absurd hs (by decide)
@@ -369,21 +367,21 @@ theorem schluss_gut : GutGedeckt ncZiel := by
   · exact Or.inr (nie_gut (u_8_ax false true))
   · exact Or.inr (nie_gut (u_8_ax true true))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M99_468.zellen _ (by decide))
+  · exact Or.inl (M16_13.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
   · exact absurd hs (by decide)
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M49_651.zellen _ (by decide))
+  · exact Or.inl (M47_549.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M99_468.zellen _ (by decide))
+  · exact Or.inl (M16_13.zellen _ (by decide))
   · exact Or.inl (M99_824.zellen _ (by decide))
-  · exact Or.inl (M99_468.zellen _ (by decide))
+  · exact Or.inl (M16_13.zellen _ (by decide))
 
 theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   intro x hx hs
@@ -397,9 +395,9 @@ theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   · exact fun e h => absurd h (u_0_ohne false true e)
   · exact absurd hs (by decide)
   · exact fun e h => absurd h (u_0_ohne true true e)
-  · exact fun e h => ⟨N20_30.bnoetig, fun w hw => by
-        obtain rfl := (by decide : ∀ w ∈ N20_30.bnoetig, w = ⟨0, 0, true, [true, true, true]⟩) w hw
-        exact h, N20_30.zellen⟩
+  · exact fun e h => ⟨N47_20.bnoetig, fun w hw => by
+        obtain rfl := (by decide : ∀ w ∈ N47_20.bnoetig, w = ⟨0, 0, true, [true, true, true]⟩) w hw
+        exact h, N47_20.zellen⟩
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
@@ -537,9 +535,9 @@ theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
-  · exact fun e h => ⟨N47_20.bnoetig, fun w hw => by
-        obtain rfl := (by decide : ∀ w ∈ N47_20.bnoetig, w = ⟨8, 0, true, [true, false, false]⟩) w hw
-        exact h, N47_20.zellen⟩
+  · exact fun e h => ⟨N47_45.bnoetig, fun w hw => by
+        obtain rfl := (by decide : ∀ w ∈ N47_45.bnoetig, w = ⟨8, 0, true, [true, false, false]⟩) w hw
+        exact h, N47_45.zellen⟩
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
@@ -553,9 +551,9 @@ theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
-  · exact fun e h => ⟨N23_0.bnoetig, fun w hw => by
-        obtain rfl := (by decide : ∀ w ∈ N23_0.bnoetig, w = ⟨9, 0, true, [true, true, true, false]⟩) w hw
-        exact h, N23_0.zellen⟩
+  · exact fun e h => ⟨N16_5.bnoetig, fun w hw => by
+        obtain rfl := (by decide : ∀ w ∈ N16_5.bnoetig, w = ⟨9, 0, true, [true, true, true, false]⟩) w hw
+        exact h, N16_5.zellen⟩
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)
   · exact absurd hs (by decide)

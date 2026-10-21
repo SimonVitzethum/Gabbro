@@ -96,7 +96,37 @@ theorem min_fold_le (rs : List Int) : ∀ (a : Option Int), (∀ c, a = some c �
       exact ⟨c, hc, by omega⟩
     · exact ih _ (fun _ _ _ _ => trivial) r hr
 
-/-- `3.0 10`: a program of the source takes no lock below its floor -- the floor is the least rank the body takes. -/
+/-- Folding the smaller of two optional ranks never rises above a start that is a rank. -/
+theorem foldl_minOpt_le {α : Type} (F : α → Option Int) :
+    ∀ (xs : List α) (a : Option Int) (c0 : Int), a = some c0 →
+      ∃ c, xs.foldl (fun a g => minOpt a (F g)) a = some c ∧ c ≤ c0 := by
+  intro xs
+  induction xs with
+  | nil => intro a c0 h; exact ⟨c0, h, le_refl _⟩
+  | cons x xs ih =>
+    intro a c0 h
+    subst h
+    simp only [List.foldl_cons]
+    cases hF : F x with
+    | none =>
+      simp only [minOpt]
+      exact ih _ c0 rfl
+    | some d =>
+      simp only [minOpt]
+      obtain ⟨c, hc, hle⟩ := ih _ (if c0 < d then c0 else d) rfl
+      exact ⟨c, hc, by split at hle <;> omega⟩
+
+/-- Every round of the floor relation is at most the least rank the function takes itself. -/
+theorem bodenRunden_le {D : Deklaration} [Aufz D] (P : Programm D) (f : D.Fn) (d : Int)
+    (hd : Rumpf.bodenAbgeleitet (P.rumpf f) = some d) :
+    ∀ n, ∃ c, Programm.bodenRunden P n f = some c ∧ c ≤ d := by
+  intro n
+  cases n with
+  | zero => exact ⟨d, hd, le_refl _⟩
+  | succ n => exact foldl_minOpt_le _ _ _ d hd
+
+/-- `3.0 10`: a program of the source takes no lock below its floor -- the floor is at most the least rank the body
+    takes. -/
 theorem u_3_0_10 (e : Einsatz) : ¬ e.Hat ⟨3, 0, true, [true, false]⟩ := by
   letI := e.aufz
   letI := e.zahlen
@@ -105,15 +135,20 @@ theorem u_3_0_10 (e : Einsatz) : ¬ e.Hat ⟨3, 0, true, [true, false]⟩ := by
   simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
   obtain ⟨f, _, L, _, -, -, -, hn, hb, -⟩ := h0
   have hfl := e.hBoden f
-  simp only [Rumpf.bodenAbgeleitet] at hfl
   have hL : L ∈ (Aufz.lock (D := e.D)).filter fun L' =>
       !(mE ⟨fun _ => true, fun _ => true, fun L'' => !(decide (L'' = L'))⟩ (e.P.rumpf f)) :=
     List.mem_filter.2 ⟨Aufz.lock_mem L, hn⟩
-  obtain ⟨c, hc, hle⟩ := min_fold_le _ none (fun _ h _ _ => by cases h) (e.D.rang L) (List.mem_map_of_mem hL)
-  have hcb : some c = (e.D.signatur f).boden := hc.symm.trans hfl
+  obtain ⟨d, hd, hdle⟩ := min_fold_le _ none (fun _ h _ _ => by cases h) (e.D.rang L) (List.mem_map_of_mem hL)
+  obtain ⟨c, hc, hcle⟩ := bodenRunden_le e.P f d hd (Aufz.fn (D := e.D)).length
+  have hne : (Aufz.lock (D := e.D)).isEmpty = false := by
+    cases hl : (Aufz.lock (D := e.D)) with
+    | nil => rw [hl] at hL; cases (List.mem_filter.1 hL).1
+    | cons _ _ => rfl
+  have hcb : some c = (e.D.signatur f).boden := by
+    rw [← hfl]; simp only [Programm.bodenP, hne, hc, Bool.false_eq_true, if_false]
   have : (bodenM f).sperre L = true := by
     simp only [bodenM, bodenF, ← hcb, decide_eq_true_eq]
-    exact hle
+    omega
   rw [this] at hb
   cases hb
 

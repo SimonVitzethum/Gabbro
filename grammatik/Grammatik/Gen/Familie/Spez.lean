@@ -31,6 +31,7 @@ theorem mem_fin? {n i : Nat} (h : i < n) : (⟨i, h⟩ : Fin n) ∈ (fin? n i).t
 structure FeldZ where
   typ : Ty
   erlaubt : List (Int × Int) := []
+  deriving DecidableEq, Repr
 
 /-- A table: its `count`, its fields, the lock that `protects` it, the mark that `owner`s it. -/
 structure TabZ where
@@ -40,6 +41,7 @@ structure TabZ where
   eigner : Option Nat := none
   geteilt : Bool := false
   geist : Bool := false
+  deriving DecidableEq, Repr
 
 /-- A static: its type, whether it is `atomic`, its guard (a lock or a mark with a stage), the payload it
     `publishes`. -/
@@ -51,11 +53,13 @@ structure GlobZ where
   nutzlast : List Nat := []
   geteilt : Bool := false
   geist : Bool := false
+  deriving DecidableEq, Repr
 
 /-- A lock: its rank and whether taking it masks interrupts. -/
 structure LockZ where
   rang : Int
   maskiert : Bool := false
+  deriving DecidableEq, Repr
 
 /-- A function signature. -/
 structure SigZ where
@@ -68,10 +72,12 @@ structure SigZ where
   konsumiert : List (Nat × Nat) := []
   produziert : List (Nat × Nat) := []
   boden : Option Int := none
+  deriving DecidableEq, Repr
 
 /-- An invariant: the tables it ranges over. -/
 structure InvZ where
   traeger : List Nat
+  deriving DecidableEq, Repr
 
 /-- A foreign body (`axiom`, `extern`, `syscall`, `asm`). -/
 structure AxZ where
@@ -80,6 +86,7 @@ structure AxZ where
   gruende : Nat := 0
   schreibt : List Nat := []
   gschreibt : List Nat := []
+  deriving DecidableEq, Repr
 
 /-- A device register: its type, its class, the register it mirrors, the carriers its state lives in, the promise
     the device makes about the value read. -/
@@ -89,6 +96,7 @@ structure RegZ where
   spiegel : Option Nat := none
   traeger : List Nat := []
   zusage : Bool := true
+  deriving DecidableEq, Repr
 
 /-- **The specification of a declaration.** -/
 structure Spez where
@@ -102,6 +110,7 @@ structure Spez where
   axs : List AxZ := []
   regs : List RegZ := []
   annahmen : Nat := 0
+  deriving DecidableEq, Repr
 
 namespace Spez
 

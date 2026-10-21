@@ -34,7 +34,7 @@ def ws : List z.deklaration.Fn := [(⟨0, by decide⟩ : Fin z.fns.length)]
 
 def P : Programm z.deklaration := h0.programm
 
-def alle : List Zelle := [⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨1, 0, true, [false, false, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨3, 0, true, [false, true]⟩, ⟨4, 0, true, [true, true]⟩, ⟨4, 0, true, [false, false]⟩, ⟨5, 0, true, [true, false]⟩, ⟨6, 0, true, [false, true, false]⟩, ⟨6, 1, true, [false, true, true, true]⟩, ⟨6, 1, true, [false, true, false, true]⟩, ⟨6, 1, true, [false, false, false, true]⟩, ⟨6, 1, true, [false, false, true, true]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨9, 0, true, [false, true, false, false]⟩, ⟨9, 0, true, [false, false, false, false]⟩]
+def alle : List Zelle := [⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨1, 0, true, [false, false, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨4, 0, true, [false, false]⟩, ⟨5, 0, true, [true, false]⟩, ⟨6, 0, true, [false, true, false]⟩, ⟨6, 1, true, [false, true, true, true]⟩, ⟨6, 1, true, [false, true, false, true]⟩, ⟨6, 1, true, [false, false, false, true]⟩, ⟨6, 1, true, [false, false, true, true]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨9, 0, true, [false, true, false, false]⟩, ⟨9, 0, true, [false, false, false, false]⟩]
 
 def bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w
 

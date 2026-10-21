@@ -70,8 +70,6 @@ theorem langHaut_boden (k : Nat) : z0.bodenOk (langHaut k).programm = true := by
   intro f _
   have hf : f = f0 := Fin.ext (by have := f.isLt; simp [z0, Spez.deklaration] at this ⊢; omega)
   subst hf
-  show Rumpf.bodenAbgeleitet (lang k []) = _
-  simp only [Rumpf.bodenAbgeleitet, lang_sperre, Bool.not_true, List.filter_false]
   rfl
 
 /-- **A program of the source of size at least `k`.** -/

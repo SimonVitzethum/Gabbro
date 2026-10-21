@@ -85,7 +85,7 @@ structure Einsatz where
   /-- the lock family is the one of the source: each lock protects exactly the carriers it guards (`protects`) -/
   hS : ∀ L c, c ∈ S.orte L ↔ L ∈ waechterVon c
   /-- every body derives its declared floor: the language writes no floor, it is the least rank the body takes -/
-  hBoden : ∀ f, @Rumpf.bodenAbgeleitet D aufz f (P.rumpf f) = (D.signatur f).boden
+  hBoden : ∀ f, @Programm.bodenP D aufz P f = (D.signatur f).boden
   /-- no foreign body (`extern fn` is outside the test sets, Simon 2026-10-20) -/
   keinAx : D.Ax → False
 

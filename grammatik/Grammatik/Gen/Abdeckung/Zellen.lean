@@ -191,13 +191,38 @@ def zellenAbweichung (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : Li
       (if schreibGetrenntW P fs ws c == (schreibGetrenntZellen P fs ws c).all Zelle.kern then [] else [200 + i]) ++
       (if geteiltVB P fs c == (geteiltZelle P fs c).kern then [] else [300 + i]))
 
-/-- The floor the language derives from a body: the least rank of the locks the body itself takes (`none` if it takes none).
-    The language does not write a floor; the model's signature carries one, so a unit can be printed faithfully only
-    when the declared floor is this one. -/
+/-- The least rank of the locks a body itself takes (`none` if it takes none). -/
 def Rumpf.bodenAbgeleitet {f : D.Fn} (b : Rumpf D f) : Option Int :=
   ((Aufz.lock (D := D)).filter fun L =>
     !(mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b)).map D.rang
     |>.foldl (fun a r => match a with | none => some r | some m => some (if m < r then m else r)) none
+
+/-- The smaller of two optional ranks. -/
+def minOpt : Option Int → Option Int → Option Int
+  | none, b => b
+  | a, none => a
+  | some a, some b => some (if a < b then a else b)
+
+/-- The functions a body calls DIRECTLY (by name, not through a pointer). -/
+def ruftDirektB (P : Programm D) (f g : D.Fn) : Bool :=
+  !(mE ⟨fun h => !(decide (h = g)), fun _ => true, fun _ => true⟩ (P.rumpf f))
+
+/-- `n` rounds of the floor relation: the least rank taken by the function itself or by a function it reaches by `n`
+    direct calls. -/
+def Programm.bodenRunden (P : Programm D) : Nat → D.Fn → Option Int
+  | 0 => fun f => Rumpf.bodenAbgeleitet (P.rumpf f)
+  | n + 1 => fun f => ((Aufz.fn (D := D)).filter (ruftDirektB P f)).foldl
+      (fun a g => minOpt a (Programm.bodenRunden P n g)) (Rumpf.bodenAbgeleitet (P.rumpf f))
+
+/-- **The floor the language derives** (`floorOf` of the Lean front end, `resolve_floors`): `none` in a unit without
+    locks; else the least rank of a lock taken on a path of direct calls from the function, or one above the highest
+    rank of the unit when no path takes a lock. The language does not write a floor; the model's signature carries one,
+    and a program of the source carries this one. -/
+def Programm.bodenP (P : Programm D) (f : D.Fn) : Option Int :=
+  if (Aufz.lock (D := D)).isEmpty then none
+  else some (match Programm.bodenRunden P (Aufz.fn (D := D)).length f with
+    | some c => c
+    | none => ((Aufz.lock (D := D)).map D.rang).foldl max 0 + 1)
 
 end Atome
 
