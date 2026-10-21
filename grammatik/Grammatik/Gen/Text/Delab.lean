@@ -263,18 +263,20 @@ def delabRes (f : Fin z.fns.length) : Except String (Option STyp) :=
   | none => pure none
   | some t => do pure (some (← typS t))
 
+/-- Is the predicate `true` (then no clause is printed)? -/
+def istTru {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} : Expr z.deklaration Γ Λ τ → Bool
+  | .tru => true
+  | _ => false
+
 /-- The `requires` clause (none for `true`). -/
 def delabReq (P : Programm z.deklaration) (f : Fin z.fns.length) : Except String (List SKlausel) :=
-  match P.requires f with
-  | .tru => pure []
-  | e => do pure [SKlausel.needs (← delabE z none e)]
+  if istTru z (P.requires f) then pure [] else do pure [SKlausel.needs (← delabE z none (P.requires f))]
 
 /-- The `ensures` clause (none for `true`); its result is named by its number. -/
 def delabEns (P : Programm z.deklaration) (f : Fin z.fns.length) : Except String (List SKlausel) :=
-  match P.ensures f with
-  | .tru => pure []
-  | e => do pure [SKlausel.gives (← delabE z ((z.deklaration.signatur f).erg.map fun _ =>
-      (z.deklaration.signatur f).params.length) e)]
+  if istTru z (P.ensures f) then pure [] else do
+    pure [SKlausel.gives (← delabE z ((z.deklaration.signatur f).erg.map fun _ =>
+      (z.deklaration.signatur f).params.length) (P.ensures f))]
 
 /-- The held locks, the written tables and statics, the locks the body takes: by name. -/
 def heldNamen (f : Fin z.fns.length) : List String :=

@@ -603,4 +603,4 @@ import Grammatik.Gen.Zeugen.N.N47_20
 import Grammatik.Gen.Zeugen.N.N47_45
 import Grammatik.Gen.Zeugen.Schluss
 import Grammatik.Gen.Text.Satz
-import Grammatik.Gen.Text.Invers.Funktion
+import Grammatik.Gen.Text.Invers.Ganz
