@@ -428,6 +428,37 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
             | .ok (b, r) => .ok (Block.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
+  | Γ, fn, n + 1, Λ, pe, .regRead x d r :: rest =>
+    match regIdx u.regs d r with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match lowSeqL (l := l) u caller (.int (regAt u g).lo (regAt u g).hi :: Γ)
+            (fn.mitBindung x ((regAt u g).lo, (regAt u g).hi)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Block.regRead (D := declOf u) g hk b, r')
+      else .error "lower: register read against its class"
+  | Γ, fn, n + 1, Λ, pe, .regReadElse x d r :: rest =>
+    match regIdx u.regs d r with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match (regAt u g).pruefung with
+        | none => .error "lower: register read without a check"
+        | some p =>
+          match lowEns u (.int (regAt u g).lo (regAt u g).hi :: Γ) Λ
+              (fn.mitBindung (regAt u g).name ((regAt u g).lo, (regAt u g).hi)) none p with
+          | .error e => .error e
+          | .ok zu =>
+            match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+            | .error e => .error e
+            | .ok (sonst, .blkEnd :: rest') =>
+              match lowSeqL (l := l) u caller (.int (regAt u g).lo (regAt u g).hi :: Γ)
+                  (fn.mitBindung x ((regAt u g).lo, (regAt u g).hi)) n Λ pe rest' with
+              | .error e => .error e
+              | .ok (b, r') => .ok (Block.regReadElse (D := declOf u) g hk zu sonst b, r')
+            | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: register read against its class"
   | Γ, fn, n + 1, Λ, pe, .ret v :: rest =>
     match lowRetStmt u caller Γ fn Λ pe v with
     | .error e => .error e
@@ -674,6 +705,10 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
+  | _, _, _ + 1, _, _, .regRead .. :: _ =>
+    .error "lower: a register read in an else branch has no G form (Endblock lacks regRead)"
+  | _, _, _ + 1, _, _, .regReadElse .. :: _ =>
+    .error "lower: a register read in an else branch has no G form (Endblock lacks regReadElse)"
   | _, _, _ + 1, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
   | Γ, fn, n + 1, Λ, pe, .bindAxElse y c args e :: rest =>
@@ -842,6 +877,10 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
+  | _, _, _ + 1, .regRead .. :: _, _ =>
+    .error "lower: a register read at the top level of a body has no G form (Endblock lacks regRead)"
+  | _, _, _ + 1, .regReadElse .. :: _, _ =>
+    .error "lower: a register read at the top level of a body has no G form (Endblock lacks regReadElse)"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
   | Γ, fn, n + 1, .ret v :: rest, r =>

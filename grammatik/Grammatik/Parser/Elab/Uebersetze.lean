@@ -235,6 +235,14 @@ inductive UStmt
   /-- `leave i;` / `next i;`: exit / end the pass of the innermost `traverse` (`Stmt.leave`/`Stmt.next`). -/
   | leave : String → UStmt
   | next : String → UStmt
+  /-- `let x = d.R;` through a device handle `d` (`Block.regRead`): binder, device, register. -/
+  | regRead : String → String → String → UStmt
+  /-- `let x = d.R else (e) { .. }` at a register with `requires p else A::B` (`Block.regReadElse`):
+      `regReadElse x D R`, the statements of the `else` branch with its ender, `blkEnd`; the reason `e` is not
+      in scope there (the model's `else` branch is an end block over the outer scope). -/
+  | regReadElse : String → String → String → UStmt
+  /-- `d.R = v;` (`Stmt.regWrite`): device, register, value. -/
+  | regWrite : String → String → USide → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -304,6 +312,25 @@ structure USum where
 /-- The specification of a tagged type: the payload range of each case (`Ty.sum cs`). -/
 def USum.spec (s : USum) : List (Option (Int × Int)) := s.cases.map (·.2)
 
+/-- One device register (`device D .. { reg R : T @off class K .. }`, `D.Reg`): its device and name, the range
+    of its type (`D.rtyp`, always an integer range: `regdecl` reads an `intty`), its class (`D.rklasse`), the
+    register its writes carry the other bits from (`mirrors R from M` names `M` at `R`, `D.spiegel`), the
+    carriers its answer rests on (`depends { .. }`, `D.rtraeger`: table or static names), and its promise: a
+    `requires p` WITHOUT `else` is the device's promise about every value read (`D.rzusage`, `zusage`); a
+    `requires p else A::B` makes the read fallible instead (`Block.regReadElse`, `pruefung`), and then the
+    device promises nothing. Both predicates name the register itself as their one variable. -/
+structure UReg where
+  dev : String
+  name : String
+  lo : Int
+  hi : Int
+  klasse : Regklasse
+  spiegel : Option String := none
+  traeger : List String := []
+  zusage : Option UEns := none
+  pruefung : Option UEns := none
+  deriving DecidableEq, Repr
+
 /-- A parameter kind: a pointer to a table, an index into one,
     or a plain integer range (kept beside the `Ty` so an index
     parameter stays recognizable after `Ty.index` unfolds it to
@@ -361,6 +388,12 @@ structure UCtx where
   sums : List USum := []
   /-- The result is a tagged type: its position and its specification. -/
   resSum : Option (Nat × List (Option (Int × Int))) := none
+  /-- The unit's device registers. -/
+  regs : List UReg := []
+  /-- The device handles in scope: a parameter `d : D` (or `d : ptr<space, rights> D`) and its device `D`.
+      A handle is no value of the model (a register is outside the world, `D.Reg`): it is erased from the
+      parameters and only names the device of `d.R`. -/
+  griffe : List (String × String) := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -462,6 +495,8 @@ structure UProg where
   hands : List String := []
   /-- The statics (`Deklaration.Glob`). -/
   globs : List UGlob := []
+  /-- The device registers (`Deklaration.Reg`), in declaration order. -/
+  regs : List UReg := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -1256,6 +1291,9 @@ structure UFnKopf where
   ext : Bool := false
   /-- The answer of a foreign body is `never` (the call does not return). -/
   resNever : Bool := false
+  /-- The device handles among the declared parameters: the position in the WRITTEN parameter list, the
+      name and the device. They are erased from `names`/`kinds`/`types`; a call drops their arguments. -/
+  griffe : List (Nat × String × String) := []
 
 /-- The answer type of a foreign body. -/
 def UFnKopf.axErg (k : UFnKopf) : Option Ty :=
@@ -1393,6 +1431,13 @@ structure UEffekte where
 def uIstGlobName (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) (g : String) : Bool :=
   !(kopf.names.any (strEq · g)) && !(tabs.any (fun x => strEq x.name g)) && globs.any (fun x => strEq x.name g)
 
+/-- A place through a device handle (`d`, `d.R`, `d.R.F`): a register is outside the world, so `writes d`
+    names no carrier (the class decides the access, `Stmt.regWrite`). -/
+def uIstGriffOrt (kopf : UFnKopf) : SExpr → Bool
+  | .variable h => kopf.griffe.any (fun g => strEq g.2.1 h)
+  | .field o _ => uIstGriffOrt kopf o
+  | _ => false
+
 def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs : List UGlob) :
     List SEffekt → Except String UEffekte
   | [] => .ok { locks := [], puts := [] }
@@ -1404,6 +1449,7 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
       | .error e => .error e
       | .ok r => .ok { r with locks := l :: r.locks }
   | .writes o :: rest =>
+    if uIstGriffOrt kopf o then uEffekteAux kopf tabs locks globs rest else
     match (match o with
         | .variable a => if tabs.any (fun x => x.arena && strEq x.name a) then some a else none
         | _ => none : Option String) with
@@ -1474,14 +1520,34 @@ def uEindeutigAux : List String → List String → List String
 def uEindeutig (xs : List String) : List String :=
   uEindeutigAux xs []
 
+/-- A device handle type: `D` or `ptr<space, rights> D` for a device `D` of the unit. -/
+def uGriffTyp (devs : List String) : STyp → Option String
+  | .atom d => if devs.any (strEq · d) then some d else none
+  | .ptr _ _ (.atom d) => if devs.any (strEq · d) then some d else none
+  | _ => none
+
+/-- The device handles of a written parameter list: position, name, device. -/
+def uGriffe (devs : List String) : Nat → List (String × STyp) → List (Nat × String × String)
+  | _, [] => []
+  | k, (n, ty) :: rest =>
+    match uGriffTyp devs ty with
+    | some d => (k, n, d) :: uGriffe devs (k + 1) rest
+    | none => uGriffe devs (k + 1) rest
+
+/-- The written parameters without the device handles (a handle is no value of the model). -/
+def uOhneGriffe (devs : List String) (ps : List (String × STyp)) : List (String × STyp) :=
+  ps.filter (fun p => (uGriffTyp devs p.2).isNone)
+
 /-- Pass one: the head of an `impl` function (non-`impl`,
     bodiless and clause-carrying forms are explicit errors).
     Returns the head and the written tables. -/
 def elabKopf (_consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := []) :
-    FnSig → Except String (UFnKopf × List String)
-  | { art, name, params, res, fehler, klauseln } =>
+    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := [])
+    (sig : FnSig) (devs : List String := []) : Except String (UFnKopf × List String) :=
+  match sig with
+  | { art, name, params := params0, res, fehler, klauseln } =>
+    let params := uOhneGriffe devs params0
     if !strEq art "impl" then .error "fn is not impl"
     else
       match uOhneKlauselForm klauseln with
@@ -1510,7 +1576,7 @@ def elabKopf (_consts : List (String × Int))
             let kopf : UFnKopf :=
               { name, names, kinds, types, res := .none,
                 bits := params.map (fun p => uParamBreite p.2),
-                held := uEindeutig held, kanal := kn }
+                held := uEindeutig held, kanal := kn, griffe := uGriffe devs 0 params0 }
             match uEffekte kopf tabs locks globs klauseln with
             | .error e => .error e
             | .ok eff =>
@@ -1719,6 +1785,41 @@ def uAtomSchreib (ctx : UCtx) (ziel wert : SExpr) (p : String) : Except String U
           | .ok v => .ok (.storeAtom g v)
   | _ => .error "publishes without an atomic without G form"
 
+/-- The arguments of a call without those at the callee's device handles; each of those must be a handle of
+    the same device in the caller (a handle is no value of the model: the register is named by the device). -/
+def uOhneGriffArgs (ctx : UCtx) (gs : List (Nat × String × String)) : Nat → List SExpr →
+    Except String (List SExpr)
+  | _, [] => .ok []
+  | k, a :: rest =>
+    match gs.find? (fun g => g.1 == k) with
+    | none =>
+      match uOhneGriffArgs ctx gs (k + 1) rest with
+      | .error e => .error e
+      | .ok xs => .ok (a :: xs)
+    | some (_, _, d) =>
+      match a with
+      | .variable h =>
+        if ctx.griffe.any (fun p => strEq p.1 h && strEq p.2 d) then uOhneGriffArgs ctx gs (k + 1) rest
+        else .error "device argument without G form"
+      | _ => .error "device argument without G form"
+
+/-- A register place through a device handle in scope: `d.R` (`some` of the register, or of an error for an
+    unknown register); `d.R.F` (a register field) has no G form; anything else is no register place. -/
+def uRegOrt (ctx : UCtx) : SExpr → Option (Except String UReg)
+  | .field (.variable h) r =>
+    if ctx.names.any (strEq · h) then none else
+    match ctx.griffe.find? (fun p => strEq p.1 h) with
+    | none => none
+    | some (_, d) =>
+      some (match ctx.regs.find? (fun g => strEq g.dev d && strEq g.name r) with
+        | some g => .ok g
+        | none => .error ("register unknown: " ++ r))
+  | .field (.field (.variable h) _) _ =>
+    if ctx.names.any (strEq · h) then none
+    else if ctx.griffe.any (fun p => strEq p.1 h) then some (.error "register field without G form")
+    else none
+  | _ => none
+
 /-- A direct call: the callee and its arguments against the callee's parameter kinds. The callee's required
     locks must be held (`RufPasst.hh`); an extra lock of the caller must rank below the callee's floor
     (`RufPasst.hx`), which the lowering decides (`floorUeberB`). -/
@@ -1729,9 +1830,12 @@ def uRuf (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (c : String) (a
   | .some callee =>
     if !(callee.held.all (fun l => ctx.held.any (strEq · l))) then .error "call without held guard"
     else
-      match uArgs ctx tabs callee.kinds args with
+      match uOhneGriffArgs ctx callee.griffe 0 args with
       | .error e => .error e
-      | .ok xs => .ok (callee, xs)
+      | .ok args' =>
+        match uArgs ctx tabs callee.kinds args' with
+        | .error e => .error e
+        | .ok xs => .ok (callee, xs)
 
 /-- The scope after `let e` of a reason (`Ty.why n`, `n` the number of cases). -/
 def UFn.mitWhy (f : UFn) (x : String) (num n : Nat) : UFn :=
@@ -1819,7 +1923,16 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/
 def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     SAnw → Except String UStmt
-  | .set ziel op wert => uSetze ctx ziel op wert
+  | .set ziel op wert =>
+    match uRegOrt ctx ziel with
+    | some (.error e) => .error e
+    | some (.ok rg) =>
+      if !strEq op "=" then .error "compound register write without G form"
+      else
+        match uWertBody ctx wert with
+        | .error e => .error e
+        | .ok s => .ok (.regWrite rg.dev rg.name s)
+    | none => uSetze ctx ziel op wert
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .reset a .none =>
     if ctx.tabs.any (fun x => x.arena && strEq x.name a) then .ok (.assignGlob (a ++ "#used") (.lit 0))
@@ -2040,6 +2153,14 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     callee's result type (`Block.bindCall`; a range annotation must contain the result range). -/
 def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool) (x : String)
     (t : Option STyp) (e : SExpr) : Except String (UStmt × UCtx) :=
+  match uRegOrt ctx e with
+  | some (.error err) => .error err
+  | some (.ok rg) =>
+    if mu || t.isSome then .error "let of a register with a type without G form"
+    else if rg.pruefung.isSome then .error "fallible register read needs `let .. else`"
+    else .ok (.regRead x rg.dev rg.name,
+      uMitLokal ctx x UParamArt.int (Ty.int rg.lo rg.hi) (ctx.muts.filter (fun m => !strEq m x)))
+  | none =>
   match (match t with | .some (.atom a) => ctx.sums.findIdx? (fun (s : USum) => strEq s.name a) | _ => none : Option Nat) with
   | .some k =>
     if mu then .error "let mut of a tagged value without G form"
@@ -2326,6 +2447,24 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok (UStmt.ret r :: xs, cE)
+  | f + 1, ctx, .bindElse y t (.field a r) _ (.block ss en) :: rest =>
+    match uRegOrt ctx (.field a r) with
+    | none => .error "let else without G form"
+    | some (.error err) => .error err
+    | some (.ok rg) =>
+      if t.isSome then .error "let else with a type without G form"
+      else if rg.pruefung.isNone then .error "let else of a register read without a promise to check"
+      else
+        match uAnwReihe tabs koepfe f ctx ss with
+        | .error err => .error err
+        | .ok (ebody, ctxEB) =>
+          match uEndeStmt ctxEB en with
+          | .error err => .error err
+          | .ok endS =>
+            match uAnwReihe tabs koepfe f (uMitLokal ctx y UParamArt.int (Ty.int rg.lo rg.hi)
+                (ctx.muts.filter (fun m => !strEq m y))) rest with
+            | .error err => .error err
+            | .ok (ys, cE) => .ok ([UStmt.regReadElse y rg.dev rg.name] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
   | f + 1, ctx, .bindElse y t (.call c args) e (.block ss en) :: rest =>
     if t.isSome then .error "let else with a type without G form"
     else
@@ -2526,24 +2665,26 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
-    (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := []) : UCtx :=
+    (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
+    (regs : List UReg := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
-    resSum := kopf.resSum }
+    resSum := kopf.resSum, regs, griffe := kopf.griffe.map (·.2) }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
 def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
-    (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := []) :
+    (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
+    (devs : List String := []) (regs : List UReg := []) :
     Except String UFn :=
-  match elabKopf consts alias tabs locks globs whys sums sig with
+  match elabKopf consts alias tabs locks globs whys sums sig devs with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums
+    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, body, r) =>
@@ -2654,6 +2795,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
+  | .devT .. :: rest => uRestFehler rest
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
@@ -2870,6 +3012,130 @@ def uWhys : List SItemTief → Except String (List UWhy)
       | .ok r => .ok ({ name := n, cases := cs.map (·.1) } :: r)
   | _ :: rest => uWhys rest
 
+/-! ## Device registers -/
+
+/-- The register class word (`regklasse`). -/
+def uRegKlasse (k : String) : Except String Regklasse :=
+  if strEq k "r" then .ok .r else if strEq k "w" then .ok .w else if strEq k "rw" then .ok .rw
+  else if strEq k "w1c" then .ok .w1c else if strEq k "rc" then .ok .rc
+  else .error ("register class without G form: " ++ k)
+
+/-- A side of a register predicate at the value `v` (the register's own name reads `v`). -/
+def uZSeite (v : Int) : USide → Option Int
+  | .lit k => some k
+  | .param _ => some v
+  | .add a b => (uZSeite v a).bind fun x => (uZSeite v b).map (x + ·)
+  | .sub a b => (uZSeite v a).bind fun x => (uZSeite v b).map (x - ·)
+  | .mul a b => (uZSeite v a).bind fun x => (uZSeite v b).map (x * ·)
+  | .neg a => (uZSeite v a).map (- ·)
+  | _ => none
+
+/-- A comparison of two numbers by its operator word. -/
+def uVergleich (op : String) (x y : Int) : Option Bool :=
+  if strEq op "==" then some (decide (x = y)) else if strEq op "!=" then some (!decide (x = y))
+  else if strEq op "<" then some (decide (x < y)) else if strEq op "<=" then some (decide (x ≤ y))
+  else if strEq op ">" then some (decide (y < x)) else if strEq op ">=" then some (decide (y ≤ x))
+  else none
+
+/-- A register predicate at the value `v` (`none`: a form the promise does not evaluate). -/
+def uZEns (v : Int) : UEns → Option Bool
+  | .cmp op a b => (uZSeite v a).bind fun x => (uZSeite v b).bind fun y => uVergleich op x y
+  | .tru => some true
+  | .fls => some false
+  | .and a b => (uZEns v a).bind fun x => (uZEns v b).map (x && ·)
+  | .or a b => (uZEns v a).bind fun x => (uZEns v b).map (x || ·)
+  | .not a => (uZEns v a).map (!·)
+  | _ => none
+
+/-- The device's promise of a register at a read value: `true` without a promise. -/
+def UReg.zusageBei (g : UReg) (v : Int) : Bool :=
+  match g.zusage with
+  | none => true
+  | some p => (uZEns v p).getD true
+
+/-- The context of a register predicate: the register's own name is its one (numeric) variable. -/
+def uRegCtx (alias : List (String × (Int × Int))) (lits : List (String × Int)) (n : String) (lo hi : Int) :
+    UCtx :=
+  { names := [n], kinds := [.int], types := [.int lo hi], tabs := [], locks := [], held := [], res := none,
+    fname := n, alias, lits }
+
+/-- One `reg` of a device: an integer type (an EMPTY range `lo > hi` included: the declaration stands, a read
+    answers nothing -- the checker's `N314`), a class without stages, no bit fields, a promise (or, with
+    `else`, a check at the binding) that evaluates, and `depends` carriers that are tables or statics of the
+    unit, named bare. -/
+def uReg (alias : List (String × (Int × Int))) (lits : List (String × Int)) (tabs : List UTab)
+    (globs : List UGlob) (dev : String) (rg : SReg) : Except String UReg :=
+  if !rg.stage.isEmpty then .error "register class per stage without G form"
+  else if !rg.felder.isEmpty then .error "register fields without G form"
+  else
+    match uErgBereich alias rg.rtyp with
+    | .error e => .error e
+    | .ok (lo, hi) =>
+      match uRegKlasse rg.klasse with
+      | .error e => .error e
+      | .ok k =>
+        match uSeq (rg.abhaengt.map fun c => match c with
+            | [n] =>
+              if tabs.any (fun x => strEq x.name n) || globs.any (fun x => strEq x.name n) then .ok n
+              else .error ("depends names no carrier: " ++ n)
+            | _ => .error "depends on a field without G form") with
+        | .error e => .error e
+        | .ok ts =>
+          match (match rg.voraus with
+              | none => .ok none
+              | some p =>
+                match uBool (uRegCtx alias lits rg.name lo hi) p with
+                | .error e => .error e
+                | .ok q => if (uZEns lo q).isSome then .ok (some q) else .error "register promise without G form"
+              : Except String (Option UEns)) with
+          | .error e => .error e
+          | .ok pr =>
+            match rg.elseF with
+            | some _ => .ok { dev, name := rg.name, lo, hi, klasse := k, traeger := ts, pruefung := pr }
+            | none => .ok { dev, name := rg.name, lo, hi, klasse := k, traeger := ts, zusage := pr }
+
+/-- `mirrors W from M` of a device: `M` at `W`. -/
+def uSpiegelPaare : List SGerTeil → Except String (List (String × String))
+  | [] => .ok []
+  | .copy (.variable w) (.variable m) :: rest =>
+    match uSpiegelPaare rest with
+    | .error e => .error e
+    | .ok ps => .ok ((w, m) :: ps)
+  | .copy .. :: _ => .error "mirrors without G form"
+  | _ :: rest => uSpiegelPaare rest
+
+/-- The registers of one device, in order: banks and transitions have no G form here (a `bank` is sugar for
+    indexed registers; a device `transition` has no statement that invokes it in the language). -/
+def uGeraet (alias : List (String × (Int × Int))) (lits : List (String × Int)) (tabs : List UTab)
+    (globs : List UGlob) (dev : String) (teile : List SGerTeil) : Except String (List UReg) :=
+  match uSpiegelPaare teile with
+  | .error e => .error e
+  | .ok ms =>
+    match uSeq (teile.filterMap fun p => match p with
+        | .reg rg => some (uReg alias lits tabs globs dev rg)
+        | .bank _ => some (.error "register bank without G form")
+        | .trans _ => some (.error "device transition without G form")
+        | .copy .. => none) with
+    | .error e => .error e
+    | .ok regs =>
+      if ms.all (fun (w, m) => regs.any (fun g => strEq g.name w) && regs.any (fun g => strEq g.name m)) then
+        .ok (regs.map fun g =>
+          { g with spiegel := (ms.find? (fun p => strEq p.1 g.name)).map (·.2) })
+      else .error "mirrors names no register of the device"
+
+/-- The registers of the unit: every `device` item in order. -/
+def uRegs (alias : List (String × (Int × Int))) (lits : List (String × Int)) (tabs : List UTab)
+    (globs : List UGlob) : List SItemTief → Except String (List UReg)
+  | [] => .ok []
+  | .devT n _ _ teile :: rest =>
+    match uGeraet alias lits tabs globs n teile with
+    | .error e => .error e
+    | .ok rs =>
+      match uRegs alias lits tabs globs rest with
+      | .error e => .error e
+      | .ok more => .ok (rs ++ more)
+  | _ :: rest => uRegs alias lits tabs globs rest
+
 /-! ## Lock floors (`Signatur.boden`)
 
     The floor of a function is the lowest rank of any lock taken on a path from it (its own `locks L` blocks
@@ -2963,7 +3229,11 @@ def elabU : List SItemTief → Except String UProg
     match uSums alias ms with
     | .error e => .error e
     | .ok sums =>
-    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s)) with
+    match uRegs alias consts tabs globs ms with
+    | .error e => .error e
+    | .ok regs =>
+    let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
+    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs)) with
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
@@ -2976,7 +3246,8 @@ def elabU : List SItemTief → Except String UProg
     let axKoepfe := axKoepfe0 ++ gateKoepfe
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
-    match uSeq (fnItems.map (fun (s, b) => elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums)) with
+    match uSeq (fnItems.map (fun (s, b) =>
+        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs)) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln fns ms with
@@ -2991,7 +3262,7 @@ def elabU : List SItemTief → Except String UProg
           gestartet := gestartet,
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0 }),
-          annahmen := annahmen, whys := whys, sums := sums }
+          annahmen := annahmen, whys := whys, sums := sums, regs := regs }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
@@ -3295,7 +3566,8 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t => .ok (.cons s t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
-    | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
+    | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
 
@@ -3332,7 +3604,8 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
-    | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _ =>
+    | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
+    | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
 
@@ -3683,7 +3956,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
@@ -4021,6 +4294,9 @@ def beqUStmt : UStmt → UStmt → Bool
   | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
   | .ret a, .ret b => beqURet a b
   | .leave a, .leave b | .next a, .next b => strEq a b
+  | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>
+    strEq a b && strEq d e && strEq r s
+  | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && beqUSide v w
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
@@ -4109,7 +4385,8 @@ def beqUFnList : List UFn → List UFn → Bool
 def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabs b.tabs &&
     beqULockList a.locks b.locks && beqUFnList a.fns b.fns &&
-    beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs
+    beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs &&
+    decide (a.regs = b.regs)
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool

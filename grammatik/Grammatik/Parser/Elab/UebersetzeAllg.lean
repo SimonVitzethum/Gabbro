@@ -143,6 +143,29 @@ def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.lengt
       | .error e => .error e
       | .ok j => .ok j.succ
 
+/-- The register at an index. -/
+def regAt (u : UProg) (r : Fin u.regs.length) : UReg := u.regs.get r
+
+/-- A register by device and name. -/
+def regIdx : (rs : List UReg) → (d n : String) → Except String (Fin rs.length)
+  | [], _, n => .error ("register unknown: " ++ n)
+  | g :: rest, d, n =>
+    if g.dev == d && g.name == n then .ok 0
+    else match regIdx rest d n with
+      | .error e => .error e
+      | .ok j => .ok j.succ
+
+/-- The mirror of a register (`mirrors R from M`): a register of the same device. -/
+def spiegelAt (u : UProg) (r : Fin u.regs.length) : Option (Fin u.regs.length) :=
+  (regAt u r).spiegel.bind fun m => (regIdx u.regs (regAt u r).dev m).toOption
+
+/-- The carriers a register's answer rests on (`depends { .. }`): tables first by name, else statics. -/
+def rtraegerAt (u : UProg) (r : Fin u.regs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
+  (regAt u r).traeger.filterMap fun n =>
+    match (tabIdx u.tabs n).toOption with
+    | some t => some (.inl t)
+    | none => (globIdx u.globs n).toOption.map .inr
+
 /-- The write flag of a function at a static. -/
 def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
   f.gputs.any (· == (globAt u g).name)
@@ -190,8 +213,8 @@ theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
   | cons _ _ => simp
 
 /-- The declaration built from the elaborated program itself: index
-    carriers (`Fin`) for tables, locks, fields and functions; no
-    globals, marks, invariants, axioms, registers or assumptions. -/
+    carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
+    (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
 def declOf (u : UProg) : Deklaration where
   Tab := Fin u.tabs.length
   decTab := inferInstance
@@ -232,11 +255,12 @@ def declOf (u : UProg) : Deklaration where
   aschreibt := fun _ _ => false
   agschreibt := fun _ _ => false
   agruende := fun a => (uaxAt u a).gruende
-  Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  Reg := Fin u.regs.length
+  rtyp := fun r => .int (regAt u r).lo (regAt u r).hi
+  rklasse := fun r => (regAt u r).klasse
+  spiegel := spiegelAt u
+  rzusage := fun r (v : Zahl (regAt u r).lo (regAt u r).hi) => (regAt u r).zusageBei v.n
+  rtraeger := rtraegerAt u
   Annahme := Option (Fin u.annahmen.length)
   a10 := none
   geteilt_bewacht :=

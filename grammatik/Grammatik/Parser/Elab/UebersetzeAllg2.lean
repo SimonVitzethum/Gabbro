@@ -989,6 +989,20 @@ def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (f
       | .error e => .error e
       | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
 
+/-- `d.R = v;` (`Stmt.regWrite`): the value fitted into the register's range, the class writable. -/
+def lowRegWriteL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (d r : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match regIdx u.regs d r with
+  | .error e => .error e
+  | .ok g =>
+    match lowWertAt u Γ Λ fn (regAt u g).lo (regAt u g).hi v with
+    | .error e => .error e
+    | .ok e =>
+      if hk : ((declOf u).rklasse g).schreibbar = true then
+        .ok (Stmt.regWrite (D := declOf u) g hk e)
+      else .error "register written against its class"
+
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1007,9 +1021,10 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .setVar x v => lowSetVarL u caller Γ fn Λ x v
   | .setVarB x v => lowSetVarBL u caller Γ fn Λ x v
   | .call c args => lowCallL u caller Γ fn Λ c args
+  | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"
