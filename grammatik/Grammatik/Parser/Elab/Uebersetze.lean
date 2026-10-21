@@ -247,6 +247,8 @@ inductive UStmt
   | regReadElse : String → String → String → UStmt
   /-- `d.R = v;` (`Stmt.regWrite`): device, register, value. -/
   | regWrite : String → String → USide → UStmt
+  /-- `transition T.slots[i].f : A -> B;` (`Stmt.shift`): table, field, index, the state, the stage numbers. -/
+  | shiftTab : String → String → UIdx → String → Int → Int → UStmt
   /-- `let p = &f;` (`Block.bind` of `Expr.fnref`): binder, function. -/
   | bindFnref : String → String → UStmt
   /-- `p(..);` through a function pointer (`Stmt.callInd`): the pointer, the function it points at, the arguments. -/
@@ -332,6 +334,15 @@ structure USum where
 
 /-- The specification of a tagged type: the payload range of each case (`Ty.sum cs`). -/
 def USum.spec (s : USum) : List (Option (Int × Int)) := s.cases.map (·.2)
+
+/-- One `state S { transition t { f : A -> B } .. }` (`D.erlaubt`): its stages, numbered 0, 1, 2, .. in the order
+    they are first written, and the allowed pairs (one per `transition` line, as stage numbers). The field it
+    governs is the field a `transition T.slots[i].f : A -> B;` statement is applied to (Simon, 2026-10-21). -/
+structure UZustand where
+  name : String
+  stufen : List String
+  paare : List (Nat × Nat)
+  deriving DecidableEq, Repr
 
 /-- One invariant (`table T { .. invariant I cost .. runs .. : p; }` or `group G over { T, U } { invariant I .. }`,
     `D.Inv`): its name, its carrier tables (`D.traeger`) and its predicate over no parameter (`Programm.invariante`,
@@ -423,6 +434,8 @@ structure UCtx where
   resSum : Option (Nat × List (Option (Int × Int))) := none
   /-- The unit's device registers. -/
   regs : List UReg := []
+  /-- The unit's `state` items. -/
+  zustaende : List UZustand := []
   /-- The device handles in scope: a parameter `d : D` (or `d : ptr<space, rights> D`) and its device `D`.
       A handle is no value of the model (a register is outside the world, `D.Reg`): it is erased from the
       parameters and only names the device of `d.R`. -/
@@ -538,6 +551,10 @@ structure UProg where
   regs : List UReg := []
   /-- The invariants (`Deklaration.Inv`): table invariants in table order, then group invariants. -/
   invs : List UInv := []
+  /-- The `state` items, in order. -/
+  zustaende : List UZustand := []
+  /-- The governed fields: table, field and the state whose `transition` statements are applied to it. -/
+  regiert : List (String × String × String) := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -2005,6 +2022,17 @@ def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except
         | none => .error "function pointer to no function")
     | _ => none
 
+/-- The state that declares the transition `von -> nach` (by stage names): exactly one, with the stage numbers. -/
+def uZustandVon (zs : List UZustand) (von nach : String) : Except String (String × Nat × Nat) :=
+  let treffer := zs.filterMap fun z =>
+    match z.stufen.findIdx? (strEq · von), z.stufen.findIdx? (strEq · nach) with
+    | some a, some c => if z.paare.contains (a, c) then some (z.name, a, c) else none
+    | _, _ => none
+  match treffer with
+  | [x] => .ok x
+  | [] => .error "transition not declared by a state"
+  | _ => .error "transition declared by two states"
+
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/
 def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
@@ -2020,6 +2048,14 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         | .ok s => .ok (.regWrite rg.dev rg.name s)
     | none => uSetze ctx ziel op wert
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
+  | .shift z von nach =>
+    match uZugriff ctx z with
+    | .error e => .error e
+    | .ok (.thru .., _, _, _) => .error "transition through a pointer without G form"
+    | .ok (.tabelle _, tb, f, ix) =>
+      match uZustandVon ctx.zustaende von nach with
+      | .error e => .error e
+      | .ok (s, a, c) => .ok (.shiftTab tb f ix s (Int.ofNat a) (Int.ofNat c))
   | .reset a .none =>
     if ctx.tabs.any (fun x => x.arena && strEq x.name a) then .ok (.assignGlob (a ++ "#used") (.lit 0))
     else .error ("arena unknown: " ++ a)
@@ -2814,12 +2850,12 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
     (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
-    (regs : List UReg := []) : UCtx :=
+    (regs : List UReg := []) (zustaende : List UZustand := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
-    resSum := kopf.resSum, regs, griffe := kopf.griffe.map (·.2) }
+    resSum := kopf.resSum, regs, griffe := kopf.griffe.map (·.2), zustaende }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -2827,12 +2863,12 @@ def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
     (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
-    (devs : List String := []) (regs : List UReg := []) :
+    (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := []) :
     Except String UFn :=
   match elabKopf consts alias tabs locks globs whys sums sig devs with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs
+    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>
@@ -2956,6 +2992,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .concT _ :: rest => uRestFehler rest
   | .devT .. :: rest => uRestFehler rest
   | .groupT .. :: rest => uRestFehler rest
+  | .stateT .. :: rest => uRestFehler rest
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
@@ -3171,6 +3208,42 @@ def uWhys : List SItemTief → Except String (List UWhy)
       | .error e => .error e
       | .ok r => .ok ({ name := n, cases := cs.map (·.1) } :: r)
   | _ :: rest => uWhys rest
+
+/-! ## States -/
+
+/-- The stage names of a `state`, in the order they are first written. -/
+def uStufenNamen : List (SExpr × SExpr × SExpr) → List String → Except String (List String)
+  | [], acc => .ok acc
+  | (_, .variable a, .variable c) :: rest, acc =>
+    let acc1 := if acc.any (strEq · a) then acc else acc ++ [a]
+    let acc2 := if acc1.any (strEq · c) then acc1 else acc1 ++ [c]
+    uStufenNamen rest acc2
+  | _ :: _, _ => .error "state stage without G form"
+
+/-- One `state` item: stages 0, 1, 2, .. in written order, one allowed pair per transition line. A
+    `requires` or an `effects` at a state transition has no form here. -/
+def uZustand (n : String) (ts : List STrans) : Except String UZustand :=
+  if !ts.all (fun tr => tr.voraus.isNone && tr.wirkung.isEmpty) then .error "state transition clause without G form"
+  else
+    let schritte := ts.flatMap (·.schritte)
+    match uStufenNamen schritte [] with
+    | .error e => .error e
+    | .ok stufen =>
+      let nr : SExpr → Nat := fun e => match e with
+        | .variable a => (stufen.findIdx? (strEq · a)).getD 0
+        | _ => 0
+      .ok { name := n, stufen, paare := schritte.map fun (_, a, c) => (nr a, nr c) }
+
+/-- The governed fields: each `transition` statement of a body names its table, field and state; a field
+    governed by two states is refused. -/
+def uRegiert (fns : List UFn) : Except String (List (String × String × String)) :=
+  let alle := fns.flatMap fun f => f.body.filterMap fun st => match st with
+    | .shiftTab tb fld _ s _ _ => some (tb, fld, s)
+    | _ => none
+  let eins := alle.foldl (fun acc x => if acc.any (fun y => strEq y.1 x.1 && strEq y.2.1 x.2.1 && strEq y.2.2 x.2.2)
+    then acc else acc ++ [x]) []
+  if eins.all (fun x => eins.all (fun y => !(strEq x.1 y.1 && strEq x.2.1 y.2.1) || strEq x.2.2 y.2.2)) then .ok eins
+  else .error "a field governed by two states"
 
 /-! ## Invariants -/
 
@@ -3437,6 +3510,9 @@ def elabU : List SItemTief → Except String UProg
     match uInvs consts alias tabs locks globs ms with
     | .error e => .error e
     | .ok invs =>
+    match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts) | _ => none)) with
+    | .error e => .error e
+    | .ok zustaende =>
     let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs)) with
     | .error e => .error e
@@ -3452,7 +3528,7 @@ def elabU : List SItemTief → Except String UProg
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, b) =>
-        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs)) with
+        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende)) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln fns ms with
@@ -3463,12 +3539,16 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok gestartet =>
       if !uU003 locks fns invs then .error "a writer of an invariant's carrier does not hold all its locks" else
+      match uRegiert fns with
+      | .error e => .error e
+      | .ok regiert =>
       let u : UProg :=
         { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
           gestartet := gestartet,
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0 }),
-          annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs }
+          annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
+          zustaende := zustaende, regiert := regiert }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
@@ -3775,7 +3855,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
     | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _
-    | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ =>
+    | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .shiftTab .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call after call without G form"
 
@@ -3814,7 +3894,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
     | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .awaitBind .. :: _, _
-    | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ =>
+    | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .shiftTab .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "call without G form"
 
@@ -4166,7 +4246,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
@@ -4508,6 +4588,8 @@ def beqUStmt : UStmt → UStmt → Bool
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>
     strEq a b && strEq d e && strEq r s
   | .regWrite d r v, .regWrite e s w => strEq d e && strEq r s && beqUSide v w
+  | .shiftTab a f x s v w, .shiftTab b g y z v' w' =>
+    strEq a b && strEq f g && beqUIdx x y && strEq s z && v == v' && w == w'
   | .awaitBind a g, .awaitBind b h => strEq a b && strEq g h
   | .bindFnref a g, .bindFnref b h => strEq a b && strEq g h
   | .callInd p f xs, .callInd q g ys => strEq p q && strEq f g && beqUArgList xs ys

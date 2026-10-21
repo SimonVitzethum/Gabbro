@@ -1027,6 +1027,34 @@ def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (f
           (Stmt.callInd (D := declOf u) (n := k.callee.val) (Expr.var v) k.args k.hp hr))
       else .error "call of a function with a reason channel needs `let .. else`"
 
+/-- `transition T.slots[i].f : A -> B;` (`Stmt.shift`): the stage `B` in the field's range, the pair declared
+    (`D.erlaubt`), the write right and the guards. -/
+def lowShiftL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (von nach : Int) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match tabIdx u.tabs b with
+  | .error e => .error e
+  | .ok t =>
+    match fieldHit u t fname with
+    | .error e => .error e
+    | .ok fh =>
+      match lowIdx u Γ Λ fn 0 t ix with
+      | .error e => .error e
+      | .ok i =>
+        if hn : fh.range.1 ≤ nach ∧ nach ≤ fh.range.2 then
+          if he : (declOf u).erlaubt t fh.idx von nach = true then
+            if hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+              if hw : writesAt u (fnAt u caller) t = true then
+                have hwV : (verOf u caller).schreibt t = true := by
+                  show (vertragVon (declOf u) caller).schreibt t = true
+                  rw [vSchreibt_eq u caller t]
+                  exact hw
+                .ok (Stmt.shift (D := declOf u) t fh.idx fh.hint i von nach hn he hwV hL)
+              else .error "write without right"
+            else .error "access without held guard"
+          else .error "transition not allowed at the field"
+        else .error "stage outside the field's range"
+
 /-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1047,6 +1075,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => lowRegWriteL u caller Γ fn Λ d r v
   | .callInd p f args => lowCallIndL u caller Γ fn Λ p f args
+  | .shiftTab b f ix _ von nach => lowShiftL u caller Γ fn Λ b f ix von nach
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. =>

@@ -100,9 +100,11 @@ rules('grammatik/Grammatik/Parser/Elab', [
     (r'^UebersetzeProben\w*$', 'Proben'),
 ])
 
-# The witnesses of the first thirteen walls, and those of the forms added since (14 and up): two folders.
+# The witnesses of the first thirteen walls, those of the forms added since (14 to 33), and the later ones
+# (34 and up): three folders.
 rules('grammatik/Grammatik/Parser/Elab/Proben', [
     (r'^UebersetzeProben([2-9]|1[0-3])?$', 'Fruehe'),
+    (r'^UebersetzeProben(3[4-9]|[4-9]\d|\d{3,})$', 'Spaet'),
     (r'^UebersetzeProben\d+$', 'Formen'),
 ])
 
