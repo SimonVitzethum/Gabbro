@@ -41,7 +41,7 @@ def expr {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → Exce
   | _, .tru => .ok ".tru"
   | _, .fls => .ok ".fls"
   | _, .var x => .ok s!"(.var {var x})"
-  | _, .glob g _ => .ok s!"(.glob {fin (glob g) "z.globs.length"} {bew})"
+  | _, .glob g _ => .ok s!"(Expr.glob (D := z.deklaration) {fin (glob g) "z.globs.length"} {bew})"
   | _, .slot t f i _ => do .ok s!"(.slot {fin (tab t) "z.tabs.length"} {fin (feld t f) s!"(z.tabs.get ⟨{tab t}, by decide⟩).felder.length"} {← expr i} {bew})"
   | _, .fnref f n _ => .ok s!"(.fnref {fin (fn f) "z.fns.length"} {n} {bew})"
   | .int lo' hi', .widen _ _ e => do .ok s!"(Expr.widen (lo' := {zahl lo'}) (hi' := {zahl hi'}) {bew} {bew} {← expr e})"
