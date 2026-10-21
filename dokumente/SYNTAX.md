@@ -677,7 +677,7 @@ placelist  = place { "," place } ;
 | `true`, `false` | | `bool` | `Expr.tru`, `Expr.fls` |
 | `place` = a local | | its type | `Expr.var x` |
 | `place` = a `static`/`atomic` | **the guards of the global are in Λ** (`H007`, §11) | its type | `Expr.glob g (hL : gdarf D g Λ)` |
-| `place` = `T.slots[i].f`, `r[i].f` | **`i : index into T`** (CHANGED «SG-4»: no other type reaches an index — a wider number reaches it through `narrow`, §7) **and the guards of `T` are in Λ** («SG-6a») | the field's type | `Expr.slot t f i hL` |
+| `place` = `T.slots[i].f`, `r[i].f` | **`i : index into T`** (CHANGED «SG-4»: no other type reaches an index — a wider number reaches it through `narrow`, §7; an index into a table of the same `count` is one, `Ty.index` being the count) **and the guards of `T` are in Λ** («SG-6a») | the field's type | `Expr.slot t f i hL` |
 | `n` bytes at `i` of a byte carrier | `i : lo .. hi` with `0 ≤ lo` and `hi + n ≤ count`; guards of the carrier in Λ («SG-16») | `0 .. 256ⁿ − 1` | `Expr.getBytes`; theorem `bytes_in_tabelle` |
 | `place` = `p->f`, `p[i].f` | the same, through a pointer (§3) | | `Expr.thru` |
 | `Some(e)`, `None` | `e : index into T` | `option index into T` | `Expr.some`, `Expr.none` |
@@ -689,7 +689,7 @@ placelist  = place { "," place } ;
 | `&f` | `f` has exactly the signature of the `fnptr` at the place | `fn(…)` | `Expr.fnref f n (h : D.sig f = n)` |
 | `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.oldG hL`, `Expr.oldS hL` |
-| `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
+| `result` | only in `ensures`: the answer (a number in a comparison, a truth value as a predicate) | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
 | `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |

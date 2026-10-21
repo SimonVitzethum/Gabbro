@@ -100,6 +100,8 @@ inductive UEns
       table, the binder (an index into `T` inside `p`) and the body. -/
   | alle : String → String → UEns → UEns
   | einige : String → String → UEns → UEns
+  /-- `result` of a function with a `bool` result, in its `ensures` (`Expr.var` of the head of `ErgCtx`). -/
+  | ergB : UEns
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -995,8 +997,15 @@ def uAnzahlTab (tabs : List UTab) (t : String) : Except String Int :=
   | .some x => .ok x.count
   | .none => .error ("table unknown: " ++ t)
 
+/-- Two tables of the same slot count: an index into one is an index into the other (`Ty.index` is the
+    count, as in the model). -/
+def uGleicheAnzahl (tabs : List UTab) (m n : Nat) : Bool :=
+  match tabs[m]?, tabs[n]? with
+  | some a, some b => a.count == b.count
+  | _, _ => false
+
 /-- An index into a table: a literal inside `count`, or an
-    index parameter for the same table (the `tr_index` of
+    index parameter for a table of the same count (the `tr_index` of
     `lean_g.rs`). -/
 def uIndex (ctx : UCtx) (t : String) (num : Nat) : SExpr → Except String UIdx
   | .lit v =>
@@ -1011,7 +1020,7 @@ def uIndex (ctx : UCtx) (t : String) (num : Nat) : SExpr → Except String UIdx
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.index m) =>
-        if m == num then .ok (.param p) else .error "index of foreign table"
+        if m == num || uGleicheAnzahl ctx.tabs m num then .ok (.param p) else .error "index of foreign table"
       | .ok .int => .ok (.param p)
       | _ => .error "index without G form"
   | _ => .error "index without G form"
@@ -1260,6 +1269,7 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
         | .ok b => .ok (if k == XKind.all then .alle tn x b else .einige tn x b)
   | .tru => .ok .tru
   | .fls => .ok .fls
+  | .res => if ctx.resBool then .ok .ergB else .error "ensures clause without G form"
   | .variable g =>
     match (match uParamNr ctx g with
         | .ok j =>
@@ -1298,6 +1308,7 @@ def ensAltErg : UEns → Bool
   | .and a b | .or a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
   | .alle _ _ b | .einige _ _ b => ensAltErg b
+  | .ergB => true
   | _ => false
 
 /-- A truth value in a BODY (a returned or stored `bool`): the predicate forms of an `ensures`,
@@ -3709,7 +3720,7 @@ def lowerVglEin (tabs : List UTab) (names : List String)
 /-- One `ensures` predicate in `einzahlen`. -/
 def lowerSichertEin (tabs : List UTab) (names : List String)
     (types : List Ty) : UEns → Except String UEnsEin
-  | .globB _ | .var _ => .error "static without G form in the 104 lowering"
+  | .globB _ | .var _ | .ergB => .error "static without G form in the 104 lowering"
   | .alle .. | .einige .. => .error "quantifier without G form in the 104 lowering"
   | .cmp op a b => lowerVglEin tabs names types op a b
   | .tru => .ok Expr.tru
@@ -4122,7 +4133,7 @@ def lowerVglLies (tabs : List UTab) (names : List String)
 def lowerSichertLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     UEns → Except String UEnsLies
-  | .globB _ | .var _ => .error "static without G form in the 104 lowering"
+  | .globB _ | .var _ | .ergB => .error "static without G form in the 104 lowering"
   | .alle .. | .einige .. => .error "quantifier without G form in the 104 lowering"
   | .cmp op a b => lowerVglLies tabs names types res op a b
   | .tru => .ok Expr.tru
@@ -4558,6 +4569,7 @@ def beqUEns : UEns → UEns → Bool
     strEq a b && strEq f g && beqUIdx x y
   | .globB a, .globB b => strEq a b
   | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
+  | .ergB, .ergB => true
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool

@@ -1118,7 +1118,7 @@ def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
   | .error e => .error e
   | .ok r0 =>
   match lowEnsList u (ErgCtx (ctxOf u c) ((verOf u c).erg))
-      (resOf u c) (fnAt u c) (fnAt u c).res
+      (resOf u c) (fnAt u c) (fnAt u c).ergTy
       (fnAt u c).gives with
   | .error e => .error e
   | .ok e0 =>

@@ -160,12 +160,16 @@ theorem ergOk_mitErg {V : Vertrag z.deklaration} {ctx : UCtx} {Γ : Ctx} {Λ : L
   intro n hn
   simp only [Option.some.injEq] at hn
   subst hn
-  refine ⟨by simp, fun lo hi h => ?_⟩
   have h' : (τ :: Γ).reverse[Γ.length]? = some τ := by simp
-  rw [h'] at h
-  simp only [Option.some.injEq] at h
-  subst h
-  exact (H.ergInt lo hi hτ).1
+  refine ⟨by simp, fun lo hi h => ?_, fun h => ?_⟩
+  · rw [h'] at h
+    simp only [Option.some.injEq] at h
+    subst h
+    exact (H.ergInt lo hi hτ).1
+  · rw [h'] at h
+    simp only [Option.some.injEq] at h
+    subst h
+    exact (H.ergBool hτ).2
 
 /-- The kinds of the `ensures` context: the result (when there is one) first. -/
 def artErgAuf (erg : Option Ty) (art : Nat → UParamArt) : Nat → UParamArt :=

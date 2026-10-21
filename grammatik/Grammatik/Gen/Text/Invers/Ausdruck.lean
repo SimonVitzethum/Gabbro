@@ -41,7 +41,9 @@ def uOfIdx (art : Nat → UParamArt) (kopf : Option Nat) (num : Nat) (c : Int) {
   | .var x =>
     if kopf = some (Γ.length - 1 - tiefe x) then none else
     match art (tiefe x) with
-    | .index m => if m = num then some (.param (nVar (Γ.length - 1 - tiefe x))) else none
+    | .index m =>
+      if m = num ∨ (List.finRange z.tabs.length).any (fun t' => t'.val == m && decide (z.deklaration.count t' = c))
+      then some (.param (nVar (Γ.length - 1 - tiefe x))) else none
     | .int => some (.param (nVar (Γ.length - 1 - tiefe x)))
     | _ => none
   | _ => none
@@ -78,8 +80,8 @@ def uOfB (art : Nat → UParamArt) (kopf : Option Nat) {Γ : Ctx} {Λ : List (Re
     Expr z.deklaration Γ Λ τ → Option UEns
   | .tru => some .tru
   | .fls => some .fls
-  | .var x =>
-    if kopf = some (Γ.length - 1 - tiefe x) then none else
+  | .var (τ := τ) x =>
+    if kopf = some (Γ.length - 1 - tiefe x) then (if τ = .bool then some .ergB else none) else
     match art (tiefe x) with
     | .bool => some (.var (nVar (Γ.length - 1 - tiefe x)))
     | _ => none
@@ -130,6 +132,21 @@ theorem tiefe_lt : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), tiefe x < Γ.length
 
 variable {z}
 
+theorem tabNrAux_at : ∀ (tabs : List UTab) (k0 : Nat) (n : String) (j : Nat) (c : Int),
+    uTabNrAux tabs k0 n = .ok (j, c) → k0 ≤ j ∧ ∃ tb, tabs[j - k0]? = some tb ∧ tb.count = c
+  | [], _, _, _, _, h => by simp [uTabNrAux] at h
+  | tb :: rest, k0, n, j, c, h => by
+    simp only [uTabNrAux] at h
+    split at h
+    · simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨le_refl _, tb, by simp, rfl⟩
+    · obtain ⟨hk, tb', h1, h2⟩ := tabNrAux_at rest (k0 + 1) n j c h
+      refine ⟨by omega, tb', ?_, h2⟩
+      have hj : j - k0 = (j - (k0 + 1)) + 1 := by omega
+      rw [hj]
+      simpa using h1
+
 theorem EInvK.tabFind {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (t : z.deklaration.Tab) :
     uAnzahlTab ctx.tabs (nTab (tN z t)) = .ok (z.deklaration.count t) := by
@@ -176,9 +193,36 @@ theorem idx_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Na
       rw [hj]
       simp only
       rw [ha]
-      revert hu
-      cases art (tiefe x) <;> simp
-      intro h1 h2; subst h1; subst h2; simp
+      cases hart : art (tiefe x) with
+      | index m =>
+        rw [hart] at hu
+        simp only at hu
+        split at hu
+        · rename_i hc
+          simp only [Option.some.injEq] at hu; subst hu
+          have hg : (m == tN z t || uGleicheAnzahl ctx.tabs m (tN z t)) = true := by
+            rcases hc with rfl | hc
+            · simp
+            · obtain ⟨t', _, ht'⟩ := List.any_eq_true.1 hc
+              simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at ht'
+              obtain ⟨hm, hcnt⟩ := ht'
+              subst hm
+              obtain ⟨_, tb1, h1, c1⟩ := tabNrAux_at ctx.tabs 0 _ _ _ (H.tabNr t')
+              obtain ⟨_, tb2, h2, c2⟩ := tabNrAux_at ctx.tabs 0 _ _ _ (H.tabNr t)
+              simp only [Nat.sub_zero] at h1 h2
+              have : uGleicheAnzahl ctx.tabs t'.val (tN z t) = true := by
+                unfold uGleicheAnzahl
+                show (match ctx.tabs[tN z t']?, ctx.tabs[tN z t]? with
+                  | some a, some b => a.count == b.count | _, _ => false) = true
+                rw [h1, h2]; simp [c1, c2, hcnt]
+              simp [this]
+          simp only [hg, ite_true]
+        · simp at hu
+      | int =>
+        rw [hart] at hu
+        simp only [Option.some.injEq] at hu; subst hu
+        rfl
+      | _ => rw [hart] at hu; simp at hu
   | _ => simp [uOfIdx] at hu
 
 /-- The printed slot read `T.slots[i].f`. -/
@@ -250,19 +294,24 @@ theorem var_typ : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), Γ.reverse[Γ.length
 
 /-- The result of an `ensures` is read as `result` only when it is a number of a function with a result range. -/
 def ErgOk (ctx : UCtx) (Γ : Ctx) (kopf : Option Nat) : Prop :=
-  ∀ n, kopf = some n → n < Γ.length ∧ ∀ lo hi, Γ.reverse[n]? = some (.int lo hi) → ctx.res.isSome
+  ∀ n, kopf = some n → n < Γ.length ∧ (∀ lo hi, Γ.reverse[n]? = some (.int lo hi) → ctx.res.isSome) ∧
+    (Γ.reverse[n]? = some .bool → ctx.resBool = true)
 
 theorem ergOk_none (ctx : UCtx) (Γ : Ctx) : ErgOk ctx Γ none := fun n h => by simp at h
 
 theorem ErgOk.auf {ctx ctx' : UCtx} {Γ : Ctx} {kopf : Option Nat} (h : ErgOk ctx Γ kopf) (hres : ctx'.res = ctx.res)
-    (τ : Ty) : ErgOk ctx' (τ :: Γ) kopf := by
+    (hb : ctx'.resBool = ctx.resBool) (τ : Ty) : ErgOk ctx' (τ :: Γ) kopf := by
   intro n hn
-  obtain ⟨h1, h2⟩ := h n hn
-  refine ⟨by simp; omega, fun lo hi hg => ?_⟩
-  rw [hres]
-  apply h2 lo hi
-  rw [List.reverse_cons, List.getElem?_append_left (by simpa using h1)] at hg
-  exact hg
+  obtain ⟨h1, h2, h3⟩ := h n hn
+  refine ⟨by simp; omega, fun lo hi hg => ?_, fun hg => ?_⟩
+  · rw [hres]
+    apply h2 lo hi
+    rw [List.reverse_cons, List.getElem?_append_left (by simpa using h1)] at hg
+    exact hg
+  · rw [hb]
+    apply h3
+    rw [List.reverse_cons, List.getElem?_append_left (by simpa using h1)] at hg
+    exact hg
 
 theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (hr : ErgOk ctx Γ kopf) :
@@ -275,7 +324,7 @@ theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     have hx := var_typ x
     cases τ with
     | int lo hi =>
-      have := (hr _ hk).2 lo hi hx
+      have := (hr _ hk).2.1 lo hi hx
       simp only [uSeiteBlatt]
       cases h : ctx.res with
       | none => simp [h] at this
@@ -565,7 +614,15 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     simp only [delabE, Except.ok.injEq] at hd; subst hd
     simp only [uOfB] at hu
     split at hu
-    · simp at hu
+    · rename_i hk
+      split at hu
+      · rename_i hτ
+        simp only [Option.some.injEq] at hu; subst hu
+        subst hτ
+        have hx := var_typ x
+        have := (hr _ hk).2.2 hx
+        simp [hk, uSichert, this]
+      · simp at hu
     · rename_i hk
       simp only [hk, ite_false]
       obtain ⟨j, hj, ha⟩ := H.var (tiefe x) (tiefe_lt x) hk
@@ -740,7 +797,7 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     simp [xa] at hu
     subst hu
     simp at hn
-    have h1 := ih (H.auf t) (hr.auf rfl _) body (by omega) sa x ha xa
+    have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
     simp [uSichert, uTabNr, H.tabNr t, h1, strEq_eq]
   | existsSlots t body hL =>
@@ -757,7 +814,7 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     simp [xa] at hu
     subst hu
     simp at hn
-    have h1 := ih (H.auf t) (hr.auf rfl _) body (by omega) sa x ha xa
+    have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
     simp [uSichert, uTabNr, H.tabNr t, h1, strEq_eq]
   | _ => simp [uOfB] at hu
@@ -816,7 +873,7 @@ theorem ens_ohne_erg (n : Nat) :
   | var x =>
     simp only [uOfB] at hu
     split at hu
-    · simp at hu
+    · rename_i h; simp at h
     · split at hu <;> simp at hu; subst hu; rfl
   | glob g hL =>
     simp only [uOfB] at hu

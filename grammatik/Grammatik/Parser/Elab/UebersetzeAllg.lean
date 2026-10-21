@@ -602,7 +602,7 @@ def paramPos : List (String × Ty) → String → Except String Nat
 /-! ## Generic lowering: indices, sides, contracts -/
 
 /-- An index into a table: a literal inside `count`, or an index
-    parameter for the same table (`sh` shifts parameter positions:
+    parameter of a table of the same count (`sh` shifts parameter positions:
     `0` in a body, `1` in an `ensures` context with a result, where
     the result rides first). -/
 def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -619,12 +619,11 @@ def lowIdx (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .error e => .error e
     | .ok j =>
       match fn.kinds[j]? with
-      | some (.index m) =>
-        if m == t.val then
-          match lowVar Γ (sh + j) (.index ((declOf u).count t)) with
-          | .error e => .error e
-          | .ok v => .ok (Expr.var v)
-        else .error "index of foreign table"
+      | some (.index _) =>
+        -- an index into a table of the same count is an index into `t` (the model's `Ty.index` is the count)
+        match lowVar Γ (sh + j) (.index ((declOf u).count t)) with
+        | .error _ => .error "index of foreign table"
+        | .ok v => .ok (Expr.var v)
       | some .int =>
         match fn.params[j]? with
         | some (_, .int lo hi) =>
@@ -1017,7 +1016,7 @@ def lowBoolTab (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 /-- A comparison side in `ensures`: literals, numeric parameters,
     slot reads, `old` and `result` travel. -/
 def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (er : Option (Int × Int)) :
+    (fn : UFn) (er : Option Ty) :
     USide → Except String (LowSide u Γ Λ)
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
@@ -1067,11 +1066,11 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .ok x => .ok (LowSide.minusEins x)
   | .erg =>
     match er with
-    | some (a, b) =>
+    | some (.int a b) =>
       match lowVar Γ 0 (.int a b) with
       | .error e => .error e
       | .ok v => .ok { range := (a, b), term := Expr.var v }
-    | none => .error "result without result"
+    | _ => .error "result without result"
 
 /-- A value side in a body: the sides of an `ensures` without `old` and `result` (a body reads neither). -/
 def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -1081,7 +1080,7 @@ def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 
 /-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
 def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (er : Option (Int × Int)) :
+    (fn : UFn) (er : Option Ty) :
     String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
   | op, a, b =>
     match lowSideEns u Γ Λ fn er a with
@@ -1101,7 +1100,7 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 
 /-- One `ensures` predicate. -/
 def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (er : Option (Int × Int)) :
+    (fn : UFn) (er : Option Ty) :
     UEns → Except String (Expr (declOf u) Γ Λ .bool)
   | .cmp op a b => lowCmp u Γ Λ fn er op a b
   | .tru => .ok Expr.tru
@@ -1125,6 +1124,13 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .globB p => lowGlobBool u Γ Λ p
+  | .ergB =>
+    match er with
+    | some .bool =>
+      match lowVar Γ 0 .bool with
+      | .error e => .error e
+      | .ok v => .ok (Expr.var v)
+    | _ => .error "result without result"
   | .var p =>
     match paramPos fn.params p with
     | .error e => .error e
@@ -1157,7 +1163,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 
 /-- The `ensures` conjunction (empty is `.tru`). -/
 def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (er : Option (Int × Int)) :
+    (fn : UFn) (er : Option Ty) :
     List UEns → Except String (Expr (declOf u) Γ Λ .bool)
   | [] => .ok Expr.tru
   | e :: rest =>

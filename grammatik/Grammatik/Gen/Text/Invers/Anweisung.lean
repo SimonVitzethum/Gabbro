@@ -440,7 +440,7 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
     simp only [delabE, Except.ok.injEq] at hd; subst hd
     simp only [uOfB] at hu
     split at hu
-    · simp at hu
+    · rename_i h; simp at h
     · rename_i hk
       obtain ⟨j, hj, ha⟩ := H.var (tiefe x) (tiefe_lt x) (by simp)
       split at hu
