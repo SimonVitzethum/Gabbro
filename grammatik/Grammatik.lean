@@ -126,6 +126,10 @@ import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
 import Grammatik.Logik.Fortschritt.PlanLauf
 import Grammatik.Logik.Fortschritt.Hungerfrei
 import Grammatik.Logik.Fortschritt.HungerfreiZeuge
+import Grammatik.Logik.Terminierung.Klasse
+import Grammatik.Logik.Terminierung.Durchgang
+import Grammatik.Logik.Terminierung.Mass
+import Grammatik.Logik.Terminierung.Rekursion
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Logik.Fortschritt.KostenGZeuge
 import Grammatik.Proben.AuditFinal
