@@ -574,7 +574,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
             else .error "argument right without G form"
           else .error "argument type without G form"
         else .error "argument type without G form"
-      | .val _ | .bval _ | .oval _ | .gval _ => .error "value for pointer without G form"
+      | .val _ | .bval _ | .oval _ | .gval _ | .fnref _ => .error "value for pointer without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
@@ -626,6 +626,22 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     | .why _, .why n =>
       match a with
       | .gval g => lowGrund u Γ Λ fn n g
+      | _ => .error "argument without G form"
+    | .fnptr _, .fnptr m =>
+      match a with
+      | .fnref f =>
+        match fnIdx u.fns f with
+        | .error e => .error e
+        | .ok g =>
+          if h : (declOf u).passt g m = true then .ok (Expr.fnref (D := declOf u) g m h)
+          else .error "function does not conform to the pointer type"
+      | .var p =>
+        match paramPos fn.params p with
+        | .error e => .error e
+        | .ok j =>
+          match lowVar Γ j (.fnptr m) with
+          | .error e => .error e
+          | .ok x => .ok (Expr.var x)
       | _ => .error "argument without G form"
     | _, _ => .error "argument type without G form"
 
@@ -1051,28 +1067,98 @@ def lowRegWriteBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           .ok (Stmt.regWrite (D := declOf u) g hk e)
         else .error "register written against its class"
 
-/-- The pointer of an indirect call: the local `p` of type `fnptr n`, where `n` is the number of the function
-    `k.callee` the call was elaborated against (one signature per function, `sig f = f`). -/
-def lowZeiger (u : UProg) (Γ : Ctx) (fn : UFn) (p : String) (callee : Fin u.fns.length) :
-    Except String (Var Γ (Ty.fnptr callee.val)) :=
+/-- The signature after a call through a pointer of the unit: the held set stays (no marks). -/
+theorem nachSigAt_eq (u : UProg) (n : Nat) (L : List (Res (declOf u))) :
+    nachSig (declOf u) ((declOf u).sigNr n) L = L := by
+  show nachSig (declOf u) (sigAt u n) L = L
+  unfold sigAt
+  split <;> exact List.append_nil L
+
+/-- `RufPasst` against any signature of the unit, decided over the finite carriers. -/
+def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+    (Fin u.locks.length) Empty) (Λ : List (Res (declOf u))) : Bool :=
+  (List.finRange u.tabs.length).all (fun t => !S.schreibt t || V.schreibt t) &&
+  (List.finRange u.globs.length).all (fun g => !S.gschreibt g || V.gschreibt g) &&
+  S.haelt.all (fun L => decide (Res.held (D := declOf u) L ∈ Λ)) &&
+  (List.finRange u.locks.length).all (fun L => !(decide (Res.held (D := declOf u) L ∈ Λ)) ||
+    decide (L ∈ S.haelt) || (match S.boden with | some c => decide ((lockAt u L).rank < c) | none => false)) &&
+  (match V.boden with
+    | none => true
+    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false)
+
+theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+    (Fin u.locks.length) Empty} {Λ : List (Res (declOf u))} (h : rufPasstB u V S Λ = true) :
+    RufPasst (declOf u) V S Λ := by
+  unfold rufPasstB at h
+  simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
+  obtain ⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩ := h
+  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_⟩
+  · rcases hw t (List.mem_finRange t) with h1 | h1
+    · rw [ht] at h1; cases h1
+    · exact h1
+  · rcases hg g (List.mem_finRange g) with h1 | h1
+    · rw [ht] at h1; cases h1
+    · exact h1
+  · have : S.konsumiert = [] := by
+      cases hk : S.konsumiert with
+      | nil => rfl
+      | cons m _ => exact m.1.elim
+    rw [this]; exact ⟨[], List.Perm.refl _, by simp⟩
+  · rcases hx L (List.mem_finRange L) with (h1 | h1) | h1
+    · simp at h1; exact absurd hL h1
+    · exact absurd h1 hn
+    · revert h1
+      cases hS : S.boden with
+      | none => intro h1; cases h1
+      | some c => intro h1; exact ⟨c, rfl, of_decide_eq_true h1⟩
+  · rw [hc] at hb
+    revert hb
+    cases hS : S.boden with
+    | none => intro h1; cases h1
+    | some c' => intro h1; exact ⟨c', rfl, of_decide_eq_true h1⟩
+
+/-- The parameter kinds of the signature number `n` of the unit. -/
+def sigKinds (u : UProg) (n : Nat) : List UParamArt := (((sigFns u)[n]?).map (·.kinds)).getD []
+
+/-- The head of a call through a pointer of type `fnptr n`: the arguments against `n`'s parameters and the
+    harvested `RufPasst` against `n`'s signature (a function the pointer holds conforms to it, `passt`). -/
+structure RufKopfN (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u))) (n : Nat) where
+  args : Args (declOf u) Γ Λ ((declOf u).sigNr n).params
+  hp : RufPasst (declOf u) (verOf u caller) ((declOf u).sigNr n) Λ
+
+def lowRufKopfN (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (n : Nat) (args : List UArg) : Except String (RufKopfN u caller Γ Λ n) :=
+  match lowCallArgsAuxL u caller Γ fn Λ (sigKinds u n) ((declOf u).sigNr n).params args with
+  | .error e => .error e
+  | .ok a =>
+    if hp : rufPasstB u (verOf u caller) (sigAt u n) Λ = true then .ok ⟨a, rufPasstB_ok hp⟩
+    else .error "call through a pointer against the rights of its type"
+
+/-- The pointer of an indirect call: the local `p` and the signature number of its type. -/
+def lowZeigerN (u : UProg) (Γ : Ctx) (fn : UFn) (p : String) : Except String (Σ n : Nat, Var Γ (Ty.fnptr n)) :=
   match paramPos fn.params p with
   | .error e => .error e
-  | .ok j => lowVar Γ j (Ty.fnptr callee.val)
+  | .ok j =>
+    match ((fn.params[j]?).map (·.2) : Option Ty) with
+    | some (Ty.fnptr n) =>
+      match lowVar Γ j (Ty.fnptr n) with
+      | .error e => .error e
+      | .ok v => .ok ⟨n, v⟩
+    | _ => .error "call through a name that is no function pointer"
 
-/-- `p(..);` through a function pointer (`Stmt.callInd`): the premises of a direct call of the function `p`
-    points at, against its signature `sigNr (sig f)`. -/
+/-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type. -/
 def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
-    (Λ : List (Res (declOf u))) (p cname : String) (args : List UArg) :
+    (Λ : List (Res (declOf u))) (p _cname : String) (args : List UArg) :
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
-  match lowRufKopf u caller Γ fn Λ cname args with
+  match lowZeigerN u Γ fn p with
   | .error e => .error e
-  | .ok k =>
-    match lowZeiger u Γ fn p k.callee with
+  | .ok ⟨n, v⟩ =>
+    match lowRufKopfN u caller Γ fn Λ n args with
     | .error e => .error e
-    | .ok v =>
-      if hr : (declOf u).gruende k.callee = 0 then
-        .ok (castNachStmtL u caller k.callee Γ Λ
-          (Stmt.callInd (D := declOf u) (n := k.callee.val) (Expr.var v) k.args k.hp hr))
+    | .ok k =>
+      if hr : ((declOf u).sigNr n).gruende = 0 then
+        have s := Stmt.callInd (D := declOf u) (l := l) (n := n) (Expr.var v) k.args k.hp hr
+        .ok (by rw [nachSigAt_eq u n Λ] at s; exact s)
       else .error "call of a function with a reason channel needs `let .. else`"
 
 /-- `transition T.slots[i].f : A -> B;` (`Stmt.shift`): the stage `B` in the field's range, the pair declared

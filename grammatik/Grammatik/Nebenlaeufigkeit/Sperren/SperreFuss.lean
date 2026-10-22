@@ -251,10 +251,10 @@ theorem vertrag_stabil {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob
 /-- The same for a callee named through a pointer of signature `n`. -/
 theorem vertrag_stabil_ind {P : Programm D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {f : D.Fn}
     (hF : FussS P S lok f) {V : Vertrag D} {Λ : List (Res D)} {n : Nat} (g : D.Fn)
-    (hg : D.sig g = n) (hp : RufPasst D V (D.sigNr n) Λ)
+    (hg : D.passt g n = true) (hp : RufPasst D V (D.sigNr n) Λ)
     (h : (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrteG P f) :
     (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok f Λ := by
-  subst hg
+  replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
   exact vertrag_stabil hF g hp h
 
 /-- **The own `ensures` carriers are stable at a return**: at `ret` the

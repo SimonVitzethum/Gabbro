@@ -29,6 +29,11 @@ structure KopfPasst (gNr : Nat → Nat) (f : z.deklaration.Fn) (k : UFnKopf) : P
 def KInv (gNr : Nat → Nat) (koepfe : List UFnKopf) : Prop :=
   ∀ f : z.deklaration.Fn, ∃ k, koepfe.find? (fun k => strEq k.name (nFn (fN z f))) = some k ∧ KopfPasst gNr f k
 
+/-- **The head numbers**: every function's head stands at its own signature number (the elaborator
+    numbers a pointer `&f` by the head index of `f`, the model by `sig f`). -/
+def KIdx (koepfe : List UFnKopf) : Prop :=
+  ∀ f : z.deklaration.Fn, koepfe.findIdx? (fun k => strEq k.name (nFn (fN z f))) = some (z.deklaration.sig f)
+
 theorem kinv_idx {gNr : Nat → Nat} {koepfe : List UFnKopf} {f : z.deklaration.Fn} {k : UFnKopf}
     (h : koepfe.find? (fun k => strEq k.name (nFn (fN z f))) = some k) :
     ∃ i, koepfe.findIdx? (fun k => strEq k.name (nFn (fN z f))) = some i ∧ koepfe[i]? = some k := by
@@ -182,6 +187,7 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
   griff := H.griff
   reg := H.reg
   kanal := H.kanal
+  zb := H.zb
 
 theorem SInv.fnFremd {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) (i : Nat) : ∃ e, uParamNr ctx (nFn i) = .error e :=
@@ -205,7 +211,7 @@ theorem bindWert_fnref {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} 
     (f : z.deklaration.Fn) (k : UFnKopf) (i : Nat) (hi : koepfe.findIdx? (fun k => strEq k.name (nFn (fN z f))) = some i)
     (hk : koepfe[i]? = some k) (hK : KopfPasst gNr f k) (x : String) :
     uBindWert ctx tabs koepfe false x none (.fnref (nFn (fN z f))) =
-      .ok (.bindFnref x (nFn (fN z f)), ctxMit ctx x (.fnptr i) (.fnptr i) 0 [] ctx.loops) := by
+      .ok (.bindFnref x (nFn (fN z f)) i, ctxMit ctx x (.fnptr i) (.fnptr i) 0 [] ctx.loops) := by
   obtain ⟨e, he⟩ := H.fnFremd (fN z f)
   have ht : (ctx.tabs.any fun tb => strEq tb.name (nFn (fN z f))) = false := by
     rw [List.any_eq_false]
@@ -224,14 +230,15 @@ theorem anw1_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {�
     (hK : KopfPasst gNr f k) (hh : ∀ L, L ∈ (z.deklaration.signatur f).haelt → Res.held L ∈ Λ)
     (hr : z.deklaration.gruende f = 0)
     (args : Args z.deklaration Γ Λ (z.deklaration.params f)) (as : List SExpr) (xs : List UArg)
-    (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) (p : Nat) (ls : List String) :
+    (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) (hb : i < ctx.zeigerBasis) (p : Nat)
+    (ls : List String) :
     uAnw1 (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) tabs koepfe (.call (nZeiger p) as) =
       .ok (.callInd (nZeiger p) (nFn (fN z f)) xs) := by
   have H' := H.pushZ p (.fnptr i) (.fnptr i) 0 ls
   have hp : uParamNr (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) (nZeiger p) = .ok 0 := by
     simp [uParamNr, ctxMit, uParamNrAux]
   have hz : uFnZeiger (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) koepfe (nZeiger p) = some (.ok k) := by
-    unfold uFnZeiger; rw [hp]; simp [ctxMit, uArtBei, hk]
+    unfold uFnZeiger; rw [hp]; simp [ctxMit, uArtBei, hk, hb]
   have hR := ruf_ok H' tabs f k hf hK hh args as xs hd hu
   simp only [uAnw1, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, hK.name]
 
@@ -273,7 +280,8 @@ theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx
     (hr : z.deklaration.gruende f = 0) (τ : Ty) (he : z.deklaration.erg f = some τ) (a : UParamArt)
     (ha : artErg τ = some a)
     (args : Args z.deklaration Γ Λ (z.deklaration.params f)) (as : List SExpr) (xs : List UArg)
-    (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) (p : Nat) (ls : List String) (x : String) :
+    (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) (hb : i < ctx.zeigerBasis) (p : Nat)
+    (ls : List String) (x : String) :
     ∃ ty, uBindWert (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) tabs koepfe false x none
         (.call (nZeiger p) as) =
       .ok (.bindCallInd x (nZeiger p) (nFn (fN z f)) xs,
@@ -282,7 +290,7 @@ theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx
   have hp : uParamNr (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) (nZeiger p) = .ok 0 := by
     simp [uParamNr, ctxMit, uParamNrAux]
   have hz : uFnZeiger (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) koepfe (nZeiger p) = some (.ok k) := by
-    unfold uFnZeiger; rw [hp]; simp [ctxMit, uArtBei, hk]
+    unfold uFnZeiger; rw [hp]; simp [ctxMit, uArtBei, hk, hb]
   have hR := ruf_ok H' tabs f k hf hK hh args as xs hd hu
   cases τ with
   | bool =>

@@ -1,12 +1,9 @@
-// erwartet: N296
-// **Poison 248 -- an indirect call with the wrong arity.**
+// erwartet: N589
+// **Poison 248 -- an `ensures` at a function pointer type.**
 //
-// Until lane 177 this file fell at `N037`: an `ensures` at the pointer type was refused
-// outright. The clause is carried now -- it narrows the answer the way a direct callee's
-// does -- so the file keeps its `ensures` and falls at the COUNT instead: two arguments
-// where the slot declares one. The comparison runs on the overlap (the one argument still
-// gets its shape check); the count is held by neither side without this line, the same
-// shape `M143` closed for direct calls.
+// The twin of `gift/247` on the other clause: a covariant `ensures` at the type has no
+// model either (TODO O43), so the answer of an indirect call is the declared type and no
+// more, and the clause is refused where it stands (2026-10-21).
 
 module gift::fnzeiger_mit_ensures {
 
@@ -23,7 +20,7 @@ impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
     effects { reads t, writes ZUSTAND }
     costs   <= 8 ops
 {
-    let ok = t->senden(b, b);
+    let ok = t->senden(b);
 }
 
 }

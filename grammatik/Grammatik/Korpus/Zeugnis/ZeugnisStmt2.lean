@@ -203,7 +203,7 @@ def certStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certRange D Γ Λ e = intVonTyp (D.typ t f) ∧
       V.schreibt t = true ∧ darf D t Λ ∧ Λ = Λ'
   | .callInd f n Λc _ =>
-    D.sig f = n ∧ Λ = Λc ∧ (D.sigNr n).params = [] ∧
+    D.passt f n = true ∧ Λ = Λc ∧ (D.sigNr n).params = [] ∧
       (D.sigNr n).gruende = 0 ∧ nachSig D (D.sigNr n) Λ = Λ'
   | .onTag cs i p arms =>
     i < cs.length ∧ certCut3PayloadOk D Γ Λ cs[i]? p = true ∧
@@ -223,7 +223,7 @@ def decStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certRange D Γ Λ e = intVonTyp (D.typ t f) ∧
       V.schreibt t = true ∧ darf D t Λ ∧ Λ = Λ'))
   | .callInd f n Λc _ =>
-    inferInstanceAs (Decidable (D.sig f = n ∧ Λ = Λc ∧
+    inferInstanceAs (Decidable (D.passt f n = true ∧ Λ = Λc ∧
       (D.sigNr n).params = [] ∧ (D.sigNr n).gruende = 0 ∧
       nachSig D (D.sigNr n) Λ = Λ'))
   | .onTag cs i p arms =>
@@ -346,7 +346,7 @@ def certSeq2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
   | .cons2 s Λm rest =>
     certStmt2Gueltig D V l Γ Λ Λm s ∧ certSeq2Gueltig D V l Γ Λm Λ' rest
   | .bindCallInd f n lo hi Λc _ rest =>
-    D.sig f = n ∧ Λ = Λc ∧ (D.sigNr n).params = [] ∧
+    D.passt f n = true ∧ Λ = Λc ∧ (D.sigNr n).params = [] ∧
       (D.sigNr n).gruende = 0 ∧ (D.sigNr n).erg = some (.int lo hi) ∧
       certSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest
   | .float _ a b lo hi rest =>
@@ -375,7 +375,7 @@ def decSeq2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certSeq2Gueltig D V l Γ Λm Λ' rest))
   | .bindCallInd f n lo hi Λc _ rest =>
     haveI := decSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest
-    inferInstanceAs (Decidable (D.sig f = n ∧ Λ = Λc ∧
+    inferInstanceAs (Decidable (D.passt f n = true ∧ Λ = Λc ∧
       (D.sigNr n).params = [] ∧ (D.sigNr n).gruende = 0 ∧
       (D.sigNr n).erg = some (.int lo hi) ∧
       certSeq2Gueltig D V l (.int lo hi :: Γ) (nachSig D (D.sigNr n) Λ) Λ' rest))

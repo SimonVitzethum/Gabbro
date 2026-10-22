@@ -31,7 +31,8 @@ def RumpfSatz (n : Nat) : Prop :=
       uOfEnd z V gNr art e = some (us, r) →
       ∃ cE, uAnwReihe tabs koepfe f ctx es = .ok (us, cE) ∧ uEnde cE en = .ok r ∧ ∃ v, en = some (.ret v))
 
-theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z) gNr koepfe) (n : Nat) :
+theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z) gNr koepfe)
+    (hI : KIdx (z := z) koepfe) (n : Nat) :
     RumpfSatz (z := z) (V := V) gNr tabs koepfe n := by
   induction n with
   | zero => exact ⟨fun _ _ _ _ _ h => by omega, fun _ _ _ _ _ _ h => by omega, fun _ _ _ _ _ _ _ _ h => by omega⟩
@@ -250,28 +251,33 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
     | callInd p args hp hr =>
       simp only [uOfSt] at hu
       split at hu
-      · rename_i _ f hm
-        subst hm
-        simp only [delabS] at hd
-        cases ha : delabA z args with
-        | error _ => simp [ha, bind, Except.bind] at hd
-        | ok as =>
-        simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
-        subst hd
-        cases hx : uOfArgs z art args with
-        | none => simp [hx] at hu
-        | some xs =>
-        simp only [hx, Option.map_some, Option.some.injEq] at hu
-        subst hu
-        obtain ⟨k, hf, hKP⟩ := hK f
-        obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hf
-        have H' := H.pushZ Γ.length (.fnptr i) (.fnptr i) 0 ctx.loops
-        refine ⟨nach_ohne_marken hM _ Λ, by simp, _, H', fun g tail ys cE hg ht => ?_⟩
-        have h2 := reihe_call tabs koepfe g _ _ as tail _ ys cE
-          (anw1_callInd H tabs f k i hf hk hKP hp.hh hr args as xs ha hx Γ.length ctx.loops) ht
-        have h1 := reihe_bind tabs koepfe (g + 1) ctx _ _ _ _ _ _ cE
-          (bindWert_fnref H tabs f k i hi hk hKP (nZeiger Γ.length)) h2
-        simpa using h1
+      · rename_i f _
+        split at hu
+        · rename_i hn
+          subst hn
+          simp only [delabS] at hd
+          cases ha : delabA z args with
+          | error _ => simp [ha, bind, Except.bind] at hd
+          | ok as =>
+          simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+          subst hd
+          cases hx : uOfArgs z art args with
+          | none => simp [hx] at hu
+          | some xs =>
+          simp only [hx, Option.map_some, Option.some.injEq] at hu
+          subst hu
+          obtain ⟨k, hf, hKP⟩ := hK f
+          obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hf
+          have hiE : i = z.deklaration.sig f := by rw [hI f] at hi; exact (Option.some.inj hi).symm
+          subst hiE
+          have H' := H.pushZ Γ.length (.fnptr (z.deklaration.sig f)) (.fnptr (z.deklaration.sig f)) 0 ctx.loops
+          refine ⟨nach_ohne_marken hM _ Λ, by simp, _, H', fun g tail ys cE hg ht => ?_⟩
+          have h2 := reihe_call tabs koepfe g _ _ as tail _ ys cE
+            (anw1_callInd H tabs f k _ hf hk hKP hp.hh hr args as xs ha hx (H.zb f) Γ.length ctx.loops) ht
+          have h1 := reihe_bind tabs koepfe (g + 1) ctx _ _ _ _ _ _ cE
+            (bindWert_fnref H tabs f k _ hi hk hKP (nZeiger Γ.length)) h2
+          simpa using h1
+        · simp at hu
       · simp at hu
     | regWrite r hk e =>
       simp only [delabS] at hd
@@ -443,36 +449,41 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       | some us2 =>
       simp only [hτ, hx, hur, Option.bind_eq_bind, Option.bind_some] at hu
       split at hu
-      · rename_i _ fk hm
-        subst hm
-        simp only [Option.some.injEq] at hu
-        subst hu
-        simp only [delabB] at hd
-        cases ha : delabA z args with
-        | error _ => simp [ha, bind, Except.bind] at hd
-        | ok as =>
-        cases hr' : delabB z V rest with
-        | error _ => simp [ha, hr', bind, Except.bind] at hd
-        | ok ss2 =>
-        simp only [ha, hr', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
-        subst hd
-        obtain ⟨f', rfl⟩ : ∃ f', f = f' + 2 := ⟨f - 2, by simp at hf; omega⟩
-        simp at hn hf
-        obtain ⟨k, hfk, hKP⟩ := hK fk
-        obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hfk
-        obtain ⟨ty, hb⟩ := bindWert_callInd H tabs fk k i hfk hk hKP hp.hh hr τ he a hτ args as xs ha hx Γ.length
-          ctx.loops (nVar Γ.length)
-        have hN : nachSig z.deklaration (z.deklaration.sigNr (z.deklaration.sig fk)) Λ = Λ := nach_ohne_marken hM _ Λ
-        have H' : SInv z V (ctxMit (ctxMit ctx (nZeiger Γ.length) (.fnptr i) (.fnptr i) 0 [] ctx.loops)
-            (nVar Γ.length) a ty 0 [] ctx.loops) (τ :: Γ)
-            (nachSig z.deklaration (z.deklaration.sigNr (z.deklaration.sig fk)) Λ) (artAuf a art) := by
-          rw [hN]; exact (H.pushZ Γ.length (.fnptr i) (.fnptr i) 0 ctx.loops).push τ a ty 0 [] ctx.loops rfl
-        obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
-        refine ⟨hΛ.trans hN, cE, ?_⟩
-        have h2 := reihe_bind tabs koepfe f' _ _ _ _ ss2 _ us2 cE hb hrest
-        have h1 := reihe_bind tabs koepfe (f' + 1) ctx _ _ _ _ _ _ cE
-          (bindWert_fnref H tabs fk k i hi hk hKP (nZeiger Γ.length)) h2
-        simpa using h1
+      · rename_i fk _
+        split at hu
+        · rename_i hn
+          subst hn
+          simp only [Option.some.injEq] at hu
+          subst hu
+          simp only [delabB] at hd
+          cases ha : delabA z args with
+          | error _ => simp [ha, bind, Except.bind] at hd
+          | ok as =>
+          cases hr' : delabB z V rest with
+          | error _ => simp [ha, hr', bind, Except.bind] at hd
+          | ok ss2 =>
+          simp only [ha, hr', bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
+          subst hd
+          obtain ⟨f', rfl⟩ : ∃ f', f = f' + 2 := ⟨f - 2, by simp at hf; omega⟩
+          simp at hn hf
+          obtain ⟨k, hfk, hKP⟩ := hK fk
+          obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hfk
+          have hiE : i = z.deklaration.sig fk := by rw [hI fk] at hi; exact (Option.some.inj hi).symm
+          subst hiE
+          obtain ⟨ty, hb⟩ := bindWert_callInd H tabs fk k _ hfk hk hKP hp.hh hr τ he a hτ args as xs ha hx (H.zb fk) Γ.length
+            ctx.loops (nVar Γ.length)
+          have hN : nachSig z.deklaration (z.deklaration.sigNr (z.deklaration.sig fk)) Λ = Λ := nach_ohne_marken hM _ Λ
+          have H' : SInv z V (ctxMit (ctxMit ctx (nZeiger Γ.length) (.fnptr (z.deklaration.sig fk)) (.fnptr (z.deklaration.sig fk)) 0 [] ctx.loops)
+              (nVar Γ.length) a ty 0 [] ctx.loops) (τ :: Γ)
+              (nachSig z.deklaration (z.deklaration.sigNr (z.deklaration.sig fk)) Λ) (artAuf a art) := by
+            rw [hN]; exact (H.pushZ Γ.length (.fnptr (z.deklaration.sig fk)) (.fnptr (z.deklaration.sig fk)) 0 ctx.loops).push τ a ty 0 [] ctx.loops rfl
+          obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur
+          refine ⟨hΛ.trans hN, cE, ?_⟩
+          have h2 := reihe_bind tabs koepfe f' _ _ _ _ ss2 _ us2 cE hb hrest
+          have h1 := reihe_bind tabs koepfe (f' + 1) ctx _ _ _ _ _ _ cE
+            (bindWert_fnref H tabs fk k _ hi hk hKP (nZeiger Γ.length)) h2
+          simpa using h1
+        · simp at hu
       · simp at hu
     | bindCallElse fk args he hp hr err rest =>
       rename_i τ

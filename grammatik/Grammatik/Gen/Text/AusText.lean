@@ -45,6 +45,8 @@ instance aufzU (u : UProg) : Aufz (declOf u) where
     cases a with
     | none => exact List.mem_cons_self
     | some i => exact List.mem_cons_of_mem _ (List.mem_map.2 ⟨i, List.mem_finRange i, rfl⟩)
+  sigs := List.range (sigFns u).length
+  sigs_mem := fun f n h => List.mem_range.2 (passtAt_lt u f n h)
   decFn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   decInv := inferInstanceAs (DecidableEq (Fin u.invs.length))
   decAx := inferInstanceAs (DecidableEq (Fin u.axs.length))

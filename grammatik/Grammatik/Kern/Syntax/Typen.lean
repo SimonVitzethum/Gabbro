@@ -47,9 +47,9 @@ inductive Ty where
   /-- `f32`/`f64 in lo .. hi` («F») -- die Schranken als Brueche `(z, n)`, weil `0.5` eine
       Schranke ist. Der Wert ist eine ENDLICHE Gleitkommazahl der Maschine im Bereich. -/
   | fl (lo hi : Int × Int)
-  /-- `fn(…) -> T effects {…} costs …` -- ein Funktionszeiger mit seinem Vertrag («B8»):
-      der Wert ist eine Funktion, deren Signatur GENAU diese ist. Die Signatur steht hier
-      als Nummer; welche das ist, sagt die Deklaration (`sig`). -/
+  /-- `fn(…) -> T effects {…} costs …` -- a function pointer («B8»): the value is a function whose
+      own signature CONFORMS to signature number `sig` (`Deklaration.passt`, `SigPasst`; structural
+      since 2026-10-21). -/
   | fnptr (sig : Nat)
   /-- `ptr<space, rights> T` -- ein Zeiger auf den Traeger Nummer `t` (M3). Der Wert ist die
       FAEHIGKEIT, `t` anzusprechen; jeder Zugriff hindurch braucht die Waechter von `t`
@@ -114,9 +114,10 @@ structure Gleit (lo hi : Int × Int) where
   le_hi : gleitLe x (bruch hi) = true
 
 /-- Der Wert eines Typs. **Ein Wert ausserhalb seines Typs existiert nicht.**
-    `F` sind die Funktionen des Programms, `sig` ihre Signaturnummer -- ein Funktionszeiger
-    ist eine Funktion mit GENAU der Signatur seines Typs. -/
-def Val (F : Type) (sig : F → Nat) : Ty → Type
+    `F` are the functions of the program and `passt f n` says that `f` CONFORMS to the pointer
+    type `fnptr n` (`Deklaration.passt`, `SigPasst`, 2026-10-21): a function pointer is a
+    function whose own signature fits the signature its type names. -/
+def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .int lo hi => Zahl lo hi
   | .bool => Bool
   | .opt n => Option (Zahl 0 (n - 1))
@@ -124,10 +125,10 @@ def Val (F : Type) (sig : F → Nat) : Ty → Type
   | .why n => Fin n
   | .never => Empty
   | .fl lo hi => Gleit lo hi
-  | .fnptr n => { f : F // sig f = n }
+  | .fnptr n => { f : F // passt f n = true }
   | .ptr _ _ => Unit
 
-theorem Val.int_bereich {F : Type} {sig : F → Nat} {lo hi : Int} (v : Val F sig (.int lo hi)) :
+theorem Val.int_bereich {F : Type} {passt : F → Nat → Bool} {lo hi : Int} (v : Val F passt (.int lo hi)) :
     lo ≤ v.n ∧ v.n ≤ hi := ⟨v.lo_le, v.le_hi⟩
 
 /-- Ein Wert eines engeren Bereichs ist einer des weiteren -- die eine Umwandlung, die die

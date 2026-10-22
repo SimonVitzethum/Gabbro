@@ -47,6 +47,10 @@ class Aufz (D : Deklaration) where
   reg_mem : ∀ r, r ∈ reg
   annahme : List D.Annahme
   annahme_mem : ∀ a, a ∈ annahme
+  /-- The pointer types a function conforms to (`Deklaration.passt`, 2026-10-21): a finite list that
+      holds every one. -/
+  sigs : List Nat
+  sigs_mem : ∀ f n, D.passt f n = true → n ∈ sigs
   /-- decidable equality on functions and the other enumerated types the generator compares -/
   decFn : DecidableEq D.Fn
   decInv : DecidableEq D.Inv

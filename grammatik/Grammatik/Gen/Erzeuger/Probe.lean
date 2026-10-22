@@ -103,6 +103,8 @@ instance probeA : Aufz probeD where
   reg_mem := fun e => nomatch e
   annahme := [()]
   annahme_mem := fun _ => List.mem_singleton.2 rfl
+  sigs := [probeD.sig ()]
+  sigs_mem := fun _ _ h => List.mem_singleton.2 (of_decide_eq_true h).symm
   decFn := inferInstanceAs (DecidableEq Unit)
   decInv := fun e => nomatch e
   decAx := fun e => nomatch e

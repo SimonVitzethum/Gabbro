@@ -60,9 +60,11 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     (hks : (z.deklaration.signatur f).params.mapM artErg = some ks)
     (hdevs : ∀ d ∈ devs, d = "Dev") (hgriff : ∀ r : z.deklaration.Reg, mitGriff = true ∧ "Dev" ∈ devs)
     (als : List (String × (Int × Int))) (name : String) (annahmen : List String) (sums : List USum)
-    (zustaende : List UZustand) (hs : sums = []) :
+    (zustaende : List UZustand) (hs : sums = []) (zeiger : List String) (zb : Nat)
+    (hzb : ∀ g : z.deklaration.Fn, z.deklaration.sig g < zb) :
     SInv z (vertragVon z.deklaration f)
-      (uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) name annahmen whys sums regs zustaende)
+      { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) name annahmen whys sums regs zustaende with
+        zeiger := zeiger, zeigerBasis := zb }
       (z.deklaration.signatur f).params (Signatur.anfang z.deklaration (z.deklaration.signatur f))
       (artListe ks) where
   var d hd := by
@@ -112,7 +114,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
   griff r := by
     obtain ⟨hm, hd⟩ := hgriff r
     subst hm
-    obtain ⟨hf, _⟩ := parListe_ok _ als tabs sums whys devs hdevs _ 0 ps ks hps hks
+    obtain ⟨hf, _⟩ := parListe_ok _ als tabs sums whys [] 0 devs hdevs _ 0 ps ks hps hks
     have hps_none : ∀ p ∈ ps, uGriffTyp devs p.2 = none := by
       intro p hp
       have := (List.filter_eq_self.1 hf) p hp
@@ -126,6 +128,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     simp only [vertragVon, Vertrag.vonSig] at h ⊢
     obtain ⟨w, h1, h2, _, h4⟩ := hL.why f h
     exact ⟨_, w, by simp [uCtxVon, kopfVon, kanalVon, Deklaration.gruende, h], h1, h2, h4⟩
+  zb := hzb
 
 /-- The `requires`/`ensures` context: the body context with the held resources of `Λ'` (its locks held). -/
 theorem SInv.vertragE {V : Vertrag z.deklaration} {ctx : UCtx} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)}
@@ -364,13 +367,16 @@ theorem ens_einv (f : z.deklaration.Fn) {ctx : UCtx} {art : Nat → UParamArt}
 theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) {tabs : List UTab}
     {locks : List ULock} {globs : List UGlob} {whys : List UWhy} {regs : List UReg}
     (hL : LInv z gNr tabs locks globs whys regs) (hM : ∀ m : z.deklaration.Marke, False)
-    (koepfe : List UFnKopf) (hK : KInv (z := z) gNr koepfe) (devs : List String) (mitGriff : Bool)
+    (koepfe : List UFnKopf) (hK : KInv (z := z) gNr koepfe) (hI : KIdx (z := z) koepfe)
+    (zeiger : List String) (zb : Nat) (hzb : ∀ g : z.deklaration.Fn, z.deklaration.sig g < zb)
+    (devs : List String) (mitGriff : Bool)
     (hdevs : ∀ d ∈ devs, d = "Dev") (hgriff : mitGriff = true → "Dev" ∈ devs)
     (hreg : ∀ r : z.deklaration.Reg, mitGriff = true)
     (als : List (String × (Int × Int))) (annahmen : List String) (sums : List USum) (zustaende : List UZustand)
     (hs : sums = []) (hsize : sizeOf (P.rumpf f) < 1000000) (sig : FnSig) (koerper : SAnw)
     (hd : delabFn z P mitGriff f = .ok (.fnT sig koerper)) (ufn : UFn) (hu : uOfFn z gNr P f = some ufn) :
-    elabUFunktion [] als tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende = .ok ufn := by
+    elabUFunktion [] als tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende zeiger zb =
+      .ok ufn := by
   obtain ⟨ps, res, req, ens, ss, ende, hps, hres, hreq, hens, hb, rfl, rfl⟩ := delabFn_teile P mitGriff f sig koerper hd
   unfold uOfFn at hu
   simp only at hu
@@ -445,14 +451,14 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
         obtain ⟨w, h1, h2, h3, _⟩ := hL.why f h
         exact ⟨w, h1, h2, h3⟩
       klauseln := hkl }
-  have hkopf := kopf_ok z gNr P f tabs locks globs whys devs mitGriff [] als sums ps ks res req ens hps hks hres hV
+  have hkopf := kopf_ok z gNr P f tabs locks globs whys devs mitGriff [] als sums zeiger zb ps ks res req ens hps hks hres hV
   have H := fnCtx_sinv hL hM f devs mitGriff ps ks hps hks hdevs (fun r => ⟨hreg r, hgriff (hreg r)⟩) als
-    (nFn (fN z f)) annahmen sums zustaende hs
+    (nFn (fN z f)) annahmen sums zustaende hs zeiger zb hzb
   unfold elabUFunktion
   simp only [hkopf]
   rw [elabFn_eq, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]
-  set ctx := uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) (nFn (fN z f)) annahmen whys
-    sums regs zustaende with hctx
+  set ctx := { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) (nFn (fN z f)) annahmen whys
+    sums regs zustaende with zeiger := zeiger, zeigerBasis := zb } with hctx
   -- ensures
   have hG : uSeq (ens.filterMap (gibtF ctx)) = .ok gives := by
     rcases hE with ⟨rfl, rfl⟩ | ⟨e, u, rfl, rfl, he, hu⟩
@@ -469,7 +475,7 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
       have := bool_ok H.einv (P.requires f) e u he hu
       simp [brauchtF_needs ctx e hko, uSeq, this]
   -- the body
-  obtain ⟨cE, hB, hEnde, _⟩ := (rumpf_satz gNr ctx.tabs koepfe hM hK (sizeOf (P.rumpf f) + 1)).2.2 (P.rumpf f) ctx
+  obtain ⟨cE, hB, hEnde, _⟩ := (rumpf_satz gNr ctx.tabs koepfe hM hK hI (sizeOf (P.rumpf f) + 1)).2.2 (P.rumpf f) ctx
     (artListe ks) 1000000 ss ende body r (by omega) hsize H hb hbr
   simp only [hG, hN, hB, hEnde]
   congr 1

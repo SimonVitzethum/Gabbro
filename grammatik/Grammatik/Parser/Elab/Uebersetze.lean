@@ -141,6 +141,8 @@ inductive UArg
   | oval : UOpt → UArg
   /-- A reason value for a parameter of a reason type. -/
   | gval : UGrund → UArg
+  /-- `&f` for a parameter of a pointer type: the function (`Expr.fnref`; that it conforms is the lowering's). -/
+  | fnref : String → UArg
   deriving DecidableEq, Repr
 
 /-- The trailing return: nothing, or a value (a literal, a
@@ -263,8 +265,9 @@ inductive UStmt
   | regWriteB : String → String → UEns → UStmt
   /-- `transition T.slots[i].f : A -> B;` (`Stmt.shift`): table, field, index, the state, the stage numbers. -/
   | shiftTab : String → String → UIdx → String → Int → Int → UStmt
-  /-- `let p = &f;` (`Block.bind` of `Expr.fnref`): binder, function. -/
-  | bindFnref : String → String → UStmt
+  /-- `let p [: fn(..)] = &f;` (`Block.bind` of `Expr.fnref`): binder, function, the signature number of the
+      pointer's type (`f`'s own without a written type). -/
+  | bindFnref : String → String → Nat → UStmt
   /-- `p(..);` through a function pointer (`Stmt.callInd`): the pointer, the function it points at, the arguments. -/
   | callInd : String → String → List UArg → UStmt
   /-- `let y = p(..);` (`Block.bindCallInd`): binder, pointer, function, arguments. -/
@@ -407,8 +410,8 @@ inductive UParamArt
   | why : Nat → UParamArt
   /-- A value of a tagged type (`Ty.sum`), `n` the position of its declaration. -/
   | sum : Nat → UParamArt
-  /-- A function pointer `fnptr n` (`Ty.fnptr n`): bound by `let p = &f;`, `n` the number of `f` (its signature
-      number: one signature per function, `sig f = f`). -/
+  /-- A function pointer `fnptr n` (`Ty.fnptr n`): a parameter or `let` of a pointer type (`n` its signature
+      number, behind the functions'), or `let p = &f;` (`n` the number of `f`, its own signature). -/
   | fnptr : Nat → UParamArt
   deriving DecidableEq, Repr
 
@@ -465,6 +468,10 @@ structure UCtx where
       A handle is no value of the model (a register is outside the world, `D.Reg`): it is erased from the
       parameters and only names the device of `d.R`. -/
   griffe : List (String × String) := []
+  /-- The unit's function-pointer types by text (`UProg.ptrKeys`) and their first signature number (the number
+      of functions); their heads stand in the head list under the names `fn#j` (`elabZeigerTyp`). -/
+  zeiger : List String := []
+  zeigerBasis : Nat := 0
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -586,6 +593,12 @@ structure UProg where
   zustaende : List UZustand := []
   /-- The governed fields: table, field and the state whose `transition` statements are applied to it. -/
   regiert : List (String × String × String) := []
+  /-- The function-pointer TYPES of the unit (`fn(..) -> T effects { .. } costs <= e ops`), each once by its
+      text: their signatures stand behind the functions' (`sigAt`: number `fns.length + j`), and a function
+      that conforms to one may be its value (`Deklaration.passt`, 2026-10-21). Bodies stay empty. -/
+  ptrs : List UFn := []
+  /-- The texts of `ptrs`, in the same order (the key a parameter or `let` type is found by). -/
+  ptrKeys : List String := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -1439,7 +1452,15 @@ def uParamBreite : STyp → Nat
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
 def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])
-    (whys : List UWhy := []) : String × STyp → Except String (String × Ty × UParamArt)
+    (whys : List UWhy := []) (zeiger : List String := []) (zb : Nat := 0) :
+    String × STyp → Except String (String × Ty × UParamArt)
+  | (n, .raw r) =>
+    match zeiger.findIdx? (strEq · r) with
+    | .some j => .ok (n, Ty.fnptr (zb + j), .fnptr (zb + j))
+    | .none =>
+      match uTyp alias tabs (.raw r) with
+      | .error e => .error e
+      | .ok ty => .ok (n, ty, .int)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
     else if strEq rechte "rw" || strEq rechte "own" then
@@ -1678,7 +1699,8 @@ def uOhneGriffe (devs : List String) (ps : List (String × STyp)) : List (String
 def elabKopf (_consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := [])
-    (sig : FnSig) (devs : List String := []) : Except String (UFnKopf × List String) :=
+    (sig : FnSig) (devs : List String := []) (zeiger : List String := []) (zb : Nat := 0) :
+    Except String (UFnKopf × List String) :=
   match sig with
   | { art, name, params := params0, res, fehler, klauseln } =>
     let params := uOhneGriffe devs params0
@@ -1687,7 +1709,7 @@ def elabKopf (_consts : List (String × Int))
       match uOhneKlauselForm klauseln with
       | .error e => .error e
       | .ok _ =>
-        match uSeq (params.map (uParam alias tabs sums whys)) with
+        match uSeq (params.map (uParam alias tabs sums whys zeiger zb)) with
         | .error e => .error e
         | .ok ps =>
           let names := ps.map (·.1)
@@ -1885,6 +1907,15 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
       match uArtBei ctx.kinds j with
       | .ok (.why k') => if k' == k then .ok (.gval (.var p)) else .error "argument of a foreign reason"
       | _ => .error "argument without G form"
+  | .fnptr m, .variable p =>
+    match uParamNr ctx p with
+    | .error e => .error e
+    | .ok j =>
+      match uArtBei ctx.kinds j with
+      | .ok (.fnptr m2) =>
+        if m == m2 then .ok (.var p) else .error "function pointer of another type as an argument"
+      | _ => .error "pointer argument without G form"
+  | .fnptr _, .fnref f => .ok (.fnref f)
   | _, _ => .error "argument without G form"
 
 def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
@@ -2101,9 +2132,15 @@ def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except
   | .ok j =>
     match uArtBei ctx.kinds j with
     | .ok (.fnptr n) =>
-      some (match koepfe[n]? with
-        | some k => .ok k
-        | none => .error "function pointer to no function")
+      if n < ctx.zeigerBasis then
+        some (match koepfe[n]? with
+          | some k => .ok k
+          | none => .error "function pointer to no function")
+      else
+        -- a pointer of a declared pointer type: the head of the type (`fn#j`)
+        some (match koepfe.find? (fun (k : UFnKopf) => strEq k.name ("fn#" ++ toString (n - ctx.zeigerBasis))) with
+          | some k => .ok k
+          | none => .error "function pointer of no type")
     | _ => none
 
 /-- The state that declares the transition `von -> nach` (by stage names): exactly one, with the stage numbers. -/
@@ -2402,9 +2439,23 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
             some (match koepfe[n]? with
               | some k =>
                 if k.ext then .error "address of a foreign fn without G form"
-                else if mu || t.isSome then .error "let of a function pointer with a type without G form"
-                else .ok (.bindFnref x f, uMitLokal ctx x (UParamArt.fnptr n) (Ty.fnptr n)
-                  (ctx.muts.filter (fun m => !strEq m x)))
+                else if mu then .error "let mut of a function pointer without G form"
+                else
+                  -- The type of the pointer: the one written (`let p : fn(..) = &f;`, a pointer type of the
+                  -- unit, number `zeigerBasis + j`), else `f`'s own signature (number `n`). That `f` conforms
+                  -- to a written type is the lowering's decision (`Deklaration.passt`).
+                  match (match t with
+                      | .none => .ok n
+                      | .some (.raw r) =>
+                        match ctx.zeiger.findIdx? (strEq · r) with
+                        | .some j => .ok (ctx.zeigerBasis + j)
+                        | .none => .error "let of a function pointer with a type that is no pointer type"
+                      | .some _ => .error "let of a function pointer with a type that is no pointer type" :
+                      Except String Nat) with
+                  | .error err => .error err
+                  | .ok m =>
+                    .ok (.bindFnref x f m, uMitLokal ctx x (UParamArt.fnptr m) (Ty.fnptr m)
+                      (ctx.muts.filter (fun m => !strEq m x)))
               | none => .error ("function unknown: " ++ f))
       | .call c args =>
         match uFnZeiger ctx koepfe c with
@@ -2983,12 +3034,14 @@ def elabUFunktion (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
     (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
-    (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := []) :
+    (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
+    (zeiger : List String := []) (zb : Nat := 0) :
     Except String UFn :=
-  match elabKopf consts alias tabs locks globs whys sums sig devs with
+  match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende
+    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende with
+                 zeiger := zeiger, zeigerBasis := zb }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>
@@ -3567,7 +3620,8 @@ def callNames (f : UFn) : List String :=
 def floorStep (u : UProg) (cur : List (String × Option Int)) : List (String × Option Int) :=
   u.fns.map fun f =>
     (f.name, (callNames f).foldl
-      (fun acc c => optMin acc ((cur.find? (fun p => p.1 == c)).bind (·.2))) (directFloor u f))
+      (fun acc c => optMin acc (((cur ++ u.ptrs.map (fun p => (p.name, p.boden))).find? (fun p => p.1 == c)).bind
+        (·.2))) (directFloor u f))
 
 /-- `n` rounds (a path through the call graph is at most as long as the number of functions). -/
 def floorsN (u : UProg) : Nat → List (String × Option Int)
@@ -3585,6 +3639,119 @@ def floorOf (u : UProg) (f : UFn) : Option Int :=
 /-- The post-pass: every function carries its floor (`UFn.boden`). -/
 def uMitBoden (u : UProg) : UProg :=
   { u with fns := u.fns.map fun f => { f with boden := floorOf u f } }
+
+
+/-! ## Function-pointer types (2026-10-21)
+
+  A `fn(..) [-> T] effects { .. } costs <= e ops` type of the unit is read once by its text (the type reader keeps
+  it raw, `STyp.raw`) into a head like a function's and a signature with an empty body (`UProg.ptrs`). Its number
+  stands behind the functions'; a function conforms to it by `Deklaration.passt` (`passtAt`, decided). The model
+  has no contract on a signature: a `requires` (`Held(..)` included) or an `ensures` is refused by name (TODO O43);
+  `costs` travels nowhere, as at a function. No lock crosses an indirect call (a `locks` effect at the type is
+  refused, as `N036` does): the floor of the type is one above the highest rank of the unit. -/
+
+/-- The parameters of a pointer type up to `)`: `[name :] type`, comma separated (an unnamed one is `p<k>`). -/
+def uZeigerParams : Nat → Nat → List Token → Except String (List (String × STyp) × List Token)
+  | 0, _, _ => .error "out of fuel"
+  | _ + 1, _, .zeichen ")" :: r => .ok ([], r)
+  | f + 1, k, toks =>
+    let (n, toks') : String × List Token := match toks with
+      | t :: .zeichen ":" :: r => match nameText t with
+        | some n => (n, r)
+        | none => ("p" ++ toString k, toks)
+      | _ => ("p" ++ toString k, toks)
+    match parseTyp f toks' with
+    | .error e => .error e
+    | .ok (ty, .zeichen "," :: r) =>
+      match uZeigerParams f (k + 1) r with
+      | .error e => .error e
+      | .ok (ps, r') => .ok ((n, ty) :: ps, r')
+    | .ok (ty, .zeichen ")" :: r) => .ok ([(n, ty)], r)
+    | .ok _ => .error "pointer type parameters without G form"
+
+/-- A contract on a pointer type: refused (the model's signatures carry none, TODO O43; `N589` in the checker).
+    `requires Held(..)` is refused too: no lock crosses an indirect call. -/
+def uZeigerVertrag : List SKlausel → Except String Unit
+  | [] => .ok ()
+  | .needs .tru :: rest => uZeigerVertrag rest
+  | .gives .tru :: rest => uZeigerVertrag rest
+  | .needs _ :: _ => .error "contract on a function-pointer type without G form"
+  | .gives _ :: _ => .error "contract on a function-pointer type without G form"
+  | _ :: rest => uZeigerVertrag rest
+
+/-- The text of a pointer type as a function head (`FnSig`, art `impl`, no name). -/
+def uZeigerSig (raw : String) : Except String FnSig :=
+  match lex raw with
+  | .error _ => .error "pointer type unreadable"
+  | .ok (.wort "fn" :: .zeichen "(" :: r) =>
+    match uZeigerParams 10000 0 r with
+    | .error e => .error e
+    | .ok (ps, r1) =>
+      match parseErgebnis 10000 r1 with
+      | .error e => .error e
+      | .ok (_, some _, _) => .error "pointer type with a reason channel without G form"
+      | .ok (erg, none, r2) =>
+        match parseKlauseln 10000 r2 with
+        | .error e => .error e
+        | .ok (ks, r3) =>
+          if !(r3.all (fun t => match t with | .ende => true | _ => false)) then .error "pointer type without G form"
+          else .ok { art := "impl", name := "", params := ps, res := erg, fehler := none, klauseln := ks }
+  | .ok _ => .error "pointer type without G form"
+
+/-- The texts of the pointer types a surface type list names (`fn (` raw types). -/
+def uZeigerTexte : List STyp → List String
+  | [] => []
+  | .raw r :: rest => if r.startsWith "fn (" then r :: uZeigerTexte rest else uZeigerTexte rest
+  | _ :: rest => uZeigerTexte rest
+
+/-- The pointer types written at a `let` of a body. -/
+def uZeigerAnw : Nat → SAnw → List String
+  | 0, _ => []
+  | f + 1, a => match a with
+    | .bind _ _ (some t) _ => uZeigerTexte [t]
+    | .bindElse _ (some t) _ _ b => uZeigerTexte [t] ++ uZeigerAnw f b
+    | .bindElse _ none _ _ b => uZeigerAnw f b
+    | .cond _ t es e => uZeigerAnw f t ++ (es.flatMap (uZeigerAnw f)) ++ (match e with | some b => uZeigerAnw f b | none => [])
+    | .elsif _ b => uZeigerAnw f b
+    | .cases _ as => as.flatMap (uZeigerAnw f)
+    | .arm _ _ b => uZeigerAnw f b
+    | .each _ _ _ _ _ _ _ b => uZeigerAnw f b
+    | .retry _ b => uZeigerAnw f b
+    | .loop _ b => uZeigerAnw f b
+    | .waive _ b => uZeigerAnw f b
+    | .trim _ _ b => uZeigerAnw f b
+    | .locks _ _ b => uZeigerAnw f b
+    | .watch _ b => uZeigerAnw f b
+    | .alloc _ _ _ _ _ (some b) => uZeigerAnw f b
+    | .grow _ _ b => uZeigerAnw f b
+    | .child b => uZeigerAnw f b
+    | .block as _ => as.flatMap (uZeigerAnw f)
+    | _ => []
+
+/-- A pointer type of the unit as a head (named `fn#j`) and an elaborated signature with an empty body. -/
+def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
+    (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) (zeiger : List String)
+    (zb j : Nat) (raw : String) : Except String (UFnKopf × UFn) :=
+  match uZeigerSig raw with
+  | .error e => .error e
+  | .ok sig =>
+    match uZeigerVertrag sig.klauseln with
+    | .error e => .error e
+    | .ok _ =>
+      match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb with
+      | .error e => .error e
+      | .ok (kopf0, schreibt) =>
+        let name := "fn#" ++ toString j
+        let kopf := { kopf0 with name := name }
+        let genommen := (uEffekte kopf tabs locks globs sig.klauseln).toOption.map (·.locks) |>.getD []
+        if !genommen.isEmpty then .error "locks at a function-pointer type do not cross an indirect call" else
+        -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
+        -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
+        let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds,
+                     res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
+                     gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [],
+                     body := [], ret := .empty, boden := boden })
 
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
@@ -3637,7 +3804,13 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok zustaende =>
     let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
-    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs)) with
+    let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
+    let zb := fnItems.length
+    match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
+        elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r)) with
+    | .error e => .error e
+    | .ok zeigerPaare =>
+    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb)) with
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
@@ -3648,10 +3821,10 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok gateKoepfe =>
     let axKoepfe := axKoepfe0 ++ gateKoepfe
-    let koepfe := kopfPaare.map (·.1) ++ axKoepfe
+    let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, b) =>
-        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende)) with
+        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb)) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln fns ms with
@@ -3661,7 +3834,7 @@ def elabU : List SItemTief → Except String UProg
         (fun d => uStart fns "start" d)) with
     | .error e => .error e
     | .ok gestartet =>
-      if !uU003 locks fns invs then .error "a writer of an invariant's carrier does not hold all its locks" else
+      if !uU003 locks (fns ++ zeigerPaare.map (·.2)) invs then .error "a writer of an invariant's carrier does not hold all its locks" else
       match uRegiert fns with
       | .error e => .error e
       | .ok regiert =>
@@ -3671,7 +3844,7 @@ def elabU : List SItemTief → Except String UProg
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0 }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
-          zustaende := zustaende, regiert := regiert }
+          zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
@@ -4369,7 +4542,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
@@ -4676,6 +4849,7 @@ def beqUArg : UArg → UArg → Bool
   | .var a, .var b => strEq a b
   | .freshPtr a w, .freshPtr b v => strEq a b && w == v
   | .val a, .val b => beqUSide a b
+  | .fnref a, .fnref b => strEq a b
   | _, _ => false
 
 def beqUArgList : List UArg → List UArg → Bool
@@ -4716,7 +4890,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .shiftTab a f x s v w, .shiftTab b g y z v' w' =>
     strEq a b && strEq f g && beqUIdx x y && strEq s z && v == v' && w == w'
   | .awaitBind a g, .awaitBind b h => strEq a b && strEq g h
-  | .bindFnref a g, .bindFnref b h => strEq a b && strEq g h
+  | .bindFnref a g n, .bindFnref b h m => strEq a b && strEq g h && n == m
   | .callInd p f xs, .callInd q g ys => strEq p q && strEq f g && beqUArgList xs ys
   | .bindCallInd a p f xs, .bindCallInd b q g ys => strEq a b && strEq p q && strEq f g && beqUArgList xs ys
   | _, _ => false

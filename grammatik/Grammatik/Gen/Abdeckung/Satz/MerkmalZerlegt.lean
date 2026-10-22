@@ -57,7 +57,7 @@ theorem sperrMerkmal_zerlegt (ls : List D.Lock) (hls : ∀ L : D.Lock, L ∈ ls)
 
 /-- The probe "does not call `g`, not even through `g`'s signature" (the probe of `ruftB`). -/
 def ohneRuf (g : D.Fn) : Merkmal D :=
-  ⟨fun h => !(decide (h = g)), fun n => !(decide (n = D.sig g)), fun _ => true⟩
+  ⟨fun h => !(decide (h = g)), fun n => !(D.passt g n), fun _ => true⟩
 
 /-- **The call graph feature set** `rufM fs Z` is the conjunction, over the complete function list, of "does not call
     `g`" for every `g` outside `Z`. -/
@@ -87,15 +87,12 @@ theorem rufM_zerlegt (fs : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) (Z : D.Fn
         · simp [ohneRuf] at this
     · intro n
       rw [alle_ind]; simp only [List.all_map, Function.comp_def]
-      show (fs.all fun g => !(decide (D.sig g = n)) || Z g) = _
+      show (fs.all fun g => !(D.passt g n) || Z g) = _
       apply congrArg (List.all fs); funext g
       split
       · rename_i h; simp [h, Merkmal.top]
       · rename_i h
         simp only [h, ohneRuf, Bool.or_false]
-        by_cases he : D.sig g = n
-        · subst he; simp
-        · simp [he, Ne.symm he]
     · intro L
       rw [alle_sperre]; simp only [List.all_map, Function.comp_def]
       symm; apply List.all_eq_true.2; intro g _; split <;> rfl

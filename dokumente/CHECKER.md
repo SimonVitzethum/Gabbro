@@ -101,7 +101,7 @@ gabbro lean | lean-g | gegenbeispiel|counterexample | prove|beweise | gabbrov pr
   bytes of one file). `gabbro lean` glues several files into one program text (see §11, "unit
   view").
 * **Hints are not refusals.** The call sites that issue a hint (`Absage::hinweis`) are `D023`,
-  `E003`, `E009`, `E249`, `H004`, `H008`, `M114`, `N026`, `N297`, `R015`, `S007`, `V003`. Every
+  `E003`, `E009`, `E249`, `H004`, `H008`, `M114`, `N026`, `R015`, `S007`, `V003`. Every
   sentence in the register is weaker by exactly the functions on which a hint says "undecidable".
 * **`--fix`** applies the machine-applicable repairs a refusal carries (`fix: …` lines; the
   `Fix` is `Some` only where the edit is unique — the missing entry the hull names, the bound
@@ -357,7 +357,7 @@ neither carries, the pass refuses instead of assuming.*
 | no mixing `bool`/numbers; same *shape* and name at a slot (aggregate, pointer, array) | `M135`, `M139`, `M142` |
 | `~` only over a width-bearing operand; `x << y & z` grouped differently in Gabbro and in C must be parenthesised | `M136`–`M138` |
 | arity at a direct call (the precondition of every rule behind it) | `M143` |
-| function pointers: only `&f` of a declared function; the **contract is subsumed** (effects ⊆, costs ≤, arity), the **signature is equal** (`M141`: types compare exactly); a call through the pointer is held against the type's `requires` | `M127`–`M129`, `M141`, `N295`–`N297` |
+| function pointers: only `&f` of a declared function; the type is a **signature** (Lean `SigPasst`): effects ⊆, costs ≤, arity, the **signature is equal** (`M141`: types compare exactly); no `requires`/`ensures` at the type (`N589`), no function that requires `Held(..)` as a value (`N590`) | `M127`–`M129`, `M141`, `N296`, `N589`, `N590` |
 | overflow operators: wrapping (`+% -% *% <<%`) only on an exact unsigned range, saturating (`+\|`) on one shared range; unary minus checks `-INT_MIN`; `%` traps at the smallest value over `-1` | `M150`, `M152`–`M154` |
 | bit intrinsics (`clz ctz log2_floor popcount rotl rotr bswap`): typed at the call, results exact; their names cannot be declared | `M157`–`M160`, `N058` |
 | `refines g`: `g` a declared `spec fn`, same arity, at an `impl fn` | `M130`–`M132` |

@@ -311,15 +311,15 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       hneu =>
     rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩
   | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
-    subst hg
-    rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr (D.sig g)) Λ, ρ, .dann rest k⟩⟩
+    replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
+    rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
-    subst hg
-    rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr (D.sig g)) Λ, ρ, .ende rest⟩⟩
+    replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
+    rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho
       neu hneu =>
-    subst hg
-    rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr (D.sig g)) Λ, ρ, .wartet rest k⟩⟩
+    replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
+    rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩
   | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
       by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], ?_, ?_⟩)

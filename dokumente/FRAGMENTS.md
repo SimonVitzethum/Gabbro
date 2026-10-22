@@ -70,7 +70,7 @@ the retired `PFLICHTEN` register or `SYNTAX.md` and was not run again today).
 | B5 | prose explains the retired word *keeping* | **closed** | the word no longer occurs in `SYNTAX.md` |
 | B6 | no name for the return value in `ensures` | **closed** | `result`; retired `pruefe-notation` |
 | B7 | no record or array literal in `expr` | **closed 2026-08-17** | labelled call `P(a: 1, b: true)`; *no* braced literal (76 corpus sites have a `{` right after an expression) |
-| B8 | no call through a `place`; no producer of a function pointer | **closed** | `SYNTAX.md` «B8» productions; `fn(…)` types carry a contract (`N035`–`N037`) |
+| B8 | no call through a `place`; no producer of a function pointer | **closed** | `SYNTAX.md` «B8» productions; `fn(…)` types are signatures: effects and costs (`N035`, `N036`), no `requires`/`ensures` (`N589`, 2026-10-21) |
 | B9 | `fnptr` carries no contract | **retracted — a false entry** | `N035` (effects *and* costs obligatory, since 2026-08-21), `N036`, `N037` |
 | B10 | `traverse` yields no value and has no `break`; `by consuming` drains the whole queue | **open** (language/emitter) | checker accepts, `gabbro emit` refuses `[C001]` at the queue traverse (§8); retired `pruefe-notation` lists B10 as its one `ABSENKUNGSLUECKEN` entry |
 | B11 | `forever` has no exit | **corrected 2026-08-20/28** | `leave <mark>` / `next` exist (`beispiele/04`, `39`, `150`); what is still missing is an exit that *carries a reason* |

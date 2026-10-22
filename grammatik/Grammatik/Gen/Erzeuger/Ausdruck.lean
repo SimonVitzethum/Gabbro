@@ -152,7 +152,9 @@ def gPtrOf : Sz (SE D Γ Λ) :=
     Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl [true, false]) fun rw =>
       Sz.pure ⟨.ptr n rw, .ptrOf t n ht rw⟩)
 
-def gFnref : Sz (SE D Γ Λ) := Sz.blatt (Aufz.fn.map fun f => ⟨.fnptr (D.sig f), .fnref f (D.sig f) rfl⟩)
+/-- `&f` at every pointer type `f` conforms to (`Aufz.sigs` holds every such type). -/
+def gFnref : Sz (SE D Γ Λ) := Sz.blatt (Aufz.fn.flatMap fun f => (Aufz.sigs (D := D)).filterMap fun n =>
+  if h : D.passt f n = true then some ⟨.fnptr n, .fnref f n h⟩ else none)
 
 def gWiden : Sz (SE D Γ Λ) :=
   Sz.knoten (Sz.bind (intS E) fun ⟨lo, hi, e⟩ => Sz.bind zS fun lo' => Sz.bind zS fun hi' =>

@@ -104,30 +104,27 @@ theorem gOk_ohne_test {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} 
     e.gOk (fun _ => true) (fun _ => true) = true := by
   rw [eGOk]; exact mE_top e
 
-/-- The probe "calls through no pointer of signature `n`" (the probe of `indB`). -/
-def ohneInd (n : Nat) : Merkmal D := ⟨fun _ => true, fun n' => !(decide (n' = n)), fun _ => true⟩
+/-- The probe "calls through no pointer type `g` conforms to" (the probe of `indB`). -/
+def ohneInd (g : D.Fn) : Merkmal D := ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩
 
 /-- The admissibility of indirect calls over the complete function list is the conjunction, over every function `g`
-    whose contract carriers are not in the footprint, of "calls through no pointer of `g`'s signature". -/
+    whose contract carriers are not in the footprint, of "calls through no pointer type `g` conforms to". -/
 theorem kand_zerlegt (fs : List D.Fn) (Ok : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ) :
-    mE (indMerkmal fun n => fs.all fun g => !(decide (D.sig g = n)) || Ok g) e =
-      fs.all fun g => Ok g || mE (ohneInd (D.sig g)) e := by
-  have hA : (indMerkmal fun n => fs.all fun g => !(decide (D.sig g = n)) || Ok g : Merkmal D) =
-      Merkmal.alle (fs.map fun g => if Ok g then Merkmal.top else ohneInd (D.sig g)) := by
+    mE (indMerkmal fun n => fs.all fun g => !(D.passt g n) || Ok g) e =
+      fs.all fun g => Ok g || mE (ohneInd g) e := by
+  have hA : (indMerkmal fun n => fs.all fun g => !(D.passt g n) || Ok g : Merkmal D) =
+      Merkmal.alle (fs.map fun g => if Ok g then Merkmal.top else ohneInd g) := by
     apply Merkmal.gleich
     · intro h; rw [alle_ruf]; simp only [List.all_map, Function.comp_def]
       symm; apply List.all_eq_true.2; intro g _; split <;> rfl
     · intro n; rw [alle_ind]; simp only [List.all_map, Function.comp_def]
-      show (fs.all fun g => !(decide (D.sig g = n)) || Ok g) = _
+      show (fs.all fun g => !(D.passt g n) || Ok g) = _
       apply congrArg (List.all fs); funext g
       split
       · rename_i h; simp [h, Merkmal.top]
       · rename_i h
         simp only [h, ohneInd, Bool.or_false]
-        by_cases he : D.sig g = n
-        · subst he; simp
-        · simp [he, Ne.symm he]
     · intro L; rw [alle_sperre]; simp only [List.all_map, Function.comp_def]
       symm; apply List.all_eq_true.2; intro g _; split <;> rfl
   rw [hA, mE_alle, List.all_map]
@@ -137,7 +134,7 @@ theorem kand_zerlegt (fs : List D.Fn) (Ok : D.Fn → Bool) {V : Vertrag D} {l : 
   · rename_i h; rw [h, mE_top]; rfl
   · rename_i h; simp [h]
 
-theorem indB_eq (P : Programm D) (f : D.Fn) (n : Nat) : indB P f n = !(mE (ohneInd n) (P.rumpf f)) := rfl
+theorem indB_eq (P : Programm D) (f g : D.Fn) : indB P f g = !(mE (ohneInd g) (P.rumpf f)) := rfl
 
 theorem any_nicht {α : Type} (l : List α) (p : α → Bool) : (l.any fun x => !p x) = !(l.all p) := by
   induction l with

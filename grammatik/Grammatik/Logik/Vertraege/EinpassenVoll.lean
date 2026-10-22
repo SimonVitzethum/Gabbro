@@ -154,10 +154,10 @@ theorem gleitWortPasst_wf {lo hi : Int × Int} {n : Int} {v : Gleit lo hi}
 
 /-! ## 3. Function pointers -/
 
-/-- **Every function of signature `m` is the answer of an image that places it at `0`.** -/
-theorem zeigerPasst_voll (m : Nat) (v : {f : D.Fn // D.sig f = m}) :
+/-- **Every function conforming to `fnptr m` is the answer of an image that places it at `0`.** -/
+theorem zeigerPasst_voll (m : Nat) (v : {f : D.Fn // D.passt f m = true}) :
     zeigerPasst (fun _ => some v.1) m 0 = some v := by
-  show (if h : D.sig v.1 = m then some ⟨v.1, h⟩ else Option.none) = some v
+  show (if h : D.passt v.1 m = true then some ⟨v.1, h⟩ else Option.none) = some v
   rw [dif_pos v.2]
 
 /-! ## 4. Every type -/
@@ -198,7 +198,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
       exact congrArg some (Fin.ext (Int.toNat_natCast _))⟩
   | .never, v, _ => (v : Empty).elim
   | .fl lo hi, v, hw => ⟨fun _ => Option.none, _, gleitWortPasst_voll lo hi v hw⟩
-  | .fnptr m, v, _ => ⟨fun _ => some (v : {f : D.Fn // D.sig f = m}).1, 0, zeigerPasst_voll m v⟩
+  | .fnptr m, v, _ => ⟨fun _ => some (v : {f : D.Fn // D.passt f m = true}).1, 0, zeigerPasst_voll m v⟩
   | .ptr _ _, _, _ => ⟨fun _ => Option.none, 0, rfl⟩
 
 /-- Every decoded value is a value an answer can have. -/
@@ -494,7 +494,7 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .why n => decide (n ≠ 0)
   | .never => false
   | .fl lo hi => gleitBarB lo hi
-  | .fnptr m => fs.any fun f => decide (D.sig f = m)
+  | .fnptr m => fs.any fun f => D.passt f m
   | .ptr _ _ => true
 
 /-- An answer class is not empty, decided (a call without a result always answers). -/
@@ -536,8 +536,8 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
       exact ⟨fun ⟨v, hv⟩ => ⟨v, hv⟩, fun ⟨v, hv⟩ => ⟨v, hv⟩⟩
   | .fnptr m => by
       simp only [antwortTyB, List.any_eq_true, decide_eq_true_eq]
-      exact ⟨fun ⟨f, _, hf⟩ => ⟨(⟨f, hf⟩ : {f : D.Fn // D.sig f = m}), trivial⟩,
-        fun ⟨v, _⟩ => ⟨(v : {f : D.Fn // D.sig f = m}).1, hvoll _, v.2⟩⟩
+      exact ⟨fun ⟨f, _, hf⟩ => ⟨(⟨f, hf⟩ : {f : D.Fn // D.passt f m = true}), trivial⟩,
+        fun ⟨v, _⟩ => ⟨(v : {f : D.Fn // D.passt f m = true}).1, hvoll _, v.2⟩⟩
   | .ptr _ _ => ⟨fun _ => ⟨(() : Unit), trivial⟩, fun _ => rfl⟩
 
 /-- **The answer class, decided exactly** (W1): given the complete function list, the Bool

@@ -20,8 +20,9 @@ theorem schranke_zahlE (als : List (String × (Int × Int))) (n : Int) : uSchran
   · rename_i h; simp [uSchranke, Int.toNat_of_nonneg (show 0 ≤ -n by omega)]
 
 theorem typS_art {t : Ty} {st : STyp} {a : UParamArt} (ht : typS t = .ok st) (ha : artErg t = some a)
-    (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy) (n : String) :
-    uParam als tabs sums whys (n, st) = .ok (n, t, a) := by
+    (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy)
+    (zeiger : List String) (zb : Nat) (n : String) :
+    uParam als tabs sums whys zeiger zb (n, st) = .ok (n, t, a) := by
   cases t with
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
@@ -46,11 +47,11 @@ theorem typS_griff {t : Ty} {st : STyp} (ht : typS t = .ok st) (ha : (artErg t).
 
 /-- The printed parameters read back: names `v{np-1-j}`, the types, their kinds. -/
 theorem parListe_ok (np : Nat) (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum)
-    (whys : List UWhy) (devs : List String) (hd : ∀ d ∈ devs, d = "Dev") :
+    (whys : List UWhy) (zeiger : List String) (zb : Nat) (devs : List String) (hd : ∀ d ∈ devs, d = "Dev") :
     ∀ (ts : List Ty) (j : Nat) (ps : List (String × STyp)) (ks : List UParamArt),
       parListe np j ts = .ok ps → ts.mapM artErg = some ks →
       uOhneGriffe devs ps = ps ∧
-      uSeq (ps.map (uParam als tabs sums whys)) =
+      uSeq (ps.map (uParam als tabs sums whys zeiger zb)) =
         .ok (((List.range' j ts.length).map fun i => nVar (np - 1 - i)).zip (ts.zip ks) |>.map
           fun (n, t, k) => (n, t, k)) := by
   intro ts
@@ -83,7 +84,7 @@ theorem parListe_ok (np : Nat) (als : List (String × (Int × Int))) (tabs : Lis
     refine ⟨?_, ?_⟩
     · simp only [uOhneGriffe, List.filter_cons, typS_griff ht (by simp [ha]) devs hd, Option.isNone_none, ite_true]
       exact congrArg _ h1
-    · simp only [List.map_cons, uSeq, typS_art ht ha als tabs sums whys, h2, List.length_cons, List.range'_succ,
+    · simp only [List.map_cons, uSeq, typS_art ht ha als tabs sums whys zeiger zb, h2, List.length_cons, List.range'_succ,
         List.zip_cons_cons]
 
 /-- The parameter `v{np-1-d}` is found at position `d`. -/
@@ -396,7 +397,7 @@ theorem tripel_proj {α β γ : Type} (as : List α) (bs : List β) (cs : List �
 theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (devs : List String) (mitGriff : Bool)
     (consts : List (String × Int)) (als : List (String × (Int × Int))) (sums : List USum)
-    (ps : List (String × STyp)) (ks : List UParamArt) (res : Option STyp) (req ens : List SKlausel)
+    (zeiger : List String) (zb : Nat) (ps : List (String × STyp)) (ks : List UParamArt) (res : Option STyp) (req ens : List SKlausel)
     (hps : parListe (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params = .ok ps)
     (hks : (z.deklaration.signatur f).params.mapM artErg = some ks)
     (hres : delabRes z f = .ok res)
@@ -405,11 +406,11 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
       { art := "impl", name := nFn (fN z f), params := mitGriffPs ps mitGriff, res,
         fehler := if (z.deklaration.signatur f).gruende = 0 then none
           else some (nGrund (z.deklaration.signatur f).gruende),
-        klauseln := klauselnVon z P f req ens } devs =
+        klauseln := klauselnVon z P f req ens } devs zeiger zb =
       .ok (kopfVon z gNr devs f ps ks mitGriff, uEindeutig ((tNamen z f).map nTab)) := by
   set S := z.deklaration.signatur f with hS
   set np := S.params.length with hnp
-  obtain ⟨hfilt, hseq⟩ := parListe_ok np als tabs sums whys devs hV.devsOk S.params 0 ps ks hps hks
+  obtain ⟨hfilt, hseq⟩ := parListe_ok np als tabs sums whys zeiger zb devs hV.devsOk S.params 0 ps ks hps hks
   have hlen := mapM_length artErg S.params ks hks
   obtain ⟨p1, p2, p3⟩ := tripel_proj ((List.range' 0 S.params.length).map fun i => nVar (np - 1 - i)) S.params ks
     (by simp) hlen

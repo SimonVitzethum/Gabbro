@@ -232,7 +232,7 @@ structure Schluessel where
     reaches the same cells as the full sweep. -/
 def Rumpf.schluessel [Zahlen] {f : D.Fn} (b : Rumpf D f) : Schluessel :=
   ⟨(Aufz.fn (D := D)).map fun g => !(mE (rufNur g) b),
-   (Aufz.fn (D := D)).map fun g => !(mE ⟨fun _ => true, fun n => !(decide (n = D.sig g)), fun _ => true⟩ b),
+   (Aufz.fn (D := D)).map fun g => !(mE ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩ b),
    (Aufz.lock (D := D)).map fun L => !(mE ⟨fun _ => true, fun _ => true, fun L' => !(decide (L' = L))⟩ b),
    b.gOk (fun _ => true) (fun _ => true),
    (Aufz.ax (D := D)).map fun a => decide (Sum.inl a ∈ b.ants),

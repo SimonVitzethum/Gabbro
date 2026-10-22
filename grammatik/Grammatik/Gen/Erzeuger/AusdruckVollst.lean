@@ -143,10 +143,10 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
         (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) (Sz.mem_wenn ht (Sz.mem_bind
           (Sz.mem_wahl (by cases rw <;> simp)) (Sz.mem_pure _)))))) (by omega)
   | fnref f n hn =>
-    subst hn
     simp only [groesseExpr]
     ausd (gFnref (D := D) (Γ := Γ) (Λ := Λ)),
-      Sz.mem_blatt (List.mem_map.2 ⟨f, Aufz.fn_mem f, rfl⟩)
+      Sz.mem_blatt (List.mem_flatMap.2 ⟨f, Aufz.fn_mem f, List.mem_filterMap.2
+        ⟨n, Aufz.sigs_mem f n hn, by rw [dif_pos hn]⟩⟩)
   | oldG g hL =>
     simp only [groesseExpr]
     ausd (gOldG (D := D) (Γ := Γ) (Λ := Λ)),

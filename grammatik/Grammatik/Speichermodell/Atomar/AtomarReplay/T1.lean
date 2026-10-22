@@ -87,11 +87,11 @@ theorem vertrag_stabilX (hF : FussSX P S lok Tg f) (hTV : ∀ c, Tg c → Vertra
     · exact (hTV o h' g).2.1 ho
 
 theorem vertrag_stabilX_ind (hF : FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
-    {V : Vertrag D} {Λ : List (Res D)} {n : Nat} (g : D.Fn) (hg : D.sig g = n)
+    {V : Vertrag D} {Λ : List (Res D)} {n : Nat} (g : D.Fn) (hg : D.passt g n = true)
     (hp : RufPasst D V (D.sigNr n) Λ)
     (h : (P.requires g).orte ++ (P.ensures g).orte ⊆ fussOrteG P f) :
     (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok f Λ := by
-  subst hg
+  replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
   exact vertrag_stabilX hF hTV g hp h
 
 /-- **The own `ensures` carriers are stable at a return.** -/

@@ -81,10 +81,11 @@ def uOfSt (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
         else (uOfS z art none e).map fun u => [.storeAtom (nGlob (gN z g)) u]
       else none
   | .call f args _ _ => (uOfArgs z art args).map fun xs => [.call (nFn (fN z f)) xs]
-  | .callInd (Γ := Γ) p args _ _ =>
+  | .callInd (Γ := Γ) (n := n) p args _ _ =>
       match p with
-      | .fnref f _ _ => (uOfArgs z art args).map fun xs =>
-        [.bindFnref (nZeiger Γ.length) (nFn (fN z f)), .callInd (nZeiger Γ.length) (nFn (fN z f)) xs]
+      | .fnref f _ _ => if n = z.deklaration.sig f then (uOfArgs z art args).map fun xs =>
+        [.bindFnref (nZeiger Γ.length) (nFn (fN z f)) n, .callInd (nZeiger Γ.length) (nFn (fN z f)) xs]
+        else none
       | _ => none
   | _ => none
 
@@ -113,14 +114,16 @@ def uOfBl (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.
       let (es, er) ← uOfEnd (artAuf (.why (gNr (z.deklaration.gruende f))) art) err
       some ([.bindElse (nVar Γ.length) (nFn (fN z f)) xs (nVar Γ.length)] ++ es ++ [.ret er, .blkEnd] ++
         (← uOfBl (artAuf a art) rest))
-  | .bindCallInd (Γ := Γ) (τ := τ) p args _ _ _ rest => do
+  | .bindCallInd (Γ := Γ) (n := n) (τ := τ) p args _ _ _ rest => do
       let a ← artErg τ
       let xs ← uOfArgs z art args
       let rs ← uOfBl (artAuf a art) rest
       match p with
       | .fnref f _ _ =>
-        some ([.bindFnref (nZeiger Γ.length) (nFn (fN z f)),
-          .bindCallInd (nVar Γ.length) (nZeiger Γ.length) (nFn (fN z f)) xs] ++ rs)
+        if n = z.deklaration.sig f then
+          some ([.bindFnref (nZeiger Γ.length) (nFn (fN z f)) n,
+            .bindCallInd (nVar Γ.length) (nZeiger Γ.length) (nFn (fN z f)) xs] ++ rs)
+        else none
       | _ => none
   | _ => none
 
@@ -193,6 +196,8 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   kanal : V.gruende ≠ 0 → ∃ k w, ctx.kanal = some (k, V.gruende) ∧
     ctx.whys.findIdx? (fun x => strEq x.name (nGrund V.gruende)) = some k ∧ ctx.whys[k]? = some w ∧
     ∀ r, r < V.gruende → w.cases.findIdx? (strEq · (nFall r)) = some r
+  /-- every function's own signature number (its head number) lies below the pointer-type base -/
+  zb : ∀ f : z.deklaration.Fn, z.deklaration.sig f < ctx.zeigerBasis
 
 variable {z V}
 
@@ -379,6 +384,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   griff := H.griff
   reg := H.reg
   kanal := H.kanal
+  zb := H.zb
 
 theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) (L : z.deklaration.Lock) :
@@ -410,6 +416,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   griff := H.griff
   reg := H.reg
   kanal := H.kanal
+  zb := H.zb
 
 /-! ### Values of a `let`: a truth value is never read as a number -/
 

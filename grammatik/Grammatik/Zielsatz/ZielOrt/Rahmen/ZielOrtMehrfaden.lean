@@ -93,14 +93,14 @@ theorem ziel_ort_sperre_invL (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     an indirect call's signature must have all its functions (of the
     member list) in `Z`; `locks` are not restricted. -/
 def rufM (fs : List D.Fn) (Z : D.Fn → Bool) : Merkmal D :=
-  ⟨Z, fun n => fs.all fun g => !(decide (D.sig g = n)) || Z g, fun _ => true⟩
+  ⟨Z, fun n => fs.all fun g => !(D.passt g n) || Z g, fun _ => true⟩
 
 theorem rufZiel_rufM {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) {Z : D.Fn → Bool}
     {g : D.Fn} (h : RufZiel (rufM fs Z) g) : Z g = true := by
-  rcases h with h | h
+  rcases h with h | ⟨n, hn, h⟩
   · exact h
   · have h1 := (List.all_eq_true.mp h) g (hvoll g)
-    simpa using h1
+    simpa [hn] using h1
 
 /-- **The call graph of `Z` is closed**: every function in `Z` calls only
     into `Z`. -/
@@ -129,7 +129,7 @@ variable [DecidableEq D.Fn]
 
 /-- `f`'s body calls `g` (directly, or through `g`'s signature). -/
 def ruftB (P : Programm D) (f g : D.Fn) : Bool :=
-  !(mE ⟨fun h => !(decide (h = g)), fun n => !(decide (n = D.sig g)), fun _ => true⟩ (P.rumpf f))
+  !(mE ⟨fun h => !(decide (h = g)), fun n => !(D.passt g n), fun _ => true⟩ (P.rumpf f))
 
 /-- One more round of the call graph. -/
 def erreichSchritt (P : Programm D) (fs : List D.Fn) (Z : D.Fn → Bool) : D.Fn → Bool :=

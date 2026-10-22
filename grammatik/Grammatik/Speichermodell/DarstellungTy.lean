@@ -29,7 +29,7 @@ def encOpt (n : Int) : Option (Zahl 0 (n - 1)) → Int
     or the sentinel `N` for `option index into T`, the case number for `reason`. The remaining
     types have no integer cell. (Until 2026-10-18 this lived in `CSpeicher.lean`, the C memory
     model, deleted with the C emitter.) -/
-def encW {F : Type} {sig : F → Nat} : (τ : Ty) → Val F sig τ → Int
+def encW {F : Type} {sig : F → Nat → Bool} : (τ : Ty) → Val F sig τ → Int
   | .int _ _, v => Zahl.n v
   | .bool, b => if (show Bool from b) then 1 else 0
   | .opt n, o => encOpt n o
@@ -61,7 +61,7 @@ def tyLo : Gabbro.Grammatik.Ty → Int
   | _ => 0
 
 /-- The offset encoding of a value: `Darstellung.enc` of `encW`. -/
-def encN {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
+def encN {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
     (v : Gabbro.Grammatik.Val F sig t) : Nat :=
   Grammatik.Speichermodell.Darstellung.enc (tyLo t)
     (Gabbro.Grammatik.encW t v)
@@ -72,7 +72,7 @@ def encN {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
     Ranges via `Darstellung.enc_lt_two_pow` (with `Zahl.lo_le` /
     `le_hi`, as the range check does); `option` via `encOpt` (the sentinel
     `n` included); `grund` via `Fin`. -/
-theorem encN_lt {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
+theorem encN_lt {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
     (b : Nat) (hb : tyBits t = some b)
     (v : Gabbro.Grammatik.Val F sig t) : encN t v < 2 ^ b := by
   cases t with
@@ -133,7 +133,7 @@ theorem encN_lt {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
     unconditional form is false. Ranges need no condition
     (`dec_enc` takes its bounds as hypotheses, contradictory or not);
     `grund` cases come from `Fin`; the remaining types encode `0`. -/
-theorem decN_encN {F : Type} {sig : F → Nat} (t : Gabbro.Grammatik.Ty)
+theorem decN_encN {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
     (v : Gabbro.Grammatik.Val F sig t)
     (hOpt : ∀ n : Int, t = .opt n → 0 ≤ n) :
     Grammatik.Speichermodell.Darstellung.dec (tyLo t) (encN t v) =
@@ -194,7 +194,7 @@ def narrowCell (t : Gabbro.Grammatik.Ty) : Option Nat :=
   (tyBits t).map Grammatik.Speichermodell.Darstellung.zellBytes
 
 /-- **A narrow cell within 64 bits holds the encoded value.** -/
-theorem narrow_fits {F : Type} {sig : F → Nat}
+theorem narrow_fits {F : Type} {sig : F → Nat → Bool}
     (t : Gabbro.Grammatik.Ty) (b c : Nat) (hb : tyBits t = some b)
     (h64 : b ≤ 64) (hc : narrowCell t = some c)
     (v : Gabbro.Grammatik.Val F sig t) :
@@ -248,14 +248,14 @@ theorem narrowCell_int100 : narrowCell (.int 0 100) = some 1 := by decide
 theorem narrowCell_int70000 : narrowCell (.int 0 70000) = some 4 := by decide
 
 /-- `encN_lt` fires on a concrete range value. -/
-theorem encN_lt_int59 {F : Type} {sig : F → Nat} :
+theorem encN_lt_int59 {F : Type} {sig : F → Nat → Bool} :
     @encN F sig (.int 5 9)
       (⟨7, by decide, by decide⟩ : Gabbro.Grammatik.Val F sig (.int 5 9)) <
       2 ^ 3 :=
   @encN_lt F sig (.int 5 9) 3 (by decide) _
 
 /-- `encN_lt` fires on a concrete `option` value (`some`). -/
-theorem encN_lt_opt3 {F : Type} {sig : F → Nat} :
+theorem encN_lt_opt3 {F : Type} {sig : F → Nat → Bool} :
     @encN F sig (.opt 3)
       (some (⟨2, by decide, by decide⟩ : Gabbro.Grammatik.Zahl 0 2)) < 2 ^ 2 :=
   @encN_lt F sig (.opt 3) 2 (by decide) _
