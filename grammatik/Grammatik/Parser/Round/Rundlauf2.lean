@@ -139,6 +139,18 @@ theorem un_is_pre : ∀ (o : String),
   · exact Or.inr (Or.inl (strKlingt o "-" h))
   · exact Or.inr (Or.inr (strKlingt o "~" h))
 
+theorem un_ne_klammer (o : String) (hop : (strEq o "!" || strEq o "-" || strEq o "~") = true) :
+    strEq o "-()" = false := by
+  obtain rfl | rfl | rfl := un_is_pre o hop <;> decide
+
+/-- The operand condition of the `-` arm for an atom: a numeral prints no `(`. -/
+theorem atom_bed (x : SExpr) (rest : List Token) :
+    (∀ T, druckToks x ++ rest ≠ .zeichen "(" :: T) ∨ istLit x = false := by
+  cases x <;> simp [istLit, druckToks]
+
+theorem nonatom_bed (x : SExpr) (hat : istAtom x = false) : istLit x = false := by
+  cases x <;> simp_all [istAtom, istLit]
+
 -- A lawful `+`/`*` spelling names itself: the two cases of
 -- the widened `gutKern` bin-arm.
 theorem bin_is_pm : ∀ (o : String),
@@ -188,15 +200,12 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
     simp only [Bool.and_eq_true] at h
     obtain ⟨hop, hx⟩ := h
     obtain rfl | rfl | rfl := un_is_pre o hop
-    · simp only [gut, Bool.and_eq_true] at ⊢
-      refine ⟨?_, gut_of_gutKern x hx⟩
-      decide
-    · simp only [gut, Bool.and_eq_true] at ⊢
-      refine ⟨?_, gut_of_gutKern x hx⟩
-      decide
-    · simp only [gut, Bool.and_eq_true] at ⊢
-      refine ⟨?_, gut_of_gutKern x hx⟩
-      decide
+    · simp only [gut, gut_of_gutKern x hx, Bool.and_true, Bool.or_eq_true]
+      left; decide
+    · simp only [gut, gut_of_gutKern x hx, Bool.and_true, Bool.or_eq_true]
+      left; decide
+    · simp only [gut, gut_of_gutKern x hx, Bool.and_true, Bool.or_eq_true]
+      left; decide
   | bin o l r =>
     rw [gutKern_bin] at h
     simp only [Bool.and_eq_true, and_assoc] at h
@@ -913,15 +922,35 @@ theorem turm_var : ∀ (a : String) (rest : List Token),
 theorem bang_arm_gen : ∀ (G' : Nat) (M R : List Token) (o : String) (v : SExpr),
     (strEq o "!" || strEq o "-" || strEq o "~") = true →
     parsePrimary G' M = .ok (v, R) →
+    ((∀ T, M ≠ .zeichen "(" :: T) ∨ istLit v = false) →
     parseUnary (G' + 1) ([.zeichen o] ++ M) = .ok (.un o v, R) := by
-  intro G' M R o v hop h
+  intro G' M R o v hop h hl
   obtain rfl | rfl | rfl := un_is_pre o hop
   · simp only [List.cons_append, List.nil_append] at h ⊢
     simp only [parseUnary, h] at ⊢
   · simp only [List.cons_append, List.nil_append] at h ⊢
-    simp only [parseUnary, h] at ⊢
+    cases M with
+    | nil => cases G' <;> simp [parsePrimary] at h
+    | cons t T =>
+      by_cases ht : t = .zeichen "("
+      · subst ht
+        have hl' : istLit v = false := by
+          rcases hl with hl | hl
+          · exact absurd rfl (hl T)
+          · exact hl
+        simp only [parseUnary, h, hl', Bool.false_eq_true, ite_false]
+      · simp only [parseUnary]
+        split <;> simp_all
   · simp only [List.cons_append, List.nil_append] at h ⊢
     simp only [parseUnary, h] at ⊢
+
+/-- `-(n)`: the negation of a numeral (`.un "-()"`), the parenthesised arm of `-`. -/
+theorem negklammer_arm : ∀ (G' : Nat) (M R : List Token) (n : Nat),
+    parsePrimary G' ([.zeichen "("] ++ M) = .ok (.lit n, R) →
+    parseUnary (G' + 1) ([.zeichen "-", .zeichen "("] ++ M) = .ok (.un "-()" (.lit n), R) := by
+  intro G' M R n h
+  simp only [List.cons_append, List.nil_append] at h ⊢
+  simp only [parseUnary, h, istLit, ite_true]
 
 theorem paren_arm : ∀ (G'' : Nat) (M R : List Token) (v : SExpr),
     parseOr G'' M = .ok (v, [.zeichen ")"] ++ R) →
@@ -983,10 +1012,10 @@ theorem kern_un_atom_turm : ∀ (o : String) (x : SExpr) (rest : List Token),
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     have hd : druckToks (.un o x) =
         [.zeichen o] ++ druckToks x := by
-      simp [druckToks, hat]
+      simp [druckToks, hat, un_ne_klammer _ hop]
     have hP' := hPx G' (by omega)
     simp only [hd, List.append_assoc] at ⊢
-    exact bang_arm_gen _ _ _ _ _ hop hP'
+    exact bang_arm_gen _ _ _ _ _ hop hP' (atom_bed x rest)
   have hup := tower_up (.un o x) rest hr hU
   exact ⟨hU, hup.1, hup.2.1, hup.2.2.1, hup.2.2.2.1,
     hup.2.2.2.2.1, hup.2.2.2.2.2⟩
@@ -1025,12 +1054,12 @@ theorem kern_un_paren_turm : ∀ (o : String) (x : SExpr) (rest : List Token),
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     have hd : druckToks (.un o x) = [.zeichen o] ++
         (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-      simp [druckToks, hat]
+      simp [druckToks, hat, un_ne_klammer _ hop]
     have hF2 : 1 ≤ G' := by omega
     obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
     have hO' := hOx G'' (by omega)
     have hPar := paren_arm _ _ _ _ hO'
-    have hBang := bang_arm_gen _ _ _ _ _ hop hPar
+    have hBang := bang_arm_gen _ _ _ _ _ hop hPar (Or.inr (nonatom_bed x hat))
     simp only [hd, List.append_assoc] at ⊢
     exact hBang
   have hup := tower_up (.un o x) rest hr hU
@@ -2779,10 +2808,10 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
         exact rPr x rest G hxn hgx hpf hrs hrg hG
       have hd : druckToks (.un o x) =
           [.zeichen o] ++ druckToks x := by
-        simp [druckToks, hat]
+        simp [druckToks, hat, un_ne_klammer _ hop]
       have hP' := hPx F' (by omega)
       simp only [hd, List.append_assoc] at ⊢
-      exact bang_arm_gen _ _ _ _ _ hop hP'
+      exact bang_arm_gen _ _ _ _ _ hop hP' (atom_bed x rest)
     | false =>
       have hOx : ∀ (G : Nat), 12 * (groesse x + 1) + groesse x + 8 ≤ G →
           parseOr G (druckToks x ++ ([.zeichen ")"] ++ rest)) =
@@ -2792,12 +2821,12 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
           (hr_paren rest) (hrs_paren rest) (hrg_paren rest) hG
       have hd : druckToks (.un o x) = [.zeichen o] ++
           (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-        simp [druckToks, hat]
+        simp [druckToks, hat, un_ne_klammer _ hop]
       have hF2 : 1 ≤ F' := by omega
       obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
       have hO' := hOx F'' (by omega)
       have hPar := paren_arm _ _ _ _ hO'
-      have hBang := bang_arm_gen _ _ _ _ _ hop hPar
+      have hBang := bang_arm_gen _ _ _ _ _ hop hPar (Or.inr (nonatom_bed x hat))
       simp only [hd, List.append_assoc] at ⊢
       exact hBang
   | bin o l r =>

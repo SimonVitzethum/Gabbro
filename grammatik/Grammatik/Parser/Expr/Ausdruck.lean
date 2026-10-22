@@ -216,6 +216,11 @@ def grundKette : List String → SExpr
 -- so the block terminates by `f`. Against `parse.rs`: the level
 -- order, the single comparison, the flat bit level and the riding
 -- overflow operators match one by one.
+/-- A numeral: `-<numeral>` is a negative literal, `-(<numeral>)` the negation of a literal (`.un "-()"`). -/
+def istLit : SExpr → Bool
+  | .lit _ => true
+  | _ => false
+
 mutual
 def parseOr (f : Nat) (toks : List Token) :
     Except String (SExpr × List Token) :=
@@ -315,6 +320,9 @@ def parseUnary (f : Nat) (toks : List Token) :
   | f + 1 => match toks with
     | .zeichen "!" :: rest => match parsePrimary f rest with
       | .ok (e, rest') => .ok (.un "!" e, rest')
+      | .error e => .error e
+    | .zeichen "-" :: .zeichen "(" :: rest => match parsePrimary f (.zeichen "(" :: rest) with
+      | .ok (e, rest') => .ok (if istLit e then .un "-()" e else .un "-" e, rest')
       | .error e => .error e
     | .zeichen "-" :: rest => match parsePrimary f rest with
       | .ok (e, rest') => .ok (.un "-" e, rest')
@@ -625,7 +633,8 @@ def druck : SExpr → String
   | .index x i => druck x ++ "[" ++ druck i ++ "]"
   | .arrow x f => druck x ++ "->" ++ f
   | .un o x =>
-    if istAtom x then o ++ druck x else o ++ "(" ++ druck x ++ ")"
+    if strEq o "-()" then "-(" ++ druck x ++ ")"
+    else if istAtom x then o ++ druck x else o ++ "(" ++ druck x ++ ")"
   | .bin o l r => "(" ++ druck l ++ " " ++ o ++ " " ++ druck r ++ ")"
   | .call f args =>
     match args with

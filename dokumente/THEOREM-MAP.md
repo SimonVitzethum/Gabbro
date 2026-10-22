@@ -4153,7 +4153,7 @@ special cases of `R014` (they stay separate rules); records over byte buffers (r
 ## 77. The Lean parser as a measured front end: coverage matrix, no new theorem (Track P, 2026-10-17)
 
 Statement-level facts: `lex_keywords` and `wortschatz_248` hold over the 248 words of `kw.rs` (five were missing);
-`u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben` probes hold over the
+`u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben1..7` probes hold over the
 changed readers (`lockT` 7 fields, `globT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`, `SAnw.each` structured).
 Statics (2026-10-18): `declOf` carries `Glob := Fin u.globs.length` (`gdarf_globs`: no static is guarded), the call rule
 checks the written statics (`sigGSchreibt_eq`, `vGSchreibt_eq`), the initial memory starts each static at its

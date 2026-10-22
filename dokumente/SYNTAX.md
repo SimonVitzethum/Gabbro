@@ -607,6 +607,9 @@ mulexpr    = unary { ( "*" | "/" | "%" | "*%" ) unary } ;
 (* LANGUAGE.md section 3.4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
    each rides at the precedence of its base operator. *)
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
+(* `-` directly before a numeral is a negative LITERAL (`-3` is `Expr.lit (-3)`); `-` before a parenthesised
+   operand is the NEGATION (`-(3)` is `Expr.neg (Expr.lit 3)`, `-(a + b)` is `Expr.neg (Expr.add a b)`),
+   and so is `-x` over any other operand. One spelling for each model form. *)
 (* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
    carries a width. *)
 fnvalue    = "&" path ;

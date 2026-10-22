@@ -335,6 +335,7 @@ def druckToks : SExpr → List Token
     druckToks x ++ [.zeichen "["] ++ druckToks i ++ [.zeichen "]"]
   | .arrow x f => druckToks x ++ [.zeichen "->", nameTok f]
   | .un o x =>
+    if strEq o "-()" then [.zeichen "-", .zeichen "("] ++ druckToks x ++ [.zeichen ")"] else
     [.zeichen o] ++
       if istAtom x then druckToks x
       else [.zeichen "("] ++ druckToks x ++ [.zeichen ")"]
@@ -374,6 +375,10 @@ def istAddOp (s : String) : Bool :=
     strEq s "-%" || strEq s "+|"
 def istMulOp (s : String) : Bool :=
   strEq s "*" || strEq s "/" || strEq s "%" || strEq s "*%"
+@[simp] theorem strEq_bang_klammer : strEq "!" "-()" = false := by decide
+@[simp] theorem strEq_minus_klammer : strEq "-" "-()" = false := by decide
+@[simp] theorem strEq_tilde_klammer : strEq "~" "-()" = false := by decide
+
 def gutOpUn (o : String) : Bool :=
   strEq o "!" || strEq o "-" || strEq o "~"
 def gutOpOr (o : String) : Bool :=
@@ -429,7 +434,7 @@ def gut : SExpr → Bool
   | .field x _ => gutPlatz x
   | .index x i => gutPlatz x && gut i
   | .arrow x _ => gutPlatz x
-  | .un o x => gutOpUn o && gut x
+  | .un o x => (gutOpUn o && gut x) || (strEq o "-()" && istLit x)
   | .bin o l r => gutOpBin o && gut l && gut r
   | .call f xs => !istKopfWort f && gutListe xs
   | .fnref _ => true
@@ -1197,13 +1202,25 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         · intro h
           simp at h
     | un o x =>
-      simp only [gut, Bool.and_eq_true] at hg
+      by_cases hs0 : strEq o "-()" = true
+      · have ho := strKlingt o "-()" hs0
+        subst ho
+        have hl : istLit x = true := by
+          have h0 : gutOpUn "-()" = false := by decide
+          simp only [gut, h0, Bool.false_and, Bool.false_or, hs0, Bool.true_and] at hg; exact hg
+        cases x with
+        | lit k =>
+          simp only [druckToks, hs0, ite_true, List.mem_append, List.mem_cons, List.mem_nil_iff,
+            or_false] at hm
+          rcases hm with ((rfl | rfl) | rfl) | rfl <;> intro h <;> simp at h
+        | _ => simp [istLit] at hl
+      simp only [gut, hs0, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg
       obtain ⟨hop, hx⟩ := hg
       have hne : o ≠ ":" := by
         intro he
         subst he
         exact absurd hop (by decide)
-      simp only [druckToks] at hm
+      simp only [druckToks, hs0, Bool.false_eq_true, ite_false] at hm
       rw [List.mem_append] at hm
       obtain hmL | hmR := hm
       · rw [List.mem_singleton] at hmL
@@ -1571,13 +1588,19 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       exact ihb
     | un o x =>
-      simp only [gut, Bool.and_eq_true] at hg
+      by_cases hs0 : strEq o "-()" = true
+      · simp only [druckToks, hs0, ite_true, List.cons_append] at hT
+        injection hT with ha _
+        subst ha
+        intro h
+        simp at h
+      simp only [gut, hs0, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg
       obtain ⟨hop, -⟩ := hg
       have hne : o ≠ ")" := by
         intro he
         subst he
         exact absurd hop (by decide)
-      simp only [druckToks, List.cons_append] at hT
+      simp only [druckToks, hs0, Bool.false_eq_true, ite_false, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h

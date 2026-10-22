@@ -79,7 +79,12 @@ def delabE (kopf : Option Nat) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : 
   | .add a b => do .ok (.bin "+" (← delabE kopf a) (← delabE kopf b))
   | .sub a b => do .ok (.bin "-" (← delabE kopf a) (← delabE kopf b))
   | .mul a b => do .ok (.bin "*" (← delabE kopf a) (← delabE kopf b))
-  | .neg a => do .ok (.un "-" (← delabE kopf a))
+  | .neg a => do
+      let a' ← delabE kopf a
+      -- `-(n)` for a numeral (`-n` is the literal `-n`); every other operand prints `-x`/`-(x)`
+      .ok (match a' with
+        | .lit m => .un "-()" (.lit m)
+        | x => .un "-" x)
   | .lt a b => do .ok (.bin "<" (← delabE kopf a) (← delabE kopf b))
   | .le a b => do .ok (.bin "<=" (← delabE kopf a) (← delabE kopf b))
   | .eq a b => do .ok (.bin "==" (← delabE kopf a) (← delabE kopf b))

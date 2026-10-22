@@ -208,20 +208,20 @@ theorem unLegs : ∀ (o : String) (x : SExpr), gutOpUn o = true → Legs x → L
     | true =>
       have hpf := primFrei_of_istAtom x hat
       have hd : druckToks (.un o x) = [.zeichen o] ++ druckToks x := by
-        simp [druckToks, hat]
+        simp [druckToks, hat, un_ne_klammer _ ho]
       have hP' := Hx.1 rest G' hpf hrs hrg (by omega)
       simp only [hd, List.append_assoc] at ⊢
-      exact bang_arm_gen _ _ _ _ _ ho hP'
+      exact bang_arm_gen _ _ _ _ _ ho hP' (atom_bed x rest)
     | false =>
       have hd : druckToks (.un o x) = [.zeichen o] ++
           (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-        simp [druckToks, hat]
+        simp [druckToks, hat, un_ne_klammer _ ho]
       have hF2 : 1 ≤ G' := by omega
       obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
       have hO' := Hx.2.2.2.2.2.2.2 _ G'' (hr_paren rest) (hrs_paren rest) (hrg_paren rest)
         (by omega)
       have hPar := paren_arm _ _ _ _ hO'
-      have hBang := bang_arm_gen _ _ _ _ _ ho hPar
+      have hBang := bang_arm_gen _ _ _ _ _ ho hPar (Or.inr (nonatom_bed x hat))
       simp only [hd, List.append_assoc] at ⊢
       exact hBang
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -233,6 +233,34 @@ theorem unLegs : ∀ (o : String) (x : SExpr), gutOpUn o = true → Legs x → L
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.2.2.1 G hG
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.2.2.2.1 G hG
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.2.2.2.2 G hG
+
+/-- `-(n)`, the negation of a numeral: the parenthesised arm of `-` (`negklammer_arm`) over the numeral's legs. -/
+theorem negLitLegs (n : Nat) (Hx : Legs (.lit n)) : Legs (.un "-()" (.lit n)) := by
+  have hs0 : strEq "-()" "-()" = true := by decide
+  have hd : druckToks (.un "-()" (.lit n)) = [.zeichen "-", .zeichen "("] ++ (druckToks (.lit n) ++ [.zeichen ")"]) := by
+    simp only [druckToks, hs0, ite_true, List.append_assoc]
+  have hU : ∀ (rest : List Token) (G : Nat), ruhigSuff rest = true → ruhigGleit rest = true →
+      12 * (groesse (.un "-()" (.lit n)) + 1) + groesse (.un "-()" (.lit n)) + 2 ≤ G →
+      parseUnary G (druckToks (.un "-()" (.lit n)) ++ rest) = .ok (.un "-()" (.lit n), rest) := by
+    intro rest G hrs hrg hG
+    have hsize : groesse (.un "-()" (.lit n)) = groesse (.lit n) + 1 := rfl
+    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+    obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+    have hO' := Hx.2.2.2.2.2.2.2 _ G'' (hr_paren rest) (hrs_paren rest) (hrg_paren rest) (by omega)
+    have hPar := paren_arm _ _ _ _ hO'
+    have hN := negklammer_arm _ _ _ n hPar
+    simp only [hd, List.append_assoc] at ⊢
+    simpa only [List.append_assoc] using hN
+  have hT : ∀ (rest : List Token), ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true → _ :=
+    fun rest hr hrs hrg => tower_up (.un "-()" (.lit n)) rest hr (fun G hG => hU rest G hrs hrg hG)
+  refine ⟨?_, hU, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro rest G hpf; simp [primFrei] at hpf
+  · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).1 G hG
+  · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.1 G hG
+  · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.1 G hG
+  · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.2.1 G hG
+  · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.2.2.1 G hG
+  · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.2.2.2 G hG
 
 /-! ### The size-bounded invariant from legs -/
 
@@ -346,9 +374,15 @@ theorem legs_gut_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
     | index x i => exact platz hg
     | arrow x f => exact platz hg
     | un o x =>
-      simp only [gut, Bool.and_eq_true] at hg
-      have hx : groesse x ≤ n := by simp only [groesse] at hs; omega
-      exact unLegs o x hg.1 (ih x hx hg.2)
+      simp only [gut, Bool.or_eq_true, Bool.and_eq_true] at hg
+      rcases hg with hg | ⟨ho, hl⟩
+      · have hx : groesse x ≤ n := by simp only [groesse] at hs; omega
+        exact unLegs o x hg.1 (ih x hx hg.2)
+      · have := strKlingt o "-()" ho
+        subst this
+        cases x with
+        | lit k => exact negLitLegs k (legsKern _ rfl)
+        | _ => simp [istLit] at hl
     | bin o l r =>
       simp only [gut, Bool.and_eq_true] at hg
       have hl : groesse l ≤ n := by simp only [groesse] at hs; omega

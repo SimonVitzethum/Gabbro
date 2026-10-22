@@ -56,7 +56,7 @@ def tyInt : Ty → Bool
 /-- The side the elaborator reads (`uSeite`, `uWertBody`): a number. -/
 def uOfS (art : Nat → UParamArt) (kopf : Option Nat) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} :
     Expr z.deklaration Γ Λ τ → Option USide
-  | .lit n => some (if 0 ≤ n then .lit n else .neg (.lit (-n)))
+  | .lit n => some (.lit n)
   | .var (τ := τ) x =>
     if kopf = some (Γ.length - 1 - tiefe x) then (if tyInt τ then some .erg else none) else
     match art (tiefe x) with
@@ -386,7 +386,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       simp only [uRechne, hB.lit]
       simp [Int.toNat_of_nonneg h]
     · simp only [zahlE, h, ite_false]
-      simp only [uRechne, hB.lit]
+      simp only [uRechne]
       simp [Int.toNat_of_nonneg (show 0 ≤ -m by omega)]
   | var x =>
     simp only [delabE, Except.ok.injEq] at hd
@@ -522,7 +522,10 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     simp [xa] at hu
     subst hu
     simp at hn
-    simp only [uRechne, ih a (by omega) sa x ha xa]
+    have hx := ih a (by omega) sa x ha xa
+    cases sa with
+    | lit m => simp only [uRechne] at hx ⊢; simp only [hx]
+    | _ => simp only [uRechne] at hx ⊢ <;> simp only [hx]
   | _ => simp [uOfS] at hu
 
 /-- **A number in an `ensures`/`requires`**. -/
@@ -830,7 +833,7 @@ theorem seite_ohne_erg (art : Nat → UParamArt) (n : Nat) :
   cases e with
   | lit m =>
     simp only [uOfS, Option.some.injEq] at hu; subst hu
-    split <;> rfl
+    rfl
   | var x =>
     simp only [uOfS] at hu
     split at hu

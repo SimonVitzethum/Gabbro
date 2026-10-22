@@ -592,7 +592,7 @@ theorem kopfOk_delab {Γ : Ctx} {Λ : List (Res z.deklaration)} (art : Nat → U
   | neg a | not a =>
     simp only [delabE] at hd
     cases ha : delabE z k a <;> simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd
-    subst hd; rfl
+    subst hd; (try split) <;> rfl
   | forallSlots t body hL | existsSlots t body hL =>
     simp only [delabE] at hd
     cases ha : delabE z k body <;> simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd

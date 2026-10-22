@@ -609,6 +609,7 @@ def uSchranke (alias : List (String × (Int × Int))) : SExpr → Option Int
   | .variable c =>
     (alias.find? (fun p => strEq p.1 c)).bind fun p => if p.2.1 == p.2.2 then some p.2.1 else none
   | .un "-" a => (uSchranke alias a).map (fun v => -v)
+  | .un "-()" a => (uSchranke alias a).map (fun v => -v)
   | .bin op a b =>
     match uSchranke alias a, uSchranke alias b with
     | some x, some y =>
@@ -1158,7 +1159,12 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
           else if strEq op "<<" then .ok (.shl x y)
           else .ok (.shr x y)
     else blatt (.bin op a b)
+  | .un "-" (.lit v) => .ok (.lit (-(Int.ofNat v)))
   | .un "-" a =>
+    match uRechne ctx blatt a with
+    | .error e => .error e
+    | .ok x => .ok (.neg x)
+  | .un "-()" a =>
     match uRechne ctx blatt a with
     | .error e => .error e
     | .ok x => .ok (.neg x)

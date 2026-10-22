@@ -188,6 +188,8 @@ import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben33
 import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben34
 import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben35
 import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben36
+import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben37
+import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben38
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
@@ -213,7 +215,13 @@ import Grammatik.Korpus.Zeugnis.ZeugnisStmt104b
 import Grammatik.Korpus.Programme.TermIdent104
 import Grammatik.Nebenlaeufigkeit.Sperren.ExportSperre
 import Grammatik.Parser.Item.ElementTief
-import Grammatik.Parser.Item.ElementTiefProben
+import Grammatik.Parser.Item.ElementTiefProben1
+import Grammatik.Parser.Item.ElementTiefProben2
+import Grammatik.Parser.Item.ElementTiefProben3
+import Grammatik.Parser.Item.ElementTiefProben4
+import Grammatik.Parser.Item.ElementTiefProben5
+import Grammatik.Parser.Item.ElementTiefProben6
+import Grammatik.Parser.Item.ElementTiefProben7
 import Grammatik.Parser.Elab.Uebersetze
 import Grammatik.Korpus.Zeugnis.ZeugnisKorpus
 import Grammatik.Proben.HelferZeuge

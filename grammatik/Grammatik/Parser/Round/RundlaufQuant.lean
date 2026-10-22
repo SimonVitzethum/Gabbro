@@ -279,7 +279,8 @@ theorem atom_gut (e : SExpr) (hg : gut e = true) (R : List Token) (hR : AtomFolg
     | un o x =>
       simp only [nichtKopf] at hk
       have := (strEq_eq _ _).mp hk; subst this
-      have hx : gut x = true := by simp only [gut, Bool.and_eq_true] at hg; exact hg.2
+      have hx : gut x = true := by
+        simp only [gut, strEq_bang_klammer, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg; exact hg.2
       have hlen : (druckToks x).length + 1 ≤ (druckToks (.un "!" x)).length := by
         cases ha : istAtom x <;> simp [druckToks, ha]
       simp only [atomTeil, atomWert, strEq_self, ite_true]
@@ -739,7 +740,7 @@ theorem bein_nicht (x : SExpr) (hx : PredBein x) : PredBein (.un "!" x) := by
   · have hgx : gut x = false := by
       cases h : gut x
       · rfl
-      · exact absurd (by simp only [gut, h, Bool.and_true]; decide) hg
+      · exact absurd (by simp only [gut, h, Bool.and_true, strEq_bang_klammer, Bool.false_and, Bool.or_false]; decide) hg
     have hdr := druck_nichtKopf _ (nichtKopf_un x)
     have hW : atomWert (.un "!" x) = x := by simp [atomWert, strEq_self]
     obtain ⟨t, ts, hxd, hxb, hxk⟩ := hx.kopf
