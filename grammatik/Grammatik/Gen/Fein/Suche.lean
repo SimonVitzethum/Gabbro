@@ -105,7 +105,7 @@ def genTF (V : Vertrag D) (cap : Nat) : Nat → Nat → (l : Bool) → (Γ : Ctx
   | 0, n + 1, _, _, _ => List.replicate (n + 2) ([], [], [])
   | f + 1, n + 1, l, Γ, Λ =>
     let Et := genEF (min n eGrenze) (min n eGrenze) Γ Λ
-    let gen := fun m l' Γ' Λ' => genTF V cap f (min m cap) l' Γ' Λ'
+    let gen := fun m l' Γ' Λ' => genTF V cap f (if l' = l then min m cap else m) l' Γ' Λ'
     let cs := (knotenKeys' (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
     let exK : List (Ctx × List (Res D)) := ((knotenKeys' (n + 1) l Γ Λ Et).map (fun k => (k.2.1, k.2.2.1)) ++
       (Aufz.glob.map fun g => (D.gtyp g :: Γ, Λ)) ++ (Aufz.reg.map fun r => (D.rtyp r :: Γ, Λ))).eraseDups
@@ -146,6 +146,61 @@ def kandidaten (z : Spez) (nb nc cap : Nat) : List (Programm z.deklaration) :=
       (reqF f nc).map (fun e => { P0 with requires := fun g => if h : f = g then h ▸ e else .tru }) ++
       (ensF f nc).map (fun e => { P0 with ensures := fun g => if h : f = g then h ▸ e else .tru })
     rs ++ vs
+  else []
+
+/-! ## Packing: many bodies in one program -/
+
+section
+variable {V : Vertrag D}
+
+/-- End blocks as the `else` branches of a chain of `check false`. -/
+def packe {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : List (Endblock D V l Γ Λ) → Block D V l Γ Λ Λ
+  | [] => .nil
+  | e :: es => .check .fls e (packe es)
+
+/-- **A packed body**: the end blocks `es` in a branch that is never taken (`if true` around the chain of
+    `check false`, each with one of them as its `else`), then the end block `letzt`. -/
+def gepackt {Γ : Ctx} {Λ : List (Res D)} (es : List (Endblock D V false Γ Λ)) (letzt : Endblock D V false Γ Λ) :
+    Endblock D V false Γ Λ :=
+  .cons (.ite .tru (packe es) .nil) letzt
+
+end
+
+/-- A valid program of a member under some start parameter, with its proof. -/
+def gutVon (z : Spez) (P : Programm z.deklaration) : Option (Gutes z) :=
+  z.parameter.findSome? fun ws => (match z.erzeugeAus P ws with
+    | some (.gut g) => some g
+    | _ => none)
+
+/-- **The packed programs of a member**: the filtered bodies of every function are added one after the other to the
+    packed body of their function as long as the program stays valid; a program is emitted when one function holds
+    `k` bodies. Then the contract variants, each alone. -/
+def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
+  letI : Zahlen := z.zahlen
+  let D := z.deklaration
+  let tabs : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f => ⟨f, rumpfF f nb cap⟩
+  let basis : ∀ f : D.Fn, Option (Rumpf D f) := fun f => ((ofTy tabs f).headD []).head?
+  if hall : z.fnListe.all (fun f => (basis f).isSome) = true then
+    let b0 : ∀ f : D.Fn, Rumpf D f := fun f => (basis f).get (by
+      have := List.all_eq_true.1 hall f (List.mem_finRange f); simpa using this)
+    let prog : (∀ f : D.Fn, List (Rumpf D f)) → Programm D := fun L =>
+      Programm.mk (fun _ => .tru) (fun _ => .tru) (fun _ => .tru)
+        (fun f => if (L f).isEmpty then b0 f else gepackt (L f) (b0 f)) (fun _ => false)
+    let leer : ∀ f : D.Fn, List (Rumpf D f) := fun _ => []
+    let paare : List (Σ f : D.Fn, Rumpf D f) := tabs.flatMap fun ⟨f, bs⟩ => bs.map fun b => ⟨f, b⟩
+    let r := paare.foldl (fun (acc : (∀ f : D.Fn, List (Rumpf D f)) × Nat × Option (Gutes z) × Array (Gutes z)) p =>
+      let (L, n, g, out) := acc
+      let L' : ∀ f : D.Fn, List (Rumpf D f) := fun f => if h : p.1 = f then L f ++ [h ▸ p.2] else L f
+      match gutVon z (prog L') with
+      | none => acc
+      | some g' =>
+        if n + 1 ≥ k then (leer, 0, none, out.push g') else (L', n + 1, some g', out)) (leer, 0, none, #[])
+    let out := match r.2.2.1 with | some g => r.2.2.2.push g | none => r.2.2.2
+    let P0 := prog leer
+    let vs := z.fnListe.flatMap fun f =>
+      (reqF f nc).map (fun e => { P0 with requires := fun g => if h : f = g then h ▸ e else .tru }) ++
+      (ensF f nc).map (fun e => { P0 with ensures := fun g => if h : f = g then h ▸ e else .tru })
+    out.toList ++ vs.filterMap (gutVon z)
   else []
 
 end Gabbro.Grammatik.Gen.Fein

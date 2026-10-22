@@ -29,9 +29,9 @@ def leanFein (z : Spez) (quelle : String) (i : Nat) (stamm : String) (P : Progra
     s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs ++
     (if vdefs.endsWith "\n" then "" else "\n\n") ++
     "/-- The witness as a program of the source. -/\ndef e : Einsatz := z.einsatz P ws (by decide) (by decide)\n\n" ++
-    "theorem e_gueltig : e.gueltig = true := by decide\n\n" ++
+    "theorem e_gueltig : e.gueltig = true := by decide +kernel\n\n" ++
     s!"/-- Its fine cells. -/\ndef zs : List Fein.FZelle := [\n  {zsT}]\n\n" ++
-    "theorem e_hatF : ∀ c ∈ zs, e.HatF c := by decide\n\n" ++
+    "theorem e_hatF : ∀ c ∈ zs, e.HatF c := by decide +kernel\n\n" ++
     s!"end Gabbro.Grammatik.Gen.Zeugen.F.{stamm}\n")
 
 end Gabbro.Grammatik.Gen.Fein

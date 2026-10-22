@@ -27,12 +27,15 @@ def gruppen : List (List Ty) :=
 theorem gruppen_vertreter : vertreter ⊆ gruppen.flatten := by decide
 
 /-- Expressions: a table and statics of the group, parameters of the group (a second table with a chain field and a
-    byte for `reaches` and the bytes). -/
+    byte for `reaches` and the bytes); for every type of the group a callee that takes the group and answers that
+    type, and one that may fail with a reason (calls, arguments and results of every class). -/
 def ausdruck (g : List Ty) : Spez where
   tabs := [{ count := 1, felder := g.map fun τ => { typ := τ } },
            { count := 2, felder := [{ typ := .opt 2 }, { typ := .int 0 255 }] }]
   globs := g.map fun τ => { typ := τ }
-  sigs := [{ params := g, schreibt := [0, 1], gschreibt := List.range g.length }]
+  sigs := [{ params := g, schreibt := [0, 1], gschreibt := List.range g.length }] ++
+    g.map (fun τ => { params := g, erg := some τ }) ++ [{ erg := g.head?, gruende := 1 }]
+  fns := List.range (g.length + 2)
 
 /-- Registers of the group. -/
 def register (g : List Ty) : Spez where
