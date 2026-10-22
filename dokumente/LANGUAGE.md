@@ -465,8 +465,11 @@ missing release of a region and the passing of an extent by a Gabbro body.
 
 `fn(…) -> T effects { … } costs <= n ops` is a type; the value is `&f` (the one `&` that takes a
 name, not an expression). At an indirect call there is no name to resolve, so what is known about
-the callee stands at the type (`N035` demands `effects` and `costs`; `requires` and `ensures`
-are carried and read at the call and at the producer).
+the callee stands at the type (`N035` demands `effects` and `costs`). The type is STRUCTURAL
+(2026-10-21): `&f` fits wherever `f` conforms to the type -- equal parameters, result and reason
+channel, `f`'s writes among the type's, no lock held or taken by `f`. A call through the pointer
+is checked against the type. A `requires` and an `ensures` at a pointer type are refused
+(`N589`): the model's signatures carry no contract yet (TODO O43).
 
 ```gabbro
 module sprache::fnptr {
@@ -518,11 +521,13 @@ impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
 | the producer promises more than its slot (arity, effects, costs) / the signature differs | `M128` / `M141`, `M142` |
 | call through a place with no `fn(…)` type | `M129` |
 | `locks`, `masks`, `consumes`, `publishes` at the type — they do not cross an indirect call | `N036` |
+| `requires` or `ensures` at the type — a pointer type is a signature without a contract | `N589` |
+| `&f` where `f` requires `Held(..)` — no lock crosses an indirect call | `N590` |
+| an indirect call with another number of arguments than the type declares | `N296` |
 
-The direction of refinement is the content: a function assigned to a pointer type owes
-`requires_type ⇒ requires_f` (contravariant) and `ensures_f ⇒ ensures_type` (covariant);
-effects `⊆`, costs `<=`, arity and signature are decided by the checker, the two implications
-are the user's logic. **The honest gap:** lock order, interrupt context, linearity and pairing do
+Conformance is decided (`Deklaration.passt`, `SigPasst` in the Lean model): effects `⊆`, arity
+and signature by the checker; a contract on the type would need a contravariant `requires` and a
+covariant `ensures` in the model first. **The honest gap:** lock order, interrupt context, linearity and pairing do
 not cross an indirect call — a program that would need that does not pass (measured need in the
 reference code: zero of four indirect call sites take a lock). A `let … else` over an indirect
 call is refused by the emitter by name (the type has no `or R` channel). `entry fn(…)` is a

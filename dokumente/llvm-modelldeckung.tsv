@@ -18,6 +18,16 @@ Signatur.gschreibt	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_be
 Signatur.konsumiert	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 Signatur.produziert	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
 Signatur.boden	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static proof/typing obligation; no independent runtime state.
+SigPasst.params	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.erg	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.gruende	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.schreibt	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.gschreibt	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.konsumiert	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.produziert	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.haelt	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.extra	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
+SigPasst.boden	ERASED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Static conformance obligation of a function-pointer value; no independent runtime state.
 Regklasse.r	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
 Regklasse.w	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
 Regklasse.rw	REFUSED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	No model-Reg export path; volatile surface MMIO and the x86 port space (in/out, llvm/portraum.rs) are different representations.
@@ -51,6 +61,8 @@ Deklaration.eigner	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declara
 Deklaration.Fn	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
 Deklaration.sig	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
 Deklaration.sigNr	PARTIAL	crates/gabbro-check/src/llvm.rs::sammle	Runtime layouts, functions and carriers exist on supported widths; declaration-wide coverage inherits the listed constructor restrictions.
+Deklaration.passt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static conformance of a function to a pointer type (`SigPasst`); decided before lowering, no runtime state.
+Deklaration.passt_ok	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Proof field of the declaration; no runtime state.
 Deklaration.eigner_nie_erzeugt	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.Inv	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
 Deklaration.traeger	ERASED	crates/gabbro-check/src/llvm.rs::sammle	Static declaration/checker obligation; no independent runtime state.
@@ -198,6 +210,10 @@ Endblock.bindCall	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-fl
 Endblock.bindCallElse	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Control-flow/binding constructor represented by generated blocks and typed cells.
 Endblock.bindAxiom	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
 Endblock.bindAxiomElse	PARTIAL	crates/gabbro-check/src/llvm.rs::senke_stmt	Direct, errno and stack-carrying gates supported (the child region is outlined, llvm/stapeltor.rs); paired/unbound gates refused.
+Endblock.regRead	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
+Endblock.regReadElse	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
+Endblock.awaits	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Unfolded to the Block form (`Endblock.alsBlock`); lowered as `Block.awaits`.
+Endblock.bindCallInd	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Unfolded to the Block form (`Endblock.alsBlock`); lowered as `Block.bindCallInd`.
 Arms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Arms.cons	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 GrundArms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.

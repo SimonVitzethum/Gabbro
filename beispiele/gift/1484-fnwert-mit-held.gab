@@ -1,0 +1,41 @@
+// erwartet: N590
+// **Poison 1484 -- a function that requires a held lock, made a pointer value.**
+//
+// In the Lean model a function fits a pointer type only where its own signature conforms
+// (`SigPasst`): the locks it holds by signature must be among the type's, and a pointer
+// type holds none. So `&schreibe` has no value of any pointer type -- a call through the
+// pointer would enter `schreibe` with no one held to `PUFFER` (2026-10-21).
+
+module gift::fnwert_mit_held {
+
+table Puffer count 64 {
+    slot {
+        wert : u32,
+    }
+}
+
+lock PUFFER protects { Puffer } rank 0 held <= 64 ops;
+
+type Rueckruf = {
+    cb : fn(k : u32)
+        effects { writes Puffer.slots }
+        costs   <= 8 ops,
+};
+
+impl fn schreibe(k : u32)
+    requires Held(PUFFER)
+    effects { writes Puffer.slots }
+    costs   <= 8 ops
+{
+    narrow k to 0 ..< 64 else { return; }
+    Puffer.slots[k].wert = k;
+}
+
+impl fn registriere() -> Rueckruf
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Rueckruf(cb: &schreibe);
+}
+
+}
