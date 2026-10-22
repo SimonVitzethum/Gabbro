@@ -4406,3 +4406,50 @@ NOT proved (open, named in `PLAN-HARDWARE.md` §16.11/§16.12): the bridge from 
 | Gabbro: the constructor table of the term families checked against the model at elaboration (`Signatur`); root-cell counts **`wurzel_z0`** (1 650), **`wurzel_z1`** (657 922 500), `wurzelFamilie`; pattern atoms of the ten components, `musterZellen_wert` (≤ 4 540) | `Gabbro/Signatur`, `Gabbro/Zaehlung` | the dimension table (H2, H3, H6) is a reading of the model, on paper |
 
 NOT proved: that the Rust checker and compiler are in any of these classes (hypotheses H1-H8 of `CHECKER.md` §16.1, an assumption about the code, measured by metamorphic tests); the Myhill-Nerode index of `AkzeptiertX` (only the presentation upper bound is computed); `|W| ≤ n - 1` and the witness height `m + n - 1` (paper); the exact minimum for `m = n` (open); that every presentation combination is reachable in a given declaration.
+
+## 86. The budget is not a stop of the program: `budgetUnecht` (2026-10-22, review of `gabbro_ziel`, point 2)
+
+*Files: `grammatik/Grammatik/Logik/Ruf/Maschine/BudgetMonoton.lean`, `Zielsatz/Atomar/BeweisAtomar.lean` (`budget_unecht`), `Zielsatz/Eigenschaften/BudgetZeuge.lean`; the leg in `Zielsatz/Kern/Spec.lean` (`ZielFX.budgetUnecht`).*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `GRest.plus`, `RufRahmenG.plus`, `RufFadenG.plus`, `RufMaschineG.plus`, `FadenMaschine.plus` (every `ewig` counter `j` higher); `plus_zero`, `plus_plus`, `plus_wartend`, `plus_anRueck` | BudgetMonoton | -- |
+| **`execStmt_blatt_passes`** (a leaf runs the same at every budget) | BudgetMonoton | `istBlatt` |
+| **`rufSchrittG_plus`** (a step at budget `p` is a step at `p + j` of the shifted machines; all 80 rules, generated cases) | BudgetMonoton | -- |
+| `rufErreichbarG_plus`, `rufSchrittGX_plus`, `rufErreichbarGX_plus`, `fadenSchrittX_plus`, `fadenErreichbarX_plus`, `rufStartG_plus`, `fadenStart_plus`, **`fadenErreichbarX_budget`** | BudgetMonoton | -- |
+| **`budget_unecht`**: a thread at a spent budget steps at `passes + 1` from the machine one counter higher | BeweisAtomar | `FortschrittG` at `passes + 1` |
+| the leg **`ZielFX.budgetUnecht`** in `gabbro_ziel` | BeweisAtomar | (a)-(d) |
+| witness `bz_halt`, `bz_erreicht`, `bz_erreicht1`, **`bz_weiter`** (`forever { }`: stopped at budget 0, steps on at budget 1) | BudgetZeuge | -- |
+
+NOT proved: termination, a waiting or time bound for `forever`.
+
+## 87. Starvation freedom on the ticket lock: `GabbroZielLeben` (2026-10-22, review of `gabbro_ziel`, point 1)
+
+*Files: `grammatik/Grammatik/Logik/Fortschritt/PlanLauf.lean` (definitions), `Hungerfrei.lean`, `HungerfreiZeuge.lean`; the statement `GabbroZielLeben` in `Zielsatz/Kern/Spec.lean`, proved as `gabbro_ziel_leben` in `Zielsatz/Atomar/BeweisAtomar.lean`.*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `PlanLauf`, `Bereit` (moved from Lebendigkeit/T1.lean); **`FifoLauf`** (one queue per lock: exactly the threads at `locks L`, each once, only the head takes, survivors keep their order ahead of newcomers); **`Fair`** (weak fairness) | PlanLauf | -- |
+| `vorne`, `vorne_filter`, `vorne_praefix`, `mem_vorne`, `kopf_vorne`, `vorne_leer`; `FifoLauf.vorne_schritt`, `vorne_le`, `vorne_lt`, `verlaesst` (a thread leaves the queue only by taking the lock), `bleibt` | Hungerfrei | -- |
+| **`fifoSperre_aus`**: the runtime assumption `FifoSperre` of the waiting bound holds on every `FifoLauf` | Hungerfrei | -- |
+| `fair_of_fairF` (bounded fairness is weak fairness); `kopfHalt_keineSperre`, `restHalt_keineSperre`; **`frei_bereit`** (the head at a free lock can step) | Hungerfrei | `FortschrittG` along the run |
+| **`kopf_nimmt`** (the head at a free lock takes it), **`gehalten_oder_frei`**, **`hungerfrei`** (a waiting thread takes the lock, or some thread holds it for ever) | Hungerfrei | `GutO`, rank invariant, exclusivity, progress along the run, `Fair` |
+| **`gabbro_ziel_leben : GabbroZielLeben`** | BeweisAtomar | (a)-(d), a `FifoLauf` from the runtime start, `Fair` |
+| witness **`hz_lauf`** (the two-thread run of `lZeuge` as a fair `FifoLauf`; both threads wait at step 5), **`hz_hungerfrei`** (every hypothesis of `hungerfrei` discharged); `lZeuge` now also exposes who stands at `locks` when | HungerfreiZeuge, LebendigkeitZeuge | -- |
+
+NOT proved: a bound on the wait (`wartezeit_schranke` needs a hold-time premise); that a critical section ends; the same over machine GX or with threads spawned at run time.
+
+## 88. Memory at addresses: `speicherAdressen` (2026-10-22, review of `gabbro_ziel`, point 3)
+
+*Files: `grammatik/Grammatik/Speichermodell/Adressen/{Bereich,Layout,AdressZeuge}.lean`; the leg `ZielX.speicherAdressen` in `Zielsatz/Kern/Spec.lean`.*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `ImBereich` (the declared extent `0 ..< count`), `AussenGleich`, **`ImBereichO`** (foreign code writes inside the extents: a named assumption, inside the leg) | Bereich | -- |
+| `storeSlot_aussen`, `schreibSlot_aussen`, `schreibBytes_aussen`, `index_imBereich`; **`execStmt_blatt_aussen`** (a leaf writes inside the extents) | Bereich | `ImBereichO` |
+| `axiomAntwort_aussen`, `axiomAntwortSonst_aussen`, `execStmt_leave_welt`, `execStmt_next_welt`; **`rufSchrittG_aussen`** (all rules of G), `rufSchrittGX_aussen`, **`rufErreichbarGX_aussen`** | Bereich | `ImBereichO`; shared atomics are globals |
+| `AdressLayout`, **`LayoutOk`**; **`zelle_im_bereich`**, **`zellen_getrennt_tab`**, **`zellen_getrennt`**, **`geaendert_im_bereich`** | Layout | `LayoutOk` |
+| the leg **`ZielX.speicherAdressen`** in `gabbro_ziel` | BeweisAtomar | (a)-(d), `ImBereichO` inside |
+| witnesses **`az_bereich`** (`t[1].x = 5` changes a cell in its extent; its byte 108 lies in the table's region under a correct layout), **`ab_aussen`** (a foreign body writing `T[7]` changes a cell outside the extent), `oB_nicht`, `oG_gut` | AdressZeuge | -- |
+
+Finding: `GutO` frames foreign writes by carrier only, so G admitted foreign writes outside the declared extents without a word; `ImBereichO` names that assumption. NOT proved: reads in their extents as a statement about runs (they are, by the index types); that the compiler's layout is a `LayoutOk` one.
