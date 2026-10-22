@@ -19,7 +19,7 @@ variable {D : Deklaration}
 section Akteur
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 set_option maxHeartbeats 8000000 in
 /-- **The acting thread keeps its replay and its log** -- every rule of G, over the semantics
@@ -31,10 +31,10 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
     (hFS : ∀ f, FussSX P S lok Tg f)
     {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
-    (hF : FadenSA P O passes Q S lok Tg (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
+    (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
     (hRS : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel)
     (hSG : SperrInvG S M) :
-    FadenSA P O passes Q S lok Tg (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
+    FadenSA P O passes Q S lok Tg m zyk (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]

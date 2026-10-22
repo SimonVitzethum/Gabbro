@@ -134,7 +134,7 @@ theorem zielInvSA_start
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hStart : StartGut P sp init) :
-    ZielInvSA P O passes Q S lok Tg (RufStartG P sp init) := by
+    ZielInvSA P O passes Q S lok Tg m zyk (RufStartG P sp init) := by
   have hz : ∀ t, (RufStartG P sp init).faeden t =
       ⟨[], ⟨(init t).1, (init t).2, sp.welt [], ⟨false, D.params (init t).1,
         Signatur.anfang D (D.signatur (init t).1), (init t).2, .ende (P.rumpf (init t).1)⟩⟩,
@@ -173,9 +173,9 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
     (hFS : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c)
     {M M' : RufMaschineG D} {u : Faden} (hs : RufSchrittGX P O passes Tg M u M')
     (hFF : FadenFakten P K M)
-    (hI : ZielInvSA P O passes Q S lok Tg M) (hRS : RahmenInvS P S lok M)
+    (hI : ZielInvSA P O passes Q S lok Tg m zyk M) (hRS : RahmenInvS P S lok M)
     (hSG : SperrInvG S M) :
-    ZielInvSA P O passes Q S lok Tg M' ∧ RahmenInvS P S lok M' ∧ SperrInvG S M' := by
+    ZielInvSA P O passes Q S lok Tg m zyk M' ∧ RahmenInvS P S lok M' ∧ SperrInvG S M' := by
   obtain ⟨σ, M'', hs1, hσ, h1, h2, hfa, _, _⟩ := hs
   let M1 := mitSpeicher M σ
   have hM1f : M1.faeden = M.faeden := rfl
@@ -189,7 +189,7 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
     rw [← hSG L hL]
     exact hS.2 L _ _ fun c hc => hj c fun ht => hTO c ht L hc
   -- the replay of u at M1
-  have hFu1 : FadenSA P O passes Q S lok Tg (M1.faeden u) (M1.weltVon u) :=
+  have hFu1 : FadenSA P O passes Q S lok Tg m zyk (M1.faeden u) (M1.weltVon u) :=
     fadenSA_speicher (hI.1 u) fun c hc => hj c fun ht => hTS c ht _ _ hc
   have hRSu1 : RahmenStapelS P S lok M1.speicher (RufSchluesselG (M1.faeden u).kopf)
       (M1.faeden u).stapel :=
@@ -297,7 +297,7 @@ theorem zielInvSA_erreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat) (Q
     (hK : ∀ f : D.Fn, KoerperGutSA P passes Q S Tg f) (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
     ∀ M : RufMaschineG D, RufErreichbarGX P O passes Tg (RufStartG P sp init) M →
-      ZielInvSA P O passes Q S lok Tg M ∧ RahmenInvS P S lok M ∧ SperrInvG S M := by
+      ZielInvSA P O passes Q S lok Tg m zyk M ∧ RahmenInvS P S lok M ∧ SperrInvG S M := by
   intro M hr
   induction hr with
   | start =>
@@ -324,7 +324,7 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     {M : RufMaschineG D} (t : Faden)
-    (hF : FadenSA P O passes Q S lok Tg (M.faeden t) (M.weltVon t)) :
+    (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden t) (M.weltVon t)) :
     PrueftG O passes M t := by
   have hK' := hF.1
   refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,

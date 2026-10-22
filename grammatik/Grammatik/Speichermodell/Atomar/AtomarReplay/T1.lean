@@ -13,6 +13,7 @@
   in `ziel_ort_sperre`, and only body reads may see the rely.
 -/
 import Grammatik.Speichermodell.Atomar.AtomarRec
+import Grammatik.Logik.Terminierung.Mass
 
 namespace Gabbro.Grammatik
 
@@ -193,10 +194,22 @@ theorem passtX_leer (hE : ¬ Nonempty (Ereignis D)) (T : D.Tab ⊕ D.Glob → Pr
 
 /-! ## 3. The replay invariants -/
 
+/-- **The measure record** (T4, 2026-10-22): every recorded call of a function in `Z` (the caller's own recursion
+    cycle) had a measure below `w` (the caller's entry measure). With `Z` false nowhere it says nothing. -/
+def MassOkV (m : Mass D) (Z : D.Fn → Bool) (w : List Nat) (H : List (EintragV D)) : Prop :=
+  ∀ (g : D.Fn) (σ : World D) (ρ : Env D (D.params g)) (a : RufAusgang g),
+    (⟨g, σ, ρ, a⟩ : EintragV D) ∈ H → Z g = true → lexLt (m.wert g σ ρ) w = true
+
+theorem massOkV_nil (m : Mass D) (Z : D.Fn → Bool) (w : List Nat) : MassOkV m Z w [] :=
+  fun _ _ _ _ h => absurd h List.not_mem_nil
+
+theorem massOkV_aus (m : Mass D) (w : List Nat) (H : List (EintragV D)) : MassOkV m (fun _ => false) w H :=
+  fun _ _ _ _ _ h => by cases h
+
 section Inv
 
 variable (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
-  (lok : D.Tab ⊕ D.Glob → Bool) (Tg : D.Tab ⊕ D.Glob → Prop)
+  (lok : D.Tab ⊕ D.Glob → Bool) (Tg : D.Tab ⊕ D.Glob → Prop) (m : Mass D) (zyk : D.Fn → D.Fn → Bool)
 
 /-- How a suspended frame continues once its pending call is answered (as `FortS`). -/
 def FortSA (F : RufRahmenG D) (g : D.Fn) (X : ZErgG (vertragVon D F.f))
@@ -229,6 +242,7 @@ def KopfSA (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D))
     (HX : List (XEintrag D)) (σ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
+    MassOkV m (zyk F.f) (m.wert F.f F.s0 F.rho) H ∧
     KurzVBA (P := P) (O := O) (passes := passes) (S := S) σ.spur.length H ∧
     FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O σ.spur.length HA ∧
     FunkU HU ∧ InvU S HU ∧ KurzUB σ.spur.length HU ∧
@@ -246,12 +260,14 @@ def WarteSA (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) 
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D))
     (HX : List (XEintrag D)) (κ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
+    MassOkV m (zyk F.f) (m.wert F.f F.s0 F.rho) H ∧
     KurzVBA (P := P) (O := O) (passes := passes) (S := S) κ.spur.length H ∧
     FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O κ.spur.length HA ∧
     FunkU HU ∧ InvU S HU ∧ KurzUB κ.spur.length HU ∧
     (FunkX HX ∧ KurzX κ.spur.length HX) ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
+    (zyk F.f G.1 = true → lexLt (m.wert G.1 κ G.2.1) (m.wert F.f F.s0 F.rho) = true) ∧
     (GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧
       (P.requires G.1).orte ++ (P.ensures G.1).orte ⊆ stabilS P S lok F.f F.rest.2.2.1 ∧
       GleichAuf (stabilS P S lok F.f F.rest.2.2.1) κ G.2.2) ∧
@@ -264,13 +280,13 @@ def WarteSA (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) 
 
 def StapelSA : (Σ f : D.Fn, Env D (D.params f) × World D) → List (RufRahmenG D) → Prop
   | _, [] => True
-  | G, F :: rest => WarteSA P O passes Q S lok Tg F G ∧ StapelSA (RufSchluesselG F) rest
+  | G, F :: rest => WarteSA P O passes Q S lok Tg m zyk F G ∧ StapelSA (RufSchluesselG F) rest
 
 def FadenSA (z : RufFadenG D) (W : World D) : Prop :=
-  KopfSA P O passes Q S lok Tg z.kopf W ∧ StapelSA P O passes Q S lok Tg (RufSchluesselG z.kopf) z.stapel
+  KopfSA P O passes Q S lok Tg m zyk z.kopf W ∧ StapelSA P O passes Q S lok Tg m zyk (RufSchluesselG z.kopf) z.stapel
 
 def ZielInvSA (M : RufMaschineG D) : Prop :=
-  (∀ t, FadenSA P O passes Q S lok Tg (M.faeden t) (M.weltVon t)) ∧ ∀ t, LogOk P (M.faeden t).log
+  (∀ t, FadenSA P O passes Q S lok Tg m zyk (M.faeden t) (M.weltVon t)) ∧ ∀ t, LogOk P (M.faeden t).log
 
 end Inv
 /-- `FortSA` is monotone in the predicted result. -/

@@ -93,12 +93,13 @@ theorem lexLt_wf : ∀ n, WellFounded (lexLtN n)
 
 /-! ## 2. The measure gate and the user's duty -/
 
+/-- `g` lies on a cycle with `f` (both reach each other), over the member list `fs`. -/
+def zyklusMit [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (f g : D.Fn) : Bool :=
+  reachB P fs f g && reachB P fs g f
+
 section Pflicht
 
-variable [DecidableEq D.Fn] (P : Programm D)
-
-/-- `g` lies on a cycle with `f` (both reach each other), over the member list `fs`. -/
-def zyklusMit (fs : List D.Fn) (f g : D.Fn) : Bool := reachB P fs f g && reachB P fs g f
+variable (P : Programm D)
 
 /-- **The measure gate**: a call of `g` with `Z g` whose measure does not fall below `w` answers
     `logik (abstieg g)`; every other call is `R`'s. -/
@@ -173,8 +174,6 @@ theorem rufAusM_ohneAbstieg {P : Programm D} {H : List (EintragV D)} (hv : Vertr
   · cases h
 
 section Tor
-
-variable [DecidableEq D.Fn]
 
 /-- The gate keeps a handler's agreement with a record whose cycle calls all fall. -/
 theorem massTor_passtV {m : Mass D} {Z : D.Fn → Bool} {w : List Nat}

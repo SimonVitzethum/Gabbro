@@ -82,7 +82,7 @@ end Faeden
 section Bereich
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 /-- **A replayed thread passes every float range check at its head, under the atomic rely**
     (the twin of `fadenS_bereich`). -/
@@ -90,7 +90,7 @@ theorem fadenSA_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     {M : RufMaschineG D} (t : Faden)
-    (hF : FadenSA P O passes Q S lok Tg (M.faeden t) (M.weltVon t)) :
+    (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden t) (M.weltVon t)) :
     BereichG M t := by
   refine ⟨fun l Γ Λ Λ' ρ op l1 h1 l2 h2 lo hi a b rest k hr hv => ?_,
     fun l Γ Λ Λ' ρ q lo hi rest k hr hv => ?_,

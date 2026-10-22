@@ -10,14 +10,14 @@ variable {D : Deklaration}
 section Frei
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 /-- **The head's prediction is never a `logik` outcome** (as `kopfS_keineLogik`), against the
     record handler, oracle, lock move and atomic environment. -/
 theorem kopfSA_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D} {W : World D}
-    (hG : KopfSA P O passes Q S lok Tg F W) :
+    (hG : KopfSA P O passes Q S lok Tg m zyk F W) :
     ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D))
       (HX : List (XEintrag D)) (σ : World D),
       FunkX HX ∧ KurzX σ.spur.length HX ∧
@@ -26,7 +26,7 @@ theorem kopfSA_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       ∀ (A : AUmwelt D), PasstX Tg A HX → HavocA Tg A → ∀ e : Logik D,
         semHA S (orakelAus O HA) (umweltAus S sp HU) A passes (rufAusL H) F.rest.2.2.2.2 σ
           F.rest.2.2.2.1 ≠ .logik e := by
-  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, hkx⟩, hg, hok,
+  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, hkx⟩, hg, hok,
     heq⟩ := hG
   refine ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, fun A hPX hHA e he => ?_⟩
   have h1 := heq (rufAusL H) (orakelAus O HA) (umweltAus S sp HU) A (rufAusL_passt hf)
@@ -41,7 +41,7 @@ theorem kopfSA_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
 theorem kopfSA_keineLogik' (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D} {W : World D}
-    (hG : KopfSA P O passes Q S lok Tg F W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    (hG : KopfSA P O passes Q S lok Tg m zyk F W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D F.f) l Γ Λ} (hr : F.rest = ⟨l, Γ, Λ, ρ, r⟩) :
     ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (HU : List (UEintrag D))
       (HX : List (XEintrag D)) (σ : World D),
@@ -57,7 +57,7 @@ theorem kopfSA_keineLogik' (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
 theorem kopfSA_frei_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D} {W : World D}
-    (hG : KopfSA P O passes Q S lok Tg F W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (hG : KopfSA P O passes Q S lok Tg m zyk F W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} (L : D.Lock) (hL : Res.held L ∈ Λ) {r : GRest D (vertragVon D F.f) l Γ Λ}
     (hr : F.rest = ⟨l, Γ, Λ, ρ, r⟩)
     (hlog : ∀ (O' : Orakel D) (U : Umwelt D) (A : AUmwelt D) R (σ : World D),
@@ -80,10 +80,10 @@ theorem kopfSA_frei_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
 theorem fadenSA_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {z : RufFadenG D} {W : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock)
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ) (ρ : Env D Γ)
     (hr : z.kopf.rest = ⟨l, Γ, Res.held L :: Λ, ρ, .frei L k⟩) (spur' : List (Ereignis D)) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l, Γ, Λ, ρ, k⟩⟩, spur', z.log⟩
       (W.speicher.welt spur') := by
   have hW := kopfSA_frei_inv hO hRL hQ hS hsp hK hF.1 L List.mem_cons_self hr
@@ -98,13 +98,13 @@ theorem fadenSA_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
 theorem fadenSA_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {z : RufFadenG D} {W : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W) {Γ : Ctx} {Λ Λ1 : List (Res D)} (L : D.Lock)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W) {Γ : Ctx} {Λ Λ1 : List (Res D)} (L : D.Lock)
     (rest : Block D (vertragVon D z.kopf.f) true Γ Λ (Res.held L :: Λ1))
     (k : GRest D (vertragVon D z.kopf.f) true Γ Λ1) (ρ : Env D Γ) (h : true = true) (x : Bool)
     (hr : z.kopf.rest =
       ⟨true, Γ, Λ, ρ, .dann (.cons (if x then .leave h else .next h) rest) (.frei L k)⟩)
     (spur' : List (Ereignis D)) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
         ⟨true, Γ, Λ1, ρ, .dann (.cons (if x then .leave h else .next h) .nil) k⟩⟩, spur', z.log⟩
       (W.speicher.welt spur') := by
