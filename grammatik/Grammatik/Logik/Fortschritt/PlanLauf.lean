@@ -13,7 +13,6 @@
 -/
 import Grammatik.Logik.Ruf.Maschine.RufMaschineG
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
-import Mathlib.Data.List.Infix
 
 namespace Gabbro.Grammatik
 

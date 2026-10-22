@@ -25,7 +25,6 @@
 import Grammatik.Logik.Fortschritt.Lebendigkeit
 import Grammatik.Logik.Fortschritt.PlanLauf
 import Grammatik.Zielsatz.Eigenschaften.Masken
-import Mathlib.Data.Nat.Find
 
 namespace Gabbro.Grammatik
 
@@ -137,18 +136,19 @@ theorem FifoLauf.verlaesst {n : Nat} {L : D.Lock} {t : Faden} (h0 : t ∈ R.q n 
     R.akt n = some t ∧ AnSperre (R.M n) t L := by
   have hA := (R.glied n L t).mp h0
   refine ⟨?_, hA⟩
-  by_contra ha
+  apply Classical.byContradiction
+  intro ha
   exact h1 ((R.glied (n + 1) L t).mpr (R.an_gleich ha hA))
 
 /-- **`t` stays in the queue with nobody new ahead, or it took the lock.** -/
 theorem FifoLauf.bleibt {L : D.Lock} {t : Faden} {a : Nat} (ha : t ∈ R.q a L) :
     ∀ d, (t ∈ R.q (a + d) L ∧ (vorne (R.q (a + d) L) t).length ≤ (vorne (R.q a L) t).length) ∨
       ∃ j, a ≤ j ∧ j < a + d ∧ R.akt j = some t ∧ AnSperre (R.M j) t L
-  | 0 => Or.inl ⟨ha, le_refl _⟩
+  | 0 => Or.inl ⟨ha, Nat.le_refl _⟩
   | d + 1 => by
       rcases FifoLauf.bleibt ha d with ⟨hd, hle⟩ | ⟨j, h1, h2, h3⟩
       · by_cases hn : t ∈ R.q (a + d + 1) L
-        · exact Or.inl ⟨hn, (R.vorne_le hd hn).trans hle⟩
+        · exact Or.inl ⟨hn, Nat.le_trans (R.vorne_le hd hn) hle⟩
         · obtain ⟨e1, e2⟩ := R.verlaesst hd hn
           exact Or.inr ⟨a + d, by omega, by omega, e1, e2⟩
       · exact Or.inr ⟨j, h1, by omega, h3⟩
@@ -239,8 +239,10 @@ include hO hRang hFort hFair in
 theorem kopf_nimmt {n : Nat} {h : Faden} {L : D.Lock} (hk : (R.q n L).head? = some h)
     (hfrei : ∀ u, L ∉ offen ((R.M n).faeden u).spur) :
     ∃ j, n ≤ j ∧ R.akt j = some h ∧ AnSperre (R.M j) h L := by
-  by_contra hno
-  push Not at hno
+  apply Classical.byContradiction
+  intro hno0
+  have hno : ∀ j, n ≤ j → R.akt j = some h → ¬ AnSperre (R.M j) h L :=
+    fun j h1 h2 h3 => hno0 ⟨j, h1, h2, h3⟩
   -- from `n` on: `h` stands at `locks L` at the head of the queue, and `L` is free
   have inv : ∀ d, AnSperre (R.M (n + d)) h L ∧ (R.q (n + d) L).head? = some h ∧
       ∀ u, L ∉ offen ((R.M (n + d)).faeden u).spur := by
@@ -289,39 +291,41 @@ theorem gehalten_oder_frei {n : Nat} {L : D.Lock} :
     (∃ u m, ∀ j, m ≤ j → L ∈ offen ((R.M j).faeden u).spur) ∨
       ∃ m, n ≤ m ∧ ∀ u, L ∉ offen ((R.M m).faeden u).spur := by
   by_cases hf : ∀ u, L ∉ offen ((R.M n).faeden u).spur
-  · exact Or.inr ⟨n, le_refl n, hf⟩
-  push Not at hf
-  obtain ⟨u, hu⟩ := hf
+  · exact Or.inr ⟨n, Nat.le_refl n, hf⟩
+  obtain ⟨u, hu⟩ : ∃ u, L ∈ offen ((R.M n).faeden u).spur :=
+    Classical.byContradiction fun hc => hf fun u hu => hc ⟨u, hu⟩
   by_cases hfor : ∀ j, n ≤ j → L ∈ offen ((R.M j).faeden u).spur
   · exact Or.inl ⟨u, n, hfor⟩
-  push Not at hfor
-  -- the first step at which `u` no longer holds `L`
-  classical
-  let p := fun d => L ∉ offen ((R.M (n + d)).faeden u).spur
-  have hex : ∃ d, p d := by
-    obtain ⟨j, hj, hjn⟩ := hfor
-    obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hj
-    exact ⟨d, hjn⟩
-  have hmin := Nat.find_spec hex
-  have hpos : Nat.find hex ≠ 0 := fun e => by
-    have := hmin; rw [e] at this; exact this hu
-  obtain ⟨d, hd⟩ := Nat.exists_eq_succ_of_ne_zero hpos
-  have hprev : L ∈ offen ((R.M (n + d)).faeden u).spur := by
-    have := Nat.find_min hex (show d < Nat.find hex by omega)
-    simpa [p] using this
-  refine Or.inr ⟨n + (d + 1), by omega, fun v hv => ?_⟩
-  have hnow : L ∉ offen ((R.M (n + (d + 1))).faeden u).spur := by
-    have := hmin; rw [hd] at this; exact this
-  by_cases hvu : v = u
-  · subst hvu; exact hnow hv
-  · -- `u` acted (it lost the lock), so `v` did not, and `v` held `L` beside `u` before: impossible
-    have hua : R.akt (n + d) = some u := by
-      by_contra ha
-      rw [show n + (d + 1) = n + d + 1 by omega, R.toPlanLauf.fremd (n + d) u ha] at hnow
-      exact hnow hprev
-    have hva : R.akt (n + d) ≠ some v := fun e => hvu (Option.some.inj (e.symm.trans hua))
-    rw [show n + (d + 1) = n + d + 1 by omega, R.toPlanLauf.fremd (n + d) v hva] at hv
-    exact hEx (n + d) u v (Ne.symm hvu) L hprev hv
+  have hfor : ∃ j, n ≤ j ∧ L ∉ offen ((R.M j).faeden u).spur :=
+    Classical.byContradiction fun hc => hfor fun j hj => Classical.byContradiction fun hn => hc ⟨j, hj, hn⟩
+  -- step by step from `n`: `u` still holds `L`, or `L` was free at some step in between
+  have stufe : ∀ d, L ∈ offen ((R.M (n + d)).faeden u).spur ∨
+      ∃ m, n ≤ m ∧ ∀ v, L ∉ offen ((R.M m).faeden v).spur := by
+    intro d
+    induction d with
+    | zero => exact Or.inl hu
+    | succ d ih =>
+        rcases ih with hprev | hfrei
+        · by_cases hnow : L ∈ offen ((R.M (n + (d + 1))).faeden u).spur
+          · exact Or.inl hnow
+          · refine Or.inr ⟨n + (d + 1), by omega, fun v hv => ?_⟩
+            by_cases hvu : v = u
+            · subst hvu; exact hnow hv
+            · -- `u` acted (it lost the lock), so `v` did not, and `v` held `L` beside `u` before
+              have hua : R.akt (n + d) = some u := by
+                apply Classical.byContradiction
+                intro ha
+                rw [show n + (d + 1) = n + d + 1 by omega, R.toPlanLauf.fremd (n + d) u ha] at hnow
+                exact hnow hprev
+              have hva : R.akt (n + d) ≠ some v := fun e => hvu (Option.some.inj (e.symm.trans hua))
+              rw [show n + (d + 1) = n + d + 1 by omega, R.toPlanLauf.fremd (n + d) v hva] at hv
+              exact hEx (n + d) u v (Ne.symm hvu) L hprev hv
+        · exact Or.inr hfrei
+  obtain ⟨j, hj, hjn⟩ := hfor
+  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hj
+  rcases stufe d with h | h
+  · exact absurd h hjn
+  · exact Or.inr h
 
 include hO hRang hEx hFort hFair in
 /-- **STARVATION FREEDOM.** A thread standing at `locks L` on a fair run of the ticket lock takes `L`, or some
@@ -333,9 +337,9 @@ theorem hungerfrei {n : Nat} {t : Faden} {L : D.Lock} (hA : AnSperre (R.M n) t L
   suffices H : ∀ k n, t ∈ R.q n L → (vorne (R.q n L) t).length ≤ k →
       (∃ j, n ≤ j ∧ R.akt j = some t ∧ AnSperre (R.M j) t L) ∨
         ∃ u m, ∀ j, m ≤ j → L ∈ offen ((R.M j).faeden u).spur from
-    H _ n ((R.glied n L t).mpr hA) (le_refl _)
+    H _ n ((R.glied n L t).mpr hA) (Nat.le_refl _)
   intro k
-  induction k using Nat.strong_induction_on with
+  induction k using Nat.strongRecOn with
   | _ k ih =>
   intro n ht hk
   rcases gehalten_oder_frei R hEx (n := n) (L := L) with hfor | ⟨m, hnm, hfrei⟩
@@ -370,7 +374,7 @@ theorem hungerfrei {n : Nat} {t : Faden} {L : D.Lock} (hA : AnSperre (R.M n) t L
       have hvj : h ∈ vorne (R.q (n + d + e) L) t :=
         kopf_vorne (R.kopf _ h L hja hjA) hht
       have hlt := R.vorne_lt htj htj1 hvj hhn
-      rcases ih _ (by omega) (n + d + e + 1) htj1 (le_refl _) with ⟨j2, hj2, hj2a, hj2A⟩ | hf
+      rcases ih _ (by omega) (n + d + e + 1) htj1 (Nat.le_refl _) with ⟨j2, hj2, hj2a, hj2A⟩ | hf
       · exact Or.inl ⟨j2, by omega, hj2a, hj2A⟩
       · exact Or.inr hf
     · exact Or.inl ⟨j', by omega, h3, h4⟩
