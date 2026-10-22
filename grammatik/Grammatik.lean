@@ -605,3 +605,12 @@ import Grammatik.Gen.Zeugen.N.N47_20
 import Grammatik.Gen.Zeugen.N.N47_45
 import Grammatik.Gen.Zeugen.Schluss
 import Grammatik.Gen.Text.Satz
+import Grammatik.Gen.Fein.Zellen
+import Grammatik.Gen.Fein.Universum
+import Grammatik.Gen.Fein.Pruefung
+import Grammatik.Gen.Fein.Satz
+import Grammatik.Gen.Fein.Neutral
+import Grammatik.Gen.Fein.Tafel
+import Grammatik.Gen.Fein.Mitglieder
+import Grammatik.Gen.Fein.Suche
+import Grammatik.Gen.Fein.Druck

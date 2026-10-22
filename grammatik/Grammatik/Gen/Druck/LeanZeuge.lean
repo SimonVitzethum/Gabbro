@@ -16,6 +16,19 @@ open Gabbro.Grammatik
 def Zelle.lean (x : Zelle) : String :=
   s!"⟨{x.komp}, {x.art}, {x.urteil}, [{String.intercalate ", " (x.atome.map toString)}]⟩"
 
+/-- The numbers of the elements of a member's finite types. -/
+def Spez.nummern (z : Spez) : LeanTerm.Namen z.deklaration where
+  tab t := (show Fin z.tabs.length from t).val
+  glob g := (show Fin z.globs.length from g).val
+  fn f := (show Fin z.fns.length from f).val
+  lock L := (show Fin z.locks.length from L).val
+  ax a := (show Fin z.axs.length from a).val
+  feld _ f := (show Fin _ from f).val
+  reg r := (show Fin z.regs.length from r).val
+  marke m := (show Fin z.marken.length from m).val
+  inv i := (show Fin z.invs.length from i).val
+  annahme a := (show Fin (z.annahmen + 1) from a).val
+
 /-- The contract `true` everywhere: only such programs are printed (a contract variant has no clause yet). -/
 def Spez.ohneVertrag (z : Spez) (P : Programm z.deklaration) : Bool :=
   z.fnListe.all fun f => istWahrL (P.requires f) && istWahrL (P.ensures f)
@@ -35,7 +48,7 @@ def Spez.leanVertrag (z : Spez) (P : Programm z.deklaration) : Except String (St
   match z.fnListe.find? (fun f => !wahr (P.requires f)), z.fnListe.find? (fun f => !wahr (P.ensures f)) with
   | none, none => pure ("def P : Programm z.deklaration := h0.programm\n\n", "List.mem_cons_self")
   | some f, none => do
-    let e ← LeanTerm.expr tab glob fn feld (P.requires f)
+    let e ← LeanTerm.expr z.nummern (P.requires f)
     let j := fn f
     pure (s!"def fv : z.deklaration.Fn := (⟨{j}, by decide⟩ : Fin z.fns.length)\n\n" ++ s!"def vr : Expr z.deklaration (z.deklaration.params fv)\n    (Signatur.anfang z.deklaration (z.deklaration.signatur fv)) .bool :=\n  {e}\n\n" ++
       s!"def P : Programm z.deklaration :=\n  \{ h0.programm with requires := fun g => if hg : g = fv then hg ▸ vr else Expr.tru }\n\n" ++
@@ -43,7 +56,7 @@ def Spez.leanVertrag (z : Spez) (P : Programm z.deklaration) : Except String (St
       "theorem vr_endlich : @groesseExpr z.deklaration z.zahlen _ _ _ vr < unendlich := by decide\n\n",
       s!"(vertragsL_req z ncZiel h0 fv vr vr_klein vr_endlich)")
   | none, some f => do
-    let e ← LeanTerm.expr tab glob fn feld (P.ensures f)
+    let e ← LeanTerm.expr z.nummern (P.ensures f)
     let j := fn f
     pure (s!"def fv : z.deklaration.Fn := (⟨{j}, by decide⟩ : Fin z.fns.length)\n\n" ++ s!"def ve : Expr z.deklaration (ErgCtx (z.deklaration.params fv) (z.deklaration.erg fv))\n    (vertragVon z.deklaration fv).ende .bool :=\n  {e}\n\n" ++
       s!"def P : Programm z.deklaration :=\n  \{ h0.programm with ensures := fun g => if hg : g = fv then hg ▸ ve else Expr.tru }\n\n" ++
@@ -63,7 +76,7 @@ def Spez.leanRuempfe (z : Spez) (P : Programm z.deklaration) : Except String Str
   let feld := fun (t : z.deklaration.Tab) (f : z.deklaration.Feld t) => (show Fin _ from f).val
   let reg := fun (r : z.deklaration.Reg) => (show Fin z.regs.length from r).val
   let defs ← z.fnListe.mapM fun f => do
-    let b ← LeanTerm.endblock tab glob fn lock ax feld reg (P.rumpf f)
+    let b ← LeanTerm.endblock z.nummern (P.rumpf f)
     pure s!"def b{fn f} : Rumpf z.deklaration ⟨{fn f}, by decide⟩ :=\n  {b}\n\n"
   let klauseln := z.fnListe.map fun f => s!"  | ⟨{fn f}, _⟩ => b{fn f}\n"
   pure (String.join defs ++ "def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f\n" ++ String.join klauseln ++
