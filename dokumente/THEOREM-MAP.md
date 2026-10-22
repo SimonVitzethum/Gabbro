@@ -4453,3 +4453,23 @@ NOT proved: a bound on the wait (`wartezeit_schranke` needs a hold-time premise)
 | witnesses **`az_bereich`** (`t[1].x = 5` changes a cell in its extent; its byte 108 lies in the table's region under a correct layout), **`ab_aussen`** (a foreign body writing `T[7]` changes a cell outside the extent), `oB_nicht`, `oG_gut` | AdressZeuge | -- |
 
 Finding: `GutO` frames foreign writes by carrier only, so G admitted foreign writes outside the declared extents without a word; `ImBereichO` names that assumption. NOT proved: reads in their extents as a statement about runs (they are, by the index types); that the compiler's layout is a `LayoutOk` one.
+
+## 89. Termination: classes decided from the syntax, measured recursion, `GabbroZielTerminierung` (2026-10-22, T1-T5)
+
+*Files: `grammatik/Grammatik/Logik/Terminierung/{Klasse,Durchgang,Mass,LaufGX,Rekursion,Entscheidung,KlasseZeuge}.lean`; the measure duty threaded through the replay (`Speichermodell/Atomar/AtomarReplay/T1.lean`, `MassOkV`); the statement `GabbroZielTerminierung` in `Zielsatz/Kern/Spec.lean`, proved as `gabbro_ziel_terminierung` in `Zielsatz/Atomar/BeweisTerminierung.lean`.*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `TermKlasse` (`endet`, `umgebung`, `bedingt`, `abgelehnt`), `Befund`, `befS`/`befB`/`befE`, **`lokal`**, **`klasse`** (the weakest local class of the call hull), `programmKlasse`: the decision algorithm, a Bool computation over the bodies; a `return` or `leave` inside a `forever` pass is an exit | Klasse | -- |
+| `SegU`, `DInv`, `dinv_schritt`, `dinv_lauf`; **`durchgang_schritte`** (T3: one pass of a `forever` takes at most `passKosten` own steps) | Durchgang | the cost tables' admission facts |
+| `Mass` (per function a lexicographic tuple over the parameters, location-free), `Mass.wert_welt`, `lexLt`, **`lexLt_wf`**, `massTor`, **`MassPflicht`** (the `decreases` duty), `zykS` (strict cycle relation), `massPflicht_ohne_zyklus` | Mass | -- |
+| `MassOkV`; `KopfSA`/`WarteSA` carry the measure's fall of every call into the caller's cycle; `zielInvSA_erreichbarGX` takes `MassPflicht` | AtomarReplay, AtomarLauf | as `gabbro_ziel` |
+| `rufeS`/…/`rufeR` with a signature gate `ZS` and a `forever` gate `EW`; **`schrittArt`** covers indirect calls (the cost engine runs with `ZS = false`, `EW = true`) | KostenG T1/T2 | -- |
+| `wlt`, **`acc_wlt`**, `slt`, `KetteW`, **`acc_sltK`** (the stack order is well-founded on falling stacks), **`endlich_aus_wf`**, `tor`, `torS`, `gew`, `rangF`, `Glieder`, `kette_aus`, **`schritt_rang`** (an own GX step lowers the rank), **`rekursion_endlich`**, `rekursion_endlich_aus` (T4) | Rekursion | gate `tor` on the bodies; measure lengths along a cycle; the replay |
+| `LaufGX` (infinite GX runs), `LaufGX.erreichbar` | LaufGX | -- |
+| `rufeS_mS`/…/`rufeE_mE` (gates = feature sets), `rufeE_ohneEwig`; `rangB`, `reachB_trans`, `rangB_le`, `rangB_lt`, `tor_ruft`, **`tor_gut`** (the gate holds for EVERY program) | Entscheidung | complete member list |
+| **`terminierung`** (every thread finitely many steps), `klasse_endet_lokal`, `lokal_endet_ewig`, `ewigFrei_klasse`, `ewigFrei_rumpf`, `ewigFrei_schritt`, **`ewigFrei_ohne_budget`**, **`endet_satz`** (T5) | Entscheidung | goal premises, `MassPflicht`, measure lengths |
+| **`gabbro_ziel_terminierung : GabbroZielTerminierung`**, `terminierung_aus` | BeweisTerminierung | (a)-(d), `MassPflicht` on `E.P.mitRuhe`, measure lengths |
+| witnesses `kz_endet`, `kz_endet_mass`, `kz_abgelehnt`, `kz_bedingt_end`, `kz_umgebung`, `kz_bedingt_leave`, `kz_bedingt_rueck`, `kz_ewigFrei`, `kz_nicht_ewigFrei` (every class computed by `decide`) | KlasseZeuge | -- |
+
+A cost table cannot bound measured recursion (Ackermann's `(1, 0)` calls `(0, k)` for every `k`); the bound is a well-founded rank of the stack (frame weight: rank of the function in the call graph, measure at entry, residue potential with calls priced 0; the stack ordered lexicographically from the bottom, a prefix below its extensions). NOT proved: the measure duty stated on `E.P` (it is stated on `E.P.mitRuhe`); termination of `umgebung`/`bedingt` beyond the budget; threads spawned at run time; a witness of `GabbroZielTerminierung` with every premise group discharged.

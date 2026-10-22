@@ -17,6 +17,10 @@
     (`gabbro_ziel_verbund`).
   * `GabbroZielLeben` -- liveness: on every weakly fair run of the ticket lock a thread standing at `locks L` takes
     `L`, or some thread holds `L` from some step on for ever (`gabbro_ziel_leben`).
+  * `GabbroZielTerminierung` -- termination: under the measure duty (`decreases`, user logic), on every infinite run
+    of machine GX every thread takes only finitely many steps, and a thread whose start the algorithm `klasse` puts
+    in class `endet` never stands at a spent `forever` budget (`gabbro_ziel_terminierung`, proof in
+    Zielsatz/Atomar/BeweisTerminierung.lean). See TERMINATION below.
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool, not the Rust checker, and no
   bridge from the model to a binary is built (THE READING, below).
@@ -149,9 +153,23 @@
   listed in the certificate's header), and THE READING above. A green build says NOTHING about an uncertified
   program; such a program reaches the statements only through a hand-written term.
 
+  TERMINATION (2026-10-22, `GabbroZielTerminierung`). Two more premises beside (a)-(d), both user logic: a measure
+  `m` (per function a lexicographic tuple of natural-number expressions over its parameters, the `decreases`
+  clause) whose duty `MassPflicht` holds for every function -- every call back into the caller's cycle (`zykS`)
+  has a smaller measure than the caller's entry -- and measures of one length along a cycle. A function on no cycle
+  owes nothing (`massPflicht_ohne_zyklus`). Stated over the program with the idle root (`E.P.mitRuhe`, as the runs
+  are). Claimed: (1) on every infinite GX run from the runtime's start every thread takes only finitely many steps
+  -- a `forever` is finite here because machine G grants `passes` passes from outside; (2) a thread whose start
+  function the decision algorithm `klasse` (Logik/Terminierung/Klasse.lean: `endet`, `umgebung`, `bedingt`,
+  `abgelehnt`, computed from the syntax) puts in class `endet` never stands at a spent budget: its end does not
+  lean on the passes. Classes `umgebung` and `bedingt` are finite per pass (`durchgang_schritte`), not in this
+  statement.
+
   NOT CLAIMED:
-  * termination, a waiting bound, a time bound for `forever` or recursion; `GabbroZielLeben` claims that a lock
-    wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
+  * a waiting bound, a time bound for `forever` or recursion, termination of `umgebung`/`bedingt` beyond the budget
+    (whether a `leave` guard or a base path is ever taken is the program's question); the measure duty stated on
+    `E.P` instead of `E.P.mitRuhe`; termination with threads spawned at run time; `GabbroZielLeben` claims that a
+    lock wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
     time;
   * stack depth (G's stacks are unbounded; the LLVM lowering runs recursion without native stack growth, and
     exhausted memory fail-stops -- outside the model);
@@ -196,6 +214,8 @@ import Grammatik.Logik.Fortschritt.Folge
 import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 import Grammatik.Logik.Fortschritt.PlanLauf
 import Grammatik.Speichermodell.Adressen.Layout
+import Grammatik.Logik.Terminierung.LaufGX
+import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -1072,6 +1092,32 @@ def GabbroZielLeben : Prop :=
         ∀ (n : Nat) (t : Faden) (L : D.mitRuhe.Lock), AnSperre (R.M n) t L →
           (∃ j, n ≤ j ∧ R.akt j = some t ∧ AnSperre (R.M j) t L) ∨
             ∃ u m, ∀ j, m ≤ j → L ∈ offen ((R.M j).faeden u).spur
+
+/-! ## Termination (2026-10-22)
+
+    A FOURTH statement under the same four premise groups, with the measure duty beside (b). See TERMINATION in the
+    header. -/
+
+/-- **GABBRO_ZIEL_TERMINIERUNG.** Under the measure duty: on every infinite GX run from the runtime's start every
+    thread takes only finitely many steps, and a thread whose start is of class `endet` never stands at a spent
+    `forever` budget. -/
+def GabbroZielTerminierung : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflichtA E →                                          -- (b) the user, with the rely
+    ∀ (passes : Nat) (m : Mass D.mitRuhe),
+      (∀ f, MassPflicht E.P.mitRuhe passes (fun a σ v => E.Q a (worldZ σ) (ergZ (D.aerg a) v)) E.S.mitRuhe (GeteiltV (D := D) E.P E.ws) m
+        (zykS E.P.mitRuhe (fsRuhe fs.1)) f) →                   -- (b') the measures fall (`decreases`)
+      (∀ f g, zykS E.P.mitRuhe (fsRuhe fs.1) f g = true → (m f).length = (m g).length) →
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
+    ∀ (sp : Speicher D.mitRuhe) (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
+      ∀ R : LaufGX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws),
+        R.M 0 = RufStartG E.P.mitRuhe sp init →
+        ∀ t : Faden, (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧
+          (klasse E.P.mitRuhe (fsRuhe fs.1) m.hat (init t).1 = .endet →
+            ∀ j, ¬ HaltBenannt O.mitRuhe passes (R.M j) .budget t)
 
 /-! ## Linking separately compiled units (Opus agent E, 2026-09-26)
 
