@@ -186,10 +186,18 @@ theorem endlich_aus_wf {α : Type} (Rel : α → α → Prop) (x : Nat → α) (
 
 section Rang
 
-variable (P : Programm D) (pa : Nat) (m : Mass D) (zyk : D.Fn → D.Fn → Bool) (rk : D.Fn → Nat)
+variable (P : Programm D) (pa : Nat) (m : Mass D) (zyk : D.Fn → D.Fn → Bool) (rk : D.Fn → Nat) (fs : List D.Fn)
 
 /-- **The call gate**: from `f`, a call goes to a lower rank, or along `f`'s cycle at the same rank. -/
 def tor (f g : D.Fn) : Bool := decide (rk g < rk f) || (rk g == rk f && zyk f g)
+
+/-- **The gate of an indirect call** through signature `n`: every function of signature `n` passes `tor`. -/
+def torS (f : D.Fn) (n : Nat) : Bool := fs.all fun g => !(D.passt g n) || tor zyk rk f g
+
+theorem torS_tor (hvoll : ∀ g, g ∈ fs) {f : D.Fn} {n : Nat} {g : D.Fn} (h : torS zyk rk fs f n = true)
+    (hp : D.passt g n = true) : tor zyk rk f g = true := by
+  have := List.all_eq_true.mp h g (hvoll g)
+  simpa [hp] using this
 
 /-- A frame's weight. -/
 def gew (r : RufRahmenG D) : Gewicht :=
@@ -202,21 +210,22 @@ def rangF (z : RufFadenG D) : List Gewicht := ((z.kopf :: z.stapel).map (gew pa 
 /-- The static facts of a stack, top first: every frame's residue calls through its gate, and every frame was
     called through the gate of the frame below it. -/
 def Glieder : RufRahmenG D → List (RufRahmenG D) → Prop
-  | r, [] => rufeR (tor zyk rk r.f) r.rest.2.2.2.2 = true
-  | r, b :: rest => rufeR (tor zyk rk r.f) r.rest.2.2.2.2 = true ∧ tor zyk rk b.f r.f = true ∧ Glieder b rest
+  | r, [] => rufeR (tor zyk rk r.f) (torS zyk rk fs r.f) r.rest.2.2.2.2 = true
+  | r, b :: rest => rufeR (tor zyk rk r.f) (torS zyk rk fs r.f) r.rest.2.2.2.2 = true ∧ tor zyk rk b.f r.f = true ∧ Glieder b rest
 
-theorem glieder_kopf {r : RufRahmenG D} {st : List (RufRahmenG D)} (h : Glieder zyk rk r st) :
-    rufeR (tor zyk rk r.f) r.rest.2.2.2.2 = true := by
+theorem glieder_kopf {r : RufRahmenG D} {st : List (RufRahmenG D)} (h : Glieder zyk rk fs r st) :
+    rufeR (tor zyk rk r.f) (torS zyk rk fs r.f) r.rest.2.2.2.2 = true := by
   cases st with
   | nil => exact h
   | cons _ _ => exact h.1
 
-theorem glieder_ersetze {r r' : RufRahmenG D} {st : List (RufRahmenG D)} (h : Glieder zyk rk r st)
-    (hf : r'.f = r.f) (hok : rufeR (tor zyk rk r.f) r'.rest.2.2.2.2 = true) : Glieder zyk rk r' st := by
+theorem glieder_ersetze {r r' : RufRahmenG D} {st : List (RufRahmenG D)} (h : Glieder zyk rk fs r st)
+    (hf : r'.f = r.f) (hok : rufeR (tor zyk rk r.f) (torS zyk rk fs r.f) r'.rest.2.2.2.2 = true) : Glieder zyk rk fs r' st := by
   have ht : tor zyk rk r'.f = tor zyk rk r.f := by rw [hf]
+  have hts : torS zyk rk fs r'.f = torS zyk rk fs r.f := by rw [hf]
   cases st with
-  | nil => show rufeR (tor zyk rk r'.f) r'.rest.2.2.2.2 = true; rw [ht]; exact hok
-  | cons b rest => exact ⟨by rw [ht]; exact hok, hf ▸ h.2.1, h.2.2⟩
+  | nil => show rufeR (tor zyk rk r'.f) (torS zyk rk fs r'.f) r'.rest.2.2.2.2 = true; rw [ht, hts]; exact hok
+  | cons b rest => exact ⟨by rw [ht, hts]; exact hok, hf ▸ h.2.1, h.2.2⟩
 
 /-- Along the stack, every call into the caller's cycle has a smaller measure than the caller's entry (the
     replay's fact, `WarteSA`). -/
@@ -228,7 +237,7 @@ def MassFaellt : (Σ f : D.Fn, Env D (D.params f) × World D) → List (RufRahme
 
 /-- **The weights fall up the stack**: the gate's links, with the measure's fall along a cycle. -/
 theorem kette_aus (hL : ∀ f g, zyk f g = true → (m f).length = (m g).length) :
-    ∀ (r : RufRahmenG D) (st : List (RufRahmenG D)), Glieder zyk rk r st →
+    ∀ (r : RufRahmenG D) (st : List (RufRahmenG D)), Glieder zyk rk fs r st →
       MassFaellt m zyk (RufSchluesselG r) st → KetteT ((r :: st).map (gew pa m rk))
   | r, [], _, _ => trivial
   | r, b :: rest, h, hm => by
@@ -254,7 +263,7 @@ end Rang
 section Schritt
 
 variable {P : Programm D} {O : Orakel D} {pa : Nat} {Tg : D.Tab ⊕ D.Glob → Prop} (m : Mass D)
-  (zyk : D.Fn → D.Fn → Bool) (rk : D.Fn → Nat)
+  (zyk : D.Fn → D.Fn → Bool) (rk : D.Fn → Nat) (fs : List D.Fn)
 
 theorem schluessel_kopf {a b : RufFadenG D}
     (h : RufFadenSchluesselG a = RufFadenSchluesselG b) : RufSchluesselG a.kopf = RufSchluesselG b.kopf := by
@@ -271,24 +280,24 @@ theorem wlt_pot {a b : Gewicht} (h1 : a.1 = b.1) (h2 : a.2 < b.2) : wlt a b :=
   Or.inr ⟨congrArg (·.1) h1, Or.inr ⟨congrArg (·.2) h1, h2⟩⟩
 
 /-- **An own step of a GX run lowers the thread's rank and keeps its static facts.** -/
-theorem schritt_rang
-    (hR : ∀ f, rufeE (tor zyk rk f) (P.rumpf f) = true)
+theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
+    (hR : ∀ f, rufeE (tor zyk rk f) (torS zyk rk fs f) (P.rumpf f) = true)
     {M M' : RufMaschineG D} {t : Faden} (hP0 : RufMaschinePasstG M) (hP1 : RufMaschinePasstG M')
     (hs : RufSchrittGX P O pa Tg M t M')
-    (hG : Glieder zyk rk (M.faeden t).kopf (M.faeden t).stapel) :
+    (hG : Glieder zyk rk fs (M.faeden t).kopf (M.faeden t).stapel) :
     slt (rangF pa m rk (M'.faeden t)) (rangF pa m rk (M.faeden t)) ∧
-      Glieder zyk rk (M'.faeden t).kopf (M'.faeden t).stapel := by
+      Glieder zyk rk fs (M'.faeden t).kopf (M'.faeden t).stapel := by
   have hk := Zielsatz.schritt_schluesselX hP0 hP1 hs
   obtain ⟨σ, M'', hg, _, _, _, hfa, _, _⟩ := hs
   have hfa' : M'.faeden t = M''.faeden t := by rw [hfa]
   have hfm : (mitSpeicher M σ).faeden t = M.faeden t := rfl
   have hlen : ∀ z : RufFadenG D, (RufFadenSchluesselG z).length = z.stapel.length + 1 := by
     intro z; simp [RufFadenSchluesselG]
-  rcases schrittArt hg (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) with
+  rcases schrittArt hg (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) (torS zyk rk fs (M.faeden t).kopf.f) with
     ⟨hst, hpot⟩ | ⟨g, caller', rho, s0, hst, hkopf, hpush⟩ | ⟨caller, rst, hst, hst', hpop⟩
   · -- the head steps: same stack, same key, lower potential
     rw [hfm, ← hfa'] at hst hpot
-    obtain ⟨hok', hlt⟩ := hpot (glieder_kopf zyk rk hG)
+    obtain ⟨hok', hlt⟩ := hpot (glieder_kopf zyk rk fs hG)
     have hkey : RufSchluesselG (M'.faeden t).kopf = RufSchluesselG (M.faeden t).kopf := by
       rcases hk with he | ⟨_, he⟩ | ⟨_, _, _, _, _, he, _⟩ | ⟨_, _, _, _, _, he, _⟩
       · exact schluessel_kopf he
@@ -305,12 +314,21 @@ theorem schritt_rang
       apply slt_praefix
       exact Or.inl (wlt_pot (gew_fst m rk hkey) (by dsimp only [gew]; omega))
     · rw [hst]
-      exact glieder_ersetze zyk rk hG hf hok'
+      exact glieder_ersetze zyk rk fs hG hf hok'
   · -- a call: the caller's potential falls, the callee sits above it
     rw [hfm, ← hfa'] at hst
     rw [← hfa'] at hkopf
     rw [hfm] at hpush
-    obtain ⟨hzg, hokc, hlt⟩ := hpush (glieder_kopf zyk rk hG)
+    obtain ⟨hokc, hdir⟩ := hpush (glieder_kopf zyk rk fs hG)
+    have hzg : tor zyk rk (M.faeden t).kopf.f g = true := by
+      rcases hdir with ⟨hz, _⟩ | ⟨n, hn, hp, _⟩
+      · exact hz
+      · exact torS_tor zyk rk fs hvoll hn hp
+    have hlt : potRest (fun _ => 0) pa caller'.rest.2.2.2.2 + 1 ≤
+        potRest (fun _ => 0) pa (M.faeden t).kopf.rest.2.2.2.2 := by
+      rcases hdir with ⟨_, h⟩ | ⟨_, _, _, h⟩
+      · simp only [Nat.add_zero] at h; omega
+      · exact h
     have hkey : RufSchluesselG caller' = RufSchluesselG (M.faeden t).kopf := by
       rcases hk with he | ⟨_, he⟩ | ⟨_, _, _, _, _, he, _⟩ | ⟨_, _, _, _, _, he, _⟩
       · exfalso
@@ -332,15 +350,15 @@ theorem schritt_rang
       rw [hst]
       simp only [List.map_cons, List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
       apply slt_praefix
-      exact Or.inl (wlt_pot (gew_fst m rk hkey) (by dsimp only [gew] at hlt ⊢; omega))
+      exact Or.inl (wlt_pot (gew_fst m rk hkey) (by dsimp only [gew]; omega))
     · rw [hst, hkopf]
-      refine ⟨hR g, ?_, glieder_ersetze zyk rk hG hcf hokc⟩
+      refine ⟨hR g, ?_, glieder_ersetze zyk rk fs hG hcf hokc⟩
       show tor zyk rk caller'.f g = true
       rw [hcf]; exact hzg
   · -- a return: the head goes, the caller stays at most where it was
     rw [hfm] at hst
     rw [← hfa'] at hst' hpop
-    obtain ⟨hgate, hle⟩ := hpop (fun _ => 0) (tor zyk rk caller.f)
+    obtain ⟨hgate, hle⟩ := hpop (fun _ => 0) (tor zyk rk caller.f) (torS zyk rk fs caller.f)
     have hkey : RufSchluesselG (M'.faeden t).kopf = RufSchluesselG caller := by
       rcases hk with he | ⟨_, he⟩ | ⟨_, _, _, _, _, he, _⟩ | ⟨_, _, _, _, _, he, _⟩
       · exfalso
@@ -368,7 +386,7 @@ theorem schritt_rang
       · exact Or.inl (wlt_pot (gew_fst m rk hkey) hp)
       · refine Or.inr ⟨Prod.ext (gew_fst m rk hkey) (by dsimp only [gew]; omega), trivial⟩
     · rw [hst']
-      exact glieder_ersetze zyk rk hG.2.2 hf (hgate (glieder_kopf zyk rk hG.2.2))
+      exact glieder_ersetze zyk rk fs hG.2.2 hf (hgate (glieder_kopf zyk rk fs hG.2.2))
 
 end Schritt
 
@@ -404,15 +422,15 @@ theorem LaufGX.erreichbar {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D
 section Lauf
 
 variable {P : Programm D} {O : Orakel D} {pa : Nat} {Tg : D.Tab ⊕ D.Glob → Prop} (m : Mass D)
-  (zyk : D.Fn → D.Fn → Bool) (rk : D.Fn → Nat)
+  (zyk : D.Fn → D.Fn → Bool) (rk : D.Fn → Nat) (fs : List D.Fn)
 
 /-- **T4 -- MEASURED RECURSION TERMINATES.** For a program whose every body calls only through the gate (a lower
     rank, or the caller's cycle at the same rank; no indirect call) and whose measures have one length along a
     cycle, on every infinite GX run from the start on which the goal's replay holds (with the measure), every
     thread takes only finitely many steps. -/
 theorem rekursion_endlich (Q : AxEns D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool)
-    (hTA : ∀ c, Tg c → AtomarAusgenommen c)
-    (hR : ∀ f, rufeE (tor zyk rk f) (P.rumpf f) = true)
+    (hvoll : ∀ g, g ∈ fs) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
+    (hR : ∀ f, rufeE (tor zyk rk f) (torS zyk rk fs f) (P.rumpf f) = true)
     (hL : ∀ f g, zyk f g = true → (m f).length = (m g).length)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hInv : ∀ M, RufErreichbarGX P O pa Tg (RufStartG P sp init) M → ZielInvSA P O pa Q S lok Tg m zyk M)
@@ -420,7 +438,7 @@ theorem rekursion_endlich (Q : AxEns D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob
     ∃ N, ∀ j, N ≤ j → R.akt j ≠ some t := by
   have hre := R.erreichbar h0
   have hP : ∀ j, RufMaschinePasstG (R.M j) := fun j => Zielsatz.gx_passt hTA sp init (hre j)
-  have hGl : ∀ j, Glieder zyk rk ((R.M j).faeden t).kopf ((R.M j).faeden t).stapel := by
+  have hGl : ∀ j, Glieder zyk rk fs ((R.M j).faeden t).kopf ((R.M j).faeden t).stapel := by
     intro j
     induction j with
     | zero =>
@@ -436,14 +454,14 @@ theorem rekursion_endlich (Q : AxEns D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob
       | some u =>
         by_cases htu : t = u
         · subst htu
-          exact (schritt_rang m zyk rk hR (hP j) (hP (j + 1)) (R.schritt j t h) ih).2
+          exact (schritt_rang m zyk rk fs hvoll hR (hP j) (hP (j + 1)) (R.schritt j t h) ih).2
         · rw [Zielsatz.gx_fremd (R.schritt j u h) t htu]; exact ih
   have hK : ∀ j, KetteW (rangF pa m rk ((R.M j).faeden t)) := fun j =>
-    ketteT_reverse _ (kette_aus pa m zyk rk hL _ _ (hGl j)
+    ketteT_reverse _ (kette_aus pa m zyk rk fs hL _ _ (hGl j)
       (stapelSA_massFaellt P O pa Q S lok Tg m zyk _ _ ((hInv _ (hre j)).1 t).2))
   obtain ⟨N, hN⟩ := endlich_aus_wf sltK (fun j => rangF pa m rk ((R.M j).faeden t))
     (fun j => R.akt j = some t) (fun j => acc_sltK _ (hK j))
-    (fun j h => ⟨hK (j + 1), (schritt_rang m zyk rk hR (hP j) (hP (j + 1)) (R.schritt j t h) (hGl j)).1⟩)
+    (fun j h => ⟨hK (j + 1), (schritt_rang m zyk rk fs hvoll hR (hP j) (hP (j + 1)) (R.schritt j t h) (hGl j)).1⟩)
     (fun j h => by
       cases ha : R.akt j with
       | none => show rangF pa m rk ((R.M (j + 1)).faeden t) = _; rw [R.stotter j ha]
@@ -455,7 +473,7 @@ theorem rekursion_endlich (Q : AxEns D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob
 
 /-- **T4 from the goal's premises**: `rekursion_endlich` with the replay supplied by `zielInvSA_erreichbarGX`, the
     user's measure duty `MassPflicht` for every function in place of the empty one the goal uses. -/
-theorem rekursion_endlich_aus (Q : AxEns D) (S : SperrInv D) {fs : List D.Fn} (K : Faden → D.Fn → Bool)
+theorem rekursion_endlich_aus (Q : AxEns D) (S : SperrInv D) (K : Faden → D.Fn → Bool)
     (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -468,11 +486,11 @@ theorem rekursion_endlich_aus (Q : AxEns D) (S : SperrInv D) {fs : List D.Fn} (K
     (hK : ∀ f : D.Fn, KoerperGutSA P pa Q S Tg f) (hM : ∀ f, MassPflicht P pa Q S Tg m zyk f)
     (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hR : ∀ f, rufeE (tor zyk rk f) (P.rumpf f) = true)
+    (hR : ∀ f, rufeE (tor zyk rk f) (torS zyk rk fs f) (P.rumpf f) = true)
     (hL : ∀ f g, zyk f g = true → (m f).length = (m g).length)
     (R : LaufGX P O pa Tg) (h0 : R.M 0 = RufStartG P sp init) (t : Faden) :
     ∃ N, ∀ j, N ≤ j → R.akt j ≠ some t :=
-  rekursion_endlich m zyk rk Q S lok hTA hR hL sp init
+  rekursion_endlich m zyk rk fs Q S lok hvoll hTA hR hL sp init
     (fun M hr => (zielInvSA_erreichbarGX P O pa Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
       hTA hTV hTS hTO hFragS hFS hlokK hK hM hStart hsp hex M hr).1) R h0 t
 

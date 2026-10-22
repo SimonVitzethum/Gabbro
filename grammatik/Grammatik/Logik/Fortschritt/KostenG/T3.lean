@@ -13,7 +13,7 @@ def kostenPasst [DecidableEq D.Fn] (P : Programm D) (passes : Nat) (decl : D.Fn 
     (fs : List D.Fn) : Bool :=
   fs.all fun g =>
     decide (kostenEnd decl passes (P.rumpf g) ≤ decl g) &&
-      rufeE (fun h => fs.contains h) (P.rumpf g)
+      rufeE (fun h => fs.contains h) (fun _ => false) (P.rumpf g)
 
 /-- **TARGET 2 -- `kosten_passt_deklaration`.** If the decidable check
     `kostenPasst` holds for the function list `fs`, every frame of a
@@ -34,7 +34,7 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
   have hall := List.all_eq_true.mp hK
   have hfs : ∀ h, h ∈ fs →
       kostenEnd decl passes (P.rumpf h) ≤ decl h ∧
-        rufeE (fun h => fs.contains h) (P.rumpf h) = true := by
+        rufeE (fun h => fs.contains h) (fun _ => false) (P.rumpf h) = true := by
     intro h hh
     have := hall h hh
     simp only [Bool.and_eq_true, decide_eq_true_eq] at this

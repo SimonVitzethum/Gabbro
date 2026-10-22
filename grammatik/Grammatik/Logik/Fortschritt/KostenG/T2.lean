@@ -5,27 +5,31 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- **One own step of the head: the potential argument, per rule of G.** -/
+/-- **One own step of the head: the potential argument, per rule of G.** A push through a direct call charges
+    the callee's cost `c g`; one through an indirect call (signature `n`, admitted by `ZS n`) charges nothing for
+    the callee, whose cost the model does not name. -/
 theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschineG D} {f : Faden}
-    (hs : RufSchrittG P O pa M f M') (c : D.Fn → Nat) (Z : D.Fn → Bool) :
+    (hs : RufSchrittG P O pa M f M') (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) :
     ((M'.faeden f).stapel = (M.faeden f).stapel ∧
-      (rufeR Z (M.faeden f).kopf.rest.2.2.2.2 = true →
-        rufeR Z (M'.faeden f).kopf.rest.2.2.2.2 = true ∧
+      (rufeR Z ZS (M.faeden f).kopf.rest.2.2.2.2 = true →
+        rufeR Z ZS (M'.faeden f).kopf.rest.2.2.2.2 = true ∧
         potRest c pa (M'.faeden f).kopf.rest.2.2.2.2 + 1 ≤
           potRest c pa (M.faeden f).kopf.rest.2.2.2.2)) ∨
     (∃ (g : D.Fn) (caller' : RufRahmenG D) (rho : Env D (D.params g)) (s0 : World D),
       (M'.faeden f).stapel = caller' :: (M.faeden f).stapel ∧
       (M'.faeden f).kopf = ⟨g, rho, s0, ⟨false, D.params g, Signatur.anfang D (D.signatur g),
         rho, .ende (P.rumpf g)⟩⟩ ∧
-      (rufeR Z (M.faeden f).kopf.rest.2.2.2.2 = true →
-        Z g = true ∧ rufeR Z caller'.rest.2.2.2.2 = true ∧
-        potRest c pa caller'.rest.2.2.2.2 + 1 + c g ≤
-          potRest c pa (M.faeden f).kopf.rest.2.2.2.2)) ∨
+      (rufeR Z ZS (M.faeden f).kopf.rest.2.2.2.2 = true →
+        rufeR Z ZS caller'.rest.2.2.2.2 = true ∧
+        ((Z g = true ∧ potRest c pa caller'.rest.2.2.2.2 + 1 + c g ≤
+            potRest c pa (M.faeden f).kopf.rest.2.2.2.2) ∨
+          (∃ n, ZS n = true ∧ D.passt g n = true ∧
+            potRest c pa caller'.rest.2.2.2.2 + 1 ≤ potRest c pa (M.faeden f).kopf.rest.2.2.2.2)))) ∨
     (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
       (M.faeden f).stapel = caller :: rst ∧ (M'.faeden f).stapel = rst ∧
-      ∀ (c' : D.Fn → Nat) (Z' : D.Fn → Bool),
-        (rufeR Z' caller.rest.2.2.2.2 = true →
-          rufeR Z' (M'.faeden f).kopf.rest.2.2.2.2 = true) ∧
+      ∀ (c' : D.Fn → Nat) (Z' : D.Fn → Bool) (ZS' : Nat → Bool),
+        (rufeR Z' ZS' caller.rest.2.2.2.2 = true →
+          rufeR Z' ZS' (M'.faeden f).kopf.rest.2.2.2.2 = true) ∧
         potRest c' pa (M'.faeden f).kopf.rest.2.2.2.2 ≤ potRest c' pa caller.rest.2.2.2.2) := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead =>
@@ -48,9 +52,9 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       all_goals (simp only [potRest, kostenBlock_alsBlock, kostenEnd, kostenSonst]; omega)
   | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
     kopfA
-    · have h := rufeB_armWahlG Z arms (eval σ₁ v σ₁ ρ) hok.1.1
+    · have h := rufeB_armWahlG Z ZS arms (eval σ₁ v σ₁ ρ) hok.1.1
       rw [hw] at h
-      have h2 : rufeB Z b = true := h
+      have h2 : rufeB Z ZS b = true := h
       simp_all
     · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
       rw [hw] at h
@@ -58,9 +62,9 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       omega
   | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw =>
     kopfA
-    · have h := rufeB_armWahlG Z arms (eval σ₁ v σ₁ ρ) hok.1.1
+    · have h := rufeB_armWahlG Z ZS arms (eval σ₁ v σ₁ ρ) hok.1.1
       rw [hw] at h
-      have h2 : rufeB Z b = true := h
+      have h2 : rufeB Z ZS b = true := h
       simp_all
     · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
       rw [hw] at h
@@ -68,7 +72,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       omega
   | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw =>
     kopfA
-    · have h := rufeB_grundWahlG Z arms (eval σ₁ r σ₁ ρ) hok.1.1
+    · have h := rufeB_grundWahlG Z ZS arms (eval σ₁ r σ₁ ρ) hok.1.1
       rw [hw] at h
       simp_all
     · have h := kostenBlock_grundWahlG c pa arms (eval σ₁ r σ₁ ρ)
@@ -89,7 +93,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     · rw [hhead] at hok ⊢
       dsimp only at hok ⊢
       simp only [potRest, kostenEnd, kostenStmt, rufeR, rufeE, rufeS, Bool.and_eq_true] at hok ⊢
-      exact ⟨hok.1, hok.2, by omega⟩
+      exact ⟨hok.2, Or.inl ⟨hok.1, by omega⟩⟩
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nach D g Λ, ρ, .dann rest k⟩⟩, rho, s0,
@@ -98,7 +102,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       dsimp only at hok ⊢
       simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS,
         Bool.and_eq_true] at hok ⊢
-      exact ⟨hok.1.1, ⟨hok.1.2, hok.2⟩, by omega⟩
+      exact ⟨⟨hok.1.2, hok.2⟩, Or.inl ⟨hok.1.1, by omega⟩⟩
   | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩, rho, s0,
@@ -106,7 +110,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     · rw [hhead] at hok ⊢
       dsimp only at hok ⊢
       simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
-      exact ⟨hok.1.1, ⟨hok.1.2, hok.2⟩, by omega⟩
+      exact ⟨⟨hok.1.2, hok.2⟩, Or.inl ⟨hok.1.1, by omega⟩⟩
   | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩, rho, s0,
@@ -114,79 +118,82 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     · rw [hhead] at hok ⊢
       dsimp only at hok ⊢
       simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
-      exact ⟨hok.1.1.1, ⟨⟨hok.1.1.2, hok.1.2⟩, hok.2⟩, by omega⟩
+      exact ⟨⟨⟨hok.1.1.2, hok.1.2⟩, hok.2⟩, Or.inl ⟨hok.1.1.1, by omega⟩⟩
   | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩, rho, s0,
       by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok
-      dsimp only at hok
-      simp only [rufeR, rufeB, rufeS, Bool.false_and, Bool.false_eq_true] at hok
+    · rw [hhead] at hok ⊢
+      dsimp only at hok ⊢
+      simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS, Bool.and_eq_true] at hok ⊢
+      exact ⟨⟨hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1, hg, by omega⟩⟩
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩, rho, s0,
       by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok
-      dsimp only at hok
-      simp only [rufeR, rufeE, rufeS, Bool.false_and, Bool.false_eq_true] at hok
+    · rw [hhead] at hok ⊢
+      dsimp only at hok ⊢
+      simp only [potRest, kostenEnd, kostenStmt, rufeR, rufeE, rufeS, Bool.and_eq_true] at hok ⊢
+      exact ⟨hok.2, Or.inr ⟨n, hok.1, hg, by omega⟩⟩
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
     refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
       ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩, rho, s0,
       by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok
-      dsimp only at hok
-      simp only [rufeR, rufeB, Bool.false_and, Bool.false_eq_true] at hok
+    · rw [hhead] at hok ⊢
+      dsimp only at hok ⊢
+      simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
+      exact ⟨⟨hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1, hg, by omega⟩⟩
   | rueck caller rst hpop =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]
     exact ⟨id, Nat.le_refl _⟩
   | rueckCons caller rst hpop =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]
     exact ⟨id, Nat.le_refl _⟩
   | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]
     exact ⟨id, Nat.le_refl _⟩
   | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
       simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
   | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
       hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
       simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
   | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
       simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
   | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rw [hcaller]; dsimp only
     simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
     exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
   | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rw [hcaller]; dsimp only
     simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
     exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
   | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
     refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' => ?_⟩)
+      fun c' Z' ZS' => ?_⟩)
     dsimp only; rw [rufUpdateG_self]; dsimp only
     rw [hcaller]; dsimp only
     simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
@@ -307,7 +314,7 @@ theorem eintritt_push {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMasc
     (hl : (M.faeden f).stapel.length < (M'.faeden f).stapel.length) :
     ∃ (g : D.Fn) (rho : Env D (D.params g)) (s0 : World D),
       Eintritt P f g rho s0 ((M.faeden f).stapel.length + 1) M' := by
-  rcases schrittArt hs (fun _ => 0) (fun _ => true) with
+  rcases schrittArt hs (fun _ => 0) (fun _ => true) (fun _ => true) with
     ⟨hst, _⟩ | ⟨g, caller', rho, s0, hst, hk, _⟩ | ⟨caller, rst, hpop, hst, _⟩
   · rw [hst] at hl; exact absurd hl (Nat.lt_irrefl _)
   · exact ⟨g, rho, s0, hk, by rw [hst]; rfl⟩
@@ -322,7 +329,7 @@ inductive Seg {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (
     List (RufRahmenG D) → Nat → Prop where
   | nil : Seg T S pa [] 0
   | cons (r : RufRahmenG D) (i : ι) (rs : List (RufRahmenG D)) (p : Nat)
-      (hok : rufeR (S i) r.rest.2.2.2.2 = true) (h : Seg T S pa rs p) :
+      (hok : rufeR (S i) (fun _ => false) r.rest.2.2.2.2 = true) (h : Seg T S pa rs p) :
       Seg T S pa (r :: rs) (potRest (T i) pa r.rest.2.2.2.2 + p)
 
 /-- **The invariant**: thread `f` runs the segment `kopf :: oben` above the
@@ -344,7 +351,7 @@ variable {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : 
     the body costed at the entry frame's table. -/
 theorem kinv_eintritt {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : World D}
     {k : Nat} {M : RufMaschineG D} (hE : Eintritt P f g rho s0 k M) (i0 : ι)
-    (hok : rufeE (S i0) (P.rumpf g) = true) :
+    (hok : rufeE (S i0) (fun _ => false) (P.rumpf g) = true) :
     KInv T S pa (kostenEnd (T i0) pa (P.rumpf g)) f k M 0 := by
   obtain ⟨hk, hl⟩ := hE
   refine ⟨[], (M.faeden f).stapel, kostenEnd (T i0) pa (P.rumpf g) + 0, rfl, hl, ?_,
@@ -361,7 +368,7 @@ theorem kinv_eintritt {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : Wo
     callees are admitted there. -/
 theorem kinv_schritt
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
     {B : Nat} {f : Faden} {k : Nat} {M M' : RufMaschineG D} {n : Nat} {g : Faden}
     (hI : KInv T S pa B f k M n) (hs : RufSchrittG P O pa M g M') :
     n + (if g = f then 1 else 0) ≤ B ∧
@@ -373,12 +380,13 @@ theorem kinv_schritt
     obtain ⟨oben, unten, Φ, hst, hul, hseg, hB⟩ := hI
     cases hseg with
     | cons _ i _ p hok hrest =>
-      rcases schrittArt hs (T i) (S i) with
+      rcases schrittArt hs (T i) (S i) (fun _ => false) with
         ⟨hst', hA⟩ | ⟨g', caller', rho, s0, hst', hk', hB'⟩ | ⟨caller, rst, hpop, hst', hC⟩
       · obtain ⟨hok', hpot⟩ := hA hok
         refine ⟨by omega, fun _ => ⟨oben, unten, _, by rw [hst', hst], hul,
           Seg.cons _ i oben p hok' hrest, by omega⟩⟩
-      · obtain ⟨hZ, hokc, hpot⟩ := hB' hok
+      · obtain ⟨hokc, hdir⟩ := hB' hok
+        obtain ⟨hZ, hpot⟩ := hdir.resolve_right (fun ⟨_, hn, _⟩ => Bool.false_ne_true hn)
         have h1 := hS1 i g' hZ
         have h2 := hS2 i g' hZ
         refine ⟨by omega, fun _ => ⟨caller' :: oben, unten,
@@ -402,7 +410,7 @@ theorem kinv_schritt
           obtain ⟨rfl, rfl⟩ := hpop
           cases hrest with
           | cons _ j _ p' hokj hrest' =>
-            obtain ⟨hokc, hpotc⟩ := hC (T j) (S j)
+            obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false)
             refine ⟨oben', unten, _, hst', hul, Seg.cons _ j oben' p' (hokc hokj) hrest', ?_⟩
             omega
   · simp only [hgf, if_false, Nat.add_zero]
@@ -416,7 +424,7 @@ theorem kinv_schritt
     which the frame stays active, the own steps never exceed the budget. -/
 theorem kinv_lauf
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
     {B : Nat} {f : Faden} {k : Nat} {M1 : RufMaschineG D}
     (h0 : KInv T S pa B f k M1 0) :
     ∀ {M2 : RufMaschineG D} (run : SegLauf P O pa M1 M2), aktivVor f k run →
@@ -441,10 +449,10 @@ theorem kinv_lauf
     body own steps until (and including) its return. -/
 theorem rahmen_schritte
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
     {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : World D} {k : Nat}
     {M1 M2 : RufMaschineG D} (hE : Eintritt P f g rho s0 k M1) (i0 : ι)
-    (hok : rufeE (S i0) (P.rumpf g) = true)
+    (hok : rufeE (S i0) (fun _ => false) (P.rumpf g) = true)
     (run : SegLauf P O pa M1 M2) (hA : aktivVor f k run) :
     segZaehle run f ≤ kostenEnd (T i0) pa (P.rumpf g) :=
   (kinv_lauf T S nx P O pa hS1 hS2 (kinv_eintritt T S P pa hE i0 hok) run hA).1
@@ -466,7 +474,7 @@ def kostenTief (P : Programm D) (pa : Nat) : Nat → D.Fn → Nat
     over the WHOLE syntax instead of a fragment, and decidable. -/
 def rufTief (P : Programm D) : Nat → D.Fn → Bool
   | 0, _ => false
-  | n + 1, g => rufeE (rufTief P n) (P.rumpf g)
+  | n + 1, g => rufeE (rufTief P n) (fun _ => false) (P.rumpf g)
 
 /-- **TARGET 1 -- `frame_schritte_beschraenkt`.** Let thread `f` enter a
     frame of `g` with `k` frames below it (`Eintritt`, as every start frame

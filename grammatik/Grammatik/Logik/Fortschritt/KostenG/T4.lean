@@ -255,7 +255,7 @@ variable {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
 mutual
 theorem rufeS_of_StmtR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} :
-    StmtR A C mr s → rufeS Z s = true
+    StmtR A C mr s → rufeS Z (fun _ => false) s = true
   | .blatt _ hb => by cases hb <;> rfl
   | .ite _ _ _ ht he => by
       simp only [rufeS, Bool.and_eq_true]
@@ -289,7 +289,7 @@ theorem rufeS_of_StmtR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr 
 
 theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {b : Block D V l Γ Λ Λ'} :
-    BlockR A C mr b → rufeB Z b = true
+    BlockR A C mr b → rufeB Z (fun _ => false) b = true
   | .nil => rfl
   | .cons _ _ hs hr => by
       simp only [rufeB, Bool.and_eq_true]
@@ -322,7 +322,7 @@ theorem rufeB_of_BlockR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr
 
 theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)} {e : Endblock D V l Γ Λ} :
-    EndR A C e → rufeE Z e = true
+    EndR A C e → rufeE Z (fun _ => false) e = true
   | .ret _ _ => rfl
   | .cons _ _ hs hr => by
       simp only [rufeE, Bool.and_eq_true]
@@ -332,7 +332,7 @@ theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : 
 
 theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
-    {arms : Arms D V l Γ Λ Λ' cs} : ArmsR A C mr arms → rufeArms Z arms = true
+    {arms : Arms D V l Γ Λ Λ' cs} : ArmsR A C mr arms → rufeArms Z (fun _ => false) arms = true
   | .nil => rfl
   | .cons _ _ hb hr => by
       simp only [rufeArms, Bool.and_eq_true]
@@ -340,7 +340,7 @@ theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {
 
 theorem rufeGArms_of_GrundArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
-    {arms : GrundArms D V l Γ Λ Λ' n} : GrundArmsR A C mr arms → rufeGArms Z arms = true
+    {arms : GrundArms D V l Γ Λ Λ' n} : GrundArmsR A C mr arms → rufeGArms Z (fun _ => false) arms = true
   | .nil => rfl
   | .cons _ _ hb hr => by
       simp only [rufeGArms, Bool.and_eq_true]
