@@ -312,7 +312,7 @@ theorem kinv_faeden {ι : Type} {T : ι → D.Fn → Nat} {S : ι → D.Fn → B
     presented memory, and the invariant reads the acting thread's frames only). -/
 theorem kinv_laufX {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : ι → D.Fn → ι)
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) passes (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {B : Nat} {f : Faden} {k : Nat} {M1 : RufMaschineG D}
     (h0 : KInv T S passes B f k M1 0) :
     ∀ {M2 : RufMaschineG D} (run : SegLaufX P O passes Tg M1 M2), aktivVorX f k run →

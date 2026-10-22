@@ -6,11 +6,12 @@
   into exactly one class. The classes, strongest first:
   * `endet` -- every call returns: no `forever` in the call hull, every recursion cycle carries a measure
     (`decreases`). Bounds: T3/T4.
-  * `umgebung` -- a `forever` in the hull, left by no `leave`: it ends exactly when the environment stops it (the
-    `progress a` assumption of the loop; machine G grants its passes from outside). A kernel that ends only on a
-    shutdown signal is in this class.
-  * `bedingt` -- a `forever` left by a `leave`, or a tail-call cycle without a measure: it ends exactly when a
-    named condition C of the program holds -- the guard of the `leave`, or the base path of the cycle. An
+  * `umgebung` -- a `forever` in the hull, left by no `leave` and no `return` inside it: once control is in the
+    loop, only the environment ends it (the `progress a` assumption of the loop; machine G grants its passes from
+    outside). A kernel that ends only on a shutdown signal is in this class.
+  * `bedingt` -- a `forever` left by a `leave` or a `return` inside it, or a tail-call cycle without a measure: it
+    ends exactly when a named condition C of the program holds -- the guard of the exit, or the base path of the
+    cycle. An
     interpreter that ends when its guest halts is in this class. The algorithm DETERMINES the end as the exact
     condition C; whether C ever holds is the program's question (undecidable in general -- the language stays
     Turing complete).
@@ -60,7 +61,7 @@ end TermKlasse
 structure Befund (D : Deklaration) where
   /-- a `forever` stands in the body -/
   ewig : Bool := false
-  /-- a `leave` leaves a `forever` -/
+  /-- a `leave` or a `return` leaves a `forever` -/
   austritt : Bool := false
   /-- the direct callees -/
   rufe : List D.Fn := []
@@ -155,6 +156,8 @@ def befS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig danachLeer 
   | .retry _ _ body ueber => befB false imEwig body ++ befB ebene imEwig ueber
   | .forever _ _ body => { ewig := true } ++ befB true true body
   | .leave _ => { austritt := ebene }
+  | .ret .. => { austritt := imEwig }
+  | .retWhy .. => { austritt := imEwig }
   | _ => {}
 
 def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
@@ -190,8 +193,8 @@ def befGArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} (ebene imEw
   | .cons b rest => befB ebene imEwig b ++ befGArms ebene imEwig rest
 
 def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endblock D V l Γ Λ → Befund D
-  | .ret .. => {}
-  | .retWhy .. => {}
+  | .ret .. => { austritt := imEwig }
+  | .retWhy .. => { austritt := imEwig }
   | .leave _ => { austritt := ebene }
   | .next _ => {}
   | .cons s rest => befS ebene imEwig rest.retLeer s ++ befE ebene imEwig rest

@@ -24,10 +24,10 @@ variable {D : Deklaration}
     index `i0`, and their total potential. -/
 inductive SegU {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (pa : Nat) (i0 : ι) :
     List (RufRahmenG D) → Nat → Prop where
-  | eins (r : RufRahmenG D) (hok : rufeR (S i0) (fun _ => false) r.rest.2.2.2.2 = true) :
+  | eins (r : RufRahmenG D) (hok : rufeR (S i0) (fun _ => false) true r.rest.2.2.2.2 = true) :
       SegU T S pa i0 [r] (potRest (T i0) pa r.rest.2.2.2.2)
   | cons (r : RufRahmenG D) (i : ι) (rs : List (RufRahmenG D)) (p : Nat)
-      (hok : rufeR (S i) (fun _ => false) r.rest.2.2.2.2 = true) (h : SegU T S pa i0 rs p) :
+      (hok : rufeR (S i) (fun _ => false) true r.rest.2.2.2.2 = true) (h : SegU T S pa i0 rs p) :
       SegU T S pa i0 (r :: rs) (potRest (T i) pa r.rest.2.2.2.2 + p)
 
 /-- **The invariant**: as `KInv`, with the entry frame's index kept. -/
@@ -49,7 +49,7 @@ theorem segU_pos {i0 : ι} : ∀ {rs : List (RufRahmenG D)} {Φ : Nat}, SegU T S
 /-- **The engine step**, keeping the entry frame's index. -/
 theorem dinv_schritt
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {B : Nat} {i0 : ι} {f : Faden} {k : Nat} {M M' : RufMaschineG D} {n : Nat} {g : Faden}
     (hI : DInv T S pa B i0 f k M n) (hs : RufSchrittG P O pa M g M') :
     n + (if g = f then 1 else 0) ≤ B ∧
@@ -62,7 +62,7 @@ theorem dinv_schritt
     cases hseg with
     | eins _ hok =>
       -- the entry frame alone: index `i0`
-      rcases schrittArt hs (T i0) (S i0) (fun _ => false) with
+      rcases schrittArt hs (T i0) (S i0) (fun _ => false) true with
         ⟨hst', hA⟩ | ⟨g', caller', rho, s0, hst', hk', hB'⟩ | ⟨caller, rst, hpop, hst', hC⟩
       · obtain ⟨hok', hpot⟩ := hA hok
         exact ⟨by omega, fun _ => ⟨[], unten, _, by rw [hst', hst], hul, SegU.eins _ hok', by omega⟩⟩
@@ -83,7 +83,7 @@ theorem dinv_schritt
         simp only [List.length_cons] at hul
         omega
     | cons _ i _ p hok hrest =>
-      rcases schrittArt hs (T i) (S i) (fun _ => false) with
+      rcases schrittArt hs (T i) (S i) (fun _ => false) true with
         ⟨hst', hA⟩ | ⟨g', caller', rho, s0, hst', hk', hB'⟩ | ⟨caller, rst, hpop, hst', hC⟩
       · obtain ⟨hok', hpot⟩ := hA hok
         exact ⟨by omega, fun _ => ⟨oben, unten, _, by rw [hst', hst], hul, SegU.cons _ i oben p hok' hrest,
@@ -107,11 +107,11 @@ theorem dinv_schritt
           obtain ⟨rfl, rfl⟩ := hpop
           cases hrest with
           | eins _ hokj =>
-            obtain ⟨hokc, hpotc⟩ := hC (T i0) (S i0) (fun _ => false)
+            obtain ⟨hokc, hpotc⟩ := hC (T i0) (S i0) (fun _ => false) true
             refine ⟨[], unten, _, hst', hul, SegU.eins _ (hokc hokj), ?_⟩
             omega
           | cons _ j _ q hokj hrest' =>
-            obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false)
+            obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false) true
             refine ⟨oben', unten, _, hst', hul, SegU.cons _ j oben' q (hokc hokj) hrest', ?_⟩
             omega
   · simp only [hgf, ite_false, Nat.add_zero]
@@ -124,7 +124,7 @@ theorem dinv_schritt
 /-- **The engine over a run**, keeping the entry frame's index. -/
 theorem dinv_lauf
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {B : Nat} {i0 : ι} {f : Faden} {k : Nat} {M1 : RufMaschineG D}
     (h0 : DInv T S pa B i0 f k M1 0) :
     ∀ {M2 : RufMaschineG D} (run : SegLauf P O pa M1 M2), aktivVor f k run →
@@ -163,14 +163,14 @@ def passKosten (c : D.Fn → Nat) {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
     boundary `.ewig a n inv body k`, the thread takes at most one pass's cost of own steps. -/
 theorem durchgang_schritte
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
-    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) (P.rumpf g) = true)
+    (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : World D} {kk : Nat}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {a : D.Annahme} {n : Nat}
     {inv : Expr D Γ Λ .bool} {body : Block D (vertragVon D g) true Γ Λ Λ}
     {k : GRest D (vertragVon D g) l Γ Λ} {ρ1 ρ2 : Env D Γ} {M1 M2 : RufMaschineG D} (i0 : ι)
     (h1 : (M1.faeden f).kopf = ⟨g, rho, s0, ⟨l, Γ, Λ, ρ1, .ewig a (n + 1) inv body k⟩⟩)
     (hl1 : (M1.faeden f).stapel.length = kk)
-    (hok : rufeR (S i0) (fun _ => false) (GRest.ewig a (n + 1) inv body k) = true)
+    (hok : rufeR (S i0) (fun _ => false) true (GRest.ewig a (n + 1) inv body k) = true)
     (run : SegLauf P O pa M1 M2) (hA : aktivVor f kk run)
     (h2 : (M2.faeden f).kopf = ⟨g, rho, s0, ⟨l, Γ, Λ, ρ2, .ewig a n inv body k⟩⟩)
     (hl2 : (M2.faeden f).stapel.length = kk) :
