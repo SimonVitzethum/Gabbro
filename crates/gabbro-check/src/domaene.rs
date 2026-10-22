@@ -1044,7 +1044,7 @@ fn d027_orte_aus_expr(e: &Expr, verweise: &HashSet<String>, aus: &mut Vec<Ort>) 
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
         |         ExprArt::Klammer(_)
-        | ExprArt::Unaer(_, _)
+        | ExprArt::Unaer(_, _) | ExprArt::IstSome(_)
         // **Lane E1:** the arguments of a library call name places like any
         // call's; the descent runs through `unterausdruecke` like the rest.
         // **Lane 111:** the elements of a table literal the same way.

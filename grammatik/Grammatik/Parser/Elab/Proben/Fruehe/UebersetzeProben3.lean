@@ -79,9 +79,33 @@ def conc_first : String :=
   "module m { impl fn w() { } impl fn v() { } entry e vector 1 arch x86_64 { regs in { } regs out { } preserves { } clobbers { } stack k per cpu nested never dispatch m::v; } concurrent { w }; }"
 theorem concurrent_roots_come_first : roots conc_first = some (["w", "v"], []) := by decide +kernel
 
+/-- A start with its arguments (`concurrent { m::f(a, b) }`): one value per parameter. -/
+def conc_args_ok : String :=
+  "module m { impl fn p(i : u32 in 0 .. 1, b : bool) { } concurrent { p(1, true) }; }"
+theorem conc_args_ok_roots : roots conc_args_ok = some (["p"], []) := by decide +kernel
+
+/-- A start without the arguments its function needs. -/
 def conc_params_refused : String := "module m { impl fn p(i : u32 in 0 .. 1) { } concurrent { p }; }"
 theorem conc_params_refused_stufe :
-    stufe conc_params_refused = "elab: concurrent member names a function with parameters: no start-argument form: p" := by
+    stufe conc_params_refused = "elab: concurrent member with 0 arguments for 1 parameters: p" := by
+  decide +kernel
+
+/-- A start argument outside its parameter's range. -/
+def conc_arg_range_refused : String := "module m { impl fn p(i : u32 in 0 .. 1) { } concurrent { p(2) }; }"
+theorem conc_arg_range_refused_stufe :
+    stufe conc_arg_range_refused = "elab: concurrent member with an argument outside its parameter's type: p" := by
+  decide +kernel
+
+/-- A pointer parameter is started with `&T`, the one pointer to the carrier its type names. -/
+def conc_ptr_ok : String :=
+  "module m { table T count 2 { slot { v : u32, } } impl fn p(k : ptr<normal, r> T) { } concurrent { p(&T) }; }"
+theorem conc_ptr_ok_roots : roots conc_ptr_ok = some (["p"], []) := by decide +kernel
+
+/-- Twin: `&U` for a pointer into `T` is refused. -/
+def conc_ptr_refused : String :=
+  "module m { table T count 2 { slot { v : u32, } } table U count 2 { slot { v : u32, } } impl fn p(k : ptr<normal, r> T) { } concurrent { p(&U) }; }"
+theorem conc_ptr_refused_stufe :
+    stufe conc_ptr_refused = "elab: concurrent member with an argument outside its parameter's type: p" := by
   decide +kernel
 
 def conc_unknown_refused : String := "module m { impl fn w() { } concurrent { nix }; }"

@@ -311,7 +311,7 @@ def itemGutB : Nat → SItemTief → Bool
   | _ + 1, .whyT _ cs _ => cs.all fun c => gut c.2.1 && c.1 != "exhaustive"
   | _ + 1, .groupT _ ms ivs => !ms.isEmpty && ivs.all invGutB
   | _ + 1, .fnT sig b => sigGutB sig && anwGutB 100 true b
-  | _ + 1, .concT ps => ps.all fun p => !p.isEmpty && p.all nameForm
+  | _ + 1, .concT ps => ps.all fun p => !p.1.isEmpty && p.1.all nameForm && p.2.all gut
   | _ + 1, .entryT e => e.vektor.all gut && e.ist.all gut &&
       (e.nest.isNone || e.nest == some "never" || e.nest == some "masked") && !e.dispatch.isEmpty
   | _ + 1, _ => false
@@ -363,7 +363,7 @@ theorem itemGutB_sound : ∀ (n : Nat) (it : SItemTief), itemGutB n it = true �
     | .concT ps, h =>
       simp only [itemGutB, List.all_eq_true, Bool.and_eq_true, Bool.not_eq_true',
         List.isEmpty_eq_false_iff] at h
-      exact .concT ps fun p hp => ⟨(h p hp).1, (h p hp).2⟩
+      exact .concT ps fun p hp => ⟨⟨(h p hp).1.1, (h p hp).1.2⟩, (h p hp).2⟩
     | .entryT e, h =>
       simp only [itemGutB, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq, Bool.not_eq_true',
         List.isEmpty_eq_false_iff, Option.isNone_iff_eq_none] at h

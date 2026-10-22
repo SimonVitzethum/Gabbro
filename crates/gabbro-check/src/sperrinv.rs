@@ -128,7 +128,7 @@ fn ausdruck(g: &mut Gang<'_>, e: &Expr) {
         | ExprArt::Falsch => {}
         ExprArt::Ort(o) => ort_merken(g, o),
         ExprArt::Klammer(x) => ausdruck(g, x),
-        ExprArt::Unaer(_, x) => ausdruck(g, x),
+        ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => ausdruck(g, x),
         ExprArt::Binaer(_, a, b) => {
             ausdruck(g, a);
             ausdruck(g, b);

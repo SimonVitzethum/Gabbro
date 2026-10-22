@@ -211,7 +211,7 @@ def groesse : SExpr → Nat
   | .old x => groesse x + 1
   | .res => 1
   | .why _ _ => 1
-  | .ext _ _ _ => 1
+  | .ext _ _ xs => groesseListe xs + 1
 def groesseListe : List SExpr → Nat
   | [] => 0
   | x :: xs => groesse x + groesseListe xs
@@ -424,6 +424,11 @@ def istKopfWort (s : String) : Bool :=
 -- fails; suffixes attach only to place bases, so `feld`/`index`/
 -- `arrow` need a `gutPlatz` base (`grundKette` multi-segment
 -- paths print as field chains and parse back through suffixes).
+/-- A bare variable. -/
+def istVar : SExpr → Bool
+  | .variable _ => true
+  | _ => false
+
 mutual
 def gut : SExpr → Bool
   | .lit _ => true
@@ -447,6 +452,7 @@ def gut : SExpr → Bool
   | .why g _ =>
     !istKopfWort g && !istIntWort g && !istZuckerBreite g &&
       !strEq g "Self"
+  | .ext .call [] xs => gutOrtRuf xs
   | .ext _ _ _ => false
 def gutPlatz : SExpr → Bool
   | .variable s => !istKopfWort s
@@ -457,6 +463,11 @@ def gutPlatz : SExpr → Bool
 def gutListe : List SExpr → Bool
   | [] => true
   | x :: xs => gut x && gutListe xs
+-- A call through a place (`o.is_some()`, `p->f(x)`): the callee is a suffixed place, never a bare
+-- name (a bare name before `(` reads as the direct call `.call`).
+def gutOrtRuf : List SExpr → Bool
+  | [] => false
+  | c :: xs => gutPlatz c && !istVar c && gutListe xs
 end
 
 -- A benign parser follow: the token list starts with no loop
@@ -997,6 +1008,37 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
   | why g f => simp [gutPlatz] at h
   | ext xk xn xs => simp [gutPlatz] at h
 
+/-- The printable `ext` trees are the calls through a place: a suffixed place, then the arguments. -/
+theorem gut_ruf_faelle (k : XKind) (ns : List String) (xs : List SExpr) (h : gut (.ext k ns xs) = true) :
+    k = .call ∧ ns = [] ∧ ∃ c ys, xs = c :: ys ∧ gutPlatz c = true ∧ istVar c = false ∧
+      gutListe ys = true := by
+  cases k with
+  | call =>
+    cases ns with
+    | cons _ _ => simp [gut] at h
+    | nil =>
+      cases xs with
+      | nil => simp [gut, gutOrtRuf] at h
+      | cons c ys =>
+        simp only [gut, gutOrtRuf, Bool.and_eq_true, Bool.not_eq_true'] at h
+        exact ⟨rfl, rfl, c, ys, rfl, h.1.1, h.1.2, h.2⟩
+  | _ => simp [gut] at h
+
+/-- Printed operands, comma separated, are the printed list. -/
+theorem kommaToks_viele : ∀ (ys : List SExpr), kommaToks (druckToksViele ys) = druckToksListe ys
+  | [] => rfl
+  | [_] => rfl
+  | y :: z :: zs => by
+    have ih := kommaToks_viele (z :: zs)
+    simp only [druckToksViele] at ih ⊢
+    simp only [kommaToks, druckToksListe, ih]
+
+/-- The print of a call through a place: the place, then the parenthesised arguments. -/
+theorem druck_ruf (c : SExpr) (ys : List SExpr) :
+    druckToks (.ext .call [] (c :: ys)) =
+      druckToks c ++ ([.zeichen "("] ++ druckToksListe ys ++ [.zeichen ")"]) := by
+  simp only [druckToks, druckToksViele, druckExtToks, kommaToks_viele, List.append_assoc]
+
 -- Head and tail of a `gut` list stay `gut`.
 theorem gutListe_Kopf : ∀ (x : SExpr) (xs : List SExpr),
     gutListe (x :: xs) = true → gut x = true := by
@@ -1482,7 +1524,18 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         simp at h
       · intro h
         simp at h
-    | ext xk xn xs => exact absurd hg (by simp [gut])
+    | ext xk xn xs =>
+      obtain ⟨rfl, rfl, c, ys, rfl, hc, -, hys⟩ := gut_ruf_faelle xk xn xs hg
+      have hpc := groesse_pos c
+      have hcs : groesse c ≤ n := by simp only [groesse, groesseListe] at hs; omega
+      have hcall : groesse (.call "x" ys) ≤ n := by simp only [groesse, groesseListe] at hs ⊢; omega
+      have hgc : gut (.call "x" ys) = true := by simp only [gut, hys, Bool.and_true]; decide
+      rw [druck_ruf, List.mem_append] at hm
+      rcases hm with hm | hm
+      · exact ih c hcs (gut_of_gutPlatz c hc) t hm
+      · apply ih (.call "x" ys) hcall hgc t
+        simp only [druckToks, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hm ⊢
+        rcases hm with (h | h) | h <;> simp [h]
 
 -- A printed `gut` tree never starts with `)` (heads are literals,
 -- names or openers; suffix chains delver into the base, operators
@@ -1648,7 +1701,15 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       subst ha
       intro h
       simp at h
-    | ext xk xn xs => exact absurd hg (by simp [gut])
+    | ext xk xn xs =>
+      obtain ⟨rfl, rfl, c, ys, rfl, hc, -, -⟩ := gut_ruf_faelle xk xn xs hg
+      have hcs : groesse c ≤ n := by simp only [groesse, groesseListe] at hs; omega
+      have hlen := toksLang (groesse c) c (Nat.le_refl _)
+      obtain ⟨a', R', hc'⟩ := List.exists_cons_of_ne_nil (List.ne_nil_of_length_pos hlen)
+      rw [druck_ruf, hc', List.cons_append] at hT
+      injection hT with ha _
+      subst ha
+      exact ih c hcs (gut_of_gutPlatz c hc) a' R' hc'
 
 -- The round-trip invariant at size bound `n`: every level parses
 -- every `gut` tree from its printed tokens with fuel linear in

@@ -1155,7 +1155,7 @@ fn scan_expr(e: &Expr, acc: &mut Scan) {
             scan_expr(a, acc);
             scan_expr(b, acc);
         }
-        ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => scan_expr(x, acc),
+        ExprArt::Unaer(_, x) | ExprArt::Klammer(x) | ExprArt::IstSome(x) => scan_expr(x, acc),
         ExprArt::Ruf(r) => scan_ruf(r, acc),
         ExprArt::Eingebaut(_) => {}
         _ => {}
@@ -3655,9 +3655,10 @@ fn check_locks(model: &Model, scope: &Scope) -> Result<(), Refusal> {
 /// members first, then the `entry`/`boot` dispatch roots -- one pool,
 /// because one boot assignment starts them all (the order
 /// `startexklusiv.rs` reads). Every start resolves to exactly one exported
-/// `impl fn`; a start with parameters has no `Env` form (the declaration
-/// carries no arguments) and is refused by name, as is a dispatch that
-/// names nothing exported.
+/// `impl fn`; a start with parameters is refused by name: its arguments
+/// (`concurrent { m::f(a, b) }`, checked by `N591`/`N592`) are not yet written
+/// into the exported start's `Env`. A dispatch that names nothing exported
+/// is refused as well.
 fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
     fn nimm(model: &Model, kurz: &str, quelle: &str, aus: &mut Vec<usize>) -> Result<(), Refusal> {
         let treffer: Vec<usize> =
@@ -3671,7 +3672,7 @@ fn check_starts(model: &Model) -> Result<Vec<usize>, Refusal> {
         if !model.fns[i].decl.parameter.is_empty() {
             return Err(refuse(
                 "LG001",
-                format!("start `{kurz}` takes parameters, which have no start-argument form"),
+                format!("start `{kurz}` takes parameters: its start arguments are not exported yet"),
             ));
         }
         aus.push(i);
@@ -4994,7 +4995,7 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
                 foot_expr(a, model, params, acc);
                 foot_expr(b, model, params, acc);
             }
-            ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => foot_expr(x, model, params, acc),
+            ExprArt::Unaer(_, x) | ExprArt::Klammer(x) | ExprArt::IstSome(x) => foot_expr(x, model, params, acc),
             ExprArt::Ruf(r) => {
                 for a in &r.argumente {
                     foot_expr(a, model, params, acc);
@@ -5161,7 +5162,7 @@ fn foot_fn(cf: &CheckedFn, model: &Model, fns: &[CheckedFn]) -> Vec<usize> {
                 foot_expr(a, model, params, acc);
                 foot_expr(b, model, params, acc);
             }
-            ExprArt::Unaer(_, x) | ExprArt::Klammer(x) => foot_expr(x, model, params, acc),
+            ExprArt::Unaer(_, x) | ExprArt::Klammer(x) | ExprArt::IstSome(x) => foot_expr(x, model, params, acc),
             _ => {}
         }
     }

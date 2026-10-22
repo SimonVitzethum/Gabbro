@@ -116,9 +116,8 @@ def genTF (K : Kenner D) (V : Vertrag D) (cap : Nat) : Nat → Nat → (l : Bool
   | f + 1, n + 1, l, Γ, Λ =>
     let Et := genEF K (min n eGrenze) (min n eGrenze) Γ Λ
     let gen := fun m l' Γ' Λ' => genTF K V cap f (if l' = l then min m cap else m) l' Γ' Λ'
-    let cs := (knotenKeys' (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
-    let exK : List (Ctx × List (Res D)) := ((knotenKeys' (n + 1) l Γ Λ Et).map (fun k => (k.2.1, k.2.2.1)) ++
-      (Aufz.glob.map fun g => (D.gtyp g :: Γ, Λ)) ++ (Aufz.reg.map fun r => (D.rtyp r :: Γ, Λ))).eraseDups
+    let cs := (knotenKeysG (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
+    let exK : List (Ctx × List (Res D)) := (knotenKeysG (n + 1) l Γ Λ Et).map (fun k => (k.2.1, k.2.2.1)) |>.eraseDups
     let ec : List (EEintrag D) := exK.map fun k => ⟨k.1, k.2, Thunk.mk fun _ => genEF K (min n eGrenze) (min n eGrenze) k.1 k.2⟩
     let O : Orakel V :=
       { ex := fun Γ' Λ' m => tab ((findeE ec Γ' Λ').getD (genEF K (min m eGrenze) (min m eGrenze) Γ' Λ'))

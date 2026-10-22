@@ -114,7 +114,7 @@ theorem t35_lex :
     lex "concurrent { read_a, read_c };" = .ok tt35 := by
   decide
 theorem t35 : beqTopTief (parseTopTief tt35)
-    (.ok [.concT [["read_a"], ["read_c"]]]) = true := by
+    (.ok [.concT [(["read_a"], []), (["read_c"], [])]]) = true := by
   decide
 -- beispiele/108-disjoint-start-locks.gab (the declared pair).
 -- Rust: `Concurrent` -- same shape.

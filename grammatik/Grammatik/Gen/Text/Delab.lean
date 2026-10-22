@@ -100,6 +100,12 @@ def delabE (kopf : Option Nat) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : 
   | .shr _ _ _ _ _ a b => do .ok (.bin ">>" (← delabE kopf a) (← delabE kopf b))
   | .none _ => .ok (.call "None" [])
   | .some e => do .ok (.call "Some" [← delabE kopf e])
+  | .istSome e => do
+      -- `o.is_some()` over a place; `None`/`Some(i)` have no suffix (no source program tests them)
+      match ← delabE kopf e with
+      | .variable v => .ok (.ext .call [] [.field (.variable v) "is_some"])
+      | .field b f => .ok (.ext .call [] [.field (.field b f) "is_some"])
+      | _ => .error "is_some over a value that is no place"
   | .oldG g _ => .ok (.old (.variable (nGlob (show Fin z.globs.length from g).val)))
   | .oldS t f i _ => do
       .ok (.old (.field (.index (.field (.variable (nTab (show Fin z.tabs.length from t).val)) "slots")
@@ -450,6 +456,16 @@ def eintritt (i : Nat) : SItemTief :=
             erhaelt := [], kills := [], perCpu := true, ist := none, dispatch := ["m", nFn i],
             «via» := some "idt", arch := "x86_64", stapel := "stk" ++ toString i, nest := some "never" }
 
+/-- The value a start passes for a parameter: the least value of its type (a start's arguments do not enter
+    the checker's verdict; the language needs one value per parameter). -/
+def startWert : Ty → Except String SExpr
+  | .int lo _ => .ok (zahlE lo)
+  | .bool => .ok .fls
+  | .opt _ => .ok (.call "None" [])
+  | .ptr t _ => .ok (.fnref (nTab t))
+  | .fnptr _ => .error "start argument of a function-pointer type"
+  | _ => .error "start argument of a type without a value form"
+
 /-- **The delaborator**: a program of the generator as the items of one module. -/
 def delab (P : Programm z.deklaration) (ws : List z.deklaration.Fn) : Except String (List SItemTief) := do
   if !z.marken.isEmpty then throw "marks without a spelling"
@@ -460,8 +476,11 @@ def delab (P : Programm z.deklaration) (ws : List z.deklaration.Fn) : Except Str
   let dev ← delabDev z
   let invs ← (List.finRange z.invs.length).mapM (delabInv z P)
   let fns ← (List.finRange z.fns.length).mapM (delabFn z P (!z.regs.isEmpty))
-  let starts := if ws.isEmpty then [] else
-    [SItemTief.concT (ws.map fun f => ["m", nFn (show Fin z.fns.length from f).val])]
+  let starts ← if ws.isEmpty then pure [] else do
+    let ms ← ws.mapM fun f => do
+      let as ← (z.deklaration.signatur f).params.mapM startWert
+      pure (["m", nFn (show Fin z.fns.length from f).val], as)
+    pure [SItemTief.concT ms]
   let eintritte := ((List.finRange z.fns.length).filter fun f => P.unterbricht f).map fun f => eintritt f.val
   pure [.modT "m" (tabs ++ globs ++ locks ++ dev ++ (gruende z).map grundItem ++ invs ++ fns ++ starts ++ eintritte)]
 

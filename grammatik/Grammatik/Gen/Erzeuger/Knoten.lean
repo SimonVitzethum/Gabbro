@@ -136,6 +136,14 @@ def knotenKeys (n : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (Et : List (L
 def knotenKeys' (n : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (Et : List (List (SE D Γ Λ))) : List (Schl D) :=
   (knotenKeys n l Γ Λ Et).filter fun k => 0 < k.2.2.2
 
+/-- The keys of a node's cache: the contexts its statements open (`knotenKeys'`) and the contexts after reading a
+    static or a register (`let x = g`, bound `n - 1`). Without the second part those tables are rebuilt at every
+    request, which dominates a member with several statics. -/
+def knotenKeysG (n : Nat) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (Et : List (List (SE D Γ Λ))) : List (Schl D) :=
+  knotenKeys' n l Γ Λ Et ++
+    (((Aufz.glob.map fun g => (D.gtyp g :: Γ, Λ)) ++ (Aufz.reg.map fun r => (D.rtyp r :: Γ, Λ))).eraseDups.map
+      fun k => (l, k.1, k.2, n - 1))
+
 /-- **The table of a context by size**: the buckets `0 .. n`, by fuel. -/
 def genT (V : Vertrag D) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : List (Res D)) → List (Eimer V l Γ Λ)
   | _, 0, _, _, _ => [([], [], [])]
@@ -143,7 +151,7 @@ def genT (V : Vertrag D) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : L
   | f + 1, n + 1, l, Γ, Λ =>
     let Et := genE n n Γ Λ
     let gen := fun m l' Γ' Λ' => genT V f m l' Γ' Λ'
-    tabT (orakelC V gen ((knotenKeys' (n + 1) l Γ Λ Et).map (CEintrag.neu V gen))) (tab Et) (n + 1)
+    tabT (orakelC V gen ((knotenKeysG (n + 1) l Γ Λ Et).map (CEintrag.neu V gen))) (tab Et) (n + 1)
 
 theorem groesseStmt_pos {Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') : 1 ≤ groesseStmt s := by
   cases s <;> simp only [groesseStmt] <;> omega
@@ -298,7 +306,7 @@ theorem genT_vollst (V : Vertrag D) : ∀ (f n : Nat) (l : Bool) (Γ : Ctx) (Λ 
       · have := groesseEnd_pos e; omega
     · let Et := genE nmax nmax Γ Λ
       let gen := fun m l' Γ' Λ' => genT V f m l' Γ' Λ'
-      let O := orakelC V gen ((knotenKeys' (nmax + 1) l Γ Λ Et).map (CEintrag.neu V gen))
+      let O := orakelC V gen ((knotenKeysG (nmax + 1) l Γ Λ Et).map (CEintrag.neu V gen))
       let E : Sz (SE D Γ Λ) := tab Et
       have hgen : genT V (f + 1) (nmax + 1) l Γ Λ = tabT O E (nmax + 1) := rfl
       rw [hgen]

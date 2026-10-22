@@ -1911,7 +1911,7 @@ def items108 : List SItemTief := [.modT
                 (.field (.variable "T") "slots")
                 (.lit 1))
               "v"))))),
-    .concT [["read_a"], ["read_c"]]]]
+    .concT [(["read_a"], []), (["read_c"], [])]]]
 
 theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
   decide

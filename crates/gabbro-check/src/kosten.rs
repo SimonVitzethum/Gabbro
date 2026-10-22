@@ -1305,7 +1305,7 @@ impl<'a> Rechner<'a> {
                 .fold(Kosten::Zahl(1), |k, ix| k.plus(self.ausdruck(ix, lokal))),
             ExprArt::Alt(_) => Kosten::Zahl(0),
             ExprArt::Klammer(i) => self.ausdruck(i, lokal),
-            ExprArt::Unaer(_, i) => Kosten::Zahl(1).plus(self.ausdruck(i, lokal)),
+            ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => Kosten::Zahl(1).plus(self.ausdruck(i, lokal)),
             ExprArt::Binaer(_, a, b) => {
                 Kosten::Zahl(1).plus(self.ausdruck(a, lokal)).plus(self.ausdruck(b, lokal))
             }

@@ -1857,6 +1857,23 @@ fn senke_expr_mit(k: &mut Koerper, e: &Expr, _erwartet: Option<(&LlTyp, Zeichen)
             let v = senke_expr(k, x)?;
             senke_unaer(k, *op, v, e.span)
         }
+        // `o.is_some()`: the tag of the `%gabopt` (1 for `Some`, 0 for `None`), as in an option `match`.
+        ExprArt::IstSome(x) => {
+            let v = senke_expr(k, x)?;
+            if !matches!(&v.typ, LlTyp::Benannt(n) if n == "gabopt") {
+                weigere(k.s, "Y106", e.span, "is_some over a value that is no option".to_string());
+                return None;
+            }
+            let slot = k.alloca("%gabopt");
+            k.zeile(&format!("store %gabopt {}, ptr {slot}, align 8", v.text));
+            let tp = k.tmp();
+            k.zeile(&format!("{tp} = getelementptr %gabopt, ptr {slot}, i32 0, i32 0"));
+            let tag = k.tmp();
+            k.zeile(&format!("{tag} = load i32, ptr {tp}, align 4"));
+            let t = k.tmp();
+            k.zeile(&format!("{t} = icmp ne i32 {tag}, 0"));
+            Some(Wert::int(t, 1, Zeichen::Egal))
+        }
         ExprArt::Binaer(op, a, b) => {
             senke_binaer(k, *op, a, b, e.span, _erwartet)
         }
@@ -8631,7 +8648,7 @@ fn rufe_in_expr(e: &Expr, out: &mut Vec<Pfad>) {
             }
         }
         ExprArt::Klammer(x) => rufe_in_expr(x, out),
-        ExprArt::Unaer(_, x) => rufe_in_expr(x, out),
+        ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => rufe_in_expr(x, out),
         ExprArt::Binaer(_, a, b) => {
             rufe_in_expr(a, out);
             rufe_in_expr(b, out);

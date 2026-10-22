@@ -207,7 +207,9 @@ only `n += k`; computable domain bound; **not nested** in another loop; nothing 
 `opaque` forbids conversion in both directions. `tagged` is the sum type; `match` over it is
 exhaustive, and a `Variant(e)` is the construction (unknown/ambiguous case `N280`, payload
 mismatch `N281`–`N284`). There is **no general `option T`**: over `index into T` it is the
-table's index option; over anything else the writer spells a two-case `tagged` type.
+table's index option; over anything else the writer spells a two-case `tagged` type. The index
+option is read by `match` (`Some(i)`/`None`) or tested by `x.is_some()` (`Expr.istSome`, a `bool`; over
+anything but an option at a place `N593`).
 `string max N` is a bounded string (one length word plus `N` bytes, no terminator).
 
 ### 3.4 Bits, widths, shifts, overflow
@@ -973,7 +975,9 @@ place, so one function may check the flag and another read the payload (§4).
 
 ### 11.7 Threads and `concurrent`
 
-`concurrent { f, g }` declares the bodies that run concurrently; the checker holds them against
+`concurrent { f, g(1, true) }` declares the bodies that run concurrently, each with the
+arguments it is started with (one value per parameter -- a literal in range, `true`/`false`, `None`,
+`&T` for a pointer into `T` -- `N591`/`N592`); the checker holds them against
 each other over the transitive hulls — shared writes fall (`W001`), undeclared overlapping roots
 fall (`W002`), an incomplete hull refuses (`W003`). `start` creates real threads in the
 generated runtime. Per-form atomicity (which emitted forms are single accesses) is measured per

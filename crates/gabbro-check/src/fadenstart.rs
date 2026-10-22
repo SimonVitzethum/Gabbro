@@ -49,7 +49,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 /// One `start` statement with the holding context it stands in.
 struct Fund {
@@ -127,6 +127,127 @@ pub fn wurzeln(baum: &Programm) -> Vec<(String, String, Span)> {
 
 fn melde(code: &'static str, span: Span, text: String, notiz: &str, absagen: &mut Absagen) {
     absagen.schiebe(Absage::fehler(code, span, text).mit_notiz(notiz));
+}
+
+/// A literal integer value (`n` or `-n`), if the argument is one.
+fn ganz_literal(e: &Expr) -> Option<i128> {
+    match &e.art {
+        ExprArt::Zahl(n) => i128::try_from(*n).ok(),
+        ExprArt::Unaer(UnOp::Negativ, x) => match &x.art {
+            ExprArt::Zahl(n) => i128::try_from(*n).ok().map(|v| -v),
+            _ => None,
+        },
+        ExprArt::Klammer(x) => ganz_literal(x),
+        _ => None,
+    }
+}
+
+/// The range of an integer parameter type with literal bounds (the bare word: its full range).
+fn literal_bereich(t: &IntTy) -> Option<(i128, i128)> {
+    if let Some(b) = &t.bereich {
+        let lo = ganz_literal(&b.von)?;
+        let hi = ganz_literal(&b.bis)?;
+        Some((lo, if b.exklusiv { hi - 1 } else { hi }))
+    } else {
+        let (breite, vz) = crate::umgebung::breite_von(t.wort)?;
+        Some(crate::typen::grenzen(breite, vz))
+    }
+}
+
+/// Is the start argument a value of the parameter's type: a literal in the range, `true`/`false`, `None`
+/// for an `option index` -- the forms the Lean front end reads (`uStartArg`).
+fn startwert_passt(u: &crate::umgebung::Umgebung, modul: &str, t: &TypExpr, a: &Expr) -> bool {
+    match t {
+        TypExpr::Int(i) => match (ganz_literal(a), literal_bereich(i)) {
+            (Some(v), Some((lo, hi))) => lo <= v && v <= hi,
+            _ => false,
+        },
+        TypExpr::Bool(_) => matches!(a.art, ExprArt::Wahr | ExprArt::Falsch),
+        // `index into T` is the range `0 .. count - 1` (Lean `Ty.index n = .int 0 (n - 1)`): a literal in it.
+        TypExpr::Index { tabelle, optional: false, .. } => {
+            match (ganz_literal(a), u.indextyp(modul, &tabelle.text, false)) {
+                (Some(v), crate::typen::Typ::Benannt { unter, .. }) => match unter.as_ref() {
+                    crate::typen::Typ::Ganzzahl(b) => b.min <= v && v <= b.max,
+                    _ => false,
+                },
+                _ => false,
+            }
+        }
+        TypExpr::Index { optional: true, .. } => {
+            matches!(&a.art, ExprArt::Ort(o) if o.basis.text == "None" && o.suffixe.is_empty())
+        }
+        // `&T` for a `ptr<normal, …> T` parameter (Lean `Expr.ptrOf`): the one pointer to the
+        // carrier the type names.
+        TypExpr::Zeiger(p) => match (&p.raum, &p.ziel, &a.art) {
+            (Raum::Normal, TypExpr::Pfad(z), ExprArt::FnWert(w)) => z.text() == w.text(),
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+/// **The start arguments of the `concurrent` members** (`N591`, `N592`): a member is started with one
+/// value per parameter of its function, each a value of the parameter's type -- the model's start
+/// carries its arguments (`Einheit` starts, `concurrent { m::f(a, b) }`).
+pub fn concurrent_argumente(baum: &Programm, absagen: &mut Absagen) {
+    let mut funktionen: BTreeMap<String, FnDecl> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Funktion(f) = &item.art {
+            funktionen.insert(crate::umgebung::qualifiziere(modul, &f.name.text), f.clone());
+        }
+    });
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    let mut funde: Vec<(String, Pfad, Vec<Expr>)> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Concurrent(c) = &item.art {
+            for (p, a) in c.koerper.iter().zip(c.argumente.iter()) {
+                funde.push((modul.to_string(), p.clone(), a.clone()));
+            }
+        }
+    });
+    for (modul, pfad, args) in funde {
+        let span = pfad.teile.last().map(|i| i.span).unwrap_or(pfad.span);
+        // Unresolvable: `W003` (nebeneinander.rs) owns it.
+        let Some(k) = g.aufloesen(&u, &modul, &pfad.text()) else {
+            continue;
+        };
+        let Some(f) = funktionen.get(&k) else {
+            continue;
+        };
+        if f.parameter.len() != args.len() {
+            melde(
+                "N591",
+                span,
+                format!(
+                    "`concurrent` starts `{}` with {} argument(s), and it takes {} parameter(s)",
+                    pfad.text(),
+                    args.len(),
+                    f.parameter.len()
+                ),
+                "a member is started with one value per parameter: `concurrent { m::f(a, b) }` \
+                 (the model's start carries its arguments)",
+                absagen,
+            );
+            continue;
+        }
+        for (p, a) in f.parameter.iter().zip(args.iter()) {
+            if !startwert_passt(&u, &modul, &p.typ, a) {
+                melde(
+                    "N592",
+                    a.span,
+                    format!(
+                        "`concurrent` starts `{}` with an argument for `{}` that is no value of its type",
+                        pfad.text(),
+                        p.name.text
+                    ),
+                    "a start argument is a literal in the parameter's range, `true`/`false`, or `None` \
+                     for an `option index` -- the forms the start has in the Lean model",
+                    absagen,
+                );
+            }
+        }
+    }
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {

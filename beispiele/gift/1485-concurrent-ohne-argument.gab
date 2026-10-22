@@ -1,0 +1,17 @@
+// erwartet: N591
+// **Poison 1485 -- a `concurrent` member started without the argument its function needs.**
+//
+// The model's start is a function with its arguments (`Einheit` starts); `zaehle` takes one
+// parameter, so `concurrent { zaehle }` names no start the model has.
+
+module gift::concurrent_ohne_argument {
+
+impl fn zaehle(k : u32 in 0 .. 9)
+    effects { pure }
+    costs   <= 2 ops
+{
+}
+
+concurrent { zaehle };
+
+}

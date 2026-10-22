@@ -313,7 +313,7 @@ def w108items : List SItemTief :=
       (.block []
         (.some (.ret (.some (.field
           (.index (.field (.variable "T") "slots") (.lit 1)) "v"))))),
-    .concT [["read_a"], ["read_c"]]]]
+    .concT [(["read_a"], []), (["read_c"], [])]]]
 
 /-- **108's elaborated program** (same probe, pasted):
     the table and both readers, the `concurrent` members as thread roots. -/

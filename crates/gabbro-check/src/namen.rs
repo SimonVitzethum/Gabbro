@@ -906,7 +906,7 @@ fn knoten_ausdruck(
             | ExprArt::Ergebnis
             | ExprArt::Grund { .. }
             | ExprArt::Zaehle { .. }
-            | ExprArt::Unaer(..)
+            | ExprArt::Unaer(..) | ExprArt::IstSome(_)
             | ExprArt::Binaer(..)
             | ExprArt::ArrayLit(_) => {}
         }
@@ -1358,7 +1358,7 @@ fn has_aus_pred(p: &Pred, aus: &mut Vec<String>) {
                     aus.push(o.text());
                 }
             }
-            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => e(i, aus),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => e(i, aus),
             ExprArt::Binaer(_, a, b) => {
                 e(a, aus);
                 e(b, aus);
@@ -1387,7 +1387,7 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
                     ex(a, aus);
                 }
             }
-            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => ex(i, aus),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => ex(i, aus),
             ExprArt::Binaer(_, a, b) => {
                 ex(a, aus);
                 ex(b, aus);
@@ -3610,7 +3610,7 @@ fn namen_im_praedikat(p: &Pred, aus: &mut Vec<String>) {
     fn e(x: &Expr, aus: &mut Vec<String>) {
         match &x.art {
             ExprArt::Ort(o) => aus.push(o.basis.text.clone()),
-            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => e(i, aus),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => e(i, aus),
             ExprArt::Binaer(_, a, b) => {
                 e(a, aus);
                 e(b, aus);
@@ -4210,7 +4210,7 @@ fn einseitige_vergleiche(s: &Stmt, aus: &mut Vec<(String, Span)>) {
 fn namen_flach(e: &Expr, aus: &mut Vec<String>) {
     match &e.art {
         ExprArt::Ort(o) => aus.push(o.basis.text.clone()),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => namen_flach(x, aus),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => namen_flach(x, aus),
         ExprArt::Binaer(_, a, b) => {
             namen_flach(a, aus);
             namen_flach(b, aus);
@@ -5534,7 +5534,7 @@ fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
             }
         }
         match &e.art {
-            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus_expr(x, aus),
+            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => aus_expr(x, aus),
             ExprArt::Binaer(_, a, b) => {
                 aus_expr(a, aus);
                 aus_expr(b, aus);

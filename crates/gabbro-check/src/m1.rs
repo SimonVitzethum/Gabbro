@@ -3387,6 +3387,21 @@ impl<'a> Pruefer<'a> {
                 let _ = self.ausdruck(i, lage);
                 Typ::Wahrheit
             }
+            // `o.is_some()` (Lean `Expr.istSome`): a truth value over an `option index into T`.
+            ExprArt::IstSome(o) => {
+                let t = self.ausdruck(o, lage);
+                if !matches!(t, Typ::Unbekannt) && option_nutzlast(&t).is_none() {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N593",
+                            e.span,
+                            format!("`.is_some()` over `{}`: only an `option index into T` holds a value or none", t.text()),
+                        )
+                        .mit_notiz("SYNTAX.md §4: `x.is_some()` is the option test (`Expr.istSome`)"),
+                    );
+                }
+                Typ::Wahrheit
+            }
             ExprArt::Unaer(UnOp::Negativ, i) => {
                 let t = self.ausdruck(i, lage);
                 let Some(b) = t.bereich() else { return Typ::Unbekannt };
@@ -8982,7 +8997,7 @@ fn rufnamen_im_ruf(r: &Ruf) -> Vec<&Pfad> {
 fn enthaelt_ruf(e: &Expr) -> bool {
     match &e.art {
         ExprArt::Ruf(_) => true,
-        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => enthaelt_ruf(i),
+        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => enthaelt_ruf(i),
         ExprArt::Binaer(_, a, b) => enthaelt_ruf(a) || enthaelt_ruf(b),
         ExprArt::Ort(o) => o.suffixe.iter().any(|sx| match sx {
             OrtSuffix::Index(i) => enthaelt_ruf(i),
@@ -9394,7 +9409,7 @@ fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<Str
     fn aus_expr(e: &Expr, gebunden: &[String], out: &mut Vec<String>) {
         match &e.art {
             ExprArt::Ort(o) => aus_ort(o, gebunden, out),
-            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => aus_expr(i, gebunden, out),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => aus_expr(i, gebunden, out),
             ExprArt::Binaer(_, a, b) => {
                 aus_expr(a, gebunden, out);
                 aus_expr(b, gebunden, out);

@@ -339,7 +339,7 @@ fn argument_term(a: &Expr, caller: &[CallerParam]) -> Result<String, Reason> {
         | ExprArt::LibraryCall(_)
         | ExprArt::Ergebnis
         | ExprArt::Grund { .. }
-        | ExprArt::Unaer(_, _)
+        | ExprArt::Unaer(_, _) | ExprArt::IstSome(_)
         | ExprArt::Binaer(_, _, _) => Err(Reason::ArgumentNotStable),
     }
 }
@@ -399,6 +399,8 @@ fn expr_term(e: &Expr, binding: &Binding) -> Result<String, Reason> {
         // `int` -- there is no width in them. `HOL-Library` would carry `NOT`; this theory
         // imports `Main`.
         ExprArt::Unaer(UnOp::BitNicht, _) => Err(Reason::NoTerm),
+        // the theory has no option values, so no option test
+        ExprArt::IstSome(_) => Err(Reason::NoTerm),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
                 BinOp::Oder => "\\<or>",

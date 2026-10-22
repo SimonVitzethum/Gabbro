@@ -1242,7 +1242,7 @@ fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
                 aus.push((o.text(), geteilt));
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => held_aus_expr(x, aus),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => held_aus_expr(x, aus),
         ExprArt::Binaer(_, a, b) => {
             held_aus_expr(a, aus);
             held_aus_expr(b, aus);

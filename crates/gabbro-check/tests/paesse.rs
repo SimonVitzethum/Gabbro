@@ -5011,7 +5011,7 @@ impl fn setzer() -> u32 effects { writes A } costs <= 64 ops {
     reset A;
     return 0;
 }
-concurrent { leser, setzer };",
+concurrent { leser(0), setzer };",
         &["N521"],
     );
     // Through a callee: the reset hides one call down, the closure finds it.
@@ -5029,7 +5029,7 @@ impl fn leser(i : index into A) -> u32 effects { reads A } costs <= 64 ops {
     let x : u32 = A[i];
     return x;
 }
-concurrent { setzer, leser };",
+concurrent { setzer, leser(0) };",
         &["N521"],
     );
 }

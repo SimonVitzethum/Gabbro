@@ -1,38 +1,21 @@
 /-
   File:      Grammatik/Parser/Round/RundlaufVoll.lean
-  Subject:   Layer L2a of the syntax round trip: the expression round trip for the WHOLE printable
-             class `gut`, by the joint size induction that Rundlauf3's header names as the remaining
-             blocker.
+  Subject:   Layer L2a of the syntax round trip, the pieces for the WHOLE printable class `gut`: the
+             invariant `R n` repackaged from legs at size `n` (`R_of_legs`), the generic operand-leg
+             steps for `||`/`&&` (`orLegs`, `andLegs`), the prefix towers (`unLegs`), the
+             leaf legs and the case split of `gut` over `built` (`gut_built_faelle`).
 
-  Rundlauf3/4 widened the predicate one layer at a time (`gutKern` ... `gutPrim`), each layer over
-  the previous one, so a `==` over a `&` over a call was out of reach. Here the size induction runs
-  over `gut` itself:
+  The joint induction over `gut` itself runs in `RundlaufTok` at a TOKEN bound (`legs_tok`,
+  `parse_druck_tok`, `parseTop_druck_gut`); the size bound of this file (thirteen fuel per node) does
+  not reach the fixed-fuel readers, so its own induction was dropped when calls through a place
+  (`o.is_some()`) joined `gut`.
 
-    `legs_gut_n n : ∀ e, groesse e ≤ n → gut e = true → Legs e`
-
-  Step `n + 1`: the hypothesis at `n` is repackaged as lane 161's size-bounded invariant `R n`
-  (`R_of_legs`), which feeds the general lemmas lane 161 proved over `R n` and never closed the
-  induction for (`prim_platz`, `prim_ruf`, `prim_alt`, `ort_platz_all` -- places with arbitrary
-  `gut` index payloads, calls with arbitrary `gut` arguments, `old`/`sizeof`/`lenof` over arbitrary
-  places). Binary operators take the generic operand-leg steps of Rundlauf3 (`cmpLegs`, `bitLegs`,
-  `addLegs`, `mulLegs`) plus the two new ones here (`orLegs`, `andLegs`, the `||`/`&&` inner traces
-  over abstract legs); prefixes take the spelling-blind towers of Rundlauf2 (`kern_un_atom_turm`,
-  `kern_un_paren_turm`, which carry no predicate) over the operand's legs (`unLegs`).
-
-  Main statements:
-  - `legs_gut : ∀ e, gut e = true → Legs e`;
-  - `parse_druck_gut : ∀ e, gut e = true → parseOr (brennstoff e) (druckToks e ++ [.ende]) =
-     .ok (e, [.ende])`;
-  The size bound (thirteen fuel per node) does not reach the fixed-fuel readers (`parseTop`, fuel
-  `8 * length + 32`); `RundlaufTok` restates the induction at a TOKEN bound and closes `parseTop`
-  and the composition with L1.
-
-  `gut` is the printability predicate of lane 161 (Rundlauf.lean), unchanged: it excludes exactly
-  the shapes with no token spelling that parses back (booked there): reserved heads
-  (`istKeinPlatz`), unknown operator spellings, suffixes on non-places, `sizeof`/`lenof`/`old` over
-  non-places, `sizeof`/`lenof` over a bare type word, `G::F` with an integer, sugared-width or
-  `Self` head, and every `ext` form (predicates, strings, calls through places -- `druckExtToks`
-  prints them, outside the theorem).
+  `gut` is the printability predicate of lane 161 (Rundlauf.lean): it excludes exactly the shapes with
+  no token spelling that parses back (booked there): reserved heads (`istKeinPlatz`), unknown
+  operator spellings, suffixes on non-places, `sizeof`/`lenof`/`old` over non-places, `sizeof`/
+  `lenof` over a bare type word, `G::F` with an integer, sugared-width or `Self` head, and every
+  `ext` form except a call through a suffixed place (predicates and strings -- `druckExtToks` prints
+  them, outside the theorem).
 -/
 import Grammatik.Parser.Round.Rundlauf4
 import Grammatik.Parser.Round.RundlaufLex
@@ -342,97 +325,6 @@ theorem gut_built_faelle : ∀ (w : String) (xs : List SExpr), gut (.built w xs)
            | exact Or.inr ⟨_, _, rfl, rfl, h.1, h.2⟩)
       | (injection heq)
 
-/-! ### The joint size induction -/
-
-theorem legs_gut_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true → Legs e := by
-  intro n
-  induction n with
-  | zero =>
-    intro e hs _
-    have := groesse_pos e
-    omega
-  | succ n ih =>
-    have Rn : R n := R_of_legs n ih
-    intro e hs hg
-    -- Places (`field`/`index`/`arrow`): the primary leg is lane 161's `prim_platz`, the print
-    -- starts with the head identifier.
-    have platz : gutPlatz e = true → Legs e := by
-      intro hp
-      obtain ⟨a, suff, rfl, _, _, _⟩ := zerlege (n + 1) e hs hp
-      have hd : druckToks (applySuff (.variable a) suff) = [nameTok a] ++ suffToks suff := by
-        rw [druckToks_applySuff]; rfl
-      apply identTurm a _ hd
-      intro rest' G hrs _ hG
-      exact prim_platz n Rn _ rest' G hs hp hrs hG
-    cases e with
-    | lit m => exact legsKern _ rfl
-    | float s => exact legsKern _ rfl
-    | tru => exact legsKern _ rfl
-    | fls => exact legsKern _ rfl
-    | «variable» s => exact legsKern _ hg
-    | field x f => exact platz hg
-    | index x i => exact platz hg
-    | arrow x f => exact platz hg
-    | un o x =>
-      simp only [gut, Bool.or_eq_true, Bool.and_eq_true] at hg
-      rcases hg with hg | ⟨ho, hl⟩
-      · have hx : groesse x ≤ n := by simp only [groesse] at hs; omega
-        exact unLegs o x hg.1 (ih x hx hg.2)
-      · have := strKlingt o "-()" ho
-        subst this
-        cases x with
-        | lit k => exact negLitLegs k (legsKern _ rfl)
-        | _ => simp [istLit] at hl
-    | bin o l r =>
-      simp only [gut, Bool.and_eq_true] at hg
-      have hl : groesse l ≤ n := by simp only [groesse] at hs; omega
-      have hr : groesse r ≤ n := by simp only [groesse] at hs; omega
-      exact binLegs o l r hg.1.1 (ih l hl hg.1.2) (ih r hr hg.2)
-    | call f xs =>
-      have hd : druckToks (.call f xs) = [nameTok f] ++
-          ([.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]) := by
-        simp [druckToks]
-      apply identTurm f _ hd
-      intro rest' G hrs _ hG
-      exact prim_ruf n Rn f xs rest' G hs hg hrs hG
-    | fnref p => exact fnwertLegs p
-    | built w xs =>
-      rcases gut_built_faelle w xs hg with ⟨x, hw, rfl, hp, htw⟩ | ⟨a, b, rfl, rfl, ha, hb⟩
-      · have hx : groesse x ≤ n := by
-          simp only [groesse, groesseListe] at hs; omega
-        apply embTower w [x]
-        intro rest' G hrs _ hG
-        exact prim_emb1_gen n Rn w x rest' G hw hx hp htw hrs hG
-      · have ha' : groesse a ≤ n := by
-          simp only [groesse, groesseListe] at hs; omega
-        have hb' : groesse b ≤ n := by
-          simp only [groesse, groesseListe] at hs; omega
-        exact alignedLegs a b (ih a ha' ha) (ih b hb' hb)
-    | old x =>
-      have hd : druckToks (.old x) = [.wort "old"] ++
-          (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-        simp [druckToks]
-      apply wortTurm _ _ hd
-      intro rest' G hrs _ hG
-      exact prim_alt n Rn x rest' G hs hg hrs hG
-    | res => exact ergebnisLegs
-    | why g f =>
-      simp only [gut, Bool.and_eq_true] at hg
-      exact grundLegs g f hg.1.1.1 hg.1.1.2 hg.1.2 hg.2
-    | ext k ns xs => simp [gut] at hg
-
-/-- **Every printable expression has all eight round-trip legs.** -/
-theorem legs_gut : ∀ (e : SExpr), gut e = true → Legs e :=
-  fun e hg => legs_gut_n (groesse e) e (Nat.le_refl _) hg
-
-/-- **L2a: every printable expression parses back from its tokens** (with `brennstoff` fuel). -/
-theorem parse_druck_gut : ∀ (e : SExpr), gut e = true →
-    parseOr (brennstoff e) (druckToks e ++ [.ende]) = .ok (e, [.ende]) := by
-  intro e hg
-  have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
-  exact (legs_gut e hg).2.2.2.2.2.2.2 [.ende] (brennstoff e) rfl rfl rfl hF
-
 /-! ### Witnesses -/
 
 /-- A tree no earlier level reaches: a comparison over a bit operator over a call with a place
@@ -445,12 +337,5 @@ def zeugeTief : SExpr :=
 
 theorem zeugeTief_gut : gut zeugeTief = true := by decide
 
-theorem parse_druck_gut_zeuge :
-    parseOr (brennstoff zeugeTief) (druckToks zeugeTief ++ [.ende]) = .ok (zeugeTief, [.ende]) :=
-  parse_druck_gut zeugeTief zeugeTief_gut
-
 end Gabbro.Grammatik.Parser
 
-#print axioms Gabbro.Grammatik.Parser.legs_gut
-#print axioms Gabbro.Grammatik.Parser.parse_druck_gut
-#print axioms Gabbro.Grammatik.Parser.parse_druck_gut_zeuge

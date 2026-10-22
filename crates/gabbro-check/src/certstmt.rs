@@ -417,6 +417,7 @@ fn expr_name(e: &Expr) -> String {
             format!("reason {}::{}", grund.text, fall.text)
         }
         ExprArt::Zaehle { .. } => "count".to_string(),
+        ExprArt::IstSome(_) => "option test".to_string(),
         ExprArt::Unaer(op, _) => match op {
             UnOp::Nicht => "negation".to_string(),
             UnOp::Negativ => "unary minus".to_string(),

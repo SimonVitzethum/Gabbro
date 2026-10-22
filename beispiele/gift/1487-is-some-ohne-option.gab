@@ -1,0 +1,14 @@
+// erwartet: N593
+// **Poison 1487 -- `N593`: `.is_some()` over an integer.** Only an `option index into T` holds a
+// value or none.
+
+module gift::is_some_ohne_option {
+
+impl fn falsch(k : u32 in 0 .. 9) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return k.is_some();
+}
+
+}

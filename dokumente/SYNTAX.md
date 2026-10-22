@@ -641,7 +641,9 @@ optionexpr = "Some" "(" expr ")" | "None" ;
 paren      = "(" expr ")" ;
 call       = ( path | place ) "(" [ arglist ] ")" ;
 (* «B8»: a call over a PLACE is an indirect call; the callee is not known at translation
-   time, and what is known about it stands at the type of the place (`fnptr`). *)
+   time, and what is known about it stands at the type of the place (`fnptr`). A call over a
+   place whose last suffix is `.is_some`, with no argument, is the option test `x.is_some()`
+   (`Expr.istSome`), not a call. *)
 arglist    = arg { "," arg } ;
 arg        = [ ident ":" ] expr ;
 (* «B7»: a labelled call is the record constructor -- `P(a: 1, b: true)`. There is NO braced
@@ -688,7 +690,7 @@ placelist  = place { "," place } ;
 | `n` bytes at `i` of a byte carrier | `i : lo .. hi` with `0 ≤ lo` and `hi + n ≤ count`; guards of the carrier in Λ («SG-16») | `0 .. 256ⁿ − 1` | `Expr.getBytes`; theorem `bytes_in_tabelle` |
 | `place` = `p->f`, `p[i].f` | the same, through a pointer (§3) | | `Expr.thru` |
 | `Some(e)`, `None` | `e : index into T` | `option index into T` | `Expr.some`, `Expr.none` |
-| `x.is_some()` / match on `option` | | `bool` | `Expr.istSome` |
+| `x.is_some()` / match on `option` | `x` an `option index into T` at a place (`N593` otherwise): a call through a place whose last suffix is `.is_some`, with no argument, IS the test | `bool` | `Expr.istSome` |
 | `Variant(e)` (a `tagged` case) | the payload has the case's type; the case index is in range by shape | the sum type | `Expr.case cs i nutz` |
 | `Variant()` / bare `Variant` (a nullary `tagged` case, lane 167) | nothing to carry — the case index alone says which case it is | the sum type | `Expr.case cs i` with the empty payload |
 | `Variant(e)` refused (lane 167) | an unknown or ambiguous case (`N280`); a missing payload (`N281`); a payload on a nullary case (`N282`); a bare name over a payload case (`N283`); labels at a case (`N284`) — the payload RANGE stays `M101`'s, its SHAPE `M140`'s | — | — |
@@ -1833,9 +1835,16 @@ rcudecl    = "rcu" ident "protects" "{" placelist "}" [ "reclaims" place ] ";" ;
 observestmt = "observes" ident block ;
 gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
              ( "{" { invariant } "}" | ";" ) ;
-concurrentdecl = "concurrent" "{" path { "," path } [ "," ] "}" ";" ;
+concurrentdecl = "concurrent" "{" startmember { "," startmember } [ "," ] "}" ";" ;
+startmember = path [ "(" [ expr { "," expr } ] ")" ] ;
 (* «SG-23»: the declared-concurrent bodies -- paths, not idents (dispatch roots or
-   scheduler entry `fn`s); one member at least, trailing comma allowed like `group`. *)
+   scheduler entry `fn`s); one member at least, trailing comma allowed like `group`.
+   A member is started with one value per parameter of its function (2026-10-22: the Lean
+   model's start carries its arguments, `Einheit` starts): an integer literal inside the
+   declared range, `true`/`false`, `None` for an `option index`, `&T` for a `ptr<normal, …> T`
+   (`Expr.ptrOf`; a pointer value is the one pointer to its carrier) -- `N591` refuses a wrong count,
+   `N592` a value outside the parameter's type. The Lean front end reads it the same way
+   (`uStartMit`). *)
 ```
 
 ```gabbro

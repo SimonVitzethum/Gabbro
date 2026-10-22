@@ -384,7 +384,7 @@ fn orte_aus_expr(e: &Expr, aus: &mut Vec<Ort>) {
                 }
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => orte_aus_expr(x, aus),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => orte_aus_expr(x, aus),
         ExprArt::Binaer(_, a, b) => {
             orte_aus_expr(a, aus);
             orte_aus_expr(b, aus);

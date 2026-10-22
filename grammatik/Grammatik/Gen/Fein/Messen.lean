@@ -23,8 +23,10 @@ def Kenner.mitM : Kenner D :=
   ⟨fun e => fzE e ++ (exprM e).map mitgliedZelle, fun s => fzS s ++ (stmtM s).map mitgliedZelle,
    fun b => fzB b ++ (blockM b).map mitgliedZelle, fun x => fzEnd x ++ (endM x).map mitgliedZelle⟩
 
-/-- **The body tables of a member** for the coverage driver: per function the filtered bodies by size up to `nb` (the
-    filter `okFuer` of components 3 and 8 as in `Spez.tabellen`). -/
+/-- **The filtered body tables of a member**: per function the bodies by size up to `nb` that bring a fine cell or a
+    register member not seen before (the filter `okFuer` of components 3 and 8 as in `Spez.tabellen`). A search aid
+    for fine-cell witnesses, not the coverage driver's tables: measured 2026-10-22, the novelty filter drops the
+    payload case `NutzlastExpr.num` of member 12 that the unfiltered tables reach at size 7. -/
 def _root_.Gabbro.Grammatik.Gen.Spez.tabellenF (z : Spez) (nb : Nat) (p3 p8 : Bool) :
     List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))) :=
   letI : Zahlen := z.zahlen
