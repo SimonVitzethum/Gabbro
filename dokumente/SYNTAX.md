@@ -494,7 +494,7 @@ linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` de
 | `boolty` | | `Ty.bool` |
 | `nevertype` | the type without a value: a body `-> never` can derive **no** `return` | `Ty.never`, `Wert D .never = Empty` («SG-18») |
 | `variants` (`tagged`) | a case index **and** its payload, no other shape | `Ty.sum cases`, value `Σ i, Nutzlast (cases.get i)` |
-| `reason` values (§9) | one of `n` declared grounds | `Ty.why n`, value `Fin n` |
+| `reason` values (§9) | one of `n` declared grounds; a parameter, a result, an argument, a bound call value | `Ty.why n`, value `Fin n` |
 | `fnptr` | the value is a function that **conforms to this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.passt f sig = true}` («SG-8»; structural since 2026-10-21, `SigPasst`) |
 | `ptrty` (§3) | a capability naming a declared carrier and a right | `Ty.ptr tab rw` |
 | `linear type m [order]` | a resource in the context Λ, with a stage | `D.Marke`, `D.stufen`, `Res.marke m stufe` («SG-14») |
@@ -609,6 +609,9 @@ mulexpr    = unary { ( "*" | "/" | "%" | "*%" ) unary } ;
 (* LANGUAGE.md section 3.4 (lane 88): `+%`, `-%`, `*%`, `<<%` wrap and `+|` saturates;
    each rides at the precedence of its base operator. *)
 unary      = [ "!" | "-" | "~" ] primary | fnvalue ;
+(* `-` directly before a numeral is a negative LITERAL (`-3` is `Expr.lit (-3)`); `-` before a parenthesised
+   operand is the NEGATION (`-(3)` is `Expr.neg (Expr.lit 3)`, `-(a + b)` is `Expr.neg (Expr.add a b)`),
+   and so is `-x` over any other operand. One spelling for each model form. *)
 (* `~a` is `a ^ <all bits of the declared width>` (`M137`); the operand is unsigned and
    carries a width. *)
 fnvalue    = "&" path ;
@@ -630,8 +633,10 @@ countexpr  = "count" ident "in" domain ":" pred ;
    A cross-table count is a `group` invariant («SG-10»), not a wider domain:
    whoever hand-maintains a count instead of stating it leaks manual plumbing. *)
 reasonval  = ident "::" ident ;
-(* The producer of a `reason` value: `return R::F;` IS the error return (`M122`); a ground
-   compares only against a ground of the same declaration (`M124`). *)
+(* The producer of a `reason` value: in a function with the channel `or R`, `return R::F;` IS the error
+   return (`M122`); a reason is also a value type (`-> R`, `p : R`, `f(R::F)`, `let x = g();`), and in a
+   function of result type `R` (whose channel, if any, names another reason) `return R::F;` returns the
+   value. A ground compares only against a ground of the same declaration (`M124`). *)
 optionexpr = "Some" "(" expr ")" | "None" ;
 paren      = "(" expr ")" ;
 call       = ( path | place ) "(" [ arglist ] ")" ;
@@ -679,7 +684,7 @@ placelist  = place { "," place } ;
 | `true`, `false` | | `bool` | `Expr.tru`, `Expr.fls` |
 | `place` = a local | | its type | `Expr.var x` |
 | `place` = a `static`/`atomic` | **the guards of the global are in Λ** (`H007`, §11) | its type | `Expr.glob g (hL : gdarf D g Λ)` |
-| `place` = `T.slots[i].f`, `r[i].f` | **`i : index into T`** (CHANGED «SG-4»: no other type reaches an index — a wider number reaches it through `narrow`, §7) **and the guards of `T` are in Λ** («SG-6a») | the field's type | `Expr.slot t f i hL` |
+| `place` = `T.slots[i].f`, `r[i].f` | **`i : index into T`** (CHANGED «SG-4»: no other type reaches an index — a wider number reaches it through `narrow`, §7; an index into a table of the same `count` is one, `Ty.index` being the count) **and the guards of `T` are in Λ** («SG-6a») | the field's type | `Expr.slot t f i hL` |
 | `n` bytes at `i` of a byte carrier | `i : lo .. hi` with `0 ≤ lo` and `hi + n ≤ count`; guards of the carrier in Λ («SG-16») | `0 .. 256ⁿ − 1` | `Expr.getBytes`; theorem `bytes_in_tabelle` |
 | `place` = `p->f`, `p[i].f` | the same, through a pointer (§3) | | `Expr.thru` |
 | `Some(e)`, `None` | `e : index into T` | `option index into T` | `Expr.some`, `Expr.none` |
@@ -691,7 +696,7 @@ placelist  = place { "," place } ;
 | `&f` | `f` conforms to the `fnptr` at the place (a `let p : fn(…) = &f;`, an argument for a parameter of that type; without a written type, `f`'s own signature) | `fn(…)` | `Expr.fnref f n (h : D.passt f n = true)` |
 | `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.oldG hL`, `Expr.oldS hL` |
-| `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
+| `result` | only in `ensures`: the answer (a number in a comparison, a truth value as a predicate) | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
 | `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |

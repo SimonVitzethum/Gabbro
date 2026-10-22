@@ -117,10 +117,13 @@ theorem druck_kopf : ∀ (e : SExpr), gut e = true →
     obtain ⟨s, ts, h, hk⟩ := platz_kopf_aux (groesse y) y (Nat.le_refl _) hy
     exact ⟨nameTok s, ts ++ [.zeichen "->", nameTok f], by simp [druckToks, h], kopfGut_nameTok hk⟩
   | un o x =>
+    by_cases hs0 : strEq o "-()" = true
+    · exact ⟨.zeichen "-", .zeichen "(" :: (druckToks x ++ [.zeichen ")"]), by simp [druckToks, hs0],
+        by simp [KopfGut]⟩
     have ho : gutOpUn o = true := by
-      simp only [gut, Bool.and_eq_true] at hg
+      simp only [gut, hs0, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg
       exact hg.1
-    refine ⟨.zeichen o, _, rfl, ?_⟩
+    refine ⟨.zeichen o, _, by simp [druckToks, hs0]; rfl, ?_⟩
     simp only [gutOpUn, Bool.or_eq_true, strEq_eq] at ho
     simp only [KopfGut]
     rcases ho with (h | h) | h <;> simp [h]

@@ -933,20 +933,20 @@ theorem unLegsM_atom (m : Nat) (o : String) (x : SExpr) (ho : gutOpUn o = true)
     (hat : istAtom x = true) (Hx : LegsB m x) : LegsB m (.un o x) := by
   have hpf := primFrei_of_istAtom x hat
   have hd : druckToks (.un o x) = [.zeichen o] ++ druckToks x := by
-    simp [druckToks, hat]
+    simp [druckToks, hat, un_ne_klammer _ ho]
   apply legsB_aus m _ (fun rest G h => by simp [primFrei] at h)
   intro rest G hrs hrg hG
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   have hP' := Hx.1 rest G' hpf hrs hrg (by omega)
   simp only [hd, List.append_assoc] at ⊢
-  exact bang_arm_gen _ _ _ _ _ ho hP'
+  exact bang_arm_gen _ _ _ _ _ ho hP' (atom_bed x rest)
 
 /-- A prefix over a parenthesised operand: eight more (the `(` arm runs `parseOr`). -/
 theorem unLegsM_klammer (m : Nat) (o : String) (x : SExpr) (ho : gutOpUn o = true)
     (hat : istAtom x = false) (Hx : LegsB m x) : LegsB (m + 8) (.un o x) := by
   have hd : druckToks (.un o x) = [.zeichen o] ++
       (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-    simp [druckToks, hat]
+    simp [druckToks, hat, un_ne_klammer _ ho]
   apply legsB_aus _ _ (fun rest G h => by simp [primFrei] at h)
   intro rest G hrs hrg hG
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
@@ -954,9 +954,25 @@ theorem unLegsM_klammer (m : Nat) (o : String) (x : SExpr) (ho : gutOpUn o = tru
   have hO' := Hx.2.2.2.2.2.2.2 _ G'' (hr_paren rest) (hrs_paren rest) (hrg_paren rest)
     (by omega)
   have hPar := paren_arm _ _ _ _ hO'
-  have hBang := bang_arm_gen _ _ _ _ _ ho hPar
+  have hBang := bang_arm_gen _ _ _ _ _ ho hPar (Or.inr (nonatom_bed x hat))
   simp only [hd, List.append_assoc] at ⊢
   exact hBang
+
+/-- `-(n)`: the parenthesised arm of `-` over a numeral, eight more. -/
+theorem negLitLegsM (m : Nat) (n : Nat) (Hx : LegsB m (.lit n)) : LegsB (m + 8) (.un "-()" (.lit n)) := by
+  have hs0 : strEq "-()" "-()" = true := by decide
+  have hd : druckToks (.un "-()" (.lit n)) = [.zeichen "-", .zeichen "("] ++ (druckToks (.lit n) ++ [.zeichen ")"]) := by
+    simp only [druckToks, hs0, ite_true, List.append_assoc]
+  apply legsB_aus _ _ (fun rest G h => by simp [primFrei] at h)
+  intro rest G hrs hrg hG
+  obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+  obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
+  have hO' := Hx.2.2.2.2.2.2.2 _ G'' (hr_paren rest) (hrs_paren rest) (hrg_paren rest)
+    (by omega)
+  have hPar := paren_arm _ _ _ _ hO'
+  have hN := negklammer_arm _ _ _ n hPar
+  simp only [hd, List.append_assoc] at ⊢
+  simpa only [List.append_assoc] using hN
 
 /-! ### The token measure -/
 
@@ -1300,19 +1316,30 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
     | index x i => exact platz hg
     | arrow x f => exact platz hg
     | un o x =>
-      simp only [gut, Bool.and_eq_true] at hg
-      have hx : groesse x ≤ n := by simp only [groesse] at hs; omega
-      have Hx := ih x hx hg.2
-      cases hat : istAtom x with
-      | true =>
-        apply LegsB_mono _ (unLegsM_atom _ o x hg.1 hat Hx)
-        simp only [fb, druckToks, hat, ite_true, List.length_append, List.length_singleton]
-        omega
-      | false =>
-        apply LegsB_mono _ (unLegsM_klammer _ o x hg.1 hat Hx)
-        simp only [fb, druckToks, hat, Bool.false_eq_true, ite_false, List.length_append,
-          List.length_singleton]
-        omega
+      simp only [gut, Bool.or_eq_true, Bool.and_eq_true] at hg
+      rcases hg with hg | ⟨ho, hl⟩
+      · have hx : groesse x ≤ n := by simp only [groesse] at hs; omega
+        have Hx := ih x hx hg.2
+        have hne := un_ne_klammer o hg.1
+        cases hat : istAtom x with
+        | true =>
+          apply LegsB_mono _ (unLegsM_atom _ o x hg.1 hat Hx)
+          simp only [fb, druckToks, hne, hat, ite_true, Bool.false_eq_true, ite_false, List.length_append,
+            List.length_singleton]
+          omega
+        | false =>
+          apply LegsB_mono _ (unLegsM_klammer _ o x hg.1 hat Hx)
+          simp only [fb, druckToks, hne, hat, Bool.false_eq_true, ite_false, List.length_append,
+            List.length_singleton]
+          omega
+      · have := strKlingt o "-()" ho
+        subst this
+        cases x with
+        | lit k =>
+          have hk : groesse (SExpr.lit k) ≤ n := by simp only [groesse] at hs ⊢; omega
+          apply LegsB_mono _ (negLitLegsM _ k (ih (.lit k) hk rfl))
+          simp [fb, druckToks, ho]
+        | _ => simp [istLit] at hl
     | bin o l r =>
       simp only [gut, Bool.and_eq_true] at hg
       have hl : groesse l ≤ n := by simp only [groesse] at hs; omega

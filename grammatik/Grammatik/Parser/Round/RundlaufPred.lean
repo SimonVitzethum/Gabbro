@@ -102,7 +102,11 @@ theorem druck_kopf_pred (e : SExpr) (hg : gut e = true) :
   | index x i => exact platz _ hg
   | arrow x f => exact platz _ hg
   | un o x =>
-    refine ⟨.zeichen o, _, rfl, ⟨by simp, by simp⟩, ?_⟩
+    by_cases hs0 : strEq o "-()" = true
+    · refine ⟨.zeichen "-", .zeichen "(" :: (druckToks x ++ [.zeichen ")"]), by simp [druckToks, hs0],
+        ⟨by simp, by simp⟩, ?_⟩
+      intro h; injection h with h; exact absurd h (by decide)
+    refine ⟨.zeichen o, _, by simp [druckToks, hs0]; rfl, ⟨by simp, by simp⟩, ?_⟩
     intro h; injection h with h; subst h; exact ⟨x, rfl⟩
   | bin o l r => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
   | call f xs =>
@@ -161,7 +165,8 @@ theorem pred_druck (e : SExpr) (hg : gut e = true) (rest : List Token) (hf : Pre
     obtain ⟨t, ts, hd, hk, hbang⟩ := druck_kopf_pred e hg
     by_cases hb : t = .zeichen "!"
     · obtain ⟨x, rfl⟩ := hbang hb
-      have hx : gut x = true := by simp only [gut, Bool.and_eq_true] at hg; exact hg.2
+      have hx : gut x = true := by
+        simp only [gut, strEq_bang_klammer, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg; exact hg.2
       cases hat : istAtom x with
       | true =>
         have hdx : druckToks (.un "!" x) = .zeichen "!" :: druckToks x := by simp [druckToks, hat]

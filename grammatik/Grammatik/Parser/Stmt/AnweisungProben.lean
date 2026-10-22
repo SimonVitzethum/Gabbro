@@ -524,7 +524,7 @@ end Gabbro.Grammatik.Parser
     full corpus block. The one full block is `f01`.
   * Synthetic probes (no corpus occurrence, measured 2026-09-13):
     `s12` (`else if`), `s24` (`next`), `s30` (`stateassign`),
-    (the item probes live in `ElementTiefProben`). The `s31` (`advances`) shape has no
+    (the item probes live in `ElementTiefProben1..7`). The `s31` (`advances`) shape has no
     statement-level counterpart in `parse.rs` either (it rides in
     the checker); the probe pins the SYNTAX.md production.
 -/

@@ -5,7 +5,7 @@
 
   The surface types `STyp`/`SEffekt`/`SKlausel`/`FnSig`/`SItemTief`
   with fuel-indexed readers (`parseItemTief`, `parseTopTief`).
-  Probes live in `Parser/ElementTiefProben.lean`.
+  Probes live in `Parser/Item/ElementTiefProben1..7.lean`.
 -/
 import Grammatik.Parser.Stmt.Anweisung
 

@@ -60,15 +60,15 @@ variable (z : Spez)
 
 /-! ### Expressions -/
 
-/-- An expression; `kopf` is the name of the head variable when it is the result (an `ensures`). -/
-def delabE (kopf : Option String) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} :
+/-- An expression; `kopf` is the number of the result variable in an `ensures` (the head of `ErgCtx`, named
+    `result`), counted like every variable from the bottom of the context so that a binder below it does not
+    move it. -/
+def delabE (kopf : Option Nat) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} :
     Expr z.deklaration Γ Λ τ → Except String SExpr
   | .lit n => .ok (zahlE n)
   | .tru => .ok .tru
   | .fls => .ok .fls
-  | .var x => .ok (match kopf, tiefe x with
-    | some _, 0 => .res
-    | _, d => .variable (nVar (Γ.length - 1 - d)))
+  | .var x => .ok (if kopf = some (Γ.length - 1 - tiefe x) then .res else .variable (nVar (Γ.length - 1 - tiefe x)))
   | .glob g _ => .ok (.variable (nGlob (show Fin z.globs.length from g).val))
   | .slot t f i _ => do
       let i' ← delabE kopf i
@@ -79,7 +79,12 @@ def delabE (kopf : Option String) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ
   | .add a b => do .ok (.bin "+" (← delabE kopf a) (← delabE kopf b))
   | .sub a b => do .ok (.bin "-" (← delabE kopf a) (← delabE kopf b))
   | .mul a b => do .ok (.bin "*" (← delabE kopf a) (← delabE kopf b))
-  | .neg a => do .ok (.un "-" (← delabE kopf a))
+  | .neg a => do
+      let a' ← delabE kopf a
+      -- `-(n)` for a numeral (`-n` is the literal `-n`); every other operand prints `-x`/`-(x)`
+      .ok (match a' with
+        | .lit m => .un "-()" (.lit m)
+        | x => .un "-" x)
   | .lt a b => do .ok (.bin "<" (← delabE kopf a) (← delabE kopf b))
   | .le a b => do .ok (.bin "<=" (← delabE kopf a) (← delabE kopf b))
   | .eq a b => do .ok (.bin "==" (← delabE kopf a) (← delabE kopf b))
@@ -208,6 +213,22 @@ def delabEnd {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
       let (rs, en) ← delabEnd rest
       .ok (.bindElse (nVar Γ.length) none (.call (nFn (show Fin z.fns.length from f).val) as) (nVar Γ.length)
         (.block es ee) :: rs, en)
+  | .regRead r _ rest => do
+      let (rs, en) ← delabEnd rest
+      .ok (.bind false (nVar Γ.length) none (regOrt z r) :: rs, en)
+  | .awaits g payload _ _ _ rest => do
+      let (rs, en) ← delabEnd rest
+      .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
+        rs, en)
+  | .bindCallInd p args _ _ _ rest => do
+      let as ← delabA z args
+      let (rs, en) ← delabEnd rest
+      match p with
+      | .fnref f _ _ =>
+        .ok (.bind false (nZeiger Γ.length) none (.fnref (nFn (show Fin z.fns.length from f).val)) ::
+          .bind false (nVar Γ.length) none (.call (nZeiger Γ.length) as) :: rs, en)
+      | .var x => .ok (.bind false (nVar Γ.length) none (.call (nVar (Γ.length - 1 - tiefe x)) as) :: rs, en)
+      | _ => .error "indirect call through an expression without a spelling"
   | e => .error ("end block without a spelling: " ++ String.intercalate " " (Gabbro.Grammatik.Parser.Cover.Mitglieder.cE e))
 
 end
@@ -217,55 +238,117 @@ end
 def kommaNamen (ns : List String) : List Token :=
   (ns.map fun n => [nameTok n]).intersperse [.zeichen ","] |>.flatten
 
-/-- The locks a body takes itself (fuel for the nesting). -/
-def genommenF : Nat → SAnw → List String
-  | 0, _ => []
-  | n + 1, .locks _ (.variable L) b => L :: genommenF n b
-  | n + 1, .block ss _ => ss.flatMap (genommenF n)
-  | n + 1, .cond _ t eis s => genommenF n t ++ eis.flatMap (genommenF n) ++ (s.map (genommenF n)).getD []
-  | n + 1, .bindElse _ _ _ _ b => genommenF n b
-  | n + 1, .each _ _ _ _ _ _ _ b => genommenF n b
-  | _, _ => []
+/- The locks a body takes itself (`locks L { .. }`, in the order they are written), read off the model. -/
+mutual
 
-def genommen (s : SAnw) : List String := genommenF 1000 s
+def sperrenS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
+    Stmt z.deklaration V l Γ Λ Λ' → List z.deklaration.Lock
+  | .locks L _ body => L :: sperrenB body
+  | .ite _ t e => sperrenB t ++ sperrenB e
+  | .traverse _ _ body => sperrenB body
+  | _ => []
 
-/-- Does a body name the device handle? -/
-def nGlobs (gs : List Nat) : List String := gs.map nGlob
+def sperrenB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
+    Block z.deklaration V l Γ Λ Λ' → List z.deklaration.Lock
+  | .cons s rest => sperrenS s ++ sperrenB rest
+  | .bind _ rest => sperrenB rest
+  | .bindCall _ _ _ _ _ rest => sperrenB rest
+  | .bindCallElse _ _ _ _ _ err rest => sperrenE err ++ sperrenB rest
+  | .bindCallInd _ _ _ _ _ rest => sperrenB rest
+  | .regRead _ _ rest => sperrenB rest
+  | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenB rest
+  | .awaits _ _ _ _ _ rest => sperrenB rest
+  | _ => []
+
+def sperrenE {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
+    Endblock z.deklaration V l Γ Λ → List z.deklaration.Lock
+  | .cons s rest => sperrenS s ++ sperrenE rest
+  | .bind _ rest => sperrenE rest
+  | .bindCall _ _ _ _ _ rest => sperrenE rest
+  | .bindCallElse _ _ _ _ _ err rest => sperrenE err ++ sperrenE rest
+  | .regRead _ _ rest => sperrenE rest
+  | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenE rest
+  | .awaits _ _ _ _ _ rest => sperrenE rest
+  | .bindCallInd _ _ _ _ _ rest => sperrenE rest
+  | _ => []
+
+end
+
+/-- The parameters: the `j`-th of `np` is `v{np-1-j}` (the variable of depth `j` in the body). -/
+def parListe (np : Nat) : Nat → List Ty → Except String (List (String × STyp))
+  | _, [] => .ok []
+  | j, t :: ts => do .ok ((nVar (np - 1 - j), ← typS t) :: (← parListe np (j + 1) ts))
+
+/-- The result type of a function. -/
+def delabRes (f : Fin z.fns.length) : Except String (Option STyp) :=
+  match (z.deklaration.signatur f).erg with
+  | none => pure none
+  | some t => do pure (some (← typS t))
+
+/-- Is the predicate `true` (then no clause is printed)? -/
+def istTru {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} : Expr z.deklaration Γ Λ τ → Bool
+  | .tru => true
+  | _ => false
+
+/-- The `requires` clause (none for `true`). -/
+def delabReq (P : Programm z.deklaration) (f : Fin z.fns.length) : Except String (List SKlausel) :=
+  if istTru z (P.requires f) then pure [] else do pure [SKlausel.needs (← delabE z none (P.requires f))]
+
+/-- The `ensures` clause (none for `true`); its result is named by its number. -/
+def delabEns (P : Programm z.deklaration) (f : Fin z.fns.length) : Except String (List SKlausel) :=
+  if istTru z (P.ensures f) then pure [] else do
+    pure [SKlausel.gives (← delabE z ((z.deklaration.signatur f).erg.map fun _ =>
+      (z.deklaration.signatur f).params.length) (P.ensures f))]
+
+/-- The held locks, the written tables and statics, the locks the body takes: by name. -/
+def heldNamen (f : Fin z.fns.length) : List String :=
+  (z.deklaration.signatur f).haelt.map fun L => nLock (show Fin z.locks.length from L).val
+def tNamen (f : Fin z.fns.length) : List Nat :=
+  ((List.finRange z.tabs.length).filter fun t => (z.deklaration.signatur f).schreibt t).map (·.val)
+def gNamen (f : Fin z.fns.length) : List Nat :=
+  ((List.finRange z.globs.length).filter fun g => (z.deklaration.signatur f).gschreibt g).map (·.val)
+def lNamen (P : Programm z.deklaration) (f : Fin z.fns.length) : List String :=
+  ((sperrenE z (vertragVon z.deklaration f) (P.rumpf f)).map fun L => nLock (show Fin z.locks.length from L).val).eraseDups
+
+/-- The effects of a function. -/
+def effListe (P : Programm z.deklaration) (f : Fin z.fns.length) : List SEffekt :=
+  (tNamen z f).map (fun i => SEffekt.writes (.field (.variable (nTab i)) "slots")) ++
+    (gNamen z f).map (fun i => SEffekt.writes (.variable (nGlob i))) ++
+    (lNamen z P f).map (fun l => SEffekt.locks false (.variable l))
+
+/-- `requires Held(..)` for the held locks (none without). -/
+def heldKlausel (f : Fin z.fns.length) : List SKlausel :=
+  if (heldNamen z f).isEmpty then [] else [SKlausel.needs (.call "Held" ((heldNamen z f).map SExpr.variable))]
+
+/-- `effects { .. }` (none without). -/
+def effKlausel (P : Programm z.deklaration) (f : Fin z.fns.length) : List SKlausel :=
+  if (effListe z P f).isEmpty then [] else [SKlausel.effs (effListe z P f)]
+
+/-- The clauses of a function. -/
+def klauselnVon (P : Programm z.deklaration) (f : Fin z.fns.length) (req ens : List SKlausel) : List SKlausel :=
+  heldKlausel z f ++ req ++ ens ++ effKlausel z P f
 
 /-- One function. -/
 def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length) : Except String SItemTief := do
-  let n := z.fns.get f
-  let s := z.sigRoh n
+  let s := z.deklaration.signatur f
   let np := s.params.length
-  let ps ← (s.params.zipIdx.map fun (t, j) => do pure (nVar (np - 1 - j), ← typS t)).mapM id
+  let ps ← parListe np 0 s.params
   let ps := ps ++ (if mitGriff then [("d", .atom "Dev")] else [])
-  let res ← match s.erg with
-    | none => pure none
-    | some t => do pure (some (← typS t))
-  let held := (z.haelt n).map fun L => SExpr.variable (nLock L.val)
-  let heldK := if held.isEmpty then [] else [SKlausel.needs (.call "Held" held)]
-  let req ← match P.requires f with
-    | .tru => pure []
-    | e => do pure [SKlausel.needs (← delabE z none e)]
-  let ens ← match P.ensures f with
-    | .tru => pure []
-    | e => do pure [SKlausel.gives (← delabE z (s.erg.map fun _ => "result") e)]
+  let res ← delabRes z f
+  let req ← delabReq z P f
+  let ens ← delabEns z P f
   let (ss, ende) ← delabEnd z (vertragVon z.deklaration f) (P.rumpf f)
-  let koerper := SAnw.block ss ende
-  let schreibt := ((List.finRange z.tabs.length).filter fun t => z.schreibt n t).map
-    (fun t => SEffekt.writes (.field (.variable (nTab t.val)) "slots"))
-  let gschreibt := ((List.finRange z.globs.length).filter fun g => s.gschreibt.contains g.val).map
-    (fun g => SEffekt.writes (.variable (nGlob g.val)))
-  let sperren := (genommen koerper).eraseDups.map fun L => SEffekt.locks false (.variable L)
-  let eff := schreibt ++ gschreibt ++ sperren
-  let effK := if eff.isEmpty then [] else [SKlausel.effs eff]
   pure (.fnT { art := "impl", name := nFn f.val, params := ps, res,
                fehler := if s.gruende = 0 then none else some (nGrund s.gruende),
-               klauseln := heldK ++ req ++ ens ++ effK } koerper)
+               klauseln := klauselnVon z P f req ens } (SAnw.block ss ende))
 
 /-- The reason types the unit names. -/
 def gruende : List Nat :=
-  ((List.finRange z.fns.length).map fun f => (z.sigRoh (z.fns.get f)).gruende).filter (· ≠ 0) |>.eraseDups
+  (((List.finRange z.fns.length).flatMap fun f =>
+    z.deklaration.gruende f :: (((z.deklaration.signatur f).params ++ (z.deklaration.signatur f).erg.toList).filterMap
+      fun t => match t with
+        | .why n => some n
+        | _ => none)).filter (· ≠ 0)).eraseDups
 
 def grundItem (n : Nat) : SItemTief :=
   .whyT (nGrund n) ((List.range n).map fun j => (nFall j, .lit (j + 1), s!"c{j}")) true
@@ -276,7 +359,7 @@ def delabTab (t : Fin z.tabs.length) : Except String SItemTief := do
     pure ({ fname := nFeld j, ftyp := ← typS fz.typ, pos := none, bezug := none, wo := none,
             reserviert := false, byOps := false } : SFeld)).mapM id
   if tz.count < 0 then throw "table with a negative count"
-  pure (.tableT (nTab t.val) (some (.lit tz.count.toNat)) none none tz.geteilt [.tSlot fs])
+  pure (.tableT (nTab t.val) (some (.lit tz.count.toNat)) none none (z.deklaration.geteilt t) [.tSlot fs])
 
 def anfang : Ty → SKonstWert
   | .int lo hi => .one (zahlE (if lo > 0 then lo else if hi < 0 then hi else 0))
@@ -287,16 +370,24 @@ def delabGlob (g : Fin z.globs.length) : Except String SItemTief := do
   let gz := z.globs.get g
   let ty ← typS gz.typ
   if gz.atomar then
-    pure (.atomT (nGlob g.val) ty (if gz.nutzlast.isEmpty then none else some (gz.nutzlast.map fun k => .variable (nGlob k)))
-      none none)
+    let nl := z.deklaration.nutzlast g
+    pure (.atomT (nGlob g.val) ty (if nl.isEmpty then none else
+      some (nl.map fun h => .variable (nGlob (show Fin z.globs.length from h).val))) none none)
   else
-    pure (.globT true (nGlob g.val) ty (anfang gz.typ) none none gz.geteilt)
+    pure (.globT true (nGlob g.val) ty (anfang gz.typ) none none (z.deklaration.ggeteilt g))
+
+/-- A required resource is the lock `L`. -/
+def istLock (L : Fin z.locks.length) : z.deklaration.Lock ⊕ (z.deklaration.Marke × Nat) → Bool
+  | .inl M => (show Fin z.locks.length from M).val == L.val
+  | .inr _ => false
 
 def delabLock (L : Fin z.locks.length) : Except String SItemTief := do
   let lz := z.locks.get L
   let schuetzt :=
-    ((List.finRange z.tabs.length).filter fun t => (z.tabs.get t).sperre == some L.val).map (fun t => SExpr.variable (nTab t.val)) ++
-    ((List.finRange z.globs.length).filter fun g => (z.globs.get g).sperre == some L.val).map (fun g => SExpr.variable (nGlob g.val))
+    ((List.finRange z.tabs.length).filter fun t => (z.deklaration.braucht t).any (istLock z L)).map
+      (fun t => SExpr.variable (nTab t.val)) ++
+    ((List.finRange z.globs.length).filter fun g => (z.deklaration.gbraucht g).any (istLock z L)).map
+      (fun g => SExpr.variable (nGlob g.val))
   if lz.rang < 0 then throw "lock with a negative rank"
   pure (.lockT (nLock L.val) schuetzt (.lit lz.rang.toNat) none none (if lz.maskiert then some "irqs" else none) none)
 

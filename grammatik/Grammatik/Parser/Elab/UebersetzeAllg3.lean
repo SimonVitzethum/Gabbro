@@ -54,6 +54,20 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
     | some _ => .error "number returned for a non-number result"
     | none => .error "return with value without result"
   | .why _ => .error "reason as a value without G form"
+  | .grund g =>
+    match hE : (fnAt u caller).ergTy with
+    | some (.why n) =>
+      match lowGrund u Γ (resOf u caller) fn n g with
+      | .error e => .error e
+      | .ok v =>
+        have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+          rw [show (verOf u caller).erg =
+            (vertragVon (declOf u) caller).erg from rfl,
+            vErg_eq u caller, hE]
+          exact ErgExpr.val v
+        .ok eW
+    | some _ => .error "reason returned for a non-reason result"
+    | none => .error "return with value without result"
   | .sum v =>
     match hE : (fnAt u caller).ergTy with
     | some (.sum cs) =>
@@ -1148,7 +1162,7 @@ def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
   | .error e => .error e
   | .ok r0 =>
   match lowEnsList u (ErgCtx (ctxOf u c) ((verOf u c).erg))
-      (resOf u c) (fnAt u c) (fnAt u c).res
+      (resOf u c) (fnAt u c) (fnAt u c).ergTy
       (fnAt u c).gives with
   | .error e => .error e
   | .ok e0 =>
