@@ -605,6 +605,19 @@ theorem kopfOk_delab {Γ : Ctx} {Λ : List (Res z.deklaration)} (art : Nat → U
     cases ha : delabE z k body <;> simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd
     subst hd; rfl
   | why m r => simp [uOfS, uOfB] at hf
+  | div _ _ a b | rem _ _ a b | sdiv _ a b | srem _ a b | band _ _ a b | bor _ _ _ _ _ a b | bxor _ _ _ _ _ a b
+  | shl _ _ _ _ _ a b | shr _ _ _ _ _ a b =>
+    simp only [delabE] at hd
+    cases ha : delabE z k a <;> cases hb : delabE z k b <;>
+      simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd
+    subst hd; rfl
+  | oldG g hL => simp only [delabE, Except.ok.injEq] at hd; subst hd; rfl
+  | oldS t f i hL =>
+    simp only [delabE] at hd
+    cases hi : delabE z k i <;> simp only [hi, bind, Except.bind, Except.ok.injEq, reduceCtorEq] at hd
+    subst hd; rfl
+  | none m => simp [uOfS, uOfB] at hf
+  | some e => simp [uOfS, uOfB] at hf
   | _ => simp [delabE] at hd
 
 theorem regOrt_kopfOk (ctx : UCtx) (s : SExpr) (h : kopfOk s = true) : uRegOrt ctx s = none := by

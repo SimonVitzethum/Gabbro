@@ -39,3 +39,7 @@ root = "Grammatik.Gen.Abdeckung.ZellenSammeln"
 [[lean_exe]]
 name = "gen-fein"
 root = "Grammatik.Gen.Fein.Lauf"
+
+[[lean_exe]]
+name = "gen-text"
+root = "Grammatik.Gen.Text.Lauf"

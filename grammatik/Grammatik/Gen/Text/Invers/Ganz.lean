@@ -56,7 +56,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     {whys : List UWhy} {regs : List UReg} (hL : LInv z gNr tabs locks globs whys regs)
     (hM : ∀ m : z.deklaration.Marke, False) (f : z.deklaration.Fn) (devs : List String) (mitGriff : Bool)
     (ps : List (String × STyp)) (ks : List UParamArt)
-    (hps : parListe (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params = .ok ps)
+    (hps : parListe (optTab z) (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params = .ok ps)
     (hks : (z.deklaration.signatur f).params.mapM artErg = some ks)
     (hdevs : ∀ d ∈ devs, d = "Dev") (hgriff : ∀ r : z.deklaration.Reg, mitGriff = true ∧ "Dev" ∈ devs)
     (als : List (String × (Int × Int))) (name : String) (annahmen : List String) (sums : List USum)
@@ -114,7 +114,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
   griff r := by
     obtain ⟨hm, hd⟩ := hgriff r
     subst hm
-    obtain ⟨hf, _⟩ := parListe_ok _ als tabs sums whys [] 0 devs hdevs _ 0 ps ks hps hks
+    obtain ⟨hf, _⟩ := parListe_ok (optTab z) _ als tabs sums whys [] 0 devs hdevs _ 0 ps ks hps hks
     have hps_none : ∀ p ∈ ps, uGriffTyp devs p.2 = none := by
       intro p hp
       have := (List.filter_eq_self.1 hf) p hp
@@ -213,7 +213,7 @@ def uOfFn (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn
 theorem delabFn_teile (P : Programm z.deklaration) (mitGriff : Bool) (f : z.deklaration.Fn) (sig : FnSig)
     (koerper : SAnw) (hd : delabFn z P mitGriff f = .ok (.fnT sig koerper)) :
     ∃ ps res req ens ss ende,
-      parListe (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params = .ok ps ∧
+      parListe (optTab z) (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params = .ok ps ∧
       delabRes z f = .ok res ∧ delabReq z P f = .ok req ∧ delabEns z P f = .ok ens ∧
       delabEnd z (vertragVon z.deklaration f) (P.rumpf f) = .ok (ss, ende) ∧
       sig = { art := "impl", name := nFn (fN z f), params := mitGriffPs ps mitGriff, res,
@@ -222,7 +222,7 @@ theorem delabFn_teile (P : Programm z.deklaration) (mitGriff : Bool) (f : z.dekl
               klauseln := klauselnVon z P f req ens } ∧
       koerper = .block ss ende := by
   unfold delabFn at hd
-  cases hps : parListe (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params with
+  cases hps : parListe (optTab z) (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params with
   | error _ => simp [hps, bind, Except.bind] at hd
   | ok ps =>
   cases hres : delabRes z f with

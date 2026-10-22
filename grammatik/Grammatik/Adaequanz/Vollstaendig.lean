@@ -53,6 +53,15 @@ theorem vollstaendig_hinreichend {φS : Z → Bool} {M N : List P} (h : Vollstae
     obtain ⟨m, hm, hmz⟩ := h.gut p z hz hS
     exact imM m hm z hmz
 
+/-- **Theorem 4's sufficiency from conditions (a) and (b)**: complete test sets M and N are a sufficient test set in
+    the sense of `MusterHinreichend` (`Muster.lean`), with no canonical program per cell and no closure of the program
+    class. (a) is `gut_m` + `gut` (the valid tests carry every cell of a valid program), (b) is `n_schlecht` +
+    `schlecht` (every refused program has a refused test whose cells it has or a valid test has). -/
+theorem vollstaendig_muster {φS : Z → Bool} {M N : List P} (h : Vollstaendig T φS M N) :
+    MusterHinreichend T φS (M ++ N) := fun φ hMN =>
+  vollstaendig_hinreichend T h φ (fun m hm => hMN m (List.mem_append_left _ hm))
+    (fun n hn => hMN n (List.mem_append_right _ hn))
+
 /-! ## A witness: the condition is satisfiable and the theorem is not vacuous -/
 
 /-- Two programs over two cells: `gut` has only the good cell `true`; `boese` has the bad cell `false`. -/
@@ -100,5 +109,9 @@ theorem zeuge_nicht_leer : ¬ (akzeptiert zeugeT (fun _ => true) false ↔ akzep
   have h1 : akzeptiert zeugeT (fun _ => true) false := fun _ _ => rfl
   have := (h.mp h1) false (Or.inr ⟨rfl, rfl⟩)
   exact Bool.false_ne_true this
+
+/-- The witness of `vollstaendig_muster`: the two-program test set is sufficient in the sense of Theorem 4. -/
+theorem zeuge_muster : MusterHinreichend zeugeT zeugeS ([true] ++ [false]) :=
+  vollstaendig_muster zeugeT zeuge_vollstaendig
 
 end Gabbro.Grammatik.Adaequanz

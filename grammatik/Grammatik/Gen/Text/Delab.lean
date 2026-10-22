@@ -49,11 +49,15 @@ def tiefe : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
 /-- A literal. -/
 def zahlE (n : Int) : SExpr := if 0 ≤ n then .lit n.toNat else .un "-" (.lit (-n).toNat)
 
-/-- A type. -/
-def typS : Ty → Except String STyp
+/-- A type; `otab n` names the table whose count an `option index into T` of count `n` is. -/
+def typS (otab : Int → Option Nat) : Ty → Except String STyp
   | .int lo hi => .ok (.range (.atom (if 0 ≤ lo then "u64" else "i64")) (zahlE lo) (zahlE hi) false)
   | .bool => .ok (.atom "bool")
   | .why n => .ok (.atom (nGrund n))
+  | .ptr n rw => .ok (.ptr "normal" (if rw then "rw" else "r") (.atom (nTab n)))
+  | .opt n => match otab n with
+    | some i => .ok (.index true (nTab i))
+    | none => .error "option of a count no table has"
   | _ => .error "type without a spelling"
 
 variable (z : Spez)
@@ -85,6 +89,21 @@ def delabE (kopf : Option Nat) {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : 
       .ok (match a' with
         | .lit m => .un "-()" (.lit m)
         | x => .un "-" x)
+  | .div _ _ a b => do .ok (.bin "/" (← delabE kopf a) (← delabE kopf b))
+  | .rem _ _ a b => do .ok (.bin "%" (← delabE kopf a) (← delabE kopf b))
+  | .sdiv _ a b => do .ok (.bin "/" (← delabE kopf a) (← delabE kopf b))
+  | .srem _ a b => do .ok (.bin "%" (← delabE kopf a) (← delabE kopf b))
+  | .band _ _ a b => do .ok (.bin "&" (← delabE kopf a) (← delabE kopf b))
+  | .bor _ _ _ _ _ a b => do .ok (.bin "|" (← delabE kopf a) (← delabE kopf b))
+  | .bxor _ _ _ _ _ a b => do .ok (.bin "^" (← delabE kopf a) (← delabE kopf b))
+  | .shl _ _ _ _ _ a b => do .ok (.bin "<<" (← delabE kopf a) (← delabE kopf b))
+  | .shr _ _ _ _ _ a b => do .ok (.bin ">>" (← delabE kopf a) (← delabE kopf b))
+  | .none _ => .ok (.call "None" [])
+  | .some e => do .ok (.call "Some" [← delabE kopf e])
+  | .oldG g _ => .ok (.old (.variable (nGlob (show Fin z.globs.length from g).val)))
+  | .oldS t f i _ => do
+      .ok (.old (.field (.index (.field (.variable (nTab (show Fin z.tabs.length from t).val)) "slots")
+        (← delabE kopf i)) (nFeld (show Fin _ from f).val)))
   | .lt a b => do .ok (.bin "<" (← delabE kopf a) (← delabE kopf b))
   | .le a b => do .ok (.bin "<=" (← delabE kopf a) (← delabE kopf b))
   | .eq a b => do .ok (.bin "==" (← delabE kopf a) (← delabE kopf b))
@@ -275,15 +294,19 @@ def sperrenE {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
 end
 
 /-- The parameters: the `j`-th of `np` is `v{np-1-j}` (the variable of depth `j` in the body). -/
-def parListe (np : Nat) : Nat → List Ty → Except String (List (String × STyp))
+def parListe (otab : Int → Option Nat) (np : Nat) : Nat → List Ty → Except String (List (String × STyp))
   | _, [] => .ok []
-  | j, t :: ts => do .ok ((nVar (np - 1 - j), ← typS t) :: (← parListe np (j + 1) ts))
+  | j, t :: ts => do .ok ((nVar (np - 1 - j), ← typS otab t) :: (← parListe otab np (j + 1) ts))
+
+/-- The table an option of count `n` indexes: the first table of that count. -/
+def optTab (n : Int) : Option Nat :=
+  ((List.finRange z.tabs.length).find? fun t => decide ((z.tabs.get t).count = n)).map (·.val)
 
 /-- The result type of a function. -/
 def delabRes (f : Fin z.fns.length) : Except String (Option STyp) :=
   match (z.deklaration.signatur f).erg with
   | none => pure none
-  | some t => do pure (some (← typS t))
+  | some t => do pure (some (← typS (optTab z) t))
 
 /-- Is the predicate `true` (then no clause is printed)? -/
 def istTru {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} : Expr z.deklaration Γ Λ τ → Bool
@@ -332,7 +355,7 @@ def klauselnVon (P : Programm z.deklaration) (f : Fin z.fns.length) (req ens : L
 def delabFn (P : Programm z.deklaration) (mitGriff : Bool) (f : Fin z.fns.length) : Except String SItemTief := do
   let s := z.deklaration.signatur f
   let np := s.params.length
-  let ps ← parListe np 0 s.params
+  let ps ← parListe (optTab z) np 0 s.params
   let ps := ps ++ (if mitGriff then [("d", .atom "Dev")] else [])
   let res ← delabRes z f
   let req ← delabReq z P f
@@ -356,7 +379,7 @@ def grundItem (n : Nat) : SItemTief :=
 def delabTab (t : Fin z.tabs.length) : Except String SItemTief := do
   let tz := z.tabs.get t
   let fs ← (tz.felder.zipIdx.map fun (fz, j) => do
-    pure ({ fname := nFeld j, ftyp := ← typS fz.typ, pos := none, bezug := none, wo := none,
+    pure ({ fname := nFeld j, ftyp := ← typS (optTab z) fz.typ, pos := none, bezug := none, wo := none,
             reserviert := false, byOps := false } : SFeld)).mapM id
   if tz.count < 0 then throw "table with a negative count"
   pure (.tableT (nTab t.val) (some (.lit tz.count.toNat)) none none (z.deklaration.geteilt t) [.tSlot fs])
@@ -368,7 +391,7 @@ def anfang : Ty → SKonstWert
 
 def delabGlob (g : Fin z.globs.length) : Except String SItemTief := do
   let gz := z.globs.get g
-  let ty ← typS gz.typ
+  let ty ← typS (optTab z) gz.typ
   if gz.atomar then
     let nl := z.deklaration.nutzlast g
     pure (.atomT (nGlob g.val) ty (if nl.isEmpty then none else

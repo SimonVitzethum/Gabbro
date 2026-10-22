@@ -37,6 +37,11 @@ def ausdruck (g : List Ty) : Spez where
     g.map (fun τ => { params := g, erg := some τ }) ++ [{ erg := g.head?, gruende := 1 }]
   fns := List.range (g.length + 2)
 
+/-- As `ausdruck`, and the first function also takes a pointer to the first callee (indirect calls with a result). -/
+def zeiger (g : List Ty) : Spez :=
+  let a := ausdruck g
+  { a with sigs := a.sigs.set 0 { a.sigs.getD 0 {} with params := g ++ [.fnptr 1] } }
+
 /-- Registers of the group. -/
 def register (g : List Ty) : Spez where
   tabs := [{ count := 1, felder := g.map fun τ => { typ := τ } }]
@@ -49,8 +54,8 @@ def atomar (g : List Ty) : Spez where
   globs := g.map (fun τ => { typ := τ, atomar := true, nutzlast := [g.length] }) ++ [{ typ := .int 0 0 }]
   sigs := [{ params := g, gschreibt := List.range (g.length + 1) }]
 
-/-- **The fine members**: for every group the three declarations. -/
+/-- **The fine members**: for every group the three declarations, then for every group the one with a pointer. -/
 def feinMitglieder : List Spez :=
-  (gruppen.flatMap fun g => [ausdruck g, register g, atomar g]).map Spez.einzeln
+  ((gruppen.flatMap fun g => [ausdruck g, register g, atomar g]) ++ gruppen.map zeiger).map Spez.einzeln
 
 end Gabbro.Grammatik.Gen.Fein

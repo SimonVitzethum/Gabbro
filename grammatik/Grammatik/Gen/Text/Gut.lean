@@ -16,6 +16,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser
 def typGutB : STyp → Bool
   | .atom a => !typKopf a
   | .range (.atom a) lo hi _ => !typKopf a && gut lo && gut hi
+  | .ptr _ w t => nameForm w && typGutB t
+  | .index _ _ => true
   | _ => false
 
 theorem typGutB_sound (t : STyp) (h : typGutB t = true) : TypGut t := by
@@ -33,6 +35,10 @@ theorem typGutB_sound (t : STyp) (h : typGutB t = true) : TypGut t := by
       obtain ⟨rfl, rfl, rfl⟩ := hm
       exact ⟨hlo, hhi⟩)
     simpa [applyTS, tsStep] using this
+  | .ptr r w t, h =>
+    simp only [typGutB, Bool.and_eq_true] at h
+    exact TypGut.ptr r w t h.1 (typGutB_sound t h.2)
+  | .index o t, _ => exact TypGut.index o t
 
 theorem typOptGutB_sound (t : Option STyp) (h : t.all typGutB = true) : TypOptGut t := by
   cases t with
