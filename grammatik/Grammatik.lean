@@ -411,6 +411,9 @@ import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.Kern.Semantik.GanzzahlMatch
 import Grammatik.Zielsatz.Eigenschaften.Divergenz
 import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeGebunden
+import Grammatik.Speichermodell.Adressen.Bereich
+import Grammatik.Speichermodell.Adressen.Layout
+import Grammatik.Speichermodell.Adressen.AdressZeuge
 import Grammatik.Speichermodell.Maschine.Sicht
 import Grammatik.Speichermodell.Maschine.MaschineW
 import Grammatik.Speichermodell.Maschine.DRF

@@ -268,7 +268,10 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
           (hZI.1.1 t)) hA.antworten
       zeit := fun f g n _ _ _ hadm hE _ run hA' =>
         frame_schritte_beschraenktX f g n hadm hE run hA'
-      folge := folgeG_erreichbarX hTA sp init hX }
+      folge := folgeG_erreichbarX hTA sp init hX
+      speicherAdressen := fun hI lay hLay t k f hne =>
+        geaendert_im_bereich (rufErreichbarGX_aussen
+          (fun t ht => by obtain ⟨g, e, -⟩ := hTA _ ht; cases e) hI hX) hLay hne }
 
 /-- A residue at a named stop is no `forever` loop with budget left. -/
 theorem restHalt_nicht_ewigPos {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {Γ : Ctx}

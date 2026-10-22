@@ -481,6 +481,29 @@
     (no start under a held lock), and `klon_als_faden` (fix lane F9's clone machine is a
     special case of the thread machine).
 
+  -- BEGIN address block (2026-10-22, review of gabbro_ziel, point 3) --
+  WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. `ZielX` gains ONE leg, `speicherAdressen`; no
+  premise moves.
+  * THE GAP. The leg `speicherSicher` (`SpurInv`) is a statement about the trace; that every access stays in its
+    carrier was carried by the types alone (an index has an index type) and was nowhere a statement about runs. And
+    machine G's memory is a function on EVERY index of a table: a write outside the declared extent has no address
+    in a real memory and would land in another carrier. Foreign code was allowed to make such writes: `GutO` frames
+    an axiom at the level of carriers, not of indices.
+  * THE MODEL (Speichermodell/Adressen/). `ImBereich D t k` is the declared extent `0 ..< D.count t`;
+    `rufSchrittG_aussen`, `rufSchrittGX_aussen`, `rufErreichbarGX_aussen`: no step of G or GX writes outside the
+    extents, provided foreign code does not (`ImBereichO`: a NAMED assumption about the oracle, kept inside the leg
+    like `KernPlan`, so premise (c) is unchanged). `AdressLayout`/`LayoutOk`: any byte layout of the carriers a
+    correct loader may produce (fields inside their element and apart, carriers apart); a cell in its extent lies in
+    its table's region (`zelle_im_bereich`), two different cells share no byte (`zellen_getrennt_tab`,
+    `zellen_getrennt`).
+  * THE LEG. `speicherAdressen`: under `ImBereichO`, every cell a run has changed lies in its extent and, under every
+    correct layout, with all its bytes in the region of its table. Proof: `geaendert_im_bereich` over
+    `rufErreichbarGX_aussen` (the shared atomics are globals, `AtomarAusgenommen`).
+  * WHAT IT DOES NOT BUY: reads are in their extent by the index types, not by a theorem about runs; globals and
+    registers have no index; the layout of the emitted code (that the compiler's layout is a `LayoutOk` one and that
+    its cells are these) is the compiler's (Code/Model/Layout.lean), not claimed here.
+  -- END address block --
+
   -- BEGIN starvation block (2026-10-22, review of gabbro_ziel, point 1) --
   WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. PURELY ADDITIVE: a THIRD statement,
   `GabbroZielLeben`; `GabbroZiel` and its legs are unchanged.
@@ -1524,6 +1547,7 @@ import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Logik.Fortschritt.Folge
 import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 import Grammatik.Logik.Fortschritt.PlanLauf
+import Grammatik.Speichermodell.Adressen.Layout
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -2284,6 +2308,12 @@ structure ZielX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   fortschritt : FortschrittG P O passes M
   zeit : ZeitAbX P O passes Tg M
   folge : FolgeG P M
+  -- memory at addresses (2026-10-22): if foreign code writes inside the declared extents (`ImBereichO`, a named
+  -- assumption inside the leg), every cell the run has changed lies in its extent and, under every correct layout,
+  -- with all its bytes in the region of its table
+  speicherAdressen : ImBereichO O → ∀ (lay : AdressLayout D), LayoutOk lay → ∀ (t : D.Tab) (k : Int) (f : D.Feld t),
+    M.speicher.slots t k f ≠ M0.speicher.slots t k f →
+      ImBereich D t k ∧ ∀ a, lay.inZelle t k f a → lay.inTabelle t a
 
 /-- **Every stop is named, on the thread machine over GX.** -/
 def FortschrittFX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
