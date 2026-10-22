@@ -163,7 +163,11 @@ theorem ohneVorbedingung_rufZuD
   cases hy : R' (some g) (worldR σ) (envR ρ) with
   | ok => rw [hy] at hx; cases hx
   | why => rw [hy] at hx; cases hx
-  | logik => rw [hy] at hx; cases hx
+  | logik e' =>
+      rw [hy] at hx
+      simp only [rufZ, RufAusgang.logik.injEq] at hx
+      unfold logikZ at hx
+      split at hx <;> cases hx
   | hardware => rw [hy] at hx; cases hx
 
 theorem ohneLogik_rufZuD
@@ -191,8 +195,17 @@ theorem rufRel_rufZuD
       left
       simp only [rufZ, rufR, worldR_worldZ]
   | logik e' =>
-      right
-      exact ⟨e', .schleife, rfl, rfl, fun g' he => absurd he (h (some g) _ _ e' hy g')⟩
+      cases e' with
+      | abstieg h' =>
+          cases h' with
+          | some h0 => exact Or.inl rfl
+          | none =>
+              right
+              exact ⟨_, .schleife, rfl, rfl, logikTreu_schleife (by intro g' he; cases he) (by intro h0 he; cases he)⟩
+      | vorbedingung g' => exact absurd rfl (h (some g) _ _ _ hy g')
+      | _ =>
+          right
+          exact ⟨_, .schleife, rfl, rfl, logikTreu_schleife (by intro g' he; cases he) (by intro h0 he; cases he)⟩
   | hardware e =>
       left
       simp only [rufZ, rufR, hwR_hwZ]
@@ -209,7 +222,7 @@ theorem rufRel_torRuf (P : Programm D)
   · rw [if_pos hr, if_pos (hq.mpr hr)]
     exact h g σ ρ
   · rw [if_neg hr, if_neg (fun x => hr (hq.mp x))]
-    exact Or.inr ⟨_, _, rfl, rfl, fun _ _ => ⟨g, rfl⟩⟩
+    exact Or.inr ⟨_, _, rfl, rfl, ⟨fun _ _ => ⟨g, rfl⟩, by intro h0 he; cases he⟩⟩
 
 /-- The body of `some f`, related to the body of `f` under the answering
     oracle, move and handler of `D`. -/
@@ -285,7 +298,7 @@ theorem koerperGutS_mitRuhe (h : KoerperGutS P passes Q S f) :
         | hardware => rw [hy] at e; cases e
       · have h1 := hx.symm.trans h1
         cases h1
-        obtain ⟨g0, hg0⟩ := ht g rfl
+        obtain ⟨g0, hg0⟩ := ht.1 g rfl
         rw [hg0] at h2
         exact hk.2 g0 h2
   · obtain ⟨σ0, rfl⟩ : ∃ σ0, σ = worldR σ0 := ⟨worldZ σ, (worldR_worldZ σ).symm⟩

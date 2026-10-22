@@ -234,7 +234,7 @@ theorem pushSA_mass (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS :
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact hM F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
         (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
-        (umweltAusA Tg HX) hHA (rufAusM H) (rufAusM_rahmen hv) (rufAusM_ohneAbstieg hv)
+        (umweltAusA Tg HX) hHA (rufAusM H) (rufAusM_rahmen hv) (rufAusM_ohneAbstieg hv) (rufAusM_ohneVorbedingung hv)
         F.s0 F.rho hreq g hz hex
 
 /-- **A returning head justifies its answer** (no event, as `popS_begr_ok`). -/
