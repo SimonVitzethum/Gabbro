@@ -47,9 +47,9 @@ inductive Ty where
   /-- `f32`/`f64 in lo .. hi` («F») -- die Schranken als Brueche `(z, n)`, weil `0.5` eine
       Schranke ist. Der Wert ist eine ENDLICHE Gleitkommazahl der Maschine im Bereich. -/
   | fl (lo hi : Int × Int)
-  /-- `fn(…) -> T effects {…} costs …` -- ein Funktionszeiger mit seinem Vertrag («B8»):
-      der Wert ist eine Funktion, deren Signatur GENAU diese ist. Die Signatur steht hier
-      als Nummer; welche das ist, sagt die Deklaration (`sig`). -/
+  /-- `fn(…) -> T effects {…} costs …` -- a function pointer («B8»): the value is a function whose
+      own signature CONFORMS to signature number `sig` (`Deklaration.passt`, `SigPasst`; structural
+      since 2026-10-21). -/
   | fnptr (sig : Nat)
   /-- `ptr<space, rights> T` -- ein Zeiger auf den Traeger Nummer `t` (M3). Der Wert ist die
       FAEHIGKEIT, `t` anzusprechen; jeder Zugriff hindurch braucht die Waechter von `t`

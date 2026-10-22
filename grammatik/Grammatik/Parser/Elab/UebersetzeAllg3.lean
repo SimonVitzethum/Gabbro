@@ -162,6 +162,12 @@ theorem rangOkB_sound (u : UProg) (Λ : List (Res (declOf u))) (L : (declOf u).L
   exact of_decide_eq_true this
 
 /-- The result type of a callee, for a binding (`he` of `Block.bindCall`); a callee without a value binds nothing. -/
+def withErgN {α : Type} (u : UProg) (n : Nat)
+    (K : (τ : Ty) → ((declOf u).sigNr n).erg = some τ → Except String α) : Except String α :=
+  match hE : ((declOf u).sigNr n).erg with
+  | none => .error "call without a value"
+  | some τ => K τ hE
+
 def withErg {α : Type} (u : UProg) (callee : Fin u.fns.length)
     (K : (τ : Ty) → (declOf u).erg callee = some τ → Except String α) : Except String α :=
   match hE : (declOf u).erg callee with
@@ -428,29 +434,31 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
             | .ok (b, r) => .ok (Block.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
-  | Γ, fn, n + 1, Λ, pe, .bindFnref x f :: rest =>
+  | Γ, fn, n + 1, Λ, pe, .bindFnref x f m :: rest =>
     match fnIdx u.fns f with
     | .error e => .error e
     | .ok g =>
-      match lowSeqL (l := l) u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n Λ pe rest with
-      | .error e => .error e
-      | .ok (b, r') => .ok (Block.bind (Expr.fnref (D := declOf u) g g.val (decide_eq_true rfl)) b, r')
-  | Γ, fn, n + 1, Λ, pe, .bindCallInd x p cname args :: rest =>
-    match lowRufKopf u caller Γ fn Λ cname args with
+      if h : (declOf u).passt g m = true then
+        match lowSeqL (l := l) u caller (Ty.fnptr m :: Γ) (fn.mitFnptr x m) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Block.bind (Expr.fnref (D := declOf u) g m h) b, r')
+      else .error "function does not conform to the pointer type"
+  | Γ, fn, n + 1, Λ, pe, .bindCallInd x p _ args :: rest =>
+    match lowZeigerN u Γ fn p with
     | .error e => .error e
-    | .ok k =>
-      match lowZeiger u Γ fn p k.callee with
+    | .ok ⟨m, v⟩ =>
+      match lowRufKopfN u caller Γ fn Λ m args with
       | .error e => .error e
-      | .ok v =>
-        withErg u k.callee fun τ hE =>
+      | .ok k =>
+        withErgN u m fun τ hE =>
           match lowSeqL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
           | .error e => .error e
           | .ok (b, r') =>
-            if hr : (declOf u).gruende k.callee = 0 then
-              have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) Λ := by
-                rw [nach_eq u k.callee Λ]
+            if hr : ((declOf u).sigNr m).gruende = 0 then
+              have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) Λ := by
+                rw [nachSigAt_eq u m Λ]
                 exact b
-              .ok (Block.bindCallInd (D := declOf u) (n := k.callee.val) (Expr.var v) k.args hE k.hp hr b', r')
+              .ok (Block.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
   | Γ, fn, n + 1, Λ, pe, .awaitBind x a :: rest =>
     match globIdx u.globs a with
@@ -740,15 +748,17 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
     .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
-  | Γ, fn, n + 1, Λ, pe, .bindFnref x f :: rest =>
+  | Γ, fn, n + 1, Λ, pe, .bindFnref x f m :: rest =>
     match fnIdx u.fns f with
     | .error e => .error e
     | .ok g =>
-      match lowEndL (l := l) u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n Λ pe rest with
-      | .error e => .error e
-      | .ok (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val (decide_eq_true rfl)) b, r')
+      if h : (declOf u).passt g m = true then
+        match lowEndL (l := l) u caller (Ty.fnptr m :: Γ) (fn.mitFnptr x m) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g m h) b, r')
+      else .error "function does not conform to the pointer type"
   | _, _, _ + 1, _, _, .bindCallInd .. :: _ =>
-    .error "lower: an indirect call bound in an else branch has no G form (Endblock lacks bindCallInd)"
+    .error "lower: an indirect call bound in an else branch has no G form here"
   | _, _, _ + 1, _, _, .awaitBind .. :: _ =>
     .error "lower: an awaits in an else branch has no G form (Endblock lacks awaits)"
   | _, _, _ + 1, _, _, .regRead .. :: _ =>
@@ -923,15 +933,33 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, .narrowBeg .. :: _, _ =>
     .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
-  | Γ, fn, n + 1, .bindFnref x f :: rest, r =>
+  | Γ, fn, n + 1, .bindFnref x f m :: rest, r =>
     match fnIdx u.fns f with
     | .error e => .error e
     | .ok g =>
-      match lowBodyF u caller (Ty.fnptr g.val :: Γ) (fn.mitFnptr x g.val) n rest r with
+      if h : (declOf u).passt g m = true then
+        match lowBodyF u caller (Ty.fnptr m :: Γ) (fn.mitFnptr x m) n rest r with
+        | .error e => .error e
+        | .ok e => .ok (Endblock.bind (Expr.fnref (D := declOf u) g m h) e)
+      else .error "function does not conform to the pointer type"
+  | Γ, fn, n + 1, .bindCallInd x p _ args :: rest, r =>
+    match lowZeigerN u Γ fn p with
+    | .error e => .error e
+    | .ok ⟨m, v⟩ =>
+      match lowRufKopfN u caller Γ fn (resOf u caller) m args with
       | .error e => .error e
-      | .ok e => .ok (Endblock.bind (Expr.fnref (D := declOf u) g g.val (decide_eq_true rfl)) e)
-  | _, _, _ + 1, .bindCallInd .. :: _, _ =>
-    .error "lower: an indirect call bound at the top level of a body has no G form (Endblock lacks bindCallInd)"
+      | .ok k =>
+        withErgN u m fun τ hE =>
+          match lowBodyF u caller (τ :: Γ) (fn.mitTy x τ) n rest r with
+          | .error e => .error e
+          | .ok e =>
+            if hr : ((declOf u).sigNr m).gruende = 0 then
+              have e' : Endblock (declOf u) (verOf u caller) false (τ :: Γ)
+                  (nachSig (declOf u) ((declOf u).sigNr m) (resOf u caller)) := by
+                rw [nachSigAt_eq u m (resOf u caller)]
+                exact e
+              .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr e')
+            else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, .awaitBind .. :: _, _ =>
     .error "lower: an awaits at the top level of a body has no G form (Endblock lacks awaits)"
   | _, _, _ + 1, .regRead .. :: _, _ =>
