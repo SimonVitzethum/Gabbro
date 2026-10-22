@@ -1,1540 +1,188 @@
 /-
-  File:    Grammatik/Zielsatz/Spec.lean -- THE GOAL AS ONE STATEMENT (PLAN-ZIELSATZ.md step 2).
-  Content: definitions and `def GabbroZiel : Prop`. No proof. Review target.
+  File:    Grammatik/Zielsatz/Kern/Spec.lean -- THE GOAL AS STATEMENTS. Definitions only, no proof. Review target:
+           every extension of the goal is a reviewed diff of this file. The history of this header (the review
+           rounds, the lanes and agents that moved the statement, every superseded form) is in git:
+           `git log -p -- grammatik/Grammatik/Zielsatz/Kern/Spec.lean`.
 
-  Goal (owner): a user proves only their OWN logic plus named hardware assumptions; memory
-  safety, data-race freedom, contracts where claimed in concurrent runs, and time are carried
-  by the language.
+  GOAL (Simon): a Gabbro user proves only their own logic plus named hardware assumptions; memory safety, race
+  freedom, contracts where claimed -- in concurrent runs too -- and time are carried by the language.
 
-  SHAPE (since 2026-09-15). Everything is about ONE value `E : Einheit D`, the program the
-  user wrote: code with contracts `E.P`, lock invariants `E.S`, axiom ensures `E.Q`, declared
-  starts with arguments `E.starts` (functions `E.ws`), declared initial memory `E.sp0`.
-  Premises in four groups:
-  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of the checker (`PrueferX`: the Bool and its
-      soundness against `AkzeptiertSpecX`, since lane O25c; the concrete checker is
-      `akzeptiertX_pruefer`, Zielsatz/AtomarZiel.lean, computing `AkzeptiertX E.P E.S fs ls cs
-      E.ws` -- `Akzeptiert` of Zielsatz/Akzeptiert.lean with the footprint rule admitting the
-      unit's shared atomics);
-  (b) `NutzerPflichtA E` -- the user's logic: the bodies at EVERY `forever` budget and against
-      every value a read of a shared atomic may return (`LogikPflichtA`, the rely; on a unit
-      without one it is `LogikPflicht`) AND the start (`StartPflicht`: every lock invariant at
-      `E.sp0`, every declared start's `requires` there with its declared arguments);
-      BRIDGE TO GabbroV (comment only, 2026-09-29; `bruecke/`, `messung/GABBROV-BRUECKE-REPORT.md`):
-      for a unit the Lean parser elaborates (`lowerAllg`), (b) is DERIVED from GabbroV's duty
-      files (`bruecke_nutzer`, `bruecke_nutzerA`), given per-unit decided name and rank
-      conditions. It covers the parser's fragment only (corpus: 104 and 108); every other unit
-      still carries (b) as an assumption. No unit inside it has a shared atomic, so the rely
-      of `LogikPflichtA` is empty there; a unit WITH one is not bridged.
-  (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code;
-  (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (A4).
-  Then for every budget, every set of initially live threads and every reached machine of the
-  THREAD machine (FadenMaschine.lean: machine G plus threads spawned at run time by `start` and
-  `child`, since 2026-09-26; over machine GX since lane O25c, Speichermodell/GXMaschine.lean:
-  the unit's shared atomics read as the weak memory answers): `ZielFX` -- `ZielX` on its G
-  state plus the spawn and join legs. The statement before lane O25c is `GabbroZielSC`
-  (`ZielF`/`Ziel` over G, the checker and (b) of before), a corollary (atomic-rely block).
-  `fs`/`ls`/`cs` (functions, locks, carriers) are `Aufzaehlung`s (complete by their type:
-  finite declarations only).
-  A SECOND statement, `GabbroZielVerbund` (end of this file, since 2026-09-26), covers a
-  program LINKED from two separately compiled units under the same hardware assumptions; its
-  conclusion is this statement's `ZielF`, on the linked unit (the linking block below).
+  THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
+  `Classical.choice`, `Quot.sound`):
+  * `GabbroZiel` -- safety, on every reached machine: the legs of `ZielFX` (below). Proof `gabbro_ziel`.
+  * `GabbroZielSC` -- the same over machine G without the atomic rely; a corollary (`gabbro_ziel_sc_aus`), kept as a
+    name because corpus theorems and embeddings are stated over it.
+  * `GabbroZielVerbund` -- a program LINKED from two separately compiled units, each accepted alone, under the link
+    check `SchnittstelleSpec` and the SAME hardware assumptions; conclusion `ZielF` on the linked unit
+    (`gabbro_ziel_verbund`).
+  * `GabbroZielLeben` -- liveness: on every weakly fair run of the ticket lock a thread standing at `locks L` takes
+    `L`, or some thread holds `L` from some step on for ever (`gabbro_ziel_leben`).
+  What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
+  said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool, not the Rust checker, and no
+  bridge from the model to a binary is built (THE READING, below).
 
-  WHAT A GREEN BUILD COVERS (OPUS AGENT C, 2026-09-26; messung/OPUS-C-TRAGWEITE.md). A header
-  paragraph only: NO definition of this file changed, no premise moved, `Ziel`/`ZielF` are as
-  before. It says, per REAL program, what a green `lake build` of `grammatik/` establishes, so
-  that "Lean green => the language carries everything except what this header names" holds
-  by construction and not by reading:
-  * THE ONE LIST is `Grammatik/Zertifikat/REGISTER.txt`: every `.gab` under `beispiele/` (top
-    level and `gift/`) the checker accepts, each either CERTIFIED or UNCERTIFIED. The cargo test
-    `crates/gabbro-check/tests/zertifikate.rs` recomputes it from the tree and fails on any
-    byte of difference, so an accepted program outside both lines, a stale certificate or a
-    stale row turns `cargo test` RED. Measured 2026-09-26: 199 accepted, 23 CERTIFIED, 176
-    UNCERTIFIED (of the 129 top-level corpus programs: 18 certified); after lane O25c (the
-    exporter carries payload-free atomics, example 162 added): 204 accepted, 25 CERTIFIED, 179
-    UNCERTIFIED (of the 139 top-level corpus programs: 20 certified).
-  * CERTIFIED: the program's certificate (the byte-exact output of `gabbro obligations --g`,
-    imported by `Grammatik/Zertifikate.lean`, so in the build) holds the exported unit `gE`,
-    decides (a) for it IN LEAN (`gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE … = true
-    := by decide`, since lane O25c) and states this theorem on it (`gP_gabbro_f`: `ZielFX` on
-    every reachable thread machine over GX; `gP_gabbro`: `ZielX` on every GX run), with (b)
-    `NutzerPflichtA gE` as the open
-    hypothesis -- the user's part -- and (c), (d) as named above. For such a program the Rust
-    checker's verdict is NOT in the chain of reasoning: the Lean Bool decides, and an exported
-    program the Lean Bool refused would turn the build RED.
-  * UNCERTIFIED: the exporter refuses the program (the row names its FIRST refusal, code and
-    message, `LG001`-`LG007`). A green build says NOTHING about such a program; this statement
-    reaches it only through a hand-written term (`Korpus07`, `Korpus125`), which no guardian
-    pins to the source.
-  * A program outside `beispiele/` is covered exactly when its own `gabbro obligations --g`
-    output elaborates (the same file, the same `decide`); nothing checks that this was done.
-  * STILL TRUSTED FOR A CERTIFIED PROGRAM, and named here as NOT CLAIMED: (i) that `gE` IS the
-    source program -- the exporter (`lean_g.rs`) is unverified, and every form it drops is
-    listed in the certificate's own header under "NO FORM in G" (declared `costs`, `reads`,
-    deadlines with `arch`/`falsifier`, lock hold budgets, `traverse` annotations, `by ops`,
-    `mut`, `pub`/`opaque`, `const fn` declarations, the hardware around `entry`/`boot`): none
-    of them is claimed, whatever the Rust checker enforces about them; (ii) that machine G is
-    the meaning of the emitted C -- the register marks `chain-instance=…` where a Lean instance
-    of the generic closing theorem exists (104, 108 today, `zaehle-kette.py --lean` measures
-    2 of 129 CLOSED) and `chain=none` everywhere else, where it is an assumption of the reading
-    (below); of the emitted C forms, 51 have a correspondence lemma, 4 map to a named
-    assumption and 27 have no semantics (`pruefe-cformen.py`, `KNOWN_UNCOVERED`).
-  * TABLE AND GROUP INVARIANTS (review of Opus agent D, 2026-09-26): the exporter writes
-    `Inv := Empty` and refuses `maintains` (`LG001`), so for every CERTIFIED program the legs
-    `invRuhe` and `invSicht` are vacuous; of the invariant legs only the lock legs
-    `sperrWechsel`/`sperrSicht` (and `sperrInv`) carry content there.
-  * The Rust diagnostic codes (411 in the checker, 0 of its sentences in state PROVED) are
-    therefore not premises of anything here: the ones mirroring `AkzeptiertSpec` are re-decided
-    in Lean for every certified program, and the others guard properties this statement does
-    not claim (the NOT CLAIMED list, and the dropped forms above).
+  THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
+  lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time
+  roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
+  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
+      (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
+      lock-free starts, pool safety, write separation, answer sites, masking discipline). The concrete checker is
+      `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
+      enumerations (finite declarations only).
+  (b) `NutzerPflichtA E` -- the user's logic: every body, SEQUENTIALLY, at every `forever` budget, against every
+      callee answer meeting the callee's contract and frame, every oracle answer of class (c), every lock move
+      keeping the invariant (`HavocOk`), and every value a read of an admitted shared atomic may return (the rely):
+      its `ensures` and owed invariants at value and reason exits, every callee's `requires`, no `logik` outcome
+      (`LogikPflichtA`); and the start (`StartPflicht`: the lock invariants at `E.sp0`, every root's `requires`
+      there). For units the Lean parser elaborates, (b) is derived from GabbroV's duty files
+      (`bruecke_nutzer`, `bruecke_nutzerA`) under per-unit decided name and rank conditions.
+  (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code (THE ONE LIST, below).
+  (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (THE ONE LIST).
+  CONCLUSION of `GabbroZiel`: for every budget `passes`, every set `lebt0` of initially live threads and every
+  machine `K` of the THREAD machine over GX (FadenMaschine.lean, GXMaschine.lean: machine G, threads spawned at run
+  time by `start`/`child`, and every read of an admitted shared atomic answered by the weak memory) reachable from
+  the runtime's start: `ZielFX` at `K`. The program run is `E.P.mitRuhe`, `E.P` plus the runtime's idle root
+  (MitRuhe.lean; every function behaves as in `E.P`, MitRuheSemantik.lean).
 
-  -- BEGIN atomic-rely block (Opus lane O25c, 2026-09-26) --
-  WHAT CHANGED ON 2026-09-26 (OPUS LANES O25, O25b, O25c: UNGUARDED ATOMIC COMMUNICATION,
-  OFFEN O25 AND O17's READ HALF), AND WHY -- a REVIEWED DIFF of this file (the review:
-  messung/OPUS-O25C-ATOMICS.md; the pieces: OPUS-O25-ATOMICS.md, OPUS-O25B-ATOMICS.md). The
-  premises (a) and (b) and the conclusion MOVE; the statement of before stays, as
-  `GabbroZielSC`, and is DERIVED from the new one.
-  * THE GAP. The footprint component `fuss` demanded that every carrier a thread reads is
-    thread-local or lock-guarded, `atomic` carriers included. So a flag, a counter or a
-    per-core cell that one thread writes and another reads WITHOUT a lock -- the thing atomics
-    exist for -- was refused, and `schwach` (the weak machine adds no behaviour) was true only
-    because W's non-SC outcomes occurred on no accepted program. Covering such programs needs
-    two things: the weak memory may answer a read of a shared atomic with a stale message
-    (the statement must speak about those runs), and the user's sequential proof must hold
-    whatever that read returns (a RELY).
-  * THE DIFF, premises. (a) `C : Pruefer` becomes `C : PrueferX`, sound against
-    `AkzeptiertSpecX` -- `AkzeptiertSpec` with ONE field changed: `fuss` is `FussSX` over the
-    ADMITTED SHARED ATOMICS `GeteiltV P ws` (an `atomic` global with no guard lock that is not
-    thread-local among the starts, `GeteiltA`, and that no `requires`, `ensures` or owed
-    invariant mentions, `VertragsFrei`): such a carrier may stand in a footprint beside the
-    local and the guarded ones. A RELAXATION: every checker of before is a checker for the
-    rely (`Pruefer.alsX`, via `akzeptiertSpecX_of_spec`), with the same verdict. (b)
-    `NutzerPflicht E` becomes `NutzerPflichtA E`: `LogikPflicht` with every body run by
-    `execEndHA` against EVERY atomic environment in `HavocA (GeteiltA E.P E.ws)` -- at every
-    read of a shared atomic the body meets every value of its type (Speichermodell/AtomarSem.lean,
-    AtomarRec.lean). A STRENGTHENING exactly where another thread can interfere
-    (`hP_rely_nicht`: a body whose sequential triple holds fails it), and NO change on every
-    unit the checker of before accepts: such a unit reads no shared atomic, and the two
-    obligations are EQUIVALENT there (`logikPflichtA_iff_akzeptiert`). (c), (d): unchanged.
-  * THE DIFF, conclusion. The thread machine runs over machine GX (`FadenSchrittX`,
-    Speichermodell/GXMaschine.lean): its `lauf` step is a step of G on a PRESENTED memory that
-    agrees with G's outside the unit's admitted shared atomics `GeteiltV E.P E.ws`
-    (`RufSchrittGX`, AtomarLauf.lean) -- so every stale answer the weak memory may give at a
-    shared atomic is a run of the statement. `ZielF`/`Ziel` become `ZielFX`/`ZielX`, leg by leg:
-    - SAME statement, now at every GX-reachable machine: `speicherSicher`, `vertrag`,
-      `sperrInv`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `startEnde`,
-      `keinStartGrund`, `keinLogikHalt`, `keineVerklemmung`, `keinZyklus`, `fortschritt`,
-      `folge`, and on the thread machine `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei`,
-      `keineVerklemmung`, `keinZyklus`;
-    - over MORE runs or steps (GA/GX contain G): `rennfrei` (`RennfreiBisGA`: every GA run,
-      non-atomic carriers), `sperrWechsel`/`sperrSicht` (every GX step), `keinKernHalt`
-      (`KernHaltEA`: Opus agent H's leg with the program's own handlers, over GA runs,
-      from `AkzeptiertSpecX.masken`), `zeit` (`ZeitAbX`: every GX segment), `fortschritt`/`spawnSicht` of the
-      thread machine (GX thread steps);
-    - CHANGED FORM: `schwach` (`SchwachX`): every step W takes from a machine over `M` is a
-      GX step, and the memory W presents is G's at every carrier OUTSIDE the shared atomics.
-      The form of before (`SchwachSC`: every W step is a G step) is FALSE on an accepted flag
-      program (`n1_schwachSC_falsch`); with no shared atomic the two coincide.
-  * RMW ATOMICITY IN W ITSELF. `SchrittW` gains the field `rmw`: an `exchange` of `g` (the
-    one read-modify-write form, emitted as ONE C11 RMW -- `atomic_fetch_*`, `atomic_exchange`
-    or a CAS loop) writes `g` DIRECTLY above the message it read. Without it W admitted the
-    lost update (`zaehler_verloren`), which no C11 execution shows (RC11's atomicity axiom);
-    with it no two RMWs read one message (`w_kein_verlust`, RMW.lean) and the two-thread
-    counter ends at 2 (see the witnesses). W still contains G (`w_aus_g`: the SC construction
-    writes at `ts + 1`), and W is still an over-approximation of RC11, so every claim over W
-    stays a claim about the C (assumption (2) of the reading now names the RMW lowering).
-  * WHY NOTHING IS WEAKENED (theorems, Zielsatz/BeweisAtomar.lean). `gabbro_ziel_sc_aus :
-    GabbroZiel → GabbroZielSC` -- the STATEMENT OF BEFORE, VERBATIM, is a corollary: a checker
-    of before is a `PrueferX` (`Pruefer.alsX`); on a unit it accepts, (b) of before gives (b)
-    with the rely (`nutzerPflichtA_of_akzeptiert`) and no admitted shared atomic exists
-    (`geteiltV_leer`); every thread-machine run over G is one over GX (`fadenErreichbarX_of`);
-    and with no shared atomic `ZielFX` is `ZielF` (`zielF_of_X`, via `gx_leer_g`: GX over an
-    empty set IS G). The same for linked units (`gabbro_ziel_verbund_sc_aus`). So every
-    program, run and leg of before is covered, and the new statement adds the programs with
-    shared atomics and their weak runs. ONE CAVEAT (review of lane O25c, F1): "verbatim" is
-    the TEXT. The machine W under the leg `schwach` changed with it: `SchrittW` gained `rmw`,
-    so `SchwachSC` in `GabbroZielSC` now speaks about the W steps in which an `exchange` writes
-    directly above the message it read. W without `rmw` admitted strictly more steps (the lost
-    update), so the leg of before claimed more than the text of before now claims: that no
-    step of W, even a non-atomic read-modify-write, left G on an accepted unit. What carries
-    the difference is assumption (2) of the reading (the emitter lowers `exchange` to ONE C11
-    RMW); for an `exchange` of a lock-guarded plain global the adjacency is DRF's, not C11's.
-    Every other leg of `GabbroZielSC` reads definitions this lane did not touch.
-  * WHAT CARRIES THE PROOF (`zielX_aus`, `zielFX_aus`): the replay of the user's proof with
-    the rely (`ziel_ort_atomar_voll`, lanes O25b: the recorded environment answers every
-    shared read with the value the weak memory gave), the invariant legs over GX
-    (`invarianten_atomar`), the thread-only invariants over GA (`gaInv`), the DRF theorem with
-    racing atomics (`schwach_ist_gX`), the time bound over GX segments
-    (`frame_schritte_beschraenktX`), the order leg over GX (`folgeG_erreichbarX`), and the
-    thread machine over GX (`FadenInvX`).
-  * WITNESSES (Zielsatz/AtomarAkzeptiertZeuge.lean, Zielsatz/AtomarGoalZeuge.lean,
-    Speichermodell/Zaehler*.lean): the flag program of configuration 1 (`kern` stores the
-    atomic `konfig`, `hauptA`/`hauptB` read it with no lock) is refused by the checker of
-    before, accepted by `AkzeptiertX`, carries (b) with the rely, and `gabbro_ziel` gives
-    `ZielFX` on it; W's stale read really happens on it and is a covered GX step; the rely
-    bites (`hP_rely_nicht`); a contract over the shared `konfig` is refused
-    (`vertrag_atomar_abgelehnt`, Rust `N484`); the per-core fold is accepted
-    (`faltung_akzeptiertX`, O17's read half); the counter on W itself (`w_zaehler`,
-    Speichermodell/ZaehlerW.lean): where every write of an atomic is an `exchange` adding one,
-    its history on every W run is the gap-free chain `0 … n` and the newest message holds the
-    start value plus the number of writes -- two increments end at two above the start
-    (`w_zaehler_zwei`), in every interleaving; the program-side premise (every write of the
-    global IS that `exchange`) is a hypothesis there, not yet discharged for a concrete term.
-    Certified: `beispiele/162-geteilte-flagge.gab` (a shared atomic written by one start, read by
-    another, no lock) -- refused by the checker of before (`g162_alt_abgelehnt`), its
-    certificate decides `AkzeptiertX` and states `GabbroZiel` on it.
-  * WHAT STAYS NAMED (NOT CLAIMED below): a contract, `requires`, `ensures` or invariant over a
-    shared atomic (refused: its value may change at any moment, `N484`); the publish/await
-    hand-off of a PLAIN payload read without a lock (still refused, verdict P3; OFFEN O25's
-    remaining part); linked units sharing an atomic across the link (the link check's `lok`
-    demands every lock-free footprint carrier thread-local over the composed hulls, atomics
-    included); the merge discipline of per-core cells beyond reading them (OFFEN O17).
-  -- END atomic-rely block --
+  THE LEGS. `ZielX` at the G state `K.m` (reached from `M0`), `ZielFX` on the thread machine. "From" names what
+  carries a leg besides machine G: (a) the checker, (b) the user, (c) the oracle class, "--" nothing.
+  * `speicherSicher` (`SpurInv`) -- every recorded access carries its carrier's guards, whose locks are held. (c).
+  * `speicherAdressen` -- if foreign code writes inside the declared extents (`ImBereichO`, inside the leg), every
+    cell the run changed lies in its extent and, under every correct byte layout (`AdressLayout`, `LayoutOk`), with
+    all its bytes in its table's region; different cells share no byte (Speichermodell/Adressen/). (c).
+  * `rennfrei` (`RennfreiBisGA`) -- two accesses of different threads to a non-atomic carrier, one a write, are
+    lock-ordered, on every run with racing atomics. (a), (c).
+  * `schwach` (`SchwachX`) -- every step of the weak machine W is a GX step, its presented memory G's outside the
+    shared atomics: the weak memory adds no behaviour beyond the rely. (a), (c).
+  * `vertrag`, `invRueck`, `invGrund`, `keinLogikHalt`, `startEnde`, `keinStartGrund` -- (b)'s sequential clauses at
+    the places of the interleaved run: `requires` at every logged entry, `ensures` and owed invariants at every
+    logged return, no thread stuck at a `logik` check, a start finishes in its contract, no start at a reason.
+    (a), (b), (c).
+  * `sperrInv` -- every free lock has its invariant in shared memory. `sperrWechsel`, `sperrSicht` -- every acquire
+    starts from it, every release leaves it, and no thread but the holder touches a protected carrier. (a), (b).
+  * `invRuhe`, `invSicht` -- a table invariant holds wherever no unfinished thread is inside one of its writers,
+    and for a thread holding one of its guards outside every writer (hypothesis: it held at the start). (a), (b).
+  * `keineVerklemmung`, `keinZyklus` -- no global deadlock, no wait cycle (lock ranks). (a).
+  * `keinKernHalt` (`KernHaltEA`) -- for every core assignment and every run the core hardware admits (`KernPlan`,
+    inside the leg), a thread whose root the program declares an interrupt handler never stands at a lock another
+    thread of its core holds. (a): the masking discipline.
+  * `fortschritt` -- every thread is finished, waits for a lock, stands at a NAMED stop, or can step (SAFETY: no
+    unnamed stuck state). (a), (b), (c).
+  * `zeit` -- a frame with a finite call tree takes at most `kostenTief` own steps while active. --.
+  * `folge` -- the order of calls in every thread's call log, for every order specification the program passes
+    (Folge.lean). --.
+  * on the thread machine: `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei` (dormant and joining threads hold
+    nothing), `keineVerklemmung`/`keinZyklus` with join waits, `fortschritt` with the join wait, `spawnSicht` (a
+    spawn leaves the G state alone, the new thread holds nothing, every free lock and closed invariant holds).
+  * `budgetUnecht` -- a thread at a spent `forever` budget takes a step at budget `passes + 1` from the machine
+    with every counter one higher: the budget stop is no stop of the program (BudgetMonoton.lean: every run at
+    budget `p` is a run at every larger budget).
 
-  -- BEGIN linking block (Opus agent E, 2026-09-26) --
-  WHAT CHANGED ON 2026-09-26 (OPUS AGENT E: LINKING SEPARATELY COMPILED UNITS), AND WHY -- a
-  REVIEWED DIFF of this file (the review: messung/OPUS-E-LINKEN.md). PURELY ADDITIVE: no
-  definition above changed, `GabbroZiel` is word for word the statement of before, and every
-  theorem about it stands. What is added is a SECOND statement, `GabbroZielVerbund`, at the end
-  of this file, with the definitions it reads.
-  * THE GAP. The statement was about ONE `Einheit`: a function another unit supplies is not in
-    its `D.Fn` with a body, and "linking of separately compiled units" stood in NOT CLAIMED.
-    The language has the bridge (`gabbro abi` writes a `.gabi`, the importer is checked
-    `--with` it: the exporter's heads, contract and effects, become `extern fn` heads), but
-    nothing said that two units, each accepted alone, make an accepted program together.
-  * THE MODEL. Two units `E₁`, `E₂` over ONE link declaration `D` (the union of their
-    declarations; `Verbindbar`: the same contracts, table invariants, lock invariants and
-    initial memory), unit 1 owning the functions where `e` holds. Each unit carries LEAF
-    placeholders for the functions it does not own (`Platzhalter`: the `extern fn` head, which
-    calls nothing the checker could follow). The LINKED unit `verbinde e E₁ E₂` takes every
-    body from its owner, both units' starts and run-time roots, and the shared rest.
-  * THE STATEMENT (`GabbroZielVerbund`): (a) each unit accepted ALONE by the checker, one link
-    declaration, and the LINK CHECK `SchnittstelleSpec`; (b) each unit's user proves the bodies
-    IT owns and its start (`NutzerTeil`); (c) the hardware meets the assumptions AND THEY ARE
-    THE SAME for both units (`E₂.Q = E₁.Q`, one oracle); (d) the runtime starts the linked
-    unit. Conclusion: `GabbroZiel`'s own -- `ZielF` on every reachable thread machine of the
-    linked program, so race freedom and lock discipline ACROSS the units, spawned threads,
-    joins and the weak-memory leg `schwach` are all claimed for the linked program.
-  * THE LINK CHECK (`SchnittstelleSpec`, decided exactly by `schnittstelleB`,
-    Zielsatz/Verbund.lean). Placeholders are leaves; no callback through an import
-    (`KeinRueckruf`: an imported function's graph stays in its owner); and the three
-    WHOLE-PROGRAM components of `AkzeptiertSpec` -- thread-locality (`fuss`), write
-    separation (`renn`), pool safety (`einzeln`) -- re-decided over the COMPOSED hulls
-    (`HuelleV`: a root's graph inside its owner, then inside the owner of every function of
-    the other unit it reaches). That is where the interface carries the footprints: a unit
-    alone sees neither the other unit's threads nor a read hidden behind an imported head
-    (the refusal witness `vm_abgelehnt` is exactly that). The per-body components (fragment,
-    closed graphs, lock floors, lock-invariant places, roots, answer sites) are each owner's
-    own verdict.
-  * WHY IT HOLDS (`gabbro_ziel_verbund`, Zielsatz/Verbund.lean): the linked unit meets every
-    premise of `GabbroZiel` -- `akzeptiertSpec_verbinde` (a body's footprint and features
-    depend on its own text and the shared contracts only; the linked call graph of a root
-    lies in its composed hull; the linked graph is closed), `nutzerPflicht_verbinde` (a body
-    triple depends on its own body and the contracts only) -- and `gabbro_ziel` applies.
-  * EMBEDDING: `verbinde_leer` -- a unit linked with a partner that owns and starts nothing is
-    the unit itself; `verbinde_akzeptiert`, `nutzerTeil_verbinde` -- the linked unit is
-    accepted by the concrete checker and carries the restricted user duty, so a chain of units
-    links by iteration.
-  * WITNESSES (Zielsatz/VerbundZeuge.lean): `vz_ziel`/`vz_lauf_zeuge` (a library exports the
-    lock-guarded table writer `wrap` with `ensures konto[0] == 100`, an app calls it from two
-    threads; each unit accepted alone, the link accepted, `ZielF` on the linked program, and a
-    run where both app threads step and one holds the lock); `vm_abgelehnt` (footprints that
-    do not compose: each unit accepted alone, the link refused, and the whole-program checker
-    refuses the linked program too); `vz_vertrag_zu_schwach` (the exported contract is weaker
-    than the importer's: no link declaration).
-  -- END linking block --
+  THE ONE ASSUMPTION LIST -- everything the statements assume that is neither the checker's Bool nor the user's
+  proof:
+  * (c) `GutO O` -- an axiom (a FOREIGN body: `extern fn`, `prim fn`, `asm`, `entry`, `entrust`) writes only its
+    declared carriers, keeps the held locks and leaves its accesses in the trace. Nothing in the language can check
+    foreign code. (Carriers, not indices: that it writes inside the declared extents is `ImBereichO`, below.)
+  * (c) `RegLokal O` -- a register read answers from the carriers declared for its device; `awaits g` depends only
+    on `g`. NAMED RESTRICTION: a register WITHOUT declared carriers answers the same value in every world, so
+    `RegLokal` is stronger than a volatile device; such a register is read through an axiom or given carriers.
+  * (c) `AxVertragO E.Q O` -- every axiom answer that fits its declared result type meets the declared `ensures`.
+    A false `E.Q` is a false NAMED assumption, visible in the declaration. `Q := false` empties (c) for an axiom
+    without a result; for one with a result (c) stays inhabited by oracles whose answers never fit, and every call
+    then stops at `hardware`. Every type has a real decoding (`einpassen_voll`), so for an `E.Q` satisfiable at a
+    decodable value, oracles with fitting answers exist and (b) must cover them.
+  * (d) `Laufzeit.lader` -- the loader establishes the declared initial memory `E.sp0` (initialized data and zeroed
+    storage of the image). That `E.sp0` meets the lock invariants and the start `requires` is the user's (b).
+  * (d) `Laufzeit.start`/`.einmal` -- the runtime runs exactly the declared starts with their declared arguments,
+    one thread per occurrence, and the idle root on every other thread; a routine runs on several threads only if
+    declared at least twice (a worker pool). Run-time roots (`E.gestartet`) have slots that stay dormant until a
+    `start`/`child` step spawns them. Assumed about the runtime and the lowering: (1) a spawned root's arguments are
+    the unit's and its ghost entry world is the start world; (2) spawns happen only where the checked conditions
+    hold (no lock held at a `start`, `N461`; the starter waits for every root; a `child` is entered with nothing
+    held, `N456`); (3) every spawn succeeds (`Faden` is unbounded; thread creation failing is not modelled).
+  * INSIDE A LEG, not in (c): `KernPlan` (`keinKernHalt`: masking works and a handler runs to completion on the
+    core it preempted) and `ImBereichO` (`speicherAdressen`: foreign code writes inside the declared extents).
+  * `GabbroZielLeben`: `Fair` -- the scheduler is weakly fair (a thread ready at every step from some point on
+    takes a step). The FIFO order of the lock is no assumption: it is the model (`FifoLauf`, the ticket lock of
+    laufzeit/sperre.gab and Code/Conc/Lock.lean), and the earlier runtime assumption `FifoSperre` is a theorem
+    about it (`fifoSperre_aus`).
+  * `GabbroZielVerbund`: the two units' hardware assumptions are the same (`E₂.Q = E₁.Q`).
 
-  -- BEGIN order block (Opus agent G, 2026-09-26) --
-  WHAT CHANGED ON 2026-09-26 (OPUS AGENT G: THE FOUR OBLIGATIONS OF OFFEN O1), AND WHY -- a
-  REVIEWED DIFF of this file (the review: messung/OPUS-G-O1.md). NO premise moved; `Ziel` gains
-  ONE leg, `folge`.
-  * THE GAP. OFFEN O1 booked four obligations of the Caprock corpus as unstatable because
-    `programmlogik/Gabbro/Body.lean`'s `exec` is big-step: L24 ("`caller` and `reply_owner` are
-    written in ONE step: never half set"), L34 ("the invariant does NOT hold between the two
-    assignments"), L50 ("`Flush`: the flush completed BEFORE the reply"), L52 ("`Stop`: the
-    reply still goes out BEFORE the service ends"). The diagnosis holds for Body.lean and not
-    for this statement: its runs are machine G's, which is SMALL-STEP (every leaf, unfold, push
-    and pop is one step), its threads carry an access trace (`spur`) and a CALL LOG (`log`,
-    newest first), and every intermediate machine is a reached machine. All four are STATABLE
-    here; what was missing were the predicates and, for L50/L52, the claim.
-  * L24 AND L34 -- the two sides of ONE object, both claimed since Opus agent D, now read so:
-    - L24 read literally ("no third state exists") is FALSE of every program that writes two
-      places in two statements: G has the state in between, and L34 names it. Its CONTENT is
-      observational -- no OTHER thread sees the pair half set -- and that is claimed: `invSicht`
-      (a table/group invariant: a thread outside every writer that holds a guard lock sees it
-      intact) and `sperrSicht` + `sperrWechsel` (a lock invariant: no step of a non-holder
-      touches a protected carrier; every section starts from it, every release restores it).
-      (Review of Opus agent G, 2026-09-26: of these, only the LOCK form carries content --
-      `invSicht` is nominal in the model, review of Opus agent D F2, and `Inv := Empty` for
-      every certified program; L24 is claimed where the pair sits under ONE lock whose
-      invariant relates it.)
-    - L34 is an EXISTENCE statement about one program (the region is not empty), not a
-      guarantee; `tabelle_gebrochen` (Zielsatz/InvariantenZeuge.lean) is its shape: two writes
-      of `privA`, the invariant false at a reached machine between them, and open there.
-    - What stays NOT CLAIMED (below): the promises LANGUAGE.md §8.3 hangs on the NAME in
-      `breaking I` -- the region is where `I` rests, the block restores `I` at its end. G drops
-      the name when it unfolds the block (`dannBreaking`), so no leg can speak of "inside the
-      region"; restoration is claimed at every RETURN of a writer (`invRueck`, `invGrund`).
-  * L50 AND L52 -- ONE shape, and the new leg `folge : FolgeG P M` (Folge.lean):
-    - THE STATEMENT: for every order specification `Φ` (`vor`, `ruf`, `ende`: sets of
-      functions; `ind`: signatures) the program passes -- `FolgeOk`: in every body, every call
-      of a `ruf` function (directly, or indirectly through a signature in `ind`) and every
-      return of an `ende` function stands DIRECTLY behind a call of a `vor` function, with only
-      leaves and bindings in between; a decidable scan with one bit -- every thread's call log
-      has every entry of a `ruf` function and every return of an `ende` function (except the
-      thread's start entry) DIRECTLY behind a return of a `vor` function (`FolgeLog`), and a
-      finished thread whose start function is an `ende` function ended directly behind one.
-    - L50 is `vor = {request_flush}`, `ruf = {reply4}`: every entry of the reply stands
-      directly behind a logged NORMAL return of the flush -- the flush completed; a reason
-      return (`grund`) does not arm. L52 is `vor = {reply4}`, `ende = {the service}`: the
-      service returns, or its thread ends, directly behind the reply's return.
-    - WHY "DIRECTLY": `flush ∧ reply` -- both happened -- is the weakening
-      messung/GABBROV-V1.md warned of; `folgeLog_nicht_schwach` and the run `folge50_gegen`
-      show the conjunction holding where the order fails.
-    - PREMISE-FREE: the leg holds on every reached machine of every program
-      (`folgeG_erreichbar`, FolgeBeweis.lean), by a thread invariant every rule of G keeps
-      (`folgeInvG_schritt`): no user logic, no hardware assumption. The static premise sits
-      INSIDE the leg (for each `Φ` the program passes), as `InvTraeger` sits inside `invRuhe`.
-    - FOR THE USER'S OWN FUNCTIONS: the statement runs `E.P.mitRuhe`; `Φ.mitRuhe` lifts an
-      order specification over `D` (the idle root in no set), the check commutes with the
-      translation of the bodies (`folgeOk_mitRuhe`), and `gabbro_ziel_folge`
-      (Zielsatz/FolgeZiel.lean) reads the leg off `GabbroZiel` for every `Φ` over `D` the
-      program passes -- on every reachable THREAD machine, spawned threads included.
-  * WHY NOTHING IS WEAKENED. The premises of `GabbroZiel` and `GabbroZielVerbund` are textually
-    unchanged; `Ziel` gains a conjunct and loses none; every earlier leg is proved by the same
-    term (Zielsatz/Beweis.lean), so `gabbro_ziel_g`, `gabbro_ziel_vor`, `gabbro_ziel_verbund`
-    and every certificate still hold, and the old `Ziel` is a projection of the new.
-  * WITNESSES (FolgeZeuge.lean, the sequential fixture `eP`: `haupt` = `setze(); pruefe();
-    return`, `setze` writes `konto[0] := 5`): `folge50_zeuge` (a reached machine whose newest
-    log event is the entry of `pruefe`, directly behind the return of `setze`, whose write is
-    in the entry world; the leg there), `folge52_zeuge` (thread 0 finished in `haupt` directly
-    behind the return of `pruefe`, by the leg), `folge50_gegen` (the calls swapped: the check
-    refuses, and a reached run has both events in its log and not the order).
-  * WHAT STAYS NAMED (NOT CLAIMED below): an order of effects that are not calls of GABBRO
-    functions (an axiom's or a register's effect is not in the call log -- a wrapper function
-    puts it there); an order across a compound statement, an indirect call or a lock block (the
-    check starts every sub-block unarmed and refuses such a `Φ`; it does not weaken); an order
-    "sometime before" (not claimed); and WHICH `Φ` a source program means -- the exporter emits
-    no order specification, so for a certified program the leg holds for every `Φ` the Lean
-    program passes, and naming the one the obligation means is the reader's step -- as is
-    deciding `FolgeOk` for it: no certificate states a `Φ`, and no Rust pass mirrors the check
-    (review of Opus agent G). The ENTRY of a thread's start function -- a declared start or a
-    thread created at run time -- is the oldest log event and is not ordered: a `ruf` function
-    run as a thread start escapes the leg.
-  -- END order block --
+  THE PERMITTED STOPS (`HaltArt`, in `fortschritt`) -- where the statement reports instead of claiming more:
+  * `hardware` -- an axiom answer outside its (answerable) declared type, a register answer outside its type or
+    against its declared promise (`D.rzusage`), a leaf's hardware outcome: foreign code or a device breaking its
+    declaration.
+  * `nieZurueck` -- a call of an axiom whose declared result is `never`: the call does not return (the declaration's
+    promise about the foreign code). Every other empty answer type is refused by the checker (`antworten`).
+  * `flagge` -- an `awaits` whose flag is not visible: a WAIT (not yet published, not visible, or never published).
+  * `budget` -- a spent `forever` budget: a model artefact, and not final (`budgetUnecht`).
+  A thread at any of these stops while holding a lock leaves every thread that needs it waiting for ever; that is
+  the second case of `GabbroZielLeben`.
 
-  -- BEGIN invariant block (Opus agent D, 2026-09-26) --
-  WHAT CHANGED ON 2026-09-26 (OPUS AGENT D: INVARIANTS BEYOND THE RETURNS, OFFEN O11), AND WHY
-  -- a REVIEWED DIFF of this file (the review: messung/OPUS-D-INVARIANTEN.md). NO premise
-  moved; `Ziel` gains four legs, `ZielF` one:
-  * THE GAP. NOT CLAIMED read "invariants at entry or while locks are held (claimed at returns
-    only)". `Ziel` said that a table/group invariant holds at every logged return of a function
-    that owes it (`invRueck`, `invGrund`) and that a FREE lock has its invariant in memory
-    (`sperrInv`); nothing said what a function sees at its entry, what the acquirer of a lock
-    starts from, or what the other threads see while a lock is held.
-  * THE DIFF (definitions above `Ziel`): `InvTraeger` (the invariant reads only its declared
-    carriers), `InvZu` (no UNFINISHED thread has a frame of a function that owes it), and the
-    legs
-    - `invRuhe : InvRuheG P M0 M` -- every invariant that reads only its carriers and held in
-      the start memory holds at `M` whenever it is closed there;
-    - `invSicht : InvSichtG P M0 M` -- a thread outside every writer of an invariant that holds
-      a guard lock of one of its carriers sees it intact, whatever the others do;
-    - `sperrWechsel : SperrWechselG P O passes S M` -- every step from `M` that acquires `L`
-      goes from a memory where `S.inv L` holds to one where it holds, and every release leaves
-      one where it holds;
-    - `sperrSicht : SperrSichtG P O passes S M` -- every step from `M` that accesses a carrier
-      `L` protects holds `L`, and while a thread holds `L` no other thread's step moves it;
-    and `ZielF.spawnSicht` -- a spawn leaves the G state alone, the spawned thread holds no
-    lock, every free lock has its invariant and every closed invariant holds at that moment.
-  * WHAT IS NOW CLAIMED, precisely, and what the words "at entry" and "while held" can mean:
-    - AT ENTRY: an invariant is owed by every function whose effects write one of its
-      carriers (`schuldet`), and inside such a body it may be broken. A function CALLED from
-      inside a writer may see it broken at its entry, so "at every entry" is false in general.
-      Claimed: at every entry -- indeed at every machine -- reached while no unfinished thread
-      is inside a writer (`invRuhe`), and at every point of a thread holding one of its guards
-      outside every writer (`invSicht`). A writer's callee sees what the writer's `requires`
-      to it says, which is the user's logic. (Review 2026-09-26, URTEIL-SPECDIFF-OPUS-D:
-      a callee's writes are its caller's (`RufPasst.hw`), so every frame BELOW a writer --
-      up to the thread's start function -- is a writer too. A thread that ever writes a
-      carrier of `i` keeps `i` open for its whole life; `invRuhe` bites once every such
-      thread has finished, and at every point of a program in which no running thread writes
-      `i`. And with the declaration's `invarianten_gehalten` (a writer holds every guard BY
-      SIGNATURE) and lock-free starts, an invariant with a GUARDED carrier has, by argument
-      and not by a theorem, no writer reachable from an accepted start at all: it is frozen
-      at its start value, and `invSicht` then says no more than `invRuhe`. The Rust `U003`
-      counts `locks` in the body instead -- the model is stricter, see the verdict.)
-    - WHILE HELD: an invariant is a predicate over SHARED memory and the holder's writes are
-      shared memory at once, so the holder may break a lock invariant inside its section and
-      the memory then does not satisfy it. "Other threads never observe it broken" means,
-      exactly: no step of a thread that does not hold `L` touches a protected carrier, and no
-      step of another thread moves one while `L` is held (`sperrSicht`); every section starts
-      from the invariant and every release restores it (`sperrWechsel`). A held lock's
-      invariant is observed by its holder alone, at observation points -- that is the claim.
-    - AT THE START: a lock invariant at `E.sp0` is (b) already (`StartPflicht.sperren`), so
-      `sperrInv` holds at the start machine; a table invariant at `E.sp0` is the HYPOTHESIS of
-      `invRuhe`/`invSicht` (see below). ACROSS SPAWNS: `spawnSicht`.
-  * WHY NOTHING IS WEAKENED. The premises of `GabbroZiel` are textually unchanged (`Einheit`,
-    `AkzeptiertSpec`, `NutzerPflicht`, `HardwareAnnahmen`, `Laufzeit`). `Ziel` and `ZielF` gain
-    conjuncts and lose none; every earlier leg is proved by the same term (Zielsatz/Beweis.lean),
-    so `gabbro_ziel_g`, `gabbro_ziel_vor` and every certificate still hold, and the old `Ziel`
-    is a projection of the new. Unlike `keinKernHalt` and `zeit`, these legs are NOT
-    premise-free: `invRuhe` uses (b) through `invRueck`, `invGrund` and `StartEndeG`;
-    `sperrWechsel` uses `sperrInv` ((a) and (b)); `sperrSicht` and `invSicht` use (a)
-    (`sperrOrte`, lock-free roots: start exclusivity) and the declaration's `U003`
-    (`invarianten_gehalten`).
-  * WHY TABLE INVARIANTS AT `E.sp0` STAY A HYPOTHESIS. (b) did not demand them before, and
-    making them a (b) duty would drop from the statement every program whose declared table
-    invariant is false at its initializer -- programs the old legs covered. As a hypothesis of
-    the leg nothing is dropped; for a concrete unit it is decidable. (Measured on the corpus:
-    `beispiele/09`'s invariant WAS false at its zeroed table, and at its own writer's return --
-    repaired with `N496`, see below.)
-  * WHAT CARRIES THE PROOF (Zielsatz/Invarianten.lean): a step changes a carrier only if its
-    head function may write it (`schritt_traeger`), so outside every writer nothing moves the
-    invariant; the step that ends the last writer frame is a POP -- every step appends at most
-    one call-log event (`schritt_logArt`, over the 70 rules) and the log determines the key
-    stack (`rufLogPasstG_eind`, `schritt_schluessel`), so the popped writer's return is logged
-    and `invRueck`/`invGrund` give the invariant at the memory the step leaves -- or the thread
-    FINISHES at the writer's return (`StartEndeG`, `fertig_retKopf`). The lock legs are
-    exclusivity (`exklusivG`), the rely (`relyG`), the guard of every access (`zugriff_haelt`)
-    and `sperrInv` at the machines before and after the move.
-  * OFFEN O11 (an invariant no function `maintains` was booked by nothing) is CLOSED on both
-    sides. Model: every function that writes a carrier owes the invariant at its returns
-    (`schuldet`, `InvGutS`/`InvGutGrund` in `LogikPflicht`), and one no function writes is
-    carried by the frame (`inv_ohne_schreiber`). Rust: `N496` refuses a function whose effects
-    write, publish or consume a carrier of a `table`/`group` invariant without naming it in
-    `maintains`.
-  * WITNESSES (Zielsatz/InvariantenZeuge.lean, on the two-writer program `mP` of
-    MehrfadenZeuge.lean): the lock invariant `konto[0] == konto[1]` is BROKEN at a reached
-    machine inside thread 0's section (`konto = [30, 0]`), where no step of thread 1 can touch
-    `konto`; after the release, thread 1's acquire starts from `konto[0] == konto[1]` BY THE
-    LEG; the table invariant `privA[0] == privA[1]` is BROKEN inside `hauptA` and holds, BY THE
-    LEG, at thread 1's entry of `setze` once thread 0 is finished; and the refusal side of O11
-    is `beispiele/gift/1231`-`1234`.
-  * WHAT STAYS NAMED (NOT CLAIMED below): an invariant reading carriers outside `D.traeger`;
-    a table invariant false at the start; any invariant at a point where an unfinished thread
-    is inside one of its writers (it may be broken there, by design); and every certified
-    program has NO table invariant (the exporter writes `Inv := Empty`), so for them
-    `invRuhe`/`invSicht` are vacuous and the contentful new legs are the lock legs.
-  -- END invariant block --
+  THE READING -- not premises, assumptions of reading the statements as statements about the BINARY:
+  * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is the LLVM path
+    (`gabbro build`: checker, LLVM IR from `llvm.rs`, `opt`, `llc`, `ld.lld`); the bridge is translation validation
+    (source -> model -> final machine bytes, checked in Lean; dokumente/PLAN-TRANSLATION-VALIDATION.md), which is
+    NOT built. Code/ holds the refinement pieces (`lowerS_ok`, `stmt_gx`, the ticket lock), not a whole-program
+    simulation.
+  * The memory model, five named assumptions:
+    (1) the view machine W over-approximates the C11 memory model -- the model LLVM's atomic orderings follow -- for
+        the orderings the lowering uses, at G's step granularity: nothing interleaves inside a step, all reads of a
+        step are checked against the pre-step view, a release message carries the view before the step's own
+        writes; `seq_cst` is modelled as release/acquire (Speichermodell/Sicht.lean, a published promise-free
+        timestamp machine, not proved here against an axiomatic model);
+    (2) the toolchain and the hardware implement the atomic orderings as specified, and an `exchange` is lowered to
+        ONE read-modify-write (`SchrittW.rmw`: the write sits directly above the message read);
+    (3) every lock take is an acquire and every give a release (the runtime's ticket lock: fetch-add on `next`,
+        acquire spin on `now`, release advance);
+    (4) carriers are the locations (a table or an atomic array is one location of W);
+    (5) what G reads without recording it -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
+        `awaits` -- is read over G's memory: the last executed write, not an older message.
 
-  WHAT CHANGED ON 2026-09-26 (OPUS AGENT A, OFFEN O21/O22), AND WHY -- a REVIEWED DIFF of this
-  file (the review itself: messung/OPUS-A-LAUFZEITFAEDEN.md):
-  * THE GAP. The language creates threads at run time -- the hosted `start { f, g };` (the
-    starter waits for its roots: a join; Rust `N458`-`N462`) and the `child { … }` region of a
-    stack gate (its own thread on the handed stack, entered holding nothing; Rust `N446`-`N452`,
-    `N456`, `N457`) -- and this statement fixed the thread population at the start: (d) let a
-    thread run only the idle root or a declared start, and `Ziel` spoke about G runs only. A
-    child reached the goal only through `klon_ziel` (CloneHandoff.lean, outside the
-    statement), a `start` not at all (NOT CLAIMED until this diff).
-  * THE DIFF. (i) `Einheit` gains `gestartet` (default `[]`): the run-time roots with their
-    arguments. (ii) `Einheit.ws` lists every run-time root TWICE: a root may run on any number
-    of threads, so the checker judges it as a pool routine -- `AkzeptiertSpec` is textually
-    unchanged, and its `wurzeln` (no signature lock, no reasons) and `einzeln` (pool-safe)
-    components now decide the model half of `N458`/`N462` (for a lifted `child` region: of
-    `N456`/`N457`), `Getrennt`/`SchreibGetrennt` pair a root with every start and with itself
-    (`akzeptiertSpec_gestartet`, Zielsatz/FaedenVor.lean). (iii) (b) `StartPflicht.req` and
-    (d) `Laufzeit.start` range over `E.starts ++ E.gestartet`: the runtime may place a thread
-    slot at a run-time root, and its `requires` is the user's duty at `E.sp0`, as for a
-    declared start. (iv) THE CONCLUSION moves from machine G to the THREAD MACHINE
-    (`FadenMaschine`, `FadenSchritt`, `FadenErreichbar`, `FadenStart`; FadenMaschine.lean):
-    a G machine plus the live set. A slot that is not live is DORMANT and untouched until a
-    live thread spawns it -- by `start` (only while the starter holds no lock, the model side
-    of `N461`; the starter then takes no step until every root is finished, and the `join`
-    step ends the wait) or by `kind` (the parent goes on). No G rule changed or was added. The
-    conclusion is `ZielF` on every reachable thread machine, from any set `lebt0` of initially
-    live threads: `Ziel` on its G state (every spawned thread IS a G thread there), and the
-    legs `schlafendUnberuehrt`, `schlafendFrei` (a spawned thread enters holding nothing),
-    `joinFrei` (a waiting starter holds nothing), `keineVerklemmung` and `keinZyklus` WITH
-    join waits (`KeinWarteZyklusF`: no cycle through locks and joins), and `fortschritt`
-    (`FortschrittF`: every stop named, the join wait `JoinWartet` among them).
-  * WHY NOTHING IS WEAKENED (theorems, Zielsatz/FaedenVor.lean and Beweis.lean):
-    `fadenErreichbar_von_G` -- every G run is a thread-machine run with every thread live and
-    nothing spawned, so `Ziel` on every G run (`gabbro_ziel_g`, the statement of before, which
-    every caller of `gabbro_ziel` now uses) is a corollary; `ws_ohne_gestartet`,
-    `startPflicht_vor_iff`, `laufzeit_vor_iff` -- on a unit with `gestartet = []` (every unit
-    of before) the checker's `ws`, (b) and (d) are word for word the old ones;
-    `pruefer_aus_vor`, `pruefer_aus_vor_gleich` -- every checker of the old interface is a
-    checker of the new one with the same verdict on every unit of before; and
-    `gabbro_ziel_vor : GabbroZielVor` -- the OLD STATEMENT, VERBATIM over the units of
-    before, is proved from the new one. The new statement adds units with run-time roots and
-    runs with spawns and joins, and the legs above; it drops nothing.
-  * WHAT CARRIES THE PROOF: the bridge `fadenErreichbar_G` (a spawn and a join do not move the
-    G state), so `ziel_aus` applies unchanged; the thread-machine invariant `FadenInv` (a
-    dormant slot is its start thread, a joining starter holds no lock and is live, an awaited
-    root is live and ranks above its starter, ranks are bounded by the spawn clock); the join
-    legs from lock ranks plus the ghost spawn rank (Zielsatz/Faeden.lean).
-  * NEW NAMED ASSUMPTIONS (in THE ONE LIST below, (d)): a run-time root's slot is placed in the
-    start machine, so its ARGUMENTS are the unit's (a `start` root takes none, `N458`; the
-    exporter carries no root with parameters) and its frame's ghost ENTRY WORLD (`s0`, the
-    logged entry) is the start world -- its body reads the memory of the moment it steps, as a
-    late-scheduled declared start does; and the spawn SITES are the checked ones: the lowering
-    spawns a `start` root only where the starter holds nothing (`N461`) and waits for all its
-    roots, and enters a `child` by jump at the region with an empty held set (`N456`, the
-    jump assumption of OFFEN O21) -- translation validation's to check, as every "G is the
-    meaning of the C".
-  * WITNESSES (Zielsatz/FaedenZeuge.lean): `sj_lauf` (a `start` spawns two threads, both write
-    and finish, the join fires only then, the starter calls and writes), `kw2_lauf` (a `child`
-    runs concurrently with its parent: parent call, child write, parent write),
-    `spawn_start_ziel`/`spawn_kind_ziel` (every leg of `ZielF` on spawn runs of ACCEPTED units,
-    through `gabbro_ziel`), refusals `start_nicht_poolsicher_abgelehnt` (a non-pool-safe root,
-    at the pool component), `kind_unter_sperre_abgelehnt` (a region lifted from inside `locks`
-    needs the lock at entry, refused at the root component), `start_unter_sperre_kein_schritt`
-    (no start under a held lock), and `klon_als_faden` (fix lane F9's clone machine is a
-    special case of the thread machine).
+  WHAT A GREEN BUILD COVERS. Certificates are generated on demand (crates/gabbro-check/tests/zertifikate.rs): for
+  every accepted `.gab` under `beispiele/` the exporter (`gabbro obligations --g`) either writes a certificate --
+  the exported unit `gE`, the checker premise decided IN LEAN (`gCheck … := by decide`) and `GabbroZiel`
+  instantiated on it with (b) open (`gP_gabbro_f`) -- which the Lean guardian elaborates, or refuses the program by
+  name (`LG001`-`LG007`); the register is `target/zertifikate/REGISTER.txt`. Checked-in instances:
+  Korpus/Programme/GenOblig104.lean, GenOblig108.lean. For a certified program the Rust checker's verdict is not in
+  the chain. STILL TRUSTED: that `gE` IS the source program (the exporter is unverified; every form it drops is
+  listed in the certificate's header), and THE READING above. A green build says NOTHING about an uncertified
+  program; such a program reaches the statements only through a hand-written term.
 
-  -- BEGIN address block (2026-10-22, review of gabbro_ziel, point 3) --
-  WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. `ZielX` gains ONE leg, `speicherAdressen`; no
-  premise moves.
-  * THE GAP. The leg `speicherSicher` (`SpurInv`) is a statement about the trace; that every access stays in its
-    carrier was carried by the types alone (an index has an index type) and was nowhere a statement about runs. And
-    machine G's memory is a function on EVERY index of a table: a write outside the declared extent has no address
-    in a real memory and would land in another carrier. Foreign code was allowed to make such writes: `GutO` frames
-    an axiom at the level of carriers, not of indices.
-  * THE MODEL (Speichermodell/Adressen/). `ImBereich D t k` is the declared extent `0 ..< D.count t`;
-    `rufSchrittG_aussen`, `rufSchrittGX_aussen`, `rufErreichbarGX_aussen`: no step of G or GX writes outside the
-    extents, provided foreign code does not (`ImBereichO`: a NAMED assumption about the oracle, kept inside the leg
-    like `KernPlan`, so premise (c) is unchanged). `AdressLayout`/`LayoutOk`: any byte layout of the carriers a
-    correct loader may produce (fields inside their element and apart, carriers apart); a cell in its extent lies in
-    its table's region (`zelle_im_bereich`), two different cells share no byte (`zellen_getrennt_tab`,
-    `zellen_getrennt`).
-  * THE LEG. `speicherAdressen`: under `ImBereichO`, every cell a run has changed lies in its extent and, under every
-    correct layout, with all its bytes in the region of its table. Proof: `geaendert_im_bereich` over
-    `rufErreichbarGX_aussen` (the shared atomics are globals, `AtomarAusgenommen`).
-  * WHAT IT DOES NOT BUY: reads are in their extent by the index types, not by a theorem about runs; globals and
-    registers have no index; the layout of the emitted code (that the compiler's layout is a `LayoutOk` one and that
-    its cells are these) is the compiler's (Code/Model/Layout.lean), not claimed here.
-  -- END address block --
+  NOT CLAIMED:
+  * termination, a waiting bound, a time bound for `forever` or recursion; `GabbroZielLeben` claims that a lock
+    wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
+    time;
+  * stack depth (G's stacks are unbounded; the LLVM lowering runs recursion without native stack growth, and
+    exhausted memory fail-stops -- outside the model);
+  * the compiled code and the hardware (THE READING); that the compiler's byte layout is a `LayoutOk` one;
+  * reads in their extents as a statement about runs (they are, by the index types); globals and registers have no
+    index;
+  * that W is exactly the C11 model; a contract, `requires`, `ensures` or invariant over a shared atomic (refused,
+    `N484`); the merge discipline of per-core cells beyond reading them (OFFEN O17); linked units sharing an atomic
+    across the link; the publish/await hand-off of an unguarded PLAIN payload (refused);
+  * floats beyond the kernel IEEE model (that the FPU computes it is `gleitkomma_ieee`, a hardware fact);
+  * an invariant inside a running writer or false in the start memory or reading carriers outside its declared
+    `traeger`; a lock invariant inside its holder's section (claimed: no other thread observes it there);
+  * interrupt handlers beyond `KernPlan`: re-entry, handler-on-handler preemption, a thrown entry without `via idt`,
+    a lock the unit does not declare (OFFEN O19);
+  * an order of effects that are not calls of Gabbro functions, an order across a compound statement, an indirect
+    call or a lock block, the entry of a `ruf` function run as a thread start, an order "sometime before", the
+    promises of `breaking I` about its name (OFFEN O1);
+  * a routine declared ONCE running on several threads (outside (d));
+  * for linked units: differing hardware assumptions, a callback through an import, an importer relying on a
+    contract other than the exporter's, dynamic loading, linking of foreign code below the ABI, the link step
+    itself;
+  * for threads spawned at run time: arguments per spawn, a root `requires` holding only at the spawn world,
+    `old`-reads at the spawn world, the end of a join wait, the child's stack, a failing spawn, the lowering of the
+    spawn;
+  * dynamic data structures without a declared ceiling (OFFEN O29; an arena with ceiling `M` is a table of `M`
+    slots, and the exporter refuses `grow`, `LG005`); probabilistic statements (OFFEN O29);
+  * every program the certificate register lists as UNCERTIFIED, by name.
 
-  -- BEGIN starvation block (2026-10-22, review of gabbro_ziel, point 1) --
-  WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. PURELY ADDITIVE: a THIRD statement,
-  `GabbroZielLeben`; `GabbroZiel` and its legs are unchanged.
-  * THE GAP. The legs `keineVerklemmung`, `keinZyklus` and `fortschritt` are SAFETY: at every reached machine no
-    deadlock, no wait cycle, no unnamed stop. None says that a waiting thread ever gets its lock: machine G hands a
-    free lock to any of the waiting threads, so one of them may be overtaken for ever.
-  * THE MODEL (Logik/Fortschritt/PlanLauf.lean). The language's lock is a ticket lock (Code/Conc/Lock.lean). A run
-    of it (`FifoLauf`) is a scheduled run of machine G (`PlanLauf`: infinite, a step of one thread or a stutter where
-    nobody can step) with one queue per lock: the queue holds exactly the threads at `locks L`, only its head takes
-    `L`, and the threads that stay keep their order ahead of every newcomer. The runtime assumption `FifoSperre` of
-    the waiting bound (Lebendigkeit.lean) is a THEOREM about such runs (`fifoSperre_aus`). The scheduler is weakly
-    fair (`Fair`): a NAMED assumption about the scheduler, like `KernPlan` for interrupt handlers.
-  * THE STATEMENT. Premises (a)-(d) of `GabbroZiel`; every fair ticket-lock run from the runtime's start. Conclusion:
-    a thread at `locks L` takes `L`, or some thread holds `L` from some step on for ever. The second case is the
-    program's: a critical section that never ends (a `forever` or a recursion inside it, a named stop inside it,
-    or a nested wait whose own holder never ends). Proof (`hungerfrei`, Logik/Fortschritt/Hungerfrei.lean;
-    `gabbro_ziel_leben`, Zielsatz/Atomar/BeweisAtomar.lean): by induction on the threads ahead in the queue; the
-    head at a free lock can always step (the leg `fortschritt` of `GabbroZiel`), nobody else can take the lock, so
-    by fairness the head takes it.
-  * WHAT IT DOES NOT BUY: a bound on the wait (the waiting bound `wartezeit_schranke` needs a hold-time premise);
-    that a critical section ends (termination is NOT CLAIMED); runs over machine GX (the shared atomics answered by
-    the weak memory) and threads spawned at run time (the statement is over machine G with the declared starts).
-  -- END starvation block --
-
-  -- BEGIN budget block (2026-10-22, review of gabbro_ziel, point 2) --
-  WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. `ZielFX` gains ONE leg, `budgetUnecht`; no premise
-  moves.
-  * THE GAP. Machine G gives every `forever` instance `passes` passes and then stops it with the named stop
-    `budget`; the statement holds for every `passes`. Whether that family covers the program's unbounded runs was a
-    reading, not a theorem: nothing said that a budget stop is an artefact of the budget and not of the program.
-  * THE MODEL (Logik/Ruf/Maschine/BudgetMonoton.lean). `passes` decides nothing in a step but the counter a
-    `forever` instance starts with (`execStmt_blatt_passes`). Shifting every counter by `j` (`RufMaschineG.plus`)
-    maps every step at budget `p` to a step at `p + j` (`rufSchrittG_plus`, all rules of G), every run over G, GX and
-    the thread machine (`fadenErreichbarX_budget`), and leaves the start alone. So the budgets form an increasing
-    family, and every finite run -- every prefix of an unbounded run -- is a run at every budget above its passes.
-  * THE LEG. `budgetUnecht`: a thread at a spent budget on a reached thread machine takes a step at budget
-    `passes + 1` from the same machine with every counter one higher. Proof (`budget_unecht`,
-    Zielsatz/Atomar/BeweisAtomar.lean): the shifted machine is reached at `passes + 1`, and there the progress leg
-    leaves the stopped thread nothing but a step (a `forever` with budget left is no finished thread, no lock wait,
-    no named stop). Witness: Zielsatz/Eigenschaften/BudgetZeuge.lean (`forever { }`: stopped at budget 0, steps on
-    at budget 1).
-  * WHAT IT DOES NOT BUY: termination, a waiting bound or a time bound for `forever` (NOT CLAIMED below, unchanged).
-  -- END budget block --
-
-  -- BEGIN weak-memory block (Opus agent B, 2026-09-26) --
-  WHAT CHANGED ON 2026-09-26 (OPUS AGENT B: THE MEMORY MODEL BEYOND DRF-SC), AND WHY -- a
-  REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
-  * THE GAP. G is sequentially consistent, and the header read "the hardware is DRF-SC" as an
-    assumption of the reading; `atomic` globals were "ordered by A10" and excluded from
-    `rennfrei`. The emitted C is a C11 program with relaxed, release/acquire and seq_cst
-    atomics and `pthread_mutex` locks (or own/foreign lock primitives, see assumption (3) of
-    the reading below); nothing proved that its weak behaviours are G's.
-  * THE MODEL (Speichermodell/Sicht.lean, MaschineW.lean). Machine W is machine G over a WEAK
-    memory: a history of messages per carrier (plain and atomic), a view per thread and per
-    lock, message views for release writes. A thread's step READS, at every carrier it reads,
-    ANY message at or above its view -- not necessarily the newest -- and writes at a fresh
-    timestamp above its view. This is the promise-free timestamp machine of RC11 for the
-    orders the emitter writes (relaxed; release store / acquire load / acq_rel RMW; `seq_cst`
-    modelled as release/acquire -- an over-approximation, so claims over W hold for the C, at
-    G's step granularity and under the five named assumptions of the reading below).
-    The weakness is real: on the instruction machine built from the same primitives the
-    stale outcome of relaxed message passing and both-zero store buffering are REACHABLE
-    (`mp_rlx_erlaubt`, `sb_erlaubt`), the latter not on SC (`sb_sc_verboten`); release/acquire
-    forbids the MP outcome (`mp_ra_verboten`); coherence holds (`corr_verboten`).
-  * THE DIFF. New `SchwachSC P O passes M0 M` and the leg `schwach` of `Ziel`: at every
-    reached machine `M`, for EVERY assignment of memory orders to the atomics, every step the
-    weak machine takes from a weak state over `M` (reached from `RufStartW M0`) is a step of G
-    from `M` to the successor's G-part. With it (`gabbro_ziel_schwach`, Zielsatz/Schwach.lean)
-    every leg of `Ziel` holds at every machine W reaches: the goal is proved over the weak
-    machine, not only over G. SCOPE since the merge with Opus agent A (thread machine): W is
-    taken over G's runs from the start machine; `ZielF.g.schwach` holds at every reachable
-    thread machine `K.m` (`gabbro_zielF_schwach`), but W does NOT model spawn and join
-    (`pthread_create`/`pthread_join`) as synchronisation points. Under DRF by exclusion that
-    costs nothing (a child reading what its parent wrote is refused by `fuss` unless the
-    carrier is guarded), and it is no claim that spawn/join order memory.
-  * WHY IT HOLDS (the DRF theorem, Speichermodell/DRF.lean, `schwach_ist_g`): the checker's
-    footprint component (`fuss`) already demands that every carrier a thread's graph READS is
-    thread-local or lock-guarded -- `atomic` carriers included -- and every access to a guarded
-    carrier holds its lock. So a thread's view reaches the newest message of every carrier it
-    reads (its own writes, or the lock's view joined at the take), `Lesbar` admits only that
-    message, and it carries G's value (`liest_neueste`, `praesentiert_g`).
-  * WHY NOTHING IS WEAKENED. `Ziel` gains a conjunct and loses none; no premise of `GabbroZiel`
-    changed. Unlike `keinKernHalt` and `zeit` the leg is NOT premise-free: it uses (a) (`fuss`,
-    closed graphs) and (c) (`GutO`), and W really is weaker than G where the checker refuses:
-    on the refused configuration of `w_nicht_sc` (Speichermodell/Zeuge.lean; `konfig` written
-    by one start and read by another, no lock) W reads the initial value after the write and
-    stores `0` where every G step of the same thread stores `3` -- as a theorem,
-    `schwach_nicht_trivial`: `¬ SchwachSC` at that reached machine (via `g_schritt_0`,
-    inversion over the rules of G). W contains G (`w_aus_g`: every run
-    of G is a run of W), so the new statement covers every machine the old one did, and more.
-    Witness on an accepted program: `schwach_pool_zeuge` (three W steps on the F10 pool,
-    every leg of `Ziel` by `gabbro_ziel_schwach`).
-  * WHAT IT DOES NOT BUY, named below (NOT CLAIMED, OFFEN O25): the goal still covers no
-    program that RELIES on an unguarded atomic read across threads -- `fuss` refuses such a
-    program -- so the non-SC outcomes of W never occur on an accepted program. (SUPERSEDED by
-    the atomic-rely block of lane O25c: such programs are covered, and `schwach` has the form
-    `SchwachX`.)
-  -- END weak-memory block --
-
-  WHAT CHANGED ON 2026-09-22 (FIX LANE F11, reviews G02 F1/G12 F1, OFFEN O19), AND WHY -- a
-  REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
-  * THE GAP. An `entry … vector … via idt` dispatch root travels into the model as an ordinary
-    declared start (see (d) below), and G interleaves threads freely. So the configuration the
-    Rust `H102` refuses -- a handler takes, on the core it interrupted, a lock that core's
-    thread holds without `masks irqs` (`beispiele/gift/460`) -- is no deadlock in G: there the
-    holder simply steps on. `D.maskiert` (the exported `masks irqs`, lane 255) was read by
-    nothing here, so `beispiele/59`'s exported deadlock freedom was NOT interrupt-deadlock
-    freedom. Simon's decision (2026-09-21): real coverage, not a NOT-CLAIMED line.
-  * THE DIFF. New `KernPlan kern H ms fs n` (a core assignment, a handler set, and the two
-    hardware facts about one core: a handler takes its FIRST step only where no other thread
-    of its core holds a masked lock -- that is what `cli`/`sti` DO -- and from there it runs
-    to completion before that thread continues -- that is what preemption IS). New leg
-    `keinKernHalt : KernHaltG P O passes M0 M` of `Ziel`: on such a run a handler NEVER stands
-    at a lock a thread of its own core holds.
-  * WHY NOTHING IS WEAKENED, AND HOW MUCH IT ADDS. `Ziel` gains a conjunct and loses none,
-    and no premise of `GabbroZiel` changed, so it covers exactly the same programs and runs,
-    and every earlier theorem about them still holds. It is NOT strictly stronger, though,
-    and the word was wrong here until the Spec-diff review of 2026-09-23: the leg needs
-    nothing from (a)-(d) and holds for EVERY program of G with no premise (`kernHaltG_gilt`,
-    Zielsatz/Masken.lean -- `ziel_aus` discharges `keinKernHalt` with it and nothing else),
-    so the new `Ziel` is LOGICALLY EQUIVALENT to the `Ziel` before F11. It is the same kind
-    of leg as `zeit`: what it adds is a READING of a core schedule that G itself does not
-    know, and the whole program side sits in the leg's OWN hypotheses (`KernPlan`, and the
-    masking discipline `H102`) -- which is also why it closes no gap by itself, and why O19
-    stays open. What carries the proof is the frame invariant `MerkInvG` (FadenMerkmal),
-    whose `Merkmal.sperre` field says which locks a body may take.
-  * WHERE THE PROGRAM SIDE SITS, and why NOT in (a): the leg's own hypotheses name the
-    handler threads (`H`), their cores (`kern`), their call graphs (`Z`) and features (`A`),
-    and demand that every lock a HANDLER's features admit is declared `masks irqs` -- that is
-    `H102`, decided by `maskenDisziplinB` (Zielsatz/Masken.lean) as the Rust checker decides
-    it over the handler's call-graph hull (`kontexte.rs`). It is not a component of
-    `AkzeptiertSpec`, because `Einheit` does not say WHICH declared start is a handler: the
-    exporter drops `via idt` (the dispatch fact) and G has no cores. Closing that needs a
-    field in `Einheit` and a core in the machine -- OFFEN O19, narrowed to exactly this.
-  * WITNESSES (Zielsatz/MaskenZeuge.lean, on `Korpus59.lean`): `masken_zeuge` -- threads 0
-    (`takt_verteiler`, the handler) and 1 (`ruf_verteiler`) on ONE core; thread 1 takes `RING`
-    and the handler then steps and stands at `locks TAKT` (masked) while the interrupted
-    thread is inside its section; the leg gives that `TAKT` is not held by that thread.
-    `masken_disziplin_460` -- the `gift/460` shape (a handler root whose lock does not mask)
-    is refused by the discipline Bool, `masken_disziplin_59` accepts example 59.
-    [Superseded 2026-09-26 by the handler block below: the leg is now `KernHaltE`, and
-    `KernHaltG` lives in Zielsatz/Masken.lean as the general form it is proved through.]
-
-  -- BEGIN handler block (Opus agent H, 2026-09-26, OFFEN O19) --
-  WHAT CHANGED ON 2026-09-26 (OPUS AGENT H, OFFEN O19), AND WHY -- a REVIEWED DIFF of this file
-  and of `Programm` (Syntax.lean); (a) gains ONE component, the leg `keinKernHalt` changes type:
-  * THE GAP. After F11 the leg was unconditional (`kernHaltG_gilt`), so the conjunct added no
-    logical content (URTEIL-SPECDIFF-2026-09-23, F1): WHICH threads are handlers, their call
-    graphs and the masking discipline `H102` were hypotheses of the leg, chosen by whoever
-    applies it, not facts of the unit.
-  * THE DIFF, in four places.
-    - `Programm.unterbricht : D.Fn → Bool` (Syntax.lean, default `fun _ => false`): the
-      function is entered by hardware, the exported `entry … via idt dispatch f`. It sits in the
-      program because `Ziel` reads the program and nothing else of the unit; `Programm.mitRuhe`
-      carries it (the idle root is no handler); `Verbindbar` demands one dispatch fact for both
-      units of a link, like one contract.
-    - (a): `AkzeptiertSpec.masken : MaskenDisziplin P fs` -- every function the call graph of a
-      handler root reaches takes only locks declared `masks irqs` (`NurMaskiert`). Decided by the
-      component `maskenB` of `Akzeptiert` (`maskenB_iff`); it is the Rust `H102`. The link check
-      `SchnittstelleSpec` gains the same over the composed hull (`masken`).
-    - `HandlerVon P M0 t`: thread `t`'s root at the start machine is a handler of `P`.
-    - The leg `keinKernHalt : KernHaltE P O passes M0 M`: for EVERY core assignment and every run
-      from `M0` the core hardware admits (`KernPlan kern (HandlerVon P M0)`), a handler never
-      stands at a lock another thread of its core holds. `KernPlan` is the only premise inside
-      the leg: the NAMED HARDWARE ASSUMPTION of this leg (what `cli`/`sti` and preemption do on
-      one core), listed with (c)/(d) below. The core machine is G restricted to such runs: every
-      core-scheduled run IS a G run, so every other leg holds on it a fortiori.
-  * WHY IT IS CONTENTFUL NOW. `KernHaltE` is FALSE for a program the discipline refuses:
-    `kernHaltE_verletzt` (Zielsatz/MaskenZeuge.lean) runs a handler that enters while the
-    thread of its core holds an UNMASKED lock (the entry is admitted: the lock masks nothing)
-    and then stands at that lock -- the deadlock of `gift/460`. So the leg is no theorem about
-    every program; `ziel_aus` discharges it from (a) (`kernHaltE_aus`, Zielsatz/Masken.lean:
-    `AkzeptiertSpec.abg` for the call graphs, `.masken` for the locks, the start machine for the
-    rest), and `kernHaltG_gilt` is its proof engine, not its discharge.
-  * WHAT MOVED, AND WHETHER ANYTHING IS WEAKENED. (a) is TIGHTER exactly on programs with a
-    handler whose graph takes an unmasked lock -- the shape the Rust `H102` refuses (the Rust
-    rule reads the handler's effect hull and skips a lock its unit does not declare, so on a
-    lock behind a cut edge or an undeclared lock the Lean component can refuse where `H102` is
-    silent; review 2026-09-26 F1); on a
-    program with no handler the component is `true` (`maskenB_ohne`), so every unit of before
-    (all of them: the field did not exist) keeps its verdict word for word, and the leg holds
-    with nothing from (a) (`kernHaltE_ohne_handler`). An old checker becomes a `Pruefer` when
-    conjoined with the component it never judged (`pruefer_vor_neu`, PoolSym.lean). (b), (c),
-    (d) and every other leg are unchanged. The leg itself is not weaker than F11's: that one was
-    equivalent to `True`; this one quantifies over every core assignment and every admitted run
-    with the handler set fixed by the unit.
-  * WITNESSES (Zielsatz/MaskenZeuge.lean): `masken_zeuge` -- `beispiele/59` with its `via idt`
-    root `takt_verteiler` as the program's handler, one core, the handler preempting thread 1
-    inside its `RING` section and standing at `locks TAKT` (masked): the leg of `korpus59_ziel`
-    (now from (a)) says `TAKT` is not held there. `kernHaltE_verletzt` -- the refused shape:
-    accepted by the checker WITHOUT the handler component, refused WITH it
-    (`handler_abgelehnt`), and the leg fails on a real run of it.
-  * WHAT THIS HUNK DOES NOT REACH (review 2026-09-26, F2/F3). The leg speaks of THREADS whose
-    root is a declared handler: a function marked `unterbricht` that no declared start runs is
-    checked by (a) but occurs in no run of G (the exporter starts every dispatch root, lane 198;
-    the diff script pins both, K6). The shared-atomics statement `gabbro_ziel_atomar`
-    (`ZielAtomar`, Zielsatz/AtomarAkzeptiert.lean) keeps F11's form `KernHaltGA`, which holds for
-    every program. (Merge with lane O25c: the GOAL statement with the rely carries this hunk's
-    leg -- `AkzeptiertSpecX` has the field `masken`, `AkzeptiertX` the component `maskenB`, and
-    `ZielX.keinKernHalt` is `KernHaltEA`, this leg over GA runs, `kernHaltEA_aus`.)
-  -- END handler block --
-
-  -- BEGIN end-block gate block (C-free lane, 2026-09-30) --
-  WHAT CHANGED ON 2026-09-30 (C-FREE LANE: A FOREIGN CALL AT THE TOP LEVEL OF A BODY), AND WHY.
-  * THE GAP. A body is an `Endblock`, and `Endblock` had no binder for a foreign call: the answer
-    of an axiom could be bound only inside a nested `Block` (`Block.bindAxiom`). Every `syscall`
-    gate of the corpus and of the network stack is called at the top level of a body, and the
-    last call of a `-> never` process entry (`exit_group(...)`) ends a body -- the exporter
-    refused all of them (LG004).
-  * THE MODEL. One new `Endblock` constructor (Syntax.lean): `bindAxiom`, with the premises of
-    `Block.bindAxiom` and an end-block rest. Its semantics (`execEnd`) is that of the block
-    form; the machine gains ONE rule, `endeBindAxiom` (`dannBindAxiom` with the rest in `ende`
-    position). A `-> never` call that ENDS a value-returning end block still has no form (its
-    rest would be a dead end with no value to return) and stays refused by name.
-  * THE DIFF (below, `RestHalt`): two arms, the SAME stops `KopfHalt` names at
-    `Block.bindAxiom`, now at `.ende (.bindAxiom ..)` -- `hardware` (the answer is outside its
-    answerable type) and `nieZurueck` (the axiom's declared result is `never`). No stop KIND is
-    added, no premise and no conclusion moves; the definition names the same stop at the second
-    place it can stand. Without the two arms the statement would be FALSE for such a program
-    (a thread standing there could neither step nor be named), so the goal theorem forces
-    them.
-  * THE REASON CHANNEL (same day, second slice). A fallible gate (`-> T or R`) is an axiom with
-    `D.agruende a > 0` (a new `Deklaration` field, default `0`, so every declaration of before
-    is unchanged); `Block.bindAxiomElse` / `Endblock.bindAxiomElse` bind its value or run the
-    `else` block with its reason (`bindCallElse`'s shape). The machine's raw answer carries the
-    pair packed like a `tagged` value (`sonstPasst`, the convention of `summePasst`). THE DIFF:
-    one `KopfHalt` arm and one `RestHalt` arm, the stop `hardware` where the raw answer decodes
-    to neither (an unlisted errno or an out-of-range value -- the stub's
-    `__builtin_unreachable()` under the named assumption). The answer class always holds the
-    reasons, so no `nieZurueck` case arises and `antwortenB` needs no new clause. Again no stop
-    kind, premise or conclusion moves.
-  -- END end-block gate block --
-
-  -- BEGIN arena runtime block (C-free lane, 2026-09-30) --
-  WHAT CHANGED ON 2026-09-30 (C-FREE LANE: THE HOSTED ARENA RUNTIME IS GENERATED, AND ITS STORAGE
-  IS THE PROGRAM'S BINDING), AND WHY. COMMENT ONLY: no definition, premise or conclusion moves.
-  * THE GAP. `laufzeit/arena_dyn.c` was handwritten C behind premise (d) `Laufzeit.reserve` and
-    `Laufzeit.commit`; it handed the binding addresses as NUMBERS and computed the page ranges
-    itself. Simon's rule of 2026-09-30 is no handwritten C in a finished binary, and no number
-    ever becomes a pointer in the language.
-  * THE CHANGE. The hosted driver WRITES that runtime (`crates/gabbro-cli/src/treiber.rs`,
-    `ARENA_LAUFZEIT`), a template in the register (`arena.dyn`) whose arithmetic is proved in
-    `Grammatik/SchablonenArena.lean`: the reserved span covers every slot on whole pages with no
-    64-bit wrap (`arena_spanne_passt`), and every commit range covers the new slots, lies on pages
-    and inside the span (`arena_commit_bereich`). The storage calls are GABBRO functions of the
-    program's binding (`bibliothek/linux/linux.gab`: `gabbro_os_reserve` answers a REGION through
-    a region gate -- template `tor.region` -- and `gabbro_os_commit` takes one under `requires
-    bytes <= lenof(stelle)`), checked like any user code.
-  * WHAT (d) SAYS NOW (the two entries below, reworded): the reservation and the commit are the
-    PROGRAM's calls under the proved template, and what remains assumed is exactly the contract
-    of the program's own gates -- user logic in its source, the kind premise (c) already names
-    for every gate. What a green build says about a unit with an arena does not move: the arena
-    is still, in this statement, a table of `M` slots in the declared initial memory.
-  * THE SAME DAY, THREADS AND LOCKS (still comment only). The hosted driver writes the lock
-    (the ticket lock `CTicket.lean` proves, template `sperre.ticket`) and the thread runtime
-    (`faden.laufzeit`, starting each declared root through the trampoline of the program's stack
-    gate, `tor.trampolin`); `laufzeit/faden.c`, `laufzeit/bindung.h` and
-    `bibliothek/linux/linux.c` are gone. (d) `Laufzeit.start` names the new split below; no
-    definition moves.
-  -- END arena runtime block --
-
-  WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
-  DIFF of this file; the text of `GabbroZiel` and of `Ziel` is unchanged:
-  * The Rust checker admits a symmetric worker pool, `concurrent { w, w }`, when `w` is
-    pool-safe (lane 245, narrowed `N304`), while `AkzeptiertSpec.einzeln` demanded `ws.Nodup`
-    and (d) let no declared start run on two threads -- so no theorem covered those programs.
-    Simon's decision (2026-09-21): move the statement, and prove the legs.
-  * THE DIFF. New `Mehrfach ws w` (`[w, w]` is a sublist of `ws`: declared at least twice).
-    (a) `AkzeptiertSpec.einzeln : ws.Nodup` becomes `EinzelnPool P fs ws` (every routine
-    declared twice is `PoolSicherW`: no signature lock, no reasons, every carrier its graph may
-    write guarded or atomic); `Getrennt` pairs a start with a DIFFERENT OCCURRENCE (`w₁ ≠ w₂ ∨
-    Mehrfach ws w₁`), so a pool routine's footprint carrier that its own graph may write needs a
-    signature lock or a lock invariant, as for two different starts. (d) `Laufzeit.einmal` lets
-    a routine run on several threads iff it is declared at least twice (before: never).
-  * WHY NOTHING IS WEAKENED. (i) Every program the old checker accepted is accepted, with the
-    same verdict: on a repetition-free `ws` `Mehrfach` never holds, so the new `Getrennt` is the
-    old one and `EinzelnPool` holds vacuously (`akzeptiert_nodup_gleich`,
-    `akzeptiertSpecVor_neu`, Zielsatz/PoolSym.lean). (ii) Both premise changes are
-    RELAXATIONS: `AkzeptiertSpec` is the target of `Pruefer.korrekt`, so every old checker is
-    still a `Pruefer` (`pruefer_vor_neu`), and every run (d) admitted before is admitted now.
-    `GabbroZiel` therefore claims `Ziel` for strictly more programs and runs, and `Ziel` is the
-    same structure. (iii) The proof needs nothing new below `Akzeptiert_ok`: every leg is
-    proved over per-THREAD facts (`lokK`, `SchreibGetrenntK`, `StartExklusiv`), and the two
-    places where distinctness entered -- `getrenntK_of`, `schreibGetrenntK_of` -- now take a
-    same-routine pair from `Mehrfach`: the footprint pair from the occurrence form of
-    `Getrennt`, the write pair from pool safety (a pool graph writes no unguarded, non-atomic
-    carrier). Witnesses: `pool_ziel_zeuge` (a pool of two lock-guarded workers accepted by
-    `akzeptiert_pruefer`, both instances stepped, `Ziel` by `gabbro_ziel`) and `pool_abgelehnt`
-    (an unguarded writer twice is refused by the Bool), Zielsatz/PoolZeuge.lean.
-  * WHAT STAYS NAMED: per-core writes (`accumulates … per cpu`, OFFEN O17) are exempt in the
-    Rust pool rule and unmodelled; the exporter refuses such units, so they never reach (a).
-
-  WHAT CHANGED ON 2026-09-15 (FOURTH ROUND), AND WHY (round-6 confirmation reviews,
-  URTEIL-OPUS-2026-09-15d.md and URTEIL-MUSE-2026-09-15d.md, finding W1 -- a REVIEWED DIFF:
-  `AkzeptiertSpec` gains the field `antworten`, `KopfHalt .nieZurueck` is narrowed to an
-  axiom `-> never`; the text of `GabbroZiel` is unchanged):
-  * W1 -- the third round named every EMPTY declared answer type as the stop `nieZurueck`,
-    with the reason "the continuation is unreachable in the C as in G". That is true only
-    for an axiom `-> never` (the C prototype is `_Noreturn`). An axiom whose result is
-    `.why 0`, an empty range, a sum without a value or a pointer type no function has is
-    declared by an ORDINARY prototype: the C call returns some word and the continuation
-    runs, covered by nothing;
-    a register read never "does not return". Both reviewers reproduced it: probe A behind
-    `let p = hol();` with `hol() -> fn(sig 5)` (no function has signature 5) met (b) and was
-    certified. REPAIR, in the checker: the new component `antworten` (Bool `antwortenB`,
-    Zielsatz/Akzeptiert.lean, decided exactly by `antwortenB_iff`) refuses every answer site
-    of every body -- `bindAxiom`, `axiomCall`, `regLies`, `regLiesElse` (`Block.ants`,
-    AntwortOrte.lean) -- whose declared answer type has no value, except an axiom whose
-    result is `never` (`StelleOk`). Emptiness is decided from the declaration (range
-    bounds, reason count, sum cases, the float range by three candidate witnesses, complete
-    since the kernel IEEE order is transitive on finite values) and, for `fnptr n`, over the
-    enumerated function list (`antwortB_iff`, EinpassenVoll.lean). G continues only with
-    sub-blocks of the bodies (`antInvG_erreichbar`, AntwortOrte.lean), so on every reachable
-    machine a thread can stand at an empty answer type only at an axiom `-> never`
-    (`fort_dann`, Fortschritt.lean), and `KopfHalt .nieZurueck` now SAYS so: it holds only at
-    an axiom call whose declared result is `never`. The reason of the ONE list is true
-    again, and the escape is gone from it. Refuted: the round-6 probe, now refused by the
-    checker (`w1_abgelehnt`, Zielsatz/ProbenW1.lean).
-  * Precision (verdict): "for a satisfiable `E.Q`, oracles with fitting answers exist" reads
-    "satisfiable at a DECODABLE value" (for a float: a well-formed one, `WertOk`).
-
-  WHAT CHANGED ON 2026-09-15 (THIRD ROUND), AND WHY (round-5 confirmation review, finding
-  G1 -- a REVIEWED DIFF of this file: `KopfHalt`, `HaltArt`, `FortschrittG` and the ONE list
-  below. The text of `GabbroZiel` and every premise are unchanged; the leg `fortschritt` of
-  `Ziel` names one more stop kind, and its `hardware` kind is narrowed to answerable types):
-  * G1 -- `einpassen`, which holds a raw machine answer against the declared type, answered
-    `none` for EVERY raw word of a `tagged` sum (an `ok | reason` syscall result), a float
-    and a function pointer. So every call of an axiom with such a result stopped at
-    `hardware (annahme a)`, every read of such a register at `hardware (register r)`, for
-    EVERY oracle: a stop the MODEL decided, filed as hardware -- the class of F1. (b) does not
-    constrain hardware outcomes, so probe A behind one such call met (b), passed the checker
-    and was certified; `AxVertragO` was vacuous for those axioms. REPAIR, in the model
-    (Semantik.lean): every type has a real decoding -- a sum packs the emitter's C value
-    `struct { marke; union last; }` as `roh = marke + |cases| * last` (`summePasst`); a float
-    is its IEEE-754 binary64 bit pattern, range-checked like a computed float
-    (`gleitWortPasst`); a function pointer is a code address that the LOADED IMAGE names
-    (`Orakel.zeiger`, a new oracle field -- which address a function has is the linker's and
-    loader's, so it is the machine's answer; the signature number is checked against the
-    declared `fnptr n`). PROVED (EinpassenVoll.lean): every value of every type (floats:
-    well-formed) is the decoding of some raw word under some image (`einpassen_voll`), and
-    the answer class is empty EXACTLY when the declared type has no value (`antwortLeer_iff`)
-    -- the model decides no stop the declared type does not. Refuted: the G1 probes
-    (Zielsatz/ProbenG1.lean) -- an axiom with an `ok | err` result and a float register, each
-    in front of `ensures false`, both accepted by the checker: an oracle meeting (c) answers
-    them (`g1_holen_antwortet`, `g1_temp_antwortet`), and no program with that code meets (b)
-    (`g1PA_widerlegt`, whenever the declared ensures holds at SOME answer; `g1PR_widerlegt`).
-  * THE EMPTY TYPES, and `never` (NEW kind `HaltArt.nieZurueck`): a declared answer type
-    without a value (`never`, `.why 0`, an empty range, a sum without a value, a pointer
-    type no function has; `AntwortLeer`) admits no answer at all -- so its call does not
-    return. That is not the machine answering "outside" a type that has no inside, so it is
-    no longer a `hardware` stop: `KopfHalt .hardware` at an axiom or register head now
-    requires the type to be answerable (`¬ AntwortLeer`), and `KopfHalt .nieZurueck` names
-    the empty case; `FortschrittG` lists it. (NARROWED in the fourth round, W1: the reason
-    below holds only for `-> never`; every other empty type is now refused by the checker,
-    and `nieZurueck` is an axiom `-> never` alone.) WHY this and not "only in tail position": for
-    `-> never` the non-return IS the declaration (the emitter writes `_Noreturn` on the
-    prototype), the code after the call is unreachable in the C exactly as in G, and (b)
-    still covers every statement BEFORE the call -- a `logik` outcome or a failed callee
-    `requires` there is an outcome of the body, which `KoerperGutS` excludes. What stays
-    vacuous is only the unreachable continuation and the function's own `ensures` (a body
-    that never returns meets every `ensures`, partial correctness, as for recursion).
-  * The replay of the user's sequential proof into G (`GleichRS`, `ZeigerGleich`) and the
-    idle-root transfer (`OrakelRu`, MitRuheSemantik.lean: an oracle of `E.P.mitRuhe` may
-    place the root at an address, which no translated type accepts) carry the image; no
-    premise changed.
-
-  WHAT CHANGED ON 2026-09-15 (SECOND ROUND), AND WHY (fourth Opus verdict,
-  URTEIL-OPUS-2026-09-15b.md):
-  * F1 -- a float result outside its declared range ended the body in `Hardware.ieee` for
-    EVERY oracle: the kernel IEEE model (`gleitRechne`, Annex F) decides it from the
-    program's own values, no machine is involved. `KoerperGutS` constrains only returns and
-    `logik` outcomes, so probe A behind an out-of-range literal (`f1P`, SpecProben) met (b),
-    passed the checker with its start declared and running, and was certified -- by a stop
-    labelled "hardware". REPAIR, in the model: the three float forms without `else`
-    (`gleit`, a float literal, `gleitVon`) answer `Logik.bereich` there (Semantik.lean,
-    SperreSem.lean; `Hardware.ieee` is no longer produced). Why this and not a new clause
-    "`≠ hardware ieee`" in (b): the range is the program's logic exactly as a `state`
-    pre-state is (`Logik.vorzustand`), so the existing clause "no `logik` outcome" of
-    `KoerperGutS` covers it with no new obligation shape; and the replay already carries
-    `logik` outcomes to the machine, so the CONCLUSION gains it too: no reachable machine
-    has a thread at a failing range check (`BereichG`, Fortschritt.lean, from the
-    obligation) -- `FortschrittG` lists no float stop any more. Machine G's rules are
-    unchanged (they fire only on an in-range result, as before). That the FPU computes the
-    kernel model is `gleitkomma_ieee`, on the C side, where it always was. Refuted:
-    `probeF1_widerlegt_gilt` (Proben.lean); the checker accepts `f1P` (`f1_akzeptiert`), so
-    the refusal is (b)'s.
-  * F2 -- `keineVerklemmung` ruled out only GLOBAL deadlock. New leg `keinZyklus`
-    (`KeinWarteZyklus`): no threads `t₀ … tₙ₊₁ = t₀` each standing at a lock the next one
-    holds, whatever the other threads do; proved from the rank invariant
-    (`kein_warteZyklusG`, Zielsatz/Beweis.lean).
-  * F3 -- the named stops are now of three KINDS (`HaltArt`) and listed, with their
-    reasons, in THE ONE ASSUMPTION LIST below: `hardware` (axiom and register answers),
-    `flagge` (an `awaits` whose flag is not visible: a WAIT, no longer called hardware),
-    `budget` (a spent `forever` budget: a model artefact, not called hardware).
-  * Header corrections: `speicherSicher` needs no checker (only `GutO`); "`Q := false`
-    empties (c)" holds only for axioms without a result (see (c) `AxVertragO`).
-
-  WHAT CHANGED ON 2026-09-15, FIRST ROUND, AND WHY (third Opus verdict,
-  URTEIL-OPUS-2026-09-15.md):
-  * P1 -- an unsatisfiable lock invariant (`invariant false`) emptied (b): every body
-    obligation quantifies `∀ U, HavocOk S U → …`, and `HavocOk` had no member. It also
-    emptied the conclusion: the old premise `StartZulaessig` demanded every invariant at the
-    start memory, so no start was admissible. Its fields `req` and `sperren` belonged to no
-    premise group. Now they are the user's `StartPflicht`, over the memory and arguments the
-    PROGRAM declares. An unsatisfiable family refutes (b) (`unerfuellbar_widerlegt`,
-    `probeA_falsch_inv_nicht`), `HavocOk` is inhabited under (b) (`havocOk_bewohnt`), and
-    every (b)-refutation of the probes holds with no side condition on the family.
-  * P2 -- `ws`, `S`, `Q` were free parameters: `akP3` (two writers) was refused with its real
-    starts and accepted with `ws = []`. They are now fields of `E`; the checker runs on
-    `E.ws`, the hardware assumption names `E.Q`, and (d) lets a thread run only a declared
-    start (`laufzeit_nur_erklaert`). No accepted program over `akD` runs both writers
-    (`akD_kein_zweiter_schreiber`); the same code declaring no start is a different program,
-    about the root alone (`akP3_ohne_starts`). The checker also demands distinct starts
-    (`AkzeptiertSpec.einzeln`), so the runtime's exact start is covered (`laufzeit_voll`).
-  * P3 -- publish payloads were dropped from the race leg with nothing in their place; two
-    starts WRITING one unguarded payload passed. The exemption is gone from `RennfreiBis`
-    and from the checker's `renn`: only `atomic` globals are exempt. Why no pairing conjunct
-    is needed: a payload read by one start and written by another is already refused by the
-    footprint check (`fuss`: an unguarded footprint carrier must be thread-local), and a
-    guarded payload is lock-ordered like any carrier. What remains exempt is exactly what
-    A10 orders: accesses to `atomic` globals. The price, NAMED: the publish/await hand-off
-    of an UNGUARDED payload across threads is refused, not covered.
-  * `StartZulaessig` is no longer a premise; the proof derives it (`startZulaessig_aus`,
-    Zielsatz/Beweis.lean). The old `NutzerPflicht P S Q` is now `LogikPflicht`.
-
-  THE ONE ASSUMPTION LIST -- everything the theorem assumes that is neither the checker's
-  Bool nor the user's proof. Each entry with why it is hardware/runtime and not a software
-  obligation under that name:
-  * (c) `GutO O` -- an axiom (a FOREIGN body: `extern fn`, `prim fn`, `asm`, `entry`,
-    `entrust`) writes only its declared frame, keeps the held locks, and leaves its accesses
-    in the trace. Foreign code is not Gabbro code: nothing in the language can check it, and
-    the user's logic never sees its body.
-  * (c) `RegLokal O` -- a register read answers from the state of its device, i.e. from the
-    carriers declared for it (`depends`, `D.rtraeger`); `awaits g` sees a publication
-    depending only on `g`. It is about the device, not the program. NAMED RESTRICTION
-    (third verdict, `register_ohne_traeger_konstant`, Zielsatz/Proben.lean): a register
-    WITHOUT declared carriers answers the same value in EVERY world, and a user proof may use
-    that two reads agree -- a real volatile register breaks that. So `RegLokal` is STRONGER
-    than hardware: a register whose value the device changes on its own must be read through
-    an axiom (whose answer is free under `GutO`) or given carriers an axiom writes. Not
-    repaired here: G's oracle answers a read from the world alone, and the replay linking the
-    user's sequential proof to G (`regLies_gleich`) needs the answer to be a function of the
-    carriers the two worlds share.
-  * (c) `AxVertragO E.Q O` -- every axiom answer THAT FITS ITS DECLARED RESULT TYPE meets
-    the `ensures` the program declares for it. That is the contract of foreign code or a
-    device, which the user writes and nothing checks: a false `E.Q` is a false NAMED
-    assumption (visible in the declaration). CORRECTED 2026-09-15 (verdict): `Q := false`
-    makes (c) unsatisfiable only for an axiom WITHOUT a result; for an axiom with a result,
-    (c) stays inhabited by oracles whose answers never fit the type, and every call of that
-    axiom then stops at a `hardware` stop (`Hardware.annahme`). Both are the honest kind of
-    vacuity -- a visible false assumption, reported as such -- but they are two kinds.
-    SINCE G1 (2026-09-15) "fits" is a real decoding for EVERY type (`einpassen_voll`): for an
-    `E.Q` satisfiable at a DECODABLE value (for a float: a well-formed one, `WertOk`; a `Q`
-    true only at malformed bit triples is again a false declaration), oracles with fitting
-    answers exist, and (b) must cover them. SINCE W1 the checker admits no answer site at an
-    empty type except an axiom `-> never`, so every other site's class has such values.
-  * (d) `Laufzeit.lader` -- the loader establishes the program's declared initial memory
-    `E.sp0` (initialized data and zeroed storage of the emitted C). A toolchain/loader fact;
-    that `E.sp0` meets the lock invariants and start `requires` is the USER's `StartPflicht`.
-  * (d) `Laufzeit.reserve` -- THE RESERVATION OF A DYNAMIC ARENA (server lane, 2026-09-28;
-    the wording is PLAN-DYNAMIC section 9's; reworded by the C-free lane 2026-09-30, header
-    block "arena runtime"): the virtual range for every dynamic arena's ceiling `M` is reserved
-    BEFORE any start runs; a failed reservation refuses the LOAD, it never starts a program with
-    a smaller range. **No new premise and no new field**: an arena is, in this statement, a table
-    of `M` slots in the declared initial memory (the sugar of ArenaZucker.lean, the dynamic form
-    in ArenaDyn.lean section `Form`), so a load that cannot provide that range establishes no
-    `E.sp0` at all and `Laufzeit.lader` is FALSE of it -- the theorem then says nothing about
-    that run, which is the honest answer and not a weaker one. HOSTED, the reservation is no
-    longer a runtime file: the generated driver's arena runtime (template `arena.dyn`, arithmetic
-    proved in SchablonenArena.lean) asks the PROGRAM's binding for a region of the whole span
-    (`gabbro_os_reserve`, a Gabbro function over a region gate, template `tor.region`), and what
-    is assumed is that gate's declared contract -- user logic in the program's source. On metal,
-    the carved region of (M10); in a Linux kernel module, a static pool of the manifest's
-    `provision` per arena with the span cut at it (the driver the build writes, template
-    `arena.modul`, arithmetic proved in SchablonenModul.lean). What is NOT claimed: that the reservation succeeds --
-    refuse-on-load is a refusal, not a leg.
-  * (d) `Laufzeit.commit` -- THE COMMIT SERVICE (server lane, 2026-09-28; wording from
-    PLAN-DYNAMIC section 9; reworded by the C-free lane 2026-09-30): every `grow` the checker
-    admits either COMMITS its slots before the next statement runs or takes its `else` branch; a
-    commit that reports success names readable and writable storage; commit latency is bounded
-    by the runtime's DECLARED per-slot cost (`ArenaDyn.growKosten` reads that number as DATA from
-    (c)'s latency entry -- it is read, never justified). In the model there is no third outcome,
-    and that is proved rather than assumed: the form is `Block.narrow` of `committed + n` into
-    `0 .. M` with one store (`dynGrow_commit`, with the frame -- the used counter and every slot
-    stay put), and past the ceiling there is no branch at all (`dynGrowListe_scheitert`). HOSTED,
-    the page range a commit covers is the generated template's and proved to cover the new
-    slots inside the reserved span (`arena_commit_bereich`); the commit itself is the program's
-    binding (`gabbro_os_commit`, a Gabbro function over its own gate), so what stays assumed is
-    that gate's contract: a commit that fails BELOW the ceiling reaches the program's `else`, and
-    success is never reported over storage that faults on first touch. It belongs to the class
-    the NOT CLAIMED line "the C and the hardware" already covers, and is named here because a
-    dynamic arena is the one form whose storage arrives AFTER the load. **Also comment only:** no
-    definition of this file changes, `Laufzeit` has the three fields it had, and every proof of
-    the tree is untouched.
-  * (d) `Laufzeit.start`/`.einmal` -- the runtime starts exactly the declared starts, each on
-    its own thread with its declared arguments, and the idle root `none` (MitRuhe.lean: body
-    `return`, empty signature, no lock, no reason, writes nothing) on every other thread;
-    the statement covers every assignment running some of the declared starts this way, and
-    (since fix lane F10) any number of threads running a routine the program declares at
-    least twice (a worker pool; the runtime's own start runs one thread per occurrence).
-    Thread creation is the runtime's (the emitted `main`/boot code), not user logic -- HOSTED,
-    since 2026-09-30 (C-free lane, header block "arena runtime"), the generated driver's thread
-    runtime (template `faden.laufzeit`) through the trampoline of the PROGRAM's stack gate
-    (`tor.trampolin`; `SchablonenFaden.lean` proves the mechanics: root then end on the handed
-    stack, the join returning only after the thread's end); what stays assumed is that gate's
-    contract, user logic like every gate's. The
-    machine runs `E.P.mitRuhe`, whose `some f` IS `f` of `E.P`: every checker fact transfers
-    (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`) and every function behaves as in `E.P`
-    (MitRuheSemantik.lean).
-  * (d) since 2026-09-26, THREADS CREATED AT RUN TIME -- `Laufzeit.start` also places thread
-    slots at the run-time roots `E.gestartet`; a slot the run does not start live is DORMANT in
-    the thread machine until a `start` or `child` step spawns it. Assumed, and not a software
-    obligation under that name: (1) the slot's ARGUMENTS are the unit's (for a `start` root
-    `.nil`, `N458`) and its frame's ghost entry world (`s0` and the logged entry, read by
-    `old`-parts of the root's `ensures` and by `VertragAmOrtG`'s `requires` leg) is the START
-    world, not the spawn world -- the body itself reads shared memory at each step, so what it
-    DOES is the spawned thread's behaviour; (2) the spawn SITES are the checked ones: the
-    lowering creates the threads of a `start` only where the starter holds no lock (`N461`
-    checks the source, the `start` rule carries it as a side condition), makes the starter wait
-    until EVERY root has finished (the `join` rule), and enters a `child` region by jump with
-    an empty held set (`N456`; OFFEN O21's jump assumption); and (3) every spawn SUCCEEDS: the
-    `start`/`kind` steps have no failure branch, and a unit that spawns in a loop needs
-    unboundedly many slots (`Faden` is unbounded) -- thread creation failing for want of memory,
-    stacks or thread ids is not modelled (review 2026-09-26). All three are statements about the
-    runtime and the lowering (lane 260's raw `clone`), whose check is translation validation's.
-    Over-approximated, never under-: a spawn may fire at ANY point of a live thread where the
-    rule's condition holds, and any slot may be live from the start (`lebt0` is quantified).
-  -- BEGIN bare-metal runtime block (Opus agent I, 2026-09-26, OFFEN O32) --
-  * (d) ON BARE METAL -- `laufzeit/metall/` (Multiboot1 entry, long mode, SMP bring-up, per-core
-    scheduler, context switch, ticket lock) implements the thread interface of
-    `laufzeit/faden.h` WITHOUT an OS; the emitted C does not change. COMMENT ONLY: no definition,
-    no premise and no leg of this file changes; the hunk says what (d) means on that runtime.
-    WHAT THE MODEL ALREADY COVERS, with nothing added: `ZielF`'s thread machine (FadenMaschine)
-    interleaves live threads FREELY, spawns wherever the rule admits, and lets a starter wait
-    until every root finished. Any scheduler produces a subset of those interleavings -- round
-    robin, preemptive, cooperative, one core or sixteen -- so no leg depends on WHICH scheduler
-    runs; the model's thread is not bound to a core at all. What the metal runtime must satisfy
-    for (d) and the transfer to the C to describe it, NAMED here as runtime/hardware assumptions
-    of that runtime (unchecked: they are about `start.S`/`kern.c` and the machine, not about the
-    user's program):
-    - (M1) CONTEXT SWITCH: a switched-out thread resumes with exactly the state it left -- at a
-      call boundary the SysV callee-saved set plus MXCSR and the x87 control word
-      (`metall_schalte`), at a timer interrupt all fifteen general registers plus the FXSAVE
-      area (`metall_takt_eintritt`) -- on its own stack, and the switch touches no Gabbro
-      carrier. This is what makes a G step of one thread unaffected by the others' steps.
-    - (M2) LAPIC AND IPI: INIT-SIPI-SIPI starts each application processor in real mode at the
-      trampoline page (vector 0x08 = 0x8000); the LAPIC timer, periodic, interrupts a thread
-      running with IF = 1 at the end of every quantum; an EOI re-arms it; no other interrupt
-      arrives (both 8259s masked, no device routed); the ACPI MADT names the cores; the
-      port-0x80 delay is long enough for the INIT/SIPI waits.
-    - (M3) BOOT PROTOCOL: a Multiboot1 loader (SPRACHE A21) places the segments at their
-      physical addresses and ZEROES `.bss` -- on metal that is `Laufzeit.lader`'s "zeroed
-      storage of the emitted C" -- and enters in 32-bit protected mode; the low 4 GiB are then
-      identity-mapped with no protection between the unit and the runtime (foreign code's frame
-      is `GutO`'s, as everywhere).
-    - (M4) SCHEDULER FAIRNESS: one FIFO queue per core, a thread fixed to the core it was placed
-      on (round robin over the cores at its start), a preempted or yielding thread to the tail.
-      Every runnable thread therefore runs again within one round of its core's queue. NO LEG
-      USES THIS: the safety legs hold on every interleaving, `fortschritt` is a statement about
-      stuck states, and starvation freedom is NOT CLAIMED (list below). Fairness is what makes
-      the runs that END reachable on the metal: a cooperative build (`-DMETALL_KOOPERATIV`)
-      hangs a spin on a same-core thread forever (measured, `pruefe-metall.sh` gift `staffel`)
-      -- an infinite run G also admits, so nothing claimed becomes false, but nothing finishes.
-    - (M5) THE LOCK: `L_nimm`/`L_gib` are the ticket lock of CTicket.lean (THEOREM-MAP §32; the
-      refinement `ticketLP_sperrAbstrakt` discharges `sperre` of `LaufzeitC` for that shape).
-      The spin YIELDS its core every 64 passes: a stutter of a thread whose ticket is not
-      served (`spinnt_nur`), no step of the lock. The runtime's own locks (run queues, thread
-      table, serial line) are ticket locks too, held with interrupts off, and touch no carrier.
-    - (M6) THE JOIN: the join word is nonzero before the thread can run and is cleared with
-      release ordering only after the thread has LEFT its stack (by the core's scheduler, not by
-      the thread), and the waiter reads it with acquire -- the `join` rule (every root finished)
-      plus the synchronizes-with edge; the unit's stack is reusable when the join returns.
-    - (M7) DRF-SC ON METAL: x86-TSO plus the C11 orderings of the emitted C and of the runtime
-      -- the same named premise `DRFSC` as hosted; the metal adds no memory-model assumption.
-    NOT CLAIMED on metal, in addition to the list below: hardware other than
-    `qemu-system-x86_64 -smp 4` (TCG; that is where it was booted, 2026-09-26); more than 16
-    cores or 64 live threads (a start beyond that answers EAGAIN, and the emitted `start` traps
-    -- the model's spawn never fails, named below); the quantum's length and any waiting bound;
-    the scheduler stack (16 KiB per core) and thread stack depth (stack depth is NOT CLAIMED
-    anyway); interrupt handlers the PROGRAM declares (`via idt`): this runtime's IDT holds only
-    the CPU exceptions (report and stop) and its own timer, so `KernPlan` (the handler leg's
-    named core schedule) has no realisation here yet -- OFFEN O19/O32.
-  -- END bare-metal runtime block --
-  -- BEGIN bare-metal entries and targets (Opus agent L, 2026-09-26, OFFEN O31/O32) --
-    COMMENT ONLY: no definition, no premise and no leg of this file changes. Since Opus agent J
-    the metal runtime installs the handlers the PROGRAM declares (`METALL_EINTRITT`, masked
-    locks, `laufzeit/metall/arena.c`), which supersedes the last sentence of the block above;
-    what that adds to (c)/(d) on metal, NAMED as runtime/hardware assumptions (unchecked, about
-    `laufzeit/metall/` and the machine, not about the user's program):
-    - (M8) THE ENTRY STUB: an entry (`entry … vector N`, entered or `via idt`) runs its
-      `dispatch` with the `regs in` registers, in order, as the arguments and stores the answer
-      into the `regs out` register; every other general register and the x87/SSE state come
-      back as they were (`metall_eintritt_gemeinsam`, `laufzeit/metall/eintritt_asm.h`); a
-      LAPIC-thrown entry is acknowledged once. The checker holds the binding against the
-      dispatch's signature (`N561`), so the stub never guesses. The same text is the kernel
-      service entry at vector 0x80 of a gate bound for `target … abi metal` (OFFEN O31); its
-      register half is falsified by `sonden/sonde_metall_systemruf.c`, which assembles THAT
-      text into a userland program. The entry runs on the interrupted stack: the declared
-      `stack NAME per cpu` / `ist` is not switched to (OFFEN O32 (8)), and an exception vector
-      that pushes a CPU error code is refused by the runtime (OFFEN O32 (9)).
-    - (M9) THE MASKED LOCK: a `masks irqs` lock clears IF BEFORE its ticket is drawn and
-      restores the holder's flags at release; a spin with IF = 0 never yields its core. So no
-      `via idt` handler lands on a core with a claim on the lock -- the realisation of the
-      handler leg's named core schedule (`KernPlan`, OFFEN O19) for masked locks. An UNMASKED
-      lock taken inside a masked section spins with IF = 0 without yielding (OFFEN O32 (10)).
-    - (M10) THE ARENA BUDGET: a dynamic arena's reserve is a static region carved at load
-      (refusal = load refusal), and `grow` commits against a fixed budget; an exhausted budget
-      answers the program's `else` -- the same answer a refused hosted commit gives, so the
-      arena leg is unchanged; what the budget IS, is the image's configuration.
-    TARGETS (OFFEN O31): a gate written `via V` is filled by the parser from the ACTIVE
-    target's binding before any check, so premise (c) names the assumption THAT binding
-    carries (`linux_write_contract` under `linux_x86_64`, `metal_kernel_contract` under
-    `metal` in the corpus); the checker refuses one assumption under two targets (`N566`),
-    and the link statement (`GabbroZielVerbund`, same `Q`) is held by `N568`: two linked
-    units call ONE kernel.
-  -- END bare-metal entries and targets --
-  -- BEGIN Linux kernel module: the atomic lowering (server lane, 2026-09-28, TODO 0e K6;
-     revised by the C-free lane's C2, 2026-09-30) --
-    COMMENT ONLY: no definition, no premise and no leg of this file changes. It names what
-    assumption (2) of the five memory-model assumptions above -- "the C compiler and the
-    hardware implement C11 atomics and the orders as specified" -- means inside a THIRD
-    runtime, the loadable Linux kernel module, whose build is `-nostdinc` and so has no
-    `<stdatomic.h>` of the toolchain's:
-    - (M11) THE MODULE BUILD USES THE COMPILER'S OWN C11 ATOMICS: the `<stdatomic.h>` the build
-      writes for a `module` unit (`crates/gabbro-cli/src/treiber.rs`, `KMOD_STDATOMIC`) maps
-      each of the emitter's nine C11 call forms onto the compiler builtin of the same operation
-      (`__atomic_load`, `__atomic_store`, `__atomic_fetch_*`, `__atomic_compare_exchange`) and
-      hands the C11 ordering through unchanged -- the builtins a hosted `<stdatomic.h>` expands
-      to. So (2) is assumed of the same compiler on this target as on a hosted one, and of
-      nothing beyond it: the kernel's own memory model (LKMM) is neither used nor assumed,
-      because a Gabbro `atomic` is shared only among the unit's own threads and never with
-      kernel code. (*Until 2026-09-30 (M11) named a handwritten table onto the LKMM macros
-      (`READ_ONCE`, `smp_load_acquire`, the `try_cmpxchg` family) and assumed that LKMM refines
-      the C11 orders; the table left with the module runtime's other handwritten C, and that
-      assumption with it -- a smaller assumption, not a larger one.*) `_Atomic` is a real C11
-      qualifier on this target again, so a plain access to an atomic object would be
-      sequentially consistent rather than unordered. A builtin the compiler cannot inline is
-      an undefined symbol at the kernel build's `modpost`: a refused build, never a silent
-      library call.
-      MEASURED, and these keep the assumption about the header that is actually built: (i)
-      every access to an atomic in the emitted C goes through one of the nine call forms, over
-      the whole corpus, at token level (`instrumente/pruefe-atomar-zugriffe.py`); (ii) each
-      (form, ordering) pair is expanded by the preprocessor from the header in the module's
-      build directory and held against its builtin AND the ordering it hands over, and the rows
-      compile with no library call (`instrumente/pruefe-kernelmodul.sh`, whose gift 8 drops an
-      ordering).
-      NOT CLAIMED on this runtime, in addition to the list below: a floating-point `atomic`
-      (refused, `bau.rs::modulregel`: kernel code may not use the FPU without
-      `kernel_fpu_begin`); per-CPU cells as the kernel's per-cpu accessors (`accumulates … per
-      cpu N` lowers to an ordinary array with relaxed accesses -- correct, not per-cpu-
-      optimised); and that any run on x86 could FALSIFY a dropped ordering (it cannot -- x86
-      gives acquire and release away, which is why (ii) above is static and not a run).
-  -- END Linux kernel module --
-  * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
-    the places where the theorem reports instead of claiming more. Each with why it is not
-    the user's logic:
-    - `hardware`, axiom answer outside its type (`dannBindAxiom`, an axiom leaf;
-      `Hardware.annahme`) -- the answer of FOREIGN code, which (c) describes only by its
-      frame (`GutO`) and its declared `ensures` (`AxVertragO`); a type-correct answer is
-      constrained, an ill-typed one is the foreign code breaking its declaration. Only for
-      an ANSWERABLE type (`¬ AntwortLeer`, since G1): the type has values, each of them some
-      raw word under some image (`einpassen_voll`), so the machine could have answered.
-    - `hardware`, register answer outside its type (`dannRegLies*`; `Hardware.register`) --
-      the device answered a bit pattern its declared type excludes (answerable types only,
-      as above).
-    - `nieZurueck` (since G1; narrowed by W1), a call of an axiom whose declared result is
-      `never` -- the call does not return. That is the declaration's promise about the
-      foreign code (the C prototype is `_Noreturn`; a foreign body that returns breaks it, a
-      hardware/foreign fact like every entry of (c)). The continuation is unreachable in the
-      C as in G; everything before the call is covered by (b). Every OTHER empty answer type
-      (`.why 0`, an empty range, a sum without a value, a pointer type no function of the
-      program has), at an axiom or at a register, is REFUSED by the checker
-      (`AkzeptiertSpec.antworten`, W1): its C call would return into a continuation nothing
-      covers, so it is not named here but excluded, and no reachable thread stands at one.
-    - `hardware`, register answer against its declared promise (`regLies` of a `requires`
-      without `else`; `Hardware.geraet`) -- the device broke the promise its declaration
-      makes (`D.rzusage`). A promise the user declares `false` makes every read a stop: the
-      same honest vacuity as `Q := false`, visible in the declaration.
-    - `flagge`, an `awaits g` whose flag is not visible (`dannAwaits`) -- a WAIT, not a
-      failure: G tests visibility once where the C spins. It covers three cases G does not
-      separate: not yet published (a wait whose end is liveness, not claimed), published
-      but not visible (A10 fails: the hardware part), and NEVER published (the program's
-      own pairing, verdict F3). Why the last is not made a checker or user obligation: (d)
-      covers runs with ANY SUBSET of the declared starts, so on a covered run the publisher
-      need not run at all, and no static pairing check can exclude the permanent wait; and
-      G has no "later" in which a publication could arrive -- whether it does is a liveness
-      fact, like the end of a lock wait, and the statement claims no liveness. So it is
-      reported, as a wait, and named here.
-    - `budget`, a spent `forever` budget (`.ewig _ 0`) -- a MODEL ARTEFACT, not hardware:
-      G unrolls `forever` at most `passes` times, and `GabbroZiel` quantifies every
-      `passes`, so every finite prefix of the C's endless loop is a run of a larger budget.
-      A thread at this stop is one the C keeps running.
-    - GONE (verdict F1): `ieee`, a float result outside its range. It is `Logik.bereich`,
-      excluded by (b), and `FortschrittG` has no such stop.
-    NAMED NEXT TO PROGRESS: a thread at ANY of these stops while it holds a lock `L` leaves
-    every thread that needs `L` waiting forever -- `WartetG` then holds for them at every
-    later machine, and every leg of `Ziel` still holds. Progress is "every stop is named",
-    not "every wait ends"; the waiting bound (Lebendigkeit.lean) assumes no such stop inside
-    a critical section (`HardwareImAbschnitt`), and is not in `Ziel`.
-  * Not premises, but assumptions of the reading: machine G is the meaning of the C at G's
-    step granularity (translation validation, PLAN-TRANSLATION-VALIDATION). Until
-    2026-09-26 a second clause read "the hardware is DRF-SC"; it is WITHDRAWN for accepted
-    programs -- sequential consistency of what a step reads is now the leg `schwach`, proved
-    (weak-memory hunk, Opus agent B; repaired after the Spec-diff verdict of 2026-09-26, F1,
-    F2, F5). What replaces it, FIVE named assumptions of the reading:
-    (1) the view machine W over-approximates the C11 (RC11) memory model for the orders the
-        emitter writes -- AT G's STEP GRANULARITY and jointly with the translation-validation
-        reading above, not on its own: W steps are G's coarse steps, so nothing interleaves
-        inside a step (that is exactly "G is the meaning of the C"), all reads of a step are
-        checked against the pre-step view, and a release message carries the view before the
-        step's own writes (the last two make W weaker than C11, the safe direction).
-        `Speichermodell/Sicht.lean`: promise-free timestamp machine, `seq_cst` as
-        release/acquire; a published model, not proved here against an axiomatic C11;
-    (2) the C compiler and the hardware implement C11 atomics and the orders as specified,
-        and the emitter lowers an `exchange` to ONE C11 read-modify-write (`atomic_fetch_*`,
-        `atomic_exchange`, or a CAS loop retried until it succeeds) -- that is what
-        `SchrittW.rmw` models (lane O25c: the write sits directly above the message read,
-        RC11's atomicity of RMWs);
-    (3) EVERY lock primitive `<L>_nimm` is an acquire and every `<L>_gib` a release, whoever
-        implements it: a driver-defined lock (`pthread_mutex_lock`/`_unlock`, `treiber.rs`);
-        an OWN primitive -- a bodied `<L>_nimm`/`<L>_gib` over a declared atomic, `N323`
-        (atomicity, the body reads an atomic, hold time) and, since 2026-09-26 (Opus lane
-        O25, OFFEN O26; a comment-only correction of this header, no definition moved), the
-        orders `N481`-`N483`: the take reads an atomic declared `acquire`/`release`/`seq`,
-        the give writes one, and a take and a give of one lock meet on such an atomic -- so
-        for own primitives this is CHECKED at the source level, the lowering of the orders
-        staying (2); or a foreign one (`extern fn`/`asm`, trust base) -- ASSUMED. Measured
-        the same day: `N042` refuses the C name of every own or foreign `<L>_nimm`/`<L>_gib`
-        beside `lock L`, so on an accepted program today every lock is driver-defined;
-    (4) carriers are the locations (a table or an atomic array is ONE location of W; the DRF
-        argument holds per element as well, since it only uses the lock and locality facts);
-    (5) what G reads WITHOUT recording it is read over G's memory: the answers of foreign code
-        and axioms (`Orakel.wirkt`, `axiomAntwort`), register reads (`O.regLies`) and the
-        visibility of `awaits` (`O.sichtbar`) are taken over G's memory at every carrier the
-        step does not record (`SchrittW` presents G's memory there; RennfreiVoll.lean lists
-        these reads as unrecorded). That the foreign side, the device and the `awaits`
-        hand-off see that memory -- the last executed write, not some C11-admissible older
-        message -- is ASSUMED, not derived. This is the part of the old "hardware is DRF-SC"
-        that the leg `schwach` does not discharge.
-
-  WHAT `Ziel` ADDS OVER `NutzerPflicht` (leg by leg). The user proves SEQUENTIAL per-function
-  facts: each body, run alone by `execEndH` against every callee answer meeting the callee's
-  contract and frame, every register/axiom answer in the (c) class, and every lock move
-  keeping the invariant, ends in its `ensures` and owed invariants, meets each callee's
-  `requires`, and never ends in `logik`; plus the start obligation. `Ziel` speaks about the
-  INTERLEAVED machine G:
-  * `speicherSicher` (`SpurInv`) -- NOT in (b) at all: every access in every run carries its
-    carrier's guards and those locks are really held. CORRECTED 2026-09-15 (verdict): it
-    needs NO checker and no user proof -- `spurInv_erreichbar` uses only `GutO`, so it holds
-    for EVERY well-typed program of G: carried by the intrinsic typing of `Programm D`
-    (bounds are `.index n` types, pointers are declared tables, no heap). That is literally
-    "by the language", but for Lean terms: its force for a `.gab` file rests on the
-    `.gab -> Programm D` step (the exporter). Stack depth is not covered.
-  * `rennfrei` (`RennfreiBis`) -- NOT in (b): cross-thread access pairs with a write are
-    lock-ordered, or do not exist. From the checker and G.
-  * `vertrag`, `invRueck`, `invGrund`, `keinLogikHalt`, `startEnde`, `keinStartGrund` --
-    these ARE (b)'s sequential clauses, restated at the places of G's log. What the theorem
-    adds is that they survive interleaving and are G's behaviour, not only `execEndH`'s: the
-    other threads interfere only through lock moves of the `HavocOk` class and through
-    carriers the checker proved thread-local. For a single-threaded program without locks
-    these legs are (nearly) a restatement of (b), transported to G by the replay.
-  * `sperrInv` (`SperrInvG`) -- NEW: every lock no thread holds has its invariant IN SHARED
-    MEMORY at every reached machine. (b) only checks the invariant at each release of one
-    body; the global cross-thread fact is the theorem's.
-  * `invRuhe` (`InvRuheG`), `invSicht` (`InvSichtG`) -- NEW (Opus agent D): (b) checks a table
-    invariant at the returns of each body only; the theorem's is that it holds in shared
-    memory wherever no unfinished thread is inside a writer of it, and at every point of a
-    thread that holds one of its guards outside every writer.
-  * `sperrWechsel` (`SperrWechselG`), `sperrSicht` (`SperrSichtG`) -- NEW (Opus agent D): (b)
-    assumes the invariant at each acquire (`HavocOk`) and checks it at each release of ONE
-    body; the theorem's is that every acquire in the interleaved machine really starts from it,
-    every release really leaves it, and no thread but the holder touches a protected carrier
-    while the lock is held. With `sperrInv` that is the lock invariant everywhere it can be
-    observed.
-  * `keineVerklemmung`, `keinZyklus`, `fortschritt` -- NOT in (b): no global deadlock, and
-    (since 2026-09-15, F2) no wait CYCLE among any threads, both from lock ranks; and G
-    never stops silently: every thread is finished, waits for a lock, waits for a
-    publication, has spent its `forever` budget, stands at a hardware stop, or can step.
-    Since F1 the user's own code has no stop of its own in that list: a failing loop
-    invariant, `state` pre-state or float range is excluded (`keinLogikHalt`, `BereichG`).
-    So the safety legs cannot be made vacuous by a stop the USER's code decides; they can
-    by a stop of the list above (hardware, a wait, the budget) -- each named.
-  * `keinKernHalt` (`KernHaltE`, since Opus agent H 2026-09-26) -- NOT in (b): for every core
-    assignment and every run the core hardware admits (`KernPlan`: masking works, and a handler
-    runs to completion on the core it preempted), a thread whose root the PROGRAM declares a
-    handler (`P.unterbricht`, `entry … via idt`) never stands at a lock another thread of its
-    core holds. From (a): the masking discipline is `AkzeptiertSpec.masken` (the Rust `H102`).
-    It FAILS on programs the discipline refuses (`kernHaltE_verletzt`), so it is carried by
-    (a), unlike F11's form (`KernHaltG`, which held for every program).
-  * `schwach` (`SchwachSC`, weak-memory hunk, Opus agent B 2026-09-26) -- NOT in (b): the weak
-    machine W takes only G's steps on the program, for every order assignment; hence every
-    leg holds on every machine W reaches (`gabbro_ziel_schwach`). From (a) (`fuss`: every
-    read carrier is thread-local or lock-guarded, atomics included) and (c) (`GutO`).
-  * `zeit` (`ZeitAb`) -- NOT in (b), and WEAK: a bound on a frame's OWN G-steps by the
-    syntax-computed `kostenTief`, for frames with a finite call tree only (`rufTief`). It
-    holds for EVERY program of G with no premise (`frame_schritte_beschraenkt`), so it says
-    nothing about waiting, recursion, indirect calls or a `forever` loop; not the declared
-    `costs`.
-
-  REVIEW PACKAGE -- every model definition used, file:line, what it says / if it were wrong.
-  Machine G and the sequential semantics (review question 4):
-  * `RufMaschineG` RufMaschineG:151 -- shared memory, per thread a frame stack, trace, call log
-    / a field G lacks is a behaviour no conjunct can speak of.
-  * `RufSchrittG` RufMaschineG:246 -- the 70 rules, one thread per step, rules fire only on
-    success outcomes / a rule G has and C lacks (or vice versa) makes every leg about another program.
-  * `RufStartG` :2093, `RufErreichbarG` :2110 -- every thread in its start frame holding its
-    signature locks; reachable = finitely many steps / a start C does not make is irrelevant.
-  * `execStmt` Semantik:669, `keinRuf` Maschine:383, `Stmt.istBlatt` Maschine:392 -- one
-    statement sequentially; leaves are what G runs in one step / wrong leaves = wrong steps.
-  * `Logik`/`Hardware` Semantik:277/296 -- the failure outcomes; `Logik.bereich` (a float
-    result outside its range, since 2026-09-15) / a user-decided failure filed as
-    `Hardware` would pass (b) unconstrained (verdict F1).
-  * `einpassen` Semantik:425 (`summePasst`, `gleitWortPasst`, `zeigerPasst` above it),
-    `AntwortLeer` :447, `Orakel.zeiger` :451 -- a raw answer held against the declared type,
-    and the loaded image / a type the decoding refused for every word would be a stop the
-    model decides and files as hardware (finding G1); `einpassen_voll`, `antwortLeer_iff`
-    (EinpassenVoll.lean) say it refuses exactly the values the type lacks.
-  * `execEndH` SperreSem:363, `HavocOk` :71, `SperrInv` :45 -- the sequential body semantics the
-    user proves against: `locks L` runs from any move keeping `S.inv L`, a release checks it /
-    if it differs from `execStmt` outside `locks`, the user proves the wrong body.
-  * `World` Semantik:79 (slots total over `Int`; in-range is the TYPE of `.index` values),
-    `Speicher` Maschine:359, `Orakel` Semantik:451, `Faden` Wettlauf:46 (= Nat, all started).
-  * `Deklaration.mitRuhe`, `Programm.mitRuhe`, `Orakel.mitRuhe`, `SperrInv.mitRuhe`, `fsRuhe`,
-    `wsRuhe`, `speicherR` :268, `envR` :280 MitRuhe.lean -- the idle root added, signature
-    numbers and function-pointer types shifted by one, every body translated constructor by
-    constructor, memory and arguments carried over / a translation that changed a body would
-    make every leg speak about another program.
-  The thread machine (since 2026-09-26):
-  * `FadenMaschine`/`FadenSchritt`/`FadenErreichbar`/`FadenStart` FadenMaschine.lean -- a G
-    machine plus live set, join lists and ghost rank/clock; steps `lauf` (a G step of a live,
-    non-joining thread), `start` (spawn a list of dormant slots and wait, only holding no lock),
-    `kind` (spawn one slot, go on), `join` (end the wait once every root is finished) / a spawn
-    that moved the G state, or a join that fired early, would make the legs speak about
-    another run; `fadenErreichbar_G` and `fadenErreichbar_von_G` are the two bridges.
-  Premise definitions:
-  * `Einheit`, `Einheit.ws` (here) -- the program as one declaration / a field the exporter
-    does not fill from the source would make the statement about another program.
-  * `Block.ants`, `StelleOk` AntwortOrte.lean -- the answer sites of a body (axiom calls,
-    register reads) and when one is admissible (an axiom `-> never`, or a non-empty answer
-    type) / a site the collector missed could stand at an empty type unrefused (W1).
-  * `GutO` Satz:965 -- axioms stay in their declared write frames, keep held locks and trace.
-  * `RegLokal` ZielOrtGeraetSem:48 -- register/visibility answers depend only on declared carriers.
-  * `AxVertragO`/`AxEnsLokal`/`AxEns` AxiomVertrag:50/56/44 -- axiom answers meet the declared
-    `ensures`; the declared ensures reads only the axiom's write carriers.
-  * `KoerperGutS` SperreFuss:374 -- per function, sequential: triple, caller duty, no `logik`
-    outcome (since 2026-09-15 that includes `logik bereich`, a float out of range), against every frame-respecting handler (`RespektiertRahmen` ZielOrtRahmenSem:48,
-    `OhneVorbedingung` ZielOrt:87, `OhneLogik` ZielOrtGanz:51), oracle (`RahmenO`
-    ZielOrtVollBeweis:48) and move / an empty handler/oracle/move class empties it (probe A/D;
-    the move class is inhabited under (b) since 2026-09-15, `havocOk_bewohnt`).
-  * `InvGutS`/`InvAmRueck`/`InvHaelt` ZielOrtInv:54/46/41 -- owed invariants at a value return.
-  * `ReqAmEintritt`/`EnsAmRueck` VertragOrtB:114/120, `StartGut` ZielOrt:113.
-  * `programmImFragmentG` ZielOrtGeraetSem:502, `fussOrteG` :450, `FussS` SperreFuss:140,
-    `AbgK` ZielOrtMehrfaden:107, `reachB` :146, `StufenM` Verklemmung:552, `Bewacht`
-    InterferenzAllgemein:1350, `TraegerSchreibt` :123 -- the checker's program facts.
-  Conclusion definitions:
-  * `SpurInv` RennfreiVoll:249 (`Ereignis.gut` Satz:263, `Konsistent` :279) -- every recorded
-    access carries its carrier's guards (locks AND marks) in `Λ`, whose locks are really held.
-  * `LaufG`/`ZugriffG`/`SchreibG`/`GeordnetG` RennfreiVoll:485/333/337/563 -- runs by index;
-    an access = recorded event or memory change; ordered = release by one, acquire by the other.
-    `AtomarAusgenommen` InterferenzAllgemein:609.
-  * `VertragAmOrtG` ZielOrt:67 -- requires at every logged entry, ensures at every logged return.
-  * `SperrInvG` SperreMaschine:424 -- every lock no thread holds has its invariant in memory.
-  * (invariant block) `InvTraeger`, `InvZu`, `InvRuheG`, `InvSichtG`, `SperrWechselG`,
-    `SperrSichtG` (here) -- over `InvHaelt`/`schuldet` (ZielOrtInv, Semantik), `FertigG`
-    (Verklemmung), `ZugriffG`/`TraegerGleich` (RennfreiVoll, ZielOrt) / an `InvZu` that
-    ignored a running writer would claim an invariant the writer is breaking; an `InvZu`
-    that asked finished threads too would make `invRuhe` vacuous for every invariant a start
-    function writes; a `SperrSichtG` over steps not taken from `M` would say nothing.
-  * `InvAmOrtG` ZielOrtInv:66; `StartEndeG` ZielOrtStart:70 (`RetKopf` :59); `KeinStartGrundG`
-    :191; `KeinLogikHaltG`/`PrueftG` ZielOrtGanz:658/622 -- no thread stuck at a loop invariant
-    or transition test. `FertigG`/`WartetG`/`AnSperre` Verklemmung:746/751/652.
-    `BereichG` Fortschritt.lean -- the float range checks pass at every head (proof side,
-    not in `Ziel`: `FortschrittG` lists no float stop, so it follows from `fortschritt`).
-  * `Eintritt`/`SegLauf`/`aktivVor`/`segZaehle`/`kostenTief`/`rufTief` KostenG:788/740/776/750/955/964.
-  * (order block) `Folge`, `fS`/`fB`/`fE`/`fNach`, `GRest.fR`, `FolgeOk`, `Armiert`, `Pflichtig`,
-    `FolgeLog`, `FolgeG` Folge.lean -- the order leg over the call log (`RufEreignisF`,
-    RufMaschineF) / a check that let a `ruf` call through unarmed would claim an order the run
-    lacks; a `FolgeLog` that looked past the DIRECT predecessor would be the conjunction the
-    obligation forbids.
-  * (weak-memory hunk) `RufMaschineW`, `RufStartW`, `SchrittW`, `RufSchrittW`, `RufErreichbarW`,
-    `ordVon`, `vorSicht`, `lesenVon`/`genommenVon`/`gegebenVon` Speichermodell/MaschineW.lean;
-    `Nachricht`, `Sicht`, `Ordnung`, `beitrag`, `nachricht`, `Lesbar`, `Frisch`
-    Speichermodell/Sicht.lean -- the weak machine / a rule W lacks against RC11 (a behaviour
-    the C has and W not) would make `schwach` claim SC where the C is weaker; the direction
-    that matters is "W admits at least every C11 behaviour", which the header names.
-  NEW here: `Einheit`, `LogikPflicht`, `StartPflicht`, `Laufzeit` (2026-09-15); `HaltArt`,
-  `KopfHalt`, `RestHalt`, `WartetAuf`, `KeinWarteZyklus` (2026-09-15, verdicts F2/F3);
-  `InvGutGrund`, `InvAmGrundG` (invariants at REASON exits), `HaltBenannt` (the named
-  stops, by kind), `RennfreiBis`
-  (DRF for every non-atomic carrier), `Getrennt`, `SchreibGetrennt` (write separation of
-  unguarded carriers, the counterpart of `H013`; with it `rennfreiBis_of`, Akzeptiert.lean,
-  proves `RennfreiBis`), `Ruhig` (an idle start writes NOTHING), `AkzeptiertSpec`,
-  `StartZulaessig` (derived, not a premise), `Ziel`, `GabbroZiel`; `Mehrfach` (a routine
-  declared at least twice, fix lane F10) with `PoolSicher`/`PoolSicherW`/`EinzelnPool` (lane
-  245, a premise since F10); `KernPlan` (one core with interrupt handlers, fix lane F11);
-  `Programm.unterbricht` (Syntax.lean), `NurMaskiert`, `MaskenDisziplin`,
-  `AkzeptiertSpec.masken`, `HandlerVon` and the leg `KernHaltE` (Opus agent H 2026-09-26,
-  replacing F11's `KernHaltG`; proved in Zielsatz/Masken.lean); `Einheit.gestartet`, `JoinWartet`,
-  `WartetF`, `KeinWarteZyklusF`, `FortschrittF`, `ZielF` and the thread machine (threads
-  created at run time, Opus agent A 2026-09-26; legs proved in Zielsatz/Faeden.lean);
-  `SchwachSC` and the leg `schwach` (the weak machine takes only G's steps, Opus agent B
-  2026-09-26, proved in Speichermodell/DRF.lean); `InvTraeger`, `InvZu`, `InvRuheG`,
-  `InvSichtG`, `SperrWechselG`, `SperrSichtG`, the legs `invRuhe`, `invSicht`, `sperrWechsel`,
-  `sperrSicht` and `ZielF.spawnSicht` (invariants beyond the returns, Opus agent D
-  2026-09-26, proved in Zielsatz/Invarianten.lean); the leg `folge` (the order of effects in the call log,
-  Opus agent G 2026-09-26, OFFEN O1; definitions in Folge.lean, proved in FolgeBeweis.lean).
-
-  REVIEW QUESTIONS. 1. Does `Ziel` say the four legs, nothing weaker (see WHAT `Ziel` ADDS)?
-  2. Is every premise in exactly one group? The start conditions are (b) (`StartPflicht`)
-  and (d) (`Laufzeit`) since 2026-09-15; nothing else restricts the quantified runs.
-  3. Can a user-controlled choice empty an obligation? Probes A/D: closed by `NutzerPflicht`
-  at every budget. Probe F1 (an out-of-range float, the one stop the user's code decided
-  for every oracle): closed, `logik bereich` (`probeF1_widerlegt_gilt`). An unsatisfiable lock family or start `requires`: closed, it refutes (b)
-  (`unerfuellbar_widerlegt`, `start_req_widerlegt`). An empty answer type other than `never`
-  (W1): closed, the checker refuses it (`w1_abgelehnt`). The run class is never empty: the root
-  on every thread from `E.sp0` meets (d) (`laufzeit_ruhe`). What stays in the user's hand,
-  honestly: `E.starts = []` (the program runs nothing; the statement is then about the root,
-  `laufzeit_ohne_starts`), and `E.Q` unsatisfiable (a false named hardware assumption, (c)
-  empty). 4. Does G run what the language means (translation validation takes over for the C)?
-
-  NOT CLAIMED (PLAN §6): termination and a waiting bound under fairness (that a wait ENDS on a fair ticket-lock
-  run unless a holder never leaves its section is claimed since 2026-10-22: `GabbroZielLeben`) (`zeit` bounds only
-  frames with a finite call tree, `rufTief`); stack depth (G's stacks are unbounded and
-  recursion is admitted, so a non-returning recursive function meets any `ensures` while the
-  emitted C overflows); the C and the hardware; (weak-memory hunk, 2026-09-26: the line
-  "weak memory beyond DRF-SC" is REPLACED -- what is now claimed is the leg `schwach`: W,
-  the weak machine, adds no behaviour on an accepted program, for every order assignment,
-  and every leg holds on every machine W reaches) (atomic-rely hunk, lane O25c, 2026-09-26: the
-  line "programs that RELY on an unguarded atomic read across threads" is REPLACED -- what is
-  now claimed is the statement over machine GX with the rely, see the atomic-rely block) a
-  `requires`, `ensures` or invariant OVER a shared atomic (refused: `GeteiltV` demands
-  `VertragsFrei`, Rust `N484`; the value may change at any moment, so no contract can promise
-  it); the merge discipline of per-core cells (`accumulates … per cpu`, OFFEN O17) beyond what
-  the rely gives a reader; linked units that share an atomic ACROSS the link (the link check's
-  `lok` demands every lock-free footprint carrier thread-local over the composed hulls,
-  atomics included: such a link is refused and not covered); that W is exactly
-  RC11 (it over-approximates it at G's step granularity: `seq_cst` is modelled as release/acquire, so no SC-order
-  fact is claimed; no promises, hence no load buffering, which RC11 forbids as well);
-  `atomic` globals stay excluded from `rennfrei` (their accesses are atomic operations, not
-  races; `schwach` covers their values); the publish/await hand-off of an unguarded PLAIN
-  payload (refused by the checker, see P3; the part of OFFEN O25 that remains after lane
-  O25c); floats only as the kernel IEEE model of FLOATING-POINT §7 (no float assumption on G's
-  side -- true since F1: an out-of-range result is the user's `logik bereich`, not a
-  hardware stop; `gleitkomma_ieee` is on the C side); starvation freedom; (Opus agent D,
-  2026-09-26: the line "invariants at entry or while locks are held (claimed at returns only)"
-  is REPLACED -- what is now claimed is `invRuhe`, `invSicht`, `sperrWechsel`, `sperrSicht`
-  and `spawnSicht`, see the invariant block above) a table/group invariant at a point where an
-  unfinished thread is inside a function that writes one of its carriers (it may be broken
-  there by design; a writer's callee sees what the writer's `requires` to it says), one that is
-  false in the start memory (the start is the legs' hypothesis, not a (b) duty), and one whose
-  predicate reads carriers outside its declared `traeger` (`InvTraeger`); a lock invariant
-  INSIDE its holder's section (the holder may break it; claimed is that no other thread
-  observes the protected carriers there, and that every acquire and release sees it);
-  (handler hunk, Opus agent H 2026-09-26: the line "WHICH threads are interrupt handlers and
-  which core they share … taken as the leg's own hypotheses" is REPLACED -- the handlers are the
-  unit's (`Programm.unterbricht`), the discipline is (a)'s, and the leg holds for every core
-  assignment) for interrupt handlers: that the hardware schedules as `KernPlan` says -- a
-  handler is entered only where no other thread of its core holds a `masks irqs` lock, and
-  runs to completion before that thread continues (a NAMED HARDWARE ASSUMPTION inside the leg,
-  not a premise of (c): it constrains runs, (c) constrains answers); the emitted C realises no
-  masking at all (no `cli`/`sti`; `beispiele/59` says so in its header), so translation
-  validation has nothing to relate `KernPlan` to; re-entry of a handler thread and
-  handler-on-handler preemption (`KernPlan` lets no other thread of the core step while a
-  handler runs, and in G a handler thread runs once); a thrown entry that writes no `via idt`
-  (an IPI such as `beispiele/57`'s: `unterbricht` is false for it, as for the Rust `H102`); a
-  lock the unit does not declare (the Rust `H102` skips it; in the model every lock is
-  declared) -- OFFEN O19; (order hunk, Opus agent G, 2026-09-26: OFFEN O1's L50/L52 are claimed by
-  the leg `folge`, see the order block above) an order of effects that are not calls of Gabbro
-  functions (axiom and register effects are not in the call log), an order across a compound
-  statement, an indirect call or a lock block (`FolgeOk` refuses that `Φ`), the entry of a
-  `ruf` function that runs as a thread's start function, an order
-  "sometime before", and the promises of `breaking I` about its NAME -- that the region is
-  where `I` rests and that the block restores `I` (G unfolds the block without the name;
-  restoration is claimed at every writer's return) -- OFFEN O1; a busy routine declared ONCE on several threads
-  (outside (d); a routine declared twice may run on any number of threads since fix lane F10,
-  and the checker admits that only pool-safe, `EinzelnPool`); (linking hunk, 2026-09-26: the line
-  "linking of separately compiled units" is REPLACED -- what is now claimed is
-  `GabbroZielVerbund`: two units over one link declaration, each accepted alone, the link
-  check, the SAME hardware assumptions, `ZielF` on the linked program) for LINKED units:
-  units whose hardware assumptions DIFFER (the premise `E₂.Q = E₁.Q`; the Rust `N505` refuses
-  an assumption both units name with different content); a callback through an imported
-  function back into the importer (refused by `KeinRueckruf`, not covered); an importer
-  relying on a contract other than the exporter's, weaker or stronger (the link declaration
-  has ONE contract per function; a differing head is refused, `N501`-`N504`); dynamic loading
-  (the linked unit is fixed before the start); ABI-level linking of foreign C (an `extern fn`
-  no Gabbro unit supplies stays an axiom of (c)); the C-level link step itself (symbol
-  resolution, calling convention, record layout -- translation validation's, like every "G
-  is the meaning of the C"); and the RUST side of premise (a) only as far as the Rust checker
-  is the Lean Bool at all (the caveat of one unit): since Opus agent F `gabbro link` checks the
-  LINKED program whole -- every start of both units, every footprint from its owner's body --
-  and an imported head's declared READS join the importer's own footprint, which closes the
-  false accept of review E, F1 (messung/URTEIL-SPECDIFF-OPUS-E-2026-09-26.md,
-  messung/OPUS-F-VERBUND-RENNEN.md; OFFEN O28); for threads SPAWNED at run time (claimed since 2026-09-26, see
-  (d) above): a root whose ARGUMENTS differ per spawn (a `child` region reading its handed
-  values -- the model fixes one argument list per slot), a root `requires` that holds only at
-  the SPAWN world (it is (b)'s duty at `E.sp0`), `old`-reads of a root's `ensures` at the spawn
-  world, the END of a join wait (a root that never finishes keeps its starter waiting, a named
-  `JoinWartet` stop, like a lock wait), the child's handed STACK (G is address-free), a spawn
-  that FAILS (thread creation out of resources: the model's spawn always succeeds), and the
-  C side of the spawn (lane 260's lowering: translation validation) -- OFFEN O21/O22;
-  DYNAMIC UNBOUNDED DATA STRUCTURES (lists, trees, graphs, maps whose size no declaration
-  bounds; heap allocation without a declared ceiling, recursive types) -- planned for later,
-  out of scope now, OFFEN O29. NOT this case (server lane, 2026-09-28): an
-  `arena A capacity lo .. hi max M of T`, whose ceiling `M` bounds it. Its form is sugar over
-  the existing `Block` (ArenaDyn.lean section `Form`: `DynForm`, `Block.dynGrowB`,
-  `Block.dynAlloc`), so this statement covers a program written in it with no new case -- but
-  the EXPORTER does not produce that shape: `grow` is refused (`LG005`) and the exported
-  `ArenaForm` spans `hi`, not `M`. So no dynamic-arena program is CERTIFIED today, and for an
-  uncertified program a green build says nothing (see WHAT A GREEN BUILD COVERS);
-  PROBABILISTIC STATEMENTS (distributions, expected values, failure probabilities, randomised
-  algorithms: the statement is about EVERY run, the model has no measure over runs) -- planned
-  for later, out of scope now, OFFEN O29. The
-  exporter carries `start` (roots into `gestartet`); a `child` needs a stack gate, a foreign
-  body the exporter does not build (`Ax := Empty`), so no `child` program is exported. Declared
-  `costs` are not in
-  `Deklaration`: `zeit` is the syntax-computed bound. The `.gab` -> `Einheit` step is the
-  exporter's (lean_g.rs). Since lane 198 it fills `starts`, `sp0`, `S` and the source
-  `requires` of the unit `gE` for the fragment it exports (pinned by the test
-  `einheit_width_travels_together`); everything outside that fragment is refused by name
-  (`LG001`-`LG007`), and a program there reaches `GabbroZiel` only by a hand-written term.
-  The exporter itself is not verified: that `gE` is the source program is the job of the
-  translation-validation chain, not of this statement. Which corpus program is on which side
-  is THE ONE LIST `Grammatik/Zertifikat/REGISTER.txt` (see WHAT A GREEN BUILD COVERS above):
-  every UNCERTIFIED program there is NOT CLAIMED, by name.
-
-  FINDINGS (definitions in proof files, imported anyway): there is no definition-only layer.
-  All imports are mixed files; the goal predicates live in flagship proof files
-  (ZielOrt, ZielOrtGanz, ZielOrtInv, ZielOrtStart, ZielOrtMehrfaden, SperreFuss,
-  SperreMaschine, Verklemmung, RennfreiVoll, KostenG); the closure includes WITNESS files
-  (AxiomVertrag imports ZielOrtVollZeuge, RennfreiG imports ZielOrtZeuge). To move: every
-  definition listed above out of its proof file.
+  KNOWN DEBT. There is no definition-only layer: the goal predicates live in mixed files (ZielOrt, SperreFuss,
+  SperreMaschine, Verklemmung, RennfreiVoll, KostenG, …), and the import closure includes witness files. To do:
+  every definition this file reads out of its proof file.
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
@@ -1823,8 +471,8 @@ def InvAmGrundG (P : Programm D) (M : RufMaschineG D) : Prop :=
     * `nieZurueck` -- the head calls an axiom whose declared result is `never`: the call does
       not return;
     * `flagge` -- a WAIT for a publication: the head is `awaits g` and `g` is not visible;
-    * `budget` -- the `forever` budget is spent: G's finite stand-in for a loop the C runs
-      without end.
+    * `budget` -- the `forever` budget is spent: G's finite stand-in for a loop the program runs
+      without end (not final: the leg `budgetUnecht`).
     An out-of-range float is NOT a stop any more: it is `Logik.bereich`, excluded by the
     user's obligation, and no reachable machine stands at one (verdict F1). -/
 inductive HaltArt where
@@ -1832,14 +480,14 @@ inductive HaltArt where
   | flagge
   | budget
   /-- The head is a call of an axiom whose DECLARED result is `never` -- the call does not
-      return. That is the declaration's promise (the emitter writes `_Noreturn` on the
-      prototype), and the code after the call is unreachable in the C as in G; the
+      return. That is the declaration's promise (the lowering marks the call `noreturn`), and
+      the code after the call is unreachable in the binary as in G; the
       obligation (b) still covers everything before the call. NEW 2026-09-15 (round-5
       finding G1): before, this stop was filed as `hardware`, as if the machine had answered
       outside a type that has no inside. NARROWED 2026-09-15 (round-6 finding W1): every
       other empty answer type (`.why 0`, an empty range, a sum without a value, a pointer
       type no function has, at an axiom or a register) is refused by the checker
-      (`AkzeptiertSpec.antworten`), because there the C call returns. -/
+      (`AkzeptiertSpec.antworten`), because there the compiled call returns. -/
   | nieZurueck
 
 /-- The first layer of the head block is a named stop of kind `k` at the world `σ`: the
