@@ -64,31 +64,13 @@
   unchanged.
 -/
 import Grammatik.Logik.Fortschritt.Fortschritt
+import Grammatik.Logik.Fortschritt.PlanLauf
 
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-! ## 1. Scheduled runs -/
-
-section Lauf
-
-variable (P : Programm D) (O : Orakel D) (passes : Nat)
-
-/-- Thread `t` can step at `M`. -/
-def Bereit (M : RufMaschineG D) (t : Faden) : Prop := ∃ M', RufSchrittG P O passes M t M'
-
-/-- **A scheduled run**: an infinite sequence of machines; at every scheduler
-    step either thread `u` takes a step of machine G (`akt n = some u`), or the
-    machine stutters (`akt n = none`), which is allowed only where no thread
-    can step. -/
-structure PlanLauf where
-  M : Nat → RufMaschineG D
-  akt : Nat → Option Faden
-  schritt : ∀ n u, akt n = some u → RufSchrittG P O passes (M n) u (M (n + 1))
-  stotter : ∀ n, akt n = none → M (n + 1) = M n ∧ ∀ u, ¬ Bereit P O passes (M n) u
-
-end Lauf
+/-! ## 1. Scheduled runs: `Bereit` and `PlanLauf` live in Logik/Fortschritt/PlanLauf.lean -/
 /-! ## 2. Counting on a run -/
 
 open Classical in

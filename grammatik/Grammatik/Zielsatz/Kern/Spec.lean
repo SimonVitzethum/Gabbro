@@ -481,6 +481,50 @@
     (no start under a held lock), and `klon_als_faden` (fix lane F9's clone machine is a
     special case of the thread machine).
 
+  -- BEGIN starvation block (2026-10-22, review of gabbro_ziel, point 1) --
+  WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. PURELY ADDITIVE: a THIRD statement,
+  `GabbroZielLeben`; `GabbroZiel` and its legs are unchanged.
+  * THE GAP. The legs `keineVerklemmung`, `keinZyklus` and `fortschritt` are SAFETY: at every reached machine no
+    deadlock, no wait cycle, no unnamed stop. None says that a waiting thread ever gets its lock: machine G hands a
+    free lock to any of the waiting threads, so one of them may be overtaken for ever.
+  * THE MODEL (Logik/Fortschritt/PlanLauf.lean). The language's lock is a ticket lock (Code/Conc/Lock.lean). A run
+    of it (`FifoLauf`) is a scheduled run of machine G (`PlanLauf`: infinite, a step of one thread or a stutter where
+    nobody can step) with one queue per lock: the queue holds exactly the threads at `locks L`, only its head takes
+    `L`, and the threads that stay keep their order ahead of every newcomer. The runtime assumption `FifoSperre` of
+    the waiting bound (Lebendigkeit.lean) is a THEOREM about such runs (`fifoSperre_aus`). The scheduler is weakly
+    fair (`Fair`): a NAMED assumption about the scheduler, like `KernPlan` for interrupt handlers.
+  * THE STATEMENT. Premises (a)-(d) of `GabbroZiel`; every fair ticket-lock run from the runtime's start. Conclusion:
+    a thread at `locks L` takes `L`, or some thread holds `L` from some step on for ever. The second case is the
+    program's: a critical section that never ends (a `forever` or a recursion inside it, a named stop inside it,
+    or a nested wait whose own holder never ends). Proof (`hungerfrei`, Logik/Fortschritt/Hungerfrei.lean;
+    `gabbro_ziel_leben`, Zielsatz/Atomar/BeweisAtomar.lean): by induction on the threads ahead in the queue; the
+    head at a free lock can always step (the leg `fortschritt` of `GabbroZiel`), nobody else can take the lock, so
+    by fairness the head takes it.
+  * WHAT IT DOES NOT BUY: a bound on the wait (the waiting bound `wartezeit_schranke` needs a hold-time premise);
+    that a critical section ends (termination is NOT CLAIMED); runs over machine GX (the shared atomics answered by
+    the weak memory) and threads spawned at run time (the statement is over machine G with the declared starts).
+  -- END starvation block --
+
+  -- BEGIN budget block (2026-10-22, review of gabbro_ziel, point 2) --
+  WHAT CHANGED ON 2026-10-22, AND WHY -- a diff of this file. `ZielFX` gains ONE leg, `budgetUnecht`; no premise
+  moves.
+  * THE GAP. Machine G gives every `forever` instance `passes` passes and then stops it with the named stop
+    `budget`; the statement holds for every `passes`. Whether that family covers the program's unbounded runs was a
+    reading, not a theorem: nothing said that a budget stop is an artefact of the budget and not of the program.
+  * THE MODEL (Logik/Ruf/Maschine/BudgetMonoton.lean). `passes` decides nothing in a step but the counter a
+    `forever` instance starts with (`execStmt_blatt_passes`). Shifting every counter by `j` (`RufMaschineG.plus`)
+    maps every step at budget `p` to a step at `p + j` (`rufSchrittG_plus`, all rules of G), every run over G, GX and
+    the thread machine (`fadenErreichbarX_budget`), and leaves the start alone. So the budgets form an increasing
+    family, and every finite run -- every prefix of an unbounded run -- is a run at every budget above its passes.
+  * THE LEG. `budgetUnecht`: a thread at a spent budget on a reached thread machine takes a step at budget
+    `passes + 1` from the same machine with every counter one higher. Proof (`budget_unecht`,
+    Zielsatz/Atomar/BeweisAtomar.lean): the shifted machine is reached at `passes + 1`, and there the progress leg
+    leaves the stopped thread nothing but a step (a `forever` with budget left is no finished thread, no lock wait,
+    no named stop). Witness: Zielsatz/Eigenschaften/BudgetZeuge.lean (`forever { }`: stopped at budget 0, steps on
+    at budget 1).
+  * WHAT IT DOES NOT BUY: termination, a waiting bound or a time bound for `forever` (NOT CLAIMED below, unchanged).
+  -- END budget block --
+
   -- BEGIN weak-memory block (Opus agent B, 2026-09-26) --
   WHAT CHANGED ON 2026-09-26 (OPUS AGENT B: THE MEMORY MODEL BEYOND DRF-SC), AND WHY -- a
   REVIEWED DIFF of this file; NO premise moved, `Ziel` gained ONE leg:
@@ -1357,7 +1401,8 @@
   `laufzeit_ohne_starts`), and `E.Q` unsatisfiable (a false named hardware assumption, (c)
   empty). 4. Does G run what the language means (translation validation takes over for the C)?
 
-  NOT CLAIMED (PLAN §6): termination and a waiting bound under fairness (`zeit` bounds only
+  NOT CLAIMED (PLAN §6): termination and a waiting bound under fairness (that a wait ENDS on a fair ticket-lock
+  run unless a holder never leaves its section is claimed since 2026-10-22: `GabbroZielLeben`) (`zeit` bounds only
   frames with a finite call tree, `rufTief`); stack depth (G's stacks are unbounded and
   recursion is admitted, so a non-returning recursive function meets any `ensures` while the
   emitted C overflows); the C and the hardware; (weak-memory hunk, 2026-09-26: the line
@@ -1477,6 +1522,8 @@ import Grammatik.Speichermodell.Maschine.MaschineW
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
 import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Logik.Fortschritt.Folge
+import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
+import Grammatik.Logik.Fortschritt.PlanLauf
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -2266,6 +2313,10 @@ structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     K.lebt t = false → K'.lebt t = true →
       K'.m = K.m ∧ (∀ L, L ∉ offen (K'.m.faeden t).spur) ∧ SperrInvG S K'.m ∧
         InvRuheG P M0 K'.m
+  -- the budget stop is no stop of the program (2026-10-22): one budget higher, from the same machine with every
+  -- `forever` counter one higher, the stopped thread takes its next step
+  budgetUnecht : ∀ t, HaltBenannt O passes K.m .budget t →
+    ∃ M', RufSchrittG P O (passes + 1) (K.m.plus 1) t M'
 -- END atomic-rely definitions --
 
 /-- **GABBRO_ZIEL** (since Opus lane O25c, 2026-09-26: WITH THE ATOMIC RELY). Over the THREAD
@@ -2317,6 +2368,32 @@ def GabbroZielSC : Prop :=
           (FadenStart E.P.mitRuhe sp init lebt0) K →
           ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K
 
+
+/-! ## Starvation freedom (2026-10-22)
+
+    `GabbroZiel` is a statement about every REACHED machine: safety. Whether a thread that waits for a lock ever
+    gets it is a statement about infinite RUNS. It is stated here as a THIRD statement, under the same four premise
+    groups, over the runs of the ticket lock (`FifoLauf`, Logik/Fortschritt/PlanLauf.lean) on which the scheduler is
+    weakly fair (`Fair`). See the starvation block in the header. -/
+
+/-- **GABBRO_ZIEL_LEBEN.** On every weakly fair run of the ticket lock from the runtime's start, a thread standing
+    at `locks L` takes `L`, or some thread holds `L` from some step on for ever (a critical section of the program
+    that does not end). -/
+def GabbroZielLeben : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflichtA E →                                          -- (b) the user, with the rely
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
+      ∀ R : FifoLauf E.P.mitRuhe O.mitRuhe passes,                -- the ticket lock
+        R.M 0 = RufStartG E.P.mitRuhe sp init →
+        Fair E.P.mitRuhe O.mitRuhe passes R.toPlanLauf →        -- the scheduler, weakly fair
+        ∀ (n : Nat) (t : Faden) (L : D.mitRuhe.Lock), AnSperre (R.M n) t L →
+          (∃ j, n ≤ j ∧ R.akt j = some t ∧ AnSperre (R.M j) t L) ∨
+            ∃ u m, ∀ j, m ≤ j → L ∈ offen ((R.M j).faeden u).spur
 
 /-! ## Linking separately compiled units (Opus agent E, 2026-09-26)
 

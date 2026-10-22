@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/Logik/Ruf/Maschine/Budget.lean
+  File:      Grammatik/Logik/Ruf/Maschine/BudgetMonoton.lean
   Subject:   THE BUDGET IS MONOTONE: a run of machine G with the `forever` budget `p` is, step for step, a run
              with every larger budget `p + j`, on the machines whose `ewig` counters are `j` higher.
 
@@ -481,5 +481,29 @@ theorem fadenErreichbarX_budget {P : Programm D} {O : Orakel D} {p : Nat} {Tg : 
     FadenErreichbarX P O (p + j) Tg (FadenStart P sp init lebt0) (K.plus j) := by
   have := fadenErreichbarX_plus j h
   rwa [fadenStart_plus] at this
+
+/-! ## 5. Reading the head of a residue -/
+
+/-- The residue is a `forever` loop with its counter. -/
+def GRest.istEwig {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ → Bool
+  | .ewig .. => true
+  | _ => false
+
+/-- The residue is a `forever` loop with budget left. -/
+def GRest.istEwigPos {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ → Bool
+  | .ewig _ (_ + 1) .. => true
+  | _ => false
+
+/-- **Shifted by at least one, a loop has budget left.** -/
+theorem GRest.plus_istEwigPos (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (g : GRest D V l Γ Λ) (h : g.istEwig = true) : (g.plus (j + 1)).istEwigPos = true := by
+  cases g <;> simp_all [GRest.istEwig, GRest.istEwigPos, GRest.plus, ← Nat.add_assoc]
+
+/-- A Boolean reading of a residue, read through its own equation. -/
+theorem sigmaRest_lies {V : Vertrag D} (F : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, GRest D V l Γ Λ → Bool)
+    {x : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} {ρ : Env D Γ} {g : GRest D V l Γ Λ} (h : x = ⟨l, Γ, Λ, ρ, g⟩) :
+    F x.2.2.2.2 = F g := by
+  subst h; rfl
 
 end Gabbro.Grammatik

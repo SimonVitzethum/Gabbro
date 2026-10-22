@@ -91,6 +91,7 @@ import Grammatik.Logik.Ruf.Hoare.HoareRuf
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustand
 import Grammatik.Kern.Semantik.Syscall.SyscallPaarung
 import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante
 import Grammatik.Kern.Syntax.Konstanten
 import Grammatik.Bausteine.Arena.Bibliothek
@@ -122,6 +123,9 @@ import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetAus
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
+import Grammatik.Logik.Fortschritt.PlanLauf
+import Grammatik.Logik.Fortschritt.Hungerfrei
+import Grammatik.Logik.Fortschritt.HungerfreiZeuge
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Logik.Fortschritt.KostenGZeuge
 import Grammatik.Proben.AuditFinal
@@ -291,6 +295,7 @@ import Grammatik.Zielsatz.Faeden.RuheNutzer
 import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
 import Grammatik.Zielsatz.Faeden.Faeden
+import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 import Grammatik.Zielsatz.Eigenschaften.Invarianten
 import Grammatik.Zielsatz.Eigenschaften.InvariantenZeuge
 import Grammatik.Zielsatz.Faeden.FaedenVor
