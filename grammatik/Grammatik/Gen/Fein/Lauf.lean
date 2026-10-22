@@ -70,12 +70,12 @@ def zeit (q : String) (i n cap : Nat) : IO Unit := do
   for f in z.fnListe do
     for k in List.range (min n eGrenze + 1) do
       let t0 ← IO.monoMsNow
-      let t := genEF (D := D) k k (D.params f) (Signatur.anfang D (D.signatur f))
+      let t := genEF (D := D) Kenner.fein k k (D.params f) (Signatur.anfang D (D.signatur f))
       let gr := t.map List.length
       IO.eprintln s!"expressions {k}: {gr} ({(← IO.monoMsNow) - t0} ms)"
     for k in List.range (n + 1) do
       let t0 ← IO.monoMsNow
-      let t := genTF (vertragVon D f) cap k k false (D.params f) (Signatur.anfang D (D.signatur f))
+      let t := genTF Kenner.fein (vertragVon D f) cap k k false (D.params f) (Signatur.anfang D (D.signatur f))
       let gr := t.map fun e => (e.1.length, e.2.1.length, e.2.2.length)
       IO.eprintln s!"tables {k}: {gr} ({(← IO.monoMsNow) - t0} ms)"
 

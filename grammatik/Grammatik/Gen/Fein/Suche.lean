@@ -65,69 +65,79 @@ def einzeln : Ty → Bool
   | .int lo hi => lo == hi
   | _ => false
 
+/-- **What makes a term new**: the cells a term brings, per family (the fine cells; the coverage driver adds the
+    register members). -/
+structure Kenner (D : Deklaration) where
+  e : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → List FZelle
+  s : ∀ {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ Λ' → List FZelle
+  b : ∀ {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V l Γ Λ Λ' → List FZelle
+  n : ∀ {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ → List FZelle
+
+/-- The fine cells. -/
+def Kenner.fein : Kenner D := ⟨fzE, fzS, fzB, fzEnd⟩
+
 /-- The key of an expression: its exact type and its constructor (a parent that needs a child of this constructor
     at exactly this type finds one). -/
 def eSchl {Γ : Ctx} {Λ : List (Res D)} (p : SE D Γ Λ) : Option (Ty × Nat) :=
   if Zahlen.bindOk p.1 || einzeln p.1 then some (p.1, kE p.2) else none
 
 /-- The filtered expressions of one context by size; the bodies of the quantifiers are built once per table. -/
-def genEF : Nat → Nat → (Γ : Ctx) → (Λ : List (Res D)) → List (List (SE D Γ Λ))
+def genEF (K : Kenner D) : Nat → Nat → (Γ : Ctx) → (Λ : List (Res D)) → List (List (SE D Γ Λ))
   | 0, n, _, _ => List.replicate (n + 1) []
   | f + 1, n, Γ, Λ =>
     let qs : List (EEintrag D) := Aufz.tab.map fun t =>
-      ⟨.index (D.count t) :: Γ, Λ, Thunk.mk fun _ => genEF f n (.index (D.count t) :: Γ) Λ⟩
+      ⟨.index (D.count t) :: Γ, Λ, Thunk.mk fun _ => genEF K f n (.index (D.count t) :: Γ) Λ⟩
     bucketsL [] (fun prev k =>
-      neuFilterK (fun (p : SE D Γ Λ) => fzE p.2) eSchl (gesehen (fun (p : SE D Γ Λ) => fzE p.2) prev)
+      neuFilterK (fun (p : SE D Γ Λ) => K.e p.2) eSchl (gesehen (fun (p : SE D Γ Λ) => K.e p.2) prev)
         (prev.foldl (fun s b => b.foldl (fun s p => match eSchl p with | some k => s.insert k | none => s) s) {})
-        (exprS (fun Γ' j => tab ((findeE qs Γ' Λ).getD (genEF f j Γ' Λ))) (tab prev) k)) n
+        (exprS (fun Γ' j => tab ((findeE qs Γ' Λ).getD (genEF K f j Γ' Λ))) (tab prev) k)) n
 
 section
 variable {V : Vertrag D}
 
-/-- The cells of a statement, a block, an end block. -/
-def czS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (p : SS D V l Γ Λ) : List FZelle := fzS p.2
-def czB {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (p : SB D V l Γ Λ) : List FZelle := fzB p.2
-
 /-- One filtered bucket. -/
-def schrittF {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ))
+def schrittF (K : Kenner D) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ))
     (prev : List (Eimer V l Γ Λ)) (k : Nat) : Eimer V l Γ Λ :=
   let (s, b, e) := schritt O E prev k
-  ((neuFilter czS (gesehen czS (prev.map (·.1))) s).1,
-   (neuFilter czB (gesehen czB (prev.map (·.2.1))) b).1,
-   (neuFilter fzEnd (gesehen fzEnd (prev.map (·.2.2))) e).1)
+  let cS := fun (p : SS D V l Γ Λ) => K.s p.2
+  let cB := fun (p : SB D V l Γ Λ) => K.b p.2
+  let cN := fun (x : Endblock D V l Γ Λ) => K.n x
+  ((neuFilter cS (gesehen cS (prev.map (·.1))) s).1,
+   (neuFilter cB (gesehen cB (prev.map (·.2.1))) b).1,
+   (neuFilter cN (gesehen cN (prev.map (·.2.2))) e).1)
 
 /-- The size bound of the expressions in the tables (the expression cells are all reached by size 5). -/
 def eGrenze : Nat := 5
 
 /-- **The filtered table of a context by size**, by fuel. -/
-def genTF (V : Vertrag D) (cap : Nat) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : List (Res D)) → List (Eimer V l Γ Λ)
+def genTF (K : Kenner D) (V : Vertrag D) (cap : Nat) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : List (Res D)) → List (Eimer V l Γ Λ)
   | _, 0, _, _, _ => [([], [], [])]
   | 0, n + 1, _, _, _ => List.replicate (n + 2) ([], [], [])
   | f + 1, n + 1, l, Γ, Λ =>
-    let Et := genEF (min n eGrenze) (min n eGrenze) Γ Λ
-    let gen := fun m l' Γ' Λ' => genTF V cap f (if l' = l then min m cap else m) l' Γ' Λ'
+    let Et := genEF K (min n eGrenze) (min n eGrenze) Γ Λ
+    let gen := fun m l' Γ' Λ' => genTF K V cap f (if l' = l then min m cap else m) l' Γ' Λ'
     let cs := (knotenKeys' (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
     let exK : List (Ctx × List (Res D)) := ((knotenKeys' (n + 1) l Γ Λ Et).map (fun k => (k.2.1, k.2.2.1)) ++
       (Aufz.glob.map fun g => (D.gtyp g :: Γ, Λ)) ++ (Aufz.reg.map fun r => (D.rtyp r :: Γ, Λ))).eraseDups
-    let ec : List (EEintrag D) := exK.map fun k => ⟨k.1, k.2, Thunk.mk fun _ => genEF (min n eGrenze) (min n eGrenze) k.1 k.2⟩
+    let ec : List (EEintrag D) := exK.map fun k => ⟨k.1, k.2, Thunk.mk fun _ => genEF K (min n eGrenze) (min n eGrenze) k.1 k.2⟩
     let O : Orakel V :=
-      { ex := fun Γ' Λ' m => tab ((findeE ec Γ' Λ').getD (genEF (min m eGrenze) (min m eGrenze) Γ' Λ'))
+      { ex := fun Γ' Λ' m => tab ((findeE ec Γ' Λ').getD (genEF K (min m eGrenze) (min m eGrenze) Γ' Λ'))
         bl := fun l' Γ' Λ' m => tabB (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ')
         en := fun l' Γ' Λ' m => tabN (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ') }
-    bucketsL ([], [], []) (fun prev k => schrittF O (tab Et) prev k) (n + 1)
+    bucketsL ([], [], []) (fun prev k => schrittF K O (tab Et) prev k) (n + 1)
 
 end
 
 /-- The filtered bodies of a function, all sizes up to `n`. -/
 def rumpfF (f : D.Fn) (n cap : Nat) : List (Rumpf D f) :=
-  (genTF (vertragVon D f) cap n n false (D.params f) (Signatur.anfang D (D.signatur f))).flatMap (·.2.2)
+  (genTF Kenner.fein (vertragVon D f) cap n n false (D.params f) (Signatur.anfang D (D.signatur f))).flatMap (·.2.2)
 
 /-- The filtered `requires` and `ensures` of a function. -/
 def reqF (f : D.Fn) (n : Nat) : List (Expr D (D.params f) (Signatur.anfang D (D.signatur f)) .bool) :=
-  (genEF n n _ _).flatMap fun b => b.filterMap fun p => ofTy [p] .bool |>.head?
+  (genEF Kenner.fein n n _ _).flatMap fun b => b.filterMap fun p => ofTy [p] .bool |>.head?
 
 def ensF (f : D.Fn) (n : Nat) : List (Expr D (ErgCtx (D.params f) (D.erg f)) (vertragVon D f).ende .bool) :=
-  (genEF n n _ _).flatMap fun b => b.filterMap fun p => ofTy [p] .bool |>.head?
+  (genEF Kenner.fein n n _ _).flatMap fun b => b.filterMap fun p => ofTy [p] .bool |>.head?
 
 /-- **The candidates of a member**: the program whose every body is the first filtered body of its function, and the
     programs that differ from it in one body or one contract. -/

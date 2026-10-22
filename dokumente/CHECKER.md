@@ -1853,7 +1853,7 @@ exact minimum is not determined here (it is the checking-sequence problem for tr
 many sorts of Gabbro, "root" means the PROGRAM root: the root lower bound counts program-root cells; the flag bound
 counts all cells.
 
-### 16.4 Theorems 3 and 4: the cell-local classes (exact)
+### 16.4 Theorems 3, 4 and 5: the cell-local classes
 
 **Theorem 4, conjunctive checkers** (`Muster.lean`). The verdict is a conjunction over the cells a program
 contains: a local typing rule at a node (the premises of a constructor of `Syntax.lean`) or a whole-program
@@ -1868,9 +1868,17 @@ each other. Then:
 * `gut_noetig`: an accepted cell that occurs in a valid program must occur in a VALID test;
 * `muster_schranke`: `|M| ≥ (isolable refusal cells) + 1`.
 
-So the least set is: one SINGLE-FAULT program per isolable refusal cell, plus a minimum set of valid programs that
-together contain every accepted cell (often one). This is the exact answer for TODO item 8's class, and it is the
-shape the generator already has (valid programs, `NurAn` single-fault refusals).
+**What is proved, and what is not.** 4b-4d are NECESSARY conditions (a lower bound on any sufficient set). 4a is
+sufficient only under its closure hypothesis (a canonical program per cell whose cells occur in every program with
+that cell), which the Gabbro programs do not have: bad cells mask each other (6.0 never comes without 5.0). The
+sufficient condition that holds for Gabbro is **Theorem 5** (`Vollstaendig.lean`): (a) every program of M is valid and
+every cell of a valid program occurs in a program of M (`gut_m`, `gut`); (b) every program of N is refused and every
+refused program has a test in N each of whose cells occurs in that program or in a program of M (`n_schlecht`,
+`schlecht`). Then `vollstaendig_hinreichend`, and in Theorem 4's terms `vollstaendig_muster` (M ++ N is
+`MusterHinreichend`; witness `zeuge_muster`). (b) is weaker than "one single-fault test per bad cell", so necessary
+(4b-4d) and sufficient (Theorem 5) do NOT meet: the least set is bracketed between `muster_schranke` and the sets that
+satisfy (a)+(b), not computed exactly. The generator's sets satisfy (a)+(b) (`zeugen_tafel`, 16.6a); their
+minimality is not claimed.
 
 **Theorem 3, the compiler** (`Ueberdeckung.lean`). The lowering is correct cell by cell (`lowerS_ok`): a table
 `ok : Z → Prop`, a program correct iff all its cells are. Under H8 (no masking): `deckung_iff` — sufficient iff
@@ -2000,9 +2008,10 @@ need source mutants.
 
 **The only oracle is the Lean model's own Bool** (`komp c` = component `c` of `AkzeptiertX`); the Rust checker is not
 consulted anywhere, since it may be wrong and is the subject of the differential harness (12.6). The transcription is
-checked against `komp` by evaluation (`zellenStimmen`; `zellenAbweichung` names the disagreeing component). The first
-version of the cells disagreed with `komp` on 96 programs (components 1 and 9 range over ALL functions, not the starts);
-the self-check found it. It says nothing about forms no checked program contains.
+proved equal to `komp` for every program (`urteil_komp`, component by component, and `akzeptiertX_zellen`:
+`AkzeptiertX` is true exactly when no cell of the program is bad, `Gen/Abdeckung/Satz/ZellenSatz.lean`). The evaluation
+check `zellenStimmen` that stood here before the proof (it found that components 1 and 9 range over ALL functions) is
+superseded by the theorem.
 
 **The generator carries the proof in its output.** The cells are measured on the programs of `Spez.erzeuge`
 (`Gen/Abdeckung/Waehlen.lean`). It emits a program only together with the proof of its class, decided inside the generator
@@ -2057,7 +2066,11 @@ distinct cell sets):
 | bad cells isolated in a program refused by exactly their component | 9 of 20 |
 | Rust accepts of the 9 cover programs | 8 (the refusal is `H013`, an entry writing an unshared place) |
 
-The 11 bad cells never isolated, with the reason as a CLAIM that still needs its Lean proof: `6.0 110/101/111` never
+*State 2026-10-22: every cell of the universe is closed in Lean (`Gen/Zeugen/Schluss.lean`, `zeugen_tafel`): a good
+cell by a valid witness of `Mw` or a theorem that no valid program has it, a bad cell by a test of `Nw` in the sense of
+(b) above or a theorem that no program has it (`Satz/Unmoeglich.lean`: `u_0_ohne`, `u_1_0_110`, `u_3_0_10`, `u_4_10`,
+`u_8_ax`, `ug_6_0`; the masked 6.0 cells by the test with their root cell, `m_6_0`). The paragraph below is the state of
+2026-10-20.* The 11 bad cells never isolated, with the reason as a CLAIM that still needed its Lean proof: `6.0 110/101/111` never
 occur alone, because a start that holds a lock or has reasons is also a bad cell of component 5 (`wurzelnB`); `0.0 000/010/
 001/011` need `gOk` false, which `gOk` with both of its tests true seems never to give; `1.0 110` needs a call graph that is
 not closed, but `reach` is the closure; `0.0 111` needs an indirect call and a contract carrier (the generator emits true
@@ -2092,7 +2105,7 @@ the model has no such rule; one printer error found and fixed on the way (`P033`
 
 | Lean (kernel-checked, standard axioms) | Paper (this section) |
 |---|---|
-| Theorems 1–4 over an ARBITRARY ranked signature: `hinlaenglich`, `testmenge_laenge`, `wurzel_noetig`, `wurzel_schranke`, `flagge_noetig`, `deckung_iff`, `deckung_schranke`, `muster_hinlaenglich`, `schlecht_noetig`, `gut_noetig`, `muster_schranke`; the counter-models `kein_endlicher_test`, `zaehler_ueber_m`, `sonderfall_nicht_neutral` | that the Rust checker and compiler satisfy H1–H8 (an assumption about the code; metamorphic tests and audit) |
+| Theorems 1–4 over an ARBITRARY ranked signature: `hinlaenglich`, `testmenge_laenge`, `wurzel_noetig`, `wurzel_schranke`, `flagge_noetig`, `deckung_iff`, `deckung_schranke`, `muster_hinlaenglich`, `schlecht_noetig`, `gut_noetig`, `muster_schranke`; Theorem 5 `vollstaendig_hinreichend`, `vollstaendig_muster` (with witnesses); for Gabbro `urteil_komp`/`akzeptiertX_zellen` (the model's Bool is the conjunction of its cells) and `zeugen_tafel` (every cell closed by a test or a theorem); the counter-models `kein_endlicher_test`, `zaehler_ueber_m`, `sonderfall_nicht_neutral` | that the Rust checker and compiler satisfy H1–H8 (an assumption about the code; metamorphic tests and audit); the least test set (only bracketed, 16.4) |
 | witnesses on a concrete 3-constructor lock checker: 32 tests for `m = n = 3`, a planted wrong checker fails one, the mutant and the counter model pass (`Zeugen.lean`) | `|W| ≤ n − 1`; the witness height `m + n − 1`; the exact minimum for `m = n` (open) |
 | the Gabbro constructor table checked against the model (`Signatur.lean`); the root-cell counts per family member (`Zaehlung.lean`) | the dimension table (read from `Akzeptiert.lean` and the components); that every presentation combination is reachable; the Myhill–Nerode index of `AkzeptiertX` (not computed: only the presentation upper bound) |
 
