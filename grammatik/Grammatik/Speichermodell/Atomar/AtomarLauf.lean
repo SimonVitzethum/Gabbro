@@ -128,6 +128,7 @@ section Lauf
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
   {K : Faden → D.Fn → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {lok : D.Tab ⊕ D.Glob → Bool}
+  {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 /-- **The start machine is replayed** (as `zielInvS_start`). -/
 theorem zielInvSA_start
@@ -149,7 +150,7 @@ theorem zielInvSA_start
   refine ⟨fun t => ?_, fun t => ?_⟩
   · unfold RufMaschineG.weltVon
     rw [hz t]
-    exact ⟨⟨[], [], [], [], sp.welt [], hStart t, funkV_nil, vertraegeOkR_nil P, kurzVBA_nil _,
+    exact ⟨⟨[], [], [], [], sp.welt [], hStart t, funkV_nil, vertraegeOkR_nil P, massOkV_nil _ _ _, kurzVBA_nil _,
       funkA_nil, rahmenA_nil, vertragA_nil _ Q, kurzAB_nil _, funkU_nil, invU_nil S, kurzUB_nil _,
       ⟨funkX_nil, kurzX_nil _⟩, GleichAuf.vonSpeicher rfl, ⟨hFragS _, fuss_rumpfG P _⟩,
       fun R O' U A _ _ _ _ _ _ => ZErgG.folgt_refl _⟩, trivial⟩
@@ -166,7 +167,8 @@ structure FadenFakten (P : Programm D) (K : Faden → D.Fn → Bool) (M : RufMas
 /-- **One GX step keeps the replay, the frame invariant and the machine lock invariant.** -/
 theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (hlok : AxEnsLokal Q) (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
-    (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
+    (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
+    (hTV : ∀ c, Tg c → VertragsFrei P c)
     (hTS : ∀ c, Tg c → ∀ f Λ, c ∉ stabilS P S lok f Λ)
     (hTO : ∀ c, Tg c → ∀ L, c ∉ S.orte L)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
@@ -194,7 +196,7 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
   have hRSu1 : RahmenStapelS P S lok M1.speicher (RufSchluesselG (M1.faeden u).kopf)
       (M1.faeden u).stapel :=
     rahmenStapelS_fremd (hRS u) fun F _ c hc => hj c fun ht => hTS c ht _ _ hc
-  have hA := akteurSA hO hRL hQ hlok hS hsp hK hTV hFragS hFS hs1 hFu1 (hI.2 u) hRSu1 hSG1
+  have hA := akteurSA hO hRL hQ hlok hS hsp hK hM hTV hFragS hFS hs1 hFu1 (hI.2 u) hRSu1 hSG1
   -- the rely for the other threads, from the thread invariants at M1 (= M's threads)
   have hFF1 : FadenFakten P K M1 := ⟨hFF.halt, hFF.exkl, hFF.graph⟩
   have hrely : ∀ t, t ≠ u → ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel,
@@ -294,7 +296,8 @@ theorem zielInvSA_erreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat) (Q
     (hTO : ∀ c, Tg c → ∀ L, c ∉ S.orte L)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
     (hFS : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c)
-    (hK : ∀ f : D.Fn, KoerperGutSA P passes Q S Tg f) (hStart : StartGut P sp init)
+    (hK : ∀ f : D.Fn, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
+    (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init) :
     ∀ M : RufMaschineG D, RufErreichbarGX P O passes Tg (RufStartG P sp init) M →
       ZielInvSA P O passes Q S lok Tg m zyk M ∧ RahmenInvS P S lok M ∧ SperrInvG S M := by
@@ -313,7 +316,7 @@ theorem zielInvSA_erreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat) (Q
       rw [e]
       trivial
   | schritt M M' u hr' hs ih =>
-      exact zielInvSA_schrittGX hO hRL hQ hlok hS hsp hK hTV hTS hTO hFragS hFS hlokK hs
+      exact zielInvSA_schrittGX hO hRL hQ hlok hS hsp hK hM hTV hTS hTO hFragS hFS hlokK hs
         (fadenFakten_GX hO hvoll hTA sp init hex hAbg hWurzel hr') ih.1 ih.2.1 ih.2.2
 
 /-- **A replayed thread is stopped at no `logik` check of G** (as `fadenS_prueft`): the check
@@ -418,7 +421,8 @@ theorem ziel_ort_atomar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEn
       VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M := by
   intro M hr
   have hI := zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
-    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr
+    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK (fun f => massPflicht_aus P passes Q S Tg Mass.leer f)
+    hStart hsp hex M hr
   exact ⟨fun t ev hev => hI.1.2 t ev hev, hI.2.2,
     fun t => fadenSA_prueft hO hRL hQ hS hsp hK hFS t (hI.1.1 t)⟩
 

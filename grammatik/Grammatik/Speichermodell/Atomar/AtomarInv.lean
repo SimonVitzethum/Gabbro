@@ -388,7 +388,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
       VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧ InvAmOrtG P M ∧
       Zielsatz.InvAmGrundG P M ∧ StartEndeG P M ∧ KeinStartGrundG M := by
   have hZ := zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
-    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex
+    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK (fun f => massPflicht_aus P passes Q S Tg Mass.leer f) hStart hsp hex
   intro M hr
   have hA := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel hTA
     hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr
@@ -405,7 +405,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         have ih' := ih hA'
         obtain ⟨σ, M'', hs1, hσ, _, _, hfa, _, _⟩ := hs
         have hI0 := (hZ M hr').1.1 u
-        have hFu1 : FadenSA P O passes Q S lok Tg m zyk ((mitSpeicher M σ).faeden u)
+        have hFu1 : FadenSA P O passes Q S lok Tg Mass.leer (fun _ _ => false) ((mitSpeicher M σ).faeden u)
             ((mitSpeicher M σ).weltVon u) :=
           fadenSA_speicher hI0 fun c hc => hσ c fun ht => hTS c ht _ _ hc
         intro t ev hev
@@ -429,7 +429,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         have ih' := ih hA'
         obtain ⟨σ, M'', hs1, hσ, _, _, hfa, _, _⟩ := hs
         have hI0 := (hZ M hr').1.1 u
-        have hFu1 : FadenSA P O passes Q S lok Tg m zyk ((mitSpeicher M σ).faeden u)
+        have hFu1 : FadenSA P O passes Q S lok Tg Mass.leer (fun _ _ => false) ((mitSpeicher M σ).faeden u)
             ((mitSpeicher M σ).weltVon u) :=
           fadenSA_speicher hI0 fun c hc => hσ c fun ht => hTS c ht _ _ hc
         intro t ev hev

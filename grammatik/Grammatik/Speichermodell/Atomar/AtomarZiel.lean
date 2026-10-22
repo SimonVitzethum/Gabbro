@@ -138,7 +138,7 @@ theorem ziel_atomar_w (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Gl
       fortschritt := fortschrittG_GA hO hSt sp init (startSpur_nodup_leer init hLeer) hA hV.2.2.1
         (fun t => fadenSA_bereich hO hRL hQ hS hsp hK hFS t
           ((zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
-            hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex W.g hX).1.1 t))
+            hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK (fun f => massPflicht_aus P passes Q S Tg Mass.leer f) hStart hsp hex W.g hX).1.1 t))
         hAnt
       zeit := fun f g n _ _ _ hadm hE _ run hA' =>
         frame_schritte_beschraenkt P O passes f g n hadm hE run hA' }
