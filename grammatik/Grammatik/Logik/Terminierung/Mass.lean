@@ -97,6 +97,11 @@ theorem lexLt_wf : ∀ n, WellFounded (lexLtN n)
 def zyklusMit [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (f g : D.Fn) : Bool :=
   reachB P fs f g && reachB P fs g f
 
+/-- **The cycle relation of the measure gate**: `g` lies on a cycle with `f`, and `f` calls back into its cycle. A
+    function on no cycle has none (`zyklusMit` alone is reflexive). -/
+def zykS [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (f g : D.Fn) : Bool :=
+  zyklusMit P fs f g && fs.any fun h => ruftB P f h && reachB P fs h f
+
 section Pflicht
 
 variable (P : Programm D)
@@ -130,6 +135,12 @@ def MassPflicht (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.G
 theorem massPflicht_aus (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop) (m : Mass D)
     (f : D.Fn) : MassPflicht P passes Q S T m (fun _ _ => false) f :=
   fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ g h => by cases h
+
+/-- **A function on no cycle owes nothing**: its measure duty for `zykS` is empty. -/
+theorem massPflicht_ohne_zyklus [DecidableEq D.Fn] (fs : List D.Fn) (passes : Nat) (Q : AxEns D)
+    (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop) (m : Mass D) (f : D.Fn)
+    (h : ∀ g, zykS P fs f g = false) : MassPflicht P passes Q S T m (zykS P fs) f :=
+  fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ g hg => absurd hg (by rw [h g]; decide)
 
 end Pflicht
 

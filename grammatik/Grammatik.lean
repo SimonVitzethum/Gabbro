@@ -131,6 +131,7 @@ import Grammatik.Logik.Terminierung.Durchgang
 import Grammatik.Logik.Terminierung.Mass
 import Grammatik.Logik.Terminierung.Rekursion
 import Grammatik.Logik.Terminierung.Entscheidung
+import Grammatik.Logik.Terminierung.KlasseZeuge
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Logik.Fortschritt.KostenGZeuge
 import Grammatik.Proben.AuditFinal

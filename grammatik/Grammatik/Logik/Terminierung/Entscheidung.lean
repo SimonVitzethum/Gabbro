@@ -3,7 +3,7 @@
   Subject:   T5 -- THE CLASSES MEET THE SEMANTICS (2026-10-22).
 
   * `tor_gut` -- the call gate of T4 holds for EVERY program, with the rank computed from the call graph
-    (`rangB f`: how many functions `f` reaches) and the cycles of `zyklusMit`: a callee reaches no more than its
+    (`rangB f`: how many functions `f` reaches) and the cycles of `zykS`: a callee reaches no more than its
     caller, and as many only if it reaches the caller back. So T4 needs nothing static beyond measures of one
     length along a cycle.
   * `terminierung` -- for every program whose measures meet the user's duty (`MassPflicht`, the `decreases`
@@ -302,13 +302,15 @@ theorem rangB_lt {f g : D.Fn} (h : reachB P fs f g = true) (hn : reachB P fs g f
     ⟨f, hvoll f, reachB_wurzel P fs f, hn⟩
 
 /-- **Every callee passes the gate**: it reaches no more than its caller, and as many only on the caller's cycle. -/
-theorem tor_ruft {f g : D.Fn} (hr : ruftB P f g = true) : tor (zyklusMit P fs) (rangB P fs) f g = true := by
+theorem tor_ruft {f g : D.Fn} (hr : ruftB P f g = true) : tor (zykS P fs) (rangB P fs) f g = true := by
   have hfg : reachB P fs f g = true := Zielsatz.reachB_ruft P hvoll (reachB_wurzel P fs f) hr
   unfold tor
   cases hgf : reachB P fs g f
   · simp [rangB_lt hvoll hfg hgf]
   · have e : rangB P fs g = rangB P fs f := Nat.le_antisymm (rangB_le hvoll hfg) (rangB_le hvoll hgf)
-    simp [e, zyklusMit, hfg, hgf]
+    simp only [e, Nat.lt_irrefl, decide_false, Bool.false_or, beq_self_eq_true, Bool.true_and]
+    simp only [zykS, zyklusMit, hfg, hgf, Bool.and_self, Bool.true_and]
+    exact List.any_eq_true.2 ⟨g, hvoll g, by simp [hr, hgf]⟩
 
 /-- A gate that every callee of `f` passes admits `f`'s body. -/
 theorem rufeE_aus_ruft (Z : D.Fn → Bool) {f : D.Fn} (hZ : ∀ g, ruftB P f g = true → Z g = true) :
@@ -330,7 +332,7 @@ theorem rufeE_aus_ruft (Z : D.Fn → Bool) {f : D.Fn} (hZ : ∀ g, ruftB P f g =
 
 /-- **THE GATE HOLDS FOR EVERY PROGRAM.** -/
 theorem tor_gut (f : D.Fn) :
-    rufeE (tor (zyklusMit P fs) (rangB P fs) f) (torS (zyklusMit P fs) (rangB P fs) fs f) true (P.rumpf f) = true :=
+    rufeE (tor (zykS P fs) (rangB P fs) f) (torS (zykS P fs) (rangB P fs) fs f) true (P.rumpf f) = true :=
   rufeE_aus_ruft hvoll _ fun _ hr => tor_ruft hvoll hr
 
 end Rang
@@ -343,7 +345,7 @@ variable [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {pa : Nat} {Tg : D.T
   (m : Mass D) {fs : List D.Fn}
 
 /-- **TERMINATION** (T5, first half): every program whose measures fall where the user's duty says (`MassPflicht`
-    for the cycles of `zyklusMit`) and have one length along a cycle: on every infinite GX run from the start, every
+    for the cycles of `zykS`) and have one length along a cycle: on every infinite GX run from the start, every
     thread takes only finitely many steps. No static premise beyond the measures: the gate holds for every program
     (`tor_gut`). -/
 theorem terminierung (Q : AxEns D) (S : SperrInv D) (K : Faden → D.Fn → Bool)
@@ -356,13 +358,13 @@ theorem terminierung (Q : AxEns D) (S : SperrInv D) (K : Faden → D.Fn → Bool
     (hTO : ∀ c, Tg c → ∀ L, c ∉ S.orte L)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
     (hFS : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c)
-    (hK : ∀ f : D.Fn, KoerperGutSA P pa Q S Tg f) (hM : ∀ f, MassPflicht P pa Q S Tg m (zyklusMit P fs) f)
+    (hK : ∀ f : D.Fn, KoerperGutSA P pa Q S Tg f) (hM : ∀ f, MassPflicht P pa Q S Tg m (zykS P fs) f)
     (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hL : ∀ f g, zyklusMit P fs f g = true → (m f).length = (m g).length)
+    (hL : ∀ f g, zykS P fs f g = true → (m f).length = (m g).length)
     (R : LaufGX P O pa Tg) (h0 : R.M 0 = RufStartG P sp init) (t : Faden) :
     ∃ N, ∀ j, N ≤ j → R.akt j ≠ some t :=
-  rekursion_endlich_aus m (zyklusMit P fs) (rangB P fs) fs Q S K lok sp init hO hRL hQ hlok hS hvoll hAbg
+  rekursion_endlich_aus m (zykS P fs) (rangB P fs) fs Q S K lok sp init hO hRL hQ hlok hS hvoll hAbg
     hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hM hStart hsp hex (tor_gut hvoll) hL R h0 t
 
 end Satz
@@ -547,10 +549,10 @@ theorem endet_satz [DecidableEq D.Fn] {P : Programm D} {O : Orakel D} {pa : Nat}
     (hTO : ∀ c, Tg c → ∀ L, c ∉ S.orte L)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
     (hFS : ∀ f, FussSX P S lok Tg f) (hlokK : ∀ c, lok c = true → GetrenntK P K c)
-    (hK : ∀ f : D.Fn, KoerperGutSA P pa Q S Tg f) (hM : ∀ f, MassPflicht P pa Q S Tg m (zyklusMit P fs) f)
+    (hK : ∀ f : D.Fn, KoerperGutSA P pa Q S Tg f) (hM : ∀ f, MassPflicht P pa Q S Tg m (zykS P fs) f)
     (hStart : StartGut P sp init)
     (hsp : ∀ L, S.inv L sp = true) (hex : StartExklusiv init)
-    (hL : ∀ f g, zyklusMit P fs f g = true → (m f).length = (m g).length)
+    (hL : ∀ f g, zykS P fs f g = true → (m f).length = (m g).length)
     (R : LaufGX P O pa Tg) (h0 : R.M 0 = RufStartG P sp init) (t : Faden)
     (hk : klasse P fs mass (init t).1 = .endet) :
     (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧ ∀ j, ((R.M j).faeden t).kopf.rest.2.2.2.2.istEwig = false :=
