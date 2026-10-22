@@ -2109,6 +2109,33 @@ the model has no such rule; one printer error found and fixed on the way (`P033`
 | witnesses on a concrete 3-constructor lock checker: 32 tests for `m = n = 3`, a planted wrong checker fails one, the mutant and the counter model pass (`Zeugen.lean`) | `|W| ≤ n − 1`; the witness height `m + n − 1`; the exact minimum for `m = n` (open) |
 | the Gabbro constructor table checked against the model (`Signatur.lean`); the root-cell counts per family member (`Zaehlung.lean`) | the dimension table (read from `Akzeptiert.lean` and the components); that every presentation combination is reachable; the Myhill–Nerode index of `AkzeptiertX` (not computed: only the presentation upper bound) |
 
+### 16.8 The fine cells (measured 2026-10-23)
+
+A checker or compiler may treat every construct in its loop context and every pair of directly nested constructs
+differently and still be neutral (`Gen/Fein/Neutral.lean`: `NeutralF`, `pruefer_fein`, `compiler_fein`). Its
+cells are the **fine cells**: a constructor with the type classes of its expression children, and a parent with
+the constructor of one child (`fzE`, `fzS`, …). The universe `uF` is every fine cell the typing allows
+(`moeglich`); `feinZellen_uF` proves that every fine cell of every program is in it. Since 2026-10-23 `moeglich`
+carries the **range rule** `typRegel`, proved at the divisors: a divisor of `div`/`rem` (`1 ≤ lo`) is never a
+`div` `rem` `sdiv` `srem` `getBytes` `band` `bor` `bxor` `shl` `shr` (their range starts at or below zero,
+`nullHaltig_kE`), a divisor of `sdiv`/`srem` (zero excluded) never a `sdiv` `srem` `getBytes` `bor` `bxor`
+(their range holds zero, `nullFest_kE`). That removed 30 cells: **4267**.
+
+| | cells |
+|---|---|
+| in the universe | 4267 |
+| a valid witness found (174 packed programs, greedy cover) | 3250 |
+| open | 1017 |
+
+The open cells are almost all pair cells of constructs that rarely meet: an indirect call, a register read with a
+promise or a float block as the continuation of `ite`/`locks`/a loop; a float comparison as a stored value; an
+argument or a result of a class the family's signatures lack (`bool`, option, sum, reason, function pointer,
+float); a variable or a static of a positive range as a divisor. They need a search that keeps a building block
+for an open cell even when the block brings nothing new itself (the novelty filter drops it), and declarations
+with those signatures. Cells realisable only over an empty range (`int 0 (-5)`) count: the table asks for a valid
+witness or a proof that no valid program has the cell. The fine table (`FeinTafel`, `feinTafel_aus`) is not
+closed yet, so `pruefer_fein`/`compiler_fein` have no instance; the coarse theorems of §16.4–16.6a do.
+
 ---
 
 ## Appendix A — where the old section ids went

@@ -191,12 +191,36 @@ def datenOk (r : Zeile) (l : Bool) : Nat → List Nat → Bool
       | none => false
   | _, _ => false
 
+/-- The expression constructors whose integer result starts at or below zero whatever the operands: `div` `rem`
+    `sdiv` `srem` `getBytes` `band` `bor` `bxor` `shl` `shr` (`Gen/Fein/Satz.lean`, `nullHaltig_kE`, proves it). -/
+def nullHaltig : List Nat := [16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+
+/-- The expression constructors whose integer result holds zero whatever the operands (`lo ≤ 0 ≤ hi`): `sdiv`
+    `srem` `getBytes` `bor` `bxor` (`Gen/Fein/Satz.lean`, `nullFest_kE`). `band` `div` `rem` `shl` `shr` are not
+    among them: over an empty operand range their own range is empty and may lie below zero. -/
+def nullFest : List Nat := [18, 19, 20, 22, 23]
+
+/-- The expression children whose range starts at one or above: the divisors of `div` and `rem` (`1 ≤ l2`). -/
+def positivKind (f k p : Nat) : Bool := f == 0 && (k == 16 || k == 17) && p == 1
+
+/-- The expression children whose range excludes zero: the divisors of `sdiv` and `srem` (`1 ≤ l2 ∨ h2 ≤ -1`). -/
+def nullfreiKind (f k p : Nat) : Bool := f == 0 && (k == 18 || k == 19) && p == 1
+
+/-- **The range rule of a pair cell**: a child that starts at one or above is none of `nullHaltig`, a child whose
+    range excludes zero none of `nullFest`. -/
+def typRegel (c : FZelle) : Bool :=
+  match c.art, c.daten with
+  | 1, [p, 0, kk] => !(positivKind c.fam c.kon p && nullHaltig.contains kk) &&
+      !(nullfreiKind c.fam c.kon p && nullFest.contains kk)
+  | _, _ => true
+
 /-- **A fine cell the typing allows**: its constructor exists, is no foreign body, stands in its loop context (an
-    expression has none), and its data fit. -/
+    expression has none), its data fit, and a pair cell keeps the range rule (`typRegel`). -/
 def moeglich (c : FZelle) : Bool :=
   match zeile c.fam c.kon with
   | none => false
-  | some r => (decide (4 ≤ c.fam) || !c.l) && !r.fremd && (!r.lnoetig || c.l) && datenOk r c.l c.art c.daten
+  | some r => (decide (4 ≤ c.fam) || !c.l) && !r.fremd && (!r.lnoetig || c.l) && datenOk r c.l c.art c.daten &&
+      typRegel c
 
 /-! ## The list -/
 
@@ -306,7 +330,7 @@ theorem uF_vollst {c : FZelle} (h : moeglich c = true) : c ∈ uF := by
   · simp at h
   · next r hr =>
     simp only [Bool.and_eq_true] at h
-    obtain ⟨⟨⟨_, _⟩, _⟩, hd⟩ := h
+    obtain ⟨⟨⟨⟨_, _⟩, _⟩, hd⟩, ht⟩ := h
     obtain ⟨hf, hk⟩ := zeile_lt hr
     have hart : art = 0 ∨ art = 1 := by
       match art, hd with
@@ -322,6 +346,6 @@ theorem uF_vollst {c : FZelle} (h : moeglich c = true) : c ∈ uF := by
       refine ⟨art, hart, l, by cases l <;> simp, d, daten_mem hd, rfl⟩
     · unfold moeglich
       simp only [hr, Bool.and_eq_true]
-      exact ⟨⟨⟨by assumption, by assumption⟩, by assumption⟩, hd⟩
+      exact ⟨⟨⟨⟨by assumption, by assumption⟩, by assumption⟩, hd⟩, ht⟩
 
 end Gabbro.Grammatik.Gen.Fein
