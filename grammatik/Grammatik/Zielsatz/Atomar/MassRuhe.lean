@@ -11,7 +11,7 @@
     (`rufZ`, `LogikTreu`), a descent of the lifted body is a descent of the body.
 -/
 import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
-import Grammatik.Logik.Terminierung.Mass
+import Grammatik.Logik.Terminierung.Entscheidung
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
 
 namespace Gabbro.Grammatik
@@ -164,5 +164,159 @@ theorem massPflicht_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : ∀ w, AbgK P
       exact hk (h2.trans (congrArg _ (ht.2 g rfl)))
 
 end Transfer
+
+/-! ## 5. A `forever`-free hull, translated -/
+
+section Ewig
+
+variable {V : Vertrag D}
+
+theorem ewig_nachΛ {l : Bool} {Γ : Ctx} {Λ Λ₁ Λ₂ : List (Res D)} (h : Λ₁ = Λ₂) (s : Stmt D V l Γ Λ Λ₁)
+    (eb ie dl : Bool) : (befS eb ie dl (Stmt.nachΛ h s)).ewig = (befS eb ie dl s).ewig := by
+  subst h; rfl
+
+theorem ewig_vorΛ {l : Bool} {Γ : Ctx} {Λ₁ Λ₂ Λ' : List (Res D)} (h : Λ₁ = Λ₂) (b : Block D V l Γ Λ₁ Λ')
+    (eb ie : Bool) : (befB eb ie (Block.vorΛ h b)).ewig = (befB eb ie b).ewig := by
+  subst h; rfl
+
+theorem ewig_umΛE {l : Bool} {Γ : Ctx} {Λ₁ Λ₂ : List (Res D)} (h : Λ₁ = Λ₂) (e : Endblock D V l Γ Λ₁)
+    (eb ie : Bool) : (befE eb ie (Endblock.umΛ h e)).ewig = (befE eb ie e).ewig := by
+  subst h; rfl
+
+mutual
+
+theorem ewig_ruS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (eb ie dl dl' : Bool),
+    (befS eb ie dl (ruS s)).ewig = (befS eb ie dl' s).ewig
+  | _, _, _, _, .assignSlot .., _, _, _, _ => rfl
+  | _, _, _, _, .assignThru .., _, _, _, _ => rfl
+  | _, _, _, _, .assignGlob .., _, _, _, _ => rfl
+  | _, _, _, _, .putBytes .., _, _, _, _ => rfl
+  | _, _, _, _, .assignVar .., _, _, _, _ => rfl
+  | _, _, _, _, .shift .., _, _, _, _ => rfl
+  | _, _, _, _, .ite _ t e, eb, ie, _, _ => kongr₂ (· || ·) (ewig_ruB t eb ie) (ewig_ruB e eb ie)
+  | _, _, _, _, .onOption _ p a, eb, ie, _, _ => kongr₂ (· || ·) (ewig_ruB p eb ie) (ewig_ruB a eb ie)
+  | _, _, _, _, .onTag _ arms, eb, ie, _, _ => ewig_ruArms arms eb ie
+  | _, _, _, _, .onWhy _ arms, eb, ie, _, _ => ewig_ruGArms arms eb ie
+  | _, _, _, _, .call .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
+  | _, _, _, _, .callInd .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
+  | _, _, _, _, .locks _ _ body, eb, ie, _, _ => ewig_ruB body eb ie
+  | _, _, _, _, .breaking _ body, eb, ie, _, _ => ewig_ruB body eb ie
+  | _, _, _, _, .traverse _ _ body, _, ie, _, _ => ewig_ruB body false ie
+  | _, _, _, _, .retry _ _ body ueber, eb, ie, _, _ => kongr₂ (· || ·) (ewig_ruB body false ie) (ewig_ruB ueber eb ie)
+  | _, _, _, _, .forever _ _ body, _, _, _, _ => by simp only [ruS, befS, befund_und_ewig, Bool.true_or]
+  | _, _, _, _, .axiomCall .., _, _, _, _ => rfl
+  | _, _, _, _, .regWrite .., _, _, _, _ => rfl
+  | _, _, _, _, .transition .., _, _, _, _ => rfl
+  | _, _, _, _, .publish .., _, _, _, _ => rfl
+  | _, _, _, _, .advances .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
+  | _, _, _, _, .retires .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
+  | _, _, _, _, .ret .., _, _, _, _ => rfl
+  | _, _, _, _, .retWhy .., _, _, _, _ => rfl
+  | _, _, _, _, .leave _, _, _, _, _ => rfl
+  | _, _, _, _, .next _, _, _, _, _ => rfl
+
+theorem ewig_ruB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (eb ie : Bool),
+    (befB eb ie (ruB b)).ewig = (befB eb ie b).ewig
+  | _, _, _, _, .nil, _, _ => rfl
+  | _, _, _, _, .cons s rest, eb, ie => kongr₂ (· || ·) (ewig_ruS s eb ie _ _) (ewig_ruB rest eb ie)
+  | _, _, _, _, .bind _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .bindCall _ _ _ _ _ rest, eb, ie => by
+      simp only [ruB, befB, befund_und_ewig]
+      exact kongr₂ (· || ·) rfl ((ewig_vorΛ _ _ eb ie).trans (ewig_ruB rest eb ie))
+  | _, _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie => by
+      simp only [ruB, befB, befund_und_ewig]
+      exact kongr₂ (· || ·) rfl ((ewig_vorΛ _ _ eb ie).trans (ewig_ruB rest eb ie))
+  | _, _, _, _, .bindCallElse _ _ _ _ _ err rest, eb, ie => by
+      simp only [ruB, befB, befund_und_ewig]
+      exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
+        ((ewig_vorΛ _ _ eb ie).trans (ewig_ruB rest eb ie))
+  | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd err eb ie) (ewig_ruB rest eb ie)
+  | _, _, _, _, .regRead _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .regReadElse _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
+  | _, _, _, _, .awaits _ _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .narrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
+  | _, _, _, _, .check _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
+  | _, _, _, _, .float _ _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .floatLit _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .floatOf _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .floatNarrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
+
+theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (eb ie : Bool),
+    (befE eb ie (ruEnd e)).ewig = (befE eb ie e).ewig
+  | _, _, _, .ret .., _, _ => rfl
+  | _, _, _, .retWhy .., _, _ => rfl
+  | _, _, _, .leave _, _, _ => rfl
+  | _, _, _, .next _, _, _ => rfl
+  | _, _, _, .cons s rest, eb, ie => kongr₂ (· || ·) (ewig_ruS s eb ie _ _) (ewig_ruEnd rest eb ie)
+  | _, _, _, .bind _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .bindCall _ _ _ _ _ rest, eb, ie => by
+      simp only [ruEnd, befE, befund_und_ewig]
+      exact kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
+  | _, _, _, .bindCallElse _ _ _ _ _ err rest, eb, ie => by
+      simp only [ruEnd, befE, befund_und_ewig]
+      exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
+        ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd err eb ie) (ewig_ruEnd rest eb ie)
+  | _, _, _, .regRead _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .regReadElse _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruEnd rest eb ie)
+  | _, _, _, .awaits _ _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie => by
+      simp only [ruEnd, befE, befund_und_ewig]
+      exact kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
+
+theorem ewig_ruArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    (arms : Arms D V l Γ Λ Λ' cs) (eb ie : Bool), (befArms eb ie (ruArms arms)).ewig = (befArms eb ie arms).ewig
+  | _, _, _, _, _, .nil, _, _ => rfl
+  | _, _, _, _, _, .cons (c := none) b rest, eb, ie => kongr₂ (· || ·) (ewig_ruB b eb ie) (ewig_ruArms rest eb ie)
+  | _, _, _, _, _, .cons (c := some (_, _)) b rest, eb, ie => kongr₂ (· || ·) (ewig_ruB b eb ie) (ewig_ruArms rest eb ie)
+
+theorem ewig_ruGArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (arms : GrundArms D V l Γ Λ Λ' n) (eb ie : Bool), (befGArms eb ie (ruGArms arms)).ewig = (befGArms eb ie arms).ewig
+  | _, _, _, _, _, .nil, _, _ => rfl
+  | _, _, _, _, _, .cons b rest, eb, ie => kongr₂ (· || ·) (ewig_ruB b eb ie) (ewig_ruGArms rest eb ie)
+
+end
+
+end Ewig
+
+section EwigFrei
+
+variable [DecidableEq D.Fn] (P : Programm D) {fs : List D.Fn}
+
+theorem befund_mitRuhe_ewig (h : D.Fn) : (befund P.mitRuhe (some h)).ewig = (befund P h).ewig := by
+  unfold befund
+  show (befE false false (Endblock.umΛ (anfang_map (D.signatur h)) (ruEnd (P.rumpf h)))).ewig = _
+  rw [ewig_umΛE, ewig_ruEnd]
+
+/-- **A `forever`-free hull stays `forever`-free on `P.mitRuhe`.** -/
+theorem ewigFrei_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : ∀ w, AbgK P fs (reachB P fs w)) {w : D.Fn}
+    (h : ewigFrei P fs w = true) : ewigFrei P.mitRuhe (fsRuhe fs) (some w) = true := by
+  unfold ewigFrei at h ⊢
+  simp only [fsRuhe, List.all_cons, List.all_map, Function.comp_def, Bool.and_eq_true]
+  refine ⟨?_, ?_⟩
+  · have := reachB_mitRuhe_nicht_ruhe P hA w
+    simp only [fsRuhe] at this
+    simp [this]
+  · rw [← h]
+    apply congrArg (List.all fs)
+    funext x
+    rw [befund_mitRuhe_ewig]
+    exact congrArg (fun b => !b || !(befund P x).ewig) (reachB_mitRuhe P hvoll hA w x)
+
+/-- The idle root reaches no `forever`. -/
+theorem ewigFrei_mitRuhe_ruhe : ewigFrei P.mitRuhe (fsRuhe fs) none = true := by
+  unfold ewigFrei
+  simp only [fsRuhe, List.all_cons, List.all_map, Function.comp_def, Bool.and_eq_true]
+  refine ⟨?_, List.all_eq_true.2 fun x _ => ?_⟩
+  · have hb : (befund P.mitRuhe none).ewig = false := rfl
+    simp [hb]
+  · have := reachB_mitRuhe_ruhe (P := P) (fs := fs) x
+    simp only [fsRuhe] at this
+    simp [this]
+
+end EwigFrei
 
 end Gabbro.Grammatik

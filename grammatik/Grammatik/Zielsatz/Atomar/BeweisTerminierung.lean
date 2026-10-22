@@ -6,6 +6,7 @@
 -/
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Logik.Terminierung.Entscheidung
+import Grammatik.Zielsatz.Atomar.MassRuhe
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -28,7 +29,7 @@ theorem terminierung_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
     (hLm : ∀ f g, zykS P fs f g = true → (m f).length = (m g).length)
     (R : LaufGX P O passes (GeteiltV P ws)) (h0 : R.M 0 = RufStartG P sp init) (t : Faden) :
     (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧
-      (klasse P fs m.hat (init t).1 = .endet → ∀ j, ¬ HaltBenannt O passes (R.M j) .budget t) := by
+      (ewigFrei P fs (init t).1 = true → ∀ j, ¬ HaltBenannt O passes (R.M j) .budget t) := by
   have hW : ∀ t, D.haelt (init t).1 = [] ∧ D.gruende (init t).1 = 0 := fun t => by
     rcases hZ.wurzel t with h | h
     · exact hA.wurzeln _ h
@@ -48,14 +49,10 @@ theorem terminierung_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
       exact @of_decide_eq_true _ (Classical.propDecidable _) hc)
   have hK := fun f => koerperGutSA_mono hT ((hN.1 passes f).1)
   have hex := startExklusiv_ohne_haelt init hLeer
-  have hE := fun (hk : klasse P fs m.hat (init t).1 = .endet) =>
-    endet_satz m m.hat Q S (kVon P fs init) (lokW P fs ws) sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll
-      (fun t => hA.abg _) (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
-      hlokK hK hM hZ.req hZ.sperren hex hLm R h0 t hk
   refine ⟨terminierung m Q S (kVon P fs init) (lokW P fs ws) sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll
       (fun t => hA.abg _) (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
       hlokK hK hM hZ.req hZ.sperren hex hLm R h0 t, fun hk j ⟨l, Γ, Λ, ρ, r, hrest, hh⟩ => ?_⟩
-  have h1 := (hE hk).2 j
+  have h1 := ewigFrei_ohne_budget hvoll sp init R h0 t hk j
   rw [sigmaRest_lies (fun g => g.istEwig) hrest, restHalt_budget_ewig hh] at h1
   exact absurd h1 (by decide)
 
@@ -77,10 +74,28 @@ theorem gabbro_ziel_terminierung : GabbroZielTerminierung := by
   have hH' := hardware_mitRuhe hH
   have hZ := startZulaessig_aus E fs.1 hN.start hL
   have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hA0.abg
-  revert hM R
+  have hM' := massPflicht_mitRuhe fs.2 hA0.abg hM
+  have hLm' : ∀ f' g', zykS E.P.mitRuhe (fsRuhe fs.1) f' g' = true →
+      (m.mitRuhe f').length = (m.mitRuhe g').length := by
+    intro f' g' hz
+    cases f' with
+    | none => rw [zykS_mitRuhe_ruhe] at hz; cases hz
+    | some f =>
+      cases g' with
+      | none => rw [zykS_mitRuhe_zur_ruhe] at hz; cases hz
+      | some g =>
+        rw [zykS_mitRuhe E.P fs.2 hA0.abg] at hz
+        rw [Mass.laenge_mitRuhe, Mass.laenge_mitRuhe]
+        exact hLm f g hz
+  revert hM' R
   rw [← heq]
-  intro hM R hR0
-  exact terminierung_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) (wsRuhe E.ws) hA hN'
-    O.mitRuhe hH' passes sp init hZ m hM hLm R hR0 t
+  intro R hR0 hM'
+  refine ⟨(terminierung_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) (wsRuhe E.ws) hA hN'
+    O.mitRuhe hH' passes sp init hZ m.mitRuhe hM' hLm' R hR0 t).1, fun hk => ?_⟩
+  refine (terminierung_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) (wsRuhe E.ws) hA hN'
+    O.mitRuhe hH' passes sp init hZ m.mitRuhe hM' hLm' R hR0 t).2 ?_
+  cases hi : (init t).1 with
+  | none => exact ewigFrei_mitRuhe_ruhe E.P
+  | some w => exact ewigFrei_mitRuhe E.P fs.2 hA0.abg (ewigFrei_klasse E.P fs.1 m.hat fs.2 (hk w hi))
 
 end Gabbro.Grammatik.Zielsatz

@@ -133,7 +133,9 @@ import Grammatik.Logik.Terminierung.Rekursion
 import Grammatik.Logik.Terminierung.Entscheidung
 import Grammatik.Logik.Terminierung.KlasseZeuge
 import Grammatik.Logik.Terminierung.LaufGX
+import Grammatik.Zielsatz.Atomar.MassRuhe
 import Grammatik.Zielsatz.Atomar.BeweisTerminierung
+import Grammatik.Zielsatz.Atomar.TerminierungZeuge
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Logik.Fortschritt.KostenGZeuge
 import Grammatik.Proben.AuditFinal

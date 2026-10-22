@@ -157,8 +157,9 @@
   `m` (per function a lexicographic tuple of natural-number expressions over its parameters, the `decreases`
   clause) whose duty `MassPflicht` holds for every function -- every call back into the caller's cycle (`zykS`)
   has a smaller measure than the caller's entry -- and measures of one length along a cycle. A function on no cycle
-  owes nothing (`massPflicht_ohne_zyklus`). Stated over the program with the idle root (`E.P.mitRuhe`, as the runs
-  are). Claimed: (1) on every infinite GX run from the runtime's start every thread takes only finitely many steps
+  owes nothing (`massPflicht_ohne_zyklus`). The measure, its duty and the class are stated on the user's program
+  `E.P`; the runs are those of the program with the idle root (`E.P.mitRuhe`), to which the duty transfers
+  (`massPflicht_mitRuhe`). Claimed: (1) on every infinite GX run from the runtime's start every thread takes only finitely many steps
   -- a `forever` is finite here because machine G grants `passes` passes from outside; (2) a thread whose start
   function the decision algorithm `klasse` (Logik/Terminierung/Klasse.lean: `endet`, `umgebung`, `bedingt`,
   `abgelehnt`, computed from the syntax) puts in class `endet` never stands at a spent budget: its end does not
@@ -167,8 +168,8 @@
 
   NOT CLAIMED:
   * a waiting bound, a time bound for `forever` or recursion, termination of `umgebung`/`bedingt` beyond the budget
-    (whether a `leave` guard or a base path is ever taken is the program's question); the measure duty stated on
-    `E.P` instead of `E.P.mitRuhe`; termination with threads spawned at run time; `GabbroZielLeben` claims that a
+    (whether a `leave` guard or a base path is ever taken is the program's question); termination with threads
+    spawned at run time; `GabbroZielLeben` claims that a
     lock wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
     time;
   * stack depth (G's stacks are unbounded; the LLVM lowering runs recursion without native stack growth, and
@@ -215,7 +216,6 @@ import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 import Grammatik.Logik.Fortschritt.PlanLauf
 import Grammatik.Speichermodell.Adressen.Layout
 import Grammatik.Logik.Terminierung.LaufGX
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -1106,17 +1106,17 @@ def GabbroZielTerminierung : Prop :=
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
     NutzerPflichtA E →                                          -- (b) the user, with the rely
-    ∀ (passes : Nat) (m : Mass D.mitRuhe),
-      (∀ f, MassPflicht E.P.mitRuhe passes (fun a σ v => E.Q a (worldZ σ) (ergZ (D.aerg a) v)) E.S.mitRuhe (GeteiltV (D := D) E.P E.ws) m
-        (zykS E.P.mitRuhe (fsRuhe fs.1)) f) →                   -- (b') the measures fall (`decreases`)
-      (∀ f g, zykS E.P.mitRuhe (fsRuhe fs.1) f g = true → (m f).length = (m g).length) →
+    ∀ (passes : Nat) (m : Mass D),
+      (∀ f, MassPflicht E.P passes E.Q E.S (GeteiltV (D := D) E.P E.ws) m (zykS E.P fs.1) f) →
+                                                                -- (b') the measures fall (`decreases`)
+      (∀ f g, zykS E.P fs.1 f g = true → (m f).length = (m g).length) →
     ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
     ∀ (sp : Speicher D.mitRuhe) (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
       Laufzeit E sp init →                                      -- (d) the runtime, A4
       ∀ R : LaufGX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws),
         R.M 0 = RufStartG E.P.mitRuhe sp init →
         ∀ t : Faden, (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧
-          (klasse E.P.mitRuhe (fsRuhe fs.1) m.hat (init t).1 = .endet →
+          ((∀ w, (init t).1 = some w → klasse E.P fs.1 m.hat w = .endet) →
             ∀ j, ¬ HaltBenannt O.mitRuhe passes (R.M j) .budget t)
 
 /-! ## Linking separately compiled units (Opus agent E, 2026-09-26)
