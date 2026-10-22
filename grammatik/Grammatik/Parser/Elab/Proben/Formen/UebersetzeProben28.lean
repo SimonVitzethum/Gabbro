@@ -47,12 +47,10 @@ def reg_class_refused : String :=
 theorem reg_class_refused_stufe : stufe reg_class_refused = "lower: register written against its class" := by
   decide +kernel
 
-/-- A read at the top level of a body: `Endblock` has no register read. -/
-def reg_top_refused : String :=
+/-- A read at the top level of a body: `Endblock.regRead`. -/
+def reg_top_ok : String :=
   "module m { device D(b : u64) at mmio { reg S : u32 in 0 .. 9 @0 class r } impl fn f(d : D) -> u32 in 0 .. 9 { let x = d.S; return x; } }"
-theorem reg_top_refused_stufe : stufe reg_top_refused =
-    "lower: lower: a register read at the top level of a body has no G form (Endblock lacks regRead)" := by
-  decide +kernel
+theorem reg_top_ok_stufe : stufe reg_top_ok = "OK" := by decide +kernel
 
 /-- A fallible read (`requires p else A::B`) in a `let .. else`. -/
 def reg_else_ok : String :=

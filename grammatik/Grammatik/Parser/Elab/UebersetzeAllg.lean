@@ -1072,6 +1072,14 @@ def lowBoolTab (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
             exact Expr.slot (D := declOf u) t fh.idx i hL)
         else .error "access without held guard"
 
+/-- The result of an `ensures` as a parameter `#erg` in front of the others (a name no source can write): inside a
+    quantifier the binder rides in front of the result, so the result is found by its name, not at position 0. -/
+def ergAlsParam (fn : UFn) : Option Ty → Except String UFn
+  | none => .ok fn
+  | some (.int a b) => .ok { fn with params := ("#erg", .int a b) :: fn.params, kinds := .int :: fn.kinds }
+  | some .bool => .ok { fn with params := ("#erg", .bool) :: fn.params, kinds := .bool :: fn.kinds }
+  | some _ => .error "quantifier beside a result of this type without G form"
+
 /-- A comparison side in `ensures`: literals, numeric parameters,
     slot reads, `old` and `result` travel. -/
 def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -1129,6 +1137,13 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       match lowVar Γ 0 (.int a b) with
       | .error e => .error e
       | .ok v => .ok { range := (a, b), term := Expr.var v }
+    | none =>
+      match paramPos fn.params "#erg", fn.params.find? (·.1 == "#erg") with
+      | .ok j, some (_, .int a b) =>
+        match lowVar Γ j (.int a b) with
+        | .error e => .error e
+        | .ok v => .ok { range := (a, b), term := Expr.var v }
+      | _, _ => .error "result without result"
     | _ => .error "result without result"
 
 /-- A value side in a body: the sides of an `ensures` without `old` and `result` (a body reads neither). -/
@@ -1189,6 +1204,13 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       match lowVar Γ 0 .bool with
       | .error e => .error e
       | .ok v => .ok (Expr.var v)
+    | none =>
+      match paramPos fn.params "#erg", fn.params.find? (·.1 == "#erg") with
+      | .ok j, some (_, .bool) =>
+        match lowVar Γ j .bool with
+        | .error e => .error e
+        | .ok v => .ok (Expr.var v)
+      | _, _ => .error "result without result"
     | _ => .error "result without result"
   | .var p =>
     match paramPos fn.params p with
@@ -1200,22 +1222,22 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .alle tn x body =>
-    if er.isSome then .error "quantifier beside a result without G form" else
-    match tabIdx u.tabs tn with
-    | .error e => .error e
-    | .ok t =>
+    match tabIdx u.tabs tn, ergAlsParam fn er with
+    | .error e, _ => .error e
+    | _, .error e => .error e
+    | .ok t, .ok fnR =>
       if hL : (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ) then
-        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fn.mitIndex x t.val ((declOf u).count t)) none body with
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fnR.mitIndex x t.val ((declOf u).count t)) none body with
         | .error e => .error e
         | .ok b => .ok (Expr.forallSlots (D := declOf u) t b hL)
       else .error "access without held guard"
   | .einige tn x body =>
-    if er.isSome then .error "quantifier beside a result without G form" else
-    match tabIdx u.tabs tn with
-    | .error e => .error e
-    | .ok t =>
+    match tabIdx u.tabs tn, ergAlsParam fn er with
+    | .error e, _ => .error e
+    | _, .error e => .error e
+    | .ok t, .ok fnR =>
       if hL : (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ) then
-        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fn.mitIndex x t.val ((declOf u).count t)) none body with
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fnR.mitIndex x t.val ((declOf u).count t)) none body with
         | .error e => .error e
         | .ok b => .ok (Expr.existsSlots (D := declOf u) t b hL)
       else .error "access without held guard"

@@ -73,10 +73,14 @@ def forall_guard_refused : String :=
 theorem forall_guard_refused_stufe : stufe forall_guard_refused = "elab: access without held guard" := by
   decide +kernel
 
-/-- A quantifier beside a result is refused by name. -/
-def forall_erg_refused : String :=
+/-- A quantifier beside a result: the result rides behind the binder (`#erg`, `ergAlsParam`). -/
+def forall_erg_ok : String :=
   "module m { table T count 2 { slot { v : u32, } } impl fn f() -> u32 in 0 .. 9 ensures forall k in slots of T : T.slots[k].v > 0 { return 0; } }"
-theorem forall_erg_refused_stufe :
-    stufe forall_erg_refused = "lower: quantifier beside a result without G form" := by decide +kernel
+theorem forall_erg_ok_stufe : stufe forall_erg_ok = "OK" := by decide +kernel
+
+/-- ... and the result read inside the quantifier, at its type (a wrong position would not have the type). -/
+def forall_erg_lies : String :=
+  "module m { table T count 2 { slot { v : u32, } } impl fn f(a : u32 in 0 .. 3) -> u32 in 0 .. 9 ensures exists k in slots of T : T.slots[k].v >= result + a { return 0; } }"
+theorem forall_erg_lies_stufe : stufe forall_erg_lies = "OK" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben30

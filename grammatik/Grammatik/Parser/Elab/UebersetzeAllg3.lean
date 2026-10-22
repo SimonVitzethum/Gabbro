@@ -754,8 +754,20 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowEndL (l := l) u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Endblock.bind ev b, r)
-  | _, _, _ + 1, _, _, .bindCall .. :: _ =>
-    .error "lower: a value call in an else branch has no G form (Endblock lacks bindCall)"
+  | Γ, fn, n + 1, Λ, pe, .bindCall x cname args :: rest =>
+    match lowRufKopf u caller Γ fn Λ cname args with
+    | .error e => .error e
+    | .ok k =>
+      withErg u k.callee fun τ hE =>
+        match lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r) =>
+          if hr : (declOf u).gruende k.callee = 0 then
+            have b' : Endblock (declOf u) (verOf u caller) l (τ :: Γ) (nach (declOf u) k.callee Λ) := by
+              rw [nach_eq u k.callee Λ]
+              exact b
+            .ok (Endblock.bindCall (D := declOf u) k.callee k.args hE k.hp hr b', r)
+          else .error "call of a function with a reason channel needs `let .. else`"
   | _, _, _ + 1, _, _, .axCall .. :: _ =>
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .bindAx .. :: _ =>
@@ -771,14 +783,62 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .error e => .error e
         | .ok (b, r') => .ok (Endblock.bind (Expr.fnref (D := declOf u) g m h) b, r')
       else .error "function does not conform to the pointer type"
-  | _, _, _ + 1, _, _, .bindCallInd .. :: _ =>
-    .error "lower: an indirect call bound in an else branch has no G form here"
-  | _, _, _ + 1, _, _, .awaitBind .. :: _ =>
-    .error "lower: an awaits in an else branch has no G form (Endblock lacks awaits)"
-  | _, _, _ + 1, _, _, .regRead .. :: _ =>
-    .error "lower: a register read in an else branch has no G form (Endblock lacks regRead)"
-  | _, _, _ + 1, _, _, .regReadElse .. :: _ =>
-    .error "lower: a register read in an else branch has no G form (Endblock lacks regReadElse)"
+  | Γ, fn, n + 1, Λ, pe, .bindCallInd x p _ args :: rest =>
+    match lowZeigerN u Γ fn p with
+    | .error e => .error e
+    | .ok ⟨m, v⟩ =>
+      match lowRufKopfN u caller Γ fn Λ m args with
+      | .error e => .error e
+      | .ok k =>
+        withErgN u m fun τ hE =>
+          match lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy x τ) n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r') =>
+            if hr : ((declOf u).sigNr m).gruende = 0 then
+              have b' : Endblock (declOf u) (verOf u caller) l (τ :: Γ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) := by
+                rw [nachSigAt_eq u m Λ]
+                exact b
+              .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
+            else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, n + 1, Λ, pe, .awaitBind x a :: rest =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if ha : (declOf u).atomar g = true then
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        match lowEndL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Endblock.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd ha b, r')
+      else .error "access without held guard"
+      else .error "awaits at a static that is not atomic"
+  | Γ, fn, n + 1, Λ, pe, .regRead x d rg :: rest =>
+    match regIdx u.regs d rg with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match lowEndL (l := l) u caller ((regAt u g).ty :: Γ) (fn.mitTy x (regAt u g).ty) n Λ pe rest with
+        | .error e => .error e
+        | .ok (b, r') => .ok (Endblock.regRead (D := declOf u) g hk b, r')
+      else .error "lower: register read against its class"
+  | Γ, fn, n + 1, Λ, pe, .regReadElse x d rg :: rest =>
+    match regIdx u.regs d rg with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match (regAt u g).pruefung with
+        | none => .error "lower: register read without a check"
+        | some p =>
+          match lowEns u ((regAt u g).ty :: Γ) Λ (fn.mitTy (regAt u g).name (regAt u g).ty) none p with
+          | .error e => .error e
+          | .ok zu =>
+            match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+            | .error e => .error e
+            | .ok (sonst, .blkEnd :: rest') =>
+              match lowEndL (l := l) u caller ((regAt u g).ty :: Γ) (fn.mitTy x (regAt u g).ty) n Λ pe rest' with
+              | .error e => .error e
+              | .ok (b, r') => .ok (Endblock.regReadElse (D := declOf u) g hk zu sonst b, r')
+            | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: register read against its class"
   | _, _, _ + 1, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
   | Γ, fn, n + 1, Λ, pe, .bindAxElse y c args e :: rest =>
@@ -974,12 +1034,46 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 exact e
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr e')
             else .error "call of a function with a reason channel needs `let .. else`"
-  | _, _, _ + 1, .awaitBind .. :: _, _ =>
-    .error "lower: an awaits at the top level of a body has no G form (Endblock lacks awaits)"
-  | _, _, _ + 1, .regRead .. :: _, _ =>
-    .error "lower: a register read at the top level of a body has no G form (Endblock lacks regRead)"
-  | _, _, _ + 1, .regReadElse .. :: _, _ =>
-    .error "lower: a register read at the top level of a body has no G form (Endblock lacks regReadElse)"
+  | Γ, fn, n + 1, .awaitBind x a :: rest, r =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if ha : (declOf u).atomar g = true then
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ resOf u caller) then
+        match lowBodyF u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n rest r with
+        | .error e => .error e
+        | .ok e => .ok (Endblock.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd ha e)
+      else .error "access without held guard"
+      else .error "awaits at a static that is not atomic"
+  | Γ, fn, n + 1, .regRead x d rg :: rest, r =>
+    match regIdx u.regs d rg with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match lowBodyF u caller ((regAt u g).ty :: Γ) (fn.mitTy x (regAt u g).ty) n rest r with
+        | .error e => .error e
+        | .ok e => .ok (Endblock.regRead (D := declOf u) g hk e)
+      else .error "lower: register read against its class"
+  | Γ, fn, n + 1, .regReadElse x d rg :: rest, r =>
+    match regIdx u.regs d rg with
+    | .error e => .error e
+    | .ok g =>
+      if hk : ((declOf u).rklasse g).lesbar = true then
+        match (regAt u g).pruefung with
+        | none => .error "lower: register read without a check"
+        | some p =>
+          match lowEns u ((regAt u g).ty :: Γ) (resOf u caller)
+              (fn.mitTy (regAt u g).name (regAt u g).ty) none p with
+          | .error e => .error e
+          | .ok zu =>
+            match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) rest with
+            | .error e => .error e
+            | .ok (sonst, .blkEnd :: rest') =>
+              match lowBodyF u caller ((regAt u g).ty :: Γ) (fn.mitTy x (regAt u g).ty) n rest' r with
+              | .error e => .error e
+              | .ok e => .ok (Endblock.regReadElse (D := declOf u) g hk zu sonst e)
+            | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: register read against its class"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
   | Γ, fn, n + 1, .ret v :: rest, r =>
