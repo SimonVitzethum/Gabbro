@@ -198,11 +198,11 @@ def invTraeger (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
 /-- `U003` at an invariant, decided over the elaborated functions: a writer of a carrier holds every lock that
     guards a carrier (the elaborator refuses a unit where it fails, `uU003`). -/
 def invOkB (u : UProg) (i : Fin u.invs.length) : Bool :=
-  (List.finRange u.fns.length).all fun f =>
-    !((invTraeger u i).any (writesAt u (fnAt u f))) ||
+  (u.fns ++ u.ptrs).all fun f =>
+    !((invTraeger u i).any (writesAt u f)) ||
     (invTraeger u i).all fun t => (needsAt u t).all fun w =>
       match w with
-      | .inl L => decide (L ∈ heldAt u (fnAt u f))
+      | .inl L => decide (L ∈ heldAt u f)
       | .inr _ => true
 
 /-- The carriers of an invariant in the declaration: its tables where `U003` holds (always, for an elaborated
@@ -235,11 +235,65 @@ def dummySig (u : UProg) :
   konsumiert := []
   produziert := []
 
+/-- The signatures of the unit: the functions', then the pointer types' (`UProg.ptrs`). -/
+def sigFns (u : UProg) : List UFn := u.fns ++ u.ptrs
+
 /-- The `n`th signature, or the dummy (an out-of-range number names
-    no function). -/
+    no function and no pointer type). -/
 def sigAt (u : UProg) (n : Nat) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty :=
-  if h : n < u.fns.length then mkSig u (u.fns.get ⟨n, h⟩) else dummySig u
+  if h : n < (sigFns u).length then mkSig u ((sigFns u).get ⟨n, h⟩) else dummySig u
+
+/-- **Conformance, decided** (`SigPasst` over the finite carriers of an elaborated unit): the first
+    signature fits the second. -/
+def sigPasstB {a b c : Nat} (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin b) (Fin c) Empty) : Bool :=
+  decide (S.params = T.params) && decide (S.erg = T.erg) && decide (S.gruende = T.gruende) &&
+  (List.finRange a).all (fun t => !S.schreibt t || T.schreibt t) &&
+  (List.finRange b).all (fun g => !S.gschreibt g || T.gschreibt g) &&
+  decide (S.konsumiert = T.konsumiert) && decide (S.produziert = T.produziert) &&
+  S.haelt.all (fun L => decide (L ∈ T.haelt)) &&
+  T.haelt.all (fun L => decide (L ∈ S.haelt) ||
+    (match S.boden with | some c => decide (rang L < c) | none => false)) &&
+  (match T.boden with
+    | none => true
+    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false)
+
+theorem sigPasstB_ok {a b c : Nat} {rang : Fin c → Int} {S T : Signatur (Fin a) (Fin b) (Fin c) Empty}
+    (h : sigPasstB rang S T = true) : SigPasst rang S T := by
+  unfold sigPasstB at h
+  simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨hp, he⟩, hg⟩, hw⟩, hgw⟩, hk⟩, hpr⟩, hh⟩, hx⟩, hb⟩ := h
+  refine ⟨hp, he, hg, fun t ht => ?_, fun g' hg' => ?_, hk, hpr, fun L hL => hh L hL, fun L hL hn => ?_,
+    fun c hc => ?_⟩
+  · rcases hw t (List.mem_finRange t) with h1 | h1
+    · rw [ht] at h1; cases h1
+    · exact h1
+  · rcases hgw g' (List.mem_finRange g') with h1 | h1
+    · rw [hg'] at h1; cases h1
+    · exact h1
+  · rcases hx L hL with h1 | h1
+    · exact absurd h1 hn
+    · revert h1
+      cases hS : S.boden with
+      | none => intro h1; cases h1
+      | some c => intro h1; exact ⟨c, rfl, of_decide_eq_true h1⟩
+  · rw [hc] at hb
+    revert hb
+    cases hS : S.boden with
+    | none => intro h1; cases h1
+    | some c' => intro h1; exact ⟨c', rfl, of_decide_eq_true h1⟩
+
+/-- `f` conforms to the signature number `n` of the unit: a live number, and the signatures fit. -/
+def passtAt (u : UProg) (f : Fin u.fns.length) (n : Nat) : Bool :=
+  decide (n < (sigFns u).length) && sigPasstB (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n)
+
+theorem passtAt_ok (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f n = true) :
+    SigPasst (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n) :=
+  sigPasstB_ok (Bool.and_eq_true_iff.mp h).2
+
+theorem passtAt_lt (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f n = true) :
+    n < (sigFns u).length :=
+  of_decide_eq_true (Bool.and_eq_true_iff.mp h).1
 
 /-- `invarianten_gehalten` for the declaration of every `UProg`. -/
 theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
@@ -251,15 +305,14 @@ theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
   | true =>
     rw [hok] at h ht
     simp only [if_true] at h ht
-    by_cases hn : n < u.fns.length
-    · have hs : sigAt u n = mkSig u (u.fns.get ⟨n, hn⟩) := by unfold sigAt; rw [dif_pos hn]
+    by_cases hn : n < (sigFns u).length
+    · have hs : sigAt u n = mkSig u ((sigFns u).get ⟨n, hn⟩) := by unfold sigAt; rw [dif_pos hn]
       rw [hs] at h ⊢
       unfold invOkB at hok
-      have hf := List.all_eq_true.mp hok ⟨n, hn⟩ (List.mem_finRange _)
+      have hf := List.all_eq_true.mp hok ((sigFns u).get ⟨n, hn⟩) (List.get_mem _ _)
       simp only [Bool.or_eq_true, Bool.not_eq_true'] at hf
       rcases hf with hf | hf
-      · have h' : (invTraeger u i).any (writesAt u (u.fns.get ⟨n, hn⟩)) = true := h
-        simp only [fnAt] at hf
+      · have h' : (invTraeger u i).any (writesAt u ((sigFns u).get ⟨n, hn⟩)) = true := h
         rw [hf] at h'
         cases h'
       · have ht' := List.all_eq_true.mp hf t ht
@@ -315,6 +368,8 @@ def declOf (u : UProg) : Deklaration where
   Fn := Fin u.fns.length
   sig := fun f => f.val
   sigNr := sigAt u
+  passt := passtAt u
+  passt_ok := passtAt_ok u
   eigner_nie_erzeugt :=
     fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
   Inv := Fin u.invs.length
@@ -351,8 +406,12 @@ def declOf (u : UProg) : Deklaration where
 /-- `sigAt` at a live index is the elaborated signature. -/
 theorem sigAt_get (u : UProg) (i : Fin u.fns.length) :
     sigAt u i.val = mkSig u (fnAt u i) := by
+  have hi : i.val < (sigFns u).length := by
+    unfold sigFns; rw [List.length_append]; omega
   unfold sigAt fnAt
-  rw [dif_pos i.isLt, Fin.eta i i.isLt]
+  rw [dif_pos hi]
+  congr 1
+  simp only [sigFns, List.get_eq_getElem, List.getElem_append_left i.isLt]
 
 /-- Projections of `sigAt` at a live index. -/
 theorem sigAt_params (u : UProg) (i : Fin u.fns.length) :

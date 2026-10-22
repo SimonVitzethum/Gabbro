@@ -146,6 +146,10 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   at a time (`Strom`), with contracts. Open: M and N as concrete values for the whole model with `Vollstaendig` proved (a witness or an
   impossibility theorem per cell, `gut_in_n`); the remaining cells without witness; stage 3 (R, text level), stage 5 (model mutations), the
   lowering cells from `lowerS_ok`.
+- **O43 (contracts on function-pointer types; 2026-10-21).** Pointer types are structural (`Deklaration.passt`, `SigPasst`), but a
+  `fn(..)` type's `requires`/`ensures` have no model: contracts on function-pointer types (requires/ensures carried by `SigPasst`, with
+  contravariance) need the model first. Until then a non-`true` contract on a pointer type is refused by name; `costs` travels nowhere,
+  as at a function.
 - **O37 (regions in G).** No byte pointers in the model (`Ty.ptr` is a carrier capability); nothing frees a region (no ownership closure at
   the gate parameter); Gabbro bodies pass on no extent (only a foreign `ensures … <= lenof(result)` carries).
 
