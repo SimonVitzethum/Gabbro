@@ -419,7 +419,7 @@ impl Umgebung {
         // the carrier walk AFTER it. An alias-held pointer at a table therefore
         // resolved to `Unbekannt` (and an alias-held index to the full word): the
         // p8-hole class, one map further out. It stayed invisible because nothing
-        // printed the shape -- until an `N297` hint spelled `ptr<…> ?`, and because
+        // printed the shape -- until a hint of lane 177 spelled `ptr<…> ?`, and because
         // `M142` compares through `Unbekannt` in silence, the hole was also in the
         // decidable check, not only in the text.
         //
@@ -1904,11 +1904,8 @@ impl Umgebung {
             // reader. *A field of type `fn() -> bool` passed as `u32`, as `bool` and as a
             // `ptr`, in one file, without a refusal* (`probe/p8.gab`).
             //
-            // **Lane 177 carries the LOGIC clauses too.** `requires`/`ensures` at the
-            // pointer type stood in the grammar since the type was built and were refused
-            // by `N037`; now they ride into the type beside `effects` and `costs`. A
-            // declared type has no producer (`None`): who stands behind it is decided
-            // where a value flows in, not where the slot is declared.
+            // A `requires`/`ensures` at the pointer type is refused (`N589`, namen.rs): the
+            // type is a signature and carries no contract.
             TypExpr::FnZeiger(f) => Typ::FnPtr(Box::new(crate::typen::FnPtrContract {
                 parameters: f
                     .parameter
@@ -1932,9 +1929,6 @@ impl Umgebung {
                 has_effects: f.effects.is_some(),
                 costs: f.costs.as_ref().and_then(|e| self.konst_wert(von, e)),
                 has_costs: f.costs.is_some(),
-                requires: f.requires.clone(),
-                ensures: f.ensures.clone(),
-                producer: None,
             })),
             // **A3.** `index into T` erbt die Schranke aus `T`s `count`. Ohne `count` bleibt
             // sie offen -- und das ist dann eine Aussage der Deklaration, keine Konvention.

@@ -1,0 +1,33 @@
+// erwartet: N589
+// **Poison 1483 -- `requires Held(L)` at a function pointer type.**
+//
+// A held lock is a precondition like any other at the type, and no lock crosses an
+// indirect call (`N036`): the caller through the pointer would be held to a lock duty no
+// pass reads there. Refused at the clause (2026-10-21).
+
+module gift::fnzeiger_mit_held {
+
+table Puffer count 4 {
+    slot {
+        wert : u32,
+    }
+}
+
+lock PUFFER protects { Puffer } rank 0 held <= 64 ops;
+
+type Rueckruf = {
+    cb : fn(k : u32)
+        requires Held(PUFFER)
+        effects { writes Puffer.slots }
+        costs   <= 8 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Rueckruf, k : u32)
+    requires Held(PUFFER)
+    effects { reads t, writes Puffer.slots }
+    costs   <= 16 ops
+{
+    t->cb(k);
+}
+
+}

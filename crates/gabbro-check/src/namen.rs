@@ -1044,13 +1044,11 @@ const TRAGBARE_WIRKUNGEN: [&str; 5] = ["reads", "writes", "allocs", "pure", "div
 /// * **`N036` -- an effect no pass can carry across an indirect call.** See
 ///   `TRAGBARE_WIRKUNGEN` for the table and the reason per word.
 ///
-/// **Lane 177 retired the third rule, `N037`.** It refused `requires`/`ensures` at the
-/// pointer type on the ground that no pass read them -- *a clause without a reader*.
-/// The reader is built now: the type's `requires` is checked at an indirect call
-/// (`N295`, m1), its `ensures` narrows the answer, and a producer `&f` owes the slot
-/// the refinement implication (kind `C` in `gabbro obligations`, hinted `N297`). What
-/// `N037` refused is carried, not dropped: `beispiele/gift/247`-`248` pin the new
-/// readings instead of the old refusal.
+/// * **`N589` -- a `requires` or `ensures` at the pointer type** (2026-10-21). Pointer
+///   types are STRUCTURAL in the Lean model (`Deklaration.passt`, `SigPasst`): a function
+///   fits where its own signature conforms to the type's, and the model's signatures carry
+///   no contract. A clause the model cannot read is refused, never carried: the
+///   contravariant `requires` and covariant `ensures` need the model first (TODO O43).
 fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         crate::jeder_typausdruck_im_item(item, &mut |t| {
@@ -1144,12 +1142,39 @@ fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
                 }
                 absagen.schiebe(a);
             }
-            // **Lane 177 carries `requires`/`ensures` at the pointer type instead of
-            // refusing them** (the retired `N037`): the clauses ride into
-            // `typen::FnPtrContract` (`umgebung.rs`) and are read at the indirect call
-            // (`N295`, narrowing) and at the producer (`C`/`N297`, m1). See the head of
-            // this function for why the refusal stood, and the report of lane 177 for
-            // why it falls.
+            // **`N589` -- no contract at a pointer type.** One refusal per clause word, at
+            // the first clause: the model has nothing a `requires` or `ensures` here could
+            // mean (TODO O43).
+            // The two words stand in their OWN format literal (the register reads literals,
+            // see `N035` above).
+            let mut erste: Vec<(Span, String)> = Vec::new();
+            if let Some(k) = f.requires.first() {
+                erste.push((
+                    k.span,
+                    format!("`{}` carries a `requires` -- a function pointer type has no contract", f.shape()),
+                ));
+            }
+            if let Some(k) = f.ensures.first() {
+                erste.push((
+                    k.span,
+                    format!("`{}` carries an `ensures` -- a function pointer type has no contract", f.shape()),
+                ));
+            }
+            for (span, text) in erste {
+                absagen.schiebe(
+                    Absage::fehler("N589", span, text)
+                        .mit_notiz(
+                            "a pointer type is a signature: a function fits where its own \
+                             parameters, result and effects conform to it (the model's \
+                             `SigPasst`), and the model's signatures carry no `requires` or \
+                             `ensures`",
+                        )
+                        .mit_notiz(
+                            "state the condition at the function that is called, or check it \
+                             before the indirect call",
+                        ),
+                );
+            }
         });
     });
 }

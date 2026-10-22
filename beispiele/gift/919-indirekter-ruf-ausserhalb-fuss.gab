@@ -5,14 +5,11 @@
 // behind the pointer keeps its contract carriers inside the caller footprint.
 // `hart_senden` carries `requires zaehler == 0` into the pointer `t->senden`, and
 // `ausgeben` never names `zaehler` -- so the call falls with E249. `ausgeben2` names
-// the carrier in its own contract under the signature guard and stays silent.
-// `schreibt` takes the lock in the body, so no `H008` joins in; `hart_senden` holds
-// the guard itself, so no `H007` joins in either.
+// the carrier in its own contract and stays silent. The carrier is unguarded: a function
+// that holds a lock by signature is no pointer value (`N590`, 2026-10-21).
 module gift::fuss_wache_indirekt {
 
 static mut zaehler : u8 = 0;
-
-lock ZAEHLER protects { zaehler } rank 0 held <= 8 ops;
 
 type Treiber = {
     senden : fn(u8)
@@ -20,9 +17,10 @@ type Treiber = {
         costs   <= 4 ops,
 };
 
-// The producer behind the pointer: contract over a written carrier, guarded itself.
+// The producer behind the pointer: contract over a written carrier. It holds no lock by
+// signature: a function that does is no pointer value (`N590`), so the carrier is unguarded.
 impl fn hart_senden(b : u8)
-    requires Held(ZAEHLER), zaehler == 0
+    requires zaehler == 0
     effects { writes zaehler }
     costs   <= 3 ops
 {
@@ -45,21 +43,19 @@ impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
     t->senden(b);
 }
 
-// Must pass: the caller names the carrier under the signature guard.
+// Must pass: the caller names the carrier in its contract.
 impl fn ausgeben2(t : ptr<normal, r> Treiber, b : u8)
-    requires Held(ZAEHLER), zaehler == 0
+    requires zaehler == 0
     effects { reads t, reads zaehler, writes zaehler }
     costs   <= 12 ops
 {
     t->senden(b);
 }
 
-// The writer that keeps the lock taken.
-impl fn schreibt(v : u8) effects { writes zaehler, locks ZAEHLER } costs <= 8 ops
+// A second writer of the carrier.
+impl fn schreibt(v : u8) effects { writes zaehler } costs <= 8 ops
 {
-    locks ZAEHLER {
-        zaehler = v;
-    }
+    zaehler = v;
 }
 
 }

@@ -1,23 +1,16 @@
-//! **The higher-order contract on function-pointer types (lane 177).**
+//! **Function-pointer types are signatures (2026-10-21).**
 //!
-//! A `fn(…) -> T` type carries `requires`/`ensures` beside `effects`/`costs`. Three
-//! readings, each with its probe:
+//! In the Lean model a pointer type is STRUCTURAL: a function fits where its own signature
+//! conforms (`Deklaration.passt`, `SigPasst`), and the model's signatures carry no contract.
+//! The checker holds the same line:
 //!
-//! * an indirect call is checked against the TYPE's contract -- `N295` (the weak `M115`
-//!   reading of the slot's `requires`) and `N296` (the `M143` reading of the arity);
-//! * assigning or passing `&f` records the refinement implication as a `C` obligation
-//!   (`N297` hints at the flow) and decides nothing about it;
-//! * effects `⊆`, costs `<=`, arity and signature stay DECIDED (`M128`/`M142`).
+//! * an indirect call passes exactly the TYPE's arguments -- `N296`;
+//! * a `requires` (a `Held(..)` included) or an `ensures` at the type is refused -- `N589`;
+//! * a function that requires a held lock is no pointer value -- `N590`;
+//! * effects `⊆`, costs `<=`, arity and signature stay DECIDED (`M128`/`M141`/`M142`).
 //!
-//! ## Why the direction is pinned twice
-//!
-//! The refinement is contravariant in `requires` (`requires_slot ⇒ requires_f`) and
-//! covariant in `ensures` (`ensures_f ⇒ ensures_slot`), and the wrong direction is
-//! unsound and easy to build by accident. `gift/957` (a stronger `requires` at `&f`
-//! than at the slot) and `gift/958` (a stronger `ensures` at the slot than at `&f`)
-//! record their `C` obligation and hint -- under swapped logic both would see a trivial
-//! truth, record nothing, and these tests go red. *A guard that only asserts a refusal
-//! is green for a rule pointing the wrong way.*
+//! The contract on pointer types that lane 177 carried (and counted as kind `C`) is gone
+//! with it: TODO O43 names the contravariant/covariant model it would need first.
 
 use gabbro_syntax::diag::Stufe;
 use std::path::{Path, PathBuf};
@@ -66,100 +59,44 @@ fn pflichten(
     bericht
 }
 
-/// **The slot's `requires` is checked at the indirect call, both spellings.**
-///
-/// `247` excludes by literal (`0` against `b > 0`), `956` by range (`100 .. 200`
-/// against `k < 64`). Each must fall exactly once with `N295`: the file-level gift run
-/// only asserts the code FIRES, so purity (no second code beside it) is held HERE.
+/// **A contract at the pointer type is refused at the clause** -- `requires`, `ensures` and
+/// `requires Held(..)`, one `N589` each and nothing beside it (the file-level gift run only
+/// asserts the code FIRES; purity is held HERE).
 #[test]
-fn indirekter_ruf_haelt_requires_des_typs() {
+fn vertrag_am_zeigertyp_wird_abgelehnt() {
     for datei in [
         "gift/247-fnzeiger-mit-requires.gab",
-        "gift/956-indirect-call-violates-requires.gab",
+        "gift/248-fnzeiger-mit-ensures.gab",
+        "gift/1483-fnzeiger-mit-held.gab",
     ] {
         let (_, _, absagen) = lies(datei);
-        assert_eq!(
-            fehler(&absagen),
-            ["N295"],
-            "{datei} must fall exactly once with N295"
-        );
+        assert_eq!(fehler(&absagen), ["N589"], "{datei} must fall exactly once with N589");
     }
 }
 
-/// **The arity of an indirect call is the slot's, both spellings.**
-///
-/// `248` keeps its `ensures` flavour (the narrowing stays silent on `bool`), `959` is
-/// the minimal shape. Exactly one `N296` each.
+/// **The arity of an indirect call is the slot's.** Exactly one `N296`.
 #[test]
 fn indirekter_ruf_haelt_stelligkeit_des_typs() {
-    for datei in [
-        "gift/248-fnzeiger-mit-ensures.gab",
-        "gift/959-indirect-call-wrong-arity.gab",
-    ] {
-        let (_, _, absagen) = lies(datei);
-        assert_eq!(
-            fehler(&absagen),
-            ["N296"],
-            "{datei} must fall exactly once with N296"
-        );
+    let (_, _, absagen) = lies("gift/959-indirect-call-wrong-arity.gab");
+    assert_eq!(fehler(&absagen), ["N296"], "959 must fall exactly once with N296");
+}
+
+/// **A function that requires a held lock is no pointer value** -- `N590` at `&schreibe`.
+#[test]
+fn funktion_mit_held_ist_kein_zeigerwert() {
+    let (_, _, absagen) = lies("gift/1484-fnwert-mit-held.gab");
+    assert_eq!(fehler(&absagen), ["N590"], "1484 must fall exactly once with N590");
+}
+
+/// **The positive sides: a comparator and a driver callback through their slots**, clean,
+/// with no hint and no contract-refinement line in `gabbro obligations`.
+#[test]
+fn zeigertypen_ohne_vertrag_gehen_durch() {
+    for datei in ["126-vergleichssortierung.gab", "127-treiberrueckruf.gab"] {
+        let (quelle, baum, absagen) = lies(datei);
+        assert!(fehler(&absagen).is_empty(), "{datei}:\n{}", absagen.zeige(&quelle));
+        assert!(hinweise(&absagen).is_empty(), "{datei}: hints {:?}", hinweise(&absagen));
+        let bericht = pflichten(&quelle, &baum, datei);
+        assert!(!bericht.contains("\tC\t"), "{datei}: a contract-refinement line:\n{bericht}");
     }
-}
-
-/// **A stronger `requires` at `&f` than at the slot records the `requires` half.**
-///
-/// `957` owes `requires_slot ⇒ requires_f`, i.e. `true ⇒ b > 0` -- contravariant, and
-/// not provable in general. The checker records it (kind `C`), hints `N297`, and
-/// refuses nothing. Under the swapped direction (`requires_f ⇒ requires_slot`) the
-/// implication is trivially true and NEITHER the hint NOR the obligation appears --
-/// that is the probe.
-#[test]
-fn staerkeres_requires_am_erzeuger_wird_gezaehlt() {
-    let (quelle, baum, absagen) = lies("gift/957-producer-requires-stronger-than-slot.gab");
-    assert!(fehler(&absagen).is_empty(), "nothing decided here");
-    assert_eq!(hinweise(&absagen), ["N297"], "one hint at the flow");
-    let bericht = pflichten(&quelle, &baum, "957-producer-requires-stronger-than-slot.gab");
-    assert!(
-        bericht.contains("requires of fn(b : u8) => requires of &hart_senden"),
-        "the requires-half implication is not there as written:\n{bericht}"
-    );
-    assert!(
-        bericht.contains("\tC\t"),
-        "no contract-refinement line at all:\n{bericht}"
-    );
-}
-
-/// **A stronger `ensures` at the slot than at `&f` records the `ensures` half.**
-///
-/// The mirror of the test above: `958` owes `ensures_f ⇒ ensures_slot`, i.e.
-/// `true ⇒ result == true` -- covariant. Same hint, same kind, other half; swapped
-/// logic (`ensures_slot ⇒ ensures_f`) sees `… ⇒ true` and stays silent.
-#[test]
-fn staerkeres_ensures_am_typ_wird_gezaehlt() {
-    let (quelle, baum, absagen) = lies("gift/958-slot-ensures-stronger-than-producer.gab");
-    assert!(fehler(&absagen).is_empty(), "nothing decided here");
-    assert_eq!(hinweise(&absagen), ["N297"], "one hint at the flow");
-    let bericht = pflichten(&quelle, &baum, "958-slot-ensures-stronger-than-producer.gab");
-    assert!(
-        bericht.contains("ensures of &hart_bereit => ensures of fn() -> bool"),
-        "the ensures-half implication is not there as written:\n{bericht}"
-    );
-}
-
-/// **The driver callback: world effects on the slot, decided and counted.**
-///
-/// `127` carries `effects` and `costs` on the pointer type beside `requires`. The
-/// decidable sides hold silently (`M128`: `writes Puffer.slots ⊆ writes Puffer.slots`,
-/// `8 <= 8`); the logic half -- `k < 64 ⇒ Held(PUFFER) ∧ k < 64` -- stands as kind
-/// `C`, naming the one gap the lane leaves open: no pass holds a `Held` requirement
-/// at an indirect call, so the holder discharges it by calling under the lock.
-#[test]
-fn treiberrueckruf_traegt_wirkungen_und_zaehlt_die_logik() {
-    let (quelle, baum, absagen) = lies("127-treiberrueckruf.gab");
-    assert!(fehler(&absagen).is_empty(), "{}", absagen.zeige(&quelle));
-    assert_eq!(hinweise(&absagen), ["N297"], "one hint at `registriere`");
-    let bericht = pflichten(&quelle, &baum, "127-treiberrueckruf.gab");
-    assert!(
-        bericht.contains("requires of fn(k : u32) => requires of &schreibe"),
-        "the requires-half implication is not there as written:\n{bericht}"
-    );
 }

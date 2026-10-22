@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 REGISTER = ROOT / "dokumente/llvm-modelldeckung.tsv"
 MODELS = {
     "Kern/Syntax/Typen.lean": ["Ty"],
-    "Kern/Syntax/Syntax.lean": ["Signatur", "Regklasse", "Deklaration", "Res", "Vertrag", "RufPasst", "Var", "Expr", "NutzlastExpr", "Args", "ErgExpr", "GleitOp", "Stmt", "Block", "Endblock", "Arms", "GrundArms", "Programm"],
+    "Kern/Syntax/Syntax.lean": ["Signatur", "SigPasst", "Regklasse", "Deklaration", "Res", "Vertrag", "RufPasst", "Var", "Expr", "NutzlastExpr", "Args", "ErgExpr", "GleitOp", "Stmt", "Block", "Endblock", "Arms", "GrundArms", "Programm"],
     "Bausteine/Arena/ArenaZucker.lean": ["ArenaForm"],
     "Bausteine/Arena/ArenaDyn.lean": ["DynArena", "DynForm", "FreiZustand"],
     "Logik/Ruf/Maschine/RufMaschineG.lean": ["GRest"],

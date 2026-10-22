@@ -427,15 +427,17 @@ fieldty    = typeexpr
 bitpos     = int | "[" int ":" int "]" ;
 variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
 fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
-(* «B8»: a function pointer type CARRIES ITS CONTRACT, because at an indirect call there is no
-   name to resolve -- what is known about the callee is the promise at the type. *)
-(* Lane 177 -- REFINEMENT DIRECTION, and it is the content, not a convention: a function `f`
-   assigned to or passed as this type owes `requires_type ⇒ requires_f` (CONTRAVARIANT --
-   `f` accepts at least what the type promises callers may pass) and `ensures_f ⇒
-   ensures_type` (COVARIANT -- `f` delivers at least what the type promises). The wrong
-   direction is unsound and easy to build by accident: `beispiele/gift/957`-`958` fail if
-   it swaps. Effects (`⊆`), costs (`<=`), arity and signature are decided by the checker
-   (`M128`/`M142`); the two implications are the user's logic (kind `C`). *)
+(* «B8»: a function pointer type is a SIGNATURE of its own, because at an indirect call there is
+   no name to resolve -- what is known about the callee is what the type says. *)
+(* CHANGED 2026-10-21 (Simon: pointer types are STRUCTURAL; Lean model first). A function `f`
+   may be the value of the type when it CONFORMS (`Deklaration.passt`, `SigPasst`): equal
+   parameter types, result and reason channel; `f`'s writes among the type's; `f` holds no lock
+   by signature and takes none (no lock crosses an indirect call: `N036`, the type's floor stands
+   above every rank). A call through the pointer is checked against the TYPE (`RufPasst`), a
+   direct call against the callee's own signature. The model's signatures carry no contract, so
+   a `requires` (`Held(..)` included) or an `ensures` at a pointer type is refused (`N589`;
+   TODO O43 names the missing contravariant/covariant model); `costs` travels nowhere, as at a
+   function. *)
 fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
 entryfn    = "entry" "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] ;
@@ -493,7 +495,7 @@ linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` de
 | `nevertype` | the type without a value: a body `-> never` can derive **no** `return` | `Ty.never`, `Wert D .never = Empty` («SG-18») |
 | `variants` (`tagged`) | a case index **and** its payload, no other shape | `Ty.sum cases`, value `Σ i, Nutzlast (cases.get i)` |
 | `reason` values (§9) | one of `n` declared grounds | `Ty.why n`, value `Fin n` |
-| `fnptr` | the value is a function **of exactly this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.sig f = sig}` («SG-8») |
+| `fnptr` | the value is a function that **conforms to this signature** — the proof travels with the value | `Ty.fnptr sig`, value `{f // D.passt f sig = true}` («SG-8»; structural since 2026-10-21, `SigPasst`) |
 | `ptrty` (§3) | a capability naming a declared carrier and a right | `Ty.ptr tab rw` |
 | `linear type m [order]` | a resource in the context Λ, with a stage | `D.Marke`, `D.stufen`, `Res.marke m stufe` («SG-14») |
 | `structty`, `array`, `path` to a type | a compound is a **table with `count 1`** (a record) or `count N` (an array): the field is a slot field, the element index an index type | `D.Tab` with `count`, `Feld`, `typ` — SUGAR over §9 |
@@ -686,7 +688,7 @@ placelist  = place { "," place } ;
 | `Variant()` / bare `Variant` (a nullary `tagged` case, lane 167) | nothing to carry — the case index alone says which case it is | the sum type | `Expr.case cs i` with the empty payload |
 | `Variant(e)` refused (lane 167) | an unknown or ambiguous case (`N280`); a missing payload (`N281`); a payload on a nullary case (`N282`); a bare name over a payload case (`N283`); labels at a case (`N284`) — the payload RANGE stays `M101`'s, its SHAPE `M140`'s | — | — |
 | `R::F` | | `reason R` | `Expr.why n r` |
-| `&f` | `f` has exactly the signature of the `fnptr` at the place | `fn(…)` | `Expr.fnref f n (h : D.sig f = n)` |
+| `&f` | `f` conforms to the `fnptr` at the place (a `let p : fn(…) = &f;`, an argument for a parameter of that type; without a written type, `f`'s own signature) | `fn(…)` | `Expr.fnref f n (h : D.passt f n = true)` |
 | `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.oldG hL`, `Expr.oldS hL` |
 | `result` | only in `ensures`: the answer | the return type | the head variable of the `ensures` context (`ErgCtx`) |
@@ -703,7 +705,7 @@ The M1 limit named in the second version — flow-sensitive narrowing — is ans
 
 *Lean:* `Expr : Ctx → List (Res D) → Ty → Type` (`Syntax.lean` §3); theorem `wert_total` (every
 expression has a value of its type), `im_bereich` (a number is in its range), `gleit_endlich`
-(a float is finite and in its range), `fnptr_passt` (a function pointer has its signature),
+(a float is finite and in its range), `fnptr_passt` (a function pointer conforms to its type),
 `division_hat_nenner` (a division had a positive denominator).
 
 ---
