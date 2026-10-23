@@ -127,6 +127,21 @@ def genTF (K : Kenner D) (V : Vertrag D) (cap : Nat) : Nat → Nat → (l : Bool
 
 end
 
+/-- **The unfiltered table of a context by size with expressions up to size `ec`** (a search aid: deep nests of
+    blocks over small expressions, which the full tables do not reach at the same bound). -/
+def genTZ (V : Vertrag D) (ec : Nat) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : List (Res D)) → List (Eimer V l Γ Λ)
+  | _, 0, _, _, _ => [([], [], [])]
+  | 0, n + 1, _, _, _ => List.replicate (n + 2) ([], [], [])
+  | f + 1, n + 1, l, Γ, Λ =>
+    let Et := genE (min n ec) (min n ec) Γ Λ
+    let gen := fun m l' Γ' Λ' => genTZ V ec f m l' Γ' Λ'
+    let cs := (knotenKeysG (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
+    let O : Orakel V :=
+      { ex := fun Γ' Λ' m => tab (genE (min m ec) (min m ec) Γ' Λ')
+        bl := fun l' Γ' Λ' m => tabB (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ')
+        en := fun l' Γ' Λ' m => tabN (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ') }
+    tabT O (tab Et) (n + 1)
+
 /-- The filtered bodies of a function, all sizes up to `n`. -/
 def rumpfF (f : D.Fn) (n cap : Nat) : List (Rumpf D f) :=
   (genTF Kenner.fein (vertragVon D f) cap n n false (D.params f) (Signatur.anfang D (D.signatur f))).flatMap (·.2.2)
@@ -218,13 +233,14 @@ def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
       (reqF f nc).map (fun e => { P0 with requires := fun g => if h : f = g then h ▸ e else .tru }) ++
       (ensF f nc).map (fun e => { P0 with ensures := fun g => if h : f = g then h ▸ e else .tru })
 
-/-- **The packed programs for target cells**: the bodies of the UNFILTERED tables up to size `nb` (`rumpfT`: no
-    novelty filter drops a building block) that carry a fine cell `ziel` accepts. -/
-def packenZiel (z : Spez) (nb k : Nat) (ziel : FZelle → Bool) : List (Gutes z) :=
+/-- **The packed programs for target cells**: the bodies of the UNFILTERED tables up to size `nb` with expressions up
+    to size `ec` (`genTZ`: no novelty filter drops a building block) that carry a fine cell `ziel` accepts. -/
+def packenZiel (z : Spez) (nb ec k : Nat) (ziel : FZelle → Bool) : List (Gutes z) :=
   letI : Zahlen := z.zahlen
   let D := z.deklaration
-  let alle : List (Σ f : D.Fn, List (Rumpf D f)) :=
-    z.fnListe.map fun f => ⟨f, (rumpfT (fun _ _ => true) f nb).flatten⟩
+  let alle : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f =>
+    let t := tabN (genTZ (vertragVon D f) ec nb nb false (D.params f) (Signatur.anfang D (D.signatur f)))
+    ⟨f, ((List.range (nb + 1)).map t).flatten⟩
   let tabs : List (Σ f : D.Fn, List (Rumpf D f)) :=
     alle.map fun ⟨f, bs⟩ => ⟨f, bs.filter fun b => (fzEnd b).any ziel⟩
   packKern z (fun f => ((ofTy alle f).headD []).head?) tabs k fun _ => []
