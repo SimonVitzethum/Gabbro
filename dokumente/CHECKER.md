@@ -2109,7 +2109,7 @@ the model has no such rule; one printer error found and fixed on the way (`P033`
 | witnesses on a concrete 3-constructor lock checker: 32 tests for `m = n = 3`, a planted wrong checker fails one, the mutant and the counter model pass (`Zeugen.lean`) | `|W| ≤ n − 1`; the witness height `m + n − 1`; the exact minimum for `m = n` (open) |
 | the Gabbro constructor table checked against the model (`Signatur.lean`); the root-cell counts per family member (`Zaehlung.lean`) | the dimension table (read from `Akzeptiert.lean` and the components); that every presentation combination is reachable; the Myhill–Nerode index of `AkzeptiertX` (not computed: only the presentation upper bound) |
 
-### 16.8 The fine cells (measured 2026-10-23)
+### 16.8 The fine cells (measured 2026-10-23, search paused)
 
 A checker or compiler may treat every construct in its loop context and every pair of directly nested constructs
 differently and still be neutral (`Gen/Fein/Neutral.lean`: `NeutralF`, `pruefer_fein`, `compiler_fein`). Its
@@ -2124,17 +2124,43 @@ carries the **range rule** `typRegel`, proved at the divisors: a divisor of `div
 | | cells |
 |---|---|
 | in the universe | 4267 |
-| a valid witness found (174 packed programs, greedy cover) | 3250 |
-| open | 1017 |
+| a valid witness found (218 programs, greedy cover; measured 2026-10-23, search paused) | 3391 |
+| open | 876 |
 
-The open cells are almost all pair cells of constructs that rarely meet: an indirect call, a register read with a
-promise or a float block as the continuation of `ite`/`locks`/a loop; a float comparison as a stored value; an
-argument or a result of a class the family's signatures lack (`bool`, option, sum, reason, function pointer,
-float); a variable or a static of a positive range as a divisor. They need a search that keeps a building block
-for an open cell even when the block brings nothing new itself (the novelty filter drops it), and declarations
-with those signatures. Cells realisable only over an empty range (`int 0 (-5)`) count: the table asks for a valid
-witness or a proof that no valid program has the cell. The fine table (`FeinTafel`, `feinTafel_aus`) is not
-closed yet, so `pruefer_fein`/`compiler_fein` have no instance; the coarse theorems of §16.4–16.6a do.
+**How the witnesses were searched** (all untrusted; every witness is a program the kernel checks, `Gen/Fein/Druck.lean`,
+`e_gueltig`/`e_hatF` by `decide +kernel`; driver `gen-fein`, `Gen/Fein/Lauf.lean`):
+
+| step | method | covered after |
+|---|---|---|
+| 1 | `packen`: the novelty-filtered tables (`genTF`, a body is kept only when it brings a fine cell not seen) of every member, packed many bodies to a program | 3250 |
+| 2 | `packenZiel` (`gen-fein ziel`): the UNFILTERED tables up to body size 7, only bodies carrying an open cell; plus a divisor group among the fine members (`teilerGruppe`: `int 1 2`, the empty `int 0 (-1)`) | 3316 |
+| 3 | combination members `kombi`: every feature (register with a promise, atomics, function pointer, callees with a result and a reason, floats) alone and in pairs, 15 members | 3324 |
+| 4 | `genTZ`: unfiltered tables with the expressions bounded apart (fuel 2), body size 12, then 11 and 10 for the members that ran into the 90-minute limit | 3391 |
+
+**What the open cells are** (the list is kept with the search, `kratz/fein/offen-lesbar.txt`; by parent): almost all
+are pairs whose two halves need features of different kinds in one body of 9 to 14 nodes: a block form that binds
+(`bindCall`, `bindCallElse`, `bindCallInd`, `regRead`, `regReadElse`, `awaits`, `exchange`, `narrow`, `check`, the
+four float blocks) as the continuation or the branch of another such form or of a statement (`ite`, `onOption`,
+`locks`, `breaking`, the loops), often inside a loop (`l = true`); expressions of a class in a position whose
+neighbours need another feature (`fllt`/`flle` stored, returned, published; an index of `assignThru` computed by an
+operator; a payload of a sum case). 16 are constructor cells: arguments of class `bool`, option, sum, reason, `never`
+(the callees of the fine members take a whole type group, so one call needs four arguments), and the mark
+statements `advances`/`retires` (no member declares marks). None of these was shown impossible; apart from the
+range rule no further typing rule is known that excludes them.
+
+**Why the search stalled, and the next step.** Every table so far enumerates all bodies of a context; at body size
+12 and beyond that breaks the 90-minute limit for members with several features. The next generator (`genTK`,
+`gen-fein vertreter`, written, measured only on one member) keeps per context at most three statements, blocks and
+end blocks per set of OWN fine cells (constructor cell and the pair cells to its children, `eigene`), and per type at
+most three expressions per own cells: a pair cell needs one representative of the child in the parent's context, not
+all of them. Measured so far: it finds the same witnesses as the full table at small size; its reach at size 14 and
+beyond is not measured. Two fixes found on the way: a callee body needs size 4 or more (the target packer's callee
+bound is 6), and the packer chooses its body per target cell only among bodies that pass components 3 and 8 alone
+(`okFuer`), else the first body per cell is mostly invalid. Then: signatures with ONE parameter per class for the
+argument and result cells, a member with marks, and the representative search over all members.
+
+The fine table (`FeinTafel`, `feinTafel_aus`) is not closed yet, so `pruefer_fein`/`compiler_fein` have no instance;
+the coarse theorems of §16.4–16.6a do.
 
 ---
 

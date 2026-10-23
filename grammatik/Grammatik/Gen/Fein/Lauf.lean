@@ -13,6 +13,7 @@
                gen-fein ziel Q A B NB EC K DIR ZIEL the packed witnesses for the target cells of the file ZIEL
                                                 (`packenZiel`: unfiltered tables up to NB, expressions up to EC), as
                                                 `packen` writes them
+               gen-fein vertreter Q A B NB EC K DIR ZIEL as `ziel`, over the tables of representatives (`genTK`)
 -/
 import Grammatik.Gen.Fein.Suche
 import Grammatik.Gen.Fein.Druck
@@ -106,14 +107,14 @@ def packenL (q : String) (a b nb nc cap k : Nat) (dir : String) : IO UInt32 := d
   return (if fehler = 0 then 0 else 1)
 
 /-- `ziel`: the packed witnesses for the target cells listed in the file `zf` (`packenZiel`), as `packenL` writes them. -/
-def zielL (q : String) (a b nb ec k : Nat) (dir zf : String) : IO UInt32 := do
+def zielL (q : String) (a b nb ec k : Nat) (vertreter : Bool) (dir zf : String) : IO UInt32 := do
   let ziel : Std.HashSet String := ((← IO.FS.readFile zf).splitOn "\n").foldl (fun s l =>
     if l.trimAscii.isEmpty then s else s.insert l.trimAscii.toString) {}
   let mut fehler := 0
   for i in List.range' a (b - a) do
     let z := (quelle q).getD i {}
     let t0 ← IO.monoMsNow
-    let gs := packenZiel z nb ec k fun c => ziel.contains (zelleT c)
+    let gs := packenZiel z nb ec k vertreter fun c => ziel.contains (zelleT c)
     let mut j := 0
     for g in gs do
       let e := z.einsatz g.prog g.ws g.ohneAx g.boden
@@ -136,5 +137,6 @@ def main (args : List String) : IO UInt32 := do
   | ["packen", q, a, b, nb, nc, cap, k, d] =>
     packenL q a.toNat! b.toNat! nb.toNat! nc.toNat! cap.toNat! k.toNat! d
   | ["zeit", q, i, n, cap] => zeit q i.toNat! n.toNat! cap.toNat!; return 0
-  | ["ziel", q, a, b, nb, ec, k, d, zf] => zielL q a.toNat! b.toNat! nb.toNat! ec.toNat! k.toNat! d zf
+  | ["ziel", q, a, b, nb, ec, k, d, zf] => zielL q a.toNat! b.toNat! nb.toNat! ec.toNat! k.toNat! false d zf
+  | ["vertreter", q, a, b, nb, ec, k, d, zf] => zielL q a.toNat! b.toNat! nb.toNat! ec.toNat! k.toNat! true d zf
   | _ => IO.eprintln "usage: gen-fein sammeln Q A B NB NC CAP | gen-fein drucke Q LISTE NB NC CAP DIR"; return 2

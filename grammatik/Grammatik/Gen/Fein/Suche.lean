@@ -7,7 +7,7 @@
   (`neuFilter`). So the tables stay small, and every fine cell the clauses can reach under the size bound is still in
   some kept term of its context. The tables are the ones of `Gen/Erzeuger/Knoten.lean` with that filter.
 -/
-import Grammatik.Gen.Fein.Zellen
+import Grammatik.Gen.Fein.Universum
 import Grammatik.Gen.Abdeckung.Waehlen
 import Std.Data.HashSet
 import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
@@ -142,6 +142,67 @@ def genTZ (V : Vertrag D) (ec : Nat) : Nat → Nat → (l : Bool) → (Γ : Ctx)
         en := fun l' Γ' Λ' m => tabN (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ') }
     tabT O (tab Et) (n + 1)
 
+/-- How often each key occurs in a set of lists. -/
+def schluessel {α κ : Type} [BEq κ] [Hashable κ] (rk : α → κ) (xss : List (List α)) : Std.HashMap κ Nat :=
+  xss.foldl (fun s xs => xs.foldl (fun s x => s.insert (rk x) (s.getD (rk x) 0 + 1)) s) {}
+
+/-- Keep at most `n` elements per key, counting the keys already seen. -/
+def jeSchluessel {α κ : Type} [BEq κ] [Hashable κ] (n : Nat) (rk : α → κ) (seen : Std.HashMap κ Nat) (xs : List α) :
+    List α :=
+  (xs.foldl (fun (acc : Array α × Std.HashMap κ Nat) x =>
+    let c := acc.2.getD (rk x) 0
+    if c < n then (acc.1.push x, acc.2.insert (rk x) (c + 1)) else acc) (#[], seen)).1.toList
+
+/-- The fine cells a node has itself: its constructor cell and one pair cell per child (`fzE` and its kin list them
+    first, then the cells of the children). -/
+def eigene (cs : List FZelle) : List FZelle :=
+  match cs.head? with
+  | some c => cs.take (1 + ((zeile c.fam c.kon).map (·.kinder.length)).getD 0)
+  | none => []
+
+/-- **The expressions of a context by size, one per type and own cells** (a search aid). -/
+def genEK : Nat → Nat → (Γ : Ctx) → (Λ : List (Res D)) → List (List (SE D Γ Λ))
+  | 0, n, _, _ => List.replicate (n + 1) []
+  | f + 1, n, Γ, Λ =>
+    let rk := fun (p : SE D Γ Λ) => (p.1, eigene (fzE p.2))
+    let qs : List (EEintrag D) := Aufz.tab.map fun t =>
+      ⟨.index (D.count t) :: Γ, Λ, Thunk.mk fun _ => genEK f n (.index (D.count t) :: Γ) Λ⟩
+    bucketsL [] (fun prev k =>
+      jeSchluessel 3 rk (schluessel rk prev)
+        (exprS (fun Γ' j => tab ((findeE qs Γ' Λ).getD (genEK f j Γ' Λ))) (tab prev) k)) n
+
+section
+variable {V : Vertrag D}
+
+/-- One bucket keeping three statements, blocks, end blocks per own cells (and resources after). -/
+def schrittK {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ))
+    (prev : List (Eimer V l Γ Λ)) (k : Nat) : Eimer V l Γ Λ :=
+  let (s, b, e) := schritt O E prev k
+  let rS := fun (p : SS D V l Γ Λ) => (eigene (fzS p.2), p.1.length)
+  let rB := fun (p : SB D V l Γ Λ) => (eigene (fzB p.2), p.1.length)
+  let rN := fun (x : Endblock D V l Γ Λ) => eigene (fzEnd x)
+  (jeSchluessel 3 rS (schluessel rS (prev.map (·.1))) s,
+   jeSchluessel 3 rB (schluessel rB (prev.map (·.2.1))) b,
+   jeSchluessel 3 rN (schluessel rN (prev.map (·.2.2))) e)
+
+/-- **The table of representatives**: per context, up to three statements, blocks and end blocks of every set of own fine
+    cells (constructor cell and pair cells), over the first expression of every type and own cells (a search aid: a
+    pair of directly nested constructs needs one representative of the child in the parent's context, not all). -/
+def genTK (V : Vertrag D) (ec : Nat) : Nat → Nat → (l : Bool) → (Γ : Ctx) → (Λ : List (Res D)) → List (Eimer V l Γ Λ)
+  | _, 0, _, _, _ => [([], [], [])]
+  | 0, n + 1, _, _, _ => List.replicate (n + 2) ([], [], [])
+  | f + 1, n + 1, l, Γ, Λ =>
+    let Et := genEK (min n ec) (min n ec) Γ Λ
+    let gen := fun m l' Γ' Λ' => genTK V ec f m l' Γ' Λ'
+    let cs := (knotenKeysG (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
+    let O : Orakel V :=
+      { ex := fun Γ' Λ' m => tab (genEK (min m ec) (min m ec) Γ' Λ')
+        bl := fun l' Γ' Λ' m => tabB (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ')
+        en := fun l' Γ' Λ' m => tabN (findeOder cs l' Γ' Λ' m fun _ => gen m l' Γ' Λ') }
+    bucketsL ([], [], []) (fun prev k => schrittK O (tab Et) prev k) (n + 1)
+
+end
+
 /-- The filtered bodies of a function, all sizes up to `n`. -/
 def rumpfF (f : D.Fn) (n cap : Nat) : List (Rumpf D f) :=
   (genTF Kenner.fein (vertragVon D f) cap n n false (D.params f) (Signatur.anfang D (D.signatur f))).flatMap (·.2.2)
@@ -235,13 +296,19 @@ def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
 
 /-- **The packed programs for target cells**: the bodies of the UNFILTERED tables up to size `nb` with expressions up
     to size `ec` (`genTZ`: no novelty filter drops a building block) that carry a fine cell `ziel` accepts, the first
-    body for each such cell. -/
-def packenZiel (z : Spez) (nb ec k : Nat) (ziel : FZelle → Bool) : List (Gutes z) :=
+    body for each such cell. Only the first function's table is deep; the other functions (callees) go to size 6.
+    With `vertreter` the tables are those of representatives (`genTK`). A body that fails components 3 or 8 alone
+    (`okFuer`) is dropped before the choice. -/
+def packenZiel (z : Spez) (nb ec k : Nat) (vertreter : Bool) (ziel : FZelle → Bool) : List (Gutes z) :=
   letI : Zahlen := z.zahlen
   let D := z.deklaration
+  -- deep tables for the first function only: the others are callees, their bodies need not be deep
   let alle : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f =>
-    let t := tabN (genTZ (vertragVon D f) ec nb nb false (D.params f) (Signatur.anfang D (D.signatur f)))
-    ⟨f, ((List.range (nb + 1)).map t).flatten⟩
+    let n := if f.val = 0 then nb else min nb 6
+    let V := vertragVon D f
+    let a := Signatur.anfang D (D.signatur f)
+    let t := tabN (if vertreter then genTK V ec n n false (D.params f) a else genTZ V ec n n false (D.params f) a)
+    ⟨f, (((List.range (n + 1)).map t).flatten).filter (okFuer true true (List.finRange z.fns.length) f)⟩
   -- one body per target cell: the first that brings it (the tables are complete, the packing is the cost)
   let tabs : List (Σ f : D.Fn, List (Rumpf D f)) :=
     alle.map fun ⟨f, bs⟩ => ⟨f, (neuFilter (fun b => (fzEnd b).filter ziel) {} bs).1⟩
