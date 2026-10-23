@@ -1218,6 +1218,121 @@ theorem prim_rufM (f : String) (xs : List SExpr) (rest : List Token) (F : Nat)
   simp only [List.append_assoc] at hA ⊢
   simp only [List.nil_append, hA]
 
+/-! ### Calls through a place (`o.is_some()`, `p->f(x)`) -/
+
+/-- Every fragment prints at least one token. -/
+theorem suffLen_le : ∀ (suff : List SuffFrag), suff.length ≤ (suffToks suff).length
+  | [] => Nat.le_refl _
+  | .dot _ :: s => by have := suffLen_le s; simp only [suffToks, List.length_cons]; omega
+  | .arrow _ :: s => by have := suffLen_le s; simp only [suffToks, List.length_cons]; omega
+  | .idx i :: s => by
+    have := suffLen_le s
+    simp only [suffToks, List.length_cons, List.length_append, List.length_singleton]; omega
+
+/-- A suffix chain read off any follow: `parseSuffixe` spends one fuel per fragment and stands at the
+    applied chain before the follow. -/
+theorem suffWeiterM : ∀ (suff : List SuffFrag) (base : SExpr) (R : List Token) (F : Nat),
+    SuffLegs suff → 6 * (suffToks suff).length + 29 ≤ F →
+    parseSuffixe F base (suffToks suff ++ R) = parseSuffixe (F - suff.length) (applySuff base suff) R := by
+  intro suff
+  induction suff with
+  | nil => intro base R F _ _; simp [suffToks, applySuff]
+  | cons frag suff ih =>
+    intro base R F hs hF
+    have hs' := suffLegs_tail hs
+    simp only [List.length_cons]
+    obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+    rw [Nat.add_sub_add_right]
+    cases frag with
+    | dot f =>
+      simp only [suffToks, List.cons_append]
+      simp only [parseSuffixe, nameText_nameTok]
+      simp only [applySuff]
+      simp only [suffToks, List.length_cons] at hF
+      exact ih _ R F' hs' (by omega)
+    | arrow f =>
+      simp only [suffToks, List.cons_append]
+      simp only [parseSuffixe, nameText_nameTok]
+      simp only [applySuff]
+      simp only [suffToks, List.length_cons] at hF
+      exact ih _ R F' hs' (by omega)
+    | idx i =>
+      have hLi := hs i (by simp)
+      simp only [suffToks, List.length_cons, List.length_append, List.length_singleton] at hF
+      simp only [suffToks, List.cons_append]
+      simp only [parseSuffixe]
+      have hr1 : ruhig ([.zeichen "]"] ++ suffToks suff ++ R) = true := rfl
+      have hr2 : ruhigSuff ([.zeichen "]"] ++ suffToks suff ++ R) = true := rfl
+      have hr3 : ruhigGleit ([.zeichen "]"] ++ suffToks suff ++ R) = true := rfl
+      have hOi := hLi.2.2.2.2.2.2.2 ([.zeichen "]"] ++ suffToks suff ++ R) F' hr1 hr2 hr3
+        (by simp only [fb]; omega)
+      simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hOi
+      simp only [hOi, List.cons_append]
+      simp only [applySuff]
+      exact ih _ R F' hs' (by omega)
+
+/-- A chain that is not a bare name reads `(` as a call through it. -/
+theorem suff_ruf (G : Nat) (c : SExpr) (T : List Token) (hc : istVar c = false) :
+    parseSuffixe (G + 1) c (.zeichen "(" :: T) =
+      match parseArgs G T with
+      | .ok (args, rest') => parseSuffixe G (.ext .call [] (c :: args)) rest'
+      | .error e => .error e := by
+  cases c with
+  | «variable» s => simp [istVar] at hc
+  | _ => simp only [parseSuffixe] <;> rfl
+
+theorem istVar_applySuff : ∀ (suff : List SuffFrag) (base : SExpr), istVar base = false →
+    istVar (applySuff base suff) = false
+  | [], _, h => h
+  | .dot _ :: s, _, _ => istVar_applySuff s _ rfl
+  | .arrow _ :: s, _, _ => istVar_applySuff s _ rfl
+  | .idx _ :: s, _, _ => istVar_applySuff s _ rfl
+
+theorem istVar_kette (a : String) (suff : List SuffFrag) (hne : suff ≠ []) :
+    istVar (applySuff (.variable a) suff) = false := by
+  cases suff with
+  | nil => exact absurd rfl hne
+  | cons f s => cases f <;> exact istVar_applySuff s _ rfl
+
+theorem sammleSeg_kette (suff : List SuffFrag) (hne : suff ≠ []) (segs : List String) (R : List Token) :
+    sammleSegmente (suffToks suff ++ R) segs = (segs, suffToks suff ++ R) := by
+  cases suff with
+  | nil => exact absurd rfl hne
+  | cons f s => cases f <;> rfl
+
+theorem kette_nopar (suff : List SuffFrag) (hne : suff ≠ []) (R R2 : List Token) :
+    suffToks suff ++ R ≠ .zeichen "(" :: R2 := by
+  cases suff with
+  | nil => exact absurd rfl hne
+  | cons f s => cases f <;> simp [suffToks]
+
+/-- Calls through a place through `parsePrimary` at token fuel. -/
+theorem prim_methM (a : String) (suff : List SuffFrag) (xs : List SExpr) (rest : List Token) (F : Nat)
+    (hka : (!istKopfWort a) = true) (hs : SuffLegs suff) (hne : suff ≠ [])
+    (hxs : ∀ x ∈ xs, LegsB (fb x) x ∧ gut x = true) (hr : ruhigSuff rest = true)
+    (hF : 6 * (suffToks suff).length + 6 * (druckToksListe xs).length + 40 ≤ F) :
+    parsePrimary F (druckToks (.ext .call [] (applySuff (.variable a) suff :: xs)) ++ rest) =
+      .ok (.ext .call [] (applySuff (.variable a) suff :: xs), rest) := by
+  have hle := suffLen_le suff
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
+  rw [druck_ruf, druckToks_applySuff]
+  simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
+  rw [parsePrimary_nameTok _ _ _ (nichtWahr_falsch _ hka)]
+  simp only [parseKopf, nameText_nameTok]
+  rw [sammleSeg_kette suff hne]
+  have hmiss : ∀ (R2 : List Token), suffToks suff ++ (.zeichen "(" :: (druckToksListe xs ++
+      (.zeichen ")" :: rest))) ≠ .zeichen "(" :: R2 := kette_nopar suff hne _
+  simp only [hmiss]
+  rw [suffWeiterM suff (.variable a) _ F'' hs (by omega)]
+  obtain ⟨G, hG⟩ : ∃ G, F'' - suff.length = G + 1 := ⟨F'' - suff.length - 1, by omega⟩
+  rw [hG, suff_ruf G _ _ (istVar_kette a suff hne)]
+  have hA := argsM xs rest G hxs (by omega)
+  simp only [List.append_assoc, List.cons_append, List.nil_append] at hA
+  rw [hA]
+  obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+  exact stopSuffix G' _ rest hr
+
 /-! ### `old`, `sizeof`, `lenof`, `aligned` -/
 
 theorem prim_altM (a : String) (suff : List SuffFrag) (rest : List Token) (F : Nat)
@@ -1424,7 +1539,35 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
     | why g f =>
       simp only [gut, Bool.and_eq_true] at hg
       exact blatt (grundLegs g f hg.1.1.1 hg.1.1.2 hg.1.2 hg.2) rfl
-    | ext k ns xs => simp [gut] at hg
+    | ext k ns xs =>
+      obtain ⟨rfl, rfl, c, ys, rfl, hp, hv, hys⟩ := gut_ruf_faelle k ns xs hg
+      have hcs : groesse c ≤ n + 1 := by simp only [groesse, groesseListe] at hs; omega
+      obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := zerlege (n + 1) c hcs hp
+      have hne : suff ≠ [] := by rintro rfl; simp [applySuff, istVar] at hv
+      have hsl : SuffLegs suff := by
+        intro i hi
+        obtain ⟨hgi, hi'⟩ := suff_idx_mem suff i hi hgs
+        have : groesse (applySuff (.variable a) suff) ≤ n := by
+          simp only [groesse, groesseListe] at hs; omega
+        rw [groesse_applySuff] at this
+        exact ih i (by simp only [groesse] at this; omega) hi'
+      have hxs : ∀ x ∈ ys, LegsB (fb x) x ∧ gut x = true := by
+        intro x hx
+        have hgx := gutListe_mem ys x hx hys
+        have hsx : groesse x ≤ n := by
+          have := groesse_mem_le ys x hx
+          have := groesse_pos (applySuff (.variable a) suff)
+          simp only [groesse, groesseListe] at hs; omega
+        exact ⟨ih x hsx hgx, hgx⟩
+      have hd : druckToks (.ext .call [] (applySuff (.variable a) suff :: ys)) = [nameTok a] ++
+          (suffToks suff ++ ([.zeichen "("] ++ druckToksListe ys ++ [.zeichen ")"])) := by
+        rw [druck_ruf, druckToks_applySuff]
+        simp only [druckToks, List.append_assoc]
+      apply legsB_kopf _ (nameTok a) _ (nameTok_form a) hd
+      intro rest' G hrs _ hG
+      apply prim_methM a suff ys rest' G hka hsl hne hxs hrs
+      simp only [fb, hd, List.length_append, List.length_singleton] at hG
+      omega
 
 /-- **Every printable expression has its legs at the token bound.** -/
 theorem legs_tok : ∀ (e : SExpr), gut e = true → LegsB (fb e) e :=
@@ -1466,6 +1609,20 @@ theorem parseTop_druck_gut_zeuge :
       (.un "!" (.variable "y"))) (.un "!" (.variable "z"))) :=
   parseTop_druck_gut _ (by decide)
 
+/-- A call through a place (`o.is_some()`) and one with arguments through a pointer chain
+    (`p->q[i].f(x, 1)`), through the whole reader. -/
+theorem parseTop_druck_ruf_zeuge :
+    parseTop (druckToks (.ext .call [] [.field (.variable "o") "is_some"]) ++ [.ende]) =
+      .ok (.ext .call [] [.field (.variable "o") "is_some"]) :=
+  parseTop_druck_gut _ (by decide)
+
+theorem parseTop_druck_ruf_zeuge2 :
+    parseTop (druckToks (.ext .call [] [.field (.index (.arrow (.variable "p") "q") (.variable "i")) "f",
+      .variable "x", .lit 1]) ++ [.ende]) =
+      .ok (.ext .call [] [.field (.index (.arrow (.variable "p") "q") (.variable "i")) "f",
+        .variable "x", .lit 1]) :=
+  parseTop_druck_gut _ (by decide)
+
 /-- The deep witness of `RundlaufVoll` from its rendered source text. -/
 theorem rundlauf_text_gut_zeuge :
     parseTopAusText (renderText (druckToks zeugeTief)) = .ok zeugeTief :=
@@ -1479,3 +1636,5 @@ end Gabbro.Grammatik.Parser
 #print axioms Gabbro.Grammatik.Parser.rundlauf_text_gut
 #print axioms Gabbro.Grammatik.Parser.parseTop_druck_gut_zeuge
 #print axioms Gabbro.Grammatik.Parser.rundlauf_text_gut_zeuge
+#print axioms Gabbro.Grammatik.Parser.parseTop_druck_ruf_zeuge
+#print axioms Gabbro.Grammatik.Parser.parseTop_druck_ruf_zeuge2

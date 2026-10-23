@@ -541,6 +541,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("nebeneinander", nebeneinander::pass(baum, absagen));
         z!("arena_faden", arena_faden::pass(baum, absagen));
         z!("fadenstart", fadenstart::pass(baum, absagen));
+        z!("startargumente", fadenstart::concurrent_argumente(baum, absagen));
         z!("startexklusiv", startexklusiv::pass(baum, absagen));
         // H021 + H022, same wiring as below (timed variant).
         z!("ableitung", ableitung::pass(baum, absagen));
@@ -618,6 +619,8 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // statement's shape (`N458`-`N461`); its race half (`N462`) is `fusswache2`'s. No
     // pass number of its own: a rule of the thread-start column, like the two around it.
     fadenstart::pass(baum, absagen);
+    // The start arguments of the `concurrent` members (`N591`/`N592`), beside the thread starts.
+    fadenstart::concurrent_argumente(baum, absagen);
     // **Lane 137, beside the concurrency pass whose start pool it reads.**
     // No pass number of its own: like `kontexte::pass` above it is a rule of
     // the same column (thread starts), not a new one.
@@ -1329,7 +1332,8 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         // reads are read here too, or `effects { pure }` would cover a `count` over
         // foreign writes (same class as the `Folgt`/`Quantor` hole of 2026-08-20).
         ExprArt::Zaehle { rumpf, .. } => aus.extend(ausdruecke_im_praedikat(rumpf)),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus.push(x),
+        // `o.is_some()` reads its place: the operand is that place.
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => aus.push(x),
         ExprArt::Binaer(_, a, b) => {
             aus.push(a);
             aus.push(b);
@@ -1434,6 +1438,8 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             | ExprArt::Ruf(_)
             // **Lane E1:** a library call is itself no place.
             | ExprArt::LibraryCall(_)
+            // `o.is_some()` is a truth value; its place is the operand, found below it.
+            | ExprArt::IstSome(_)
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)
             | ExprArt::Binaer(_, _, _)

@@ -291,7 +291,7 @@ fn liest_expr(e: &Expr, t: &mut Taten) {
                 }
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => liest_expr(x, t),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => liest_expr(x, t),
         ExprArt::Binaer(_, a, b) => {
             liest_expr(a, t);
             liest_expr(b, t);

@@ -63,6 +63,13 @@ def rufM (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (
   (if S.produziert.isEmpty then [] else ["Signatur.produziert"]) ++
   (if S.boden.isSome then ["Signatur.boden"] else [])
 
+/-- What a call through a function pointer puts into play: the callee conforms to the pointer type
+    (`Deklaration.passt_ok`), and the conformance is the whole `SigPasst`. -/
+def passtM : List String :=
+  ["Deklaration.passt", "Deklaration.passt_ok", "SigPasst.params", "SigPasst.erg", "SigPasst.gruende",
+   "SigPasst.schreibt", "SigPasst.gschreibt", "SigPasst.konsumiert", "SigPasst.produziert", "SigPasst.haelt",
+   "SigPasst.extra", "SigPasst.boden"]
+
 /-- The resources held. -/
 def resM : List (Res D) → List String
   | [] => []
@@ -82,7 +89,7 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .slot t f i _ => "Expr.slot" :: tyM (D.typ t f) ++ ["Deklaration.count", "Deklaration.typ"] ++ exprM i
   | _, _, _, .thru p t _ f i _ => "Expr.thru" :: tyM (D.typ t f) ++ ["Deklaration.tabNr"] ++ exprM p ++ exprM i
   | _, _, _, .ptrOf .. => ["Expr.ptrOf", "Ty.ptr", "Deklaration.tabNr"]
-  | _, _, _, .fnref .. => ["Expr.fnref", "Ty.fnptr", "Deklaration.sig"]
+  | _, _, _, .fnref .. => ["Expr.fnref", "Ty.fnptr", "Deklaration.sig", "Deklaration.passt"]
   | _, _, _, .oldG g _ => "Expr.oldG" :: tyM (D.gtyp g)
   | _, _, _, .oldS t f i _ => "Expr.oldS" :: tyM (D.typ t f) ++ exprM i
   | _, _, _, .widen _ _ e => "Expr.widen" :: "Ty.int" :: exprM e
@@ -240,7 +247,7 @@ def stmtM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ 
   | l, _, Λ, _, .onTag v arms => zelle l Λ "Stmt.onTag" ++ (exprM v ++ armsM arms ++ resM Λ ++ paare "Stmt.onTag" (armsStmts arms))
   | l, _, Λ, _, .onWhy r arms => zelle l Λ "Stmt.onWhy" ++ (exprM r ++ grundArmsM arms ++ resM Λ ++ paare "Stmt.onWhy" (grundArmsStmts arms))
   | l, _, Λ, _, .call f args _ _ => zelle l Λ "Stmt.call" ++ ("Deklaration.sigNr" :: argsM args ++ rufM V (D.signatur f) Λ ++ resM Λ)
-  | l, _, Λ, _, .callInd p args _ _ => zelle l Λ "Stmt.callInd" ++ ("Deklaration.sigNr" :: exprM p ++ argsM args ++ resM Λ)
+  | l, _, Λ, _, .callInd p args _ _ => zelle l Λ "Stmt.callInd" ++ ("Deklaration.sigNr" :: passtM ++ exprM p ++ argsM args ++ resM Λ)
   | l, _, Λ, _, .locks _ _ body => zelle l Λ "Stmt.locks" ++ ("Deklaration.rang" :: blockM body ++ resM Λ ++ paare "Stmt.locks" (blockStmts body))
   | l, _, Λ, _, .breaking _ body => zelle l Λ "Stmt.breaking" ++ ("Deklaration.traeger" :: blockM body ++ resM Λ ++ paare "Stmt.breaking" (blockStmts body))
   | l, _, Λ, _, .traverse _ inv body => zelle l Λ "Stmt.traverse" ++ (exprM inv ++ blockM body ++ resM Λ ++ paare "Stmt.traverse" (blockStmts body))
@@ -263,7 +270,7 @@ def blockM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V l Γ �
   | _, _, _, _, .cons s rest => "Block.cons" :: stmtM s ++ blockM rest
   | _, _, _, _, .bind e rest => "Block.bind" :: exprM e ++ blockM rest
   | l, _, Λ, _, .bindCall f args _ _ _ rest => "Block.bindCall" :: argsM args ++ rufM V (D.signatur f) Λ ++ blockM rest
-  | l, _, Λ, _, .bindCallInd p args _ _ _ rest => "Block.bindCallInd" :: exprM p ++ argsM args ++ blockM rest
+  | l, _, Λ, _, .bindCallInd p args _ _ _ rest => "Block.bindCallInd" :: passtM ++ exprM p ++ argsM args ++ blockM rest
   | l, _, Λ, _, .bindCallElse f args _ _ _ err rest =>
     zelle l Λ "Block.bindCallElse" ++ (argsM args ++ rufM V (D.signatur f) Λ ++ endM err ++ blockM rest ++ paare "Block.bindCallElse" (endStmts err))
   | _, _, _, _, .bindAxiom _ args _ _ _ _ _ rest => "Block.bindAxiom" :: argsM args ++ blockM rest
@@ -298,7 +305,7 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
   | _, _, _, .regReadElse r _ z sonst rest =>
     "Endblock.regReadElse" :: "Deklaration.rzusage" :: klasseM (D.rklasse r) ++ exprM z ++ endM sonst ++ endM rest
   | _, _, _, .awaits _ _ _ _ _ rest => "Endblock.awaits" :: endM rest
-  | _, _, _, .bindCallInd p args _ _ _ rest => "Endblock.bindCallInd" :: exprM p ++ argsM args ++ endM rest
+  | _, _, _, .bindCallInd p args _ _ _ rest => "Endblock.bindCallInd" :: passtM ++ exprM p ++ argsM args ++ endM rest
 
 def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
     Arms D V l Γ Λ Λ' cs → List String

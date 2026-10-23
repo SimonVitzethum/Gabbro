@@ -122,7 +122,7 @@ fn zellen_expr(e: &Expr, gebunden: &BTreeSet<String>, params: &BTreeMap<String, 
         }
         ExprArt::Alt(_) => {}
         ExprArt::Klammer(x) => zellen_expr(x, gebunden, params, acc),
-        ExprArt::Unaer(_, x) => zellen_expr(x, gebunden, params, acc),
+        ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => zellen_expr(x, gebunden, params, acc),
         ExprArt::Binaer(_, a, b) => {
             zellen_expr(a, gebunden, params, acc);
             zellen_expr(b, gebunden, params, acc);

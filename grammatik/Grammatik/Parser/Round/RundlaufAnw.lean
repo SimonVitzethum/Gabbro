@@ -153,6 +153,10 @@ theorem druck_kopf : ∀ (e : SExpr), gut e = true →
   | res => exact ⟨.wort "result", [], by simp [druckToks], by simp [KopfGut]⟩
   | why g f =>
     exact ⟨nameTok g, _, rfl, kopfGut_nameTok (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1.1.1)⟩
-  | ext _ _ _ => simp [gut] at hg
+  | ext k ns xs =>
+    obtain ⟨rfl, rfl, c, ys, rfl, hc, -, -⟩ := gut_ruf_faelle k ns xs hg
+    obtain ⟨s, ts, h, hk⟩ := platz_kopf_aux (groesse c) c (Nat.le_refl _) hc
+    exact ⟨nameTok s, ts ++ ([.zeichen "("] ++ druckToksListe ys ++ [.zeichen ")"]), by rw [druck_ruf, h]; rfl,
+      kopfGut_nameTok hk⟩
 
 end Gabbro.Grammatik.Parser

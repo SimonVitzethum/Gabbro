@@ -54,8 +54,16 @@ def atomar (g : List Ty) : Spez where
   globs := g.map (fun τ => { typ := τ, atomar := true, nutzlast := [g.length] }) ++ [{ typ := .int 0 0 }]
   sigs := [{ params := g, gschreibt := List.range (g.length + 1) }]
 
-/-- **The fine members**: for every group the three declarations, then for every group the one with a pointer. -/
+/-- The ranges the divisors need: one that starts at one (a divisor of `div`/`rem`), and an EMPTY one (`int 0 (-1)`):
+    over it `band`, `div`, `rem`, `shl`, `shr` have a range below zero and stand as the divisor of `sdiv`/`srem`. A
+    program over an empty range is a program; the fine table asks for a valid witness of every cell such a program
+    has, or a proof that none has it. -/
+def teilerGruppe : List Ty := [.int 1 2, .int 0 (-1), .int 0 1]
+
+/-- **The fine members**: for every group the three declarations, then for every group the one with a pointer; then
+    the divisor group (appended, so the members before keep their numbers). -/
 def feinMitglieder : List Spez :=
-  ((gruppen.flatMap fun g => [ausdruck g, register g, atomar g]) ++ gruppen.map zeiger).map Spez.einzeln
+  (((gruppen.flatMap fun g => [ausdruck g, register g, atomar g]) ++ gruppen.map zeiger) ++
+    [ausdruck teilerGruppe, register teilerGruppe, zeiger teilerGruppe]).map Spez.einzeln
 
 end Gabbro.Grammatik.Gen.Fein

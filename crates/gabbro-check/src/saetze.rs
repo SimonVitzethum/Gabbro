@@ -4950,6 +4950,47 @@ pub const PHASEN: &[Satz] = &[
                      `rcu_schutz`, `fenster_sammeln`)",
     },
     Satz {
+        name: "faden.startargumente",
+        kennungen: &["N591", "N592"],
+        aussage: "A `concurrent` member that passed is started with exactly one value per \
+                  parameter of its function (`N591`), and each value belongs to the \
+                  parameter's type: an integer literal inside the declared range, `true` or \
+                  `false` for a `bool`, `None` for an `option index`, `&T` for a `ptr<normal, …> T` \
+                  (`N592`). This is the \
+                  start the Lean model has: an `Einheit` start is a function with its \
+                  arguments, and the Lean front end reads `concurrent { m::f(a, b) }` the \
+                  same way (`uStartMit`, `uStartArg`).",
+        vorbehalt: "Only literal values travel: an argument that is a constant name, an \
+                    expression or a value of another type (a function pointer, a tagged value, a \
+                    reason) is refused (`N592`), and `gabbro lean-g` does not yet write the \
+                    arguments into the exported start (`LG001`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1485` (`N591`: a member started without the argument \
+                      its function needs), `1486` (`N592`: an argument outside the \
+                      parameter's range); beispiele/1170 (a member started with its \
+                      arguments, accepted).",
+        fundstelle: "crates/gabbro-check/src/fadenstart.rs (`concurrent_argumente`); \
+                    crates/gabbro-syntax/src/parse.rs (`concurrentdecl`); SYNTAX.md \
+                    concurrentdecl",
+    },
+    Satz {
+        name: "option.ist_some",
+        kennungen: &["N593"],
+        aussage: "`x.is_some()` is the option test of the Lean model (`Expr.istSome`): a call \
+                  through a place whose last suffix is `.is_some`, with no argument, is read as \
+                  the test, and it passes only over an `option index into T` (`N593` \
+                  otherwise); its value is a `bool`, and the place is read like any operand.",
+        vorbehalt: "A function-pointer field named `is_some` cannot be called with no \
+                    argument -- the spelling is the test. `None.is_some()` and \
+                    `Some(i).is_some()` are no form: the suffix stands only at a place.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: `1487` (`N593`: `.is_some()` over an integer); \
+                      beispiele/1171 (`is_some()` over an option parameter and an option \
+                      field, accepted).",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs (`ExprArt::IstSome`); \
+                     crates/gabbro-check/src/m1.rs (the `IstSome` arm of `ausdruck`)",
+    },
+    Satz {
         name: "faden.start",
         kennungen: &["N458", "N461", "N462"],
         aussage: "A hosted thread start `start { f, g };` that passed names roots that \

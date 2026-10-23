@@ -1,0 +1,16 @@
+// erwartet: N592
+// **Poison 1486 -- a start argument outside its parameter's range.**
+//
+// `zaehle` takes `k : u32 in 0 .. 9`; the start passes `12`, which is no value of that type.
+
+module gift::concurrent_argument_ausserhalb {
+
+impl fn zaehle(k : u32 in 0 .. 9)
+    effects { pure }
+    costs   <= 2 ops
+{
+}
+
+concurrent { zaehle(12) };
+
+}

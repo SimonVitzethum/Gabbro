@@ -51,7 +51,8 @@ inductive ItemGut : SItemTief → Prop
       TypGut t → AtomGut pub ord → ItemGut (.atomT n t pub ord obs)
   | whyT (n : String) (cs : List (String × SExpr × String)) (ex : Bool) :
       (∀ c ∈ cs, FallGut c) → ItemGut (.whyT n cs ex)
-  | concT (ps : List (List String)) : (∀ p ∈ ps, PfadGut p) → ItemGut (.concT ps)
+  | concT (ps : List (List String × List SExpr)) : (∀ p ∈ ps, PfadGut p.1 ∧ ∀ x ∈ p.2, gut x = true) →
+      ItemGut (.concT ps)
   | tableT (n : String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
       (parts : List STabTeil) : (∀ e, cnt = some e → gut e = true) → (∀ t ∈ parts, TeilGut t) →
       ItemGut (.tableT n cnt backed owner sh parts)
@@ -175,7 +176,7 @@ def zeugeProgramm : List SItemTief := [
                             (.ext .any ["t", "threads"] [.bin "==" (.variable "t") (.lit 1)])]),
                         .effs [.writes (.variable "max")], .cost (.lit 5)] }
       (.block [.set (.variable "max") "+=" (.variable "x")] (some (.ret (some (.variable "x")))))],
-  .concT [["kern", "erhoehe"]],
+  .concT [(["kern", "erhoehe"], [])],
   .tableT "Knoten" (some (.lit 64)) none none true [
     .tSlot [{ fname := "x", ftyp := .atom "u32", pos := none, bezug := none,
               wo := some (.bin "<" (.variable "x") (.lit 10)), reserviert := false, byOps := true }],
@@ -220,7 +221,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
       exact .set _ _ _ (by decide) (by decide) (by decide)
   · exact .concT _ (by
       intro p hp; simp at hp; subst hp
-      exact ⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> decide⟩)
+      exact ⟨⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> decide⟩, by simp⟩)
   · refine .tableT _ _ _ _ _ _ (by intro e he; cases he; decide) ?_
     intro t ht
     simp only [List.mem_cons, List.not_mem_nil, or_false] at ht

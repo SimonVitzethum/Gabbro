@@ -2464,6 +2464,22 @@ impl<'a> Parser<'a> {
                 // and the refusal said nothing about the matter (`probe/p3.gab`).
                 if self.ist_z(Z::RundAuf) {
                     let ruf = self.ruf_ab(CallTarget::Place(ort))?;
+                    // `o.is_some()`: the option test, not a call through a function pointer.
+                    if let CallTarget::Place(ort) = &ruf.ziel {
+                        if ruf.argumente.is_empty()
+                            && matches!(ort.suffixe.last(), Some(OrtSuffix::Feld(f)) if f.text == "is_some")
+                        {
+                            let mut o = ort.clone();
+                            o.suffixe.pop();
+                            return Ok(Expr {
+                                span: ruf.span,
+                                art: ExprArt::IstSome(Box::new(Expr {
+                                    span: o.span,
+                                    art: ExprArt::Ort(o),
+                                })),
+                            });
+                        }
+                    }
                     return Ok(Expr {
                         span: ruf.span,
                         art: ExprArt::Ruf(ruf),
@@ -5516,17 +5532,27 @@ impl<'a> Parser<'a> {
     fn concurrentdecl(&mut self) -> Erg<ConcurrentDecl> {
         let anfang = self.erwarte_kw(Kw::Concurrent)?;
         self.erwarte_z(Z::GeschweiftAuf)?;
-        let mut koerper = vec![self.pfad()?];
-        while self.friss_z(Z::Komma) {
-            if self.ist_z(Z::GeschweiftZu) {
+        let mut koerper = Vec::new();
+        let mut argumente = Vec::new();
+        loop {
+            let p = self.pfad()?;
+            // `m::f(a, b)`: the arguments the body is started with (the model's start).
+            let a = if self.ist_z(Z::RundAuf) {
+                self.ruf_ab(CallTarget::Path(p.clone()))?.argumente
+            } else {
+                Vec::new()
+            };
+            koerper.push(p);
+            argumente.push(a);
+            if !self.friss_z(Z::Komma) || self.ist_z(Z::GeschweiftZu) {
                 break; // Schlusskomma -- dieselbe Regel wie ueberall seit 2026-08-16
             }
-            koerper.push(self.pfad()?);
         }
         let _ = self.erwarte_z(Z::GeschweiftZu)?;
         let ende = self.erwarte_z(Z::Semi)?;
         Ok(ConcurrentDecl {
             koerper,
+            argumente,
             span: anfang.bis_zu(ende),
         })
     }

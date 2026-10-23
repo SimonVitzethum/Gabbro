@@ -30,17 +30,75 @@ theorem eig_ok {f k : Nat} {l : Bool} {hs : List Nat} {r : Zeile} (hr : zeile f 
     (h1 : (decide (4 ≤ f) || !l) = true) (h2 : (!r.fremd && (!r.lnoetig || l)) = true)
     (h3 : koepfeOk (exprReqs r.kinder) hs = true) : moeglich ⟨0, f, k, l, hs⟩ = true := by
   simp only [Bool.and_eq_true] at h2
-  simp only [moeglich, hr, h1, h2, Bool.and_eq_true, datenOk, h3, and_self]
+  simp only [moeglich, hr, h1, h2, Bool.and_eq_true, datenOk, h3, and_self, typRegel]
 
 theorem paar_ok {f k : Nat} {l : Bool} {p cf kk : Nat} {r : Zeile} {c : Nat × Option Nat × Option Bool}
     (hr : zeile f k = some r) (h1 : (decide (4 ≤ f) || !l) = true) (h2 : (!r.fremd && (!r.lnoetig || l)) = true)
-    (hc : r.kinder[p]? = some c) (hcf : cf = c.1) (h3 : kindOk cf c.2.1 (c.2.2.getD l) kk = true) :
+    (hc : r.kinder[p]? = some c) (hcf : cf = c.1) (h3 : kindOk cf c.2.1 (c.2.2.getD l) kk = true)
+    (ht : typRegel ⟨1, f, k, l, [p, cf, kk]⟩ = true := by rfl) :
     moeglich ⟨1, f, k, l, [p, cf, kk]⟩ = true := by
   subst hcf
   simp only [Bool.and_eq_true] at h2
-  simp only [moeglich, hr, h1, h2, Bool.and_eq_true, datenOk, hc, beq_self_eq_true, h3, and_self]
+  simp only [moeglich, hr, h1, h2, Bool.and_eq_true, datenOk, hc, beq_self_eq_true, h3, and_self, ht]
 
 variable {D : Deklaration}
+
+/-- **The constructors of `nullHaltig` start at or below zero**: a divisor of `div`/`rem` (`1 ≤ l`) is none of them. -/
+theorem nullHaltig_kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (b : Expr D Γ Λ τ) {l h : Int} (hτ : τ = .int l h)
+    (hl : 1 ≤ l) : nullHaltig.contains (kE b) = false := by
+  cases b with
+  | sdiv hb a b' =>
+    injection hτ with h1 _
+    simp only [betragMax] at h1
+    omega
+  | srem hb a b' =>
+    injection hτ with h1 _
+    simp only [betragMax] at h1
+    rcases hb with hb | hb <;> omega
+  | _ => first
+    | rfl
+    | (injection hτ with h1 _; omega)
+
+/-- **The constructors of `nullFest` hold zero**: a divisor of `sdiv`/`srem` (`1 ≤ l ∨ h ≤ -1`) is none of them. -/
+theorem nullFest_kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (b : Expr D Γ Λ τ) {l h : Int} (hτ : τ = .int l h)
+    (hl : 1 ≤ l ∨ h ≤ -1) : nullFest.contains (kE b) = false := by
+  cases b with
+  | sdiv hb a b' =>
+    injection hτ with h1 h2
+    simp only [betragMax] at h1 h2
+    omega
+  | srem hb a b' =>
+    injection hτ with h1 h2
+    simp only [betragMax] at h1 h2
+    rcases hb with hb | hb <;> omega
+  | getBytes t f hf n i hlo hhi hL =>
+    injection hτ with h1 h2
+    have hp : (0 : Int) < 256 ^ n := by
+      have := Nat.pow_pos (n := n) (show 0 < 256 by decide); exact_mod_cast this
+    omega
+  | bor w h0 h0' hw1 hw2 a b' =>
+    injection hτ with h1 h2
+    have hp : (0 : Int) < 2 ^ w := by
+      have := Nat.pow_pos (n := w) (show 0 < 2 by decide); exact_mod_cast this
+    omega
+  | bxor w h0 h0' hw1 hw2 a b' =>
+    injection hτ with h1 h2
+    have hp : (0 : Int) < 2 ^ w := by
+      have := Nat.pow_pos (n := w) (show 0 < 2 by decide); exact_mod_cast this
+    omega
+  | _ => rfl
+
+/-- The range rule at the divisor of `div`/`rem`. -/
+theorem typRegel_teiler {Γ : Ctx} {Λ : List (Res D)} {l h : Int} (b : Expr D Γ Λ (.int l h)) (hl : 1 ≤ l)
+    (k : Nat) (lk : Bool) (hk : k = 16 ∨ k = 17) : typRegel ⟨1, 0, k, lk, [1, 0, kE b]⟩ = true := by
+  have h0 := nullHaltig_kE b rfl hl
+  rcases hk with rfl | rfl <;> simp only [typRegel, h0, Bool.and_false, Bool.not_false, Bool.true_and] <;> rfl
+
+/-- The range rule at the divisor of `sdiv`/`srem`. -/
+theorem typRegel_steiler {Γ : Ctx} {Λ : List (Res D)} {l h : Int} (b : Expr D Γ Λ (.int l h)) (hl : 1 ≤ l ∨ h ≤ -1)
+    (k : Nat) (lk : Bool) (hk : k = 18 ∨ k = 19) : typRegel ⟨1, 0, k, lk, [1, 0, kE b]⟩ = true := by
+  have h0 := nullFest_kE b rfl hl
+  rcases hk with rfl | rfl <;> simp only [typRegel, h0, Bool.and_false, Bool.not_false, Bool.and_true] <;> rfl
 
 theorem kopf_frei {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) : kopfOk none (tk e) = true :=
   kopfOk_none τ
@@ -104,10 +162,10 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .sub (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .neg (a := a) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) all_nil)) (fzE_ok hax a))
   | .mul (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
-  | .div (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
-  | .rem (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
-  | .sdiv (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
-  | .srem (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .div (h1' := hb) (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _) (typRegel_teiler b hb _ _ (Or.inl rfl))) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .rem (h1' := hb) (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _) (typRegel_teiler b hb _ _ (Or.inr rfl))) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .sdiv (hb := hb) (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _) (typRegel_steiler b hb _ _ (Or.inl rfl))) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .srem (hb := hb) (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _) (typRegel_steiler b hb _ _ (Or.inr rfl))) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .getBytes (i := i) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) all_nil)) (fzE_ok hax i))
   | .band (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .bor (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))

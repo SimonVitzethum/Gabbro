@@ -544,7 +544,7 @@ fn expr_namen(e: &Expr, aus: &mut Vec<String>) {
                 }
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => expr_namen(x, aus),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => expr_namen(x, aus),
         ExprArt::Binaer(_, a, b) => {
             expr_namen(a, aus);
             expr_namen(b, aus);

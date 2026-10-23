@@ -623,6 +623,11 @@ pub enum ExprArt {
     Eingebaut(Box<Eingebaut>),
     /// `old(place)` -- expression, not predicate; only in `ensures`.
     Alt(Ort),
+    /// `o.is_some()` -- the option test (Lean `Expr.istSome`): whether the `option index into T` at the
+    /// place holds a value. A call through a place whose last suffix is `.is_some`, with no argument, is
+    /// this test (`parse::primary`); the operand is that place as an `ExprArt::Ort`, so every walker
+    /// that reads places reads it, and it must be an option (`N593`).
+    IstSome(Box<Expr>),
     /// `result` -- the return value in `ensures`.
     Ergebnis,
     /// **`R::F` -- der Wert eines `reason`, und damit sein ERZEUGER** (Stufe 7, 2026-08-21).
@@ -2181,7 +2186,8 @@ pub struct GruppeDecl {
     pub span: Span,
 }
 
-/// `concurrent { f, g };` -- the bodies that may run at the same time.
+/// `concurrent { f, g(1, true) };` -- the bodies that may run at the same time, each with the
+/// arguments it is started with (the Lean model's start carries its arguments, `Einheit` starts).
 ///
 /// No name of its own: the set is identified by its members, and the closed
 /// world says what is not in any set never runs concurrently.
@@ -2189,6 +2195,8 @@ pub struct GruppeDecl {
 pub struct ConcurrentDecl {
     /// The bodies, as paths -- dispatch roots or scheduler entry `fn`s.
     pub koerper: Vec<Pfad>,
+    /// The start arguments of each body, parallel to `koerper` (empty: none written).
+    pub argumente: Vec<Vec<Expr>>,
     pub span: Span,
 }
 

@@ -345,6 +345,17 @@ def druckProfEintraege : List SProfEintrag → List Token
   | e :: rest => druckProfEintrag e ++ druckProfEintraege rest
 
 mutual
+/-- A start: the path, and its arguments in parentheses when it has any. -/
+def druckStart (p : List String × List SExpr) : List Token :=
+  rohToks ("::".intercalate p.1) ++
+    (if p.2.isEmpty then [] else [.zeichen "("] ++ druckToksListe p.2 ++ [.zeichen ")"])
+
+/-- The starts of a `concurrent` item, comma separated. -/
+def druckStarts : List (List String × List SExpr) → List Token
+  | [] => []
+  | [p] => druckStart p
+  | p :: ps => druckStart p ++ [.zeichen ","] ++ druckStarts ps
+
 /-- An item as tokens (the inverse of `parseItemTief`; total on every kind). -/
 def druckItem : SItemTief → List Token
   | .modT p its => [.wort "module"] ++ rohToks p ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
@@ -403,7 +414,7 @@ def druckItem : SItemTief → List Token
       (match inv with
         | some p => [.wort "invariant"] ++ druckToks p
         | none => []) ++ [.zeichen ";"])
-  | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckWurzeln (ps.map (fun p => "::".intercalate p)) ++ [.zeichen "}", .zeichen ";"])
+  | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckStarts ps ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++

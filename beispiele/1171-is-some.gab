@@ -1,0 +1,36 @@
+// **Example 1171 -- `x.is_some()`, the option test.**
+//
+// The Lean model's `Expr.istSome`: a truth value over an `option index into T`, here over an option
+// parameter. The place is read like any operand.
+
+module beispiel::is_some {
+
+table Halde count 4 {
+    slot {
+        belegt    : bool,
+        naechster : option index into Halde,
+    }
+}
+
+impl fn hat_wert(o : option index into Halde) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return o.is_some();
+}
+
+impl fn keiner(o : option index into Halde) -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return !o.is_some();
+}
+
+impl fn hat_nachfolger(i : index into Halde) -> bool
+    effects { reads Halde }
+    costs   <= 4 ops
+{
+    return Halde.slots[i].naechster.is_some();
+}
+
+}

@@ -842,7 +842,7 @@ fn expr_uebergabe(x: &Expr, tore: &HashMap<String, usize>, uebergeben: &mut Hash
                 expr_uebergabe(a, tore, uebergeben);
             }
         }
-        ExprArt::Klammer(y) | ExprArt::Unaer(_, y) => expr_uebergabe(y, tore, uebergeben),
+        ExprArt::Klammer(y) | ExprArt::IstSome(y) | ExprArt::Unaer(_, y) => expr_uebergabe(y, tore, uebergeben),
         ExprArt::Binaer(_, a, b) => {
             expr_uebergabe(a, tore, uebergeben);
             expr_uebergabe(b, tore, uebergeben);
@@ -1092,7 +1092,7 @@ fn zugriff_expr(e: &Expr, z: &mut Kindzugriff) {
             // **Lane 261:** a string literal names nothing either.
             ExprArt::LibraryCall(_)
             | ExprArt::Klammer(_)
-            | ExprArt::Unaer(_, _)
+            | ExprArt::Unaer(_, _) | ExprArt::IstSome(_)
             | ExprArt::Binaer(_, _, _)
             | ExprArt::ArrayLit(_)
             | ExprArt::Kette(_)

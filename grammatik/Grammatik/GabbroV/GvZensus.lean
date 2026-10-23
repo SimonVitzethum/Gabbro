@@ -351,7 +351,7 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let wurzF := (ms.filter fun it => match it with
     | .entryT _ => true
     | _ => false).filterMap fun it =>
-    match uWurzeln fnsOk [it] with
+    match uWurzeln tabOk fnsOk [it] with
     | .error e => some ({ stufe := "eintritt", art := "entry", name := "", meldung := e } : Befund)
     | .ok _ => none
   globF ++ tabF ++ lockF ++ fnF.flatten ++ wurzF

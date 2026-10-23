@@ -618,6 +618,7 @@ theorem kopfOk_delab {Γ : Ctx} {Λ : List (Res z.deklaration)} (art : Nat → U
     subst hd; rfl
   | none m => simp [uOfS, uOfB] at hf
   | some e => simp [uOfS, uOfB] at hf
+  | istSome e => simp [uOfS, uOfB] at hf
   | _ => simp [delabE] at hd
 
 theorem regOrt_kopfOk (ctx : UCtx) (s : SExpr) (h : kopfOk s = true) : uRegOrt ctx s = none := by

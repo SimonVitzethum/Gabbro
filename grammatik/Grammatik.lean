@@ -204,6 +204,7 @@ import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben35
 import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben36
 import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben37
 import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben38
+import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben39
 import Grammatik.Parser.Expr.AusdruckProben
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
@@ -276,7 +277,6 @@ import Grammatik.Parser.Round.RundlaufItem
 import Grammatik.Parser.Round.RundlaufGeraet
 import Grammatik.Parser.Round.RundlaufProgramm
 import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Parser.Elab.UebersetzeOpt
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 import Grammatik.Kern.Semantik.Durchgaenge

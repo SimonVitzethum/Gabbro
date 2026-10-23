@@ -179,6 +179,11 @@ def beqWortListe : List (List String) → List (List String) → Bool
   | x :: xs, y :: ys => beqWorte x y && beqWortListe xs ys
   | _, _ => false
 
+def beqStartListe : List (List String × List SExpr) → List (List String × List SExpr) → Bool
+  | [], [] => true
+  | (p, a) :: xs, (q, b) :: ys => beqWorte p q && beqSExprList a b && beqStartListe xs ys
+  | _, _ => false
+
 def beqOptPaarWort : Option (String × String) → Option (String × String) → Bool
   | none, none => true
   | some (a, b), some (c, d) => strEq a c && strEq b d
@@ -602,7 +607,8 @@ inductive SItemTief
   | lockT : String → List SExpr → SExpr → Option SExpr → Option SExpr → Option String → Option SExpr → SItemTief
   | rcuT : String → List SExpr → Option SExpr → SItemTief
   | groupT : String → List String → List SGruppenInv → SItemTief
-  | concT : List (List String) → SItemTief
+  /-- `concurrent { m::f, m::g(a, b) }`: each start's path and its arguments (none: a function without parameters). -/
+  | concT : List (List String × List SExpr) → SItemTief
   | accT : String → STyp → String → Option SExpr → SItemTief
   | walkT : SWeg → SItemTief
   | entryT : SEingang → SItemTief
@@ -668,7 +674,7 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     strEq a b && beqSExprList p q && beqOptExpr r s
   | .groupT a m i, .groupT b n j =>
     strEq a b && beqWorte m n && beqSGruppenInvList i j
-  | .concT a, .concT b => beqWortListe a b
+  | .concT a, .concT b => beqStartListe a b
   | .accT a t m p, .accT b u n q =>
     strEq a b && beqSTyp t u && strEq m n && beqOptExpr p q
   | .walkT a, .walkT b => beqSWeg a b
@@ -1552,7 +1558,7 @@ def parseRegBind : List Token → Except String (SRegBind × List Token)
 /-- A `{` … `}` path list (`concurrent`, `group over`;
     trailing commas allowed). -/
 def parsePfadListe (f : Nat) (toks : List Token) :
-    Except String (List (List String) × List Token) :=
+    Except String (List (List String × List SExpr) × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match fordereZeichen "{" toks with
@@ -1562,22 +1568,31 @@ def parsePfadListe (f : Nat) (toks : List Token) :
       | _ => match parsePfadFolge f r with
         | .error e => .error e
         | .ok (ps, r') => .ok (ps, r')
-/-- Paths after the opening `{`. -/
+/-- The arguments of a start: in parentheses, or none. -/
+def startArgs (f : Nat) (r0 : List Token) : Except String (List SExpr × List Token) :=
+  match r0 with
+  | .zeichen "(" :: r => parseArgs f r
+  | _ => .ok ([], r0)
+
+/-- Starts after the opening `{`: a path, its arguments in parentheses if any. -/
 def parsePfadFolge (f : Nat) (toks : List Token) :
-    Except String (List (List String) × List Token) :=
+    Except String (List (List String × List SExpr) × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match nimmPfad toks with
     | .error e => .error e
-    | .ok (p, r1) => match r1 with
-      | .zeichen "," :: r2 => match r2 with
-        | .zeichen "}" :: r3 => .ok ([p], r3)
-        | _ => match parsePfadFolge f r2 with
+    | .ok (p, r0) =>
+      match startArgs f r0 with
+      | .error e => .error e
+      | .ok (as, r1) => match r1 with
+        | .zeichen "," :: r2 => match r2 with
+          | .zeichen "}" :: r3 => .ok ([(p, as)], r3)
+          | _ => match parsePfadFolge f r2 with
+            | .error e => .error e
+            | .ok (ps, r') => .ok ((p, as) :: ps, r')
+        | _ => match fordereZeichen "}" r1 with
           | .error e => .error e
-          | .ok (ps, r') => .ok (p :: ps, r')
-      | _ => match fordereZeichen "}" r1 with
-        | .error e => .error e
-        | .ok r' => .ok ([p], r')
+          | .ok r' => .ok ([(p, as)], r')
 /-- One boot step: `step f(args) ;` or `step n = e ;`. -/
 def parseBootSchritt (f : Nat) (toks : List Token) :
     Except String (SBootSchritt × List Token) :=

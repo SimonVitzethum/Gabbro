@@ -96,8 +96,6 @@ def bekannteLuecken : List (String × String) :=
    ("Endblock.next", G_ZUSTAND),
    ("Endblock.bindAxiomElse", G_GROESSE),
    ("Endblock.bindCallInd", G_GROESSE),
-   ("Endblock.regRead", G_GROESSE),
-   ("Endblock.regReadElse", G_GROESSE),
    ("Arms.nil", G_GROESSE),
    ("Arms.cons", G_GROESSE),
    ("GrundArms.nil", G_GROESSE),

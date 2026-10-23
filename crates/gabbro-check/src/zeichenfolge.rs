@@ -1297,7 +1297,7 @@ fn expr_regel(x: &Expr, z: &Zustand, lage: &Lage, absagen: &mut gabbro_syntax::d
             ),
             (None, None) => {}
         },
-        ExprArt::Unaer(_, a) => {
+        ExprArt::Unaer(_, a) | ExprArt::IstSome(a) => {
             if synth(a, z, lage).is_some() {
                 sort_ablehnung(
                     x.span,

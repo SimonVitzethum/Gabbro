@@ -169,6 +169,6 @@ impl fn arbeiter3(schluessel : u32) -> u32 in 0 .. 3
     return suche(schluessel);
 }
 
-concurrent { arbeiter0, arbeiter1, arbeiter2, arbeiter3 };
+concurrent { arbeiter0(0), arbeiter1(1), arbeiter2(2), arbeiter3(3) };
 
 }

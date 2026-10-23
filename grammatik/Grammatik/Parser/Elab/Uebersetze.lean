@@ -79,6 +79,16 @@ inductive USide
   | neg : USide → USide
   deriving DecidableEq, Repr
 
+/-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
+    read of an option field through a pointer (`slot`) or at a table (`tab`). -/
+inductive UOpt
+  | nichts : UOpt
+  | etwas : UIdx → UOpt
+  | var : String → UOpt
+  | slot : String → String → UIdx → UOpt
+  | tab : String → String → UIdx → UOpt
+  deriving DecidableEq, Repr
+
 /-- One `ensures` predicate: a comparison, truth values, or a
     boolean combination (the `tr_ensures` fragment). -/
 inductive UEns
@@ -102,16 +112,8 @@ inductive UEns
   | einige : String → String → UEns → UEns
   /-- `result` of a function with a `bool` result, in its `ensures` (`Expr.var` of the head of `ErgCtx`). -/
   | ergB : UEns
-  deriving DecidableEq, Repr
-
-/-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
-    read of an option field through a pointer (`slot`) or at a table (`tab`). -/
-inductive UOpt
-  | nichts : UOpt
-  | etwas : UIdx → UOpt
-  | var : String → UOpt
-  | slot : String → String → UIdx → UOpt
-  | tab : String → String → UIdx → UOpt
+  /-- `o.is_some()` (`Expr.istSome`): the option value and the number of the table it indexes. -/
+  | istSome : UOpt → Nat → UEns
   deriving DecidableEq, Repr
 
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
@@ -1264,6 +1266,27 @@ def uIstVgl : String → Bool
   | ">=" => true
   | _ => false
 
+/-- An option value read off an expression, with the number of its table: an option variable or the read of
+    an option field. -/
+def uOptEin (ctx : UCtx) : SExpr → Except String (UOpt × Nat)
+  | .variable p =>
+    match uParamNr ctx p with
+    | .error e => .error e
+    | .ok j =>
+      match uArtBei ctx.kinds j with
+      | .ok (.opt m) => .ok (.var p, m)
+      | _ => .error "match without G form"
+  | e =>
+    match uZugriff ctx e with
+    | .error x => .error x
+    | .ok (b, tb, f, ix) =>
+      match uOptFeld ctx tb f with
+      | .none => .error "match without G form"
+      | .some m =>
+        match b with
+        | .thru p => .ok (.slot p f ix, m)
+        | .tabelle t => .ok (.tab t f ix, m)
+
 /-- One `ensures` predicate (the `tr_ensures` of `lean_g.rs`). -/
 def uSichert (ctx : UCtx) : SExpr → Except String UEns
   | .bin op l r =>
@@ -1323,6 +1346,10 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
       | .bool => .ok (.globB g)
       | _ => .error "number static as a truth value"
     | .none => .error "ensures clause without G form"
+  | .ext .call [] [.field o "is_some"] =>
+    match uOptEin ctx o with
+    | .error x => .error x
+    | .ok (v, m) => .ok (.istSome v m)
   | e =>
     match uZugriff ctx e with
     | .error x => .error (if uPraemisse x then x else "ensures clause without G form")
@@ -1770,27 +1797,6 @@ def elabKopf (_consts : List (String × Int))
                 | .error e => .error e
                 | .ok r =>
                   .ok ({ kopf with res := .some r }, puts)
-
-/-- An option value read off an expression, with the number of its table: an option variable or the read of
-    an option field. -/
-def uOptEin (ctx : UCtx) : SExpr → Except String (UOpt × Nat)
-  | .variable p =>
-    match uParamNr ctx p with
-    | .error e => .error e
-    | .ok j =>
-      match uArtBei ctx.kinds j with
-      | .ok (.opt m) => .ok (.var p, m)
-      | _ => .error "match without G form"
-  | e =>
-    match uZugriff ctx e with
-    | .error x => .error x
-    | .ok (b, tb, f, ix) =>
-      match uOptFeld ctx tb f with
-      | .none => .error "match without G form"
-      | .some m =>
-        match b with
-        | .thru p => .ok (.slot p f ix, m)
-        | .tabelle t => .ok (.tab t f ix, m)
 
 /-- An option value of the table `num`: `None`, `Some(i)`, or what `uOptEin` reads (its table must be `num`). -/
 def uOpt (ctx : UCtx) (num : Nat) : SExpr → Except String UOpt
@@ -3177,16 +3183,41 @@ def uStart (fns : List UFn) (quelle d : String) : Except String String :=
     else .error (quelle ++ " names a function with parameters: no start-argument form: " ++ d)
   | .none => .error (quelle ++ " names an unknown function: " ++ d)
 
+/-- A start argument is a value of its parameter's type: a literal in the range, `true`/`false`, `None`. -/
+def uStartArg (tabs : List UTab) : Ty → SExpr → Bool
+  | .int lo hi, .lit n => decide (lo ≤ (n : Int) ∧ (n : Int) ≤ hi)
+  | .int lo hi, .un "-" (.lit n) => decide (lo ≤ -(n : Int) ∧ -(n : Int) ≤ hi)
+  | .bool, .tru => true
+  | .bool, .fls => true
+  | .opt _, .call "None" [] => true
+  -- `&T` for a `ptr<…> T` parameter (`Expr.ptrOf`): the one pointer to the carrier the type names
+  | .ptr n _, .fnref t => match tabs[n]? with
+    | .some tb => strEq tb.name t
+    | .none => false
+  | _, _ => false
+
+/-- A `concurrent` member: a function of the unit, started with one value per parameter
+    (`concurrent { m::f(a, b) }`, the model's start with its arguments). -/
+def uStartMit (tabs : List UTab) (fns : List UFn) (d : String) (args : List SExpr) : Except String String :=
+  match fns.find? (fun f => strEq f.name d) with
+  | .some f =>
+    if f.params.length != args.length then
+      .error ("concurrent member with " ++ toString args.length ++ " arguments for " ++
+        toString f.params.length ++ " parameters: " ++ d)
+    else if (f.params.zip args).all (fun (p, a) => uStartArg tabs p.2 a) then .ok d
+    else .error ("concurrent member with an argument outside its parameter's type: " ++ d)
+  | .none => .error ("concurrent member names an unknown function: " ++ d)
+
 /-- The roots of the `concurrent` items, in order (their members come first, as in `check_starts`). -/
-def uNebenWurzeln (fns : List UFn) : List SItemTief → Except String (List String)
+def uNebenWurzeln (tabs : List UTab) (fns : List UFn) : List SItemTief → Except String (List String)
   | [] => .ok []
   | .concT ps :: rest => do
-    let here ← uSeq (ps.map fun p => match p.getLast? with
-      | .some d => uStart fns "concurrent member" d
+    let here ← uSeq (ps.map fun (p, args) => match p.getLast? with
+      | .some d => uStartMit tabs fns d args
       | .none => .error "empty path in concurrent")
-    let more ← uNebenWurzeln fns rest
+    let more ← uNebenWurzeln tabs fns rest
     pure (here ++ more)
-  | _ :: rest => uNebenWurzeln fns rest
+  | _ :: rest => uNebenWurzeln tabs fns rest
 
 /-- The dispatch roots of the `entry` items: ONE dispatch target that names a parameterless function of
     the unit. Everything else about the entry (vector, registers, stack) is the
@@ -3212,8 +3243,8 @@ def uHandler : List SItemTief → List String
   | _ :: rest => uHandler rest
 
 /-- The thread roots: `concurrent` members, then entry dispatch roots. -/
-def uWurzeln (fns : List UFn) (ms : List SItemTief) : Except String (List String) := do
-  let a ← uNebenWurzeln fns ms
+def uWurzeln (tabs : List UTab) (fns : List UFn) (ms : List SItemTief) : Except String (List String) := do
+  let a ← uNebenWurzeln tabs fns ms
   let b ← uEingangsWurzeln fns ms
   pure (a ++ b)
 
@@ -3827,7 +3858,7 @@ def elabU : List SItemTief → Except String UProg
         elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb)) with
     | .error e => .error e
     | .ok fns =>
-    match uWurzeln fns ms with
+    match uWurzeln tabs fns ms with
     | .error e => .error e
     | .ok roots =>
     match uSeq ((uOhneDoppelte (fnItems.flatMap (fun (_, b) => uStartNamen 100000 b))).map
@@ -4012,6 +4043,7 @@ def lowerSichertEin (tabs : List UTab) (names : List String)
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
+  | .istSome .. => .error "option test without G form in the 104 lowering"
 
 /-- The `ensures` conjunction in `einzahlen` (empty is `.tru`,
     like the exporter's conjunction). -/
@@ -4425,6 +4457,7 @@ def lowerSichertLies (tabs : List UTab) (names : List String)
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
+  | .istSome .. => .error "option test without G form in the 104 lowering"
 
 def lowerSichertListeLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
@@ -4838,6 +4871,7 @@ def beqUEns : UEns → UEns → Bool
   | .globB a, .globB b => strEq a b
   | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
   | .ergB, .ergB => true
+  | .istSome o m, .istSome p n => o == p && m == n
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool

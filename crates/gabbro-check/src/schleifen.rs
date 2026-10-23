@@ -464,7 +464,7 @@ fn namen_im_ausdruck(e: &Expr, aus: &mut Vec<String>) {
                 }
             }
         }
-        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => namen_im_ausdruck(i, aus),
+        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) | ExprArt::IstSome(i) => namen_im_ausdruck(i, aus),
         ExprArt::Binaer(_, a, b) => {
             namen_im_ausdruck(a, aus);
             namen_im_ausdruck(b, aus);

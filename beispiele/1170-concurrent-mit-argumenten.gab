@@ -1,0 +1,35 @@
+// **Example 1170 -- `concurrent` members started with their arguments.**
+//
+// The Lean model's start is a function with its arguments (`Einheit` starts). Each member is
+// started with one value per parameter: a literal in the range, `true`/`false`, `None` for an
+// `option index`, `&T` for a pointer into the table `T` (`N591`, `N592`).
+
+module beispiel::concurrent_mit_argumenten {
+
+impl fn zaehle(k : u32 in 0 .. 9, laut : bool)
+    effects { pure }
+    costs   <= 2 ops
+{
+}
+
+impl fn warte()
+    effects { pure }
+    costs   <= 2 ops
+{
+}
+
+table Puffer count 2 {
+    slot {
+        wert : u32,
+    }
+}
+
+impl fn schaue(p : ptr<normal, r> Puffer)
+    effects { pure }
+    costs   <= 2 ops
+{
+}
+
+concurrent { zaehle(3, true), warte, schaue(&Puffer) };
+
+}

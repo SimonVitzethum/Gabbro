@@ -122,7 +122,13 @@ theorem druck_kopf_pred (e : SExpr) (hg : gut e = true) :
   | res => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
   | why g f =>
     exact ⟨_, _, rfl, ki g (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1.1.1), by simp⟩
-  | ext k ns xs => simp [gut] at hg
+  | ext k ns xs =>
+    obtain ⟨rfl, rfl, c, ys, rfl, hc, hv, -⟩ := gut_ruf_faelle k ns xs hg
+    obtain ⟨t, ts, h, hk, h3⟩ := platz c hc
+    refine ⟨t, ts ++ ([.zeichen "("] ++ druckToksListe ys ++ [.zeichen ")"]), by rw [druck_ruf, h]; rfl, hk,
+      fun ht => ?_⟩
+    obtain ⟨x, rfl⟩ := h3 ht
+    simp [gutPlatz] at hc
 
 /-- After `parseCmp`, the atom's tail checks. -/
 theorem predAtom_aus (H : Nat) (toks rest : List Token) (e : SExpr)

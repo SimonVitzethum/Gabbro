@@ -116,9 +116,8 @@ def genTF (K : Kenner D) (V : Vertrag D) (cap : Nat) : Nat → Nat → (l : Bool
   | f + 1, n + 1, l, Γ, Λ =>
     let Et := genEF K (min n eGrenze) (min n eGrenze) Γ Λ
     let gen := fun m l' Γ' Λ' => genTF K V cap f (if l' = l then min m cap else m) l' Γ' Λ'
-    let cs := (knotenKeys' (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
-    let exK : List (Ctx × List (Res D)) := ((knotenKeys' (n + 1) l Γ Λ Et).map (fun k => (k.2.1, k.2.2.1)) ++
-      (Aufz.glob.map fun g => (D.gtyp g :: Γ, Λ)) ++ (Aufz.reg.map fun r => (D.rtyp r :: Γ, Λ))).eraseDups
+    let cs := (knotenKeysG (n + 1) l Γ Λ Et).map (CEintrag.neu V gen)
+    let exK : List (Ctx × List (Res D)) := (knotenKeysG (n + 1) l Γ Λ Et).map (fun k => (k.2.1, k.2.2.1)) |>.eraseDups
     let ec : List (EEintrag D) := exK.map fun k => ⟨k.1, k.2, Thunk.mk fun _ => genEF K (min n eGrenze) (min n eGrenze) k.1 k.2⟩
     let O : Orakel V :=
       { ex := fun Γ' Λ' m => tab ((findeE ec Γ' Λ').getD (genEF K (min m eGrenze) (min m eGrenze) Γ' Λ'))
@@ -182,14 +181,14 @@ def gutVon (z : Spez) (P : Programm z.deklaration) : Option (Gutes z) :=
     | some (.gut g) => some g
     | _ => none)
 
-/-- **The packed programs of a member**: the filtered bodies of every function are added one after the other to the
-    packed body of their function as long as the program stays valid; a program is emitted when one function holds
-    `k` bodies. Then the contract variants, each alone. -/
-def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
-  letI : Zahlen := z.zahlen
+/-- **The packing core**: the bodies `tabs` of every function are added one after the other to the packed body of
+    their function as long as the program stays valid; a program is emitted when one function holds `k` bodies. A
+    function without a body in `tabs` keeps its `basis` body; without a basis body for every function nothing is
+    packed. `vertraege` gives the programs that differ from the empty packing in their contracts. -/
+def packKern (z : Spez) (basis : ∀ f : z.deklaration.Fn, Option (Rumpf z.deklaration f))
+    (tabs : List (Σ f : z.deklaration.Fn, List (Rumpf z.deklaration f))) (k : Nat)
+    (vertraege : Programm z.deklaration → List (Programm z.deklaration)) : List (Gutes z) :=
   let D := z.deklaration
-  let tabs : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f => ⟨f, rumpfF f nb cap⟩
-  let basis : ∀ f : D.Fn, Option (Rumpf D f) := fun f => ((ofTy tabs f).headD []).head?
   if hall : z.fnListe.all (fun f => (basis f).isSome) = true then
     let b0 : ∀ f : D.Fn, Rumpf D f := fun f => (basis f).get (by
       have := List.all_eq_true.1 hall f (List.mem_finRange f); simpa using this)
@@ -206,11 +205,28 @@ def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
       | some g' =>
         if n + 1 ≥ k then (leer, 0, none, out.push g') else (L', n + 1, some g', out)) (leer, 0, none, #[])
     let out := match r.2.2.1 with | some g => r.2.2.2.push g | none => r.2.2.2
-    let P0 := prog leer
-    let vs := z.fnListe.flatMap fun f =>
+    out.toList ++ (vertraege (prog leer)).filterMap (gutVon z)
+  else []
+
+/-- **The packed programs of a member**: the filtered bodies (`rumpfF`), then the contract variants, each alone. -/
+def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
+  letI : Zahlen := z.zahlen
+  let D := z.deklaration
+  let tabs : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f => ⟨f, rumpfF f nb cap⟩
+  packKern z (fun f => ((ofTy tabs f).headD []).head?) tabs k fun P0 =>
+    z.fnListe.flatMap fun f =>
       (reqF f nc).map (fun e => { P0 with requires := fun g => if h : f = g then h ▸ e else .tru }) ++
       (ensF f nc).map (fun e => { P0 with ensures := fun g => if h : f = g then h ▸ e else .tru })
-    out.toList ++ vs.filterMap (gutVon z)
-  else []
+
+/-- **The packed programs for target cells**: the bodies of the UNFILTERED tables up to size `nb` (`rumpfT`: no
+    novelty filter drops a building block) that carry a fine cell `ziel` accepts. -/
+def packenZiel (z : Spez) (nb k : Nat) (ziel : FZelle → Bool) : List (Gutes z) :=
+  letI : Zahlen := z.zahlen
+  let D := z.deklaration
+  let alle : List (Σ f : D.Fn, List (Rumpf D f)) :=
+    z.fnListe.map fun f => ⟨f, (rumpfT (fun _ _ => true) f nb).flatten⟩
+  let tabs : List (Σ f : D.Fn, List (Rumpf D f)) :=
+    alle.map fun ⟨f, bs⟩ => ⟨f, bs.filter fun b => (fzEnd b).any ziel⟩
+  packKern z (fun f => ((ofTy alle f).headD []).head?) tabs k fun _ => []
 
 end Gabbro.Grammatik.Gen.Fein

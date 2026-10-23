@@ -1625,7 +1625,7 @@ fn orte_in(e: &Expr, f: &mut impl FnMut(&Ort)) {
                 }
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => orte_in(x, f),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => orte_in(x, f),
         ExprArt::Binaer(_, a, b) => {
             orte_in(a, f);
             orte_in(b, f);
@@ -1977,7 +1977,7 @@ fn rufe_in<'a>(e: &'a Expr, out: &mut Vec<&'a Ruf>) {
                 rufe_in(a, out);
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => rufe_in(x, out),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => rufe_in(x, out),
         ExprArt::Binaer(_, a, b) => {
             rufe_in(a, out);
             rufe_in(b, out);
@@ -2488,7 +2488,7 @@ fn rufprobe_expr(
                 rufprobe_expr(a, span, offen, kette, sperren, rw, absagen);
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => {
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => {
             rufprobe_expr(x, span, offen, kette, sperren, rw, absagen)
         }
         ExprArt::Binaer(_, a, b) => {

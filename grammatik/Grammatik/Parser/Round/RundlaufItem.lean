@@ -1030,9 +1030,56 @@ theorem druckWurzeln_pfade : ∀ (ps : List (List String)), (∀ p ∈ ps, PfadG
       simp only [druckWurzeln, kommaToks, rohToks_pfad p hp.1 hp.2] at ih' ⊢
       rw [ih']
 
-theorem pfadFolge_rund : ∀ (ps : List (List String)) (R : List Token) (F : Nat), ps ≠ [] →
-    (∀ p ∈ ps, p ≠ []) → (ps.map pfadToks).length ≤ F →
-    parsePfadFolge F (kommaToks (ps.map pfadToks) ++ .zeichen "}" :: R) = .ok (ps, R) := by
+/-- The arguments of a start as printed: in parentheses when there are any. -/
+def argToks (as : List SExpr) : List Token :=
+  if as.isEmpty then [] else [.zeichen "("] ++ druckToksListe as ++ [.zeichen ")"]
+
+theorem druckStart_eq (p : List String × List SExpr) (hp : PfadGut p.1) :
+    druckStart p = pfadToks p.1 ++ argToks p.2 := by
+  simp [druckStart, argToks, rohToks_pfad p.1 hp.1 hp.2]
+
+/-- After a path, the arguments read back (or none) and the follow `,`/`}` stays. -/
+theorem argToks_rund (as : List SExpr) (has : ∀ x ∈ as, gut x = true) (R : List Token) (f : Nat)
+    (hR : ∀ r, R ≠ .zeichen "(" :: r) (hF : 6 * (druckToksListe as).length + 36 ≤ f) :
+    startArgs f (argToks as ++ R) = .ok (as, R) := by
+  cases as with
+  | nil =>
+    simp only [argToks, List.isEmpty_nil, if_true, List.nil_append]
+    unfold startArgs
+    split
+    · rename_i x; exact absurd rfl (hR x)
+    · rfl
+  | cons x xs =>
+    simp only [argToks, List.isEmpty_cons, Bool.false_eq_true, if_false, List.append_assoc, List.cons_append,
+      List.nil_append, startArgs]
+    have := argsM (x :: xs) R f (fun y hy => ⟨legs_tok y (has y hy), has y hy⟩) hF
+    simpa [List.append_assoc] using this
+
+theorem druckToksListe_le_argToks : ∀ (as : List SExpr), (druckToksListe as).length ≤ (argToks as).length
+  | [] => by simp [druckToksListe, argToks]
+  | x :: xs => by simp [argToks]; omega
+
+/-- The tokens of the starts, as `kommaToks` of each start's tokens. -/
+theorem druckStarts_eq : ∀ (ps : List (List String × List SExpr)), (∀ p ∈ ps, PfadGut p.1) →
+    druckStarts ps = kommaToks (ps.map fun p => pfadToks p.1 ++ argToks p.2) := by
+  intro ps hps
+  induction ps with
+  | nil => rfl
+  | cons p ps ih =>
+    have hp := hps p (by simp)
+    have ih' := ih (fun x hx => hps x (List.mem_cons_of_mem _ hx))
+    cases ps with
+    | nil => simp [druckStarts, kommaToks, druckStart_eq p hp]
+    | cons q qs =>
+      simp only [List.map_cons] at ih' ⊢
+      simp only [druckStarts, kommaToks, druckStart_eq p hp] at ih' ⊢
+      rw [ih']
+
+theorem startFolge_rund : ∀ (ps : List (List String × List SExpr)) (R : List Token) (F : Nat), ps ≠ [] →
+    (∀ p ∈ ps, PfadGut p.1 ∧ ∀ x ∈ p.2, gut x = true) →
+    ps.length + 6 * (kommaToks (ps.map fun p => pfadToks p.1 ++ argToks p.2)).length + 37 ≤ F →
+    parsePfadFolge F (kommaToks (ps.map fun p => pfadToks p.1 ++ argToks p.2) ++ .zeichen "}" :: R) =
+      .ok (ps, R) := by
   intro ps
   induction ps with
   | nil => intro _ _ h; exact absurd rfl h
@@ -1042,43 +1089,62 @@ theorem pfadFolge_rund : ∀ (ps : List (List String)) (R : List Token) (F : Nat
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp at hF; omega⟩
     cases ps with
     | nil =>
-      have hP := nimmPfad_pfad p (.zeichen "}" :: R) hp (by intro r e; simp at e)
-      simp only [List.map_cons, List.map_nil, kommaToks]
-      simp [parsePfadFolge, hP, fordereZeichen, strEq_self]
+      have hP := nimmPfad_pfad p.1 (argToks p.2 ++ .zeichen "}" :: R) hp.1.1 (by
+        intro r e
+        unfold argToks at e; split at e <;> simp at e)
+      have hA := argToks_rund p.2 hp.2 (.zeichen "}" :: R) F' (by intro r e; simp at e) (by
+        have := druckToksListe_le_argToks p.2
+        simp [kommaToks] at hF; omega)
+      simp only [List.map_cons, List.map_nil, kommaToks, List.append_assoc] at hP hA ⊢
+      unfold parsePfadFolge
+      simp only [hP]
+      rw [hA]
+      simp [fordereZeichen, strEq_self]
     | cons q qs =>
       have hq := hg q (by simp)
-      have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp at hF ⊢; omega)
-      have hP := nimmPfad_pfad p (.zeichen "," :: (kommaToks ((q :: qs).map pfadToks) ++ .zeichen "}" :: R))
-        hp (by intro r e; simp at e)
-      obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks q = nameTok a :: us := by
-        match q, hq with
+      have hR := ih R F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp [kommaToks] at hF ⊢; omega)
+      obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks q.1 = nameTok a :: us := by
+        match q.1, hq.1.1 with
         | [a], _ => exact ⟨a, [], rfl⟩
         | a :: b :: cs, _ => exact ⟨a, _, rfl⟩
-      have hk : kommaToks ((q :: qs).map pfadToks) = nameTok a :: (kommaToks ((q :: qs).map pfadToks)).tail := by
+      have hk : kommaToks ((q :: qs).map fun p => pfadToks p.1 ++ argToks p.2) =
+          nameTok a :: (kommaToks ((q :: qs).map fun p => pfadToks p.1 ++ argToks p.2)).tail := by
         cases qs <;> simp [kommaToks, hq1]
-      have hd : kommaToks ((p :: q :: qs).map pfadToks) = pfadToks p ++ .zeichen "," ::
-          kommaToks ((q :: qs).map pfadToks) := by
+      have hd : kommaToks ((p :: q :: qs).map fun p => pfadToks p.1 ++ argToks p.2) = pfadToks p.1 ++
+          (argToks p.2 ++ .zeichen "," :: kommaToks ((q :: qs).map fun p => pfadToks p.1 ++ argToks p.2)) := by
         simp [kommaToks]
+      have hP := nimmPfad_pfad p.1 (argToks p.2 ++ .zeichen "," ::
+        (kommaToks ((q :: qs).map fun p => pfadToks p.1 ++ argToks p.2) ++ .zeichen "}" :: R)) hp.1.1 (by
+          intro r e
+          unfold argToks at e; split at e <;> simp at e)
+      have hA := argToks_rund p.2 hp.2 (.zeichen "," ::
+        (kommaToks ((q :: qs).map fun p => pfadToks p.1 ++ argToks p.2) ++ .zeichen "}" :: R)) F'
+        (by intro r e; simp at e) (by
+          have := druckToksListe_le_argToks p.2
+          rw [hd] at hF; simp at hF; omega)
       rw [hd]
-      simp only [List.append_assoc, List.cons_append] at hP ⊢
-      rw [hk] at hP hR ⊢
-      simp only [List.cons_append] at hP hR ⊢
+      simp only [List.append_assoc, List.cons_append] at hP hA ⊢
       unfold parsePfadFolge
-      simp only [hP, hR]
+      simp only [hP]
+      rw [hA]
+      rw [hk] at hR ⊢
+      simp only [List.cons_append] at hR ⊢
+      simp only [hR]
       rcases nameTok_cases a with h | h <;> rw [h] <;> rfl
 
-theorem item_conc (ps : List (List String)) (hps : ∀ p ∈ ps, PfadGut p) : ItemBein (.concT ps) := by
+theorem item_conc (ps : List (List String × List SExpr)) (hps : ∀ p ∈ ps, PfadGut p.1 ∧ ∀ x ∈ p.2, gut x = true) :
+    ItemBein (.concT ps) := by
   intro rest F hF
-  have hW := druckWurzeln_pfade ps hps
-  have hlen : (ps.map pfadToks).length ≤ (kommaToks (ps.map pfadToks)).length := by
+  have hW := druckStarts_eq ps (fun p hp => (hps p hp).1)
+  have hlen : ps.length ≤ (kommaToks (ps.map fun p => pfadToks p.1 ++ argToks p.2)).length := by
     clear hF hW
     induction ps with
     | nil => simp
     | cons p ps ih =>
       have hp := hps p (by simp)
       have ih' := ih (fun x hx => hps x (List.mem_cons_of_mem _ hx))
-      have h1 : 1 ≤ (pfadToks p).length := by
-        match p, hp.1 with
+      have h1 : 1 ≤ (pfadToks p.1).length := by
+        match p.1, hp.1.1 with
         | [a], _ => simp [pfadToks]
         | a :: b :: cs, _ => simp [pfadToks]
       cases ps with
@@ -1087,20 +1153,20 @@ theorem item_conc (ps : List (List String)) (hps : ∀ p ∈ ps, PfadGut p) : It
   simp only [fbI, druckItem, hW, List.length_append, List.length_cons, List.length_nil] at hF
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 4 := ⟨F - 4, by omega⟩
   have hd : druckItem (.concT ps) ++ rest = .wort "concurrent" :: .zeichen "{" ::
-      (kommaToks (ps.map pfadToks) ++ .zeichen "}" :: .zeichen ";" :: rest) := by
+      (kommaToks (ps.map fun p => pfadToks p.1 ++ argToks p.2) ++ .zeichen "}" :: .zeichen ";" :: rest) := by
     simp [druckItem, hW]
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_concurrent]
   cases ps with
   | nil => simp [kommaToks, parseNebenTief, nimmWort, strEq_self, parsePfadListe, fordereZeichen]
   | cons p ps' =>
     have hp := hps p (by simp)
-    have hF' := pfadFolge_rund (p :: ps') (.zeichen ";" :: rest) F' (by simp) (fun x hx => (hps x hx).1)
-      (by omega)
-    obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks p = nameTok a :: us := by
-      match p, hp.1 with
+    have hF' := startFolge_rund (p :: ps') (.zeichen ";" :: rest) F' (by simp) hps (by omega)
+    obtain ⟨a, us, hq1⟩ : ∃ a us, pfadToks p.1 = nameTok a :: us := by
+      match p.1, hp.1.1 with
       | [a], _ => exact ⟨a, [], rfl⟩
       | a :: b :: cs, _ => exact ⟨a, _, rfl⟩
-    have hk : kommaToks ((p :: ps').map pfadToks) = nameTok a :: (kommaToks ((p :: ps').map pfadToks)).tail := by
+    have hk : kommaToks ((p :: ps').map fun p => pfadToks p.1 ++ argToks p.2) =
+        nameTok a :: (kommaToks ((p :: ps').map fun p => pfadToks p.1 ++ argToks p.2)).tail := by
       cases ps' <;> simp [kommaToks, hq1]
     rw [hk] at hF' ⊢
     simp only [List.cons_append, List.map_cons] at hF' ⊢

@@ -1191,6 +1191,8 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // **`~` has no term here, and the reason is the model and not the operator.** A
         // complement is `2^n - 1 - x`, and the `n` is nowhere in this channel.
         ExprArt::Unaer(UnOp::BitNicht, _) => Err(LeanReason::Expression),
+        // the option test has no term in this channel (no option values here)
+        ExprArt::IstSome(_) => Err(LeanReason::Expression),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
                 BinOp::Plus => "add",
@@ -1784,7 +1786,7 @@ fn calls_in<'a>(e: &'a Expr, c: &Ctx, out: &mut Vec<&'a Ruf>) {
                 calls_in(a, c, out);
             }
         }
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => calls_in(x, c, out),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) | ExprArt::IstSome(x) => calls_in(x, c, out),
         ExprArt::Binaer(BinOp::Und, _, _) | ExprArt::Binaer(BinOp::Oder, _, _) => {}
         ExprArt::Binaer(_, a, b) => {
             calls_in(a, c, out);
@@ -1957,7 +1959,7 @@ fn shape_of_expr(e: &Expr, c: &Ctx) -> Option<Shape> {
         ExprArt::Zahl(_) => Some(Shape::Int),
         ExprArt::Wahr | ExprArt::Falsch => Some(Shape::Bool),
         ExprArt::Klammer(x) => shape_of_expr(x, c),
-        ExprArt::Unaer(UnOp::Nicht, _) => Some(Shape::Bool),
+        ExprArt::Unaer(UnOp::Nicht, _) | ExprArt::IstSome(_) => Some(Shape::Bool),
         ExprArt::Unaer(UnOp::Negativ, _) => Some(Shape::Int),
         ExprArt::Unaer(UnOp::BitNicht, _) => None,
         ExprArt::Binaer(op, _, _) => match op {
@@ -4044,6 +4046,7 @@ fn renamed_expr(e: &Expr, pairs: &[(String, String)]) -> Expr {
         ExprArt::Alt(o) => ExprArt::Alt(renamed_ort(o, pairs)),
         ExprArt::Klammer(x) => ExprArt::Klammer(Box::new(renamed_expr(x, pairs))),
         ExprArt::Unaer(op, x) => ExprArt::Unaer(*op, Box::new(renamed_expr(x, pairs))),
+        ExprArt::IstSome(x) => ExprArt::IstSome(Box::new(renamed_expr(x, pairs))),
         ExprArt::Binaer(op, a, b) => ExprArt::Binaer(
             *op,
             Box::new(renamed_expr(a, pairs)),
