@@ -234,15 +234,17 @@ def packen (z : Spez) (nb nc cap k : Nat) : List (Gutes z) :=
       (ensF f nc).map (fun e => { P0 with ensures := fun g => if h : f = g then h ▸ e else .tru })
 
 /-- **The packed programs for target cells**: the bodies of the UNFILTERED tables up to size `nb` with expressions up
-    to size `ec` (`genTZ`: no novelty filter drops a building block) that carry a fine cell `ziel` accepts. -/
+    to size `ec` (`genTZ`: no novelty filter drops a building block) that carry a fine cell `ziel` accepts, the first
+    body for each such cell. -/
 def packenZiel (z : Spez) (nb ec k : Nat) (ziel : FZelle → Bool) : List (Gutes z) :=
   letI : Zahlen := z.zahlen
   let D := z.deklaration
   let alle : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f =>
     let t := tabN (genTZ (vertragVon D f) ec nb nb false (D.params f) (Signatur.anfang D (D.signatur f)))
     ⟨f, ((List.range (nb + 1)).map t).flatten⟩
+  -- one body per target cell: the first that brings it (the tables are complete, the packing is the cost)
   let tabs : List (Σ f : D.Fn, List (Rumpf D f)) :=
-    alle.map fun ⟨f, bs⟩ => ⟨f, bs.filter fun b => (fzEnd b).any ziel⟩
+    alle.map fun ⟨f, bs⟩ => ⟨f, (neuFilter (fun b => (fzEnd b).filter ziel) {} bs).1⟩
   packKern z (fun f => ((ofTy alle f).headD []).head?) tabs k fun _ => []
 
 end Gabbro.Grammatik.Gen.Fein
