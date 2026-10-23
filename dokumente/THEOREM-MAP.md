@@ -4475,3 +4475,19 @@ Finding: `GutO` frames foreign writes by carrier only, so G admitted foreign wri
 | witnesses `kz_endet`, `kz_endet_mass`, `kz_abgelehnt`, `kz_bedingt_end`, `kz_umgebung`, `kz_bedingt_leave`, `kz_bedingt_rueck`, `kz_ewigFrei`, `kz_nicht_ewigFrei` (every class computed by `decide`) | KlasseZeuge | -- |
 
 A cost table cannot bound measured recursion (Ackermann's `(1, 0)` calls `(0, k)` for every `k`); the bound is a well-founded rank of the stack (frame weight: rank of the function in the call graph, measure at entry, residue potential with calls priced 0; the stack ordered lexicographically from the bottom, a prefix below its extensions). NOT proved: termination of `umgebung`/`bedingt` beyond the budget; threads spawned at run time.
+
+## 90. Termination with spawned threads, a waiting bound, the exit condition (2026-10-23)
+
+*Files: `grammatik/Grammatik/Logik/Terminierung/{LaufGX,Ausgang,KlasseZeuge}.lean`, `Logik/Fortschritt/Warten.lean` (definitions moved out of `Lebendigkeit/T1.lean`), `Zielsatz/Atomar/{BeweisTerminierung,TerminierungZeuge,BeweisWarten}.lean`; the statements `GabbroZielTerminierung` (now over thread-machine runs) and `GabbroZielWarten` in `Zielsatz/Kern/Spec.lean`.*
+
+| Statement | File | Hypotheses |
+|---|---|---|
+| `FadenLaufX` (infinite runs of the thread machine over GX), `FadenLaufX.alsGX`, `FadenLaufX.erreichbar` | LaufGX | -- |
+| **`gabbro_ziel_terminierung`** over every set of initially live threads and every thread-machine run (threads started, spawned and joined at run time); witness `terminierung_zeuge` on a thread-machine run | BeweisTerminierung, TerminierungZeuge | as §89 |
+| `zaehl`, `wMaxH`, `wF`, **`wartezeit`**, `FifoSperre`, `FairF`, `LaufzeitAnnahme`, `Haltezeit`, `Anwaerter`; `HardwareImAbschnitt` (in Spec.lean) | Warten | -- |
+| `bereich_aus` (every float check passes at every reached GX machine); **`gabbro_ziel_warten : GabbroZielWarten`** (from `wartezeit_schranke`, whose witness is LebendigkeitZeuge) | BeweisWarten | (a)-(d), a `FifoLauf`, `FairF F`, `Haltezeit h k`, `HardwareImAbschnitt`, `Anwaerter Ts` |
+| `OhneAus`, `EndOhneAus` and their transport lemmas; **`foreverLauf_ok`**, **`foreverLauf_zurueck`**, `foreverLauf_why` (a loop ends normally only through a pass that leaves, returns only through one that returns), **`foreverLauf_nur_umwelt`**, `ohneAus_forever`, `ohneAus_traverse`, `ohneAus_retry` | Ausgang | -- |
+| **`ohneAus_execStmt`**/`execBlock`/`execEnd`/`execArms`/`execGrund` (a statement whose finding holds no exit yields none), **`forever_umgebung`**, **`forever_bedingt`** | Ausgang | -- |
+| witnesses `kz_umgebung_endet_nie`, `kz_bedingt_endet` | KlasseZeuge | -- |
+
+NOT proved: the hold time derived from the program (the two bridges of Lebendigkeit.lean); termination of `umgebung`/`bedingt` beyond the budget (undecidable in general; the exit condition is the model's part).

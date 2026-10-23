@@ -11,6 +11,7 @@
   And `ewigFrei` (the premise of `endet_satz`'s budget half) holds exactly for the `forever`-free ones.
 -/
 import Grammatik.Logik.Terminierung.Entscheidung
+import Grammatik.Logik.Terminierung.Ausgang
 import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 
 namespace Gabbro.Grammatik.Terminierung.KlasseZeuge
@@ -63,5 +64,23 @@ theorem kz_bedingt_rueck : klasse (prog rRueck) [()] ohne () = .bedingt := by de
 
 theorem kz_ewigFrei : ewigFrei (prog rZwei) [()] () = true := by decide
 theorem kz_nicht_ewigFrei : ewigFrei bP [()] () = false := by decide
+
+/-- **The exit condition on the witnesses**: `forever { }` (class `umgebung`) ends only at a logic or hardware
+    stop, for every oracle, handler, grant of passes and start; `forever { leave; }` (class `bedingt`) completes after
+    one pass. -/
+theorem kz_umgebung_endet_nie (O : Orakel bD) (passes : Nat)
+    (R : ∀ f : bD.Fn, World bD → Env bD (bD.params f) → RufAusgang f) (σ : World bD) (ρ : Env bD (bD.params ())) :
+    (∃ e, execStmt (l := false) O passes R
+        (.forever () Expr.tru (.nil : Block bD (vertragVon bD ()) true (bD.params ()) Λ0 Λ0)) σ ρ = .logik e) ∨
+      ∃ e, execStmt (l := false) O passes R
+        (.forever () Expr.tru (.nil : Block bD (vertragVon bD ()) true (bD.params ()) Λ0 Λ0)) σ ρ = .hardware e :=
+  forever_umgebung O passes R () Expr.tru .nil rfl σ ρ
+
+theorem kz_bedingt_endet (O : Orakel bD) (R : ∀ f : bD.Fn, World bD → Env bD (bD.params f) → RufAusgang f)
+    (σ : World bD) (ρ : Env bD (bD.params ())) :
+    ∃ σ', execStmt (l := false) O 1 R
+      (.forever () Expr.tru (.cons (.leave rfl) .nil : Block bD (vertragVon bD ()) true (bD.params ()) Λ0 Λ0)) σ ρ =
+        .ok σ' ρ :=
+  ⟨_, rfl⟩
 
 end Gabbro.Grammatik.Terminierung.KlasseZeuge

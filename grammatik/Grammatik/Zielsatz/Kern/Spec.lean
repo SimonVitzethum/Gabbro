@@ -167,8 +167,11 @@
   finitely many steps -- a `forever` is finite here because machine G grants `passes` passes from outside; (2) a thread whose start
   function the decision algorithm `klasse` (Logik/Terminierung/Klasse.lean: `endet`, `umgebung`, `bedingt`,
   `abgelehnt`, computed from the syntax) puts in class `endet` never stands at a spent budget: its end does not
-  lean on the passes. Classes `umgebung` and `bedingt` are finite per pass (`durchgang_schritte`), not in this
-  statement.
+  lean on the passes. Classes `umgebung` and `bedingt` are finite per pass (`durchgang_schritte`); how their loops can
+  end is fixed in the model, not here (Logik/Terminierung/Ausgang.lean): a `forever` loop completes only through a
+  pass that leaves and returns only through one that returns (`forever_bedingt`), and a loop whose body holds no exit
+  -- the loops of class `umgebung` -- ends only at a logic or hardware stop, at its `progress` assumption when the
+  passes are spent (`forever_umgebung`).
 
   WAITING (2026-10-23, `GabbroZielWarten`). Over the runs of the ticket lock (`FifoLauf`) from the runtime's start,
   four named premises of the run, none derived: the scheduler's fairness window `F` (`FairF`: a thread that can

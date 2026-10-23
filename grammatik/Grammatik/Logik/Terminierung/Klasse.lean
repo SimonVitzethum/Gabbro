@@ -17,7 +17,9 @@
     Turing complete).
   * `abgelehnt` -- refused: a recursion cycle with a non-tail call and no measure, or a `forever` whose pass is not
     itself of class `endet` (a pass must end, so that every service is productive).
-  A function's class is the weakest local class in its call hull (`klasse`).
+  A function's class is the weakest local class in its call hull (`klasse`). What each class means in the model:
+  `endet` -- `endet_satz` (Entscheidung.lean); `umgebung` and `bedingt` -- the exit condition of their loops
+  (`forever_umgebung`, `forever_bedingt`, Ausgang.lean).
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 
