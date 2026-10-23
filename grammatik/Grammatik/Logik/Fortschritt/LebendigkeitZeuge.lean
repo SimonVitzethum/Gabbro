@@ -624,7 +624,7 @@ set_option maxHeartbeats 4000000 in
     while thread 0 holds the lock at steps 6-11, and takes it at step 15. -/
 theorem lZeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧ R.akt = lAkt ∧
-    LaufzeitAnnahme R 4 ∧ Haltezeit R (fun _ => 6) (fun _ => 0) ∧ HardwareImAbschnitt R ∧
+    LaufzeitAnnahme R 4 ∧ Haltezeit R (fun _ => 6) (fun _ => 0) ∧ Zielsatz.HardwareImAbschnitt R ∧
     Anwaerter R (fun _ => [0, 1]) ∧ (∀ n, KeinLogikHaltG mO 0 (R.M n)) ∧
     (∀ j, 5 ≤ j → j ≤ 15 → AnSperre (R.M j) 1 ()) ∧
     (∀ j, 6 ≤ j → j ≤ 11 → () ∈ offen ((R.M j).faeden 0).spur) ∧
@@ -791,7 +791,7 @@ theorem lW_eq : wartezeit (D := mD) [()] (fun _ => [0, 1]) (fun _ => 6) (fun _ =
     takes it at step 15 (`lZeuge`: `akt 15 = some 1`, held at step 16). -/
 theorem wartezeit_zeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧ LaufzeitAnnahme R 4 ∧
-    Haltezeit R (fun _ => 6) (fun _ => 0) ∧ HardwareImAbschnitt R ∧
+    Haltezeit R (fun _ => 6) (fun _ => 0) ∧ Zielsatz.HardwareImAbschnitt R ∧
     Anwaerter R (fun _ => [0, 1]) ∧
     AnSperre (R.M 5) 1 () ∧
     (∀ j, 6 ≤ j → j ≤ 11 → () ∈ offen ((R.M j).faeden 0).spur) ∧

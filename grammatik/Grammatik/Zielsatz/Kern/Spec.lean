@@ -21,6 +21,9 @@
     of machine GX every thread takes only finitely many steps, and a thread whose start the algorithm `klasse` puts
     in class `endet` never stands at a spent `forever` budget (`gabbro_ziel_terminierung`, proof in
     Zielsatz/Atomar/BeweisTerminierung.lean). See TERMINATION below.
+  * `GabbroZielWarten` -- a waiting bound: on every run of the ticket lock a thread standing at `locks L` takes `L`
+    within `wartezeit` scheduler steps, under four named premises of the run (`gabbro_ziel_warten`, proof in
+    Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool, not the Rust checker, and no
   bridge from the model to a binary is built (THE READING, below).
@@ -167,8 +170,18 @@
   lean on the passes. Classes `umgebung` and `bedingt` are finite per pass (`durchgang_schritte`), not in this
   statement.
 
+  WAITING (2026-10-23, `GabbroZielWarten`). Over the runs of the ticket lock (`FifoLauf`) from the runtime's start,
+  four named premises of the run, none derived: the scheduler's fairness window `F` (`FairF`: a thread that can
+  step at each of `F` consecutive steps takes one); the hold time (`Haltezeit h k`: on every stretch on which a
+  thread holds `L` it takes at most `h L` own steps, `k L` of them at a nested `locks`); no named stop inside a
+  critical section (`HardwareImAbschnitt`); the contenders `Ts L` (`Anwaerter`). Claimed: a thread standing at
+  `locks L` takes `L` within `wartezeit ls Ts h k F L` scheduler steps (Logik/Fortschritt/Warten.lean: recursive over
+  the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time is a premise: that the checker's `held <= N ops`
+  bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
+
   NOT CLAIMED:
-  * a waiting bound, a time bound for `forever` or recursion, termination of `umgebung`/`bedingt` beyond the budget
+  * a waiting bound without the four premises of WAITING (in particular the hold time derived from the program), a
+    time bound for `forever` or recursion, termination of `umgebung`/`bedingt` beyond the budget
     (whether a `leave` guard or a base path is ever taken is the program's question); `GabbroZielLeben` claims that a
     lock wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
     time;
@@ -214,6 +227,7 @@ import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Logik.Fortschritt.Folge
 import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 import Grammatik.Logik.Fortschritt.PlanLauf
+import Grammatik.Logik.Fortschritt.Warten
 import Grammatik.Speichermodell.Adressen.Layout
 import Grammatik.Logik.Terminierung.LaufGX
 
@@ -568,6 +582,12 @@ def FortschrittG (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschine
   ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M .flagge t ∨
     HaltBenannt O passes M .budget t ∨ HaltBenannt O passes M .hardware t ∨
     HaltBenannt O passes M .nieZurueck t ∨ ∃ M', RufSchrittG P O passes M t M'
+
+/-- **No named stop inside a critical section**, of any kind (`HaltArt`): devices and axioms answer, `awaits`
+    payloads become visible, the `forever` budget is not spent while a lock is held. A named assumption of the
+    waiting bound (`GabbroZielWarten`). -/
+def HardwareImAbschnitt {P : Programm D} {O : Orakel D} {passes : Nat} (R : PlanLauf P O passes) : Prop :=
+  ∀ n u L, L ∈ offen ((R.M n).faeden u).spur → ∀ k, ¬ HaltBenannt O passes (R.M n) k u
 
 /-- Thread `t` stands at `locks L` while thread `u` holds `L`. -/
 def WartetAuf (M : RufMaschineG D) (t u : Faden) (L : D.Lock) : Prop :=
@@ -1092,6 +1112,36 @@ def GabbroZielLeben : Prop :=
         ∀ (n : Nat) (t : Faden) (L : D.mitRuhe.Lock), AnSperre (R.M n) t L →
           (∃ j, n ≤ j ∧ R.akt j = some t ∧ AnSperre (R.M j) t L) ∨
             ∃ u m, ∀ j, m ≤ j → L ∈ offen ((R.M j).faeden u).spur
+
+/-! ## A waiting bound (2026-10-23)
+
+    Starvation freedom says a waiting thread gets its lock; the waiting bound says WHEN. A FIFTH statement under the
+    same four premise groups, over the runs of the ticket lock, with four named premises of the run: the scheduler's
+    fairness window `F` (`FairF`), the hold time of every critical section (`Haltezeit`), no named stop inside a
+    critical section (`HardwareImAbschnitt`) and the contenders (`Anwaerter`). See WAITING in the header. -/
+
+/-- **GABBRO_ZIEL_WARTEN.** On every run of the ticket lock from the runtime's start whose scheduler has fairness
+    window `F`, whose critical sections of `L` take at most `h L` own steps (`k L` of them at a nested `locks`),
+    without a named stop inside a section, and whose contenders for `L` are `Ts L`: a thread standing at `locks L`
+    at step `n0` takes `L` before step `n0 + wartezeit ls Ts h k F L`. -/
+def GabbroZielWarten : Prop :=
+  ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
+    C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E
+    NutzerPflichtA E →                                          -- (b) the user, with the rely
+    ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
+    ∀ (passes : Nat) (sp : Speicher D.mitRuhe)
+      (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
+      Laufzeit E sp init →                                      -- (d) the runtime, A4
+      ∀ (R : FifoLauf E.P.mitRuhe O.mitRuhe passes) (F : Nat) (h k : D.Lock → Nat) (Ts : D.Lock → List Faden),
+        R.M 0 = RufStartG E.P.mitRuhe sp init →
+        FairF R.toPlanLauf F →                                  -- the scheduler's fairness window
+        Haltezeit R.toPlanLauf h k →                            -- the hold time of the sections
+        HardwareImAbschnitt R.toPlanLauf →                      -- no named stop inside a section
+        Anwaerter R.toPlanLauf Ts →                             -- the contenders
+        ∀ (L : D.Lock) (t : Faden) (n0 : Nat), AnSperre (R.M n0) t L →
+          ∃ j, n0 ≤ j ∧ j < n0 + wartezeit (D := D.mitRuhe) ls.1 Ts h k F L ∧ R.akt j = some t ∧
+            L ∈ offen ((R.M (j + 1)).faeden t).spur
 
 /-! ## Termination (2026-10-22)
 

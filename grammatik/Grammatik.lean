@@ -124,6 +124,7 @@ import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetAus
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
 import Grammatik.Logik.Fortschritt.PlanLauf
+import Grammatik.Logik.Fortschritt.Warten
 import Grammatik.Logik.Fortschritt.Hungerfrei
 import Grammatik.Logik.Fortschritt.HungerfreiZeuge
 import Grammatik.Logik.Terminierung.Klasse
@@ -136,6 +137,7 @@ import Grammatik.Logik.Terminierung.LaufGX
 import Grammatik.Zielsatz.Atomar.MassRuhe
 import Grammatik.Zielsatz.Atomar.BeweisTerminierung
 import Grammatik.Zielsatz.Atomar.TerminierungZeuge
+import Grammatik.Zielsatz.Atomar.BeweisWarten
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Logik.Fortschritt.KostenGZeuge
 import Grammatik.Proben.AuditFinal
