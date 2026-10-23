@@ -100,7 +100,7 @@ end Gabbro.Grammatik
     rule steps it). Then it takes fewer steps, never more.
   * TIME. Steps of G are not operations of kosten.rs and not cycles; §11
     relates the first two, `Ziel.lean` `fristAlsAnnahme` the last.
-  * Indirect calls (`callInd`, `bindCallInd`) are excluded (`rufeS`): the
+  * Indirect calls (`callInd`, `bindCallInd`) are excluded (gate `ZS = fun _ => false`): the
     Lean signature carries no cost, so a pointer's callee has no number
     (F8). The declared costs are an explicit table `decl`, not a field of
     `Signatur` (a field broke the anonymous constructors in `Satz.lean` and

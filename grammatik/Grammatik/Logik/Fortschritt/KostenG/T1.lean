@@ -159,7 +159,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       model has no number for it (the checker reads `costs` off the
       pointer TYPE -- `kosten.rs::ruf`, «B8» -- and the Lean signature has
       no cost field). Counted without a callee here and EXCLUDED from the
-      bound by `rufeS` (see CUTS). -/
+      bound: the cost engine runs the gates with `ZS = fun _ => false` (see CUTS). -/
   | .callInd p args _ _ => 1 + kostenExpr p + kostenArgs args
   | .locks _ _ body => 2 + kostenBlock c pa body
   | .breaking _ body => 1 + kostenBlock c pa body
@@ -264,25 +264,27 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
 end
 /-! ## 2. Which callees a body names -/
 
-/- `rufeS Z s`: every DIRECT callee named in `s` satisfies `Z`, and `s`
-    contains no indirect call (whose callee the syntax does not name). The
+/- `rufeS Z ZS EW EW s`: every DIRECT callee named in `s` satisfies `Z`, and every
+    indirect call in `s` goes through a signature `n` with `ZS n` (the syntax
+    names the signature, not the callee; `ZS = fun _ => false` excludes
+    indirect calls), and a `forever` stands in `s` only if `EW`. The
     bound needs to know, before a push, that the callee's cost was counted
     at a table the callee's own body fits under; this is the Bool that
     carries the admission of the callees down the residue. -/
 mutual
-def rufeS (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
-  | .ite _ t e => rufeB Z t && rufeB Z e
-  | .onOption _ p a => rufeB Z p && rufeB Z a
-  | .onTag _ arms => rufeArms Z arms
-  | .onWhy _ arms => rufeGArms Z arms
+  | .ite _ t e => rufeB Z ZS EW t && rufeB Z ZS EW e
+  | .onOption _ p a => rufeB Z ZS EW p && rufeB Z ZS EW a
+  | .onTag _ arms => rufeArms Z ZS EW arms
+  | .onWhy _ arms => rufeGArms Z ZS EW arms
   | .call g _ _ _ => Z g
-  | .callInd _ _ _ _ => false
-  | .locks _ _ body => rufeB Z body
-  | .breaking _ body => rufeB Z body
-  | .traverse _ _ body => rufeB Z body
-  | .retry _ _ body ueber => rufeB Z body && rufeB Z ueber
-  | .forever _ _ body => rufeB Z body
+  | .callInd (n := n) _ _ _ _ => ZS n
+  | .locks _ _ body => rufeB Z ZS EW body
+  | .breaking _ body => rufeB Z ZS EW body
+  | .traverse _ _ body => rufeB Z ZS EW body
+  | .retry _ _ body ueber => rufeB Z ZS EW body && rufeB Z ZS EW ueber
+  | .forever _ _ body => EW && rufeB Z ZS EW body
   | .assignSlot .. => true
   | .assignThru .. => true
   | .assignGlob .. => true
@@ -300,71 +302,71 @@ def rufeS (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .leave _ => true
   | .next _ => true
 
-def rufeB (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def rufeB (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Bool
   | .nil => true
-  | .cons s rest => rufeS Z s && rufeB Z rest
-  | .bind _ rest => rufeB Z rest
-  | .bindCall g _ _ _ _ rest => Z g && rufeB Z rest
-  | .bindCallInd _ _ _ _ _ _ => false
-  | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z err && rufeB Z rest
-  | .bindAxiom _ _ _ _ _ _ _ rest => rufeB Z rest
-  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeB Z rest
-  | .regRead _ _ rest => rufeB Z rest
-  | .regReadElse _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
-  | .awaits _ _ _ _ _ rest => rufeB Z rest
-  | .exchange _ _ _ _ rest => rufeB Z rest
-  | .narrow _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
-  | .check _ sonst rest => rufeE Z sonst && rufeB Z rest
-  | .float _ _ _ _ _ rest => rufeB Z rest
-  | .floatLit _ _ _ rest => rufeB Z rest
-  | .floatOf _ _ _ rest => rufeB Z rest
-  | .floatNarrow _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
+  | .cons s rest => rufeS Z ZS EW s && rufeB Z ZS EW rest
+  | .bind _ rest => rufeB Z ZS EW rest
+  | .bindCall g _ _ _ _ rest => Z g && rufeB Z ZS EW rest
+  | .bindCallInd (n := n) _ _ _ _ _ rest => ZS n && rufeB Z ZS EW rest
+  | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z ZS EW err && rufeB Z ZS EW rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => rufeB Z ZS EW rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeB Z ZS EW rest
+  | .regRead _ _ rest => rufeB Z ZS EW rest
+  | .regReadElse _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
+  | .awaits _ _ _ _ _ rest => rufeB Z ZS EW rest
+  | .exchange _ _ _ _ rest => rufeB Z ZS EW rest
+  | .narrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
+  | .check _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
+  | .float _ _ _ _ _ rest => rufeB Z ZS EW rest
+  | .floatLit _ _ _ rest => rufeB Z ZS EW rest
+  | .floatOf _ _ _ rest => rufeB Z ZS EW rest
+  | .floatNarrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
 
-def rufeArms (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def rufeArms (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
-  | .cons b rest => rufeB Z b && rufeArms Z rest
+  | .cons b rest => rufeB Z ZS EW b && rufeArms Z ZS EW rest
 
-def rufeGArms (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def rufeGArms (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {n : Nat} : GrundArms D V l Γ Λ Λ' n → Bool
   | .nil => true
-  | .cons b rest => rufeB Z b && rufeGArms Z rest
+  | .cons b rest => rufeB Z ZS EW b && rufeGArms Z ZS EW rest
 
-def rufeE (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
   | .leave _ => true
   | .next _ => true
-  | .cons s rest => rufeS Z s && rufeE Z rest
-  | .bind _ rest => rufeE Z rest
-  | .bindCall g _ _ _ _ rest => Z g && rufeE Z rest
-  | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z err && rufeE Z rest
-  | .bindAxiom _ _ _ _ _ _ _ rest => rufeE Z rest
-  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeE Z rest
-  | .regRead _ _ rest => rufeE Z rest
-  | .regReadElse _ _ _ sonst rest => rufeE Z sonst && rufeE Z rest
-  | .awaits _ _ _ _ _ rest => rufeE Z rest
-  | .bindCallInd _ _ _ _ _ _ => false
+  | .cons s rest => rufeS Z ZS EW s && rufeE Z ZS EW rest
+  | .bind _ rest => rufeE Z ZS EW rest
+  | .bindCall g _ _ _ _ rest => Z g && rufeE Z ZS EW rest
+  | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z ZS EW err && rufeE Z ZS EW rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => rufeE Z ZS EW rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeE Z ZS EW rest
+  | .regRead _ _ rest => rufeE Z ZS EW rest
+  | .regReadElse _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
+  | .awaits _ _ _ _ _ rest => rufeE Z ZS EW rest
+  | .bindCallInd (n := n) _ _ _ _ _ rest => ZS n && rufeE Z ZS EW rest
 end
 /-- The callees of a residue: those of every block, end block and loop body
     still to run. -/
-def rufeR (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+def rufeR (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     GRest D V l Γ Λ → Bool
-  | .ende e => rufeE Z e
-  | .dann b k => rufeB Z b && rufeR Z k
-  | .schrumpf k => rufeR Z k
-  | .frei _ k => rufeR Z k
-  | .trav _ _ body _ k => rufeB Z body && rufeR Z k
-  | .travRest _ _ body _ k => rufeB Z body && rufeR Z k
-  | .wieder _ _ body ueber k => rufeB Z body && rufeB Z ueber && rufeR Z k
-  | .wiederRest _ _ body ueber k => rufeB Z body && rufeB Z ueber && rufeR Z k
-  | .ewig _ _ _ body k => rufeB Z body && rufeR Z k
-  | .ewigRest _ _ _ body k => rufeB Z body && rufeR Z k
-  | .wartet rest k => rufeB Z rest && rufeR Z k
-  | .wartetSonst _ err rest k => rufeE Z err && rufeB Z rest && rufeR Z k
-  | .abbruch k => rufeR Z k
+  | .ende e => rufeE Z ZS EW e
+  | .dann b k => rufeB Z ZS EW b && rufeR Z ZS EW k
+  | .schrumpf k => rufeR Z ZS EW k
+  | .frei _ k => rufeR Z ZS EW k
+  | .trav _ _ body _ k => rufeB Z ZS EW body && rufeR Z ZS EW k
+  | .travRest _ _ body _ k => rufeB Z ZS EW body && rufeR Z ZS EW k
+  | .wieder _ _ body ueber k => rufeB Z ZS EW body && rufeB Z ZS EW ueber && rufeR Z ZS EW k
+  | .wiederRest _ _ body ueber k => rufeB Z ZS EW body && rufeB Z ZS EW ueber && rufeR Z ZS EW k
+  | .ewig _ _ _ body k => EW && rufeB Z ZS EW body && rufeR Z ZS EW k
+  | .ewigRest _ _ _ body k => EW && rufeB Z ZS EW body && rufeR Z ZS EW k
+  | .wartet rest k => rufeB Z ZS EW rest && rufeR Z ZS EW k
+  | .wartetSonst _ err rest k => rufeE Z ZS EW err && rufeB Z ZS EW rest && rufeR Z ZS EW k
+  | .abbruch k => rufeR Z ZS EW k
   | .leer => true
 
 /-! ## 3. The potential: `kosten` read as a function of the residue -/
@@ -458,33 +460,33 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
 
 /-- An end block run as a block names the callees the end block names. -/
-theorem rufeB_alsBlock (Z : D.Fn → Bool) :
+theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
-      rufeB Z e.alsBlock.2 = rufeE Z e
+      rufeB Z ZS EW e.alsBlock.2 = rufeE Z ZS EW e
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bind e rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindCall _ _ _ _ _ rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindCallElse _ _ _ _ _ err rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .regRead r hk rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .regReadElse r hk z sonst rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .awaits g pl hp hL hat rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindCallInd p args he hp hr rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
 
 end Positiv
 /-! ## 4. Arm selection keeps cost and callees -/
@@ -500,17 +502,17 @@ theorem kostenBlock_armWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : 
       have ih := kostenBlock_armWahlG c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, by simpa using nutz⟩
       simp only [armWahlG, kostenArms]; omega
 
-theorem rufeB_armWahlG (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+theorem rufeB_armWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
-    rufeArms Z arms = true → rufeB Z (armWahlG arms v).2.1 = true
+    rufeArms Z ZS EW arms = true → rufeB Z ZS EW (armWahlG arms v).2.1 = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by
       simp only [rufeArms, Bool.and_eq_true] at h
       exact h.1
   | _, .cons b rest, ⟨⟨n + 1, hn⟩, nutz⟩, h => by
       simp only [rufeArms, Bool.and_eq_true] at h
-      exact rufeB_armWahlG Z rest _ h.2
+      exact rufeB_armWahlG Z ZS EW rest _ h.2
 
 theorem kostenBlock_grundWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -523,17 +525,17 @@ theorem kostenBlock_grundWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l 
       have ih := kostenBlock_grundWahlG c pa rest ⟨k, Nat.lt_of_succ_lt_succ h⟩
       simp only [grundWahlG, kostenGrundArms]; omega
 
-theorem rufeB_grundWahlG (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+theorem rufeB_grundWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
     ∀ {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n),
-    rufeGArms Z arms = true → rufeB Z (grundWahlG arms r) = true
+    rufeGArms Z ZS EW arms = true → rufeB Z ZS EW (grundWahlG arms r) = true
   | _, .nil, ⟨k, hk⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨0, _⟩, h => by
       simp only [rufeGArms, Bool.and_eq_true] at h
       exact h.1
   | _, .cons b rest, ⟨k + 1, hk⟩, h => by
       simp only [rufeGArms, Bool.and_eq_true] at h
-      exact rufeB_grundWahlG Z rest _ h.2
+      exact rufeB_grundWahlG Z ZS EW rest _ h.2
 
 /-- The index list of a `traverse` has at most `count` entries. -/
 theorem alleIndizes_length (n : Int) : (alleIndizes n).length ≤ n.toNat := by
@@ -551,12 +553,13 @@ theorem alleIndizes_length (n : Int) : (alleIndizes n).length ≤ n.toNat := by
       by at least one;
     * (B) a push -- the callee enters its body, the caller continues below
       it, and the caller's potential drops by at least one PLUS the cost
-      `c g` it counted for the callee;
+      `c g` it counted for the callee (an indirect call admitted by `ZS`:
+      by at least one, its callee uncounted);
     * (C) a pop -- the head frame (potential at least one, `potRest_pos`)
       leaves and the caller below resumes with at most its old potential.
-    And the callees named in the residue stay admitted (`rufeR`). The
-    indirect-call pushes fall in (B) only vacuously: their residue fails
-    `rufeR`. -/
+    And the callees named in the residue stay admitted (`rufeR`). With
+    `ZS = fun _ => false` an indirect-call push falls in (B) only
+    vacuously: its residue fails `rufeR`. -/
 
 set_option hygiene false in
 /-- Case (A) of `schrittArt`: rewrite the new head and the old head into

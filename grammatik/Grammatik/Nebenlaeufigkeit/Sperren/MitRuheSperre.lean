@@ -81,12 +81,18 @@ def hwZ : Hardware D.mitRuhe → Hardware D
 
 theorem hwR_hwZ (e : Hardware D.mitRuhe) : hwR (hwZ e) = e := by cases e <;> rfl
 
+/-- A logic label of `D.mitRuhe`, read back where the measure gate needs it: a descent at a translated function
+    stays a descent; every other label becomes `schleife`. -/
+def logikZ : Logik D.mitRuhe → Logik D
+  | .abstieg (some h) => .abstieg h
+  | _ => .schleife
+
 /-- A call outcome of `D.mitRuhe` at `some g`, translated back; a logic
-    failure becomes `schleife` (its label is not read back). -/
+    failure keeps a descent's label (`logikZ`), every other becomes `schleife`. -/
 def rufZ {g : D.Fn} : RufAusgang (D := D.mitRuhe) (some g) → RufAusgang g
   | .ok σ v => .ok (worldZ σ) (ergZ (D.erg g) v)
   | .why σ r => .why (worldZ σ) r
-  | .logik _ => .logik .schleife
+  | .logik e => .logik (logikZ e)
   | .hardware e => .hardware (hwZ e)
 
 /-- **The handler of `D` a handler of `D.mitRuhe` answers with.** -/
@@ -122,9 +128,14 @@ theorem umweltZ_ru (U' : Umwelt D.mitRuhe) (L : D.Lock) (σ : World D) :
 
 /-! ## 2. Outcomes up to the label of a logic failure -/
 
-/-- A logic label of `D.mitRuhe` blames a caller only if the one of `D` does. -/
+/-- A logic label of `D.mitRuhe` blames a caller only if the one of `D` does, and is a descent at a translated
+    function only if the one of `D` is that descent. -/
 def LogikTreu (e' : Logik D.mitRuhe) (e : Logik D) : Prop :=
-  ∀ g', e' = .vorbedingung g' → ∃ g, e = .vorbedingung g
+  (∀ g', e' = .vorbedingung g' → ∃ g, e = .vorbedingung g) ∧ ∀ h, e' = .abstieg (some h) → e = .abstieg h
+
+theorem logikTreu_schleife {e' : Logik D.mitRuhe} (h1 : ∀ g', e' ≠ .vorbedingung g')
+    (h2 : ∀ h, e' ≠ .abstieg (some h)) : LogikTreu e' .schleife :=
+  ⟨fun g' he => absurd he (h1 g'), fun h he => absurd he (h2 h)⟩
 
 section Rel
 

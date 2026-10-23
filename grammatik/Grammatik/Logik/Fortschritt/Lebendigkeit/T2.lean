@@ -455,7 +455,7 @@ theorem abschnittAktiv_aus (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
     (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hB : ∀ n t, BereichG (R.M n) t)
     (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x)
-    (hHw : HardwareImAbschnitt R) :
+    (hHw : Zielsatz.HardwareImAbschnitt R) :
     AbschnittAktiv R := by
   intro n u L hu
   have hr := R.erreichbar hr0 n
@@ -491,7 +491,7 @@ theorem wartezeit_schranke (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (hls : ∀ L : D.Lock, L ∈ ls)
     (hr0 : RufErreichbarG P O passes (RufStartG P sp init) (R.M 0))
     (hL : ∀ n, KeinLogikHaltG O passes (R.M n)) (hB : ∀ n t, BereichG (R.M n) t)
-    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) (hLZ : LaufzeitAnnahme R F) (hH : Haltezeit R h k) (hHw : HardwareImAbschnitt R)
+    (hAnt : ∀ g, ∀ x ∈ (P.rumpf g).ants, StelleOk D x) (hLZ : LaufzeitAnnahme R F) (hH : Haltezeit R h k) (hHw : Zielsatz.HardwareImAbschnitt R)
     (hAnw : Anwaerter R Ts)
     (L : D.Lock) (t : Faden) (n0 : Nat) (hA : AnSperre (R.M n0) t L) :
     ∃ j, n0 ≤ j ∧ j < n0 + wartezeit ls Ts h k F L ∧ R.akt j = some t ∧

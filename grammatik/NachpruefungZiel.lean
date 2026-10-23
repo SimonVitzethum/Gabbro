@@ -6,6 +6,9 @@ import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Zielsatz.Kern.Proben
 import Grammatik.Zielsatz.Kern.ProbenW1
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
+import Grammatik.Zielsatz.Atomar.BeweisTerminierung
+import Grammatik.Zielsatz.Atomar.TerminierungZeuge
+import Grammatik.Zielsatz.Atomar.BeweisWarten
 
 open Gabbro.Grammatik
 
@@ -15,6 +18,10 @@ open Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbund
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_leben
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_terminierung
+#print axioms Gabbro.Grammatik.Zielsatz.terminierung_zeuge
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_warten
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbund_sc_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt

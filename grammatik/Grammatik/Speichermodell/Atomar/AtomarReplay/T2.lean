@@ -8,13 +8,13 @@ variable {D : Deklaration}
 section Schritte
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
-theorem kopfSA_okS {F : RufRahmenG D} {W : World D} (h : KopfSA P O passes Q S lok Tg F W)
+theorem kopfSA_okS {F : RufRahmenG D} {W : World D} (h : KopfSA P O passes Q S lok Tg m zyk F W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D F.f) l Γ Λ} (hr : F.rest = ⟨l, Γ, Λ, ρ, r⟩) :
     r.okS P (fussOrteG P F.f) (sicher P lok F.f) := by
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hok, _⟩ := h
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hok, _⟩ := h
   rw [hr] at hok
   exact hok
 
@@ -22,7 +22,7 @@ theorem kopfSA_okS {F : RufRahmenG D} {W : World D} (h : KopfSA P O passes Q S l
     (a read of a shared atomic), and its residue semantics is followed for every environment
     repeating the extended record. -/
 theorem fadenSA_lokalQ {z : RufFadenG D} {W W' : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     {l' : Bool} {Γ' : Ctx} {Λ' : List (Res D)} (ρ' : Env D Γ')
@@ -37,14 +37,14 @@ theorem fadenSA_lokalQ {z : RufFadenG D} {W W' : World D}
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D) (A : AUmwelt D), PasstX Tg A HX' → HavocA Tg A → GleichRS O O' →
           (semHA S O' U A passes R r σ ρ).folgt (semHA S O' U A passes R r' σ' ρ')) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩ W' := by
-  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
+  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
     hok, heq⟩, hS⟩ := hF
   have hok' : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) := by rw [hr] at hok; exact hok
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
   obtain ⟨σ', HX', hfx', hkx', hsub, hl, hg', hok'', hsem⟩ := hstep σ HX hfx hkx hg0 hok'
-  refine ⟨⟨H, HA, HU, HX', σ', hreq, hf, hv, kurzVBA_mono hk hl, hfa, hra, hqa, kurzAB_mono hka hl,
+  refine ⟨⟨H, HA, HU, HX', σ', hreq, hf, hv, hm, kurzVBA_mono hk hl, hfa, hra, hqa, kurzAB_mono hka hl,
     hfu, hiu, kurzUB_mono hku hl, ⟨hfx', hkx'⟩, hg', hok'', fun R O' U A hR hA hU hX hHA hQ => ?_⟩,
     hS⟩
   have h1 := heq R O' U A hR hA hU (passtX_teil hsub hX) hHA hQ
@@ -54,7 +54,7 @@ theorem fadenSA_lokalQ {z : RufFadenG D} {W W' : World D}
 /-- A head-local step with no read of a shared atomic and a semantics that holds for every
     oracle and environment (the record stays). -/
 theorem fadenSA_lokal {z : RufFadenG D} {W W' : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     {l' : Bool} {Γ' : Ctx} {Λ' : List (Res D)} (ρ' : Env D Γ')
@@ -66,7 +66,7 @@ theorem fadenSA_lokal {z : RufFadenG D} {W W' : World D}
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D) (A : AUmwelt D),
           (semHA S O' U A passes R r σ ρ).folgt (semHA S O' U A passes R r' σ ρ')) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩ W' :=
   fadenSA_lokalQ hF hr ρ' r' spur' fun σ HX hfx hkx hg hok => by
     obtain ⟨_, hg', hok', hsem⟩ := hstep σ hg hok
@@ -77,7 +77,7 @@ theorem fadenSA_lokal {z : RufFadenG D} {W W' : World D}
     atomic): the read is recorded, the sequential world after it holds the machine's presented
     values at the read shared atomics (`mischT`), and the step continues from there. -/
 theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     {l' : Bool} {Γ' : Ctx} {Λ' : List (Res D)} (ρ' : Env D Γ')
@@ -94,7 +94,7 @@ theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
           (U : Umwelt D) (A : AUmwelt D) (σ0 : World D), GleichRS O O' →
           GleichAuf (stabilS P S lok z.kopf.f Λ) σ0 W → leseA A σ0 Λr X = σ →
           (semHA S O' U A passes R r σ0 ρ).folgt (semHA S O' U A passes R r' σ' ρ')) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩ W' := by
   refine fadenSA_lokalQ hF hr ρ' r' spur' fun σ HX hfx hkx hg hok => ?_
   obtain ⟨HX', hfx', hkx', hsub, hrec⟩ := lese_schritt Tg hfx hkx Λr X W.speicher
@@ -105,13 +105,13 @@ theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
 
 /-- Memory moved outside the head's stable carriers keeps the replay. -/
 theorem fadenSA_speicher {z : RufFadenG D} {W W' : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     (hw : ∀ c ∈ stabilS P S lok z.kopf.f z.kopf.rest.2.2.1,
       TraegerGleich W'.speicher W.speicher c) :
-    FadenSA P O passes Q S lok Tg z W' := by
-  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, hx, hg, hok,
+    FadenSA P O passes Q S lok Tg m zyk z W' := by
+  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, hx, hg, hok,
     heq⟩, hS⟩ := hF
-  refine ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, hx,
+  refine ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, hx,
     ⟨fun t ht => ?_, fun g hg' => ?_⟩, hok, heq⟩, hS⟩
   · exact (hg.1 t ht).trans (hw (.inl t) ht).symm
   · exact (hg.2 g hg').trans (hw (.inr g) hg').symm
@@ -121,7 +121,7 @@ theorem fadenSA_speicher {z : RufFadenG D} {W W' : World D}
 theorem popSA_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {G : RufRahmenG D}
-    {W : World D} (hG : KopfSA P O passes Q S lok Tg G W) {lr : Bool} {Γ : Ctx}
+    {W : World D} (hG : KopfSA P O passes Q S lok Tg m zyk G W) {lr : Bool} {Γ : Ctx}
     {Λ : List (Res D)} {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ}
     (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
     (e : ErgExpr D Γ Λ (vertragVon D G.f).erg)
@@ -132,7 +132,7 @@ theorem popSA_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
         (.zurueck (leseA A σ Λ e.orte) (evalErg (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ))) :
     EnsAmRueck P G.f G.s0 (W.lese Λ e.orte) G.rho
       (evalErg (W.lese Λ e.orte) e (W.lese Λ e.orte) ρ) := by
-  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, hkx⟩, hg, _,
+  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, hkx⟩, hg, _,
     heq⟩ := hG
   obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte W.speicher
   have hPX := umweltAusA_passt Tg hfx'
@@ -194,9 +194,52 @@ theorem pushSA_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
         (umweltAusA Tg HX) hHA (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1)
         F.s0 F.rho hreq).2 g hex
 
+/-- **The measure leg** (T4, as `pushSA_req`): a call into the caller's own cycle has a smaller measure than the
+    caller's entry. Were it not so, the measure gate would answer `abstieg` there, the replay would carry that to
+    the caller's body, and the user's duty `MassPflicht` excludes it. -/
+theorem pushSA_mass (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+    {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
+    (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f) {F : RufRahmenG D}
+    {H : List (EintragV D)} {HA : List (AxEintrag D)} {HU : List (UEintrag D)}
+    {HX : List (XEintrag D)} {σ : World D}
+    (hreq : ReqAmEintritt P F.f F.s0 F.rho) (hf : FunkV H) (hv : VertraegeOkR P H)
+    (hm : MassOkV m (zyk F.f) (m.wert F.f F.s0 F.rho) H)
+    (hfa : FunkA HA) (hra : RahmenA HA) (hqa : VertragA O.zeiger Q HA) (hfu : FunkU HU)
+    (hiu : InvU S HU) (hfx : FunkX HX)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    (r : GRest D (vertragVon D F.f) l Γ Λ)
+    (heq : ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
+      (U : Umwelt D) (A : AUmwelt D), PasstV R H → PasstA O' HA → PasstU S U HU →
+      PasstX Tg A HX → HavocA Tg A → GleichRS O O' →
+      (zErgG (execEndHA (V := vertragVon D F.f) S O' U A passes R (P.rumpf F.f) F.s0 F.rho)).folgt
+        (semHA S O' U A passes R r σ ρ))
+    (g : D.Fn) (κ : World D) (ρk : Env D (D.params g))
+    (hlogik : ∀ (O' : Orakel D) (U : Umwelt D) (A : AUmwelt D) R (e : Logik D),
+      PasstX Tg A HX → HavocA Tg A → R g κ ρk = .logik e →
+      semHA S O' U A passes R r σ ρ = .logik e)
+    (hz : zyk F.f g = true) :
+    lexLt (m.wert g κ ρk) (m.wert F.f F.s0 F.rho) = true := by
+  cases hlt : lexLt (m.wert g κ ρk) (m.wert F.f F.s0 F.rho) with
+  | true => rfl
+  | false =>
+      exfalso
+      have htor : massTor m (zyk F.f) (m.wert F.f F.s0 F.rho) (rufAusM H) g κ ρk = .logik (.abstieg g) := by
+        simp only [massTor, hz, hlt, Bool.not_false, Bool.and_self, ↓reduceIte]
+      have hPX := umweltAusA_passt Tg hfx
+      have hHA := umweltAusA_ok Tg HX
+      have h1 := heq _ (orakelAus O HA) (umweltAus S sp HU) (umweltAusA Tg HX)
+        (massTor_passtV (rufAusM_passt hf) hm) (orakelAus_passt O hfa) (umweltAus_passt S sp hfu)
+        hPX hHA (gleichRS_orakelAus O HA)
+      rw [hlogik _ _ _ _ _ hPX hHA htor] at h1
+      have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
+      exact hM F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
+        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
+        (umweltAusA Tg HX) hHA (rufAusM H) (rufAusM_rahmen hv) (rufAusM_ohneAbstieg hv) (rufAusM_ohneVorbedingung hv)
+        F.s0 F.rho hreq g hz hex
+
 /-- **A returning head justifies its answer** (no event, as `popS_begr_ok`). -/
 theorem popSA_begr_ok (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : World D}
-    (hG : KopfSA P O passes Q S lok Tg G W) {lr : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (hG : KopfSA P O passes Q S lok Tg m zyk G W) {lr : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ} (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
     (e : ErgExpr D Γ Λ (vertragVon D G.f).erg)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -204,7 +247,7 @@ theorem popSA_begr_ok (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : Wo
         (.zurueck (leseA A σ Λ e.orte) (evalErg (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ))) :
     BegruendetA P O passes S
       ⟨G.f, G.s0, G.rho, .ok G.s0 (evalErg (W.lese Λ e.orte) e (W.lese Λ e.orte) ρ)⟩ := by
-  obtain ⟨H, HA, HU, HX, σ, _, hf, _, hk, _, _, _, hka, _, _, _, _, _, _, heq⟩ := hG
+  obtain ⟨H, HA, HU, HX, σ, _, hf, _, _, hk, _, _, _, hka, _, _, _, _, _, _, heq⟩ := hG
   obtain rfl : σ = W := welt_eq hE σ W
   refine .mk _ _ _ _ H hf (hk.2 hE) (fun R U A hR => ?_)
   have h1 := heq R O U A hR (hka.2 hE) (passtU_leer hE S U HU) (passtX_leer hE Tg A HX)
@@ -219,14 +262,14 @@ theorem popSA_begr_ok (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : Wo
 
 /-- The same for a head at a REASON return. -/
 theorem popSA_begr_grund (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W : World D}
-    (hG : KopfSA P O passes Q S lok Tg G W) {lr : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (hG : KopfSA P O passes Q S lok Tg m zyk G W) {lr : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ} (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
     (rg : Fin (vertragVon D G.f).gruende)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
       (U : Umwelt D) (A : AUmwelt D) (σ : World D),
       (semHA S O' U A passes R r σ ρ).gleich (.why σ rg)) :
     BegruendetA P O passes S ⟨G.f, G.s0, G.rho, .why G.s0 rg⟩ := by
-  obtain ⟨H, HA, HU, HX, σ, _, hf, _, hk, _, _, _, hka, _, _, _, _, _, _, heq⟩ := hG
+  obtain ⟨H, HA, HU, HX, σ, _, hf, _, _, hk, _, _, _, hka, _, _, _, _, _, _, heq⟩ := hG
   refine .mk _ _ _ _ H hf (hk.2 hE) (fun R U A hR => ?_)
   have h1 := heq R O U A hR (hka.2 hE) (passtU_leer hE S U HU) (passtX_leer hE Tg A HX)
     (havocA_leer hE Tg A) ⟨rfl, rfl, rfl⟩
@@ -239,7 +282,7 @@ theorem popSA_begr_grund (hE : ¬ Nonempty (Ereignis D)) {G : RufRahmenG D} {W :
 /-- **The caller resumes** (as `popS_kopf`). -/
 theorem popSA_kopf {F : RufRahmenG D}
     {G : Σ f : D.Fn, Env D (D.params f) × World D}
-    (hW : WarteSA P O passes Q S lok Tg F G) (s1 : World D) (mk : World D → RufAusgang G.1)
+    (hW : WarteSA P O passes Q S lok Tg m zyk F G) (s1 : World D) (mk : World D → RufAusgang G.1)
     (hmk : (∃ v, (∀ σa, mk σa = .ok σa v) ∧ EnsAmRueck P G.1 G.2.2 s1 G.2.1 v) ∨
       (∃ r, ∀ σa, mk σa = .why σa r))
     (hb : ¬ Nonempty (Ereignis D) → BegruendetA P O passes S ⟨G.1, G.2.2, G.2.1, mk G.2.2⟩)
@@ -252,9 +295,9 @@ theorem popSA_kopf {F : RufRahmenG D}
       (U : Umwelt D) (A : AUmwelt D) (σa : World D) (X : ZErgG (vertragVon D F.f)),
       FortSA passes S F G.1 X R O' U A (mk σa) → X.folgt (semHA S O' U A passes R r' σa ρ'))
     (W' : World D) (hW' : W'.slots = s1.slots ∧ W'.globs = s1.globs) :
-    KopfSA P O passes Q S lok Tg ⟨F.f, F.rho, F.s0, ⟨l, Γ, Λ, ρ', r'⟩⟩ W' := by
-  obtain ⟨H, HA, HU, HX, κ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hok,
-    hreqκ, ⟨hglκ, hsub, hfussκ⟩, hcont⟩ := hW
+    KopfSA P O passes Q S lok Tg m zyk ⟨F.f, F.rho, F.s0, ⟨l, Γ, Λ, ρ', r'⟩⟩ W' := by
+  obtain ⟨H, HA, HU, HX, κ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hok,
+    hreqκ, hmκ, ⟨hglκ, hsub, hfussκ⟩, hcont⟩ := hW
   have hσa : GleichAuf (stabilS P S lok F.f F.rest.2.2.1) (rahmenWeltF G.1 κ s1) s1 :=
     rahmenWeltF_gleichAuf G.1 hfussκ hRah
   have hlen := rahmenWeltF_laenge G.1 κ s1
@@ -269,7 +312,7 @@ theorem popSA_kopf {F : RufRahmenG D}
       H ++ [⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩] :=
     List.mem_append_right _ List.mem_cons_self
   refine ⟨H ++ [⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩], HA, HU, HX, rahmenWeltF G.1 κ s1,
-    hreq, funkV_appendBA hf hk _ (fun _ => Nat.le_refl _) hbe, ⟨?_, ?_⟩, ?_, hfa, hra, hqa,
+    hreq, funkV_appendBA hf hk _ (fun _ => Nat.le_refl _) hbe, ⟨?_, ?_⟩, ?_, ?_, hfa, hra, hqa,
     kurzAB_mono hka hlen, hfu, hiu, kurzUB_mono hku hlen, ⟨hfx, kurzX_mono hkx hlen⟩, ?_,
     hok' hok, ?_⟩
   · intro g σ ρ a hm
@@ -302,6 +345,12 @@ theorem popSA_kopf {F : RufRahmenG D}
         · rw [hr'] at hw; cases hw
       subst e
       exact ⟨rahmenWeltF_rahmen G.1 κ s1, rahmenWeltF_offen G.1 κ s1⟩
+  · intro g σ ρ a hm' hz
+    rcases List.mem_append.mp hm' with hm' | hm'
+    · exact hm g σ ρ a hm' hz
+    · rw [List.mem_singleton] at hm'
+      cases hm'
+      exact hmκ hz
   · refine ⟨fun hN e hm => ?_, fun hN e hm => ?_⟩
     · rcases List.mem_append.mp hm with hm | hm
       · exact Nat.lt_trans (hk.1 hN e hm) (hlt hN)
@@ -328,9 +377,9 @@ theorem popSA_kopf {F : RufRahmenG D}
     the caller's stable carriers and on `os`). -/
 theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
-    (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
+    (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
-    {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg z W)
+    {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     (os : List (D.Tab ⊕ D.Glob)) (g : D.Fn) (rhoF : World D → Env D (D.params g))
@@ -353,7 +402,7 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
       leseA A σ0 Λ os = κ →
       FortSA passes S ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩ g
         (semHA S O' U A passes R r σ0 ρ) R O' U A (R g κ (rhoF κ))) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨lc, Γc, Λc, ρc, rc⟩⟩ :: z.stapel,
         ⟨g, rhoF (W.lese Λ os), W.lese Λ os,
           ⟨false, D.params g, Signatur.anfang D (D.signatur g), rhoF (W.lese Λ os),
@@ -362,7 +411,7 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
         RufEreignisF.eintritt g (rhoF (W.lese Λ os)) (W.lese Λ os) :: z.log⟩
       (W.lese Λ os) ∧
     ReqAmEintritt P g (W.lese Λ os) (rhoF (W.lese Λ os)) := by
-  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
+  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
     hok, heq⟩, hSt'⟩ := hF
   have hok' : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) := by rw [hr] at hok; exact hok
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
@@ -383,6 +432,14 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
     (mischT Tg os (σ.lese Λ os) W.speicher) (rhoF (mischT Tg os (σ.lese Λ os) W.speicher))
     (fun O' U A R e hPX hHA h => hlogik O' U A R σ _ e hgκ (hrec A hPX hHA) h)
   rw [hρk] at hreqκ
+  have hmκ : zyk z.kopf.f g = true →
+      lexLt (m.wert g (mischT Tg os (σ.lese Λ os) W.speicher) (rhoF (W.lese Λ os)))
+        (m.wert z.kopf.f z.kopf.s0 z.kopf.rho) = true := fun hz => by
+    have h := pushSA_mass hO hRL hQ hS hsp hM hreq hf hv hm hfa hra hqa hfu hiu hfx' r heq' g
+      (mischT Tg os (σ.lese Λ os) W.speicher) (rhoF (mischT Tg os (σ.lese Λ os) W.speicher))
+      (fun O' U A R e hPX hHA h => hlogik O' U A R σ _ e hgκ (hrec A hPX hHA) h) hz
+    rw [hρk] at h
+    exact h
   have hctrκ : GleichAuf ((P.requires g).orte ++ (P.ensures g).orte)
       (mischT Tg os (σ.lese Λ os) W.speicher) (W.lese Λ os) :=
     GleichAuf.mono (fun _ h => List.mem_append_left _ (hctr h)) hgκ
@@ -392,13 +449,13 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
     fun _ h => stabilS_iff (fun L => (hΛc L).symm) (hctr h)
   have hlen : σ.spur.length ≤ (mischT Tg os (σ.lese Λ os) W.speicher).spur.length :=
     lese_laenge _ _ _
-  refine ⟨⟨⟨[], [], [], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, kurzVBA_nil _,
+  refine ⟨⟨⟨[], [], [], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, massOkV_nil _ _ _, kurzVBA_nil _,
     funkA_nil, rahmenA_nil, vertragA_nil _ Q, kurzAB_nil _, funkU_nil, invU_nil S, kurzUB_nil _,
     ⟨funkX_nil, kurzX_nil _⟩, GleichAuf.refl _ _, ⟨hFragS g, fuss_rumpfG P g⟩,
     fun R O' U A _ _ _ _ _ _ => ZErgG.folgt_refl _⟩,
-    ⟨H, HA, HU, HX', mischT Tg os (σ.lese Λ os) W.speicher, hreq, hf, hv, kurzVBA_mono hk hlen,
+    ⟨H, HA, HU, HX', mischT Tg os (σ.lese Λ os) W.speicher, hreq, hf, hv, hm, kurzVBA_mono hk hlen,
       hfa, hra, hqa, kurzAB_mono hka hlen, hfu, hiu, kurzUB_mono hku hlen, ⟨hfx', hkx'⟩, hrc hok',
-      hreqκ, ⟨hctrκ, hsubc, gleichAuf_stabil_iff hΛc
+      hreqκ, hmκ, ⟨hctrκ, hsubc, gleichAuf_stabil_iff hΛc
         (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hgκ)⟩, ?_⟩, hSt'⟩, hreq0⟩
   intro R O' U A hR hA hU hX hHA hQ
   have hw := hweiter O' U A R σ _ hgκ (hrec A hX hHA)
@@ -408,7 +465,7 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
 
 /-- **An axiom step keeps the replay** (as `fadenS_ax`): its argument read is recorded. -/
 theorem fadenSA_ax {z : RufFadenG D} {W : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W)
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     {l' : Bool} {Γ' : Ctx} {Λ' : List (Res D)} (ρ' : Env D Γ')
@@ -432,10 +489,10 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
       O'.wirkt a κ (evalArgs κ args κ ρ) = (axWeltF a κ xm.1, xm.2) →
       (semHA S O' U A passes R r σ0 ρ).folgt
         (semHA S O' U A passes R r' (axWeltF a κ xm.1) ρ')) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩
       (xm.1.speicher.welt spur') := by
-  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
+  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
     hok0, heq⟩, hS⟩ := hF
   have hok' : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) := by
     rw [hr] at hok0; exact hok0
@@ -471,7 +528,7 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
       evalArgs (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) args
         (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) ρ,
       (axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1, xm.2)⟩], HU, HX',
-    axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1, hreq, hf, hv,
+    axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1, hreq, hf, hv, hm,
     kurzVBA_mono hk hlen2, ?_, ?_, ?_, ?_,
     hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' hlen3⟩, ?_, hok hok', ?_⟩, hS⟩
   · by_cases hN : Nonempty (Ereignis D)
@@ -582,7 +639,7 @@ theorem vorA_eq {A : AUmwelt D} {σ w : World D} {Λ : List (Res D)} {X : List (
     its answer. -/
 theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
     (hlok : AxEnsLokal Q) (hFS : ∀ f, FussSX P S lok Tg f) {z : RufFadenG D} {W : World D}
-    (hF : FadenSA P O passes Q S lok Tg z W) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {ρ : Env D Γ} {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
     (s : Stmt D (vertragVon D z.kopf.f) l Γ Λ Λ') (K : GRest D (vertragVon D z.kopf.f) l Γ Λ')
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -592,7 +649,7 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
       stmtOrteP P s ⊆ fussOrteG P z.kopf.f ∧ K.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f))
     (hleaf : s.istBlatt = true) (σ' : World D) (ρ' : Env D Γ)
     (hstep : execStmt O passes keinRuf s W ρ = .ok σ' ρ') :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l, Γ, Λ', ρ', K⟩⟩, σ'.spur, z.log⟩
       (σ'.speicher.welt σ'.spur) := by
   have hΛ' : ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ := s.held_iff
@@ -643,7 +700,7 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
       | _ => simp [Stmt.istAxiom] at hax
 
 /-- **The acquire keeps the replay** (as `fadenS_locks`). -/
-theorem fadenSA_locks {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg z W)
+theorem fadenSA_locks {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg m zyk z W)
     {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)} (L : D.Lock)
     (hrL : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
     (body : Block D (vertragVon D z.kopf.f) l Γ (Res.held L :: Λ) (Res.held L :: Λ))
@@ -651,11 +708,11 @@ theorem fadenSA_locks {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.locks L hrL body) rest) k⟩)
     (hinv : S.inv L W.speicher = true) (spur' : List (Ereignis D)) :
-    FadenSA P O passes Q S lok Tg
+    FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
         ⟨l, Γ, Res.held L :: Λ, ρ, .dann body (.frei L (.dann rest k))⟩⟩, spur', z.log⟩
       (W.speicher.welt spur') := by
-  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
+  obtain ⟨⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, hk, hfa, hra, hqa, hka, hfu, hiu, hku, ⟨hfx, hkx⟩, hg,
     hok, heq⟩, hS⟩ := hF
   rw [hr] at hg hok
   simp only at hg hok
@@ -663,7 +720,7 @@ theorem fadenSA_locks {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q
   have hlen : σ.spur.length < ((mischU S L σ W.speicher).nimmt L).spur.length := by
     show σ.spur.length < (Ereignis.nimmt L _ :: σ.spur).length
     exact Nat.lt_succ_self _
-  refine ⟨⟨H, HA, HU ++ [(L, σ, W.speicher)], HX, (mischU S L σ W.speicher).nimmt L, hreq, hf, hv,
+  refine ⟨⟨H, HA, HU ++ [(L, σ, W.speicher)], HX, (mischU S L σ W.speicher).nimmt L, hreq, hf, hv, hm,
     kurzVBA_mono hk (Nat.le_of_lt hlen), hfa, hra, hqa, kurzAB_mono hka (Nat.le_of_lt hlen),
     funkU_append hfu (hku ⟨.gibt L⟩) _ (Nat.le_refl _), invU_append hiu L σ W.speicher hinv, ?_,
     ⟨hfx, kurzX_mono hkx (Nat.le_of_lt hlen)⟩, ?_, ⟨hks, hss, hrest⟩, ?_⟩, hS⟩

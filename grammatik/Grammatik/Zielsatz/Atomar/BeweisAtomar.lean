@@ -16,6 +16,7 @@
 import Grammatik.Zielsatz.Atomar.AtomarZiel
 import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Zielsatz.Faeden.Verbund
+import Grammatik.Logik.Fortschritt.Hungerfrei
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -235,7 +236,7 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
   have hZI := zielInvSA_erreichbarGX P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
     sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
-    hlokK hK hZ.req hZ.sperren hex M hX
+    hlokK hK (fun f => massPflicht_aus P passes Q S (GeteiltV P ws) Mass.leer f) hZ.req hZ.sperren hex M hX
   exact
     { speicherSicher := gaInv_spur hH.1 sp init hGA
       rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt =>
@@ -267,7 +268,59 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
           (hZI.1.1 t)) hA.antworten
       zeit := fun f g n _ _ _ hadm hE _ run hA' =>
         frame_schritte_beschraenktX f g n hadm hE run hA'
-      folge := folgeG_erreichbarX hTA sp init hX }
+      folge := folgeG_erreichbarX hTA sp init hX
+      speicherAdressen := fun hI lay hLay t k f hne =>
+        geaendert_im_bereich (rufErreichbarGX_aussen
+          (fun t ht => by obtain ⟨g, e, -⟩ := hTA _ ht; cases e) hI hX) hLay hne }
+
+/-- A residue at a named stop is no `forever` loop with budget left. -/
+theorem restHalt_nicht_ewigPos {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} {σ : World D} {ρ : Env D Γ} {k : HaltArt} {r : GRest D V l Γ Λ}
+    (h : RestHalt O passes σ ρ k r) : r.istEwigPos = false := by
+  cases k <;> cases r <;> simp_all [RestHalt, GRest.istEwigPos] <;> rename_i n _ _ _ <;> cases n <;> simp_all [RestHalt]
+
+/-- A residue at a spent budget is a `forever` loop. -/
+theorem restHalt_budget_ewig {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} {σ : World D} {ρ : Env D Γ} {r : GRest D V l Γ Λ}
+    (h : RestHalt O passes σ ρ .budget r) : r.istEwig = true := by
+  cases r <;> simp_all [RestHalt, GRest.istEwig, KopfHalt]
+  all_goals (rename_i b _; cases b <;> simp_all [KopfHalt])
+
+/-- A head with budget left is no head with another reading. -/
+theorem kopf_ewigPos {r : RufRahmenG D} (hP : r.rest.2.2.2.2.istEwigPos = true) {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} {ρ : Env D Γ} {g : GRest D (vertragVon D r.f) l Γ Λ} (h : r.rest = ⟨l, Γ, Λ, ρ, g⟩)
+    (hg : g.istEwigPos = false) : False := by
+  have := (sigmaRest_lies (fun g => g.istEwigPos) h).symm.trans hP
+  rw [hg] at this
+  exact Bool.false_ne_true this
+
+/-- **A stop on budget is no stop of the program**: on the machine one budget higher, the thread steps.
+    The step comes from the progress leg at the higher budget: a `forever` loop with budget left is no
+    finished thread, no lock wait and no named stop. -/
+theorem budget_unecht {M : RufMaschineG D} {t : Faden} (hF : FortschrittG P O (passes + 1) (M.plus 1))
+    (hB : HaltBenannt O passes M .budget t) : ∃ M', RufSchrittG P O (passes + 1) (M.plus 1) t M' := by
+  obtain ⟨l, Γ, Λ, ρ, r, hr, hh⟩ := hB
+  have hP : ((M.plus 1).faeden t).kopf.rest.2.2.2.2.istEwigPos = true :=
+    (sigmaRest_lies (fun g => (g.plus 1).istEwigPos) hr).trans
+      (GRest.plus_istEwigPos 0 r (restHalt_budget_ewig hh))
+  have halt : ∀ k, ¬ HaltBenannt O (passes + 1) (M.plus 1) k t := by
+    rintro k ⟨l', Γ', Λ', ρ', r', hr', hh'⟩
+    exact kopf_ewigPos hP hr' (restHalt_nicht_ewigPos hh')
+  rcases hF t with hf | hw | hh' | hh' | hh' | hh' | hs
+  · exfalso
+    have h1 := hf.2
+    have hn : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (g : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+        g.istEwigPos = true → g.anRueck = false := by
+      intro _ _ _ g hg; cases g <;> simp_all [GRest.istEwigPos, GRest.anRueck]
+    exact Bool.false_ne_true ((hn _ hP).symm.trans h1)
+  · exfalso
+    obtain ⟨⟨L, l', Γ', Λ', Λ'', ρ', hr', body, rest, k, he⟩, _⟩ := hw
+    exact kopf_ewigPos hP he rfl
+  · exact absurd hh' (halt _)
+  · exact absurd hh' (halt _)
+  · exact absurd hh' (halt _)
+  · exact absurd hh' (halt _)
+  · exact hs
 
 /-- **Every leg of `ZielFX` on every thread machine over GX.** -/
 theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
@@ -303,7 +356,11 @@ theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
       rw [fadenX_spawn_m hs h0 h1]
       refine ⟨rfl, fun L hL => ?_, hG.sperrInv, hG.invRuhe⟩
       rw [faden_schlafend_freiX hI t h0 (hLeer t)] at hL
-      exact List.not_mem_nil hL }
+      exact List.not_mem_nil hL
+    budgetUnecht := fun t hB => by
+      have hK1 := fadenInvX_erreichbar (fadenErreichbarX_budget 1 hK)
+      exact budget_unecht (zielX_aus P S Q hvoll hls ws hA hN O hH (passes + 1) sp init hZ _
+        hK1.lauf).fortschritt hB }
 
 end Aus
 
@@ -357,6 +414,37 @@ theorem gabbro_ziel : GabbroZiel := by
     (wsRuhe E.ws) hA hN' O.mitRuhe (hardware_mitRuhe hH) passes sp init
     (startZulaessig_aus E fs.1 hN.start hL) lebt0 K (heq ▸ hK)
   exact heq ▸ h
+
+/-- **GABBRO_ZIEL_LEBEN, PROVED.** The reduction to `P.mitRuhe` as for `gabbro_ziel`; every machine of the run is
+    reached, so the goal theorem's facts hold at each of them (progress, lock exclusivity, the rank invariant), and
+    `hungerfrei` applies. -/
+theorem gabbro_ziel_leben : GabbroZielLeben := by
+  intro C D _ E fs ls cs hC hN O hH passes sp init hL R hR0 hFair n t L hSp
+  have hA0 := C.korrekt E fs ls cs hC
+  have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
+  have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
+      (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
+    have h := logikPflichtA_mitRuhe hN.logik
+    exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc)
+        (h.1 passes f).1,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.2⟩,
+      h.2⟩
+  have hH' := hardware_mitRuhe hH
+  have hZ := startZulaessig_aus E fs.1 hN.start hL
+  have hLeer : ∀ t, D.mitRuhe.haelt (init t).1 = [] := fun t => by
+    rcases hZ.wurzel t with h | h
+    · exact (hA.wurzeln _ h).1
+    · exact h.1
+  have hND := startSpur_nodup_leer init hLeer
+  have hr : ∀ n, RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) (R.M n) :=
+    R.toPlanLauf.erreichbar (hR0 ▸ RufErreichbarG.start)
+  exact hungerfrei R hH'.1
+    (fun n t => ⟨_, rangInvG_erreichbar hH'.1 hA.stufen sp init hND (hr n) t⟩)
+    (fun n => exklusivG hH'.1 sp init (startExklusiv_ohne_haelt init hLeer) (hr n))
+    (fun n => (zielX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2 (wsRuhe E.ws) hA hN'
+      O.mitRuhe hH' passes sp init hZ (R.M n) (gx_aus_g_lauf (hr n))).fortschritt)
+    hFair hSp
 
 /-- **The goal on every run of machine GX** (every thread live, nothing spawned): the reading
     of `GabbroZiel` over plain GX runs, as `gabbro_ziel_g` is the reading of the statement of

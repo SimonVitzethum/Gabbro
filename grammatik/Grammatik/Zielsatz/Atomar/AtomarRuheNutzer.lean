@@ -106,7 +106,7 @@ theorem koerperGutSA_mitRuhe (h : KoerperGutSA P passes Q S T f) :
         | hardware => rw [hy] at e; cases e
       · have h1 := hx.symm.trans h1
         cases h1
-        obtain ⟨g0, hg0⟩ := ht g rfl
+        obtain ⟨g0, hg0⟩ := ht.1 g rfl
         rw [hg0] at h2
         exact hk.2 g0 h2
   · obtain ⟨σ0, rfl⟩ : ∃ σ0, σ = worldR σ0 := ⟨worldZ σ, (worldR_worldZ σ).symm⟩

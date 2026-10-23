@@ -624,11 +624,12 @@ set_option maxHeartbeats 4000000 in
     while thread 0 holds the lock at steps 6-11, and takes it at step 15. -/
 theorem lZeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧ R.akt = lAkt ∧
-    LaufzeitAnnahme R 4 ∧ Haltezeit R (fun _ => 6) (fun _ => 0) ∧ HardwareImAbschnitt R ∧
+    LaufzeitAnnahme R 4 ∧ Haltezeit R (fun _ => 6) (fun _ => 0) ∧ Zielsatz.HardwareImAbschnitt R ∧
     Anwaerter R (fun _ => [0, 1]) ∧ (∀ n, KeinLogikHaltG mO 0 (R.M n)) ∧
     (∀ j, 5 ≤ j → j ≤ 15 → AnSperre (R.M j) 1 ()) ∧
     (∀ j, 6 ≤ j → j ≤ 11 → () ∈ offen ((R.M j).faeden 0).spur) ∧
-    () ∈ offen ((R.M 16).faeden 1).spur := by
+    () ∈ offen ((R.M 16).faeden 1).spur ∧
+    (∀ j u, AnSperre (R.M j) u () ↔ (u = 0 ∧ lA0 j = true) ∨ (u = 1 ∧ lA1 j = true)) := by
   obtain ⟨Ms, h0, hS, hT, hB0, hB1, hI⟩ := lLauf
   have nb0 : ∀ j, 15 ≤ j → ¬ Bereit mP mO 0 (Ms j) 0 := fun j hj => by
     have hb := hB0 j
@@ -662,7 +663,7 @@ theorem lZeuge : ∃ R : PlanLauf mP mO 0,
         · by_cases hu1 : u = 1
           · subst hu1; exact nb1 n h23
           · exact nbI n u (faden_ge2 hu0 hu1) }
-  refine ⟨R, h0, rfl, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, an1, halt0, ?_⟩
+  refine ⟨R, h0, rfl, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, an1, halt0, ?_, ?_⟩
   · -- FIFO
     intro t u L a n htu hW hakt hAu
     rcases lAkt_some hakt with ⟨rfl, hn⟩ | ⟨rfl, hn⟩
@@ -768,6 +769,16 @@ theorem lZeuge : ∃ R : PlanLauf mP mO 0,
   · show () ∈ offen ((Ms 16).faeden 1).spur
     rw [(hB1 16).off]
     exact List.mem_singleton_self _
+  · -- who stands at `locks`, as a table (the queue of the ticket-lock witness reads it)
+    intro j u
+    constructor
+    · intro h
+      rcases lAn hB0 hB1 hI h with ⟨rfl, h1, h2⟩ | ⟨rfl, h1, h2⟩
+      · exact Or.inl ⟨rfl, by simp only [lA0]; exact decide_eq_true ⟨h1, h2⟩⟩
+      · exact Or.inr ⟨rfl, by simp only [lA1]; exact decide_eq_true ⟨h1, h2⟩⟩
+    · rintro (⟨rfl, h⟩ | ⟨rfl, h⟩)
+      · exact (befund_an (hB0 j) ()).2 h
+      · exact (befund_an (hB1 j) ()).2 h
 
 /-- The bound on the witness: `(2 - 1) * (6 * 4 + 0 * 0 + 4) + 4 = 32`. -/
 theorem lW_eq : wartezeit (D := mD) [()] (fun _ => [0, 1]) (fun _ => 6) (fun _ => 0) 4 () = 32 := by
@@ -780,14 +791,14 @@ theorem lW_eq : wartezeit (D := mD) [()] (fun _ => [0, 1]) (fun _ => 6) (fun _ =
     takes it at step 15 (`lZeuge`: `akt 15 = some 1`, held at step 16). -/
 theorem wartezeit_zeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧ LaufzeitAnnahme R 4 ∧
-    Haltezeit R (fun _ => 6) (fun _ => 0) ∧ HardwareImAbschnitt R ∧
+    Haltezeit R (fun _ => 6) (fun _ => 0) ∧ Zielsatz.HardwareImAbschnitt R ∧
     Anwaerter R (fun _ => [0, 1]) ∧
     AnSperre (R.M 5) 1 () ∧
     (∀ j, 6 ≤ j → j ≤ 11 → () ∈ offen ((R.M j).faeden 0).spur) ∧
     R.akt 15 = some 1 ∧ () ∈ offen ((R.M 16).faeden 1).spur ∧
     wartezeit (D := mD) [()] (fun _ => [0, 1]) (fun _ => 6) (fun _ => 0) 4 () = 32 ∧
     ∃ j, 5 ≤ j ∧ j < 5 + 32 ∧ R.akt j = some 1 ∧ () ∈ offen ((R.M (j + 1)).faeden 1).spur := by
-  obtain ⟨R, h0, hakt, hLZ, hH, hHw, hAnw, hL, an1, halt0, h16⟩ := lZeuge
+  obtain ⟨R, h0, hakt, hLZ, hH, hHw, hAnw, hL, an1, halt0, h16, -⟩ := lZeuge
   have hA5 : AnSperre (R.M 5) 1 () := an1 5 (Nat.le_refl 5) (by decide)
   have hB : ∀ n t, BereichG (R.M n) t := fun n =>
     bereichG_mehrfaden mP mO 0 (axWahr mD) mSI mFs mSp mInit mK mO_gut mO_lokal

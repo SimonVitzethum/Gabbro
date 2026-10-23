@@ -19,22 +19,23 @@ variable {D : Deklaration}
 section Akteur
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 set_option maxHeartbeats 8000000 in
 /-- **The acting thread keeps its replay and its log** -- every rule of G, over the semantics
     with the atomic rely. -/
 theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
-    (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
+    (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
+    (hTV : ∀ c, Tg c → VertragsFrei P c)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
     (hFS : ∀ f, FussSX P S lok Tg f)
     {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M')
-    (hF : FadenSA P O passes Q S lok Tg (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
+    (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
     (hRS : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel)
     (hSG : SperrInvG S M) :
-    FadenSA P O passes Q S lok Tg (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
+    FadenSA P O passes Q S lok Tg m zyk (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -871,7 +872,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead args.orte g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead args.orte g
       (fun κ => evalArgs κ args κ ρ)
       (fun hok => by
         obtain ⟨_, hss, _⟩ := okS_ende_cons hok
@@ -901,7 +902,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead args.orte g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead args.orte g
       (fun κ => evalArgs κ args κ ρ)
       (fun hok => by
         obtain ⟨_, hss, _⟩ := okS_dann_cons hok
@@ -931,7 +932,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
   | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead args.orte g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead args.orte g
       (fun κ => evalArgs κ args κ ρ)
       (fun hok => by
         obtain ⟨_, hss, _⟩ := hok
@@ -970,7 +971,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       hneu =>
     subst hs0 hrho
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead args.orte g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead args.orte g
       (fun κ => evalArgs κ args κ ρ)
       (fun hok => by
         obtain ⟨_, hss, _⟩ := hok
@@ -1023,7 +1024,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => List.mem_append_right _ (List.mem_append_left _ h)) hgσ ρ]
       exact hv
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead (p.orte ++ args.orte) g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead (p.orte ++ args.orte) g
       (fun κ => umsig hg (evalArgs κ args κ ρ))
       (fun _ c hc => by
         rcases List.mem_append.mp hc with hc | hc
@@ -1062,7 +1063,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => List.mem_append_right _ (List.mem_append_left _ h)) hgσ ρ]
       exact hv
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead (p.orte ++ args.orte) g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead (p.orte ++ args.orte) g
       (fun κ => umsig hg (evalArgs κ args κ ρ))
       (fun _ c hc => by
         rcases List.mem_append.mp hc with hc | hc
@@ -1103,7 +1104,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       intro σ hgσ
       rw [eval_gleichAuf p (fun _ h => List.mem_append_right _ (List.mem_append_left _ h)) hgσ ρ]
       exact hv
-    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hFragS hF hhead (p.orte ++ args.orte) g
+    obtain ⟨hFad, hReq⟩ := pushSA_gen hO hRL hQ hS hsp hK hM hFragS hF hhead (p.orte ++ args.orte) g
       (fun κ => umsig hg (evalArgs κ args κ ρ))
       (fun _ c hc => by
         rcases List.mem_append.mp hc with hc | hc

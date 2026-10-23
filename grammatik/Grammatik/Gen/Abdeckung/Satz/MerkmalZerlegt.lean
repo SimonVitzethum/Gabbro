@@ -9,7 +9,7 @@ namespace Gabbro.Grammatik.Gen
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
-variable {D : Deklaration} [Aufz D] [Zahlen]
+variable {D : Deklaration} [DecidableEq D.Fn]
 
 set_option linter.unusedSectionVars false
 

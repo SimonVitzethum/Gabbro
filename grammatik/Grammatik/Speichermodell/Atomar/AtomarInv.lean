@@ -39,13 +39,13 @@ end Stabil
 section Schritte
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
-  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop}
+  {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 
 /-- **The return leg for invariants** (as `popS_inv`), the returned expression's read recorded. -/
 theorem popSA_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hI : ∀ f, InvGutSA P passes Q S Tg f) {G : RufRahmenG D}
-    {W : World D} (hG : KopfSA P O passes Q S lok Tg G W) {lr : Bool} {Γ : Ctx}
+    {W : World D} (hG : KopfSA P O passes Q S lok Tg m zyk G W) {lr : Bool} {Γ : Ctx}
     {Λ : List (Res D)} {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ}
     (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩)
     (e : ErgExpr D Γ Λ (vertragVon D G.f).erg)
@@ -55,7 +55,7 @@ theorem popSA_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
       (U : Umwelt D) (A : AUmwelt D) (σ : World D), (semHA S O' U A passes R r σ ρ).gleich
         (.zurueck (leseA A σ Λ e.orte) (evalErg (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ))) :
     InvAmRueck P G.f (W.lese Λ e.orte) := by
-  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, hkx⟩, hg, _,
+  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, hkx⟩, hg, _,
     heq⟩ := hG
   obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte W.speicher
   have hPX := umweltAusA_passt Tg hfx'
@@ -98,7 +98,7 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
     (hI : ∀ f, InvGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     (hTV : ∀ c, Tg c → VertragsFrei P c)
     {M M' : RufMaschineG D} {u : Faden}
-    (hF : KopfSA P O passes Q S lok Tg (M.faeden u).kopf (M.weltVon u))
+    (hF : KopfSA P O passes Q S lok Tg m zyk (M.faeden u).kopf (M.weltVon u))
     (hs : RufSchrittG P O passes M u M') :
     ∀ ev ∈ (M'.faeden u).log, ev ∈ (M.faeden u).log ∨
       ∀ (g : D.Fn) (rho : Env D (D.params g)) (v : ErgVal D (D.erg g)) (s0 s1 : World D),
@@ -193,7 +193,7 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
 theorem popSA_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hIG : ∀ f, InvGutGrundA P passes Q S Tg f) {G : RufRahmenG D}
-    {W : World D} (hG : KopfSA P O passes Q S lok Tg G W) {lr : Bool} {Γ : Ctx}
+    {W : World D} (hG : KopfSA P O passes Q S lok Tg m zyk G W) {lr : Bool} {Γ : Ctx}
     {Λ : List (Res D)} {ρ : Env D Γ} {r : GRest D (vertragVon D G.f) lr Γ Λ}
     (hr : G.rest = ⟨lr, Γ, Λ, ρ, r⟩) (rg : Fin (vertragVon D G.f).gruende)
     (hinv : ∀ i ∈ D.invs, schuldet G.f i = true → (P.invariante i).orte ⊆ stabilS P S lok G.f Λ)
@@ -201,7 +201,7 @@ theorem popSA_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS :
       (U : Umwelt D) (A : AUmwelt D) (σ : World D),
       (semHA S O' U A passes R r σ ρ).gleich (.why σ rg)) :
     InvAmRueck P G.f W := by
-  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, _⟩, hg, _,
+  obtain ⟨H, HA, HU, HX, σ, hreq, hf, hv, hm, _, hfa, hra, hqa, _, hfu, hiu, _, ⟨hfx, _⟩, hg, _,
     heq⟩ := hG
   have hPX := umweltAusA_passt Tg hfx
   have hHA := umweltAusA_ok Tg HX
@@ -240,7 +240,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     (hIG : ∀ f, InvGutGrundA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     (hTV : ∀ c, Tg c → VertragsFrei P c)
     {M M' : RufMaschineG D} {u : Faden}
-    (hF : KopfSA P O passes Q S lok Tg (M.faeden u).kopf (M.weltVon u))
+    (hF : KopfSA P O passes Q S lok Tg m zyk (M.faeden u).kopf (M.weltVon u))
     (hs : RufSchrittG P O passes M u M') :
     ∀ ev ∈ (M'.faeden u).log, ev ∈ (M.faeden u).log ∨
       ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
@@ -293,7 +293,7 @@ theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hI : ∀ f, InvGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
     {G : RufRahmenG D} {W : World D}
-    (hG : KopfSA P O passes Q S lok Tg G W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    (hG : KopfSA P O passes Q S lok Tg m zyk G W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D G.f) l Γ Λ} (hr : G.rest = ⟨l, Γ, Λ, ρ, r⟩)
     (e : ErgExpr D Γ Λ (vertragVon D G.f).erg) (hk : RetKopf e r) :
     EnsAmRueck P G.f G.s0 (W.lese Λ e.orte) G.rho (evalErg (W.lese Λ e.orte) e (W.lese Λ e.orte) ρ) ∧
@@ -388,7 +388,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
       VertragAmOrtG P M ∧ SperrInvG S M ∧ KeinLogikHaltG O passes M ∧ InvAmOrtG P M ∧
       Zielsatz.InvAmGrundG P M ∧ StartEndeG P M ∧ KeinStartGrundG M := by
   have hZ := zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
-    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex
+    hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK (fun f => massPflicht_aus P passes Q S Tg Mass.leer f) hStart hsp hex
   intro M hr
   have hA := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel hTA
     hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr
@@ -405,7 +405,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         have ih' := ih hA'
         obtain ⟨σ, M'', hs1, hσ, _, _, hfa, _, _⟩ := hs
         have hI0 := (hZ M hr').1.1 u
-        have hFu1 : FadenSA P O passes Q S lok Tg ((mitSpeicher M σ).faeden u)
+        have hFu1 : FadenSA P O passes Q S lok Tg Mass.leer (fun _ _ => false) ((mitSpeicher M σ).faeden u)
             ((mitSpeicher M σ).weltVon u) :=
           fadenSA_speicher hI0 fun c hc => hσ c fun ht => hTS c ht _ _ hc
         intro t ev hev
@@ -429,7 +429,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         have ih' := ih hA'
         obtain ⟨σ, M'', hs1, hσ, _, _, hfa, _, _⟩ := hs
         have hI0 := (hZ M hr').1.1 u
-        have hFu1 : FadenSA P O passes Q S lok Tg ((mitSpeicher M σ).faeden u)
+        have hFu1 : FadenSA P O passes Q S lok Tg Mass.leer (fun _ _ => false) ((mitSpeicher M σ).faeden u)
             ((mitSpeicher M σ).weltVon u) :=
           fadenSA_speicher hI0 fun c hc => hσ c fun ht => hTS c ht _ _ hc
         intro t ev hev
