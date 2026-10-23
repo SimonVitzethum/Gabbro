@@ -60,10 +60,40 @@ def atomar (g : List Ty) : Spez where
     has, or a proof that none has it. -/
 def teilerGruppe : List Ty := [.int 1 2, .int 0 (-1), .int 0 1]
 
+/-- The features a combination member joins: a register with a promise, atomics, a function pointer, callees with a
+    result (one that cannot fail, one with a reason), floats. -/
+inductive Merkmal
+  | reg | atom | zeiger | ruf | float
+  deriving DecidableEq, Repr
+
+/-- **A combination member**: one function that may read and write a table, and the features `ms` in one declaration,
+    so that the block forms each feature brings (`regRead`/`regReadElse`, `awaits`/`exchange`, `bindCallInd`,
+    `bindCall`/`bindCallElse`, the float blocks) can follow one another and stand in each other's branches. -/
+def kombi (ms : List Merkmal) : Spez :=
+  let hat := fun m => ms.contains m
+  let rufe := hat .ruf || hat .zeiger
+  { tabs := [{ count := 2, felder := [{ typ := .int 0 1 }, { typ := .int 0 255 }] }]
+    globs := if hat .atom then [{ typ := .bool, atomar := true }, { typ := .int 0 1, atomar := true }] else []
+    regs := if hat .reg then [{ typ := .int 0 1, klasse := .rw }] else []
+    sigs := [{ params := [.int 0 1] ++ (if hat .float then [.fl (0, 1) (1, 1)] else []) ++
+                 (if hat .zeiger then [.fnptr 1] else []),
+               schreibt := [0], gschreibt := if hat .atom then [0, 1] else [] }] ++
+      (if rufe then [{ params := [.int 0 1], erg := some (.int 0 1) },
+                     { params := [.int 0 1], erg := some (.int 0 1), gruende := 1 }] else [])
+    fns := List.range (if rufe then 3 else 1) }
+
+/-- Every feature alone and every pair of features. -/
+def kombiListen : List (List Merkmal) :=
+  let ms : List Merkmal := [.reg, .atom, .zeiger, .ruf, .float]
+  ms.flatMap fun a => (ms.dropWhile (· != a)).map fun b => if a == b then [a] else [a, b]
+
 /-- **The fine members**: for every group the three declarations, then for every group the one with a pointer; then
-    the divisor group (appended, so the members before keep their numbers). -/
+    the divisor group; then the combination members (each block appended, so the members before keep their
+    numbers). -/
 def feinMitglieder : List Spez :=
   (((gruppen.flatMap fun g => [ausdruck g, register g, atomar g]) ++ gruppen.map zeiger) ++
-    [ausdruck teilerGruppe, register teilerGruppe, zeiger teilerGruppe]).map Spez.einzeln
+    [ausdruck teilerGruppe, register teilerGruppe, zeiger teilerGruppe] ++ kombiListen.map kombi).map Spez.einzeln
+
+theorem kombiListen_laenge : kombiListen.length = 15 := by decide
 
 end Gabbro.Grammatik.Gen.Fein
