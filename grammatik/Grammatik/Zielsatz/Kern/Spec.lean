@@ -159,8 +159,9 @@
   has a smaller measure than the caller's entry -- and measures of one length along a cycle. A function on no cycle
   owes nothing (`massPflicht_ohne_zyklus`). The measure, its duty and the class are stated on the user's program
   `E.P`; the runs are those of the program with the idle root (`E.P.mitRuhe`), to which the duty transfers
-  (`massPflicht_mitRuhe`). Claimed: (1) on every infinite GX run from the runtime's start every thread takes only finitely many steps
-  -- a `forever` is finite here because machine G grants `passes` passes from outside; (2) a thread whose start
+  (`massPflicht_mitRuhe`). Claimed: (1) on every infinite run of the thread machine over GX from the runtime's
+  start (any initially live threads; threads started, spawned and joined at run time) every thread takes only
+  finitely many steps -- a `forever` is finite here because machine G grants `passes` passes from outside; (2) a thread whose start
   function the decision algorithm `klasse` (Logik/Terminierung/Klasse.lean: `endet`, `umgebung`, `bedingt`,
   `abgelehnt`, computed from the syntax) puts in class `endet` never stands at a spent budget: its end does not
   lean on the passes. Classes `umgebung` and `bedingt` are finite per pass (`durchgang_schritte`), not in this
@@ -168,8 +169,7 @@
 
   NOT CLAIMED:
   * a waiting bound, a time bound for `forever` or recursion, termination of `umgebung`/`bedingt` beyond the budget
-    (whether a `leave` guard or a base path is ever taken is the program's question); termination with threads
-    spawned at run time; `GabbroZielLeben` claims that a
+    (whether a `leave` guard or a base path is ever taken is the program's question); `GabbroZielLeben` claims that a
     lock wait ends unless a holder never lets go, not when, and not for runs over GX or with threads spawned at run
     time;
   * stack depth (G's stacks are unbounded; the LLVM lowering runs recursion without native stack growth, and
@@ -1098,8 +1098,9 @@ def GabbroZielLeben : Prop :=
     A FOURTH statement under the same four premise groups, with the measure duty beside (b). See TERMINATION in the
     header. -/
 
-/-- **GABBRO_ZIEL_TERMINIERUNG.** Under the measure duty: on every infinite GX run from the runtime's start every
-    thread takes only finitely many steps, and a thread whose start is of class `endet` never stands at a spent
+/-- **GABBRO_ZIEL_TERMINIERUNG.** Under the measure duty: on every infinite run of the thread machine over GX from
+    the runtime's start (threads started, spawned and joined at run time included) every thread takes only finitely
+    many steps, and a thread whose start is of class `endet` never stands at a spent
     `forever` budget. -/
 def GabbroZielTerminierung : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
@@ -1113,11 +1114,11 @@ def GabbroZielTerminierung : Prop :=
     ∀ O : Orakel D, HardwareAnnahmen O E.Q →                    -- (c) the hardware
     ∀ (sp : Speicher D.mitRuhe) (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
       Laufzeit E sp init →                                      -- (d) the runtime, A4
-      ∀ R : LaufGX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws),
-        R.M 0 = RufStartG E.P.mitRuhe sp init →
+      ∀ (lebt0 : Faden → Bool) (R : FadenLaufX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)),
+        R.K 0 = FadenStart E.P.mitRuhe sp init lebt0 →
         ∀ t : Faden, (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧
           ((∀ w, (init t).1 = some w → klasse E.P fs.1 m.hat w = .endet) →
-            ∀ j, ¬ HaltBenannt O.mitRuhe passes (R.M j) .budget t)
+            ∀ j, ¬ HaltBenannt O.mitRuhe passes (R.K j).m .budget t)
 
 /-! ## Linking separately compiled units (Opus agent E, 2026-09-26)
 

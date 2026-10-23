@@ -60,7 +60,12 @@ end Aus
 
 /-- **GABBRO_ZIEL_TERMINIERUNG, proved.** -/
 theorem gabbro_ziel_terminierung : GabbroZielTerminierung := by
-  intro C D _ E fs ls cs hC hN passes m hM hLm O hH sp init hL R hR0 t
+  intro C D _ E fs ls cs hC hN passes m hM hLm O hH sp init hL lebt0 R0 hK0 t
+  have hR0 : R0.alsGX.M 0 = RufStartG E.P.mitRuhe sp init := congrArg FadenMaschine.m hK0
+  change (∃ N, ∀ j, N ≤ j → R0.alsGX.akt j ≠ some t) ∧
+    ((∀ w, (init t).1 = some w → klasse E.P fs.1 m.hat w = .endet) →
+      ∀ j, ¬ HaltBenannt O.mitRuhe passes (R0.alsGX.M j) .budget t)
+  generalize R0.alsGX = R at hR0 ⊢
   have hA0 := C.korrekt E fs ls cs hC
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
