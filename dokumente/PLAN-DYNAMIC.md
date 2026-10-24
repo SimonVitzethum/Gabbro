@@ -1311,6 +1311,19 @@ semantic body obligation, not yet a computed source ownership judgment; owning r
 source certificates and the `Akzeptiert`/`gabbro_ziel` integration still need the steps in 12.5. The Rust checker and binary are unchanged.
 
 
+The next checked increment adds `Factory`, `Return`, `Borrow`, `FactoryWitness` and `Source/`. The actual source factory handles provider
+refusal, fresh allocation and free-list reuse with explicit failure continuations. Generic result rules return ownership to the caller
+or restore a scoped loan. A joint G witness allocates in the callee, returns the actual slot, and frees it in the caller; a separate
+executed OOM witness preserves the empty ledger.
+
+The source context assigns copied/widened references one origin and tracks grants separately from numeric values. Its executable
+expression admission, consume check, binding and allocation-context rules have soundness proofs over the existing G syntax. The
+source free witness executes G's allocator update and proves that the saved alias is rejected; reusing the same numeric index admits
+only the new origin. `Ownership/Audit.lean` imports these results. The targeted build passes (580 jobs), with standard axioms only.
+These source rules are still primitives: they do not yet constitute a complete function-body checker or remove the whole-program
+integration obligations above. Quantified/range arena expressions currently have an explicit conservative refusal.
+
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing

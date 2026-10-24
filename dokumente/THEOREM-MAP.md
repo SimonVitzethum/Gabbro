@@ -4587,6 +4587,13 @@ Targeted module checks pass with standard axioms only. **Open:** a computed sour
 owning-result/alias admission and the central `Akzeptiert`/goal integration. This increment does not close the whole gap or certify Rust.
 
 
+The next increment adds generic `factory_checked`, `factory_oom_path`, `factory_result`, `identity_result` and `borrow_result`, and
+actual factory/return/free plus OOM witnesses. `Source.checkExpression_sound`, `checked_release`, `checked_binding` and
+`allocation_context` connect computed source provenance to actual grants and executed G allocation/release. The source witness
+rejects a copied alias after consumption and after reuse. `Ownership/Audit.lean` builds with standard axioms only; the full source
+body/goal integration remains open as specified above.
+
+
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 
 Files: `Bausteine/Arena/Unbounded/{State,Safety,Lifetime,Runs,Execution,GForm,Realization,Witnesses,Audit}.lean`.

@@ -8,6 +8,16 @@ namespace Gabbro.Grammatik.ArenaOwnership
 
 variable {D : Deklaration}
 
+inductive PassingMode where
+  | owned
+  | borrowed
+  deriving DecidableEq
+
+def PassingMode.permits (mode : PassingMode) (s : State) (frame : Frame) (h : Handle) : Prop :=
+  match mode with
+  | .owned => s.owns frame h
+  | .borrowed => s.access frame h
+
 def emptyResult (f : D.Fn) (he : D.erg f = none) {Γ : Ctx} {Λ : List (Res D)} :
     ErgExpr D Γ Λ (vertragVon D f).erg := by
   change ErgExpr D Γ Λ (D.erg f)
@@ -27,8 +37,8 @@ theorem valueResult_eval {Γ : Ctx} {Λ : List (Res D)} {erg : Option Ty} {τ : 
 
 def identityContract (A : FreiForm D) (f : D.Fn)
     (x : Var (D.params f) (Ty.index (D.count A.tab)))
-    (he : D.erg f = some (Ty.index (D.count A.tab))) : Contract D f where
-  requires := fun frame s ρ => ∃ h, s.owns frame h ∧ h.slot = (ρ.get x).n
+    (he : D.erg f = some (Ty.index (D.count A.tab))) (mode : PassingMode) : Contract D f where
+  requires := fun frame s ρ => ∃ h, mode.permits s frame h ∧ h.slot = (ρ.get x).n
   ensures := fun _frame s ρ s' answer =>
     match answer with
     | .value v => s' = s ∧ (ergWert he v).n = (ρ.get x).n
@@ -43,13 +53,13 @@ def identityBody (A : FreiForm D) (f : D.Fn)
 
 theorem identity_checked (A : FreiForm D) (f : D.Fn)
     (x : Var (D.params f) (Ty.index (D.count A.tab)))
-    (he : D.erg f = some (Ty.index (D.count A.tab)))
+    (he : D.erg f = some (Ty.index (D.count A.tab))) (mode : PassingMode)
     (hend : (Signatur.anfang D (D.signatur f)).Perm (vertragVon D f).ende)
     (O : Orakel D) (passes : Nat)
     (R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g)
     (frame : Frame) (s : State) (σ : World D) (ρ : Env D (D.params f))
     (ha : s.agrees A σ) (hf : A.FreiOk σ) :
-    (identityContract A f x he).bodyPost A frame s ρ
+    (identityContract A f x he mode).bodyPost A frame s ρ
       (execEnd O passes R (identityBody A f x he hend) σ ρ) := by
   refine ⟨s, State.agrees_reads ha _ _, free_invariant_reads hf _ _, rfl, ?_⟩
   exact congrArg (fun v => v.n) (valueResult_eval he (.var x) _ _ _)

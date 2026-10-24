@@ -36,6 +36,48 @@ def Contract.bodyPost (A : FreiForm D) (C : Contract D f) (frame : Frame)
   | .logik _ => True
   | .hardware _ => True
 
+/-- A returning block has the same result contract as an end block, and
+cannot silently fall through or leave its enclosing loop. -/
+def Contract.blockPost (A : FreiForm D) (C : Contract D f) (frame : Frame)
+    (s : State) (ρ : Env D (D.params f)) {l : Bool} {Γ : Ctx} :
+    Ausgang (vertragVon D f) l Γ → Prop
+  | .zurueck σ' v => ∃ s', s'.agrees A σ' ∧ A.FreiOk σ' ∧ C.ensures frame s ρ s' (.value v)
+  | .why σ' r => ∃ s', s'.agrees A σ' ∧ A.FreiOk σ' ∧ C.ensures frame s ρ s' (.reason r)
+  | .ok _ _ => False
+  | .leave _ _ _ => False
+  | .next _ _ _ => False
+  | .logik _ => True
+  | .hardware _ => True
+
+theorem Contract.blockPost_shrink (A : FreiForm D) (C : Contract D f) (frame : Frame)
+    (s : State) (ρ : Env D (D.params f)) {l : Bool} {Γ : Ctx} {τ : Ty}
+    (out : Ausgang (vertragVon D f) l (τ :: Γ)) (hp : C.blockPost A frame s ρ out) :
+    C.blockPost A frame s ρ out.schrumpf := by
+  cases out <;> exact hp
+
+theorem Contract.blockPost_after_stmt (A : FreiForm D) (C : Contract D f) (frame : Frame)
+    (s : State) (entry : Env D (D.params f)) (O : Orakel D) (passes : Nat)
+    (R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (stmt : Stmt D (vertragVon D f) l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hp : C.blockPost A frame s entry (execStmt O passes R stmt σ ρ)) :
+    C.blockPost A frame s entry (execBlock O passes R (.cons stmt .nil) σ ρ) := by
+  simp only [execBlock]
+  generalize he : execStmt O passes R stmt σ ρ = out at hp ⊢
+  cases out <;> exact hp
+
+theorem Contract.blockPost_ite (A : FreiForm D) (C : Contract D f) (frame : Frame)
+    (s : State) (entry : Env D (D.params f)) (O : Orakel D) (passes : Nat)
+    (R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Expr D Γ Λ .bool)
+    (t e : Block D (vertragVon D f) l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hp : C.blockPost A frame s entry
+      (if wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) then
+        execBlock O passes R t (σ.lese Λ c.orte) ρ
+      else execBlock O passes R e (σ.lese Λ c.orte) ρ)) :
+    C.blockPost A frame s entry (execBlock O passes R (.cons (.ite c t e) .nil) σ ρ) :=
+  Contract.blockPost_after_stmt A C frame s entry O passes R (.ite c t e) σ ρ hp
+
 def Respects (A : FreiForm D) (C : ∀ f, Contract D f)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
   ∀ f frame s σ ρ, s.agrees A σ → A.FreiOk σ → (C f).requires frame s ρ →

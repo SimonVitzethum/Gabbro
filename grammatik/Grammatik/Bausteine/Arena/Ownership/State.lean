@@ -318,6 +318,49 @@ theorem State.own_handles_equal {s : State} {f g : Frame} {h k : Handle}
     simp only at hs ha hg
     cases hs; cases ha; cases hg; rfl
 
+theorem State.own_cell {s : State} {f : Frame} {h : Handle} (ho : s.owns f h) :
+    ∃ c, s.cells h.slot = some c := by
+  unfold State.owns at ho
+  cases hc : s.cells h.slot with
+  | none => simp [hc] at ho
+  | some c => exact ⟨c, rfl⟩
+
+theorem State.allocate_empty {s s' : State} {f : Frame} {i : Int} {h : Handle}
+    (he : s.allocate f i = some (s', h)) : s.cells i = none := by
+  unfold State.allocate at he
+  split at he
+  · cases he
+  · assumption
+
+theorem State.allocate_other {s s' : State} {f : Frame} {i : Int} {h : Handle}
+    (he : s.allocate f i = some (s', h)) (j : Int) (hj : j ≠ i) : s'.cells j = s.cells j := by
+  unfold State.allocate at he
+  split at he
+  · cases he
+  · cases he; simp [State.put, hj]
+
+theorem State.move_other {s s' : State} {f g : Frame} {h h' : Handle}
+    (he : s.move f g h = some (s', h')) (j : Int) (hj : j ≠ h.slot) : s'.cells j = s.cells j := by
+  unfold State.move at he
+  split at he
+  · cases he; simp [State.put, hj]
+  · cases he
+
+theorem State.release_other {s s' : State} {f : Frame} {h : Handle}
+    (he : s.release f h = some s') (j : Int) (hj : j ≠ h.slot) : s'.cells j = s.cells j := by
+  unfold State.release at he
+  split at he
+  · cases he; simp [State.put, hj]
+  · cases he
+
+theorem State.owns_from_same_cell {s s' : State} {f : Frame} {h : Handle}
+    (he : s'.cells h.slot = s.cells h.slot) (ho : s.owns f h) : s'.owns f h := by
+  simpa only [State.owns, he] using ho
+
+theorem State.access_from_same_cell {s s' : State} {f : Frame} {h : Handle}
+    (he : s'.cells h.slot = s.cells h.slot) (ho : s.access f h) : s'.access f h := by
+  simpa only [State.access, he] using ho
+
 theorem State.lend_valid {s : State} (hv : s.valid) (f g : Frame) (h : Handle)
     {s' : State} (he : s.lend f g h = some s') :
     s'.valid ∧ s'.access g h ∧ ¬ s'.owns g h ∧ ¬ s'.access f h := by
