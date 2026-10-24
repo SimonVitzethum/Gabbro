@@ -29,15 +29,16 @@ theorem n1E_gabbro (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD
     (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
       (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
     ZielFX n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
-      (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) K :=
+      (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) [] K :=
   gabbro_ziel akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
     ⟨nCs, nCs_voll⟩
-    (by show AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true; exact n1_akzeptiertX)
+    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
+        rw [n1_akzeptiertX]; rfl)
     n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩ passes _ _ (laufzeit_voll n1E)
     lebt0 K hK
 
 /-- The checker facts of configuration 1, as `AkzeptiertSpecX`. -/
-theorem n1_specX : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws :=
+theorem n1_specX : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] :=
   akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll n1_akzeptiertX
 
 /-- `ZielX` at every machine GX reaches from configuration 1's start. -/

@@ -113,8 +113,10 @@ theorem rights_handle {c : Context} {g : Ghost} {s : State} {fr : Frame} (hr : R
   | none => rw [hm] at hi; cases hi
   | some m => obtain ⟨h, hg, hp⟩ := hr.1 i m hm; exact ⟨m, h, rfl, hg, hp⟩
 
-theorem handoff_ok (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = true) :
-    HandoffOk s fr (calleeFrame A s fr) (movedHandles g ms os) (lentHandles g ms os) := by
+/-- The handoff to any activation that the ledger does not name. -/
+theorem handoff_ok_at (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = true) (cf : Frame)
+    (hfresh : ∀ j cell, s.cells j = some cell → cell.owner ≠ cf ∧ cf ∉ cell.loans) :
+    HandoffOk s fr cf (movedHandles g ms os) (lentHandles g ms os) := by
   obtain ⟨ha, _, _, _, hr⟩ := hR
   refine ⟨ha.1, ?_, ?_, ?_, ?_⟩
   · intro h hm
@@ -144,18 +146,23 @@ theorem handoff_ok (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = tru
     obtain ⟨mj, kj, hmj, hgkj, _⟩ := rights_handle hr hsome
     rw [hgj] at hgkj; cases hgkj
     exact hr.2 i j .owned mj (hown rfl) hmj hij (Or.inl rfl) h k hg hgj
-  · exact State.freshFrame_fresh ha fr
+  · exact hfresh
+
+theorem handoff_ok (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = true) :
+    HandoffOk s fr (calleeFrame A s fr) (movedHandles g ms os) (lentHandles g ms os) :=
+  handoff_ok_at hR hp _ (State.freshFrame_fresh hR.1 fr)
 
 /-- **The callee's interface precondition holds at the handoff.** -/
-theorem handoff_requires {Λ : List (Res D)} {params : Ctx} (modes : Modes params)
+theorem handoff_requires_at {Λ : List (Res D)} {params : Ctx} (modes : Modes params)
     (args : Args D Γ Λ params) (hms : modeList modes = ms) (hos : originList c args = os)
-    (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = true) (σa σb : World D) :
+    (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = true) (σa σb : World D) (cf : Frame)
+    (hfresh : ∀ j cell, s.cells j = some cell → cell.owner ≠ cf ∧ cf ∉ cell.loans) :
     References (Flow.parameterContext modes) (calleeGhost g ms os s.next) (evalArgs σa args σb ρ) ∧
       Rights (Flow.parameterContext modes) (calleeGhost g ms os s.next)
-        (s.handoff (calleeFrame A s fr) (movedHandles g ms os) (lentHandles g ms os)) (calleeFrame A s fr) ∧
+        (s.handoff cf (movedHandles g ms os) (lentHandles g ms os)) cf ∧
       Complete (Flow.parameterContext modes) (calleeGhost g ms os s.next)
-        (s.handoff (calleeFrame A s fr) (movedHandles g ms os) (lentHandles g ms os)) (calleeFrame A s fr) := by
-  have hok := handoff_ok (ms := ms) (os := os) hR hp
+        (s.handoff cf (movedHandles g ms os) (lentHandles g ms os)) cf := by
+  have hok := handoff_ok_at (ms := ms) (os := os) hR hp cf hfresh
   obtain ⟨_, _, _, href, hr⟩ := hR
   refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩, ?_⟩
   · exact (Flow.parameterContext_length modes).1
@@ -225,6 +232,16 @@ theorem handoff_requires {Λ : List (Res D)} {params : Ctx} (modes : Modes param
     · rw [parameterContext_rights, hms]; simp [hmu]
     · simp [calleeGhost, hmu, hou, hg]
     · subst hc; exact ⟨rfl, rfl⟩
+
+theorem handoff_requires {Λ : List (Res D)} {params : Ctx} (modes : Modes params)
+    (args : Args D Γ Λ params) (hms : modeList modes = ms) (hos : originList c args = os)
+    (hR : Realizes c g A fr s σ ρ) (hp : planFits c ms os = true) (σa σb : World D) :
+    References (Flow.parameterContext modes) (calleeGhost g ms os s.next) (evalArgs σa args σb ρ) ∧
+      Rights (Flow.parameterContext modes) (calleeGhost g ms os s.next)
+        (s.handoff (calleeFrame A s fr) (movedHandles g ms os) (lentHandles g ms os)) (calleeFrame A s fr) ∧
+      Complete (Flow.parameterContext modes) (calleeGhost g ms os s.next)
+        (s.handoff (calleeFrame A s fr) (movedHandles g ms os) (lentHandles g ms os)) (calleeFrame A s fr) :=
+  handoff_requires_at modes args hms hos hR hp σa σb _ (State.freshFrame_fresh hR.1 fr)
 
 /-! ## 3. Back at the caller -/
 

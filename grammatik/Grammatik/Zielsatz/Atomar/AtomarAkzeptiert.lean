@@ -45,9 +45,17 @@ variable [DecidableEq D.Fn]
 
 /-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.** -/
 theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    (h : AkzeptiertSpec P S fs ws) : AkzeptiertSpecX P S fs ws :=
+    (h : AkzeptiertSpec P S fs ws) : AkzeptiertSpecX P S fs ws [] :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
-    h.einzeln, h.renn, h.antworten, h.masken⟩
+    h.einzeln, h.renn, h.antworten, h.masken, (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+
+/-- **The ownership judgment added to the checker's facts**: the facts of `AkzeptiertSpecX` that
+    do not read the arenas hold for every arena list. -/
+theorem AkzeptiertSpecX.mitBesitz {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
+    {B B' : List (ArenaOwnership.Body.ArenaIface D)} (h : AkzeptiertSpecX P S fs ws B)
+    (hb : ∀ a ∈ B', ArenaOwnership.Body.Checked P a.A a.I)
+    (hw : ∀ a ∈ B', ArenaOwnership.Machine.ArenaPlain a.A) : AkzeptiertSpecX P S fs ws B' :=
+  { h with besitz := hb, worte := hw }
 
 variable {P : Programm D} {S : SperrInv D} {Q : AxEns D} {fs ws : List D.Fn}
 
@@ -65,7 +73,7 @@ theorem fragX_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (h : programmImFragmentG P fs 
 /-- **An admitted shared atomic is stable nowhere**: it is not a signature-guarded carrier
     (unguarded), not thread-local (`lokW` is `Getrennt`, which is `GetrenntR` on closed graphs),
     and in no lock's carriers (`sperrOrte`). -/
-theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpecX P S fs ws)
+theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B)
     {c : D.Tab ⊕ D.Glob} (hc : GeteiltV P ws c) (f : D.Fn) (Λ : List (Res D)) :
     c ∉ stabilS P S (lokW P fs ws) f Λ := by
   obtain ⟨⟨_, hB, hR⟩, _⟩ := hc
@@ -108,7 +116,7 @@ structure ZielAtomar (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : 
     satisfies `ZielAtomar` over `GeteiltV`. -/
 theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
-    (hA : AkzeptiertSpecX P S fs ws) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (ord : D.Glob → Ordnung) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init) :
     ∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W →
@@ -158,7 +166,7 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
 /-- **Race freedom with shared atomics, on every run of W**: two accesses by different threads
     to a NON-atomic carrier, one a write, are ordered through a guard lock. -/
 theorem rennfrei_atomar_spec (P : Programm D) (S : SperrInv D) {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn) (hA : AkzeptiertSpecX P S fs ws)
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn) {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B)
     (O : Orakel D) (hO : GutO O) (passes : Nat) (ord : D.Glob → Ordnung) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (Ws : Nat → RufMaschineW D) (ts : Nat → Faden) (n : Nat)
@@ -264,14 +272,15 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
 /-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. -/
 theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : AkzeptiertX P S fs ls cs ws = true) :
-    AkzeptiertSpecX P S fs ws := by
+    AkzeptiertSpecX P S fs ws [] := by
   unfold AkzeptiertX at h
   simp only [Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact ⟨h1, hAbg, fussWXB_ok hvoll hAbg h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
-    (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10⟩
+    (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
+    (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
 
 /-- The old footprint component implies the new one. -/
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by

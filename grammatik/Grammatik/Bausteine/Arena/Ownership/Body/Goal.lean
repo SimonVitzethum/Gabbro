@@ -1,4 +1,5 @@
 import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
+import Grammatik.Bausteine.Arena.Ownership.Body.Witness
 import Grammatik.Zielsatz.Kern.Spec
 
 /-! **The ownership leg beside the goal statement.** The checker reads, beside
@@ -9,10 +10,8 @@ actual call of the program keeps its ownership interface, at every depth and
 budget. Nothing is taken from the user's obligation (`NutzerPflichtA`) and
 nothing new is assumed of RAM or hardware.
 
-This is a statement BESIDE `GabbroZiel`: folding it into `Spec.lean` (the
-acceptance target `AkzeptiertSpecX` and the conclusion `ZielX`) is a change of
-the reviewed statement and waits for that review; the per-step lifting onto
-the GA/GX machine is open (`PLAN-DYNAMIC` 12.8). -/
+This is the sequential statement over `rufAt`, per call; the per-machine leg
+on every GA/GX run is `ZielFX.besitz` in `GabbroZiel` (`Spec.lean`). -/
 
 namespace Gabbro.Grammatik.ArenaOwnership.Body
 
@@ -20,10 +19,13 @@ open Source Zielsatz
 
 variable {D : Deklaration}
 
-/-- An arena of the unit with the ownership interfaces of its functions. -/
-structure ArenaIface (D : Deklaration) where
-  A : FreiForm D
-  I : Interfaces A
+/-- The witness program passes the executable check, decided by the kernel. -/
+theorem witness_passes : checkProgram Witness.P Witness.A Witness.I [true, false] = true := by decide
+
+theorem witness_checked : Checked Witness.P Witness.A Witness.I :=
+  checkProgram_sound (fun f => by cases f <;> simp) witness_passes
+
+#print axioms witness_checked
 
 /-- **The ownership acceptance**: every body passes the check for every declared arena. -/
 def ownershipAccepted (E : Einheit D) (arenas : List (ArenaIface D)) (fs : List D.Fn) : Bool :=

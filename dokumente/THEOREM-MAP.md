@@ -4635,6 +4635,39 @@ Files: `Bausteine/Arena/Ownership/Body/{Shapes,Goal}.lean`, `Body/Check/{Context
 
 Standard axioms only. Open: the `Spec.lean` integration (review), GA/GX steps, exporter (`PLAN-DYNAMIC` 12.9).
 
+### 92.4. Ownership on every reachable machine G, GA, GX (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/Machine/*.lean` (19 files). Plan: `PLAN-DYNAMIC.md` 12.10–12.11.
+
+* `ownInv_start`, `ownInv_step`: the machine invariant `OwnInv` (one disciplined ledger, `Head` per thread, `Susp` per
+  suspended activation) holds at the start and every step of G keeps it, given the rely `pendWord`.
+* `run_leaf`, `os_meta`, `list_step`, `counter_step`, `store_step`, `release_step`, `run_narrow`, the unfold, binding and exit
+  steps; `ownInv_push`, `ownInv_pop`, `Push.*`, `Pop.*`; `View.local_view`.
+* `rely_core`, `rely_of`: the rely from held static holdings, lock exclusivity and write separation.
+* `ownInv_reach`, `ownInv_reachGA`, `ownInv_reachGX`: every reachable machine.
+
+* `checked_mitRuhe`, `threadFacts_of`, `startOwn_of`, `ownership_goal_gx` (`Ruhe/`): the leg on the goal's own runs,
+  its thread facts derived from (a), (b) and (d).
+* `GoalWitness.ownership_goal_gx_zeuge`, `GoalWitness.actual_run`: every premise discharged on an allocating unit.
+
+Standard axioms only. Open: `Spec.lean` integration (review).
+
+
+
+### 92.5. The ownership leg inside `GabbroZiel` (2026-10-24)
+
+`Zielsatz/Kern/Spec.lean` (`Einheit.arenen`, `AkzeptiertSpecX.besitz`/`worte`, `BesitzStart`, `ZielFX.besitz`),
+`Zielsatz/Atomar/{AtomarZiel,BeweisAtomar}.lean`, `Bausteine/Arena/Ownership/Ruhe/{Start,Witness}.lean`. Scope:
+`PLAN-DYNAMIC.md` 12.11.
+
+* `akzeptiertSpecX_mitRuhe`: the ownership facts lift to `P.mitRuhe` (`checked_mitRuhe`).
+* `besitzB_sound`, `besitzB_leer`: the ownership acceptance, decided; trivially accepted without an arena.
+* `threadFacts_of`, `startOwn_arenen`: the rely's thread facts and every arena's start from (a), (b) and (d).
+* `zielFX_aus`, `gabbro_ziel`: the leg `besitz` on every GX thread-machine run.
+* `gabbro_ziel_sc_aus`, `gabbro_ziel_verbund_sc_aus`, `gabbro_ziel_atomar_vor`: the statements of before, for units
+  without an arena.
+* `GoalWitness.besitz_zeuge` (non-degenerate: one arena, allocation and release executed, `actual_run`). All axiom
+  lists standard.
 
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 

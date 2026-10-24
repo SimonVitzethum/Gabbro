@@ -22,7 +22,7 @@ variable [DecidableEq D.Fn]
 /-- **Every float range check passes at every machine GX reaches**, from the premise groups (as `zielX_aus`). -/
 theorem bereich_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn)
-    (hA : AkzeptiertSpecX P S fs ws) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (M : RufMaschineG D) (hX : RufErreichbarGX P O passes (GeteiltV P ws) (RufStartG P sp init) M) :
@@ -57,7 +57,7 @@ end Aus
 /-- **GABBRO_ZIEL_WARTEN, PROVED.** -/
 theorem gabbro_ziel_warten : GabbroZielWarten := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL R F h k Ts hR0 hFair hHz hHw hAnw L t n0 hSp
-  have hA0 := C.korrekt E fs ls cs hC
+  have hA0 := (C.korrekt E fs ls cs hC).1
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
       (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by

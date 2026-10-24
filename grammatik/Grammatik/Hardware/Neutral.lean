@@ -47,7 +47,7 @@ def GabbroZielZ (Z : ∀ D : Deklaration, Orakel D → Prop) : Prop :=
         FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
           (FadenStart E.P.mitRuhe sp init lebt0) K →
           ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
-            (RufStartG E.P.mitRuhe sp init) K
+            (RufStartG E.P.mitRuhe sp init) (E.arenen.map (·.mitRuhe)) K
 
 /-- **More named assumptions never break the goal theorem.** -/
 theorem gabbro_ziel_zusatz (Z : ∀ D : Deklaration, Orakel D → Prop) : GabbroZielZ Z := by

@@ -22,7 +22,7 @@ variable [DecidableEq D.Fn]
     per thread on every infinite GX run, and for a start of class `endet` never a spent budget. -/
 theorem terminierung_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn)
-    (hA : AkzeptiertSpecX P S fs ws) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (m : Mass D) (hM : ∀ f, MassPflicht P passes Q S (GeteiltV P ws) m (zykS P fs) f)
@@ -66,7 +66,7 @@ theorem gabbro_ziel_terminierung : GabbroZielTerminierung := by
     ((∀ w, (init t).1 = some w → klasse E.P fs.1 m.hat w = .endet) →
       ∀ j, ¬ HaltBenannt O.mitRuhe passes (R0.alsGX.M j) .budget t)
   generalize R0.alsGX = R at hR0 ⊢
-  have hA0 := C.korrekt E fs ls cs hC
+  have hA0 := (C.korrekt E fs ls cs hC).1
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
       (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by

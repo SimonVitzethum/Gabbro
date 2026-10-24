@@ -327,7 +327,7 @@ theorem vertrag_atomar_echt :
 
 /-- **Configuration 1 as a unit**: `hauptA`, `hauptB`, `kern` declared, all-zero memory. -/
 def n1E : Einheit nD :=
-  ⟨nP, SchwachZeuge.nS, axWahr nD, [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩], sp0, []⟩
+  ⟨nP, SchwachZeuge.nS, axWahr nD, [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩], sp0, [], []⟩
 
 theorem n1E_ws : n1E.ws = n1ws := rfl
 
@@ -348,7 +348,8 @@ theorem n1E_ziel (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
         (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) W :=
   gabbro_ziel_atomar akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
     ⟨nCs, nCs_voll⟩
-    (by show AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true; exact n1_akzeptiertX)
+    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
+        rw [n1_akzeptiertX]; rfl)
     n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩
     passes ord _ _ (laufzeit_voll n1E)
 

@@ -1421,6 +1421,86 @@ invariant over `GRest` continuations, not a lifting of an existing theorem. (c) 
 syntax for passing modes; the Lean model takes interfaces as checker input. Whether they are declared in the source
 or inferred is a language decision (Lean model first), and the Rust work follows the review of (a).
 
+### 12.10 Ownership at every GA/GX step: design (2026-10-24)
+
+**Choice.** One GLOBAL ghost ledger for the whole machine, not a per-thread replay. Extending the GX replay
+(`KopfSA`: a sequential run under the lock havoc `U` and the atomic environment `A`) cannot carry ownership of an
+arena whose carriers are protected by a lock: the havoc at an acquire may move the free-list head, the counter and
+the links arbitrarily, so a per-thread ledger loses agreement with the world. The global ledger covers thread-local
+AND lock-protected arenas (the strongest variant).
+
+**Invariant** `OwnInv A I M`: some ledger `s` agrees with the shared memory and its free list is well formed, and
+every thread `t` satisfies `ThreadOk`: its frames are activations `⟨t, a_d⟩` (distinct per depth), the head frame
+realises a source context `c` over its environment with complete accounting, and its residue is judged
+(`OR k c r`, a judgment over `GRest` that mirrors `OB`/`OE` and accepts `leave`/`next` arriving at the loop
+shims); every suspended frame keeps the context of its pending call (plan, lent and moved handles) and its residue
+after the return.
+
+**Rely/guarantee.** A step of thread `u` changes only ledger cells whose owner is a frame of `u` (moves stay in the
+thread; loans stay in the thread; allocation and release act on the stepping frame), so every other thread's
+`ThreadOk` is kept. Effects of a returning callee are framed per thread (`framedT`): cells of other threads may have
+changed meanwhile, never cells of the caller's thread outside the callee.
+
+**Atomicity of the allocator forms.** `alloc` and `free` take two or three machine steps (narrow, payload store,
+counter or head update). Between them the residue is in a PENDING state (binder = counter or free-list head, slot
+not yet live; link written, head not yet moved). The pending state is kept under other threads' steps because the
+arena's carriers are either guarded by a lock the thread holds (`darf`/`gdarf` in the form, `rufG_haelt_statisch`,
+`exklusivG`, `schritt_traeger`) or written by one thread only; this is the rely premise, discharged from the
+existing machine facts.
+
+**Steps.** (F1) thread-relative effects; (F2) the residue judgment `OR` and its link to `OB`/`OE`; (F3) per-step
+preservation for one thread's head steps (leaves via `os_sound` with the call-free handler, unfoldings, loop shims,
+peels); (F4) push/pop with `State.handoff`/`State.restore` in thread-relative form; (F5) other threads; (F6) the
+reachable-machine theorem over G, GA and GX (shared atomics are not arena carriers) and the leg beside `ZielX`.
+
+### 12.11 Ownership at every GA/GX step: proved (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/Machine/` (`View`, `Residue`, `Head`, `Leaf`, `Block`, `BlockInv`, `Alloc`, `Unfold`,
+`Bind`, `Exit`, `Pop`, `Push`, `Inv`, `Local`, `Call`, `Return`, `Step`, `Rely`, `Reach`).
+
+**What is proved.** `ownInv_reach`, `ownInv_reachGA`, `ownInv_reachGX`: on every machine G, GA and GX reaches from an
+admissible start, `OwnInv A I M` holds for every checked program (`Checked P A I`, the executable check of 12.9).
+`OwnInv`: ONE ledger agrees with the shared memory, the free list is well formed, the ledger is disciplined (loans go to
+deeper activations of the owner's thread, every named activation exists), every thread's running activation is in a
+`Head` state (a realised context with a judged residue `OR`, or one of the four states inside an executed allocator
+form), and every suspended activation realises, over the ledger it sees (`viewAt`), the context it resumes from
+(`Resume`). Activations are numbered by stack depth; a callee is fresh because the ledger is disciplined.
+
+**How.** `ownInv_step` (one case per rule of G): steps inside the running activation keep every cell AND every link it
+does not own (`Next`); `ownInv_push`/`ownInv_pop` move the ledger by `State.handoff`/`State.pop` and change no other
+activation's view. The allocator forms grant a slot exactly at the step that makes it live and retire it exactly at the
+step that puts it on the list. The rely (`pendWord`: the allocator word another thread is about to write stays) is
+derived (`rely_core`) from held static holdings, lock exclusivity and the write separation of unguarded carriers.
+
+**Premises, named.** `GutO` (the existing oracle frame); `StartOwn` (well-formed empty arena at the start, start routines
+handed no allocation); `ThreadFacts` (closed call graphs with their roots, a lock-exclusive start, unguarded allocator
+words write-separated — the facts the acceptance (`Akzeptiert_ok`) already provides); for GA/GX `ArenaPlain` (the head
+and the counter are not atomic globals). Nothing is moved into `NutzerPflichtA`, nothing assumed of RAM.
+
+**Derived premises and witness (2026-10-24).** `Ruhe/`: `checked_mitRuhe` lifts a checked program to its idle-root
+form `P.mitRuhe` (the goal's runs); `threadFacts_of` derives `ThreadFacts` from (a) `AkzeptiertSpecX` and the
+admissible start `StartZulaessig` that (b)+(d) give; `StartOwn` follows from two decidable ownership-acceptance facts
+(`ArenaLeer`: the declared start memory holds an empty arena; `StartPlain`: no declared start takes a handle);
+`ArenaPlain` is decidable on the declaration. `ownership_goal_gx`: under `GabbroZiel`'s premises and the ownership
+acceptance of an arena, `OwnInv` holds at every machine of every thread-machine run over GX. Non-degenerate witness
+`GoalWitness.ownership_goal_gx_zeuge` (one function on `FA` allocating and releasing; the goal's concrete checker
+accepts it by `decide`, the user's obligation is proved, every premise discharged) and `actual_run` (the allocation and
+the release execute).
+
+**Folded into the goal statement (2026-10-24, reviewed by Simon: arenas as a field of the unit).** `Einheit.arenen`
+(default `[]`); `AkzeptiertSpecX` takes the arena list and carries `besitz` (`Checked`) and `worte` (`ArenaPlain`);
+`BesitzStart E` (every arena empty in `E.sp0`, no start or run-time root handed an allocation) comes with it out of
+`PrueferX.korrekt`; `ZielFX` carries the leg `besitz : ∀ a ∈ B, OwnInv a.A a.I K.m`, and `GabbroZiel` instantiates
+`B := E.arenen.map (·.mitRuhe)`. Proof: `zielFX_aus` by `ownInv_reachGX` from `threadFacts_of` and `startOwn_arenen`
+(`Ruhe/Start.lean`); the concrete checker decides the acceptance by `besitzB` (`besitzB_sound`). Linked units carry both
+arenas lists, but `GabbroZielVerbund` claims `besitz` over `[]` (NOT CLAIMED). The derived statements of before
+(`gabbro_ziel_sc_aus`, `gabbro_ziel_verbund_sc_aus`, `gabbro_ziel_atomar_vor`) cover units without an arena;
+`gabbro_ziel_sc` proves `GabbroZielSC` for every unit directly. Witness `GoalWitness.besitz_zeuge`: the arena unit,
+accepted by `akzeptiertX_pruefer` with its ownership acceptance, gets `besitz` from `gabbro_ziel`.
+
+**Open.** Exporter/Rust: emit `arenen` (arena and ownership interfaces) from the source and check it in the Rust
+checker.
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing
