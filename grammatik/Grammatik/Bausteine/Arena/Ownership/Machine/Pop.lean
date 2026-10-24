@@ -1,4 +1,6 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.View
+import Grammatik.Bausteine.Arena.Ownership.Machine.Head
+import Grammatik.Bausteine.Arena.Ownership.Body.Forms
+import Grammatik.Bausteine.Arena.Ownership.Body.Check.Ops
 
 /-! **The ledger when the running activation returns.** The returning
 activation `cf` hands what it owns (at most its owning result) to its caller
@@ -160,6 +162,165 @@ theorem view_other (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {fr2 : 
         · simp [hgcf]
       · have hsee' : ¬ fr2.Sees { c with loans := c.loans.filter (fun g => decide (g ≠ ⟨t, a + 1⟩)) } := hsee
         rw [if_neg hsee, if_neg hsee']
+
+end Pop
+
+/-! ## The caller, running again -/
+
+namespace Pop
+
+variable {s : State} {depth : Nat → Nat} {t a : Nat}
+
+/-- A cell the caller sees: after the return it is the cell as the caller saw it. -/
+theorem pop_at (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {i : Int} {c : Cell}
+    (hc : s.cells i = some c) (hsee : (⟨t, a⟩ : Frame).Sees c) :
+    popCell s.next ⟨t, a + 1⟩ ⟨t, a⟩ c = c.at ⟨t, a⟩ := by
+  have hne : c.owner ≠ ⟨t, a + 1⟩ := by
+    intro he; have := hsee.2; rw [he] at this; exact absurd this (by simp)
+  unfold popCell
+  rw [if_neg hne]
+  simp only [Cell.at, Cell.mk.injEq, true_and]
+  apply List.filter_congr
+  intro g hg
+  obtain ⟨hgt, hlt⟩ := (hd i c hc).1.1 g hg
+  have hle := (hd i c hc).2.2 g hg
+  have ht : g.thread = t := hgt.trans hsee.1
+  rw [ht, hdepth] at hle
+  by_cases hgcf : g = ⟨t, a + 1⟩
+  · subst hgcf
+    have : (⟨t, a⟩ : Frame).Deeper ⟨t, a + 1⟩ := ⟨rfl, by simp⟩
+    simp [this]
+  · have hga : g.activation ≠ a + 1 := fun he => hgcf (frame_eq ht he)
+    have : ¬ (⟨t, a⟩ : Frame).Deeper g := by
+      rintro ⟨_, h⟩; simp at h; omega
+    simp [hgcf, this]
+
+theorem cell_seen (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {i : Int} {c' : Cell}
+    (hv : (s.viewAt ⟨t, a⟩).cells i = some c') : (s.pop ⟨t, a + 1⟩ ⟨t, a⟩).cells i = some c' := by
+  rw [View.viewAt_cells] at hv
+  cases hs : s.cells i with
+  | none => rw [hs] at hv; cases hv
+  | some c =>
+    rw [hs] at hv
+    simp only [Option.bind_some] at hv
+    split at hv
+    · rename_i hsee
+      cases hv
+      rw [cells, hs]
+      simp only [Option.map_some, pop_at hd hdepth hs hsee]
+    · cases hv
+
+theorem rights (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context} {g : Ghost}
+    (hr : Rights c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩) : Rights c g (s.pop ⟨t, a + 1⟩ ⟨t, a⟩) ⟨t, a⟩ := by
+  refine ⟨fun o m hm => ?_, hr.2⟩
+  obtain ⟨h, hg, hp⟩ := hr.1 o m hm
+  refine ⟨h, hg, ?_⟩
+  have ha := PassingMode.access_of_permits hp
+  unfold State.access at ha
+  cases hv : (s.viewAt ⟨t, a⟩).cells h.slot with
+  | none => rw [hv] at ha; exact ha.elim
+  | some c' => exact PassingMode.permits_same_cell ((cell_seen hd hdepth hv).trans hv.symm) hp
+
+/-- The caller's cells after the return: the handed-back allocation, or as the caller saw them. -/
+theorem owned_cells (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {j : Int} {cell : Cell}
+    (hc : (s.pop ⟨t, a + 1⟩ ⟨t, a⟩).cells j = some cell) (ho : cell.owner = ⟨t, a⟩) :
+    (∃ old, s.cells j = some old ∧ old.owner = ⟨t, a + 1⟩ ∧ cell = ⟨old.allocation, s.next, ⟨t, a⟩, []⟩) ∨
+      (s.viewAt ⟨t, a⟩).cells j = some cell := by
+  rw [cells] at hc
+  cases hs : s.cells j with
+  | none => rw [hs] at hc; cases hc
+  | some old =>
+    rw [hs] at hc
+    simp only [Option.map_some, Option.some.injEq] at hc
+    by_cases hcf : old.owner = ⟨t, a + 1⟩
+    · left
+      refine ⟨old, rfl, hcf, ?_⟩
+      rw [← hc]; unfold popCell; rw [if_pos hcf]
+    · right
+      have hsee : (⟨t, a⟩ : Frame).Sees old := by
+        have : cell.owner = old.owner := by rw [← hc]; unfold popCell; rw [if_neg hcf]
+        show old.owner.thread = t ∧ old.owner.activation ≤ a
+        rw [← this, ho]; exact ⟨rfl, Nat.le_refl _⟩
+      rw [View.viewAt_cells, hs]
+      simp only [Option.bind_some, if_pos hsee]
+      rw [← hc, pop_at hd hdepth hs hsee]
+
+/-- **A caller whose callee returned nothing it owned.** -/
+theorem frame_plain {D : Deklaration} (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context}
+    {g : Ghost} {Γ : Ctx} {ρ : Env D Γ} (hf : FrameOk c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩ ρ)
+    (hclosed : s.closed ⟨t, a + 1⟩) : FrameOk c g (s.pop ⟨t, a + 1⟩ ⟨t, a⟩) ⟨t, a⟩ ρ := by
+  refine ⟨hf.1, hf.2.1, rights hd hdepth hf.2.2.1, ?_⟩
+  intro j cell hc ho
+  rcases owned_cells hd hdepth hc ho with ⟨old, hs, hcf, _⟩ | hv
+  · exact absurd hcf (hclosed j old hs)
+  · exact hf.2.2.2 j cell hv ho
+
+/-- The allocation an owning callee hands back. -/
+def handBack (s : State) (h : Handle) : Handle := ⟨h.slot, h.allocation, s.next⟩
+
+theorem owns_handBack (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {h : Handle}
+    (ho : s.owns ⟨t, a + 1⟩ h) : (s.pop ⟨t, a + 1⟩ ⟨t, a⟩).owns ⟨t, a⟩ (handBack s h) := by
+  obtain ⟨old, hs⟩ := State.own_cell ho
+  have hm := State.owned_cell ho hs
+  simp only [State.owns, handBack, cells, hs, Option.map_some]
+  unfold popCell
+  rw [if_pos hm.2.1]
+  exact ⟨⟨hm.1.1, rfl⟩, rfl, rfl⟩
+
+theorem disjoint_handBack (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context} {g : Ghost}
+    (hr : Rights c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩) {h : Handle} (ho : s.owns ⟨t, a + 1⟩ h) :
+    ∀ i mode old, c.rights i = some mode → g i = some old → old.slot ≠ (handBack s h).slot := by
+  intro i mode old hi hg he
+  obtain ⟨h', hg', hp⟩ := hr.1 i mode hi
+  rw [hg] at hg'; cases hg'
+  have ha := PassingMode.access_of_permits hp
+  unfold State.access at ha
+  obtain ⟨cell, hs⟩ := State.own_cell ho
+  have hm := State.owned_cell ho hs
+  simp only [handBack] at he
+  rw [he, View.viewAt_cells, hs] at ha
+  by_cases hsee : (⟨t, a⟩ : Frame).Sees cell
+  · have := hsee.2; rw [hm.2.1] at this; exact absurd this (by simp)
+  · simp [hsee] at ha
+
+theorem complete_handBack (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context} {g : Ghost}
+    (hb : c.bounded) (hc : Complete c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩) {h : Handle} (ho : s.owns ⟨t, a + 1⟩ h)
+    (hsingle : s.single ⟨t, a + 1⟩ h) :
+    Complete c.bindFresh (g.set c.next (handBack s h)) (s.pop ⟨t, a + 1⟩ ⟨t, a⟩) ⟨t, a⟩ := by
+  apply Complete.bindOwning hb (owns_handBack hd hdepth ho)
+  intro slot cell h3 howner hne
+  rcases owned_cells hd hdepth h3 howner with ⟨old, hs, hcf, _⟩ | hv
+  · exact absurd (hsingle slot old hs hcf).1 hne
+  · exact hc slot cell hv howner
+
+/-- **A caller whose callee handed back an allocation**, bound under a new origin. -/
+theorem frame_owner {D : Deklaration} (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context}
+    {g : Ghost} {Γ : Ctx} {τ : Ty} {ρ : Env D Γ} (hf : FrameOk c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩ ρ) {h : Handle}
+    (ho : s.owns ⟨t, a + 1⟩ h) (hsingle : s.single ⟨t, a + 1⟩ h) (v : Wert D τ) (hv : intVon τ v = some h.slot) :
+    FrameOk c.bindFresh (g.set c.next (handBack s h)) (s.pop ⟨t, a + 1⟩ ⟨t, a⟩) ⟨t, a⟩ (.cons v ρ) := by
+  refine ⟨Context.bindFresh_bounded hf.1, ?_,
+    extend_rights (rights hd hdepth hf.2.2.1) (owns_handBack hd hdepth ho) (disjoint_handBack hd hdepth hf.2.2.1 ho),
+    complete_handBack hd hdepth hf.1 hf.2.2.2 ho hsingle⟩
+  have href' := References.setFresh hf.1 hf.2.1 (handBack s h)
+  change References (c.bind (some c.next)) (g.set c.next (handBack s h)) (.cons v ρ)
+  apply References.bind href' v (some c.next)
+  intro i hi
+  cases hi
+  exact ⟨handBack s h, Ghost.set_at g c.next _, hv⟩
+
+/-- … with the result discarded. -/
+theorem frame_ownerDrop {D : Deklaration} (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context}
+    {g : Ghost} {Γ : Ctx} {ρ : Env D Γ} (hf : FrameOk c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩ ρ) {h : Handle}
+    (ho : s.owns ⟨t, a + 1⟩ h) (hsingle : s.single ⟨t, a + 1⟩ h) :
+    FrameOk c.bindFresh.drop (g.set c.next (handBack s h)) (s.pop ⟨t, a + 1⟩ ⟨t, a⟩) ⟨t, a⟩ ρ := by
+  refine ⟨Body.Context.drop_bounded (Context.bindFresh_bounded hf.1), ?_,
+    extend_rights (rights hd hdepth hf.2.2.1) (owns_handBack hd hdepth ho) (disjoint_handBack hd hdepth hf.2.2.1 ho),
+    complete_handBack hd hdepth hf.1 hf.2.2.2 ho hsingle⟩
+  have href' := References.setFresh hf.1 hf.2.1 (handBack s h)
+  have hrefs : c.bindFresh.drop.references = c.references := by
+    simp [Context.bindFresh, Context.drop]
+  exact ⟨by rw [hrefs]; exact href'.1, fun x i hi => href'.2 x i (by
+    simp only [Context.reference, hrefs] at hi ⊢; exact hi)⟩
 
 end Pop
 
