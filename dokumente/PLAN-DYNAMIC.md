@@ -1453,6 +1453,35 @@ preservation for one thread's head steps (leaves via `os_sound` with the call-fr
 peels); (F4) push/pop with `State.handoff`/`State.restore` in thread-relative form; (F5) other threads; (F6) the
 reachable-machine theorem over G, GA and GX (shared atomics are not arena carriers) and the leg beside `ZielX`.
 
+### 12.11 Ownership at every GA/GX step: proved (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/Machine/` (`View`, `Residue`, `Head`, `Leaf`, `Block`, `BlockInv`, `Alloc`, `Unfold`,
+`Bind`, `Exit`, `Pop`, `Push`, `Inv`, `Local`, `Call`, `Return`, `Step`, `Rely`, `Reach`).
+
+**What is proved.** `ownInv_reach`, `ownInv_reachGA`, `ownInv_reachGX`: on every machine G, GA and GX reaches from an
+admissible start, `OwnInv A I M` holds for every checked program (`Checked P A I`, the executable check of 12.9).
+`OwnInv`: ONE ledger agrees with the shared memory, the free list is well formed, the ledger is disciplined (loans go to
+deeper activations of the owner's thread, every named activation exists), every thread's running activation is in a
+`Head` state (a realised context with a judged residue `OR`, or one of the four states inside an executed allocator
+form), and every suspended activation realises, over the ledger it sees (`viewAt`), the context it resumes from
+(`Resume`). Activations are numbered by stack depth; a callee is fresh because the ledger is disciplined.
+
+**How.** `ownInv_step` (one case per rule of G): steps inside the running activation keep every cell AND every link it
+does not own (`Next`); `ownInv_push`/`ownInv_pop` move the ledger by `State.handoff`/`State.pop` and change no other
+activation's view. The allocator forms grant a slot exactly at the step that makes it live and retire it exactly at the
+step that puts it on the list. The rely (`pendWord`: the allocator word another thread is about to write stays) is
+derived (`rely_core`) from held static holdings, lock exclusivity and the write separation of unguarded carriers.
+
+**Premises, named.** `GutO` (the existing oracle frame); `StartOwn` (well-formed empty arena at the start, start routines
+handed no allocation); `ThreadFacts` (closed call graphs with their roots, a lock-exclusive start, unguarded allocator
+words write-separated — the facts the acceptance (`Akzeptiert_ok`) already provides); for GA/GX `ArenaPlain` (the head
+and the counter are not atomic globals). Nothing is moved into `NutzerPflichtA`, nothing assumed of RAM.
+
+**Open.** (a) Folding `OwnInv` into `Spec.lean` (`AkzeptiertSpecX` + `ZielX`) waits for Simon's review; until then the
+leg stands beside the goal. (b) Deriving `ThreadFacts`/`StartOwn`/`ArenaPlain` from the goal's own premises in one
+statement (mechanical: `Akzeptiert_ok`, `StartZulaessig`), with a non-degenerate witness instantiating every premise (witness
+obligation; `witness_checked` covers `Checked` today). (c) Exporter/Rust after (a).
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing

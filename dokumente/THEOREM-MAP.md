@@ -4635,6 +4635,19 @@ Files: `Bausteine/Arena/Ownership/Body/{Shapes,Goal}.lean`, `Body/Check/{Context
 
 Standard axioms only. Open: the `Spec.lean` integration (review), GA/GX steps, exporter (`PLAN-DYNAMIC` 12.9).
 
+### 92.4. Ownership on every reachable machine G, GA, GX (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/Machine/*.lean` (19 files). Plan: `PLAN-DYNAMIC.md` 12.10–12.11.
+
+* `ownInv_start`, `ownInv_step`: the machine invariant `OwnInv` (one disciplined ledger, `Head` per thread, `Susp` per
+  suspended activation) holds at the start and every step of G keeps it, given the rely `pendWord`.
+* `run_leaf`, `os_meta`, `list_step`, `counter_step`, `store_step`, `release_step`, `run_narrow`, the unfold, binding and exit
+  steps; `ownInv_push`, `ownInv_pop`, `Push.*`, `Pop.*`; `View.local_view`.
+* `rely_core`, `rely_of`: the rely from held static holdings, lock exclusivity and write separation.
+* `ownInv_reach`, `ownInv_reachGA`, `ownInv_reachGX`: every reachable machine.
+
+Standard axioms only. Open: `Spec.lean` integration (review), deriving the named premises from the goal's own.
+
 
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 
