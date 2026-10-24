@@ -1309,3 +1309,61 @@ Validation of this increment: targeted Lean compilation of the six modules; the 
 `propext`, `Classical.choice`, `Quot.sound` (or a subset). No new axiom or proof hole. This is **not full closure**: `Bodies` remains a
 semantic body obligation, not yet a computed source ownership judgment; owning result admission, all executable alias uses, general
 source certificates and the `Akzeptiert`/`gabbro_ziel` integration still need the steps in 12.5. The Rust checker and binary are unchanged.
+
+
+## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
+
+Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing
+termination classes and proof obligations retained. This replaces the earlier “not authorized” note in the universality work.
+The sampled no-`max` form in section 5.3 still has a `u32::MAX` counter ceiling in the production backend; it is not this new model.
+
+### 13.1 Implemented semantics and proved properties
+
+`grammatik/Grammatik/Bausteine/Arena/Unbounded/` contains `State`, `Safety`, `Lifetime`, `Runs`, `Execution`, `GForm`, `Realization`,
+`Witnesses` and `Audit`. This is a Lean storage component with partial, explicit connections to G, not a newly admitted source feature.
+
+* `Capacity.bounded maximum` and the explicit `Capacity.unbounded` use the same operations. Each state has an `extent` and finitely
+  supported live payloads. There is no fixed maximum in the unbounded case. `no_static_memory_bound` proves that repeating one fixed
+  allocation operation retains more payload cells than any proposed bound; `finite_payload_support` proves every individual valid
+  state is finite. The beyond-`u32` witness specializes that theorem without trying to allocate billions of cells during a test.
+* `Ref region` brands references by region and exposes no integer constructor. Payloads have one fixed Lean type per heap. The heap
+  reuses `ArenaOwnership.State` for allocation incarnations, grants, exclusive owners and scoped loans. It does not invent a second
+  ownership protocol. The payload map is the new component's storage; `PayloadRepresented` explicitly relates it to existing G memory.
+* Every `allocate` consults an explicit provider answer, including free-list reuse. `allocateThen` requires both success and failure
+  continuations; refusal invokes the latter on the unchanged heap. Positive availability still respects a bounded policy's ceiling.
+  No OS behaviour or RAM availability is a new axiom. Availability remains an obligation of the program's own provider binding.
+* Read/write require the current owning or borrowing grant. Release invalidates all aliases of that allocation; reuse issues a fresh
+  incarnation/grant. A move issues a fresh grant and stays on the same thread. Loans suspend the lender's access and prevent release;
+  ending the loan restores the exact original heap. Reset checks all live owners and loans by traversing a finite range; its checker
+  is equivalent to `ArenaOwnership.State.canReset`, including rights held in suspended frames. Reset preserves the grant clock.
+* `Step.preserves` and `Reachable.valid` cover arbitrary mixed executions of all storage operations. `Reachable.read_safe` establishes
+  live, in-bounds storage for every successful read. Access exclusivity covers read/write operations between distinct frames. These
+  are component theorems; they are not a proof of G's multicore scheduling or its whole-program contracts for a new heap construct.
+* A finite list of allocation requests always completes or returns an explicit OOM prefix (`allocateList`), even for a provider that
+  always refuses. No allocation inserts a retry. Arbitrarily many successful allocations are conditional on the explicitly successful
+  provider answers in `Allocations`; the theorem does not promise unlimited physical RAM or decide arbitrary program termination.
+
+### 13.2 Executed G connection and exact remaining boundary
+
+`Block.allocationAttempt` uses G's existing checked branch with mandatory failure and success continuations. Its refusal/available
+execution equations include the actual recorded reads, and `allocationAttempt_termination` preserves both branches in the existing
+termination analysis. It assumes no provider success. A finite physical allocator retains its own full/failure branch on the success
+side; the guard alone is not proof that an allocation can succeed.
+
+`physicalIndex` lowers an actual live reference only after its grant and the finite realisation's extent have been established.
+`read_execution` proves a G slot expression reads the represented payload. `fresh_payload_execution` executes the real G allocation
+instructions and proves agreement of payload, live grants, ownership and free-list safety after the allocation. Its witness stores
+byte 7 in an initially empty four-slot G arena. This is a **single-operation finite realisation**, not a universal program obtained by
+increasing a static capacity, and not the missing unbounded whole-program simulation.
+
+Still required before production acceptance: represent region references and allocation outcomes in the admitted language/declaration
+and G execution; prove the generic whole-program ownership/heap simulation and extend the reviewed goal statement where necessary;
+check all source alias uses and owning call results (section 12); model provider freshness/disjointness and costs as user logic;
+update the Lean front end, exporter and GabbroV bridge; then implement the Rust checker, compiler and source documentation. Physical
+address/counter exhaustion must go to the ordinary failure continuation rather than become an ideal-model ceiling or an inserted trap.
+The new component has not yet been enabled in Rust. There is no full Turing-completeness claim.
+
+Validation of this increment: the dedicated Lean audit builds successfully (810 jobs), and the complete `Grammatik` plus audit build
+succeeds (2,188 jobs). The 64 audited declarations use only standard axioms,
+and `gabbro_ziel` still has exactly `propext`, `Classical.choice`, `Quot.sound`. Joint witnesses exercise reuse/stale aliases, double free,
+OOM on reuse, movement, exclusive loans, reset, the bounded policy, mixed executions and actual G payload/refusal execution.

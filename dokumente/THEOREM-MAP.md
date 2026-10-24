@@ -4585,3 +4585,27 @@ Plan and remaining closure conditions: `PLAN-DYNAMIC.md` section 12.
 
 Targeted module checks pass with standard axioms only. **Open:** a computed source ownership judgment discharging `Bodies`, general
 owning-result/alias admission and the central `Akzeptiert`/goal integration. This increment does not close the whole gap or certify Rust.
+
+
+## 93. Explicit unbounded, fallible storage component (2026-10-24)
+
+Files: `Bausteine/Arena/Unbounded/{State,Safety,Lifetime,Runs,Execution,GForm,Realization,Witnesses,Audit}.lean`.
+Authorization, architecture and open integration: `PLAN-DYNAMIC.md` section 13. Reuses section 92's ownership ledger.
+
+* `Heap.allocate_valid`, `allocate_none_iff`: success creates a live, typed payload with a fresh grant; failure is exactly provider
+  refusal or the selected bounded policy's capacity limit. Free-list reuse also permits provider refusal.
+* `Heap.release_valid`, `move_valid`, `lend_valid`, `endLoan_valid`, `reset_valid`, `reuse_no_revival`, `lend_endLoan`: lifetime rules
+  survive payload allocation, reuse, ownership transfer, exclusive scoped borrowing and finite checked reset.
+* `Step.preserves`, `Reachable.valid`, `Reachable.read_safe`: arbitrary mixed storage executions retain finite support, coherent live
+  rights/payloads, exclusive access and in-bounds backing memory.
+* `Allocations.exists`, `no_static_memory_bound`, `Heap.finite_payload_support`: one fixed allocation operation has arbitrarily large
+  successful finite executions with no declared maximum; each individual valid heap still has finite support. Successful provider
+  answers are explicit conditions of these runs, not a claim about unlimited physical resources.
+* `allocationAttempt_refused`, `allocationAttempt_available`, `allocationAttempt_termination`: an ordinary G checked branch carries
+  both mandatory allocation continuations without hiding either branch from the existing termination analysis.
+* `read_execution`, `fresh_payload_execution`: actual G expressions/allocation instructions agree on represented payloads and grants
+  for one finite physical realisation with room. `g_payload_execution_zeuge` instantiates all premises with a stored nonzero byte.
+
+The complete `Grammatik` plus dedicated audit build succeeds (2,188 jobs), auditing 64 declarations with standard axioms; the original
+goal keeps exactly the standard three. Layout and no-holes checks pass. This component is
+**not yet a whole-program unbounded G heap**, a computed source admission judgment, a Rust feature or a Turing-completeness theorem.
