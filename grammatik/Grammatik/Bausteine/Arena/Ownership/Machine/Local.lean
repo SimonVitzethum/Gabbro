@@ -23,42 +23,42 @@ def pendWord (A : FreiForm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
 
 section Transfer
 
-variable {A : FreiForm D} {I : Interfaces A} {s s' : State} {depth : Nat → Nat} {fr : Frame}
+variable {A : FreiForm D} {I : Interfaces A} {s s' : State} {depth depth' : Nat → Nat} {fr : Frame}
 
 theorem FrameOk.transfer {c : Context} {g : Ghost} {Γ : Ctx} {ρ : Env D Γ} (hf : FrameOk c g s fr ρ)
-    (hd : s.Disciplined depth) (hd' : s'.Disciplined depth) (hrun : View.Running depth fr)
-    (hv : s.viewAt fr = s'.viewAt fr) : FrameOk c g s' fr ρ := by
+    (hd : s.Disciplined depth) (hd' : s'.Disciplined depth') (hrun : View.Running depth fr)
+    (hrun' : View.Running depth' fr) (hv : s.viewAt fr = s'.viewAt fr) : FrameOk c g s' fr ρ := by
   refine ⟨hf.1, hf.2.1, ?_, ?_⟩
   · have := (View.rights_running hd hrun).mpr hf.2.2.1
     rw [hv] at this
-    exact (View.rights_running hd' hrun).mp this
+    exact (View.rights_running hd' hrun').mp this
   · have := (View.complete_running hd hrun).mpr hf.2.2.2
     rw [hv] at this
-    exact (View.complete_running hd' hrun).mp this
+    exact (View.complete_running hd' hrun').mp this
 
 /-- **Another thread's running activation** keeps its state across a step that moves neither its view, nor
     the allocator word it is about to write, nor a link it owns. -/
 theorem Head.other {σ σ' : World D} {f : D.Fn} {x} (h : Head A I fr s σ f x)
-    (hd : s.Disciplined depth) (hd' : s'.Disciplined depth) (hrun : View.Running depth fr)
-    (hv : s.viewAt fr = s'.viewAt fr)
+    (hd : s.Disciplined depth) (hd' : s'.Disciplined depth') (hrun : View.Running depth fr)
+    (hrun' : View.Running depth' fr) (hv : s.viewAt fr = s'.viewAt fr)
     (hglob : ∀ g, pendWord A x.2.2.2.2 = some g → σ'.globs g = σ.globs g)
     (hlink : ∀ j cell, s.cells j = some cell → cell.owner = fr → A.naechst σ' j = A.naechst σ j) :
     Head A I fr s' σ' f x := by
   cases h with
-  | run ρ r hk hf hr => exact .run ρ r hk (hf.transfer hd hd' hrun hv) hr
+  | run ρ r hk hf hr => exact .run ρ r hk (hf.transfer hd hd' hrun hrun' hv) hr
   | list x ρ e2 hw hL b r he2 hx hlt hk hf hr =>
     have hg := hglob A.kopf (by simp [pendWord])
     have hkopf : A.kopfSt σ' = A.kopfSt σ := by simp only [FreiForm.kopfSt, hg]
-    exact .list x ρ e2 hw hL b r he2 (hkopf ▸ hx) (hkopf ▸ hlt) hk (hf.transfer hd hd' hrun hv) hr
+    exact .list x ρ e2 hw hL b r he2 (hkopf ▸ hx) (hkopf ▸ hlt) hk (hf.transfer hd hd' hrun hrun' hv) hr
   | counter x ρ e2 hw hL b r he2 hx hlt hk hf hr =>
     have hg := hglob A.zaehl (by simp [pendWord])
     have hst : A.stand σ' = A.stand σ := by simp only [ArenaForm.stand, hg]
-    exact .counter x ρ e2 hw hL b r he2 (hst ▸ hx) (hst ▸ hlt) hk (hf.transfer hd hd' hrun hv) hr
+    exact .counter x ρ e2 hw hL b r he2 (hst ▸ hx) (hst ▸ hlt) hk (hf.transfer hd hd' hrun hrun' hv) hr
   | store x ρ t f' i ev hws hLs hn e2 hw hL b r he2 hx hlt hk hf hr =>
     have hg := hglob A.zaehl (by simp [pendWord])
     have hst : A.stand σ' = A.stand σ := by simp only [ArenaForm.stand, hg]
     exact .store x ρ t f' i ev hws hLs hn e2 hw hL b r he2 (hst ▸ hx) (hst ▸ hlt) hk
-      (hf.transfer hd hd' hrun hv) hr
+      (hf.transfer hd hd' hrun hrun' hv) hr
   | release ρ e2 hw hL b r p o h he2 hp ho hg hlink' hk hf hr =>
     have hgk := hglob A.kopf (by simp [pendWord])
     have hkopf : A.kopfSt σ' = A.kopfSt σ := by simp only [FreiForm.kopfSt, hgk]
@@ -67,7 +67,7 @@ theorem Head.other {σ σ' : World D} {f : D.Fn} {x} (h : Head A I fr s σ f x)
     obtain ⟨cell, hcell⟩ := State.own_cell howns
     have hn := hlink h.slot cell hcell (State.owned_cell howns hcell).2.1
     exact .release ρ e2 hw hL b r p o h he2 hp ho hg (by rw [hn, hkopf]; exact hlink') hk
-      (hf.transfer hd hd' hrun hv) hr
+      (hf.transfer hd hd' hrun hrun' hv) hr
 
 theorem Susp.transfer {callee f : D.Fn} {x} (h : Susp A I fr s callee f x) (hv : s.viewAt fr = s'.viewAt fr) :
     Susp A I fr s' callee f x := by
@@ -133,7 +133,7 @@ theorem ownInv_local {A : FreiForm D} {I : Interfaces A} {M M' : RufMaschineG D}
     have hrunt : View.Running (depthOf M) ⟨t, (M.faeden t).stapel.length⟩ := rfl
     have hne : (⟨t, (M.faeden t).stapel.length⟩ : Frame).thread ≠ u := htu
     refine ⟨?_, StackOk.transfer (hth t).2 fun a _ => View.local_view hd hrun hloc (Or.inl htu)⟩
-    apply (hth t).1.other hd hd' hrunt (View.local_view hd hrun hloc (Or.inl hne))
+    apply (hth t).1.other hd hd' hrunt hrunt (View.local_view hd hrun hloc (Or.inl hne))
     · intro g hg
       exact hrely t htu g hg
     · intro j cell hc ho
