@@ -4769,3 +4769,32 @@ Full library plus audit: 2,234 jobs; 58 G-stack axiom lists, all standard; no-ho
 * `programm_vollstaendig`, `programm_korrekt`, `programm_haelt`: halting runs and normal completions correspond both ways, up to the
   failure block of a full arena; the output stack holds the output.
 * Witnesses as listed in 13.7. All axiom lists standard.
+
+## 94. Linking projects: the whole program as the guarantee carrier (2026-10-25)
+
+`Zielsatz/Projekte/{Komposition,Ziel,Ohne,ZeugeAtomar,ZeugeSperre,ZeugeBesitz}.lean`, `ZielOrt/Grundlage/ZielOrtGanz/T2.lean`.
+Scope: `BUILD-SYSTEM.md` §7 (plan) -- several projects, each with its own source, build file and proofs, linked into
+ONE program; every guarantee holds across project boundaries because the program is one unit for `GabbroZiel`.
+
+* `komponiere`, `koerperVon_besitzer`: the composed unit -- every body from its owning project, every project's starts,
+  run-time roots and arenas, the conjunction of the projects' axiom ensures (`qAlle`).
+* `geteiltA_offen`: the shared atomics of every program lie in the open-world rely `OffenA`.
+* `koerperGutSA_Q`, `invGutSA_Q`, `invGutGrundA_Q`: a stronger axiom ensures is a weaker obligation;
+  `koerperGutSA_mitRumpf2` (and twins): the obligation reads the contracts and ONE body.
+* `nutzerPflichtA_komponiere`: (b) of the composed unit from each project's `NutzerTeilO` (own bodies against the
+  open-world rely and the project's own ensures, its start).
+* **`gabbro_ziel_projekte`** (`GabbroZielProjekte`): acceptance of the composed unit + each project's obligation +
+  the joined hardware assumptions + the runtime ⇒ every leg of `ZielFX`, `besitz` over the arenas of ALL projects.
+  The proof is `gabbro_ziel` over the composed unit; no leg is new, none dropped.
+* `Endblock.logikFrei_ok` (generalized): every property of the callees' `logik` answers carries over to a
+  `logikFrei` body; `koerperGutR_ohne`, `logikPflicht_ohne`, `nutzerTeilO_ohne`: a project without contracts,
+  invariants and atomic globals whose bodies pass `logikFrei` owes no hand-written proof.
+* Witnesses (all premises discharged, the concrete checker by `decide`): `projekte_zeuge` + `grenze` (a SHARED
+  ATOMIC written in the library, read in the application), `projekte_sperre_zeuge` + `grenze` (a CALL with a
+  contract, a LOCK held across it, a guarded TABLE and a table INVARIANT across the boundary),
+  `projekte_besitz_zeuge`, `besitz_ueber_die_grenze` + `grenze` (an ALLOCATION made in the library and released
+  in the application; the actual run allocates slot 0 and frees it).
+* Open (BUILD-SYSTEM.md §7.9): reuse of a project's proof across programs whose link declarations differ (an
+  embedding of declarations), name spaces in the Lean front end, `GabbroZielVerbund` for n units with every leg.
+
+All axiom lists standard.
