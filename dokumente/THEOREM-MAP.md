@@ -4646,7 +4646,11 @@ Files: `Bausteine/Arena/Ownership/Machine/*.lean` (19 files). Plan: `PLAN-DYNAMI
 * `rely_core`, `rely_of`: the rely from held static holdings, lock exclusivity and write separation.
 * `ownInv_reach`, `ownInv_reachGA`, `ownInv_reachGX`: every reachable machine.
 
-Standard axioms only. Open: `Spec.lean` integration (review), deriving the named premises from the goal's own.
+* `checked_mitRuhe`, `threadFacts_of`, `startOwn_of`, `ownership_goal_gx` (`Ruhe/`): the leg on the goal's own runs,
+  its thread facts derived from (a), (b) and (d).
+* `GoalWitness.ownership_goal_gx_zeuge`, `GoalWitness.actual_run`: every premise discharged on an allocating unit.
+
+Standard axioms only. Open: `Spec.lean` integration (review).
 
 
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)

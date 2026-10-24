@@ -3,6 +3,7 @@ import Grammatik.Bausteine.Arena.Ownership.Source.Witness
 import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
 import Grammatik.Bausteine.Arena.Ownership.Body.Goal
 import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+import Grammatik.Bausteine.Arena.Ownership.Ruhe.Witness
 
 /-! Kernel-checked public audit of the ownership extension. The general body
 judgment and its soundness are in `Body/`, ownership on every reachable
@@ -59,5 +60,9 @@ namespace Gabbro.Grammatik.ArenaOwnership
 #print axioms Machine.ownInv_reach
 #print axioms Machine.ownInv_reachGA
 #print axioms Machine.ownInv_reachGX
+#print axioms Ruhe.checked_mitRuhe
+#print axioms Ruhe.ownership_goal_gx
+#print axioms Ruhe.GoalWitness.ownership_goal_gx_zeuge
+#print axioms Ruhe.GoalWitness.actual_run
 
 end Gabbro.Grammatik.ArenaOwnership

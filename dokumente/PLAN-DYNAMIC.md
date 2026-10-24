@@ -1477,10 +1477,18 @@ handed no allocation); `ThreadFacts` (closed call graphs with their roots, a loc
 words write-separated — the facts the acceptance (`Akzeptiert_ok`) already provides); for GA/GX `ArenaPlain` (the head
 and the counter are not atomic globals). Nothing is moved into `NutzerPflichtA`, nothing assumed of RAM.
 
-**Open.** (a) Folding `OwnInv` into `Spec.lean` (`AkzeptiertSpecX` + `ZielX`) waits for Simon's review; until then the
-leg stands beside the goal. (b) Deriving `ThreadFacts`/`StartOwn`/`ArenaPlain` from the goal's own premises in one
-statement (mechanical: `Akzeptiert_ok`, `StartZulaessig`), with a non-degenerate witness instantiating every premise (witness
-obligation; `witness_checked` covers `Checked` today). (c) Exporter/Rust after (a).
+**Derived premises and witness (2026-10-24).** `Ruhe/`: `checked_mitRuhe` lifts a checked program to its idle-root
+form `P.mitRuhe` (the goal's runs); `threadFacts_of` derives `ThreadFacts` from (a) `AkzeptiertSpecX` and the
+admissible start `StartZulaessig` that (b)+(d) give; `StartOwn` follows from two decidable ownership-acceptance facts
+(`ArenaLeer`: the declared start memory holds an empty arena; `StartPlain`: no declared start takes a handle);
+`ArenaPlain` is decidable on the declaration. `ownership_goal_gx`: under `GabbroZiel`'s premises and the ownership
+acceptance of an arena, `OwnInv` holds at every machine of every thread-machine run over GX. Non-degenerate witness
+`GoalWitness.ownership_goal_gx_zeuge` (one function on `FA` allocating and releasing; the goal's concrete checker
+accepts it by `decide`, the user's obligation is proved, every premise discharged) and `actual_run` (the allocation and
+the release execute).
+
+**Open.** (a) Folding the leg into `Spec.lean` (`AkzeptiertSpecX` + `ZielFX`) waits for Simon's review; until then it
+stands beside the goal. (b) Exporter/Rust after (a).
 
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
