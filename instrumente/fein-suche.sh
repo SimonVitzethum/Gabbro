@@ -21,7 +21,7 @@
 #       messung/fein/offen.txt (the cells no cached program has)
 #
 # Memory: each driver process runs in a systemd scope with MemoryMax = min(FEIN_GB, available - 4) GB (default 8)
-# and no swap; it does not start below 6 GB available. A scope that hits its ceiling ends that run only (the run is
+# and no swap; below 6 GB available it waits (up to an hour) instead of starting, so no run is skipped silently. A scope that hits its ceiling ends that run only (the run is
 # not cached and is tried again next time).
 set -u
 W=$(cd "$(dirname "$(realpath "$0")")/.." && pwd)
@@ -29,10 +29,14 @@ BIN=$W/target/fein/gen-fein
 LAEUFE=$W/messung/fein/laeufe
 mkdir -p "$LAEUFE"
 
-deckel() {   # deckel COMMAND...: run COMMAND under the memory ceiling
-  local want=${FEIN_GB:-8} avail lim
+deckel() {   # deckel COMMAND...: run COMMAND under the memory ceiling; wait (up to an hour) while memory is short
+  local want=${FEIN_GB:-8} avail lim t=0
   avail=$(awk '/MemAvailable/ {print int($2/1048576)}' /proc/meminfo)
-  if [ "$avail" -lt 6 ]; then echo "fein-suche: only ${avail} GB available, not starting" >&2; return 75; fi
+  while [ "$avail" -lt 6 ]; do
+    if [ "$t" -ge 3600 ]; then echo "fein-suche: only ${avail} GB available for an hour, not starting" >&2; return 75; fi
+    sleep 30; t=$((t + 30))
+    avail=$(awk '/MemAvailable/ {print int($2/1048576)}' /proc/meminfo)
+  done
   lim=$(( avail - 4 )); [ "$want" -lt "$lim" ] && lim=$want
   systemd-run --user --scope --quiet -p MemoryMax=${lim}G -p MemorySwapMax=0 -- nice -n 10 "$@"
 }
