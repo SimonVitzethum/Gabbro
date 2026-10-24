@@ -474,6 +474,264 @@ guardians inside the acceptance run. Built: `gabbro gabbrov pruefe` and the `Bru
 
 ---
 
+## D5. Complete universality proof and Brainfuck compiler plan (2026-10-24)
+
+**Status: planned, not proved.** The checked starting point is THEOREM-MAP section 91 and
+`grammatik/Grammatik/Berechenbarkeit/`. All new Lean modules belong below that directory, with
+subdirectories before any folder exceeds 20 entries. This plan concerns the Lean language model;
+it does not certify the Rust compiler or a finite physical computer.
+
+### D5.1. The deliverables and their quantifiers
+
+The deliverables are a uniform compiler for **every well-formed Brainfuck program**, its semantic
+preservation proof, a theorem that Gabbro represents every partial recursive function, and precise
+termination/resource boundaries. A collection of compiled examples is not the deliverable.
+
+Use the following theorem contracts; the notation is a specification, not existing Lean declarations:
+
+```text
+compileBF : BF.Program -> FiniteGProgram
+
+forall p input output,
+  BF.HaltsWith p input output <->
+    exists budget execution,
+      TargetExecution (compileBF p) input budget execution /\
+      NormalHalt execution /\ ObservedOutput execution = output
+
+forall f : Nat -> Part Nat, Nat.Partrec f ->
+  exists P : FiniteGProgram,
+    forall x y, y in f x <->
+      exists budget execution,
+        TargetExecution P (encodeNat x) budget execution /\
+        NormalHalt execution /\ decodeNat (ObservedOutput execution) = some y
+```
+
+`P` and its declarations are fixed before quantifying over `x`. The compiler is total and
+computable, produces finite syntax and complete finite name enumerations, and never evaluates its
+source program to discover its answer. `NormalHalt` includes an explicit, proved shutdown protocol
+for helper threads. Exhaustion, exceptions, invalid source and allocation failure are separate
+outcomes. Input/output codecs must have inverse and domain theorems.
+
+Add finite-trace preservation and reflection, including outputs produced by programs that never
+halt. Target scheduling is not allowed to choose a computational answer. Prove uniqueness of
+observable results and correspondence at synchronization boundaries, with administrative steps
+hidden by a proved observation map. Existence of a faithful execution is the basic expressiveness
+statement; scheduler-independent progress requires the additional premises in D5.6.
+
+### D5.2. Freeze the Brainfuck dialect
+
+The primary dialect has eight commands, balanced brackets, 8-bit cells with arithmetic modulo 256,
+a zero-initialized tape unbounded in both directions, and a pointer initially at the origin. Input
+is a finite byte stream, EOF supplies zero, and output is a byte stream. Comments are ignored;
+unbalanced brackets produce a parser error. A tape with 30,000 cells is a bounded variant, not the
+universality target. Natural-valued cells and alternative EOF conventions need separate adapters
+and must not silently change the primary theorem.
+
+Define an executable parser, bracket matching, deterministic labeled small-step semantics, normal
+halt, finite runs and infinite behavior. Either use finite-support tape maps or two finite lists
+around the head with implicit zero tails; prove equivalence if both representations are used.
+The head position in the specification may be an integer; the Gabbro program must not smuggle an
+unbounded integer through a bounded Gabbro value.
+
+The compiler must account for each command:
+
+| BF command | Intermediate behavior to prove |
+|---|---|
+| `+`, `-` | Explicit wrap at 255/0; no Gabbro arithmetic overflow |
+| `>`, `<` | Push the old head onto one tape stack, pop the opposite stack, use zero on empty |
+| `[` | Skip to the matching exit on zero; otherwise enter the body |
+| `]` | Re-test/jump according to the frozen bracket convention |
+| `,` | Consume exactly one input byte, or supply the specified EOF value |
+| `.` | Produce exactly one matching output byte, in order |
+
+### D5.3. Use one existing intermediate machine
+
+Use Mathlib's **finite presentation of `Turing.TM2`**, rather than building a second universal
+machine. The pinned local sources are `Mathlib/Computability/TuringMachine/{Config,ToPartrec,
+StackTuringMachine,Computable}.lean`. Relevant checked declarations include
+`Turing.ToPartrec.Code.exists_code`, `Turing.PartrecToTM2.tr_eval` and
+`Turing.PartrecToTM2.tr_supports`. Inspect their exact types when implementing the adapters.
+
+The two proof paths share one backend:
+
+```text
+BF syntax + byte I/O -> finite TM2 presentation ----+
+                                                   +-> real Gabbro syntax -> machine G
+partial recursive code -> Mathlib TM2 + support ---+
+```
+
+The BF path uses two tape stacks plus input/output storage as required, finite control and a
+byte-valued head. Specify observable I/O at transitions, not only as a final output list: delaying
+all output until halt would lose the behavior of nonterminating BF programs. An observation layer
+on the existing TM2 relation may label the designated output operations; it must not introduce
+new computational transitions.
+
+The Mathlib path needs an actual restriction to the finite support supplied by `tr_supports`;
+`PartrecToTM2`'s ambient label type is not itself a finite program. Prove the restriction closed
+under steps and preserve `tr_eval`, with finite alphabets and finite local state. Reify functions
+over those finite domains into explicit finite tables/decision trees, so no arbitrary Lean
+function is executed inside the compiled program. Input/output representation must compose with
+Mathlib's list-of-naturals representation. This path proves Gabbro universality without assuming
+Brainfuck universality or adding a separate TM-to-Brainfuck compiler.
+
+### D5.4. The storage construction and the early feasibility gate
+
+Compare the available approaches before committing to the large simulation:
+
+| Approach | Assessment |
+|---|---|
+| A fixed-size Gabbro table or `DynArena` ceiling | Useful for bounded witnesses; insufficient for an unbounded tape |
+| Unbounded Gabbro integers or a Lean function stored as an evaluator | Missing from the chosen source fragment; would change or bypass the target |
+| Existing call stacks, one worker per TM2 stack, finite shared control | Primary route for the current general model; requires real controllable push/pop and a verified protocol |
+| An explicitly unbounded, fallible region | Possible language extension if the admitted fragment blocks the primary route; separate Lean-first project, not an already available escape hatch |
+
+For the primary route, generate one stack-worker family per finite stack index and a controller.
+Use actual `RufSchrittG` calls to push frames, returns to pop them, a retained local symbol in each
+data frame, and a permanent bottom frame that answers empty without being popped. Workers answer
+`push`, `pop`, `peek` and `stop` through bounded mailboxes. Use one outstanding request and a finite
+phase/ownership handshake; do not assume an unbounded request counter.
+
+Shared mailbox accesses are protected by declared locks. Release a lock before waiting or making
+a recursive push. A response belongs to its request, a command takes effect exactly once, and a
+controller cannot consume an old response. The protocol invariant must cover intermediate states,
+not just request/response endpoints. Call logs and traces are observations, never addressable
+storage for the source program. No hardware oracle computes a tape operation or a TM2 step.
+
+**Gate U0, before a full compiler:** implement and prove `push a; push b; peek; pop; pop; pop-empty`,
+including restoration of the older frame and the unchanged other worker, from `RufStartG`. Then
+prove arbitrary finite command-list correctness, not just this witness. Exhibit finite declarations,
+enumerations, effects, lock discipline and the exact termination class of the generated workers.
+
+The existing `RecursionBoundary` result warns about a real obstruction: its non-tail recursion is
+accepted by the core safety Bool but classified `abgelehnt`, and has no valid `MassPflicht` for any
+measure. That theorem concerns that program; it is not an impossibility theorem for every storage
+implementation. Nevertheless, the plan cannot promise an admitted universal fragment before U0.
+
+If U0 works only for raw G or the core safety checker, record exactly that scope. A proof claiming
+the additional termination admission must either find a construction satisfying its actual duties,
+or separately prove the expressiveness obstruction and specify a reviewed extension. Never mark
+arbitrary non-tail recursion `bedingt`, invent a falling measure, remove `MassPflicht`, or weaken
+`Spec.lean` to make the compiler pass. A genuine language extension needs its own semantics,
+safety/user-duty bridges and goal review before integration; the compiler, exporter and syntax
+documentation then follow the Lean model.
+
+### D5.5. Initialization, I/O and admissibility are proof obligations
+
+All target data stacks start empty. A relation to an already populated arbitrary stack is not an
+initialization proof. Prove that the input loader reaches the encoding used by the TM2 theorem by
+actual G steps, while preserving the compiled computational core. The fixed-program theorem
+requires arbitrary finite input to enter through a defined byte interface, rather than increasing
+the program's internal table bounds for each input.
+
+The interface may only supply the next byte/EOF and record emitted bytes, with an explicit
+transition/trace specification and no mutation of computational storage. If expressed through the
+existing register/oracle model, prove those restrictions for the specific device model and keep
+the I/O premise explicit. This is byte transport, not an oracle for a machine's answer. Also prove
+a closed, data-only loader specialization using finite literal input and actual initialization
+steps. That specialization alone does not discharge the fixed-program/runtime-input theorem.
+
+For every generated program, prove complete finite enumerations, well-typed bodies, the exact
+`Akzeptiert`/`AkzeptiertX` result applicable to the selected interface, frame/footprint conditions,
+lock invariants, start duties and the applicable `NutzerPflichtA` obligations. Instantiate the
+existing goal theorem where those hypotheses are proved. Keep the termination classifier and
+`MassPflicht` as separate, explicit theorem premises/results. Do not infer full admissibility
+from the core Bool alone.
+
+Use the ordinary locked fragment with no shared atomic data initially. Transfer the simulation
+from G through the project's existing thread and GX interfaces, proving that no weak-memory choice
+changes the protected protocol. The observation theorem must follow the real machine to which the
+claimed safety result applies; matching a private evaluator is insufficient.
+
+### D5.6. Termination, fuel, time and space boundaries
+
+These are distinct deliverables:
+
+| Result | Required statement |
+|---|---|
+| Conditional termination | BF normal halt iff some sufficiently funded target execution normally halts, with the same output |
+| Divergence reflection | If BF does not halt, **no** budget produces a normal target halt; finite target executions may exhaust their budget |
+| `runs until C` | The exit guard is the encoded BF halt condition; continuing passes do not exit and normal completion establishes it; eventual truth needs a separate proof |
+| Finite-prefix adequacy | Every finite BF prefix has a faithful finite G prefix with adequate fuel; reflection excludes extra observations and wrong halts |
+| Larger budgets | Prove adequacy/compatibility for the actual nested G execution, not just `run_mono` with its pass evaluator fixed |
+| Infinite behavior | Build a coherent limit of compatible finite simulations if needed; `forall n, exists execution` alone does not construct one infinite run |
+| Recursive measures | Transfer a supplied source termination argument only when representable and satisfying the actual `MassPflicht`; a ghost natural rank is not automatically a legal Gabbro `decreases` expression |
+| Resource exhaustion | Remains a named stop; it never proves the source has terminated or failed to terminate |
+
+For a BF run of **known length `N`**, derive total computable bounds `Fuel(p, input, N, F)`,
+`Time(p, input, N, F)` and `Space(p, input, N)` from the compiled protocol. Include input loading,
+guard checks, all administrative steps, queueing/polling and helper shutdown. State whether space
+counts live frames, committed storage or retained logs; do not use logs as workspace. No constant
+or linear overhead claim is made until the relevant macro bound is proved.
+
+For a canonical constructive schedule, derive a bound directly. To quantify over runtime schedules,
+use the existing FIFO/`FairF` interfaces and prove the needed finite lock-hold bounds. Weak fairness
+alone supplies no numeric delay bound. A fixed finite budget cannot cover arbitrarily long unfair
+delays. Eventual progress under weak fairness belongs to an adequate/unexhausted or justified limit
+semantics, with byte delivery and resource premises stated; it must not be asserted for every run
+at every fixed budget.
+
+After the partial-recursive-function bridge, derive by reduction that there is no total computable,
+sound and complete normal-halting decider for this universal fragment. Also rule out a total
+computable small-step time bound `Bound(p, input)` covering every normally halting computation on
+the canonical schedule: simulating that many steps would decide halting. A fuel-only bound has
+the same consequence only after a proof that fixed-fuel evaluation of the compiled fragment is
+a total decision procedure; the general G call machine can recurse even at fuel zero. This does not prevent a bound
+conditional on a supplied halting trace, a validated ranking, or a restricted total fragment.
+`runs until C` describes the condition for a successful exit; it does not decide whether C is reached.
+
+For the exact expressive-power claim, also encode the finite target syntax, stacks, device cursor
+and canonical scheduler effectively, and prove its observable partial evaluation partial recursive.
+The lower bound then represents every partial recursive function, and the upper bound rules out
+additional power from the chosen I/O or schedule. Arbitrary unrestricted oracles are outside this theorem.
+
+For the bounded variant, fix the tape extent, scalar domains, input and finite control, and prove
+the resulting computational-state quotient finite and its halting question decidable. Exclude
+write-only output history from that quotient and justify the exclusion. Any transfer of this
+argument to G must additionally bound or quotient its accessible stacks/continuations and justify
+every discarded state component. This explains precisely which unbounded resource the universal
+construction needs; a finite physical realization retains its resource stops.
+
+### D5.7. Work packages, dependencies and completion gates
+
+All paths in this table are planned relative to `grammatik/Grammatik/Berechenbarkeit/`; names denote
+deliverables, not existing declarations. Reuse the current `RunsUntil*`, `RecursionBoundary` and
+`Audit` files. Each universal theorem needs nondegenerate typed witnesses and negative probes.
+
+| Package | Modules and deliverable | Depends on |
+|---|---|---|
+| U0 | `Storage/{Interface,Program,Protocol,Witnesses}`: real empty/push/pop/peek/stop, command-list refinement, exact admission report | Existing call machine |
+| U1 | `Brainfuck/{Syntax,Semantics,Witnesses}`: all eight commands, parsing/brackets, deterministic traces and halt | Frozen dialect |
+| U2 | `Machine/{Finite,Encoding}`: explicit finite TM2 presentation, encodings, executable tables; restrict Mathlib support | Pinned Mathlib |
+| U3 | `Brainfuck/Compile`: total syntax-directed BF-to-TM2 translation, per-command and loop simulation | U1, U2 |
+| U4 | `Storage/{Initialization,Admission}`: actual input loading, byte interface, starts and safety duties | U0, U2 |
+| U5 | `Machine/{Compile,Simulation}`: one generic TM2-to-G compiler; all-instruction simulation/reflection and administrative progress | U0, U2, U4 |
+| U6 | `Brainfuck/Correctness`: whole-program halt/I/O/prefix equivalence, helper shutdown; optional concrete syntax round trip must have its generic elaboration proof | U3, U5 |
+| U7 | `Termination/{Budget,Bounds,Limits}`: nested-fuel adequacy, schedule/space/time bounds, conditional exits and bounded variant | U5, U6 |
+| U8 | `Universality/{Partrec,Theorem}`: compose Mathlib's code/TM2 bridge with U5 and codecs; every partial recursive function, one fixed target per source; target evaluation is partial recursive | U2, U4, U5 |
+| U9 | `Universality/Undecidability`: halting reduction and absence of a total computable general bound; explicit witnesses and axiom audit | U7, U8 |
+| U10 | Review of exact final statements, model interfaces, documented assumptions and all four guardians before publication | U6-U9 |
+
+U1 and U2 can be developed independently while the feasibility question is resolved. Do not build
+the large target simulation past an unresolved U0 admission/storage obstruction. The model-level
+result does not require changing the production Rust CLI; any later `gabbro` Brainfuck frontend or
+binary correctness claim is a separate Lean-first integration task.
+
+Completion requires all of the following, with none hidden behind an assumed simulation theorem:
+
+1. A computable finite compiler for all well-formed BF programs, proved over the actual G machine.
+2. Input initialization, output-prefix equality, reflection, normal shutdown and divergence correspondence.
+3. The generic partial-recursive-function representation theorem and justified finite support/codecs.
+4. The exact safety/admission scope, conditional resource bounds and general undecidability boundary.
+5. No added axioms or proof holes; audited standard axioms and unchanged `gabbro_ziel` axioms.
+
+Witnesses must include bracket nesting and skipping, byte wrap, EOF, output before divergence,
+`+[]` (divergence without tape growth), `+[>+]` and `+[<+]` (unbounded tape growth), repeated crossing
+of the origin, genuine restoration after several pops, insufficient fuel, stale-reply rejection,
+two-worker interleavings and a source computation from Mathlib's partial-recursive-function path.
+Build new modules and their witnesses first, then the full Lean library and axiom/layout checks;
+update THEOREM-MAP 91 and TODO at each checked milestone. A green bounded BF interpreter, unchecked
+initial stacks or a semantic compiler assumption cannot close U10.
+
 # Part E — Trust base and the lowering
 
 ## E1. What is trusted, by layer

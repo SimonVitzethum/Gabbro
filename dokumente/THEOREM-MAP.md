@@ -4519,3 +4519,8 @@ witness is not a universal simulator. `Spec.lean`, `Akzeptiert` and the semantic
 Validation: `lake build` succeeds (1,775 jobs); `lake build Grammatik.Berechenbarkeit.Audit` checks 34 declarations
 using only `propext`, `Classical.choice` and `Quot.sound`, with exactly those three for `gabbro_ziel`.
 The Lean guardian's no-holes scan and the repository layout check pass. These are model checks, not a Rust or binary verification.
+
+**Planned continuation:** [PROOF.md D5](PROOF.md#d5-complete-universality-proof-and-brainfuck-compiler-plan-2026-10-24)
+specifies the complete Brainfuck-to-finite-TM2-to-G compiler proof and the shared
+partial-recursive-function bridge, packages U0-U10. Its initialization, admission, scheduling, nested-fuel, trace and termination
+obligations are planned work, not additional theorems proved by this section.

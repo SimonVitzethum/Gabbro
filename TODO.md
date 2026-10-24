@@ -158,6 +158,10 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   has class `abgelehnt`. Open: a finite-program, oracle-free universal-machine encoding and a generic push/pop/controller simulation with
   halting/output correspondence, budget adequacy and precise admission conditions. Unbounded stacks and conditional exits are not that proof;
   do not claim Turing completeness from them. No syntax, acceptance rule or goal premise was weakened.
+  **Complete proof plan:** [PROOF.md D5](dokumente/PROOF.md#d5-complete-universality-proof-and-brainfuck-compiler-plan-2026-10-24),
+  packages U0-U10: all eight Brainfuck commands compiled through finite Mathlib TM2
+  to the actual G machine, with input loading, safety/admission, bidirectional halt and output-prefix preservation, nested-fuel adequacy,
+  conditional time/space bounds and a partial-recursive-function/undecidability bridge. Resolve real push/pop and admission at U0 first.
 
 ## 3. Checker
 
