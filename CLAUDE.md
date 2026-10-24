@@ -70,7 +70,7 @@ There is no second machine any more (since 2026-09-27); recipes for servers or S
 * **Both trees into an agent directory:** `crates/` and `grammatik/`; `programmlogik/` needs its warm
   `.lake` (Mathlib), otherwise `cargo test` hangs (`gabbro prove` goes cloning). A stale `.lake` is worse
   than none.
-* At most two Opus agents at a time (AGENTS.md §6).
+* Parallel work: AGENTS.md §6.
 
 ## What else applies
 
