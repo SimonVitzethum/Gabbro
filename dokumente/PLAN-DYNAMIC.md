@@ -1582,3 +1582,8 @@ Scope, stated exactly: the arena has a fixed count, so a long run may end in the
 unbounded G declaration. The initial representation (input already on its stack) is a premise, not a proved G loader. Checker admission
 (`Akzeptiert`) of `programm`, the goal statement and the Rust side are untouched; all boundaries of 13.2 for an unbounded region remain.
 All new audit entries use standard axioms only.
+
+Update (same day): `BrainfuckG/ProgrammAkzeptiert.lean` wraps the G statement of the program `.` in a whole G function (bind
+counter and head, run, return). The core checker accepts it (`prog_accepted_zeuge`, `decide +kernel` on `Akzeptiert`; the `= false`
+probe fails), its structural class is `bedingt`, and `prog_exec_zeuge` shows that the same function returns normally within budget 2
+with the halting Brainfuck run and its output. Admission for EVERY Brainfuck program is not proved; it is per-program evidence.

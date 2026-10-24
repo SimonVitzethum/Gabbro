@@ -1,4 +1,5 @@
 import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
+import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert
 import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
 import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
 import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
@@ -27,3 +28,6 @@ import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses.programm_vollstaendig_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses.programm_ok_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses.programm_haelt_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert.prog_klasse_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert.prog_accepted_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert.prog_exec_zeuge
