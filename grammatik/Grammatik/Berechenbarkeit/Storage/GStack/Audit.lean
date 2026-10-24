@@ -1,6 +1,7 @@
 import Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses
 import Grammatik.Berechenbarkeit.Storage.GStack.Multi
 import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
+import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
 import Grammatik.Berechenbarkeit.Storage.HeapAudit
 
 /-! Axiom audit of the actual, capacity-bounded G stack bridge.
@@ -71,3 +72,6 @@ The imported heap audit retains the separate unbounded component boundary. -/
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses.multi_w1
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses.push_multi_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses.pop_multi_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.takeOrBump_reused
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.takeOrBump_fresh
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.takeOrBump_full
