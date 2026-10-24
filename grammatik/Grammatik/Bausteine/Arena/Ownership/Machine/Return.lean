@@ -128,10 +128,10 @@ theorem ownInv_pop {A : FreiForm D} {I : Interfaces A} {M M' : RufMaschineG D} {
     (hag : s.agrees A (M.speicher.welt [])) (hfo : A.FreiOk (M.speicher.welt []))
     (hd : s.Disciplined (depthOf M)) (hth : ∀ t, ThreadOk A I s (M.speicher.welt []) t (M.faeden t))
     {caller : RufRahmenG D} {rst : List (RufRahmenG D)} (hpop : (M.faeden u).stapel = caller :: rst)
-    {nr : RufRahmenG D} (hnf : nr.f = caller.f)
-    (hhead : Head A I ⟨u, rst.length⟩ (s.pop ⟨u, rst.length + 1⟩ ⟨u, rst.length⟩) (M.speicher.welt []) nr.f nr.rest)
-    {spur' : List (Ereignis D)} {log' : List (RufEreignisF D)}
-    (hmem : M'.speicher = M.speicher) (hM' : M'.faeden = rufUpdateG M.faeden u ⟨rst, nr, spur', log'⟩) :
+    {nr : RufRahmenG D} {spur' : List (Ereignis D)} {log' : List (RufEreignisF D)}
+    (hmem : M'.speicher = M.speicher) (hM' : M'.faeden = rufUpdateG M.faeden u ⟨rst, nr, spur', log'⟩)
+    (hnf : nr.f = caller.f)
+    (hhead : Head A I ⟨u, rst.length⟩ (s.pop ⟨u, rst.length + 1⟩ ⟨u, rst.length⟩) (M.speicher.welt []) nr.f nr.rest) :
     OwnInv A I M' := by
   have hdu : depthOf M u = rst.length + 1 := by
     show (M.faeden u).stapel.length = _

@@ -55,14 +55,14 @@ section Step
 variable {A : FreiForm D} {I : Interfaces A} {fr : Frame} {s : State}
   {f : D.Fn} {l : Bool} {Γ : Ctx} {k c : Context} {g : Ghost} {σ σ' : World D} {ρ : Env D Γ}
 
-theorem exit_leave {Λ Λ1 Λ' : List (Res D)} {hl : true = true}
+theorem exit_leave {Λ1 Λ' : List (Res D)} {hl : true = true}
     {rest : Block D (vertragVon D f) true Γ Λ1 Λ'} {r : GRest D (vertragVon D f) true Γ Λ'}
     (hr : OR A I (I f).output k c (.dann (.cons (.leave hl : Stmt D (vertragVon D f) true Γ Λ1 Λ1) rest) r)) :
     ExitsTo k c ∧ OX A I (I f).output k r := by
   obtain ⟨c2, hs, hc⟩ := hr.stmt trivial
   exact ⟨os_top hs, ox_top hc.exits⟩
 
-theorem exit_next {Λ Λ1 Λ' : List (Res D)} {hl : true = true}
+theorem exit_next {Λ1 Λ' : List (Res D)} {hl : true = true}
     {rest : Block D (vertragVon D f) true Γ Λ1 Λ'} {r : GRest D (vertragVon D f) true Γ Λ'}
     (hr : OR A I (I f).output k c (.dann (.cons (.next hl : Stmt D (vertragVon D f) true Γ Λ1 Λ1) rest) r)) :
     ExitsTo k c ∧ OX A I (I f).output k r := by
