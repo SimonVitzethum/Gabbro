@@ -4721,3 +4721,18 @@ The nonempty, empty, insufficient-budget, larger-budget, whole-function return, 
 instantiate the theorem jointly. The structural classification and the source/goal boundary are unchanged (`PLAN-DYNAMIC.md` 13.6).
 
 Full library plus audit: 2,234 jobs; 58 G-stack axiom lists, all standard; no-holes, goal axioms, layout and whitespace checks pass.
+
+### 93.5. Brainfuck as one G program over a finite arena (2026-10-24)
+
+`Berechenbarkeit/BrainfuckG/{Kopf,Nimm,Lege,Schritt,Programm,LegeWitnesses,SchrittWitnesses,ProgrammWitnesses,Audit}.lean`,
+`Storage/GStack/{Multi,MultiWitnesses,TakeOrBump}.lean`. Scope: `PLAN-DYNAMIC.md` 13.7.
+
+* `push_multi`, `pop_multi`: several stacks in one arena; a push or pop changes exactly its stack.
+* `takeOrBump_reused`, `takeOrBump_fresh`, `takeOrBump_full`: the allocator in G code; the failure block runs exactly when the free list is
+  empty and the counter is at the count.
+* `plusEins_eval`, `minusEins_eval`, `nimm_leer`, `nimm_voll`, `lege_ok`, `lege_voll`: the head byte and its moves between the stacks.
+* `befehl_schritt`, `befehl_voll`, `befehl_genau`: one instruction block is one Brainfuck step or the failure block.
+* `wahl_treffer`, `durchgang`, `durchgang_platz`, `durchgang_ende`: the counter selection and one pass of the loop.
+* `programm_vollstaendig`, `programm_korrekt`, `programm_haelt`: halting runs and normal completions correspond both ways, up to the
+  failure block of a full arena; the output stack holds the output.
+* Witnesses as listed in 13.7. All axiom lists standard.
