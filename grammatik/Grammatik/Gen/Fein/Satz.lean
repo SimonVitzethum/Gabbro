@@ -11,7 +11,7 @@ namespace Gabbro.Grammatik.Gen.Fein
 
 open Gabbro.Grammatik
 
-theorem kopf_lt (τ : Ty) : τ.kopf < 9 := by cases τ <;> simp [Ty.kopf]
+theorem kopf_lt (τ : Ty) : τ.kopf < 10 := by cases τ <;> simp [Ty.kopf]
 
 theorem kopfOk_none (τ : Ty) : kopfOk none τ.kopf = true := decide_eq_true (kopf_lt τ)
 
@@ -188,6 +188,10 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .forallSlots (body := body) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ body rfl _)) all_nil)) (fzE_ok hax body))
   | .existsSlots (body := body) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ body rfl _)) all_nil)) (fzE_ok hax body))
   | .reaches (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .refStart .. => by simp only [fzE]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
+  | .refNext (r := a) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) all_nil)) (fzE_ok hax a))
+  | .refEq (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .slotRef (r := i) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) all_nil)) (fzE_ok hax i))
 
 theorem fzN_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : (e : NutzlastExpr D Γ Λ o) → (fzN e).all moeglich = true
   | .empty .. => by simp only [fzN]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
@@ -229,6 +233,7 @@ theorem fzS_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ 
   | .retWhy .. => by simp only [fzS]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .leave (h := h) .. => by subst h; simp only [fzS]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .next (h := h) .. => by subst h; simp only [fzS]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
+  | .assignSlotRef (r := i) (e := e) .. => by simp only [fzS]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc rfl (kc (kopf_frei e) rfl))) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e (kopfOk_none _) _)) all_nil))) (fzE_ok hax i)) (fzE_ok hax e))
 
 theorem fzB_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : (e : Block D V l Γ Λ Λ') → (fzB e).all moeglich = true
   | .nil .. => by simp only [fzB]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)

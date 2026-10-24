@@ -431,15 +431,6 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   /-- `&f` -- the function pointer: a function that CONFORMS to the pointer type («B8»; structural
       since 2026-10-21, `Deklaration.passt`). -/
   | fnref (f : D.Fn) (n : Nat) (h : D.passt f n = true) : Expr Γ Λ (.fnptr n)
-  /-- The first cell of an open region: the start reference. -/
-  | refStart (n : Nat) : Expr Γ Λ (.ref n)
-  /-- The cell after `r`: how a bump allocator makes a fresh reference. There is no other way to make one. -/
-  | refNext (r : Expr Γ Λ (.ref n)) : Expr Γ Λ (.ref n)
-  /-- Two references name the same cell. -/
-  | refEq (a b : Expr Γ Λ (.ref n)) : Expr Γ Λ .bool
-  /-- `r->f` into the OPEN table number `n` -- under the same guards as a slot of `t`. -/
-  | slotRef (r : Expr Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
-      (f : D.Feld t) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
   /-- `old(g)`, `old(T.slots[i].f)` -- nur in `ensures`: der Wert beim Eintritt. -/
   | oldG (g : D.Glob) (hL : gdarf D g Λ) : Expr Γ Λ (D.gtyp g)
   | oldS (t : D.Tab) (f : D.Feld t) (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
@@ -507,6 +498,15 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       `ancestors of` und `chain(…) in` sind `forallSlots` mit `reaches` als Filter. -/
   | reaches (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
       (a b : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ .bool
+  /-- The first cell of an open region: the start reference. -/
+  | refStart (n : Nat) : Expr Γ Λ (.ref n)
+  /-- The cell after `r`: how a bump allocator makes a fresh reference. There is no other way to make one. -/
+  | refNext (r : Expr Γ Λ (.ref n)) : Expr Γ Λ (.ref n)
+  /-- Two references name the same cell. -/
+  | refEq (a b : Expr Γ Λ (.ref n)) : Expr Γ Λ .bool
+  /-- `r->f` into the OPEN table number `n` -- under the same guards as a slot of `t`. -/
+  | slotRef (r : Expr Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
+      (f : D.Feld t) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
   | empty : NutzlastExpr Γ Λ none
@@ -541,10 +541,6 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignThru (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
-  /-- `r->f = e;` into the OPEN table number `n` (`Expr.slotRef`). -/
-  | assignSlotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
-      (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      Stmt l Γ Λ Λ
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
       (hL : gdarf D g Λ) : Stmt l Γ Λ Λ
   /-- `n` Bytes ab Index `i` schreiben («SG-16») -- ein Feld eines `format` ueber einem
@@ -615,6 +611,10 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | retWhy (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) : Stmt l Γ Λ Λ
   | leave (h : l = true) : Stmt l Γ Λ Λ
   | next (h : l = true) : Stmt l Γ Λ Λ
+  /-- `r->f = e;` into the OPEN table number `n` (`Expr.slotRef`). -/
+  | assignSlotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
+      (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
+      Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ

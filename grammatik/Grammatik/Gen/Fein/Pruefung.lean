@@ -19,7 +19,7 @@ def familienF : List Name := [``Gabbro.Grammatik.Expr, ``Gabbro.Grammatik.Nutzla
 
 /-- The constructors of `Ty` in the order of `Ty.kopf`. -/
 def koepfeF : List Name := [``Ty.int, ``Ty.bool, ``Ty.opt, ``Ty.sum, ``Ty.why, ``Ty.never, ``Ty.fl, ``Ty.fnptr,
-  ``Ty.ptr]
+  ``Ty.ptr, ``Ty.ref]
 
 /-- The type class of a type expression (`none`: not a constructor application, any class). -/
 def kopfVon (t : Lean.Expr) : MetaM (Option Nat) := do

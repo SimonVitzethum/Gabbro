@@ -40,13 +40,15 @@ def _root_.Gabbro.Grammatik.Ty.kopf : Ty → Nat
   | .fl .. => 6
   | .fnptr .. => 7
   | .ptr .. => 8
+  | .ref .. => 9
 
 variable {D : Deklaration}
 
 /-- The type class of an expression. -/
 def tk {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (_ : Expr D Γ Λ τ) : Nat := τ.kopf
 
-/-- The constructor of a node (its index in the family, the order of `Adaequanz/Gabbro/Signatur.lean`). -/
+/-- The constructor of a node (its index in the family, the order of `Adaequanz/Gabbro/Signatur.lean`; the region forms of
+    2026-10-24 are appended after the existing numbers, so that the cached witness runs keep their cell names). -/
 def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .lit .. => 0
   | .tru .. => 1
@@ -225,6 +227,10 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .forallSlots (body := body) .. => [⟨0, 0, 39, false, [tk body]⟩, ⟨1, 0, 39, false, [0, 0, kE body]⟩] ++ fzE body
   | .existsSlots (body := body) .. => [⟨0, 0, 40, false, [tk body]⟩, ⟨1, 0, 40, false, [0, 0, kE body]⟩] ++ fzE body
   | .reaches (a := a) (b := b) .. => [⟨0, 0, 41, false, [tk a, tk b]⟩, ⟨1, 0, 41, false, [0, 0, kE a]⟩, ⟨1, 0, 41, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
+  | .refStart .. => [⟨0, 0, 42, false, []⟩]
+  | .refNext (r := r) .. => [⟨0, 0, 43, false, [tk r]⟩, ⟨1, 0, 43, false, [0, 0, kE r]⟩] ++ fzE r
+  | .refEq (a := a) (b := b) .. => [⟨0, 0, 44, false, [tk a, tk b]⟩, ⟨1, 0, 44, false, [0, 0, kE a]⟩, ⟨1, 0, 44, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
+  | .slotRef (r := r) .. => [⟨0, 0, 45, false, [tk r]⟩, ⟨1, 0, 45, false, [0, 0, kE r]⟩] ++ fzE r
 
 def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]
@@ -241,6 +247,7 @@ def fzR {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : ErgExpr D Γ Λ o → L
 def fzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → List FZelle
   | .assignSlot (i := i) (e := e) .. => [⟨0, 4, 0, l, [tk i, tk e]⟩, ⟨1, 4, 0, l, [0, 0, kE i]⟩, ⟨1, 4, 0, l, [1, 0, kE e]⟩] ++ fzE i ++ fzE e
   | .assignThru (p := p) (i := i) (e := e) .. => [⟨0, 4, 1, l, [tk p, tk i, tk e]⟩, ⟨1, 4, 1, l, [0, 0, kE p]⟩, ⟨1, 4, 1, l, [1, 0, kE i]⟩, ⟨1, 4, 1, l, [2, 0, kE e]⟩] ++ fzE p ++ fzE i ++ fzE e
+  | .assignSlotRef (r := r) (e := e) .. => [⟨0, 4, 27, l, [tk r, tk e]⟩, ⟨1, 4, 27, l, [0, 0, kE r]⟩, ⟨1, 4, 27, l, [1, 0, kE e]⟩] ++ fzE r ++ fzE e
   | .assignGlob (e := e) .. => [⟨0, 4, 2, l, [tk e]⟩, ⟨1, 4, 2, l, [0, 0, kE e]⟩] ++ fzE e
   | .putBytes (i := i) (e := e) .. => [⟨0, 4, 3, l, [tk i, tk e]⟩, ⟨1, 4, 3, l, [0, 0, kE i]⟩, ⟨1, 4, 3, l, [1, 0, kE e]⟩] ++ fzE i ++ fzE e
   | .assignVar (e := e) .. => [⟨0, 4, 4, l, [tk e]⟩, ⟨1, 4, 4, l, [0, 0, kE e]⟩] ++ fzE e

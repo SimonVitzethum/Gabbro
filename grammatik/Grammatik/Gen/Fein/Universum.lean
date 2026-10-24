@@ -67,7 +67,11 @@ def kTab : List (List Zeile) := [
     ⟨some 4, false, false, []⟩ /- why -/,
     ⟨some 1, false, false, [(0, some 1, none)]⟩ /- forallSlots -/,
     ⟨some 1, false, false, [(0, some 1, none)]⟩ /- existsSlots -/,
-    ⟨some 1, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- reaches -/],
+    ⟨some 1, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- reaches -/,
+    ⟨some 9, false, false, []⟩ /- refStart -/,
+    ⟨some 9, false, false, [(0, some 9, none)]⟩ /- refNext -/,
+    ⟨some 1, false, false, [(0, some 9, none), (0, some 9, none)]⟩ /- refEq -/,
+    ⟨none, false, false, [(0, some 9, none)]⟩ /- slotRef -/],
   -- NutzlastExpr
   [⟨none, false, false, []⟩ /- empty -/,
     ⟨none, false, false, [(0, some 0, none)]⟩ /- num -/],
@@ -104,7 +108,8 @@ def kTab : List (List Zeile) := [
     ⟨none, false, false, [(3, none, none)]⟩ /- ret -/,
     ⟨none, false, false, []⟩ /- retWhy -/,
     ⟨none, true, false, []⟩ /- leave -/,
-    ⟨none, true, false, []⟩ /- next -/],
+    ⟨none, true, false, []⟩ /- next -/,
+    ⟨none, false, false, [(0, some 9, none), (0, none, none)]⟩ /- assignSlotRef -/],
   -- Block
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(4, none, none), (5, none, none)]⟩ /- cons -/,
@@ -154,7 +159,7 @@ def kAnzahl (f : Nat) : Nat := (kTab.getD f []).length
 
 /-- A type class meets a requirement. -/
 def kopfOk : Option Nat → Nat → Bool
-  | none, h => decide (h < 9)
+  | none, h => decide (h < 10)
   | some q, h => q == h
 
 /-- The type classes of the expression children meet their requirements. -/
@@ -166,7 +171,7 @@ def koepfeOk : List (Option Nat) → List Nat → Bool
 /-- An expression constructor can have the type class `h`. -/
 def ergPasst (k h : Nat) : Bool :=
   match zeile 0 k with
-  | some r => (match r.erg with | none => decide (h < 9) | some q => q == h)
+  | some r => (match r.erg with | none => decide (h < 10) | some q => q == h)
   | none => false
 
 /-- A constructor can stand in the loop context `l`. -/
@@ -181,7 +186,7 @@ def exprReqs (ks : List (Nat × Option Nat × Option Bool)) : List (Option Nat) 
 
 /-- A child of family `cf`, requirement `q`, loop context `lk` can be constructor `k`. -/
 def kindOk (cf : Nat) (q : Option Nat) (lk : Bool) (k : Nat) : Bool :=
-  if cf = 0 then (List.range 9).any (fun i => kopfOk q i && ergPasst k i) else lPasst cf k lk
+  if cf = 0 then (List.range 10).any (fun i => kopfOk q i && ergPasst k i) else lPasst cf k lk
 
 /-- The data of a cell fit its row. -/
 def datenOk (r : Zeile) (l : Bool) : Nat → List Nat → Bool
@@ -226,7 +231,7 @@ def moeglich (c : FZelle) : Bool :=
 
 /-- The type classes a requirement allows. -/
 def kopfListe : Option Nat → List Nat
-  | none => List.range 9
+  | none => List.range 10
   | some q => [q]
 
 /-- The data of a constructor cell. -/
