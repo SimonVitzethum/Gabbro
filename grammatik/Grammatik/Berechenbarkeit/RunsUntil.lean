@@ -31,6 +31,25 @@ inductive ExitTrace (step : World D → Env D Γ → Ausgang V true Γ)
 variable {step : World D → Env D Γ → Ausgang V true Γ}
   {inv : World D → Env D Γ → World D × Bool}
 
+/-- Deterministic execution cannot reach its first normal exit at two
+different continuing-pass counts from the same initial state. -/
+theorem ExitTrace.length_unique {n m σ ρ σ1 ρ1 σ2 ρ2}
+    (h1 : ExitTrace step inv n σ ρ σ1 ρ1) (h2 : ExitTrace step inv m σ ρ σ2 ρ2) : n = m := by
+  induction h1 generalizing m σ2 ρ2 with
+  | leave hi hs =>
+      cases h2 with
+      | leave => rfl
+      | more hi2 hs2 tail2 =>
+          rcases hs2 with hs2 | hs2 <;> rw [hs] at hs2 <;> cases hs2
+  | more hi hs tail ih =>
+      cases h2 with
+      | leave hi2 hs2 =>
+          rcases hs with hs | hs <;> rw [hs2] at hs <;> cases hs
+      | more hi2 hs2 tail2 =>
+          rcases hs with hs | hs <;> rcases hs2 with hs2 | hs2 <;>
+            rw [hs] at hs2 <;> cases hs2
+          all_goals exact congrArg Nat.succ (ih tail2)
+
 /-- Every recorded exit is completed by every sufficiently large budget. -/
 theorem ExitTrace.run {n σ ρ σ' ρ'} (h : ExitTrace step inv n σ ρ σ' ρ')
     (a : D.Annahme) {p : Nat} (hp : n < p) :

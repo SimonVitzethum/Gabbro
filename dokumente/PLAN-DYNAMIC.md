@@ -1494,3 +1494,32 @@ still does not imply general ownership admission; the remaining obligations in 1
 
 Validation: full library plus G-stack audit succeeds (2,232 jobs); all 45 G-stack audit entries use standard axioms only. No-holes,
 goal axioms, 1,065-file layout and whitespace checks pass. No production source admission or Rust implementation is changed.
+
+### 13.6 Exact termination boundary for an actual G stack loop (2026-10-24)
+
+`GStack/Drain.lean` composes the real pop/free code with the existing `runsUntil` abbreviation. Its logical guard reads the actual
+stack head and tests the empty sentinel. `drain_trace` constructs an `ExitTrace` of the existing G loop evaluator from every
+represented, free-list-safe input stack: each continuing pass removes exactly one cell, and the final pass observes the empty head.
+`ExitTrace.length_unique` proves that deterministic execution cannot reach its first normal exit at two distinct pass counts.
+
+`drain_iff_budget` gives the exact boundary, under those initial representation/safety premises:
+
+```
+normal completion at budget p  <->  initialStack.length < p
+```
+
+Thus a stack of length `n` needs exactly `n + 1` loop passes, including the last guard check. `drain_bound` also establishes the empty
+output representation, unchanged caller environment and retained free-list safety. It assumes no provider success and no eventual
+truth of an arbitrary condition; the proof derives the guard's eventual truth from the decreasing represented stack length.
+This measures G loop fuel, not primitive instructions, CPU cycles, allocator latency or hardware WCET. It neither bounds an arbitrary
+Brainfuck computation nor decides its halting. Section 13.3's abstract operation bound remains a separate theorem.
+
+`DrainWitnesses` instantiates both directions with two cells, rules out normal completion at budget 2, supplies normal completion and
+empty output for every budget at least 3, and checks the empty-stack boundary. A complete finite G function executes the loop and
+returns normally. The existing core checker accepts it; its existing structural class stays `bedingt`. The semantic bound is a
+separate Lean theorem about represented inputs, not a silent classifier change or a newly installed source-certificate interface.
+All source/goal/unbounded-G boundaries from 13.2 remain open.
+
+Validation: full library plus G-stack audit succeeds (2,234 jobs). All 58 G-stack, 68 heap-backend and 64 storage audit entries use
+standard axioms only; the primary goal keeps exactly the standard three. No-holes, goal axioms, 1,067-file layout and whitespace checks
+pass. The whole-function proof composes the loop execution equation instead of normalizing its entire functional memory.

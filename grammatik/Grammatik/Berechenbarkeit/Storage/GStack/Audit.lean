@@ -1,4 +1,4 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses
+import Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses
 import Grammatik.Berechenbarkeit.Storage.HeapAudit
 
 /-! Axiom audit of the actual, capacity-bounded G stack bridge.
@@ -49,3 +49,16 @@ The imported heap audit retains the separate unbounded component boundary. -/
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.cycle
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.fresh_owned_cycle_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.reused_owned_cycle_zeuge
+#print axioms Gabbro.Grammatik.Terminierung.ExitTrace.length_unique
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.emptyGuard_eval
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Represents.empty_head
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.drain_trace
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.drain_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.drain_iff_budget
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.exact_budget_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.drain_values_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.insufficient_budget_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.empty_budget_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.conditional_class_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.core_accepted_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses.program_return_zeuge

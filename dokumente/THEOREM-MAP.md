@@ -4681,3 +4681,16 @@ reused_owned_cycle_zeuge}` jointly instantiate code execution, byte retention, f
 allocations, including a live cell outside the old stack. See `PLAN-DYNAMIC.md` 13.5 for the unchanged source/goal boundary.
 
 Full library plus audit: 2,232 jobs; 45 G-stack axiom lists, all standard; no-holes, goal axioms, layout and whitespace checks pass.
+
+### 93.4. Exact budget boundary of a G `runs until` stack loop (2026-10-24)
+
+`Terminierung.ExitTrace.length_unique` proves uniqueness of the first-exit continuing-pass count over the existing deterministic
+loop semantics. `GStack/{Drain,DrainWitnesses}.lean` supplies an actual G drain loop with a head-reading logical guard and real
+pop/free instructions. `drain_trace`, `drain_bound` and `drain_iff_budget` prove normal completion iff the supplied loop budget exceeds
+the initial represented stack length, and establish empty output/free-list safety. Preconditions include actual representation and
+free-list safety; arbitrary malformed arenas are not covered. This is a loop-pass bound, not hardware time or a halting decider.
+
+The nonempty, empty, insufficient-budget, larger-budget, whole-function return, core acceptance and `bedingt` classification witnesses
+instantiate the theorem jointly. The structural classification and the source/goal boundary are unchanged (`PLAN-DYNAMIC.md` 13.6).
+
+Full library plus audit: 2,234 jobs; 58 G-stack axiom lists, all standard; no-holes, goal axioms, layout and whitespace checks pass.
