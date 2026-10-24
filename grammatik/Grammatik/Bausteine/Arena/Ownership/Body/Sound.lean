@@ -192,6 +192,15 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     | _ => exact h1
   | _, _, _, _, _, _, _, _, .weaken b hb hw, σ, ρ, hk, h =>
     BPost.weaken _ hw (ob_sound hR hO hb σ ρ hk h)
+  | _, Γ, _, _, _, _, _, _, .dead s rest hs, σ, ρ, hk, h => by
+    simp only [execBlock]
+    have h1 := os_sound hR hO (hs ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩
+      ⟨fun _ _ => rfl, fun ref hm i he => by
+        simp only [List.mem_replicate] at hm; rw [hm.2] at he; cases he⟩) σ ρ hk h
+    generalize execStmt O passes R s σ ρ = o at h1 ⊢
+    cases o with
+    | ok σ' ρ' => have := h1.length; simp at this
+    | _ => exact h1
   | _, _, _, _, _, _, _, _, .bind e rest _ hr, σ, ρ, hk, h => by
     simp only [execBlock]
     exact BPost.schrumpf hk _ (ob_sound hR hO hr _ _ (by simp; omega) ((h.reads _ _).bindExpr e _ _))
@@ -321,16 +330,18 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega)
         ((h.reads _ _).bindNone (τ := .fl lo hi) v))
     · exact EPost.toB _ (oe_sound hR hO hs _ _ hk (h.reads _ _))
-  | _, _, _, _, _, _, _, _, .allocList v hwT hLT hwK hLK voll rest _ hvoll hrest, σ, ρ, hk, h =>
-    allocList_post O passes R v hwT hLT hwK hLK voll rest hk h
+  | _, _, _, _, _, _, _, _, .allocList e lo' hi' voll g e2 hwK hLK t f i ev hw hL rest he hhi hg he2 hn _ _ _
+      hvoll hrest, σ, ρ, hk, h =>
+    allocList_post O passes R e lo' hi' voll g e2 hwK hLK t f i ev hw hL rest he hhi hg he2 hn hk h
       (fun σ' h' => oe_sound hR hO hvoll σ' ρ hk h')
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' (by simp; omega) h')
-  | _, _, _, _, _, _, _, _, .allocCounter v hwT hLT hwG hLG voll rest _ hvoll hrest, σ, ρ, hk, h =>
-    allocCounter_post O passes R v hwT hLT hwG hLG voll rest hk h
+  | _, _, _, _, _, _, _, _, .allocCounter e lo' hi' voll t f i ev hw hL g e2 hwG hLG rest he hhi hn hg he2 _ _ _
+      hvoll hrest, σ, ρ, hk, h =>
+    allocCounter_post O passes R e lo' hi' voll t f i ev hw hL g e2 hwG hLG rest he hhi hn hg he2 hk h
       (fun σ' h' => oe_sound hR hO hvoll σ' ρ hk h')
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' (by simp; omega) h')
-  | _, _, _, _, _, _, _, _, .release x hwT hLT hwK hLK rest hc hrest, σ, ρ, hk, h =>
-    release_post O passes R x hwT hLT hwK hLK rest hc h
+  | _, _, _, _, _, _, _, _, .release t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc hrest, σ, ρ, hk, h =>
+    release_post O passes R t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc h
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' hk h')
 
 theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
@@ -355,6 +366,15 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     generalize execStmt O passes R s σ ρ = o at h1 ⊢
     cases o with
     | ok σ' ρ' => exact oe_sound hR hO hr σ' ρ' hk h1
+    | _ => exact h1
+  | _, Γ, _, _, _, _, .dead s rest hs, σ, ρ, hk, h => by
+    simp only [execEnd]
+    have h1 := os_sound hR hO (hs ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩
+      ⟨fun _ _ => rfl, fun ref hm i he => by
+        simp only [List.mem_replicate] at hm; rw [hm.2] at he; cases he⟩) σ ρ hk h
+    generalize execStmt O passes R s σ ρ = o at h1 ⊢
+    cases o with
+    | ok σ' ρ' => have := h1.length; simp at this
     | _ => exact h1
   | _, _, _, _, _, _, .bind e rest _ hr, σ, ρ, hk, h => by
     simp only [execEnd]

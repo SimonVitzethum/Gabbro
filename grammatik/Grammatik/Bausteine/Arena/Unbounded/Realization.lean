@@ -53,7 +53,7 @@ theorem allocation_payload_frame (A : FreiForm D)
   intro i
   simp only [eval, Block.arenaBump, eval_umTyp, orte_umTyp, Expr.orte,
     World.slots_schreibGlob, World.slots_lese]
-  simp [Expr.weaken, Expr.ins, Var.ins, eval, Env.get,
+  simp [Expr.weaken, Expr.ins, Expr.ren, Var.ins, eval, Env.get,
     World.schreibSlot, World.merke, World.storeSlot, World.lese]
 
 /-- The existing G allocation actually runs and produces the SAME grant as the

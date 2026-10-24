@@ -114,16 +114,32 @@ def I : Interfaces A
 def entry : Context := Flow.parameterContext (Modes.nil : Modes [])
 
 theorem make_derives : OE A I (V := vertragVon D true) (I true).output noLoop entry makeBody := by
-  have hblk : OB A I (I true).output noLoop entry makeAlloc ((entry.bind none).drop) :=
-    OB.allocCounter seven rfl tab_right rfl (glob_right _) _ makeReturn (by rfl)
-      (OE.retWhy _ _ (by rfl))
-      (OB.cons _ _ (OS.ret (c' := entry.bind none) _ _ (by rfl)) OB.nil)
+  have hblk : OB A I (I true).output noLoop entry makeAlloc ((entry.bind none).drop) := by
+    unfold makeAlloc Block.arenaAlloc Block.arenaRumpf
+    refine OB.allocCounter _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ?he ?hhi ?hn ?hg ?he2 ?hi ?hev ?hs ?hvoll ?hrest
+    case he => rfl
+    case hhi => decide
+    case hn => decide
+    case hg => rfl
+    case he2 => rfl
+    case hi => rfl
+    case hev => rfl
+    case hs => rfl
+    case hvoll => exact OE.retWhy _ _ (by rfl)
+    case hrest => exact OB.cons _ _ (OS.ret (c' := entry.bind none) _ _ (by rfl)) OB.nil
   exact OE.cons _ _ (OS.ite _ _ _ (by rfl) hblk hblk) (OE.retWhy _ _ (by rfl))
 
 theorem user_derives : OE A I (V := vertragVon D false) (I false).output noLoop entry userBody := by
   have hrel : OB A I (I false).output noLoop ((entry.afterCall [] []).bindFresh) release
-      (((entry.afterCall [] []).bindFresh).kill 0) :=
-    OB.release .here rfl tab_right rfl (glob_right _) .nil (by rfl) OB.nil
+      (((entry.afterCall [] []).bindFresh).kill 0) := by
+    unfold release Block.freiVar
+    refine OB.release (o := 0) (p := 0) _ _ _ _ _ _ _ _ _ _ _ rfl ?hf ?hip ?he ?hg ?he2 ?hc OB.nil
+    case hf => rfl
+    case hip => rfl
+    case he => rfl
+    case hg => rfl
+    case he2 => rfl
+    case hc => rfl
   unfold userBody
   apply OE.bindCallElse
   · rfl
