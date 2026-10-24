@@ -195,6 +195,9 @@ inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (hs : OS A I out k c s c1) (hr : OB A I out k c1 rest c2) : OB A I out k c (.cons s rest) c2
   | weaken {l Γ Λ Λ' k c c1 c2} (b : Block D V l Γ Λ Λ') (hb : OB A I out k c b c1) (hw : Weaker c2 c1) :
       OB A I out k c b c2
+  /-- A statement that admits every context after it never falls through: what follows is dead. -/
+  | dead {l Γ Λ Λ1 Λ' k c c'} (s : Stmt D V l Γ Λ Λ1) (rest : Block D V l Γ Λ1 Λ')
+      (hs : ∀ c1, OS A I out k c s c1) : OB A I out k c (.cons s rest) c'
   | bind {l Γ Λ Λ' k c c1 τ} (e : Expr D Γ Λ τ) (rest : Block D V l (τ :: Γ) Λ Λ')
       (he : checkExpression A c e = true) (hr : OB A I out k (c.bind (origin c e)) rest c1) :
       OB A I out k c (.bind e rest) c1.drop

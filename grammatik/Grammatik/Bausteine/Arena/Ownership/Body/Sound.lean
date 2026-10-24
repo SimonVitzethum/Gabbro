@@ -192,6 +192,13 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     | _ => exact h1
   | _, _, _, _, _, _, _, _, .weaken b hb hw, σ, ρ, hk, h =>
     BPost.weaken _ hw (ob_sound hR hO hb σ ρ hk h)
+  | _, Γ, _, _, _, _, _, _, .dead s rest hs, σ, ρ, hk, h => by
+    simp only [execBlock]
+    have h1 := os_sound hR hO (hs ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩) σ ρ hk h
+    generalize execStmt O passes R s σ ρ = o at h1 ⊢
+    cases o with
+    | ok σ' ρ' => have := h1.length; simp at this
+    | _ => exact h1
   | _, _, _, _, _, _, _, _, .bind e rest _ hr, σ, ρ, hk, h => by
     simp only [execBlock]
     exact BPost.schrumpf hk _ (ob_sound hR hO hr _ _ (by simp; omega) ((h.reads _ _).bindExpr e _ _))
