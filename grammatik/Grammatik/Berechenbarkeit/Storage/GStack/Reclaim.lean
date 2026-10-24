@@ -83,8 +83,9 @@ theorem popAndRelease_values (L : LinkFeld A) (G : LinkKopf A)
     ∃ σ' k,
       execBlock O passes R (Block.popAndRelease L G hwH hLH hwT hLT hwF hLF empty rest) σ ρ =
         ((execBlock O passes R rest σ' (.cons value (.cons k ρ))).schrumpf).schrumpf ∧
-      k.n = G.st σ ∧ Represents L G σ' values ∧ A.FreiOk σ' ∧ ¬ A.Lebt σ' k.n := by
-  obtain ⟨σ1, k, hpop, hkn, hvalue, hrep, hfree, hlive, hnot, _⟩ :=
+      k.n = G.st σ ∧ Represents L G σ' values ∧ A.FreiOk σ' ∧ ¬ A.Lebt σ' k.n ∧
+      (∀ i, A.Lebt σ' i ↔ A.Lebt σ i ∧ i ≠ k.n) := by
+  obtain ⟨σ1, k, hpop, hkn, hvalue, hrep, hfree, hlive, hnot, hpopLive⟩ :=
     linkPop_values O passes R L G hwH hLH hLT empty σ ρ value values hr hf
   let σ2 := σ1.lese Λ [Sum.inl A.tab]
   have hlive2 : A.Lebt σ2 k.n := (A.lebt_gleich (σ := σ1) (σ' := σ2) rfl (fun _ => rfl) rfl k.n).mpr hlive
@@ -92,19 +93,22 @@ theorem popAndRelease_values (L : LinkFeld A) (G : LinkKopf A)
     have hn : L.wert σ2 = L.wert σ1 := funext (fun _ => rfl)
     rw [hn, show G.st σ2 = G.st σ1 from rfl]
     exact hnot
-  obtain ⟨σ3, hrelease, hrep3, hfree3, hdead, _⟩ :=
+  obtain ⟨σ3, hrelease, hrep3, hfree3, hdead, hreleaseLive⟩ :=
     free_values O passes R (l := l) A L G (.there .here) hwT hLT hwF hLF σ2 (.cons value (.cons k ρ))
       values (hrep.reads _ _) (A.freiOk_gleich (σ := σ1) (σ' := σ2) rfl (fun _ => rfl) rfl hfree)
       (by simpa only [Env.get_cons_there, Env.get_cons_here] using hlive2)
       (by simpa only [Env.get_cons_there, Env.get_cons_here] using hnot2)
-  refine ⟨σ3, k, ?_, hkn, hrep3, hfree3, hdead⟩
-  unfold Block.popAndRelease
-  rw [hpop]
-  have heval : eval σ2 (Expr.slot A.tab A.feld (Expr.var .here) hLT) σ2 (.cons k ρ) = value := hvalue
-  change ((execBlock O passes R
-    (Gabbro.Grammatik.Block.freiVar A (.there .here) hwT hLT hwF hLF rest)
-    σ2 (.cons (eval σ2 (Expr.slot A.tab A.feld (Expr.var .here) hLT) σ2 (.cons k ρ)) (.cons k ρ))).schrumpf).schrumpf = _
-  rw [heval, hrelease]
+  refine ⟨σ3, k, ?_, hkn, hrep3, hfree3, hdead, ?_⟩
+  · unfold Block.popAndRelease
+    rw [hpop]
+    have heval : eval σ2 (Expr.slot A.tab A.feld (Expr.var .here) hLT) σ2 (.cons k ρ) = value := hvalue
+    change ((execBlock O passes R
+      (Gabbro.Grammatik.Block.freiVar A (.there .here) hwT hLT hwF hLF rest)
+      σ2 (.cons (eval σ2 (Expr.slot A.tab A.feld (Expr.var .here) hLT) σ2 (.cons k ρ)) (.cons k ρ))).schrumpf).schrumpf = _
+    rw [heval, hrelease]
+  · intro i
+    exact (hreleaseLive i).trans (and_congr
+      ((A.lebt_gleich (σ := σ1) (σ' := σ2) rfl (fun _ => rfl) rfl i).trans (hpopLive i)) Iff.rfl)
 
 end Execution
 

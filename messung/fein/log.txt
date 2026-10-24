@@ -1,0 +1,4 @@
+vertreter-f40-nb9-ec3: 4 programs (1634 ms)
+vertreter-f39-nb9-ec3: 4 programs (1913 ms)
+vertreter-f40-nb10-ec3: 4 programs (5298 ms)
+vertreter-f39-nb10-ec3: 4 programs (6406 ms)

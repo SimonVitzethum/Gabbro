@@ -48,9 +48,9 @@ theorem push_values (allocator : Allocator A V l Γ Λ) (L : LinkFeld A) (G : Li
         execBlock O passes R (Block.pushAllocated allocator L G hwT hLT hwH hLH rest) σ ρ =
           (execBlock O passes R rest σ' (.cons k ρ)).schrumpf) ∧
       k.n = slot ∧ G.st σ' = slot ∧ Represents L G σ' (value :: values) ∧ A.FreiOk σ' := by
-  obtain ⟨σ1, k, halloc, hkn, hframe, hf, hlive, hnew, hold, hbytes⟩ := ha
+  obtain ⟨σ1, k, halloc, hkn, hframe, hf, hlive, hold, hbytes⟩ := ha
   have hrep : Represents L G σ1 values := hr.frame (G.st_fremd hframe) (L.wert_fremd hframe)
-    (fun i hi => hlive i (hr.list_ok.lebt_auf hi)) (by
+    (fun i hi => (hlive i).mpr (.inr (hr.list_ok.lebt_auf hi))) (by
       intro i hi
       have hne : i ≠ slot := fun he => hold (he ▸ hr.list_ok.lebt_auf hi)
       simpa [hne] using hbytes i)
@@ -60,7 +60,7 @@ theorem push_values (allocator : Allocator A V l Γ Λ) (L : LinkFeld A) (G : Li
     exact hold (hr.list_ok.lebt_auf hi)
   obtain ⟨σ2, hlink, hr2, hf2, hhead, _⟩ :=
     linkPush_values O passes R (l := l) L G .here hwT hLT hwH hLH σ1 (.cons k ρ) values hrep hf
-      (by simpa only [Env.get_cons_here, hkn] using hnew)
+      (by simpa only [Env.get_cons_here, hkn] using (hlive slot).mpr (.inl rfl))
       (by simpa only [Env.get_cons_here, hkn] using hnot)
   have hstored : σ1.slots A.tab k.n A.feld = value := by simpa [hkn] using hbytes slot
   refine ⟨σ2, k, ?_, hkn, ?_, ?_, hf2⟩

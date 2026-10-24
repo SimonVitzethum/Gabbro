@@ -1481,3 +1481,81 @@ entries use only standard axioms; the goal keeps exactly the standard three. The
 boundary in 13.2 is still binding: this is a proved executable heap backend, **not yet an admitted whole-program unbounded G construct**.
 The next bridge must execute the stack protocol in G and prove source admission, initialization and final normal return, rather than
 claim universality from a family of independently bounded programs.
+
+### 13.4 Actual G stack execution and finite program witnesses (2026-10-24)
+
+`Berechenbarkeit/Storage/GStack/` now proves value-sensitive stack operations over the existing G instructions. `Represents` reads
+payloads along a live, acyclic linked chain; it is not an uninterpreted stack interface. `linkPush_values`, `linkPop_values`,
+`fresh_allocated`, `reused_allocated`, `push_values` and `popAndRelease_values` execute the concrete link/counter/free-list stores,
+preserve the old value sequence, save a popped payload before freeing its cell, and establish free-list safety. Prefix equations
+quantify over every continuation, so composition does not replace the continuation with a test-only body. Fresh and recycled
+allocation share one push implementation and theorem. `tryPush_refused` retains the explicit provider failure continuation.
+
+Joint witnesses execute fresh and recycled push/pop/free cycles, including reuse in front of a nonempty old stack. A whole finite G
+program binds its own input and sink, executes the cycle, saves byte 7 in the caller local, releases the cell and returns normally.
+The existing core `Akzeptiert` computes true for this program, and its termination class computes to `endet`. Separate witnesses
+exercise provider refusal despite available room and the empty-pop branch. This is an instantiation of the old core checker, not
+integration of the proposed ownership/source checker or a proof that every arbitrary initial arena satisfies the representation.
+
+The stack prefixes introduce no loops or recursive calls. The `*_termination` equations retain exactly the continuation's extracted
+behaviour plus every supplied failure branch; they do not prove that an arbitrary surrounding controller halts. The finite program
+witness is proved by composing the semantic prefix theorems, avoiding repeated normalization of the entire functional memory.
+
+**Boundary unchanged:** actual G indices still have `D.count A.tab` as their bound. These are generic proofs of the concrete operations
+needed by the bridge, not an unbounded G declaration, a whole TM2/G compiler or a new universality theorem. `popAndRelease` also exposes
+the dead internal index to its continuation; full source admission must reject reference use after release. No ownership check is
+silently inferred from the old `Akzeptiert` witness. Section 13.2's source, whole-program, goal, provider and Rust obligations remain.
+
+History: `7fd5ea1d` includes concurrent ownership-source work as well as the heap backend; `32afd758` checkpoints the G stack prefix
+files alongside independent ownership work. The successful combined library/heap/ownership build after `7fd5ea1d` measured 2,221 jobs.
+The dedicated G stack audit checks its declarations and imports the earlier heap audits; this does not constitute independent review
+of the separate ownership-source integration.
+
+Validation: full `Grammatik` plus `GStack.Audit` build succeeds (2,230 jobs). The 36 new G-stack audit entries and the earlier 68/64
+heap/storage entries use standard axioms only; `gabbro_ziel` retains exactly the standard three. The no-holes/axiom guardian stages,
+the 1,063-file Lean layout check and whitespace check pass. No Rust or binary validation is claimed for this Lean-only increment.
+
+### 13.5 Ownership grants across concrete G push/pop (2026-10-24)
+
+`Allocated` now specifies the exact live-set change, replacing its weaker monotonicity/new-cell pair. Fresh allocation and free-list
+reuse both prove that the selected slot is the only newly live slot. `popAndRelease_values` likewise states the exact removal.
+`GStack/Grants.lean` derives `push_owned` and `pop_owned` by combining these executed prefixes with the existing ownership ledger.
+Push issues one fresh incarnation/grant; link stores issue none. Pop saves the payload before release, invalidates every handle at
+the released slot in every frame, and retains every other ledger entry. This is a semantic bridge, not a new source admission rule.
+
+`GrantWitnesses.Cycle` observes the actual G code, stored byte, free-list invariant and ownership transitions jointly. Fresh and
+recycled witnesses instantiate it, with the recycled fixture retaining a nonempty old stack and live allocations owned by another
+frame, including a cell outside that stack. The complete ledger agreement premise checks those cells too. The old checker witness
+still does not imply general ownership admission; the remaining obligations in 13.2 and 13.4 are unchanged.
+
+Validation: full library plus G-stack audit succeeds (2,232 jobs); all 45 G-stack audit entries use standard axioms only. No-holes,
+goal axioms, 1,065-file layout and whitespace checks pass. No production source admission or Rust implementation is changed.
+
+### 13.6 Exact termination boundary for an actual G stack loop (2026-10-24)
+
+`GStack/Drain.lean` composes the real pop/free code with the existing `runsUntil` abbreviation. Its logical guard reads the actual
+stack head and tests the empty sentinel. `drain_trace` constructs an `ExitTrace` of the existing G loop evaluator from every
+represented, free-list-safe input stack: each continuing pass removes exactly one cell, and the final pass observes the empty head.
+`ExitTrace.length_unique` proves that deterministic execution cannot reach its first normal exit at two distinct pass counts.
+
+`drain_iff_budget` gives the exact boundary, under those initial representation/safety premises:
+
+```
+normal completion at budget p  <->  initialStack.length < p
+```
+
+Thus a stack of length `n` needs exactly `n + 1` loop passes, including the last guard check. `drain_bound` also establishes the empty
+output representation, unchanged caller environment and retained free-list safety. It assumes no provider success and no eventual
+truth of an arbitrary condition; the proof derives the guard's eventual truth from the decreasing represented stack length.
+This measures G loop fuel, not primitive instructions, CPU cycles, allocator latency or hardware WCET. It neither bounds an arbitrary
+Brainfuck computation nor decides its halting. Section 13.3's abstract operation bound remains a separate theorem.
+
+`DrainWitnesses` instantiates both directions with two cells, rules out normal completion at budget 2, supplies normal completion and
+empty output for every budget at least 3, and checks the empty-stack boundary. A complete finite G function executes the loop and
+returns normally. The existing core checker accepts it; its existing structural class stays `bedingt`. The semantic bound is a
+separate Lean theorem about represented inputs, not a silent classifier change or a newly installed source-certificate interface.
+All source/goal/unbounded-G boundaries from 13.2 remain open.
+
+Validation: full library plus G-stack audit succeeds (2,234 jobs). All 58 G-stack, 68 heap-backend and 64 storage audit entries use
+standard axioms only; the primary goal keeps exactly the standard three. No-holes, goal axioms, 1,067-file layout and whitespace checks
+pass. The whole-function proof composes the loop execution equation instead of normalizing its entire functional memory.

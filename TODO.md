@@ -174,6 +174,10 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   Whole-program G admission/export, production lowering and the final universality theorem remain open.
   The linked TM2/BF heap backend now preserves and reflects halting and output from allocated input, with OOM separated from normal halt
   and a conditional four-operation bound per BF transition (`PLAN-DYNAMIC.md` 13.3). This target is the new storage component, not yet G.
+  Concrete, value-sensitive G push/pop/free prefixes and a whole finite core-accepted `endet` witness are now proved (`PLAN-DYNAMIC.md`
+  13.4). G's fixed index bound, full source ownership admission and the unbounded whole-program TM2/G bridge remain open.
+  G stack operations now carry exact ownership-grant effects (13.5); an actual G `runs until stack-is-empty` loop has the exact
+  proved boundary `initialStack.length < passes`, including a core-accepted conditional-class function witness (13.6).
 
 ## 3. Checker
 

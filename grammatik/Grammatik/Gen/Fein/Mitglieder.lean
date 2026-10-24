@@ -87,12 +87,27 @@ def kombiListen : List (List Merkmal) :=
   let ms : List Merkmal := [.reg, .atom, .zeiger, .ruf, .float]
   ms.flatMap fun a => (ms.dropWhile (· != a)).map fun b => if a == b then [a] else [a, b]
 
+/-- **A one-class member**: a function with one parameter of the class `τ`, and a callee that takes one value of that
+    class and answers one: a call or a result of the class needs one argument, not a whole type group. -/
+def einKlasse (τ : Ty) : Spez where
+  tabs := [{ count := 1, felder := [{ typ := τ }] }]
+  sigs := [{ params := [τ], schreibt := [0] }, { params := [τ], erg := some τ }]
+  fns := [0, 1]
+
+/-- **The mark members**: a function that holds a mark of two stages at its start and leaves with the next stage
+    (`advances`), and one that gives it back (`retires`, under a named assumption). -/
+def marke (weiter : Bool) : Spez where
+  marken := [2]
+  annahmen := 1
+  sigs := [{ konsumiert := [(0, 0)], produziert := if weiter then [(0, 1)] else [] }]
+
 /-- **The fine members**: for every group the three declarations, then for every group the one with a pointer; then
-    the divisor group; then the combination members (each block appended, so the members before keep their
-    numbers). -/
+    the divisor group; then the combination members; then a one-class member per class and the two mark members
+    (each block appended, so the members before keep their numbers). -/
 def feinMitglieder : List Spez :=
   (((gruppen.flatMap fun g => [ausdruck g, register g, atomar g]) ++ gruppen.map zeiger) ++
-    [ausdruck teilerGruppe, register teilerGruppe, zeiger teilerGruppe] ++ kombiListen.map kombi).map Spez.einzeln
+    [ausdruck teilerGruppe, register teilerGruppe, zeiger teilerGruppe] ++ kombiListen.map kombi ++
+    vertreter.map einKlasse ++ [marke true, marke false]).map Spez.einzeln
 
 theorem kombiListen_laenge : kombiListen.length = 15 := by decide
 
