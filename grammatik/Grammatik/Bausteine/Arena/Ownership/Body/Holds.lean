@@ -177,32 +177,31 @@ theorem Holds.drop {c : Context} {σ : World D} {Γ : Ctx} {τ : Ty} {v : Wert D
 /-! ## 3. Weakening a context -/
 
 /-- `k` knows no more than `c`: the same rights, and every name `k` ties to
-an origin is tied to it in `c`. Joins and loop heads use it. -/
+an origin is tied to it in `c`. `k` is bounded by its own counter, so `c`
+may have used (and given up) origins beyond it: a loop body that allocates
+and releases returns to its head. Joins and loop heads use it. -/
 def Weaker (k c : Context) : Prop :=
-  (∀ i, k.rights i = c.rights i) ∧ c.next ≤ k.next ∧
+  (∀ i, k.rights i = c.rights i) ∧ (∀ i, k.next ≤ i → k.rights i = none) ∧
     k.references.length = c.references.length ∧
-    ∀ (p o : Nat), k.references[p]? = some (some o) → c.references[p]? = some (some o)
+    ∀ (p o : Nat), k.references[p]? = some (some o) → c.references[p]? = some (some o) ∧ o < k.next
 
-theorem Weaker.refl (c : Context) : Weaker c c :=
-  ⟨fun _ => rfl, Nat.le_refl _, rfl, fun _ _ h => h⟩
+theorem Weaker.refl {c : Context} (hc : c.bounded) : Weaker c c :=
+  ⟨fun _ => rfl, hc.1, rfl, fun p o h => ⟨h, hc.2 _ (List.mem_of_getElem? h) o rfl⟩⟩
 
 theorem Weaker.trans {a b c : Context} (hab : Weaker a b) (hbc : Weaker b c) : Weaker a c :=
-  ⟨fun i => (hab.1 i).trans (hbc.1 i), Nat.le_trans hbc.2.1 hab.2.1, hab.2.2.1.trans hbc.2.2.1,
-    fun p o h => hbc.2.2.2 p o (hab.2.2.2 p o h)⟩
+  ⟨fun i => (hab.1 i).trans (hbc.1 i), hab.2.1, hab.2.2.1.trans hbc.2.2.1,
+    fun p o h => ⟨(hbc.2.2.2 p o (hab.2.2.2 p o h).1).1, (hab.2.2.2 p o h).2⟩⟩
 
 theorem Holds.weaken {k c : Context} {σ : World D} {Γ : Ctx} {ρ : Env D Γ}
     (h : Holds A fr s0 c σ ρ) (hw : Weaker k c) : Holds A fr s0 k σ ρ := by
   obtain ⟨g, s, ⟨ha, hf, hb, href, hr⟩, hc, hl, hp⟩ := h
-  have hrights : k.rights = c.rights := funext hw.1
   refine ⟨g, s, ⟨ha, hf, ?_, ?_, ?_⟩, ?_, hl, hp⟩
   · constructor
-    · intro i hi
-      rw [hw.1 i]
-      exact hb.1 i (Nat.le_trans hw.2.1 hi)
+    · exact hw.2.1
     · intro ref hm i he
       subst he
       obtain ⟨p, hp⟩ := List.mem_iff_getElem?.mp hm
-      exact Nat.lt_of_lt_of_le (hb.2 _ (List.mem_of_getElem? (hw.2.2.2 p i hp)) i rfl) hw.2.1
+      exact (hw.2.2.2 p i hp).2
   · refine ⟨hw.2.2.1.trans href.1, ?_⟩
     intro υ x i hi
     apply href.2 x i
@@ -212,7 +211,7 @@ theorem Holds.weaken {k c : Context} {σ : World D} {Γ : Ctx} {ρ : Env D Γ}
     | some ref =>
       simp only [hk, Option.getD_some] at hi
       subst ref
-      simp [hw.2.2.2 _ _ hk]
+      simp [(hw.2.2.2 _ _ hk).1]
   · exact ⟨fun i mode hi => hr.1 i mode (hw.1 i ▸ hi),
       fun i j p q hi hj => hr.2 i j p q (hw.1 i ▸ hi) (hw.1 j ▸ hj)⟩
   · intro slot cell hcell howner
