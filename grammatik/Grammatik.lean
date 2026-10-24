@@ -414,6 +414,7 @@ import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbdeckung
 import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschZeuge
 import Grammatik.Bausteine.Schablonen.SchablonenStapel
 import Grammatik.Bausteine.Arena.ArenaReset
+import Grammatik.Bausteine.Arena.Ownership.Witness
 import Grammatik.Logik.Ruf.FremdRuf
 import Grammatik.Zielsatz.Faeden.PoolSym
 import Grammatik.Zielsatz.Eigenschaften.Masken

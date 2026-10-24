@@ -4568,3 +4568,20 @@ program. This is a checked storage primitive, **not** an unbounded stack worker 
 
 Validation: `lake build Grammatik Grammatik.Berechenbarkeit.Audit` succeeds (2,173 jobs), auditing 88 declarations
 with standard axioms only; `gabbro_ziel` keeps exactly `propext`, `Classical.choice`, `Quot.sound`. Layout and diff checks pass.
+
+## 92. Allocation ownership across calls: first proved increment (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/{State,World,Calls,Bodies,Boundary,Witness}.lean`.
+Plan and remaining closure conditions: `PLAN-DYNAMIC.md` section 12.
+
+* `State.move_valid`, `release_valid`, `lend_valid`, `lend_endLoan`, `reuse_no_revival`: a slot's allocation identity is distinct from its
+  current owning grant; consuming transfers invalidate saved aliases, loans cannot release, and reallocation never revives an old grant.
+* `release_execution`, `allocate_fresh_execution`, `allocate_reuse_execution`: the ledger refines the existing executed G allocator forms,
+  with exact liveness changes and the allocator frame. There is no second payload memory.
+* `rufAt_ownership`: all actual calls obey value-dependent contracts at every recursion fuel, provided the body obligations `Bodies`
+  hold. `destructor_checked` and `identity_checked` discharge concrete generic source forms without assuming a safe foreign destructor.
+* `consume_call` and `Witness.consume_call_witness`: a real source destructor receives an index through a G call, frees that allocation,
+  changes the free-list head from 4 to 0, and leaves no access through a saved caller alias. All premises are instantiated jointly.
+
+Targeted module checks pass with standard axioms only. **Open:** a computed source ownership judgment discharging `Bodies`, general
+owning-result/alias admission and the central `Akzeptiert`/goal integration. This increment does not close the whole gap or certify Rust.

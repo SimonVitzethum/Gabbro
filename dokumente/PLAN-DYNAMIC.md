@@ -1175,7 +1175,7 @@ invariant ONLY, not a `D.invs` member) change the text of the earlier proposal a
 
 ## 12. Ownership of individual allocations across calls (Lean audit and plan, 2026-10-24)
 
-**Status: inspected definitions and proofs; extension PLANNED, not implemented or proved.** The question is whether a caller can hand one
+**Status: implementation in progress; proved increments are recorded in section 12.6, full closure remains OPEN.** The question is whether a caller can hand one
 allocation to a callee which may free it, return its ownership, or return a newly allocated object. Preserving the arena's structural
 invariant across a call is already proved, but does not establish this ownership protocol. This audit did not run a fresh Lean build.
 
@@ -1292,3 +1292,20 @@ OOM-path rule for a sampled arena with positive `lo`. Add the Lean admission rul
    `--no-fail-fast`. Measure corpus diagnostic changes; ownership-transfer examples may newly pass, unsafe programs must not become
    accepted. Record proof, checker/exporter and binary evidence separately. Until these gates pass, this section remains a plan and
    section 8's open item stays open.
+
+### 12.6 Implementation evidence (2026-10-24, in progress)
+
+`grammatik/Grammatik/Bausteine/Arena/Ownership/` now contains the ghost ledger (`State`), its refinement of the existing G allocator
+(`World`), the recursive call-contract theorem (`Calls`), generic source destructor/identity bodies and their proofs (`Bodies`), the
+consuming G-call rule (`Boundary`), and joint witnesses (`Witness`). `Grammatik.lean` imports the witness and hence all six modules.
+
+Proved: a successful move changes the owning grant without changing allocation identity; release consumes the grant; loans prevent
+release and restore the lender; slot reuse cannot revive an earlier grant. The executed `freiVar`, fresh `arenaAlloc` and free-list
+`freiNimm` update exactly the live cells described by the ledger. `rufAt_ownership` derives contract respect at every recursion fuel
+from `Bodies`; `consume_call` connects a transferred argument to an actual G call and destruction. The joint witness calls the actual
+source destructor through `rufAt`, changes the free-list head from 4 to 0, and denies every saved caller alias access afterwards.
+
+Validation of this increment: targeted Lean compilation of the six modules; the displayed main/witness axiom lists contain only
+`propext`, `Classical.choice`, `Quot.sound` (or a subset). No new axiom or proof hole. This is **not full closure**: `Bodies` remains a
+semantic body obligation, not yet a computed source ownership judgment; owning result admission, all executable alias uses, general
+source certificates and the `Akzeptiert`/`gabbro_ziel` integration still need the steps in 12.5. The Rust checker and binary are unchanged.
