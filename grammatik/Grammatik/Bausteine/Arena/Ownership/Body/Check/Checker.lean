@@ -56,6 +56,11 @@ def seqR (r : Out) (f : Context → Out) : Out :=
   | some none => some none
   | none => none
 
+/-- The first outcome, unless it refuses. -/
+def orElseR : Out → Out → Out
+  | none, b => b
+  | a, _ => a
+
 def mapR (f : Context → Context) : Out → Out
   | some (some c) => some (some (f c))
   | r => r
@@ -138,15 +143,11 @@ def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     let generic := seqR (chkS s k c) (fun c1 => chkB rest k c1)
     match s with
     | .assignSlot t f i e _ _ =>
-      match rest with
-      | .cons (.assignGlob g e2 _ _) rest' =>
-        if (if ht : t = A.tab then decide (ht ▸ f = A.nxt) else false) && (exprVarPos i).isSome &&
-            exprVarPos e2 == exprVarPos i && exprGlob e == some A.kopf && decide (g = A.kopf) then
-          match consume c i with
-          | some (c2, _) => chkB rest' k c2
-          | none => none
-        else generic
-      | _ => generic
+      if (if ht : t = A.tab then decide (ht ▸ f = A.nxt) else false) && exprGlob e == some A.kopf then
+        match exprVarPos i, consume c i with
+        | some p, some (c2, _) => relB rest k c2 p
+        | _, _ => none
+      else generic
     | _ => generic
   | _, _, _, _, .bind e rest, k, c =>
     if checkExpression A c e then mapR Context.drop (chkB rest k (c.bind (origin c e))) else none
@@ -187,26 +188,11 @@ def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
   | _, Γ, _, _, .narrow e lo' hi' voll rest, k, c =>
     let generic := if checkExpression A c e && chkE voll k c then
       mapR Context.drop (chkB rest k (c.bind (origin c e))) else none
-    match rest with
-    | .cons (.assignSlot t f i ev _ _) rest1 =>
-      match rest1 with
-      | .cons (.assignGlob g e2 _ _) rest' =>
-        if exprGlob e == some A.zaehl && decide (hi' < D.count A.tab) && decide (NotLink A t f) &&
-            decide (g = A.zaehl) && exprSucc e2 == some Γ.length && checkExpression A c.bindFresh i &&
-            checkExpression A c.bindFresh ev && storeCheck A c.bindFresh t i then
-          if chkE voll k c then mapR Context.drop (chkB rest' k c.bindFresh) else none
-        else generic
-      | _ => generic
-    | .cons (.assignGlob g e2 _ _) rest1 =>
-      match rest1 with
-      | .cons (.assignSlot t f i ev _ _) rest' =>
-        if exprGlob e == some A.kopf && decide (hi' < D.count A.tab) && decide (g = A.kopf) &&
-            slotIsLink A e2 Γ.length && decide (NotLink A t f) && checkExpression A c.bindFresh i &&
-            checkExpression A c.bindFresh ev && storeCheck A c.bindFresh t i then
-          if chkE voll k c then mapR Context.drop (chkB rest' k c.bindFresh) else none
-        else generic
-      | _ => generic
-    | _ => generic
+    let shaped := if chkE voll k c && decide (hi' < D.count A.tab) then
+      (if exprGlob e == some A.zaehl then mapR Context.drop (ctr1B rest k c.bindFresh Γ.length)
+      else if exprGlob e == some A.kopf then mapR Context.drop (lst1B rest k c.bindFresh Γ.length)
+      else none) else none
+    orElseR shaped generic
   | _, _, _, _, .check cond sonst rest, k, c =>
     if checkExpression A c cond && chkE sonst k c then chkB rest k c else none
   | _, _, _, _, .float _ a b _ _ rest, k, c =>
@@ -261,6 +247,50 @@ def chkGrund : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Na
     GrundArms D V l Γ Λ Λ' n → (k c : Context) → Out
   | _, _, _, _, _, .nil, _, _ => some none
   | _, _, _, _, _, .cons b rest, k, c => joinR (chkB b k c) (chkGrund rest k c)
+
+/-- After the link store of a release: the head becomes the released variable. -/
+def relB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (k c : Context) → Nat → Out
+  | _, _, _, _, .cons s rest, k, c, p =>
+    match s with
+    | .assignGlob g e2 _ _ => if decide (g = A.kopf) && exprVarPos e2 == some p then chkB rest k c else none
+    | _ => none
+  | _, _, _, _, _, _, _, _ => none
+
+/-- After the counter is narrowed: a store that is no link. -/
+def ctr1B : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (k c : Context) → Nat → Out
+  | _, _, _, _, .cons s rest, k, c, p =>
+    match s with
+    | .assignSlot t f i ev _ _ =>
+      if decide (NotLink A t f) && checkExpression A c i && checkExpression A c ev && storeCheck A c t i then
+        ctr2B rest k c p else none
+    | _ => none
+  | _, _, _, _, _, _, _, _ => none
+
+/-- After the payload store: the counter becomes the binder plus one. -/
+def ctr2B : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (k c : Context) → Nat → Out
+  | _, _, _, _, .cons s rest, k, c, p =>
+    match s with
+    | .assignGlob g e2 _ _ => if decide (g = A.zaehl) && exprSucc e2 == some p then chkB rest k c else none
+    | _ => none
+  | _, _, _, _, _, _, _, _ => none
+
+/-- After the free-list head is narrowed: the head takes the binder's link. -/
+def lst1B : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (k c : Context) → Nat → Out
+  | _, _, _, _, .cons s rest, k, c, p =>
+    match s with
+    | .assignGlob g e2 _ _ => if decide (g = A.kopf) && slotIsLink A e2 p then lst2B rest k c else none
+    | _ => none
+  | _, _, _, _, _, _, _, _ => none
+
+/-- After the head moved on: a store that is no link. -/
+def lst2B : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (k c : Context) → Out
+  | _, _, _, _, .cons s rest, k, c =>
+    match s with
+    | .assignSlot t f i ev _ _ =>
+      if decide (NotLink A t f) && checkExpression A c i && checkExpression A c ev && storeCheck A c t i then
+        chkB rest k c else none
+    | _ => none
+  | _, _, _, _, _, _, _ => none
 
 end
 

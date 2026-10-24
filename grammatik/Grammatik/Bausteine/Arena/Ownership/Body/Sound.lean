@@ -194,7 +194,9 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     BPost.weaken _ hw (ob_sound hR hO hb σ ρ hk h)
   | _, Γ, _, _, _, _, _, _, .dead s rest hs, σ, ρ, hk, h => by
     simp only [execBlock]
-    have h1 := os_sound hR hO (hs ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩) σ ρ hk h
+    have h1 := os_sound hR hO (hs ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩
+      ⟨fun _ _ => rfl, fun ref hm i he => by
+        simp only [List.mem_replicate] at hm; rw [hm.2] at he; cases he⟩) σ ρ hk h
     generalize execStmt O passes R s σ ρ = o at h1 ⊢
     cases o with
     | ok σ' ρ' => have := h1.length; simp at this
@@ -364,6 +366,15 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     generalize execStmt O passes R s σ ρ = o at h1 ⊢
     cases o with
     | ok σ' ρ' => exact oe_sound hR hO hr σ' ρ' hk h1
+    | _ => exact h1
+  | _, Γ, _, _, _, _, .dead s rest hs, σ, ρ, hk, h => by
+    simp only [execEnd]
+    have h1 := os_sound hR hO (hs ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩
+      ⟨fun _ _ => rfl, fun ref hm i he => by
+        simp only [List.mem_replicate] at hm; rw [hm.2] at he; cases he⟩) σ ρ hk h
+    generalize execStmt O passes R s σ ρ = o at h1 ⊢
+    cases o with
+    | ok σ' ρ' => have := h1.length; simp at this
     | _ => exact h1
   | _, _, _, _, _, _, .bind e rest _ hr, σ, ρ, hk, h => by
     simp only [execEnd]

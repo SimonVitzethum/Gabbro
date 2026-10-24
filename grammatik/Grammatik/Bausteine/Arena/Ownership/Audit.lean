@@ -1,7 +1,7 @@
 import Grammatik.Bausteine.Arena.Ownership.FactoryWitness
 import Grammatik.Bausteine.Arena.Ownership.Source.Witness
 import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
-import Grammatik.Bausteine.Arena.Ownership.Body.Witness
+import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
 
 /-! Kernel-checked public audit of the ownership extension. The general body
 judgment and its soundness are in `Body/`; whole-program integration is
@@ -47,5 +47,9 @@ namespace Gabbro.Grammatik.ArenaOwnership
 #print axioms Body.checked_calls
 #print axioms Body.Witness.checked
 #print axioms Body.Witness.actual_run_closed
+#print axioms Body.chkE_sound
+#print axioms Body.checkProgram_sound
+#print axioms Body.checkProgram_calls
+#print axioms Body.witness_checked
 
 end Gabbro.Grammatik.ArenaOwnership

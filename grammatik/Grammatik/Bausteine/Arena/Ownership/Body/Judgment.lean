@@ -181,10 +181,10 @@ inductive OS (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       OS A I out (l := l) k c (.ret e hΛ) c'
   | retWhy {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c c' : Context} (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) (hf : finish c none = true) :
       OS A I out (l := l) (Γ := Γ) k c (.retWhy r hΛ) c'
-  | leave {Γ Λ k c c'} (h : true = true) (hx : ExitsTo k c) :
-      OS A I out (Γ := Γ) (Λ := Λ) k c (.leave h) c'
-  | next {Γ Λ k c c'} (h : true = true) (hx : ExitsTo k c) :
-      OS A I out (Γ := Γ) (Λ := Λ) k c (.next h) c'
+  | leave {l Γ Λ k c c'} (h : l = true) (hx : ExitsTo k c) :
+      OS A I out (l := l) (Γ := Γ) (Λ := Λ) k c (.leave h) c'
+  | next {l Γ Λ k c c'} (h : l = true) (hx : ExitsTo k c) :
+      OS A I out (l := l) (Γ := Γ) (Λ := Λ) k c (.next h) c'
 
 /-- **A block.** -/
 inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
@@ -197,7 +197,7 @@ inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       OB A I out k c b c2
   /-- A statement that admits every context after it never falls through: what follows is dead. -/
   | dead {l Γ Λ Λ1 Λ' k c c'} (s : Stmt D V l Γ Λ Λ1) (rest : Block D V l Γ Λ1 Λ')
-      (hs : ∀ c1, OS A I out k c s c1) : OB A I out k c (.cons s rest) c'
+      (hs : ∀ c1, c1.bounded → OS A I out k c s c1) : OB A I out k c (.cons s rest) c'
   | bind {l Γ Λ Λ' k c c1 τ} (e : Expr D Γ Λ τ) (rest : Block D V l (τ :: Γ) Λ Λ')
       (he : checkExpression A c e = true) (hr : OB A I out k (c.bind (origin c e)) rest c1) :
       OB A I out k c (.bind e rest) c1.drop
@@ -331,12 +331,15 @@ inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       OE A I out (l := l) k c (.ret e hΛ)
   | retWhy {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) (hf : finish c none = true) :
       OE A I out (l := l) (Γ := Γ) k c (.retWhy r hΛ)
-  | leave {Γ Λ k c} (h : true = true) (hx : ExitsTo k c) :
-      OE A I out (Γ := Γ) (Λ := Λ) k c (.leave h)
-  | next {Γ Λ k c} (h : true = true) (hx : ExitsTo k c) :
-      OE A I out (Γ := Γ) (Λ := Λ) k c (.next h)
+  | leave {l Γ Λ k c} (h : l = true) (hx : ExitsTo k c) :
+      OE A I out (l := l) (Γ := Γ) (Λ := Λ) k c (.leave h)
+  | next {l Γ Λ k c} (h : l = true) (hx : ExitsTo k c) :
+      OE A I out (l := l) (Γ := Γ) (Λ := Λ) k c (.next h)
   | cons {l Γ Λ Λ1 k c c1} (s : Stmt D V l Γ Λ Λ1) (rest : Endblock D V l Γ Λ1)
       (hs : OS A I out k c s c1) (hr : OE A I out k c1 rest) : OE A I out k c (.cons s rest)
+  /-- What follows a statement that never falls through is dead. -/
+  | dead {l Γ Λ Λ1 k c} (s : Stmt D V l Γ Λ Λ1) (rest : Endblock D V l Γ Λ1)
+      (hs : ∀ c1, c1.bounded → OS A I out k c s c1) : OE A I out k c (.cons s rest)
   | bind {l Γ Λ k c τ} (e : Expr D Γ Λ τ) (rest : Endblock D V l (τ :: Γ) Λ)
       (he : checkExpression A c e = true) (hr : OE A I out k (c.bind (origin c e)) rest) :
       OE A I out k c (.bind e rest)
