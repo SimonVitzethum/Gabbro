@@ -31,6 +31,8 @@ structure Namen (D : Deklaration) where
   lock : D.Lock → String
   fn : D.Fn → String
   ax : D.Ax → String
+  /-- The open table a foreign body is the provider of (`table T open provided by p`): its call prints as `alloc T`. -/
+  anbieterVon : D.Ax → Option String := fun _ => none
 
 /-- The depth of a variable: `here` is 0. -/
 def varTiefe : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
@@ -78,6 +80,8 @@ def druckE (nm : Namen D) (kopf : Option String) {Γ : Ctx} {Λ : List (Res D)} 
   | .istSome (.var x) => .ok s!"v{Γ.length - 1 - varTiefe x}.is_some()"
   | .forallSlots t body _ => do .ok s!"(forall v{Γ.length} in slots of {nm.tab t} : {← druckE nm kopf body})"
   | .existsSlots t body _ => do .ok s!"(exists v{Γ.length} in slots of {nm.tab t} : {← druckE nm kopf body})"
+  | .refEq a b => do .ok s!"({← druckE nm kopf a} == {← druckE nm kopf b})"
+  | .slotRef r t _ _ f _ => do .ok s!"{← druckE nm kopf r}->{nm.feld t f}"
   | e => nichtDruckbar "expression" (eE e)
 
 /-- The arguments of a call. -/
@@ -95,6 +99,14 @@ def druckR (nm : Namen D) {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : ErgEx
 
 /-- A comma list. -/
 def liste (xs : List String) : String := String.intercalate ", " xs
+
+/-- The call of a foreign body: `alloc T` where it is the provider of `T` and takes no arguments, else `p(args)`. -/
+def druckAufruf (nm : Namen D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) :
+    Except String String := do
+  let xs ← druckA nm args
+  .ok (match nm.anbieterVon a, xs with
+    | some t, [] => s!"alloc {t}"
+    | _, _ => s!"{nm.ax a}({liste xs})")
 
 variable (V : Vertrag D)
 
@@ -122,6 +134,8 @@ def druckS (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .locks L _ body => do
       .ok s!"{ein}locks {nm.lock L} \{\n{← druckB nm (ein ++ "    ") body}{ein}}\n"
   | .axiomCall a args _ _ _ _ _ => do .ok s!"{ein}{nm.ax a}({liste (← druckA nm args)});\n"
+  | .assignSlotRef r t _ _ f e _ _ => do
+      .ok s!"{ein}{← druckE nm none r}->{nm.feld t f} = {← druckE nm none e};\n"
   | .ret e _ => do .ok s!"{ein}{← druckR nm e}\n"
   | .retWhy r _ => .ok s!"{ein}return {grundTyp V.gruende}::C{r.val};\n"
   | s => (nichtDruckbar "statement" (cS s)).map id
@@ -136,7 +150,7 @@ def druckB (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .bindCall f args _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
   | .bindAxiom a args _ _ _ _ _ rest => do
-      .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckB nm ein rest))
+      .ok (s!"{ein}let v{Γ.length} = {← druckAufruf nm a args};\n" ++ (← druckB nm ein rest))
   | .awaits g payload _ _ _ rest => do
       let ns := payload.map nm.glob
       .ok (s!"{ein}let v{Γ.length} = {nm.glob g} awaits {if ns.isEmpty then "{ }" else "{ " ++ liste ns ++ " }"};\n" ++
@@ -161,7 +175,7 @@ def druckEnd (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ : List (Res
   | .bindCall f args _ _ _ rest => do
       .ok (s!"{ein}let v{Γ.length} = {nm.fn f}({liste (← druckA nm args)});\n" ++ (← druckEnd nm ein rest))
   | .bindAxiom a args _ _ _ _ _ rest => do
-      .ok (s!"{ein}let v{Γ.length} = {nm.ax a}({liste (← druckA nm args)});\n" ++ (← druckEnd nm ein rest))
+      .ok (s!"{ein}let v{Γ.length} = {← druckAufruf nm a args};\n" ++ (← druckEnd nm ein rest))
   | .retWhy r _ => .ok s!"{ein}return {grundTyp V.gruende}::C{r.val};\n"
   | .awaits g payload _ _ _ rest => do
       let ns := payload.map nm.glob

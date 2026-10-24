@@ -38,7 +38,7 @@ def Spez.druckTy (z : Spez) : Ty → Except String String
   | .fl .. => .error "unsupported type: float"
   | .fnptr _ => .error "unsupported type: function pointer"
   | .ptr .. => .error "unsupported type: pointer"
-  | .ref _ => .error "unsupported type: reference (the open region has no source syntax yet)"
+  | .ref n => if n < z.tabs.length then .ok s!"ref T{n}" else .error "unsupported type: reference to no table"
 
 /-- The names of the entities of a member. -/
 def Spez.namen (z : Spez) : Namen z.deklaration where
@@ -48,6 +48,8 @@ def Spez.namen (z : Spez) : Namen z.deklaration where
   lock := fun L => s!"L{(show Fin z.locks.length from L).val}"
   fn := fun f => s!"fn{(show Fin z.fns.length from f).val}"
   ax := fun a => s!"ax{(show Fin z.axs.length from a).val}"
+  anbieterVon := fun a => ((List.finRange z.tabs.length).find? fun t => z.deklaration.anbieter t == some a).map
+    fun t => s!"T{t.val}"
 
 /-- A comma list. -/
 private def kommas (xs : List String) : String := String.intercalate ", " xs
@@ -165,7 +167,10 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (ws : Lis
   let tabs ← (List.finRange z.tabs.length).mapM fun t => do
     let tz := z.tabs.get t
     let fs ← (tz.felder.zipIdx.map fun (fz, j) => do pure s!"        f{j} : {← z.druckTy fz.typ},").mapM id
-    pure s!"table {nm.tab t} count {tz.count} \{\n    slot \{\n{String.intercalate "\n" fs}\n    }\n}\n"
+    let kopf := if z.deklaration.offen t then
+        "open" ++ ((z.deklaration.anbieter t).map (fun a => s!" provided by {nm.ax a}")).getD ""
+      else s!"count {tz.count}"
+    pure s!"table {nm.tab t} {kopf} \{\n    slot \{\n{String.intercalate "\n" fs}\n    }\n}\n"
   let globs ← (List.finRange z.globs.length).mapM fun g => do
     let gz := z.globs.get g
     let ty ← z.druckTy gz.typ
@@ -203,5 +208,21 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (ws : Lis
 def Spez.quelltext (z : Spez) (h : Programm z.deklaration) (ws : List z.deklaration.Fn)
     (name : String) : Except String String :=
   @Spez.quelltextMit z z.zahlen h ws name
+
+/-- A probe of the open region's source forms: an open table `T0` whose provider is `ax0 : -> ref T0`. -/
+def offenProbe : Spez where
+  tabs := [{ count := 0, offen := true, anbieter := some 0, felder := [{ typ := .int 0 255 }] }]
+  axs := [{ erg := some (.ref 0) }]
+
+/-- `ref T0` is printed as such. -/
+theorem offenProbe_typ : offenProbe.druckTy (.ref 0) = .ok "ref T0" := rfl
+
+/-- The provider is known by its table: its call prints as `alloc T0`. -/
+theorem offenProbe_anbieter : offenProbe.namen.anbieterVon ⟨0, by decide⟩ = some "T0" := rfl
+
+set_option maxRecDepth 20000 in
+/-- The provider item itself. -/
+theorem offenProbe_ax : offenProbe.druckAx ⟨0, by decide⟩ =
+    .ok "extern fn ax0() -> ref T0 effects { pure } costs <= 1000 ops;\n" := rfl
 
 end Gabbro.Grammatik.Gen

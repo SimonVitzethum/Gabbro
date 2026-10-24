@@ -37,9 +37,9 @@ def Spez.gteilt : Bool := z.globs.any fun g => g.geteilt && (g.sperre.isSome || 
 /-- The table `t` and the static `g` form an arena (`ArenaForm`): the counter ranges over `0 .. count`. -/
 def Spez.arenaPaare : List (Nat × Nat) :=
   (List.range z.tabs.length).flatMap fun t => (List.range z.globs.length).filterMap fun g =>
-    if (z.tabs.getD t ⟨0, [], none, none, false, false, false⟩).count > 0 &&
+    if (z.tabs.getD t { count := 0, felder := [] }).count > 0 &&
         (z.globs.getD g ⟨.bool, false, none, none, [], false, false⟩).typ ==
-          .int 0 (z.tabs.getD t ⟨0, [], none, none, false, false, false⟩).count then some (t, g) else none
+          .int 0 (z.tabs.getD t { count := 0, felder := [] }).count then some (t, g) else none
 
 /-- **The members a declaration exercises.** -/
 def Spez.mitglieder : List String :=

@@ -102,10 +102,11 @@ def marke (weiter : Bool) : Spez where
   sigs := [{ konsumiert := [(0, 0)], produziert := if weiter then [(0, 1)] else [] }]
 
 /-- **The region member** (PLAN-DYNAMIC 14): an open table with a byte field and a reference field, a static of
-    reference type, references as parameters and as a result. The provider item is a foreign body, outside the fine
-    cells; references reach the bodies as parameters and through the static. -/
+    reference type, references as parameters and as a result, and the table's provider `ax0 : -> ref T0`
+    (`table T0 open provided by ax0`), whose call is `alloc T0`. -/
 def region : Spez where
-  tabs := [{ count := 0, offen := true, felder := [{ typ := .int 0 255 }, { typ := .ref 0 }] }]
+  tabs := [{ count := 0, offen := true, anbieter := some 0, felder := [{ typ := .int 0 255 }, { typ := .ref 0 }] }]
+  axs := [{ erg := some (.ref 0) }]
   globs := [{ typ := .ref 0 }]
   sigs := [{ params := [.ref 0, .ref 0], schreibt := [0], gschreibt := [0] }, { params := [.ref 0], erg := some (.ref 0) }]
   fns := [0, 1]
