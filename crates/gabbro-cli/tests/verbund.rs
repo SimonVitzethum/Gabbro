@@ -259,31 +259,31 @@ fn die_zwillinge_verbinden_sauber() {
     }
 }
 
-/// **`gabbro build a.gab b.gab` runs the link** (Opus F, OFFEN O28): the racing pair 1247
-/// falls with the one-file codes, the twin passes, and the build says nothing was compiled.
+/// **`gabbro link a.gab b.gab` links units given as source files** (Opus F, OFFEN O28): the
+/// racing pair 1247 falls with the one-file codes, the twin passes. (Until 2026-10-25
+/// `gabbro build a.gab b.gab` ran the same link; the build system after Meson takes a project
+/// file, and the link stays where it belongs.)
 #[test]
-fn der_bau_aus_quelldateien_verbindet() {
+fn der_link_aus_quelldateien_verbindet() {
     let (aus, fehler, code) = lauf(&[
-        "build",
+        "link",
         &format!("{D}/1247-rennen-verbund-bib.gab"),
         &format!("{D}/1247-rennen-verbund-app.gab"),
     ]);
-    assert_eq!(code, 1, "the racing pair does not build:\n{aus}\n{fehler}");
+    assert_eq!(code, 1, "the racing pair does not link:\n{aus}\n{fehler}");
     assert_eq!(sortiert(codes(&fehler)), vec!["N291".to_string(), "N301".to_string()]);
     let (aus, fehler, code) = lauf(&[
-        "build",
+        "link",
         &format!("{D}/faeden-beide-bib.gab"),
         &format!("{D}/faeden-beide-app.gab"),
     ]);
-    assert_eq!(code, 0, "the twin builds:\n{aus}\n{fehler}");
-    assert!(aus.contains("NOTHING was compiled"), "{aus}");
+    assert_eq!(code, 0, "the twin links:\n{aus}\n{fehler}");
 }
 
 /// **`gabbro link a.gab b.gab` WITHOUT `--with` derives the interfaces** (server lane,
 /// TODO section 0e K1). Before, the pair linked only when somebody handed it the library's
 /// `.gabi`: `use bib::setze;` reached nothing, and the app fell alone with `H016`/`H021`/
-/// `K003`. Now the preamble comes from the units on the command line, out of the same
-/// function `gabbro build a.gab b.gab` uses.
+/// `K003`. Now the preamble comes from the units on the command line.
 ///
 /// Three things are measured here, and the third is the one that matters:
 ///

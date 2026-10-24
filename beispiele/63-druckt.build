@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# `gabbro setup <dir> beispiele/63-druckt.build`, then `gabbro compile -C <dir>`.
+project('63-druckt')
+
+program('hallo', '63-druckt.gab')

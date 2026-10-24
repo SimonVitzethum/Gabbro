@@ -1,0 +1,9 @@
+# The two-file example: `betrieb.gab` uses `lager`, four `use lager::…` lines.
+#
+# What does NOT stand here, and the reason is W7, not thrift: the edge. The build READS the
+# `use` lines and computes it; a list here would be a second register over the same thing,
+# and the first `use` line added without it would build from a mixture.
+project('bau-beispiel')
+
+library('lager', 'lager.gab')
+object('betrieb', 'betrieb.gab')

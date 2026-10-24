@@ -20,23 +20,30 @@ have a line under them that ends the attempt — and this file is the sixth answ
 ```
 $ gabbro new hello
 written  hello.gab
-written  hello.bau
+written  gabbro.build
 
-$ gabbro build hello.bau
+$ gabbro build
+build directory build (`gabbro configure -C build` shows its options)
 built    hello
-built 1 unit(s), 0 up to date, 0 refused -- 1 file(s) named by this manifest
-NOT looked at: 0 `.gab` file(s) in this tree stand in no unit of this manifest (1 in the tree)
-  the manifest is the reach -- a file no `unit` line names is not a file this build passed
+built 1 target(s), 0 up to date, 0 refused -- 1 file(s) named by this project
+NOT looked at: 0 `.gab` file(s) below the project root stand in no target (1 below the root)
 
-$ ./target/hello/hello
+$ ./build/hello
 Hi
+
+$ gabbro test -C build
+current  hello  -- content unchanged, artefact present
+built 0 target(s), 1 up to date, 0 refused -- 1 file(s) named by this project
+NOT looked at: 0 `.gab` file(s) below the project root stand in no target (1 below the root)
+ok       prints-hi
+1 ok, 0 failed, 1 test(s) declared in project `hello`
 ```
 
-`gabbro new` writes a source and a manifest that **check, build and run as they stand.** Every
+`gabbro new` writes a source and a project file that **check, build, test and run as they stand.** Every
 clause in what it writes carries a comment saying why it is there, and the four that are
 irreducible are marked. *Open that file beside this one.*
 
-> **Which backend is this?** LLVM, the only one. `gabbro build` on a `.bau` manifest runs the
+> **Which backend is this?** LLVM, the only one. `gabbro build` over a `gabbro.build` runs the
 > checker, writes LLVM IR, and links a static binary with `opt`, `llc` and `ld.lld`: no C, no libc
 > and no linked runtime (`gabbro llvm [--target=x86_64|aarch64]` writes the IR alone;
 > [`LLVM-BACKEND.md`](LLVM-BACKEND.md)). The C11 emitter this tutorial once built through was
@@ -92,10 +99,11 @@ line**, and the count will stay at zero on its own.
 
 ### And the two file kinds
 
-A `.gab` file is source. A `.bau` file is a **manifest** — which sources form a unit, whether
-that unit is a `program` or an `object`, which C compiler builds it (the legacy C path; see
-section 1), where the artefacts go ([`BUILD-SYSTEM.md`](BUILD-SYSTEM.md)).
-`gabbro check` takes `.gab` paths; `gabbro build` takes the `.bau`.
+A `.gab` file is source. A `gabbro.build` is the **project file**, after Meson — which targets
+exist (`program`, `library`, `object`), their sources, their tests and the options of a build
+directory ([`BUILD-SYSTEM.md`](BUILD-SYSTEM.md)). The edges between files and libraries are not
+in it: they are computed from `module` and `use`. `gabbro check` takes `.gab` paths; `gabbro
+build`, `setup`, `compile` and `test` take the project.
 
 ---
 

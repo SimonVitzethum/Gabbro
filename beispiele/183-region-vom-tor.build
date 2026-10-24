@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# `gabbro setup <dir> beispiele/183-region-vom-tor.build`, then `gabbro compile -C <dir>`.
+project('183-region-vom-tor')
+
+program('region', '183-region-vom-tor.gab')

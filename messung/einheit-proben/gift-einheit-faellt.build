@@ -1,0 +1,6 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: `betrieb.gab` alone uses `lager::` and no target here declares it -- the unit
+# falls in the checker, and the build says so by name.
+project('gift-faellt')
+
+object('halb', '../../programmlogik/beispiel/betrieb.gab')

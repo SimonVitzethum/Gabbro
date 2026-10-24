@@ -440,7 +440,7 @@ the seL4 calibration point is 20:1, of which about 0.5 abstract specification an
 
 Not re-run unless dated otherwise.
 
-- **Entry:** `gabbro new hallo` → `gabbro build hallo.bau` → `./target/hallo/hallo` prints `Hi`,
+- **Entry:** `gabbro new hallo` → `gabbro build` → `./build/hallo` prints `Hi`,
   no hand-written C driver (closed 2026-09-02; the README's quick start is the current form).
 - **Newcomer path:** eight attempts to write "add two numbers" fell to one after `gabbro new`,
   the tutorial and five "did you mean" hints; the five paper cuts live in

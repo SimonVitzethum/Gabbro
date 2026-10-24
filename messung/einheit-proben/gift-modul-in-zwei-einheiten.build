@@ -1,0 +1,7 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: two libraries declare the same module -- a `use` edge onto it would have two
+# targets.
+project('gift-zwei-module')
+
+library('eins', 'pub-a.gab')
+library('zwei', 'pub-a.gab')

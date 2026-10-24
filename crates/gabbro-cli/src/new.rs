@@ -24,9 +24,8 @@
 //! declaration too*, and `pub` on the entry is not decoration -- it is the difference between
 //! a symbol the linker finds and one it does not.
 //!
-//! **The manifest has no optional line at all.** All four of `compiler`, `out`,
-//! `unit <name> <program|object>` and an INDENTED source path are refused by name when
-//! missing -- measured against `lies_manifest`, which returns exactly those four refusals.
+//! **The project file is the smallest one that builds, tests and installs**: `project`, one
+//! `program` and one `test` that compares what the program prints.
 //!
 //! # What this command therefore writes
 //!
@@ -76,8 +75,9 @@ fn quelle(name: &str) -> String {
 //
 //     gabbro check {name}.gab     -- 0 errors
 //     gabbro costs {name}.gab     -- what the body COSTS, beside what the line PROMISES
-//     gabbro build {name}.bau     -- LLVM: checker, IR, `opt`, `llc`, `ld.lld`
-//     ./target/{name}/{name}      -- prints `Hi`
+//     gabbro build                -- `gabbro.build`; LLVM: checker, IR, `opt`, `llc`, `ld.lld`
+//     ./build/{name}              -- prints `Hi`
+//     gabbro test -C build        -- runs the test `gabbro.build` declares
 //
 // There is no C library and no C compiler in this build. **The program asks the kernel
 // itself:** the `syscall` item below is the raw Linux `write` (x86-64, number 1), with the
@@ -111,7 +111,7 @@ syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
 pub static mut TEXT : [u8; 3] = 0;
 
 // **(4) `pub fn main` is the entry.** The generator writes `_start` around it and hands the
-// answer to `exit_group`; a `unit … program` names exactly one such function.
+// answer to `exit_group`; a `program` target names exactly one such function.
 //
 // **`costs <= 40 ops` is NOT irreducible** -- delete it and the file still checks. It stands
 // here for the one habit worth having from the first day: **`gabbro costs {name}.gab` prints
@@ -132,40 +132,37 @@ pub fn main() -> u64
     )
 }
 
-/// The manifest. **No line in it is optional**, and the file says which refusal each one
-/// prevents.
-fn manifest(name: &str) -> String {
+/// The project file. **Every call in it is one a newcomer needs on the first day.**
+fn projektdatei(name: &str) -> String {
     format!(
         "\
--- The manifest for `{name}`. **Both kinds of line are obligatory** -- each is refused by
--- name when it is missing, and the refusal is the whole documentation:
---
---     `out`  -- \"no `out` line\"
---     `unit` -- \"no `unit` line\"; `unit <name> <program|object>`, three words
---     a path -- \"unit `{name}` names no file\"; INDENTED, one path per line
---
--- **The indent is the whole syntax.** An indented line is a source of the unit above.
---
--- There is no `compiler` line: the build runs the LLVM tools (`opt`, `llc`, `ld.lld`) and
--- compiles no C. The unit graph is read out of `module` and `use` IN THE SOURCES and never
--- from a line here -- a manifest that repeated it would be a second register that can drift.
-out      target/{name}
+# The project `{name}`, written by `gabbro new`. `dokumente/BUILD-SYSTEM.md` is the long form.
+#
+#     gabbro build                 -- configures `build/` once, then compiles
+#     gabbro test -C build         -- builds, then runs the test below
+#     gabbro install -C build      -- copies the program into <prefix>/bin
+#
+# What does NOT stand here: the edges between files and libraries (they are read out of
+# `module` and `use` in the sources), compiler flags (`arch`, `when TESTBUILD`, effects and
+# costs stand in the source), and C (this build compiles none).
+project('{name}', version: '0.1.0')
 
-unit {name} program
-    {name}.gab
+{name} = program('{name}', '{name}.gab', install: true)
+
+test('prints-hi', {name}, stdout: 'Hi\\n')
 "
     )
 }
 
 /// **Writes both files or neither.** A half-written skeleton is worse than none: the reader
-/// would build a manifest against a source that is not there and read a tool's refusal instead
-/// of Gabbro's.
+/// would build a project file against a source that is not there and read a tool's refusal
+/// instead of Gabbro's.
 pub fn befehl(rest: &[String]) -> std::process::ExitCode {
     let benannt: Vec<&String> = rest.iter().filter(|a| !a.starts_with('-')).collect();
     if benannt.len() != 1 {
         eprintln!(
-            "gabbro new <name>  -- writes `<name>.gab` and `<name>.bau` into this directory, \
-             and they build and run as written. {} name(s) given",
+            "gabbro new <name>  -- writes `gabbro.build` and `<name>.gab` into this directory, \
+             and they build, test and run as written. {} name(s) given",
             benannt.len()
         );
         return std::process::ExitCode::from(2);
@@ -177,7 +174,7 @@ pub fn befehl(rest: &[String]) -> std::process::ExitCode {
     }
 
     let gab = format!("{name}.gab");
-    let bau = format!("{name}.bau");
+    let bau = "gabbro.build".to_string();
     // **Both existence checks BEFORE the first write.** Otherwise a run over a half-present
     // pair overwrites one file and refuses on the other.
     for datei in [&gab, &bau] {
@@ -190,7 +187,7 @@ pub fn befehl(rest: &[String]) -> std::process::ExitCode {
         }
     }
 
-    for (datei, inhalt) in [(&gab, quelle(name)), (&bau, manifest(name))] {
+    for (datei, inhalt) in [(&gab, quelle(name)), (&bau, projektdatei(name))] {
         if let Err(e) = std::fs::write(datei, inhalt) {
             eprintln!("gabbro new: `{datei}`: {e}");
             return std::process::ExitCode::from(2);
@@ -201,9 +198,9 @@ pub fn befehl(rest: &[String]) -> std::process::ExitCode {
         "written  {gab}\n\
          written  {bau}\n\
          \n\
-         It checks, builds and runs as it stands:\n\
-         \n    gabbro check {gab}\n    gabbro costs {gab}\n    gabbro build {bau}\n    \
-         ./target/{name}/{name}\n\
+         It checks, builds, tests and runs as it stands:\n\
+         \n    gabbro check {gab}\n    gabbro costs {gab}\n    gabbro build\n    \
+         gabbro test -C build\n    ./build/{name}\n\
          \n\
          `dokumente/TUTORIAL.md` says why each clause is there."
     );

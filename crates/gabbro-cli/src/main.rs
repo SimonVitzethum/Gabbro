@@ -171,10 +171,17 @@ fn main() -> std::process::ExitCode {
         // **Linking two separately compiled units** (Opus agent E, 2026-09-26): the heads an
         // importer relied on, held against the bodies they stand for (`N501`-`N505`).
         "link" | "verbinde" => befehl_link(rest),
-        // **`gabbro build` -- the build out of a manifest** (German second name `bau`). The
-        // reckoning that decided its shape stands in `dokumente/BUILD-SYSTEM.md`, and it was
-        // written before the first line of `bau.rs`.
+        // **The build system, after Meson** (`dokumente/BUILD-SYSTEM.md`): a project file
+        // `gabbro.build`, one build directory per configuration. `build|bau` is the one-step
+        // form (setup `build/` if needed, then compile); the other commands are English from
+        // the start, without a second name.
         "build" | "bau" => bau::befehl(rest),
+        "setup" => bau::setup(rest),
+        "configure" => bau::configure(rest),
+        "compile" => bau::compile(rest),
+        "test" => bau::test(rest),
+        "install" => bau::install(rest),
+        "introspect" => bau::introspect(rest),
         // **«B3»: the on-ramp.** English first name and no second one -- the working
         // language was set to English on 2026-09-01, and a NEW subcommand that shipped a
         // German spelling would be a pair nobody asked for.
@@ -724,6 +731,12 @@ fn main() -> std::process::ExitCode {
 const COMMAND_NAMES: &[&str] = &[
     "abi",
     "build", "bau",
+    "setup",
+    "configure",
+    "compile",
+    "test",
+    "install",
+    "introspect",
     "new",
     "llvm",
     "llvm-cert",
@@ -820,7 +833,7 @@ fn hilfe() {
     eprintln!(
         "gabbro -- compiler and checker for Gabbro (stage P2 + three passes)
 
-  gabbro new <name>                 write `<name>.gab` and `<name>.bau` into this directory.
+  gabbro new <name>                 write `<name>/gabbro.build` and `<name>/<name>.gab`.
                                     They CHECK, BUILD and RUN as written -- the skeleton is
                                     the irreducible file (a libc-free program with its own
                                     `write` gate), and every clause in it carries the reason it stands there.
@@ -888,17 +901,31 @@ fn hilfe() {
                                       `--elide` removes every clause equal to what
                                       would be derived. Same diagnostics, same
                                       register, same C -- or no view at all
-  gabbro build|bau [--testbuild] [--dry-run] [--target=x86_64|aarch64] [<manifest>]
-                                    the build out of a manifest, through LLVM (checker ->
-                                    IR -> `opt -O3` -> `llc` -> `ld.lld`; no C compiler, no
-                                    libc). `module`/`kmod`/`metal` products are refused by
-                                    name. It computes the unit graph
-                                    from `module` and `use` -- never from a manifest line --
-                                    and is incremental by CONTENT, not by timestamp. It
-                                    prints what it built AND what it did not look at, and
-                                    two or more units must LINK (`gabbro link`). With
-                                    `<a.gab> <b.gab>…` instead of a manifest: the link
-                                    check only, nothing compiled.
+  gabbro setup <builddir> [<sourcedir|build file>] [-D<name>=<value>]…
+                                    configure a build directory from a project file
+                                    `gabbro.build` (after Meson: `project`, `program`,
+                                    `library`, `object`, `test`, `subdir`, `files`,
+                                    `get_option`, `if`, `foreach`). A build directory is ONE
+                                    configuration: built-in options `target` (x86_64|aarch64),
+                                    `buildtype` (shipping|testbuild), `prefix`, `bindir`, and
+                                    the project's own from `gabbro.options`
+  gabbro compile [-C <builddir>] [--dry-run] [<target>…]
+                                    build through LLVM (checker -> IR -> `opt -O3` -> `llc` ->
+                                    `ld.lld`; no C compiler, no libc). A library's files join
+                                    every unit whose `use` lines reach its modules -- the
+                                    edges are computed, never written. Incremental by CONTENT,
+                                    not by timestamp; prints what it did NOT look at
+  gabbro test [-C <builddir>] [<test>…]
+                                    build, then run the declared tests (exit code, stdout,
+                                    timeout); an aarch64 build runs under `qemu-aarch64`
+  gabbro install [-C <builddir>]    build, then copy `install: true` programs into
+                                    `$DESTDIR<prefix>/<bindir>`
+  gabbro configure [-C <builddir>] [-D<name>=<value>]…
+                                    print the options of a build directory, or change them
+  gabbro introspect [-C <builddir>] the evaluated project as JSON
+  gabbro build|bau [<sourcedir|build file>] [-D<name>=<value>]… [--dry-run]
+                                    the one-step form: `setup build` if `build/` is no build
+                                    directory yet, then `compile -C build`.
                                     The reckoning: `dokumente/BUILD-SYSTEM.md`
   gabbro obligations|pflichten [--isabelle | --lean | --g] <file.gab>…
                                     what a HUMAN still owes -- counted, not discharged.
@@ -1678,7 +1705,7 @@ pub(crate) struct Einheitstext {
 
 /// **Glue a file list into ONE translation unit** -- the one place that does it.
 ///
-/// Three commands join a unit: `pruefe --unit`, `emit --unit` and `gabbro build`. Until
+/// Three commands join a unit: `pruefe --unit`, `emit --unit` and `gabbro compile`. Until
 /// 2026-09-01 two of them carried their own copy of this byte arithmetic, and *the copies had
 /// already drifted*: the build's did not carry a `--with` preamble at all, so a unit that
 /// checked against a library on the command line could not be built out of a manifest. **A
@@ -1737,7 +1764,7 @@ pub(crate) enum Strom {
 /// rather than dropped**, because a partition that swallows what it cannot place looks
 /// exactly like a clean run.
 ///
-/// `gabbro build` renders the same way, out of the same function -- two renderings of one
+/// `gabbro compile` renders the same way, out of the same function -- two renderings of one
 /// joined parse would be a second register over the same thing.
 pub(crate) fn zeige_je_stueck(
     absagen: &gabbro_syntax::Absagen,
@@ -1914,8 +1941,7 @@ fn items_im_bereich(baum: &gabbro_syntax::ast::Programm, von: usize, bis: usize)
 /// of the OTHERS is its preamble, and there are two ways to get one. With `--with L.gabi` the
 /// named interfaces go in front of every unit after the FIRST, exactly as `gabbro check B.gab
 /// --with A.gabi` read it. WITHOUT `--with` the preambles are DERIVED from the units on the
-/// command line (`vorspaenne_aus_einheiten`, the same derivation `gabbro build a.gab b.gab`
-/// runs): every unit reads the `gabbro abi` heads of all the others, so a `use bib::setze;`
+/// command line (`vorspaenne_aus_einheiten`): every unit reads the `gabbro abi` heads of all the others, so a `use bib::setze;`
 /// reaches the body it names instead of needing a hand-written mirror beside it.
 ///
 /// *The derivation is not a weakening.* A derived head is written FROM the body, so
@@ -1983,7 +2009,7 @@ fn befehl_link(argumente: &[String]) -> std::process::ExitCode {
 /// or generate with `gabbro abi` and pass through `--with`.
 ///
 /// **This is the ONE derivation** (`W7`: a second register over the same thing is the defect,
-/// not the copy): `gabbro link a.gab b.gab` and `gabbro build a.gab b.gab` both call here.
+/// not the copy): `gabbro link a.gab b.gab` calls here.
 /// A unit that does not parse yields an empty interface rather than a panic; its own check
 /// then reports the parse errors, which is where they belong.
 ///
@@ -2036,8 +2062,7 @@ pub(crate) fn vorspaenne_aus_einheiten(namen: &[String], roh: &[String]) -> Vec<
         .collect()
 }
 
-/// **The link over already read sources** -- `gabbro link`'s core, and the one `gabbro build`
-/// runs over the units of a manifest. `quellen[i]` is unit `i`'s full source (preamble
+/// **The link over already read sources** -- `gabbro link`'s core. `quellen[i]` is unit `i`'s full source (preamble
 /// included) with the byte offset where its own text begins. Prints every refusal and the
 /// summary line; returns whether the units link.
 pub(crate) fn verbinde_quellen(

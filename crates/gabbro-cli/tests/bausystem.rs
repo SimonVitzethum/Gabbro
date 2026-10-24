@@ -1,20 +1,31 @@
-//! **`gabbro build` -- the build out of a manifest.**
+//! **The build system after Meson: `gabbro setup`, `compile`, `test`, `install`, `configure`,
+//! `introspect`, and the one-step `build`.**
 //!
-//! The reckoning stands in `dokumente/BUILD-SYSTEM.md` and was written before `bau.rs`. What is
-//! held here is the part that can be run:
+//! `dokumente/BUILD-SYSTEM.md` is the long form. What is held here is the part that can be run:
 //!
-//! * the graph is COMPUTED out of `module` and `use`, never read out of the manifest,
+//! * the edges between targets are COMPUTED out of `module` and `use`, never read out of the
+//!   project file (a library's files join the units that use it),
 //! * the incremental decision is by CONTENT and not by timestamp -- **`touch` must not
 //!   rebuild, and a deleted artefact must**,
-//! * a unit that does not check writes no C and calls no `cc`,
+//! * a build directory is ONE configuration, and changing the target rebuilds,
+//! * every refusal names its file and line, or the target it is about,
 //! * and the coverage line says what the build did NOT look at.
 
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
+fn wurzel() -> PathBuf {
+    PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+}
+
 fn lauf(argumente: &[&str]) -> (String, String, i32) {
+    lauf_in(&wurzel(), argumente)
+}
+
+fn lauf_in(verzeichnis: &Path, argumente: &[&str]) -> (String, String, i32) {
     let aus = Command::new(env!("CARGO_BIN_EXE_gabbro"))
         .args(argumente)
-        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+        .current_dir(verzeichnis)
         .output()
         .expect("gabbro runs");
     (
@@ -24,258 +35,256 @@ fn lauf(argumente: &[&str]) -> (String, String, i32) {
     )
 }
 
-const MANIFEST: &str = "programmlogik/beispiel/gabbro.bau";
+/// A build directory of this probe's own, empty: a product left by an earlier run would make
+/// "current" and "built" depend on history, not on the input.
+fn bauverzeichnis(marke: &str) -> String {
+    let d = wurzel().join(format!("target/bausystem-{}-{marke}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    d.display().to_string()
+}
 
-/// **The counter-sample: the two-file unit builds, and the C survives
-/// `-Wall -Wextra -Werror`.**
+fn weg(d: &str) {
+    let _ = std::fs::remove_dir_all(d);
+}
+
+const BEISPIEL: &str = "programmlogik/beispiel";
+
+/// **The two-file example builds: a library and an object that uses it.**
 #[test]
 fn das_zweidateienbeispiel_baut() {
-    // A first run may find the artefact current from an earlier run; either is a pass here,
-    // and the incremental behaviour has its own test below.
-    let (aus, fehler, code) = lauf(&["build", MANIFEST]);
-    assert_eq!(code, 0, "the unit builds:\n{aus}\n{fehler}");
-    assert!(
-        aus.contains("built    lager") || aus.contains("current  lager"),
-        "the unit is named either way:\n{aus}"
-    );
+    let b = bauverzeichnis("beispiel");
+    let (aus, fehler, code) = lauf(&["setup", &b, BEISPIEL]);
+    assert_eq!(code, 0, "setup runs:\n{aus}\n{fehler}");
+    assert!(aus.contains("2 target(s), 0 test(s)"), "{aus}");
+    let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "the targets build:\n{aus}\n{fehler}");
+    assert!(aus.contains("built    lager") && aus.contains("built    betrieb"), "{aus}");
+    assert!(Path::new(&b).join("betrieb.o").exists(), "the object is there");
+    weg(&b);
 }
 
-/// **The coverage line, in the shape `abnahme.py` uses.** *"nothing found" and "nothing
-/// looked at" look the same otherwise* -- and a build over two files must not read like a
-/// build over the tree.
-#[test]
-fn der_bau_sagt_was_er_nicht_angesehen_hat() {
-    let (aus, _, _) = lauf(&["build", "--dry-run", MANIFEST]);
-    assert!(
-        aus.contains("2 file(s) named by this manifest"),
-        "what it covered:\n{aus}"
-    );
-    assert!(
-        aus.contains("NOT looked at:") && aus.contains("stand in no unit of this manifest"),
-        "and what it did not:\n{aus}"
-    );
-    assert!(
-        aus.contains("the manifest is the reach"),
-        "with the reason beside it, not only the number:\n{aus}"
-    );
-}
-
-/// **Incremental by CONTENT and not by timestamp -- the whole point, in one test.**
-///
-/// `CLAUDE.md` carries two traps of this class in opposite directions. So both directions are
-/// held: a `touch` (new mtime, same bytes) must NOT rebuild, and a deleted artefact with a
-/// valid record MUST -- *the artefact's presence is checked, not believed.*
-#[test]
-fn inkrementell_nach_inhalt_und_nicht_nach_zeitstempel() {
-    let wurzel = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."));
-    // Build once so there is something to be current about.
-    let (_, _, code) = lauf(&["build", MANIFEST]);
-    assert_eq!(code, 0, "the preparing build runs");
-
-    // 1. Same bytes, new mtime -- read the file and write it straight back.
-    let quelle = wurzel.join("programmlogik/beispiel/lager.gab");
-    let bytes = std::fs::read(&quelle).expect("source readable");
-    std::fs::write(&quelle, &bytes).expect("source writable");
-    let (aus, _, code) = lauf(&["build", MANIFEST]);
-    assert_eq!(code, 0, "a rewrite of the same bytes is not a change:\n{aus}");
-    assert!(
-        aus.contains("current  lager"),
-        "the same content does NOT rebuild, however new the timestamp:\n{aus}"
-    );
-
-    // 2. The artefact is gone, the record is still valid.
-    let erzeugnis = wurzel.join("target/bau-beispiel/lager.o");
-    std::fs::remove_file(&erzeugnis).expect("artefact removable");
-    let (aus, _, code) = lauf(&["build", MANIFEST]);
-    assert_eq!(code, 0, "the build repairs the gap:\n{aus}");
-    assert!(
-        aus.contains("built    lager"),
-        "a deleted artefact rebuilds -- the presence is CHECKED, not believed:\n{aus}"
-    );
-    assert!(erzeugnis.exists(), "and the artefact is back");
-}
-
-/// **The graph is computed, not read.** The manifest of the example carries no dependency
-/// line at all, and the build still knows it is one unit.
+/// **The graph is computed, not read.** The project file carries no dependency at all, and
+/// the plan still knows that `betrieb` rests on `lager`.
 #[test]
 fn der_graph_wird_gerechnet_und_nicht_gelesen() {
-    let manifest = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../programmlogik/beispiel/gabbro.bau"
-    ))
-    .expect("manifest readable");
-    // Only comment lines may mention `use` -- no directive does.
-    for zeile in manifest.lines() {
-        let ohne = zeile.split("--").next().unwrap_or("");
+    let text = std::fs::read_to_string(wurzel().join(BEISPIEL).join("gabbro.build"))
+        .expect("project file readable");
+    for zeile in text.lines() {
+        let ohne = zeile.split('#').next().unwrap_or("");
         assert!(
-            !ohne.contains("use ") && !ohne.contains("depends"),
+            !ohne.contains("deps") && !ohne.contains("use "),
             "no dependency is written down; they come out of the sources: {zeile}"
         );
     }
-    let (aus, _, _) = lauf(&["build", "--dry-run", MANIFEST]);
-    assert!(
-        aus.contains("computed edge(s) between units"),
-        "and the build says the edges are computed:\n{aus}"
-    );
+    let b = bauverzeichnis("graph");
+    lauf(&["setup", &b, BEISPIEL]);
+    let (aus, _, code) = lauf(&["compile", "-C", &b, "--dry-run"]);
+    assert_eq!(code, 0, "{aus}");
+    assert!(aus.contains("object betrieb (2 file(s), computed: lager)"), "the edge is computed:\n{aus}");
+    weg(&b);
 }
 
-/// **Poison: the same module name in two units.** Across the tree a module name is not unique
-/// (`module gift` belongs to 122 files); inside ONE build it must be, or a `use` edge would
-/// have two targets and the graph would be a guess.
+/// **The coverage line.** *"nothing found" and "nothing looked at" look the same otherwise.*
 #[test]
-fn gift_derselbe_modulname_in_zwei_einheiten() {
-    let (_, fehler, code) = lauf(&[
-        "build",
-        "messung/einheit-proben/gift-modul-in-zwei-einheiten.bau",
-    ]);
-    assert_eq!(code, 1, "refused:\n{fehler}");
-    assert!(
-        fehler.contains("declared in unit") && fehler.contains("two targets"),
-        "and it says WHY, not just that:\n{fehler}"
-    );
+fn der_bau_sagt_was_er_nicht_angesehen_hat() {
+    let b = bauverzeichnis("deckung");
+    lauf(&["setup", &b, BEISPIEL]);
+    let (aus, _, _) = lauf(&["compile", "-C", &b, "--dry-run"]);
+    assert!(aus.contains("2 file(s) named by this project"), "what it covered:\n{aus}");
+    assert!(aus.contains("NOT looked at:") && aus.contains("stand in no target"), "and what not:\n{aus}");
+    weg(&b);
 }
 
-/// **Poison: a unit that names no file.** A build over nothing reports success, and then
-/// "nothing found" looks like "nothing looked at".
+/// **Incremental by CONTENT and not by timestamp.** A `touch` (new mtime, same bytes) must NOT
+/// rebuild; a deleted artefact with a valid record MUST -- *the presence is checked, not
+/// believed.*
 #[test]
-fn gift_eine_einheit_ohne_datei() {
-    let (_, fehler, code) = lauf(&["build", "messung/einheit-proben/gift-leere-einheit.bau"]);
-    assert_eq!(code, 2, "refused at the manifest:\n{fehler}");
-    assert!(
-        fehler.contains("names no file"),
-        "by name:\n{fehler}"
-    );
+fn inkrementell_nach_inhalt_und_nicht_nach_zeitstempel() {
+    // A copy of the example of its own: rewriting a file of the shared tree would race with
+    // the probes that read it in parallel.
+    let d = PathBuf::from(bauverzeichnis("inkrement"));
+    std::fs::create_dir_all(&d).unwrap();
+    for f in ["gabbro.build", "lager.gab", "betrieb.gab"] {
+        std::fs::copy(wurzel().join(BEISPIEL).join(f), d.join(f)).unwrap();
+    }
+    let b = d.join("bau").display().to_string();
+    lauf(&["setup", &b, &d.display().to_string()]);
+    let (_, _, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "the preparing build runs");
+
+    let quelle = d.join("lager.gab");
+    let bytes = std::fs::read(&quelle).expect("source readable");
+    std::fs::write(&quelle, &bytes).expect("source writable");
+    let (aus, _, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "{aus}");
+    assert!(aus.contains("current  lager") && aus.contains("current  betrieb"), "same content, no rebuild:\n{aus}");
+
+    let erzeugnis = Path::new(&b).join("betrieb.o");
+    std::fs::remove_file(&erzeugnis).expect("artefact removable");
+    let (aus, _, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "{aus}");
+    assert!(aus.contains("built    betrieb"), "a deleted artefact rebuilds:\n{aus}");
+    assert!(erzeugnis.exists(), "and the artefact is back");
+    weg(&d.display().to_string());
 }
 
-/// **Poison: a unit whose files do not check.** No C is written and no `cc` is called -- a
-/// generator that translates out of a refused tree undoes every pass in front of it.
-///
-/// **And the sites are in the FILE, not in the concatenation** -- the build renders through
-/// the same offset map as `pruefe --unit`, out of the same function.
-#[test]
-fn gift_eine_einheit_die_nicht_durchgeht() {
-    let (aus, fehler, code) = lauf(&["build", "messung/einheit-proben/gift-einheit-faellt.bau"]);
-    assert_eq!(code, 1, "refused:\n{aus}\n{fehler}");
-    assert!(aus.contains("REFUSED  halb"), "the unit is named:\n{aus}");
-    assert!(
-        aus.contains("no IR written"),
-        "and nothing was written:\n{aus}"
-    );
-    // **The refusals go to STDOUT, like `gabbro pruefe`'s** -- they come out of the shared
-    // renderer, and a refusal that changed stream between two subcommands would be a refusal
-    // a harness has to look for in two places.
-    assert!(
-        aus.contains("programmlogik/beispiel/betrieb.gab:36:56"),
-        "the site is in its own file at its own line, not in the concatenation:\n{aus}"
-    );
-    assert!(
-        !aus.contains("<unit>:") && !fehler.contains("<unit>:"),
-        "no refusal carries a line number of the joined text:\n{aus}\n{fehler}"
-    );
-}
-
-/// **A different target is a different artefact -- and the build must notice.**
-///
-/// *This test exists because a hand mutation survived without it:* dropping the target out of
-/// the fingerprint left the other probes green, and a build that switched from `x86_64` to
-/// `aarch64` would have reported "current" over an artefact nobody asked for any more.
-/// **Content alone is not the whole input.**
+/// **A build directory is ONE configuration**, and the target is part of every fingerprint:
+/// `configure -Dtarget=aarch64` rebuilds though not a source byte moved.
 #[test]
 fn ein_anderes_ziel_baut_neu() {
-    // A manifest of its own, with its own output directory: the other tests build `MANIFEST`
-    // in parallel, and two targets in one directory would be the collision this test guards.
-    // The output directory is per process and emptied first: a product left by an earlier
-    // (or interrupted) run would make "current" and "built" depend on history, not on the input.
-    let aus_dir = format!("target/bau-ziel-{}", std::process::id());
-    let _ = std::fs::remove_dir_all(concat!(env!("CARGO_MANIFEST_DIR"), "/../..").to_owned() + "/" + &aus_dir);
-    let pfad = std::env::temp_dir().join(format!("gabbro-ziel-{}.bau", std::process::id()));
-    std::fs::write(
-        &pfad,
-        format!("out {aus_dir}\nunit lager object\n    programmlogik/beispiel/lager.gab\n    programmlogik/beispiel/betrieb.gab\n"),
-    )
-    .expect("manifest written");
-    let m = pfad.to_str().unwrap();
-    let (aus, fehler, code) = lauf(&["build", "--target=x86_64", m]);
-    assert_eq!(code, 0, "the first target builds:\n{aus}\n{fehler}");
-    let (aus, _, _) = lauf(&["build", "--target=x86_64", m]);
-    assert!(
-        aus.contains("current  lager"),
-        "the same manifest twice is current -- otherwise the next assertion is empty:\n{aus}"
-    );
-    let (aus, fehler, code) = lauf(&["build", "--target=aarch64", m]);
-    assert_eq!(code, 0, "the second target builds:\n{aus}\n{fehler}");
-    assert!(
-        aus.contains("built    lager"),
-        "ONE changed target rebuilds, though not a source byte moved:\n{aus}"
-    );
-    let _ = std::fs::remove_dir_all(concat!(env!("CARGO_MANIFEST_DIR"), "/../..").to_owned() + "/" + &aus_dir);
+    let b = bauverzeichnis("ziel");
+    lauf(&["setup", &b, BEISPIEL, "-Dtarget=x86_64"]);
+    let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    let (aus, _, _) = lauf(&["compile", "-C", &b]);
+    assert!(aus.contains("current  betrieb"), "twice is current:\n{aus}");
+    let (aus, fehler, code) = lauf(&["configure", "-C", &b, "-Dtarget=aarch64"]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    assert!(aus.contains("target") && aus.contains("aarch64"), "{aus}");
+    let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    assert!(aus.contains("built    betrieb"), "the changed target rebuilds:\n{aus}");
+    weg(&b);
 }
 
-/// **The products that needed C are refused BY NAME**, and each refusal says what was removed.
+/// **A refused option value never reaches the build directory.**
 #[test]
-fn entfernte_erzeugnisse_fallen_mit_namen() {
-    let d = std::env::temp_dir().join(format!("gabbro-entfernt-{}", std::process::id()));
-    let _ = std::fs::create_dir_all(&d);
-    for (zeilen, wort) in [
-        ("compiler cc\nout target/x\nunit a program\n    a.gab\n", "removed manifest word"),
-        ("out target/x\nkmod /lib/modules/k/build init_module cleanup_module\nunit a object\n    a.gab\n", "removed manifest word"),
-        ("out target/x\nmetal laufzeit/metall\nunit a object\n    a.gab\n", "removed manifest word"),
-        ("out target/x\nunit a module i e\n    a.gab\n", "kernel module"),
-        ("out target/x\nunit a object\n    a.gab\n    korper.c\n", "C file"),
+fn ein_falscher_optionswert_faellt_mit_namen() {
+    let b = bauverzeichnis("option");
+    let (_, fehler, code) = lauf(&["setup", &b, BEISPIEL, "-Dtarget=sparc"]);
+    assert_eq!(code, 2, "{fehler}");
+    assert!(fehler.contains("`sparc` is none of `x86_64`, `aarch64`"), "{fehler}");
+    assert!(!Path::new(&b).exists(), "nothing was written");
+    let (_, fehler, code) = lauf(&["setup", &b, BEISPIEL, "-Dnirgends=1"]);
+    assert_eq!(code, 2);
+    assert!(fehler.contains("`nirgends` is no option"), "{fehler}");
+    lauf(&["setup", &b, BEISPIEL]);
+    let (_, fehler, code) = lauf(&["configure", "-C", &b, "-Dbuildtype=fast"]);
+    assert_eq!(code, 2, "{fehler}");
+    let zustand = std::fs::read_to_string(Path::new(&b).join("gabbro-setup.txt")).unwrap();
+    assert!(!zustand.contains("fast"), "the directory kept its configuration:\n{zustand}");
+    let (_, fehler, code) = lauf(&["setup", &b, BEISPIEL]);
+    assert_eq!(code, 2, "a second setup over a build directory is refused");
+    assert!(fehler.contains("already a build directory"), "{fehler}");
+    weg(&b);
+}
+
+/// **A library builds a program from two targets** -- the case the manifest build refused
+/// (a unit resting on another unit) builds now, and the binary runs.
+#[test]
+fn ein_programm_ueber_einer_bibliothek_baut() {
+    let b = bauverzeichnis("bibliothek");
+    let (aus, fehler, code) = lauf(&["setup", &b, "messung/einheit-proben/zwei-einheiten.build"]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    assert!(aus.contains("built    rechenwerk") && aus.contains("built    haupt"), "{aus}");
+    let (aus, _, _) = lauf(&["introspect", "-C", &b]);
+    assert!(
+        aus.contains("\"name\": \"haupt\", \"type\": \"program\"")
+            && aus.contains("\"libraries\": [\"rechenwerk\"]"),
+        "introspection names the computed library:\n{aus}"
+    );
+    assert!(Path::new(&b).join("haupt").exists(), "the program is linked");
+    weg(&b);
+}
+
+/// **Poisons, each refused by name.**
+#[test]
+fn gifte_fallen_mit_namen() {
+    for (datei, schritt, code_soll, text) in [
+        ("messung/einheit-proben/gift-modul-in-zwei-einheiten.build", "setup", 2, "two targets"),
+        ("messung/einheit-proben/gift-leere-einheit.build", "setup", 2, "names no source"),
+        ("messung/einheit-proben/gift-programm-nutzt-objekt.build", "setup", 2, "make `rechenwerk` a `library`"),
+        ("messung/einheit-proben/gift-programm-ohne-main.build", "compile", 1, "names no entry"),
+        ("messung/einheit-proben/gift-einheit-faellt.build", "compile", 1, "error(s) -- no IR written"),
+        ("messung/einheit-proben/gift-programm-ohne-kante.build", "compile", 1, "error(s) -- no IR written"),
+        ("messung/proben/gift-eintritt-in-bibliothek.build", "compile", 1, "carries the entry `main`"),
     ] {
-        let pfad = d.join("m.bau");
-        std::fs::write(&pfad, zeilen).expect("manifest written");
-        let (_, fehler, code) = lauf(&["build", pfad.to_str().unwrap()]);
-        assert_eq!(code, 2, "refused at the manifest:\n{fehler}");
-        assert!(fehler.contains(wort), "by name (`{wort}`):\n{fehler}");
-    }
-    let _ = std::fs::remove_dir_all(&d);
-}
-
-/// The fingerprint takes the LENGTHS of its parts too. Without that, two different file
-/// lists whose bytes concatenate the same way would be one build.
-#[test]
-fn der_abdruck_trennt_verschiedene_zerlegungen() {
-    // (This is held through the command line's own behaviour elsewhere; here the property is
-    // stated on the function directly, which is why `bau` is a module of the binary crate and
-    // its helper is `pub`.)
-    let a: &[&[u8]] = &[b"ab", b"c"];
-    let b: &[&[u8]] = &[b"a", b"bc"];
-    assert_ne!(
-        gabbro_bau_abdruck(a),
-        gabbro_bau_abdruck(b),
-        "two different decompositions are two different fingerprints"
-    );
-}
-
-/// A copy of `bau::abdruck64` -- an integration test cannot reach a binary crate's modules,
-/// so the property is stated against the same computation. **If the two ever disagree, this
-/// test is the wrong one to trust** -- it is here for the property, not as a second
-/// implementation anyone should call.
-fn gabbro_bau_abdruck(teile: &[&[u8]]) -> u64 {
-    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    for t in teile {
-        for b in (t.len() as u64).to_le_bytes() {
-            h ^= u64::from(b);
-            h = h.wrapping_mul(0x0000_0100_0000_01b3);
+        let b = bauverzeichnis(&format!("gift-{}", datei.len()));
+        let (aus, fehler, code) = lauf(&["setup", &b, datei]);
+        if schritt == "setup" {
+            assert_eq!(code, code_soll, "{datei}:\n{aus}\n{fehler}");
+            assert!(fehler.contains(text), "{datei} by name (`{text}`):\n{fehler}");
+        } else {
+            assert_eq!(code, 0, "{datei} configures:\n{aus}\n{fehler}");
+            let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
+            assert_eq!(code, code_soll, "{datei}:\n{aus}\n{fehler}");
+            assert!(aus.contains(text), "{datei} by name (`{text}`):\n{aus}");
         }
-        for b in *t {
-            h ^= u64::from(*b);
-            h = h.wrapping_mul(0x0000_0100_0000_01b3);
-        }
+        weg(&b);
     }
-    h
 }
 
-
-/// **A unit that rests on another unit is refused by name** -- the LLVM backend has no
-/// separate compilation across units, and a build that tried would die at the linker.
+/// **The build language refuses at file and line**, and what the build does not do (C, a
+/// written dependency list) is refused by name.
 #[test]
-fn eine_kante_zwischen_einheiten_faellt_mit_namen() {
-    let (_, fehler, code) = lauf(&["build", "messung/einheit-proben/zwei-einheiten.bau"]);
-    assert_eq!(code, 1, "refused:\n{fehler}");
-    assert!(
-        fehler.contains("uses unit") && fehler.contains("separate compilation"),
-        "and it says why:\n{fehler}"
-    );
+fn die_baudatei_faellt_mit_zeile() {
+    let d = PathBuf::from(bauverzeichnis("sprache"));
+    std::fs::create_dir_all(&d).unwrap();
+    for (text, wort) in [
+        ("project('p')\nprogram('a', 'a.c')\n", "gabbro.build:2: `a.c` is no `.gab` file"),
+        ("project('p')\nprogram('a', 'a.gab', deps: [])\n", "gabbro.build:2: `program` takes no `deps:`"),
+        ("project('p')\ncustom_target('x')\n", "gabbro.build:2: `custom_target` is no function"),
+        ("project('p')\nif true\n", "the file ends before `elif`"),
+        ("program('a', 'a.gab')\n", "before `project(...)`"),
+    ] {
+        std::fs::write(d.join("gabbro.build"), text).unwrap();
+        let (_, fehler, code) = lauf(&["setup", &d.join("b").display().to_string(), &d.display().to_string()]);
+        assert_eq!(code, 2, "{text}\n{fehler}");
+        assert!(fehler.contains(wort), "`{wort}`:\n{fehler}");
+    }
+    weg(&d.display().to_string());
+}
+
+/// **Options, subdirectories, tests and install, end to end** on a project written here.
+#[test]
+fn optionen_unterverzeichnisse_tests_und_installation() {
+    let d = PathBuf::from(bauverzeichnis("projekt"));
+    std::fs::create_dir_all(d.join("werkzeuge")).unwrap();
+    // The source is the `gabbro new` skeleton: libc-free, it prints `Hi`.
+    std::fs::create_dir_all(d.join("neu")).unwrap();
+    let (_, fehler, code) = lauf_in(&d.join("neu"), &["new", "hallo"]);
+    assert_eq!(code, 0, "{fehler}");
+    std::fs::rename(d.join("neu/hallo.gab"), d.join("werkzeuge/hallo.gab")).unwrap();
+    std::fs::remove_dir_all(d.join("neu")).unwrap();
+    std::fs::write(
+        d.join("gabbro.options"),
+        "option('mit_werkzeugen', type: 'boolean', value: true, description: 'build the tools')\n",
+    )
+    .unwrap();
+    std::fs::write(
+        d.join("gabbro.build"),
+        "project('p', version: '2.0')\nif get_option('mit_werkzeugen')\n  subdir('werkzeuge')\nendif\n",
+    )
+    .unwrap();
+    std::fs::write(
+        d.join("werkzeuge/gabbro.build"),
+        "hallo = program('hallo', files('hallo.gab'), install: true)\n\
+         test('laeuft', hallo, exit: 0, stdout: 'Hi\\n')\n\
+         test('falsche-ausgabe', hallo, stdout: 'nein')\n",
+    )
+    .unwrap();
+    let b = d.join("bau").display().to_string();
+    let (aus, fehler, code) = lauf_in(&d, &["setup", &b, "-Dmit_werkzeugen=false"]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    assert!(aus.contains("0 target(s), 0 test(s)"), "the option removes the subdirectory:\n{aus}");
+    let (aus, fehler, code) = lauf_in(&d, &["configure", "-C", &b, "-Dmit_werkzeugen=true"]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    let (aus, fehler, code) = lauf_in(&d, &["test", "-C", &b, "laeuft"]);
+    assert_eq!(code, 0, "{aus}\n{fehler}");
+    assert!(aus.contains("ok       laeuft") && aus.contains("1 ok, 0 failed"), "{aus}");
+    let (aus, _, code) = lauf_in(&d, &["test", "-C", &b, "falsche-ausgabe"]);
+    assert_eq!(code, 1, "a wrong output fails:\n{aus}");
+    assert!(aus.contains("FAIL     falsche-ausgabe (werkzeuge/gabbro.build:3)"), "{aus}");
+    let ziel = d.join("ziel");
+    let aus = Command::new(env!("CARGO_BIN_EXE_gabbro"))
+        .args(["install", "-C", &b])
+        .current_dir(&d)
+        .env("DESTDIR", &ziel)
+        .output()
+        .expect("gabbro runs");
+    assert_eq!(aus.status.code(), Some(0), "{}", String::from_utf8_lossy(&aus.stderr));
+    assert!(ziel.join("usr/local/bin/hallo").exists(), "installed under DESTDIR/prefix/bindir");
+    weg(&d.display().to_string());
 }

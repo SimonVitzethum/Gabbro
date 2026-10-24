@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# `gabbro setup <dir> beispiele/173-abbruch-ohne-libc.build`, then `gabbro compile -C <dir>`.
+project('173-abbruch-ohne-libc')
+
+program('abbruch', '173-abbruch-ohne-libc.gab')
