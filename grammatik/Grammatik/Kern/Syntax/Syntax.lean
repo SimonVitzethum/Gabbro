@@ -217,6 +217,14 @@ structure Deklaration where
       reason `i` (`axiomAntwortSonst`, Semantik.lean). Default: no channel -- every
       declaration written before this field is the declaration of before. -/
   agruende : Ax → Nat := fun _ => 0
+  /-- `table T open provided by p` -- the provider of an open table: the foreign item whose answer is a fresh cell of
+      `T`, and the item `alloc T` calls (`Block.alloc`, Zucker.lean). Default: no table has a provider. -/
+  anbieter : Tab → Option Ax := fun _ => none
+  /-- A provider fits its table: the table is open, the provider takes no arguments and answers `ref T`. A
+      declaration whose provider answers anything else cannot be built. -/
+  anbieter_passt : ∀ t a, anbieter t = some a →
+      offen t = true ∧ aparams a = [] ∧ ∃ n, aerg a = some (.ref n) ∧ tabNr n = some t := by
+    intro _ _ h; exact nomatch h
   /-- `device … { reg R : T @off class K }` -/
   Reg : Type
   rtyp : Reg → Ty

@@ -1,11 +1,13 @@
 import Grammatik.Speichermodell.Adressen.Layout
 import Grammatik.Kern.Syntax.Koernung
+import Grammatik.Kern.Syntax.Zucker
 import Grammatik.Zielsatz.Kern.Akzeptiert
 
-/-! The open region in G, executed (PLAN-DYNAMIC 14). One open table `T` (`table T open`, one byte field) and one
-provider item `neu : -> ref T` -- the program's memory provider, whose answer is the ONLY way a reference comes into
-being. That the provider has memory to give is user logic (Simon, 2026-10-24: OOM is user logic): the item has no
-failure branch. The body `let r = neu(); r->x = 7; return;` runs in G:
+/-! The open region in G, executed (PLAN-DYNAMIC 14). One open table `T` (`table T open provided by neu`, one byte
+field) and its provider item `neu : -> ref T` -- the program's memory provider, whose answer is the ONLY way a
+reference comes into being. That the provider has memory to give is user logic (Simon, 2026-10-24: OOM is user
+logic): the item has no failure branch. The body `let r = alloc T; r->x = 7; return;` runs in G (`alloc T` is the
+provider's call, `Endblock.alloc`):
 
 * `zelle_geschrieben`: when the provider answers cell `K`, the run writes `7` into cell `K` of `T` and returns;
 * `kein_statisches_limit`: for EVERY `K` -- no ceiling, `count T = 0` -- there is a provider answer that makes the same
@@ -57,6 +59,8 @@ open Gabbro.Grammatik
   aerg := fun _ => some (.ref 0)
   aschreibt := fun _ _ => false
   agschreibt := fun _ g => g.elim
+  anbieter := fun _ => some ()
+  anbieter_passt := fun _ _ _ => ⟨rfl, rfl, 0, rfl, rfl⟩
   Reg := Empty
   rtyp := fun r => r.elim
   rklasse := fun r => r.elim
@@ -75,9 +79,17 @@ def weiter : Endblock rD rV false [.ref 0] [] :=
   .cons (.assignSlotRef (.var .here) () rfl rfl () (.widen (by decide) (by decide) (.lit 7)) rfl
     (fun _ h => nomatch h)) (.ret .empty (List.Perm.refl _))
 
-/-- `let r = neu(); r->x = 7; return;` -/
+/-- `let r = alloc T; r->x = 7; return;` -/
 def rumpf : Endblock rD rV false [] [] :=
-  .bindAxiom () .nil rfl (fun _ h => nomatch h) (fun g => g.elim) (fun _ h => nomatch h) (fun g => g.elim) weiter
+  .alloc () () rfl rfl (fun _ h => nomatch h) (fun g => g.elim) (fun _ h => nomatch h) (fun g => g.elim) weiter
+
+/-- `alloc T` is the provider's call: `let r = neu();`. -/
+theorem rumpf_ist_anbieterruf :
+    rumpf = .bindAxiom () .nil rfl (fun _ h => nomatch h) (fun g => g.elim) (fun _ h => nomatch h)
+      (fun g => g.elim) weiter := rfl
+
+/-- The reference `alloc T` answers points into `T`, an open table. -/
+theorem alloc_in_T : rD.tabNr 0 = some () ∧ rD.offen () = true := Block.alloc_tabelle (a := ()) rfl rfl
 
 /-- The provider answering cell `K` (the raw word `K`). -/
 def oK (K : Nat) : Orakel rD :=
@@ -90,7 +102,7 @@ def w0 : World rD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => g.e
 theorem antwort_K (K : Nat) :
     einpassenErg (D := rD) (fun _ => none) (some (.ref 0)) (K : Int) =
       some (Val.vonZelle (F := rD.Fn) (passt := rD.passt) (n := 0) K) := by
-  simp only [einpassenErg, einpassen, Int.natCast_nonneg, if_true, Int.toNat_natCast]
+  simp only [einpassenErg, einpassen, Int.natCast_nonneg, ite_true, Int.toNat_natCast]
   rfl
 
 /-- **The provider's cell is written.** -/
@@ -99,7 +111,7 @@ theorem zelle_geschrieben (K : Nat) (passes : Nat)
     ∃ σ', execEnd (oK K) passes R rumpf w0 .nil = .zurueck σ' () ∧ (σ'.slots () (K : Int) ()).n = 7 := by
   have h : execEnd (oK K) passes R rumpf w0 .nil =
       (execEnd (oK K) passes R weiter (w0.lese [] []) (.cons (Val.vonZelle K) .nil)).schrumpf := by
-    simp only [rumpf, execEnd, axiomAntwort, oK, Args.orte, antwort_K]
+    simp only [rumpf_ist_anbieterruf, execEnd, axiomAntwort, oK, Args.orte, antwort_K]
     rfl
   rw [h]
   refine ⟨_, rfl, ?_⟩
