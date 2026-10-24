@@ -1421,6 +1421,38 @@ invariant over `GRest` continuations, not a lifting of an existing theorem. (c) 
 syntax for passing modes; the Lean model takes interfaces as checker input. Whether they are declared in the source
 or inferred is a language decision (Lean model first), and the Rust work follows the review of (a).
 
+### 12.10 Ownership at every GA/GX step: design (2026-10-24)
+
+**Choice.** One GLOBAL ghost ledger for the whole machine, not a per-thread replay. Extending the GX replay
+(`KopfSA`: a sequential run under the lock havoc `U` and the atomic environment `A`) cannot carry ownership of an
+arena whose carriers are protected by a lock: the havoc at an acquire may move the free-list head, the counter and
+the links arbitrarily, so a per-thread ledger loses agreement with the world. The global ledger covers thread-local
+AND lock-protected arenas (the strongest variant).
+
+**Invariant** `OwnInv A I M`: some ledger `s` agrees with the shared memory and its free list is well formed, and
+every thread `t` satisfies `ThreadOk`: its frames are activations `⟨t, a_d⟩` (distinct per depth), the head frame
+realises a source context `c` over its environment with complete accounting, and its residue is judged
+(`OR k c r`, a judgment over `GRest` that mirrors `OB`/`OE` and accepts `leave`/`next` arriving at the loop
+shims); every suspended frame keeps the context of its pending call (plan, lent and moved handles) and its residue
+after the return.
+
+**Rely/guarantee.** A step of thread `u` changes only ledger cells whose owner is a frame of `u` (moves stay in the
+thread; loans stay in the thread; allocation and release act on the stepping frame), so every other thread's
+`ThreadOk` is kept. Effects of a returning callee are framed per thread (`framedT`): cells of other threads may have
+changed meanwhile, never cells of the caller's thread outside the callee.
+
+**Atomicity of the allocator forms.** `alloc` and `free` take two or three machine steps (narrow, payload store,
+counter or head update). Between them the residue is in a PENDING state (binder = counter or free-list head, slot
+not yet live; link written, head not yet moved). The pending state is kept under other threads' steps because the
+arena's carriers are either guarded by a lock the thread holds (`darf`/`gdarf` in the form, `rufG_haelt_statisch`,
+`exklusivG`, `schritt_traeger`) or written by one thread only; this is the rely premise, discharged from the
+existing machine facts.
+
+**Steps.** (F1) thread-relative effects; (F2) the residue judgment `OR` and its link to `OB`/`OE`; (F3) per-step
+preservation for one thread's head steps (leaves via `os_sound` with the call-free handler, unfoldings, loop shims,
+peels); (F4) push/pop with `State.handoff`/`State.restore` in thread-relative form; (F5) other threads; (F6) the
+reachable-machine theorem over G, GA and GX (shared atomics are not arena carriers) and the leg beside `ZielX`.
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing
