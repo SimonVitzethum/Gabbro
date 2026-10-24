@@ -1559,3 +1559,26 @@ All source/goal/unbounded-G boundaries from 13.2 remain open.
 Validation: full library plus G-stack audit succeeds (2,234 jobs). All 58 G-stack, 68 heap-backend and 64 storage audit entries use
 standard axioms only; the primary goal keeps exactly the standard three. No-holes, goal axioms, 1,067-file layout and whitespace checks
 pass. The whole-function proof composes the loop execution equation instead of normalizing its entire functional memory.
+
+### 13.7 Brainfuck executed directly as a G program over one finite arena (2026-10-24)
+
+`Berechenbarkeit/BrainfuckG/{Kopf,Nimm,Lege,Schritt,Programm}.lean` with `Storage/GStack/{Multi,TakeOrBump}.lean` compile every
+well-formed byte-Brainfuck program to ONE G statement, uniformly in the program: `programm = runsUntil (pc = n) { if pc = 0 {...}
+else if pc = 1 {...} ... }`. A state lives in two locals (head byte `int 0 255`, counter `int 0 n`) and four linked stacks in one
+arena (left tape, right tape, remaining input, reversed output; `MultiRep`, disjoint cell sets, every other stack unchanged by a push
+or pop). `>`, `<`, `.` push the head through `Block.takeOrBump` (free list first, then the counter; with neither the declared failure
+block runs, `takeOrBump_full`); `>`, `<`, `,` pop into the head (zero on an empty stack); `+`/`-` are `(h + 1) % 256`, `(h + 255) % 256`.
+
+* `befehl_schritt` / `befehl_genau`: one instruction block runs normally to exactly the represented successor state, or (a push without
+  room) the failure block -- nothing else.
+* `programm_vollstaendig`: a Brainfuck run halting after `k` steps is completed by every budget above `k`, normally in the represented
+  final state, or by the failure block's abort. `programm_korrekt`: every normal completion is a halting Brainfuck run of fewer steps than
+  the budget, in the represented final state. `programm_haelt`: from the initial state on an input, normal completion gives
+  `HaltsWith p input out` with `out` on the output stack.
+* Witnesses (`*Witnesses.lean`): push/pop on two stacks; a push of 7, a push in a full arena; the `.` block on head 7 and in a full arena;
+  the program `.` on empty input completed normally by two real passes, with its `HaltsWith`.
+
+Scope, stated exactly: the arena has a fixed count, so a long run may end in the failure block; that is the refuse-on-full form, not an
+unbounded G declaration. The initial representation (input already on its stack) is a premise, not a proved G loader. Checker admission
+(`Akzeptiert`) of `programm`, the goal statement and the Rust side are untouched; all boundaries of 13.2 for an unbounded region remain.
+All new audit entries use standard axioms only.
