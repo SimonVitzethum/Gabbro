@@ -1,4 +1,4 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Witnesses
+import Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses
 import Grammatik.Berechenbarkeit.Storage.HeapAudit
 
 /-! Axiom audit of the actual, capacity-bounded G stack bridge.
@@ -40,3 +40,12 @@ The imported heap audit retains the separate unbounded component boundary. -/
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Witnesses.program_exec_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Witnesses.program_termination_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Witnesses.program_accepted_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.push_owned
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.pop_owned
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.empty_agrees
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.reused_valid
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.reused_agrees
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.reused_other_owns
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.cycle
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.fresh_owned_cycle_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses.reused_owned_cycle_zeuge

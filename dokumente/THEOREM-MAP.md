@@ -4671,3 +4671,13 @@ Scope and the exact remaining boundary: `PLAN-DYNAMIC.md` 13.4.
   separately. This is not the new source ownership checker, an unbounded G arena or a whole-program TM2/G simulation.
 
 Full library plus G-stack audit: 2,230 jobs; 36 new axiom lists, all standard. No-holes, goal-axiom, layout and whitespace checks pass.
+
+### 93.3. Exact G stack live sets and ownership grants (2026-10-24)
+
+`GStack/Allocation.lean` now proves exact live-set insertion for both real allocators; `popAndRelease_values` exposes exact removal.
+`Grants.{push_owned,pop_owned}` connect those executions to the existing ownership ledger, including fresh grant creation,
+slot-wide alias invalidation and exact preservation of all unrelated ledger entries. `GrantWitnesses.{cycle,fresh_owned_cycle_zeuge,
+reused_owned_cycle_zeuge}` jointly instantiate code execution, byte retention, free-list safety, grants and another frame's existing
+allocations, including a live cell outside the old stack. See `PLAN-DYNAMIC.md` 13.5 for the unchanged source/goal boundary.
+
+Full library plus audit: 2,232 jobs; 45 G-stack axiom lists, all standard; no-holes, goal axioms, layout and whitespace checks pass.

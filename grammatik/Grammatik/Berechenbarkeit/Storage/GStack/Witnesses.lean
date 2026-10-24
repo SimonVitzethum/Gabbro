@@ -94,7 +94,7 @@ theorem roundTrip_correct (O : Orakel FD) (passes : Nat)
   let receive : Gabbro.Grammatik.Block FD FV false
       (Payload :: Ty.index 4 :: [Payload, Payload]) [] [] :=
     .cons (.assignVar (.there (.there .here)) (.var .here)) .nil
-  obtain ⟨σ2, k2, hpop, _, hr2, hf2, hdead⟩ :=
+  obtain ⟨σ2, k2, hpop, _, hr2, hf2, hdead, _⟩ :=
     popAndRelease_values O passes R LL LG rfl (fgdarf _) rfl fdarf rfl (fgdarf _) failure
       receive σ1 initialEnv seven values hr1 hf1
   refine ⟨σ2, k2, ?_, hr2, hf2, hdead⟩

@@ -18,7 +18,7 @@ def Allocated (O : Orakel D) (passes : Nat)
     (∀ {Λ'} (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ'),
       execBlock O passes R (allocator rest) σ ρ = (execBlock O passes R rest σ' (.cons k ρ)).schrumpf) ∧
     k.n = slot ∧ A.Fremd σ σ' ∧ A.FreiOk σ' ∧
-    (∀ i, A.Lebt σ i → A.Lebt σ' i) ∧ A.Lebt σ' slot ∧ ¬ A.Lebt σ slot ∧
+    (∀ i, A.Lebt σ' i ↔ i = slot ∨ A.Lebt σ i) ∧ ¬ A.Lebt σ slot ∧
     (∀ i, σ'.slots A.tab i A.feld = if i = slot then value else σ.slots A.tab i A.feld)
 
 section Execution
@@ -47,22 +47,24 @@ theorem fresh_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
       rfl
     case payload =>
       intro i
-      simp [eval, Block.arenaBump, Expr.weaken, Expr.ins, Var.ins, Env.get_cons_here, Env.get_cons_there, FreiForm.kopfSt,
-        World.schreibSlot, World.merke, World.storeSlot, World.lese] <;> rfl
+      simp [eval, Block.arenaBump, Expr.weaken, Expr.ins, Var.ins,
+        World.schreibSlot, World.merke, World.storeSlot, World.lese]; rfl
   obtain ⟨σp, k, hexec, hkn, hbytes⟩ := hprefix
-  obtain ⟨σm, km, hm, hkm, hframe, hf', hlive, hnew⟩ :=
-    frischAlloc_ausfuehren O passes R A (.var x) hwT hLT hwU hLU failure (.nil) σ ρ hroom hf
+  obtain ⟨σm, hm, hhead, hlinks, hcount, hframe⟩ :=
+    arenaRumpf_ausfuehren O passes R A (.var x) hwT hLT hwU hLU (.nil)
+      (σ.lese Λ [Sum.inr A.zaehl]) ⟨A.stand σ, hk.1, hk.2⟩ ρ
   have hworld : σm = σp := by
     have he := hexec (.nil)
-    rw [hm] at he
+    rw [arenaAlloc_unter_schranke O passes R A.toArenaForm (.var x) hwT hLT hwU hLU
+      failure (.nil) σ ρ hroom, hm] at he
     change (Ausgang.ok σm ρ : Ausgang V l Γ) = .ok σp ρ at he
     cases he; rfl
   subst σm
-  refine ⟨σp, k, hexec, hkn, hframe, hf', hlive, ?_, ?_, hbytes⟩
-  · simpa only [hkm] using hnew
-  · intro hn
-    have := hn.2.1
-    omega
+  refine ⟨σp, k, hexec, hkn, hframe, (A.lebt_bump hf hhead hlinks hcount).1,
+    fun i => A.bump_live_iff hf hhead hlinks hcount i, ?_, hbytes⟩
+  intro hn
+  have := hn.2.1
+  omega
 
 theorem reused_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -86,21 +88,28 @@ theorem reused_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
       rfl
     case payload =>
       intro i
-      simp [eval, Expr.weaken, Expr.ins, Var.ins, Env.get_cons_here, Env.get_cons_there, FreiForm.kopfSt,
-        World.schreibSlot, World.merke, World.storeSlot, World.lese] <;> rfl
+      simp [eval, Expr.weaken, Expr.ins, Var.ins,
+        World.schreibSlot, World.merke, World.storeSlot, World.lese]; rfl
   obtain ⟨σp, k, hexec, hkn, hbytes⟩ := hprefix
-  obtain ⟨σm, km, hm, hkm, hframe, hf', hlive, hnew, honfree⟩ :=
-    nimmAlloc_ausfuehren O passes R A (.var x) hwT hLT hwF hLF failure (.nil) σ ρ hroom hf
+  obtain ⟨σm, km, hm, hkm, hhead, hlinks, hcount, hframe⟩ :=
+    nimmAlloc_fakten O passes R A (.var x) hwT hLT hwF hLF failure (.nil) σ ρ hroom
   have hworld : σm = σp := by
     have he := hexec (.nil)
     rw [hm] at he
     change (Ausgang.ok σm ρ : Ausgang V l Γ) = .ok σp ρ at he
     cases he; rfl
   subst σm
-  refine ⟨σp, k, hexec, hkn, hframe, hf', hlive, ?_, ?_, hbytes⟩
-  · simpa only [hkm] using hnew
-  · intro hn
-    exact hn.2.2 (by simpa only [hkm] using honfree)
+  refine ⟨σp, k, hexec, hkn, hframe, (A.lebt_abheb hroom hf hhead hlinks hcount).1,
+    fun i => A.take_live_iff hroom hf hhead hlinks hcount i, ?_, hbytes⟩
+  have honfree : A.AufListe σ (A.kopfSt σ) := by
+    obtain ⟨entries, hc, _, _⟩ := hf
+    generalize heq : A.kopfSt σ = root at hc hroom ⊢
+    cases hc with
+    | nil => exact absurd hroom (Int.lt_irrefl _)
+    | cons root hlo hhi tail ht =>
+      exact ⟨root :: tail, by rw [heq]; exact FreiForm.Kette.cons root hlo hhi tail ht, List.mem_cons_self⟩
+  intro hn
+  exact hn.2.2 honfree
 
 end Execution
 

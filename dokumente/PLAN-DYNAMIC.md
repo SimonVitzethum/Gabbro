@@ -1478,3 +1478,19 @@ of the separate ownership-source integration.
 Validation: full `Grammatik` plus `GStack.Audit` build succeeds (2,230 jobs). The 36 new G-stack audit entries and the earlier 68/64
 heap/storage entries use standard axioms only; `gabbro_ziel` retains exactly the standard three. The no-holes/axiom guardian stages,
 the 1,063-file Lean layout check and whitespace check pass. No Rust or binary validation is claimed for this Lean-only increment.
+
+### 13.5 Ownership grants across concrete G push/pop (2026-10-24)
+
+`Allocated` now specifies the exact live-set change, replacing its weaker monotonicity/new-cell pair. Fresh allocation and free-list
+reuse both prove that the selected slot is the only newly live slot. `popAndRelease_values` likewise states the exact removal.
+`GStack/Grants.lean` derives `push_owned` and `pop_owned` by combining these executed prefixes with the existing ownership ledger.
+Push issues one fresh incarnation/grant; link stores issue none. Pop saves the payload before release, invalidates every handle at
+the released slot in every frame, and retains every other ledger entry. This is a semantic bridge, not a new source admission rule.
+
+`GrantWitnesses.Cycle` observes the actual G code, stored byte, free-list invariant and ownership transitions jointly. Fresh and
+recycled witnesses instantiate it, with the recycled fixture retaining a nonempty old stack and live allocations owned by another
+frame, including a cell outside that stack. The complete ledger agreement premise checks those cells too. The old checker witness
+still does not imply general ownership admission; the remaining obligations in 13.2 and 13.4 are unchanged.
+
+Validation: full library plus G-stack audit succeeds (2,232 jobs); all 45 G-stack audit entries use standard axioms only. No-holes,
+goal axioms, 1,065-file layout and whitespace checks pass. No production source admission or Rust implementation is changed.
