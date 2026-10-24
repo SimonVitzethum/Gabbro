@@ -138,6 +138,9 @@ import Grammatik.Logik.Terminierung.LaufGX
 import Grammatik.Berechenbarkeit.RunsUntil
 import Grammatik.Berechenbarkeit.RunsUntilWitnesses
 import Grammatik.Berechenbarkeit.RecursionBoundary
+import Grammatik.Berechenbarkeit.AdmissionBoundary
+import Grammatik.Berechenbarkeit.TerminationCompatibility
+import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
 import Grammatik.Zielsatz.Atomar.MassRuhe
 import Grammatik.Zielsatz.Atomar.BeweisTerminierung
 import Grammatik.Zielsatz.Atomar.TerminierungZeuge

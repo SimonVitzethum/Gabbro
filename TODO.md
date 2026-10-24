@@ -162,6 +162,11 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   packages U0-U10: all eight Brainfuck commands compiled through finite Mathlib TM2
   to the actual G machine, with input loading, safety/admission, bidirectional halt and output-prefix preservation, nested-fuel adequacy,
   conditional time/space bounds and a partial-recursive-function/undecidability bridge. Resolve real push/pop and admission at U0 first.
+  **Checked intermediate milestone:** `Brainfuck/{Machine,ToTM2,Fuel,Witnesses}.lean` proves the eight-command byte semantics,
+  exact BF-to-TM2 step/evaluation/halting/output correspondence and finite halting certificates, with nested-loop and divergence probes.
+  `AdmissionBoundary.lean` proves generic rejection of reachable unmeasured non-tail cycles. `TerminationCompatibility.lean` proves
+  incompatibility with a complete computable halting test under an explicit reduction premise. Raw-text parsing, Gabbro storage/backend,
+  admission, initialization and the universality bridge remain open. Simon confirmed: checked classes/proofs with conditional runs allowed.
 
 ## 3. Checker
 

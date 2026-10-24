@@ -481,6 +481,19 @@ guardians inside the acceptance run. Built: `gabbro gabbrov pruefe` and the `Bru
 subdirectories before any folder exceeds 20 entries. This plan concerns the Lean language model;
 it does not certify the Rust compiler or a finite physical computer.
 
+**Implementation milestone (2026-10-24):** `Brainfuck/{Machine,ToTM2,Fuel,Witnesses}.lean` now
+defines the eight-command byte semantics and validates nested bracket destinations, proves exact
+BF-to-TM2 one-step and partial-evaluation correspondence, reflects/preserves reachable states, and
+checks finite halting certificates with exhaustion distinct. Typed witnesses cover nested loops,
+input/EOF, wraparound and output before proved divergence. This is a compiler over validated finite
+instruction vectors; a raw-text frontend and the actual Gabbro stack/backend remain open.
+`AdmissionBoundary.lean` proves the generic rejection of every reachable unmeasured non-tail cycle;
+`TerminationCompatibility.lean` proves the no-complete-halting-test implication under an **explicit**
+effective reduction premise, not an already established Gabbro universality theorem.
+
+**Confirmed constraint (Simon, 2026-10-24):** termination classes and supplied termination proofs
+remain checked; conditional executions are allowed. No complete semantic halting decider is requested.
+
 ### D5.1. The deliverables and their quantifiers
 
 The deliverables are a uniform compiler for **every well-formed Brainfuck program**, its semantic

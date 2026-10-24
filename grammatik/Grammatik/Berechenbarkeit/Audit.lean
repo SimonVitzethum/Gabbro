@@ -2,6 +2,9 @@
    This file checks the existing goal theorem as well; it makes no universality claim. -/
 import Grammatik.Berechenbarkeit.RunsUntilWitnesses
 import Grammatik.Berechenbarkeit.RecursionBoundary
+import Grammatik.Berechenbarkeit.AdmissionBoundary
+import Grammatik.Berechenbarkeit.TerminationCompatibility
+import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Grammatik.Terminierung.ExitTrace.run
@@ -37,3 +40,44 @@ import Grammatik.Berechenbarkeit.RecursionBoundary
 #print axioms Gabbro.Grammatik.Berechenbarkeit.RecursionBoundary.claimed_measure_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.RecursionBoundary.no_measure_duty
 #print axioms Gabbro.Grammatik.Berechenbarkeit.RecursionBoundary.no_wellFounded_ranking
+
+-- Universality development: exact intermediate compiler and termination boundaries.
+#print axioms Gabbro.Grammatik.Berechenbarkeit.AdmissionBoundary.unmeasured_non_tail_rejected
+#print axioms Gabbro.Grammatik.Berechenbarkeit.AdmissionBoundary.admitted_cycle_has_measure_or_tail
+#print axioms Gabbro.Grammatik.Berechenbarkeit.AdmissionBoundary.rejection_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.AdmissionBoundary.conditional_tail_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.TerminationCompatibility.no_complete_halting_test
+#print axioms Gabbro.Grammatik.Berechenbarkeit.TerminationCompatibility.reference_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.runFor_sound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.runFor_complete
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.runFor_iff
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.haltsWith_iff_fuel
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.runFor_mono
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.runFor_translation
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.halt_iff
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.increment_wrap
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.decrement_wrap
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.jump_exec
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.instruction_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.step_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.respects
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.evaluation_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.termination_iff
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.reachable_preservation
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.reachable_reflection
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.steps_iff_reaches
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.haltsWith_iff_eval
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.compiler_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.transfer_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.transfer_halts_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.transfer_tm2_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.insufficient_fuel_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.eof_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.nested_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.wrap_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.output_before_divergence_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.spin_step_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.self_loop_not_terminating
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.divergence_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.tm2_divergence_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.invalid_brackets_zeuge

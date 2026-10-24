@@ -4524,3 +4524,28 @@ The Lean guardian's no-holes scan and the repository layout check pass. These ar
 specifies the complete Brainfuck-to-finite-TM2-to-G compiler proof and the shared
 partial-recursive-function bridge, packages U0-U10. Its initialization, admission, scheduling, nested-fuel, trace and termination
 obligations are planned work, not additional theorems proved by this section.
+
+### 91.1. Checked BF-to-TM2 compiler and termination compatibility (2026-10-24)
+
+*Files: `Berechenbarkeit/Brainfuck/{Machine,ToTM2,Fuel,Witnesses}.lean`, `AdmissionBoundary.lean`,
+`TerminationCompatibility.lean`, with all new theorem axioms checked by `Berechenbarkeit/Audit.lean`.*
+
+| Statement | Exact scope |
+|---|---|
+| `Brainfuck.halt_iff`, `increment_wrap`, `decrement_wrap` | Eight-command byte semantics, two-sided unbounded tape, zero at EOF; only end-of-code is normal halt. Bracket destinations are validated for nesting and pairing. |
+| `instruction_correct`, `step_correct` | Every source instruction is executed by genuine Mathlib TM2 operations; exact step equality, no computational oracle. |
+| `evaluation_correct`, `termination_iff`, `compiler_correct` | All validated finite BF instruction vectors have the same partial evaluation, halting and output in TM2. This is **not yet** a Gabbro backend. |
+| `reachable_preservation`, `reachable_reflection` | Intermediate states and output prefixes correspond, including on computations that never halt. |
+| `runFor_sound`, `runFor_complete`, `runFor_iff`, `haltsWith_iff_fuel`, `runFor_mono` | A finite bound is executable and a successful answer contains a genuine halting trace. A sufficiently large bound recognizes every supplied finite trace. Exhaustion is a separate constructor. |
+| `runFor_translation` | The same small-step fuel gives exactly corresponding BF/TM2 normal or exhausted states; no Gabbro overhead bound is inferred. |
+| `transfer_*`, `eof_zeuge`, `nested_zeuge`, `wrap_zeuge`, `insufficient_fuel_zeuge` | Real input/tape writes, both pointer directions, nested loops, EOF, wrap and a failing smaller bound. |
+| `output_before_divergence_zeuge`, `divergence_zeuge`, `tm2_divergence_zeuge`, `invalid_brackets_zeuge` | A byte is output before a proved infinite loop; compilation cannot manufacture a normal halt; malformed brackets fail validation. |
+| `AdmissionBoundary.unmeasured_non_tail_rejected`, `admitted_cycle_has_measure_or_tail` | Generic over actual Gabbro programs: every reachable unmeasured non-tail cycle rejects its start. The existing conditional tail-cycle witness is still admitted. |
+| `TerminationCompatibility.no_complete_halting_test` | Given an **explicit computable halting reduction** from Mathlib partial-recursive codes, the target's normal-halting predicate is not computable. The reference witness is the source code model, not a claimed Gabbro compiler. |
+
+Simon confirmed that decidable classes and checking supplied termination proofs remain required while conditional runs are allowed.
+No Gabbro construct, classifier, measure duty or goal premise changed. Still open: raw BF text to validated vectors, real Gabbro
+stack workers/protocol, their admission and initialization, the TM2-to-G simulation and the final universality theorem.
+
+Validation of this milestone: full `lake build` succeeds (1,849 jobs), the expanded axiom audit checks 73 declarations
+with standard axioms only, and the goal-axiom, no-holes and layout checks pass. No production Rust or binary claim follows.
