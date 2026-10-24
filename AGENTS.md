@@ -248,8 +248,10 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
   A heap without a ceiling stays refused BY DEFAULT. **Planned, not required** (Simon,
   2026-09-29): an explicitly declared region WITHOUT a ceiling, as an opt-in beside the default
-  (every allocation may fail and must be handled; the static whole-program memory bound is lost
-  for such a program, which is what makes the language Turing-complete in the model). TODO §4.
+  (the static whole-program memory bound is lost for such a program, which is what makes the
+  language Turing-complete in the model). TODO §4. **OOM is user logic** (Simon, 2026-10-24): an
+  allocation needs no source OOM path; that the provider has memory to give is the program's own
+  obligation (its provider contract). The open region is PLAN-DYNAMIC 14 (cells only from the provider).
 - **Tag milestones** at the push that reaches them.
 - **Security:**
   - Never write API keys or passwords into the repo, memory or logs. The opencode keys live only

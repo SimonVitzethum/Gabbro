@@ -343,17 +343,17 @@ of §8.2 (refusal, never "optimised but unchecked"); a LANGUAGE item goes into t
 | G2 | `return E from f`: one discriminant per frame, checked after each call, no unwinder | the reason channel (`why`, `retWhy`, `bindCallElse`) lowered the same way | lowering | the reason reaches exactly the source-declared `else`; budget and call log unchanged |
 | G3 | specialisation per call-site key (literal parameters, function values, narrowed options) | a `fnptr` call whose target is decided, constant parameters | lowering | §8.3 I1/I2: contracts at their place with actual values, `FolgeG` order, budget of the inlined body |
 | G4 | flat layout: no interior pointers; variable-mode enums pay only their own variant; narrow ids (`u32`) | table cells and sums laid out flat, narrow cells from the range types (`narrowCell`), compact sums where not indexed | lowering | `LayoutOk` of the address leg; sums that are indexed stay fixed-size |
-| G5 | reserve address space, commit on use | the open region (PLAN-DYNAMIC 14) reserves its own address space and commits on use | lowering | the provider answer stays the ONLY gate: no growth without it; exhaustion goes to the failure branch, never a trap |
+| G5 | reserve address space, commit on use | the open region (PLAN-DYNAMIC 14) reserves its own address space and commits on use | lowering | a cell exists only after the provider answered it; that the provider has memory is user logic (Simon, 2026-10-24) |
 | G6 | relative references (`T&<u32>`, 1/2/4 bytes) | `ref` is already a cell number of its region; width from the provider's bound | lowering | a width too small for an answer refuses at the provider, not by truncation |
 | G7 | loop facts and hoisting (`fixedlen`, `lenbound`, `hoistrefs`, `hoistfields`) | loop-invariant reads of fields and references hoisted | lowering | §8.3 L1/L2 and §8.4: no store to the footprint in the loop, no lock/atomic/call/device boundary crossed |
 | G8 | `--bce-lines`, `checkfree fn` | a report of the runtime checks a function keeps (`narrow`, `check`, division guards) and an opt-in attribute that refuses a function keeping any | LANGUAGE (attribute) | Gabbro's index types already make most bounds static; the attribute only refuses, it never removes a check |
 | G9 | shared-nothing workers, flat values over typed queues (`memcpy`) | a queue form for flat values beside the lock discipline | LANGUAGE (library form) | race freedom by construction (no shared carrier); the queue's contract is user logic |
 | G10 | verified deserialisation (`from_bytes`: framing, tags, lengths, links) | a decoder generated from a `format` over byte carriers (`getBytes`, `einpassen`) | lowering + proof | the decoder accepts exactly the well-formed values; corrupt input takes the failure branch |
-| G11 | data stack: bump allocation freed at scope exit (one store) | an ADDITIONAL storage class for function-local dynamic values, beside heap and regions | LANGUAGE (later) | every growth has its failure branch (no unchecked growth); nothing escapes its scope (ownership judgment) |
+| G11 | data stack: bump allocation freed at scope exit (one store) | an ADDITIONAL storage class for function-local dynamic values, beside heap and regions | LANGUAGE (later) | enough room is user logic (OOM is user logic); nothing escapes its scope (ownership judgment) |
 
 **Not taken over:**
-* growth without a capacity check on a fixed reservation (Goose's 2 GB stacks): exhaustion would be a fault, not the
-  declared failure branch (Simon: every allocation has an OOM path);
+* (revised 2026-10-24) growth without a capacity check is no longer excluded on principle: OOM is user logic, so a growth
+  whose room the program proves needs no check; a growth whose room is NOT proved stays refused, never a silent trap;
 * reusable pools whose stale slots read "a value of the right type": Gabbro's ownership judgment rules stale use out, which is
   stronger;
 * "no heap": Gabbro keeps its heap forms.
