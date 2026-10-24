@@ -23,7 +23,7 @@ theorem consume_call_frame (A : FreiForm D) (C : ∀ f, Contract D f)
     {σ' : World D} {ρ' : Env D Γ}
     (he : execStmt (l := l) O passes R (Stmt.call f args hp hr) σ ρ = .ok σ' ρ') :
     ∃ s' : State, s'.agrees A σ' ∧ A.FreiOk σ' ∧ ρ' = ρ ∧ (∀ frame, ¬ s'.access frame h) ∧
-      (∀ j, j ≠ h.slot → s'.cells j = s.cells j) := by
+      (∀ j, j ≠ h.slot → s'.cells j = s.cells j) ∧ s.next ≤ s'.next := by
   obtain ⟨si, hi, hm⟩ := State.move_exists ho ht
   have hmprops := State.move_valid ha.1 caller callee h hm
   have hsi := State.move_agrees (State.agrees_reads ha Λ args.orte) caller callee h hi hm
@@ -46,13 +46,18 @@ theorem consume_call_frame (A : FreiForm D) (C : ∀ f, Contract D f)
     cases he
     have hpst := hpost.1 σ' v hcall
     rw [hC] at hpst
-    obtain ⟨so, hso, hfree, released, hown, hslot, hrelease⟩ := hpst
+    obtain ⟨so, hso, hfree, released, hown, hslot, hconsumed⟩ := hpst
     have hsame : released = hi := State.own_handles_equal hown hmprops.2.1
       (hslot.trans (hmprops.2.2.2.1.trans hx.symm).symm)
     subst released
-    refine ⟨so, hso, hfree, rfl, State.release_excludes_slot hrelease hmprops.2.2.2.1.symm, ?_⟩
-    intro j hj
-    exact (State.release_other hrelease j (hmprops.2.2.2.1 ▸ hj)).trans (State.move_other hm j hj)
+    refine ⟨so, hso, hfree, rfl, ?_, ?_, ?_⟩
+    · intro other
+      simp [State.access, ← hmprops.2.2.2.1, hconsumed.1]
+    · intro j hj
+      exact (hconsumed.2.1 j (hmprops.2.2.2.1 ▸ hj)).trans (State.move_other hm j hj)
+    · have hn := hconsumed.2.2
+      rw [State.move_next hm] at hn
+      omega
   | why sw r => exact (Fin.cast hr r).elim0
   | logik e => rw [hcall] at he; cases he
   | hardware e => rw [hcall] at he; cases he
@@ -71,7 +76,7 @@ theorem consume_call (A : FreiForm D) (C : ∀ f, Contract D f)
     {σ' : World D} {ρ' : Env D Γ}
     (he : execStmt (l := l) O passes R (Stmt.call f args hp hr) σ ρ = .ok σ' ρ') :
     ∃ s' : State, s'.agrees A σ' ∧ A.FreiOk σ' ∧ ρ' = ρ ∧ (∀ frame, ¬ s'.access frame h) := by
-  obtain ⟨s', ha', hf', hrho, hdead, _⟩ := consume_call_frame A C O passes R hR f x hC args hp hr
+  obtain ⟨s', ha', hf', hrho, hdead, _, _⟩ := consume_call_frame A C O passes R hR f x hC args hp hr
     caller callee s h σ ρ ha hf ho ht hx he
   exact ⟨s', ha', hf', hrho, hdead⟩
 

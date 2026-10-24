@@ -1324,6 +1324,38 @@ These source rules are still primitives: they do not yet constitute a complete f
 integration obligations above. Quantified/range arena expressions currently have an explicit conservative refusal.
 
 
+### 12.7 Source-certified calls and exact remaining integration (2026-10-24)
+
+The ownership contracts now describe framed effects rather than one exact allocator invocation. A destructor removes precisely the
+selected allocation, preserves every other cell and never decreases the grant clock. An owning identity/forwarder returns the same
+allocation with a current grant and preserves every other cell; a borrow restores the original ledger. This admits nested transfers
+without weakening the caller's frame or confusing allocation identity with the current grant.
+
+`Source/Admission.lean` defines syntax-indexed `CheckedBody` certificates for source identity, destructor, fallible factory, consuming
+forwarder and owning-result forwarder bodies. No constructor accepts a semantic preservation premise. `checked_bodies` derives the
+former `Bodies` obligation from those source certificates; `checked_calls` consequently proves actual `rufAt` contract respect for
+all recursion budgets. The destructor and factory witnesses now instantiate this source judgment. This is a **restricted source
+judgment**, not an executable whole-language checker: other G body shapes have no certificate yet.
+
+`Source/Calls.lean` derives the consuming caller-context update from the selected actual argument expression. `Source/Results.lean`
+gives a returned owner a new source origin, retains old aliases as consumed, and preserves unrelated owning and borrowing grants.
+Factory reasons preserve the complete caller context for arbitrary initial states, not only an empty-heap example. Source parameter
+provenance, expression substitution and a shared owning-binder rule connect these judgments to actual argument/result values.
+`ArgumentFlow` checks typed argument lists, rejecting repeated owners and either ordering of loan/owner overlap; its generic rejection
+lemmas and concrete negative witnesses are proved. It is not yet a complete multi-argument runtime handoff theorem.
+
+`Source/ForwardWitness.lean` instantiates all source-certificate and execution premises jointly: one real G function calls another,
+returns its owning result, and the caller frees that returned object. Old grants are unusable, the old source name is refused, and the
+new result name is admitted. A second actual G call borrows the object, cannot release it, and restores the exact original owner grant.
+
+Validation: the ownership audit builds (590 jobs) and the complete library builds (2,218 jobs); audited declarations use only standard
+axioms. Layout and whitespace checks pass. The primary `gabbro_ziel` statement and its user/hardware assumptions are unchanged.
+**Still open, so the requested full gap is not closed:** general source-body admission (including joins, loops, compatible indirect
+calls and full argument handoff), preservation at every real GA/GX prefix, integration in the actual `Akzeptiert`/`PrueferX` and reviewed
+goal path, and the Lean front-end/exporter bridge. The new certificates are not that missing central admission check. No Rust or final
+binary claim follows. Do not move any of these missing memory proofs into `NutzerPflichtA` or RAM/hardware assumptions.
+
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing
@@ -1380,3 +1412,36 @@ Validation of this increment: the dedicated Lean audit builds successfully (810 
 succeeds (2,188 jobs). The 64 audited declarations use only standard axioms,
 and `gabbro_ziel` still has exactly `propext`, `Classical.choice`, `Quot.sound`. Joint witnesses exercise reuse/stale aliases, double free,
 OOM on reuse, movement, exclusive loans, reset, the bounded policy, mixed executions and actual G payload/refusal execution.
+
+
+### 13.3 Linked-stack machine backend and conditional bounds (2026-10-24)
+
+`Unbounded/{Frame,Linked,Observe}.lean` adds cell-level framing and an actual linked stack on the same heap. Push allocates a node
+containing one value and one region reference; pop reads and releases the head. The representation theorem preserves all remaining
+nodes' grants/payloads. Distinct cells in a well-formed chain bound its length by the current heap extent; `readAll_extent` therefore
+observes real linked cells with finite fuel computed from the heap itself. No list-valued stack oracle sits in finite control.
+
+`Berechenbarkeit/Storage/{TM2Heap,TM2Execution,TM2Initialize,TM2Run,TM2Observe,TM2Cost,BrainfuckHeap,BrainfuckBounds,HeapWitnesses,HeapAudit}.lean`
+implements Mathlib TM2's push/peek/pop/load/branch/goto/halt using region-branded linked cells. Each stack has its own region brand.
+The finite control retains its original labels and local values, plus one optional reference per stack. Input loading really allocates
+cells; OOM returns the already allocated prefix for the caller to handle. Normal halt, fuel exhaustion, OOM and invalid storage are
+separate outcomes. Representation invariants exclude invalid storage; arbitrary provider refusals preserve safe intermediate storage.
+
+`BrainfuckHeap.compiler_correct` proves that **every well-formed byte-Brainfuck program** has exactly the same normal halting/output
+behaviour in this heap backend when allocations are available, starting from the actual allocated input. The exact finite-budget
+correspondence includes one silent entry/halt transition for empty source code. `run_sound_any` proves provider refusal cannot fabricate
+a normal guest halt; `divergence_preserved` rules out a spurious halt at every budget, including when allocation may fail. Computational
+witnesses execute transfer (19 transitions), nested loops (40), byte wrapping, empty code, insufficient fuel, input/output OOM and
+output before divergence. A separate push/load/peek/pop witness checks real head retention and release.
+
+`TM2Cost.Counted` and `Driven` are faithful traces of the executable interpreter. Every finite statement tree has a computed operation
+bound, including failure paths. Compiled Brainfuck uses at most four abstract heap/control operations per transition. A supplied finite
+halting trace of `k` source transitions yields a target termination certificate with at most `4 * (k + emptyEntry)` such operations.
+Input loading and output observation are separate finite procedures. These are **abstract operation counts**, not CPU-cycle, allocator,
+provider-latency or hardware WCET bounds. No general halting decider or relaxed termination class is added.
+
+Validation: full `Grammatik` plus `HeapAudit` build succeeds (2,213 jobs). The 68 new audit entries and the original storage audit's 64
+entries use only standard axioms; the goal keeps exactly the standard three. The Rust checker/compiler are unchanged. The remaining
+boundary in 13.2 is still binding: this is a proved executable heap backend, **not yet an admitted whole-program unbounded G construct**.
+The next bridge must execute the stack protocol in G and prove source admission, initialization and final normal return, rather than
+claim universality from a family of independently bounded programs.

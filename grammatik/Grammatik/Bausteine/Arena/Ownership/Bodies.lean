@@ -1,4 +1,4 @@
-import Grammatik.Bausteine.Arena.Ownership.Calls
+import Grammatik.Bausteine.Arena.Ownership.Effects
 
 /-! Generic source certificates for ownership operations. These are actual G
 end blocks, not assumed foreign functions. The theorems quantify over every
@@ -39,9 +39,13 @@ def identityContract (A : FreiForm D) (f : D.Fn)
     (x : Var (D.params f) (Ty.index (D.count A.tab)))
     (he : D.erg f = some (Ty.index (D.count A.tab))) (mode : PassingMode) : Contract D f where
   requires := fun frame s ρ => ∃ h, mode.permits s frame h ∧ h.slot = (ρ.get x).n
-  ensures := fun _frame s ρ s' answer =>
+  ensures := fun frame s ρ s' answer =>
     match answer with
-    | .value v => s' = s ∧ (ergWert he v).n = (ρ.get x).n
+    | .value v =>
+      (ergWert he v).n = (ρ.get x).n ∧
+      match mode with
+      | .borrowed => s' = s
+      | .owned => ∃ h k, s.owns frame h ∧ h.slot = (ρ.get x).n ∧ s.returned s' frame h k
     | .reason _ => False
 
 def identityBody (A : FreiForm D) (f : D.Fn)
@@ -58,18 +62,24 @@ theorem identity_checked (A : FreiForm D) (f : D.Fn)
     (O : Orakel D) (passes : Nat)
     (R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g)
     (frame : Frame) (s : State) (σ : World D) (ρ : Env D (D.params f))
-    (ha : s.agrees A σ) (hf : A.FreiOk σ) :
+    (ha : s.agrees A σ) (hf : A.FreiOk σ)
+    (hpre : (identityContract A f x he mode).requires frame s ρ) :
     (identityContract A f x he mode).bodyPost A frame s ρ
       (execEnd O passes R (identityBody A f x he hend) σ ρ) := by
-  refine ⟨s, State.agrees_reads ha _ _, free_invariant_reads hf _ _, rfl, ?_⟩
-  exact congrArg (fun v => v.n) (valueResult_eval he (.var x) _ _ _)
+  refine ⟨s, State.agrees_reads ha _ _, free_invariant_reads hf _ _, ?_, ?_⟩
+  · exact congrArg (fun v => v.n) (valueResult_eval he (.var x) _ _ _)
+  · cases mode with
+    | borrowed => rfl
+    | owned =>
+      obtain ⟨h, ho, hx⟩ := hpre
+      exact ⟨h, h, ho, hx, State.returned_refl ho⟩
 
 def destructorContract (A : FreiForm D) (f : D.Fn)
     (x : Var (D.params f) (Ty.index (D.count A.tab))) : Contract D f where
   requires := fun frame s ρ => ∃ h, s.owns frame h ∧ h.slot = (ρ.get x).n
   ensures := fun frame s ρ s' answer =>
     match answer with
-    | .value _ => ∃ h, s.owns frame h ∧ h.slot = (ρ.get x).n ∧ s.release frame h = some s'
+    | .value _ => ∃ h, s.owns frame h ∧ h.slot = (ρ.get x).n ∧ s.consumed s' h
     | .reason _ => False
 
 /-- The ordinary source expansion of a destructor. -/
@@ -108,6 +118,7 @@ theorem destructor_checked (A : FreiForm D) (f : D.Fn)
     (σ.lese (Signatur.anfang D (D.signatur f)) []) ρ = .ok σ' ρ at hr
   simp only [destructorBody, execEnd, execStmt, Expr.orte, eval, wahr?, ite_true]
   rw [hr]
-  exact ⟨s', State.agrees_reads ha' _ _, free_invariant_reads hf' _ _, h, hown, hslot, hs⟩
+  exact ⟨s', State.agrees_reads ha' _ _, free_invariant_reads hf' _ _, h, hown, hslot,
+    State.release_consumed hs⟩
 
 end Gabbro.Grammatik.ArenaOwnership

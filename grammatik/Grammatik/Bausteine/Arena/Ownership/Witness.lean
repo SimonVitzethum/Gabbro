@@ -1,4 +1,4 @@
-import Grammatik.Bausteine.Arena.Ownership.Boundary
+import Grammatik.Bausteine.Arena.Ownership.Source.Admission
 import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
 
 /-! Joint witnesses over the existing four-slot arena fixture. The source
@@ -62,10 +62,13 @@ def P : Programm D where
 
 def C (f : D.Fn) : Contract D f := destructorContract A f .here
 
-theorem bodies (O : Orakel D) (passes : Nat) : Bodies P A C O passes := by
-  intro R _ f frame s σ ρ ha hf hp
-  exact destructor_checked A f .here rfl rfl tab_right rfl (glob_right _) (List.Perm.refl [])
-    O passes R frame s σ ρ ha hf hp
+theorem source_checked : Source.CheckedProgram P A C := by
+  intro f
+  exact Source.CheckedBody.destroy (A := A) (C := C) (f := f) .here rfl rfl tab_right rfl (glob_right _)
+    (List.Perm.refl [])
+
+theorem bodies (O : Orakel D) (passes : Nat) : Bodies P A C O passes :=
+  Source.checked_bodies P A C source_checked O passes
 
 def caller : Frame := ⟨0, 0⟩
 def callee : Frame := ⟨0, 1⟩

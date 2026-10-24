@@ -17,7 +17,7 @@ theorem factory_result (A : FreiForm D) (C : ∀ f, Contract D f)
     {σ' : World D} {v : ErgVal D (D.erg f)} (hrun : R f σ ρ = .ok σ' v) :
     ∃ (s' : State) (h : Handle), s'.agrees A σ' ∧ A.FreiOk σ' ∧ s'.owns caller h ∧
       h.slot = (ergWert he v).n ∧
-      (∀ old, s.owns caller old → s'.owns caller old) := by
+      (∀ old, s.owns caller old → s'.owns caller old) ∧ s.cells h.slot = none ∧ s.sameOutside s' h.slot := by
   have hpre : (C f).requires callee s ρ := by rw [hC]; trivial
   have hp := (hR f callee s σ ρ ha hf hpre).1 σ' v hrun
   rw [hC] at hp
@@ -26,16 +26,21 @@ theorem factory_result (A : FreiForm D) (C : ∀ f, Contract D f)
   obtain ⟨returned, handle, hmove⟩ := State.move_exists hown ht
   have hm := State.move_valid haa.1 callee caller result hmove
   refine ⟨returned, handle, State.move_agrees haa callee caller result handle hmove, hfa, hm.2.1,
-    hm.2.2.2.1.trans hslot, ?_⟩
-  intro old hold
-  obtain ⟨c, hc⟩ := State.own_cell hold
-  have hne : old.slot ≠ result.slot := by
-    intro hs
-    rw [hs, State.allocate_empty halloc] at hc
-    cases hc
-  apply State.owns_from_same_cell (s := s)
-  · exact (State.move_other hmove old.slot hne).trans (State.allocate_other halloc old.slot hne)
-  · exact hold
+    hm.2.2.2.1.trans hslot, ?_, ?_, ?_⟩
+  · intro old hold
+    obtain ⟨c, hc⟩ := State.own_cell hold
+    have hne : old.slot ≠ result.slot := by
+      intro hs
+      rw [hs, State.allocate_empty halloc] at hc
+      cases hc
+    apply State.owns_from_same_cell (s := s)
+    · exact (State.move_other hmove old.slot hne).trans (State.allocate_other halloc old.slot hne)
+    · exact hold
+  · rw [hm.2.2.2.1]
+    exact State.allocate_empty halloc
+  · intro j hj
+    have hne : j ≠ result.slot := hm.2.2.2.1 ▸ hj
+    exact (State.move_other hmove j hne).trans (State.allocate_other halloc j hne)
 
 theorem identity_result (A : FreiForm D) (C : ∀ f, Contract D f)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -47,8 +52,8 @@ theorem identity_result (A : FreiForm D) (C : ∀ f, Contract D f)
     (ha : s.agrees A σ) (hf : A.FreiOk σ) (ho : s.owns caller original)
     (hx : original.slot = (ρ.get x).n)
     {σ' : World D} {v : ErgVal D (D.erg f)} (hrun : R f σ ρ = .ok σ' v) :
-    ∃ (s' : State) (h : Handle), s'.agrees A σ' ∧ A.FreiOk σ' ∧ s'.owns caller h ∧
-      h.slot = (ergWert he v).n ∧ h.allocation = original.allocation ∧
+    ∃ (s' : State) (h : Handle), s'.agrees A σ' ∧ A.FreiOk σ' ∧
+      s.returned s' caller original h ∧ h.slot = (ergWert he v).n ∧
       (∀ frame, ¬ s'.access frame original) := by
   obtain ⟨entered, incoming, henter⟩ := State.move_exists ho ht
   have hen := State.move_valid ha.1 caller callee original henter
@@ -58,16 +63,30 @@ theorem identity_result (A : FreiForm D) (C : ∀ f, Contract D f)
     exact ⟨incoming, hen.2.1, hen.2.2.2.1.trans hx⟩
   have hp := (hR f callee entered σ ρ hae hf hpre).1 σ' v hrun
   rw [hC] at hp
-  obtain ⟨ended, hah, hfh, hsame, hvalue⟩ := hp
-  subst ended
-  obtain ⟨returned, outgoing, hreturn⟩ := State.move_exists hen.2.1 ht.symm
-  have hret := State.move_valid hah.1 callee caller incoming hreturn
-  refine ⟨returned, outgoing, State.move_agrees hah callee caller incoming outgoing hreturn, hfh, hret.2.1,
-    hret.2.2.2.1.trans (hen.2.2.2.1.trans (hx.trans hvalue.symm)),
-    hret.2.2.2.2.trans hen.2.2.2.2, ?_⟩
-  apply State.move_excludes_older hreturn hen.2.2.2.1.symm
+  obtain ⟨ended, hah, hfh, hvalue, first, last, hfirst, hslot, heffect⟩ := hp
+  have hid : first = incoming := State.own_handles_equal hfirst hen.2.1
+    (hslot.trans (hen.2.2.2.1.trans hx).symm)
+  subst first
+  obtain ⟨returned, outgoing, hreturn⟩ := State.move_exists heffect.1 ht.symm
+  have hret := State.move_valid hah.1 callee caller last hreturn
+  have hlast : last.slot = original.slot := heffect.2.1.trans hen.2.2.2.1
+  have houtside : s.sameOutside returned original.slot := by
+    intro j hj
+    exact (State.move_other hreturn j (hlast ▸ hj)).trans
+      ((heffect.2.2.2.1 j (hen.2.2.2.1 ▸ hj)).trans (State.move_other henter j hj))
+  have hnext : s.next ≤ returned.next := by
+    have hn := heffect.2.2.2.2
+    rw [State.move_next henter] at hn
+    rw [State.move_next hreturn]
+    omega
+  refine ⟨returned, outgoing, State.move_agrees hah callee caller last outgoing hreturn, hfh,
+    ⟨hret.2.1, hret.2.2.2.1.trans hlast,
+      hret.2.2.2.2.trans (heffect.2.2.1.trans hen.2.2.2.2), houtside, hnext⟩,
+    hret.2.2.2.1.trans (hlast.trans (hx.trans hvalue.symm)), ?_⟩
+  apply State.move_excludes_older hreturn hlast.symm
   have hc := State.own_clock ha.1 ho
-  rw [State.move_next henter]
+  have hn := heffect.2.2.2.2
+  rw [State.move_next henter] at hn
   omega
 
 #print axioms factory_result

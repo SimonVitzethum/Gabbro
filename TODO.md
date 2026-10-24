@@ -172,6 +172,8 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   This primitive does not solve the admission of an unbounded recursive stack service. Simon authorized an explicit, fallible region without
   an element ceiling. Its storage semantics and safety proofs are now in `Bausteine/Arena/Unbounded/`; see `PLAN-DYNAMIC.md` section 13.
   Whole-program G admission/export, production lowering and the final universality theorem remain open.
+  The linked TM2/BF heap backend now preserves and reflects halting and output from allocated input, with OOM separated from normal halt
+  and a conditional four-operation bound per BF transition (`PLAN-DYNAMIC.md` 13.3). This target is the new storage component, not yet G.
 
 ## 3. Checker
 

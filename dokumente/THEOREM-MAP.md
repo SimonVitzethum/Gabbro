@@ -4594,6 +4594,21 @@ rejects a copied alias after consumption and after reuse. `Ownership/Audit.lean`
 body/goal integration remains open as specified above.
 
 
+### 92.1. Checked source forms, nested results and caller contexts (2026-10-24)
+
+`State.consumed`/`returned` describe frame-preserving, clock-monotone effects and compose with internal transfers. `Source.CheckedBody`
+certifies actual G identity/destructor/factory/forwarder bodies without semantic preservation premises. `checked_bodies` derives `Bodies`
+and `checked_calls` covers every actual recursive `rufAt` budget for that restricted source judgment.
+
+`checked_consuming_call`, `returned_context`, `checked_owning_result`, `checked_factory_result` and `checked_factory_reason` relate source
+origins to actual call arguments/results, retaining unrelated ownership and loans. `consumed_argument_cannot_repeat` and
+`loan_reservation_blocks_consumption` prove the argument-flow refusal rules. The joint `nested_return_and_release` and
+`borrowed_call_restores_owner` witnesses execute nonempty G programs, actual return binding/release and scoped loan restoration.
+
+Ownership audit: 590 jobs; full library: 2,218 jobs; standard axioms only. Full closure remains explicitly open in `PLAN-DYNAMIC` 12.7:
+these source certificates are not the general body checker, the per-prefix GA/GX simulation or the primary acceptance/goal integration.
+
+
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 
 Files: `Bausteine/Arena/Unbounded/{State,Safety,Lifetime,Runs,Execution,GForm,Realization,Witnesses,Audit}.lean`.
@@ -4616,3 +4631,25 @@ Authorization, architecture and open integration: `PLAN-DYNAMIC.md` section 13. 
 The complete `Grammatik` plus dedicated audit build succeeds (2,188 jobs), auditing 64 declarations with standard axioms; the original
 goal keeps exactly the standard three. Layout and no-holes checks pass. This component is
 **not yet a whole-program unbounded G heap**, a computed source admission judgment, a Rust feature or a Turing-completeness theorem.
+
+
+### 93.1. Linked TM2/BF execution and conditional operation counts (2026-10-24)
+
+The region component now has proved linked-cell stacks and a finite observer (`Unbounded/{Frame,Linked,Observe}.lean`).
+`Berechenbarkeit/Storage/` adds the generic TM2 heap interpreter, allocated input, finite runs, output observation, faithful operation
+counts, Brainfuck compilation and joint execution witnesses. `PLAN-DYNAMIC.md` 13.3 gives the exact scope and remaining G bridge.
+
+* `Linked.push_correct`, `pop_correct`, `Chain.length_le_extent`, `readAll_extent`: real allocated/freed linked cells, preserved other
+  grants/bytes, and observation bounded by actual finite storage.
+* `evaluate_correct`, `evaluate_safe`, `loadInput_correct`, `loadInput_safe`: all seven TM2 instruction forms use this storage without
+  stack oracles, starting from allocated input; OOM retains a safe prefix and cannot become normal completion.
+* `drive_correct`, `drive_partial_correct`, `drive_complete`, `drive_sound_any`: exact proposed-budget correspondence, with halt,
+  exhaustion and OOM distinguished. `Store.observe_correct` reads the represented output from linked cells.
+* `BrainfuckHeap.compiler_correct`, `run_sound_any`, `divergence_preserved`: all well-formed byte-BF programs, including empty code,
+  preserve and reflect normal halting/output; provider refusal cannot manufacture a halt. The target remains the heap component.
+* `Counted.sound/bound`, `Driven.sound/bound`, `halting_trace_with_bound`: faithful finite execution traces and a conditional bound of
+  four abstract heap/control operations per compiled BF transition, with a single empty-code entry adjustment. Not hardware WCET.
+
+Full library plus heap audit: 2,213 jobs; 68 new and 64 earlier storage/main axiom lists, all standard. Executed witnesses cover transfer,
+nested loops, wrap, empty input entry, OOM, fuel exhaustion, divergent output prefixes and peek followed by release. No G admission or
+Rust/universality claim is inferred from these component results.

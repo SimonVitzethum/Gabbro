@@ -79,10 +79,16 @@ theorem agrees : State.empty.agrees A world := by
     omega
   · rintro ⟨c, h⟩; cases h
 
-theorem bodies (available : Bool) (O : Orakel D) (passes : Nat) : Bodies (P available) A C O passes := by
-  intro R _ f frame s σ ρ ha hf _
-  exact factory_checked A f rfl (oom f) (readiness available) seven rfl tab_right
-    rfl (glob_right _) rfl (glob_right _) (glob_right _) (List.Perm.refl []) O passes R frame s σ ρ ha hf
+theorem source_checked (available : Bool) : Source.CheckedProgram (P available) A C := by
+  intro f
+  apply Source.CheckedBody.factory (A := A) (C := C) (f := f) rfl (oom f) (readiness available) seven
+    (hwT := rfl) (hLT := tab_right) (hwU := rfl) (hLU := glob_right _)
+    (hwF := rfl) (hLF := glob_right _) (hLC := glob_right _) (hend := List.Perm.refl [])
+  · cases available <;> rfl
+  · rfl
+
+theorem bodies (available : Bool) (O : Orakel D) (passes : Nat) : Bodies (P available) A C O passes :=
+  Source.checked_bodies (P available) A C (source_checked available) O passes
 
 theorem actual_success (O : Orakel D) (passes : Nat) :
     ∃ (σ' : World D) (v : ErgVal D (D.erg ())),

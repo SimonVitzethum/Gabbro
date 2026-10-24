@@ -1,0 +1,74 @@
+import Grammatik.Berechenbarkeit.Storage.HeapWitnesses
+import Grammatik.Berechenbarkeit.Storage.BrainfuckBounds
+import Grammatik.Bausteine.Arena.Unbounded.Audit
+
+/-! Axiom audit of the linked TM2/BF backend and its conditional operation bounds. -/
+
+#print axioms Gabbro.Grammatik.ArenaStorage.Heap.AgreesAt.owns
+#print axioms Gabbro.Grammatik.ArenaStorage.Heap.AgreesAt.read
+#print axioms Gabbro.Grammatik.ArenaStorage.Heap.allocate_frame
+#print axioms Gabbro.Grammatik.ArenaStorage.Heap.owned_candidate_ne
+#print axioms Gabbro.Grammatik.ArenaStorage.Heap.release_exists
+#print axioms Gabbro.Grammatik.ArenaStorage.Heap.release_frame
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.Chain.owned
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.Chain.transport
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.push_correct
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.push_refused
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.pop_correct
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.represents_empty
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.push_represents
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.peek_represents
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.pop_represents
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.Chain.readAll
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.Chain.slots_nodup
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.Chain.length_le_extent
+#print axioms Gabbro.Grammatik.ArenaStorage.Linked.readAll_extent
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.empty_represents
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.put_represents
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.push_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.push_spec
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.peek_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.pop_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.evaluate_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.evaluate_safe
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.step_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.load_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.load_safe
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.loadInput_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.loadInput_safe
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.drive_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.drive_complete
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.drive_sound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.drive_partial_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.drive_sound_any
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Store.observe_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Counted.sound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Counted.exists
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Counted.bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.finite_pass_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Driven.sound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Driven.exists
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.Driven.bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap.drive_operation_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.initial_budget
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.run_complete
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.run_sound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.normal_halting_iff
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.compiler_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.run_sound_any
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.divergence_preserved
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.jump_operation_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.instruction_operation_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.program_operation_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.conditional_operation_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.BrainfuckHeap.halting_trace_with_bound
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.transfer_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.insufficient_fuel_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.nested_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.wrap_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.empty_entry_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.input_oom_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.output_oom_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.output_prefix_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.divergence_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses.peek_pop_zeuge

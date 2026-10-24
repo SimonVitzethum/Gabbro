@@ -25,7 +25,7 @@ theorem borrow_result (A : FreiForm D) (C : ∀ f, Contract D f)
     exact ⟨h, hl.2.1, hx⟩
   have hp := (hR f callee loaned σ ρ hal hf hpre).1 σ' v hrun
   rw [hC] at hp
-  obtain ⟨ended, hae, hfe, hsame, hvalue⟩ := hp
+  obtain ⟨ended, hae, hfe, hvalue, hsame⟩ := hp
   subst ended
   have hreturn := State.lend_endLoan caller callee h hlend
   refine ⟨State.endLoan_agrees hae callee h hreturn, hfe, hvalue.trans hx.symm, hreturn, ?_⟩
