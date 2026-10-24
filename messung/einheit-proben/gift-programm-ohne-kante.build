@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: `prog-haupt.gab` uses `werk::` and `vorrat::`, and no library here declares them.
+project('gift-ohne-kante')
+
+program('haupt', 'prog-haupt.gab')

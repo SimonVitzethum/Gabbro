@@ -1128,7 +1128,7 @@ falls out of M2 rather than a special rule. The speech test is a second obligati
 *failed* run consumes; the lower bound is M1 (a measured quantity `in 1 ..` cannot report zero);
 "the measured path writes the quantity itself" is an M3 write right. `check` bodies compile only
 under `when TESTBUILD`: a gated item produces **no line of output** in the shipping build
-(`gabbro llvm --testbuild` or `gabbro build --testbuild` opens the gate); `G001` (ungated code calls a gated function), `G002`
+(`gabbro llvm --testbuild` or a build directory with `-Dbuildtype=testbuild` opens the gate); `G001` (ungated code calls a gated function), `G002`
 (any other `when` condition), `G003` (`TESTBUILD` declared as a name). `offline` invariants are
 *not* gated — a different clause with a different reader.
 

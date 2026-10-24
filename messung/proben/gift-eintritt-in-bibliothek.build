@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: an object that carries the entry `main` -- refused before any tool runs.
+project('eintritt-bib')
+
+object('bibliothek', 'probe-eintritt.gab')

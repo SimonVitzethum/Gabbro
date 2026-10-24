@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# The entry rule, positive: a program with `pub fn main`.
+project('eintritt')
+
+program('eintritt', 'probe-eintritt.gab')

@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: the entry rule (`zwei`).
+project('eintritt-zwei')
+
+program('zwei', 'probe-eintritt-zwei.gab')
