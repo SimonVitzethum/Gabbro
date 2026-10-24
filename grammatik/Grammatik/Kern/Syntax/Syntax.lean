@@ -149,7 +149,7 @@ structure Deklaration where
   [decTab : DecidableEq Tab]
   /-- `table T count N`; ein `format` und ein Verbund sind Tabellen mit `count 1`. -/
   count : Tab → Int
-  /-- `table T open` -- an OPEN table: a region without a declared element ceiling. Its cells are addressed by
+  /-- `table T from p` -- an OPEN table: a region without a declared element ceiling. Its cells are addressed by
       `ref` values (`Expr.slotRef`), not by the bounded index type; `count` does not bound them. Every cell of
       such a region comes from the program's own provider (an answer of type `ref`); that it has memory to give is
       user logic. Default: no table is open. -/
@@ -217,7 +217,7 @@ structure Deklaration where
       reason `i` (`axiomAntwortSonst`, Semantik.lean). Default: no channel -- every
       declaration written before this field is the declaration of before. -/
   agruende : Ax → Nat := fun _ => 0
-  /-- `table T open provided by p` -- the provider of an open table: the foreign item whose answer is a fresh cell of
+  /-- `table T from p` -- the provider of an open table: the foreign item whose answer is a fresh cell of
       `T`, and the item `alloc T` calls (`Block.alloc`, Zucker.lean). Default: no table has a provider. -/
   anbieter : Tab → Option Ax := fun _ => none
   /-- A provider fits its table: the table is open, the provider takes no arguments and answers `ref T`. A

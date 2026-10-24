@@ -43,7 +43,7 @@ structure TabZ where
   geist : Bool := false
   /-- `table T open`: a region without an element ceiling (`Deklaration.offen`). -/
   offen : Bool := false
-  /-- `provided by ax<k>`: the provider of the open table (`Deklaration.anbieter`); a provider that does not fit
+  /-- `from ax<k>`: the provider of the open table (`Deklaration.anbieter`); a provider that does not fit
       (`Spez.anbieterPasst`) is no provider. -/
   anbieter : Option Nat := none
   deriving DecidableEq, Repr

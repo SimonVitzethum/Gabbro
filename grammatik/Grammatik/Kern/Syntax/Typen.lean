@@ -56,7 +56,7 @@ inductive Ty where
       wie ein direkter. Zwei Zeiger auf `t` sind damit zwei Namen fuer EINE Welt unter EINEM
       Waechter -- der Alias kostet keine Sicherheit, nur Logik (§15.8). -/
   | ptr (t : Nat) (rw : Bool)
-  /-- `ref T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
+  /-- `index into T` at an open table `T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
       `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
       memory provider: the answer of a provider item (`syscall`/`extern`), whose contract (user logic) says the cell
       is fresh. That the provider has memory to give is user logic too (Simon, 2026-10-24: OOM is user logic). G itself makes no reference, and never one

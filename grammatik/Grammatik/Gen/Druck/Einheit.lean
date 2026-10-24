@@ -38,7 +38,7 @@ def Spez.druckTy (z : Spez) : Ty → Except String String
   | .fl .. => .error "unsupported type: float"
   | .fnptr _ => .error "unsupported type: function pointer"
   | .ptr .. => .error "unsupported type: pointer"
-  | .ref n => if n < z.tabs.length then .ok s!"ref T{n}" else .error "unsupported type: reference to no table"
+  | .ref n => if n < z.tabs.length then .ok s!"index into T{n}" else .error "unsupported type: reference to no table"
 
 /-- The names of the entities of a member. -/
 def Spez.namen (z : Spez) : Namen z.deklaration where
@@ -167,9 +167,11 @@ def Spez.quelltextMit (z : Spez) [Zahlen] (h : Programm z.deklaration) (ws : Lis
   let tabs ← (List.finRange z.tabs.length).mapM fun t => do
     let tz := z.tabs.get t
     let fs ← (tz.felder.zipIdx.map fun (fz, j) => do pure s!"        f{j} : {← z.druckTy fz.typ},").mapM id
-    let kopf := if z.deklaration.offen t then
-        "open" ++ ((z.deklaration.anbieter t).map (fun a => s!" provided by {nm.ax a}")).getD ""
-      else s!"count {tz.count}"
+    let kopf ← if z.deklaration.offen t then
+        match z.deklaration.anbieter t with
+        | some a => pure s!"from {nm.ax a}"
+        | none => throw "unsupported feature: open table without provider (the source names one: `from p`)"
+      else pure s!"count {tz.count}"
     pure s!"table {nm.tab t} {kopf} \{\n    slot \{\n{String.intercalate "\n" fs}\n    }\n}\n"
   let globs ← (List.finRange z.globs.length).mapM fun g => do
     let gz := z.globs.get g
@@ -209,13 +211,13 @@ def Spez.quelltext (z : Spez) (h : Programm z.deklaration) (ws : List z.deklarat
     (name : String) : Except String String :=
   @Spez.quelltextMit z z.zahlen h ws name
 
-/-- A probe of the open region's source forms: an open table `T0` whose provider is `ax0 : -> ref T0`. -/
+/-- A probe of the open region's source forms: an open table `T0` whose provider is `ax0 : -> index into T0`. -/
 def offenProbe : Spez where
   tabs := [{ count := 0, offen := true, anbieter := some 0, felder := [{ typ := .int 0 255 }] }]
   axs := [{ erg := some (.ref 0) }]
 
-/-- `ref T0` is printed as such. -/
-theorem offenProbe_typ : offenProbe.druckTy (.ref 0) = .ok "ref T0" := rfl
+/-- A reference into the open `T0` is `index into T0`. -/
+theorem offenProbe_typ : offenProbe.druckTy (.ref 0) = .ok "index into T0" := rfl
 
 /-- The provider is known by its table: its call prints as `alloc T0`. -/
 theorem offenProbe_anbieter : offenProbe.namen.anbieterVon ⟨0, by decide⟩ = some "T0" := rfl
@@ -223,6 +225,6 @@ theorem offenProbe_anbieter : offenProbe.namen.anbieterVon ⟨0, by decide⟩ = 
 set_option maxRecDepth 20000 in
 /-- The provider item itself. -/
 theorem offenProbe_ax : offenProbe.druckAx ⟨0, by decide⟩ =
-    .ok "extern fn ax0() -> ref T0 effects { pure } costs <= 1000 ops;\n" := rfl
+    .ok "extern fn ax0() -> index into T0 effects { pure } costs <= 1000 ops;\n" := rfl
 
 end Gabbro.Grammatik.Gen

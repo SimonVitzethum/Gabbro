@@ -201,7 +201,7 @@ def onExceeded (f : D.Fn) (hp0 : D.params f = []) (hp : RufPasst D V (D.signatur
 def argsLeer : (ps : List Ty) → ps = [] → Args D Γ Λ ps
   | [], _ => .nil
 
-/-- `let r = alloc T;` -- the call of `T`'s provider (`table T open provided by p`): `let r = p();`. The provider
+/-- `let r = alloc T;` -- the call of `T`'s provider (`table T from p`): `let r = p();`. The provider
     takes no arguments (`anbieter_passt`); its answer is a reference into `T` (`Block.alloc_tabelle`). -/
 def alloc (t : D.Tab) (a : D.Ax) (hp : D.anbieter t = some a) (he : D.aerg a = some (.ref n))
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)

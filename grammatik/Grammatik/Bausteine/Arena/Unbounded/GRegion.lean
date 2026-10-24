@@ -3,8 +3,8 @@ import Grammatik.Kern.Syntax.Koernung
 import Grammatik.Kern.Syntax.Zucker
 import Grammatik.Zielsatz.Kern.Akzeptiert
 
-/-! The open region in G, executed (PLAN-DYNAMIC 14). One open table `T` (`table T open provided by neu`, one byte
-field) and its provider item `neu : -> ref T` -- the program's memory provider, whose answer is the ONLY way a
+/-! The open region in G, executed (PLAN-DYNAMIC 14). One open table `T` (`table T from neu`, one byte field) and its
+provider item `neu : -> index into T` -- the program's memory provider, whose answer is the ONLY way a
 reference comes into being. That the provider has memory to give is user logic (Simon, 2026-10-24: OOM is user
 logic): the item has no failure branch. The body `let r = alloc T; r->x = 7; return;` runs in G (`alloc T` is the
 provider's call, `Endblock.alloc`):

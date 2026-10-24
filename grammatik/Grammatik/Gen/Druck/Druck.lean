@@ -31,7 +31,7 @@ structure Namen (D : Deklaration) where
   lock : D.Lock → String
   fn : D.Fn → String
   ax : D.Ax → String
-  /-- The open table a foreign body is the provider of (`table T open provided by p`): its call prints as `alloc T`. -/
+  /-- The open table a foreign body is the provider of (`table T from p`): its call prints as `alloc T`. -/
   anbieterVon : D.Ax → Option String := fun _ => none
 
 /-- The depth of a variable: `here` is 0. -/
