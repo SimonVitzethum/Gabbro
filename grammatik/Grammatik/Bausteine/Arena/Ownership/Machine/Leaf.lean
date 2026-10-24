@@ -163,4 +163,105 @@ theorem link_live (A : FreiForm D) {σ σ2 : World D} {i : Int} (hi : A.Lebt σ 
   unfold FreiForm.Lebt
   rw [hs, hauf]
 
+/-! ## The leaf step -/
+
+section Step
+
+variable {A : FreiForm D} {I : Interfaces A} {O : Orakel D} {passes : Nat} {fr : Frame} {s : State}
+
+/-- **What a step of the running activation leaves**: a next ledger that keeps every cell the activation does not
+    own and manufactures no grant, agreeing with the next world, and the next state of the activation. -/
+def Next (A : FreiForm D) (I : Interfaces A) (fr : Frame) (s : State) (σ' : World D) (f : D.Fn)
+    (x : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D (vertragVon D f) l Γ Λ) : Prop :=
+  ∃ s', s.local s' fr ∧ s.progress s' ∧ s'.agrees A σ' ∧ A.FreiOk σ' ∧ Head A I fr s' σ' f x
+
+theorem Next.same {σ' : World D} {f : D.Fn} {x} (ha : s.agrees A σ') (ho : A.FreiOk σ')
+    (h : Head A I fr s σ' f x) : Next A I fr s σ' f x :=
+  ⟨s, State.local_refl s fr, State.progress_refl s, ha, ho, h⟩
+
+theorem Next.of_holds {σ' : World D} {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context}
+    {ρ : Env D Γ} {r : GRest D (vertragVon D f) l Γ Λ} (h : Holds A fr s c σ' ρ)
+    (hk : k.references.length ≤ Γ.length) (hr : OR A I (I f).output k c r) :
+    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
+  obtain ⟨g, s', hf, ha, ho, hl, hp⟩ := FrameOk.of_holds h
+  exact ⟨s', hl, hp, ha, ho, .run ρ r hk hf hr⟩
+
+/-- A step into a context no environment realises does not happen. -/
+theorem holds_bad {σ' : World D} {Γ : Ctx} {ρ : Env D Γ} (h : Holds A fr s (badContext Γ) σ' ρ) : False := by
+  obtain ⟨_, _, hf, _⟩ := FrameOk.of_holds h
+  exact badContext_length Γ hf.length
+
+/-- **A leaf statement in block position.** -/
+theorem run_leaf (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 Λ' : List (Res D)} {k c : Context}
+    {g : Ghost} {σ : World D} {ρ : Env D Γ} {st : Stmt D (vertragVon D f) l Γ Λ Λ1}
+    {rest : Block D (vertragVon D f) l Γ Λ1 Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
+    (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
+    (hr : OR A I (I f).output k c (.dann (.cons st rest) r))
+    {σ' : World D} {ρ' : Env D Γ} (hstep : execStmt O passes keinRuf st σ ρ = .ok σ' ρ') :
+    Next A I fr s σ' f ⟨l, Γ, Λ1, ρ', .dann rest r⟩ := by
+  obtain ⟨c1, hb, hc⟩ := hr.dann_inv
+  have hH := hf.holds ha ho
+  rcases ob_cons_inv hb rfl with ⟨c2, hs, hrest⟩ | hd | ⟨t, f', i, e, hw, hL, g', e2, hwK, hLK, rest', c2, o, p,
+    heq, ⟨ht, hfl⟩, hip, he, hg, he2, hcons, hrest⟩
+  · have hp := os_sound (respects_keinRuf A I.contracts) hO hs σ ρ hk hH (passes := passes)
+    rw [hstep] at hp
+    exact Next.of_holds hp hk (OR.of_cont hrest hc)
+  · have hp := os_sound (respects_keinRuf A I.contracts) hO (hd _ (badContext_bounded Γ)) σ ρ hk hH
+      (passes := passes)
+    rw [hstep] at hp
+    exact (holds_bad hp).elim
+  · cases heq
+    subst ht hg
+    cases hfl
+    simp only [execStmt] at hstep
+    injection hstep with hσ hρ
+    subst σ' ρ'
+    obtain ⟨hsource, howned, hctx⟩ := consume_facts hcons
+    subst hctx
+    obtain ⟨hh, hgh, hown⟩ := hf.2.2.1.1 o .owned howned
+    have hx : ∀ σa σb, intVon _ (eval σa i σb ρ) = some hh.slot := by
+      intro σa σb
+      obtain ⟨other, hg', hvalue⟩ := origin_sound c g ρ hf.2.1 i o hsource σa σb
+      rw [hgh] at hg'; cases hg'; exact hvalue
+    have hpx : ρ.unten p = some hh.slot := by rw [← exprVarPos_eval i hip σ σ ρ]; exact hx σ σ
+    generalize hσ1 : σ.lese Λ (i.orte ++ e.orte) = σ1
+    have hi1 : (eval σ1 i σ1 ρ).n = hh.slot := by
+      have := hx σ1 σ1; simp only [intVon, Option.some.injEq] at this; exact this
+    have hlink : (Wert.umTyp A.hnxt (eval σ1 e σ1 ρ)).n = A.kopfSt σ := by
+      have := exprGlob_eval e he σ1 σ1 ρ
+      rw [intVon_umTyp A.hnxt, intVon_umTyp A.hkopf, Option.some.injEq] at this
+      rw [this, ← hσ1]; rfl
+    generalize hσ2 : σ1.schreibSlot A.tab Λ (eval σ1 i σ1 ρ).n A.nxt (eval σ1 e σ1 ρ) = σ2
+    have hk2 : A.kopfSt σ2 = A.kopfSt σ := by rw [← hσ2, FreiForm.kopfSt_schreibSlot, ← hσ1]; rfl
+    have hs2 : A.stand σ2 = A.stand σ := by rw [← hσ2, ArenaForm.stand_schreibSlot, ← hσ1]; rfl
+    have hn2 : ∀ j, A.naechst σ2 j = if j = hh.slot then A.kopfSt σ else A.naechst σ j := by
+      intro j; rw [← hσ2, FreiForm.naechst_schreibSlot, hi1, hlink, ← hσ1]; rfl
+    have hlive : A.Lebt σ hh.slot := State.owned_live ha hown
+    obtain ⟨ho2, hl2⟩ := link_live A hlive ho hk2 hs2 (fun j hj => by rw [hn2]; simp [hj])
+    refine Next.same ⟨ha.1, fun j => (hl2 j).trans (ha.2 j)⟩ ho2 ?_
+    exact .release ρ e2 hwK hLK rest' r p o hh he2 hpx howned hgh (by rw [hn2, hk2]; simp) hk hf
+      (OR.of_cont hrest hc)
+
+/-- **A leaf statement in end-block position.** -/
+theorem run_leaf_ende (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {k c : Context}
+    {g : Ghost} {σ : World D} {ρ : Env D Γ} {st : Stmt D (vertragVon D f) l Γ Λ Λ1}
+    {rest : Endblock D (vertragVon D f) l Γ Λ1}
+    (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
+    (hr : OR A I (I f).output k c (.ende (.cons st rest)))
+    {σ' : World D} {ρ' : Env D Γ} (hstep : execStmt O passes keinRuf st σ ρ = .ok σ' ρ') :
+    Next A I fr s σ' f ⟨l, Γ, Λ1, ρ', .ende rest⟩ := by
+  cases hr with
+  | ende _ he =>
+    have hH := hf.holds ha ho
+    rcases oe_cons_inv he rfl with ⟨c2, hs, hrest⟩ | hd
+    · have hp := os_sound (respects_keinRuf A I.contracts) hO hs σ ρ hk hH (passes := passes)
+      rw [hstep] at hp
+      exact Next.of_holds hp hk (.ende rest hrest)
+    · have hp := os_sound (respects_keinRuf A I.contracts) hO (hd _ (badContext_bounded Γ)) σ ρ hk hH
+        (passes := passes)
+      rw [hstep] at hp
+      exact (holds_bad hp).elim
+
+end Step
+
 end Gabbro.Grammatik.ArenaOwnership.Machine
