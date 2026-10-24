@@ -1,9 +1,11 @@
 import Grammatik.Bausteine.Arena.Ownership.FactoryWitness
 import Grammatik.Bausteine.Arena.Ownership.Source.Witness
 import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
+import Grammatik.Bausteine.Arena.Ownership.Body.Witness
 
-/-! Kernel-checked public audit of the ownership extension. Source admission
-and whole-program integration are recorded separately in PLAN-DYNAMIC §12. -/
+/-! Kernel-checked public audit of the ownership extension. The general body
+judgment and its soundness are in `Body/`; whole-program integration is
+recorded separately in PLAN-DYNAMIC §12. -/
 
 namespace Gabbro.Grammatik.ArenaOwnership
 
@@ -34,5 +36,16 @@ namespace Gabbro.Grammatik.ArenaOwnership
 #print axioms Source.ForwardWitness.borrowed_call_restores_owner
 #print axioms Source.consumed_argument_cannot_repeat
 #print axioms Source.loan_reservation_blocks_consumption
+#print axioms Body.handoff_requires
+#print axioms Body.return_plain
+#print axioms Body.return_owner
+#print axioms Body.call_value
+#print axioms Body.callInd_value
+#print axioms Body.ob_sound
+#print axioms Body.oe_sound
+#print axioms Body.checked_bodies
+#print axioms Body.checked_calls
+#print axioms Body.Witness.checked
+#print axioms Body.Witness.actual_run_closed
 
 end Gabbro.Grammatik.ArenaOwnership

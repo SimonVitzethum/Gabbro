@@ -1356,6 +1356,42 @@ goal path, and the Lean front-end/exporter bridge. The new certificates are not 
 binary claim follows. Do not move any of these missing memory proofs into `NutzerPflichtA` or RAM/hardware assumptions.
 
 
+### 12.8 The general body judgment and its soundness (2026-10-24)
+
+`Bausteine/Arena/Ownership/Body/` replaces the restricted source certificates as the admission of function bodies. It is one mutual
+judgment over G's actual syntax (`Judgment.lean`: `OS`/`OB`/`OE`/`OArms`/`OGrund`) with a rule for every statement, block and end-block
+form, and one soundness induction (`Sound.lean`: `os_sound`, `ob_sound`, `oe_sound`, `oarms_sound`, `ogrund_sound`).
+
+* **Invariant** (`Holds.lean`): at every statement boundary some ghost ledger refines the actual world, realises the source context over
+  the actual environment, accounts for every allocation the activation owns, and is local and progressing from the activation's entry
+  ledger. Stores keep the free-list head, the links and the used counter (`MetaSame`); a raw store into a link or allocator word has no
+  rule. Every evaluated expression is access-checked against the current context.
+* **Joins and loops**: branches and case arms end in a common weaker context (`Weaker`); `forever`, `retry` and `traverse` keep an
+  invariant loop context at every pass, `next` and `leave` (`ExitsTo`, through any number of nested binders), proved over G's own loop
+  runners (`Steps.lean`). Assignment re-binds the assigned name's provenance; narrowing keeps it.
+* **Calls with full argument handoff** (`Handoff.lean`, `Plan.lean`, `Call.lean`, `CallStep.lean`): per parameter the interface mode and the
+  caller origin of the actual argument; an owned origin is passed once and never also lent. At the call the moved allocations get one
+  new grant owned by a fresh callee activation and the lent ones carry the callee on top of their loan stack (`State.handoff`); the
+  callee's interface precondition holds there (`handoff_requires`). From only the callee's interface postcondition the caller gets back
+  every loan, every untouched allocation, and an owning result under a new grant (`return_plain`, `return_owner`); consumed origins are
+  dead. The call handler is arbitrary up to `Respects` for the interface contracts.
+* **Indirect calls** (`CallInd.lean`): admitted against one signature interface, only when every function fitting the signature number
+  has the same modes and result kind (`SigCompatible`); the runtime target meets the same handoff through the actual `umsig` transport.
+* **Allocator forms** (`Forms.lean`): allocation from the free list or the counter binds a new owning origin (or takes its `else` on a
+  full arena), release consumes one, on the worlds the executed forms leave.
+* **Foreign bodies**: admitted only when they write no arena table and neither allocator word; framed by the existing `GutO`.
+* **Program** (`Program.lean`): `Checked P A I` (every body derives from its parameter context) gives `Bodies` (`checked_bodies`) and
+  `Respects` for the actual `rufAt` at every depth (`checked_calls`). `Witness.lean`: a two-function program (factory with OOM reason,
+  caller with `else`, release in a joined branch) is `Checked`; its actual run allocates, hands over and releases, and the interface at
+  that run gives a closed activation.
+
+Axioms of every main theorem: `propext`, `Classical.choice`, `Quot.sound` (or fewer). `gabbro_ziel` and `Spec.lean` are untouched.
+**Still open** (this is item 1 of 12.7 closed, not the whole gap): (2) preservation at every GA/GX step, which needs a continuation
+judgment over `GRest` and a rely for other threads' frames; (3) an executable admission check inside `Akzeptiert`/`PrueferX` (the
+allocator forms are definitions over `narrow`/`assignGlob`, so a Bool check must recognise them without syntactic equality on `Expr`)
+and the reviewed `Spec.lean` diff; (4) the front-end/exporter emitting interfaces and derivations. Containers (list/tree moves), whole
+arena reset and range/quantified arena expressions have no rule and stay refused.
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing

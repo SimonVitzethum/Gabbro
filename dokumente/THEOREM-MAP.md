@@ -4609,6 +4609,21 @@ Ownership audit: 590 jobs; full library: 2,218 jobs; standard axioms only. Full 
 these source certificates are not the general body checker, the per-prefix GA/GX simulation or the primary acceptance/goal integration.
 
 
+### 92.2. The general ownership body judgment (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/Body/{Holds,Handoff,Plan,Call,CallStep,CallInd,Judgment,Steps,Forms,Sound,Program,Witness}.lean`.
+
+* `ob_sound`, `oe_sound` (with `os_sound`, `oarms_sound`, `ogrund_sound`): every derivation of the mutual judgment keeps its promise on
+  the actual G outcome for every world and environment satisfying `Holds`; joins, loops, exits, assignment, framed foreign bodies, the
+  allocator forms, direct and pointer calls.
+* `handoff_requires`, `return_plain`, `return_owner`: full multi-argument handoff into a fresh activation and back, from only the callee's
+  interface postcondition. `call_value`, `call_reason`, `callInd_value`: the same against the actual handler under `Respects`.
+* `checked_bodies`, `checked_calls`: a `Checked` program discharges `Bodies`; every actual `rufAt` call keeps its ownership interface.
+* `Witness.checked`, `Witness.actual_run_closed`: non-degenerate two-function witness, executed.
+
+Standard axioms only. Open: GA/GX step preservation, `Akzeptiert`/goal integration, exporter (`PLAN-DYNAMIC` 12.8).
+
+
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 
 Files: `Bausteine/Arena/Unbounded/{State,Safety,Lifetime,Runs,Execution,GForm,Realization,Witnesses,Audit}.lean`.
