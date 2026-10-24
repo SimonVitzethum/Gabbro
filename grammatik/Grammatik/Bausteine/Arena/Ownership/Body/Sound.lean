@@ -321,16 +321,18 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega)
         ((h.reads _ _).bindNone (τ := .fl lo hi) v))
     · exact EPost.toB _ (oe_sound hR hO hs _ _ hk (h.reads _ _))
-  | _, _, _, _, _, _, _, _, .allocList v hwT hLT hwK hLK voll rest _ hvoll hrest, σ, ρ, hk, h =>
-    allocList_post O passes R v hwT hLT hwK hLK voll rest hk h
+  | _, _, _, _, _, _, _, _, .allocList e lo' hi' voll g e2 hwK hLK t f i ev hw hL rest he hhi hg he2 hn _ _ _
+      hvoll hrest, σ, ρ, hk, h =>
+    allocList_post O passes R e lo' hi' voll g e2 hwK hLK t f i ev hw hL rest he hhi hg he2 hn hk h
       (fun σ' h' => oe_sound hR hO hvoll σ' ρ hk h')
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' (by simp; omega) h')
-  | _, _, _, _, _, _, _, _, .allocCounter v hwT hLT hwG hLG voll rest _ hvoll hrest, σ, ρ, hk, h =>
-    allocCounter_post O passes R v hwT hLT hwG hLG voll rest hk h
+  | _, _, _, _, _, _, _, _, .allocCounter e lo' hi' voll t f i ev hw hL g e2 hwG hLG rest he hhi hn hg he2 _ _ _
+      hvoll hrest, σ, ρ, hk, h =>
+    allocCounter_post O passes R e lo' hi' voll t f i ev hw hL g e2 hwG hLG rest he hhi hn hg he2 hk h
       (fun σ' h' => oe_sound hR hO hvoll σ' ρ hk h')
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' (by simp; omega) h')
-  | _, _, _, _, _, _, _, _, .release x hwT hLT hwK hLK rest hc hrest, σ, ρ, hk, h =>
-    release_post O passes R x hwT hLT hwK hLK rest hc h
+  | _, _, _, _, _, _, _, _, .release t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc hrest, σ, ρ, hk, h =>
+    release_post O passes R t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc h
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' hk h')
 
 theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :

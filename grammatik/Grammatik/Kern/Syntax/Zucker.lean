@@ -46,56 +46,71 @@ def Var.ins : (Γ1 : Ctx) → Var (Γ1 ++ Γ2) τ → Var (Γ1 ++ σ :: Γ2) τ
   | _ :: _, .here => .here
   | _ :: Γ1, .there x => .there (Var.ins Γ1 x)
 
+/-- A renaming lifted under one more binder. -/
+def Var.hoch {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
+    ∀ {τ : Ty}, Var (σ :: Γ) τ → Var (σ :: Γ') τ
+  | _, .here => .here
+  | _, .there x => .there (r x)
+
 mutual
-/-- Ein Ausdruck unter einem eingeschobenen Binder: dieselben Orte, dasselbe `Λ`. -/
-def Expr.ins (Γ1 : Ctx) : Expr D (Γ1 ++ Γ2) Λ τ → Expr D (Γ1 ++ σ :: Γ2) Λ τ
+/-- An expression under a renaming of its variables: the same places, the same `Λ`.
+    Structural, so it computes in the kernel (an exported program's sugar is decided by `decide`). -/
+def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr D Γ Λ τ → Expr D Γ' Λ τ
   | .lit n => .lit n
   | .tru => .tru
   | .fls => .fls
-  | .var x => .var (Var.ins Γ1 x)
+  | .var x => .var (r x)
   | .glob g hL => .glob g hL
-  | .slot t f i hL => .slot t f (i.ins Γ1) hL
-  | .thru p t ht f i hL => .thru (p.ins Γ1) t ht f (i.ins Γ1) hL
+  | .slot t f i hL => .slot t f (i.ren r) hL
+  | .thru p t ht f i hL => .thru (p.ren r) t ht f (i.ren r) hL
   | .ptrOf t n ht rw => .ptrOf t n ht rw
   | .fnref f n h => .fnref f n h
   | .oldG g hL => .oldG g hL
-  | .oldS t f i hL => .oldS t f (i.ins Γ1) hL
-  | .getBytes t f hf n i hlo hhi hL => .getBytes t f hf n (i.ins Γ1) hlo hhi hL
-  | .widen h1 h2 e => .widen h1 h2 (e.ins Γ1)
-  | .add a b => .add (a.ins Γ1) (b.ins Γ1)
-  | .sub a b => .sub (a.ins Γ1) (b.ins Γ1)
-  | .neg a => .neg (a.ins Γ1)
-  | .mul a b => .mul (a.ins Γ1) (b.ins Γ1)
-  | .div h0 h1 a b => .div h0 h1 (a.ins Γ1) (b.ins Γ1)
-  | .rem h0 h1 a b => .rem h0 h1 (a.ins Γ1) (b.ins Γ1)
-  | .sdiv hb a b => .sdiv hb (a.ins Γ1) (b.ins Γ1)
-  | .srem hb a b => .srem hb (a.ins Γ1) (b.ins Γ1)
-  | .band h0 h0' a b => .band h0 h0' (a.ins Γ1) (b.ins Γ1)
-  | .bor w h0 h0' hw1 hw2 a b => .bor w h0 h0' hw1 hw2 (a.ins Γ1) (b.ins Γ1)
-  | .bxor w h0 h0' hw1 hw2 a b => .bxor w h0 h0' hw1 hw2 (a.ins Γ1) (b.ins Γ1)
-  | .shl w hw1 hw2 h0 h0' a b => .shl w hw1 hw2 h0 h0' (a.ins Γ1) (b.ins Γ1)
-  | .shr w hw1 hw2 h0 h0' a b => .shr w hw1 hw2 h0 h0' (a.ins Γ1) (b.ins Γ1)
-  | .lt a b => .lt (a.ins Γ1) (b.ins Γ1)
-  | .le a b => .le (a.ins Γ1) (b.ins Γ1)
-  | .eq a b => .eq (a.ins Γ1) (b.ins Γ1)
-  | .fllt a b => .fllt (a.ins Γ1) (b.ins Γ1)
-  | .flle a b => .flle (a.ins Γ1) (b.ins Γ1)
-  | .and a b => .and (a.ins Γ1) (b.ins Γ1)
-  | .or a b => .or (a.ins Γ1) (b.ins Γ1)
-  | .not a => .not (a.ins Γ1)
+  | .oldS t f i hL => .oldS t f (i.ren r) hL
+  | .getBytes t f hf n i hlo hhi hL => .getBytes t f hf n (i.ren r) hlo hhi hL
+  | .widen h1 h2 e => .widen h1 h2 (e.ren r)
+  | .add a b => .add (a.ren r) (b.ren r)
+  | .sub a b => .sub (a.ren r) (b.ren r)
+  | .neg a => .neg (a.ren r)
+  | .mul a b => .mul (a.ren r) (b.ren r)
+  | .div h0 h1 a b => .div h0 h1 (a.ren r) (b.ren r)
+  | .rem h0 h1 a b => .rem h0 h1 (a.ren r) (b.ren r)
+  | .sdiv hb a b => .sdiv hb (a.ren r) (b.ren r)
+  | .srem hb a b => .srem hb (a.ren r) (b.ren r)
+  | .band h0 h0' a b => .band h0 h0' (a.ren r) (b.ren r)
+  | .bor w h0 h0' hw1 hw2 a b => .bor w h0 h0' hw1 hw2 (a.ren r) (b.ren r)
+  | .bxor w h0 h0' hw1 hw2 a b => .bxor w h0 h0' hw1 hw2 (a.ren r) (b.ren r)
+  | .shl w hw1 hw2 h0 h0' a b => .shl w hw1 hw2 h0 h0' (a.ren r) (b.ren r)
+  | .shr w hw1 hw2 h0 h0' a b => .shr w hw1 hw2 h0 h0' (a.ren r) (b.ren r)
+  | .lt a b => .lt (a.ren r) (b.ren r)
+  | .le a b => .le (a.ren r) (b.ren r)
+  | .eq a b => .eq (a.ren r) (b.ren r)
+  | .fllt a b => .fllt (a.ren r) (b.ren r)
+  | .flle a b => .flle (a.ren r) (b.ren r)
+  | .and a b => .and (a.ren r) (b.ren r)
+  | .or a b => .or (a.ren r) (b.ren r)
+  | .not a => .not (a.ren r)
   | .none n => .none n
-  | .some e => .some (e.ins Γ1)
-  | .istSome e => .istSome (e.ins Γ1)
-  | .case cs i nutz => .case cs i (nutz.ins Γ1)
-  | .why n r => .why n r
-  | .forallSlots t body hL => .forallSlots t (body.ins (_ :: Γ1)) hL
-  | .existsSlots t body hL => .existsSlots t (body.ins (_ :: Γ1)) hL
-  | .reaches t f hf a b hL => .reaches t f hf (a.ins Γ1) (b.ins Γ1) hL
+  | .some e => .some (e.ren r)
+  | .istSome e => .istSome (e.ren r)
+  | .case cs i nutz => .case cs i (nutz.ren r)
+  | .why n r' => .why n r'
+  | .forallSlots t body hL => .forallSlots t (body.ren (Var.hoch r)) hL
+  | .existsSlots t body hL => .existsSlots t (body.ren (Var.hoch r)) hL
+  | .reaches t f hf a b hL => .reaches t f hf (a.ren r) (b.ren r) hL
 
-def NutzlastExpr.ins (Γ1 : Ctx) : NutzlastExpr D (Γ1 ++ Γ2) Λ c → NutzlastExpr D (Γ1 ++ σ :: Γ2) Λ c
+def NutzlastExpr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
+    NutzlastExpr D Γ Λ c → NutzlastExpr D Γ' Λ c
   | .empty => .empty
-  | .num e => .num (e.ins Γ1)
+  | .num e => .num (e.ren r)
 end
+
+/-- Ein Ausdruck unter einem eingeschobenen Binder: dieselben Orte, dasselbe `Λ`. -/
+def Expr.ins (Γ1 : Ctx) (e : Expr D (Γ1 ++ Γ2) Λ τ) : Expr D (Γ1 ++ σ :: Γ2) Λ τ :=
+  e.ren (Var.ins Γ1)
+
+def NutzlastExpr.ins (Γ1 : Ctx) (e : NutzlastExpr D (Γ1 ++ Γ2) Λ c) : NutzlastExpr D (Γ1 ++ σ :: Γ2) Λ c :=
+  e.ren (Var.ins Γ1)
 
 /-- Ein Ausdruck, einen Binder tiefer. -/
 def Expr.weaken (e : Expr D Γ Λ τ) : Expr D (σ :: Γ) Λ τ := Expr.ins (Γ1 := []) e

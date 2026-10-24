@@ -1,4 +1,4 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Context
+import Grammatik.Bausteine.Arena.Ownership.Body.CallInd
 
 /-! Recognisers for the expression shapes of the executed allocator forms,
 with what they mean. They match on G's expression constructors at any type

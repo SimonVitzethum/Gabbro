@@ -1,4 +1,4 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.CallInd
+import Grammatik.Bausteine.Arena.Ownership.Body.Shapes
 
 /-! **The general ownership body judgment** over G's actual syntax.
 
@@ -281,28 +281,45 @@ inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (he : checkExpression A c e = true) (hs : OE A I out k c sonst)
       (hrest : OB A I out k (c.bind none) rest c1) :
       OB A I out k c (.floatNarrow e lo hi sonst rest) c1.drop
-  /-- `let x = alloc A (v) else voll;` from the free list: the binder is a new owning origin. -/
-  | allocList {l Γ Λ Λ' k c c1} (v : Expr D Γ Λ (D.typ A.tab A.feld))
-      (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ) (hwK : V.gschreibt A.kopf = true)
-      (hLK : gdarf D A.kopf Λ) (voll : Endblock D V l Γ Λ)
-      (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ')
-      (hv : checkExpression A c v = true) (hvoll : OE A I out k c voll)
+  /-- `let x = alloc A (…) else voll;` from the free list, as the executed form: narrow the free-list head into the
+      index range (else `voll`), the head takes the link of the binder, then any store that is no link. The binder is
+      a new owning origin. Recognised on the actual statements, whatever the payload. -/
+  | allocList {l Γ Λ Λ' k c c1 lo hi} (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int) (voll : Endblock D V l Γ Λ)
+      (g : D.Glob) (e2 : Expr D (.int lo' hi' :: Γ) Λ (D.gtyp g)) (hwK : V.gschreibt g = true) (hLK : gdarf D g Λ)
+      (t : D.Tab) (f : D.Feld t) (i : Expr D (.int lo' hi' :: Γ) Λ (.index (D.count t)))
+      (ev : Expr D (.int lo' hi' :: Γ) Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+      (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
+      (he : exprGlob e = some A.kopf) (hhi : hi' < D.count A.tab) (hg : g = A.kopf)
+      (he2 : exprSlotRead e2 = some ⟨A.tab, A.nxt, Γ.length⟩) (hn : NotLink A t f)
+      (hi : checkExpression A c.bindFresh i = true) (hev : checkExpression A c.bindFresh ev = true)
+      (hs : storeCheck A c.bindFresh t i = true) (hvoll : OE A I out k c voll)
       (hrest : OB A I out k c.bindFresh rest c1) :
-      OB A I out k c (Block.freiNimm A v hwT hLT hwK hLK voll rest) c1.drop
-  /-- `let x = alloc A (v) else voll;` from the used counter. -/
-  | allocCounter {l Γ Λ Λ' k c c1} (v : Expr D Γ Λ (D.typ A.tab A.feld))
-      (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ) (hwG : V.gschreibt A.zaehl = true)
-      (hLG : gdarf D A.zaehl Λ) (voll : Endblock D V l Γ Λ)
-      (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ')
-      (hv : checkExpression A c v = true) (hvoll : OE A I out k c voll)
+      OB A I out k c (.narrow e lo' hi' voll (.cons (.assignGlob g e2 hwK hLK) (.cons (.assignSlot t f i ev hw hL) rest)))
+        c1.drop
+  /-- `let x = alloc A (…) else voll;` from the used counter, as the executed form: narrow the counter into the index
+      range (else `voll`), any store that is no link, then the counter becomes the binder plus one. -/
+  | allocCounter {l Γ Λ Λ' k c c1 lo hi} (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int) (voll : Endblock D V l Γ Λ)
+      (t : D.Tab) (f : D.Feld t) (i : Expr D (.int lo' hi' :: Γ) Λ (.index (D.count t)))
+      (ev : Expr D (.int lo' hi' :: Γ) Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+      (g : D.Glob) (e2 : Expr D (.int lo' hi' :: Γ) Λ (D.gtyp g)) (hwG : V.gschreibt g = true) (hLG : gdarf D g Λ)
+      (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
+      (he : exprGlob e = some A.zaehl) (hhi : hi' < D.count A.tab) (hn : NotLink A t f) (hg : g = A.zaehl)
+      (he2 : exprSucc e2 = some Γ.length)
+      (hi : checkExpression A c.bindFresh i = true) (hev : checkExpression A c.bindFresh ev = true)
+      (hs : storeCheck A c.bindFresh t i = true) (hvoll : OE A I out k c voll)
       (hrest : OB A I out k c.bindFresh rest c1) :
-      OB A I out k c (Block.arenaAlloc A.toArenaForm v hwT hLT hwG hLG voll rest) c1.drop
-  /-- `free A[x];` consumes the owning origin of `x`. -/
-  | release {l Γ Λ Λ' k c c2 c1 i} (x : Var Γ (Ty.index (D.count A.tab)))
-      (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ) (hwK : V.gschreibt A.kopf = true)
-      (hLK : gdarf D A.kopf Λ) (rest : Block D V l Γ Λ Λ')
-      (hc : consume c (.var (Λ := Λ) x) = some (c2, i)) (hrest : OB A I out k c2 rest c1) :
-      OB A I out k c (Block.freiVar A x hwT hLT hwK hLK rest) c1
+      OB A I out k c (.narrow e lo' hi' voll (.cons (.assignSlot t f i ev hw hL) (.cons (.assignGlob g e2 hwG hLG) rest)))
+        c1.drop
+  /-- `free A[x];` as the executed form: the link of `x` takes the head, the head becomes `x`. Consumes the owning
+      origin of `x`. -/
+  | release {l Γ Λ Λ' k c c2 c1 o p} (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
+      (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+      (g : D.Glob) (e2 : Expr D Γ Λ (D.gtyp g)) (hwK : V.gschreibt g = true) (hLK : gdarf D g Λ)
+      (rest : Block D V l Γ Λ Λ')
+      (ht : t = A.tab) (hf : ht ▸ f = A.nxt) (hip : exprVarPos i = some p) (he : exprGlob e = some A.kopf)
+      (hg : g = A.kopf) (he2 : exprVarPos e2 = some p) (hc : consume c i = some (c2, o))
+      (hrest : OB A I out k c2 rest c1) :
+      OB A I out k c (.cons (.assignSlot t f i e hw hL) (.cons (.assignGlob g e2 hwK hLK) rest)) c1
 
 /-- **An end block** (a body, or an `else` that does not fall off). -/
 inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
