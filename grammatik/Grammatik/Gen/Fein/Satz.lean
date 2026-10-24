@@ -188,8 +188,6 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .forallSlots (body := body) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ body rfl _)) all_nil)) (fzE_ok hax body))
   | .existsSlots (body := body) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ body rfl _)) all_nil)) (fzE_ok hax body))
   | .reaches (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
-  | .refStart .. => by simp only [fzE]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
-  | .refNext (r := a) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) all_nil)) (fzE_ok hax a))
   | .refEq (a := a) (b := b) .. => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .slotRef (r := i) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) all_nil)) (fzE_ok hax i))
 

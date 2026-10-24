@@ -134,8 +134,6 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .fls => none
   | .thru _ _ _ _ _ _ => none
   | .ptrOf _ _ _ _ => none
-  | .refStart _ => none
-  | .refNext _ => none
   | .refEq _ _ => none
   | .slotRef _ _ _ _ _ _ => none
   | .fnref _ _ _ => none
@@ -443,8 +441,6 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
   | .fls => by simp [printInt]
   | .thru _ _ _ _ _ _ => by simp [printInt]
   | .ptrOf _ _ _ _ => by simp [printInt]
-  | .refStart _ => by simp [printInt]
-  | .refNext _ => by simp [printInt]
   | .refEq _ _ => by simp [printInt]
   | .slotRef _ _ _ _ _ _ => by simp [printInt]
   | .fnref _ _ _ => by simp [printInt]

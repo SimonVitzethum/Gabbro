@@ -162,12 +162,6 @@ def gPtrOf : Sz (SE D Γ Λ) :=
     Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl [true, false]) fun rw =>
       Sz.pure ⟨.ptr n rw, .ptrOf t n ht rw⟩)
 
-def gRefStart : Sz (SE D Γ Λ) :=
-  Sz.knoten (Sz.bind nS fun n => Sz.pure ⟨.ref n, .refStart n⟩)
-
-def gRefNext : Sz (SE D Γ Λ) :=
-  Sz.knoten (Sz.bind (refS E) fun ⟨n, r⟩ => Sz.pure ⟨.ref n, .refNext r⟩)
-
 def gRefEq : Sz (SE D Γ Λ) :=
   Sz.knoten (Sz.bind (refS E) fun ⟨n, a⟩ => Sz.bind (tyS E (.ref n)) fun b => Sz.pure ⟨.bool, .refEq a b⟩)
 
@@ -308,6 +302,6 @@ def exprS (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE D Γ Λ)) :
   Sz.alle [gLit, gBool, gVar Γ, gGlob, gSlot E, gThru E, gPtrOf, gFnref, gOldG, gOldS E, gWiden E, gAdd E,
     gSub E, gNeg E, gMul E, gDiv E, gRem E, gSdiv E, gSrem E, gGetBytes E, gBand E, gBor E, gBxor E, gShl E,
     gShr E, gLt E, gLe E, gEq E, gFllt E, gFlle E, gAnd E, gOr E, gNot E, gNone, gSome E, gIstSome E, gCase E,
-    gWhy, gForall Q, gExists Q, gReaches E, gRefStart, gRefNext E, gRefEq E, gSlotRef E]
+    gWhy, gForall Q, gExists Q, gReaches E, gRefEq E, gSlotRef E]
 
 end Gabbro.Grammatik.Gen

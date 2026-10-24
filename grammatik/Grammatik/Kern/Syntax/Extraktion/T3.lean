@@ -55,12 +55,6 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact hS t (hsub _ (by simp [Expr.orte])) _ _
-  | .refStart _ => rfl
-  | .refNext r =>
-      have h := eval_liest_nur_orte r os
-        (fun o ho => hsub o ho) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [h]
   | .refEq a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho))) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G

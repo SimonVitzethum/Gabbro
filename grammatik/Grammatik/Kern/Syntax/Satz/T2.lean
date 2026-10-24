@@ -32,8 +32,7 @@ theorem gut_nimmt_gibt {W G} (σ σ1 : World D) (L : D.Lock)
 mutual
 theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .lit _, _, h | .tru, _, h | .fls, _, h | .var _, _, h | .ptrOf _ _ _ _, _, h
-  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h | .refStart _, _, h => by simp [Expr.orte] at h
-  | .refNext r, o, h => r.orte_darf o h
+  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h => by simp [Expr.orte] at h
   | .refEq a b, o, h => by
       simp only [Expr.orte, List.mem_append] at h
       rcases h with h | h

@@ -30,8 +30,6 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .thru (p := p) (i := i) .. => "Expr.thru" :: (eE p ++ eE i)
   | .ptrOf .. => ["Expr.ptrOf"]
   | .fnref .. => ["Expr.fnref"]
-  | .refStart _ => ["Expr.refStart"]
-  | .refNext r => "Expr.refNext" :: eE r
   | .refEq a b => "Expr.refEq" :: (eE a ++ eE b)
   | .slotRef (r := r) .. => "Expr.slotRef" :: eE r
   | .oldG .. => ["Expr.oldG"]

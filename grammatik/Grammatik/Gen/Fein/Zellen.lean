@@ -92,10 +92,8 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .forallSlots .. => 39
   | .existsSlots .. => 40
   | .reaches .. => 41
-  | .refStart .. => 42
-  | .refNext .. => 43
-  | .refEq .. => 44
-  | .slotRef .. => 45
+  | .refEq .. => 42
+  | .slotRef .. => 43
 
 def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
@@ -227,10 +225,8 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .forallSlots (body := body) .. => [⟨0, 0, 39, false, [tk body]⟩, ⟨1, 0, 39, false, [0, 0, kE body]⟩] ++ fzE body
   | .existsSlots (body := body) .. => [⟨0, 0, 40, false, [tk body]⟩, ⟨1, 0, 40, false, [0, 0, kE body]⟩] ++ fzE body
   | .reaches (a := a) (b := b) .. => [⟨0, 0, 41, false, [tk a, tk b]⟩, ⟨1, 0, 41, false, [0, 0, kE a]⟩, ⟨1, 0, 41, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
-  | .refStart .. => [⟨0, 0, 42, false, []⟩]
-  | .refNext (r := r) .. => [⟨0, 0, 43, false, [tk r]⟩, ⟨1, 0, 43, false, [0, 0, kE r]⟩] ++ fzE r
-  | .refEq (a := a) (b := b) .. => [⟨0, 0, 44, false, [tk a, tk b]⟩, ⟨1, 0, 44, false, [0, 0, kE a]⟩, ⟨1, 0, 44, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
-  | .slotRef (r := r) .. => [⟨0, 0, 45, false, [tk r]⟩, ⟨1, 0, 45, false, [0, 0, kE r]⟩] ++ fzE r
+  | .refEq (a := a) (b := b) .. => [⟨0, 0, 42, false, [tk a, tk b]⟩, ⟨1, 0, 42, false, [0, 0, kE a]⟩, ⟨1, 0, 42, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
+  | .slotRef (r := r) .. => [⟨0, 0, 43, false, [tk r]⟩, ⟨1, 0, 43, false, [0, 0, kE r]⟩] ++ fzE r
 
 def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]

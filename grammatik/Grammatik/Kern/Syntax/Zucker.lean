@@ -60,8 +60,6 @@ def Expr.ins (Γ1 : Ctx) : Expr D (Γ1 ++ Γ2) Λ τ → Expr D (Γ1 ++ σ :: Γ
   | .fnref f n h => .fnref f n h
   | .oldG g hL => .oldG g hL
   | .oldS t f i hL => .oldS t f (i.ins Γ1) hL
-  | .refStart n => .refStart n
-  | .refNext r => .refNext (r.ins Γ1)
   | .refEq a b => .refEq (a.ins Γ1) (b.ins Γ1)
   | .slotRef r t ht ho f hL => .slotRef (r.ins Γ1) t ht ho f hL
   | .getBytes t f hf n i hlo hhi hL => .getBytes t f hf n (i.ins Γ1) hlo hhi hL

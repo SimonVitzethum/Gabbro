@@ -144,10 +144,6 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
         (eval_ru σ₀ σ i ρ)
   | _, _, _, .ptrOf .., _ => rfl
   | _, _, _, .fnref .., _ => rfl
-  | _, _, _, .refStart _, _ => rfl
-  | _, _, _, .refNext r, ρ =>
-      congrArg (fun z : Nat => (Val.vonZelle (z + 1) : Val (Option D.Fn) (passtM D) (.ref _)))
-        (eval_ru σ₀ σ r ρ)
   | _, _, _, .refEq a b, ρ => by
       show decide (_ = _) = decide (_ = _)
       rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]

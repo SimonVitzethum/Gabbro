@@ -57,9 +57,10 @@ inductive Ty where
       Waechter -- der Alias kostet keine Sicherheit, nur Logik (§15.8). -/
   | ptr (t : Nat) (rw : Bool)
   /-- `ref T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
-      `Deklaration.offen`). The value is a cell number without an upper bound; a reference is made only from
-      the start reference and the successor of a reference (`refStart`, `refNext`), never from an integer, and
-      every access through it carries the guards of `t` like a slot access. -/
+      `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
+      memory provider: the answer of a provider item (`syscall`/`extern`, `Block.bindAxiomElse`) with its mandatory
+      failure branch, whose contract (user logic) says the cell is fresh. G itself makes no reference, and never one
+      from an integer. Every access through it carries the guards of `t` like a slot access. -/
   | ref (t : Nat)
   deriving DecidableEq, Repr
 

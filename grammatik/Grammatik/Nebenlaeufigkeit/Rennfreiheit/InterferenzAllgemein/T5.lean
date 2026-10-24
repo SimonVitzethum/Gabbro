@@ -33,11 +33,6 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   | .fnref _ _ _ => rfl
   | .none _ => rfl
   | .why _ _ => rfl
-  | .refStart _ => rfl
-  | .refNext r =>
-      have h := eval_liest_nur_speicher r σ₀ σ₀' σ σ' ρ hS hG h0S h0G
-      simp only [eval]
-      rw [h]
   | .refEq a b =>
       have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G

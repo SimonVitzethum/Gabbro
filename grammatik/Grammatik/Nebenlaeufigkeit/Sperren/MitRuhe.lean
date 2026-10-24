@@ -475,8 +475,6 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ht rw
   | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) h
-  | _, _, _, .refStart n => .refStart n
-  | _, _, _, .refNext r => .refNext (ruE r)
   | _, _, _, .refEq a b => .refEq (ruE a) (ruE b)
   | _, _, _, .slotRef r t ht ho f hL => .slotRef (ruE r) t ht ho f (darfR hL)
   | _, _, _, .oldG g hL => Expr.oldG (D := D.mitRuhe) g (gdarfR hL)

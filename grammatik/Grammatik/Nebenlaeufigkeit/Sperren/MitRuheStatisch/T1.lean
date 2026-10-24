@@ -31,8 +31,6 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .thru p t ht f i hL => kongr₂ (fun x y => x ++ Sum.inl t :: y) (ruE_orte p) (ruE_orte i)
   | _, _, _, .ptrOf .. => rfl
   | _, _, _, .fnref .. => rfl
-  | _, _, _, .refStart _ => rfl
-  | _, _, _, .refNext r => ruE_orte r
   | _, _, _, .refEq a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .slotRef r t ht ho f hL => congrArg (Sum.inl t :: ·) (ruE_orte r)
   | _, _, _, .oldG _ _ => rfl

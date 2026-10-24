@@ -68,8 +68,6 @@ def kTab : List (List Zeile) := [
     ⟨some 1, false, false, [(0, some 1, none)]⟩ /- forallSlots -/,
     ⟨some 1, false, false, [(0, some 1, none)]⟩ /- existsSlots -/,
     ⟨some 1, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- reaches -/,
-    ⟨some 9, false, false, []⟩ /- refStart -/,
-    ⟨some 9, false, false, [(0, some 9, none)]⟩ /- refNext -/,
     ⟨some 1, false, false, [(0, some 9, none), (0, some 9, none)]⟩ /- refEq -/,
     ⟨none, false, false, [(0, some 9, none)]⟩ /- slotRef -/],
   -- NutzlastExpr

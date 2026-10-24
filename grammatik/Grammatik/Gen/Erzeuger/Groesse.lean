@@ -31,8 +31,6 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .thru p _ _ _ i _ => 1 + groesseExpr p + groesseExpr i
   | _, _, _, .ptrOf _ n _ _ => 1 + Zahlen.kostN n
   | _, _, _, .fnref _ _ _ => 1
-  | _, _, _, .refStart n => 1 + Zahlen.kostN n
-  | _, _, _, .refNext r => 1 + groesseExpr r
   | _, _, _, .refEq a b => 1 + groesseExpr a + groesseExpr b
   | _, _, _, .slotRef r _ _ _ _ _ => 1 + groesseExpr r
   | _, _, _, .oldG _ _ => 1

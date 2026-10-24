@@ -226,11 +226,6 @@ theorem ersetzeE (P : SE D Γ Λ → Prop) (PQ : (Σ Γ' : Ctx, SE D Γ' Λ) →
     exact ⟨.thru p' t ht f i' hL, ⟨fun c => by simp [Expr.orte, gp.orte c, gi.orte c],
       by have := gp.groesse; have := gi.groesse; simp only [groesseExpr]; omega⟩,
       by simp [Expr.teile, hp, hi], by simp [Expr.qteil]⟩
-  | refNext r =>
-    obtain ⟨r', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y r := h ⟨_, r⟩ (by simp [Expr.teile])
-    exact ⟨.refNext r', ⟨fun c => by simp [Expr.orte, g1.orte c],
-      by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
   | refEq a b =>
     obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
     obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])

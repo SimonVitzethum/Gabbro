@@ -158,8 +158,7 @@ mutual
 /-- Die Traeger und Globale, die ein Ausdruck liest (statisch; eine Ueberdeckung, denn
     `&&` liest den rechten Operanden nicht immer -- mehr Ereignisse, alle bewacht). -/
 def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
-  | .lit _ | .tru | .fls | .var _ | .ptrOf _ _ _ _ | .fnref _ _ _ | .none _ | .why _ _ | .refStart _ => []
-  | .refNext r => r.orte
+  | .lit _ | .tru | .fls | .var _ | .ptrOf _ _ _ _ | .fnref _ _ _ | .none _ | .why _ _ => []
   | .refEq a b => a.orte ++ b.orte
   | .slotRef r t _ _ _ _ => .inl t :: r.orte
   | .glob g _ => [.inr g]
@@ -223,8 +222,6 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .thru _ t _ f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .ptrOf _ _ _ _, _, _ => ()
   | .fnref f _ h, _, _ => ⟨f, h⟩
-  | .refStart _, _, _ => Val.vonZelle 0
-  | .refNext r, σ, ρ => Val.vonZelle ((eval σ₀ r σ ρ).zelle + 1)
   | .refEq a b, σ, ρ => decide ((eval σ₀ a σ ρ).zelle = (eval σ₀ b σ ρ).zelle)
   | .slotRef r t _ _ f _, σ, ρ => σ.slots t ((eval σ₀ r σ ρ).zelle : Int) f
   | .oldG g _, _, _ => σ₀.globs g

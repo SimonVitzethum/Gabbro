@@ -1599,28 +1599,33 @@ program can use storage without a declared element ceiling. The Lean model comes
 * **`Deklaration.offen : Tab → Bool`** (default `false`): `table T open`. An open table is a region; its cells are not bounded by
   `count`.
 * **`Ty.ref t`**: a reference into open table number `t`. Its value is a cell number with no upper bound (`Val.zelle : Nat`).
-* **`Expr.refStart n`** (cell 0), **`Expr.refNext r`** (the next cell), **`Expr.refEq a b`**: the only ways to make and compare
-  references. There is no integer-to-reference form; a reference is the result of the region's own bump.
-* **`Expr.slotRef r t ht ho f hL`** and **`Stmt.assignSlotRef r t ht ho f e hw hL`**: read and write a field of the cell `r` of the
-  open table `t`, under exactly the guards of a slot access (`darf D t Λ`, `V.schreibt t`); the access records the read/write of `t`
-  like `slot`/`assignSlot`.
-* Allocation is G code, not a primitive: a counter global of type `ref t` bumped by `refNext`, a free list linked through `ref`
-  fields with a separate `bool` "has next" field, and every request behind `Block.allocationAttempt` -- the provider answer is an
-  ordinary Boolean from the program's own binding, the failure branch is mandatory, also on reuse. No availability axiom.
+* **Where a reference comes from (Simon, 2026-10-24): ONLY from the program's memory provider.** A reference is the answer of a
+  provider item (`syscall`/`extern`, bound with `Block.bindAxiomElse`, whose failure branch is mandatory); the item's contract
+  (user logic) says the cell is fresh. G has no form that makes a reference, and none that turns an integer into one. This is
+  "memory from outside comes as a REGION" applied to every single cell: every allocation has its OOM path by construction.
+* **`Expr.refEq a b`**, **`Expr.slotRef r t ht ho f hL`** and **`Stmt.assignSlotRef r t ht ho f e hw hL`**: compare references,
+  read and write a field of cell `r` of the open table `t`, under exactly the guards of a slot access (`darf D t Λ`,
+  `V.schreibt t`); the access records the read/write of `t` like `slot`/`assignSlot`.
+* The new constructors stand at the END of `Expr` and `Stmt`, so the fine cells of the existing constructors keep their numbers.
 
-### 14.2 What is decided and why
+### 14.2 The address leg of the goal (Simon, 2026-10-24: address spaces)
 
-* **No new memory primitive in the machine.** `World.slots` is already indexed by every `Int`; the open table only lifts the bound
-  that the index TYPE imposed. Race freedom, guards and the access trace are those of the table, so `gabbro_ziel`'s carrier-level
-  legs extend case by case.
-* **No forged references.** Like `ptr`, a `ref` is minted only by the region itself. Logical aliasing and use after release are the
-  ownership judgment's business (section 12), which works on the same G syntax.
-* **The raw word of a reference** is its cell number (`roh`); a provider answer decodes only non-negative words (`einpassen`).
-  Lowering to a finite machine must refuse (go to the failure branch) before the number exceeds its word: that is the provider's
-  answer, user logic, never an inserted trap or an assumption.
+An address is a pair (space, byte). Closed tables and the globals lie in space `0` as before; every open region lies in a space of
+its own (`LayoutOk.offen`) and reaches up without an end, so its growth meets no other carrier. `ImBereich D t k` is
+`0 ≤ k ∧ (D.offen t ∨ k < D.count t)`. The text of `speicherAdressen` in `Spec.lean` is unchanged, but its meaning moved with
+`AdressLayout`/`ImBereich`: this is a goal-statement change and needs review before the merge.
 
-### 14.3 Still open in this section
+### 14.3 What is proved, and what stays conservative
 
-The adaptations of every function and proof over G's syntax (in progress), the checker components of `Akzeptiert`, `gabbro_ziel`
-unchanged in text and axioms, a refinement theorem from the G region code to `ArenaStorage.Heap` with `Capacity.unbounded`, the
-Brainfuck bridge moved from the finite arena to the open region, witnesses, and only then Rust.
+The whole Lean tree builds with the forms: machine G, the lock and atomic semantics, race freedom, call adequacy, costs, the
+Hoare rules, the idle-root translation, the address leg, the generator (clauses, completeness, representatives), the coverage
+cells (component hashes re-pinned after reading them again: the cells are carrier-level and see a reference access as an access
+of its table) and the fine-cell universe (type class `ref` = 9). `gabbro_ziel` keeps exactly `propext`, `Classical.choice`,
+`Quot.sound`. Conservative, by refusal: the object-frame discipline and the ownership requirements refuse reference accesses
+(no rule yet); the source printer has no syntax for references.
+
+### 14.4 Still open
+
+Witnesses (a program with an open region, executed and accepted; the address leg on it), a refinement theorem from the G region
+to `ArenaStorage.Heap` with `Capacity.unbounded`, ownership rules for reference accesses, the generator's declarations with open
+tables (otherwise the new fine cells are unreachable for M and N), the Brainfuck bridge on the open region, then Rust.

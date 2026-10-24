@@ -150,9 +150,9 @@ structure Deklaration where
   /-- `table T count N`; ein `format` und ein Verbund sind Tabellen mit `count 1`. -/
   count : Tab → Int
   /-- `table T open` -- an OPEN table: a region without a declared element ceiling. Its cells are addressed by
-      `ref` values (`Expr.slotRef`), not by the bounded index type; `count` does not bound them. Every
-      allocation in such a region is a request to the program's own provider with a mandatory failure branch
-      (`Block.allocationAttempt`). Default: no table is open. -/
+      `ref` values (`Expr.slotRef`), not by the bounded index type; `count` does not bound them. Every cell of
+      such a region comes from the program's own provider (an answer of type `ref`, with a mandatory failure
+      branch). Default: no table is open. -/
   offen : Tab → Bool := fun _ => false
   Feld : Tab → Type
   [decFeld : ∀ t, DecidableEq (Feld t)]
@@ -498,10 +498,6 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       `ancestors of` und `chain(…) in` sind `forallSlots` mit `reaches` als Filter. -/
   | reaches (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
       (a b : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ .bool
-  /-- The first cell of an open region: the start reference. -/
-  | refStart (n : Nat) : Expr Γ Λ (.ref n)
-  /-- The cell after `r`: how a bump allocator makes a fresh reference. There is no other way to make one. -/
-  | refNext (r : Expr Γ Λ (.ref n)) : Expr Γ Λ (.ref n)
   /-- Two references name the same cell. -/
   | refEq (a b : Expr Γ Λ (.ref n)) : Expr Γ Λ .bool
   /-- `r->f` into the OPEN table number `n` -- under the same guards as a slot of `t`. -/

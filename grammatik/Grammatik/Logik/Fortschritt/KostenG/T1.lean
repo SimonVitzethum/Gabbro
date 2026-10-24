@@ -66,8 +66,6 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .thru p _ _ _ i _ => 1 + kostenExpr p + kostenExpr i
   | .ptrOf _ _ _ _ => 0
   | .fnref _ _ _ => 0
-  | .refStart _ => 0
-  | .refNext r => 1 + kostenExpr r
   | .refEq a b => 1 + kostenExpr a + kostenExpr b
   | .slotRef r _ _ _ _ _ => 1 + kostenExpr r
   | .oldG _ _ => 1
