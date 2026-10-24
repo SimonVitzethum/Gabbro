@@ -58,8 +58,8 @@ inductive Ty where
   | ptr (t : Nat) (rw : Bool)
   /-- `ref T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
       `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
-      memory provider: the answer of a provider item (`syscall`/`extern`, `Block.bindAxiomElse`) with its mandatory
-      failure branch, whose contract (user logic) says the cell is fresh. G itself makes no reference, and never one
+      memory provider: the answer of a provider item (`syscall`/`extern`), whose contract (user logic) says the cell
+      is fresh. That the provider has memory to give is user logic too (Simon, 2026-10-24: OOM is user logic). G itself makes no reference, and never one
       from an integer. Every access through it carries the guards of `t` like a slot access. -/
   | ref (t : Nat)
   deriving DecidableEq, Repr

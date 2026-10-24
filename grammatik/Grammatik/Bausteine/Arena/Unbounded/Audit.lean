@@ -70,6 +70,5 @@ import Grammatik.Zielsatz.BeweisAtomar
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Grammatik.GRegion.zelle_geschrieben
 #print axioms Gabbro.Grammatik.GRegion.kein_statisches_limit
-#print axioms Gabbro.Grammatik.GRegion.oom_fehlerzweig
 #print axioms Gabbro.Grammatik.GRegion.zelle_im_bereich
 #print axioms Gabbro.Grammatik.GRegion.prog_akzeptiert

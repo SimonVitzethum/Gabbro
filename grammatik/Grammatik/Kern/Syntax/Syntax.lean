@@ -151,8 +151,8 @@ structure Deklaration where
   count : Tab → Int
   /-- `table T open` -- an OPEN table: a region without a declared element ceiling. Its cells are addressed by
       `ref` values (`Expr.slotRef`), not by the bounded index type; `count` does not bound them. Every cell of
-      such a region comes from the program's own provider (an answer of type `ref`, with a mandatory failure
-      branch). Default: no table is open. -/
+      such a region comes from the program's own provider (an answer of type `ref`); that it has memory to give is
+      user logic. Default: no table is open. -/
   offen : Tab → Bool := fun _ => false
   Feld : Tab → Type
   [decFeld : ∀ t, DecidableEq (Feld t)]

@@ -3,13 +3,13 @@ import Grammatik.Kern.Syntax.Koernung
 import Grammatik.Zielsatz.Kern.Akzeptiert
 
 /-! The open region in G, executed (PLAN-DYNAMIC 14). One open table `T` (`table T open`, one byte field) and one
-provider item `neu : -> ref T else 1 reason` -- the program's memory provider, whose answer is the ONLY way a reference
-comes into being. The body `let r = neu() else { return; }; r->x = 7; return;` runs in G:
+provider item `neu : -> ref T` -- the program's memory provider, whose answer is the ONLY way a reference comes into
+being. That the provider has memory to give is user logic (Simon, 2026-10-24: OOM is user logic): the item has no
+failure branch. The body `let r = neu(); r->x = 7; return;` runs in G:
 
 * `zelle_geschrieben`: when the provider answers cell `K`, the run writes `7` into cell `K` of `T` and returns;
 * `kein_statisches_limit`: for EVERY `K` -- no ceiling, `count T = 0` -- there is a provider answer that makes the same
   program write cell `K`;
-* `oom_fehlerzweig`: when the provider refuses, the failure branch runs and no cell of `T` is written;
 * `zelle_im_bereich`: the written cell lies in the extent of the open region (the address leg, `ImBereich`). -/
 
 namespace Gabbro.Grammatik.GRegion
@@ -17,7 +17,7 @@ namespace Gabbro.Grammatik.GRegion
 open Gabbro.Grammatik
 
 /-- One OPEN table `T` (`count 0`: the count bounds nothing), one byte field; one function; one provider item that
-    answers a reference into `T` or one reason (out of memory). -/
+    answers a reference into `T`. -/
 @[reducible] def rD : Deklaration where
   Tab := Unit
   decTab := inferInstance
@@ -57,7 +57,6 @@ open Gabbro.Grammatik
   aerg := fun _ => some (.ref 0)
   aschreibt := fun _ _ => false
   agschreibt := fun _ g => g.elim
-  agruende := fun _ => 1
   Reg := Empty
   rtyp := fun r => r.elim
   rklasse := fun r => r.elim
@@ -76,30 +75,22 @@ def weiter : Endblock rD rV false [.ref 0] [] :=
   .cons (.assignSlotRef (.var .here) () rfl rfl () (.widen (by decide) (by decide) (.lit 7)) rfl
     (fun _ h => nomatch h)) (.ret .empty (List.Perm.refl _))
 
-/-- `let r = neu() else { return; }; r->x = 7; return;` -/
+/-- `let r = neu(); r->x = 7; return;` -/
 def rumpf : Endblock rD rV false [] [] :=
-  .bindAxiomElse () .nil rfl (by decide) (fun _ h => nomatch h) (fun g => g.elim) (fun _ h => nomatch h)
-    (fun g => g.elim)
-    (.ret .empty (List.Perm.refl _))
-    weiter
+  .bindAxiom () .nil rfl (fun _ h => nomatch h) (fun g => g.elim) (fun _ h => nomatch h) (fun g => g.elim) weiter
 
-/-- The provider answering cell `K` (the raw word `2 K`: tag 0, value `K`). -/
+/-- The provider answering cell `K` (the raw word `K`). -/
 def oK (K : Nat) : Orakel rD :=
-  ⟨fun _ σ _ => (σ, 2 * (K : Int)), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
-
-/-- The provider refusing (the raw word `1`: reason 0, out of memory). -/
-def oVoll : Orakel rD :=
-  ⟨fun _ σ _ => (σ, 1), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+  ⟨fun _ σ _ => (σ, (K : Int)), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
 
 /-- A start world: every cell holds `0`. -/
 def w0 : World rD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => g.elim, []⟩
 
-/-- The provider's answer `2 K` decodes as cell `K`. -/
+/-- The provider's answer `K` decodes as cell `K`. -/
 theorem antwort_K (K : Nat) :
-    sonstPasst (D := rD) (fun _ => none) (some (.ref 0)) 1 (2 * (K : Int)) = some (Sum.inl (Val.vonZelle (F := rD.Fn) (passt := rD.passt) (n := 0) K)) := by
-  have h1 : 2 * (K : Int) % ((1 : Nat) + 1 : Int) = 0 := by omega
-  have h2 : 2 * (K : Int) / ((1 : Nat) + 1 : Int) = K := by omega
-  simp only [sonstPasst, h1, if_true, h2, einpassenErg, einpassen, Int.natCast_nonneg, Int.toNat_natCast]
+    einpassenErg (D := rD) (fun _ => none) (some (.ref 0)) (K : Int) =
+      some (Val.vonZelle (F := rD.Fn) (passt := rD.passt) (n := 0) K) := by
+  simp only [einpassenErg, einpassen, Int.natCast_nonneg, if_true, Int.toNat_natCast]
   rfl
 
 /-- **The provider's cell is written.** -/
@@ -108,7 +99,7 @@ theorem zelle_geschrieben (K : Nat) (passes : Nat)
     ∃ σ', execEnd (oK K) passes R rumpf w0 .nil = .zurueck σ' () ∧ (σ'.slots () (K : Int) ()).n = 7 := by
   have h : execEnd (oK K) passes R rumpf w0 .nil =
       (execEnd (oK K) passes R weiter (w0.lese [] []) (.cons (Val.vonZelle K) .nil)).schrumpf := by
-    simp only [rumpf, execEnd, axiomAntwortSonst, oK, Args.orte, antwort_K]
+    simp only [rumpf, execEnd, axiomAntwort, oK, Args.orte, antwort_K]
     rfl
   rw [h]
   refine ⟨_, rfl, ?_⟩
@@ -123,12 +114,6 @@ theorem kein_statisches_limit (passes : Nat)
   intro K
   obtain ⟨σ', h, h7⟩ := zelle_geschrieben K passes R
   exact ⟨oK K, σ', h, h7, by simp⟩
-
-/-- **Out of memory is the failure branch**: the provider refuses, the function returns through `else`, and no cell
-    of `T` changes. -/
-theorem oom_fehlerzweig (passes : Nat) (R : ∀ f : rD.Fn, World rD → Env rD (rD.params f) → RufAusgang f) :
-    ∃ σ', execEnd oVoll passes R rumpf w0 .nil = .zurueck σ' () ∧ ∀ k f, σ'.slots () k f = w0.slots () k f := by
-  refine ⟨_, rfl, fun _ _ => rfl⟩
 
 /-- **The written cell lies in the extent of the open region**, whatever its number. -/
 theorem zelle_im_bereich (K : Nat) : ImBereich rD () (K : Int) := ⟨by omega, .inl rfl⟩
