@@ -107,7 +107,7 @@ theorem run_narrow {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {lo 
     (hr : OR A I (I f).output k c (.dann (.narrow e lo' hi' sonst rest) r))
     (h : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi') :
-    Next A I fr s (σ.lese Λ e.orte) f ⟨l, .int lo' hi' :: Γ, Λ,
+    Next A I fr s σ (σ.lese Λ e.orte) f ⟨l, .int lo' hi' :: Γ, Λ,
       .cons ⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, h.1, h.2⟩ ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, alt⟩ := ob_narrow_inv hb rfl
@@ -121,14 +121,14 @@ theorem run_narrow {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {lo 
     have hv := exprGlob_eval e he (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ
     rw [intVon_umTyp A.hkopf, intVon_int, Option.some.injEq] at hv
     change _ = A.kopfSt (σ.lese Λ e.orte) at hv
-    refine Next.same ha1 ho1 (.list _ ρ e2 hwK hLK _ _ he2 hv ?_ hk hf ?_)
+    refine Next.meta ha ho (MetaSame.reads A σ Λ e.orte) (.list _ ρ e2 hwK hLK _ _ he2 hv ?_ hk hf ?_)
     · have := h.2; rw [hv] at this; omega
     · exact OR.binder (.cons _ _ (.assignSlot t f' i ev hw hL hn hi hev hst) hrest) hd hk hc
   · subst hreq
     have hv := exprGlob_eval e he (σ.lese Λ e.orte) (σ.lese Λ e.orte) ρ
     rw [intVon_umTyp A.hz, intVon_int, Option.some.injEq] at hv
     change _ = A.stand (σ.lese Λ e.orte) at hv
-    refine Next.same ha1 ho1 (.store _ ρ t f' i ev hw hL hn e2 hwG hLG _ _ he2 hv ?_ hk hf ?_)
+    refine Next.meta ha ho (MetaSame.reads A σ Λ e.orte) (.store _ ρ t f' i ev hw hL hn e2 hwG hLG _ _ he2 hv ?_ hk hf ?_)
     · have := h.2; rw [hv] at this; omega
     · exact OR.binder hrest hd hk hc
 
@@ -139,10 +139,10 @@ theorem run_narrowElse {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
     {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.narrow e lo' hi' sonst rest) r)) :
-    Next A I fr s (σ.lese Λ e.orte) f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
+    Next A I fr s σ (σ.lese Λ e.orte) f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨hs, _⟩ := ob_narrow_inv hb rfl
-  exact Next.same (agrees_reads ha Λ e.orte) (freiOk_reads ho Λ e.orte) (.run ρ _ hk hf (OR.sonst hs hc.exits))
+  exact Next.meta ha ho (MetaSame.reads A σ Λ e.orte) (.run ρ _ hk hf (OR.sonst hs hc.exits))
 
 end Step
 
@@ -167,7 +167,7 @@ theorem list_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo h
     {σ' : World D} {ρ' : Env D (.int lo hi :: Γ)}
     (hstep : execStmt O passes keinRuf (.assignGlob A.kopf e2 hw hL : Stmt D (vertragVon D f) l _ Λ Λ) σ (.cons x ρ) =
       .ok σ' ρ') :
-    Next A I fr s σ' f ⟨l, .int lo hi :: Γ, Λ, ρ', .dann b r⟩ := by
+    Next A I fr s σ σ' f ⟨l, .int lo hi :: Γ, Λ, ρ', .dann b r⟩ := by
   simp only [execStmt] at hstep
   injection hstep with hσ hρ
   subst σ' ρ'
@@ -201,7 +201,7 @@ theorem list_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo h
     rw [A.take_live_iff hlt ho hk2 hn2 hs2 j, ← hx]
   exact Next.of_holds (Holds.allocateAt (σm := σ) (τ := .int lo hi) (realizes_of hf ha ho) hf.2.2.2
     (State.local_refl s fr) (State.progress_refl s) x x.n hs (allocate_slot hs) (intVon_int x) hagree htake.1)
-    (Nat.le_succ_of_le hk) hr
+    (Nat.le_succ_of_le hk) hr hn2
 
 /-- **The counter rises past the binder**: the binder's slot turns live and is granted. -/
 theorem counter_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo hi : Int} {k c : Context}
@@ -215,7 +215,7 @@ theorem counter_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {l
     {σ' : World D} {ρ' : Env D (.int lo hi :: Γ)}
     (hstep : execStmt O passes keinRuf (.assignGlob A.zaehl e2 hw hL : Stmt D (vertragVon D f) l _ Λ Λ) σ
       (.cons x ρ) = .ok σ' ρ') :
-    Next A I fr s σ' f ⟨l, .int lo hi :: Γ, Λ, ρ', .dann b r⟩ := by
+    Next A I fr s σ σ' f ⟨l, .int lo hi :: Γ, Λ, ρ', .dann b r⟩ := by
   simp only [execStmt] at hstep
   injection hstep with hσ hρ
   subst σ' ρ'
@@ -240,7 +240,7 @@ theorem counter_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {l
     rw [A.bump_live_iff ho hkopf hlinks hstand j, ← hx]
   exact Next.of_holds (Holds.allocateAt (σm := σ) (τ := .int lo hi) (realizes_of hf ha ho) hf.2.2.2
     (State.local_refl s fr) (State.progress_refl s) x x.n hs (allocate_slot hs) (intVon_int x) hagree hbump.1)
-    (Nat.le_succ_of_le hk) hr
+    (Nat.le_succ_of_le hk) hr hlinks
 
 /-- **The payload store before the counter rises** keeps the allocator words. -/
 theorem store_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo hi : Int} {k c : Context}
@@ -257,7 +257,7 @@ theorem store_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo 
     {σ' : World D} {ρ' : Env D (.int lo hi :: Γ)}
     (hstep : execStmt O passes keinRuf (.assignSlot t f' i ev hws hLs : Stmt D (vertragVon D f) l _ Λ Λ) σ
       (.cons x ρ) = .ok σ' ρ') :
-    Next A I fr s σ' f ⟨l, .int lo hi :: Γ, Λ, ρ', .dann (.cons (.assignGlob A.zaehl e2 hw hL) b) r⟩ := by
+    Next A I fr s σ σ' f ⟨l, .int lo hi :: Γ, Λ, ρ', .dann (.cons (.assignGlob A.zaehl e2 hw hL) b) r⟩ := by
   simp only [execStmt] at hstep
   injection hstep with hσ hρ
   subst σ' ρ'
@@ -265,7 +265,7 @@ theorem store_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo 
     (MetaSame.writeSlot A (σ.lese Λ (i.orte ++ ev.orte)) t Λ
       (eval (σ.lese Λ (i.orte ++ ev.orte)) i (σ.lese Λ (i.orte ++ ev.orte)) (.cons x ρ)).n f'
       (eval (σ.lese Λ (i.orte ++ ev.orte)) ev (σ.lese Λ (i.orte ++ ev.orte)) (.cons x ρ)) hn)
-  exact Next.same (State.agrees_meta ha hm) (freiOk_meta ho hm)
+  exact Next.meta ha ho hm
     (.counter x ρ e2 hw hL b r he2 (by rw [hm.2.2]; exact hx) (by rw [hm.2.2]; exact hlt) hk hf hr)
 
 /-- **The head takes the slot of `free`**: the slot goes on the list and its grant is retired. -/
@@ -280,7 +280,7 @@ theorem release_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {k
     {σ' : World D} {ρ' : Env D Γ}
     (hstep : execStmt O passes keinRuf (.assignGlob A.kopf e2 hw hL : Stmt D (vertragVon D f) l _ Λ Λ) σ ρ =
       .ok σ' ρ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ', .dann b r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ', .dann b r⟩ := by
   simp only [execStmt] at hstep
   injection hstep with hσ hρ
   subst σ' ρ'
@@ -299,7 +299,8 @@ theorem release_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {k
   have hfree := A.lebt_frei h.slot hlive ho hk3 hl3 (fun j _ => hn3 j) hs3
   have howns' : s.owns fr h := howns
   have hrel : s.release fr h = some (s.put h.slot none) := by simp [State.release, howns']
-  refine ⟨s.put h.slot none, State.release_local hrel, State.release_progress hrel, ?_, hfree.1, ?_⟩
+  refine ⟨s.put h.slot none, State.release_local hrel, State.release_progress hrel, ?_, hfree.1,
+    fun j _ => hn3 j, ?_⟩
   · exact State.release_agrees ha fr h hrel
       (fun j => A.release_live_iff h.slot hlive ho hk3 hl3 (fun j' _ => hn3 j') hs3 j)
   · exact .run ρ _ hk ⟨Context.kill_bounded hf.1 o, Context.kill_references hf.2.1 o,

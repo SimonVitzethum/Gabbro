@@ -163,6 +163,117 @@ theorem link_live (A : FreiForm D) {σ σ2 : World D} {i : Int} (hi : A.Lebt σ 
   unfold FreiForm.Lebt
   rw [hs, hauf]
 
+
+/-! ## A leaf keeps the allocator words -/
+
+section Meta
+
+variable {A : FreiForm D} {I : Interfaces A} {V : Vertrag D} {out : Flow.Output A V.erg} {O : Orakel D}
+  {passes : Nat}
+
+/-- **A judged leaf keeps the free-list head, every link and the counter.** -/
+theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c2 : Context}
+    {st : Stmt D V l Γ Λ Λ'}, OS A I out k c st c2 → st.istBlatt = true →
+    ∀ (σ : World D) (ρ : Env D Γ) (σ' : World D) (ρ' : Env D Γ),
+      execStmt O passes keinRuf st σ ρ = .ok σ' ρ' → MetaSame A σ σ'
+  | _, _, _, _, _, _, _, _, .assignSlot t f _ _ _ _ hn _ _ _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact (MetaSame.reads A σ _ _).trans (MetaSame.writeSlot A _ t _ _ f _ hn)
+  | _, _, _, _, _, _, _, _, .assignThru _ t _ f _ _ _ _ hn _ _ _ _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact (MetaSame.reads A σ _ _).trans (MetaSame.writeSlot A _ t _ _ f _ hn)
+  | _, _, _, _, _, _, _, _, .assignGlob g _ _ _ hg _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact (MetaSame.reads A σ _ _).trans (MetaSame.writeGlob A _ g _ _ hg)
+  | _, _, _, _, _, _, _, _, .putBytes t f hf _ _ _ _ _ _ _ ht _ _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact (MetaSame.reads A σ _ _).trans (MetaSame.writeBytes A t f hf _ (fun he => absurd he.symm ht) _ _ _)
+  | _, _, _, _, _, _, _, _, .assignVar .. => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact MetaSame.reads A σ _ _
+  | _, _, _, _, _, _, _, _, .shift t f _ _ _ _ _ _ _ _ hl _ _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    split at h
+    · injection h with h1 _
+      subst σ'
+      exact (MetaSame.reads A σ _ _).trans (MetaSame.writeSlot A _ t _ _ f _ hl)
+    · cases h
+  | _, _, _, _, _, _, _, _, .axiomCall a _ _ _ _ _ _ hfree _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    split at h
+    · rename_i σ2 v heq
+      injection h with h1 _
+      subst σ'
+      have hσ : σ2 = (axiomAntwort O a _ _).1 := (congrArg Prod.fst heq).symm
+      rw [axiomAntwort_fst] at hσ
+      rw [hσ]
+      exact (MetaSame.reads A σ _ _).trans (MetaSame.axiom hO hfree _ _)
+    · cases h
+  | _, _, _, _, _, _, _, _, .regWrite .. => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact MetaSame.reads A σ _ _
+  | _, _, _, _, _, _, _, _, .transition .. => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact MetaSame.refl A σ
+  | _, _, _, _, _, _, _, _, .publish g _ _ _ _ _ hg _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact (MetaSame.reads A σ _ _).trans (MetaSame.writeGlob A _ g _ _ hg)
+  | _, _, _, _, _, _, _, _, .advances .. => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact MetaSame.refl A σ
+  | _, _, _, _, _, _, _, _, .retires .. => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact MetaSame.refl A σ
+  | _, _, _, _, _, _, _, _, .ret .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
+  | _, _, _, _, _, _, _, _, .retWhy .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
+  | _, _, _, _, _, _, _, _, .leave .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
+  | _, _, _, _, _, _, _, _, .next .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
+  | _, _, _, _, _, _, _, _, .ite .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .onOption .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .onTag .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .onWhy .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .call .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .callInd .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .locks .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .breaking .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .traverse .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .retry .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .forever .. => by intro hl; simp [Stmt.istBlatt] at hl
+
+end Meta
+
 /-! ## The leaf step -/
 
 section Step
@@ -171,20 +282,28 @@ variable {A : FreiForm D} {I : Interfaces A} {O : Orakel D} {passes : Nat} {fr :
 
 /-- **What a step of the running activation leaves**: a next ledger that keeps every cell the activation does not
     own and manufactures no grant, agreeing with the next world, and the next state of the activation. -/
-def Next (A : FreiForm D) (I : Interfaces A) (fr : Frame) (s : State) (σ' : World D) (f : D.Fn)
+def Next (A : FreiForm D) (I : Interfaces A) (fr : Frame) (s : State) (σ σ' : World D) (f : D.Fn)
     (x : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D (vertragVon D f) l Γ Λ) : Prop :=
-  ∃ s', s.local s' fr ∧ s.progress s' ∧ s'.agrees A σ' ∧ A.FreiOk σ' ∧ Head A I fr s' σ' f x
+  ∃ s', s.local s' fr ∧ s.progress s' ∧ s'.agrees A σ' ∧ A.FreiOk σ' ∧
+    (∀ j, (∀ cell, s.cells j = some cell → cell.owner ≠ fr) → A.naechst σ' j = A.naechst σ j) ∧
+    Head A I fr s' σ' f x
 
-theorem Next.same {σ' : World D} {f : D.Fn} {x} (ha : s.agrees A σ') (ho : A.FreiOk σ')
-    (h : Head A I fr s σ' f x) : Next A I fr s σ' f x :=
-  ⟨s, State.local_refl s fr, State.progress_refl s, ha, ho, h⟩
+theorem Next.same {σ : World D} {f : D.Fn} {x} (ha : s.agrees A σ) (ho : A.FreiOk σ)
+    (h : Head A I fr s σ f x) : Next A I fr s σ σ f x :=
+  ⟨s, State.local_refl s fr, State.progress_refl s, ha, ho, fun _ _ => rfl, h⟩
 
-theorem Next.of_holds {σ' : World D} {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context}
+theorem Next.meta {σ σ' : World D} {f : D.Fn} {x} (ha : s.agrees A σ) (ho : A.FreiOk σ) (hm : MetaSame A σ σ')
+    (h : Head A I fr s σ' f x) : Next A I fr s σ σ' f x :=
+  ⟨s, State.local_refl s fr, State.progress_refl s, State.agrees_meta ha hm, freiOk_meta ho hm,
+    fun j _ => hm.2.1 j, h⟩
+
+theorem Next.of_holds {σ σ' : World D} {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context}
     {ρ : Env D Γ} {r : GRest D (vertragVon D f) l Γ Λ} (h : Holds A fr s c σ' ρ)
-    (hk : k.references.length ≤ Γ.length) (hr : OR A I (I f).output k c r) :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
-  obtain ⟨g, s', hf, ha, ho, hl, hp⟩ := FrameOk.of_holds h
-  exact ⟨s', hl, hp, ha, ho, .run ρ r hk hf hr⟩
+    (hk : k.references.length ≤ Γ.length) (hr : OR A I (I f).output k c r)
+    (hl : ∀ j, A.naechst σ' j = A.naechst σ j := by intro _; rfl) :
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
+  obtain ⟨g, s', hf, ha, ho, hlo, hp⟩ := FrameOk.of_holds h
+  exact ⟨s', hlo, hp, ha, ho, fun j _ => hl j, .run ρ r hk hf hr⟩
 
 /-- A step into a context no environment realises does not happen. -/
 theorem holds_bad {σ' : World D} {Γ : Ctx} {ρ : Env D Γ} (h : Holds A fr s (badContext Γ) σ' ρ) : False := by
@@ -196,16 +315,16 @@ theorem run_leaf (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 Λ' : Li
     {g : Ghost} {σ : World D} {ρ : Env D Γ} {st : Stmt D (vertragVon D f) l Γ Λ Λ1}
     {rest : Block D (vertragVon D f) l Γ Λ1 Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
-    (hr : OR A I (I f).output k c (.dann (.cons st rest) r))
+    (hr : OR A I (I f).output k c (.dann (.cons st rest) r)) (hleaf : st.istBlatt = true)
     {σ' : World D} {ρ' : Env D Γ} (hstep : execStmt O passes keinRuf st σ ρ = .ok σ' ρ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ1, ρ', .dann rest r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ1, ρ', .dann rest r⟩ := by
   obtain ⟨c1, hb, hc⟩ := hr.dann_inv
   have hH := hf.holds ha ho
   rcases ob_cons_inv hb rfl with ⟨c2, hs, hrest⟩ | hd | ⟨t, f', i, e, hw, hL, g', e2, hwK, hLK, rest', c2, o, p,
     heq, ⟨ht, hfl⟩, hip, he, hg, he2, hcons, hrest⟩
   · have hp := os_sound (respects_keinRuf A I.contracts) hO hs σ ρ hk hH (passes := passes)
     rw [hstep] at hp
-    exact Next.of_holds hp hk (OR.of_cont hrest hc)
+    exact Next.of_holds hp hk (OR.of_cont hrest hc) (os_meta hO hs hleaf σ ρ σ' ρ' hstep).2.1
   · have hp := os_sound (respects_keinRuf A I.contracts) hO (hd _ (badContext_bounded Γ)) σ ρ hk hH
       (passes := passes)
     rw [hstep] at hp
@@ -238,7 +357,14 @@ theorem run_leaf (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 Λ' : Li
       intro j; rw [← hσ2, FreiForm.naechst_schreibSlot, hi1, hlink, ← hσ1]; rfl
     have hlive : A.Lebt σ hh.slot := State.owned_live ha hown
     obtain ⟨ho2, hl2⟩ := link_live A hlive ho hk2 hs2 (fun j hj => by rw [hn2]; simp [hj])
-    refine Next.same ⟨ha.1, fun j => (hl2 j).trans (ha.2 j)⟩ ho2 ?_
+    refine ⟨s, State.local_refl s fr, State.progress_refl s, ⟨ha.1, fun j => (hl2 j).trans (ha.2 j)⟩, ho2, ?_, ?_⟩
+    · intro j hj
+      rw [hn2]
+      by_cases hjs : j = hh.slot
+      · subst hjs
+        obtain ⟨cell, hcell⟩ := State.own_cell hown
+        exact absurd (State.owned_cell hown hcell).2.1 (hj _ hcell)
+      · simp [hjs]
     exact .release ρ e2 hwK hLK rest' r p o hh he2 hpx howned hgh (by rw [hn2, hk2]; simp) hk hf
       (OR.of_cont hrest hc)
 
@@ -247,16 +373,16 @@ theorem run_leaf_ende (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : L
     {g : Ghost} {σ : World D} {ρ : Env D Γ} {st : Stmt D (vertragVon D f) l Γ Λ Λ1}
     {rest : Endblock D (vertragVon D f) l Γ Λ1}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
-    (hr : OR A I (I f).output k c (.ende (.cons st rest)))
+    (hr : OR A I (I f).output k c (.ende (.cons st rest))) (hleaf : st.istBlatt = true)
     {σ' : World D} {ρ' : Env D Γ} (hstep : execStmt O passes keinRuf st σ ρ = .ok σ' ρ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ1, ρ', .ende rest⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ1, ρ', .ende rest⟩ := by
   cases hr with
   | ende _ he =>
     have hH := hf.holds ha ho
     rcases oe_cons_inv he rfl with ⟨c2, hs, hrest⟩ | hd
     · have hp := os_sound (respects_keinRuf A I.contracts) hO hs σ ρ hk hH (passes := passes)
       rw [hstep] at hp
-      exact Next.of_holds hp hk (.ende rest hrest)
+      exact Next.of_holds hp hk (.ende rest hrest) (os_meta hO hs hleaf σ ρ σ' ρ' hstep).2.1
     · have hp := os_sound (respects_keinRuf A I.contracts) hO (hd _ (badContext_bounded Γ)) σ ρ hk hH
         (passes := passes)
       rw [hstep] at hp

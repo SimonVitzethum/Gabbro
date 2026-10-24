@@ -40,7 +40,7 @@ theorem Next.bindNone {Λ Λ' : List (Res D)} {τ : Ty} {c1 cout : Context}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hm : MetaSame A σ σ') (hrest : OB A I (I f).output k (c.bind none) rest c1) (hd : DropW cout c1)
     (hc : Cont A I (I f).output k cout r) (v : Wert D τ) :
-    Next A I fr s σ' f ⟨l, τ :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ :=
+    Next A I fr s σ σ' f ⟨l, τ :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ :=
   Next.holdsMeta hf ha ho hm (fun h => h.bindNone v) (Nat.le_succ_of_le hk) (OR.binder hrest hd hk hc)
 
 /-- `let x = e;` -/
@@ -48,7 +48,7 @@ theorem run_bind {Λ Λ' : List (Res D)} {τ : Ty} {e : Expr D Γ Λ τ}
     {rest : Block D (vertragVon D f) l (τ :: Γ) Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.bind e rest) r)) :
-    Next A I fr s (σ.lese Λ e.orte) f
+    Next A I fr s σ (σ.lese Λ e.orte) f
       ⟨l, τ :: Γ, Λ, .cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, c1, hrest, hd⟩ := ob_top hb
@@ -60,7 +60,7 @@ theorem run_bindEnde {Λ : List (Res D)} {τ : Ty} {e : Expr D Γ Λ τ}
     {rest : Endblock D (vertragVon D f) l (τ :: Γ) Λ}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.ende (.bind e rest))) :
-    Next A I fr s (σ.lese Λ e.orte) f
+    Next A I fr s σ (σ.lese Λ e.orte) f
       ⟨l, τ :: Γ, Λ, .cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ, .ende rest⟩ := by
   cases hr with
   | ende _ he =>
@@ -74,7 +74,7 @@ theorem run_regRead {Λ Λ' : List (Res D)} {re : D.Reg} {hkl : (D.rklasse re).l
     {rest : Block D (vertragVon D f) l (D.rtyp re :: Γ) Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.regRead re hkl rest) r)) (v : Wert D (D.rtyp re)) :
-    Next A I fr s σ f ⟨l, D.rtyp re :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ f ⟨l, D.rtyp re :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho (MetaSame.refl A σ) hrest hd hc v
@@ -86,7 +86,7 @@ theorem run_regReadElse {Λ Λ' : List (Res D)} {re : D.Reg} {hkl : (D.rklasse r
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.regReadElse re hkl z sonst rest) r)) (hm : MetaSame A σ σ')
     (v : Wert D (D.rtyp re)) :
-    Next A I fr s σ' f ⟨l, D.rtyp re :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, D.rtyp re :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, _, c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho hm hrest hd hc v
@@ -97,7 +97,7 @@ theorem run_regReadSonst {Λ Λ' : List (Res D)} {re : D.Reg} {hkl : (D.rklasse 
     {rest : Block D (vertragVon D f) l (D.rtyp re :: Γ) Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.regReadElse re hkl z sonst rest) r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, hs, _⟩ := ob_top hb
   exact Next.meta ha ho hm (.run ρ _ hk hf (OR.sonst hs hc.exits))
@@ -109,7 +109,7 @@ theorem run_awaits {Λ Λ' : List (Res D)} {gl : D.Glob} {pl : List D.Glob} {hp 
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.awaits gl pl hp hL hat rest) r)) (hm : MetaSame A σ σ')
     (v : Wert D (D.gtyp gl)) :
-    Next A I fr s σ' f ⟨l, D.gtyp gl :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, D.gtyp gl :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho hm hrest hd hc v
@@ -121,7 +121,7 @@ theorem run_exchange {Λ Λ' : List (Res D)} {gl : D.Glob} {neu : Expr D (D.gtyp
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.exchange gl neu hw hL rest) r)) (σ₁ : World D)
     (hm₁ : MetaSame A σ σ₁) (x : Wert D (D.gtyp gl)) (v : Wert D (D.gtyp gl)) :
-    Next A I fr s (σ₁.schreibGlob gl Λ x) f ⟨l, D.gtyp gl :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ (σ₁.schreibGlob gl Λ x) f ⟨l, D.gtyp gl :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨hg, _, c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho (hm₁.trans (MetaSame.writeGlob A σ₁ gl Λ x hg)) hrest hd hc v
@@ -133,7 +133,7 @@ theorem run_float {Λ Λ' : List (Res D)} {op : GleitOp} {l1 h1 l2 h2 lo hi : In
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.float op a b lo hi rest) r)) (hm : MetaSame A σ σ')
     (v : Wert D (.fl lo hi)) :
-    Next A I fr s σ' f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, _, c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho hm hrest hd hc v
@@ -142,7 +142,7 @@ theorem run_floatLit {Λ Λ' : List (Res D)} {q lo hi : Int × Int}
     {rest : Block D (vertragVon D f) l (.fl lo hi :: Γ) Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.floatLit q lo hi rest) r)) (v : Wert D (.fl lo hi)) :
-    Next A I fr s σ f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho (MetaSame.refl A σ) hrest hd hc v
@@ -152,7 +152,7 @@ theorem run_floatOf {Λ Λ' : List (Res D)} {l1 h1 : Int} {lo hi : Int × Int} {
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.floatOf e lo hi rest) r)) (hm : MetaSame A σ σ')
     (v : Wert D (.fl lo hi)) :
-    Next A I fr s σ' f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho hm hrest hd hc v
@@ -163,7 +163,7 @@ theorem run_floatNarrow {Λ Λ' : List (Res D)} {l1 h1 lo hi : Int × Int} {e : 
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.floatNarrow e lo hi sonst rest) r)) (hm : MetaSame A σ σ')
     (v : Wert D (.fl lo hi)) :
-    Next A I fr s σ' f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, _, c1, hrest, hd⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho hm hrest hd hc v
@@ -173,7 +173,7 @@ theorem run_floatNarrowSonst {Λ Λ' : List (Res D)} {l1 h1 lo hi : Int × Int} 
     {rest : Block D (vertragVon D f) l (.fl lo hi :: Γ) Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.floatNarrow e lo hi sonst rest) r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, hs, _⟩ := ob_top hb
   exact Next.meta ha ho hm (.run ρ _ hk hf (OR.sonst hs hc.exits))
@@ -183,7 +183,7 @@ theorem run_check {Λ Λ' : List (Res D)} {cond : Expr D Γ Λ .bool} {sonst : E
     {rest : Block D (vertragVon D f) l Γ Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.check cond sonst rest) r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .dann rest r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .dann rest r⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, _, c1, hrest, hw⟩ := ob_top hb
   exact Next.meta ha ho hm (.run ρ _ hk hf (OR.weakened hrest hw hc))
@@ -193,7 +193,7 @@ theorem run_checkSonst {Λ Λ' : List (Res D)} {cond : Expr D Γ Λ .bool} {sons
     {rest : Block D (vertragVon D f) l Γ Λ Λ'} {r : GRest D (vertragVon D f) l Γ Λ'}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.check cond sonst rest) r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨_, hs, _⟩ := ob_top hb
   exact Next.meta ha ho hm (.run ρ _ hk hf (OR.sonst hs hc.exits))
@@ -210,7 +210,7 @@ theorem run_bindAxiom (hO : GutO O) {Λ Λ' : List (Res D)} {τ : Ty} {a : D.Ax}
     (hr : OR A I (I f).output k c (.dann (.bindAxiom a args he hw hg hd hgd rest) r))
     {σ₂ : World D} {ρa : Env D (D.aparams a)} {x : Option (ErgVal D (D.aerg a))}
     (hax : axiomAntwort O a (σ.lese Λ args.orte) ρa = (σ₂, x)) (v : Wert D τ) :
-    Next A I fr s σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨hfree, _, c1, hrest, hd'⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho ((MetaSame.reads A σ Λ args.orte).trans (meta_axiom hO hfree hax))
@@ -228,7 +228,7 @@ theorem run_bindAxiomElse (hO : GutO O) {Λ Λ' : List (Res D)} {τ : Ty} {a : D
     (hr : OR A I (I f).output k c (.dann (.bindAxiomElse a args he hr0 hw hg hd hgd err rest) r))
     {σ₂ : World D} {ρa : Env D (D.aparams a)} {x : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
     (hax : axiomAntwortSonst O a (σ.lese Λ args.orte) ρa = (σ₂, x)) (v : Wert D τ) :
-    Next A I fr s σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
+    Next A I fr s σ σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .dann rest (.schrumpf r)⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨hfree, _, _, c1, hrest, hd'⟩ := ob_top hb
   exact Next.bindNone hk hf ha ho ((MetaSame.reads A σ Λ args.orte).trans (meta_axiomSonst hO hfree hax))
@@ -246,7 +246,7 @@ theorem run_bindAxiomGrund (hO : GutO O) {Λ Λ' : List (Res D)} {τ : Ty} {a : 
     (hr : OR A I (I f).output k c (.dann (.bindAxiomElse a args he hr0 hw hg hd hgd err rest) r))
     {σ₂ : World D} {ρa : Env D (D.aparams a)} {x : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
     (hax : axiomAntwortSonst O a (σ.lese Λ args.orte) ρa = (σ₂, x)) (rg : Fin (D.agruende a)) :
-    Next A I fr s σ₂ f ⟨l, .why (D.agruende a) :: Γ, Λ, (Env.cons (τ := .why (D.agruende a)) rg ρ),
+    Next A I fr s σ σ₂ f ⟨l, .why (D.agruende a) :: Γ, Λ, (Env.cons (τ := .why (D.agruende a)) rg ρ),
       .dann err.alsBlock.2 (.abbruch (.schrumpf r))⟩ := by
   obtain ⟨cout, hb, hc⟩ := hr.dann_inv
   obtain ⟨hfree, _, herr, _⟩ := ob_top hb
@@ -264,7 +264,7 @@ theorem run_bindAxiomEnde (hO : GutO O) {Λ : List (Res D)} {τ : Ty} {a : D.Ax}
     (hr : OR A I (I f).output k c (.ende (.bindAxiom a args he hw hg hd hgd rest)))
     {σ₂ : World D} {ρa : Env D (D.aparams a)} {x : Option (ErgVal D (D.aerg a))}
     (hax : axiomAntwort O a (σ.lese Λ args.orte) ρa = (σ₂, x)) (v : Wert D τ) :
-    Next A I fr s σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .ende rest⟩ := by
+    Next A I fr s σ σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .ende rest⟩ := by
   cases hr with
   | ende _ he' =>
     cases he' with
@@ -283,8 +283,8 @@ theorem run_bindAxiomElseEnde (hO : GutO O) {Λ : List (Res D)} {τ : Ty} {a : D
     (hr : OR A I (I f).output k c (.ende (.bindAxiomElse a args he hr0 hw hg hd hgd err rest)))
     {σ₂ : World D} {ρa : Env D (D.aparams a)} {x : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
     (hax : axiomAntwortSonst O a (σ.lese Λ args.orte) ρa = (σ₂, x)) :
-    (∀ v : Wert D τ, Next A I fr s σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .ende rest⟩) ∧
-    (∀ rg : Fin (D.agruende a), Next A I fr s σ₂ f
+    (∀ v : Wert D τ, Next A I fr s σ σ₂ f ⟨l, τ :: Γ, Λ, .cons v ρ, .ende rest⟩) ∧
+    (∀ rg : Fin (D.agruende a), Next A I fr s σ σ₂ f
       ⟨l, .why (D.agruende a) :: Γ, Λ, (Env.cons (τ := .why (D.agruende a)) rg ρ), .ende err⟩) := by
   cases hr with
   | ende _ he' =>

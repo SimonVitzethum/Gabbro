@@ -87,7 +87,7 @@ theorem travExit {Λ : List (Res D)} {kk : Context} {t : D.Tab} {inv : Expr D Γ
 theorem run_peel {Λ1 : List (Res D)} {st : Stmt D (vertragVon D f) true Γ Λ1 Λ1}
     {r : GRest D (vertragVon D f) true Γ Λ1} (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ)
     (ha : s.agrees A σ) (ho : A.FreiOk σ) (hall : OS A I (I f).output k c st (badContext Γ))
-    (hX : OX A I (I f).output k r) : Next A I fr s σ f ⟨true, Γ, Λ1, ρ, .dann (.cons st .nil) r⟩ :=
+    (hX : OX A I (I f).output k r) : Next A I fr s σ σ f ⟨true, Γ, Λ1, ρ, .dann (.cons st .nil) r⟩ :=
   Next.same ha ho (.run ρ _ hk hf (OR.of_dead (.cons _ _ hall .nil) hX))
 
 /-- **An exit peels through a shrink**, forgetting the binder. -/
@@ -95,7 +95,7 @@ theorem run_peelSchrumpf {Λ1 : List (Res D)} {τ : Ty} {v : Wert D τ} {st : St
     {r : GRest D (vertragVon D f) true Γ Λ1} (hk : k.references.length ≤ Γ.length)
     (hf : FrameOk c g s fr (.cons v ρ)) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hall : OS A I (I f).output k c.drop st (badContext Γ)) (hX : OX A I (I f).output k r) :
-    Next A I fr s σ f ⟨true, Γ, Λ1, ρ, .dann (.cons st .nil) r⟩ :=
+    Next A I fr s σ σ f ⟨true, Γ, Λ1, ρ, .dann (.cons st .nil) r⟩ :=
   Next.of_holds (hf.holds ha ho).drop hk (OR.of_dead (.cons _ _ hall .nil) hX)
 
 /-- The exit context of a shrink. -/
@@ -109,7 +109,7 @@ theorem run_leaveTrav {Λ : List (Res D)} {kk : Context} {t : D.Tab} {inv : Expr
     {r : GRest D (vertragVon D f) l Γ Λ} {c : Context} {i : Wert D (.index (D.count t))}
     (hf : FrameOk c g s fr (.cons i ρ)) (ha : s.agrees A σ) (ho : A.FreiOk σ) (hx : ExitsTo kk c)
     (hX : OX A I (I f).output kk (.travRest t inv body is r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
   obtain ⟨hw, k0, c1, _, _, _, hk0, h⟩ := travExit hf hx hX
   exact Next.holdsMeta hf ha ho hm (fun h' => h'.drop.weaken hw) hk0 h
 
@@ -119,7 +119,7 @@ theorem run_nextTrav {Λ : List (Res D)} {kk : Context} {t : D.Tab} {inv : Expr 
     {r : GRest D (vertragVon D f) l Γ Λ} {c : Context} {i : Wert D (.index (D.count t))}
     (hf : FrameOk c g s fr (.cons i ρ)) (ha : s.agrees A σ) (ho : A.FreiOk σ) (hx : ExitsTo kk c)
     (hX : OX A I (I f).output kk (.travRest t inv body is r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .trav t inv body is r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .trav t inv body is r⟩ := by
   obtain ⟨hw, k0, c1, hinv, hb, hback, hk0, h⟩ := travExit hf hx hX
   exact Next.holdsMeta hf ha ho hm (fun h' => h'.drop) hk0 (.trav t inv body is r hw hinv hb hback hk0 h)
 
@@ -129,7 +129,7 @@ theorem run_leaveWieder {Λ : List (Res D)} {kk : Context} {n : Nat} {bis : Expr
     {r : GRest D (vertragVon D f) l Γ Λ}
     (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ) (hx : ExitsTo kk c)
     (hX : OX A I (I f).output kk (.wiederRest n bis body ueber r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
   obtain ⟨k0, c1, _, _, _, _, hlen, hk0, h⟩ := ox_top hX
   exact Next.holdsMeta hf ha ho hm (fun h' => h'.weaken (hx.weaker (hf.length.trans hlen.symm))) hk0 h
 
@@ -139,7 +139,7 @@ theorem run_nextWieder {Λ : List (Res D)} {kk : Context} {n : Nat} {bis : Expr 
     {r : GRest D (vertragVon D f) l Γ Λ}
     (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ) (hx : ExitsTo kk c)
     (hX : OX A I (I f).output kk (.wiederRest n bis body ueber r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .wieder n bis body ueber r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .wieder n bis body ueber r⟩ := by
   obtain ⟨k0, c1, hbis, hb, hback, hu, hlen, hk0, h⟩ := ox_top hX
   exact Next.meta ha ho hm (.run ρ _ hk0 hf
     (.wieder n bis body ueber r (hx.weaker (hf.length.trans hlen.symm)) hbis hb hback hu hk0 h))
@@ -149,7 +149,7 @@ theorem run_leaveEwig {Λ : List (Res D)} {kk : Context} {a : D.Annahme} {n : Na
     {body : Block D (vertragVon D f) true Γ Λ Λ} {r : GRest D (vertragVon D f) l Γ Λ}
     (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ) (hx : ExitsTo kk c)
     (hX : OX A I (I f).output kk (.ewigRest a n inv body r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, r⟩ := by
   obtain ⟨k0, c1, _, _, _, hlen, hk0, h⟩ := ox_top hX
   exact Next.holdsMeta hf ha ho hm (fun h' => h'.weaken (hx.weaker (hf.length.trans hlen.symm))) hk0 h
 
@@ -158,7 +158,7 @@ theorem run_nextEwig {Λ : List (Res D)} {kk : Context} {a : D.Annahme} {n : Nat
     {body : Block D (vertragVon D f) true Γ Λ Λ} {r : GRest D (vertragVon D f) l Γ Λ}
     (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ) (hx : ExitsTo kk c)
     (hX : OX A I (I f).output kk (.ewigRest a n inv body r)) (hm : MetaSame A σ σ') :
-    Next A I fr s σ' f ⟨l, Γ, Λ, ρ, .ewig a n inv body r⟩ := by
+    Next A I fr s σ σ' f ⟨l, Γ, Λ, ρ, .ewig a n inv body r⟩ := by
   obtain ⟨k0, c1, hinv, hb, hback, hlen, hk0, h⟩ := ox_top hX
   exact Next.meta ha ho hm (.run ρ _ hk0 hf
     (.ewig a n inv body r (hx.weaker (hf.length.trans hlen.symm)) hinv hb hback hk0 h))
