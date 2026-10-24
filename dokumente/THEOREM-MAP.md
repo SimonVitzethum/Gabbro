@@ -4491,3 +4491,31 @@ A cost table cannot bound measured recursion (Ackermann's `(1, 0)` calls `(0, k)
 | witnesses `kz_umgebung_endet_nie`, `kz_bedingt_endet` | KlasseZeuge | -- |
 
 NOT proved: the hold time derived from the program (the two bridges of Lebendigkeit.lean); termination of `umgebung`/`bedingt` beyond the budget (undecidable in general; the exit condition is the model's part).
+
+
+## 91. Conditional exits and the universality boundary (2026-10-24)
+
+*Files: `grammatik/Grammatik/Berechenbarkeit/{RunsUntil,RunsUntilWitnesses,RecursionBoundary,Audit}.lean`.*
+
+| Statement | Hypotheses and precise scope |
+|---|---|
+| `ExitTrace.run`, `exitTrace_of_run`, `run_iff_exitTrace`, `exists_run_iff_exitTrace` | Actual `foreverLauf` outcomes and invariant checks: normal completion iff a finite exit trace exists within the budget. Exhaustion is not completion. |
+| `run_mono` | The pass evaluator is fixed; adding fuel preserves a normal result. This does not replace fuel arguments of nested evaluators. |
+| `run_of_rank`, `runsUntil_of_rank` | Every invariant check succeeds; each continuing pass ends normally and strictly decreases a natural rank. Fuel greater than the initial rank suffices. |
+| `untilBody`, `runsUntil`, `untilBody_exec` | Definitions and exact semantics over existing `forever` / `if` / `leave`; no new surface syntax or machine rule. |
+| `runsUntil_iff`, `untilBody_continue_guard`, `untilBody_exit_guard`, `runsUntil_post` | Continuing passes see a false guard. A normal exit sees a true guard if the body has no separate `leave`. No eventual truth is assumed from the mere existence of the expression. |
+| `assignment_zeuge`, `rank_zeuge`, `memory_zeuge`, `memory_guard_zeuge` | Typed Gabbro code changes a local Boolean, or writes the guarded reference table from 0 to 100, and then exits. |
+| `insufficient_budget_zeuge`, `false_guard_never_zeuge`, `conditional_classes_zeuge` | One budget unit is too small for the writing loop; a permanently false guard never completes normally. Both a terminating and a nonterminating example have class `bedingt`. |
+| `push_step`, `reached_zeuge`, `depth_zeuge`, `unbounded_stack` | A single finite, oracle-free G program reaches every finite call-stack depth at every fixed loop budget, including zero, by actual `RufSchrittG` calls from `RufStartG`. |
+| `accepted_zeuge`, `rejected_zeuge`, `claimed_measure_zeuge` | The core safety Bool accepts this program; the separate termination classifier rejects its unmeasured non-tail cycle. Supplying a measure-present flag changes the class, not the execution. |
+| `no_measure_duty`, `no_wellFounded_ranking` | For that program, **every** candidate recursion measure fails the semantic `MassPflicht`; no well-founded ranking decreases along all its actual steps. |
+
+**NOT PROVED:** Turing completeness of the general model, or of any admitted fragment. The missing result is a generic simulation of a
+standard universal machine by finite Gabbro programs, including input/output representation, actual controllable push and pop, communication,
+normal halting in both directions and budget adequacy. A new mini-machine, an infinite declaration, arbitrary initial stack contents without
+an initialization proof, a host-language evaluator or a computational oracle would not discharge that obligation. The present growing-stack
+witness is not a universal simulator. `Spec.lean`, `Akzeptiert` and the semantic premises are unchanged.
+
+Validation: `lake build` succeeds (1,775 jobs); `lake build Grammatik.Berechenbarkeit.Audit` checks 34 declarations
+using only `propext`, `Classical.choice` and `Quot.sound`, with exactly those three for `gabbro_ziel`.
+The Lean guardian's no-holes scan and the repository layout check pass. These are model checks, not a Rust or binary verification.

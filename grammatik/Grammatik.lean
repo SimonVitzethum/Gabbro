@@ -135,6 +135,9 @@ import Grammatik.Logik.Terminierung.Entscheidung
 import Grammatik.Logik.Terminierung.Ausgang
 import Grammatik.Logik.Terminierung.KlasseZeuge
 import Grammatik.Logik.Terminierung.LaufGX
+import Grammatik.Berechenbarkeit.RunsUntil
+import Grammatik.Berechenbarkeit.RunsUntilWitnesses
+import Grammatik.Berechenbarkeit.RecursionBoundary
 import Grammatik.Zielsatz.Atomar.MassRuhe
 import Grammatik.Zielsatz.Atomar.BeweisTerminierung
 import Grammatik.Zielsatz.Atomar.TerminierungZeuge

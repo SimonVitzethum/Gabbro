@@ -179,6 +179,11 @@ collision it guards needs a `group … ops` and a `walk … by ops` the grammar 
 
 Named in the header, never hidden; each extension of the goal is a reviewed diff.
 
+**Computational universality is not proved.** The results in `grammatik/Grammatik/Berechenbarkeit/` (THEOREM-MAP 91)
+establish exact conditional exits and the distinction between the core safety checker, unbounded machine-G stacks,
+and the additional recursive-descent duty. A finite universal simulator and its correspondence proof are still open;
+neither a `forever` loop nor removal of an arena's written `max` establishes Turing completeness.
+
 * termination and waiting bounds under fairness (`zeit` bounds finite call trees only; a waiting
   bound exists separately, B6); starvation freedom; stack depth (G's stacks are unbounded);
 * the C and the hardware (translation validation's job, Part E); linking at the C level;

@@ -154,8 +154,10 @@ lifetimes use arenas.
 
 `pb P blw B` switches the unbounded form on: no `max`, and before every commit the generator asks `P` for free
 bytes; below `B` the `else` runs (the OOM path). One probe per MiB, none on the fast path; freestanding, `P`
-measures itself. The static whole-program memory bound is lost for such a program, which is what makes the
-language Turing-complete in the model. `beispiele/1160-halde-mit-abtastung.gab` is the example (checker-clean;
+measures itself. Removing the source-level `max` alone does not establish Turing completeness: the current
+LLVM representation still caps the slot count at `u32::MAX`, and `DynArena` has an explicit finite `M`.
+The general machine-G model has unbounded call stacks, but a universal-machine simulation remains unproved
+(`grammatik/Grammatik/Berechenbarkeit/`, THEOREM-MAP section 91). `beispiele/1160-halde-mit-abtastung.gab` is the example (checker-clean;
 LLVM-runnable on both targets, the out-of-memory branch taken correctly at 100 bytes free). An unbounded heap
 WITHOUT sampling is unwritable: without the clause no-`max` is the static form with ceiling `hi`.
 

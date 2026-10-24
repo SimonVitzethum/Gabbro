@@ -152,6 +152,12 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   as at a function.
 - **O37 (regions in G).** No byte pointers in the model (`Ty.ptr` is a carrier capability); nothing frees a region (no ownership closure at
   the gate parameter); Gabbro bodies pass on no extent (only a foreign `ensures … <= lenof(result)` carries).
+- **Computational universality (2026-10-24).** Partial results in `grammatik/Grammatik/Berechenbarkeit/` (THEOREM-MAP 91): exact normal
+  completion of `runsUntil` over existing syntax, decreasing-rank fuel bounds, real writing witnesses, and an accepted finite G program
+  reaching arbitrary stack depths. That recursive witness admits no semantic `MassPflicht` for any measure; its unmeasured non-tail cycle
+  has class `abgelehnt`. Open: a finite-program, oracle-free universal-machine encoding and a generic push/pop/controller simulation with
+  halting/output correspondence, budget adequacy and precise admission conditions. Unbounded stacks and conditional exits are not that proof;
+  do not claim Turing completeness from them. No syntax, acceptance rule or goal premise was weakened.
 
 ## 3. Checker
 

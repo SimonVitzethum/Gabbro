@@ -11,10 +11,9 @@
     outside). A kernel that ends only on a shutdown signal is in this class.
   * `bedingt` -- a `forever` left by a `leave` or a `return` inside it, or a tail-call cycle without a measure: it
     ends exactly when a named condition C of the program holds -- the guard of the exit, or the base path of the
-    cycle. An
-    interpreter that ends when its guest halts is in this class. The algorithm DETERMINES the end as the exact
-    condition C; whether C ever holds is the program's question (undecidable in general -- the language stays
-    Turing complete).
+    cycle. An interpreter that ends when its guest halts is in this class. An exit condition does not prove that
+    the exit is reached: `Berechenbarkeit/RunsUntil.lean` states and proves the exact path and guard obligations.
+    No Turing-completeness or general undecidability theorem follows from this classification.
   * `abgelehnt` -- refused: a recursion cycle with a non-tail call and no measure, or a `forever` whose pass is not
     itself of class `endet` (a pass must end, so that every service is productive).
   A function's class is the weakest local class in its call hull (`klasse`). What each class means in the model:
